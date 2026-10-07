@@ -166,6 +166,13 @@ impl GpuState {
     ///
     /// Call it once a frame before anything reads `third_person`.
     pub(crate) fn update_zoom_view(&mut self, time: i32) {
+        if self.live_session.is_some() {
+            self.third_person_choice = self
+                .console
+                .as_ref()
+                .and_then(|console| console.bool_cvar("cg_thirdPerson"))
+                .unwrap_or(self.third_person_choice);
+        }
         self.zoom_first_person = self
             .zoom_view(time)
             .is_some_and(ZoomView::forces_first_person);

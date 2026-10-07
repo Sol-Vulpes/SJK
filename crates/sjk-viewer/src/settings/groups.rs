@@ -72,6 +72,7 @@ impl Group {
                 "cg_thirdPersonCameraDamp",
                 "cg_thirdPersonTargetDamp",
                 "cg_errorDecay",
+                "cg_thirdPerson",
                 "cg_thirdPersonRange",
                 "cg_thirdPersonVertOffset",
                 "cg_thirdPersonHorzOffset",

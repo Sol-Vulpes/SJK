@@ -85,7 +85,8 @@ length both widths divide. Checked in game on Windows 11 on JoF's full server.
 ## EternalJK camera damping
 
 Camera settings UI (`feat/camera-settings`, base `c9d6db8`): a CAMERA tab
-exposes the existing archived framing, damping, FOV, bob and shake controls;
+exposes a saved first/third-person mode plus archived framing, damping, FOV,
+bob and shake controls;
 classic Game options and search include the same controls. No camera formula
 or gameplay changes. Windows Rust 1.99 workspace checks cover registered cvar
 types, help and menu catalogues; in-game UI appearance remains unverified.

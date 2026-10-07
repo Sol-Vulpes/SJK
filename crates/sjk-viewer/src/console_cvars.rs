@@ -243,6 +243,12 @@ pub(super) fn register_daily_cvars(cvars: &mut CvarRegistry) -> Result<(), sjk_s
             "Third-person camera distance behind the player",
         ),
         CvarDefinition::new(
+            "cg_thirdPerson",
+            true,
+            archive,
+            "Choose the saved third-person view; zoom can temporarily force first person",
+        ),
+        CvarDefinition::new(
             "cg_thirdPersonVertOffset",
             16.0,
             archive,

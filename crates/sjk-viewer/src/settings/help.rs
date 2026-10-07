@@ -111,6 +111,10 @@ pub(super) fn lines(text: &str) -> [&str; HELP_LINES] {
 
 const HELP: &[(&str, &str)] = &[
     (
+        "cg_thirdPerson",
+        "Choose first or third person for live play. The camera key saves this choice too; zoom overrides it temporarily.",
+    ),
+    (
         "cg_fovAspectAdjust",
         "Widen the horizontal field of view on wide screens while preserving the vertical framing.",
     ),

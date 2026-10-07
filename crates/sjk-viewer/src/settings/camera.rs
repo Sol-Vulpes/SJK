@@ -10,6 +10,11 @@ const fn slider(label: &'static str, cvar: &'static str, min: f64, max: f64, ste
 }
 
 pub(super) const ROWS: &[Setting] = &[
+    Setting {
+        label: "Third-person view",
+        cvar: "cg_thirdPerson",
+        kind: ValueKind::Bool,
+    },
     slider("Field of view", "cg_fov", 70., 130., 1.),
     Setting {
         label: "Widescreen FOV",

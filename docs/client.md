@@ -863,6 +863,7 @@ rather than 0.35000000000000003.
 ## Key bindings
 
 Settings > CAMERA provides live, saved controls for third-person distance,
+first/third-person mode (`cg_thirdPerson`, also saved by the camera key),
 height, shoulder offset, orbit/pitch, camera and target damping, and EternalJK's
 damping reference rate (0 selects stock). It also offers view FOV, first-person
 bob, effect shake and view-model FOV. Numeric rows accept direct entry as well
