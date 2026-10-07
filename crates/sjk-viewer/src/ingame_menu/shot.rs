@@ -36,6 +36,8 @@ pub(crate) struct Panel {
     pub(super) camera_fallback: [f32; 4],
     pub(crate) sun_tab: bool,
     pub(crate) live: bool,
+    /// Temporary third-person preview while this page is open.
+    pub(crate) camera_preview: bool,
     pub(crate) dirty: [bool; 2],
     pub(crate) sun_available: bool,
     pub(crate) sun_mode: crate::console::director::SunMode,
@@ -51,6 +53,7 @@ impl Default for Panel {
             camera_fallback: [0., 0., 80., 16.],
             sun_tab: false,
             live: true,
+            camera_preview: false,
             dirty: [false; 2],
             sun_available: false,
             sun_mode: Default::default(),

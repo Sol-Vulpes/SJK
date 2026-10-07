@@ -170,14 +170,19 @@ impl GpuState {
             self.third_person_choice = self
                 .console
                 .as_ref()
-                .and_then(|console| console.bool_cvar("cg_thirdPerson"))
+                .and_then(|console| console.bool_cvar("cg_thirdperson"))
                 .unwrap_or(self.third_person_choice);
         }
         self.zoom_first_person = self
             .zoom_view(time)
             .is_some_and(ZoomView::forces_first_person);
-        self.third_person =
-            rendering_third_person(self.third_person_choice, self.zoom_first_person);
+        let shot_preview = self.game_menu
+            && self.game_menu_page == crate::ingame_menu::Page::Shot
+            && self.in_game_menu.shot.camera_preview;
+        self.third_person = rendering_third_person(
+            self.third_person_choice || shot_preview,
+            self.zoom_first_person,
+        );
     }
 
     /// The player state the zoom decision reads: the predicted one in a live session

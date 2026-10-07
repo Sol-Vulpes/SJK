@@ -355,7 +355,7 @@ const GRAPHICS: [Slot; 11] = {
 /// Setup's GAMEPLAY (classic+), laid out as [`GRAPHICS`]: the mouse options
 /// brought over from Controls, and JKR's additions regrouped by subject (game
 /// options, the menus and console, the HUD, the scoreboard), then the network.
-const GAMEPLAY: [Slot; 12] = {
+const GAMEPLAY: [Slot; 13] = {
     let [play, profile, settings, sjk] = nav_row();
     let [back, exit] = back_exit();
     [
@@ -372,32 +372,38 @@ const GAMEPLAY: [Slot; 12] = {
         list_row(
             Entry::GameOptions,
             "GAME OPTIONS",
-            "Pickups, models, saber and Force trails, camera",
+            "Pickups, models, saber and Force trails",
             209.0,
+        ),
+        list_row(
+            Entry::Camera,
+            "CAMERA",
+            "View mode, framing, field of view, bob and shake",
+            233.0,
         ),
         list_row(
             Entry::Interface,
             "INTERFACE",
             "Menu style, colours and fonts, the console's look",
-            233.0,
+            257.0,
         ),
         list_row(
             Entry::Hud,
             "HUD",
             "HUD style and scale, status, crosshair, readouts and chat",
-            257.0,
+            281.0,
         ),
         list_row(
             Entry::Scoreboard,
             "SCOREBOARD",
             "Scoreboard style, client numbers, head icons and row size",
-            281.0,
+            305.0,
         ),
         list_row(
             Entry::Network,
             "NETWORK",
             "Master server and connection rates",
-            305.0,
+            329.0,
         ),
         Slot {
             entry: Entry::SetupBack,

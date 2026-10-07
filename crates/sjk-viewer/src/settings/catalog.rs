@@ -95,15 +95,6 @@ pub(super) const VIDEO: &[Setting] = &[
         },
     },
     Setting {
-        label: "Field of view",
-        cvar: "cg_fov",
-        kind: ValueKind::Float {
-            min: 70.0,
-            max: 130.0,
-            step: 5.0,
-        },
-    },
-    Setting {
         label: "Impact marks",
         cvar: "cg_marks",
         kind: ValueKind::Bool,
@@ -482,33 +473,6 @@ pub(super) const GAME: &[Setting] = &[
             min: 0,
             max: 2,
             step: 1,
-        },
-    },
-    Setting {
-        label: "Third-person camera damping",
-        cvar: "cg_thirdPersonCameraDamp",
-        kind: ValueKind::Float {
-            min: 0.0,
-            max: 1.0,
-            step: 0.05,
-        },
-    },
-    Setting {
-        label: "Third-person target damping",
-        cvar: "cg_thirdPersonTargetDamp",
-        kind: ValueKind::Float {
-            min: 0.0,
-            max: 1.0,
-            step: 0.05,
-        },
-    },
-    Setting {
-        label: "Prediction error smoothing (ms)",
-        cvar: "cg_errorDecay",
-        kind: ValueKind::Float {
-            min: 0.0,
-            max: 500.0,
-            step: 25.0,
         },
     },
     Setting {

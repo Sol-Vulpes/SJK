@@ -54,11 +54,7 @@ pub(super) const ROWS: &[Setting] = &[
     Setting {
         label: "Effect camera shake",
         cvar: "cg_screenShake",
-        kind: ValueKind::Integer {
-            min: 0,
-            max: 2,
-            step: 1,
-        },
+        kind: ValueKind::Bool,
     },
     slider(
         "View-model FOV (0 uses world FOV)",
