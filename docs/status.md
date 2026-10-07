@@ -137,8 +137,12 @@ unverified.
 Review follow-up against `c096c64`: Shot preview is a transient override and
 never changes the saved view mode. Classic gets its own Camera group, using the
 same rows as modern; duplicate camera rows are removed and shake is on/off.
-Workspace fmt, build, tests and clippy pass with existing warnings. Follow-up
-Shot and Classic GPU behavior remain unverified.
+Workspace fmt, build, tests and clippy pass with existing warnings. Combined revision `44ff6e5` was checked on 2026-10-07 (Windows, RTX 5070 Ti,
+release, isolated native server, retail `mp/duel1`, 1280x720): Classic's Camera
+group renders with its icon and rows; adjusting Shot's live-preview angle shows
+third person while `cg_thirdPerson` stays 0, then closing returns to first
+person with that value intact. Orbit, demos, every slider and other resolutions
+remain unverified in game.
 
 ## EternalJK camera damping
 
