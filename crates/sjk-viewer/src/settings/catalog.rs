@@ -5,7 +5,7 @@
 //! not offered. Player identity
 //! (name, model, sabers) lives in the Player menu, not here.
 
-pub(super) const TABS: [&str; 9] = [
+pub(super) const TABS: [&str; 10] = [
     "VIDEO",
     "AUDIO",
     "HUD",
@@ -14,12 +14,13 @@ pub(super) const TABS: [&str; 9] = [
     "NETWORK",
     "HUD+",
     "TEXT",
+    "CAMERA",
     FIRST_SETUP_CAPTION,
 ];
 /// The first-start tab's caption, also the classic Setup group's name.
 pub(crate) const FIRST_SETUP_CAPTION: &str = "FIRST SETUP";
 /// The first-start tab (`settings/quick.rs`); last, so the other tabs keep their numbers.
-pub(super) const QUICK_TAB: usize = 8;
+pub(super) const QUICK_TAB: usize = 9;
 /// The tab whose last row opens the key-binding editor.
 pub(super) const KEYBINDS_TAB: usize = 3;
 /// The tab whose last row opens the renderer settings ([`RENDERER_TABS`]).

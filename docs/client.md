@@ -862,6 +862,13 @@ rather than 0.35000000000000003.
 
 ## Key bindings
 
+Settings > CAMERA provides live, saved controls for third-person distance,
+height, shoulder offset, orbit/pitch, camera and target damping, and EternalJK's
+damping reference rate (0 selects stock). It also offers view FOV, first-person
+bob, effect shake and view-model FOV. Numeric rows accept direct entry as well
+as sliders. The classic Setup > Game options panel and settings search expose
+the same camera controls. Camera offsets change presentation, not player aim.
+
 Settings > Key bindings binds two keys per action: click a slot (or select it
 and press Enter), then press a key or mouse button, or turn the mouse wheel to
 bind `MWHEELUP` or `MWHEELDOWN` (a notch only scrolls the list when no slot is
