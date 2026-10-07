@@ -84,12 +84,16 @@ length both widths divide. Checked in game on Windows 11 on JoF's full server.
 
 ## EternalJK camera damping
 
-Camera settings UI (`feat/camera-settings`, base `c9d6db8`): a CAMERA tab
+Camera settings UI (`feat/camera-settings`, base `cfbc789`): a CAMERA tab
 exposes a saved first/third-person mode plus archived framing, damping, FOV,
 bob and shake controls;
 classic Game options and search include the same controls. No camera formula
 or gameplay changes. Windows Rust 1.99 workspace checks cover registered cvar
-types, help and menu catalogues; in-game UI appearance remains unverified.
+types, help and menu catalogues. Combined revision `7b76890` was checked
+on 2026-10-07 (Windows, RTX 5070 Ti, release, retail `mp/duel1`, 1280x720):
+the modern CAMERA tab renders and changing its view-mode toggle updates
+`cg_thirdPerson`. Classic layout, every slider and other resolutions remain
+unverified.
 
 Branch `feat/camera-fps`: the third-person camera damps as EternalJK's does. Stock
 damping eases the camera once per 50 ms; EternalJK eases once per frame of
