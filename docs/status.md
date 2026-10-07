@@ -121,6 +121,29 @@ widths divide them, the one whose rows read as players wins. See
 [networking.md](networking.md). Unit tests cover full stock and jaPRO servers and a
 length both widths divide. Checked in game on Windows 11 on JoF's full server.
 
+## Camera settings
+
+Camera settings UI (`feat/camera-settings`): a CAMERA tab
+exposes a saved first/third-person mode plus archived framing, damping, FOV,
+bob and shake controls;
+classic Gameplay > Camera and search include the same controls. No camera formula
+or gameplay changes. Windows Rust 1.99 workspace checks cover registered cvar
+types, help and menu catalogues. Combined revision `7b76890` was checked
+on 2026-10-07 (Windows, RTX 5070 Ti, release, retail `mp/duel1`, 1280x720):
+the modern CAMERA tab renders and changing its view-mode toggle updates
+`cg_thirdPerson`. Classic layout, every slider and other resolutions remain
+unverified.
+
+Review follow-up against `c096c64`: Shot preview is a transient override and
+never changes the saved view mode. Classic gets its own Camera group, using the
+same rows as modern; duplicate camera rows are removed and shake is on/off.
+Workspace fmt, build, tests and clippy pass with existing warnings. Combined revision `44ff6e5` was checked on 2026-10-07 (Windows, RTX 5070 Ti,
+release, isolated native server, retail `mp/duel1`, 1280x720): Classic's Camera
+group renders with its icon and rows; adjusting Shot's live-preview angle shows
+third person while `cg_thirdPerson` stays 0, then closing returns to first
+person with that value intact. Orbit, demos, every slider and other resolutions
+remain unverified in game.
+
 ## EternalJK camera damping
 
 Branch `feat/camera-fps`: the third-person camera damps as EternalJK's does. Stock

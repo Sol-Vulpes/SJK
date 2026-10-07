@@ -18,11 +18,12 @@ fn searchable() -> &'static Searchable {
     SEARCHABLE.get_or_init(|| {
         let tab =
             |caption: &str| settings(TABS.iter().position(|tab| *tab == caption).unwrap_or(0));
-        let sources: [(&'static str, &'static [Setting]); 13] = [
+        let sources: [(&'static str, &'static [Setting]); 14] = [
             ("Video", tab("VIDEO")),
             ("Sound", tab("AUDIO")),
             ("Mouse", tab("CONTROLS")),
             ("Game options", Group::GameOptions.rows()),
+            ("Camera", Group::Camera.rows()),
             ("Interface", Group::Interface.rows()),
             ("HUD", Group::Hud.rows()),
             ("Scoreboard", Group::Scoreboard.rows()),
@@ -126,7 +127,7 @@ mod tests {
     #[test]
     fn results_sit_under_their_groups() {
         let lines = lines("fov");
-        assert_eq!(lines[0], super::super::Line::Heading("Video"));
+        assert_eq!(lines[0], super::super::Line::Heading("Camera"));
         assert!(lines.iter().any(|line| matches!(
             line,
             super::super::Line::Row(row) if rows()[*row].cvar == "cg_fov"

@@ -80,6 +80,7 @@ pub(crate) enum Entry {
     Video,
     Sound,
     GameOptions,
+    Camera,
     /// SJK: the menus' and console's look.
     Interface,
     Hud,
@@ -265,6 +266,7 @@ impl Entry {
             Self::Video => Outcome::Settings("VIDEO"),
             Self::Sound => Outcome::Settings("AUDIO"),
             Self::GameOptions => Outcome::Settings("GAME"),
+            Self::Camera => Outcome::Settings("CAMERA"),
             Self::Interface => Outcome::Settings("TEXT"),
             Self::Hud => Outcome::Settings("HUD"),
             Self::Scoreboard => Outcome::Settings("HUD+"),
@@ -341,6 +343,7 @@ impl Entry {
             Self::Video => settings("VIDEO"),
             Self::Sound => settings("AUDIO"),
             Self::GameOptions => Panel::Group(Group::GameOptions),
+            Self::Camera => Panel::Group(Group::Camera),
             Self::Interface => Panel::Group(Group::Interface),
             Self::Hud => Panel::Group(Group::Hud),
             Self::Scoreboard => Panel::Group(Group::Scoreboard),
@@ -382,6 +385,7 @@ impl Entry {
             Self::Weather => "weather",
             Self::MouseJoystick => "mouse_joystick",
             Self::GameOptions => "game_options",
+            Self::Camera => "camera",
             Self::Interface => "interface",
             Self::Hud => "hud",
             Self::Scoreboard => "scoreboard",
@@ -556,10 +560,11 @@ mod tests {
             ]
         );
         assert_eq!(
-            entries(Page::Gameplay)[4..10],
+            entries(Page::Gameplay)[4..11],
             [
                 Entry::MouseJoystick,
                 Entry::GameOptions,
+                Entry::Camera,
                 Entry::Interface,
                 Entry::Hud,
                 Entry::Scoreboard,

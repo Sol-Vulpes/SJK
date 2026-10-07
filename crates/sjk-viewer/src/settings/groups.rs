@@ -11,7 +11,7 @@ use std::sync::OnceLock;
 /// A classic Setup group gathering rows of several settings tabs.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) enum Group {
-    /// Gameplay: pickups, models, trails, remaps, camera and prediction.
+    /// Gameplay: pickups, models, trails and remaps.
     GameOptions,
     /// The menus' style, colours and fonts, and the console's look.
     Interface,
@@ -19,22 +19,26 @@ pub(crate) enum Group {
     Hud,
     /// The scoreboard's style and columns.
     Scoreboard,
+    /// Camera framing, field of view, bob and shake.
+    Camera,
     /// The first-start settings ([`super::quick`]); gathers rows the other groups
     /// and tabs already hold, so it is not one of [`Group::ALL`].
     Quick,
 }
 
 impl Group {
-    pub(crate) const ALL: [Self; 4] = [
+    pub(crate) const ALL: [Self; 5] = [
         Self::GameOptions,
+        Self::Camera,
         Self::Interface,
         Self::Hud,
         Self::Scoreboard,
     ];
 
     /// The group's name, as the one tab of the modern screen showing it.
-    const CAPTIONS: [&'static str; 5] = [
+    const CAPTIONS: [&'static str; 6] = [
         "GAME OPTIONS",
+        "CAMERA",
         "INTERFACE",
         "HUD",
         "SCOREBOARD",
@@ -69,9 +73,6 @@ impl Group {
                 "cg_shieldSphere",
                 "cg_shieldBrightness",
                 "cg_remaps",
-                "cg_thirdPersonCameraDamp",
-                "cg_thirdPersonTargetDamp",
-                "cg_errorDecay",
             ],
             Self::Interface => &[
                 crate::menu::style::CVAR,
@@ -126,6 +127,26 @@ impl Group {
                 "cg_drawScoreboardIcons",
                 "cg_smallScoreboard",
             ],
+            Self::Camera => &[
+                "cg_thirdPerson",
+                "cg_fov",
+                "cg_fovAspectAdjust",
+                "cg_thirdPersonRange",
+                "cg_thirdPersonVertOffset",
+                "cg_thirdPersonHorzOffset",
+                "cg_thirdPersonAngle",
+                "cg_thirdPersonPitchOffset",
+                "cg_thirdPersonCameraDamp",
+                "cg_thirdPersonTargetDamp",
+                "cg_cameraFPS",
+                "cg_errorDecay",
+                "cg_bobUp",
+                "cg_bobPitch",
+                "cg_bobRoll",
+                "cg_screenShake",
+                "cg_fovViewmodel",
+                "cg_fovViewmodelAdjust",
+            ],
             Self::Quick => &[],
         }
     }
@@ -135,7 +156,11 @@ impl Group {
         if self == Self::Quick {
             return super::quick::rows();
         }
-        static ROWS: [OnceLock<Vec<Setting>>; 4] = [
+        if self == Self::Camera {
+            return super::camera::ROWS;
+        }
+        static ROWS: [OnceLock<Vec<Setting>>; 5] = [
+            OnceLock::new(),
             OnceLock::new(),
             OnceLock::new(),
             OnceLock::new(),
@@ -173,7 +198,7 @@ mod tests {
             .flat_map(|group| group.rows())
             .map(|setting| setting.cvar)
             .collect();
-        for caption in ["GAME", "HUD", "HUD+", "TEXT"] {
+        for caption in ["GAME", "HUD", "HUD+", "TEXT", "CAMERA"] {
             let tab = TABS.iter().position(|tab| *tab == caption).unwrap();
             for setting in super::super::settings(tab) {
                 let count = grouped.iter().filter(|cvar| **cvar == setting.cvar).count();

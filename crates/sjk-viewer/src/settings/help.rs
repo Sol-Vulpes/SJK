@@ -110,6 +110,62 @@ pub(super) fn lines(text: &str) -> [&str; HELP_LINES] {
 }
 
 const HELP: &[(&str, &str)] = &[
+    (
+        "cg_thirdPerson",
+        "Choose first or third person for live play. The camera key saves this choice too; zoom overrides it temporarily.",
+    ),
+    (
+        "cg_fovAspectAdjust",
+        "Widen the horizontal field of view on wide screens while preserving the vertical framing.",
+    ),
+    (
+        "cg_thirdPersonRange",
+        "Distance behind your player. Smaller values move closer; zero puts the camera at the focus.",
+    ),
+    (
+        "cg_thirdPersonVertOffset",
+        "Raise or lower the third-person camera's focus. Negative values place it lower.",
+    ),
+    (
+        "cg_thirdPersonHorzOffset",
+        "Move the camera sideways for a shoulder view. Zero keeps it centered.",
+    ),
+    (
+        "cg_thirdPersonAngle",
+        "Orbit around your player without changing where the player aims.",
+    ),
+    (
+        "cg_thirdPersonPitchOffset",
+        "Tilt the third-person camera relative to your aim. This does not change player input.",
+    ),
+    (
+        "cg_cameraFPS",
+        "Reference rate for EternalJK camera damping. Zero uses stock damping; values below 15 also use stock.",
+    ),
+    (
+        "cg_bobUp",
+        "Vertical motion of the first-person view while moving. Zero removes this bob.",
+    ),
+    (
+        "cg_bobPitch",
+        "Pitch motion of the first-person view while moving. Zero removes this bob.",
+    ),
+    (
+        "cg_bobRoll",
+        "Roll motion of the first-person view while moving. Zero removes this bob.",
+    ),
+    (
+        "cg_screenShake",
+        "Camera shake from explosions and effects. Zero disables effect shake; damage kick remains separate.",
+    ),
+    (
+        "cg_fovViewmodel",
+        "Field of view of first-person guns. Zero uses world FOV. This does not reposition saber bolts.",
+    ),
+    (
+        "cg_fovViewmodelAdjust",
+        "Lower the first-person gun slightly when view-model FOV exceeds 90 degrees.",
+    ),
     // VIDEO
     (
         "r_resolution",

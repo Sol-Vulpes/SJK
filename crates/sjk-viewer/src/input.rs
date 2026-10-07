@@ -399,7 +399,17 @@ impl super::GpuState {
             }
             // The choice, not the derived `third_person`: during a zoom it decides what
             // the camera is once the zoom ends (`GpuState::update_zoom_view`).
-            Some(InputAction::ToggleCamera) => self.third_person_choice = !self.third_person_choice,
+            Some(InputAction::ToggleCamera) => {
+                self.third_person_choice = !self.third_person_choice;
+                if self.live_session.is_some()
+                    && let Some(console) = &mut self.console
+                {
+                    console.set_cvar(
+                        "cg_thirdPerson",
+                        if self.third_person_choice { "1" } else { "0" },
+                    );
+                }
+            }
             Some(InputAction::SaberToggle) => {
                 self.pending_generic_command = GENCMD_SABER_SWITCH;
             }

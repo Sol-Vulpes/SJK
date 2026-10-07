@@ -39,6 +39,7 @@ impl GpuState {
         camera[0] = (camera[0] + 180.).rem_euclid(360.) - 180.;
         let sun = self.world_materials.shot_sun(false);
         let panel = &mut self.in_game_menu.shot;
+        panel.camera_preview = false;
         panel.camera_fallback = fallback;
         panel.values[..4].copy_from_slice(&camera);
         panel.sun_available = sun.is_some();
@@ -179,7 +180,7 @@ impl GpuState {
                             panel.values[..4].try_into().unwrap(),
                             duration,
                         ));
-                        self.third_person_choice = true;
+                        panel.camera_preview = true;
                     }
                     if panel.dirty[1] && panel.sun_available {
                         console.director.set_sun(Request::Target(
@@ -193,7 +194,7 @@ impl GpuState {
                 if sun_tab {
                     console.director.set_sun(Request::Orbit(panel.values[7]));
                 } else {
-                    self.third_person_choice = true;
+                    panel.camera_preview = true;
                     console.director.set_camera(Request::Orbit(panel.values[7]));
                 }
                 panel.dirty[usize::from(sun_tab)] = false;

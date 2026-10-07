@@ -8,6 +8,7 @@ use sjk_ui::{DrawList, Rect};
 use winit::event::{ElementState, KeyEvent};
 use winit::keyboard::{KeyCode, PhysicalKey};
 
+mod camera;
 mod catalog;
 mod classic_view;
 mod display;
@@ -778,6 +779,7 @@ fn settings(tab: usize) -> &'static [Setting] {
         5 => NETWORK,
         6 => HUD_OPTIONS,
         7 => TEXT,
+        8 => camera::ROWS,
         QUICK_TAB => quick::rows(),
         _ => &[],
     }

@@ -689,6 +689,18 @@ Model cap surfaces (`*_cap_*`) are carried in every actor mesh, hidden until a c
 
 ## Third-person camera
 
+Settings > CAMERA provides live, saved controls for third-person distance,
+first/third-person mode (`cg_thirdPerson`, also saved by the camera key),
+height, shoulder offset, orbit/pitch, camera and target damping, and EternalJK's
+damping reference rate (0 selects stock). It also offers view FOV, first-person
+bob, effect shake and view-model FOV. Numeric rows accept direct entry as well
+as sliders. The classic Settings > Gameplay > Camera group and settings search expose
+the same camera controls. Camera offsets change presentation, not player aim.
+
+Shot Preview and Orbit use a temporary third-person override while the Shot
+page is open; closing it restores the selected view without changing the saved
+mode, including during demo playback. Effect shake is an on/off control.
+
 Third-person framing follows OpenJK multiplayer `CG_OffsetThirdPersonView`.
 The camera uses a four-unit collision hull against solid/terrain/player-clip
 surfaces and presented inline models, including moving doors and platforms and
