@@ -34,16 +34,29 @@ pub enum StaffRequest {
         /// The achievement's id, or empty for every one.
         id: String,
     },
+    /// Delete an SJK chat message for everyone.
+    ChatDelete {
+        /// The message's id.
+        id: u64,
+    },
+    /// Mute or unmute a key in the SJK chat.
+    ChatMute {
+        /// The key.
+        key_id: String,
+        /// Mute (true) or unmute.
+        muted: bool,
+    },
 }
 
 impl StaffRequest {
     /// The key the request changes, if it changes one.
     pub fn target(&self) -> Option<&str> {
         match self {
-            Self::Search(_) => None,
+            Self::Search(_) | Self::ChatDelete { .. } => None,
             Self::Award { key_id, .. }
             | Self::Unaward { key_id, .. }
-            | Self::ClearAchievements { key_id, .. } => Some(key_id),
+            | Self::ClearAchievements { key_id, .. }
+            | Self::ChatMute { key_id, .. } => Some(key_id),
         }
     }
 }
@@ -95,5 +108,8 @@ pub(crate) fn done(request: &StaffRequest, count: usize) -> String {
             "Cleared every achievement".to_owned()
         }
         StaffRequest::ClearAchievements { id, .. } => format!("Cleared {id}"),
+        StaffRequest::ChatDelete { .. } => "Deleted the message".to_owned(),
+        StaffRequest::ChatMute { muted: true, .. } => "Muted in the chat".to_owned(),
+        StaffRequest::ChatMute { muted: false, .. } => "Unmuted in the chat".to_owned(),
     }
 }

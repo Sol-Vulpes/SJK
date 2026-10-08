@@ -3,7 +3,7 @@
 use crate::keys::{Identity, random_bytes};
 use crate::report::{BugReport, PlayerReport, WorldNote};
 use crate::staff::StaffRequest;
-use crate::wire::{Achievement, Achievements, Players, Presence, Profile, authorization};
+use crate::wire::{Achievement, Achievements, Feed, Players, Presence, Profile, authorization};
 use serde::de::DeserializeOwned;
 use serde_json::{Value, json};
 use std::collections::BTreeMap;
@@ -74,6 +74,38 @@ pub trait Hub: Send {
     ) -> Result<Vec<Profile>, HubError> {
         Err(HubError::Protocol(
             "this hub client does not send staff requests".to_owned(),
+        ))
+    }
+    /// Send an SJK chat message (already checked by [`crate::chat::check`]) signed by
+    /// the identity, with the in-game `name` worn (may be empty); the hub answers with
+    /// its id.
+    fn chat(&mut self, _identity: &Identity, _text: &str, _name: &str) -> Result<u64, HubError> {
+        Err(HubError::Protocol(
+            "this hub client does not send chat".to_owned(),
+        ))
+    }
+    /// Play `emote` for the slot the identity claims on `server`.
+    fn emote(
+        &mut self,
+        _identity: &Identity,
+        _server: &str,
+        _emote: &str,
+    ) -> Result<u64, HubError> {
+        Err(HubError::Protocol(
+            "this hub client does not send emotes".to_owned(),
+        ))
+    }
+    /// What is new after `after` (chat, and the emotes of `server`), waiting up to `wait`
+    /// seconds at the hub for something to come.
+    fn feed(
+        &mut self,
+        _identity: &Identity,
+        _after: u64,
+        _server: Option<&str>,
+        _wait: u64,
+    ) -> Result<Feed, HubError> {
+        Err(HubError::Protocol(
+            "this hub client does not read the feed".to_owned(),
         ))
     }
     /// Any player's public profile.
@@ -160,6 +192,15 @@ pub struct HttpHub {
 impl HttpHub {
     /// A client for the hub at `base_url` (`https://hub.example`, no trailing slash needed).
     pub fn new(base_url: &str, user_agent: &str) -> Result<Self, HubError> {
+        Self::with_timeout(base_url, user_agent, TIMEOUT)
+    }
+
+    /// [`HttpHub::new`] whose requests may take `timeout` (the feed's long poll).
+    pub fn with_timeout(
+        base_url: &str,
+        user_agent: &str,
+        timeout: Duration,
+    ) -> Result<Self, HubError> {
         let base = base_url.trim().trim_end_matches('/').to_owned();
         if !valid_base_url(&base) {
             return Err(HubError::Network(
@@ -167,7 +208,7 @@ impl HttpHub {
             ));
         }
         let agent = ureq::Agent::config_builder()
-            .timeout_global(Some(TIMEOUT))
+            .timeout_global(Some(timeout))
             .user_agent(user_agent)
             .http_status_as_error(false)
             .build()
@@ -317,6 +358,56 @@ fn player_report_body(report: &PlayerReport) -> Value {
     body
 }
 
+/// A game server's address as a query value: digits and dots as they are, the rest
+/// (`:`, an IPv6 address's brackets) percent-encoded.
+fn encode_server(server: &str) -> String {
+    server
+        .bytes()
+        .map(|byte| match byte {
+            b'0'..=b'9' | b'.' => (byte as char).to_string(),
+            _ => format!("%{byte:02X}"),
+        })
+        .collect()
+}
+
+/// `GET /v1/feed`'s path and query.
+fn feed_path(after: u64, server: Option<&str>, wait: u64) -> String {
+    let mut path = format!("/v1/feed?after={after}&wait={wait}");
+    if let Some(server) = server {
+        path.push_str("&server=");
+        path.push_str(&encode_server(server));
+    }
+    path
+}
+
+/// A staff request's path and body.
+fn staff_call(request: &StaffRequest) -> (&'static str, Value) {
+    match request {
+        StaffRequest::Search(query) => ("/v1/staff/search", json!({ "query": query })),
+        StaffRequest::Award {
+            key_id,
+            medal,
+            note,
+        } => (
+            "/v1/staff/award",
+            json!({ "key_id": key_id, "medal": medal, "note": note }),
+        ),
+        StaffRequest::Unaward { key_id, medal } => (
+            "/v1/staff/unaward",
+            json!({ "key_id": key_id, "medal": medal }),
+        ),
+        StaffRequest::ClearAchievements { key_id, id } => (
+            "/v1/staff/clear-achievements",
+            json!({ "key_id": key_id, "id": id }),
+        ),
+        StaffRequest::ChatDelete { id } => ("/v1/staff/chat-delete", json!({ "id": id })),
+        StaffRequest::ChatMute { key_id, muted } => (
+            "/v1/staff/chat-mute",
+            json!({ "key_id": key_id, "muted": muted }),
+        ),
+    }
+}
+
 fn parse<T: DeserializeOwned>(value: Value) -> Result<T, HubError> {
     serde_json::from_value(value).map_err(|error| HubError::Protocol(error.to_string()))
 }
@@ -416,31 +507,16 @@ impl Hub for HttpHub {
         identity: &Identity,
         request: &StaffRequest,
     ) -> Result<Vec<Profile>, HubError> {
-        let (path, body) = match request {
-            StaffRequest::Search(query) => ("/v1/staff/search", json!({ "query": query })),
-            StaffRequest::Award {
-                key_id,
-                medal,
-                note,
-            } => (
-                "/v1/staff/award",
-                json!({ "key_id": key_id, "medal": medal, "note": note }),
-            ),
-            StaffRequest::Unaward { key_id, medal } => (
-                "/v1/staff/unaward",
-                json!({ "key_id": key_id, "medal": medal }),
-            ),
-            StaffRequest::ClearAchievements { key_id, id } => (
-                "/v1/staff/clear-achievements",
-                json!({ "key_id": key_id, "id": id }),
-            ),
-        };
+        let (path, body) = staff_call(request);
         let answer = self.send(Some(identity), "POST", path, Some(body))?;
-        if matches!(request, StaffRequest::Search(_)) {
-            let found: Players = parse(answer)?;
-            Ok(found.players)
-        } else {
-            Ok(vec![parse(answer)?])
+        match request {
+            StaffRequest::Search(_) => {
+                let found: Players = parse(answer)?;
+                Ok(found.players)
+            }
+            // The chat's moderation answers `{}`.
+            StaffRequest::ChatDelete { .. } | StaffRequest::ChatMute { .. } => Ok(Vec::new()),
+            _ => Ok(vec![parse(answer)?]),
         }
     }
 
@@ -474,15 +550,39 @@ impl Hub for HttpHub {
     }
 
     fn presence(&mut self, server: &str) -> Result<Vec<Presence>, HubError> {
-        let query: String = server
-            .bytes()
-            .map(|byte| match byte {
-                b'0'..=b'9' | b'.' => (byte as char).to_string(),
-                _ => format!("%{byte:02X}"),
-            })
-            .collect();
+        let query = encode_server(server);
         let answer = self.send(None, "GET", &format!("/v1/presence?server={query}"), None)?;
         parse(answer["players"].clone())
+    }
+
+    fn chat(&mut self, identity: &Identity, text: &str, name: &str) -> Result<u64, HubError> {
+        let mut body = json!({ "text": text });
+        if !name.is_empty() {
+            body["name"] = json!(name);
+        }
+        let answer = self.send(Some(identity), "POST", "/v1/chat", Some(body))?;
+        answer["id"]
+            .as_u64()
+            .ok_or_else(|| HubError::Protocol("the chat answer has no id".to_owned()))
+    }
+
+    fn emote(&mut self, identity: &Identity, server: &str, emote: &str) -> Result<u64, HubError> {
+        let body = json!({ "server": server, "emote": emote });
+        let answer = self.send(Some(identity), "POST", "/v1/emote", Some(body))?;
+        answer["id"]
+            .as_u64()
+            .ok_or_else(|| HubError::Protocol("the emote answer has no id".to_owned()))
+    }
+
+    fn feed(
+        &mut self,
+        identity: &Identity,
+        after: u64,
+        server: Option<&str>,
+        wait: u64,
+    ) -> Result<Feed, HubError> {
+        let path = feed_path(after, server, wait);
+        parse(self.send(Some(identity), "GET", &path, None)?)
     }
 }
 
@@ -542,6 +642,41 @@ mod tests {
         assert_eq!(body["target_key_id"], "0123456789abcdef");
         assert_eq!(body["server_name"], "^4JoF");
         assert_eq!(body["name"], "^2Sol");
+    }
+
+    #[test]
+    fn the_feed_path_carries_after_wait_and_the_server() {
+        assert_eq!(feed_path(0, None, 25), "/v1/feed?after=0&wait=25");
+        assert_eq!(
+            feed_path(14, Some("1.2.3.4:29070"), 25),
+            "/v1/feed?after=14&wait=25&server=1.2.3.4%3A29070"
+        );
+        assert_eq!(
+            feed_path(1, Some("[::1]:29070"), 0),
+            "/v1/feed?after=1&wait=0&server=%5B%3A%3A1%5D%3A29070"
+        );
+    }
+
+    #[test]
+    fn staff_chat_requests_send_the_protocols_fields() {
+        assert_eq!(
+            staff_call(&StaffRequest::ChatDelete { id: 12 }),
+            ("/v1/staff/chat-delete", json!({"id": 12}))
+        );
+        assert_eq!(
+            staff_call(&StaffRequest::ChatMute {
+                key_id: "0123456789abcdef".into(),
+                muted: true
+            }),
+            (
+                "/v1/staff/chat-mute",
+                json!({"key_id": "0123456789abcdef", "muted": true})
+            )
+        );
+        assert_eq!(
+            staff_call(&StaffRequest::Search("so".into())),
+            ("/v1/staff/search", json!({"query": "so"}))
+        );
     }
 
     #[test]

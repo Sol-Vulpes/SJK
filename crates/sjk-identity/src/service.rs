@@ -1035,6 +1035,7 @@ mod tests {
                     key_id: key_id.clone(),
                     ..profile("Target")
                 }],
+                StaffRequest::ChatDelete { .. } | StaffRequest::ChatMute { .. } => Vec::new(),
             })
         }
     }
