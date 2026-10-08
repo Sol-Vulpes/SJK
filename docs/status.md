@@ -36,7 +36,10 @@ shots looked at: `duel6_sun_blade` (beside stock orange and blue, close-ups over
 held on the Character page), `other_players_holocrons_on_duel6`, the Unlockables page
 (owned, locked, identity off, 4:3), Profile and Staff. Not verified: nothing ran
 against the deployed hub (it has neither chat nor looks yet) or with other players in a
-match; the sounds were not listened to; giving a saber on/off sound to the nearest
+match; the sounds were not listened to; follow mode with real players is untested (a
+review fixed the followed player wearing the spectator's skin, looks lost to a 429 or
+a failed claim, looks read across a server change, and a relocked skin lingering on
+its owner's screen, each with a test); giving a saber on/off sound to the nearest
 skinned player within 64 units is a guess, as the game sends it with no owner.
 
 ## SJK chat and emotes through the hub
