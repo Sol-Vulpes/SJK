@@ -122,7 +122,10 @@ and failures wait 10 seconds; `not_on_server` waits for the next accepted claim;
 another refusal (an older hub) is not repeated until the look or the claim changes.
 Leaving the server sends nothing (the release drops the look).
 `Snapshot::look_outcome` holds what became of the last one. Unit tests against a fake
-hub; not tried against a running hub.
+hub, and end to end (`hub_e2e`) against the hub's unlocks work in progress run on this
+PC: a look needs a claim, shows in presence and the feed, survives the claim's renewal
+but not another slot, a skin the key lacks is refused until granted, and the service
+wears its look (without a skin it lacks) and reads looks with the chat off.
 
 ### Receiving
 
