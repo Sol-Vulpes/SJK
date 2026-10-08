@@ -542,6 +542,20 @@ test: listRemaps says the map is blocked; the map's own and local remapShader re
 test: unblockRemaps brings them back; after a restart the list is still in cg_remapsBlockedMaps.
 note: Not run in game yet. The map's own worldspawn remaps are never blocked.
 
+[blade-skins]
+area: Rendering & effects
+title: Unlockable blade skins, and others see your look (SJK PR #45)
+change: Blade skins come in asset packs the hub serves; the first is the Sun blade (an unlock).
+change: Others on the server see your skin, and your lit Illuminate holocron, through the hub.
+change: Profile > Unlockables (or unlockables) lists them; saberskin equips one.
+test: Hub with unlocks and packs: sjk-hub unlock <key_id> saber_sun, or Staff page > Unlock.
+test: Profile > Unlockables: the Sun swatch is drawn; equip it, join a server, ignite the saber.
+test: A second SJK player on the server sees your skin, and your holocron by your shoulder.
+test: Relock it on the Staff page: your blade goes back to the stock look.
+test: With no skin, retail and RGB blades look exactly as before.
+note: Needs the hub's unlocks and asset packs (SJK-hub #2 and #3), not deployed when merged.
+note: Not run in a game against the deployed hub; the sounds have not been heard yet.
+
 # ---- Audio ----
 
 # ---- Gameplay ----

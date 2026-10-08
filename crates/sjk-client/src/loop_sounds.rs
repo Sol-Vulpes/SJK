@@ -134,6 +134,10 @@ pub(crate) struct LegacyLoopAdapter {
     weapon_firing: [Option<u16>; 19],
     weapon_ready: [Option<u16>; 19],
     sabers: [SaberLoops; MAX_CLIENTS],
+    /// Registered hums of the replacement saber sound sets, by set.
+    saber_hums: Vec<u16>,
+    /// The hum each client's blade skin plays instead of its sabers' own.
+    hum_overrides: [Option<u16>; MAX_CLIENTS],
     client_config_hash: [u64; MAX_CLIENTS],
     decisions: Vec<LegacyLoopDecision>,
     loops_per_entity: Box<[u8]>,
@@ -209,6 +213,8 @@ impl LegacyLoopAdapter {
             weapon_firing,
             weapon_ready,
             sabers,
+            saber_hums: Vec::new(),
+            hum_overrides: [None; MAX_CLIENTS],
             client_config_hash: std::array::from_fn(|client| {
                 player_config_hash(game_state, client)
             }),
@@ -417,7 +423,9 @@ impl LegacyLoopAdapter {
             self.push_soundset(sound, set_index, state.number(), origin);
             return;
         }
-        let sound = self.cs_sounds[usize::from(configured)];
+        let sound = self
+            .thrown_saber_hum(state)
+            .or(self.cs_sounds[usize::from(configured)]);
         let velocity = if state.entity_type() == ET_MISSILE {
             legacy_evaluate_trajectory_delta(
                 state.trajectory_delta(),
@@ -476,7 +484,7 @@ impl LegacyLoopAdapter {
         if client >= MAX_CLIENTS {
             return;
         }
-        let loops = self.sabers[client];
+        let loops = self.saber_loops(client);
         let primary_active = !state.saber_in_flight();
         let secondary_active = state.saber_holstered() == 0 && loops.secondary.is_some();
         if primary_active {
@@ -514,7 +522,7 @@ impl LegacyLoopAdapter {
         if client >= MAX_CLIENTS {
             return;
         }
-        let loops = self.sabers[client];
+        let loops = self.saber_loops(client);
         let primary_active = !player.saber_in_flight();
         let secondary_active = player.saber_holstered() == 0 && loops.secondary.is_some();
         if primary_active {
@@ -536,6 +544,50 @@ impl LegacyLoopAdapter {
                 listener_origin,
                 [0.0; 3],
             );
+        }
+    }
+
+    /// Register the replacement sets' hums, in set order
+    /// (`LegacySoundAdapter::register_saber_sound_sets`).
+    pub(crate) fn register_saber_hums(
+        &mut self,
+        hums: &[&str],
+        vfs: &VirtualFileSystem,
+        register: &mut impl FnMut(&str, &[u8]) -> Option<SoundHandle>,
+    ) {
+        self.saber_hums = hums
+            .iter()
+            .map(|path| intern_sound(&mut self.sounds, vfs, path, register))
+            .collect();
+    }
+
+    /// Which set's hum each client plays (`None`: its sabers' own).
+    pub(crate) fn set_saber_hum_overrides(&mut self, sets: &[Option<u8>; MAX_CLIENTS]) {
+        self.hum_overrides =
+            sets.map(|set| set.and_then(|set| self.saber_hums.get(usize::from(set)).copied()));
+    }
+
+    /// A thrown saber's hum when its owner wears a blade skin: the skin's, in place of
+    /// the `loopSound` the game gives the saber entity (`w_saber.c`'s `saberHumSound`
+    /// or the hilt's `soundLoop`). `None` for any other entity or a stock owner.
+    fn thrown_saber_hum(&self, state: &EntityState) -> Option<u16> {
+        let owner = crate::thrown_sabers::legacy_thrown_saber_owner(state)?;
+        self.hum_overrides
+            .get(usize::from(owner))
+            .copied()
+            .flatten()
+    }
+
+    /// A client's hums: its sabers' own, or its blade skin's for both (the second is then
+    /// the same sound on the same source, which `push` keeps once).
+    fn saber_loops(&self, client: usize) -> SaberLoops {
+        let loops = self.sabers[client];
+        match self.hum_overrides[client] {
+            Some(hum) => SaberLoops {
+                primary: Some(hum),
+                secondary: loops.secondary.map(|_| hum),
+            },
+            None => loops,
         }
     }
 

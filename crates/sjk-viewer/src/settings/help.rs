@@ -335,7 +335,7 @@ const HELP: &[(&str, &str)] = &[
     ),
     (
         crate::illuminate::CVAR,
-        "Illuminate on the Force wheel: a holocron by your shoulder lights the way. Only you see it.",
+        "Illuminate on the Force wheel: a holocron by your shoulder lights the way. Other SJK players see it too.",
     ),
     (
         "cg_shieldBrightness",

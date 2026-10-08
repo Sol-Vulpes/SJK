@@ -1788,7 +1788,10 @@ are in [identity.md](identity.md).
   bio (written there, up to 6 lines under the hub's rules), their record from the
   achievement counts, and a second tab, the achievements board (`achievements`). It
   has the SJK UI's look in every menu style; its Identity settings button opens the
-  Identity page ([identity.md](identity.md#profile)).
+  Identity page ([identity.md](identity.md#profile)) and See unlockables the
+  Unlockables page (`unlockables`, [unlockables.md](unlockables.md#unlockables-page)).
+- Blade skins: `cg_saberSkin` and `saberskin` choose the one worn, shown only while the
+  hub profile owns it ([Blade skins](#blade-skins)).
 - Achievements are counted in matches on servers and kept in `achievements.json`
   beside `identity.key`, sent to the hub with the identity on; an unlock says so in the
   console and as a centre print ([identity.md](identity.md#achievements)).
@@ -1907,9 +1910,11 @@ See [hud/force_wheel.rs](../crates/sjk-viewer/src/hud/force_wheel.rs).
 
 Illuminate is a free power every player has, SJK's own and not a game power: a
 holocron that floats by the player's left shoulder, turning slowly and bobbing,
-with a warm point light (300 units) that lights the way in dark maps. Only this
-client sees it; no server knows of it and other players, SJK ones included, do
-not see it. It is the Force wheel's last entry (and the radial HUD's list's), with its
+with a warm point light (300 units) that lights the way in dark maps. No game
+server knows of it: its lit state travels through the SJK hub as part of the
+player's look ([unlockables.md](unlockables.md)), so other SJK players on the same
+server see it by that player (below); players on stock clients do not. It is the
+Force wheel's last entry (and the radial HUD's list's), with its
 own holocron icon; `+useforce` on it turns the holocron on or off, and the
 `force_illuminate` command does the same from a bind (Settings > Key bindings >
 Force powers). It is never sent as the selected power: the client sets its
@@ -1927,11 +1932,63 @@ on or off for the client's run, not saved. Its light is added first each frame,
 so a full light list never drops it, but `r_dynamiclight 0` puts it out with the
 others.
 
+Other SJK players' holocrons show when their look says lit (with `cl_identity` on and
+a hub; their claimed name must match the name the game shows in their slot, as for
+badges). Each floats by that player's left shoulder, placed from their entity's
+interpolated origin, eye height (crouching lowers it) and view yaw, with the same fade,
+bob, turn and trailing as one's own (each slot's bob and turn a little out of step).
+The cube always shows for another player, in first and third person, while the game
+draws them; dead, hidden, cloaked or out of the snapshot, it goes out where it was.
+`cg_illuminate 0` only takes one's own off the wheel. All the cubes show, but only
+the four nearest the camera add their light, so the frame's 32 lights stay for the
+weapons and sabers.
+
 The cube, its two pictures (lit metal, and the emblem alone for the glowing
 stage), its shader and the wheel icon are bundled and mounted below all game
 data, so a PK3 with the same paths replaces them. Sol generated the art; see
 [assets/holocron](../crates/sjk-viewer/assets/holocron/README.md) and
 [illuminate.rs](../crates/sjk-viewer/src/illuminate.rs).
+
+## Blade skins
+
+A blade skin is an unlockable saber look ([unlockables.md](unlockables.md)); the
+first is the Sun blade (`saber_sun`). Its look and sounds are a blade-skin file and
+sound files in a pack the SJK hub delivers ([unlockables.md](unlockables.md#packs)),
+drawn by the generic renderer described in
+[rendering.md](rendering.md#saber-blade-skins); with no pack the skin is the stock
+blade. `cg_saberSkin` (archived, default
+empty) holds the skin the player wears by unlock id; empty or an unknown id is the
+stock blade. It shows only while the player's own hub profile lists that unlock
+(`Looks::own_saber_skin`, read twice a second) and its pack is loaded: with the
+identity off, no hub, no answer yet, the unlock missing or no pack, the stock blade
+shows, in the hand, in first person, thrown and on the Character page. Other players'
+skins are their looks from the hub ([unlockables.md](unlockables.md#receiving)), copied
+into the per-client table (`GpuState::sync_saber_skins`) only when the looks or the
+loaded skins change.
+
+`saberskin` lists the blade skins, owned (since when) or locked (how to get it), and
+which is worn; `saberskin <id>` or `saberskin none` sets `cg_saberSkin` (a locked one
+is kept and shows once unlocked). `unlockables` opens the Unlockables page (also the
+Profile page's See unlockables), where owned skins are equipped and unequipped
+([sjk-ui.md](sjk-ui.md#sjks-pages)).
+
+A skin brings its own sounds, heard for each player wearing it: its ignition for
+`EV_SABER_UNHOLSTER` and for a general sound that is a stock `saberon*`/`saberoff*`
+or any `.sab` `soundOn`/`soundOff` (the game's `G_Sound` gives these no owner, so
+the player whose origin is nearest the sound, within 64 units, is taken), its hum
+for both sabers' hum loop, and three swings for `EV_SABER_ATTACK` and the animation
+`saberhup` cues, ahead of a hilt's own `swingSound`s
+([saber_sound_overrides.rs](../crates/sjk-client/src/saber_sound_overrides.rs)).
+The viewer registers the skins' sounds with the gamestate's sound tables and passes
+the per-client table every frame. With no skin worn every path is the stock one. A
+thrown saber hums its owner's skin too: the flying saber entity's `loopSound` (the
+stock hum or the hilt's `soundLoop`) is replaced while the owner it names
+(`genericenemyindex`) wears one. A skin's sounds are the game paths its file names, read from its pack below all game
+data (`VirtualFileSystem::with_lower`), so a PK3 with the same paths replaces them. They
+are registered when the gamestate's tables are built and again, at once, when a pack
+arrives mid-session (`GameAudio::follow_blade_skins`, which also decodes a skin's
+sounds afresh in case the new pack changed them); the per-client table then names the
+new sets. The Sun's sounds have not been checked by ear in a game.
 
 ## Quick wheels
 

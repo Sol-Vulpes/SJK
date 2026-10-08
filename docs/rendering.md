@@ -948,6 +948,56 @@ spectators/follow and dead flags. Shared fallback meshes stay hidden until
 the local model loads. The body and head mask use one filtered equipment
 decision; head descendants such as hair and helmets are masked too.
 
+## Saber blade skins
+
+A blade skin replaces a saber blade's colour (not its hilt) with a look of its own; the
+first is the Sun blade, an SJK unlockable ([unlockables.md](unlockables.md#blade-skins)).
+The renderer is generic and data-driven: a skin's look is a blade-skin file in a pack
+the SJK hub delivers ([unlockables.md](unlockables.md#blade-skin-files)), and no skin's
+values are in the code. [saber_skins.rs](../crates/sjk-viewer/src/saber_skins.rs) holds
+the loaded skins (`LoadedSkins`, at most 8, numbered in id order) and the per-client
+table of who wears which (filled from the hub's looks; ids and names are
+[unlockables.rs](../crates/sjk-viewer/src/unlockables.rs)'s); `BladeColor::Skin` carries
+the skin's number, trail and light wherever a blade colour is chosen (in the hand,
+thrown, first person, the menu stage). A skin whose pack is not loaded is the player's
+stock blade.
+
+- **Material.** Each loaded skin is the saber material of its number after the six
+  retail pairs and the neutral RGB pair (`saber_rgb.rs` `SKIN_MATERIAL` = 7, eight
+  slots, which hold the neutral pair until a skin loads there). Its glow/core pair is
+  the pack's images, or generated from the file's two profiles by the same code as the
+  neutral pair (`generated_glow`/`generated_core`; the neutral pair's bytes are
+  unchanged and pinned by a test). Retail and RGB blades keep their materials and
+  shading unchanged.
+- **Parameters.** The skins' parameters are a uniform array of 8 `Skin` structs of 21
+  `vec4`s (`SkinUniform`, bind group 2 of the saber pipelines), written only when skins
+  load (`saber_gpu::Runtime::upload_skins`), never per frame. Each instance's material
+  slot selects its skin.
+- **Animation.** `saber.wgsl` colours and animates a skin from two per-instance values,
+  presentation seconds wrapped at 1024 s and a per-blade seed
+  (`Instance::with_animation`; the seed follows the entity, saber and blade, so a thrown
+  blade keeps its hand's) and its parameters: granulation (one or two octaves of value
+  noise drifting toward the tip), flame tongues licking outward at the corona's rim,
+  shimmer waves, up to 8 flare tracks each sending a bright knot from hilt to tip once a
+  cycle, lit on the cycles whose draw passes the file's threshold, brightening and
+  widening the corona, and the core's breathing. The corona is graded from the file's
+  rim colours to its inside colour; the core is the file's hot colour with a fringe
+  between two colours. The glow capsule may reach `corona.reach` (1 to 2) times the
+  stock one; the effect bounds allow for 2 (`MAX_GLOW_REACH`). `fragment_glow` shades
+  the glow the same way, so the dynamic glow's bloom follows the flares.
+- **Trail and light.** The skin's file gives its trail colour, its light colour (with
+  the stock gain) and the light's flicker (an amount and up to two waves, phased per
+  hilt).
+
+Per frame this adds one 8-byte vertex attribute per blade and nothing else on the
+CPU; the noise is only evaluated for skinned blades. The world shot `duel6_sun_blade`
+([world_shot_saber_skins.rs](../crates/sjk-viewer/src/world_shot_saber_skins.rs)),
+given the hub's pack through `SJK_TEST_PACKS`, draws the Sun between a stock orange and
+a stock blue blade, the Sun close up every 0.3 s, and the Character page's model holding
+it; reviewed by eye on one GPU (08/10/2026), and again after the move to blade-skin
+files against shots of the earlier built-in Sun (same day), not on other GPUs or in a
+live match.
+
 ## Saber trails
 
 [saber_trail.rs](../crates/sjk-viewer/src/saber_trail.rs) follows codemp
