@@ -7,11 +7,11 @@ Illuminate holocron is lit) travels through the hub, so every SJK player on the
 same game server sees it. Players on stock clients see nothing, and no game
 server knows of any of it.
 
-Status (08/10/2026): designed with Sol the same day and being built on
+Status (08/10/2026): designed with Sol the same day and built on
 `personal/saber-skins` (client, stacked on `personal/sjk-chat`) and
 `feat/unlocks-looks` (Sol-Vulpes/SJK-hub, stacked on `feat/chat-emotes`). The
-hub's side is not deployed. Sections below say what is built and what is
-verified as each part lands.
+hub's side is not deployed, so nothing has been seen with real players yet. Each
+section below says what is built and how it was verified.
 
 ## Decisions
 
@@ -29,8 +29,10 @@ verified as each part lands.
 ## Catalogue
 
 Fixed, in the hub (`src/unlocks.rs`) and in the client
-([unlockables.rs](../crates/sjk-viewer/src/unlockables.rs)); a new unlockable
-needs both. Ids never change meaning.
+([unlockables.rs](../crates/sjk-viewer/src/unlockables.rs), the one client list: id,
+name, kind, a line on what it is, how to get it, and for a blade skin its
+`BladeSkin`; the looks, the blade skins, `saberskin`, the Unlockables page and the
+Staff page all read it); a new unlockable needs both. Ids never change meaning.
 
 | Id | Name | Kind | How to get it |
 | --- | --- | --- | --- |
@@ -97,14 +99,29 @@ whether the Illuminate holocron is lit. Both are required in a request.
 
 ### Settings and commands
 
-- `cg_saberSkin` (archived, default empty): the blade-skin unlock id the player
-  wears. It applies only while the player's own hub profile lists that unlock; with
-  no identity, no hub or the unlock missing, the stock blade shows and nothing is
-  sent. Built so far: the cvar, read once a frame in one place
+Built.
+
+- `cg_saberSkin` (archived, default empty; one registration, the constant
+  `unlockables::SABER_SKIN_CVAR`): the blade-skin unlock id the player wears. It
+  applies only while the player's own hub profile lists that unlock; with no
+  identity, no hub, the hub not answered yet or the unlock missing, the stock blade
+  shows and nothing is sent. The looks read it twice a second and gate it
+  (`Looks::own_saber_skin`); the renderer takes the gated skin from there
   (`GpuState::local_saber_skin`, [saber_skins.rs](../crates/sjk-viewer/src/saber_skins.rs)),
-  which for now applies it without the profile check.
-- `unlockables` opens the Unlockables page; `saberskin` alone lists the blade skins
-  with owned or locked, `saberskin <id>` or `saberskin none` sets `cg_saberSkin`.
+  for the hand, first person, a thrown saber, the sounds and the Character page's
+  preview.
+- `saberskin` ([saber_skin_command.rs](../crates/sjk-viewer/src/saber_skin_command.rs))
+  alone lists the blade skins: id, name, owned (since when) or locked (how to get
+  it), which one is worn or chosen, and why ownership is not known when it is not
+  (identity off, no hub, waiting). `saberskin <id>` (case ignored, stored as the
+  catalogue's id) or `saberskin none` sets `cg_saberSkin`; a locked skin is set all
+  the same and the answer says it shows only once unlocked. An unknown id is refused.
+  Tab completes the command's name; its argument has no completion (the console
+  completes command and cvar names only).
+- `unlockables` opens (or closes) the Unlockables page.
+
+Verified by unit tests (the listing, the answers, the cvar set even when locked, the
+gate); not yet used against the deployed hub.
 
 ### Sending
 
@@ -146,16 +163,18 @@ settings, not the hub.
 What the renderer reads, on `GpuState::looks`:
 
 - `saber_skin_id(client) -> Option<&'static str>`: the blade skin the player in that
-  slot wears (one of `looks::BLADE_SKINS`), `None` for the stock blade; the local
-  player's slot holds its own gated skin.
+  slot wears (a catalogue id), `None` for the stock blade; the local player's slot
+  holds its own gated skin.
+- `revision()`: changes whenever what a slot wears (or the own look) changes, so the
+  blade skins' table is filled again only then.
 - `illuminated(client) -> bool`: their holocron is lit.
 - `own_saber_skin() -> Option<&'static str>`: the local player's gated skin, in a game
   or not (first person, the Character page's preview).
 
 ### The Sun blade
 
-Built on `personal/saber-skins-blade` (renderer and sounds); who wears it comes from
-the per-client table the hub's looks are to fill.
+Built (renderer and sounds); who wears it is the viewer's per-client table, filled
+from the looks.
 
 - Drawn as its own saber material (slot 7, after the neutral RGB pair) with
   engine-generated textures: a white-hot core into gold, a corona from gold through
@@ -164,18 +183,25 @@ the per-client table the hub's looks are to fill.
   per-blade seed; the dynamic glow pass gets the same animation
   ([rendering.md](rendering.md#saber-blade-skins)). Its trail is amber gold and its
   light warm orange with a slow flicker. Retail and RGB blades are unchanged.
-- Shown for every client whose entry in the viewer's `SaberSkins` table is set
-  (`SaberSkins::set(client, Some(BladeSkin::Sun))`): in the game, in first person,
-  thrown, and on the menu stage (the Character page) for the local player.
+- Shown for every client whose entry in the viewer's `SaberSkins` table is set: in the
+  game, in first person, thrown, and on the menu stage (the Character page) for the
+  local player. Once a frame (`GpuState::sync_saber_skins`) the table takes every
+  other slot's skin from `Looks::saber_skin_id` when the looks' revision changed (no
+  allocation; 32 lookups only then), and the local player's own from the gated
+  `Looks::own_saber_skin` in its slot (also with no session, for the preview).
 - Sounds, per player wearing it: ignition and switching off, the hum loop and three
   swings replace the stock ones (`sound/sjk/sabers/sun/*`, synthesized by
   `scripts/saber_skin_sounds.py`, bundled and mounted below the game data). The
   viewer passes the table to the audio adapter every frame
-  (`LegacySoundAdapter::set_saber_sound_overrides`, [client.md](client.md#blade-skins)).
-  A thrown saber's hum stays the hilt's own.
-- Verified: unit tests (material slot, colours, the table, the cvar, the sound
-  overrides per client, the bundled WAVs and the hum's loop point) and the
-  `duel6_sun_blade` world shot. Not verified: the sounds by ear, a live match.
+  (`LegacySoundAdapter::set_saber_sound_overrides`, [client.md](client.md#blade-skins)),
+  so other players' sounds follow their looks too. A thrown saber hums the skin's hum
+  as well: the saber entity's own `loopSound` is replaced while its owner
+  (`genericenemyindex`) wears a skin.
+- Verified: unit tests (material slot, colours, the table following the looks and the
+  gated own skin, the cvar, the sound overrides per client, a thrown saber's hum, the
+  bundled WAVs and the hum's loop point) and the `duel6_sun_blade` world shot (the
+  held blade with the unlock owned, as a profile listing it would). Not verified: the
+  sounds by ear, a live match, another player's skin from a real hub.
 
 ### Illuminate for others
 
@@ -192,11 +218,30 @@ without a session); not yet seen with real players.
 
 ### Unlockables page
 
-An SJK page (SJK UI look in every menu style, as the Staff page) opened from
-Profile and `unlockables`: a card per unlockable with a live swatch, its name,
-owned (with the date and the team's note) or locked (with how to get it), and Equip
-or Unequip for owned blade skins. The Staff page gains Unlock and Relock for the
-player found.
+Built ([unlockables_panel.rs](../crates/sjk-viewer/src/unlockables_panel.rs), drawing
+in [unlockables_panel_view.rs](../crates/sjk-viewer/src/unlockables_panel_view.rs) and
+[unlockables_swatch.rs](../crates/sjk-viewer/src/unlockables_swatch.rs); layout in
+[sjk-ui.md](sjk-ui.md#sjks-pages)). An SJK page in the SJK UI's look in every menu
+style, as the Staff and Profile pages, opened by the Profile page's See unlockables
+and the `unlockables` command:
+
+- a card per catalogue entry: a live swatch (the Sun blade drawn with the UI's
+  shapes, moving: a breathing corona, flame loops and granules, a flare running hilt
+  to tip; grey and still under a padlock when locked), its kind, name and what it is,
+  owned (`Yours since dd/mm/yyyy, from the SJK team` and the team's note) or locked
+  (how to get it), and Equip or Unequip for an owned blade skin, which sets
+  `cg_saberSkin`;
+- what the player wears and how unlockables work on the right;
+- with the identity off, no hub or no answer yet, the page says so ("Unlockables need
+  the SJK identity") and the cards are neither owned nor locked.
+
+The Staff page lists every unlockable for the player found, with Unlock (sending the
+note field's text) and Relock ([identity.md](identity.md#staff)).
+
+Verified: unit tests (keys, pointer, focus, equip, every state fitting at 1080p, 4K,
+4:3 and 21:9, the swatch moving and staying inside its frame, the Staff page's Unlock
+and Relock) and the world shots `duel6_sjk_unlockables` (owned and worn, locked,
+identity off, 4:3), `duel6_sjk_profile` and `duel6_sjk_staff`.
 
 ## Planned, not built
 

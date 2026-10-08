@@ -103,7 +103,9 @@ the camera behind glides through its tour (The map behind); on the loading
 screen a gold arc turns once every three seconds and the destination's
 levelshot fades in (0.45 s); on Credits the sun (its sunburst, god rays and
 sparks) keeps turning and rising, and the page's rows rise into place as it
-opens or a fold unfolds. Nothing else moves on its own.
+opens or a fold unfolds; on Unlockables an owned unlockable's swatch lives (the Sun
+blade's corona breathes, flame loops rise and a flare runs along it). Nothing else
+moves on its own.
 
 ## The map behind
 
@@ -269,7 +271,8 @@ opened from a game.
 ## SJK's pages
 
 What's new, Update, Identity, Profile and Credits, which the main page's SJK page opens
-(and their console commands), have the SJK UI's look in this style: drawn in its
+(and their console commands), and the Staff, Unlockables and SJK chat pages have the
+SJK UI's look in this style (Profile, Staff, Unlockables and SJK chat in every style): drawn in its
 families over the map darkened as Settings is (Update as a pop-up card, as First
 setup), each with the way back (Esc, "Back") and its name at the top and its
 keys bottom right. They stay the
@@ -307,8 +310,10 @@ overlay routes their text to the UI's families (`console_sjk_pages.rs`).
   other names, Identity settings) over "Your record" (eight numbers in two columns)
   and "Unlocked lately"; "About you", the bio's box (620 by 300, Exo 2 at 18,
   wrapped by measured width, the end being written kept in view) with its counts,
-  Revert and Save (gold) and the rules; Medals (pictures at 84) and Achievements (how
-  many unlocked, a gold bar, See the board). Achievements: how many unlocked with a
+  Revert and Save (gold) and the rules; Medals (pictures at 84), Achievements (how
+  many unlocked, a gold bar, See the board) and Unlockables (how many owned at 30, or
+  a line saying they are kept on the hub, and See unlockables, which opens the
+  Unlockables page; Tab reaches it after See the board). Achievements: how many unlocked with a
   bar, then the 21 cards in three columns of seven (560 by 94): a medallion ringed by
   the count in the category's colour (Combat ember, Duels and flags gold, Journeys
   holo, Community green), filled and gold once unlocked, the goal inside; the name,
@@ -320,10 +325,35 @@ overlay routes their text to the UI's families (`console_sjk_pages.rs`).
   rows of 50, the chosen one banded, tags Staff and Verified in gold); the chosen
   player's name at 38 and facts over the middle and right; Medals: each medal's
   medallion (dim when not held), name and count, date given, Give (gold) and Take
-  back, then the note's field; Achievements: Clear all (Press again while it waits),
+  back, then the note's field (sent with the next medal or unlock); Unlockables under
+  it: each unlockable of the catalogue in rows of 58, its name (gold when held) and
+  its date or "Not held" with its id, Unlock (gold) and Relock, as the medals' Give
+  and Take back; Achievements: Clear all (Press again while it waits),
   each achievement with a count, its date or count and Clear, and a line on what
   clearing does. The last request's answer bottom left (gold, ember when refused).
-  World shot: `world_shot::tests::duel6_sjk_staff`.
+  World shot: `world_shot::tests::duel6_sjk_staff` (the player's own, then another
+  holding the Sun blade).
+- **Unlockables** ([unlockables_panel_view.rs](../crates/sjk-viewer/src/unlockables_panel_view.rs),
+  08/10/2026, [unlockables.md](unlockables.md#unlockables-page)): drawn in this look in
+  every menu style, opened by Profile's See unlockables or `unlockables`. Under the top
+  bar how many the player owns at 38 ("1 of 1 owned") over a line, or why it is not
+  known ("Identity is off", "No hub is set", "Contacting the hub...") with what to do,
+  and a holo rule. Down the left a card per unlockable (852 by 268, radius 18): navy
+  glass with a gold edge when owned (brighter when worn), white while chosen; its
+  swatch (400 by 224), the one memorable thing, drawn live with the UI's shapes (the
+  Sun blade from a steel hilt: a white-hot core, a gold to red corona that breathes in
+  nine layers of warm haze, small flame loops rising and sinking, granules drifting,
+  and every 2.6 s a flare running from hilt to tip; locked, a grey still blade under a
+  padlock); then the kind in holo, the state at the right (Worn, Owned in gold, or
+  Locked), the name at 34 (gold when owned), what it is, "Yours since dd/mm/yyyy, from
+  the SJK team" in gold with the team's note in quotes, or "How to get it: ...", and
+  Equip (gold) or Unequip, or an inert Locked (Needs identity, Needs a hub, Waiting)
+  pill. Under the cards, a quiet outlined "More to come" card. On the right "You wear"
+  with the blade at 36 (gold when a skin shows) and a line, then "How unlockables
+  work". Keys: Up and Down (and Left, Right) choose a card, Tab and Shift+Tab walk
+  them, Enter or Space equips or unequips, Esc back; a click on Equip or Unequip acts,
+  on a card it chooses it. The swatches are the only thing moving. World shot:
+  `world_shot::unlockables::duel6_sjk_unlockables`.
 - **SJK chat** ([sjk_chat_panel_view.rs](../crates/sjk-viewer/src/sjk_chat_panel_view.rs),
   08/10/2026, Sol's request, [hub-chat.md](hub-chat.md)): drawn in this look in every
   menu style. The online count in gold over a line on what the chat is; the messages

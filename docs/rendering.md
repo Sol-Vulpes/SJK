@@ -860,8 +860,9 @@ decision; head descendants such as hair and helmets are masked too.
 
 A blade skin replaces a saber blade's colour (not its hilt) with a look of its own;
 the first is the Sun blade, an SJK unlockable ([unlockables.md](unlockables.md#the-sun-blade)).
-[saber_skins.rs](../crates/sjk-viewer/src/saber_skins.rs) holds the catalogue and the
-per-client table of who wears which skin; `BladeColor::Skin` selects it wherever a
+[saber_skins.rs](../crates/sjk-viewer/src/saber_skins.rs) holds the skins and the
+per-client table of who wears which (filled from the hub's looks; ids and names are
+[unlockables.rs](../crates/sjk-viewer/src/unlockables.rs)'s); `BladeColor::Skin` selects it wherever a
 blade colour is chosen (in the hand, thrown, first person, the menu stage).
 
 - **Material.** Each skin is its own saber material after the six retail pairs and

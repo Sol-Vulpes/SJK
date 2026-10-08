@@ -1720,7 +1720,10 @@ are in [identity.md](identity.md).
   bio (written there, up to 6 lines under the hub's rules), their record from the
   achievement counts, and a second tab, the achievements board (`achievements`). It
   has the SJK UI's look in every menu style; its Identity settings button opens the
-  Identity page ([identity.md](identity.md#profile)).
+  Identity page ([identity.md](identity.md#profile)) and See unlockables the
+  Unlockables page (`unlockables`, [unlockables.md](unlockables.md#unlockables-page)).
+- Blade skins: `cg_saberSkin` and `saberskin` choose the one worn, shown only while the
+  hub profile owns it ([Blade skins](#blade-skins)).
 - Achievements are counted in matches on servers and kept in `achievements.json`
   beside `identity.key`, sent to the hub with the identity on; an unlock says so in the
   console and as a centre print ([identity.md](identity.md#achievements)).
@@ -1883,10 +1886,18 @@ A blade skin is an unlockable saber look ([unlockables.md](unlockables.md)); the
 first, the Sun blade (`saber_sun`), is drawn as described in
 [rendering.md](rendering.md#saber-blade-skins). `cg_saberSkin` (archived, default
 empty) holds the skin the player wears by unlock id; empty or an unknown id is the
-stock blade. For now it applies directly to the local player
-(`GpuState::local_saber_skin`); gating it by the player's hub profile is still to
-come. Other players' skins are set in the per-client table
-(`SaberSkins::set`) that the hub's looks will fill.
+stock blade. It shows only while the player's own hub profile lists that unlock
+(`Looks::own_saber_skin`, read twice a second): with the identity off, no hub, no
+answer yet or the unlock missing, the stock blade shows, in the hand, in first
+person, thrown and on the Character page. Other players' skins are their looks from
+the hub ([unlockables.md](unlockables.md#receiving)), copied into the per-client table
+(`GpuState::sync_saber_skins`) only when the looks change.
+
+`saberskin` lists the blade skins, owned (since when) or locked (how to get it), and
+which is worn; `saberskin <id>` or `saberskin none` sets `cg_saberSkin` (a locked one
+is kept and shows once unlocked). `unlockables` opens the Unlockables page (also the
+Profile page's See unlockables), where owned skins are equipped and unequipped
+([sjk-ui.md](sjk-ui.md#sjks-pages)).
 
 A skin brings its own sounds, heard for each player wearing it: its ignition for
 `EV_SABER_UNHOLSTER` and for a general sound that is a stock `saberon*`/`saberoff*`
@@ -1897,7 +1908,9 @@ for both sabers' hum loop, and three swings for `EV_SABER_ATTACK` and the animat
 ([saber_sound_overrides.rs](../crates/sjk-client/src/saber_sound_overrides.rs)).
 The viewer registers the skins' sounds with the gamestate's sound tables and passes
 the per-client table every frame. With no skin worn every path is the stock one. A
-thrown saber's hum is still the hilt's own. The Sun's sounds are synthesized by
+thrown saber hums its owner's skin too: the flying saber entity's `loopSound` (the
+stock hum or the hilt's `soundLoop`) is replaced while the owner it names
+(`genericenemyindex`) wears one. The Sun's sounds are synthesized by
 `scripts/saber_skin_sounds.py`, bundled and mounted below all game data at
 `sound/sjk/sabers/sun/`, so a PK3 with the same paths replaces them
 ([assets/sabers/sun](../crates/sjk-viewer/assets/sabers/sun/README.md)); they have

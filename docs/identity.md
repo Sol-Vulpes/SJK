@@ -438,6 +438,10 @@ themself until another is chosen, or with Me), and offers:
 - every medal of the catalogue with what the player holds: Give (Give +1 for a
   repeatable one already held), Take back (one award; a repeatable one counts down),
   and a note sent with the next medal, which everyone can read;
+- every unlockable of the catalogue with whether the player holds it (and since
+  when): Unlock (`StaffRequest::Unlock`, with the note field's text as the team's
+  note) and Relock (`StaffRequest::Relock`), as Give and Take back for medals; the
+  hub's answer replaces the chosen profile and shows in the status line;
 - the player's achievements at the hub, each with Clear, and Clear all, which waits
   for a second press within 3 seconds.
 
@@ -466,7 +470,9 @@ sends its counts, which the page says.
 - `staff` opens the Staff page, for a staff key only.
 - `cg_saberSkin` (archived, default empty) is the blade-skin unlock id the player
   wears; it applies, and is sent, only while the own profile lists it
-  ([unlockables.md](unlockables.md)).
+  ([unlockables.md](unlockables.md)). `saberskin` lists the blade skins (owned or
+  locked) and `saberskin <id>`/`none` sets it; `unlockables` opens the Unlockables
+  page, where owned ones are equipped.
 - `cl_sjkChat` (default 1; Settings > Network > SJK chat) shows the SJK chat and reads
   it; `sjkchat` opens its page, `messagemode5` (I) its composer in a game, and
   `sjkemote <id>` sends an emote ([hub-chat.md](hub-chat.md)).
