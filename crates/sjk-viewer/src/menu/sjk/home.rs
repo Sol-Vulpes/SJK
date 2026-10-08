@@ -8,9 +8,13 @@
 //! screens. Escape leaves a page for the main one, and on the main one asks to
 //! quit.
 //!
+//! Under the servers, the SJK chat is docked (`docs/hub-chat.md`): its last lines,
+//! who is online, a field to type in and Open chat for its page.
+//!
 //! Keys: Up and Down move along the arc, Enter takes the entry, Right (or Tab)
-//! moves to the servers and Left (or Escape) back. The pointer chooses by
-//! hovering and acts with a click.
+//! moves to the servers and Left (or Escape) back; Down past the last server
+//! reaches the chat, where Enter starts typing (Enter sends, Escape stops). The
+//! pointer chooses by hovering and acts with a click.
 //!
 //! The page is laid out on a 16:9 frame of 1080-line pixels centred in the
 //! window: a wider window shows more map at the sides, a narrower one scales
@@ -27,9 +31,14 @@ use winit::keyboard::KeyCode;
 /// The JoF community's server, suggested while the player has joined none.
 pub(crate) const JOF_SERVER: &str = "135.125.145.49:29070";
 
-/// Pointer tokens: the arc's entries, then the servers.
+/// Pointer tokens: the arc's entries, then the servers, then the chat's field and
+/// its Open chat.
 const ENTRY_TOKEN: u16 = 0;
 const SERVER_TOKEN: u16 = 20;
+const CHAT_TOKEN: u16 = 40;
+const OPEN_CHAT_TOKEN: u16 = 41;
+/// The longest message typed in the dock, as the hub takes it.
+const DRAFT_MAX: usize = sjk_identity::chat::TEXT_MAX;
 
 /// The pages the ring shows.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -88,6 +97,10 @@ pub(crate) enum Action {
     Open(MainDestination),
     /// Join server `i` of the column.
     Join(usize),
+    /// Send what was typed in the chat's field ([`Home::take_draft`]).
+    SendChat,
+    /// Open the SJK chat's page.
+    OpenChat,
     /// Exit to the desktop.
     Quit,
 }
@@ -200,6 +213,30 @@ pub(crate) struct HomeView<'a> {
     /// A newer release the update check found.
     pub(crate) update: Option<&'a str>,
     pub(crate) seconds: f64,
+    /// The SJK chat, docked under the servers; `None` while it is off.
+    pub(crate) chat: Option<ChatDock<'a>>,
+}
+
+/// The SJK chat as the dock shows it.
+#[derive(Clone, Copy, Debug)]
+pub(crate) struct ChatDock<'a> {
+    /// The last messages, oldest first; the dock shows the last that fit.
+    pub(crate) lines: &'a [DockLine<'a>],
+    /// Keys reading the chat lately.
+    pub(crate) online: u32,
+    /// The hub answered the last poll.
+    pub(crate) live: bool,
+    /// Why the chat cannot send or read, or what became of the last message.
+    pub(crate) notice: &'a str,
+}
+
+/// One message of the dock.
+#[derive(Clone, Copy, Debug)]
+pub(crate) struct DockLine<'a> {
+    /// The sender's name with its colour codes.
+    pub(crate) name: &'a str,
+    pub(crate) text: &'a str,
+    pub(crate) verified: bool,
 }
 
 /// Where the keyboard is.
@@ -207,6 +244,8 @@ pub(crate) struct HomeView<'a> {
 enum Focus {
     Arc,
     Server(usize),
+    /// The SJK chat's field.
+    Chat,
 }
 
 /// The page's state: which page of the ring, its chosen entry, the keyboard's
@@ -221,6 +260,12 @@ pub(crate) struct Home {
     arc: Option<f32>,
     /// Menu time of the last frame, for the arc's easing.
     last: f64,
+    /// Whether the last frame docked the chat.
+    dock: bool,
+    /// What is typed in the chat's field, while typing.
+    draft: Option<String>,
+    /// What Enter sent from the field, until the menu takes it.
+    sent: Option<String>,
 }
 
 impl Default for Home {
@@ -231,6 +276,9 @@ impl Default for Home {
             focus: Focus::Arc,
             arc: None,
             last: 0.0,
+            dock: false,
+            draft: None,
+            sent: None,
         }
     }
 }
@@ -253,6 +301,50 @@ impl Home {
         self.page = Page::Main;
         self.entry = 0;
         self.focus = Focus::Arc;
+        self.draft = None;
+    }
+
+    /// Whether the chat's field takes the keys.
+    pub(crate) fn is_typing(&self) -> bool {
+        self.draft.is_some()
+    }
+
+    /// What Enter sent from the chat's field.
+    pub(crate) fn take_draft(&mut self) -> String {
+        self.sent.take().unwrap_or_default()
+    }
+
+    /// A key while typing in the chat's field: text goes into it, Backspace takes a
+    /// character back, Enter sends, Escape stops; every other key is swallowed, so no
+    /// menu key acts.
+    pub(crate) fn typing_key(&mut self, key: KeyCode, text: Option<&str>) -> Option<Action> {
+        let draft = self.draft.as_mut()?;
+        match key {
+            KeyCode::Escape => self.draft = None,
+            KeyCode::Enter | KeyCode::NumpadEnter => {
+                if draft.trim().is_empty() {
+                    self.draft = None;
+                } else {
+                    // The draft stays for `take_draft`.
+                    let text = std::mem::take(draft);
+                    self.draft = None;
+                    self.sent = Some(text);
+                    return Some(Action::SendChat);
+                }
+            }
+            KeyCode::Backspace => {
+                draft.pop();
+            }
+            _ => {
+                for c in text.unwrap_or_default().chars().filter(|c| !c.is_control()) {
+                    if draft.chars().count() >= DRAFT_MAX {
+                        break;
+                    }
+                    draft.push(c);
+                }
+            }
+        }
+        None
     }
 
     fn entries(&self) -> &'static [Entry] {
@@ -300,8 +392,22 @@ impl Home {
             (KeyCode::ArrowUp | KeyCode::KeyW, Focus::Server(index)) => {
                 self.focus = Focus::Server((index + servers - 1) % servers);
             }
+            (KeyCode::ArrowDown | KeyCode::KeyS, Focus::Server(index))
+                if self.dock && index + 1 >= servers =>
+            {
+                self.focus = Focus::Chat;
+            }
             (KeyCode::ArrowDown | KeyCode::KeyS, Focus::Server(index)) => {
                 self.focus = Focus::Server((index + 1) % servers);
+            }
+            (KeyCode::ArrowUp | KeyCode::KeyW, Focus::Chat) => {
+                self.focus = Focus::Server(servers.saturating_sub(1));
+            }
+            (KeyCode::ArrowLeft | KeyCode::KeyA | KeyCode::Tab | KeyCode::Escape, Focus::Chat) => {
+                self.focus = Focus::Arc;
+            }
+            (KeyCode::Enter | KeyCode::NumpadEnter | KeyCode::Space, Focus::Chat) => {
+                self.draft = Some(String::new());
             }
             (
                 KeyCode::ArrowLeft | KeyCode::KeyA | KeyCode::Tab | KeyCode::Escape,
@@ -332,6 +438,24 @@ impl Home {
             self.entry = usize::from(token - ENTRY_TOKEN);
             self.focus = Focus::Arc;
             return if activate { self.take() } else { None };
+        }
+        match token {
+            CHAT_TOKEN if self.dock => {
+                self.focus = Focus::Chat;
+                if activate && self.draft.is_none() {
+                    self.draft = Some(String::new());
+                }
+                return None;
+            }
+            OPEN_CHAT_TOKEN if self.dock => {
+                self.focus = Focus::Chat;
+                if activate {
+                    self.draft = None;
+                    return Some(Action::OpenChat);
+                }
+                return None;
+            }
+            _ => {}
         }
         let index = usize::from(token.checked_sub(SERVER_TOKEN)?);
         if index >= servers {
@@ -370,6 +494,12 @@ const COLUMN_X: f32 = 1500.0;
 const COLUMN_WIDTH: f32 = 324.0;
 const COLUMN_TOP: f32 = 236.0;
 const SERVER_HEIGHT: f32 = 96.0;
+/// The docked chat: its top, a message row's height and how many rows show.
+const DOCK_TOP: f32 = 700.0;
+const DOCK_ROW: f32 = 26.0;
+const DOCK_ROWS: usize = 5;
+/// The field's top, under the rows.
+const DOCK_FIELD: f32 = DOCK_TOP + 40.0 + DOCK_ROWS as f32 * DOCK_ROW + 8.0;
 
 /// Angle (radians) of entry `index` of `count` round the ring.
 fn entry_angle(index: usize, count: usize) -> f32 {
@@ -432,6 +562,13 @@ pub(crate) fn build(
     );
 
     // The gold arc points at the chosen entry, or at the servers.
+    home.dock = view.chat.is_some();
+    if !home.dock {
+        home.draft = None;
+        if home.focus == Focus::Chat {
+            home.focus = Focus::Arc;
+        }
+    }
     let entries = home.entries();
     let target = match home.focus {
         Focus::Arc => entry_angle(home.entry, entries.len()),
@@ -439,6 +576,7 @@ pub(crate) fn build(
             let y = COLUMN_TOP + 64.0 + (index as f32 + 0.5) * SERVER_HEIGHT;
             (y - RING[1]).atan2(COLUMN_X - RING[0])
         }
+        Focus::Chat => (DOCK_FIELD + 16.0 - RING[1]).atan2(COLUMN_X - RING[0]),
     };
     let arc = home.arc_towards(target, seconds);
     let sweep = 0.42;
@@ -517,6 +655,9 @@ pub(crate) fn build(
     }
 
     servers(canvas, &frame, home, view);
+    if let Some(dock) = &view.chat {
+        chat_dock(canvas, &frame, home, dock);
+    }
     player(canvas, &frame, view);
     hints(canvas, &frame, home, !view.servers.is_empty());
     version(canvas, &frame, view);
@@ -524,6 +665,7 @@ pub(crate) fn build(
     let selected = match home.focus {
         Focus::Arc => ENTRY_TOKEN + home.entry as u16,
         Focus::Server(index) => SERVER_TOKEN + index as u16,
+        Focus::Chat => CHAT_TOKEN,
     };
     canvas.finish(selected);
 }
@@ -715,6 +857,146 @@ fn servers(canvas: &mut MenuCanvas, frame: &Frame, home: &Home, view: &HomeView<
     }
 }
 
+/// The SJK chat under the servers: its name and who is online, its last lines, the
+/// field and Open chat.
+fn chat_dock(canvas: &mut MenuCanvas, frame: &Frame, home: &Home, dock: &ChatDock<'_>) {
+    let s = frame.s;
+    text(
+        canvas,
+        TextFamily::Display,
+        format_args!("SJK chat"),
+        frame.rect(COLUMN_X, DOCK_TOP, COLUMN_WIDTH, 30.0),
+        24.0 * s,
+        color::TEXT,
+        FontWeight::Regular,
+        TextAlign::Start,
+    );
+    let status = frame.rect(COLUMN_X, DOCK_TOP + 4.0, COLUMN_WIDTH, 24.0);
+    let body = |canvas: &mut MenuCanvas, rect, colour, align, value: std::fmt::Arguments<'_>| {
+        text(
+            canvas,
+            TextFamily::Body,
+            value,
+            rect,
+            15.0 * s,
+            colour,
+            FontWeight::Regular,
+            align,
+        );
+    };
+    if dock.live {
+        body(
+            canvas,
+            status,
+            color::MUTED,
+            TextAlign::End,
+            format_args!("{} online", dock.online),
+        );
+    } else {
+        body(
+            canvas,
+            status,
+            color::QUIET,
+            TextAlign::End,
+            format_args!("Not connected"),
+        );
+    }
+    let shown = dock.lines.len().min(DOCK_ROWS);
+    for (row, line) in dock.lines[dock.lines.len() - shown..].iter().enumerate() {
+        let top = DOCK_TOP + 40.0 + row as f32 * DOCK_ROW;
+        if line.verified {
+            let _ = canvas.draw_list_mut().push(DrawCommand::RoundedRect {
+                rect: frame.rect(COLUMN_X - 12.0, top + 9.0, 5.0, 5.0),
+                radius: 2.5 * s,
+                color: color::GOLD,
+            });
+        }
+        body(
+            canvas,
+            frame.rect(COLUMN_X, top, COLUMN_WIDTH, DOCK_ROW - 4.0),
+            color::TEXT,
+            TextAlign::Start,
+            format_args!("{}^7: {}", line.name, line.text),
+        );
+    }
+    if shown == 0 {
+        body(
+            canvas,
+            frame.rect(COLUMN_X, DOCK_TOP + 40.0, COLUMN_WIDTH, DOCK_ROW - 4.0),
+            color::QUIET,
+            TextAlign::Start,
+            format_args!("Nobody has said anything yet"),
+        );
+    }
+    let field = frame.rect(COLUMN_X - 14.0, DOCK_FIELD, COLUMN_WIDTH + 24.0, 34.0);
+    let focused = home.focus == Focus::Chat || canvas.token_hovered(CHAT_TOKEN);
+    let _ = canvas.draw_list_mut().push(DrawCommand::RoundedRect {
+        rect: field,
+        radius: 8.0 * s,
+        color: color::alpha(color::HOLO, if focused { 0.14 } else { 0.07 }),
+    });
+    if focused {
+        let _ = canvas.draw_list_mut().push(DrawCommand::RoundedRect {
+            rect: frame.rect(COLUMN_X - 14.0, DOCK_FIELD + 6.0, 3.0, 22.0),
+            radius: 1.5 * s,
+            color: color::GOLD_BRIGHT,
+        });
+    }
+    let inside = frame.rect(COLUMN_X, DOCK_FIELD + 5.0, COLUMN_WIDTH - 4.0, 24.0);
+    match home.draft.as_deref() {
+        // The end of a long draft shows, as in a field that scrolls.
+        Some(draft) => {
+            let start = draft
+                .char_indices()
+                .rev()
+                .nth(34)
+                .map_or(0, |(index, _)| index);
+            body(
+                canvas,
+                inside,
+                color::TEXT,
+                TextAlign::Start,
+                format_args!("{}_", &draft[start..]),
+            );
+        }
+        None if focused => body(
+            canvas,
+            inside,
+            color::MUTED,
+            TextAlign::Start,
+            format_args!("Enter to talk to every SJK player"),
+        ),
+        None => body(
+            canvas,
+            inside,
+            color::QUIET,
+            TextAlign::Start,
+            format_args!("Say something to every SJK player"),
+        ),
+    }
+    canvas.hit_region(CHAT_TOKEN, field);
+    let below = DOCK_FIELD + 42.0;
+    if !dock.notice.is_empty() {
+        body(
+            canvas,
+            frame.rect(COLUMN_X, below, COLUMN_WIDTH - 96.0, 20.0),
+            color::QUIET,
+            TextAlign::Start,
+            format_args!("{}", dock.notice),
+        );
+    }
+    let open = frame.rect(COLUMN_X + COLUMN_WIDTH - 96.0, below - 2.0, 96.0, 24.0);
+    let lit = canvas.token_hovered(OPEN_CHAT_TOKEN);
+    body(
+        canvas,
+        open,
+        if lit { color::GOLD_BRIGHT } else { color::GOLD },
+        TextAlign::End,
+        format_args!("Open chat"),
+    );
+    canvas.hit_region(OPEN_CHAT_TOKEN, open);
+}
+
 /// The player, bottom left: a gold ring with their initial, their name, and
 /// their model and blade.
 fn player(canvas: &mut MenuCanvas, frame: &Frame, view: &HomeView<'_>) {
@@ -805,6 +1087,16 @@ fn hints(canvas: &mut MenuCanvas, frame: &Frame, home: &Home, servers: bool) {
             (&["Enter"], "join"),
             (&["Left"], "back"),
         ],
+        Focus::Chat if home.is_typing() => [
+            (&["Enter"], "send"),
+            (&["Esc"], "stop typing"),
+            (&["Backspace"], "erase"),
+        ],
+        Focus::Chat => [
+            (&["Enter"], "type"),
+            (&["Up"], "servers"),
+            (&["Left"], "back"),
+        ],
     };
     let gap = 28.0 * s;
     let total: f32 = rows
@@ -892,8 +1184,9 @@ mod tests {
         }
     }
 
-    // Four servers end above the corners' text.
-    const _: () = assert!(COLUMN_TOP + 64.0 + 4.0 * SERVER_HEIGHT < 940.0);
+    // Four servers end above the corners' text, and the dock between them.
+    const _: () = assert!(COLUMN_TOP + 64.0 + 4.0 * SERVER_HEIGHT < DOCK_TOP);
+    const _: () = assert!(DOCK_FIELD + 42.0 + 22.0 < 962.0);
 
     #[test]
     fn pages_open_and_close_on_the_ring() {
@@ -961,6 +1254,198 @@ mod tests {
             home.pointer(ENTRY_TOKEN + 2, true, 3),
             Some(Action::Open(MainDestination::Credits))
         );
+    }
+
+    fn server(name: &'static str) -> ServerItem<'static> {
+        ServerItem {
+            name,
+            map: "mp/ffa3",
+            live: Some((5, 16, 40)),
+            played: Some(Ago::Minutes(5)),
+        }
+    }
+
+    const LINES: [DockLine<'static>; 2] = [
+        DockLine {
+            name: "^2Sol",
+            text: "gg all",
+            verified: true,
+        },
+        DockLine {
+            name: "Fox",
+            text: "a long message that will not fit on one row of the dock at all, cut",
+            verified: false,
+        },
+    ];
+
+    fn view<'a>(servers: &'a [ServerItem<'a>], chat: Option<ChatDock<'a>>) -> HomeView<'a> {
+        HomeView {
+            name: "Sol",
+            model: "kyle",
+            blade_name: "blue",
+            servers,
+            version: "2026.1008.1",
+            update: Some("2026.1009.1"),
+            seconds: 1.0,
+            chat,
+        }
+    }
+
+    fn dock() -> ChatDock<'static> {
+        ChatDock {
+            lines: &LINES,
+            online: 7,
+            live: true,
+            notice: "",
+        }
+    }
+
+    #[test]
+    fn the_dock_fits_under_the_servers_in_every_window() {
+        let servers = [server("a"), server("b"), server("c"), server("d")];
+        for viewport in VIEWPORTS {
+            let mut canvas = MenuCanvas::new();
+            let mut home = Home::default();
+            build(
+                &mut canvas,
+                viewport,
+                &mut home,
+                &view(&servers, Some(dock())),
+                1.0,
+            );
+            let frame = Frame::new(viewport);
+            let field = canvas.rect_for(CHAT_TOKEN).expect("the dock's field");
+            let open = canvas.rect_for(OPEN_CHAT_TOKEN).expect("Open chat");
+            let last = canvas.rect_for(SERVER_TOKEN + 3).unwrap();
+            let version_top = frame.point(0.0, 962.0)[1];
+            for rect in [field, open] {
+                assert!(rect.y > last.bottom(), "{viewport:?}: under the servers");
+                assert!(
+                    rect.bottom() < version_top,
+                    "{viewport:?}: above the version"
+                );
+                assert!(rect.x >= 0.0 && rect.right() <= viewport[0], "{viewport:?}");
+            }
+        }
+        // Without the chat there is no dock.
+        let mut canvas = MenuCanvas::new();
+        build(
+            &mut canvas,
+            VIEWPORTS[0],
+            &mut Home::default(),
+            &view(&servers, None),
+            1.0,
+        );
+        assert!(canvas.rect_for(CHAT_TOKEN).is_none());
+    }
+
+    #[test]
+    fn the_dock_shows_the_last_lines_and_who_is_online() {
+        let servers = [server("a")];
+        let mut canvas = MenuCanvas::new();
+        let mut home = Home::default();
+        build(
+            &mut canvas,
+            VIEWPORTS[0],
+            &mut home,
+            &view(&servers, Some(dock())),
+            1.0,
+        );
+        let runs: Vec<&str> = canvas.text_runs().collect();
+        assert!(runs.contains(&"SJK chat"), "{runs:?}");
+        assert!(runs.contains(&"7 online"), "{runs:?}");
+        assert!(runs.contains(&"^2Sol^7: gg all"), "{runs:?}");
+        assert!(runs.contains(&"Open chat"), "{runs:?}");
+    }
+
+    #[test]
+    fn the_keyboard_reaches_the_dock_and_types() {
+        let mut home = Home::default();
+        home.dock = true;
+        home.key(KeyCode::ArrowRight, 3);
+        home.key(KeyCode::ArrowDown, 3);
+        home.key(KeyCode::ArrowDown, 3);
+        assert_eq!(home.focus, Focus::Server(2));
+        home.key(KeyCode::ArrowDown, 3);
+        assert_eq!(home.focus, Focus::Chat);
+        home.key(KeyCode::ArrowUp, 3);
+        assert_eq!(home.focus, Focus::Server(2));
+        home.key(KeyCode::ArrowDown, 3);
+        assert_eq!(home.key(KeyCode::Enter, 3), None);
+        assert!(home.is_typing());
+        // Without the dock, Down on the last server goes round to the first.
+        let mut home = Home::default();
+        home.key(KeyCode::ArrowRight, 3);
+        for _ in 0..3 {
+            home.key(KeyCode::ArrowDown, 3);
+        }
+        assert_eq!(home.focus, Focus::Server(0));
+    }
+
+    #[test]
+    fn dock_typing_takes_letters_not_menu_keys() {
+        let mut home = Home::default();
+        home.dock = true;
+        home.focus = Focus::Chat;
+        home.key(KeyCode::Enter, 1);
+        for (key, text) in [
+            (KeyCode::KeyW, "w"),
+            (KeyCode::KeyS, "s"),
+            (KeyCode::Space, " "),
+        ] {
+            assert_eq!(home.typing_key(key, Some(text)), None);
+        }
+        assert_eq!(home.typing_key(KeyCode::ArrowUp, None), None);
+        assert_eq!(home.typing_key(KeyCode::Tab, Some("\t")), None);
+        assert_eq!(home.focus, Focus::Chat);
+        assert_eq!(home.draft.as_deref(), Some("ws "));
+        home.typing_key(KeyCode::Backspace, Some("\u{8}"));
+        assert_eq!(home.draft.as_deref(), Some("ws"));
+        for _ in 0..200 {
+            home.typing_key(KeyCode::KeyA, Some("a"));
+        }
+        assert_eq!(home.draft.as_ref().unwrap().chars().count(), 150);
+    }
+
+    #[test]
+    fn enter_sends_and_escape_cancels() {
+        let mut home = Home::default();
+        home.dock = true;
+        home.focus = Focus::Chat;
+        home.key(KeyCode::Enter, 1);
+        home.typing_key(KeyCode::KeyG, Some("g"));
+        home.typing_key(KeyCode::KeyG, Some("g"));
+        assert_eq!(
+            home.typing_key(KeyCode::Enter, Some("\r")),
+            Some(Action::SendChat)
+        );
+        assert_eq!(home.take_draft(), "gg");
+        assert!(!home.is_typing());
+        home.key(KeyCode::Enter, 1);
+        home.typing_key(KeyCode::KeyX, Some("x"));
+        assert_eq!(home.typing_key(KeyCode::Escape, None), None);
+        assert!(!home.is_typing());
+        assert_eq!(home.focus, Focus::Chat);
+        // Enter on nothing typed only stops typing.
+        home.key(KeyCode::Enter, 1);
+        assert_eq!(home.typing_key(KeyCode::Enter, Some("\r")), None);
+        assert!(!home.is_typing());
+    }
+
+    #[test]
+    fn the_pointer_types_in_the_dock_and_opens_the_chat() {
+        let mut home = Home::default();
+        home.dock = true;
+        assert_eq!(home.pointer(CHAT_TOKEN, false, 1), None);
+        assert_eq!(home.focus, Focus::Chat);
+        assert!(!home.is_typing());
+        assert_eq!(home.pointer(CHAT_TOKEN, true, 1), None);
+        assert!(home.is_typing());
+        assert_eq!(
+            home.pointer(OPEN_CHAT_TOKEN, true, 1),
+            Some(Action::OpenChat)
+        );
+        assert!(!home.is_typing(), "the page takes the typing");
     }
 
     #[test]

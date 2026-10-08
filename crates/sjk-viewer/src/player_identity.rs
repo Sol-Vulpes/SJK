@@ -53,6 +53,8 @@ struct Runtime {
     next_sync: Option<Instant>,
     /// Keys the player muted in the SJK chat, on this PC for this session.
     muted: Vec<String>,
+    /// Counts changes to `muted`.
+    muted_revision: u64,
 }
 
 static RUNTIME: Mutex<Runtime> = Mutex::new(Runtime {
@@ -64,6 +66,7 @@ static RUNTIME: Mutex<Runtime> = Mutex::new(Runtime {
     sent_chat: None,
     next_sync: None,
     muted: Vec::new(),
+    muted_revision: 0,
 });
 
 fn lock() -> MutexGuard<'static, Runtime> {
@@ -480,6 +483,12 @@ pub(crate) fn set_muted(key_id: &str, muted: bool) {
     if muted {
         runtime.muted.push(key_id.to_owned());
     }
+    runtime.muted_revision += 1;
+}
+
+/// Counts changes to the mutes, so what is derived from them can be kept.
+pub(crate) fn mutes_revision() -> u64 {
+    lock().muted_revision
 }
 
 /// Ask the hub for another player's profile (their bio).
