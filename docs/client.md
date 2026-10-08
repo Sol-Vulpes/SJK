@@ -2138,17 +2138,24 @@ See [platform.rs](../crates/sjk-viewer/src/platform.rs) and
 Edit settings through the client, or edit the file while the client is stopped
 so autosaving cannot overwrite your changes.
 
-`com_maxfps` defaults to `-1` (AUTO in Settings > Video): frames are capped at the
-refresh rate of the monitor holding the window, rounded to whole hertz and
-re-read once a second, or at stock's 125 when the monitor reports none. `0` is
-uncapped. The old default, 1000, saved in every existing profile, is reset to
-AUTO once on first launch (marker `com_maxfpsDefaultVersion`); a cap chosen
-afterwards is kept. The default is not saved to the configuration. On the slider
+`com_maxfps` defaults to `-1` (AUTO in Settings > Video); `0` is uncapped. The
+old default, 1000, saved in every existing profile, is reset to AUTO once on
+first launch (marker `com_maxfpsDefaultVersion`); a cap chosen afterwards is
+kept. The default is not saved to the configuration. On the slider
 AUTO is the rail's left end: arrows step AUTO, 0, 25, 50 and so on, and typing
 `-1` selects it. An uncapped
 client saturates the GPU; screen recorders and streamers sharing it then skip
 frames (OBS reported 83% skipped for encoding lag against an uncapped client at
 4K). See [runtime_settings.rs](../crates/sjk-viewer/src/runtime_settings.rs).
+
+AUTO caps frames at stock's 125 unless `com_maxfpsMonitor` (archived, default 0;
+Settings > Video > Detect refresh rate) is 1: then AUTO is the refresh rate of
+the monitor holding the window, rounded to whole hertz and re-read once a second,
+or 125 when the monitor reports none. At 0 the monitor's rate is never read, so
+AUTO caps as it does for a monitor that reports none. Sol asked for the detection
+to be off by default (08/10/2026). The setting changes only what AUTO means: a
+`com_maxfps` the player set stays as set. It is new, so no profile has saved it
+and its default reaches existing profiles without a migration.
 
 A window without focus has caps of its own: `com_maxfpsUnfocused` (SJK's default
 30; EternalJK's 0 keeps the normal cap) and `com_maxfpsMinimized` (50), where 0

@@ -7,6 +7,30 @@ SJK currently contains a native client and standard dedicated server in a
 20-crate Rust workspace. This page records scope and verification, rather than
 claiming complete parity from the presence of an implementation.
 
+## Monitor refresh-rate detection off by default
+
+Branch `feat/monitor-rate-cvar` (08/10/2026, based on `a6230f9`, Linux): Sol asked
+for a cvar to turn off the detection of the monitor's refresh rate, off by default.
+`com_maxfps -1` (AUTO, the default) capped frames at the refresh rate of the
+monitor holding the window, re-read once a second, or at 125 when the monitor
+reported none ([runtime_settings.rs](../crates/sjk-viewer/src/runtime_settings.rs)).
+`com_maxfpsMonitor` (archived, default 0; Settings > Video > Detect refresh rate)
+now decides: at 0 the monitor's rate is never read and AUTO caps at 125, as for a
+monitor that reports none; at 1 AUTO follows the monitor as before. The frame loop
+reads it from a change-callback cache, without a name lookup. A `com_maxfps` the
+player set is left alone, and nothing is migrated: the cvar is new, so no profile
+has saved it and the default reaches existing profiles
+([client.md](client.md#configuration-and-content)).
+
+Verified on Linux with Rust 1.97: unit tests pin the default (0, AUTO at 125
+without reading the monitor, also without a console), the monitor's rate in whole
+hertz and the 125 fallback when on, the setting saved and loaded, and a cap the
+player set (0 to 1000, and 144 from a profile saved before the cvar) kept either
+way; formatting, the locked workspace build and tests pass, and workspace Clippy
+reports no warning on a changed line. Not verified: no client was run (no GPU,
+display or game data), so neither the cap in either state nor the new Settings row
+was seen on screen.
+
 ## Percent signs and quotes in chat
 
 Branch `fix/chat-percent` (08/10/2026, based on `15cf7a9`, Linux): a `%` typed in
