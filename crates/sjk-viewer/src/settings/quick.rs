@@ -1,5 +1,5 @@
 //! The FIRST SETUP tab of Settings: the few settings worth choosing once on a first
-//! start (the menu and camera styles, display, aim, sound, the HUD,
+//! start (graphics quality, the menu and camera styles, display, aim, sound, the HUD,
 //! nameplates, the Force shells and the network opt-ins). The rows are the catalogue's own, looked up by
 //! cvar, so a change here is the same change the other tabs make; the last row,
 //! whether the screen opens at start, is the tab's own.
@@ -19,6 +19,7 @@ const HIDE_ROW: Setting = Setting {
 
 /// The tab's cvars, in order.
 const CVARS: &[&str] = &[
+    crate::graphics_quality::ROW_NAME,
     crate::menu::style::CVAR,
     crate::camera::STYLE_CVAR,
     "r_resolution",
@@ -73,15 +74,24 @@ mod tests {
     }
 
     #[test]
-    fn the_menu_and_camera_styles_come_first_under_their_heading() {
-        let cvars: Vec<_> = rows().iter().take(2).map(|row| row.cvar).collect();
-        assert_eq!(cvars, [crate::menu::style::CVAR, crate::camera::STYLE_CVAR]);
+    fn graphics_quality_comes_first_then_the_styles_under_their_headings() {
+        let cvars: Vec<_> = rows().iter().take(3).map(|row| row.cvar).collect();
         assert_eq!(
-            super::super::Group::Quick.lines()[..3],
+            cvars,
             [
-                super::super::Line::Heading("Styles"),
+                crate::graphics_quality::ROW_NAME,
+                crate::menu::style::CVAR,
+                crate::camera::STYLE_CVAR
+            ]
+        );
+        assert_eq!(
+            super::super::Group::Quick.lines()[..5],
+            [
+                super::super::Line::Heading("Graphics"),
                 super::super::Line::Row(0),
+                super::super::Line::Heading("Styles"),
                 super::super::Line::Row(1),
+                super::super::Line::Row(2),
             ]
         );
     }

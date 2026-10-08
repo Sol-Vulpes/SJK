@@ -13,9 +13,9 @@ Status (08/10/2026): the main page, Settings (with the key bindings),
 Character, What's new, Update, Identity, Credits, Servers (the server browser),
 the loading screen, the scoreboard, the in-game menu, Camera control and the
 report and note dialog (Report a bug) are done. Every other
-screen opens in its classic+ version, which covers the map as the classic style
-does.
-The other style: First setup's first row, Settings > Interface > Menu style, or
+screen opens in its classic+ version, which
+covers the map as the classic style does.
+The other style: First setup's Menu style row, Settings > Interface > Menu style, or
 `ui_menuStyle classic`; restart for the style's map behind the main page.
 
 ## Design
@@ -457,7 +457,9 @@ Settings screen.
 - **Top:** "First setup", what it is for, and how to bring another client's
   .cfg over.
 - **Rows:** First setup's rows as Settings draws them, its column moved into
-  the card, under its sub-headings (Styles first: menu and camera style).
+  the card, under its sub-headings (Graphics first, the [graphics
+  quality](client.md#graphics-quality) level, whose list opens on Enter; then
+  Styles: menu and camera style).
   Eleven lines show; the rest scroll inside the card. The focused row's help
   sits in two lines under them (left out while a list is open).
 - **Foot,** always in view under a rule: the "Don't show at start" tick box

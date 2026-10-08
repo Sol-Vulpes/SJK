@@ -2,7 +2,7 @@
 //! offered at every start until its "Don't show at start" row is ticked, and
 //! opened by the `firstsetup` command;
 //! `firstsetup import` opens the Import page (`config_import.rs`). Its first row
-//! picks the menu style. The command's old name `quicksetup` is gone, so that `quit`
+//! picks the graphics quality, its second the menu style. The command's old name `quicksetup` is gone, so that `quit`
 //! is the only command a `q` completes to.
 
 use super::classic::layout::{Entry, Page};

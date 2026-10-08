@@ -9,6 +9,8 @@
 #                               made it when that is not the piece's owner.
 
 = Sol
++ 08/10/2026 | SJK #35 | Add graphics quality levels at the top of First setup
+- dd33529 |  | Add graphics quality levels at the top of First setup
 + 08/10/2026 | SJK #38 | Reload the menu's images when it moves to another world's renderer
 - 97a5246 |  | Reload the menu's images when it moves to another world's renderer
 + 08/10/2026 | SJK #34 | Remove the modern UI style, leaving the SJK UI and classic menus

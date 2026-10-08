@@ -88,7 +88,7 @@ archived cvar, so every existing profile carries it. The console's start moves a
 saved `classic` once to `sjk` and marks the profile (`ui_menuStyleDefaultVersion`
 1, archived); a style chosen after that, `classic` included, stays
 ([console_session.rs](../crates/sjk-viewer/src/console_session.rs)). The style is
-also the first row of [First setup](#first-setup), under Styles with the camera
+also the second row of [First setup](#first-setup), under Styles with the camera
 style.
 
 SJK began with a third, native style, `modern` (or `0`): a column of entries over
@@ -329,8 +329,8 @@ retail's YES/NO text and `menu/new` slider art:
   A text setting shows its text in a field, typed in place.
 - The longer groups are divided by sub-headings: Game options (items and models,
   effects, camera and prediction), Interface (menus, console), HUD (layout,
-  crosshair, names and cards, nameplates, readouts) and First setup (styles,
-  display, aim, sound, HUD, nameplates, Force shells, SJK).
+  crosshair, names and cards, nameplates, readouts) and First setup (graphics,
+  styles, display, aim, sound, HUD, nameplates, Force shells, SJK).
 
 Retail split video and the Force binds over two pages because a page held few
 items; classic+ panels scroll and explain the focused item, so SJK shows each as
@@ -343,8 +343,8 @@ one group and regroups the settings screen's GAME, HUD, HUD+ and TEXT tabs by su
   of their own in the same layout, their groups down the left, the OPTIONS tab
   still marked, and Back (or Escape) returning to OPTIONS; in game they are the
   same pop-up.
-  - Graphics: Video is the whole VIDEO tab (resolution, display, frame rate,
-    field of view, marks, shadows, gamma); Image, Lighting and Shadows are the
+  - Graphics: Video is the whole VIDEO tab (graphics quality, resolution,
+    display, frame rate, field of view, marks, shadows, gamma); Image, Lighting and Shadows are the
     renderer settings' tabs; Weather is the renderer settings' WEATHER tab
     (weather, density, quality, forced weather, ground fog, clouds; see
     [Weather](rendering.md#weather)).
@@ -843,7 +843,7 @@ has no automatic fade when the camera nears the player. See
 ### Camera style
 
 `cg_cameraStyle` (archived; Settings > Gameplay > Game options, "Camera and
-prediction", and First setup's second row, under Styles) picks how the camera
+prediction", and First setup's third row, under Styles) picks how the camera
 follows the player ([camera_style.rs](../crates/sjk-viewer/src/camera_style.rs)):
 
 | Value | Camera |
@@ -968,13 +968,59 @@ display-mode row. Eye adaptation holds still while this page is open, so
 exposure changes made here show at once instead of being eased.
 See [catalog.rs](../crates/sjk-viewer/src/settings/catalog.rs).
 
+### Graphics quality
+
+The first row of VIDEO, and of [First setup](#first-setup), is Graphics quality
+([graphics_quality.rs](../crates/sjk-viewer/src/graphics_quality.rs)): one choice
+of four levels that sets the costly rendering settings together, from Performance
+(the most frames per second) to Ultra (the best look). The level is not saved
+on its own: the row shows whichever level the settings match, and Custom once
+one of them has been changed on its own; stepping from Custom starts at the
+level the settings are nearest. High is the [default visual
+profile](rendering.md#default-visual-profile), so a fresh profile reads High,
+and Backspace (classic+) returns to it. The `graphicsquality` command names the
+level, or sets it with `graphicsquality performance|balanced|high|ultra`.
+
+| Setting | Performance | Balanced | High | Ultra |
+| --- | --- | --- | --- | --- |
+| HDR scene, bloom, FXAA, soft particles, per-pixel model lighting | off | on | on | on |
+| Dynamic glow (`r_DynamicGlow`) | off | on | on | on |
+| Sunbeam dust (`r_dustMotes`) | 0 | 0.5 | 1 | 1 |
+| Reflection probes, floor mirrors | off | off | on | on |
+| Parallax mapping, emission maps and their halo | off | on | on | on |
+| Sun and sky (`r_dayNight`) | off | on | on | on |
+| Emission-map lights (`r_emissiveLights`) | 0 | 1 | 1 | 1 |
+| Light shafts (`r_volumetrics`) | 0 | 1 | 3 | 3 |
+| World and character sun shadows | off | on | on | on |
+| Shadow resolution | 1024 | 1024 | 2048 | 4096 |
+| Shadow filter taps | 8 | 8 | 16 | 24 |
+| Weather density | 1 | 1.5 | 2 | 2 |
+| Weather quality | 0 | 1 | 2 | 3 |
+| Volumetric clouds | off | on | on | on |
+
+Performance is close to the retail look: baked lightmaps without SJK's sun,
+shadows or light shafts, and no post-processing. Everything else is left as the
+player set it: the FPS cap, vertical sync, resolution and supersampling (which
+multiplies the pixels drawn, so even Ultra leaves it to the player), the taste
+settings (exposure, time of day, tone curve, glow style, parallax depth,
+emission strength), contact shadows (still being worked out) and whether
+weather and fog show at all. Rows marked "(restart)" still apply after a restart,
+so a new level's shadows, light shafts, HDR, FXAA, sun and sky, reflection probes
+and material maps show at the next start, and emission-map lights at the next map;
+the rest change at once. A level is saved with one write
+of the profile. The levels were chosen from what each setting draws, not from
+measured frame times; how many frames each level gains on a given GPU is not
+yet measured.
+
 ## First setup
 
 The tabbed settings screen's last tab, FIRST SETUP (called Quick setup before
 06/10/2026)
 ([quick.rs](../crates/sjk-viewer/src/settings/quick.rs)), gathers the settings worth
-choosing on a first start: under a Styles heading, the menu style (SJK or
-Classic) and the camera style (EJK or SJK, [Camera style](#camera-style));
+choosing on a first start: first, under a Graphics heading, the graphics quality
+([Graphics quality](#graphics-quality)); under a Styles heading, the menu style
+(SJK or Classic) and the camera style (EJK or SJK, [Camera
+style](#camera-style));
 then resolution, display mode, vsync, field of view, mouse
 sensitivity and inversion, always run, effects and music volume, the HUD look and
 scale, the crosshair, the nameplates and their bars, Force bar and power icons, the
@@ -993,7 +1039,7 @@ them as a pop-up card over the map (since 08/10/2026,
 [sjk-ui.md](sjk-ui.md#first-setup)): the rows scroll inside it, and "Don't show
 at start" is a tick box pinned at its foot, always in view, beside All settings
 (the Settings screen on its First setup category, which keeps the rows too) and
-Done. Picking another menu style on its first row keeps First setup on show in
+Done. Picking another menu style on its Menu style row keeps First setup on show in
 the new style: the classic Setup page's FIRST SETUP group or the SJK UI's
 pop-up.
 

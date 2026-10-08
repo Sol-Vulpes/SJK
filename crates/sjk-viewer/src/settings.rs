@@ -174,6 +174,8 @@ enum Pick {
     Value(&'static str),
     /// A display mode.
     Mode(DisplayMode),
+    /// A graphics quality level.
+    Quality(crate::graphics_quality::Level),
 }
 
 /// A classic+ dropdown open on row `row`: its choices, the highlighted one
@@ -749,6 +751,14 @@ impl SettingsMenu {
                 self.refresh(console);
                 return;
             }
+            (ValueKind::Quality, _) => {
+                // Custom settings step from the level they are nearest.
+                crate::graphics_quality::Level::nearest(console)
+                    .step(direction)
+                    .apply(console);
+                self.refresh(console);
+                return;
+            }
             _ => return,
         };
         console.set_cvar(setting.cvar, &next);
@@ -836,6 +846,7 @@ impl SettingsMenu {
                 ValueKind::DisplayMode => display.label().to_owned(),
                 ValueKind::HudPicker => hud.clone(),
                 ValueKind::WheelPages => wheel_pages_text(console),
+                ValueKind::Quality => crate::graphics_quality::shown(console).to_owned(),
                 ValueKind::Bool => toggle_text(console, setting.cvar),
                 _ => row_text(console, setting),
             }));
@@ -861,6 +872,34 @@ fn section_settings(section: Section, tab: usize) -> &'static [Setting] {
         },
         Section::Group(group) => group.rows(),
         Section::Search => search::rows(),
+    }
+}
+
+/// Whether `cvar` has a row on a general or renderer tab that can show
+/// `value`: a switch's 0 or 1, or a number within its slider's range.
+#[cfg(test)]
+pub(crate) fn row_takes(cvar: &str, value: &str) -> bool {
+    let row = (0..TABS.len())
+        .map(settings)
+        .chain([
+            RENDER_IMAGE,
+            RENDER_LIGHTING,
+            RENDER_SHADOWS,
+            RENDER_WEATHER,
+        ])
+        .flatten()
+        .find(|setting| setting.cvar.eq_ignore_ascii_case(cvar));
+    let Some(row) = row else {
+        return false;
+    };
+    let number = value.parse::<f64>();
+    match (row.kind, number) {
+        (ValueKind::Bool, Ok(number)) => number == 0.0 || number == 1.0,
+        (ValueKind::Integer { min, max, .. }, Ok(number)) => {
+            number.fract() == 0.0 && (min as f64..=max as f64).contains(&number)
+        }
+        (ValueKind::Float { min, max, .. }, Ok(number)) => (min..=max).contains(&number),
+        _ => false,
     }
 }
 
@@ -1000,13 +1039,14 @@ mod tests {
         let (_directory, console) = console();
         for setting in rows() {
             // Rows whose value is not one cvar's (resolution, display mode, HUD,
-            // the quick wheel's pages).
+            // the quick wheel's pages, graphics quality).
             if matches!(
                 setting.kind,
                 ValueKind::Resolution
                     | ValueKind::DisplayMode
                     | ValueKind::HudPicker
                     | ValueKind::WheelPages
+                    | ValueKind::Quality
             ) {
                 continue;
             }

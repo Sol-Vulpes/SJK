@@ -7,6 +7,31 @@ SJK currently contains a native client and standard dedicated server in a
 20-crate Rust workspace. This page records scope and verification, rather than
 claiming complete parity from the presence of an implementation.
 
+## Graphics quality levels
+
+Branch `feat/graphics-preset` (08/10/2026, based on `15cf7a9`, Ubuntu 24.04, Rust
+1.99): Sol asked for a graphics performance choice at the top of First setup, from
+a level that puts frame rate first to one that makes everything look its best.
+Built ([client.md](client.md#graphics-quality)): Graphics quality, the first row of
+First setup (under a Graphics heading) and of VIDEO, with Performance, Balanced,
+High and Ultra, each setting 22 costly rendering cvars together; High is the
+default visual profile, the row shows Custom once one of them is changed on its
+own, and `graphicsquality [level]` names or sets it from the console. The FPS
+cap, vsync, resolution, supersampling, taste settings and gameplay are not touched.
+
+Verified on Linux: `cargo fmt --all --check`, `cargo build --locked --workspace`,
+`cargo test --locked --workspace` (1516 passed, 49 ignored) and `cargo clippy
+--locked --workspace --all-targets` (exit 0, no warning in the changed files).
+New unit tests: a fresh profile is High (every High value is its cvar's default);
+each level applies, reads back and survives a restart of the profile; no level is
+cheaper than the one below it; every value is one its Settings row can show; a
+setting changed on its own is Custom and steps from its nearest level; steps stop
+at Performance and Ultra; the command; and the classic+ row's list, default and
+Backspace. Not verified: no client was started (no game data or GPU run on this
+machine), so the row was not seen in the SJK UI pop-up or the classic panel, and
+no level's frame rate or look was measured or compared; the levels are chosen from
+what each setting draws.
+
 ## Menu pictures follow the renderer
 
 Branch `fix/menu-icons-after-world-change` (08/10/2026, based on `15cf7a9`, Linux): the

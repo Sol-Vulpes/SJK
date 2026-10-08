@@ -238,6 +238,18 @@ test: Repeat for Force (classic), Controls pictures, Create game preview and the
 test: Both menu styles (ui_menuStyle sjk and classic) and the in-game menu's Character page.
 note: Not tried in a running client.
 
+[graphics-quality]
+area: Menus & settings
+title: Graphics quality levels at the top of First setup and Video (SJK PR #35)
+change: Performance, Balanced, High and Ultra set 22 rendering cvars together (docs/client.md).
+change: A fresh profile reads High; a hand change reads Custom; nothing is applied on its own.
+change: Also the graphicsquality console command; Backspace or right-click returns to High.
+test: Fresh profile, First setup (SJK UI card and classic Setup): the top row reads High.
+test: Pick Performance: shadows, light shafts and post-processing go off after a restart.
+test: Change one setting by hand: the row reads Custom; step it: it starts at the nearest level.
+test: graphicsquality ultra names Ultra and what needs a restart; graphicsquality alone shows it.
+note: The first row is pre-selected, so a stray Backspace there replaces 22 settings.
+
 # ---- HUD ----
 
 [menu-huds]
