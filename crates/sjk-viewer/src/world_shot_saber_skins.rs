@@ -1,7 +1,8 @@
 //! World shots of the Sun blade ([`crate::saber_skins`]) on duel6, without a session:
 //! lit blades stand in front of the first spawn's view, the Sun between a stock orange
 //! and a stock blue blade, at several animation times, then the Sun alone up close; and
-//! the player screen's model holding the Sun blade (`cg_saberSkin saber_sun`). Ignored
+//! the player screen's model holding the Sun blade (`cg_saberSkin saber_sun`, owned as
+//! a hub profile listing it would make it). Ignored
 //! like the other world shots.
 
 use super::*;
@@ -95,12 +96,14 @@ fn held_on_the_stage() {
     let cvars = [
         ("ui_menuStyle", "sjk"),
         (crate::settings::quick::HIDE_CVAR, "1"),
-        (crate::saber_skins::CVAR, "saber_sun"),
+        (crate::unlockables::SABER_SKIN_CVAR, "saber_sun"),
     ];
     let Some((mut gpu, _profile)) = open("maps/mp/duel6.bsp", [1920, 1080], Some(menu), &cvars)
     else {
         return;
     };
+    // The shots have no hub: they own the unlock, as a profile listing it would.
+    gpu.looks.shot_owns_unlocks = true;
     let _ = frame(&mut gpu, 4);
     if let (Some(menu), Some(console)) = (gpu.client_menu.as_mut(), gpu.console.as_ref()) {
         menu.open_player(console, crate::player_menu::ReturnTarget::MainMenu);

@@ -484,16 +484,10 @@ pub(super) fn register_daily_cvars(cvars: &mut CvarRegistry) -> Result<(), sjk_s
             "Illuminate on the Force wheel: a holocron by your shoulder that lights the way, which other SJK players on the server see too (0 removes it)",
         ),
         CvarDefinition::new(
-            crate::looks::SABER_SKIN_CVAR,
+            crate::unlockables::SABER_SKIN_CVAR,
             "",
             archive,
-            "The blade skin you wear (an unlockable's id, such as saber_sun); empty for the stock blade",
-        ),
-        CvarDefinition::new(
-            crate::saber_skins::CVAR,
-            "",
-            archive,
-            "The blade skin your sabers wear, by unlock id (saber_sun: the Sun blade); empty for the stock blade",
+            "The blade skin your sabers wear, by unlock id (saber_sun: the Sun blade), shown once your SJK profile holds it; empty for the stock blade",
         ),
         CvarDefinition::new(
             crate::quick_wheel::SOUNDS_CVAR,

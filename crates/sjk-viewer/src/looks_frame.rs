@@ -53,9 +53,13 @@ impl GpuState {
             let setting = self
                 .console
                 .as_ref()
-                .and_then(|console| console.text_cvar(looks::SABER_SKIN_CVAR).ok())
+                .and_then(|console| console.text_cvar(crate::unlockables::SABER_SKIN_CVAR).ok())
                 .unwrap_or_default();
-            Worn::own(setting, player_identity::owns_unlock, lit).saber_skin
+            #[cfg(test)]
+            let shot = self.looks.shot_owns_unlocks;
+            #[cfg(not(test))]
+            let shot = false;
+            Worn::own(setting, |id| shot || player_identity::owns_unlock(id), lit).saber_skin
         } else {
             self.looks.own().saber_skin
         };

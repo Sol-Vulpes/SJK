@@ -1,5 +1,6 @@
 //! Blade skins: unlockable looks that replace a saber blade's colour (not its hilt),
-//! the first being the **Sun blade** (`saber_sun`, see `docs/unlockables.md`).
+//! the first being the **Sun blade** (`saber_sun`, see `docs/unlockables.md`). Their
+//! ids, names and descriptions are the catalogue's ([`crate::unlockables`]).
 //!
 //! A skin is drawn as its own saber material after the retail pairs and the neutral RGB
 //! pair ([`BladeColor::Skin`]), with engine-generated textures ([`sun_glow`],
@@ -11,16 +12,14 @@
 //! Who wears which skin is the per-client [`SaberSkins`] table on [`GpuState`]. Saber
 //! submission (in the hand, thrown, first person) asks it for each entity's blades, and
 //! the audio adapter gets its sound overrides from it every frame
-//! ([`GpuState::sync_saber_skins`]). For now only the local player's entry is set, from
-//! `cg_saberSkin` ([`GpuState::local_saber_skin`]); the hub's looks fill the others.
+//! ([`GpuState::sync_saber_skins`]). The local player's entry is its own skin, gated by
+//! its hub profile ([`GpuState::local_saber_skin`]); every other client's is the look
+//! the hub relayed for its slot (`GpuState::looks`), taken again only when it changes.
 
 use crate::saber_rgb::BladeColor;
 use crate::{GameAudio, GpuState};
 use sjk_vfs::{VfsError, VirtualFileSystem};
 
-/// Archived: the blade-skin unlock id the local player wears; empty or unknown for the
-/// stock blade.
-pub(crate) const CVAR: &str = "cg_saberSkin";
 /// Players a game server can hold (`MAX_CLIENTS`); entity ids 1..=32 are their bodies.
 pub(crate) const MAX_CLIENTS: usize = sjk_client::SABER_SOUND_CLIENTS;
 /// How far a skin's glow capsule reaches past the stock one, for its flares and shimmer;
@@ -96,19 +95,9 @@ impl BladeSkin {
         }
     }
 
-    /// The unlock id the hub and `cg_saberSkin` name it by.
-    pub(crate) const fn unlock_id(self) -> &'static str {
-        match self {
-            Self::Sun => "saber_sun",
-        }
-    }
-
-    /// The skin an unlock id names; an id that is not a blade skin is `None`.
-    pub(crate) fn from_unlock_id(id: &str) -> Option<Self> {
-        let id = id.trim();
-        Self::ALL
-            .into_iter()
-            .find(|skin| skin.unlock_id().eq_ignore_ascii_case(id))
+    /// The skin a catalogue id names; an id that is not a known blade skin is `None`.
+    pub(crate) fn from_id(id: &str) -> Option<Self> {
+        crate::unlockables::blade_skin(id).and_then(crate::unlockables::Unlockable::blade_skin)
     }
 
     /// Its replacement saber sounds.
@@ -150,11 +139,16 @@ impl BladeSkin {
 /// for the menus' preview (no client slot there).
 #[derive(Clone, Debug, Default)]
 pub(crate) struct SaberSkins {
+    /// What each slot is drawn wearing: `others`, with the local player's own in its slot.
     clients: [Option<BladeSkin>; MAX_CLIENTS],
+    /// What the hub's looks say each slot wears.
+    others: [Option<BladeSkin>; MAX_CLIENTS],
     /// The local player's skin, also shown with no session (the Character preview).
     local: Option<BladeSkin>,
-    /// The client slot `local` was last written to, so a new slot clears the old.
+    /// The local player's client slot, in a session.
     local_client: Option<usize>,
+    /// The looks' revision `others` was last taken at.
+    looks_revision: Option<u64>,
     /// Blades the world shots add every frame, without a session (blade, colour, seed).
     #[cfg(test)]
     pub(crate) shot_blades: Vec<(crate::saber::Blade, BladeColor, u32)>,
@@ -164,11 +158,41 @@ pub(crate) struct SaberSkins {
 }
 
 impl SaberSkins {
-    /// Set client slot `client`'s skin (`None` for the stock blade); out-of-range slots
-    /// are ignored.
+    /// Set what the hub says client slot `client` wears (`None` for the stock blade);
+    /// out-of-range slots are ignored, and the local player's own slot keeps its skin.
+    #[cfg(test)]
     pub(crate) fn set(&mut self, client: usize, skin: Option<BladeSkin>) {
-        if let Some(slot) = self.clients.get_mut(client) {
+        if let Some(slot) = self.others.get_mut(client) {
             *slot = skin;
+            self.merge();
+        }
+    }
+
+    /// Take every other slot's skin from the looks (`skin_of` a client slot) when their
+    /// `revision` is not the one last taken; no allocation, 32 lookups when it changed.
+    pub(crate) fn follow_looks(
+        &mut self,
+        revision: u64,
+        skin_of: impl Fn(usize) -> Option<BladeSkin>,
+    ) {
+        if self.looks_revision == Some(revision) {
+            return;
+        }
+        self.looks_revision = Some(revision);
+        for (client, skin) in self.others.iter_mut().enumerate() {
+            *skin = skin_of(client);
+        }
+        self.merge();
+    }
+
+    /// Draw `others`, with the local player's own skin in its slot.
+    fn merge(&mut self) {
+        self.clients = self.others;
+        if let Some(slot) = self
+            .local_client
+            .and_then(|client| self.clients.get_mut(client))
+        {
+            *slot = self.local;
         }
     }
 
@@ -190,16 +214,12 @@ impl SaberSkins {
 
     /// The local player wears `skin` and, in a session, sits in slot `client`.
     pub(crate) fn set_local(&mut self, client: Option<usize>, skin: Option<BladeSkin>) {
-        if self.local_client != client
-            && let Some(previous) = self.local_client
-        {
-            self.set(previous, None);
+        if (client, skin) == (self.local_client, self.local) {
+            return;
         }
         self.local = skin;
         self.local_client = client;
-        if let Some(client) = client {
-            self.set(client, skin);
-        }
+        self.merge();
     }
 
     /// Each client slot's sound set ([`BladeSkin::index`]) for the audio adapter.
@@ -221,25 +241,18 @@ pub(crate) fn sound_sets() -> [sjk_client::SaberSoundSet<'static>; BladeSkin::AL
     })
 }
 
-/// `cg_saberSkin`'s value as a skin; empty or unknown is the stock blade.
-pub(crate) fn parse_cvar(value: Option<&sjk_shell::CvarValue>) -> Option<BladeSkin> {
-    match value? {
-        sjk_shell::CvarValue::Text(id) => BladeSkin::from_unlock_id(id),
-        _ => None,
-    }
-}
-
 impl GpuState {
-    /// The skin the local player wears. **For now straight from `cg_saberSkin`**; the
-    /// hub work replaces this with the choice gated by the player's own hub profile
-    /// (only an unlock the profile lists may be worn).
+    /// The skin the local player wears: `cg_saberSkin` only while the own hub profile
+    /// lists that unlock (`Looks::own_saber_skin`, read twice a second); with no
+    /// identity, no hub or the unlock missing, the stock blade.
     pub(crate) fn local_saber_skin(&self) -> Option<BladeSkin> {
-        parse_cvar(self.console.as_ref().and_then(|console| console.cvar(CVAR)))
+        self.looks.own_saber_skin().and_then(BladeSkin::from_id)
     }
 
-    /// Once a frame, before the session's sabers are submitted: the local player's entry
-    /// from [`Self::local_saber_skin`], and every client's sound override to the audio
-    /// adapter. No allocation: a cvar lookup and two 32-entry copies.
+    /// Once a frame, before the session's sabers are submitted: every other client's
+    /// entry from the hub's looks when they changed, the local player's from
+    /// [`Self::local_saber_skin`], and every client's sound override to the audio
+    /// adapter. No allocation: a few compares, and 32-entry copies on a change.
     pub(crate) fn sync_saber_skins(
         &mut self,
         game_audio: &mut Option<GameAudio>,
@@ -255,6 +268,10 @@ impl GpuState {
                     .map(crate::demo_playback::Session::latest_snapshot)
             })
             .map(|snapshot| usize::from(snapshot.player.client_num()));
+        let looks = &self.looks;
+        self.saber_skins.follow_looks(looks.revision(), |client| {
+            looks.saber_skin_id(client).and_then(BladeSkin::from_id)
+        });
         let skin = self.local_saber_skin();
         self.saber_skins.set_local(client, skin);
         if let Some(audio) = game_audio {

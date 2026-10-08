@@ -172,25 +172,71 @@ fn the_local_choice_follows_the_players_slot() {
 }
 
 #[test]
-fn cg_saber_skin_names_the_unlock_and_anything_else_is_stock() {
-    use sjk_shell::CvarValue;
-    let parse = |value: CvarValue| parse_cvar(Some(&value));
-    assert_eq!(
-        parse(CvarValue::Text("saber_sun".into())),
-        Some(BladeSkin::Sun)
-    );
-    assert_eq!(
-        parse(CvarValue::Text(" SABER_Sun ".into())),
-        Some(BladeSkin::Sun)
-    );
-    assert_eq!(parse(CvarValue::Text(String::new())), None);
-    assert_eq!(parse(CvarValue::Text("saber_moon".into())), None);
-    assert_eq!(parse(CvarValue::Integer(1)), None);
-    assert_eq!(parse_cvar(None), None);
+fn catalogue_ids_name_the_skins_and_anything_else_is_stock() {
+    assert_eq!(BladeSkin::from_id("saber_sun"), Some(BladeSkin::Sun));
+    assert_eq!(BladeSkin::from_id(" SABER_Sun "), Some(BladeSkin::Sun));
+    assert_eq!(BladeSkin::from_id(""), None);
+    assert_eq!(BladeSkin::from_id("saber_moon"), None);
     for skin in BladeSkin::ALL {
-        assert_eq!(BladeSkin::from_unlock_id(skin.unlock_id()), Some(skin));
+        let id = crate::unlockables::of_blade_skin(skin).id;
+        assert_eq!(BladeSkin::from_id(id), Some(skin));
         assert_eq!(BladeSkin::ALL[skin.index()], skin);
     }
+}
+
+#[test]
+fn other_players_skins_follow_the_looks_only_when_they_change() {
+    use std::cell::Cell;
+    let mut skins = SaberSkins::default();
+    skins.set_local(Some(2), Some(BladeSkin::Sun));
+    let asked = Cell::new(0);
+    let looks = |client: usize| {
+        asked.set(asked.get() + 1);
+        // The hub says slot 2 (the local player's own) wears nothing: its own wins.
+        (client == 5).then_some(BladeSkin::Sun)
+    };
+    skins.follow_looks(7, looks);
+    assert_eq!(asked.get(), MAX_CLIENTS);
+    assert_eq!(skins.get(6), Some(BladeSkin::Sun));
+    assert_eq!(skins.get(3), Some(BladeSkin::Sun), "the local player's own");
+    let sets = skins.sound_sets();
+    assert_eq!(sets[5], Some(0));
+    assert_eq!(sets[2], Some(0));
+    assert_eq!(sets.iter().filter(|set| set.is_some()).count(), 2);
+    // The same revision is not read again.
+    skins.follow_looks(7, looks);
+    assert_eq!(asked.get(), MAX_CLIENTS);
+    // A new one is; the slot that took its look off goes stock, sounds too.
+    skins.follow_looks(8, |_| None);
+    assert_eq!(skins.get(6), None);
+    assert_eq!(skins.sound_sets()[5], None);
+    assert_eq!(skins.get(3), Some(BladeSkin::Sun));
+    // The local player leaves the game: its old slot shows the hub's look again.
+    skins.set(2, Some(BladeSkin::Sun));
+    skins.set_local(None, None);
+    assert_eq!(skins.get(3), Some(BladeSkin::Sun));
+    assert_eq!(skins.local(), None);
+}
+
+#[test]
+fn the_local_skin_is_gated_by_the_own_profile() {
+    let mut looks = crate::looks::Looks::default();
+    // `cg_saberSkin saber_sun` without the unlock: the stock blade.
+    let unowned = crate::looks::Worn::own("saber_sun", |_| false, false);
+    looks.set_own(None, unowned);
+    assert_eq!(looks.own_saber_skin().and_then(BladeSkin::from_id), None);
+    let owned = crate::looks::Worn::own("saber_sun", |id| id == "saber_sun", false);
+    looks.set_own(Some(4), owned);
+    assert_eq!(
+        looks.own_saber_skin().and_then(BladeSkin::from_id),
+        Some(BladeSkin::Sun)
+    );
+    // The local slot in the looks wears it too, so following them agrees.
+    let mut skins = SaberSkins::default();
+    skins.follow_looks(looks.revision(), |client| {
+        looks.saber_skin_id(client).and_then(BladeSkin::from_id)
+    });
+    assert_eq!(skins.get(5), Some(BladeSkin::Sun));
 }
 
 #[test]
@@ -198,7 +244,7 @@ fn the_cvar_is_registered_archived_and_empty() {
     let directory = tempfile::tempdir().unwrap();
     let console = crate::console::ViewerConsole::new(directory.path().join("config.cfg")).unwrap();
     assert_eq!(
-        console.cvar(CVAR),
+        console.cvar(crate::unlockables::SABER_SKIN_CVAR),
         Some(&sjk_shell::CvarValue::Text(String::new()))
     );
 }

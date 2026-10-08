@@ -3,7 +3,8 @@
 //! Other players' looks come through the SJK hub ([`sjk_identity::Look`]): from the
 //! presence roster when it changes and from the feed's look events as they come. The
 //! local player's own look comes from its own settings (`cg_saberSkin`, gated by the
-//! unlocks of its hub profile, and its Illuminate), never from the hub.
+//! unlocks of its hub profile, and its Illuminate), never from the hub. Blade skins are
+//! named by their ids in the catalogue ([`crate::unlockables`]).
 //!
 //! A hub look counts only while the game shows, in its slot, the name the claim was
 //! made under (the badges' and emotes' rule, [`sjk_identity::names_match`]). The
@@ -12,27 +13,24 @@
 //! fixed [`Worn`] table.
 //!
 //! The renderer reads [`Looks::saber_skin_id`], [`Looks::illuminated`] and
-//! [`Looks::own_saber_skin`] on `GpuState::looks`.
+//! [`Looks::own_saber_skin`] on `GpuState::looks`, and [`Looks::revision`] tells it
+//! when what is worn changed (`GpuState::sync_saber_skins`).
 
 use sjk_identity::Look;
 
 /// Slots the table holds, as the emotes' do.
 pub(crate) const SLOTS: usize = 64;
-/// Archived: the blade-skin unlock id the player wears, empty for the stock blade.
-pub(crate) const SABER_SKIN_CVAR: &str = "cg_saberSkin";
-/// The blade skins this client knows (`docs/unlockables.md`, "Catalogue"); a look
-/// naming any other id draws the stock blade.
-pub(crate) const BLADE_SKINS: [&str; 1] = ["saber_sun"];
 
-/// The blade skin `id` names, if this client knows it.
-pub(crate) fn blade_skin(id: &str) -> Option<&'static str> {
-    BLADE_SKINS.iter().copied().find(|known| *known == id)
+/// The catalogue's id of the blade skin `id` names, if this client knows it; a look
+/// naming any other id draws the stock blade.
+fn blade_skin(id: &str) -> Option<&'static str> {
+    crate::unlockables::blade_skin(id).map(|unlockable| unlockable.id)
 }
 
 /// What one player wears, as this client draws it.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub(crate) struct Worn {
-    /// The blade skin, one of [`BLADE_SKINS`]; `None` for the stock blade.
+    /// The blade skin, a catalogue id; `None` for the stock blade.
     pub(crate) saber_skin: Option<&'static str>,
     /// The Illuminate holocron is lit.
     pub(crate) illuminate: bool,
@@ -50,7 +48,6 @@ impl Worn {
     /// The look the hub is told the local player wears: the skin only when the own
     /// profile lists it (`owned`), and the local holocron's lit state.
     pub(crate) fn own(skin_setting: &str, owned: impl Fn(&str) -> bool, lit: bool) -> Self {
-        let skin_setting = skin_setting.trim();
         Self {
             saber_skin: blade_skin(skin_setting).filter(|skin| owned(skin)),
             illuminate: lit,
@@ -88,6 +85,11 @@ pub(crate) struct Looks {
     pub(crate) roster_revision: Option<u64>,
     /// The server the hub looks are for.
     pub(crate) server: Option<std::net::SocketAddr>,
+    /// Counts changes to [`Self::worn`], so a reader can follow it cheaply.
+    revision: u64,
+    /// World shots own every unlock, having no hub.
+    #[cfg(test)]
+    pub(crate) shot_owns_unlocks: bool,
 }
 
 impl Default for Looks {
@@ -99,15 +101,16 @@ impl Default for Looks {
             own: Worn::default(),
             roster_revision: None,
             server: None,
+            revision: 0,
+            #[cfg(test)]
+            shot_owns_unlocks: false,
         }
     }
 }
 
 impl Looks {
-    /// The blade skin the player in `client` wears, one of [`BLADE_SKINS`]; `None` for
-    /// the stock blade (and for a slot out of range).
-    // The seam the blade skins' drawing plugs into (`saber_skins.rs`, separate work).
-    #[allow(dead_code)]
+    /// The blade skin the player in `client` wears, a catalogue id; `None` for the
+    /// stock blade (and for a slot out of range).
     pub(crate) fn saber_skin_id(&self, client: usize) -> Option<&'static str> {
         self.worn.get(client)?.saber_skin
     }
@@ -119,8 +122,6 @@ impl Looks {
 
     /// The local player's own blade skin, gated by its profile's unlocks: for the
     /// first-person blade and the Character page's preview, in a game or not.
-    // The seam the blade skins' drawing plugs into (`saber_skins.rs`, separate work).
-    #[allow(dead_code)]
     pub(crate) fn own_saber_skin(&self) -> Option<&'static str> {
         self.own.saber_skin
     }
@@ -128,6 +129,11 @@ impl Looks {
     /// The local player's own look.
     pub(crate) fn own(&self) -> Worn {
         self.own
+    }
+
+    /// Changes whenever what a slot is drawn wearing (or the own look) changes.
+    pub(crate) fn revision(&self) -> u64 {
+        self.revision
     }
 
     /// Forget every hub look: another server, or none.
@@ -175,6 +181,9 @@ impl Looks {
     /// The local player's slot (`None` out of a game) and own look. A slot it left
     /// wears nothing until the next [`Looks::rebuild`].
     pub(crate) fn set_own(&mut self, slot: Option<u8>, own: Worn) {
+        if (slot, own) != (self.own_slot, self.own) {
+            self.revision += 1;
+        }
         if slot != self.own_slot
             && let Some(left) = self
                 .own_slot
@@ -192,6 +201,7 @@ impl Looks {
     /// Rebuild what each slot is drawn wearing; `shown` is the name the game shows in
     /// a slot. Only slots with a hub look ask for it.
     pub(crate) fn rebuild(&mut self, shown: impl Fn(u8) -> Option<String>) {
+        let before = self.worn;
         for (slot, (worn, claimed)) in self.worn.iter_mut().zip(&self.claimed).enumerate() {
             *worn = claimed
                 .as_ref()
@@ -207,6 +217,9 @@ impl Looks {
         }
         let (slot, own) = (self.own_slot, self.own);
         self.set_own(slot, own);
+        if self.worn != before {
+            self.revision += 1;
+        }
     }
 }
 
@@ -316,6 +329,26 @@ mod tests {
         let own = Worn::own("saber_sun", |_| true, false);
         looks.set_own(None, own);
         assert_eq!(looks.own_saber_skin(), Some("saber_sun"));
+    }
+
+    #[test]
+    fn the_revision_follows_what_is_worn() {
+        let mut looks = Looks::default();
+        let start = looks.revision();
+        looks.rebuild(shown);
+        assert_eq!(looks.revision(), start, "nothing worn changed");
+        looks.apply_event(3, "Sol", &look("saber_sun", false));
+        assert_eq!(looks.revision(), start, "not drawn before the rebuild");
+        looks.rebuild(shown);
+        let worn = looks.revision();
+        assert!(worn > start);
+        looks.rebuild(shown);
+        assert_eq!(looks.revision(), worn);
+        looks.set_own(Some(1), Worn::own("saber_sun", |_| true, false));
+        assert!(looks.revision() > worn);
+        let own = looks.revision();
+        looks.set_own(Some(1), Worn::own("saber_sun", |_| true, false));
+        assert_eq!(looks.revision(), own);
     }
 
     #[test]

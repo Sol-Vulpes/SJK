@@ -95,6 +95,10 @@ pub(super) const COMMANDS: &[(&str, &str)] = &[
         crate::console::SJK_CHAT_HELP,
     ),
     (crate::emotes::COMMAND, crate::emotes::HELP),
+    (
+        crate::saber_skin_command::COMMAND,
+        crate::saber_skin_command::HELP,
+    ),
     (super::update_panel::COMMAND, super::update_panel::HELP),
     (
         crate::identity_command::COMMAND,
@@ -495,6 +499,7 @@ impl crate::GpuState {
                 self.sync_cursor_policy();
             }
             crate::emotes::COMMAND => return self.emote_command(args),
+            crate::saber_skin_command::COMMAND => return self.saber_skin_command(args),
             crate::console::SJK_CHAT_COMMAND => {
                 if let Some(console) = &mut self.console {
                     console.toggle_sjk_chat_panel();
