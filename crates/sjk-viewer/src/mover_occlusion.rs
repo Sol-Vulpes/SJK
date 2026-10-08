@@ -185,6 +185,14 @@ pub(crate) struct Doors {
 }
 
 impl Doors {
+    /// No door tiles for `occluders` occluders.
+    pub(crate) fn none(occluders: usize) -> Self {
+        Self {
+            tiles: Vec::new(),
+            by_occluder: vec![Vec::new(); occluders],
+        }
+    }
+
     /// Give a door tile to every lamp whose reach touches an occluder's, at most
     /// `capacity` of them: the most powerful when there are more.
     pub(crate) fn assign(
@@ -463,6 +471,78 @@ impl Poses {
 
     pub(crate) fn any_unknown(&self) -> bool {
         self.known.iter().any(|known| !known)
+    }
+}
+
+/// The CPU half of [`gpu::Runtime`]: which occluder each presented mover is, and where
+/// every occluder stands.
+pub(crate) struct Tracking {
+    /// Per mover catalog mesh: its occluder.
+    mesh_to_occluder: Vec<Option<u32>>,
+    pub(crate) doors: Doors,
+    pub(crate) poses: Poses,
+    pub(crate) queue: Queue,
+    /// Whether the baselines have placed the movers no snapshot has shown.
+    baselines_placed: bool,
+}
+
+impl Tracking {
+    /// `doors` must name these occluders (`Doors::assign` over them, or [`Doors::none`]).
+    pub(crate) fn new(occluders: &[Occluder], doors: Doors) -> Self {
+        let meshes = occluders.iter().map(|o| o.mesh + 1).max().unwrap_or(0);
+        let mut mesh_to_occluder = vec![None; meshes];
+        for (index, occluder) in occluders.iter().enumerate() {
+            mesh_to_occluder[occluder.mesh] = Some(index as u32);
+        }
+        let doors = if doors.by_occluder.len() == occluders.len() {
+            doors
+        } else {
+            Doors::none(occluders.len())
+        };
+        Self {
+            mesh_to_occluder,
+            poses: Poses::new(occluders.len()),
+            queue: Queue::new(doors.tiles.len()),
+            doors,
+            baselines_placed: false,
+        }
+    }
+
+    fn occluder_of(&self, mesh: Option<usize>) -> Option<usize> {
+        mesh.and_then(|mesh| self.mesh_to_occluder.get(mesh).copied().flatten())
+            .map(|occluder| occluder as usize)
+    }
+
+    /// Place the movers this frame presents, then the baselines' movers no snapshot has
+    /// shown (once).
+    pub(crate) fn observe(
+        &mut self,
+        presented: &[crate::movers::Presented],
+        baselines: Option<impl Iterator<Item = crate::movers::Presented>>,
+        mesh_of: impl Fn(usize) -> Option<usize>,
+    ) {
+        for mover in presented {
+            if let Some(occluder) = self.occluder_of(mesh_of(mover.model_index)) {
+                self.poses
+                    .set(occluder, Pose::of(mover), &self.doors, &mut self.queue);
+            }
+        }
+        if !self.baselines_placed
+            && self.poses.any_unknown()
+            && let Some(baselines) = baselines
+        {
+            for mover in baselines {
+                if let Some(occluder) = self.occluder_of(mesh_of(mover.model_index)) {
+                    self.poses.set_unknown(
+                        occluder,
+                        Pose::of(&mover),
+                        &self.doors,
+                        &mut self.queue,
+                    );
+                }
+            }
+            self.baselines_placed = true;
+        }
     }
 }
 

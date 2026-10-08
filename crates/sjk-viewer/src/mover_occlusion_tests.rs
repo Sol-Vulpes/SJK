@@ -394,3 +394,34 @@ fn only_cells_behind_a_mover_from_the_lamp_can_be_in_its_shadow() {
     // A lamp inside the box shadows anywhere.
     assert!(may_shadow(Vec3::new(4., 4., 64.), lower, upper, a, b));
 }
+
+/// Mover `model` drawn at `origin`, or hidden.
+fn presented(model: usize, origin: [f32; 3], visible: bool) -> crate::movers::Presented {
+    crate::movers::Presented {
+        entity_number: 100 + model as u16,
+        model_index: model,
+        origin,
+        angles: [0.; 3],
+        rotation: [0., 0., 0., 1.],
+        visible,
+    }
+}
+
+#[test]
+fn movers_without_door_tiles_still_count_their_moves_for_the_far_cascade() {
+    // Inline model 7 is the catalog's mesh 2; no lamp gave it a door tile.
+    let mut tracking = Tracking::new(&[door(2, [0.; 3])], Doors::none(1));
+    let mesh_of = |model: usize| (model == 7).then_some(2);
+    let none = || None::<std::iter::Empty<crate::movers::Presented>>;
+    tracking.observe(&[presented(7, [0.; 3], true)], none(), mesh_of);
+    let placed = tracking.poses.generation;
+    assert_eq!(placed, 1);
+    tracking.observe(&[presented(7, [0.; 3], true)], none(), mesh_of);
+    assert_eq!(tracking.poses.generation, placed, "still");
+    tracking.observe(&[presented(7, [0., 0., 16.], true)], none(), mesh_of);
+    assert_eq!(tracking.poses.generation, placed + 1, "moved");
+    assert_eq!(tracking.queue.len(), 0, "no tiles to trace");
+    // Door tiles from other occluders cannot index this one.
+    let mismatched = Tracking::new(&[door(2, [0.; 3])], Doors::none(3));
+    assert_eq!(mismatched.doors.by_occluder.len(), 1);
+}

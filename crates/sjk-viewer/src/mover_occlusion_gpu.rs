@@ -1,6 +1,6 @@
 //! GPU side of mover occlusion: occluder triangles and poses, and the trace of queued
 //! door tiles into the lamp visibility atlas.
-use super::{Doors, Occluder, Pose, Poses, Queue};
+use super::{Doors, Occluder, Poses, Queue, Tracking};
 use wgpu::util::DeviceExt;
 
 /// Rays traced per frame: 31 tiles of 128² (about 17,000 rays each) or 120 of 64²,
@@ -14,13 +14,16 @@ const CACHE_REFRESH: std::time::Duration = std::time::Duration::from_millis(100)
 /// Cache layers baked again in one frame; the rest wait for the next.
 const LAYERS_PER_FRAME: usize = 4;
 
-/// Pose tracking and the tracer of one map's door tiles.
+/// Pose tracking of one map's shadow-casting movers and the tracer of their door tiles.
 pub(crate) struct Runtime {
-    /// Per mover catalog mesh: its occluder.
-    mesh_to_occluder: Vec<Option<u32>>,
-    doors: Doors,
-    poses: Poses,
-    queue: Queue,
+    tracking: Tracking,
+    /// `None` without door tiles: the poses then only tell the far sun cascade when
+    /// movers have moved.
+    tracer: Option<Tracer>,
+}
+
+/// The GPU trace of queued door tiles and the lamp cache regions it makes stale.
+struct Tracer {
     batch: Vec<u32>,
     /// Tiles traced per frame at this atlas resolution.
     budget: usize,
@@ -28,8 +31,6 @@ pub(crate) struct Runtime {
     pending: std::cell::Cell<u32>,
     /// The poses `table` holds, by `Poses::generation`.
     uploaded: Option<u64>,
-    /// Whether the baselines have placed the movers no snapshot has shown.
-    baselines_placed: bool,
     table: Vec<[f32; 4]>,
     table_buffer: wgpu::Buffer,
     work: wgpu::Buffer,
@@ -50,27 +51,60 @@ pub(crate) struct Runtime {
 }
 
 impl Runtime {
-    /// `None` when no lamp has a door tile or the atlas has no resolution.
+    /// `None` without occluders. `doors` (`lamp_lights::Gpu::take_doors`) are traced when
+    /// there are any and the atlas has a resolution; otherwise only poses are tracked.
     pub(crate) fn new(
         device: &wgpu::Device,
         lamps: &crate::lamp_lights::Gpu,
-        doors: Doors,
+        doors: Option<Doors>,
         lamp_set: &[crate::lamp_lights::Lamp],
         occluders: &[Occluder],
-        meshes: usize,
         cache: Option<&crate::world_materials::lamp_cache::Pages>,
     ) -> Option<Self> {
-        let resolution = lamps.visibility_resolution()?;
-        if doors.tiles.is_empty() {
+        if occluders.is_empty() {
             return None;
         }
-        let mut mesh_to_occluder = vec![None; meshes];
+        let tracking = Tracking::new(
+            occluders,
+            doors.unwrap_or_else(|| Doors::none(occluders.len())),
+        );
+        let tracer = lamps
+            .visibility_resolution()
+            .filter(|_| !tracking.doors.tiles.is_empty())
+            .map(|resolution| {
+                Tracer::new(
+                    device,
+                    lamps,
+                    &tracking.doors,
+                    lamp_set,
+                    occluders,
+                    cache,
+                    resolution,
+                )
+            });
+        if tracer.is_none() {
+            crate::log::progress(format_args!(
+                "Mover occlusion: {} movers tracked for the far sun cascade, no door tiles",
+                occluders.len()
+            ));
+        }
+        Some(Self { tracking, tracer })
+    }
+}
+
+impl Tracer {
+    fn new(
+        device: &wgpu::Device,
+        lamps: &crate::lamp_lights::Gpu,
+        doors: &Doors,
+        lamp_set: &[crate::lamp_lights::Lamp],
+        occluders: &[Occluder],
+        cache: Option<&crate::world_materials::lamp_cache::Pages>,
+        resolution: u32,
+    ) -> Self {
         let mut triangles: Vec<[f32; 4]> = Vec::new();
         let mut table = Vec::with_capacity(occluders.len() * 4);
-        for (index, occluder) in occluders.iter().enumerate() {
-            if let Some(slot) = mesh_to_occluder.get_mut(occluder.mesh) {
-                *slot = Some(index as u32);
-            }
+        for occluder in occluders {
             let first = (triangles.len() / 3) as u32;
             for [a, b, c] in &occluder.triangles {
                 triangles.push(a.extend(0.).to_array());
@@ -224,7 +258,7 @@ impl Runtime {
             |pages| {
                 super::cache_regions(
                     lamp_set,
-                    &doors,
+                    doors,
                     occluders,
                     pages.surfaces(),
                     pages.resolution(),
@@ -239,17 +273,12 @@ impl Runtime {
             doors.tiles.len(),
             started.elapsed().as_secs_f64() * 1e3
         ));
-        Some(Self {
-            mesh_to_occluder,
-            poses: Poses::new(occluders.len()),
-            queue: Queue::new(doors.tiles.len()),
-            doors,
+        Self {
             batch: Vec::with_capacity(MAX_TILES),
             budget: ((RAYS_PER_FRAME / ((resolution + 2) * (resolution + 2))) as usize)
                 .clamp(8, MAX_TILES),
             pending: std::cell::Cell::new(0),
             uploaded: None,
-            baselines_placed: false,
             table,
             table_buffer,
             work,
@@ -262,49 +291,18 @@ impl Runtime {
             regions,
             stale: Default::default(),
             refreshed: std::cell::Cell::new(None),
-        })
+        }
     }
 
-    /// Place the movers this frame presents, then the baselines' movers no snapshot has
-    /// shown (once), and upload what changed and the next tiles to trace.
-    pub(crate) fn observe(
+    /// Upload the poses if they changed and, once the last batch is traced, the next tiles.
+    fn prepare(
         &mut self,
         queue: &crate::frame_queue::FrameQueue,
-        presented: &[crate::movers::Presented],
-        baselines: Option<impl Iterator<Item = crate::movers::Presented>>,
-        mesh_of: impl Fn(usize) -> Option<usize>,
+        poses: &Poses,
+        tiles: &mut Queue,
     ) {
-        let Self {
-            mesh_to_occluder,
-            doors,
-            poses,
-            queue: tiles,
-            baselines_placed,
-            ..
-        } = self;
-        let occluder_of = |model_index| {
-            mesh_of(model_index)
-                .and_then(|mesh| mesh_to_occluder.get(mesh).copied().flatten())
-                .map(|occluder| occluder as usize)
-        };
-        for mover in presented {
-            if let Some(occluder) = occluder_of(mover.model_index) {
-                poses.set(occluder, Pose::of(mover), doors, tiles);
-            }
-        }
-        if !*baselines_placed
-            && poses.any_unknown()
-            && let Some(baselines) = baselines
-        {
-            for mover in baselines {
-                if let Some(occluder) = occluder_of(mover.model_index) {
-                    poses.set_unknown(occluder, Pose::of(&mover), doors, tiles);
-                }
-            }
-            *baselines_placed = true;
-        }
-        if self.uploaded != Some(self.poses.generation) {
-            for (index, pose) in self.poses.current.iter().enumerate() {
+        if self.uploaded != Some(poses.generation) {
+            for (index, pose) in poses.current.iter().enumerate() {
                 self.table[index * 4] = pose.rotation.to_array();
                 self.table[index * 4 + 1] = pose
                     .origin
@@ -312,10 +310,10 @@ impl Runtime {
                     .to_array();
             }
             queue.write_buffer(&self.table_buffer, 0, bytemuck::cast_slice(&self.table));
-            self.uploaded = Some(self.poses.generation);
+            self.uploaded = Some(poses.generation);
         }
         if self.pending.get() == 0 {
-            self.queue.take(self.budget, &mut self.batch);
+            tiles.take(self.budget, &mut self.batch);
             if !self.batch.is_empty() {
                 queue.write_buffer(&self.work, 0, bytemuck::cast_slice(&self.batch));
                 queue.write_buffer(
@@ -328,8 +326,7 @@ impl Runtime {
         }
     }
 
-    /// Trace the tiles `observe` queued, once.
-    pub(crate) fn encode(&self, encoder: &mut wgpu::CommandEncoder) {
+    fn encode(&self, encoder: &mut wgpu::CommandEncoder) {
         let tiles = self.pending.replace(0);
         if tiles == 0 {
             return;
@@ -354,45 +351,87 @@ impl Runtime {
             }
         }
     }
+}
+
+/// Lamp cache regions to bake again this frame (`Runtime::take_refresh`), without a heap.
+#[derive(Default)]
+pub(crate) struct Refresh {
+    regions: [(u32, [u32; 4]); LAYERS_PER_FRAME],
+    count: usize,
+}
+
+impl Refresh {
+    pub(crate) fn regions(&self) -> &[(u32, [u32; 4])] {
+        &self.regions[..self.count]
+    }
+}
+
+impl Runtime {
+    /// Place the movers this frame presents, then the baselines' movers no snapshot has
+    /// shown (once), and upload what changed and the next tiles to trace.
+    pub(crate) fn observe(
+        &mut self,
+        queue: &crate::frame_queue::FrameQueue,
+        presented: &[crate::movers::Presented],
+        baselines: Option<impl Iterator<Item = crate::movers::Presented>>,
+        mesh_of: impl Fn(usize) -> Option<usize>,
+    ) {
+        self.tracking.observe(presented, baselines, mesh_of);
+        if let Some(tracer) = &mut self.tracer {
+            tracer.prepare(queue, &self.tracking.poses, &mut self.tracking.queue);
+        }
+    }
+
+    /// Trace the tiles `observe` queued, once.
+    pub(crate) fn encode(&self, encoder: &mut wgpu::CommandEncoder) {
+        if let Some(tracer) = &self.tracer {
+            tracer.encode(encoder);
+        }
+    }
 
     /// The lamps `occluder` has door tiles for, and whether any tile is still queued.
     #[cfg(test)]
     pub(crate) fn door_lamps(&self, occluder: usize) -> (Vec<u32>, bool) {
         (
-            self.doors.by_occluder[occluder]
+            self.tracking.doors.by_occluder[occluder]
                 .iter()
-                .map(|&tile| self.doors.tiles[tile as usize].lamp)
+                .map(|&tile| self.tracking.doors.tiles[tile as usize].lamp)
                 .collect(),
-            self.queue.pending_len() > 0 || self.pending.get() > 0,
+            self.tracking.queue.pending_len() > 0
+                || self.tracer.as_ref().is_some_and(|t| t.pending.get() > 0),
         )
     }
 
     /// Cache regions to bake again this frame: every [`CACHE_REFRESH`] while tiles are
     /// still queued, at once when none are; at most [`LAYERS_PER_FRAME`] layers.
-    pub(crate) fn take_refresh(&self) -> Vec<(u32, [u32; 4])> {
-        let mut stale = self.stale.borrow_mut();
-        let settled = self.queue.pending_len() == 0 && self.pending.get() == 0;
-        let due = self
+    pub(crate) fn take_refresh(&self) -> Refresh {
+        let mut refresh = Refresh::default();
+        let Some(tracer) = &self.tracer else {
+            return refresh;
+        };
+        let mut stale = tracer.stale.borrow_mut();
+        let settled = self.tracking.queue.pending_len() == 0 && tracer.pending.get() == 0;
+        let due = tracer
             .refreshed
             .get()
             .is_none_or(|at| at.elapsed() >= CACHE_REFRESH);
         if stale.is_empty() || !(settled || due) {
-            return Vec::new();
+            return refresh;
         }
-        self.refreshed.set(Some(std::time::Instant::now()));
-        let mut regions = Vec::with_capacity(LAYERS_PER_FRAME);
-        while regions.len() < LAYERS_PER_FRAME {
+        tracer.refreshed.set(Some(std::time::Instant::now()));
+        while refresh.count < LAYERS_PER_FRAME {
             let Some(region) = stale.pop_first() else {
                 break;
             };
-            regions.push(region);
+            refresh.regions[refresh.count] = region;
+            refresh.count += 1;
         }
-        regions
+        refresh
     }
 
     /// Counts mover pose changes that affect light.
     pub(crate) fn generation(&self) -> u64 {
-        self.poses.generation
+        self.tracking.poses.generation
     }
 }
 

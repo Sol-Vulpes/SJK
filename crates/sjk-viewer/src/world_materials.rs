@@ -299,6 +299,9 @@ pub(crate) struct Runtime {
     surfaces_by_source: Vec<crate::gi_voxels::Surface>,
     /// Local lights from the map's emissive faces (real-time mode).
     lamps: crate::lamp_lights::LampSet,
+    /// The movers' opaque casters (`mover_occlusion.rs`): door tiles for the lamps near
+    /// them and, with or without, the far sun cascade's refreshes.
+    pub(crate) mover_occluders: Vec<mover_occlusion::Occluder>,
     /// One bind group for every opaque static world stage, where the device allows.
     stage_table: Option<stage_table::Table>,
 
@@ -487,6 +490,7 @@ fn finish_runtime(
         gi: None,
         surfaces_by_source,
         lamps: crate::lamp_lights::LampSet::default(),
+        mover_occluders: Vec::new(),
         active: Default::default(),
         indirect: None,
         stage_table: None,

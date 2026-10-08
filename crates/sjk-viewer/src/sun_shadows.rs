@@ -172,6 +172,16 @@ pub(super) struct FarCascade {
 /// shows their final pose.
 const FAR_MOVER_REFRESH: std::time::Duration = std::time::Duration::from_millis(250);
 
+/// Whether the far cascade, drawn with mover poses `drawn` (`Poses::generation`) at `at`,
+/// must be drawn again for poses `generation` at `now`.
+fn far_follows_movers(
+    (drawn, at): (u64, Option<std::time::Instant>),
+    generation: u64,
+    now: impl FnOnce() -> std::time::Instant,
+) -> bool {
+    drawn != generation && at.is_none_or(|at| now().duration_since(at) >= FAR_MOVER_REFRESH)
+}
+
 /// One cleared depth-only pass onto a lamp shadow face.
 fn face_pass<'a>(
     encoder: &'a mut wgpu::CommandEncoder,
@@ -510,6 +520,7 @@ impl super::Runtime {
             scene,
             light_divisor(supersampling),
             &self.lamps,
+            &self.mover_occluders,
             self.lamp_cache_pages.as_ref(),
             self.shadow_bounds,
             &self.probe_domain,
@@ -1180,8 +1191,7 @@ impl super::Runtime {
             .as_ref()
             .and_then(|shadow| shadow.movers.as_ref())
             .map_or(0, |movers| movers.generation());
-        let (drawn, at) = far.movers.get();
-        let movers_moved = drawn != movers && at.is_none_or(|at| at.elapsed() >= FAR_MOVER_REFRESH);
+        let movers_moved = far_follows_movers(far.movers.get(), movers, std::time::Instant::now);
         if let Some((rendered, fit)) = far.rendered.get() {
             if rendered.dot(sun) >= FAR_REFRESH_COS && !movers_moved {
                 return Some((fit, false));
@@ -1274,4 +1284,22 @@ fn join_runs(mut ranges: Vec<Range<u32>>) -> Vec<Range<u32>> {
         }
     }
     joined
+}
+
+#[cfg(test)]
+mod far_mover_tests {
+    use super::*;
+
+    #[test]
+    fn the_far_cascade_follows_movers_at_most_every_quarter_second() {
+        let start = std::time::Instant::now();
+        let later = |ms| start + std::time::Duration::from_millis(ms);
+        // Never drawn with movers: at once.
+        assert!(far_follows_movers((0, None), 1, || start));
+        // Drawn with these poses: not again.
+        assert!(!far_follows_movers((3, Some(start)), 3, || later(1000)));
+        // Moved since: after 250 ms, not before.
+        assert!(!far_follows_movers((3, Some(start)), 4, || later(249)));
+        assert!(far_follows_movers((3, Some(start)), 4, || later(250)));
+    }
 }

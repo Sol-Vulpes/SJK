@@ -594,12 +594,14 @@ otherwise come from a trace of the static world only, done once when the map loa
   follows every 100 ms, at once when the queue is empty, at most four layers a frame.
 - **Sun.** The view and close cascades already drew movers every frame. The far
   cascade, redrawn only when the sun turns, now also redraws when movers have moved,
-  at most every 250 ms, and once more after they stop. Volumetric light and GI probes
-  read it.
+  at most every 250 ms, and once more after they stop. Every shadow-casting mover is
+  tracked for it, whether or not a lamp gave it a door tile, so it follows movers on
+  maps without lamps too. Volumetric light and GI probes read it.
 - GI probes sample lamp visibility through the same atlas, so their lamp bounce sees
   the movers too, as the probes refresh (a few hundred a frame).
 
-`SJK_MOVER_OCCLUSION=0` leaves movers out (no door tiles), for same-binary comparisons.
+`SJK_MOVER_OCCLUSION=0` leaves movers out of lamp shadows (no door tiles), for
+same-binary comparisons; the far cascade still follows them.
 The ignored world shot `world_shot::movers::movers_shadow_lamps` renders the movers with
 the most door lamps closed, open and with every mover hidden, from beside a lamp, and
 with `SJK_MOVER_TIMING=1` holds views for GPU timing (see its rustdoc).

@@ -597,7 +597,7 @@ impl super::super::super::Runtime {
                     input.vertices,
                     input.indices,
                     &shadow.lamps,
-                    &movers.take_refresh(),
+                    movers.take_refresh().regions(),
                 );
             }
         }

@@ -44,21 +44,16 @@ fn movers_shadow_lamps() {
                 .collect();
         let occluders: Vec<(usize, Vec3, Vec3, Vec3)> = gpu
             .world_materials
-            .gi
-            .as_ref()
-            .map(|gi| {
-                gi.movers
-                    .iter()
-                    .map(|o| {
-                        let rest = gpu.mover_catalog.meshes[o.mesh]
-                            .model_index
-                            .and_then(|model| origins.get(&model).copied())
-                            .unwrap_or_default();
-                        (o.mesh, o.lower, o.upper, rest)
-                    })
-                    .collect()
+            .mover_occluders
+            .iter()
+            .map(|o| {
+                let rest = gpu.mover_catalog.meshes[o.mesh]
+                    .model_index
+                    .and_then(|model| origins.get(&model).copied())
+                    .unwrap_or_default();
+                (o.mesh, o.lower, o.upper, rest)
             })
-            .unwrap_or_default();
+            .collect();
         let models: Vec<Option<usize>> = occluders
             .iter()
             .map(|&(mesh, ..)| gpu.mover_catalog.meshes[mesh].model_index)

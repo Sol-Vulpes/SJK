@@ -16,8 +16,6 @@ pub(crate) struct Header {
 /// Immutable voxel buffers (kept alive by the bind group) plus the surface table.
 pub(crate) struct Runtime {
     pub(crate) fixtures: Option<super::lamp_geometry::Runtime>,
-    /// The movers' opaque casters, for lamp door tiles (`mover_occlusion.rs`).
-    pub(crate) movers: Vec<super::mover_occlusion::Occluder>,
 
     /// CPU copy, kept for dead-probe tests at probe installation.
     pub(crate) world: crate::gi_voxels::VoxelWorld,
@@ -141,13 +139,13 @@ impl Runtime {
             layout,
             bind_group,
             fixtures: None,
-            movers: Vec::new(),
         }
     }
 }
 
 impl super::Runtime {
-    /// Voxelise the world draws once and keep them resident; a no-op unless enabled.
+    /// Voxelise the world draws once and keep them resident; a no-op unless enabled. The
+    /// movers' casters are gathered either way, for the far sun cascade.
     pub(crate) fn install_gi(
         &mut self,
         device: &wgpu::Device,
@@ -156,6 +154,7 @@ impl super::Runtime {
         enabled: bool,
     ) {
         self.gi = None;
+        self.mover_occluders = self.gather_mover_occluders(flat, mover_meshes);
         if !enabled {
             return;
         }
@@ -202,8 +201,7 @@ impl super::Runtime {
             &self.surfaces_by_source,
         ));
         let started = std::time::Instant::now();
-        runtime.movers = self.mover_occluders(flat, mover_meshes);
-        for occluder in &mut runtime.movers {
+        for occluder in &mut self.mover_occluders {
             occluder.seen_by = Some(super::mover_occlusion::seen_by(
                 &self.lamps.lamps,
                 occluder.reach,
@@ -212,7 +210,7 @@ impl super::Runtime {
         }
         crate::log::progress(format_args!(
             "Mover occluders: {} movers, lamps that see them found in {:.0} ms",
-            runtime.movers.len(),
+            self.mover_occluders.len(),
             started.elapsed().as_secs_f64() * 1e3
         ));
         self.gi = Some(runtime);
@@ -220,7 +218,7 @@ impl super::Runtime {
 
     /// Each inline mover's opaque casters in its model space, by the same rule as the
     /// static triangles: alpha-tested grates and blended glass let light through.
-    fn mover_occluders(
+    fn gather_mover_occluders(
         &self,
         flat: &crate::scene_flatten::FlattenedScene,
         mover_meshes: &[crate::movers::Mesh],
