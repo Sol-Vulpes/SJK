@@ -124,6 +124,18 @@ test: Press U aiming at nobody: nothing opens. Key bindings > Other lists U on W
 test: A bind of your own on U (for example taunt) is still there after a restart.
 note: Lumaya did not check the physical U targeting in game.
 
+[last-key-wins]
+area: Input
+title: cl_idrive: the last pressed movement key wins; cl_idriveDelay (SJK PR #37)
+change: cl_idrive 1 makes the key pressed last win a pair; 2 does it for jump/crouch only.
+change: cl_idriveDelay keeps the pair neutral that many ms after a press and after a release.
+change: Default 0 for both: nothing changes until you set them (Settings > Controls).
+test: cl_idrive 1: hold W, then S too, release S: you go back, then forward, never both.
+test: Same for A/D and jump/crouch; cl_idrive 2 only changes jump and crouch.
+test: cl_idriveDelay 20: the reversal stops for a moment first, on a press and on a release.
+test: Below 125 FPS (com_maxfps 60) the delay still gives at least one neutral step.
+note: Not tried on a server; what a server's nerf check detects is unknown.
+
 # ---- Menus & settings ----
 
 [sharp-levelshots]

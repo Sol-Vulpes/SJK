@@ -2494,6 +2494,18 @@ one command and `cg_fkDuration` (default 50) lasts 0.4 s.
 forbids it with bit 7 (`RESTRICT_FLIPKICKBIND`) of serverinfo `restricts`. See
 [flip_kick.rs](../crates/sjk-viewer/src/input/flip_kick.rs).
 
+`cl_idrive` is JoF EJK's "last key wins" input (archived, default 0): while both
+keys of a movement pair are held, the one pressed last moves the player instead of
+the two cancelling out. `1` resolves every pair (forward/back, strafe left/right
+including `+strafe` with the turn keys, jump/crouch), `2` only jump/crouch; keys
+pressed in the same millisecond still cancel, as in EJK. `cl_idriveDelay` is SJK's
+own (archived, default 0, at most 1000): for that many milliseconds after the newer
+key's press, and again after it is let go, while the older key is still held, the
+pair stays neutral, so a reversal is never instant on servers that penalise one. The
+delay is counted per command, so a frame that makes several commands (below 125 FPS)
+spaces them out. Both apply from the next frame and are in Settings > Controls. See
+[idrive.rs](../crates/sjk-viewer/src/input/idrive.rs).
+
 `serverconfig` lists a JA+ server's options from the `jp_cinfo` value in its
 serverinfo (flip kick, roll fix mode, DFA variants, kata, ledge grab, alternate
 dimension and the rest), as the JA+ client plugin and EternalJK print them

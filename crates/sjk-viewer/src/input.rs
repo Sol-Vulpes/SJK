@@ -4,6 +4,7 @@ use sjk_protocol::UserCommand;
 pub(crate) mod alt_code;
 pub(crate) mod dead_key;
 pub(crate) mod flip_kick;
+pub(crate) mod idrive;
 pub(crate) mod motion;
 
 mod selection_commands;
@@ -86,6 +87,8 @@ pub(crate) struct GameplayInput {
     pub(crate) motion: motion::Motion,
     /// `cl_run`: the walk key toggles walking instead of running.
     always_run: bool,
+    /// `cl_idrive` and `cl_idriveDelay`: the last-pressed key of a pair wins.
+    idrive: idrive::Idrive,
     focused: bool,
     reset_after_buffer: bool,
 }
@@ -101,6 +104,7 @@ impl Default for GameplayInput {
             held: [state::KeyState::default(); 32],
             motion: motion::Motion::default(),
             always_run: true,
+            idrive: idrive::Idrive::default(),
             focused: true,
             reset_after_buffer: false,
         }
@@ -176,6 +180,18 @@ impl GameplayInput {
     /// Latch `cl_run` (retail default 1); see `user_command`.
     pub(crate) fn set_always_run(&mut self, always_run: bool) {
         self.always_run = always_run;
+    }
+
+    /// Latch `cl_idrive` and `cl_idriveDelay`; see [`idrive`].
+    pub(crate) fn set_idrive(&mut self, idrive: idrive::Idrive) {
+        self.idrive = idrive;
+    }
+
+    /// The command about to be built was made `millis` before the frame's sample time
+    /// (0 for the last or only command of a frame), so `cl_idriveDelay` is counted in
+    /// command time. Reset it to 0 after the commands of a frame.
+    pub(crate) fn set_command_age(&mut self, millis: u64) {
+        self.motion.command_age = millis;
     }
 
     pub(crate) fn held(&self, button: GameButton) -> bool {
@@ -277,8 +293,13 @@ impl GameplayInput {
                 movespeed,
                 self.motion.side
                     + if self.held(GameButton::Strafe) {
-                        movespeed as f32
-                            * (self.fraction(GameButton::Right) - self.fraction(GameButton::Left))
+                        let (right, left) = self.idrive_pair(
+                            GameButton::Right,
+                            GameButton::Left,
+                            self.fraction(GameButton::Right),
+                            self.fraction(GameButton::Left),
+                        );
+                        movespeed as f32 * (right - left)
                     } else {
                         0.0
                     },
@@ -609,6 +630,131 @@ mod tests {
         );
         input.finish_command();
         assert_eq!(buttons(&input) & BUTTON_12, 0);
+    }
+
+    /// One 8 ms command ending at `now`, returning its forward move.
+    fn forward_move(input: &mut GameplayInput, now: u64) -> i8 {
+        let look = crate::pointer_input::MouseLook {
+            sensitivity: 5.0,
+            yaw_scale: 0.022,
+            pitch_scale: 0.022,
+            invert: false,
+        };
+        input.sample_motion(now, look);
+        let forward = input
+            .user_command(0, 0.0, 0.0, [0; 3], 0, 0, 0)
+            .forward_move;
+        input.finish_command();
+        forward
+    }
+
+    #[test]
+    fn idrive_reverses_to_the_last_pressed_key_after_its_delay() {
+        let mut input = GameplayInput::default();
+        input.set_idrive(idrive::Idrive {
+            mode: 1,
+            delay_millis: 16,
+        });
+        forward_move(&mut input, 100);
+        input.apply("+forward 17 100");
+        assert_eq!(forward_move(&mut input, 108), 127);
+        input.apply("+back 31 108");
+        assert_eq!(forward_move(&mut input, 116), 0);
+        assert_eq!(forward_move(&mut input, 124), -127);
+        input.apply("-back 31 124");
+        // Letting the newer key go keeps the pair neutral for the delay too.
+        assert_eq!(forward_move(&mut input, 132), 0);
+        assert_eq!(forward_move(&mut input, 140), 127);
+    }
+
+    /// Commands every `step` ms after `now` until one moves by `until`; the moves
+    /// before it, and the time of the last command.
+    fn moves_until(
+        input: &mut GameplayInput,
+        mut now: u64,
+        step: u64,
+        until: i8,
+    ) -> (Vec<i8>, u64) {
+        let mut before = Vec::new();
+        loop {
+            now += step;
+            let moved = forward_move(input, now);
+            if moved == until {
+                return (before, now);
+            }
+            before.push(moved);
+            assert!(before.len() < 100, "never reached {until}: {before:?}");
+        }
+    }
+
+    #[test]
+    fn idrive_keeps_its_neutral_gap_at_every_command_step() {
+        // A command is made every `step` ms (125, 142, 250 and 333 FPS): the commands
+        // strictly inside the delay after a press, or after the newer key's release,
+        // are neutral, so neither reversal is ever instant.
+        for step in [8_u64, 7, 4, 3] {
+            for delay in [16_u64, 50] {
+                let gap = (delay.div_ceil(step) - 1) as usize;
+                let mut input = GameplayInput::default();
+                input.set_idrive(idrive::Idrive {
+                    mode: 1,
+                    delay_millis: delay,
+                });
+                forward_move(&mut input, 1000);
+                input.apply("+forward 17 1000");
+                let (_, mut now) = moves_until(&mut input, 1000, step, 127);
+                for _ in 0..10 {
+                    now += step;
+                    assert_eq!(forward_move(&mut input, now), 127);
+                }
+                input.apply(&format!("+back 31 {now}"));
+                let (before, reached) = moves_until(&mut input, now, step, -127);
+                assert_eq!(before, vec![0; gap], "press, step {step} delay {delay}");
+                now = reached;
+                for _ in 0..10 {
+                    now += step;
+                    assert_eq!(forward_move(&mut input, now), -127);
+                }
+                input.apply(&format!("-back 31 {now}"));
+                let (before, _) = moves_until(&mut input, now, step, 127);
+                assert_eq!(before, vec![0; gap], "release, step {step} delay {delay}");
+            }
+        }
+    }
+
+    #[test]
+    fn idrive_counts_its_delay_in_command_time_not_frame_time() {
+        // A 16 ms frame makes two commands, stamped 8 ms apart. The press was at
+        // 2000: the first command (made at 2008) is inside the 16 ms delay, the second
+        // (2016) is not. Evaluated at the frame's time both would be 2016.
+        let mut input = GameplayInput::default();
+        input.set_idrive(idrive::Idrive {
+            mode: 1,
+            delay_millis: 16,
+        });
+        let look = crate::pointer_input::MouseLook {
+            sensitivity: 5.0,
+            yaw_scale: 0.022,
+            pitch_scale: 0.022,
+            invert: false,
+        };
+        input.sample_motion(1000, look);
+        input.apply("+forward 17 1000");
+        input.sample_motion(2000, look);
+        input.finish_command();
+        input.apply("+back 31 2000");
+        input.sample_motion(2016, look);
+        let mut moves = Vec::new();
+        for age in [8, 0] {
+            input.set_command_age(age);
+            moves.push(
+                input
+                    .user_command(0, 0.0, 0.0, [0; 3], 0, 0, 0)
+                    .forward_move,
+            );
+        }
+        input.set_command_age(0);
+        assert_eq!(moves, [0, -127]);
     }
 
     #[test]

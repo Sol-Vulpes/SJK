@@ -29,6 +29,8 @@ impl GpuState {
         };
         self.gameplay_input
             .set_always_run(console.bool_cvar("cl_run").unwrap_or(true));
+        self.gameplay_input
+            .set_idrive(crate::input::idrive::Idrive::read(console));
         self.gameplay_input.motion.sync(console);
         // Retail defaults from `codemp/cgame/cg_xcvar.h`: cg_marks 1,
         // cg_shadows 1, cg_drawGun 1.

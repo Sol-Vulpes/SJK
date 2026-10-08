@@ -9,6 +9,8 @@
 #                               made it when that is not the piece's owner.
 
 = Sol
++ 08/10/2026 | SJK #37 | Add cl_idrive and a live cl_idriveDelay for opposing movement keys
+- 8ee146c |  | Add cl_idrive and a live cl_idriveDelay for opposing movement keys
 + 08/10/2026 | SJK #35 | Add graphics quality levels at the top of First setup
 - dd33529 |  | Add graphics quality levels at the top of First setup
 + 08/10/2026 | SJK #38 | Reload the menu's images when it moves to another world's renderer

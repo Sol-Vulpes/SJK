@@ -21,6 +21,7 @@ Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 
 ## Unreleased
 
+- cl_idrive (Settings > Controls): with both keys of a movement pair held, the one pressed last wins (1 all pairs, 2 jump/crouch only); cl_idriveDelay keeps you still for a few milliseconds when you reverse, for servers that dislike instant reversals _(Sol, after JoF EJK)_
 - Graphics quality: four levels (Performance, Balanced, High, Ultra) at the top of First setup and of Settings > Video set the costly rendering options together; a fresh profile reads High, a hand-changed setting reads Custom, and nothing changes until you pick a level (`graphicsquality` in the console) _(Sol)_
 - The character screen's model squares, the Force page, the part pictures, the key-binding pictures and the map and HUD previews no longer turn black or show another model after you join a server, change map or disconnect _(Sol)_
 - The modern menus are gone: SJK has the SJK UI (the default) and the classic menus. The modern scoreboard, console and HUD layout go with them, as do the menu accent setting and the gate on mp/ffa3 that opened as you joined. A setting saved as modern starts on its default again (the SJK UI's menus, the game HUD) _(Sol)_
