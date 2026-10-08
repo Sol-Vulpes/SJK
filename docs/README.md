@@ -18,7 +18,7 @@ and changed together. Begin with the status page, then the architecture.
 | [Classic+ menus](classic-plus.md) | SJK's modernised classic pages: rules, layout and code recipe |
 | [SJK UI](sjk-ui.md) | SJK's own menus (`ui_menuStyle sjk`): design, tokens, screens and plan |
 | [Player identity](identity.md) | SJK's identity key, the hub, scoreboard badges: design, limits and privacy |
-| [SJK chat and emotes](hub-chat.md) | The hub-carried chat for all SJK players and the emote path (planned) |
+| [SJK chat and emotes](hub-chat.md) | The chat every SJK player shares through the hub, and the emotes path |
 
 [AGENTS.md](../AGENTS.md) defines the documentation maintenance rules. Update the
 page that owns a fact rather than adding a second account elsewhere. New facts

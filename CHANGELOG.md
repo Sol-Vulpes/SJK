@@ -21,6 +21,8 @@ Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 
 ## Unreleased
 
+- SJK chat: one conversation for every SJK player, through the SJK hub rather than the game server, so it reaches SJK players on any server and in the menus. In a game, I (messagemode5) writes to it (Tab cycles All, Team and SJK) and its messages show in the chat tagged SJK; the main menu docks it under Recent servers; its page (sjkchat, Open chat, or the in-game SJK menu) shows it all and mutes a sender on this PC. The hub keeps the last 200 messages in memory only; cl_sjkChat 0 (Settings > Network > SJK chat) turns it off _(Sol)_
+- Emotes, groundwork: sjkemote <id> plays an emote the other SJK players on your server see, through the SJK hub; emotes come as emotes/<id>.emote files, none yet, and until their animations exist the console says who emoted _(Sol)_
 - Surfaces that a server or the map remaps to another shader keep the map's light and shadow; they used to look flat and uniformly pale _(Sol)_
 - Staff tools (for SJK staff, from Profile or the staff command): find any player, give or take back their medals with a note, and clear their achievements; clearing your own also resets your counts, so you can unlock them again _(Sol)_
 - U is now bound by default to a private message to the player under your crosshair (`messagemode3`); Y chat and T team chat stay, and an existing profile gets U only when it is free _(Lumaya, after OpenJK)_
