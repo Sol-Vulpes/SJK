@@ -5,7 +5,9 @@ SJK chat is one conversation for every SJK player, carried by the SJK hub
 any server, or in the menus with no server at all, and players on stock clients
 never see it. Emotes ride the same hub connection so SJK players on one game server
 see each other's emotes; the emotes themselves (animations, sounds, art) are
-separate work, and SJK only has the path for them so far.
+separate work, and SJK only has the path for them so far. The feed also carries the
+players' looks (blade skin and Illuminate, [unlockables.md](unlockables.md)), so it
+reads on a game server even with the chat off.
 
 Status (08/10/2026): built on `personal/sjk-chat` (client) and `feat/chat-emotes`
 (Sol-Vulpes/SJK-hub), designed with Sol the same day; the hub's side is not deployed.
@@ -29,7 +31,7 @@ The hub's side is described in Sol-Vulpes/SJK-hub (`PROTOCOL.md`, "Chat", "Emote
 | Piece | Where |
 | --- | --- |
 | Text rules (word for word with the hub's `src/chat.rs`) | [chat.rs](../crates/sjk-identity/src/chat.rs) |
-| Wire types (`ChatMessage`, `Emote`, `Feed`) | [wire.rs](../crates/sjk-identity/src/wire.rs) |
+| Wire types (`ChatMessage`, `Emote`, `LookEvent`, `Feed`) | [wire.rs](../crates/sjk-identity/src/wire.rs) |
 | Requests (`chat`, `emote`, `feed`) | [hub.rs](../crates/sjk-identity/src/hub.rs) |
 | The feed thread and `ChatState` | [feed.rs](../crates/sjk-identity/src/feed.rs), [service.rs](../crates/sjk-identity/src/service.rs) |
 | Viewer glue, local mutes | [player_identity.rs](../crates/sjk-viewer/src/player_identity.rs) |
@@ -57,8 +59,10 @@ Old clients ignore all of it, so it stays `/v1/`.
 - `GET /v1/feed?after=<id>&server=<ip:port>&wait=<0..25>`, signed. Messages, emotes
   and deletions share one id sequence. The hub answers as soon as it holds something
   newer than `after` for this reader, else after `wait` seconds:
-  `{"next","chat":[..],"emotes":[..],"deleted":[..],"online"}`. `after` 0, or above
-  the newest id (the hub restarted), gives the newest 50 messages and no emotes.
+  `{"next","chat":[..],"emotes":[..],"looks":[..],"deleted":[..],"online"}` (`looks`,
+  the server's look events of the last 60 seconds, since unlocks and looks). `after` 0,
+  or above the newest id (the hub restarted), gives the newest 50 messages, the
+  server's looks of the last 60 seconds (looks are state) and no emotes.
   A key reads at most 40 times a minute (`feed_quota`); the feed (300 a minute) and chat
   and emotes (60 a minute) have per-address allowances of their own, so several players
   sharing an address fit and talking never spends what claims need.
@@ -74,13 +78,23 @@ Old clients ignore all of it, so it stays `/v1/`.
   message or emote is `ChatState::outcome`.
 - `Service::start_with_feed` starts a second thread, `sjk-hub-feed`, with its own HTTP
   client (timeout 40 seconds), so the worker's claims and reports never wait behind
-  the long poll. It reads only while the identity is on, the hub answered the
-  registration and `cl_sjkChat` is on (`Service::set_chat`), polls at most every 2
-  seconds and backs off (2 to 60 seconds) when the hub fails. It keeps the last 200
-  messages, the online count and whether the last poll reached the hub
+  the long poll. It reads only while the identity is on and the hub answered the
+  registration, and then while the player is on a game server (whatever `cl_sjkChat`
+  says, for the looks and emotes) or `cl_sjkChat` is on (`Service::set_chat`); in the
+  menus with the chat off it makes no request. It polls at most every 2 seconds and
+  backs off (2 to 60 seconds) when the hub fails. With the chat on it keeps the last
+  200 messages, the online count and whether the last poll reached the hub
   (`ChatState`; `loaded` says when the hub being read first answered, so the game's
-  feed marks that backlog instead of replaying it), and queues up to 64 received emotes (`Service::take_emotes`). A new
-  hub, or ids that go backwards (the hub restarted), start from the backlog.
+  feed marks that backlog instead of replaying it); with the chat off it keeps none of
+  them, so `ChatState` stays as an idle feed leaves it and nothing shows, and turning
+  the chat on starts again from the backlog. Either way it queues up to 64 received
+  emotes (`Service::take_emotes`) and 64 looks (`Service::take_looks`). A new hub, or
+  ids that go backwards (the hub restarted), start from the backlog; another game
+  server starts again from `after` 0, whose answer brings that server's looks of the
+  last minute. The looks keep the server they were read for and the reading's
+  generation (it changes with the hub, the server or the identity going off or on):
+  `Service::take_looks` hands over only the current generation's for the viewer's
+  server, so a poll under way at a change brings no old look.
 - Shutting down tells the feed thread to stop; it ends after its poll without being
   waited for.
 
@@ -97,7 +111,9 @@ Old clients ignore all of it, so it stays `/v1/`.
   does not replay the hub's backlog in the feed (the dock and the page show it). A
   refusal (quota, rules) shows as an `SJK chat:` line.
 - `cl_sjkChat` (default 1, Settings > Network > SJK chat) shows SJK chat and runs the
-  feed; 0 hides it and stops the reading.
+  feed; 0 hides it. On a game server the feed still reads, for the players' looks and
+  emotes, but no message reaches the game's feed, the dock or the page; in the menus it
+  stops.
 
 ## In the menus
 
@@ -138,7 +154,8 @@ Old clients ignore all of it, so it stays `/v1/`.
 
 With `cl_identity`, `cl_hubUrl` and `cl_sjkChat` on, the hub sees the player's key
 and IP address on every feed request (which it counts for `online`), and each message
-or emote they send with the name they wear. Messages are public to every SJK player,
+or emote they send with the name they wear. With `cl_sjkChat` off it still sees the
+feed requests made on a game server (for the looks), with the server's address. Messages are public to every SJK player,
 kept in the hub's memory only (the last 200), and gone when the hub restarts; a
 message staff delete stays in the staff log. Emotes are kept 10 seconds. The mute
 flag is the only new thing on the hub's disk. Local mutes are not saved.
