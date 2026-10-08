@@ -26,8 +26,8 @@ const LIST_BOTTOM: f32 = 880.0;
 const NAME_ROW: f32 = 28.0;
 const BODY_ROW: f32 = 24.0;
 const GAP: f32 = 12.0;
-/// Characters a row of a message holds.
-const WRAP_CHARS: usize = 104;
+/// Characters a row of a message holds (each row is also cut to the column).
+const WRAP_CHARS: usize = 136;
 /// The field and Send.
 const FIELD_Y: f32 = 900.0;
 const FIELD_WIDTH: f32 = 1_040.0;
@@ -171,36 +171,30 @@ impl Panel {
                 &mut self.ui,
                 TextFamily::Display,
                 format_args!("{}", if name.is_empty() { "(no name)" } else { &name }),
-                frame.rect(LIST_X, y, 560.0, NAME_ROW - 2.0),
+                frame.rect(LIST_X, y, LIST_WIDTH - 440.0, NAME_ROW - 2.0),
                 20.0 * s,
                 color::TEXT,
                 FontWeight::Semibold,
                 TextAlign::Start,
             );
             let tags = match (message.staff, message.verified) {
-                (true, true) => "Staff, verified",
-                (true, false) => "Staff",
-                (false, true) => "Verified",
+                (true, true) => "Staff, verified  ·  ",
+                (true, false) => "Staff  ·  ",
+                (false, true) => "Verified  ·  ",
                 (false, false) => "",
             };
             let when = ago(u64::try_from(message.at).unwrap_or(0), inputs.now);
             text(
                 &mut self.ui,
                 TextFamily::Body,
-                format_args!("{tags}"),
-                frame.rect(LIST_X + 580.0, y + 2.0, 300.0, NAME_ROW - 6.0),
+                format_args!("{tags}{when}"),
+                frame.rect(LIST_X + LIST_WIDTH - 420.0, y + 2.0, 420.0, NAME_ROW - 6.0),
                 15.0 * s,
-                color::GOLD_BRIGHT,
-                FontWeight::Regular,
-                TextAlign::Start,
-            );
-            text(
-                &mut self.ui,
-                TextFamily::Body,
-                format_args!("{when}"),
-                frame.rect(LIST_X + LIST_WIDTH - 240.0, y + 2.0, 240.0, NAME_ROW - 6.0),
-                15.0 * s,
-                color::QUIET,
+                if tags.is_empty() {
+                    color::QUIET
+                } else {
+                    color::GOLD_BRIGHT
+                },
                 FontWeight::Regular,
                 TextAlign::End,
             );

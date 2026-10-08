@@ -901,9 +901,11 @@ fn chat_dock(canvas: &mut MenuCanvas, frame: &Frame, home: &Home, dock: &ChatDoc
             format_args!("Not connected"),
         );
     }
+    // The lines sit on the field, the newest last, as chats do.
     let shown = dock.lines.len().min(DOCK_ROWS);
+    let first_row = DOCK_ROWS - shown;
     for (row, line) in dock.lines[dock.lines.len() - shown..].iter().enumerate() {
-        let top = DOCK_TOP + 40.0 + row as f32 * DOCK_ROW;
+        let top = DOCK_TOP + 40.0 + (first_row + row) as f32 * DOCK_ROW;
         if line.verified {
             let _ = canvas.draw_list_mut().push(DrawCommand::RoundedRect {
                 rect: frame.rect(COLUMN_X - 12.0, top + 9.0, 5.0, 5.0),
@@ -922,7 +924,12 @@ fn chat_dock(canvas: &mut MenuCanvas, frame: &Frame, home: &Home, dock: &ChatDoc
     if shown == 0 {
         body(
             canvas,
-            frame.rect(COLUMN_X, DOCK_TOP + 40.0, COLUMN_WIDTH, DOCK_ROW - 4.0),
+            frame.rect(
+                COLUMN_X,
+                DOCK_TOP + 40.0 + (DOCK_ROWS - 1) as f32 * DOCK_ROW,
+                COLUMN_WIDTH,
+                DOCK_ROW - 4.0,
+            ),
             color::QUIET,
             TextAlign::Start,
             format_args!("Nobody has said anything yet"),

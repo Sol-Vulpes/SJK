@@ -430,3 +430,126 @@ fn a_staff_key_finds_players_gives_and_takes_back_medals_and_clears_achievements
         .unwrap();
     assert!(all[0].achievements.is_empty());
 }
+
+#[test]
+#[ignore = "needs a running hub (SJK_HUB_TEST_URL)"]
+fn chat_and_emotes_reach_other_players_through_the_long_poll() {
+    use std::time::{Duration, Instant};
+
+    let url = std::env::var("SJK_HUB_TEST_URL").expect("SJK_HUB_TEST_URL");
+    let mut hub = hub();
+    let mut reader =
+        HttpHub::with_timeout(&url, "sjk-identity-test", sjk_identity::feed::TIMEOUT).unwrap();
+    let me = Identity::generate().unwrap();
+    let other = Identity::generate().unwrap();
+    hub.register(&me, Some("^2Chatty")).unwrap();
+    hub.register(&other, None).unwrap();
+    let start = reader.feed(&other, 0, None, 0).unwrap();
+
+    // The rules are the hub's too.
+    let refused = hub.chat(&me, "hi \u{1F600}", "").unwrap_err();
+    assert!(
+        matches!(refused, HubError::Rejected { ref code, .. } if code == "chat_characters"),
+        "{refused:?}"
+    );
+
+    // A reader waiting at the hub hears a message as soon as it is said.
+    let text = format!("hello from {}", &me.key_id()[..8]);
+    let said = std::thread::scope(|scope| {
+        let waiting = scope.spawn(|| {
+            let asked = Instant::now();
+            let feed = reader.feed(&other, start.next, None, 25).unwrap();
+            (feed, asked.elapsed())
+        });
+        std::thread::sleep(Duration::from_secs(2));
+        hub.chat(&me, &text, "^2Chatty").unwrap();
+        waiting.join().unwrap()
+    });
+    let (feed, waited) = said;
+    assert!(
+        waited >= Duration::from_millis(1_500) && waited < Duration::from_secs(10),
+        "{waited:?}"
+    );
+    let message = feed
+        .chat
+        .iter()
+        .find(|m| m.text == text)
+        .expect("the message");
+    assert_eq!(
+        (message.key_id.as_str(), message.name.as_str()),
+        (me.key_id().as_str(), "^2Chatty")
+    );
+
+    // An emote needs a claim and reaches the readers of that server.
+    let server = format!(
+        "10.97.0.{}:29070",
+        u8::from_str_radix(&me.key_id()[..2], 16).unwrap()
+    );
+    let nowhere = hub.emote(&me, &server, "wave").unwrap_err();
+    assert!(
+        matches!(nowhere, HubError::Rejected { ref code, .. } if code == "not_on_server"),
+        "{nowhere:?}"
+    );
+    hub.claim(&me, &server, 4, "^2Chatty").unwrap();
+    hub.emote(&me, &server, "wave").unwrap();
+    let here = reader.feed(&other, feed.next, Some(&server), 0).unwrap();
+    assert_eq!(here.emotes.len(), 1);
+    assert_eq!(
+        (here.emotes[0].slot, here.emotes[0].emote.as_str()),
+        (4, "wave")
+    );
+    assert_eq!(here.emotes[0].claimed_name, "^2Chatty");
+    hub.release(&me, &server).unwrap();
+}
+
+#[test]
+#[ignore = "needs a running hub (SJK_HUB_TEST_URL)"]
+fn the_service_reads_the_chat_on_its_own_thread() {
+    use sjk_identity::{Service, Settings};
+    use std::time::{Duration, Instant};
+
+    let url = std::env::var("SJK_HUB_TEST_URL").expect("SJK_HUB_TEST_URL");
+    let make: sjk_identity::HubFactory = Box::new(|url| {
+        HttpHub::new(url, "sjk-identity-test").map(|hub| Box::new(hub) as Box<dyn Hub>)
+    });
+    let make_feed: sjk_identity::HubFactory = Box::new(|url| {
+        HttpHub::with_timeout(url, "sjk-identity-test", sjk_identity::feed::TIMEOUT)
+            .map(|hub| Box::new(hub) as Box<dyn Hub>)
+    });
+    let me = Identity::generate().unwrap();
+    let service = Service::start_with_feed(me, make, Some(make_feed));
+    service.set_name("^3Svc".to_owned());
+    service.set_chat(true);
+    service.configure(Settings {
+        enabled: true,
+        hub_url: url,
+    });
+    let wait_for = |what: &str, done: &dyn Fn(&sjk_identity::ChatState) -> bool| {
+        let until = Instant::now() + Duration::from_secs(15);
+        while Instant::now() < until {
+            if service.with_chat(|chat| done(chat)) {
+                return;
+            }
+            std::thread::sleep(Duration::from_millis(50));
+        }
+        panic!(
+            "timed out waiting for {what}: {:?}",
+            service.with_chat(Clone::clone)
+        );
+    };
+    wait_for("the feed to reach the hub", &|chat| {
+        chat.live && chat.online >= 1
+    });
+    let text = format!("service says hi {}", std::process::id());
+    service.chat(text.clone());
+    wait_for("its own message", &|chat| {
+        chat.messages
+            .iter()
+            .any(|message| message.text == text && message.name == "^3Svc")
+    });
+    assert!(service.with_chat(|chat| chat.outcome.as_ref().is_some_and(|o| o.sent)));
+    // Turning the chat off stops the reading.
+    service.set_chat(false);
+    wait_for("the feed to stop", &|chat| !chat.live);
+    service.shutdown(Duration::from_secs(5));
+}
