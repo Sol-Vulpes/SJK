@@ -20,8 +20,12 @@ use sjk_protocol::{EntityState, GameState, Snapshot};
 use sjk_vfs::VirtualFileSystem;
 #[path = "sound_feedback.rs"]
 mod feedback;
+#[path = "saber_sound_overrides.rs"]
+mod saber_overrides;
 #[path = "sound_taunts.rs"]
 mod taunts;
+use saber_overrides::SaberSoundOverrides;
+pub use saber_overrides::{SABER_SOUND_CLIENTS, SaberSoundSet, TOGGLE_REACH};
 
 const CS_SOUNDS: usize = 811; // codemp/game/bg_public.h:132
 const MAX_SOUNDS: usize = 256;
@@ -568,6 +572,8 @@ pub struct LegacySoundAdapter {
     ledger: LegacySoundLedger,
     loops: LegacyLoopAdapter,
     maintained: MaintainedSounds,
+    /// Blade skins' sounds in place of the stock saber's, per client.
+    saber_overrides: SaberSoundOverrides,
 }
 
 impl LegacySoundAdapter {
@@ -795,6 +801,7 @@ impl LegacySoundAdapter {
             ledger: LegacySoundLedger::default(),
             loops,
             maintained,
+            saber_overrides: SaberSoundOverrides::default(),
         }
     }
 
@@ -1226,7 +1233,9 @@ impl LegacySoundAdapter {
             }
             29 => Some((
                 LegacySoundEvent::SaberAttack,
-                self.saber_attack[variant % 8],
+                self.saber_overrides
+                    .swing(source, variant)
+                    .or(self.saber_attack[variant % 8]),
                 source,
                 CHAN_WEAPON,
                 false,
@@ -1247,7 +1256,7 @@ impl LegacySoundAdapter {
             )),
             33 => Some((
                 LegacySoundEvent::SaberUnholster,
-                self.saber_on,
+                self.saber_overrides.on(source).or(self.saber_on),
                 source,
                 CHAN_AUTO,
                 false,
@@ -1304,7 +1313,12 @@ impl LegacySoundAdapter {
                 }),
             76 => Some((
                 LegacySoundEvent::General,
-                self.configured_sound(parameter, client),
+                {
+                    let sound = self.configured_sound(parameter, client);
+                    self.saber_overrides
+                        .general(sound, &self.sounds, entity.origin, snapshot)
+                        .or(sound)
+                },
                 source,
                 entity.general_channel,
                 false,

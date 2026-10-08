@@ -28,6 +28,10 @@ pub struct LegacySaberDefinition {
     pub radius: f32,
     /// Hum asset selected by `soundLoop`.
     pub sound_loop: String,
+    /// Ignition sound selected by `soundOn` (lowercase), when authored.
+    pub sound_on: Option<String>,
+    /// Switching-off sound selected by `soundOff` (lowercase), when authored.
+    pub sound_off: Option<String>,
     /// Optional model animation spin-sound override.
     pub sound_spin: Option<String>,
     /// Three authored animation swing variants (`swingSound1` through `3`).
@@ -183,6 +187,8 @@ fn parse(source: &str) -> Vec<LegacySaberDefinition> {
         let mut sound_spin = None;
         let mut sound_swing = [None, None, None];
         let mut sound_loop = "sound/weapons/saber/saberhum3.wav".to_owned();
+        let mut sound_on = None;
+        let mut sound_off = None;
         let mut num_blades = 1_u8;
         let mut blade_style2_start = 0_u8;
         let mut trail_style = 0_u8;
@@ -230,6 +236,8 @@ fn parse(source: &str) -> Vec<LegacySaberDefinition> {
                 "nowallmarks" => no_wall_marks |= value.parse::<i32>().unwrap_or(0) != 0,
                 "nodlight" => no_dlight |= value.parse::<i32>().unwrap_or(0) != 0,
                 "soundloop" => sound_loop.clone_from(value),
+                "soundon" => sound_on = Some(value.to_ascii_lowercase()),
+                "soundoff" => sound_off = Some(value.to_ascii_lowercase()),
                 "spinsound" => sound_spin = Some(value.to_ascii_lowercase()),
                 "swingsound1" => sound_swing[0] = Some(value.to_ascii_lowercase()),
                 "swingsound2" => sound_swing[1] = Some(value.to_ascii_lowercase()),
@@ -272,6 +280,8 @@ fn parse(source: &str) -> Vec<LegacySaberDefinition> {
             length: blade_lengths[0],
             radius: blade_radii[0],
             sound_loop,
+            sound_on,
+            sound_off,
             sound_spin,
             sound_swing,
             num_blades,
