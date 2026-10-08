@@ -512,11 +512,10 @@ fn a_snapshot_holds_a_mover_with_a_visible_cluster_and_an_open_area() {
         "behind a closed area portal"
     );
     assert!(!Sight::default().seen(|_| true, |_| true), "in the void");
-    let crowded = Sight::of(&(0..20).collect::<Vec<u32>>(), &[]);
-    assert!(
-        crowded.seen(|_| false, |_| false),
-        "more clusters than named"
-    );
+    // Past 16 clusters only the named ones count; past 4 areas any area will do.
+    let crowded = Sight::of(&(0..20).collect::<Vec<u32>>(), &[0, 1, 2, 3, 4]);
+    assert!(crowded.seen(|cluster| cluster == 15, |_| false));
+    assert!(!crowded.seen(|cluster| cluster == 17, |_| true));
     // From a map: a synthetic map's leaves are all cluster 0, area 0.
     use sjk_bsp::{CollisionShader, box_brush, write_collision_map};
     let shader = CollisionShader {

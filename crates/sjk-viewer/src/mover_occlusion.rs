@@ -340,15 +340,18 @@ pub(crate) fn merge(a: [u32; 4], b: [u32; 4]) -> [u32; 4] {
 /// The clusters and areas a mover's reach box touches (`CM_BoxLeafnums`), to tell whether
 /// a snapshot would hold it: `SV_AddEntitiesVisibleFromPoint` sends an entity when one of
 /// its clusters is in the eye's PVS and one of its areas is connected. Built from the
-/// whole reach box, it can only call a mover in view more often than the server does.
+/// whole reach box, which a mover's current place lies in. Only the first
+/// [`SIGHT_CLUSTERS`] clusters are named and tested, so a mover touching more is taken as
+/// out of view when none of those is visible: one the server dropped then keeps
+/// blocking, rather than a mover it merely left out losing its shadow.
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub(crate) struct Sight {
     clusters: [u32; SIGHT_CLUSTERS],
     cluster_count: u8,
     areas: [i32; SIGHT_AREAS],
     area_count: u8,
-    /// The box touched more clusters or areas than are named: taken as in view.
-    crowded: bool,
+    /// The box touched more areas than are named: its area test passes.
+    many_areas: bool,
 }
 
 const SIGHT_CLUSTERS: usize = 16;
@@ -368,10 +371,7 @@ impl Sight {
     pub(crate) fn new(bsp: &sjk_bsp::Bsp, lower: Vec3, upper: Vec3) -> Self {
         let mut leaves = [0usize; 256];
         let found = bsp.box_leaves(lower.to_array(), upper.to_array(), &mut leaves);
-        let mut sight = Self {
-            crowded: found.count == leaves.len(),
-            ..Self::default()
-        };
+        let mut sight = Self::default();
         for &leaf in &leaves[..found.count] {
             let leaf = &bsp.leaves()[leaf];
             if let Ok(cluster) = u32::try_from(leaf.cluster) {
@@ -389,9 +389,7 @@ impl Sight {
         if self.clusters[..count].contains(&cluster) {
             return;
         }
-        if count == SIGHT_CLUSTERS {
-            self.crowded = true;
-        } else {
+        if count < SIGHT_CLUSTERS {
             self.clusters[count] = cluster;
             self.cluster_count += 1;
         }
@@ -403,7 +401,7 @@ impl Sight {
             return;
         }
         if count == SIGHT_AREAS {
-            self.crowded = true;
+            self.many_areas = true;
         } else {
             self.areas[count] = area;
             self.area_count += 1;
@@ -426,13 +424,10 @@ impl Sight {
         cluster_visible: impl Fn(usize) -> bool,
         area_open: impl Fn(i32) -> bool,
     ) -> bool {
-        if self.crowded {
-            return true;
-        }
         let clusters = &self.clusters[..usize::from(self.cluster_count)];
         let areas = &self.areas[..usize::from(self.area_count)];
         clusters.iter().any(|&c| cluster_visible(c as usize))
-            && (areas.is_empty() || areas.iter().any(|&a| area_open(a)))
+            && (self.many_areas || areas.is_empty() || areas.iter().any(|&a| area_open(a)))
     }
 }
 
