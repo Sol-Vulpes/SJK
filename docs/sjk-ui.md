@@ -244,9 +244,10 @@ the Force groups' powers in their order, the other side's skipped), Left and
 Right change it (a hilt list's choice moves one hilt), Enter types or acts, Tab
 and `[` `]` change page, Escape returns to the main page (dropping an
 unapplied Force draft, as before). The pointer: a click on a control acts (‹ ›
-by the half it lands on, a chip picks its colour, a slider follows, a style
-button, a hilt, a level), a click elsewhere on a row only chooses it, a click
-on a tile picks that model. The SJK view's own targets (levels, style buttons,
+by the half of the control it lands on, a chip picks the colour drawn under
+it, a slider follows, a style button, a hilt, a level), a click elsewhere on a
+row (a Force power's holocron or name too) only chooses it, a click on a tile
+picks that model. The SJK view's own targets (levels, style buttons,
 hilts and the lists' wheel areas, tokens from 1000) go to
 `PlayerMenu::sjk_pointer` before the screen's shared pointer handling.
 
