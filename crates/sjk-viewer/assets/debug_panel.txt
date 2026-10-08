@@ -263,6 +263,18 @@ change: FPS and weapon labels 1.35x -> 2x at 4K; Windows display scaling no long
 test: At 3840x2160: crosshair name, kill feed, timer, FPS and weapon name are clearly bigger.
 test: cg_hudScale 0.5 and 1.5 at 4K: nothing overflows the screen edges.
 
+[card-polish]
+area: HUD
+title: Player card polish: hips anchor, Escape unpins, small medal names (SJK PR #33)
+change: The card's leader starts at the player's hips (lower when they crouch), not at the head.
+change: Escape unpins a pinned card instead of opening the game menu; with no pin it is as before.
+change: No duel record line; medal names are small print; dot, emblem and VERIFIED sit centred.
+test: Look at a player and press inspect: the card points at their hips, also when they crouch.
+test: With the card pinned press Escape: it unpins and no menu opens; Escape again opens it.
+test: Pin a player with several medals: the names are small, about 52 characters to a line.
+test: cg_playerCard 0, then Escape: the game menu opens as before.
+note: Not tried in a running client; how far a crouch drops the hips (HIP_DROP 0.5) is an estimate.
+
 # ---- Rendering & effects ----
 
 [renderer-settings]

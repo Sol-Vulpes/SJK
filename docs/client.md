@@ -1738,15 +1738,16 @@ are in [identity.md](identity.md).
 
 ### Player card
 
-Look at a player, keeping the view steady, and a card appears beside their head
-([player_card.rs](../crates/sjk-viewer/src/hud/player_card.rs)). It shows what the
-server already publishes to every client (name with its colour codes, model and its
-head icon, saber hilts with their blade colours, the hat and cape worn, duel record or
-bot skill) and, when the hub knows
-the player, SJK's emblem, their hub name, a gold VERIFIED and the medallions of the
-medals the SJK team gave them ([identity.md](identity.md#medals)); a pinned card names
-the medals under them, a repeatable one with its count. It adds nothing a
-glance at the scoreboard would not: no health, Force or position.
+Look at a player, keeping the view steady, and a card appears beside their hips
+([player_card.rs](../crates/sjk-viewer/src/hud/player_card.rs)): a leader runs from a
+dot at the player's origin (their hips; a crouch lowers it by half the box's drop) to
+the card, centred on it. It shows what the server already publishes to every client
+(name with its colour codes, model and its head icon, saber hilts with their blade
+colours, the hat and cape worn, bot skill; not the duel wins and losses) and, when the
+hub knows the player, SJK's emblem, their hub name, a gold VERIFIED and the medallions of
+the medals the SJK team gave them ([identity.md](identity.md#medals)); a pinned card
+names the medals under them in small print, a repeatable one with its count. It adds
+nothing a glance at the scoreboard would not: no health, Force or position.
 
 - `cg_playerCard` (default 1; Settings > HUD+ > Player card) turns it on.
 - `cg_playerCardDelay` (default 1.5; Settings > HUD+ > Card delay) is the seconds
@@ -1756,9 +1757,9 @@ glance at the scoreboard would not: no health, Force or position.
 - `inspect` (Settings > Key bindings > Interaction > Inspect player; bound to X by default,
   or `bind <key> inspect`) pins the card to the player under the crosshair at once, with
   no wait. It stays when you look away or the player moves, follows them (kept inside the
-  screen), and a second press hides it; it also drops when the player leaves or the map
-  changes. After hiding it, the card does not return until the crosshair leaves that
-  player. Behind you, the card is not drawn but stays pinned.
+  screen), and a second press or Escape hides it (Escape then does not open the game
+  menu); it also drops when the player leaves or the map changes. After hiding it, the
+  card does not return until the crosshair leaves that player. Behind you, the card is not drawn but stays pinned.
 - World notes: with no card pinned and no player under the crosshair, `inspect`
   selects the world surface under the crosshair, or the mover whose bounds the view ray
   meets first, and names it in a centre print (shader, BSP surface, lightmap or vertex

@@ -2293,6 +2293,12 @@ hub players with SJK's emblem instead of text; see [client.md](client.md#player-
 `personal/card-inspect` adds the model's head icon and the worn hat and cape, an
 `inspect` key that pins the card to the player under the crosshair, and anchors the card
 beside the top of the player's box instead of 70 units above the origin.
+`feat/player-inspect-polish` (08/10/2026) anchors it at the hips (the origin), lets
+Escape unpin it, drops the duel wins and losses, prints the medal names small and
+aligns the saber swatches, the emblem and VERIFIED with their text. Verified: unit tests
+(Escape unpins once, only a pinned card; no duel line; medal line breaks) and the
+`menu_snapshot`/`medals_snapshot` drawings, measured at 1080p. Not verified in the
+running client or on a live server.
 The emblem is one more cell of the UI icon atlas, uploaded at start.
 
 Verified: unit tests for the dwell rules (steady look, a turn restarting the wait,
