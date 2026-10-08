@@ -129,7 +129,7 @@ mod tests {
             at: 0,
             key_id: format!("{id:016x}"),
             name: "^2Sol".to_owned(),
-            verified: id % 2 == 0,
+            verified: id.is_multiple_of(2),
             staff: false,
             text: text.to_owned(),
         }

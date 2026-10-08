@@ -94,6 +94,7 @@ pub(super) const COMMANDS: &[(&str, &str)] = &[
         crate::console::SJK_CHAT_COMMAND,
         crate::console::SJK_CHAT_HELP,
     ),
+    (crate::emotes::COMMAND, crate::emotes::HELP),
     (super::update_panel::COMMAND, super::update_panel::HELP),
     (
         crate::identity_command::COMMAND,
@@ -276,6 +277,32 @@ impl ViewerConsole {
 }
 
 impl crate::GpuState {
+    /// `sjkemote <id>`: play an emote the SJK players on this server see; alone it
+    /// lists the installed ones.
+    fn emote_command(&mut self, args: &[String]) -> Result<Vec<String>, String> {
+        let Some(id) = args.first().map(|id| id.to_ascii_lowercase()) else {
+            if crate::emotes::lock().catalogue.is_none()
+                && let Some(vfs) = self.vfs.as_deref()
+            {
+                crate::emotes::lock().catalogue = Some(crate::emotes::load(vfs));
+            }
+            let state = crate::emotes::lock();
+            return Ok(crate::emotes::listing(
+                state.catalogue.as_deref().unwrap_or_default(),
+            ));
+        };
+        if !crate::emotes::valid_id(&id) {
+            return Err("An emote id is 1 to 32 of a to z, 0 to 9 and _".to_owned());
+        }
+        if self.live_session.is_none() {
+            return Err("Join a server to emote".to_owned());
+        }
+        if !crate::player_identity::emote(id) {
+            return Err("Emotes need the SJK identity (cl_identity 1)".to_owned());
+        }
+        Ok(Vec::new())
+    }
+
     /// Open stock targeted chat using authoritative damage and retained crosshair state.
     pub(crate) fn targeted_chat(&mut self, attacker: bool) {
         if let Some(session) = &self.live_session {
@@ -467,6 +494,7 @@ impl crate::GpuState {
                 }
                 self.sync_cursor_policy();
             }
+            crate::emotes::COMMAND => return self.emote_command(args),
             crate::console::SJK_CHAT_COMMAND => {
                 if let Some(console) = &mut self.console {
                     console.toggle_sjk_chat_panel();

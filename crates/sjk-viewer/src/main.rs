@@ -136,6 +136,8 @@ mod viewer_app;
 use object_meshes::StaticModelMesh;
 mod achievements_frame;
 mod bug_report;
+mod emotes;
+mod emotes_frame;
 mod gi_voxels;
 mod identity_command;
 mod identity_frame;

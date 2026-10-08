@@ -1360,8 +1360,10 @@ mod tests {
 
     #[test]
     fn the_keyboard_reaches_the_dock_and_types() {
-        let mut home = Home::default();
-        home.dock = true;
+        let mut home = Home {
+            dock: true,
+            ..Home::default()
+        };
         home.key(KeyCode::ArrowRight, 3);
         home.key(KeyCode::ArrowDown, 3);
         home.key(KeyCode::ArrowDown, 3);
@@ -1384,8 +1386,10 @@ mod tests {
 
     #[test]
     fn dock_typing_takes_letters_not_menu_keys() {
-        let mut home = Home::default();
-        home.dock = true;
+        let mut home = Home {
+            dock: true,
+            ..Home::default()
+        };
         home.focus = Focus::Chat;
         home.key(KeyCode::Enter, 1);
         for (key, text) in [
@@ -1409,8 +1413,10 @@ mod tests {
 
     #[test]
     fn enter_sends_and_escape_cancels() {
-        let mut home = Home::default();
-        home.dock = true;
+        let mut home = Home {
+            dock: true,
+            ..Home::default()
+        };
         home.focus = Focus::Chat;
         home.key(KeyCode::Enter, 1);
         home.typing_key(KeyCode::KeyG, Some("g"));
@@ -1434,8 +1440,10 @@ mod tests {
 
     #[test]
     fn the_pointer_types_in_the_dock_and_opens_the_chat() {
-        let mut home = Home::default();
-        home.dock = true;
+        let mut home = Home {
+            dock: true,
+            ..Home::default()
+        };
         assert_eq!(home.pointer(CHAT_TOKEN, false, 1), None);
         assert_eq!(home.focus, Focus::Chat);
         assert!(!home.is_typing());

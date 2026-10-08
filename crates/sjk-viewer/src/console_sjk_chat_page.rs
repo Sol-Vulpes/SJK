@@ -98,19 +98,6 @@ impl ViewerConsole {
         let enabled = self.bool_cvar("cl_sjkChat") != Some(false);
         let now = crate::menu::sjk::recent::now();
         let panel = &mut self.sjk_chat_panel;
-        #[cfg(test)]
-        if let Some((chat, staff)) = panel.preview.take() {
-            let inputs = Inputs {
-                chat: Some(&chat),
-                muted: &muted,
-                staff,
-                enabled,
-                now: u64::try_from(chat.messages.back().map_or(0, |m| m.at)).unwrap_or(0) + 90,
-            };
-            panel.append_sjk(&inputs, target, viewport);
-            panel.preview = Some((chat, staff));
-            return;
-        }
         let mut target = Some(target);
         let _ = crate::player_identity::with_chat(|chat| {
             let inputs = Inputs {
@@ -135,14 +122,6 @@ impl ViewerConsole {
             };
             panel.append_sjk(&inputs, target, viewport);
         }
-    }
-
-    /// Open the page on `chat` in place of the live one, for a world shot.
-    #[cfg(test)]
-    pub(crate) fn preview_sjk_chat(&mut self, chat: sjk_identity::ChatState, staff: bool) {
-        self.sjk_chat_panel.open(true);
-        self.sjk_chat_panel.preview = Some((chat, staff));
-        self.set_open(true);
     }
 
     /// The page's draw list while it is shown.

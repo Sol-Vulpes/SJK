@@ -86,9 +86,6 @@ pub(crate) struct Panel {
     scroll: usize,
     shown: Shown,
     epoch: Instant,
-    /// What a world shot shows in place of the live chat: the chat and staff.
-    #[cfg(test)]
-    pub(crate) preview: Option<(ChatState, bool)>,
 }
 
 impl Default for Panel {
@@ -110,8 +107,6 @@ impl Panel {
             scroll: 0,
             shown: Shown::default(),
             epoch: Instant::now(),
-            #[cfg(test)]
-            preview: None,
         }
     }
 
@@ -330,8 +325,8 @@ mod tests {
             at: 1_791_300_000 + id as i64 * 60,
             key_id: key.to_owned(),
             name: format!("^{}Player {id}", id % 8),
-            verified: id % 3 == 0,
-            staff: id % 5 == 0,
+            verified: id.is_multiple_of(3),
+            staff: id.is_multiple_of(5),
             text: text.to_owned(),
         }
     }

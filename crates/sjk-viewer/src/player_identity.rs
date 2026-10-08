@@ -466,11 +466,6 @@ pub(crate) fn take_emotes() -> Vec<sjk_identity::Emote> {
         .unwrap_or_default()
 }
 
-/// Whether the player muted `key_id` in the SJK chat (on this PC, this session).
-pub(crate) fn is_muted(key_id: &str) -> bool {
-    lock().muted.iter().any(|muted| muted == key_id)
-}
-
 /// The keys the player muted in the SJK chat.
 pub(crate) fn muted_keys() -> Vec<String> {
     lock().muted.clone()
@@ -534,12 +529,22 @@ mod tests {
 
     #[test]
     fn local_mutes_are_by_key() {
-        assert!(!is_muted("0123456789abcdef"));
+        let muted = |key: &str| muted_keys().iter().any(|muted| muted == key);
+        let before = mutes_revision();
+        assert!(!muted("0123456789abcdef"));
         set_muted("0123456789abcdef", true);
-        assert!(is_muted("0123456789abcdef"));
-        assert!(!is_muted("fedcba9876543210"));
+        assert!(muted("0123456789abcdef"));
+        assert!(!muted("fedcba9876543210"));
         set_muted("0123456789abcdef", true);
+        assert_eq!(
+            muted_keys()
+                .iter()
+                .filter(|key| *key == "0123456789abcdef")
+                .count(),
+            1
+        );
         set_muted("0123456789abcdef", false);
-        assert!(!is_muted("0123456789abcdef"));
+        assert!(!muted("0123456789abcdef"));
+        assert!(mutes_revision() > before);
     }
 }
