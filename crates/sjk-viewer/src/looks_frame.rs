@@ -13,17 +13,19 @@ impl GpuState {
     /// twice-a-second turn, when the own blade skin is read again and given to the
     /// service.
     pub(crate) fn update_looks(&mut self, due: bool) {
-        let received = player_identity::take_looks();
         let session = self.live_session.as_ref();
         let server = session
             .filter(|session| !session.is_local())
             .map(|session| session.server());
+        // Only the looks read for this server under the feed's current reading.
+        let received = player_identity::take_looks(server);
         let mut changed = due;
         if self.looks.server != server {
             self.looks.clear(server);
             self.illuminate_others.clear();
             changed = true;
         }
+        changed |= self.looks.follow_feed(received.generation);
         if server.is_some() {
             let revision = player_identity::revision();
             if self.looks.roster_revision != Some(revision) {
@@ -40,7 +42,7 @@ impl GpuState {
                 });
                 changed = true;
             }
-            for event in &received {
+            for event in &received.events {
                 self.looks
                     .apply_event(event.slot, &event.claimed_name, &event.look());
                 changed = true;

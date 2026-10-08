@@ -89,7 +89,12 @@ Old clients ignore all of it, so it stays `/v1/`.
   them, so `ChatState` stays as an idle feed leaves it and nothing shows, and turning
   the chat on starts again from the backlog. Either way it queues up to 64 received
   emotes (`Service::take_emotes`) and 64 looks (`Service::take_looks`). A new hub, or
-  ids that go backwards (the hub restarted), start from the backlog.
+  ids that go backwards (the hub restarted), start from the backlog; another game
+  server starts again from `after` 0, whose answer brings that server's looks of the
+  last minute. The looks keep the server they were read for and the reading's
+  generation (it changes with the hub, the server or the identity going off or on):
+  `Service::take_looks` hands over only the current generation's for the viewer's
+  server, so a poll under way at a change brings no old look.
 - Shutting down tells the feed thread to stop; it ends after its poll without being
   waited for.
 

@@ -6,12 +6,12 @@
 //! The service is inert while it is disabled or has no hub address: it makes no
 //! request of any kind.
 
-use crate::feed::{ChatState, FeedShared, FeedWorker};
+use crate::feed::{ChatState, FeedShared, FeedWorker, QueuedLook, ReceivedLooks};
 use crate::hub::{Hub, HubError};
 use crate::keys::Identity;
 use crate::report::{BugReport, PlayerReport, WorldNote};
 use crate::staff::{StaffRequest, StaffState};
-use crate::wire::{Achievement, Emote, Look, LookEvent, Presence, Profile, Unlock, names_match};
+use crate::wire::{Achievement, Emote, Look, Presence, Profile, Unlock, names_match};
 use std::collections::{BTreeMap, HashMap, VecDeque};
 use std::net::SocketAddr;
 use std::sync::mpsc::{Receiver, RecvTimeoutError, Sender, channel};
@@ -340,7 +340,8 @@ impl Worker {
     /// Tell the feed thread what to read: the hub, only while the identity is on and
     /// the hub answered the registration, and then on a game server (for its looks
     /// and emotes, whatever the chat says) or with the chat on; the server played on;
-    /// and whether the chat shows.
+    /// and whether the chat shows. Another hub or server, or none, is a new
+    /// generation: the looks read before are dropped.
     fn publish_feed(&self) {
         let reading = self.chat_on || self.location.is_some();
         let url = (self.settings.enabled && self.registered && reading && self.hub.is_some())
@@ -352,8 +353,18 @@ impl Worker {
                 .as_ref()
                 .map(|location| location.server.to_string()),
             chat: self.chat_on,
+            generation: 0,
         };
         let mut shared = lock_feed(&self.feed);
+        let generation = if (&shared.url, &shared.server) == (&wanted.url, &wanted.server) {
+            shared.generation
+        } else {
+            shared.generation + 1
+        };
+        let wanted = FeedShared {
+            generation,
+            ..wanted
+        };
         if *shared != wanted {
             *shared = wanted;
         }
@@ -1008,7 +1019,9 @@ pub struct Service {
     staff: Arc<Mutex<StaffState>>,
     chat: Arc<Mutex<ChatState>>,
     emotes: Arc<Mutex<VecDeque<Emote>>>,
-    looks: Arc<Mutex<VecDeque<LookEvent>>>,
+    looks: Arc<Mutex<VecDeque<QueuedLook>>>,
+    /// What the feed is told to read, for the looks' generation.
+    feed: Arc<Mutex<FeedShared>>,
     /// Set to end the feed thread, which ends after its poll at the latest.
     feed_stop: Arc<std::sync::atomic::AtomicBool>,
     finished: Mutex<Receiver<()>>,
@@ -1044,6 +1057,7 @@ impl Service {
             Instant::now(),
         );
         let chat = Arc::clone(&worker.chat);
+        let feed = Arc::clone(&worker.feed);
         let emotes = Arc::new(Mutex::new(VecDeque::new()));
         let looks = Arc::new(Mutex::new(VecDeque::new()));
         let feed_stop = Arc::new(std::sync::atomic::AtomicBool::new(false));
@@ -1093,6 +1107,7 @@ impl Service {
             chat,
             emotes,
             looks,
+            feed,
             feed_stop,
             finished: Mutex::new(finished),
             note_tags: std::sync::atomic::AtomicU64::new(0),
@@ -1229,9 +1244,13 @@ impl Service {
         let _ = self.commands.send(Command::Look(look));
     }
 
-    /// The looks the feed received since the last call, oldest first.
-    pub fn take_looks(&self) -> Vec<LookEvent> {
-        crate::feed::lock(&self.looks).drain(..).collect()
+    /// The looks the feed received since the last call, oldest first: those it read
+    /// for `server`, the game server the player is on, under the current reading. A
+    /// poll still under way when the server changed or the identity went off brings
+    /// none, and [`ReceivedLooks::generation`] tells when every look had before is out
+    /// of date.
+    pub fn take_looks(&self, server: Option<SocketAddr>) -> ReceivedLooks {
+        crate::feed::take_looks(&self.feed, &self.looks, server)
     }
 
     /// Withdraw the claim and stop, waiting at most `timeout` for it. The feed thread
@@ -1604,6 +1623,32 @@ mod tests {
         assert!(url().is_some());
         worker.handle(Command::Configure(Settings::default()), t0);
         assert_eq!(url(), None, "identity off");
+    }
+
+    #[test]
+    fn another_server_or_the_identity_off_is_a_new_reading_for_the_looks() {
+        let fake = Fake::default();
+        let t0 = Instant::now();
+        let (mut worker, _) = worker(&fake, t0);
+        let shared = Arc::clone(&worker.feed);
+        let generation = || lock_feed(&shared).generation;
+        worker.handle(Command::Configure(on("https://hub")), t0);
+        worker.tick(t0);
+        worker.handle(Command::Enter(here(3, "Sol")), t0);
+        let first = generation();
+        // The chat, a slot or a name change nothing of what is read.
+        worker.handle(Command::SetChat(true), t0);
+        worker.handle(Command::Enter(here(4, "Sol")), t0);
+        assert_eq!(generation(), first);
+        let elsewhere = Location {
+            server: "5.6.7.8:29070".parse().unwrap(),
+            ..here(4, "Sol")
+        };
+        worker.handle(Command::Enter(elsewhere), t0);
+        let second = generation();
+        assert!(second > first);
+        worker.handle(Command::Configure(Settings::default()), t0);
+        assert!(generation() > second, "identity off");
     }
 
     fn lit(saber: &str) -> Look {

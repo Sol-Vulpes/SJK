@@ -115,6 +115,8 @@ pub(crate) struct Looks {
     pub(crate) roster_revision: Option<u64>,
     /// The server the hub looks are for.
     pub(crate) server: Option<std::net::SocketAddr>,
+    /// The feed's reading the hub looks are from (`ReceivedLooks::generation`).
+    feed_generation: Option<u64>,
     /// Counts changes to [`Self::worn`], so a reader can follow it cheaply.
     revision: u64,
     /// World shots own every unlock, having no hub.
@@ -131,6 +133,7 @@ impl Default for Looks {
             own: Worn::default(),
             roster_revision: None,
             server: None,
+            feed_generation: None,
             revision: 0,
             #[cfg(test)]
             shot_owns_unlocks: false,
@@ -172,6 +175,19 @@ impl Looks {
         self.roster_revision = None;
         self.server = server;
         self.rebuild(|_| None);
+    }
+
+    /// Follow the feed's reading: when its `generation` changes (the identity went off
+    /// or on, another hub or server), every hub look goes and the roster is read
+    /// again, so no look from before, a late poll's included, stays. True when the
+    /// looks were cleared.
+    pub(crate) fn follow_feed(&mut self, generation: u64) -> bool {
+        if self.feed_generation == Some(generation) {
+            return false;
+        }
+        self.feed_generation = Some(generation);
+        self.clear(self.server);
+        true
     }
 
     /// Take the presence roster's looks in place of every hub look: `(slot, claimed
@@ -361,6 +377,23 @@ mod tests {
         assert_eq!(looks.server, elsewhere);
         assert_eq!(looks.own(), own);
         assert!(looks.illuminated(1), "the local player's own slot");
+    }
+
+    #[test]
+    fn a_new_feed_reading_clears_the_hub_looks() {
+        let mut looks = Looks::default();
+        assert!(looks.follow_feed(1), "the first reading");
+        assert!(!looks.follow_feed(1));
+        looks.roster_revision = Some(4);
+        looks.apply_event(3, "Sol", &look("saber_sun", true));
+        looks.rebuild(shown);
+        assert!(looks.illuminated(3));
+        // The identity went off: a look applied before must not stay.
+        assert!(looks.follow_feed(2));
+        looks.rebuild(shown);
+        assert!(!looks.illuminated(3));
+        assert_eq!(looks.saber_skin_id(3), None);
+        assert_eq!(looks.roster_revision, None, "the roster is read again");
     }
 
     #[test]

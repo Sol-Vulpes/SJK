@@ -697,7 +697,7 @@ fn the_service_wears_its_look_on_its_claim_and_reads_looks_with_the_chat_off() {
     let put_out = |look: &sjk_identity::LookEvent| look.slot == 6 && !look.illuminate;
     let mut looks = Vec::new();
     while !looks.iter().any(put_out) && Instant::now() < until {
-        looks.extend(service.take_looks());
+        looks.extend(service.take_looks(server.parse().ok()).events);
         std::thread::sleep(Duration::from_millis(200));
     }
     assert!(looks.iter().any(put_out), "{looks:?}");

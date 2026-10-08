@@ -9,12 +9,20 @@
 //! for, and whether the chat shows. With the chat off the feed still reads on a game
 //! server, for the looks and emotes, but keeps no message: [`ChatState`] stays as an
 //! idle feed leaves it. With no hub to read it makes no request.
+//!
+//! Another game server starts the reading again from `after` 0, whose answer carries
+//! that server's looks of the last minute. The looks queued for the viewer carry the
+//! server they were read for and the reading's generation ([`FeedShared::generation`],
+//! which changes with the hub, the server or the identity going off or on), and
+//! [`take_looks`] hands over only those of the current generation and the viewer's
+//! server, so a poll still under way when either changed cannot bring old looks back.
 
 use crate::hub::Hub;
 use crate::keys::Identity;
 use crate::service::{HubFactory, ReportOutcome};
 use crate::wire::{ChatMessage, Emote, Feed, LookEvent};
 use std::collections::VecDeque;
+use std::net::SocketAddr;
 use std::sync::{Arc, Mutex, MutexGuard};
 use std::time::{Duration, Instant};
 
@@ -65,6 +73,53 @@ pub(crate) struct FeedShared {
     pub(crate) server: Option<String>,
     /// Whether the SJK chat shows: without it no message is kept.
     pub(crate) chat: bool,
+    /// Changes whenever `url` or `server` does: looks read before belong to another
+    /// reading (another hub or server, or the identity since turned off).
+    pub(crate) generation: u64,
+}
+
+/// A look event queued for the viewer, with what it was read for.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub(crate) struct QueuedLook {
+    /// [`FeedShared::generation`] when the poll that brought it began.
+    generation: u64,
+    /// The game server that poll asked for.
+    server: Option<SocketAddr>,
+    event: LookEvent,
+}
+
+/// The look events the feed received for the viewer's server under the current
+/// reading ([`crate::Service::take_looks`]).
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct ReceivedLooks {
+    /// The reading's generation: when it changes (the identity went off or on, another
+    /// hub or server), every look received before is out of date, the roster's too.
+    pub generation: u64,
+    /// The events, oldest first.
+    pub events: Vec<LookEvent>,
+}
+
+/// Take the queued looks: those read under the current generation for `server`, the
+/// game server the viewer is on (it may be ahead of the worker); the rest are dropped.
+pub(crate) fn take_looks(
+    shared: &Mutex<FeedShared>,
+    queue: &Mutex<VecDeque<QueuedLook>>,
+    server: Option<SocketAddr>,
+) -> ReceivedLooks {
+    // Under the shared lock, so no new generation's looks are dropped as old ones.
+    let shared = lock(shared);
+    let mut queue = lock(queue);
+    let events = queue
+        .drain(..)
+        .filter(|queued| {
+            queued.generation == shared.generation && server.is_some() && queued.server == server
+        })
+        .map(|queued| queued.event)
+        .collect();
+    ReceivedLooks {
+        generation: shared.generation,
+        events,
+    }
 }
 
 pub(crate) fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
@@ -80,9 +135,11 @@ pub(crate) struct FeedWorker {
     shared: Arc<Mutex<FeedShared>>,
     state: Arc<Mutex<ChatState>>,
     emotes: Arc<Mutex<VecDeque<Emote>>>,
-    looks: Arc<Mutex<VecDeque<LookEvent>>>,
+    looks: Arc<Mutex<VecDeque<QueuedLook>>>,
     hub: Option<Box<dyn Hub>>,
     url: Option<String>,
+    /// The game server read for, as last told.
+    server: Option<String>,
     /// Whether the chat shows, as last told.
     chat: bool,
     after: u64,
@@ -99,7 +156,7 @@ impl FeedWorker {
         shared: Arc<Mutex<FeedShared>>,
         state: Arc<Mutex<ChatState>>,
         emotes: Arc<Mutex<VecDeque<Emote>>>,
-        looks: Arc<Mutex<VecDeque<LookEvent>>>,
+        looks: Arc<Mutex<VecDeque<QueuedLook>>>,
         now: Instant,
     ) -> Self {
         Self {
@@ -111,6 +168,7 @@ impl FeedWorker {
             looks,
             hub: None,
             url: None,
+            server: None,
             chat: false,
             after: 0,
             due: now,
@@ -129,6 +187,12 @@ impl FeedWorker {
         } else if shared.chat != self.chat {
             self.show_chat(shared.chat, now);
         }
+        // Another server: its looks of the last minute come with `after` 0, and the
+        // old server's ids say nothing of it.
+        if shared.server != self.server {
+            self.server.clone_from(&shared.server);
+            self.after = 0;
+        }
         if self.url.is_none() {
             return IDLE;
         }
@@ -140,7 +204,7 @@ impl FeedWorker {
         };
         match hub.feed(&self.identity, self.after, shared.server.as_deref(), WAIT) {
             Ok(feed) => {
-                self.apply(feed);
+                self.apply(feed, &shared);
                 self.backoff = RETRY_MIN;
                 self.due = now + POLL_GAP;
             }
@@ -197,13 +261,23 @@ impl FeedWorker {
         }
     }
 
-    /// Take an answer into the state: its messages only while the chat shows.
-    fn apply(&mut self, mut feed: Feed) {
+    /// Take an answer to a poll made as `polled` says into the state: its messages
+    /// only while the chat shows, its looks marked with the reading they belong to.
+    fn apply(&mut self, mut feed: Feed, polled: &FeedShared) {
         if self.chat {
             self.apply_chat(&mut feed);
         }
         queue(&self.emotes, feed.emotes, EMOTES_WAITING);
-        queue(&self.looks, feed.looks, LOOKS_WAITING);
+        let server = polled
+            .server
+            .as_deref()
+            .and_then(|server| server.parse().ok());
+        let looks = feed.looks.into_iter().map(|event| QueuedLook {
+            generation: polled.generation,
+            server,
+            event,
+        });
+        queue(&self.looks, looks, LOOKS_WAITING);
         self.after = feed.next;
     }
 
@@ -248,8 +322,9 @@ impl FeedWorker {
 }
 
 /// Add `received` to `waiting`, keeping the newest `kept`.
-fn queue<T>(waiting: &Mutex<VecDeque<T>>, received: Vec<T>, kept: usize) {
-    if received.is_empty() {
+fn queue<T>(waiting: &Mutex<VecDeque<T>>, received: impl IntoIterator<Item = T>, kept: usize) {
+    let mut received = received.into_iter().peekable();
+    if received.peek().is_none() {
         return;
     }
     let mut waiting = lock(waiting);
@@ -278,12 +353,16 @@ mod tests {
     use crate::wire::Profile;
     use std::sync::atomic::{AtomicBool, Ordering};
 
+    /// Something that happens while a poll is under way.
+    type Meanwhile = Box<dyn FnOnce() + Send>;
+
     /// A hub whose feed answers come from a script.
     #[derive(Clone, Default)]
     struct Scripted {
         answers: Arc<Mutex<VecDeque<Result<Feed, HubError>>>>,
         asked: Arc<Mutex<Vec<String>>>,
         down: Arc<AtomicBool>,
+        meanwhile: Arc<Mutex<Option<Meanwhile>>>,
     }
 
     impl Hub for Scripted {
@@ -316,6 +395,9 @@ mod tests {
                 .lock()
                 .unwrap()
                 .push(format!("after={after} server={server:?} wait={wait}"));
+            if let Some(meanwhile) = self.meanwhile.lock().unwrap().take() {
+                meanwhile();
+            }
             if self.down.load(Ordering::SeqCst) {
                 return Err(HubError::Network("down".to_owned()));
             }
@@ -353,7 +435,7 @@ mod tests {
         shared: Arc<Mutex<FeedShared>>,
         state: Arc<Mutex<ChatState>>,
         emotes: Arc<Mutex<VecDeque<Emote>>>,
-        looks: Arc<Mutex<VecDeque<LookEvent>>>,
+        looks: Arc<Mutex<VecDeque<QueuedLook>>>,
         worker: FeedWorker,
         made: Arc<Mutex<Vec<String>>>,
     }
@@ -405,11 +487,17 @@ mod tests {
                 .collect()
         }
         fn read(&self, url: &str, server: Option<&str>) {
-            *lock(&self.shared) = FeedShared {
+            let mut shared = lock(&self.shared);
+            *shared = FeedShared {
                 url: Some(url.to_owned()),
                 server: server.map(str::to_owned),
                 chat: true,
+                generation: shared.generation + 1,
             };
+        }
+        /// The looks waiting for a viewer on `server`.
+        fn take_looks(&self, server: &str) -> ReceivedLooks {
+            take_looks(&self.shared, &self.looks, server.parse().ok())
         }
         fn show_chat(&self, on: bool) {
             lock(&self.shared).chat = on;
@@ -532,10 +620,108 @@ mod tests {
             ..Feed::default()
         }));
         rig.worker.step(t0);
-        let waiting = lock(&rig.looks);
+        let waiting = rig.take_looks("1.2.3.4:29070").events;
         assert_eq!(waiting.len(), LOOKS_WAITING);
-        assert_eq!(waiting.front().map(|look| look.id), Some(7));
-        assert_eq!(waiting.back(), Some(&look_event(70, true)));
+        assert_eq!(waiting.first().map(|look| look.id), Some(7));
+        assert_eq!(waiting.last(), Some(&look_event(70, true)));
+        assert!(lock(&rig.looks).is_empty(), "taken");
+    }
+
+    #[test]
+    fn another_server_is_read_from_the_start_for_its_looks() {
+        let t0 = Instant::now();
+        let mut rig = rig(t0);
+        rig.read("https://hub", Some("1.2.3.4:29070"));
+        rig.script(answer(9, vec![message(9, "hi")]));
+        rig.worker.step(t0);
+        rig.read("https://hub", Some("5.6.7.8:29070"));
+        rig.script(Ok(Feed {
+            next: 9,
+            chat: vec![message(9, "hi")],
+            looks: vec![look_event(8, true)],
+            ..Feed::default()
+        }));
+        rig.worker.step(t0 + POLL_GAP);
+        assert_eq!(
+            rig.asked()[1],
+            "after=0 server=Some(\"5.6.7.8:29070\") wait=25",
+            "the hub's answer to 0 carries the server's looks of the last minute"
+        );
+        assert_eq!(rig.texts(), ["hi"], "the same hub: the chat goes on");
+        assert_eq!(
+            rig.take_looks("5.6.7.8:29070").events,
+            [look_event(8, true)]
+        );
+        rig.worker.step(t0 + POLL_GAP * 2);
+        assert_eq!(
+            rig.asked()[2],
+            "after=9 server=Some(\"5.6.7.8:29070\") wait=25"
+        );
+    }
+
+    #[test]
+    fn looks_of_a_poll_under_way_when_the_reading_changed_are_dropped() {
+        let t0 = Instant::now();
+        let mut rig = rig(t0);
+        let old = "1.2.3.4:29070";
+        rig.read("https://hub", Some(old));
+        // The player moves to another server while the poll waits at the hub.
+        let shared = Arc::clone(&rig.shared);
+        *rig.hub.meanwhile.lock().unwrap() = Some(Box::new(move || {
+            let mut shared = lock(&shared);
+            shared.server = Some("5.6.7.8:29070".to_owned());
+            shared.generation += 1;
+        }));
+        rig.script(Ok(Feed {
+            next: 5,
+            looks: vec![look_event(5, true)],
+            ..Feed::default()
+        }));
+        rig.worker.step(t0);
+        let taken = rig.take_looks("5.6.7.8:29070");
+        assert_eq!(taken.generation, lock(&rig.shared).generation);
+        assert!(taken.events.is_empty(), "read for the old server");
+        // The viewer is still on the old server, but the reading changed: dropped too.
+        rig.read("https://hub", Some(old));
+        rig.script(Ok(Feed {
+            next: 6,
+            looks: vec![look_event(6, true)],
+            ..Feed::default()
+        }));
+        rig.worker.step(t0 + POLL_GAP);
+        let shared = Arc::clone(&rig.shared);
+        *rig.hub.meanwhile.lock().unwrap() = Some(Box::new(move || {
+            // The identity is turned off.
+            let mut shared = lock(&shared);
+            *shared = FeedShared {
+                generation: shared.generation + 1,
+                ..FeedShared::default()
+            };
+        }));
+        rig.script(Ok(Feed {
+            next: 7,
+            looks: vec![look_event(7, false)],
+            ..Feed::default()
+        }));
+        rig.worker.step(t0 + POLL_GAP * 2);
+        let taken = rig.take_looks(old);
+        assert!(taken.events.is_empty(), "{:?}", taken.events);
+        // Without a change, the same server's looks are handed over.
+        rig.read("https://hub", Some(old));
+        rig.script(Ok(Feed {
+            next: 8,
+            looks: vec![look_event(8, true)],
+            ..Feed::default()
+        }));
+        rig.worker.step(t0 + POLL_GAP * 3);
+        assert!(rig.take_looks("5.6.7.8:29070").events.is_empty());
+        rig.script(Ok(Feed {
+            next: 9,
+            looks: vec![look_event(9, true)],
+            ..Feed::default()
+        }));
+        rig.worker.step(t0 + POLL_GAP * 4);
+        assert_eq!(rig.take_looks(old).events, [look_event(9, true)]);
     }
 
     #[test]

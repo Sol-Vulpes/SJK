@@ -160,12 +160,19 @@ wears its look (without a skin it lacks) and reads looks with the chat off.
 Built ([feed.rs](../crates/sjk-identity/src/feed.rs),
 [looks.rs](../crates/sjk-viewer/src/looks.rs)). The feed reads on a game server
 whatever `cl_sjkChat` says, keeping no message with the chat off, and queues the
-looks it gets (`Service::take_looks`, the newest 64). `GpuState::looks` keeps one look
+looks it gets (`Service::take_looks`, the newest 64). Another game server is read
+from `after` 0, so its first answer brings that server's looks of the last minute.
+Each queued look keeps the server it was read for and the reading's generation, which
+changes with the hub, the server or the identity going off or on; the viewer is
+handed only the looks read for the server it is on under the current generation, and
+clears every hub look (reading the roster again) when the generation changes, so a
+poll still under way at a change cannot bring an old look back. `GpuState::looks` keeps one look
 per slot (64): the presence roster's when its revision changes (it replaces every hub
 look) and feed events as they come (newer, so they win until the roster changes
 again). A look counts only while the game shows the claimed name in its slot (the
 badges' rule); the names are compared when a roster or an event comes and twice a
-second, so a frame only reads a fixed table. Another server or leaving clears them.
+second, so a frame only reads a fixed table. Another server, leaving or a new feed
+generation clears them.
 An unknown skin id draws the stock blade. The local player's own look comes from its
 settings, not the hub.
 

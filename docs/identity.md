@@ -293,7 +293,8 @@ blade-skin unlock id or `""`, and whether the Illuminate holocron is lit.
   drops the look. `Snapshot::look_outcome` says what became of the last one.
 - Receiving: presence entries carry `look` (`Presence::look`) and the feed carries look
   events (`Feed::looks`, `LookEvent`), queued for the viewer (`Service::take_looks`, the
-  newest 64). The viewer's `looks.rs` keeps one look per slot: the roster's when it
+  newest 64, handing over only those read for the viewer's server under the feed's
+  current generation, `ReceivedLooks`; a new generation clears the viewer's hub looks). The viewer's `looks.rs` keeps one look per slot: the roster's when it
   changes, the feed's as they come (newer, so they win until the roster changes
   again), counted only while the game shows the claimed name in that slot, and cleared
   on another server. The local player's own look comes from its settings.

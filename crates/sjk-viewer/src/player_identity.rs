@@ -469,12 +469,13 @@ pub(crate) fn take_emotes() -> Vec<sjk_identity::Emote> {
         .unwrap_or_default()
 }
 
-/// The looks the feed received since the last call.
-pub(crate) fn take_looks() -> Vec<sjk_identity::LookEvent> {
+/// The looks the feed received since the last call for `server`, the game server the
+/// player is on, under the feed's current reading (`Service::take_looks`).
+pub(crate) fn take_looks(server: Option<SocketAddr>) -> sjk_identity::ReceivedLooks {
     lock()
         .service
         .as_ref()
-        .map(Service::take_looks)
+        .map(|service| service.take_looks(server))
         .unwrap_or_default()
 }
 
@@ -585,7 +586,7 @@ mod tests {
         assert!(!emote("wave".to_owned()));
         assert!(with_chat(|chat| chat.revision).is_none());
         assert!(take_emotes().is_empty());
-        assert!(take_looks().is_empty());
+        assert_eq!(take_looks(None), sjk_identity::ReceivedLooks::default());
         assert!(with_roster(|players| players.len()).is_none());
         assert!(!owns_unlock("saber_sun"));
         assert!(!set_look(&sjk_identity::Look::default()));
