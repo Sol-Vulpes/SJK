@@ -500,6 +500,25 @@ test: Outdoors, watch a moving lift's sun shadow from far away: it follows the l
 note: SJK_MOVER_OCCLUSION=0 leaves movers out of lamp light, to compare with the same build.
 note: Not tried on screen yet: the door tracer, the partial re-bakes and the far cascade refresh.
 
+[remap-vertex-light]
+area: Rendering & effects
+title: Vertex-lit remap targets take the map's live light (SJK PR #40)
+change: A remap to an rgbGen vertex shader on a lightmapped surface takes real-time light.
+change: It kept its static bake before: brighter than its neighbours and blind to lamps.
+test: JA+ server on mp/ffa4, real-time lighting: the remapped trim, flag and rock door match.
+test: The purple lamp near them lights them as it lights the unremapped walls.
+note: Checked offline on mp/ffa4 with the five remaps as local ones (Linux), not on a server.
+
+[remap-blocked-maps]
+area: Rendering & effects
+title: cg_remapsBlockedMaps ignores server remaps on chosen maps (SJK PR #40)
+change: cg_remapsBlockedMaps lists maps where server remaps are ignored, as cg_remaps 0 there.
+change: blockRemaps [map] adds the loaded map (or a named one); unblockRemaps [map] removes it.
+test: On a server that remaps the map: blockRemaps; the server's remaps go at once.
+test: listRemaps says the map is blocked; the map's own and local remapShader remaps still apply.
+test: unblockRemaps brings them back; after a restart the list is still in cg_remapsBlockedMaps.
+note: Not run in game yet. The map's own worldspawn remaps are never blocked.
+
 # ---- Audio ----
 
 # ---- Gameplay ----

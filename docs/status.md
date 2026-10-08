@@ -7,6 +7,39 @@ SJK currently contains a native client and standard dedicated server in a
 20-crate Rust workspace. This page records scope and verification, rather than
 claiming complete parity from the presence of an implementation.
 
+## Remapped vertex-lit targets and blocked remap maps
+
+Branch `feat/map-remap-blocklist` (08/10/2026, based on `15cf7a9`, Linux). Sol
+reported that `mp/ffa4` on a JA+ server, whose remaps include
+`textures/rift/thick_trim -> textures/yavin/stonewall2_vertex` (and `flag2`,
+`rockdoor` to other `yavin/*_vertex` shaders), looked too bright and blind to light.
+Those targets are `q3map_onlyvertexlighting` shaders with one `rgbGen vertex`
+stage, drawn on lightmapped surfaces. The surfaces' BSP vertex colours match their
+lightmaps (`thick_trim`: mean 62.0 for both), so the colour was right, but only
+vertex-lit (`LIGHTMAP_BY_VERTEX`) surfaces were marked as baked light at load, and
+real-time lighting left the remapped stage's static bake in place. A remap onto a
+lightmapped slot now marks such stages too
+([rendering](rendering.md#server-shader-remaps)). `cg_remapsBlockedMaps`, with
+`blockRemaps` and `unblockRemaps`, ignores server remaps on listed maps
+([client](client.md#shader-remap-controls)).
+
+Verified: workspace formatting, the locked build, clippy (no new warnings) and the
+locked tests passed on Linux, with new unit tests of the vertex-light decision, map
+name matching, list editing and the cache. The ignored world shot
+`world_shot::notes::world_notes` on `mp/ffa4`, with the server's five remaps applied
+as local remaps, at the largest `thick_trim`, `flag2` and `rockdoor` surfaces showed
+them flat and pale, unaffected by the nearby purple lamp, before the change, and lit
+like the unremapped map after it; the harness exits with `free(): invalid pointer`
+after the test passes. Not checked on a live server or demo, in classic lighting
+(where the bake shows as before), or in game for the blocked-map cvar and commands.
+
+Review at the merge (08/10/2026): a map name with a multi-byte character across its
+fifth byte (accented letters right after `mp/`) no longer panics `remap_blocked_maps::map_name`, which the
+archived `cg_remapsBlockedMaps` would have repeated at every start; the docs say a list
+with semicolons needs quotes in the console. Known: only the server's remaps are
+blocked, not the map's own worldspawn or local `remapShader` ones, and a map's own
+`rgbGen vertex` shader on a lightmapped surface still keeps its baked light.
+
 ## Compact SJK scoreboard; the HUD hides under the scoreboard
 
 Branch `feat/compact-scoreboard` (08/10/2026, based on `15cf7a9`, Linux): Sol

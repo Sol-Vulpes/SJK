@@ -70,7 +70,13 @@ world never used it (a `$lightmap` stage becomes the white image, an unscripted
 texture is lit by `rgbGen lightingDiffuse`), or with whichever lightmap page another
 surface gave it. Either way the remapped surface ignored the map's light, uniformly
 bright or patchy (08/10/2026). A target shader without a `$lightmap` stage still
-shows only the lighting its stages ask for.
+shows only the lighting its stages ask for. A vertex-coloured stage (`rgbGen vertex`
+or `exactVertex`) on a lightmapped surface shows that surface's baked vertex light,
+which q3map2 stores beside the lightmap, as in rd-vanilla; it is marked as baked
+light like a vertex-lit surface's, so real-time lighting replaces it. Before, a
+`q3map_onlyvertexlighting` target such as `textures/yavin/stonewall2_vertex` kept
+the static bake under real-time lighting, brighter than its neighbours and blind to
+live light (`mp/ffa4` on a JA+ server).
 
 The map's own worldspawn remaps apply when its world loads, as rd-vanilla
 `R_LoadEntities` applies them: every key starting with `remapshader` (case-sensitive,
@@ -92,6 +98,10 @@ default) accepts them while excluding player-texture configstring entries, and
 **2** (the default, as in EternalJK) includes those entries. Like Tayst, a reliable
 `remapShader` command is accepted in either nonzero mode. The client applies this
 preference live rather than requiring a map reload; a server remap it excludes reveals the earlier remap it had replaced.
+`cg_remapsBlockedMaps` lists maps on which SJK ignores server remaps, as `cg_remaps 0`
+does there; worldspawn and local remaps still apply. The frame reads a cached answer,
+refreshed when the cvar or the loaded map changes
+([remap_blocked_maps.rs](../crates/sjk-viewer/src/remap_blocked_maps.rs)).
 `listRemaps` lists the map's, the enabled server and the local remaps in the order
 they were applied, with their source, and marks those a later remap overrides.
 `remapShader <old> <new>` sets a temporary local remap for the loaded map, without

@@ -21,6 +21,8 @@ Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 
 ## Unreleased
 
+- Remapped surfaces drawn with a vertex-lit texture (like the ones a server puts on mp/ffa4) take the map's live light instead of staying too bright _(Sol)_
+- `cg_remapsBlockedMaps` lists maps where the server may not swap textures, as `cg_remaps 0` on those maps only; `blockRemaps` and `unblockRemaps` add or remove the loaded map (or a named one) _(Sol)_
 - The SJK scoreboard is compact by default: thinner rows keep a full server (32 players in free for all, or on one team) in one column; Settings > Scoreboard > Compact SJK scoreboard turns it off. While the scoreboard is held, in any style, the HUD steps aside as for the quick wheel (chat stays) _(Sol)_
 - Doors, lifts and other moving brushes now block the light of the map's lamps while closed and let it through when open, hidden or broken; far sun shadows follow them too _(Sol)_
 - SJK chat: one conversation for every SJK player, through the SJK hub rather than the game server, so it reaches SJK players on any server and in the menus. In a game, I (messagemode5, bound in new profiles; bind it under Settings > Key bindings > Other otherwise) writes to it (Tab cycles All, Team and SJK) and its messages show in the chat tagged SJK; the main menu docks it under Recent servers; its page (sjkchat, Open chat, or the in-game SJK menu) shows it all and mutes a sender on this PC. The hub keeps the last 200 messages in memory only; cl_sjkChat 0 (Settings > Network > SJK chat) turns it off _(Sol)_

@@ -162,6 +162,8 @@ pub(crate) struct ViewerConsole {
     smooth_clients: console_cvars::IntegerSetting,
     draw_fog: console_cvars::IntegerSetting,
     remaps: console_cvars::IntegerSetting,
+    /// Changes of `cg_remapsBlockedMaps`, for [`crate::remap_blocked_maps`].
+    remap_blocked_maps: console_cvars::RevisionSetting,
     packet_dup: console_cvars::IntegerSetting,
     max_packets: console_cvars::IntegerSetting,
     pub(crate) geometry_controls: crate::shared_geometry::environment::Cvars,
@@ -846,5 +848,10 @@ fn invalid_cvar(name: &str, requirement: &str) -> IoError {
 impl ViewerConsole {
     pub(crate) fn remap_mode(&self) -> i64 {
         self.remaps.value()
+    }
+
+    /// How often `cg_remapsBlockedMaps` has changed, read without a name lookup.
+    pub(crate) fn remap_blocked_maps_revision(&self) -> u64 {
+        self.remap_blocked_maps.value()
     }
 }

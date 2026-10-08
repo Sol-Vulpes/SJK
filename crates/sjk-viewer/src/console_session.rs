@@ -139,6 +139,8 @@ impl ViewerConsole {
         let smooth_clients =
             console_cvars::IntegerSetting::bind(&mut cvars, "cg_smoothClients", 0)?;
         let remaps = console_cvars::IntegerSetting::bind(&mut cvars, "cg_remaps", 2)?;
+        let remap_blocked_maps =
+            console_cvars::RevisionSetting::bind(&mut cvars, crate::remap_blocked_maps::CVAR)?;
         let draw_fog = console_cvars::IntegerSetting::bind(&mut cvars, "r_drawfog", 2)?;
         let packet_dup = console_cvars::IntegerSetting::bind(&mut cvars, "cl_packetdup", 1)?;
         let max_packets = console_cvars::IntegerSetting::bind(
@@ -456,6 +458,7 @@ impl ViewerConsole {
             smooth_clients,
             draw_fog,
             remaps,
+            remap_blocked_maps,
             packet_dup,
             max_packets,
             post_color,
