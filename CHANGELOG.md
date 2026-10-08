@@ -21,6 +21,8 @@ Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 
 ## Unreleased
 
+- SJK chat: one conversation for every SJK player, through the SJK hub rather than the game server, so it reaches SJK players on any server and in the menus. In a game, I (messagemode5, bound in new profiles; bind it under Settings > Key bindings > Other otherwise) writes to it (Tab cycles All, Team and SJK) and its messages show in the chat tagged SJK; the main menu docks it under Recent servers; its page (sjkchat, Open chat, or the in-game SJK menu) shows it all and mutes a sender on this PC. The hub keeps the last 200 messages in memory only; cl_sjkChat 0 (Settings > Network > SJK chat) turns it off _(Sol)_
+- Emotes, groundwork: sjkemote <id> plays an emote the other SJK players on your server see, through the SJK hub; emotes come as emotes/<id>.emote files, none yet, and until their animations exist the console says who emoted _(Sol)_
 - cl_idrive (Settings > Controls): with both keys of a movement pair held, the one pressed last wins (1 all pairs, 2 jump/crouch only); cl_idriveDelay keeps you still for a few milliseconds when you reverse, for servers that dislike instant reversals _(Sol, after JoF EJK)_
 - Graphics quality: four levels (Performance, Balanced, High, Ultra) at the top of First setup and of Settings > Video set the costly rendering options together; a fresh profile reads High, a hand-changed setting reads Custom, and nothing changes until you pick a level (`graphicsquality` in the console) _(Sol)_
 - The character screen's model squares, the Force page, the part pictures, the key-binding pictures and the map and HUD previews no longer turn black or show another model after you join a server, change map or disconnect _(Sol)_

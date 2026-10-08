@@ -1252,7 +1252,11 @@ unchanged. The command is bindable under Settings > Key bindings > Other.
 
 U defaults to crosshair-target private chat (`messagemode3`): aim at a player,
 press U, then compose a tell addressed to that player. Global chat remains on
-Y (`messagemode`), and team chat on T (`messagemode2`). Existing profiles gain
+Y (`messagemode`), and team chat on T (`messagemode2`). I opens the SJK chat
+(`messagemode5`, [hub-chat.md](hub-chat.md)); a new profile, or a whole config table
+imported at First setup, gets I when it is free and nothing is bound to
+`messagemode5`; an existing profile binds it in Settings > Key bindings > Other.
+Existing profiles gain
 U when it is free and no custom crosshair-chat key exists. Version-2 profiles
 from the earlier incorrect global-U default repair U to `messagemode3` and
 restore Y global chat if needed and free; other occupied keys stay unchanged.
@@ -1792,6 +1796,14 @@ are in [identity.md](identity.md).
   the classic+ box names them in its status with their medallions. With none, a line
   says how medals come. A medal new to the client shows once in a pop-up on the main
   menu or when the game menu opens ([identity.md](identity.md#medals)).
+- SJK chat: one conversation for every SJK player, through the hub, in games and in
+  the menus ([hub-chat.md](hub-chat.md)). In a game, I (`messagemode5`) opens the
+  composer on the SJK channel (Tab cycles All, Team and SJK); hub messages show in the
+  chat feed tagged SJK in gold. The SJK UI's main page docks it under Recent servers;
+  `sjkchat`, the dock's Open chat and the in-game SJK menu open its page, where a
+  message's sender can be muted on this PC. `cl_sjkChat 0` (Settings > Network > SJK
+  chat) hides it and stops the reading. `sjkemote <id>` sends an emote the SJK players
+  on the server see (`sjkemote` alone lists the installed ones; none ship yet).
 - Back up `identity.key`: losing it loses the identity.
 
 ### Player card

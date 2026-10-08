@@ -9,6 +9,21 @@
 #                               made it when that is not the piece's owner.
 
 = Sol
++ 08/10/2026 | SJK #36 | SJK chat through the hub, and the path for emotes
+- 460187b |  | Plan SJK chat and emotes through the hub
+- 4bacaa5 |  | sjk-identity: chat rules and the feed's types
+- c0daae7 |  | sjk-identity: chat, emote and feed requests
+- 99dd077 |  | sjk-identity: sending chat and emotes, and the feed thread
+- dd93b25 |  | SJK chat setting and the identity glue
+- f44808c |  | SJK chat as a fourth channel in the game
+- df43d41 |  | SJK chat docked on the main page
+- e644096 |  | SJK chat page
+- 1d462e9 |  | Emotes: the catalogue format, playing emotes and the sjkemote command
+- f69f54e |  | SJK chat: lines sit on the dock's field; the page's tags join the time
+- 81646c0 |  | Document the SJK chat and the emotes path
+- 584df47 |  | SJK chat: no backlog over the game, and mutes reach lines already shown
+- 4ba2626 |  | SJK chat page: say what a staff request came to
+- e873ee1 |  | Document the feed's limits and the review's fixes
 + 08/10/2026 | SJK #37 | Add cl_idrive and a live cl_idriveDelay for opposing movement keys
 - 8ee146c |  | Add cl_idrive and a live cl_idriveDelay for opposing movement keys
 + 08/10/2026 | SJK #35 | Add graphics quality levels at the top of First setup

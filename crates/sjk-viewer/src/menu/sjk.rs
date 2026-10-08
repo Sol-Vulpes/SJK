@@ -18,6 +18,7 @@
 //! ([`crate::ui_scale::height_scale`]).
 
 pub(crate) mod browser;
+pub(crate) mod chat_dock;
 pub(crate) mod home;
 pub(crate) mod kit;
 pub(crate) mod loading;
@@ -152,6 +153,12 @@ impl ClientMenu {
             *slot = item;
             count += 1;
         }
+        let chat_on = console.is_some_and(|console| console.bool_cvar("cl_sjkChat") != Some(false));
+        if chat_on {
+            self.chat_dock.refresh();
+        }
+        let mut lines = [chat_dock::BLANK; chat_dock::LINES];
+        let chat = chat_on.then(|| self.chat_dock.view(&mut lines));
         let view = home::HomeView {
             name,
             model,
@@ -160,6 +167,7 @@ impl ClientMenu {
             version: env!("SJK_BUILD_VERSION"),
             update: update.as_deref(),
             seconds: super::art::motion::seconds(),
+            chat,
         };
         home::build(&mut self.ui, viewport, &mut self.home, &view, reveal);
         target.append(&self.ui, viewport);
@@ -217,6 +225,37 @@ impl ClientMenu {
             }
             home::Action::Open(destination) => self.open_main_destination(destination, console),
             home::Action::Quit => MenuAction::Quit,
+            home::Action::SendChat => {
+                let text = self.home.take_draft();
+                self.chat_dock.local = if console.bool_cvar("cl_sjkChat") == Some(false) {
+                    "SJK chat is off (Settings > Network)"
+                } else if crate::player_identity::chat(text) {
+                    ""
+                } else {
+                    "Turn the SJK identity on to chat"
+                };
+                MenuAction::None
+            }
+            home::Action::OpenChat => {
+                console.open_sjk_chat_panel();
+                MenuAction::None
+            }
+        }
+    }
+
+    /// A key while the main page's chat field is being typed in: every key goes to
+    /// the field.
+    pub(super) fn sjk_home_typing(
+        &mut self,
+        event: &winit::event::KeyEvent,
+        console: &mut ViewerConsole,
+    ) -> MenuAction {
+        let winit::keyboard::PhysicalKey::Code(key) = event.physical_key else {
+            return MenuAction::None;
+        };
+        match self.home.typing_key(key, event.text.as_deref()) {
+            Some(action) => self.sjk_home_act(action, console),
+            None => MenuAction::None,
         }
     }
 

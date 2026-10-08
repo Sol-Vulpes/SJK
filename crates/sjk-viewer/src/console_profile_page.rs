@@ -39,6 +39,7 @@ impl ViewerConsole {
         self.credits.close();
         self.identity_panel.close();
         self.staff_panel.close();
+        self.sjk_chat_panel.close();
         self.dead_key.settle();
         self.profile_panel.open(tab, owns_console);
     }

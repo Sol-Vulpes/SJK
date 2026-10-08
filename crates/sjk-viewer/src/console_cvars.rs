@@ -534,6 +534,12 @@ pub(super) fn register_daily_cvars(cvars: &mut CvarRegistry) -> Result<(), sjk_s
             "Address of the SJK hub (https://...); empty means no hub",
         ),
         CvarDefinition::new(
+            "cl_sjkChat",
+            true,
+            archive,
+            "Show the SJK chat, which every SJK player shares through the SJK hub, and read it (0 hides it and stops reading)",
+        ),
+        CvarDefinition::new(
             "cl_updateAs",
             "",
             CvarFlags::NONE,

@@ -1357,12 +1357,13 @@ fn player_card(shots: &mut Snapshot) {
 /// The SJK UI's main page over its map (the JoF HD wide levelshot of
 /// mp/duel6 standing in for the live backdrop), with each family drawn from
 /// its own atlas: the main page with three recent servers, the Play and SJK
-/// pages, a server focused, the JoF suggestion of a first start, and at 4:3.
+/// pages, a server focused, the JoF suggestion of a first start, and at 4:3, each
+/// with the SJK chat docked under the servers.
 #[test]
 #[ignore = "reads the installed game data named by JKA_GAME_DATA"]
 fn sjk_home_snapshot() {
     use crate::game_font::SjkFonts;
-    use crate::menu::sjk::home::{self, Home, HomeView, Page, ServerItem};
+    use crate::menu::sjk::home::{self, ChatDock, DockLine, Home, HomeView, Page, ServerItem};
     use crate::menu::sjk::recent::Ago;
     use crate::menu_widgets::MenuCanvas;
     let (_, vfs) = art();
@@ -1395,6 +1396,23 @@ fn sjk_home_snapshot() {
         live: Some((24, 32, 31)),
         played: None,
     }];
+    let chat = [
+        DockLine {
+            name: "^5JoF^7 Jedi",
+            text: "anyone up for duels on ffa3?",
+            verified: true,
+        },
+        DockLine {
+            name: "^1Fox",
+            text: "in 5 min, finishing a CTF",
+            verified: false,
+        },
+        DockLine {
+            name: "Kyle",
+            text: "the new HUD looks great, but the force bar in the corner feels a bit too small at 4K",
+            verified: false,
+        },
+    ];
     // Name, window, page, chosen entry, focused server, servers.
     type Case<'a> = (
         &'a str,
@@ -1437,6 +1455,12 @@ fn sjk_home_snapshot() {
             version: "2026.1007.1",
             update: Some("2026.1008.1"),
             seconds: 12.0,
+            chat: Some(ChatDock {
+                lines: &chat,
+                online: 12,
+                live: true,
+                notice: "",
+            }),
         };
         home::build(&mut canvas, viewport, &mut home, &view, 1.0);
         let (mut display_text, mut body_text) = (Vec::new(), Vec::new());

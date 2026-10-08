@@ -28,6 +28,7 @@ This page is the design and the current limits. The player-facing summary is
 | Staff requests, Staff page, `staff` command | [staff.rs](../crates/sjk-identity/src/staff.rs), [staff_panel.rs](../crates/sjk-viewer/src/staff_panel.rs), [staff_panel_view.rs](../crates/sjk-viewer/src/staff_panel_view.rs), [console_staff_page.rs](../crates/sjk-viewer/src/console_staff_page.rs) |
 | Achievements: catalogue, counts, tracker | [achievements.rs](../crates/sjk-viewer/src/achievements.rs), [achievements/tracker.rs](../crates/sjk-viewer/src/achievements/tracker.rs), [achievements_frame.rs](../crates/sjk-viewer/src/achievements_frame.rs) |
 | Achievements: medallion look, unlock pop-up | [achievements/medallion.rs](../crates/sjk-viewer/src/achievements/medallion.rs), [achievement_toast.rs](../crates/sjk-viewer/src/achievement_toast.rs) |
+| SJK chat and emotes | [hub-chat.md](hub-chat.md) |
 | The hub itself and its protocol | repository Sol-Vulpes/SJK-hub (`PROTOCOL.md`) |
 
 The hub is a separate repository because it is deployed on its own schedule. The
@@ -421,6 +422,9 @@ sends its counts, which the page says.
   localhost only.
 - `profile` opens the Profile page and `achievements` its board (again: closes it).
 - `staff` opens the Staff page, for a staff key only.
+- `cl_sjkChat` (default 1; Settings > Network > SJK chat) shows the SJK chat and reads
+  it; `sjkchat` opens its page, `messagemode5` (I) its composer in a game, and
+  `sjkemote <id>` sends an emote ([hub-chat.md](hub-chat.md)).
 - `cg_achievementSound` (default 1; Settings > Sound > Achievement sound) plays the
   secret-area sound with each achievement's pop-up.
 - The Identity page (main menu > SJK > IDENTITY, the Profile page's Identity settings,
@@ -444,8 +448,8 @@ permissions.
 
 ## Planned, not built
 
-The hub is meant to grow: a signed asset manifest, music and video, and private
-chat. None of that exists. In the SJK UI the Identity page opens from the Profile
+The hub is meant to grow: a signed asset manifest, music and video. None of that
+exists. The SJK chat and the emotes path are built ([hub-chat.md](hub-chat.md)). In the SJK UI the Identity page opens from the Profile
 page (its arc holds five entries), the in-game SJK menu and the `identity` command.
 Achievements a dedicated server would vouch for, and pictures for the achievements,
 are not made yet.

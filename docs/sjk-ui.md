@@ -166,6 +166,12 @@ one (4:3, 5:4) scales the frame down to its width.
   it, and when it was last played ("2 hours ago", "yesterday": relative, so no
   time zone is needed). Before any join, the column offers the JoF server
   (`135.125.145.49:29070`) under "Start here".
+- **SJK chat:** docked under the servers (from y 700, [hub-chat.md](hub-chat.md)):
+  "SJK chat" and the online count, the last five lines sitting on a field (a gold dot
+  for a verified sender, each cut to one row), the field, and Open chat in gold under
+  it, which opens the SJK chat page. Down past the last server reaches the field
+  (the gold arc turns to it); Enter types and every key goes to the field until Enter
+  sends or Escape stops. Not shown with `cl_sjkChat 0`.
 - **Corners:** the player, bottom left (a gold ring with their initial, their
   name with its colours, their model and blade); the keys of the page, bottom
   centre; the version and a newer release found, bottom right.
@@ -318,6 +324,14 @@ overlay routes their text to the UI's families (`console_sjk_pages.rs`).
   each achievement with a count, its date or count and Clear, and a line on what
   clearing does. The last request's answer bottom left (gold, ember when refused).
   World shot: `world_shot::tests::duel6_sjk_staff`.
+- **SJK chat** ([sjk_chat_panel_view.rs](../crates/sjk-viewer/src/sjk_chat_panel_view.rs),
+  08/10/2026, Sol's request, [hub-chat.md](hub-chat.md)): drawn in this look in every
+  menu style. The online count in gold over a line on what the chat is; the messages
+  down the left, newest at the bottom over the field and Send (gold), each with its
+  name in its colours, Staff and Verified with how long ago on the right, and its text
+  wrapped; a chosen one is banded and shown on the right with Mute on this PC and, for
+  staff, Delete for everyone, Mute and Unmute at the hub. "N older: Page Up" and "N
+  newer: Page Down" mark the ends when it scrolls.
 - **Credits** ([credits_sjk.rs](../crates/sjk-viewer/src/credits_sjk.rs), since
   08/10/2026, Sol's request: restyle Credits but keep its sun): on the left SJK's
   emblem (220 across, centred at (300, 330)) is the page's sun, the one memorable
@@ -734,7 +748,7 @@ page's 16:9 frame.
     Call a vote directly, whose lists (map, game type, kick, warmup, limits)
     are the shared call-vote lists. Voting or calling a vote returns to the
     match, as retail's pop-ups do.
-  - SJK: What's new, Credits, Profile, Identity, Report a bug, Report a player
+  - SJK: What's new, Credits, Profile, Identity, Report a bug, Report a player, SJK chat
     (the Players page).
   - Leave: Leave the server, Quit to desktop (ember when chosen), Stay. It opens on Stay, since its rows act at once.
 - **Match card:** on the right (x 1360, 464 wide) over its own fade: the

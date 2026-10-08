@@ -7,6 +7,39 @@ SJK currently contains a native client and standard dedicated server in a
 20-crate Rust workspace. This page records scope and verification, rather than
 claiming complete parity from the presence of an implementation.
 
+## SJK chat and emotes through the hub
+
+SJK-only branch `personal/sjk-chat` (08/10/2026, based on `15cf7a9`, Ubuntu 24.04, Rust
+1.99), with `feat/chat-emotes` in Sol-Vulpes/SJK-hub: Sol asked for a chat that goes
+through the SJK hub rather than the game server, seen in the menus too and as a new
+message mode in games, and for the groundwork of emotes synced between SJK players
+(a friend makes the emotes themselves). Built ([hub-chat.md](hub-chat.md)): the hub's
+`/v1/chat`, `/v1/emote` and long-polled `/v1/feed` (memory only, a `chat_muted` flag,
+staff delete and mute), the client's feed thread, the SJK channel in the game's chat
+(`messagemode5`, I), the main page's dock, the SJK chat page (`sjkchat`, the in-game
+SJK menu), `cl_sjkChat`, and emotes' catalogue format, `sjkemote` and per-slot active
+emotes for the animation work to read.
+
+Verified: the hub's unit and in-memory API tests (the long poll under a paused clock),
+`cargo test` and `cargo clippy --all-targets` there; workspace formatting, the locked
+build, the locked workspace tests and workspace Clippy (no warning in the changed code)
+here; the new unit tests listed in [hub-chat.md](hub-chat.md#verification); `hub_e2e`
+against a hub built and run on this PC (the long poll delivered a message in about two
+seconds; the service read its own message); the dock and the page rendered off screen
+over a plain backdrop and looked at. Not verified: no client was started (nothing seen in
+a game or over the map), nothing through Cloudflare or the deployed hub (not deployed),
+Windows, many players at once.
+
+Review at the merge (08/10/2026): an emote id from the hub that no catalogue entry
+names is checked (`emotes::valid_id`) before the console shows it; the docs say that
+only a new profile, or a whole config table imported at First setup, gets I, because
+the missing-defaults migration only runs for profiles at `cl_bindDefaultsVersion` 0
+(an existing profile binds it under Key bindings). Known and left as built: Tab from
+Team goes to SJK, `cl_sjkChat` defaults to 1 (the feed is polled from the menus too,
+about every 27 s when quiet), the client does not rate-limit sending (the hub's
+quotas do), and a hub without the chat routes leaves the dock on "Not connected"
+without logging.
+
 ## Graphics quality levels
 
 Branch `feat/graphics-preset` (08/10/2026, based on `15cf7a9`, Ubuntu 24.04, Rust

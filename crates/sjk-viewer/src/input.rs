@@ -47,6 +47,8 @@ pub(crate) enum InputAction {
     MessageMode(bool),
     /// Whisper to the crosshair player, or last attacker when true.
     TargetMessage(bool),
+    /// The SJK chat, through the SJK hub (`messagemode5`).
+    SjkMessageMode,
     ToggleCamera,
     SaberToggle,
     SaberStyle,
@@ -226,6 +228,7 @@ impl GameplayInput {
                     | "messagemode2"
                     | "messagemode3"
                     | "messagemode4"
+                    | "messagemode5"
                     | "togglecamera"
                     | "sabertoggle"
                     | "saberstyle"
@@ -346,6 +349,7 @@ impl GameplayInput {
             "messagemode2" => Some(InputAction::MessageMode(true)),
             "messagemode3" => Some(InputAction::TargetMessage(false)),
             "messagemode4" => Some(InputAction::TargetMessage(true)),
+            "messagemode5" => Some(InputAction::SjkMessageMode),
             "togglecamera" => Some(InputAction::ToggleCamera),
             "sabertoggle" => Some(InputAction::SaberToggle),
             "saberstyle" => Some(InputAction::SaberStyle),
@@ -420,6 +424,18 @@ impl super::GpuState {
             Some(InputAction::MessageMode(team)) if self.live_session.is_some() => {
                 self.gameplay_input.release_keys();
                 self.chat.open(team);
+                self.sync_cursor_policy();
+            }
+            Some(InputAction::SjkMessageMode) if self.live_session.is_some() => {
+                self.gameplay_input.release_keys();
+                self.chat.open_sjk();
+                self.sync_cursor_policy();
+            }
+            // Without a game the composer has nowhere to show: the page has it.
+            Some(InputAction::SjkMessageMode) => {
+                if let Some(console) = &mut self.console {
+                    console.open_sjk_chat_panel();
+                }
                 self.sync_cursor_policy();
             }
             // The choice, not the derived `third_person`: during a zoom it decides what
@@ -594,6 +610,16 @@ mod tests {
 
     fn buttons(input: &GameplayInput) -> u16 {
         input.user_command(0, 0.0, 0.0, [0; 3], 0, 0, 0).buttons
+    }
+
+    #[test]
+    fn messagemode5_opens_the_sjk_chat() {
+        let mut input = GameplayInput::default();
+        assert!(GameplayInput::recognizes("messagemode5"));
+        assert_eq!(
+            input.apply("messagemode5"),
+            Some(InputAction::SjkMessageMode)
+        );
     }
 
     #[test]

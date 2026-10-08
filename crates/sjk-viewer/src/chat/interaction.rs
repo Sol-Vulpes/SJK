@@ -10,6 +10,7 @@ use winit::keyboard::{Key, KeyCode, PhysicalKey};
 pub(super) const GLOBAL: u16 = 100;
 pub(super) const TEAM: u16 = 101;
 pub(super) const LATEST: u16 = 102;
+pub(super) const SJK: u16 = 103;
 
 /// Keys the composer acts on itself rather than typing their text.
 fn handled_key(key: KeyCode) -> bool {
@@ -104,10 +105,10 @@ impl ChatOverlay {
             KeyCode::PageDown | KeyCode::ArrowDown => self.scroll_by(-3),
             KeyCode::Tab => {
                 let channel = self.input.as_ref().expect("active input").channel;
-                self.activate(if channel == Channel::Global {
-                    TEAM
-                } else {
-                    GLOBAL
+                self.activate(match channel {
+                    Channel::Global => TEAM,
+                    Channel::Team => SJK,
+                    Channel::Sjk | Channel::Whisper => GLOBAL,
                 });
             }
             _ => {
@@ -127,7 +128,19 @@ impl ChatOverlay {
 
     fn submit(&mut self) -> ChatInputResult {
         let input = self.input.as_ref().expect("active input");
+        if input.channel == Channel::Sjk {
+            let text = input.text.trim().to_owned();
+            self.input = None;
+            self.scroll = 0;
+            self.unread = 0;
+            return if text.is_empty() {
+                ChatInputResult::None
+            } else {
+                ChatInputResult::Sjk(text)
+            };
+        }
         let destination = match input.channel {
+            Channel::Sjk => unreachable!("sent to the hub above"),
             Channel::Global => ChatDestination::Global,
             Channel::Team => ChatDestination::Team,
             Channel::Whisper => {
@@ -173,7 +186,7 @@ impl ChatOverlay {
             self.pressed_action = ACTIONS
                 .into_iter()
                 .rev()
-                .chain([MENU_BACK, LATEST, TEAM, GLOBAL])
+                .chain([MENU_BACK, LATEST, SJK, TEAM, GLOBAL])
                 .chain(0..MAX_VISIBLE as u16)
                 .find(|token| {
                     self.ui
@@ -254,12 +267,12 @@ impl ChatOverlay {
 
     pub(super) fn activate(&mut self, token: u16) {
         match token {
-            GLOBAL | TEAM => {
+            GLOBAL | TEAM | SJK => {
                 if let Some(input) = &mut self.input {
-                    input.channel = if token == GLOBAL {
-                        Channel::Global
-                    } else {
-                        Channel::Team
+                    input.channel = match token {
+                        GLOBAL => Channel::Global,
+                        TEAM => Channel::Team,
+                        _ => Channel::Sjk,
                     };
                     input.recipient = None;
                     self.notice = "";
@@ -289,14 +302,42 @@ impl crate::GpuState {
         {
             self.chat.update_roster(session.game_state());
         }
-        if let ChatInputResult::Submit(command) = self.chat.handle_key(event) {
-            let command = self.console.as_ref().map_or_else(
-                || command.clone(),
-                |console| console.color_chat_command(&command),
-            );
-            self.send_chat_command(&command);
+        match self.chat.handle_key(event) {
+            ChatInputResult::Submit(command) => {
+                let command = self.console.as_ref().map_or_else(
+                    || command.clone(),
+                    |console| console.color_chat_command(&command),
+                );
+                self.send_chat_command(&command);
+            }
+            ChatInputResult::Sjk(text) => self.send_sjk_chat(text),
+            ChatInputResult::None => {}
         }
         self.sync_cursor_policy();
+    }
+
+    /// Hand a message to the SJK chat, never to the game server; say why when it
+    /// cannot go.
+    pub(crate) fn send_sjk_chat(&mut self, text: String) {
+        let off = self
+            .console
+            .as_ref()
+            .is_some_and(|console| console.bool_cvar("cl_sjkChat") == Some(false));
+        let why = if off {
+            Some("^3SJK chat is off (cl_sjkChat 1 turns it on)")
+        } else if !crate::player_identity::chat(text) {
+            Some("^3SJK chat needs the SJK identity (cl_identity 1)")
+        } else {
+            None
+        };
+        if let Some(why) = why {
+            self.chat.receive(
+                sjk_client::ServerEventKind::Chat,
+                why.to_owned(),
+                None,
+                Instant::now(),
+            );
+        }
     }
 
     /// Composer and console messages share the real server's reliable channel.

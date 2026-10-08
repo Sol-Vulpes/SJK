@@ -128,6 +128,8 @@ pub(crate) struct ClientMenu {
     classic: classic::ClassicMain,
     /// The SJK UI's main page: its page of the ring, chosen entry and motion.
     home: sjk::home::Home,
+    /// What the main page's docked SJK chat shows.
+    chat_dock: sjk::chat_dock::DockCache,
     /// The servers joined last, for the SJK UI's main page.
     recent: sjk::recent::RecentServers,
     /// The SJK UI's Settings: whether it is open and on which category.
@@ -219,6 +221,7 @@ impl ClientMenu {
             menu_style: MenuStyle::default(),
             classic: classic::ClassicMain::new(),
             home: sjk::home::Home::default(),
+            chat_dock: sjk::chat_dock::DockCache::default(),
             // Tests never read or write the player's own list.
             recent: if cfg!(test) {
                 sjk::recent::RecentServers::default()
@@ -769,7 +772,17 @@ impl ClientMenu {
         event: &KeyEvent,
         console: &mut ViewerConsole,
     ) -> MenuAction {
-        if !self.is_visible() || event.state != ElementState::Pressed || event.repeat {
+        if !self.is_visible() || event.state != ElementState::Pressed {
+            return MenuAction::None;
+        }
+        // Typing in the main page's chat field, held keys repeat (Backspace).
+        if matches!(self.state.phase(), ClientPhase::MainMenu)
+            && self.menu_style == MenuStyle::Sjk
+            && self.home.is_typing()
+        {
+            return self.sjk_home_typing(event, console);
+        }
+        if event.repeat {
             return MenuAction::None;
         }
         if self.address_editing {

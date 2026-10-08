@@ -34,6 +34,7 @@ impl ViewerConsole {
         self.update_panel.close();
         self.profile_panel.close();
         self.staff_panel.close();
+        self.sjk_chat_panel.close();
         self.config_import.close();
         self.credits.close();
         self.dead_key.settle();

@@ -83,6 +83,20 @@ test: A message with no colour codes is one colour on every row, as it is on the
 test: cg_chatBoxEmojis 1, a long coloured line with :poop: wraps and keeps its colour after it.
 note: Unit-tested only; not run in game yet. The typed draft is one scrolling row, unchanged.
 
+[sjk-chat]
+area: Console & chat
+title: SJK chat through the hub, and the path for emotes (SJK PR #36)
+change: A fourth chat channel, SJK: I opens its composer, Tab cycles All, Team and SJK.
+change: The main menu docks it under Recent servers; sjkchat opens its page, where you can mute.
+change: sjkemote <id> relays an emote through the hub; cl_sjkChat 0 turns the chat off.
+test: Settings > Key bindings > Other: bind SJK chat to a key if your profile has no I yet.
+test: In a game press I, type a line, Enter: it shows tagged SJK; the game server sees nothing.
+test: In the main menu the dock under Recent servers shows the chat, or Not connected.
+test: cl_sjkChat 0, or cl_identity 0: no polling, and Enter on SJK says why it cannot send.
+test: Normal chat (Y, T, U), the console and the in-game SJK menu behave as before.
+note: Needs the hub's chat routes deployed; until then the dock stays on Not connected.
+note: Tab from Team now goes to SJK: read the composer's channel before pressing Enter.
+
 # ---- Input ----
 
 [locked-binds]

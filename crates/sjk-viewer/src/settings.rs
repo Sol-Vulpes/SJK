@@ -1035,6 +1035,18 @@ mod tests {
     }
 
     #[test]
+    fn the_sjk_chat_setting_defaults_on_beside_the_hub() {
+        let (_directory, console) = console();
+        assert_eq!(console.bool_cvar("cl_sjkChat"), Some(true));
+        let network: Vec<&str> = catalog::NETWORK.iter().map(|row| row.cvar).collect();
+        let hub = network
+            .iter()
+            .position(|cvar| *cvar == "cl_hubUrl")
+            .unwrap();
+        assert_eq!(network.get(hub + 1), Some(&"cl_sjkChat"));
+    }
+
+    #[test]
     fn every_row_names_a_registered_cvar_of_its_kind() {
         let (_directory, console) = console();
         for setting in rows() {

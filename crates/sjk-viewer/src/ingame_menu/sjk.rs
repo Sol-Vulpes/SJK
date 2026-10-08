@@ -11,7 +11,7 @@ pub(crate) struct Entry {
 }
 
 /// The pop-up's entries, top to bottom; the SJK UI's page adds Back after them.
-pub(crate) const ENTRIES: [Entry; 6] = [
+pub(crate) const ENTRIES: [Entry; 7] = [
     Entry {
         label: "Changelog",
         hint: "What changed in each SJK release, and who made it",
@@ -36,6 +36,10 @@ pub(crate) const ENTRIES: [Entry; 6] = [
         label: "Report a player",
         hint: "Everyone here; tell the SJK team about a cheater or a troll",
     },
+    Entry {
+        label: "SJK chat",
+        hint: "Talk with every SJK player, on any server or in the menus",
+    },
 ];
 
 /// Rows of the entries.
@@ -45,3 +49,4 @@ pub(crate) const PROFILE: usize = 2;
 pub(crate) const IDENTITY: usize = 3;
 pub(crate) const REPORT: usize = 4;
 pub(crate) const REPORT_PLAYER: usize = 5;
+pub(crate) const SJK_CHAT: usize = 6;
