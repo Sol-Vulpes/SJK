@@ -1,7 +1,7 @@
 //! The Profile page's drawing, in the SJK UI's look over the map whatever the menu
 //! style: the top bar with the two tabs; on Profile, who the player is and their
-//! record on the left, the bio in the middle and their medals and achievements on the
-//! right; on Achievements, the board, three columns of cards.
+//! record on the left, the bio in the middle and their medals, achievements and
+//! unlockables on the right; on Achievements, the board, three columns of cards.
 
 use super::*;
 use crate::achievements::medallion::{self, tint};
@@ -606,6 +606,51 @@ impl Panel {
             self.focus == Focus::Board,
             BOARD_TOKEN,
         );
+        self.unlockables(frame, inputs, y + 196.0);
+    }
+
+    /// How many unlockables the player owns, and the way to their page, from `y`.
+    fn unlockables(&mut self, frame: &Frame, inputs: &Inputs<'_>, y: f32) {
+        let s = frame.s;
+        kit::heading(&mut self.ui, frame, RIGHT_X, y, RIGHT_WIDTH, "Unlockables");
+        let holdings = crate::unlockables::Holdings::of(inputs.enabled, inputs.snapshot);
+        let (line, size, colour) = if holdings.reason().is_none() {
+            let owned = crate::unlockables::ALL
+                .iter()
+                .filter(|unlockable| holdings.unlock(unlockable.id).is_some())
+                .count();
+            (
+                format!("{owned} of {} owned", crate::unlockables::ALL.len()),
+                30.0,
+                color::TEXT,
+            )
+        } else {
+            (
+                "Blade skins and more, kept on the SJK hub".to_owned(),
+                17.0,
+                color::MUTED,
+            )
+        };
+        text(
+            &mut self.ui,
+            TextFamily::Display,
+            format_args!("{line}"),
+            frame.rect(RIGHT_X, y + 26.0, RIGHT_WIDTH, 40.0),
+            size * s,
+            colour,
+            FontWeight::Semibold,
+            TextAlign::Start,
+        );
+        kit::button(
+            &mut self.ui,
+            frame,
+            [RIGHT_X, y + 76.0, 240.0, 46.0],
+            "See unlockables",
+            false,
+            true,
+            self.focus == Focus::Unlockables,
+            UNLOCKABLES_TOKEN,
+        );
     }
 
     /// The achievements board: how many are unlocked, then every achievement's card.
@@ -775,7 +820,7 @@ impl Panel {
             Focus::Identity | Focus::Staff => "open",
             Focus::Bio | Focus::Save => "save",
             Focus::Revert => "revert",
-            Focus::Board => "open",
+            Focus::Board | Focus::Unlockables => "open",
         };
         let mut keys: Vec<(&[&str], &str)> = vec![(&["Tab"], "next"), (&["Enter"], enter)];
         if typing {
@@ -951,6 +996,7 @@ mod tests {
                     Focus::Save,
                     Focus::Revert,
                     Focus::Board,
+                    Focus::Unlockables,
                 ] {
                     for body in [&families.body.font, &inter.font] {
                         for viewport in [

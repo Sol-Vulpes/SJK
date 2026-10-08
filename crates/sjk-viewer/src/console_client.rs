@@ -91,6 +91,10 @@ pub(super) const COMMANDS: &[(&str, &str)] = &[
     ),
     (crate::console::STAFF_COMMAND, crate::console::STAFF_HELP),
     (
+        crate::console::UNLOCKABLES_COMMAND,
+        crate::console::UNLOCKABLES_HELP,
+    ),
+    (
         crate::console::SJK_CHAT_COMMAND,
         crate::console::SJK_CHAT_HELP,
     ),
@@ -509,6 +513,12 @@ impl crate::GpuState {
             crate::console::STAFF_COMMAND => {
                 if let Some(console) = &mut self.console {
                     console.toggle_staff_panel();
+                }
+                self.sync_cursor_policy();
+            }
+            crate::console::UNLOCKABLES_COMMAND => {
+                if let Some(console) = &mut self.console {
+                    console.toggle_unlockables_panel();
                 }
                 self.sync_cursor_policy();
             }

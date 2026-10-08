@@ -7,7 +7,7 @@
 //!
 //! Opened by the SJK menus' Profile entry or the `profile` and `achievements`
 //! commands; its Identity settings button opens the Identity page (the key, the
-//! switch that shares it, the hub). Like the Identity page it lives in the console and is drawn
+//! switch that shares it, the hub), and See unlockables the Unlockables page. Like the Identity page it lives in the console and is drawn
 //! in place of it, always in the SJK UI's look ([`view`]). Tab moves between the tabs,
 //! the bio and its buttons; Left and Right switch tabs from the tabs; Enter saves the
 //! bio from the field (Shift+Enter starts a new line); Escape goes back.
@@ -31,6 +31,7 @@ const REVERT_TOKEN: u16 = 1_012;
 const BOARD_TOKEN: u16 = 1_013;
 const IDENTITY_TOKEN: u16 = 1_014;
 const STAFF_TOKEN: u16 = 1_015;
+const UNLOCKABLES_TOKEN: u16 = 1_016;
 
 /// The page's two tabs.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -57,6 +58,7 @@ enum Focus {
     Save,
     Revert,
     Board,
+    Unlockables,
 }
 
 /// What the console does after the page handled an event.
@@ -72,6 +74,8 @@ pub(crate) enum PanelAction {
     Identity,
     /// Open the Staff page.
     Staff,
+    /// Open the Unlockables page.
+    Unlockables,
 }
 
 /// A save on its way: the bio sent and the service's notice before it, to tell the
@@ -287,11 +291,17 @@ impl Panel {
                 Focus::Save,
                 Focus::Revert,
                 Focus::Board,
+                Focus::Unlockables,
             ];
         }
         match (self.tab, self.writable) {
             (Tab::Achievements, _) => &[Focus::Tabs],
-            (Tab::Profile, false) => &[Focus::Tabs, Focus::Identity, Focus::Board],
+            (Tab::Profile, false) => &[
+                Focus::Tabs,
+                Focus::Identity,
+                Focus::Board,
+                Focus::Unlockables,
+            ],
             (Tab::Profile, true) => &[
                 Focus::Tabs,
                 Focus::Identity,
@@ -299,6 +309,7 @@ impl Panel {
                 Focus::Save,
                 Focus::Revert,
                 Focus::Board,
+                Focus::Unlockables,
             ],
         }
     }
@@ -338,6 +349,7 @@ impl Panel {
                 self.show(Tab::Achievements);
                 PanelAction::None
             }
+            Focus::Unlockables => PanelAction::Unlockables,
         }
     }
 
@@ -441,6 +453,10 @@ impl Panel {
                 self.show(Tab::Achievements);
                 PanelAction::None
             }
+            Some(UNLOCKABLES_TOKEN) if self.tab == Tab::Profile => {
+                self.focus = Focus::Unlockables;
+                PanelAction::Unlockables
+            }
             _ => PanelAction::None,
         }
     }
@@ -464,6 +480,7 @@ impl Panel {
             Focus::Save => SAVE_TOKEN,
             Focus::Revert => REVERT_TOKEN,
             Focus::Board => BOARD_TOKEN,
+            Focus::Unlockables => UNLOCKABLES_TOKEN,
         }
     }
 }
@@ -596,7 +613,15 @@ mod tests {
             ..inputs(None)
         });
         assert!(!panel.writable);
-        assert_eq!(panel.order(), [Focus::Tabs, Focus::Identity, Focus::Board]);
+        assert_eq!(
+            panel.order(),
+            [
+                Focus::Tabs,
+                Focus::Identity,
+                Focus::Board,
+                Focus::Unlockables
+            ]
+        );
         panel.bio = "hello there".to_owned();
         assert_eq!(panel.save(None), PanelAction::None);
     }
@@ -605,7 +630,7 @@ mod tests {
     fn tab_walks_the_controls_and_enter_switches_tabs() {
         let shot = snapshot(Some(me("")), None);
         let mut panel = opened(&shot);
-        let steps: Vec<Focus> = (0..6)
+        let steps: Vec<Focus> = (0..7)
             .map(|_| {
                 panel.step(true);
                 panel.focus
@@ -619,9 +644,13 @@ mod tests {
                 Focus::Save,
                 Focus::Revert,
                 Focus::Board,
+                Focus::Unlockables,
                 Focus::Tabs
             ]
         );
+        panel.focus = Focus::Unlockables;
+        assert_eq!(panel.activate(None), PanelAction::Unlockables);
+        panel.focus = Focus::Tabs;
         assert_eq!(panel.activate(None), PanelAction::None);
         assert_eq!(panel.tab(), Tab::Achievements);
         assert_eq!(panel.order(), [Focus::Tabs]);

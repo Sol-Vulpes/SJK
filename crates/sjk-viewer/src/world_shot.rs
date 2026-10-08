@@ -242,6 +242,9 @@ mod holocron;
 #[path = "world_shot_saber_skins.rs"]
 mod saber_skins;
 
+#[path = "world_shot_unlockables.rs"]
+mod unlockables;
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -754,7 +757,11 @@ Found the fog bug, ask me about it!"
                     .collect(),
                 medals: vec![medal("early_tester", 1), medal("bug_hunter", 2)],
                 achievements: Vec::new(),
-                unlocks: Vec::new(),
+                unlocks: vec![sjk_identity::Unlock {
+                    id: "saber_sun".to_owned(),
+                    granted: 1_791_336_225,
+                    note: String::new(),
+                }],
             };
             let snapshot = sjk_identity::Snapshot {
                 status: sjk_identity::Status::Online,

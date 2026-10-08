@@ -1,0 +1,441 @@
+//! The Unlockables page's live swatches: each unlockable drawn small with the UI's
+//! shapes, moving as it does in the game. The Sun blade lies across its swatch from a
+//! steel hilt: a white-gold core in a gold glow and an orange corona that breathes in a
+//! soft warm haze, loops of flame rising off it and granules drifting along it, and now
+//! and then a bright flare running from the hilt to the tip (as `saber.wgsl` animates the real blade). A locked one is
+//! drawn grey and still, under a padlock.
+
+use crate::menu::sjk::{Frame, color};
+use crate::menu_widgets::MenuCanvas;
+use crate::saber_skins::BladeSkin;
+use sjk_ui::{Color, DrawCommand, Gradient};
+
+/// One second of the flare's cycle: it runs for [`FLARE_RUN`] of [`FLARE_PERIOD`].
+const FLARE_PERIOD: f32 = 2.6;
+const FLARE_RUN: f32 = 0.62;
+/// Layers of the soft haze and of the flare's light; prominences and granules along
+/// the corona.
+const HAZE_LAYERS: usize = 9;
+const FLARE_LAYERS: usize = 8;
+const PROMINENCES: usize = 6;
+const GRANULES: usize = 12;
+
+fn push(canvas: &mut MenuCanvas, command: DrawCommand) {
+    let _ = canvas.draw_list_mut().push(command);
+}
+
+/// A filled rounded rectangle, radius half its height (frame pixels).
+fn capsule(canvas: &mut MenuCanvas, frame: &Frame, rect: [f32; 4], colour: Color) {
+    let [x, y, width, height] = rect;
+    let rect = frame.rect(x, y, width, height);
+    push(
+        canvas,
+        DrawCommand::RoundedRect {
+            rect,
+            radius: rect.height.min(rect.width) * 0.5,
+            color: colour,
+        },
+    );
+}
+
+/// A filled disc of `radius` round (`x`, `y`) (frame pixels).
+fn disc(canvas: &mut MenuCanvas, frame: &Frame, x: f32, y: f32, radius: f32, colour: Color) {
+    capsule(
+        canvas,
+        frame,
+        [x - radius, y - radius, radius * 2.0, radius * 2.0],
+        colour,
+    );
+}
+
+/// `value`'s fractional part.
+fn fract(value: f32) -> f32 {
+    value - value.floor()
+}
+
+/// Draw `skin` across the swatch `rect` (frame pixels) at `seconds`; `owned` lights it.
+pub(super) fn blade(
+    canvas: &mut MenuCanvas,
+    frame: &Frame,
+    rect: [f32; 4],
+    skin: BladeSkin,
+    owned: bool,
+    seconds: f32,
+) {
+    let [x, y, width, height] = rect;
+    let s = frame.s;
+    // The swatch's own dark glass, so the glow reads the same over any map.
+    push(
+        canvas,
+        DrawCommand::RoundedRect {
+            rect: frame.rect(x, y, width, height),
+            radius: 14.0 * s,
+            color: Color::new(0.016, 0.024, 0.05, 0.94),
+        },
+    );
+    let centre = y + height * 0.5;
+    let hilt = 84.0;
+    let start = x + 26.0 + hilt;
+    let length = width - (start - x) - 34.0;
+    if owned {
+        match skin {
+            BladeSkin::Sun => sun(canvas, frame, start, centre, length, seconds),
+        }
+    } else {
+        grey_blade(canvas, frame, start, centre, length);
+    }
+    hilt_at(canvas, frame, start, centre, hilt, owned);
+    push(
+        canvas,
+        DrawCommand::Border {
+            rect: frame.rect(x, y, width, height),
+            radius: 14.0 * s,
+            width: 1.2 * s,
+            color: color::alpha(color::HOLO, if owned { 0.22 } else { 0.14 }),
+        },
+    );
+    if !owned {
+        padlock(canvas, frame, x + width * 0.5, centre);
+    }
+}
+
+/// The Sun blade from `start` along `length`, centred on `centre`.
+fn sun(canvas: &mut MenuCanvas, frame: &Frame, start: f32, centre: f32, length: f32, t: f32) {
+    let s = frame.s;
+    // The corona breathes slowly and unevenly, as the blade's light flickers.
+    let breath = 1.0 + 0.05 * (t * 7.3).sin() * 0.6 + 0.05 * (t * 12.9 + 1.7).sin() * 0.4;
+    let end = start + length;
+    // The light it casts on the swatch, and its haze: many faint layers, so the glow
+    // falls off softly instead of in bands.
+    for step in 0..HAZE_LAYERS {
+        let k = step as f32 / (HAZE_LAYERS - 1) as f32;
+        let half = (64.0 - 46.0 * k) * breath;
+        let warm = Color::new(1.0, 0.3 + 0.28 * k, 0.06 + 0.1 * k, 0.026 + 0.03 * k);
+        capsule(
+            canvas,
+            frame,
+            [
+                start - 6.0 - half * 0.25,
+                centre - half,
+                length + 6.0 + half * 0.6,
+                half * 2.0,
+            ],
+            warm,
+        );
+    }
+    // Prominences: loops of flame rising off the corona and sinking back, drifting
+    // tipward, above and below in turn.
+    let corona = 13.0 * breath;
+    for index in 0..PROMINENCES {
+        let i = index as f32;
+        let life = fract(t * (0.21 + 0.03 * i) + i * 0.37);
+        let along = fract(i * 0.29 + 0.13 + t * 0.035);
+        let rise = (life * std::f32::consts::PI).sin();
+        let radius = 3.0 + 4.5 * rise;
+        let px = start + 14.0 + along * (length - 28.0);
+        let above = index % 2 == 0;
+        let py = if above {
+            centre - corona + 4.0
+        } else {
+            centre + corona - 4.0
+        };
+        push(
+            canvas,
+            DrawCommand::Arc {
+                center: frame.point(px, py),
+                radius: radius * s,
+                width: (1.4 + 1.2 * rise) * s,
+                start: if above { std::f32::consts::PI } else { 0.0 },
+                sweep: std::f32::consts::PI,
+                color: Color::new(1.0, 0.4 + 0.14 * rise, 0.1, 0.38 * rise),
+                knockout: None,
+            },
+        );
+    }
+    // The corona, rim red into orange, gold and the glow by the core: stacked, so
+    // each band is a step of a few pixels.
+    for (half, colour) in [
+        (corona, Color::new(1.0, 0.34, 0.08, 0.55)),
+        (corona * 0.8, Color::new(1.0, 0.5, 0.12, 0.72)),
+        (corona * 0.62, Color::new(1.0, 0.66, 0.2, 0.86)),
+        (corona * 0.46, Color::new(1.0, 0.8, 0.36, 0.95)),
+    ] {
+        capsule(
+            canvas,
+            frame,
+            [start, centre - half, length + half * 0.4, half * 2.0],
+            colour,
+        );
+    }
+    // Granulation: bright cells drifting along the glow.
+    for index in 0..GRANULES {
+        let i = index as f32;
+        let along = fract(i * 0.0833 + 0.11 * (i * 1.7).sin() + t * 0.045);
+        let wobble = (t * 1.9 + i * 2.3).sin() * corona * 0.5;
+        let shine = 0.5 + 0.5 * (t * 3.3 + i * 1.3).sin();
+        disc(
+            canvas,
+            frame,
+            start + 6.0 + along * (length - 12.0),
+            centre + wobble,
+            1.4 + 1.1 * shine,
+            Color::new(1.0, 0.9, 0.62, 0.18 + 0.4 * shine),
+        );
+    }
+    // The white-hot core, gold at its very edge.
+    capsule(
+        canvas,
+        frame,
+        [start, centre - 4.4, length, 8.8],
+        Color::new(1.0, 0.9, 0.62, 1.0),
+    );
+    capsule(
+        canvas,
+        frame,
+        [start + 1.0, centre - 2.6, length - 2.0, 5.2],
+        Color::new(1.0, 0.99, 0.94, 1.0),
+    );
+    // The flare: a bright knot running from the hilt to the tip, swelling and fading,
+    // its light soft round it.
+    let phase = fract(t / FLARE_PERIOD);
+    if phase < FLARE_RUN {
+        let run = phase / FLARE_RUN;
+        let eased = run * run * (3.0 - 2.0 * run);
+        let fx = start + eased * length;
+        let strength = (run * std::f32::consts::PI).sin();
+        for step in 0..FLARE_LAYERS {
+            let k = step as f32 / (FLARE_LAYERS - 1) as f32;
+            let half = (5.0 + 25.0 * (1.0 - k) * (1.0 - k)) * (0.4 + 0.6 * strength);
+            capsule(
+                canvas,
+                frame,
+                [fx - half * 1.5, centre - half, half * 3.0, half * 2.0],
+                Color::new(1.0, 0.6 + 0.38 * k, 0.22 + 0.7 * k, 0.07 * strength),
+            );
+        }
+        let streak = 10.0 + 30.0 * strength;
+        capsule(
+            canvas,
+            frame,
+            [fx - streak, centre - 4.0, streak * 2.0, 8.0],
+            Color::new(1.0, 0.98, 0.9, 0.85 * strength),
+        );
+        disc(
+            canvas,
+            frame,
+            fx,
+            centre,
+            2.0 + 5.0 * strength,
+            Color::new(1.0, 1.0, 1.0, strength),
+        );
+    }
+    // A glint at the tip.
+    disc(
+        canvas,
+        frame,
+        end + corona * 0.2,
+        centre,
+        3.0 + 1.5 * breath,
+        Color::new(1.0, 0.93, 0.7, 0.55),
+    );
+}
+
+/// A locked blade: grey and still.
+fn grey_blade(canvas: &mut MenuCanvas, frame: &Frame, start: f32, centre: f32, length: f32) {
+    capsule(
+        canvas,
+        frame,
+        [start - 4.0, centre - 15.0, length + 12.0, 30.0],
+        color::alpha(color::QUIET, 0.08),
+    );
+    capsule(
+        canvas,
+        frame,
+        [start, centre - 6.0, length, 12.0],
+        color::alpha(color::QUIET, 0.3),
+    );
+    capsule(
+        canvas,
+        frame,
+        [start + 1.0, centre - 2.5, length - 2.0, 5.0],
+        color::alpha(color::MUTED, 0.45),
+    );
+}
+
+/// The steel hilt ending at `start`, `length` long.
+fn hilt_at(
+    canvas: &mut MenuCanvas,
+    frame: &Frame,
+    start: f32,
+    centre: f32,
+    length: f32,
+    lit: bool,
+) {
+    let s = frame.s;
+    let shade = if lit { 1.0 } else { 0.55 };
+    let steel = |level: f32| {
+        Color::new(
+            level * shade,
+            (level + 0.02) * shade,
+            (level + 0.06) * shade,
+            1.0,
+        )
+    };
+    let x = start - length;
+    // The pommel, the grip and the emitter's shroud.
+    let rect = frame.rect(x, centre - 8.0, length - 12.0, 16.0);
+    push(
+        canvas,
+        DrawCommand::GradientRect {
+            rect,
+            radius: 4.0 * s,
+            gradient: Gradient {
+                start: steel(0.78),
+                end: steel(0.3),
+                vertical: true,
+            },
+        },
+    );
+    for ridge in 0..5 {
+        let rx = x + 22.0 + ridge as f32 * 8.0;
+        push(
+            canvas,
+            DrawCommand::SolidRect {
+                rect: frame.rect(rx, centre - 8.0, 3.0, 16.0),
+                color: Color::new(0.06, 0.07, 0.1, 0.85),
+            },
+        );
+    }
+    let rect = frame.rect(start - 14.0, centre - 11.0, 14.0, 22.0);
+    push(
+        canvas,
+        DrawCommand::GradientRect {
+            rect,
+            radius: 3.0 * s,
+            gradient: Gradient {
+                start: steel(0.86),
+                end: steel(0.36),
+                vertical: true,
+            },
+        },
+    );
+    // The activator, gold.
+    push(
+        canvas,
+        DrawCommand::RoundedRect {
+            rect: frame.rect(x + 66.0, centre - 10.5, 7.0, 4.0),
+            radius: 1.5 * s,
+            color: if lit {
+                color::GOLD
+            } else {
+                color::alpha(color::QUIET, 0.8)
+            },
+        },
+    );
+    push(
+        canvas,
+        DrawCommand::RoundedRect {
+            rect: frame.rect(x - 4.0, centre - 9.0, 6.0, 18.0),
+            radius: 2.0 * s,
+            color: steel(0.5),
+        },
+    );
+}
+
+/// A padlock centred on (`x`, `y`).
+fn padlock(canvas: &mut MenuCanvas, frame: &Frame, x: f32, y: f32) {
+    let s = frame.s;
+    disc(canvas, frame, x, y, 30.0, color::alpha(color::SPACE, 0.82));
+    push(
+        canvas,
+        DrawCommand::Arc {
+            center: frame.point(x, y - 5.0),
+            radius: 7.0 * s,
+            width: 3.0 * s,
+            start: std::f32::consts::PI,
+            sweep: std::f32::consts::PI,
+            color: color::MUTED,
+            knockout: None,
+        },
+    );
+    for side in [-7.0, 7.0] {
+        push(
+            canvas,
+            DrawCommand::SolidRect {
+                rect: frame.rect(x + side - 1.5, y - 5.0, 3.0, 5.0),
+                color: color::MUTED,
+            },
+        );
+    }
+    push(
+        canvas,
+        DrawCommand::RoundedRect {
+            rect: frame.rect(x - 11.0, y - 1.0, 22.0, 17.0),
+            radius: 3.0 * s,
+            color: color::MUTED,
+        },
+    );
+    push(
+        canvas,
+        DrawCommand::RoundedRect {
+            rect: frame.rect(x - 2.0, y + 4.0, 4.0, 7.0),
+            radius: 2.0 * s,
+            color: color::SPACE,
+        },
+    );
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn drawn(owned: bool, seconds: f32) -> Vec<DrawCommand> {
+        let mut canvas = MenuCanvas::with_capacities(8, 32, 400);
+        canvas.begin_transparent([1920.0, 1080.0]);
+        let frame = Frame::new([1920.0, 1080.0]);
+        blade(
+            &mut canvas,
+            &frame,
+            [100.0, 100.0, 380.0, 200.0],
+            BladeSkin::Sun,
+            owned,
+            seconds,
+        );
+        canvas.draw_list().commands().to_vec()
+    }
+
+    #[test]
+    fn the_sun_swatch_moves_and_the_locked_one_is_still() {
+        let (a, b) = (drawn(true, 0.3), drawn(true, 1.1));
+        assert_ne!(a, b, "the owned swatch is alive");
+        assert_eq!(
+            drawn(false, 0.3),
+            drawn(false, 1.1),
+            "a locked one is still"
+        );
+        // The flare runs part of each cycle: more shapes then.
+        let resting = drawn(true, FLARE_PERIOD * 0.9).len();
+        assert!(drawn(true, FLARE_PERIOD * 0.3).len() > resting);
+        // Every shape stays inside the swatch.
+        let frame = Frame::new([1920.0, 1080.0]);
+        let swatch = frame.rect(100.0, 100.0, 380.0, 200.0);
+        for seconds in [0.0, 0.7, 1.4, 2.2, 9.9] {
+            for command in drawn(true, seconds) {
+                let rect = match command {
+                    DrawCommand::RoundedRect { rect, .. }
+                    | DrawCommand::GradientRect { rect, .. }
+                    | DrawCommand::SolidRect { rect, .. }
+                    | DrawCommand::Border { rect, .. } => rect,
+                    _ => continue,
+                };
+                assert!(
+                    rect.x >= swatch.x - 0.5
+                        && rect.y >= swatch.y - 0.5
+                        && rect.right() <= swatch.right() + 0.5
+                        && rect.y + rect.height <= swatch.y + swatch.height + 0.5,
+                    "{rect:?} at {seconds}"
+                );
+            }
+        }
+    }
+}

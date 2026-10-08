@@ -51,8 +51,13 @@ pub(crate) mod sjk_chat_panel;
 mod staff_page;
 #[path = "staff_panel.rs"]
 pub(crate) mod staff_panel;
+#[path = "console_unlockables_page.rs"]
+mod unlockables_page;
+#[path = "unlockables_panel.rs"]
+pub(crate) mod unlockables_panel;
 pub(crate) use sjk_chat_page::{SJK_CHAT_COMMAND, SJK_CHAT_HELP};
 pub(crate) use staff_page::{STAFF_COMMAND, STAFF_HELP};
+pub(crate) use unlockables_page::{UNLOCKABLES_COMMAND, UNLOCKABLES_HELP};
 #[path = "profile_panel.rs"]
 pub(crate) mod profile_panel;
 pub(crate) use profile_page::{
@@ -155,6 +160,7 @@ pub(crate) struct ViewerConsole {
     identity_panel: identity_panel::Panel,
     profile_panel: profile_panel::Panel,
     staff_panel: staff_panel::Panel,
+    unlockables_panel: unlockables_panel::Panel,
     sjk_chat_panel: sjk_chat_panel::Panel,
     /// The Import page (a dropped `.cfg`), drawn in place of the console while open.
     config_import: config_import_panel::Panel,
@@ -297,6 +303,7 @@ impl ViewerConsole {
                 || self.identity_panel.is_open()
                 || self.profile_panel.is_open()
                 || self.staff_panel.is_open()
+                || self.unlockables_panel.is_open()
                 || self.sjk_chat_panel.is_open()
                 || self.config_import.is_open())
     }
@@ -734,6 +741,9 @@ impl ViewerConsole {
         if let Some(draw_list) = self.staff_panel_draw_list() {
             return draw_list;
         }
+        if let Some(draw_list) = self.unlockables_panel_draw_list() {
+            return draw_list;
+        }
         if let Some(draw_list) = self.sjk_chat_panel_draw_list() {
             return draw_list;
         }
@@ -799,6 +809,7 @@ impl ViewerConsole {
             self.identity_panel.close();
             self.profile_panel.close();
             self.staff_panel.close();
+            self.unlockables_panel.close();
             self.sjk_chat_panel.close();
             self.config_import.close();
         }
