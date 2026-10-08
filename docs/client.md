@@ -343,7 +343,8 @@ one group and regroups the modern GAME, HUD, HUD+ and TEXT tabs by subject
     spacing, console style, text size and line spacing); HUD the HUD style, files
     and scale, status, weapon bar, crosshair and its size, names, nameplates,
     timer, speedometer, team overlay, lagometer, chat and ground readout;
-    Scoreboard its style, client numbers, head icons and small rows. Network
+    Scoreboard its style, the SJK one's compact rows, client numbers, head
+    icons and small rows. Network
     follows.
 - KEY BINDINGS: every binding is in one list, under the headings Movement,
   Interaction, Weapons, Force powers (retail's two Force pages as one) and Other.
@@ -1253,14 +1254,20 @@ unchanged.
 ## Scoreboard styles
 
 `cg_scoreboardStyle` (Settings > Scoreboard > "Scoreboard style") picks the
-scoreboard layout:
+scoreboard layout. While the scoreboard is held, in every style, the HUD steps
+aside as for the quick wheel (status, weapon, timers, vote and kill lines,
+crosshair, the ground readout and the game-data HUD; chat stays,
+`scoreboard::hides_hud`), unless `cg_drawScores 0` leaves the key drawing
+nothing:
 
 - `auto`, the default of a new profile: the SJK UI's scoreboard while
   `ui_menuStyle` is `sjk`, the classic one with any other menu style (what SJK
   showed before the choice existed);
 - `sjk`, the SJK UI's scoreboard whatever the menus
   ([SJK UI](sjk-ui.md#scoreboard)): columns floating over the darkened game in
-  the UI's type, the teams side by side, the duelists as facing cards;
+  the UI's type, the teams side by side, the duelists as facing cards. Its
+  compact rows (`cg_compactScoreboard`, on by default) keep a full server in
+  one column;
 - `classic`, the retail scoreboard as EternalJK-derived clients such as JoF EJK
   draw it (below);
 - `modern` (or `0`), the modern table beside the chat column.

@@ -7,6 +7,28 @@ SJK currently contains a native client and standard dedicated server in a
 20-crate Rust workspace. This page records scope and verification, rather than
 claiming complete parity from the presence of an implementation.
 
+## Compact SJK scoreboard; the HUD hides under the scoreboard
+
+Branch `feat/compact-scoreboard` (08/10/2026, based on `15cf7a9`, Linux): Sol
+asked for a much more compact SJK UI scoreboard, on by default, holding every
+player in one column, and for the HUD to hide while the scoreboard is held.
+`cg_compactScoreboard` (default 1, Settings > Scoreboard) gives the SJK look rows
+of 20 to 32 frame pixels, splitting a list only below 20, so 32 players in free
+for all or on one team stand in one column ([sjk-ui.md](sjk-ui.md#scoreboard)).
+`scoreboard::hides_hud` joins the quick wheel and intermission in
+`ground_hud::frame`, in every scoreboard style
+([client.md](client.md#scoreboard-styles)).
+
+Verified on Linux: unit tests pin one column for 32 players and an uncut team of
+32 when compact, the old split and cut without it, and every made-up match
+fitting the canvas both ways at 1080 lines, 4K and 5:4; workspace formatting,
+build, tests and clippy (no new warnings). The world shot
+`duel6_sjk_scoreboard` rendered the 30-player board in one column and, compact
+off, in two (`duel6-scoreboard-full-split`); the harness process aborts with
+`free(): invalid pointer` after the test passes. Not verified: the HUD hiding
+was not seen in a running client (the world shots draw no HUD), and the compact
+board was not seen over a real match.
+
 ## Remapped surfaces keep the map's light
 
 Branch `fix/remap-source-lightmap` (08/10/2026, based on `6d2eb4b`, Linux): Sol

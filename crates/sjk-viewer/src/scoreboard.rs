@@ -202,6 +202,7 @@ impl Scoreboard {
                     local: Some((player.health(), player.armor())),
                     ..duelists(game)
                 },
+                compact: style::compact(options),
             };
             // Measured in the families that will draw the text.
             let measure = match fonts.sjk_metrics() {
@@ -619,6 +620,18 @@ fn byte_signature(bytes: &[u8]) -> u64 {
 /// Automatic intermission scores and the ordinary held scoreboard share one layout.
 pub(crate) fn requested(gpu: &crate::GpuState, intermission: bool) -> bool {
     intermission || gpu.gameplay_input.held(crate::input::GameButton::Scores)
+}
+
+/// While the scoreboard is held the HUD steps aside, as for the quick wheel:
+/// the status, weapon, timers, crosshair and the game-data HUD hide; chat and
+/// the board stay. Not with `cg_drawScores 0`, when holding it shows nothing.
+pub(crate) fn hides_hud(gpu: &crate::GpuState) -> bool {
+    requested(gpu, false)
+        && gpu
+            .console
+            .as_ref()
+            .and_then(|console| console.bool_cvar("cg_drawScores"))
+            .unwrap_or(true)
 }
 
 #[cfg(test)]

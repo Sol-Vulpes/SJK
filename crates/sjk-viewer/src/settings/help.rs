@@ -407,6 +407,10 @@ const HELP: &[(&str, &str)] = &[
         "Auto matches the menus: SJK's own with the SJK UI, else the classic one after the original game's.",
     ),
     (
+        crate::scoreboard::style::COMPACT_CVAR,
+        "Thinner rows on SJK's scoreboard, so every player fits in one column.",
+    ),
+    (
         "cg_showClientIDs",
         "Shows each player's client number on the scoreboard.",
     ),

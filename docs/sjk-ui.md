@@ -664,15 +664,21 @@ and out as the classic board does, settling into place as it opens.
   Your row has the UI's band with its gold bar, and its place, score, bars and
   ping in gold. Bots and players still joining are muted, with "Bot", "Joining"
   or "Connecting" for their ping.
+- **Compact** (`cg_compactScoreboard`, Settings > Scoreboard > "Compact SJK
+  scoreboard", on by default): rows are 32 tall at most and as thin as 20, and
+  a list splits in two only when even 20 would not fit, so a full server (32 in
+  free for all, or 32 on one team) stands in one column. Names and numbers scale
+  with the thinner rows (names 16 to 20, numbers 17 to 22). Off,
+  the sizes below apply.
 - **Free for all** (and Holocron, Jedi Master): one list by place; once rows
   would be thinner than 34 pixels (past 22 players) two lists side by side, 16
-  each at 32.
+  each at 32. Compact keeps it one list (32 players at 23.6).
 - **Team games:** the two teams side by side, red left and blue right, each
   under its head: the team's score in Rajdhani 76 (muted while it trails), the
   team's name in its muted colour with how many play, and a thin rule in that
   colour. Capture modes show score, captures, assists and defends (no minutes,
   for room) and a carried flag's icon before the name. A team too long for
-  rows of 26 pixels ends with "and n more", keeping your row.
+  rows of 26 pixels (20 compact) ends with "and n more", keeping your row.
 - **Duel and power duel:** the duelists (`CS_CLIENT_DUELISTS`, else the
   players not spectating) as two facing cards about the board's middle with
   "vs" between them: the name (Rajdhani 44), the score large (112, gold for
@@ -680,7 +686,8 @@ and out as the classic board does, settling into place as it opens.
   shield"; your health and shield from your snapshot, an opponent's health when
   the server shares it, `g_showDuelHealths`), over a rule, gold under your
   card. A power duel's pair stack two smaller cards facing the lone duelist.
-  Under them "Waiting to duel": everyone else in turn, with their record.
+  Under them "Waiting to duel": everyone else in turn, with their record
+  (compact: one list up to 21, then two).
 - **Spectators:** one line at the bottom, "Watching" then their names without
   colours.
 
@@ -943,7 +950,8 @@ button acts.
   ground);
   `duel6_sjk_scoreboard` the scoreboard on
   made-up matches (`scoreboard::shot`: free for all with 14 and with 30
-  players, capture the flag, a duel, a power duel, and a 4:3 window), drawn
+  players, the 30 again without compact rows, capture the flag, a duel, a
+  power duel, and a 4:3 window), drawn
   without a server;
   `duel6_sjk_ingame` the in-game menu over
   duel6 on a made-up match (`Card::for_shot`, `InGameMenu::sjk_for_shot`):

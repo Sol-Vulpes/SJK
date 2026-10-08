@@ -9,13 +9,24 @@
 //! otherwise (what SJK drew before the choice existed). Every profile had saved
 //! the old default `classic`, so it moves once to `auto`
 //! (`cg_scoreboardStyleDefaultVersion`, in the console's start); a look chosen
-//! after that keeps it whatever the menu style.
+//! after that keeps it whatever the menu style. `cg_compactScoreboard` (on by
+//! default) packs the SJK look's rows so every player fits one column.
 
 use crate::console::ViewerConsole;
 use crate::menu::style::MenuStyle;
 
 /// Archived cvar naming the scoreboard style.
 pub(crate) const CVAR: &str = "cg_scoreboardStyle";
+/// Archived cvar: the SJK look's thin rows, every player in one column.
+pub(crate) const COMPACT_CVAR: &str = "cg_compactScoreboard";
+
+/// Whether the SJK look packs its rows (`cg_compactScoreboard`, on unless
+/// switched off).
+pub(crate) fn compact(console: Option<&ViewerConsole>) -> bool {
+    console
+        .and_then(|console| console.bool_cvar(COMPACT_CVAR))
+        .unwrap_or(true)
+}
 
 /// Layout family of the scoreboard, as drawn.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
