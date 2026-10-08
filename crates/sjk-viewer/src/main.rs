@@ -143,6 +143,8 @@ mod identity_command;
 mod identity_frame;
 mod illuminate;
 mod live_session;
+mod looks;
+mod looks_frame;
 mod net_timing;
 mod particle_motion;
 mod particle_physics;
@@ -328,6 +330,10 @@ struct GpuState {
     speed_trails: actor_world_submission::speed_trail::Trails,
     /// Illuminate's holocron, the client's own Force-wheel light.
     illuminate: illuminate::Holocron,
+    /// The other players' holocrons, lit by their looks.
+    illuminate_others: illuminate::Others,
+    /// What each player wears that SJK draws (blade skin, Illuminate).
+    looks: looks::Looks,
     trick_fades: sjk_client::LegacyTrickFades,
     projectiles: Vec<projectiles::Presented>,
     missile_effects: LegacyMissileEffects,
@@ -1174,6 +1180,8 @@ impl GpuState {
             saber_trail_segments: saber_trail::SegmentPool::default(),
             speed_trails: Default::default(),
             illuminate: Default::default(),
+            illuminate_others: Default::default(),
+            looks: Default::default(),
             trick_fades: Default::default(),
             projectiles: Vec::with_capacity(sjk_protocol::MAX_LEGACY_ENTITIES),
             missile_effects,
