@@ -3,6 +3,9 @@
 pub(super) struct KeyState {
     keys: [Option<u64>; 2],
     down_at: u64,
+    /// Time of the press that made the key active; unlike `down_at`, sampling
+    /// leaves it alone, as `cl_idrive` leaves EJK's `downtime` (cl_input.cpp:499).
+    pub pressed_at: u64,
     elapsed: u64,
     pub command_elapsed: u64,
     pub active: bool,
@@ -31,6 +34,7 @@ impl KeyState {
             self.active = true;
             self.pressed = true;
             self.down_at = time;
+            self.pressed_at = time;
             self.fraction = 1.0;
             true
         } else {

@@ -4,6 +4,7 @@ use sjk_protocol::UserCommand;
 pub(crate) mod alt_code;
 pub(crate) mod dead_key;
 pub(crate) mod flip_kick;
+pub(crate) mod idrive;
 pub(crate) mod motion;
 
 mod selection_commands;
@@ -86,6 +87,8 @@ pub(crate) struct GameplayInput {
     pub(crate) motion: motion::Motion,
     /// `cl_run`: the walk key toggles walking instead of running.
     always_run: bool,
+    /// `cl_idrive` and `cl_idriveDelay`: the last-pressed key of a pair wins.
+    idrive: idrive::Idrive,
     focused: bool,
     reset_after_buffer: bool,
 }
@@ -101,6 +104,7 @@ impl Default for GameplayInput {
             held: [state::KeyState::default(); 32],
             motion: motion::Motion::default(),
             always_run: true,
+            idrive: idrive::Idrive::default(),
             focused: true,
             reset_after_buffer: false,
         }
@@ -176,6 +180,11 @@ impl GameplayInput {
     /// Latch `cl_run` (retail default 1); see `user_command`.
     pub(crate) fn set_always_run(&mut self, always_run: bool) {
         self.always_run = always_run;
+    }
+
+    /// Latch `cl_idrive` and `cl_idriveDelay`; see [`idrive`].
+    pub(crate) fn set_idrive(&mut self, idrive: idrive::Idrive) {
+        self.idrive = idrive;
     }
 
     pub(crate) fn held(&self, button: GameButton) -> bool {
@@ -277,8 +286,13 @@ impl GameplayInput {
                 movespeed,
                 self.motion.side
                     + if self.held(GameButton::Strafe) {
-                        movespeed as f32
-                            * (self.fraction(GameButton::Right) - self.fraction(GameButton::Left))
+                        let (right, left) = self.idrive_pair(
+                            GameButton::Right,
+                            GameButton::Left,
+                            self.fraction(GameButton::Right),
+                            self.fraction(GameButton::Left),
+                        );
+                        movespeed as f32 * (right - left)
                     } else {
                         0.0
                     },
@@ -609,6 +623,39 @@ mod tests {
         );
         input.finish_command();
         assert_eq!(buttons(&input) & BUTTON_12, 0);
+    }
+
+    /// One 8 ms command ending at `now`, returning its forward move.
+    fn forward_move(input: &mut GameplayInput, now: u64) -> i8 {
+        let look = crate::pointer_input::MouseLook {
+            sensitivity: 5.0,
+            yaw_scale: 0.022,
+            pitch_scale: 0.022,
+            invert: false,
+        };
+        input.sample_motion(now, look);
+        let forward = input
+            .user_command(0, 0.0, 0.0, [0; 3], 0, 0, 0)
+            .forward_move;
+        input.finish_command();
+        forward
+    }
+
+    #[test]
+    fn idrive_reverses_to_the_last_pressed_key_after_its_delay() {
+        let mut input = GameplayInput::default();
+        input.set_idrive(idrive::Idrive {
+            mode: 1,
+            delay_millis: 16,
+        });
+        forward_move(&mut input, 100);
+        input.apply("+forward 17 100");
+        assert_eq!(forward_move(&mut input, 108), 127);
+        input.apply("+back 31 108");
+        assert_eq!(forward_move(&mut input, 116), 0);
+        assert_eq!(forward_move(&mut input, 124), -127);
+        input.apply("-back 31 124");
+        assert_eq!(forward_move(&mut input, 132), 127);
     }
 
     #[test]

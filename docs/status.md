@@ -2416,6 +2416,17 @@ Unit tests cover the run (alternation, first-jump hold, second-jump delay,
 restart); the sjk-viewer tests and workspace clippy passed. No game was started:
 a flip kick on a live JA+ server is unverified.
 
+## Last key wins input
+
+Branch `feat/cl-idrive` (2026-10-08, based on `15cf7a9`) ports JoF EJK's
+`cl_idrive` (the last-pressed key of a movement pair wins; 2 limits it to
+jump/crouch) and adds `cl_idriveDelay`, a neutral gap in milliseconds before the
+newer key takes over, for servers that penalise instant reversals. See
+[client.md](client.md) (`cl_idrive`). Unit tests cover the resolution, mode 2,
+same-millisecond presses, the delay and its early end, and a forward/back reversal
+through the user-command path. No game was started: what a given server's penalty
+actually detects, and whether a delay avoids it, is unverified.
+
 ## Weather
 
 Branch `personal/weather` (06/10/2026, based on `2e348b0`) draws the

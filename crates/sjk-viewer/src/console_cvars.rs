@@ -369,6 +369,20 @@ pub(super) fn register_daily_cvars(cvars: &mut CvarRegistry) -> Result<(), sjk_s
             archive,
             "Run by default; the walk key walks",
         ),
+        // JoF EJK's `cl_idrive` (`cl_input.cpp`, default 0) and SJK's
+        // `cl_idriveDelay` ([`crate::input::idrive`]).
+        CvarDefinition::new(
+            crate::input::idrive::CVAR,
+            0_i64,
+            archive,
+            "Last-pressed movement key wins: 0 off, 1 all directions, 2 jump/crouch only",
+        ),
+        CvarDefinition::new(
+            crate::input::idrive::DELAY_CVAR,
+            0_i64,
+            archive,
+            "cl_idrive: milliseconds a reversal stays neutral before the new key wins (0-1000)",
+        ),
         // Retail defaults: `codemp/cgame/cg_xcvar.h` cg_marks 1, cg_shadows 1,
         // cg_drawGun 1.
         CvarDefinition::new(

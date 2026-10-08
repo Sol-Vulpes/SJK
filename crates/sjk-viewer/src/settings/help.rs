@@ -292,6 +292,14 @@ const HELP: &[(&str, &str)] = &[
         "Moving the mouse forward looks down instead of up.",
     ),
     ("cl_run", "Run by default; the Walk key walks."),
+    (
+        crate::input::idrive::CVAR,
+        "Opposite movement keys move toward the one pressed last instead of cancelling. 1 all, 2 jump/crouch.",
+    ),
+    (
+        crate::input::idrive::DELAY_CVAR,
+        "Stand still this long after pressing the opposite key before it takes over; some servers punish instant flips.",
+    ),
     // GAME
     (
         "cg_simpleItems",

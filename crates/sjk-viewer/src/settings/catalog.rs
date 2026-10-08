@@ -440,6 +440,24 @@ pub(super) const CONTROLS: &[Setting] = &[
         cvar: "cl_run",
         kind: ValueKind::Bool,
     },
+    Setting {
+        label: "Last key wins (0 off, 1 all, 2 jump/crouch)",
+        cvar: crate::input::idrive::CVAR,
+        kind: ValueKind::Integer {
+            min: 0,
+            max: 2,
+            step: 1,
+        },
+    },
+    Setting {
+        label: "Last key wins delay (ms)",
+        cvar: crate::input::idrive::DELAY_CVAR,
+        kind: ValueKind::Integer {
+            min: 0,
+            max: crate::input::idrive::MAX_DELAY_MILLIS as i64,
+            step: 5,
+        },
+    },
 ];
 pub(super) const GAME: &[Setting] = &[
     Setting {
