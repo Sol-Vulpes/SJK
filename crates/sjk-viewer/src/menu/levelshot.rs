@@ -127,6 +127,13 @@ impl Levelshots {
         self.want(&wanted);
     }
 
+    /// Forget what the texture holds (it is another world's): the wanted
+    /// preview is uploaded again from the cache.
+    pub(crate) fn forget_upload(&mut self) {
+        self.shown.clear();
+        self.shown_image = false;
+    }
+
     /// Ask for `map`'s preview (`mp/ffa3`); cheap when it is already wanted.
     pub(crate) fn want(&mut self, map: &str) {
         if self.wanted == map {

@@ -335,6 +335,11 @@ impl CreateGameMenu {
         self.levelshots.service(upload);
     }
 
+    /// Upload the wanted levelshot again, into another world's texture.
+    pub(crate) fn forget_levelshot_upload(&mut self) {
+        self.levelshots.forget_upload();
+    }
+
     /// Ask for `map`'s levelshot for another screen (the classic loading
     /// screen) through the same cache, which owns the renderer's one preview
     /// texture, and hand a freshly decoded one to `upload`.

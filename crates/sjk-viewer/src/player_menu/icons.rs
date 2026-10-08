@@ -47,7 +47,8 @@ impl IconLoader {
         }
     }
 
-    pub(super) fn is_idle(&self) -> bool {
+    /// Whether nothing has been requested yet.
+    pub(crate) fn is_idle(&self) -> bool {
         !self.requested
     }
 
