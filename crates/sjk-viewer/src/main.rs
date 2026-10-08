@@ -88,6 +88,7 @@ mod glow_pass;
 mod gpu_context;
 mod gpu_phases;
 mod gpu_texture;
+mod graphics_quality;
 mod ground_hud;
 mod hud;
 mod hud_runtime;

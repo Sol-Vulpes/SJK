@@ -18,6 +18,7 @@
 
 use super::help::{self, Timing};
 use super::*;
+use crate::graphics_quality::Level;
 use crate::menu::classic::layout::Span;
 use crate::menu::classic::panel::{Detail, OPTION, PanelFrame, VALUE};
 use crate::menu::classic::view::{FOCUS, Sentence};
@@ -366,6 +367,7 @@ impl SettingsMenu {
                     .map(Pick::Mode)
                     .collect()
             }
+            ValueKind::Quality => Level::ALL.into_iter().map(Pick::Quality).collect(),
             _ => return false,
         };
         let current = match setting.kind {
@@ -374,6 +376,13 @@ impl SettingsMenu {
                 values
                     .iter()
                     .position(|candidate| Some(*candidate) == value.as_deref())
+                    .unwrap_or(0)
+            }
+            ValueKind::Quality => {
+                let level = Level::nearest(console);
+                picks
+                    .iter()
+                    .position(|pick| *pick == Pick::Quality(level))
                     .unwrap_or(0)
             }
             _ => {
@@ -433,6 +442,7 @@ impl SettingsMenu {
                 console.set_cvar(setting.cvar, value);
             }
             Pick::Mode(mode) => mode.store(console),
+            Pick::Quality(level) => level.apply(console),
         }
         self.refresh(console);
     }
@@ -442,6 +452,7 @@ impl SettingsMenu {
         match pick {
             Pick::Value(value) => value,
             Pick::Mode(mode) => mode.label(),
+            Pick::Quality(level) => level.label(),
         }
     }
 
@@ -469,7 +480,8 @@ impl SettingsMenu {
     }
 
     /// Return row `row` to its default value. Rows whose value is not one
-    /// cvar's (resolution, display mode) are left alone.
+    /// cvar's (resolution, display mode) are left alone; graphics quality's
+    /// default is High, the fresh profile's values.
     pub(super) fn reset_to_default(&mut self, console: &mut ViewerConsole, row: usize) {
         let Some(setting) = self.rows().get(row) else {
             return;
@@ -477,7 +489,9 @@ impl SettingsMenu {
         if matches!(setting.kind, ValueKind::Resolution | ValueKind::DisplayMode) {
             return;
         }
-        if let Some(default) = console.cvar_default(setting.cvar).map(CvarValue::as_text) {
+        if matches!(setting.kind, ValueKind::Quality) {
+            Level::High.apply(console);
+        } else if let Some(default) = console.cvar_default(setting.cvar).map(CvarValue::as_text) {
             console.set_cvar(setting.cvar, &default);
         }
         self.editing = None;
@@ -636,7 +650,8 @@ impl SettingsMenu {
                 | ValueKind::Resolution
                 | ValueKind::DisplayMode
                 | ValueKind::HudPicker
-                | ValueKind::WheelPages => {
+                | ValueKind::WheelPages
+                | ValueKind::Quality => {
                     let open = self.dropdown.as_ref().is_some_and(|open| open.row == row);
                     place.choice_field(
                         &mut self.ui,
@@ -838,7 +853,7 @@ impl SettingsMenu {
         hint.push_str(match setting.kind {
             ValueKind::Bool => "ENTER or a click to switch it, LEFT or RIGHT too",
             kind if segment_choices(kind).is_some() => "Click a choice, or LEFT or RIGHT to step",
-            ValueKind::Choice(_) | ValueKind::DisplayMode => {
+            ValueKind::Choice(_) | ValueKind::DisplayMode | ValueKind::Quality => {
                 "ENTER or a click for the choices, LEFT or RIGHT to step"
             }
             ValueKind::Integer { .. } | ValueKind::Float { .. } => {
@@ -957,6 +972,12 @@ impl std::fmt::Display for Number {
 /// What row `setting` shows for its default, and whether `console`'s value
 /// differs from it. Rows whose value is not one cvar's have neither.
 pub(super) fn row_default(console: &ViewerConsole, setting: &Setting) -> RowDefault {
+    if matches!(setting.kind, ValueKind::Quality) {
+        return RowDefault {
+            text: Some(Level::High.label().to_owned()),
+            changed: Level::current(console) != Some(Level::High),
+        };
+    }
     // The HUD row names a HUD that two cvars select together; the quick
     // wheel's pages are a file, restored to the defaults in their editor.
     if matches!(
@@ -1132,7 +1153,48 @@ mod tests {
         let cap = row_of(&menu, "com_maxfps");
         assert_eq!(menu.defaults[cap].text.as_deref(), Some("AUTO"));
         // Resolution and display mode are not one cvar's value.
-        assert_eq!(menu.defaults[0], RowDefault::default());
+        let resolution = row_of(&menu, "r_resolution");
+        assert_eq!(menu.defaults[resolution], RowDefault::default());
+    }
+
+    #[test]
+    fn graphics_quality_lists_its_levels_and_returns_to_high() {
+        use crate::graphics_quality::{Level, ROW_NAME};
+        let (_directory, mut console) = console();
+        let mut menu = SettingsMenu::new();
+        menu.open_tab(&console, SettingsMenu::tab_index("VIDEO").unwrap());
+        let row = row_of(&menu, ROW_NAME);
+        assert_eq!(menu.values[row], "High");
+        assert_eq!(
+            menu.defaults[row],
+            RowDefault {
+                text: Some("High".to_owned()),
+                changed: false
+            }
+        );
+        // The list opens on the level in use; picking one sets it.
+        assert!(menu.open_dropdown(&console, row));
+        let open = menu.dropdown.as_ref().unwrap();
+        assert_eq!(open.picks, Level::ALL.map(Pick::Quality));
+        assert_eq!(open.current, 2);
+        menu.apply_pick(&mut console, 3);
+        assert_eq!(Level::current(&console), Some(Level::Ultra));
+        assert_eq!(menu.values[row], "Ultra");
+        assert!(menu.defaults[row].changed);
+        // Changed on its own, a setting makes it Custom; Left steps down from
+        // the level it is nearest.
+        console.set_cvar("r_sunShadowTaps", "20");
+        menu.refresh(&console);
+        assert_eq!(menu.values[row], "Custom");
+        menu.selected = row;
+        menu.adjust(&mut console, -1);
+        assert_eq!(menu.values[row], "High");
+        menu.adjust(&mut console, -1);
+        assert_eq!(menu.values[row], "Balanced");
+        // Backspace's default is High.
+        menu.reset_to_default(&mut console, row);
+        assert_eq!(Level::current(&console), Some(Level::High));
+        assert!(!menu.defaults[row].changed);
     }
 
     #[test]

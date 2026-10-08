@@ -175,6 +175,7 @@ impl Group {
             // Its headings are its tabs' names ([`graphics_tabs`]).
             Self::Scoreboard | Self::Graphics => &[],
             Self::Quick => &[
+                (crate::graphics_quality::ROW_NAME, "Graphics"),
                 (crate::menu::style::CVAR, "Styles"),
                 ("r_resolution", "Display"),
                 ("sensitivity", "Aim"),

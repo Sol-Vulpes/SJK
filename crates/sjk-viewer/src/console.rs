@@ -410,6 +410,21 @@ impl ViewerConsole {
         }
     }
 
+    /// Set several cvars from text and save the profile once if any changed;
+    /// a value a cvar refuses is logged and the others are still set.
+    pub(crate) fn set_cvars<'a>(&mut self, values: impl IntoIterator<Item = (&'a str, &'a str)>) {
+        let mut changed = false;
+        for (name, value) in values {
+            match self.shell.cvars.set_text(name, value) {
+                Ok(set) => changed |= set,
+                Err(error) => self.shell.push_log(format!("^1{error}")),
+            }
+        }
+        if changed {
+            self.persist();
+        }
+    }
+
     /// Set a cvar from text and persist a change; the error is returned, not logged.
     fn apply_cvar(&mut self, name: &str, value: &str) -> Result<(), sjk_shell::CvarError> {
         if self.shell.cvars.set_text(name, value)? {

@@ -150,7 +150,8 @@ fn row_view(
         | ValueKind::Resolution
         | ValueKind::DisplayMode
         | ValueKind::HudPicker
-        | ValueKind::WheelPages => ui.form_cycler(value_zone, value, None, value_color, s),
+        | ValueKind::WheelPages
+        | ValueKind::Quality => ui.form_cycler(value_zone, value, None, value_color, s),
         ValueKind::Text => {
             ui.form_value(value, value_zone, value_color, s);
             if editing {

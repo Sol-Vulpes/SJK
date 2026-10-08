@@ -112,6 +112,10 @@ pub(super) fn lines(text: &str) -> [&str; HELP_LINES] {
 const HELP: &[(&str, &str)] = &[
     // VIDEO
     (
+        crate::graphics_quality::ROW_NAME,
+        "Sets the costly graphics together: Performance for the most FPS, Ultra for the best look. Shadows and light shafts need a restart.",
+    ),
+    (
         "r_resolution",
         "The window's size, or the screen mode in exclusive fullscreen. Enter opens the list of sizes.",
     ),

@@ -2351,7 +2351,9 @@ take effect only where a pack such as the [generated one](#generating-material-m
 supplies maps; without one nothing is drawn differently or created. Noon, bloom,
 dust and material maps are SJK's defaults (Sol's own settings). Emission maps
 (`r_emissiveMaps 1`) are on too and only act where a pack has `_e` images.
-These are ordinary cvar defaults, not a config imported at launch.
+These are ordinary cvar defaults, not a config imported at launch. They are the
+High level of [graphics quality](client.md#graphics-quality), which sets the
+costly ones together.
 
 Saved values take precedence, including explicitly disabled effects. The client
 saves every archived setting, so a `config.cfg` written before a default changed

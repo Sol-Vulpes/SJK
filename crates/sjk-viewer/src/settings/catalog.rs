@@ -55,6 +55,9 @@ pub(super) enum ValueKind {
     /// The quick wheel's pages (`wheel.json`, not a cvar): Enter opens their
     /// editor ([`super::wheel_editor`]).
     WheelPages,
+    /// The graphics quality level ([`crate::graphics_quality`], not a cvar):
+    /// steps or lists the levels, each setting the renderer's costly cvars.
+    Quality,
 }
 
 #[derive(Clone, Copy)]
@@ -72,6 +75,11 @@ pub(crate) const RESOLUTIONS: &[&str] = &[
     "3840x2160",
 ];
 pub(super) const VIDEO: &[Setting] = &[
+    Setting {
+        label: "Graphics quality",
+        cvar: crate::graphics_quality::ROW_NAME,
+        kind: ValueKind::Quality,
+    },
     Setting {
         label: "Resolution",
         cvar: "r_resolution",
