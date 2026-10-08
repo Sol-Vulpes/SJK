@@ -79,3 +79,6 @@ fn direction_at(pixel: vec2<i32>) -> vec4<f32> {
     if sum.a == 0.0 { return RimDirected(here, direction_at(pixel)); }
     return RimDirected(rim_texel(pixel), vec4(sum.xyz/sum.a, 1.0));
 }
+// Empties a rectangle (scissored) before a partial bake of it (`Cache::refresh`).
+@fragment fn clear() -> @location(0) vec4<f32> { return vec4(0.0); }
+@fragment fn clear_directed() -> RimDirected { return RimDirected(vec4(0.0), vec4(0.0)); }

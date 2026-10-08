@@ -308,7 +308,7 @@ impl Runtime {
             None,
             &sampler,
             super::shadows::light_buffer::Binding::Neutral,
-            &crate::lamp_lights::Gpu::new(device, &crate::lamp_lights::LampSet::default()),
+            &crate::lamp_lights::Gpu::new(device, &crate::lamp_lights::LampSet::default(), &[]),
             None,
             &forge.point_lights,
         );

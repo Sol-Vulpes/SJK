@@ -15,6 +15,7 @@ BSP geometry, PVS visibility, lightmaps, shader stages and legacy models.
 | Main scene passes | [main_scene_pass.rs](../crates/sjk-viewer/src/main_scene_pass.rs) |
 | Secondary views | [scene_views.rs](../crates/sjk-viewer/src/scene_views.rs) |
 | Sun and real-time lighting | [sun_shadows.rs](../crates/sjk-viewer/src/sun_shadows.rs) |
+| Movers in lamp shadows | [mover_occlusion.rs](../crates/sjk-viewer/src/mover_occlusion.rs) |
 | Post processing | [post_aa.rs](../crates/sjk-viewer/src/post_aa.rs) |
 | Dynamic glow | [post_glow.rs](../crates/sjk-viewer/src/post_glow.rs), [glow_pass.rs](../crates/sjk-viewer/src/glow_pass.rs) |
 | Eye adaptation | [post_exposure.rs](../crates/sjk-viewer/src/post_exposure.rs) |
@@ -552,6 +553,87 @@ Settled GPU medians (11–13 samples per view) were 1.038→1.038 ms and
 fixed-view GPU results do not establish a speedup, exclusive-device performance,
 31-player frame times or Windows behavior. The owner approved publication of the combined lighting/transition preview;
 this does not close the remaining dark-interior investigation.
+
+## Movers in lamp shadows
+
+Doors, lifts, `func_static` brushes and the other inline movers block the map's lamps
+in real-time lighting, at the pose the client draws them with: a closed door keeps a
+lamp's light in its room, an open one lets it through
+([mover_occlusion.rs](../crates/sjk-viewer/src/mover_occlusion.rs)). Lamp shadows
+otherwise come from a trace of the static world only, done once when the map loads.
+
+- **Which lamps.** At load each mover gets the world box it can move through, from its
+  entity's spawn keys: `func_door` and `func_button` from their spawn bounds to where
+  they slide (`SP_func_door`'s `G_SetMovedir` and `lip`), `func_plat` down by its
+  `height`, brushes that never move (`func_static`, `func_breakable`, `func_usable`,
+  `func_glass`, `func_wall`) their spawn bounds. Other movers (trains, rotating and
+  bobbing ones) get their bounds grown on every side by their largest extent. A lamp
+  whose reach touches that box, and that sees into it past the static world (a CPU ray
+  from the lamp gets through to one of 27 points spread through the box), gets a door
+  tile.
+- **Door tiles.** They sit after the lamps' own tiles in the static visibility atlas,
+  at the same resolution: only as many as fit without lowering it (the most powerful
+  lamps first when there are more). Each holds the lamp's distances to the movers alone,
+  traced on the GPU against the movers near that lamp at their current pose; a
+  receiver's lamp visibility is the world tile's times the door tile's. The trace also
+  records the pixel rectangle the movers cover, in two border texels the filter never
+  reads; a receiver whose filter footprint lies outside it skips the door tile.
+- **Poses.** Movers in the snapshot block light where they are drawn; one hidden or
+  broken (not drawn) blocks nothing. A mover no snapshot has shown yet stands at its
+  baseline's spawn pose; one with neither blocks nothing. A mover missing from a
+  snapshot that would hold it blocks nothing either: the server removed it (a broken
+  `func_breakable`) or hid it with `SVF_NOCLIENT` (`func_usable` or `func_wall` switched
+  off), which no snapshot shows as hidden. "Would hold it" is the server's test, from
+  the player's eye: one of the clusters of the mover's reach box (the first 16 it touches)
+  is in the eye's PVS and one of its areas is open in the snapshot's area mask. A mover
+  left out because its place is out of view keeps its last pose, and `EF_PERMANENT`
+  movers (never sent) keep theirs. A pose change queues the mover's door tiles again;
+  about 2^19 rays are traced per frame (31 tiles at 128², 120 at 64²), oldest first, so
+  a moving lift spreads its cost and its final pose is always traced. The pose kept is
+  the one last traced, until the mover is a hundredth of a unit or about a hundredth of
+  a degree from it, so slow motion adds up to a trace and a still mover is never traced
+  again.
+- **Lamp cache.** The static lamp cache is baked with the door tiles as they are. When
+  tiles are traced again, the cache texels their movers can shadow are baked again: at
+  load, each door tile finds the cache surfaces in its lamp's reach that lie behind its
+  movers (the cone from the lamp around the mover's box), one texel rectangle per
+  layer. A refresh clears and lights that rectangle again, then runs the steep and rim
+  passes over the layer; outside the rectangle that can only poison a few more texels
+  (evaluated directly), never change their light. While tiles keep coming the cache
+  follows every 100 ms, at once when the queue is empty, at most four layers a frame.
+- **Sun.** The view and close cascades already drew movers every frame. The far
+  cascade, redrawn only when the sun turns, now also redraws when movers have moved,
+  at most every 250 ms, and once more after they stop. Every shadow-casting mover is
+  tracked for it, whether or not a lamp gave it a door tile, so it follows movers on
+  maps without lamps too. Volumetric light and GI probes read it.
+- GI probes sample lamp visibility through the same atlas, so their lamp bounce sees
+  the movers too, as the probes refresh (a few hundred a frame).
+
+`SJK_MOVER_OCCLUSION=0` leaves movers out of lamp shadows (no door tiles), for
+same-binary comparisons; the far cascade still follows them.
+The ignored world shot `world_shot::movers::movers_shadow_lamps` renders the movers with
+the most door lamps closed, open and with every mover hidden, from beside a lamp, and
+with `SJK_MOVER_TIMING=1` holds views for GPU timing (see its rustdoc).
+
+Cost, measured on `mp/siege_hoth` (482 door tiles of 1,481 lamps, 68 movers) in a
+release build at 960×540, Linux, Radeon RX 9060 XT: the visibility atlas grew from 95.5
+to 127.6 MiB; finding the lamps and the cache regions took about 100 ms at load. Median
+light pass at the start camera 0.290 → 0.302 ms; beside a closed hangar door 0.650 →
+0.853 ms, the door's own surfaces being lit directly; the tracer took 0.10 ms a frame
+while that door was shown and hidden every frame, 0.003 ms at rest.
+
+Memory beyond the atlas: when door tiles re-bake the lamp cache, the bake's scratch
+targets stay after the first bake (two Depth32 targets, the RGBA16F rim target and, with
+light directions, the RGB10A2 rim directions): 20 bytes per texel of the cache's layer
+resolution, 20 MiB at 1024², 80 MiB at 2048² (16 bytes a texel without directions). The
+`Lamp light cache: bake encoded` log line names the amount. Maps without door tiles, and
+`SJK_MOVER_OCCLUSION=0`, free them after the first bake as before. The `mp/siege_hoth`
+figure above does not include them; it was not measured.
+
+Not covered: a train or lift that travels outside its box does not shadow lamps it
+reaches there; alpha-tested and blended mover faces let light through, like those of
+the static world; dynamic lights still cast no shadows; baked lightmaps (`r_dayNight 0`)
+are unchanged.
 
 ## Indirect lighting and dark-area readability
 

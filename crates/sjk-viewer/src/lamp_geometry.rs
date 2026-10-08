@@ -22,10 +22,9 @@ impl Runtime {
     /// Build and upload the static visibility BVH and surface table.
     pub(crate) fn new(
         device: &wgpu::Device,
-        triangles: &[geometry::Triangle],
+        geometry: &geometry::Geometry,
         surfaces: &[crate::gi_voxels::Surface],
     ) -> Self {
-        let geometry = geometry::Geometry::new(triangles);
         let header = Header {
             counts: [
                 (geometry.nodes.len() / 2) as u32,

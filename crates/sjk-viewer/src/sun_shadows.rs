@@ -100,6 +100,8 @@ pub(super) struct Runtime {
     bounds: bounds::Bounds,
     /// The map's lamps as GPU buffers, bound during lighting evaluation.
     lamps: crate::lamp_lights::Gpu,
+    /// Movers shadowing the lamps near them (`mover_occlusion.rs`).
+    movers: Option<super::mover_occlusion::gpu::Runtime>,
     /// Shadow maps of the nearest lamps; day mode only.
     lamp_shadows: Option<lamp_shadows::Runtime>,
     /// Slit closing over every cascade after it renders (`r_sunShadowGapClose`).
@@ -161,6 +163,23 @@ pub(super) struct FarCascade {
     cascade: Cascade,
     /// Sun direction and fit the current depth contents were rendered with.
     rendered: std::cell::Cell<Option<(Vec3, fit::Fit)>>,
+    /// The mover poses (`mover_occlusion::gpu::Runtime::generation`) it was rendered
+    /// with, and when.
+    movers: std::cell::Cell<(u64, Option<std::time::Instant>)>,
+}
+
+/// The far cascade follows movers at most this often; the next refresh after they stop
+/// shows their final pose.
+const FAR_MOVER_REFRESH: std::time::Duration = std::time::Duration::from_millis(250);
+
+/// Whether the far cascade, drawn with mover poses `drawn` (`Poses::generation`) at `at`,
+/// must be drawn again for poses `generation` at `now`.
+fn far_follows_movers(
+    (drawn, at): (u64, Option<std::time::Instant>),
+    generation: u64,
+    now: impl FnOnce() -> std::time::Instant,
+) -> bool {
+    drawn != generation && at.is_none_or(|at| now().duration_since(at) >= FAR_MOVER_REFRESH)
 }
 
 /// One cleared depth-only pass onto a lamp shadow face.
@@ -501,6 +520,8 @@ impl super::Runtime {
             scene,
             light_divisor(supersampling),
             &self.lamps,
+            &self.mover_occluders,
+            self.lamp_cache_pages.as_ref(),
             self.shadow_bounds,
             &self.probe_domain,
         );
@@ -605,6 +626,55 @@ impl super::Runtime {
             && self.forge.model_sun.as_ref().is_some_and(|s| s.ready.get())
     }
 
+    /// Place this frame's movers for lamp shadows (`mover_occlusion.rs`); the movers of
+    /// `baselines` (with whether each is `EF_PERMANENT`) that no snapshot has shown yet
+    /// stand at their spawn pose. With `eye`, `presented` is that snapshot's: a mover it
+    /// would hold but does not (`mover_occlusion::Sight`) stops blocking.
+    pub(crate) fn observe_movers(
+        &mut self,
+        queue: &crate::frame_queue::FrameQueue,
+        presented: &[crate::movers::Presented],
+        baselines: Option<impl Iterator<Item = (crate::movers::Presented, bool)>>,
+        mesh_of: impl Fn(usize) -> Option<usize>,
+        eye: Option<super::mover_occlusion::Eye<'_>>,
+    ) {
+        let areas = &self.areas;
+        let in_view = eye.map(|eye| {
+            move |sight: &super::mover_occlusion::Sight| {
+                // An eye outside the map tells nothing: keep the movers as they are.
+                eye.cluster.is_some_and(|from| {
+                    sight.seen(
+                        |to| {
+                            eye.visibility
+                                .is_none_or(|pvs| pvs.is_cluster_visible(from, to))
+                        },
+                        |area| areas.open(area),
+                    )
+                })
+            }
+        });
+        if let Some(movers) = self.shadows.as_mut().and_then(|s| s.movers.as_mut()) {
+            movers.observe(queue, presented, baselines, mesh_of, in_view);
+        }
+    }
+
+    /// The positions of the lamps occluder `occluder` shadows, for world shots, and
+    /// whether door tiles are still waiting to be traced.
+    #[cfg(test)]
+    pub(crate) fn door_lamps(&self, occluder: usize) -> (Vec<Vec3>, bool) {
+        let Some(movers) = self.shadows.as_ref().and_then(|s| s.movers.as_ref()) else {
+            return (Vec::new(), false);
+        };
+        let (lamps, busy) = movers.door_lamps(occluder);
+        (
+            lamps
+                .iter()
+                .map(|&lamp| self.lamps.lamps[lamp as usize].position)
+                .collect(),
+            busy,
+        )
+    }
+
     /// Whether real main-view actor shadows replace the temporary blob producer.
     pub(crate) fn sun_shadows_active(&self) -> bool {
         self.shadows.is_some()
@@ -629,6 +699,13 @@ impl super::Runtime {
         };
         if let Some(medium) = &shadow.volumetrics {
             medium.invalidate();
+        }
+        // Door tiles before anything samples lamp visibility this frame.
+        if let Some(movers) = &shadow.movers {
+            movers.encode(encoder);
+        }
+        if let Some(phases) = phases {
+            phases.mark(encoder, "door-tiles");
         }
         let frame = shadow.light_frame(shadow.time.get());
         let sun = Vec3::from_array(frame.sun.direction);
@@ -1127,14 +1204,21 @@ impl super::Runtime {
         resolution: u32,
         input: &FrameDraw<'_>,
     ) -> Option<(fit::Fit, bool)> {
+        let movers = self
+            .shadows
+            .as_ref()
+            .and_then(|shadow| shadow.movers.as_ref())
+            .map_or(0, |movers| movers.generation());
+        let movers_moved = far_follows_movers(far.movers.get(), movers, std::time::Instant::now);
         if let Some((rendered, fit)) = far.rendered.get() {
-            if rendered.dot(sun) >= FAR_REFRESH_COS {
+            if rendered.dot(sun) >= FAR_REFRESH_COS && !movers_moved {
                 return Some((fit, false));
             }
         }
         let fit = volume::fit_map(sun, self.shadow_bounds, resolution)?;
         self.render_cascade(encoder, queue, &far.cascade, &fit, input, None, None);
         far.rendered.set(Some((sun, fit)));
+        far.movers.set((movers, Some(std::time::Instant::now())));
         Some((fit, true))
     }
 
@@ -1218,4 +1302,22 @@ fn join_runs(mut ranges: Vec<Range<u32>>) -> Vec<Range<u32>> {
         }
     }
     joined
+}
+
+#[cfg(test)]
+mod far_mover_tests {
+    use super::*;
+
+    #[test]
+    fn the_far_cascade_follows_movers_at_most_every_quarter_second() {
+        let start = std::time::Instant::now();
+        let later = |ms| start + std::time::Duration::from_millis(ms);
+        // Never drawn with movers: at once.
+        assert!(far_follows_movers((0, None), 1, || start));
+        // Drawn with these poses: not again.
+        assert!(!far_follows_movers((3, Some(start)), 3, || later(1000)));
+        // Moved since: after 250 ms, not before.
+        assert!(!far_follows_movers((3, Some(start)), 4, || later(249)));
+        assert!(far_follows_movers((3, Some(start)), 4, || later(250)));
+    }
 }

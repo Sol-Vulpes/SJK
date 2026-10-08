@@ -473,6 +473,19 @@ test: remapShader <old> <new> on a map: the surface keeps its shadows; clearRema
 test: Glowing, sky and effect targets with their own stages look as before.
 note: Checked offline on mp/duel6 only; not on a live server or with a $lightmap target shader.
 
+[mover-light]
+area: Rendering & effects
+title: Doors, lifts and other movers block lamp light (SJK PR #39)
+change: Closed doors, lifts and other moving brushes stop the light of lamps behind them.
+change: Open, hidden, broken or switched-off ones let it through again.
+change: The far sun shadows follow movers too, at most four times a second.
+test: siege_hoth, High quality: by the closed hangar door, no lamp light leaks onto the floor.
+test: Open and close that door: the light comes through as it opens and goes as it closes.
+test: Break a breakable wall or switch off a force field by a lamp: no shadow stays behind.
+test: Outdoors, watch a moving lift's sun shadow from far away: it follows the lift.
+note: SJK_MOVER_OCCLUSION=0 leaves movers out of lamp light, to compare with the same build.
+note: Not tried on screen yet: the door tracer, the partial re-bakes and the far cascade refresh.
+
 # ---- Audio ----
 
 # ---- Gameplay ----

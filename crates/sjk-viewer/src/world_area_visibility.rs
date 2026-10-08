@@ -67,7 +67,8 @@ impl Areas {
         &self.mask
     }
 
-    fn open(&self, area: i32) -> bool {
+    /// Whether the snapshot's area mask leaves `area` connected to the viewer's.
+    pub(crate) fn open(&self, area: i32) -> bool {
         usize::try_from(area)
             .ok()
             .and_then(|n| self.mask.get(n >> 3).map(|byte| byte & (1 << (n & 7)) == 0))

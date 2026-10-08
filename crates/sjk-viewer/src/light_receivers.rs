@@ -581,6 +581,7 @@ impl super::super::super::Runtime {
             .zip(target.cache.as_ref())
             .zip(shadow.cache_group.as_ref());
         if let Some(((cache, _), _)) = cache {
+            // Keep the bake's targets only for movers that will re-bake parts of it.
             cache.bake_once(
                 &self.forge.device,
                 encoder,
@@ -588,7 +589,20 @@ impl super::super::super::Runtime {
                 input.indices,
                 &shadow.lamps,
                 self.shadow_bounds,
+                shadow.movers.as_ref().is_some_and(|m| m.rebakes_cache()),
             );
+            // Mover shadows that changed since (`mover_occlusion.rs`).
+            if let Some(movers) = &shadow.movers {
+                cache.refresh(
+                    &self.forge.device,
+                    encoder,
+                    input.vertices,
+                    input.indices,
+                    &shadow.lamps,
+                    self.shadow_bounds,
+                    movers.take_refresh().regions(),
+                );
+            }
         }
         // Not cleared: lighting reads only the texels the pre-pass covered, and the
         // depth-equal pass below writes every one of them (`receiver_texel`).

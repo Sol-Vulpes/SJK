@@ -18,6 +18,11 @@ pub(crate) fn on_big_stack(shots: impl FnOnce() + Send + 'static) {
         .expect("the world shots ran");
 }
 
+thread_local! {
+    /// Keep `GpuState::movers` from frame to frame without a snapshot.
+    pub(crate) static MOVERS_PINNED: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+}
+
 /// Where the shots are written.
 pub(crate) fn directory() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../target/world-shots")
@@ -235,6 +240,10 @@ fn read_back(
 #[cfg(test)]
 #[path = "world_shot_notes.rs"]
 mod notes;
+
+#[cfg(test)]
+#[path = "world_shot_movers.rs"]
+mod movers;
 
 #[path = "world_shot_illuminate.rs"]
 mod holocron;

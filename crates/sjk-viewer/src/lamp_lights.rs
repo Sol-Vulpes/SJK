@@ -84,7 +84,12 @@ pub(crate) struct Gpu {
     pub(crate) grid: wgpu::Buffer,
     pub(crate) data: wgpu::Buffer,
     visibility: wgpu::TextureView,
+    /// Directional samples per edge of the traced atlas; `None` before tracing.
+    resolution: Option<u32>,
     lamp_count: u32,
+    /// Mover door tiles after the lamps' own in the atlas (`mover_occlusion.rs`).
+    door_tiles: u32,
+    doors: Option<crate::world_materials::mover_occlusion::Doors>,
 }
 
 #[repr(C)]
@@ -99,7 +104,14 @@ struct Grid {
 
 impl Gpu {
     /// Upload a set; an empty set is the neutral stand-in (zero counts, one dummy lamp).
-    pub(crate) fn new(device: &wgpu::Device, set: &LampSet) -> Self {
+    /// Lamps that `occluders` (the map's movers) can reach get door tiles, as many as the
+    /// atlas holds without lowering its resolution.
+    pub(crate) fn new(
+        device: &wgpu::Device,
+        set: &LampSet,
+        occluders: &[crate::world_materials::mover_occlusion::Occluder],
+    ) -> Self {
+        use crate::world_materials::mover_occlusion::Doors;
         use wgpu::util::DeviceExt;
         let make = |label, contents: &[u8], usage| {
             device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
@@ -121,8 +133,18 @@ impl Gpu {
         } else {
             &set.lamps
         };
+        let capacity = visibility::door_capacity(
+            set.lamps.len() as u32,
+            device.limits().max_texture_dimension_2d,
+        );
+        let doors = Doors::assign(&set.lamps, occluders, capacity as usize);
+        // Per lamp: its door tile + 1, zero without one, in the first axis's spare word.
+        let mut door_of = vec![0u32; lamps.len()];
+        for (tile, door) in doors.tiles.iter().enumerate() {
+            door_of[door.lamp as usize] = tile as u32 + 1;
+        }
         let mut data: Vec<[u32; 4]> = Vec::new();
-        for l in lamps {
+        for (l, door) in lamps.iter().zip(&door_of) {
             data.push([l.position.x, l.position.y, l.position.z, l.radius].map(f32::to_bits));
             data.push([l.normal.x, l.normal.y, l.normal.z, l.power].map(f32::to_bits));
             let area = 4. * l.axis_u.cross(l.axis_v).length();
@@ -135,7 +157,8 @@ impl Gpu {
                 ]
                 .map(f32::to_bits),
             );
-            data.push(l.axis_u.extend(0.).to_array().map(f32::to_bits));
+            let [x, y, z] = l.axis_u.to_array().map(f32::to_bits);
+            data.push([x, y, z, *door]);
             data.push(l.axis_v.extend(0.).to_array().map(f32::to_bits));
         }
         let cells_offset = data.len() as u32;
@@ -181,12 +204,15 @@ impl Gpu {
                 threshold_offset,
                 u32::from(!set.thresholds.is_empty()),
                 0,
-                0,
+                doors.tiles.len() as u32,
             ],
         };
         Self {
             visibility: visibility::texture(device, [1, 1]),
+            resolution: None,
             lamp_count: set.lamps.len() as u32,
+            door_tiles: doors.tiles.len() as u32,
+            doors: (!doors.tiles.is_empty()).then_some(doors),
 
             grid: make(
                 "SJK lamp grid",
@@ -199,6 +225,22 @@ impl Gpu {
                 wgpu::BufferUsages::STORAGE,
             ),
         }
+    }
+
+    /// The door tiles, for the mover occlusion runtime; `None` after the first call or
+    /// without any.
+    pub(crate) fn take_doors(&mut self) -> Option<crate::world_materials::mover_occlusion::Doors> {
+        self.doors.take()
+    }
+
+    /// The visibility atlas, lamp tiles then door tiles.
+    pub(crate) fn visibility_view(&self) -> &wgpu::TextureView {
+        &self.visibility
+    }
+
+    /// Directional samples per tile edge, once the atlas is traced.
+    pub(crate) fn visibility_resolution(&self) -> Option<u32> {
+        self.resolution
     }
 
     /// Layout entries for the two lamp bindings at `base`, fragment and compute visible.
