@@ -2526,6 +2526,17 @@ delay is counted per command, so a frame that makes several commands (below 125 
 spaces them out. Both apply from the next frame and are in Settings > Controls. See
 [idrive.rs](../crates/sjk-viewer/src/input/idrive.rs).
 
+`+duck` is JoF EJK's crouch without a roll (`CG_NorollDown_f`). Its press lets go
+of jump and walks for one user command, then it crouches like `+movedown`, sharing
+its key state. Crouching while moving rolls only from a running legs animation
+(`bg_pmove.c` `PM_Footsteps`); the walking command replaces it with the walk, and
+once crouched the legs crouch instead. EJK walks with `+speed`, which runs under
+`cl_run 0`; SJK walks whatever `cl_run` is. A roll on landing while crouched
+(`PM_CrashLand`) is not prevented, in EJK either. Under `cl_idrive` `+duck` is the
+crouch key of the jump/crouch pair, as `+movedown` is. Unlike EJK, whose `-duck`
+also lets go of every `+movedown` and `+speed` key, `-duck` releases only itself. See
+[input.rs](../crates/sjk-viewer/src/input.rs) (`up_move`).
+
 `serverconfig` lists a JA+ server's options from the `jp_cinfo` value in its
 serverinfo (flip kick, roll fix mode, DFA variants, kata, ledge grab, alternate
 dimension and the rest), as the JA+ client plugin and EternalJK print them

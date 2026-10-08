@@ -21,6 +21,7 @@ Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 
 ## Unreleased
 
+- `+duck` crouches without rolling, as in JoF EternalJK: bind it in place of `+movedown` (Controls > Movement > Crouch, no roll) to crouch while running without going into a roll _(Sol, after JoF EternalJK)_
 - Remapped surfaces drawn with a vertex-lit texture (like the ones a server puts on mp/ffa4) take the map's live light instead of staying too bright _(Sol)_
 - `cg_remapsBlockedMaps` lists maps where the server may not swap textures, as `cg_remaps 0` on those maps only; `blockRemaps` and `unblockRemaps` add or remove the loaded map (or a named one) _(Sol)_
 - The SJK scoreboard is compact by default: thinner rows keep a full server (32 players in free for all, or on one team) in one column; Settings > Scoreboard > Compact SJK scoreboard turns it off. While the scoreboard is held, in any style, the HUD steps aside as for the quick wheel (chat stays) _(Sol)_

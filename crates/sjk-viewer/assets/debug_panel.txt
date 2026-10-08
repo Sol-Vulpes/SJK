@@ -150,6 +150,18 @@ test: cl_idriveDelay 20: the reversal stops for a moment first, on a press and o
 test: Below 125 FPS (com_maxfps 60) the delay still gives at least one neutral step.
 note: Not tried on a server; what a server's nerf check detects is unknown.
 
+[duck-no-roll]
+area: Input
+title: +duck crouches without rolling, as in JoF EternalJK (SJK PR #41)
+change: +duck lets go of jump and walks for one user command, then crouches like +movedown.
+change: That walk takes the legs out of the run, so crouching while running does not roll.
+change: No default key: bind it in Controls > Movement > Crouch, no roll (JoF).
+test: Bind C to Crouch, no roll; run forward and press C: you crouch-walk, never roll.
+test: Same while running backwards and strafing; plain +movedown on another key still rolls.
+test: Hold SPACE, press C: the jump is let go and you crouch; release C: you stand up.
+test: With cl_idrive 2: hold C, then SPACE: you jump; let go of SPACE: you crouch again.
+note: A roll on landing while crouched (PM_CrashLand) is not prevented, in EJK either.
+
 # ---- Menus & settings ----
 
 [sharp-levelshots]

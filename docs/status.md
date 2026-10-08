@@ -2622,6 +2622,23 @@ Unit tests cover the run (alternation, first-jump hold, second-jump delay,
 restart); the sjk-viewer tests and workspace clippy passed. No game was started:
 a flip kick on a live JA+ server is unverified.
 
+## Crouch without rolling
+
+Branch `feat/duck-no-roll` (08/10/2026, based on `15cf7a9`) ports JoF EJK's
+`+duck`: one walking command with jump released, then a crouch, so moving into
+a crouch does not roll. It is bindable in Controls > Movement. See
+[client.md](client.md) (`+duck`). Unit tests cover the user commands (the walk,
+then the crouch, jump let go, `cl_run 0`, a held `+movedown`); the workspace
+checks passed. No game was started: that the server keeps the player from
+rolling is unverified.
+
+Review at the merge (08/10/2026): the crouch value now goes through the same `axis`
+as every pair, so `cl_idrive` (merged first) still resolves jump and crouch with
+`+duck` as the crouch key; before, `+duck` and `+movedown` bypassed it and crouch
+while jump read 0. Tests cover that, the walk-then-crouch sequence at 8, 7, 4 and 3 ms
+command steps, and a jump pressed while ducking. `-duck` releases only itself, unlike
+EJK's, which also lets go of every `+movedown` and `+speed` key. Not run on a server.
+
 ## Last key wins input
 
 Branch `feat/cl-idrive` (08/10/2026, based on `15cf7a9`) ports JoF EJK's

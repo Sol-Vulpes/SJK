@@ -9,6 +9,11 @@
 #                               made it when that is not the piece's owner.
 
 = Sol
++ 08/10/2026 | SJK #41 | Add JoF EJK's +duck: crouch without rolling
+- 7e936c9 |  | Add JoF EJK's +duck: crouch without rolling
++ 08/10/2026 | SJK #40 | Light vertex-lit remap targets; cg_remapsBlockedMaps to ignore remaps per map
+- fbf2f46 |  | Light vertex-coloured remap targets with the map's live light
+- e49822a |  | Add cg_remapsBlockedMaps to ignore server remaps on listed maps
 + 08/10/2026 | SJK #42 | Compact SJK scoreboard by default; hide the HUD while scores are held
 - fca86a4 |  | Compact SJK scoreboard by default; hide the HUD while scores are held
 + 08/10/2026 | SJK #39 | Let movers shadow lamps and the far sun cascade

@@ -120,6 +120,7 @@ impl GameButton {
             Self::Strafe => 28,
             Self::Mlook => 29,
             Self::ForceStasis => 30,
+            Self::Duck => 31,
         }
     }
 }
