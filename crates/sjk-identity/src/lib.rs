@@ -9,6 +9,7 @@
 #![warn(missing_docs)]
 
 pub mod bio;
+pub mod chat;
 pub mod hub;
 mod keys;
 pub mod report;
@@ -21,4 +22,7 @@ pub use keys::{Identity, KeyError};
 pub use report::{BugReport, Category, PlayerReport, WorldNote};
 pub use service::{HubFactory, Location, ReportOutcome, Service, Settings, Snapshot, Status};
 pub use staff::{StaffRequest, StaffState};
-pub use wire::{Achievement, Medal, Presence, Profile, WornName, names_match, normal_form};
+pub use wire::{
+    Achievement, ChatMessage, Emote, Feed, Medal, Presence, Profile, WornName, names_match,
+    normal_form,
+};

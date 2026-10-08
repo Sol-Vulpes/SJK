@@ -124,6 +124,65 @@ pub struct Presence {
     pub medals: Vec<Medal>,
 }
 
+/// One SJK chat message (`PROTOCOL.md`, "Chat"), as the feed carries it. Show its
+/// `name` and `text` only through [`crate::chat::for_display`].
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
+pub struct ChatMessage {
+    /// Its id in the feed's sequence.
+    pub id: u64,
+    /// When the hub took it, unix seconds.
+    pub at: i64,
+    /// The sender's key id.
+    pub key_id: String,
+    /// The in-game name the sender wore, else their hub name.
+    pub name: String,
+    /// Whether the hub's operator vouches for the sender.
+    #[serde(default)]
+    pub verified: bool,
+    /// Whether the sender is SJK staff.
+    #[serde(default)]
+    pub staff: bool,
+    /// What they said.
+    pub text: String,
+}
+
+/// One emote on a game server (`PROTOCOL.md`, "Emotes"): the slot and name come from
+/// the sender's claim, so they say who the hub believes is in that slot.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
+pub struct Emote {
+    /// Its id in the feed's sequence.
+    pub id: u64,
+    /// When the hub took it, unix seconds.
+    pub at: i64,
+    /// The sender's slot on the server, from their claim.
+    pub slot: u8,
+    /// The name the sender claimed the game shows there.
+    pub claimed_name: String,
+    /// The sender's key id.
+    pub key_id: String,
+    /// The emote's id (`wave`); a client plays the ids it has.
+    pub emote: String,
+}
+
+/// The hub's answer to `GET /v1/feed` (`PROTOCOL.md`, "The feed").
+#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq)]
+pub struct Feed {
+    /// The `after` of the next request.
+    pub next: u64,
+    /// New messages, oldest first.
+    #[serde(default)]
+    pub chat: Vec<ChatMessage>,
+    /// New emotes on the server asked about.
+    #[serde(default)]
+    pub emotes: Vec<Emote>,
+    /// Messages staff deleted.
+    #[serde(default)]
+    pub deleted: Vec<u64>,
+    /// Keys that read the feed in the last minute.
+    #[serde(default)]
+    pub online: u32,
+}
+
 /// The text a request's signature covers.
 pub fn signed_text(
     method: &str,
@@ -207,6 +266,28 @@ mod tests {
     }
 
     const KNOWN_ANSWER: &str = "SJK-Sig key=6kpsY-KcUgq-9VB7Ey7F-ZVHdq6-vnuSQh7qaRRG0iw, ts=1000000, nonce=AQEBAQEBAQEBAQEB, sig=IKLlpqaSWIXqXK7Q77SsGJiE4BIdUTjkSWv2zyr0951WKByhEShSL-Ow70Rgc3znokl0Sf4rQK2VjNkPEm9uCQ";
+
+    #[test]
+    fn a_feed_answer_parses() {
+        let feed: Feed = serde_json::from_str(
+            r#"{"next":14,"chat":[{"id":12,"at":5,"key_id":"aa","name":"^2Sol",
+                "verified":true,"staff":false,"text":"gg"}],
+                "emotes":[{"id":13,"at":6,"slot":3,"claimed_name":"^2Sol","key_id":"aa",
+                "emote":"wave"}],"deleted":[9],"online":7}"#,
+        )
+        .unwrap();
+        assert_eq!(feed.next, 14);
+        assert_eq!(feed.chat[0].text, "gg");
+        assert!(feed.chat[0].verified);
+        assert_eq!(
+            (feed.emotes[0].slot, feed.emotes[0].emote.as_str()),
+            (3, "wave")
+        );
+        assert_eq!((feed.deleted.as_slice(), feed.online), (&[9][..], 7));
+        // Lists a hub leaves out are empty.
+        let quiet: Feed = serde_json::from_str(r#"{"next":3}"#).unwrap();
+        assert!(quiet.chat.is_empty() && quiet.emotes.is_empty() && quiet.deleted.is_empty());
+    }
 
     #[test]
     fn names_match_through_colours_and_case() {
