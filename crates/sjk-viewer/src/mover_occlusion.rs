@@ -434,6 +434,9 @@ impl Poses {
     }
 
     /// Place `occluder` at `pose`, queueing its tiles when that changes its light.
+    /// `current` keeps the pose last traced until the mover has moved past
+    /// [`Pose::moved`]'s threshold from it, so motion slower than the threshold per
+    /// frame still adds up to a trace.
     pub(crate) fn set(&mut self, occluder: usize, pose: Pose, doors: &Doors, queue: &mut Queue) {
         self.known[occluder] = true;
         if self.current[occluder].moved(&pose) {
@@ -441,8 +444,8 @@ impl Poses {
                 queue.push(tile);
             }
             self.generation = self.generation.wrapping_add(1);
+            self.current[occluder] = pose;
         }
-        self.current[occluder] = pose;
     }
 
     /// Place an occluder no snapshot has shown, at its spawn pose.

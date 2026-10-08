@@ -219,6 +219,57 @@ fn hiding_a_mover_frees_its_light_and_hidden_moves_do_not_count() {
     queue.take(8, &mut batch);
     poses.set(0, pose([50.; 3], false), &doors, &mut queue);
     assert_eq!(queue.len(), 0);
+    // Shown again where it went while hidden: traced there.
+    poses.set(0, pose([50.; 3], true), &doors, &mut queue);
+    assert_eq!(queue.len(), 1);
+    assert_eq!(poses.current[0].origin, Vec3::splat(50.));
+}
+
+#[test]
+fn slow_motion_adds_up_to_a_trace() {
+    let doors = Doors {
+        tiles: Vec::new(),
+        by_occluder: vec![vec![0]],
+    };
+    let mut queue = Queue::new(1);
+    let mut poses = Poses::new(1);
+    let mut batch = Vec::new();
+    poses.set(0, pose([0.; 3], true), &doors, &mut queue);
+    queue.take(8, &mut batch);
+    // A lift at 2 units a second drawn at 500 fps: 0.004 a frame, under the threshold.
+    let mut traces = 0;
+    for frame in 1..=250 {
+        poses.set(
+            0,
+            pose([0., 0., frame as f32 * 0.004], true),
+            &doors,
+            &mut queue,
+        );
+        if queue.len() > 0 {
+            traces += 1;
+            queue.take(8, &mut batch);
+        }
+        let behind = frame as f32 * 0.004 - poses.current[0].origin.z;
+        assert!(behind <= 0.0101, "frame {frame}: traced {behind} behind");
+    }
+    assert!(traces >= 80, "{traces} traces over one unit");
+    // Turning 0.002 degrees a frame from yaw 90, a sixth of the threshold.
+    let mut traces = 0;
+    poses.set(0, turned_pose([0., 90., 0.]), &doors, &mut queue);
+    queue.take(8, &mut batch);
+    for frame in 1..=500 {
+        poses.set(
+            0,
+            turned_pose([0., 90. + frame as f32 * 0.002, 0.]),
+            &doors,
+            &mut queue,
+        );
+        if queue.len() > 0 {
+            traces += 1;
+            queue.take(8, &mut batch);
+        }
+    }
+    assert!(traces >= 40, "{traces} traces over one degree");
 }
 
 #[test]
