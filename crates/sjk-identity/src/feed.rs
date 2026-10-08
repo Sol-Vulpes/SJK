@@ -1,16 +1,28 @@
-//! The SJK chat's feed (`PROTOCOL.md`, "The feed"): a thread of its own that holds a
-//! long poll open at the hub and keeps the last messages, the online count and the
-//! emotes received, so the identity worker's claims and reports never wait behind it.
+//! The hub's feed (`PROTOCOL.md`, "The feed"): a thread of its own that holds a long
+//! poll open at the hub and keeps the SJK chat's last messages and online count, and
+//! the emotes and looks received, so the identity worker's claims and reports never
+//! wait behind it.
 //!
 //! The worker tells it, through [`FeedShared`], which hub to read (only while the
-//! identity is on, the hub answered the registration and the chat is on) and which
-//! game server's emotes to ask for. With no hub to read it makes no request.
+//! identity is on and the hub answered the registration, and then while the player
+//! is on a game server or the chat is on), which game server's emotes and looks to ask
+//! for, and whether the chat shows. With the chat off the feed still reads on a game
+//! server, for the looks and emotes, but keeps no message: [`ChatState`] stays as an
+//! idle feed leaves it. With no hub to read it makes no request.
+//!
+//! Another game server starts the reading again from `after` 0, whose answer carries
+//! that server's looks of the last minute. The looks queued for the viewer carry the
+//! server they were read for and the reading's generation ([`FeedShared::generation`],
+//! which changes with the hub, the server or the identity going off or on), and
+//! [`take_looks`] hands over only those of the current generation and the viewer's
+//! server, so a poll still under way when either changed cannot bring old looks back.
 
 use crate::hub::Hub;
 use crate::keys::Identity;
 use crate::service::{HubFactory, ReportOutcome};
-use crate::wire::{ChatMessage, Emote, Feed};
+use crate::wire::{ChatMessage, Emote, Feed, LookEvent};
 use std::collections::VecDeque;
+use std::net::SocketAddr;
 use std::sync::{Arc, Mutex, MutexGuard};
 use std::time::{Duration, Instant};
 
@@ -29,6 +41,8 @@ const RETRY_MAX: Duration = Duration::from_secs(60);
 pub(crate) const IDLE: Duration = Duration::from_secs(1);
 /// Emotes waiting for the viewer, the newest kept.
 const EMOTES_WAITING: usize = 64;
+/// Looks waiting for the viewer, the newest kept.
+const LOOKS_WAITING: usize = 64;
 
 /// What the chat shows.
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
@@ -55,8 +69,57 @@ pub struct ChatState {
 pub(crate) struct FeedShared {
     /// The hub to read; `None` while there is none to read.
     pub(crate) url: Option<String>,
-    /// The game server whose emotes to ask for.
+    /// The game server whose emotes and looks to ask for.
     pub(crate) server: Option<String>,
+    /// Whether the SJK chat shows: without it no message is kept.
+    pub(crate) chat: bool,
+    /// Changes whenever `url` or `server` does: looks read before belong to another
+    /// reading (another hub or server, or the identity since turned off).
+    pub(crate) generation: u64,
+}
+
+/// A look event queued for the viewer, with what it was read for.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub(crate) struct QueuedLook {
+    /// [`FeedShared::generation`] when the poll that brought it began.
+    generation: u64,
+    /// The game server that poll asked for.
+    server: Option<SocketAddr>,
+    event: LookEvent,
+}
+
+/// The look events the feed received for the viewer's server under the current
+/// reading ([`crate::Service::take_looks`]).
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct ReceivedLooks {
+    /// The reading's generation: when it changes (the identity went off or on, another
+    /// hub or server), every look received before is out of date, the roster's too.
+    pub generation: u64,
+    /// The events, oldest first.
+    pub events: Vec<LookEvent>,
+}
+
+/// Take the queued looks: those read under the current generation for `server`, the
+/// game server the viewer is on (it may be ahead of the worker); the rest are dropped.
+pub(crate) fn take_looks(
+    shared: &Mutex<FeedShared>,
+    queue: &Mutex<VecDeque<QueuedLook>>,
+    server: Option<SocketAddr>,
+) -> ReceivedLooks {
+    // Under the shared lock, so no new generation's looks are dropped as old ones.
+    let shared = lock(shared);
+    let mut queue = lock(queue);
+    let events = queue
+        .drain(..)
+        .filter(|queued| {
+            queued.generation == shared.generation && server.is_some() && queued.server == server
+        })
+        .map(|queued| queued.event)
+        .collect();
+    ReceivedLooks {
+        generation: shared.generation,
+        events,
+    }
 }
 
 pub(crate) fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
@@ -72,8 +135,13 @@ pub(crate) struct FeedWorker {
     shared: Arc<Mutex<FeedShared>>,
     state: Arc<Mutex<ChatState>>,
     emotes: Arc<Mutex<VecDeque<Emote>>>,
+    looks: Arc<Mutex<VecDeque<QueuedLook>>>,
     hub: Option<Box<dyn Hub>>,
     url: Option<String>,
+    /// The game server read for, as last told.
+    server: Option<String>,
+    /// Whether the chat shows, as last told.
+    chat: bool,
     after: u64,
     due: Instant,
     backoff: Duration,
@@ -88,6 +156,7 @@ impl FeedWorker {
         shared: Arc<Mutex<FeedShared>>,
         state: Arc<Mutex<ChatState>>,
         emotes: Arc<Mutex<VecDeque<Emote>>>,
+        looks: Arc<Mutex<VecDeque<QueuedLook>>>,
         now: Instant,
     ) -> Self {
         Self {
@@ -96,8 +165,11 @@ impl FeedWorker {
             shared,
             state,
             emotes,
+            looks,
             hub: None,
             url: None,
+            server: None,
+            chat: false,
             after: 0,
             due: now,
             backoff: RETRY_MIN,
@@ -110,7 +182,16 @@ impl FeedWorker {
     pub(crate) fn step(&mut self, now: Instant) -> Duration {
         let shared = lock(&self.shared).clone();
         if shared.url != self.url {
+            self.chat = shared.chat;
             self.switch(shared.url.clone(), now);
+        } else if shared.chat != self.chat {
+            self.show_chat(shared.chat, now);
+        }
+        // Another server: its looks of the last minute come with `after` 0, and the
+        // old server's ids say nothing of it.
+        if shared.server != self.server {
+            self.server.clone_from(&shared.server);
+            self.after = 0;
         }
         if self.url.is_none() {
             return IDLE;
@@ -123,7 +204,7 @@ impl FeedWorker {
         };
         match hub.feed(&self.identity, self.after, shared.server.as_deref(), WAIT) {
             Ok(feed) => {
-                self.apply(feed);
+                self.apply(feed, &shared);
                 self.backoff = RETRY_MIN;
                 self.due = now + POLL_GAP;
             }
@@ -143,6 +224,23 @@ impl FeedWorker {
         self.after = 0;
         self.due = now;
         self.backoff = RETRY_MIN;
+        self.clear_chat();
+    }
+
+    /// The chat was turned on or off while the same hub is read (on a game server).
+    /// Off, the messages go; on, the reading starts again from the hub's backlog, as
+    /// it would have had the feed been idle.
+    fn show_chat(&mut self, on: bool, now: Instant) {
+        self.chat = on;
+        if on {
+            self.after = 0;
+            self.due = now;
+        }
+        self.clear_chat();
+    }
+
+    /// Forget the messages: a new backlog, under a new epoch, is due.
+    fn clear_chat(&mut self) {
         self.epoch += 1;
         let mut state = lock(&self.state);
         state.loaded = None;
@@ -153,6 +251,9 @@ impl FeedWorker {
     }
 
     fn set_live(&self, live: bool) {
+        if !self.chat {
+            return;
+        }
         let mut state = lock(&self.state);
         if state.live != live {
             state.live = live;
@@ -160,8 +261,28 @@ impl FeedWorker {
         }
     }
 
-    /// Take an answer into the state.
-    fn apply(&mut self, feed: Feed) {
+    /// Take an answer to a poll made as `polled` says into the state: its messages
+    /// only while the chat shows, its looks marked with the reading they belong to.
+    fn apply(&mut self, mut feed: Feed, polled: &FeedShared) {
+        if self.chat {
+            self.apply_chat(&mut feed);
+        }
+        queue(&self.emotes, feed.emotes, EMOTES_WAITING);
+        let server = polled
+            .server
+            .as_deref()
+            .and_then(|server| server.parse().ok());
+        let looks = feed.looks.into_iter().map(|event| QueuedLook {
+            generation: polled.generation,
+            server,
+            event,
+        });
+        queue(&self.looks, looks, LOOKS_WAITING);
+        self.after = feed.next;
+    }
+
+    /// Take an answer's messages, deletions and online count into the chat.
+    fn apply_chat(&self, feed: &mut Feed) {
         let mut state = lock(&self.state);
         let mut changed =
             !state.live || state.online != feed.online || state.loaded != Some(self.epoch);
@@ -179,7 +300,7 @@ impl FeedWorker {
                 .retain(|message| !feed.deleted.contains(&message.id));
             changed |= state.messages.len() != before;
         }
-        for message in feed.chat {
+        for message in feed.chat.drain(..) {
             if state
                 .messages
                 .back()
@@ -197,17 +318,21 @@ impl FeedWorker {
         if changed {
             state.revision += 1;
         }
-        drop(state);
-        if !feed.emotes.is_empty() {
-            let mut emotes = lock(&self.emotes);
-            for emote in feed.emotes {
-                if emotes.len() == EMOTES_WAITING {
-                    emotes.pop_front();
-                }
-                emotes.push_back(emote);
-            }
+    }
+}
+
+/// Add `received` to `waiting`, keeping the newest `kept`.
+fn queue<T>(waiting: &Mutex<VecDeque<T>>, received: impl IntoIterator<Item = T>, kept: usize) {
+    let mut received = received.into_iter().peekable();
+    if received.peek().is_none() {
+        return;
+    }
+    let mut waiting = lock(waiting);
+    for item in received {
+        if waiting.len() == kept {
+            waiting.pop_front();
         }
-        self.after = feed.next;
+        waiting.push_back(item);
     }
 }
 
@@ -228,12 +353,16 @@ mod tests {
     use crate::wire::Profile;
     use std::sync::atomic::{AtomicBool, Ordering};
 
+    /// Something that happens while a poll is under way.
+    type Meanwhile = Box<dyn FnOnce() + Send>;
+
     /// A hub whose feed answers come from a script.
     #[derive(Clone, Default)]
     struct Scripted {
         answers: Arc<Mutex<VecDeque<Result<Feed, HubError>>>>,
         asked: Arc<Mutex<Vec<String>>>,
         down: Arc<AtomicBool>,
+        meanwhile: Arc<Mutex<Option<Meanwhile>>>,
     }
 
     impl Hub for Scripted {
@@ -266,6 +395,9 @@ mod tests {
                 .lock()
                 .unwrap()
                 .push(format!("after={after} server={server:?} wait={wait}"));
+            if let Some(meanwhile) = self.meanwhile.lock().unwrap().take() {
+                meanwhile();
+            }
             if self.down.load(Ordering::SeqCst) {
                 return Err(HubError::Network("down".to_owned()));
             }
@@ -303,6 +435,7 @@ mod tests {
         shared: Arc<Mutex<FeedShared>>,
         state: Arc<Mutex<ChatState>>,
         emotes: Arc<Mutex<VecDeque<Emote>>>,
+        looks: Arc<Mutex<VecDeque<QueuedLook>>>,
         worker: FeedWorker,
         made: Arc<Mutex<Vec<String>>>,
     }
@@ -312,6 +445,7 @@ mod tests {
         let shared = Arc::new(Mutex::new(FeedShared::default()));
         let state = Arc::new(Mutex::new(ChatState::default()));
         let emotes = Arc::new(Mutex::new(VecDeque::new()));
+        let looks = Arc::new(Mutex::new(VecDeque::new()));
         let made = Arc::new(Mutex::new(Vec::new()));
         let (factory, log) = (hub.clone(), Arc::clone(&made));
         let make: HubFactory = Box::new(move |url| {
@@ -324,6 +458,7 @@ mod tests {
             Arc::clone(&shared),
             Arc::clone(&state),
             Arc::clone(&emotes),
+            Arc::clone(&looks),
             now,
         );
         Rig {
@@ -331,6 +466,7 @@ mod tests {
             shared,
             state,
             emotes,
+            looks,
             worker,
             made,
         }
@@ -351,10 +487,20 @@ mod tests {
                 .collect()
         }
         fn read(&self, url: &str, server: Option<&str>) {
-            *lock(&self.shared) = FeedShared {
+            let mut shared = lock(&self.shared);
+            *shared = FeedShared {
                 url: Some(url.to_owned()),
                 server: server.map(str::to_owned),
+                chat: true,
+                generation: shared.generation + 1,
             };
+        }
+        /// The looks waiting for a viewer on `server`.
+        fn take_looks(&self, server: &str) -> ReceivedLooks {
+            take_looks(&self.shared, &self.looks, server.parse().ok())
+        }
+        fn show_chat(&self, on: bool) {
+            lock(&self.shared).chat = on;
         }
     }
 
@@ -448,6 +594,189 @@ mod tests {
             lock(&rig.emotes).iter().cloned().collect::<Vec<_>>(),
             [wave]
         );
+    }
+
+    fn look_event(id: u64, illuminate: bool) -> LookEvent {
+        LookEvent {
+            id,
+            at: 0,
+            slot: 3,
+            claimed_name: "Sol".to_owned(),
+            key_id: "aa".to_owned(),
+            saber: "saber_sun".to_owned(),
+            illuminate,
+        }
+    }
+
+    #[test]
+    fn looks_wait_for_the_viewer_and_the_newest_are_kept() {
+        let t0 = Instant::now();
+        let mut rig = rig(t0);
+        rig.read("https://hub", Some("1.2.3.4:29070"));
+        let batch: Vec<LookEvent> = (1..=70).map(|id| look_event(id, id % 2 == 0)).collect();
+        rig.script(Ok(Feed {
+            next: 70,
+            looks: batch,
+            ..Feed::default()
+        }));
+        rig.worker.step(t0);
+        let waiting = rig.take_looks("1.2.3.4:29070").events;
+        assert_eq!(waiting.len(), LOOKS_WAITING);
+        assert_eq!(waiting.first().map(|look| look.id), Some(7));
+        assert_eq!(waiting.last(), Some(&look_event(70, true)));
+        assert!(lock(&rig.looks).is_empty(), "taken");
+    }
+
+    #[test]
+    fn another_server_is_read_from_the_start_for_its_looks() {
+        let t0 = Instant::now();
+        let mut rig = rig(t0);
+        rig.read("https://hub", Some("1.2.3.4:29070"));
+        rig.script(answer(9, vec![message(9, "hi")]));
+        rig.worker.step(t0);
+        rig.read("https://hub", Some("5.6.7.8:29070"));
+        rig.script(Ok(Feed {
+            next: 9,
+            chat: vec![message(9, "hi")],
+            looks: vec![look_event(8, true)],
+            ..Feed::default()
+        }));
+        rig.worker.step(t0 + POLL_GAP);
+        assert_eq!(
+            rig.asked()[1],
+            "after=0 server=Some(\"5.6.7.8:29070\") wait=25",
+            "the hub's answer to 0 carries the server's looks of the last minute"
+        );
+        assert_eq!(rig.texts(), ["hi"], "the same hub: the chat goes on");
+        assert_eq!(
+            rig.take_looks("5.6.7.8:29070").events,
+            [look_event(8, true)]
+        );
+        rig.worker.step(t0 + POLL_GAP * 2);
+        assert_eq!(
+            rig.asked()[2],
+            "after=9 server=Some(\"5.6.7.8:29070\") wait=25"
+        );
+    }
+
+    #[test]
+    fn looks_of_a_poll_under_way_when_the_reading_changed_are_dropped() {
+        let t0 = Instant::now();
+        let mut rig = rig(t0);
+        let old = "1.2.3.4:29070";
+        rig.read("https://hub", Some(old));
+        // The player moves to another server while the poll waits at the hub.
+        let shared = Arc::clone(&rig.shared);
+        *rig.hub.meanwhile.lock().unwrap() = Some(Box::new(move || {
+            let mut shared = lock(&shared);
+            shared.server = Some("5.6.7.8:29070".to_owned());
+            shared.generation += 1;
+        }));
+        rig.script(Ok(Feed {
+            next: 5,
+            looks: vec![look_event(5, true)],
+            ..Feed::default()
+        }));
+        rig.worker.step(t0);
+        let taken = rig.take_looks("5.6.7.8:29070");
+        assert_eq!(taken.generation, lock(&rig.shared).generation);
+        assert!(taken.events.is_empty(), "read for the old server");
+        // The viewer is still on the old server, but the reading changed: dropped too.
+        rig.read("https://hub", Some(old));
+        rig.script(Ok(Feed {
+            next: 6,
+            looks: vec![look_event(6, true)],
+            ..Feed::default()
+        }));
+        rig.worker.step(t0 + POLL_GAP);
+        let shared = Arc::clone(&rig.shared);
+        *rig.hub.meanwhile.lock().unwrap() = Some(Box::new(move || {
+            // The identity is turned off.
+            let mut shared = lock(&shared);
+            *shared = FeedShared {
+                generation: shared.generation + 1,
+                ..FeedShared::default()
+            };
+        }));
+        rig.script(Ok(Feed {
+            next: 7,
+            looks: vec![look_event(7, false)],
+            ..Feed::default()
+        }));
+        rig.worker.step(t0 + POLL_GAP * 2);
+        let taken = rig.take_looks(old);
+        assert!(taken.events.is_empty(), "{:?}", taken.events);
+        // Without a change, the same server's looks are handed over.
+        rig.read("https://hub", Some(old));
+        rig.script(Ok(Feed {
+            next: 8,
+            looks: vec![look_event(8, true)],
+            ..Feed::default()
+        }));
+        rig.worker.step(t0 + POLL_GAP * 3);
+        assert!(rig.take_looks("5.6.7.8:29070").events.is_empty());
+        rig.script(Ok(Feed {
+            next: 9,
+            looks: vec![look_event(9, true)],
+            ..Feed::default()
+        }));
+        rig.worker.step(t0 + POLL_GAP * 4);
+        assert_eq!(rig.take_looks(old).events, [look_event(9, true)]);
+    }
+
+    #[test]
+    fn with_the_chat_off_the_feed_keeps_looks_and_emotes_but_no_message() {
+        let t0 = Instant::now();
+        let mut rig = rig(t0);
+        rig.read("https://hub", Some("1.2.3.4:29070"));
+        rig.show_chat(false);
+        rig.script(Ok(Feed {
+            next: 5,
+            chat: vec![message(4, "hidden")],
+            looks: vec![look_event(5, true)],
+            online: 9,
+            ..Feed::default()
+        }));
+        rig.worker.step(t0);
+        assert_eq!(
+            rig.asked(),
+            ["after=0 server=Some(\"1.2.3.4:29070\") wait=25"]
+        );
+        assert_eq!(lock(&rig.looks).len(), 1);
+        // The chat is as an idle feed leaves it: nothing the page or the game shows.
+        let idle = |state: &ChatState| ChatState {
+            revision: state.revision,
+            ..ChatState::default()
+        };
+        let state = lock(&rig.state).clone();
+        assert_eq!(state, idle(&state));
+        // A failure says nothing either.
+        rig.hub.down.store(true, Ordering::SeqCst);
+        rig.worker.step(t0 + POLL_GAP);
+        assert_eq!(*lock(&rig.state), state);
+        rig.hub.down.store(false, Ordering::SeqCst);
+        // On again: the backlog is read from the start, under a new epoch.
+        rig.show_chat(true);
+        rig.script(answer(6, vec![message(4, "hidden"), message(6, "hello")]));
+        rig.worker.step(t0 + POLL_GAP * 2);
+        assert_eq!(
+            rig.asked()[2],
+            "after=0 server=Some(\"1.2.3.4:29070\") wait=25"
+        );
+        assert_eq!(rig.texts(), ["hidden", "hello"]);
+        let first = lock(&rig.state).loaded.expect("loaded");
+        // Off once more: the messages go, and the reading goes on from where it was.
+        rig.show_chat(false);
+        rig.worker.step(t0 + POLL_GAP * 3);
+        assert!(rig.texts().is_empty());
+        assert_eq!(lock(&rig.state).loaded, None);
+        assert_eq!(
+            rig.asked()[3],
+            "after=6 server=Some(\"1.2.3.4:29070\") wait=25"
+        );
+        rig.show_chat(true);
+        rig.worker.step(t0 + POLL_GAP * 4);
+        assert_ne!(lock(&rig.state).loaded, Some(first));
     }
 
     #[test]

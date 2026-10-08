@@ -7,6 +7,8 @@ use std::time::{Duration, Instant};
 
 pub(super) struct PreparedLegacyAudio {
     pub(super) adapter: LegacySoundAdapter,
+    /// The generation of the blade skins whose sound sets the adapter holds.
+    skins_generation: u64,
     pub(super) sounds: Vec<(String, SoundHandle, Box<[u8]>)>,
     pub(super) elapsed: Duration,
     cue_handles: [Option<SoundHandle>; 9],
@@ -17,7 +19,11 @@ pub(super) struct LegacyLoadTask {
 }
 
 impl LegacyLoadTask {
-    pub(super) fn start(vfs: Arc<VirtualFileSystem>, game_state: GameState) -> Self {
+    pub(super) fn start(
+        vfs: Arc<VirtualFileSystem>,
+        game_state: GameState,
+        skins: Arc<crate::saber_skins::LoadedSkins>,
+    ) -> Self {
         let (sender, receiver) = std::sync::mpsc::channel();
         thread::Builder::new()
             .name("sjk-legacy-audio-load".into())
@@ -26,12 +32,20 @@ impl LegacyLoadTask {
                 let result = (|| {
                     let mut sounds = Vec::with_capacity(512);
                     let mut next_handle = 0;
-                    let adapter = LegacySoundAdapter::new(&game_state, &vfs, |path, bytes| {
+                    let mut register = |path: &str, bytes: &[u8]| {
                         let handle = SoundHandle(next_handle);
                         next_handle = next_handle.wrapping_add(1);
                         sounds.push((path.to_owned(), handle, bytes.into()));
                         Some(handle)
-                    });
+                    };
+                    let mut adapter = LegacySoundAdapter::new(&game_state, &vfs, &mut register);
+                    // The skins' sounds are in their packs, below the game data.
+                    let saber_vfs = vfs.with_lower(skins.packs()).map_err(|e| e.to_string())?;
+                    adapter.register_saber_sound_sets(
+                        &skins.sound_sets(),
+                        &saber_vfs,
+                        &mut register,
+                    );
                     for path in feedback::KILL_SOUNDS {
                         if let Ok(Some(asset)) = vfs.read(path) {
                             let handle = SoundHandle(next_handle);
@@ -55,6 +69,7 @@ impl LegacyLoadTask {
                     });
                     Ok(PreparedLegacyAudio {
                         adapter,
+                        skins_generation: skins.generation(),
                         sounds,
                         cue_handles,
                         elapsed: started.elapsed(),
@@ -84,6 +99,7 @@ impl GameAudio {
         self.output.send(AudioCommand::StopEffects);
         self.output.stop_music();
         self.legacy = None;
+        self.saber_sets_generation = None;
         self.legacy_load = None;
         self.sound_table_refresh = None;
         self.deferred_snapshots.clear();
@@ -102,7 +118,11 @@ impl GameAudio {
         self.sound_table_refresh = Some(SoundTableRefresh::new(game_state));
         self.legacy_vfs = Some(Arc::clone(&vfs));
         self.deferred_snapshots.clear();
-        self.legacy_load = Some(LegacyLoadTask::start(vfs, game_state.clone()));
+        self.legacy_load = Some(LegacyLoadTask::start(
+            vfs,
+            game_state.clone(),
+            Arc::clone(&self.blade_skins),
+        ));
     }
 
     /// Integrate worker handles into the current bank before replaying queued events.
@@ -135,6 +155,9 @@ impl GameAudio {
                 self.transitions.handles =
                     prepared.cue_handles.map(|h| h.map(|h| remap[h.0 as usize]));
                 self.legacy = Some(prepared.adapter);
+                self.saber_sets_generation = Some(prepared.skins_generation);
+                // Skins loaded while the tables were built: their sounds now.
+                self.register_blade_skin_sounds();
                 crate::log::progress(format_args!(
                     "legacy audio tables ready in {:.1}ms",
                     elapsed.as_secs_f64() * 1_000.0
@@ -146,5 +169,58 @@ impl GameAudio {
                 crate::log::progress(format_args!("legacy audio load failed: {error}"));
             }
         }
+    }
+}
+
+impl GameAudio {
+    /// Take the blade skins the renderer took (`saber_skins.rs`): when they are new,
+    /// their sounds are decoded afresh and registered at once with the gamestate's tables
+    /// (a pack that came mid-session); otherwise nothing (two compares a frame).
+    pub(crate) fn follow_blade_skins(&mut self, skins: &Arc<crate::saber_skins::LoadedSkins>) {
+        if self.blade_skins.generation() != skins.generation() {
+            self.blade_skins = Arc::clone(skins);
+            // A new pack may change a sound at the same path: decode them again.
+            for set in self.blade_skins.sound_sets() {
+                for path in [set.on, set.off, set.hum].into_iter().chain(set.swings) {
+                    self.handles.remove(&path.to_ascii_lowercase());
+                }
+            }
+        }
+        if self.legacy.is_some() && self.saber_sets_generation != Some(skins.generation()) {
+            self.register_blade_skin_sounds();
+        }
+    }
+
+    /// Register the current blade skins' sound sets with the gamestate's tables, decoding
+    /// any sound not decoded yet; reads the packs below the game data.
+    fn register_blade_skin_sounds(&mut self) {
+        let skins = Arc::clone(&self.blade_skins);
+        if self.saber_sets_generation == Some(skins.generation()) {
+            return;
+        }
+        let (Some(adapter), Some(vfs)) = (self.legacy.as_mut(), self.legacy_vfs.as_ref()) else {
+            return;
+        };
+        let vfs = match vfs.with_lower(skins.packs()) {
+            Ok(vfs) => vfs,
+            Err(error) => {
+                crate::log::progress(format_args!("blade skin sounds: {error}"));
+                return;
+            }
+        };
+        let (handles, next_handle, output) =
+            (&mut self.handles, &mut self.next_handle, &self.output);
+        adapter.register_saber_sound_sets(&skins.sound_sets(), &vfs, |path, bytes| {
+            let key = path.to_ascii_lowercase();
+            if let Some(handle) = handles.get(&key) {
+                return Some(*handle);
+            }
+            let handle = SoundHandle(*next_handle);
+            *next_handle = next_handle.wrapping_add(1);
+            output.decode(handle, bytes, path.rsplit('.').next().unwrap_or("wav"));
+            handles.insert(key, handle);
+            Some(handle)
+        });
+        self.saber_sets_generation = Some(skins.generation());
     }
 }

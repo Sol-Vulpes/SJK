@@ -2439,6 +2439,7 @@ dependencies = [
  "pollster",
  "ringbuf",
  "rodio",
+ "serde",
  "serde_json",
  "sha2",
  "sjk-audio",

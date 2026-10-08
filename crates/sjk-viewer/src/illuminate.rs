@@ -1,10 +1,13 @@
 //! Illuminate, SJK's own Force-wheel entry ([`sjk_client::force_wheel::ILLUMINATE`]):
 //! a holocron that floats by the local player's left shoulder, turning slowly, and
-//! lights the way with a warm point light. It is this client's alone: no server
-//! knows of it and no other player sees it. `+useforce` on its wheel entry, or the
-//! `force_illuminate` command, turns it on and off; `cg_illuminate 0` takes it off
-//! the wheel and puts it out. In first person only its light shows (the cube is
-//! drawn for mirrors, like the body).
+//! lights the way with a warm point light. No game server knows of it: its lit state
+//! travels through the SJK hub as part of the player's look (`looks.rs`), so other SJK
+//! players on the server see it by that player ([`Others`]). `+useforce` on its wheel
+//! entry, or the `force_illuminate` command, turns it on and off; `cg_illuminate 0`
+//! takes it off the wheel and puts it out. In first person only its light shows (the
+//! cube is drawn for mirrors, like the body); another player's cube always shows while
+//! that player is drawn, except a followed (spectated) player's in first person, which
+//! is drawn as one's own.
 //!
 //! Its model, pictures and shader are bundled ([`FILES`], made by
 //! `scripts/holocron_assets.py`) and mounted below all game data, so a PK3 with
@@ -14,7 +17,7 @@ use crate::GpuState;
 use crate::actor_instance::ActorInstance;
 use crate::dynamic_lights::PointLight;
 use glam::{Quat, Vec3};
-use sjk_protocol::PlayerState;
+use sjk_protocol::{EntityState, PlayerState};
 use sjk_vfs::{VfsError, VirtualFileSystem};
 use std::time::Instant;
 
@@ -66,6 +69,23 @@ const TILT: [f32; 2] = [0.38, 0.28];
 /// The light: reach in units and a warm white.
 const RADIUS: f32 = 300.0;
 const COLOR: [f32; 3] = [1.5, 1.3, 1.0];
+/// Other players' holocrons that light the world, the nearest the camera: the frame's
+/// lights are few (`MAX_POINT_LIGHTS`) and the weapons need theirs. Their cubes
+/// always show.
+const OTHERS_LIT: usize = 4;
+/// Slots of other players a holocron can float by, as the looks hold.
+const SLOTS: usize = crate::looks::SLOTS;
+/// How far apart in their bob and turn the holocrons of two slots are, in seconds.
+const SLOT_PHASE: f32 = 0.37;
+/// The eye above the origin of a player whose box the entity does not send:
+/// `DEFAULT_VIEWHEIGHT` (`bg_public.h`).
+const EYE_HEIGHT: f32 = 36.0;
+/// `ET_PLAYER`, and the entity flags and powerup that hide a player: `EF_DEAD`,
+/// `EF_NODRAW` and `PW_CLOAKED` (`bg_public.h`).
+const ET_PLAYER: u8 = 1;
+const EF_DEAD: u32 = 1 << 1;
+const EF_NODRAW: u32 = 1 << 8;
+const PW_CLOAKED: u32 = 1 << 11;
 
 /// Mount the bundled files.
 pub(crate) fn mount(vfs: &mut VirtualFileSystem) -> Result<(), VfsError> {
@@ -73,17 +93,31 @@ pub(crate) fn mount(vfs: &mut VirtualFileSystem) -> Result<(), VfsError> {
     Ok(())
 }
 
-/// Whether the holocron can show for `player`: alive, playing, not watching
-/// someone else and not at the intermission.
-fn playing(player: &PlayerState) -> bool {
+/// `PMF_FOLLOW`: the player state is that of the player being followed.
+const PMF_FOLLOW: u16 = 4096;
+
+/// Whether a holocron can show by the player whose state is `player`: alive, playing
+/// and not at the intermission.
+fn alive(player: &PlayerState) -> bool {
     // `pmtype_t`: PM_SPECTATOR 4, PM_DEAD 5, PM_INTERMISSION 7, PM_SPINTERMISSION 8.
-    player.health() > 0
-        && !matches!(player.movement_type(), 4 | 5 | 7 | 8)
-        && player.movement_flags() & 4096 == 0
+    player.health() > 0 && !matches!(player.movement_type(), 4 | 5 | 7 | 8)
+}
+
+/// Whether the local player's own holocron can show: [`alive`], and not watching
+/// someone else.
+fn playing(player: &PlayerState) -> bool {
+    alive(player) && player.movement_flags() & PMF_FOLLOW == 0
+}
+
+/// Where the holocron of the player the view follows floats: by the view's eye
+/// (`view`, its eye and yaw) as one's own does, while the followed player's state
+/// (`player`, the snapshot's) is [`alive`]. Their entity is not in the snapshot.
+fn followed_anchor(player: &PlayerState, view: Option<(Vec3, f32)>) -> Option<(Vec3, f32)> {
+    view.filter(|_| alive(player))
 }
 
 /// Where and how the holocron is drawn this frame.
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub(crate) struct Pose {
     pub(crate) position: Vec3,
     pub(crate) rotation: Quat,
@@ -91,7 +125,8 @@ pub(crate) struct Pose {
     pub(crate) level: f32,
 }
 
-/// The holocron's state: on or off, and where it floats.
+/// One holocron's state: on or off, and where it floats. The local player's, and one
+/// per other player ([`Others`]), step alike.
 #[derive(Clone, Copy, Debug, Default)]
 pub(crate) struct Holocron {
     on: bool,
@@ -107,6 +142,11 @@ pub(crate) struct Holocron {
 impl Holocron {
     pub(crate) fn toggle(&mut self) {
         self.on = !self.on;
+    }
+
+    /// Whether it is lit (it may still be fading in, or out of sight).
+    pub(crate) fn lit(&self) -> bool {
+        self.on
     }
 
     /// Where it floats from `eye` facing `yaw` (radians), without its bob.
@@ -170,6 +210,95 @@ fn smooth(t: f32) -> f32 {
     t * t * (3.0 - 2.0 * t)
 }
 
+/// The eye of a player entity and its view's yaw in radians, while the game draws the
+/// player: alive, not hidden and not cloaked. `origin` is the entity's interpolated
+/// origin and `yaw_degrees` its interpolated view yaw.
+pub(crate) fn player_anchor(
+    entity: &EntityState,
+    origin: [f32; 3],
+    yaw_degrees: f32,
+) -> Option<(Vec3, f32)> {
+    let hidden =
+        entity.e_flags() & (EF_DEAD | EF_NODRAW) != 0 || entity.powerups() & PW_CLOAKED != 0;
+    (entity.entity_type() == ET_PLAYER && !hidden).then(|| {
+        (
+            Vec3::from_array(origin) + Vec3::Z * eye_height(entity.solid()),
+            yaw_degrees.to_radians(),
+        )
+    })
+}
+
+/// The eye above the origin for a packed box (`solid`): the box's top less four
+/// (`DEFAULT_MAXS_2 - 4`, `CROUCH_MAXS_2 - 4`).
+fn eye_height(solid: u32) -> f32 {
+    let top = (solid >> 16) & 255;
+    if solid == 0 || top == 0 {
+        EYE_HEIGHT
+    } else {
+        top as f32 - 32.0 - 4.0
+    }
+}
+
+/// The holocrons of the other players on the server, one per slot, lit by their
+/// looks (`looks.rs`). Fixed-size: a frame allocates nothing.
+pub(crate) struct Others {
+    holocrons: [Holocron; SLOTS],
+    /// Lit players to float by without a session, for the world shots: slot, eye, yaw.
+    #[cfg(test)]
+    pub(crate) shot_players: Vec<(usize, Vec3, f32)>,
+}
+
+impl Default for Others {
+    fn default() -> Self {
+        Self {
+            holocrons: [Holocron::default(); SLOTS],
+            #[cfg(test)]
+            shot_players: Vec::new(),
+        }
+    }
+}
+
+impl Others {
+    /// Step every slot to `now`: `lit` says whose look has it lit, `anchors` where each
+    /// player's eye is and which way they face (`None` while they are not drawn), and
+    /// `seconds` the presentation time. `pose` gets each holocron that shows.
+    pub(crate) fn advance(
+        &mut self,
+        lit: impl Fn(usize) -> bool,
+        anchors: &[Option<(Vec3, f32)>; SLOTS],
+        seconds: f32,
+        now: Instant,
+        mut pose: impl FnMut(usize, Pose),
+    ) {
+        for (slot, holocron) in self.holocrons.iter_mut().enumerate() {
+            holocron.on = lit(slot);
+            if !holocron.on && holocron.level <= 0.0 {
+                // Out and staying out: nothing to step.
+                holocron.last = None;
+                continue;
+            }
+            let phase = slot as f32 * SLOT_PHASE;
+            if let Some(shown) = holocron.advance(anchors[slot], seconds + phase, now) {
+                pose(slot, shown);
+            }
+        }
+    }
+
+    /// Whether the holocron of `slot` shows (lit, or still going out).
+    pub(crate) fn showing(&self, slot: usize) -> bool {
+        self.holocrons
+            .get(slot)
+            .is_some_and(|holocron| holocron.level > 0.0)
+    }
+
+    /// Put every holocron out at once: no game, or another server.
+    pub(crate) fn clear(&mut self) {
+        for holocron in &mut self.holocrons {
+            *holocron = Holocron::default();
+        }
+    }
+}
+
 impl GpuState {
     /// `cg_illuminate`: Illuminate is on the Force wheel.
     pub(crate) fn illuminate_enabled(&self) -> bool {
@@ -187,9 +316,20 @@ impl GpuState {
         }
     }
 
-    /// Add this frame's holocron and its light. Called right after the frame's
-    /// lights are cleared, so a full list never drops the player's own light.
+    /// Add this frame's holocrons and their lights: the local player's, then the
+    /// other players'. Called right after the frame's lights are cleared, so a full
+    /// list never drops the player's own light.
     pub(crate) fn submit_illuminate(&mut self, presentation_time: i64, now: Instant) {
+        let mesh = self
+            .object_meshes
+            .iter()
+            .position(|mesh| mesh.appearance.model == MODEL);
+        self.submit_own_holocron(mesh, presentation_time, now);
+        self.submit_other_holocrons(mesh, presentation_time, now);
+    }
+
+    /// The local player's holocron.
+    fn submit_own_holocron(&mut self, mesh: Option<usize>, presentation_time: i64, now: Instant) {
         let enabled = self.illuminate_enabled();
         if !enabled {
             self.illuminate.on = false;
@@ -199,9 +339,8 @@ impl GpuState {
         let anchor = self
             .live_session
             .as_ref()
-            .filter(|_| !self.detached_camera && !self.free_camera_active())
             .filter(|session| playing(&session.latest_snapshot().player))
-            .map(|_| (self.camera_position, self.camera_yaw));
+            .and_then(|_| self.view_anchor());
         #[cfg(test)]
         let anchor = anchor.or(self.illuminate.shot_anchor);
         let Some(pose) = self
@@ -210,28 +349,150 @@ impl GpuState {
         else {
             return;
         };
-        self.dynamic_lights.push_radiant(PointLight {
-            origin: pose.position.to_array(),
-            radius: RADIUS * pose.level,
-            color: COLOR,
-        });
-        let Some(mesh) = self
-            .object_meshes
-            .iter()
-            .position(|mesh| mesh.appearance.model == MODEL)
-        else {
+        self.dynamic_lights.push_radiant(light(pose));
+        let Some(mesh) = mesh else {
             return;
         };
-        let mut instance = ActorInstance::new(
-            pose.position.to_array(),
-            pose.rotation.to_array(),
-            [pose.level; 3],
-        );
+        let mut instance = cube(pose);
         if !self.third_person {
             instance.view_flags |= 1;
         }
         self.object_groups[mesh].push(instance);
     }
+
+    /// The view's eye and yaw while the camera is the player's view (not detached nor
+    /// free).
+    fn view_anchor(&self) -> Option<(Vec3, f32)> {
+        (!self.detached_camera && !self.free_camera_active())
+            .then_some((self.camera_position, self.camera_yaw))
+    }
+
+    /// The other players' holocrons: by each player the game draws whose look has
+    /// Illuminate lit, from their entity's interpolated origin and view yaw. The
+    /// local player's own slot is the game state's; a player the view follows is
+    /// another player, whose holocron floats by the view's eye and, in first person,
+    /// shows only its light (as one's own).
+    fn submit_other_holocrons(
+        &mut self,
+        mesh: Option<usize>,
+        presentation_time: i64,
+        now: Instant,
+    ) {
+        let mut anchors = [None; SLOTS];
+        let mut own = None;
+        let mut followed = None;
+        if let Some(session) = self.live_session.as_ref() {
+            let snapshot = session.latest_snapshot();
+            let slots = crate::looks::ViewSlots::of(session.game_state(), &snapshot.player);
+            own = slots.own;
+            followed = slots.followed().filter(|&slot| slot < SLOTS);
+            if let Some(slot) = followed {
+                anchors[slot] = followed_anchor(&snapshot.player, self.view_anchor());
+            }
+            for entity in &snapshot.entities {
+                let slot = usize::from(entity.number());
+                // Only players with a holocron lit, or still going out, are placed.
+                if slot >= SLOTS
+                    || !(self.looks.illuminated(slot) || self.illuminate_others.showing(slot))
+                {
+                    continue;
+                }
+                let Some(presented) = self
+                    .live_world
+                    .entity(sjk_runtime::EntityId::new(slot as u64 + 1))
+                else {
+                    continue;
+                };
+                let origin = presented.sample(presentation_time).translation;
+                let yaw = presented
+                    .sample_pose(presentation_time)
+                    .map_or(0.0, |pose| pose.view_angles_degrees[1]);
+                if Some(slot) != followed {
+                    anchors[slot] = player_anchor(entity, origin, yaw);
+                }
+            }
+        } else if self.illuminate_others_idle() {
+            return;
+        }
+        #[cfg(test)]
+        let mut shot_lit = 0_u64;
+        #[cfg(test)]
+        for &(slot, eye, yaw) in &self.illuminate_others.shot_players {
+            anchors[slot] = Some((eye, yaw));
+            shot_lit |= 1 << slot;
+        }
+        #[cfg(not(test))]
+        let shot_lit = 0_u64;
+        // The nearest few light the world; every cube shows.
+        let camera = self.camera_position;
+        let mut nearest = [(f32::INFINITY, Pose::default()); OTHERS_LIT];
+        let looks = &self.looks;
+        let groups = &mut self.object_groups;
+        let first_person = !self.third_person;
+        self.illuminate_others.advance(
+            |slot| Some(slot) != own && (looks.illuminated(slot) || shot_lit & 1 << slot != 0),
+            &anchors,
+            presentation_time as f32 * 0.001,
+            now,
+            |slot, pose| {
+                if let Some(mesh) = mesh {
+                    let mut instance = cube(pose);
+                    if first_person && Some(slot) == followed {
+                        instance.view_flags |= 1;
+                    }
+                    groups[mesh].push(instance);
+                }
+                keep_nearest(&mut nearest, pose.position.distance_squared(camera), pose);
+            },
+        );
+        nearest.sort_unstable_by(|a, b| a.0.total_cmp(&b.0));
+        for (distance, pose) in nearest {
+            if distance.is_finite() {
+                self.dynamic_lights.push_radiant(light(pose));
+            }
+        }
+    }
+
+    /// Out of a game there is nobody to float by: every other player's holocron goes
+    /// at once, and there is nothing to do.
+    fn illuminate_others_idle(&mut self) -> bool {
+        #[cfg(test)]
+        if !self.illuminate_others.shot_players.is_empty() {
+            return false;
+        }
+        self.illuminate_others.clear();
+        true
+    }
+}
+
+/// Keep `pose`, `distance` from the camera, among the `nearest` if it is nearer than
+/// the farthest kept (the unused places are infinitely far).
+fn keep_nearest(nearest: &mut [(f32, Pose)], distance: f32, pose: Pose) {
+    if let Some(farthest) = nearest
+        .iter_mut()
+        .max_by(|a, b| a.0.total_cmp(&b.0))
+        .filter(|farthest| distance < farthest.0)
+    {
+        *farthest = (distance, pose);
+    }
+}
+
+/// A holocron's warm light at `pose`.
+fn light(pose: Pose) -> PointLight {
+    PointLight {
+        origin: pose.position.to_array(),
+        radius: RADIUS * pose.level,
+        color: COLOR,
+    }
+}
+
+/// A holocron's cube at `pose`.
+fn cube(pose: Pose) -> ActorInstance {
+    ActorInstance::new(
+        pose.position.to_array(),
+        pose.rotation.to_array(),
+        [pose.level; 3],
+    )
 }
 
 #[cfg(test)]
@@ -322,6 +583,138 @@ mod tests {
         let elsewhere = eye + Vec3::X * 30.0;
         let pose = run(&mut holocron, Some((elsewhere, 0.0)), start, 1.5, 1.55).unwrap();
         assert_eq!(pose.position, elsewhere + OFFSET);
+    }
+
+    /// A player entity in `slot` with the flags and powerups given.
+    fn player(slot: u16, flags: u32, powerups: u32) -> EntityState {
+        let mut entity = EntityState::zero(slot, &sjk_protocol::LEGACY_ENTITY_FIELDS);
+        entity.set_raw_field(8, u32::from(ET_PLAYER));
+        entity.set_raw_field(19, flags);
+        entity.set_raw_field(77, powerups);
+        entity
+    }
+
+    #[test]
+    fn another_player_is_floated_by_from_their_eye_and_view_yaw() {
+        let origin = [100.0, 50.0, 24.0];
+        let (eye, yaw) = player_anchor(&player(3, 0, 0), origin, 90.0).unwrap();
+        assert_eq!(eye, Vec3::new(100.0, 50.0, 24.0 + EYE_HEIGHT));
+        assert!((yaw - std::f32::consts::FRAC_PI_2).abs() < 1e-6);
+        // Crouched (box top 16): the eye is at 12.
+        let mut crouched = player(3, 0, 0);
+        crouched.set_raw_field(26, (48 << 16) | (24 << 8) | 15);
+        assert_eq!(player_anchor(&crouched, origin, 0.0).unwrap().0.z, 36.0);
+        // Not drawn: dead, hidden, cloaked, or not a player.
+        assert_eq!(player_anchor(&player(3, EF_DEAD, 0), origin, 0.0), None);
+        assert_eq!(player_anchor(&player(3, EF_NODRAW, 0), origin, 0.0), None);
+        assert_eq!(player_anchor(&player(3, 0, PW_CLOAKED), origin, 0.0), None);
+        let mut missile = player(3, 0, 0);
+        missile.set_raw_field(8, 3);
+        assert_eq!(player_anchor(&missile, origin, 0.0), None);
+    }
+
+    /// Step the others at 60 frames a second from `from` to `to` seconds, the slots in
+    /// `lit` lit, at presentation time 0; the poses of the last step.
+    fn run_others(
+        others: &mut Others,
+        lit: &[usize],
+        anchors: &[Option<(Vec3, f32)>; SLOTS],
+        start: Instant,
+        from: f32,
+        to: f32,
+    ) -> Vec<(usize, Pose)> {
+        let mut poses = Vec::new();
+        let mut t = from;
+        while t <= to + 1e-4 {
+            poses.clear();
+            others.advance(
+                |slot| lit.contains(&slot),
+                anchors,
+                0.0,
+                at(start, t),
+                |slot, pose| poses.push((slot, pose)),
+            );
+            t += 1.0 / 60.0;
+        }
+        poses
+    }
+
+    #[test]
+    fn other_players_holocrons_fade_and_follow_as_ones_own() {
+        let start = Instant::now();
+        let mut others = Others::default();
+        let eye = Vec3::new(100.0, 0.0, 60.0);
+        let mut anchors = [None; SLOTS];
+        anchors[3] = Some((eye, std::f32::consts::FRAC_PI_2));
+        anchors[5] = Some((eye + Vec3::X * 200.0, 0.0));
+        // Only lit looks show, and only where a player is drawn.
+        let poses = run_others(&mut others, &[3, 7], &anchors, start, 0.0, 0.1);
+        assert_eq!(poses.len(), 1);
+        let (slot, pose) = poses[0];
+        assert_eq!(slot, 3);
+        assert!(pose.level > 0.0 && pose.level < 1.0, "fading in");
+        let poses = run_others(&mut others, &[3, 7], &anchors, start, 0.1, 1.0);
+        let pose = poses[0].1;
+        assert_eq!(pose.level, 1.0);
+        // By the left shoulder of a player facing +y, the bob of slot 3 included.
+        let bob = (3.0 * SLOT_PHASE * std::f32::consts::TAU / BOB_PERIOD).sin() * BOB;
+        let expected = Holocron::place(eye, std::f32::consts::FRAC_PI_2) + Vec3::Z * bob;
+        assert!((pose.position - expected).length() < 1e-3);
+        // The same as the local player's from the same eye and yaw.
+        let mut own = Holocron::default();
+        own.toggle();
+        let local = run(&mut own, anchors[3], start, 0.0, 1.0).unwrap();
+        assert!((local.position + Vec3::Z * bob - pose.position).length() < 1e-3);
+        // The player is no longer drawn (dead, gone from the snapshot): it fades out
+        // where it was.
+        anchors[3] = None;
+        let poses = run_others(&mut others, &[3], &anchors, start, 1.0, 1.1);
+        assert!(poses[0].1.level < 1.0);
+        assert!((poses[0].1.position - expected).length() < 1e-3);
+        assert!(run_others(&mut others, &[3], &anchors, start, 1.1, 1.5).is_empty());
+        // Put out by the look: it fades too.
+        anchors[3] = Some((eye, 0.0));
+        run_others(&mut others, &[3], &anchors, start, 1.5, 2.5);
+        let poses = run_others(&mut others, &[], &anchors, start, 2.5, 2.55);
+        assert!(poses[0].1.level < 1.0);
+        assert!(run_others(&mut others, &[], &anchors, start, 2.55, 3.0).is_empty());
+        // Cleared (another server): out at once.
+        run_others(&mut others, &[3], &anchors, start, 3.0, 4.0);
+        others.clear();
+        assert!(run_others(&mut others, &[], &anchors, start, 4.0, 4.0).is_empty());
+    }
+
+    #[test]
+    fn a_followed_players_holocron_floats_by_the_view_while_they_live() {
+        let mut followed = PlayerState::zero();
+        followed.set_client_num(5);
+        followed.set_movement_flags(PMF_FOLLOW);
+        followed.stats[0] = 100;
+        let view = Some((Vec3::new(1.0, 2.0, 3.0), 0.5));
+        // Following them: not the own holocron's place, but theirs is the view's.
+        assert!(!playing(&followed));
+        assert_eq!(followed_anchor(&followed, view), view);
+        assert_eq!(followed_anchor(&followed, None), None, "a free camera");
+        followed.stats[0] = 0;
+        assert_eq!(followed_anchor(&followed, view), None, "dead");
+        followed.stats[0] = 100;
+        followed.set_movement_type(7);
+        assert_eq!(followed_anchor(&followed, view), None, "the intermission");
+    }
+
+    #[test]
+    fn only_the_nearest_others_light_the_world() {
+        let mut nearest = [(f32::INFINITY, Pose::default()); OTHERS_LIT];
+        let at = |x: f32| Pose {
+            position: Vec3::X * x,
+            ..Pose::default()
+        };
+        for x in [50.0, 10.0, 70.0, 30.0, 20.0, 60.0] {
+            keep_nearest(&mut nearest, x * x, at(x));
+        }
+        let mut kept: Vec<f32> = nearest.iter().map(|(_, pose)| pose.position.x).collect();
+        kept.sort_by(f32::total_cmp);
+        assert_eq!(kept, [10.0, 20.0, 30.0, 50.0]);
     }
 
     #[test]

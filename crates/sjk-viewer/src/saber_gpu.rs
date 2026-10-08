@@ -1,6 +1,7 @@
 //! Production WGPU resources for saber blades and motion trails.
 
 use crate::saber::{self, Instance};
+use crate::saber_skins::{LoadedSkins, MAX_SKINS, SkinUniform};
 use crate::saber_trail::SegmentPool;
 use crate::{DepthTarget, texture_layout_entry};
 use sjk_shader::ShaderCatalog;
@@ -17,6 +18,13 @@ pub(crate) struct Runtime {
     /// shaders carry `glow`, the `*_line` cores do not (`sabers.shader`).
     glow_pipeline: wgpu::RenderPipeline,
     materials: Vec<wgpu::BindGroup>,
+    /// What a blade-skin slot's pair is made with when a skin loads.
+    texture_layout: wgpu::BindGroupLayout,
+    samplers: saber::Samplers,
+    /// The loaded blade skins' parameters (`saber.wgsl` `skins`), written only when
+    /// skins load.
+    skins_buffer: wgpu::Buffer,
+    skins: wgpu::BindGroup,
     instance_buffer: wgpu::Buffer,
     ranges: [Range<u32>; crate::saber_rgb::MATERIAL_COUNT],
     trails: crate::saber_trail_gpu::Runtime,
@@ -60,10 +68,43 @@ impl Runtime {
                 sampler_entry(4),
             ],
         });
-        let materials = saber::create_materials(device, queue, vfs, shaders, &texture_layout)?;
+        let samplers = saber::Samplers::new(device);
+        let materials =
+            saber::create_materials(device, queue, vfs, shaders, &texture_layout, &samplers)?;
+        let skins_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            label: Some("SJK saber skins layout"),
+            entries: &[wgpu::BindGroupLayoutEntry {
+                binding: 0,
+                visibility: wgpu::ShaderStages::VERTEX_FRAGMENT,
+                ty: wgpu::BindingType::Buffer {
+                    ty: wgpu::BufferBindingType::Uniform,
+                    has_dynamic_offset: false,
+                    min_binding_size: None,
+                },
+                count: None,
+            }],
+        });
+        let skins_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("SJK saber skins"),
+            size: std::mem::size_of::<[SkinUniform; MAX_SKINS]>() as u64,
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+        let skins = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("SJK saber skins"),
+            layout: &skins_layout,
+            entries: &[wgpu::BindGroupEntry {
+                binding: 0,
+                resource: skins_buffer.as_entire_binding(),
+            }],
+        });
         let layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("SJK saber pipeline layout"),
-            bind_group_layouts: &[Some(camera_layout), Some(&texture_layout)],
+            bind_group_layouts: &[
+                Some(camera_layout),
+                Some(&texture_layout),
+                Some(&skins_layout),
+            ],
             immediate_size: 0,
         });
         let create = |fragment| {
@@ -120,6 +161,10 @@ impl Runtime {
             pipeline,
             glow_pipeline,
             materials,
+            texture_layout,
+            samplers,
+            skins_buffer,
+            skins,
             instance_buffer,
             preview_buffer,
             preview_ranges: std::array::from_fn(|_| 0..0),
@@ -133,6 +178,32 @@ impl Runtime {
                 format,
             )?,
         })
+    }
+
+    /// Take the loaded blade skins: their parameters into the uniform array and their
+    /// glow/core pairs into their material slots. Only when skins load, never per frame.
+    pub(crate) fn upload_skins(
+        &mut self,
+        device: &wgpu::Device,
+        queue: &crate::frame_queue::FrameQueue,
+        skins: &LoadedSkins,
+    ) {
+        queue.write_buffer(
+            &self.skins_buffer,
+            0,
+            bytemuck::cast_slice(&skins.uniforms()),
+        );
+        for (index, skin) in skins.iter() {
+            self.materials[crate::saber_rgb::SKIN_MATERIAL as usize + usize::from(index)] =
+                saber::material(
+                    device,
+                    queue,
+                    &self.texture_layout,
+                    &self.samplers,
+                    &skin.glow,
+                    &skin.core,
+                );
+        }
     }
 
     pub(crate) fn prepare(
@@ -181,6 +252,7 @@ impl Runtime {
         draw_instances(
             pass,
             camera,
+            &self.skins,
             &self.pipeline,
             &self.materials,
             &self.preview_buffer,
@@ -217,6 +289,7 @@ impl Runtime {
         draw_instances(
             pass,
             camera,
+            &self.skins,
             pipeline,
             &self.materials,
             &self.instance_buffer,
@@ -244,6 +317,7 @@ impl Runtime {
 fn draw_instances<'pass>(
     pass: &mut wgpu::RenderPass<'pass>,
     camera: &'pass wgpu::BindGroup,
+    skins: &'pass wgpu::BindGroup,
     pipeline: &'pass wgpu::RenderPipeline,
     materials: &'pass [wgpu::BindGroup],
     buffer: &'pass wgpu::Buffer,
@@ -254,6 +328,7 @@ fn draw_instances<'pass>(
     }
     pass.set_pipeline(pipeline);
     pass.set_bind_group(0, camera, &[]);
+    pass.set_bind_group(2, skins, &[]);
     pass.set_vertex_buffer(0, buffer.slice(..));
     for (material, instances) in materials.iter().zip(ranges.iter().cloned()) {
         if instances.is_empty() {

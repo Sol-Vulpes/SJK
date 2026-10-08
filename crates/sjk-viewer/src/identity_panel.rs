@@ -859,6 +859,9 @@ mod tests {
             report: None,
             note: None,
             player_report: None,
+            look_outcome: None,
+            packs_revision: 0,
+            assets_note: None,
         }
     }
 
@@ -884,6 +887,7 @@ mod tests {
             names: Vec::new(),
             medals: Vec::new(),
             achievements: Vec::new(),
+            unlocks: Vec::new(),
         }
     }
 
@@ -944,6 +948,7 @@ mod tests {
             name: "Kit".to_owned(),
             verified: true,
             medals: Vec::new(),
+            look: None,
         }];
         let shown = view(&inputs(Some(&state)));
         assert_eq!(shown.headline, "Sol");
@@ -1038,6 +1043,7 @@ mod tests {
                 name: format!("p{slot}"),
                 verified: false,
                 medals: Vec::new(),
+                look: None,
             })
             .collect();
         assert_eq!(view(&inputs(Some(&state))).players.len(), PLAYERS_SHOWN);
