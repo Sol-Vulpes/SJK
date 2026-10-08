@@ -40,6 +40,7 @@ impl ViewerConsole {
         self.credits.close();
         self.identity_panel.close();
         self.profile_panel.close();
+        self.unlockables_panel.close();
         self.sjk_chat_panel.close();
         self.dead_key.settle();
         self.staff_panel.open(owns_console);
@@ -144,6 +145,12 @@ impl ViewerConsole {
         self.staff_panel.open(true);
         self.staff_panel.preview = Some((me, staff));
         self.set_open(true);
+    }
+
+    /// Choose the player with `key_id` on the open page, for a world shot.
+    #[cfg(test)]
+    pub(crate) fn staff_choose(&mut self, key_id: &str) {
+        self.staff_panel.choose_for_shot(key_id);
     }
 
     /// The page's draw list while it is shown.

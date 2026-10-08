@@ -914,6 +914,11 @@ like this one.",
             sjk_identity::Profile {
                 verified: true,
                 medals: vec![medal("early_contributor", 1)],
+                unlocks: vec![sjk_identity::Unlock {
+                    id: "saber_sun".to_owned(),
+                    granted: 1_791_336_225,
+                    note: String::new(),
+                }],
                 ..profile("9a0c51e2b7d34f80", "^5Creyon")
             },
             profile("1f2e3d4c5b6a7980", "^3Lumaya"),
@@ -948,6 +953,11 @@ like this one.",
                 }
             }
             println!("{}", shoot(&mut gpu, 6, "duel6-staff").display());
+            // Another player, holding the Sun blade: Relock offered, Unlock not.
+            if let Some(console) = gpu.console.as_mut() {
+                console.staff_choose("9a0c51e2b7d34f80");
+            }
+            println!("{}", shoot(&mut gpu, 6, "duel6-staff-other").display());
         });
     }
 
