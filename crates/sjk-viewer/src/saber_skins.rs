@@ -13,8 +13,9 @@
 //! submission (in the hand, thrown, first person) asks it for each entity's blades, and
 //! the audio adapter gets its sound overrides from it every frame
 //! ([`GpuState::sync_saber_skins`]). The local player's entry is its own skin, gated by
-//! its hub profile ([`GpuState::local_saber_skin`]); every other client's is the look
-//! the hub relayed for its slot (`GpuState::looks`), taken again only when it changes.
+//! its hub profile ([`GpuState::local_saber_skin`]), in its own slot (the game state's,
+//! also while it follows someone); every other client's is the look the hub relayed
+//! for its slot (`GpuState::looks`), taken again only when it changes.
 
 use crate::saber_rgb::BladeColor;
 use crate::{GameAudio, GpuState};
@@ -251,8 +252,10 @@ impl GpuState {
 
     /// Once a frame, before the session's sabers are submitted: every other client's
     /// entry from the hub's looks when they changed, the local player's from
-    /// [`Self::local_saber_skin`], and every client's sound override to the audio
-    /// adapter. No allocation: a few compares, and 32-entry copies on a change.
+    /// [`Self::local_saber_skin`] in its own slot (the game state's: following someone,
+    /// the snapshot's player state is theirs, and they wear their own look), and every
+    /// client's sound override to the audio adapter. No allocation: a few compares,
+    /// and 32-entry copies on a change.
     pub(crate) fn sync_saber_skins(
         &mut self,
         game_audio: &mut Option<GameAudio>,
@@ -261,13 +264,15 @@ impl GpuState {
         let client = self
             .live_session
             .as_ref()
-            .map(sjk_client::ClientSession::latest_snapshot)
+            .map(|session| (session.game_state(), session.latest_snapshot()))
             .or_else(|| {
                 self.demo_session
                     .as_ref()
-                    .map(crate::demo_playback::Session::latest_snapshot)
+                    .map(|session| (session.game_state(), session.latest_snapshot()))
             })
-            .map(|snapshot| usize::from(snapshot.player.client_num()));
+            .and_then(|(game_state, snapshot)| {
+                crate::looks::ViewSlots::of(game_state, &snapshot.player).own
+            });
         let looks = &self.looks;
         self.saber_skins.follow_looks(looks.revision(), |client| {
             looks.saber_skin_id(client).and_then(BladeSkin::from_id)

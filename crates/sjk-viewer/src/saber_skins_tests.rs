@@ -325,3 +325,41 @@ fn the_bundled_sounds_mount_parse_and_the_hum_loops_cleanly() {
     assert_eq!(sets[0].on, sounds.on);
     assert_eq!(sets[0].swings, sounds.swings);
 }
+
+#[test]
+fn following_another_player_draws_their_look_not_the_own_skin() {
+    use crate::looks::{Looks, ViewSlots, Worn};
+    // The local player, in slot 2, wears the Sun and follows slot 5 (`PMF_FOLLOW`),
+    // whose hub look is the stock blade: the snapshot's player state is slot 5's.
+    let game_state = sjk_protocol::GameState::empty_local(2);
+    let mut followed = sjk_protocol::PlayerState::zero();
+    followed.set_client_num(5);
+    followed.set_movement_flags(0x1000);
+    let mut looks = Looks::default();
+    let stock = sjk_identity::Look {
+        saber: String::new(),
+        illuminate: true,
+    };
+    looks.apply_event(5, "Fox", &stock);
+    let slots = ViewSlots::of(&game_state, &followed);
+    looks.set_own(
+        slots.own.and_then(|slot| u8::try_from(slot).ok()),
+        Worn::own("saber_sun", |_| true, false),
+    );
+    looks.rebuild(|slot| (slot == 5).then(|| "Fox".to_owned()));
+    let mut skins = SaberSkins::default();
+    skins.follow_looks(looks.revision(), |client| {
+        looks.saber_skin_id(client).and_then(BladeSkin::from_id)
+    });
+    skins.set_local(
+        slots.own,
+        looks.own_saber_skin().and_then(BladeSkin::from_id),
+    );
+    assert_eq!(skins.get(6), None, "the followed player's own look");
+    assert_eq!(skins.sound_sets()[5], None);
+    assert_eq!(
+        skins.get(3),
+        Some(BladeSkin::Sun),
+        "the local player's slot"
+    );
+}

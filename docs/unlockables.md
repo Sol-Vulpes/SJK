@@ -191,7 +191,10 @@ from the looks.
   local player. Once a frame (`GpuState::sync_saber_skins`) the table takes every
   other slot's skin from `Looks::saber_skin_id` when the looks' revision changed (no
   allocation; 32 lookups only then), and the local player's own from the gated
-  `Looks::own_saber_skin` in its slot (also with no session, for the preview).
+  `Looks::own_saber_skin` in its slot (also with no session, for the preview). That
+  slot is the game state's `client_num`, not the snapshot's player state's: following
+  (spectating) someone, the state is theirs (`PMF_FOLLOW`), and they keep their own
+  hub look, blades, thrown saber and sounds alike (`looks::ViewSlots`).
 - Sounds, per player wearing it: ignition and switching off, the hum loop and three
   swings replace the stock ones (`sound/sjk/sabers/sun/*`, synthesized by
   `scripts/saber_skin_sounds.py`, bundled and mounted below the game data). The
@@ -216,8 +219,11 @@ step through the same code, each slot's bob a little out of step. The cube alway
 shows for another player while the game draws them; dead, hidden, cloaked or out of
 the snapshot, it goes out where it was. Every cube shows, but only the four nearest
 the camera add their warm light, so the frame's 32 lights stay for the weapons.
+Following (spectating) another player, one's own holocron goes out and the followed
+player's, if their look has it lit, floats by the view's eye as one's own does (their
+entity is not in the snapshot), showing only its light in first person.
 Unit tests and an off-screen shot on duel6 (two holocrons placed for remote players
-without a session); not yet seen with real players.
+without a session); not yet seen with real players, nor in follow mode.
 
 ### Unlockables page
 

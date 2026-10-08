@@ -17,9 +17,39 @@
 //! when what is worn changed (`GpuState::sync_saber_skins`).
 
 use sjk_identity::Look;
+use sjk_protocol::{GameState, PlayerState};
 
 /// Slots the table holds, as the emotes' do.
 pub(crate) const SLOTS: usize = 64;
+
+/// Whose slots a session's view involves: the local player's own (the game state's
+/// `client_num`) and the one whose player state the snapshot carries. They differ
+/// while the local player follows (spectates) someone: the server then sends the
+/// followed player's state, flagged `PMF_FOLLOW`, under their `client_num`, and leaves
+/// their entity out of the snapshot. The own look belongs in the own slot only; the
+/// followed player wears their hub look.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) struct ViewSlots {
+    /// The local player's own slot.
+    pub(crate) own: Option<usize>,
+    /// The slot whose player state the view shows.
+    pub(crate) viewed: usize,
+}
+
+impl ViewSlots {
+    /// The slots of a session with `game_state` whose latest player state is `player`.
+    pub(crate) fn of(game_state: &GameState, player: &PlayerState) -> Self {
+        Self {
+            own: usize::try_from(game_state.client_num).ok(),
+            viewed: usize::from(player.client_num()),
+        }
+    }
+
+    /// The player the view follows, when it is not the local player's own.
+    pub(crate) fn followed(self) -> Option<usize> {
+        (Some(self.viewed) != self.own).then_some(self.viewed)
+    }
+}
 
 /// The catalogue's id of the blade skin `id` names, if this client knows it; a look
 /// naming any other id draws the stock blade.
@@ -264,6 +294,23 @@ mod tests {
         // Someone else takes slot 3: the look goes with the next rebuild.
         looks.rebuild(|slot| (slot == 3).then(|| "Fox".to_owned()));
         assert!(!looks.illuminated(3));
+    }
+
+    #[test]
+    fn following_someone_the_view_is_theirs_and_the_own_slot_stays() {
+        // `PMF_FOLLOW`: the server sends the followed player's state.
+        const PMF_FOLLOW: u16 = 0x1000;
+        let game_state = GameState::empty_local(2);
+        let mut player = PlayerState::zero();
+        player.set_client_num(2);
+        let playing = ViewSlots::of(&game_state, &player);
+        assert_eq!((playing.own, playing.viewed), (Some(2), 2));
+        assert_eq!(playing.followed(), None);
+        player.set_client_num(5);
+        player.set_movement_flags(PMF_FOLLOW);
+        let following = ViewSlots::of(&game_state, &player);
+        assert_eq!(following.own, Some(2), "the game state's, not the state's");
+        assert_eq!(following.followed(), Some(5));
     }
 
     #[test]

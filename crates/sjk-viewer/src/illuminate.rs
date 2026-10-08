@@ -6,7 +6,8 @@
 //! entry, or the `force_illuminate` command, turns it on and off; `cg_illuminate 0`
 //! takes it off the wheel and puts it out. In first person only its light shows (the
 //! cube is drawn for mirrors, like the body); another player's cube always shows while
-//! that player is drawn.
+//! that player is drawn, except a followed (spectated) player's in first person, which
+//! is drawn as one's own.
 //!
 //! Its model, pictures and shader are bundled ([`FILES`], made by
 //! `scripts/holocron_assets.py`) and mounted below all game data, so a PK3 with
@@ -92,13 +93,27 @@ pub(crate) fn mount(vfs: &mut VirtualFileSystem) -> Result<(), VfsError> {
     Ok(())
 }
 
-/// Whether the holocron can show for `player`: alive, playing, not watching
-/// someone else and not at the intermission.
-fn playing(player: &PlayerState) -> bool {
+/// `PMF_FOLLOW`: the player state is that of the player being followed.
+const PMF_FOLLOW: u16 = 4096;
+
+/// Whether a holocron can show by the player whose state is `player`: alive, playing
+/// and not at the intermission.
+fn alive(player: &PlayerState) -> bool {
     // `pmtype_t`: PM_SPECTATOR 4, PM_DEAD 5, PM_INTERMISSION 7, PM_SPINTERMISSION 8.
-    player.health() > 0
-        && !matches!(player.movement_type(), 4 | 5 | 7 | 8)
-        && player.movement_flags() & 4096 == 0
+    player.health() > 0 && !matches!(player.movement_type(), 4 | 5 | 7 | 8)
+}
+
+/// Whether the local player's own holocron can show: [`alive`], and not watching
+/// someone else.
+fn playing(player: &PlayerState) -> bool {
+    alive(player) && player.movement_flags() & PMF_FOLLOW == 0
+}
+
+/// Where the holocron of the player the view follows floats: by the view's eye
+/// (`view`, its eye and yaw) as one's own does, while the followed player's state
+/// (`player`, the snapshot's) is [`alive`]. Their entity is not in the snapshot.
+fn followed_anchor(player: &PlayerState, view: Option<(Vec3, f32)>) -> Option<(Vec3, f32)> {
+    view.filter(|_| alive(player))
 }
 
 /// Where and how the holocron is drawn this frame.
@@ -324,9 +339,8 @@ impl GpuState {
         let anchor = self
             .live_session
             .as_ref()
-            .filter(|_| !self.detached_camera && !self.free_camera_active())
             .filter(|session| playing(&session.latest_snapshot().player))
-            .map(|_| (self.camera_position, self.camera_yaw));
+            .and_then(|_| self.view_anchor());
         #[cfg(test)]
         let anchor = anchor.or(self.illuminate.shot_anchor);
         let Some(pose) = self
@@ -346,8 +360,18 @@ impl GpuState {
         self.object_groups[mesh].push(instance);
     }
 
+    /// The view's eye and yaw while the camera is the player's view (not detached nor
+    /// free).
+    fn view_anchor(&self) -> Option<(Vec3, f32)> {
+        (!self.detached_camera && !self.free_camera_active())
+            .then_some((self.camera_position, self.camera_yaw))
+    }
+
     /// The other players' holocrons: by each player the game draws whose look has
-    /// Illuminate lit, from their entity's interpolated origin and view yaw.
+    /// Illuminate lit, from their entity's interpolated origin and view yaw. The
+    /// local player's own slot is the game state's; a player the view follows is
+    /// another player, whose holocron floats by the view's eye and, in first person,
+    /// shows only its light (as one's own).
     fn submit_other_holocrons(
         &mut self,
         mesh: Option<usize>,
@@ -356,9 +380,15 @@ impl GpuState {
     ) {
         let mut anchors = [None; SLOTS];
         let mut own = None;
+        let mut followed = None;
         if let Some(session) = self.live_session.as_ref() {
             let snapshot = session.latest_snapshot();
-            own = Some(usize::from(snapshot.player.client_num()));
+            let slots = crate::looks::ViewSlots::of(session.game_state(), &snapshot.player);
+            own = slots.own;
+            followed = slots.followed().filter(|&slot| slot < SLOTS);
+            if let Some(slot) = followed {
+                anchors[slot] = followed_anchor(&snapshot.player, self.view_anchor());
+            }
             for entity in &snapshot.entities {
                 let slot = usize::from(entity.number());
                 // Only players with a holocron lit, or still going out, are placed.
@@ -377,7 +407,9 @@ impl GpuState {
                 let yaw = presented
                     .sample_pose(presentation_time)
                     .map_or(0.0, |pose| pose.view_angles_degrees[1]);
-                anchors[slot] = player_anchor(entity, origin, yaw);
+                if Some(slot) != followed {
+                    anchors[slot] = player_anchor(entity, origin, yaw);
+                }
             }
         } else if self.illuminate_others_idle() {
             return;
@@ -396,14 +428,19 @@ impl GpuState {
         let mut nearest = [(f32::INFINITY, Pose::default()); OTHERS_LIT];
         let looks = &self.looks;
         let groups = &mut self.object_groups;
+        let first_person = !self.third_person;
         self.illuminate_others.advance(
             |slot| Some(slot) != own && (looks.illuminated(slot) || shot_lit & 1 << slot != 0),
             &anchors,
             presentation_time as f32 * 0.001,
             now,
-            |_, pose| {
+            |slot, pose| {
                 if let Some(mesh) = mesh {
-                    groups[mesh].push(cube(pose));
+                    let mut instance = cube(pose);
+                    if first_person && Some(slot) == followed {
+                        instance.view_flags |= 1;
+                    }
+                    groups[mesh].push(instance);
                 }
                 keep_nearest(&mut nearest, pose.position.distance_squared(camera), pose);
             },
@@ -645,6 +682,24 @@ mod tests {
         run_others(&mut others, &[3], &anchors, start, 3.0, 4.0);
         others.clear();
         assert!(run_others(&mut others, &[], &anchors, start, 4.0, 4.0).is_empty());
+    }
+
+    #[test]
+    fn a_followed_players_holocron_floats_by_the_view_while_they_live() {
+        let mut followed = PlayerState::zero();
+        followed.set_client_num(5);
+        followed.set_movement_flags(PMF_FOLLOW);
+        followed.stats[0] = 100;
+        let view = Some((Vec3::new(1.0, 2.0, 3.0), 0.5));
+        // Following them: not the own holocron's place, but theirs is the view's.
+        assert!(!playing(&followed));
+        assert_eq!(followed_anchor(&followed, view), view);
+        assert_eq!(followed_anchor(&followed, None), None, "a free camera");
+        followed.stats[0] = 0;
+        assert_eq!(followed_anchor(&followed, view), None, "dead");
+        followed.stats[0] = 100;
+        followed.set_movement_type(7);
+        assert_eq!(followed_anchor(&followed, view), None, "the intermission");
     }
 
     #[test]
