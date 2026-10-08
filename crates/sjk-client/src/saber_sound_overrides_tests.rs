@@ -309,6 +309,59 @@ fn the_wearer_hums_with_the_set() {
     );
 }
 
+/// A thrown saber (`ET_GENERAL`, `WP_SABER`, its owner in `genericenemyindex`) humming
+/// with the game's `loopSound` in sound slot 5.
+fn thrown_saber(number: u16, owner: u16) -> EntityState {
+    let mut state = EntityState::zero(number, &LEGACY_ENTITY_FIELDS);
+    state.set_raw_field(14, 3); // WP_SABER
+    state.set_raw_field(18, 1_024 + u32::from(owner));
+    state.set_raw_field(55, 5); // loopSound
+    state
+}
+
+#[test]
+fn a_thrown_saber_hums_with_its_owners_set() {
+    let mut game = game_state();
+    game.replace_config_string(CS_SOUNDS + 5, b"sound/weapons/saber/saberhum1.wav".to_vec())
+        .unwrap();
+    let vfs = vfs();
+    let mut next = 0;
+    let mut register = |_: &str, _: &[u8]| {
+        next += 1;
+        Some(SoundHandle(next))
+    };
+    let mut adapter = LegacySoundAdapter::new(&game, &vfs, &mut register);
+    adapter.register_saber_sound_sets(&[SUN], &vfs, &mut register);
+    let flying = |adapter: &mut LegacySoundAdapter| {
+        let snapshot = snapshot(vec![thrown_saber(200, SKINNED), thrown_saber(201, STOCK)]);
+        adapter.observe_loops(&snapshot, 1_000, [0.0; 3], |state| state.trajectory_base());
+        adapter
+            .loop_decisions()
+            .iter()
+            .map(|decision| {
+                (
+                    decision.request.source.0 as u16,
+                    adapter
+                        .loop_sound(decision.sound.unwrap())
+                        .unwrap()
+                        .path
+                        .to_string(),
+                )
+            })
+            .collect::<Vec<_>>()
+    };
+    let stock = "sound/weapons/saber/saberhum1.wav".to_owned();
+    assert_eq!(
+        flying(&mut adapter),
+        [(200, stock.clone()), (201, stock.clone())]
+    );
+    wear(&mut adapter, SKINNED);
+    assert_eq!(
+        flying(&mut adapter),
+        [(200, SUN.hum.to_owned()), (201, stock)]
+    );
+}
+
 #[test]
 fn an_unregistered_set_is_not_worn() {
     let mut adapter = adapter();

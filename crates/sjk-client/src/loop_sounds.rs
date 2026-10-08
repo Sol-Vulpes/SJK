@@ -423,7 +423,9 @@ impl LegacyLoopAdapter {
             self.push_soundset(sound, set_index, state.number(), origin);
             return;
         }
-        let sound = self.cs_sounds[usize::from(configured)];
+        let sound = self
+            .thrown_saber_hum(state)
+            .or(self.cs_sounds[usize::from(configured)]);
         let velocity = if state.entity_type() == ET_MISSILE {
             legacy_evaluate_trajectory_delta(
                 state.trajectory_delta(),
@@ -563,6 +565,17 @@ impl LegacyLoopAdapter {
     pub(crate) fn set_saber_hum_overrides(&mut self, sets: &[Option<u8>; MAX_CLIENTS]) {
         self.hum_overrides =
             sets.map(|set| set.and_then(|set| self.saber_hums.get(usize::from(set)).copied()));
+    }
+
+    /// A thrown saber's hum when its owner wears a blade skin: the skin's, in place of
+    /// the `loopSound` the game gives the saber entity (`w_saber.c`'s `saberHumSound`
+    /// or the hilt's `soundLoop`). `None` for any other entity or a stock owner.
+    fn thrown_saber_hum(&self, state: &EntityState) -> Option<u16> {
+        let owner = crate::thrown_sabers::legacy_thrown_saber_owner(state)?;
+        self.hum_overrides
+            .get(usize::from(owner))
+            .copied()
+            .flatten()
     }
 
     /// A client's hums: its sabers' own, or its blade skin's for both (the second is then

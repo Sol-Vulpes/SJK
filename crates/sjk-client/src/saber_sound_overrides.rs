@@ -15,7 +15,8 @@
 //!   player's whose origin is nearest the event's, within [`TOGGLE_REACH`];
 //! - `EV_SABER_ATTACK` plays one of the three `swings` (as a `.sab` with
 //!   `swingSound1`-`3` does, `cg_event.c`);
-//! - the hum loop ([`crate::loop_sounds`]) plays `hum` for both sabers.
+//! - the hum loop ([`crate::loop_sounds`]) plays `hum` for both sabers, and for the
+//!   saber while it is thrown (the flying saber entity's own `loopSound`).
 //!
 //! Animation swing cues are the viewer's (`actor_sounds.rs`).
 
