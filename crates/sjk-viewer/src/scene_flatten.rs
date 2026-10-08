@@ -41,6 +41,9 @@ pub(crate) struct DrawBatch {
     /// Left out of the colour pass (an HD world pack draws its place) but still
     /// a world surface for shadows, light and everything else.
     pub(crate) hidden: bool,
+    /// A visual replacement for hidden draws: drawn by the colour pass only, and not a
+    /// world surface for anything else (so `world_surface` is false).
+    pub(crate) overlay: bool,
     /// World-space AABB of the referenced vertices, for light-frustum culling of casters.
     pub(crate) bounds: [[f32; 3]; 2],
 }
@@ -118,6 +121,7 @@ pub(super) fn flatten_scene(
                     .surfaces
                     .contains(&draw.surface_index),
                 hidden: false,
+                overlay: false,
                 bounds: index_bounds(
                     batch.indices[draw.indices.start as usize..draw.indices.end as usize]
                         .iter()
@@ -177,6 +181,7 @@ pub(super) fn append_player_preview(
             surface_index: None,
             world_surface: true,
             hidden: false,
+            overlay: false,
             bounds: index_bounds(
                 scene.indices[index_start as usize..]
                     .iter()

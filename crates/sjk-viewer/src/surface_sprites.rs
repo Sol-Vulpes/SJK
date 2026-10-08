@@ -104,6 +104,7 @@ pub(crate) fn append(
                 surface_index: draw.surface_index,
                 world_surface: draw.world_surface,
                 hidden: draw.hidden,
+                overlay: draw.overlay,
                 bounds: draw.bounds,
             };
             scene.draws.push(generated);

@@ -13,10 +13,11 @@
 //! like game data, the file is named by `SJK_HD_WORLD`.
 
 use crate::gpu_vertex::GpuVertex;
-use crate::scene_flatten::{DrawBatch, FlattenedScene, ViewerMaterial, index_bounds};
+use crate::hd_world_lightmap::Charts;
+use crate::scene_flatten::{DrawBatch, FlattenedScene, index_bounds};
 use glam::{Mat4, Quat, Vec3};
 use serde_json::Value;
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::error::Error;
 use std::path::Path;
 
@@ -38,6 +39,9 @@ pub(crate) struct Mesh {
 pub(crate) struct Summary {
     pub(crate) meshes: usize,
     pub(crate) triangles: usize,
+    pub(crate) draws: usize,
+    /// Triangles with no stock surface of their shader to borrow a lightmap chart from.
+    pub(crate) unplaced_triangles: usize,
     pub(crate) hidden_draws: usize,
     pub(crate) shaders_without_stock: Vec<String>,
 }
@@ -298,51 +302,66 @@ pub(crate) fn apply(flat: &mut FlattenedScene, meshes: &[Mesh]) -> Result<Summar
             summary.hidden_draws += 1;
         }
     }
-    // The lightmap page each shader had in the stock map: the pack's surfaces
-    // are drawn as that paint (live light replaces the page's texels).
-    let mut pages = HashMap::<String, i32>::new();
-    for material in &flat.materials {
-        let entry = pages
+    // The stock material of each shader (preferring one on a lightmap page), for
+    // triangles that find no stock surface to borrow a chart from.
+    let mut stock_materials = HashMap::<String, usize>::new();
+    for (index, material) in flat.materials.iter().enumerate() {
+        let entry = stock_materials
             .entry(material.shader.to_ascii_lowercase())
-            .or_insert(material.lightmap);
-        if *entry < 0 && material.lightmap >= 0 {
-            *entry = material.lightmap;
+            .or_insert(index);
+        if flat.materials[*entry].lightmap < 0 && material.lightmap >= 0 {
+            *entry = index;
         }
     }
-    let forced = std::env::var("SJK_HD_LIGHTMAP")
-        .ok()
-        .and_then(|v| v.parse::<i32>().ok());
+    let charts = Charts::of(flat, &packed);
     for mesh in meshes {
-        let Some(&stock) = pages.get(&mesh.shader.to_ascii_lowercase()) else {
+        let Some(&fallback) = stock_materials.get(&mesh.shader.to_ascii_lowercase()) else {
             summary.shaders_without_stock.push(mesh.shader.clone());
             continue;
         };
-        let base: u32 = flat.vertices.len().try_into()?;
-        let start: u32 = flat.indices.len().try_into()?;
-        for i in 0..mesh.positions.len() {
-            flat.vertices.push(GpuVertex {
-                position: mesh.positions[i],
-                normal: mesh.normals[i],
-                color: mesh.colors[i],
-                texture_coordinates: mesh.uvs[i],
-                lightmap_coordinates: [0.0, 0.0],
-            });
+        // Each triangle takes the material (lightmap page) and lightmap
+        // coordinates of the nearest stock surface of its shader; its vertices
+        // are not shared, as neighbours may land on different charts.
+        let mut groups = BTreeMap::<usize, (Vec<GpuVertex>, Vec<u32>)>::new();
+        for triangle in mesh.indices.chunks_exact(3) {
+            let corner = |k: usize| Vec3::from_array(mesh.positions[triangle[k] as usize]);
+            let placement = charts.place(flat, &mesh.shader, [corner(0), corner(1), corner(2)]);
+            if placement.is_none() {
+                summary.unplaced_triangles += 1;
+            }
+            let (material, uvs) =
+                placement.map_or((fallback, [[0.0; 2]; 3]), |p| (p.material, p.uvs));
+            let (vertices, indices) = groups.entry(material).or_default();
+            for (k, &i) in triangle.iter().enumerate() {
+                let i = i as usize;
+                indices.push(vertices.len() as u32);
+                vertices.push(GpuVertex {
+                    position: mesh.positions[i],
+                    normal: mesh.normals[i],
+                    color: mesh.colors[i],
+                    texture_coordinates: mesh.uvs[i],
+                    lightmap_coordinates: uvs[k],
+                });
+            }
         }
-        flat.indices.extend(mesh.indices.iter().map(|&i| base + i));
-        let material = flat.materials.len();
-        flat.materials.push(ViewerMaterial {
-            shader: mesh.shader.clone(),
-            lightmap: forced.unwrap_or(stock),
-        });
-        flat.draws.push(DrawBatch {
-            indices: start..u32::try_from(flat.indices.len())?,
-            material,
-            clusters: Vec::new(),
-            surface_index: None,
-            world_surface: true,
-            hidden: false,
-            bounds: index_bounds(mesh.positions.iter().copied()),
-        });
+        for (material, (vertices, indices)) in groups {
+            let base: u32 = flat.vertices.len().try_into()?;
+            let start: u32 = flat.indices.len().try_into()?;
+            let bounds = index_bounds(vertices.iter().map(|v| v.position));
+            flat.vertices.extend(vertices);
+            flat.indices.extend(indices.iter().map(|&i| base + i));
+            flat.draws.push(DrawBatch {
+                indices: start..u32::try_from(flat.indices.len())?,
+                material,
+                clusters: Vec::new(),
+                surface_index: None,
+                world_surface: false,
+                hidden: false,
+                overlay: true,
+                bounds,
+            });
+            summary.draws += 1;
+        }
         summary.meshes += 1;
         summary.triangles += mesh.indices.len() / 3;
     }
@@ -354,7 +373,23 @@ pub(crate) fn apply_from_env(flat: &mut FlattenedScene) {
     let Some(path) = std::env::var_os(ENV) else {
         return;
     };
-    match load(Path::new(&path)).and_then(|meshes| apply(flat, &meshes)) {
+    // `SJK_HD_SKIP=a,b` keeps the shaders containing `a` or `b` stock, to find
+    // which part of a pack changes the picture.
+    let skip: Vec<String> = std::env::var("SJK_HD_SKIP")
+        .map(|v| {
+            v.split(',')
+                .map(|s| s.trim().to_ascii_lowercase())
+                .collect()
+        })
+        .unwrap_or_default();
+    let loaded = load(Path::new(&path)).map(|mut meshes| {
+        meshes.retain(|m| {
+            let shader = m.shader.to_ascii_lowercase();
+            !skip.iter().any(|s| !s.is_empty() && shader.contains(s))
+        });
+        meshes
+    });
+    match loaded.and_then(|meshes| apply(flat, &meshes)) {
         Ok(summary) => crate::log::progress(format_args!("HD world: {summary:?}")),
         Err(error) => {
             crate::log::progress(format_args!("HD world: {error}; the stock map is drawn"))
@@ -397,7 +432,7 @@ mod tests {
             "buffers": [{"byteLength": 48}],
         });
         let mut json_bytes = serde_json::to_vec(&json).expect("json");
-        while json_bytes.len() % 4 != 0 {
+        while !json_bytes.len().is_multiple_of(4) {
             json_bytes.push(b' ');
         }
         let total = 12 + 8 + json_bytes.len() + 8 + bin.len();

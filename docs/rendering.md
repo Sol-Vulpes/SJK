@@ -2319,22 +2319,30 @@ python scripts/shader_testmap.py --install
 a map's static-world surfaces while the BSP stays the source of collision,
 entities, visibility, light and shadows (SJK's client-side "override map"; the
 server and other players see the stock map). `SJK_HD_WORLD=<pack.glb>` names the
-pack until packs are mounted like game data.
+pack until packs are mounted like game data; `SJK_HD_SKIP=a,b` keeps the shaders
+containing `a` or `b` stock, to find which part of a pack changes the picture.
 
 - **Replacement is by shader.** Every static-world draw whose shader the pack also
   carries is marked `DrawBatch::hidden`: left out of the colour pass in
-  `world_material_build`, still a world surface for shadow casters, GI, lamps and
-  decals. The pack's meshes are appended as extra world draws (no BSP surface
-  index, no visibility clusters: always drawn). A pack may cover part of a map.
+  `world_material_build`, but still a world surface for shadow casters, GI, lamps
+  and decals. The pack's meshes are appended as `overlay` draws: drawn by the colour
+  pass only (`world_surface` false, no BSP surface index, no visibility clusters, so
+  always drawn), invisible to shadows, GI, the lamp cache, decals and fog. A pack
+  may cover part of a map.
 - **Frame.** 1:1 scale, glTF Y-up from the map's Z-up (`(x, y, z)` to `(x, z, -y)`),
   counter-clockwise fronts (the map's triangles run clockwise against their
   normals, so the loader swaps two indices), material name = BSP shader name
   (a Blender `.001` suffix is dropped), `COLOR_0` kept. Node transforms are applied.
-- **Lighting.** Each pack mesh is drawn as the stock paint of its shader, with a
-  lightmap page the stock map used for that shader (`SJK_HD_LIGHTMAP` forces one):
-  material maps and live lighting treat it like lightmapped world paint. Its own
-  lightmap coordinates are zero, so only live lighting (`r_liveLighting 2`) is
-  meaningful; baked lighting shows one texel.
+  A pack made straight from the BSP also carries the inline models (doors, lifts):
+  leave those out of a pack, they are not replaced.
+- **Lighting.** A pack has no lightmap parametrization, and live lighting still reads
+  the stock charts
+  ([hd_world_lightmap.rs](../crates/sjk-viewer/src/hd_world_lightmap.rs)): each
+  triangle takes the stock material (so the lightmap page) and the lightmap
+  coordinates of the nearest stock triangle of its shader, extended affinely to its
+  corners and clamped to that surface's chart. Vertices are not shared between
+  triangles for that reason (three times the vertices). Only live lighting
+  (`r_liveLighting 2`) is meaningful; baked lighting shows borrowed texels.
 - **Tools.** Ignored tests in
   [world_shot_hd.rs](../crates/sjk-viewer/src/world_shot_hd.rs): `ffa5_export` writes
   `target/hd-world/ffa5/ffa5.glb` and its textures from the BSP
@@ -2342,14 +2350,19 @@ pack until packs are mounted like game data.
   BSP model and shader under `model_<n>`), `ffa5_baseline` renders ffa5 under retail,
   default and fully live light, `ffa5_hd_pack` renders a pack from the same cameras.
 
-Verified on 08/10/2026, ffa5 only, off-screen renders: a Blender-edited pack
-(48 meshes, 65,962 triangles; terrain subdivided, edges bevelled, two outlines
-rounded) loads, hides 5,026 stock draws and renders textured under
-`r_liveLighting 2`. Not verified or not done: in-game play, movers (inline models
-stay stock), fog volumes, decals and portals on pack surfaces, shadows from the pack
-(they come from the stock surfaces), a pack's own lamps, and lighting parity: the
-pack's floors read lighter and olive and its tower tops show red-lit rings that the
-stock render lacks. Forcing no lightmap (`SJK_HD_LIGHTMAP=-1`) washes the paint out.
+Verified on 08/10/2026, ffa5 only, off-screen renders from 12 cameras (8 spawns, 4
+overviews): a Blender-edited pack (48 meshes, 65,962 triangles; terrain subdivided,
+edges bevelled, two outlines rounded) loads, hides 5,026 stock draws and renders
+textured under `r_liveLighting 2`, every triangle placed on a stock chart. Against the
+stock render under the same light the mean absolute pixel difference (8 bit, 48x27
+downscale) is 2.6 to 12.5 per camera (2.6 to 4.0 on the overviews), down from 2.5 to
+19.1 before the chart transfer. Not verified or not done: in-game play, movers
+(inline models stay stock), fog volumes, decals and portals on pack surfaces, shadows
+from the pack (they come from the stock surfaces), a pack's own lamps, and the
+remaining differences: the pack's tower tops show red-lit rings the stock render
+lacks (not caused by double-counted geometry, per-material state, the lamp cache,
+the lightmap page or the pack's Blender processing: each was tried), and some interiors
+are still lighter. Forcing no lightmap washes the paint out.
 
 ## Default visual profile
 

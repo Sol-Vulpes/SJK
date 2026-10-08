@@ -212,7 +212,10 @@ fn build(
         let mut static_draws: Vec<StaticDraw> = draws
             .iter()
             .filter(|draw| {
-                !undrawn && draw.world_surface && !draw.hidden && draw.material == material_index
+                !undrawn
+                    && (draw.world_surface || draw.overlay)
+                    && !draw.hidden
+                    && draw.material == material_index
             })
             .map(|draw| StaticDraw {
                 view_cache: Default::default(),
