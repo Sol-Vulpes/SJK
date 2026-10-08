@@ -29,6 +29,7 @@ This page is the design and the current limits. The player-facing summary is
 | Achievements: catalogue, counts, tracker | [achievements.rs](../crates/sjk-viewer/src/achievements.rs), [achievements/tracker.rs](../crates/sjk-viewer/src/achievements/tracker.rs), [achievements_frame.rs](../crates/sjk-viewer/src/achievements_frame.rs) |
 | Achievements: medallion look, unlock pop-up | [achievements/medallion.rs](../crates/sjk-viewer/src/achievements/medallion.rs), [achievement_toast.rs](../crates/sjk-viewer/src/achievement_toast.rs) |
 | SJK chat and emotes | [hub-chat.md](hub-chat.md) |
+| Unlocks and looks (blade skin, Illuminate) | [unlockables.md](unlockables.md), [looks.rs](../crates/sjk-viewer/src/looks.rs), [looks_frame.rs](../crates/sjk-viewer/src/looks_frame.rs) |
 | The hub itself and its protocol | repository Sol-Vulpes/SJK-hub (`PROTOCOL.md`) |
 
 The hub is a separate repository because it is deployed on its own schedule. The
@@ -56,6 +57,11 @@ vector that both test suites check, so a drift in either shows as a failing test
    that slot and its claimed name matches the name the game shows there (compared
    after lower-casing and dropping colour codes and symbols). The local player's own
    plate (`cg_nameplateSelf`) has the badge when their own key is verified.
+5. Once a claim is accepted the thread also tells the hub the player's *look* (the
+   blade skin they wear and whether their Illuminate holocron is lit), which lives on
+   the claim; other SJK clients on the server read it from the claims and the feed and
+   draw it, under the same name rule as the badges ([Unlocks and
+   looks](#unlocks-and-looks)).
 
 Verification is the operator's alone (the hub's `verify` command or its operator API,
 which list every key with its worn names); a player asks for nothing and sets nothing.
@@ -87,8 +93,9 @@ With `cl_identity` on and `cl_hubUrl` set the hub receives the player's public k
 and in-game name at start and whenever the name changes, the game server address,
 slot and in-game name for as long as they play, and sees their IP address. Claims
 are deleted 90 seconds after they stop being repeated; profiles and the worn-name
-history stay until the operator removes them. With either setting off the client
-sends nothing. Since 06/10/2026 `cl_hubUrl` defaults to `https://sjk.dfox.app` so players
+history stay until the operator removes them. While a claim lives, it carries the
+player's look (blade skin and Illuminate), dropped with the claim. With either setting
+off the client sends nothing. Since 06/10/2026 `cl_hubUrl` defaults to `https://sjk.dfox.app` so players
 set nothing: a default install makes a key and tells that hub where it plays. The
 Identity page, the setting's help and the changelog say what is sent and that
 `cl_identity 0` stops it.
@@ -256,6 +263,41 @@ Medals are public: anyone can read a key's profile and the presence list of a se
 so a player's medals, counts, dates and notes are visible to everyone, as their hub
 name and verified flag are. The client sends nothing about medals.
 
+## Unlocks and looks
+
+Unlocks are cosmetic things a key owns, granted by the hub's operator or staff
+(design, catalogue and status: [unlockables.md](unlockables.md)); the first is the Sun
+blade. A profile lists them (`"unlocks":[{"id","granted","note"}]`, the catalogue's
+order; older hubs send none, `Profile::unlocks`). Staff grant and take one back with
+`StaffRequest::Unlock` and `StaffRequest::Relock` (`/v1/staff/unlock`,
+`/v1/staff/relock`); the answer is the target's profile, which replaces the player's
+own when it is theirs, as for medals.
+
+A *look* is what a player wears that others draw: `{"saber":"..","illuminate":..}`, a
+blade-skin unlock id or `""`, and whether the Illuminate holocron is lit.
+
+- Sending: the viewer computes the own look twice a second from `cg_saberSkin`, kept
+  only while the own profile lists that unlock and the client knows the id, and the
+  local Illuminate, and hands it to `Service::set_look` when it changes. The worker
+  keeps the latest and sends `POST /v1/look` once its claim is accepted, again when
+  the look changes or the claim does (another server, slot or name, or a claim that
+  failed and may have lapsed), at most once a second (changes in between are coalesced,
+  the latest wins). A `not_unlocked` or `bad_look` answer leaves that skin out (the look
+  goes with `saber:""`, so Illuminate still syncs) until the profile's unlocks change;
+  `look_quota` and failures wait 10 seconds; another refusal (an older hub) is not
+  repeated until the look or the claim changes. Leaving sends nothing: the release
+  drops the look. `Snapshot::look_outcome` says what became of the last one.
+- Receiving: presence entries carry `look` (`Presence::look`) and the feed carries look
+  events (`Feed::looks`, `LookEvent`), queued for the viewer (`Service::take_looks`, the
+  newest 64). The viewer's `looks.rs` keeps one look per slot: the roster's when it
+  changes, the feed's as they come (newer, so they win until the roster changes
+  again), counted only while the game shows the claimed name in that slot, and cleared
+  on another server. The local player's own look comes from its settings.
+- Others' Illuminate shows by their left shoulder ([client.md](client.md#illuminate));
+  blade skins are drawn by the saber renderer from `Looks::saber_skin_id`.
+
+Looks are public to every SJK player on the server, as badges are.
+
 ## Profile
 
 The Profile page (the SJK UI's main page > SJK > Profile, the classic menu's SJK
@@ -422,6 +464,9 @@ sends its counts, which the page says.
   localhost only.
 - `profile` opens the Profile page and `achievements` its board (again: closes it).
 - `staff` opens the Staff page, for a staff key only.
+- `cg_saberSkin` (archived, default empty) is the blade-skin unlock id the player
+  wears; it applies, and is sent, only while the own profile lists it
+  ([unlockables.md](unlockables.md)).
 - `cl_sjkChat` (default 1; Settings > Network > SJK chat) shows the SJK chat and reads
   it; `sjkchat` opens its page, `messagemode5` (I) its composer in a game, and
   `sjkemote <id>` sends an emote ([hub-chat.md](hub-chat.md)).

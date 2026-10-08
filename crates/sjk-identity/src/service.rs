@@ -1,6 +1,6 @@
 //! The background service that keeps the player registered with the hub, repeats
-//! their game-server claim while they play, and reads who else on that server is
-//! known. Nothing here blocks a frame: the viewer sends [`Command`]s through
+//! their game-server claim while they play, tells the hub the look they wear there,
+//! and reads who else on that server is known. Nothing here blocks a frame: the viewer sends [`Command`]s through
 //! [`Service`] and reads a [`Snapshot`].
 //!
 //! The service is inert while it is disabled or has no hub address: it makes no
@@ -11,7 +11,7 @@ use crate::hub::{Hub, HubError};
 use crate::keys::Identity;
 use crate::report::{BugReport, PlayerReport, WorldNote};
 use crate::staff::{StaffRequest, StaffState};
-use crate::wire::{Achievement, Emote, Presence, Profile, names_match};
+use crate::wire::{Achievement, Emote, Look, LookEvent, Presence, Profile, Unlock, names_match};
 use std::collections::{BTreeMap, HashMap, VecDeque};
 use std::net::SocketAddr;
 use std::sync::mpsc::{Receiver, RecvTimeoutError, Sender, channel};
@@ -35,6 +35,10 @@ const RETRY_MIN: Duration = Duration::from_secs(10);
 const RETRY_MAX: Duration = Duration::from_secs(120);
 /// Longest the worker sleeps without looking at its commands.
 const IDLE_MAX: Duration = Duration::from_secs(60);
+/// Shortest time between two looks sent: the hub takes one a second.
+const LOOK_EVERY: Duration = Duration::from_secs(1);
+/// How long a look waits after the hub said too many (`look_quota`) or failed.
+const LOOK_AGAIN: Duration = Duration::from_secs(10);
 
 /// What the player has configured.
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
@@ -98,6 +102,8 @@ pub struct Snapshot {
     pub note: Option<ReportOutcome>,
     /// The outcome of the last player report sent with [`Service::player_report`].
     pub player_report: Option<ReportOutcome>,
+    /// What became of the last look sent ([`Service::set_look`]).
+    pub look_outcome: Option<ReportOutcome>,
 }
 
 /// What became of a bug report or a world note.
@@ -125,6 +131,7 @@ impl Snapshot {
             report: None,
             note: None,
             player_report: None,
+            look_outcome: None,
         }
     }
 
@@ -162,6 +169,8 @@ enum Command {
     Emote(String),
     /// Whether the SJK chat is on.
     SetChat(bool),
+    /// The look the player wears.
+    Look(Look),
     Stop,
 }
 
@@ -216,6 +225,20 @@ struct Worker {
     feed: Arc<Mutex<FeedShared>>,
     /// What the chat shows; the worker writes the outcome of what it sends.
     chat: Arc<Mutex<ChatState>>,
+    /// The look the viewer last gave.
+    look: Look,
+    /// The claim (server, slot and name) the hub accepted last, while it holds it: a
+    /// look lives on it.
+    look_claim: Option<(String, u8, String)>,
+    /// The look the hub holds on that claim; `None` for none, which draws as the
+    /// default look.
+    look_held: Option<Look>,
+    /// When the next look may go.
+    due_look: Instant,
+    /// Blade skins the hub said the key does not hold, and the unlocks the profile
+    /// listed then: they are not sent again until those change.
+    look_refused: Vec<String>,
+    look_refused_for: Vec<Unlock>,
 }
 
 /// The refusal of anything sent before the hub answered the registration.
@@ -285,13 +308,22 @@ impl Worker {
             chat_on: false,
             feed: Arc::default(),
             chat: Arc::default(),
+            look: Look::default(),
+            look_claim: None,
+            look_held: None,
+            due_look: now,
+            look_refused: Vec::new(),
+            look_refused_for: Vec::new(),
         }
     }
 
-    /// Tell the feed thread what to read: the hub, only while the identity is on, the
-    /// hub answered the registration and the chat is on; and the server played on.
+    /// Tell the feed thread what to read: the hub, only while the identity is on and
+    /// the hub answered the registration, and then on a game server (for its looks
+    /// and emotes, whatever the chat says) or with the chat on; the server played on;
+    /// and whether the chat shows.
     fn publish_feed(&self) {
-        let url = (self.settings.enabled && self.registered && self.chat_on && self.hub.is_some())
+        let reading = self.chat_on || self.location.is_some();
+        let url = (self.settings.enabled && self.registered && reading && self.hub.is_some())
             .then(|| self.settings.hub_url.trim().to_owned());
         let wanted = FeedShared {
             url,
@@ -299,6 +331,7 @@ impl Worker {
                 .location
                 .as_ref()
                 .map(|location| location.server.to_string()),
+            chat: self.chat_on,
         };
         let mut shared = lock_feed(&self.feed);
         if *shared != wanted {
@@ -373,11 +406,14 @@ impl Worker {
         due
     }
 
-    /// Withdraw the claim the hub holds, if any, ignoring a failure: it expires.
+    /// Withdraw the claim the hub holds, if any, ignoring a failure: it expires. The
+    /// look on it goes with it.
     fn release(&mut self) {
         if let (Some(server), Some(hub)) = (self.claimed.take(), self.hub.as_mut()) {
             let _ = hub.release(&self.identity, &server);
         }
+        self.look_claim = None;
+        self.look_held = None;
         self.update(|snapshot| {
             snapshot.server = None;
             snapshot.players.clear();
@@ -437,6 +473,7 @@ impl Worker {
             Command::Chat(text) => self.send_chat(&text),
             Command::Emote(emote) => self.send_emote(&emote),
             Command::SetChat(on) => self.chat_on = on,
+            Command::Look(look) => self.look = look,
             Command::Stop => self.release(),
         }
         self.publish_feed();
@@ -685,7 +722,84 @@ impl Worker {
         if !self.lookups.is_empty() {
             wait = Duration::ZERO;
         }
+        if self.look_waiting() {
+            wait = wait.min(self.due_look.saturating_duration_since(now));
+        }
         wait
+    }
+
+    /// The look to send: the one the viewer gave, without a blade skin the hub said
+    /// the key does not hold while the profile's unlocks are the same.
+    fn look_to_send(&mut self) -> Look {
+        if !self.look_refused.is_empty() {
+            let same = lock(&self.snapshot)
+                .me
+                .as_ref()
+                .is_some_and(|me| me.unlocks == self.look_refused_for);
+            if !same {
+                self.look_refused.clear();
+            }
+        }
+        let mut look = self.look.clone();
+        if self.look_refused.contains(&look.saber) {
+            look.saber.clear();
+        }
+        look
+    }
+
+    /// Whether the hub's claim should get another look than the one it holds.
+    fn look_waiting(&mut self) -> bool {
+        self.look_claim.is_some()
+            && self.look_to_send() != self.look_held.clone().unwrap_or_default()
+    }
+
+    /// Send the look for the accepted claim if it changed and one may go.
+    fn send_look(&mut self, now: Instant) {
+        if now < self.due_look || !self.look_waiting() {
+            return;
+        }
+        let look = self.look_to_send();
+        let (Some((server, _, _)), Some(hub)) = (self.look_claim.clone(), self.hub.as_mut()) else {
+            return;
+        };
+        let outcome = hub.look(&self.identity, &server, &look);
+        self.due_look = now + LOOK_EVERY;
+        match &outcome {
+            Ok(_) => self.look_held = Some(look.clone()),
+            // The skin is not the key's (or not the hub's): the rest of the look still
+            // goes, without it, until the profile changes.
+            Err(HubError::Rejected { code, .. })
+                if (code == "not_unlocked" || code == "bad_look") && !look.saber.is_empty() =>
+            {
+                self.look_refused_for = lock(&self.snapshot)
+                    .me
+                    .as_ref()
+                    .map(|me| me.unlocks.clone())
+                    .unwrap_or_default();
+                self.look_refused.push(look.saber.clone());
+            }
+            // The claim lapsed at the hub: the next accepted claim sends the look again.
+            Err(HubError::Rejected { code, .. }) if code == "not_on_server" => {
+                self.look_claim = None;
+                self.look_held = None;
+            }
+            Err(HubError::Rejected { code, .. }) if code == "look_quota" => {
+                self.due_look = now + LOOK_AGAIN;
+            }
+            // Any other refusal (an older hub without looks) is not repeated until the
+            // look or the claim changes.
+            Err(HubError::Rejected { status, .. }) if (400..500).contains(status) => {
+                self.look_held = Some(look.clone());
+            }
+            Err(_) => self.due_look = now + LOOK_AGAIN,
+        }
+        self.update(|snapshot| {
+            let serial = snapshot
+                .look_outcome
+                .as_ref()
+                .map_or(1, |last| last.serial + 1);
+            snapshot.look_outcome = Some(outcome_of(serial, outcome.map(|_| String::new())));
+        });
     }
 
     /// Whether the hub should hear the achievement counts: they changed since they
@@ -781,9 +895,19 @@ impl Worker {
                     Ok(()) => {
                         self.claimed = Some(server.clone());
                         self.due_claim = now + CLAIM_EVERY;
+                        // Renewing the same claim keeps its look; another server,
+                        // slot or name starts with none.
+                        let claim = (server.clone(), location.slot, location.name.clone());
+                        if self.look_claim.as_ref() != Some(&claim) {
+                            self.look_claim = Some(claim);
+                            self.look_held = None;
+                        }
                     }
                     Err(failure) => {
                         self.due_claim = now + self.backoff;
+                        // The claim may lapse meanwhile, and its look with it.
+                        self.look_claim = None;
+                        self.look_held = None;
                         error = Some(failure);
                     }
                 }
@@ -817,6 +941,8 @@ impl Worker {
                 }
             }
         }
+        // A look is cosmetic: what became of it is in its outcome, not the status.
+        self.send_look(now);
         match error.or(counts_error) {
             Some(failure) => {
                 self.backoff = (self.backoff * 2).min(RETRY_MAX);
@@ -848,6 +974,7 @@ pub struct Service {
     staff: Arc<Mutex<StaffState>>,
     chat: Arc<Mutex<ChatState>>,
     emotes: Arc<Mutex<VecDeque<Emote>>>,
+    looks: Arc<Mutex<VecDeque<LookEvent>>>,
     /// Set to end the feed thread, which ends after its poll at the latest.
     feed_stop: Arc<std::sync::atomic::AtomicBool>,
     finished: Mutex<Receiver<()>>,
@@ -884,6 +1011,7 @@ impl Service {
         );
         let chat = Arc::clone(&worker.chat);
         let emotes = Arc::new(Mutex::new(VecDeque::new()));
+        let looks = Arc::new(Mutex::new(VecDeque::new()));
         let feed_stop = Arc::new(std::sync::atomic::AtomicBool::new(false));
         if let Some(make_feed_hub) = make_feed_hub {
             let feed = FeedWorker::new(
@@ -892,6 +1020,7 @@ impl Service {
                 Arc::clone(&worker.feed),
                 Arc::clone(&chat),
                 Arc::clone(&emotes),
+                Arc::clone(&looks),
                 Instant::now(),
             );
             let stop = Arc::clone(&feed_stop);
@@ -929,6 +1058,7 @@ impl Service {
             staff,
             chat,
             emotes,
+            looks,
             feed_stop,
             finished: Mutex::new(finished),
             note_tags: std::sync::atomic::AtomicU64::new(0),
@@ -1028,7 +1158,9 @@ impl Service {
         read(&lock(&self.snapshot))
     }
 
-    /// Turn the SJK chat on or off: the feed reads the hub only while it is on.
+    /// Turn the SJK chat on or off. Off, the feed still reads the hub while the
+    /// player is on a game server (for its looks and emotes) but keeps no message; in
+    /// the menus it reads only with the chat on.
     pub fn set_chat(&self, on: bool) {
         let _ = self.commands.send(Command::SetChat(on));
     }
@@ -1052,6 +1184,20 @@ impl Service {
     /// The emotes received since the last call, oldest first.
     pub fn take_emotes(&self) -> Vec<Emote> {
         crate::feed::lock(&self.emotes).drain(..).collect()
+    }
+
+    /// The look the player wears (`PROTOCOL.md`, "Looks"). The worker keeps the
+    /// latest and sends it once its claim on a server is accepted, again when it
+    /// changes or the claim does (another server, slot or name), at most once a
+    /// second; a blade skin the hub says the key does not hold is left out until the
+    /// profile changes. What became of it arrives in [`Snapshot::look_outcome`].
+    pub fn set_look(&self, look: Look) {
+        let _ = self.commands.send(Command::Look(look));
+    }
+
+    /// The looks the feed received since the last call, oldest first.
+    pub fn take_looks(&self) -> Vec<LookEvent> {
+        crate::feed::lock(&self.looks).drain(..).collect()
     }
 
     /// Withdraw the claim and stop, waiting at most `timeout` for it. The feed thread
@@ -1083,11 +1229,33 @@ mod tests {
         cap: Arc<Mutex<Option<u64>>>,
         /// The achievements the fake hub holds, as its profiles list them.
         held: Arc<Mutex<Vec<Achievement>>>,
+        /// The unlocks the fake hub holds for the player's key.
+        owned: Arc<Mutex<Vec<String>>>,
     }
 
     impl Fake {
         fn log(&self) -> Vec<String> {
             self.log.lock().unwrap().clone()
+        }
+
+        fn unlocks(&self) -> Vec<Unlock> {
+            self.owned
+                .lock()
+                .unwrap()
+                .iter()
+                .map(|id| Unlock {
+                    id: id.clone(),
+                    granted: 1,
+                    note: String::new(),
+                })
+                .collect()
+        }
+
+        fn looks(&self) -> Vec<String> {
+            self.log()
+                .into_iter()
+                .filter(|line| line.starts_with("look"))
+                .collect()
         }
 
         fn record(&self, line: String) -> Result<(), HubError> {
@@ -1112,16 +1280,22 @@ mod tests {
             names: Vec::new(),
             medals: Vec::new(),
             achievements: Vec::new(),
+            unlocks: Vec::new(),
         }
     }
 
     impl Hub for Fake {
         fn register(&mut self, _: &Identity, name: Option<&str>) -> Result<Profile, HubError> {
+            let unlocks = self.unlocks();
             match name {
-                Some(name) => self
-                    .record(format!("register {name}"))
-                    .map(|()| profile(name)),
-                None => self.record("register".to_owned()).map(|()| profile("")),
+                Some(name) => self.record(format!("register {name}")).map(|()| Profile {
+                    unlocks,
+                    ..profile(name)
+                }),
+                None => self.record("register".to_owned()).map(|()| Profile {
+                    unlocks,
+                    ..profile("")
+                }),
             }
         }
         fn set_bio(&mut self, _: &Identity, bio: &str) -> Result<Profile, HubError> {
@@ -1130,6 +1304,7 @@ mod tests {
         fn profile(&mut self, key_id: &str) -> Result<Profile, HubError> {
             self.record(format!("lookup {key_id}")).map(|()| Profile {
                 achievements: self.held.lock().unwrap().clone(),
+                unlocks: self.unlocks(),
                 ..profile("Other")
             })
         }
@@ -1180,6 +1355,20 @@ mod tests {
         fn emote(&mut self, _: &Identity, server: &str, emote: &str) -> Result<u64, HubError> {
             Fake::record(self, format!("emote {emote} on {server}")).map(|()| 13)
         }
+        fn look(&mut self, _: &Identity, server: &str, look: &Look) -> Result<u64, HubError> {
+            Fake::record(
+                self,
+                format!("look {server} {:?} {}", look.saber, look.illuminate),
+            )?;
+            if !look.saber.is_empty() && !self.owned.lock().unwrap().contains(&look.saber) {
+                return Err(HubError::Rejected {
+                    status: 403,
+                    code: "not_unlocked".to_owned(),
+                    message: "this key does not hold that unlock".to_owned(),
+                });
+            }
+            Ok(15)
+        }
         fn set_achievements(
             &mut self,
             _: &Identity,
@@ -1218,6 +1407,22 @@ mod tests {
                     }],
                     ..profile("Target")
                 }],
+                StaffRequest::Unlock { key_id, unlock, .. } => {
+                    self.owned.lock().unwrap().push(unlock.clone());
+                    vec![Profile {
+                        key_id: key_id.clone(),
+                        unlocks: self.unlocks(),
+                        ..profile("Target")
+                    }]
+                }
+                StaffRequest::Relock { key_id, unlock } => {
+                    self.owned.lock().unwrap().retain(|id| id != unlock);
+                    vec![Profile {
+                        key_id: key_id.clone(),
+                        unlocks: self.unlocks(),
+                        ..profile("Target")
+                    }]
+                }
                 StaffRequest::Unaward { key_id, .. }
                 | StaffRequest::ClearAchievements { key_id, .. } => vec![Profile {
                     key_id: key_id.clone(),
@@ -1327,7 +1532,7 @@ mod tests {
     }
 
     #[test]
-    fn the_feed_runs_only_when_registered_with_chat_on() {
+    fn the_feed_runs_when_registered_with_chat_on_or_on_a_server() {
         let fake = Fake::default();
         fake.fail.store(true, Ordering::SeqCst);
         let t0 = Instant::now();
@@ -1342,14 +1547,203 @@ mod tests {
         worker.tick(t0 + Duration::from_secs(30));
         assert_eq!(url().as_deref(), Some("https://hub"));
         assert_eq!(lock_feed(&shared).server, None);
-        worker.handle(Command::Enter(here(3, "Sol")), t0);
-        assert_eq!(lock_feed(&shared).server.as_deref(), Some("1.2.3.4:29070"));
+        assert!(lock_feed(&shared).chat);
+        // In the menus the chat off stops the reading.
         worker.handle(Command::SetChat(false), t0);
         assert_eq!(url(), None);
+        // On a server it reads anyway, for the looks and emotes, the chat hidden.
+        worker.handle(Command::Enter(here(3, "Sol")), t0);
+        assert_eq!(url().as_deref(), Some("https://hub"));
+        assert_eq!(lock_feed(&shared).server.as_deref(), Some("1.2.3.4:29070"));
+        assert!(!lock_feed(&shared).chat);
+        worker.handle(Command::SetChat(true), t0);
+        assert!(url().is_some() && lock_feed(&shared).chat);
+        worker.handle(Command::SetChat(false), t0);
+        worker.handle(Command::Leave, t0);
+        assert_eq!(url(), None, "back in the menus with the chat off");
         worker.handle(Command::SetChat(true), t0);
         assert!(url().is_some());
         worker.handle(Command::Configure(Settings::default()), t0);
         assert_eq!(url(), None, "identity off");
+    }
+
+    fn lit(saber: &str) -> Look {
+        Look {
+            saber: saber.to_owned(),
+            illuminate: true,
+        }
+    }
+
+    #[test]
+    fn the_look_goes_once_the_claim_is_accepted_and_at_most_once_a_second() {
+        let fake = Fake::default();
+        fake.owned.lock().unwrap().push("saber_sun".to_owned());
+        let t0 = Instant::now();
+        let (mut worker, snapshot) = worker(&fake, t0);
+        // Without a claim there is nowhere to wear it.
+        worker.handle(Command::Look(lit("")), t0);
+        worker.handle(Command::Configure(on("https://hub")), t0);
+        worker.tick(t0);
+        assert!(fake.looks().is_empty());
+        worker.handle(Command::Enter(here(3, "Sol")), t0);
+        worker.tick(t0);
+        assert_eq!(
+            fake.log()[1..],
+            [
+                "claim 1.2.3.4:29070 3 Sol",
+                "presence 1.2.3.4:29070",
+                "look 1.2.3.4:29070 \"\" true",
+            ]
+        );
+        assert!(lock(&snapshot).look_outcome.as_ref().unwrap().sent);
+        // Changes within the second wait, and only the latest goes.
+        let ms = |ms| t0 + Duration::from_millis(ms);
+        worker.handle(Command::Look(lit("saber_sun")), ms(200));
+        assert_eq!(worker.tick(ms(200)), Duration::from_millis(800));
+        worker.handle(Command::Look(Look::default()), ms(500));
+        worker.tick(ms(500));
+        worker.handle(Command::Look(lit("saber_sun")), ms(700));
+        worker.tick(ms(700));
+        assert_eq!(fake.looks().len(), 1);
+        worker.tick(ms(1_000));
+        assert_eq!(
+            fake.looks(),
+            [
+                "look 1.2.3.4:29070 \"\" true",
+                "look 1.2.3.4:29070 \"saber_sun\" true"
+            ]
+        );
+        // The same look is not sent again, nor with the claim renewed.
+        worker.handle(Command::Look(lit("saber_sun")), ms(2_000));
+        worker.tick(ms(2_000));
+        worker.tick(t0 + Duration::from_secs(46));
+        assert_eq!(fake.looks().len(), 2);
+    }
+
+    #[test]
+    fn a_new_claim_gets_the_look_again_and_no_look_sends_nothing() {
+        let fake = Fake::default();
+        let t0 = Instant::now();
+        let (mut worker, _) = worker(&fake, t0);
+        worker.handle(Command::Configure(on("https://hub")), t0);
+        worker.handle(Command::Enter(here(3, "Sol")), t0);
+        worker.tick(t0);
+        assert!(
+            fake.looks().is_empty(),
+            "the default look is the claim's own"
+        );
+        worker.handle(Command::Look(lit("")), t0);
+        worker.tick(t0);
+        assert_eq!(fake.looks().len(), 1);
+        // Another slot: a new claim, which starts with no look.
+        let t1 = t0 + Duration::from_secs(5);
+        worker.handle(Command::Enter(here(4, "Sol")), t1);
+        worker.tick(t1);
+        assert_eq!(fake.log().last().unwrap(), "look 1.2.3.4:29070 \"\" true");
+        assert_eq!(fake.looks().len(), 2);
+        // Another server: the old claim is withdrawn and the new one gets it.
+        let elsewhere = Location {
+            server: "5.6.7.8:29070".parse().unwrap(),
+            ..here(4, "Sol")
+        };
+        let t2 = t1 + Duration::from_secs(5);
+        worker.handle(Command::Enter(elsewhere), t2);
+        worker.tick(t2);
+        assert_eq!(fake.log().last().unwrap(), "look 5.6.7.8:29070 \"\" true");
+        // A claim that failed may have lapsed: the next accepted one sends it again.
+        fake.fail.store(true, Ordering::SeqCst);
+        let t3 = t2 + Duration::from_secs(46);
+        worker.tick(t3);
+        fake.fail.store(false, Ordering::SeqCst);
+        worker.tick(t3 + Duration::from_secs(30));
+        assert_eq!(fake.looks().len(), 4);
+        // Leaving needs nothing: the release drops it.
+        worker.handle(Command::Leave, t3 + Duration::from_secs(31));
+        assert_eq!(fake.log().last().unwrap(), "release 5.6.7.8:29070");
+    }
+
+    #[test]
+    fn a_blade_skin_the_key_lacks_is_left_out_until_the_profile_changes() {
+        let fake = Fake::default();
+        let t0 = Instant::now();
+        let (mut worker, snapshot) = worker(&fake, t0);
+        worker.handle(Command::Configure(on("https://hub")), t0);
+        worker.handle(Command::Enter(here(3, "Sol")), t0);
+        worker.handle(Command::Look(lit("saber_sun")), t0);
+        worker.tick(t0);
+        assert_eq!(fake.looks(), ["look 1.2.3.4:29070 \"saber_sun\" true"]);
+        let outcome = lock(&snapshot).look_outcome.clone().unwrap();
+        assert!(!outcome.sent);
+        // A second later the Illuminate still goes, without the skin, and then nothing.
+        let t1 = t0 + Duration::from_secs(1);
+        worker.tick(t1);
+        worker.tick(t1 + Duration::from_secs(5));
+        assert_eq!(
+            fake.looks()[1..],
+            ["look 1.2.3.4:29070 \"\" true".to_owned()]
+        );
+        // Another skin is tried and refused; back to the first, which stays out: the
+        // hub already holds the look without a skin, so nothing goes.
+        worker.handle(
+            Command::Look(lit("saber_moon")),
+            t1 + Duration::from_secs(5),
+        );
+        worker.tick(t1 + Duration::from_secs(5));
+        worker.handle(Command::Look(lit("saber_sun")), t1 + Duration::from_secs(7));
+        worker.tick(t1 + Duration::from_secs(7));
+        worker.tick(t1 + Duration::from_secs(8));
+        assert_eq!(
+            fake.looks()[2..],
+            ["look 1.2.3.4:29070 \"saber_moon\" true".to_owned()]
+        );
+        // Staff unlock it on the player's own key: the profile changes, it goes.
+        let me = lock(&snapshot).me.clone().unwrap().key_id;
+        worker.handle(
+            Command::Staff(StaffRequest::Unlock {
+                key_id: me,
+                unlock: "saber_sun".into(),
+                note: String::new(),
+            }),
+            t1 + Duration::from_secs(9),
+        );
+        worker.tick(t1 + Duration::from_secs(9));
+        assert_eq!(
+            fake.looks().last().unwrap(),
+            "look 1.2.3.4:29070 \"saber_sun\" true"
+        );
+        assert!(lock(&snapshot).look_outcome.clone().unwrap().sent);
+    }
+
+    #[test]
+    fn staff_unlock_and_relock_change_the_profile_they_answer() {
+        let fake = Fake::default();
+        let t0 = Instant::now();
+        let (mut worker, snapshot) = worker(&fake, t0);
+        worker.handle(Command::Configure(on("https://hub")), t0);
+        worker.tick(t0);
+        let staff = Arc::clone(&worker.staff);
+        let me = lock(&snapshot).me.clone().unwrap().key_id;
+        worker.handle(
+            Command::Staff(StaffRequest::Unlock {
+                key_id: me.clone(),
+                unlock: "saber_sun".into(),
+                note: "Thanks".into(),
+            }),
+            t0,
+        );
+        assert_eq!(staff.lock().unwrap().message, "Unlocked saber_sun");
+        let unlocks = |snapshot: &Mutex<Snapshot>| lock(snapshot).me.clone().unwrap().unlocks;
+        assert_eq!(unlocks(&snapshot)[0].id, "saber_sun");
+        worker.handle(
+            Command::Staff(StaffRequest::Relock {
+                key_id: me,
+                unlock: "saber_sun".into(),
+            }),
+            t0,
+        );
+        assert_eq!(staff.lock().unwrap().message, "Took back saber_sun");
+        assert!(unlocks(&snapshot).is_empty());
+        assert_eq!(staff.lock().unwrap().players[0].unlocks, []);
     }
 
     #[test]
@@ -1588,6 +1982,7 @@ mod tests {
             name: "Sol".to_owned(),
             verified: true,
             medals: Vec::new(),
+            look: None,
         }];
         let t0 = Instant::now();
         let (mut worker, snapshot) = worker(&fake, t0);

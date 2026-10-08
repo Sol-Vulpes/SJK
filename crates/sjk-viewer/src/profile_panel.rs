@@ -486,6 +486,7 @@ mod tests {
             names: Vec::new(),
             medals: Vec::new(),
             achievements: Vec::new(),
+            unlocks: Vec::new(),
         }
     }
 
@@ -502,6 +503,7 @@ mod tests {
             report: None,
             note: None,
             player_report: None,
+            look_outcome: None,
         }
     }
 

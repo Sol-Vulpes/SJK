@@ -892,6 +892,7 @@ mod tests {
             })
             .collect(),
             achievements: Vec::new(),
+            unlocks: Vec::new(),
         }
     }
 

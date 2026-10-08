@@ -375,6 +375,7 @@ mod tests {
             names: Vec::new(),
             medals: Vec::new(),
             achievements: Vec::new(),
+            unlocks: Vec::new(),
         }
     }
 
