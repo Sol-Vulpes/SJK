@@ -10,12 +10,17 @@
 //! colour, the hot core stays white with a coloured fringe.
 
 use crate::saber::Color;
+use crate::saber_skins::BladeSkin;
 
 /// Material slot of the engine-generated neutral pair, after the six retail
 /// colours.
 pub(crate) const RGB_MATERIAL: u32 = Color::ALL.len() as u32;
-/// Number of saber material bind groups (six retail pairs plus the neutral one).
-pub(crate) const MATERIAL_COUNT: usize = RGB_MATERIAL as usize + 1;
+/// Material slot of the first blade skin ([`BladeSkin::ALL`] order), after the
+/// neutral pair.
+pub(crate) const SKIN_MATERIAL: u32 = RGB_MATERIAL + 1;
+/// Number of saber material bind groups (six retail pairs, the neutral one and
+/// one per blade skin).
+pub(crate) const MATERIAL_COUNT: usize = SKIN_MATERIAL as usize + BladeSkin::ALL.len();
 
 /// Blade colour as the renderer needs it: a retail shader pair, or a tint
 /// applied to the neutral pair.
@@ -25,6 +30,8 @@ pub(crate) enum BladeColor {
     Retail(Color),
     /// Any other colour, drawn with the neutral textures tinted by this RGB.
     Rgb([u8; 3]),
+    /// A blade skin, drawn with its own textures and animation (`saber_skins.rs`).
+    Skin(BladeSkin),
 }
 
 impl BladeColor {
@@ -41,23 +48,39 @@ impl BladeColor {
         match self {
             Self::Retail(color) => color.index() as u32,
             Self::Rgb(_) => RGB_MATERIAL,
+            Self::Skin(skin) => SKIN_MATERIAL + skin.index() as u32,
         }
+    }
+
+    /// The colour an instance with `material` and per-instance `tint` was made from.
+    pub(crate) fn from_material(material: u32, tint: [f32; 3]) -> Self {
+        if let Some(color) = Color::ALL.get(material as usize) {
+            return Self::Retail(*color);
+        }
+        if let Some(skin) = material
+            .checked_sub(SKIN_MATERIAL)
+            .and_then(|index| BladeSkin::ALL.get(index as usize))
+        {
+            return Self::Skin(*skin);
+        }
+        Self::Rgb(tint.map(|c| (c * 255.).round().clamp(0., 255.) as u8))
     }
 
     /// Per-instance multiplier; retail textures already carry their colour.
     pub(crate) fn tint(self) -> [f32; 3] {
         match self {
-            Self::Retail(_) => [1.0; 3],
+            Self::Retail(_) | Self::Skin(_) => [1.0; 3],
             Self::Rgb(rgb) => rgb.map(|channel| f32::from(channel) / 255.0),
         }
     }
 
     /// Vertex RGB of the blur trail: the stock table for retail colours,
-    /// the player's tint for RGB (`cg_players.c:7840-7855`).
+    /// the player's tint for RGB (`cg_players.c:7840-7855`), the skin's own for a skin.
     pub(crate) fn trail_rgb(self) -> [f32; 3] {
         match self {
             Self::Retail(color) => color.trail_rgb(),
             Self::Rgb(rgb) => rgb.map(|channel| f32::from(channel) / 255.0),
+            Self::Skin(skin) => skin.trail_rgb(),
         }
     }
 }

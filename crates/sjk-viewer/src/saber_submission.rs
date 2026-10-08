@@ -12,10 +12,12 @@ use sjk_runtime::{HeldEquipment, HeldItemKind};
 pub(crate) mod lights;
 
 /// Submit both hilts and every numbered blade for one actor. `trails` is
-/// `None` with `cg_saberTrail 0`.
+/// `None` with `cg_saberTrail 0`; `skin` is the blade skin the actor wears, which
+/// replaces both sabers' colours.
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn submit(
     entity_id: u64,
+    skin: Option<crate::saber_skins::BladeSkin>,
     hands: [Option<(&str, saber::Attachment)>; 2],
     equipment: HeldEquipment,
     actor_origin: Vec3,
@@ -60,11 +62,16 @@ pub(crate) fn submit(
             weapon_rotation.to_array(),
             [1.0; 3],
         ));
-        let color = BladeColor::from_rgb(if saber_index == 0 {
-            equipment.color
-        } else {
-            equipment.secondary_color
-        });
+        let color = skin.map_or_else(
+            || {
+                BladeColor::from_rgb(if saber_index == 0 {
+                    equipment.color
+                } else {
+                    equipment.secondary_color
+                })
+            },
+            BladeColor::Skin,
+        );
         let mut light_blades = [None; 8];
         for blade_index in 0..usize::from(hilt.num_blades) {
             let Some(hilt_blade) = hilt.blade(blade_index) else {
@@ -87,10 +94,8 @@ pub(crate) fn submit(
                 length,
                 hilt_blade.radius,
             );
-            let flicker = saber::Flicker::sample(
-                entity_id.wrapping_mul(24) + (saber_index * 8 + blade_index) as u64,
-                presentation_time,
-            );
+            let key = entity_id.wrapping_mul(24) + (saber_index * 8 + blade_index) as u64;
+            let flicker = saber::Flicker::sample(key, presentation_time);
             saber_instances.extend(
                 Instance::pair_flickering(blade, color, hilt_blade.length, flicker).map(|i| {
                     i.with_contact(
@@ -100,6 +105,7 @@ pub(crate) fn submit(
                         !hilt.no_wall_marks,
                         hilt.no_dlight,
                     )
+                    .with_animation(presentation_time as f64 * 0.001, key as u32)
                 }),
             );
             light_blades[blade_index] = Some(blade);

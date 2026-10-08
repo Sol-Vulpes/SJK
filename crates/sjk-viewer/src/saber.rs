@@ -111,6 +111,9 @@ pub(crate) struct Instance {
     radius: f32,
     color: [f32; 4],
     material: u32,
+    /// Presentation seconds (wrapped, [`Self::with_animation`]) and a per-blade seed in
+    /// [0, 1), for the skins' animation; unused by the retail and RGB pairs.
+    animation: [f32; 2],
     contact: u32,
     no_light: u32,
     /// The blade's configured radius, for contacts; not a GPU attribute.
@@ -150,8 +153,9 @@ impl Flicker {
 }
 
 impl Instance {
-    const ATTRIBUTES: [wgpu::VertexAttribute; 6] = wgpu::vertex_attr_array![
-        0 => Float32x3, 1 => Float32, 2 => Float32x3, 3 => Float32, 4 => Float32x4, 5 => Uint32];
+    const ATTRIBUTES: [wgpu::VertexAttribute; 7] = wgpu::vertex_attr_array![
+        0 => Float32x3, 1 => Float32, 2 => Float32x3, 3 => Float32, 4 => Float32x4, 5 => Uint32,
+        6 => Float32x2];
 
     pub(crate) fn layout() -> wgpu::VertexBufferLayout<'static> {
         wgpu::VertexBufferLayout {
@@ -191,6 +195,7 @@ impl Instance {
             radius: radius * grow,
             color: [red, green, blue, hilt],
             material: color.material(),
+            animation: [0.0; 2],
             contact: 0,
             no_light: 0,
             nominal_radius: blade.radius,
@@ -203,6 +208,24 @@ impl Instance {
             ),
             make(blade.radius / 3.0 + flicker.core * range, 0.0),
         ]
+    }
+
+    /// Period the animation time wraps at, in seconds, keeping it precise in an `f32`
+    /// (`saber.wgsl` sees a jump once in this long).
+    pub(crate) const ANIMATION_PERIOD: f64 = 1_024.0;
+
+    /// Stamp the skins' animation: presentation time `seconds` and a stable per-blade
+    /// `seed` (the same for a blade's glow and core, and from frame to frame).
+    pub(crate) fn with_animation(mut self, seconds: f64, seed: u32) -> Self {
+        let mut hash = seed.wrapping_mul(0x9e37_79b9) ^ 0x85eb_ca6b;
+        hash ^= hash >> 15;
+        hash = hash.wrapping_mul(0x2c1b_3c6d);
+        hash ^= hash >> 12;
+        self.animation = [
+            seconds.rem_euclid(Self::ANIMATION_PERIOD) as f32,
+            (hash >> 8) as f32 / (1u32 << 24) as f32,
+        ];
+        self
     }
 
     /// Tag render instances with a stable presentation key; GPU attributes are unchanged.
@@ -227,15 +250,8 @@ impl Instance {
         if self.contact == 0 || self.color[3] <= 0.0 {
             return None;
         }
-        let color = Color::ALL.get(self.material as usize).copied().map_or_else(
-            || {
-                BladeColor::Rgb(
-                    [self.color[0], self.color[1], self.color[2]]
-                        .map(|c| (c * 255.).round().clamp(0., 255.) as u8),
-                )
-            },
-            BladeColor::Retail,
-        );
+        let color =
+            BladeColor::from_material(self.material, [self.color[0], self.color[1], self.color[2]]);
         Some((
             self.contact as usize - 1,
             Blade {
@@ -283,9 +299,15 @@ impl Instance {
         let direction = Vec3::from_array(self.direction);
         let base = Vec3::from_array(self.base);
         let radius = self.radius.max(0.01);
+        // A skin's glow reaches further, for its flares (saber.wgsl `SUN_REACH`).
+        let widen = if self.material >= crate::saber_rgb::SKIN_MATERIAL {
+            crate::saber_skins::GLOW_REACH
+        } else {
+            1.0
+        };
         let reach = if self.color[3] > 0.0 {
             // saber.wgsl `chain_radius` at the hilt, or the hilt sprite; quad corners reach √2.
-            (radius + 0.017 * self.length / (0.65 * radius)).max(self.color[3])
+            ((radius + 0.017 * self.length / (0.65 * radius)) * widen).max(self.color[3])
                 * std::f32::consts::SQRT_2
         } else {
             radius
@@ -419,7 +441,8 @@ impl Samplers {
 }
 
 /// Load the six real retail glow/core shader pairs used by `CG_DoSaber`,
-/// followed by the engine-generated neutral pair for custom RGB blades.
+/// followed by the engine-generated neutral pair for custom RGB blades and the
+/// blade skins' pairs.
 pub(crate) fn create_materials(
     device: &wgpu::Device,
     queue: &crate::frame_queue::FrameQueue,
@@ -450,6 +473,7 @@ pub(crate) fn create_materials(
             ))
         })
         .chain(std::iter::once(Ok(neutral)))
+        .chain(crate::saber_skins::create_materials(device, queue, layout, &samplers).map(Ok))
         .collect()
 }
 
@@ -599,6 +623,58 @@ pub(crate) fn world_blade(
 #[cfg(test)]
 mod cutoff_tests {
     use super::*;
+
+    #[test]
+    fn the_animation_attribute_sits_where_the_instance_keeps_it() {
+        let offset = |index: usize| Instance::ATTRIBUTES[index].offset as usize;
+        assert_eq!(offset(5), std::mem::offset_of!(Instance, material));
+        assert_eq!(offset(6), std::mem::offset_of!(Instance, animation));
+        assert_eq!(
+            Instance::ATTRIBUTES[6].format,
+            wgpu::VertexFormat::Float32x2
+        );
+        // saber.wgsl's slots and reach match the Rust ones.
+        let shader = include_str!("saber.wgsl");
+        assert!(shader.contains(&format!(
+            "const NEUTRAL_MATERIAL: u32 = {}u;",
+            crate::saber_rgb::RGB_MATERIAL
+        )));
+        assert!(shader.contains(&format!(
+            "const SUN_MATERIAL: u32 = {}u;",
+            BladeColor::Skin(crate::saber_skins::BladeSkin::Sun).material()
+        )));
+        assert!(shader.contains(&format!(
+            "const SUN_REACH: f32 = {:?};",
+            crate::saber_skins::GLOW_REACH
+        )));
+        assert!(shader.contains("@location(6) blade_animation: vec2<f32>"));
+    }
+
+    #[test]
+    fn animation_time_wraps_and_seeds_are_stable_and_spread() {
+        let blade = Blade {
+            base: [0.; 3],
+            direction: [1., 0., 0.],
+            length: 40.,
+            radius: 3.,
+        };
+        let pair = Instance::pair(blade, BladeColor::from_rgb([0, 0, 255]));
+        let stamped = pair.map(|i| i.with_animation(1_030.5, 7));
+        assert_eq!(stamped[0].animation, stamped[1].animation);
+        assert!((stamped[0].animation[0] - 6.5).abs() < 1e-4);
+        assert_eq!(
+            pair[0].with_animation(3.0, 7).animation[1],
+            stamped[0].animation[1]
+        );
+        let seeds: Vec<f32> = (0..64)
+            .map(|seed| pair[0].with_animation(0.0, seed).animation[1])
+            .collect();
+        assert!(seeds.iter().all(|seed| (0.0..1.0).contains(seed)));
+        assert!(seeds.iter().any(|&seed| seed < 0.25) && seeds.iter().any(|&seed| seed > 0.75));
+        assert_ne!(seeds[0], seeds[1]);
+        // Unstamped (retail) instances carry zeros.
+        assert_eq!(pair[0].animation, [0.0; 2]);
+    }
 
     #[test]
     fn cutoff_matches_stock_render_pair_at_command_steps() {

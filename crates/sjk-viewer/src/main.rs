@@ -172,6 +172,7 @@ mod saber_defs;
 mod saber_gpu;
 mod saber_hilts;
 mod saber_rgb;
+mod saber_skins;
 mod saber_submission;
 mod saber_trail;
 mod saber_trail_gpu;
@@ -323,6 +324,8 @@ struct GpuState {
     first_person_view: first_person_view::Tracker,
     model_material_overrides: model_materials::Overrides,
     saber_hilts: Option<saber::HiltCatalog>,
+    /// Who wears which blade skin (`saber_skins.rs`).
+    saber_skins: saber_skins::SaberSkins,
     saber_states: saber_trail::StateSlab,
     saber_trail_segments: saber_trail::SegmentPool,
     speed_trails: actor_world_submission::speed_trail::Trails,
@@ -1170,6 +1173,7 @@ impl GpuState {
 
             model_material_overrides,
             saber_hilts,
+            saber_skins: Default::default(),
             saber_states: saber_trail::StateSlab::default(),
             saber_trail_segments: saber_trail::SegmentPool::default(),
             speed_trails: Default::default(),
@@ -1897,6 +1901,7 @@ impl GpuState {
         self.particle_groups.iter_mut().for_each(Vec::clear);
         self.dynamic_lights.clear();
         self.submit_illuminate(presentation_time, visual_now);
+        self.sync_saber_skins(game_audio, presentation_time);
         let debug_missiles = effect_debug::sync(self.console.as_ref());
         let active_snapshot = first_person_view::presented_snapshot(
             self.live_session.as_ref(),

@@ -269,9 +269,10 @@ impl Options {
             .ok_or("SJK_MAX_ASSET_MIB must be positive and fit in u64")?;
         let mut vfs = VirtualFileSystem::with_max_asset_bytes(limit);
         vfs.set_read_diagnostics(self.debug);
-        // SJK's own content (Illuminate's holocron), below everything so game
-        // data with the same paths replaces it.
+        // SJK's own content (Illuminate's holocron, the blade skins' sounds),
+        // below everything so game data with the same paths replaces it.
         crate::illuminate::mount(&mut vfs)?;
+        crate::saber_skins::mount(&mut vfs)?;
         // JoF EJK's hats and capes, below everything else so they never
         // replace other content.
         let log = !COSMETICS_LOGGED.swap(true, Ordering::Relaxed);

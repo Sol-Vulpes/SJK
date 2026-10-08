@@ -239,6 +239,9 @@ mod notes;
 #[path = "world_shot_illuminate.rs"]
 mod holocron;
 
+#[path = "world_shot_saber_skins.rs"]
+mod saber_skins;
+
 #[cfg(test)]
 mod tests {
     use super::*;

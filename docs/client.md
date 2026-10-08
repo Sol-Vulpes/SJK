@@ -1864,6 +1864,32 @@ data, so a PK3 with the same paths replaces them. Sol generated the art; see
 [assets/holocron](../crates/sjk-viewer/assets/holocron/README.md) and
 [illuminate.rs](../crates/sjk-viewer/src/illuminate.rs).
 
+## Blade skins
+
+A blade skin is an unlockable saber look ([unlockables.md](unlockables.md)); the
+first, the Sun blade (`saber_sun`), is drawn as described in
+[rendering.md](rendering.md#saber-blade-skins). `cg_saberSkin` (archived, default
+empty) holds the skin the player wears by unlock id; empty or an unknown id is the
+stock blade. For now it applies directly to the local player
+(`GpuState::local_saber_skin`); gating it by the player's hub profile is still to
+come. Other players' skins are set in the per-client table
+(`SaberSkins::set`) that the hub's looks will fill.
+
+A skin brings its own sounds, heard for each player wearing it: its ignition for
+`EV_SABER_UNHOLSTER` and for a general sound that is a stock `saberon*`/`saberoff*`
+or any `.sab` `soundOn`/`soundOff` (the game's `G_Sound` gives these no owner, so
+the player whose origin is nearest the sound, within 64 units, is taken), its hum
+for both sabers' hum loop, and three swings for `EV_SABER_ATTACK` and the animation
+`saberhup` cues, ahead of a hilt's own `swingSound`s
+([saber_sound_overrides.rs](../crates/sjk-client/src/saber_sound_overrides.rs)).
+The viewer registers the skins' sounds with the gamestate's sound tables and passes
+the per-client table every frame. With no skin worn every path is the stock one. A
+thrown saber's hum is still the hilt's own. The Sun's sounds are synthesized by
+`scripts/saber_skin_sounds.py`, bundled and mounted below all game data at
+`sound/sjk/sabers/sun/`, so a PK3 with the same paths replaces them
+([assets/sabers/sun](../crates/sjk-viewer/assets/sabers/sun/README.md)); they have
+not been checked by ear in a game.
+
 ## Quick wheels
 
 SJK's quick wheel ([quick_wheel.rs](../crates/sjk-viewer/src/quick_wheel.rs)):
