@@ -97,6 +97,17 @@ test: Normal chat (Y, T, U), the console and the in-game SJK menu behave as befo
 note: Needs the hub's chat routes deployed; until then the dock stays on Not connected.
 note: Tab from Team now goes to SJK: read the composer's channel before pressing Enter.
 
+[chat-percent-quotes]
+area: Console & chat
+title: % and quotes in chat arrive as typed, as EternalJK sends them (SJK PR #44)
+change: A % in a chat line goes out as the escape EternalJK uses and shows as % again.
+change: A " goes out as two apostrophes and shows as " again, for SJK and EternalJK players.
+change: The chat box counts the longer escapes in its length limit; the console keeps them.
+test: On a JoF or JA+ server say 100% done and say "hi": both show as typed in the chat box.
+test: Have a JoF EternalJK player say the same: SJK shows the % and the quotes too.
+test: Type 60 percent signs: the box stops at 15, and the sent line is never cut mid-escape.
+note: The console copy of a chat line keeps the escapes, as in EternalJK.
+
 # ---- Input ----
 
 [locked-binds]

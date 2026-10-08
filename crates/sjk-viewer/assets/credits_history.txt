@@ -814,6 +814,8 @@
 - 0d215f1 |  | Initial JKR source
 
 = Creyon
++ 08/10/2026 | SJK #44 | Send and show % and quotes in chat as EternalJK does
+- 3dc0fdb |  | Send and show % and quotes in chat as EternalJK does
 + 08/10/2026 | SJK #30 | Show JoF EternalJK's chat emojis
 - dc0cbcc |  | Show JoF EternalJK's chat emojis
 + 08/10/2026 | SJK #31 | Show the console input in its colour codes, as EternalJK does

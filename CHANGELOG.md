@@ -21,6 +21,7 @@ Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 
 ## Unreleased
 
+- A % typed in chat now arrives as a % and a " as a ", for SJK and JoF EternalJK players alike (they used to turn into . and a space); the chat box counts the longer escapes in its length limit _(Creyon, after JoF EternalJK)_
 - `+duck` crouches without rolling, as in JoF EternalJK: bind it in place of `+movedown` (Controls > Movement > Crouch, no roll) to crouch while running without going into a roll _(Sol, after JoF EternalJK)_
 - Remapped surfaces drawn with a vertex-lit texture (like the ones a server puts on mp/ffa4) take the map's live light instead of staying too bright _(Sol)_
 - `cg_remapsBlockedMaps` lists maps where the server may not swap textures, as `cg_remaps 0` on those maps only; `blockRemaps` and `unblockRemaps` add or remove the loaded map (or a named one) _(Sol)_

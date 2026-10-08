@@ -73,7 +73,7 @@ Sol develops SJK and sets its direction. Sol's work includes:
 Creyon and Lumaya wear the SJK team's Early Contributor medal, shown on their
 cards of the in-game credits page.
 
-Creyon ([Creyon94](https://github.com/Creyon94)), contributor and tester, has 23
+Creyon ([Creyon94](https://github.com/Creyon94)), contributor and tester, has 24
 pull requests merged into SJK, most of them bringing SJK in line with EternalJK
 ([all of them](https://github.com/Sol-Vulpes/SJK/pulls?q=is%3Apr+author%3ACreyon94)):
 
@@ -102,7 +102,10 @@ pull requests merged into SJK, most of them bringing SJK in line with EternalJK
   and the kicker held still through JA+'s own kicks, as JoF EternalJK;
 - #30 chat emojis: JoF EternalJK's pictures in place of their names in chat
   (`cg_chatBoxEmojis`, `listEmojis`);
-- #31 the console input row drawn in its colour codes, as EternalJK.
+- #31 the console input row drawn in its colour codes, as EternalJK;
+- #44 `%` and `"` in chat sent as EternalJK sends them (a degree sign, slash and dot,
+  and two apostrophes) and shown as typed, so SJK and EternalJK players see each
+  other's percent signs and quotes.
 
 Lumaya ([lumayaa](https://github.com/lumayaa)), contributor, has 5 pull requests
 merged into SJK
