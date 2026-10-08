@@ -154,6 +154,12 @@ impl GpuState {
             }
             ingame_menu::sjk::REPORT => self.open_bug_report(),
             ingame_menu::sjk::REPORT_PLAYER => self.open_players_page(),
+            ingame_menu::sjk::SJK_CHAT => {
+                if let Some(console) = &mut self.console {
+                    console.open_sjk_chat_panel();
+                }
+                self.sync_cursor_policy();
+            }
             _ => self.back_or_close_game_menu(),
         }
     }

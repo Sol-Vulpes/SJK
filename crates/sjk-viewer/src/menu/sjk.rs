@@ -237,7 +237,10 @@ impl ClientMenu {
                 };
                 MenuAction::None
             }
-            home::Action::OpenChat => MenuAction::None,
+            home::Action::OpenChat => {
+                console.open_sjk_chat_panel();
+                MenuAction::None
+            }
         }
     }
 

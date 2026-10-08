@@ -90,6 +90,10 @@ pub(super) const COMMANDS: &[(&str, &str)] = &[
         crate::console::ACHIEVEMENTS_HELP,
     ),
     (crate::console::STAFF_COMMAND, crate::console::STAFF_HELP),
+    (
+        crate::console::SJK_CHAT_COMMAND,
+        crate::console::SJK_CHAT_HELP,
+    ),
     (super::update_panel::COMMAND, super::update_panel::HELP),
     (
         crate::identity_command::COMMAND,
@@ -460,6 +464,12 @@ impl crate::GpuState {
             crate::console::PROFILE_COMMAND => {
                 if let Some(console) = &mut self.console {
                     console.toggle_profile_panel(crate::console::profile_panel::Tab::Profile);
+                }
+                self.sync_cursor_policy();
+            }
+            crate::console::SJK_CHAT_COMMAND => {
+                if let Some(console) = &mut self.console {
+                    console.toggle_sjk_chat_panel();
                 }
                 self.sync_cursor_policy();
             }

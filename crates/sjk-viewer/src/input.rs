@@ -410,6 +410,13 @@ impl super::GpuState {
                 self.chat.open_sjk();
                 self.sync_cursor_policy();
             }
+            // Without a game the composer has nowhere to show: the page has it.
+            Some(InputAction::SjkMessageMode) => {
+                if let Some(console) = &mut self.console {
+                    console.open_sjk_chat_panel();
+                }
+                self.sync_cursor_policy();
+            }
             // The choice, not the derived `third_person`: during a zoom it decides what
             // the camera is once the zoom ends (`GpuState::update_zoom_view`).
             Some(InputAction::ToggleCamera) => self.third_person_choice = !self.third_person_choice,
@@ -515,10 +522,7 @@ impl super::GpuState {
                     eprintln!("failed to cast vote: {error}");
                 }
             }
-            Some(
-                InputAction::MessageMode(_) | InputAction::SjkMessageMode | InputAction::TeamMenu,
-            )
-            | None => {}
+            Some(InputAction::MessageMode(_) | InputAction::TeamMenu) | None => {}
         }
     }
 

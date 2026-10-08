@@ -40,6 +40,7 @@ impl ViewerConsole {
         self.credits.close();
         self.identity_panel.close();
         self.profile_panel.close();
+        self.sjk_chat_panel.close();
         self.dead_key.settle();
         self.staff_panel.open(owns_console);
         crate::player_identity::staff(StaffRequest::Search(String::new()));
