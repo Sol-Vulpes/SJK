@@ -44,6 +44,10 @@ pub struct ChatState {
     pub live: bool,
     /// What became of the last message or emote sent.
     pub outcome: Option<ReportOutcome>,
+    /// `None` until the hub being read answered once; then a number that changes with
+    /// each hub (or each time the reading starts again), so a reader can tell the
+    /// backlog that came with that first answer from what is said afterwards.
+    pub loaded: Option<u64>,
 }
 
 /// What the identity worker tells the feed.
@@ -73,6 +77,8 @@ pub(crate) struct FeedWorker {
     after: u64,
     due: Instant,
     backoff: Duration,
+    /// Counts the hubs read (`ChatState::loaded`).
+    epoch: u64,
 }
 
 impl FeedWorker {
@@ -95,6 +101,7 @@ impl FeedWorker {
             after: 0,
             due: now,
             backoff: RETRY_MIN,
+            epoch: 0,
         }
     }
 
@@ -136,7 +143,9 @@ impl FeedWorker {
         self.after = 0;
         self.due = now;
         self.backoff = RETRY_MIN;
+        self.epoch += 1;
         let mut state = lock(&self.state);
+        state.loaded = None;
         state.messages.clear();
         state.live = false;
         state.online = 0;
@@ -154,7 +163,8 @@ impl FeedWorker {
     /// Take an answer into the state.
     fn apply(&mut self, feed: Feed) {
         let mut state = lock(&self.state);
-        let mut changed = !state.live || state.online != feed.online;
+        let mut changed =
+            !state.live || state.online != feed.online || state.loaded != Some(self.epoch);
         state.live = true;
         state.online = feed.online;
         // Ids that go backwards mean the hub restarted: its backlog starts afresh.
@@ -183,6 +193,7 @@ impl FeedWorker {
             state.messages.push_back(message);
             changed = true;
         }
+        state.loaded = Some(self.epoch);
         if changed {
             state.revision += 1;
         }
@@ -452,6 +463,30 @@ mod tests {
         assert_eq!(*rig.made.lock().unwrap(), ["https://one", "https://two"]);
         assert_eq!(rig.asked()[1], "after=0 server=None wait=25");
         assert_eq!(rig.texts(), ["new hub"]);
+    }
+
+    #[test]
+    fn the_backlog_is_marked_loaded_once_the_hub_answered() {
+        let t0 = Instant::now();
+        let mut rig = rig(t0);
+        assert_eq!(lock(&rig.state).loaded, None);
+        rig.read("https://one", None);
+        rig.hub.down.store(true, Ordering::SeqCst);
+        rig.worker.step(t0);
+        assert_eq!(lock(&rig.state).loaded, None, "no answer yet");
+        rig.hub.down.store(false, Ordering::SeqCst);
+        rig.script(answer(2, vec![message(1, "a"), message(2, "b")]));
+        rig.worker.step(t0 + RETRY_MIN);
+        let first = lock(&rig.state).loaded.expect("loaded");
+        // Another hub: not loaded until it answers, then under another epoch.
+        rig.read("https://two", None);
+        rig.hub.down.store(true, Ordering::SeqCst);
+        rig.worker.step(t0 + RETRY_MIN * 2);
+        assert_eq!(lock(&rig.state).loaded, None);
+        rig.hub.down.store(false, Ordering::SeqCst);
+        rig.worker.step(t0 + RETRY_MIN * 4);
+        let second = lock(&rig.state).loaded.expect("loaded again");
+        assert_ne!(first, second);
     }
 
     #[test]

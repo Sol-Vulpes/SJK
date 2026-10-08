@@ -208,11 +208,14 @@ impl ChatOverlay {
                 let label = if line.muted {
                     "IGNORED"
                 } else {
-                    match (line.channel, line.hub) {
+                    match (
+                        line.channel,
+                        line.hub.as_ref().is_some_and(|hub| hub.verified),
+                    ) {
                         (Channel::Team, _) => "TEAM",
                         (Channel::Whisper, _) => "WHISPER",
-                        (Channel::Sjk, Some((_, true))) => "SJK VERIFIED",
-                        (Channel::Sjk, _) => "SJK",
+                        (Channel::Sjk, true) => "SJK VERIFIED",
+                        (Channel::Sjk, false) => "SJK",
                         (Channel::Global, _) => "",
                     }
                 };

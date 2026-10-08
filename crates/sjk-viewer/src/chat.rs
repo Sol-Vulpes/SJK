@@ -51,8 +51,15 @@ struct ChatLine {
     emojis: Vec<u16>,
     wrap: layout::Wrapped,
     y: Option<Tween>,
-    /// An SJK chat line's id at the hub, and whether its sender is verified.
-    hub: Option<(u64, bool)>,
+    /// What the hub said of an SJK chat line.
+    hub: Option<HubLine>,
+}
+
+/// An SJK chat line's id at the hub and its sender.
+struct HubLine {
+    id: u64,
+    verified: bool,
+    key_id: String,
 }
 
 #[derive(Clone, Copy)]
@@ -90,10 +97,12 @@ pub(crate) struct ChatOverlay {
     emojis: emoji::Emojis,
     /// The newest SJK chat id the feed has seen; `None` before the first sync.
     sjk_seen: Option<u64>,
+    /// The reading of the hub (`ChatState::loaded`) whose backlog was marked.
+    sjk_epoch: Option<u64>,
     /// The serial of the last SJK chat outcome shown.
     sjk_outcome: u64,
-    /// The SJK chat's revision and outcome serial last followed.
-    sjk_mark: Option<(u64, u64)>,
+    /// The SJK chat's revision, outcome serial and mutes revision last followed.
+    sjk_mark: Option<(u64, u64, u64)>,
 }
 
 impl ChatOverlay {
@@ -129,6 +138,7 @@ impl ChatOverlay {
             options: options::Options::default(),
             emojis: emoji::Emojis::default(),
             sjk_seen: None,
+            sjk_epoch: None,
             sjk_outcome: 0,
             sjk_mark: None,
         }

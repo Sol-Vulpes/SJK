@@ -1,7 +1,7 @@
 //! The per-frame hook of the SJK chat (`docs/hub-chat.md`): when the identity
 //! service's chat changed, bring the game's chat feed in line with it (new messages,
 //! deleted ones, why a message was refused). Each frame costs one look at the chat's
-//! revision; nothing is copied unless it changed.
+//! revision and the mutes'; nothing is copied unless one changed.
 
 use super::*;
 
@@ -15,10 +15,12 @@ impl GpuState {
         if !on {
             return;
         }
+        let mutes = player_identity::mutes_revision();
         let Some(mark) = player_identity::with_chat(|chat| {
             (
                 chat.revision,
                 chat.outcome.as_ref().map_or(0, |outcome| outcome.serial),
+                mutes,
             )
         }) else {
             return;
@@ -31,7 +33,7 @@ impl GpuState {
         let now = Instant::now();
         let chat = &mut self.chat;
         player_identity::with_chat(|state| {
-            chat.sync_sjk(&state.messages, |key| muted.iter().any(|m| m == key), now);
+            chat.sync_sjk(state, |key| muted.iter().any(|m| m == key), now);
             chat.sjk_outcome(state.outcome.as_ref(), now);
         });
     }

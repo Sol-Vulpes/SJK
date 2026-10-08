@@ -340,6 +340,7 @@ mod tests {
             online: 9,
             live: true,
             outcome: None,
+            loaded: Some(1),
         }
     }
 

@@ -4,7 +4,7 @@
 //! server, and what is typed on it goes to the hub, never to the game server.
 
 use super::*;
-use sjk_identity::{ChatMessage, ReportOutcome};
+use sjk_identity::{ChatMessage, ChatState, ReportOutcome};
 
 /// Messages the identity service keeps (`sjk_identity::feed::MESSAGES_KEPT`): while it
 /// holds fewer, none has dropped off its end.
@@ -42,7 +42,11 @@ impl ChatOverlay {
             emojis,
             wrap: layout::Wrapped::default(),
             y: None,
-            hub: Some((message.id, message.verified)),
+            hub: Some(HubLine {
+                id: message.id,
+                verified: message.verified,
+                key_id: message.key_id.clone(),
+            }),
         });
         if self.is_typing() && self.scroll > 0 {
             self.scroll = (self.scroll + 1).min(self.lines.len().saturating_sub(1));
@@ -50,9 +54,10 @@ impl ChatOverlay {
         }
     }
 
-    /// Whether the SJK chat's `mark` (its revision and outcome serial) differs from the
-    /// one the feed last followed; it is the one followed from now on.
-    pub(crate) fn sjk_changed(&mut self, mark: (u64, u64)) -> bool {
+    /// Whether the SJK chat's `mark` (its revision, outcome serial and the mutes'
+    /// revision) differs from the one the feed last followed; it is the one followed
+    /// from now on.
+    pub(crate) fn sjk_changed(&mut self, mark: (u64, u64, u64)) -> bool {
         let changed = self.sjk_mark != Some(mark);
         self.sjk_mark = Some(mark);
         changed
@@ -75,17 +80,32 @@ impl ChatOverlay {
         }
     }
 
-    /// Bring the feed in line with the SJK chat's `messages` (oldest first): new ones
-    /// join it, ones staff deleted leave it. The first call only marks where the chat
-    /// is, so joining a game does not replay the hub's backlog over it. `muted` says
-    /// whether the player muted a key.
+    /// Bring the feed in line with the SJK chat `state`: new messages join it, ones
+    /// staff deleted leave it, and lines follow the mutes (`muted` says whether the
+    /// player muted a key). The backlog a hub sends when the reading starts is only
+    /// marked, never replayed over the game: nothing is marked before the hub's first
+    /// answer, and a new reading (`ChatState::loaded`) marks again.
     pub(crate) fn sync_sjk(
         &mut self,
-        messages: &std::collections::VecDeque<ChatMessage>,
+        state: &ChatState,
         muted: impl Fn(&str) -> bool,
         now: Instant,
     ) {
+        for line in &mut self.lines {
+            if let Some(hub) = &line.hub {
+                line.muted = muted(&hub.key_id);
+            }
+        }
+        let Some(epoch) = state.loaded else {
+            return;
+        };
+        let messages = &state.messages;
         let newest = messages.back().map_or(0, |message| message.id);
+        if self.sjk_epoch != Some(epoch) {
+            self.sjk_epoch = Some(epoch);
+            self.sjk_seen = Some(newest);
+            return;
+        }
         let seen = match self.sjk_seen {
             // A first look, or a hub whose ids began again: mark, show nothing.
             None => {
@@ -104,9 +124,9 @@ impl ChatOverlay {
         } else {
             0
         };
-        self.lines.retain(|line| match line.hub {
-            Some((id, _)) if id >= lowest && id <= newest => {
-                messages.iter().any(|message| message.id == id)
+        self.lines.retain(|line| match &line.hub {
+            Some(hub) if hub.id >= lowest && hub.id <= newest => {
+                messages.iter().any(|message| message.id == hub.id)
             }
             _ => true,
         });
@@ -120,6 +140,7 @@ impl ChatOverlay {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use sjk_identity::ChatState;
     use std::collections::VecDeque;
     use winit::keyboard::{Key, KeyCode, NamedKey, SmolStr};
 
@@ -135,11 +156,23 @@ mod tests {
         }
     }
 
-    fn hub(messages: &[(u64, &str)]) -> VecDeque<ChatMessage> {
-        messages
-            .iter()
-            .map(|(id, text)| message(*id, text))
-            .collect()
+    /// The chat as the service holds it, the hub's first answer in.
+    fn hub(messages: &[(u64, &str)]) -> ChatState {
+        loaded(
+            1,
+            messages
+                .iter()
+                .map(|(id, text)| message(*id, text))
+                .collect(),
+        )
+    }
+
+    fn loaded(epoch: u64, messages: VecDeque<ChatMessage>) -> ChatState {
+        ChatState {
+            messages,
+            loaded: Some(epoch),
+            ..ChatState::default()
+        }
     }
 
     fn type_text(chat: &mut ChatOverlay, text: &str) {
@@ -215,7 +248,7 @@ mod tests {
     fn hub_lines_join_the_feed_once_with_their_tag() {
         let mut chat = ChatOverlay::new();
         let now = Instant::now();
-        chat.sync_sjk(&VecDeque::new(), |_| false, now);
+        chat.sync_sjk(&hub(&[]), |_| false, now);
         let messages = hub(&[(1, "hello ^1there"), (2, "bad \u{1F600}x")]);
         chat.sync_sjk(&messages, |_| false, now);
         chat.sync_sjk(&messages, |_| false, now);
@@ -235,7 +268,7 @@ mod tests {
     fn deleted_hub_messages_leave_the_feed() {
         let mut chat = ChatOverlay::new();
         let now = Instant::now();
-        chat.sync_sjk(&VecDeque::new(), |_| false, now);
+        chat.sync_sjk(&hub(&[]), |_| false, now);
         chat.receive(ServerEventKind::Chat, "server line".to_owned(), None, now);
         chat.sync_sjk(&hub(&[(4, "spam"), (5, "fine")]), |_| false, now);
         chat.sync_sjk(&hub(&[(5, "fine")]), |_| false, now);
@@ -252,20 +285,20 @@ mod tests {
     fn a_full_chat_does_not_take_old_lines_for_deleted() {
         let mut chat = ChatOverlay::new();
         let now = Instant::now();
-        chat.sync_sjk(&VecDeque::new(), |_| false, now);
+        chat.sync_sjk(&hub(&[]), |_| false, now);
         chat.sync_sjk(&hub(&[(1, "first")]), |_| false, now);
-        let full: VecDeque<ChatMessage> = (2..2 + KEPT as u64).map(|id| message(id, "x")).collect();
+        let full = loaded(1, (2..2 + KEPT as u64).map(|id| message(id, "x")).collect());
         chat.sync_sjk(&full, |_| false, now);
         assert_eq!(
             bodies(&chat)[..HISTORY_LIMIT - 1],
             vec!["x"; HISTORY_LIMIT - 1][..]
         );
         let mut chat = ChatOverlay::new();
-        chat.sync_sjk(&VecDeque::new(), |_| false, now);
+        chat.sync_sjk(&hub(&[]), |_| false, now);
         chat.sync_sjk(&hub(&[(1, "first")]), |_| false, now);
         // The service dropped message 1 off its end: still shown.
         let mut later = full.clone();
-        later.pop_back();
+        later.messages.pop_back();
         chat.sync_sjk(&later, |_| false, now);
         assert_eq!(chat.lines.front().map(|line| line.body.as_str()), Some("x"));
     }
@@ -273,10 +306,11 @@ mod tests {
     #[test]
     fn the_feed_follows_the_chat_only_when_it_changed() {
         let mut chat = ChatOverlay::new();
-        assert!(chat.sjk_changed((0, 0)));
-        assert!(!chat.sjk_changed((0, 0)));
-        assert!(chat.sjk_changed((1, 0)));
-        assert!(chat.sjk_changed((1, 1)));
+        assert!(chat.sjk_changed((0, 0, 0)));
+        assert!(!chat.sjk_changed((0, 0, 0)));
+        assert!(chat.sjk_changed((1, 0, 0)));
+        assert!(chat.sjk_changed((1, 1, 0)));
+        assert!(chat.sjk_changed((1, 1, 1)), "a mute changed");
     }
 
     #[test]
@@ -307,13 +341,52 @@ mod tests {
     fn a_muted_key_stays_muted() {
         let mut chat = ChatOverlay::new();
         let now = Instant::now();
-        chat.sync_sjk(&VecDeque::new(), |_| false, now);
+        chat.sync_sjk(&hub(&[]), |_| false, now);
         let troll = message(3, "spam");
         chat.sync_sjk(
-            &VecDeque::from([troll.clone()]),
+            &loaded(1, VecDeque::from([troll.clone()])),
             |key| key == troll.key_id,
             now,
         );
         assert!(chat.lines[0].muted);
+    }
+
+    #[test]
+    fn a_muted_key_hides_lines_already_shown() {
+        let mut chat = ChatOverlay::new();
+        let now = Instant::now();
+        chat.sync_sjk(&hub(&[]), |_| false, now);
+        let state = hub(&[(1, "spam"), (2, "fine")]);
+        chat.sync_sjk(&state, |_| false, now);
+        assert!(!chat.lines[0].muted);
+        let troll = message(1, "").key_id;
+        chat.sync_sjk(&state, |key| key == troll, now);
+        assert!(chat.lines[0].muted && !chat.lines[1].muted);
+        chat.sync_sjk(&state, |_| false, now);
+        assert!(!chat.lines[0].muted, "unmuted again");
+    }
+
+    #[test]
+    fn the_backlog_is_not_replayed_while_or_after_it_loads() {
+        let mut chat = ChatOverlay::new();
+        let now = Instant::now();
+        // The service has started but the hub has not answered: nothing is marked.
+        chat.sync_sjk(&ChatState::default(), |_| false, now);
+        // Its first answer brings the backlog: marked, not shown.
+        chat.sync_sjk(&hub(&[(1, "old"), (2, "older")]), |_| false, now);
+        assert!(chat.lines.is_empty());
+        chat.sync_sjk(
+            &hub(&[(1, "old"), (2, "older"), (3, "new")]),
+            |_| false,
+            now,
+        );
+        assert_eq!(bodies(&chat), ["new"]);
+        // Reading starts again (another hub, the chat turned off and on): its backlog
+        // is marked again rather than replayed.
+        chat.sync_sjk(&ChatState::default(), |_| false, now);
+        let mut again = hub(&[(1, "old"), (2, "older"), (3, "new"), (4, "newer")]);
+        again.loaded = Some(2);
+        chat.sync_sjk(&again, |_| false, now);
+        assert_eq!(bodies(&chat), ["new"]);
     }
 }
