@@ -2652,6 +2652,12 @@ defaults to `cg_remaps 2`, EternalJK's default, which includes player-texture
 configstring remaps; `cg_remaps 1` is TaystJK's default policy
 excluding them, and `cg_remaps 0` disables server remaps.
 Settings > GAME > "Shader remaps" sets the same cvar and applies at once.
+`cg_remapsBlockedMaps` lists maps where server remaps are ignored, as with
+`cg_remaps 0` on those maps only: map names separated by spaces, commas or
+semicolons (`mp/ffa4 mp/duel6`; `maps/` and `.bsp` are optional, capitals do not
+matter). `blockRemaps [map]` adds a map and `unblockRemaps [map]` removes it, the
+loaded one when no map is named; the change applies at once, and `listRemaps` says
+when the loaded map is blocked. The list is saved with the other settings.
 A map's own worldspawn remaps always apply. `listRemaps` lists the map's, the
 enabled server and the temporary local remaps in the order they were applied, each
 labelled `map:`, `server:` or `local:`, and marks those a later remap overrides.

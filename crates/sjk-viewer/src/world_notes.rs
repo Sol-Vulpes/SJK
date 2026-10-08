@@ -834,7 +834,7 @@ impl crate::GpuState {
             self.world_load_map.clone()
         };
         // The shader a remap draws over the surface, as `listRemaps` resolves it.
-        let mode = self.console.as_ref().map_or(1, |c| c.remap_mode());
+        let mode = self.remap_mode();
         let server = self
             .live_session
             .as_ref()

@@ -2,7 +2,7 @@
 
 use sjk_shell::{CvarDefinition, CvarFlags, CvarRegistry};
 use std::sync::Arc;
-use std::sync::atomic::{AtomicI64, Ordering};
+use std::sync::atomic::{AtomicI64, AtomicU64, Ordering};
 
 /// `cl_maxpackets` default: one packet per user command (125 a second), as
 /// JoF EJK. Stock's 30 and EternalJK's 63 batch two to four commands a packet.
@@ -39,6 +39,26 @@ impl IntegerSetting {
     }
 }
 
+/// Change counter for a cvar that frame code reads again only after it changes.
+pub(super) struct RevisionSetting(Arc<AtomicU64>);
+
+impl RevisionSetting {
+    /// Bind before config loading so an archived value counts as a change.
+    pub(super) fn bind(cvars: &mut CvarRegistry, name: &str) -> Result<Self, sjk_shell::CvarError> {
+        let revision = Arc::new(AtomicU64::new(0));
+        let changed = Arc::clone(&revision);
+        cvars.on_change(name, move |_| {
+            changed.fetch_add(1, Ordering::Relaxed);
+        })?;
+        Ok(Self(revision))
+    }
+
+    /// Read the change count without allocation or locking.
+    pub(super) fn value(&self) -> u64 {
+        self.0.load(Ordering::Relaxed)
+    }
+}
+
 pub(super) fn register_daily_cvars(cvars: &mut CvarRegistry) -> Result<(), sjk_shell::CvarError> {
     crate::frame_target::aa::register(cvars)?;
     crate::frame_target::scale::register(cvars)?;
@@ -58,6 +78,12 @@ pub(super) fn register_daily_cvars(cvars: &mut CvarRegistry) -> Result<(), sjk_s
             2_i64,
             archive,
             "Shader remaps: 0 off, 1 skip player textures, 2 all (default, as EternalJK)",
+        ),
+        CvarDefinition::new(
+            crate::remap_blocked_maps::CVAR,
+            "",
+            archive,
+            "Maps whose server shader remaps are ignored, as with cg_remaps 0: mp/ffa4 mp/duel6",
         ),
         CvarDefinition::new(
             "cg_forceEnemyModel",

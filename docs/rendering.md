@@ -97,6 +97,10 @@ default) accepts them while excluding player-texture configstring entries, and
 **2** (the default, as in EternalJK) includes those entries. Like Tayst, a reliable
 `remapShader` command is accepted in either nonzero mode. The client applies this
 preference live rather than requiring a map reload; a server remap it excludes reveals the earlier remap it had replaced.
+`cg_remapsBlockedMaps` lists maps on which SJK ignores server remaps, as `cg_remaps 0`
+does there; worldspawn and local remaps still apply. The frame reads a cached answer,
+refreshed when the cvar or the loaded map changes
+([remap_blocked_maps.rs](../crates/sjk-viewer/src/remap_blocked_maps.rs)).
 `listRemaps` lists the map's, the enabled server and the local remaps in the order
 they were applied, with their source, and marks those a later remap overrides.
 `remapShader <old> <new>` sets a temporary local remap for the loaded map, without

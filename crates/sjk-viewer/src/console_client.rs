@@ -38,6 +38,14 @@ pub(super) const COMMANDS: &[(&str, &str)] = &[
         "clearRemaps",
         "Clear server and local shader replacements until new ones arrive",
     ),
+    (
+        "blockRemaps",
+        "Ignore server shader remaps on a map, the loaded one by default: blockRemaps [map]",
+    ),
+    (
+        "unblockRemaps",
+        "Allow server shader remaps on a blocked map again: unblockRemaps [map]",
+    ),
     ("speedometer", "Configure supported speedometer flags"),
     ("strafehelper", "Configure supported airborne CGAZ flags"),
     ("play", "Play local sound files"),
@@ -387,6 +395,9 @@ impl crate::GpuState {
         match name.as_str() {
             "remapshader" | "listremaps" | "clearremaps" => {
                 return self.remap_command(&name, args);
+            }
+            "blockremaps" | "unblockremaps" => {
+                return self.remap_block_command(name == "blockremaps", args);
             }
             "speedometer" | "strafehelper" => {
                 return hud_commands::execute(

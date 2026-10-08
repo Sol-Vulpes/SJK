@@ -35,7 +35,7 @@ impl crate::GpuState {
         if !args.is_empty() {
             return Err("usage: listRemaps".into());
         }
-        let mode = self.console.as_ref().map_or(1, |c| c.remap_mode());
+        let mode = self.remap_mode();
         let state = self
             .live_session
             .as_ref()
@@ -46,6 +46,16 @@ impl crate::GpuState {
             .remap_listing(state.and_then(|s| s.table(mode)));
         if lines.is_empty() {
             lines.push("No active shader remaps".into());
+        }
+        if mode == 0 && self.console.as_ref().is_some_and(|c| c.remap_mode() != 0) {
+            lines.insert(
+                0,
+                format!(
+                    "Server shader remaps ignored on {} ({})",
+                    crate::remap_blocked_maps::map_name(&self.world_load_map),
+                    crate::remap_blocked_maps::CVAR,
+                ),
+            );
         }
         Ok(lines)
     }

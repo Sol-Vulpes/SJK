@@ -22,6 +22,7 @@ Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 ## Unreleased
 
 - Remapped surfaces drawn with a vertex-lit texture (like the ones a server puts on mp/ffa4) take the map's live light instead of staying too bright _(Sol)_
+- `cg_remapsBlockedMaps` lists maps where the server may not swap textures, as `cg_remaps 0` on those maps only; `blockRemaps` and `unblockRemaps` add or remove the loaded map (or a named one) _(Sol)_
 - Surfaces that a server or the map remaps to another shader keep the map's light and shadow; they used to look flat and uniformly pale _(Sol)_
 - Staff tools (for SJK staff, from Profile or the staff command): find any player, give or take back their medals with a note, and clear their achievements; clearing your own also resets your counts, so you can unlock them again _(Sol)_
 - U is now bound by default to a private message to the player under your crosshair (`messagemode3`); Y chat and T team chat stay, and an existing profile gets U only when it is free _(Lumaya, after OpenJK)_

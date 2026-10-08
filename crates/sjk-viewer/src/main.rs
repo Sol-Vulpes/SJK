@@ -162,6 +162,7 @@ mod pointer_input;
 mod presentation_clock;
 mod projectiles;
 mod quick_wheel;
+mod remap_blocked_maps;
 mod render_helpers;
 mod runtime_settings;
 mod saber;
@@ -482,6 +483,8 @@ struct GpuState {
     world_load_state: session_transition::LoadStateMachine,
     world_load_started: Option<Instant>,
     world_load_map: String,
+    /// Whether `world_load_map` is in `cg_remapsBlockedMaps`.
+    remap_blocked_maps: remap_blocked_maps::Cache,
     snapshot_observations: snapshot_presentation::Counters,
     obituaries: sjk_client::ObituaryTracker,
     /// What the player does in matches, for the achievements (`achievements.rs`).
@@ -1306,6 +1309,7 @@ impl GpuState {
             world_load_state: session_transition::LoadStateMachine::new(),
             world_load_started: None,
             world_load_map: String::with_capacity(64),
+            remap_blocked_maps: Default::default(),
             snapshot_observations: snapshot_presentation::Counters::default(),
             obituaries: sjk_client::ObituaryTracker::new(),
             achievement_tracker: achievements::tracker::Tracker::default(),
