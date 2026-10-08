@@ -7,6 +7,38 @@ SJK currently contains a native client and standard dedicated server in a
 20-crate Rust workspace. This page records scope and verification, rather than
 claiming complete parity from the presence of an implementation.
 
+## Unlockables: the Sun blade, and looks through the hub
+
+SJK-only branch `personal/saber-skins` (08/10/2026, stacked on `personal/sjk-chat`,
+Ubuntu 24.04, Rust 1.99) with the hub's `feat/unlocks-looks` (stacked on
+`feat/chat-emotes`): Sol asked for unlockable saber blade skins, a golden/orange sun
+blade with flares and its own sounds first, seen by everyone, and for others to see
+Illuminate too ([unlockables.md](unlockables.md)). Built: the hub keeps unlocks per key
+(operator and staff grant them) and a look (blade skin, Illuminate lit) on each live
+claim, lists it in presence and sends changes through the feed; the client sends its
+own look, gated by its unlocks, keeps every slot's look under the badges' name rule,
+draws the Sun blade (an animated material in `saber.wgsl`, amber trail, warm
+flickering light) and plays its synthesized sounds (ignition, off, hum, three swings,
+also for a thrown saber) for every player wearing it, puts a holocron by every other
+lit player's shoulder (light for the 4 nearest), and has the Unlockables page
+(Profile, `unlockables`), `saberskin` and Unlock/Relock on the Staff page. The feed now
+reads on a game server with `cl_sjkChat 0` (chat stays hidden).
+
+Verified: `cargo fmt --all --check`, `cargo build --locked --workspace`,
+`cargo test --locked --workspace` (viewer 1241 passed, 44 ignored; every crate passed)
+and `cargo clippy --locked --workspace --all-targets` (no warning on a changed line);
+unit tests for the wire, the look worker (coalescing, resend on a new claim, refusals),
+the feed with chat off, the looks table, the gating, the per-client sound overrides,
+the skin material and its instance layout, the bundled sounds (format, loop point) and
+the page; `hub_e2e` against the new hub built and run on this PC (looks, chat off,
+staff unlock and relock); the hub's own suite (101 unit, 69 API, 3 command line). World
+shots looked at: `duel6_sun_blade` (beside stock orange and blue, close-ups over time,
+held on the Character page), `other_players_holocrons_on_duel6`, the Unlockables page
+(owned, locked, identity off, 4:3), Profile and Staff. Not verified: nothing ran
+against the deployed hub (it has neither chat nor looks yet) or with other players in a
+match; the sounds were not listened to; giving a saber on/off sound to the nearest
+skinned player within 64 units is a guess, as the game sends it with no owner.
+
 ## SJK chat and emotes through the hub
 
 SJK-only branch `personal/sjk-chat` (08/10/2026, based on `15cf7a9`, Ubuntu 24.04, Rust

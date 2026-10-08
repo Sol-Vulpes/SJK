@@ -61,8 +61,8 @@ Old clients ignore all of it, so it stays `/v1/`.
   newer than `after` for this reader, else after `wait` seconds:
   `{"next","chat":[..],"emotes":[..],"looks":[..],"deleted":[..],"online"}` (`looks`,
   the server's look events of the last 60 seconds, since unlocks and looks). `after` 0,
-  or above the newest id (the hub restarted), gives the newest 50 messages and no
-  emotes or looks.
+  or above the newest id (the hub restarted), gives the newest 50 messages, the
+  server's looks of the last 60 seconds (looks are state) and no emotes.
   A key reads at most 40 times a minute (`feed_quota`); the feed (300 a minute) and chat
   and emotes (60 a minute) have per-address allowances of their own, so several players
   sharing an address fit and talking never spends what claims need.

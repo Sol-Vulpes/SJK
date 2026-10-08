@@ -91,7 +91,10 @@ whether the Illuminate holocron is lit. Both are required in a request.
       {"id":15,"at":<unix s>,"slot":3,"claimed_name":"^2Sol","key_id":"..",
        "saber":"saber_sun","illuminate":true}
 
-  A batch with looks is not empty. `after` 0 or above the newest id gives no looks.
+  A batch with looks is not empty. `after` 0 or above the newest id (a new
+  reader, or a hub that restarted) gives the server's looks of the last 60 seconds:
+  looks are state, so a reader's first answer must not miss one, and applied oldest
+  first they leave each slot with its latest look.
 - A client applies a look, as emotes and badges, only when the name its game shows in
   `slot` matches `claimed_name`.
 

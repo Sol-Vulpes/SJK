@@ -64,6 +64,8 @@ Sol develops SJK and sets its direction. Sol's work includes:
   achievements counted in matches and kept on the SJK hub, with their board;
 - the in-game staff tools for medals and achievements;
 - the SJK chat every SJK player shares through the SJK hub, and the path for emotes;
+- unlockables kept at the SJK hub: the Sun blade skin with its synthesized sounds,
+  and looks (blade skins, Illuminate) every SJK player on a server sees;
 - the console socket for external apps (after JoF EJK), muting in the
   background (after EternalJK) and the JA+ `flipkick` command (after JoF EJK);
 - the camera style setting, its locked camera after JoF EJK (`cg_cameraStyle`).
