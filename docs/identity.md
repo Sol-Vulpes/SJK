@@ -228,7 +228,7 @@ Where they show:
   never the columns, and fewer show where the name would keep less than half its room
   (the SJK UI: a third). Derived only when the roster or the rows change.
 - The player card (`inspect`): the medallions in a row under the hub name; a pinned card
-  names them too, with a repeatable one's count.
+  names them too in small print, with a repeatable one's count.
 - The SJK UI's Players page: the chosen player's card lists their medallions and names.
 - The Identity page: the player's own medals, each with its whole picture, name and
   count, description, the date it was given (`dd/mm/yyyy`) and the team's note; with

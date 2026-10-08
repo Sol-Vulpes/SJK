@@ -138,10 +138,11 @@ impl GpuState {
             }
             return;
         }
-        // Escape drops a waiting `inspect` selection before it opens the game menu.
+        // Escape unpins a pinned player card, or drops a waiting `inspect` selection,
+        // before it opens the game menu.
         if key == KeyCode::Escape
             && event.state == ElementState::Pressed
-            && self.world_notes.cancel_selection()
+            && (self.hud.card.cancel() || self.world_notes.cancel_selection())
         {
             return;
         }
