@@ -41,6 +41,21 @@ impl Look {
     }
 }
 
+/// Stage metadata bit: the stage's vertex colour is the map's baked light, which
+/// real-time lighting replaces (`world_lighting_mode.wgsl`).
+const VERTEX_BAKE: u32 = 1;
+
+/// A vertex-coloured target stage (`rgbGen vertex` or `exactVertex`, codes 2 and 3)
+/// drawn on a lightmapped surface shows that surface's baked vertex light: q3map2
+/// stores it beside the lightmap, and rd-vanilla draws it there. Only vertex-lit
+/// (`LIGHTMAP_BY_VERTEX`) surfaces are marked at load, so without this a
+/// `q3map_onlyvertexlighting` target such as `textures/yavin/stonewall2_vertex`
+/// kept the static bake under real-time lighting: brighter than its neighbours and
+/// blind to live light.
+fn baked_vertex_light(lightmap: i32, rgb_generator: f32) -> bool {
+    lightmap >= 0 && matches!(rgb_generator as i32, 2 | 3)
+}
+
 impl Runtime {
     /// Draw `look` in `source`'s slot; `look` receives what the slot drew before.
     fn show(&mut self, source: usize, look: &mut Look) {
@@ -112,6 +127,10 @@ impl Runtime {
             compiled.stages.clear();
         }
         for stage in &mut compiled.stages {
+            if baked_vertex_light(key.lightmap, stage.gpu.generators[0]) {
+                stage.gpu.wave_functions[3] =
+                    (stage.gpu.wave_functions[3] as u32 | VERTEX_BAKE) as f32;
+            }
             stage.gpu.emission[2] = offset;
             stage.gpu.emission[3] = if definition.is_some_and(|d| {
                 d.stages
@@ -181,5 +200,27 @@ impl Runtime {
             own,
         }));
         Ok(true)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::baked_vertex_light;
+
+    #[test]
+    fn vertex_colour_on_a_lightmapped_slot_is_baked_light() {
+        // `rgbGen vertex` and `exactVertex` on a lightmap page.
+        assert!(baked_vertex_light(0, 2.));
+        assert!(baked_vertex_light(7, 3.));
+        // Identity, lightingDiffuse and constants keep their authored colour.
+        assert!(!baked_vertex_light(0, 0.));
+        assert!(!baked_vertex_light(0, 4.));
+        assert!(!baked_vertex_light(0, 6.));
+        // Vertex-lit slots are marked at load; entity slots are lit per instance.
+        assert!(!baked_vertex_light(
+            crate::world_stage::LIGHTMAP_BY_VERTEX,
+            2.
+        ));
+        assert!(!baked_vertex_light(crate::world_stage::LIGHTMAP_NONE, 2.));
     }
 }

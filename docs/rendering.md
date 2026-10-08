@@ -69,7 +69,13 @@ world never used it (a `$lightmap` stage becomes the white image, an unscripted
 texture is lit by `rgbGen lightingDiffuse`), or with whichever lightmap page another
 surface gave it. Either way the remapped surface ignored the map's light, uniformly
 bright or patchy (08/10/2026). A target shader without a `$lightmap` stage still
-shows only the lighting its stages ask for.
+shows only the lighting its stages ask for. A vertex-coloured stage (`rgbGen vertex`
+or `exactVertex`) on a lightmapped surface shows that surface's baked vertex light,
+which q3map2 stores beside the lightmap, as in rd-vanilla; it is marked as baked
+light like a vertex-lit surface's, so real-time lighting replaces it. Before, a
+`q3map_onlyvertexlighting` target such as `textures/yavin/stonewall2_vertex` kept
+the static bake under real-time lighting, brighter than its neighbours and blind to
+live light (`mp/ffa4` on a JA+ server).
 
 The map's own worldspawn remaps apply when its world loads, as rd-vanilla
 `R_LoadEntities` applies them: every key starting with `remapshader` (case-sensitive,
