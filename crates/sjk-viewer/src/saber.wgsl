@@ -12,6 +12,13 @@
 //     (L / (0.65 r)) · mean over v in [v_lo, v_hi] of glow(u, v),
 //     u = 0.5 + x / 2r, v_hi = 0.5 + y / 2r, v_lo = 0.5 + (y - shaft) / 2r,
 // and the mean comes from the glow image's column integral, `glow_integral`.
+//
+// Blade skins (saber_skins.rs) have their own grey glow/core pair and are coloured and
+// animated here from the instance's time and seed: the Sun blade's white-hot core runs into
+// gold, its orange corona carries slowly drifting granulation along the blade and flame
+// tongues outward, and now and then a brighter flare (a prominence) runs from the hilt to
+// the tip, swelling the glow. The dynamic glow pass shades the glow the same way, so its
+// bloom follows the flares.
 struct Camera {
     view_projection: mat4x4<f32>,
     position: vec3<f32>,
@@ -46,15 +53,26 @@ struct VertexOutput {
     @location(4) @interpolate(flat) length: f32,
     // Hilt sprite radius for the glow; zero selects the core line.
     @location(5) @interpolate(flat) hilt: f32,
-    @location(6) @interpolate(flat) neutral: u32,
+    // KIND_RETAIL, KIND_NEUTRAL or KIND_SUN.
+    @location(6) @interpolate(flat) kind: u32,
+    // Presentation seconds (wrapped) and the blade's seed in [0, 1).
+    @location(7) @interpolate(flat) animation: vec2<f32>,
 }
 
 // TaystJK's CG_DoSaber submits the core RT_LINE twice (taystjk cgame cg_players.c:6429 and 6465;
 // the second adds `saber` where `sbak` was meant). The owner's reference look is TaystJK's. Two
 // GL_ONE GL_ONE adds with a clamp after each are one add of twice the colour.
 const CORE_DRAWS: f32 = 2.0;
-// Slot of the engine-generated neutral glow/core pair (saber_rgb.rs).
+// Slot of the engine-generated neutral glow/core pair (saber_rgb.rs), and of the Sun blade's
+// (saber_rgb.rs `SKIN_MATERIAL`).
 const NEUTRAL_MATERIAL: u32 = 6u;
+const SUN_MATERIAL: u32 = 7u;
+const KIND_RETAIL: u32 = 0u;
+const KIND_NEUTRAL: u32 = 1u;
+const KIND_SUN: u32 = 2u;
+// How far the Sun's glow reaches past the stock capsule, for its flares and shimmer
+// (saber_skins.rs `GLOW_REACH`).
+const SUN_REACH: f32 = 1.6;
 // RB_SurfaceSaberGlow: sprite spacing and per-sprite growth.
 const SPACING: f32 = 0.65;
 const GROWTH: f32 = 0.017;
@@ -79,6 +97,7 @@ fn vertex_main(
     @location(3) blade_radius: f32,
     @location(4) blade_color: vec4<f32>,
     @location(5) blade_material: u32,
+    @location(6) blade_animation: vec2<f32>,
 ) -> VertexOutput {
     let direction = normalize(blade_direction);
     let view_direction = normalize(camera.position - (blade_base + direction * blade_length * 0.5));
@@ -94,10 +113,15 @@ fn vertex_main(
     let local = QUAD[vertex_index];
     let hilt = blade_color.a;
     var output: VertexOutput;
+    output.kind = KIND_RETAIL;
+    if blade_material == NEUTRAL_MATERIAL { output.kind = KIND_NEUTRAL; }
+    if blade_material == SUN_MATERIAL { output.kind = KIND_SUN; }
+    output.animation = blade_animation;
+    let reach = select(1.0, SUN_REACH, output.kind == KIND_SUN);
     var world: vec3<f32>;
     if hilt > 0.0 {
         // Wide enough for the grown hilt-end sprites and the hilt sprite itself.
-        let extent = max(chain_radius(blade_radius, blade_length, 0.0), hilt);
+        let extent = max(chain_radius(blade_radius, blade_length, 0.0) * reach, hilt);
         let shaft = blade_length * projected;
         world = blade_base + direction * (local.y * blade_length)
             + (side * local.x + up * (local.y * 2.0 - 1.0)) * extent;
@@ -115,7 +139,6 @@ fn vertex_main(
     output.radius = blade_radius;
     output.length = blade_length;
     output.hilt = hilt;
-    output.neutral = select(0u, 1u, blade_material == NEUTRAL_MATERIAL);
     return output;
 }
 
@@ -153,10 +176,122 @@ fn glow_capsule(input: VertexOutput) -> vec3<f32> {
     return sum + glow(hilt.x, hilt.y);
 }
 
+// --- The Sun blade -------------------------------------------------------------------------
+
+const SUN_RED: vec3<f32> = vec3(1.0, 0.2, 0.02);
+const SUN_ORANGE: vec3<f32> = vec3(1.0, 0.42, 0.05);
+const SUN_GOLD: vec3<f32> = vec3(1.0, 0.72, 0.24);
+const SUN_WHITE: vec3<f32> = vec3(1.0, 0.97, 0.86);
+
+// PCG hash of a lattice point, in [0, 1].
+fn sun_hash(cell: vec2<i32>) -> f32 {
+    var v = bitcast<u32>(cell.x) * 747796405u + 2891336453u;
+    v = v ^ (bitcast<u32>(cell.y) * 2654435761u);
+    v = v * 747796405u + 2891336453u;
+    let word = ((v >> ((v >> 28u) + 4u)) ^ v) * 277803737u;
+    return f32((word >> 22u) ^ word) / 4294967295.0;
+}
+
+// Smooth value noise in [0, 1].
+fn sun_noise(p: vec2<f32>) -> f32 {
+    let cell = vec2<i32>(floor(p));
+    let f = fract(p);
+    let u = f * f * (3.0 - 2.0 * f);
+    let a = sun_hash(cell);
+    let b = sun_hash(cell + vec2(1, 0));
+    let c = sun_hash(cell + vec2(0, 1));
+    let d = sun_hash(cell + vec2(1, 1));
+    return mix(mix(a, b, u.x), mix(c, d, u.x), u.y);
+}
+
+// Granulation at `along` world units from the hilt: two octaves drifting toward the tip and
+// slowly changing as they go.
+fn sun_granulation(along: f32, time: f32, seed: f32) -> f32 {
+    let coarse = sun_noise(vec2(along * 0.32 - time * 2.1, time * 0.45 + seed * 61.0));
+    let fine = sun_noise(vec2(along * 0.85 - time * 3.6, time * 0.9 + seed * 113.0));
+    return smoothstep(0.15, 0.85, coarse * 0.62 + fine * 0.38);
+}
+
+// Flares at `along`: three tracks, each sending a bright knot from the hilt to the tip once a
+// cycle and lit on about half its cycles, so they come now and then and never in step.
+fn sun_flares(along: f32, length: f32, time: f32, seed: f32) -> f32 {
+    var total = 0.0;
+    for (var track = 0; track < 3; track++) {
+        let rate = 0.38 + 0.11 * f32(track) + 0.08 * seed;
+        let phase = time * rate + seed * 7.3 + f32(track) * 0.37;
+        let cycle = floor(phase);
+        let travel = fract(phase);
+        let lit = step(0.55, sun_hash(vec2(i32(cycle), track * 7919 + i32(seed * 4096.0))));
+        let position = travel * (length + 10.0) - 5.0;
+        let width = 2.6 + 1.4 * sun_hash(vec2(i32(cycle), track + 31));
+        let offset = (along - position) / width;
+        total += lit * sin(3.14159265 * travel) * exp(-offset * offset);
+    }
+    return total;
+}
+
+// Along the blade from the hilt, world units: the glow's projected `y`, or the core line's
+// texture `v` (one unit behind the hilt to the tip).
+fn sun_along(input: VertexOutput) -> f32 {
+    if input.hilt > 0.0 {
+        return clamp(input.blade.y / max(input.shaft, 0.0001), 0.0, 1.0) * input.length;
+    }
+    return mix(-1.0, input.length, input.blade.y);
+}
+
+fn sun_glow(input: VertexOutput) -> vec3<f32> {
+    let time = input.animation.x;
+    let seed = input.animation.y;
+    let along = sun_along(input);
+    let grain = sun_granulation(along, time, seed);
+    let flare = sun_flares(along, input.length, time, seed);
+    // Shimmer and swell: the corona breathes a little, a flare widens it.
+    let shimmer = 0.045 * sin(time * 9.0 + along * 0.7 + seed * 6.283)
+        + 0.03 * sin(time * 15.7 - along * 1.3);
+    let widen = min(1.0 + shimmer + 0.14 * (grain - 0.5) + 0.4 * flare, SUN_REACH);
+    var shaded = input;
+    shaded.blade.x = input.blade.x / widen;
+    let capsule = glow_capsule(shaded) / widen;
+    // Flame tongues licking outward in the corona's edge.
+    let r = chain_radius(input.radius, input.length, clamp(along / max(input.length, 0.0001), 0.0, 1.0));
+    let out = abs(input.blade.x) / (r * widen);
+    let tongue = sun_noise(vec2(along * 0.45 + seed * 17.0, out * 2.2 - time * 3.4));
+    let edge = smoothstep(0.25, 0.9, out);
+    let flicker = mix(1.0, 0.3 + 1.4 * tongue, edge);
+    // Gold by the core, orange in the corona, red at its rim; granulation and flares heat it.
+    let inner = 1.0 - smoothstep(0.0, 0.8, out);
+    let rim = mix(SUN_RED, SUN_ORANGE, clamp(grain * 1.2 + flare * 0.6, 0.0, 1.0));
+    let color = mix(rim, SUN_GOLD, clamp(inner * inner * (0.55 + 0.45 * grain) + flare * 0.25, 0.0, 1.0));
+    let brightness = (0.5 + 0.7 * grain + 1.3 * flare) * flicker;
+    return capsule * color * brightness;
+}
+
+fn sun_core(input: VertexOutput, texel: vec4<f32>) -> vec3<f32> {
+    let time = input.animation.x;
+    let seed = input.animation.y;
+    let along = sun_along(input);
+    let grain = sun_granulation(along, time, seed);
+    let flare = sun_flares(along, input.length, time, seed);
+    let fringe = mix(SUN_ORANGE, SUN_GOLD, 0.35 + 0.65 * grain) * (0.7 + 0.6 * grain + 1.0 * flare);
+    return CORE_DRAWS * (SUN_WHITE * texel.r * (1.0 + 0.4 * flare) + fringe * texel.g);
+}
+
+// The core line's texture coordinates; the Sun's core breathes a little across.
+fn core_coordinates(input: VertexOutput) -> vec2<f32> {
+    var across = input.blade.x / (2.0 * input.radius);
+    if input.kind == KIND_SUN {
+        let along = mix(-1.0, input.length, input.blade.y);
+        let time = input.animation.x;
+        across *= 1.0 + 0.06 * sin(time * 11.0 + along * 0.9 + input.animation.y * 6.283);
+    }
+    return vec2(0.5 + across, 1.0 - input.blade.y);
+}
+
 // Dynamic glow: the glow capsule only; the core line's shader has no `glow` stage.
 @fragment
 fn fragment_glow(input: VertexOutput) -> @location(0) vec4<f32> {
     if input.hilt <= 0.0 { discard; }
+    if input.kind == KIND_SUN { return vec4(sun_glow(input), 1.0); }
     return vec4(glow_capsule(input) * input.color, 1.0);
 }
 
@@ -164,14 +299,18 @@ fn fragment_glow(input: VertexOutput) -> @location(0) vec4<f32> {
 fn fragment_main(input: VertexOutput) -> @location(0) vec4<f32> {
     // v runs from the tip (0) to behind the hilt (1), as DoLine's texture coordinates do.
     // Derivatives are taken before any branch (uniform control flow); the glow ignores them.
-    let core_uv = vec2(0.5 + input.blade.x / (2.0 * input.radius), 1.0 - input.blade.y);
+    let core_uv = core_coordinates(input);
     let core_dx = dpdx(core_uv);
     let core_dy = dpdy(core_uv);
     if input.hilt > 0.0 {
+        if input.kind == KIND_SUN { return vec4(sun_glow(input), 1.0); }
         return vec4(glow_capsule(input) * input.color, 1.0);
     }
     var texel = textureSampleGrad(core_texture, core_sampler, core_uv, core_dx, core_dy);
-    if input.neutral == 1u {
+    if input.kind == KIND_SUN {
+        return vec4(sun_core(input, texel), 1.0);
+    }
+    if input.kind == KIND_NEUTRAL {
         // Neutral core: red = white-hot core, green = tinted fringe.
         return vec4(CORE_DRAWS * (vec3(texel.r) + input.color * texel.g), 1.0);
     }

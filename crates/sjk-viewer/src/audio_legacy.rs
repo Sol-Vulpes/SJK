@@ -26,12 +26,18 @@ impl LegacyLoadTask {
                 let result = (|| {
                     let mut sounds = Vec::with_capacity(512);
                     let mut next_handle = 0;
-                    let adapter = LegacySoundAdapter::new(&game_state, &vfs, |path, bytes| {
+                    let mut register = |path: &str, bytes: &[u8]| {
                         let handle = SoundHandle(next_handle);
                         next_handle = next_handle.wrapping_add(1);
                         sounds.push((path.to_owned(), handle, bytes.into()));
                         Some(handle)
-                    });
+                    };
+                    let mut adapter = LegacySoundAdapter::new(&game_state, &vfs, &mut register);
+                    adapter.register_saber_sound_sets(
+                        &crate::saber_skins::sound_sets(),
+                        &vfs,
+                        &mut register,
+                    );
                     for path in feedback::KILL_SOUNDS {
                         if let Ok(Some(asset)) = vfs.read(path) {
                             let handle = SoundHandle(next_handle);

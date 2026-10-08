@@ -856,6 +856,41 @@ spectators/follow and dead flags. Shared fallback meshes stay hidden until
 the local model loads. The body and head mask use one filtered equipment
 decision; head descendants such as hair and helmets are masked too.
 
+## Saber blade skins
+
+A blade skin replaces a saber blade's colour (not its hilt) with a look of its own;
+the first is the Sun blade, an SJK unlockable ([unlockables.md](unlockables.md#the-sun-blade)).
+[saber_skins.rs](../crates/sjk-viewer/src/saber_skins.rs) holds the catalogue and the
+per-client table of who wears which skin; `BladeColor::Skin` selects it wherever a
+blade colour is chosen (in the hand, thrown, first person, the menu stage).
+
+- **Material.** Each skin is its own saber material after the six retail pairs and
+  the neutral RGB pair (slot 7 for the Sun; `saber_rgb.rs` `SKIN_MATERIAL`), with
+  engine-generated grey textures: a glow with a longer, fainter corona tail than the
+  neutral one, and a core whose red channel is a narrow white-hot centre and green a
+  broad fringe. Retail and RGB blades keep their materials and shading unchanged.
+- **Animation.** `saber.wgsl` colours and animates the skin from two per-instance
+  values, presentation seconds wrapped at 1024 s and a per-blade seed
+  (`Instance::with_animation`; the seed follows the entity, saber and blade, so a
+  thrown blade keeps its hand's): granulation (two octaves of value noise drifting
+  toward the tip), flame tongues licking outward at the corona's rim, and three flare
+  tracks each sending a bright knot from hilt to tip once a cycle (1.5 to 2.6 s), lit on
+  under half their cycles, which brighten and widen the corona. The corona runs from
+  gold by the core through orange to red at its rim; the core is white-hot into gold.
+  Its glow capsule may reach 1.6 times the stock one (`GLOW_REACH`, also used for the
+  effect bounds). `fragment_glow` shades the glow the same way, so the dynamic glow's
+  bloom follows the flares. Brightness stays near the stock blades'.
+- **Trail and light.** The Sun's trail is amber gold (`[1, 0.6, 0.12]`); its light
+  warm orange (`[1, 0.55, 0.15]`, with the stock gain) whose brightness flickers
+  slowly by about ±8 % per hilt.
+
+Per frame this adds one 8-byte vertex attribute per blade and nothing else on the
+CPU; the noise is only evaluated for skinned blades. The world shot `duel6_sun_blade`
+([world_shot_saber_skins.rs](../crates/sjk-viewer/src/world_shot_saber_skins.rs))
+draws the Sun between a stock orange and a stock blue blade, the Sun close up every
+0.3 s, and the Character page's model holding it; reviewed by eye on one GPU
+(08/10/2026), not on other GPUs or in a live match.
+
 ## Saber trails
 
 [saber_trail.rs](../crates/sjk-viewer/src/saber_trail.rs) follows codemp

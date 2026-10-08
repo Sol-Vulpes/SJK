@@ -232,6 +232,8 @@ impl GpuState {
     /// pose or the hilts changed.
     pub(crate) fn begin_saber_instances(&mut self) {
         self.saber_instances.clear();
+        // The stage model is the local player: its blades wear the player's skin.
+        let skin = self.saber_skins.local();
         let stage = &mut self.menu_stage;
         stage.preview.blades.clear();
         // The classic preview's blades are drawn into it, not into the world.
@@ -261,7 +263,8 @@ impl GpuState {
             .flatten()
             .filter(|saber| saber.line.is_some())
             .count();
-        let roll = showcase::roll_degrees(crate::menu::art::motion::seconds() as f32);
+        let seconds = crate::menu::art::motion::seconds();
+        let roll = showcase::roll_degrees(seconds as f32);
         for (hand, saber) in stage.sabers.iter().enumerate() {
             let Some(saber) = saber else {
                 continue;
@@ -296,15 +299,18 @@ impl GpuState {
                 self.queue
                     .write_buffer(&saber.instance_buffer, 0, bytemuck::bytes_of(&instance));
             }
-            for blade in saber
+            let color = skin.map_or(saber.color, BladeColor::Skin);
+            for (index, blade) in saber
                 .blades
                 .iter()
                 .take(usize::from(saber.num_blades))
-                .flatten()
+                .enumerate()
+                .filter_map(|(index, blade)| Some((index, blade.as_ref()?)))
             {
                 let blade =
                     saber::world_blade(grip, rotation, blade.socket, blade.length, blade.radius);
-                let pair = saber::Instance::pair(blade, saber.color);
+                let pair = saber::Instance::pair(blade, color)
+                    .map(|i| i.with_animation(seconds, (hand * 8 + index) as u32));
                 if preview {
                     stage.preview.blades.extend(pair);
                 } else {

@@ -100,7 +100,9 @@ whether the Illuminate holocron is lit. Both are required in a request.
 - `cg_saberSkin` (archived, default empty): the blade-skin unlock id the player
   wears. It applies only while the player's own hub profile lists that unlock; with
   no identity, no hub or the unlock missing, the stock blade shows and nothing is
-  sent.
+  sent. Built so far: the cvar, read once a frame in one place
+  (`GpuState::local_saber_skin`, [saber_skins.rs](../crates/sjk-viewer/src/saber_skins.rs)),
+  which for now applies it without the profile check.
 - `unlockables` opens the Unlockables page; `saberskin` alone lists the blade skins
   with owned or locked, `saberskin <id>` or `saberskin none` sets `cg_saberSkin`.
 
@@ -121,14 +123,28 @@ not the hub.
 
 ### The Sun blade
 
-- Drawn as its own saber material: a white-gold core, an orange corona with drifting
-  granulation, and flares running along the blade, animated by time in `saber.wgsl`;
-  the dynamic glow pass gets the same animation. Its trail is amber and its light
-  warm orange with a slight flicker.
-- Shown for any player whose look wears it: in the game, in first person, thrown,
-  and in the Character page's preview of the local player.
+Built on `personal/saber-skins-blade` (renderer and sounds); who wears it comes from
+the per-client table the hub's looks are to fill.
+
+- Drawn as its own saber material (slot 7, after the neutral RGB pair) with
+  engine-generated textures: a white-hot core into gold, a corona from gold through
+  orange to a red rim with drifting granulation and flame tongues, and flares running
+  from hilt to tip now and then, animated in `saber.wgsl` from per-instance time and a
+  per-blade seed; the dynamic glow pass gets the same animation
+  ([rendering.md](rendering.md#saber-blade-skins)). Its trail is amber gold and its
+  light warm orange with a slow flicker. Retail and RGB blades are unchanged.
+- Shown for every client whose entry in the viewer's `SaberSkins` table is set
+  (`SaberSkins::set(client, Some(BladeSkin::Sun))`): in the game, in first person,
+  thrown, and on the menu stage (the Character page) for the local player.
 - Sounds, per player wearing it: ignition and switching off, the hum loop and three
-  swings replace the stock ones (`sound/sjk/sabers/sun/*`).
+  swings replace the stock ones (`sound/sjk/sabers/sun/*`, synthesized by
+  `scripts/saber_skin_sounds.py`, bundled and mounted below the game data). The
+  viewer passes the table to the audio adapter every frame
+  (`LegacySoundAdapter::set_saber_sound_overrides`, [client.md](client.md#blade-skins)).
+  A thrown saber's hum stays the hilt's own.
+- Verified: unit tests (material slot, colours, the table, the cvar, the sound
+  overrides per client, the bundled WAVs and the hum's loop point) and the
+  `duel6_sun_blade` world shot. Not verified: the sounds by ear, a live match.
 
 ### Illuminate for others
 

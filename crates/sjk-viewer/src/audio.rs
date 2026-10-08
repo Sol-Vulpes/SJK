@@ -98,6 +98,17 @@ impl GameAudio {
             }
         }
     }
+    /// Which blade skin's sound set each client slot wears (`saber_skins.rs`); cheap,
+    /// called every frame. Until the gamestate's tables are ready there is nothing to set.
+    pub(crate) fn set_saber_sound_overrides(
+        &mut self,
+        clients: &[Option<u8>; sjk_client::SABER_SOUND_CLIENTS],
+    ) {
+        if let Some(adapter) = &mut self.legacy {
+            adapter.set_saber_sound_overrides(clients);
+        }
+    }
+
     /// Create the one process-lifetime output stream and its decode worker.
     pub(crate) fn start() -> Option<Self> {
         let output = AudioOutput::start(MixerConfig {

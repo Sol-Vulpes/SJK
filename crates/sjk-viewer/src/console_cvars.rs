@@ -484,6 +484,12 @@ pub(super) fn register_daily_cvars(cvars: &mut CvarRegistry) -> Result<(), sjk_s
             "Illuminate on the Force wheel: a holocron by your shoulder that lights the way,              seen only by you (0 removes it)",
         ),
         CvarDefinition::new(
+            crate::saber_skins::CVAR,
+            "",
+            archive,
+            "The blade skin your sabers wear, by unlock id (saber_sun: the Sun blade); empty for the stock blade",
+        ),
+        CvarDefinition::new(
             crate::quick_wheel::SOUNDS_CVAR,
             true,
             archive,
