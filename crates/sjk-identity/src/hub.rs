@@ -3,7 +3,9 @@
 use crate::keys::{Identity, random_bytes};
 use crate::report::{BugReport, PlayerReport, WorldNote};
 use crate::staff::StaffRequest;
-use crate::wire::{Achievement, Achievements, Feed, Players, Presence, Profile, authorization};
+use crate::wire::{
+    Achievement, Achievements, Feed, Look, Players, Presence, Profile, authorization,
+};
 use serde::de::DeserializeOwned;
 use serde_json::{Value, json};
 use std::collections::BTreeMap;
@@ -95,7 +97,14 @@ pub trait Hub: Send {
             "this hub client does not send emotes".to_owned(),
         ))
     }
-    /// What is new after `after` (chat, and the emotes of `server`), waiting up to `wait`
+    /// Wear `look` for the claim the identity holds on `server` (`PROTOCOL.md`,
+    /// "Looks"); the hub answers with the feed id of its event.
+    fn look(&mut self, _identity: &Identity, _server: &str, _look: &Look) -> Result<u64, HubError> {
+        Err(HubError::Protocol(
+            "this hub client does not send looks".to_owned(),
+        ))
+    }
+    /// What is new after `after` (chat, and the emotes and looks of `server`), waiting up to `wait`
     /// seconds at the hub for something to come.
     fn feed(
         &mut self,
@@ -380,6 +389,11 @@ fn feed_path(after: u64, server: Option<&str>, wait: u64) -> String {
     path
 }
 
+/// `POST /v1/look`'s body: exactly the server and the look's two fields.
+fn look_body(server: &str, look: &Look) -> Value {
+    json!({ "server": server, "saber": look.saber, "illuminate": look.illuminate })
+}
+
 /// A staff request's path and body.
 fn staff_call(request: &StaffRequest) -> (&'static str, Value) {
     match request {
@@ -395,6 +409,18 @@ fn staff_call(request: &StaffRequest) -> (&'static str, Value) {
         StaffRequest::Unaward { key_id, medal } => (
             "/v1/staff/unaward",
             json!({ "key_id": key_id, "medal": medal }),
+        ),
+        StaffRequest::Unlock {
+            key_id,
+            unlock,
+            note,
+        } => (
+            "/v1/staff/unlock",
+            json!({ "key_id": key_id, "unlock": unlock, "note": note }),
+        ),
+        StaffRequest::Relock { key_id, unlock } => (
+            "/v1/staff/relock",
+            json!({ "key_id": key_id, "unlock": unlock }),
         ),
         StaffRequest::ClearAchievements { key_id, id } => (
             "/v1/staff/clear-achievements",
@@ -574,6 +600,14 @@ impl Hub for HttpHub {
             .ok_or_else(|| HubError::Protocol("the emote answer has no id".to_owned()))
     }
 
+    fn look(&mut self, identity: &Identity, server: &str, look: &Look) -> Result<u64, HubError> {
+        let body = look_body(server, look);
+        let answer = self.send(Some(identity), "POST", "/v1/look", Some(body))?;
+        answer["id"]
+            .as_u64()
+            .ok_or_else(|| HubError::Protocol("the look answer has no id".to_owned()))
+    }
+
     fn feed(
         &mut self,
         identity: &Identity,
@@ -676,6 +710,47 @@ mod tests {
         assert_eq!(
             staff_call(&StaffRequest::Search("so".into())),
             ("/v1/staff/search", json!({"query": "so"}))
+        );
+    }
+
+    #[test]
+    fn a_look_sends_exactly_the_protocols_fields() {
+        let look = Look {
+            saber: "saber_sun".to_owned(),
+            illuminate: true,
+        };
+        assert_eq!(
+            look_body("1.2.3.4:29070", &look),
+            json!({"server": "1.2.3.4:29070", "saber": "saber_sun", "illuminate": true})
+        );
+        assert_eq!(
+            look_body("[::1]:29070", &Look::default()).to_string(),
+            r#"{"illuminate":false,"saber":"","server":"[::1]:29070"}"#
+        );
+    }
+
+    #[test]
+    fn staff_unlocks_send_the_protocols_fields() {
+        assert_eq!(
+            staff_call(&StaffRequest::Unlock {
+                key_id: "0123456789abcdef".into(),
+                unlock: "saber_sun".into(),
+                note: "Thanks".into(),
+            }),
+            (
+                "/v1/staff/unlock",
+                json!({"key_id": "0123456789abcdef", "unlock": "saber_sun", "note": "Thanks"})
+            )
+        );
+        assert_eq!(
+            staff_call(&StaffRequest::Relock {
+                key_id: "0123456789abcdef".into(),
+                unlock: "saber_sun".into(),
+            }),
+            (
+                "/v1/staff/relock",
+                json!({"key_id": "0123456789abcdef", "unlock": "saber_sun"})
+            )
         );
     }
 

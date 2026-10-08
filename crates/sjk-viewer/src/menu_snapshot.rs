@@ -1145,6 +1145,7 @@ fn identity_page(shots: &Snapshot, art: ArtSet) {
                 .collect(),
             medals: Vec::new(),
             achievements: Vec::new(),
+            unlocks: Vec::new(),
         }),
         server: None,
         players: vec![
@@ -1155,6 +1156,7 @@ fn identity_page(shots: &Snapshot, art: ArtSet) {
                 name: "Fox".to_owned(),
                 verified: true,
                 medals: Vec::new(),
+                look: None,
             },
             Presence {
                 slot: 7,
@@ -1163,6 +1165,7 @@ fn identity_page(shots: &Snapshot, art: ArtSet) {
                 name: String::new(),
                 verified: false,
                 medals: Vec::new(),
+                look: None,
             },
         ],
         profiles: std::collections::HashMap::new(),
@@ -1171,6 +1174,7 @@ fn identity_page(shots: &Snapshot, art: ArtSet) {
         report: None,
         note: None,
         player_report: None,
+        look_outcome: None,
     };
     let online = hub(Status::Online, "^1Sol", &["^4Vulpes", "Padawan"]);
     let fresh = hub(Status::Online, "Padawan", &[]);
@@ -2178,6 +2182,7 @@ fn medals_snapshot() {
             names: Vec::new(),
             medals,
             achievements: Vec::new(),
+            unlocks: Vec::new(),
         }),
         server: None,
         players: Vec::new(),
@@ -2187,6 +2192,7 @@ fn medals_snapshot() {
         report: None,
         note: None,
         player_report: None,
+        look_outcome: None,
     };
     let with = hub(shot_medals());
     let without = hub(Vec::new());
