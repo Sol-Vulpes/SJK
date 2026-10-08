@@ -643,8 +643,8 @@ fn bake_target_bytes(resolution: u32, directed: bool) -> u64 {
 }
 
 /// The bake's pipelines, groups and scratch targets, kept after the first bake while
-/// movers refresh the cache. The light group is made per bake: the lamps' buffers change with the
-/// lighting settings.
+/// movers refresh the cache. The light group is made per bake: the lamps' buffers change
+/// with the lighting settings.
 struct Baker {
     nearest: wgpu::TextureView,
     farthest: wgpu::TextureView,
