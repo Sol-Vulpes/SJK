@@ -211,7 +211,9 @@ fn build(
         }
         let mut static_draws: Vec<StaticDraw> = draws
             .iter()
-            .filter(|draw| !undrawn && draw.world_surface && draw.material == material_index)
+            .filter(|draw| {
+                !undrawn && draw.world_surface && !draw.hidden && draw.material == material_index
+            })
             .map(|draw| StaticDraw {
                 view_cache: Default::default(),
                 indices: draw.indices.clone(),

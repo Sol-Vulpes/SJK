@@ -98,6 +98,18 @@ mod tests {
         });
     }
 
+    /// The same cameras with the pack named by `SJK_HD_WORLD` replacing the
+    /// world's surfaces, under fully live light.
+    #[test]
+    #[ignore = "renders with the GPU and the installed game data named by JKA_GAME_DATA; needs SJK_HD_WORLD"]
+    fn ffa5_hd_pack() {
+        assert!(
+            std::env::var_os(crate::hd_world::ENV).is_some(),
+            "SJK_HD_WORLD names the pack"
+        );
+        on_big_stack(|| sheet_of("ffa5-hd-live", &[("r_liveLighting", "2")]));
+    }
+
     /// ffa5 as shipped (`r_dayNight 0`: retail baked light), under SJK's default
     /// lighting (live sun, baked indirect) and with everything live
     /// (`r_liveLighting 2`), the mode an HD world has to look right in.

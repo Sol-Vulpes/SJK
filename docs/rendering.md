@@ -2313,6 +2313,44 @@ python scripts/shader_testmap.py --install
   the retail lists miss some, so the script writes a complete one for the
   compile (it is not packed).
 
+## HD world pack (proof of concept)
+
+[hd_world.rs](../crates/sjk-viewer/src/hd_world.rs) draws a binary glTF in place of
+a map's static-world surfaces while the BSP stays the source of collision,
+entities, visibility, light and shadows (SJK's client-side "override map"; the
+server and other players see the stock map). `SJK_HD_WORLD=<pack.glb>` names the
+pack until packs are mounted like game data.
+
+- **Replacement is by shader.** Every static-world draw whose shader the pack also
+  carries is marked `DrawBatch::hidden`: left out of the colour pass in
+  `world_material_build`, still a world surface for shadow casters, GI, lamps and
+  decals. The pack's meshes are appended as extra world draws (no BSP surface
+  index, no visibility clusters: always drawn). A pack may cover part of a map.
+- **Frame.** 1:1 scale, glTF Y-up from the map's Z-up (`(x, y, z)` to `(x, z, -y)`),
+  counter-clockwise fronts (the map's triangles run clockwise against their
+  normals, so the loader swaps two indices), material name = BSP shader name
+  (a Blender `.001` suffix is dropped), `COLOR_0` kept. Node transforms are applied.
+- **Lighting.** Each pack mesh is drawn as the stock paint of its shader, with a
+  lightmap page the stock map used for that shader (`SJK_HD_LIGHTMAP` forces one):
+  material maps and live lighting treat it like lightmapped world paint. Its own
+  lightmap coordinates are zero, so only live lighting (`r_liveLighting 2`) is
+  meaningful; baked lighting shows one texel.
+- **Tools.** Ignored tests in
+  [world_shot_hd.rs](../crates/sjk-viewer/src/world_shot_hd.rs): `ffa5_export` writes
+  `target/hd-world/ffa5/ffa5.glb` and its textures from the BSP
+  ([hd_world_export.rs](../crates/sjk-viewer/src/hd_world_export.rs): one object per
+  BSP model and shader under `model_<n>`), `ffa5_baseline` renders ffa5 under retail,
+  default and fully live light, `ffa5_hd_pack` renders a pack from the same cameras.
+
+Verified on 08/10/2026, ffa5 only, off-screen renders: a Blender-edited pack
+(48 meshes, 65,962 triangles; terrain subdivided, edges bevelled, two outlines
+rounded) loads, hides 5,026 stock draws and renders textured under
+`r_liveLighting 2`. Not verified or not done: in-game play, movers (inline models
+stay stock), fog volumes, decals and portals on pack surfaces, shadows from the pack
+(they come from the stock surfaces), a pack's own lamps, and lighting parity: the
+pack's floors read lighter and olive and its tower tops show red-lit rings that the
+stock render lacks. Forcing no lightmap (`SJK_HD_LIGHTMAP=-1`) washes the paint out.
+
 ## Default visual profile
 
 New profiles use the owner-approved rendering setup: day/night enabled at a fixed

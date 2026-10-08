@@ -53,6 +53,7 @@ pub(super) fn append(scene: &mut FlattenedScene, bsp: &Bsp) -> Result<(), Box<dy
             clusters,
             surface_index: Some(index),
             world_surface: root.contains(&index),
+            hidden: false,
             bounds: crate::scene_flatten::index_bounds(
                 scene.indices[start as usize..start as usize + 6]
                     .iter()

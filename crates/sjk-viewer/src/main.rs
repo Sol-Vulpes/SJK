@@ -87,6 +87,7 @@ mod gpu_context;
 mod gpu_phases;
 mod gpu_texture;
 mod ground_hud;
+mod hd_world;
 mod hud;
 mod hud_runtime;
 mod impact_spawn;

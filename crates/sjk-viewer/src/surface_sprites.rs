@@ -103,6 +103,7 @@ pub(crate) fn append(
                 clusters: draw.clusters.clone(),
                 surface_index: draw.surface_index,
                 world_surface: draw.world_surface,
+                hidden: draw.hidden,
                 bounds: draw.bounds,
             };
             scene.draws.push(generated);

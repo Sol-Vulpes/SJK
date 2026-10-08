@@ -17,6 +17,7 @@ pub(super) fn prepare(
     let mut flat = flatten_scene(scene, bsp)?;
     sprites::append(&mut flat, shaders)?;
     flares::append(&mut flat, bsp)?;
+    crate::hd_world::apply_from_env(&mut flat);
     Ok(flat)
 }
 
@@ -37,6 +38,9 @@ pub(crate) struct DrawBatch {
     pub(crate) surface_index: Option<usize>,
     /// Part of the static world (model 0) and not detached as a prop.
     pub(crate) world_surface: bool,
+    /// Left out of the colour pass (an HD world pack draws its place) but still
+    /// a world surface for shadows, light and everything else.
+    pub(crate) hidden: bool,
     /// World-space AABB of the referenced vertices, for light-frustum culling of casters.
     pub(crate) bounds: [[f32; 3]; 2],
 }
@@ -113,6 +117,7 @@ pub(super) fn flatten_scene(
                 world_surface: bsp.render().models()[0]
                     .surfaces
                     .contains(&draw.surface_index),
+                hidden: false,
                 bounds: index_bounds(
                     batch.indices[draw.indices.start as usize..draw.indices.end as usize]
                         .iter()
@@ -171,6 +176,7 @@ pub(super) fn append_player_preview(
             clusters: Vec::new(),
             surface_index: None,
             world_surface: true,
+            hidden: false,
             bounds: index_bounds(
                 scene.indices[index_start as usize..]
                     .iter()
