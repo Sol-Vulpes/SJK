@@ -1,8 +1,9 @@
 //! The Update page: whether a newer SJK release exists, and the buttons to check
 //! again, install it or read its notes (state and work in `update.rs`).
 //!
-//! Opened by the main menu's Update entry (modern and classic) or the `update`
-//! console command. Like the changelog page it lives in the console and is drawn
+//! Opened by the main menu's Update entry or the `update` console command.
+//! The SJK UI draws it in its own look (`update_panel_sjk.rs`); the classic
+//! menus, which have no version of it, in SJK's hero look. Like the changelog page it lives in the console and is drawn
 //! in place of it, so it opens over the menus and in a match.
 
 use crate::menu_widgets::{BACK_TOKEN, FormLayout, MenuCanvas, Scrim};
@@ -166,7 +167,7 @@ impl Panel {
         self.open
     }
 
-    /// Draw the SJK UI's look (`sjk`), in its families, or the modern one.
+    /// Draw the SJK UI's look (`sjk`), in its families, or the hero one.
     pub(crate) fn set_sjk(&mut self, sjk: bool) {
         self.sjk = sjk;
     }

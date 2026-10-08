@@ -469,6 +469,20 @@ test: JA+: two players duel, walk through them; while duelling, walk through a b
 
 # ---- More changes ----
 
+[remove-modern-ui]
+area: Menus & settings
+title: Only the SJK UI and classic menus: the modern style is gone
+change: ui_menuStyle is sjk or classic; the modern main page, browser and game menu are gone.
+change: cg_scoreboardStyle, con_style and cg_hudStyle lose modern; ui_accent and the ffa3 gate go.
+change: A saved modern (or 0) is reset at start; con_lineSpacing, con_maxLines are dropped.
+test: config.cfg with ui_menuStyle, con_style and cg_hudStyle "modern": start the client.
+test: The SJK UI opens with its console and scoreboard, and the game HUD shows in a match.
+test: Classic menus: Create game, Setup > Renderer, Update and F8 Camera control still open.
+test: Join from mp/ffa3 (classic) and mp/duel6 (SJK UI): the loading screen, then the game.
+test: mp/ffa3: the big gate at the end of the browser corridor looks as before.
+test: HUD picker: SJK radial and SJK classic, no SJK modern; Text only still shows a HUD.
+note: Older entries that test the modern style or its console, scoreboard or HUD no longer apply.
+
 [sjk-standalone]
 area: Menus & settings
 title: SJK on its own: no jkr_ names, SJK folders, credits Origins
@@ -1855,7 +1869,7 @@ area: Input
 title: The HUD hides while the quick wheel is open
 change: Holding the wheel hides what HUD off hides; chat and nameplates stay.
 test: In a match, hold Q: health, ammo, timer and crosshair vanish; let go: they come back.
-test: Same with each HUD style (Game, the default, then Radial, Modern, Classic).
+test: Same with each HUD style (Game, the default, then Radial, Classic).
 
 [wheel-icons-sounds]
 area: Input
@@ -2321,7 +2335,7 @@ change: Main menu entry and page, the in-game menu's page, Quit, version line an
 change: Also the window title, the console's ready line and the programs' version information.
 test: Main page: the fourth entry reads SJK; its page title reads SJK; Quit's hint: Leave SJK.
 test: Bottom of the main page: SJK <version>. Update card: This is SJK <version>.
-test: In a match, Esc: the SJK entry and page; modern menus: Quit SJK.
+test: In a match, Esc: the SJK entry and page; classic menus: the SJK button.
 test: The window title and the console's first line say SJK.
 note: Credits keep "Sol JK" for Sol's own section, as the name's origin.
 

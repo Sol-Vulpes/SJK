@@ -3,7 +3,7 @@
 //! and changelog: the `menu_box_ingame` pop-up over the dimmed screen, the `menu_blendbox`
 //! title band, retail's option rows (a lilac label, a gold value, the highlight band behind
 //! the focused row), list-box text fields, gold buttons that glow when focused, and the
-//! description line under the box. Every control answers to the modern view's tokens, so the
+//! description line under the box. Every control answers to the page's tokens, so the
 //! keyboard and the pointer serve both looks.
 
 use super::{

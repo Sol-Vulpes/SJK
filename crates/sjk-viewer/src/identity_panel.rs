@@ -10,7 +10,7 @@
 //! field; Enter saves from a field.
 
 use crate::menu::art::ArtSet;
-use crate::menu_widgets::{BACK_TOKEN, ButtonStyle, FormLayout, MenuCanvas, Scrim};
+use crate::menu_widgets::{BACK_TOKEN, MenuCanvas};
 use crate::text::{TextVertex, UiFont};
 use sjk_identity::{Snapshot, Status};
 use sjk_ui::{Color, FontWeight, InputEvent, Rect, TextAlign, UiEventKind};
@@ -155,10 +155,9 @@ pub(crate) struct Panel {
     fields: bool,
     /// The hub address is not SJK's own: the way back to it is on offer.
     offer_hub: bool,
-    /// The classic+ look is drawn, with the retail menu art it can use.
-    classic: bool,
+    /// The retail menu art the classic+ look can use.
     art: ArtSet,
-    /// The SJK UI's look (`identity_panel_sjk.rs`).
+    /// The SJK UI's look (`identity_panel_sjk.rs`), else the classic+ one.
     sjk: bool,
     /// A problem found before anything was sent.
     message: String,
@@ -360,7 +359,6 @@ impl Panel {
             enabled: false,
             fields: false,
             offer_hub: false,
-            classic: false,
             art: ArtSet::default(),
             sjk: false,
             message: String::new(),
@@ -394,15 +392,14 @@ impl Panel {
         self.ui.draw_list()
     }
 
-    /// Choose the look: classic+ with the retail `art` it can draw, or modern.
-    pub(crate) fn set_look(&mut self, classic: bool, art: ArtSet) {
-        self.classic = classic;
+    /// The retail `art` the classic+ look can draw.
+    pub(crate) fn set_art(&mut self, art: ArtSet) {
         self.art = art;
     }
 
     /// Whether the classic+ look is drawn, so its text uses the retail font.
     pub(crate) fn is_classic(&self) -> bool {
-        self.classic
+        !self.sjk
     }
 
     /// Draw the SJK UI's look (`sjk`), in its families, or not.
@@ -412,7 +409,7 @@ impl Panel {
 
     /// Whether the SJK UI's look is drawn.
     pub(crate) fn is_sjk(&self) -> bool {
-        self.sjk && !self.classic
+        self.sjk
     }
 
     /// Show a problem found before anything was sent.
@@ -547,46 +544,6 @@ impl Panel {
         }
     }
 
-    /// A text field: the box, its pointer target and the text (its end, with a caret while
-    /// it has the focus), or a hint when it is empty.
-    fn draw_field(
-        &mut self,
-        rect: Rect,
-        token: u16,
-        text: &str,
-        hint: &str,
-        focused: bool,
-        s: f32,
-    ) {
-        self.ui.text_field(rect, focused);
-        self.ui.hit_region(token, rect);
-        let theme = self.ui.theme();
-        let room = ((rect.width - 28.0 * s) / (15.0 * s * 0.55)) as usize;
-        let caret = focused && (self.epoch.elapsed().as_millis() / 500).is_multiple_of(2);
-        let (shown, color) = if text.is_empty() && !focused {
-            (hint.to_owned(), theme.muted)
-        } else {
-            let mut shown = fit_tail(text, room.saturating_sub(1));
-            if caret {
-                shown.push('|');
-            }
-            (shown, theme.foreground)
-        };
-        self.ui.text(
-            &shown,
-            Rect::new(
-                rect.x + 14.0 * s,
-                rect.y,
-                rect.width - 28.0 * s,
-                rect.height,
-            ),
-            15.0 * s,
-            color,
-            FontWeight::Regular,
-            0.0,
-        );
-    }
-
     /// Draw the page over the whole frame; text other overlays appended earlier this frame is
     /// dropped rather than shown through.
     pub(crate) fn append(
@@ -598,226 +555,7 @@ impl Panel {
     ) {
         vertices.clear();
         self.sync(inputs);
-        if self.classic {
-            self.append_classic(inputs, vertices, font, viewport);
-            return;
-        }
-        let view = view(inputs);
-        let layout = FormLayout::new(viewport);
-        let s = layout.scale;
-        self.ui.begin_hero(viewport, 1.0, Scrim::Wide);
-        self.ui.form_header(
-            &layout,
-            "SJK   /   IDENTITY",
-            "IDENTITY",
-            crate::build_info::label(),
-        );
-        let theme = self.ui.theme();
-        let x = layout.margin;
-        let top = viewport[1] * 0.17 + 112.0 * s;
-        let mut width = (viewport[0] - x * 2.0).min(840.0 * s);
-        // The medals' panel sits right of the card, which narrows to leave it room.
-        let medals_gap = 24.0 * s;
-        let medals_width = view.medals.as_ref().map(|_| {
-            let room = viewport[0] - x * 2.0 - medals_gap;
-            let panel = (room - width).clamp(300.0 * s, 520.0 * s);
-            width = width.min(room - panel);
-            panel
-        });
-        let pad = 24.0 * s;
-        let line = 22.0 * s;
-        let fields_height = if self.fields {
-            76.0 * s + 56.0 * s
-        } else {
-            0.0
-        };
-        let base = pad * 2.0 + 44.0 * s + view.lines.len() as f32 * line + 58.0 * s + fields_height;
-        let room = (viewport[1] - 76.0 * s - top - base - 40.0 * s).max(0.0);
-        let rows = view.players.len().min((room / (26.0 * s)) as usize);
-        let players_height = if rows == 0 {
-            0.0
-        } else {
-            40.0 * s + rows as f32 * 26.0 * s
-        };
-        let card = Rect::new(x, top, width, base + players_height);
-        self.ui.panel(card);
-        let inner = card.width - pad * 2.0;
-        let left = card.x + pad;
-        let mut y = card.y + pad;
-        self.ui.text(
-            &view.headline,
-            Rect::new(left, y, inner, 36.0 * s),
-            28.0 * s,
-            theme.foreground,
-            FontWeight::Semibold,
-            0.0,
-        );
-        y += 44.0 * s;
-        for text in &view.lines {
-            self.ui.text(
-                text,
-                Rect::new(left, y, inner, line),
-                15.0 * s,
-                theme.muted,
-                FontWeight::Regular,
-                0.2 * s,
-            );
-            y += line;
-        }
-        y += 10.0 * s;
-        let badge = if self.enabled { "ON" } else { "OFF" };
-        self.ui.button_styled(
-            TOGGLE_TOKEN,
-            "Share my identity with the SJK hub",
-            Rect::new(left, y, inner, 46.0 * s),
-            ButtonStyle {
-                selected: self.focus == Focus::Toggle,
-                enabled: true,
-                accent: self.enabled.then_some(theme.accent),
-                badge: Some(badge),
-            },
-        );
-        y += 58.0 * s;
-        if self.fields {
-            let bio = std::mem::take(&mut self.bio);
-            self.ui.text(
-                "About you (optional, up to 500 characters)",
-                Rect::new(left, y, inner, 18.0 * s),
-                12.0 * s,
-                theme.muted,
-                FontWeight::Semibold,
-                0.4 * s,
-            );
-            let rect = Rect::new(left, y + 20.0 * s, inner, 44.0 * s);
-            let focused = self.focus == Focus::Bio;
-            self.draw_field(
-                rect,
-                BIO_TOKEN,
-                &bio,
-                "Say something about yourself",
-                focused,
-                s,
-            );
-            y += 76.0 * s;
-            self.bio = bio;
-            let save = Rect::new(left, y, 150.0 * s, 44.0 * s);
-            self.ui.button_styled(
-                SAVE_TOKEN,
-                "Save",
-                save,
-                ButtonStyle {
-                    selected: self.focus == Focus::Save,
-                    enabled: true,
-                    accent: Some(theme.accent),
-                    badge: None,
-                },
-            );
-            let copied = self
-                .copied_until
-                .is_some_and(|until| Instant::now() < until);
-            let copy = Rect::new(save.right() + 12.0 * s, y, 210.0 * s, 44.0 * s);
-            self.ui.button(
-                COPY_TOKEN,
-                if copied { "Copied" } else { "Copy my key id" },
-                copy,
-                self.focus == Focus::Copy,
-            );
-            let mut last = copy.right();
-            if self.offer_hub {
-                let hub = Rect::new(copy.right() + 12.0 * s, y, 250.0 * s, 44.0 * s);
-                self.ui.button(
-                    HUB_TOKEN,
-                    "Use the official hub",
-                    hub,
-                    self.focus == Focus::Hub,
-                );
-                last = hub.right();
-            }
-            if !self.message.is_empty() {
-                self.ui.text(
-                    &self.message,
-                    Rect::new(
-                        last + 16.0 * s,
-                        y,
-                        (card.right() - last - 16.0 * s - pad).max(0.0),
-                        44.0 * s,
-                    ),
-                    14.0 * s,
-                    Color::new(1.0, 0.45, 0.4, 1.0),
-                    FontWeight::Semibold,
-                    0.0,
-                );
-            }
-            y += 56.0 * s;
-        }
-        if rows > 0 {
-            y += 14.0 * s;
-            self.ui.text(
-                "KNOWN PLAYERS HERE",
-                Rect::new(left, y, inner, 20.0 * s),
-                13.0 * s,
-                theme.muted,
-                FontWeight::Semibold,
-                1.5 * s,
-            );
-            y += 26.0 * s;
-            for player in view.players.iter().take(rows) {
-                let color = if player.verified {
-                    Color::new(1.0, 0.82, 0.25, 1.0)
-                } else {
-                    theme.foreground
-                };
-                let row = Rect::new(left, y, inner, 24.0 * s);
-                self.ui.text(
-                    &format!("{:>2}   {}", player.slot, player.name),
-                    row,
-                    18.0 * s,
-                    color,
-                    FontWeight::Regular,
-                    0.0,
-                );
-                if player.verified {
-                    self.ui.text_aligned(
-                        "VERIFIED",
-                        row,
-                        13.0 * s,
-                        color,
-                        FontWeight::Semibold,
-                        1.0 * s,
-                        TextAlign::End,
-                    );
-                }
-                y += 26.0 * s;
-            }
-        }
-        if let (Some(medals), Some(panel)) = (&view.medals, medals_width) {
-            self.modern_medals(
-                medals,
-                font,
-                card.right() + medals_gap,
-                top,
-                panel,
-                viewport[1] - 96.0 * s,
-                s,
-            );
-        }
-        let enter = match self.focus {
-            Focus::Toggle => "Switch",
-            Focus::Bio | Focus::Save => "Save",
-            Focus::Copy => "Copy",
-            Focus::Hub => "Use",
-        };
-        self.ui.form_footer_actions(
-            &layout,
-            &[
-                ("TAB", "Next", 0),
-                ("ENTER", enter, 0),
-                ("ESC", "Close", BACK_TOKEN),
-            ],
-        );
-        self.ui.end_hero();
-        self.ui.finish(self.focus.token());
-        self.ui.append_text(vertices, font, viewport);
+        self.append_classic(inputs, vertices, font, viewport);
     }
 }
 

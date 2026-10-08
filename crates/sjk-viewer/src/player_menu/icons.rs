@@ -10,7 +10,7 @@ use sjk_vfs::VirtualFileSystem;
 use std::sync::Arc;
 use std::sync::mpsc::{self, Receiver};
 
-/// Atlas cells the player screen owns (the banner strip takes the rest).
+/// Atlas cells the player screen owns.
 pub(super) const MAX_ICONS: usize = crate::ui_renderer::ICON_CELLS as usize;
 /// Atlas cells of the Force page, outside the player screen's range.
 pub(super) const FORCE_CELLS: usize = crate::ui_renderer::FORCE_ICON_CELLS as usize;

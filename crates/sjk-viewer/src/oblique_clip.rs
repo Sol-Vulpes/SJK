@@ -1,11 +1,10 @@
-//! Oblique near-plane clipping for the portal pass (Lengyel, "Oblique View
-//! Frustum Depth Projection and Clipping", JGT 2005).
+//! Oblique near-plane clipping (Lengyel, "Oblique View Frustum Depth
+//! Projection and Clipping", JGT 2005).
 //!
-//! The far camera stands behind the far doorway, mirroring the menu camera's
-//! distance to the near one, so whatever the destination has behind its
-//! doorway would block the view. Bending the projection's near plane onto
-//! the doorway plane clips exactly that away while keeping the far plane in
-//! place.
+//! A mirrored or portal camera stands behind the surface it looks through, so
+//! whatever lies behind that surface would block the view. Bending the
+//! projection's near plane onto the surface's plane clips exactly that away
+//! while keeping the far plane in place.
 
 use glam::{Mat4, Vec3, Vec4};
 

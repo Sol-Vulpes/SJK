@@ -1,8 +1,6 @@
-//! Compact text-only filter strip using the browser's existing hit regions and theme.
+//! The browser's filter toggles: their pointer tokens and the archived cvars
+//! they flip.
 use super::*;
-use crate::menu_widgets::{FormLayout, MenuCanvas};
-use crate::server_browser::filters::Filters;
-use sjk_ui::{FontWeight, Rect};
 
 /// Independent hit tokens, outside row/header/modal namespaces.
 pub(super) const BASE: u16 = 50;
@@ -47,55 +45,6 @@ impl ClientMenu {
 /// The game type `step` after `mode` in -1 (all), 0 to 9.
 fn next_mode(mode: i32, step: i32) -> i32 {
     (mode + 1 + step).rem_euclid(11) - 1
-}
-
-/// Draw controls above the table, without cards or per-frame string construction.
-pub(crate) fn append(ui: &mut MenuCanvas, layout: &FormLayout, filters: Filters) {
-    let labels = [
-        if filters.empty {
-            "EMPTY: SHOW"
-        } else {
-            "EMPTY: HIDE"
-        },
-        if filters.full {
-            "FULL: SHOW"
-        } else {
-            "FULL: HIDE"
-        },
-        if filters.password {
-            "LOCKED: SHOW"
-        } else {
-            "LOCKED: HIDE"
-        },
-        if filters.valid {
-            "VALID ONLY"
-        } else {
-            "ALL INFO"
-        },
-        if filters.mode < 0 {
-            "ALL MODES"
-        } else {
-            crate::server_browser::gametype_name(Some(filters.mode))
-        },
-    ];
-    let s = layout.scale;
-    for (index, label) in labels.into_iter().enumerate() {
-        let rect = Rect::new(
-            layout.margin + index as f32 * 145.0 * s,
-            layout.rows_y,
-            138.0 * s,
-            28.0 * s,
-        );
-        ui.hit_region(BASE + index as u16, rect);
-        ui.text(
-            label,
-            rect,
-            12.0 * s,
-            ui.theme().accent,
-            FontWeight::Semibold,
-            0.5 * s,
-        );
-    }
 }
 
 #[cfg(test)]

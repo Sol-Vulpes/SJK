@@ -1,8 +1,6 @@
-//! Retained in-game menu: the pages reached with Escape during a match,
-//! drawn in the main menu's hero style over the live world, or, with
-//! `ui_menuStyle classic`, as the retail bar and pop-ups ([`classic`]), or,
-//! with `ui_menuStyle sjk`, as the SJK UI's arc and match card
-//! ([`sjk_view`]).
+//! Retained in-game menu: the pages reached with Escape during a match, drawn
+//! with `ui_menuStyle sjk` as the SJK UI's arc and match card ([`sjk_view`]),
+//! or with `ui_menuStyle classic` as the retail bar and pop-ups ([`classic`]).
 
 use crate::menu::art::ArtSet;
 use crate::menu::sjk::TextTarget;
@@ -11,7 +9,6 @@ use crate::menu_widgets::MenuCanvas;
 use crate::text::{TextVertex, UiFont};
 use sjk_protocol::{GameState, InfoString};
 use sjk_ui::{AbstractAction, DrawList, InputEvent, UiEventKind};
-use std::fmt::Write as _;
 
 mod about;
 mod callvote;
@@ -25,7 +22,6 @@ pub(crate) mod siege_data;
 pub(crate) mod sjk;
 mod sjk_actions;
 pub(crate) mod sjk_view;
-mod view;
 pub(crate) use callvote::Action as CallVoteAction;
 
 const VOTE_SCROLL_TOKEN: u16 = u16::MAX;
@@ -85,40 +81,9 @@ pub(crate) struct View<'a> {
     pub(crate) _frame: std::marker::PhantomData<&'a ()>,
 }
 
-/// The per-entry hint of `view`'s page: only the main page carries hints.
-fn hint_for(view: &View<'_>) -> impl Fn(usize) -> &'static str {
-    let (page, vote_active) = (view.page, view.vote_active);
-    move |row| match page {
-        Page::Main => main_hint(row, vote_active),
-        Page::Sjk => sjk::ENTRIES.get(row).map_or("", |entry| entry.hint),
-        Page::ReportPlayer => players::State::category(row).map_or("", |c| c.hint()),
-        _ => "",
-    }
-}
-
-/// One-line description under the selected entry of the main page.
-fn main_hint(row: usize, vote_active: bool) -> &'static str {
-    match row {
-        0 => "Back to the match",
-        1 => "Pick a side or spectate",
-        2 => "Find another server; joining leaves this one",
-        3 => "Name, model, saber, colours and Force",
-        4 => "SJK's changelog, and more to come",
-        5 => "Host, map, game type and limits",
-        6 => "Video, audio, HUD, game and network",
-        7 => "Key bindings",
-        8 => "Map, game type, kick, limits",
-        9 | 10 if vote_active => "Cast your vote on the current call",
-        9 if !vote_active => "Camera framing and smooth sunlight for recording",
-        11 if vote_active => "Camera framing and smooth sunlight for recording",
-        _ => "Disconnect or quit",
-    }
-}
-
 /// Fixed-storage retained UI state shared by every in-game page.
 pub(crate) struct InGameMenu {
     canvas: MenuCanvas,
-    kicker: String,
     rows: [String; 24],
     enabled: [bool; 24],
     row_count: usize,
@@ -162,7 +127,6 @@ impl InGameMenu {
     pub(crate) fn new() -> Self {
         Self {
             canvas: MenuCanvas::new(),
-            kicker: String::with_capacity(48),
             rows: std::array::from_fn(|_| String::with_capacity(96)),
             enabled: [true; 24],
             row_count: 0,
@@ -192,7 +156,7 @@ impl InGameMenu {
 
     /// Whether the classic (retail bar and pop-ups) layout is in use.
     pub(crate) fn is_classic(&self) -> bool {
-        self.style.classic_screens() && !self.is_sjk()
+        self.style == MenuStyle::Classic
     }
 
     /// Whether the SJK UI's layout is in use ([`sjk_view`]).
@@ -207,7 +171,7 @@ impl InGameMenu {
     }
 
     /// The row the main page shows when a screen opened from it returns: the
-    /// entry that opened it in the SJK UI, the first in the other looks.
+    /// entry that opened it in the SJK UI, the first in the classic look.
     pub(crate) fn return_row(&mut self) -> usize {
         if self.is_sjk() {
             std::mem::take(&mut self.return_row)
@@ -297,6 +261,7 @@ impl InGameMenu {
         );
     }
 
+    /// Draw `view`'s page in the classic look.
     pub(crate) fn append(
         &mut self,
         view: View<'_>,
@@ -312,24 +277,13 @@ impl InGameMenu {
         }
         self.prepare_rows(&view);
         self.active_page = view.page;
-        let rows = view::Rows {
+        let rows = classic_view::Rows {
             labels: &self.rows[..self.row_count],
             enabled: &self.enabled[..self.row_count],
             scroll: self.callvote.scroll_metrics(view.page),
             info: info_lines(&self.about, &self.players, view.page),
         };
-        if self.is_classic() {
-            classic_view::build(&mut self.canvas, &view, rows, self.art, viewport);
-        } else {
-            view::build(
-                &mut self.canvas,
-                &view,
-                &self.kicker,
-                rows,
-                hint_for(&view),
-                viewport,
-            );
-        }
+        classic_view::build(&mut self.canvas, &view, rows, self.art, viewport);
         self.canvas.append_text(vertices, font, viewport);
     }
 
@@ -388,7 +342,7 @@ impl InGameMenu {
         self.callvote.activate(page, row)
     }
 
-    pub(crate) fn row_count(&self, page: Page, team_game: bool, vote_active: bool) -> usize {
+    pub(crate) fn row_count(&self, page: Page, team_game: bool) -> usize {
         if matches!(page, Page::Players | Page::ReportPlayer) {
             self.players.row_count(page)
         } else if let Some(count) =
@@ -402,18 +356,11 @@ impl InGameMenu {
         } else if page.is_vote_page() {
             self.callvote.row_count(page)
         } else {
-            row_count(page, team_game, vote_active)
+            shared_row_count(page)
         }
     }
 
     fn prepare_rows(&mut self, view: &View<'_>) {
-        self.kicker.clear();
-        self.kicker.push_str(match view.team {
-            1 => "JEDI ACADEMY   /   RED TEAM",
-            2 => "JEDI ACADEMY   /   BLUE TEAM",
-            3 => "JEDI ACADEMY   /   SPECTATING",
-            _ => "JEDI ACADEMY   /   PLAYING",
-        });
         for row in &mut self.rows {
             row.clear();
         }
@@ -450,14 +397,10 @@ impl InGameMenu {
         } else {
             self.prepare_standard_rows(view)
         };
+        // The current team cannot be taken: the classic pop-up dims it and
+        // the SJK UI says so under it.
         for row in 0..self.row_count {
-            let current = current_team_row(view, row);
-            self.enabled[row] &= !current;
-            // The modern list says so in the row; the classic pop-up dims it
-            // and the SJK UI says so under it.
-            if current && !self.style.classic_screens() {
-                self.rows[row].push_str("  /  current");
-            }
+            self.enabled[row] &= !current_team_row(view, row);
         }
         if self.is_sjk() {
             sjk_view::split_hints(
@@ -468,70 +411,13 @@ impl InGameMenu {
         }
     }
 
+    /// The rows of a page neither look draws itself: the classic look's
+    /// server-info page.
     fn prepare_standard_rows(&mut self, view: &View<'_>) -> usize {
         match view.page {
-            Page::Main => {
-                let mut count = 0;
-                for value in [
-                    "Resume",
-                    "Join / change team",
-                    "Server browser",
-                    "Player profile",
-                    "SJK",
-                    "Server info",
-                    "Settings",
-                    "Controls",
-                ] {
-                    self.rows[count].push_str(value);
-                    count += 1;
-                }
-                self.rows[count].push_str("Call vote");
-                count += 1;
-                if view.vote_active {
-                    self.rows[count].push_str("Vote yes");
-                    self.rows[count + 1].push_str("Vote no");
-                    count += 2;
-                }
-                self.rows[count].push_str(CAMERA_CONTROL);
-                count += 1;
-                self.rows[count].push_str("Leave");
-                count + 1
-            }
             Page::About => {
                 self.rows[0].push_str("Back");
                 1
-            }
-            Page::Sjk => {
-                for (row, entry) in sjk::ENTRIES.iter().enumerate() {
-                    self.rows[row].push_str(entry.label);
-                }
-                self.rows[sjk::ENTRIES.len()].push_str("Back");
-                sjk::ENTRIES.len() + 1
-            }
-            Page::Leave => {
-                self.rows[0].push_str("Disconnect  /  back to the main menu");
-                self.rows[1].push_str("Quit SJK");
-                self.rows[2].push_str("Back");
-                3
-            }
-            Page::Team => {
-                if view.team_game {
-                    let _ = write!(
-                        self.rows[0],
-                        "Auto-join  /  {} red / {} blue",
-                        view.red_players, view.blue_players
-                    );
-                    let _ = write!(self.rows[1], "Red team  /  {} players", view.red_players);
-                    let _ = write!(self.rows[2], "Blue team  /  {} players", view.blue_players);
-                    self.rows[3].push_str("Spectate");
-                    self.rows[4].push_str("Back");
-                    5
-                } else {
-                    self.rows[0].push_str("Join game");
-                    self.rows[1].push_str("Spectate");
-                    self.rows[2].push_str("Back");
-                    3
-                }
             }
             _ => 0,
         }
@@ -590,20 +476,11 @@ pub(crate) fn weapon_name(weapon: u8) -> &'static str {
     }
 }
 
-pub(crate) fn row_count(page: Page, team_game: bool, vote_active: bool) -> usize {
+/// The row count of a page neither look draws itself (the classic look's
+/// server-info page).
+fn shared_row_count(page: Page) -> usize {
     match page {
-        Page::Main => {
-            if vote_active {
-                13
-            } else {
-                11
-            }
-        }
-        Page::Team if team_game => 5,
-        Page::Team => 3,
         Page::About => 1,
-        Page::Sjk => sjk::ENTRIES.len() + 1,
-        Page::Leave => 3,
         _ => 0,
     }
 }
@@ -685,7 +562,6 @@ mod sjk_tests {
         let mut menu = InGameMenu::new();
         for (style, classic, sjk, main_rows) in [
             (MenuStyle::Classic, true, false, classic::Tab::ALL.len()),
-            (MenuStyle::Modern, false, false, 11),
             (MenuStyle::Sjk, false, true, sjk_view::Entry::MAIN.len()),
         ] {
             menu.set_style(style, ArtSet::default());
@@ -694,15 +570,15 @@ mod sjk_tests {
                 (classic, sjk),
                 "{style:?}"
             );
-            assert_eq!(menu.row_count(Page::Main, false, false), main_rows);
+            assert_eq!(menu.row_count(Page::Main, false), main_rows);
         }
         // Pages the SJK UI shares keep the shared row counts.
         let menu = sjk_menu();
         assert_eq!(
-            menu.row_count(Page::CallVote, false, false),
+            menu.row_count(Page::CallVote, false),
             menu.callvote.row_count(Page::CallVote)
         );
-        assert_eq!(menu.row_count(Page::Vote, false, true), 4);
+        assert_eq!(menu.row_count(Page::Vote, false), 4);
     }
 
     #[test]
@@ -726,7 +602,7 @@ mod sjk_tests {
                 (Page::Sjk, false),
                 (Page::Leave, false),
             ] {
-                let count = menu.row_count(page, team_game, false);
+                let count = menu.row_count(page, team_game);
                 assert!(count > 0, "{page:?}");
                 menu.build_sjk(view(page, count - 1, team_game, 2), viewport);
                 assert_eq!(menu.row_count, count, "{page:?}: prepared rows");
@@ -741,7 +617,7 @@ mod sjk_tests {
             }
         }
         // Forty maps page through sixteen at a time, with More and Back.
-        assert_eq!(menu.row_count(Page::VoteMap, false, false), 18);
+        assert_eq!(menu.row_count(Page::VoteMap, false), 18);
         menu.build_sjk(view(Page::VoteMap, 0, false, 0), [1_920.0, 1_080.0]);
         assert_eq!(menu.rows[16], "More maps...");
     }
@@ -766,27 +642,23 @@ mod sjk_tests {
 
     #[test]
     fn every_style_calls_the_panel_camera_control() {
-        for style in [MenuStyle::Modern, MenuStyle::Sjk] {
-            let mut menu = InGameMenu::new();
-            menu.set_style(style, ArtSet::default());
-            for vote_active in [false, true] {
-                let mut main = view(Page::Main, 0, false, 0);
-                main.vote_active = vote_active;
-                menu.prepare_rows(&main);
-                let rows = &menu.rows[..menu.row_count];
-                // The row the main page's actions open the panel from.
-                let row = match style {
-                    MenuStyle::Sjk => sjk_view::Entry::Shot.index(),
-                    _ if vote_active => 11,
-                    _ => 9,
-                };
-                assert_eq!(rows[row], CAMERA_CONTROL, "{style:?} {vote_active}");
-                assert!(
-                    rows.iter()
-                        .all(|row| !row.to_ascii_lowercase().contains("shot")),
-                    "{style:?}: {rows:?}"
-                );
-            }
+        let mut menu = sjk_menu();
+        for vote_active in [false, true] {
+            let mut main = view(Page::Main, 0, false, 0);
+            main.vote_active = vote_active;
+            menu.prepare_rows(&main);
+            let rows = &menu.rows[..menu.row_count];
+            // The row the main page's actions open the panel from.
+            assert_eq!(
+                rows[sjk_view::Entry::Shot.index()],
+                CAMERA_CONTROL,
+                "{vote_active}"
+            );
+            assert!(
+                rows.iter()
+                    .all(|row| !row.to_ascii_lowercase().contains("shot")),
+                "{rows:?}"
+            );
         }
         // The classic bar has no entry: F8 opens the panel there.
         let mut classic = InGameMenu::new();
@@ -805,8 +677,8 @@ mod sjk_tests {
         menu.remember_return(sjk_view::Entry::Settings.index());
         assert_eq!(menu.return_row(), sjk_view::Entry::Settings.index());
         assert_eq!(menu.return_row(), 0, "taken once");
-        menu.set_style(MenuStyle::Modern, ArtSet::default());
+        menu.set_style(MenuStyle::Classic, ArtSet::default());
         menu.remember_return(4);
-        assert_eq!(menu.return_row(), 0, "the other looks open on the first");
+        assert_eq!(menu.return_row(), 0, "the classic look opens on the first");
     }
 }

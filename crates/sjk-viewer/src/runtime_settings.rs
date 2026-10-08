@@ -15,11 +15,8 @@ impl GpuState {
             console.apply_window_options(window);
         }
         let Some(console) = &self.console else {
-            return; // evidence runs keep whatever accent they set
+            return; // evidence runs keep the settings they set
         };
-        if let Some(menu) = &mut self.client_menu {
-            menu.set_accent(ui_accent(console));
-        }
         self.ui_font.set_style(crate::text::TextStyle::from_cvars(
             console.float_cvar(crate::text::style::SCALE_CVAR),
             console.float_cvar(crate::text::style::TRACKING_CVAR),
@@ -235,51 +232,6 @@ pub(crate) fn preferred_present_mode(
         .copied()
         .find(|mode| modes.contains(mode))
         .unwrap_or(modes[0])
-}
-
-/// Named accent presets accepted by `ui_accent`, first entry is the default.
-pub(crate) const ACCENT_PRESETS: [(&str, &str); 6] = [
-    ("ember", "ff6a3d"),
-    ("amber", "ffb340"),
-    ("blue", "33c7ff"),
-    ("green", "5ee08a"),
-    ("violet", "c9a3ff"),
-    ("neutral", "e8e8e8"),
-];
-
-/// The player's `ui_accent`; the default preset when absent or malformed, so
-/// a typo never blanks the menu chrome.
-pub(crate) fn ui_accent(console: &super::console::ViewerConsole) -> sjk_ui::Color {
-    console
-        .text_value("ui_accent")
-        .and_then(parse_accent)
-        .or_else(|| parse_accent(ACCENT_PRESETS[0].0))
-        .unwrap_or(sjk_ui::Theme::default().accent)
-}
-
-/// Parse a preset name (`ember`, `amber`, ...) or `RRGGBB` / `#RRGGBB` into an
-/// opaque sRGB colour.
-pub(crate) fn parse_accent(text: &str) -> Option<sjk_ui::Color> {
-    let text = text.trim();
-    let hex = ACCENT_PRESETS
-        .iter()
-        .find(|(name, _)| name.eq_ignore_ascii_case(text))
-        .map_or(text, |(_, hex)| hex)
-        .trim_start_matches('#');
-    if hex.len() != 6 || !hex.is_ascii() {
-        return None;
-    }
-    let channel = |index: usize| {
-        u8::from_str_radix(&hex[index..index + 2], 16)
-            .ok()
-            .map(|value| f32::from(value) / 255.0)
-    };
-    Some(sjk_ui::Color::new(
-        channel(0)?,
-        channel(2)?,
-        channel(4)?,
-        1.0,
-    ))
 }
 
 #[cfg(test)]

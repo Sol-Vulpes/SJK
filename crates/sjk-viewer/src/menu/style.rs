@@ -1,15 +1,12 @@
 //! The `ui_menuStyle` setting: which layout the main menu uses.
 //!
-//! `modern` is the native hero layout ([`super::main_view`]); `classic`
-//! follows the original Jedi Academy multiplayer menus ([`super::classic`]);
 //! `sjk` is the SJK UI ([`super::sjk`]), SJK's own menus drawn over the live
-//! map, and the default. A profile saved with the
-//! earlier default `classic` moves to `sjk` once (`ui_menuStyleDefaultVersion`,
-//! in the console's start); a style chosen after that stays.
-//! The in-game menu follows the same setting ([`crate::ingame_menu`]).
-//! Screens without a classic version yet use their modern layout in both;
-//! screens without an SJK UI version yet use their classic one
-//! ([`MenuStyle::classic_screens`]).
+//! map, and the default; `classic` follows the original Jedi Academy
+//! multiplayer menus ([`super::classic`]). A profile saved with the earlier
+//! default `classic` moves to `sjk` once (`ui_menuStyleDefaultVersion`, in the
+//! console's start); a style chosen after that stays. The in-game menu follows
+//! the same setting ([`crate::ingame_menu`]). Screens without an SJK UI
+//! version yet use their classic one.
 
 use super::ClientMenu;
 use super::art::{self, ArtSet};
@@ -28,46 +25,36 @@ pub(crate) enum MenuStyle {
     /// Close to the retail menus in layout and flow, for players who know
     /// where things were in the original game.
     Classic,
-    /// The native layout: one column of entries over the live map.
-    Modern,
 }
 
 impl MenuStyle {
     /// Values the settings screens offer, in [`MenuStyle`] order.
-    pub(crate) const NAMES: [&'static str; 3] = ["sjk", "classic", "modern"];
+    pub(crate) const NAMES: [&'static str; 2] = ["sjk", "classic"];
     /// The `ui_menuStyle` value of the default style.
     pub(crate) const DEFAULT_NAME: &'static str = Self::NAMES[0];
     /// The default `ui_menuStyle` before the SJK UI became it: a saved value
     /// moves from it once.
     pub(crate) const OLD_DEFAULT_NAME: &'static str = Self::NAMES[1];
 
-    /// Read the cvar value: `modern` (any case) or `0` selects the modern
-    /// style, `classic` (any case) or `1` the classic one; anything else,
-    /// including a missing or mistyped value, the default SJK UI, so a typo
-    /// never leaves the player without a menu.
+    /// Read the cvar value: `classic` (any case) or `1` selects the classic
+    /// style; anything else, including a missing or mistyped value and the
+    /// retired `modern` (or `0`), the default SJK UI, so a typo never leaves
+    /// the player without a menu.
     pub(crate) fn from_cvar(value: Option<&str>) -> Self {
         match value.map(str::trim) {
-            Some(text) if text.eq_ignore_ascii_case("modern") || text == "0" => Self::Modern,
             Some(text) if text.eq_ignore_ascii_case("classic") || text == "1" => Self::Classic,
             _ => Self::Sjk,
         }
     }
 
-    /// Whether screens drawn in a classic and a modern version use the
-    /// classic one: in the classic style, and in the SJK UI until the screen
-    /// has its own version.
-    pub(crate) fn classic_screens(self) -> bool {
-        matches!(self, Self::Classic | Self::Sjk)
-    }
-
     /// The map the menus stand on from the start: the SJK UI's main page is
-    /// drawn over mp/duel6's temple courtyard; the other styles keep mp/ffa3,
+    /// drawn over mp/duel6's temple courtyard; the classic style keeps mp/ffa3,
     /// whose camera routes, gate and player stage the menu backdrop has
     /// (`menu_backdrop`).
     pub(crate) fn boot_map(self) -> &'static str {
         match self {
             Self::Sjk => "maps/mp/duel6.bsp",
-            Self::Modern | Self::Classic => "maps/mp/ffa3.bsp",
+            Self::Classic => "maps/mp/ffa3.bsp",
         }
     }
 }
@@ -78,23 +65,15 @@ impl ClientMenu {
     /// layouts.
     pub(crate) fn set_menu_style(&mut self, style: MenuStyle, console: &ViewerConsole) {
         if style != self.menu_style {
-            let classic_screens = self.menu_style.classic_screens();
             let sjk_settings = self.sjk_settings_on_show();
             let first_setup = self.first_setup_on_show();
             self.menu_style = style;
-            self.main_selection = 0;
             self.classic.reset();
             self.home.reset();
-            // An open option panel carries on as the modern screen (the
-            // Menu style row itself sits on the Interface panel), on the tab
-            // holding the row; between the classic style and the SJK UI,
-            // which share the panels, it stays as it is, but for the SJK UI's
-            // own Settings, which hands over to the classic panel.
-            if classic_screens != style.classic_screens() {
-                self.leave_sjk_settings();
-                self.leave_classic_panel();
-                self.settings.continue_modern(console);
-            } else if sjk_settings {
+            // An open option panel stays as it is: the classic style and the
+            // SJK UI share the panels, but for the SJK UI's own Settings,
+            // which hands over to the classic panel.
+            if sjk_settings {
                 self.sjk_settings_to_classic(console);
             }
             // First setup picked to the SJK UI goes on as its pop-up.
@@ -104,9 +83,8 @@ impl ClientMenu {
         }
     }
 
-    /// Whether First setup is on show over the main menu, in any style: the
-    /// classic Setup panel's group, the SJK UI's pop-up or category, or the
-    /// modern FIRST SETUP tab.
+    /// Whether First setup is on show over the main menu, in either style: the
+    /// classic Setup panel's group, or the SJK UI's pop-up or category.
     fn first_setup_on_show(&self) -> bool {
         use super::classic::layout::Entry;
         if self.settings_return != crate::player_menu::ReturnTarget::MainMenu {
@@ -128,58 +106,50 @@ impl ClientMenu {
     pub(crate) fn set_menu_art(&mut self, art: ArtSet) {
         self.art = art;
         let sjk = self.menu_style == MenuStyle::Sjk;
-        self.player
-            .set_style(self.menu_style.classic_screens() && !sjk, art);
+        self.player.set_style(!sjk, art);
         self.player.set_sjk(sjk);
     }
 }
 
 impl crate::GpuState {
-    /// Apply `ui_menuStyle` to the main and in-game menus. While the
-    /// classic style is on, or the classic console (whose command browser is
-    /// classic+), the player's retail menu artwork is decoded (once, on a
-    /// worker) and uploaded when ready; the menus and the console's browser
-    /// are told which pieces they can draw.
+    /// Apply `ui_menuStyle` to the main and in-game menus. The player's
+    /// retail menu artwork, which the classic pages (the SJK UI borrows those
+    /// it has no version of) and the classic console's classic+ command
+    /// browser draw, is decoded (once, on a worker) and uploaded when ready;
+    /// the menus and the console's browser are told which pieces they can draw.
     pub(crate) fn sync_menu_style(&mut self) {
         let Some(console) = &self.console else {
             return;
         };
         let style = MenuStyle::from_cvar(console.text_value(CVAR));
-        let classic_console = crate::game_font::classic_console(Some(console));
         // SJK's emblem is on every style's main page.
         crate::menu::emblem::request();
         self.ui_shapes.install_emblem(&self.device, &self.queue);
         self.ui_shapes.install_medals(&self.device, &self.queue);
-        if style.classic_screens() || classic_console {
-            if let Some(vfs) = &self.vfs {
-                art::request(vfs);
-            }
-            self.ui_shapes.install_menu_art(&self.device, &self.queue);
+        if let Some(vfs) = &self.vfs {
+            art::request(vfs);
         }
+        self.ui_shapes.install_menu_art(&self.device, &self.queue);
         let art = self.ui_shapes.menu_art();
         if let Some(menu) = &mut self.client_menu {
             menu.set_menu_style(style, console);
             menu.set_menu_art(art);
         }
         self.in_game_menu.set_style(style, art);
-        let classic = style.classic_screens();
         let sjk = style == MenuStyle::Sjk;
         // The report and note dialog is the SJK UI's card with its menus.
         self.text_dialog.set_look(
             match style {
                 MenuStyle::Sjk => crate::text_dialog::Look::Sjk,
                 MenuStyle::Classic => crate::text_dialog::Look::Classic,
-                MenuStyle::Modern => crate::text_dialog::Look::Modern,
             },
             art,
         );
         if let Some(console) = &mut self.console {
-            // What's new, Update, Identity and Credits have the SJK UI's own look.
-
+            // What's new, Update, Identity and Credits have the SJK UI's own
+            // look with its menus, and their classic+ one with the classic.
             console.set_browser_art(art);
-            console.set_changelog_look(classic && !sjk, art);
-            console.set_credits_look(classic && !sjk);
-            console.set_identity_look(classic && !sjk, art);
+            console.set_page_art(art);
             console.set_sjk_pages(sjk);
         }
         // The first start's First setup waits for the style, so it opens in the right one.
@@ -197,7 +167,7 @@ impl crate::GpuState {
         let Some(menu) = &self.client_menu else {
             return;
         };
-        if !menu.is_classic() || !menu.is_loading_screen() {
+        if !menu.is_loading_screen() {
             return;
         }
         let stage = if self.is_menu_world {
@@ -228,22 +198,23 @@ mod tests {
     use super::*;
 
     #[test]
-    fn modern_and_classic_need_an_explicit_value() {
+    fn classic_needs_an_explicit_value() {
         assert_eq!(MenuStyle::from_cvar(None), MenuStyle::Sjk);
         assert_eq!(MenuStyle::from_cvar(Some("")), MenuStyle::Sjk);
-        assert_eq!(MenuStyle::from_cvar(Some("modern")), MenuStyle::Modern);
-        assert_eq!(MenuStyle::from_cvar(Some(" Modern ")), MenuStyle::Modern);
+        // The retired modern style is the SJK UI.
+        assert_eq!(MenuStyle::from_cvar(Some("modern")), MenuStyle::Sjk);
+        assert_eq!(MenuStyle::from_cvar(Some(" Modern ")), MenuStyle::Sjk);
+        assert_eq!(MenuStyle::from_cvar(Some("0")), MenuStyle::Sjk);
         assert_eq!(MenuStyle::from_cvar(Some("modrn")), MenuStyle::Sjk);
         assert_eq!(MenuStyle::from_cvar(Some("clasic")), MenuStyle::Sjk);
-        assert_eq!(MenuStyle::from_cvar(Some("0")), MenuStyle::Modern);
         assert_eq!(MenuStyle::from_cvar(Some("classic")), MenuStyle::Classic);
         assert_eq!(MenuStyle::from_cvar(Some(" Classic ")), MenuStyle::Classic);
         assert_eq!(MenuStyle::from_cvar(Some("1")), MenuStyle::Classic);
     }
 
     /// A new profile starts on the SJK UI; a profile saved with the old
-    /// default `classic` moves to it once, and a style chosen after that, or
-    /// before it other than `classic`, stays start after start.
+    /// default `classic` moves to it once, and a style chosen after that
+    /// stays start after start. A saved `modern`, a retired style, is reset.
     #[test]
     fn a_saved_old_default_moves_to_the_sjk_ui_once() {
         let directory = tempfile::tempdir().unwrap();
@@ -265,23 +236,21 @@ mod tests {
             MenuStyle::Classic
         );
         drop(console);
-        // A modern style saved before the move was a choice, not the default.
-        std::fs::write(&path, "seta ui_menuStyle \"modern\"\n").unwrap();
+        // The modern style is retired: a saved one starts on the SJK UI.
+        std::fs::write(
+            &path,
+            "seta ui_menuStyle \"modern\"\nseta ui_menuStyleDefaultVersion \"1\"\n",
+        )
+        .unwrap();
         let console = ViewerConsole::new(path).unwrap();
-        assert_eq!(console.text_value(CVAR), Some("modern"));
+        assert_eq!(console.text_value(CVAR), Some("sjk"));
     }
 
     #[test]
     fn offered_names_parse_in_order() {
         let parsed = MenuStyle::NAMES.map(|name| MenuStyle::from_cvar(Some(name)));
-        assert_eq!(
-            parsed,
-            [MenuStyle::Sjk, MenuStyle::Classic, MenuStyle::Modern]
-        );
+        assert_eq!(parsed, [MenuStyle::Sjk, MenuStyle::Classic]);
         assert_eq!(MenuStyle::from_cvar(Some(" SJK ")), MenuStyle::Sjk);
-        // The SJK UI borrows the classic screens it has no version of yet.
-        assert!(MenuStyle::Sjk.classic_screens() && MenuStyle::Classic.classic_screens());
-        assert!(!MenuStyle::Modern.classic_screens());
         assert_eq!(
             MenuStyle::from_cvar(Some(MenuStyle::DEFAULT_NAME)),
             MenuStyle::default()

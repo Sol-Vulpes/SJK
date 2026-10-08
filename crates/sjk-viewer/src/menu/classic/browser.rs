@@ -1,7 +1,7 @@
 //! The classic server browser: retail's `ui/jamp/joinserver.menu` laid out
-//! on the 640x480 canvas over the same browser model as the modern screen.
+//! on the 640x480 canvas over the same browser model as the SJK UI's.
 //!
-//! Every control answers to the modern browser's pointer tokens (rows, sort
+//! Every control answers to the browser's pointer tokens (rows, sort
 //! headers, scrollbar, refresh, favourite, filter, join, back, the filter
 //! toggles and the password and address prompts), so the keyboard, pointer
 //! and wheel handling in [`crate::menu`] serve both styles. Retail's items
@@ -93,8 +93,8 @@ struct Column {
     align: TextAlign,
 }
 
-/// The five columns in retail order. The sort tokens follow the modern
-/// header order (name, map, players, ping, type).
+/// The five columns in retail order. The sort tokens follow the pointer
+/// handling's header order (name, map, players, ping, type).
 const COLUMNS: [Column; 5] = [
     Column {
         label: "SERVER NAME",
@@ -143,7 +143,7 @@ const COLUMNS: [Column; 5] = [
     },
 ];
 
-/// The header token the modern pointer handling sorts `column` by.
+/// The header token the pointer handling sorts `column` by.
 fn sort_token(column: SortColumn) -> u16 {
     HEADER_TOKEN
         + match column {
@@ -887,8 +887,7 @@ fn list(
             thumb_rect,
             if active { FOCUS } else { view::gold(0.75) },
         );
-        // Registered as a scroll target, as the modern scrollbar is, so a
-        // drag along it moves the window.
+        // Registered as a scroll target, so a drag along it moves the window.
         canvas.scroll_region(SCROLLBAR_TOKEN, rect);
     }
 }
@@ -990,8 +989,8 @@ fn info_popup(
     };
     match details {
         DetailsState::Nothing => line(canvas, 0.0, "NO SERVER SELECTED.", SELECTOR),
-        DetailsState::Querying(_) => line(canvas, 0.0, "ASKING THE SERVER...", SELECTOR),
-        DetailsState::Failed(_, error) => {
+        DetailsState::Querying => line(canvas, 0.0, "ASKING THE SERVER...", SELECTOR),
+        DetailsState::Failed(error) => {
             line(canvas, 0.0, "NO ANSWER TO THE STATUS QUERY.", SELECTOR);
             line(canvas, 1.0, error, DISABLED);
         }
@@ -1091,7 +1090,7 @@ fn field(canvas: &mut MenuCanvas, place: &Placement, rect: [f32; 4], text: &str,
 }
 
 /// The password of a locked server (retail `password_popmenu`). The
-/// tokens are the modern prompt's.
+/// tokens are the SJK UI prompt's.
 fn password_prompt(canvas: &mut MenuCanvas, viewport: [f32; 2], place: &Placement, length: usize) {
     let [x, y, width, _] = popup(
         canvas,
@@ -1201,8 +1200,8 @@ mod tests {
     }
 
     #[test]
-    fn sort_headers_answer_to_the_modern_sort_tokens() {
-        // The modern pointer handling sorts header `token - HEADER_TOKEN` by
+    fn sort_headers_answer_to_the_shared_sort_tokens() {
+        // The pointer handling sorts header `token - HEADER_TOKEN` by
         // name, map, players, ping, game type.
         let expected = [
             SortColumn::Name,

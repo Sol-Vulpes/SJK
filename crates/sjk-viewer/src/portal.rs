@@ -1,160 +1,18 @@
-//! The world beyond the menu's gate: the map the client is joining.
+//! The world the client is joining, prepared while it connects.
 //!
-//! Destination construction overlaps the connection. The gate draws a lightweight
-//! view of that world while opening, then hands the actual prepared world to the
-//! client for local exploration or live play. A verified gamestate supersedes
-//! speculative browser content; there is no second live-world build when it matches.
+//! Destination construction overlaps the connection: the menu's loading screen
+//! shows its progress, and the actual prepared world is handed to the client
+//! for live play. A verified gamestate supersedes speculative browser content;
+//! there is no second live-world build when it matches.
 
-pub(crate) mod clip;
 #[path = "portal_render.rs"]
 mod render;
 
 use crate::gpu_context::Context;
-use crate::menu_backdrop::Vantage;
 use crate::session_transition::{WorldInstallPoll, WorldInstallTask, WorldLoadPoll, WorldLoadTask};
-use crate::{CameraUniform, GpuState, GpuWorldInput};
-use glam::Vec3;
-use glam::camera::rh::{proj::directx::perspective, view::look_at_mat4};
+use crate::{GpuState, GpuWorldInput};
 use std::path::Path;
 use std::sync::Arc;
-
-/// An upright doorway: where it stands and which way "through" points.
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub(crate) struct Frame {
-    pub(crate) origin: Vec3,
-    /// Radians.
-    pub(crate) yaw: f32,
-}
-
-impl Frame {
-    /// The same doorway, "through" pointing the other way.
-    pub(crate) fn reversed(self) -> Self {
-        Self {
-            origin: self.origin,
-            yaw: self.yaw + std::f32::consts::PI,
-        }
-    }
-
-    /// Unit vector pointing through the doorway.
-    pub(crate) fn forward(self) -> Vec3 {
-        let (sin, cos) = self.yaw.sin_cos();
-        Vec3::new(cos, sin, 0.0)
-    }
-
-    /// The far doorway of a map. A map with a gate of its own (the menu map
-    /// joined for real) is a mirror: the far doorway is that same gate
-    /// facing back, so the server's copy of the very corridor the menu
-    /// camera stands in shows through the menu's gate, and the glide flies
-    /// into it. Any other map is entered at its first deathmatch spawn (else
-    /// its intermission view), stood on the floor so the two floors meet at
-    /// the doorway, facing the way the spawn faces.
-    pub(crate) fn from_bsp(bsp: &sjk_bsp::Bsp) -> Option<Self> {
-        if let Some(gate) = crate::menu_backdrop::gate_for(bsp) {
-            return Some(gate.doorway().reversed());
-        }
-        let entities = sjk_entity::parse_entity_lump(bsp.entities()).ok()?;
-        let spawn = entities
-            .iter()
-            .find(|entity| entity.classname() == Some("info_player_deathmatch"))
-            .and_then(|entity| {
-                let origin = Vec3::from_array(entity.vector("origin").ok()??);
-                let yaw = entity
-                    .get("angle")
-                    .and_then(|angle| angle.trim().parse::<f32>().ok())
-                    .unwrap_or(0.0);
-                Some((origin, yaw.to_radians()))
-            });
-        let (origin, yaw) = match spawn {
-            Some(spawn) => spawn,
-            None => {
-                let vantage = Vantage::from_bsp(bsp)?;
-                (vantage.origin, vantage.yaw)
-            }
-        };
-        Some(Self {
-            origin: floor_under(bsp, origin),
-            yaw,
-        })
-    }
-}
-
-/// How far past the far doorway's plane, toward the menu world, the
-/// destination is still drawn so the two floors meet without a seam.
-const CLIP_OVERLAP: f32 = 1.0;
-
-/// Where the eye is taken to be above a doorway's floor for visibility.
-const EYE_ABOVE_FLOOR: f32 = 56.0;
-
-/// How far below a spawn or view point the floor is looked for.
-const FLOOR_REACH: f32 = 512.0;
-
-/// `point` dropped onto the world floor beneath it (unchanged when nothing
-/// solid lies within reach).
-fn floor_under(bsp: &sjk_bsp::Bsp, point: Vec3) -> Vec3 {
-    const CONTENTS_SOLID: u32 = 1;
-    let end = point - Vec3::Z * FLOOR_REACH;
-    let trace = bsp.trace_box(
-        point.to_array(),
-        end.to_array(),
-        sjk_bsp::Aabb::POINT,
-        CONTENTS_SOLID,
-    );
-    if trace.start_solid || trace.fraction >= 1.0 {
-        point
-    } else {
-        Vec3::from_array(trace.end_position)
-    }
-}
-
-/// A free camera pose.
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub(crate) struct Camera {
-    pub(crate) position: Vec3,
-    pub(crate) yaw: f32,
-    pub(crate) pitch: f32,
-}
-
-impl Camera {
-    /// The pose in the destination world that sees, through `beyond`, what
-    /// this camera sees through `doorway`: the same pose relative to the
-    /// far frame as this one has to the near frame.
-    pub(crate) fn through(self, doorway: Frame, beyond: Frame) -> Self {
-        let turn = beyond.yaw - doorway.yaw;
-        let (sin, cos) = turn.sin_cos();
-        let local = self.position - doorway.origin;
-        let rotated = Vec3::new(
-            local.x * cos - local.y * sin,
-            local.x * sin + local.y * cos,
-            local.z,
-        );
-        Self {
-            position: beyond.origin + rotated,
-            yaw: self.yaw + turn,
-            pitch: self.pitch,
-        }
-    }
-
-    /// Whether the camera stands on the far side of `doorway`'s plane.
-    pub(crate) fn is_past(self, doorway: Frame) -> bool {
-        let (sin, cos) = doorway.yaw.sin_cos();
-        let local = self.position - doorway.origin;
-        local.x * cos + local.y * sin >= 0.0
-    }
-}
-
-/// What the portal pass left on the frame, and so how the menu world draws
-/// over it.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub(crate) enum View {
-    /// Nothing: the menu world clears the frame and draws its sky.
-    Absent,
-    /// The destination, seen through the doorway: the menu world draws over
-    /// it without clearing colour or drawing its sky.
-    Behind,
-    /// The camera is through the doorway: the destination alone is on
-    /// screen and the menu world is not drawn.
-    Inside,
-}
 
 /// The preview of the map the client is joining, in whatever state its
 /// load is in.
@@ -166,8 +24,6 @@ pub(crate) struct Destination {
     load: Option<WorldLoadTask>,
     install: Option<WorldInstallTask>,
     world: Option<Box<GpuState>>,
-    /// The doorway in the destination: its intermission vantage.
-    frame: Frame,
     error: Option<String>,
 }
 
@@ -180,10 +36,6 @@ impl Destination {
             load: None,
             install: None,
             world: None,
-            frame: Frame {
-                origin: Vec3::ZERO,
-                yaw: 0.0,
-            },
             error: None,
         }
     }
@@ -241,7 +93,9 @@ impl Destination {
                 WorldLoadPoll::Failed(error) => self.fail(&error),
                 WorldLoadPoll::Ready(loaded) => {
                     self.load = None;
-                    self.frame = Frame::from_bsp(&loaded.bsp).unwrap_or(self.frame);
+                    // The joined session's snapshot places the camera.
+                    let (camera_origin, camera_yaw) =
+                        crate::assets::initial_camera(&loaded.bsp).unwrap_or(([0.0; 3], 0.0));
                     let bounds = loaded.bsp.render().models()[0].clone();
                     let input = GpuWorldInput {
                         scene: loaded.scene,
@@ -251,8 +105,8 @@ impl Destination {
                         shaders: loaded.shaders,
                         world_minimums: bounds.minimums,
                         world_maximums: bounds.maximums,
-                        camera_origin: self.frame.origin.to_array(),
-                        camera_yaw: self.frame.yaw,
+                        camera_origin,
+                        camera_yaw,
                         player_preview: None,
                         live_session: None,
                         demo_session: None,
@@ -302,7 +156,7 @@ impl Destination {
         self.error = Some(error.to_owned());
     }
 
-    /// The gate only opens onto a fully prepared world.
+    /// Whether the world is fully prepared.
     pub(crate) fn ready(&self) -> bool {
         self.world.is_some()
     }
@@ -339,9 +193,5 @@ impl Destination {
 
     pub(crate) fn map(&self) -> Option<&str> {
         self.map.as_deref()
-    }
-
-    pub(crate) fn entry_camera(&self, camera: Camera, doorway: Frame) -> Camera {
-        camera.through(doorway, self.frame)
     }
 }

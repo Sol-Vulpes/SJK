@@ -1,5 +1,5 @@
-//! Camera control's modern look (also the classic style's): a responsive
-//! right-edge panel; the rest of the world stays untinted.
+//! Camera control's panel with the classic menus: a responsive right-edge
+//! panel; the rest of the world stays untinted.
 use super::*;
 use sjk_ui::{Color, DrawCommand, FontWeight, Rect, TextAlign};
 

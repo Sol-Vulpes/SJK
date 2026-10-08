@@ -7,18 +7,15 @@
 //! shot (settings) fly there along a per-map authored route and back again.
 
 mod flight;
-mod passage;
 mod routes;
 mod tour;
 
 use super::GpuState;
-use crate::world_props::{self, GateCue, PropSpec};
 use flight::Path;
 use glam::Vec3;
-use passage::Passage;
+pub(crate) use routes::Stage;
 #[cfg(test)]
 pub(crate) use routes::tour_for;
-pub(crate) use routes::{Stage, props_for};
 use sjk_bsp::Bsp;
 use sjk_entity::parse_entity_lump;
 use sjk_ui::{Easing, Tween};
@@ -45,12 +42,6 @@ pub(crate) enum Shot {
 /// starts at departure so settings are usable while the camera is still
 /// moving; the flight is scenery, not a wait.
 const REVEAL_SPAN: f32 = 0.18;
-/// How long the gate takes to open once the camera is in front of it, and
-/// to close again when a connection is abandoned.
-const GATE_OPEN_MILLIS: u32 = 1_200;
-const GATE_CLOSE_MILLIS: u32 = 1_200;
-/// Browser-flight progress from which the gate is close enough to open.
-const GATE_IN_VIEW: f32 = 0.5;
 
 /// Camera anchor for the menu backdrop.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -90,20 +81,6 @@ pub(crate) struct Backdrop {
     /// its parent's shot), 1 = parked on the active flight's shot.
     progress: Tween,
     last_progress: f32,
-    /// Whether the client wants the map's gate prop open (it is connecting).
-    gate_wanted: bool,
-    /// Whether the server world the glide leads into is built and waiting
-    /// (true while nothing is pending, so a map without a join never waits).
-    world_ready: bool,
-    /// 0 = the gate prop at rest, 1 = fully open.
-    gate: Tween,
-    /// The glide through the open gate into the map being joined.
-    passage: Passage,
-    gate_prop: Option<&'static PropSpec>,
-    /// Gate opening last frame, to notice the cues it passes.
-    gate_last: f32,
-    /// A cue the opening passed, until it is taken.
-    gate_cue: Option<GateCue>,
     /// The map's camera tour, when it has one: the main shot plays it, and
     /// the other shots are reached by a cut through dark instead of a flight
     /// (a tour's shots are all over the map, so no route starts from them).
@@ -123,7 +100,7 @@ impl Backdrop {
             .into_iter()
             .filter_map(|shot| routes::route_for(message.as_deref()?, shot))
             .collect::<Vec<_>>();
-        let mut backdrop = Self::new(main, &routes, gate_for(bsp));
+        let mut backdrop = Self::new(main, &routes);
         if let Some(shots) = message.as_deref().and_then(routes::tour_for) {
             // Each start shuffles the tour differently.
             let seed = std::time::SystemTime::now()
@@ -135,9 +112,8 @@ impl Backdrop {
     }
 
     /// Routes chained onto another shot must follow that shot's route; a
-    /// route whose parent is missing is dropped. `gate` is the map's gate
-    /// prop, opened and flown through when a join completes.
-    fn new(main: Vantage, routes: &[&routes::Route], gate: Option<&'static PropSpec>) -> Self {
+    /// route whose parent is missing is dropped.
+    fn new(main: Vantage, routes: &[&routes::Route]) -> Self {
         let mut flights: Vec<Flight> = Vec::with_capacity(routes.len());
         for route in routes {
             let parent = match route.from {
@@ -163,13 +139,6 @@ impl Backdrop {
             active: None,
             progress: Tween::settled(0.0),
             last_progress: 0.0,
-            gate_wanted: false,
-            world_ready: true,
-            gate: Tween::settled(0.0),
-            passage: Passage::new(gate.map(PropSpec::doorway)),
-            gate_prop: gate,
-            gate_last: 0.0,
-            gate_cue: None,
             tour: None,
             cut: None,
             darkness: 0.0,
@@ -298,7 +267,6 @@ impl Backdrop {
         }
         let progress = self.progress.sample(millis);
         self.last_progress = progress;
-        self.drive_gate(millis);
         let seconds = millis as f32 / 1_000.0;
         let Some(flight) = self.active.map(|index| &self.flights[index]) else {
             return self.main.sample(seconds);
@@ -310,83 +278,11 @@ impl Backdrop {
         let departure = start.drift(seconds);
         let arrival = flight.path.destination().drift(seconds);
         let drift = departure.blend(arrival, progress);
-        let parked = Sample {
+        Sample {
             origin: pose.origin + drift.origin,
             yaw: pose.yaw + drift.yaw,
             pitch: pose.pitch + drift.pitch,
-        };
-        self.passage.pose(parked, millis)
-    }
-
-    /// Ask for the map's gate prop to open (the client is connecting) or
-    /// close. It only opens once the camera is in front of it.
-    pub(crate) fn set_gate(&mut self, wanted: bool) {
-        self.gate_wanted = wanted;
-    }
-
-    /// Whether the server world behind the gate is built: the glide through
-    /// the gate does not set off before it is.
-    pub(crate) fn set_world_ready(&mut self, ready: bool) {
-        self.world_ready = ready;
-    }
-
-    /// Shut the gate and end any glide at once: the menu world is coming
-    /// back after a game, so there is nothing to walk back out of.
-    pub(crate) fn reset_gate(&mut self) {
-        self.gate_wanted = false;
-        self.gate = Tween::settled(0.0);
-        self.gate_last = 0.0;
-        self.gate_cue = None;
-        self.passage.reset();
-    }
-
-    fn drive_gate(&mut self, millis: u64) {
-        let in_view = self.active.is_some()
-            && self.active == self.flight_for(Shot::Browser)
-            && self.last_progress >= GATE_IN_VIEW;
-        // The gate stays open while the camera is anywhere in the doorway.
-        let wanted = self.gate_wanted && in_view || self.passage.under_way(millis);
-        let target = if wanted { 1.0 } else { 0.0 };
-        if self.gate.target() != target {
-            let duration = if target > 0.0 {
-                GATE_OPEN_MILLIS
-            } else {
-                GATE_CLOSE_MILLIS
-            };
-            self.gate.retarget(target, millis, duration, Easing::Linear);
         }
-        let open = self.gate.sample(millis);
-        if let Some(cue) = world_props::gate_cue(self.gate_last, open) {
-            self.gate_cue = Some(cue);
-        }
-        self.gate_last = open;
-        let fully_open = self.gate.target() == 1.0 && open >= 1.0;
-        self.passage
-            .drive(self.gate_wanted, fully_open, self.world_ready, millis);
-    }
-
-    /// A cue the gate's opening passed since the last call, with where the
-    /// dust it shakes loose falls from.
-    pub(crate) fn take_gate_cue(&mut self) -> Option<(GateCue, [[f32; 3]; 2])> {
-        let cue = self.gate_cue.take()?;
-        Some((cue, self.gate_prop?.dust_points()))
-    }
-
-    /// How far the map's gate prop is open at backdrop time `millis`.
-    pub(crate) fn gate_open(&self, millis: u64) -> f32 {
-        self.gate.sample(millis)
-    }
-
-    /// Whether the camera has flown through the open gate: the join may cut
-    /// to the server world.
-    pub(crate) fn gate_crossed(&self, millis: u64) -> bool {
-        self.passage.crossed(millis)
-    }
-
-    /// How far along the glide through the gate the camera is (0 parked,
-    /// 1 beyond the doorway), for diagnostics.
-    pub(crate) fn passage_progress(&self, millis: u64) -> f32 {
-        self.passage.progress(millis)
     }
 
     /// Opacity for the screen that belongs to `shot`: fully visible while the
@@ -467,13 +363,6 @@ pub(crate) fn worldspawn_message(bsp: &Bsp) -> Option<String> {
         .find(|entity| entity.classname() == Some("worldspawn"))
         .and_then(|entity| entity.get("message"))
         .map(str::to_owned)
-}
-
-/// The map's gate prop, if it has one: the menu's doorway into the map
-/// being joined.
-pub(crate) fn gate_for(bsp: &Bsp) -> Option<&'static PropSpec> {
-    let message = worldspawn_message(bsp)?;
-    props_for(&message).next()
 }
 
 impl Vantage {
@@ -571,8 +460,7 @@ pub(crate) fn classic_hides_world(gpu: &GpuState) -> bool {
         if menu.sjk_loading_on_show() {
             return menu.sjk_loading_hides_world(gpu.is_menu_world);
         }
-        menu.is_classic()
-            && !menu.sjk_screen()
+        !menu.sjk_screen()
             && menu.is_visible()
             && (standalone_menu_visible(gpu) || menu.is_loading_screen())
     })
@@ -606,14 +494,6 @@ pub(crate) fn menu_holds_view(
     menu.is_visible() && (!sessions || (menu_world && menu.is_connecting()))
 }
 
-/// How far the map's gate prop is open this frame (0 outside a connect).
-pub(crate) fn gate_open(gpu: &GpuState, now: Instant) -> f32 {
-    let millis = now.duration_since(gpu.ui_epoch).as_millis() as u64;
-    gpu.client_menu
-        .as_ref()
-        .map_or(0.0, |menu| menu.gate_open(millis))
-}
-
 /// Fly or park the free camera on the current screen's shot while a
 /// standalone menu is up.
 pub(crate) fn drive(gpu: &mut GpuState, now: Instant) {
@@ -621,46 +501,16 @@ pub(crate) fn drive(gpu: &mut GpuState, now: Instant) {
         return;
     }
     let millis = now.duration_since(gpu.ui_epoch).as_millis() as u64;
-    let world_ready = gpu.world_settled();
-    let Some(sample) = gpu.client_menu.as_mut().and_then(|menu| {
-        menu.set_world_ready(world_ready);
-        menu.drive_backdrop(millis)
-    }) else {
+    let Some(sample) = gpu
+        .client_menu
+        .as_mut()
+        .and_then(|menu| menu.drive_backdrop(millis))
+    else {
         return;
     };
     gpu.camera_position = sample.origin;
     gpu.camera_yaw = sample.yaw;
     gpu.camera_pitch = sample.pitch;
-    let cue = gpu
-        .client_menu
-        .as_mut()
-        .and_then(crate::menu::ClientMenu::take_gate_cue);
-    if let Some((cue, points)) = cue {
-        shake_dust_loose(gpu, cue, points, now);
-    }
-}
-
-/// Dust falls from the gate's seam at each cue of its opening.
-fn shake_dust_loose(gpu: &mut GpuState, cue: GateCue, points: [[f32; 3]; 2], now: Instant) {
-    let Some(vfs) = gpu.vfs.clone() else {
-        return;
-    };
-    for (index, point) in points.into_iter().enumerate() {
-        let seed = (cue as u32) << 8 | index as u32;
-        crate::effect_runtime::spawn_effect(
-            &mut gpu.particles,
-            &mut gpu.effect_aux,
-            &mut gpu.effects,
-            &vfs,
-            world_props::DUST_EFFECT,
-            Vec3::from_array(point),
-            now,
-            seed,
-            0,
-            &mut None,
-            crate::combat_effects::rotation_from_direction([0.0, 0.0, -1.0]),
-        );
-    }
 }
 
 /// Legacy `hud.wgsl` backdrop selector: 4 = console, 3 = a menu screen that
@@ -681,24 +531,4 @@ pub(crate) fn shader_menu_state(gpu: &GpuState) -> f32 {
     } else {
         0.0
     }
-}
-
-/// The doorway of the gate prop while it stands open at all: where the map
-/// being joined is seen through.
-pub(crate) fn gate_doorway(gpu: &GpuState, now: Instant) -> Option<crate::portal::Frame> {
-    if gate_open(gpu, now) <= 0.0 {
-        return None;
-    }
-    gpu.mover_catalog
-        .gate()
-        .map(crate::world_props::Leaf::doorway)
-}
-
-/// Whether the menu camera has flown through the gate (or there is no gate
-/// to fly through), so a finished join may cut to the server world.
-pub(crate) fn gate_crossed(gpu: &GpuState, now: Instant) -> bool {
-    let millis = now.duration_since(gpu.ui_epoch).as_millis() as u64;
-    gpu.client_menu
-        .as_ref()
-        .is_none_or(|menu| menu.gate_crossed(millis))
 }

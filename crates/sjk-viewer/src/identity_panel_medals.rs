@@ -1,9 +1,9 @@
 //! The player's own medals on the Identity page (`medals.rs`, `docs/identity.md`
 //! "Medals"): each one's whole picture, its name (with how often a repeatable one was
 //! given), what it is for, when it was given and the SJK team's note, beside the page's
-//! column; or a line saying how medals come when there are none. The modern look puts
-//! them in a panel right of the page's card, the SJK UI in a column right of its own;
-//! the classic+ box names them in a line of its status with their small medallions.
+//! column; or a line saying how medals come when there are none. The SJK UI puts them
+//! in a column right of its own; the classic+ box names them in a line of its status
+//! with their small medallions.
 
 use super::*;
 use crate::medals::Award;
@@ -91,125 +91,6 @@ pub(super) fn classic_line(medals: Option<&[Award]>) -> Option<String> {
 }
 
 impl Panel {
-    /// The modern look's Medals panel at `x`, `top`, `width` wide, ending above
-    /// `bottom`; medals that would pass it are left out.
-    #[allow(clippy::too_many_arguments)]
-    pub(super) fn modern_medals(
-        &mut self,
-        medals: &[Award],
-        font: &UiFont,
-        x: f32,
-        top: f32,
-        width: f32,
-        bottom: f32,
-        s: f32,
-    ) {
-        let theme = self.ui.theme();
-        let pad = 24.0 * s;
-        let art = 96.0 * s;
-        let line = 20.0 * s;
-        let text_x = x + pad + art + 16.0 * s;
-        let text_width = width - pad * 2.0 - art - 16.0 * s;
-        // Lines are measured in the page's font, with a little to spare for its style.
-        let scale = 14.0 * s / font.height.max(1.0);
-        let fits = |room: f32| {
-            move |line: &str| crate::text::visible_text_width(font, line, scale) * 1.06 <= room
-        };
-        let laid = lay_out(medals, &fits(text_width));
-        let row_height = |medal: &Laid<'_>| (28.0 * s + medal.lines() as f32 * line).max(art);
-        let none_yet = wrap_fitting(NONE_YET, &fits(width - pad * 2.0));
-        let heading = 34.0 * s;
-        let mut height = pad * 2.0 + heading;
-        let mut shown = 0;
-        if laid.is_empty() {
-            height += none_yet.len() as f32 * line;
-        }
-        for medal in &laid {
-            let next = row_height(medal) + if shown > 0 { 18.0 * s } else { 0.0 };
-            if top + height + next > bottom {
-                break;
-            }
-            height += next;
-            shown += 1;
-        }
-        self.ui.panel(Rect::new(x, top, width, height));
-        let mut y = top + pad;
-        self.ui.text(
-            "MEDALS",
-            Rect::new(x + pad, y, width - pad * 2.0, 20.0 * s),
-            13.0 * s,
-            theme.muted,
-            FontWeight::Semibold,
-            1.5 * s,
-        );
-        y += heading;
-        for text in &none_yet {
-            if !laid.is_empty() {
-                break;
-            }
-            self.ui.text(
-                text,
-                Rect::new(x + pad, y, width - pad * 2.0, line),
-                14.0 * s,
-                theme.muted,
-                FontWeight::Regular,
-                0.0,
-            );
-            y += line;
-        }
-        for medal in laid.iter().take(shown) {
-            let row = y;
-            let _ = self.ui.draw_list_mut().push(DrawCommand::TexturedQuad {
-                rect: Rect::new(x + pad, row, art, art),
-                texture: medal.award.medal.art(),
-                color: Color::new(1.0, 1.0, 1.0, 1.0),
-            });
-            self.ui.text(
-                &medal.award.label(),
-                Rect::new(text_x, y, text_width, 26.0 * s),
-                19.0 * s,
-                Color::new(1.0, 0.82, 0.25, 1.0),
-                FontWeight::Semibold,
-                0.0,
-            );
-            y += 28.0 * s;
-            let lines = medal
-                .description
-                .iter()
-                .map(|text| (text.as_str(), theme.muted))
-                .chain((!medal.given.is_empty()).then_some((medal.given.as_str(), theme.muted)));
-            for (text, colour) in lines {
-                self.ui.text(
-                    text,
-                    Rect::new(text_x, y, text_width, line),
-                    14.0 * s,
-                    colour,
-                    FontWeight::Regular,
-                    0.0,
-                );
-                y += line;
-            }
-            for (index, text) in medal.note.iter().enumerate() {
-                let open = if index == 0 { "\"" } else { "" };
-                let close = if index + 1 == medal.note.len() {
-                    "\""
-                } else {
-                    ""
-                };
-                self.ui.text(
-                    &format!("{open}{text}{close}"),
-                    Rect::new(text_x, y, text_width, line),
-                    14.0 * s,
-                    theme.foreground,
-                    FontWeight::Regular,
-                    0.0,
-                );
-                y += line;
-            }
-            y = row + row_height(medal) + 18.0 * s;
-        }
-    }
-
     /// The SJK UI's Medals column, right of the page's, down to `bottom`.
     pub(super) fn sjk_medals(&mut self, frame: &Frame, medals: &[Award], top: f32, bottom: f32) {
         let s = frame.s;

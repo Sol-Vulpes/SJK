@@ -1838,7 +1838,7 @@ and the profile keeps the model's portrait for the rest of the session.
 The 2D layer (text, retained UI shapes, the shader HUD, the menu-file HUD and the
 scope) works in display values, as retail's 2D drawing did: a colour is the
 sRGB value shown on screen, and alpha mixes display values. `^1` is pure red,
-`ui_accent ff6a3d` shows as `#FF6A3D`, and a black text shadow at 0.55 over
+the theme's accent `#FF6A3D` shows as `#FF6A3D`, and a black text shadow at 0.55 over
 mid-grey shows 0.225 as in retail. The world, its resolve, bloom, HDR, the effect
 layer and the in-world ground HUD stay in linear light.
 [ui_target.rs](../crates/sjk-viewer/src/ui_target.rs) holds the model:
@@ -1857,7 +1857,7 @@ layer and the in-world ground HUD stay in linear light.
   at `r_gamma 1`.
 - The float `r_hdr` target never receives 2D draws: HDR is encoded by the
   resolve before the 2D pass.
-- Pictures sampled by the 2D layer (icon atlas, wordmark, classic menu art,
+- Pictures sampled by the 2D layer (icon atlas, classic menu art,
   SJK's menu emblem, levelshots, menu-file HUD art, scope art) are `Rgba8Unorm`,
   so their texels are not decoded.
 - SJK's menu emblem adds its two glow layers as light (`src * alpha + dst`) in
@@ -1877,21 +1877,22 @@ white washes (separators, borders, hover fills) look fainter than before.
 
 ### Menu readability
 
-Menu screens draw their text straight over the live map, so a left-hand scrim
-darkens the world behind the text column. The archived cvar `ui_menuContrast`
+SJK's hero screens (Create game and its map picker, the tabbed settings, the
+key-binding editor) draw their text straight over the live map, so a left-hand
+scrim darkens the world behind the text column. The archived cvar `ui_menuContrast`
 (Settings, GAME tab) sets how far that scrim is held under the text:
 
 | Value | Effect |
 | --- | --- |
-| `off` | The original scrims; the in-game menu leaves the match untinted |
+| `off` | The original scrims |
 | `standard` (default) | Muted body text reaches WCAG AA (4.5:1) and the accent 3:1 (large text, UI components) over a backdrop of relative luminance 0.5 (about sRGB `#bcbcbc`) |
-| `strong` | All enabled text, the accent included, reaches 4.5:1 over pure white; dark custom accents are capped at 95% darkening |
+| `strong` | All enabled text, the accent included, reaches 4.5:1 over pure white; the darkening is capped at 95% |
 
 With a level on, each scrim keeps its original fade but does not drop below
 the required darkness until the right edge of the text column, then eases
-back over 12% of the screen width. The in-game menu gets the player screen's
-column scrim, centred cards and the map picker's caption get the same floor,
-and dimmed labels gain just enough opacity to reach 4.5:1 on that backing.
+back over 12% of the screen width. The map picker's caption gets the same
+floor, and dimmed labels gain just enough opacity to reach 4.5:1 on that
+backing.
 Disabled entries (drawn under 0.7 opacity) keep their dimmed look. The
 figures follow the [UI colour model](#ui-colour-model): luminance linearises
 the display values, and scrims and translucent text mix display values as the
@@ -2028,8 +2029,12 @@ with `cg_classicHudFont`) rather than retail's `ergoec`. Not drawn: vehicle and
 siege HUD menus, the out-of-Force flash, and item text or owner-draw fields,
 which the retail and the checked custom HUDs do not use.
 
-`cg_hudStyle classic` selects SJK's classic layout in either font; `modern`
-draws the modern layout, or the classic one when `cg_classicHudFont` is on.
+`cg_hudStyle classic` selects SJK's classic layout in either font. Under `game`,
+SJK's default layout ([default.json](../crates/sjk-viewer/assets/hud/default.json),
+or a `hud.json` beside the configuration) draws the crosshair, team rows, votes,
+kill feed, timer and lagometer, and the status too when the game HUD's files give
+none; with `cg_classicHudFont` on, the classic layout does instead. A saved
+`modern`, the retired layout of that name, is reset to `game` at start.
 
 `cg_hudStyle radial` (picker name "SJK radial") is SJK's own take on the TheRisqe Radial
 HUD, drawn by the engine with no PK3: health (red, outer) and armor (green, inner) as
@@ -2055,7 +2060,7 @@ Medium yellow, Strong red, Dual green, Staff magenta, as TheRisqe's style pictur
 the style's name replaces the number, in the same colour. The weapon-name transient rests in
 the hollow between the bars, above the pills.
 It is the layout document [radial.json](../crates/sjk-viewer/assets/hud/radial.json): the
-modern layout's other widgets (crosshair, team rows, votes, kill feed, timer, lagometer)
+default layout's other widgets (crosshair, team rows, votes, kill feed, timer, lagometer)
 plus `arc` widgets, which `hud.json` overrides cannot yet replace for this style.
 Widgets are placed in 1080-line pixels that grow with the window height and `cg_hudScale`;
 the ring group's drop is a widget's `offset_fraction` instead, a fraction of the screen's
@@ -2067,10 +2072,10 @@ so they stay smooth at any resolution and scale with the HUD scale. Segment geom
 distance function are in [arc.rs](../crates/sjk-ui/src/arc.rs) (unit-tested; the shader
 evaluates the same expression); the ammunition ratio is the weapon's pool over
 `ammoData[].max`, doubled with the Double Ammo rune ([radial.rs](../crates/sjk-viewer/src/hud/radial.rs)).
-Health pulses red at 25 or less, as the modern HUD does. Health and armour run to twice
+Health pulses red at 25 or less, as the default and classic layouts do. Health and armour run to twice
 the maximum (`hud/update.rs`); over it, the same segments are stroked again from the start,
 0.55 of the stroke wide, in a deeper shade of the fill (`nameplate_math::saturated`); the
-modern and classic meters draw the same as an inner band (`overflow_band`). The shader's
+default and classic layouts' meters draw the same as an inner band (`overflow_band`). The shader's
 own bars (`hud.wgsl`) are clamped to one maximum. `menu_snapshot` renders the sample
 states (`radial_hud_snapshot` only these) to `target/menu-snapshots/hud-radial-*.png` with
 a CPU copy of the shader; `hud-radial-overheal` is 125 health over 199 armour.
@@ -2092,7 +2097,7 @@ bottom centre. The row needs `cg_draw2D`, a living player who is not spectating,
 following or on an emplaced gun, and no held scoreboard; a Force or inventory
 cycle after it hides it, since `CG_Draw2D` shows only the most recent selector.
 
-SJK's own layouts (classic, modern and radial) draw their weapon name as a transient
+SJK's own layouts (default, classic and radial) draw their weapon name as a transient
 that holds 0.8 s and fades over 0.6 s, as long as the row; while the row shows they
 hide it, since the row names the weapon, so it only appears when the row cannot (for
 example while following a player). The ammunition count, the ammunition arc and

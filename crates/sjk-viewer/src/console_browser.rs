@@ -1,9 +1,9 @@
 //! Searchable browser of console commands and cvars, opened with F3 in the open console
 //! or with `consolebrowser`: names, descriptions, cvar values and defaults, and inline
-//! editing of the selected cvar. Drawing is in `console_browser_view.rs`, in
-//! `console_browser_classic.rs` for the classic+ look the classic console uses, and
-//! in `console_browser_sjk.rs` for the SJK UI's look its console uses, where
-//! the chosen entry's text can be selected with the mouse. Ctrl+C copies that
+//! editing of the selected cvar. Drawing is in `console_browser_classic.rs` for the
+//! classic+ look the classic console uses, and in `console_browser_sjk.rs` for the
+//! SJK UI's look its console uses, where the chosen entry's text can be selected
+//! with the mouse. Ctrl+C copies that
 //! selection, or else the chosen entry as a console line (`name value`).
 
 use crate::menu::art::ArtSet;
@@ -18,8 +18,6 @@ pub(crate) mod classic;
 mod pointer;
 #[path = "console_browser_sjk.rs"]
 mod sjk;
-#[path = "console_browser_view.rs"]
-mod view;
 
 /// Filter tabs; `Tab` and `Shift+Tab` cycle them.
 const TABS: [&str; 4] = ["ALL", "COMMANDS", "CVARS", "CHANGED"];
@@ -48,10 +46,8 @@ pub(crate) enum BrowserAction {
 /// How the browser is drawn, after the console's style.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub(crate) enum Look {
-    /// SJK's: a hero header, tabs and two-line rows (`con_style modern`).
-    #[default]
-    Modern,
     /// Classic+: a retail pop-up box (`con_style classic`).
+    #[default]
     Classic,
     /// The SJK UI's, with its families (`con_style sjk`).
     Sjk,
@@ -155,7 +151,7 @@ impl Browser {
             status: String::new(),
             status_error: false,
             ui: MenuCanvas::with_text_capacity(256),
-            look: Look::Modern,
+            look: Look::Classic,
             art: ArtSet::default(),
             tab_counts: [0; TABS.len()],
             select: crate::text_select::TextSelect::default(),

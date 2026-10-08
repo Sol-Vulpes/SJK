@@ -123,6 +123,7 @@ mod muzzle_flash;
 mod notice;
 mod npc_refresh;
 mod object_meshes;
+mod oblique_clip;
 mod particle_atlas;
 mod particle_draw;
 mod peek;
@@ -201,7 +202,6 @@ mod wgsl_source;
 mod window_icon;
 mod world_materials;
 mod world_notes;
-mod world_props;
 #[cfg(test)]
 mod world_shot;
 mod world_stage;
@@ -664,7 +664,7 @@ impl GpuState {
             Vec::new()
         };
         load_profile.mark("player-models")?;
-        let mover_catalog = movers::build_catalog(&bsp, &mut flattened);
+        let mover_catalog = movers::build_catalog(&bsp, &flattened);
         let decal_surfaces = decal_marks::DecalSurfaces::from_flattened(&flattened, &bsp);
         let mut object_meshes = object_meshes::load(
             &vfs,
@@ -883,7 +883,7 @@ impl GpuState {
             });
         let game_fonts = game_font::GameFonts::preload(
             preload_game_fonts || game_font::enabled(console.as_ref()),
-            game_font::grid_console(console.as_ref()),
+            console.is_some(),
             &game_font::Device {
                 device: &device,
                 queue: &queue,
@@ -1565,16 +1565,14 @@ impl GpuState {
         };
         self.hud.weapon_select.shown = self.sample_weapon_select(intermission_view.is_some());
         // JoF EJK's Force wheel (the retail icon bar) with the retail-looking HUDs.
-        self.hud.set_force_wheel_bar(!matches!(
-            hud_style,
-            menu_hud::HudStyle::Modern | menu_hud::HudStyle::Radial
-        ));
+        self.hud
+            .set_force_wheel_bar(hud_style != menu_hud::HudStyle::Radial);
         let hud_layout = self.hud.layout(
             hud_font,
             match hud_style {
                 menu_hud::HudStyle::Radial => hud::HudLook::Radial,
                 menu_hud::HudStyle::Classic => hud::HudLook::Classic,
-                _ => hud::HudLook::Modern,
+                menu_hud::HudStyle::Game => hud::HudLook::Game,
             },
             viewport,
             runtime_settings::hud_scale(self.console.as_ref()),
@@ -2037,7 +2035,7 @@ impl GpuState {
             }
         }
         self.prepare_scene_views(view, projection, presentation_time as i32);
-        movers::append_frame(self, presentation_time, visual_now);
+        movers::append_frame(self, presentation_time);
         self.static_models.append_instances(&mut self.object_groups);
         pickups::simple::append_frame(self, visual_now);
         // The charge glow on the view gun's muzzle (`cg_weapons.c` charge bits), after
@@ -2081,13 +2079,6 @@ impl GpuState {
         if let Some(phases) = &self.gpu_phases {
             phases.begin(&mut encoder);
         }
-        // The map being joined shows through the open gate: it is drawn
-        // first, and the menu world draws over it without its own sky.
-        let portal =
-            menu_backdrop::gate_doorway(self, visual_now).map_or(portal::View::Absent, |doorway| {
-                let shader_time = presentation_time as f32 * 0.001;
-                self.draw_portal(&mut encoder, &target_view, doorway, shader_time)
-            });
         dynamic_lights::entities::finish(self, presentation_time, visual_now, game_audio);
         let detached_flight = self.free_camera_active();
         let object_groups = &mut self.object_groups;
@@ -2277,7 +2268,6 @@ impl GpuState {
             self.encode_world_scene(
                 &mut encoder,
                 &target_view,
-                portal,
                 source_cluster,
                 &particle_ranges,
                 has_entity_instances,

@@ -1,7 +1,7 @@
 //! What the classic in-game menu's bar buttons and pop-ups do. Pages the
-//! classic menu shares with the modern one (about, join, Siege classes,
-//! call vote) keep their actions in `game_menu_actions.rs`; this module
-//! covers the bar and the retail pop-ups that differ.
+//! classic menu shares with the SJK UI (about, join, Siege classes, call
+//! vote) keep their actions in `game_menu_actions.rs`; this module covers
+//! the bar and the retail pop-ups that differ.
 
 use super::Page;
 use super::classic::{self, NO, Tab, YES, leave};
@@ -16,7 +16,7 @@ impl GpuState {
     }
 
     /// Activate the focused row of a classic page. Returns false for pages
-    /// whose rows act as in the modern menu.
+    /// whose rows keep the shared actions.
     pub(crate) fn activate_classic_row(&mut self) -> bool {
         let row = self.game_menu_row;
         match self.game_menu_page {

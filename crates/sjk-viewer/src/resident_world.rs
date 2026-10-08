@@ -11,7 +11,7 @@ mod scenery;
 #[path = "resident_walk.rs"]
 mod walk;
 
-use crate::{GpuState, portal};
+use crate::GpuState;
 use sjk_client::ClientSession;
 use std::time::{Duration, Instant};
 
@@ -211,53 +211,32 @@ impl GpuState {
         self.resident.remote_command_due = now + Duration::from_millis(25);
     }
 
-    /// The gate adopts its actual render world; it never starts a second parallel install.
-    pub(crate) fn poll_gate_destination(
+    /// The join adopts its destination's actual render world; it never starts a
+    /// second parallel install.
+    pub(crate) fn poll_destination(
         &mut self,
     ) -> Result<Option<GpuState>, Box<dyn std::error::Error>> {
         if let Some(error) = self.portal.session_error() {
             return Err(error.into());
         }
-        if !self.portal.ready()
-            || self.holds_world_install(Instant::now())
-            || !self.resident.snapshot_ready()
+        if !self.portal.ready() || !self.resident.snapshot_ready() {
+            return Ok(None);
+        }
+        // The loading screen stays up until the world can be played: a world
+        // built from the joined session's own gamestate, with the session in
+        // hand, rather than a preview to explore.
+        if self.client_menu.is_some()
+            && (self.resident.session.is_none() || !self.portal.for_session())
         {
             return Ok(None);
         }
-        // The classic loading screen stays up until the world can be played:
-        // a world built from the joined session's own gamestate, with the
-        // session in hand, rather than a preview to explore.
-        let classic = self
-            .client_menu
-            .as_ref()
-            .is_some_and(crate::menu::ClientMenu::is_classic);
-        if classic && (self.resident.session.is_none() || !self.portal.for_session()) {
-            return Ok(None);
-        }
-        let pose = crate::menu_backdrop::gate_doorway(self, Instant::now()).map(|doorway| {
-            self.portal.entry_camera(
-                portal::Camera {
-                    position: self.camera_position,
-                    yaw: self.camera_yaw,
-                    pitch: self.camera_pitch,
-                },
-                doorway,
-            )
-        });
         self.world_load_map = self.portal.map().unwrap_or_default().to_owned();
-        let Some(mut world) = self.portal.take_world() else {
+        let Some(world) = self.portal.take_world() else {
             return Ok(None);
         };
-        if (!world.resident.bound || self.resident.session.is_none())
-            && let Some(pose) = pose
-        {
-            world.camera_position = pose.position;
-            world.camera_yaw = pose.yaw;
-            world.camera_pitch = pose.pitch;
-        }
         self.pending_map_reload = false;
         crate::log::progress(format_args!(
-            "gate destination adopted: {} (session ready={})",
+            "destination adopted: {} (session ready={})",
             self.world_load_map, world.resident.bound
         ));
         Ok(Some(world))

@@ -234,7 +234,7 @@ impl Floors {
                 },
             );
             let reflected = math::reflect_plane(p.normal, p.distance, view, eye);
-            let clip = crate::portal::clip::oblique_projection(
+            let clip = crate::oblique_clip::oblique_projection(
                 projection,
                 reflected.matrix,
                 reflected.clip_point + p.normal * 0.05,

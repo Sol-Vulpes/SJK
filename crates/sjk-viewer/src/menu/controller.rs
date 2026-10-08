@@ -1,6 +1,5 @@
 //! Menu rendering dispatch and activation helpers.
 
-use super::network_view::{self, NetworkNotice};
 use super::*;
 
 impl ClientMenu {
@@ -28,9 +27,7 @@ impl ClientMenu {
                 let target = sjk::TextTarget::Inter(vertices, font);
                 self.append_sjk_loading(target, viewport);
             }
-            ClientPhase::Connecting(_) | ClientPhase::ConnectionError
-                if self.menu_style.classic_screens() =>
-            {
+            ClientPhase::Connecting(_) | ClientPhase::ConnectionError => {
                 let failed = matches!(self.state.phase(), ClientPhase::ConnectionError);
                 let error = failed.then(|| self.state.status().to_owned());
                 let preview = self.create_game.levelshot_preview(self.loading.map());
@@ -101,48 +98,8 @@ impl ClientMenu {
                 let reveal = self.screen_reveal();
                 self.create_game.append(vertices, font, viewport, reveal);
             }
-            ClientPhase::Connecting(_) => {
-                let notice = NetworkNotice {
-                    kicker: "NETWORK",
-                    title: "Loading",
-                    status: self.state.status(),
-                    body: "Joining the server and preparing its map...",
-                    action: ("Cancel", "Stop joining and return to the browser"),
-                };
-                network_view::build(&mut self.ui, viewport, &notice);
-                self.ui.append_text(vertices, font, viewport);
-            }
-            ClientPhase::ConnectionError => {
-                let notice = NetworkNotice {
-                    kicker: "NETWORK",
-                    title: "Connection failed",
-                    status: self.state.status(),
-                    body: "The client returned safely. Check the address or server status.",
-                    action: ("Back to browser", "Pick another server or retry"),
-                };
-                network_view::build(&mut self.ui, viewport, &notice);
-                self.ui.append_text(vertices, font, viewport);
-            }
             ClientPhase::InGame => {}
         }
-    }
-
-    pub(super) fn activate_main(&mut self, console: &mut ViewerConsole) -> MenuAction {
-        if self.menu_style == MenuStyle::Classic {
-            return self.activate_classic(console);
-        }
-        let destination = match self.main_selection {
-            0 => MainDestination::Browser,
-            1 => MainDestination::CreateGame,
-            2 => MainDestination::Player,
-            3 => MainDestination::Settings { tab: 0 },
-            4 => MainDestination::Changelog,
-            5 => MainDestination::Credits,
-            6 => MainDestination::Update,
-            7 => MainDestination::Quit,
-            _ => return MenuAction::None,
-        };
-        self.open_main_destination(destination, console)
     }
 
     pub(super) fn refresh(&mut self) {
@@ -227,28 +184,5 @@ impl ClientMenu {
         let reveal = self.screen_reveal();
         self.settings
             .append(vertices, font, viewport, scale, reveal);
-    }
-
-    pub(super) fn navigate_main(&mut self, action: AbstractAction) {
-        if self.menu_style == MenuStyle::Classic {
-            self.navigate_classic(action);
-            return;
-        }
-        if let Some(row) = self
-            .ui
-            .action(action)
-            .map(usize::from)
-            .filter(|row| *row < MAIN_ITEMS.len())
-        {
-            self.main_selection = row;
-        } else {
-            self.main_selection = if action == AbstractAction::Previous {
-                self.main_selection
-                    .checked_sub(1)
-                    .unwrap_or(MAIN_ITEMS.len() - 1)
-            } else {
-                (self.main_selection + 1) % MAIN_ITEMS.len()
-            };
-        }
     }
 }

@@ -7,6 +7,39 @@ SJK currently contains a native client and standard dedicated server in a
 20-crate Rust workspace. This page records scope and verification, rather than
 claiming complete parity from the presence of an implementation.
 
+## Modern UI removed
+
+Branch `refactor/remove-modern-ui` (08/10/2026, based on `15cf7a9`, Ubuntu 24.04,
+Rust 1.99): the native "modern" style is removed, so the menus are the SJK UI (the
+default) or the classic ones ([client.md](client.md#menu-style)). Gone with it:
+`ui_menuStyle modern` and its main page, server browser, connect notices, in-game
+menu, player screen view and the modern looks of the changelog, Identity and
+credits pages, the text dialog and the console's command browser, with the menu
+wordmark banner; `cg_scoreboardStyle modern` (the floating table); `con_style
+modern` (the Inter console) with `con_lineSpacing`, `con_maxLines` and
+`con_datetime`, which only it read; `cg_hudStyle modern` (the default layout stays
+as the `game` style's base layer); `ui_accent`, which only coloured the modern
+canvas; and the join's gate flight on mp/ffa3 (the gate prop, its dust, the glide
+and the portal pass drawing the destination through the doorway), which no other
+style showed. The destination world is still prepared during a join and handed
+over as before; the gate's face is drawn as ordinary world geometry again. At
+start a saved `modern` (or `0`) in those four settings goes back to its default
+and the four retired cvars are dropped (`retire_modern_ui`). Create game and its
+map picker, the tabbed settings, the key-binding editor opened on its own, the
+Update page and Camera control with the classic menus have no classic or SJK UI
+version yet and keep the hero look; earlier sections of this page that test the
+modern style describe code that no longer exists.
+
+Verified on Linux: `cargo fmt --all --check`, `cargo build --locked --workspace`,
+`cargo test --locked --workspace` (1501 passed, 48 ignored) and `cargo clippy
+--locked --workspace --all-targets` (no denied lint; no warning kind more often
+than on `main`). A new unit test starts a profile saved with every modern style and
+the retired cvars; the style, HUD picker, in-game menu, First setup and text dialog
+tests were updated to the two styles. Each removed branch was checked by reading to
+be reachable only under the modern style. Not verified: no client was started, no
+world shot or menu snapshot was rendered (no game data or GPU run on this machine),
+nothing on Windows, and mp/ffa3's gate surface was not looked at on screen.
+
 ## Remapped surfaces keep the map's light
 
 Branch `fix/remap-source-lightmap` (08/10/2026, based on `6d2eb4b`, Linux): Sol

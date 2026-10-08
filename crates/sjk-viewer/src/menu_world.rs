@@ -1,6 +1,6 @@
 //! The boot map stays resident while the client is on a server, so the
 //! standalone menu always comes back to the same map — with its authored
-//! camera routes, stage and props — whatever map the server ran.
+//! camera routes and stage — whatever map the server ran.
 //!
 //! A server world replaces the menu world as the current [`GpuState`] when it
 //! is installed; the menu world is parked here instead of dropped and takes
@@ -24,7 +24,7 @@ impl Parked {
     pub(crate) fn install(&mut self, current: &mut GpuState, installed: GpuState) {
         let mut previous = std::mem::replace(current, installed);
         if previous.is_menu_world {
-            // The world seen through the gate is the one just installed.
+            // The destination being prepared is the one just installed.
             previous.portal.aim(None, None);
             self.world = Some(previous);
         }
@@ -32,7 +32,7 @@ impl Parked {
 
     /// Hand the shell back to the parked menu world once the client has left
     /// the server and no map is loading. A join in flight comes along, so a
-    /// reconnect from a server plays out in front of the menu map's gate.
+    /// reconnect from a server plays out over the menu map.
     /// Returns whether the current world changed (the caller re-attaches
     /// audio).
     pub(crate) fn restore_if_idle(&mut self, current: &mut GpuState) -> bool {
@@ -43,13 +43,10 @@ impl Parked {
             return false;
         };
         current.hand_shell_to(&mut menu);
-        if let Some(client_menu) = &mut menu.client_menu {
-            client_menu.reset_gate();
-        }
         menu.world_load_state = crate::session_transition::LoadStateMachine::new();
         menu.world_load_started = None;
-        // The last server's map must not show through the gate of the next
-        // join before the new server names its own.
+        // The last server's map must not be prepared for the next join before
+        // the new server names its own.
         menu.world_load_map.clear();
         menu.live_map_installed = false;
         menu.resize(current.size);

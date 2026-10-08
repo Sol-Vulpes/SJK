@@ -14,10 +14,10 @@ use art::{ArtTextures, Run, Source};
 use emblem::EmblemTextures;
 use icons::IconAtlas;
 pub(crate) use icons::{
-    ATLAS_CELLS, BANNER_SIZE, BANNER_TEXTURE, BIND_ICON_CELLS, BIND_ICON_FIRST,
-    CROSSHAIR_ICON_CELLS, CROSSHAIR_ICON_FIRST, EMOJI_ICON_CELLS, EMOJI_ICON_FIRST,
-    FORCE_ICON_CELLS, FORCE_ICON_FIRST, FORCE_WHEEL_ICON_CELLS, FORCE_WHEEL_ICON_FIRST, ICON_CELLS,
-    ICON_SIZE, LOGO_ICON, PART_ICON_CELLS, PART_ICON_FIRST, SCOREBOARD_ICON_CELLS,
+    ATLAS_CELLS, BIND_ICON_CELLS, BIND_ICON_FIRST, CROSSHAIR_ICON_CELLS, CROSSHAIR_ICON_FIRST,
+    EMOJI_ICON_CELLS, EMOJI_ICON_FIRST, FORCE_ICON_CELLS, FORCE_ICON_FIRST, FORCE_WHEEL_ICON_CELLS,
+    FORCE_WHEEL_ICON_FIRST, ICON_CELLS, ICON_SIZE, LOGO_ICON, PART_ICON_CELLS, PART_ICON_FIRST,
+    SCOREBOARD_ICON_CELLS,
 };
 pub(crate) use levelshot::LEVELSHOT_TEXTURE;
 use medal_art::MedalTextures;
@@ -68,10 +68,6 @@ pub(crate) fn verified_badge_pixels() -> Vec<u8> {
     verified_badge::pixels(icons::ICON_SIZE)
 }
 use levelshot::LevelshotTexture;
-
-/// Main-menu wordmark: the Jedi Knight saber emblem laid horizontal, white
-/// on transparent, tinted by the player's accent at draw time.
-const MENU_WORDMARK: &[u8] = include_bytes!("../assets/menu/jk-wordmark.png");
 
 /// SJK's emblem, scaled into one icon cell at start.
 const SJK_EMBLEM: &[u8] = include_bytes!("../../../assets/branding/sjk-logo-512.png");
@@ -284,10 +280,6 @@ impl ShapeRenderer {
         let icons = IconAtlas::new(device, &texture_layout);
         let levelshot = LevelshotTexture::new(device, &texture_layout);
         let hud_preview = LevelshotTexture::new(device, &texture_layout);
-        match image::load_from_memory(MENU_WORDMARK) {
-            Ok(wordmark) => icons.upload_banner(queue, &wordmark.into_rgba8()),
-            Err(error) => eprintln!("menu wordmark: {error}"),
-        }
         match image::load_from_memory(SJK_EMBLEM) {
             Ok(emblem) => {
                 let cell = image::imageops::resize(

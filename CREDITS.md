@@ -12,8 +12,8 @@ Sol develops SJK and sets its direction. Sol's work includes:
 
 - the Sol JK name, README, credits and website;
 - the SJK emblem, provided by Sol: in the classic menu's ring (in place of the
-  retail logo video) and above the modern menu's title, as the programs' and
-  window's icons, and on the README, release notes and site;
+  retail logo video) and the SJK UI's holo ring, as the programs' and window's
+  icons, and on the README, release notes and site;
 - SJK's slider entry habits (type to open, Space steps, clicking away applies);
 - the classic menu style as the default, and classic+ (the classic style
   modernised: the guide, the option panels' detail box and default marks, the

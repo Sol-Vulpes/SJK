@@ -100,9 +100,9 @@ pub(crate) enum DetailsState<'a> {
     /// No row is selected.
     Nothing,
     /// The selected server has been asked and has not answered yet.
-    Querying(SocketAddr),
+    Querying,
     /// The selected server did not answer.
-    Failed(SocketAddr, &'a str),
+    Failed(&'a str),
     Ready(&'a DetailsView),
 }
 
@@ -211,8 +211,8 @@ impl ServerDetails {
             .as_ref()
             .filter(|(failed, _)| *failed == address)
         {
-            return DetailsState::Failed(address, error);
+            return DetailsState::Failed(error);
         }
-        DetailsState::Querying(address)
+        DetailsState::Querying
     }
 }

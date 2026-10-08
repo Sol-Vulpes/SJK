@@ -68,11 +68,10 @@ impl GpuState {
     }
 
     /// Lay out and upload the classic console's own layer
-    /// ([`console_backdrop`]), drawn after all other 2D text; empty for the
-    /// modern console or under the full-frame browser.
+    /// ([`console_backdrop`]), drawn after all other 2D text; empty under the
+    /// full-frame browser.
     fn append_classic_console(&mut self, viewport: [f32; 2], covers_frame: bool) {
-        let classic = !covers_frame && game_font::grid_console(self.console.as_ref());
-        let Some(console) = self.console.as_mut().filter(|_| classic) else {
+        let Some(console) = self.console.as_mut().filter(|_| !covers_frame) else {
             self.console_layer.clear();
             return;
         };

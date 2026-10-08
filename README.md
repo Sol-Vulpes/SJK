@@ -104,8 +104,8 @@ saved game-data setting; known installation locations are also checked. The
 explicit positional form `sjk /path/to/GameData --connect HOST:PORT`
 remains supported. See [client launch](docs/client.md#launch) for discovery order.
 Use the in-game menus for controls, graphics, audio and player settings;
-Settings > Interface > Menu style (GAME on the modern menus), or First setup's
-first row, switches between the SJK UI, the classic and the modern menus.
+Settings > Interface > Menu style, or First setup's first row, switches
+between the SJK UI and the classic menus.
 
 Settings and player-created files live in `GameData/SJK/`: `config.cfg`,
 `marks.txt`, favorites, friends, screenshots, demos and optional chat logs.

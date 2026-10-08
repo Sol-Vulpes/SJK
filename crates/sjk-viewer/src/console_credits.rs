@@ -38,12 +38,6 @@ impl ViewerConsole {
         }
     }
 
-    /// The credits palette follows the menu style: retail's with classic menus
-    /// (the SJK UI's look is chosen with [`Self::set_sjk_pages`]).
-    pub(crate) fn set_credits_look(&mut self, classic: bool) {
-        self.credits.set_classic(classic);
-    }
-
     /// The page, for snapshots.
     #[cfg(test)]
     pub(crate) fn credits_mut(&mut self) -> &mut super::credits::Panel {

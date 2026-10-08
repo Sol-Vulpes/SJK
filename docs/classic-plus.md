@@ -52,8 +52,8 @@ A classic+ page must still read as the retail menu it stands for.
   descriptions, names and typed text keep their case.
 - **Flow.** Retail's entries in retail's order, which keyboard focus follows;
   Apply, Back and Escape lead where retail's did; the description line at the
-  bottom says what the hovered or focused item does. Classic and modern screens
-  edit the same values, so switching style never loses anything.
+  bottom says what the hovered or focused item does. Classic screens and the
+  SJK UI edit the same values, so switching style never loses anything.
 
 ## What the plus adds
 
@@ -203,7 +203,7 @@ the menus over it, their fonts) into an image read back to
 well as the game data (`world_shot -- --ignored --nocapture --test-threads=1`;
 two clients at once on one GPU can fail). Its tests draw duel6's plan from
 above, views from its spawns, the SJK UI's camera tour, the SJK UI over the map
-and the player screen on duel6's stage (each page, modern and SJK UI). Their throwaway profile keeps the identity and the
+and the player screen on duel6's stage (each page, in the SJK UI). Their throwaway profile keeps the identity and the
 update check off.
 
 The pictures go to `target/menu-snapshots/`. They approximate the UI renderer

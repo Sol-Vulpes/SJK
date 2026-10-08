@@ -305,25 +305,6 @@ pub(super) fn append(gpu: &mut crate::GpuState, viewport: [f32; 2]) {
             );
             return;
         }
-        super::style::ScoreboardStyle::Modern => {
-            let header = super::view::MatchHeader {
-                map: "mp/duel6",
-                mode: "FFA",
-                team_scores: shot.team_scores,
-                team_game: false,
-                local_client: shot.local.client,
-            };
-            super::view::build(ui, rows, header, viewport);
-            ui.finish(u16::MAX);
-            ui.append_text_routed(
-                &mut gpu.game_fonts,
-                |_, text| Some(super::retail_font(text)),
-                &mut gpu.text_vertices,
-                &gpu.ui_font,
-                viewport,
-            );
-            return;
-        }
         super::style::ScoreboardStyle::Sjk => {}
     }
     let header = SjkHeader {

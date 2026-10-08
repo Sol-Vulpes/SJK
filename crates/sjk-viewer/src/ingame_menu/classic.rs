@@ -7,7 +7,7 @@
 //!
 //! The classic menu reuses the in-game [`Page`] states and their actions:
 //! the bar is the main page, each pop-up a page. This module holds what
-//! differs from the modern hero layout: the bar's buttons, the retail rows
+//! differs from the shared pages: the bar's buttons, the retail rows
 //! of the join, vote and exit pop-ups (with the exit confirmations), which
 //! entries SJK cannot offer yet, and the pop-up geometry on the 640x480
 //! canvas. Drawing is in [`super::classic_view`], activation in
@@ -154,7 +154,7 @@ pub(crate) const NO: usize = 1;
 /// (the retail client hosting the game itself) could do.
 const RESTART_NOTE: &str = "Not in SJK yet: call a vote to restart (Call Vote)";
 
-/// Row count of `page` where the classic menu differs from the modern one.
+/// Row count of `page` where the classic menu has rows of its own.
 pub(crate) fn row_count(page: Page, team_game: bool) -> Option<usize> {
     match page {
         Page::Main => Some(Tab::ALL.len()),
@@ -249,7 +249,7 @@ pub(crate) fn popup(page: Page, rows: usize, info: usize) -> [f32; 4] {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ingame_menu::row_count as modern_row_count;
+    use crate::ingame_menu::shared_row_count;
 
     fn view(page: Page, team_game: bool, siege: bool) -> View<'static> {
         View {
@@ -332,9 +332,9 @@ mod tests {
             let count = prepare(&view(page, team_game, false), &mut rows, &mut enabled);
             assert_eq!(count, row_count(page, team_game), "{page:?}");
         }
-        // Pages the classic menu shares keep the modern rows.
+        // Pages the classic menu shares keep the shared rows.
         assert_eq!(row_count(Page::About, false), None);
-        assert_eq!(modern_row_count(Page::About, false, false), 1);
+        assert_eq!(shared_row_count(Page::About), 1);
     }
 
     #[test]
