@@ -7,6 +7,44 @@ SJK currently contains a native client and standard dedicated server in a
 20-crate Rust workspace. This page records scope and verification, rather than
 claiming complete parity from the presence of an implementation.
 
+## Force profile on a server
+
+Branch `claude/sleepy-noether-xv9qk9` (08/10/2026, based on `a6230f9`, Linux).
+Sol reported that on a server with other Force rules no profile they picked
+became usable, and asked to see which powers the server accepts while still
+picking any (for full Force duels).
+
+The value fitted to the server at join replaced `forcepowers` in every later
+userinfo of the connection, so a profile applied in play never reached the
+server, and nothing sent `forcechanged`, so the server would not have re-read it
+anyway. The page also never knew the server's rules: it read `ui_rankChange`
+(stale across servers, never set by a join) and `g_gametype` and `ui_freesaber`
+cvars that do not exist. Now each userinfo sends the player's profile fitted to
+the server's rules, keeping its `g_forcePowerDisable` powers (stock
+legalization drops them without parking the player), Apply on a server sends
+`forcechanged` after the userinfo, the page takes the server's rank and free
+saber skills, and the server's limits are marked but not enforced, with a This
+server panel in the SJK UI ([client.md](client.md#force-profile-on-a-server)).
+An `nfr` reply now always waits for a userinfo flush, which an unchanged profile
+did not start.
+
+Evidence: OpenJK `codemp` (`WP_InitForcePowers`, `BG_LegalizedForcePowers`,
+`Cmd_ForceChanged_f`, `ClientSpawn`'s `forceDoInit`, `UI_UpdateClientForcePowers`)
+and jaPRO's `g_forcePowerDisableFFA` for duel powers. Unit tests cover the sent
+profile (disabled powers kept, fitted to the rank's points, legal for the
+server), a later profile being the one sent, `forcechanged` after Apply only on
+a server and after the userinfo, the `nfr` rejoin retries, the page's server
+rank, free saber and limits, and the Force page drawn with every rule to show.
+On Linux, formatting, the locked workspace build and the locked workspace tests
+pass; workspace Clippy finishes without errors and none of its warnings is on a
+changed line.
+
+Not verified: nothing was run against a server, in a game or on screen (no game
+data or GPU here), so the server's re-read at respawn, JA+ and jaPRO full Force
+duels and the new panels' looks are unchecked. Known: the bounded rejoin retries
+after an `nfr` park are only polled while a userinfo change waits, so they do
+not fire (`fix/force-rejoin-retries`).
+
 ## Percent signs and quotes in chat
 
 Branch `fix/chat-percent` (08/10/2026, based on `15cf7a9`, Linux): a `%` typed in

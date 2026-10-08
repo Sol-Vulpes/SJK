@@ -189,14 +189,19 @@ Settings and SJK in place of retail's Controls and Setup:
     user folder (beside `config.cfg`). The window is as wide as the in-game
     profile. SJK lays the powers out in two columns, the neutral powers over the saber skills and the chosen
     side's five beside them, each with its holocron (`gfx/mp/f_icon_*`), whole
-    whenever the power can be bought (a team power outside team games, or
-    Saber Defend or Throw without Attack, keeps its holocron at 55% and its
-    stars a readable grey, where retail's near-black hid their costs), and
+    whenever the power can be bought (Saber Defend or Throw without Attack
+    keeps its holocron at 55% and its stars a readable grey, where retail's
+    near-black hid their costs), and
     adds Light and Dark cards with the side emblems, a points meter that shows
     a hovered star's price (red when the points left cannot pay it) and a
     panel for the hovered or focused power: its holocron, level, the next
-    level's cost or why it cannot be bought (other side, team games only,
-    Saber Attack 1 needed), every level's cost and what it has taken. A click
+    level's cost or why it cannot be bought (other side, Saber Attack 1
+    needed), every level's cost and what it has taken, or what the server does
+    with it. On a server, the names of the powers it turns off, holds at a
+    level or does not use are amber, the mastery line says when the rank is
+    the server's highest, and the panel with nothing focused says how many
+    powers the server turns off (see [Force profile on a
+    server](#force-profile-on-a-server)). A click
     on a power raises it a level and the right button lowers it, as retail's
     did; a click on a star sets that level (on the power's top star, one
     below). Left and Right step the focused power. Reset, Discard and Apply
@@ -596,6 +601,38 @@ map or disconnecting. Tiles answer to
 the pointer by their place on screen, so a long list never runs into other
 controls' pointer tokens. The Search row under Team colour (Enter to type)
 filters the grid as the classic profile's search does (see above).
+
+### Force profile on a server
+
+`forcepowers` is the player's own profile. On a server, every userinfo sends it
+fitted to the server's rules from `CS_SERVERINFO` (`g_maxForceRank`, free saber
+skills when every other weapon is off, the game type), as stock
+`BG_LegalizedForcePowers` would fit it, but keeping the powers
+`g_forcePowerDisable` turns off: the server drops those from its own copy
+without calling the profile illegal, so sending them never parks the player in
+spectator, and a mod that gives them back in a full Force duel finds them
+(jaPRO lets the powers its `g_forcePowerDisableFFA` holds back work in duels).
+Apply on a server sends the new profile and then `forcechanged`, as stock
+`UI_UpdateClientForcePowers` does: the server reads it at once while you
+spectate and at your next respawn in play (it prints that it will). A
+`forcepowers` typed in the console is sent fitted the same way, without the
+`forcechanged`.
+
+Opened on a server, the Force page takes the server's highest rank and free
+saber skills, which decide whether the server keeps the profile it is sent. What
+the server only will not let be used stays buyable and is marked: its disabled
+powers ("Off on this server"; Jump "fixed" at 1 and Saber Offense and Defense
+at 3, as the server holds them), and team powers outside team games ("Team
+games only"). They cost points like any other, so the profile still fits where
+they work. The SJK UI's Force page lists the server's rules under the side's
+powers (This server: the highest rank and its points, free saber skills, the
+powers it turns off or, past eight, how many, whether team powers work); off a
+server it says a server's rules show there once you join, and team powers can
+be bought. A mod's own limits that are not in `CS_SERVERINFO` (jaPRO's
+`g_forcePowerDisableFFA`) cannot be shown. The rules are in
+[force_profile_negotiation.rs](../crates/sjk-client/src/force_profile_negotiation.rs)
+and the page's handling in
+[force.rs](../crates/sjk-viewer/src/player_menu/force.rs).
 
 ## Player models
 

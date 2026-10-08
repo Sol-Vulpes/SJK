@@ -2,7 +2,8 @@
 
 use super::*;
 use sjk_client::{
-    ForceProfileNegotiator, LegacyTeamChoice, force_rank_reply, force_rules_from_serverinfo,
+    ForceAllocation, ForceLegalizeRules, ForceProfileNegotiator, LegacyTeamChoice,
+    force_rank_reply, force_rules_from_serverinfo, legalize_force_powers,
 };
 use sjk_protocol::GameState;
 
@@ -557,24 +558,44 @@ impl ViewerConsole {
         self.force_profile.note_team_choice(choice);
     }
 
-    /// Adopt the `forcepowers` value negotiated while joining a server.
+    /// Report the `forcepowers` value sent while joining a server when it is
+    /// not the player's own (later userinfo is fitted the same way).
     pub(crate) fn note_server_forcepowers(&mut self, negotiated: &str) {
         let preferred = self.text_value("forcepowers").unwrap_or_default();
-        let value = (negotiated != preferred).then(|| negotiated.to_owned());
-        if value.is_some() {
+        if negotiated != preferred {
             self.shell.push_log(format!(
                 "^5Force profile adjusted to server limits: ^7{negotiated}"
             ));
         }
-        self.force_profile.set_server_forcepowers(value);
     }
 
-    /// The Force profile the server plays the local player with: the one negotiated
-    /// for it, else the player's own `forcepowers`.
-    pub(crate) fn own_forcepowers(&self) -> Option<&str> {
-        self.force_profile
-            .server_forcepowers()
-            .or_else(|| self.text_value("forcepowers"))
+    /// The Force profile the server plays the local player with: the player's
+    /// own `forcepowers` as the server's rules leave it (its disabled powers
+    /// dropped), or as written off a server.
+    pub(crate) fn own_force_allocation(&self) -> Option<ForceAllocation> {
+        let preferred = self.text_value("forcepowers")?;
+        match self.force_profile.server_rules() {
+            Some(rules) => Some(legalize_force_powers(preferred, rules).allocation),
+            None => ForceAllocation::parse(preferred).ok(),
+        }
+    }
+
+    /// The Force rules of the server the client plays on (`None` off one, or
+    /// in a demo), `g_forcePowerDisable` included.
+    pub(crate) fn server_force_rules(&self) -> Option<ForceLegalizeRules> {
+        self.force_profile.server_rules()
+    }
+
+    /// Make `value` the player's Force profile; on a server, have it read it
+    /// (`forcechanged` once the userinfo carrying it is out): at once while
+    /// spectating, at the next respawn in play.
+    pub(crate) fn apply_forcepowers(&mut self, value: &str) {
+        if self.set_cvar("forcepowers", value) {
+            self.force_profile.profile_applied();
+            // The `forcechanged` goes out after the userinfo flush, which an
+            // unchanged value would not start.
+            self.userinfo_dirty.store(true, Ordering::Release);
+        }
     }
 
     /// Refresh `serverinfo` and profile-specific completion from the active session.
@@ -586,6 +607,8 @@ impl ViewerConsole {
             session.compat_profile(),
             session.server(),
         );
+        self.force_profile
+            .set_server_rules(Some(sjk_client::server_force_rules(session.game_state())));
     }
 
     /// Refresh demo serverinfo through the same status and completion path as live play.
@@ -683,16 +706,22 @@ impl ViewerConsole {
         if !update.open_profile {
             return;
         }
+        // The notice's rank and team (the side `g_forceBasedTeams` holds the
+        // player to) become the rules the sent profile is fitted to.
         let rules = force_rules_from_serverinfo(game_state, update.rank, update.team);
+        self.force_profile.set_server_rules(Some(rules));
         let current = self
-            .force_profile
-            .server_forcepowers()
-            .or_else(|| self.text_value("forcepowers"))
+            .text_value("forcepowers")
             .unwrap_or_default()
             .to_owned();
-        let reply = force_rank_reply(&current, rules, self.force_profile.rejoin_team());
+        let reply = force_rank_reply(
+            &current,
+            rules.for_sent_profile(),
+            self.force_profile.rejoin_team(),
+        );
+        // The reply waits for this userinfo, carrying the fitted profile.
+        self.userinfo_dirty.store(true, Ordering::Release);
         if reply.changed {
-            self.userinfo_dirty.store(true, Ordering::Release);
             self.shell.push_log(format!(
                 "^5Force profile adjusted to server limits: ^7{}",
                 reply.forcepowers

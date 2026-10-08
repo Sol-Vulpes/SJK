@@ -158,7 +158,9 @@ pub use force_profile::{
 pub use force_profile_negotiation::{
     EnterPlayOutcome, ForceProfileNegotiator, RejoinOutput, enter_play, server_legal_forcepowers,
 };
-pub use force_rank_reply::{ForceRankReply, force_rank_reply, force_rules_from_serverinfo};
+pub use force_rank_reply::{
+    ForceRankReply, force_rank_reply, force_rules_from_serverinfo, server_force_rules,
+};
 pub use ghoul2_pose::{LegacyGhoul2Animator, LegacyGhoul2PosePolicy};
 pub use impact_events::{
     EV_DISRUPTOR_HIT, EV_DISRUPTOR_MAIN_SHOT, EV_DISRUPTOR_SNIPER_MISS, EV_DISRUPTOR_SNIPER_SHOT,
