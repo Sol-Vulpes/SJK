@@ -38,6 +38,9 @@ pub(crate) enum GameButton {
     /// `+force_stasis` (JoF EJK `cl_input.cpp`): the usercmd Stasis button, sent
     /// only where a JoF JA+ server granted Stasis ([`sjk_client::force_wheel`]).
     ForceStasis,
+    /// `+duck` (JoF EJK `CG_NorollDown_f`): crouch without rolling. See
+    /// [`GameplayInput::up_move`].
+    Duck,
 }
 
 /// One-shot action emitted by a non-button bind command.
@@ -255,7 +258,9 @@ impl GameplayInput {
         // `CL_KeyMove` (`codemp/client/cl_input.cpp:888-895`): running when
         // `in_speed.active ^ cl_run->integer`, otherwise `BUTTON_WALKING` with
         // `movespeed` 46 instead of 127. With `cl_run 1` the walk key walks.
-        let walking = !(self.held(GameButton::Speed) ^ self.always_run);
+        // `+duck` walks for the command after its press ([`Self::up_move`]).
+        let walking = !(self.held(GameButton::Speed) ^ self.always_run)
+            || self.held[GameButton::Duck.slot()].pressed;
         let movespeed = if walking { 46 } else { 127 };
         buttons = (buttons & !16) | u16::from(walking) * 16;
         UserCommand {
@@ -283,7 +288,7 @@ impl GameplayInput {
                         0.0
                     },
             ),
-            up_move: self.axis(GameButton::Up, GameButton::Down, movespeed, 0.0),
+            up_move: self.up_move(movespeed),
             buttons,
             weapon,
             force_selection: self.selection.force.unwrap_or(force_selection),
@@ -291,6 +296,27 @@ impl GameplayInput {
             generic_command,
             ..UserCommand::default()
         }
+    }
+
+    /// Jump and crouch, with `+duck` as JoF EJK plays it (`cg_consolecmds.c`
+    /// `CG_NorollDown_f`): its press lets go of jump and walks for one frame, then
+    /// it crouches like `+movedown`. Moving into a crouch rolls only from a running
+    /// legs animation (`bg_pmove.c` `PM_Footsteps`), and one walking command
+    /// replaces it with the walk; once crouched, the legs crouch instead.
+    /// EJK walks with `+speed`, which runs under `cl_run 0`; SJK always walks.
+    fn up_move(&self, speed: i8) -> i8 {
+        let duck = &self.held[GameButton::Duck.slot()];
+        if duck.pressed {
+            return self
+                .axis(GameButton::Up, GameButton::Down, speed, 0.0)
+                .min(0);
+        }
+        // In EJK `+duck` presses `+movedown`, so the two share one key state.
+        let down = self
+            .movement_fraction(GameButton::Down)
+            .max(self.movement_fraction(GameButton::Duck));
+        let up = (speed as f32 * self.movement_fraction(GameButton::Up)) as i32;
+        ((up as f32 - speed as f32 * down) as i32).clamp(-127, 127) as i8
     }
 
     /// Apply one command resolved by the bind table.
@@ -308,6 +334,10 @@ impl GameplayInput {
                 .and_then(|word| word.parse().ok())
                 .unwrap_or(self.motion.now);
             let changed = self.held[button.slot()].event(pressed, key, time);
+            if changed && pressed && button == GameButton::Duck {
+                // EJK's `-moveup`: a typed release, letting go of every jump key.
+                self.held[GameButton::Up.slot()].event(false, None, time);
+            }
             if !pressed && button == GameButton::Mlook {
                 return Some(InputAction::MlookReleased);
             }
@@ -374,6 +404,8 @@ fn button_for_command(command: &str) -> Option<GameButton> {
         "moveright" => Some(GameButton::MoveRight),
         "moveup" => Some(GameButton::Up),
         "movedown" => Some(GameButton::Down),
+        // JoF EJK `cg_consolecmds.c` (`+duck`): crouch without rolling.
+        "duck" => Some(GameButton::Duck),
         "speed" => Some(GameButton::Speed),
         "attack" => Some(GameButton::Button(0)),
         "altattack" => Some(GameButton::Button(7)),
@@ -618,5 +650,60 @@ mod tests {
         assert_ne!(buttons(&input) & (1 << 5), 0);
         input.finish_command();
         assert_eq!(buttons(&input) & (1 << 5), 0);
+    }
+
+    const BUTTON_WALKING: u16 = 1 << 4;
+
+    fn command(input: &GameplayInput) -> UserCommand {
+        input.user_command(0, 0.0, 0.0, [0; 3], 0, 0, 0)
+    }
+
+    #[test]
+    fn duck_walks_one_command_then_crouches() {
+        let mut input = GameplayInput::default();
+        assert!(GameplayInput::recognizes("+duck"));
+        input.apply("+forward 17 0");
+        input.apply("+duck 46 0");
+        // The walk that takes the legs out of their running animation, so no roll.
+        let first = command(&input);
+        assert_ne!(first.buttons & BUTTON_WALKING, 0);
+        assert_eq!((first.forward_move, first.up_move), (46, 0));
+        input.finish_command();
+        let second = command(&input);
+        assert_eq!(second.buttons & BUTTON_WALKING, 0);
+        assert_eq!((second.forward_move, second.up_move), (127, -127));
+        input.apply("-duck 46 10");
+        input.finish_command();
+        assert_eq!(command(&input).up_move, 0);
+    }
+
+    #[test]
+    fn duck_lets_go_of_jump_and_walks_under_cl_run_0() {
+        let mut input = GameplayInput::default();
+        input.set_always_run(false);
+        input.apply("+speed 42 0");
+        input.apply("+moveup 57 0");
+        input.apply("+duck 46 0");
+        assert!(!input.held(GameButton::Up));
+        let first = command(&input);
+        assert_ne!(first.buttons & BUTTON_WALKING, 0, "EJK's +speed would run");
+        assert_eq!(first.up_move, 0);
+        input.finish_command();
+        assert_eq!(command(&input).up_move, -127);
+    }
+
+    #[test]
+    fn duck_and_crouch_share_the_crouch() {
+        let mut input = GameplayInput::default();
+        input.apply("+movedown 99 0");
+        input.apply("+duck 46 0");
+        assert_eq!(
+            command(&input).up_move,
+            -46,
+            "still crouched, at walking speed"
+        );
+        input.finish_command();
+        input.apply("-duck 46 10");
+        assert_eq!(command(&input).up_move, -127);
     }
 }

@@ -2416,6 +2416,16 @@ Unit tests cover the run (alternation, first-jump hold, second-jump delay,
 restart); the sjk-viewer tests and workspace clippy passed. No game was started:
 a flip kick on a live JA+ server is unverified.
 
+## Crouch without rolling
+
+Branch `feat/duck-no-roll` (08/10/2026, based on `15cf7a9`) ports JoF EJK's
+`+duck`: one walking command with jump released, then a crouch, so moving into
+a crouch does not roll. It is bindable in Controls > Movement. See
+[client.md](client.md) (`+duck`). Unit tests cover the user commands (the walk,
+then the crouch, jump let go, `cl_run 0`, a held `+movedown`); the workspace
+checks passed. No game was started: that the server keeps the player from
+rolling is unverified.
+
 ## Weather
 
 Branch `personal/weather` (06/10/2026, based on `2e348b0`) draws the
