@@ -236,6 +236,38 @@ exact single-cell reduction for aligned power-of-two blocks and the previous
 area-overlap calculation for other dimensions. These changes reduce preparation
 work without reducing source count, texture resolution or lighting quality.
 
+### Pipelines compiled at load
+
+A render pipeline created while a frame is recorded stalls that frame while the
+driver compiles its stage program: about half a second per program on a cold RADV
+shader cache, by the note in [world_materials.rs](../crates/sjk-viewer/src/world_materials.rs),
+far less once the driver's cache holds it. World installation runs on the
+`sjk-world-install` thread while the previous world or the loading notice is shown,
+so it compiles there what the new map's first frames draw:
+
+- the depth-tested pipeline of every key the map's world and model materials use, the
+  no-depth one of model keys and the forced-alpha variants of model stages (log:
+  `compiled N pipeline keys`);
+- in real-time lighting, where the static world's opaque stages draw through the stage
+  table ([stage_table.rs](../crates/sjk-viewer/src/stage_table.rs)), the table's program
+  and both lighting variants (scene and live emission) of every stage it holds: the
+  static-world variant for materials with static surfaces, the entity variant for
+  models (log: `Stage table: compiled N pipelines at load`);
+- in real-time lighting, the light pass's depth-priming pipelines and, on a map with a
+  lamp cache, its cached receiver, light and direct-lamp pipelines (log: `Light pass:
+  depth priming ... compiled at load`).
+
+Until 08/10/2026 the last two groups were compiled in the first frame that drew them,
+after the map had gone live: the first frames of a real-time map compiled the table
+program and one pipeline per visible key, and more as new surfaces came into view. A
+load now takes longer by those compiles instead. Still compiled in a frame, on first
+use: glow variants, the lamp cache's bake pipelines (in the first lit frame, with the
+bake), the clouds' and weather's programs (first frame with sky or weather), models
+loaded mid-match (their entity pipelines as they load, their table pipelines when
+first drawn) and keys only a later remap uses. Not measured on a GPU; compare the
+`[+ms]` stamps of these log lines and the `frame-budget` maxima after a map load with
+`SJK_FRAME_BUDGET=1` (see [status](status.md)).
+
 ## Selected controls
 
 | Cvar | Behavior |
