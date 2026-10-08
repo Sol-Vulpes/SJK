@@ -353,8 +353,19 @@ impl Pose {
         self.blocking != other.blocking
             || (self.blocking
                 && (self.origin.distance_squared(other.origin) > 1e-4
-                    || self.rotation.dot(other.rotation).abs() < 1. - 1e-8))
+                    || turned(self.rotation, other.rotation)))
     }
+}
+
+/// Whether two rotations are more than about a hundredth of a degree apart, either sign
+/// of the quaternion. Measured as the distance between the quaternions, which is zero for
+/// equal ones: their dot product cannot tell, since `1 - 1e-8` is 1 in f32 and a
+/// quaternion's dot with itself is one step below 1 at many angles (yaw 90 or 270 from
+/// `legacy_angles_to_quaternion`), so a still mover looked as if it moved every frame.
+fn turned(a: Quat, b: Quat) -> bool {
+    let (a, b) = (glam::Vec4::from(a), glam::Vec4::from(b));
+    // Unit quaternions θ apart are about θ/2 apart: (1e-4)² is θ near 0.0115°.
+    (a - b).length_squared().min((a + b).length_squared()) > 1e-8
 }
 
 /// Door tiles waiting to be traced, oldest first, each at most once.

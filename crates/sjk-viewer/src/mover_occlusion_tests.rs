@@ -273,6 +273,38 @@ fn rotation_sign_does_not_count_as_a_move() {
     assert!(a.moved(&c));
 }
 
+/// A pose drawn at `angles` (pitch, yaw, roll), as snapshot movers are presented.
+fn turned_pose(angles: [f32; 3]) -> Pose {
+    Pose {
+        origin: Vec3::ZERO,
+        rotation: Quat::from_array(sjk_client::legacy_angles_to_quaternion(angles)),
+        blocking: true,
+    }
+}
+
+#[test]
+fn a_still_turned_mover_is_not_moving_and_a_hundredth_of_a_degree_is() {
+    // Yaw 90 and 270 give a quaternion whose dot with itself is one step below 1 in f32.
+    for yaw in [90., 270.] {
+        let still = turned_pose([0., yaw, 0.]);
+        assert!(!still.moved(&still), "yaw {yaw}");
+        assert!(
+            still.moved(&turned_pose([0., yaw + 0.02, 0.])),
+            "yaw {yaw} + 0.02"
+        );
+        assert!(
+            !still.moved(&turned_pose([0., yaw + 0.005, 0.])),
+            "yaw {yaw} + 0.005"
+        );
+    }
+    for pitch in [0., 15., 30., 45., 90.] {
+        for yaw in 0..360 {
+            let still = turned_pose([pitch, yaw as f32, 0.]);
+            assert!(!still.moved(&still), "pitch {pitch} yaw {yaw}");
+        }
+    }
+}
+
 #[test]
 fn only_lamps_that_see_into_the_reach_past_the_world_count() {
     let lamps = [
