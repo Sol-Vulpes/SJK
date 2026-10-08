@@ -1838,9 +1838,11 @@ See [hud/force_wheel.rs](../crates/sjk-viewer/src/hud/force_wheel.rs).
 
 Illuminate is a free power every player has, SJK's own and not a game power: a
 holocron that floats by the player's left shoulder, turning slowly and bobbing,
-with a warm point light (300 units) that lights the way in dark maps. Only this
-client sees it; no server knows of it and other players, SJK ones included, do
-not see it. It is the Force wheel's last entry (and the modern list's), with its
+with a warm point light (300 units) that lights the way in dark maps. No game
+server knows of it: its lit state travels through the SJK hub as part of the
+player's look ([unlockables.md](unlockables.md)), so other SJK players on the same
+server see it by that player (below); players on stock clients do not. It is the
+Force wheel's last entry (and the modern list's), with its
 own holocron icon; `+useforce` on it turns the holocron on or off, and the
 `force_illuminate` command does the same from a bind (Settings > Key bindings >
 Force powers). It is never sent as the selected power: the client sets its
@@ -1857,6 +1859,17 @@ person only its light shows (the cube is drawn in mirrors, like the body). It is
 on or off for the client's run, not saved. Its light is added first each frame,
 so a full light list never drops it, but `r_dynamiclight 0` puts it out with the
 others.
+
+Other SJK players' holocrons show when their look says lit (with `cl_identity` on and
+a hub; their claimed name must match the name the game shows in their slot, as for
+badges). Each floats by that player's left shoulder, placed from their entity's
+interpolated origin, eye height (crouching lowers it) and view yaw, with the same fade,
+bob, turn and trailing as one's own (each slot's bob and turn a little out of step).
+The cube always shows for another player, in first and third person, while the game
+draws them; dead, hidden, cloaked or out of the snapshot, it goes out where it was.
+`cg_illuminate 0` only takes one's own off the wheel. All the cubes show, but only
+the four nearest the camera add their light, so the frame's 32 lights stay for the
+weapons and sabers.
 
 The cube, its two pictures (lit metal, and the emblem alone for the glowing
 stage), its shader and the wheel icon are bundled and mounted below all game

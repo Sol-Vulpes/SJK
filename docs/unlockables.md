@@ -106,18 +106,46 @@ whether the Illuminate holocron is lit. Both are required in a request.
 
 ### Sending
 
-The identity worker keeps the look the viewer last gave it (`Service::set_look`).
-After its claim on a server is accepted, and whenever the look changes, it sends
-`POST /v1/look`, at most one a second (the latest wins); a new claim (another
-server or slot) sends the look again. A `not_unlocked` answer stops sending that
-skin until the profile changes.
+Built ([service.rs](../crates/sjk-identity/src/service.rs),
+[looks_frame.rs](../crates/sjk-viewer/src/looks_frame.rs)). Twice a second the viewer
+computes the own look: `cg_saberSkin` when the client knows that blade skin and the own
+profile lists it (else `""`), and whether the local Illuminate is lit; it hands it to
+`Service::set_look` only when it changed. The identity worker keeps the latest. After
+its claim on a server is accepted, and whenever the look changes, it sends
+`POST /v1/look`, at most one a second (changes in between are coalesced, the latest
+wins); a new claim (another server, slot or name, or one renewed after a failed
+claim, which may have lapsed) sends it again, and renewing the same claim does not. A
+look equal to none (stock blade, holocron out) is not sent on a fresh claim. A
+`not_unlocked` (or `bad_look`) answer leaves that skin out, the look going on with
+`saber:""` so Illuminate still syncs, until the profile's unlocks change; `look_quota`
+and failures wait 10 seconds; `not_on_server` waits for the next accepted claim;
+another refusal (an older hub) is not repeated until the look or the claim changes.
+Leaving the server sends nothing (the release drops the look).
+`Snapshot::look_outcome` holds what became of the last one. Unit tests against a fake
+hub; not tried against a running hub.
 
 ### Receiving
 
-`looks` in the viewer keep one look per slot: from the presence roster when it
-changes and from feed events as they come (the feed's are newer). A look counts only
-under the badges' name rule. The local player's own look comes from its settings,
-not the hub.
+Built ([feed.rs](../crates/sjk-identity/src/feed.rs),
+[looks.rs](../crates/sjk-viewer/src/looks.rs)). The feed reads on a game server
+whatever `cl_sjkChat` says, keeping no message with the chat off, and queues the
+looks it gets (`Service::take_looks`, the newest 64). `GpuState::looks` keeps one look
+per slot (64): the presence roster's when its revision changes (it replaces every hub
+look) and feed events as they come (newer, so they win until the roster changes
+again). A look counts only while the game shows the claimed name in its slot (the
+badges' rule); the names are compared when a roster or an event comes and twice a
+second, so a frame only reads a fixed table. Another server or leaving clears them.
+An unknown skin id draws the stock blade. The local player's own look comes from its
+settings, not the hub.
+
+What the renderer reads, on `GpuState::looks`:
+
+- `saber_skin_id(client) -> Option<&'static str>`: the blade skin the player in that
+  slot wears (one of `looks::BLADE_SKINS`), `None` for the stock blade; the local
+  player's slot holds its own gated skin.
+- `illuminated(client) -> bool`: their holocron is lit.
+- `own_saber_skin() -> Option<&'static str>`: the local player's gated skin, in a game
+  or not (first person, the Character page's preview).
 
 ### The Sun blade
 
@@ -132,9 +160,16 @@ not the hub.
 
 ### Illuminate for others
 
-Every lit look puts a holocron by that player's left shoulder with its warm light,
-placed from their entity's position and view yaw, with the same fade, bob and spin
-as one's own.
+Built ([illuminate.rs](../crates/sjk-viewer/src/illuminate.rs)). Every lit look puts a
+holocron by that player's left shoulder, placed from their entity's interpolated
+origin, eye height (from its box, so crouching lowers it) and view yaw, with the same
+fade, bob, spin and trailing as one's own: the local holocron and one per other slot
+step through the same code, each slot's bob a little out of step. The cube always
+shows for another player while the game draws them; dead, hidden, cloaked or out of
+the snapshot, it goes out where it was. Every cube shows, but only the four nearest
+the camera add their warm light, so the frame's 32 lights stay for the weapons.
+Unit tests and an off-screen shot on duel6 (two holocrons placed for remote players
+without a session); not yet seen with real players.
 
 ### Unlockables page
 
