@@ -58,6 +58,19 @@ pub(crate) struct Inputs<'a> {
     pub(crate) enabled: bool,
     /// Now, unix seconds, for how long ago messages came.
     pub(crate) now: u64,
+    /// What the staff requests came to, for a staff key.
+    pub(crate) staff_state: Option<StaffShown<'a>>,
+}
+
+/// The part of `sjk_identity::StaffState` the page shows.
+#[derive(Clone, Copy, Debug)]
+pub(crate) struct StaffShown<'a> {
+    /// Counts answers.
+    pub(crate) serial: u64,
+    pub(crate) message: &'a str,
+    pub(crate) failed: bool,
+    /// A request is on its way.
+    pub(crate) busy: bool,
 }
 
 /// What the last frame showed, for keys and clicks.
@@ -84,6 +97,9 @@ pub(crate) struct Panel {
     selected: Option<u64>,
     /// Messages hidden below the list, scrolled up past.
     scroll: usize,
+    /// The staff answers' serial when the page last sent a staff request: answers
+    /// past it are this page's.
+    staff_after: Option<u64>,
     shown: Shown,
     epoch: Instant,
 }
@@ -105,6 +121,7 @@ impl Panel {
             order: Vec::with_capacity(64),
             selected: None,
             scroll: 0,
+            staff_after: None,
             shown: Shown::default(),
             epoch: Instant::now(),
         }
@@ -129,6 +146,11 @@ impl Panel {
         self.open = false;
         self.owns_console = false;
         owned
+    }
+
+    /// The page sent a staff request while the staff answers' serial was `serial`.
+    pub(crate) fn staff_sent(&mut self, serial: u64) {
+        self.staff_after = Some(serial);
     }
 
     pub(crate) fn draw_list(&self) -> &sjk_ui::DrawList {
@@ -351,6 +373,7 @@ mod tests {
             staff,
             enabled: true,
             now: 1_791_400_000,
+            staff_state: None,
         }
     }
 

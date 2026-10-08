@@ -446,13 +446,32 @@ impl Panel {
             );
             self.order.push(token);
         }
+        // What the page's last staff request came to, else what staff requests are.
+        let answer = inputs
+            .staff_state
+            .zip(self.staff_after)
+            .and_then(|(state, after)| {
+                if state.serial > after {
+                    Some(if state.failed {
+                        (format!("Not done: {}", state.message), color::EMBER)
+                    } else {
+                        (format!("Done: {}", state.message), color::GOLD_BRIGHT)
+                    })
+                } else {
+                    state
+                        .busy
+                        .then(|| ("Sending to the hub...".to_owned(), color::MUTED))
+                }
+            });
+        let (line, colour) =
+            answer.unwrap_or_else(|| ("The hub logs what staff do.".to_owned(), color::QUIET));
         text(
             &mut self.ui,
             TextFamily::Body,
-            format_args!("The hub logs what staff do."),
+            format_args!("{line}"),
             frame.rect(SIDE_X, y + 3.0 * 54.0, SIDE_WIDTH, 22.0),
             14.0 * s,
-            color::QUIET,
+            colour,
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -534,6 +553,67 @@ mod tests {
                 }
             }
         }
+    }
+
+    #[test]
+    fn a_staff_request_says_what_it_came_to() {
+        let fonts = crate::text::load_modern(1.0, None).expect("Inter");
+        let state = chat(3);
+        let mut panel = Panel::new();
+        panel.open(true);
+        panel.selected = Some(3);
+        let runs =
+            |panel: &Panel| -> Vec<String> { panel.ui.text_runs().map(str::to_owned).collect() };
+        // Nothing sent from the page: no line, whatever the staff state holds.
+        let old = StaffShown {
+            serial: 4,
+            message: "Gave bug_hunter",
+            failed: false,
+            busy: false,
+        };
+        let quiet = Inputs {
+            staff_state: Some(old),
+            ..inputs(&state, &[], true)
+        };
+        panel.build(&quiet, &fonts.font, [1920.0, 1080.0]);
+        assert!(!runs(&panel).iter().any(|run| run == "Gave bug_hunter"));
+        // Sent: waiting, then the hub's answer.
+        panel.staff_sent(4);
+        let waiting = StaffShown { busy: true, ..old };
+        panel.build(
+            &Inputs {
+                staff_state: Some(waiting),
+                ..inputs(&state, &[], true)
+            },
+            &fonts.font,
+            [1920.0, 1080.0],
+        );
+        assert!(
+            runs(&panel)
+                .iter()
+                .any(|run| run == "Sending to the hub...")
+        );
+        let refused = StaffShown {
+            serial: 5,
+            message: "you sent as many staff requests as you may for now; try again later",
+            failed: true,
+            busy: false,
+        };
+        panel.build(
+            &Inputs {
+                staff_state: Some(refused),
+                ..inputs(&state, &[], true)
+            },
+            &fonts.font,
+            [1920.0, 1080.0],
+        );
+        assert!(
+            runs(&panel)
+                .iter()
+                .any(|run| run.starts_with("Not done: you sent as many staff")),
+            "{:?}",
+            runs(&panel)
+        );
     }
 
     #[test]

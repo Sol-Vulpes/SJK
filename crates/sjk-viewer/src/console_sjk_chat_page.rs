@@ -2,7 +2,7 @@
 //! what it asks (messages to the hub, mutes here, staff requests), and routing keys
 //! and pointer events to it, as for the Staff page.
 
-use super::sjk_chat_panel::{Inputs, PanelAction};
+use super::sjk_chat_panel::{Inputs, PanelAction, StaffShown};
 use super::*;
 use sjk_ui::InputEvent;
 
@@ -59,7 +59,10 @@ impl ViewerConsole {
             }
             PanelAction::Mute(key_id, muted) => crate::player_identity::set_muted(&key_id, muted),
             PanelAction::Staff(request) => {
-                if !crate::player_identity::staff(request) {
+                let serial = crate::player_identity::staff_state().map_or(0, |state| state.serial);
+                if crate::player_identity::staff(request) {
+                    self.sjk_chat_panel.staff_sent(serial);
+                } else {
                     self.push_log("^3sjkchat: the identity is not running");
                 }
             }
@@ -95,6 +98,13 @@ impl ViewerConsole {
         // Read before the chat's lock is taken: they lock the identity too.
         let muted = crate::player_identity::muted_keys();
         let staff = crate::player_identity::is_staff();
+        let staff_state = staff.then(crate::player_identity::staff_state).flatten();
+        let staff_shown = staff_state.as_ref().map(|state| StaffShown {
+            serial: state.serial,
+            message: &state.message,
+            failed: state.failed,
+            busy: state.busy,
+        });
         let enabled = self.bool_cvar("cl_sjkChat") != Some(false);
         let now = crate::menu::sjk::recent::now();
         let panel = &mut self.sjk_chat_panel;
@@ -106,6 +116,7 @@ impl ViewerConsole {
                 staff,
                 enabled,
                 now,
+                staff_state: staff_shown,
             };
             if let Some(target) = target.take() {
                 panel.append_sjk(&inputs, target, viewport);
@@ -119,6 +130,7 @@ impl ViewerConsole {
                 staff,
                 enabled,
                 now,
+                staff_state: staff_shown,
             };
             panel.append_sjk(&inputs, target, viewport);
         }
