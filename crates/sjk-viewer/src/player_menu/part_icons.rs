@@ -68,6 +68,13 @@ impl PartIcons {
         self.loader.poll();
     }
 
+    /// Forget the uploaded pictures (the atlas is another world's): the
+    /// next [`Self::show`] loads them again.
+    pub(super) fn forget_uploads(&mut self) {
+        self.species = None;
+        self.loader = IconLoader::new();
+    }
+
     pub(super) fn upload(
         &mut self,
         renderer: &crate::ui_renderer::ShapeRenderer,

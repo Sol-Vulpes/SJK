@@ -120,8 +120,16 @@ impl ModelIcons {
         }
         self.catalog = Some(Arc::clone(catalog));
         self.paths = icon_paths(catalog);
-        self.by_entry.clear();
         self.failed.clear();
+        self.forget_uploads();
+        self.worker = spawn(Arc::clone(vfs), Arc::clone(&self.wanted));
+    }
+
+    /// Empty every cell, for an atlas that holds none of the icons uploaded
+    /// so far (another world's): tiles ask for their icons again. Icons
+    /// that failed to decode stay failed.
+    pub(super) fn forget_uploads(&mut self) {
+        self.by_entry.clear();
         self.jobs.clear();
         self.uploads.clear();
         for (cell, wanted) in self.cells.iter_mut().zip(self.wanted.iter()) {
@@ -132,7 +140,6 @@ impl ModelIcons {
             };
             wanted.store(NO_ENTRY, Ordering::Relaxed);
         }
-        self.worker = spawn(Arc::clone(vfs), Arc::clone(&self.wanted));
     }
 
     /// The icon of catalogue entry `entry` if it is in the atlas, asking for
@@ -436,6 +443,27 @@ mod tests {
         for entry in (0..20).step_by(2) {
             assert!(icons.by_entry.contains_key(&entry), "entry {entry} lost");
         }
+    }
+
+    #[test]
+    fn another_atlas_loads_the_icons_again() {
+        let (vfs, catalog) = (vfs(8), catalog(8));
+        let mut icons = ModelIcons::new();
+        icons.attach(&vfs, &catalog);
+        icons.icon(0);
+        icons.icon(1);
+        settle(&mut icons);
+        assert!(icons.icon(0).is_some() && icons.failed(1));
+        // A new world's atlas has none of the old one's pictures.
+        icons.forget_uploads();
+        assert!(icons.icon(0).is_none(), "an empty cell must not be drawn");
+        assert_eq!(icons.jobs.len(), 1, "the icon is decoded again");
+        settle(&mut icons);
+        assert!(icons.icon(0).is_some());
+        assert!(
+            icons.icon(1).is_none() && icons.jobs.is_empty(),
+            "a bad file stays failed"
+        );
     }
 
     #[test]

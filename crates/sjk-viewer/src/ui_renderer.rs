@@ -201,7 +201,12 @@ pub(crate) struct ShapeRenderer {
     /// Whether a frame past the vertex or run storage has been logged: shapes
     /// past it are dropped, so the log names the cause of a missing picture.
     overflow_logged: bool,
+    /// See [`Self::id`].
+    id: u64,
 }
+
+/// Source of [`ShapeRenderer::id`].
+static NEXT_RENDERER_ID: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
 
 impl ShapeRenderer {
     /// Create the one process-lifetime pipeline and fixed vertex storage.
@@ -340,6 +345,7 @@ impl ShapeRenderer {
                 ..Default::default()
             }),
             overflow_logged: false,
+            id: NEXT_RENDERER_ID.fetch_add(1, std::sync::atomic::Ordering::Relaxed),
         };
         // Artwork decoded for an earlier world is uploaded with this one, on
         // the install worker rather than the frame thread.
@@ -839,6 +845,14 @@ impl ShapeRenderer {
                 parameters: [radius.min(rect.width.min(rect.height) * 0.5), mode],
                 uv: local,
             }));
+    }
+
+    /// This renderer's identity, unique for the process. Every world has a
+    /// renderer of its own, with an empty icon atlas, map preview and HUD
+    /// preview, while the menu moves from world to world: an image uploaded
+    /// into one renderer is not in another.
+    pub(crate) fn id(&self) -> u64 {
+        self.id
     }
 
     /// Upload one decoded [`ICON_SIZE`]-square RGBA icon into a stable atlas

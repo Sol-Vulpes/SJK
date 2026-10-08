@@ -104,6 +104,11 @@ impl KeybindEditor {
         self.icons.attach_vfs(vfs);
     }
 
+    /// Upload the pictures again, into another world's atlas.
+    pub(crate) fn forget_uploads(&mut self) {
+        self.icons.forget_uploads();
+    }
+
     /// Decode the pictures (once) and collect them, while the screen is up.
     pub(crate) fn poll_icons(&mut self) {
         self.icons.poll();

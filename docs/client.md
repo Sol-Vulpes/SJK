@@ -584,7 +584,14 @@ a tile asks for its icon when it is drawn, a worker thread decodes it (without
 the shared image cache, so the whole catalogue is never held at full size) into
 a free cell or the one drawn least recently, and tiles on screen keep theirs.
 Before SJK did this, every model past the 207th was a black tile. A model whose
-icon file cannot be decoded shows its name in the tile instead. Tiles answer to
+icon file cannot be decoded shows its name in the tile instead. Every world (the
+menu map, each server map) has a UI renderer and icon atlas of its own while the
+menu moves between them, so when the menu meets a renderer it has not uploaded
+into (`ShapeRenderer::id`), its image caches (model, Force, part and key-binding
+icons, the map and HUD previews) forget what they uploaded and load it again
+(`ClientMenu::follow_renderer` in [menu.rs](../crates/sjk-viewer/src/menu.rs)).
+Before that, tiles cached in an earlier world drew black after joining, changing
+map or disconnecting. Tiles answer to
 the pointer by their place on screen, so a long list never runs into other
 controls' pointer tokens. The Search row under Team colour (Enter to type)
 filters the grid as the classic profile's search does (see above).

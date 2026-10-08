@@ -250,6 +250,12 @@ impl SettingsMenu {
         }
     }
 
+    /// Upload the highlighted HUD's preview again, into another world's
+    /// texture.
+    pub(crate) fn forget_hud_preview_upload(&mut self) {
+        self.hud.shown = None;
+    }
+
     /// Per frame while the settings are up: read the HUD list when it is
     /// stale, collect a finished preview, start the highlighted one's and
     /// hand `upload` the preview to show when it changes.

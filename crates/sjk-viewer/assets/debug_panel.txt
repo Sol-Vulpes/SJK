@@ -227,6 +227,17 @@ test: Right from AUTO gives 0 (uncapped), then 25, 50...; dragging to the far le
 test: com_maxfps 144 then 60: cg_drawFPS holds 144 and 60, not a few frames below.
 test: Record with OBS uncapped vs AUTO: compare skipped frames in the OBS log.
 
+[menu-images-world-change]
+area: Menus & settings
+title: Menu pictures survive a join, a map change and a disconnect (SJK PR #38)
+change: Every world has its own icon atlas; the menu now loads its pictures again in a new one.
+change: Covers model squares, Force and part icons, key pictures, map and HUD previews.
+test: Open Character, close it, join a local server, open Character: no black or wrong squares.
+test: Change map, then disconnect to the menu, and open Character again: the squares are right.
+test: Repeat for Force (classic), Controls pictures, Create game preview and the HUD picker.
+test: Both menu styles (ui_menuStyle sjk and classic) and the in-game menu's Character page.
+note: Not tried in a running client.
+
 # ---- HUD ----
 
 [menu-huds]

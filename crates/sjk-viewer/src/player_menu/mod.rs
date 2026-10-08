@@ -294,6 +294,15 @@ impl PlayerMenu {
         self.part_icons.upload(renderer, queue);
     }
 
+    /// Upload every icon again, into an atlas that holds none of them
+    /// (another world's, see [`crate::ui_renderer::ShapeRenderer::id`]).
+    /// The Force and part icons are decoded again on the next poll.
+    pub(crate) fn forget_uploads(&mut self) {
+        self.icons.forget_uploads();
+        self.force_icons = icons::IconLoader::new();
+        self.part_icons.forget_uploads();
+    }
+
     /// Start decoding the Force icons once the VFS is known, and serve the
     /// model icons once the catalogue is too.
     fn request_icons_if_ready(&mut self) {

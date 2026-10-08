@@ -67,6 +67,7 @@ pub(crate) fn upload_menu_images(
     shaders: &sjk_shader::ShaderCatalog,
 ) {
     let Some(menu) = menu else { return };
+    menu.follow_renderer(renderer.id());
     match menu.state.phase() {
         ClientPhase::Player => menu.player.upload_icons(renderer, queue),
         ClientPhase::Keybinds => menu.keybinds.upload_icons(renderer, queue),
@@ -184,6 +185,9 @@ pub(crate) struct ClientMenu {
     destination_map: Option<String>,
     /// First setup was offered in this run (`offer_first_setup`).
     first_setup_offered: bool,
+    /// The renderer ([`crate::ui_renderer::ShapeRenderer::id`]) the menu's
+    /// images were uploaded into; another one (a world change) has none of them.
+    uploaded_into: Option<u64>,
 }
 
 /// Backdrop shot each client phase is presented over. A connect stays on
@@ -250,7 +254,24 @@ impl ClientMenu {
             address_input: String::with_capacity(256),
             address_error: String::with_capacity(96),
             backdrop: None,
+            uploaded_into: None,
         }
+    }
+
+    /// Upload the menu's images again when `renderer` is not the one they
+    /// went into: every world has a renderer of its own, while the menu moves
+    /// between worlds, so the icons of a cache that thinks itself filled would
+    /// be drawn from empty cells (black squares) or from cells the other world
+    /// filled with something else.
+    fn follow_renderer(&mut self, renderer: u64) {
+        if self.uploaded_into == Some(renderer) {
+            return;
+        }
+        self.uploaded_into = Some(renderer);
+        self.player.forget_uploads();
+        self.keybinds.forget_uploads();
+        self.settings.forget_hud_preview_upload();
+        self.create_game.forget_levelshot_upload();
     }
 
     /// Advance the live-map backdrop toward the current screen's shot and

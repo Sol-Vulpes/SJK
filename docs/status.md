@@ -7,6 +7,25 @@ SJK currently contains a native client and standard dedicated server in a
 20-crate Rust workspace. This page records scope and verification, rather than
 claiming complete parity from the presence of an implementation.
 
+## Menu pictures follow the renderer
+
+Branch `fix/menu-icons-after-world-change` (08/10/2026, based on `15cf7a9`, Linux): the
+model squares on the character screen sometimes showed solid black, in the classic
+menus and the SJK UI alike. Every world builds its own `ShapeRenderer`, with an empty
+icon atlas, map preview and HUD preview, while the menu is handed from world to world
+and its image caches kept counting their cells as uploaded. The menu now notices a new
+renderer (`ShapeRenderer::id`, `ClientMenu::follow_renderer`) and each cache forgets
+its uploads: the model icons, the Force page, the character-creation parts, the
+key-binding pictures, the map preview and the HUD picker preview
+([client](client.md)).
+
+Verified: workspace formatting, the locked build, clippy (the same warning count) and
+the locked tests passed on Linux, including
+`player_menu::model_icons::tests::another_atlas_loads_the_icons_again`, which does not
+compile without the fix. Not verified: the client was not run (join a server, change
+map or disconnect, then open the character screen); the other caches share the reset
+path but have no tests of their own.
+
 ## Modern UI removed
 
 Branch `refactor/remove-modern-ui` (08/10/2026, based on `15cf7a9`, Ubuntu 24.04,
