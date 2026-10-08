@@ -235,7 +235,8 @@ pub(crate) struct Cache {
     directions: Option<(wgpu::TextureView, Vec<wgpu::TextureView>)>,
     sampler: wgpu::Sampler,
     baked: std::cell::Cell<bool>,
-    /// Kept after the first bake for refreshes.
+    /// Kept after the first bake only while movers re-bake the cache (`Cache::refresh`);
+    /// its scratch targets take [`Cache::baker_bytes`].
     baker: std::cell::RefCell<Option<Baker>>,
 }
 
@@ -410,8 +411,11 @@ impl Cache {
         })
     }
 
-    /// Bake every layer into `encoder` the first time a frame lights the map. The
-    /// pipelines and scratch targets stay for [`Cache::refresh`].
+    /// Bake every layer into `encoder` the first time a frame lights the map. With `keep`
+    /// (movers will re-bake parts of it) the pipelines and scratch targets stay for
+    /// [`Cache::refresh`]; otherwise they live only for this call, as their memory
+    /// ([`Cache::baker_bytes`]) would serve nothing.
+    #[allow(clippy::too_many_arguments)]
     pub(crate) fn bake_once(
         &self,
         device: &wgpu::Device,
@@ -420,6 +424,7 @@ impl Cache {
         indices: &wgpu::Buffer,
         lamps: &crate::lamp_lights::Gpu,
         bounds: [glam::Vec3; 2],
+        keep: bool,
     ) {
         if self.baked.replace(true) {
             return;
@@ -438,16 +443,33 @@ impl Cache {
                 None,
             );
         }
-        *self.baker.borrow_mut() = Some(baker);
+        if keep {
+            *self.baker.borrow_mut() = Some(baker);
+        }
         crate::log::progress(format_args!(
-            "Lamp light cache: bake encoded in {:.1} ms",
-            started.elapsed().as_secs_f64() * 1000.
+            "Lamp light cache: bake encoded in {:.1} ms{}",
+            started.elapsed().as_secs_f64() * 1000.,
+            if keep {
+                format!(
+                    "; bake targets kept for mover refreshes, {:.1} MiB",
+                    self.baker_bytes() as f64 / 1048576.
+                )
+            } else {
+                String::new()
+            }
         ));
+    }
+
+    /// GPU memory of the bake's scratch targets: two depth targets and one or two colour
+    /// targets at the cache's resolution.
+    pub(crate) fn baker_bytes(&self) -> u64 {
+        bake_target_bytes(self.resolution, self.directions.is_some())
     }
 
     /// Bake `regions` (layer, texel rectangle `[x0, y0, x1, y1)`) again with the lamps'
     /// current visibility: a mover's shadow changed there (`mover_occlusion.rs`). Nothing
-    /// before the first bake, which already sees it.
+    /// before the first bake, which already sees it. The bake's targets are made again
+    /// if the first bake did not keep them, and then kept.
     #[allow(clippy::too_many_arguments)]
     pub(crate) fn refresh(
         &self,
@@ -456,15 +478,14 @@ impl Cache {
         vertices: &wgpu::Buffer,
         indices: &wgpu::Buffer,
         lamps: &crate::lamp_lights::Gpu,
+        bounds: [glam::Vec3; 2],
         regions: &[(u32, [u32; 4])],
     ) {
-        let baker = self.baker.borrow();
-        let Some(baker) = baker.as_ref() else {
-            return;
-        };
-        if regions.is_empty() {
+        if regions.is_empty() || !self.baked.get() {
             return;
         }
+        let mut baker = self.baker.borrow_mut();
+        let baker = baker.get_or_insert_with(|| Baker::new(device, self, bounds));
         let light_group = baker.light_group(device, lamps);
         for &(layer, rect) in regions {
             if (layer as usize) < self.layers.len() {
@@ -613,8 +634,16 @@ impl Cache {
     }
 }
 
-/// The bake's pipelines, groups and scratch targets, kept after the first bake for
-/// refreshes. The light group is made per bake: the lamps' buffers change with the
+/// The bake's scratch targets at `resolution`: nearest and farthest depth (Depth32Float),
+/// the rim target ([`FORMAT`]) and, with directions, the rim directions
+/// ([`DIRECTION_FORMAT`]).
+fn bake_target_bytes(resolution: u32, directed: bool) -> u64 {
+    let per_texel = 4 + 4 + TEXEL_BYTES + if directed { DIRECTION_TEXEL_BYTES } else { 0 };
+    u64::from(resolution).pow(2) * per_texel
+}
+
+/// The bake's pipelines, groups and scratch targets, kept after the first bake while
+/// movers refresh the cache. The light group is made per bake: the lamps' buffers change with the
 /// lighting settings.
 struct Baker {
     nearest: wgpu::TextureView,
@@ -975,6 +1004,14 @@ impl Baker {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn the_kept_bake_targets_take_20_bytes_a_texel_with_directions() {
+        const MIB: u64 = 1 << 20;
+        assert_eq!(super::bake_target_bytes(2048, true), 80 * MIB);
+        assert_eq!(super::bake_target_bytes(2048, false), 64 * MIB);
+        assert_eq!(super::bake_target_bytes(1024, true), 20 * MIB);
+    }
+
     #[test]
     fn bake_and_rim_programs_validate_with_directions() {
         let light = format!(

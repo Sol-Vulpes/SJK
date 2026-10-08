@@ -431,6 +431,13 @@ impl Runtime {
         refresh
     }
 
+    /// Whether traced door tiles make lamp cache regions stale (`Cache::refresh`).
+    pub(crate) fn rebakes_cache(&self) -> bool {
+        self.tracer
+            .as_ref()
+            .is_some_and(|tracer| tracer.regions.iter().any(|regions| !regions.is_empty()))
+    }
+
     /// Counts mover pose changes that affect light.
     pub(crate) fn generation(&self) -> u64 {
         self.tracking.poses.generation

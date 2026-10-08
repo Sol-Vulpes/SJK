@@ -621,6 +621,14 @@ light pass at the start camera 0.290 → 0.302 ms; beside a closed hangar door 0
 0.853 ms, the door's own surfaces being lit directly; the tracer took 0.10 ms a frame
 while that door was shown and hidden every frame, 0.003 ms at rest.
 
+Memory beyond the atlas: when door tiles re-bake the lamp cache, the bake's scratch
+targets stay after the first bake (two Depth32 targets, the RGBA16F rim target and, with
+light directions, the RGB10A2 rim directions): 20 bytes per texel of the cache's layer
+resolution, 20 MiB at 1024², 80 MiB at 2048² (16 bytes a texel without directions). The
+`Lamp light cache: bake encoded` log line names the amount. Maps without door tiles, and
+`SJK_MOVER_OCCLUSION=0`, free them after the first bake as before. The `mp/siege_hoth`
+figure above does not include them; it was not measured.
+
 Not covered: a train or lift that travels outside its box does not shadow lamps it
 reaches there; alpha-tested and blended mover faces let light through, like those of
 the static world; dynamic lights still cast no shadows; baked lightmaps (`r_dayNight 0`)
