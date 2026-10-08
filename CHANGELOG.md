@@ -19,7 +19,12 @@ tests check this file):
 Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 -->
 
-## Unreleased
+## 2026.1008.2 (Alpha) | 08/10/2026
+
+The modern menu style is gone, leaving the SJK UI and the classic menus. New: profiles
+with achievements, SJK chat through the hub, graphics quality levels, doors and lifts
+that block lamp light, a compact scoreboard, cl_idrive and +duck, and percent signs and
+quotes that survive in chat; plus the fixes that came with them.
 
 - A % typed in chat now arrives as a % and a " as a ", for SJK and JoF EternalJK players alike (they used to turn into . and a space); the chat box counts the longer escapes in its length limit _(Creyon, after JoF EternalJK)_
 - `+duck` crouches without rolling, as in JoF EternalJK: bind it in place of `+movedown` (Controls > Movement > Crouch, no roll) to crouch while running without going into a roll _(Sol, after JoF EternalJK)_
