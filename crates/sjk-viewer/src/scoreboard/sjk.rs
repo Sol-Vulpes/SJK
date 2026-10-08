@@ -11,7 +11,9 @@
 //! side by side once rows would be too thin), the two teams side by side in
 //! team games, each under its score with a thin rule in a muted team colour, and
 //! in duels the duelists as two facing cards over the players waiting their
-//! turn. Spectators share one line at the bottom. Your row is on the UI's gold
+//! turn. Compact (`cg_compactScoreboard`, the default) packs the rows thinner
+//! so a full server stays in one column. Spectators share one line at the
+//! bottom. Your row is on the UI's gold
 //! band with gold accents; bots and spectators are quieter.
 //!
 //! Nothing here allocates: runs are formatted into the canvas's retained
@@ -62,6 +64,10 @@ const SPECTATORS_Y: f32 = 1002.0;
 const ROW_MOST: f32 = 52.0;
 const ROW_SPLIT: f32 = 34.0;
 const ROW_FLOOR: f32 = 26.0;
+/// Compact rows: the most, and the least before a list splits in two (only
+/// a list longer than a full server's team, such as a duel's queue, does).
+const COMPACT_MOST: f32 = 32.0;
+const COMPACT_FLOOR: f32 = 20.0;
 /// Where the signal bars start before the ping's right edge: their 25 pixels,
 /// a gap, then room for three digits.
 const BARS_BEFORE_PING: f32 = 76.0;
@@ -107,6 +113,8 @@ pub(super) struct SjkHeader<'a> {
     /// Who last killed you, while you are dead.
     pub(super) killer: Option<&'a str>,
     pub(super) duel: Duelists,
+    /// `cg_compactScoreboard`: thin rows, every player in one column.
+    pub(super) compact: bool,
 }
 
 /// Measures runs before they are drawn, so what follows them can be placed:
@@ -1047,11 +1055,16 @@ impl Painter<'_> {
     /// The rows `member` takes from `rows`, in their order, as `list` says:
     /// column labels over a rule, then a row each, split in two when allowed
     /// and needed, and cut with "and n more" (your row kept) when they cannot
-    /// fit at [`ROW_FLOOR`].
+    /// fit at [`ROW_FLOOR`] ([`COMPACT_FLOOR`] when compact).
     fn list(&mut self, rows: &[ScoreRow], list: &List, member: impl Fn(&ScoreRow) -> bool) {
+        let (most, split_below, floor) = if self.header.compact {
+            (COMPACT_MOST, COMPACT_FLOOR, COMPACT_FLOOR)
+        } else {
+            (ROW_MOST, ROW_SPLIT, ROW_FLOOR)
+        };
         let total = rows.iter().filter(|row| member(row)).count();
         let height = list.bottom - list.top;
-        let halves = if list.split && total > 0 && height / (total as f32) < ROW_SPLIT {
+        let halves = if list.split && total > 0 && height / (total as f32) < split_below {
             2
         } else {
             1
@@ -1062,7 +1075,7 @@ impl Painter<'_> {
             list.width
         };
         let per = total.div_ceil(halves).max(1);
-        let row_height = (height / per as f32).clamp(ROW_FLOOR, ROW_MOST);
+        let row_height = (height / per as f32).clamp(floor, most);
         let fits = ((height / row_height) as usize).max(1);
         let capacity = fits * halves;
         let cut = total > capacity;
@@ -1206,8 +1219,18 @@ impl Painter<'_> {
                 color: color::alpha(color::HOLO, 0.06),
             });
         }
-        let name_size = (height * 0.44).clamp(16.0, 22.0);
-        let number_size = (height * 0.5).clamp(18.0, 26.0);
+        // Compact rows fill more of their height, to stay readable.
+        let (name_size, number_size) = if self.header.compact {
+            (
+                (height * 0.7).clamp(16.0, 20.0),
+                (height * 0.75).clamp(17.0, 22.0),
+            )
+        } else {
+            (
+                (height * 0.44).clamp(16.0, 22.0),
+                (height * 0.5).clamp(18.0, 26.0),
+            )
+        };
         let quiet = row.bot || !row.has_score;
         if let (Some(right), Some(place)) = (columns.place, place) {
             self.run(
@@ -1473,6 +1496,7 @@ mod tests {
             },
             killer: None,
             duel: Duelists::default(),
+            compact: false,
         }
     }
 
@@ -1541,6 +1565,32 @@ mod tests {
             let watching: Vec<_> = (0..32).map(|client| row(client, SPECTATOR, 0)).collect();
             let ui = draw(&watching, &header(0, 0), viewport);
             assert!(!ui.overflowed(), "spectators at {viewport:?}");
+        }
+    }
+
+    /// Compact, a full free-for-all stays in one column and a team of 32
+    /// shows everyone; without it the list splits and the team is cut.
+    #[test]
+    fn compact_keeps_a_full_server_in_one_column() {
+        let free: Vec<_> = (0..32)
+            .map(|client| row(client, 0, 40 - i32::from(client)))
+            .collect();
+        let one: Vec<_> = (0..32).map(|client| row(client, 2, 0)).collect();
+        for viewport in [[1920.0, 1080.0], [3840.0, 2160.0], [1280.0, 1024.0]] {
+            for compact in [true, false] {
+                let mut ffa = header(0, 7);
+                ffa.compact = compact;
+                let ui = draw(&free, &ffa, viewport);
+                assert!(!ui.overflowed(), "free for all at {viewport:?}");
+                let columns = ui.text_runs().filter(|run| *run == "Player").count();
+                assert_eq!(columns, if compact { 1 } else { 2 }, "{viewport:?}");
+                let mut team = header(TEAM, 31);
+                team.compact = compact;
+                let ui = draw(&one, &team, viewport);
+                assert!(!ui.overflowed(), "one team at {viewport:?}");
+                let cut = ui.text_runs().any(|run| run.starts_with("and "));
+                assert_eq!(cut, !compact, "{viewport:?}");
+            }
         }
     }
 

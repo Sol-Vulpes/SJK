@@ -83,20 +83,20 @@ test: A message with no colour codes is one colour on every row, as it is on the
 test: cg_chatBoxEmojis 1, a long coloured line with :poop: wraps and keeps its colour after it.
 note: Unit-tested only; not run in game yet. The typed draft is one scrolling row, unchanged.
 
-[sjk-chat]
-area: Console & chat
-title: SJK chat through the hub, and the path for emotes (SJK PR #36)
-change: A fourth chat channel, SJK: I opens its composer, Tab cycles All, Team and SJK.
-change: The main menu docks it under Recent servers; sjkchat opens its page, where you can mute.
-change: sjkemote <id> relays an emote through the hub; cl_sjkChat 0 turns the chat off.
-test: Settings > Key bindings > Other: bind SJK chat to a key if your profile has no I yet.
-test: In a game press I, type a line, Enter: it shows tagged SJK; the game server sees nothing.
-test: In the main menu the dock under Recent servers shows the chat, or Not connected.
-test: cl_sjkChat 0, or cl_identity 0: no polling, and Enter on SJK says why it cannot send.
-test: Normal chat (Y, T, U), the console and the in-game SJK menu behave as before.
-note: Needs the hub's chat routes deployed; until then the dock stays on Not connected.
-note: Tab from Team now goes to SJK: read the composer's channel before pressing Enter.
-
+[sjk-chat]
+area: Console & chat
+title: SJK chat through the hub, and the path for emotes (SJK PR #36)
+change: A fourth chat channel, SJK: I opens its composer, Tab cycles All, Team and SJK.
+change: The main menu docks it under Recent servers; sjkchat opens its page, where you can mute.
+change: sjkemote <id> relays an emote through the hub; cl_sjkChat 0 turns the chat off.
+test: Settings > Key bindings > Other: bind SJK chat to a key if your profile has no I yet.
+test: In a game press I, type a line, Enter: it shows tagged SJK; the game server sees nothing.
+test: In the main menu the dock under Recent servers shows the chat, or Not connected.
+test: cl_sjkChat 0, or cl_identity 0: no polling, and Enter on SJK says why it cannot send.
+test: Normal chat (Y, T, U), the console and the in-game SJK menu behave as before.
+note: Needs the hub's chat routes deployed; until then the dock stays on Not connected.
+note: Tab from Team now goes to SJK: read the composer's channel before pressing Enter.
+
 # ---- Input ----
 
 [locked-binds]
@@ -324,6 +324,20 @@ test: Pin a player with several medals: the names are small, about 52 characters
 test: cg_playerCard 0, then Escape: the game menu opens as before.
 note: Not tried in a running client; how far a crouch drops the hips (HIP_DROP 0.5) is an estimate.
 
+[compact-scoreboard]
+area: HUD
+title: Compact SJK scoreboard; the HUD hides while scores are held (SJK PR #42)
+change: cg_compactScoreboard 1 (default): SJK scoreboard rows 20-32 tall, a full server in one column.
+change: Holding the scoreboard hides the HUD (status, weapon, timer, crosshair, votes); chat stays.
+change: Settings > Scoreboard > Compact SJK scoreboard off gives the old layout back.
+test: SJK UI, local server, FFA with 20+ bots: hold Tab: one column, names and pings readable.
+test: Team game, 16 vs 16 bots: both teams listed in full, no "and n more".
+test: Hold Tab: health, ammo, timer, crosshair and kill feed go, chat stays; let go: all back.
+test: cg_scoreboardStyle classic: Tab hides the HUD too. cg_drawScores 0: Tab leaves the HUD.
+test: Compact SJK scoreboard off, 30 players: two lists side by side as before.
+note: Not tried in a running client: the HUD hiding and the compact board over a real match.
+note: Alt+Tab while holding Tab leaves the board and the hidden HUD up until Tab is pressed again.
+
 # ---- Rendering & effects ----
 
 [renderer-settings]
@@ -473,19 +487,19 @@ test: remapShader <old> <new> on a map: the surface keeps its shadows; clearRema
 test: Glowing, sky and effect targets with their own stages look as before.
 note: Checked offline on mp/duel6 only; not on a live server or with a $lightmap target shader.
 
-[mover-light]
-area: Rendering & effects
-title: Doors, lifts and other movers block lamp light (SJK PR #39)
-change: Closed doors, lifts and other moving brushes stop the light of lamps behind them.
-change: Open, hidden, broken or switched-off ones let it through again.
-change: The far sun shadows follow movers too, at most four times a second.
-test: siege_hoth, High quality: by the closed hangar door, no lamp light leaks onto the floor.
-test: Open and close that door: the light comes through as it opens and goes as it closes.
-test: Break a breakable wall or switch off a force field by a lamp: no shadow stays behind.
-test: Outdoors, watch a moving lift's sun shadow from far away: it follows the lift.
-note: SJK_MOVER_OCCLUSION=0 leaves movers out of lamp light, to compare with the same build.
-note: Not tried on screen yet: the door tracer, the partial re-bakes and the far cascade refresh.
-
+[mover-light]
+area: Rendering & effects
+title: Doors, lifts and other movers block lamp light (SJK PR #39)
+change: Closed doors, lifts and other moving brushes stop the light of lamps behind them.
+change: Open, hidden, broken or switched-off ones let it through again.
+change: The far sun shadows follow movers too, at most four times a second.
+test: siege_hoth, High quality: by the closed hangar door, no lamp light leaks onto the floor.
+test: Open and close that door: the light comes through as it opens and goes as it closes.
+test: Break a breakable wall or switch off a force field by a lamp: no shadow stays behind.
+test: Outdoors, watch a moving lift's sun shadow from far away: it follows the lift.
+note: SJK_MOVER_OCCLUSION=0 leaves movers out of lamp light, to compare with the same build.
+note: Not tried on screen yet: the door tracer, the partial re-bakes and the far cascade refresh.
+
 # ---- Audio ----
 
 # ---- Gameplay ----

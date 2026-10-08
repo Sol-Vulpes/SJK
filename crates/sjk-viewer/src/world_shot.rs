@@ -1080,6 +1080,15 @@ like this one.",
                 gpu.scoreboard.show_for_shot(game);
                 println!("{}", shoot(&mut gpu, 16, name).display());
             }
+            // The full server without compact rows: two lists side by side.
+            if let Some(console) = gpu.console.as_mut() {
+                console.set_cvar(crate::scoreboard::style::COMPACT_CVAR, "0");
+            }
+            gpu.scoreboard.show_for_shot(Match::Crowd);
+            println!(
+                "{}",
+                shoot(&mut gpu, 16, "duel6-scoreboard-full-split").display()
+            );
             gpu.scoreboard.end_shot();
             drop(gpu);
             // A 4:3 window: the frame scales down to its width.

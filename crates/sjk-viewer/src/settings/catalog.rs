@@ -209,6 +209,11 @@ pub(super) const HUD_OPTIONS: &[Setting] = &[
         kind: ValueKind::Choice(&crate::scoreboard::style::ScoreboardStyle::NAMES),
     },
     Setting {
+        label: "Compact SJK scoreboard",
+        cvar: crate::scoreboard::style::COMPACT_CVAR,
+        kind: ValueKind::Bool,
+    },
+    Setting {
         label: "Scoreboard client IDs",
         cvar: "cg_showClientIDs",
         kind: ValueKind::Bool,

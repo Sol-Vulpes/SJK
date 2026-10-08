@@ -9,6 +9,8 @@
 #                               made it when that is not the piece's owner.
 
 = Sol
++ 08/10/2026 | SJK #42 | Compact SJK scoreboard by default; hide the HUD while scores are held
+- fca86a4 |  | Compact SJK scoreboard by default; hide the HUD while scores are held
 + 08/10/2026 | SJK #39 | Let movers shadow lamps and the far sun cascade
 - ec35028 |  | Let movers shadow lamps and the far sun cascade
 - 2a802fa |  | Count a still, turned mover as still

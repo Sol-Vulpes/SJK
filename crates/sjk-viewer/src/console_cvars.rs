@@ -657,6 +657,12 @@ pub(super) fn register_daily_cvars(cvars: &mut CvarRegistry) -> Result<(), sjk_s
             "Scoreboard layout: auto (sjk with the SJK UI's menus, else classic), sjk, or classic (after the retail scoreboard)",
         ),
         CvarDefinition::new(
+            crate::scoreboard::style::COMPACT_CVAR,
+            true,
+            archive,
+            "SJK scoreboard: thin rows, so every player fits in one column",
+        ),
+        CvarDefinition::new(
             "cg_smallScoreboard",
             false,
             archive,

@@ -316,6 +316,7 @@ pub(super) fn append(gpu: &mut crate::GpuState, viewport: [f32; 2]) {
         local: shot.local,
         killer: shot.killer,
         duel: shot.duel,
+        compact: super::style::compact(gpu.console.as_ref()),
     };
     let measure = match gpu.game_fonts.sjk_metrics() {
         Some((display, body)) => Measure {
@@ -358,7 +359,7 @@ mod tests {
             board.show_for_shot(game);
             assert!(board.rows.len() <= 32, "{game:?}");
             let shot = board.shot.as_ref().expect("a shot");
-            let header = SjkHeader {
+            let mut header = SjkHeader {
                 map: "mp/duel6",
                 gametype: shot.gametype,
                 limits: shot.limits,
@@ -367,8 +368,12 @@ mod tests {
                 local: shot.local,
                 killer: shot.killer,
                 duel: shot.duel,
+                compact: false,
             };
-            for viewport in [[1920.0, 1080.0], [3840.0, 2160.0]] {
+            for (compact, viewport) in [false, true].into_iter().flat_map(|compact| {
+                [[1920.0, 1080.0], [3840.0, 2160.0]].map(|size| (compact, size))
+            }) {
+                header.compact = compact;
                 sjk::build(
                     &mut board.ui,
                     &board.rows,
@@ -379,7 +384,10 @@ mod tests {
                     viewport,
                 );
                 board.ui.finish(u16::MAX);
-                assert!(!board.ui.overflowed(), "{game:?} at {viewport:?}");
+                assert!(
+                    !board.ui.overflowed(),
+                    "{game:?} at {viewport:?}, compact {compact}"
+                );
             }
         }
     }
