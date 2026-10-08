@@ -135,9 +135,13 @@ profile lists it (else `""`), and whether the local Illuminate is lit; it hands 
 `Service::set_look` only when it changed. The identity worker keeps the latest. After
 its claim on a server is accepted, and whenever the look changes, it sends
 `POST /v1/look`, at most one a second (changes in between are coalesced, the latest
-wins); a new claim (another server, slot or name, or one renewed after a failed
-claim, which may have lapsed) sends it again, and renewing the same claim does not. A
-look equal to none (stock blade, holocron out) is not sent on a fresh claim. A
+wins); a new claim (another server, slot or name) sends it again, and renewing the
+same claim does not. What the hub holds is known (none for a new claim or after a
+release, else the last look it took) or unknown: at the worker's start (a client that
+stopped without releasing may have left a live claim with a look), after a failed claim
+(it may have lapsed, or still be live with the old look) and after a failed release.
+A look equal to none (stock blade, holocron out) is not sent on a claim known to hold
+none; while unknown, the next accepted claim gets the look whatever it is. A
 `not_unlocked` (or `bad_look`) answer leaves that skin out, the look going on with
 `saber:""` so Illuminate still syncs, until the profile's unlocks change; too many
 (429: `look_quota`, or the per-address `rate_limited` the chat and emotes share), a

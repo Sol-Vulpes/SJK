@@ -280,9 +280,11 @@ blade-skin unlock id or `""`, and whether the Illuminate holocron is lit.
   only while the own profile lists that unlock and the client knows the id, and the
   local Illuminate, and hands it to `Service::set_look` when it changes. The worker
   keeps the latest and sends `POST /v1/look` once its claim is accepted, again when
-  the look changes or the claim does (another server, slot or name, or a claim that
-  failed and may have lapsed), at most once a second (changes in between are coalesced,
-  the latest wins). A `not_unlocked` or `bad_look` answer leaves that skin out (the look
+  the look changes or the claim does (another server, slot or name), at most once a
+  second (changes in between are coalesced, the latest wins). When what the hub holds
+  is unknown (at the start, after a failed claim or a failed release, when an older
+  claim may still be live with a look) the next accepted claim gets the look even if
+  it is none. A `not_unlocked` or `bad_look` answer leaves that skin out (the look
   goes with `saber:""`, so Illuminate still syncs) until the profile's unlocks change;
   too many (429: `look_quota`, or the address's `rate_limited`), a refused signature
   (401, the clock still off after the one retry) and failures wait 10 seconds and go

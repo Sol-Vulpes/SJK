@@ -231,15 +231,34 @@ struct Worker {
     /// The claim (server, slot and name) the hub accepted last, while it holds it: a
     /// look lives on it.
     look_claim: Option<(String, u8, String)>,
-    /// The look the hub holds on that claim; `None` for none, which draws as the
-    /// default look.
-    look_held: Option<Look>,
+    /// The look the hub holds for the key: on the accepted claim, or, with none
+    /// accepted now, on a claim that may still be live.
+    look_held: Held,
     /// When the next look may go.
     due_look: Instant,
     /// Blade skins the hub said the key does not hold, and the unlocks the profile
     /// listed then: they are not sent again until those change.
     look_refused: Vec<String>,
     look_refused_for: Vec<Unlock>,
+}
+
+/// What the hub holds as the player's look.
+#[derive(Clone, Debug, Eq, PartialEq)]
+enum Held {
+    /// Not known: the worker just started (a client that stopped without releasing may
+    /// have left a live claim with a look), a claim failed (the last one may still be
+    /// live, its look with it) or a release failed. The look goes on the next accepted
+    /// claim whatever it is.
+    Unknown,
+    /// This look; [`Look::default`] for none, as a new claim starts.
+    Look(Look),
+}
+
+impl Held {
+    /// No look: what a new claim starts with.
+    fn none() -> Self {
+        Self::Look(Look::default())
+    }
 }
 
 /// The refusal of anything sent before the hub answered the registration.
@@ -311,7 +330,7 @@ impl Worker {
             chat: Arc::default(),
             look: Look::default(),
             look_claim: None,
-            look_held: None,
+            look_held: Held::Unknown,
             due_look: now,
             look_refused: Vec::new(),
             look_refused_for: Vec::new(),
@@ -408,13 +427,19 @@ impl Worker {
     }
 
     /// Withdraw the claim the hub holds, if any, ignoring a failure: it expires. The
-    /// look on it goes with it.
+    /// look on it goes with it; after a failure the hub may hold both a while longer.
     fn release(&mut self) {
-        if let (Some(server), Some(hub)) = (self.claimed.take(), self.hub.as_mut()) {
-            let _ = hub.release(&self.identity, &server);
+        match (self.claimed.take(), self.hub.as_mut()) {
+            (Some(server), Some(hub)) => {
+                self.look_held = match hub.release(&self.identity, &server) {
+                    Ok(()) => Held::none(),
+                    Err(_) => Held::Unknown,
+                };
+            }
+            (Some(_), None) => self.look_held = Held::Unknown,
+            (None, _) => {}
         }
         self.look_claim = None;
-        self.look_held = None;
         self.update(|snapshot| {
             snapshot.server = None;
             snapshot.players.clear();
@@ -750,8 +775,7 @@ impl Worker {
 
     /// Whether the hub's claim should get another look than the one it holds.
     fn look_waiting(&mut self) -> bool {
-        self.look_claim.is_some()
-            && self.look_to_send() != self.look_held.clone().unwrap_or_default()
+        self.look_claim.is_some() && Held::Look(self.look_to_send()) != self.look_held
     }
 
     /// Send the look for the accepted claim if it changed and one may go.
@@ -766,7 +790,7 @@ impl Worker {
         let outcome = hub.look(&self.identity, &server, &look);
         self.due_look = now + LOOK_EVERY;
         match &outcome {
-            Ok(_) => self.look_held = Some(look.clone()),
+            Ok(_) => self.look_held = Held::Look(look.clone()),
             // The skin is not the key's (or not the hub's): the rest of the look still
             // goes, without it, until the profile changes.
             Err(HubError::Rejected { code, .. })
@@ -782,7 +806,7 @@ impl Worker {
             // The claim lapsed at the hub: the next accepted claim sends the look again.
             Err(HubError::Rejected { code, .. }) if code == "not_on_server" => {
                 self.look_claim = None;
-                self.look_held = None;
+                self.look_held = Held::none();
             }
             // Too many: the key's look quota, or the address's allowance (429
             // `rate_limited`) shared with the chat and emotes. A signature refused
@@ -795,7 +819,7 @@ impl Worker {
             // Any other refusal (an older hub without looks) is not repeated until the
             // look or the claim changes.
             Err(HubError::Rejected { status, .. }) if (400..500).contains(status) => {
-                self.look_held = Some(look.clone());
+                self.look_held = Held::Look(look.clone());
             }
             Err(_) => self.due_look = now + LOOK_AGAIN,
         }
@@ -902,18 +926,22 @@ impl Worker {
                         self.claimed = Some(server.clone());
                         self.due_claim = now + CLAIM_EVERY;
                         // Renewing the same claim keeps its look; another server,
-                        // slot or name starts with none.
+                        // slot or name starts with none. With no claim accepted before
+                        // (released, lapsed, failed or none yet), what the hub holds
+                        // stays as it was known, or unknown.
                         let claim = (server.clone(), location.slot, location.name.clone());
-                        if self.look_claim.as_ref() != Some(&claim) {
-                            self.look_claim = Some(claim);
-                            self.look_held = None;
+                        if self.look_claim.as_ref() != Some(&claim)
+                            && self.look_claim.replace(claim).is_some()
+                        {
+                            self.look_held = Held::none();
                         }
                     }
                     Err(failure) => {
                         self.due_claim = now + self.backoff;
-                        // The claim may lapse meanwhile, and its look with it.
+                        // The claim may lapse meanwhile, and its look with it, or
+                        // still be live with it: what the hub holds is not known.
                         self.look_claim = None;
-                        self.look_held = None;
+                        self.look_held = Held::Unknown;
                         error = Some(failure);
                     }
                 }
@@ -1639,38 +1667,81 @@ mod tests {
         worker.handle(Command::Configure(on("https://hub")), t0);
         worker.handle(Command::Enter(here(3, "Sol")), t0);
         worker.tick(t0);
-        assert!(
-            fake.looks().is_empty(),
-            "the default look is the claim's own"
-        );
-        worker.handle(Command::Look(lit("")), t0);
-        worker.tick(t0);
-        assert_eq!(fake.looks().len(), 1);
-        // Another slot: a new claim, which starts with no look.
+        // A client that stopped without releasing may have left a live claim with a
+        // look: the first accepted claim gets the look, even none.
+        assert_eq!(fake.looks(), ["look 1.2.3.4:29070 \"\" false"]);
+        // Another slot: a new claim, which starts with no look, so none goes.
         let t1 = t0 + Duration::from_secs(5);
         worker.handle(Command::Enter(here(4, "Sol")), t1);
         worker.tick(t1);
-        assert_eq!(fake.log().last().unwrap(), "look 1.2.3.4:29070 \"\" true");
+        assert_eq!(fake.log().last().unwrap(), "presence 1.2.3.4:29070");
+        assert_eq!(fake.looks().len(), 1);
+        worker.handle(Command::Look(lit("")), t1);
+        worker.tick(t1);
         assert_eq!(fake.looks().len(), 2);
+        // Another slot again: the new claim gets the look again.
+        let t2 = t1 + Duration::from_secs(5);
+        worker.handle(Command::Enter(here(5, "Sol")), t2);
+        worker.tick(t2);
+        assert_eq!(fake.log().last().unwrap(), "look 1.2.3.4:29070 \"\" true");
+        assert_eq!(fake.looks().len(), 3);
         // Another server: the old claim is withdrawn and the new one gets it.
         let elsewhere = Location {
             server: "5.6.7.8:29070".parse().unwrap(),
-            ..here(4, "Sol")
+            ..here(5, "Sol")
         };
-        let t2 = t1 + Duration::from_secs(5);
-        worker.handle(Command::Enter(elsewhere), t2);
-        worker.tick(t2);
+        let t3 = t2 + Duration::from_secs(5);
+        worker.handle(Command::Enter(elsewhere), t3);
+        worker.tick(t3);
         assert_eq!(fake.log().last().unwrap(), "look 5.6.7.8:29070 \"\" true");
         // A claim that failed may have lapsed: the next accepted one sends it again.
         fake.fail.store(true, Ordering::SeqCst);
-        let t3 = t2 + Duration::from_secs(46);
-        worker.tick(t3);
+        let t4 = t3 + Duration::from_secs(46);
+        worker.tick(t4);
         fake.fail.store(false, Ordering::SeqCst);
-        worker.tick(t3 + Duration::from_secs(30));
-        assert_eq!(fake.looks().len(), 4);
+        worker.tick(t4 + Duration::from_secs(30));
+        assert_eq!(fake.looks().len(), 5);
         // Leaving needs nothing: the release drops it.
-        worker.handle(Command::Leave, t3 + Duration::from_secs(31));
+        worker.handle(Command::Leave, t4 + Duration::from_secs(31));
         assert_eq!(fake.log().last().unwrap(), "release 5.6.7.8:29070");
+        // Back on the server: a new claim after a release starts with no look.
+        let t5 = t4 + Duration::from_secs(40);
+        worker.handle(Command::Look(Look::default()), t5);
+        worker.handle(Command::Enter(here(5, "Sol")), t5);
+        worker.tick(t5);
+        assert_eq!(fake.log().last().unwrap(), "presence 1.2.3.4:29070");
+        assert_eq!(fake.looks().len(), 5);
+    }
+
+    #[test]
+    fn after_a_failed_claim_the_look_goes_whatever_it_is() {
+        let fake = Fake::default();
+        fake.owned.lock().unwrap().push("saber_sun".to_owned());
+        let t0 = Instant::now();
+        let (mut worker, _) = worker(&fake, t0);
+        worker.handle(Command::Configure(on("https://hub")), t0);
+        worker.handle(Command::Enter(here(3, "Sol")), t0);
+        worker.handle(Command::Look(lit("saber_sun")), t0);
+        worker.tick(t0);
+        assert_eq!(fake.looks(), ["look 1.2.3.4:29070 \"saber_sun\" true"]);
+        // The renewal fails (it timed out, say) while the hub still holds the claim and
+        // its look; meanwhile the look goes back to none.
+        fake.fail.store(true, Ordering::SeqCst);
+        let t1 = t0 + Duration::from_secs(46);
+        worker.tick(t1);
+        worker.handle(Command::Look(Look::default()), t1);
+        fake.fail.store(false, Ordering::SeqCst);
+        // The same claim is accepted again: the hub may still hold the Sun, so none goes.
+        let t2 = t1 + Duration::from_secs(30);
+        worker.tick(t2);
+        assert_eq!(
+            fake.looks().last().unwrap(),
+            "look 1.2.3.4:29070 \"\" false"
+        );
+        assert_eq!(fake.looks().len(), 2);
+        // Known again: not repeated.
+        worker.tick(t2 + Duration::from_secs(46));
+        assert_eq!(fake.looks().len(), 2);
     }
 
     fn refused(status: u16, code: &str) -> HubError {
@@ -1696,8 +1767,8 @@ mod tests {
                 .unwrap()
                 .push_back(refused(status, code));
         }
-        worker.handle(Command::Look(lit("")), t0);
-        let mut at = t0;
+        let mut at = t0 + LOOK_EVERY;
+        worker.handle(Command::Look(lit("")), at);
         for (n, code) in ["rate_limited", "look_quota", "clock"].iter().enumerate() {
             worker.tick(at);
             assert_eq!(fake.looks().len(), sent + n + 1, "{code}");
@@ -1939,13 +2010,15 @@ mod tests {
             [
                 "register",
                 "claim 1.2.3.4:29070 3 Sol",
-                "presence 1.2.3.4:29070"
+                "presence 1.2.3.4:29070",
+                // What the hub held for the key before the start is not known.
+                "look 1.2.3.4:29070 \"\" false"
             ]
         );
         assert_eq!(lock(&snapshot).status, Status::Online);
         // Nothing is due for a while, then the roster, then the claim.
         worker.tick(t0 + Duration::from_secs(10));
-        assert_eq!(fake.log().len(), 3);
+        assert_eq!(fake.log().len(), 4);
         worker.tick(t0 + Duration::from_secs(16));
         assert_eq!(fake.log().last().unwrap(), "presence 1.2.3.4:29070");
         worker.tick(t0 + Duration::from_secs(46));
