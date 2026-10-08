@@ -92,12 +92,6 @@ impl ViewerConsole {
                 "Password used only when joining a locked server",
             ),
             CvarDefinition::new(
-                "con_maxLines",
-                32_i64,
-                CvarFlags::ARCHIVE,
-                "Maximum visible console lines",
-            ),
-            CvarDefinition::new(
                 "fs_gameData",
                 "",
                 CvarFlags::ARCHIVE,
@@ -373,7 +367,7 @@ impl ViewerConsole {
         }
         // ui_menuStyle defaulted to classic and every profile saved it, so the
         // SJK UI, the new default, would reach none. Move a saved classic once
-        // to the default; a classic (or modern) chosen after this stays.
+        // to the default; a classic chosen after this stays.
         if matches!(
             shell
                 .cvars
@@ -432,6 +426,7 @@ impl ViewerConsole {
             }
             let _ = shell.cvars.set_text("cg_cameraStyleDefaultVersion", "1");
         }
+        retire_modern_ui(&mut shell.cvars);
         shell.push_log("^5SJK console ready. ^7Type cmdlist for commands.");
         Ok(Self {
             shell,
@@ -712,6 +707,34 @@ impl ViewerConsole {
     }
 }
 
+/// The modern menus, scoreboard, console and HUD are retired: a saved `modern`
+/// (or the `0` that also named it) goes back to the setting's default, the SJK
+/// UI and the styles that follow it, and the settings only they read are
+/// dropped from the profile instead of being kept as user cvars.
+fn retire_modern_ui(cvars: &mut CvarRegistry) {
+    for style in [
+        crate::menu::style::CVAR,
+        crate::scoreboard::style::CVAR,
+        super::console_options::STYLE_CVAR,
+        crate::menu_hud::STYLE_CVAR,
+    ] {
+        if cvars.get(style).is_some_and(|cvar| {
+            let value = cvar.value.as_text();
+            value.trim().eq_ignore_ascii_case("modern") || value.trim() == "0"
+        }) {
+            let _ = cvars.reset(style);
+        }
+    }
+    for retired in [
+        "ui_accent",
+        "con_lineSpacing",
+        "con_maxLines",
+        "con_datetime",
+    ] {
+        let _ = cvars.unset(retired);
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::console::ViewerConsole;
@@ -766,5 +789,49 @@ mod tests {
         .unwrap();
         let console = ViewerConsole::new(chosen).unwrap();
         assert_eq!(console.shell.binds.get("q"), Some("+wheel general"));
+    }
+
+    /// A profile saved with the retired modern styles starts on the defaults,
+    /// and the settings only they read are gone; other saved styles stay.
+    #[test]
+    fn saved_modern_styles_go_back_to_the_defaults() {
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("config.cfg");
+        std::fs::write(
+            &path,
+            "seta ui_menuStyle \"modern\"\nseta cg_scoreboardStyle \"0\"\n\
+             seta con_style \"Modern\"\nseta cg_hudStyle \"modern\"\n\
+             seta ui_accent \"blue\"\nseta con_lineSpacing \"1.2\"\n\
+             seta con_maxLines \"40\"\nseta con_datetime \"1\"\n",
+        )
+        .unwrap();
+        let console = ViewerConsole::new(path).unwrap();
+        assert_eq!(console.text_value("ui_menuStyle"), Some("sjk"));
+        assert_eq!(console.text_value("cg_scoreboardStyle"), Some("auto"));
+        assert_eq!(console.text_value("con_style"), Some("auto"));
+        assert_eq!(console.text_value("cg_hudStyle"), Some("game"));
+        for retired in [
+            "ui_accent",
+            "con_lineSpacing",
+            "con_maxLines",
+            "con_datetime",
+        ] {
+            assert!(console.shell.cvars.get(retired).is_none(), "{retired}");
+        }
+        // The other looks stay as chosen.
+        let chosen = directory.path().join("chosen.cfg");
+        std::fs::write(
+            &chosen,
+            "seta ui_menuStyleDefaultVersion \"1\"\nseta ui_menuStyle \"classic\"\n\
+             seta cg_scoreboardStyleDefaultVersion \"1\"\nseta cg_scoreboardStyle \"classic\"\n\
+             seta con_styleDefaultVersion \"1\"\nseta con_style \"sjk\"\n\
+             seta cg_hudStyle \"radial\"\n",
+        )
+        .unwrap();
+        let console = ViewerConsole::new(chosen).unwrap();
+        assert_eq!(console.text_value("ui_menuStyle"), Some("classic"));
+        assert_eq!(console.text_value("cg_scoreboardStyle"), Some("classic"));
+        assert_eq!(console.text_value("con_style"), Some("sjk"));
+        assert_eq!(console.text_value("cg_hudStyle"), Some("radial"));
     }
 }

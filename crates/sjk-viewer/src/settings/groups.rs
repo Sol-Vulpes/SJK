@@ -1,9 +1,9 @@
-//! The classic Setup page's own groups. Retail's `setup.menu` and the modern
-//! settings tabs cut the settings differently, so classic+ regroups them by
+//! The classic Setup page's own groups. Retail's `setup.menu` and the settings
+//! screen's tabs cut the settings differently, so classic+ regroups them by
 //! what they are about (`docs/classic-plus.md`): gameplay options, the
 //! menus and console, the HUD, the scoreboard. Each group lists its rows'
 //! cvars; the settings come from the catalogue, so a group shows the same
-//! rows the modern tabs do.
+//! rows the tabs do.
 
 use super::catalog::*;
 use std::sync::OnceLock;
@@ -46,7 +46,7 @@ impl Group {
         Self::Scoreboard,
     ];
 
-    /// The group's name, as the one tab of the modern screen showing it.
+    /// The group's name, as the one tab of the tabbed screen showing it.
     const CAPTIONS: [&'static str; 6] = [
         "GAME OPTIONS",
         "INTERFACE",
@@ -93,14 +93,12 @@ impl Group {
             ],
             Self::Interface => &[
                 crate::menu::style::CVAR,
-                "ui_accent",
                 "ui_menuContrast",
                 crate::game_font::CVAR,
                 crate::text::style::SCALE_CVAR,
                 crate::text::style::TRACKING_CVAR,
                 crate::console::console_options::STYLE_CVAR,
                 "con_scale",
-                "con_lineSpacing",
                 crate::quick_wheel::pages::FILE,
                 crate::quick_wheel::SOUNDS_CVAR,
             ],

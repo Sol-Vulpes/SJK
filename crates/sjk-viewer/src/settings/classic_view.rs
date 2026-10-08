@@ -189,31 +189,6 @@ impl SettingsMenu {
             .is_some_and(|classic| classic.pinned.is_some())
     }
 
-    /// Carry on as the modern screen after the menu style changed under a
-    /// classic panel: a classic group's row is shown on the modern tab that
-    /// holds it.
-    pub(crate) fn continue_modern(&mut self, console: &ViewerConsole) {
-        if !matches!(self.section, Section::Group(_) | Section::Search) {
-            return;
-        }
-        let cvar = self.rows().get(self.selected).map(|setting| setting.cvar);
-        // First setup carries on as the FIRST SETUP tab, which has the same
-        // rows (its Menu style row is also Interface's).
-        let quick = matches!(self.section, Section::Group(Group::Quick));
-        let mut tabs = quick.then_some(QUICK_TAB).into_iter().chain(0..TABS.len());
-        let found = tabs.find_map(|tab| {
-            let row = settings(tab)
-                .iter()
-                .position(|setting| Some(setting.cvar) == cvar)?;
-            Some((tab, row))
-        });
-        let (tab, row) = found.unwrap_or((0, 0));
-        self.section = Section::General;
-        self.tab = tab;
-        self.selected = row;
-        self.refresh(console);
-    }
-
     /// Back to the full tabbed screen, keeping the tab.
     pub(crate) fn leave_classic(&mut self) {
         if self.classic.take().is_some() {
@@ -1169,9 +1144,10 @@ mod tests {
         assert!(!menu.open_dropdown(&console, fonts));
         let contrast = row_of(&menu, "ui_menuContrast");
         assert!(!menu.open_dropdown(&console, contrast));
-        // The accent's six choices still open a list.
-        assert!(menu.open_dropdown(&console, row_of(&menu, "ui_accent")));
-        menu.dropdown = None;
+        // A longer choice still opens a list: Video's display modes.
+        let mut video = SettingsMenu::new();
+        video.open_tab(&console, SettingsMenu::tab_index("VIDEO").unwrap());
+        assert!(video.open_dropdown(&console, row_of(&video, "r_fullscreen")));
         // A segment sets its own value; the reset button the default.
         menu.activate_control(
             &mut console,

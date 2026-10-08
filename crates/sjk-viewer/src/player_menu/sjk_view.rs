@@ -2,9 +2,9 @@
 //! player's name as the screen's title, the three pages as tabs under it,
 //! their rows in a column on the left drawn with the SJK UI's kit, and the
 //! model standing on the menu map's stage on the right, a caption beside it as
-//! in a gallery. It is the modern screen's state with another view: the rows,
-//! the grid's tiles, the tabs and the back key answer to the modern screen's
-//! tokens, so its keys and pointer work unchanged. Each row registers its
+//! in a gallery. It is the player screen's shared state with a view of its own:
+//! the rows, the grid's tiles, the tabs and the back key answer to the
+//! screen's tokens, so its keys and pointer work unchanged. Each row registers its
 //! control first and then the whole row, so a token's rectangle is its
 //! control's ([`MenuCanvas::rect_for`]); a click on a row outside its control
 //! only chooses the row (`pointer.rs`).
@@ -248,7 +248,7 @@ impl PlayerMenu {
         target.append(&self.canvas, viewport);
     }
 
-    /// The SJK UI's own pointer targets, before the modern screen's:
+    /// The SJK UI's own pointer targets, before the screen's shared ones:
     /// - a level cell chooses its power's row when hovered and, clicked, sets
     ///   the power to that level (its own level steps it down one, as
     ///   classic+'s stars do);
@@ -256,7 +256,7 @@ impl PlayerMenu {
     /// - a hilt chooses that hilt, the wheel over a list scrolls it, and a
     ///   click on a list beside its hilts only chooses its row.
     ///
-    /// `None` leaves the event to the modern screen.
+    /// `None` leaves the event to the shared handling.
     pub(super) fn sjk_pointer(
         &mut self,
         kind: sjk_ui::UiEventKind,

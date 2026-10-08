@@ -534,11 +534,6 @@ pub(super) const GAME: &[Setting] = &[
         },
     },
     Setting {
-        label: "Menu accent",
-        cvar: "ui_accent",
-        kind: ValueKind::Choice(&["ember", "amber", "blue", "green", "violet", "neutral"]),
-    },
-    Setting {
         label: "Menu contrast",
         cvar: "ui_menuContrast",
         kind: ValueKind::Choice(&["off", "standard", "strong"]),
@@ -599,8 +594,7 @@ pub(super) const NETWORK: &[Setting] = &[
         },
     },
 ];
-/// Text size and spacing, and the console's style. Menu rows keep their layout;
-/// modern console rows follow `con_lineSpacing`.
+/// Text size and spacing, and the console's style. Menu rows keep their layout.
 pub(super) const TEXT: &[Setting] = &[
     Setting {
         label: "Console style",
@@ -630,15 +624,6 @@ pub(super) const TEXT: &[Setting] = &[
         cvar: "con_scale",
         kind: ValueKind::Float {
             min: 0.5,
-            max: 2.0,
-            step: 0.05,
-        },
-    },
-    Setting {
-        label: "Console line spacing",
-        cvar: "con_lineSpacing",
-        kind: ValueKind::Float {
-            min: 0.8,
             max: 2.0,
             step: 0.05,
         },

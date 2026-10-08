@@ -260,7 +260,7 @@ mod tests {
 
     /// The console's looks over duel6, half open on made-up scrollback with a
     /// command being typed (its unique completion ghosted) and two rows
-    /// selected: the SJK UI's deck, the classic and modern consoles; the deck
+    /// selected: the SJK UI's deck and the classic console; the deck
     /// full height and at 4K, and scrolled back.
     #[test]
     #[ignore = "renders with the GPU and the installed game data named by JKA_GAME_DATA"]
@@ -312,7 +312,6 @@ mod tests {
                 &[
                     ("duel6-console-sjk", "sjk", "0.5"),
                     ("duel6-console-classic", "classic", "0.5"),
-                    ("duel6-console-modern", "modern", "0.5"),
                     ("duel6-console-sjk-full", "sjk", "1"),
                 ],
             );
@@ -584,7 +583,7 @@ mod tests {
 
     /// A new profile's first start: no menu style saved, so the SJK UI, and
     /// First setup opening by itself on its Menu style row; then the style
-    /// switched to classic and to modern from there, First setup staying.
+    /// switched to classic from there, First setup staying.
     #[test]
     #[ignore = "renders with the GPU and the installed game data named by JKA_GAME_DATA"]
     fn duel6_first_setup() {
@@ -598,13 +597,11 @@ mod tests {
             gpu.ui_epoch -= std::time::Duration::from_millis(2_000);
             let path = shoot(&mut gpu, 20, "duel6-first-setup-sjk");
             println!("{}", path.display());
-            for style in ["classic", "modern"] {
-                if let Some(console) = gpu.console.as_mut() {
-                    console.set_cvar(crate::menu::style::CVAR, style);
-                }
-                let path = shoot(&mut gpu, 20, &format!("duel6-first-setup-{style}"));
-                println!("{}", path.display());
+            if let Some(console) = gpu.console.as_mut() {
+                console.set_cvar(crate::menu::style::CVAR, "classic");
             }
+            let path = shoot(&mut gpu, 20, "duel6-first-setup-classic");
+            println!("{}", path.display());
         });
     }
 
@@ -658,12 +655,6 @@ mod tests {
             let path = shoot(&mut gpu, 30, &format!("{name}-saber-dual"));
             println!("{}", path.display());
         });
-    }
-
-    #[test]
-    #[ignore = "renders with the GPU and the installed game data named by JKA_GAME_DATA"]
-    fn duel6_player_modern() {
-        duel6_player("modern", "duel6-player-modern");
     }
 
     #[test]
@@ -1198,14 +1189,14 @@ like this one.",
     }
 
     /// Every scoreboard look with the SJK emblem and medal ribbon bars after the names
-    /// of the made-up players the hub knows: classic and modern on a free for all, the
-    /// SJK UI's on a free for all and a duel (the bars on a duelist's card).
+    /// of the made-up players the hub knows: classic on a free for all, the SJK UI's on
+    /// a free for all and a duel (the bars on a duelist's card).
     #[test]
     #[ignore = "renders with the GPU and the installed game data named by JKA_GAME_DATA"]
     fn duel6_scoreboard_medals() {
         use crate::scoreboard::shot::Match;
         on_big_stack(|| {
-            for style in ["classic", "modern", "sjk"] {
+            for style in ["classic", "sjk"] {
                 let Some((mut gpu, _profile)) = open("maps/mp/duel6.bsp", [1920, 1080], None, &[])
                 else {
                     return;
@@ -1482,7 +1473,7 @@ like this one.",
     /// (there is no server): the game menu with its Camera control entry
     /// chosen, then the panel on its Camera page; in the SJK UI also the Sun
     /// page, a number being typed and the Sun page where the sun cannot be
-    /// set, and a 4:3 window; the modern look for its new name.
+    /// set, and a 4:3 window; the classic bar and its panel, opened by F8.
     #[test]
     #[ignore = "renders with the GPU and the installed game data named by JKA_GAME_DATA"]
     fn duel6_camera_control() {
@@ -1495,7 +1486,7 @@ like this one.",
             for (style, size, prefix) in [
                 ("sjk", [1920, 1080], "duel6-camera"),
                 ("sjk", [1440, 1080], "duel6-camera-4x3"),
-                ("modern", [1920, 1080], "duel6-camera-modern"),
+                ("classic", [1920, 1080], "duel6-camera-classic"),
             ] {
                 let menu = menu::ClientMenu::new(false, String::new());
                 let cvars = [
@@ -1528,8 +1519,8 @@ like this one.",
                         .sjk_for_shot(Card::for_shot(false, false), ffa);
                     gpu.game_menu_row = Entry::Shot.index();
                 } else {
-                    // Without a vote on, the modern main page's tenth row.
-                    gpu.game_menu_row = 9;
+                    // The classic bar has no entry: F8 opens the panel there.
+                    gpu.game_menu_row = 0;
                 }
                 let entry = format!("{prefix}-entry");
                 println!("{}", shoot(&mut gpu, 16, &entry).display());
@@ -1709,8 +1700,8 @@ like this one.",
     /// Settings > Quick wheel in the SJK UI over duel6: the pages with General
     /// focused, a choice focused (the preview highlighting it), the catalogue
     /// changing it, a custom choice's form, a new page being named, then the
-    /// page filled; and the same editor opened from the classic+ and modern
-    /// settings' Interface row.
+    /// page filled; and the same editor opened from the classic+ settings'
+    /// Interface row.
     #[test]
     #[ignore = "renders with the GPU and the installed game data named by JKA_GAME_DATA"]
     fn duel6_quick_wheel_settings() {
@@ -1803,25 +1794,20 @@ like this one.",
                 }
                 println!("{}", shoot(&mut gpu, 6, name).display());
             }
-            for (style, classic) in [("classic", true), ("modern", false)] {
-                if let Some(console) = gpu.console.as_mut() {
-                    console.set_cvar(crate::menu::style::CVAR, style);
-                }
-                let _ = frame(&mut gpu, 2);
-                if let (Some(menu), Some(console)) =
-                    (gpu.client_menu.as_mut(), gpu.console.as_ref())
-                {
-                    menu.wheel_overlay_for_shot(console, classic);
-                }
-                let path = shoot(&mut gpu, 6, &format!("duel6-wheel-settings-{style}"));
-                println!("{}", path.display());
+            if let Some(console) = gpu.console.as_mut() {
+                console.set_cvar(crate::menu::style::CVAR, "classic");
             }
+            let _ = frame(&mut gpu, 2);
+            if let (Some(menu), Some(console)) = (gpu.client_menu.as_mut(), gpu.console.as_ref()) {
+                menu.wheel_overlay_for_shot(console);
+            }
+            let path = shoot(&mut gpu, 6, "duel6-wheel-settings-classic");
+            println!("{}", path.display());
         });
     }
 
     /// The game menu's Players page (a small scoreboard) and its Report page, in the
-    /// SJK UI, the classic and the modern menus, for a verified player and for one who
-    /// is not, and
+    /// SJK UI and the classic menus, for a verified player and for one who is not, and
     /// the report's dialog: on a made-up roster over duel6.
     #[test]
     #[ignore = "renders with the GPU and the installed game data named by JKA_GAME_DATA"]
@@ -1829,7 +1815,7 @@ like this one.",
         use crate::ingame_menu::players::{Gate, State};
         use crate::ingame_menu::{Page, ShotView, sjk_view::Card};
         on_big_stack(|| {
-            for style in ["sjk", "classic", "modern"] {
+            for style in ["sjk", "classic"] {
                 let menu = menu::ClientMenu::new(false, String::new());
                 let cvars = [
                     ("ui_menuStyle", style),

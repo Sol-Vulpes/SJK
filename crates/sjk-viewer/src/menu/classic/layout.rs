@@ -275,7 +275,7 @@ impl Entry {
             Self::Network => Outcome::Settings("NETWORK"),
             Self::Graphics => Outcome::Page(Page::Graphics),
             Self::Gameplay => Outcome::Page(Page::Gameplay),
-            // Each opens its panel ([`Entry::panel`]); the modern screen otherwise.
+            // Each opens its panel ([`Entry::panel`]); the renderer settings otherwise.
             Self::RenderImage | Self::RenderLighting | Self::RenderShadows | Self::Weather => {
                 Outcome::Open(MainDestination::Renderer)
             }

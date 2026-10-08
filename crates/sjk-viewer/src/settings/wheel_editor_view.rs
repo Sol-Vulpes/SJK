@@ -6,7 +6,7 @@
 //! the keys of what has the keyboard bottom right.
 //!
 //! Positions are pixels of the SJK UI's 16:9 frame ([`Frame`]), in the columns of
-//! Settings' rows and detail; outside the SJK UI (classic+, modern) the same
+//! Settings' rows and detail; outside the SJK UI (classic+, tabbed) the same
 //! layout is drawn on its own over the screen, moved left where the rail would
 //! be.
 
@@ -39,7 +39,7 @@ const KEYS_Y: f32 = 992.0;
 /// A row's small controls: their side and the gap between them.
 const BUTTON: f32 = 30.0;
 const BUTTON_GAP: f32 = 6.0;
-/// How far left the layout moves without the rail (classic+, modern), so it
+/// How far left the layout moves without the rail (classic+, tabbed), so it
 /// sits in the middle of the frame.
 const OVERLAY_SHIFT: f32 = -190.0;
 
@@ -77,7 +77,7 @@ impl SettingsMenu {
         target.append(&editor.ui, viewport);
     }
 
-    /// Draw the editor on its own over the classic+ or modern settings, in the
+    /// Draw the editor on its own over the classic+ or tabbed settings, in the
     /// SJK UI's look, its text in the menus' `font`.
     pub(super) fn append_wheel_overlay(
         &mut self,

@@ -297,29 +297,6 @@ impl MenuCanvas {
         label
     }
 
-    /// Zero-through-three level indicator (three pills) without any game policy.
-    pub(crate) fn pip_row(&mut self, rect: Rect, level: u8, color: Color) {
-        let gap = 5.0;
-        let width = (rect.width - gap * 2.0) / 3.0;
-        for index in 0..3 {
-            let filled = index < usize::from(level);
-            let _ = self.draw.push(DrawCommand::RoundedRect {
-                rect: Rect::new(
-                    rect.x + index as f32 * (width + gap),
-                    rect.y,
-                    width,
-                    rect.height,
-                ),
-                radius: rect.height * 0.5,
-                color: if filled {
-                    color
-                } else {
-                    Color::new(1.0, 1.0, 1.0, 0.13)
-                },
-            });
-        }
-    }
-
     /// A row whose value is a right-aligned action verb (`EDIT  >`).
     pub(crate) fn form_action_row(
         &mut self,

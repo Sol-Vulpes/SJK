@@ -179,12 +179,6 @@ pub(super) fn register_daily_cvars(cvars: &mut CvarRegistry) -> Result<(), sjk_s
             "Synchronize presentation (0/1)",
         ),
         CvarDefinition::new(
-            "ui_accent",
-            "ember",
-            archive,
-            "Menu accent: ember, amber, blue, green, violet, neutral, or RRGGBB hex",
-        ),
-        CvarDefinition::new(
             crate::menu_widgets::MenuContrast::CVAR,
             "standard",
             archive,
@@ -194,7 +188,7 @@ pub(super) fn register_daily_cvars(cvars: &mut CvarRegistry) -> Result<(), sjk_s
             crate::menu::style::CVAR,
             crate::menu::style::MenuStyle::DEFAULT_NAME,
             archive,
-            "Menu layout: sjk (the SJK UI), classic (after the original Jedi Academy menus) or modern",
+            "Menu layout: sjk (the SJK UI) or classic (after the original Jedi Academy menus)",
         ),
         CvarDefinition::new(
             "r_gamma",
@@ -234,7 +228,7 @@ pub(super) fn register_daily_cvars(cvars: &mut CvarRegistry) -> Result<(), sjk_s
             "cg_hudScale",
             0.7_f64,
             archive,
-            "Size multiplier for the modern HUD widgets (0.25 to 2)",
+            "Size multiplier for the HUD (0.25 to 2)",
         ),
         CvarDefinition::new(
             "cg_thirdPersonRange",
@@ -640,7 +634,7 @@ pub(super) fn register_daily_cvars(cvars: &mut CvarRegistry) -> Result<(), sjk_s
             crate::scoreboard::style::CVAR,
             crate::scoreboard::style::ScoreboardStyle::DEFAULT_NAME,
             archive,
-            "Scoreboard layout: auto (sjk with the SJK UI's menus, else classic), sjk, classic (after the retail scoreboard), or modern",
+            "Scoreboard layout: auto (sjk with the SJK UI's menus, else classic), sjk, or classic (after the retail scoreboard)",
         ),
         CvarDefinition::new(
             "cg_smallScoreboard",

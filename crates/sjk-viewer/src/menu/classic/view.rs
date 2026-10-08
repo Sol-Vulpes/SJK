@@ -365,8 +365,8 @@ fn backdrop_art(
     }
 }
 
-/// The retail background alone, opaque, under a modern screen a classic
-/// page opened while the world is not drawn: the sub-pages' backdrop and
+/// The retail background alone, opaque, under a screen a classic page
+/// opened while the world is not drawn: the sub-pages' backdrop and
 /// glyph columns, without their frames.
 pub(crate) fn opaque_backdrop(canvas: &mut MenuCanvas, viewport: [f32; 2], art_set: ArtSet) {
     let place = Placement::new(viewport);

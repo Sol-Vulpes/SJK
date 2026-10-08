@@ -1,5 +1,5 @@
-//! Screens the main menu opens, shared by every menu style so the modern
-//! and classic layouts lead to the same places.
+//! Screens the main menu opens, shared by both menu styles so the SJK UI
+//! and the classic layout lead to the same places.
 
 use super::*;
 

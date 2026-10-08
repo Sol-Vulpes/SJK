@@ -134,18 +134,9 @@ impl ViewerConsole {
     /// codes; how many characters, or `None` if none is selected.
     fn copy_output(&mut self) -> Option<usize> {
         let (start, end) = self.selection.range()?;
-        // The classic console draws stamps beside the text, so its marks count
-        // bytes of the text alone.
-        let options = self.options();
-        let stamped = options.timestamps != 0
-            && options.style == super::console_options::ConsoleStyle::Modern;
-        let lines = self.shell.lines().map(|line| {
-            if stamped {
-                line.stamped_text.as_str()
-            } else {
-                line.text.as_str()
-            }
-        });
+        // The console draws stamps beside the text, so its marks count bytes
+        // of the text alone.
+        let lines = self.shell.lines().map(|line| line.text.as_str());
         let first = self.shell.lines_written() - self.shell.lines().count() as u64;
         let mut text = String::new();
         copy_range(lines, first, start, end, &mut text);

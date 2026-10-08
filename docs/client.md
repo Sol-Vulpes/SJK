@@ -75,10 +75,10 @@ pixels are reduced to that; decoded previews are cached up to 64 MiB.
 ## Menu style
 
 `ui_menuStyle` (Settings, GAME tab, "Menu style") picks the layout of the main
-and in-game menus: `sjk` (default), the SJK UI; `modern` (or `0`); or `classic`
-(or `1`), which is close to the retail multiplayer menus in layout and flow
-without porting their `.menu` scripts. An unknown value falls back to `sjk`. The
-retail 640x480 layout is fitted to the window height and centred.
+and in-game menus: `sjk` (default), the SJK UI; or `classic` (or `1`), which is
+close to the retail multiplayer menus in layout and flow without porting their
+`.menu` scripts. An unknown value falls back to `sjk`. The retail 640x480 layout
+is fitted to the window height and centred.
 
 SJK's own classic pages keep the retail look and add modern help inside it; the
 rules are in [Classic+ menus](classic-plus.md).
@@ -86,11 +86,25 @@ rules are in [Classic+ menus](classic-plus.md).
 Before 08/10/2026 SJK's default was `classic`, and `config.cfg` saves every
 archived cvar, so every existing profile carries it. The console's start moves a
 saved `classic` once to `sjk` and marks the profile (`ui_menuStyleDefaultVersion`
-1, archived); a style chosen after that, `classic` included, stays, and a saved
-`modern` was a choice and is left alone
+1, archived); a style chosen after that, `classic` included, stays
 ([console_session.rs](../crates/sjk-viewer/src/console_session.rs)). The style is
 also the first row of [First setup](#first-setup), under Styles with the camera
 style.
+
+SJK began with a third, native style, `modern` (or `0`): a column of entries over
+the live map, with its own browser, settings tabs, in-game menu, scoreboard
+(`cg_scoreboardStyle modern`), console (`con_style modern`) and HUD layout
+(`cg_hudStyle modern`), and a gate on mp/ffa3 that opened onto the server being
+joined. It is gone. The console's start puts a saved `modern` (or `0`) in any of
+those settings back to its default (the SJK UI, `auto`, `auto` and `game`) and
+drops the settings only it read (`ui_accent`, `con_lineSpacing`, `con_maxLines`,
+`con_datetime`) from the profile (`retire_modern_ui` in
+[console_session.rs](../crates/sjk-viewer/src/console_session.rs)). A few
+screens the classic pages and the SJK UI open have no version of their own yet
+and keep that style's hero look: Create game and its map picker, the tabbed
+settings screen (the renderer settings, the HUD picker, the resolution list),
+the key-binding editor opened on its own, the Update page and Camera control
+with the classic menus.
 
 The SJK UI is SJK's own menus drawn over the live map in SJK's type
 ([SJK UI](sjk-ui.md)). It has its main page: the emblem in a
@@ -124,7 +138,7 @@ Settings and SJK in place of retail's Controls and Setup:
 - Every sub-page repeats the navigation row (Play, Profile, Settings, SJK) and
   has Back and Exit.
 - Profile opens the retail profile pages (`player`, `player2`, `saber`), which
-  edit the same drafts as the modern Player screen and write them at once:
+  edit the same drafts as the SJK UI's Character and write them at once:
   - Profile: name, team colour and the head grid (six 64-unit cells per row),
     Custom to character creation, APPLY on to lightsaber creation, Exit. SJK
     sets Custom beside a Force button (retail's in-game `configforce` art) to
@@ -161,7 +175,7 @@ Settings and SJK in place of retail's Controls and Setup:
     (`r | g << 8 | b << 16`), as JoF EJK's `UI_UpdateSaberColor` writes them.
     A swatch brings a stock colour back.
   - Force: retail's in-game `ingame_playerforce` window, here on both
-    frames, editing the same draft as the modern Force tab. It keeps retail's
+    frames, editing the same draft as the SJK UI's Force tab. It keeps retail's
     frame, title band, gold mastery line, blue and red side bars and level
     stars, each numbered with what that level costs (`UI_DrawForceStars`:
     `forcestarN` once bought, `forcecircleN` before), and retail's templates
@@ -229,8 +243,8 @@ Settings and SJK in place of retail's Controls and Setup:
   last.
 
 Join Server opens retail's join-server screen (`ui/jamp/joinserver.menu`) on
-the same browser as the modern style, so the list, favourites, filters and
-sorting carry over between styles. Labels and buttons are in capitals:
+the same browser as the SJK UI's, so the list, favourites, filters and sorting
+carry over between styles. Labels and buttons are in capitals:
 
 - GET NEW LIST and REFRESH LIST both fetch the master list again, as retail's
   `RefreshServers` behind both did.
@@ -268,8 +282,8 @@ Settings' two tabs sit on the panel's title band, KEY BINDINGS on the left and
 OPTIONS on the right; a click switches, and Tab walks through the groups of both
 tabs in turn. Each tab keeps its group list down the left and shows the chosen
 group's items in the panel beside it, opening on First setup (OPTIONS) and Movement
-(KEY BINDINGS). The items are the same settings and key bindings as the modern
-screens, laid out the retail way (labels set against a column at retail
+(KEY BINDINGS). The items are the same settings and key bindings as the tabbed
+settings screen's, laid out the retail way (labels set against a column at retail
 `textalignx`, the value after them, the open group's entry in white) with
 classic+'s own controls, below. A group with more items than the
 panel holds scrolls: the wheel over its items moves the list one item per notch
@@ -310,8 +324,8 @@ retail's YES/NO text and `menu/new` slider art:
 - A choice of two or three values (menu style, menu contrast, console style,
   scoreboard style) shows them all side by side, the one in use filled gold; a
   click on one sets it, Left and Right step.
-- A longer list (the menu accent), the display mode, the resolution and the HUD
-  show their value in a field with a small caret; a click or Enter opens the list.
+- A longer list (the display mode, the resolution, the HUD) shows its value in
+  a field with a small caret; a click or Enter opens the list.
   A text setting shows its text in a field, typed in place.
 - The longer groups are divided by sub-headings: Game options (items and models,
   effects, camera and prediction), Interface (menus, console), HUD (layout,
@@ -320,7 +334,7 @@ retail's YES/NO text and `menu/new` slider art:
 
 Retail split video and the Force binds over two pages because a page held few
 items; classic+ panels scroll and explain the focused item, so SJK shows each as
-one group and regroups the modern GAME, HUD, HUD+ and TEXT tabs by subject
+one group and regroups the settings screen's GAME, HUD, HUD+ and TEXT tabs by subject
 ([settings/groups.rs](../crates/sjk-viewer/src/settings/groups.rs)):
 
 - OPTIONS lists First setup, Graphics, Sound and Gameplay (Sol's grouping,
@@ -338,9 +352,8 @@ one group and regroups the modern GAME, HUD, HUD+ and TEXT tabs by subject
     here from the key bindings). Game Options holds the gameplay rows (simple
     items, forced models, saber and speed trails, aura shell, shader remaps,
     third-person camera style and damping, prediction smoothing). Interface
-    gathers the menus' and console's look (menu style, accent, contrast, game
-    fonts, menu text size and
-    spacing, console style, text size and line spacing); HUD the HUD style, files
+    gathers the menus' and console's look (menu style, contrast, game fonts, menu
+    text size and spacing, console style and text size); HUD the HUD style, files
     and scale, status, weapon bar, crosshair and its size, names, nameplates,
     timer, speedometer, team overlay, lagometer, chat and ground readout;
     Scoreboard its style, client numbers, head icons and small rows. Network
@@ -407,15 +420,14 @@ Graphics and Gameplay pages to OPTIONS).
 The classic in-game bar's Settings opens the same panels as retail's
 `ingame_setup` and `ingame_controls` pop-ups, with the two tabs on the pop-up's
 title band: a box under the bar with the group list and panel at their in-game
-positions and no navigation row, closing back to the bar. Switching the Menu style (on Interface) while a panel is
-open continues on the modern settings screen.
+positions and no navigation row, closing back to the bar.
 
 The classic in-game menu (Escape during a match) is the retail top bar: About,
 Join, Profile, Add Bot, Settings (retail's Controls and Setup), Vote, Call Vote
 and Exit, after SJK's own narrower SJK button at its left end. Each opens a pop-up under it or the matching screen. SJK's pop-up holds
 SJK's own screens, for now the [changelog page](#changelog-page)
 ([ingame_menu/sjk.rs](../crates/sjk-viewer/src/ingame_menu/sjk.rs) lists them);
-the modern game menu has the same pop-up as its SJK row, before Server info.
+the SJK UI's in-game menu has the same page as its Sol JK entry.
 About shows the server info. Join picks
 a team, or opens the class list in Siege; in a team game Team Red and Team Blue
 carry their flag (`gfx/hud/mpi_rflag`, `mpi_bflag`) and the team's player count. Vote is Yes/No. Call Vote opens the
@@ -432,7 +444,7 @@ Objectives, V Chat and Restart Match are dimmed with a note, because the client
 cannot add bots or restart a match it does not host. Left and Right move along
 the bar; Escape closes a pop-up, then the menu. The Server browser and
 [Camera control](#camera-control) entries, which retail did not have, are in the
-modern style and the SJK UI only (F8 opens Camera control in every style).
+SJK UI only (F8 opens Camera control in either style).
 
 With the player's retail game data mounted, the classic menus draw its own
 artwork: the backdrop, side glyph columns, ring, windows, logo, sub-page frames,
@@ -457,9 +469,8 @@ lights shimmer (0.30 ± 0.15 from two sines of 0.9 and 0.37 seconds), drawn as
 additive glow layers over the still emblem. The emblem is bundled
 ([assets/branding](../assets/branding/README.md), drawn by
 [menu/emblem.rs](../crates/sjk-viewer/src/menu/emblem.rs)) and decoded with its
-mip chain on a worker thread when the first menu shows. The modern main page
-shows it too, 128 units (pixels at 1080 lines) high above its title line and
-aligned with the entry column; it shrinks in short windows. The ring
+mip chain on a worker thread when the first menu shows. The SJK UI's main page
+shows it too, in its turning holo ring ([SJK UI](sjk-ui.md)). The ring
 turns 5 degrees a second (`tcMod rotate 5`), the side glyph columns climb over
 their `menu_side_text_b` backdrop (`tcMod scroll 0 0.025`), and a quarter of
 `env_logo` drifts through the logo's translucent letters between an opaque and a
@@ -477,17 +488,17 @@ typed text, vote-list names and the about values keep their case.
 
 Outside a match the classic style draws no world. The main pages are opaque
 over the retail background (the main page's emblem fills the centre gap,
-the sub-pages' gap stays dark), and the modern screens they open (Settings, key
-bindings, Player, Create game) get the retail backdrop beneath them; the classic
-server browser draws its own. The frame
+the sub-pages' gap stays dark), and the screens they open (the tabbed settings,
+key bindings, Player, Create game) get the retail backdrop beneath them; the
+classic server browser draws its own. The frame
 then clears instead of rendering the map, its secondary views and flares; the
 boot map is still loaded, because the menu world is what joins build on, and
-switching back to `modern` shows it again. Not loading it at all in the classic
+switching to the SJK UI shows it again. Not loading it at all in the classic
 style is a possible follow-up. Over a live match the in-game menu and the
 screens it opens leave the game visible, as retail's do.
 
-Joins and server map changes show retail's loading screens instead of the
-modern gate. Until the gamestate arrives it is the connect screen
+Joins and server map changes show retail's loading screens. Until the gamestate
+arrives it is the connect screen
 (`ui/jamp/connect.menu`, `UI_DrawConnectScreen`): `menu/art/unknownmap_mp`,
 "Connecting to <address>" (or "Starting up..." when the client hosts the game)
 and "Awaiting connection...", "Awaiting challenge..." or "Awaiting
@@ -501,9 +512,9 @@ force rules and the game type's rules, worded from the player's `MP_INGAME`
 strings. The LED bar along the bottom (`gfx/hud/mp_levelload`, `load_tick`,
 `load_tick_cap`) has retail's nine ticks; the client lights them from its own load
 (gamestate, map parse, world build, world ready, session) rather than cgame's
-registration steps. Colour codes in the host name are dropped. The gate stays
-shut, the destination world is adopted only once it is built from the
-session's own gamestate with the session in hand, and the player never walks a
+registration steps. Colour codes in the host name are dropped. The destination
+world is adopted only once it is built from the session's own gamestate with the
+session in hand, and the player never walks a
 preview world: the screen stays until the map is live. Escape or a click
 cancels, as before. A failed join shows the connect screen with the reason; a
 retail-style error page (`error.menu`) is not drawn yet. The loading screen is
@@ -540,8 +551,8 @@ are in [destination.rs](../crates/sjk-viewer/src/menu/destination.rs).
 Planned follow-ups, each a new page or screen module, following the retail
 `ui/jamp` menus:
 
-- Classic versions of the screens the classic pages still open in the modern
-  style: Join Server's `findplayer` and `createfavorite` pop-ups, Create
+- Classic versions of the screens the classic pages still open in SJK's hero
+  look: Join Server's `findplayer` and `createfavorite` pop-ups, Create
   Server (`createserver`, `advancedcreateserver`),
   Solo Game (`quickgame`).
 - Retail option items SJK has no setting for (video quality presets, colour
@@ -559,13 +570,12 @@ The player screen's Character and Saber pages write their cvars as soon as a
 value changes. The Force page edits a draft instead: Apply writes `forcepowers`
 once, in the stock format and legalized as before, Discard returns to the applied
 profile, and leaving the screen drops unapplied changes. While a draft is pending,
-the page's points line reads NOT APPLIED and the footer's Back cap says that
-leaving drops it. Power icons (`gfx/mp/f_icon_*`) and side emblems
+the page says it is not applied yet (the SJK UI's points line, the classic Force
+window's status). Power icons (`gfx/mp/f_icon_*`) and side emblems
 (`gfx/hud/mpi_jlight`, `gfx/hud/mpi_dklight`) come from the installed game data;
 without them the page shows text only. They take icon-atlas cells of their own
 after the HUD's, so the character grid keeps all 207 of its icon cells. See
-[force.rs](../crates/sjk-viewer/src/player_menu/force.rs) and
-[force_view.rs](../crates/sjk-viewer/src/player_menu/force_view.rs).
+[force.rs](../crates/sjk-viewer/src/player_menu/force.rs).
 
 The Character page's grid (and the classic head grid) can list far more models
 than those 207 cells: an installation with community packs lists over 900. The
@@ -692,9 +702,8 @@ mirrors and portals. A piece this client does not have is not drawn.
 number or a name they wear one (the same again takes it off), `cosmetics
 clear` takes both off and `cosmetics visibility [off|on|onlyme]` shows or sets
 `cg_cosmetics` ([command.rs](../crates/sjk-viewer/src/cosmetics/command.rs)).
-The classic profile's Cosmetics window does the same, and the modern player
-screen's Character page has Hat and Cape rows under its grid (None, then
-each installed piece). The menu stage model wears what `color1` and `color2`
+The classic profile's Cosmetics window does the same, and the SJK UI's
+Character page has Hat and Cape rows (None, then each installed piece). The menu stage model wears what `color1` and `color2`
 name, placed on the bolts of the pose it is skinned with like its hilts
 ([menu_stage/cosmetics.rs](../crates/sjk-viewer/src/menu_stage/cosmetics.rs)),
 unless `cg_cosmetics` is 0.
@@ -856,8 +865,8 @@ profile also sets `cg_thirdPersonRange 100`, which SJK leaves to that cvar. SJK'
 Camera control (named Shot controls until 08/10/2026) is a panel for framing
 screenshots and recordings in a match or a demo
 ([ingame_menu/shot.rs](../crates/sjk-viewer/src/ingame_menu/shot.rs)). The game
-menu's Camera control entry opens it (the SJK UI's arc and the modern menu; the
-classic bar has no entry), as does F8 while F8 has no binding. It drives the
+menu's Camera control entry opens it (the SJK UI's arc; the classic bar has no
+entry), as does F8 while F8 has no binding. It drives the
 console's presentation director, the same one as the `demo_camera` and
 `demo_sun` commands, which keep their names: nothing it does reaches the
 server, prediction or the player's input.
@@ -885,8 +894,8 @@ are one stop), Left and Right step a slider, a digit types its value (Enter
 applies, Escape cancels), Enter or Space acts, F8 or Escape hides the panel. The
 pointer drags a slider's track, a click on its number types it, and a click acts
 on a button, a tab or a switch. With the SJK UI's menus the panel has the SJK
-UI's look ([SJK UI](sjk-ui.md#camera-control)); with the classic and modern
-menus, the modern panel.
+UI's look ([SJK UI](sjk-ui.md#camera-control)); with the classic menus, a
+right-edge panel in SJK's hero look.
 
 ## Animation sounds and voice variants
 
@@ -954,11 +963,11 @@ See [catalog.rs](../crates/sjk-viewer/src/settings/catalog.rs).
 
 ## First setup
 
-The modern settings screen's last tab, FIRST SETUP (called Quick setup before
+The tabbed settings screen's last tab, FIRST SETUP (called Quick setup before
 06/10/2026)
 ([quick.rs](../crates/sjk-viewer/src/settings/quick.rs)), gathers the settings worth
-choosing on a first start: under a Styles heading, the menu style (SJK, Classic
-or Modern) and the camera style (EJK or SJK, [Camera style](#camera-style));
+choosing on a first start: under a Styles heading, the menu style (SJK or
+Classic) and the camera style (EJK or SJK, [Camera style](#camera-style));
 then resolution, display mode, vsync, field of view, mouse
 sensitivity and inversion, always run, effects and music volume, the HUD look and
 scale, the crosshair, the nameplates and their bars, Force bar and power icons, the
@@ -971,15 +980,15 @@ other tabs keep their numbers.
 With the classic menus the same rows are the first group of the
 Setup page, FIRST SETUP (`Group::Quick`, [groups.rs](../crates/sjk-viewer/src/settings/groups.rs)),
 drawn as a classic+ option panel like the others, with search, descriptions and
-defaults; the modern style shows them as the FIRST SETUP tab. The SJK UI shows
+defaults, and opens the FIRST SETUP tab only if that panel cannot open. The SJK UI shows
 them as a pop-up card over the map (since 08/10/2026,
 [sjk_popup.rs](../crates/sjk-viewer/src/settings/sjk_popup.rs),
 [sjk-ui.md](sjk-ui.md#first-setup)): the rows scroll inside it, and "Don't show
 at start" is a tick box pinned at its foot, always in view, beside All settings
 (the Settings screen on its First setup category, which keeps the rows too) and
 Done. Picking another menu style on its first row keeps First setup on show in
-the new style: the classic Setup page's FIRST SETUP group, the SJK UI's pop-up
-or the modern FIRST SETUP tab (not Interface, which also has the row).
+the new style: the classic Setup page's FIRST SETUP group or the SJK UI's
+pop-up.
 
 At every start, the first time the main menu is up and the menu style is known, it
 opens in the active style, until the player ticks "Don't show at start"
@@ -1100,14 +1109,13 @@ icons remain unimplemented. See
 
 ## Joining and changing maps
 
-The menu's FFA3 gate opens onto the prepared destination world. Map preparation
-and connection run independently: when the world is ready first, you can walk,
-jump and crouch locally while the connection finishes. A matching verified world
-is reused when the server session becomes ready; joining does not build it twice.
-The opening and crossing animation takes about 2.1 seconds once the destination
-is ready. The gate stays closed while required content is unavailable. The
-existing connection notice shows the server address/status and Cancel action
-over the gate during joining; it disappears when the destination is entered.
+A join from the menu prepares the destination world while the connection runs:
+map preparation and connection are independent, and the loading screen (the
+classic one or the SJK UI's) shows how far both are. The world is adopted once it
+is built from the joined session's own gamestate with the session in hand, so
+the player never walks a preview; a matching verified world is reused when the
+server session becomes ready, and joining does not build it twice. Escape or a
+click on the loading screen cancels.
 
 On a server map change, gameplay pauses and a loading notice is shown over the
 previous view until the destination and a fresh active snapshot are ready. The
@@ -1120,19 +1128,17 @@ The viewer no longer prepares an in-process native game for every loaded world.
 CPU map preparation and GPU resource installation remain on background workers,
 using the existing GPU context. Archive checksum inventory reads ZIP directories
 without decompressing every asset. Matching same-map restarts can still reuse
-the prepared world, and the gate adopts its already-built destination. The
+the prepared world, and the join adopts its already-built destination. The
 waiting connection sends neutral commands during map loading and is kept separate
 from the displayed old world, so new-map entities cannot appear in the wrong BSP.
 Texture mip preparation and lamp extraction use bounded CPU workers; repeated
 texture loads can reuse a bounded process-local mip cache. See
 [load-time rendering preparation](rendering.md#load-time-texture-and-light-preparation)
-for cache limits and unchanged output semantics. The gate animation and server
-readiness still contribute to the time before play begins.
+for cache limits and unchanged output semantics. Server readiness still
+contributes to the time before play begins.
 
-First entry through the gate before a server player exists retains movement-only
-exploration with frozen brush collision. The gate's through-door view uses the
-existing lightweight rendering path; full lighting begins when the destination
-becomes the active world.
+First entry into the destination before a server player exists retains
+movement-only exploration with frozen brush collision.
 
 Server console output (`print`) goes exclusively to the console, including match
 statistics, command replies and server announcements. It never enters chat history.
@@ -1164,7 +1170,7 @@ from the already-open menu's transition path.
 Implementation: [resident worlds](../crates/sjk-viewer/src/resident_world.rs),
 [early exploration](../crates/sjk-viewer/src/resident_walk.rs),
 [world handoff](../crates/sjk-viewer/src/session_transition.rs) and
-[gate destination](../crates/sjk-viewer/src/portal.rs).
+[destination preparation](../crates/sjk-viewer/src/portal.rs).
 
 Losing window focus releases held gameplay controls and discards gameplay actions
 already queued for that frame. Synthetic key events on refocus cannot re-press a
@@ -1256,14 +1262,13 @@ unchanged.
 scoreboard layout:
 
 - `auto`, the default of a new profile: the SJK UI's scoreboard while
-  `ui_menuStyle` is `sjk`, the classic one with any other menu style (what SJK
+  `ui_menuStyle` is `sjk`, the classic one with the classic menus (what SJK
   showed before the choice existed);
 - `sjk`, the SJK UI's scoreboard whatever the menus
   ([SJK UI](sjk-ui.md#scoreboard)): columns floating over the darkened game in
   the UI's type, the teams side by side, the duelists as facing cards;
 - `classic`, the retail scoreboard as EternalJK-derived clients such as JoF EJK
-  draw it (below);
-- `modern` (or `0`), the modern table beside the chat column.
+  draw it (below).
 
 A mistyped value gives the classic board. `config.cfg` saves every archived
 setting, so every profile from before `auto` existed had the old default
@@ -1305,8 +1310,9 @@ allocated per frame; the text and draw storage is reserved for 32 clients.
 
 `cg_hudStyle` chooses `game`, the status HUD of the game's own menu files (the
 original Jedi Academy HUD, or a custom HUD pack that replaces `ui/hud.menu`),
-or SJK's own `modern`, `classic` or `radial` layout. The default is `game`, the
-classic HUD, and a saved `cg_hudStyle` is kept. `cg_hudFiles`
+or SJK's own `classic` or `radial` layout. The default is `game`, the classic
+HUD, and a saved `cg_hudStyle` is kept (but the retired `modern`, see
+[Menu style](#menu-style)). `cg_hudFiles`
 names the menu list, `ui/jahud.txt` by default; `1` gives the text-only HUD and
 EternalJK's `3`/`4` name its elegance and JoF HUD lists when those files are
 installed. `cg_hudPack` names the PK3 whose HUD to use when several replace
@@ -1328,11 +1334,11 @@ player over a retail levelshot, and its PK3 or list file under it, the HUD in
 use marked. The list holds each installed PK3 that ships `ui/hud.menu` in
 install order (the game's own archives as "Jedi Academy", others by file name
 without a `zz_` load-order prefix), every other `ui/*hud*.txt` list that
-describes a HUD, the text-only HUD, and SJK's classic and modern layouts, which
+describes a HUD, the text-only HUD, and SJK's radial and classic layouts, which
 have a note instead of a picture. Arrows, the wheel or the pointer highlight;
 Enter or a click uses the HUD and closes; Escape closes. The picker takes
-retail's colours and highlight art on the classic menus and the theme's on the
-modern ones. "Game HUD files" stays on the tab for lists the picker does not
+retail's colours and highlight art on the classic menus and the theme's with
+the SJK UI. "Game HUD files" stays on the tab for lists the picker does not
 find.
 
 ## Nameplates
@@ -1570,8 +1576,8 @@ the same build at startup (`build: SJK ...`). How the version is decided is in
 
 ## Changelog page
 
-The main menu's Changelog entry (modern list; SJK > CHANGELOG on the classic
-page), the in-game SJK pop-up's Changelog and the
+The main menu's Changelog entry (SJK > What's new in the SJK UI; SJK >
+CHANGELOG on the classic page), the in-game SJK pop-up's Changelog and the
 `changelog` console command show every SJK release from [CHANGELOG.md](../CHANGELOG.md), built into the client
 ([changelog.rs](../crates/sjk-viewer/src/changelog.rs), parsed by
 [changelog_data.rs](../crates/sjk-viewer/src/changelog_data.rs)). Releases are
@@ -1622,7 +1628,7 @@ The client looks for a newer SJK release when it starts and from the Update page
 
 ## Credits page
 
-The main menu's Credits entry (modern list; SJK > CREDITS on the classic page), the in-game SJK pop-up's Credits and the
+The main menu's Credits entry (SJK > Credits in the SJK UI; SJK > CREDITS on the classic page), the in-game SJK pop-up's Credits and the
 `credits` console command show who makes SJK, from
 [credits.txt](../crates/sjk-viewer/assets/credits.txt), built into the client
 ([credits.rs](../crates/sjk-viewer/src/credits.rs), parsed by
@@ -1707,8 +1713,7 @@ are in [identity.md](identity.md).
   Tab, Shift+Tab and the arrow keys move between the controls, Enter or Space works the
   switch and the buttons, letters type into the focused field (Ctrl+V pastes) and Escape
   closes; the pointer works too. The bio field follows the hub's copy until the player
-  types in it. The modern main menu has no entry (its list is full); reach it from the
-  in-game menu or the command there. The commands remain: `identity bio <text>` changes
+  types in it. The commands remain: `identity bio <text>` changes
   the bio (`identity name` says the name is the one played under), `identity key` prints
   the key id and file,
   `identity who [slot]` lists known players (with a slot, that player's bio).
@@ -1728,8 +1733,8 @@ are in [identity.md](identity.md).
   SJK team gave them ([identity.md](identity.md#medals)); fewer bars show where the
   name would run short of room. It trusts
   a claim only when the claimed name matches the name the game shows in that slot.
-- The Identity page lists the player's own medals: in the modern look a Medals panel
-  right of the page's card, in the SJK UI a column right of its own, each with its
+- The Identity page lists the player's own medals: in the SJK UI a column right of
+  its own, each with its
   picture, name, description, the date it was given (`dd/mm/yyyy`) and the team's note;
   the classic+ box names them in its status with their medallions. With none, a line
   says how medals come. A medal new to the client shows once in a pop-up on the main
@@ -1809,7 +1814,7 @@ With the `game` and `classic` HUD styles, `forcenext`/`forceprev` show JoF
 EternalJK's Force wheel: retail's Force selection bar (`CG_DrawForceSelect`),
 the selected power large in the middle above the HUD with up to three
 neighbours on each side and its name under it, for 1.4 seconds as in retail.
-It scales with `cg_hudScale`; the `modern` style keeps its list of names. On a
+It scales with `cg_hudScale`; the `radial` style keeps its list of names. On a
 JoF JA+ server that grants them, the wheel also holds Stasis and Repulse (after
 Sense) and Dash (before Speed), from spare `forcePowersKnown` bits, as in JoF EJK
 ([force_wheel.rs](../crates/sjk-client/src/force_wheel.rs)). They are never sent
@@ -1831,7 +1836,7 @@ Illuminate is a free power every player has, SJK's own and not a game power: a
 holocron that floats by the player's left shoulder, turning slowly and bobbing,
 with a warm point light (300 units) that lights the way in dark maps. Only this
 client sees it; no server knows of it and other players, SJK ones included, do
-not see it. It is the Force wheel's last entry (and the modern list's), with its
+not see it. It is the Force wheel's last entry (and the radial HUD's list's), with its
 own holocron icon; `+useforce` on it turns the holocron on or off, and the
 `force_illuminate` command does the same from a bind (Settings > Key bindings >
 Force powers). It is never sent as the selected power: the client sets its
@@ -1946,7 +1951,7 @@ of piling up. A PK3 replacing one of these files (JoF's cosmetic mod replaces
 `button1`) replaces it in the wheel and the menus alike.
 
 `cg_wheelSounds` (archived, default 1) turns them off: Settings > Quick wheel's
-Sound row, which the classic+ and modern editor has too, or Interface's "Quick
+Sound row, which the classic+ menus' editor has too, or Interface's "Quick
 wheel sounds" row. The wheel reads it as it opens.
 
 ### Choices
@@ -1971,7 +1976,7 @@ A custom choice is a name (up to 24 characters) and any console command (up to
 
 In the SJK UI, Settings has a Quick wheel category (after HUD; see
 [SJK UI](sjk-ui.md#quick-wheel)); Interface's "Quick wheel pages" row goes to it.
-With the classic+ and modern menus that row (Interface, and the modern GAME tab)
+With the classic+ menus that row (Interface, and the tabbed settings' GAME tab)
 opens the same editor on its own, in the SJK UI's look over the settings, Escape
 returning to the row ([wheel_editor.rs](../crates/sjk-viewer/src/settings/wheel_editor.rs)).
 
@@ -2169,16 +2174,15 @@ and red). The table is `quake_color` in [text.rs](../crates/sjk-viewer/src/text.
 | `auto` (default) | `sjk` while the menus are the SJK UI (`ui_menuStyle sjk`), else `classic` |
 | `sjk` | The SJK UI's deck ([SJK UI console](#sjk-ui-console)) |
 | `classic` | EternalJK's console (`cl_console.cpp`, `cl_keys.cpp`) |
-| `modern` (or `0`) | The modern console (Inter text on a tinted panel with a header and key hints) |
 
 A mistyped value acts as `auto`, as do `horizon` and `dock`, two SJK UI designs
-removed on 08/10/2026 once Sol chose the deck. Every profile had saved the old default
+removed on 08/10/2026 once Sol chose the deck, and the retired `modern` (or `0`),
+which a profile's start also resets ([Menu style](#menu-style)). Every profile had saved the old default
 `classic`, so a saved `classic` moves once to `auto` (`con_styleDefaultVersion`,
 as `cg_scoreboardStyle` did): it still gives the classic console unless the
 menus are the SJK UI; a `classic` chosen afterwards stays. Input editing, mouse
 selection, completion, the `]cmd` echo, history (Up and Down) and the F3 browser
-work the same in every look; the classic console and the SJK UI's deck share
-EternalJK's keys below. See
+work the same in both looks, which share EternalJK's keys below. See
 [console_classic.rs](../crates/sjk-viewer/src/console_classic.rs),
 [console_sjk.rs](../crates/sjk-viewer/src/console_sjk.rs),
 [console_backdrop.rs](../crates/sjk-viewer/src/console_backdrop.rs) and
@@ -2241,13 +2245,13 @@ never shows through an opaque console.
 | Insert | Toggle overstrike: typing replaces the character after the cursor |
 
 A `toggleconsole` bind reopens at the last height a console key chose. The console
-slides at `scr_conspeed` screens per second and is drawn from its first pixel
-(the modern console waits until it is 8% open). A disconnected client whose menu
+slides at `scr_conspeed` screens per second and is drawn from its first pixel.
+A disconnected client whose menu
 is closed shows the console full screen, as `Con_DrawConsole` does; the map
 viewer without a menu does not.
 
 Scrollback rows are drawn from three cells above the console's bottom edge up to
-the top of the screen (`con_maxLines` is not used). Lines start white (`^7`),
+the top of the screen. Lines start white (`^7`),
 error lines light red, and a colour code carries on into the rows a line wraps
 onto. Words wrap as `CL_ConsolePrint` wraps them: a word that fits on a row but
 not in what is left of the current one, or would end exactly at its edge, starts
@@ -2276,8 +2280,8 @@ Closed, the console draws notify lines while a game, a demo or a map walk runs
 and no menu has focus: of the last `con_notifylines` rows, those written within
 `con_notifytime` seconds and not quiet (chat), from the top edge of the screen,
 one cell plus `cl_conXOffset` pixels from the left. Dragging the mouse selects
-scrollback text and Ctrl+C copies it, as in the modern console; the classic
-console's selection does not include the time column.
+scrollback text and Ctrl+C copies it; the selection does not include the time
+column.
 
 ### SJK UI console
 
@@ -2313,8 +2317,7 @@ client.
 
 Local time comes from the operating system's time zone rules, daylight saving
 included ([local_time.rs](../crates/sjk-shell/src/local_time.rs)); the scrollback's
-stamps, also the modern console's `[HH:MM:SS]` and the log file's, are local time
-too. Differences from EternalJK besides those above: the input never runs past
+stamps and the log file's `[HH:MM:SS]` are local time too. Differences from EternalJK besides those above: the input never runs past
 the screen's right edge (EternalJK's can).
 
 ## Console socket
@@ -2472,10 +2475,9 @@ copy waits up to 1.5 s for the tool to finish and reports failure if it fails; a
 paste waits for a copy still being set.
 See [console_editing.rs](../crates/sjk-viewer/src/console_editing.rs) and
 [console_selection.rs](../crates/sjk-viewer/src/console_selection.rs). The input
-line and output rows are drawn and measured through one
-[ConsoleText](../crates/sjk-viewer/src/console_text.rs) per text size, so the
-caret, highlights and mouse hits follow the drawn glyphs at any size or letter
-spacing.
+line and output rows are drawn and measured on the console's character grid
+([console_classic.rs](../crates/sjk-viewer/src/console_classic.rs)), so the caret,
+highlights and mouse hits follow the drawn cells at any `con_scale`.
 
 Tab completes the command or cvar name being typed, after a leading `/` or `\` and
 after the last `;`. A unique name completes with a trailing space; otherwise the
@@ -2514,7 +2516,7 @@ list box whose selected row sits on `menu_blendbox2` (a changed cvar's value in
 gold with its default beside it), a detail box with the selected entry's kind,
 value, default and whole description, and the description line under the box.
 It uses the menus' retail font when `ui_gameFont` is on, and works without the
-retail art. Keys, pointer and wheel act as in the modern look
+retail art. Keys, pointer and wheel act as in the SJK UI's look
 ([console_browser_classic.rs](../crates/sjk-viewer/src/console_browser_classic.rs)).
 
 With the SJK UI's console (`con_style sjk`, or `auto` with the SJK UI's
@@ -2533,50 +2535,32 @@ mouse: a drag selects across lines, a double click selects a word
 while the same entry is shown. In every look Ctrl+C (or Ctrl+Insert) copies the
 selected text, or else the chosen entry as a console line (a command's name, a
 cvar's `name value`, the value quoted when empty or spaced), and the footer says
-what was copied. Mouse selection is the SJK UI's look's only; the modern and
-classic+ looks copy the chosen entry.
+what was copied. Mouse selection is the SJK UI's look's only; the classic+ look
+copies the chosen entry.
 
 For graphics controls and diagnostics, see [rendering.md](rendering.md).
 
 ## Text size and spacing
 
-The Settings screen's TEXT tab holds four archived cvars. Menu text draws as
-before at the defaults; the console's rows are closer together than before.
+The Settings screen's TEXT tab holds three archived cvars, beside the console
+style. Menu text draws as before at the defaults.
 
 | Cvar | Default | Range | Effect |
 | --- | --- | --- | --- |
 | `ui_textScale` | 1 | 0.8 to 1.2 | Text size on menu screens and the in-game menu |
-| `ui_letterSpacing` | 0 | -0.05 to 0.15 | Extra space after each letter in menus and the console, as a fraction of the text size |
-| `con_scale` | 1 | above 0 (menu: 0.5 to 2) | Size of the whole console: text, margins and rows; the classic console's character cells |
-| `con_lineSpacing` | 0.9 | 0.8 to 2 | Modern console history and notify row pitch as a multiple of the text size; at 0.8 descenders meet the next row's ascenders |
+| `ui_letterSpacing` | 0 | -0.05 to 0.15 | Extra space after each letter of menu text, as a fraction of the text size; the console's character grid keeps its cells |
+| `con_scale` | 1 | above 0 (menu: 0.5 to 2) | Size of the whole console: its character cells, margins and rows |
 
 Menu text grows or shrinks about the centre of its line without moving the
 layout, so the range is limited to what menu rows can hold; that style is
 applied where retained text commands become glyph quads, see
-[text/style.rs](../crates/sjk-viewer/src/text/style.rs). The console sizes its
-own text with `con_scale` and puts the letter spacing into its layout
-([console_view.rs](../crates/sjk-viewer/src/console_view.rs)), so anything that
-measures console text, such as a caret, sees the spacing it is drawn with.
-These settings do not affect chat, the scoreboard or the HUD.
-
-Console defaults, compared with stock at 1080p: stock draws 8 x 16 px cells
-whose capitals are 14 px tall, so its rows are 16 px apart and nearly touch.
-The modern console's text is 14 px Inter: the size is its line box (ascent plus
-descent, 1.21 em), with 8.4 px capitals. A pitch of 0.9 times the text size
-gives 12.6 px rows at 1080p, where capitals fill two thirds of the pitch and the
-deepest descender (`g`) still clears the next row's ascenders and brackets by
-about 1 px. Below 0.82 they touch, so the range stops at 0.8; only accented
-capitals can overlap the row above there. Rows closer than their line box
-overlap: each row keeps its whole text box (and glyph shadow) for drawing, and
-the bottom row's text ends at the input separator's margin. Selection bands and
-pointer rows stay one pitch tall and centred on the text. Earlier builds read
-`con_lineSpacing` as a multiple of a fixed 22 px pitch; such a saved value below
-0.8 now clamps to 0.8, the tightest setting. `con_maxLines` defaults to 32 so
-the default-height console fills with rows instead of stopping at the old 18.
-Letter spacing stays 0: Inter's average advance relative to its x-height (0.89)
-is already close to stock's cells (0.8), Inter's own size-specific tracking at
-this size is +0.002 em, and tighter text would run digits and `il1` together.
-See [console_options.rs](../crates/sjk-viewer/src/console_options.rs).
+[text/style.rs](../crates/sjk-viewer/src/text/style.rs). These settings do not
+affect chat, the scoreboard or the HUD. Letter spacing stays 0: Inter's average
+advance relative to its x-height (0.89) is already close to stock's cells (0.8),
+Inter's own size-specific tracking at this size is +0.002 em, and tighter text
+would run digits and `il1` together. A profile's `con_lineSpacing` and
+`con_maxLines`, which only the retired modern console read, are dropped at its
+start ([Menu style](#menu-style)).
 
 The chat box's wrapped body rows are one line box apart (18 px at 1080p and
 `cg_chatBoxFontSize` 1; they were 27 px). Inter's capitals are 0.60 of that box,

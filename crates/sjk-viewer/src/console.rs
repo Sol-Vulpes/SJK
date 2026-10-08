@@ -74,8 +74,6 @@ mod console_command;
 mod console_forward;
 #[path = "console_keyboard.rs"]
 mod console_keyboard;
-#[path = "console_text.rs"]
-mod console_text;
 #[path = "console_edit_view.rs"]
 pub(crate) mod edit_view;
 #[path = "console_editing.rs"]
@@ -575,45 +573,8 @@ impl ViewerConsole {
             self.browser.append(vertices, font, viewport);
             return;
         }
-        let options = self.options();
-        if options.style.is_grid() {
-            // Drawn on its own layer by `append_classic`.
-            self.presentation.clear(viewport);
-            return;
-        }
-        let configured = self
-            .shell
-            .cvars
-            .get("con_maxLines")
-            .and_then(|cvar| match cvar.value {
-                CvarValue::Integer(value) => usize::try_from(value).ok(),
-                _ => None,
-            })
-            .unwrap_or(18);
-        let completion = self.shell.completion_hint(&self.input).unwrap_or("");
-        let edit = edit_view::EditFrame {
-            prompt: edit_view::PromptLine {
-                input: &self.input,
-                cursor: self.edit.cursor(&self.input),
-                selection: self.edit.selection(&self.input),
-            },
-            selection: &mut self.selection,
-            lines_end: self.shell.lines_written(),
-        };
-        self.presentation.append_options(
-            self.shell.lines(),
-            configured,
-            self.scroll_offset,
-            edit,
-            completion,
-            vertices,
-            font,
-            viewport,
-            options,
-            self.open,
-            self.shell.command_clock_millis(),
-        );
-        self.apply_prompt_pointer();
+        // The console itself is drawn on its own layer by `append_classic`.
+        self.presentation.clear(viewport);
     }
 
     /// The command browser follows the console style: the classic console's is
@@ -623,21 +584,15 @@ impl ViewerConsole {
         let look = match self.console_style() {
             console_options::ConsoleStyle::Classic => browser::Look::Classic,
             console_options::ConsoleStyle::Sjk => browser::Look::Sjk,
-            console_options::ConsoleStyle::Modern => browser::Look::Modern,
         };
         self.browser.set_look(look, art);
     }
 
-    /// The changelog page follows the menu style: classic+ with the classic
-    /// menus, with the retail menu `art` it can use.
-    pub(crate) fn set_changelog_look(&mut self, classic: bool, art: crate::menu::art::ArtSet) {
-        self.changelog.set_look(classic, art);
-    }
-
-    /// The Identity page follows the menu style: classic+ with the classic menus, with
-    /// the retail menu `art` it can use.
-    pub(crate) fn set_identity_look(&mut self, classic: bool, art: crate::menu::art::ArtSet) {
-        self.identity_panel.set_look(classic, art);
+    /// The retail menu `art` the changelog and Identity pages' classic+ looks
+    /// can use (the SJK UI's looks are chosen with [`Self::set_sjk_pages`]).
+    pub(crate) fn set_page_art(&mut self, art: crate::menu::art::ArtSet) {
+        self.changelog.set_art(art);
+        self.identity_panel.set_art(art);
     }
 
     /// Fill the console for a world shot: open it on made-up scrollback (a
@@ -665,7 +620,7 @@ impl ViewerConsole {
             "]cg_fov 110",
             "]con_style",
             "\"con_style\" is:\"auto^7\" default:\"auto^7\"",
-            "Console style: auto (the SJK UI's with its menus, else classic), sjk, classic (after EternalJK) or modern",
+            "Console style: auto (the SJK UI's with its menus, else classic), sjk or classic (after EternalJK)",
             "^1Unknown command \"saberthrow\"",
             "Kyle was cut in half by Sol's saber",
             "^3Bishop^7 entered the game",
@@ -763,7 +718,7 @@ impl ViewerConsole {
         }
         if self.history.last() != Some(&command) {
             self.history.push(command.clone());
-            if self.console_style().is_grid() && self.history.len() > classic::HISTORY {
+            if self.history.len() > classic::HISTORY {
                 self.history.remove(0);
             }
         }

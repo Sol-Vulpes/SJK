@@ -21,20 +21,18 @@ impl ClientMenu {
     /// Open the First setup screen, returning to `target` when it closes: the
     /// SJK UI's pop-up over its main page, the classic Setup panel's FIRST
     /// SETUP group under the classic style (and the SJK UI in a game), the
-    /// FIRST SETUP tab of the modern screen otherwise.
+    /// settings screen's FIRST SETUP tab if that panel cannot open.
     pub(crate) fn open_first_setup(&mut self, console: &ViewerConsole, target: ReturnTarget) {
         if self.menu_style == MenuStyle::Sjk && target == ReturnTarget::MainMenu {
             self.open_sjk_first_setup(console, target);
             return;
         }
-        if self.menu_style.classic_screens() {
-            let frame = match target {
-                ReturnTarget::MainMenu => Frame::Main,
-                ReturnTarget::InGame => Frame::InGame,
-            };
-            if self.open_classic_panel(console, Page::Setup, Entry::FirstSetup, frame, target) {
-                return;
-            }
+        let frame = match target {
+            ReturnTarget::MainMenu => Frame::Main,
+            ReturnTarget::InGame => Frame::InGame,
+        };
+        if self.open_classic_panel(console, Page::Setup, Entry::FirstSetup, frame, target) {
+            return;
         }
         self.open_settings_from(console, target, SettingsMenu::quick_tab());
     }
@@ -135,10 +133,6 @@ mod tests {
         menu.set_menu_style(MenuStyle::Classic, &console);
         let panel = menu.classic_panel.expect("a classic panel");
         assert_eq!((panel.page, panel.entry), (Page::Setup, Entry::FirstSetup));
-        // Classic to modern: the modern screen (on its FIRST SETUP tab,
-        // `settings::tests::first_setup_carries_on_as_its_modern_tab`).
-        menu.set_menu_style(MenuStyle::Modern, &console);
-        assert!(menu.classic_panel.is_none());
         assert_eq!(*menu.state.phase(), ClientPhase::Settings);
     }
 
@@ -164,36 +158,21 @@ mod tests {
     }
 
     /// Picking the SJK UI on First setup's Menu style row, from the classic
-    /// panel or the modern tab, goes on as the pop-up.
+    /// panel, goes on as the pop-up.
     #[test]
     fn first_setup_picked_to_the_sjk_ui_goes_on_as_its_popup() {
         let (_directory, console) = console();
-        for style in [MenuStyle::Classic, MenuStyle::Modern] {
-            let mut menu = ClientMenu::new(true, String::new());
-            menu.menu_style = style;
-            menu.open_first_setup(&console, ReturnTarget::MainMenu);
-            assert!(!menu.settings.popup(), "{style:?}");
-            menu.set_menu_style(MenuStyle::Sjk, &console);
-            assert!(
-                menu.sjk_settings_on_show() && menu.settings.popup(),
-                "{style:?}"
-            );
-            assert!(menu.classic_panel.is_none(), "{style:?}");
-        }
+        let mut menu = ClientMenu::new(true, String::new());
+        menu.menu_style = MenuStyle::Classic;
+        menu.open_first_setup(&console, ReturnTarget::MainMenu);
+        assert!(!menu.settings.popup());
+        menu.set_menu_style(MenuStyle::Sjk, &console);
+        assert!(menu.sjk_settings_on_show() && menu.settings.popup());
+        assert!(menu.classic_panel.is_none());
         // Another screen switched to the SJK UI stays itself.
         let mut menu = ClientMenu::new(true, String::new());
         menu.menu_style = MenuStyle::Classic;
         menu.set_menu_style(MenuStyle::Sjk, &console);
         assert_eq!(*menu.state.phase(), ClientPhase::MainMenu);
-    }
-
-    #[test]
-    fn the_modern_style_opens_the_first_setup_tab() {
-        let (_directory, console) = console();
-        let mut menu = ClientMenu::new(true, String::new());
-        menu.menu_style = MenuStyle::Modern;
-        menu.open_first_setup(&console, ReturnTarget::MainMenu);
-        assert_eq!(*menu.state.phase(), ClientPhase::Settings);
-        assert!(menu.classic_panel.is_none());
     }
 }

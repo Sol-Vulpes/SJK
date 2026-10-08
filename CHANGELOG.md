@@ -21,6 +21,7 @@ Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 
 ## Unreleased
 
+- The modern menus are gone: SJK has the SJK UI (the default) and the classic menus. The modern scoreboard, console and HUD layout go with them, as do the menu accent setting and the gate on mp/ffa3 that opened as you joined. A setting saved as modern starts on its default again (the SJK UI's menus, the game HUD) _(Sol)_
 - The player card points at the player's hips instead of their head, Escape unpins a pinned card (without opening the game menu), the duel record line is gone and medal names are small print _(Sol)_
 - Surfaces that a server or the map remaps to another shader keep the map's light and shadow; they used to look flat and uniformly pale _(Sol)_
 - Staff tools (for SJK staff, from Profile or the staff command): find any player, give or take back their medals with a note, and clear their achievements; clearing your own also resets your counts, so you can unlock them again _(Sol)_

@@ -106,19 +106,14 @@ pub(crate) fn acquire(gpu: &GpuState) -> Result<Output, FrameStatus> {
     Ok(Output { frame, view, ui })
 }
 
-/// How the world pass starts on its colour target: cleared to the night
-/// tint, or kept when a portal world was already drawn underneath.
-pub(crate) fn world_load(portal: crate::portal::View) -> wgpu::LoadOp<wgpu::Color> {
-    if portal != crate::portal::View::Absent {
-        wgpu::LoadOp::Load
-    } else {
-        wgpu::LoadOp::Clear(wgpu::Color {
-            r: 0.015,
-            g: 0.02,
-            b: 0.035,
-            a: 1.0,
-        })
-    }
+/// How the world pass starts on its colour target: cleared to the night tint.
+pub(crate) fn world_load() -> wgpu::LoadOp<wgpu::Color> {
+    wgpu::LoadOp::Clear(wgpu::Color {
+        r: 0.015,
+        g: 0.02,
+        b: 0.035,
+        a: 1.0,
+    })
 }
 
 impl GpuState {

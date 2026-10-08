@@ -2,8 +2,8 @@
 //! sunlight panel for framing shots and recordings, sharing the console's
 //! presentation director (`demo_camera`, `demo_sun`). The game menu's Camera
 //! control entry or F8 (while unbound) opens it. It has two looks over the same
-//! state, tokens, keys and pointer: the modern one ([`view`]) and the SJK UI's
-//! ([`sjk_view`]).
+//! state, tokens, keys and pointer: the panel the classic style shows ([`view`])
+//! and the SJK UI's ([`sjk_view`]).
 mod numeric;
 mod runtime;
 

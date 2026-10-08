@@ -1,4 +1,4 @@
-//! Modern data-driven in-game HUD over authoritative snapshot values.
+//! Data-driven in-game HUD over authoritative snapshot values.
 
 mod data_source;
 use data_source::*;
@@ -228,8 +228,11 @@ pub(crate) struct HudOverlay {
 /// Which bundled layout document the status HUD is drawn from.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) enum HudLook {
-    /// SJK's modern layout (the classic one without the modern font).
-    Modern,
+    /// Under the game-data HUD: the default layout (or a `hud.json` override),
+    /// whose crosshair, team rows, votes, kill feed, timer and lagometer stay
+    /// while the game HUD draws the status, and whose status widgets stand in
+    /// when its files give none; the classic layout with `cg_classicHudFont`.
+    Game,
     /// SJK's classic layout.
     Classic,
     /// SJK's radial layout: arcs around the crosshair.
@@ -321,7 +324,7 @@ impl HudOverlay {
             interrupted: false,
             lagometer: sjk_client::LagometerSamples::new(),
             default_document: HudLayoutDocument::from_json(DEFAULT_LAYOUT)
-                .expect("bundled modern HUD document is valid"),
+                .expect("bundled default HUD document is valid"),
             classic_document: HudLayoutDocument::from_json(CLASSIC_LAYOUT)
                 .expect("bundled classic HUD document is valid"),
             override_document,
@@ -365,11 +368,11 @@ impl HudOverlay {
         let document = match look {
             HudLook::Radial => &self.radial_document,
             HudLook::Classic => &self.classic_document,
-            HudLook::Modern if font.is_modern() => self
+            HudLook::Game if font.is_modern() => self
                 .override_document
                 .as_ref()
                 .unwrap_or(&self.default_document),
-            HudLook::Modern => &self.classic_document,
+            HudLook::Game => &self.classic_document,
         };
         // The nameplates' bars wear this HUD's health, armour and Force colours.
         let meter = |binding: &str| {

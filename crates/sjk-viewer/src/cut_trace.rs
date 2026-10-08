@@ -1,19 +1,15 @@
 //! Per-frame stderr trace of the view around the cut from the menu world
 //! into a joined map.
 //!
-//! Enabled by `SJK_TRACE_CUT=1`. Prints the rendered view for the last part
-//! of the glide through the gate (the menu world, with the portal's mirrored
-//! camera), every one of the first frames of the installed world, and after
-//! those any frame in the first seconds whose view, snapshot or size moved,
-//! so a wrong camera at the cut can be attributed to the branch that chose
-//! it and a later snap to what changed.
+//! Enabled by `SJK_TRACE_CUT=1`. Prints every one of the first frames of the
+//! installed world, and after those any frame in the first seconds whose view,
+//! snapshot or size moved, so a wrong camera at the cut can be attributed to
+//! the branch that chose it and a later snap to what changed.
 
 use super::GpuState;
 use glam::Vec3;
 use std::time::{Duration, Instant};
 
-/// Glide progress from which the menu world's frames are traced.
-const GLIDE_FROM: f32 = 0.9;
 /// How many frames of a freshly installed world are traced unconditionally.
 const LIVE_FRAMES: u32 = 40;
 /// For how long after the cut changed frames are still traced.
@@ -68,38 +64,12 @@ impl CutTrace {
 
 /// Print this frame's view when it lies inside the traced window.
 pub(crate) fn tick(gpu: &mut GpuState, branch: &'static str, view: (Vec3, Vec3), now: Instant) {
-    if !gpu.cut_trace.enabled {
+    if !gpu.cut_trace.enabled || gpu.is_menu_world {
         return;
     }
     let millis = now.duration_since(gpu.ui_epoch).as_millis() as u64;
     let (position, target) = view;
     let cam = gpu.camera_position;
-    if gpu.is_menu_world {
-        let progress = gpu
-            .client_menu
-            .as_ref()
-            .map_or(0.0, |menu| menu.passage_progress(millis));
-        if progress < GLIDE_FROM {
-            return;
-        }
-        eprintln!(
-            "cut trace: menu t={millis} glide={progress:.3} branch={branch} \
-             view=({:.1},{:.1},{:.1})->({:.1},{:.1},{:.1}) \
-             cam=({:.1},{:.1},{:.1}) yaw={:.3} pitch={:.3}",
-            position.x,
-            position.y,
-            position.z,
-            target.x,
-            target.y,
-            target.z,
-            cam.x,
-            cam.y,
-            cam.z,
-            gpu.camera_yaw,
-            gpu.camera_pitch,
-        );
-        return;
-    }
     let Some(session) = gpu.live_session.as_ref() else {
         return;
     };

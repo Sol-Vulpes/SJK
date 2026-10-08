@@ -809,18 +809,16 @@ mod tests {
         assert!(!dialog.is_open());
     }
 
-    /// The other looks close on Send as before, and a card waiting for an answer is
+    /// The classic look closes on Send as before, and a card waiting for an answer is
     /// dropped when the look changes.
     #[test]
-    fn other_looks_close_on_send() {
-        for look in [Look::Classic, Look::Modern] {
-            let mut dialog = TextDialog::default();
-            dialog.set_look(look, crate::menu::art::ArtSet::default());
-            dialog.open(Kind::Report);
-            typed(&mut dialog, "The door flickers on ffa3");
-            assert!(matches!(dialog.key(KeyCode::Enter, None), Action::Send(..)));
-            assert!(!dialog.is_open() && !dialog.sending(Report::Bug));
-        }
+    fn the_classic_look_closes_on_send() {
+        let mut dialog = TextDialog::default();
+        dialog.set_look(Look::Classic, crate::menu::art::ArtSet::default());
+        dialog.open(Kind::Report);
+        typed(&mut dialog, "The door flickers on ffa3");
+        assert!(matches!(dialog.key(KeyCode::Enter, None), Action::Send(..)));
+        assert!(!dialog.is_open() && !dialog.sending(Report::Bug));
         let mut dialog = sjk(Kind::Report);
         typed(&mut dialog, "The door flickers on ffa3");
         dialog.key(KeyCode::Enter, None);

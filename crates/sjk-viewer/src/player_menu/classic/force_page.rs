@@ -864,7 +864,7 @@ mod drawing_tests {
         menu.snapshot_focus_power(focus);
         let font = crate::text::load_modern(1.0, None).unwrap().font;
         let mut vertices = Vec::new();
-        menu.append_classic(&mut vertices, &font, [1920.0, 1080.0], 1.0);
+        menu.append(&mut vertices, &font, [1920.0, 1080.0], 1.0);
         menu
     }
 

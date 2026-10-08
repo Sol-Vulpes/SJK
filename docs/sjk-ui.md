@@ -13,10 +13,10 @@ Status (08/10/2026): the main page, Settings (with the key bindings),
 Character, What's new, Update, Identity, Credits, Servers (the server browser),
 the loading screen, the scoreboard, the in-game menu, Camera control and the
 report and note dialog (Report a bug) are done. Every other
-screen opens in its classic+ version (`MenuStyle::classic_screens`), which
-covers the map as the classic style does.
-Other styles: First setup's first row, Settings > Interface > Menu style, or
-`ui_menuStyle classic`/`modern`; restart for the style's map behind the main page.
+screen opens in its classic+ version, which covers the map as the classic style
+does.
+The other style: First setup's first row, Settings > Interface > Menu style, or
+`ui_menuStyle classic`; restart for the style's map behind the main page.
 
 ## Design
 
@@ -182,7 +182,7 @@ password prompt.
 [player_menu/sjk_view.rs](../crates/sjk-viewer/src/player_menu/sjk_view.rs): the
 player screen, opened by the main page's Character. The model stands on duel6's
 stage in the map's own light, holding the saber draft lit, and every change
-shows on it at once (the modern screen's `menu_stage`). The screen is laid out
+shows on it at once (`menu_stage`). The screen is laid out
 on the 16:9 frame, dark behind the form on the left and clear over the model.
 
 - **Top:** the way back (Esc, "Main menu") and the player's name, with its
@@ -232,7 +232,7 @@ on the 16:9 frame, dark behind the form on the left and clear over the model.
 - **Keys:** bottom right, the focused row's (Left Right change, Enter type or
   do it) and Tab with the next page's name.
 
-The keys are the modern screen's: Up and Down choose a row (on the Saber and
+The keys are the player screen's shared ones: Up and Down choose a row (on the Saber and
 Force pages in the order they show them: both hilt lists before the blades,
 the Force groups' powers in their order, the other side's skipped), Left and
 Right change it (a hilt list's choice moves one hilt), Enter types or acts, Tab
@@ -242,10 +242,10 @@ by the half it lands on, a chip picks its colour, a slider follows, a style
 button, a hilt, a level), a click elsewhere on a row only chooses it, a click
 on a tile picks that model. The SJK view's own targets (levels, style buttons,
 hilts and the lists' wheel areas, tokens from 1000) go to
-`PlayerMenu::sjk_pointer` before the modern screen's pointer.
+`PlayerMenu::sjk_pointer` before the screen's shared pointer handling.
 
-It is the modern screen's state and controller with another view: the rows,
-tiles, tabs and back key answer to the modern screen's tokens, each row
+It is the player screen's shared state and controller with a view of its own:
+the rows, tiles, tabs and back key answer to the screen's tokens, each row
 registering its control before the whole row so the token's rectangle is the
 control's.
 
@@ -442,7 +442,7 @@ The rows are a classic+ panel's (`settings::ClassicRows`), so the search over
 every setting, the lists, the defaults and typed numbers are the classic+
 panels' own; only the drawing and the frame are the SJK UI's. Changing Menu
 style on the screen (it is on Interface) hands over to the classic+ panel of the
-same group (Graphics: the renderer's image tab), or to the modern screen.
+same group (Graphics: the renderer's image tab).
 
 ### First setup
 
@@ -471,9 +471,8 @@ scrolling lines (`ClassicRows::pinned`): the keyboard reaches it after the last
 row (Up from the first wraps to it), Enter or a click flips it, Backspace
 returns it to its default. Done or Escape goes back to the main page; All
 settings or Tab opens the Settings screen on First setup. The pop-up has no
-search. Picking the classic or modern style on its Menu style row goes on as
-that style's First setup, and picking the SJK UI on theirs comes back to the
-pop-up. In a game the SJK UI's First setup is still the classic panel.
+search. Picking the classic style on its Menu style row goes on as that style's
+First setup, and picking the SJK UI on the classic one comes back to the pop-up. In a game the SJK UI's First setup is still the classic panel.
 
 ### Quick wheel
 
@@ -508,7 +507,7 @@ detail's columns:
 - **Keys:** bottom right, what has the keyboard's, and Tab for the next group.
 
 Outside the SJK UI the editor draws the same columns on its own over the
-classic+ or modern settings (the navy ground, "Esc Settings" and "Quick wheel"
+classic+ or tabbed settings (the navy ground, "Esc Settings" and "Quick wheel"
 as its title), moved 190 left where the rail would be. The editor has its own
 canvas (1024 draw commands); every state of a full wheel fits it (a test).
 
@@ -566,8 +565,7 @@ pointer: a click on a row chooses it and a second within 0.4 s joins it; a
 header sorts; a switch's row flips it; the game type steps back on its left
 half and on on its right half.
 
-Joining shows the SJK UI's loading screen (Loading); mp/duel6 has no gate to
-fly through.
+Joining shows the SJK UI's loading screen (Loading).
 
 ## Loading
 
@@ -803,8 +801,8 @@ right edge:
 The focused control has the kit's band (a slider's or switch's whole row, a tab)
 or a button's white edge. It is the panel's state, tokens, keys and pointer
 (`shot::Panel`), drawn by another view: `InGameMenu::append_sjk` builds it when
-the page is `Page::Shot`. With the classic and modern menus the modern panel
-draws as before, renamed.
+the page is `Page::Shot`. With the classic menus a right-edge panel in SJK's
+hero look draws it, renamed.
 
 ## Report a bug and its dialogs
 
@@ -813,8 +811,8 @@ text dialog as the SJK UI's pop-up card (Sol's request, 08/10/2026). One dialog
 serves three things, and all three take this look with the SJK UI's menus:
 Report a bug (the in-game menu's SJK page), a player report's few words
 (Players, a player, a reason) and a world note (`inspect` twice,
-[client.md](client.md#player-card)). The classic+ and modern looks stay with
-their styles ([identity.md](identity.md#bug-reports)).
+[client.md](client.md#player-card)). The classic+ look stays with the classic
+menus ([identity.md](identity.md#bug-reports)).
 
 - **Card:** 920 wide and 592 tall, centred on the frame, with the browser
   prompts' glass, shadow and holo edge (`kit::card`), over the scene darkened
@@ -862,9 +860,9 @@ button acts.
 
 ## Implementation
 
-- `ui_menuStyle` has a third value, `sjk` (`menu::style::MenuStyle::Sjk`).
-  `MenuStyle::classic_screens` is true for it, so every screen without an SJK UI
-  version opens its classic one; the main page dispatches to `menu::sjk::home`.
+- `ui_menuStyle sjk` (`menu::style::MenuStyle::Sjk`) is the default beside
+  `classic`. Every screen without an SJK UI version opens its classic one; the
+  main page dispatches to `menu::sjk::home`.
   `ClientMenu::sjk_screen` says when one of the SJK UI's own screens is on show
   (the main page, Settings without a picker open, Character, Servers, the
   loading screen): the map is drawn under it (the loading screen leaves it out
@@ -876,7 +874,7 @@ button acts.
   lit rail, cycler, colour chips, button and rank pips), in frame pixels
   (`menu::sjk::Frame`).
 - The player screen's style: `PlayerMenu::set_sjk` (from `set_menu_art`) draws
-  the modern screen in the SJK UI's view; `ClientMenu::sjk_screen` covers the
+  the screen in the SJK UI's view; `ClientMenu::sjk_screen` covers the
   player phase then, so the map and the stage model show under it.
 - Settings is the classic+ panel's state with another view: the menu opens a
   category's rows as the classic+ panels do, keeps `classic_panel` empty and
@@ -951,14 +949,14 @@ button acts.
   Leave, a spectator's card and Settings opened from it;
   `duel6_camera_control` Camera control over duel6 on a made-up match: the
   in-game menu with its entry chosen, the panel's Camera and Sun pages, a number
-  typed, the Sun page where the sun cannot be set, a 4:3 window and the modern
-  look;
+  typed, the Sun page where the sun cannot be set, a 4:3 window and the classic
+  menus' bar and panel;
   `duel6_quick_wheel` the quick wheel's ring over duel6 (General, the change to
   Weather half-way, Weather, the middle, 4:3, in Inter, and three full pages of
   the second board's icons, `duel6-wheel-icons-1` to `-3`) and
   `duel6_quick_wheel_settings` its Settings category (pages, the sound switch
   off, a choice, the catalogue, a custom choice, a new page) and the editor over
-  the classic+ and modern settings;
+  the classic+ settings;
   `duel6_sjk_credits` Credits over duel6: the top, Creyon's and Lumaya's
   panels with their folds open and their medals, Creyon's work unfolded, and
   the end of the page.
@@ -999,5 +997,4 @@ classic version:
 3. Create a game.
 
 `sjk` became the default `ui_menuStyle` before these were done. mp/duel6 has
-its tour, player stage and saber shot; it has no gate, which mp/ffa3's browser
-flies through on a join.
+its tour, player stage and saber shot.

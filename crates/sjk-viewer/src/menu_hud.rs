@@ -8,7 +8,7 @@
 //! `cg_hudFiles` gives a custom HUD, with no SJK-specific format. A nonzero
 //! integer `cg_hudFiles` selects the stock text-only HUD instead.
 //!
-//! `cg_hudStyle` chooses between the client's own modern and classic layouts and
+//! `cg_hudStyle` chooses between the client's own classic and radial layouts and
 //! this game-data HUD (`game`, SJK's default). In `game` mode the built-in status
 //! widgets hide ([`crate::hud::HudVisibility::menu_hud`]) and everything else
 //! the built-in HUD shows (crosshair, obituaries, timers, chat) stays. Files that
@@ -69,8 +69,6 @@ const INCLUDE_DEPTH: usize = 4;
 /// `cg_hudStyle` values.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) enum HudStyle {
-    /// SJK's own layout (or the classic one while `cg_classicHudFont` is on).
-    Modern,
     /// SJK's classic layout in either font.
     Classic,
     /// SJK's radial layout: health, armor, Force and ammunition as arcs around the
@@ -83,24 +81,23 @@ pub(crate) enum HudStyle {
 
 impl HudStyle {
     /// Settings choices, in [`HudStyle`] order.
-    pub(crate) const NAMES: [&'static str; 4] = ["modern", "classic", "game", "radial"];
+    pub(crate) const NAMES: [&'static str; 3] = ["classic", "game", "radial"];
     /// The style of a fresh profile.
     pub(crate) const DEFAULT: Self = Self::Game;
 
     /// The cvar value naming this style.
     pub(crate) fn name(self) -> &'static str {
         match self {
-            Self::Modern => Self::NAMES[0],
-            Self::Classic => Self::NAMES[1],
-            Self::Game => Self::NAMES[2],
-            Self::Radial => Self::NAMES[3],
+            Self::Classic => Self::NAMES[0],
+            Self::Game => Self::NAMES[1],
+            Self::Radial => Self::NAMES[2],
         }
     }
 
-    /// Read the cvar; anything unknown is the default.
+    /// Read the cvar; anything unknown, `modern` (a retired layout) among it,
+    /// is the default.
     pub(crate) fn from_cvar(value: Option<&str>) -> Self {
         match value.map(str::trim) {
-            Some(text) if text.eq_ignore_ascii_case("modern") => Self::Modern,
             Some(text) if text.eq_ignore_ascii_case("classic") => Self::Classic,
             Some(text) if text.eq_ignore_ascii_case("game") => Self::Game,
             Some(text) if text.eq_ignore_ascii_case("radial") => Self::Radial,
@@ -141,7 +138,7 @@ pub(crate) fn register(cvars: &mut CvarRegistry) -> Result<(), sjk_shell::CvarEr
         STYLE_CVAR,
         HudStyle::DEFAULT.name(),
         CvarFlags::ARCHIVE,
-        "HUD: game (the game's menu-file HUD, cg_hudFiles), modern or classic (SJK layouts)",
+        "HUD: game (the game's menu-file HUD, cg_hudFiles), classic or radial (SJK layouts)",
     ))?;
     cvars.register(CvarDefinition::new(
         FILES_CVAR,
@@ -544,16 +541,11 @@ mod tests {
         assert_eq!(HudStyle::from_cvar(Some("classic")), HudStyle::Classic);
         assert_eq!(HudStyle::from_cvar(Some(" Radial")), HudStyle::Radial);
         assert_eq!(HudStyle::from_cvar(Some("retro")), HudStyle::Game);
-        assert_eq!(HudStyle::from_cvar(Some(" Modern ")), HudStyle::Modern);
+        assert_eq!(HudStyle::from_cvar(Some(" Modern ")), HudStyle::Game);
         let parsed = HudStyle::NAMES.map(|name| HudStyle::from_cvar(Some(name)));
         assert_eq!(
             parsed,
-            [
-                HudStyle::Modern,
-                HudStyle::Classic,
-                HudStyle::Game,
-                HudStyle::Radial
-            ]
+            [HudStyle::Classic, HudStyle::Game, HudStyle::Radial]
         );
         for style in parsed {
             assert_eq!(HudStyle::from_cvar(Some(style.name())), style);

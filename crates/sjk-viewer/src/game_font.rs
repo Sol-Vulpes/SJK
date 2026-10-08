@@ -495,7 +495,9 @@ fn target<'a>(
 /// Call before any text is appended.
 pub(crate) fn prepare(gpu: &mut GpuState) {
     let enabled = enabled(gpu.console.as_ref());
-    let console = grid_console(gpu.console.as_ref());
+    // The console is a character grid on its own layer (the classic one or
+    // the SJK UI's), which needs the console font whatever `ui_gameFont` says.
+    let console = gpu.console.is_some();
     let fonts = &mut gpu.game_fonts;
     fonts.enabled = enabled;
     for layer in fonts.layers_mut() {
@@ -547,13 +549,6 @@ pub(crate) fn classic_console(console: Option<&crate::console::ViewerConsole>) -
     console.is_some_and(|console| {
         console.console_style() == crate::console::console_options::ConsoleStyle::Classic
     })
-}
-
-/// Whether `console` draws a grid console on its own layer (the classic one or
-/// the SJK UI's), which needs the console font whatever
-/// `ui_gameFont` says.
-pub(crate) fn grid_console(console: Option<&crate::console::ViewerConsole>) -> bool {
-    console.is_some_and(|console| console.console_style().is_grid())
 }
 
 /// Whether the option is on in `console`, for preloading a world's fonts.

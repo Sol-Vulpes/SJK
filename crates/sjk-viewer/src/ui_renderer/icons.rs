@@ -1,6 +1,5 @@
-//! Fixed-size texture atlas used by generic retained UI textured quads:
-//! a grid of [`ICON_SIZE`] cells for icons, plus one wide banner strip along
-//! the bottom for the menu wordmark. Map previews have their own texture
+//! Fixed-size texture atlas used by generic retained UI textured quads: a grid
+//! of [`ICON_SIZE`] cells for icons. Map previews have their own texture
 //! ([`super::levelshot`]).
 
 use super::ShapeVertex;
@@ -10,11 +9,9 @@ const ATLAS_SIZE: u32 = 2_048;
 /// Edge of one atlas cell; icons are uploaded at exactly this size.
 pub(crate) const ICON_SIZE: u32 = 128;
 const COLUMNS: u32 = ATLAS_SIZE / ICON_SIZE;
-/// Pixel size of the banner strip (rows of cells it takes: 3).
-pub(crate) const BANNER_SIZE: [u32; 2] = [1_536, 384];
-const BANNER_Y: u32 = ATLAS_HEIGHT - BANNER_SIZE[1];
-/// Original menu-cell reservation; HUD cells follow without reducing menu capacity.
-pub(crate) const ICON_CELLS: u32 = COLUMNS * ((ATLAS_SIZE - BANNER_SIZE[1]) / ICON_SIZE);
+/// Original menu-cell reservation (13 rows); HUD cells follow without reducing
+/// menu capacity.
+pub(crate) const ICON_CELLS: u32 = COLUMNS * 13;
 /// HUD icon cells, right after the menu cells (`hud::icons::assets::COUNT`).
 const HUD_CELLS: u32 = 117;
 /// First of the player screen's Force page cells, after the HUD cells, so the
@@ -72,12 +69,10 @@ pub(crate) const MEDAL_ICON_CELLS: u32 = 8;
 pub(crate) const EMOJI_ICON_FIRST: u32 = MEDAL_ICON_FIRST + MEDAL_ICON_CELLS;
 /// Emoji cells: four rows, room for EternalJK's 256 (`MAX_LOADABLE_EMOJIS`).
 pub(crate) const EMOJI_ICON_CELLS: u32 = 4 * COLUMNS;
-/// Every icon cell; the banner strip lies below the last row.
+/// Every icon cell.
 pub(crate) const ATLAS_CELLS: u32 = EMOJI_ICON_FIRST + EMOJI_ICON_CELLS;
 const TOTAL_CELLS: u32 = ATLAS_CELLS;
-const ATLAS_HEIGHT: u32 = TOTAL_CELLS.div_ceil(COLUMNS) * ICON_SIZE + BANNER_SIZE[1];
-/// `TexturedQuad` texture naming the banner strip.
-pub(crate) const BANNER_TEXTURE: TextureId = TextureId(u32::MAX);
+const ATLAS_HEIGHT: u32 = TOTAL_CELLS.div_ceil(COLUMNS) * ICON_SIZE;
 
 pub(super) struct IconAtlas {
     texture: wgpu::Texture,
@@ -165,47 +160,6 @@ impl IconAtlas {
             },
         );
     }
-
-    /// Upload the [`BANNER_SIZE`] RGBA banner drawn by [`BANNER_TEXTURE`].
-    pub(super) fn upload_banner(&self, queue: &crate::frame_queue::FrameQueue, rgba: &[u8]) {
-        self.upload_region(queue, [0, BANNER_Y], BANNER_SIZE, rgba);
-    }
-
-    fn upload_region(
-        &self,
-        queue: &crate::frame_queue::FrameQueue,
-        origin: [u32; 2],
-        size: [u32; 2],
-        rgba: &[u8],
-    ) {
-        let [width, height] = size;
-        if rgba.len() != (width * height * 4) as usize {
-            return;
-        }
-        queue.write_texture(
-            wgpu::TexelCopyTextureInfo {
-                texture: &self.texture,
-                mip_level: 0,
-                origin: wgpu::Origin3d {
-                    x: origin[0],
-                    y: origin[1],
-                    z: 0,
-                },
-                aspect: wgpu::TextureAspect::All,
-            },
-            rgba,
-            wgpu::TexelCopyBufferLayout {
-                offset: 0,
-                bytes_per_row: Some(width * 4),
-                rows_per_image: Some(height),
-            },
-            wgpu::Extent3d {
-                width,
-                height,
-                depth_or_array_layers: 1,
-            },
-        );
-    }
 }
 
 /// Atlas UV corners of `texture`; the map preview spans its own texture.
@@ -214,17 +168,6 @@ pub(super) fn uv_range(texture: TextureId) -> ([f32; 2], [f32; 2]) {
         return ([0.0, 0.0], [1.0, 1.0]);
     }
     let atlas = ATLAS_SIZE as f32;
-    if texture == BANNER_TEXTURE {
-        let [width, height] = BANNER_SIZE;
-        let uv0 = [0.0, BANNER_Y as f32 / ATLAS_HEIGHT as f32];
-        return (
-            uv0,
-            [
-                width as f32 / atlas,
-                uv0[1] + height as f32 / ATLAS_HEIGHT as f32,
-            ],
-        );
-    }
     let index = texture.0.min(TOTAL_CELLS - 1);
     let x = (index % COLUMNS) * ICON_SIZE;
     let y = (index / COLUMNS) * ICON_SIZE;
@@ -292,26 +235,12 @@ pub(super) fn push_quad_corners(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
-    #[test]
-    fn every_cell_lies_above_the_banner_strip() {
-        let last = TOTAL_CELLS - 1;
-        let bottom = (last / COLUMNS + 1) * ICON_SIZE;
-        assert!(
-            bottom <= BANNER_Y,
-            "cells end at {bottom}, banner at {BANNER_Y}"
-        );
-        let (_, end) = uv_range(TextureId(SCOREBOARD_ICON_CELLS + 31));
-        assert!(end[1] <= BANNER_Y as f32 / ATLAS_HEIGHT as f32);
-    }
-
     #[test]
     fn the_atlas_fits_the_texture_size_the_client_asks_for() {
         // The device is created with wgpu's default limits (`gpu_context.rs`),
         // whose largest 2D texture is 8192 on a side; the atlas is taller than
         // it is wide.
         let limit = wgpu::Limits::default().max_texture_dimension_2d;
-        assert!(ATLAS_HEIGHT <= limit, "{ATLAS_HEIGHT}");
+        assert!(super::ATLAS_HEIGHT <= limit, "{}", super::ATLAS_HEIGHT);
     }
 }

@@ -129,7 +129,7 @@ pub(crate) struct State {
     /// The player chosen for a report, as they were then, and their row.
     target: Option<(Player, usize)>,
     gate: Gate,
-    /// The read-only lines over the classic and modern pages.
+    /// The read-only lines over the classic pages.
     info: Vec<String>,
     read_at: Option<Instant>,
     scores_at: Option<Instant>,
@@ -421,7 +421,7 @@ impl State {
         }
     }
 
-    /// The read-only lines over the classic and modern pages ("label  /  value", as the
+    /// The read-only lines over the classic pages ("label  /  value", as the
     /// classic about pop-up lays them out).
     pub(crate) fn info(&self, page: Page) -> &[String] {
         match page {

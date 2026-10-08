@@ -1,5 +1,6 @@
-//! Modern player screen: a hero form over the live map, with the `model`
-//! cvar's character standing on the backdrop's stage. Character and saber
+//! The player screen: its state and pages, drawn as the classic profile pages
+//! ([`classic`]) or the SJK UI's Character ([`sjk_view`]), there with the
+//! `model` cvar's character standing on the backdrop's stage. Character and saber
 //! changes write their cvars the moment they are made, so the stage model
 //! swaps instantly and there is nothing to apply or revert. The Force page
 //! is the exception: it edits a draft that only its Apply action writes
@@ -11,7 +12,6 @@ mod cosmetics;
 mod force;
 pub(crate) mod force_icons;
 mod force_templates;
-mod force_view;
 mod grid;
 pub(crate) mod icons;
 mod model_icons;
@@ -20,10 +20,8 @@ mod part_icons;
 mod pointer;
 mod rows;
 mod saber;
-mod saber_view;
 mod sjk_view;
 mod team_filter;
-mod view;
 
 use crate::console::ViewerConsole;
 use crate::menu_widgets::MenuCanvas;
@@ -33,9 +31,6 @@ use sjk_ui::DrawList;
 use sjk_vfs::VirtualFileSystem;
 use std::sync::Arc;
 use team_filter::TeamSkin;
-
-/// Tab labels, in page order.
-const PAGE_TABS: [&str; 3] = ["CHARACTER", "SABER", "FORCE"];
 
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 enum ProfilePage {
@@ -189,10 +184,9 @@ pub(crate) struct PlayerMenu {
     force_templates: force_templates::TemplateState,
     /// JoF EJK's hats and capes (the classic cosmetics window).
     cosmetics: cosmetics::CosmeticsMenu,
-    /// `ui_menuStyle classic`: the retail profile pages instead of the
-    /// hero form.
+    /// `ui_menuStyle classic`: the retail profile pages.
     classic_style: bool,
-    /// `ui_menuStyle sjk`: the SJK UI's view of the modern screen (`sjk_view`).
+    /// `ui_menuStyle sjk`: the SJK UI's view of the screen (`sjk_view`).
     sjk: bool,
     /// The SJK UI's hilt lists: the first saber's and the second's.
     sjk_hilts: [sjk_view::HiltList; 2],

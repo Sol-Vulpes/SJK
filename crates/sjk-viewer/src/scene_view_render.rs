@@ -171,7 +171,7 @@ impl GpuState {
         let views = &mut self.scene_views;
         if let (Some(selection), Some(target)) = (&views.selection, &views.portal_target) {
             debug_assert_eq!(target.size, scene_size);
-            let p = crate::portal::clip::oblique_projection(
+            let p = crate::oblique_clip::oblique_projection(
                 projection,
                 selection.view.matrix,
                 selection.view.clip_point,

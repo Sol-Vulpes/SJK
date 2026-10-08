@@ -5,7 +5,6 @@
 //! pointer, a click on a palette picks the chip under it, and the footer's
 //! ESC cap goes back.
 
-use super::force_view::side_direction;
 use super::grid::{GRID_SCROLL_TOKEN, MODEL_ROW, TILE_BASE};
 use super::rows::FORCE_SIDE_ROW;
 use super::saber::PALETTE;
@@ -216,5 +215,25 @@ impl PlayerMenu {
             _ => {}
         }
         PlayerMenuResult::None
+    }
+}
+
+/// Which side a pointer at `x` on the side picker `rect` picks, as an
+/// `adjust` direction: the left card is Light (-1), the right Dark (1).
+fn side_direction(rect: sjk_ui::Rect, x: f32) -> isize {
+    if x < rect.x + rect.width * 0.5 { -1 } else { 1 }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn side_cards_split_the_row_down_the_middle() {
+        let rect = sjk_ui::Rect::new(100.0, 0.0, 400.0, 75.0);
+        assert_eq!(side_direction(rect, 120.0), -1);
+        assert_eq!(side_direction(rect, 299.0), -1);
+        assert_eq!(side_direction(rect, 300.0), 1);
+        assert_eq!(side_direction(rect, 480.0), 1);
     }
 }

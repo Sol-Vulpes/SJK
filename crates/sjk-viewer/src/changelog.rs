@@ -1,19 +1,20 @@
 //! The changelog page: every SJK release with its changes and their credits,
 //! read from `CHANGELOG.md` (built in, parsed once; see `changelog_data.rs`).
 //!
-//! Opened by the main menu's Changelog entry (modern and classic) or the
-//! `changelog` console command. Like the `debug_panel` test list it lives in the
+//! Opened by the main menu's Changelog entry or the `changelog` console
+//! command. Like the `debug_panel` test list it lives in the
 //! console and is drawn in place of it, so it opens over the menus and in a
 //! match; opened with the console closed, it closes the console again with
 //! itself. Releases are listed newest first on the left; the selected one's
 //! introduction and changes, each followed by its credit, are wrapped on a
 //! scrolling pane on the right. With `ui_menuStyle classic` the page takes the
-//! classic+ look of the command browser's pop-up (`changelog_classic.rs`).
+//! classic+ look of the command browser's pop-up (`changelog_classic.rs`), with
+//! the SJK UI its own (`changelog_sjk.rs`).
 
 use crate::menu::art::ArtSet;
-use crate::menu_widgets::{BACK_TOKEN, FormLayout, MenuCanvas, Scrim};
-use crate::text::{TextFace, TextVertex, UiFont, visible_text_width_style};
-use sjk_ui::{Color, FontWeight, InputEvent, Rect, TextAlign, UiEventKind};
+use crate::menu_widgets::{BACK_TOKEN, MenuCanvas};
+use crate::text::{TextFace, UiFont, visible_text_width_style};
+use sjk_ui::{FontWeight, InputEvent, Rect, TextAlign, UiEventKind};
 use winit::event::{ElementState, KeyEvent};
 use winit::keyboard::{KeyCode, PhysicalKey};
 
@@ -40,20 +41,6 @@ const PANE_BAR_TOKEN: u16 = 910;
 /// Pane lines one wheel notch scrolls.
 const WHEEL_LINES: usize = 3;
 
-/// Text sizes on the pane, at a scale of 1.
-const BODY_SIZE: f32 = 16.0;
-const BODY_LINE: f32 = 24.0;
-const CREDIT_SIZE: f32 = 12.0;
-const CREDIT_LINE: f32 = 22.0;
-const CREDIT_SPACING: f32 = 1.6;
-/// Gap after a paragraph or a change's credit.
-const GAP: f32 = 12.0;
-/// Indent of a change's text after its bullet.
-const BULLET_INDENT: f32 = 20.0;
-
-/// Secondary text in rows and the pane.
-const SOFT: Color = Color::new(0.916, 0.945, 0.973, 0.936);
-
 /// What the console does after the page handled an event.
 #[derive(Debug, Eq, PartialEq)]
 pub(crate) enum PanelAction {
@@ -77,16 +64,6 @@ struct Line {
     text: String,
 }
 
-impl LineKind {
-    fn height(self) -> f32 {
-        match self {
-            Self::Intro | Self::Change | Self::More => BODY_LINE,
-            Self::Credit => CREDIT_LINE,
-            Self::Gap => GAP,
-        }
-    }
-}
-
 pub(crate) struct Panel {
     open: bool,
     /// The page opened the console, so closing the page closes it too.
@@ -107,11 +84,9 @@ pub(crate) struct Panel {
     max_scroll: usize,
     /// Pane lines the last frame showed, for Page Up / Page Down.
     page_lines: usize,
-    summary: String,
-    /// The classic+ look, with the retail menu art it can draw.
-    classic: bool,
+    /// The retail menu art the classic+ look can draw.
     art: ArtSet,
-    /// The SJK UI's look (`changelog_sjk.rs`).
+    /// The SJK UI's look (`changelog_sjk.rs`), else the classic+ one.
     sjk: bool,
     ui: MenuCanvas,
 }
@@ -128,8 +103,6 @@ impl Panel {
             Ok(releases) => (releases, None),
             Err(error) => (Vec::new(), Some(error)),
         };
-        let released = releases.iter().filter(|r| !r.date.is_empty()).count();
-        let summary = format!("{released} releases, newest first   /   credits after each change");
         Self {
             open: false,
             owns_console: false,
@@ -143,8 +116,6 @@ impl Panel {
             scroll: 0,
             max_scroll: 0,
             page_lines: 1,
-            summary,
-            classic: false,
             art: ArtSet::default(),
             sjk: false,
             ui: MenuCanvas::with_text_capacity(256),
@@ -155,15 +126,14 @@ impl Panel {
         self.open
     }
 
-    /// Choose the look: classic+ with the retail `art` it can draw, or modern.
-    pub(crate) fn set_look(&mut self, classic: bool, art: ArtSet) {
-        self.classic = classic;
+    /// The retail `art` the classic+ look can draw.
+    pub(crate) fn set_art(&mut self, art: ArtSet) {
         self.art = art;
     }
 
     /// Whether the classic+ look is drawn, so its text can use the retail font.
     pub(crate) fn is_classic(&self) -> bool {
-        self.classic
+        !self.sjk
     }
 
     /// Draw the SJK UI's look (`sjk`), in its families, or not.
@@ -173,7 +143,7 @@ impl Panel {
 
     /// Whether the SJK UI's look is drawn.
     pub(crate) fn is_sjk(&self) -> bool {
-        self.sjk && !self.classic
+        self.sjk
     }
 
     /// Show the page; `owns_console` when the console was closed before it.
@@ -344,215 +314,6 @@ impl Panel {
             self.max_scroll = index;
         }
         self.scroll = self.scroll.min(self.max_scroll);
-    }
-
-    /// Draw the page over the whole frame. As with the debug panel, text other
-    /// overlays appended earlier this frame is dropped rather than shown through.
-    pub(crate) fn append(
-        &mut self,
-        vertices: &mut Vec<TextVertex>,
-        font: &UiFont,
-        viewport: [f32; 2],
-    ) {
-        if self.classic {
-            self.append_classic(vertices, font, viewport);
-            return;
-        }
-        vertices.clear();
-        let mut layout = FormLayout::new(viewport);
-        let s = layout.scale;
-        layout.margin = (viewport[0] * 0.06).max(48.0 * s);
-        let inner = viewport[0] - layout.margin * 2.0;
-        layout.column_width = (inner * 0.28).clamp(280.0 * s, 440.0 * s).min(inner * 0.4);
-        layout.rows_y = layout.tabs_y();
-        layout.row_height = 56.0 * s;
-        let rows_bottom = viewport[1] - 84.0 * s;
-        self.rows = (((rows_bottom - layout.rows_y) / layout.row_height).floor()).max(1.0) as usize;
-        self.rows = self.rows.min(ROW_LIMIT);
-        self.first = self
-            .first
-            .min(self.releases.len().saturating_sub(self.rows));
-
-        self.ui.begin_hero(viewport, 1.0, Scrim::Wide);
-        self.ui
-            .form_header(&layout, "SJK   /   RELEASES", "CHANGELOG", &self.summary);
-
-        let shown = self.first..self.releases.len().min(self.first + self.rows);
-        for (slot, index) in shown.enumerate() {
-            let rect = Rect::new(
-                layout.margin,
-                layout.rows_y + slot as f32 * layout.row_height,
-                layout.column_width,
-                layout.row_height,
-            );
-            self.row_view(rect, slot, index, s);
-        }
-
-        let pane_x = layout.margin + layout.column_width + 40.0 * s;
-        let pane_top = viewport[1] * 0.17 - 34.0 * s;
-        let pane = Rect::new(
-            pane_x,
-            pane_top,
-            viewport[0] - layout.margin - pane_x,
-            rows_bottom - pane_top,
-        );
-        self.ui.scroll_region(PANE_TOKEN, pane);
-        self.pane_view(pane, font, s);
-
-        self.ui.form_footer_actions(
-            &layout,
-            &[
-                ("UP / DOWN", "Release", 0),
-                ("PAGE UP / DOWN", "Scroll", 0),
-                ("ESC", "Close", BACK_TOKEN),
-            ],
-        );
-        self.ui.end_hero();
-        let selected = self.selected.saturating_sub(self.first);
-        self.ui
-            .finish(ROW_BASE + selected.min(ROW_LIMIT - 1) as u16);
-        self.ui.append_text(vertices, font, viewport);
-    }
-
-    /// One release: its title, then its date and change count.
-    fn row_view(&mut self, rect: Rect, slot: usize, index: usize, s: f32) {
-        let selected = index == self.selected;
-        self.ui
-            .form_row_frame(rect, ROW_BASE + slot as u16, selected, s);
-        let theme = self.ui.theme();
-        let release = &self.releases[index];
-        let x = rect.x + 16.0 * s;
-        let width = rect.width - 24.0 * s;
-        self.ui.text(
-            &release.title,
-            Rect::new(x, rect.y + 8.0 * s, width, 22.0 * s),
-            17.0 * s,
-            if selected { theme.foreground } else { SOFT },
-            if selected {
-                FontWeight::Semibold
-            } else {
-                FontWeight::Regular
-            },
-            0.2 * s,
-        );
-        self.ui.text(
-            &release.meta,
-            Rect::new(x, rect.y + 33.0 * s, width, 16.0 * s),
-            11.0 * s,
-            if release.date.is_empty() {
-                theme.accent
-            } else {
-                Color::new(0.854, 0.896, 0.936, 0.864)
-            },
-            FontWeight::Semibold,
-            1.2 * s,
-        );
-    }
-
-    /// The selected release on a backed pane: title and date, then its wrapped
-    /// introduction and changes from `scroll`, cut off at the pane's bottom.
-    fn pane_view(&mut self, pane: Rect, font: &UiFont, s: f32) {
-        self.ui.panel(pane);
-        let theme = self.ui.theme();
-        let pad = 28.0 * s;
-        let x = pane.x + pad;
-        let width = pane.width - pad * 2.0;
-        let bottom = pane.bottom() - pad;
-        let mut y = pane.y + pad;
-        if let Some(error) = &self.error {
-            self.ui.text(
-                error,
-                Rect::new(x, y, width, 22.0 * s),
-                16.0 * s,
-                theme.critical,
-                FontWeight::Regular,
-                0.2 * s,
-            );
-            return;
-        }
-        let Some(release) = self.releases.get(self.selected) else {
-            return;
-        };
-        self.ui.text(
-            &release.meta,
-            Rect::new(x, y, width, 18.0 * s),
-            13.0 * s,
-            theme.accent,
-            FontWeight::Semibold,
-            2.0 * s,
-        );
-        y += 26.0 * s;
-        self.ui.text(
-            &release.title,
-            Rect::new(x, y, width, 36.0 * s),
-            28.0 * s,
-            theme.foreground,
-            FontWeight::Semibold,
-            0.0,
-        );
-        y += 52.0 * s;
-
-        self.wrap(font, width, BODY_SIZE * s, 0.2 * s, BULLET_INDENT * s);
-        let available = bottom - y;
-        self.fit_scroll(available, |kind| kind.height() * s);
-
-        let indent = BULLET_INDENT * s;
-        let mut shown = 0_usize;
-        for line in &self.lines[self.scroll..] {
-            let height = line.kind.height() * s;
-            if y + height > bottom + 0.5 {
-                break;
-            }
-            shown += 1;
-            match line.kind {
-                LineKind::Gap => {}
-                LineKind::Intro => self.ui.text(
-                    &line.text,
-                    Rect::new(x, y, width, BODY_LINE * s),
-                    BODY_SIZE * s,
-                    theme.muted,
-                    FontWeight::Regular,
-                    0.2 * s,
-                ),
-                LineKind::Change | LineKind::More => {
-                    if line.kind == LineKind::Change {
-                        self.ui.accent_bar(
-                            Rect::new(x + 2.0 * s, y + 9.0 * s, 6.0 * s, 6.0 * s),
-                            theme.accent,
-                        );
-                    }
-                    self.ui.text(
-                        &line.text,
-                        Rect::new(x + indent, y, width - indent, BODY_LINE * s),
-                        BODY_SIZE * s,
-                        SOFT,
-                        FontWeight::Regular,
-                        0.2 * s,
-                    );
-                }
-                LineKind::Credit => self.ui.text_aligned(
-                    &line.text,
-                    Rect::new(x + indent, y + 2.0 * s, width - indent, 16.0 * s),
-                    CREDIT_SIZE * s,
-                    theme.accent,
-                    FontWeight::Semibold,
-                    CREDIT_SPACING * s,
-                    TextAlign::Start,
-                ),
-            }
-            y += height;
-        }
-        self.page_lines = shown.saturating_sub(2).max(1);
-        if self.max_scroll > 0 {
-            let top = bottom - available;
-            self.ui.scrollbar(
-                PANE_BAR_TOKEN,
-                Rect::new(pane.right() - 14.0 * s, top, 5.0 * s, available),
-                self.scroll,
-                shown,
-                self.lines.len(),
-            );
-        }
     }
 }
 

@@ -153,15 +153,6 @@ impl ForceMenu {
         self.allocation.remaining_points(self.rules.free_saber)
     }
 
-    /// Whether power `index` can hold levels on the draft's side in this
-    /// gametype; legalization clears it otherwise.
-    pub(super) fn is_available(&self, index: usize) -> bool {
-        ForcePower::ALL.get(index).is_some_and(|power| {
-            power.side().is_none_or(|side| side == self.allocation.side)
-                && !(power.is_team_power() && self.rules.gametype < GT_TEAM)
-        })
-    }
-
     /// Whether the draft differs from the applied profile.
     pub(super) fn is_dirty(&self) -> bool {
         self.allocation != self.applied
@@ -429,27 +420,5 @@ mod tests {
         assert_eq!(menu.remaining_points(), 10);
         assert!(!menu.set_level(1, 0)); // Jump keeps its free level
         assert_eq!(menu.allocation().levels[1], 1);
-    }
-
-    #[test]
-    fn availability_follows_side_and_gametype() {
-        let mut menu = menu(DEFAULT_FORCEPOWERS);
-        assert!(menu.is_available(0)); // Heal, light
-        assert!(!menu.is_available(6)); // Grip, dark
-        assert!(menu.is_available(1)); // Jump, neutral
-        assert!(!menu.is_available(11)); // Team Heal outside team games
-        menu.set_side(ForceSide::Dark);
-        assert!(!menu.is_available(0));
-        assert!(menu.is_available(6));
-        menu.load(
-            DEFAULT_FORCEPOWERS,
-            0,
-            ForceLegalizeRules {
-                gametype: GT_TEAM,
-                ..ForceLegalizeRules::default()
-            },
-        );
-        assert!(menu.is_available(11));
-        assert!(!menu.is_available(12)); // Team Energize is dark
     }
 }

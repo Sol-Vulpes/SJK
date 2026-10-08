@@ -391,19 +391,15 @@ impl ClientMenu {
     }
 
     /// The quick wheel's editor opened from Interface's row of the classic+
-    /// (`classic`) or the modern settings (world shots).
-    pub(crate) fn wheel_overlay_for_shot(&mut self, console: &ViewerConsole, classic: bool) {
-        if classic {
-            self.open_classic_panel(
-                console,
-                Page::Gameplay,
-                Entry::Interface,
-                PanelFrame::Main,
-                ReturnTarget::MainMenu,
-            );
-        } else {
-            self.open_settings_from(console, ReturnTarget::MainMenu, 0);
-        }
+    /// settings (world shots).
+    pub(crate) fn wheel_overlay_for_shot(&mut self, console: &ViewerConsole) {
+        self.open_classic_panel(
+            console,
+            Page::Gameplay,
+            Entry::Interface,
+            PanelFrame::Main,
+            ReturnTarget::MainMenu,
+        );
         self.settings
             .open_wheel_editor(console, crate::settings::WheelMode::Overlay);
     }
@@ -591,12 +587,6 @@ mod tests {
             (panel.page, panel.entry),
             (Page::Gameplay, Entry::Interface)
         );
-        // To modern: the modern screen.
-        let mut modern = menu();
-        modern.open_sjk_settings(&console, interface, ReturnTarget::MainMenu);
-        modern.set_menu_style(super::super::super::MenuStyle::Modern, &console);
-        assert!(!modern.sjk_settings_on_show() && modern.classic_panel.is_none());
-        assert_eq!(*modern.state.phase(), ClientPhase::Settings);
     }
 
     #[test]

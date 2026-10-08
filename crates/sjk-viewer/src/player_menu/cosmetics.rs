@@ -125,8 +125,8 @@ impl CosmeticsMenu {
         self.set(console, slot, (!wearing).then_some(name.as_str()));
     }
 
-    /// Step `slot` through None and the installed pieces (the modern
-    /// player screen's Hat and Cape rows), wearing each.
+    /// Step `slot` through None and the installed pieces (the player
+    /// screen's Hat and Cape rows), wearing each.
     pub(super) fn cycle(
         &mut self,
         console: &mut ViewerConsole,

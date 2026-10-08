@@ -9,6 +9,8 @@
 #                               made it when that is not the piece's owner.
 
 = Sol
++ 08/10/2026 | SJK #34 | Remove the modern UI style, leaving the SJK UI and classic menus
+- e0f5038 |  | Remove the modern UI style, leaving the SJK UI and classic menus
 + 08/10/2026 | SJK #33 | Polish the player card: hips anchor, Escape unpins, small medal names
 - 92743ac |  | Polish the player card: hips anchor, Escape unpins, small medal names
 + 08/10/2026 | SJK #32 | Keep the replaced surface's lighting on shader remaps

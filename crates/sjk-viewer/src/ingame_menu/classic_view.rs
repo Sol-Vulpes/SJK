@@ -10,7 +10,6 @@
 //! values of the about pop-up.
 
 use super::classic::{self, BAR_HEIGHT, BAR_TOKEN, INFO_LINE, Tab};
-use super::view::Rows;
 use super::{Page, VOTE_SCROLL_TOKEN, View};
 use crate::menu::art::{ArtPiece, ArtSet};
 use crate::menu::classic::layout::Placement;
@@ -19,6 +18,16 @@ use crate::menu::classic::view::{
 };
 use crate::menu_widgets::MenuCanvas;
 use sjk_ui::{DrawCommand, FontWeight, Gradient, Rect, TextAlign};
+
+/// The prepared entries of one page.
+pub(super) struct Rows<'a> {
+    pub(super) labels: &'a [String],
+    pub(super) enabled: &'a [bool],
+    /// `(first visible, total)` of a scrolling vote list.
+    pub(super) scroll: Option<(usize, usize)>,
+    /// Read-only lines shown above the entries.
+    pub(super) info: &'a [String],
+}
 
 /// Build the bar and the open pop-up of `view` into `canvas`.
 pub(super) fn build(

@@ -209,8 +209,7 @@ impl ViewerConsole {
             self.browser_action(action);
             return true;
         }
-        let classic = self.console_style().is_grid();
-        if classic && self.classic_key(event, key) {
+        if self.classic_key(event, key) {
             return true;
         }
         // Keys the console acts on itself end a pending composition when the platform
@@ -242,7 +241,7 @@ impl ViewerConsole {
                     &mut PromptLine {
                         text: &mut self.input,
                         edit: &mut self.edit,
-                        overstrike: classic && self.overstrike,
+                        overstrike: self.overstrike,
                     },
                     &event.logical_key,
                     event.text.as_deref(),
@@ -256,7 +255,7 @@ impl ViewerConsole {
 }
 
 impl ViewerConsole {
-    /// Keys only the classic console has (`Console_Key`): Page Up/Down scroll two
+    /// EternalJK's console keys (`Console_Key`): Page Up/Down scroll two
     /// rows (ten with Ctrl), Ctrl+Home/End jump to the top or bottom, keypad 8/2
     /// (without Num Lock) and Ctrl+P/N walk the history, Ctrl+L clears the
     /// scrollback and Insert toggles overstrike. `false` leaves the key to the

@@ -349,14 +349,13 @@ const HELP: &[(&str, &str)] = &[
         "cg_errorDecay",
         "Smooths the view over this many milliseconds when the server corrects you; 0 snaps.",
     ),
-    ("ui_accent", "Accent colour of the modern menus."),
     (
         "ui_menuContrast",
-        "Darkens the backdrop behind the modern menus for easier reading.",
+        "Darkens the backdrop behind Create game and the settings screens drawn over the map, for easier reading.",
     ),
     (
         crate::menu::style::CVAR,
-        "The SJK UI, SJK's own menus over the live map; classic menus after the original game's; or the modern ones.",
+        "The SJK UI, SJK's own menus over the live map; or classic menus after the original game's.",
     ),
     (
         crate::quick_wheel::pages::FILE,
@@ -421,7 +420,7 @@ const HELP: &[(&str, &str)] = &[
     // TEXT
     (
         crate::console::console_options::STYLE_CVAR,
-        "The console's look: classic, after EternalJK's, or SJK's modern one.",
+        "The console's look: the SJK UI's with its menus, or classic, after EternalJK's.",
     ),
     (crate::text::style::SCALE_CVAR, "Size of the menu text."),
     (
@@ -429,10 +428,6 @@ const HELP: &[(&str, &str)] = &[
         "Extra space between letters in the menus and the console.",
     ),
     ("con_scale", "Size of the console text."),
-    (
-        "con_lineSpacing",
-        "Space between the modern console's lines.",
-    ),
     // IMAGE
     (
         "r_sceneHdr",

@@ -51,7 +51,7 @@ pub(crate) struct Family {
     fallback: Option<[&'static [u8]; 2]>,
 }
 
-/// Inter, the modern menus', HUD's and chat's font.
+/// Inter, the HUD's, chat's and SJK's own screens' font.
 pub(crate) const INTER: Family = Family {
     name: "Inter",
     faces: [INTER_REGULAR, INTER_SEMIBOLD],
