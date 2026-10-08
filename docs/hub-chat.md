@@ -59,7 +59,9 @@ Old clients ignore all of it, so it stays `/v1/`.
   newer than `after` for this reader, else after `wait` seconds:
   `{"next","chat":[..],"emotes":[..],"deleted":[..],"online"}`. `after` 0, or above
   the newest id (the hub restarted), gives the newest 50 messages and no emotes.
-  The feed has its own per-address allowance (40 a minute), apart from the general one.
+  A key reads at most 40 times a minute (`feed_quota`); the feed (300 a minute) and chat
+  and emotes (60 a minute) have per-address allowances of their own, so several players
+  sharing an address fit and talking never spends what claims need.
 - Moderation: a `chat_muted` flag on keys (the operator's `chat-mute` and
   `chat-unmute`, `{"chat_muted":true}` in the operator API) and two staff requests,
   `/v1/staff/chat-delete` `{"id"}` and `/v1/staff/chat-mute` `{"key_id","muted"}`,
@@ -76,7 +78,8 @@ Old clients ignore all of it, so it stays `/v1/`.
   registration and `cl_sjkChat` is on (`Service::set_chat`), polls at most every 2
   seconds and backs off (2 to 60 seconds) when the hub fails. It keeps the last 200
   messages, the online count and whether the last poll reached the hub
-  (`ChatState`), and queues up to 64 received emotes (`Service::take_emotes`). A new
+  (`ChatState`; `loaded` says when the hub being read first answered, so the game's
+  feed marks that backlog instead of replaying it), and queues up to 64 received emotes (`Service::take_emotes`). A new
   hub, or ids that go backwards (the hub restarted), start from the backlog.
 - Shutting down tells the feed thread to stop; it ends after its poll without being
   waited for.
@@ -89,7 +92,8 @@ Old clients ignore all of it, so it stays `/v1/`.
   never to the game server.
 - Hub messages join the chat feed tagged SJK in the SJK UI's gold (`#E8B84A`, apart
   from the game's blues), SJK VERIFIED for a verified sender. Names and texts go
-  through `chat::for_display`. Messages staff delete leave the feed. Joining a game
+  through `chat::for_display`. Messages staff delete leave the feed, and muting a key
+  on the page hides its lines already there. Joining a game
   does not replay the hub's backlog in the feed (the dock and the page show it). A
   refusal (quota, rules) shows as an `SJK chat:` line.
 - `cl_sjkChat` (default 1, Settings > Network > SJK chat) shows SJK chat and runs the
@@ -109,7 +113,8 @@ Old clients ignore all of it, so it stays `/v1/`.
   character count. Up from the field chooses the newest message, Up and Down move,
   Page Up and Page Down scroll, Tab walks every control. A chosen message offers Mute on
   this PC (for the session); for staff, Delete for everyone, Mute at the hub and Unmute
-  at the hub (the client does not know a key's mute flag). It opens from the dock's
+  at the hub (the client does not know a key's mute flag); under them, what the request
+  came to (sending, done, or the hub's refusal). It opens from the dock's
   Open chat, `sjkchat`, `messagemode5` outside a game, and the in-game SJK menu's
   SJK chat.
 
@@ -146,7 +151,8 @@ flag is the only new thing on the hub's disk. Local mutes are not saved.
   batches of 50, a restart's `after`, emotes per server and their 10 seconds,
   deletions, the online count) and API tests run in memory, including the long poll
   under tokio's paused clock (answered when a message comes, empty after 25 seconds),
-  emotes needing a claim, IPv6 servers, the feed's own allowance, staff delete and
+  emotes needing a claim, IPv6 servers, the feed's and the chat's own allowances (four
+  readers behind one address, 40 reads a minute per key), staff delete and
   mute with the log, the operator's API and commands. `cargo test` and `cargo clippy
   --all-targets` pass.
 - Client: unit tests for the rules (identical to the hub's), `for_display`, the feed
