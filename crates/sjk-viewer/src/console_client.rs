@@ -60,6 +60,10 @@ pub(super) const COMMANDS: &[(&str, &str)] = &[
         "messagemode4",
         "Compose last-attacker chat when tracking is available",
     ),
+    (
+        "messagemode5",
+        "Compose SJK chat, which every SJK player shares through the SJK hub",
+    ),
     ("toggleconsole", "Toggle the console"),
     (
         "consolebrowser",
@@ -413,6 +417,9 @@ impl crate::GpuState {
             }
             "messagemode3" | "messagemode4" => {
                 self.targeted_chat(name == "messagemode4");
+            }
+            "messagemode5" => {
+                self.apply_input_action(Some(crate::input::InputAction::SjkMessageMode));
             }
             "toggleconsole" => {
                 if let Some(console) = &mut self.console {

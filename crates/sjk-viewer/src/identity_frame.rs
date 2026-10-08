@@ -1,7 +1,8 @@
 //! The per-frame hook of player identity (`player_identity.rs`): twice a second,
 //! hand the service the player's settings and where they are playing, the new
 //! medal pop-up the medals of the player's own profile (`medal_popup.rs`), and the
-//! achievements their counts (`achievements_frame.rs`).
+//! achievements their counts (`achievements_frame.rs`). Each frame it also lets the
+//! chat feed follow the SJK chat (`sjk_chat_frame.rs`).
 
 use super::*;
 use sjk_identity::Settings;
@@ -10,6 +11,7 @@ impl GpuState {
     /// Tell the identity service about the settings and the live session. Does
     /// nothing between its twice-a-second turns.
     pub(crate) fn update_identity(&mut self) {
+        self.update_sjk_chat();
         if !player_identity::due() {
             return;
         }

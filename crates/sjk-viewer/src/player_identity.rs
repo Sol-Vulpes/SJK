@@ -468,6 +468,11 @@ pub(crate) fn is_muted(key_id: &str) -> bool {
     lock().muted.iter().any(|muted| muted == key_id)
 }
 
+/// The keys the player muted in the SJK chat.
+pub(crate) fn muted_keys() -> Vec<String> {
+    lock().muted.clone()
+}
+
 /// Mute or unmute `key_id` in the SJK chat on this PC.
 pub(crate) fn set_muted(key_id: &str, muted: bool) {
     let mut runtime = lock();

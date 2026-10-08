@@ -150,6 +150,7 @@ pub(crate) const ACTIONS: &[BindableAction] = &[
     action(Other, "Team chat", "messagemode2", "t"),
     action(Other, "Whisper to crosshair player", "messagemode3", "u"),
     action(Other, "Whisper to last attacker", "messagemode4", ""),
+    action(Other, "SJK chat", "messagemode5", "i"),
     action(Other, "Join / team menu", "teammenu", "j"),
     action(Other, "Vote yes", "vote yes", ""),
     action(Other, "Vote no", "vote no", ""),
@@ -246,6 +247,22 @@ pub(crate) fn migrate_chat_default(binds: &mut BindTable, repair_global_u: bool)
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_sjk_chat_key_defaults_to_i_and_respects_custom_binds() {
+        assert_eq!(default_bindings().get("i"), Some("messagemode5"));
+        let mut old = BindTable::new();
+        migrate_missing_defaults(&mut old);
+        assert_eq!(old.get("i"), Some("messagemode5"));
+        let mut taken = BindTable::new();
+        taken.bind("i", "invuse").unwrap();
+        migrate_missing_defaults(&mut taken);
+        assert_eq!(taken.get("i"), Some("invuse"));
+        let mut custom = BindTable::new();
+        custom.bind("o", "messagemode5").unwrap();
+        migrate_missing_defaults(&mut custom);
+        assert_eq!(custom.get("i"), None);
+    }
 
     #[test]
     fn crosshair_chat_u_preserves_existing_bindings() {

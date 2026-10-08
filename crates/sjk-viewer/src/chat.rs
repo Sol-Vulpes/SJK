@@ -9,6 +9,7 @@ mod interaction;
 mod layout;
 mod options;
 mod player_actions;
+mod sjk;
 mod social;
 
 mod view;
@@ -30,11 +31,13 @@ const HOLD_MS: u64 = 9_000;
 const FADE_MS: u64 = 2_000;
 const ENTER_MS: u32 = 220;
 
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 enum Channel {
     Global,
     Team,
     Whisper,
+    /// The SJK chat, through the SJK hub (`chat/sjk.rs`).
+    Sjk,
 }
 
 struct ChatLine {
@@ -48,6 +51,8 @@ struct ChatLine {
     emojis: Vec<u16>,
     wrap: layout::Wrapped,
     y: Option<Tween>,
+    /// An SJK chat line's id at the hub, and whether its sender is verified.
+    hub: Option<(u64, bool)>,
 }
 
 #[derive(Clone, Copy)]
@@ -83,6 +88,12 @@ pub(crate) struct ChatOverlay {
     scoreboard_layout: bool,
     options: options::Options,
     emojis: emoji::Emojis,
+    /// The newest SJK chat id the feed has seen; `None` before the first sync.
+    sjk_seen: Option<u64>,
+    /// The serial of the last SJK chat outcome shown.
+    sjk_outcome: u64,
+    /// The SJK chat's revision and outcome serial last followed.
+    sjk_mark: Option<(u64, u64)>,
 }
 
 impl ChatOverlay {
@@ -117,6 +128,9 @@ impl ChatOverlay {
             scoreboard_layout: false,
             options: options::Options::default(),
             emojis: emoji::Emojis::default(),
+            sjk_seen: None,
+            sjk_outcome: 0,
+            sjk_mark: None,
         }
     }
 
@@ -206,6 +220,7 @@ impl ChatOverlay {
             emojis,
             wrap: layout::Wrapped::default(),
             y: None,
+            hub: None,
         };
         if self.lines.len() == HISTORY_LIMIT {
             self.lines.pop_front();
@@ -305,4 +320,6 @@ impl ChatOverlay {
 pub(crate) enum ChatInputResult {
     None,
     Submit(String),
+    /// A message for the SJK chat, to send through the hub.
+    Sjk(String),
 }

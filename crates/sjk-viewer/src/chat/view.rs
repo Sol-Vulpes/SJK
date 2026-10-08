@@ -16,6 +16,8 @@ pub(super) fn tint(channel: Channel, alpha: f32) -> Color {
         Channel::Global => Color::new(0.70, 0.88, 0.98, alpha),
         Channel::Team => Color::new(0.40, 0.86, 0.86, alpha),
         Channel::Whisper => Color::new(0.84, 0.68, 1.0, alpha),
+        // The SJK UI's gold (`#E8B84A`), apart from the game's blues.
+        Channel::Sjk => Color::new(0.91, 0.72, 0.29, alpha),
     }
 }
 
@@ -206,10 +208,12 @@ impl ChatOverlay {
                 let label = if line.muted {
                     "IGNORED"
                 } else {
-                    match line.channel {
-                        Channel::Team => "TEAM",
-                        Channel::Whisper => "WHISPER",
-                        Channel::Global => "",
+                    match (line.channel, line.hub) {
+                        (Channel::Team, _) => "TEAM",
+                        (Channel::Whisper, _) => "WHISPER",
+                        (Channel::Sjk, Some((_, true))) => "SJK VERIFIED",
+                        (Channel::Sjk, _) => "SJK",
+                        (Channel::Global, _) => "",
                     }
                 };
                 self.ui.text(

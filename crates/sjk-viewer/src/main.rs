@@ -182,6 +182,7 @@ mod session_transition;
 mod settings;
 mod settings_icons;
 mod shared_geometry;
+mod sjk_chat_frame;
 mod sky_stage;
 mod snapshot_presentation;
 mod static_models;
