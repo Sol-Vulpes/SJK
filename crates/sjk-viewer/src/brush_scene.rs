@@ -25,6 +25,16 @@ pub(crate) fn append_frame(gpu: &mut GpuState, time: i64, now: Instant) {
         &mut gpu.mover_groups,
         |number| crate::actor_instance::scene_flags(game, snapshot, number),
     );
+    let catalog = &gpu.mover_catalog;
+    gpu.world_materials.observe_movers(
+        &gpu.queue,
+        &gpu.movers,
+        game.map(|game| {
+            game.baselines()
+                .filter_map(move |state| legacy_present_mover(state, time as i32))
+        }),
+        |model_index| catalog.mesh_of(model_index),
+    );
     if let (Some(game), Some(snapshot)) = (game, snapshot) {
         for state in game.baselines().filter(|state| {
             sjk_client::legacy_permanent_visible(state, snapshot.player.origin())

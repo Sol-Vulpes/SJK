@@ -12,13 +12,32 @@ pub(super) fn new(
     scene: [u32; 2],
     light_divisor: u32,
     lamp_set: &crate::lamp_lights::LampSet,
+    cache_pages: Option<&super::super::lamp_cache::Pages>,
     bounds: [Vec3; 2],
     domain: &super::super::gi_probe_domain::Domain,
 ) -> Runtime {
-    let mut lamps = crate::lamp_lights::Gpu::new(device, lamp_set);
+    // `SJK_MOVER_OCCLUSION=0` leaves movers out of lamp shadows, for comparisons.
+    let occluders = if std::env::var_os("SJK_MOVER_OCCLUSION").is_some_and(|value| value == "0") {
+        &[][..]
+    } else {
+        gi.map_or(&[][..], |gi| &gi.movers[..])
+    };
+    let mut lamps = crate::lamp_lights::Gpu::new(device, lamp_set, occluders);
     if let Some(geometry) = gi.and_then(|gi| gi.fixtures.as_ref()) {
         lamps.prepare_visibility(device, queue, geometry);
     }
+    let movers = lamps.take_doors().and_then(|doors| {
+        let meshes = occluders.iter().map(|o| o.mesh + 1).max().unwrap_or(0);
+        super::super::mover_occlusion::gpu::Runtime::new(
+            device,
+            &lamps,
+            doors,
+            &lamp_set.lamps,
+            occluders,
+            meshes,
+            cache_pages,
+        )
+    });
     let lamp_shadows = settings
         .day
         .enabled
@@ -72,6 +91,7 @@ pub(super) fn new(
     let far = settings.world.then(|| FarCascade {
         cascade: cascade("SJK far sun cascade"),
         rendered: std::cell::Cell::new(None),
+        movers: std::cell::Cell::new((0, None)),
     });
     let close = settings.world.then(|| cascade("SJK close sun cascade"));
     let held = settings.world.then(|| {
@@ -355,6 +375,7 @@ pub(super) fn new(
         sampler,
         bounds,
         lamps,
+        movers,
         lamp_shadows,
         caster,
         receiver_pipelines,

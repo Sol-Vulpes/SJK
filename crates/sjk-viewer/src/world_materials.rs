@@ -20,6 +20,8 @@ pub(crate) mod lamp_geometry;
 mod lighting_environment;
 #[path = "world_lighting_mode.rs"]
 pub(crate) mod lighting_mode;
+#[path = "mover_occlusion.rs"]
+pub(crate) mod mover_occlusion;
 
 #[cfg(test)]
 #[path = "world_shader_fxc_tests.rs"]

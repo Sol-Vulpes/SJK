@@ -589,6 +589,17 @@ impl super::super::super::Runtime {
                 &shadow.lamps,
                 self.shadow_bounds,
             );
+            // Mover shadows that changed since (`mover_occlusion.rs`).
+            if let Some(movers) = &shadow.movers {
+                cache.refresh(
+                    &self.forge.device,
+                    encoder,
+                    input.vertices,
+                    input.indices,
+                    &shadow.lamps,
+                    &movers.take_refresh(),
+                );
+            }
         }
         // Not cleared: lighting reads only the texels the pre-pass covered, and the
         // depth-equal pass below writes every one of them (`receiver_texel`).

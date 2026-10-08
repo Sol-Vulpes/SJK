@@ -22,6 +22,9 @@ pub(crate) use scene::append_frame;
 /// or a detached world prop (`model_index` none).
 pub(crate) struct Mesh {
     pub(crate) model_index: Option<usize>,
+    /// The world box the model can move through (`mover_occlusion::reach`); empty for
+    /// a world prop.
+    pub(crate) reach: [[f32; 3]; 2],
     pub(crate) draws: Vec<ActorDraw>,
 }
 
@@ -49,6 +52,7 @@ pub(crate) type Presented = LegacyMoverPresentation;
 /// remain owned by the world pipeline.
 pub(crate) fn build_catalog(bsp: &Bsp, flattened: &mut FlattenedScene) -> Catalog {
     let detached = world_props::detach(bsp, flattened);
+    let spawns = spawn_entities(bsp);
     let mut mesh_by_model = vec![None; bsp.render().models().len()];
     let mut meshes = (1..bsp.render().models().len())
         .filter_map(|model_index| {
@@ -65,8 +69,16 @@ pub(crate) fn build_catalog(bsp: &Bsp, flattened: &mut FlattenedScene) -> Catalo
                     material: draw.material,
                 })
                 .collect::<Vec<_>>();
+            let entity = spawns.get(&model_index);
+            let bounds = &bsp.render().models()[model_index];
+            let (lower, upper) = crate::world_materials::mover_occlusion::reach(
+                entity,
+                glam::Vec3::from_array(bounds.minimums),
+                glam::Vec3::from_array(bounds.maximums),
+            );
             (!draws.is_empty()).then_some(Mesh {
                 model_index: Some(model_index),
+                reach: [lower.to_array(), upper.to_array()],
                 draws,
             })
         })
@@ -88,6 +100,27 @@ pub(crate) fn build_catalog(bsp: &Bsp, flattened: &mut FlattenedScene) -> Catalo
         meshes,
         mesh_by_model,
         props,
+    }
+}
+
+/// The map's entities that spawn a brush model, by inline model index (`"model" "*N"`).
+fn spawn_entities(bsp: &Bsp) -> std::collections::HashMap<usize, sjk_entity::Entity> {
+    let Ok(entities) = sjk_entity::parse_entity_lump(bsp.entities()) else {
+        return Default::default();
+    };
+    entities
+        .into_iter()
+        .filter_map(|entity| {
+            let model = entity.get("model")?.strip_prefix('*')?.parse().ok()?;
+            Some((model, entity))
+        })
+        .collect()
+}
+
+impl Catalog {
+    /// The mesh drawing inline model `model_index`, if it has surfaces.
+    pub(crate) fn mesh_of(&self, model_index: usize) -> Option<usize> {
+        self.mesh_by_model.get(model_index).copied().flatten()
     }
 }
 

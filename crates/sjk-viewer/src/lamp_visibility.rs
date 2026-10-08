@@ -30,6 +30,31 @@ fn shape(count: u32, limit: u32) -> Option<(u32, u32, [u32; 2])> {
     }
 }
 
+/// Door tiles the atlas can add to `lamps` lamp tiles at the resolution the lamps alone
+/// would get: doors never coarsen the lamps' own shadows.
+pub(super) fn door_capacity(lamps: u32, limit: u32) -> u32 {
+    let Some((resolution, ..)) = shape(lamps, limit) else {
+        return 0;
+    };
+    let fits = |doors: u32| {
+        lamps
+            .checked_add(doors)
+            .and_then(|count| shape(count, limit))
+            .is_some_and(|(r, ..)| r == resolution)
+    };
+    // The tile count a resolution fits only shrinks as the count grows.
+    let (mut low, mut high) = (0u32, 1u32 << 20);
+    while low < high {
+        let middle = low + (high - low).div_ceil(2);
+        if fits(middle) {
+            low = middle;
+        } else {
+            high = middle - 1;
+        }
+    }
+    low
+}
+
 pub(super) fn texture(device: &wgpu::Device, size: [u32; 2]) -> wgpu::TextureView {
     device
         .create_texture(&wgpu::TextureDescriptor {
@@ -58,11 +83,13 @@ impl Gpu {
         queue: &crate::frame_queue::FrameQueue,
         geometry: &crate::world_materials::lamp_geometry::Runtime,
     ) {
-        let Some((resolution, columns, size)) =
-            shape(self.lamp_count, device.limits().max_texture_dimension_2d)
-        else {
+        let Some((resolution, columns, size)) = shape(
+            self.lamp_count + self.door_tiles,
+            device.limits().max_texture_dimension_2d,
+        ) else {
             return;
         };
+        self.resolution = Some(resolution);
         self.visibility = texture(device, size);
         queue.write_buffer(&self.grid, 56, bytemuck::cast_slice(&[resolution, columns]));
         let mut entries = Self::layout_entries(0).to_vec();
@@ -123,8 +150,10 @@ impl Gpu {
         }
         queue.submit([encoder.finish()]);
         crate::log::progress(format_args!(
-            "Fixture visibility: {} lamps, {resolution} directional samples per edge, {:.1} MiB",
+            "Fixture visibility: {} lamps and {} mover door tiles, {resolution} directional \
+             samples per edge, {:.1} MiB",
             self.lamp_count,
+            self.door_tiles,
             f64::from(size[0]) * f64::from(size[1]) * 4. / 1048576.
         ));
     }
@@ -147,6 +176,22 @@ impl Gpu {
         wgpu::BindGroupEntry {
             binding,
             resource: wgpu::BindingResource::TextureView(&self.visibility),
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn door_tiles_never_lower_the_lamps_resolution() {
+        for lamps in [1, 100, 5_000, 20_000, 40_000] {
+            let limit = 16_384;
+            let alone = shape(lamps, limit).expect("a shape").0;
+            let doors = door_capacity(lamps, limit);
+            assert_eq!(shape(lamps + doors, limit).expect("a shape").0, alone);
+            assert_ne!(shape(lamps + doors + 1, limit).map(|s| s.0), Some(alone));
         }
     }
 }

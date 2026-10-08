@@ -1,0 +1,409 @@
+//! GPU side of mover occlusion: occluder triangles and poses, and the trace of queued
+//! door tiles into the lamp visibility atlas.
+use super::{Doors, Occluder, Pose, Poses, Queue};
+use wgpu::util::DeviceExt;
+
+/// Rays traced per frame: 31 tiles of 128² (about 17,000 rays each) or 120 of 64²,
+/// each ray tested against the few movers near its lamp.
+const RAYS_PER_FRAME: u32 = 1 << 19;
+/// The most tiles one frame traces, whatever the resolution.
+const MAX_TILES: usize = 512;
+/// While movers keep moving, the lamp cache follows them this often; once every queued
+/// tile is traced it follows at once.
+const CACHE_REFRESH: std::time::Duration = std::time::Duration::from_millis(100);
+/// Cache layers baked again in one frame; the rest wait for the next.
+const LAYERS_PER_FRAME: usize = 4;
+
+/// Pose tracking and the tracer of one map's door tiles.
+pub(crate) struct Runtime {
+    /// Per mover catalog mesh: its occluder.
+    mesh_to_occluder: Vec<Option<u32>>,
+    doors: Doors,
+    poses: Poses,
+    queue: Queue,
+    batch: Vec<u32>,
+    /// Tiles traced per frame at this atlas resolution.
+    budget: usize,
+    /// Tiles written to `work` and not yet traced.
+    pending: std::cell::Cell<u32>,
+    /// The poses `table` holds, by `Poses::generation`.
+    uploaded: Option<u64>,
+    /// Whether the baselines have placed the movers no snapshot has shown.
+    baselines_placed: bool,
+    table: Vec<[f32; 4]>,
+    table_buffer: wgpu::Buffer,
+    work: wgpu::Buffer,
+    /// Per queued tile: the pixel rectangle its movers cover (`mover_occlusion.wgsl`).
+    covered: wgpu::Buffer,
+    /// `covered`'s starting value for each queued tile.
+    uncovered: Vec<[u32; 4]>,
+    pipeline: wgpu::ComputePipeline,
+    publish: wgpu::ComputePipeline,
+    group: wgpu::BindGroup,
+    pitch: u32,
+    /// Per door tile, the lamp cache texels its movers can shadow
+    /// (`mover_occlusion::cache_regions`).
+    regions: Vec<Vec<(u32, [u32; 4])>>,
+    /// Cache texels of traced tiles waiting to be baked again, one rectangle per layer.
+    stale: std::cell::RefCell<std::collections::BTreeMap<u32, [u32; 4]>>,
+    refreshed: std::cell::Cell<Option<std::time::Instant>>,
+}
+
+impl Runtime {
+    /// `None` when no lamp has a door tile or the atlas has no resolution.
+    pub(crate) fn new(
+        device: &wgpu::Device,
+        lamps: &crate::lamp_lights::Gpu,
+        doors: Doors,
+        lamp_set: &[crate::lamp_lights::Lamp],
+        occluders: &[Occluder],
+        meshes: usize,
+        cache: Option<&crate::world_materials::lamp_cache::Pages>,
+    ) -> Option<Self> {
+        let resolution = lamps.visibility_resolution()?;
+        if doors.tiles.is_empty() {
+            return None;
+        }
+        let mut mesh_to_occluder = vec![None; meshes];
+        let mut triangles: Vec<[f32; 4]> = Vec::new();
+        let mut table = Vec::with_capacity(occluders.len() * 4);
+        for (index, occluder) in occluders.iter().enumerate() {
+            if let Some(slot) = mesh_to_occluder.get_mut(occluder.mesh) {
+                *slot = Some(index as u32);
+            }
+            let first = (triangles.len() / 3) as u32;
+            for [a, b, c] in &occluder.triangles {
+                triangles.push(a.extend(0.).to_array());
+                triangles.push((*b - *a).extend(0.).to_array());
+                triangles.push((*c - *a).extend(0.).to_array());
+            }
+            let count = occluder.triangles.len() as u32;
+            table.extend([
+                [0., 0., 0., 1.],
+                [0.; 4],
+                occluder.lower.extend(f32::from_bits(first)).to_array(),
+                occluder.upper.extend(f32::from_bits(count)).to_array(),
+            ]);
+        }
+        let mut tiles: Vec<[u32; 4]> = Vec::with_capacity(doors.tiles.len());
+        let mut lists: Vec<u32> = Vec::new();
+        for tile in &doors.tiles {
+            tiles.push([
+                tile.lamp,
+                lists.len() as u32,
+                tile.occluders.len() as u32,
+                0,
+            ]);
+            lists.extend(&tile.occluders);
+        }
+        let storage = |label, contents: &[u8], usage| {
+            device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some(label),
+                contents,
+                usage: wgpu::BufferUsages::STORAGE | usage,
+            })
+        };
+        let table_buffer = storage(
+            "SJK mover occluder poses",
+            bytemuck::cast_slice(&table),
+            wgpu::BufferUsages::COPY_DST,
+        );
+        let triangle_buffer = storage(
+            "SJK mover occluder triangles",
+            bytemuck::cast_slice(&triangles),
+            wgpu::BufferUsages::empty(),
+        );
+        let tile_buffer = storage(
+            "SJK door tiles",
+            bytemuck::cast_slice(&tiles),
+            wgpu::BufferUsages::empty(),
+        );
+        let list_buffer = storage(
+            "SJK door tile occluders",
+            bytemuck::cast_slice(&lists),
+            wgpu::BufferUsages::empty(),
+        );
+        let work = storage(
+            "SJK door tiles to trace",
+            bytemuck::cast_slice(&[0u32; MAX_TILES]),
+            wgpu::BufferUsages::COPY_DST,
+        );
+        let covered = storage(
+            "SJK door tile coverage",
+            bytemuck::cast_slice(&[[0u32; 4]; MAX_TILES]),
+            wgpu::BufferUsages::COPY_DST,
+        );
+        let read_only = |binding| wgpu::BindGroupLayoutEntry {
+            binding,
+            visibility: wgpu::ShaderStages::COMPUTE,
+            ty: wgpu::BindingType::Buffer {
+                ty: wgpu::BufferBindingType::Storage { read_only: true },
+                has_dynamic_offset: false,
+                min_binding_size: None,
+            },
+            count: None,
+        };
+        let mut entries = crate::lamp_lights::Gpu::layout_entries(0).to_vec();
+        entries.push(wgpu::BindGroupLayoutEntry {
+            binding: 2,
+            visibility: wgpu::ShaderStages::COMPUTE,
+            ty: wgpu::BindingType::StorageTexture {
+                access: wgpu::StorageTextureAccess::WriteOnly,
+                format: wgpu::TextureFormat::R32Float,
+                view_dimension: wgpu::TextureViewDimension::D2,
+            },
+            count: None,
+        });
+        entries.extend((3..8).map(read_only));
+        entries.push(wgpu::BindGroupLayoutEntry {
+            binding: 8,
+            visibility: wgpu::ShaderStages::COMPUTE,
+            ty: wgpu::BindingType::Buffer {
+                ty: wgpu::BufferBindingType::Storage { read_only: false },
+                has_dynamic_offset: false,
+                min_binding_size: None,
+            },
+            count: None,
+        });
+        let layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            label: Some("SJK door tile tracing"),
+            entries: &entries,
+        });
+        let mut entries = lamps.entries(0).to_vec();
+        entries.push(wgpu::BindGroupEntry {
+            binding: 2,
+            resource: wgpu::BindingResource::TextureView(lamps.visibility_view()),
+        });
+        for (binding, buffer) in [
+            (3, &table_buffer),
+            (4, &triangle_buffer),
+            (5, &tile_buffer),
+            (6, &list_buffer),
+            (7, &work),
+            (8, &covered),
+        ] {
+            entries.push(wgpu::BindGroupEntry {
+                binding,
+                resource: buffer.as_entire_binding(),
+            });
+        }
+        let group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("SJK door tile tracing"),
+            layout: &layout,
+            entries: &entries,
+        });
+        let source = format!(
+            "{}{}",
+            include_str!("lamp_visibility_common.wgsl"),
+            include_str!("mover_occlusion.wgsl")
+        );
+        let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+            label: Some("SJK door tile tracing"),
+            source: wgpu::ShaderSource::Wgsl(source.into()),
+        });
+        let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+            label: Some("SJK door tile tracing"),
+            bind_group_layouts: &[Some(&layout)],
+            immediate_size: 0,
+        });
+        let entry = |label, entry_point| {
+            device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+                label: Some(label),
+                layout: Some(&pipeline_layout),
+                module: &shader,
+                entry_point: Some(entry_point),
+                compilation_options: Default::default(),
+                cache: None,
+            })
+        };
+        let pipeline = entry("SJK door tile tracing", "trace");
+        let publish = entry("SJK door tile coverage", "publish");
+        let started = std::time::Instant::now();
+        let regions = cache.map_or_else(
+            || vec![Vec::new(); doors.tiles.len()],
+            |pages| {
+                super::cache_regions(
+                    lamp_set,
+                    &doors,
+                    occluders,
+                    pages.surfaces(),
+                    pages.resolution(),
+                )
+            },
+        );
+        crate::log::progress(format_args!(
+            "Mover occlusion: {} movers ({} triangles) shadow {} lamps; their cache \
+             regions found in {:.0} ms",
+            occluders.len(),
+            triangles.len() / 3,
+            doors.tiles.len(),
+            started.elapsed().as_secs_f64() * 1e3
+        ));
+        Some(Self {
+            mesh_to_occluder,
+            poses: Poses::new(occluders.len()),
+            queue: Queue::new(doors.tiles.len()),
+            doors,
+            batch: Vec::with_capacity(MAX_TILES),
+            budget: ((RAYS_PER_FRAME / ((resolution + 2) * (resolution + 2))) as usize)
+                .clamp(8, MAX_TILES),
+            pending: std::cell::Cell::new(0),
+            uploaded: None,
+            baselines_placed: false,
+            table,
+            table_buffer,
+            work,
+            covered,
+            uncovered: vec![[u32::MAX, u32::MAX, 0, 0]; MAX_TILES],
+            pipeline,
+            publish,
+            group,
+            pitch: resolution + 2,
+            regions,
+            stale: Default::default(),
+            refreshed: std::cell::Cell::new(None),
+        })
+    }
+
+    /// Place the movers this frame presents, then the baselines' movers no snapshot has
+    /// shown (once), and upload what changed and the next tiles to trace.
+    pub(crate) fn observe(
+        &mut self,
+        queue: &crate::frame_queue::FrameQueue,
+        presented: &[crate::movers::Presented],
+        baselines: Option<impl Iterator<Item = crate::movers::Presented>>,
+        mesh_of: impl Fn(usize) -> Option<usize>,
+    ) {
+        let Self {
+            mesh_to_occluder,
+            doors,
+            poses,
+            queue: tiles,
+            baselines_placed,
+            ..
+        } = self;
+        let occluder_of = |model_index| {
+            mesh_of(model_index)
+                .and_then(|mesh| mesh_to_occluder.get(mesh).copied().flatten())
+                .map(|occluder| occluder as usize)
+        };
+        for mover in presented {
+            if let Some(occluder) = occluder_of(mover.model_index) {
+                poses.set(occluder, Pose::of(mover), doors, tiles);
+            }
+        }
+        if !*baselines_placed
+            && poses.any_unknown()
+            && let Some(baselines) = baselines
+        {
+            for mover in baselines {
+                if let Some(occluder) = occluder_of(mover.model_index) {
+                    poses.set_unknown(occluder, Pose::of(&mover), doors, tiles);
+                }
+            }
+            *baselines_placed = true;
+        }
+        if self.uploaded != Some(self.poses.generation) {
+            for (index, pose) in self.poses.current.iter().enumerate() {
+                self.table[index * 4] = pose.rotation.to_array();
+                self.table[index * 4 + 1] = pose
+                    .origin
+                    .extend(f32::from(u8::from(pose.blocking)))
+                    .to_array();
+            }
+            queue.write_buffer(&self.table_buffer, 0, bytemuck::cast_slice(&self.table));
+            self.uploaded = Some(self.poses.generation);
+        }
+        if self.pending.get() == 0 {
+            self.queue.take(self.budget, &mut self.batch);
+            if !self.batch.is_empty() {
+                queue.write_buffer(&self.work, 0, bytemuck::cast_slice(&self.batch));
+                queue.write_buffer(
+                    &self.covered,
+                    0,
+                    bytemuck::cast_slice(&self.uncovered[..self.batch.len()]),
+                );
+                self.pending.set(self.batch.len() as u32);
+            }
+        }
+    }
+
+    /// Trace the tiles `observe` queued, once.
+    pub(crate) fn encode(&self, encoder: &mut wgpu::CommandEncoder) {
+        let tiles = self.pending.replace(0);
+        if tiles == 0 {
+            return;
+        }
+        let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+            label: Some("SJK door tile tracing"),
+            timestamp_writes: None,
+        });
+        pass.set_pipeline(&self.pipeline);
+        pass.set_bind_group(0, &self.group, &[]);
+        let groups = self.pitch.div_ceil(8);
+        pass.dispatch_workgroups(groups, groups, tiles);
+        pass.set_pipeline(&self.publish);
+        pass.dispatch_workgroups(tiles, 1, 1);
+        let mut stale = self.stale.borrow_mut();
+        for &tile in &self.batch[..tiles as usize] {
+            for &(layer, rect) in &self.regions[tile as usize] {
+                stale
+                    .entry(layer)
+                    .and_modify(|r| *r = super::merge(*r, rect))
+                    .or_insert(rect);
+            }
+        }
+    }
+
+    /// The lamps `occluder` has door tiles for, and whether any tile is still queued.
+    #[cfg(test)]
+    pub(crate) fn door_lamps(&self, occluder: usize) -> (Vec<u32>, bool) {
+        (
+            self.doors.by_occluder[occluder]
+                .iter()
+                .map(|&tile| self.doors.tiles[tile as usize].lamp)
+                .collect(),
+            self.queue.pending_len() > 0 || self.pending.get() > 0,
+        )
+    }
+
+    /// Cache regions to bake again this frame: every [`CACHE_REFRESH`] while tiles are
+    /// still queued, at once when none are; at most [`LAYERS_PER_FRAME`] layers.
+    pub(crate) fn take_refresh(&self) -> Vec<(u32, [u32; 4])> {
+        let mut stale = self.stale.borrow_mut();
+        let settled = self.queue.pending_len() == 0 && self.pending.get() == 0;
+        let due = self
+            .refreshed
+            .get()
+            .is_none_or(|at| at.elapsed() >= CACHE_REFRESH);
+        if stale.is_empty() || !(settled || due) {
+            return Vec::new();
+        }
+        self.refreshed.set(Some(std::time::Instant::now()));
+        let mut regions = Vec::with_capacity(LAYERS_PER_FRAME);
+        while regions.len() < LAYERS_PER_FRAME {
+            let Some(region) = stale.pop_first() else {
+                break;
+            };
+            regions.push(region);
+        }
+        regions
+    }
+
+    /// Counts mover pose changes that affect light.
+    pub(crate) fn generation(&self) -> u64 {
+        self.poses.generation
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn the_door_tile_tracer_validates() {
+        crate::wgsl_source::validate(&format!(
+            "{}{}",
+            include_str!("lamp_visibility_common.wgsl"),
+            include_str!("mover_occlusion.wgsl")
+        ));
+    }
+}

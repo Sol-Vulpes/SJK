@@ -909,7 +909,12 @@ impl GpuState {
                 context.material_maps,
             )?;
         world_materials.bind_geometry(&geometry);
-        world_materials.install_gi(&device, &flattened, context.sun_shadows.day.enabled);
+        world_materials.install_gi(
+            &device,
+            &flattened,
+            &mover_catalog.meshes,
+            context.sun_shadows.day.enabled,
+        );
         let scene_views = scene_views::Runtime::new(
             &device,
             &camera_layout,
@@ -1989,7 +1994,7 @@ impl GpuState {
                 .update(snapshot, presentation_time as i32);
         } else {
             self.projectiles.clear();
-            if !self.resident.exploring() {
+            if !self.resident.exploring() && !world_shot_movers_pinned() {
                 self.movers.clear();
             }
             self.pickups.clear();
@@ -2364,3 +2369,14 @@ mod particle_atlas_sampling;
 
 mod depth_target;
 use depth_target::DepthTarget;
+
+/// World shots place movers by hand (`world_shot::movers`); nothing else keeps them
+/// without a snapshot.
+#[cfg(test)]
+fn world_shot_movers_pinned() -> bool {
+    world_shot::MOVERS_PINNED.with(std::cell::Cell::get)
+}
+#[cfg(not(test))]
+fn world_shot_movers_pinned() -> bool {
+    false
+}

@@ -7,6 +7,29 @@ SJK currently contains a native client and standard dedicated server in a
 20-crate Rust workspace. This page records scope and verification, rather than
 claiming complete parity from the presence of an implementation.
 
+## Movers in lamp shadows
+
+Branch `feat/mover-light-occlusion` (08/10/2026, based on `15cf7a9`, Linux): Sol asked
+for doors and every other moving object to block light when closed and let it through
+when open. Lamp shadows came from a one-time trace of the static world, so a closed
+door let every lamp through, and the far sun cascade kept movers where they stood when
+it was drawn. Lamps near movers now get door tiles in the visibility atlas, traced
+against the movers at their current pose, the lamp cache is baked again where their
+shadows change, and the far cascade follows movers
+([rendering](rendering.md#movers-in-lamp-shadows)).
+
+Verified: workspace formatting, the locked build, clippy and the locked tests passed on
+Linux; unit tests cover mover reach from spawn keys, lamp selection (reach, world
+visibility, capacity), shadow cones, cache regions, poses, the trace queue, atlas
+capacity and the CPU segment test. The ignored world shot on `mp/siege_hoth` (release,
+Radeon RX 9060 XT), compared with `SJK_MOVER_OCCLUSION=0` on the same views: the light
+a lamp sent through the closed hangar door onto the floor before it is gone (about
+27,000 pixels darker), and with every mover hidden both runs match (no pixel differs by
+6 levels or more at two of the three movers; 156 pixels by up to 21 at the third).
+Timing is in [rendering](rendering.md#movers-in-lamp-shadows). Not checked in a live
+game, on a server whose doors open and close, or on Windows; GI bounce follows doors
+only as its probes refresh.
+
 ## Remapped surfaces keep the map's light
 
 Branch `fix/remap-source-lightmap` (08/10/2026, based on `6d2eb4b`, Linux): Sol

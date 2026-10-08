@@ -13,8 +13,46 @@ fn lamp_visibility_pixel(pixel: vec2<i32>, resolution: i32) -> vec2<i32> {
     let reflected = ((pixel.x^pixel.y)&resolution)!=0;
     return select(local,vec2(resolution-1)-local,reflected);
 }
-// Static geometry visibility remains available even when a lamp has no actor-shadow slot.
+// Static geometry visibility remains available even when a lamp has no actor-shadow slot:
+// the world's, times the movers' near the lamp.
 fn lamp_static_visibility(lamp: u32, world: vec3<f32>, normal: vec3<f32>) -> f32 {
+    let visibility = lamp_world_visibility(lamp,world,normal);
+    if visibility <= 0.0 { return 0.0; }
+    return visibility*lamp_door_visibility(lamp,world,normal);
+}
+fn lamp_world_visibility(lamp: u32, world: vec3<f32>, normal: vec3<f32>) -> f32 {
+    return lamp_tile_visibility(lamp,lamp,world,normal);
+}
+// Movers between the lamp and the receiver (`mover_occlusion.rs`): the lamp's door tile,
+// after the lamps' own tiles in the atlas.
+// The tile's top border row holds the pixel rectangle its movers cover (packed
+// x + 256 y; `mover_occlusion.wgsl`): a filter footprint wholly outside it reads only
+// unblocked texels, so it is skipped. Footprints within two texels of the tile's edge
+// reach mirrored texels and always filter.
+fn lamp_door_visibility(lamp: u32, world: vec3<f32>, normal: vec3<f32>) -> f32 {
+    let door = lamp_data[lamp*5u+3u].w;
+    let resolution = lamp_grid.offsets.z;
+    if door == 0u || resolution == 0u { return 1.0; }
+    let slot = lamp_grid.counts.w+door-1u;
+    let pitch = resolution+2u;
+    let tile = vec2<i32>(vec2(slot%lamp_grid.offsets.w,slot/lamp_grid.offsets.w)*pitch);
+    let low = textureLoad(lamp_visibility_map,tile,0).x;
+    if low < 0.0 || low >= 65536.0 { return 1.0; }
+    let high = textureLoad(lamp_visibility_map,tile+vec2(1,0),0).x;
+    let source = bitcast<vec4<f32>>(lamp_data[lamp*5u]).xyz;
+    let emitter_normal = bitcast<vec4<f32>>(lamp_data[lamp*5u+1u]).xyz;
+    let delta = world-(source+emitter_normal*0.5);
+    if dot(delta,delta)<1e-6 { return 1.0; }
+    let at = (lamp_octa_coordinates(normalize(delta))*0.5+0.5)*f32(resolution)-0.5;
+    let center = floor(at+0.5);
+    let lower = vec2(low%256.0,floor(low/256.0));
+    let upper = vec2(high%256.0,floor(high/256.0));
+    let inside = all(center>=vec2(2.0)) && all(center<=vec2(f32(resolution)-3.0));
+    if inside && (any(center+2.0<lower) || any(center-2.0>upper)) { return 1.0; }
+    return lamp_tile_visibility(slot,lamp,world,normal);
+}
+// Visibility from `lamp` in atlas tile `slot`: its own, or its door tile.
+fn lamp_tile_visibility(slot: u32, lamp: u32, world: vec3<f32>, normal: vec3<f32>) -> f32 {
     let resolution = lamp_grid.offsets.z;
     if resolution == 0u { return 1.0; }
     let source = bitcast<vec4<f32>>(lamp_data[lamp*5u]).xyz;
@@ -25,7 +63,7 @@ fn lamp_static_visibility(lamp: u32, world: vec3<f32>, normal: vec3<f32>) -> f32
     let at = uv*f32(resolution)-0.5;
     let center = vec2<i32>(floor(at+0.5));
     let pitch = resolution+2u;
-    let tile = vec2(lamp%lamp_grid.offsets.w,lamp/lamp_grid.offsets.w)*pitch;
+    let tile = vec2(slot%lamp_grid.offsets.w,slot/lamp_grid.offsets.w)*pitch;
     let plane = dot(delta,normal);
     let plane_distance = abs(plane);
     let oriented_normal = normal*select(-1.0,1.0,plane>=0.0);
