@@ -143,7 +143,12 @@ stopped without releasing may have left a live claim with a look), after a faile
 A look equal to none (stock blade, holocron out) is not sent on a claim known to hold
 none; while unknown, the next accepted claim gets the look whatever it is. A
 `not_unlocked` (or `bad_look`) answer leaves that skin out, the look going on with
-`saber:""` so Illuminate still syncs, until the profile's unlocks change; too many
+`saber:""` so Illuminate still syncs, until the profile's unlocks change. The own
+profile is read every ten minutes, and sooner (at most once every 30 seconds) after a
+`not_unlocked`, or when the feed relays a look of the player's own key, newer than the
+last one sent, with another blade skin (staff took it back; `Service::take_looks`
+hands it to the worker), so a relocked skin leaves the player's own blade within
+seconds; too many
 (429: `look_quota`, or the per-address `rate_limited` the chat and emotes share), a
 refused signature (401) and failures wait 10 seconds and go again; `not_on_server`
 waits for the next accepted claim;

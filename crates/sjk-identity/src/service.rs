@@ -25,6 +25,9 @@ const POLL_EVERY: Duration = Duration::from_secs(15);
 /// How often the player's own profile is read again while registered, so a medal
 /// the SJK team gives during a session shows without a restart.
 const PROFILE_EVERY: Duration = Duration::from_secs(600);
+/// Shortest time between two readings of the own profile brought forward because its
+/// unlocks look out of date (a skin refused, or taken back at the hub).
+const PROFILE_SOON: Duration = Duration::from_secs(30);
 /// Shortest time between two sendings of the achievement counts.
 const ACHIEVEMENTS_EVERY: Duration = Duration::from_secs(60);
 /// How long counts the hub held back (over an hourly allowance) wait before they are
@@ -172,6 +175,8 @@ enum Command {
     SetChat(bool),
     /// The look the player wears.
     Look(Look),
+    /// The feed relayed a look event of the player's own key: its id and blade skin.
+    OwnLook(u64, String),
     Stop,
 }
 
@@ -240,6 +245,10 @@ struct Worker {
     /// listed then: they are not sent again until those change.
     look_refused: Vec<String>,
     look_refused_for: Vec<Unlock>,
+    /// The feed id of the last look the hub took from this worker.
+    look_id: Option<u64>,
+    /// When the own profile may next be read early ([`Worker::profile_soon`]).
+    profile_soon_after: Instant,
 }
 
 /// What the hub holds as the player's look.
@@ -334,6 +343,28 @@ impl Worker {
             due_look: now,
             look_refused: Vec::new(),
             look_refused_for: Vec::new(),
+            look_id: None,
+            profile_soon_after: now,
+        }
+    }
+
+    /// Read the own profile soon: its unlocks look out of date. At most once every
+    /// [`PROFILE_SOON`], and never later than it was due anyway.
+    fn profile_soon(&mut self, now: Instant) {
+        let at = self.profile_soon_after.max(now);
+        if at < self.due_profile {
+            self.due_profile = at;
+            self.profile_soon_after = at + PROFILE_SOON;
+        }
+    }
+
+    /// The feed relayed look `id` of the player's own key, with blade skin `saber`.
+    /// One the hub made after the last this worker sent, wearing another skin than
+    /// the one to send, is the hub taking the skin back (staff relocked it): the
+    /// profile's unlocks are out of date.
+    fn own_look_seen(&mut self, id: u64, saber: &str, now: Instant) {
+        if self.look_id.is_none_or(|sent| id > sent) && saber != self.look_to_send().saber {
+            self.profile_soon(now);
         }
     }
 
@@ -511,6 +542,7 @@ impl Worker {
             Command::Emote(emote) => self.send_emote(&emote),
             Command::SetChat(on) => self.chat_on = on,
             Command::Look(look) => self.look = look,
+            Command::OwnLook(id, saber) => self.own_look_seen(id, &saber, now),
             Command::Stop => self.release(),
         }
         self.publish_feed();
@@ -801,12 +833,19 @@ impl Worker {
         let outcome = hub.look(&self.identity, &server, &look);
         self.due_look = now + LOOK_EVERY;
         match &outcome {
-            Ok(_) => self.look_held = Held::Look(look.clone()),
+            Ok(id) => {
+                self.look_held = Held::Look(look.clone());
+                self.look_id = Some(*id);
+            }
             // The skin is not the key's (or not the hub's): the rest of the look still
-            // goes, without it, until the profile changes.
+            // goes, without it, until the profile changes. Not the key's while its
+            // profile said so: the profile is out of date.
             Err(HubError::Rejected { code, .. })
                 if (code == "not_unlocked" || code == "bad_look") && !look.saber.is_empty() =>
             {
+                if code == "not_unlocked" {
+                    self.profile_soon(now);
+                }
                 self.look_refused_for = lock(&self.snapshot)
                     .me
                     .as_ref()
@@ -1022,6 +1061,8 @@ pub struct Service {
     looks: Arc<Mutex<VecDeque<QueuedLook>>>,
     /// What the feed is told to read, for the looks' generation.
     feed: Arc<Mutex<FeedShared>>,
+    /// The player's own key id, to recognise its looks in the feed.
+    key_id: String,
     /// Set to end the feed thread, which ends after its poll at the latest.
     feed_stop: Arc<std::sync::atomic::AtomicBool>,
     finished: Mutex<Receiver<()>>,
@@ -1044,7 +1085,8 @@ impl Service {
         make_hub: HubFactory,
         make_feed_hub: Option<HubFactory>,
     ) -> Self {
-        let snapshot = Arc::new(Mutex::new(Snapshot::new(identity.key_id())));
+        let key_id = identity.key_id();
+        let snapshot = Arc::new(Mutex::new(Snapshot::new(key_id.clone())));
         let staff = Arc::new(Mutex::new(StaffState::default()));
         let (commands, inbox) = channel();
         let (done, finished) = channel();
@@ -1108,6 +1150,7 @@ impl Service {
             emotes,
             looks,
             feed,
+            key_id,
             feed_stop,
             finished: Mutex::new(finished),
             note_tags: std::sync::atomic::AtomicU64::new(0),
@@ -1248,9 +1291,21 @@ impl Service {
     /// for `server`, the game server the player is on, under the current reading. A
     /// poll still under way when the server changed or the identity went off brings
     /// none, and [`ReceivedLooks::generation`] tells when every look had before is out
-    /// of date.
+    /// of date. The newest look of the player's own key goes to the worker, which reads
+    /// the own profile again soon when the hub took a skin back.
     pub fn take_looks(&self, server: Option<SocketAddr>) -> ReceivedLooks {
-        crate::feed::take_looks(&self.feed, &self.looks, server)
+        let received = crate::feed::take_looks(&self.feed, &self.looks, server);
+        if let Some(own) = received
+            .events
+            .iter()
+            .rev()
+            .find(|event| event.key_id == self.key_id)
+        {
+            let _ = self
+                .commands
+                .send(Command::OwnLook(own.id, own.saber.clone()));
+        }
+        received
     }
 
     /// Withdraw the claim and stop, waiting at most `timeout` for it. The feed thread
@@ -1309,7 +1364,7 @@ mod tests {
         fn looks(&self) -> Vec<String> {
             self.log()
                 .into_iter()
-                .filter(|line| line.starts_with("look"))
+                .filter(|line| line.starts_with("look "))
                 .collect()
         }
 
@@ -1835,6 +1890,75 @@ mod tests {
         worker.tick(at + LOOK_AGAIN);
         worker.tick(at + LOOK_AGAIN * 3);
         assert_eq!(fake.looks().len(), sent + 5);
+    }
+
+    fn profile_reads(fake: &Fake) -> usize {
+        fake.log()
+            .iter()
+            .filter(|line| line.starts_with("lookup"))
+            .count()
+    }
+
+    #[test]
+    fn a_refused_skin_reads_the_own_profile_soon_at_most_twice_a_minute() {
+        let fake = Fake::default();
+        let t0 = Instant::now();
+        let (mut worker, _) = worker(&fake, t0);
+        worker.handle(Command::Configure(on("https://hub")), t0);
+        worker.handle(Command::Enter(here(3, "Sol")), t0);
+        // The profile listed the Sun, but staff took it back: the hub refuses it.
+        worker.handle(Command::Look(lit("saber_sun")), t0);
+        assert_eq!(
+            worker.tick(t0),
+            Duration::ZERO,
+            "the profile is due at once"
+        );
+        assert_eq!(fake.looks(), ["look 1.2.3.4:29070 \"saber_sun\" true"]);
+        assert_eq!(profile_reads(&fake), 0);
+        let ms = |ms| t0 + Duration::from_millis(ms);
+        worker.tick(ms(10));
+        assert_eq!(profile_reads(&fake), 1);
+        // Refused again: not before 30 seconds from the last early reading.
+        worker.handle(Command::Look(lit("saber_moon")), ms(2_000));
+        worker.tick(ms(2_000));
+        assert_eq!(
+            fake.looks().last().unwrap(),
+            "look 1.2.3.4:29070 \"saber_moon\" true"
+        );
+        worker.tick(ms(29_000));
+        assert_eq!(profile_reads(&fake), 1);
+        worker.tick(ms(30_010));
+        assert_eq!(profile_reads(&fake), 2);
+    }
+
+    #[test]
+    fn the_hub_taking_the_own_skin_back_reads_the_own_profile_soon() {
+        let fake = Fake::default();
+        fake.owned.lock().unwrap().push("saber_sun".to_owned());
+        let t0 = Instant::now();
+        let (mut worker, _) = worker(&fake, t0);
+        worker.handle(Command::Configure(on("https://hub")), t0);
+        worker.handle(Command::Enter(here(3, "Sol")), t0);
+        worker.handle(Command::Look(lit("saber_sun")), t0);
+        worker.tick(t0);
+        // The fake hub numbers it 15. The feed brings it back: nothing to do.
+        let t1 = t0 + Duration::from_secs(1);
+        worker.handle(Command::OwnLook(15, "saber_sun".into()), t1);
+        // An older one, or a newer one with the same skin, is not news either.
+        worker.handle(Command::OwnLook(12, String::new()), t1);
+        worker.handle(Command::OwnLook(16, "saber_sun".into()), t1);
+        worker.tick(t1);
+        assert_eq!(profile_reads(&fake), 0);
+        // Staff relock it: the hub's event takes the skin off.
+        worker.handle(Command::OwnLook(20, String::new()), t1);
+        worker.tick(t1);
+        assert_eq!(profile_reads(&fake), 1);
+        // Another within the 30 seconds waits for them.
+        worker.handle(Command::OwnLook(21, String::new()), t1);
+        worker.tick(t1 + Duration::from_secs(29));
+        assert_eq!(profile_reads(&fake), 1);
+        worker.tick(t1 + Duration::from_secs(30));
+        assert_eq!(profile_reads(&fake), 2);
     }
 
     #[test]

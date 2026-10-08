@@ -70,7 +70,10 @@ Nothing blocks a frame: the viewer compares settings and place with what the thr
 was last told twice a second, and the scoreboard re-derives its marks only when the
 hub's roster or its own rows change. While registered, the thread also reads the
 player's own profile again every ten minutes, so the verified flag and medals the SJK
-team changes reach a running client.
+team changes reach a running client. It reads it sooner, at most once every 30
+seconds, when its unlocks look out of date: the hub refused a blade skin
+(`not_unlocked`), or the feed relayed a look of the player's own key, newer than the
+last one sent, with another blade skin (staff took it back).
 
 ## What a badge proves
 
@@ -285,12 +288,12 @@ blade-skin unlock id or `""`, and whether the Illuminate holocron is lit.
   is unknown (at the start, after a failed claim or a failed release, when an older
   claim may still be live with a look) the next accepted claim gets the look even if
   it is none. A `not_unlocked` or `bad_look` answer leaves that skin out (the look
-  goes with `saber:""`, so Illuminate still syncs) until the profile's unlocks change;
-  too many (429: `look_quota`, or the address's `rate_limited`), a refused signature
-  (401, the clock still off after the one retry) and failures wait 10 seconds and go
-  again; another refusal (an older hub) is not repeated until the look or the claim
-  changes. Leaving sends nothing: the release
-  drops the look. `Snapshot::look_outcome` says what became of the last one.
+  goes with `saber:""`, so Illuminate still syncs) until the profile's unlocks change,
+  and a `not_unlocked` has the own profile read again soon (at most once every 30
+  seconds); too many (429: `look_quota`, or the address's `rate_limited`), a refused
+  signature (401, the clock still off after the one retry) and failures wait 10
+  seconds and go again; another refusal (an older hub) is not repeated until the look
+  or the claim changes. Leaving sends nothing: the release drops the look. `Snapshot::look_outcome` says what became of the last one.
 - Receiving: presence entries carry `look` (`Presence::look`) and the feed carries look
   events (`Feed::looks`, `LookEvent`), queued for the viewer (`Service::take_looks`, the
   newest 64, handing over only those read for the viewer's server under the feed's
