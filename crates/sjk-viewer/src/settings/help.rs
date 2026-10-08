@@ -388,6 +388,10 @@ const HELP: &[(&str, &str)] = &[
         "The SJK hub's address (https://...). Empty means no hub: nothing is sent.",
     ),
     (
+        "cl_sjkChat",
+        "The chat every SJK player shares through the SJK hub, in menus and games. Off hides it.",
+    ),
+    (
         "rate",
         "Most data per second the server may send you; raise it on a fast connection.",
     ),

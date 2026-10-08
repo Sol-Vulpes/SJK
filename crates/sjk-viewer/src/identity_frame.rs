@@ -32,7 +32,8 @@ impl GpuState {
         let location = self.live_session.as_ref().and_then(|session| {
             player_identity::location(session.server(), session.is_local(), session.game_state())
         });
-        player_identity::apply(console.config_directory(), settings, name, location);
+        let chat = console.bool_cvar("cl_sjkChat") != Some(false);
+        player_identity::apply(console.config_directory(), settings, name, location, chat);
         self.offer_medals();
         self.update_achievements();
     }

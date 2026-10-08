@@ -48,7 +48,11 @@ struct Runtime {
     sent_settings: Option<Settings>,
     sent_location: Option<Location>,
     sent_name: Option<String>,
+    /// Whether the SJK chat was last told on (`cl_sjkChat`).
+    sent_chat: Option<bool>,
     next_sync: Option<Instant>,
+    /// Keys the player muted in the SJK chat, on this PC for this session.
+    muted: Vec<String>,
 }
 
 static RUNTIME: Mutex<Runtime> = Mutex::new(Runtime {
@@ -57,7 +61,9 @@ static RUNTIME: Mutex<Runtime> = Mutex::new(Runtime {
     sent_settings: None,
     sent_location: None,
     sent_name: None,
+    sent_chat: None,
     next_sync: None,
+    muted: Vec::new(),
 });
 
 fn lock() -> MutexGuard<'static, Runtime> {
@@ -69,6 +75,13 @@ fn lock() -> MutexGuard<'static, Runtime> {
 fn make_hub(url: &str) -> Result<Box<dyn Hub>, sjk_identity::HubError> {
     let agent = format!("SJK/{}", crate::build_info::VERSION);
     HttpHub::new(url, &agent).map(|hub| Box::new(hub) as Box<dyn Hub>)
+}
+
+/// A hub client for the SJK chat's long poll, whose requests may last longer.
+fn make_feed_hub(url: &str) -> Result<Box<dyn Hub>, sjk_identity::HubError> {
+    let agent = format!("SJK/{}", crate::build_info::VERSION);
+    HttpHub::with_timeout(url, &agent, sjk_identity::feed::TIMEOUT)
+        .map(|hub| Box::new(hub) as Box<dyn Hub>)
 }
 
 /// The name the game shows for `slot`, as the server published it.
@@ -113,12 +126,13 @@ pub(crate) fn due() -> bool {
 
 /// Bring the service in line with the settings, the in-game `name` the player wears
 /// (the `name` setting, which the hub keeps in the key's name history: the player
-/// chooses nothing) and the player's place.
+/// chooses nothing), the player's place and whether the SJK chat is on (`chat`).
 pub(crate) fn apply(
     config_directory: &Path,
     settings: Settings,
     name: String,
     location: Option<Location>,
+    chat: bool,
 ) {
     let mut runtime = lock();
     if runtime.service.is_none() {
@@ -132,7 +146,11 @@ pub(crate) fn apply(
                     identity.key_id(),
                     KEY_FILE
                 ));
-                runtime.service = Some(Service::start(identity, Box::new(make_hub)));
+                runtime.service = Some(Service::start_with_feed(
+                    identity,
+                    Box::new(make_hub),
+                    Some(Box::new(make_feed_hub)),
+                ));
             }
             Err(error) => {
                 crate::log::progress(format_args!("identity: {error}"));
@@ -148,6 +166,10 @@ pub(crate) fn apply(
     if runtime.sent_name.as_ref() != Some(&name) {
         service.set_name(name.clone());
         runtime.sent_name = Some(name);
+    }
+    if runtime.sent_chat != Some(chat) {
+        service.set_chat(chat);
+        runtime.sent_chat = Some(chat);
     }
     if runtime.sent_settings.as_ref() != Some(&settings) {
         service.configure(settings.clone());
@@ -403,6 +425,58 @@ pub(crate) fn staff_state() -> Option<sjk_identity::StaffState> {
         .map(sjk_identity::Service::staff_state)
 }
 
+/// Send an SJK chat message; false when the service has not started. What became of
+/// it arrives in the chat's `outcome`.
+pub(crate) fn chat(text: String) -> bool {
+    let runtime = lock();
+    let Some(service) = runtime.service.as_ref() else {
+        return false;
+    };
+    service.chat(text);
+    true
+}
+
+/// Play an emote for the player's slot; false when the service has not started.
+pub(crate) fn emote(id: String) -> bool {
+    let runtime = lock();
+    let Some(service) = runtime.service.as_ref() else {
+        return false;
+    };
+    service.emote(id);
+    true
+}
+
+/// Read the SJK chat; `None` when the service has not started. Keep `read` short.
+pub(crate) fn with_chat<R>(read: impl FnOnce(&sjk_identity::ChatState) -> R) -> Option<R> {
+    lock()
+        .service
+        .as_ref()
+        .map(|service| service.with_chat(read))
+}
+
+/// The emotes received since the last call.
+pub(crate) fn take_emotes() -> Vec<sjk_identity::Emote> {
+    lock()
+        .service
+        .as_ref()
+        .map(Service::take_emotes)
+        .unwrap_or_default()
+}
+
+/// Whether the player muted `key_id` in the SJK chat (on this PC, this session).
+pub(crate) fn is_muted(key_id: &str) -> bool {
+    lock().muted.iter().any(|muted| muted == key_id)
+}
+
+/// Mute or unmute `key_id` in the SJK chat on this PC.
+pub(crate) fn set_muted(key_id: &str, muted: bool) {
+    let mut runtime = lock();
+    runtime.muted.retain(|key| key != key_id);
+    if muted {
+        runtime.muted.push(key_id.to_owned());
+    }
+}
+
 /// Ask the hub for another player's profile (their bio).
 pub(crate) fn look_up(key_id: &str) {
     if let Some(service) = lock().service.as_ref() {
@@ -438,5 +512,20 @@ mod tests {
         assert!(staff_state().is_none());
         assert!(own_key_id().is_none());
         assert!(!set_achievement_counts(&std::collections::BTreeMap::new()));
+        assert!(!chat("hi".to_owned()));
+        assert!(!emote("wave".to_owned()));
+        assert!(with_chat(|chat| chat.revision).is_none());
+        assert!(take_emotes().is_empty());
+    }
+
+    #[test]
+    fn local_mutes_are_by_key() {
+        assert!(!is_muted("0123456789abcdef"));
+        set_muted("0123456789abcdef", true);
+        assert!(is_muted("0123456789abcdef"));
+        assert!(!is_muted("fedcba9876543210"));
+        set_muted("0123456789abcdef", true);
+        set_muted("0123456789abcdef", false);
+        assert!(!is_muted("0123456789abcdef"));
     }
 }
