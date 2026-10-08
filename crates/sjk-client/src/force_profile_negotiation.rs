@@ -20,7 +20,11 @@
 //! 1556-1562`). [`ForceProfileNegotiator`] performs those steps itself. Because
 //! `Cmd_Team_f` refuses a second team change within five seconds of the first
 //! (`codemp/game/g_cmds.c:998-1001`, `1031`), the join is retried a bounded
-//! number of times.
+//! number of times, except in duel and power duel, where waiting as a
+//! spectator is the queue: there `SetTeam` keeps a queued player spectating
+//! but announces and respawns them on every request (`g_cmds.c:829-841`,
+//! `906`, `922`), and `Cmd_Team_f` refuses any change in power duel
+//! (`g_cmds.c:1016-1022`).
 //!
 //! The value sent is always the player's own `forcepowers` fitted to the
 //! server's current rules ([`ForceLegalizeRules::for_sent_profile`]), worked
@@ -271,9 +275,14 @@ impl ForceProfileNegotiator {
     }
 
     /// Queue the reply; it is sent once the userinfo has reached the server.
+    /// The team is asked for again later while the player stays parked,
+    /// except where spectating is the duel queue.
     pub fn queue(&mut self, reply: &ForceRankReply, now: Instant) {
         self.pending = Some(reply.command.clone());
-        self.retry = self.rejoin_team().map(|_| Retry {
+        let duel = self
+            .rules
+            .is_some_and(|rules| matches!(rules.gametype, GT_DUEL | GT_POWERDUEL));
+        self.retry = self.rejoin_team().filter(|_| !duel).map(|_| Retry {
             due: now + REJOIN_INTERVAL,
             attempts_left: REJOIN_ATTEMPTS,
         });
@@ -286,7 +295,8 @@ impl ForceProfileNegotiator {
         self.retry = None;
     }
 
-    /// Advance the state machine for one frame.
+    /// Advance the state machine for one frame; call it every frame, as a
+    /// retry falls due seconds after the userinfo before it went out.
     ///
     /// `userinfo_settled` is true when no userinfo change is still waiting to be
     /// sent; `spectator` reflects the latest snapshot.
@@ -411,6 +421,29 @@ mod tests {
         negotiator.profile_applied();
         let output = negotiator.poll(now, true, false);
         assert_eq!(output.commands, vec![b"forcechanged \"FREE\"".to_vec()]);
+    }
+
+    #[test]
+    fn a_parked_duel_player_waits_in_the_queue() {
+        let now = Instant::now();
+        for gametype in [GT_DUEL, GT_POWERDUEL] {
+            let mut negotiator = ForceProfileNegotiator::default();
+            negotiator.set_server_rules(Some(ForceLegalizeRules {
+                gametype,
+                ..ForceLegalizeRules::default()
+            }));
+            let reply = force_rank_reply(
+                "7-1-032330000000001333",
+                ForceLegalizeRules::default(),
+                Some(LegacyTeamChoice::Free),
+            );
+            negotiator.queue(&reply, now);
+            assert_eq!(negotiator.poll(now, true, true).commands.len(), 1);
+            for step in 1..=REJOIN_ATTEMPTS + 1 {
+                let at = now + REJOIN_INTERVAL * u32::from(step);
+                assert_eq!(negotiator.poll(at, true, true), RejoinOutput::default());
+            }
+        }
     }
 
     #[test]

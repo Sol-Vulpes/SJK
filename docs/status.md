@@ -7,6 +7,29 @@ SJK currently contains a native client and standard dedicated server in a
 20-crate Rust workspace. This page records scope and verification, rather than
 claiming complete parity from the presence of an implementation.
 
+## Force-profile rejoin retries
+
+Branch `fix/force-rejoin-retries` (08/10/2026, based on the Force profile branch
+below, Linux). When a server parks the player in spectator over their Force
+profile (`nfr <rank> 1 <team>`), the client answers with `forcechanged "<TEAM>"`
+and was meant to ask for the team again up to three times, 5.5 s apart, while
+the player stayed parked. The negotiator was only polled after a userinfo
+flush, and a retry falls due seconds after that flush, so the retries never
+went out. It is now polled every frame (`ViewerConsole::flush_userinfo`; no
+allocation when idle). Retries are left out in duel and power duel, where
+spectating is the queue: OpenJK's `SetTeam` keeps a queued player spectating
+but announces and respawns them on every `team` request, and `Cmd_Team_f`
+refuses any change in power duel ([client.md](client.md#force-profile-on-a-server)).
+
+Verified on Linux: unit tests for the retries (three, then the notice) and for
+none in duel and power duel (fails without the change); formatting, the locked
+workspace build and tests, and workspace Clippy (no warning on a changed line).
+Not verified against a server: stock servers no longer park a player for an SJK
+profile (it is fitted to their rules), so this path needs a mod that sends `nfr`
+on its own. Known: a `team` typed in the console does not reach the negotiator,
+so a player who typed `team spectator` within the 16 seconds after such a park
+would be sent back once per remaining retry.
+
 ## Force profile on a server
 
 Branch `claude/sleepy-noether-xv9qk9` (08/10/2026, based on `a6230f9`, Linux).
@@ -41,9 +64,7 @@ changed line.
 
 Not verified: nothing was run against a server, in a game or on screen (no game
 data or GPU here), so the server's re-read at respawn, JA+ and jaPRO full Force
-duels and the new panels' looks are unchecked. Known: the bounded rejoin retries
-after an `nfr` park are only polled while a userinfo change waits, so they do
-not fire (`fix/force-rejoin-retries`).
+duels and the new panels' looks are unchecked.
 
 ## Percent signs and quotes in chat
 

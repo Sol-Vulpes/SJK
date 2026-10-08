@@ -501,11 +501,18 @@ impl ViewerConsole {
         })
     }
 
-    /// Flush an effective profile change through OpenJK's reliable userinfo command.
+    /// Flush an effective profile change through OpenJK's reliable userinfo
+    /// command, then send what the Force profile exchange has due.
     pub(crate) fn flush_userinfo(&mut self, session: &mut ClientSession, now: Instant) {
-        if !self.userinfo_dirty.load(Ordering::Acquire) {
-            return;
+        if self.userinfo_dirty.load(Ordering::Acquire) {
+            self.send_userinfo(session, now);
         }
+        // Every frame: a rejoin retry falls due seconds after the userinfo
+        // that preceded it went out, when nothing is left to flush.
+        self.poll_force_rejoin(session, now);
+    }
+
+    fn send_userinfo(&mut self, session: &mut ClientSession, now: Instant) {
         let result = self
             .userinfo()
             .map_err(|error| error.to_string())
@@ -534,7 +541,6 @@ impl ViewerConsole {
                     .push_log(format!("^1Could not update userinfo: {error}"));
             }
         }
-        self.poll_force_rejoin(session, now);
     }
 
     /// Send the queued `forcechanged` reply and bounded `team` retries.
