@@ -246,7 +246,8 @@ pub use server_clock::ServerClock;
 pub use session_transition::{SessionTransition, SessionTransitionKind};
 pub use sound_events::{
     LegacyMusicAction, LegacySoundAdapter, LegacySoundDecision, LegacySoundEvent,
-    LegacySoundLedger, RegisteredLegacySound, normal_attenuation as legacy_sound_attenuation,
+    LegacySoundLedger, RegisteredLegacySound, SABER_SOUND_CLIENTS, SaberSoundSet, TOGGLE_REACH,
+    normal_attenuation as legacy_sound_attenuation,
 };
 pub use taystjk_cosmetics::{
     CosmeticUnlock, CosmeticUnlockTable, MAX_COSMETIC_UNLOCKS, apply_taystjk_cosmetics,
