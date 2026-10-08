@@ -6,12 +6,13 @@
 //! The service is inert while it is disabled or has no hub address: it makes no
 //! request of any kind.
 
+use crate::feed::{ChatState, FeedShared, FeedWorker};
 use crate::hub::{Hub, HubError};
 use crate::keys::Identity;
 use crate::report::{BugReport, PlayerReport, WorldNote};
 use crate::staff::{StaffRequest, StaffState};
-use crate::wire::{Achievement, Presence, Profile, names_match};
-use std::collections::{BTreeMap, HashMap};
+use crate::wire::{Achievement, Emote, Presence, Profile, names_match};
+use std::collections::{BTreeMap, HashMap, VecDeque};
 use std::net::SocketAddr;
 use std::sync::mpsc::{Receiver, RecvTimeoutError, Sender, channel};
 use std::sync::{Arc, Mutex, MutexGuard};
@@ -155,7 +156,21 @@ enum Command {
     Note(u64, WorldNote),
     /// The picture of the note tagged so.
     NoteImage(u64, Vec<u8>),
+    /// An SJK chat message.
+    Chat(String),
+    /// An emote, for the slot the player claims.
+    Emote(String),
+    /// Whether the SJK chat is on.
+    SetChat(bool),
     Stop,
+}
+
+fn lock_chat(chat: &Mutex<ChatState>) -> MutexGuard<'_, ChatState> {
+    crate::feed::lock(chat)
+}
+
+fn lock_feed(feed: &Mutex<FeedShared>) -> MutexGuard<'_, FeedShared> {
+    crate::feed::lock(feed)
 }
 
 /// Notes whose pictures may still come, kept by tag: the newest few only.
@@ -195,6 +210,17 @@ struct Worker {
     due_counts: Instant,
     /// What staff requests brought back.
     staff: Arc<Mutex<StaffState>>,
+    /// Whether the SJK chat is on (`cl_sjkChat`).
+    chat_on: bool,
+    /// What the feed thread is told to read.
+    feed: Arc<Mutex<FeedShared>>,
+    /// What the chat shows; the worker writes the outcome of what it sends.
+    chat: Arc<Mutex<ChatState>>,
+}
+
+/// The refusal of anything sent before the hub answered the registration.
+fn not_connected() -> HubError {
+    HubError::Protocol("not connected to the hub (is identity on, cl_identity 1?)".to_owned())
 }
 
 /// What the player is told of a report or a note: what the hub stored it as, or why
@@ -256,7 +282,84 @@ impl Worker {
             counts_sent: None,
             due_counts: now,
             staff,
+            chat_on: false,
+            feed: Arc::default(),
+            chat: Arc::default(),
         }
+    }
+
+    /// Tell the feed thread what to read: the hub, only while the identity is on, the
+    /// hub answered the registration and the chat is on; and the server played on.
+    fn publish_feed(&self) {
+        let url = (self.settings.enabled && self.registered && self.chat_on && self.hub.is_some())
+            .then(|| self.settings.hub_url.trim().to_owned());
+        let wanted = FeedShared {
+            url,
+            server: self
+                .location
+                .as_ref()
+                .map(|location| location.server.to_string()),
+        };
+        let mut shared = lock_feed(&self.feed);
+        if *shared != wanted {
+            *shared = wanted;
+        }
+    }
+
+    /// Put what became of a message or an emote where the chat shows it.
+    fn chat_outcome(&self, outcome: Result<String, HubError>) {
+        let mut chat = lock_chat(&self.chat);
+        let serial = chat.outcome.as_ref().map_or(1, |last| last.serial + 1);
+        chat.outcome = Some(outcome_of(serial, outcome));
+    }
+
+    /// Send an SJK chat message under the rules, once registered.
+    fn send_chat(&mut self, text: &str) {
+        let outcome = match crate::chat::check(text) {
+            Err(error) => Err(HubError::Rejected {
+                status: 400,
+                code: error.code().to_owned(),
+                message: error.message().to_owned(),
+            }),
+            Ok(text) => match (self.hub.as_mut(), self.registered) {
+                (Some(hub), true) => {
+                    let name = self.name.clone().unwrap_or_default();
+                    hub.chat(&self.identity, &text, &name)
+                        .map(|_| String::new())
+                }
+                _ => Err(not_connected()),
+            },
+        };
+        self.chat_outcome(outcome);
+    }
+
+    /// Send an emote for the slot the player claims on their server.
+    fn send_emote(&mut self, emote: &str) {
+        let well_formed = (1..=32).contains(&emote.len())
+            && emote
+                .bytes()
+                .all(|byte| byte.is_ascii_lowercase() || byte.is_ascii_digit() || byte == b'_');
+        let server = self
+            .location
+            .as_ref()
+            .map(|location| location.server.to_string());
+        let outcome = match (self.hub.as_mut(), self.registered, server) {
+            _ if !well_formed => Err(HubError::Rejected {
+                status: 400,
+                code: "bad_emote".to_owned(),
+                message: "an emote is 1 to 32 of a to z, 0 to 9 and _".to_owned(),
+            }),
+            (Some(_), true, None) => Err(HubError::Rejected {
+                status: 403,
+                code: "not_on_server".to_owned(),
+                message: "join a server to emote".to_owned(),
+            }),
+            (Some(hub), true, Some(server)) => hub
+                .emote(&self.identity, &server, emote)
+                .map(|_| String::new()),
+            _ => Err(not_connected()),
+        };
+        self.chat_outcome(outcome);
     }
 
     fn update(&self, change: impl FnOnce(&mut Snapshot)) {
@@ -331,8 +434,12 @@ impl Worker {
             }
             Command::NoteImage(tag, jpeg) => self.note_image(tag, &jpeg),
             Command::LookUp(key_id) => self.lookups.push(key_id),
+            Command::Chat(text) => self.send_chat(&text),
+            Command::Emote(emote) => self.send_emote(&emote),
+            Command::SetChat(on) => self.chat_on = on,
             Command::Stop => self.release(),
         }
+        self.publish_feed();
     }
 
     fn configure(&mut self, settings: Settings, now: Instant) {
@@ -513,6 +620,12 @@ impl Worker {
 
     /// Do whatever is due at `now`; return how long to wait for the next thing.
     fn tick(&mut self, now: Instant) -> Duration {
+        let wait = self.tick_due(now);
+        self.publish_feed();
+        wait
+    }
+
+    fn tick_due(&mut self, now: Instant) -> Duration {
         if !self.settings.enabled {
             self.update(|snapshot| snapshot.status = Status::Disabled);
             return IDLE_MAX;
@@ -733,6 +846,10 @@ pub struct Service {
     commands: Sender<Command>,
     snapshot: Arc<Mutex<Snapshot>>,
     staff: Arc<Mutex<StaffState>>,
+    chat: Arc<Mutex<ChatState>>,
+    emotes: Arc<Mutex<VecDeque<Emote>>>,
+    /// Set to end the feed thread, which ends after its poll at the latest.
+    feed_stop: Arc<std::sync::atomic::AtomicBool>,
     finished: Mutex<Receiver<()>>,
     /// The last tag given to a note ([`Service::note`]).
     note_tags: std::sync::atomic::AtomicU64,
@@ -740,12 +857,24 @@ pub struct Service {
 
 impl Service {
     /// Start the worker thread for `identity`. `make_hub` builds a hub client for
-    /// the configured address.
+    /// the configured address. Without a feed, the SJK chat sends but never reads.
     pub fn start(identity: Identity, make_hub: HubFactory) -> Self {
+        Self::start_with_feed(identity, make_hub, None)
+    }
+
+    /// [`Service::start`] with the SJK chat's feed on a thread of its own, reading the
+    /// hub through clients `make_feed_hub` builds (with a timeout longer than the
+    /// hub's wait, [`crate::feed::TIMEOUT`]).
+    pub fn start_with_feed(
+        identity: Identity,
+        make_hub: HubFactory,
+        make_feed_hub: Option<HubFactory>,
+    ) -> Self {
         let snapshot = Arc::new(Mutex::new(Snapshot::new(identity.key_id())));
         let staff = Arc::new(Mutex::new(StaffState::default()));
         let (commands, inbox) = channel();
         let (done, finished) = channel();
+        let feed_identity = identity.clone();
         let mut worker = Worker::new(
             identity,
             make_hub,
@@ -753,6 +882,27 @@ impl Service {
             Arc::clone(&staff),
             Instant::now(),
         );
+        let chat = Arc::clone(&worker.chat);
+        let emotes = Arc::new(Mutex::new(VecDeque::new()));
+        let feed_stop = Arc::new(std::sync::atomic::AtomicBool::new(false));
+        if let Some(make_feed_hub) = make_feed_hub {
+            let feed = FeedWorker::new(
+                feed_identity,
+                make_feed_hub,
+                Arc::clone(&worker.feed),
+                Arc::clone(&chat),
+                Arc::clone(&emotes),
+                Instant::now(),
+            );
+            let stop = Arc::clone(&feed_stop);
+            let spawned = std::thread::Builder::new()
+                .name("sjk-hub-feed".to_owned())
+                .spawn(move || crate::feed::run(feed, &stop));
+            if let Err(error) = spawned {
+                lock(&snapshot).status =
+                    Status::Failed(format!("cannot start the chat thread: {error}"));
+            }
+        }
         let spawned = std::thread::Builder::new()
             .name("sjk-identity".to_owned())
             .spawn(move || {
@@ -777,6 +927,9 @@ impl Service {
             commands,
             snapshot,
             staff,
+            chat,
+            emotes,
+            feed_stop,
             finished: Mutex::new(finished),
             note_tags: std::sync::atomic::AtomicU64::new(0),
         }
@@ -875,8 +1028,37 @@ impl Service {
         read(&lock(&self.snapshot))
     }
 
-    /// Withdraw the claim and stop, waiting at most `timeout` for it.
+    /// Turn the SJK chat on or off: the feed reads the hub only while it is on.
+    pub fn set_chat(&self, on: bool) {
+        let _ = self.commands.send(Command::SetChat(on));
+    }
+
+    /// Send an SJK chat message; what became of it arrives in [`ChatState::outcome`].
+    pub fn chat(&self, text: String) {
+        let _ = self.commands.send(Command::Chat(text));
+    }
+
+    /// Play an emote for the player's slot on their server; what became of it arrives in
+    /// [`ChatState::outcome`].
+    pub fn emote(&self, emote: String) {
+        let _ = self.commands.send(Command::Emote(emote));
+    }
+
+    /// Read the chat without copying it; keep `read` short.
+    pub fn with_chat<R>(&self, read: impl FnOnce(&ChatState) -> R) -> R {
+        read(&lock_chat(&self.chat))
+    }
+
+    /// The emotes received since the last call, oldest first.
+    pub fn take_emotes(&self) -> Vec<Emote> {
+        crate::feed::lock(&self.emotes).drain(..).collect()
+    }
+
+    /// Withdraw the claim and stop, waiting at most `timeout` for it. The feed thread
+    /// is told to stop and ends after its poll, without being waited for.
     pub fn shutdown(&self, timeout: Duration) {
+        self.feed_stop
+            .store(true, std::sync::atomic::Ordering::Relaxed);
         let _ = self.commands.send(Command::Stop);
         let finished = self
             .finished
@@ -992,6 +1174,12 @@ mod tests {
         fn note_image(&mut self, _: &Identity, id: i64, jpeg: &[u8]) -> Result<(), HubError> {
             Fake::record(self, format!("image {id} {} bytes", jpeg.len()))
         }
+        fn chat(&mut self, _: &Identity, text: &str, name: &str) -> Result<u64, HubError> {
+            Fake::record(self, format!("chat {text} as {name}")).map(|()| 12)
+        }
+        fn emote(&mut self, _: &Identity, server: &str, emote: &str) -> Result<u64, HubError> {
+            Fake::record(self, format!("emote {emote} on {server}")).map(|()| 13)
+        }
         fn set_achievements(
             &mut self,
             _: &Identity,
@@ -1087,6 +1275,81 @@ mod tests {
             .into_iter()
             .filter(|line| line.starts_with("achievements"))
             .collect()
+    }
+
+    fn chat_outcome(worker: &Worker) -> ReportOutcome {
+        lock_chat(&worker.chat).outcome.clone().unwrap()
+    }
+
+    #[test]
+    fn chat_needs_the_rules_and_a_registration() {
+        let fake = Fake::default();
+        let t0 = Instant::now();
+        let (mut worker, _) = worker(&fake, t0);
+        worker.handle(Command::Chat("hello".into()), t0);
+        let first = chat_outcome(&worker);
+        assert!(!first.sent && first.message.contains("not connected"));
+        worker.handle(Command::Name("^2Sol".into()), t0);
+        worker.handle(Command::Configure(on("https://hub")), t0);
+        worker.tick(t0);
+        // The rules are checked here first; nothing goes.
+        worker.handle(Command::Chat("hi \u{1F600}".into()), t0);
+        let refused = chat_outcome(&worker);
+        assert_eq!(
+            (refused.serial, refused.sent, refused.message.as_str()),
+            (2, false, crate::chat::ChatError::Characters.message())
+        );
+        worker.handle(Command::Chat("  gg   wp ".into()), t0);
+        assert_eq!(fake.log().last().unwrap(), "chat gg wp as ^2Sol");
+        let sent = chat_outcome(&worker);
+        assert!(sent.sent);
+        assert_eq!(sent.serial, 3);
+    }
+
+    #[test]
+    fn emotes_need_a_server_and_a_well_formed_id() {
+        let fake = Fake::default();
+        let t0 = Instant::now();
+        let (mut worker, _) = worker(&fake, t0);
+        worker.handle(Command::Configure(on("https://hub")), t0);
+        worker.tick(t0);
+        worker.handle(Command::Emote("wave".into()), t0);
+        let nowhere = chat_outcome(&worker);
+        assert!(!nowhere.sent && nowhere.message.contains("server"));
+        worker.handle(Command::Enter(here(3, "Sol")), t0);
+        worker.tick(t0);
+        worker.handle(Command::Emote("Wave!".into()), t0);
+        assert!(!chat_outcome(&worker).sent);
+        assert!(!fake.log().iter().any(|line| line.starts_with("emote")));
+        worker.handle(Command::Emote("wave".into()), t0);
+        assert_eq!(fake.log().last().unwrap(), "emote wave on 1.2.3.4:29070");
+        assert!(chat_outcome(&worker).sent);
+    }
+
+    #[test]
+    fn the_feed_runs_only_when_registered_with_chat_on() {
+        let fake = Fake::default();
+        fake.fail.store(true, Ordering::SeqCst);
+        let t0 = Instant::now();
+        let (mut worker, _) = worker(&fake, t0);
+        let shared = Arc::clone(&worker.feed);
+        let url = || lock_feed(&shared).url.clone();
+        worker.handle(Command::SetChat(true), t0);
+        worker.handle(Command::Configure(on("https://hub")), t0);
+        worker.tick(t0);
+        assert_eq!(url(), None, "not registered yet");
+        fake.fail.store(false, Ordering::SeqCst);
+        worker.tick(t0 + Duration::from_secs(30));
+        assert_eq!(url().as_deref(), Some("https://hub"));
+        assert_eq!(lock_feed(&shared).server, None);
+        worker.handle(Command::Enter(here(3, "Sol")), t0);
+        assert_eq!(lock_feed(&shared).server.as_deref(), Some("1.2.3.4:29070"));
+        worker.handle(Command::SetChat(false), t0);
+        assert_eq!(url(), None);
+        worker.handle(Command::SetChat(true), t0);
+        assert!(url().is_some());
+        worker.handle(Command::Configure(Settings::default()), t0);
+        assert_eq!(url(), None, "identity off");
     }
 
     #[test]

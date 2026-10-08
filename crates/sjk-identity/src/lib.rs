@@ -10,6 +10,7 @@
 
 pub mod bio;
 pub mod chat;
+pub mod feed;
 pub mod hub;
 mod keys;
 pub mod report;
@@ -17,6 +18,7 @@ pub mod service;
 pub mod staff;
 pub mod wire;
 
+pub use feed::ChatState;
 pub use hub::{HttpHub, Hub, HubError, valid_base_url};
 pub use keys::{Identity, KeyError};
 pub use report::{BugReport, Category, PlayerReport, WorldNote};
