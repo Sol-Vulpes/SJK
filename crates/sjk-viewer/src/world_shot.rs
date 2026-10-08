@@ -240,6 +240,10 @@ mod notes;
 mod holocron;
 
 #[cfg(test)]
+#[path = "world_shot_hd.rs"]
+mod hd;
+
+#[cfg(test)]
 mod tests {
     use super::*;
 
