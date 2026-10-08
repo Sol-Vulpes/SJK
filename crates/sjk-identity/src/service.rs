@@ -37,7 +37,8 @@ const RETRY_MAX: Duration = Duration::from_secs(120);
 const IDLE_MAX: Duration = Duration::from_secs(60);
 /// Shortest time between two looks sent: the hub takes one a second.
 const LOOK_EVERY: Duration = Duration::from_secs(1);
-/// How long a look waits after the hub said too many (`look_quota`) or failed.
+/// How long a look waits after the hub said too many (429: `look_quota`, or the
+/// address's `rate_limited`), refused the signature (401) or failed.
 const LOOK_AGAIN: Duration = Duration::from_secs(10);
 
 /// What the player has configured.
@@ -783,7 +784,12 @@ impl Worker {
                 self.look_claim = None;
                 self.look_held = None;
             }
-            Err(HubError::Rejected { code, .. }) if code == "look_quota" => {
+            // Too many: the key's look quota, or the address's allowance (429
+            // `rate_limited`) shared with the chat and emotes. A signature refused
+            // (401, the clock still off after the one retry) is not final either.
+            Err(HubError::Rejected {
+                status: 401 | 429, ..
+            }) => {
                 self.due_look = now + LOOK_AGAIN;
             }
             // Any other refusal (an older hub without looks) is not repeated until the
@@ -1231,6 +1237,8 @@ mod tests {
         held: Arc<Mutex<Vec<Achievement>>>,
         /// The unlocks the fake hub holds for the player's key.
         owned: Arc<Mutex<Vec<String>>>,
+        /// Refusals the next looks get, in order.
+        look_refusals: Arc<Mutex<VecDeque<HubError>>>,
     }
 
     impl Fake {
@@ -1360,6 +1368,9 @@ mod tests {
                 self,
                 format!("look {server} {:?} {}", look.saber, look.illuminate),
             )?;
+            if let Some(refusal) = self.look_refusals.lock().unwrap().pop_front() {
+                return Err(refusal);
+            }
             if !look.saber.is_empty() && !self.owned.lock().unwrap().contains(&look.saber) {
                 return Err(HubError::Rejected {
                     status: 403,
@@ -1660,6 +1671,54 @@ mod tests {
         // Leaving needs nothing: the release drops it.
         worker.handle(Command::Leave, t3 + Duration::from_secs(31));
         assert_eq!(fake.log().last().unwrap(), "release 5.6.7.8:29070");
+    }
+
+    fn refused(status: u16, code: &str) -> HubError {
+        HubError::Rejected {
+            status,
+            code: code.to_owned(),
+            message: String::new(),
+        }
+    }
+
+    #[test]
+    fn a_look_refused_for_too_many_or_the_signature_goes_again_later() {
+        let fake = Fake::default();
+        let t0 = Instant::now();
+        let (mut worker, snapshot) = worker(&fake, t0);
+        worker.handle(Command::Configure(on("https://hub")), t0);
+        worker.handle(Command::Enter(here(3, "Sol")), t0);
+        worker.tick(t0);
+        let sent = fake.looks().len();
+        for (status, code) in [(429, "rate_limited"), (429, "look_quota"), (401, "clock")] {
+            fake.look_refusals
+                .lock()
+                .unwrap()
+                .push_back(refused(status, code));
+        }
+        worker.handle(Command::Look(lit("")), t0);
+        let mut at = t0;
+        for (n, code) in ["rate_limited", "look_quota", "clock"].iter().enumerate() {
+            worker.tick(at);
+            assert_eq!(fake.looks().len(), sent + n + 1, "{code}");
+            assert!(!lock(&snapshot).look_outcome.clone().unwrap().sent);
+            // Not again within the wait, then again.
+            worker.tick(at + LOOK_AGAIN - Duration::from_millis(1));
+            assert_eq!(fake.looks().len(), sent + n + 1, "{code}");
+            at += LOOK_AGAIN;
+        }
+        worker.tick(at);
+        assert_eq!(fake.looks().len(), sent + 4);
+        assert!(lock(&snapshot).look_outcome.clone().unwrap().sent);
+        // Another refusal (an older hub) is not repeated.
+        fake.look_refusals
+            .lock()
+            .unwrap()
+            .push_back(refused(404, "not_found"));
+        worker.handle(Command::Look(Look::default()), at);
+        worker.tick(at + LOOK_AGAIN);
+        worker.tick(at + LOOK_AGAIN * 3);
+        assert_eq!(fake.looks().len(), sent + 5);
     }
 
     #[test]

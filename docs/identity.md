@@ -284,8 +284,10 @@ blade-skin unlock id or `""`, and whether the Illuminate holocron is lit.
   failed and may have lapsed), at most once a second (changes in between are coalesced,
   the latest wins). A `not_unlocked` or `bad_look` answer leaves that skin out (the look
   goes with `saber:""`, so Illuminate still syncs) until the profile's unlocks change;
-  `look_quota` and failures wait 10 seconds; another refusal (an older hub) is not
-  repeated until the look or the claim changes. Leaving sends nothing: the release
+  too many (429: `look_quota`, or the address's `rate_limited`), a refused signature
+  (401, the clock still off after the one retry) and failures wait 10 seconds and go
+  again; another refusal (an older hub) is not repeated until the look or the claim
+  changes. Leaving sends nothing: the release
   drops the look. `Snapshot::look_outcome` says what became of the last one.
 - Receiving: presence entries carry `look` (`Presence::look`) and the feed carries look
   events (`Feed::looks`, `LookEvent`), queued for the viewer (`Service::take_looks`, the

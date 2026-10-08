@@ -139,8 +139,10 @@ wins); a new claim (another server, slot or name, or one renewed after a failed
 claim, which may have lapsed) sends it again, and renewing the same claim does not. A
 look equal to none (stock blade, holocron out) is not sent on a fresh claim. A
 `not_unlocked` (or `bad_look`) answer leaves that skin out, the look going on with
-`saber:""` so Illuminate still syncs, until the profile's unlocks change; `look_quota`
-and failures wait 10 seconds; `not_on_server` waits for the next accepted claim;
+`saber:""` so Illuminate still syncs, until the profile's unlocks change; too many
+(429: `look_quota`, or the per-address `rate_limited` the chat and emotes share), a
+refused signature (401) and failures wait 10 seconds and go again; `not_on_server`
+waits for the next accepted claim;
 another refusal (an older hub) is not repeated until the look or the claim changes.
 Leaving the server sends nothing (the release drops the look).
 `Snapshot::look_outcome` holds what became of the last one. Unit tests against a fake
