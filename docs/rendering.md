@@ -580,10 +580,18 @@ otherwise come from a trace of the static world only, done once when the map loa
   reads; a receiver whose filter footprint lies outside it skips the door tile.
 - **Poses.** Movers in the snapshot block light where they are drawn; one hidden or
   broken (not drawn) blocks nothing. A mover no snapshot has shown yet stands at its
-  baseline's spawn pose; one with neither blocks nothing. A pose change queues the
-  mover's door tiles again; about 2^19 rays are traced per frame (31 tiles at 128²,
-  120 at 64²), oldest first, so a moving lift spreads its cost and its final pose is
-  always traced.
+  baseline's spawn pose; one with neither blocks nothing. A mover missing from a
+  snapshot that would hold it blocks nothing either: the server removed it (a broken
+  `func_breakable`) or hid it with `SVF_NOCLIENT` (`func_usable` or `func_wall` switched
+  off), which no snapshot shows as hidden. "Would hold it" is the server's test, from
+  the player's eye: one of the clusters of the mover's reach box is in the eye's PVS and
+  one of its areas is open in the snapshot's area mask. A mover left out because its place
+  is out of view keeps its last pose, and `EF_PERMANENT` movers (never sent) keep
+  theirs. A pose change queues the mover's door tiles again; about 2^19 rays are traced
+  per frame (31 tiles at 128², 120 at 64²), oldest first, so a moving lift spreads its
+  cost and its final pose is always traced. The pose kept is the one last traced, until
+  the mover is a hundredth of a unit or about a hundredth of a degree from it, so slow
+  motion adds up to a trace and a still mover is never traced again.
 - **Lamp cache.** The static lamp cache is baked with the door tiles as they are. When
   tiles are traced again, the cache texels their movers can shadow are baked again: at
   load, each door tile finds the cache surfaces in its lamp's reach that lie behind its

@@ -25,15 +25,36 @@ pub(crate) fn append_frame(gpu: &mut GpuState, time: i64, now: Instant) {
         &mut gpu.mover_groups,
         |number| crate::actor_instance::scene_flags(game, snapshot, number),
     );
+    /// `EF_PERMANENT` (`codemp/game/q_shared.h`): sent only in the baselines, never in a
+    /// snapshot (`permanent_entities.rs`).
+    const EF_PERMANENT: u32 = 1 << 7;
     let catalog = &gpu.mover_catalog;
+    // `gpu.movers` holds the movers of the presented live or demo snapshot; the server
+    // built it from the player's eye (`SV_BuildClientSnapshot`).
+    let eye = first_person_view::presented_snapshot(
+        gpu.live_session.as_ref(),
+        gpu.demo_session.as_ref(),
+        time as i32,
+    )
+    .map(|snapshot| {
+        let mut eye = snapshot.player.origin();
+        eye[2] += snapshot.player.view_height() as f32;
+        crate::world_materials::mover_occlusion::Eye {
+            cluster: usize::try_from(gpu.bsp.leaves()[gpu.bsp.leaf_at(eye)].cluster).ok(),
+            visibility: gpu.bsp.render().visibility(),
+        }
+    });
     gpu.world_materials.observe_movers(
         &gpu.queue,
         &gpu.movers,
         game.map(|game| {
-            game.baselines()
-                .filter_map(move |state| legacy_present_mover(state, time as i32))
+            game.baselines().filter_map(move |state| {
+                legacy_present_mover(state, time as i32)
+                    .map(|mover| (mover, state.e_flags() & EF_PERMANENT != 0))
+            })
         }),
         |model_index| catalog.mesh_of(model_index),
+        eye,
     );
     if let (Some(game), Some(snapshot)) = (game, snapshot) {
         for state in game.baselines().filter(|state| {

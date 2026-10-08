@@ -412,16 +412,125 @@ fn movers_without_door_tiles_still_count_their_moves_for_the_far_cascade() {
     // Inline model 7 is the catalog's mesh 2; no lamp gave it a door tile.
     let mut tracking = Tracking::new(&[door(2, [0.; 3])], Doors::none(1));
     let mesh_of = |model: usize| (model == 7).then_some(2);
-    let none = || None::<std::iter::Empty<crate::movers::Presented>>;
-    tracking.observe(&[presented(7, [0.; 3], true)], none(), mesh_of);
+    let none = || None::<std::iter::Empty<(crate::movers::Presented, bool)>>;
+    tracking.observe(&[presented(7, [0.; 3], true)], none(), mesh_of, NO_EYE);
     let placed = tracking.poses.generation;
     assert_eq!(placed, 1);
-    tracking.observe(&[presented(7, [0.; 3], true)], none(), mesh_of);
+    tracking.observe(&[presented(7, [0.; 3], true)], none(), mesh_of, NO_EYE);
     assert_eq!(tracking.poses.generation, placed, "still");
-    tracking.observe(&[presented(7, [0., 0., 16.], true)], none(), mesh_of);
+    tracking.observe(
+        &[presented(7, [0., 0., 16.], true)],
+        none(),
+        mesh_of,
+        NO_EYE,
+    );
     assert_eq!(tracking.poses.generation, placed + 1, "moved");
     assert_eq!(tracking.queue.len(), 0, "no tiles to trace");
     // Door tiles from other occluders cannot index this one.
     let mismatched = Tracking::new(&[door(2, [0.; 3])], Doors::none(3));
     assert_eq!(mismatched.doors.by_occluder.len(), 1);
+}
+
+/// No snapshot behind the presented movers.
+const NO_EYE: Option<fn(&Sight) -> bool> = None;
+
+#[test]
+fn a_mover_missing_from_a_snapshot_that_would_hold_it_stops_blocking() {
+    // Mesh m is inline model 10 + m. The eye sees clusters 0 and 1, through area 0.
+    let clusters = [0, 0, 0, 3, 1];
+    let occluders: Vec<Occluder> = (0..5)
+        .map(|mesh| {
+            let mut occluder = door(mesh, [0.; 3]);
+            occluder.sight = Sight::of(&[clusters[mesh]], &[0]);
+            occluder
+        })
+        .collect();
+    let doors = Doors {
+        tiles: (0..5)
+            .map(|i| Tile {
+                lamp: i,
+                occluders: vec![i],
+            })
+            .collect(),
+        by_occluder: (0..5).map(|i| vec![i]).collect(),
+    };
+    let mut tracking = Tracking::new(&occluders, doors);
+    let mut batch = Vec::new();
+    let mesh_of = |model: usize| model.checked_sub(10).filter(|&mesh| mesh < 5);
+    let eye = || Some(|sight: &Sight| sight.seen(|cluster| cluster < 2, |area| area == 0));
+    // Only in the baselines: 12 is EF_PERMANENT, 13 stands out of view, 14 in view.
+    let baselines = || {
+        Some(
+            [
+                (presented(12, [0.; 3], true), true),
+                (presented(13, [0.; 3], true), false),
+                (presented(14, [0.; 3], true), false),
+            ]
+            .into_iter(),
+        )
+    };
+    let blocking = |tracking: &Tracking| -> Vec<bool> {
+        tracking.poses.current.iter().map(|p| p.blocking).collect()
+    };
+    let shown = [presented(10, [0.; 3], true), presented(11, [0.; 3], true)];
+    tracking.observe(&shown, baselines(), mesh_of, eye());
+    assert_eq!(
+        blocking(&tracking),
+        [true, true, true, true, false],
+        "a never-sent mover whose place is in view was removed before we came"
+    );
+    tracking.queue.take(8, &mut batch);
+    // 10 leaves the snapshot (func_usable switched off: SVF_NOCLIENT) though in view.
+    let generation = tracking.poses.generation;
+    tracking.observe(&shown[1..], baselines(), mesh_of, eye());
+    assert_eq!(blocking(&tracking), [false, true, true, true, false]);
+    assert_eq!(tracking.queue.len(), 1, "its door tile is traced again");
+    assert_eq!(
+        tracking.poses.generation,
+        generation + 1,
+        "the far cascade follows"
+    );
+    tracking.queue.take(8, &mut batch);
+    // Frames without a snapshot take nothing away.
+    tracking.observe(&[], baselines(), mesh_of, NO_EYE);
+    assert_eq!(blocking(&tracking), [false, true, true, true, false]);
+    // Sent again: it blocks again.
+    tracking.observe(&shown, baselines(), mesh_of, eye());
+    assert_eq!(blocking(&tracking), [true, true, true, true, false]);
+}
+
+#[test]
+fn a_snapshot_holds_a_mover_with_a_visible_cluster_and_an_open_area() {
+    let sight = Sight::of(&[4, 9], &[2]);
+    assert!(sight.seen(|cluster| cluster == 9, |_| true));
+    assert!(
+        !sight.seen(|cluster| cluster == 5, |_| true),
+        "out of the PVS"
+    );
+    assert!(
+        !sight.seen(|_| true, |area| area != 2),
+        "behind a closed area portal"
+    );
+    assert!(!Sight::default().seen(|_| true, |_| true), "in the void");
+    let crowded = Sight::of(&(0..20).collect::<Vec<u32>>(), &[]);
+    assert!(
+        crowded.seen(|_| false, |_| false),
+        "more clusters than named"
+    );
+    // From a map: a synthetic map's leaves are all cluster 0, area 0.
+    use sjk_bsp::{CollisionShader, box_brush, write_collision_map};
+    let shader = CollisionShader {
+        name: "textures/stone".into(),
+        surface_flags: 0,
+        content_flags: 1,
+    };
+    let map = write_collision_map(
+        "{\n\"classname\" \"worldspawn\"\n}\n",
+        &[shader],
+        &[box_brush([-512., -512., -64.], [512., 512., 0.], 0)],
+    );
+    let bsp = sjk_bsp::Bsp::parse(&map).expect("synthetic map parses");
+    let sight = Sight::new(&bsp, Vec3::new(0., 0., 8.), Vec3::new(64., 8., 136.));
+    assert_eq!(sight, Sight::of(&[0], &[0]));
+    assert!(sight.seen(|cluster| cluster == 0, |area| area == 0));
 }

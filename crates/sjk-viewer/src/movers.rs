@@ -25,6 +25,9 @@ pub(crate) struct Mesh {
     /// The world box the model can move through (`mover_occlusion::reach`); empty for
     /// a world prop.
     pub(crate) reach: [[f32; 3]; 2],
+    /// The clusters and areas `reach` touches, to tell a mover the server removed from one
+    /// it left out of the snapshot (`mover_occlusion::Sight`).
+    pub(crate) sight: crate::world_materials::mover_occlusion::Sight,
     pub(crate) draws: Vec<ActorDraw>,
 }
 
@@ -79,6 +82,7 @@ pub(crate) fn build_catalog(bsp: &Bsp, flattened: &mut FlattenedScene) -> Catalo
             (!draws.is_empty()).then_some(Mesh {
                 model_index: Some(model_index),
                 reach: [lower.to_array(), upper.to_array()],
+                sight: crate::world_materials::mover_occlusion::Sight::new(bsp, lower, upper),
                 draws,
             })
         })

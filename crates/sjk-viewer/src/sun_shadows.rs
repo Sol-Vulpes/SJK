@@ -627,16 +627,34 @@ impl super::Runtime {
     }
 
     /// Place this frame's movers for lamp shadows (`mover_occlusion.rs`); the movers of
-    /// `baselines` that no snapshot has shown yet stand at their spawn pose.
+    /// `baselines` (with whether each is `EF_PERMANENT`) that no snapshot has shown yet
+    /// stand at their spawn pose. With `eye`, `presented` is that snapshot's: a mover it
+    /// would hold but does not (`mover_occlusion::Sight`) stops blocking.
     pub(crate) fn observe_movers(
         &mut self,
         queue: &crate::frame_queue::FrameQueue,
         presented: &[crate::movers::Presented],
-        baselines: Option<impl Iterator<Item = crate::movers::Presented>>,
+        baselines: Option<impl Iterator<Item = (crate::movers::Presented, bool)>>,
         mesh_of: impl Fn(usize) -> Option<usize>,
+        eye: Option<super::mover_occlusion::Eye<'_>>,
     ) {
+        let areas = &self.areas;
+        let in_view = eye.map(|eye| {
+            move |sight: &super::mover_occlusion::Sight| {
+                // An eye outside the map tells nothing: keep the movers as they are.
+                eye.cluster.is_some_and(|from| {
+                    sight.seen(
+                        |to| {
+                            eye.visibility
+                                .is_none_or(|pvs| pvs.is_cluster_visible(from, to))
+                        },
+                        |area| areas.open(area),
+                    )
+                })
+            }
+        });
         if let Some(movers) = self.shadows.as_mut().and_then(|s| s.movers.as_mut()) {
-            movers.observe(queue, presented, baselines, mesh_of);
+            movers.observe(queue, presented, baselines, mesh_of, in_view);
         }
     }
 

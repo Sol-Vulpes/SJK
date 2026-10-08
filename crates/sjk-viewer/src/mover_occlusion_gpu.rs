@@ -367,16 +367,18 @@ impl Refresh {
 }
 
 impl Runtime {
-    /// Place the movers this frame presents, then the baselines' movers no snapshot has
-    /// shown (once), and upload what changed and the next tiles to trace.
+    /// Place this frame's movers ([`Tracking::observe`]) and upload what changed and the
+    /// next tiles to trace.
     pub(crate) fn observe(
         &mut self,
         queue: &crate::frame_queue::FrameQueue,
         presented: &[crate::movers::Presented],
-        baselines: Option<impl Iterator<Item = crate::movers::Presented>>,
+        baselines: Option<impl Iterator<Item = (crate::movers::Presented, bool)>>,
         mesh_of: impl Fn(usize) -> Option<usize>,
+        in_view: Option<impl Fn(&super::Sight) -> bool>,
     ) {
-        self.tracking.observe(presented, baselines, mesh_of);
+        self.tracking
+            .observe(presented, baselines, mesh_of, in_view);
         if let Some(tracer) = &mut self.tracer {
             tracer.prepare(queue, &self.tracking.poses, &mut self.tracking.queue);
         }

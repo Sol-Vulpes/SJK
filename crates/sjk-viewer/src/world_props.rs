@@ -182,6 +182,7 @@ pub(crate) fn detach(bsp: &Bsp, flattened: &mut FlattenedScene) -> Vec<Detached>
                     mesh: Mesh {
                         model_index: None,
                         reach: [[0.; 3]; 2],
+                        sight: Default::default(),
                         draws: vec![ActorDraw {
                             indices: leaf,
                             material: draw.material,

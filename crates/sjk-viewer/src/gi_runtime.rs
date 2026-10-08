@@ -255,7 +255,10 @@ impl super::Runtime {
             .filter(|(mesh, _)| mover_meshes[*mesh].model_index.is_some())
             .filter_map(|(mesh, triangles)| {
                 let [lower, upper] = mover_meshes[mesh].reach.map(glam::Vec3::from_array);
-                super::mover_occlusion::Occluder::new(mesh, triangles, (lower, upper))
+                let mut occluder =
+                    super::mover_occlusion::Occluder::new(mesh, triangles, (lower, upper))?;
+                occluder.sight = mover_meshes[mesh].sight;
+                Some(occluder)
             })
             .collect()
     }

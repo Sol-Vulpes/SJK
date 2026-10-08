@@ -11,7 +11,10 @@
 //!
 //! Only movers the client knows block light: those in the current snapshot, at the pose
 //! they are drawn with, and those of the map's baselines it has not seen yet, at their
-//! spawn pose. A hidden or broken mover (not drawn) blocks nothing.
+//! spawn pose. A hidden or broken mover (not drawn) blocks nothing, and neither does one
+//! missing from a snapshot that would hold it ([`Sight`]): the server removed it or hid it
+//! with `SVF_NOCLIENT`. One left out because its place is out of the player's view keeps
+//! its last pose.
 use glam::{Quat, Vec3};
 use std::collections::VecDeque;
 
@@ -30,6 +33,8 @@ pub(crate) struct Occluder {
     pub(crate) reach: (Vec3, Vec3),
     /// The lamps the static world lets see `reach` ([`seen_by`]), sorted; `None` for all.
     pub(crate) seen_by: Option<Vec<u32>>,
+    /// Where the server would show it from ([`Sight`]).
+    pub(crate) sight: Sight,
 }
 
 impl Occluder {
@@ -48,6 +53,7 @@ impl Occluder {
             upper,
             reach,
             seen_by: None,
+            sight: Sight::default(),
         })
     }
 }
@@ -331,6 +337,105 @@ pub(crate) fn merge(a: [u32; 4], b: [u32; 4]) -> [u32; 4] {
     ]
 }
 
+/// The clusters and areas a mover's reach box touches (`CM_BoxLeafnums`), to tell whether
+/// a snapshot would hold it: `SV_AddEntitiesVisibleFromPoint` sends an entity when one of
+/// its clusters is in the eye's PVS and one of its areas is connected. Built from the
+/// whole reach box, it can only call a mover in view more often than the server does.
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub(crate) struct Sight {
+    clusters: [u32; SIGHT_CLUSTERS],
+    cluster_count: u8,
+    areas: [i32; SIGHT_AREAS],
+    area_count: u8,
+    /// The box touched more clusters or areas than are named: taken as in view.
+    crowded: bool,
+}
+
+const SIGHT_CLUSTERS: usize = 16;
+const SIGHT_AREAS: usize = 4;
+
+/// Where the server built the presented snapshot from (`SV_BuildClientSnapshot`: the
+/// player's origin raised by its view height).
+#[derive(Clone, Copy)]
+pub(crate) struct Eye<'a> {
+    /// The eye's cluster; `None` outside the map.
+    pub(crate) cluster: Option<usize>,
+    /// The map's PVS; `None` for a map without one, where every cluster sees every other.
+    pub(crate) visibility: Option<&'a sjk_bsp::Visibility>,
+}
+
+impl Sight {
+    pub(crate) fn new(bsp: &sjk_bsp::Bsp, lower: Vec3, upper: Vec3) -> Self {
+        let mut leaves = [0usize; 256];
+        let found = bsp.box_leaves(lower.to_array(), upper.to_array(), &mut leaves);
+        let mut sight = Self {
+            crowded: found.count == leaves.len(),
+            ..Self::default()
+        };
+        for &leaf in &leaves[..found.count] {
+            let leaf = &bsp.leaves()[leaf];
+            if let Ok(cluster) = u32::try_from(leaf.cluster) {
+                sight.add_cluster(cluster);
+            }
+            if leaf.area >= 0 {
+                sight.add_area(leaf.area);
+            }
+        }
+        sight
+    }
+
+    fn add_cluster(&mut self, cluster: u32) {
+        let count = usize::from(self.cluster_count);
+        if self.clusters[..count].contains(&cluster) {
+            return;
+        }
+        if count == SIGHT_CLUSTERS {
+            self.crowded = true;
+        } else {
+            self.clusters[count] = cluster;
+            self.cluster_count += 1;
+        }
+    }
+
+    fn add_area(&mut self, area: i32) {
+        let count = usize::from(self.area_count);
+        if self.areas[..count].contains(&area) {
+            return;
+        }
+        if count == SIGHT_AREAS {
+            self.crowded = true;
+        } else {
+            self.areas[count] = area;
+            self.area_count += 1;
+        }
+    }
+
+    #[cfg(test)]
+    pub(crate) fn of(clusters: &[u32], areas: &[i32]) -> Self {
+        let mut sight = Self::default();
+        clusters.iter().for_each(|&c| sight.add_cluster(c));
+        areas.iter().for_each(|&a| sight.add_area(a));
+        sight
+    }
+
+    /// Whether a snapshot taken where the eye sees the clusters `cluster_visible` accepts,
+    /// with the areas `area_open` accepts connected, would hold the mover. A box in no
+    /// cluster (in the void) is never in view.
+    pub(crate) fn seen(
+        &self,
+        cluster_visible: impl Fn(usize) -> bool,
+        area_open: impl Fn(i32) -> bool,
+    ) -> bool {
+        if self.crowded {
+            return true;
+        }
+        let clusters = &self.clusters[..usize::from(self.cluster_count)];
+        let areas = &self.areas[..usize::from(self.area_count)];
+        clusters.iter().any(|&c| cluster_visible(c as usize))
+            && (areas.is_empty() || areas.iter().any(|&a| area_open(a)))
+    }
+}
+
 /// Where an occluder is and whether it blocks light.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub(crate) struct Pose {
@@ -484,6 +589,14 @@ pub(crate) struct Tracking {
     pub(crate) queue: Queue,
     /// Whether the baselines have placed the movers no snapshot has shown.
     baselines_placed: bool,
+    /// Per occluder: where the server would show it from.
+    sights: Vec<Sight>,
+    /// Per occluder: the last [`Tracking::observe`] call whose snapshot held it.
+    presented_at: Vec<u32>,
+    observed: u32,
+    /// Per occluder: an `EF_PERMANENT` baseline, drawn from the baseline and never sent in
+    /// a snapshot.
+    permanent: Vec<bool>,
 }
 
 impl Tracking {
@@ -505,6 +618,10 @@ impl Tracking {
             queue: Queue::new(doors.tiles.len()),
             doors,
             baselines_placed: false,
+            sights: occluders.iter().map(|o| o.sight).collect(),
+            presented_at: vec![0; occluders.len()],
+            observed: 0,
+            permanent: vec![false; occluders.len()],
         }
     }
 
@@ -514,25 +631,32 @@ impl Tracking {
     }
 
     /// Place the movers this frame presents, then the baselines' movers no snapshot has
-    /// shown (once).
+    /// shown (once; each with whether it is `EF_PERMANENT`). With the presented movers
+    /// coming from a snapshot, `in_view` tells whether that snapshot would hold a mover
+    /// ([`Sight::seen`]): a blocking mover missing from it was removed or hidden by the
+    /// server and stops blocking. Without a snapshot nothing is taken away.
     pub(crate) fn observe(
         &mut self,
         presented: &[crate::movers::Presented],
-        baselines: Option<impl Iterator<Item = crate::movers::Presented>>,
+        baselines: Option<impl Iterator<Item = (crate::movers::Presented, bool)>>,
         mesh_of: impl Fn(usize) -> Option<usize>,
+        in_view: Option<impl Fn(&Sight) -> bool>,
     ) {
+        self.observed = self.observed.wrapping_add(1);
         for mover in presented {
             if let Some(occluder) = self.occluder_of(mesh_of(mover.model_index)) {
                 self.poses
                     .set(occluder, Pose::of(mover), &self.doors, &mut self.queue);
+                self.presented_at[occluder] = self.observed;
             }
         }
         if !self.baselines_placed
             && self.poses.any_unknown()
             && let Some(baselines) = baselines
         {
-            for mover in baselines {
+            for (mover, permanent) in baselines {
                 if let Some(occluder) = self.occluder_of(mesh_of(mover.model_index)) {
+                    self.permanent[occluder] |= permanent;
                     self.poses.set_unknown(
                         occluder,
                         Pose::of(&mover),
@@ -542,6 +666,23 @@ impl Tracking {
                 }
             }
             self.baselines_placed = true;
+        }
+        let Some(in_view) = in_view else {
+            return;
+        };
+        for occluder in 0..self.sights.len() {
+            if self.poses.current[occluder].blocking
+                && self.presented_at[occluder] != self.observed
+                && !self.permanent[occluder]
+                && in_view(&self.sights[occluder])
+            {
+                let removed = Pose {
+                    blocking: false,
+                    ..self.poses.current[occluder]
+                };
+                self.poses
+                    .set(occluder, removed, &self.doors, &mut self.queue);
+            }
         }
     }
 }
