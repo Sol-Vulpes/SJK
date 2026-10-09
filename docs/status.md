@@ -7,6 +7,16 @@ SJK currently contains a native client and standard dedicated server in a
 20-crate Rust workspace. This page records scope and verification, rather than
 claiming complete parity from the presence of an implementation.
 
+## Profile tabs at a larger text size; a shorter Profile line
+
+Branch `personal/tab-fit` (10/10/2026, Windows 11), Sol's report: at `ui_textScale
+1.2` the Profile screen's "Achievements" tab was cut, the row being laid out at the
+neutral size and drawn larger inside it. The text style is now published each frame
+(`text::style::current`) and the row sets each name at its styled width (unit test:
+the largest style keeps the seven within the frame; world shot
+`duel6_sjk_profile_tabs_styled`). The main page's Profile line reads "Character, Force
+and SJK profile", clear of the server column. Not tried in the game.
+
 ## The player's own key id off screen; the SJK page without Profile
 
 Branch `personal/key-quiet` (09/10/2026, Windows 11), Sol's answers on the Profile

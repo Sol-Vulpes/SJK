@@ -139,7 +139,7 @@ const MAIN: [Entry; 5] = [
     ),
     entry(
         "Profile",
-        "Character, saber and Force; your SJK profile and medals",
+        "Character, Force and SJK profile",
         open(MainDestination::Player),
     ),
     entry(

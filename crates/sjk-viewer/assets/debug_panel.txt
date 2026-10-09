@@ -3112,3 +3112,12 @@ test: Profile > SJK Profile: no Key id line. Esc > Players, your row: Known as o
 test: SJK chat: click your own message, then someone else's: only theirs shows a key id.
 note: Not tried in a game.
 
+[tab-fit]
+area: Menus & settings
+title: Profile tabs whole at a larger text size; shorter Profile line
+change: The tab row makes room for ui_textScale and ui_letterSpacing; no name is cut.
+change: Main page Profile line: "Character, Force and SJK profile", clear of the servers.
+test: ui_textScale 1.2, Profile: all seven tab names whole, Achievements included.
+test: Main page, choose Profile: its line ends before the server column.
+note: Not tried in a game.
+

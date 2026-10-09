@@ -117,9 +117,18 @@ pub(crate) const SHIFT: f32 = 44.0;
 /// A tab's name's size.
 const LABEL_SIZE: f32 = 26.0;
 
-/// How wide a tab's name is set.
+/// How wide a tab's name is drawn, the player's text size and letter spacing
+/// (`ui_textScale`, `ui_letterSpacing`) included: the row makes room for the styled
+/// names, which would otherwise be cut at their tab's end.
 fn label_width(label: &str) -> f32 {
-    crate::text::display_width(label, LABEL_SIZE)
+    styled_width(label, crate::text::style::current())
+}
+
+/// [`label_width`] in `style`.
+fn styled_width(label: &str, style: crate::text::TextStyle) -> f32 {
+    let size = LABEL_SIZE * style.scale;
+    let tracking = style.tracking * size * label.chars().count() as f32;
+    (crate::text::display_width(label, size) + tracking).max(0.0)
 }
 
 /// Where tab `index` of `labels` starts and how wide its name is (frame pixels).
@@ -499,6 +508,30 @@ mod tests {
         assert_eq!(Tab::of_player_page(2), Tab::Force);
         assert_eq!(Tab::Collection.label(), COLLECTION);
         assert_eq!(Tab::Profile.label(), "SJK Profile");
+    }
+
+    /// A larger text style widens every tab's name by as much as it is drawn wider, so
+    /// none is cut ("Achievements" was at `ui_textScale 1.2`), and even the largest
+    /// style keeps the seven within the frame.
+    #[test]
+    fn the_tabs_make_room_for_the_players_text_style() {
+        let neutral = crate::text::TextStyle::NEUTRAL;
+        let larger = crate::text::TextStyle {
+            scale: 1.2,
+            tracking: 0.0,
+        };
+        let widest = crate::text::TextStyle {
+            scale: crate::text::style::SCALE_RANGE.1,
+            tracking: crate::text::style::TRACKING_RANGE.1,
+        };
+        let plain = styled_width("Achievements", neutral);
+        assert!(plain > 100.0);
+        assert!((styled_width("Achievements", larger) - plain * 1.2).abs() < 0.01);
+        let row: f32 = LABELS
+            .iter()
+            .map(|label| styled_width(label, widest) + GAP)
+            .sum();
+        assert!(ROW_X + row < 1_824.0, "the row reaches {}", ROW_X + row);
     }
 
     /// The row the screens draw and the areas the switch hit-tests are the same, in
