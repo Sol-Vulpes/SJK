@@ -1074,12 +1074,17 @@ menus ([identity.md](identity.md#bug-reports)).
   (Rajdhani 40: "What went wrong?", the player and the reason, "What should
   change here?"), cut with an ellipsis when too long; a line or two of
   guidance (for a note, the surface it is about).
-- **Field:** six lines of the text (Exo 2 19) wrapped by the font's width, the
-  last six of a longer text; a gold caret while it has the keyboard, lit
-  steadily while typing; "Type here" while empty; outlined white while focused.
+- **Field:** six lines of the text (Exo 2 19) wrapped by the font's width in the
+  player's text style (`ui_textScale`, `ui_letterSpacing`; the wrap, the caret
+  and the clicks measure as the renderer draws, `text_dialog_field.rs`); the
+  lines scroll to keep the caret in view; a gold caret bar at the insertion
+  point while it has the keyboard, lit steadily while typing; "Type here" while
+  empty (held clear of the caret); outlined white while focused.
 - **Under it:** the rules ("Letters, digits, spaces and . , ! ? ' - : ( )
   only") and the count against the limit (600, 300 for a player report, 500 for
-  a note; gold at the limit), then why the last Send was refused, in gold.
+  a note; gold at the limit), then why a Send is refused in a warm red band just
+  above the buttons: after a Send was refused, and already while Send has the
+  keyboard or the pointer and the text would not pass.
 - **Foot:** Cancel and Send (gold, dimmed until the text would pass the hub's
   rules; Enter or a click then says why).
 - **Keys:** under the card, bottom right: Enter send, Ctrl V paste (while the
@@ -1102,7 +1107,12 @@ frame; its outcome stays a centre print and a console line.
 
 Keys: Tab and Shift+Tab move between the field, Send and Cancel; Enter sends
 (on Cancel, cancels); Space acts on a button and types in the field; Escape
-cancels. After Send, Enter or Space takes the focused button (Close, Done or
+cancels. In the field the text has an insertion point: Left and Right move it
+(with Ctrl by words), Up and Down by wrapped lines (from the first line to the
+start, from the last to the end), Home and End to the ends of the line (with Ctrl
+of the text), Backspace and Delete remove at it (with Ctrl a word), typing and
+pasting insert at it within the same limits, and a click puts it between the
+glyphs under the pointer. With Send or Cancel focused the arrows walk the buttons. After Send, Enter or Space takes the focused button (Close, Done or
 Edit), Tab moves between Edit and Close, Escape closes. The pointer: a click on
 the field gives it the keyboard (on a failed report's text, edits it), on a
 button acts.

@@ -138,6 +138,7 @@ impl ApplicationHandler for ViewerApplication {
             WindowEvent::ModifiersChanged(modifiers) => {
                 gpu.chat.set_modifiers(modifiers.state());
                 gpu.text_dialog.set_shift(modifiers.state().shift_key());
+                gpu.text_dialog.set_control(modifiers.state().control_key());
                 gpu.alt_code.set_control(modifiers.state().control_key());
                 if let Some(console) = gpu.console.as_mut() {
                     console.set_shift(modifiers.state().shift_key());

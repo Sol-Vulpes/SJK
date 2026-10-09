@@ -8,6 +8,12 @@
 //! any script, spaces and `. , ! ? ' - : ( )`, line breaks turned into spaces), a report
 //! at most 600 characters, a note at most [`NOTE_MAX`], a player report at most 300.
 //!
+//! The text has an insertion point (the console's `LineEdit`): the arrows, Home, End,
+//! Backspace and Delete work at it, typing and pasting insert there, a click places it.
+//! [`field`] wraps the text and finds each caret position with the renderer's own
+//! measure (the player's text size and spacing), so both looks draw the caret between
+//! two glyphs.
+//!
 //! The launcher is the Report a bug button drawn centred at the bottom of the screen
 //! while the game menu is open. With the classic menus both take the classic+ look
 //! ([`classic`]); with the SJK UI the dialog is its pop-up card ([`sjk`]) and has no
@@ -19,9 +25,11 @@
 //! on Send and the answer comes as a centre print, as it does when the card was closed
 //! first. A note always closes on Send: its screenshot is taken of the next frame.
 
+use crate::console::line_edit::{LineEdit, Motion};
 use crate::menu::art::ArtSet;
 use crate::menu_widgets::MenuCanvas;
 use crate::text::{TextVertex, UiFont};
+use field::FieldLayout;
 use sjk_ui::{InputEvent, UiEventKind};
 use std::time::Instant;
 use winit::event::{ElementState, KeyEvent};
@@ -29,6 +37,8 @@ use winit::keyboard::{KeyCode, PhysicalKey};
 
 #[path = "text_dialog_classic.rs"]
 mod classic;
+#[path = "text_dialog_field.rs"]
+mod field;
 #[path = "text_dialog_sjk.rs"]
 mod sjk;
 
@@ -110,6 +120,10 @@ enum Focus {
 pub(crate) struct TextDialog {
     kind: Option<Kind>,
     text: String,
+    /// The insertion point in `text`.
+    edit: LineEdit,
+    /// How the last frame wrapped `text`, for the keys and the pointer that move by lines.
+    layout: FieldLayout,
     focus: Focus,
     /// Why the last Send was refused.
     message: String,
@@ -118,6 +132,8 @@ pub(crate) struct TextDialog {
     epoch: Instant,
     /// Shift is held (Shift+Tab goes back).
     shift: bool,
+    /// Control is held (the arrows and Backspace work on words).
+    control: bool,
     /// The look drawn, and the retail menu art the classic+ one can use.
     look: Look,
     art: ArtSet,
@@ -130,6 +146,8 @@ impl Default for TextDialog {
         Self {
             kind: None,
             text: String::with_capacity(2_400),
+            edit: LineEdit::default(),
+            layout: FieldLayout::default(),
             focus: Focus::Field,
             message: String::new(),
             // The SJK UI's card draws about 30 runs and 70 commands.
@@ -137,6 +155,7 @@ impl Default for TextDialog {
             launcher: MenuCanvas::with_capacities(4, 32, 16),
             epoch: Instant::now(),
             shift: false,
+            control: false,
             look: Look::default(),
             art: ArtSet::default(),
             phase: Phase::Writing,
@@ -187,41 +206,12 @@ fn wrap(text: &str, width: usize) -> Vec<String> {
 /// `text` broken into lines that `fits` accepts, at spaces where it can be; a word longer
 /// than a line is cut where the line ends.
 fn wrap_by(text: &str, fits: impl Fn(&str) -> bool) -> Vec<String> {
-    let mut lines = Vec::new();
-    let mut line = String::new();
-    for word in text.split(' ') {
-        let mut word = word.to_owned();
-        loop {
-            let candidate = if line.is_empty() {
-                word.clone()
-            } else {
-                format!("{line} {word}")
-            };
-            if fits(&candidate) {
-                line = candidate;
-                break;
-            }
-            if !line.is_empty() {
-                lines.push(std::mem::take(&mut line));
-                continue;
-            }
-            let mut head = String::new();
-            for character in word.chars() {
-                head.push(character);
-                if !fits(&head) {
-                    head.pop();
-                    break;
-                }
-            }
-            if head.is_empty() {
-                head = word.chars().take(1).collect();
-            }
-            word = word[head.len()..].to_owned();
-            lines.push(head);
-        }
-    }
-    lines.push(line);
-    lines
+    let mut ranges = Vec::new();
+    field::wrap_ranges(text, fits, &mut ranges);
+    ranges
+        .into_iter()
+        .map(|range| text[range].to_owned())
+        .collect()
 }
 
 /// `text` broken into lines no wider than `width` pixels when drawn `size` pixels high
@@ -250,6 +240,8 @@ impl TextDialog {
     pub(crate) fn open(&mut self, kind: Kind) {
         self.kind = Some(kind);
         self.text.clear();
+        self.edit.to_end(&self.text);
+        self.layout.reset();
         self.message.clear();
         self.focus = Focus::Field;
         self.phase = Phase::Writing;
@@ -324,6 +316,8 @@ impl TextDialog {
     #[cfg(test)]
     pub(crate) fn preview(&mut self, text: &str, on_send: bool, message: &str) {
         self.text = text.to_owned();
+        self.edit.to_end(&self.text);
+        self.layout.reset();
         self.focus = if on_send { Focus::Send } else { Focus::Field };
         self.message = message.to_owned();
     }
@@ -355,6 +349,11 @@ impl TextDialog {
         self.shift = shift;
     }
 
+    /// Follow the Control key (`ModifiersChanged`).
+    pub(crate) fn set_control(&mut self, control: bool) {
+        self.control = control;
+    }
+
     pub(crate) fn handle_key(&mut self, event: &KeyEvent) -> Action {
         if event.state != ElementState::Pressed {
             return Action::None;
@@ -376,11 +375,7 @@ impl TextDialog {
         let shift = self.shift;
         match key {
             KeyCode::Escape => return self.close(),
-            KeyCode::Tab => {
-                let order = [Focus::Field, Focus::Send, Focus::Cancel];
-                let at = order.iter().position(|f| *f == self.focus).unwrap_or(0);
-                self.focus = order[if shift { at + 2 } else { at + 1 } % 3];
-            }
+            KeyCode::Tab => self.step_focus(shift),
             KeyCode::Enter | KeyCode::NumpadEnter => {
                 return if self.focus == Focus::Cancel {
                     self.close()
@@ -396,11 +391,51 @@ impl TextDialog {
                 };
             }
             KeyCode::Backspace if self.focus == Focus::Field => {
-                self.text.pop();
-                self.message.clear();
-                // The caret stays lit while typing.
-                self.epoch = Instant::now();
+                let word = self.control;
+                self.erase(if word { Motion::WordLeft } else { Motion::Left });
             }
+            KeyCode::Delete if self.focus == Focus::Field => {
+                let word = self.control;
+                self.erase(if word {
+                    Motion::WordRight
+                } else {
+                    Motion::Right
+                });
+            }
+            KeyCode::ArrowLeft | KeyCode::ArrowRight if self.focus == Focus::Field => {
+                let left = key == KeyCode::ArrowLeft;
+                let motion = match (self.control, left) {
+                    (false, true) => Motion::Left,
+                    (false, false) => Motion::Right,
+                    (true, true) => Motion::WordLeft,
+                    (true, false) => Motion::WordRight,
+                };
+                self.edit.motion(&self.text, motion, false);
+                self.moved();
+            }
+            KeyCode::ArrowUp | KeyCode::ArrowDown if self.focus == Focus::Field => {
+                let at = self.edit.cursor(&self.text);
+                let to = self
+                    .layout
+                    .vertical(&self.text, at, key == KeyCode::ArrowDown);
+                self.edit.place(&self.text, to, false);
+                self.moved();
+            }
+            KeyCode::Home | KeyCode::End if self.focus == Focus::Field => {
+                let home = key == KeyCode::Home;
+                let at = self.edit.cursor(&self.text);
+                // Control takes the caret to the ends of the whole text.
+                let to = match (self.control, home) {
+                    (true, true) => 0,
+                    (true, false) => self.text.len(),
+                    _ => self.layout.edge(&self.text, at, home),
+                };
+                self.edit.place(&self.text, to, false);
+                self.moved();
+            }
+            // The arrows walk the buttons as Tab does.
+            KeyCode::ArrowLeft | KeyCode::ArrowUp => self.step_focus(true),
+            KeyCode::ArrowRight | KeyCode::ArrowDown => self.step_focus(false),
             _ if self.focus == Focus::Field => {
                 let pasted;
                 let text = match text {
@@ -414,14 +449,40 @@ impl TextDialog {
                 let kind = self.kind.as_ref().expect("open");
                 let kept = typed(kind, &self.text, text);
                 if !kept.is_empty() {
-                    self.text.push_str(&kept);
-                    self.message.clear();
-                    self.epoch = Instant::now();
+                    let limit = limit(kind);
+                    self.edit
+                        .insert_counted(&mut self.text, &kept, limit, |_| 1);
+                    self.touched();
                 }
             }
             _ => {}
         }
         Action::None
+    }
+
+    /// Delete from the caret to where `motion` goes (Backspace is `Left`, Delete `Right`).
+    fn erase(&mut self, motion: Motion) {
+        self.edit.delete(&mut self.text, motion);
+        self.touched();
+    }
+
+    /// The text changed: the refusal no longer applies and the caret shows.
+    fn touched(&mut self) {
+        self.message.clear();
+        self.layout.touch();
+        self.moved();
+    }
+
+    /// The caret moved: it stays lit, as while typing.
+    fn moved(&mut self) {
+        self.epoch = Instant::now();
+    }
+
+    /// Tab's order over the field and the two buttons, one step.
+    fn step_focus(&mut self, back: bool) {
+        let order = [Focus::Field, Focus::Send, Focus::Cancel];
+        let at = order.iter().position(|f| *f == self.focus).unwrap_or(0);
+        self.focus = order[if back { at + 2 } else { at + 1 } % 3];
     }
 
     /// A key on the SJK UI's card after Send: Escape closes; Enter or Space takes the
@@ -431,7 +492,7 @@ impl TextDialog {
         let failed = matches!(self.phase, Phase::Failed(_));
         match key {
             KeyCode::Escape => self.close(),
-            KeyCode::Tab if failed => {
+            KeyCode::Tab | KeyCode::ArrowLeft | KeyCode::ArrowRight if failed => {
                 self.focus = if self.focus == Focus::Send {
                     Focus::Cancel
                 } else {
@@ -462,6 +523,14 @@ impl TextDialog {
         match event.token {
             Some(FIELD_TOKEN) if writing => {
                 self.focus = Focus::Field;
+                // The caret goes where the click landed.
+                if let Some(at) = event
+                    .position
+                    .and_then(|at| self.layout.at_point(&self.text, [at.x, at.y]))
+                {
+                    self.edit.place(&self.text, at, false);
+                    self.moved();
+                }
                 Action::None
             }
             // A click on a failed report's text edits it.
@@ -642,5 +711,337 @@ mod tests {
             dialog.send(),
             Action::Send(kind, "Team killing all match long".into())
         );
+    }
+
+    fn typed_keys(dialog: &mut TextDialog, text: &str) {
+        for character in text.chars() {
+            let mut buffer = [0; 4];
+            dialog.key(KeyCode::KeyA, Some(character.encode_utf8(&mut buffer)));
+        }
+    }
+
+    fn cursor(dialog: &TextDialog) -> usize {
+        dialog.edit.cursor(&dialog.text)
+    }
+
+    /// Left, Right, Home, End, Delete and Backspace work at the caret, not at the end.
+    #[test]
+    fn the_caret_edits_in_the_middle_of_the_text() {
+        let mut dialog = TextDialog::default();
+        dialog.open(Kind::Report);
+        typed_keys(&mut dialog, "hello world");
+        assert_eq!(cursor(&dialog), 11);
+        for _ in 0..5 {
+            dialog.key(KeyCode::ArrowLeft, None);
+        }
+        assert_eq!(cursor(&dialog), 6);
+        dialog.message = "a report needs a few real words".into();
+        dialog.key(KeyCode::ArrowRight, None);
+        dialog.key(KeyCode::ArrowLeft, None);
+        assert!(!dialog.message.is_empty(), "moving is not editing");
+        typed_keys(&mut dialog, "X");
+        assert_eq!(dialog.text, "hello Xworld");
+        assert!(dialog.message.is_empty(), "typing clears the refusal");
+        assert_eq!(cursor(&dialog), 7);
+        dialog.key(KeyCode::Backspace, None);
+        assert_eq!(dialog.text, "hello world");
+        dialog.key(KeyCode::Delete, None);
+        assert_eq!(dialog.text, "hello orld");
+        assert_eq!(cursor(&dialog), 6);
+        dialog.key(KeyCode::Home, None);
+        assert_eq!(cursor(&dialog), 0);
+        dialog.key(KeyCode::Backspace, None);
+        dialog.key(KeyCode::ArrowLeft, None);
+        assert_eq!((dialog.text.as_str(), cursor(&dialog)), ("hello orld", 0));
+        typed_keys(&mut dialog, "Oh ");
+        assert_eq!(dialog.text, "Oh hello orld");
+        dialog.key(KeyCode::End, None);
+        assert_eq!(cursor(&dialog), dialog.text.len());
+        dialog.key(KeyCode::Delete, None);
+        dialog.key(KeyCode::ArrowRight, None);
+        assert_eq!(dialog.text, "Oh hello orld");
+        dialog.key(KeyCode::ArrowLeft, None);
+        typed_keys(&mut dialog, "!!");
+        assert_eq!(dialog.text, "Oh hello orl!!d");
+    }
+
+    #[test]
+    fn control_moves_and_deletes_by_words() {
+        let mut dialog = TextDialog::default();
+        dialog.open(Kind::Report);
+        typed_keys(&mut dialog, "one two three");
+        dialog.set_control(true);
+        dialog.key(KeyCode::ArrowLeft, None);
+        assert_eq!(cursor(&dialog), 8);
+        dialog.key(KeyCode::Backspace, None);
+        assert_eq!(dialog.text, "one three");
+        assert_eq!(cursor(&dialog), 4);
+        dialog.key(KeyCode::Delete, None);
+        assert_eq!(dialog.text, "one ");
+        dialog.key(KeyCode::ArrowLeft, None);
+        assert_eq!(cursor(&dialog), 0);
+        dialog.key(KeyCode::ArrowRight, None);
+        assert_eq!(cursor(&dialog), 4);
+        dialog.key(KeyCode::Home, None);
+        assert_eq!(cursor(&dialog), 0);
+        dialog.key(KeyCode::End, None);
+        assert_eq!(cursor(&dialog), 4);
+    }
+
+    /// The limits are the same wherever the caret is, and the text is still filtered.
+    #[test]
+    fn inserting_keeps_the_text_limits() {
+        let mut dialog = TextDialog::default();
+        dialog.open(Kind::Report);
+        let full = "a".repeat(sjk_identity::report::TEXT_MAX);
+        dialog.key(KeyCode::KeyA, Some(&full));
+        assert_eq!(dialog.text.chars().count(), sjk_identity::report::TEXT_MAX);
+        dialog.key(KeyCode::Home, None);
+        typed_keys(&mut dialog, "b");
+        assert_eq!(dialog.text, full, "no room");
+        for _ in 0..4 {
+            dialog.key(KeyCode::Delete, None);
+        }
+        // Pasted: what the hub refuses is dropped, a line break is a space.
+        dialog.key(KeyCode::KeyV, Some("<b>\n\u{1F642}ö"));
+        assert_eq!(
+            dialog.text.chars().count(),
+            sjk_identity::report::TEXT_MAX - 1
+        );
+        assert!(dialog.text.starts_with("b ö"), "{:?}", &dialog.text[..8]);
+        assert_eq!(cursor(&dialog), "b ö".len());
+        typed_keys(&mut dialog, "zz");
+        assert_eq!(dialog.text.chars().count(), sjk_identity::report::TEXT_MAX);
+        assert!(dialog.text.starts_with("b özaaa"));
+        // At the start, Backspace has nothing to remove; none of it can panic.
+        dialog.key(KeyCode::Home, None);
+        dialog.key(KeyCode::Backspace, None);
+        dialog.key(KeyCode::ArrowLeft, None);
+        dialog.key(KeyCode::ArrowUp, None);
+        assert_eq!(cursor(&dialog), 0);
+    }
+
+    /// The arrows walk Send and Cancel when the field does not have the keyboard.
+    #[test]
+    fn the_arrows_walk_the_buttons() {
+        let mut dialog = TextDialog::default();
+        dialog.open(Kind::Report);
+        dialog.key(KeyCode::Tab, None);
+        assert_eq!(dialog.focus, Focus::Send);
+        dialog.key(KeyCode::ArrowRight, None);
+        assert_eq!(dialog.focus, Focus::Cancel);
+        dialog.key(KeyCode::ArrowLeft, None);
+        assert_eq!(dialog.focus, Focus::Send);
+        dialog.key(KeyCode::ArrowUp, None);
+        assert_eq!(dialog.focus, Focus::Field);
+    }
+
+    fn body_font() -> crate::text::FontAtlas {
+        crate::text::load_family(&crate::text::BODY, 1.0, None).expect("a bundled family")
+    }
+
+    const SAMPLE: &str = "The door by the tower's foot flickers when I walk through it, and the light behind it goes black for a second. It happens every time on this server (ffa3).";
+
+    /// A caret position's x is the renderer's own measure of the line before it, in every
+    /// text style, on every wrapped line; and no line is wider than the box.
+    #[test]
+    fn the_caret_sits_between_glyphs_in_any_text_style() {
+        use crate::text::{TextFace, TextStyle, visible_text_width_style};
+        let atlas = body_font();
+        let font = &atlas.font;
+        for (scale, tracking) in [
+            (1.0, 0.0),
+            (1.2, 0.0),
+            (0.8, 0.0),
+            (1.0, 0.15),
+            (1.2, -0.05),
+        ] {
+            let style = TextStyle { scale, tracking };
+            for spacing in [0.0, 0.3] {
+                let face = field::Face::new(font, style, 19.0, spacing);
+                let mut layout = FieldLayout::default();
+                layout.lay_out(SAMPLE, &face, 400.0);
+                layout.show(0, 100, [0.0, 0.0], 30.0);
+                let (_, lines) = layout.visible();
+                assert!(lines.len() > 2, "the sample wraps");
+                let styled = 19.0 * scale;
+                for line in lines {
+                    let width = visible_text_width_style(
+                        font,
+                        &SAMPLE[line.clone()],
+                        styled / font.height,
+                        TextFace::Regular,
+                        spacing + tracking * styled,
+                    );
+                    assert!(width <= 400.0 - styled * 0.5, "{scale} {tracking}: {width}");
+                }
+                let lines = lines.to_vec();
+                for (at, _) in SAMPLE.char_indices().chain([(SAMPLE.len(), ' ')]) {
+                    let (line, x) = layout.locate(SAMPLE, at);
+                    let range = &lines[line];
+                    assert!(range.start <= at && at <= range.end, "{at} on {range:?}");
+                    let expected = visible_text_width_style(
+                        font,
+                        &SAMPLE[range.start..at],
+                        styled / font.height,
+                        TextFace::Regular,
+                        spacing + tracking * styled,
+                    );
+                    assert!((x - expected).abs() < 0.01, "{at}: {x} against {expected}");
+                }
+            }
+        }
+    }
+
+    /// Up and Down keep the column across wrapped lines; Home and End stay on the line;
+    /// a click lands on the glyph under it.
+    #[test]
+    fn the_caret_moves_over_wrapped_lines_and_to_clicks() {
+        let atlas = body_font();
+        let face = field::Face::new(&atlas.font, crate::text::TextStyle::NEUTRAL, 19.0, 0.0);
+        let mut layout = FieldLayout::default();
+        layout.lay_out(SAMPLE, &face, 400.0);
+        layout.show(0, 100, [50.0, 100.0], 30.0);
+        let (_, lines) = layout.visible();
+        let lines = lines.to_vec();
+        let second = lines[1].clone();
+        let in_second = second.start + 7;
+        let (line, x) = layout.locate(SAMPLE, in_second);
+        assert_eq!(line, 1);
+        // Up lands in the first line at about the same x, Down in the third.
+        let up = layout.vertical(SAMPLE, in_second, false);
+        let (up_line, up_x) = layout.locate(SAMPLE, up);
+        assert_eq!(up_line, 0);
+        assert!((up_x - x).abs() < 12.0, "{up_x} against {x}");
+        let down = layout.vertical(SAMPLE, in_second, true);
+        assert_eq!(layout.locate(SAMPLE, down).0, 2);
+        // From the first line, Up goes to the start; from the last, Down to the end.
+        assert_eq!(layout.vertical(SAMPLE, 3, false), 0);
+        assert_eq!(
+            layout.vertical(SAMPLE, SAMPLE.len() - 2, true),
+            SAMPLE.len()
+        );
+        // Home and End stay on the line.
+        assert_eq!(layout.edge(SAMPLE, in_second, true), second.start);
+        assert_eq!(layout.edge(SAMPLE, in_second, false), second.end);
+        // A click a little left of the middle of a glyph is before it; left of the line, at
+        // its start; below the last row, at the end of the last line.
+        let stop = |index: usize| layout.locate(SAMPLE, index).1;
+        let target = second.start + 12;
+        let point = [
+            50.0 + (stop(target) + stop(target + 1)) * 0.5 - 0.5,
+            100.0 + 30.0 + 10.0,
+        ];
+        assert_eq!(layout.at_point(SAMPLE, point), Some(target));
+        assert_eq!(
+            layout.at_point(SAMPLE, [0.0, 100.0 + 30.0]),
+            Some(second.start)
+        );
+        let last = lines.last().expect("lines").clone();
+        assert_eq!(layout.at_point(SAMPLE, [5000.0, 5000.0]), Some(last.end));
+        // A changed text waits for the next layout.
+        layout.touch();
+        assert_eq!(layout.at_point(SAMPLE, point), None);
+        assert_eq!(layout.edge(SAMPLE, in_second, true), 0);
+    }
+
+    fn click_at(dialog: &mut TextDialog, point: sjk_ui::Vec2) -> Action {
+        let button = sjk_ui::PointerButton::Primary;
+        dialog.handle_pointer(InputEvent::PointerMove(point));
+        dialog.handle_pointer(InputEvent::PointerPress {
+            position: point,
+            button,
+        });
+        dialog.handle_pointer(InputEvent::PointerRelease {
+            position: point,
+            button,
+        })
+    }
+
+    fn click_token(dialog: &mut TextDialog, token: u16) -> Action {
+        let rect = dialog.ui.rect_for(token).expect("drawn");
+        click_at(
+            dialog,
+            sjk_ui::Vec2::new(rect.x + rect.width * 0.5, rect.y + rect.height * 0.5),
+        )
+    }
+
+    /// The classic look: the field, Send and Cancel answer to the pointer, a refused Send
+    /// says why, and the caret is a bar at the insertion point in the player's text style.
+    #[test]
+    fn the_classic_look_answers_the_pointer_and_draws_the_caret() {
+        use crate::text::{TextFace, TextStyle, visible_text_width_style};
+        let mut atlas = crate::text::load_modern(1.0, None).expect("Inter");
+        let style = TextStyle {
+            scale: 1.2,
+            tracking: 0.1,
+        };
+        atlas.font.set_style(style);
+        let font = &atlas.font;
+        let viewport = [1920.0, 1080.0];
+        let mut dialog = TextDialog::default();
+        dialog.set_look(Look::Classic, ArtSet::default());
+        dialog.open(Kind::Report);
+        let mut vertices = Vec::new();
+        let mut draw = |dialog: &mut TextDialog| {
+            vertices.clear();
+            dialog.caret_for_shot();
+            dialog.append_classic(&Kind::Report, &mut vertices, font, viewport);
+        };
+        draw(&mut dialog);
+        for token in [FIELD_TOKEN, SEND_TOKEN, CANCEL_TOKEN] {
+            assert!(dialog.ui.rect_for(token).is_some(), "{token}");
+        }
+        // A refused Send is explained, and the field takes the keyboard back.
+        dialog.focus = Focus::Cancel;
+        assert_eq!(click_token(&mut dialog, SEND_TOKEN), Action::None);
+        assert!(!dialog.message.is_empty() && dialog.focus == Focus::Field);
+        typed_keys(&mut dialog, SAMPLE);
+        for _ in 0..40 {
+            dialog.key(KeyCode::ArrowLeft, None);
+        }
+        let at = cursor(&dialog);
+        assert_eq!(at, SAMPLE.len() - 40);
+        draw(&mut dialog);
+        // The caret bar is the gold solid rectangle.
+        let bar = dialog
+            .ui
+            .draw_list()
+            .commands()
+            .iter()
+            .find_map(|command| match command {
+                sjk_ui::DrawCommand::SolidRect { rect, color }
+                    if *color == crate::menu::classic::view::GOLD =>
+                {
+                    Some(*rect)
+                }
+                _ => None,
+            })
+            .expect("the caret is lit");
+        let place = crate::menu::classic::layout::Placement::new(viewport);
+        let size = 11.0 * place.scale * style.scale;
+        let (line, _) = dialog.layout.locate(&dialog.text, at);
+        let (first, shown) = dialog.layout.visible();
+        assert!(line >= first && line < first + shown.len());
+        let start = shown[line - first].start;
+        let before = visible_text_width_style(
+            font,
+            &dialog.text[start..at],
+            size / font.height,
+            TextFace::Regular,
+            0.3 * place.scale + style.tracking * size,
+        );
+        let left = place.rect([106.0, 154.0, 0.0, 0.0]).x;
+        let centre = bar.x + bar.width * 0.5;
+        assert!(
+            (centre - (left + before)).abs() < 0.01,
+            "{centre} {left} {before}"
+        );
+        // Clicking in the field puts the caret there.
+        let rect = dialog.ui.rect_for(FIELD_TOKEN).expect("drawn");
+        click_at(&mut dialog, sjk_ui::Vec2::new(rect.x + 3.0, rect.y + 3.0));
+        assert_eq!(cursor(&dialog), 0, "left of the first line");
+        assert_eq!(click_token(&mut dialog, CANCEL_TOKEN), Action::Cancel);
+        assert!(!dialog.is_open());
     }
 }
