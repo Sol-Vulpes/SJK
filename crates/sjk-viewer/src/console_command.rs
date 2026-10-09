@@ -118,6 +118,16 @@ impl ViewerConsole {
                         *pending_viewpos = true;
                         return Some(Ok(Vec::new()));
                     }
+                    // `perfmark <text>`: a timestamped line in the client log, here so a
+                    // script's markers keep their order against its `wait`s.
+                    if tokens
+                        .first()
+                        .is_some_and(|name| name.eq_ignore_ascii_case("perfmark"))
+                    {
+                        let text = tokens[1..].join(" ");
+                        crate::log::progress(format_args!("perf-mark {text}"));
+                        return Some(Ok(vec![format!("perf-mark {text}")]));
+                    }
                     // `mark <note>`: `viewpos`, kept with the note for whoever reads the marks.
                     if tokens
                         .first()
@@ -272,5 +282,22 @@ impl ViewerConsole {
         if let Ok(mut status) = self.server_status.write() {
             *status = "Not connected".to_owned();
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn perfmark_answers_in_the_console() {
+        let directory = tempfile::tempdir().unwrap();
+        let mut console =
+            crate::console::ViewerConsole::new(directory.path().join("config.cfg")).unwrap();
+        console.execute_console_line("perfmark lamps off", None);
+        assert!(
+            console
+                .shell
+                .lines()
+                .any(|line| line.text == "perf-mark lamps off"),
+        );
     }
 }
