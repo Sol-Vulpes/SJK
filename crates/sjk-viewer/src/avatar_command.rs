@@ -1,5 +1,5 @@
 //! The `sjkavatar` console command (`docs/identity.md`, "Pictures"): the words for
-//! what the Profile page's picture panel does, since SJK opens no file dialog.
+//! what the Profile page's picture panel does with Browse... or a file dropped on it.
 //! `sjkavatar <file>` reads a picture file and shows it on the Profile page, where Use
 //! this picture sends it; `sjkavatar clear` takes the player's picture down; with no
 //! words it opens the picture panel.
@@ -42,19 +42,24 @@ pub(crate) fn parse(args: &[String]) -> Action {
 impl crate::GpuState {
     /// `sjkavatar [<file> | clear]`.
     pub(crate) fn avatar_command(&mut self, args: &[String]) -> Result<Vec<String>, String> {
+        let action = parse(args);
+        if matches!(&action, Action::Load(path) if !path.is_file()) {
+            return Err("sjkavatar: there is no file there".to_owned());
+        }
+        // The SJK UI shows the picture panel on the Profile screen's SJK Profile tab.
+        if self.in_game_menu.is_sjk() {
+            self.open_profile_hub(crate::profile_hub::Tab::Profile);
+        }
         let console = self.console.as_mut().ok_or("Console unavailable")?;
-        let lines = match parse(args) {
+        let lines = match action {
             Action::Open => {
                 console.profile_show_picture();
                 vec![
-                    "sjkavatar: drop a picture file on the window, or type sjkavatar <file>"
+                    "sjkavatar: Browse... for a picture, drop its file on the window, or type sjkavatar <file>"
                         .to_owned(),
                 ]
             }
             Action::Load(path) => {
-                if !path.is_file() {
-                    return Err("sjkavatar: there is no file there".to_owned());
-                }
                 let name = path
                     .file_name()
                     .map(|name| name.to_string_lossy().into_owned())

@@ -3,9 +3,10 @@
 //! what it is, owned (since when, with the SJK team's note) or locked (with how to get
 //! it), and Equip or Unequip for an owned blade skin, which sets `cg_saberSkin`.
 //!
-//! Opened by the Profile page's Unlockables button or the `unlockables` command. Like
-//! the Staff page it lives in the console and has the SJK UI's look in every menu style
-//! ([`view`]). The cards that do not fit scroll: the list follows the card chosen, and the
+//! In the SJK UI it is the Profile screen's Collection tab ([`crate::profile_hub`]);
+//! in the classic menus the Profile page's See unlockables or the `unlockables` command
+//! open it on its own. Like the Staff page it lives in the console and has the SJK UI's
+//! look in every menu style ([`view`]). The cards that do not fit scroll: the list follows the card chosen, and the
 //! mouse wheel scrolls it (choosing a card it brings into view). The arrows move between
 //! the cards (Up and Down by rows), Tab and Shift+Tab walk them, Enter or Space equips or
 //! unequips the one chosen, Escape goes back; a click on Equip or Unequip acts, on a card
@@ -54,6 +55,11 @@ struct Card {
 pub(crate) struct Panel {
     open: bool,
     owns_console: bool,
+    /// Shown as the Profile screen's Collection tab: its title and row of tabs at the
+    /// top, the page moved down under them.
+    hub: bool,
+    /// What the Profile screen's tabs put at the top.
+    hub_header: crate::profile_hub::Header,
     ui: MenuCanvas,
     /// The card the keyboard is on, by its token.
     focus: u16,
@@ -86,6 +92,8 @@ impl Panel {
         Self {
             open: false,
             owns_console: false,
+            hub: false,
+            hub_header: crate::profile_hub::Header::default(),
             ui: MenuCanvas::with_capacities(96, 160, 900),
             focus: CARD_BASE,
             order: Vec::with_capacity(unlockables::ALL.len()),
@@ -112,12 +120,34 @@ impl Panel {
         }
     }
 
-    /// Show the page; `owns_console` when the console was closed before it.
+    /// Show the page on its own; `owns_console` when the console was closed before it.
     pub(crate) fn open(&mut self, owns_console: bool) {
         self.open = true;
         self.owns_console = owns_console;
+        self.hub = false;
         self.focus = CARD_BASE;
         self.first = 0;
+    }
+
+    /// Show the page as the Profile screen's Collection tab (`true`), or on its own;
+    /// [`Self::open`] puts it back on its own.
+    pub(crate) fn set_hub(&mut self, hub: bool) {
+        self.hub = hub;
+    }
+
+    /// Whether the page is the Profile screen's Collection tab.
+    pub(crate) fn is_hub(&self) -> bool {
+        self.hub
+    }
+
+    /// What the Profile screen's tabs put at the top.
+    pub(crate) fn hub_header(&self) -> &crate::profile_hub::Header {
+        &self.hub_header
+    }
+
+    /// Put `header` at the top on the Profile screen.
+    pub(crate) fn set_hub_header(&mut self, header: crate::profile_hub::Header) {
+        self.hub_header = header;
     }
 
     /// Closing the page closes the console too.
@@ -135,6 +165,12 @@ impl Panel {
 
     pub(crate) fn draw_list(&self) -> &sjk_ui::DrawList {
         self.ui.draw_list()
+    }
+
+    /// Whether the last frame ran out of room on the canvas.
+    #[cfg(test)]
+    pub(crate) fn overflowed(&self) -> bool {
+        self.ui.overflowed()
     }
 
     /// What Enter (or a click on its button) does on card `token`.

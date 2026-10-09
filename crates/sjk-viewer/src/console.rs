@@ -159,6 +159,9 @@ pub(crate) struct ViewerConsole {
     profile_panel: profile_panel::Panel,
     staff_panel: staff_panel::Panel,
     unlockables_panel: unlockables_panel::Panel,
+    /// Where the Profile screen returns while one of its tabs shows here
+    /// ([`crate::profile_hub`]).
+    profile_hub_return: crate::player_menu::ReturnTarget,
     sjk_chat_panel: sjk_chat_panel::Panel,
     /// The Import page (a dropped `.cfg`), drawn in place of the console while open.
     config_import: config_import_panel::Panel,

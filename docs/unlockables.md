@@ -167,7 +167,8 @@ Built.
   the same and the answer says it shows only once unlocked. An unknown id is refused.
   Tab completes the command's name; its argument has no completion (the console
   completes command and cvar names only).
-- `unlockables` opens (or closes) the Unlockables page.
+- `unlockables` opens (or closes) the Unlockables page: in the SJK UI the Profile
+  screen's Collection tab.
 
 Verified by unit tests (the listing, the answers, the cvar set even when locked, the
 gate); not yet used against the deployed hub.
@@ -396,8 +397,12 @@ Built ([unlockables_panel.rs](../crates/sjk-viewer/src/unlockables_panel.rs), dr
 in [unlockables_panel_view.rs](../crates/sjk-viewer/src/unlockables_panel_view.rs) and
 [unlockables_swatch.rs](../crates/sjk-viewer/src/unlockables_swatch.rs); layout in
 [sjk-ui.md](sjk-ui.md#sjks-pages)). An SJK page in the SJK UI's look in every menu
-style, as the Staff and Profile pages, opened by the Profile page's See unlockables
-and the `unlockables` command:
+style, as the Staff and Profile pages. In the SJK UI it is the
+[Profile screen](sjk-ui.md#profile-screen)'s Collection tab (09/10/2026, Sol's request
+to see all that can be unlocked, the locked too, beside the profile; the name is one
+constant, `profile_hub::COLLECTION`), opened by the tab, the Profile tab's See the
+collection and the `unlockables` command; with the classic menus the Profile page's
+See unlockables and `unlockables` open it on its own:
 
 - a card per catalogue entry: a live swatch (a blade skin drawn with the UI's shapes
   from its loaded file's colours, flicker and flares, moving: a breathing corona, flame

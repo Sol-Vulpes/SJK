@@ -1,8 +1,10 @@
 //! The Profile page's drawing, in the SJK UI's look over the map whatever the menu
-//! style: the top bar with the two tabs; on Profile, the player's picture, who they are
-//! and their record on the left, the bio (or the picture panel) in the middle and their
-//! medals, achievements and unlockables on the right; on Achievements, the board, three
-//! columns of cards.
+//! style: the top bar with the two tabs, or on the Profile screen its title and row of
+//! tabs ([`crate::profile_hub::header`]) with the page moved down under them; on
+//! Profile, the player's picture, who they are and their record on the left, the bio
+//! (or the picture panel) in the middle and their medals (on its own only),
+//! achievements and unlockables on the right; on Achievements, the board, three columns
+//! of cards; on Medals, the medals (`profile_panel_medals.rs`).
 
 use super::*;
 use crate::achievements::medallion::{self, tint};
@@ -77,7 +79,7 @@ fn who(inputs: &Inputs<'_>) -> Who {
         return plain(
             "Identity is off",
             &[
-                "Your profile lives on the SJK hub. Switch the identity on in Identity settings to show it to other players.",
+                "Your profile lives on the SJK hub. Switch the identity on in Settings, Network, to show it to other players.",
                 "Your achievements are counted on this PC meanwhile.",
             ],
         );
@@ -89,7 +91,7 @@ fn who(inputs: &Inputs<'_>) -> Who {
         Status::Disabled => plain("Identity is off", &["The settings were just changed."]),
         Status::NoHub => plain(
             "No hub is set",
-            &["Set cl_hubUrl, or use the official hub in Identity settings."],
+            &["Set cl_hubUrl, or use the official hub: Settings, Network, SJK identity key."],
         ),
         Status::Registering => plain("Contacting the hub...", &[]),
         Status::Failed(error) => Who {
@@ -184,47 +186,66 @@ impl Panel {
         let frame = Frame::new(viewport);
         self.ui.begin_transparent(viewport);
         crate::settings::sjk_view::backdrop(&mut self.ui, viewport);
-        let title = match self.tab {
-            Tab::Profile => "Profile",
-            Tab::Achievements => "Achievements",
-        };
-        // The board shown from the Profile screen goes back to the profile.
-        let back = if self.mode == Mode::Hub && self.tab == Tab::Achievements {
-            "Profile"
-        } else {
-            "Back"
-        };
-        top_bar(&mut self.ui, &frame, back, BACK_TOKEN, title, None);
         match self.mode {
-            Mode::Pages => kit::segments(
-                &mut self.ui,
-                &frame,
-                1_824.0,
-                87.0,
-                &["Profile", "Achievements"],
-                self.tab.index(),
-                self.focus == Focus::Tabs,
-                TAB_TOKEN,
-            ),
-            Mode::Hub => {
-                crate::profile_hub::strip(&mut self.ui, &frame, crate::profile_hub::Tab::Profile);
+            Mode::Pages => {
+                let title = match self.tab {
+                    Tab::Profile => "Profile",
+                    Tab::Achievements => "Achievements",
+                    Tab::Medals => "Medals",
+                };
+                top_bar(&mut self.ui, &frame, "Back", BACK_TOKEN, title, None);
+                kit::segments(
+                    &mut self.ui,
+                    &frame,
+                    1_824.0,
+                    87.0,
+                    &["Profile", "Achievements"],
+                    self.tab.index(),
+                    self.focus == Focus::Tabs,
+                    TAB_TOKEN,
+                );
             }
-            Mode::Board => {}
+            Mode::Hub => {
+                let tab = match self.tab {
+                    Tab::Profile => HubTab::Profile,
+                    Tab::Achievements => HubTab::Achievements,
+                    Tab::Medals => HubTab::Medals,
+                };
+                crate::profile_hub::header(&mut self.ui, &frame, &self.hub_header, BACK_TOKEN, tab);
+            }
         }
+        // Under the Profile screen's row of tabs the page moves down.
+        let page = frame.shifted(0.0, self.shift());
         match self.tab {
             Tab::Profile => {
                 let who = who(inputs);
-                self.left_column(&frame, inputs, &who);
+                self.left_column(&page, inputs, &who);
                 match self.middle {
-                    Middle::Bio => self.bio_column(&frame, body),
-                    Middle::Picture => self.picture_column(&frame, &who),
+                    Middle::Bio => self.bio_column(&page, body),
+                    Middle::Picture => self.picture_column(&page, &who),
                 }
-                self.right_column(&frame, inputs);
+                self.right_column(&page, inputs);
             }
-            Tab::Achievements => self.board(&frame, inputs.standings),
+            Tab::Achievements => self.board(&page, inputs.standings),
+            Tab::Medals => self.medals(&page, inputs),
         }
         self.keys(&frame);
         self.ui.finish(self.focus_token());
+    }
+
+    /// How far the page is moved down: under the Profile screen's row of tabs.
+    fn shift(&self) -> f32 {
+        if self.mode == Mode::Hub {
+            crate::profile_hub::SHIFT
+        } else {
+            0.0
+        }
+    }
+
+    /// The last frame line the page's own parts may reach, in their moved frame: over
+    /// the keys.
+    pub(super) fn bottom(&self) -> f32 {
+        KEYS_Y - 20.0 - self.shift()
     }
 
     fn left_column(&mut self, frame: &Frame, inputs: &Inputs<'_>, who: &Who) {
@@ -306,30 +327,21 @@ impl Panel {
                 y += 26.0;
             }
         }
-        let button_y = y.max(TOP + PICTURE_SIZE + 38.0) + 8.0;
-        kit::button(
-            &mut self.ui,
-            frame,
-            [LEFT_X, button_y, 220.0, 42.0],
-            "Identity settings",
-            false,
-            true,
-            self.focus == Focus::Identity,
-            IDENTITY_TOKEN,
-        );
+        y = y.max(TOP + PICTURE_SIZE + 38.0) + 8.0;
         if self.staff {
             kit::button(
                 &mut self.ui,
                 frame,
-                [LEFT_X + 236.0, button_y, 180.0, 42.0],
+                [LEFT_X, y, 180.0, 42.0],
                 "Staff tools",
                 true,
                 true,
                 self.focus == Focus::Staff,
                 STAFF_TOKEN,
             );
+            y += 42.0;
         }
-        y = button_y + 42.0 + 34.0;
+        y += 34.0;
         kit::heading(&mut self.ui, frame, LEFT_X, y, LEFT_WIDTH, "Your record");
         y += 30.0;
         for (index, (label, value)) in inputs.record.iter().take(8).enumerate() {
@@ -363,7 +375,8 @@ impl Panel {
             .filter(|standing| standing.unlocked.is_some())
             .collect();
         unlocked.sort_by_key(|standing| std::cmp::Reverse(standing.unlocked.unwrap_or(0)));
-        if unlocked.is_empty() || y + 60.0 > KEYS_Y - 20.0 {
+        let bottom = self.bottom();
+        if unlocked.is_empty() || y + 60.0 > bottom {
             return;
         }
         kit::heading(
@@ -376,7 +389,7 @@ impl Panel {
         );
         y += 26.0;
         for standing in unlocked.into_iter().take(UNLOCKS_SHOWN) {
-            if y + 28.0 > KEYS_Y - 20.0 {
+            if y + 28.0 > bottom {
                 break;
             }
             text(
@@ -577,8 +590,8 @@ impl Panel {
     }
 
     /// The picture panel, in the bio's place: the picture large (the one about to be
-    /// sent, else the player's), what is happening, how to change it, and Use this
-    /// picture, Remove picture and Done.
+    /// sent, else the player's), what is happening, Browse... and how else to choose
+    /// one, what a picture may be, and Use this picture, Remove picture and Done.
     fn picture_column(&mut self, frame: &Frame, who: &Who) {
         let s = frame.s;
         kit::heading(
@@ -672,9 +685,44 @@ impl Panel {
                 y += 24.0;
             }
         }
-        let mut y = BIO_TOP + LARGE_PICTURE + 28.0;
+        let browse_y = BIO_TOP + LARGE_PICTURE + 24.0;
+        let browsing = self.is_browsing();
+        kit::button(
+            &mut self.ui,
+            frame,
+            [MIDDLE_X, browse_y, 200.0, 46.0],
+            if browsing { "Choosing..." } else { "Browse..." },
+            false,
+            !browsing,
+            self.focus == Focus::Browse,
+            BROWSE_TOKEN,
+        );
+        for (index, part) in wrap(
+            "Choose a picture file on this PC, or drop one on this window.",
+            46,
+        )
+        .take(2)
+        .enumerate()
+        {
+            text(
+                &mut self.ui,
+                TextFamily::Body,
+                format_args!("{part}"),
+                frame.rect(
+                    MIDDLE_X + 220.0,
+                    browse_y + index as f32 * 22.0,
+                    MIDDLE_WIDTH - 220.0,
+                    22.0,
+                ),
+                15.0 * s,
+                color::MUTED,
+                FontWeight::Regular,
+                TextAlign::Start,
+            );
+        }
+        let mut y = browse_y + 46.0 + 20.0;
         for line in [
-            "Drop a picture file on this window: a PNG, JPEG or TGA of up to 16 MB. Or type sjkavatar and the file's path in the console.",
+            "A PNG, JPEG or TGA of up to 16 MB, 64 to 8192 pixels a side, at most four times as long as it is wide.",
             "It is cropped to a square from its middle and made 128 pixels across. Everyone can see it, so keep it friendly: the SJK team takes down pictures that are not.",
         ] {
             for part in wrap(line, 80) {
@@ -733,7 +781,21 @@ impl Panel {
         );
     }
 
+    /// The medals (on its own only: the Profile screen has a tab for them), the
+    /// achievements and the unlockables.
     fn right_column(&mut self, frame: &Frame, inputs: &Inputs<'_>) {
+        let y = if self.mode == Mode::Hub {
+            TOP + 20.0
+        } else {
+            self.medals_block(frame, inputs).max(TOP + 300.0) + 20.0
+        };
+        self.achievements_block(frame, inputs, y);
+        self.unlockables(frame, inputs, y + 176.0);
+    }
+
+    /// The medals given, up to [`MEDALS_SHOWN`], from the column's top; returns the y
+    /// under them.
+    fn medals_block(&mut self, frame: &Frame, inputs: &Inputs<'_>) -> f32 {
         let s = frame.s;
         kit::heading(
             &mut self.ui,
@@ -814,7 +876,12 @@ impl Panel {
             );
             y += 30.0;
         }
-        let y = y.max(TOP + 300.0) + 20.0;
+        y
+    }
+
+    /// How many achievements are unlocked, and the way to the board, from `y`.
+    fn achievements_block(&mut self, frame: &Frame, inputs: &Inputs<'_>, y: f32) {
+        let s = frame.s;
         kit::heading(&mut self.ui, frame, RIGHT_X, y, RIGHT_WIDTH, "Achievements");
         let total = inputs.standings.len();
         let unlocked = inputs
@@ -853,13 +920,17 @@ impl Panel {
             self.focus == Focus::Board,
             BOARD_TOKEN,
         );
-        self.unlockables(frame, inputs, y + 196.0);
     }
 
     /// How many unlockables the player owns, and the way to their page, from `y`.
     fn unlockables(&mut self, frame: &Frame, inputs: &Inputs<'_>, y: f32) {
         let s = frame.s;
-        kit::heading(&mut self.ui, frame, RIGHT_X, y, RIGHT_WIDTH, "Unlockables");
+        let (heading, button) = if self.mode == Mode::Hub {
+            (crate::profile_hub::COLLECTION, "See the collection")
+        } else {
+            ("Unlockables", "See unlockables")
+        };
+        kit::heading(&mut self.ui, frame, RIGHT_X, y, RIGHT_WIDTH, heading);
         let holdings = crate::unlockables::Holdings::of(inputs.enabled, inputs.snapshot);
         let (line, size, colour) = if holdings.reason().is_none() {
             let owned = crate::unlockables::ALL
@@ -892,7 +963,7 @@ impl Panel {
             &mut self.ui,
             frame,
             [RIGHT_X, y + 76.0, 240.0, 46.0],
-            "See unlockables",
+            button,
             false,
             true,
             self.focus == Focus::Unlockables,
@@ -901,8 +972,13 @@ impl Panel {
     }
 
     /// The achievements board: how many are unlocked, then every achievement's card.
+    /// Under the Profile screen's tabs the note stands beside the count.
     fn board(&mut self, frame: &Frame, standings: &[Standing]) {
         let s = frame.s;
+        let hub = self.mode == Mode::Hub;
+        // On the Profile screen the count stands a little higher and the cards start
+        // under it, so all seven rows still fit over the keys.
+        let top = if hub { TOP - 14.0 } else { TOP - 4.0 };
         let unlocked = standings
             .iter()
             .filter(|standing| standing.unlocked.is_some())
@@ -911,7 +987,7 @@ impl Panel {
             &mut self.ui,
             TextFamily::Display,
             format_args!("{unlocked} of {} unlocked", standings.len()),
-            frame.rect(LEFT_X, TOP - 4.0, 520.0, 44.0),
+            frame.rect(LEFT_X, top, 520.0, 44.0),
             34.0 * s,
             color::TEXT,
             FontWeight::Semibold,
@@ -920,7 +996,7 @@ impl Panel {
         bar(
             &mut self.ui,
             frame,
-            [LEFT_X + 360.0, TOP + 14.0, 560.0, 8.0],
+            [LEFT_X + 360.0, top + 18.0, 560.0, 8.0],
             if standings.is_empty() {
                 0.0
             } else {
@@ -928,24 +1004,36 @@ impl Panel {
             },
             color::GOLD,
         );
-        text(
-            &mut self.ui,
-            TextFamily::Body,
-            format_args!(
-                "Counted on this PC in your matches on servers, and kept on the SJK hub with your identity on."
-            ),
-            frame.rect(LEFT_X, TOP + 36.0, 1_200.0, 24.0),
-            15.0 * s,
-            color::QUIET,
-            FontWeight::Regular,
-            TextAlign::Start,
-        );
+        let (note_x, note_y, note_width) = if hub {
+            (LEFT_X + 950.0, top + 2.0, 778.0)
+        } else {
+            (LEFT_X, TOP + 36.0, 1_200.0)
+        };
+        for (index, part) in wrap(
+            "Counted on this PC in your matches on servers, and kept on the SJK hub with your identity on.",
+            if hub { 80 } else { 120 },
+        )
+        .enumerate()
+        {
+            text(
+                &mut self.ui,
+                TextFamily::Body,
+                format_args!("{part}"),
+                frame.rect(note_x, note_y + index as f32 * 20.0, note_width, 24.0),
+                15.0 * s,
+                color::QUIET,
+                FontWeight::Regular,
+                TextAlign::Start,
+            );
+        }
+        let card_top = if hub { CARD_TOP - 18.0 } else { CARD_TOP };
+        let bottom = KEYS_Y - 16.0 - self.shift();
         for (index, standing) in standings.iter().enumerate() {
             let column = index % COLUMNS;
             let row = index / COLUMNS;
             let x = LEFT_X + column as f32 * (CARD_WIDTH + CARD_GAP_X);
-            let y = CARD_TOP + row as f32 * (CARD_HEIGHT + CARD_GAP_Y);
-            if y + CARD_HEIGHT > KEYS_Y - 16.0 {
+            let y = card_top + row as f32 * (CARD_HEIGHT + CARD_GAP_Y);
+            if y + CARD_HEIGHT > bottom {
                 break;
             }
             self.card(frame, standing, x, y);
@@ -1064,23 +1152,31 @@ impl Panel {
         let typing = self.focus == Focus::Bio && self.writable;
         let enter = match self.focus {
             Focus::Tabs => "switch tab",
-            Focus::Identity | Focus::Staff => "open",
+            Focus::Staff => "open",
             Focus::Bio | Focus::Save => "save",
             Focus::Revert => "revert",
             Focus::Board | Focus::Unlockables => "open",
             Focus::Picture => "change picture",
+            Focus::Browse => "choose a file",
             Focus::UsePicture => "use this picture",
             Focus::RemovePicture => "remove picture",
             Focus::BioBack => "back to your bio",
         };
         let mut keys: Vec<(&[&str], &str)> = match (self.mode, self.tab) {
-            // The board alone has nothing to choose.
-            (Mode::Board, _) => Vec::new(),
-            (Mode::Hub, Tab::Achievements) => vec![(&["Enter"], "back to your profile")],
+            // The board and the medals have nothing to choose on the Profile screen.
+            (Mode::Hub, Tab::Achievements | Tab::Medals) => Vec::new(),
             _ => vec![(&["Tab"], "next"), (&["Enter"], enter)],
         };
         if typing {
             keys.push((&["Shift", "Enter"], "new line"));
+        }
+        if self.mode == Mode::Hub {
+            let tab = match self.tab {
+                Tab::Profile => HubTab::Profile,
+                Tab::Achievements => HubTab::Achievements,
+                Tab::Medals => HubTab::Medals,
+            };
+            keys.push((&["Ctrl", "Tab"], tab.next(true).label()));
         }
         keys.push((&["Esc"], "back"));
         let gap = 30.0 * s;
@@ -1245,10 +1341,11 @@ mod tests {
             ..snapshot(None, None)
         };
         for (enabled, shot) in [(true, Some(&online)), (true, Some(&offline)), (false, None)] {
-            for tab in Tab::ALL {
+            for tab in [Tab::Profile, Tab::Achievements, Tab::Medals] {
                 for focus in [
                     Focus::Tabs,
-                    Focus::Identity,
+                    Focus::Staff,
+                    Focus::Browse,
                     Focus::Bio,
                     Focus::Save,
                     Focus::Revert,
@@ -1262,7 +1359,7 @@ mod tests {
                             [1440.0, 1080.0],
                             [2560.0, 1080.0],
                         ] {
-                            for mode in [Mode::Pages, Mode::Hub, Mode::Board] {
+                            for mode in [Mode::Pages, Mode::Hub] {
                                 let mut panel = Panel::new();
                                 panel.open_as(tab, true, mode);
                                 panel.focus = focus;
@@ -1281,6 +1378,9 @@ mod tests {
                                 // The Profile screen's tabs answer where they are drawn.
                                 let strip = panel.ui.rect_for(crate::profile_hub::TOKEN);
                                 assert_eq!(strip.is_some(), mode == Mode::Hub);
+                                if mode == Mode::Hub {
+                                    clear_of_the_row(&panel, viewport);
+                                }
                             }
                         }
                     }
@@ -1306,9 +1406,10 @@ mod tests {
             [2560.0, 1080.0],
         ] {
             let frame = Frame::new(viewport);
-            for state in 0..5 {
+            for (state, mode) in (0..5).flat_map(|state| [(state, Mode::Pages), (state, Mode::Hub)])
+            {
                 let mut panel = Panel::new();
-                panel.open(Tab::Profile, true);
+                panel.open_as(Tab::Profile, true, mode);
                 panel.middle = Middle::Picture;
                 match state {
                     0 => {}
@@ -1335,6 +1436,7 @@ mod tests {
                 }
                 for focus in [
                     Focus::Picture,
+                    Focus::Browse,
                     Focus::UsePicture,
                     Focus::RemovePicture,
                     Focus::BioBack,
@@ -1349,7 +1451,13 @@ mod tests {
                     panel.build(&inputs, &families.body.font, viewport);
                     assert!(!panel.ui.overflowed(), "{state} {viewport:?}");
                     let keys = frame.point(0.0, KEYS_Y)[1];
-                    for token in [PICTURE_TOKEN, USE_TOKEN, REMOVE_TOKEN, BIO_BACK_TOKEN] {
+                    for token in [
+                        PICTURE_TOKEN,
+                        BROWSE_TOKEN,
+                        USE_TOKEN,
+                        REMOVE_TOKEN,
+                        BIO_BACK_TOKEN,
+                    ] {
                         let rect = panel.ui.rect_for(token).expect("the control's area");
                         assert!(rect.x >= 0.0 && rect.right() <= viewport[0], "{token}");
                         assert!(rect.y >= 0.0 && rect.bottom() < keys, "{token} {state}");
@@ -1357,14 +1465,36 @@ mod tests {
                     let (middle, right) =
                         (frame.point(MIDDLE_X, 0.0)[0], frame.point(RIGHT_X, 0.0)[0]);
                     for command in panel.ui.draw_list().commands() {
+                        // The keys' line runs under every column.
                         if let DrawCommand::Text { rect, .. } = command
                             && rect.x >= middle - 0.5
                             && rect.x < right
+                            && rect.y < keys
                         {
                             assert!(rect.right() <= right - 20.0 * frame.s, "{state} {rect:?}");
                         }
                     }
                 }
+            }
+        }
+    }
+
+    /// On the Profile screen nothing of the page stands in the row of tabs: between the
+    /// title and the page's top only the tabs' names are drawn.
+    fn clear_of_the_row(panel: &Panel, viewport: [f32; 2]) {
+        let frame = Frame::new(viewport);
+        let (above, below) = (frame.point(0.0, 120.0)[1], frame.point(0.0, 192.0)[1]);
+        let tabs = frame.point(0.0, 146.0)[1];
+        for command in panel.ui.draw_list().commands() {
+            if let DrawCommand::Text { rect, .. } = command
+                && rect.y > above
+                && rect.y < below
+            {
+                // A tab's name is set a little under the row's top.
+                assert!(
+                    rect.y >= tabs && rect.y - tabs < 10.0 * frame.s,
+                    "{rect:?} in the row"
+                );
             }
         }
     }
@@ -1429,5 +1559,20 @@ mod tests {
             let _ = panel.handle_pointer(event, None);
         }
         assert_eq!(panel.tab(), Tab::Profile);
+        // On the Profile screen every card shows too, under the row of tabs.
+        for viewport in [[1920.0, 1080.0], [1440.0, 1080.0]] {
+            let mut panel = Panel::new();
+            panel.open_as(Tab::Achievements, true, Mode::Hub);
+            panel.build(&inputs, &fonts.body.font, viewport);
+            let medallions = panel
+                .ui
+                .draw_list()
+                .commands()
+                .iter()
+                .filter(|command| matches!(command, DrawCommand::Arc { .. }))
+                .count();
+            assert!(medallions >= achievements::ALL.len(), "{viewport:?}");
+            clear_of_the_row(&panel, viewport);
+        }
     }
 }

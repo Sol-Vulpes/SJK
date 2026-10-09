@@ -7,6 +7,39 @@ SJK currently contains a native client and standard dedicated server in a
 20-crate Rust workspace. This page records scope and verification, rather than
 claiming complete parity from the presence of an implementation.
 
+## Profile screen: one row of tabs, the key in Settings, Browse for the picture
+
+Branch `personal/profile-tabs` (09/10/2026, based on `9d8b9da5`, Windows 11), Sol's
+request. The SJK UI's Profile screen has one row of seven tabs where the player
+screen's three stood: Character, Saber, Force, SJK Profile, Achievements, Medals (new:
+each medal's picture, what it is for, when it was given and the team's note, the ones
+not given dimmed) and Collection (the Unlockables page; the name is one constant). The
+Identity tab and the separate strip at the top right are gone; the in-game menu's list
+is Resume, Profile, Players, Settings, Servers, Leave, and the main page's Character
+reads Profile. In the SJK UI the `profile`, `achievements` and `unlockables` commands
+open their tabs. The identity's page opens from Settings > Network > SJK identity key,
+its key id and file hidden until Show key each time it opens. The picture panel has
+Browse..., the system's file dialog (`rfd` 0.17.2, on a worker thread), and the client
+refuses empty files, files that are no PNG, JPEG or TGA whatever their name, damaged
+or cut-short PNGs and JPEGs, pictures under 64 pixels a side, more than four times as
+long as wide or with nothing visible, each with its reason
+([sjk-ui.md](sjk-ui.md#profile-screen), [identity.md](identity.md#pictures)).
+
+Verified: `cargo test -p sjk-viewer` (1,549 passed) with tests of the row (drawn and
+hit-tested alike in four window shapes, under the title, in the player screen's
+place), the Profile page's tabs, buttons and Escape, Browse with a stand-in dialog
+(one at a time, the file read as a dropped one), each picture refusal, the hidden key,
+and every state of the pages fitting their canvases and staying clear of the row; the
+world shots `duel6_sjk_profile_screen` (all seven tabs from the game menu and round,
+the tab remembered, the picture panel, 4:3, Character and Collection from the main
+page, no canvas overflowing), `duel6_sjk_menu` (the main page's Profile, Settings'
+Network), `duel6_sjk_ingame`, `duel6_sjk_profile`, `duel6_sjk_unlockables` and the
+`medals_snapshot` Identity pages, hidden and shown. `rfd` was checked to build for
+Linux with only pure-Rust dependencies (`cargo check -p rfd --target
+x86_64-unknown-linux-gnu`). Not verified: the file dialog was never opened (tests use
+a stand-in), so how it stacks over a fullscreen game window (it has no parent window)
+is unchecked; nothing was tried in the game.
+
 ## Console `forcepowers` changes reach the server
 
 Branch `personal/force-console` (09/10/2026, based on `bc8ac6b`, Windows 11):
@@ -191,7 +224,8 @@ tools are a row of icons under the emblem; the SJK page is gone. Tab moves the k
 list, row, card; Right enters the card. Profile is the new Profile screen: the player
 screen, the Profile page and the Identity page as tabs (Ctrl+Tab, or a click on the
 strip), also from the main page's Character and SJK > Profile; Achievements opens the
-board alone. Camera control is a quick wheel action and the `cameracontrol` command.
+board alone (since 09/10/2026 one row of seven tabs and no Achievements entry: see the
+top of this page). Camera control is a quick wheel action and the `cameracontrol` command.
 The classic in-game bar is unchanged ([sjk-ui.md](sjk-ui.md#in-game-menu),
 [Profile screen](sjk-ui.md#profile-screen)).
 

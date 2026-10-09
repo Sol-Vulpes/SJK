@@ -2,6 +2,13 @@
 //! to a square from its middle, scaled to [`SIZE`] and written as a PNG), a picture the
 //! hub serves read back into pixels, and the round cut the UI draws them with. Pure
 //! functions on bytes, run on worker threads, never on the frame thread.
+//!
+//! A player's file is checked before it is sent, whatever its name says: it must hold
+//! bytes (not be empty), be a PNG, JPEG or TGA by its content (a TGA, which has no
+//! signature, by its extension), decode whole within the size and memory limits, be
+//! [`EDGE_MIN`] to 8192 pixels a side and at most [`ASPECT_MAX`] times as long as it is
+//! wide, and show something once cropped (not every pixel clear). Each refusal has its
+//! reason in words ([`PictureError`]), which the picture panel shows.
 
 use image::{ImageEncoder, RgbaImage};
 use sjk_identity::avatar::SIZE;
@@ -16,8 +23,15 @@ const EDGE_MAX: u32 = 8_192;
 const SERVED_EDGE_MAX: u32 = 256;
 /// The most a served picture's decoding may allocate.
 const SERVED_DECODE_LIMIT: u64 = 4 * 1024 * 1024;
-/// Smallest width or height a picture may have.
-pub(crate) const EDGE_MIN: u32 = 32;
+/// Smallest width or height a picture may have: the hub's own least, as a smaller one
+/// scaled up to [`SIZE`] is a blur.
+pub(crate) const EDGE_MIN: u32 = 64;
+/// How many times longer than wide (or wide than long) a picture may be: past this its
+/// middle square loses most of it.
+pub(crate) const ASPECT_MAX: u32 = 4;
+/// The most opaque a pixel may be and still count as clear, for a picture with nothing
+/// to see.
+const CLEAR_ALPHA: u8 = 8;
 /// Most memory a decoder may take for one picture.
 const DECODE_LIMIT: u64 = 256 * 1024 * 1024;
 
@@ -26,10 +40,18 @@ const DECODE_LIMIT: u64 = 256 * 1024 * 1024;
 pub(crate) enum PictureError {
     /// The file could not be read.
     Unreadable(String),
+    /// The file holds nothing.
+    Empty,
     /// Over [`FILE_MAX`] bytes or [`EDGE_MAX`] pixels a side.
     TooLarge,
     /// Under [`EDGE_MIN`] pixels a side.
     TooSmall,
+    /// More than [`ASPECT_MAX`] times as long as it is wide.
+    TooNarrow,
+    /// Every pixel of its middle square is clear.
+    Invisible,
+    /// A PNG, JPEG or TGA that stops short or is damaged.
+    Damaged,
     /// Not a picture SJK reads.
     NotAPicture,
 }
@@ -38,6 +60,7 @@ impl std::fmt::Display for PictureError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Unreadable(why) => write!(f, "Cannot read that file: {why}"),
+            Self::Empty => write!(f, "That file is empty: it holds no picture"),
             Self::TooLarge => write!(
                 f,
                 "That picture is too big: at most 16 MB and 8192 pixels a side"
@@ -45,6 +68,18 @@ impl std::fmt::Display for PictureError {
             Self::TooSmall => write!(
                 f,
                 "That picture is too small: at least {EDGE_MIN} pixels a side"
+            ),
+            Self::TooNarrow => write!(
+                f,
+                "That picture is too narrow or too wide: its long side may be at most {ASPECT_MAX} times its short side"
+            ),
+            Self::Invisible => write!(
+                f,
+                "That picture shows nothing: its middle is fully transparent"
+            ),
+            Self::Damaged => write!(
+                f,
+                "That picture file is damaged or cut short: save it again and retry"
             ),
             Self::NotAPicture => write!(
                 f,
@@ -78,9 +113,15 @@ pub(crate) fn looks_like_picture(path: &std::path::Path) -> bool {
 
 /// Read the file at `path` and make it a picture ([`prepare`]).
 pub(crate) fn prepare_file(path: &std::path::Path) -> Result<Prepared, PictureError> {
-    let size = std::fs::metadata(path)
-        .map_err(|error| PictureError::Unreadable(error.kind().to_string()))?
-        .len();
+    let metadata = std::fs::metadata(path)
+        .map_err(|error| PictureError::Unreadable(error.kind().to_string()))?;
+    if !metadata.is_file() {
+        return Err(PictureError::NotAPicture);
+    }
+    let size = metadata.len();
+    if size == 0 {
+        return Err(PictureError::Empty);
+    }
     if size > FILE_MAX {
         return Err(PictureError::TooLarge);
     }
@@ -104,13 +145,23 @@ fn prepare_as(
     bytes: &[u8],
     fallback: Option<image::ImageFormat>,
 ) -> Result<Prepared, PictureError> {
+    if bytes.is_empty() {
+        return Err(PictureError::Empty);
+    }
     if bytes.len() as u64 > FILE_MAX {
         return Err(PictureError::TooLarge);
     }
     let image = decode(bytes, None, fallback, EDGE_MAX, DECODE_LIMIT)?;
+    // The JPEG decoder fills in a file cut short: one without its end is refused.
+    if image::guess_format(bytes).ok() == Some(image::ImageFormat::Jpeg) && !jpeg_ends(bytes) {
+        return Err(PictureError::Damaged);
+    }
     let (width, height) = image.dimensions();
     if width.min(height) < EDGE_MIN {
         return Err(PictureError::TooSmall);
+    }
+    if width.max(height) > width.min(height).saturating_mul(ASPECT_MAX) {
+        return Err(PictureError::TooNarrow);
     }
     let edge = width.min(height);
     let square =
@@ -121,6 +172,9 @@ fn prepare_as(
     } else {
         image::imageops::thumbnail(&square, SIZE, SIZE)
     };
+    if scaled.pixels().all(|pixel| pixel.0[3] <= CLEAR_ALPHA) {
+        return Err(PictureError::Invisible);
+    }
     let png = encode(&scaled).map_err(|error| PictureError::Unreadable(error.to_string()))?;
     Ok(Prepared {
         png,
@@ -192,8 +246,36 @@ fn decode(
             image::ImageError::Unsupported(_) => PictureError::NotAPicture,
             // A TGA has no signature: bytes that are none of these fail here.
             _ if format == image::ImageFormat::Tga => PictureError::NotAPicture,
+            // A PNG or JPEG that stops short, or whose data is damaged.
+            image::ImageError::Decoding(_) | image::ImageError::IoError(_) => PictureError::Damaged,
             other => PictureError::Unreadable(other.to_string()),
         })
+}
+
+/// Whether the JPEG `bytes` reach their end: past the segments before the image's
+/// first scan (where an EXIF thumbnail, with an end of its own, may hide) an end of
+/// image marker follows. A file cut short has none.
+fn jpeg_ends(bytes: &[u8]) -> bool {
+    const SOS: u8 = 0xDA;
+    const EOI: [u8; 2] = [0xFF, 0xD9];
+    let mut at = 2;
+    loop {
+        // Markers may be padded with fill bytes.
+        while bytes.get(at) == Some(&0xFF) && bytes.get(at + 1) == Some(&0xFF) {
+            at += 1;
+        }
+        let (Some(&0xFF), Some(&marker)) = (bytes.get(at), bytes.get(at + 1)) else {
+            return false;
+        };
+        if marker == SOS {
+            break;
+        }
+        let Some(length) = bytes.get(at + 2..at + 4) else {
+            return false;
+        };
+        at += 2 + usize::from(u16::from_be_bytes([length[0], length[1]]));
+    }
+    bytes[at..].windows(2).any(|pair| pair == EOI)
 }
 
 /// `image` as a PNG: RGB when every pixel is opaque, else RGBA.
@@ -313,7 +395,7 @@ mod tests {
         let centre = png.get_pixel(SIZE / 2, SIZE / 2).0;
         assert!(centre[2] > 180 && centre[0] < 80, "{centre:?}");
         // A TGA is known by its file's extension.
-        let small = picture(40, 40, image::ImageFormat::Tga, |_, _| [9, 99, 199, 255]);
+        let small = picture(80, 80, image::ImageFormat::Tga, |_, _| [9, 99, 199, 255]);
         assert_eq!(prepare(&small).err(), Some(PictureError::NotAPicture));
         let dir = tempfile::tempdir().unwrap();
         let file = dir.path().join("Me.TGA");
@@ -353,7 +435,7 @@ mod tests {
             [x as u8, y as u8, 0, 255]
         });
         cut.truncate(cut.len() / 2);
-        assert!(matches!(prepare(&cut), Err(PictureError::Unreadable(_))));
+        assert_eq!(prepare(&cut).err(), Some(PictureError::Damaged));
         // A header claiming a huge picture is refused before its pixels are allocated.
         let huge = picture(64, 64, image::ImageFormat::Png, |_, _| [0; 4]);
         let mut header = huge.clone();
@@ -371,6 +453,164 @@ mod tests {
             prepare_file(std::path::Path::new("/nonexistent/sjk/avatar.png")),
             Err(PictureError::Unreadable(_))
         ));
+    }
+
+    /// The hub's least: 64 pixels a side; 63 is refused, by its shorter side too.
+    #[test]
+    fn a_picture_under_64_pixels_a_side_is_too_small() {
+        let flat = |width, height| {
+            picture(width, height, image::ImageFormat::Png, |_, _| {
+                [40, 80, 120, 255]
+            })
+        };
+        assert_eq!(EDGE_MIN, 64);
+        assert!(prepare(&flat(64, 64)).is_ok());
+        assert_eq!(prepare(&flat(63, 63)).err(), Some(PictureError::TooSmall));
+        assert_eq!(prepare(&flat(200, 63)).err(), Some(PictureError::TooSmall));
+        assert!(
+            PictureError::TooSmall.to_string().contains("64 pixels"),
+            "the reason names the size"
+        );
+    }
+
+    /// An empty file, or no bytes at all, is refused before anything is decoded.
+    #[test]
+    fn an_empty_file_is_refused() {
+        assert_eq!(prepare(&[]).err(), Some(PictureError::Empty));
+        let dir = tempfile::tempdir().unwrap();
+        let file = dir.path().join("me.png");
+        std::fs::write(&file, []).unwrap();
+        assert_eq!(prepare_file(&file).err(), Some(PictureError::Empty));
+        // A folder named like a picture is no picture either.
+        let folder = dir.path().join("folder.png");
+        std::fs::create_dir(&folder).unwrap();
+        assert_eq!(prepare_file(&folder).err(), Some(PictureError::NotAPicture));
+    }
+
+    /// A picture more than four times as long as it is wide, either way, is refused;
+    /// four times exactly is taken.
+    #[test]
+    fn a_picture_too_narrow_or_too_wide_is_refused() {
+        let flat = |width, height| {
+            picture(width, height, image::ImageFormat::Png, |_, _| {
+                [200, 100, 50, 255]
+            })
+        };
+        assert!(prepare(&flat(256, 64)).is_ok());
+        assert!(prepare(&flat(64, 256)).is_ok());
+        assert_eq!(prepare(&flat(257, 64)).err(), Some(PictureError::TooNarrow));
+        assert_eq!(
+            prepare(&flat(64, 1_000)).err(),
+            Some(PictureError::TooNarrow)
+        );
+        assert!(PictureError::TooNarrow.to_string().contains("4 times"));
+    }
+
+    /// A fully transparent picture, or one clear wherever its middle square is, shows
+    /// nothing and is refused; a single visible pixel is enough.
+    #[test]
+    fn a_picture_with_nothing_to_see_is_refused() {
+        let clear = picture(128, 128, image::ImageFormat::Png, |_, _| [255, 0, 0, 0]);
+        assert_eq!(prepare(&clear).err(), Some(PictureError::Invisible));
+        let faint = picture(128, 128, image::ImageFormat::Png, |_, _| [255, 255, 255, 3]);
+        assert_eq!(prepare(&faint).err(), Some(PictureError::Invisible));
+        // Visible only at the sides, which the middle square leaves out.
+        let sides = picture(256, 64, image::ImageFormat::Png, |x, _| {
+            if (96..160).contains(&x) {
+                [0, 0, 0, 0]
+            } else {
+                [0, 200, 0, 255]
+            }
+        });
+        assert_eq!(prepare(&sides).err(), Some(PictureError::Invisible));
+        let dot = picture(128, 128, image::ImageFormat::Png, |x, y| {
+            if (60..68).contains(&x) && (60..68).contains(&y) {
+                [0, 0, 255, 255]
+            } else {
+                [0, 0, 0, 0]
+            }
+        });
+        assert!(prepare(&dot).is_ok());
+    }
+
+    /// Whatever its name says, a file whose bytes are not a PNG, JPEG or TGA is refused
+    /// as not a picture: a program renamed .png or .jpg, a GIF, a WebP, a BMP. A file
+    /// named .tga is read as a TGA (it has no signature) and refused the same way when
+    /// it is not one.
+    #[test]
+    fn a_file_that_is_no_png_jpeg_or_tga_is_refused_whatever_its_name() {
+        let dir = tempfile::tempdir().unwrap();
+        let mut program = b"MZ\x90\x00\x03\x00\x00\x00\x04\x00\x00\x00\xff\xff".to_vec();
+        program.extend_from_slice(&[0x40; 256]);
+        program.extend_from_slice(b"This program cannot be run in DOS mode.");
+        let gif = b"GIF89a\x40\x00\x40\x00\x80\x00\x00\xff\xff\xff\x00\x00\x00!\xf9\x04\x00\x00\x00\x00\x00,\x00\x00\x00\x00\x40\x00\x40\x00\x00\x02\x02D\x01\x00;".to_vec();
+        let mut webp = b"RIFF\x24\x00\x00\x00WEBPVP8 ".to_vec();
+        webp.extend_from_slice(&[0; 24]);
+        let mut bmp = b"BM".to_vec();
+        bmp.extend_from_slice(&[0; 64]);
+        for (bytes, kind) in [
+            (&program, "program"),
+            (&gif, "gif"),
+            (&webp, "webp"),
+            (&bmp, "bmp"),
+        ] {
+            for name in ["me.png", "me.jpg", "me.jpeg", "me.tga", "me.exe", "me"] {
+                let file = dir.path().join(name);
+                std::fs::write(&file, bytes).unwrap();
+                assert_eq!(
+                    prepare_file(&file).err(),
+                    Some(PictureError::NotAPicture),
+                    "{kind} named {name}"
+                );
+            }
+        }
+    }
+
+    /// A PNG or JPEG cut short at any point, or with damaged data, is refused with a
+    /// reason and never panics.
+    #[test]
+    fn a_damaged_or_cut_png_or_jpeg_is_refused_cleanly() {
+        let png = picture(128, 96, image::ImageFormat::Png, |x, y| {
+            [x as u8, y as u8, (x ^ y) as u8, 255]
+        });
+        let jpeg = picture(128, 96, image::ImageFormat::Jpeg, |x, y| {
+            [x as u8, y as u8, (x ^ y) as u8, 255]
+        });
+        for (whole, kind) in [(&png, "png"), (&jpeg, "jpeg")] {
+            assert!(prepare(whole).is_ok(), "{kind} whole");
+            for keep in [
+                8,
+                16,
+                33,
+                64,
+                whole.len() / 3,
+                whole.len() / 2,
+                whole.len() - 12,
+            ] {
+                let cut = &whole[..keep];
+                let refused = std::panic::catch_unwind(|| prepare(cut))
+                    .unwrap_or_else(|_| panic!("{kind} cut at {keep} panicked"));
+                assert!(refused.is_err(), "{kind} cut at {keep} was taken");
+            }
+            // Damaged in the middle: flipped bytes in its data.
+            let mut damaged = whole.clone();
+            let middle = damaged.len() / 2;
+            for byte in &mut damaged[middle..middle + 32] {
+                *byte ^= 0x5a;
+            }
+            let refused = std::panic::catch_unwind(|| prepare(&damaged))
+                .unwrap_or_else(|_| panic!("damaged {kind} panicked"));
+            // A JPEG's damaged scan may still decode to a picture; a PNG's checksums
+            // catch it.
+            if kind == "png" {
+                assert_eq!(refused.err(), Some(PictureError::Damaged));
+            }
+        }
+        // A PNG cut inside its pixels says it is damaged.
+        let cut = &png[..png.len() * 2 / 3];
+        assert_eq!(prepare(cut).err(), Some(PictureError::Damaged));
+        let cut = &jpeg[..jpeg.len() * 2 / 3];
+        assert!(prepare(cut).is_err());
     }
 
     #[test]

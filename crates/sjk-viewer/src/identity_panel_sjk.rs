@@ -25,7 +25,7 @@ impl Panel {
         viewport: [f32; 2],
     ) {
         self.sync(inputs);
-        let view = view(inputs);
+        let view = view(inputs, self.revealed);
         let frame = Frame::new(viewport);
         let s = frame.s;
         self.ui.begin_transparent(viewport);
@@ -44,9 +44,6 @@ impl Panel {
             FontWeight::Semibold,
             TextAlign::Start,
         );
-        if self.hub {
-            crate::profile_hub::strip(&mut self.ui, &frame, crate::profile_hub::Tab::Identity);
-        }
         text(
             &mut self.ui,
             TextFamily::Display,
@@ -170,6 +167,16 @@ impl Panel {
                 COPY_TOKEN,
                 Focus::Copy,
             ),
+            (
+                if self.revealed {
+                    "Hide key"
+                } else {
+                    "Show key"
+                },
+                false,
+                REVEAL_TOKEN,
+                Focus::Reveal,
+            ),
         ];
         if self.offer_hub {
             buttons.push(("Use the official hub", false, HUB_TOKEN, Focus::Hub));
@@ -268,6 +275,8 @@ impl Panel {
             Focus::Bio | Focus::Save => "save",
             Focus::Copy => "copy",
             Focus::Hub => "use",
+            Focus::Reveal if self.revealed => "hide the key",
+            Focus::Reveal => "show the key",
         };
         let keys: [(&[&str], &str); 3] =
             [(&["Tab"], "next"), (&["Enter"], enter), (&["Esc"], "back")];

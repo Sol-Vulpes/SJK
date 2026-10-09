@@ -571,6 +571,12 @@ impl ClientMenu {
                     .open_wheel_editor(console, crate::settings::WheelMode::Overlay);
                 MenuAction::None
             }
+            // Network's "SJK identity key" row: the Identity page over the settings,
+            // which show again when it closes.
+            SettingsResult::OpenIdentity => {
+                console.open_identity_panel();
+                MenuAction::None
+            }
             SettingsResult::Classic(index) => self.classic_panel_button(index, console),
             SettingsResult::ClassicCycle(direction) => {
                 self.classic_panel_cycle(direction, console);
@@ -1054,7 +1060,7 @@ impl ClientMenu {
         self.state.open_player();
     }
 
-    /// Open the player screen as the Profile screen's Character tab
+    /// Open the player screen as the Profile screen's first tabs
     /// ([`crate::profile_hub`]) in the SJK UI, else on its own.
     pub(crate) fn open_player_hub(&mut self, console: &ViewerConsole, target: ReturnTarget) {
         self.open_player(console, target);
@@ -1067,12 +1073,29 @@ impl ClientMenu {
         self.player.return_target()
     }
 
-    /// Whether the Profile screen's Character tab shows.
+    /// Whether the Profile screen's Character, Saber or Force tab shows.
     pub(crate) fn player_hub_shown(&self) -> bool {
         matches!(self.state.phase(), ClientPhase::Player) && self.player.is_hub()
     }
 
-    /// Close the Character tab for another of the Profile screen's tabs, quietly
+    /// The player screen's page on show as the Profile screen's tab (0 Character,
+    /// 1 Saber, 2 Force), when it shows as one.
+    pub(crate) fn player_hub_page(&self) -> Option<usize> {
+        self.player_hub_shown().then(|| self.player.page_index())
+    }
+
+    /// Turn the player screen to page `index` (Character, Saber, Force).
+    pub(crate) fn show_player_hub_page(&mut self, index: usize) {
+        self.player.show_page(index);
+    }
+
+    /// Whether a field of the Profile screen's player pages takes the keys, so Tab
+    /// and the brackets stay with it.
+    pub(crate) fn player_hub_typing(&self) -> bool {
+        self.player_hub_shown() && self.player.typing()
+    }
+
+    /// Close the player screen's tabs for another of the Profile screen's tabs, quietly
     /// (the screen behind it shows again under the console's page); returns where it
     /// had been opened from.
     pub(crate) fn leave_player_hub(&mut self) -> ReturnTarget {
@@ -1083,6 +1106,13 @@ impl ClientMenu {
             ReturnTarget::InGame => self.state.entered_game(),
         }
         target
+    }
+
+    /// Whether the player screen's last frame ran out of room on its canvas (world
+    /// shots).
+    #[cfg(test)]
+    pub(crate) fn player_overflowed(&self) -> bool {
+        self.player.overflowed()
     }
 
     /// Show the player screen's page `index` with row `row` selected (world

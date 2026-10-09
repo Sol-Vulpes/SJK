@@ -2214,14 +2214,19 @@ fn medals_snapshot() {
     let display = crate::text::load_family(&crate::text::DISPLAY, 1.0, None).expect("Rajdhani");
     let body = crate::text::load_family(&crate::text::BODY, 1.0, None).expect("Exo 2");
     let backdrop = decode(&vfs, "levelshots/mp/duel6.jpg").expect("the duel6 levelshot");
-    for (name, snapshot, viewport) in [
-        ("medals-identity-sjk", &with, VIEWPORT_WIDE),
-        ("medals-identity-sjk-none", &without, VIEWPORT_WIDE),
-        ("medals-identity-sjk-4x3", &with, VIEWPORT),
+    // The key's id and file stay hidden but in the last, after Show.
+    for (name, snapshot, viewport, revealed) in [
+        ("medals-identity-sjk", &with, VIEWPORT_WIDE, false),
+        ("medals-identity-sjk-none", &without, VIEWPORT_WIDE, false),
+        ("medals-identity-sjk-4x3", &with, VIEWPORT, false),
+        ("medals-identity-sjk-shown", &with, VIEWPORT_WIDE, true),
     ] {
         let mut panel = Panel::new();
         panel.open(false);
         panel.set_sjk(true);
+        if revealed {
+            panel.reveal_for_shot();
+        }
         let (mut display_text, mut body_text) = (Vec::new(), Vec::new());
         panel.append_sjk(
             &inputs(snapshot),

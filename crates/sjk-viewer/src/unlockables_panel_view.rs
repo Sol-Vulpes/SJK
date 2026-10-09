@@ -1,5 +1,6 @@
 //! The Unlockables page's drawing, in the SJK UI's look: how many the player owns (or
-//! why that is not known) under the top bar; down the left a card per unlockable, its
+//! why that is not known) under the top bar (on the Profile screen its title and row
+//! of tabs, the page moved down under them); down the left a card per unlockable, its
 //! live swatch beside its kind, name, what it is, owned (date and the team's note) or
 //! locked (how to get it), and Equip or Unequip, as many as fit ([`ROWS_SHOWN`]) with a
 //! scroll bar and a line saying which show and how to see the others; on the right what
@@ -107,14 +108,27 @@ impl Panel {
         self.order.clear();
         self.ui.begin_transparent(viewport);
         crate::settings::sjk_view::backdrop(&mut self.ui, viewport);
-        top_bar(
-            &mut self.ui,
-            &frame,
-            "Back",
-            BACK_TOKEN,
-            "Unlockables",
-            None,
-        );
+        if self.hub {
+            crate::profile_hub::header(
+                &mut self.ui,
+                &frame,
+                &self.hub_header,
+                BACK_TOKEN,
+                crate::profile_hub::Tab::Collection,
+            );
+        } else {
+            top_bar(
+                &mut self.ui,
+                &frame,
+                "Back",
+                BACK_TOKEN,
+                "Unlockables",
+                None,
+            );
+        }
+        let keys = frame;
+        // Under the Profile screen's row of tabs the page moves down.
+        let frame = frame.shifted(0.0, self.shift());
         self.header(&frame, inputs);
         self.side(&frame, inputs);
         let worn = crate::unlockables::blade_skin(inputs.setting)
@@ -164,11 +178,20 @@ impl Panel {
         } else {
             self.more_to_come(&frame);
         }
-        self.keys(&frame);
+        self.keys(&keys);
         if !self.order.contains(&self.focus) {
             self.focus = self.order.first().copied().unwrap_or(CARD_BASE);
         }
         self.ui.finish(self.focus);
+    }
+
+    /// How far the page is moved down: under the Profile screen's row of tabs.
+    fn shift(&self) -> f32 {
+        if self.hub {
+            crate::profile_hub::SHIFT
+        } else {
+            0.0
+        }
     }
 
     /// How many the player owns, or why that is not known.
@@ -330,7 +353,7 @@ impl Panel {
         let rows = crate::unlockables::ALL.len().div_ceil(COLUMNS);
         let y = CARDS_TOP + rows as f32 * (CARD_HEIGHT + GAP);
         let height = 104.0;
-        if y + height > KEYS_Y - 16.0 {
+        if y + height > KEYS_Y - 16.0 - self.shift() {
             return;
         }
         let _ = self.ui.draw_list_mut().push(DrawCommand::Border {
@@ -598,6 +621,10 @@ impl Panel {
             keys.push((&["Enter"], enter));
         }
         keys.push((&["Tab"], "next"));
+        if self.hub {
+            let next = crate::profile_hub::Tab::Collection.next(true);
+            keys.push((&["Ctrl", "Tab"], next.label()));
+        }
         keys.push((&["Esc"], "back"));
         let gap = 30.0 * s;
         let width: f32 = keys

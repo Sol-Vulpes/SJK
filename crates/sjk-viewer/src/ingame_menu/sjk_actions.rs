@@ -55,14 +55,6 @@ impl GpuState {
                 self.in_game_menu.remember_return(row);
                 self.open_profile_hub_from_game(None);
             }
-            Entry::Achievements => {
-                // Drawn by the console over the game menu, which shows again when
-                // the board closes.
-                if let Some(console) = &mut self.console {
-                    console.open_achievements();
-                }
-                self.sync_cursor_policy();
-            }
             Entry::Players => self.open_players_page(),
             Entry::Settings => {
                 self.in_game_menu.remember_return(row);

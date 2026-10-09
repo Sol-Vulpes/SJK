@@ -104,8 +104,11 @@ impl ClientMenu {
                 MenuAction::None
             }
             MainDestination::Profile if self.menu_style == MenuStyle::Sjk => {
-                // The SJK UI's Profile screen, on its Profile tab.
-                console.open_profile_hub_page(crate::profile_hub::Tab::Profile);
+                // The SJK UI's Profile screen, on its SJK Profile tab.
+                console.open_profile_hub_page(
+                    crate::profile_hub::Tab::Profile,
+                    ReturnTarget::MainMenu,
+                );
                 MenuAction::None
             }
             MainDestination::Profile => {

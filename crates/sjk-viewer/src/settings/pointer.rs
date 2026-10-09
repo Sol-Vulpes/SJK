@@ -185,6 +185,8 @@ impl SettingsMenu {
                         self.open_hud_picker(console);
                     } else if matches!(setting.kind, ValueKind::WheelPages) {
                         return SettingsResult::OpenWheelPages;
+                    } else if matches!(setting.kind, ValueKind::IdentityPage) {
+                        return SettingsResult::OpenIdentity;
                     } else if self.classic.is_some() && self.open_dropdown(console, row) {
                         // Classic+: a choice opens its list; nothing changes yet.
                     } else if let Some(position) = event.position {

@@ -14,7 +14,7 @@ pub(crate) const UNLOCKABLES_HELP: &str =
     "Open your SJK unlockables: blade skins you own or can unlock, and what you wear";
 
 impl ViewerConsole {
-    /// `unlockables`: show the page, or close it.
+    /// `unlockables` in the classic menus: show the page, or close it.
     pub(crate) fn toggle_unlockables_panel(&mut self) {
         if self.open && self.unlockables_panel.is_open() {
             self.close_unlockables_panel();
@@ -23,9 +23,16 @@ impl ViewerConsole {
         self.open_unlockables_panel();
     }
 
-    /// Show the page (the Profile page's Unlockables button).
+    /// Show the page on its own (the Profile page's See unlockables in the classic
+    /// menus).
     pub(crate) fn open_unlockables_panel(&mut self) {
         let owns_console = !self.open;
+        self.show_unlockables_panel(owns_console);
+    }
+
+    /// Show the page on its own; closing it closes the console too when
+    /// `owns_console`.
+    pub(super) fn show_unlockables_panel(&mut self, owns_console: bool) {
         if !self.open {
             self.set_open(true);
         }
@@ -92,6 +99,17 @@ impl ViewerConsole {
         viewport: [f32; 2],
     ) {
         self.unlockables_panel.follow_skins();
+        if self.unlockables_panel.is_hub() {
+            let back = self.profile_hub_return;
+            let name = self.text_value("name").unwrap_or_default();
+            if !self.unlockables_panel.hub_header().is(back, name) {
+                let header = crate::profile_hub::Header {
+                    back,
+                    name: name.to_owned(),
+                };
+                self.unlockables_panel.set_hub_header(header);
+            }
+        }
         // Copied out so the page can borrow itself mutably while it draws.
         let setting = self
             .text_cvar(SABER_SKIN_CVAR)
@@ -129,6 +147,25 @@ impl ViewerConsole {
         self.open_unlockables_panel();
         self.unlockables_panel.preview = unlocks;
         self.unlockables_panel.shot_seconds = Some(seconds);
+    }
+
+    /// Show `unlocks` (`None`: the live ones) whenever the page opens, the Profile
+    /// screen's Collection tab too, its swatches drawn at `seconds`, for a world shot.
+    #[cfg(test)]
+    pub(crate) fn preview_collection(
+        &mut self,
+        unlocks: Option<Vec<sjk_identity::Unlock>>,
+        seconds: f32,
+    ) {
+        self.unlockables_panel.preview = unlocks;
+        self.unlockables_panel.shot_seconds = Some(seconds);
+    }
+
+    /// Whether the Profile page's or the Unlockables page's last frame ran out of
+    /// room on its canvas, for the world shots.
+    #[cfg(test)]
+    pub(crate) fn profile_pages_overflowed(&self) -> bool {
+        self.profile_panel.overflowed() || self.unlockables_panel.overflowed()
     }
 
     /// The page's draw list while it is shown.

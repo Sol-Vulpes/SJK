@@ -42,11 +42,9 @@ pub(crate) use dock::{CONTROL_TOKEN, icon_of};
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) enum Entry {
     Resume,
-    /// The Profile screen: Character, Profile and Identity as tabs
-    /// ([`crate::profile_hub`]).
+    /// The Profile screen: the character, the SJK profile, achievements, medals and
+    /// the collection as tabs ([`crate::profile_hub`]).
     Profile,
-    /// The achievements board on its own.
-    Achievements,
     Players,
     Settings,
     Servers,
@@ -55,10 +53,9 @@ pub(crate) enum Entry {
 
 impl Entry {
     /// The main page, top to bottom.
-    pub(crate) const MAIN: [Self; 7] = [
+    pub(crate) const MAIN: [Self; 6] = [
         Self::Resume,
         Self::Profile,
-        Self::Achievements,
         Self::Players,
         Self::Settings,
         Self::Servers,
@@ -79,7 +76,6 @@ impl Entry {
         match self {
             Self::Resume => "Resume",
             Self::Profile => "Profile",
-            Self::Achievements => "Achievements",
             Self::Players => "Players",
             Self::Settings => "Settings",
             Self::Servers => "Servers",
@@ -91,8 +87,7 @@ impl Entry {
     fn hint(self) -> &'static str {
         match self {
             Self::Resume => "Back to the match",
-            Self::Profile => "Character, saber and Force; your bio, medals and identity",
-            Self::Achievements => "What you have done in your matches, and what is left",
+            Self::Profile => "Character, saber and Force; your profile, achievements and medals",
             Self::Players => "Everyone here; report a cheater or a troll",
             Self::Settings => "Every option and key, with search",
             Self::Servers => "Find another server; joining leaves this one",
@@ -2096,18 +2091,12 @@ mod tests {
         let (mut labels, mut hints, _) = rows([""; 24]);
         let count = prepare(&view(Page::Main, 0, false, 0), &mut labels, &mut hints);
         assert_eq!(count, Some(Entry::MAIN.len()));
-        // Sol's seven (09/10/2026): Team and Vote are on the match card, Camera
-        // control and SJK's pages in the row of icons.
+        // Sol's six (09/10/2026): Team and Vote are on the match card, Camera
+        // control and SJK's pages in the row of icons, Achievements a tab of Profile.
         assert_eq!(
             labels[..Entry::MAIN.len()],
             [
-                "Resume",
-                "Profile",
-                "Achievements",
-                "Players",
-                "Settings",
-                "Servers",
-                "Leave"
+                "Resume", "Profile", "Players", "Settings", "Servers", "Leave"
             ]
         );
         assert!(

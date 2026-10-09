@@ -208,6 +208,28 @@ pub(crate) fn load_modern(
     load_family(&INTER, dpi_scale, logo)
 }
 
+/// How wide `text` is in the display family's regular face (Rajdhani SemiBold) at
+/// `size`, the line height the SJK UI sets its text at, from the font's own
+/// advances: for a layout made before the glyph atlas is at hand (the Profile
+/// screen's tabs). The font is read once; 0 if it cannot be.
+pub(crate) fn display_width(text: &str, size: f32) -> f32 {
+    /// The size the advances are read at; they scale with it.
+    const READ_AT: f32 = 100.0;
+    static FONT: std::sync::OnceLock<Option<(Font, f32)>> = std::sync::OnceLock::new();
+    let Some((font, line)) = FONT.get_or_init(|| {
+        let font = Font::from_bytes(RAJDHANI_SEMIBOLD, FontSettings::default()).ok()?;
+        let line = font.horizontal_line_metrics(READ_AT)?.new_line_size;
+        Some((font, line))
+    }) else {
+        return 0.0;
+    };
+    let advances: f32 = text
+        .chars()
+        .map(|character| font.metrics(character, READ_AT).advance_width)
+        .sum();
+    advances / line * size
+}
+
 /// Rasterize `family`'s two faces at the current monitor DPI into one atlas,
 /// as [`load_modern`] does Inter's.
 pub(crate) fn load_family(

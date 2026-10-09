@@ -481,6 +481,7 @@ impl ViewerConsole {
             profile_panel: super::profile_panel::Panel::new(),
             staff_panel: super::staff_panel::Panel::new(),
             unlockables_panel: super::unlockables_panel::Panel::new(),
+            profile_hub_return: crate::player_menu::ReturnTarget::MainMenu,
             sjk_chat_panel: super::sjk_chat_panel::Panel::new(),
             config_import: super::config_import_panel::Panel::new(),
             userinfo_dirty,

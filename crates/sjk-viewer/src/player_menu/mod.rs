@@ -49,8 +49,9 @@ impl ProfilePage {
 }
 
 /// Screen to restore when the player selector closes.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub(crate) enum ReturnTarget {
+    #[default]
     MainMenu,
     InGame,
 }
@@ -199,8 +200,9 @@ pub(crate) struct PlayerMenu {
     classic_dirty: bool,
     /// The model preview has a frame to show (set by the renderer).
     preview_ready: bool,
-    /// Shown as the Character tab of the Profile screen ([`crate::profile_hub`]):
-    /// the SJK UI's view draws the screen's tabs at its top right.
+    /// Shown as the Profile screen's Character, Saber and Force tabs
+    /// ([`crate::profile_hub`]): the SJK UI's view draws the screen's row of tabs in
+    /// place of its own three.
     hub: bool,
 }
 
@@ -246,19 +248,40 @@ impl PlayerMenu {
         }
     }
 
-    /// Show the screen as the Profile screen's Character tab (`true`), or on its
-    /// own; [`Self::open`] puts it back on its own.
+    /// Show the screen as the Profile screen's first tabs (`true`), or on its own;
+    /// [`Self::open`] puts it back on its own.
     pub(crate) fn set_hub(&mut self, hub: bool) {
         self.hub = hub;
     }
 
-    /// Whether the screen is the Profile screen's Character tab.
+    /// Whether the screen is the Profile screen's first tabs.
     pub(crate) fn is_hub(&self) -> bool {
         self.hub
     }
 
+    /// The page on show: 0 Character, 1 Saber, 2 Force.
+    pub(crate) fn page_index(&self) -> usize {
+        self.page.index()
+    }
+
+    /// Show page `index` (Character, Saber, Force), its first row chosen.
+    pub(crate) fn show_page(&mut self, index: usize) {
+        self.set_page(ProfilePage::ALL[index.min(2)]);
+    }
+
+    /// Whether a field takes the keys: the name, the model search or a number typed.
+    pub(crate) fn typing(&self) -> bool {
+        self.name_editing || self.search_editing || self.numeric.is_some()
+    }
+
     pub(crate) fn draw_list(&self) -> &DrawList {
         self.canvas.draw_list()
+    }
+
+    /// Whether the last frame ran out of room on the canvas.
+    #[cfg(test)]
+    pub(crate) fn overflowed(&self) -> bool {
+        self.canvas.overflowed()
     }
 
     /// The `model` cvar value currently shown, for the live stage model.
@@ -356,7 +379,7 @@ impl PlayerMenu {
     /// Show page `index` (Character, Saber, Force) with row `row` selected
     /// (world shots).
     pub(crate) fn show_page_for_shot(&mut self, index: usize, row: usize) {
-        self.set_page(ProfilePage::ALL[index.min(2)]);
+        self.show_page(index);
         self.selected = row;
     }
 

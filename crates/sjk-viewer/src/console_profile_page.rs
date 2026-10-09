@@ -5,6 +5,7 @@
 
 use super::profile_panel::{Inputs, Mode, PanelAction, Tab};
 use super::*;
+use crate::profile_hub::Tab as HubTab;
 use sjk_ui::InputEvent;
 
 /// The `profile` command.
@@ -15,8 +16,8 @@ pub(crate) const ACHIEVEMENTS_COMMAND: &str = "achievements";
 pub(crate) const ACHIEVEMENTS_HELP: &str = "Open the achievements board";
 
 impl ViewerConsole {
-    /// `profile` or `achievements`: show the page on `tab` in front of the console,
-    /// opening it if needed, or close it when it already shows that tab.
+    /// `profile` or `achievements` in the classic menus: show the page on `tab` in front
+    /// of the console, opening it if needed, or close it when it already shows that tab.
     pub(crate) fn toggle_profile_panel(&mut self, tab: Tab) {
         if self.open && self.profile_panel.is_open() && self.profile_panel.tab() == tab {
             self.close_profile_panel();
@@ -25,20 +26,11 @@ impl ViewerConsole {
         self.open_profile_panel(tab);
     }
 
-    /// Show the page on `tab`, on its own (the `profile` and `achievements` commands).
+    /// Show the page on `tab`, on its own (the `profile` and `achievements` commands in
+    /// the classic menus).
     pub(crate) fn open_profile_panel(&mut self, tab: Tab) {
-        self.open_profile_panel_as(tab, Mode::Pages);
-    }
-
-    /// Show the achievements board alone (the game menu's Achievements).
-    pub(crate) fn open_achievements(&mut self) {
-        self.open_profile_panel_as(Tab::Achievements, Mode::Board);
-    }
-
-    /// Show the page on `tab` as `mode` says.
-    fn open_profile_panel_as(&mut self, tab: Tab, mode: Mode) {
         let owns_console = !self.open;
-        self.show_profile_panel(tab, owns_console, mode);
+        self.show_profile_panel(tab, owns_console, Mode::Pages);
     }
 
     /// Show the page on `tab` as `mode` says; closing it closes the console too when
@@ -62,47 +54,78 @@ impl ViewerConsole {
     }
 
     /// The Profile screen's tab the console shows ([`crate::profile_hub`]): its
-    /// Profile or Identity page opened as one of the screen's tabs.
-    pub(crate) fn profile_hub_tab(&self) -> Option<crate::profile_hub::Tab> {
+    /// Profile page or Unlockables page opened as one of the screen's tabs.
+    pub(crate) fn profile_hub_tab(&self) -> Option<HubTab> {
         if !self.open {
             None
         } else if self.profile_panel.is_open() && self.profile_panel.mode() == Mode::Hub {
-            Some(crate::profile_hub::Tab::Profile)
-        } else if self.identity_panel.is_open() && self.identity_panel.is_hub() {
-            Some(crate::profile_hub::Tab::Identity)
+            Some(match self.profile_panel.tab() {
+                Tab::Profile => HubTab::Profile,
+                Tab::Achievements => HubTab::Achievements,
+                Tab::Medals => HubTab::Medals,
+            })
+        } else if self.unlockables_panel.is_open() && self.unlockables_panel.is_hub() {
+            Some(HubTab::Collection)
         } else {
             None
         }
     }
 
-    /// Show the Profile screen's Profile or Identity tab in place of the console. When
-    /// another of its tabs showed here, the console still closes with it if that one
-    /// had opened it.
-    pub(crate) fn open_profile_hub_page(&mut self, tab: crate::profile_hub::Tab) {
-        let owns_console = if self.profile_hub_tab().is_some() {
+    /// Where the Profile screen returns while the console shows one of its tabs.
+    pub(crate) fn profile_hub_return(&self) -> crate::player_menu::ReturnTarget {
+        self.profile_hub_return
+    }
+
+    /// Show the Profile screen's tab `tab` (one the console shows) in place of the
+    /// console, returning to `target`. When another of its tabs showed here, the
+    /// console still closes with it if that one had opened it; between the Profile
+    /// page's own tabs the page only turns, keeping a picture read and not sent.
+    pub(crate) fn open_profile_hub_page(
+        &mut self,
+        tab: HubTab,
+        target: crate::player_menu::ReturnTarget,
+    ) {
+        self.profile_hub_return = target;
+        let page_tab = match tab {
+            HubTab::Profile => Some(Tab::Profile),
+            HubTab::Achievements => Some(Tab::Achievements),
+            HubTab::Medals => Some(Tab::Medals),
+            HubTab::Collection => None,
+            // The player screen's pages are not the console's.
+            HubTab::Character | HubTab::Saber | HubTab::Force => return,
+        };
+        let current = self.profile_hub_tab();
+        if let (Some(page_tab), Some(HubTab::Profile | HubTab::Achievements | HubTab::Medals)) =
+            (page_tab, current)
+        {
+            self.profile_panel.show_hub_tab(page_tab);
+            return;
+        }
+        let owns_console = if current.is_some() {
             let profile = self.profile_panel.close();
-            let identity = self.identity_panel.close();
-            profile || identity
+            let unlockables = self.unlockables_panel.close();
+            profile || unlockables
         } else {
             !self.open
         };
-        if tab == crate::profile_hub::Tab::Identity {
-            self.open_identity_panel_owned(owns_console);
-            self.identity_panel.set_hub(true);
-        } else {
-            self.show_profile_panel(Tab::Profile, owns_console, Mode::Hub);
+        match page_tab {
+            Some(page_tab) => self.show_profile_panel(page_tab, owns_console, Mode::Hub),
+            None => {
+                self.show_unlockables_panel(owns_console);
+                self.unlockables_panel.set_hub(true);
+            }
         }
     }
 
-    /// Close the Profile screen's page the console shows (for its Character tab), and
-    /// the console with it when the page had opened it.
+    /// Close the Profile screen's page the console shows (for the player screen's
+    /// tabs), and the console with it when the page had opened it.
     pub(crate) fn close_profile_hub_page(&mut self) {
         if self.profile_hub_tab().is_none() {
             return;
         }
         let profile = self.profile_panel.close();
-        let identity = self.identity_panel.close();
-        if profile || identity {
+        let unlockables = self.unlockables_panel.close();
+        if profile || unlockables {
             self.set_open(false);
         }
     }
@@ -131,14 +154,9 @@ impl ViewerConsole {
                     self.unlockables_panel_owns_console();
                 }
             }
-            PanelAction::Identity => {
-                // The Identity page takes the console over; Escape there closes both
-                // when the Profile page had opened the console. On the Profile screen
-                // it is the screen's Identity tab.
-                let hub = self.profile_panel.mode() == Mode::Hub;
-                let owns_console = self.profile_panel.close();
-                self.open_identity_panel_owned(owns_console);
-                self.identity_panel.set_hub(hub);
+            PanelAction::Hub(tab) => {
+                let target = self.profile_hub_return;
+                self.open_profile_hub_page(tab, target);
             }
             PanelAction::Save { bio } => {
                 // The page shows the hub's answer, or why nothing could be sent.
@@ -227,6 +245,17 @@ impl ViewerConsole {
         target: crate::menu::sjk::TextTarget<'_>,
         viewport: [f32; 2],
     ) {
+        if self.profile_panel.mode() == Mode::Hub {
+            let back = self.profile_hub_return;
+            let name = self.text_value("name").unwrap_or_default();
+            if !self.profile_panel.hub_header().is(back, name) {
+                let header = crate::profile_hub::Header {
+                    back,
+                    name: name.to_owned(),
+                };
+                self.profile_panel.set_hub_header(header);
+            }
+        }
         #[cfg(test)]
         if let Some(preview) = self.profile_panel.preview.take() {
             let inputs = Inputs {

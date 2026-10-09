@@ -19,6 +19,12 @@ tests check this file):
 Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 -->
 
+## Unreleased
+
+- The Profile screen has one row of tabs: Character, Saber, Force, SJK Profile, Achievements, Medals (each medal with its picture, what it is for and when it was given, and the ones still to get) and Collection (every unlockable, owned or locked, with how to get it); the in-game menu's Achievements entry is now a tab, and the main page's Character button reads Profile _(Sol)_
+- The SJK identity key moved from the Profile screen to Settings, Network, and its key id and file stay hidden until Show key, each time the page opens, so it can be opened on a stream _(Sol)_
+- Your SJK picture can be chosen with Browse... (the system's file dialog), and a picture is checked more strictly before it is sent: empty, damaged or cut-short files, files that are no PNG, JPEG or TGA whatever their name, pictures under 64 pixels, more than four times as long as wide or fully transparent are refused, each with its reason _(Sol)_
+
 ## 2026.1009.1 (Alpha) | 09/10/2026
 
 SJK's lighting got much faster on heavy maps such as JoFTemple, with an Ultra low switch for the
