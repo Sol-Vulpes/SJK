@@ -46,6 +46,10 @@ pub(crate) fn open(
     // for updates.
     console.set_cvar("cl_identity", "0");
     console.set_cvar("cl_autoUpdate", "0");
+    // Shots for the site leave out the build label.
+    if std::env::var_os("WORLD_SHOT_NO_VERSION").is_some() {
+        console.set_cvar(crate::version_overlay::CVAR, "0");
+    }
     for (name, value) in cvars {
         console.set_cvar(name, value);
     }
@@ -545,6 +549,31 @@ mod tests {
                 );
             }
             println!("{}", sheet(&images, 4, 480, "duel6-tour").display());
+        });
+    }
+
+    /// Every tour shot halfway through its glide, full size and without a
+    /// menu: the site's home page plays a few of them behind its own ring
+    /// (`site/screenshots/README.md`).
+    #[test]
+    #[ignore = "renders with the GPU and the installed game data named by JKA_GAME_DATA"]
+    fn duel6_site_backdrops() {
+        on_big_stack(|| {
+            let Some((mut gpu, _profile)) = open("maps/mp/duel6.bsp", [1920, 1080], None, &[])
+            else {
+                return;
+            };
+            let shots = menu_backdrop::tour_for("Yavin Training Grounds").expect("duel6's tour");
+            let _ = frame(&mut gpu, 30);
+            for (index, shot) in shots.iter().enumerate() {
+                let origin = std::array::from_fn(|axis| (shot.from[axis] + shot.to[axis]) / 2.0);
+                let (yaw, pitch) = look(origin, shot.at);
+                aim(&mut gpu, origin, yaw, pitch);
+                println!(
+                    "{}",
+                    shoot(&mut gpu, 8, &format!("site-tour-{index}")).display()
+                );
+            }
         });
     }
 

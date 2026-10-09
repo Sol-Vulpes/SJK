@@ -20,7 +20,7 @@
 //!
 //! Two more layers are light without a picture behind them, drawn by the
 //! worker instead of decoded: a sunburst for behind the emblem and a fan of
-//! uneven god rays, as on SJK's site (`site/assets/effects.js`). [`rays`]
+//! uneven god rays, as SJK's site first drew them. [`rays`]
 //! turns them about their centre, so a screen animates them from its clock.
 
 use super::art::motion;

@@ -153,15 +153,24 @@ timestamps in logs and JSON, and file names meant to sort.
 | [SJK release](../.github/workflows/release.yml) | Tags `sjk-v<version>` | Builds and publishes the release ZIPs |
 
 The site is static: `index.html`, `assets/style.css` and `assets/site.js` (release
-list, download button, screenshot gallery). `assets/effects.js` adds the hero's
-WebGPU effects (golden god rays, a sunburst behind the emblem, drifting dust and a
+list, download entry, screenshot gallery). It wears the SJK UI's look
+([sjk-ui.md](sjk-ui.md), Sol's request of 09/10/2026): the home page is the
+client's main page, SJK's emblem in its turning ring with the sections on an arc
+round it (the gold arc turns to the one under the pointer or keyboard), the latest
+release where the client lists recent servers, a profile card for Sol and key hints,
+over shots of the client's tour of Yavin Training Grounds that cross-fade every 15
+seconds; What SJK brings is laid out as the client's Settings (a rail of categories,
+rows, a detail column with a screenshot). Below 900 px wide (or in a tall window) the
+home page stacks into a list. Its pictures are the client's own off-screen renders
+([screenshots/README.md](../site/screenshots/README.md)). `assets/effects.js` adds
+the home page's WebGPU effects (a sunburst behind the emblem, drifting dust and a
 saber trail on the pointer) with the MIT-licensed
 [Shaders](https://github.com/shader-effects-inc/shaders) library, vendored as
 `assets/vendor/shaders/shaders-4.0.0.js` with its license so no other server is
 contacted; its telemetry is turned off. When the visitor asks for reduced motion
 (Windows' "Animation effects" off does), the scene is drawn once and held still,
-without the saber trail. Without WebGPU the script adds nothing and the CSS
-starfield stays. To
+without the saber trail, and the backdrop stays on its first shot. Without WebGPU
+the script adds nothing. To
 update the library, replace the vendored file with a release's
 `dist/js/bundle.js` and check that `disableTelemetry` still stops its telemetry.
 
