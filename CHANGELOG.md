@@ -19,8 +19,21 @@ tests check this file):
 Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 -->
 
-## Unreleased
+## 2026.1009.1 (Alpha) | 09/10/2026
 
+SJK's lighting got much faster on heavy maps such as JoFTemple, with an Ultra low switch for the
+most frames; the in-game menu is rebuilt around seven entries; and the bugs players reported
+through the hub are fixed: saber styles, fullscreen, Force profiles, saber changes on JA+
+servers, the bug report box, vehicle pilots' names and a vehicle HUD.
+
+- Blue (fast) style with a staff saber that has one blade off, or with dual sabers with one switched off, no longer restarts the swing animation and spams the saber-on sound: the client works out the saber stance base for each predicted command, as OpenJK's client does, instead of treating the sabers as fully off _(Sol, after JoF EternalJK)_
+- Leaving exclusive fullscreen works: Alt-Tab or Win+D drops the game to a window and the desktop gets its own video mode back; returning to the game enters exclusive fullscreen again. Borderless and windowed are unchanged _(Sol)_
+- A forcepowers typed in the console or set by a cfg is sent to the server like the Force page's Apply, so a Force level you lower there applies at your next respawn; when nothing is sent, the console says why _(Sol)_
+- On JA+ and jaPRO servers a saber picked in the menu (or by setting saber1 and saber2) is sent with the server's saber command and applies at once instead of at your next respawn, when the server allows it (standing still, free for all, no duel) _(Sol, after JoF EternalJK)_
+- Report a bug (and the other text boxes of its kind) has a real text cursor: Left, Right, Up, Down, Home, End, Delete and Backspace work where the cursor is, Ctrl moves by words, a click places the cursor, and the cursor sits between the letters whatever the text scale; why Send refuses shows in a red band above the buttons _(Sol)_
+- The names of pilots sitting inside fighters and walkers show on their nameplates, above the vehicle _(Sol, after JoF EternalJK)_
+- A vehicle's weapons no longer play an ordinary gun's flash sound: the original game plays none for them _(Sol, after JoF EternalJK)_
+- Vehicle HUD for the pilot: hull, shield, speed, ammunition and turbo bars at the bottom centre, as in the original game; fighters replace the player's own status HUD and the crosshair is doubled or uses the vehicle's own _(Sol, after JoF EternalJK)_
 - JoFTemple runs about twice as fast with SJK's lighting: large floors with a coarse lightmap now take their lamp light from the lighting cache instead of being lit lamp by lamp every frame (7.5 ms a frame becomes 3.6 ms at 4K) _(Sol)_
 - Maps with large tiled light textures load much faster with SJK's lighting: a material that would make more than 4,096 lights is read at a coarser grain, so JoFJKMission's JKLevel1 loads in about 28 s instead of 91 s and looks the same _(Sol)_
 - Platforms and parts that never stop moving (bobbing, rotating, swinging) no longer block the map's lamps, which made the lighting redo work every frame: JoFTemple runs about 40% faster with SJK's lighting while its platforms move _(Sol)_
