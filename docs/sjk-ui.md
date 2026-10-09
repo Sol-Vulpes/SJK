@@ -226,10 +226,11 @@ on the 16:9 frame, dark behind the form on the left and clear over the model.
   charges the channel up to it, a white spark running along it, the marks it
   would buy breathing; the points it would take show white at the bar's end
   (ember, marks and bar, when there are too few). A click on a level buys up to
-  it, on the power's own level drops one; a level bought (by click or Right)
-  sends a ring out from its mark. These are the only things that move on the
-  page, and only answering the pointer or a purchase. Then Start over, Discard
-  and Apply (gold while there is something to apply). On a server, a power it
+  it, a right click on a level removes it (the power stands one below it); a
+  level bought (by click or Right) sends a ring out from its mark. These are the only things that move on the
+  page, and only answering the pointer or a purchase. Then Apply (gold while there
+  is something to apply) across the left column under the Lightsaber group, with
+  Start over and Discard side by side below it, clear of This server's lines. On a server, a power it
   turns off, holds at a level or does not use keeps its marks and has an ember
   note under its name (Off on this server, Fixed on this server, Team games
   only), and under the side's five, This server lists its rules: the highest

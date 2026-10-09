@@ -298,9 +298,11 @@ impl PlayerMenu {
                     self.selected = row;
                 } else if activate {
                     self.selected = row;
-                    let current = self.force.allocation().levels[power];
-                    let wanted = if level == current { level - 1 } else { level };
-                    if self.force.set_level(power, wanted) && wanted > current {
+                    // A click raises to the level; a right click removes one
+                    // ([`Self::sjk_remove_level`]).
+                    if level > self.force.allocation().levels[power]
+                        && self.force.set_level(power, level)
+                    {
                         self.note_level_bought(power);
                     }
                 } else {
@@ -367,6 +369,22 @@ impl PlayerMenu {
             ProfilePage::Character => return None,
         }
         Some(PlayerMenuResult::None)
+    }
+
+    /// A right click on `token`, when it is a level mark of the Force page: the
+    /// level goes, with the ones above it, so the power stands one below it. A
+    /// mark above the power's level has nothing to remove.
+    pub(super) fn sjk_remove_level(&mut self, token: u16) {
+        if self.page != ProfilePage::Force {
+            return;
+        }
+        let Some((power, level)) = level_of(token) else {
+            return;
+        };
+        self.selected = FORCE_POWER_ROW + power;
+        if level <= self.force.allocation().levels[power] {
+            self.force.set_level(power, level - 1);
+        }
     }
 
     /// The rows of the Saber and Force pages in the order they show them
@@ -1291,36 +1309,42 @@ impl PlayerMenu {
             groups_top + GROUP_HEADING + 5.0 * CELL + GROUP_GAP,
             half,
         );
-        // The actions.
-        // Under the Lightsaber group, the left column's second.
+        // The actions, under the Lightsaber group in the left column: Apply
+        // across it, Start over and Discard side by side below. The right
+        // column's server panel, which grows with its lines, keeps its room.
         let actions_top = groups_top
             + (GROUP_HEADING + 5.0 * CELL + GROUP_GAP)
             + GROUP_HEADING
             + 3.0 * CELL
             + 24.0;
-        let width = (COLUMN_WIDTH - 2.0 * 12.0) / 3.0;
-        for (slot, (row, label, enabled, primary)) in [
-            (FORCE_RESET_ROW, "Start over", true, false),
-            (FORCE_DISCARD_ROW, "Discard", dirty, false),
+        let small = (half - 12.0) / 2.0;
+        for (row, label, enabled, primary, area) in [
             (
                 FORCE_APPLY_ROW,
                 if dirty { "Apply" } else { "Applied" },
                 dirty,
                 true,
+                [COLUMN_X, actions_top, half, 48.0],
             ),
-        ]
-        .into_iter()
-        .enumerate()
-        {
+            (
+                FORCE_RESET_ROW,
+                "Start over",
+                true,
+                false,
+                [COLUMN_X, actions_top + 58.0, small, 44.0],
+            ),
+            (
+                FORCE_DISCARD_ROW,
+                "Discard",
+                dirty,
+                false,
+                [COLUMN_X + small + 12.0, actions_top + 58.0, small, 44.0],
+            ),
+        ] {
             kit::button(
                 &mut self.canvas,
                 frame,
-                [
-                    COLUMN_X + slot as f32 * (width + 12.0),
-                    actions_top,
-                    width,
-                    48.0,
-                ],
+                area,
                 label,
                 primary,
                 enabled,
@@ -1350,7 +1374,7 @@ impl PlayerMenu {
                     y: &mut f32,
                     words: &str,
                     colour: Color| {
-            for part in wrap(words, 36) {
+            for part in wrap(words, 42) {
                 text(
                     canvas,
                     TextFamily::Body,
@@ -2261,7 +2285,7 @@ mod tests {
     }
 
     #[test]
-    fn a_level_cell_buys_up_to_it_and_its_own_level_steps_down() {
+    fn a_level_cell_buys_up_to_it_and_a_right_click_removes_it() {
         let directory = tempfile::tempdir().unwrap();
         let mut console = ViewerConsole::new(directory.path().join("config.cfg")).unwrap();
         let mut menu = drawn(ProfilePage::Force, false);
@@ -2279,12 +2303,40 @@ mod tests {
         assert_eq!(menu.force.allocation().levels[push], 2);
         assert_eq!(menu.selected, FORCE_POWER_ROW + push);
         assert_eq!(menu.force.remaining_points(), left - 1 - 3);
+        // A click on the power's own level, or below it, changes nothing.
         click(&mut menu, &mut console, 2);
+        click(&mut menu, &mut console, 1);
+        assert_eq!(menu.force.allocation().levels[push], 2);
+        // A right click on a level removes it, from the pointer's own events.
+        let right_click = |menu: &mut PlayerMenu, console: &mut ViewerConsole, level| {
+            let rect = menu
+                .canvas
+                .rect_for(level_token(push, level))
+                .expect("a level mark");
+            let position = sjk_ui::Vec2::new(rect.x + rect.width * 0.5, rect.y + rect.height * 0.5);
+            let button = sjk_ui::PointerButton::Secondary;
+            for event in [
+                sjk_ui::InputEvent::PointerMove(position),
+                sjk_ui::InputEvent::PointerPress { position, button },
+                sjk_ui::InputEvent::PointerRelease { position, button },
+            ] {
+                let _ = menu.handle_pointer(event, console);
+            }
+        };
+        right_click(&mut menu, &mut console, 3);
+        assert_eq!(
+            menu.force.allocation().levels[push],
+            2,
+            "a mark above the level has nothing to remove"
+        );
+        right_click(&mut menu, &mut console, 2);
         assert_eq!(menu.force.allocation().levels[push], 1);
+        draw(&mut menu);
+        right_click(&mut menu, &mut console, 1);
+        assert_eq!(menu.force.allocation().levels[push], 0);
+        assert_eq!(menu.force.remaining_points(), left);
         // The box at the bottom right now shows Push.
         assert_eq!(menu.sjk_box_power(), Some(push));
-        // A draft only: nothing is written before Apply.
-        assert!(menu.force.is_dirty());
     }
 
     #[test]

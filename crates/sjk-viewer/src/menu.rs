@@ -1067,6 +1067,11 @@ impl ClientMenu {
     }
 
     #[cfg(test)]
+    pub(crate) fn player_server_rules_for_shot(&mut self, rules: sjk_client::ForceLegalizeRules) {
+        self.player.server_rules_for_shot(rules);
+    }
+
+    #[cfg(test)]
     pub(crate) fn player_dual_for_shot(&mut self) {
         self.player.dual_for_shot();
     }

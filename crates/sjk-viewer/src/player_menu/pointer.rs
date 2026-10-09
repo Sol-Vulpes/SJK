@@ -26,12 +26,24 @@ impl PlayerMenu {
         if self.classic_style {
             return self.classic_pointer(event, console);
         }
+        let secondary = matches!(
+            event,
+            InputEvent::PointerRelease {
+                button: sjk_ui::PointerButton::Secondary,
+                ..
+            }
+        );
         let Some(event) = self.canvas.pointer(event) else {
             return PlayerMenuResult::None;
         };
         let Some(token) = event.token else {
             return PlayerMenuResult::None;
         };
+        // SJK Force page: a right click on a level removes it.
+        if secondary && event.kind == UiEventKind::Click && self.is_sjk() {
+            self.sjk_remove_level(token);
+            return PlayerMenuResult::None;
+        }
         // SJK: pressing anything but the draft's own value field applies it.
         if event.kind == UiEventKind::Press
             && crate::menu_widgets::numeric::value_row(token)
