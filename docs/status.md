@@ -149,6 +149,65 @@ way; formatting, the locked workspace build and tests pass, and workspace Clippy
 reports no warning on a changed line. Not verified: no client was run (no GPU,
 display or game data), so neither the cap in either state nor the new Settings row
 was seen on screen.
+## Low frame rate for a while after a map load
+
+Branch `perf/after-load-stalls` (08/10/2026, based on `a6230f9`, Linux). Sol reported
+that after a map load the frame rate sometimes sits around 10 FPS for a while before
+recovering, and asked what else could hog frame time. Read from the code (no GPU or
+game data here), the first seconds of a map stack several one-off costs on the render
+thread and the GPU, in this order of likely weight:
+
+1. **Pipelines compiled mid-frame.** In real-time lighting (on devices with binding
+   arrays) the static world draws through the stage table, whose program and pipelines
+   were compiled on first draw (`stage_table.rs` `Table::pipeline`), as were the lamp
+   cache's receiver pipelines (`light_receivers.rs` `cached`) and depth priming: the
+   first frame compiled one pipeline per visible key, later frames more as surfaces
+   came into view. A cold driver cache (after an SJK or driver update) costs about half
+   a second per program. Still compiled in a frame: glow variants (`world_glow.rs`), the
+   lamp cache's bake pipelines, clouds and weather (`weather.rs`), and models loaded
+   mid-match.
+2. **Players' models on the render thread** (`config_string_refresh.rs`,
+   `clientinfo_refresh.rs`): every changed `CS_PLAYERS` or `CS_MODELS` string of a frame
+   loads its model there (files, textures, materials, pipelines), and each load
+   regrows the shared geometry buffers by copying all of them and waits for the frame
+   in flight (`shared_geometry.rs`, `FrameQueue::submit`). Team, model and saber
+   changes after a map change depend on the server, one reason it happens sometimes.
+3. **Lamp cache bake** (`lamp_cache.rs` `bake_once`): every layer of the cache (up to
+   512 MiB), each texel evaluating its lamps, in the first lit frame: a one-frame GPU
+   burst, after its bake pipelines are compiled in that frame.
+4. **Movers in lamp shadows** (`mover_occlusion_gpu.rs`): the first snapshot queues
+   every door tile, so their cache regions are baked again over the next frames (four
+   layers every 100 ms, then every frame), each with full-layer steep and rim passes.
+5. **Reflection probes** (maps with specular maps, `reflection_capture.rs`): a whole
+   probe, six scene renders with their light passes, per frame for up to 64 frames.
+6. **GI probes** (`gi_probes.rs`): three passes over every probe are queued at
+   installation, then the first frame with the far cascade relights 8,192 probes a
+   frame (32 times the steady 256) until all are done.
+
+In steady play: floor mirrors (up to six scene renders), every map video decoded each
+frame, lamp cache re-bakes every 100 ms while doors and lifts near lamps move, and GI
+and reflection refreshes while the day clock runs.
+
+Changed: map installation, on its own thread, now also compiles the stage table's
+program and pipelines (both lighting variants of every stage it holds, static-world or
+entity as drawn), the depth-priming pipelines and, on maps with a lamp cache, the
+cached receiver pipelines ([rendering](rendering.md#pipelines-compiled-at-load)). The
+pipelines are the ones the frames would have created, so the picture is unchanged; the
+load takes longer by those compiles instead. Nothing else changed: items 2 to 6 alter
+what the first frames show or need restructuring, and want a GPU measurement first.
+
+Verified on Linux: unit tests of which table pipelines are compiled (static and model
+stages, off-table stages, movers and flares, shared keys); workspace formatting, the
+locked build, tests and Clippy (no warnings on changed lines). Not measured: no GPU,
+game or timing run, so neither the stall nor the gain has been seen. To measure, in a
+release build on the same map and server before and after: `SJK_FRAME_BUDGET=1`
+prints a `frame-budget` line every half second (mean, p99, max, worst frame's phases)
+and, with timestamp support, `gpu-phases` every 32 frames; the load log's `[+ms]`
+lines (`compiled N pipeline keys`, `Stage table: compiled N pipelines at load`,
+`Light pass: ... compiled at load`, `Lamp light cache: bake encoded`, `GI probes
+converged`, `Reflection probes`, `Mover occlusion`, `client N now wears`) place each
+cost. Comparisons: `SJK_LAMP_CACHE=0`, `SJK_MOVER_OCCLUSION=0`, `SJK_STAGE_TABLE=0`,
+`r_cubeMapping 0` (restart) and `r_clouds 0`.
 
 ## Percent signs and quotes in chat
 

@@ -21,6 +21,7 @@ Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 
 ## Unreleased
 
+- Real-time lighting pipelines are now compiled while a map loads instead of in the first frames of play, to cut the stalls (around 10 FPS for a while) that followed a load; the load itself takes a little longer _(Sol)_
 - com_maxfpsMonitor (Settings > Video > Detect refresh rate), off by default: the AUTO FPS cap (com_maxfps -1) is now 125 unless it is on, when it follows the monitor's refresh rate as before; a cap you set always wins _(Sol)_
 - The game no longer freezes when you switch back to it after a long time away if the sound device went away meanwhile (a headset or monitor speakers switching off): a full sound queue waits a quarter of a second, then drops sounds, the log says audio output stopped taking sound, and snd_restart brings the sound back _(Sol)_
 - On the SJK UI's Character screen, a click on a saber colour, a < > control or a Force power now lands where it was aimed: it picks the blade chip under the pointer and turns a < > control by the half you click, and a click on a Force power's name only chooses it _(Sol)_

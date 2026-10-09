@@ -421,6 +421,18 @@ fn build(
     ));
     result.0.stage_table =
         super::stage_table::Table::build(device, &result.0.forge, &result.0.materials);
+    // The static world draws through the table in real-time lighting: compile its
+    // pipelines here, on the installing thread, rather than in the first frames of play.
+    if let Some(table) = &result.0.stage_table {
+        let table_started = Instant::now();
+        let compiled = table.prewarm(&result.0.forge, &result.0.materials);
+        if compiled > 0 {
+            crate::log::progress(format_args!(
+                "Stage table: compiled {compiled} pipelines at load in {:.0} ms",
+                table_started.elapsed().as_secs_f64() * 1e3
+            ));
+        }
+    }
 
     let finished = Instant::now();
     crate::log::progress(format_args!(

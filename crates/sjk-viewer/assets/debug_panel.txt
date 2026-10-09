@@ -2735,3 +2735,12 @@ change: com_maxfpsMonitor 0 (default): AUTO caps at 125 and the monitor is never
 change: com_maxfpsMonitor 1 (Settings > Video > Detect refresh rate): AUTO follows the monitor.
 test: Default profile: cg_drawFPS 1 holds 125; turn Detect refresh rate on: it reads your rate.
 test: com_maxfps 144 holds 144 with the setting on or off.
+
+[prewarm-lighting]
+area: Rendering & effects
+title: Lighting pipelines compile at map load (SJK PR #51)
+change: The stage table, depth priming and lamp cache receiver pipelines compile while loading.
+change: New log lines: Stage table: compiled N pipelines; Light pass: ... compiled at load.
+test: Join a server on a big map: the first seconds in play stay smooth; compare with main.
+test: SJK_FRAME_BUDGET=1 prints frame-budget lines; check the max after the load.
+note: Not measured on a GPU yet; first run after an update has a cold shader cache.
