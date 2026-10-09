@@ -2,7 +2,8 @@
 
 use super::*;
 use sjk_client::{
-    ForceProfileNegotiator, LegacyTeamChoice, force_rank_reply, force_rules_from_serverinfo,
+    ForceAllocation, ForceLegalizeRules, ForceProfileNegotiator, LegacyTeamChoice,
+    force_rank_reply, force_rules_from_serverinfo, legalize_force_powers,
 };
 use sjk_protocol::GameState;
 
@@ -295,7 +296,7 @@ impl ViewerConsole {
         }
         // com_maxfps defaulted to 1000 and every archived cvar was saved, so each
         // existing profile carries that old default. Move it once to the new
-        // refresh-rate default (-1); a 1000 chosen after this stays.
+        // default, AUTO (-1); a 1000 chosen after this stays.
         if matches!(
             shell
                 .cvars
@@ -428,6 +429,24 @@ impl ViewerConsole {
             }
             let _ = shell.cvars.set_text("cg_cameraStyleDefaultVersion", "1");
         }
+        // cg_killfeed was off by default (a one-line obituary) and every profile
+        // saved that 0, so the kill feed, on by default, would reach none. Move a
+        // saved 0 once to the default; a 0 chosen after this stays.
+        if matches!(
+            shell
+                .cvars
+                .get("cg_killfeedDefaultVersion")
+                .map(|cvar| &cvar.value),
+            Some(CvarValue::Integer(0))
+        ) {
+            if matches!(
+                shell.cvars.get("cg_killfeed").map(|cvar| &cvar.value),
+                Some(CvarValue::Integer(0))
+            ) {
+                let _ = shell.cvars.reset("cg_killfeed");
+            }
+            let _ = shell.cvars.set_text("cg_killfeedDefaultVersion", "1");
+        }
         retire_modern_ui(&mut shell.cvars);
         shell.push_log("^5SJK console ready. ^7Type cmdlist for commands.");
         Ok(Self {
@@ -450,6 +469,7 @@ impl ViewerConsole {
             identity_panel: super::identity_panel::Panel::new(),
             profile_panel: super::profile_panel::Panel::new(),
             staff_panel: super::staff_panel::Panel::new(),
+            unlockables_panel: super::unlockables_panel::Panel::new(),
             sjk_chat_panel: super::sjk_chat_panel::Panel::new(),
             config_import: super::config_import_panel::Panel::new(),
             userinfo_dirty,
@@ -500,11 +520,18 @@ impl ViewerConsole {
         })
     }
 
-    /// Flush an effective profile change through OpenJK's reliable userinfo command.
+    /// Flush an effective profile change through OpenJK's reliable userinfo
+    /// command, then send what the Force profile exchange has due.
     pub(crate) fn flush_userinfo(&mut self, session: &mut ClientSession, now: Instant) {
-        if !self.userinfo_dirty.load(Ordering::Acquire) {
-            return;
+        if self.userinfo_dirty.load(Ordering::Acquire) {
+            self.send_userinfo(session, now);
         }
+        // Every frame: a rejoin retry falls due seconds after the userinfo
+        // that preceded it went out, when nothing is left to flush.
+        self.poll_force_rejoin(session, now);
+    }
+
+    fn send_userinfo(&mut self, session: &mut ClientSession, now: Instant) {
         let result = self
             .userinfo()
             .map_err(|error| error.to_string())
@@ -533,7 +560,6 @@ impl ViewerConsole {
                     .push_log(format!("^1Could not update userinfo: {error}"));
             }
         }
-        self.poll_force_rejoin(session, now);
     }
 
     /// Send the queued `forcechanged` reply and bounded `team` retries.
@@ -557,24 +583,48 @@ impl ViewerConsole {
         self.force_profile.note_team_choice(choice);
     }
 
-    /// Adopt the `forcepowers` value negotiated while joining a server.
+    /// Report the `forcepowers` value sent while joining a server when it is
+    /// not the player's own (later userinfo is fitted the same way).
     pub(crate) fn note_server_forcepowers(&mut self, negotiated: &str) {
         let preferred = self.text_value("forcepowers").unwrap_or_default();
-        let value = (negotiated != preferred).then(|| negotiated.to_owned());
-        if value.is_some() {
+        if negotiated != preferred {
             self.shell.push_log(format!(
                 "^5Force profile adjusted to server limits: ^7{negotiated}"
             ));
         }
-        self.force_profile.set_server_forcepowers(value);
     }
 
-    /// The Force profile the server plays the local player with: the one negotiated
-    /// for it, else the player's own `forcepowers`.
-    pub(crate) fn own_forcepowers(&self) -> Option<&str> {
-        self.force_profile
-            .server_forcepowers()
-            .or_else(|| self.text_value("forcepowers"))
+    /// The Force profile the server plays the local player with: the profile
+    /// sent (the player's own, fitted to the server's rules with its disabled
+    /// powers kept) as the server's rules then leave it (those powers dropped),
+    /// or as written off a server.
+    pub(crate) fn own_force_allocation(&self) -> Option<ForceAllocation> {
+        let preferred = self.text_value("forcepowers")?;
+        match self.force_profile.server_rules() {
+            Some(rules) => {
+                let sent = self.force_profile.sent_forcepowers(preferred);
+                Some(legalize_force_powers(&sent, rules).allocation)
+            }
+            None => ForceAllocation::parse(preferred).ok(),
+        }
+    }
+
+    /// The Force rules of the server the client plays on (`None` off one, or
+    /// in a demo), `g_forcePowerDisable` included.
+    pub(crate) fn server_force_rules(&self) -> Option<ForceLegalizeRules> {
+        self.force_profile.server_rules()
+    }
+
+    /// Make `value` the player's Force profile; on a server, have it read it
+    /// (`forcechanged` once the userinfo carrying it is out): at once while
+    /// spectating, at the next respawn in play.
+    pub(crate) fn apply_forcepowers(&mut self, value: &str) {
+        if self.set_cvar("forcepowers", value) {
+            self.force_profile.profile_applied();
+            // The `forcechanged` goes out after the userinfo flush, which an
+            // unchanged value would not start.
+            self.userinfo_dirty.store(true, Ordering::Release);
+        }
     }
 
     /// Refresh `serverinfo` and profile-specific completion from the active session.
@@ -586,6 +636,8 @@ impl ViewerConsole {
             session.compat_profile(),
             session.server(),
         );
+        self.force_profile
+            .refresh_server_rules(session.game_state());
     }
 
     /// Refresh demo serverinfo through the same status and completion path as live play.
@@ -683,16 +735,22 @@ impl ViewerConsole {
         if !update.open_profile {
             return;
         }
+        // The notice's rank and team (the side `g_forceBasedTeams` holds the
+        // player to) become the rules the sent profile is fitted to.
         let rules = force_rules_from_serverinfo(game_state, update.rank, update.team);
+        self.force_profile.set_server_rules(Some(rules));
         let current = self
-            .force_profile
-            .server_forcepowers()
-            .or_else(|| self.text_value("forcepowers"))
+            .text_value("forcepowers")
             .unwrap_or_default()
             .to_owned();
-        let reply = force_rank_reply(&current, rules, self.force_profile.rejoin_team());
+        let reply = force_rank_reply(
+            &current,
+            rules.for_sent_profile(),
+            self.force_profile.rejoin_team(),
+        );
+        // The reply waits for this userinfo, carrying the fitted profile.
+        self.userinfo_dirty.store(true, Ordering::Release);
         if reply.changed {
-            self.userinfo_dirty.store(true, Ordering::Release);
             self.shell.push_log(format!(
                 "^5Force profile adjusted to server limits: ^7{}",
                 reply.forcepowers
@@ -763,6 +821,34 @@ mod tests {
         let console = ViewerConsole::new(old).unwrap();
         let kept = console.float_cvar("sensitivity").unwrap();
         assert!((kept - 13.022).abs() < 1e-9, "{kept}");
+    }
+
+    /// The nameplate's own powers are what the server grants the profile that is
+    /// sent, not what it would grant the player's own: a profile over the server's
+    /// points only because of disabled powers has other powers trimmed in the
+    /// sent one.
+    #[test]
+    fn own_force_allocation_follows_the_profile_sent() {
+        use sjk_client::{ForceLegalizeRules, legalize_force_powers};
+        let directory = tempfile::tempdir().unwrap();
+        let mut console = ViewerConsole::new(directory.path().join("config.cfg")).unwrap();
+        let preferred = "7-1-211012023123002100";
+        assert!(console.set_cvar("forcepowers", preferred));
+        let rules = ForceLegalizeRules {
+            max_rank: 4,
+            disabled_mask: 65,
+            ..ForceLegalizeRules::default()
+        };
+        console.force_profile.set_server_rules(Some(rules));
+        let own = console.own_force_allocation().unwrap();
+        let sent = console.force_profile.sent_forcepowers(preferred);
+        assert_eq!(
+            own,
+            legalize_force_powers(&sent, rules).allocation,
+            "the server grants the sent profile"
+        );
+        let naive = legalize_force_powers(preferred, rules).allocation;
+        assert_ne!(own, naive, "the player's own profile would be granted more");
     }
 
     /// Q's quick wheel opens on the page used last: a new profile binds the

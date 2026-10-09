@@ -249,6 +249,30 @@ impl VirtualFileSystem {
         }
     }
 
+    /// This file system over `lower`'s mounts: what reads would see had `lower`'s
+    /// mounts been mounted first, below every one of this one's. The sources are
+    /// shared, not reopened; `lower`'s mounts get new ids in the result.
+    pub fn with_lower(&self, lower: &Self) -> Result<Self, VfsError> {
+        let mut next_mount_id = self.next_mount_id;
+        let mut mounts = Vec::with_capacity(lower.mounts.len() + self.mounts.len());
+        for mount in &lower.mounts {
+            mounts.push(MountedSource {
+                id: MountId(next_mount_id),
+                ..mount.clone()
+            });
+            next_mount_id = next_mount_id
+                .checked_add(1)
+                .ok_or(VfsError::TooManyMounts)?;
+        }
+        mounts.extend(self.mounts.iter().cloned());
+        Ok(Self {
+            mounts,
+            next_mount_id,
+            max_asset_bytes: self.max_asset_bytes,
+            read_diagnostics: self.read_diagnostics,
+        })
+    }
+
     pub fn mounts(&self) -> impl DoubleEndedIterator<Item = MountSummary> + '_ {
         self.mounts.iter().map(|mount| MountSummary {
             id: mount.id,
@@ -802,6 +826,33 @@ mod original_name_tests {
 #[cfg(test)]
 mod without_mounts_tests {
     use super::*;
+
+    #[test]
+    fn lower_mounts_are_read_only_where_nothing_above_has_the_path() {
+        let mut vfs = VirtualFileSystem::new();
+        let base = vfs
+            .mount_memory("base", [("ui/hud.menu", b"base".to_vec())])
+            .unwrap();
+        let mut lower = VirtualFileSystem::new();
+        lower
+            .mount_memory(
+                "pack",
+                [
+                    ("ui/hud.menu", b"pack".to_vec()),
+                    ("sound/new.wav", b"new".to_vec()),
+                ],
+            )
+            .unwrap();
+        let both = vfs.with_lower(&lower).unwrap();
+        let read = |path| both.read(path).unwrap().unwrap().bytes;
+        assert_eq!(read("ui/hud.menu"), b"base");
+        assert_eq!(read("sound/new.wav"), b"new");
+        let ids: Vec<_> = both.mounts().map(|mount| mount.id).collect();
+        assert_eq!(ids.len(), 2);
+        assert_eq!(ids[1], base);
+        assert_ne!(ids[0], base, "the lower mount gets an id of its own");
+        assert!(vfs.read("sound/new.wav").unwrap().is_none());
+    }
 
     #[test]
     fn hidden_mounts_are_skipped_and_the_rest_keep_their_order() {

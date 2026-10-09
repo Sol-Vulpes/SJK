@@ -16,6 +16,7 @@ BSP geometry, PVS visibility, lightmaps, shader stages and legacy models.
 | Secondary views | [scene_views.rs](../crates/sjk-viewer/src/scene_views.rs) |
 | Sun and real-time lighting | [sun_shadows.rs](../crates/sjk-viewer/src/sun_shadows.rs) |
 | Movers in lamp shadows | [mover_occlusion.rs](../crates/sjk-viewer/src/mover_occlusion.rs) |
+| Dynamic lights and walls | [dynamic_light_shadows.rs](../crates/sjk-viewer/src/dynamic_light_shadows.rs) |
 | Post processing | [post_aa.rs](../crates/sjk-viewer/src/post_aa.rs) |
 | Dynamic glow | [post_glow.rs](../crates/sjk-viewer/src/post_glow.rs), [glow_pass.rs](../crates/sjk-viewer/src/glow_pass.rs) |
 | Eye adaptation | [post_exposure.rs](../crates/sjk-viewer/src/post_exposure.rs) |
@@ -236,6 +237,38 @@ exact single-cell reduction for aligned power-of-two blocks and the previous
 area-overlap calculation for other dimensions. These changes reduce preparation
 work without reducing source count, texture resolution or lighting quality.
 
+### Pipelines compiled at load
+
+A render pipeline created while a frame is recorded stalls that frame while the
+driver compiles its stage program: about half a second per program on a cold RADV
+shader cache, by the note in [world_materials.rs](../crates/sjk-viewer/src/world_materials.rs),
+far less once the driver's cache holds it. World installation runs on the
+`sjk-world-install` thread while the previous world or the loading notice is shown,
+so it compiles there what the new map's first frames draw:
+
+- the depth-tested pipeline of every key the map's world and model materials use, the
+  no-depth one of model keys and the forced-alpha variants of model stages (log:
+  `compiled N pipeline keys`);
+- in real-time lighting, where the static world's opaque stages draw through the stage
+  table ([stage_table.rs](../crates/sjk-viewer/src/stage_table.rs)), the table's program
+  and both lighting variants (scene and live emission) of every stage it holds: the
+  static-world variant for materials with static surfaces, the entity variant for
+  models (log: `Stage table: compiled N pipelines at load`);
+- in real-time lighting, the light pass's depth-priming pipelines and, on a map with a
+  lamp cache, its cached receiver, light and direct-lamp pipelines (log: `Light pass:
+  depth priming ... compiled at load`).
+
+Until 08/10/2026 the last two groups were compiled in the first frame that drew them,
+after the map had gone live: the first frames of a real-time map compiled the table
+program and one pipeline per visible key, and more as new surfaces came into view. A
+load now takes longer by those compiles instead. Still compiled in a frame, on first
+use: glow variants, the lamp cache's bake pipelines (in the first lit frame, with the
+bake), the clouds' and weather's programs (first frame with sky or weather), models
+loaded mid-match (their entity pipelines as they load, their table pipelines when
+first drawn) and keys only a later remap uses. Not measured on a GPU; compare the
+`[+ms]` stamps of these log lines and the `frame-budget` maxima after a map load with
+`SJK_FRAME_BUDGET=1` (see [status](status.md)).
+
 ## Selected controls
 
 | Cvar | Behavior |
@@ -264,7 +297,8 @@ work without reducing source count, texture resolution or lighting quality.
 | `r_specularMapping` | Specular, roughness and metalness maps on the same surfaces; default 1 (rend2: 0), restart required |
 | `r_parallaxMapping` | Parallax from the height in `_nh`/`normalHeightMap` images; needs `r_normalMapping`; default 1 (at `r_parallaxStrength` 0.1; rend2: 0), restart required |
 | `r_parallaxStrength` | Depth of parallax, a multiplier on the stage's `parallaxDepth` (rend2's 0.05 without one), 0 (flat) to 1.575 in steps of 1/40; default 0.1 (Sol's choice: generated height is a guess from paint, and the full depth swam), live, archived; Settings slider 0–1 |
-| `r_materialMapsDebug` | Material-mapped surfaces only: 1 mapped normal as colour, 2 tint by maps found, 3 normal-map relief, 4 reflection probes alone, 5 without reflection probes, 6 emission maps alone; default 0, live, not archived |
+| `r_parallaxNearDistance` | Units from a surface's plane inside which its parallax stops growing on screen as the camera closes in (see [Parallax](#parallax)), 0 (off) to 60 in steps of 4; default 24, live, archived, console only |
+| `r_materialMapsDebug` | Material-mapped surfaces only: 1 mapped normal as colour, 2 tint by maps found, 3 normal-map relief, 4 reflection probes alone, 5 without reflection probes, 6 emission maps alone, 7 parallax reach; default 0, live, not archived |
 | `r_emissiveMaps` | Emission maps (`<texture>_e`, SJK's) on lightmapped world surfaces; default 1, restart required. See [Emission maps](#emission-maps) |
 | `r_emissionStrength` | Brightness of emission maps, 0 (off) to 7.97 in steps of 1/32; default 1, live, archived |
 | `r_emissiveGlow` | Dynamic-glow halo around emitting texels (with `r_DynamicGlow 1`); default 1, live, archived |
@@ -275,6 +309,7 @@ work without reducing source count, texture resolution or lighting quality.
 | `r_floorReflections` | Polished floors mirror the scene (see [Floor reflections](#floor-reflections)); default 1, live |
 | `r_DynamicGlow` | Halo around `glow` shader stages: 0 off, 1 on (default), 2 saber blades only, 3 the glow alone (debug); live. See [Dynamic glow](#dynamic-glow) |
 | `r_dynamicGlowStyle` | Glow blur: 1 EternalJK rd-vulkan's (default), 0 retail rd-vanilla's; live |
+| `r_dynamicLightShadows` | Walls stop dynamic lights (sabers, bolts, explosions) in real-time lighting, 1 (default, SJK) or 0 (they light through, as retail); live, console only, archived. See [Dynamic lights and walls](#dynamic-lights-and-walls) |
 
 See [day_night.rs](../crates/sjk-viewer/src/day_night.rs),
 [sun_shadow_settings.rs](../crates/sjk-viewer/src/sun_shadow_settings.rs) and
@@ -642,8 +677,50 @@ figure above does not include them; it was not measured.
 
 Not covered: a train or lift that travels outside its box does not shadow lamps it
 reaches there; alpha-tested and blended mover faces let light through, like those of
-the static world; dynamic lights still cast no shadows; baked lightmaps (`r_dayNight 0`)
-are unchanged.
+the static world; movers do not stop dynamic lights (the static world does, see
+[Dynamic lights and walls](#dynamic-lights-and-walls)); baked lightmaps
+(`r_dayNight 0`) are unchanged.
+
+## Dynamic lights and walls
+
+Saber glow, bolts, explosions, Force effects and the other dynamic lights (the frame's
+point-light list, at most 32) stop at the static world in real-time lighting: a saber by a
+wall no longer lights the floor of the room behind it, nor the corridor round a corner
+([dynamic_light_shadows.rs](../crates/sjk-viewer/src/dynamic_light_shadows.rs)).
+Before, a surface took a dynamic light by distance and facing alone
+([point_lights.wgsl](../crates/sjk-viewer/src/point_lights.wgsl)), so every floor, ceiling
+and wall within its radius that faced it was lit, whatever stood between.
+
+- **Tiles.** Each frame, before any view draws, every light gets a 28×28 octahedral tile
+  (the lamps' mapping): per direction, how far the light gets before the static triangles
+  of the lamp visibility stop it, in 255ths of its reach (radius plus 8 units), and the
+  normal of what stops it. Glass, grates and sky let it through, as for the lamps. The GPU
+  traces them (784 rays a light, 25,088 for a full list) and copies them into the
+  point-light uniform block after the CPU's part (58,208 bytes in all), so the programs
+  read them without a new binding. A frame that traces none reads every light unshadowed.
+- **Receivers.** World surfaces, their material-map highlights and models lit per pixel
+  (`r_modelPixelLight`) take four bilinear taps of the light's tile. A tap is clear when
+  its ray gets as far as the receiver, or past the receiving plane (the lamps' test, so
+  grazing floors never shadow themselves). Otherwise what stopped it decides: a receiver
+  in front of that face (the other face of a crease, the next step of a stair) keeps the
+  light, one behind it (a wall between) loses it. Taps that find a wall between also
+  discount those that only passed beside a face, so a floor running on under a wall does
+  not light the room behind it. The geometric normal is used, never a normal map's.
+- **Edges.** Shadows are soft over about a texel (6.4°); in the tests their edge reaches a
+  tenth of the distance into the shadow and a fifth into the light. Seen past a wall's
+  foot almost edge-on, a large light (an explosion 90 units from the wall) leaves a trace
+  within a texel of the foot behind it: under 3% of its strength, 0.1% of what used to
+  come through.
+
+`r_dynamicLightShadows 0` lights through walls again for comparisons. `SJK_GPU_PHASES`
+times the trace as `dlight-shadows`. Unit tests follow the shaders' arithmetic in Rust on
+small scenes (a wall, a corner, stairs, a light just inside the face it hit) and validate
+the programs; nothing here has been rendered or timed on a GPU yet.
+
+Not covered: baked lightmaps (`r_dayNight 0`) build no triangles, so dynamic lights pass
+walls there as in the original game; movers are not in the triangles, so a closed door lets
+dynamic light through; models lit once each (`r_modelPixelLight 0`) are unchanged; dynamic
+lights still cast no shadows of actors or movers.
 
 ## Indirect lighting and dark-area readability
 
@@ -805,9 +882,22 @@ from their entity's own power bit, so both the combined and the plain shell show
 ([force_overlays.rs](../crates/sjk-client/src/force_overlays.rs)). JoF EJK's
 base-enhanced server check is not ported.
 
-`EV_PLAYER_TELEPORT_IN/OUT` play `mp/spawn` where the player's box (mins z -16, maxs z 40)
-lands when dropped up to 4096 units, as `cg_event.c` does, not at the player's centre;
-over a void no effect plays.
+`EV_PLAYER_TELEPORT_IN/OUT` play `mp/spawn`, and `EV_BECOME_JEDIMASTER` plays
+`mp/jedispawn`, where the player's box (mins z -16, maxs z 40) lands when dropped up to
+4096 units against `MASK_SOLID` (terrain included), as `cg_event.c` does
+(`:2409-2430`, `:2699-2751`), not at the player's centre; over a void no effect plays.
+The effect's forward axis is straight up (`ang = (0, 0, 1)`), whichever way the player
+faces. Its green beam is drawn by `org2fromTrace` lines: `CFxScheduler::CreateEffect`
+ends such a line where a trace from its origin along the forward axis meets a solid,
+at most 16,384 units away (`FxScheduler.cpp:1392-1418`), so the beam stands from the
+floor to the ceiling or sky.
+SJK traces every `org2fromTrace` line once, before it is first drawn
+([effect_geometry.rs](../crates/sjk-viewer/src/effect_geometry.rs)
+`resolve_traced_streak`), with `org2isOffset` moving the untraced end as electricity
+does. Lines used to take only their authored `origin2`, so a traced line had no length
+and drew as a camera-facing square at the floor. Trip mine beams keep their own cached
+trace. Stock's `CG_Trace` also stops the dropped box on solid entities such as a lift;
+SJK drops it onto the world only, and `traceImpactFx` on a traced line is not played.
 
 The Force Speed afterimages use it: two copies of the actor in its current pose
 at alpha 100 and 50, spaced by `(int)(6 * speed * 0.004)` units along the
@@ -947,6 +1037,56 @@ The body is shown only for a living player in their own view, excluding
 spectators/follow and dead flags. Shared fallback meshes stay hidden until
 the local model loads. The body and head mask use one filtered equipment
 decision; head descendants such as hair and helmets are masked too.
+
+## Saber blade skins
+
+A blade skin replaces a saber blade's colour (not its hilt) with a look of its own; the
+first is the Sun blade, an SJK unlockable ([unlockables.md](unlockables.md#blade-skins)).
+The renderer is generic and data-driven: a skin's look is a blade-skin file in a pack
+the SJK hub delivers ([unlockables.md](unlockables.md#blade-skin-files)), and no skin's
+values are in the code. [saber_skins.rs](../crates/sjk-viewer/src/saber_skins.rs) holds
+the loaded skins (`LoadedSkins`, at most 8, numbered in id order) and the per-client
+table of who wears which (filled from the hub's looks; ids and names are
+[unlockables.rs](../crates/sjk-viewer/src/unlockables.rs)'s); `BladeColor::Skin` carries
+the skin's number, trail and light wherever a blade colour is chosen (in the hand,
+thrown, first person, the menu stage). A skin whose pack is not loaded is the player's
+stock blade.
+
+- **Material.** Each loaded skin is the saber material of its number after the six
+  retail pairs and the neutral RGB pair (`saber_rgb.rs` `SKIN_MATERIAL` = 7, eight
+  slots, which hold the neutral pair until a skin loads there). Its glow/core pair is
+  the pack's images, or generated from the file's two profiles by the same code as the
+  neutral pair (`generated_glow`/`generated_core`; the neutral pair's bytes are
+  unchanged and pinned by a test). Retail and RGB blades keep their materials and
+  shading unchanged.
+- **Parameters.** The skins' parameters are a uniform array of 8 `Skin` structs of 21
+  `vec4`s (`SkinUniform`, bind group 2 of the saber pipelines), written only when skins
+  load (`saber_gpu::Runtime::upload_skins`), never per frame. Each instance's material
+  slot selects its skin.
+- **Animation.** `saber.wgsl` colours and animates a skin from two per-instance values,
+  presentation seconds wrapped at 1024 s and a per-blade seed
+  (`Instance::with_animation`; the seed follows the entity, saber and blade, so a thrown
+  blade keeps its hand's) and its parameters: granulation (one or two octaves of value
+  noise drifting toward the tip), flame tongues licking outward at the corona's rim,
+  shimmer waves, up to 8 flare tracks each sending a bright knot from hilt to tip once a
+  cycle, lit on the cycles whose draw passes the file's threshold, brightening and
+  widening the corona, and the core's breathing. The corona is graded from the file's
+  rim colours to its inside colour; the core is the file's hot colour with a fringe
+  between two colours. The glow capsule may reach `corona.reach` (1 to 2) times the
+  stock one; the effect bounds allow for 2 (`MAX_GLOW_REACH`). `fragment_glow` shades
+  the glow the same way, so the dynamic glow's bloom follows the flares.
+- **Trail and light.** The skin's file gives its trail colour, its light colour (with
+  the stock gain) and the light's flicker (an amount and up to two waves, phased per
+  hilt).
+
+Per frame this adds one 8-byte vertex attribute per blade and nothing else on the
+CPU; the noise is only evaluated for skinned blades. The world shot `duel6_sun_blade`
+([world_shot_saber_skins.rs](../crates/sjk-viewer/src/world_shot_saber_skins.rs)),
+given the hub's pack through `SJK_TEST_PACKS`, draws the Sun between a stock orange and
+a stock blue blade, the Sun close up every 0.3 s, and the Character page's model holding
+it; reviewed by eye on one GPU (08/10/2026), and again after the move to blade-skin
+files against shots of the earlier built-in Sun (same day), not on other GPUs or in a
+live match.
 
 ## Saber trails
 
@@ -1267,11 +1407,9 @@ Shading lives in [material_maps.wgsl](../crates/sjk-viewer/src/material_maps.wgs
 - With specular maps, surfaces reflect the nearest reflection probe (below), with
   rend2's split-sum `CalcIBLContribution`; without a captured probe, real-time
   lighting keeps its sky rim.
-- Parallax uses rend2's 16 linear and 8 binary steps through the height, with
-  two limits rend2 lacks: the depth fades out below about 20° above the surface
-  and where the height map is minified (1.5 to 4 texels per pixel), and the
-  offset is at most depth / 0.35 (Welsh's offset limiting). rend2's depth / cos
-  grows without bound toward grazing views; Sol saw generated relief swim.
+- Parallax marches rend2's view ray through the height with limits rend2 lacks
+  ([Parallax](#parallax)): the offset is at most depth / 0.35, the depth fades out
+  where it would no longer show, and near the camera it stops growing on screen.
   `r_parallaxStrength` scales the depth live (lighting-mode bits 2–7, which decode
   to the default 0.1 when empty); SJK draws a tenth of it by default, 0 flattens it.
 - Specular anti-aliasing (Kaplanyan and Hoffman; Tokuyoshi and Kaplanyan's bound):
@@ -1281,6 +1419,65 @@ Shading lives in [material_maps.wgsl](../crates/sjk-viewer/src/material_maps.wgs
 - The probe reflection follows half the mapped tilt: generated normal maps guess
   relief from paint, and at full tilt every guessed bump warped the reflected
   room as the view moved. Highlights keep the full mapped normal.
+
+### Parallax
+
+rend2's `RayIntersectDisplaceMap` marches the view ray through the depth in the normal
+map's alpha (16 linear and 8 binary steps) and offsets the texture by depth / cos, which
+grows without bound toward grazing views; Sol saw generated relief swim.
+`material_map_parallax` in [material_maps.wgsl](../crates/sjk-viewer/src/material_maps.wgsl)
+keeps the march and limits it:
+
+- **Offset.** At most depth / 0.35 (Welsh's offset limiting).
+- **Far.** The depth fades out where all of it would move the texture by less than half
+  a pixel on screen (gone at an eighth), below 8.6° above the surface (gone at 2.9°) and
+  where the sampler reads mip levels 2 to 4 (4 to 16 texels a pixel, at the level a 16×
+  anisotropic sampler picks), which no longer hold the relief. Until 08/10/2026 it faded
+  below 20° (gone at 8.6°) and from 1.5 to 4 texels a pixel along the longer side of the
+  pixel's footprint, which a grazing view stretches: floors lost their parallax a few
+  metres ahead. The first limit grows with the depth and the resolution, so deeper
+  relief and 4K keep parallax farther. Where the new limits keep less
+  than the old ones did (views close to head-on, far away), the old ones moved the
+  texture by less than half a pixel, in every view the tests sweep.
+- **Near.** Closer to the surface's plane than `r_parallaxNearDistance` (default 24
+  units), the depth shrinks in proportion to the camera's distance from that plane, so
+  the parallax keeps the size on screen it had at that distance. Without the limit it
+  grows as 1/distance: the third-person camera pressed 4 units from a wall saw six times
+  the parallax it had at 24 units, swimming as the camera moved and stretching the
+  texture over every relief edge. A first-person eye stays 15 units from a wall and keeps
+  15/24 of the depth; floors (60 units below a standing eye, 36 crouched) keep all of it.
+  `r_parallaxNearDistance 0` turns the limit off, for comparison.
+- **Steps.** Two linear steps per texel of the mip level the ray crosses, 4 to 24, then 6
+  binary steps and rend2's final interpolation: a pixel reads the height at most 11 times
+  (4 steps) to 31 (24 steps), against rend2's 25. A shallow or distant relief takes the
+  fewest; a deep one seen up close the most, so its layers no longer show.
+- **Mip seams.** The maps and the diffuse image are read at the offset coordinates with
+  the coordinates' own screen derivatives. Implicit derivatives took in the offset's,
+  whose jump at a relief edge picked a blurred mip level along the edge: a seam that grew
+  as the camera came closer and the texture was magnified.
+
+How far the whole depth reaches, before and after, in units from the camera, at the
+default depth for a texture repeating every 128 units (retail's scale 0.5) with a
+1024-texel map (an HD pack's; a 256-texel map in brackets), 1920 pixels across a 90°
+view:
+
+| Surface | Whole depth to | Gone by |
+| --- | --- | --- |
+| Floor, standing eye (60 units up) | 90 (170) → 410 | 160 (340) → 920 |
+| Wall seen at 45° | 140 (560) → 570 (910) | 340 (1,360) → 1,920 (3,480) |
+
+At 3840 pixels across, walls keep it about twice as far and floors to the 2.9° limit
+(about 1,200 units). The numbers come from
+[a model of the shader's limits](../crates/sjk-viewer/src/material_map_parallax_tests.rs),
+whose tests also check that the limits fade without a ring, that the near limit holds the
+parallax on screen, that the steps stay within 4 to 24, and that the shader keeps the
+modelled arithmetic. Cost: surfaces past the old limits now march too, mostly with 4
+linear steps (at most 11 reads); estimated, not measured.
+
+`r_materialMapsDebug 7` shows the reach on parallax stages: red is the share of the
+depth the far limits keep, green the share the near limit keeps, blue the linear steps
+out of 24. Yellow is the whole depth; it turns green where distance or a grazing view
+fades it out and red where the camera's closeness holds it back.
 
 ### Lamp and bounce direction in real-time lighting
 
@@ -1394,7 +1591,8 @@ it found, for example `material maps (normal+specular+parallax): 429 stages,
 branch in the material program; the ordinary programs do not change): 1 shows the
 mapped world-space normal as colour, 2 tints each stage by the maps it found (red
 parallax, green normal, blue specular, so normal plus specular is cyan), 3 shows
-the normal map's relief, four times its departure from the face, on grey.
+the normal map's relief, four times its departure from the face, on grey, and 7 how much
+of the parallax depth each pixel keeps ([Parallax](#parallax)).
 Surfaces without maps keep their ordinary look in every view, so 2 shows at a
 glance which surfaces take maps.
 
@@ -2010,7 +2208,7 @@ font, following OpenJK `codemp`:
 | --- | --- | --- |
 | `ergoec` (`FONT_MEDIUM`) | SJK Menu | Menus, crosshair name, centre prints, warmup text, match timer, enemy info, scoreboard names and headings |
 | `ocr_a` (`FONT_SMALL`) | SJK Chat | Chat box and typing line, weapon/Force/inventory selection names, scoreboard numbers |
-| Console character set (`gfx/2d/charsgrid_med`) | JetBrains Mono | Console and notify lines, FPS, snapshot, vote, team overlay, connection interrupted, kill feed |
+| Console character set (`gfx/2d/charsgrid_med`) | JetBrains Mono | Console and notify lines, FPS, snapshot, vote, team overlay, connection interrupted |
 
 The routing is per text run: the HUD maps its text ids in
 [text_values.rs](../crates/sjk-viewer/src/hud/text_values.rs), chat marks its
@@ -2124,8 +2322,8 @@ which the retail and the checked custom HUDs do not use.
 `cg_hudStyle classic` selects SJK's classic layout in either font. Under `game`,
 SJK's default layout ([default.json](../crates/sjk-viewer/assets/hud/default.json),
 or a `hud.json` beside the configuration) draws the crosshair, team rows, votes,
-kill feed, timer and lagometer, and the status too when the game HUD's files give
-none; with `cg_classicHudFont` on, the classic layout does instead. A saved
+timer and lagometer, and the status too when the game HUD's files give
+none (the [kill feed](client.md#kill-feed) is drawn by the HUD itself in every style); with `cg_classicHudFont` on, the classic layout does instead. A saved
 `modern`, the retired layout of that name, is reset to `game` at start.
 
 `cg_hudStyle radial` (picker name "SJK radial") is SJK's own take on the TheRisqe Radial
@@ -2152,7 +2350,7 @@ Medium yellow, Strong red, Dual green, Staff magenta, as TheRisqe's style pictur
 the style's name replaces the number, in the same colour. The weapon-name transient rests in
 the hollow between the bars, above the pills.
 It is the layout document [radial.json](../crates/sjk-viewer/assets/hud/radial.json): the
-default layout's other widgets (crosshair, team rows, votes, kill feed, timer, lagometer)
+default layout's other widgets (crosshair, team rows, votes, timer, lagometer)
 plus `arc` widgets, which `hud.json` overrides cannot yet replace for this style.
 Widgets are placed in 1080-line pixels that grow with the window height and `cg_hudScale`;
 the ring group's drop is a widget's `offset_fraction` instead, a fraction of the screen's

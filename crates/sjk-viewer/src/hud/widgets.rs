@@ -12,9 +12,7 @@ pub(super) struct EmitContext<'a> {
     pub(super) family: super::family::Policy,
     /// Sampled crosshair and telemetry placement.
     pub(super) targeting: super::targeting::Policy,
-    /// Retained icon handles and sampled tint/size policy.
-    pub(super) icons: &'a super::icons::Icons,
-    /// Physical viewport for obituary anchoring.
+    /// Physical viewport.
     pub(super) viewport: [f32; 2],
     pub(super) dpi_scale: f32,
     /// Hero overlay scale, independent of the compact HUD's historical clamp.
@@ -24,8 +22,6 @@ pub(super) struct EmitContext<'a> {
     pub(super) pulse: f32,
     pub(super) team_side: u8,
     pub(super) team_len: usize,
-    pub(super) kill_len: usize,
-    pub(super) kill_alpha: f32,
     pub(super) crosshair_alpha: f32,
     pub(super) crosshair_teammate: bool,
     pub(super) lagometer: &'a sjk_client::LagometerSamples,
@@ -143,9 +139,9 @@ pub(super) fn emit(
         HudWidgetKind::Repeater if binding == Some("vote_panel") => {
             super::vote::emit(draw_list, theme, widget, rect, context)
         }
-        HudWidgetKind::Repeater if binding == Some("kill_feed") => {
-            emit_kill_feed(draw_list, theme, widget, rect, context)
-        }
+        // The kill feed is drawn by `super::kill_feed` under the top right's other
+        // readouts, not by a layout widget; one left in a `hud.json` draws nothing.
+        HudWidgetKind::Repeater if binding == Some("kill_feed") => {}
         HudWidgetKind::Repeater if binding == Some("lagometer") => {
             let rect = context.targeting.lagometer_rect(rect, context.viewport);
             emit_lagometer(draw_list, theme, widget, rect, context)
@@ -195,59 +191,6 @@ fn emit_crosshair_name(
         size: crosshair_name_size(widget.style.type_scale.unwrap_or(1.0), context.dpi_scale),
         color,
         align: TextAlign::Center,
-        overflow: TextOverflow::Ellipsis,
-        weight: FontWeight::Semibold,
-        letter_spacing: 0.0,
-    });
-}
-
-/// One fading obituary line, no backplate: the console keeps the history.
-fn emit_kill_feed(
-    draw_list: &mut DrawList,
-    theme: Theme,
-    widget: &HudWidget,
-    rect: Rect,
-    context: &EmitContext<'_>,
-) {
-    if context.kill_len == 0 {
-        return;
-    }
-    let mut color = widget.style.foreground.unwrap_or(theme.foreground);
-    color.a *= context.kill_alpha;
-    let (x, align) = match context.family.kill_align {
-        1 => (24.0 * context.dpi_scale, TextAlign::Start),
-        2 => ((context.viewport[0] - rect.width) * 0.5, TextAlign::Center),
-        _ => (
-            context.viewport[0] - rect.width - 24.0 * context.dpi_scale,
-            TextAlign::End,
-        ),
-    };
-    let mut text_rect = Rect::new(
-        x + context.family.kill_geometry[0] * context.viewport[0] / 640.0
-            * if context.family.kill_align == 0 {
-                -1.0
-            } else {
-                1.0
-            },
-        rect.y + context.family.kill_geometry[1] * context.viewport[1] / 480.0,
-        rect.width,
-        rect.height * context.family.kill_geometry[2],
-    );
-    context.icons.feed(
-        draw_list,
-        &mut text_rect,
-        context.kill_alpha,
-        (context.viewport[1] / 480.0).clamp(0.6, 5.0),
-    );
-    let _ = draw_list.push(DrawCommand::Text {
-        rect: text_rect,
-        text: TextId(300),
-        size: theme.typography.body
-            * widget.style.type_scale.unwrap_or(1.0)
-            * context.dpi_scale
-            * context.family.kill_geometry[2],
-        color,
-        align,
         overflow: TextOverflow::Ellipsis,
         weight: FontWeight::Semibold,
         letter_spacing: 0.0,
@@ -339,6 +282,16 @@ fn emit_panel(draw_list: &mut DrawList, theme: Theme, widget: &HudWidget, rect: 
     }
 }
 
+/// The team overlay's heading height and row pitch, at its own scale.
+const TEAM_HEADING: f32 = 44.0;
+const TEAM_ROW: f32 = 66.0;
+
+/// Bottom of the `rows` rows [`emit_team`] draws in `rect` at `scale` (the HUD's
+/// hero scale times `cg_drawTeamOverlayScale`).
+pub(super) fn team_bottom(rect: Rect, scale: f32, rows: usize) -> f32 {
+    rect.y + (TEAM_HEADING + rows as f32 * TEAM_ROW) * scale
+}
+
 fn emit_team(
     draw_list: &mut DrawList,
     theme: Theme,
@@ -364,7 +317,7 @@ fn emit_team(
         Color::new(0.20, 0.55, 1.0, 1.0)
     };
     for row in 0..context.team_len {
-        let row_y = rect.y + 44.0 * s + row as f32 * 66.0 * s;
+        let row_y = rect.y + TEAM_HEADING * s + row as f32 * TEAM_ROW * s;
         let _ = draw_list.push(DrawCommand::RoundedRect {
             rect: Rect::new(rect.x + 8.0 * s, row_y, 3.0 * s, 56.0 * s),
             radius: 1.5,

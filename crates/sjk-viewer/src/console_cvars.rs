@@ -318,7 +318,8 @@ pub(super) fn register_daily_cvars(cvars: &mut CvarRegistry) -> Result<(), sjk_s
             "com_maxfps",
             -1_i64,
             archive | CvarFlags::OMIT_DEFAULT,
-            "Maximum rendered frames per second; -1 matches the monitor's refresh rate              (125 when unknown), 0 is uncapped",
+            "Maximum rendered frames per second; -1 (AUTO) is 125, or the monitor's refresh \
+             rate with com_maxfpsMonitor 1; 0 is uncapped",
         ),
         CvarDefinition::new("cg_drawFPS", false, archive, "Display FPS and frame time"),
         CvarDefinition::new(
@@ -515,7 +516,13 @@ pub(super) fn register_daily_cvars(cvars: &mut CvarRegistry) -> Result<(), sjk_s
             crate::illuminate::CVAR,
             1_i64,
             archive,
-            "Illuminate on the Force wheel: a holocron by your shoulder that lights the way,              seen only by you (0 removes it)",
+            "Illuminate on the Force wheel: a holocron by your shoulder that lights the way, which other SJK players on the server see too (0 removes it)",
+        ),
+        CvarDefinition::new(
+            crate::unlockables::SABER_SKIN_CVAR,
+            "",
+            archive,
+            "The blade skin your sabers wear, by unlock id (saber_sun: the Sun blade), shown once your SJK profile holds it; empty for the stock blade",
         ),
         CvarDefinition::new(
             crate::quick_wheel::SOUNDS_CVAR,
@@ -686,7 +693,7 @@ pub(super) fn register_daily_cvars(cvars: &mut CvarRegistry) -> Result<(), sjk_s
             crate::scoreboard::style::COMPACT_CVAR,
             true,
             archive,
-            "SJK scoreboard: thin rows, so every player fits in one column",
+            "SJK scoreboard: thin rows, so every player fits in one column, as wide as the names and centred",
         ),
         CvarDefinition::new(
             "cg_smallScoreboard",
@@ -728,7 +735,7 @@ pub(super) fn register_daily_cvars(cvars: &mut CvarRegistry) -> Result<(), sjk_s
             "com_maxfpsDefaultVersion",
             0_i64,
             archive,
-            "Internal migration marker for the refresh-rate com_maxfps default",
+            "Internal migration marker for the AUTO com_maxfps default",
         ),
         CvarDefinition::new(
             "cl_bindDefaultsVersion",
@@ -765,6 +772,12 @@ pub(super) fn register_daily_cvars(cvars: &mut CvarRegistry) -> Result<(), sjk_s
             0_i64,
             archive,
             "Internal migration marker for the ejk camera style default",
+        ),
+        CvarDefinition::new(
+            "cg_killfeedDefaultVersion",
+            0_i64,
+            archive,
+            "Internal migration marker for the kill feed being on by default",
         ),
     ];
     for definition in definitions {

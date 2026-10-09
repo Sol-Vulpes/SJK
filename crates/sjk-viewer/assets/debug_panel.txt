@@ -269,9 +269,9 @@ test: Check the same in the in-game settings menu.
 [fps-cap-auto]
 area: Menus & settings
 title: FPS cap follows the monitor; caps hold their exact rate
-change: com_maxfps defaults to -1 = AUTO (monitor refresh, 125 if unknown); 0 is uncapped.
+change: com_maxfps -1 = AUTO: 125, or the monitor's refresh with com_maxfpsMonitor 1; 0 is uncapped.
 change: An old saved 1000 becomes AUTO once. Caps no longer run ~7% low (240 gave 223).
-test: Settings > Video: FPS cap shows AUTO; cg_drawFPS 1 reads your refresh rate (240).
+test: Settings > Video: FPS cap shows AUTO; with Detect refresh rate on, cg_drawFPS 1 reads your rate.
 test: Right from AUTO gives 0 (uncapped), then 25, 50...; dragging to the far left gives AUTO.
 test: com_maxfps 144 then 60: cg_drawFPS holds 144 and 60, not a few frames below.
 test: Record with OBS uncapped vs AUTO: compare skipped frames in the OBS log.
@@ -541,6 +541,20 @@ test: On a server that remaps the map: blockRemaps; the server's remaps go at on
 test: listRemaps says the map is blocked; the map's own and local remapShader remaps still apply.
 test: unblockRemaps brings them back; after a restart the list is still in cg_remapsBlockedMaps.
 note: Not run in game yet. The map's own worldspawn remaps are never blocked.
+
+[blade-skins]
+area: Rendering & effects
+title: Unlockable blade skins, and others see your look (SJK PR #45)
+change: Blade skins come in asset packs the hub serves; the first is the Sun blade (an unlock).
+change: Others on the server see your skin, and your lit Illuminate holocron, through the hub.
+change: Profile > Unlockables (or unlockables) lists them; saberskin equips one.
+test: Hub with unlocks and packs: sjk-hub unlock <key_id> saber_sun, or Staff page > Unlock.
+test: Profile > Unlockables: the Sun swatch is drawn; equip it, join a server, ignite the saber.
+test: A second SJK player on the server sees your skin, and your holocron by your shoulder.
+test: Relock it on the Staff page: your blade goes back to the stock look.
+test: With no skin, retail and RGB blades look exactly as before.
+note: Needs the hub's unlocks and asset packs (SJK-hub #2 and #3), not deployed when merged.
+note: Not run in a game against the deployed hub; the sounds have not been heard yet.
 
 # ---- Audio ----
 
@@ -2695,3 +2709,132 @@ title: Looping sounds no longer drop out
 change: Saber hums and ambient loops keep playing while each frame's loops are re-sent.
 test: Stand near looping sounds (your saber, other sabers, map ambience); listen for crackles.
 test: Optional: SJK_TRACE_AUDIO=1; logs/last-client.log shows split loop frames=N every 5 s.
+
+[sjk-character-clicks]
+area: Menus & settings
+title: Clicks land on the SJK UI Character screen's controls (SJK PR #46)
+change: A blade chip click picks that chip; a < > control turns by the half clicked.
+change: A click on a Force power's name only chooses it; its level marks buy.
+test: Character > Saber: click each colour chip, then both halves of the < > controls.
+test: Character > Force: click a power's name (nothing changes), then its level marks.
+note: Not seen on screen yet; the classic pages are unchanged.
+
+[audio-device-lost]
+area: Audio
+title: A lost sound device no longer freezes the game (SJK PR #49)
+change: A sound queue nothing drains waits 250 ms once, then drops sounds instead of hanging.
+change: The log says: audio output stopped taking sound; snd_restart opens the output again.
+test: In a match, switch off the headset or disable the playback device: the game keeps running.
+test: Alt+Tab away a long while, then back: the window returns. snd_restart brings sound back.
+note: Not reproduced on Windows; the cause is from the code (WASAPI device invalidated).
+
+[fps-monitor-detect]
+area: Menus & settings
+title: Detect refresh rate is a setting, off by default (SJK PR #50)
+change: com_maxfpsMonitor 0 (default): AUTO caps at 125 and the monitor is never read.
+change: com_maxfpsMonitor 1 (Settings > Video > Detect refresh rate): AUTO follows the monitor.
+test: Default profile: cg_drawFPS 1 holds 125; turn Detect refresh rate on: it reads your rate.
+test: com_maxfps 144 holds 144 with the setting on or off.
+
+[prewarm-lighting]
+area: Rendering & effects
+title: Lighting pipelines compile at map load (SJK PR #51)
+change: The stage table, depth priming and lamp cache receiver pipelines compile while loading.
+change: New log lines: Stage table: compiled N pipelines; Light pass: ... compiled at load.
+test: Join a server on a big map: the first seconds in play stay smooth; compare with main.
+test: SJK_FRAME_BUDGET=1 prints frame-budget lines; check the max after the load.
+note: Not measured on a GPU yet; first run after an update has a cold shader cache.
+
+[door-sounds]
+area: Audio
+title: Door sounds come from the middle of the door (SJK PR #53)
+change: Brush models (doors, buttons, breakables) sound from the middle of their model.
+test: Open and close doors on mp/ffa and duel maps: the start and end sounds are heard.
+note: The saber ignition sound when switching weapons is a separate gap, not fixed here.
+
+[obituary-latin1]
+area: Console & chat
+title: Kill messages print Latin-1 names (SJK PR #57)
+change: A name with an accented letter or symbol is printed, not replaced by noname.
+change: Each name ends in ^7, so an open colour does not tint the rest of the line.
+test: Kill or be killed by a player named with e-acute: the console line shows the name.
+test: A name left in an open colour (^1Red) does not tint the words after it.
+
+[teleport-beam]
+area: Rendering & effects
+title: Teleport and spawn beam stands up (SJK PR #52)
+change: org2fromTrace effect lines are traced once and reach the ceiling or sky.
+change: The floor drop uses MASK_SOLID; the Jedi Master spawn effect points straight up.
+test: Respawn (kill) under a roof and in the open: the beam rises from your feet.
+test: Use a map teleporter (or setviewpos with cheats): the same beam; pick up a Jedi Master.
+note: Other traced lines (env/beam) now draw long, as in OpenJK. Not seen on screen yet.
+
+[scoreboard-width]
+area: HUD
+title: Compact SJK scoreboard is narrower and centred (SJK PR #55)
+change: Name column fits the longest name (140-320 px); numbers follow 48 px after it.
+change: Centred; if that covers the chat it sits just right of it. Duel cards share the centre.
+test: Hold TAB in FFA with 8 and with 32 players: a narrow, centred board; long names end in ...
+test: In team FFA and CTF the board starts beside the chat column; duel cards are centred.
+test: Settings > Scoreboard > Compact SJK scoreboard off: the old full-width board.
+note: Not seen on screen yet; world shots: duel6_sjk_scoreboard ignored test.
+
+[kill-feed]
+area: HUD
+title: Kill feed with weapon icons at the top right (SJK PR #58)
+change: Up to 5 kills: killer, weapon icon, victim; a skull for a suicide or world death.
+change: cg_killfeed is switched on once (cg_killfeedDefaultVersion) and has a Settings > HUD row.
+change: Your own kills and deaths get a stronger plate. The old one-line obituary is gone.
+test: Kill and get killed with saber, gun, Force lightning, push, fall: the icon fits the cause.
+test: Team FFA/CTF: the feed sits below FPS, team overlay and powerup column.
+test: cg_killfeed 0 in Settings > HUD hides it and stays off after a restart.
+note: Grip and lightning both show the lightning holocron. Not seen on screen yet.
+
+[parallax-range]
+area: Rendering & effects
+title: Parallax reaches farther and holds still near the camera (SJK PR #54)
+change: Depth fades below half a pixel of shift, below 8.6 degrees, and where mips 2-4 are read.
+change: r_parallaxNearDistance (24, 0 = off, console only) shrinks the depth close to a surface.
+change: r_materialMapsDebug 7 shows the reach: yellow full, green faded, red held back.
+test: mp/ffa3 with the material pack, r_parallaxStrength 1: walk a long floor; relief shows farther.
+test: Back the third-person camera into a relief wall: r_parallaxNearDistance 0 swims, 24 holds.
+note: Steps are 4-24 plus 6 binary; check frame times with SJK_FRAME_BUDGET=1. Not seen on screen.
+
+[dynamic-light-shadows]
+area: Rendering & effects
+title: Dynamic lights stop at walls (SJK PR #56)
+change: A compute pass traces a 28x28 distance tile per active light against the BSP.
+change: r_dynamicLightShadows (default 1, console only) switches it; 0 is the old lighting.
+test: On mp/ffa3 hold a lit saber at a corner: the glow no longer reaches the far side of the wall.
+test: Toggle r_dynamicLightShadows 1/0 and compare; check frame times with SJK_GPU_PHASES.
+note: Doors and lifts do not block it; edges are soft. Not run on a GPU yet.
+
+[force-profile-server]
+area: Gameplay
+title: Force profile sent to the server, server rules shown (SJK PR #47)
+change: Each userinfo carries your profile fitted to the server's rules; Apply queues forcechanged.
+change: The Force page takes rank and free saber from the server; marks Off, Fixed, Team only.
+change: SJK UI Force page: a This server panel; disabled powers stay buyable and are sent.
+test: On a server with another rank or disabled powers: build a profile, Apply, respawn: it applies.
+test: Open the Force page there: the This server panel and the marks match the server's rules.
+test: Full Force duel on JA+ / jaPRO: powers the server holds back are usable in duels.
+note: Not run against a server. Possible gap: g_forceBasedTeams after a serverinfo change.
+
+[force-rejoin-retries]
+area: Gameplay
+title: Force profile rejoin retries go out (SJK PR #48)
+change: The negotiator is polled every frame; retries ask for the team again 5.5 s apart, 3 times.
+change: No retries in duel and power duel, where spectating is the queue.
+test: On a mod that sends nfr on its own and parks you: you are sent back to your team.
+test: Wait in a duel queue after an nfr: you are not put into the game by retries.
+note: Stock servers no longer park a player for an SJK profile (SJK PR #47).
+
+[force-profile-fixes]
+area: Gameplay
+title: Force side kept across server changes; grip kills in the kill feed
+change: A serverinfo change keeps the side an nfr notice set under g_forceBasedTeams.
+change: Your nameplate's Force powers follow the profile sent to the server.
+change: A grip kill shows the Force Grip holocron in the kill feed, lightning the Lightning one.
+test: Kill a bot with Force Grip, then with lightning: the feed icon is grip's, then lightning's.
+test: On a g_forceBasedTeams server, change a server cvar mid-game: you stay on your side.
+note: Not tried in a game; the grip bit may already be clear in the kill's snapshot.

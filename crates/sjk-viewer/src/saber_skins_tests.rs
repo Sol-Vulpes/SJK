@@ -1,0 +1,454 @@
+use super::*;
+use crate::blade_skin_file::tests::{SAMPLE, sample_with};
+use crate::saber::{self, Blade, Color, Instance};
+use crate::saber_rgb::{MATERIAL_COUNT, RGB_MATERIAL, SKIN_MATERIAL};
+use crate::saber_submission::lights;
+
+fn blade() -> Blade {
+    Blade {
+        base: [0.0; 3],
+        direction: [0.0, 0.0, 1.0],
+        length: 40.0,
+        radius: 3.0,
+    }
+}
+
+/// The test blade skin ([`SAMPLE`], made-up values) loaded as the catalogue's one blade
+/// skin, numbered 0, under `generation`.
+pub(crate) fn loaded_sample(generation: u64) -> LoadedSkins {
+    let def = crate::blade_skin_file::parse("saber_sun", SAMPLE).unwrap();
+    let skin = LoadedSkin::new("saber_sun", def, &VirtualFileSystem::new()).unwrap();
+    LoadedSkins::of(vec![skin], generation)
+}
+
+fn sample_color() -> SkinColor {
+    loaded_sample(1).color_of("saber_sun").unwrap()
+}
+
+#[test]
+fn skins_have_their_materials_after_the_neutral_pair() {
+    assert_eq!(SKIN_MATERIAL, RGB_MATERIAL + 1);
+    assert_eq!(MATERIAL_COUNT, 7 + MAX_SKINS);
+    let skin = BladeColor::Skin(sample_color());
+    assert_eq!(skin.material(), 7);
+    let third = BladeColor::Skin(SkinColor {
+        index: 2,
+        ..sample_color()
+    });
+    assert_eq!(third.material(), 9);
+    // Grouped into its own range, after every other material.
+    let mut instances: Vec<Instance> = [
+        skin,
+        BladeColor::Retail(Color::Blue),
+        BladeColor::from_rgb([10, 20, 30]),
+        third,
+        skin,
+        BladeColor::Retail(Color::Red),
+    ]
+    .into_iter()
+    .flat_map(|color| Instance::pair(blade(), color))
+    .collect();
+    let ranges = saber::material_ranges(&mut instances);
+    assert_eq!(ranges[7], 6..10);
+    assert_eq!(ranges[9], 10..12);
+    assert_eq!(ranges[6], 4..6);
+    assert_eq!(ranges[0], 0..2);
+    assert_eq!(ranges[4], 2..4);
+    assert!(instances[6..10].iter().all(|i| i.material() == 7));
+}
+
+#[test]
+fn retail_and_rgb_colours_are_unchanged() {
+    for color in Color::ALL {
+        let retail = BladeColor::Retail(color);
+        assert_eq!(retail.material(), color.index() as u32);
+        assert_eq!(retail.tint(), [1.0; 3]);
+        assert_eq!(retail.trail_rgb(), color.trail_rgb());
+        assert_eq!(BladeColor::from_rgb(color.blade_rgb()), retail);
+        assert_eq!(
+            BladeColor::from_material(retail.material(), [1.0; 3]),
+            retail
+        );
+    }
+    let rgb = BladeColor::from_rgb([10, 200, 30]);
+    assert_eq!(rgb.material(), RGB_MATERIAL);
+    assert_eq!(rgb.trail_rgb(), [10.0 / 255.0, 200.0 / 255.0, 30.0 / 255.0]);
+    assert_eq!(BladeColor::from_material(RGB_MATERIAL, rgb.tint()), rgb);
+    assert_eq!(
+        lights::rgb(BladeColor::Retail(Color::Blue)),
+        [0.2, 0.4, 1.0]
+    );
+    assert_eq!(lights::rgb(rgb), rgb.tint());
+}
+
+#[test]
+fn the_neutral_pair_is_generated_byte_for_byte_as_before() {
+    // The neutral pair's formulas as they were written before the profiles.
+    let half = 64.0_f32;
+    let mut glow = Vec::new();
+    for y in 0..128 {
+        for x in 0..128 {
+            let dx = (x as f32 + 0.5 - half) / half;
+            let dy = (y as f32 + 0.5 - half) / half;
+            let distance = (dx * dx + dy * dy).sqrt();
+            let falloff = (-(distance / 0.5).powi(2)).exp() * 0.55;
+            let edge = (1.0 - distance).clamp(0.0, 0.1) * 10.0;
+            let value = (falloff * edge * 255.0).round() as u8;
+            glow.extend_from_slice(&[value, value, value, 255]);
+        }
+    }
+    assert!(crate::saber_rgb::neutral_glow() == glow);
+    let mut core = Vec::new();
+    for y in 0..256 {
+        let from_end = (y as f32 + 0.5).min(256.0 - y as f32 - 0.5);
+        let dy = (1.0 - from_end / 16.0).max(0.0);
+        for x in 0..64 {
+            let dx = (x as f32 + 0.5 - 32.0) / 32.0;
+            let distance = (dx * dx + dy * dy).sqrt();
+            let channel = |value: f32| (value * 255.0).round() as u8;
+            core.extend_from_slice(&[
+                channel((-(distance / 0.41).powi(2)).exp()),
+                channel((-(distance / 0.7).powi(2)).exp()),
+                0,
+                255,
+            ]);
+        }
+    }
+    assert!(crate::saber_rgb::neutral_core() == core);
+}
+
+#[test]
+fn a_skin_trails_and_lights_as_its_file_says_with_a_gentle_flicker() {
+    let skin = sample_color();
+    let color = BladeColor::Skin(skin);
+    assert_eq!(color.trail_rgb(), [0.2, 0.8, 0.9]);
+    assert_eq!(lights::rgb(color), [0.2, 0.7, 0.9]);
+    let levels: Vec<f32> = (0..400).map(|step| skin.flicker.at(step * 25, 3)).collect();
+    let (low, high) = levels
+        .iter()
+        .fold((f32::MAX, f32::MIN), |(lo, hi), &v| (lo.min(v), hi.max(v)));
+    // amount 0.1, one wave of weight 0.5: 0.9 ± 0.05.
+    assert!(
+        (0.84..0.87).contains(&low) && (0.93..=0.96).contains(&high),
+        "{low} {high}"
+    );
+    // Slow: no frame-to-frame strobe.
+    assert!(
+        levels
+            .windows(2)
+            .all(|pair| (pair[1] - pair[0]).abs() < 0.05)
+    );
+    // Seeds do not pulse together; no flicker holds steady.
+    assert_ne!(skin.flicker.at(1_000, 3), skin.flicker.at(1_000, 4));
+    assert_eq!(LightFlicker::default().at(1_000, 3), 1.0);
+    // The light itself: the skin's colour, at its flicker's level.
+    let mut list = crate::dynamic_lights::PointLightList::default();
+    let mut lit = [None; 8];
+    lit[0] = Some(blade());
+    lights::append(&mut list, &lit, color, 1, false, 1_000, 3);
+    let gain = 1.8 * skin.flicker.at(1_000, 3);
+    let expected = lights::rgb(color).map(|c| c * gain);
+    assert!(list.as_slice().iter().any(|light| light.color == expected));
+}
+
+#[test]
+fn a_skinned_blade_keeps_its_skin_through_contacts_and_reaches_further() {
+    let skin = sample_color();
+    let pair = Instance::pair(blade(), BladeColor::Skin(skin))
+        .map(|i| i.with_contact(3, 0, 0, true, false));
+    let (_, _, color, _) = pair[0].contact().expect("a contact source");
+    let BladeColor::Skin(back) = color else {
+        panic!("{color:?}");
+    };
+    assert_eq!(back.index, skin.index);
+    // A contact lights with the skin's light.
+    assert_eq!(lights::rgb(color), skin.light);
+    // Wide enough that the capsule, not the hilt sprite, sets the reach.
+    let wide = Blade {
+        radius: 8.0,
+        ..blade()
+    };
+    let reach = |color| Instance::pair(wide, color).map(|instance| instance.extent().2);
+    let (skinned, stock) = (
+        reach(BladeColor::Skin(skin)),
+        reach(BladeColor::from_rgb([10, 20, 30])),
+    );
+    assert!(skinned[0] >= stock[0] * MAX_GLOW_REACH * 0.99);
+    assert_eq!(skinned[1], stock[1]);
+}
+
+#[test]
+fn the_uniform_holds_the_files_parameters_where_the_shader_reads_them() {
+    let skins = loaded_sample(1);
+    let uniforms = skins.uniforms();
+    let one = uniforms[0];
+    assert_eq!(one.core_white, [0.9, 1.0, 1.0, 0.5]);
+    assert_eq!(one.core_fringe_cool, [0.1, 0.5, 0.6, 0.25]);
+    assert_eq!(one.core_fringe_hot, [0.3, 0.9, 0.8, 0.5]);
+    assert_eq!(one.core_fringe, [0.8, 0.4, 0.9, 0.0]);
+    assert_eq!(one.core_breathe, [0.05, 8.0, 0.5, 3.0]);
+    assert_eq!(one.rim_cool, [0.0, 0.2, 0.4, 0.7]);
+    assert_eq!(one.rim_hot, [0.1, 0.5, 0.7, 1.0]);
+    assert_eq!(one.inner, [0.4, 0.9, 0.9, 0.5]);
+    assert_eq!(one.inner_mix, [0.5, 0.4, 0.2, 0.0]);
+    assert_eq!(one.brightness, [0.6, 0.5, 1.0, 0.0]);
+    assert_eq!(one.swell, [1.5, 0.1, 0.3, 0.0]);
+    assert_eq!(one.grain_coarse, [0.3, 1.5, 0.4, 50.0]);
+    assert_eq!(one.grain_fine, [0.9, 3.0, 0.8, 90.0]);
+    assert_eq!(one.grain_mix, [0.7, 0.3, 0.2, 0.8]);
+    assert_eq!(one.flare_rate, [0.5, 0.1, 0.05, 2.0]);
+    assert_eq!(one.flare_shape, [5.0, 0.4, 0.5, 4.0]);
+    assert_eq!(one.flare_size, [3.0, 1.0, 0.0, 0.0]);
+    assert_eq!(one.shimmer_a, [0.04, 8.0, 0.6, 2.0]);
+    assert_eq!(one.shimmer_b, [0.0; 4], "no second wave");
+    assert_eq!(one.tongue_a, [0.4, 11.0, 2.0, 3.0]);
+    assert_eq!(one.tongue_b, [0.3, 0.8, 0.4, 1.2]);
+    // Past the loaded skins, zeros.
+    assert!(uniforms[1..].iter().all(|u| *u == SkinUniform::default()));
+    let bytes: &[u8] = bytemuck::cast_slice(&uniforms);
+    assert_eq!(bytes.len(), MAX_SKINS * 21 * 16);
+}
+
+#[test]
+fn skins_load_from_the_packs_files_with_their_images_and_sounds() {
+    // A grey 32×32 glow image in the pack, the core generated from the profile.
+    let mut png = Vec::new();
+    image::RgbaImage::from_pixel(32, 32, image::Rgba([90, 90, 90, 255]))
+        .write_to(&mut std::io::Cursor::new(&mut png), image::ImageFormat::Png)
+        .unwrap();
+    let with_image = sample_with(
+        r#""core_profile": {"width": 0.3, "fringe_width": 0.6},"#,
+        r#""core_profile": {"width": 0.3, "fringe_width": 0.6}, "glow_image": "gfx/test/glow.png","#,
+    );
+    let mut packs = VirtualFileSystem::new();
+    packs
+        .mount_memory(
+            "pack",
+            [
+                ("skins/blades/saber_sun.bladeskin", with_image.into_bytes()),
+                ("gfx/test/glow.png", png),
+                // Not a blade skin this client knows, and a broken one: left out.
+                (
+                    "skins/blades/saber_moon.bladeskin",
+                    SAMPLE.as_bytes().to_vec(),
+                ),
+                ("skins/blades/saber_bad.bladeskin", b"{".to_vec()),
+            ],
+        )
+        .unwrap();
+    let skins = LoadedSkins::load(packs, 4);
+    assert_eq!(skins.generation(), 4);
+    assert_eq!(skins.ids().collect::<Vec<_>>(), ["saber_sun"]);
+    let skin = skins.get("saber_sun").unwrap();
+    assert_eq!(skin.glow.dimensions(), (32, 32));
+    assert_eq!(skin.glow.get_pixel(3, 3).0, [90, 90, 90, 255]);
+    assert_eq!(skin.core.dimensions(), (64, 256));
+    assert_eq!(skins.color_of("saber_sun").map(|c| c.index), Some(0));
+    assert_eq!(skins.color_of("saber_moon"), None);
+    let sets = skins.sound_sets();
+    assert_eq!(sets.len(), 1);
+    assert_eq!(sets[0].hum, "sound/test/blade/hum.wav");
+    assert_eq!(sets[0].swings[1], "sound/test/blade/s2.wav");
+    assert_eq!(skins.swing(0, 4), Some("sound/test/blade/s2.wav"));
+    assert_eq!(skins.swing(1, 0), None);
+    // A missing image refuses the skin: the stock blade.
+    let mut missing = VirtualFileSystem::new();
+    missing
+        .mount_memory(
+            "pack",
+            [(
+                "skins/blades/saber_sun.bladeskin",
+                sample_with(
+                    r#""core_profile": {"width": 0.3, "fringe_width": 0.6},"#,
+                    r#""core_profile": {"width": 0.3, "fringe_width": 0.6}, "core_image": "gfx/none.png","#,
+                )
+                .into_bytes(),
+            )],
+        )
+        .unwrap();
+    assert_eq!(LoadedSkins::load(missing, 5).ids().count(), 0);
+}
+
+#[test]
+fn the_table_gives_each_players_body_its_skin() {
+    let skin = sample_color();
+    let mut skins = SaberSkins::default();
+    assert_eq!(skins.get(1), None);
+    skins.set(4, Some(skin));
+    // Entity ids are client slots plus one.
+    assert_eq!(skins.get(5), Some(skin));
+    assert_eq!(skins.get(4), None);
+    assert_eq!(skins.get(0), None);
+    assert_eq!(skins.get(33), None);
+    assert_eq!(skins.get(1_000), None);
+    skins.set(32, Some(skin));
+    assert!(
+        skins
+            .sound_sets()
+            .iter()
+            .filter(|set| set.is_some())
+            .count()
+            == 1
+    );
+    let red = BladeColor::Retail(Color::Red);
+    assert_eq!(skins.blade_color(5, red), BladeColor::Skin(skin));
+    assert_eq!(skins.blade_color(6, red), red);
+    skins.set(4, None);
+    assert_eq!(skins.get(5), None);
+    assert_eq!(skins.sound_sets(), [None; MAX_CLIENTS]);
+}
+
+#[test]
+fn the_local_choice_follows_the_players_slot() {
+    let skin = sample_color();
+    let mut skins = SaberSkins::default();
+    // In the menus: no slot, the preview still wears it.
+    skins.set_local(None, Some(skin));
+    assert_eq!(skins.local(), Some(skin));
+    assert_eq!(skins.sound_sets(), [None; MAX_CLIENTS]);
+    skins.set_local(Some(2), Some(skin));
+    assert_eq!(skins.get(3), Some(skin));
+    assert_eq!(skins.sound_sets()[2], Some(0));
+    // A new slot (another server) clears the old one.
+    skins.set_local(Some(7), Some(skin));
+    assert_eq!(skins.get(3), None);
+    assert_eq!(skins.get(8), Some(skin));
+    skins.set_local(Some(7), None);
+    assert_eq!(skins.get(8), None);
+    assert_eq!(skins.local(), None);
+}
+
+#[test]
+fn a_skin_whose_pack_is_not_loaded_is_the_stock_blade() {
+    let none = LoadedSkins::default();
+    assert_eq!(none.generation(), 0);
+    assert_eq!(none.color_of("saber_sun"), None);
+    assert!(none.sound_sets().is_empty());
+    assert_eq!(none.uniforms(), [SkinUniform::default(); MAX_SKINS]);
+    let mut skins = SaberSkins::default();
+    skins.follow_looks(1, none.generation(), |_| none.color_of("saber_sun"));
+    assert_eq!(skins.get(1), None);
+}
+
+#[test]
+fn other_players_skins_follow_the_looks_and_the_packs_only_when_they_change() {
+    use std::cell::Cell;
+    let skin = sample_color();
+    let mut skins = SaberSkins::default();
+    skins.set_local(Some(2), Some(skin));
+    let asked = Cell::new(0);
+    let looks = |client: usize| {
+        asked.set(asked.get() + 1);
+        // The hub says slot 2 (the local player's own) wears nothing: its own wins.
+        (client == 5).then_some(skin)
+    };
+    skins.follow_looks(7, 1, looks);
+    assert_eq!(asked.get(), MAX_CLIENTS);
+    assert_eq!(skins.get(6), Some(skin));
+    assert_eq!(skins.get(3), Some(skin), "the local player's own");
+    let sets = skins.sound_sets();
+    assert_eq!(sets[5], Some(0));
+    assert_eq!(sets[2], Some(0));
+    assert_eq!(sets.iter().filter(|set| set.is_some()).count(), 2);
+    // The same revision and generation are not read again.
+    skins.follow_looks(7, 1, looks);
+    assert_eq!(asked.get(), MAX_CLIENTS);
+    // New skins from a pack are, under the same looks.
+    skins.follow_looks(7, 2, looks);
+    assert_eq!(asked.get(), 2 * MAX_CLIENTS);
+    // A new revision is; the slot that took its look off goes stock, sounds too.
+    skins.follow_looks(8, 2, |_| None);
+    assert_eq!(skins.get(6), None);
+    assert_eq!(skins.sound_sets()[5], None);
+    assert_eq!(skins.get(3), Some(skin));
+    // The local player leaves the game: its old slot shows the hub's look again.
+    skins.set(2, Some(skin));
+    skins.set_local(None, None);
+    assert_eq!(skins.get(3), Some(skin));
+    assert_eq!(skins.local(), None);
+}
+
+#[test]
+fn the_local_skin_is_gated_by_the_own_profile_and_its_pack() {
+    let loaded = loaded_sample(1);
+    let mut looks = crate::looks::Looks::default();
+    // `cg_saberSkin saber_sun` without the unlock: the stock blade.
+    let unowned = crate::looks::Worn::own("saber_sun", |_| false, false);
+    looks.set_own(None, unowned);
+    assert_eq!(
+        looks.own_saber_skin().and_then(|id| loaded.color_of(id)),
+        None
+    );
+    let owned = crate::looks::Worn::own("saber_sun", |id| id == "saber_sun", false);
+    looks.set_own(Some(4), owned);
+    assert_eq!(
+        looks.own_saber_skin().and_then(|id| loaded.color_of(id)),
+        Some(sample_color())
+    );
+    // Owned, but no pack: the stock blade.
+    assert_eq!(
+        looks
+            .own_saber_skin()
+            .and_then(|id| LoadedSkins::default().color_of(id)),
+        None
+    );
+    // The local slot in the looks wears it too, so following them agrees.
+    let mut skins = SaberSkins::default();
+    skins.follow_looks(looks.revision(), loaded.generation(), |client| {
+        looks
+            .saber_skin_id(client)
+            .and_then(|id| loaded.color_of(id))
+    });
+    assert_eq!(skins.get(5), Some(sample_color()));
+}
+
+#[test]
+fn the_cvar_is_registered_archived_and_empty() {
+    let directory = tempfile::tempdir().unwrap();
+    let console = crate::console::ViewerConsole::new(directory.path().join("config.cfg")).unwrap();
+    assert_eq!(
+        console.cvar(crate::unlockables::SABER_SKIN_CVAR),
+        Some(&sjk_shell::CvarValue::Text(String::new()))
+    );
+}
+
+#[test]
+fn following_another_player_draws_their_look_not_the_own_skin() {
+    use crate::looks::{Looks, ViewSlots, Worn};
+    let loaded = loaded_sample(1);
+    // The local player, in slot 2, wears the skin and follows slot 5 (`PMF_FOLLOW`),
+    // whose hub look is the stock blade: the snapshot's player state is slot 5's.
+    let game_state = sjk_protocol::GameState::empty_local(2);
+    let mut followed = sjk_protocol::PlayerState::zero();
+    followed.set_client_num(5);
+    followed.set_movement_flags(0x1000);
+    let mut looks = Looks::default();
+    let stock = sjk_identity::Look {
+        saber: String::new(),
+        illuminate: true,
+    };
+    looks.apply_event(5, "Fox", &stock);
+    let slots = ViewSlots::of(&game_state, &followed);
+    looks.set_own(
+        slots.own.and_then(|slot| u8::try_from(slot).ok()),
+        Worn::own("saber_sun", |_| true, false),
+    );
+    looks.rebuild(|slot| (slot == 5).then(|| "Fox".to_owned()));
+    let mut skins = SaberSkins::default();
+    skins.follow_looks(looks.revision(), loaded.generation(), |client| {
+        looks
+            .saber_skin_id(client)
+            .and_then(|id| loaded.color_of(id))
+    });
+    skins.set_local(
+        slots.own,
+        looks.own_saber_skin().and_then(|id| loaded.color_of(id)),
+    );
+    assert_eq!(skins.get(6), None, "the followed player's own look");
+    assert_eq!(skins.sound_sets()[5], None);
+    assert_eq!(
+        skins.get(3),
+        Some(sample_color()),
+        "the local player's slot"
+    );
+}

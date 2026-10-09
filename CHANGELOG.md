@@ -19,6 +19,24 @@ tests check this file):
 Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 -->
 
+## Unreleased
+
+- On servers with force-based teams, a change to the server's settings no longer sends you the wrong side's Force profile; your nameplate's own Force powers match what the server grants the profile sent; and the kill feed shows Force Grip's holocron for a grip kill instead of Lightning's _(Sol)_
+- A server that parks you in spectator over your Force profile is now answered again as intended: the up to three rejoin retries are polled every frame (they never went out), and not in duel or power duel, where waiting as a spectator is the queue _(Sol)_
+- Force profile on a server with other Force rules: the profile you apply is sent to the server (read at once as a spectator, else at your next respawn), the Force page takes the server's rank and free saber skills from it and marks the powers it turns off and the team powers outside team games, and the SJK UI's Force page has a This server panel _(Sol)_
+- Dynamic lights (sabers, muzzle flashes, explosions, Force effects) no longer light through walls: each active light (up to 32) traces a small shadow tile against the map every frame; r_dynamicLightShadows 0 turns it off _(Sol)_
+- Parallax mapping reaches farther: the depth fades only where it would move the texture by less than half a pixel (a floor keeps it to about 410 units at 1080p, not 90-160), and r_parallaxNearDistance (default 24 units, 0 is off) holds it back close to a surface so it stops swimming under the camera; r_materialMapsDebug 7 shows the reach _(Sol)_
+- Kill feed: up to five kills at the top right, newest first, each as killer, weapon icon and victim (a skull for a suicide or a fall), kept 5 s and then faded; cg_killfeed (Settings > HUD > Kill feed) is on by default once and replaces the old one-line obituary _(Sol)_
+- The compact SJK scoreboard is sized to its names and centred on the screen instead of always running the full width: the name column is 140-320 px, the numbers sit close behind it, a board that would cover the chat sits just right of it, and the duel cards share the centre _(Sol)_
+- The green beam of a teleport or a spawn now stands up from the floor to the ceiling or the sky, as in OpenJK, instead of a small square at the player's feet: effect lines that follow the trace (org2fromTrace) get their length, the floor drop stops on terrain too, and the Jedi Master spawn effect points straight up _(Sol, after OpenJK)_
+- Kill messages in the console print the names of players with accented letters or symbols instead of noname, end each name in white as OpenJK does, and keep the right gender in suicide messages _(Sol, after OpenJK)_
+- Doors, buttons and other brush models play their sounds from the middle of the model, so the opening and closing sounds of doors that the map gives no origin are heard again _(Sol, after OpenJK)_
+- Real-time lighting pipelines are now compiled while a map loads instead of in the first frames of play, to cut the stalls (around 10 FPS for a while) that followed a load; the load itself takes a little longer _(Sol)_
+- com_maxfpsMonitor (Settings > Video > Detect refresh rate), off by default: the AUTO FPS cap (com_maxfps -1) is now 125 unless it is on, when it follows the monitor's refresh rate as before; a cap you set always wins _(Sol)_
+- The game no longer freezes when you switch back to it after a long time away if the sound device went away meanwhile (a headset or monitor speakers switching off): a full sound queue waits a quarter of a second, then drops sounds, the log says audio output stopped taking sound, and snd_restart brings the sound back _(Sol)_
+- On the SJK UI's Character screen, a click on a saber colour, a < > control or a Force power now lands where it was aimed: it picks the blade chip under the pointer and turns a < > control by the half you click, and a click on a Force power's name only chooses it _(Sol)_
+- Unlockables: blade skins your SJK identity owns at the SJK hub, first the Sun blade, a white-gold core in an orange corona with flares running along it, an amber trail, a warm flickering light and its own ignition, hum and swing sounds; its look and sounds come from the SJK hub as a pack the client downloads (kept in assets beside identity.key), so a blade skin shows once its pack has arrived. Every SJK player on your server sees and hears the skin you wear, and now sees your Illuminate holocron too. The Unlockables page (Profile, or the unlockables command) shows what you own and equips it; saberskin does it from the console; for now the SJK team gives them _(Sol)_
+
 ## 2026.1008.2 (Alpha) | 08/10/2026
 
 The modern menu style is gone, leaving the SJK UI and the classic menus. New: profiles

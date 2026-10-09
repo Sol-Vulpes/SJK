@@ -40,6 +40,12 @@ fn pipelines(forge: &Forge) -> [wgpu::RenderPipeline; 3] {
     })
 }
 impl Runtime {
+    /// Compile the depth-priming pipelines at map installation, for a map whose frames
+    /// will prime depth (real-time lighting), instead of in its first frame.
+    pub(super) fn prewarm_depth_prime(&self) {
+        self.depth_prime.get_or_init(|| pipelines(&self.forge));
+    }
+
     /// Prime guaranteed opaque static depths for active real-time lighting.
     /// Return whether the caller should load the established depth instead of clearing it.
     pub(crate) fn prime_depth(
