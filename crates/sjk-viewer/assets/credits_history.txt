@@ -9,6 +9,8 @@
 #                               made it when that is not the piece's owner.
 
 = Sol
++ 09/10/2026 | - | Cache coarsely lightmapped surfaces, time the light pass in parts
+- 476267e |  | Cache coarsely lightmapped surfaces, time the light pass in parts
 + 09/10/2026 | - | Perfmark log markers
 - c68527a |  | Add perfmark: a timestamped marker in the client log
 + 09/10/2026 | - | JoFTemple follow-ups in status

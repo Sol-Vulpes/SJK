@@ -19,7 +19,10 @@ use std::ops::Range;
 /// factors are softened over 16 units, so this spacing resolves both.
 const TEXEL_UNITS: f32 = 4.;
 /// A surface mapped this much coarser than the cache's spacing is evaluated directly.
-const COARSEST: f32 = 3.;
+/// 4, not 3: `JoFTemple`'s great hall floor is mapped 3.6 times coarser, and lighting it
+/// lamp by lamp took 4.2 of a 7.5 ms frame at 4K; cached, the frame is 3.6 ms and the
+/// view differs by at most 8/255 (steep texels still go direct, `lamp_cache_rim.wgsl`).
+const COARSEST: f32 = 4.;
 const MIN_RESOLUTION: u32 = 64;
 const MAX_RESOLUTION: u32 = 2048;
 /// Larger maps halve the cache's resolution; steep texels fall back to direct evaluation

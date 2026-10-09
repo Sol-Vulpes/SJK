@@ -587,7 +587,15 @@ impl super::super::super::Runtime {
         encoder: &mut wgpu::CommandEncoder,
         input: &FrameDraw<'_>,
         region: Option<[f32; 4]>,
+        phases: Option<&crate::gpu_phases::Profiler>,
     ) -> bool {
+        // The main view's light pass in parts (`SJK_GPU_PHASES`): cache upkeep, receiver
+        // attributes, shading, the direct-lamp list; the last part keeps `light-pass`.
+        let mark = |encoder: &mut wgpu::CommandEncoder, name| {
+            if let Some(phases) = phases {
+                phases.mark(encoder, name);
+            }
+        };
         let shadow = self.shadows.as_ref().unwrap();
         let buffer = shadow.light.as_ref().unwrap();
         let target = &buffer.receivers;
@@ -624,6 +632,7 @@ impl super::super::super::Runtime {
                 );
             }
         }
+        mark(encoder, "light-cache");
         // Not cleared: lighting reads only the texels the pre-pass covered, and the
         // depth-equal pass below writes every one of them (`receiver_texel`).
         let attachment = |view| {
@@ -699,6 +708,7 @@ impl super::super::super::Runtime {
                 &pipelines.entity,
             );
         }
+        mark(encoder, "light-receivers");
         let direct = cache.and(target.direct.as_ref());
         if let Some(direct) = direct {
             encoder.copy_buffer_to_buffer(&direct.reset, 0, &direct.list, 0, DIRECT_HEADER);
@@ -737,6 +747,7 @@ impl super::super::super::Runtime {
         }
         pass.draw(0..3, 0..1);
         drop(pass);
+        mark(encoder, "light-shade");
         if let Some(direct) = direct {
             let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
                 label: Some("SJK direct lamps"),

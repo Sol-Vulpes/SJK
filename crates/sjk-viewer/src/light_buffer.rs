@@ -799,7 +799,7 @@ impl super::super::Runtime {
         if let Some(phases) = phases {
             phases.mark(encoder, "light-occlusion");
         }
-        if self.draw_receiver_lighting(encoder, input, region) {
+        if self.draw_receiver_lighting(encoder, input, region, phases) {
             return;
         }
     }

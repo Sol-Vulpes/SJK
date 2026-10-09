@@ -680,6 +680,15 @@ otherwise come from a trace of the static world only, done once when the map loa
 
 `SJK_MOVER_OCCLUSION=0` leaves movers out of lamp shadows (no door tiles), for
 same-binary comparisons; the far cascade still follows them.
+A lightmapped surface goes into the lamp cache when its lightmap is at most four times
+coarser than the cache's 4-unit spacing (`lamp_cache.rs` `COARSEST`, three before
+09/10/2026); coarser ones are lit lamp by lamp every frame. `JoFTemple`'s great hall
+floor is 3.6 times coarser: lit directly it took 4.2 ms of a 7.5 ms frame at 4K on an
+RTX 5080 (Sol's in-game run with every real-time term off still measured a 5.7 ms
+light pass), cached the frame is 3.6 ms, and the spawn view differs by at most 8/255
+(0.45 % of pixels by more than 4). `mp/ffa5`, `mp/ffa3` and `JKLevel1` were unchanged
+(3.1, 3.2 and 2.5 ms) and the cache kept its 519 MiB on `JoFTemple`.
+
 The ignored world shot `world_shot::movers::movers_shadow_lamps` renders the movers with
 the most door lamps closed, open and with every mover hidden, from beside a lamp, and
 with `SJK_MOVER_TIMING=1` holds views for GPU timing (see its rustdoc).
@@ -994,7 +1003,9 @@ The trickster sees `force/confusion_old` over the head (`*head_top`, else
 Deviations: a held saber's hilt stays opaque during the fade (blades are opaque
 in stock too), and a fading body casts no sun shadow.
 
-Set `SJK_FRAME_BUDGET=1` for frame-work and GPU-phase diagnostics; `perfmark <text>`
+Set `SJK_FRAME_BUDGET=1` for frame-work and GPU-phase diagnostics (the main view's
+light pass shows as `light-cache`, `light-receivers`, `light-shade`, then `light-pass`
+for the direct-lamp list); `perfmark <text>`
 writes a timestamped `perf-mark <text>` line to the client log, so a cfg script of
 settings, `wait`s and marks splits one run into steps (09/10/2026). Measurements
 must name the build mode, GPU, resolution, settings, map and population. Separate

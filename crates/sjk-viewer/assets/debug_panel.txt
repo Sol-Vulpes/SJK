@@ -335,6 +335,13 @@ change: JKLevel1 (JoF mission): 107,118 lamps become 40,682; load 91 s becomes a
 test: High, join a JKLevel1 mission: the map loads much faster than before.
 test: The log has "a material over 4096 patches cooked" lines; strip-lit rooms look the same.
 
+[coarse-floor-cache]
+area: Rendering & effects
+title: Coarsely lightmapped floors use the lamp cache (JoFTemple about twice as fast)
+change: Surfaces up to 4x coarser than the cache's spacing are cached (3x before).
+change: JoFTemple's hall floor was lit lamp by lamp: 7.5 ms a frame becomes 3.6 ms at 4K.
+test: High, JoFTemple great hall: FPS about doubles; the floor's light looks the same.
+
 # ---- HUD ----
 
 [menu-huds]

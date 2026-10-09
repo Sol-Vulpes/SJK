@@ -7,7 +7,7 @@ use std::sync::{
     atomic::{AtomicBool, Ordering},
 };
 
-const CAPACITY: u32 = 24;
+const CAPACITY: u32 = 32;
 
 /// Frames between sampled frames; the readback of one must finish before the next.
 const INTERVAL: u32 = 32;
