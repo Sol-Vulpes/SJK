@@ -3149,3 +3149,16 @@ test: ui_textScale 1.2, Profile: all seven tab names whole, Achievements include
 test: Main page, choose Profile: its line ends before the server column.
 note: Not tried in a game.
 
+[chat-dock-wrap]
+area: Console & chat
+title: SJK chat dock: long messages wrap; the same dock in the in-game menu
+change: The main page's SJK chat shows each message whole, wrapped onto the lines it needs.
+change: The SJK UI's in-game menu (Esc in a match) docks the same chat under the match.
+test: Main page: a long SJK chat message shows on several lines, nothing cut; older ones go up.
+test: ui_textScale 1.2: fewer lines fit; a message taller than the box ends in "...".
+test: Esc in a match: SJK chat under the match; Tab goes list, icons, card, chat; Enter types.
+test: While typing, W, S, ~ and binds go into the field; Esc stops typing, Esc again: the list.
+test: Pointer on a name: the card shows above the dock, with Mute. Open chat opens the page.
+note: cl_sjkChat 0 hides both docks; identity off: "Turn the SJK identity on to chat".
+note: Not tried in a game.
+

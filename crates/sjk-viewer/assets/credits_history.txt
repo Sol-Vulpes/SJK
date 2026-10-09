@@ -9,6 +9,8 @@
 #                               made it when that is not the piece's owner.
 
 = Sol
++ 10/10/2026 | - | Wrapped SJK chat dock, also in the game menu
+- 9bf29bc |  | Wrap the SJK chat dock and dock it in the in-game menu
 + 10/10/2026 | - | A live Force page on the quick wheel
 - 55b9458 |  | Add a live Force page to the quick wheel
 + 10/10/2026 | - | Hilt search and blade skin choice on the Saber tab

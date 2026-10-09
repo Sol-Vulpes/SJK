@@ -1,16 +1,19 @@
 //! What the SJK UI's in-game menu ([`super::sjk_view`]) does where it differs
 //! from the shared pages: its main page's entries, the row of icons under the
-//! emblem and the match card's controls ([`super::sjk_focus`]) with the keys that
-//! move between them, its Leave page, Escape returning to what opened a page, and
-//! the match card read from the live session. Siege's classes, the call-vote lists
+//! emblem, the match card's controls and the docked SJK chat
+//! ([`super::sjk_focus`]) with the keys that move between them and the keys typed in
+//! the chat's field, its Leave page, Escape returning to what opened a page, and the
+//! match card read from the live session. Siege's classes, the call-vote lists
 //! and Team's rows keep the shared actions (`game_menu_actions.rs`).
 
 use super::Page;
 use super::sjk_focus::{self, Control, Focus, Icon, Move, Step};
 use super::sjk_view::{self, Entry, Local, leave};
 use crate::GpuState;
+use crate::menu::sjk::chat_dock::DockAction;
 use sjk_client::ClientSession;
-use winit::keyboard::KeyCode;
+use winit::event::{ElementState, KeyEvent};
+use winit::keyboard::{KeyCode, PhysicalKey};
 
 /// `persistant[PERS_SCORE]` and `persistant[PERS_RANK]`.
 const PERS_SCORE: usize = 0;
@@ -26,6 +29,7 @@ impl GpuState {
                 Focus::List => self.activate_sjk_entry(row),
                 Focus::Row(icon) => self.activate_sjk_icon(icon),
                 Focus::Card(control) => self.activate_sjk_control(control),
+                Focus::Chat => self.in_game_menu.start_chat_typing(),
             },
             // Team's last row is Back; the others choose a side.
             Page::Team if row + 1 >= self.game_menu_row_count() => self.sjk_back(),
@@ -155,6 +159,7 @@ impl GpuState {
             movement,
             self.in_game_menu.sjk_icons(),
             self.in_game_menu.sjk_controls(),
+            self.in_game_menu.sjk_chat(),
         );
         match step {
             Step::To(focus) => self.in_game_menu.focus = focus,
@@ -171,9 +176,9 @@ impl GpuState {
         true
     }
 
-    /// A pointer event on the SJK UI's main page's row of icons or match card
-    /// (`token`): hovering gives it the keyboard, a click acts. Returns false for
-    /// the other tokens.
+    /// A pointer event on the SJK UI's main page's row of icons, match card or docked
+    /// chat (`token`): hovering gives it the keyboard (a chat sender's name only shows
+    /// their card), a click acts. Returns false for the other tokens.
     pub(crate) fn sjk_main_pointer(&mut self, kind: sjk_ui::UiEventKind, token: usize) -> bool {
         use sjk_ui::UiEventKind;
         if !self.in_game_menu.is_sjk() || self.game_menu_page != Page::Main {
@@ -181,6 +186,15 @@ impl GpuState {
         }
         let hover = matches!(kind, UiEventKind::HoverEnter | UiEventKind::Hover);
         let activate = kind == UiEventKind::Activate;
+        if let Some(reply) = self.in_game_menu.chat_pointer(token, activate) {
+            if (hover || activate) && super::InGameMenu::chat_takes_focus(token) {
+                self.in_game_menu.focus = Focus::Chat;
+            }
+            if let Some(action) = reply {
+                self.act_on_sjk_chat(action);
+            }
+            return true;
+        }
         if let Some(icon) = u16::try_from(token).ok().and_then(sjk_view::icon_of) {
             if hover || activate {
                 self.in_game_menu.focus = Focus::Row(icon);
@@ -200,6 +214,44 @@ impl GpuState {
             return true;
         }
         false
+    }
+
+    /// A key while the SJK UI's docked chat is being typed in: every key goes to its
+    /// field, before the console's key and the game's bindings, held keys repeating
+    /// (Backspace); a release is swallowed too. Returns false when nobody types there.
+    pub(crate) fn sjk_chat_typing(&mut self, event: &KeyEvent) -> bool {
+        if !self.game_menu
+            || !self.in_game_menu.is_sjk()
+            || self.game_menu_page != Page::Main
+            || !self.in_game_menu.chat_typing()
+        {
+            return false;
+        }
+        if event.state != ElementState::Pressed {
+            return true;
+        }
+        let PhysicalKey::Code(key) = event.physical_key else {
+            return true;
+        };
+        if let Some(action) = self.in_game_menu.chat_key(key, event.text.as_deref()) {
+            self.act_on_sjk_chat(action);
+        }
+        true
+    }
+
+    /// Carry out what the docked chat asks: send what was typed, open the SJK chat's
+    /// page over the menu (it shows again when the page closes), or mute a sender.
+    fn act_on_sjk_chat(&mut self, action: DockAction) {
+        match action {
+            DockAction::Send => self.in_game_menu.send_chat(),
+            DockAction::Open => {
+                if let Some(console) = &mut self.console {
+                    console.open_sjk_chat_panel();
+                }
+                self.sync_cursor_policy();
+            }
+            DockAction::Mute => self.in_game_menu.mute_from_chat(),
+        }
     }
 
     /// A row of the call-vote page or one of its lists: open a list, call the
@@ -242,9 +294,10 @@ impl GpuState {
         }
     }
 
-    /// Back to the match.
+    /// Back to the match, anything typed in the docked chat dropped.
     fn close_game_menu(&mut self) {
         self.game_menu = false;
+        self.in_game_menu.stop_chat_typing();
         self.capture_pointer();
     }
 

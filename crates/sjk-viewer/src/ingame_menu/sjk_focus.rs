@@ -5,13 +5,18 @@
 //! `sjk_actions.rs`'s; this module holds only the model, so the tests can walk it.
 //!
 //! - Up and Down move along the list (as before); Right from the list enters the card.
-//! - Tab moves list, then the bottom row, then the card's controls, then the list
-//!   again; Shift+Tab goes the other way.
-//! - In the bottom row Left and Right move between the icons, Up returns to the list.
+//! - Tab moves list, then the bottom row, then the card's controls, then the docked
+//!   SJK chat's field, then the list again; Shift+Tab goes the other way.
+//! - In the bottom row Left and Right move between the icons (Right from the last
+//!   reaches the chat), Up returns to the list.
 //! - On the card Left and Right move along a line of controls (Left from a line's
-//!   first returns to the list), Up and Down between its lines.
-//! - Enter acts on what has the keyboard; Escape returns to the list from the row or
-//!   the card, and from the list resumes the match (the caller's).
+//!   first returns to the list), Up and Down between its lines (Down from the last
+//!   reaches the chat).
+//! - On the chat's field Up returns to the list, Left reaches the row's last icon and
+//!   Right the card's last control.
+//! - Enter acts on what has the keyboard (on the chat it starts typing); Escape returns
+//!   to the list from the row, the card or the chat, and from the list resumes the
+//!   match (the caller's).
 
 use sjk_client::LegacyTeamChoice;
 
@@ -337,17 +342,21 @@ pub(crate) enum Focus {
     Row(Icon),
     /// A control of the match card.
     Card(Control),
+    /// The field of the docked SJK chat, under the match.
+    Chat,
 }
 
 impl Focus {
-    /// The focus kept where it can still be: an icon no longer shown, or a card control
-    /// gone or no longer to be taken, moves to the card's first control or the list.
-    pub(crate) fn settle(self, icons: &[Icon], controls: &Controls) -> Self {
+    /// The focus kept where it can still be: an icon no longer shown, the chat no longer
+    /// docked (`chat`), or a card control gone or no longer to be taken, moves to the
+    /// card's first control or the list.
+    pub(crate) fn settle(self, icons: &[Icon], controls: &Controls, chat: bool) -> Self {
         match self {
             Self::Row(icon) if !icons.contains(&icon) => Self::List,
             Self::Card(control) if !controls.takes(control) => {
                 controls.first().map_or(Self::List, Self::Card)
             }
+            Self::Chat if !chat => Self::List,
             focus => focus,
         }
     }
@@ -375,31 +384,43 @@ pub(crate) enum Step {
     Stay,
 }
 
-/// Where `movement` takes the keyboard from `focus`, with `icons` in the bottom row and
-/// `controls` on the card.
-pub(crate) fn step(focus: Focus, movement: Move, icons: &[Icon], controls: &Controls) -> Step {
+/// Where `movement` takes the keyboard from `focus`, with `icons` in the bottom row,
+/// `controls` on the card and the SJK chat docked or not (`chat`).
+pub(crate) fn step(
+    focus: Focus,
+    movement: Move,
+    icons: &[Icon],
+    controls: &Controls,
+    chat: bool,
+) -> Step {
     let to = |focus: Option<Focus>| focus.map_or(Step::Stay, Step::To);
     let first_icon = icons.first().copied().map(Focus::Row);
+    let last_icon = icons.last().copied().map(Focus::Row);
     let card_first = controls.first().map(Focus::Card);
-    match (focus.settle(icons, controls), movement) {
+    let card_last = controls.last().map(Focus::Card);
+    let field = chat.then_some(Focus::Chat);
+    match (focus.settle(icons, controls, chat), movement) {
         (Focus::List, Move::Up) => Step::List(false),
         (Focus::List, Move::Down) => Step::List(true),
         (Focus::List, Move::Right) => to(card_first),
         (Focus::List, Move::Left) => Step::Stay,
-        (Focus::List, Move::Tab) => to(first_icon.or(card_first)),
-        (Focus::List, Move::BackTab) => to(controls.last().map(Focus::Card).or(first_icon)),
+        (Focus::List, Move::Tab) => to(first_icon.or(card_first).or(field)),
+        (Focus::List, Move::BackTab) => to(field.or(card_last).or(first_icon)),
         (Focus::Row(icon), Move::Left | Move::Right) => {
             let at = icons.iter().position(|shown| *shown == icon).unwrap_or(0);
             let next = if movement == Move::Right {
-                icons.get(at + 1)
+                icons.get(at + 1).copied().map(Focus::Row).or(field)
             } else {
-                at.checked_sub(1).and_then(|before| icons.get(before))
+                at.checked_sub(1)
+                    .and_then(|before| icons.get(before))
+                    .copied()
+                    .map(Focus::Row)
             };
-            to(next.copied().map(Focus::Row))
+            to(next)
         }
         (Focus::Row(_), Move::Up) => Step::To(Focus::List),
         (Focus::Row(_), Move::Down) => Step::Stay,
-        (Focus::Row(_), Move::Tab) => Step::To(card_first.unwrap_or(Focus::List)),
+        (Focus::Row(_), Move::Tab) => Step::To(card_first.or(field).unwrap_or(Focus::List)),
         (Focus::Row(_), Move::BackTab) => Step::To(Focus::List),
         (Focus::Card(control), Move::Left) => Step::To(
             controls
@@ -408,9 +429,17 @@ pub(crate) fn step(focus: Focus, movement: Move, icons: &[Icon], controls: &Cont
         ),
         (Focus::Card(control), Move::Right) => to(controls.along(control, true).map(Focus::Card)),
         (Focus::Card(control), Move::Up) => to(controls.across(control, false).map(Focus::Card)),
-        (Focus::Card(control), Move::Down) => to(controls.across(control, true).map(Focus::Card)),
-        (Focus::Card(_), Move::Tab) => Step::To(Focus::List),
+        (Focus::Card(control), Move::Down) => {
+            to(controls.across(control, true).map(Focus::Card).or(field))
+        }
+        (Focus::Card(_), Move::Tab) => Step::To(field.unwrap_or(Focus::List)),
         (Focus::Card(_), Move::BackTab) => Step::To(first_icon.unwrap_or(Focus::List)),
+        (Focus::Chat, Move::Up) => Step::To(Focus::List),
+        (Focus::Chat, Move::Left) => to(last_icon),
+        (Focus::Chat, Move::Right) => to(card_last),
+        (Focus::Chat, Move::Down) => Step::Stay,
+        (Focus::Chat, Move::Tab) => Step::To(Focus::List),
+        (Focus::Chat, Move::BackTab) => Step::To(card_last.or(first_icon).unwrap_or(Focus::List)),
     }
 }
 
@@ -519,7 +548,7 @@ mod tests {
         // A staff icon focused when the key is no longer staff falls back to the list.
         let none = Controls::none();
         assert_eq!(
-            Focus::Row(Icon::Staff).settle(Icon::shown(false), &none),
+            Focus::Row(Icon::Staff).settle(Icon::shown(false), &none, false),
             Focus::List
         );
         assert_eq!(Icon::Camera.key(), Some("F8"));
@@ -541,7 +570,7 @@ mod tests {
         let mut focus = Focus::List;
         let mut seen = Vec::new();
         for _ in 0..3 {
-            match step(focus, Move::Tab, icons, &card) {
+            match step(focus, Move::Tab, icons, &card, false) {
                 Step::To(next) => focus = next,
                 other => panic!("{other:?}"),
             }
@@ -558,24 +587,33 @@ mod tests {
         );
         // Shift+Tab goes the other way.
         assert_eq!(
-            step(Focus::List, Move::BackTab, icons, &card),
+            step(Focus::List, Move::BackTab, icons, &card, false),
             Step::To(Focus::Card(Control::CallVote))
         );
         assert_eq!(
-            step(Focus::Card(Control::CallVote), Move::BackTab, icons, &card),
+            step(
+                Focus::Card(Control::CallVote),
+                Move::BackTab,
+                icons,
+                &card,
+                false
+            ),
             Step::To(Focus::Row(Icon::Camera))
         );
         assert_eq!(
-            step(Focus::Row(Icon::Chat), Move::BackTab, icons, &card),
+            step(Focus::Row(Icon::Chat), Move::BackTab, icons, &card, false),
             Step::To(Focus::List)
         );
         // Without a card (a map explored alone) Tab goes row, list.
         let none = Controls::none();
         assert_eq!(
-            step(Focus::Row(Icon::Camera), Move::Tab, icons, &none),
+            step(Focus::Row(Icon::Camera), Move::Tab, icons, &none, false),
             Step::To(Focus::List)
         );
-        assert_eq!(step(Focus::List, Move::Right, icons, &none), Step::Stay);
+        assert_eq!(
+            step(Focus::List, Move::Right, icons, &none, false),
+            Step::Stay
+        );
     }
 
     #[test]
@@ -584,44 +622,65 @@ mod tests {
         let card = Controls::for_match(game(true, 1, true));
         // The list keeps its own steps; Right enters the card on its first control.
         assert_eq!(
-            step(Focus::List, Move::Down, icons, &card),
+            step(Focus::List, Move::Down, icons, &card, false),
             Step::List(true)
         );
-        assert_eq!(step(Focus::List, Move::Up, icons, &card), Step::List(false));
         assert_eq!(
-            step(Focus::List, Move::Right, icons, &card),
+            step(Focus::List, Move::Up, icons, &card, false),
+            Step::List(false)
+        );
+        assert_eq!(
+            step(Focus::List, Move::Right, icons, &card, false),
             Step::To(Focus::Card(Control::VoteYes))
         );
         // The row: Left and Right along it, its ends stay, Up back to the list.
         assert_eq!(
-            step(Focus::Row(Icon::Camera), Move::Right, icons, &card),
+            step(Focus::Row(Icon::Camera), Move::Right, icons, &card, false),
             Step::To(Focus::Row(Icon::WhatsNew))
         );
         assert_eq!(
-            step(Focus::Row(Icon::Camera), Move::Left, icons, &card),
+            step(Focus::Row(Icon::Camera), Move::Left, icons, &card, false),
             Step::Stay
         );
         assert_eq!(
-            step(Focus::Row(Icon::Staff), Move::Right, icons, &card),
+            step(Focus::Row(Icon::Staff), Move::Right, icons, &card, false),
             Step::Stay
         );
         assert_eq!(
-            step(Focus::Row(Icon::Credits), Move::Up, icons, &card),
+            step(Focus::Row(Icon::Credits), Move::Up, icons, &card, false),
             Step::To(Focus::List)
         );
         // The card: along a line, Left from its first back to the list.
         assert_eq!(
-            step(Focus::Card(Control::VoteYes), Move::Right, icons, &card),
+            step(
+                Focus::Card(Control::VoteYes),
+                Move::Right,
+                icons,
+                &card,
+                false
+            ),
             Step::To(Focus::Card(Control::VoteNo))
         );
         assert_eq!(
-            step(Focus::Card(Control::VoteYes), Move::Left, icons, &card),
+            step(
+                Focus::Card(Control::VoteYes),
+                Move::Left,
+                icons,
+                &card,
+                false
+            ),
             Step::To(Focus::List)
         );
         // Down from No to the side's line, nearest its place: on red, Join red is
         // passed over, so Join blue under No.
         assert_eq!(
-            step(Focus::Card(Control::VoteNo), Move::Down, icons, &card),
+            step(
+                Focus::Card(Control::VoteNo),
+                Move::Down,
+                icons,
+                &card,
+                false
+            ),
             Step::To(Focus::Card(Control::Team(LegacyTeamChoice::Blue)))
         );
         assert_eq!(
@@ -629,7 +688,8 @@ mod tests {
                 Focus::Card(Control::Team(LegacyTeamChoice::Spectator)),
                 Move::Up,
                 icons,
-                &card
+                &card,
+                false
             ),
             Step::To(Focus::Card(Control::VoteNo))
         );
@@ -638,15 +698,87 @@ mod tests {
                 Focus::Card(Control::Team(LegacyTeamChoice::Spectator)),
                 Move::Down,
                 icons,
-                &card
+                &card,
+                false
             ),
             Step::Stay
         );
         // A control that went away (the vote ended) settles on the card's first.
         let quiet = Controls::for_match(game(true, 1, false));
         assert_eq!(
-            Focus::Card(Control::VoteNo).settle(icons, &quiet),
+            Focus::Card(Control::VoteNo).settle(icons, &quiet, false),
             Focus::Card(Control::Team(LegacyTeamChoice::Blue))
+        );
+    }
+
+    #[test]
+    fn the_docked_chat_joins_the_tab_cycle_and_the_arrows() {
+        let icons = Icon::shown(false);
+        let card = Controls::for_match(game(true, 2, false));
+        let red = Focus::Card(Control::Team(LegacyTeamChoice::Red));
+        let vote = Focus::Card(Control::CallVote);
+        let mut focus = Focus::List;
+        let mut seen = Vec::new();
+        for _ in 0..4 {
+            match step(focus, Move::Tab, icons, &card, true) {
+                Step::To(next) => focus = next,
+                other => panic!("{other:?}"),
+            }
+            seen.push(focus);
+        }
+        assert_eq!(
+            seen,
+            [Focus::Row(Icon::Camera), red, Focus::Chat, Focus::List]
+        );
+        assert_eq!(
+            step(Focus::List, Move::BackTab, icons, &card, true),
+            Step::To(Focus::Chat)
+        );
+        assert_eq!(
+            step(Focus::Chat, Move::BackTab, icons, &card, true),
+            Step::To(vote)
+        );
+        // The row's last icon and the card's foot reach it; from it Up is the list.
+        assert_eq!(
+            step(Focus::Row(Icon::Chat), Move::Right, icons, &card, true),
+            Step::To(Focus::Chat)
+        );
+        assert_eq!(
+            step(vote, Move::Down, icons, &card, true),
+            Step::To(Focus::Chat)
+        );
+        assert_eq!(
+            step(Focus::Chat, Move::Up, icons, &card, true),
+            Step::To(Focus::List)
+        );
+        assert_eq!(
+            step(Focus::Chat, Move::Left, icons, &card, true),
+            Step::To(Focus::Row(Icon::Chat))
+        );
+        assert_eq!(
+            step(Focus::Chat, Move::Right, icons, &card, true),
+            Step::To(vote)
+        );
+        assert_eq!(
+            step(Focus::Chat, Move::Down, icons, &card, true),
+            Step::Stay
+        );
+        // Without the chat its field settles on the list and nothing reaches it.
+        assert_eq!(Focus::Chat.settle(icons, &card, false), Focus::List);
+        assert_eq!(
+            step(vote, Move::Tab, icons, &card, false),
+            Step::To(Focus::List)
+        );
+        // Without a match card (a map explored alone): the row, the chat, the list.
+        assert_eq!(
+            step(
+                Focus::Row(Icon::Camera),
+                Move::Tab,
+                icons,
+                &Controls::none(),
+                true
+            ),
+            Step::To(Focus::Chat)
         );
     }
 }

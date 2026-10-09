@@ -172,10 +172,14 @@ one (4:3, 5:4) scales the frame down to its width.
   time zone is needed). Before any join, the column offers the JoF server
   (`135.125.145.49:29070`) under "Start here".
 - **SJK chat:** docked under the servers (from y 700, [hub-chat.md](hub-chat.md)):
-  "SJK chat" and the online count, the last five lines sitting on a field (each the
-  name, the verified tick for a verified sender and the text in the SJK chat's gold,
-  cut to one row), the field, and Open chat in gold under
-  it, which opens the SJK chat page. Resting the pointer on a name shows the sender's
+  "SJK chat" and the online count, the last messages sitting on a field in a box five
+  one-row messages high, newest at the bottom (each the name, the verified tick for a
+  verified sender and the text in the SJK chat's gold, wrapped onto as many rows as it
+  needs since 10/10/2026, Sol's request: a long message pushes older ones out), the
+  field, and Open chat in gold under
+  it, which opens the SJK chat page. The same dock, drawn by the same code
+  ([chat_dock.rs](../crates/sjk-viewer/src/menu/sjk/chat_dock.rs)), sits in the
+  [in-game menu](#in-game-menu). Resting the pointer on a name shows the sender's
   [sender card](#sjks-pages) beside it, with Mute
   ([hub-chat.md](hub-chat.md#muting-a-player)). It keeps clear of the profile card
   bottom left in every window (`the_sender_card_keeps_clear_of_the_profile_card`); its
@@ -964,6 +968,17 @@ is gone); the same day Achievements became a tab of Profile, leaving six.
   opens. Only on the main page. What's new, Credits, SJK chat and Staff tools open
   their console pages over the menu, which shows again when they close; Report a
   bug opens the report card; Camera control its panel.
+- **SJK chat:** the main page's docked chat ([Main page](#main-page),
+  [hub-chat.md](hub-chat.md#in-the-menus)), on the main page only and while
+  `cl_sjkChat` is on: under the match between the row of icons and the card (x 860,
+  420 wide, from y 750, its Open chat line above the keys), over a soft dark pool of
+  rounded layers so it reads over the match. Its messages, field, Open chat and sender
+  cards behave as on the main page; a sender's card shows above the dock, where the
+  match is clear (shapes never cover text, so beside the name it would lie over the
+  dock's lines). Without the identity it says "Turn the SJK identity on to chat", as
+  the main page does. Typing in it, every key goes to the field before the console
+  key and the game's bindings (`GpuState::sjk_chat_typing`, ahead of
+  `route_console_key`); Escape stops typing, and leaving the menu drops the draft.
 - **Profile card:** the main page's [profile card](#profile-card), bottom left at
   the same place, under the row of icons, on every page whose arc leaves it room
   (every page of up to twelve entries; not Players and Report a player, whose table
@@ -994,21 +1009,26 @@ is gone); the same day Achievements became a tab of Profile, leaving six.
     gold and underlined when hovered or focused, with "Map, mode, kick, limits"
     after it), opening the call-vote page.
 - **Keys:** bottom centre, what has the keyboard: the list's (Up Down choose, Tab
-  icons and match, Enter open, Esc resume), the row's (Left Right choose, Tab match,
-  Enter open, Esc list), the card's (Arrows choose, Tab list, Enter vote, join,
-  spectate or open, Esc list), and a page's (Up Down choose, Enter open, report on
-  Players, write on Report a player, Esc back).
+  icons and match, or icons, match, chat with the chat docked, Enter open, Esc
+  resume), the row's (Left Right choose, Tab match, Enter open, Esc list), the card's
+  (Arrows choose, Tab list or chat, Enter vote, join, spectate or open, Esc list), the
+  chat's (Enter type, Tab list, Esc list; while typing Enter send, Esc stop typing,
+  Backspace erase), and a page's (Up Down choose, Enter open, report on Players, write
+  on Report a player, Esc back).
 
 Keyboard first: on the main page Up and Down move along the list (passing over
 nothing: every entry can be taken); Right from the list enters the card on its first
 control; Tab moves the keyboard from the list to the row of icons (its first), from
-there to the card (its first control that can be taken) and back to the list,
-Shift+Tab the other way, a part with nothing to offer skipped. In the row Left and
-Right move between the icons, Up returns to the list. On the card Left and Right move
-along a line of controls (the vote's Yes and No, the side's buttons; Left from a
-line's first returns to the list), Up and Down between its lines, nearest the
-control's place. Enter acts on what has the keyboard; Escape returns to the list from
-the row or the card, and from the list resumes the match. A control that goes away (a
+there to the card (its first control that can be taken), then to the docked chat's
+field and back to the list, Shift+Tab the other way, a part with nothing to offer
+skipped. In the row Left and Right move between the icons (Right from the last
+reaches the chat), Up returns to the list. On the card Left and Right move along a
+line of controls (the vote's Yes and No, the side's buttons; Left from a line's first
+returns to the list), Up and Down between its lines, nearest the control's place (Down
+from the last reaches the chat). On the chat's field Up returns to the list, Left
+reaches the row's last icon, Right the card's last control. Enter acts on what has the
+keyboard (on the chat it starts typing); Escape stops typing first, returns to the
+list from the row, the card or the chat, and from the list resumes the match. A control that goes away (a
 vote ends, Staff tools for a key no longer staff) gives the keyboard to the card's
 first control, or the list. Escape on a page returns to the main page on the entry
 that opened it, or on the card control that did (the side's buttons from Team and
@@ -1277,7 +1297,11 @@ nine moments, 1080p, 4K, 4:3, 21:9 and 720 lines, in the families and in Inter).
   are `sjk_focus`'s model (`Icon`, `Control`, `Controls::for_match`, `Focus`,
   `step`), built each frame from the view (`View::staff` from the profile card's
   summary) and kept on `InGameMenu` for the keys (`GpuState::sjk_main_key`) and the
-  pointer (`sjk_main_pointer`, tokens 800 for the icons and 820 for the controls). The
+  pointer (`sjk_main_pointer`, tokens 800 for the icons and 820 for the controls).
+  The docked SJK chat is `menu::sjk::chat_dock`, which the main page uses too: its
+  `Dock` (draft, sender card, the messages shown) and `DockCache` live on
+  `InGameMenu`, `InGameMenu::sync_chat` follows `cl_sjkChat` each frame, and its
+  tokens are `sjk_view::CHAT_TOKENS` (940 to 948). The
   match card (`sjk_view::Card`) is refreshed from the session by
   `GpuState::refresh_game_menu_card`. Settings
   opened from it is `ClientMenu::open_sjk_settings_from_game`; Settings' and
@@ -1310,7 +1334,9 @@ nine moments, 1080p, 4K, 4:3, 21:9 and 720 lines, in the families and in Inter).
   the main page without a vote and with one, the keyboard in the row of icons, the
   side's buttons in a CTF, Staff tools shown, a spectator in an FFA, a Siege, Team
   in a CTF, the installed maps to vote for, Leave, a 4:3 window and Settings opened
-  from it; `duel6_sjk_profile_screen` the Profile screen opened from the game menu
+  from it; `duel6_sjk_chat_dock` the docked chat on made-up messages, on the main page
+  (and typing) and in the in-game menu (a sender's card, typing with a vote on), at
+  1080p, 4:3 and 4K with the plain text style and `ui_textScale 1.2`; `duel6_sjk_profile_screen` the Profile screen opened from the game menu
   on its Character tab, Ctrl+Tab through the seven tabs and round, the game menu's
   Profile opening again on the tab left last, the picture panel with Browse..., a 4:3
   window, and from the main page its Character tab on the menu map's stage and its

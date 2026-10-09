@@ -76,6 +76,11 @@ impl<'a> Measure<'a> {
         Self { font, style }
     }
 
+    /// How much larger than their size the text style draws runs (`ui_textScale`).
+    pub(crate) fn scale(&self) -> f32 {
+        self.style.scale
+    }
+
     /// The width of `text` drawn at `size` in `face`, colour codes taking no room.
     pub(crate) fn width(&self, text: &str, size: f32, face: TextFace) -> f32 {
         let size = size * self.style.scale;
@@ -147,14 +152,28 @@ pub(crate) fn flow(
     fits: impl Fn(&str, f32) -> usize,
 ) -> Vec<Range<usize>> {
     let mut rows = Vec::with_capacity(2);
+    flow_each(text, first, rest, fits, |row| rows.push(row));
+    rows
+}
+
+/// [`flow`] handing each row to `row` instead of collecting them, so a layout redone
+/// every frame (the docked chat's) allocates nothing. Always at least one row.
+pub(crate) fn flow_each(
+    text: &str,
+    first: f32,
+    rest: f32,
+    fits: impl Fn(&str, f32) -> usize,
+    mut row: impl FnMut(Range<usize>),
+) {
+    let mut count = 0;
     let mut start = 0;
     while start < text.len() {
-        let width = if rows.is_empty() { first } else { rest };
+        let width = if count == 0 { first } else { rest };
         let mut end = start + fits(&text[start..], width.max(0.0));
         if end < text.len() {
             match text[start..end].rfind(' ') {
                 Some(space) if space > 0 => end = start + space,
-                _ if rows.is_empty() && first < rest => {
+                _ if count == 0 && first < rest => {
                     let word = text[start..].find(' ').map_or(text.len(), |at| start + at);
                     if word > end && word <= start + fits(&text[start..], rest) {
                         end = start;
@@ -163,16 +182,16 @@ pub(crate) fn flow(
                 _ => {}
             }
         }
-        rows.push(start..end);
+        row(start..end);
+        count += 1;
         start = end;
         while text.as_bytes().get(start) == Some(&b' ') {
             start += 1;
         }
     }
-    if rows.is_empty() {
-        rows.push(0..0);
+    if count == 0 {
+        row(0..0);
     }
-    rows
 }
 
 #[cfg(test)]

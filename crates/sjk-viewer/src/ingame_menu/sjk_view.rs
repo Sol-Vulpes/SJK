@@ -4,8 +4,9 @@
 //! gold and larger, a line under it saying what it opens, a lit rail beside
 //! them with a gold mark at the chosen one, SJK's emblem inside the curve), a
 //! card of the match on the right with the player's side and the vote on it, a
-//! row of small icon buttons under the emblem, the player's profile card bottom
-//! left (a click opens the Profile screen) and the keys at the bottom.
+//! row of small icon buttons under the emblem, the SJK chat docked under the match
+//! between them (the main page's dock, `menu::sjk::chat_dock`), the player's profile
+//! card bottom left (a click opens the Profile screen) and the keys at the bottom.
 //!
 //! The pages are the in-game menu's own ([`Page`]): the main one, Team (the J
 //! key's, or Siege's classes), Players (a small scoreboard, drawn as a table with
@@ -23,6 +24,7 @@ use super::sjk_focus::{Control, Controls, Focus, Icon};
 use super::{Page, View};
 use crate::game_font::GameFonts;
 use crate::menu::emblem::{self, EmblemLayer};
+use crate::menu::sjk::chat_dock::{self, ChatDock, Dock};
 use crate::menu::sjk::{
     Frame, TextTarget, color, fade, fade_across, key_hint, key_hint_width, text,
 };
@@ -350,6 +352,21 @@ const MEDAL_PITCH: f32 = 44.0;
 const KEYS_Y: f32 = 1004.0;
 /// Pointer token of the player's profile card, bottom left (`profile_card`).
 pub(crate) const CARD_TOKEN: u16 = 900;
+/// The docked SJK chat on the main page: under the match, between the row of icons and
+/// the card, its last line above the keys; and its pointer tokens.
+pub(crate) const CHAT_PLACE: chat_dock::Place = chat_dock::Place {
+    x: 860.0,
+    top: 750.0,
+    width: 420.0,
+    card_above: true,
+};
+pub(crate) const CHAT_TOKENS: chat_dock::Tokens = chat_dock::Tokens {
+    field: 940,
+    open: 941,
+    card: 942,
+    mute: 943,
+    names: 944,
+};
 
 /// The arc's spacing and type for a page of some number of entries: the gap
 /// between entries, their size and the chosen one's, and whether the chosen
@@ -443,11 +460,13 @@ pub(super) struct Rows<'a> {
 }
 
 /// The main page beyond its list: the icons of the row under the emblem, the match
-/// card's controls and where the keyboard is ([`super::sjk_focus`]).
+/// card's controls, the docked SJK chat while it is on and where the keyboard is
+/// ([`super::sjk_focus`]).
 pub(super) struct Extras<'a> {
     pub(super) focus: Focus,
     pub(super) icons: &'a [Icon],
     pub(super) controls: &'a Controls,
+    pub(super) chat: Option<Chat<'a>>,
 }
 
 impl Extras<'_> {
@@ -456,7 +475,14 @@ impl Extras<'_> {
         focus: Focus::List,
         icons: &[],
         controls: &Controls::none(),
+        chat: None,
     };
+}
+
+/// The docked SJK chat: what the menu keeps of it between frames and what it shows.
+pub(super) struct Chat<'a> {
+    pub(super) dock: &'a mut Dock,
+    pub(super) view: ChatDock<'a>,
 }
 
 /// Draw `view`'s page and its right side (the match card, or a player's) into
@@ -466,7 +492,7 @@ pub(super) fn build(
     view: &View<'_>,
     rows: &Rows<'_>,
     sides: &Sides<'_>,
-    extras: &Extras<'_>,
+    extras: &mut Extras<'_>,
     motion: &mut Motion,
     viewport: [f32; 2],
 ) {
@@ -487,6 +513,7 @@ pub(super) fn build(
         &frame,
         card.known || player.is_some(),
         table,
+        extras.chat.is_some(),
     );
     let seconds = crate::menu::art::motion::seconds();
     if table {
@@ -525,6 +552,17 @@ pub(super) fn build(
     }
     if view.page == Page::Main {
         dock::icon_row(canvas, &frame, extras);
+        if let Some(chat) = extras.chat.as_mut() {
+            chat_dock::draw(
+                canvas,
+                &frame,
+                CHAT_PLACE,
+                chat.dock,
+                &chat.view,
+                extras.focus == Focus::Chat,
+                CHAT_TOKENS,
+            );
+        }
     }
     if profile_card_room(view.page, if table { 0 } else { rows.labels.len() }) {
         let lit = canvas.token_hovered(CARD_TOKEN);
@@ -542,7 +580,20 @@ pub(super) fn build(
             );
         });
     }
-    keys(canvas, &frame, view.page, extras.focus);
+    let chat = extras.chat.as_ref().map(|chat| chat.dock.is_typing());
+    keys(canvas, &frame, view.page, extras.focus, chat);
+    // The chat's sender card goes over everything, its targets last.
+    if let Some(chat) = extras.chat.as_mut() {
+        chat_dock::sender_card(
+            canvas,
+            &frame,
+            viewport,
+            CHAT_PLACE,
+            chat.dock,
+            &chat.view,
+            CHAT_TOKENS,
+        );
+    }
     canvas.finish(dock::focus_token(view.selected_row, extras));
 }
 
@@ -563,9 +614,16 @@ fn profile_card_room(page: Page, count: usize) -> bool {
 }
 
 /// The fades that keep the menu readable over any part of the match: deep at
-/// the left edge and clear by the middle, behind the card on the right, and
-/// along the bottom behind the keys.
-fn scrims(canvas: &mut MenuCanvas, viewport: [f32; 2], frame: &Frame, card: bool, table: bool) {
+/// the left edge and clear by the middle, behind the card on the right, a soft pool
+/// under the docked chat (`chat`), and along the bottom behind the keys.
+fn scrims(
+    canvas: &mut MenuCanvas,
+    viewport: [f32; 2],
+    frame: &Frame,
+    card: bool,
+    table: bool,
+    chat: bool,
+) {
     let [width, height] = viewport;
     let space = |alpha| color::alpha(color::SPACE, alpha);
     let x = |frame_x: f32| frame.point(frame_x, 0.0)[0];
@@ -591,6 +649,20 @@ fn scrims(canvas: &mut MenuCanvas, viewport: [f32; 2], frame: &Frame, card: bool
     if card && !table {
         // Dark enough from the card's left edge (x 1360) for its small lines.
         stops(&[(x(1060.0), 0.0), (x(1340.0), 0.62), (width, 0.8)]);
+    }
+    if chat {
+        // Rounded layers, each a little inside the last, so the pool has no edge.
+        let place = CHAT_PLACE;
+        let [x, y] = [place.x - 80.0, place.top - 56.0];
+        let [w, h] = [place.width + 160.0, place.bottom() - place.top + 100.0];
+        for layer in 0..5 {
+            let inset = layer as f32 * 16.0;
+            let _ = canvas.draw_list_mut().push(DrawCommand::RoundedRect {
+                rect: frame.rect(x + inset, y + inset, w - inset * 2.0, h - inset * 2.0),
+                radius: (90.0 - inset) * frame.s,
+                color: space(0.14),
+            });
+        }
     }
     fade(
         canvas,
@@ -794,8 +866,15 @@ fn entries(canvas: &mut MenuCanvas, frame: &Frame, view: &View<'_>, rows: &Rows<
 }
 
 /// The keys of the page, bottom centre: on the main page those of what has the
-/// keyboard (the list, the row or the card).
-fn keys(canvas: &mut MenuCanvas, frame: &Frame, page: Page, focus: Focus) {
+/// keyboard (the list, the row, the card or the chat). `chat` says whether the chat is
+/// docked and typed in.
+fn keys(canvas: &mut MenuCanvas, frame: &Frame, page: Page, focus: Focus, chat: Option<bool>) {
+    let typing = chat == Some(true);
+    let (list_tab, card_tab) = if chat.is_some() {
+        ("icons, match, chat", "chat")
+    } else {
+        ("icons and match", "list")
+    };
     let s = frame.s;
     let back = if page == Page::Main { "resume" } else { "back" };
     let enter = match page {
@@ -804,9 +883,21 @@ fn keys(canvas: &mut MenuCanvas, frame: &Frame, page: Page, focus: Focus) {
         _ => "open",
     };
     let rows: [(&[&str], &str); 4] = match (page, focus) {
+        (Page::Main, _) if typing => [
+            (&["Enter"], "send"),
+            (&["Esc"], "stop typing"),
+            (&["Backspace"], "erase"),
+            (&[], ""),
+        ],
+        (Page::Main, Focus::Chat) => [
+            (&["Enter"], "type"),
+            (&["Tab"], "list"),
+            (&["Esc"], "list"),
+            (&[], ""),
+        ],
         (Page::Main, Focus::List) => [
             (&["Up", "Down"], "choose"),
-            (&["Tab"], "icons and match"),
+            (&["Tab"], list_tab),
             (&["Enter"], enter),
             (&["Esc"], back),
         ],
@@ -818,7 +909,7 @@ fn keys(canvas: &mut MenuCanvas, frame: &Frame, page: Page, focus: Focus) {
         ],
         (Page::Main, Focus::Card(control)) => [
             (&["Arrows"], "choose"),
-            (&["Tab"], "list"),
+            (&["Tab"], card_tab),
             (
                 &["Enter"],
                 match control {
@@ -1813,12 +1904,49 @@ mod tests {
         })
     }
 
-    /// The main page's row (Staff tools shown) and `controls`, the keyboard on `focus`.
-    fn main_extras(controls: &Controls, focus: Focus) -> Extras<'_> {
+    /// Messages for the docked chat: a short one, a long one and one in between.
+    const CHAT: [chat_dock::DockLine<'static>; 3] = [
+        chat_dock::DockLine {
+            name: "^5JoF^7 Jedi",
+            text: "anyone up for duels on ffa3?",
+            verified: true,
+            staff: false,
+            key_id: "0123456789abcdef",
+        },
+        chat_dock::DockLine {
+            name: "Kyle",
+            text: "the new HUD looks great, but the force bar in the corner feels a bit \
+                   too small at 4K and the clock could move a little to the left",
+            verified: false,
+            staff: false,
+            key_id: "00000000000000ff",
+        },
+        chat_dock::DockLine {
+            name: "^1Fox",
+            text: "in 5 min",
+            verified: false,
+            staff: false,
+            key_id: "fedcba9876543210",
+        },
+    ];
+
+    /// The main page's row (Staff tools shown), `controls` and the chat docked in
+    /// `dock`, the keyboard on `focus`.
+    fn main_extras<'a>(controls: &'a Controls, focus: Focus, dock: &'a mut Dock) -> Extras<'a> {
         Extras {
             focus,
             icons: Icon::shown(true),
             controls,
+            chat: Some(Chat {
+                dock,
+                view: ChatDock {
+                    lines: &CHAT,
+                    online: 12,
+                    live: true,
+                    notice: "Turn the SJK identity on to chat",
+                    measure: None,
+                },
+            }),
         }
     }
 
@@ -1885,8 +2013,9 @@ mod tests {
                 let mut canvas = MenuCanvas::new();
                 let mut motion = Motion::default();
                 let controls = full_card();
-                let extras = if page == Page::Main {
-                    main_extras(&controls, Focus::Row(Icon::Staff))
+                let mut dock = Dock::default();
+                let mut extras = if page == Page::Main {
+                    main_extras(&controls, Focus::Row(Icon::Staff), &mut dock)
                 } else {
                     Extras::NONE
                 };
@@ -1902,7 +2031,7 @@ mod tests {
                         card: &card,
                         players: &roster,
                     },
-                    &extras,
+                    &mut extras,
                     &mut motion,
                     viewport,
                 );
@@ -1939,9 +2068,10 @@ mod tests {
                     Page::VoteMap
                 };
                 let controls = full_card();
+                let mut dock = Dock::default();
                 // The row's label shows over it while an icon has the keyboard.
-                let extras = if page == Page::Main {
-                    main_extras(&controls, Focus::Row(Icon::Camera))
+                let mut extras = if page == Page::Main {
+                    main_extras(&controls, Focus::Row(Icon::Camera), &mut dock)
                 } else {
                     Extras::NONE
                 };
@@ -1958,7 +2088,7 @@ mod tests {
                         card: &card,
                         players: &roster,
                     },
-                    &extras,
+                    &mut extras,
                     &mut Motion::default(),
                     viewport,
                 );
@@ -2040,7 +2170,8 @@ mod tests {
                 ),
             ] {
                 let mut canvas = MenuCanvas::new();
-                let extras = main_extras(&controls, focus);
+                let mut dock = Dock::default();
+                let mut extras = main_extras(&controls, focus, &mut dock);
                 let mut team_view = view(Page::Main, 2, true, 2);
                 team_view.staff = true;
                 build(
@@ -2055,7 +2186,7 @@ mod tests {
                         card: &card,
                         players: &roster,
                     },
-                    &extras,
+                    &mut extras,
                     &mut Motion::default(),
                     viewport,
                 );
@@ -2071,6 +2202,25 @@ mod tests {
                 for icon in Icon::ALL {
                     areas.push(canvas.rect_for(icon_token(icon)).expect("an icon"));
                 }
+                // The docked chat's field, Open chat and names, and the profile card.
+                let tokens = CHAT_TOKENS;
+                for token in [tokens.field, tokens.open, tokens.name(0), CARD_TOKEN] {
+                    areas.push(canvas.rect_for(token).expect("a chat or card area"));
+                }
+                // Clear of the list's entries.
+                for row in 0..labels.len() {
+                    let entry = canvas.rect_for(row as u16).expect("an entry");
+                    for token in [tokens.field, tokens.open, tokens.name(0)] {
+                        let rect = canvas.rect_for(token).unwrap();
+                        assert!(
+                            rect.bottom() <= entry.y
+                                || rect.y >= entry.bottom()
+                                || rect.right() <= entry.x
+                                || rect.x >= entry.right(),
+                            "{viewport:?}: chat {token} over row {row}"
+                        );
+                    }
+                }
                 for (index, rect) in areas.iter().enumerate() {
                     for other in &areas[index + 1..] {
                         let apart = rect.bottom() <= other.y
@@ -2084,6 +2234,77 @@ mod tests {
                 assert!(focused >= CONTROL_TOKEN, "{focus:?}");
             }
         }
+    }
+
+    /// Resting the pointer on a name in the docked chat shows the sender's card above
+    /// the dock (over none of its lines), left of the match card and clear of the
+    /// profile card, inside the window; it stays while the pointer is on it.
+    #[test]
+    fn the_chat_sender_card_shows_above_the_dock() {
+        use sjk_ui::{InputEvent, Vec2};
+        let card = Card::for_shot(false, false);
+        let roster = players::State::for_shot(8, true, players::Gate::Open);
+        let labels: Vec<String> = Entry::MAIN.map(Entry::label).map(str::to_owned).to_vec();
+        let hints = vec!["What it opens".to_owned(); labels.len()];
+        let enabled = vec![true; labels.len()];
+        let controls = full_card();
+        let centre = |rect: Rect| Vec2::new(rect.x + rect.width * 0.5, rect.y + rect.height * 0.5);
+        let overlaps = |a: Rect, b: Rect| {
+            a.x < b.right() && a.right() > b.x && a.y < b.bottom() && a.bottom() > b.y
+        };
+        let mut hovered = 0;
+        for viewport in VIEWPORTS {
+            let mut canvas = MenuCanvas::new();
+            let mut dock = Dock::default();
+            let mut draw = |canvas: &mut MenuCanvas, dock: &mut Dock| {
+                build(
+                    canvas,
+                    &view(Page::Main, 0, false, 0),
+                    &Rows {
+                        labels: &labels,
+                        hints: &hints,
+                        enabled: &enabled,
+                    },
+                    &Sides {
+                        card: &card,
+                        players: &roster,
+                    },
+                    &mut main_extras(&controls, Focus::List, dock),
+                    &mut Motion::default(),
+                    viewport,
+                );
+            };
+            draw(&mut canvas, &mut dock);
+            assert!(canvas.rect_for(CHAT_TOKENS.card).is_none());
+            for index in 0..CHAT.len() {
+                let Some(name) = canvas.rect_for(CHAT_TOKENS.name(index)) else {
+                    continue;
+                };
+                canvas.pointer(InputEvent::PointerMove(centre(name)));
+                draw(&mut canvas, &mut dock);
+                hovered += 1;
+                assert!(!canvas.overflowed(), "{viewport:?}");
+                let sender = canvas.rect_for(CHAT_TOKENS.card).expect("the sender card");
+                let frame = Frame::new(viewport);
+                let [dock_left, dock_top] = frame.point(CHAT_PLACE.x - 14.0, CHAT_PLACE.top);
+                let [card_left, _] = frame.point(CARD_X, 0.0);
+                assert!(sender.bottom() <= dock_top, "{viewport:?}: {sender:?}");
+                assert!(sender.x >= dock_left - 0.5, "{viewport:?}: {sender:?}");
+                assert!(sender.right() < card_left, "{viewport:?}: {sender:?}");
+                assert!(sender.y >= 0.0, "{viewport:?}: {sender:?}");
+                let profile = canvas.rect_for(CARD_TOKEN).expect("the profile card");
+                assert!(!overlaps(sender, profile), "{viewport:?}");
+                // Onto the card: it stays.
+                let mute = canvas.rect_for(CHAT_TOKENS.mute).expect("Mute");
+                canvas.pointer(InputEvent::PointerMove(centre(mute)));
+                draw(&mut canvas, &mut dock);
+                assert!(canvas.rect_for(CHAT_TOKENS.card).is_some(), "{viewport:?}");
+                canvas.pointer(InputEvent::PointerMove(Vec2::new(1.0, 1.0)));
+                draw(&mut canvas, &mut dock);
+                assert!(canvas.rect_for(CHAT_TOKENS.card).is_none(), "{viewport:?}");
+            }
+        }
+        assert!(hovered >= VIEWPORTS.len() * 2, "{hovered} names hovered");
     }
 
     #[test]

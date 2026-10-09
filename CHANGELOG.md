@@ -21,6 +21,7 @@ Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 
 ## Unreleased
 
+- The SJK chat docked on the main page shows a long message whole, wrapped onto as many lines as it needs instead of cut at the column's edge, and the SJK UI's in-game menu (Escape in a match) docks the same chat under the match: read it, type and send, rest the pointer on a name for the sender's card _(Sol)_
 - The quick wheel has a Force page, between General and Weather: the Force powers you can use right now, the selected one marked; an instant power is used at once and selected, Grip, Lightning, Drain and Stasis are selected for your Use Force key; past 12 powers the rest go on a Force 2 page. Existing wheels get it once; Settings > Quick wheel can rename, move, remove and add it back _(Sol)_
 - The Profile screen's Saber tab can search the hilts (type any part of a name; Escape clears it) and has a Blade row to wear the stock blade or any blade skin you own, shown as small Collection swatches _(Sol)_
 - The Profile screen's tabs make room for a larger menu text size (ui_textScale, ui_letterSpacing), so Achievements is no longer cut, and the main page's Profile line is shorter, clear of the servers _(Sol)_
