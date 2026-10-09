@@ -30,6 +30,7 @@ impl LegacySoundAdapter {
             sound,
             handle,
             additional: false,
+            cause: None,
             request: PlayRequest {
                 origin: None,
                 source: SourceId(client as u32),

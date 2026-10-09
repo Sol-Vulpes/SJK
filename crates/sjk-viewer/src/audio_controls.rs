@@ -166,6 +166,11 @@ impl GameAudio {
         if footstep && !self.footsteps {
             return;
         }
+        // A muted player's footsteps, swings and other animation cues.
+        let source = SourceId(entity.saturating_sub(1) as u32);
+        if self.mute.silences(source, None) {
+            return;
+        }
         let Some(handle) = self.find_handle(path) else {
             return;
         };
@@ -174,7 +179,7 @@ impl GameAudio {
             handle,
             PlayRequest {
                 origin: (!relative).then_some(origin),
-                source: SourceId(entity.saturating_sub(1) as u32),
+                source,
                 channel: ChannelId(u32::from(if channel == 4 || channel == 12 {
                     3
                 } else {

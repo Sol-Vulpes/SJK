@@ -198,7 +198,11 @@ pub(crate) fn frame(
         slots,
         |point, normal, color, no_light, spark, sound, seed| {
             if sound {
-                if let Some(audio) = audio.as_mut() {
+                // The contact's key is its blade's: entity number times 24, and more.
+                if let Some(audio) = audio
+                    .as_mut()
+                    .filter(|audio| !audio.silenced(sjk_audio::SourceId(seed / 24), None))
+                {
                     audio.play_on_channel(
                         SOUNDS[(seed ^ time as u32) as usize % SOUNDS.len()],
                         1.,

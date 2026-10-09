@@ -2897,3 +2897,14 @@ test: Main page: the card shows picture or initial, name, tick, medals, achievem
 test: Drop a picture on the Profile page: preview, Use this picture; sjkavatar clear removes it.
 test: In game Esc menu: the same card; open the Players page: other players' pictures.
 note: Needs the hub of SJK-hub PR #5; a hub without it says it does not take pictures yet.
+
+[chat-mute]
+area: Console & chat
+title: Mute a player from their name in chat (SJK PR #64)
+change: Hovering a sender's name shows a card with their picture, medals, place, Mute / Unmute.
+change: Muted: chat hidden, shown as Kyle with the default saber, their sounds skipped.
+change: The list is kept in chat-mutes.txt (it replaces the chat page's session list).
+test: Hover a name in the dock, on the chat page and in game chat (composer open): the card shows.
+test: Mute a player on a server: no chat from them, a Kyle with a blue saber, no sounds from them.
+test: Restart: they are still muted; Unmute brings everything back.
+note: Not tried in a game; a player who renames or claims no identity is not matched by key.

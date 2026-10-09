@@ -169,6 +169,9 @@ impl ClientMenu {
             self.chat_dock.refresh();
         }
         let mut lines = [chat_dock::BLANK; chat_dock::LINES];
+        // The sender card's picture, asked before the profile card's lock is taken.
+        self.home
+            .place_sender_card(crate::player_identity::avatar_version);
         let measure = target.body_measure();
         let chat = chat_on.then(|| home::ChatDock {
             measure: Some(measure),
@@ -256,6 +259,13 @@ impl ClientMenu {
             }
             home::Action::OpenChat => {
                 console.open_sjk_chat_panel();
+                MenuAction::None
+            }
+            home::Action::Mute => {
+                // Local only: the list on this PC (`player_mutes.rs`).
+                if let Some((key_id, name)) = self.home.take_mute() {
+                    crate::player_mutes::set_muted(Some(&key_id), &name, true);
+                }
                 MenuAction::None
             }
         }

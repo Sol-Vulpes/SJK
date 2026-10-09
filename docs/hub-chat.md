@@ -34,7 +34,10 @@ The hub's side is described in Sol-Vulpes/SJK-hub (`PROTOCOL.md`, "Chat", "Emote
 | Wire types (`ChatMessage`, `Emote`, `LookEvent`, `Feed`) | [wire.rs](../crates/sjk-identity/src/wire.rs) |
 | Requests (`chat`, `emote`, `feed`) | [hub.rs](../crates/sjk-identity/src/hub.rs) |
 | The feed thread and `ChatState` | [feed.rs](../crates/sjk-identity/src/feed.rs), [service.rs](../crates/sjk-identity/src/service.rs) |
-| Viewer glue, local mutes | [player_identity.rs](../crates/sjk-viewer/src/player_identity.rs) |
+| Viewer glue | [player_identity.rs](../crates/sjk-viewer/src/player_identity.rs) |
+| Muting a player: the list, matching slots | [chat_mutes.rs](../crates/sjk-viewer/src/chat_mutes.rs), [player_mutes.rs](../crates/sjk-viewer/src/player_mutes.rs) |
+| Muting a player: drawn as Kyle, silenced | [muted_players.rs](../crates/sjk-viewer/src/muted_players.rs), [muted_players_frame.rs](../crates/sjk-viewer/src/muted_players_frame.rs), [audio_mute.rs](../crates/sjk-viewer/src/audio_mute.rs) |
+| Sender card (pointer on a name) | [sender_card.rs](../crates/sjk-viewer/src/sender_card.rs), [chat/card.rs](../crates/sjk-viewer/src/chat/card.rs) |
 | In-game SJK channel | [chat/sjk.rs](../crates/sjk-viewer/src/chat/sjk.rs), [chat/view/sjk_line.rs](../crates/sjk-viewer/src/chat/view/sjk_line.rs), [sjk_chat_frame.rs](../crates/sjk-viewer/src/sjk_chat_frame.rs) |
 | How a line looks everywhere (gold, tick, flow) | [sjk_chat_look.rs](../crates/sjk-viewer/src/sjk_chat_look.rs) |
 | Main page dock | [home.rs](../crates/sjk-viewer/src/menu/sjk/home.rs), [chat_dock.rs](../crates/sjk-viewer/src/menu/sjk/chat_dock.rs) |
@@ -109,8 +112,10 @@ Old clients ignore all of it, so it stays `/v1/`.
 - Hub messages join the chat feed as one flowing line ([How a line
   looks](#how-a-line-looks)): a small SJK tag, the name, the verified tick for a
   verified sender, then the message in the SJK chat's gold. Names and texts go
-  through `chat::for_display`. Messages staff delete leave the feed, and muting a key
-  on the page hides its lines already there. Joining a game
+  through `chat::for_display`. Messages staff delete leave the feed, and muting a
+  player ([Muting a player](#muting-a-player)) hides their lines already there. While
+  the composer is open, resting the pointer on a sender's name shows their profile
+  card with Mute or Unmute. Joining a game
   does not replay the hub's backlog in the feed (the dock and the page show it). A
   refusal (quota, rules) shows as an `SJK chat:` line.
 - `cl_sjkChat` (default 1, Settings > Network > SJK chat) shows SJK chat and runs the
@@ -122,7 +127,8 @@ Old clients ignore all of it, so it stays `/v1/`.
 
 - SJK UI main page: the chat is docked under Recent servers. Its last five lines (the
   verified tick after a verified sender's name), cut to one row each, sit on the field,
-  with the online count by its name. Down past the last server (or a click) reaches the field;
+  with the online count by its name; resting the pointer on a name shows the sender's
+  sender card with Mute. Down past the last server (or a click) reaches the field;
   Enter types (every key goes to the field), Enter sends, Escape stops. Open chat opens
   the page. A line under the field says why a message could not go.
 - The SJK chat page (a console page in the SJK UI's look in every menu style): the
@@ -130,8 +136,9 @@ Old clients ignore all of it, so it stays `/v1/`.
   how long ago on the right of its first row ("3 minutes ago", as the main page's
   servers say, so no time zone is needed); the field (the keyboard is there when the page opens), Send and the
   character count. Up from the field chooses the newest message, Up and Down move,
-  Page Up and Page Down scroll, Tab walks every control. A chosen message offers Mute on
-  this PC (for the session); for staff, Delete for everyone, Mute at the hub and Unmute
+  Page Up and Page Down scroll, Tab walks every control. Resting the pointer on a name
+  shows the sender's sender card with Mute or Unmute. A chosen message offers Mute on
+  this PC ([Muting a player](#muting-a-player)); for staff, Delete for everyone, Mute at the hub and Unmute
   at the hub (the client does not know a key's mute flag); under them, what the request
   came to (sending, done, or the hub's refusal). It opens from the dock's
   Open chat, `sjkchat`, `messagemode5` outside a game, and the in-game SJK menu's
@@ -163,6 +170,65 @@ request, 08/10/2026):
   (`sjk_chat_look::flow`), and the dock's single row sets name, tick and text one after
   another.
 
+## Muting a player
+
+A player can be muted on this PC (Sol's request, 08/10/2026). It is local: nothing goes
+to the hub or the game server, and the game is unchanged; only what this client shows
+and plays changes.
+
+- **Where:** rest the pointer on a name and the player's sender card shows beside it
+  ([sender_card.rs](../crates/sjk-viewer/src/sender_card.rs)), in the SJK UI's look
+  wherever it is: in the game's chat while the composer is open (the pointer is free
+  then), on an SJK chat sender's name or on the name of a player the server says sent
+  the line ([chat/card.rs](../crates/sjk-viewer/src/chat/card.rs)); on the main page's
+  dock; and on the SJK chat page. The card stays while the pointer moves onto it. It
+  shows their picture (or their initial, as the profile card draws it,
+  `profile_card::avatar`; the version comes from the hub's players on the server, else
+  their profile, asked of the hub once, outside any lock:
+  `player_identity::avatar_version`), the name and, for a verified player, the
+  verified tick; whether the hub knows
+  them (and staff); their hub name when it differs from the one shown; their key; their
+  medals' medallions; where they are on the server being played ("On this server, slot
+  5", or "slot 5, matched by name"); and Mute or Unmute. The Players page's card could
+  not be reused: it is that page's right column, with score and ping. The page's
+  chosen message keeps its Mute on this PC, which uses the same list.
+- **What muting does:** their SJK chat lines are hidden (the page shows "Muted on this
+  PC", the dock leaves them out, the game's feed hides them as ignored lines are) and so
+  are their game chat lines once they are matched to a slot. While they are on the
+  server, their model is drawn as `kyle/default` (Kyle's red or blue skin when a team
+  game colours the teams, so the teams still show), each saber they hold or throw as
+  `single_1` in the default blue (`color1` 4), with no hat or cape; a body they leave
+  stays so. Their look ([unlockables.md](unlockables.md#receiving)) is not drawn
+  either: no blade skin (so none of its sounds) and no lit Illuminate holocron
+  (`Looks::set_muted`). Nothing whose source is their entity, or that the sound events name them as
+  the cause of, is played: footsteps, jumps, pain, death, taunts and voice, weapon fire
+  and charging, saber swings, hum, hits and blocks (`otherEntityNum2`), Force sounds,
+  their voice commands, the hum and wall scrapes of their sabers, and the chat beep of
+  their messages ([audio_mute.rs](../crates/sjk-viewer/src/audio_mute.rs),
+  `LegacySoundDecision::cause`). Their missiles' flight and impact sounds and the
+  sounds of effect files stay: the protocol does not say whose they are. The test is a
+  bit mask of slots, so it costs nothing while nobody is muted.
+- **The list:** `chat-mutes.txt` beside `config.cfg`, one player a line: their SJK key
+  (or `-` for a player the hub does not know) and the name they were last seen with
+  ([chat_mutes.rs](../crates/sjk-viewer/src/chat_mutes.rs),
+  [player_mutes.rs](../crates/sjk-viewer/src/player_mutes.rs)). It is read at start
+  and written at every change, so mutes last across sessions (the page's mute used to
+  last for the session only). At most 1024 players.
+- **Matching a muted player to a slot**, as the scoreboard's badges do
+  ([identity.md](identity.md#what-happens)): a slot whose claim at the hub was made
+  under the name the game shows there is that key's. A slot no such claim covers is
+  matched by name: the muted name and the shown one compared lower-cased, without
+  colour codes and symbols (`sjk_identity::names_match`). That is weaker: anyone
+  wearing the name is muted, and a muted player who renames is not; the card says
+  "matched by name", and for a player the hub does not know, "By name, colours aside:
+  anyone wearing it". A slot another key claims is never matched by name, and the
+  player's own slot never is. A game chat line the server does not attribute (JA+
+  servers) is hidden when it starts with the name shown in a muted slot, then `: `;
+  such lines stay unclickable, as before. The muted slots are worked out only when the
+  list, the hub's claims or the server's players change
+  ([muted_players.rs](../crates/sjk-viewer/src/muted_players.rs)), as a bit mask the
+  renderer, the chat feed and the sound filter test.
+
 ## Emotes in the client (groundwork)
 
 - `sjkemote <id>` sends an emote while on a server (named apart from the `emote`
@@ -187,7 +253,8 @@ or emote they send with the name they wear. With `cl_sjkChat` off it still sees 
 feed requests made on a game server (for the looks), with the server's address. Messages are public to every SJK player,
 kept in the hub's memory only (the last 200), and gone when the hub restarts; a
 message staff delete stays in the staff log. Emotes are kept 10 seconds. The mute
-flag is the only new thing on the hub's disk. Local mutes are not saved.
+flag is the only new thing on the hub's disk. Local mutes stay on this PC
+(`chat-mutes.txt`, keys and names) and are never sent.
 
 ## Verification
 
@@ -217,6 +284,10 @@ flag is the only new thing on the hub's disk. Local mutes are not saved.
   off.
 - The dock and the page were rendered off screen over a plain backdrop in the UI's
   families and looked at.
+- Muting a player: unit tests for the list and its file, matching slots by claim and
+  by name, the card on a name in the feed, the dock and the page, the hidden lines,
+  Kyle and the default saber, and the sound filter ([status.md](status.md#muting-a-player-from-a-name-in-chat)).
+  Not seen or heard in a game.
 
 Not verified: no client was started, so nothing was seen in a game or over the map;
 nothing went through Cloudflare's tunnel or the deployed hub (which does not have the

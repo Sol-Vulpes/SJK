@@ -9,6 +9,11 @@
 #                               made it when that is not the piece's owner.
 
 = Sol
++ 09/10/2026 | SJK #64 | Mute a player from their name in chat: chat, model and sounds
+- 4560f60 |  | Mute a player from their name in chat: chat, model and sounds
+- 9d79584 |  | Draw a muted player without their blade skin or holocron
+- 24b552e |  | Rename the chat's player card module to sender_card
+- 9dc156d |  | Show the sender's picture on the sender card
 + 09/10/2026 | SJK #62 | Show the SJK profile card and let players upload a picture
 - 9dd36a2 |  | Show the SJK profile card and let players upload a picture
 + 09/10/2026 | SJK #63 | Show SJK chat in its own gold, on one line, with the tick alone

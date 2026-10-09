@@ -2,7 +2,8 @@
 //! newest at the bottom over the field and Send, and the chosen message with what
 //! can be done about it on the right. A message flows as one line, as SJK chat does
 //! everywhere ([`crate::sjk_chat_look`]): the name, the verified tick for a verified
-//! sender, then the text in the SJK chat's gold, wrapping only when it is too long.
+//! sender, then the text in the SJK chat's gold, wrapping only when it is too long. A
+//! name under the pointer shows its sender's sender card over the page.
 
 use super::*;
 use crate::menu::sjk::recent::ago;
@@ -132,6 +133,7 @@ impl Panel {
         self.composer(&frame, inputs);
         self.chosen(&frame, inputs, measure);
         self.keys(&frame);
+        self.card(&frame, inputs, measure, viewport);
         if !self.order.contains(&self.focus) {
             self.focus = FIELD_TOKEN;
         }
@@ -226,6 +228,7 @@ impl Panel {
             );
         }
         let mut y = LIST_TOP + room;
+        let mut hovered = None;
         for (index, (message, laid)) in messages.range(first..end).zip(&laid).enumerate() {
             let token = MESSAGE_BASE + index as u16;
             let tall = height(laid.rows.len());
@@ -236,12 +239,19 @@ impl Panel {
             self.message(frame, laid, y);
             self.ui
                 .hit_region(token, frame.rect(row[0], row[1], row[2], row[3]));
+            // The name over its row: resting the pointer on it shows the card.
+            let name = frame.rect(LIST_X, y, laid.name_width + 2.0, NAME_ROW - 2.0);
+            self.ui.hit_region(NAME_BASE + index as u16, name);
+            if self.ui.token_hovered(NAME_BASE + index as u16) {
+                hovered = Some((message, laid, name));
+            }
             self.order.push(token);
             self.shown
                 .messages
                 .push((message.id, message.key_id.clone()));
             y += tall;
         }
+        self.follow_card(hovered);
         if first > 0 {
             text(
                 &mut self.ui,
@@ -467,10 +477,10 @@ impl Panel {
             return;
         };
         let muted = inputs.muted.contains(&message.key_id);
-        self.shown.chosen = Some((message.id, message.key_id.clone(), muted));
         // The name in the body family, which the page measures, and the tick alone
         // after it for a verified sender.
         let name = for_display(&message.name);
+        self.shown.chosen = Some((message.id, message.key_id.clone(), name.clone(), muted));
         let size = 26.0;
         let room = SIDE_WIDTH - sjk_chat_look::tick_room(size);
         let width = (measure.width(&name, size * s, TextFace::Semibold) / s.max(0.001)).min(room);
@@ -523,7 +533,7 @@ impl Panel {
         text(
             &mut self.ui,
             TextFamily::Body,
-            format_args!("Hides their messages here until you quit."),
+            format_args!("Hides their chat, model, sabers and sounds on this PC."),
             frame.rect(SIDE_X, y + 50.0, SIDE_WIDTH, 22.0),
             14.0 * s,
             color::QUIET,
@@ -589,6 +599,73 @@ impl Panel {
             rect: frame.rect(SIDE_X - 30.0, LIST_TOP - 20.0, 1.0, LIST_BOTTOM - LIST_TOP),
             color: color::alpha(color::HOLO, 0.25),
         });
+    }
+
+    /// Show the sender card of the sender whose name is under the pointer
+    /// (`hovered`), keep it while the pointer is on the card, else hide it.
+    fn follow_card(&mut self, hovered: Option<(&ChatMessage, &Laid, sjk_ui::Rect)>) {
+        match hovered {
+            Some((message, laid, anchor)) => match &mut self.card {
+                Some(card) if card.id == message.id => card.anchor = anchor,
+                _ => {
+                    self.card = Some(Hovered {
+                        id: message.id,
+                        person: crate::sender_card::Person {
+                            name: laid.name.clone(),
+                            key_id: Some(message.key_id.clone()),
+                            hub_name: None,
+                            verified: message.verified,
+                            staff: message.staff,
+                            medals: crate::medals::Medals::default(),
+                            place: crate::sender_card::Place::Unknown,
+                            avatar: None,
+                        },
+                        anchor,
+                        placed: false,
+                    });
+                }
+            },
+            None if self.ui.token_hovered(CARD_TOKEN) || self.ui.token_hovered(CARD_MUTE_TOKEN) => {
+            }
+            None => self.card = None,
+        }
+    }
+
+    /// The sender card on show, beside its name and over the page; its targets last.
+    fn card(
+        &mut self,
+        frame: &Frame,
+        inputs: &Inputs<'_>,
+        measure: &Measure<'_>,
+        viewport: [f32; 2],
+    ) {
+        let Some(card) = &self.card else {
+            self.shown.card_muted = false;
+            return;
+        };
+        let muted = card
+            .person
+            .key_id
+            .as_ref()
+            .is_some_and(|key| inputs.muted.contains(key));
+        self.shown.card_muted = muted;
+        let s = frame.s;
+        let size = crate::sender_card::size(&card.person, s);
+        let origin = crate::sender_card::beside(card.anchor, size, viewport, 12.0 * s);
+        crate::sender_card::draw(
+            &mut self.ui,
+            &crate::sender_card::Card {
+                person: &card.person,
+                muted,
+                measure: Some(measure),
+            },
+            origin,
+            s,
+            crate::sender_card::Tokens {
+                card: CARD_TOKEN,
+                mute: CARD_MUTE_TOKEN,
+            },
+        );
     }
 
     /// The keys of the page, bottom right.

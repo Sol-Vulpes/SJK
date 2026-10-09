@@ -53,10 +53,9 @@ struct Runtime {
     /// The look the service was last given (`looks.rs`).
     sent_look: Option<sjk_identity::Look>,
     next_sync: Option<Instant>,
-    /// Keys the player muted in the SJK chat, on this PC for this session.
-    muted: Vec<String>,
-    /// Counts changes to `muted`.
-    muted_revision: u64,
+    /// Keys whose profile was asked for their picture's version ([`avatar_version`]),
+    /// newest last, so each is asked once.
+    picture_lookups: Vec<String>,
 }
 
 static RUNTIME: Mutex<Runtime> = Mutex::new(Runtime {
@@ -68,8 +67,7 @@ static RUNTIME: Mutex<Runtime> = Mutex::new(Runtime {
     sent_chat: None,
     sent_look: None,
     next_sync: None,
-    muted: Vec::new(),
-    muted_revision: 0,
+    picture_lookups: Vec::new(),
 });
 
 fn lock() -> MutexGuard<'static, Runtime> {
@@ -560,24 +558,60 @@ fn newly<T: Clone + PartialEq>(sent: &mut Option<T>, value: &T) -> bool {
     true
 }
 
-/// The keys the player muted in the SJK chat.
-pub(crate) fn muted_keys() -> Vec<String> {
-    lock().muted.clone()
+/// Read the hub's claims on the server being played (none when the service has not
+/// started), as the mute list matches them to slots (`chat_mutes.rs`). Keep `read`
+/// short: the service waits.
+pub(crate) fn with_claims<R>(read: impl FnOnce(&[crate::chat_mutes::Claim<'_>]) -> R) -> R {
+    let runtime = lock();
+    let Some(service) = runtime.service.as_ref() else {
+        return read(&[]);
+    };
+    service.with_snapshot(|snapshot| {
+        let claims: Vec<_> = snapshot
+            .players
+            .iter()
+            .map(|player| crate::chat_mutes::Claim {
+                slot: player.slot,
+                claimed_name: &player.claimed_name,
+                key_id: &player.key_id,
+            })
+            .collect();
+        read(&claims)
+    })
 }
 
-/// Mute or unmute `key_id` in the SJK chat on this PC.
-pub(crate) fn set_muted(key_id: &str, muted: bool) {
+/// Profiles [`avatar_version`] asks for at most, the oldest forgotten first.
+const PICTURE_LOOKUPS: usize = 64;
+
+/// The version of the picture of the player with key `key_id` (empty for none), for a
+/// card about them (`sender_card.rs`): from the hub's players on this server, else a
+/// profile fetched for them. `None` while neither is known: the first such call asks the
+/// hub for their profile, once. Locks the identity: not for a caller holding it.
+pub(crate) fn avatar_version(key_id: &str) -> Option<String> {
     let mut runtime = lock();
-    runtime.muted.retain(|key| key != key_id);
-    if muted {
-        runtime.muted.push(key_id.to_owned());
+    let runtime = &mut *runtime;
+    let service = runtime.service.as_ref()?;
+    let known = service.with_snapshot(|snapshot| {
+        snapshot
+            .players
+            .iter()
+            .find(|player| player.key_id == key_id)
+            .map(|player| player.avatar.clone())
+            .or_else(|| {
+                snapshot
+                    .profiles
+                    .get(key_id)
+                    .map(|profile| profile.avatar.clone())
+            })
+    });
+    if known.is_none() && !runtime.picture_lookups.iter().any(|key| key == key_id) {
+        if runtime.picture_lookups.len() == PICTURE_LOOKUPS {
+            runtime.picture_lookups.remove(0);
+        }
+        runtime.picture_lookups.push(key_id.to_owned());
+        service.look_up(key_id.to_owned());
     }
-    runtime.muted_revision += 1;
-}
-
-/// Counts changes to the mutes, so what is derived from them can be kept.
-pub(crate) fn mutes_revision() -> u64 {
-    lock().muted_revision
+    known
 }
 
 /// Ask the hub for another player's profile (their bio).
@@ -621,6 +655,8 @@ mod tests {
         assert!(!emote("wave".to_owned()));
         assert!(with_chat(|chat| chat.revision).is_none());
         assert!(take_emotes().is_empty());
+        assert_eq!(with_claims(|claims| claims.len()), 0);
+        assert_eq!(avatar_version("0123456789abcdef"), None);
         assert_eq!(take_looks(None), sjk_identity::ReceivedLooks::default());
         assert!(with_roster(|players| players.len()).is_none());
         assert!(!owns_unlock("saber_sun"));
@@ -638,26 +674,5 @@ mod tests {
         assert!(!newly(&mut sent, &lit));
         assert!(newly(&mut sent, &sjk_identity::Look::default()));
         assert!(newly(&mut sent, &lit));
-    }
-
-    #[test]
-    fn local_mutes_are_by_key() {
-        let muted = |key: &str| muted_keys().iter().any(|muted| muted == key);
-        let before = mutes_revision();
-        assert!(!muted("0123456789abcdef"));
-        set_muted("0123456789abcdef", true);
-        assert!(muted("0123456789abcdef"));
-        assert!(!muted("fedcba9876543210"));
-        set_muted("0123456789abcdef", true);
-        assert_eq!(
-            muted_keys()
-                .iter()
-                .filter(|key| *key == "0123456789abcdef")
-                .count(),
-            1
-        );
-        set_muted("0123456789abcdef", false);
-        assert!(!muted("0123456789abcdef"));
-        assert!(mutes_revision() > before);
     }
 }

@@ -74,6 +74,8 @@ pub(crate) struct GameAudio {
     transitions: transitions::Transitions,
     /// `SJK_TRACE_AUDIO=1`: when the next level line is due.
     trace_due: Option<Instant>,
+    /// Players muted on this PC, whose sounds are not played (`audio_mute.rs`).
+    mute: crate::audio_mute::AudioMute,
     /// The blade skins whose sounds the gamestate's tables get (`saber_skins.rs`).
     blade_skins: Arc<crate::saber_skins::LoadedSkins>,
     /// The generation of the blade skins registered in `legacy`, once it is ready.
@@ -154,6 +156,7 @@ impl GameAudio {
             kill_sounds: 2,
             transitions: transitions::Transitions::default(),
             trace_due: std::env::var_os("SJK_TRACE_AUDIO").map(|_| Instant::now()),
+            mute: crate::audio_mute::AudioMute::default(),
         };
         // `s_volume`/`s_musicvolume` defaults from `S_Init` in
         // codemp/client/snd_dma.cpp:462-466. The console overwrites these on
@@ -249,6 +252,7 @@ impl GameAudio {
             });
             adapter.set_local_health_pain(self.transitions.old_pain);
             adapter.observe_snapshot(snapshot);
+            self.mute.observe(&snapshot.entities);
             let footsteps = self.footsteps;
             for decision in adapter.decisions() {
                 if let Some(handle) = self.transitions.handle(decision, snapshot.server_time)
@@ -256,6 +260,7 @@ impl GameAudio {
                     && self
                         .voice_policy
                         .allows(*decision, snapshot.player.client_num())
+                    && !self.mute.silences(decision.request.source, decision.cause)
                 {
                     self.output
                         .send(AudioCommand::Play(handle, decision.request));
@@ -306,6 +311,7 @@ impl GameAudio {
             };
             adapter.set_local_health_pain(self.transitions.old_pain);
             adapter.observe_snapshot(&snapshot);
+            self.mute.observe(&snapshot.entities);
             let latency = queued_at.elapsed().as_secs_f64() * 1_000.0;
             // Advance all latches, but never compress loading history into one audio block.
             if !self.deferred_snapshots.is_empty() || latency > 300.0 {
@@ -318,6 +324,7 @@ impl GameAudio {
                     && self
                         .voice_policy
                         .allows(*decision, snapshot.player.client_num())
+                    && !self.mute.silences(decision.request.source, decision.cause)
                 {
                     self.output
                         .send(AudioCommand::Play(handle, decision.request));
@@ -365,6 +372,17 @@ impl GameAudio {
         }
     }
 
+    /// The client slots muted on this PC (bits), whose sounds are no longer played;
+    /// called every frame, it costs a comparison while they stay the same.
+    pub(crate) fn set_muted_clients(&mut self, clients: u32) {
+        self.mute.set_clients(clients);
+    }
+
+    /// Whether a sound from `source`, caused by `cause`, belongs to a muted player.
+    pub(crate) fn silenced(&self, source: SourceId, cause: Option<u16>) -> bool {
+        self.mute.silences(source, cause)
+    }
+
     /// Rebuild all codemp loops at rendered cadence from interpolated origins.
     ///
     /// The set is bracketed by `ClearLoops`/`CommitLoops` because the audio
@@ -398,8 +416,12 @@ impl GameAudio {
         adapter.observe_loops(snapshot, presented_time, listener_origin, |state| {
             presented_entity_origin(world, bsp, state, presented_time)
         });
+        // A muted player's loops (saber hum, Force, a thrown saber's hum) are left out.
+        let mute = &self.mute;
         for decision in adapter.loop_decisions() {
-            if let Some(handle) = decision.handle {
+            if let Some(handle) = decision.handle
+                && !mute.silences(decision.request.source, None)
+            {
                 self.output.send(AudioCommand::SetLoop(
                     handle,
                     decision.request,
@@ -408,7 +430,9 @@ impl GameAudio {
             }
         }
         for shot in adapter.ambient_shots() {
-            if let Some(handle) = shot.handle {
+            if let Some(handle) = shot.handle
+                && !mute.silences(shot.request.source, None)
+            {
                 self.output.send(AudioCommand::Play(handle, shot.request));
             }
         }
@@ -416,7 +440,9 @@ impl GameAudio {
             presented_entity_origin(world, bsp, state, presented_time)
         });
         for decision in adapter.maintained_loop_decisions() {
-            if let Some(handle) = decision.handle {
+            if let Some(handle) = decision.handle
+                && !mute.silences(decision.request.source, None)
+            {
                 self.output.send(AudioCommand::SetLoop(
                     handle,
                     decision.request,

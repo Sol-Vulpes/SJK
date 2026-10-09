@@ -10,6 +10,7 @@ mod animation_timing;
 mod app_launch;
 mod assets;
 mod audio;
+mod audio_mute;
 mod audio_output;
 mod auto_switch;
 mod avatar_command;
@@ -21,6 +22,7 @@ mod camera_uniform;
 mod capture;
 mod cgame_options;
 mod chat;
+mod chat_mutes;
 mod cinematic_roq;
 mod client_guid;
 mod client_state;
@@ -121,6 +123,8 @@ mod missile_trails;
 mod model_materials;
 mod movement_collision;
 mod movers;
+mod muted_players;
+mod muted_players_frame;
 mod muzzle_effects;
 mod muzzle_flash;
 mod notice;
@@ -134,6 +138,7 @@ mod portal;
 mod prediction_preview;
 mod scene_views;
 mod scope;
+mod sender_card;
 mod surface_tables;
 mod trip_mine_lasers;
 mod viewer_app;
@@ -164,6 +169,7 @@ mod player_identity;
 mod player_menu;
 #[cfg(test)]
 mod player_model_scan;
+mod player_mutes;
 mod player_report;
 mod player_shadows;
 mod player_skin;
@@ -424,6 +430,8 @@ struct GpuState {
     hud: hud::HudOverlay,
     scoreboard: scoreboard::Scoreboard,
     chat: chat::ChatOverlay,
+    /// Players muted on this PC who are on the server being played.
+    muted_players: muted_players::MutedPlayers,
     game_menu: bool,
     in_game_menu: ingame_menu::InGameMenu,
     game_menu_page: GameMenuPage,
@@ -1270,6 +1278,7 @@ impl GpuState {
             hud,
             scoreboard: scoreboard::Scoreboard::new(),
             chat: chat::ChatOverlay::with_emojis(emojis),
+            muted_players: muted_players::MutedPlayers::default(),
             game_menu,
             in_game_menu: ingame_menu::InGameMenu::new(),
             game_menu_page: if game_menu {

@@ -5,8 +5,9 @@
 //! pictures come from (`avatars.rs`) and the profile card what it shows
 //! (`profile_card.rs`). Each frame it also lets the chat feed follow the SJK chat
 //! (`sjk_chat_frame.rs`), starts and ends emotes (`emotes_frame.rs`), keeps the
-//! players' looks (`looks_frame.rs`) and puts the pictures that finished loading into
-//! the UI's atlas.
+//! players' looks (`looks_frame.rs`), follows the players muted on this PC
+//! (`muted_players_frame.rs`) and puts the pictures that finished loading into the
+//! UI's atlas.
 
 use super::*;
 use sjk_identity::Settings;
@@ -17,6 +18,7 @@ impl GpuState {
     pub(crate) fn update_identity(&mut self) {
         self.update_sjk_chat();
         self.update_emotes();
+        self.update_muted_players();
         avatars::service(&self.ui_shapes, &self.queue);
         let due = player_identity::due();
         self.update_looks(due);

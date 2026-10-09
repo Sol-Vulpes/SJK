@@ -1,7 +1,9 @@
 //! The SJK chat page (`docs/hub-chat.md`): the chat every SJK player shares through
 //! the SJK hub, in full. The history with names, verified and staff marks and how
 //! long ago each message came; a field to write in and Send; and, for a chosen
-//! message, Mute on this PC, and for SJK staff Delete and Mute at the hub.
+//! message, Mute on this PC, and for SJK staff Delete and Mute at the hub. Resting the
+//! pointer on a name shows the sender's sender card with Mute or Unmute
+//! ([`crate::sender_card`], "Muting a player").
 //!
 //! Opened by the main page's docked chat (Open chat), the `sjkchat` command or the
 //! in-game SJK menu. Like the Staff page it lives in the console and has the SJK UI's
@@ -28,6 +30,11 @@ const HUB_UNMUTE_TOKEN: u16 = 1_305;
 /// Messages on show, one token each.
 const MESSAGE_BASE: u16 = 1_310;
 const MESSAGES_SHOWN: usize = 40;
+/// The sender card a name shows under the pointer, and its Mute or Unmute.
+const CARD_TOKEN: u16 = 1_360;
+const CARD_MUTE_TOKEN: u16 = 1_361;
+/// The names of the messages on show, one token each.
+const NAME_BASE: u16 = 1_370;
 /// Longest message, as the hub takes it.
 const DRAFT_MAX: usize = sjk_identity::chat::TEXT_MAX;
 /// Messages Page Up and Page Down scroll by.
@@ -40,8 +47,12 @@ pub(crate) enum PanelAction {
     Close,
     /// Send this message to the SJK chat.
     Send(String),
-    /// Mute (true) or unmute this key on this PC.
-    Mute(String, bool),
+    /// Mute or unmute, on this PC, the player with this key, last seen with this name.
+    Mute {
+        key_id: String,
+        name: String,
+        muted: bool,
+    },
     /// A staff request to the hub.
     Staff(StaffRequest),
 }
@@ -78,10 +89,13 @@ pub(crate) struct StaffShown<'a> {
 struct Shown {
     /// The messages on show, by token, as (id, sender's key), oldest first.
     messages: Vec<(u64, String)>,
-    /// The chosen message's sender, and whether they are muted here.
-    chosen: Option<(u64, String, bool)>,
+    /// The chosen message's id, its sender's key and name, and whether they are
+    /// muted here.
+    chosen: Option<(u64, String, String, bool)>,
     /// How many messages there are in all.
     total: usize,
+    /// Whether the sender card's player is muted here.
+    card_muted: bool,
 }
 
 pub(crate) struct Panel {
@@ -101,7 +115,19 @@ pub(crate) struct Panel {
     /// past it are this page's.
     staff_after: Option<u64>,
     shown: Shown,
+    /// The sender card on show.
+    card: Option<Hovered>,
     epoch: Instant,
+}
+
+/// The sender card on show: the message whose sender it is about, who, and the name
+/// it is beside. Where they are on the server is asked outside the chat's lock
+/// ([`Panel::place_card`]), so it shows a frame later.
+struct Hovered {
+    id: u64,
+    person: crate::sender_card::Person,
+    anchor: sjk_ui::Rect,
+    placed: bool,
 }
 
 impl Default for Panel {
@@ -123,6 +149,7 @@ impl Panel {
             scroll: 0,
             staff_after: None,
             shown: Shown::default(),
+            card: None,
             epoch: Instant::now(),
         }
     }
@@ -153,12 +180,55 @@ impl Panel {
         self.staff_after = Some(serial);
     }
 
+    /// Say on the sender card on show where its player is on the server being played
+    /// (`place`, from their key and name, once) and their picture's version (`picture`,
+    /// from their key, until it is known). Called before the chat's lock is taken.
+    pub(crate) fn place_card(
+        &mut self,
+        place: impl FnOnce(Option<&str>, &str) -> crate::sender_card::Place,
+        picture: impl FnOnce(&str) -> Option<String>,
+    ) {
+        let Some(card) = self.card.as_mut() else {
+            return;
+        };
+        if !card.placed {
+            card.person.place = place(card.person.key_id.as_deref(), &card.person.name);
+            card.placed = true;
+        }
+        if card.person.avatar.is_none()
+            && let Some(key_id) = &card.person.key_id
+        {
+            card.person.avatar = picture(key_id);
+        }
+    }
+
     pub(crate) fn draw_list(&self) -> &sjk_ui::DrawList {
         self.ui.draw_list()
     }
 
     /// What Enter (or a click) on `token` does.
     fn activate(&mut self, token: u16) -> PanelAction {
+        if token == CARD_TOKEN {
+            return PanelAction::None;
+        }
+        if token == CARD_MUTE_TOKEN {
+            // The card's Mute or Unmute; the keyboard stays where it was.
+            let Some(card) = &self.card else {
+                return PanelAction::None;
+            };
+            return PanelAction::Mute {
+                key_id: card.person.key_id.clone().unwrap_or_default(),
+                name: card.person.name.clone(),
+                muted: !self.shown.card_muted,
+            };
+        }
+        if let Some(index) = token
+            .checked_sub(NAME_BASE)
+            .filter(|index| usize::from(*index) < MESSAGES_SHOWN)
+        {
+            // A click on a name chooses its message, as one on the row does.
+            return self.activate(MESSAGE_BASE + index);
+        }
         self.focus = token;
         let chosen = self.shown.chosen.clone();
         match token {
@@ -173,12 +243,16 @@ impl Panel {
                 PanelAction::Send(text)
             }
             MUTE_TOKEN => match chosen {
-                Some((_, key, muted)) => PanelAction::Mute(key, !muted),
+                Some((_, key_id, name, muted)) => PanelAction::Mute {
+                    key_id,
+                    name,
+                    muted: !muted,
+                },
                 None => PanelAction::None,
             },
             DELETE_TOKEN | HUB_MUTE_TOKEN | HUB_UNMUTE_TOKEN => {
                 // Only offered (laid out) for staff; the hub refuses others too.
-                let Some((id, key_id, _)) = chosen.filter(|_| self.order.contains(&token)) else {
+                let Some((id, key_id, ..)) = chosen.filter(|_| self.order.contains(&token)) else {
                     return PanelAction::None;
                 };
                 PanelAction::Staff(match token {
@@ -467,13 +541,101 @@ mod tests {
         assert_eq!(panel.selected, Some(2));
         drawn(&mut panel, &inputs(&chat, &[], false));
         let key = format!("{:016x}", 2);
-        assert_eq!(
-            panel.activate(MUTE_TOKEN),
-            PanelAction::Mute(key.clone(), true)
-        );
+        let mute = |muted| PanelAction::Mute {
+            key_id: key.clone(),
+            name: "^2Player 2".to_owned(),
+            muted,
+        };
+        assert_eq!(panel.activate(MUTE_TOKEN), mute(true));
         let muted = [key.clone()];
         drawn(&mut panel, &inputs(&chat, &muted, false));
-        assert_eq!(panel.activate(MUTE_TOKEN), PanelAction::Mute(key, false));
+        assert_eq!(panel.activate(MUTE_TOKEN), mute(false));
+    }
+
+    #[test]
+    fn resting_on_a_name_shows_the_sender_card_with_mute() {
+        use crate::sender_card::Place;
+        use sjk_ui::{InputEvent, Rect, Vec2};
+        let centre = |rect: Rect| Vec2::new(rect.x + rect.width * 0.5, rect.y + rect.height * 0.5);
+        let chat = chat(3);
+        let mut panel = Panel::new();
+        panel.open(true);
+        drawn(&mut panel, &inputs(&chat, &[], false));
+        assert!(panel.card.is_none());
+        // The second message's name, not its row.
+        let name = panel.ui.rect_for(NAME_BASE + 1).expect("a name");
+        let row = panel.ui.rect_for(MESSAGE_BASE + 1).expect("its row");
+        assert!(
+            name.width < row.width * 0.5,
+            "the name alone: {name:?} {row:?}"
+        );
+        let _ = panel.handle_pointer(InputEvent::PointerMove(centre(name)));
+        drawn(&mut panel, &inputs(&chat, &[], false));
+        let card = panel.card.as_ref().expect("the card");
+        assert_eq!(card.id, 2);
+        assert_eq!(card.person.name, "^2Player 2");
+        assert_eq!(card.person.place, Place::Unknown, "placed outside the lock");
+        // Where they are comes from outside the chat's lock, once.
+        let asked = std::cell::Cell::new(0);
+        let place = |key: Option<&str>, name: &str| {
+            asked.set(asked.get() + 1);
+            assert_eq!(
+                (key, name),
+                (Some(format!("{:016x}", 2).as_str()), "^2Player 2")
+            );
+            Place::SlotByName(5)
+        };
+        // Its picture's version is asked until it is known: not yet, then none.
+        let pictures = std::cell::Cell::new(0);
+        let picture = |answer: Option<&str>| {
+            let pictures = &pictures;
+            let answer = answer.map(str::to_owned);
+            move |key: &str| {
+                assert_eq!(key, format!("{:016x}", 2));
+                pictures.set(pictures.get() + 1);
+                answer
+            }
+        };
+        panel.place_card(place, picture(None));
+        panel.place_card(place, picture(Some("")));
+        panel.place_card(place, picture(Some("0123456789abcdef")));
+        assert_eq!((asked.get(), pictures.get()), (1, 2));
+        assert_eq!(
+            panel.card.as_ref().unwrap().person.avatar.as_deref(),
+            Some("")
+        );
+        drawn(&mut panel, &inputs(&chat, &[], false));
+        let texts: Vec<&str> = panel.ui.text_runs().collect();
+        for wanted in ["On this server, slot 5, matched by name", "Mute"] {
+            assert!(texts.contains(&wanted), "{wanted:?} in {texts:?}");
+        }
+        let card = panel.ui.rect_for(CARD_TOKEN).expect("the card's target");
+        assert!(
+            card.x >= name.right() || card.right() <= name.x,
+            "beside the name"
+        );
+        // Its Mute asks for this sender by key and name; muted, it offers Unmute.
+        let key = format!("{:016x}", 2);
+        let mute = |muted| PanelAction::Mute {
+            key_id: key.clone(),
+            name: "^2Player 2".to_owned(),
+            muted,
+        };
+        assert_eq!(panel.activate(CARD_MUTE_TOKEN), mute(true));
+        let button = panel.ui.rect_for(CARD_MUTE_TOKEN).expect("Mute");
+        let _ = panel.handle_pointer(InputEvent::PointerMove(centre(button)));
+        let muted = [key.clone()];
+        drawn(&mut panel, &inputs(&chat, &muted, false));
+        assert!(panel.card.is_some(), "kept while the pointer is on it");
+        assert!(panel.ui.text_runs().any(|text| text == "Unmute"));
+        assert_eq!(panel.activate(CARD_MUTE_TOKEN), mute(false));
+        // A click on the name chooses its message.
+        let _ = panel.activate(NAME_BASE + 1);
+        assert_eq!(panel.selected, Some(2));
+        // Away from both: gone.
+        let _ = panel.handle_pointer(InputEvent::PointerMove(Vec2::new(4.0, 1_070.0)));
+        drawn(&mut panel, &inputs(&chat, &muted, false));
+        assert!(panel.card.is_none());
     }
 
     #[test]

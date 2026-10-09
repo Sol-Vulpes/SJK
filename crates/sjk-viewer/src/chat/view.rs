@@ -43,6 +43,7 @@ impl ChatOverlay {
         }
         self.ui.begin_transparent(viewport);
         self.visible_targets.fill(None);
+        self.visible_people.fill(None);
         let mut g = self.options.geometry(viewport);
         if self.scoreboard_layout {
             let layout = crate::scoreboard::layout::Layout::new(viewport);
@@ -103,6 +104,9 @@ impl ChatOverlay {
             self.build_composer(font, &g, ms);
             self.build_player_menu(&g, viewport);
         }
+        // A name under the pointer shows its profile card, over everything.
+        self.follow_card(self.is_typing());
+        self.build_card(font, &g, viewport);
         self.ui.finish(
             self.player_menu
                 .and_then(|menu| menu.selected)
@@ -169,7 +173,8 @@ impl ChatOverlay {
             let x = g.left + slide;
             if let Some(hub) = &line.hub {
                 let prefix = sjk_line::Prefix::new(&line.name, hub.verified, font, g);
-                sjk_line::draw(
+                let hovered = active && self.ui.token_hovered(token as u16);
+                let name = sjk_line::draw(
                     &mut self.ui,
                     sjk_line::Line {
                         name: &line.name,
@@ -178,6 +183,7 @@ impl ChatOverlay {
                         wrap: &line.wrap,
                         marks: &line.emojis,
                         emojis: self.options.emojis.then_some(&self.emojis),
+                        hovered,
                     },
                     &prefix,
                     font,
@@ -185,6 +191,11 @@ impl ChatOverlay {
                     [x, y],
                     alpha,
                 );
+                // Resting the pointer on the sender's name shows their profile card.
+                if active {
+                    self.visible_people[token] = Some(card::Who::Hub(hub.id));
+                    self.ui.hit_region(token as u16, name);
+                }
                 continue;
             }
             let mut body_y = y;
@@ -220,6 +231,7 @@ impl ChatOverlay {
                 }
                 if active && let Some(target) = actionable {
                     self.visible_targets[token] = Some(target);
+                    self.visible_people[token] = Some(card::Who::Player(target));
                     self.ui.hit_region(token as u16, rect);
                 }
                 let hover = active && self.ui.token_hovered(token as u16);

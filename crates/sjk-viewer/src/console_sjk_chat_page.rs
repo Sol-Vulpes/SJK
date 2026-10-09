@@ -1,6 +1,7 @@
 //! Console side of the SJK chat page (see `sjk_chat_panel.rs`): opening it, sending
-//! what it asks (messages to the hub, mutes here, staff requests), and routing keys
-//! and pointer events to it, as for the Staff page.
+//! what it asks (messages to the hub, mutes on this PC through the mute list in
+//! `player_mutes.rs`, staff requests), and routing keys and pointer events to it, as
+//! for the Staff page.
 
 use super::sjk_chat_panel::{Inputs, PanelAction, StaffShown};
 use super::*;
@@ -58,7 +59,11 @@ impl ViewerConsole {
                     self.push_log("^3sjkchat: the SJK identity is off (cl_identity 1)");
                 }
             }
-            PanelAction::Mute(key_id, muted) => crate::player_identity::set_muted(&key_id, muted),
+            PanelAction::Mute {
+                key_id,
+                name,
+                muted,
+            } => crate::player_mutes::set_muted(Some(&key_id), &name, muted),
             PanelAction::Staff(request) => {
                 let serial = crate::player_identity::staff_state().map_or(0, |state| state.serial);
                 if crate::player_identity::staff(request) {
@@ -97,7 +102,11 @@ impl ViewerConsole {
         viewport: [f32; 2],
     ) {
         // Read before the chat's lock is taken: they lock the identity too.
-        let muted = crate::player_identity::muted_keys();
+        self.sjk_chat_panel.place_card(
+            crate::player_mutes::place,
+            crate::player_identity::avatar_version,
+        );
+        let muted = crate::player_mutes::muted_keys();
         let staff = crate::player_identity::is_staff();
         let staff_state = staff.then(crate::player_identity::staff_state).flatten();
         let staff_shown = staff_state.as_ref().map(|state| StaffShown {

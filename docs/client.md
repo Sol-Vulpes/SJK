@@ -1376,6 +1376,11 @@ sender's name. The cursor is free while composing. The player menu offers:
   match exactly; these are name bookmarks, not authenticated accounts.
 - **copy:** copies the complete name, including its colour escapes.
 
+Resting the pointer on a name (a sender's, or an SJK chat sender's) shows their
+sender card (picture, name, hub, medals) beside it, with Mute or Unmute: unlike ignore, a mute is kept on this PC
+(`chat-mutes.txt`) and, besides their chat, draws them as Kyle with the default saber
+and silences every sound they cause ([hub-chat.md](hub-chat.md#muting-a-player)).
+
 The dropdown opens without a highlighted action. Hover follows the pointer;
 keyboard navigation highlights only its current row until the pointer moves.
 Arrow keys/Tab navigate the player menu; Enter selects and Escape dismisses it
@@ -1979,8 +1984,11 @@ are in [identity.md](identity.md).
   chat feed tagged SJK, each one flowing line with its text in the SJK chat's own gold
   and the verified tick after a verified sender's name
   ([hub-chat.md](hub-chat.md#how-a-line-looks)). The SJK UI's main page docks it under Recent servers;
-  `sjkchat`, the dock's Open chat and the in-game SJK menu open its page, where a
-  message's sender can be muted on this PC. `cl_sjkChat 0` (Settings > Network > SJK
+  `sjkchat`, the dock's Open chat and the in-game SJK menu open its page. Resting the
+  pointer on a name in the chat (composer open), on the dock or on the page shows the
+  player's sender card with Mute: a muted player's chat is hidden and, on the server,
+  they are drawn as Kyle with the default saber and nothing they cause is heard, on
+  this PC only ([hub-chat.md](hub-chat.md#muting-a-player)). `cl_sjkChat 0` (Settings > Network > SJK
   chat) hides it and stops the reading. `sjkemote <id>` sends an emote the SJK players
   on the server see (`sjkemote` alone lists the installed ones; none ship yet).
 - Back up `identity.key`: losing it loses the identity.

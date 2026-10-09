@@ -1,6 +1,7 @@
 //! Floating conversation overlay. Chat owns presentation/history only; player
 //! identity and stock command semantics come from the client adapter.
 
+mod card;
 mod editing;
 mod editor;
 pub(crate) mod emoji;
@@ -61,6 +62,7 @@ struct ChatLine {
 struct HubLine {
     id: u64,
     verified: bool,
+    staff: bool,
     key_id: String,
 }
 
@@ -93,6 +95,14 @@ pub(crate) struct ChatOverlay {
     ui: MenuCanvas,
     visible_targets: [Option<ChatTarget>; MAX_VISIBLE],
     pressed_action: Option<(u16, Option<ChatTarget>)>,
+    /// Whose name each feed token is, for the profile card (`chat/card.rs`).
+    visible_people: [Option<card::Who>; MAX_VISIBLE],
+    /// The profile card on show while the composer is open.
+    card: Option<card::Card>,
+    /// Mute or Unmute asked from the card, until the frame takes it.
+    mute_request: Option<card::MuteRequest>,
+    /// Client slots muted on this PC (bits, `muted_players.rs`): their lines are hidden.
+    muted_slots: u32,
     layout_viewport: [f32; 2],
     scoreboard_layout: bool,
     options: options::Options,
@@ -135,6 +145,10 @@ impl ChatOverlay {
             ui: MenuCanvas::with_text_capacity(512),
             visible_targets: [None; MAX_VISIBLE],
             pressed_action: None,
+            visible_people: [None; MAX_VISIBLE],
+            card: None,
+            mute_request: None,
+            muted_slots: 0,
             layout_viewport: [0.0; 2],
             scoreboard_layout: false,
             options: options::Options::default(),
@@ -164,6 +178,48 @@ impl ChatOverlay {
         self.roster.update(game);
         self.muted
             .retain(|target| self.roster.name(*target).is_some());
+    }
+
+    /// Who is in each slot, as roster observations: one changes when its player
+    /// leaves, another takes the slot or they rename.
+    pub(crate) fn roster_targets(&self) -> [Option<ChatTarget>; crate::chat_mutes::SLOTS] {
+        std::array::from_fn(|slot| self.roster.target(Some(slot as u16)))
+    }
+
+    /// The client slots muted on this PC changed (or not: this is called every frame):
+    /// hide their lines, and show again those of players no longer muted.
+    pub(crate) fn set_muted_slots(&mut self, slots: u32) {
+        if self.muted_slots == slots {
+            return;
+        }
+        self.muted_slots = slots;
+        for index in 0..self.lines.len() {
+            let line = &self.lines[index];
+            if line.hub.is_some() {
+                continue;
+            }
+            let muted = match line.sender {
+                Some(target) => self.muted.contains(&target) || self.slot_muted(target),
+                None => self.prefix_muted(&line.body),
+            };
+            self.lines[index].muted = muted;
+        }
+    }
+
+    /// Whether `target`'s slot is muted on this PC.
+    fn slot_muted(&self, target: ChatTarget) -> bool {
+        target.slot() < 32 && self.muted_slots & (1 << target.slot()) != 0
+    }
+
+    /// Whether a line the server did not attribute starts with the name the game shows
+    /// in a muted slot, then `: ` (colour codes ignored), as JA+ servers send chat.
+    fn prefix_muted(&self, text: &str) -> bool {
+        self.muted_slots != 0
+            && (0..32_u16)
+                .filter(|slot| self.muted_slots & (1 << slot) != 0)
+                .filter_map(|slot| self.roster.target(Some(slot)))
+                .filter_map(|target| self.roster.display_name(target))
+                .any(|name| chat_body(text, name).0.len() < text.len())
     }
 
     pub(crate) fn receive(
@@ -230,7 +286,11 @@ impl ChatOverlay {
                 Channel::Global
             },
             received_ms: ms,
-            muted: target.is_some_and(|target| self.muted.contains(&target)),
+            // Ignored for this map, or muted on this PC (`muted_players.rs`).
+            muted: match target {
+                Some(target) => self.muted.contains(&target) || self.slot_muted(target),
+                None => self.prefix_muted(&display),
+            },
             emojis,
             wrap: layout::Wrapped::default(),
             y: None,

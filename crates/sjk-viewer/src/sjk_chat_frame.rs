@@ -15,7 +15,7 @@ impl GpuState {
         if !on {
             return;
         }
-        let mutes = player_identity::mutes_revision();
+        let mutes = player_mutes::revision();
         let Some(mark) = player_identity::with_chat(|chat| {
             (
                 chat.revision,
@@ -29,7 +29,7 @@ impl GpuState {
             return;
         }
         // The mutes live under the service's lock too: read them before it is taken.
-        let muted = player_identity::muted_keys();
+        let muted = player_mutes::muted_keys();
         let now = Instant::now();
         let chat = &mut self.chat;
         player_identity::with_chat(|state| {
