@@ -1037,6 +1037,14 @@ from the same point. That origin is the entity's `pos.trBase`, where codemp
 evaluates its trajectory, so a door that turns back halfway sounds from where
 its move began.
 
+A vehicle's own `EV_FIRE_WEAPON` and `EV_ALT_FIRE` (an `ET_NPC` of `CLASS_VEHICLE`)
+play nothing, as in `CG_EntityEvent` (`cg_event.c:2751-2760`, `:2779-2784`): they used
+to play the flash sound of whichever ordinary gun the vehicle's `weapon` field named.
+A rider's own events are unchanged. Stock gives a vehicle's guns their sound through
+the `muzzleFX` effect that `EV_VEH_FIRE` plays bolted to the vehicle
+(`CG_VehMuzzleFireFX`); SJK does not play that effect yet, so vehicle fire is silent
+until it does.
+
 ## Renderer settings
 
 SJK's own cvars have engine names: rendering ones are `r_*` (`r_sceneHdr`,

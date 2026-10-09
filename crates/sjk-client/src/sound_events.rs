@@ -488,6 +488,19 @@ struct EventSubject {
     fixed_origin: [f32; 3],
     tracked_entity: u16,
     mute_entity: u16,
+    /// A vehicle (`ET_NPC`, `CLASS_VEHICLE`): `EV_FIRE_WEAPON` and `EV_ALT_FIRE` on it
+    /// play nothing ([`is_vehicle`]).
+    vehicle: bool,
+}
+
+/// `CG_EntityEvent` (`cg_event.c:2751-2760`, `:2779-2784`): an `ET_NPC` vehicle with a
+/// `Vehicle_t` "does nothing for clientside weapon fire events". Its guns sound through
+/// the `muzzleFX` effect `EV_VEH_FIRE` plays, never through the ordinary weapon table,
+/// whose entry for the vehicle's `weapon` is a different gun's flash.
+fn is_vehicle(entity_type: u8, npc_class: u8) -> bool {
+    const ET_NPC: u8 = 13;
+    const CLASS_VEHICLE: u8 = 53;
+    entity_type == ET_NPC && npc_class == CLASS_VEHICLE
 }
 
 impl EventSubject {
@@ -512,6 +525,7 @@ impl EventSubject {
             fixed_origin: state.event_origin(),
             tracked_entity: state.tracked_entity_num(),
             mute_entity: state.mute_entity_num(),
+            vehicle: is_vehicle(state.entity_type(), state.npc_class()),
         }
     }
 
@@ -534,6 +548,7 @@ impl EventSubject {
             fixed_origin: snapshot.player.origin(),
             tracked_entity: 0,
             mute_entity: 0,
+            vehicle: false,
         }
     }
 }
@@ -1309,6 +1324,7 @@ impl LegacySoundAdapter {
                     )
                 })
             }
+            27 | 28 if entity.vehicle => None,
             27 | 28 => {
                 let alt = usize::from(event == 28);
                 Some((
@@ -2041,7 +2057,7 @@ mod origin_tests;
 
 #[cfg(test)]
 mod tests {
-    use super::{EventSubject, WEAPON_PATHS, event_cause};
+    use super::{EventSubject, WEAPON_PATHS, event_cause, is_vehicle};
     use sjk_protocol::{EntityState, LEGACY_ENTITY_FIELDS};
 
     #[test]
@@ -2064,6 +2080,16 @@ mod tests {
         assert_eq!(event_cause(2, &event), None);
         event.other2 = 1_023;
         assert_eq!(event_cause(30, &event), None);
+    }
+
+    #[test]
+    fn only_a_vehicle_npc_skips_the_ordinary_weapon_flash() {
+        assert!(is_vehicle(13, 53));
+        // Players (a rider included), other NPCs and non-NPC entities fire normally.
+        assert!(!is_vehicle(1, 53));
+        assert!(!is_vehicle(13, 0));
+        assert!(!is_vehicle(13, 52));
+        assert!(!EventSubject::entity(&EntityState::zero(300, &LEGACY_ENTITY_FIELDS)).vehicle);
     }
 
     const WP_STUN_BATON: usize = 1; // codemp/game/bg_weapons.h:33
