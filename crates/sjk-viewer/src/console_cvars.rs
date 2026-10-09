@@ -318,7 +318,8 @@ pub(super) fn register_daily_cvars(cvars: &mut CvarRegistry) -> Result<(), sjk_s
             "com_maxfps",
             -1_i64,
             archive | CvarFlags::OMIT_DEFAULT,
-            "Maximum rendered frames per second; -1 matches the monitor's refresh rate              (125 when unknown), 0 is uncapped",
+            "Maximum rendered frames per second; -1 (AUTO) is 125, or the monitor's refresh \
+             rate with com_maxfpsMonitor 1; 0 is uncapped",
         ),
         CvarDefinition::new("cg_drawFPS", false, archive, "Display FPS and frame time"),
         CvarDefinition::new(
@@ -734,7 +735,7 @@ pub(super) fn register_daily_cvars(cvars: &mut CvarRegistry) -> Result<(), sjk_s
             "com_maxfpsDefaultVersion",
             0_i64,
             archive,
-            "Internal migration marker for the refresh-rate com_maxfps default",
+            "Internal migration marker for the AUTO com_maxfps default",
         ),
         CvarDefinition::new(
             "cl_bindDefaultsVersion",

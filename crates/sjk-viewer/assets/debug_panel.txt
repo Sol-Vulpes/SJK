@@ -269,9 +269,9 @@ test: Check the same in the in-game settings menu.
 [fps-cap-auto]
 area: Menus & settings
 title: FPS cap follows the monitor; caps hold their exact rate
-change: com_maxfps defaults to -1 = AUTO (monitor refresh, 125 if unknown); 0 is uncapped.
+change: com_maxfps defaults to -1 = AUTO (125, or the monitor's refresh with com_maxfpsMonitor 1); 0 is uncapped.
 change: An old saved 1000 becomes AUTO once. Caps no longer run ~7% low (240 gave 223).
-test: Settings > Video: FPS cap shows AUTO; cg_drawFPS 1 reads your refresh rate (240).
+test: Settings > Video: FPS cap shows AUTO; with Detect refresh rate on, cg_drawFPS 1 reads your rate.
 test: Right from AUTO gives 0 (uncapped), then 25, 50...; dragging to the far left gives AUTO.
 test: com_maxfps 144 then 60: cg_drawFPS holds 144 and 60, not a few frames below.
 test: Record with OBS uncapped vs AUTO: compare skipped frames in the OBS log.
@@ -2727,3 +2727,11 @@ change: The log says: audio output stopped taking sound; snd_restart opens the o
 test: In a match, switch off the headset or disable the playback device: the game keeps running.
 test: Alt+Tab away a long while, then back: the window returns. snd_restart brings sound back.
 note: Not reproduced on Windows; the cause is from the code (WASAPI device invalidated).
+
+[fps-monitor-detect]
+area: Menus & settings
+title: Detect refresh rate is a setting, off by default (SJK PR #50)
+change: com_maxfpsMonitor 0 (default): AUTO caps at 125 and the monitor is never read.
+change: com_maxfpsMonitor 1 (Settings > Video > Detect refresh rate): AUTO follows the monitor.
+test: Default profile: cg_drawFPS 1 holds 125; turn Detect refresh rate on: it reads your rate.
+test: com_maxfps 144 holds 144 with the setting on or off.

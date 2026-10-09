@@ -126,6 +126,29 @@ remains with sound working, the window side is next and unchanged here: where Vu
 reports a minimised window's swapchain out of date, every frame reconfigures it at
 the old size (`Resized` to 0×0 is ignored), waiting for the GPU each time, and a
 redraw request that never arrives leaves the event loop polling instead of sleeping.
+## Monitor refresh-rate detection off by default
+
+Branch `feat/monitor-rate-cvar` (08/10/2026, based on `a6230f9`, Linux): Sol asked
+for a cvar to turn off the detection of the monitor's refresh rate, off by default.
+`com_maxfps -1` (AUTO, the default) capped frames at the refresh rate of the
+monitor holding the window, re-read once a second, or at 125 when the monitor
+reported none ([runtime_settings.rs](../crates/sjk-viewer/src/runtime_settings.rs)).
+`com_maxfpsMonitor` (archived, default 0; Settings > Video > Detect refresh rate)
+now decides: at 0 the monitor's rate is never read and AUTO caps at 125, as for a
+monitor that reports none; at 1 AUTO follows the monitor as before. The frame loop
+reads it from a change-callback cache, without a name lookup. A `com_maxfps` the
+player set is left alone, and nothing is migrated: the cvar is new, so no profile
+has saved it and the default reaches existing profiles
+([client.md](client.md#configuration-and-content)).
+
+Verified on Linux with Rust 1.97: unit tests pin the default (0, AUTO at 125
+without reading the monitor, also without a console), the monitor's rate in whole
+hertz and the 125 fallback when on, the setting saved and loaded, and a cap the
+player set (0 to 1000, and 144 from a profile saved before the cvar) kept either
+way; formatting, the locked workspace build and tests pass, and workspace Clippy
+reports no warning on a changed line. Not verified: no client was run (no GPU,
+display or game data), so neither the cap in either state nor the new Settings row
+was seen on screen.
 
 ## Percent signs and quotes in chat
 

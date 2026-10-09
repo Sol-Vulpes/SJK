@@ -295,7 +295,7 @@ impl ViewerConsole {
         }
         // com_maxfps defaulted to 1000 and every archived cvar was saved, so each
         // existing profile carries that old default. Move it once to the new
-        // refresh-rate default (-1); a 1000 chosen after this stays.
+        // default, AUTO (-1); a 1000 chosen after this stays.
         if matches!(
             shell
                 .cvars

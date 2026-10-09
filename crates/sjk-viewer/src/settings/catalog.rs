@@ -96,13 +96,18 @@ pub(super) const VIDEO: &[Setting] = &[
         kind: ValueKind::Bool,
     },
     Setting {
-        label: "FPS cap (AUTO = monitor, 0 = off)",
+        label: "FPS cap (AUTO, 0 = off)",
         cvar: "com_maxfps",
         kind: ValueKind::Integer {
             min: -1,
             max: 2000,
             step: 25,
         },
+    },
+    Setting {
+        label: "Detect refresh rate",
+        cvar: crate::runtime_settings::MONITOR_CAP_CVAR,
+        kind: ValueKind::Bool,
     },
     Setting {
         label: "Field of view",
