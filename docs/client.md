@@ -2220,6 +2220,20 @@ come back where they are. The change is applied from the focus and minimize
 events themselves, since a minimized window may draw no frame; see
 [console_window_options.rs](../crates/sjk-viewer/src/console_window_options.rs).
 
+The game never waits for good on a sound device that stopped. Windows ends an
+output stream when its device goes away: a headset or Bluetooth speaker that
+switches itself off after a while of silence (which a muted background window
+plays), a monitor's speakers while the display sleeps, a change of the device's
+format. The stream's callback then no longer empties the mixer's queue of 8,192
+commands, and the render thread used to wait for room in it without end, so the
+game stopped answering seconds later and Alt+Tab never brought it back. A full
+queue now waits at most 250 ms, once; then commands are dropped (every frame sends
+its state again) until the queue drains, and the log says `audio output stopped
+taking sound`. The game goes on silently; `snd_restart` opens the output again, on
+the device that is then the default. The decode worker keeps sounds in order and
+waits for room as before, but stops when the output is dropped, so `snd_restart` and
+quitting do not wait on it. See [audio_feed.rs](../crates/sjk-viewer/src/audio_feed.rs).
+
 The Video tab's Display mode row offers Windowed, Borderless fullscreen and,
 where the windowing system supports it, Exclusive fullscreen (Wayland does not).
 Stock `r_fullscreen` keeps its meaning, fullscreen on or off, and Alt+Enter still

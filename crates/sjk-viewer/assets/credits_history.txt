@@ -9,6 +9,8 @@
 #                               made it when that is not the piece's owner.
 
 = Sol
++ 09/10/2026 | SJK #49 | Stop waiting forever on an audio output that stopped
+- 6c7891a |  | Stop waiting forever on an audio output that stopped
 + 09/10/2026 | SJK #46 | Fix where clicks land on the SJK UI's Character screen
 - 17a0a8b |  | Fix where clicks land on the SJK UI's Character screen
 + 08/10/2026 | SJK #45 | Unlockable blade skins and looks every SJK player sees

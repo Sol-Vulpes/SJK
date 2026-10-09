@@ -88,6 +88,44 @@ drawn SJK UI (every blade chip at its centre and edges, a power's holocron and
 name after buying a level), which fail without the fix; formatting, the locked
 workspace build and tests pass, and workspace Clippy finishes without errors and
 with no warning on a changed line. Not seen in a running client or on screen.
+## A sound device that goes away no longer freezes the game
+
+Branch `fix/alt-tab-hang` (08/10/2026, based on `a6230f9`, Linux): Sol reported that
+after alt-tabbing away for a long while (AFK a few times), alt-tabbing back did
+nothing: the window never came back and the game had to be killed; short alt-tabs
+were fine. The likely cause is the sound output, not the window. The render thread
+pushed every sound command into the mixer's queue and, while it was full, waited for
+the audio callback to make room, without limit (`AudioOutput::send`). Windows ends an
+output stream for good when its device goes away (cpal's WASAPI thread returns on
+`AUDCLNT_E_DEVICE_INVALIDATED` and the callback is never called again): a headset
+or Bluetooth speaker switching itself off after minutes of silence, which a window
+muted in the background by `snd_mute_losefocus` plays, or a monitor's speakers while
+the display sleeps. The 8,192-command queue then fills within seconds (gains,
+listener and loops each frame, a position for each entity of each snapshot) and the
+game stops answering, which shows only at the Alt+Tab back. Time away matters
+because the device has to go away first. A full queue now waits at most 250 ms, once;
+then commands are dropped (each frame sends its state again) until the queue drains,
+and the log says `audio output stopped taking sound`. The decode worker keeps sounds
+in order and still waits for room, but stops when the output is dropped, so
+`snd_restart` (which opens the output again) and quitting do not hang on it either
+([client.md](client.md#configuration-and-content)).
+
+Verified on Linux: unit tests of a queue nothing drains (one bounded wait, then
+every push dropped at once even with an hour's patience; room again ends the stall;
+a slow callback is still waited for; the decoder waits until the output closes), of
+an output whose callback stopped receiving four queues of commands, and of dropping
+an output whose decoder waits; the two output tests time out with the old waits.
+Formatting, the locked build, tests and Clippy (no warning in the changed code)
+pass. Not verified: nothing was reproduced on Windows, and that Sol's device went
+away while he was AFK is inferred, not seen in a log. To check it, in a match switch
+off or unplug the headset, or disable the playback device (Settings > System >
+Sound), focused or not: the previous release should freeze within seconds; this one
+should go on silently, log the line, and `snd_restart` should bring the sound back
+once a device is there. If the freeze
+remains with sound working, the window side is next and unchanged here: where Vulkan
+reports a minimised window's swapchain out of date, every frame reconfigures it at
+the old size (`Resized` to 0×0 is ignored), waiting for the GPU each time, and a
+redraw request that never arrives leaves the event loop polling instead of sleeping.
 
 ## Percent signs and quotes in chat
 

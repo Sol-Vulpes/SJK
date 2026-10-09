@@ -2718,3 +2718,12 @@ change: A click on a Force power's name only chooses it; its level marks buy.
 test: Character > Saber: click each colour chip, then both halves of the < > controls.
 test: Character > Force: click a power's name (nothing changes), then its level marks.
 note: Not seen on screen yet; the classic pages are unchanged.
+
+[audio-device-lost]
+area: Audio
+title: A lost sound device no longer freezes the game (SJK PR #49)
+change: A sound queue nothing drains waits 250 ms once, then drops sounds instead of hanging.
+change: The log says: audio output stopped taking sound; snd_restart opens the output again.
+test: In a match, switch off the headset or disable the playback device: the game keeps running.
+test: Alt+Tab away a long while, then back: the window returns. snd_restart brings sound back.
+note: Not reproduced on Windows; the cause is from the code (WASAPI device invalidated).
