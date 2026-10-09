@@ -1,7 +1,8 @@
 //! Interface sound cues: hover, click and back posted by every menu canvas as
 //! it routes input, the stage model's saber throw and catch posted by the
 //! menu stage, the quick wheel's page, move and run cues, the achievement
-//! pop-up's fanfare, all played once per frame by the audio owner.
+//! pop-up's chime and the new medal's fanfare, all played once per frame by
+//! the audio owner.
 //!
 //! The posters live inside screens that have no audio access, so cues go
 //! through one process-wide atomic mailbox. A cue is a bit, not a queue:
@@ -32,6 +33,8 @@ pub(crate) enum Cue {
     WheelRun = 128,
     /// An achievement's pop-up appeared (`achievement_toast.rs`).
     Achievement = 256,
+    /// A new medal began its entrance on the medal pop-up (`medal_popup.rs`).
+    Medal = 512,
 }
 
 /// `(cue, sound path, volume)` — the game's own sounds, looked up through
@@ -51,7 +54,13 @@ pub(crate) enum Cue {
 /// secret area found: its game module (`jagamex86.dll`) plays it with the
 /// `@SP_INGAME_SECRET_AREA` centre print. Its file is in the shared
 /// `assets0.pk3`, so a multiplayer install has it.
-pub(crate) const CUE_SOUNDS: [(Cue, &str, f32); 9] = [
+///
+/// A medal, rarer and given by hand, plays the multiplayer game's own fanfare:
+/// `music/goodsmall.mp3`, which its cgame registers as `cgs.media.happyMusic`
+/// and plays to the player who becomes the Jedi Master (`EV_BECOME_JEDIMASTER`,
+/// as `sjk-client`'s `sound_events.rs` does). Like every cue it is looked up in
+/// the player's game data and is silently left out when the file is missing.
+pub(crate) const CUE_SOUNDS: [(Cue, &str, f32); 10] = [
     (Cue::Hover, "sound/interface/menuroam.mp3", 0.6),
     (Cue::Click, "sound/interface/button1.mp3", 0.9),
     (Cue::Back, "sound/interface/esc.mp3", 0.9),
@@ -61,6 +70,7 @@ pub(crate) const CUE_SOUNDS: [(Cue, &str, f32); 9] = [
     (Cue::WheelMove, "sound/interface/menuroam.mp3", 0.5),
     (Cue::WheelRun, "sound/interface/button1.mp3", 0.5),
     (Cue::Achievement, "sound/interface/secret_area.mp3", 0.8),
+    (Cue::Medal, "music/goodsmall.mp3", 0.75),
 ];
 
 /// Interface cues never share a channel with world sounds.
@@ -113,7 +123,11 @@ mod tests {
             assert_eq!(bit.count_ones(), 1, "{cue:?}");
             assert_eq!(bits & bit, 0, "{cue:?} twice");
             bits |= bit;
-            assert!(path.starts_with("sound/") && (0.0..=1.0).contains(&volume));
+            // The game's sounds, or its short music stingers (the medal's fanfare).
+            assert!(
+                (path.starts_with("sound/") || path.starts_with("music/"))
+                    && (0.0..=1.0).contains(&volume)
+            );
         }
         // The wheel's are quieter than the menus' and than gameplay (1.0).
         let volume = |wanted| {

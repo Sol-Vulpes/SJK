@@ -1914,7 +1914,18 @@ are in [identity.md](identity.md).
   picture, name, description, the date it was given (`dd/mm/yyyy`) and the team's note;
   the classic+ box names them in its status with their medallions. With none, a line
   says how medals come. A medal new to the client shows once in a pop-up on the main
-  menu or when the game menu opens ([identity.md](identity.md#medals)).
+  menu or when the game menu opens, arriving in a short ceremony with the game's
+  Jedi Master fanfare (`music/goodsmall.mp3`, silent without game data); Enter, Space,
+  Right, Escape or a click finish the entrance, then take Next or Close. It has the
+  SJK UI's look with its menus and the classic+ look with the classic ones
+  ([identity.md](identity.md#medals), [sjk-ui.md](sjk-ui.md#new-medal)).
+- `debug_medal <id> [x<count>] [note]` (`debug_medal all [note]` for every medal,
+  alone it lists the ids: `early_tester`, `early_contributor`, `bug_hunter`, which
+  takes a count, and `jof_clan`) shows made-up medals as if the SJK team had just given
+  them, through the same queue, centre print, pop-up, ceremony and sound, to try them
+  without the hub. It sends nothing and never writes `medals_seen.txt`; the console
+  closes so the pop-up shows at once on the main menu (in a match, open the game
+  menu).
 - SJK chat: one conversation for every SJK player, through the hub, in games and in
   the menus ([hub-chat.md](hub-chat.md)). In a game, I (`messagemode5`) opens the
   composer on the SJK channel (Tab cycles All, Team and SJK); hub messages show in the

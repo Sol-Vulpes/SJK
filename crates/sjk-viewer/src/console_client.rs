@@ -79,6 +79,10 @@ pub(super) const COMMANDS: &[(&str, &str)] = &[
     ),
     (super::debug_panel::COMMAND, super::debug_panel::HELP),
     (
+        crate::medal_popup::rehearsal::COMMAND,
+        crate::medal_popup::rehearsal::HELP,
+    ),
+    (
         crate::quick_wheel::OPEN_COMMAND,
         crate::quick_wheel::OPEN_HELP,
     ),
@@ -518,6 +522,7 @@ impl crate::GpuState {
                 self.sync_cursor_policy();
             }
             crate::emotes::COMMAND => return self.emote_command(args),
+            crate::medal_popup::rehearsal::COMMAND => return self.debug_medal_command(args),
             crate::saber_skin_command::COMMAND => return self.saber_skin_command(args),
             crate::console::SJK_CHAT_COMMAND => {
                 if let Some(console) = &mut self.console {

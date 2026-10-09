@@ -1811,8 +1811,7 @@ impl GpuState {
             self.world_notes.composer_closed();
         }
         if medal_popup {
-            let (vertices, font) = self.game_fonts.menu(&mut self.text_vertices, &self.ui_font);
-            self.medal_popup.append(vertices, font, viewport);
+            self.append_medal_popup(viewport);
         }
         // An achievement unlocked: its pop-up over play or the menus, never input-taking.
         let achievement_toast =

@@ -2847,3 +2847,14 @@ change: Left click buys up to a level; right click on a level removes it (one be
 test: On a server with many powers off: Character > Force: no text under the buttons.
 test: Click Push's third level, then right click the third, then the second, then the first.
 note: Right click on a mark above the power's level does nothing. Not tried in a running client.
+
+[medal-popup]
+area: Menus & settings
+title: New medal pop-up, animation and fanfare (SJK PR #59)
+change: The medal notice follows the menu style: SJK UI floating text, classic+ box.
+change: The medal flies in with a burst and ring, then idles; a key or click skips the entrance.
+change: Fanfare from music/goodsmall.mp3; debug_medal rehearses without the hub or medals_seen.
+test: debug_medal bug_hunter x3 in the SJK UI: three pop-ups, Next, then Close on the last.
+test: Same with ui_menuStyle classic: the box with NEXT / CLOSE; Enter, Space, Escape and click work.
+test: debug_medal alone lists the ids; restart: nothing was saved as seen.
+note: Not seen or heard in a game yet.

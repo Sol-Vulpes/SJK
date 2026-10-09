@@ -21,6 +21,61 @@ dropped one. Checked with the off-screen shots: `duel6_player_sjk` now also writ
 `duel6-player-sjk-force-server.png` (the page on a server with eight powers off).
 Verified: `cargo fmt --all --check`, `cargo test --locked --workspace`, the shots. Not
 tried in a running client.
+## New medal pop-up: SJK UI look, ceremony, fanfare and `debug_medal`
+
+Branch `feat/medal-award` (08/10/2026, based on `a6230f9`, Linux): Sol asked for the
+new medal pop-up's Next button in the SJK UI's style, for medals to arrive animated,
+a bit like the achievements, with a sound, and for a `debug_` command to fake
+receiving them. Built ([identity.md](identity.md#medals),
+[sjk-ui.md](sjk-ui.md#new-medal)): the pop-up was drawn on the retired modern canvas,
+its Next button that style's last user (`ButtonStyle` and `MenuCanvas::button_styled`
+are removed). With the SJK UI's menus it is now the SJK UI's: no card, the medal
+floating over the scene darkened by the UI's navy, the words in its families, the
+kit's gold button (Next, Close on the last) and the key bottom right; with the
+classic menus, the classic+ pop-up box sized to what it holds, NEXT or CLOSE in
+retail's gold with its glow and the description line. Each medal arrives in a
+ceremony both looks share (`medal_popup/award.rs`, draw-list shapes of a fixed
+number): it comes down growing into place with a little overshoot, light bursts from
+the medallion (glow, two gold rings, a flash, twenty falling sparks), a gold arc
+sweeps a ring with turning ticks, a band of light crosses the medal and the words
+fade up one group after another, all in 1.8 s; waiting, it breathes, glints softly
+every 6 s and a few sparkles twinkle. A press in the entrance finishes it; then it
+takes the button and the medal lifts away in 0.32 s. Each arrival plays the
+multiplayer game's Jedi Master fanfare, `music/goodsmall.mp3`, as an interface cue
+(silent without the file); a key on the button plays the menus' click, as a mouse
+click does. `debug_medal <id> [x<count>] [note]`, `debug_medal all [note]` and
+`debug_medal` alone (the ids) queue made-up medals through the same queue, centre
+print, pop-up, ceremony and sound; nothing is sent and `medals_seen.txt` is never
+written for them. The client has no reduced-motion setting to follow.
+
+Verified: unit tests of the timeline (the landing's overshoot, standing still at
+1.8 s, the words in order, the burst, sparks and band of light over before then, the
+breath and soft glints bounded and periodic, the exit), a bounded draw count at every
+moment, the band of light lying on the medal brighter than white, the queue with keys
+and pointer (a press in the entrance finishes it silently, the next takes the button
+with a click, one fanfare per medal, the wait for its picture), rehearsals never
+written as seen and replaced by a real medal, the command's parsing and listing. For
+both looks, every medal with no note and the longest notes (running text, the widest
+letters), alone and first of several, at nine moments, fits the canvas's draw and text
+budgets at 1080p, 4K, 4:3, 21:9 and 720 lines in the families and Inter, the button
+inside the window (above its key; inside its box in classic+); the SJK UI's button is
+the kit's gold pill, its pointer area exactly the pill, and a click there or elsewhere
+acts. CPU renders of both looks at several moments over a plain backdrop (the snapshot
+rasterizer, through a test not committed) were looked at; they led to the stronger
+band of light, the ticks outside the gold ring, a smoother glow and the classic box
+fitted to its content. On Linux with Rust 1.97: formatting, the locked workspace
+build, the locked workspace tests and workspace Clippy (no warning in the changed
+code) pass.
+
+Not seen or heard: there is no GPU, display, audio device, game data or hub here, so
+the ceremony's motion at speed, the band of light on the GPU (it relies on the UI
+shader leaving a tint past white unclamped, as it does), `music/goodsmall.mp3` in a
+player's install and its loudness, and the flow in a running client are unchecked;
+`menu_snapshot::medals_snapshot` and `world_shot::tests::duel6_medal_popup` were
+updated for both looks and the moments but not run. To try it: on the main menu,
+`debug_medal all Thank you from the SJK team` in the console (it closes, and the four
+medals show one after another), or `debug_medal bug_hunter x3` in a match, then open
+the game menu.
 
 ## Force profile and kill feed follow-ups
 

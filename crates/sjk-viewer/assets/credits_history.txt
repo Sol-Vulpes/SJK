@@ -9,6 +9,9 @@
 #                               made it when that is not the piece's owner.
 
 = Sol
++ 09/10/2026 | SJK #59 | Give new medals an SJK UI pop-up, a ceremony, a fanfare and debug_medal
+- 8ab4bf7 |  | Give new medals an SJK UI pop-up, a ceremony, a fanfare and debug_medal
+- ad22233 |  | Keep the styled menu button for the blade skins branch
 + 09/10/2026 | - | Keep the Force page's buttons clear of This server and make a right click remove a level
 - d54d2b0 |  | Keep the Force page's buttons clear of This server and make a right click remove a level
 + 09/10/2026 | - | Keep the Force side across serverinfo changes, fix the nameplate's powers, tell grip from lightning

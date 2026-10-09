@@ -21,6 +21,7 @@ Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 
 ## Unreleased
 
+- New medals get a pop-up in the menu style in use (floating over the scene in the SJK UI, a classic+ box in the classic menus) with an award animation, the Jedi Master fanfare from the game data and a Next or Close button; debug_medal <id> [x<count>] [note] rehearses it without touching the hub _(Sol)_
 - The SJK UI's Force page keeps Apply, Discard and Start over clear of the This server text (Apply spans the left column, the other two sit under it), and a right click on a Force level removes it; a left click only buys up to a level _(Sol)_
 - On servers with force-based teams, a change to the server's settings no longer sends you the wrong side's Force profile; your nameplate's own Force powers match what the server grants the profile sent; and the kill feed shows Force Grip's holocron for a grip kill instead of Lightning's _(Sol)_
 - A server that parks you in spectator over your Force profile is now answered again as intended: the up to three rejoin retries are polled every frame (they never went out), and not in duel or power duel, where waiting as a spectator is the queue _(Sol)_
