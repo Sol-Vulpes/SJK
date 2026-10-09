@@ -37,10 +37,13 @@ const ENTRY_TOKEN: u16 = 0;
 const SERVER_TOKEN: u16 = 20;
 const CHAT_TOKEN: u16 = 40;
 const OPEN_CHAT_TOKEN: u16 = 41;
-/// The dock's names, one a row, and the profile card a name shows with its Mute.
-const DOCK_NAME_TOKEN: u16 = 42;
+/// The player's profile card, bottom left.
 const CARD_TOKEN: u16 = 50;
-const CARD_MUTE_TOKEN: u16 = 51;
+/// The dock's names, one a row (a chat sender's card shows under the pointer), and
+/// that sender card and its Mute: apart from every other target of the page.
+const SENDER_NAME_TOKEN: u16 = 60;
+const SENDER_CARD_TOKEN: u16 = 70;
+const SENDER_MUTE_TOKEN: u16 = 71;
 /// The longest message typed in the dock, as the hub takes it.
 const DRAFT_MAX: usize = sjk_identity::chat::TEXT_MAX;
 
@@ -222,6 +225,8 @@ pub(crate) struct HomeView<'a> {
     pub(crate) seconds: f64,
     /// The SJK chat, docked under the servers; `None` while it is off.
     pub(crate) chat: Option<ChatDock<'a>>,
+    /// What the profile card says of the player's SJK profile.
+    pub(crate) summary: &'a crate::profile_card::Summary,
 }
 
 /// The SJK chat as the dock shows it.
@@ -252,10 +257,10 @@ pub(crate) struct DockLine<'a> {
     pub(crate) key_id: &'a str,
 }
 
-/// The profile card a dock name shows under the pointer: who, and the name it is
-/// beside.
+/// The sender card a dock name shows under the pointer (`sender_card.rs`): who, and
+/// the name it is beside.
 #[derive(Debug)]
-struct DockCard {
+struct SenderCard {
     person: crate::sender_card::Person,
     anchor: Rect,
 }
@@ -267,6 +272,8 @@ enum Focus {
     Server(usize),
     /// The SJK chat's field.
     Chat,
+    /// The player's profile card, bottom left.
+    Card,
 }
 
 /// The page's state: which page of the ring, its chosen entry, the keyboard's
@@ -287,8 +294,8 @@ pub(crate) struct Home {
     draft: Option<String>,
     /// What Enter sent from the field, until the menu takes it.
     sent: Option<String>,
-    /// The profile card on show over the dock.
-    card: Option<DockCard>,
+    /// The sender card on show over the dock.
+    sender_card: Option<SenderCard>,
     /// The key and name of the player its Mute asked for, until the menu takes them.
     muting: Option<(String, String)>,
 }
@@ -304,7 +311,7 @@ impl Default for Home {
             dock: false,
             draft: None,
             sent: None,
-            card: None,
+            sender_card: None,
             muting: None,
         }
     }
@@ -421,6 +428,19 @@ impl Home {
             (KeyCode::ArrowRight | KeyCode::KeyD | KeyCode::Tab, Focus::Arc) if servers > 0 => {
                 self.focus = Focus::Server(0);
             }
+            (KeyCode::ArrowLeft | KeyCode::KeyA, Focus::Arc) => self.focus = Focus::Card,
+            (KeyCode::Enter | KeyCode::NumpadEnter | KeyCode::Space, Focus::Card) => {
+                return Some(Action::Open(MainDestination::Profile));
+            }
+            (
+                KeyCode::ArrowRight
+                | KeyCode::KeyD
+                | KeyCode::ArrowUp
+                | KeyCode::KeyW
+                | KeyCode::Tab
+                | KeyCode::Escape,
+                Focus::Card,
+            ) => self.focus = Focus::Arc,
             (KeyCode::ArrowUp | KeyCode::KeyW, Focus::Server(index)) => {
                 self.focus = Focus::Server((index + servers - 1) % servers);
             }
@@ -487,16 +507,24 @@ impl Home {
                 }
                 return None;
             }
-            CARD_MUTE_TOKEN if self.dock => {
+            SENDER_MUTE_TOKEN if self.dock => {
                 // The dock shows only players not muted: its card offers Mute.
-                let card = if activate { self.card.take() } else { None };
+                let card = if activate {
+                    self.sender_card.take()
+                } else {
+                    None
+                };
                 let card = card?;
                 self.muting = Some((card.person.key_id.unwrap_or_default(), card.person.name));
                 return Some(Action::Mute);
             }
-            CARD_TOKEN => return None,
-            token if (DOCK_NAME_TOKEN..DOCK_NAME_TOKEN + DOCK_ROWS as u16).contains(&token) => {
+            SENDER_CARD_TOKEN => return None,
+            token if (SENDER_NAME_TOKEN..SENDER_NAME_TOKEN + DOCK_ROWS as u16).contains(&token) => {
                 return None;
+            }
+            CARD_TOKEN => {
+                self.focus = Focus::Card;
+                return activate.then_some(Action::Open(MainDestination::Profile));
             }
             _ => {}
         }
@@ -620,6 +648,10 @@ pub(crate) fn build(
             (y - RING[1]).atan2(COLUMN_X - RING[0])
         }
         Focus::Chat => (DOCK_FIELD + 16.0 - RING[1]).atan2(COLUMN_X - RING[0]),
+        Focus::Card => {
+            let centre = crate::profile_card::PICTURE[1] + crate::profile_card::PICTURE_SIZE * 0.5;
+            (centre - RING[1]).atan2(crate::profile_card::PICTURE[0] + 200.0 - RING[0])
+        }
     };
     let arc = home.arc_towards(target, seconds);
     let sweep = 0.42;
@@ -701,19 +733,34 @@ pub(crate) fn build(
     if let Some(dock) = &view.chat {
         chat_dock(canvas, &frame, home, dock);
     }
-    player(canvas, &frame, view);
+    crate::profile_card::draw(
+        canvas,
+        &frame,
+        &crate::profile_card::Card {
+            name: view.name,
+            detail: crate::profile_card::Detail::Model(
+                view.model,
+                view.blade_name,
+                view.summary.skin,
+            ),
+            summary: view.summary,
+            lit: home.focus == Focus::Card,
+        },
+        CARD_TOKEN,
+    );
     hints(canvas, &frame, home, !view.servers.is_empty());
     version(canvas, &frame, view);
     // The card goes over everything, its targets last.
     match &view.chat {
-        Some(dock) => dock_card(canvas, &frame, viewport, home, dock),
-        None => home.card = None,
+        Some(dock) => dock_sender_card(canvas, &frame, viewport, home, dock),
+        None => home.sender_card = None,
     }
     canvas.pop_opacity();
     let selected = match home.focus {
         Focus::Arc => ENTRY_TOKEN + home.entry as u16,
         Focus::Server(index) => SERVER_TOKEN + index as u16,
         Focus::Chat => CHAT_TOKEN,
+        Focus::Card => CARD_TOKEN,
     };
     canvas.finish(selected);
 }
@@ -962,7 +1009,7 @@ fn chat_dock(canvas: &mut MenuCanvas, frame: &Frame, home: &Home, dock: &ChatDoc
             15.0 * s,
         );
         // Resting the pointer on the name shows the sender's profile card.
-        canvas.hit_region(DOCK_NAME_TOKEN + row as u16, name);
+        canvas.hit_region(SENDER_NAME_TOKEN + row as u16, name);
     }
     if shown == 0 {
         body(
@@ -1122,7 +1169,7 @@ fn dock_line(
 /// Follow the pointer over the dock's names (the last frame's): the profile card of
 /// the sender under it, kept while the pointer is on the card, else none; then draw it
 /// beside the name, over the page.
-fn dock_card(
+fn dock_sender_card(
     canvas: &mut MenuCanvas,
     frame: &Frame,
     viewport: [f32; 2],
@@ -1131,14 +1178,14 @@ fn dock_card(
 ) {
     let shown = dock.lines.len().min(DOCK_ROWS);
     let first = dock.lines.len() - shown;
-    let hovered = (0..shown).find(|row| canvas.token_hovered(DOCK_NAME_TOKEN + *row as u16));
+    let hovered = (0..shown).find(|row| canvas.token_hovered(SENDER_NAME_TOKEN + *row as u16));
     match hovered {
         Some(row) => {
             let line = &dock.lines[first + row];
             let anchor = canvas
-                .rect_for(DOCK_NAME_TOKEN + row as u16)
+                .rect_for(SENDER_NAME_TOKEN + row as u16)
                 .unwrap_or_default();
-            match &mut home.card {
+            match &mut home.sender_card {
                 Some(card)
                     if card.person.name == line.name
                         && card.person.key_id.as_deref() == Some(line.key_id) =>
@@ -1146,17 +1193,18 @@ fn dock_card(
                     card.anchor = anchor;
                 }
                 _ => {
-                    home.card = Some(DockCard {
+                    home.sender_card = Some(SenderCard {
                         person: dock_person(line),
                         anchor,
                     });
                 }
             }
         }
-        None if canvas.token_hovered(CARD_TOKEN) || canvas.token_hovered(CARD_MUTE_TOKEN) => {}
-        None => home.card = None,
+        None if canvas.token_hovered(SENDER_CARD_TOKEN)
+            || canvas.token_hovered(SENDER_MUTE_TOKEN) => {}
+        None => home.sender_card = None,
     }
-    let Some(card) = home.card.as_ref() else {
+    let Some(card) = home.sender_card.as_ref() else {
         return;
     };
     let size = crate::sender_card::size(&card.person, frame.s);
@@ -1171,8 +1219,8 @@ fn dock_card(
         origin,
         frame.s,
         crate::sender_card::Tokens {
-            card: CARD_TOKEN,
-            mute: CARD_MUTE_TOKEN,
+            card: SENDER_CARD_TOKEN,
+            mute: SENDER_MUTE_TOKEN,
         },
     );
 }
@@ -1189,72 +1237,6 @@ fn dock_person(line: &DockLine<'_>) -> crate::sender_card::Person {
         medals: crate::medals::Medals::default(),
         place: crate::sender_card::Place::Unknown,
     }
-}
-
-/// The player, bottom left: a gold ring with their initial, their name, and
-/// their model and blade.
-fn player(canvas: &mut MenuCanvas, frame: &Frame, view: &HomeView<'_>) {
-    let s = frame.s;
-    let _ = canvas.draw_list_mut().push(DrawCommand::Arc {
-        center: frame.point(122.0, 990.0),
-        radius: 25.0 * s,
-        width: 2.0 * s,
-        start: 0.0,
-        sweep: std::f32::consts::TAU,
-        color: color::alpha(color::GOLD, 0.85),
-        knockout: None,
-    });
-    let initial = initial(view.name);
-    text(
-        canvas,
-        TextFamily::Display,
-        format_args!("{initial}"),
-        frame.rect(96.0, 972.0, 52.0, 36.0),
-        30.0 * s,
-        color::GOLD_BRIGHT,
-        FontWeight::Semibold,
-        TextAlign::Center,
-    );
-    text(
-        canvas,
-        TextFamily::Display,
-        format_args!("{}", view.name),
-        frame.rect(166.0, 962.0, 560.0, 30.0),
-        26.0 * s,
-        color::TEXT,
-        FontWeight::Regular,
-        TextAlign::Start,
-    );
-    text(
-        canvas,
-        TextFamily::Body,
-        format_args!(
-            "{}, {} saber",
-            crate::menu::classic::view::Sentence(view.model),
-            view.blade_name
-        ),
-        frame.rect(166.0, 994.0, 560.0, 22.0),
-        16.0 * s,
-        color::MUTED,
-        FontWeight::Regular,
-        TextAlign::Start,
-    );
-}
-
-/// The first letter of `name` past its colour codes and clan tags' symbols,
-/// in capitals; `S` for a name with none.
-fn initial(name: &str) -> char {
-    let mut characters = name.chars().peekable();
-    while let Some(character) = characters.next() {
-        if character == '^' && characters.peek().is_some_and(char::is_ascii_digit) {
-            characters.next();
-            continue;
-        }
-        if character.is_alphanumeric() {
-            return character.to_ascii_uppercase();
-        }
-    }
-    'S'
 }
 
 /// The keys of the page, bottom centre.
@@ -1290,6 +1272,11 @@ fn hints(canvas: &mut MenuCanvas, frame: &Frame, home: &Home, servers: bool) {
             (&["Enter"], "type"),
             (&["Up"], "servers"),
             (&["Left"], "back"),
+        ],
+        Focus::Card => [
+            (&["Enter"], "open your profile"),
+            (&["Right"], "back"),
+            (&["Esc"], "back"),
         ],
     };
     let gap = 28.0 * s;
@@ -1486,6 +1473,80 @@ mod tests {
             update: Some("2026.1009.1"),
             seconds: 1.0,
             chat,
+            summary: &crate::profile_card::NOBODY,
+        }
+    }
+
+    #[test]
+    fn the_keys_and_the_pointer_reach_the_profile_card() {
+        let mut home = Home::default();
+        home.key(KeyCode::ArrowLeft, 1);
+        assert_eq!(home.focus, Focus::Card);
+        assert_eq!(
+            home.key(KeyCode::Enter, 1),
+            Some(Action::Open(MainDestination::Profile))
+        );
+        // Escape on the card goes back to the arc; it does not ask to quit.
+        home.key(KeyCode::Escape, 1);
+        assert_eq!((home.focus, home.page), (Focus::Arc, Page::Main));
+        home.key(KeyCode::ArrowLeft, 1);
+        home.key(KeyCode::ArrowRight, 1);
+        assert_eq!(home.focus, Focus::Arc);
+        // Hovering chooses it, a click opens the profile.
+        assert_eq!(home.pointer(CARD_TOKEN, false, 1), None);
+        assert_eq!(home.focus, Focus::Card);
+        assert_eq!(
+            home.pointer(CARD_TOKEN, true, 1),
+            Some(Action::Open(MainDestination::Profile))
+        );
+    }
+
+    /// The card answers the pointer in the bottom-left corner of every window, and no
+    /// other text of the page reaches into it.
+    #[test]
+    fn the_profile_card_has_its_corner_to_itself() {
+        let servers = [server("JoF")];
+        for viewport in VIEWPORTS {
+            for focus in [Focus::Arc, Focus::Card, Focus::Server(0), Focus::Chat] {
+                let mut canvas = MenuCanvas::new();
+                let mut home = Home {
+                    focus,
+                    ..Home::default()
+                };
+                build(
+                    &mut canvas,
+                    viewport,
+                    &mut home,
+                    &view(&servers, Some(dock())),
+                    1.0,
+                );
+                let area = canvas.rect_for(CARD_TOKEN).expect("the card");
+                assert!(
+                    area.x >= 0.0 && area.bottom() <= viewport[1],
+                    "{viewport:?}"
+                );
+                assert!(area.right() < viewport[0] * 0.5, "{viewport:?}");
+                let inside = |rect: Rect| {
+                    rect.x >= area.x - 0.5
+                        && rect.right() <= area.right() + 0.5
+                        && rect.y >= area.y - 0.5
+                        && rect.bottom() <= area.bottom() + 0.5
+                };
+                let overlaps = |rect: Rect| {
+                    rect.x < area.right()
+                        && rect.right() > area.x
+                        && rect.y < area.bottom()
+                        && rect.bottom() > area.y
+                };
+                for command in canvas.draw_list().commands() {
+                    if let DrawCommand::Text { rect, .. } = command {
+                        assert!(
+                            inside(*rect) || !overlaps(*rect),
+                            "{viewport:?} {focus:?}: {rect:?} reaches into the card"
+                        );
+                    }
+                }
+            }
         }
     }
 
@@ -1559,7 +1620,7 @@ mod tests {
     }
 
     #[test]
-    fn resting_on_a_dock_name_shows_the_profile_card_with_mute() {
+    fn resting_on_a_dock_name_shows_the_sender_card_with_mute() {
         use sjk_ui::{InputEvent, Vec2};
         let servers = [server("a")];
         let mut canvas = MenuCanvas::new();
@@ -1578,15 +1639,15 @@ mod tests {
         };
         let centre = |rect: Rect| Vec2::new(rect.x + rect.width * 0.5, rect.y + rect.height * 0.5);
         draw(&mut canvas, &mut home);
-        assert!(home.card.is_none());
-        let name = canvas.rect_for(DOCK_NAME_TOKEN).expect("Sol's name");
+        assert!(home.sender_card.is_none());
+        let name = canvas.rect_for(SENDER_NAME_TOKEN).expect("Sol's name");
         canvas.pointer(InputEvent::PointerMove(centre(name)));
         draw(&mut canvas, &mut home);
         let runs: Vec<&str> = canvas.text_runs().collect();
         for wanted in ["SJK player, SJK staff", "Key 0123456789abcdef", "Mute"] {
             assert!(runs.contains(&wanted), "{wanted:?} in {runs:?}");
         }
-        let card = canvas.rect_for(CARD_TOKEN).expect("the card");
+        let card = canvas.rect_for(SENDER_CARD_TOKEN).expect("the card");
         assert!(
             card.x >= name.right() || card.right() <= name.x,
             "beside the name: {card:?} {name:?}"
@@ -1594,23 +1655,68 @@ mod tests {
         let [width, height] = VIEWPORTS[0];
         assert!(card.x >= 0.0 && card.right() <= width && card.bottom() <= height);
         // Onto the card: it stays; Mute mutes Sol, the dock's first line.
-        let mute = canvas.rect_for(CARD_MUTE_TOKEN).expect("Mute");
+        let mute = canvas.rect_for(SENDER_MUTE_TOKEN).expect("Mute");
         canvas.pointer(InputEvent::PointerMove(centre(mute)));
         draw(&mut canvas, &mut home);
-        assert!(home.card.is_some());
+        assert!(home.sender_card.is_some());
         // Away from both: gone.
         canvas.pointer(InputEvent::PointerMove(Vec2::new(4.0, 4.0)));
         draw(&mut canvas, &mut home);
-        assert!(home.card.is_none());
+        assert!(home.sender_card.is_none());
         canvas.pointer(InputEvent::PointerMove(centre(name)));
         draw(&mut canvas, &mut home);
-        assert_eq!(home.pointer(CARD_MUTE_TOKEN, true, 1), Some(Action::Mute));
+        assert_eq!(home.pointer(SENDER_MUTE_TOKEN, true, 1), Some(Action::Mute));
         assert_eq!(
             home.take_mute(),
             Some(("0123456789abcdef".to_owned(), "^2Sol".to_owned()))
         );
-        assert_eq!(home.pointer(CARD_MUTE_TOKEN, true, 1), None, "once");
+        assert_eq!(home.pointer(SENDER_MUTE_TOKEN, true, 1), None, "once");
         assert_eq!(home.take_mute(), None);
+    }
+
+    /// The dock's sender card and the player's own profile card, bottom left, keep
+    /// apart in every window, and hovering a dock name leaves the keyboard where it is.
+    #[test]
+    fn the_sender_card_keeps_clear_of_the_profile_card() {
+        use sjk_ui::{InputEvent, Vec2};
+        let servers = [server("JoF")];
+        let overlaps = |a: Rect, b: Rect| {
+            a.x < b.right() && a.right() > b.x && a.y < b.bottom() && a.bottom() > b.y
+        };
+        for viewport in VIEWPORTS {
+            for row in 0..dock().lines.len() {
+                let mut canvas = MenuCanvas::new();
+                let mut home = Home::default();
+                let draw = |canvas: &mut MenuCanvas, home: &mut Home| {
+                    build(canvas, viewport, home, &view(&servers, Some(dock())), 1.0);
+                };
+                draw(&mut canvas, &mut home);
+                let name = canvas
+                    .rect_for(SENDER_NAME_TOKEN + row as u16)
+                    .expect("a dock name");
+                let centre = Vec2::new(name.x + name.width * 0.5, name.y + name.height * 0.5);
+                canvas.pointer(InputEvent::PointerMove(centre));
+                draw(&mut canvas, &mut home);
+                assert_eq!(
+                    home.focus,
+                    Focus::Arc,
+                    "{viewport:?}: hovering moves no focus"
+                );
+                let sender = canvas.rect_for(SENDER_CARD_TOKEN).expect("the sender card");
+                let profile = canvas.rect_for(CARD_TOKEN).expect("the profile card");
+                assert!(
+                    !overlaps(sender, profile),
+                    "{viewport:?} row {row}: {sender:?} over {profile:?}"
+                );
+                assert!(
+                    sender.x >= 0.0
+                        && sender.y >= 0.0
+                        && sender.right() <= viewport[0] + 0.5
+                        && sender.bottom() <= viewport[1] + 0.5,
+                    "{viewport:?}: {sender:?}"
+                );
+            }
+        }
     }
 
     #[test]
@@ -1777,13 +1883,5 @@ mod tests {
         assert!(next > 1.0 && next < 2.0);
         home.arc = Some(3.0);
         assert!(home.arc_towards(-3.0, 10.1) > 3.0);
-    }
-
-    #[test]
-    fn the_initial_skips_colour_codes_and_symbols() {
-        assert_eq!(initial("^5JoF^7 Jedi"), 'J');
-        assert_eq!(initial("{JoF}solol"), 'J');
-        assert_eq!(initial("^1^2"), 'S');
-        assert_eq!(initial("sol"), 'S');
     }
 }

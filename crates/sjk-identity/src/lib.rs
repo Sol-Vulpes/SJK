@@ -9,6 +9,7 @@
 #![warn(missing_docs)]
 
 pub mod assets;
+pub mod avatar;
 pub mod bio;
 pub mod chat;
 pub mod feed;

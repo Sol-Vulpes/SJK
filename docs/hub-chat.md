@@ -37,7 +37,7 @@ The hub's side is described in Sol-Vulpes/SJK-hub (`PROTOCOL.md`, "Chat", "Emote
 | Viewer glue | [player_identity.rs](../crates/sjk-viewer/src/player_identity.rs) |
 | Muting a player: the list, matching slots | [chat_mutes.rs](../crates/sjk-viewer/src/chat_mutes.rs), [player_mutes.rs](../crates/sjk-viewer/src/player_mutes.rs) |
 | Muting a player: drawn as Kyle, silenced | [muted_players.rs](../crates/sjk-viewer/src/muted_players.rs), [muted_players_frame.rs](../crates/sjk-viewer/src/muted_players_frame.rs), [audio_mute.rs](../crates/sjk-viewer/src/audio_mute.rs) |
-| Profile card (pointer on a name) | [sender_card.rs](../crates/sjk-viewer/src/sender_card.rs), [chat/card.rs](../crates/sjk-viewer/src/chat/card.rs) |
+| Sender card (pointer on a name) | [sender_card.rs](../crates/sjk-viewer/src/sender_card.rs), [chat/card.rs](../crates/sjk-viewer/src/chat/card.rs) |
 | In-game SJK channel | [chat/sjk.rs](../crates/sjk-viewer/src/chat/sjk.rs), [chat/view/sjk_line.rs](../crates/sjk-viewer/src/chat/view/sjk_line.rs), [sjk_chat_frame.rs](../crates/sjk-viewer/src/sjk_chat_frame.rs) |
 | How a line looks everywhere (gold, tick, flow) | [sjk_chat_look.rs](../crates/sjk-viewer/src/sjk_chat_look.rs) |
 | Main page dock | [home.rs](../crates/sjk-viewer/src/menu/sjk/home.rs), [chat_dock.rs](../crates/sjk-viewer/src/menu/sjk/chat_dock.rs) |
@@ -128,7 +128,7 @@ Old clients ignore all of it, so it stays `/v1/`.
 - SJK UI main page: the chat is docked under Recent servers. Its last five lines (the
   verified tick after a verified sender's name), cut to one row each, sit on the field,
   with the online count by its name; resting the pointer on a name shows the sender's
-  profile card with Mute. Down past the last server (or a click) reaches the field;
+  sender card with Mute. Down past the last server (or a click) reaches the field;
   Enter types (every key goes to the field), Enter sends, Escape stops. Open chat opens
   the page. A line under the field says why a message could not go.
 - The SJK chat page (a console page in the SJK UI's look in every menu style): the
@@ -137,7 +137,7 @@ Old clients ignore all of it, so it stays `/v1/`.
   servers say, so no time zone is needed); the field (the keyboard is there when the page opens), Send and the
   character count. Up from the field chooses the newest message, Up and Down move,
   Page Up and Page Down scroll, Tab walks every control. Resting the pointer on a name
-  shows the sender's profile card with Mute or Unmute. A chosen message offers Mute on
+  shows the sender's sender card with Mute or Unmute. A chosen message offers Mute on
   this PC ([Muting a player](#muting-a-player)); for staff, Delete for everyone, Mute at the hub and Unmute
   at the hub (the client does not know a key's mute flag); under them, what the request
   came to (sending, done, or the hub's refusal). It opens from the dock's
@@ -176,7 +176,7 @@ A player can be muted on this PC (Sol's request, 08/10/2026). It is local: nothi
 to the hub or the game server, and the game is unchanged; only what this client shows
 and plays changes.
 
-- **Where:** rest the pointer on a name and the player's profile card shows beside it
+- **Where:** rest the pointer on a name and the player's sender card shows beside it
   ([sender_card.rs](../crates/sjk-viewer/src/sender_card.rs)), in the SJK UI's look
   wherever it is: in the game's chat while the composer is open (the pointer is free
   then), on an SJK chat sender's name or on the name of a player the server says sent

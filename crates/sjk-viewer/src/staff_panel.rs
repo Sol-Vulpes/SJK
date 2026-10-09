@@ -25,6 +25,7 @@ const ME_TOKEN: u16 = 1_101;
 const RECENT_TOKEN: u16 = 1_102;
 const NOTE_TOKEN: u16 = 1_103;
 const CLEAR_ALL_TOKEN: u16 = 1_104;
+const PICTURE_DOWN_TOKEN: u16 = 1_105;
 /// Players found, one token each.
 const PLAYER_BASE: u16 = 1_110;
 const PLAYERS_SHOWN: usize = 14;
@@ -69,6 +70,8 @@ struct Shown {
     /// unlockables.
     target: Option<String>,
     medals: [u32; crate::medals::Medal::COUNT],
+    /// The chosen player has a picture.
+    picture: bool,
     unlocks: [bool; crate::unlockables::ALL.len()],
 }
 
@@ -202,6 +205,12 @@ impl Panel {
                 PanelAction::Request(StaffRequest::Search(String::new()))
             }
             NOTE_TOKEN => PanelAction::None,
+            PICTURE_DOWN_TOKEN => match target {
+                Some(key_id) if self.shown.picture => {
+                    PanelAction::Request(StaffRequest::AvatarRemove { key_id })
+                }
+                _ => PanelAction::None,
+            },
             CLEAR_ALL_TOKEN => {
                 let Some(key_id) = target else {
                     return PanelAction::None;
@@ -417,6 +426,7 @@ mod tests {
             names: Vec::new(),
             medals: Vec::new(),
             achievements: Vec::new(),
+            avatar: String::new(),
             unlocks: Vec::new(),
         }
     }
@@ -473,6 +483,42 @@ mod tests {
         assert_eq!(panel.target(&inputs).unwrap().name, "Fox");
         let _ = panel.activate(ME_TOKEN);
         assert_eq!(panel.target(&inputs).unwrap().key_id, me.key_id);
+    }
+
+    #[test]
+    fn a_picture_is_taken_down_only_when_there_is_one() {
+        let (mut panel, me, _) = drawn(Vec::new());
+        assert!(panel.order.contains(&PICTURE_DOWN_TOKEN));
+        assert_eq!(panel.activate(PICTURE_DOWN_TOKEN), PanelAction::None);
+        let pictured = Profile {
+            avatar: "0123456789abcdef".into(),
+            ..profile("bbbbbbbbbbbbbbbb", "Fox")
+        };
+        let (mut panel, _, _) = drawn(vec![pictured]);
+        assert_eq!(panel.activate(PLAYER_BASE), PanelAction::None);
+        // The next frame shows the chosen player.
+        let staff = StaffState {
+            players: vec![Profile {
+                avatar: "0123456789abcdef".into(),
+                ..profile("bbbbbbbbbbbbbbbb", "Fox")
+            }],
+            ..StaffState::default()
+        };
+        let fonts = crate::text::load_modern(1.0, None).expect("Inter");
+        panel.build(
+            &Inputs {
+                me: Some(&me),
+                staff: &staff,
+            },
+            &fonts.font,
+            [1920.0, 1080.0],
+        );
+        assert_eq!(
+            panel.activate(PICTURE_DOWN_TOKEN),
+            PanelAction::Request(StaffRequest::AvatarRemove {
+                key_id: "bbbbbbbbbbbbbbbb".into()
+            })
+        );
     }
 
     #[test]

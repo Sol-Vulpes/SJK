@@ -757,6 +757,7 @@ Found the fog bug, ask me about it!"
                     .collect(),
                 medals: vec![medal("early_tester", 1), medal("bug_hunter", 2)],
                 achievements: Vec::new(),
+                avatar: String::new(),
                 unlocks: vec![sjk_identity::Unlock {
                     id: "saber_sun".to_owned(),
                     granted: 1_791_336_225,
@@ -775,6 +776,7 @@ Found the fog bug, ask me about it!"
                 report: None,
                 note: None,
                 player_report: None,
+                avatar: None,
                 look_outcome: None,
                 packs_revision: 0,
                 assets_note: None,
@@ -887,6 +889,7 @@ like this one.",
             names: Vec::new(),
             medals: Vec::new(),
             achievements: Vec::new(),
+            avatar: String::new(),
             unlocks: Vec::new(),
         };
         let medal = |id: &str, count| sjk_identity::Medal {

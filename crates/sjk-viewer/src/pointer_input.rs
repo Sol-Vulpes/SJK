@@ -318,6 +318,18 @@ impl GpuState {
                 return true;
             }
             if let Some((kind, row)) = self.in_game_menu.pointer(event) {
+                // The SJK UI's profile card opens the Profile page over the menu.
+                if row == usize::from(crate::ingame_menu::sjk_view::CARD_TOKEN)
+                    && self.in_game_menu.is_sjk()
+                {
+                    if kind == UiEventKind::Activate {
+                        if let Some(console) = &mut self.console {
+                            console.open_profile_panel(crate::console::profile_panel::Tab::Profile);
+                        }
+                        self.sync_cursor_policy();
+                    }
+                    return true;
+                }
                 if let Some(tab) = crate::ingame_menu::classic::bar_tab(row) {
                     self.classic_bar_pointer(kind, tab);
                     return true;

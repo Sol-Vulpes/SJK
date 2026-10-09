@@ -1,10 +1,13 @@
 //! The per-frame hook of player identity (`player_identity.rs`): twice a second,
 //! hand the service the player's settings and where they are playing, the new
-//! medal pop-up the medals of the player's own profile (`medal_popup.rs`), and the
-//! achievements their counts (`achievements_frame.rs`). Each frame it also lets the
-//! chat feed follow the SJK chat (`sjk_chat_frame.rs`), starts and ends emotes
-//! (`emotes_frame.rs`), keeps the players' looks (`looks_frame.rs`) and follows the
-//! players muted on this PC (`muted_players_frame.rs`).
+//! medal pop-up the medals of the player's own profile (`medal_popup.rs`), the
+//! achievements their counts (`achievements_frame.rs`), the picture cache where
+//! pictures come from (`avatars.rs`) and the profile card what it shows
+//! (`profile_card.rs`). Each frame it also lets the chat feed follow the SJK chat
+//! (`sjk_chat_frame.rs`), starts and ends emotes (`emotes_frame.rs`), keeps the
+//! players' looks (`looks_frame.rs`), follows the players muted on this PC
+//! (`muted_players_frame.rs`) and puts the pictures that finished loading into the
+//! UI's atlas.
 
 use super::*;
 use sjk_identity::Settings;
@@ -16,6 +19,7 @@ impl GpuState {
         self.update_sjk_chat();
         self.update_emotes();
         self.update_muted_players();
+        avatars::service(&self.ui_shapes, &self.queue);
         let due = player_identity::due();
         self.update_looks(due);
         if !due {
@@ -41,9 +45,17 @@ impl GpuState {
             player_identity::location(session.server(), session.is_local(), session.game_state())
         });
         let chat = console.bool_cvar("cl_sjkChat") != Some(false);
+        // Pictures are read from the hub the identity talks to, and only while it is on.
+        let pictures_from = if settings.enabled {
+            settings.hub_url.as_str()
+        } else {
+            ""
+        };
+        avatars::configure(Some(console.config_directory()), pictures_from);
         player_identity::apply(console.config_directory(), settings, name, location, chat);
         let (packs_revision, assets_note) = player_identity::packs();
         crate::sjk_packs::follow_identity(packs_revision, assets_note);
+        profile_card::refresh(console);
         self.offer_medals();
         self.update_achievements();
     }

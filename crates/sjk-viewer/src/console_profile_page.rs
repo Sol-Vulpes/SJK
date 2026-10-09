@@ -81,7 +81,50 @@ impl ViewerConsole {
                     self.push_log("^3profile: the identity is not running yet");
                 }
             }
+            PanelAction::SetAvatar { png } => {
+                if !crate::player_identity::set_avatar(png) {
+                    self.profile_panel
+                        .picture_failed("Not sent: turn the SJK identity on first (cl_identity 1)");
+                }
+            }
+            PanelAction::RemoveAvatar => {
+                if !crate::player_identity::remove_avatar() {
+                    self.profile_panel
+                        .picture_failed("Not sent: turn the SJK identity on first (cl_identity 1)");
+                }
+            }
         }
+    }
+
+    /// Whether the Profile page shows.
+    pub(crate) fn profile_panel_shown(&self) -> bool {
+        self.open && self.profile_panel.is_open()
+    }
+
+    /// Open the Profile page if needed, on its picture panel.
+    pub(crate) fn profile_show_picture(&mut self) {
+        if !self.profile_panel_shown() {
+            self.open_profile_panel(Tab::Profile);
+        }
+        self.profile_panel.show_picture();
+    }
+
+    /// Read the picture file at `path` and show it on the Profile page, ready to send
+    /// (a file dropped on the window, `sjkavatar <file>`).
+    pub(crate) fn profile_load_picture(&mut self, path: &std::path::Path) {
+        if !self.profile_panel_shown() {
+            self.open_profile_panel(Tab::Profile);
+        }
+        self.profile_panel.load_picture(path.to_owned());
+    }
+
+    /// Take the player's picture down (`sjkavatar clear`), on the Profile page.
+    pub(crate) fn profile_remove_picture(&mut self) {
+        if !self.profile_panel_shown() {
+            self.open_profile_panel(Tab::Profile);
+        }
+        let action = self.profile_panel.remove_picture_now();
+        self.profile_panel_action(action);
     }
 
     /// The identity service's last notice, to tell a save's answer.

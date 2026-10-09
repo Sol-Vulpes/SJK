@@ -3,7 +3,8 @@
 //! a compact version of the main page's arc of entries on it (the chosen one
 //! gold and larger, a line under it saying what it opens, a lit rail beside
 //! them with a gold mark at the chosen one, SJK's emblem inside the curve), a
-//! card of the match on the right and the keys at the bottom.
+//! card of the match on the right, the player's profile card bottom left (a
+//! click opens the Profile page) and the keys at the bottom.
 //!
 //! The pages are the in-game menu's own ([`Page`]): the main one, Team (or
 //! Siege's classes), Players (a small scoreboard, drawn as a table with the chosen
@@ -398,6 +399,8 @@ const CARD_TOP: f32 = 318.0;
 const MEDAL_PITCH: f32 = 44.0;
 /// The keys' line.
 const KEYS_Y: f32 = 1004.0;
+/// Pointer token of the player's profile card, bottom left (`profile_card`).
+pub(crate) const CARD_TOKEN: u16 = 900;
 
 /// The arc's spacing and type for a page of some number of entries: the gap
 /// between entries, their size and the chosen one's, and whether the chosen
@@ -547,8 +550,40 @@ pub(super) fn build(
         None if card.known => draw_card(canvas, &frame, card),
         None => {}
     }
+    if profile_card_room(view.page, if table { 0 } else { rows.labels.len() }) {
+        let lit = canvas.token_hovered(CARD_TOKEN);
+        crate::profile_card::with(|summary| {
+            crate::profile_card::draw(
+                canvas,
+                &frame,
+                &crate::profile_card::Card {
+                    name: &summary.name,
+                    detail: crate::profile_card::Detail::Line(&summary.detail),
+                    summary,
+                    lit,
+                },
+                CARD_TOKEN,
+            );
+        });
+    }
     keys(canvas, &frame, view.page);
     canvas.finish(view.selected_row as u16);
+}
+
+/// Whether the player's profile card has its corner on `page` with `count` entries on
+/// the arc: not on the Players pages, whose table and player card take the screen, nor
+/// when the arc's last entry (and the line under it) reaches down to it.
+fn profile_card_room(page: Page, count: usize) -> bool {
+    if matches!(page, Page::Players | Page::ReportPlayer) {
+        return false;
+    }
+    if count == 0 {
+        return true;
+    }
+    let m = metrics(count);
+    let [_, last] = entry_point(count - 1, count);
+    let under = if m.hints { 24.0 } else { 0.0 };
+    last + m.pitch * 0.5 + under <= crate::profile_card::AREA[1] - 8.0
 }
 
 /// The fades that keep the menu readable over any part of the match: deep at
@@ -1036,11 +1071,33 @@ fn player_card(
         );
     };
     let mut y = CARD_TOP;
+    // An SJK player's picture (or their initial) before their name.
+    let name_x = match &player.hub {
+        Some(hub) => {
+            let radius = 34.0;
+            crate::profile_card::avatar(
+                canvas,
+                frame.point(CARD_X + radius, CARD_TOP + radius + 4.0),
+                radius * s,
+                &crate::profile_card::Avatar {
+                    key_id: &hub.key_id,
+                    version: &hub.avatar,
+                    name: &player.name,
+                    verified: hub.verified,
+                    preview: false,
+                    lit: false,
+                },
+            );
+            CARD_X + radius * 2.0 + 18.0
+        }
+        None => CARD_X,
+    };
+    let name_width = CARD_X + CARD_WIDTH - name_x;
     text(
         canvas,
         TextFamily::Display,
         format_args!("{}", player.name),
-        frame.rect(CARD_X, y, CARD_WIDTH, 46.0),
+        frame.rect(name_x, y, name_width, 46.0),
         38.0 * s,
         color::TEXT,
         FontWeight::Regular,
@@ -1053,19 +1110,28 @@ fn player_card(
         (_, true) => ", a bot",
         _ => "",
     };
+    let slot_line = frame.rect(name_x, y, name_width, 24.0);
     if side.is_empty() {
-        body(
+        text(
             canvas,
-            y,
-            color::QUIET,
+            TextFamily::Body,
             format_args!("Slot {}{what}", player.slot),
+            slot_line,
+            17.0 * s,
+            color::QUIET,
+            FontWeight::Regular,
+            TextAlign::Start,
         );
     } else {
-        body(
+        text(
             canvas,
-            y,
-            color::QUIET,
+            TextFamily::Body,
             format_args!("Slot {}, {side}{what}", player.slot),
+            slot_line,
+            17.0 * s,
+            color::QUIET,
+            FontWeight::Regular,
+            TextAlign::Start,
         );
     }
     y += 40.0;
@@ -1801,6 +1867,77 @@ mod tests {
                 }
             }
         }
+    }
+
+    /// The profile card shows bottom left wherever the arc leaves it room, answers the
+    /// pointer there, and no entry's area or text reaches into it.
+    #[test]
+    fn the_profile_card_sits_under_the_arc_when_there_is_room() {
+        let card = Card::for_shot(false, false);
+        let roster = players::State::for_shot(8, true, players::Gate::Open);
+        for viewport in VIEWPORTS {
+            for count in 1..=24 {
+                let labels: Vec<String> = (0..count).map(|row| format!("Entry {row}")).collect();
+                let hints = vec!["What it opens".to_owned(); count];
+                let enabled = vec![true; count];
+                let page = if count == 10 {
+                    Page::Main
+                } else {
+                    Page::VoteMap
+                };
+                let mut canvas = MenuCanvas::new();
+                build(
+                    &mut canvas,
+                    &view(page, count - 1, false, 0),
+                    &Rows {
+                        labels: &labels,
+                        hints: &hints,
+                        enabled: &enabled,
+                    },
+                    &Sides {
+                        card: &card,
+                        players: &roster,
+                    },
+                    &mut Motion::default(),
+                    viewport,
+                );
+                let Some(area) = canvas.rect_for(CARD_TOKEN) else {
+                    assert!(count > 12, "{count}: every short page has the card");
+                    continue;
+                };
+                assert!(profile_card_room(page, count));
+                assert!(area.right() < viewport[0] * 0.5 && area.bottom() <= viewport[1]);
+                let overlaps = |rect: Rect| {
+                    rect.x < area.right()
+                        && rect.right() > area.x
+                        && rect.y < area.bottom()
+                        && rect.bottom() > area.y
+                };
+                for row in 0..count {
+                    let rect = canvas.rect_for(row as u16).unwrap();
+                    assert!(!overlaps(rect), "{viewport:?} {count}: row {row}");
+                }
+                let inside = |rect: Rect| {
+                    rect.x >= area.x - 0.5
+                        && rect.right() <= area.right() + 0.5
+                        && rect.y >= area.y - 0.5
+                        && rect.bottom() <= area.bottom() + 0.5
+                };
+                for command in canvas.draw_list().commands() {
+                    if let DrawCommand::Text { rect, .. } = command {
+                        assert!(inside(*rect) || !overlaps(*rect), "{viewport:?} {count}");
+                    }
+                }
+            }
+        }
+        // Not on the Players pages, whose table and player card take the screen.
+        assert!(!profile_card_room(Page::Players, 0));
+        assert!(!profile_card_room(Page::ReportPlayer, 8));
+        assert!(profile_card_room(Page::Main, Entry::MAIN.len()));
+        assert!(profile_card_room(
+            Page::Sjk,
+            super::super::sjk::ENTRIES.len() + 1
+        ));
     }
 
     #[test]

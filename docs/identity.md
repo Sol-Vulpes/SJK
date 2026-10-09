@@ -25,6 +25,8 @@ This page is the design and the current limits. The player-facing summary is
 | New medal pop-up | [medal_popup.rs](../crates/sjk-viewer/src/medal_popup.rs) |
 | Bio rules (shared word for word with the hub) | [bio.rs](../crates/sjk-identity/src/bio.rs) |
 | Profile page, `profile` and `achievements` commands | [profile_panel.rs](../crates/sjk-viewer/src/profile_panel.rs), [profile_panel_view.rs](../crates/sjk-viewer/src/profile_panel_view.rs), [console_profile_page.rs](../crates/sjk-viewer/src/console_profile_page.rs) |
+| Profile card (main page, in-game menu) | [profile_card.rs](../crates/sjk-viewer/src/profile_card.rs) |
+| Pictures: wire, cache, crop and scale, kept files, `sjkavatar` | [avatar.rs](../crates/sjk-identity/src/avatar.rs), [avatars.rs](../crates/sjk-viewer/src/avatars.rs), [avatars/picture.rs](../crates/sjk-viewer/src/avatars/picture.rs), [avatars/store.rs](../crates/sjk-viewer/src/avatars/store.rs), [avatar_command.rs](../crates/sjk-viewer/src/avatar_command.rs) |
 | Staff requests, Staff page, `staff` command | [staff.rs](../crates/sjk-identity/src/staff.rs), [staff_panel.rs](../crates/sjk-viewer/src/staff_panel.rs), [staff_panel_view.rs](../crates/sjk-viewer/src/staff_panel_view.rs), [console_staff_page.rs](../crates/sjk-viewer/src/console_staff_page.rs) |
 | Achievements: catalogue, counts, tracker | [achievements.rs](../crates/sjk-viewer/src/achievements.rs), [achievements/tracker.rs](../crates/sjk-viewer/src/achievements/tracker.rs), [achievements_frame.rs](../crates/sjk-viewer/src/achievements_frame.rs) |
 | Achievements: medallion look, unlock pop-up | [achievements/medallion.rs](../crates/sjk-viewer/src/achievements/medallion.rs), [achievement_toast.rs](../crates/sjk-viewer/src/achievement_toast.rs) |
@@ -123,6 +125,17 @@ game server's address, the in-game name the player wears, where the player stood
 surface and entity, and a smaller copy of its screenshot (at most 1280 x 720), signed
 with the player's key. The note dialog says so. The hub keeps it until the operator
 removes it; the full note and screenshot stay on the player's PC either way.
+
+A picture ([Pictures](#pictures)) is sent only when the player presses Use this
+picture (or types `sjkavatar <file>` and then presses it): a 128-pixel square PNG the
+client made from their file, signed with their key. Nothing else of the file goes:
+not its name, its path or its metadata, and the hub writes its own copy holding the
+pixels only. The picture is public, like the hub name: anyone may read it at
+`/v1/avatar/<key id>`, and every SJK client that shows the player downloads it. The
+hub keeps it until the player takes it down, the SJK team does, or the operator
+removes the identity. Showing other players' pictures asks the hub for them by key
+id, so the hub sees which players a client looks at (it already sees the servers it
+plays on); they are kept in `avatars/` in the settings folder.
 
 ## Bug reports
 
@@ -369,6 +382,11 @@ Its second tab is the achievements board (below; the `achievements` command open
 it). With the identity off, or the hub out of reach, the page says so: the bio cannot
 be written and the record and board show this PC's counts.
 
+The player's picture stands at the top of the left column ([Pictures](#pictures)): a
+click on it (or Enter on it) opens the picture panel in the bio's place. The profile
+card in the bottom-left corner of the SJK UI's main page and in-game menu
+([sjk-ui.md](sjk-ui.md#profile-card)) opens the page too.
+
 ### The bio's rules
 
 A bio is free text every player can read, so it keeps to what SJK's fonts draw and
@@ -390,6 +408,72 @@ and says which rule it breaks; the hub refuses a bio that breaks one (`bio_lengt
 client shows a bio only through `bio::for_display`, which drops what the rules
 refuse, so a bio stored before the rules, or a foreign hub, cannot put anything else
 on screen. A bio is plain text: nothing in it is ever a link or markup.
+
+## Pictures
+
+A player may show a small square picture beside their name (08/10/2026, Sol's
+request). The hub's side is `PROTOCOL.md`, "Pictures", in Sol-Vulpes/SJK-hub: the
+client needs a hub with it, or profiles carry no `avatar` and the stand-ins show.
+
+**Choosing one.** SJK opens no file dialog. A picture file dropped on the window (a
+PNG, JPEG or TGA, known by its extension, at any time; while the Profile page shows,
+any file but a `.cfg`, so the page can say why it is no picture) or named to
+`sjkavatar <file>` opens the Profile page on its picture panel. A worker thread reads
+the file (at most 16 MB) and decodes it with the `image` crate the client already
+uses (at most 8192 pixels a side and 256 MB of memory, at least 32 pixels a side),
+crops it to a square from its middle, scales it to 128 x 128 by area averaging and
+writes it as a PNG of the pixels only (RGB when every pixel is opaque, else RGBA).
+The panel shows it large, round and ringed as everyone will see it, "This is how it
+will look"; **Use this picture** sends it. Done, Escape or closing the page drops a
+picture not sent. **Remove picture** (a second press within 3 seconds) or
+`sjkavatar clear` takes the player's picture down. The panel says what went wrong in
+the player's words: not a picture SJK reads ("use a PNG, JPEG or TGA"), too big, too
+small, unreadable, the identity off or the hub out of reach, or the hub's own refusal
+(too many changes, stopped by the SJK team).
+
+**Sending.** The identity service's worker sends it, signed, once registered:
+`PUT /v1/avatar` with the PNG (at most 256 KiB, refused before sending when larger),
+`DELETE /v1/avatar` to take it down (`Service::set_avatar`, `Service::remove_avatar`;
+the outcome in `Snapshot::avatar`). The hub answers with the profile, whose `avatar`
+is the new version; the preview's pixels become that version's picture in the cache,
+so it shows at once, everywhere, without a download. The hub takes a square PNG of 64
+to 1024 pixels, re-encodes it at 128, and allows 6 changes an hour and 20 a day per
+key.
+
+**Showing.** Profiles and presence carry `avatar`, the picture's version (16 hex
+digits of the SHA-256 of the hub's PNG), `""` for none. Pictures show on the profile
+card, the Profile page, the in-game Players page's card of a player the hub knows on
+the server, and the Staff page's chosen player. A screen asks the cache
+([avatars.rs](../crates/sjk-viewer/src/avatars.rs)) for a key's picture at a version
+each frame it draws it; that compares a few strings and allocates nothing once asked.
+The first ask hands the request to one worker thread (`sjk-avatars`), which reads the
+picture kept on this PC or downloads `GET /v1/avatar/<key id>?v=<version>` (unsigned,
+at most 256 KiB, a PNG), checks it is square, decodes it and cuts it round. Once a
+frame, `avatars::service` takes what the worker finished and uploads at most four
+pictures into the UI's icon atlas (two rows of 128-pixel cells: 31 pictures and the
+preview). The cache holds 31; a new picture takes the place of the one shown longest
+ago, never one drawn in the last two frames. A new version is a new picture. A picture
+that could not be had is asked for again after two minutes, or at once when the hub's
+address changes. Until a picture is there, and for a player without one, a stand-in
+shows: the first letter of the name (past colour codes and symbols) on one of eight
+colours picked from the key id, so a player has the same colour on every PC. A
+verified player's picture is ringed in gold with the verified badge at its foot.
+
+**Kept on this PC.** Downloaded pictures are kept as the hub served them in
+`avatars/<key id>-<version>.png` beside `identity.key`
+([avatars/store.rs](../crates/sjk-viewer/src/avatars/store.rs)), so a picture is
+downloaded once per version. The folder keeps at most 256 pictures and 8 MB: past
+either, those used longest ago go (reading one counts as a use), and a key's older
+versions go when a new one is kept. Only names of that exact form are read, written
+or removed, so no text from the hub becomes a path. With the identity off nothing is
+downloaded.
+
+**Moderation.** Pictures are public and moderated by hand. A staff key's Staff page
+has Take picture down for the chosen player (`/v1/staff/avatar-remove`, in the staff
+log); stopping a key from uploading (`/v1/staff/avatar-block`,
+`StaffRequest::AvatarBlock`) and the operator's commands are the hub's
+(`ADMIN.md`). A picture taken down is gone: the key's `avatar` becomes `""` and
+clients show the stand-in.
 
 ## Achievements
 
@@ -492,7 +576,9 @@ themself until another is chosen, or with Me), and offers:
   note) and Relock (`StaffRequest::Relock`), as Give and Take back for medals; the
   hub's answer replaces the chosen profile and shows in the status line;
 - the player's achievements at the hub, each with Clear, and Clear all, which waits
-  for a second press within 3 seconds.
+  for a second press within 3 seconds;
+- the player's picture beside their name, with Take picture down
+  ([Pictures](#pictures)).
 
 Each action is a request signed by the staff member's own key (`PROTOCOL.md`,
 "Staff"); the hub refuses it from a key that is not staff, keeps a log of every staff
@@ -517,6 +603,9 @@ sends its counts, which the page says.
   localhost only.
 - `profile` opens the Profile page and `achievements` its board (again: closes it).
 - `staff` opens the Staff page, for a staff key only.
+- `sjkavatar <file>` reads a picture file and shows it on the Profile page, ready to
+  send with Use this picture; `sjkavatar clear` takes the player's picture down;
+  `sjkavatar` alone opens the picture panel ([Pictures](#pictures)).
 - `cg_saberSkin` (archived, default empty) is the blade-skin unlock id the player
   wears; it applies, and is sent, only while the own profile lists it
   ([unlockables.md](unlockables.md)). `saberskin` lists the blade skins (owned or

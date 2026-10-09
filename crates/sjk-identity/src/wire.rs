@@ -43,6 +43,10 @@ pub struct Profile {
     /// older than unlocks).
     #[serde(default)]
     pub unlocks: Vec<Unlock>,
+    /// The version of the key's picture (`crate::avatar`), empty for none (and from hubs
+    /// older than pictures).
+    #[serde(default)]
+    pub avatar: String,
 }
 
 /// One unlockable a key holds (`PROTOCOL.md`, "Unlocks"): granted by the hub's
@@ -185,6 +189,10 @@ pub struct Presence {
     /// medals), so the scoreboard shows them without a request per player.
     #[serde(default)]
     pub medals: Vec<Medal>,
+    /// The version of the claimant's picture, empty for none (and from hubs older than
+    /// pictures), so a client fetches it without a profile per player.
+    #[serde(default)]
+    pub avatar: String,
     /// What the claimant wears, when their claim has a look (absent otherwise, and
     /// from hubs older than looks).
     #[serde(default)]
@@ -451,6 +459,20 @@ mod tests {
         .unwrap();
         assert_eq!(presence.slot, 3);
         assert!(presence.medals.is_empty(), "an older hub sends no medals");
+        assert!(presence.avatar.is_empty(), "an older hub sends no picture");
+        assert!(profile.avatar.is_empty());
+        let pictured: Profile = serde_json::from_str(
+            r#"{"key_id":"aa","key":"bb","name":"Sol","bio":"","verified":false,"created":5,
+                "avatar":"0123456789abcdef"}"#,
+        )
+        .unwrap();
+        assert_eq!(pictured.avatar, "0123456789abcdef");
+        let presence: Presence = serde_json::from_str(
+            r#"{"slot":3,"claimed_name":"x","key_id":"aa","name":"Sol","verified":false,
+                "avatar":"fedcba9876543210"}"#,
+        )
+        .unwrap();
+        assert_eq!(presence.avatar, "fedcba9876543210");
     }
 
     #[test]
