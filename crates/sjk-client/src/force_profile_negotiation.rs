@@ -232,6 +232,17 @@ impl ForceProfileNegotiator {
         self.rules = rules;
     }
 
+    /// Adopt the rules `CS_SERVERINFO` advertises now, as it changes during a
+    /// connection. The side an `nfr` notice held the player to under
+    /// `g_forceBasedTeams` is kept: `CS_SERVERINFO` does not carry it.
+    pub fn refresh_server_rules(&mut self, game_state: &GameState) {
+        let mut rules = server_force_rules(game_state);
+        if rules.team_side.is_none() && serverinfo_i32(game_state, "g_forceBasedTeams") != 0 {
+            rules.team_side = self.rules.and_then(|held| held.team_side);
+        }
+        self.rules = Some(rules);
+    }
+
     /// The `forcepowers` value sent for the player's `preferred` one: fitted
     /// to the server's rules while on one, keeping the powers it disables.
     pub fn sent_forcepowers(&self, preferred: &str) -> String {
@@ -377,6 +388,33 @@ mod tests {
         let fitted = ForceAllocation::parse(&greedy).unwrap();
         assert!(fitted.used_points(false) <= 30, "{greedy}");
         assert!(legalize_force_powers(&greedy, rules.for_sent_profile()).was_legal);
+    }
+
+    #[test]
+    fn a_serverinfo_refresh_keeps_the_side_an_nfr_notice_set() {
+        use crate::force_profile::ForceSide;
+        let mut game = adept_server();
+        let mut negotiator = ForceProfileNegotiator::default();
+        let held = ForceLegalizeRules {
+            team_side: Some(ForceSide::Dark),
+            ..server_force_rules(&game)
+        };
+        negotiator.set_server_rules(Some(held));
+        // Force-based teams off: the refresh has no side to keep.
+        negotiator.refresh_server_rules(&game);
+        assert_eq!(negotiator.server_rules().unwrap().team_side, None);
+        // On: the side from the notice survives a serverinfo change.
+        game.replace_config_string(
+            0,
+            b"\\g_gametype\\0\\g_maxForceRank\\4\\g_forceBasedTeams\\1".to_vec(),
+        )
+        .unwrap();
+        negotiator.set_server_rules(Some(held));
+        negotiator.refresh_server_rules(&game);
+        assert_eq!(
+            negotiator.server_rules().unwrap().team_side,
+            Some(ForceSide::Dark)
+        );
     }
 
     #[test]

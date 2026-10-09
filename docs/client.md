@@ -1517,8 +1517,9 @@ The icon is the HUD's picture for the means of death: the weapon's own
 `gfx/hud/w_icon_*` (the saber's `w_icon_lightsaber`), mapped from each `MOD_*` to
 the weapon whose shots carry it in OpenJK's `g_weapon.c` (the sentry gun has its
 item picture), or an installed icon pack's `hud/mod/*` picture, which takes its
-place. A dark Force kill (lightning or grip, which the obituary does not tell
-apart) without such a picture shows Force Lightning's holocron, and a player
+place. A dark Force kill (`MOD_FORCE_DARK`, lightning or grip) without such a
+picture shows Force Grip's holocron when only the killer's grip was active in the
+snapshot of the kill (`ObituaryEvent::attacker_force`), else Force Lightning's, and a player
 knocked to their death (`KILLED_FORCETOSS`) Force Push's. Causes no weapon deals
 (water, lava, crushing, telefrags, unknown causes) show the skull, which is drawn
 from shapes, not a game picture. A weapon whose picture did not load shows a

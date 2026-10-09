@@ -594,13 +594,17 @@ impl ViewerConsole {
         }
     }
 
-    /// The Force profile the server plays the local player with: the player's
-    /// own `forcepowers` as the server's rules leave it (its disabled powers
-    /// dropped), or as written off a server.
+    /// The Force profile the server plays the local player with: the profile
+    /// sent (the player's own, fitted to the server's rules with its disabled
+    /// powers kept) as the server's rules then leave it (those powers dropped),
+    /// or as written off a server.
     pub(crate) fn own_force_allocation(&self) -> Option<ForceAllocation> {
         let preferred = self.text_value("forcepowers")?;
         match self.force_profile.server_rules() {
-            Some(rules) => Some(legalize_force_powers(preferred, rules).allocation),
+            Some(rules) => {
+                let sent = self.force_profile.sent_forcepowers(preferred);
+                Some(legalize_force_powers(&sent, rules).allocation)
+            }
             None => ForceAllocation::parse(preferred).ok(),
         }
     }
@@ -633,7 +637,7 @@ impl ViewerConsole {
             session.server(),
         );
         self.force_profile
-            .set_server_rules(Some(sjk_client::server_force_rules(session.game_state())));
+            .refresh_server_rules(session.game_state());
     }
 
     /// Refresh demo serverinfo through the same status and completion path as live play.
@@ -817,6 +821,34 @@ mod tests {
         let console = ViewerConsole::new(old).unwrap();
         let kept = console.float_cvar("sensitivity").unwrap();
         assert!((kept - 13.022).abs() < 1e-9, "{kept}");
+    }
+
+    /// The nameplate's own powers are what the server grants the profile that is
+    /// sent, not what it would grant the player's own: a profile over the server's
+    /// points only because of disabled powers has other powers trimmed in the
+    /// sent one.
+    #[test]
+    fn own_force_allocation_follows_the_profile_sent() {
+        use sjk_client::{ForceLegalizeRules, legalize_force_powers};
+        let directory = tempfile::tempdir().unwrap();
+        let mut console = ViewerConsole::new(directory.path().join("config.cfg")).unwrap();
+        let preferred = "7-1-211012023123002100";
+        assert!(console.set_cvar("forcepowers", preferred));
+        let rules = ForceLegalizeRules {
+            max_rank: 4,
+            disabled_mask: 65,
+            ..ForceLegalizeRules::default()
+        };
+        console.force_profile.set_server_rules(Some(rules));
+        let own = console.own_force_allocation().unwrap();
+        let sent = console.force_profile.sent_forcepowers(preferred);
+        assert_eq!(
+            own,
+            legalize_force_powers(&sent, rules).allocation,
+            "the server grants the sent profile"
+        );
+        let naive = legalize_force_powers(preferred, rules).allocation;
+        assert_ne!(own, naive, "the player's own profile would be granted more");
     }
 
     /// Q's quick wheel opens on the page used last: a new profile binds the
