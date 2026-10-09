@@ -2219,20 +2219,92 @@ fn medals_snapshot() {
             fonts,
         );
     }
-    // The new medal pop-up.
+    // The new medal pop-up: the SJK UI's over the duel6 levelshot at moments of its
+    // ceremony (held still), then the classic+ one.
+    use crate::medal_popup::MedalPopup;
+    use crate::medal_popup::award::{ENTRANCE, EXIT};
+    use crate::menu::style::MenuStyle;
     let awards = crate::medals::awards(&shot_medals());
-    for (name, shown, viewport) in [
-        ("medals-popup", vec![awards[2].clone()], VIEWPORT),
+    let hunter = || vec![awards[2].clone()];
+    for (name, shown, viewport, at, leaving) in [
+        ("medals-popup", hunter(), VIEWPORT_WIDE, ENTRANCE, None),
+        ("medals-popup-flight", hunter(), VIEWPORT_WIDE, 0.3, None),
+        ("medals-popup-landing", hunter(), VIEWPORT_WIDE, 0.55, None),
+        ("medals-popup-burst", hunter(), VIEWPORT_WIDE, 0.8, None),
+        ("medals-popup-sweep", hunter(), VIEWPORT_WIDE, 1.3, None),
+        (
+            "medals-popup-glint",
+            hunter(),
+            VIEWPORT_WIDE,
+            ENTRANCE + 1.95,
+            None,
+        ),
+        (
+            "medals-popup-leaving",
+            hunter(),
+            VIEWPORT_WIDE,
+            ENTRANCE + 2.0,
+            Some(EXIT * 0.5),
+        ),
         (
             "medals-popup-first-of-three",
             awards[..3].to_vec(),
-            VIEWPORT,
+            VIEWPORT_WIDE,
+            ENTRANCE,
+            None,
         ),
-        ("medals-popup-wide", vec![awards[1].clone()], VIEWPORT_WIDE),
+        (
+            "medals-popup-4x3",
+            vec![awards[1].clone()],
+            VIEWPORT,
+            ENTRANCE,
+            None,
+        ),
     ] {
-        let mut popup = crate::medal_popup::MedalPopup::preview(shown);
+        let mut popup = MedalPopup::preview_in(MenuStyle::Sjk, shown, at, leaving);
+        let (mut display_text, mut body_text) = (Vec::new(), Vec::new());
+        popup.append_sjk(
+            TextTarget::Families(
+                SjkFonts {
+                    display: (&mut display_text, &display.font),
+                    body: (&mut body_text, &body.font),
+                },
+                crate::text::TextStyle::NEUTRAL,
+            ),
+            viewport,
+            std::time::Instant::now(),
+        );
+        let fonts = SjkShotFonts {
+            display: (&display_text, &display.image),
+            body: (&body_text, &body.image),
+        };
+        save_sjk_shot(
+            name,
+            viewport,
+            &backdrop,
+            popup.draw_list(),
+            &shots.icons,
+            fonts,
+        );
+    }
+    for (name, shown, at) in [
+        ("medals-popup-classic", hunter(), ENTRANCE),
+        ("medals-popup-classic-burst", hunter(), 0.8),
+        (
+            "medals-popup-classic-first-of-three",
+            awards[..3].to_vec(),
+            ENTRANCE,
+        ),
+    ] {
+        let mut popup = MedalPopup::preview_in(MenuStyle::Classic, shown, at, None);
+        popup.set_style(MenuStyle::Classic, art);
         let mut vertices = Vec::new();
-        popup.append(&mut vertices, &shots.font.font, viewport);
-        shots.save_at(name, popup.draw_list(), &vertices, true, viewport);
+        popup.append_classic(
+            &mut vertices,
+            &shots.font.font,
+            VIEWPORT,
+            std::time::Instant::now(),
+        );
+        shots.save_at(name, popup.draw_list(), &vertices, true, VIEWPORT);
     }
 }

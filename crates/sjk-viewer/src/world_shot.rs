@@ -1104,37 +1104,62 @@ like this one.",
         });
     }
 
-    /// The new medal pop-up over the SJK UI's main page on the live duel6, the whole
-    /// medal's picture decoded on its worker and uploaded the first time it is drawn.
+    /// The new medal pop-up over the main page on the live duel6, in the SJK UI's look
+    /// at moments of its ceremony (the flight, the landing, the burst, the band of
+    /// light, standing still, a soft glint, leaving), each held still, then in the
+    /// classic+ look; the whole medal's picture decoded on its worker and uploaded the
+    /// first time it is drawn.
     #[test]
     #[ignore = "renders with the GPU and the installed game data named by JKA_GAME_DATA"]
     fn duel6_medal_popup() {
+        use crate::medal_popup::MedalPopup;
+        use crate::medal_popup::award::{ENTRANCE, EXIT};
         on_big_stack(|| {
-            let menu = menu::ClientMenu::new(true, String::new());
-            let cvars = [
-                ("ui_menuStyle", "sjk"),
-                (crate::settings::quick::HIDE_CVAR, "1"),
-            ];
-            let Some((mut gpu, _profile)) =
-                open("maps/mp/duel6.bsp", [1920, 1080], Some(menu), &cvars)
-            else {
-                return;
-            };
-            let _ = frame(&mut gpu, 10);
             let awards = crate::medals::awards(&[sjk_identity::Medal {
                 id: "bug_hunter".to_owned(),
                 count: 2,
                 awarded: 1_791_336_225,
                 note: "The fog that followed the camera floor.".to_owned(),
             }]);
-            gpu.medal_popup = crate::medal_popup::MedalPopup::preview(awards);
-            for _ in 0..240 {
-                let _ = frame(&mut gpu, 1);
-                if crate::medals::art::decoded().is_some() {
-                    break;
+            let moments = [
+                (0.3, None, "flight"),
+                (0.55, None, "landing"),
+                (0.8, None, "burst"),
+                (1.3, None, "sweep"),
+                (ENTRANCE, None, "still"),
+                (ENTRANCE + 1.95, None, "glint"),
+                (ENTRANCE + 2.0, Some(EXIT * 0.5), "leaving"),
+            ];
+            for style in ["sjk", "classic"] {
+                let menu = menu::ClientMenu::new(true, String::new());
+                let cvars = [
+                    ("ui_menuStyle", style),
+                    (crate::settings::quick::HIDE_CVAR, "1"),
+                ];
+                let Some((mut gpu, _profile)) =
+                    open("maps/mp/duel6.bsp", [1920, 1080], Some(menu), &cvars)
+                else {
+                    return;
+                };
+                let _ = frame(&mut gpu, 10);
+                crate::medals::art::request();
+                for _ in 0..240 {
+                    let _ = frame(&mut gpu, 1);
+                    if crate::medals::art::decoded().is_some() {
+                        break;
+                    }
+                }
+                let shown: &[_] = if style == "sjk" {
+                    &moments
+                } else {
+                    &moments[2..5]
+                };
+                for (at, leaving, name) in shown {
+                    gpu.medal_popup = MedalPopup::preview(awards.clone(), *at, *leaving);
+                    let name = format!("duel6-medal-popup-{style}-{name}");
+                    println!("{}", shoot(&mut gpu, 6, &name).display());
                 }
             }
-            println!("{}", shoot(&mut gpu, 6, "duel6-medal-popup").display());
         });
     }
 

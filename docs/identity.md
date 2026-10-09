@@ -22,7 +22,7 @@ This page is the design and the current limits. The player-facing summary is
 | Identity page, `identity` command | [identity_panel.rs](../crates/sjk-viewer/src/identity_panel.rs), [identity_command.rs](../crates/sjk-viewer/src/identity_command.rs) |
 | Players page and player reports | [players.rs](../crates/sjk-viewer/src/ingame_menu/players.rs), [player_report.rs](../crates/sjk-viewer/src/player_report.rs) |
 | Medals: catalogue, ribbons, pictures | [medals.rs](../crates/sjk-viewer/src/medals.rs), [medals/](../crates/sjk-viewer/src/medals/), [identity_panel_medals.rs](../crates/sjk-viewer/src/identity_panel_medals.rs) |
-| New medal pop-up | [medal_popup.rs](../crates/sjk-viewer/src/medal_popup.rs) |
+| New medal pop-up, its ceremony and `debug_medal` | [medal_popup.rs](../crates/sjk-viewer/src/medal_popup.rs), [medal_popup/](../crates/sjk-viewer/src/medal_popup/) |
 | Bio rules (shared word for word with the hub) | [bio.rs](../crates/sjk-identity/src/bio.rs) |
 | Profile page, `profile` and `achievements` commands | [profile_panel.rs](../crates/sjk-viewer/src/profile_panel.rs), [profile_panel_view.rs](../crates/sjk-viewer/src/profile_panel_view.rs), [console_profile_page.rs](../crates/sjk-viewer/src/console_profile_page.rs) |
 | Staff requests, Staff page, `staff` command | [staff.rs](../crates/sjk-identity/src/staff.rs), [staff_panel.rs](../crates/sjk-viewer/src/staff_panel.rs), [staff_panel_view.rs](../crates/sjk-viewer/src/staff_panel_view.rs), [console_staff_page.rs](../crates/sjk-viewer/src/console_staff_page.rs) |
@@ -236,15 +236,48 @@ Where they show:
   none, a line saying the SJK team gives medals for testing, contributing and more.
 - The new medal pop-up ([medal_popup.rs](../crates/sjk-viewer/src/medal_popup.rs)): the
   first time the client sees a medal in the player's own profile, or a repeatable one's
-  count rise, it shows it once, large, with its name, description, date and note;
-  Enter, Escape, Space or a click closes it, and several show one after another. It
+  count rise, it shows it once, large, with its name, description, date and note, and
+  several show one after another ("1 of 3"). It
   opens on the main menu, or when the game menu opens in a match, never over play: a
   medal that arrives during a match is announced once by a centre print pointing to the
   game menu. While it shows, the menu under it is neither drawn nor given input. What was
   shown is kept in `medals_seen.txt` beside `identity.key` (the key id, then one
   `<id> <count>` a line; ids the build does not know are kept), so each medal and each
   new count shows once per identity, and an install that already held medals when it
-  first read its profile still shows them.
+  first read its profile still shows them. A medal counts as shown when its button is
+  taken.
+
+  Each medal arrives in a ceremony ([award.rs](../crates/sjk-viewer/src/medal_popup/award.rs),
+  since 08/10/2026, Sol's request: animated like the achievements, with a sound). Over
+  1.8 seconds the whole medal comes down into place on its ribbon, growing from a
+  third of its size a little past its own and settling; as it lands (about 0.5 s) light
+  bursts from the medallion: a glow, two gold rings running out, a flash, and twenty
+  sparks thrown out and falling. A gold arc sweeps round it and stays as a thin ring,
+  with a ring of ticks outside it that turns as slowly as the main page's ring; a band
+  of light crosses the medal (its own picture drawn again brighter, so the light keeps
+  to its shape); and the words fade up one group after another: what it is, the name,
+  what it is for and the date, the note, then the button. While it waits it breathes:
+  its glow swells and fades over 4.2 s, a softer band of light crosses it every 6 s
+  and six sparkles twinkle round it. Enter, Space, Right, Escape or a click (on the
+  button or anywhere else) during the entrance finishes it at once; once it stands
+  still they take its button, Next (Close on the last): the menus' click plays and the
+  medal lifts away and fades in a third of a second before the next comes. Everything
+  is draw-list shapes of a fixed number (no allocation a frame); the ceremony waits up
+  to 1.5 s for the medal's picture, which is decoded as soon as a medal is queued.
+  Each medal's arrival plays the multiplayer game's own fanfare, `music/goodsmall.mp3`
+  (its cgame's `happyMusic`, played to the player who becomes the Jedi Master), through
+  the interface sounds; without the file (no game data) it is silent. The look follows
+  the menus: the SJK UI's ([sjk-ui.md](sjk-ui.md#new-medal)) or the classic+ one
+  ([classic-plus.md](classic-plus.md#pages)).
+- `debug_medal` ([rehearsal.rs](../crates/sjk-viewer/src/medal_popup/rehearsal.rs))
+  rehearses receiving medals offline: `debug_medal <id> [x<count>] [note]` (a count for
+  Bug Hunter only), `debug_medal all [note]` for every medal, `debug_medal` alone for the
+  ids. It makes the list a hub profile would carry (dated today), which is read as the
+  hub's is and queued like a real arrival, so the centre print in a match, the pop-up
+  on a menu, the ceremony, the fanfare and Next can all be tried; the console closes so
+  it shows at once over a menu. Nothing is sent to the hub, and rehearsed medals are
+  never written to `medals_seen.txt`, so a medal the team gives later still shows (a
+  real medal arriving replaces its rehearsal still waiting).
 - The credits page's cards: not from the hub but from credits.txt's `medal:` lines,
   which use the same ids (Creyon and Lumaya wear Early Contributor), so a contributor's
   card shows its medals without a request; the SJK UI draws each whole with its name
@@ -427,6 +460,8 @@ sends its counts, which the page says.
   `sjkemote <id>` sends an emote ([hub-chat.md](hub-chat.md)).
 - `cg_achievementSound` (default 1; Settings > Sound > Achievement sound) plays the
   secret-area sound with each achievement's pop-up.
+- `debug_medal <id|all> [x<count>] [note]` shows made-up medals in the new medal
+  pop-up, sending nothing ([Medals](#medals)).
 - The Identity page (main menu > SJK > IDENTITY, the Profile page's Identity settings,
   the in-game SJK menu, or the `identity` command) shows what the hub knows: the name worn now and up to three earlier ones,
   whether the key is verified, the key file's location and the players the hub knows here.

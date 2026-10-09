@@ -11,8 +11,8 @@ fixes. A profile saved with the old default `classic` moves to `sjk` once
 
 Status (08/10/2026): the main page, Settings (with the key bindings),
 Character, What's new, Update, Identity, Credits, Servers (the server browser),
-the loading screen, the scoreboard, the in-game menu, Camera control and the
-report and note dialog (Report a bug) are done. Every other
+the loading screen, the scoreboard, the in-game menu, Camera control, the
+report and note dialog (Report a bug) and the new medal pop-up are done. Every other
 screen opens in its classic+ version, which
 covers the map as the classic style does.
 The other style: First setup's Menu style row, Settings > Interface > Menu style, or
@@ -103,7 +103,9 @@ the camera behind glides through its tour (The map behind); on the loading
 screen a gold arc turns once every three seconds and the destination's
 levelshot fades in (0.45 s); on Credits the sun (its sunburst, god rays and
 sparks) keeps turning and rising, and the page's rows rise into place as it
-opens or a fold unfolds. Nothing else moves on its own.
+opens or a fold unfolds; a new medal arrives in its ceremony and, the screen's
+one memorable thing, breathes gently while it waits ([New medal](#new-medal)).
+Nothing else moves on its own.
 
 ## The map behind
 
@@ -881,6 +883,44 @@ Edit), Tab moves between Edit and Close, Escape closes. The pointer: a click on
 the field gives it the keyboard (on a failed report's text, edits it), on a
 button acts.
 
+## New medal
+
+[medal_popup/sjk_view.rs](../crates/sjk-viewer/src/medal_popup/sjk_view.rs): the pop-up
+a medal from the SJK team arrives in ([identity.md](identity.md#medals)), on the main
+page or over the game menu. Sol asked on 08/10/2026 for its Next button in the SJK
+UI's style (it was the retired modern style's) and for the medal to arrive animated,
+with a sound. No card: the medal floats in the middle of the scene darkened by the
+UI's navy (80 %, coming in over 0.3 s with the sitting's first medal), as the
+screen's one memorable thing, on the main page's 16:9 frame.
+
+- **Top:** "New medal" in gold (Rajdhani 24; "New medal · 1 of 3" when several
+  wait) over "From the SJK team" (muted, Exo 2 17).
+- **Medal:** its whole picture, 340 across, from y 172, centred; behind its
+  medallion a soft gold glow, a thin gold ring and a ring of holo ticks turning once
+  every four minutes, as the main page's ring does.
+- **Words:** the name with its count in gold (Rajdhani 56, centre line at y 600),
+  what it is for (Exo 2 20, up to two lines), "Given dd/mm/yyyy" (muted, 16), and
+  the team's note in quotes (Exo 2 19, up to five lines of 880, wrapped by measured
+  width).
+- **Button:** the kit's button (gold, 200 by 46), Next while more wait, Close on the
+  last, centred under the words; its pointer area is the pill. A click anywhere
+  else acts as it too.
+- **Keys:** bottom right, Enter next (or close).
+
+The ceremony ([award.rs](../crates/sjk-viewer/src/medal_popup/award.rs), shared with
+the classic+ look in retail's gold): the medal comes down into place growing from a
+third of its size and lands a little past it (ease-out, about 0.5 s), light bursts
+from the medallion (glow, two gold rings, a flash, twenty falling sparks), a gold arc
+sweeps the ring, a band of light crosses the medal, and the words fade up and rise
+into place one group after another, all within 1.8 s. Waiting, the glow breathes,
+a softer band crosses every 6 s and six sparkles twinkle. Enter, Space, Right,
+Escape or a click finish the entrance at once, then take the button: the medal lifts
+away and everything fades in 0.32 s. Only the medal moves on its own, and only
+because it arrived. Every moment stays under 260 of the canvas's 320 draw commands
+and its 32 text runs, with the button above the keys inside the window (a test
+sweeps every medal with no note and the longest ones, alone and first of several,
+nine moments, 1080p, 4K, 4:3, 21:9 and 720 lines, in the families and in Inter).
+
 ## Implementation
 
 - `ui_menuStyle sjk` (`menu::style::MenuStyle::Sjk`) is the default beside
@@ -1003,6 +1043,13 @@ button acts.
   renders it: the empty report, a long text, a refusal, sending, sent, not
   sent (the identity off, through the client's own path), a player report, a
   note, a 4:3 window and over the main page.
+- The new medal pop-up is the medal pop-up's state, queue, keys and pointer with a
+  look per menu style (`MedalPopup::set_style`, from `sync_menu_style`):
+  `GpuState::append_medal_popup` clears every text batch before it, as for the report
+  card, and routes the SJK UI's text to the families (Inter until they load), the
+  classic+ look's to the menus' font. `menu_snapshot::medals_snapshot` draws it over
+  duel6's levelshot at moments of its ceremony held still, and
+  `world_shot::tests::duel6_medal_popup` over the live main page in both looks.
 - The quick wheel's ring ([ring.rs](../crates/sjk-viewer/src/quick_wheel/ring.rs))
   is drawn on the HUD's layer with a canvas of its own, its text routed to the
   families when they are loaded (`quick_wheel::append`), else to Inter; it does

@@ -145,6 +145,8 @@ impl crate::GpuState {
             },
             art,
         );
+        // So is the new medal pop-up, and the classic+ one with the classic menus.
+        self.medal_popup.set_style(style, art);
         if let Some(console) = &mut self.console {
             // What's new, Update, Identity and Credits have the SJK UI's own
             // look with its menus, and their classic+ one with the classic.
