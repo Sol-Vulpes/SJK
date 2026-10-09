@@ -1054,6 +1054,37 @@ impl ClientMenu {
         self.state.open_player();
     }
 
+    /// Open the player screen as the Profile screen's Character tab
+    /// ([`crate::profile_hub`]) in the SJK UI, else on its own.
+    pub(crate) fn open_player_hub(&mut self, console: &ViewerConsole, target: ReturnTarget) {
+        self.open_player(console, target);
+        let sjk = self.player.is_sjk();
+        self.player.set_hub(sjk);
+    }
+
+    /// Where the player screen returns when it closes.
+    pub(crate) fn player_return_target(&self) -> ReturnTarget {
+        self.player.return_target()
+    }
+
+    /// Whether the Profile screen's Character tab shows.
+    pub(crate) fn player_hub_shown(&self) -> bool {
+        matches!(self.state.phase(), ClientPhase::Player) && self.player.is_hub()
+    }
+
+    /// Close the Character tab for another of the Profile screen's tabs, quietly
+    /// (the screen behind it shows again under the console's page); returns where it
+    /// had been opened from.
+    pub(crate) fn leave_player_hub(&mut self) -> ReturnTarget {
+        let target = self.player.return_target();
+        self.player.set_hub(false);
+        match target {
+            ReturnTarget::MainMenu => self.state.main_menu(),
+            ReturnTarget::InGame => self.state.entered_game(),
+        }
+        target
+    }
+
     /// Show the player screen's page `index` with row `row` selected (world
     /// shots).
     #[cfg(test)]

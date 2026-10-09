@@ -62,6 +62,20 @@ impl Tab {
     }
 }
 
+/// How the page was opened.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum Mode {
+    /// On its own (the `profile` and `achievements` commands): Profile and
+    /// Achievements as segments in the top bar.
+    Pages,
+    /// The Profile screen's Profile tab ([`crate::profile_hub`]): the screen's tabs
+    /// in the segments' place; See the board shows the board, and Escape comes back
+    /// from it to the profile.
+    Hub,
+    /// The achievements board alone (the game menu's Achievements): no tabs.
+    Board,
+}
+
 /// The control the keyboard is on.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum Focus {
@@ -151,6 +165,7 @@ pub(crate) struct Panel {
     owns_console: bool,
     ui: MenuCanvas,
     tab: Tab,
+    mode: Mode,
     focus: Focus,
     /// The bio being written.
     bio: String,
@@ -231,6 +246,7 @@ impl Panel {
             owns_console: false,
             ui: MenuCanvas::with_capacities(240, 192, 1_000),
             tab: Tab::Profile,
+            mode: Mode::Pages,
             focus: Focus::Tabs,
             bio: String::new(),
             edited: false,
@@ -257,12 +273,20 @@ impl Panel {
         self.open
     }
 
-    /// Show the page on `tab`; `owns_console` when the console was closed before it.
+    /// Show the page on `tab` on its own; `owns_console` when the console was closed
+    /// before it.
+    #[cfg(test)]
     pub(crate) fn open(&mut self, tab: Tab, owns_console: bool) {
+        self.open_as(tab, owns_console, Mode::Pages);
+    }
+
+    /// Show the page on `tab` as `mode` says ([`Mode`]).
+    pub(crate) fn open_as(&mut self, tab: Tab, owns_console: bool, mode: Mode) {
         self.open = true;
         self.owns_console = owns_console;
+        self.mode = mode;
         self.tab = tab;
-        self.focus = Focus::Tabs;
+        self.focus = self.first_focus();
         self.message.clear();
         if self.reading.is_none() && self.ready.is_none() && self.changing.is_none() {
             self.middle = Middle::Bio;
@@ -385,13 +409,32 @@ impl Panel {
         }
     }
 
-    /// Escape: from the picture panel back to the bio first, else close the page.
+    /// Escape: from the picture panel back to the bio first, on the Profile screen
+    /// from the board back to the profile, else close the page.
     fn escape(&mut self) -> PanelAction {
         if self.middle == Middle::Picture && self.tab == Tab::Profile {
             self.back_to_bio();
             PanelAction::None
+        } else if self.mode == Mode::Hub && self.tab == Tab::Achievements {
+            self.show(Tab::Profile);
+            PanelAction::None
         } else {
             PanelAction::Close
+        }
+    }
+
+    /// How the page was opened.
+    pub(crate) fn mode(&self) -> Mode {
+        self.mode
+    }
+
+    /// The control the keyboard starts on: the tabs, or on the Profile screen
+    /// (which has its own tabs) the picture.
+    fn first_focus(&self) -> Focus {
+        if self.mode == Mode::Hub && self.tab == Tab::Profile {
+            Focus::Picture
+        } else {
+            Focus::Tabs
         }
     }
 
@@ -488,10 +531,10 @@ impl Panel {
         self.staff = self.writable && me.is_some_and(|me| me.staff);
         self.sync_picture(inputs);
         if !self.staff && self.focus == Focus::Staff {
-            self.focus = Focus::Tabs;
+            self.focus = self.first_focus();
         }
         if !self.writable && matches!(self.focus, Focus::Bio | Focus::Save | Focus::Revert) {
-            self.focus = Focus::Tabs;
+            self.focus = self.first_focus();
         }
         let Some(me) = me else {
             return;
@@ -553,7 +596,12 @@ impl Panel {
         if self.tab == Tab::Achievements {
             return vec![Focus::Tabs];
         }
-        let mut order = vec![Focus::Tabs, Focus::Picture, Focus::Identity];
+        // On the Profile screen its own tabs are the screen's (Ctrl+Tab), not a stop.
+        let mut order = if self.mode == Mode::Hub {
+            vec![Focus::Picture, Focus::Identity]
+        } else {
+            vec![Focus::Tabs, Focus::Picture, Focus::Identity]
+        };
         if self.staff {
             order.push(Focus::Staff);
         }
@@ -582,15 +630,22 @@ impl Panel {
 
     fn show(&mut self, tab: Tab) {
         self.tab = tab;
-        self.focus = Focus::Tabs;
+        self.focus = self.first_focus();
     }
 
     /// What Enter (or a click) does on the focused control.
     fn activate(&mut self, notice: Option<String>) -> PanelAction {
         match self.focus {
             Focus::Tabs => {
-                let next = Tab::ALL[(self.tab.index() + 1) % Tab::ALL.len()];
-                self.show(next);
+                match self.mode {
+                    Mode::Pages => {
+                        let next = Tab::ALL[(self.tab.index() + 1) % Tab::ALL.len()];
+                        self.show(next);
+                    }
+                    // The board shown from the profile: back to it.
+                    Mode::Hub => self.show(Tab::Profile),
+                    Mode::Board => {}
+                }
                 PanelAction::None
             }
             Focus::Picture => {
@@ -637,7 +692,9 @@ impl Panel {
             KeyCode::Tab => self.step(!shift),
             KeyCode::ArrowDown if !typing => self.step(true),
             KeyCode::ArrowUp if !typing => self.step(false),
-            KeyCode::ArrowLeft | KeyCode::ArrowRight if self.focus == Focus::Tabs => {
+            KeyCode::ArrowLeft | KeyCode::ArrowRight
+                if self.focus == Focus::Tabs && self.mode == Mode::Pages =>
+            {
                 self.show(if key == KeyCode::ArrowLeft {
                     Tab::Profile
                 } else {
@@ -688,8 +745,14 @@ impl Panel {
             return PanelAction::None;
         }
         match event.token {
+            Some(BACK_TOKEN) if self.mode == Mode::Hub && self.tab == Tab::Achievements => {
+                self.show(Tab::Profile);
+                PanelAction::None
+            }
             Some(BACK_TOKEN) => PanelAction::Close,
-            Some(token) if (TAB_TOKEN..TAB_TOKEN + 2).contains(&token) => {
+            Some(token)
+                if self.mode == Mode::Pages && (TAB_TOKEN..TAB_TOKEN + 2).contains(&token) =>
+            {
                 self.show(Tab::ALL[usize::from(token - TAB_TOKEN)]);
                 PanelAction::None
             }
@@ -892,6 +955,33 @@ mod tests {
         panel.bio = "aaaaaaaaaaaa".to_owned();
         assert_eq!(panel.save(None), PanelAction::None);
         assert_eq!(panel.message, bio::BioError::Noise.message());
+    }
+
+    /// As the Profile screen's Profile tab the page has no Tabs stop and starts on the
+    /// picture; its board comes back to the profile on Escape. Alone (the game menu's
+    /// Achievements) the board has no tabs and Escape closes it.
+    #[test]
+    fn the_profile_screen_and_the_board_alone_keep_their_own_ways() {
+        let shot = snapshot(Some(me("")), None);
+        let mut panel = Panel::new();
+        panel.open_as(Tab::Profile, true, Mode::Hub);
+        panel.sync(&inputs(Some(&shot)));
+        assert_eq!(panel.focus, Focus::Picture);
+        assert!(!panel.order().contains(&Focus::Tabs));
+        panel.focus = Focus::Board;
+        assert_eq!(panel.activate(None), PanelAction::None);
+        assert_eq!(panel.tab(), Tab::Achievements);
+        assert_eq!(panel.escape(), PanelAction::None);
+        assert_eq!((panel.tab(), panel.focus), (Tab::Profile, Focus::Picture));
+        assert_eq!(panel.escape(), PanelAction::Close);
+        // The board alone: Enter on it does nothing, Escape closes.
+        let mut board = Panel::new();
+        board.open_as(Tab::Achievements, true, Mode::Board);
+        board.sync(&inputs(Some(&shot)));
+        assert_eq!(board.mode(), Mode::Board);
+        assert_eq!(board.activate(None), PanelAction::None);
+        assert_eq!(board.tab(), Tab::Achievements);
+        assert_eq!(board.escape(), PanelAction::Close);
     }
 
     #[test]

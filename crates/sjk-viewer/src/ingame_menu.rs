@@ -21,6 +21,7 @@ mod siege;
 pub(crate) mod siege_data;
 pub(crate) mod sjk;
 mod sjk_actions;
+pub(crate) mod sjk_focus;
 pub(crate) mod sjk_view;
 pub(crate) use callvote::Action as CallVoteAction;
 
@@ -77,6 +78,8 @@ pub(crate) struct View<'a> {
     pub(crate) red_players: usize,
     pub(crate) blue_players: usize,
     pub(crate) vote_active: bool,
+    /// The player's key is staff at the SJK hub: the SJK UI offers Staff tools.
+    pub(crate) staff: bool,
     /// Keeps the struct open for per-page data borrowed from the frame.
     pub(crate) _frame: std::marker::PhantomData<&'a ()>,
 }
@@ -107,6 +110,13 @@ pub(crate) struct InGameMenu {
     /// The SJK UI's main-page row that handed over to another screen, which
     /// the menu comes back on.
     return_row: usize,
+    /// Where the keyboard is on the SJK UI's main page: its list, the row of icons
+    /// or the match card ([`sjk_focus`]).
+    pub(crate) focus: sjk_focus::Focus,
+    /// The SJK UI's match card controls and whether Staff tools showed, as the last
+    /// frame drew them, for the keys and the pointer.
+    controls: sjk_focus::Controls,
+    staff: bool,
     /// The world shots' made-up match facts in place of the frame's.
     #[cfg(test)]
     shot_view: Option<ShotView>,
@@ -121,6 +131,10 @@ pub(crate) struct ShotView {
     pub(crate) red_players: usize,
     pub(crate) blue_players: usize,
     pub(crate) vote_active: bool,
+    /// Staff tools offered (a staff key).
+    pub(crate) staff: bool,
+    /// The match is Siege.
+    pub(crate) siege: bool,
 }
 
 impl InGameMenu {
@@ -142,6 +156,9 @@ impl InGameMenu {
             card: sjk_view::Card::default(),
             motion: sjk_view::Motion::default(),
             return_row: 0,
+            focus: sjk_focus::Focus::List,
+            controls: sjk_focus::Controls::none(),
+            staff: false,
             #[cfg(test)]
             shot_view: None,
         }
@@ -178,6 +195,24 @@ impl InGameMenu {
         } else {
             0
         }
+    }
+
+    /// The icons of the SJK UI's bottom row, as the last frame showed them.
+    pub(crate) fn sjk_icons(&self) -> &'static [sjk_focus::Icon] {
+        sjk_focus::Icon::shown(self.staff)
+    }
+
+    /// The SJK UI's match card controls, as the last frame drew them.
+    pub(crate) fn sjk_controls(&self) -> &sjk_focus::Controls {
+        &self.controls
+    }
+
+    /// The card control a pointer token names, as the last frame drew them.
+    pub(crate) fn sjk_control_of(&self, token: usize) -> Option<sjk_focus::Placed> {
+        let index = token.checked_sub(usize::from(sjk_view::CONTROL_TOKEN))?;
+        (index < 16)
+            .then(|| self.controls.as_slice().get(index).copied())
+            .flatten()
     }
 
     /// The SJK UI's next row from `current` of `count` on `page`, `forward`
@@ -236,17 +271,49 @@ impl InGameMenu {
                 red_players: shot.red_players,
                 blue_players: shot.blue_players,
                 vote_active: shot.vote_active,
+                staff: shot.staff,
+                siege: shot.siege,
                 ..view
             },
             None => view,
         };
         self.prepare_rows(&view);
         self.active_page = view.page;
+        // The main page's row and card: what they offer this frame, and the keyboard
+        // kept where it can still be.
+        self.staff = view.staff;
+        let main = view.page == Page::Main;
+        self.controls = if main {
+            sjk_focus::Controls::for_match(sjk_focus::Match {
+                known: self.card.is_known(),
+                team_game: view.team_game,
+                siege: view.siege,
+                team: view.team,
+                vote: view.vote_active,
+            })
+        } else {
+            sjk_focus::Controls::none()
+        };
+        let icons = sjk_focus::Icon::shown(self.staff);
+        self.focus = if main {
+            self.focus.settle(icons, &self.controls)
+        } else {
+            sjk_focus::Focus::List
+        };
         let count = self.row_count;
         let rows = sjk_view::Rows {
             labels: &self.rows[..count],
             hints: &self.hints[..count],
             enabled: &self.enabled[..count],
+        };
+        let extras = if main {
+            sjk_view::Extras {
+                focus: self.focus,
+                icons,
+                controls: &self.controls,
+            }
+        } else {
+            sjk_view::Extras::NONE
         };
         sjk_view::build(
             &mut self.canvas,
@@ -256,6 +323,7 @@ impl InGameMenu {
                 card: &self.card,
                 players: &self.players,
             },
+            &extras,
             &mut self.motion,
             viewport,
         );
@@ -371,13 +439,7 @@ impl InGameMenu {
         let own_rows = if self.is_classic() {
             classic::prepare(view, &mut self.rows, &mut self.enabled)
         } else if self.is_sjk() {
-            sjk_view::prepare(
-                view,
-                &mut self.rows,
-                &mut self.hints,
-                &mut self.enabled,
-                &self.card,
-            )
+            sjk_view::prepare(view, &mut self.rows, &mut self.hints)
         } else {
             None
         };
@@ -547,6 +609,7 @@ mod sjk_tests {
             red_players: 4,
             blue_players: 3,
             vote_active: false,
+            staff: false,
             _frame: std::marker::PhantomData,
         }
     }
@@ -578,7 +641,7 @@ mod sjk_tests {
             menu.row_count(Page::CallVote, false),
             menu.callvote.row_count(Page::CallVote)
         );
-        assert_eq!(menu.row_count(Page::Vote, false), 4);
+        assert_eq!(menu.row_count(Page::Leave, false), 3);
     }
 
     #[test]
@@ -595,11 +658,9 @@ mod sjk_tests {
                 (Page::Main, false),
                 (Page::Team, true),
                 (Page::Team, false),
-                (Page::Vote, false),
                 (Page::CallVote, false),
                 (Page::VoteMap, false),
                 (Page::VoteGameType, false),
-                (Page::Sjk, false),
                 (Page::Leave, false),
             ] {
                 let count = menu.row_count(page, team_game);
@@ -631,10 +692,6 @@ mod sjk_tests {
         assert_eq!(menu.sjk_step(Page::Team, 1, 5, true), 3);
         assert_eq!(menu.sjk_step(Page::Team, 3, 5, false), 1);
         assert_eq!(menu.sjk_step(Page::Team, 4, 5, true), 0, "wraps");
-        // No vote on: the ballot is passed over, Call a vote is reached.
-        menu.build_sjk(view(Page::Vote, 2, false, 0), [1_920.0, 1_080.0]);
-        assert_eq!(menu.sjk_step(Page::Vote, 3, 4, true), 2);
-        assert!(!menu.activation_allowed(0));
         // Another page than the one drawn: every row counts.
         assert_eq!(menu.sjk_step(Page::Main, 0, 9, true), 1);
         assert_eq!(menu.sjk_step(Page::Main, 0, 0, true), 0);
@@ -648,12 +705,8 @@ mod sjk_tests {
             main.vote_active = vote_active;
             menu.prepare_rows(&main);
             let rows = &menu.rows[..menu.row_count];
-            // The row the main page's actions open the panel from.
-            assert_eq!(
-                rows[sjk_view::Entry::Shot.index()],
-                CAMERA_CONTROL,
-                "{vote_active}"
-            );
+            // The icon under the emblem the panel opens from.
+            assert_eq!(sjk_focus::Icon::Camera.label(), CAMERA_CONTROL);
             assert!(
                 rows.iter()
                     .all(|row| !row.to_ascii_lowercase().contains("shot")),
@@ -669,6 +722,50 @@ mod sjk_tests {
                 .iter()
                 .all(|row| !row.to_ascii_lowercase().contains("shot"))
         );
+    }
+
+    /// The keyboard stays only where the frame drawn offers something: a Staff icon
+    /// once the key is no longer staff, a vote's button once the vote ended, and
+    /// anything but the list on another page fall back.
+    #[test]
+    fn the_keyboard_stays_where_the_page_offers_something() {
+        let mut menu = sjk_menu();
+        menu.card = sjk_view::Card::for_shot(false, false);
+        let mut main = view(Page::Main, 0, false, 0);
+        menu.focus = sjk_focus::Focus::Row(sjk_focus::Icon::Staff);
+        main.staff = true;
+        menu.build_sjk(main, [1_920.0, 1_080.0]);
+        assert_eq!(menu.focus, sjk_focus::Focus::Row(sjk_focus::Icon::Staff));
+        assert_eq!(menu.sjk_icons().len(), 6);
+        let mut main = view(Page::Main, 0, false, 0);
+        main.staff = false;
+        menu.build_sjk(main, [1_920.0, 1_080.0]);
+        assert_eq!(menu.focus, sjk_focus::Focus::List);
+        assert_eq!(menu.sjk_icons().len(), 5);
+        // A vote on: Yes and No on the card; the vote ends, the card's first control.
+        let mut voting = view(Page::Main, 0, false, 0);
+        voting.vote_active = true;
+        menu.focus = sjk_focus::Focus::Card(sjk_focus::Control::VoteNo);
+        menu.build_sjk(voting, [1_920.0, 1_080.0]);
+        assert_eq!(
+            menu.focus,
+            sjk_focus::Focus::Card(sjk_focus::Control::VoteNo)
+        );
+        let placed = menu
+            .sjk_control_of(usize::from(sjk_view::CONTROL_TOKEN) + 1)
+            .expect("No");
+        assert_eq!(placed.control, sjk_focus::Control::VoteNo);
+        menu.build_sjk(view(Page::Main, 0, false, 0), [1_920.0, 1_080.0]);
+        assert_eq!(
+            menu.focus,
+            sjk_focus::Focus::Card(sjk_focus::Control::Team(
+                sjk_client::LegacyTeamChoice::Spectator
+            ))
+        );
+        // Another page: the list.
+        menu.build_sjk(view(Page::Leave, 0, false, 0), [1_920.0, 1_080.0]);
+        assert_eq!(menu.focus, sjk_focus::Focus::List);
+        assert!(menu.sjk_controls().as_slice().is_empty());
     }
 
     #[test]

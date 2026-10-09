@@ -57,6 +57,10 @@ impl GpuState {
             self.medal_popup.handle_key(&event);
             return;
         }
+        // Ctrl+Tab changes the Profile screen's tab, whichever screen shows it.
+        if self.profile_hub_key(&event) {
+            return;
+        }
         if !console_open && typed && self.chat.is_typing() {
             self.chat_key(&event);
             return;
@@ -88,6 +92,10 @@ impl GpuState {
         }
         if self.game_menu {
             if event.state != ElementState::Pressed || event.repeat {
+                return;
+            }
+            // The SJK UI's main page: its list, row of icons and match card.
+            if self.sjk_main_key(key) {
                 return;
             }
             match key {
@@ -158,6 +166,7 @@ impl GpuState {
                 self.game_menu = true;
                 self.game_menu_page = GameMenuPage::Main;
                 self.game_menu_row = 0;
+                self.in_game_menu.focus = crate::ingame_menu::sjk_focus::Focus::List;
             }
             return;
         }

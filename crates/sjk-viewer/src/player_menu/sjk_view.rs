@@ -543,6 +543,10 @@ impl PlayerMenu {
                 .hit_region(token, frame.rect(x - 8.0, TABS_Y - 4.0, width + 16.0, 46.0));
             x += width + 40.0;
         }
+        if self.hub {
+            // The Profile screen's tabs, this one lit.
+            crate::profile_hub::strip(&mut self.canvas, frame, crate::profile_hub::Tab::Character);
+        }
     }
 
     /// A row's band when it is the focused one, and its name; returns whether
@@ -2162,6 +2166,26 @@ mod tests {
             [1920.0, 1080.0],
             1.0,
         );
+    }
+
+    /// As the Profile screen's Character tab every page draws the screen's tabs at its
+    /// top right, clear of its own tabs and tokens, within the canvas.
+    #[test]
+    fn the_profile_screens_tabs_show_on_every_page() {
+        for page in ProfilePage::ALL {
+            let mut menu = drawn(page, page == ProfilePage::Saber);
+            assert!(menu.canvas.rect_for(crate::profile_hub::TOKEN).is_none());
+            menu.set_hub(true);
+            draw(&mut menu);
+            assert!(!menu.canvas.overflowed(), "{page:?}");
+            let strip = menu
+                .canvas
+                .rect_for(crate::profile_hub::TOKEN)
+                .expect("the strip");
+            let own = menu.canvas.rect_for(TAB_BASE).expect("the page's tabs");
+            assert!(strip.x > own.right() && strip.bottom() <= own.y, "{page:?}");
+        }
+        const _: () = assert!(crate::profile_hub::TOKEN > HILT_BASE + 2 * HILT_STRIDE);
     }
 
     #[test]

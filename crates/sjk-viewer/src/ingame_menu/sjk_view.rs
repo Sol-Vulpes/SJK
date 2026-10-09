@@ -3,13 +3,15 @@
 //! a compact version of the main page's arc of entries on it (the chosen one
 //! gold and larger, a line under it saying what it opens, a lit rail beside
 //! them with a gold mark at the chosen one, SJK's emblem inside the curve), a
-//! card of the match on the right, the player's profile card bottom left (a
-//! click opens the Profile page) and the keys at the bottom.
+//! card of the match on the right with the player's side and the vote on it, a
+//! row of small icon buttons under the emblem, the player's profile card bottom
+//! left (a click opens the Profile screen) and the keys at the bottom.
 //!
-//! The pages are the in-game menu's own ([`Page`]): the main one, Team (or
-//! Siege's classes), Players (a small scoreboard, drawn as a table with the chosen
-//! player's card on the right) and its Report page, Vote and the call-vote lists,
-//! SJK and Leave. Their rows
+//! The pages are the in-game menu's own ([`Page`]): the main one, Team (the J
+//! key's, or Siege's classes), Players (a small scoreboard, drawn as a table with
+//! the chosen player's card on the right) and its Report page, the call-vote lists
+//! and Leave. The main page's row and card controls are `sjk_focus.rs`'s model,
+//! drawn by [`dock`]. Their rows
 //! are the shared ones where they are the same (Siege's, the call-vote
 //! lists') and this module's where they differ ([`prepare`]); what a row does
 //! is in `sjk_actions.rs` and, for the shared pages, `game_menu_actions.rs`.
@@ -17,6 +19,7 @@
 //! Positions are pixels of the SJK UI's 16:9 frame ([`Frame`]).
 
 use super::players::{self, Player};
+use super::sjk_focus::{Control, Controls, Focus, Icon};
 use super::{Page, View};
 use crate::game_font::GameFonts;
 use crate::menu::emblem::{self, EmblemLayer};
@@ -29,34 +32,36 @@ use sjk_protocol::{GameState, InfoString};
 use sjk_ui::{Color, DrawCommand, FontWeight, Rect, TextAlign};
 use std::fmt::Write as _;
 
-/// An entry of the main page, in the arc's order.
+#[path = "sjk_dock.rs"]
+mod dock;
+pub(crate) use dock::{CONTROL_TOKEN, icon_of};
+
+/// An entry of the main page, in the arc's order. Team and Vote live on the match
+/// card, Camera control and SJK's pages in the row under the emblem
+/// ([`super::sjk_focus`]).
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) enum Entry {
     Resume,
-    Team,
+    /// The Profile screen: Character, Profile and Identity as tabs
+    /// ([`crate::profile_hub`]).
+    Profile,
+    /// The achievements board on its own.
+    Achievements,
     Players,
-    Vote,
-    Character,
     Settings,
     Servers,
-    /// Camera control ([`Page::Shot`]).
-    Shot,
-    Sjk,
     Leave,
 }
 
 impl Entry {
     /// The main page, top to bottom.
-    pub(crate) const MAIN: [Self; 10] = [
+    pub(crate) const MAIN: [Self; 7] = [
         Self::Resume,
-        Self::Team,
+        Self::Profile,
+        Self::Achievements,
         Self::Players,
-        Self::Vote,
-        Self::Character,
         Self::Settings,
         Self::Servers,
-        Self::Shot,
-        Self::Sjk,
         Self::Leave,
     ];
 
@@ -73,43 +78,27 @@ impl Entry {
     fn label(self) -> &'static str {
         match self {
             Self::Resume => "Resume",
-            Self::Team => "Team",
+            Self::Profile => "Profile",
+            Self::Achievements => "Achievements",
             Self::Players => "Players",
-            Self::Vote => "Vote",
-            Self::Character => "Character",
             Self::Settings => "Settings",
             Self::Servers => "Servers",
-            Self::Shot => super::CAMERA_CONTROL,
-            Self::Sjk => "SJK",
             Self::Leave => "Leave",
         }
     }
 
     /// The line under the entry when chosen.
-    fn hint(self, view: &View<'_>) -> &'static str {
+    fn hint(self) -> &'static str {
         match self {
             Self::Resume => "Back to the match",
-            Self::Team if view.siege => "Choose your class or side",
-            Self::Team if view.team_game => "Pick a side or spectate",
-            Self::Team => "Join the game or spectate",
+            Self::Profile => "Character, saber and Force; your bio, medals and identity",
+            Self::Achievements => "What you have done in your matches, and what is left",
             Self::Players => "Everyone here; report a cheater or a troll",
-            Self::Vote if view.vote_active => "A vote is on: cast yours",
-            Self::Vote => "Call a vote: map, mode, kick, limits",
-            Self::Character => "Name, model, saber and Force",
             Self::Settings => "Every option and key, with search",
             Self::Servers => "Find another server; joining leaves this one",
-            Self::Shot => "Frame shots and recordings: the camera and the sun",
-            Self::Sjk => "Profile and achievements, what's new, report a bug",
             Self::Leave => "Leave the server, or quit",
         }
     }
-}
-
-/// Rows of the SJK UI's own Vote page: the ballot, then calling a vote.
-pub(crate) mod vote {
-    pub(crate) const YES: usize = 0;
-    pub(crate) const NO: usize = 1;
-    pub(crate) const CALL: usize = 2;
 }
 
 /// Rows of the Leave page; Stay follows them.
@@ -126,8 +115,6 @@ pub(crate) fn row_count(page: Page, team_game: bool) -> Option<usize> {
         Page::Main => Some(Entry::MAIN.len()),
         Page::Team if team_game => Some(5),
         Page::Team => Some(3),
-        Page::Vote => Some(4),
-        Page::Sjk => Some(super::sjk::ENTRIES.len() + 1),
         Page::Leave => Some(3),
         Page::About => Some(1),
         Page::ConfirmLeave | Page::ConfirmQuit => Some(2),
@@ -136,16 +123,17 @@ pub(crate) fn row_count(page: Page, team_game: bool) -> Option<usize> {
 }
 
 /// The page and row Escape (or a page's Back) returns to from `page`: the
-/// entry that opened it. `None` closes the menu.
+/// entry that opened it (or, for a page the match card opened, the main page
+/// with [`return_focus`] on the card). `None` closes the menu.
 pub(crate) fn parent(page: Page) -> Option<(Page, usize)> {
     Some(match page {
         Page::Main | Page::Shot => return None,
-        Page::Team | Page::Siege => (Page::Main, Entry::Team.index()),
-        Page::Vote | Page::CallVote => (Page::Main, Entry::Vote.index()),
+        Page::Team | Page::Siege | Page::CallVote => (Page::Main, Entry::Resume.index()),
         Page::Players => (Page::Main, Entry::Players.index()),
         // The chosen player's row: `sjk_back` takes it from the roster.
         Page::ReportPlayer => (Page::Players, 0),
-        Page::Sjk => (Page::Main, Entry::Sjk.index()),
+        // Pages of the classic look only.
+        Page::Vote | Page::Sjk => (Page::Main, Entry::Resume.index()),
         Page::Leave => (Page::Main, Entry::Leave.index()),
         Page::About => (Page::Main, Entry::Resume.index()),
         Page::ConfirmLeave => (Page::Leave, leave::SERVER),
@@ -155,6 +143,18 @@ pub(crate) fn parent(page: Page) -> Option<(Page, usize)> {
             super::callvote::opening_row(list).unwrap_or(0),
         ),
     })
+}
+
+/// Where the keyboard returns on the main page from `page`: the card control that
+/// opened it (the side's buttons for Team and Siege, Call a vote for the call-vote
+/// page and its lists), else the list.
+pub(crate) fn return_focus(page: Page) -> Focus {
+    match page {
+        Page::Team => Focus::Card(Control::Team(sjk_client::LegacyTeamChoice::Spectator)),
+        Page::Siege => Focus::Card(Control::SiegeClass),
+        page if page.is_vote_page() => Focus::Card(Control::CallVote),
+        _ => Focus::List,
+    }
 }
 
 /// Write `label` and `hint` into row `row`.
@@ -175,20 +175,13 @@ impl std::fmt::Display for Players {
     }
 }
 
-/// Fill `rows`, their `hints` and `enabled` for `view`'s page where the SJK
-/// UI has rows of its own, the `card`'s vote under the ballot; `None` leaves
-/// the page to the shared rows.
-pub(super) fn prepare(
-    view: &View<'_>,
-    rows: &mut [String],
-    hints: &mut [String],
-    enabled: &mut [bool],
-    card: &Card,
-) -> Option<usize> {
+/// Fill `rows` and their `hints` for `view`'s page where the SJK UI has rows of
+/// its own; `None` leaves the page to the shared rows.
+pub(super) fn prepare(view: &View<'_>, rows: &mut [String], hints: &mut [String]) -> Option<usize> {
     match view.page {
         Page::Main => {
             for (row, entry) in Entry::MAIN.iter().enumerate() {
-                put(rows, hints, row, entry.label(), entry.hint(view));
+                put(rows, hints, row, entry.label(), entry.hint());
             }
         }
         Page::Team if view.team_game => {
@@ -245,45 +238,6 @@ pub(super) fn prepare(
                 },
             );
             put(rows, hints, 2, "Back", "");
-        }
-        Page::Vote => {
-            for row in [vote::YES, vote::NO] {
-                rows[row].push_str(if row == vote::YES {
-                    "Vote yes"
-                } else {
-                    "Vote no"
-                });
-                enabled[row] = view.vote_active;
-                if view.vote_active && !card.vote.is_empty() {
-                    let _ = write!(
-                        hints[row],
-                        "{}: {} yes, {} no",
-                        card.vote, card.vote_yes, card.vote_no
-                    );
-                } else if !view.vote_active {
-                    hints[row].push_str("No vote is on");
-                }
-            }
-            put(
-                rows,
-                hints,
-                vote::CALL,
-                "Call a vote",
-                "Map, mode, kick, limits",
-            );
-            put(rows, hints, 3, "Back", "");
-        }
-        Page::Sjk => {
-            for (row, entry) in super::sjk::ENTRIES.iter().enumerate() {
-                // The main page's SJK page calls the changelog What's new.
-                let label = if row == super::sjk::CHANGELOG {
-                    "What's new"
-                } else {
-                    entry.label
-                };
-                put(rows, hints, row, label, entry.hint);
-            }
-            put(rows, hints, super::sjk::ENTRIES.len(), "Back", "");
         }
         Page::Leave => {
             put(
@@ -493,6 +447,23 @@ pub(super) struct Rows<'a> {
     pub(super) enabled: &'a [bool],
 }
 
+/// The main page beyond its list: the icons of the row under the emblem, the match
+/// card's controls and where the keyboard is ([`super::sjk_focus`]).
+pub(super) struct Extras<'a> {
+    pub(super) focus: Focus,
+    pub(super) icons: &'a [Icon],
+    pub(super) controls: &'a Controls,
+}
+
+impl Extras<'_> {
+    /// Nothing beyond the list (the other pages).
+    pub(super) const NONE: Extras<'static> = Extras {
+        focus: Focus::List,
+        icons: &[],
+        controls: &Controls::none(),
+    };
+}
+
 /// Draw `view`'s page and its right side (the match card, or a player's) into
 /// `canvas`.
 pub(super) fn build(
@@ -500,6 +471,7 @@ pub(super) fn build(
     view: &View<'_>,
     rows: &Rows<'_>,
     sides: &Sides<'_>,
+    extras: &Extras<'_>,
     motion: &mut Motion,
     viewport: [f32; 2],
 ) {
@@ -528,7 +500,7 @@ pub(super) fn build(
         players_table(canvas, &frame, view, rows, roster);
     } else {
         anchor(canvas, &frame, view, rows.labels.len(), motion, seconds);
-        entries(canvas, &frame, view, rows);
+        entries(canvas, &frame, view, rows, extras.focus == Focus::List);
     }
     match player {
         Some(player) => {
@@ -547,8 +519,17 @@ pub(super) fn build(
                 blocked.is_none(),
             );
         }
-        None if card.known => draw_card(canvas, &frame, card),
+        None if card.known => {
+            let main = view.page == Page::Main;
+            draw_card(canvas, &frame, card, main);
+            if main {
+                dock::card_controls(canvas, &frame, card, view, extras);
+            }
+        }
         None => {}
+    }
+    if view.page == Page::Main {
+        dock::icon_row(canvas, &frame, extras);
     }
     if profile_card_room(view.page, if table { 0 } else { rows.labels.len() }) {
         let lit = canvas.token_hovered(CARD_TOKEN);
@@ -566,8 +547,8 @@ pub(super) fn build(
             );
         });
     }
-    keys(canvas, &frame, view.page);
-    canvas.finish(view.selected_row as u16);
+    keys(canvas, &frame, view.page, extras.focus);
+    canvas.finish(dock::focus_token(view.selected_row, extras));
 }
 
 /// Whether the player's profile card has its corner on `page` with `count` entries on
@@ -718,8 +699,9 @@ fn team_colour(team: u8) -> Color {
     }
 }
 
-/// The page's entries on the arc, its name over the first.
-fn entries(canvas: &mut MenuCanvas, frame: &Frame, view: &View<'_>, rows: &Rows<'_>) {
+/// The page's entries on the arc, its name over the first; the chosen one gold while
+/// the list has the keyboard (`lit`), else only larger.
+fn entries(canvas: &mut MenuCanvas, frame: &Frame, view: &View<'_>, rows: &Rows<'_>, lit: bool) {
     let s = frame.s;
     let count = rows.labels.len();
     if count == 0 {
@@ -748,6 +730,7 @@ fn entries(canvas: &mut MenuCanvas, frame: &Frame, view: &View<'_>, rows: &Rows<
         let enabled = rows.enabled.get(row).copied().unwrap_or(true);
         let hint = rows.hints.get(row).map_or("", String::as_str);
         let colour = match (chosen, enabled, tone(view.page, row, label)) {
+            (true, true, _) if !lit => color::TEXT,
             (true, true, Tone::Leaving) => color::EMBER,
             (true, true, _) => color::GOLD_BRIGHT,
             (true, false, _) => color::MUTED,
@@ -783,7 +766,7 @@ fn entries(canvas: &mut MenuCanvas, frame: &Frame, view: &View<'_>, rows: &Rows<
                 TextAlign::Start,
             );
         }
-        if chosen && m.hints && !hint.is_empty() {
+        if chosen && lit && m.hints && !hint.is_empty() {
             text(
                 canvas,
                 TextFamily::Body,
@@ -815,8 +798,9 @@ fn entries(canvas: &mut MenuCanvas, frame: &Frame, view: &View<'_>, rows: &Rows<
     }
 }
 
-/// The keys of the page, bottom centre.
-fn keys(canvas: &mut MenuCanvas, frame: &Frame, page: Page) {
+/// The keys of the page, bottom centre: on the main page those of what has the
+/// keyboard (the list, the row or the card).
+fn keys(canvas: &mut MenuCanvas, frame: &Frame, page: Page, focus: Focus) {
     let s = frame.s;
     let back = if page == Page::Main { "resume" } else { "back" };
     let enter = match page {
@@ -824,17 +808,47 @@ fn keys(canvas: &mut MenuCanvas, frame: &Frame, page: Page) {
         Page::ReportPlayer => "write",
         _ => "open",
     };
-    let rows: [(&[&str], &str); 3] = [
-        (&["Up", "Down"], "choose"),
-        (&["Enter"], enter),
-        (&["Esc"], back),
-    ];
+    let rows: [(&[&str], &str); 4] = match (page, focus) {
+        (Page::Main, Focus::List) => [
+            (&["Up", "Down"], "choose"),
+            (&["Tab"], "icons and match"),
+            (&["Enter"], enter),
+            (&["Esc"], back),
+        ],
+        (Page::Main, Focus::Row(_)) => [
+            (&["Left", "Right"], "choose"),
+            (&["Tab"], "match"),
+            (&["Enter"], "open"),
+            (&["Esc"], "list"),
+        ],
+        (Page::Main, Focus::Card(control)) => [
+            (&["Arrows"], "choose"),
+            (&["Tab"], "list"),
+            (
+                &["Enter"],
+                match control {
+                    Control::VoteYes | Control::VoteNo => "vote",
+                    Control::Team(sjk_client::LegacyTeamChoice::Spectator) => "spectate",
+                    Control::Team(_) => "join",
+                    Control::SiegeClass | Control::CallVote => "open",
+                },
+            ),
+            (&["Esc"], "list"),
+        ],
+        _ => [
+            (&["Up", "Down"], "choose"),
+            (&["Enter"], enter),
+            (&["Esc"], back),
+            (&[], ""),
+        ],
+    };
+    let rows = rows.iter().filter(|(caps, _)| !caps.is_empty());
     let gap = 28.0 * s;
     let total: f32 = rows
-        .iter()
-        .map(|(caps, action)| key_hint_width(caps, action, s))
+        .clone()
+        .map(|(caps, action)| key_hint_width(caps, action, s) + gap)
         .sum::<f32>()
-        + gap * (rows.len() - 1) as f32;
+        - gap;
     let [centre, y] = frame.point(960.0, KEYS_Y);
     let mut x = centre - total * 0.5;
     for (caps, action) in rows {
@@ -1378,6 +1392,11 @@ impl Card {
         }
     }
 
+    /// Whether a match is on: the card shows.
+    pub(crate) fn is_known(&self) -> bool {
+        self.known
+    }
+
     /// No match is on (the menu opened without a server): the card hides.
     pub(crate) fn forget(&mut self) {
         #[cfg(test)]
@@ -1487,8 +1506,9 @@ enum Cell {
 
 /// The match card, on the right: the server and its address, the map with its
 /// mode and limits, the numbers that matter (score, place or the teams', the
-/// clock) and who plays.
-fn draw_card(canvas: &mut MenuCanvas, frame: &Frame, card: &Card) {
+/// clock) and who plays. On the `main` page the side's line says whether the player
+/// watches, and the controls follow ([`dock::card_controls`]).
+fn draw_card(canvas: &mut MenuCanvas, frame: &Frame, card: &Card, main: bool) {
     let s = frame.s;
     let rule = |canvas: &mut MenuCanvas, y: f32| {
         fade_across(
@@ -1671,7 +1691,7 @@ fn draw_card(canvas: &mut MenuCanvas, frame: &Frame, card: &Card) {
             card.playing, card.watching, card.slots
         ),
     );
-    if card.you == You::Watching {
+    if card.you == You::Watching && !main {
         body(
             canvas,
             y + 28.0,
@@ -1748,10 +1768,20 @@ impl Card {
         card.vote_no = 1;
         card
     }
+
+    /// A made-up Siege on duel6 with the player on red, for the world shots.
+    pub(crate) fn for_siege_shot() -> Self {
+        let mut card = Self::for_shot(true, false);
+        card.mode = "Siege";
+        card.limits = "20 minutes".to_owned();
+        card.team = 1;
+        card
+    }
 }
 
 #[cfg(test)]
 mod tests {
+    use super::dock::icon_token;
     use super::*;
 
     const VIEWPORTS: [[f32; 2]; 5] = [
@@ -1772,7 +1802,28 @@ mod tests {
             red_players: 4,
             blue_players: 3,
             vote_active: true,
+            staff: false,
             _frame: std::marker::PhantomData,
+        }
+    }
+
+    /// A card with every line: a vote on, both sides in a CTF on blue.
+    fn full_card() -> Controls {
+        Controls::for_match(super::super::sjk_focus::Match {
+            known: true,
+            team_game: true,
+            siege: false,
+            team: 2,
+            vote: true,
+        })
+    }
+
+    /// The main page's row (Staff tools shown) and `controls`, the keyboard on `focus`.
+    fn main_extras(controls: &Controls, focus: Focus) -> Extras<'_> {
+        Extras {
+            focus,
+            icons: Icon::shown(true),
+            controls,
         }
     }
 
@@ -1838,6 +1889,12 @@ mod tests {
                 let enabled = vec![true; labels.len()];
                 let mut canvas = MenuCanvas::new();
                 let mut motion = Motion::default();
+                let controls = full_card();
+                let extras = if page == Page::Main {
+                    main_extras(&controls, Focus::Row(Icon::Staff))
+                } else {
+                    Extras::NONE
+                };
                 build(
                     &mut canvas,
                     &view(page, 1, false, 0),
@@ -1850,6 +1907,7 @@ mod tests {
                         card: &card,
                         players: &roster,
                     },
+                    &extras,
                     &mut motion,
                     viewport,
                 );
@@ -1880,10 +1938,17 @@ mod tests {
                 let labels: Vec<String> = (0..count).map(|row| format!("Entry {row}")).collect();
                 let hints = vec!["What it opens".to_owned(); count];
                 let enabled = vec![true; count];
-                let page = if count == 10 {
+                let page = if count == Entry::MAIN.len() {
                     Page::Main
                 } else {
                     Page::VoteMap
+                };
+                let controls = full_card();
+                // The row's label shows over it while an icon has the keyboard.
+                let extras = if page == Page::Main {
+                    main_extras(&controls, Focus::Row(Icon::Camera))
+                } else {
+                    Extras::NONE
                 };
                 let mut canvas = MenuCanvas::new();
                 build(
@@ -1898,6 +1963,7 @@ mod tests {
                         card: &card,
                         players: &roster,
                     },
+                    &extras,
                     &mut Motion::default(),
                     viewport,
                 );
@@ -1917,6 +1983,23 @@ mod tests {
                     let rect = canvas.rect_for(row as u16).unwrap();
                     assert!(!overlaps(rect), "{viewport:?} {count}: row {row}");
                 }
+                // The row of icons sits between the arc and the profile card.
+                if page == Page::Main {
+                    for icon in Icon::ALL {
+                        let rect = canvas.rect_for(icon_token(icon)).expect("an icon's area");
+                        assert!(!overlaps(rect), "{viewport:?}: {icon:?}");
+                        for row in 0..count {
+                            let entry = canvas.rect_for(row as u16).unwrap();
+                            assert!(
+                                rect.bottom() <= entry.y
+                                    || rect.y >= entry.bottom()
+                                    || rect.right() <= entry.x
+                                    || rect.x >= entry.right(),
+                                "{viewport:?}: {icon:?} over row {row}"
+                            );
+                        }
+                    }
+                }
                 let inside = |rect: Rect| {
                     rect.x >= area.x - 0.5
                         && rect.right() <= area.right() + 0.5
@@ -1934,36 +2017,96 @@ mod tests {
         assert!(!profile_card_room(Page::Players, 0));
         assert!(!profile_card_room(Page::ReportPlayer, 8));
         assert!(profile_card_room(Page::Main, Entry::MAIN.len()));
-        assert!(profile_card_room(
-            Page::Sjk,
-            super::super::sjk::ENTRIES.len() + 1
-        ));
+        assert!(profile_card_room(Page::Leave, 3));
+    }
+
+    /// The main page's icons and card controls answer the pointer where they are
+    /// drawn, inside the window, apart from each other and from the card's text above
+    /// them; the keyboard's place is the canvas's focus.
+    #[test]
+    fn the_row_and_the_card_controls_have_their_own_places() {
+        let card = Card::for_shot(true, false);
+        let roster = players::State::for_shot(8, true, players::Gate::Open);
+        let labels: Vec<String> = Entry::MAIN.map(Entry::label).map(str::to_owned).to_vec();
+        let hints = vec!["What it opens".to_owned(); labels.len()];
+        let enabled = vec![true; labels.len()];
+        for viewport in VIEWPORTS {
+            for (controls, focus) in [
+                (full_card(), Focus::Card(Control::VoteNo)),
+                (
+                    Controls::for_match(super::super::sjk_focus::Match {
+                        known: true,
+                        team_game: false,
+                        siege: false,
+                        team: 3,
+                        vote: false,
+                    }),
+                    Focus::Card(Control::CallVote),
+                ),
+            ] {
+                let mut canvas = MenuCanvas::new();
+                let extras = main_extras(&controls, focus);
+                let mut team_view = view(Page::Main, 2, true, 2);
+                team_view.staff = true;
+                build(
+                    &mut canvas,
+                    &team_view,
+                    &Rows {
+                        labels: &labels,
+                        hints: &hints,
+                        enabled: &enabled,
+                    },
+                    &Sides {
+                        card: &card,
+                        players: &roster,
+                    },
+                    &extras,
+                    &mut Motion::default(),
+                    viewport,
+                );
+                assert!(!canvas.overflowed(), "{viewport:?}");
+                let mut areas: Vec<Rect> = Vec::new();
+                for (index, placed) in controls.as_slice().iter().enumerate() {
+                    let token = CONTROL_TOKEN + index as u16;
+                    let rect = canvas.rect_for(token).expect("a control's area");
+                    assert!(rect.x >= 0.0 && rect.right() <= viewport[0], "{placed:?}");
+                    assert!(rect.y >= 0.0 && rect.bottom() <= viewport[1], "{placed:?}");
+                    areas.push(rect);
+                }
+                for icon in Icon::ALL {
+                    areas.push(canvas.rect_for(icon_token(icon)).expect("an icon"));
+                }
+                for (index, rect) in areas.iter().enumerate() {
+                    for other in &areas[index + 1..] {
+                        let apart = rect.bottom() <= other.y
+                            || rect.y >= other.bottom()
+                            || rect.right() <= other.x
+                            || rect.x >= other.right();
+                        assert!(apart, "{viewport:?}: {rect:?} and {other:?}");
+                    }
+                }
+                let focused = super::dock::focus_token(2, &extras);
+                assert!(focused >= CONTROL_TOKEN, "{focus:?}");
+            }
+        }
     }
 
     #[test]
     fn the_main_page_lists_every_function_of_the_menu() {
-        let (mut labels, mut hints, mut enabled) = rows([""; 24]);
-        let card = Card::default();
-        let count = prepare(
-            &view(Page::Main, 0, false, 0),
-            &mut labels,
-            &mut hints,
-            &mut enabled,
-            &card,
-        );
+        let (mut labels, mut hints, _) = rows([""; 24]);
+        let count = prepare(&view(Page::Main, 0, false, 0), &mut labels, &mut hints);
         assert_eq!(count, Some(Entry::MAIN.len()));
+        // Sol's seven (09/10/2026): Team and Vote are on the match card, Camera
+        // control and SJK's pages in the row of icons.
         assert_eq!(
             labels[..Entry::MAIN.len()],
             [
                 "Resume",
-                "Team",
+                "Profile",
+                "Achievements",
                 "Players",
-                "Vote",
-                "Character",
                 "Settings",
                 "Servers",
-                "Camera control",
-                "SJK",
                 "Leave"
             ]
         );
@@ -1981,15 +2124,8 @@ mod tests {
 
     #[test]
     fn team_rows_say_who_is_where() {
-        let card = Card::default();
-        let (mut labels, mut hints, mut enabled) = rows([""; 24]);
-        let count = prepare(
-            &view(Page::Team, 0, true, 2),
-            &mut labels,
-            &mut hints,
-            &mut enabled,
-            &card,
-        );
+        let (mut labels, mut hints, _) = rows([""; 24]);
+        let count = prepare(&view(Page::Team, 0, true, 2), &mut labels, &mut hints);
         assert_eq!(count, Some(5));
         assert_eq!(
             labels[..5],
@@ -1998,37 +2134,10 @@ mod tests {
         assert_eq!(hints[0], "The side with fewer players: 4 red, 3 blue");
         assert_eq!(hints[1], "4 players");
         assert_eq!(hints[2], "Your team, 3 players");
-        let (mut labels, mut hints, mut enabled) = rows([""; 24]);
-        prepare(
-            &view(Page::Team, 0, false, 3),
-            &mut labels,
-            &mut hints,
-            &mut enabled,
-            &card,
-        );
+        let (mut labels, mut hints, _) = rows([""; 24]);
+        prepare(&view(Page::Team, 0, false, 3), &mut labels, &mut hints);
         assert_eq!(labels[..3], ["Join the game", "Spectate", "Back"]);
         assert_eq!(hints[1], "You are watching");
-    }
-
-    #[test]
-    fn the_ballot_shows_the_vote_and_waits_for_one() {
-        let card = Card::for_shot(false, false);
-        let (mut labels, mut hints, mut enabled) = rows([""; 24]);
-        prepare(
-            &view(Page::Vote, 0, false, 0),
-            &mut labels,
-            &mut hints,
-            &mut enabled,
-            &card,
-        );
-        assert_eq!(labels[..4], ["Vote yes", "Vote no", "Call a vote", "Back"]);
-        assert_eq!(hints[vote::YES], "Change map to mp/ffa3: 4 yes, 1 no");
-        assert!(enabled[vote::YES] && enabled[vote::NO]);
-        let mut quiet = view(Page::Vote, 0, false, 0);
-        quiet.vote_active = false;
-        let (mut labels, mut hints, mut enabled) = rows([""; 24]);
-        prepare(&quiet, &mut labels, &mut hints, &mut enabled, &card);
-        assert!(!enabled[vote::YES] && !enabled[vote::NO] && enabled[vote::CALL]);
     }
 
     #[test]
@@ -2050,13 +2159,25 @@ mod tests {
     fn escape_returns_to_the_entry_that_opened_the_page() {
         assert_eq!(parent(Page::Main), None);
         assert_eq!(parent(Page::Shot), None);
-        assert_eq!(parent(Page::Team), Some((Page::Main, Entry::Team.index())));
-        assert_eq!(parent(Page::Siege), Some((Page::Main, Entry::Team.index())));
+        // Pages the match card opens return to the main page, the keyboard on the
+        // card's control that opened them.
+        for (page, focus) in [
+            (
+                Page::Team,
+                Focus::Card(Control::Team(sjk_client::LegacyTeamChoice::Spectator)),
+            ),
+            (Page::Siege, Focus::Card(Control::SiegeClass)),
+            (Page::CallVote, Focus::Card(Control::CallVote)),
+            (Page::VoteMap, Focus::Card(Control::CallVote)),
+        ] {
+            assert_eq!(return_focus(page), focus, "{page:?}");
+        }
+        assert_eq!(parent(Page::Team).map(|(page, _)| page), Some(Page::Main));
         assert_eq!(
-            parent(Page::CallVote),
-            Some((Page::Main, Entry::Vote.index()))
+            parent(Page::CallVote).map(|(page, _)| page),
+            Some(Page::Main)
         );
-        assert_eq!(parent(Page::Sjk), Some((Page::Main, Entry::Sjk.index())));
+        assert_eq!(return_focus(Page::Players), Focus::List);
         assert_eq!(
             parent(Page::Players),
             Some((Page::Main, Entry::Players.index()))
@@ -2082,7 +2203,7 @@ mod tests {
             assert_eq!(page, Page::CallVote);
             assert_eq!(super::super::callvote::opening_row(list), Some(row));
         }
-        for page in [Page::Leave, Page::Main, Page::Vote, Page::Team, Page::Sjk] {
+        for page in [Page::Leave, Page::Main, Page::Team] {
             assert!(row_count(page, false).is_some(), "{page:?}");
         }
     }

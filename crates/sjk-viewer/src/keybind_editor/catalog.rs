@@ -158,6 +158,8 @@ pub(crate) const ACTIONS: &[BindableAction] = &[
     action(Other, "Vote no", "vote no", ""),
     action(Other, "Camera mode", "togglecamera", "p"),
     action(Other, "Free camera", "freecam", ""),
+    // SJK: the camera and sun panel; F8 opens it too while F8 is unbound.
+    action(Other, "Camera control", "cameracontrol", ""),
     action(Other, "Peek at crosshair player", "peek", ""),
     // SJK: off, names only, bars on the target and duel opponent, bars on everyone.
     action(Other, "Nameplate mode", "nameplates", "v"),

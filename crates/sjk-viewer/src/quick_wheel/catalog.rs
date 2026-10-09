@@ -354,6 +354,14 @@ pub(crate) const ACTIONS: &[Action] = &[
         Some("free_camera"),
     ),
     action(
+        "camera_control",
+        "Camera control",
+        "cameracontrol",
+        Camera,
+        State::None,
+        Some("free_camera"),
+    ),
+    action(
         "timer",
         "Match timer",
         "toggle cg_drawTimer",

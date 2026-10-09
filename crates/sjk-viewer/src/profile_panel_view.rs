@@ -188,17 +188,29 @@ impl Panel {
             Tab::Profile => "Profile",
             Tab::Achievements => "Achievements",
         };
-        top_bar(&mut self.ui, &frame, "Back", BACK_TOKEN, title, None);
-        kit::segments(
-            &mut self.ui,
-            &frame,
-            1_824.0,
-            87.0,
-            &["Profile", "Achievements"],
-            self.tab.index(),
-            self.focus == Focus::Tabs,
-            TAB_TOKEN,
-        );
+        // The board shown from the Profile screen goes back to the profile.
+        let back = if self.mode == Mode::Hub && self.tab == Tab::Achievements {
+            "Profile"
+        } else {
+            "Back"
+        };
+        top_bar(&mut self.ui, &frame, back, BACK_TOKEN, title, None);
+        match self.mode {
+            Mode::Pages => kit::segments(
+                &mut self.ui,
+                &frame,
+                1_824.0,
+                87.0,
+                &["Profile", "Achievements"],
+                self.tab.index(),
+                self.focus == Focus::Tabs,
+                TAB_TOKEN,
+            ),
+            Mode::Hub => {
+                crate::profile_hub::strip(&mut self.ui, &frame, crate::profile_hub::Tab::Profile);
+            }
+            Mode::Board => {}
+        }
         match self.tab {
             Tab::Profile => {
                 let who = who(inputs);
@@ -1061,7 +1073,12 @@ impl Panel {
             Focus::RemovePicture => "remove picture",
             Focus::BioBack => "back to your bio",
         };
-        let mut keys: Vec<(&[&str], &str)> = vec![(&["Tab"], "next"), (&["Enter"], enter)];
+        let mut keys: Vec<(&[&str], &str)> = match (self.mode, self.tab) {
+            // The board alone has nothing to choose.
+            (Mode::Board, _) => Vec::new(),
+            (Mode::Hub, Tab::Achievements) => vec![(&["Enter"], "back to your profile")],
+            _ => vec![(&["Tab"], "next"), (&["Enter"], enter)],
+        };
         if typing {
             keys.push((&["Shift", "Enter"], "new line"));
         }
@@ -1245,21 +1262,26 @@ mod tests {
                             [1440.0, 1080.0],
                             [2560.0, 1080.0],
                         ] {
-                            let mut panel = Panel::new();
-                            panel.open(tab, true);
-                            panel.focus = focus;
-                            panel.message = "a bio uses letters, digits, spaces and simple punctuation (no emoji or symbols)".into();
-                            let inputs = Inputs {
-                                enabled,
-                                snapshot: shot,
-                                standings: &standings,
-                                record: &record,
-                            };
-                            panel.build(&inputs, body, viewport);
-                            assert!(
-                                !panel.ui.overflowed(),
-                                "{tab:?} {focus:?} {enabled} at {viewport:?}"
-                            );
+                            for mode in [Mode::Pages, Mode::Hub, Mode::Board] {
+                                let mut panel = Panel::new();
+                                panel.open_as(tab, true, mode);
+                                panel.focus = focus;
+                                panel.message = "a bio uses letters, digits, spaces and simple punctuation (no emoji or symbols)".into();
+                                let inputs = Inputs {
+                                    enabled,
+                                    snapshot: shot,
+                                    standings: &standings,
+                                    record: &record,
+                                };
+                                panel.build(&inputs, body, viewport);
+                                assert!(
+                                    !panel.ui.overflowed(),
+                                    "{tab:?} {focus:?} {mode:?} {enabled} at {viewport:?}"
+                                );
+                                // The Profile screen's tabs answer where they are drawn.
+                                let strip = panel.ui.rect_for(crate::profile_hub::TOKEN);
+                                assert_eq!(strip.is_some(), mode == Mode::Hub);
+                            }
                         }
                     }
                 }

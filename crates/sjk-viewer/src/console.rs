@@ -281,6 +281,16 @@ impl ViewerConsole {
         self.shift = held;
     }
 
+    /// Whether Shift is held (`ModifiersChanged`).
+    pub(crate) fn shift_held(&self) -> bool {
+        self.shift
+    }
+
+    /// Whether Ctrl is held (`ModifiersChanged`).
+    pub(crate) fn control_held(&self) -> bool {
+        self.control
+    }
+
     /// Whether Shift or Ctrl is held (`ModifiersChanged`), for keys that move
     /// an item rather than the focus.
     pub(crate) fn modifier_held(&self) -> bool {

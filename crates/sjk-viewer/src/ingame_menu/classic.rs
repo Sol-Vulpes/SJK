@@ -261,6 +261,7 @@ mod tests {
             red_players: 0,
             blue_players: 0,
             vote_active: false,
+            staff: false,
             _frame: std::marker::PhantomData,
         }
     }

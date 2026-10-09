@@ -76,6 +76,9 @@ pub(crate) enum InputAction {
     Inspect,
     /// `force_illuminate`: turn Illuminate's holocron on or off ([`crate::illuminate`]).
     Illuminate,
+    /// `cameracontrol`: open Camera control, as F8 does
+    /// ([`crate::ingame_menu::Page::Shot`]).
+    CameraControl,
 }
 
 /// Current logical gameplay-input state.
@@ -249,6 +252,7 @@ impl GameplayInput {
                     | "flipkick"
                     | "inspect"
                     | "force_illuminate"
+                    | "cameracontrol"
             )
     }
 
@@ -398,6 +402,7 @@ impl GameplayInput {
             "flipkick" => Some(InputAction::FlipKick),
             "inspect" => Some(InputAction::Inspect),
             "force_illuminate" => Some(InputAction::Illuminate),
+            "cameracontrol" => Some(InputAction::CameraControl),
             "vote" => match words.next().map(str::to_ascii_lowercase).as_deref() {
                 Some("yes" | "y" | "1") => Some(InputAction::Vote(true)),
                 Some("no" | "n" | "0") => Some(InputAction::Vote(false)),
@@ -565,6 +570,11 @@ impl super::GpuState {
                     eprintln!("failed to request scoreboard: {error}");
                 }
             }
+            Some(InputAction::CameraControl)
+                if self.live_session.is_some() || self.demo_session.is_some() =>
+            {
+                self.open_shot_panel();
+            }
             Some(InputAction::TeamMenu) if self.live_session.is_some() => {
                 self.release_pointer();
                 self.game_menu = true;
@@ -579,7 +589,10 @@ impl super::GpuState {
                     eprintln!("failed to cast vote: {error}");
                 }
             }
-            Some(InputAction::MessageMode(_) | InputAction::TeamMenu) | None => {}
+            Some(
+                InputAction::MessageMode(_) | InputAction::TeamMenu | InputAction::CameraControl,
+            )
+            | None => {}
         }
     }
 

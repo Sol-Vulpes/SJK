@@ -118,9 +118,15 @@ its Character, the character standing on the map's path below the tower beside
 the form; What's new, Update and Identity in the same look; and its Servers, the
 server browser with where the servers come from and which show on the left, the
 sortable list in the middle and the chosen server's map, numbers and players on
-the right; and its in-game menu, a compact arc of the game menu's entries over a
-dark fade on the match's left, with a card of the match (server, map, mode and
-limits, score and place, clock, players) on the right. Every other screen opens
+the right; and its in-game menu, a compact arc of seven entries (Resume, Profile,
+Achievements, Players, Settings, Servers, Leave) over a dark fade on the match's left,
+a row of small icons under the emblem (Camera control, What's new, Credits, Report a
+bug, SJK chat, and Staff tools for a staff key), and a card of the match (server, map,
+mode and limits, score and place, clock, players) on the right with the vote on (Yes,
+No), the player's side and its buttons (Join red, Join blue, Spectate) and Call a
+vote; and its Profile screen, Character, Profile and Identity as tabs (Ctrl+Tab).
+Tab moves the keyboard between the list, the row and the card
+([sjk-ui.md](sjk-ui.md#in-game-menu)). Every other screen opens
 in its classic+ version. A client started in the SJK UI stands on mp/duel6
 instead of mp/ffa3.
 
@@ -433,7 +439,8 @@ Join, Profile, Add Bot, Settings (retail's Controls and Setup), Vote, Call Vote
 and Exit, after SJK's own narrower SJK button at its left end. Each opens a pop-up under it or the matching screen. SJK's pop-up holds
 SJK's own screens, for now the [changelog page](#changelog-page)
 ([ingame_menu/sjk.rs](../crates/sjk-viewer/src/ingame_menu/sjk.rs) lists them);
-the SJK UI's in-game menu has the same page as its Sol JK entry.
+the SJK UI's in-game menu has them in its row of icons instead
+([sjk-ui.md](sjk-ui.md#in-game-menu)), its Join and Vote on the match card.
 About shows the server info. Join picks
 a team, or opens the class list in Siege; in a team game Team Red and Team Blue
 carry their flag (`gfx/hud/mpi_rflag`, `mpi_bflag`) and the team's player count. Vote is Yes/No. Call Vote opens the
@@ -448,9 +455,9 @@ Its Join Red, Join Blue and Spectate buttons are left to the Join tab. Settings 
 the option panels described above. Siege swaps in Objectives and V Chat as retail does. Add Bot,
 Objectives, V Chat and Restart Match are dimmed with a note, because the client
 cannot add bots or restart a match it does not host. Left and Right move along
-the bar; Escape closes a pop-up, then the menu. The Server browser and
-[Camera control](#camera-control) entries, which retail did not have, are in the
-SJK UI only (F8 opens Camera control in either style).
+the bar; Escape closes a pop-up, then the menu. The Server browser entry and the
+[Camera control](#camera-control) icon, which retail did not have, are in the
+SJK UI only (F8 and `cameracontrol` open Camera control in either style).
 
 With the player's retail game data mounted, the classic menus draw its own
 artwork: the backdrop, side glyph columns, ring, windows, logo, sub-page frames,
@@ -916,8 +923,9 @@ profile also sets `cg_thirdPersonRange 100`, which SJK leaves to that cvar. SJK'
 Camera control (named Shot controls until 08/10/2026) is a panel for framing
 screenshots and recordings in a match or a demo
 ([ingame_menu/shot.rs](../crates/sjk-viewer/src/ingame_menu/shot.rs)). The game
-menu's Camera control entry opens it (the SJK UI's arc; the classic bar has no
-entry), as does F8 while F8 has no binding. It drives the
+menu's camera icon opens it (the SJK UI's row of icons; the classic bar has no
+entry), as do F8 while F8 has no binding, the `cameracontrol` command (bindable
+under Controls > Other) and the quick wheel's Camera control. It drives the
 console's presentation director, the same one as the `demo_camera` and
 `demo_sun` commands, which keep their names: nothing it does reaches the
 server, prediction or the player's input.
@@ -1932,11 +1940,14 @@ are in [identity.md](identity.md).
   the bio (`identity name` says the name is the one played under), `identity key` prints
   the key id and file,
   `identity who [slot]` lists known players (with a slot, that player's bio).
-- The Profile page (the SJK UI's main page > SJK > Profile, the classic menu's SJK
-  page, the in-game SJK menu, or the `profile` command) shows the player's profile as
+- The Profile page (the SJK UI's Profile screen, opened by its main page > SJK >
+  Profile, its main page's Character and the in-game menu's Profile, with Character
+  and Identity as its other tabs; the classic menu's SJK page and in-game SJK menu; or
+  the `profile` command) shows the player's profile as
   others read it on the hub: name, verified, member since, other names, medals, the
   bio (written there, up to 6 lines under the hub's rules), their record from the
-  achievement counts, and a second tab, the achievements board (`achievements`). It
+  achievement counts, and a second tab, the achievements board (`achievements`, and
+  on its own the SJK UI in-game menu's Achievements). It
   has the SJK UI's look in every menu style; its Identity settings button opens the
   Identity page ([identity.md](identity.md#profile)) and See unlockables the
   Unlockables page (`unlockables`, [unlockables.md](unlockables.md#unlockables-page)).
@@ -2270,7 +2281,7 @@ by its groups in Settings:
 
 | Group | Actions (console command) |
 | --- | --- |
-| Camera | Third person (`togglecamera`), Free camera (`freecam`) |
+| Camera | Third person (`togglecamera`), Free camera (`freecam`), Camera control (`cameracontrol`) |
 | Interface | Nameplates (`nameplates`, cycles), HUD on/off, Screenshot (`screenshotJPEG`), Game menu (`togglemenu`), First setup (`firstsetup`), Match timer, FPS counter, Speedometer, Lagometer (`toggle cg_...`), Console (`toggleconsole`), What's new (`changelog`) |
 | Player | Cosmetics, AFK, Team menu (`teammenu`), Spectate (`team spectator`), Respawn (`kill`), Inspect player, Engage duel, Saber style (`saberAttackCycle`), Saber on/off (`sv_saberswitch`) |
 | Emotes | Taunt, Bow, Meditate, Flourish, Gloat |

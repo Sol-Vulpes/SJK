@@ -141,8 +141,8 @@ Old clients ignore all of it, so it stays `/v1/`.
   this PC ([Muting a player](#muting-a-player)); for staff, Delete for everyone, Mute at the hub and Unmute
   at the hub (the client does not know a key's mute flag); under them, what the request
   came to (sending, done, or the hub's refusal). It opens from the dock's
-  Open chat, `sjkchat`, `messagemode5` outside a game, and the in-game SJK menu's
-  SJK chat.
+  Open chat, `sjkchat`, `messagemode5` outside a game, the classic in-game SJK menu's
+  SJK chat and the SJK UI in-game menu's SJK chat icon.
 
 ## How a line looks
 

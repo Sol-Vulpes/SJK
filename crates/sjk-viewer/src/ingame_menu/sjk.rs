@@ -1,5 +1,6 @@
 //! The in-game SJK pop-up: SJK's own screens, reached from the SJK button
-//! left of About on the classic bar, or the Sol JK entry of the SJK UI's.
+//! left of About on the classic bar. The SJK UI has them in its row of icons and
+//! on its Profile screen instead (`sjk_focus.rs`, `profile_hub.rs`).
 //! Add an entry to [`ENTRIES`] and its action in `game_menu_actions.rs`
 //! (`activate_sjk_row`).
 
@@ -10,7 +11,7 @@ pub(crate) struct Entry {
     pub(crate) hint: &'static str,
 }
 
-/// The pop-up's entries, top to bottom; the SJK UI's page adds Back after them.
+/// The pop-up's entries, top to bottom.
 pub(crate) const ENTRIES: [Entry; 7] = [
     Entry {
         label: "Changelog",

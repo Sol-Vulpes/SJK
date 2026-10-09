@@ -7,6 +7,40 @@ SJK currently contains a native client and standard dedicated server in a
 20-crate Rust workspace. This page records scope and verification, rather than
 claiming complete parity from the presence of an implementation.
 
+## In-game menu rework and the Profile screen
+
+SJK-only branch `personal/ingame-menu-2` (09/10/2026, Rust stable), Sol's request of
+09/10/2026: fewer buttons in the SJK UI's in-game menu. The list is Resume, Profile,
+Achievements, Players, Settings, Servers, Leave; Team and Vote moved onto the match
+card (the vote on with Yes and No, the player's side with Join red, Join blue and
+Spectate, or Join and Spectate, or Siege's Class and side, and Call a vote at its foot);
+Camera control, What's new, Credits, Report a bug, SJK chat and, for staff keys, Staff
+tools are a row of icons under the emblem; the SJK page is gone. Tab moves the keyboard
+list, row, card; Right enters the card. Profile is the new Profile screen: the player
+screen, the Profile page and the Identity page as tabs (Ctrl+Tab, or a click on the
+strip), also from the main page's Character and SJK > Profile; Achievements opens the
+board alone. Camera control is a quick wheel action and the `cameracontrol` command.
+The classic in-game bar is unchanged ([sjk-ui.md](sjk-ui.md#in-game-menu),
+[Profile screen](sjk-ui.md#profile-screen)).
+
+Verified: `cargo test --release -p sjk-viewer` (1491 passed; new tests for the entry
+order, the card's controls and the commands they send, Tab and arrow moves across the
+list, row and card, Staff only for staff, the keyboard settling when a control goes
+away, the Profile page's modes, the strip on every Character page and its hit areas,
+canvas overflow at 1080p, 4K, 21:9 and 4:3), `cargo clippy --locked --workspace
+--all-targets` (no warning on a changed line), `cargo fmt --all --check`, and the
+off-screen shots `duel6_sjk_ingame` (no vote, vote on, row focused, side buttons
+focused, Staff shown, a spectator in an FFA, Siege, Team, call-vote maps, Leave, 4:3,
+Settings), `duel6_sjk_profile_screen` (Character, Profile and Identity tabs switched by
+the shot's Ctrl+Tab path, the Achievements board, 4:3, the Character tab from the main
+page), `duel6_camera_control`, `duel6_sjk_profile` and `duel6_sjk_character_in_game`,
+all looked at. Not verified: anything in a running client or on a server (the side
+buttons and votes sending to a real server, Siege's Class and side, Ctrl+Tab and clicks
+on the strip through the window's real keyboard and mouse, the main page's camera
+moving between the Character tab's stage and the Profile tab, the quick wheel's Camera
+control and `cameracontrol` in a match), the classic menus beyond the camera shot's
+classic bar, and the tests of the other crates (unchanged; clippy built every target).
+
 ## Review fixes for SJK PRs #61, #62 and #64
 
 SJK-only branch `personal/review-fixes` (09/10/2026, Rust stable), from the review

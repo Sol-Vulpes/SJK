@@ -2919,3 +2919,16 @@ test: Mute a player, disconnect and rejoin the server: they are Kyle with the de
 test: Mute client 0 on a server: other players' saber blocks still sound.
 test: Change identity or hub in a game with pictures showing: each player keeps their own picture.
 note: Not tried in a game.
+
+[ingame-menu-2]
+area: Menus & settings
+title: SJK UI in-game menu: seven entries, a row of icons, side and vote on the match card
+change: Esc menu: Resume, Profile, Achievements, Players, Settings, Servers, Leave.
+change: Card: your side with Join red/blue/Spectate, the vote on (Yes, No) or Call a vote.
+change: Icons under the emblem: Camera control, What's new, Credits, Report a bug, chat, Staff.
+test: Local CTF with bots, Esc: Tab goes list, icons, card; arrows move; Enter acts; Esc list.
+test: Card: Join red / Join blue / Spectate switch side; your side is dimmed and skipped.
+test: Call a vote, then Yes or No on the card from a second client; J still opens Team.
+test: Profile: Ctrl+Tab through Character, Profile, Identity; Esc returns on Profile.
+test: Main page Character and SJK > Profile: the same tabs; quick wheel Camera control works.
+note: Staff icon only with a staff key. Siege's Class and side button untried on a server.
