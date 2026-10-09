@@ -504,16 +504,19 @@ impl Panel {
                 1.0,
             );
         }
-        text(
-            &mut self.ui,
-            TextFamily::Body,
-            format_args!("Key id {}", message.key_id),
-            frame.rect(SIDE_X, LIST_TOP + 46.0, SIDE_WIDTH, 22.0),
-            15.0 * s,
-            color::MUTED,
-            FontWeight::Regular,
-            TextAlign::Start,
-        );
+        // The player's own key stays off screen, on their own messages too.
+        if let Some(key) = crate::player_identity::printable_key_id(&message.key_id) {
+            text(
+                &mut self.ui,
+                TextFamily::Body,
+                format_args!("Key id {key}"),
+                frame.rect(SIDE_X, LIST_TOP + 46.0, SIDE_WIDTH, 22.0),
+                15.0 * s,
+                color::MUTED,
+                FontWeight::Regular,
+                TextAlign::Start,
+            );
+        }
         let mut y = LIST_TOP + 90.0;
         kit::button(
             &mut self.ui,

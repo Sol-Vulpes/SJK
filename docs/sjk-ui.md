@@ -157,8 +157,8 @@ one (4:3, 5:4) scales the frame down to its width.
     tab; it read Character until 09/10/2026), Settings (the settings screen), SJK,
     Quit.
   - Play: Join a server (the browser), Create a game, Back.
-  - SJK: What's new (the changelog), Update, Credits, Profile (the Profile screen
-    on its SJK Profile tab), Back. The arc holds five entries (a sixth curls back
+  - SJK: What's new (the changelog), Update, Credits, Back (the Profile screen is
+    the main page's Profile, and its profile card). The arc holds five entries (a sixth curls back
     into the ring); the identity's key is in Settings, Network.
   - Quit: Quit to desktop (ember when chosen), Stay. It opens on Stay.
   A page's name stands small over its first entry.
@@ -366,7 +366,7 @@ overlay routes their text to the UI's families (`console_sjk_pages.rs`).
   row of tabs, moved down 44 pixels (`profile_panel::Mode`). Profile: three columns,
   who the player is (their picture, a disc 104 across with "Add a picture" or "Change
   picture" under it, beside the hub name in its colours at 38, verified, member since,
-  key id, other names; then Staff tools for a staff key) over "Your record" (eight
+  other names; then Staff tools for a staff key) over "Your record" (eight
   numbers in two columns) and "Unlocked lately"; "About you", the bio's box (620 by
   300, Exo 2 at 18, wrapped by measured width, the end being written kept in view)
   with its counts, Revert and Save (gold) and the rules; Medals (pictures at 84, on
@@ -1036,7 +1036,7 @@ keys and pointer; the row is the player screen's own tabs grown to seven.
 - **Opened by:** the in-game menu's Profile (the tab shown last in the run, Character
   the first time; the tab a console page turned to itself counts too) and its profile
   card (SJK Profile); the main page's Profile (Character, on the menu map's stage) and
-  SJK > Profile (SJK Profile), and its profile card. In the SJK UI the `profile`,
+  its profile card (SJK Profile). In the SJK UI the `profile`,
   `achievements` and `unlockables` commands open it on SJK Profile, Achievements and
   Collection (again to close it), returning to the main page from the menus, else to
   the game menu; with the classic menus they open the pages on their own, as before.

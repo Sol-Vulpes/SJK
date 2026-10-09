@@ -9,6 +9,8 @@
 #                               made it when that is not the piece's owner.
 
 = Sol
++ 09/10/2026 | - | Own key id off screen, SJK page without Profile
+- 365e761 |  | Keep the player's own key id off screen; drop SJK > Profile
 + 09/10/2026 | - | One row of Profile tabs, identity in Settings, picture Browse
 - f643e98 |  | Profile screen: one row of tabs, the key in Settings, Browse for the picture
 + 09/10/2026 | - | Settings' changed dot after the name

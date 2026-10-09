@@ -149,7 +149,7 @@ const MAIN: [Entry; 5] = [
     ),
     entry(
         "SJK",
-        "Your profile and achievements, what's new, credits",
+        "What's new, updates and credits",
         Step::Page(Page::Sjk),
     ),
     entry("Quit", "Leave SJK", Step::Page(Page::Quit)),
@@ -167,7 +167,7 @@ const PLAY: [Entry; 3] = [
     ),
     entry("Back", "", Step::Back),
 ];
-const SJK: [Entry; 5] = [
+const SJK: [Entry; 4] = [
     entry(
         "What's new",
         "Every release and who made it",
@@ -182,11 +182,6 @@ const SJK: [Entry; 5] = [
         "Credits",
         "The people who make SJK",
         open(MainDestination::Credits),
-    ),
-    entry(
-        "Profile",
-        "Your medals, bio, record and achievements",
-        open(MainDestination::Profile),
     ),
     entry("Back", "", Step::Back),
 ];

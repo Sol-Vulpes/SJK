@@ -450,10 +450,14 @@ impl State {
             let _ = write!(place, ", {side}");
         }
         self.info.push(format!("Place  /  {place}"));
-        self.info.push(match &player.hub {
-            Some(hub) if hub.verified => format!("SJK hub  /  verified, key {}", hub.key_id),
-            Some(hub) => format!("SJK hub  /  key {}", hub.key_id),
-            None => "SJK hub  /  not known to the hub".to_owned(),
+        let key = player.hub.as_ref().map(|hub| {
+            crate::player_identity::printable_key_id(&hub.key_id)
+                .map_or_else(|| "your key".to_owned(), |key| format!("key {key}"))
+        });
+        self.info.push(match (&player.hub, key) {
+            (Some(hub), Some(key)) if hub.verified => format!("SJK hub  /  verified, {key}"),
+            (Some(_), Some(key)) => format!("SJK hub  /  {key}"),
+            _ => "SJK hub  /  not known to the hub".to_owned(),
         });
         if let Some(reason) = self.blocked() {
             self.info.push(format!("Report  /  {reason}"));
