@@ -9,6 +9,8 @@
 #                               made it when that is not the piece's owner.
 
 = Sol
++ 09/10/2026 | SJK #54 | Extend parallax to where it shows and hold it still near the camera
+- 085afe6 |  | Extend parallax to where it shows and hold it still near the camera
 + 09/10/2026 | SJK #58 | Add a kill feed with weapon icons at the top right
 - fd9be84 |  | Add a kill feed with weapon icons at the top right
 + 09/10/2026 | SJK #55 | Size the compact SJK scoreboard to its names and centre it

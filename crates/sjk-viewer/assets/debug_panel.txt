@@ -2789,3 +2789,13 @@ test: Kill and get killed with saber, gun, Force lightning, push, fall: the icon
 test: Team FFA/CTF: the feed sits below FPS, team overlay and powerup column.
 test: cg_killfeed 0 in Settings > HUD hides it and stays off after a restart.
 note: Grip and lightning both show the lightning holocron. Not seen on screen yet.
+
+[parallax-range]
+area: Rendering & effects
+title: Parallax reaches farther and holds still near the camera (SJK PR #54)
+change: Depth fades below half a pixel of shift, below 8.6 degrees, and where mips 2-4 are read.
+change: r_parallaxNearDistance (24, 0 = off, console only) shrinks the depth close to a surface.
+change: r_materialMapsDebug 7 shows the reach: yellow full, green faded, red held back.
+test: mp/ffa3 with the material pack, r_parallaxStrength 1: walk a long floor; relief shows farther.
+test: Back the third-person camera into a relief wall: r_parallaxNearDistance 0 swims, 24 holds.
+note: Steps are 4-24 plus 6 binary; check frame times with SJK_FRAME_BUDGET=1. Not seen on screen.

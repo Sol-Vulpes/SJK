@@ -978,7 +978,9 @@ Changing a value saves it like any other setting. Switches over numeric cvars
 show ON/OFF and write 1/0. Defaults are unchanged (see
 [Default visual profile](rendering.md#default-visual-profile)). Diagnostics such
 as `r_dayDebug` stay console-only, as do the speeds and key of
-[eye adaptation](rendering.md#eye-adaptation); the ground HUD stays on the HUD
+[eye adaptation](rendering.md#eye-adaptation) and the distance inside which parallax
+stops growing near the camera (`r_parallaxNearDistance`, [Parallax](rendering.md#parallax));
+the ground HUD stays on the HUD
 tab, and exclusive fullscreen (`r_exclusiveFullscreen`) stays on VIDEO's
 display-mode row. Eye adaptation holds still while this page is open, so
 exposure changes made here show at once instead of being eased.
