@@ -124,9 +124,17 @@ impl crate::GpuState {
                 };
                 restarted.sync_gains(self.console.as_ref());
                 if let (Some(session), Some(vfs)) = (&self.live_session, &self.vfs) {
-                    restarted.install_gamestate(session.game_state(), std::sync::Arc::clone(vfs));
+                    restarted.install_gamestate(
+                        session.game_state(),
+                        std::sync::Arc::clone(vfs),
+                        &self.bsp,
+                    );
                 } else if let (Some(session), Some(vfs)) = (&self.demo_session, &self.vfs) {
-                    restarted.install_gamestate(session.game_state(), std::sync::Arc::clone(vfs));
+                    restarted.install_gamestate(
+                        session.game_state(),
+                        std::sync::Arc::clone(vfs),
+                        &self.bsp,
+                    );
                 }
                 Ok(vec!["Audio output recreated; sample cache cleared.".into()])
             }

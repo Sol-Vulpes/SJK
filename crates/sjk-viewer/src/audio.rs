@@ -190,9 +190,14 @@ impl GameAudio {
                 snapshot.player.client_num(),
             )))));
         for entity in &snapshot.entities {
+            // `CG_SetEntitySoundPosition`: a door's sounds follow its middle.
+            let origin = self.legacy.as_ref().map_or_else(
+                || entity.trajectory_base(),
+                |adapter| adapter.sound_origin(entity),
+            );
             self.output.send(AudioCommand::SourcePosition(
                 SourceId(u32::from(entity.number())),
-                entity.trajectory_base(),
+                origin,
             ));
         }
         if self.legacy.is_none() {

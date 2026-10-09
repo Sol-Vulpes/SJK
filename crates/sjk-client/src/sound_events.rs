@@ -28,6 +28,7 @@ const MAX_SOUNDS: usize = 256;
 const MAX_ENTITIES: usize = 1_024;
 const MAX_CLIENTS: usize = 32;
 const ET_EVENTS: u8 = 18; // codemp/game/bg_public.h:1270
+const SOLID_BMODEL: u32 = 0x00ff_ffff; // codemp/qcommon/q_shared.h
 
 const CHAN_AUTO: u32 = 0;
 const CHAN_WEAPON: u32 = 2;
@@ -568,6 +569,8 @@ pub struct LegacySoundAdapter {
     ledger: LegacySoundLedger,
     loops: LegacyLoopAdapter,
     maintained: MaintainedSounds,
+    /// `cgs.inlineModelMidpoints`, indexed by BSP model number.
+    inline_model_midpoints: Box<[[f32; 3]]>,
 }
 
 impl LegacySoundAdapter {
@@ -795,7 +798,43 @@ impl LegacySoundAdapter {
             ledger: LegacySoundLedger::default(),
             loops,
             maintained,
+            inline_model_midpoints: Box::default(),
         }
+    }
+
+    /// Install the map's inline-model midpoints (`cgs.inlineModelMidpoints`,
+    /// `CG_RegisterGraphics`), indexed by BSP model number, model 0 unused.
+    pub fn set_inline_model_midpoints(&mut self, midpoints: Box<[[f32; 3]]>) {
+        self.inline_model_midpoints = midpoints;
+    }
+
+    /// Where an entity's sounds come from (`CG_SetEntitySoundPosition`,
+    /// `cg_ents.c:118-132`): a brush model's origin is usually the world origin,
+    /// so its sounds come from the middle of its model instead.
+    pub fn sound_origin(&self, state: &EntityState) -> [f32; 3] {
+        let origin = state.trajectory_base();
+        if state.solid() != SOLID_BMODEL {
+            return origin;
+        }
+        usize::try_from(state.model_index())
+            .ok()
+            .and_then(|index| self.inline_model_midpoints.get(index))
+            .map_or(origin, |midpoint| {
+                std::array::from_fn(|axis| origin[axis] + midpoint[axis])
+            })
+    }
+
+    /// `S_StartSound` without an origin plays at the source entity's sound
+    /// position; `fallback` when the snapshot does not hold the source.
+    fn origin_for_source(&self, snapshot: &Snapshot, source: u16, fallback: [f32; 3]) -> [f32; 3] {
+        if source == snapshot.player.client_num() {
+            return snapshot.player.origin();
+        }
+        snapshot
+            .entities
+            .iter()
+            .find(|state| state.number() == source)
+            .map_or(fallback, |state| self.sound_origin(state))
     }
 
     /// Re-resolve a player sound set when its CS_PLAYERS configstring changes.
@@ -1544,17 +1583,15 @@ impl LegacySoundAdapter {
             self.ledger.record(kind, handle.is_some());
         }
         let local = source == snapshot.player.client_num();
+        let origin = (!listener_relative && !local)
+            .then(|| self.origin_for_source(snapshot, source, origin));
         self.decisions.push(LegacySoundDecision {
             event: kind,
             sound,
             handle,
             additional,
             request: PlayRequest {
-                origin: if listener_relative || local {
-                    None
-                } else {
-                    Some(origin_for_source(snapshot, source, origin))
-                },
+                origin,
                 source: SourceId(u32::from(source)),
                 channel: ChannelId(normalize_voice_channel(channel)),
                 volume: 1.0,
@@ -1808,17 +1845,6 @@ fn custom_set(
     }
 }
 
-fn origin_for_source(snapshot: &Snapshot, source: u16, fallback: [f32; 3]) -> [f32; 3] {
-    if source == snapshot.player.client_num() {
-        return snapshot.player.origin();
-    }
-    snapshot
-        .entities
-        .iter()
-        .find(|state| state.number() == source)
-        .map_or(fallback, EntityState::trajectory_base)
-}
-
 fn client_bit(bits: [u16; 4], client: usize) -> bool {
     client < 64 && bits[client / 16] & (1 << (client % 16)) != 0
 }
@@ -1918,6 +1944,10 @@ pub(crate) fn intern_sound(
 
 #[path = "sound_config_strings.rs"]
 mod config_strings;
+
+#[cfg(test)]
+#[path = "sound_origin_tests.rs"]
+mod origin_tests;
 
 #[cfg(test)]
 mod tests {

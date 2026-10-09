@@ -16,8 +16,25 @@ pub(super) struct LegacyLoadTask {
     receiver: Receiver<Result<PreparedLegacyAudio, String>>,
 }
 
+/// `cgs.inlineModelMidpoints` (`CG_RegisterGraphics`): the middle of each brush
+/// model's bounds by model number; the world, model 0, has none.
+fn inline_model_midpoints(bsp: &Bsp) -> Box<[[f32; 3]]> {
+    let render = bsp.render();
+    (0..render.models().len())
+        .map(|index| {
+            render.inline_model(index).map_or([0.0; 3], |model| {
+                std::array::from_fn(|axis| (model.minimums[axis] + model.maximums[axis]) * 0.5)
+            })
+        })
+        .collect()
+}
+
 impl LegacyLoadTask {
-    pub(super) fn start(vfs: Arc<VirtualFileSystem>, game_state: GameState) -> Self {
+    pub(super) fn start(
+        vfs: Arc<VirtualFileSystem>,
+        game_state: GameState,
+        inline_model_midpoints: Box<[[f32; 3]]>,
+    ) -> Self {
         let (sender, receiver) = std::sync::mpsc::channel();
         thread::Builder::new()
             .name("sjk-legacy-audio-load".into())
@@ -26,12 +43,13 @@ impl LegacyLoadTask {
                 let result = (|| {
                     let mut sounds = Vec::with_capacity(512);
                     let mut next_handle = 0;
-                    let adapter = LegacySoundAdapter::new(&game_state, &vfs, |path, bytes| {
+                    let mut adapter = LegacySoundAdapter::new(&game_state, &vfs, |path, bytes| {
                         let handle = SoundHandle(next_handle);
                         next_handle = next_handle.wrapping_add(1);
                         sounds.push((path.to_owned(), handle, bytes.into()));
                         Some(handle)
                     });
+                    adapter.set_inline_model_midpoints(inline_model_midpoints);
                     for path in feedback::KILL_SOUNDS {
                         if let Ok(Some(asset)) = vfs.read(path) {
                             let handle = SoundHandle(next_handle);
@@ -92,17 +110,23 @@ impl GameAudio {
         self.dynamic = None;
     }
 
-    /// Rebuild legacy tables after a mid-session gamestate/map change.
+    /// Rebuild legacy tables after a mid-session gamestate/map change. `bsp` is
+    /// the gamestate's map, whose brush models place door and mover sounds.
     pub(crate) fn install_gamestate(
         &mut self,
         game_state: &GameState,
         vfs: Arc<VirtualFileSystem>,
+        bsp: &Bsp,
     ) {
         self.begin_map_change();
         self.sound_table_refresh = Some(SoundTableRefresh::new(game_state));
         self.legacy_vfs = Some(Arc::clone(&vfs));
         self.deferred_snapshots.clear();
-        self.legacy_load = Some(LegacyLoadTask::start(vfs, game_state.clone()));
+        self.legacy_load = Some(LegacyLoadTask::start(
+            vfs,
+            game_state.clone(),
+            inline_model_midpoints(bsp),
+        ));
     }
 
     /// Integrate worker handles into the current bank before replaying queued events.
