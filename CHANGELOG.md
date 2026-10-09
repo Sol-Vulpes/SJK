@@ -21,6 +21,7 @@ Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 
 ## Unreleased
 
+- The Profile screen's tabs make room for a larger menu text size (ui_textScale, ui_letterSpacing), so Achievements is no longer cut, and the main page's Profile line is shorter, clear of the servers _(Sol)_
 - Your own SJK key id is no longer printed on the Profile screen, your Players card, your sender card or the SJK chat's side panel; the SJK page of the main menu loses its Profile entry, now the main Profile button _(Sol)_
 - The Profile screen has one row of tabs: Character, Saber, Force, SJK Profile, Achievements, Medals (each medal with its picture, what it is for and when it was given, and the ones still to get) and Collection (every unlockable, owned or locked, with how to get it); the in-game menu's Achievements entry is now a tab, and the main page's Character button reads Profile _(Sol)_
 - The SJK identity key moved from the Profile screen to Settings, Network, and its key id and file stay hidden until Show key, each time the page opens, so it can be opened on a stream _(Sol)_

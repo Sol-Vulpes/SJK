@@ -207,6 +207,16 @@ impl ClientMenu {
         }
     }
 
+    /// Choose entry `index` of the main page's ring, as Down would (world shots).
+    #[cfg(test)]
+    pub(crate) fn sjk_home_entry_for_shot(&mut self, index: usize) {
+        for _ in 0..index {
+            let _ = self
+                .home
+                .key(winit::keyboard::KeyCode::ArrowDown, self.sjk_home_servers());
+        }
+    }
+
     /// A key on the SJK UI's main page.
     pub(super) fn sjk_home_key(
         &mut self,

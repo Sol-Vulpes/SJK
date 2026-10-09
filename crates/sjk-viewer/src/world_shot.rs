@@ -1562,6 +1562,52 @@ like this one.",
         });
     }
 
+    /// The Profile screen's tabs and the main page at Sol's text style
+    /// (`ui_textScale 1.2`): every tab's name whole, on Character and on
+    /// Achievements, and the main page's Profile line clear of the servers.
+    #[test]
+    #[ignore = "renders with the GPU and the installed game data named by JKA_GAME_DATA"]
+    fn duel6_sjk_profile_tabs_styled() {
+        use crate::profile_hub::Tab;
+        on_big_stack(|| {
+            let cvars = [
+                ("ui_menuStyle", "sjk"),
+                (crate::settings::quick::HIDE_CVAR, "1"),
+                ("name", "^1Sol^7Vulpes"),
+                (crate::text::style::SCALE_CVAR, "1.2"),
+            ];
+            let menu = menu::ClientMenu::new(true, String::new());
+            let Some((mut gpu, _profile)) =
+                open("maps/mp/duel6.bsp", [1920, 1080], Some(menu), &cvars)
+            else {
+                return;
+            };
+            gpu.ui_epoch -= std::time::Duration::from_millis(2_000);
+            let _ = frame(&mut gpu, 20);
+            if let Some(menu) = gpu.client_menu.as_mut() {
+                menu.sjk_home_entry_for_shot(1);
+            }
+            println!(
+                "{}",
+                shoot(&mut gpu, 6, "duel6-menu-profile-styled").display()
+            );
+            if let Some(console) = gpu.console.as_mut() {
+                console.preview_profile(profile_preview());
+            }
+            gpu.open_profile_hub(Tab::Character);
+            let _ = frame(&mut gpu, 30);
+            println!(
+                "{}",
+                shoot(&mut gpu, 4, "duel6-profile-tabs-styled-character").display()
+            );
+            gpu.profile_hub_show_for_shot(Tab::Achievements);
+            println!(
+                "{}",
+                shoot(&mut gpu, 6, "duel6-profile-tabs-styled-achievements").display()
+            );
+        });
+    }
+
     /// The SJK UI's Profile screen over duel6: opened from the game menu on its
     /// Character tab (the model in its live preview), then Ctrl+Tab through Saber,
     /// Force, SJK Profile, Achievements, Medals and Collection (a made-up profile and

@@ -9,6 +9,7 @@
 
 use sjk_shell::{CvarDefinition, CvarFlags, CvarRegistry};
 use sjk_ui::Rect;
+use std::sync::atomic::{AtomicU32, Ordering};
 
 /// Menu text size multiplier cvar.
 pub(crate) const SCALE_CVAR: &str = "ui_textScale";
@@ -61,6 +62,26 @@ impl TextStyle {
             letter_spacing: letter_spacing + self.tracking * styled,
             bounds: Rect::new(rect.x, rect.y - grow, rect.width, rect.height + grow * 2.0),
         }
+    }
+}
+
+/// The style the menus draw with, as [`publish`] last set it: its scale and tracking
+/// as `f32` bits.
+static CURRENT: [AtomicU32; 2] = [AtomicU32::new(1.0_f32.to_bits()), AtomicU32::new(0)];
+
+/// Make `style` the one [`current`] answers, once a frame as the cvars are read.
+pub(crate) fn publish(style: TextStyle) {
+    CURRENT[0].store(style.scale.to_bits(), Ordering::Relaxed);
+    CURRENT[1].store(style.tracking.to_bits(), Ordering::Relaxed);
+}
+
+/// The style the menus draw with this frame, for a layout that sets words side by
+/// side and must leave each its styled width (the Profile screen's tabs); neutral
+/// until [`publish`].
+pub(crate) fn current() -> TextStyle {
+    TextStyle {
+        scale: f32::from_bits(CURRENT[0].load(Ordering::Relaxed)),
+        tracking: f32::from_bits(CURRENT[1].load(Ordering::Relaxed)),
     }
 }
 
