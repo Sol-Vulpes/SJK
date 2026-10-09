@@ -324,26 +324,6 @@ fn segment_width(label: &str) -> f32 {
     32.0 + 8.6 * label.chars().count() as f32
 }
 
-/// Where segment `index` of [`segments`] ending at `right` and centred on `y` lies
-/// (frame pixels), for a caller that hit-tests them itself.
-pub(crate) fn segment_rect(right: f32, y: f32, labels: &[&str], index: usize) -> [f32; 4] {
-    let inset = 3.0;
-    let total: f32 = labels.iter().map(|label| segment_width(label)).sum::<f32>() + inset * 2.0;
-    let before: f32 = labels
-        .iter()
-        .take(index)
-        .map(|label| segment_width(label))
-        .sum();
-    let top = y - CONTROL_HEIGHT * 0.5;
-    let width = labels.get(index).map_or(0.0, |label| segment_width(label));
-    [
-        right - total + inset + before,
-        top + inset,
-        width,
-        CONTROL_HEIGHT - inset * 2.0,
-    ]
-}
-
 /// Segments ending at `right`, centred on `y`: every choice side by side in
 /// one pill, the one in use filled gold; choice `i` answers to
 /// `token_base + i`. `labels` are shown in sentence case.

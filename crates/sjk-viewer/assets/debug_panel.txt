@@ -3059,6 +3059,41 @@ test: Try cg_hudScale 1.5 and 4K.
 test: Leave the vehicle: the normal HUD returns.
 note: Not tried in a game. Damage icons, no-ammo flash and passengers are not done.
 
+# ---- Profile screen tabs, 09/10/2026 ----
+
+[profile-tabs]
+area: Menus & settings
+title: Profile screen: one row of tabs, from Character to Collection
+change: Character, Saber, Force, SJK Profile, Achievements, Medals, Collection in one row.
+change: Medals has its own tab; Collection lists every unlockable, owned and locked.
+change: In-game list loses Achievements; the main page's Character now reads Profile.
+test: Main page > Profile: the seven tabs under your name; click each, the row stays put.
+test: Ctrl+Tab and Ctrl+Shift+Tab go round all seven; on Character, Saber, Force Tab and [ ] too.
+test: Medals: yours lit with date and note, the others dimmed "Not given yet".
+test: In a match, Esc > Profile; leave on Medals with Esc; Esc > Profile opens on Medals.
+test: Console: profile, achievements, unlockables open their tabs; again closes them.
+note: Classic menus keep the old pages. Collection is one constant if it gets another name.
+
+[identity-hidden]
+area: Menus & settings
+title: Identity key in Settings, hidden until Show key
+change: Settings > Network > SJK identity key opens the Identity page; no more Identity tab.
+change: Key id and key file show bullets "(hidden)" until Show key, each time the page opens.
+test: Settings > Network > SJK identity key, Enter: key id and file are hidden.
+test: Show key reveals them, Hide key hides them; close and reopen: hidden again.
+test: Try the classic menus too (SHOW KEY button).
+note: The key id still shows on SJK Profile, the Players card and chat sender cards (unchanged).
+
+[picture-browse]
+area: Menus & settings
+title: Picture: Browse... file dialog and stricter checks
+change: SJK Profile > picture > Browse... opens the system's file dialog (PNG, JPEG, TGA).
+change: Refused with a reason: empty, under 64 px, over 4:1, fully clear, damaged, not a picture.
+test: Browse..., pick a PNG: the preview shows; Use this picture sends it.
+test: Pick a renamed .exe or .gif as .png, a 32 px picture, a 1000x100 banner: each says why.
+test: While the dialog is open the game keeps drawing; Browse... again does nothing.
+note: The dialog has no parent window: check it comes to the front in fullscreen.
+
 [changed-dot]
 area: Menus & settings
 title: Changed-setting dot right after the setting's name

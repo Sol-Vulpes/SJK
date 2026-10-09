@@ -17,7 +17,7 @@ impl ViewerConsole {
         self.open_identity_panel();
     }
 
-    /// Show the page (the SJK menus' Identity entry).
+    /// Show the page (Settings' SJK identity key row, the classic SJK menu's Identity).
     pub(crate) fn open_identity_panel(&mut self) {
         let owns_console = !self.open;
         self.open_identity_panel_owned(owns_console);
@@ -66,6 +66,8 @@ impl ViewerConsole {
             PanelAction::UseDefaultHub => {
                 self.set_cvar("cl_hubUrl", crate::player_identity::DEFAULT_HUB_URL);
             }
+            // The page shows or hides the key's id and file itself.
+            PanelAction::Reveal => {}
             PanelAction::CopyKeyId => {
                 if let Some(snapshot) = crate::player_identity::snapshot()
                     && crate::console::clipboard::copy(&snapshot.key_id)

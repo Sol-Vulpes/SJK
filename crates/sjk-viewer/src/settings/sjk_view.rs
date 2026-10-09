@@ -374,6 +374,15 @@ impl SettingsMenu {
                     RowControl::Segment { row, index: 0 }.token(),
                 );
             }
+            // It opens a page: no list drops from it.
+            ValueKind::IdentityPage => kit::field(
+                &mut self.ui,
+                frame,
+                field,
+                format_args!("{}", shown_value(&value)),
+                focused,
+                false,
+            ),
             ValueKind::Choice(_)
             | ValueKind::Resolution
             | ValueKind::DisplayMode
@@ -770,6 +779,7 @@ impl SettingsMenu {
                     ValueKind::Resolution => (&["Enter"][..], "sizes"),
                     ValueKind::HudPicker => (&["Enter"][..], "pictures"),
                     ValueKind::WheelPages => (&["Enter"][..], "edit"),
+                    ValueKind::IdentityPage => (&["Enter"][..], "open"),
                     ValueKind::Text => (&["Enter"][..], "type"),
                     _ => (&["Left", "Right"][..], "change"),
                 });

@@ -516,6 +516,10 @@ impl crate::GpuState {
                 }
                 self.sync_cursor_policy();
             }
+            // The SJK UI shows them as the Profile screen's tabs.
+            crate::console::PROFILE_COMMAND if self.in_game_menu.is_sjk() => {
+                self.toggle_profile_hub(crate::profile_hub::Tab::Profile);
+            }
             crate::console::PROFILE_COMMAND => {
                 if let Some(console) = &mut self.console {
                     console.toggle_profile_panel(crate::console::profile_panel::Tab::Profile);
@@ -537,11 +541,17 @@ impl crate::GpuState {
                 }
                 self.sync_cursor_policy();
             }
+            crate::console::UNLOCKABLES_COMMAND if self.in_game_menu.is_sjk() => {
+                self.toggle_profile_hub(crate::profile_hub::Tab::Collection);
+            }
             crate::console::UNLOCKABLES_COMMAND => {
                 if let Some(console) = &mut self.console {
                     console.toggle_unlockables_panel();
                 }
                 self.sync_cursor_policy();
+            }
+            crate::console::ACHIEVEMENTS_COMMAND if self.in_game_menu.is_sjk() => {
+                self.toggle_profile_hub(crate::profile_hub::Tab::Achievements);
             }
             crate::console::ACHIEVEMENTS_COMMAND => {
                 if let Some(console) = &mut self.console {

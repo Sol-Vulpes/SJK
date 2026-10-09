@@ -579,7 +579,8 @@ mod tests {
 
     /// The SJK UI over the live duel6, as a player sees it: the main page on
     /// the tour's first shot, later shots of the tour (the menu's clock moved
-    /// on), and Settings over the tour.
+    /// on), and Settings over the tour (Interface, and Network with the SJK identity
+    /// key's row).
     #[test]
     #[ignore = "renders with the GPU and the installed game data named by JKA_GAME_DATA"]
     fn duel6_sjk_menu() {
@@ -610,6 +611,14 @@ mod tests {
             }
             gpu.ui_epoch -= std::time::Duration::from_millis(2_000);
             shoot(&mut gpu, 4, "duel6-menu-settings");
+            // Network, with the SJK identity key's row, the key itself hidden.
+            if let (Some(menu), Some(console)) = (gpu.client_menu.as_mut(), gpu.console.as_ref()) {
+                menu.open_sjk_settings(console, 11, crate::player_menu::ReturnTarget::MainMenu);
+            }
+            shoot(&mut gpu, 4, "duel6-menu-settings-network");
+            if let (Some(menu), Some(console)) = (gpu.client_menu.as_mut(), gpu.console.as_ref()) {
+                menu.open_sjk_settings(console, 7, crate::player_menu::ReturnTarget::MainMenu);
+            }
             // Key bindings, then one of them awaiting its key.
             for (capture, name) in [
                 (false, "duel6-menu-keys"),
@@ -830,11 +839,11 @@ mod tests {
     /// for the Profile page's shots.
     fn profile_preview() -> crate::console::profile_panel::Preview {
         use crate::console::profile_panel::Preview;
-        let medal = |id: &str, count| sjk_identity::Medal {
+        let medal = |id: &str, count, note: &str| sjk_identity::Medal {
             id: id.to_owned(),
             count,
             awarded: 1_791_336_225,
-            note: String::new(),
+            note: note.to_owned(),
         };
         let me = sjk_identity::Profile {
             key_id: "44f3d0b36c9b2510".to_owned(),
@@ -855,7 +864,14 @@ Found the fog bug, ask me about it!"
                     last_seen: 0,
                 })
                 .collect(),
-            medals: vec![medal("early_tester", 1), medal("bug_hunter", 2)],
+            medals: vec![
+                medal("early_tester", 1, "Tested the first alphas with us"),
+                medal(
+                    "bug_hunter",
+                    2,
+                    "The fog that followed the camera, and the drain",
+                ),
+            ],
             achievements: Vec::new(),
             avatar: String::new(),
             unlocks: vec![sjk_identity::Unlock {
@@ -1001,16 +1017,23 @@ like this one.",
             avatar: String::new(),
             unlocks: Vec::new(),
         };
-        let medal = |id: &str, count| sjk_identity::Medal {
+        let medal = |id: &str, count, note: &str| sjk_identity::Medal {
             id: id.to_owned(),
             count,
             awarded: 1_791_336_225,
-            note: String::new(),
+            note: note.to_owned(),
         };
         let me = sjk_identity::Profile {
             staff: true,
             verified: true,
-            medals: vec![medal("early_tester", 1), medal("bug_hunter", 2)],
+            medals: vec![
+                medal("early_tester", 1, "Tested the first alphas with us"),
+                medal(
+                    "bug_hunter",
+                    2,
+                    "The fog that followed the camera, and the drain",
+                ),
+            ],
             achievements: crate::achievements::ALL
                 .iter()
                 .step_by(2)
@@ -1027,7 +1050,7 @@ like this one.",
             me.clone(),
             sjk_identity::Profile {
                 verified: true,
-                medals: vec![medal("early_contributor", 1)],
+                medals: vec![medal("early_contributor", 1, "")],
                 unlocks: vec![sjk_identity::Unlock {
                     id: "saber_sun".to_owned(),
                     granted: 1_791_336_225,
@@ -1540,10 +1563,11 @@ like this one.",
     }
 
     /// The SJK UI's Profile screen over duel6: opened from the game menu on its
-    /// Character tab (the model in its live preview), then Ctrl+Tab to the Profile tab
-    /// (a made-up profile), the Identity tab and round to Character; the game menu's
-    /// Achievements board; a 4:3 window; and from the main page, on the menu map's
-    /// stage.
+    /// Character tab (the model in its live preview), then Ctrl+Tab through Saber,
+    /// Force, SJK Profile, Achievements, Medals and Collection (a made-up profile and
+    /// collection) and round to Character; the game menu's Profile opening again on the
+    /// tab shown last; the picture panel with Browse...; a 4:3 window; and from the main
+    /// page's Profile, on the menu map's stage. No canvas runs out of room.
     #[test]
     #[ignore = "renders with the GPU and the installed game data named by JKA_GAME_DATA"]
     fn duel6_sjk_profile_screen() {
@@ -1552,7 +1576,22 @@ like this one.",
             let cvars = [
                 ("ui_menuStyle", "sjk"),
                 (crate::settings::quick::HIDE_CVAR, "1"),
+                ("name", "^1Sol^7Vulpes"),
             ];
+            let sun = || sjk_identity::Unlock {
+                id: "saber_sun".to_owned(),
+                granted: 1_791_336_225,
+                note: "Thanks for testing the blades with us".to_owned(),
+            };
+            let overflowed = |gpu: &GpuState| {
+                gpu.console
+                    .as_ref()
+                    .is_some_and(crate::console::ViewerConsole::profile_pages_overflowed)
+                    || gpu
+                        .client_menu
+                        .as_ref()
+                        .is_some_and(menu::ClientMenu::player_overflowed)
+            };
             for size in [[1920, 1080], [1440, 1080]] {
                 let suffix = if size[0] == 1920 { "" } else { "-4x3" };
                 let menu = menu::ClientMenu::new(false, String::new());
@@ -1569,6 +1608,7 @@ like this one.",
                 if let Some(console) = gpu.console.as_mut() {
                     console.close_for_connection();
                     console.preview_profile(profile_preview());
+                    console.preview_collection(Some(vec![sun()]), 0.8);
                 }
                 let _ = frame(&mut gpu, 20);
                 // As the game menu's Profile opens it the first time.
@@ -1577,17 +1617,23 @@ like this one.",
                 let _ = frame(&mut gpu, 60);
                 let name = format!("duel6-profile-screen-character{suffix}");
                 println!("{}", shoot(&mut gpu, 4, &name).display());
-                for (tab, part) in [(Tab::Profile, "profile"), (Tab::Identity, "identity")] {
+                assert!(!overflowed(&gpu), "Character{suffix}");
+                for tab in &Tab::ALL[1..] {
                     gpu.profile_hub_next_for_shot();
-                    assert_eq!(gpu.profile_hub_tab(), Some(tab));
-                    for _ in 0..240 {
-                        let _ = frame(&mut gpu, 1);
-                        if crate::medals::art::decoded().is_some() {
-                            break;
+                    assert_eq!(gpu.profile_hub_tab(), Some(*tab));
+                    // The medals' pictures are decoded the first time they show.
+                    if *tab == Tab::Medals {
+                        for _ in 0..240 {
+                            let _ = frame(&mut gpu, 1);
+                            if crate::medals::art::decoded().is_some() {
+                                break;
+                            }
                         }
                     }
+                    let part = tab.label().to_lowercase().replace(' ', "-");
                     let name = format!("duel6-profile-screen-{part}{suffix}");
                     println!("{}", shoot(&mut gpu, 6, &name).display());
+                    assert!(!overflowed(&gpu), "{tab:?}{suffix}");
                 }
                 // Round to Character: the console's page closes, the game menu waits
                 // under it on Profile.
@@ -1597,21 +1643,30 @@ like this one.",
                 if size[0] != 1920 {
                     continue;
                 }
-                // The game menu's Achievements: the board alone.
-                if let Some(menu) = gpu.client_menu.as_mut() {
-                    menu.leave_player_hub();
-                }
-                gpu.game_menu = true;
+                // Leave on Medals: the game menu's Profile opens on it again.
+                gpu.profile_hub_show_for_shot(Tab::Medals);
+                assert_eq!(gpu.profile_hub_tab(), Some(Tab::Medals));
+                let _ = frame(&mut gpu, 2);
                 if let Some(console) = gpu.console.as_mut() {
-                    console.open_achievements();
+                    console.close_profile_hub_page();
                 }
                 assert_eq!(gpu.profile_hub_tab(), None);
+                assert!(gpu.game_menu, "back on the game menu");
+                gpu.open_profile_hub_from_game(None);
+                assert_eq!(gpu.profile_hub_tab(), Some(Tab::Medals));
+                // The picture panel, with Browse..., on the SJK Profile tab.
+                gpu.profile_hub_show_for_shot(Tab::Profile);
+                if let Some(console) = gpu.console.as_mut() {
+                    console.preview_profile(profile_preview());
+                    console.profile_show_picture();
+                }
                 println!(
                     "{}",
-                    shoot(&mut gpu, 6, "duel6-ingame-achievements").display()
+                    shoot(&mut gpu, 6, "duel6-profile-screen-picture").display()
                 );
+                assert!(!overflowed(&gpu), "the picture panel");
             }
-            // From the main page: the Character tab on the menu map's stage.
+            // From the main page's Profile: the Character tab on the menu map's stage.
             let menu = menu::ClientMenu::new(true, String::new());
             let Some((mut gpu, _profile)) =
                 open("maps/mp/duel6.bsp", [1920, 1080], Some(menu), &cvars)
@@ -1627,9 +1682,14 @@ like this one.",
                 "{}",
                 shoot(&mut gpu, 150, "duel6-profile-screen-main").display()
             );
-            gpu.profile_hub_next_for_shot();
-            assert_eq!(gpu.profile_hub_tab(), Some(Tab::Profile));
+            gpu.profile_hub_show_for_shot(Tab::Collection);
+            assert_eq!(gpu.profile_hub_tab(), Some(Tab::Collection));
             assert!(!gpu.game_menu, "the main page stays under it");
+            println!(
+                "{}",
+                shoot(&mut gpu, 6, "duel6-profile-screen-main-collection").display()
+            );
+            assert!(!overflowed(&gpu), "Collection from the main page");
         });
     }
 

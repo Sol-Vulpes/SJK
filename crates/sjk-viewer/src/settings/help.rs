@@ -415,6 +415,10 @@ const HELP: &[(&str, &str)] = &[
         "The chat every SJK player shares through the SJK hub, in menus and games. Off hides it.",
     ),
     (
+        super::catalog::IDENTITY_ROW,
+        "Your SJK key: switch it on, back it up, copy its id. Enter opens it; the key stays hidden until Show.",
+    ),
+    (
         "rate",
         "Most data per second the server may send you; raise it on a fast connection.",
     ),

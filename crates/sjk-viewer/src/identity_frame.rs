@@ -6,8 +6,8 @@
 //! (`profile_card.rs`). Each frame it also lets the chat feed follow the SJK chat
 //! (`sjk_chat_frame.rs`), starts and ends emotes (`emotes_frame.rs`), keeps the
 //! players' looks (`looks_frame.rs`), follows the players muted on this PC
-//! (`muted_players_frame.rs`) and puts the pictures that finished loading into the
-//! UI's atlas.
+//! (`muted_players_frame.rs`), notes the Profile screen's tab on show
+//! (`profile_hub.rs`) and puts the pictures that finished loading into the UI's atlas.
 
 use super::*;
 use sjk_identity::Settings;
@@ -16,6 +16,7 @@ impl GpuState {
     /// Tell the identity service about the settings and the live session. Does
     /// nothing between its twice-a-second turns.
     pub(crate) fn update_identity(&mut self) {
+        self.remember_profile_hub_tab();
         self.update_sjk_chat();
         self.update_emotes();
         self.update_muted_players();

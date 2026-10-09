@@ -7,8 +7,8 @@
 //! keyboard and the pointer serve both looks.
 
 use super::{
-    BACK_TOKEN, BIO_TOKEN, COPY_TOKEN, Focus, HUB_TOKEN, Inputs, Panel, SAVE_TOKEN, TOGGLE_TOKEN,
-    fit_tail, view as page_view,
+    BACK_TOKEN, BIO_TOKEN, COPY_TOKEN, Focus, HUB_TOKEN, Inputs, Panel, REVEAL_TOKEN, SAVE_TOKEN,
+    TOGGLE_TOKEN, fit_tail, view as page_view,
 };
 use crate::console::browser::classic::{
     FRAME, LABEL, LIST_BACK, LIST_BORDER, OPTION, VALUE, border, fill, text, with_alpha,
@@ -110,7 +110,7 @@ impl Panel {
         font: &UiFont,
         viewport: [f32; 2],
     ) {
-        let mut page = page_view(inputs);
+        let mut page = page_view(inputs, self.revealed);
         // The medals are the status's last line, their medallions at its right end.
         let medal_line = super::medals::classic_line(page.medals.as_deref()).map(|line| {
             page.lines.push(line);
@@ -416,7 +416,8 @@ impl Panel {
         self.ui.hit_region(token, area);
     }
 
-    /// Save, copy the key id and, when the hub is not SJK's own, the way back to it.
+    /// Save, copy the key id, show or hide the key and, when the hub is not SJK's own,
+    /// the way back to it.
     fn classic_buttons(
         &mut self,
         place: &Placement,
@@ -432,7 +433,7 @@ impl Panel {
             place,
             SAVE_TOKEN,
             "Save",
-            [x, y, 90.0, height],
+            [x, y, 80.0, height],
             focus == Focus::Save,
             "Send your bio to the hub.",
             hint,
@@ -441,9 +442,22 @@ impl Panel {
             place,
             COPY_TOKEN,
             if copied { "Copied" } else { "Copy my key id" },
-            [x + 100.0, y, 150.0, height],
+            [x + 88.0, y, 140.0, height],
             focus == Focus::Copy,
             "Copy your key id, to give to whoever verifies you.",
+            hint,
+        );
+        self.classic_button(
+            place,
+            REVEAL_TOKEN,
+            if self.revealed {
+                "Hide key"
+            } else {
+                "Show key"
+            },
+            [x + 236.0, y, 100.0, height],
+            focus == Focus::Reveal,
+            "Show your key id and key file, hidden while nobody asks (on a stream, say).",
             hint,
         );
         if self.offer_hub {
@@ -451,7 +465,7 @@ impl Panel {
                 place,
                 HUB_TOKEN,
                 "Use the official hub",
-                [x + 260.0, y, 200.0, height],
+                [x + 344.0, y, 180.0, height],
                 focus == Focus::Hub,
                 "Use SJK's own hub (sjk.dfox.app) again.",
                 hint,

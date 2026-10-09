@@ -151,6 +151,7 @@ fn row_view(
         | ValueKind::DisplayMode
         | ValueKind::HudPicker
         | ValueKind::WheelPages
+        | ValueKind::IdentityPage
         | ValueKind::Quality => ui.form_cycler(value_zone, value, None, value_color, s),
         ValueKind::Text => {
             ui.form_value(value, value_zone, value_color, s);

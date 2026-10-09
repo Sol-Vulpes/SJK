@@ -4,7 +4,7 @@
 //!
 //! The ring's gold arc points at the chosen entry. Play, SJK and Quit open
 //! pages of their own on the same ring (the arc swaps to their entries, as
-//! retail's pages swapped inside one frame); Character and Settings open their
+//! retail's pages swapped inside one frame); Profile and Settings open their
 //! screens. Escape leaves a page for the main one, and on the main one asks to
 //! quit.
 //!
@@ -138,8 +138,8 @@ const MAIN: [Entry; 5] = [
         Step::Page(Page::Play),
     ),
     entry(
-        "Character",
-        "Name, model, saber and Force",
+        "Profile",
+        "Character, saber and Force; your SJK profile and medals",
         open(MainDestination::Player),
     ),
     entry(

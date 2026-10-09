@@ -118,13 +118,14 @@ its Character, the character standing on the map's path below the tower beside
 the form; What's new, Update and Identity in the same look; and its Servers, the
 server browser with where the servers come from and which show on the left, the
 sortable list in the middle and the chosen server's map, numbers and players on
-the right; and its in-game menu, a compact arc of seven entries (Resume, Profile,
-Achievements, Players, Settings, Servers, Leave) over a dark fade on the match's left,
+the right; and its in-game menu, a compact arc of six entries (Resume, Profile,
+Players, Settings, Servers, Leave) over a dark fade on the match's left,
 a row of small icons under the emblem (Camera control, What's new, Credits, Report a
 bug, SJK chat, and Staff tools for a staff key), and a card of the match (server, map,
 mode and limits, score and place, clock, players) on the right with the vote on (Yes,
 No), the player's side and its buttons (Join red, Join blue, Spectate) and Call a
-vote; and its Profile screen, Character, Profile and Identity as tabs (Ctrl+Tab).
+vote; and its Profile screen, one row of tabs: Character, Saber, Force, SJK Profile,
+Achievements, Medals and Collection (Ctrl+Tab).
 Tab moves the keyboard between the list, the row and the card
 ([sjk-ui.md](sjk-ui.md#in-game-menu)). Every other screen opens
 in its classic+ version. A client started in the SJK UI stands on mp/duel6
@@ -1968,16 +1969,19 @@ are in [identity.md](identity.md).
   talk to the hub. Off sends nothing and makes no key.
 - `cl_hubUrl` (default `https://sjk.dfox.app`; Settings > Network > SJK hub) is the
   hub's `https://` address. Empty means no hub, so nothing is sent.
-- The Identity page is where a player sets all of this up without a command: main
-  menu > SJK > IDENTITY (classic menus), the in-game SJK menu, or the `identity`
-  command ([identity_panel.rs](../crates/sjk-viewer/src/identity_panel.rs)). It shows the
-  key id, the file to back up, whether the hub's operator vouches for the player, the
-  hub's status and the players it knows on the current server, and has
+- The Identity page is where a player sets all of this up without a command:
+  Settings > Network > SJK identity key, main menu > SJK > IDENTITY (classic menus),
+  the in-game SJK menu, or the `identity` command
+  ([identity_panel.rs](../crates/sjk-viewer/src/identity_panel.rs)). It shows the key
+  id and the file to back up (hidden behind bullets until Show key, each time the page
+  opens, so it can be opened on a stream), whether the hub's operator vouches for the
+  player, the hub's status and the players it knows on the current server, and has
   - a switch for `cl_identity` ("Share my identity with the SJK hub", ON or OFF);
   - an optional bio field (500 characters at most), saved to the hub with Save or Enter.
     There is no name field: the hub takes the name the player plays under (`name`), and
     the page shows it with up to three earlier names. A new player has nothing to do;
   - "Copy my key id" (for the operator to verify the player);
+  - "Show key" (then "Hide key"): shows the key id and file;
   - "Use the official hub", shown only while `cl_hubUrl` is another address (a hub tried
     on this PC, say): it sets `cl_hubUrl` back to `https://sjk.dfox.app`. A saved
     `cl_hubUrl` wins over the default, so an old address stays until it is changed.
@@ -1994,24 +1998,26 @@ are in [identity.md](identity.md).
   the bio (`identity name` says the name is the one played under), `identity key` prints
   the key id and file,
   `identity who [slot]` lists known players (with a slot, that player's bio).
-- The Profile page (the SJK UI's Profile screen, opened by its main page > SJK >
-  Profile, its main page's Character and the in-game menu's Profile, with Character
-  and Identity as its other tabs; the classic menu's SJK page and in-game SJK menu; or
-  the `profile` command) shows the player's profile as
-  others read it on the hub: name, verified, member since, other names, medals, the
-  bio (written there, up to 6 lines under the hub's rules), their record from the
-  achievement counts, and a second tab, the achievements board (`achievements`, and
-  on its own the SJK UI in-game menu's Achievements). It
-  has the SJK UI's look in every menu style; its Identity settings button opens the
-  Identity page ([identity.md](identity.md#profile)) and See unlockables the
-  Unlockables page (`unlockables`, [unlockables.md](unlockables.md#unlockables-page)).
+- The Profile page (in the SJK UI the Profile screen's SJK Profile, Achievements and
+  Medals tabs, opened by its main page's Profile and SJK > Profile and the in-game
+  menu's Profile; the classic menu's SJK page and in-game SJK menu; or the `profile`
+  command) shows the player's profile as others read it on the hub: name, verified,
+  member since, other names, medals, the bio (written there, up to 6 lines under the
+  hub's rules), their record from the achievement counts, the achievements board
+  (`achievements`) and, on the Profile screen, the medals on a tab of their own. It
+  has the SJK UI's look in every menu style; See unlockables opens the Unlockables
+  page (`unlockables`, [unlockables.md](unlockables.md#unlockables-page)), the Profile
+  screen's Collection tab in the SJK UI ([identity.md](identity.md#profile)).
   The SJK UI's main page and in-game menu show a profile card bottom left (picture,
   name, verified, medals and achievements unlocked) that opens it with a click
   ([sjk-ui.md](sjk-ui.md#profile-card)).
-- A picture: drop a PNG, JPEG or TGA on the window (or type `sjkavatar <file>`; a
-  path's words may be left unquoted), see it on the Profile page cropped to a square
-  and made 128 pixels across, and press Use this picture to send it to the hub, where
-  everyone sees it. `sjkavatar clear` (or Remove picture there, pressed twice) takes it
+- A picture: choose a PNG, JPEG or TGA with Browse... on the Profile page's picture
+  panel (the system's file dialog), drop one on the window or type `sjkavatar <file>`
+  (a path's words may be left unquoted); it is checked (64 to 8192 pixels a side, at
+  most four times as long as wide, something visible, a whole file of one of those
+  formats whatever its name; every refusal says why), shown cropped to a square and
+  made 128 pixels across, and Use this picture sends it to the hub, where everyone
+  sees it. `sjkavatar clear` (or Remove picture there, pressed twice) takes it
   down and `sjkavatar` alone opens the picture panel. Other players' pictures are
   downloaded when first shown and kept in `avatars/` beside `identity.key` (at most
   256 pictures, 8 MB) ([identity.md](identity.md#pictures)).
@@ -2210,8 +2216,9 @@ loaded skins change.
 
 `saberskin` lists the blade skins, owned (since when) or locked (how to get it), and
 which is worn; `saberskin <id>` or `saberskin none` sets `cg_saberSkin` (a locked one
-is kept and shows once unlocked). `unlockables` opens the Unlockables page (also the
-Profile page's See unlockables), where owned skins are equipped and unequipped
+is kept and shows once unlocked). `unlockables` opens the Unlockables page (the Profile screen's Collection tab in the
+SJK UI; also the Profile page's See unlockables), where owned skins are equipped and
+unequipped
 ([sjk-ui.md](sjk-ui.md#sjks-pages)).
 
 A skin brings its own sounds, heard for each player wearing it, over the stock ones,

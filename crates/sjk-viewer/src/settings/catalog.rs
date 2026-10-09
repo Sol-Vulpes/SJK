@@ -58,7 +58,14 @@ pub(super) enum ValueKind {
     /// The graphics quality level ([`crate::graphics_quality`], not a cvar):
     /// steps or lists the levels, each setting the renderer's costly cvars.
     Quality,
+    /// The SJK identity's key (not a cvar): Enter opens the Identity page, where the
+    /// key's id and file stay hidden until shown.
+    IdentityPage,
 }
+
+/// The "SJK identity key" row's name in place of a cvar: the command that opens the
+/// same page.
+pub(crate) const IDENTITY_ROW: &str = "identity";
 
 #[derive(Clone, Copy)]
 pub(super) struct Setting {
@@ -625,6 +632,11 @@ pub(super) const NETWORK: &[Setting] = &[
         label: "SJK chat",
         cvar: "cl_sjkChat",
         kind: ValueKind::Bool,
+    },
+    Setting {
+        label: "SJK identity key",
+        cvar: IDENTITY_ROW,
+        kind: ValueKind::IdentityPage,
     },
     Setting {
         label: "Rate (bytes/s)",

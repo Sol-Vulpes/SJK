@@ -397,23 +397,28 @@ only to registered keys; a client keeps them to draw looks and does not pass the
 
 ## Profile
 
-The Profile page (the SJK UI's [Profile screen](sjk-ui.md#profile-screen), its
-Profile tab, opened by the main page > SJK > Profile and the in-game menu's Profile;
-the classic menu's SJK page and in-game SJK menu; or the `profile` command) is the
-player's SJK profile
-as other players read it on the hub, in the SJK UI's look in every menu style:
+The Profile page (the SJK UI's [Profile screen](sjk-ui.md#profile-screen), its SJK
+Profile, Achievements and Medals tabs, opened by the main page's Profile and SJK >
+Profile and the in-game menu's Profile; the classic menu's SJK page and in-game SJK
+menu; or the `profile` command) is the player's SJK profile as other players read it
+on the hub, in the SJK UI's look in every menu style:
 
 - who they are: the hub name with its colours, Verified by the SJK team or not yet,
   the date the key was registered (`Member since`), the key id and up to three other
-  names worn; Identity settings opens the Identity page (the switch, the key, the hub);
+  names worn (the switch, the key and the hub are on the Identity page, in Settings,
+  Network, since 09/10/2026);
 - their record, from the achievement counts kept on this PC (players defeated, saber
   kills, best streak, duels won, flags captured, maps and servers played, time
   played) and the last four achievements unlocked;
 - the bio, written in a box of up to 6 lines (Enter saves, Shift+Enter starts a new
   line, Revert puts back the hub's copy), with its counts, the hub's answer and the
   rules in a line under it;
-- their medals (picture, name, date given) and how many achievements are unlocked,
-  with a way to the board.
+- their medals (picture, name, date given; on the Profile screen a Medals tab of its
+  own instead: every medal the client knows, the ones given first with their whole
+  picture, when they were given, what they are for and the team's note, the others
+  dimmed as not given yet) and how many achievements are unlocked, with a way to the
+  board, and how many unlockables are owned, with a way to them (on the Profile
+  screen, its Achievements and Collection tabs).
 
 Its second tab is the achievements board (below; the `achievements` command opens
 it). With the identity off, or the hub out of reach, the page says so: the bio cannot
@@ -452,21 +457,39 @@ A player may show a small square picture beside their name (08/10/2026, Sol's
 request). The hub's side is `PROTOCOL.md`, "Pictures", in Sol-Vulpes/SJK-hub: the
 client needs a hub with it, or profiles carry no `avatar` and the stand-ins show.
 
-**Choosing one.** SJK opens no file dialog. A picture file dropped on the window (a
-PNG, JPEG or TGA, known by its extension, at any time; while the Profile page shows,
-any file but a `.cfg`, so the page can say why it is no picture) or named to
-`sjkavatar <file>` opens the Profile page on its picture panel. A worker thread reads
-the file (at most 16 MB) and decodes it with the `image` crate the client already
-uses (at most 8192 pixels a side and 256 MB of memory, at least 32 pixels a side),
-crops it to a square from its middle, scales it to 128 x 128 by area averaging and
-writes it as a PNG of the pixels only (RGB when every pixel is opaque, else RGBA).
+**Choosing one.** The picture panel's **Browse...** (09/10/2026, Sol's request) opens
+the system's file dialog, listing PNG, JPEG and TGA files, through the `rfd` crate
+(0.17.2; on Linux the desktop portal, reached through `libdbus` loaded at run time, so
+the build needs no GTK). The dialog runs on a worker thread, so the game keeps drawing;
+a second Browse... while it is open does nothing, and the file chosen is read as a
+dropped one. A picture file dropped on the window (a PNG, JPEG or TGA, known by its
+extension, at any time; while the Profile page shows, any file but a `.cfg`, so the
+page can say why it is no picture) or named to `sjkavatar <file>` opens the Profile
+page (in the SJK UI the Profile screen's SJK Profile tab) on its picture panel. A worker thread reads the file (at most 16 MB) and decodes
+it with the `image` crate the client already uses (at most 8192 pixels a side and 256
+MB of memory), crops it to a square from its middle, scales it to 128 x 128 by area
+averaging and writes it as a PNG of the pixels only (RGB when every pixel is opaque,
+else RGBA).
+
+The file is checked before anything is sent, whatever its name says
+([avatars/picture.rs](../crates/sjk-viewer/src/avatars/picture.rs), tightened
+09/10/2026): it must hold bytes and be a file; its content must be a PNG or JPEG (by
+its signature) or, as a TGA has none, a file named `.tga` that decodes as one, so a
+program, a GIF, a WebP or a BMP is refused whatever it is called; it must decode
+whole (a PNG cut short or damaged fails its checksums, a JPEG must reach its end
+marker after its first scan, as the decoder fills in a file cut short); it must be
+64 to 8192 pixels a side (64, the hub's own least: a smaller picture made 128 across
+is a blur) and at most four times as long as it is wide; and its middle square must
+show something (not every pixel clear). The hub checks again: square PNGs of 64 to
+1024 pixels and 256 KB, re-encoded.
 The panel shows it large, round and ringed as everyone will see it, "This is how it
 will look"; **Use this picture** sends it. Done, Escape or closing the page drops a
 picture not sent. **Remove picture** (a second press within 3 seconds) or
 `sjkavatar clear` takes the player's picture down. The panel says what went wrong in
-the player's words: not a picture SJK reads ("use a PNG, JPEG or TGA"), too big, too
-small, unreadable, the identity off or the hub out of reach, or the hub's own refusal
-(too many changes, stopped by the SJK team).
+the player's words: not a picture SJK reads ("use a PNG, JPEG or TGA"), an empty file,
+too big, too small ("at least 64 pixels a side"), too narrow or too wide, nothing to
+see, damaged or cut short, unreadable, the identity off or the hub out of reach, or
+the hub's own refusal (too many changes, stopped by the SJK team).
 
 **Sending.** The identity service's worker sends it, signed, once registered:
 `PUT /v1/avatar` with the PNG (at most 256 KiB, refused before sending when larger),
@@ -639,7 +662,9 @@ sends its counts, which the page says.
 - `cl_hubUrl` (default `https://sjk.dfox.app`; Settings > Network > SJK hub) is the hub's address.
   It must be `https://host[:port]` with no path; plain `http://` is accepted for
   localhost only.
-- `profile` opens the Profile page and `achievements` its board (again: closes it).
+- `profile` opens the Profile page and `achievements` its board (again: closes it); in
+  the SJK UI they are the Profile screen's SJK Profile and Achievements tabs, and
+  `unlockables` its Collection tab.
 - `staff` opens the Staff page, for a staff key only.
 - `sjkavatar <file>` reads a picture file and shows it on the Profile page, ready to
   send with Use this picture; `sjkavatar clear` takes the player's picture down;
@@ -656,11 +681,15 @@ sends its counts, which the page says.
   secret-area sound with each achievement's pop-up.
 - `debug_medal <id|all> [x<count>] [note]` shows made-up medals in the new medal
   pop-up, sending nothing ([Medals](#medals)).
-- The Identity page (main menu > SJK > IDENTITY, the Profile page's Identity settings,
-  the in-game SJK menu, or the `identity` command) shows what the hub knows: the name worn now and up to three earlier ones,
-  whether the key is verified, the key file's location and the players the hub knows here.
-  Its controls are optional: the on/off switch, a bio field with Save, a button that copies
-  the key id. The words do the same without it: `identity bio <text>` sets the bio,
+- The Identity page (Settings > Network > SJK identity key, main menu > SJK > IDENTITY
+  in the classic menus, the in-game SJK menu, or the `identity` command) shows what the
+  hub knows: the name worn now and up to three earlier ones, whether the key is
+  verified, the key id and the key file's location and the players the hub knows here.
+  The key id and the file (whose path names the Windows account) are bullets and
+  "(hidden)" until Show key is pressed, every time the page opens (not saved), so a
+  player can open it on a stream (09/10/2026, Sol's request). Its controls are
+  optional: the on/off switch, a bio field with Save, a button that copies the key id
+  (to the clipboard, never on screen), Show key. The words do the same without it: `identity bio <text>` sets the bio,
   `identity key` shows the key id and file, `identity who [slot]` lists the players the hub
   knows here (with a slot, their bio). `identity name` explains that the name is the one
   played under (`/name`).

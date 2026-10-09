@@ -182,8 +182,16 @@ impl crate::GpuState {
     /// A file was dropped on the window: a picture goes to the Profile page, anything
     /// else to the Import page, with what it holds.
     pub(crate) fn file_dropped(&mut self, path: &Path) {
+        let picture = self
+            .console
+            .as_ref()
+            .is_some_and(|console| dropped_picture(path, console.profile_panel_shown()));
+        // The SJK UI shows the picture on the Profile screen's SJK Profile tab.
+        if picture && self.in_game_menu.is_sjk() {
+            self.open_profile_hub(crate::profile_hub::Tab::Profile);
+        }
         if let Some(console) = &mut self.console {
-            if dropped_picture(path, console.profile_panel_shown()) {
+            if picture {
                 console.profile_load_picture(path);
             } else {
                 console.open_config_import(Some(path));

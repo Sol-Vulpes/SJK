@@ -37,6 +37,9 @@ md4.workspace = true
 pollster = "1.0.0"
 rodio = { version = "0.20.1", default-features = false, features = ["minimp3", "wav"] }
 ringbuf = "0.4.8"
+# The picture panel's Browse...: the system's file dialog. On Linux the desktop portal,
+# reached through libdbus loaded at run time, so the build needs no GTK.
+rfd = { version = "=0.17.2", default-features = false, features = ["xdg-portal"] }
 serde.workspace = true
 serde_json.workspace = true
 tempfile = "3.27.0"

@@ -630,6 +630,7 @@ impl SettingsMenu {
                 | ValueKind::DisplayMode
                 | ValueKind::HudPicker
                 | ValueKind::WheelPages
+                | ValueKind::IdentityPage
                 | ValueKind::Quality => {
                     let open = self.dropdown.as_ref().is_some_and(|open| open.row == row);
                     place.choice_field(
@@ -842,6 +843,7 @@ impl SettingsMenu {
             ValueKind::Resolution => "LEFT or RIGHT to step, ENTER for the list of sizes",
             ValueKind::HudPicker => "LEFT or RIGHT to step, ENTER to pick from pictures",
             ValueKind::WheelPages => "ENTER to edit the pages and their choices",
+            ValueKind::IdentityPage => "ENTER to open your key's page; the key stays hidden",
         });
         if self
             .defaults
@@ -971,6 +973,7 @@ pub(super) fn row_default(console: &ViewerConsole, setting: &Setting) -> RowDefa
             | ValueKind::DisplayMode
             | ValueKind::HudPicker
             | ValueKind::WheelPages
+            | ValueKind::IdentityPage
     ) {
         return RowDefault::default();
     }

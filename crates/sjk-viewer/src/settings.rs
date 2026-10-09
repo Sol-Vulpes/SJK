@@ -44,6 +44,8 @@ pub(crate) enum SettingsResult {
     /// The "Quick wheel pages" row: the SJK UI shows its Quick wheel category,
     /// the other styles the editor on its own ([`WheelMode`]).
     OpenWheelPages,
+    /// The "SJK identity key" row: the Identity page, over the settings.
+    OpenIdentity,
     /// A button of the classic panel screen around the options: index into
     /// its page's slots.
     Classic(usize),
@@ -694,6 +696,8 @@ impl SettingsMenu {
                         self.open_hud_picker(console);
                     } else if matches!(setting.kind, ValueKind::WheelPages) {
                         return SettingsResult::OpenWheelPages;
+                    } else if matches!(setting.kind, ValueKind::IdentityPage) {
+                        return SettingsResult::OpenIdentity;
                     } else if classic && self.open_dropdown(console, self.selected) {
                         // Classic+: a choice opens its list; nothing changes yet.
                     } else if !self.begin_numeric(console, self.selected) {
@@ -852,6 +856,7 @@ impl SettingsMenu {
                 ValueKind::DisplayMode => display.label().to_owned(),
                 ValueKind::HudPicker => hud.clone(),
                 ValueKind::WheelPages => wheel_pages_text(console),
+                ValueKind::IdentityPage => IDENTITY_TEXT.to_owned(),
                 ValueKind::Quality => crate::graphics_quality::shown(console).to_owned(),
                 ValueKind::Bool if setting.cvar == crate::graphics_quality::ULTRA_LOW_ROW => {
                     if crate::graphics_quality::ultra_low(console) {
@@ -973,6 +978,9 @@ fn float_text(value: f64) -> String {
     text
 }
 
+/// What the "SJK identity key" row shows: never the key itself.
+const IDENTITY_TEXT: &str = "Hidden: open to see";
+
 /// What the "Quick wheel pages" row shows: how many pages, and whether they
 /// are the defaults.
 fn wheel_pages_text(console: &ViewerConsole) -> String {
@@ -1076,6 +1084,7 @@ mod tests {
                     | ValueKind::DisplayMode
                     | ValueKind::HudPicker
                     | ValueKind::WheelPages
+                    | ValueKind::IdentityPage
                     | ValueKind::Quality
             ) {
                 continue;

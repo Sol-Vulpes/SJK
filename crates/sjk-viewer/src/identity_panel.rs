@@ -4,10 +4,14 @@
 //! typed with `identity_command.rs`). There is no name to choose: the hub
 //! takes the name the player plays under, so a new player has nothing to do here.
 //!
-//! Opened by the main menu's SJK page, the in-game SJK menu or the `identity` console
-//! command. Like the Update page it lives in the console and is drawn in place of it. Tab,
-//! the arrow keys and the pointer move between the controls; letters type into the focused
-//! field; Enter saves from a field.
+//! Opened by Settings (Network's "SJK identity key" row), the classic in-game SJK menu or
+//! the `identity` console command. Like the Update page it lives in the console and is
+//! drawn in place of it. Tab, the arrow keys and the pointer move between the controls;
+//! letters type into the focused field; Enter saves from a field.
+//!
+//! What tells the key apart (its id, the key file's path with the account's name in it)
+//! is hidden behind dots until Show is pressed, every time the page opens, so the page
+//! can be opened on a stream.
 
 use crate::menu::art::ArtSet;
 use crate::menu_widgets::{BACK_TOKEN, MenuCanvas};
@@ -39,6 +43,11 @@ const BIO_TOKEN: u16 = 932;
 const SAVE_TOKEN: u16 = 933;
 const COPY_TOKEN: u16 = 934;
 const HUB_TOKEN: u16 = 935;
+const REVEAL_TOKEN: u16 = 936;
+/// What stands for the key's id and file while they are hidden: bullets, which every
+/// family has (Windows-1252's 0x95).
+pub(crate) const HIDDEN: &str =
+    "\u{2022}\u{2022}\u{2022}\u{2022}\u{2022}\u{2022}\u{2022}\u{2022}\u{2022}\u{2022} (hidden)";
 
 /// What the console does after the page handled an event.
 #[derive(Debug, Eq, PartialEq)]
@@ -55,6 +64,8 @@ pub(crate) enum PanelAction {
     CopyKeyId,
     /// Point `cl_hubUrl` at SJK's own hub again.
     UseDefaultHub,
+    /// Show or hide the key's id and file.
+    Reveal,
 }
 
 /// The control the keyboard is on.
@@ -66,6 +77,8 @@ enum Focus {
     Copy,
     /// Back to SJK's own hub, offered while the address is another one.
     Hub,
+    /// Show or hide the key's id and file.
+    Reveal,
 }
 
 impl Focus {
@@ -76,6 +89,7 @@ impl Focus {
             Self::Save => SAVE_TOKEN,
             Self::Copy => COPY_TOKEN,
             Self::Hub => HUB_TOKEN,
+            Self::Reveal => REVEAL_TOKEN,
         }
     }
 }
@@ -83,16 +97,17 @@ impl Focus {
 /// The controls Tab visits, in order: with the identity off only the switch exists, and
 /// the way back to SJK's own hub only while it is offered.
 fn order(fields: bool, hub: bool) -> &'static [Focus] {
-    const ALL: [Focus; 5] = [
+    const ALL: [Focus; 6] = [
         Focus::Toggle,
         Focus::Bio,
         Focus::Save,
         Focus::Copy,
+        Focus::Reveal,
         Focus::Hub,
     ];
     match (fields, hub) {
         (false, _) => &ALL[..1],
-        (true, false) => &ALL[..4],
+        (true, false) => &ALL[..5],
         (true, true) => &ALL,
     }
 }
@@ -143,9 +158,8 @@ pub(crate) struct Panel {
     open: bool,
     /// The page opened the console, so closing the page closes it too.
     owns_console: bool,
-    /// Shown as the Profile screen's Identity tab ([`crate::profile_hub`]): the SJK
-    /// UI's look draws the screen's tabs at its top right.
-    hub: bool,
+    /// The key's id and file show: Show was pressed since the page opened.
+    revealed: bool,
     ui: MenuCanvas,
     focus: Focus,
     /// The bio being typed.
@@ -211,7 +225,8 @@ fn plain(headline: &str, lines: &[&str]) -> View {
     }
 }
 
-fn view(inputs: &Inputs<'_>) -> View {
+/// What the page says; the key's id and file are [`HIDDEN`] unless `revealed`.
+fn view(inputs: &Inputs<'_>, revealed: bool) -> View {
     if let Some(error) = inputs.key_error {
         return View {
             lines: vec![
@@ -234,10 +249,15 @@ fn view(inputs: &Inputs<'_>) -> View {
     let Some(snapshot) = inputs.snapshot else {
         return plain("Starting...", &["Preparing the identity key."]);
     };
-    let key = format!("Key id: {}", snapshot.key_id);
+    let (key_id, key_file) = if revealed {
+        (snapshot.key_id.as_str(), fit_tail(inputs.key_file, 90))
+    } else {
+        (HIDDEN, HIDDEN.to_owned())
+    };
+    let key = format!("Key id: {key_id}");
     // Two lines: the path can be long.
     let backup = [
-        format!("Key file: {}", fit_tail(inputs.key_file, 90)),
+        format!("Key file: {key_file}"),
         "Back it up: losing it loses this identity.".to_owned(),
     ];
     let mut view = match &snapshot.status {
@@ -355,7 +375,7 @@ impl Panel {
         Self {
             open: false,
             owns_console: false,
-            hub: false,
+            revealed: false,
             ui: MenuCanvas::with_capacities(160, 640, 512),
             focus: Focus::Toggle,
             bio: String::new(),
@@ -375,11 +395,12 @@ impl Panel {
         self.open
     }
 
-    /// Show the page; `owns_console` when the console was closed before it.
+    /// Show the page, the key's id and file hidden; `owns_console` when the console was
+    /// closed before it.
     pub(crate) fn open(&mut self, owns_console: bool) {
         self.open = true;
         self.owns_console = owns_console;
-        self.hub = false;
+        self.revealed = false;
         self.focus = Focus::Toggle;
         self.edited = false;
         self.message.clear();
@@ -397,15 +418,16 @@ impl Panel {
         self.ui.draw_list()
     }
 
-    /// Show the page as the Profile screen's Identity tab (`true`), or on its own;
-    /// [`Self::open`] puts it back on its own.
-    pub(crate) fn set_hub(&mut self, hub: bool) {
-        self.hub = hub;
+    /// Whether the key's id and file show (Show pressed since the page opened).
+    #[cfg(test)]
+    pub(crate) fn revealed(&self) -> bool {
+        self.revealed
     }
 
-    /// Whether the page is the Profile screen's Identity tab.
-    pub(crate) fn is_hub(&self) -> bool {
-        self.hub
+    /// Show the key's id and file, for the snapshots.
+    #[cfg(test)]
+    pub(crate) fn reveal_for_shot(&mut self) {
+        self.revealed = true;
     }
 
     /// The retail `art` the classic+ look can draw.
@@ -453,7 +475,14 @@ impl Panel {
             Focus::Bio | Focus::Save => self.save(),
             Focus::Copy => PanelAction::CopyKeyId,
             Focus::Hub => PanelAction::UseDefaultHub,
+            Focus::Reveal => self.reveal(),
         }
+    }
+
+    /// Show or hide the key's id and file.
+    fn reveal(&mut self) -> PanelAction {
+        self.revealed = !self.revealed;
+        PanelAction::Reveal
     }
 
     fn field(&mut self) -> Option<(&mut String, usize)> {
@@ -534,6 +563,10 @@ impl Panel {
                 self.focus = Focus::Hub;
                 PanelAction::UseDefaultHub
             }
+            Some(REVEAL_TOKEN) if self.fields => {
+                self.focus = Focus::Reveal;
+                self.reveal()
+            }
             _ => PanelAction::None,
         }
     }
@@ -589,6 +622,7 @@ impl Panel {
             "save" => Focus::Save,
             "copy" => Focus::Copy,
             "hub" => Focus::Hub,
+            "reveal" => Focus::Reveal,
             _ => Focus::Toggle,
         };
     }
@@ -649,21 +683,27 @@ mod tests {
 
     #[test]
     fn a_broken_key_beats_everything_else() {
-        let shown = view(&Inputs {
-            key_error: Some("damaged"),
-            enabled: false,
-            ..inputs(None)
-        });
+        let shown = view(
+            &Inputs {
+                key_error: Some("damaged"),
+                enabled: false,
+                ..inputs(None)
+            },
+            true,
+        );
         assert_eq!(shown.headline, "The identity key cannot be used");
         assert_eq!(shown.lines[0], "damaged");
     }
 
     #[test]
     fn off_says_nothing_is_sent_and_how_to_switch_on() {
-        let shown = view(&Inputs {
-            enabled: false,
-            ..inputs(None)
-        });
+        let shown = view(
+            &Inputs {
+                enabled: false,
+                ..inputs(None)
+            },
+            true,
+        );
         assert_eq!(shown.headline, "Identity is off");
         assert!(shown.lines[0].contains("nothing is sent"));
         assert!(shown.lines[1].contains("Switch it on"));
@@ -672,7 +712,7 @@ mod tests {
     #[test]
     fn without_a_hub_the_key_stays_local_and_the_file_is_named() {
         let state = snapshot(Status::NoHub);
-        let shown = view(&inputs(Some(&state)));
+        let shown = view(&inputs(Some(&state)), true);
         assert_eq!(shown.headline, "Your identity key is ready");
         assert!(
             shown
@@ -707,7 +747,7 @@ mod tests {
             avatar: String::new(),
             look: None,
         }];
-        let shown = view(&inputs(Some(&state)));
+        let shown = view(&inputs(Some(&state)), true);
         assert_eq!(shown.headline, "Sol");
         assert!(shown.lines.iter().any(|line| line.starts_with("Verified")));
         assert!(
@@ -731,7 +771,7 @@ mod tests {
     fn the_headline_is_the_name_worn_in_game_and_earlier_names_follow() {
         let mut state = snapshot(Status::Online);
         state.me = Some(me("", ""));
-        let shown = view(&inputs(Some(&state)));
+        let shown = view(&inputs(Some(&state)), true);
         assert_eq!(shown.headline, "Registered");
         assert!(
             shown
@@ -748,7 +788,7 @@ mod tests {
             names: vec![worn("^1Sol", 9), worn("^2Fox", 5), worn("Padawan", 1)],
             ..me("^1Sol", "")
         });
-        let shown = view(&inputs(Some(&state)));
+        let shown = view(&inputs(Some(&state)), true);
         assert_eq!(shown.headline, "Sol");
         assert!(
             shown
@@ -760,9 +800,13 @@ mod tests {
     #[test]
     fn the_page_lists_the_players_own_known_medals_once_the_hub_answered() {
         let mut state = snapshot(Status::Online);
-        assert_eq!(view(&inputs(Some(&state))).medals, None, "no profile yet");
+        assert_eq!(
+            view(&inputs(Some(&state)), true).medals,
+            None,
+            "no profile yet"
+        );
         state.me = Some(me("Sol", ""));
-        assert_eq!(view(&inputs(Some(&state))).medals, Some(Vec::new()));
+        assert_eq!(view(&inputs(Some(&state)), true).medals, Some(Vec::new()));
         let medal = |id: &str, count| sjk_identity::Medal {
             id: id.to_owned(),
             count,
@@ -773,17 +817,57 @@ mod tests {
             medals: vec![medal("bug_hunter", 2), medal("unknown", 1)],
             ..me("Sol", "")
         });
-        let medals = view(&inputs(Some(&state))).medals.expect("medals");
+        let medals = view(&inputs(Some(&state)), true).medals.expect("medals");
         assert_eq!(medals.len(), 1);
         assert_eq!(medals[0].label(), "Bug Hunter x2");
         assert_eq!(medals[0].note, "Thanks");
-        assert_eq!(view(&inputs(None)).medals, None);
+        assert_eq!(view(&inputs(None), true).medals, None);
+    }
+
+    /// Until Show is pressed the key's id and file are dots in every state, so the page
+    /// can be opened on a stream; opening the page hides them again.
+    #[test]
+    fn the_key_id_and_file_stay_hidden_until_shown() {
+        let mut state = snapshot(Status::Online);
+        state.me = Some(me("Sol", ""));
+        for status in [
+            Status::Online,
+            Status::NoHub,
+            Status::Registering,
+            Status::Failed("x".to_owned()),
+        ] {
+            state.status = status;
+            let shown = view(
+                &Inputs {
+                    key_file: "C:/Users/Streamer/GameData/SJK/identity.key",
+                    ..inputs(Some(&state))
+                },
+                false,
+            );
+            for line in &shown.lines {
+                assert!(!line.contains("0123456789abcdef"), "{line}");
+                assert!(!line.contains("Streamer"), "{line}");
+            }
+            assert!(shown.lines.iter().any(|line| line.contains(HIDDEN)));
+        }
+        let mut panel = Panel::new();
+        panel.open(true);
+        panel.sync(&inputs(Some(&state)));
+        assert!(!panel.revealed());
+        panel.focus = Focus::Reveal;
+        assert_eq!(panel.activate(), PanelAction::Reveal);
+        assert!(panel.revealed());
+        panel.close();
+        panel.open(false);
+        assert!(!panel.revealed(), "hidden again each time the page opens");
+        // Show is a stop of Tab once the fields show.
+        assert_eq!(step(Focus::Copy, true, true, false), Focus::Reveal);
     }
 
     #[test]
     fn a_failed_hub_says_why_and_that_it_retries() {
         let state = snapshot(Status::Failed("cannot reach the hub: timed out".to_owned()));
-        let shown = view(&inputs(Some(&state)));
+        let shown = view(&inputs(Some(&state)), true);
         assert_eq!(shown.headline, "Cannot reach the hub");
         assert!(shown.lines.iter().any(|line| line.contains("timed out")));
         assert!(shown.lines.contains(&"Retrying automatically.".to_owned()));
@@ -804,24 +888,27 @@ mod tests {
                 look: None,
             })
             .collect();
-        assert_eq!(view(&inputs(Some(&state))).players.len(), PLAYERS_SHOWN);
+        assert_eq!(
+            view(&inputs(Some(&state)), true).players.len(),
+            PLAYERS_SHOWN
+        );
     }
 
     #[test]
     fn tab_walks_the_controls_and_wraps_and_the_switch_stands_alone_when_off() {
         assert_eq!(step(Focus::Toggle, true, true, false), Focus::Bio);
-        assert_eq!(step(Focus::Copy, true, true, false), Focus::Toggle);
-        assert_eq!(step(Focus::Toggle, false, true, false), Focus::Copy);
+        assert_eq!(step(Focus::Reveal, true, true, false), Focus::Toggle);
+        assert_eq!(step(Focus::Toggle, false, true, false), Focus::Reveal);
         assert_eq!(step(Focus::Bio, false, true, false), Focus::Toggle);
         assert_eq!(step(Focus::Bio, true, false, false), Focus::Toggle);
     }
 
     #[test]
     fn the_way_back_to_the_official_hub_is_a_stop_only_while_it_is_offered() {
-        assert_eq!(step(Focus::Copy, true, true, true), Focus::Hub);
+        assert_eq!(step(Focus::Reveal, true, true, true), Focus::Hub);
         assert_eq!(step(Focus::Hub, true, true, true), Focus::Toggle);
         assert_eq!(step(Focus::Toggle, false, true, true), Focus::Hub);
-        assert_eq!(step(Focus::Copy, true, true, false), Focus::Toggle);
+        assert_eq!(step(Focus::Reveal, true, true, false), Focus::Toggle);
     }
 
     #[test]
@@ -851,7 +938,7 @@ mod tests {
     #[test]
     fn a_failed_hub_names_its_address() {
         let state = snapshot(Status::Failed("refused".to_owned()));
-        let shown = view(&inputs(Some(&state)));
+        let shown = view(&inputs(Some(&state)), true);
         assert!(shown.lines.contains(&"Hub: https://hub.example".to_owned()));
     }
 

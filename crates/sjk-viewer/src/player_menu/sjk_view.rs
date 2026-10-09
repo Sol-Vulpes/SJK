@@ -30,9 +30,8 @@ use sjk_ui::{Color, DrawCommand, FontWeight, TextAlign};
 /// The pages' names on their tabs.
 const TABS: [&str; 3] = ["Character", "Saber", "Force"];
 
-/// The top bar's middle line and the tabs' top.
+/// The top bar's middle line; the tabs stand under it ([`crate::profile_hub::tabs`]).
 const BAR_Y: f32 = 87.0;
-const TABS_Y: f32 = 146.0;
 /// The form's column, its rows' top and height, where a row's name starts
 /// and where its control ends, and a control's usual width.
 const COLUMN_X: f32 = 96.0;
@@ -496,11 +495,7 @@ impl PlayerMenu {
         self.canvas
             .hit_region(BACK_TOKEN, sjk_ui::Rect::new(x, y, end - x, 24.0 * s));
         let title_x = (end - frame.origin[0]) / s + 22.0;
-        let name = if self.draft.name.trim().is_empty() {
-            "Padawan"
-        } else {
-            self.draft.name.as_str()
-        };
+        let name = crate::profile_hub::title(&self.draft.name);
         text(
             &mut self.canvas,
             TextFamily::Display,
@@ -511,41 +506,12 @@ impl PlayerMenu {
             FontWeight::Semibold,
             TextAlign::Start,
         );
-        let mut x = COLUMN_X;
-        for (index, label) in TABS.iter().enumerate() {
-            // Rajdhani SemiBold at 26 is about 12 pixels a character.
-            let width = 12.0 * label.chars().count() as f32 + 4.0;
-            let token = TAB_BASE + index as u16;
-            let current = index == self.page.index();
-            let hovered = self.canvas.token_hovered(token);
-            text(
-                &mut self.canvas,
-                TextFamily::Display,
-                format_args!("{label}"),
-                frame.rect(x, TABS_Y, width + 20.0, 34.0),
-                26.0 * s,
-                match (current, hovered) {
-                    (true, _) => color::GOLD_BRIGHT,
-                    (false, true) => color::TEXT,
-                    (false, false) => color::MUTED,
-                },
-                FontWeight::Regular,
-                TextAlign::Start,
-            );
-            if current {
-                let _ = self.canvas.draw_list_mut().push(DrawCommand::RoundedRect {
-                    rect: frame.rect(x, TABS_Y + 38.0, width, 3.0),
-                    radius: 1.5 * s,
-                    color: color::GOLD_BRIGHT,
-                });
-            }
-            self.canvas
-                .hit_region(token, frame.rect(x - 8.0, TABS_Y - 4.0, width + 16.0, 46.0));
-            x += width + 40.0;
-        }
         if self.hub {
-            // The Profile screen's tabs, this one lit.
-            crate::profile_hub::strip(&mut self.canvas, frame, crate::profile_hub::Tab::Character);
+            // The Profile screen's row of tabs, this page lit.
+            let tab = crate::profile_hub::Tab::of_player_page(self.page.index());
+            crate::profile_hub::row(&mut self.canvas, frame, tab);
+        } else {
+            crate::profile_hub::tabs(&mut self.canvas, frame, &TABS, self.page.index(), TAB_BASE);
         }
     }
 
@@ -1992,7 +1958,13 @@ impl PlayerMenu {
                 RowKind::Act => (&["Enter"][..], "do it"),
                 RowKind::Step => (&["Left", "Right"][..], "change"),
             });
-            let next = TABS[(self.page.index() + 1) % TABS.len()];
+            let next = if self.hub {
+                crate::profile_hub::Tab::of_player_page(self.page.index())
+                    .next(true)
+                    .label()
+            } else {
+                TABS[(self.page.index() + 1) % TABS.len()]
+            };
             keys.push((&["Tab"][..], next));
         }
         let gap = 30.0 * s;
@@ -2168,22 +2140,27 @@ mod tests {
         );
     }
 
-    /// As the Profile screen's Character tab every page draws the screen's tabs at its
-    /// top right, clear of its own tabs and tokens, within the canvas.
+    /// As the Profile screen's first tabs every page draws the screen's row of tabs in
+    /// place of its own three, at the same place, this page lit, within the canvas.
     #[test]
-    fn the_profile_screens_tabs_show_on_every_page() {
+    fn the_profile_screens_row_stands_in_place_of_the_pages_tabs() {
         for page in ProfilePage::ALL {
             let mut menu = drawn(page, page == ProfilePage::Saber);
             assert!(menu.canvas.rect_for(crate::profile_hub::TOKEN).is_none());
+            let own = menu.canvas.rect_for(TAB_BASE).expect("the page's tabs");
             menu.set_hub(true);
             draw(&mut menu);
             assert!(!menu.canvas.overflowed(), "{page:?}");
-            let strip = menu
+            assert!(menu.canvas.rect_for(TAB_BASE).is_none(), "{page:?}");
+            let first = menu
                 .canvas
                 .rect_for(crate::profile_hub::TOKEN)
-                .expect("the strip");
-            let own = menu.canvas.rect_for(TAB_BASE).expect("the page's tabs");
-            assert!(strip.x > own.right() && strip.bottom() <= own.y, "{page:?}");
+                .expect("the row");
+            assert_eq!((first.x, first.y), (own.x, own.y), "{page:?}");
+            for tab in crate::profile_hub::Tab::ALL {
+                let token = crate::profile_hub::TOKEN + tab.index() as u16;
+                assert!(menu.canvas.rect_for(token).is_some(), "{tab:?}");
+            }
         }
         const _: () = assert!(crate::profile_hub::TOKEN > HILT_BASE + 2 * HILT_STRIDE);
     }
