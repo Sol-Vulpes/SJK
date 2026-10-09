@@ -2838,3 +2838,12 @@ change: A grip kill shows the Force Grip holocron in the kill feed, lightning th
 test: Kill a bot with Force Grip, then with lightning: the feed icon is grip's, then lightning's.
 test: On a g_forceBasedTeams server, change a server cvar mid-game: you stay on your side.
 note: Not tried in a game; the grip bit may already be clear in the kill's snapshot.
+
+[force-page-layout]
+area: Menus & settings
+title: Force page: buttons clear of This server, right click removes a level
+change: Apply, Start over and Discard sit in the left column; This server's lines no longer meet them.
+change: Left click buys up to a level; right click on a level removes it (one below it).
+test: On a server with many powers off: Character > Force: no text under the buttons.
+test: Click Push's third level, then right click the third, then the second, then the first.
+note: Right click on a mark above the power's level does nothing. Not tried in a running client.

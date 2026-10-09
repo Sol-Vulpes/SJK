@@ -9,6 +9,8 @@
 #                               made it when that is not the piece's owner.
 
 = Sol
++ 09/10/2026 | - | Keep the Force page's buttons clear of This server and make a right click remove a level
+- d54d2b0 |  | Keep the Force page's buttons clear of This server and make a right click remove a level
 + 09/10/2026 | - | Keep the Force side across serverinfo changes, fix the nameplate's powers, tell grip from lightning
 - ecf0b7e |  | Keep the Force side across serverinfo changes, fix the nameplate's powers, tell grip from lightning
 + 09/10/2026 | - | Shorten the com_maxfps line in the debug panel to the 96-character limit

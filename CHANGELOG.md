@@ -21,6 +21,7 @@ Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 
 ## Unreleased
 
+- The SJK UI's Force page keeps Apply, Discard and Start over clear of the This server text (Apply spans the left column, the other two sit under it), and a right click on a Force level removes it; a left click only buys up to a level _(Sol)_
 - On servers with force-based teams, a change to the server's settings no longer sends you the wrong side's Force profile; your nameplate's own Force powers match what the server grants the profile sent; and the kill feed shows Force Grip's holocron for a grip kill instead of Lightning's _(Sol)_
 - A server that parks you in spectator over your Force profile is now answered again as intended: the up to three rejoin retries are polled every frame (they never went out), and not in duel or power duel, where waiting as a spectator is the queue _(Sol)_
 - Force profile on a server with other Force rules: the profile you apply is sent to the server (read at once as a spectator, else at your next respawn), the Force page takes the server's rank and free saber skills from it and marks the powers it turns off and the team powers outside team games, and the SJK UI's Force page has a This server panel _(Sol)_

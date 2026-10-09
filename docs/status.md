@@ -7,6 +7,21 @@ SJK currently contains a native client and standard dedicated server in a
 20-crate Rust workspace. This page records scope and verification, rather than
 claiming complete parity from the presence of an implementation.
 
+## Force page: buttons clear of This server, right click removes a level
+
+SJK-only branch `personal/force-page-layout` (09/10/2026, Rust stable), from Sol's
+report that the Force page's buttons sat on the "This server" text. The three
+buttons ran across the whole page, over the right column where the server panel's
+lines grow (a long off list, the notes). Apply now spans the left column under the
+Lightsaber group with Start over and Discard side by side below it, and the panel's
+lines wrap at 42 characters, not 36. A click on a level only buys up to it; a right
+click on a level removes it (the power stands one below it, nothing happens on a
+mark above the power's level), replacing the click on the power's own level that
+dropped one. Checked with the off-screen shots: `duel6_player_sjk` now also writes
+`duel6-player-sjk-force-server.png` (the page on a server with eight powers off).
+Verified: `cargo fmt --all --check`, `cargo test --locked --workspace`, the shots. Not
+tried in a running client.
+
 ## Force profile and kill feed follow-ups
 
 SJK-only branch `personal/force-profile-fixes` (09/10/2026, Rust stable), from the

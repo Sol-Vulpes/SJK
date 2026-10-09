@@ -660,6 +660,22 @@ mod tests {
             }
             let path = shoot(&mut gpu, 4, &format!("{name}-force-hover"));
             println!("{}", path.display());
+            // The Force page on a server with rules: rank, free saber, powers
+            // off (the longest list a row shows) and the team powers' note.
+            if let Some(menu) = gpu.client_menu.as_mut() {
+                let longest = [5, 7, 9, 11, 12, 15, 16, 17].map(|bit| 1_u32 << bit);
+                menu.player_server_rules_for_shot(sjk_client::ForceLegalizeRules {
+                    max_rank: 5,
+                    free_saber: true,
+                    team_side: None,
+                    gametype: 0,
+                    disabled_mask: longest.iter().fold(0, |mask, bit| mask | bit),
+                });
+                menu.player_page_for_shot(2, 4);
+            }
+            let _ = frame(&mut gpu, 2);
+            let path = shoot(&mut gpu, 6, &format!("{name}-force-server"));
+            println!("{}", path.display());
             // Dual sabers: the two hands' hilt lists side by side.
             if let Some(menu) = gpu.client_menu.as_mut() {
                 menu.player_dual_for_shot();

@@ -358,6 +358,12 @@ impl PlayerMenu {
         }
     }
 
+    /// Show the Force page as on a server with `rules`, for the world shots.
+    #[cfg(test)]
+    pub(crate) fn server_rules_for_shot(&mut self, rules: sjk_client::ForceLegalizeRules) {
+        self.force.load_on_server("7-2-031330310000030333", rules);
+    }
+
     /// Make the draft Dual (not written to the profile), for the world shots.
     pub(crate) fn dual_for_shot(&mut self) {
         self.saber
