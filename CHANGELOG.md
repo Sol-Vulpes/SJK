@@ -19,16 +19,20 @@ tests check this file):
 Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 -->
 
-## Unreleased
+## 2026.1010.1 (Alpha) | 10/10/2026
 
-- The SJK chat docked on the main page shows a long message whole, wrapped onto as many lines as it needs instead of cut at the column's edge, and the SJK UI's in-game menu (Escape in a match) docks the same chat under the match: read it, type and send, rest the pointer on a name for the sender's card _(Sol)_
-- The quick wheel has a Force page, between General and Weather: the Force powers you can use right now, the selected one marked; an instant power is used at once and selected, Grip, Lightning, Drain and Stasis are selected for your Use Force key; past 12 powers the rest go on a Force 2 page. Existing wheels get it once; Settings > Quick wheel can rename, move, remove and add it back _(Sol)_
-- The Profile screen's Saber tab can search the hilts (type any part of a name; Escape clears it) and has a Blade row to wear the stock blade or any blade skin you own, shown as small Collection swatches _(Sol)_
-- The Profile screen's tabs make room for a larger menu text size (ui_textScale, ui_letterSpacing), so Achievements is no longer cut, and the main page's Profile line is shorter, clear of the servers _(Sol)_
-- Your own SJK key id is no longer printed on the Profile screen, your Players card, your sender card or the SJK chat's side panel; the SJK page of the main menu loses its Profile entry, now the main Profile button _(Sol)_
+The Profile screen becomes one row of tabs, with Medals and a Collection of everything to unlock;
+the Saber tab can search hilts and wear your blade skins; the quick wheel gets a live Force page;
+the SJK chat wraps long messages and joins the in-game menu; and your key stays off screen.
+
 - The Profile screen has one row of tabs: Character, Saber, Force, SJK Profile, Achievements, Medals (each medal with its picture, what it is for and when it was given, and the ones still to get) and Collection (every unlockable, owned or locked, with how to get it); the in-game menu's Achievements entry is now a tab, and the main page's Character button reads Profile _(Sol)_
 - The SJK identity key moved from the Profile screen to Settings, Network, and its key id and file stay hidden until Show key, each time the page opens, so it can be opened on a stream _(Sol)_
 - Your SJK picture can be chosen with Browse... (the system's file dialog), and a picture is checked more strictly before it is sent: empty, damaged or cut-short files, files that are no PNG, JPEG or TGA whatever their name, pictures under 64 pixels, more than four times as long as wide or fully transparent are refused, each with its reason _(Sol)_
+- Your own SJK key id is no longer printed on the Profile screen, your Players card, your sender card or the SJK chat's side panel; the SJK page of the main menu loses its Profile entry, now the main Profile button _(Sol)_
+- The Profile screen's tabs make room for a larger menu text size (ui_textScale, ui_letterSpacing), so Achievements is no longer cut, and the main page's Profile line is shorter, clear of the servers _(Sol)_
+- The Profile screen's Saber tab can search the hilts (type any part of a name; Escape clears it) and has a Blade row to wear the stock blade or any blade skin you own, shown as small Collection swatches _(Sol)_
+- The quick wheel has a Force page, between General and Weather: the Force powers you can use right now, the selected one marked; an instant power is used at once and selected, Grip, Lightning, Drain and Stasis are selected for your Use Force key; past 12 powers the rest go on a Force 2 page. Existing wheels get it once; Settings > Quick wheel can rename, move, remove and add it back _(Sol)_
+- The SJK chat docked on the main page shows a long message whole, wrapped onto as many lines as it needs instead of cut at the column's edge, and the SJK UI's in-game menu (Escape in a match) docks the same chat under the match: read it, type and send, rest the pointer on a name for the sender's card _(Sol)_
 - The gold dot after a changed setting (and after a rebound key) in the SJK UI's Settings sits right after the name's last letter at every size, instead of over the letters or far after them _(Sol)_
 
 ## 2026.1009.1 (Alpha) | 09/10/2026
