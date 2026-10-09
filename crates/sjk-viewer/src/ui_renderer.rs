@@ -155,7 +155,12 @@ pub(crate) fn texture_switches(lists: &[&DrawList]) -> usize {
         let texture = match command {
             DrawCommand::TexturedQuad { texture, .. }
             | DrawCommand::TexturedQuadUv { texture, .. } => *texture,
-            _ => continue,
+            // A shape after the emblem's light goes back to alpha blending.
+            _ => {
+                art::untextured(&mut runs, vertices);
+                vertices += 6;
+                continue;
+            }
         };
         let source = match crate::menu::art::ArtPiece::from_texture(texture) {
             Some(piece) => Source::Art(piece),
@@ -799,6 +804,7 @@ impl ShapeRenderer {
         if radius <= 0.0 || width <= 0.0 || self.vertices.len() + 6 > MAX_SHAPE_VERTICES {
             return;
         }
+        art::untextured(&mut self.runs, self.vertices.len());
         let position = |x: f32, y: f32| [x / viewport[0] * 2.0 - 1.0, 1.0 - y / viewport[1] * 2.0];
         let tint = [color.r, color.g, color.b, color.a * opacity];
         let points = [
@@ -834,6 +840,7 @@ impl ShapeRenderer {
         if rect.width <= 0.0 || rect.height <= 0.0 || self.vertices.len() + 6 > MAX_SHAPE_VERTICES {
             return;
         }
+        art::untextured(&mut self.runs, self.vertices.len());
         let position = |x: f32, y: f32| [x / viewport[0] * 2.0 - 1.0, 1.0 - y / viewport[1] * 2.0];
         let color = |value: Color| [value.r, value.g, value.b, value.a * opacity];
         let points = [
