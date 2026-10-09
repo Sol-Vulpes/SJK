@@ -994,7 +994,9 @@ The trickster sees `force/confusion_old` over the head (`*head_top`, else
 Deviations: a held saber's hilt stays opaque during the fade (blades are opaque
 in stock too), and a fading body casts no sun shadow.
 
-Set `SJK_FRAME_BUDGET=1` for frame-work and GPU-phase diagnostics. Measurements
+Set `SJK_FRAME_BUDGET=1` for frame-work and GPU-phase diagnostics; `perfmark <text>`
+writes a timestamped `perf-mark <text>` line to the client log, so a cfg script of
+settings, `wait`s and marks splits one run into steps (09/10/2026). Measurements
 must name the build mode, GPU, resolution, settings, map and population. Separate
 loading/shader warmup from steady frames and CPU work from GPU timings. The
 500+ FPS target remains open; neither a single GPU timestamp nor an uncapped

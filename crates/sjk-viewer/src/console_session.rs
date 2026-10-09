@@ -216,6 +216,10 @@ impl ViewerConsole {
                 "mark",
                 "mark <note>: viewpos, kept with the note in marks.txt beside the configuration",
             ),
+            (
+                "perfmark",
+                "perfmark <text>: a timestamped marker in the client log, to split timing                  runs (SJK_GPU_PHASES, SJK_FRAME_BUDGET) into steps",
+            ),
         ] {
             shell.commands.register(command, help, |_| Ok(Vec::new()))?;
         }
