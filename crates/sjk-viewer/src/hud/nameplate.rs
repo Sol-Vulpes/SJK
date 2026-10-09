@@ -642,14 +642,17 @@ impl State {
         if hidden {
             return;
         }
-        let restrictions = info_number(game.config_string(0), "restricts");
-        let local_team = snapshot.player.team() as i32;
-        let local_duel = info_number(game.config_string(1131 + usize::from(local)), "ds");
-        let master = snapshot
-            .entities
-            .iter()
-            .any(|e| e.number() < 32 && e.is_jedi_master());
-        let local_master = snapshot.player.is_jedi_master();
+        let standing = Standing {
+            mode,
+            restrictions: info_number(game.config_string(0), "restricts"),
+            local_team: snapshot.player.team() as i32,
+            local_duel: info_number(game.config_string(1131 + usize::from(local)), "ds"),
+            master: snapshot
+                .entities
+                .iter()
+                .any(|e| e.number() < 32 && e.is_jedi_master()),
+            local_master: snapshot.player.is_jedi_master(),
+        };
         // `cg_nameplateBars 3`: the player aimed at lately and the duel opponent.
         let focus = self
             .focus
@@ -678,44 +681,44 @@ impl State {
                 continue;
             }
             let (accent, icon, names_allowed, ally) = if player {
-                let info = game.config_string(1131 + usize::from(number));
-                let team = info_number(info, "t");
-                if info.is_none() || team == 3 {
+                let Some(who) =
+                    identify(game, &settings, &standing, number, entity.is_jedi_master())
+                else {
                     continue;
-                }
-                let icon = if settings.friends {
-                    friend_icon(
-                        mode,
-                        local_team,
-                        team,
-                        local_duel,
-                        info_number(info, "ds"),
-                        master,
-                        local_master,
-                        entity.is_jedi_master(),
-                    )
-                } else {
-                    None
                 };
-                if icon.is_none() && restrictions & 64 != 0 {
-                    continue;
-                }
-                let ally = mode >= GT_TEAM && (team == 1 || team == 2) && team == local_team;
-                (team_accent(mode, team), icon, restrictions & 64 == 0, ally)
+                (who.accent, who.icon, who.names_allowed, who.ally)
             } else {
                 (NPC_ACCENT, None, true, false)
             };
-            let Some(presented) = world.entity(sjk_runtime::EntityId::new(u64::from(number) + 1))
-            else {
+            let presented = |id: u16| {
+                world
+                    .entity(sjk_runtime::EntityId::new(u64::from(id) + 1))
+                    .map(|e| e.sample(now).translation)
+            };
+            // A pilot hidden in his vehicle (EF_NODRAW) has no presented body:
+            // his plate hangs over the vehicle instead.
+            let vehicle = match entity.vehicle_entity_num() {
+                0 => None,
+                id => snapshot
+                    .entities
+                    .binary_search_by_key(&id, |state| state.number())
+                    .ok()
+                    .and_then(|at| {
+                        presented(id).map(|origin| (origin, snapshot.entities[at].solid()))
+                    }),
+            };
+            let Some(placed) = math::anchor(
+                presented(number).map(|origin| (origin, entity.solid())),
+                vehicle.filter(|_| player),
+            ) else {
                 continue;
             };
-            let origin = Vec3::from_array(presented.sample(now).translation);
+            let origin = Vec3::from_array(placed.origin);
             let distance = origin.distance(camera.eye);
             if distance >= settings.range {
                 continue;
             }
-            let anchor =
-                origin + Vec3::Z * (math::head_height(entity.solid()) + math::HEAD_CLEARANCE);
+            let anchor = origin + Vec3::Z * (placed.head + math::HEAD_CLEARANCE);
             let Some(point) = camera.project_within(anchor, SCREEN_MARGIN) else {
                 continue;
             };
@@ -808,12 +811,126 @@ impl State {
                 break;
             }
         }
+        self.hidden_pilots(
+            snapshot, game, world, &standing, now, camera, bsp, scratch, step,
+        );
         if settings.own {
             self.own_plate(snapshot, mode, now, camera, step);
         }
         // Far plates first, so a near plate covers a far one.
         self.entries
             .sort_unstable_by(|a, b| b.distance.total_cmp(&a.distance));
+    }
+
+    /// The plates of pilots sealed in a vehicle (`hideRider`). `Ghost` gives such a
+    /// pilot `SVF_NOCLIENT`, so no snapshot carries his entity; stock cgame finds him
+    /// through the vehicle's `entityState_t::owner` (`CG_DrawCrosshair`'s target
+    /// name), and the plate hangs over the vehicle. Only the name and team are
+    /// known of him: no bars, icons or weapon.
+    #[allow(clippy::too_many_arguments)]
+    fn hidden_pilots(
+        &mut self,
+        snapshot: &Snapshot,
+        game: &GameState,
+        world: &sjk_runtime::World,
+        standing: &Standing,
+        now: i64,
+        camera: Camera,
+        bsp: &Bsp,
+        scratch: &mut TraceScratch,
+        step: f32,
+    ) {
+        let settings = self.settings;
+        let local = snapshot.player.client_num();
+        for vehicle in &snapshot.entities {
+            let Some(number) = math::hidden_pilot(
+                vehicle.entity_type(),
+                vehicle.npc_class(),
+                vehicle.owner(),
+                local,
+                |pilot| {
+                    snapshot
+                        .entities
+                        .binary_search_by_key(&pilot, |state| state.number())
+                        .is_ok()
+                },
+            ) else {
+                continue;
+            };
+            if self.entries.len() >= MAX_TAGS {
+                break;
+            }
+            let Some(who) = identify(game, &settings, standing, number, false) else {
+                continue;
+            };
+            let Some(placed) = world
+                .entity(sjk_runtime::EntityId::new(u64::from(vehicle.number()) + 1))
+                .and_then(|presented| {
+                    math::anchor(
+                        None,
+                        Some((presented.sample(now).translation, vehicle.solid())),
+                    )
+                })
+            else {
+                continue;
+            };
+            let origin = Vec3::from_array(placed.origin);
+            let distance = origin.distance(camera.eye);
+            if distance >= settings.range {
+                continue;
+            }
+            let Some(point) = camera.project_within(
+                origin + Vec3::Z * (placed.head + math::HEAD_CLEARANCE),
+                SCREEN_MARGIN,
+            ) else {
+                continue;
+            };
+            let trace = bsp.trace_box_with(
+                scratch,
+                camera.eye.to_array(),
+                origin.to_array(),
+                Aabb::new([0.0; 3], [0.0; 3]).unwrap(),
+                1 | 0x0200_0000,
+            );
+            let visibility = if unoccluded(trace.fraction, trace.start_solid, trace.all_solid) {
+                1.0
+            } else if settings.walls {
+                WALL_OPACITY
+            } else {
+                0.0
+            };
+            let alpha = self.fade(
+                number,
+                math::distance_fade(distance, settings.range) * visibility,
+                now,
+                step,
+            );
+            if alpha < 0.02 {
+                continue;
+            }
+            self.entries.push(Entry {
+                number,
+                npc_class: 0,
+                point,
+                distance,
+                scale: math::distance_scale(distance, settings.range, MIN_SCALE),
+                alpha,
+                detail: 0.0,
+                proximity: math::detail(distance, settings.near),
+                powers: [0; MAX_ICONS],
+                power_count: 0,
+                health: None,
+                shield: None,
+                force: None,
+                weapon: WP_NONE,
+                style: 0,
+                holstered: false,
+                accent: who.accent,
+                icon: who.icon,
+                names_allowed: who.names_allowed,
+                verified: self.verified & (1 << number) != 0,
+            });
+        }
     }
 
     /// `cg_nameplateSelf`: the local player's own plate over their head in third
@@ -1568,6 +1685,63 @@ fn icon_powers(active: u32) -> ([u8; MAX_ICONS], u8) {
         }
     }
     (powers, count)
+}
+
+/// What the viewer's own standing decides about every other player's plate.
+struct Standing {
+    mode: i32,
+    restrictions: i32,
+    local_team: i32,
+    local_duel: i32,
+    master: bool,
+    local_master: bool,
+}
+
+/// How a player's plate is drawn for the viewer.
+struct Identity {
+    accent: Color,
+    icon: Option<Color>,
+    names_allowed: bool,
+    ally: bool,
+}
+
+/// Player `number`'s plate identity from his `CS_PLAYERS` string; `None` where
+/// he has none, is a spectator, or the server's restrictions hide him.
+fn identify(
+    game: &GameState,
+    settings: &Settings,
+    standing: &Standing,
+    number: u16,
+    jedi_master: bool,
+) -> Option<Identity> {
+    let info = game.config_string(1131 + usize::from(number));
+    let team = info_number(info, "t");
+    if info.is_none() || team == 3 {
+        return None;
+    }
+    let icon = if settings.friends {
+        friend_icon(
+            standing.mode,
+            standing.local_team,
+            team,
+            standing.local_duel,
+            info_number(info, "ds"),
+            standing.master,
+            standing.local_master,
+            jedi_master,
+        )
+    } else {
+        None
+    };
+    if icon.is_none() && standing.restrictions & 64 != 0 {
+        return None;
+    }
+    Some(Identity {
+        accent: team_accent(standing.mode, team),
+        icon,
+        names_allowed: standing.restrictions & 64 == 0,
+        ally: standing.mode >= GT_TEAM && (team == 1 || team == 2) && team == standing.local_team,
+    })
 }
 
 /// Health and shield shares of `entity` (up to 2: a second bar's worth over the

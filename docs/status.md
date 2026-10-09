@@ -7,6 +7,14 @@ SJK currently contains a native client and standard dedicated server in a
 20-crate Rust workspace. This page records scope and verification, rather than
 claiming complete parity from the presence of an implementation.
 
+## Vehicle nameplates (09/10/2026)
+
+Branch `personal/vehicle-fixes`: a pilot in a `hideRider` vehicle had no plate, as the
+server never sends his entity (`SVF_NOCLIENT`). The plate now follows the vehicle's
+`owner` like stock's crosshair name, over the vehicle ([Nameplates](client.md#nameplates)).
+Verified by unit tests of the selection and anchor logic only; not seen in a game, and
+several riders of one vehicle (passengers) are not named, as stock tells only the pilot.
+
 ## JoFTemple frame rate and Ultra low
 
 Branch `personal/ultra-low` (09/10/2026, based on `8e2ac60`, Windows 11, RTX 5080,

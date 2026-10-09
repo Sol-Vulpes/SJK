@@ -1622,6 +1622,15 @@ that font is not loaded), whatever `cg_classicHudFont` says.
   centred on the middle of the name's capitals as the plate's font lays them out
   (`UiFont::capital_middle`; the HUD font hangs its glyphs low in the line).
   Which slots are verified is read from the identity service once a second.
+- **Pilots in a vehicle:** a pilot sealed in a `hideRider` vehicle (a fighter, a
+  walker) is `Ghost`ed with `SVF_NOCLIENT` (`g_vehicles.c:1924-1940`), so no snapshot
+  carries his entity and the world never presents his body. Like stock's crosshair
+  target name (`CG_DrawCrosshair`), the plate follows the vehicle's `owner` while it
+  is below `MAX_CLIENTS`: the name and team come from his `CS_PLAYERS` string and the
+  plate hangs over the vehicle's presented position and box top. Only the name and
+  team frame show (no bars, icons or weapon: the client has no state of him). A rider
+  whose entity is sent keeps his own plate, anchored to the vehicle if his body is
+  hidden (`nameplate_math::anchor`, `hidden_pilot`).
 - `cg_nameplateSelf` (off): your own plate over your head in third person, with your
   real health, shield and Force (the server sends you those), your weapon and your
   badge when your key is verified. In first person it is not drawn: it would sit in
