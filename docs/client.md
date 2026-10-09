@@ -1061,6 +1061,14 @@ from the same point. That origin is the entity's `pos.trBase`, where codemp
 evaluates its trajectory, so a door that turns back halfway sounds from where
 its move began.
 
+A vehicle's own `EV_FIRE_WEAPON` and `EV_ALT_FIRE` (an `ET_NPC` of `CLASS_VEHICLE`)
+play nothing, as in `CG_EntityEvent` (`cg_event.c:2751-2760`, `:2779-2784`): they used
+to play the flash sound of whichever ordinary gun the vehicle's `weapon` field named.
+A rider's own events are unchanged. Stock gives a vehicle's guns their sound through
+the `muzzleFX` effect that `EV_VEH_FIRE` plays bolted to the vehicle
+(`CG_VehMuzzleFireFX`); SJK does not play that effect yet, so vehicle fire is silent
+until it does.
+
 ## Renderer settings
 
 SJK's own cvars have engine names: rendering ones are `r_*` (`r_sceneHdr`,
@@ -1646,6 +1654,15 @@ that font is not loaded), whatever `cg_classicHudFont` says.
   centred on the middle of the name's capitals as the plate's font lays them out
   (`UiFont::capital_middle`; the HUD font hangs its glyphs low in the line).
   Which slots are verified is read from the identity service once a second.
+- **Pilots in a vehicle:** a pilot sealed in a `hideRider` vehicle (a fighter, a
+  walker) is `Ghost`ed with `SVF_NOCLIENT` (`g_vehicles.c:1924-1940`), so no snapshot
+  carries his entity and the world never presents his body. Like stock's crosshair
+  target name (`CG_DrawCrosshair`), the plate follows the vehicle's `owner` while it
+  is below `MAX_CLIENTS`: the name and team come from his `CS_PLAYERS` string and the
+  plate hangs over the vehicle's presented position and box top. Only the name and
+  team frame show (no bars, icons or weapon: the client has no state of him). A rider
+  whose entity is sent keeps his own plate, anchored to the vehicle if his body is
+  hidden (`nameplate_math::anchor`, `hidden_pilot`).
 - `cg_nameplateSelf` (off): your own plate over your head in third person, with your
   real health, shield and Force (the server sends you those), your weapon and your
   badge when your key is verified. In first person it is not drawn: it would sit in

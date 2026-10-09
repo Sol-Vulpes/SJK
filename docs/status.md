@@ -79,6 +79,23 @@ both looks are covered by tests, so "cannot be clicked" is attributed to the dim
 with its easy-to-miss reason; if a click really is lost in a running client it needs a
 log of that session.
 
+## Vehicle nameplates (09/10/2026)
+
+Branch `personal/vehicle-fixes`: a pilot in a `hideRider` vehicle had no plate, as the
+server never sends his entity (`SVF_NOCLIENT`). The plate now follows the vehicle's
+`owner` like stock's crosshair name, over the vehicle ([Nameplates](client.md#nameplates)).
+Verified by unit tests of the selection and anchor logic only; not seen in a game, and
+several riders of one vehicle (passengers) are not named, as stock tells only the pilot.
+
+## Vehicle fire sounds (09/10/2026)
+
+Branch `personal/vehicle-fixes`: a vehicle's `EV_FIRE_WEAPON`/`EV_ALT_FIRE` played an
+ordinary weapon's flash sound; stock plays nothing for them (`cg_event.c:2751-2760`,
+`:2779-2784`) and the client now matches. Known gap: the `muzzleFX` effect of
+`EV_VEH_FIRE` (`CG_VehMuzzleFireFX`), which carries the vehicle weapons' sound in
+retail, is not played, so vehicle fire is silent. The retail `.vwp` data was not
+available to confirm what each effect holds. Unit-tested only, not heard in a game.
+
 ## JoFTemple frame rate and Ultra low
 
 Branch `personal/ultra-low` (09/10/2026, based on `8e2ac60`, Windows 11, RTX 5080,

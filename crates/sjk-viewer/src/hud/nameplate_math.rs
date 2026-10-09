@@ -58,6 +58,58 @@ pub(super) fn head_height(solid: u32) -> f32 {
     }
 }
 
+/// Where a player's plate hangs: the world point it is traced from and the
+/// height of the box top above it.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub(super) struct Anchor {
+    pub(super) origin: [f32; 3],
+    pub(super) head: f32,
+}
+
+/// A presented body: its interpolated origin and packed `entityState_t::solid`.
+pub(super) type Body = ([f32; 3], u32);
+
+/// The anchor of a player whose own body is `own` and whose vehicle's body is
+/// `vehicle`, each `None` when the world does not present it.
+///
+/// A pilot inside a `hideRider` vehicle carries `EF_NODRAW`, so the client never
+/// presents his body (`CG_AddCEntity` skips it); his plate hangs over the
+/// vehicle he sits in instead. A rider whose body is presented keeps his own.
+pub(super) fn anchor(own: Option<Body>, vehicle: Option<Body>) -> Option<Anchor> {
+    let (origin, solid) = own.or(vehicle)?;
+    Some(Anchor {
+        origin,
+        head: head_height(solid),
+    })
+}
+
+/// `CLASS_VEHICLE` (`teams.h`).
+const CLASS_VEHICLE: u8 = 53;
+/// `ET_NPC` (`entityType_t`).
+const ET_NPC: u8 = 13;
+/// `MAX_CLIENTS`.
+const MAX_CLIENTS: u16 = 32;
+
+/// The client sealed in a vehicle whose snapshot state is given, if his own entity
+/// is not in the snapshot: stock cgame names the pilot of an `ET_NPC` /
+/// `CLASS_VEHICLE` entity from its `owner` while that is below `MAX_CLIENTS`
+/// (`CG_DrawCrosshair`). The viewer is not named to himself, and a pilot whose
+/// entity is sent (`present`) keeps the ordinary plate.
+pub(super) fn hidden_pilot(
+    entity_type: u8,
+    npc_class: u8,
+    owner: u16,
+    local: u16,
+    present: impl FnOnce(u16) -> bool,
+) -> Option<u16> {
+    (entity_type == ET_NPC
+        && npc_class == CLASS_VEHICLE
+        && owner < MAX_CLIENTS
+        && owner != local
+        && !present(owner))
+    .then_some(owner)
+}
+
 /// Bar fills until the HUD in use names its own: the retail HUD's red health,
 /// green shield (armour) and light blue Force.
 pub(super) const HEALTH_COLOR: Color = Color::new(1.0, 0.25, 0.2, 1.0);
@@ -228,6 +280,37 @@ mod tests {
         let crouching = (48 << 16) | (24 << 8) | 15;
         assert_eq!(head_height(crouching), 16.0);
         assert_eq!(head_height(0), 40.0);
+    }
+
+    #[test]
+    fn a_hidden_pilot_is_anchored_over_his_vehicle() {
+        let ship = ([100.0, 50.0, 400.0], 96 << 16);
+        let body = ([1.0, 2.0, 3.0], 72 << 16);
+        // Presented body wins, even inside a presented vehicle.
+        let own = anchor(Some(body), Some(ship)).unwrap();
+        assert_eq!((own.origin, own.head), (body.0, 40.0));
+        // No body (EF_NODRAW): the vehicle's origin and box top.
+        let hidden = anchor(None, Some(ship)).unwrap();
+        assert_eq!((hidden.origin, hidden.head), (ship.0, 64.0));
+        // A vehicle that sends no box falls back to the standing height.
+        let bare = anchor(None, Some((ship.0, 0))).unwrap();
+        assert_eq!(bare.head, 40.0);
+        // Nothing presented, nothing to anchor to.
+        assert_eq!(anchor(None, None), None);
+    }
+
+    #[test]
+    fn a_vehicles_owner_below_max_clients_is_its_hidden_pilot() {
+        let never = |_| false;
+        assert_eq!(hidden_pilot(13, 53, 5, 0, never), Some(5));
+        // Not a vehicle, an empty one (ENTITYNUM_NONE), an NPC pilot, or myself.
+        assert_eq!(hidden_pilot(13, 20, 5, 0, never), None);
+        assert_eq!(hidden_pilot(1, 53, 5, 0, never), None);
+        assert_eq!(hidden_pilot(13, 53, 1023, 0, never), None);
+        assert_eq!(hidden_pilot(13, 53, 40, 0, never), None);
+        assert_eq!(hidden_pilot(13, 53, 5, 5, never), None);
+        // A pilot whose own entity is in the snapshot is drawn from it.
+        assert_eq!(hidden_pilot(13, 53, 5, 0, |pilot| pilot == 5), None);
     }
 
     #[test]
