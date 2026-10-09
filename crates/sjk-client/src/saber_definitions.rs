@@ -28,6 +28,10 @@ pub struct LegacySaberDefinition {
     pub radius: f32,
     /// Hum asset selected by `soundLoop`.
     pub sound_loop: String,
+    /// Ignition asset selected by `soundOn` (`saberInfo_t::soundOn`).
+    pub sound_on: String,
+    /// Retraction asset selected by `soundOff` (`saberInfo_t::soundOff`).
+    pub sound_off: String,
     /// Optional model animation spin-sound override.
     pub sound_spin: Option<String>,
     /// Three authored animation swing variants (`swingSound1` through `3`).
@@ -54,6 +58,9 @@ pub struct LegacySaberDefinition {
     pub not_in_mp: bool,
     /// Whether `noRolls 1` sets `SFL_NO_ROLLS` for this hilt.
     pub no_rolls: bool,
+    /// Whether `twoHanded 1` sets `SFL_TWO_HANDED`: such a hilt is never a second
+    /// saber and drops one (`WP_SetSaber`, `bg_saberLoad.c:2237-2247`).
+    pub two_handed: bool,
     /// Authored BG_AdjustClientSpeed multiplier, defaulting to one.
     pub move_speed_scale: f32,
     /// `animSpeedScale`: a saber attack's animation speed (`BG_SaberStartTransAnim`).
@@ -81,6 +88,12 @@ pub enum LegacySaberColor {
     /// `saberColor random`, chosen by gameplay when instantiated.
     Random,
 }
+
+/// `WP_SaberSetDefaults` ignition sound, kept by a definition without `soundOn`
+/// and by a removed second saber (`bg_saberLoad.c:416`, `WP_RemoveSaber`).
+pub(crate) const LEGACY_DEFAULT_SABER_ON: &str = "sound/weapons/saber/enemy_saber_on.wav";
+/// `WP_SaberSetDefaults` retraction sound (`bg_saberLoad.c:418`).
+pub(crate) const LEGACY_DEFAULT_SABER_OFF: &str = "sound/weapons/saber/enemy_saber_off.wav";
 
 /// Load the visible VFS union so mod PK3 definitions override retail files.
 pub fn legacy_saber_definitions(
@@ -183,6 +196,9 @@ fn parse(source: &str) -> Vec<LegacySaberDefinition> {
         let mut sound_spin = None;
         let mut sound_swing = [None, None, None];
         let mut sound_loop = "sound/weapons/saber/saberhum3.wav".to_owned();
+        let mut sound_on = LEGACY_DEFAULT_SABER_ON.to_owned();
+        let mut sound_off = LEGACY_DEFAULT_SABER_OFF.to_owned();
+        let mut two_handed = false;
         let mut num_blades = 1_u8;
         let mut blade_style2_start = 0_u8;
         let mut trail_style = 0_u8;
@@ -230,6 +246,10 @@ fn parse(source: &str) -> Vec<LegacySaberDefinition> {
                 "nowallmarks" => no_wall_marks |= value.parse::<i32>().unwrap_or(0) != 0,
                 "nodlight" => no_dlight |= value.parse::<i32>().unwrap_or(0) != 0,
                 "soundloop" => sound_loop.clone_from(value),
+                "soundon" => sound_on.clone_from(value),
+                "soundoff" => sound_off.clone_from(value),
+                // `Saber_ParseTwoHanded`, codemp/game/bg_saberLoad.c:884-892.
+                "twohanded" => two_handed |= value.parse::<i32>().unwrap_or(0) != 0,
                 "spinsound" => sound_spin = Some(value.to_ascii_lowercase()),
                 "swingsound1" => sound_swing[0] = Some(value.to_ascii_lowercase()),
                 "swingsound2" => sound_swing[1] = Some(value.to_ascii_lowercase()),
@@ -272,6 +292,8 @@ fn parse(source: &str) -> Vec<LegacySaberDefinition> {
             length: blade_lengths[0],
             radius: blade_radii[0],
             sound_loop,
+            sound_on,
+            sound_off,
             sound_spin,
             sound_swing,
             num_blades,
@@ -285,6 +307,7 @@ fn parse(source: &str) -> Vec<LegacySaberDefinition> {
             default_color,
             not_in_mp,
             no_rolls,
+            two_handed,
             move_speed_scale,
             anim_speed_scale,
         });

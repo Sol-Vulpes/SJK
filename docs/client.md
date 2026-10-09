@@ -905,6 +905,36 @@ on a button, a tab or a switch. With the SJK UI's menus the panel has the SJK
 UI's look ([SJK UI](sjk-ui.md#camera-control)); with the classic menus, a
 right-edge panel in SJK's hero look.
 
+## Saber ignition and retraction sounds
+
+Two sources voice a saber turning on or off, as in OpenJK `codemp`. The server
+plays the hilt's own sound when a held saber is toggled and sends
+`EV_SABER_UNHOLSTER` when an attack ignites a holstered one. Drawing the saber
+from another weapon (fists, a gun), or putting a lit one away, is voiced by cgame
+alone: `CG_CheckPlayerG2Weapons` for the local view and `CG_Player` for everyone
+else compare the weapon whose model the player holds with the current one
+(`cg_weapons.c:2498-2580`, `cg_players.c:8932-9001`). SJK mirrors that once per
+rendered frame
+([sound_saber_switch.rs](../crates/sjk-client/src/sound_saber_switch.rs)): the
+local view from the predicted state in live play, from the snapshot's playerstate
+in demos and when following, and other players from the presented snapshot. Each
+hilt's `soundOn` or `soundOff` from `ext_data/sabers/*.sab` (`enemy_saber_on` and
+`enemy_saber_off` when a definition gives none) plays on `CHAN_AUTO` from the
+player's entity; a second saber adds its own, and a two-handed hilt drops a second
+one. `EV_CHANGE_WEAPON` has no select sound for the saber, so nothing is doubled.
+`EV_SABER_UNHOLSTER` plays the player's own hilts too; an NPC's keeps the stock
+`saberon`.
+
+cgame's quirks are kept. A single saber's ignition also plays `enemy_saber_on`,
+the default sound of its removed second slot, as the server's toggle does. A
+caught saber is silent, and so is drawing it again from fists after it was knocked
+away. A player who comes into view or respawns holding a saber is silent, but one
+who left view with a lit saber and returns with a gun is heard retracting it. The
+local player hears the ignition on a map's first frame, on joining from
+spectator, on respawning with a saber after dying with another weapon and on
+choosing another hilt with the saber out. A severed arm, which takes the weapon
+model off in cgame, is not modelled.
+
 ## Animation sounds and voice variants
 
 Footsteps and authored swing/spin sounds follow the evaluated lower/upper Ghoul2

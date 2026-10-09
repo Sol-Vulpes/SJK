@@ -20,8 +20,11 @@ use sjk_protocol::{EntityState, GameState, Snapshot};
 use sjk_vfs::VirtualFileSystem;
 #[path = "sound_feedback.rs"]
 mod feedback;
+#[path = "sound_saber_switch.rs"]
+mod saber_switch;
 #[path = "sound_taunts.rs"]
 mod taunts;
+pub use saber_switch::LegacySaberView;
 
 const CS_SOUNDS: usize = 811; // codemp/game/bg_public.h:132
 const MAX_SOUNDS: usize = 256;
@@ -37,7 +40,7 @@ const CHAN_MENU1: u32 = 11;
 const CHAN_LOCAL: u32 = 1;
 pub(crate) const CHAN_ANNOUNCER: u32 = 9;
 const CS_AMBIENT_SET: usize = 37;
-const EVENT_KIND_COUNT: usize = 56;
+const EVENT_KIND_COUNT: usize = 58;
 const EV_PLAYDOORLOOPSOUND: u16 = 72;
 const EV_MUTE_SOUND: u16 = 74;
 const EV_GENERAL_SOUND: u16 = 76;
@@ -237,6 +240,11 @@ pub enum LegacySoundEvent {
     Choke,
     /// Failed push reaction voice (`cg_event.c:1821-1823`).
     PushFail,
+    /// cgame's ignition as a player draws the saber from another weapon
+    /// (`CG_CheckPlayerG2Weapons`, `CG_Player`).
+    SaberSwitchOn,
+    /// cgame's retraction as a player puts a lit saber away for another weapon.
+    SaberSwitchOff,
 }
 
 impl LegacySoundEvent {
@@ -256,6 +264,8 @@ impl LegacySoundEvent {
             Self::Pushed => "EV_PUSHED",
             Self::Choke => "EV_CHOKE",
             Self::PushFail => "EV_PUSHFAIL",
+            Self::SaberSwitchOn => "CG_SABER_SWITCH_ON",
+            Self::SaberSwitchOff => "CG_SABER_SWITCH_OFF",
             Self::GlobalTeam => "EV_GLOBAL_TEAM_SOUND",
             Self::Footstep => "EV_FOOTSTEP",
             Self::FootstepMetal => "EV_FOOTSTEP_METAL",
@@ -530,6 +540,8 @@ pub struct LegacySoundAdapter {
     saber_hit: [Option<u16>; 3],
     saber_block: [Option<u16>; 9],
     saber_on: Option<u16>,
+    /// cgame's per-player saber ignition on a weapon switch.
+    saber_switch: saber_switch::SaberSwitchSounds,
     fall: Option<u16>,
     land: Option<u16>,
     object_hit: Option<u16>,
@@ -733,6 +745,9 @@ impl LegacySoundAdapter {
         let custom =
             std::array::from_fn(|client| custom_set(game_state, vfs, client as u16, &mut intern));
         let client_teams = std::array::from_fn(|client| client_team(game_state, client));
+        let saber_definitions = crate::legacy_saber_definitions(vfs).unwrap_or_default();
+        let saber_switch =
+            saber_switch::SaberSwitchSounds::new(game_state, &saber_definitions, &mut intern);
 
         drop(intern);
         if let Some(id) = preferred_chat.filter(|id| sounds[*id as usize].handle.is_some()) {
@@ -758,6 +773,7 @@ impl LegacySoundAdapter {
             saber_hit,
             saber_block,
             saber_on,
+            saber_switch,
             fall,
             land,
             object_hit,
@@ -807,6 +823,7 @@ impl LegacySoundAdapter {
         vfs: &VirtualFileSystem,
         mut register: impl FnMut(&str, &[u8]) -> Option<SoundHandle>,
     ) {
+        let mut saber_definitions = None;
         for client in 0..MAX_CLIENTS {
             let hash = player_config_hash(game_state, client);
             if hash == self.client_config_hash[client] {
@@ -817,6 +834,10 @@ impl LegacySoundAdapter {
             let mut intern = |path: &str| intern_sound(sounds, vfs, path, &mut register);
             self.custom[client] = custom_set(game_state, vfs, client as u16, &mut intern);
             self.client_teams[client] = client_team(game_state, client);
+            let definitions = saber_definitions
+                .get_or_insert_with(|| crate::legacy_saber_definitions(vfs).unwrap_or_default());
+            self.saber_switch
+                .refresh_client(game_state, client, definitions, &mut intern);
         }
 
         self.loops.refresh_clients(game_state, vfs, &mut register);
@@ -1245,7 +1266,8 @@ impl LegacySoundAdapter {
                 CHAN_AUTO,
                 false,
             )),
-            33 => Some((
+            // A client's own hilts are voiced below; other entities keep the stock hilt.
+            33 if usize::from(source) >= MAX_CLIENTS => Some((
                 LegacySoundEvent::SaberUnholster,
                 self.saber_on,
                 source,
@@ -1449,6 +1471,7 @@ impl LegacySoundAdapter {
                         );
                     }
                 }
+                33 => self.emit_unholster(source, entity.origin, snapshot),
                 40 if (1..=6).contains(&parameter) => {
                     self.emit(
                         LegacySoundEvent::Predefined,
