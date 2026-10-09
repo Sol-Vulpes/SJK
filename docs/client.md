@@ -622,8 +622,12 @@ spectator, and a mod that gives them back in a full Force duel finds them
 Apply on a server sends the new profile and then `forcechanged`, as stock
 `UI_UpdateClientForcePowers` does: the server reads it at once while you
 spectate and at your next respawn in play (it prints that it will). A
-`forcepowers` typed in the console is sent fitted the same way, without the
-`forcechanged`. When a server still parks you in spectator over your profile
+`forcepowers` typed in the console or set by a config on a server is sent fitted
+the same way and followed by `forcechanged` too, and the console says so (or why
+nothing was sent: the server's rules are not known yet, or a Force-profile reply
+is already waiting and covers it); a change made before joining is sent by the
+join. Before this a console change reached the server's copy only at the next
+join or menu Apply. When a server still parks you in spectator over your profile
 (`nfr <rank> 1 <team>`, which a mod can send for its own reasons), SJK answers
 as the stock Force menu would, `forcechanged` with the team you last chose from
 the game menu, and if you are still spectating it asks for that team again up

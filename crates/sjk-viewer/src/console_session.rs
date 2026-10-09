@@ -2,7 +2,7 @@
 
 use super::*;
 use sjk_client::{
-    ForceAllocation, ForceLegalizeRules, ForceProfileNegotiator, LegacyTeamChoice,
+    ForceAllocation, ForceLegalizeRules, ForceProfileNegotiator, LegacyTeamChoice, ProfileApplied,
     force_rank_reply, force_rules_from_serverinfo, legalize_force_powers,
 };
 use sjk_protocol::GameState;
@@ -166,6 +166,13 @@ impl ViewerConsole {
             let dirty = Arc::clone(&userinfo_dirty);
             cvars.on_change(&name, move |_| dirty.store(true, Ordering::Release))?;
         }
+        // Any change of `forcepowers` (the console, a config, the menu) must
+        // make the server read it: see `note_forcepowers_change`.
+        let forcepowers_changed = Arc::new(AtomicBool::new(false));
+        let changed = Arc::clone(&forcepowers_changed);
+        cvars.on_change("forcepowers", move |_| {
+            changed.store(true, Ordering::Release)
+        })?;
         let mut shell = Shell::new(cvars, keybind_editor::default_bindings());
         crate::input::settings::register_commands(&mut shell)?;
         director::register(&mut shell)?;
@@ -477,6 +484,7 @@ impl ViewerConsole {
             sjk_chat_panel: super::sjk_chat_panel::Panel::new(),
             config_import: super::config_import_panel::Panel::new(),
             userinfo_dirty,
+            forcepowers_changed,
             show_timedelta,
             time_nudge,
             smooth_clients,
@@ -530,6 +538,7 @@ impl ViewerConsole {
         if self.userinfo_dirty.load(Ordering::Acquire) {
             self.send_userinfo(session, now);
         }
+        self.note_forcepowers_change();
         // Every frame: a rejoin retry falls due seconds after the userinfo
         // that preceded it went out, when nothing is left to flush.
         self.poll_force_rejoin(session, now);
@@ -624,6 +633,8 @@ impl ViewerConsole {
     /// spectating, at the next respawn in play.
     pub(crate) fn apply_forcepowers(&mut self, value: &str) {
         if self.set_cvar("forcepowers", value) {
+            // Handled here, even when the value is unchanged (Apply again).
+            self.forcepowers_changed.store(false, Ordering::Release);
             self.force_profile.profile_applied();
             // The `forcechanged` goes out after the userinfo flush, which an
             // unchanged value would not start.
@@ -631,8 +642,39 @@ impl ViewerConsole {
         }
     }
 
+    /// A `forcepowers` change made while on a server, by the console, a
+    /// config or anything but the Force page's Apply: have the server read it
+    /// too (`forcechanged`, after the userinfo that carries it), as Apply
+    /// does. A server only re-reads a changed profile when told to
+    /// (`Cmd_ForceChanged_f`), so without this the profile stays the one it
+    /// has until a menu Apply or a rejoin. The log says what happened, and why
+    /// nothing was sent when that is so.
+    fn note_forcepowers_change(&mut self) {
+        if !self.forcepowers_changed.swap(false, Ordering::AcqRel) {
+            return;
+        }
+        let value = self
+            .text_value("forcepowers")
+            .unwrap_or_default()
+            .to_owned();
+        let line = match self.force_profile.profile_applied() {
+            ProfileApplied::Queued => format!(
+                "^5Force profile: ^7{value} sent; the server reads it at once while you                  spectate and at your next respawn in play"
+            ),
+            ProfileApplied::AlreadyQueued => format!(
+                "^5Force profile: ^7{value} sent; a Force-profile reply is already waiting                  and makes the server read it"
+            ),
+            ProfileApplied::NotOnServer => format!(
+                "^3Force profile: ^7{value} not announced to the server: its Force rules                  are not known yet; the join sends the profile"
+            ),
+        };
+        self.shell.push_log(line);
+    }
+
     /// Refresh `serverinfo` and profile-specific completion from the active session.
     pub(crate) fn set_server_info(&mut self, session: &ClientSession) {
+        // A change from before this connection is sent by its join.
+        self.forcepowers_changed.store(false, Ordering::Release);
         // Each connection starts with the base userinfo payload, without teamoverlay.
         self.userinfo_dirty.store(true, Ordering::Release);
         self.update_server_info(
@@ -853,6 +895,63 @@ mod tests {
         );
         let naive = legalize_force_powers(preferred, rules).allocation;
         assert_ne!(own, naive, "the player's own profile would be granted more");
+    }
+
+    /// A `forcepowers` typed in the console, or set by a config, on a server
+    /// has the server read it (`forcechanged`); the Force page's Apply does
+    /// not send it twice, and off a server the join sends the profile.
+    #[test]
+    fn a_console_forcepowers_change_on_a_server_is_announced() {
+        use sjk_client::{ForceLegalizeRules, ProfileApplied};
+        use std::time::Instant;
+        let directory = tempfile::tempdir().unwrap();
+        let mut console = ViewerConsole::new(directory.path().join("config.cfg")).unwrap();
+        let now = Instant::now();
+        let poll = |console: &mut ViewerConsole| console.force_profile.poll(now, true, false);
+        let logged = |console: &ViewerConsole, needle: &str| {
+            console.shell.lines().any(|line| line.text.contains(needle))
+        };
+        // Off a server nothing is queued, and the log says why.
+        let _ = console
+            .shell
+            .execute_line("forcepowers 7-1-032330000000001000");
+        console.note_forcepowers_change();
+        assert!(poll(&mut console).commands.is_empty());
+        assert!(logged(&console, "not announced to the server"));
+        // On one, the change queues `forcechanged`, sent once.
+        console
+            .force_profile
+            .set_server_rules(Some(ForceLegalizeRules::default()));
+        let _ = console
+            .shell
+            .execute_line("forcepowers 7-1-032330000000001333");
+        console.note_forcepowers_change();
+        assert_eq!(poll(&mut console).commands, vec![b"forcechanged".to_vec()]);
+        assert!(logged(&console, "the server reads it"));
+        console.note_forcepowers_change();
+        assert!(
+            poll(&mut console).commands.is_empty(),
+            "nothing new to send"
+        );
+        // While a reply is already waiting, the log says it covers the change.
+        console
+            .force_profile
+            .set_server_rules(Some(ForceLegalizeRules::default()));
+        assert_eq!(
+            console.force_profile.profile_applied(),
+            ProfileApplied::Queued
+        );
+        let _ = console
+            .shell
+            .execute_line("forcepowers 7-1-032330000000001000");
+        console.note_forcepowers_change();
+        assert!(logged(&console, "already waiting"));
+        assert_eq!(poll(&mut console).commands.len(), 1);
+        // The Force page's Apply handles its own change once.
+        console.apply_forcepowers("7-2-011110300000000300");
+        console.note_forcepowers_change();
+        assert_eq!(poll(&mut console).commands, vec![b"forcechanged".to_vec()]);
+        assert!(poll(&mut console).commands.is_empty());
     }
 
     /// Q's quick wheel opens on the page used last: a new profile binds the

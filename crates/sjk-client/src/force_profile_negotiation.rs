@@ -74,6 +74,19 @@ const JOIN_TIMEOUT: Duration = Duration::from_secs(3);
 /// Upper bound on the userinfo coalescing wait before joining regardless.
 const USERINFO_TIMEOUT: Duration = Duration::from_secs(2);
 
+/// What [`ForceProfileNegotiator::profile_applied`] did about a new profile.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum ProfileApplied {
+    /// `forcechanged` is queued behind the userinfo.
+    Queued,
+    /// A reply that makes the server read the profile is already waiting for
+    /// the userinfo, which carries this one.
+    AlreadyQueued,
+    /// No server's rules are known (not connected, or before its game state),
+    /// so nothing was queued; the join sends the profile.
+    NotOnServer,
+}
+
 /// How the client entered play.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct EnterPlayOutcome {
@@ -265,9 +278,14 @@ impl ForceProfileNegotiator {
     /// `forcechanged` so the server reads it, at once for a spectator and at
     /// the next respawn in play. Nothing to do off a server; a queued `nfr`
     /// reply already does it.
-    pub fn profile_applied(&mut self) {
-        if self.rules.is_some() && self.pending.is_none() {
+    pub fn profile_applied(&mut self) -> ProfileApplied {
+        if self.rules.is_none() {
+            ProfileApplied::NotOnServer
+        } else if self.pending.is_some() {
+            ProfileApplied::AlreadyQueued
+        } else {
             self.pending = Some(FORCE_CHANGED.to_vec());
+            ProfileApplied::Queued
         }
     }
 
@@ -438,13 +456,14 @@ mod tests {
     fn an_applied_profile_is_followed_by_forcechanged_once_its_userinfo_is_out() {
         let now = Instant::now();
         let mut negotiator = ForceProfileNegotiator::default();
-        negotiator.profile_applied();
+        assert_eq!(negotiator.profile_applied(), ProfileApplied::NotOnServer);
         assert!(
             negotiator.poll(now, true, false).commands.is_empty(),
             "off a server"
         );
         negotiator.set_server_rules(Some(ForceLegalizeRules::default()));
-        negotiator.profile_applied();
+        assert_eq!(negotiator.profile_applied(), ProfileApplied::Queued);
+        assert_eq!(negotiator.profile_applied(), ProfileApplied::AlreadyQueued);
         assert!(negotiator.poll(now, false, false).commands.is_empty());
         let output = negotiator.poll(now, true, false);
         assert_eq!(output.commands, vec![b"forcechanged".to_vec()]);
@@ -456,7 +475,7 @@ mod tests {
             Some(LegacyTeamChoice::Free),
         );
         negotiator.queue(&reply, now);
-        negotiator.profile_applied();
+        assert_eq!(negotiator.profile_applied(), ProfileApplied::AlreadyQueued);
         let output = negotiator.poll(now, true, false);
         assert_eq!(output.commands, vec![b"forcechanged \"FREE\"".to_vec()]);
     }
