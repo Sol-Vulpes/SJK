@@ -15,7 +15,10 @@ pub(crate) mod numeric;
 pub(crate) use form::{BACK_TOKEN, FormLayout, TAB_BASE, cycler_direction, palette_index};
 pub(crate) use text::TextFamily;
 
-use sjk_ui::{Color, DrawCommand, DrawList, InputRouter, Rect, Theme, WidgetId, WidgetTree};
+use sjk_ui::{
+    Color, DrawCommand, DrawList, FontWeight, InputRouter, Rect, TextAlign, Theme, WidgetId,
+    WidgetTree,
+};
 
 /// Text runs a canvas keeps a frame: the SJK UI's server browser draws about
 /// 170 (six to a server row).
@@ -23,6 +26,18 @@ const MAX_TEXT: usize = 224;
 /// Pointer areas a canvas keeps a frame.
 pub(crate) const MAX_WIDGETS: usize = 96;
 const MAX_DRAW: usize = 512;
+
+/// Visual state shared by ordinary, team-accented, and disabled buttons.
+// Unused on `main` since the medal pop-up moved to the menu kits; the
+// identity panel and text dialogs of `personal/blade-skins` (#45) still use it.
+#[allow(dead_code)]
+#[derive(Clone, Copy, Debug)]
+pub(crate) struct ButtonStyle<'a> {
+    pub(crate) selected: bool,
+    pub(crate) enabled: bool,
+    pub(crate) accent: Option<Color>,
+    pub(crate) badge: Option<&'a str>,
+}
 
 /// Semantic action attached to one focusable screen widget.
 pub(crate) type MenuToken = u16;
@@ -195,6 +210,101 @@ impl MenuCanvas {
         let _ = self.draw.push(DrawCommand::SolidRect { rect, color });
     }
 
+    /// Add a button with optional accent, status badge, and disabled semantics.
+    #[allow(dead_code)]
+    pub(crate) fn button_styled(
+        &mut self,
+        token: MenuToken,
+        label: &str,
+        rect: Rect,
+        style: ButtonStyle<'_>,
+    ) -> Rect {
+        let pressed = self.token_pressed(token);
+        let hovered = self.token_hovered(token);
+        let color = if !style.enabled {
+            Color::new(0.025, 0.038, 0.052, 0.54)
+        } else if pressed {
+            Color::new(0.018, 0.15, 0.22, 1.0)
+        } else if style.selected || hovered {
+            Color::new(0.035, 0.24, 0.34, 0.96)
+        } else {
+            Color::new(0.035, 0.055, 0.075, 0.74)
+        };
+        let _ = self.draw.push(DrawCommand::RoundedRect {
+            rect,
+            radius: self.theme.radii.md,
+            color,
+        });
+        if let Some(accent) = style.accent {
+            let _ = self.draw.push(DrawCommand::SolidRect {
+                rect: Rect::new(rect.x, rect.y + 8.0, 3.0, rect.height - 16.0),
+                color: accent,
+            });
+        }
+        if (style.selected || hovered || pressed) && style.enabled {
+            let _ = self.draw.push(DrawCommand::SolidRect {
+                rect: Rect::new(rect.x, rect.y + 8.0, 3.0, rect.height - 16.0),
+                color: style.accent.unwrap_or(self.theme.accent),
+            });
+            let _ = self.draw.push(DrawCommand::Border {
+                rect,
+                radius: self.theme.radii.md,
+                width: 2.0,
+                color: Color::new(
+                    self.theme.accent.r,
+                    self.theme.accent.g,
+                    self.theme.accent.b,
+                    0.72,
+                ),
+            });
+        }
+        let foreground = if style.enabled {
+            self.theme.foreground
+        } else {
+            Color::new(0.722, 0.761, 0.798, 0.915)
+        };
+        let badge_width = if style.badge.is_some() { 84.0 } else { 0.0 };
+        self.text(
+            label,
+            Rect::new(
+                rect.x + 20.0,
+                rect.y + 1.0,
+                rect.width - 40.0 - badge_width,
+                rect.height - 2.0,
+            ),
+            17.0,
+            foreground,
+            if style.selected {
+                FontWeight::Semibold
+            } else {
+                FontWeight::Regular
+            },
+            0.2,
+        );
+        if let Some(badge) = style.badge {
+            let badge_rect =
+                Rect::new(rect.right() - 86.0, rect.y + 11.0, 68.0, rect.height - 22.0);
+            let _ = self.draw.push(DrawCommand::RoundedRect {
+                rect: badge_rect,
+                radius: self.theme.radii.sm,
+                color: Color::new(1.0, 1.0, 1.0, 0.08),
+            });
+            self.text_aligned(
+                badge,
+                badge_rect,
+                10.0,
+                foreground,
+                FontWeight::Semibold,
+                1.2,
+                TextAlign::Center,
+            );
+        }
+        if style.enabled {
+            self.interactive(token, rect, true, false);
+        }
+        rect
+    }
+
     /// Finish focus ordering and restore semantic selection.
     pub(crate) fn finish(&mut self, selected_token: MenuToken) {
         self.check_storage();
@@ -266,7 +376,6 @@ impl MenuCanvas {
 #[cfg(test)]
 mod storage_tests {
     use super::*;
-    use sjk_ui::FontWeight;
 
     /// A frame past the canvas's fixed storage stops a debug build instead of
     /// dropping a row's pointer area (or a label) without a trace.
