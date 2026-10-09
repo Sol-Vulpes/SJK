@@ -2,7 +2,7 @@
 //! the SJK hub, in full. The history with names, verified and staff marks and how
 //! long ago each message came; a field to write in and Send; and, for a chosen
 //! message, Mute on this PC, and for SJK staff Delete and Mute at the hub. Resting the
-//! pointer on a name shows the sender's profile card with Mute or Unmute
+//! pointer on a name shows the sender's sender card with Mute or Unmute
 //! ([`crate::sender_card`], "Muting a player").
 //!
 //! Opened by the main page's docked chat (Open chat), the `sjkchat` command or the
@@ -30,7 +30,7 @@ const HUB_UNMUTE_TOKEN: u16 = 1_305;
 /// Messages on show, one token each.
 const MESSAGE_BASE: u16 = 1_310;
 const MESSAGES_SHOWN: usize = 40;
-/// The profile card a name shows under the pointer, and its Mute or Unmute.
+/// The sender card a name shows under the pointer, and its Mute or Unmute.
 const CARD_TOKEN: u16 = 1_360;
 const CARD_MUTE_TOKEN: u16 = 1_361;
 /// The names of the messages on show, one token each.
@@ -94,7 +94,7 @@ struct Shown {
     chosen: Option<(u64, String, String, bool)>,
     /// How many messages there are in all.
     total: usize,
-    /// Whether the profile card's player is muted here.
+    /// Whether the sender card's player is muted here.
     card_muted: bool,
 }
 
@@ -115,12 +115,12 @@ pub(crate) struct Panel {
     /// past it are this page's.
     staff_after: Option<u64>,
     shown: Shown,
-    /// The profile card on show.
+    /// The sender card on show.
     card: Option<Hovered>,
     epoch: Instant,
 }
 
-/// The profile card on show: the message whose sender it is about, who, and the name
+/// The sender card on show: the message whose sender it is about, who, and the name
 /// it is beside. Where they are on the server is asked outside the chat's lock
 /// ([`Panel::place_card`]), so it shows a frame later.
 struct Hovered {
@@ -180,15 +180,25 @@ impl Panel {
         self.staff_after = Some(serial);
     }
 
-    /// Say on the profile card on show where its player is on the server being played
-    /// (`place`, from their key and name). Called before the chat's lock is taken.
+    /// Say on the sender card on show where its player is on the server being played
+    /// (`place`, from their key and name, once) and their picture's version (`picture`,
+    /// from their key, until it is known). Called before the chat's lock is taken.
     pub(crate) fn place_card(
         &mut self,
         place: impl FnOnce(Option<&str>, &str) -> crate::sender_card::Place,
+        picture: impl FnOnce(&str) -> Option<String>,
     ) {
-        if let Some(card) = self.card.as_mut().filter(|card| !card.placed) {
+        let Some(card) = self.card.as_mut() else {
+            return;
+        };
+        if !card.placed {
             card.person.place = place(card.person.key_id.as_deref(), &card.person.name);
             card.placed = true;
+        }
+        if card.person.avatar.is_none()
+            && let Some(key_id) = &card.person.key_id
+        {
+            card.person.avatar = picture(key_id);
         }
     }
 
@@ -543,7 +553,7 @@ mod tests {
     }
 
     #[test]
-    fn resting_on_a_name_shows_the_profile_card_with_mute() {
+    fn resting_on_a_name_shows_the_sender_card_with_mute() {
         use crate::sender_card::Place;
         use sjk_ui::{InputEvent, Rect, Vec2};
         let centre = |rect: Rect| Vec2::new(rect.x + rect.width * 0.5, rect.y + rect.height * 0.5);
@@ -575,9 +585,25 @@ mod tests {
             );
             Place::SlotByName(5)
         };
-        panel.place_card(place);
-        panel.place_card(place);
-        assert_eq!(asked.get(), 1);
+        // Its picture's version is asked until it is known: not yet, then none.
+        let pictures = std::cell::Cell::new(0);
+        let picture = |answer: Option<&str>| {
+            let pictures = &pictures;
+            let answer = answer.map(str::to_owned);
+            move |key: &str| {
+                assert_eq!(key, format!("{:016x}", 2));
+                pictures.set(pictures.get() + 1);
+                answer
+            }
+        };
+        panel.place_card(place, picture(None));
+        panel.place_card(place, picture(Some("")));
+        panel.place_card(place, picture(Some("0123456789abcdef")));
+        assert_eq!((asked.get(), pictures.get()), (1, 2));
+        assert_eq!(
+            panel.card.as_ref().unwrap().person.avatar.as_deref(),
+            Some("")
+        );
         drawn(&mut panel, &inputs(&chat, &[], false));
         let texts: Vec<&str> = panel.ui.text_runs().collect();
         for wanted in ["On this server, slot 5, matched by name", "Mute"] {

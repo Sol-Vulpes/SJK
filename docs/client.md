@@ -1342,7 +1342,7 @@ sender's name. The cursor is free while composing. The player menu offers:
 - **copy:** copies the complete name, including its colour escapes.
 
 Resting the pointer on a name (a sender's, or an SJK chat sender's) shows their
-sender card (name, hub, medals) beside it, with Mute or Unmute: unlike ignore, a mute is kept on this PC
+sender card (picture, name, hub, medals) beside it, with Mute or Unmute: unlike ignore, a mute is kept on this PC
 (`chat-mutes.txt`) and, besides their chat, draws them as Kyle with the default saber
 and silences every sound they cause ([hub-chat.md](hub-chat.md#muting-a-player)).
 

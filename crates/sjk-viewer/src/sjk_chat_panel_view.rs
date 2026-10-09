@@ -3,7 +3,7 @@
 //! can be done about it on the right. A message flows as one line, as SJK chat does
 //! everywhere ([`crate::sjk_chat_look`]): the name, the verified tick for a verified
 //! sender, then the text in the SJK chat's gold, wrapping only when it is too long. A
-//! name under the pointer shows its sender's profile card over the page.
+//! name under the pointer shows its sender's sender card over the page.
 
 use super::*;
 use crate::menu::sjk::recent::ago;
@@ -601,7 +601,7 @@ impl Panel {
         });
     }
 
-    /// Show the profile card of the sender whose name is under the pointer
+    /// Show the sender card of the sender whose name is under the pointer
     /// (`hovered`), keep it while the pointer is on the card, else hide it.
     fn follow_card(&mut self, hovered: Option<(&ChatMessage, &Laid, sjk_ui::Rect)>) {
         match hovered {
@@ -618,6 +618,7 @@ impl Panel {
                             staff: message.staff,
                             medals: crate::medals::Medals::default(),
                             place: crate::sender_card::Place::Unknown,
+                            avatar: None,
                         },
                         anchor,
                         placed: false,
@@ -630,7 +631,7 @@ impl Panel {
         }
     }
 
-    /// The profile card on show, beside its name and over the page; its targets last.
+    /// The sender card on show, beside its name and over the page; its targets last.
     fn card(
         &mut self,
         frame: &Frame,

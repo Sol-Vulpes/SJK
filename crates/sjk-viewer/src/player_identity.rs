@@ -53,6 +53,9 @@ struct Runtime {
     /// The look the service was last given (`looks.rs`).
     sent_look: Option<sjk_identity::Look>,
     next_sync: Option<Instant>,
+    /// Keys whose profile was asked for their picture's version ([`avatar_version`]),
+    /// newest last, so each is asked once.
+    picture_lookups: Vec<String>,
 }
 
 static RUNTIME: Mutex<Runtime> = Mutex::new(Runtime {
@@ -64,6 +67,7 @@ static RUNTIME: Mutex<Runtime> = Mutex::new(Runtime {
     sent_chat: None,
     sent_look: None,
     next_sync: None,
+    picture_lookups: Vec::new(),
 });
 
 fn lock() -> MutexGuard<'static, Runtime> {
@@ -576,6 +580,40 @@ pub(crate) fn with_claims<R>(read: impl FnOnce(&[crate::chat_mutes::Claim<'_>]) 
     })
 }
 
+/// Profiles [`avatar_version`] asks for at most, the oldest forgotten first.
+const PICTURE_LOOKUPS: usize = 64;
+
+/// The version of the picture of the player with key `key_id` (empty for none), for a
+/// card about them (`sender_card.rs`): from the hub's players on this server, else a
+/// profile fetched for them. `None` while neither is known: the first such call asks the
+/// hub for their profile, once. Locks the identity: not for a caller holding it.
+pub(crate) fn avatar_version(key_id: &str) -> Option<String> {
+    let mut runtime = lock();
+    let runtime = &mut *runtime;
+    let service = runtime.service.as_ref()?;
+    let known = service.with_snapshot(|snapshot| {
+        snapshot
+            .players
+            .iter()
+            .find(|player| player.key_id == key_id)
+            .map(|player| player.avatar.clone())
+            .or_else(|| {
+                snapshot
+                    .profiles
+                    .get(key_id)
+                    .map(|profile| profile.avatar.clone())
+            })
+    });
+    if known.is_none() && !runtime.picture_lookups.iter().any(|key| key == key_id) {
+        if runtime.picture_lookups.len() == PICTURE_LOOKUPS {
+            runtime.picture_lookups.remove(0);
+        }
+        runtime.picture_lookups.push(key_id.to_owned());
+        service.look_up(key_id.to_owned());
+    }
+    known
+}
+
 /// Ask the hub for another player's profile (their bio).
 pub(crate) fn look_up(key_id: &str) {
     if let Some(service) = lock().service.as_ref() {
@@ -618,6 +656,7 @@ mod tests {
         assert!(with_chat(|chat| chat.revision).is_none());
         assert!(take_emotes().is_empty());
         assert_eq!(with_claims(|claims| claims.len()), 0);
+        assert_eq!(avatar_version("0123456789abcdef"), None);
         assert_eq!(take_looks(None), sjk_identity::ReceivedLooks::default());
         assert!(with_roster(|players| players.len()).is_none());
         assert!(!owns_unlock("saber_sun"));

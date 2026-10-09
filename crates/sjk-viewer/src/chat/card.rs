@@ -1,4 +1,4 @@
-//! The profile card in the game's chat (`docs/hub-chat.md`, "Muting a player"). While
+//! The sender card in the game's chat (`docs/hub-chat.md`, "Muting a player"). While
 //! the composer is open the pointer is free, and resting it on a name (an SJK chat
 //! sender's, or the name of a player the server says sent a line) shows their card
 //! ([`crate::sender_card`]) beside it, with Mute or Unmute. The card stays while the
@@ -72,6 +72,15 @@ impl ChatOverlay {
             None if self.ui.token_hovered(CARD) || self.ui.token_hovered(CARD_MUTE) => {}
             None => self.card = None,
         }
+        // Their picture's version, until the hub's players or their profile say it.
+        if let Some(card) = self
+            .card
+            .as_mut()
+            .filter(|card| card.person.avatar.is_none())
+            && let Some(key_id) = &card.person.key_id
+        {
+            card.person.avatar = crate::player_identity::avatar_version(key_id);
+        }
     }
 
     /// Who `who` is, from the line or the server and what the hub and the mute list
@@ -98,6 +107,7 @@ impl ChatOverlay {
                     hub_name: None,
                     verified: hub.verified,
                     staff: hub.staff,
+                    avatar: mark.as_ref().map(|mark| mark.avatar.clone()),
                     medals: mark.map(|mark| mark.medals).unwrap_or_default(),
                     place,
                 }
@@ -122,6 +132,7 @@ impl ChatOverlay {
                     } else {
                         Place::SlotByName(slot)
                     },
+                    avatar: mark.as_ref().map(|mark| mark.avatar.clone()),
                     medals: mark.map(|mark| mark.medals).unwrap_or_default(),
                 }
             }
@@ -221,7 +232,7 @@ mod tests {
     }
 
     #[test]
-    fn resting_on_a_name_shows_the_profile_card_with_mute() {
+    fn resting_on_a_name_shows_the_sender_card_with_mute() {
         let mut chat = chat();
         build(&mut chat);
         assert!(chat.card.is_none());

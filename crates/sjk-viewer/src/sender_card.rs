@@ -1,7 +1,8 @@
-//! The profile card a player's name shows when the pointer rests on it in a chat
+//! The sender card a player's name shows when the pointer rests on it in a chat
 //! (`docs/hub-chat.md`, "Muting a player"): in the game's chat while the composer is
 //! open, on the main page's dock and on the SJK chat page. It shows what the SJK hub and
-//! the server say of them, as the Players page's card does (their name and the verified
+//! the server say of them, as the Players page's card does (their picture, or their
+//! initial, as [`crate::profile_card::avatar`] draws it; their name and the verified
 //! tick, whether the hub knows them, their key and hub name, their medals' medallions,
 //! where they are on this server and how they were matched), and Mute or Unmute, which
 //! hides their chat, draws them as Kyle with the default saber and silences them on this
@@ -43,6 +44,9 @@ pub(crate) struct Person {
     pub(crate) staff: bool,
     pub(crate) medals: crate::medals::Medals,
     pub(crate) place: Place,
+    /// Their picture's version, empty for none; `None` while not known (the place that
+    /// shows the card asks, outside any lock: `player_identity::avatar_version`).
+    pub(crate) avatar: Option<String>,
 }
 
 impl Person {
@@ -81,6 +85,8 @@ const WIDTH: f32 = 340.0;
 const PAD: f32 = 16.0;
 /// Medallions a card shows at most.
 const MEDALS: usize = 6;
+/// The picture's radius, beside the name and the status line (1080p pixels).
+const PICTURE_RADIUS: f32 = 24.0;
 
 /// The card's size for `person`, at the scale `u` (1 at 1080 lines).
 pub(crate) fn size(person: &Person, u: f32) -> [f32; 2] {
@@ -164,6 +170,24 @@ pub(crate) fn draw(
             TextAlign::Start,
         );
     };
+    // Their picture, or their initial until it is loaded or when they have none,
+    // beside the name and the status line. The tick after the name says verified.
+    let radius = PICTURE_RADIUS * u;
+    crate::profile_card::avatar(
+        canvas,
+        [x + radius, y + 26.0 * u],
+        radius,
+        &crate::profile_card::Avatar {
+            key_id: person.key_id.as_deref().unwrap_or(""),
+            version: person.avatar.as_deref().unwrap_or(""),
+            name: &person.name,
+            verified: false,
+            preview: false,
+            lit: false,
+        },
+    );
+    let head_x = x + radius * 2.0 + 12.0 * u;
+    let head_width = (inner - (head_x - x)).max(1.0);
     // The name and, for a verified player, the tick alone.
     let tick_room = if person.verified {
         crate::sjk_chat_look::tick_room(20.0 * u)
@@ -172,7 +196,7 @@ pub(crate) fn draw(
     };
     canvas.text_fmt_aligned(
         format_args!("{}", person.name),
-        Rect::new(x, y, inner - tick_room, 28.0 * u),
+        Rect::new(head_x, y, head_width - tick_room, 28.0 * u),
         20.0 * u,
         color::TEXT,
         FontWeight::Semibold,
@@ -184,20 +208,22 @@ pub(crate) fn draw(
             Some(measure) => measure.width(&person.name, 20.0 * u, crate::text::TextFace::Semibold),
             None => estimated_width(&person.name, 20.0 * u),
         };
-        let end = x + (inner - tick_room).min(name);
+        let end = head_x + (head_width - tick_room).min(name);
         crate::sjk_chat_look::tick(canvas.draw_list_mut(), end, y + 13.0 * u, 20.0 * u, 1.0);
     }
     y += 30.0 * u;
-    line(
-        canvas,
-        y,
+    canvas.text_fmt_aligned(
+        format_args!("{}", person.status()),
+        Rect::new(head_x, y, head_width, 15.0 * u * 1.35),
         15.0 * u,
         if person.key_id.is_some() {
             color::GOLD_BRIGHT
         } else {
             color::MUTED
         },
-        format_args!("{}", person.status()),
+        FontWeight::Regular,
+        0.0,
+        TextAlign::Start,
     );
     y += 22.0 * u;
     if let Some(hub) = &person.hub_name {
@@ -341,6 +367,7 @@ mod tests {
             staff: false,
             medals: crate::medals::Medals::default(),
             place: Place::SlotByName(5),
+            avatar: Some(String::new()),
         }
     }
 
@@ -394,6 +421,22 @@ mod tests {
             !texts.iter().any(|text| text.contains("erified")),
             "{texts:?}"
         );
+        // No picture (or not loaded): their initial in its disc, left of the name.
+        let at = |wanted: &str| {
+            canvas
+                .draw_list()
+                .commands()
+                .iter()
+                .find_map(|command| match command {
+                    DrawCommand::Text { rect, text, .. } if canvas.stored_text(*text) == wanted => {
+                        Some(*rect)
+                    }
+                    _ => None,
+                })
+                .unwrap_or_else(|| panic!("{wanted:?} in {texts:?}"))
+        };
+        let (initial, name) = (at("S"), at("^2Sol"));
+        assert!(initial.right() <= name.x && initial.y <= name.y + name.height);
         // Both targets: the card, and the button inside it.
         assert_eq!(canvas.rect_for(TOKENS.card), Some(rect));
         let button = canvas.rect_for(TOKENS.mute).expect("the button");
@@ -410,6 +453,7 @@ mod tests {
         };
         let (_, _, texts, ticks) = drawn(&stranger, true);
         assert!(texts.contains(&"Unmute".to_owned()), "{texts:?}");
+        assert!(texts.contains(&"F".to_owned()), "their initial: {texts:?}");
         assert!(
             texts.contains(&"Not known to the SJK hub".to_owned()),
             "{texts:?}"

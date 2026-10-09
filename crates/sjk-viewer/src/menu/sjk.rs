@@ -169,6 +169,9 @@ impl ClientMenu {
             self.chat_dock.refresh();
         }
         let mut lines = [chat_dock::BLANK; chat_dock::LINES];
+        // The sender card's picture, asked before the profile card's lock is taken.
+        self.home
+            .place_sender_card(crate::player_identity::avatar_version);
         let measure = target.body_measure();
         let chat = chat_on.then(|| home::ChatDock {
             measure: Some(measure),

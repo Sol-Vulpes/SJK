@@ -182,7 +182,11 @@ and plays changes.
   then), on an SJK chat sender's name or on the name of a player the server says sent
   the line ([chat/card.rs](../crates/sjk-viewer/src/chat/card.rs)); on the main page's
   dock; and on the SJK chat page. The card stays while the pointer moves onto it. It
-  shows the name and, for a verified player, the verified tick; whether the hub knows
+  shows their picture (or their initial, as the profile card draws it,
+  `profile_card::avatar`; the version comes from the hub's players on the server, else
+  their profile, asked of the hub once, outside any lock:
+  `player_identity::avatar_version`), the name and, for a verified player, the
+  verified tick; whether the hub knows
   them (and staff); their hub name when it differs from the one shown; their key; their
   medals' medallions; where they are on the server being played ("On this server, slot
   5", or "slot 5, matched by name"); and Mute or Unmute. The Players page's card could

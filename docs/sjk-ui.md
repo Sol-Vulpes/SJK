@@ -423,7 +423,9 @@ overlay routes their text to the UI's families (`console_sjk_pages.rs`).
 - **Sender card** ([sender_card.rs](../crates/sjk-viewer/src/sender_card.rs),
   08/10/2026, Sol's request): a name under the pointer in the game's chat (composer
   open), on the main page's dock and on the SJK chat page. A 340-wide navy card with a
-  holo edge: the name and the verified tick alone, "SJK player" (gold, with "SJK staff")
+  holo edge: their picture in a 48-wide disc (the [profile card](#profile-card)'s, their
+  initial on their colour until it loads or when they have none), the name and the
+  verified tick alone, "SJK player" (gold, with "SJK staff")
   or "Not known to the SJK hub", the hub name when it differs, the key, where they are
   on the server being played, their medals' medallions, Mute or Unmute (gold edged) and
   what that does. It sits right of the name, or left of it at the screen's edge.

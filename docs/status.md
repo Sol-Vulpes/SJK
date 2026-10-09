@@ -31,9 +31,10 @@ the cause the sound events now name (`LegacySoundDecision::cause`)
 `feat/sjk-chat-look`), a muted player's look goes too: no blade skin, so none of its
 sounds, and no lit Illuminate holocron (`Looks::set_muted`). Stacked on
 `feat/sjk-profile-card` too (#62), the hover card is the sender card (`sender_card.rs`,
-#62's `profile_card.rs` being the player's own card), and its dock targets moved off
-#62's card (names 60 to 64, card 70, Mute 71); a test keeps the two cards apart in
-every window.
+#62's `profile_card.rs` being the player's own card), shows the sender's picture
+through #62's picture cache (the version from the hub's players on the server, else
+their profile, fetched once), and its dock targets moved off #62's card (names 60 to
+64, card 70, Mute 71).
 
 Verified on Linux with Rust 1.97: `cargo fmt --all --check`, `cargo build --locked
 --workspace`, `cargo test --locked --workspace` (1664 passed, 51 ignored) and `cargo
@@ -50,7 +51,10 @@ hidden and shown again, a JA+ line by its leading name; hovering a name in the g
 feed, on the dock and on the page shows the card, which stays while the pointer is on
 it, and Mute asks for that player once, then offers Unmute. Merged with main, the same
 four checks pass (1836 passed, 59 ignored), with a test that a muted player's blade skin
-and holocron are not drawn while anyone else's and the own slot's are. Not verified: no client was
+and holocron are not drawn while anyone else's and the own slot's are. Stacked on
+`feat/sjk-profile-card` too, they pass again (1871 passed, 61 ignored), with tests that
+the sender card keeps clear of the profile card in every window, its picture disc sits
+before the name and its picture's version is asked until known. Not verified: no client was
 started (no GPU, display, hub or game data here), so the card, Kyle and the silence
 were not seen or heard in a game, nor with players matched through a real hub.
 

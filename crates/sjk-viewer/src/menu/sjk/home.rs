@@ -108,7 +108,7 @@ pub(crate) enum Action {
     SendChat,
     /// Open the SJK chat's page.
     OpenChat,
-    /// Mute, on this PC, the player whose profile card the dock showed (its Mute,
+    /// Mute, on this PC, the player whose sender card the dock showed (its Mute,
     /// [`Home::take_mute`]).
     Mute,
     /// Exit to the desktop.
@@ -253,7 +253,7 @@ pub(crate) struct DockLine<'a> {
     pub(crate) text: &'a str,
     pub(crate) verified: bool,
     pub(crate) staff: bool,
-    /// The sender's SJK key, for their profile card.
+    /// The sender's SJK key, for their sender card.
     pub(crate) key_id: &'a str,
 }
 
@@ -351,6 +351,19 @@ impl Home {
     /// The key and name of the player the dock's card asked to mute ([`Action::Mute`]).
     pub(crate) fn take_mute(&mut self) -> Option<(String, String)> {
         self.muting.take()
+    }
+
+    /// Give the dock's sender card on show its player's picture version (`picture`, from
+    /// their key) until it is known. Called before the page is built, outside any lock.
+    pub(crate) fn place_sender_card(&mut self, picture: impl FnOnce(&str) -> Option<String>) {
+        if let Some(card) = self
+            .sender_card
+            .as_mut()
+            .filter(|card| card.person.avatar.is_none())
+            && let Some(key_id) = &card.person.key_id
+        {
+            card.person.avatar = picture(key_id);
+        }
     }
 
     /// A key while typing in the chat's field: text goes into it, Backspace takes a
@@ -1008,7 +1021,7 @@ fn chat_dock(canvas: &mut MenuCanvas, frame: &Frame, home: &Home, dock: &ChatDoc
             dock.measure,
             15.0 * s,
         );
-        // Resting the pointer on the name shows the sender's profile card.
+        // Resting the pointer on the name shows the sender's sender card.
         canvas.hit_region(SENDER_NAME_TOKEN + row as u16, name);
     }
     if shown == 0 {
@@ -1166,7 +1179,7 @@ fn dock_line(
     Rect::new(rect.x, rect.y, name_width + 1.0, rect.height)
 }
 
-/// Follow the pointer over the dock's names (the last frame's): the profile card of
+/// Follow the pointer over the dock's names (the last frame's): the sender card of
 /// the sender under it, kept while the pointer is on the card, else none; then draw it
 /// beside the name, over the page.
 fn dock_sender_card(
@@ -1236,6 +1249,7 @@ fn dock_person(line: &DockLine<'_>) -> crate::sender_card::Person {
         staff: line.staff,
         medals: crate::medals::Medals::default(),
         place: crate::sender_card::Place::Unknown,
+        avatar: None,
     }
 }
 
@@ -1717,6 +1731,40 @@ mod tests {
                 );
             }
         }
+    }
+
+    #[test]
+    fn the_sender_cards_picture_is_asked_until_it_is_known() {
+        use sjk_ui::{InputEvent, Vec2};
+        let servers = [server("a")];
+        let mut canvas = MenuCanvas::new();
+        let mut home = Home::default();
+        let draw = |canvas: &mut MenuCanvas, home: &mut Home| {
+            build(
+                canvas,
+                VIEWPORTS[0],
+                home,
+                &view(&servers, Some(dock())),
+                1.0,
+            );
+        };
+        draw(&mut canvas, &mut home);
+        // No card: nothing to ask.
+        home.place_sender_card(|_| panic!("no card on show"));
+        let name = canvas.rect_for(SENDER_NAME_TOKEN).expect("Sol's name");
+        canvas.pointer(InputEvent::PointerMove(Vec2::new(
+            name.x + name.width * 0.5,
+            name.y + name.height * 0.5,
+        )));
+        draw(&mut canvas, &mut home);
+        home.place_sender_card(|key| {
+            assert_eq!(key, "0123456789abcdef");
+            None
+        });
+        home.place_sender_card(|_| Some("00000000000000aa".to_owned()));
+        home.place_sender_card(|_| panic!("known now"));
+        let card = home.sender_card.as_ref().expect("the card");
+        assert_eq!(card.person.avatar.as_deref(), Some("00000000000000aa"));
     }
 
     #[test]
