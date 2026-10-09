@@ -427,7 +427,7 @@ const HELP: &[(&str, &str)] = &[
     ),
     (
         crate::scoreboard::style::COMPACT_CVAR,
-        "Thinner rows on SJK's scoreboard, so every player fits in one column.",
+        "Thinner rows on SJK's scoreboard, so every player fits in one column, in a board as wide as its names, centred.",
     ),
     (
         "cg_showClientIDs",

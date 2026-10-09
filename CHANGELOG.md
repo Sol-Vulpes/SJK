@@ -21,6 +21,7 @@ Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 
 ## Unreleased
 
+- The compact SJK scoreboard is sized to its names and centred on the screen instead of always running the full width: the name column is 140-320 px, the numbers sit close behind it, a board that would cover the chat sits just right of it, and the duel cards share the centre _(Sol)_
 - The green beam of a teleport or a spawn now stands up from the floor to the ceiling or the sky, as in OpenJK, instead of a small square at the player's feet: effect lines that follow the trace (org2fromTrace) get their length, the floor drop stops on terrain too, and the Jedi Master spawn effect points straight up _(Sol, after OpenJK)_
 - Kill messages in the console print the names of players with accented letters or symbols instead of noname, end each name in white as OpenJK does, and keep the right gender in suicide messages _(Sol, after OpenJK)_
 - Doors, buttons and other brush models play their sounds from the middle of the model, so the opening and closing sounds of doors that the map gives no origin are heard again _(Sol, after OpenJK)_

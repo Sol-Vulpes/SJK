@@ -2768,3 +2768,13 @@ change: The floor drop uses MASK_SOLID; the Jedi Master spawn effect points stra
 test: Respawn (kill) under a roof and in the open: the beam rises from your feet.
 test: Use a map teleporter (or setviewpos with cheats): the same beam; pick up a Jedi Master.
 note: Other traced lines (env/beam) now draw long, as in OpenJK. Not seen on screen yet.
+
+[scoreboard-width]
+area: HUD
+title: Compact SJK scoreboard is narrower and centred (SJK PR #55)
+change: Name column fits the longest name (140-320 px); numbers follow 48 px after it.
+change: Centred; if that covers the chat it sits just right of it. Duel cards share the centre.
+test: Hold TAB in FFA with 8 and with 32 players: a narrow, centred board; long names end in ...
+test: In team FFA and CTF the board starts beside the chat column; duel cards are centred.
+test: Settings > Scoreboard > Compact SJK scoreboard off: the old full-width board.
+note: Not seen on screen yet; world shots: duel6_sjk_scoreboard ignored test.
