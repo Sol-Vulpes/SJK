@@ -192,6 +192,9 @@ pub struct MovementConfig {
     /// The sabers' `animSpeedScale` (`BG_SaberStartTransAnim`), primary then secondary;
     /// 1 for a hand without a saber. Copied into [`MovementState`] for the animations.
     pub saber_anim_speed_scales: [f32; 2],
+    /// What a client knows of the sabers it holds, to work out `fd.saberAnimLevelBase` for each
+    /// command ([`saber_base`]); `None` leaves the state's base alone, as a server does.
+    pub saber_hands: Option<saber_base::SaberHands>,
     /// Whose `Pmove` this is. A client's prediction (`false`, the default) also does
     /// what `CG_PredictPlayerState` does around it; a server's simulation (`true`) is
     /// the bare `Pmove` that `ClientThink_real` calls.
@@ -219,6 +222,7 @@ impl Default for MovementConfig {
             roll_rules: crate::pmove_roll::RollRules::default(),
             saber_speed_scales: [1.0; 2],
             saber_anim_speed_scales: [1.0; 2],
+            saber_hands: None,
             authoritative: false,
             // The reference server's cvar defaults: every fix on.
             legacy_fixes: 0b111,
@@ -1157,6 +1161,13 @@ impl Predictor {
         // The trace mask is chosen once per command: a dead player's leaves bodies out.
         if self.fake_noclip && !self.config.authoritative {
             self.state.movement_type = PM_NOCLIP;
+        }
+        // `CG_PredictPlayerState` works the base style out before every `Pmove`
+        // (`cg_predict.c:1335-1347`): it is no wire field.
+        if !self.config.authoritative
+            && let Some(hands) = self.config.saber_hands
+        {
+            hands.apply(&mut self.state);
         }
         let dead = self.state.movement_type == PM_DEAD;
         // A player the server walks through others (`GHOST_KNOWN_FLAG`: amghost, the grace
@@ -2302,6 +2313,8 @@ mod jump;
 mod wall_moves;
 pub use wall_moves::{in_wall_rebound, wall_hold_yaw};
 
+#[path = "pmove_saber_base.rs"]
+pub mod saber_base;
 #[path = "pmove_saber_view.rs"]
 mod saber_view;
 

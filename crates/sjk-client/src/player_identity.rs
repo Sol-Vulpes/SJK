@@ -12,7 +12,7 @@ use sjk_protocol::GameState;
 use sjk_runtime::{Appearance, EntityId};
 use std::collections::{BTreeMap, BTreeSet};
 
-const CS_PLAYERS: usize = 1_131;
+pub(crate) const CS_PLAYERS: usize = 1_131;
 
 /// Resolve the model and skin requested by one BaseJKA player configstring.
 ///

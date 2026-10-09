@@ -991,6 +991,18 @@ spectator, on respawning with a saber after dying with another weapon and on
 choosing another hilt with the saber out. A severed arm, which takes the weapon
 model off in cgame, is not modelled.
 
+`fd.saberAnimLevelBase` is no wire field, so the client works it out for every
+command it predicts, as `CG_PredictPlayerState` does before `Pmove`
+(`cg_predict.c:1335-1347` in EternalJK and JoF EJK): the current style, unless one
+blade or saber is off (`saberHolstered` 1), when it is the staff base for a first
+saber with blades and the dual base for a second saber alone
+([pmove_saber_base.rs](../crates/sjk-game-jka/src/pmove_saber_base.rs); the hands
+come from clientinfo and the `.sab` files, `legacy_saber_hands`). Without it a half
+staff or one saber of a pair counted as "sabers off": the swing became a draw, the
+server's `saberHolstered` 1 undid it and `EV_SABER_UNHOLSTER` played again. This
+follows the reference's rule from reading it; it has not been run against a live
+dual or staff in the fast style.
+
 ## Animation sounds and voice variants
 
 Footsteps and authored swing/spin sounds follow the evaluated lower/upper Ghoul2

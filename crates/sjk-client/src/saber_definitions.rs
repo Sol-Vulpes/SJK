@@ -6,6 +6,7 @@
 
 use crate::catalog_tokens::tokenize;
 use crate::player_profile::SaberColor;
+use sjk_game_jka::pmove::saber_base::SaberHands;
 use sjk_protocol::GameState;
 use sjk_vfs::VirtualFileSystem;
 use std::collections::BTreeMap;
@@ -167,6 +168,52 @@ pub fn legacy_saber_movement(
         }
     }
     (no_rolls, scales, anim_scales)
+}
+
+/// What the client knows of the sabers one client holds, to work out `saberAnimLevelBase`
+/// for its prediction (`cg_predict.c:1335-1347`): whether the first saber has blades and
+/// whether a second one is held. `WP_SetSaber` drops a second saber beside a two-handed
+/// one and loads `Kyle` for a `notInMP` or unknown name (`bg_saberLoad.c:2219-2247`).
+/// A client without clientinfo gives the default, which knows nothing.
+pub fn legacy_saber_hands(
+    vfs: &VirtualFileSystem,
+    game_state: &GameState,
+    client_num: u16,
+) -> SaberHands {
+    if game_state
+        .config_string(crate::player_identity::CS_PLAYERS + usize::from(client_num))
+        .is_none_or(<[u8]>::is_empty)
+    {
+        return SaberHands::default();
+    }
+    let names = crate::player_identity::legacy_client_saber_names(game_state, client_num);
+    let definitions = legacy_saber_definitions(vfs).unwrap_or_default();
+    saber_hands(&names, &definitions)
+}
+
+fn saber_hands(
+    names: &[Option<String>; 2],
+    definitions: &BTreeMap<String, LegacySaberDefinition>,
+) -> SaberHands {
+    let two_handed = |name: &str| {
+        definitions
+            .get(&name.to_ascii_lowercase())
+            .filter(|definition| !definition.not_in_mp)
+            .or_else(|| definitions.get("kyle"))
+            .is_some_and(|definition| definition.two_handed)
+    };
+    // The first saber can never be removed; `none` leaves it unloaded.
+    let first = names[0]
+        .as_deref()
+        .filter(|name| !name.eq_ignore_ascii_case("none") && !name.eq_ignore_ascii_case("remove"));
+    let primary_blades = names[0].is_none() || first.is_some();
+    let first_two_handed = first.is_some_and(two_handed);
+    let second_saber =
+        !first_two_handed && names[1].as_deref().is_some_and(|name| !two_handed(name));
+    SaberHands {
+        primary_blades,
+        second_saber,
+    }
 }
 
 fn parse(source: &str) -> Vec<LegacySaberDefinition> {
@@ -376,5 +423,63 @@ mod load_order_tests {
             legacy_saber_load_order(&vfs).unwrap(),
             ["reborn", "kyle", "zroe", "akr", "single_2"]
         );
+    }
+}
+
+#[cfg(test)]
+mod saber_hands_tests {
+    use super::*;
+
+    fn defs() -> BTreeMap<String, LegacySaberDefinition> {
+        parse(
+            "kyle
+{
+	saberType SABER_SINGLE
+}
+             staff_1
+{
+	saberType SABER_STAFF
+	twoHanded 1
+	numBlades 2
+}
+",
+        )
+        .into_iter()
+        .map(|definition| (definition.name.to_ascii_lowercase(), definition))
+        .collect()
+    }
+
+    fn names(first: Option<&str>, second: Option<&str>) -> [Option<String>; 2] {
+        [first, second].map(|name| name.map(str::to_owned))
+    }
+
+    #[test]
+    fn hands_of_a_pair_have_both_sabers() {
+        let hands = saber_hands(&names(Some("kyle"), Some("kyle")), &defs());
+        assert!(hands.primary_blades && hands.second_saber);
+    }
+
+    #[test]
+    fn hands_of_a_single_saber_have_no_second() {
+        let hands = saber_hands(&names(Some("kyle"), None), &defs());
+        assert!(hands.primary_blades && !hands.second_saber);
+    }
+
+    #[test]
+    fn hands_of_a_two_handed_staff_drop_the_second_saber() {
+        let staff_first = saber_hands(&names(Some("staff_1"), Some("kyle")), &defs());
+        assert!(staff_first.primary_blades && !staff_first.second_saber);
+        let staff_second = saber_hands(&names(Some("kyle"), Some("staff_1")), &defs());
+        assert!(!staff_second.second_saber);
+    }
+
+    #[test]
+    fn hands_of_an_unnamed_or_unknown_saber_use_the_default_hilt() {
+        let unnamed = saber_hands(&names(None, None), &defs());
+        assert!(unnamed.primary_blades && !unnamed.second_saber);
+        let unknown = saber_hands(&names(Some("nonesuch"), Some("nonesuch")), &defs());
+        assert!(unknown.primary_blades && unknown.second_saber);
+        let removed = saber_hands(&names(Some("none"), Some("kyle")), &defs());
+        assert!(!removed.primary_blades && removed.second_saber);
     }
 }
