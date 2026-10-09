@@ -2828,3 +2828,13 @@ change: No retries in duel and power duel, where spectating is the queue.
 test: On a mod that sends nfr on its own and parks you: you are sent back to your team.
 test: Wait in a duel queue after an nfr: you are not put into the game by retries.
 note: Stock servers no longer park a player for an SJK profile (SJK PR #47).
+
+[force-profile-fixes]
+area: Gameplay
+title: Force side kept across server changes; grip kills in the kill feed
+change: A serverinfo change keeps the side an nfr notice set under g_forceBasedTeams.
+change: Your nameplate's Force powers follow the profile sent to the server.
+change: A grip kill shows the Force Grip holocron in the kill feed, lightning the Lightning one.
+test: Kill a bot with Force Grip, then with lightning: the feed icon is grip's, then lightning's.
+test: On a g_forceBasedTeams server, change a server cvar mid-game: you stay on your side.
+note: Not tried in a game; the grip bit may already be clear in the kill's snapshot.

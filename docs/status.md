@@ -63,6 +63,25 @@ updated for both looks and the moments but not run. To try it: on the main menu,
 medals show one after another), or `debug_medal bug_hunter x3` in a match, then open
 the game menu.
 
+## Force profile and kill feed follow-ups
+
+SJK-only branch `personal/force-profile-fixes` (09/10/2026, Rust stable), from the
+review of SJK PRs #47 and #58. A `CS_SERVERINFO` change no longer drops the side an
+`nfr` notice held the player to under `g_forceBasedTeams`
+(`ForceProfileNegotiator::refresh_server_rules`): the next userinfo would have sent
+the other side's profile and the server parked the player again. The nameplate's
+own powers are now what the server grants the profile that is sent, not the player's
+own: a profile over the server's points only through disabled powers has other
+powers trimmed in the sent one (`own_force_allocation`). The kill feed tells Force
+Grip from Force Lightning (`MOD_FORCE_DARK` covers both) by the killer's
+`forcePowersActive` bits in the snapshot of the kill (`ObituaryEvent::attacker_force`):
+Grip's holocron when only grip was active, else Lightning's. Verified: `cargo fmt --all
+--check`, `cargo test --locked --workspace` (new tests: a serverinfo refresh keeping
+the side, the nameplate following the sent profile, the grip holocron). Not seen in
+a game: grip kills in the feed, and `g_forceBasedTeams` servers. Unknown: whether the
+attacker's grip bit is still set in the snapshot that carries the obituary when the
+grip ends with the kill.
+
 ## Unlockables: the Sun blade, and looks through the hub
 
 SJK-only branch `personal/saber-skins` (08/10/2026, stacked on `personal/sjk-chat`,
