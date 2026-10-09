@@ -50,6 +50,8 @@ pub(super) struct Wrapped {
     pub(super) carry: [Carry; WRAP_LINES],
     pub(super) len: usize,
     width: f32,
+    /// Room the first row leaves at its start (an SJK chat line's tag and name).
+    indent: f32,
     size: f32,
     font_height: f32,
     font_modern: bool,
@@ -62,6 +64,7 @@ impl Default for Wrapped {
             carry: [Carry::NONE; WRAP_LINES],
             len: 0,
             width: 0.0,
+            indent: 0.0,
             size: 0.0,
             font_height: 0.0,
             font_modern: true,
@@ -74,8 +77,25 @@ impl Wrapped {
     /// never between a colour code's `^` and its digit ([`fitting_end`]), and each
     /// row keeps the colour code in force where it starts ([`Self::carry`]).
     pub(super) fn update(&mut self, value: &str, font: &UiFont, width: f32, size: f32) {
+        self.update_indented(value, font, width, size, 0.0);
+    }
+
+    /// [`Self::update`] for a body whose first row starts `indent` in, after what is
+    /// drawn before it on that row (an SJK chat line's tag and name): the body goes
+    /// on along the name's row and wraps only when it is too long. A first word that
+    /// does not fit after the name but fits a whole row starts the next row instead,
+    /// the first row then empty.
+    pub(super) fn update_indented(
+        &mut self,
+        value: &str,
+        font: &UiFont,
+        width: f32,
+        size: f32,
+        indent: f32,
+    ) {
         if self.len > 0
             && self.width == width
+            && self.indent == indent
             && self.size == size
             && self.font_height == font.height
             && self.font_modern == font.is_modern()
@@ -83,6 +103,7 @@ impl Wrapped {
             return;
         }
         self.width = width;
+        self.indent = indent;
         self.size = size;
         self.font_height = font.height;
         self.font_modern = font.is_modern();
@@ -90,13 +111,29 @@ impl Wrapped {
         let mut start = 0;
         let mut carry = Carry::NONE;
         while start < value.len() && self.len < WRAP_LINES {
-            let end = fitting_end(&value[start..], font, width, size);
-            let mut end = start + end;
-            if end < value.len()
-                && let Some(space) = value[start..end].rfind(' ')
-                && space > 0
-            {
-                end = start + space;
+            let room = if self.len == 0 {
+                (width - indent).max(0.0)
+            } else {
+                width
+            };
+            let mut end = start + fitting_end(&value[start..], font, room, size);
+            if end < value.len() {
+                match value[start..end].rfind(' ') {
+                    Some(space) if space > 0 => end = start + space,
+                    // The first word does not fit after the name: when it fits a
+                    // whole row, the body starts on the next one.
+                    _ if self.len == 0 && indent > 0.0 => {
+                        let word = value[start..]
+                            .find(' ')
+                            .map_or(value.len(), |at| start + at);
+                        if word > end
+                            && word <= start + fitting_end(&value[start..], font, width, size)
+                        {
+                            end = start;
+                        }
+                    }
+                    _ => {}
+                }
             }
             self.rows[self.len] = start..end;
             self.carry[self.len] = carry;
@@ -309,5 +346,71 @@ mod tests {
         assert_eq!(drawn(body, &wrapped, 1), "^3klmnopqrst");
         assert_eq!(drawn(body, &wrapped, 2), "^3uvwxyz");
         assert_goes_on_as_one_line(body, &wrapped);
+    }
+
+    /// `body` wrapped `chars` characters wide, its first row `indent` characters in.
+    fn indented(body: &str, chars: usize, indent: usize) -> Vec<&str> {
+        let mut wrapped = Wrapped::default();
+        wrapped.update_indented(
+            body,
+            &test_font(),
+            chars as f32 * 8.0,
+            12.0,
+            indent as f32 * 8.0,
+        );
+        (0..wrapped.len)
+            .map(|row| &body[wrapped.rows[row].clone()])
+            .collect()
+    }
+
+    #[test]
+    fn a_short_body_after_a_name_stays_on_its_row() {
+        assert_eq!(indented("gg all", 40, 12), ["gg all"]);
+    }
+
+    #[test]
+    fn a_long_body_after_a_name_wraps_only_where_it_must() {
+        // 28 characters after a 12-character name, then whole rows of 40.
+        let body = "the quick brown fox jumps over the lazy dog and runs far away from here";
+        let rows = indented(body, 40, 12);
+        assert_eq!(
+            rows,
+            [
+                "the quick brown fox jumps",
+                "over the lazy dog and runs far away",
+                "from here"
+            ]
+        );
+        // As wide as a line without the name, the same text wraps as a chat line.
+        assert_eq!(indented(body, 40, 0), {
+            let mut plain = Wrapped::default();
+            plain.update(body, &test_font(), 320.0, 12.0);
+            (0..plain.len)
+                .map(|row| &body[plain.rows[row].clone()])
+                .collect::<Vec<_>>()
+        });
+    }
+
+    #[test]
+    fn a_first_word_that_does_not_fit_after_the_name_starts_the_next_row() {
+        assert_eq!(
+            indented("extraordinarily so", 40, 30),
+            ["", "extraordinarily so"]
+        );
+        // A word wider than any row is broken where the name's row ends.
+        let word = "x".repeat(50);
+        assert_eq!(indented(&word, 40, 30)[0], "x".repeat(10));
+    }
+
+    #[test]
+    fn the_indent_is_part_of_the_cached_wrap() {
+        let font = test_font();
+        let body = "alpha bravo charlie delta echo";
+        let mut wrapped = Wrapped::default();
+        wrapped.update_indented(body, &font, 160.0, 12.0, 0.0);
+        assert_eq!(wrapped.len, 2);
+        wrapped.update_indented(body, &font, 160.0, 12.0, 120.0);
+        assert_eq!(wrapped.len, 3, "a wider name moved words down");
+        assert_eq!(&body[wrapped.rows[0].clone()], "alpha");
     }
 }

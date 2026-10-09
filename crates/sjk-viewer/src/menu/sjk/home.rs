@@ -228,6 +228,9 @@ pub(crate) struct ChatDock<'a> {
     pub(crate) live: bool,
     /// Why the chat cannot send or read, or what became of the last message.
     pub(crate) notice: &'a str,
+    /// How the body family measures, to set a line's runs one after another; without
+    /// it they are placed by an estimate.
+    pub(crate) measure: Option<crate::sjk_chat_look::Measure<'a>>,
 }
 
 /// One message of the dock.
@@ -906,19 +909,12 @@ fn chat_dock(canvas: &mut MenuCanvas, frame: &Frame, home: &Home, dock: &ChatDoc
     let first_row = DOCK_ROWS - shown;
     for (row, line) in dock.lines[dock.lines.len() - shown..].iter().enumerate() {
         let top = DOCK_TOP + 40.0 + (first_row + row) as f32 * DOCK_ROW;
-        if line.verified {
-            let _ = canvas.draw_list_mut().push(DrawCommand::RoundedRect {
-                rect: frame.rect(COLUMN_X - 12.0, top + 9.0, 5.0, 5.0),
-                radius: 2.5 * s,
-                color: color::GOLD,
-            });
-        }
-        body(
+        dock_line(
             canvas,
             frame.rect(COLUMN_X, top, COLUMN_WIDTH, DOCK_ROW - 4.0),
-            color::TEXT,
-            TextAlign::Start,
-            format_args!("{}^7: {}", line.name, line.text),
+            line,
+            dock.measure,
+            15.0 * s,
         );
     }
     if shown == 0 {
@@ -1002,6 +998,77 @@ fn chat_dock(canvas: &mut MenuCanvas, frame: &Frame, home: &Home, dock: &ChatDoc
         format_args!("Open chat"),
     );
     canvas.hit_region(OPEN_CHAT_TOKEN, open);
+}
+
+/// One message of the dock on its one row, as SJK chat lines look everywhere
+/// ([`crate::sjk_chat_look`]): the name in its colours, the verified tick alone for
+/// a verified sender, a colon, then the message in the SJK chat's gold, cut at the
+/// column's edge. `size` is the text size in window pixels.
+fn dock_line(
+    canvas: &mut MenuCanvas,
+    rect: Rect,
+    line: &DockLine<'_>,
+    measure: Option<crate::sjk_chat_look::Measure<'_>>,
+    size: f32,
+) {
+    use crate::sjk_chat_look;
+    use crate::text::TextFace;
+    let width = |value: &str, face| match measure {
+        Some(measure) => measure.width(value, size, face),
+        // About the body family's mean advance; colour codes take no room.
+        None => {
+            let codes = value
+                .as_bytes()
+                .windows(2)
+                .filter(|pair| pair[0] == b'^' && pair[1].is_ascii_digit())
+                .count();
+            value.chars().count().saturating_sub(codes * 2) as f32 * size * 0.52
+        }
+    };
+    let run = |canvas: &mut MenuCanvas, rect, colour, value: std::fmt::Arguments<'_>| {
+        text(
+            canvas,
+            TextFamily::Body,
+            value,
+            rect,
+            size,
+            colour,
+            FontWeight::Regular,
+            TextAlign::Start,
+        );
+    };
+    let name_width = width(line.name, TextFace::Regular).min(rect.width * 0.55);
+    run(
+        canvas,
+        Rect::new(rect.x, rect.y, name_width + 1.0, rect.height),
+        color::TEXT,
+        format_args!("{}", line.name),
+    );
+    let mut x = rect.x + name_width;
+    if line.verified {
+        sjk_chat_look::tick(
+            canvas.draw_list_mut(),
+            x,
+            rect.y + rect.height * 0.5,
+            size,
+            1.0,
+        );
+        x += sjk_chat_look::tick_room(size);
+    }
+    let colon = width(": ", TextFace::Regular);
+    run(
+        canvas,
+        Rect::new(x, rect.y, colon, rect.height),
+        color::TEXT,
+        format_args!(":"),
+    );
+    x += colon;
+    run(
+        canvas,
+        Rect::new(x, rect.y, (rect.right() - x).max(1.0), rect.height),
+        sjk_chat_look::GOLD,
+        format_args!("{}", line.text),
+    );
 }
 
 /// The player, bottom left: a gold ring with their initial, their name, and
@@ -1304,6 +1371,7 @@ mod tests {
             online: 7,
             live: true,
             notice: "",
+            measure: None,
         }
     }
 
@@ -1361,8 +1429,67 @@ mod tests {
         let runs: Vec<&str> = canvas.text_runs().collect();
         assert!(runs.contains(&"SJK chat"), "{runs:?}");
         assert!(runs.contains(&"7 online"), "{runs:?}");
-        assert!(runs.contains(&"^2Sol^7: gg all"), "{runs:?}");
+        assert!(runs.contains(&"^2Sol"), "{runs:?}");
+        assert!(runs.contains(&"gg all"), "{runs:?}");
         assert!(runs.contains(&"Open chat"), "{runs:?}");
+    }
+
+    #[test]
+    fn a_dock_line_flows_with_the_tick_alone_and_its_text_in_gold() {
+        let font = crate::text::test_font();
+        let servers = [server("a")];
+        let mut canvas = MenuCanvas::new();
+        let chat = ChatDock {
+            measure: Some(crate::sjk_chat_look::Measure::new(
+                &font,
+                crate::text::TextStyle::NEUTRAL,
+            )),
+            ..dock()
+        };
+        build(
+            &mut canvas,
+            VIEWPORTS[0],
+            &mut Home::default(),
+            &view(&servers, Some(chat)),
+            1.0,
+        );
+        let texts: Vec<(String, Rect, sjk_ui::Color)> = canvas
+            .draw_list()
+            .commands()
+            .iter()
+            .filter_map(|command| match command {
+                DrawCommand::Text {
+                    rect, text, color, ..
+                } => Some((canvas.stored_text(*text).to_owned(), *rect, *color)),
+                _ => None,
+            })
+            .collect();
+        let find = |wanted: &str| {
+            texts
+                .iter()
+                .find(|(text, ..)| text == wanted)
+                .unwrap_or_else(|| panic!("{wanted:?} not in {texts:?}"))
+        };
+        let (_, name, name_colour) = find("^2Sol");
+        let (_, body, body_colour) = find("gg all");
+        assert!((name.y - body.y).abs() < 0.01 && body.x > name.right());
+        assert_eq!(*body_colour, crate::sjk_chat_look::GOLD);
+        assert_ne!(*name_colour, crate::sjk_chat_look::GOLD);
+        let ticks: Vec<Rect> = canvas
+            .draw_list()
+            .commands()
+            .iter()
+            .filter_map(|command| match command {
+                DrawCommand::TexturedQuad { rect, texture, .. }
+                    if *texture == crate::ui_renderer::VERIFIED_TEXTURE =>
+                {
+                    Some(*rect)
+                }
+                _ => None,
+            })
+            .collect();
+        assert_eq!(ticks.len(), 1, "Sol is verified, Fox is not");
+        assert!(ticks[0].x >= name.right() - 1.0 && ticks[0].right() <= body.x);
     }
 
     #[test]

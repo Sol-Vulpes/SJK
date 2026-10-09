@@ -20,10 +20,11 @@ impl ChatOverlay {
     }
 
     /// A message for the SJK channel: its name and text through the chat rules, as
-    /// anything a hub sends is shown.
+    /// anything a hub sends is shown, the text without its colour codes, as it is
+    /// drawn in the SJK chat's gold ([`crate::sjk_chat_look::message_text`]).
     fn push_sjk(&mut self, message: &ChatMessage, muted: bool, now: Instant) {
         let name = sjk_identity::chat::for_display(&message.name);
-        let body = options::clean_body(&sjk_identity::chat::for_display(&message.text), 0);
+        let body = crate::sjk_chat_look::message_text(&message.text);
         let (body, emojis) = if self.options.emojis {
             self.emojis.markup(&body)
         } else {
@@ -252,7 +253,9 @@ mod tests {
         let messages = hub(&[(1, "hello ^1there"), (2, "bad \u{1F600}x")]);
         chat.sync_sjk(&messages, |_| false, now);
         chat.sync_sjk(&messages, |_| false, now);
-        assert_eq!(bodies(&chat), ["hello ^1there", "bad x"]);
+        // The text is drawn in the SJK chat's gold, without its colour codes; the
+        // name keeps them.
+        assert_eq!(bodies(&chat), ["hello there", "bad x"]);
         let line = &chat.lines[0];
         assert!(line.channel == Channel::Sjk);
         assert_eq!(line.name, "^2Sol");
@@ -261,7 +264,7 @@ mod tests {
         chat.build(true, &font, [1920.0, 1080.0], 1_000);
         let runs: Vec<&str> = chat.ui.text_runs().collect();
         assert!(runs.contains(&"SJK"), "{runs:?}");
-        assert!(runs.contains(&"SJK VERIFIED"), "{runs:?}");
+        assert!(!runs.contains(&"SJK VERIFIED"), "the tick alone: {runs:?}");
     }
 
     #[test]

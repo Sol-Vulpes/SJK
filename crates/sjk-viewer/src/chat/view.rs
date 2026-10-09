@@ -4,6 +4,7 @@ mod composer;
 mod draft;
 mod name;
 mod player_menu;
+mod sjk_line;
 
 use super::*;
 use crate::menu_widgets::MenuCanvas;
@@ -126,10 +127,22 @@ impl ChatOverlay {
             if (!active && line.muted) || alpha <= 0.0 {
                 continue;
             }
-            line.wrap
-                .update(&line.body, font, g.width - 12.0 * g.scale, g.font);
+            // An SJK line flows from its name's row ([`sjk_line`]); a game line with a
+            // known sender has its name on a row above the message.
+            let sjk = line
+                .hub
+                .as_ref()
+                .map(|hub| sjk_line::Prefix::new(&line.name, hub.verified, font, g));
+            let wrap_width = g.width - 12.0 * g.scale;
+            match &sjk {
+                Some(prefix) => {
+                    line.wrap
+                        .update_indented(&line.body, font, wrap_width, g.font, prefix.width())
+                }
+                None => line.wrap.update(&line.body, font, wrap_width, g.font),
+            }
             let rows = if line.muted { 1 } else { line.wrap.len };
-            let header = if line.name.is_empty() {
+            let header = if line.name.is_empty() || sjk.is_some() {
                 0.0
             } else {
                 layout::NAME_ADVANCE
@@ -154,6 +167,26 @@ impl ChatOverlay {
             let slide =
                 Tween::new(14.0 * g.scale, 0.0, 0, ENTER_MS, Easing::EaseOutCubic).sample(age);
             let x = g.left + slide;
+            if let Some(hub) = &line.hub {
+                let prefix = sjk_line::Prefix::new(&line.name, hub.verified, font, g);
+                sjk_line::draw(
+                    &mut self.ui,
+                    sjk_line::Line {
+                        name: &line.name,
+                        body: &line.body,
+                        muted: line.muted,
+                        wrap: &line.wrap,
+                        marks: &line.emojis,
+                        emojis: self.options.emojis.then_some(&self.emojis),
+                    },
+                    &prefix,
+                    font,
+                    g,
+                    [x, y],
+                    alpha,
+                );
+                continue;
+            }
             let mut body_y = y;
             if !line.name.is_empty() {
                 let end = layout::fitting_end(&line.name, font, g.width * 0.65, 16.0 * g.scale);
@@ -205,18 +238,15 @@ impl ChatOverlay {
                     FontWeight::Semibold,
                     0.0,
                 );
+                // SJK lines are drawn by `sjk_line` and never reach here.
                 let label = if line.muted {
                     "IGNORED"
                 } else {
-                    match (
-                        line.channel,
-                        line.hub.as_ref().is_some_and(|hub| hub.verified),
-                    ) {
-                        (Channel::Team, _) => "TEAM",
-                        (Channel::Whisper, _) => "WHISPER",
-                        (Channel::Sjk, true) => "SJK VERIFIED",
-                        (Channel::Sjk, false) => "SJK",
-                        (Channel::Global, _) => "",
+                    match line.channel {
+                        Channel::Team => "TEAM",
+                        Channel::Whisper => "WHISPER",
+                        Channel::Sjk => sjk_line::TAG,
+                        Channel::Global => "",
                     }
                 };
                 self.ui.text(

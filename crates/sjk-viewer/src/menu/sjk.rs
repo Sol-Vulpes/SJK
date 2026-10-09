@@ -83,7 +83,18 @@ pub(crate) enum TextTarget<'a> {
     Inter(&'a mut Vec<TextVertex>, &'a UiFont),
 }
 
-impl TextTarget<'_> {
+impl<'a> TextTarget<'a> {
+    /// How the body family's text measures as this target will draw it, in the
+    /// player's menu text style, for runs laid out one after another on a line.
+    pub(crate) fn body_measure(&self) -> crate::sjk_chat_look::Measure<'a> {
+        match *self {
+            Self::Families(ref fonts, style) => {
+                crate::sjk_chat_look::Measure::new(fonts.body.1, style)
+            }
+            Self::Inter(_, font) => crate::sjk_chat_look::Measure::new(font, font.style()),
+        }
+    }
+
     /// Append `canvas`'s text runs, each in its family.
     pub(crate) fn append(self, canvas: &MenuCanvas, viewport: [f32; 2]) {
         match self {
@@ -158,7 +169,11 @@ impl ClientMenu {
             self.chat_dock.refresh();
         }
         let mut lines = [chat_dock::BLANK; chat_dock::LINES];
-        let chat = chat_on.then(|| self.chat_dock.view(&mut lines));
+        let measure = target.body_measure();
+        let chat = chat_on.then(|| home::ChatDock {
+            measure: Some(measure),
+            ..self.chat_dock.view(&mut lines)
+        });
         let view = home::HomeView {
             name,
             model,

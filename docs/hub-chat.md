@@ -33,7 +33,8 @@ The hub's side is described in Sol-Vulpes/SJK-hub (`PROTOCOL.md`, "Chat", "Emote
 | Requests (`chat`, `emote`, `feed`) | [hub.rs](../crates/sjk-identity/src/hub.rs) |
 | The feed thread and `ChatState` | [feed.rs](../crates/sjk-identity/src/feed.rs), [service.rs](../crates/sjk-identity/src/service.rs) |
 | Viewer glue, local mutes | [player_identity.rs](../crates/sjk-viewer/src/player_identity.rs) |
-| In-game SJK channel | [chat/sjk.rs](../crates/sjk-viewer/src/chat/sjk.rs), [sjk_chat_frame.rs](../crates/sjk-viewer/src/sjk_chat_frame.rs) |
+| In-game SJK channel | [chat/sjk.rs](../crates/sjk-viewer/src/chat/sjk.rs), [chat/view/sjk_line.rs](../crates/sjk-viewer/src/chat/view/sjk_line.rs), [sjk_chat_frame.rs](../crates/sjk-viewer/src/sjk_chat_frame.rs) |
+| How a line looks everywhere (gold, tick, flow) | [sjk_chat_look.rs](../crates/sjk-viewer/src/sjk_chat_look.rs) |
 | Main page dock | [home.rs](../crates/sjk-viewer/src/menu/sjk/home.rs), [chat_dock.rs](../crates/sjk-viewer/src/menu/sjk/chat_dock.rs) |
 | SJK chat page | [sjk_chat_panel.rs](../crates/sjk-viewer/src/sjk_chat_panel.rs), [sjk_chat_panel_view.rs](../crates/sjk-viewer/src/sjk_chat_panel_view.rs), [console_sjk_chat_page.rs](../crates/sjk-viewer/src/console_sjk_chat_page.rs) |
 | Emotes | [emotes.rs](../crates/sjk-viewer/src/emotes.rs), [emotes_frame.rs](../crates/sjk-viewer/src/emotes_frame.rs) |
@@ -91,8 +92,9 @@ Old clients ignore all of it, so it stays `/v1/`.
   `messagemode5`; an existing profile binds it in Settings > Key bindings > Other)
   opens the composer on it; Tab cycles All, Team and SJK. Enter on SJK hands the text to the hub,
   never to the game server.
-- Hub messages join the chat feed tagged SJK in the SJK UI's gold (`#E8B84A`, apart
-  from the game's blues), SJK VERIFIED for a verified sender. Names and texts go
+- Hub messages join the chat feed as one flowing line ([How a line
+  looks](#how-a-line-looks)): a small SJK tag, the name, the verified tick for a
+  verified sender, then the message in the SJK chat's gold. Names and texts go
   through `chat::for_display`. Messages staff delete leave the feed, and muting a key
   on the page hides its lines already there. Joining a game
   does not replay the hub's backlog in the feed (the dock and the page show it). A
@@ -102,15 +104,15 @@ Old clients ignore all of it, so it stays `/v1/`.
 
 ## In the menus
 
-- SJK UI main page: the chat is docked under Recent servers. Its last five lines (a
-  gold dot for a verified sender), cut to one row each, sit on the field, with the
-  online count by its name. Down past the last server (or a click) reaches the field;
+- SJK UI main page: the chat is docked under Recent servers. Its last five lines (the
+  verified tick after a verified sender's name), cut to one row each, sit on the field,
+  with the online count by its name. Down past the last server (or a click) reaches the field;
   Enter types (every key goes to the field), Enter sends, Escape stops. Open chat opens
   the page. A line under the field says why a message could not go.
 - The SJK chat page (a console page in the SJK UI's look in every menu style): the
-  history, newest at the bottom, each with its name, Staff and Verified, and how long
-  ago ("3 minutes ago", as the main page's servers say, so no time zone is needed),
-  wrapped; the field (the keyboard is there when the page opens), Send and the
+  history, newest at the bottom, each a flowing line (name, tick, text) with Staff and
+  how long ago on the right of its first row ("3 minutes ago", as the main page's
+  servers say, so no time zone is needed); the field (the keyboard is there when the page opens), Send and the
   character count. Up from the field chooses the newest message, Up and Down move,
   Page Up and Page Down scroll, Tab walks every control. A chosen message offers Mute on
   this PC (for the session); for staff, Delete for everyone, Mute at the hub and Unmute
@@ -118,6 +120,32 @@ Old clients ignore all of it, so it stays `/v1/`.
   came to (sending, done, or the hub's refusal). It opens from the dock's
   Open chat, `sjkchat`, `messagemode5` outside a game, and the in-game SJK menu's
   SJK chat.
+
+## How a line looks
+
+Every SJK chat line looks the same wherever it shows, in the game's chat, on the dock
+and on the page ([sjk_chat_look.rs](../crates/sjk-viewer/src/sjk_chat_look.rs), Sol's
+request, 08/10/2026):
+
+- The message is drawn in the SJK chat's gold, `#F5C756` (`sjk_chat_look::GOLD`), a
+  colour none of the game's codes give (`^0` to `^9`, in the game's palette or the SJK
+  UI's lifted one; a test keeps it far from all of them), so it stands apart from
+  every game chat line. The message's own colour codes are dropped
+  (`sjk_chat_look::message_text`), so all of it is gold; the sender's name keeps its
+  codes over the game's white.
+- A verified sender has the verified tick after the name (the nameplates' gold seal
+  with its white tick, `ui_renderer::VERIFIED_TEXTURE`) and no word: no "SJK VERIFIED"
+  or "Verified" tag. Staff stays written on the page.
+- The line flows as one line and wraps only when it is too long, as a game chat line
+  does. In the game it used to break straight away: the feed drew a sender's name and
+  its tag on a row of their own and the message under it (`NAME_ADVANCE` in
+  `chat/view.rs`), while the servers' chat lines, which carry the name in their text,
+  flowed. Now the first row holds the SJK tag, the name, the tick and a colon, and the
+  message goes on after them (`Wrapped::update_indented` in `chat/layout.rs`, drawn by
+  `chat/view/sjk_line.rs`); a first word too wide for what is left of that row starts
+  the next. The page lays its lines out the same way, measured in its body family
+  (`sjk_chat_look::flow`), and the dock's single row sets name, tick and text one after
+  another.
 
 ## Emotes in the client (groundwork)
 

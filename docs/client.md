@@ -1807,7 +1807,9 @@ are in [identity.md](identity.md).
 - SJK chat: one conversation for every SJK player, through the hub, in games and in
   the menus ([hub-chat.md](hub-chat.md)). In a game, I (`messagemode5`) opens the
   composer on the SJK channel (Tab cycles All, Team and SJK); hub messages show in the
-  chat feed tagged SJK in gold. The SJK UI's main page docks it under Recent servers;
+  chat feed tagged SJK, each one flowing line with its text in the SJK chat's own gold
+  and the verified tick after a verified sender's name
+  ([hub-chat.md](hub-chat.md#how-a-line-looks)). The SJK UI's main page docks it under Recent servers;
   `sjkchat`, the dock's Open chat and the in-game SJK menu open its page, where a
   message's sender can be muted on this PC. `cl_sjkChat 0` (Settings > Network > SJK
   chat) hides it and stops the reading. `sjkemote <id>` sends an emote the SJK players
