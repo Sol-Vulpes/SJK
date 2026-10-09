@@ -2105,7 +2105,7 @@ font, following OpenJK `codemp`:
 | --- | --- | --- |
 | `ergoec` (`FONT_MEDIUM`) | SJK Menu | Menus, crosshair name, centre prints, warmup text, match timer, enemy info, scoreboard names and headings |
 | `ocr_a` (`FONT_SMALL`) | SJK Chat | Chat box and typing line, weapon/Force/inventory selection names, scoreboard numbers |
-| Console character set (`gfx/2d/charsgrid_med`) | JetBrains Mono | Console and notify lines, FPS, snapshot, vote, team overlay, connection interrupted, kill feed |
+| Console character set (`gfx/2d/charsgrid_med`) | JetBrains Mono | Console and notify lines, FPS, snapshot, vote, team overlay, connection interrupted |
 
 The routing is per text run: the HUD maps its text ids in
 [text_values.rs](../crates/sjk-viewer/src/hud/text_values.rs), chat marks its
@@ -2219,8 +2219,8 @@ which the retail and the checked custom HUDs do not use.
 `cg_hudStyle classic` selects SJK's classic layout in either font. Under `game`,
 SJK's default layout ([default.json](../crates/sjk-viewer/assets/hud/default.json),
 or a `hud.json` beside the configuration) draws the crosshair, team rows, votes,
-kill feed, timer and lagometer, and the status too when the game HUD's files give
-none; with `cg_classicHudFont` on, the classic layout does instead. A saved
+timer and lagometer, and the status too when the game HUD's files give
+none (the [kill feed](client.md#kill-feed) is drawn by the HUD itself in every style); with `cg_classicHudFont` on, the classic layout does instead. A saved
 `modern`, the retired layout of that name, is reset to `game` at start.
 
 `cg_hudStyle radial` (picker name "SJK radial") is SJK's own take on the TheRisqe Radial
@@ -2247,7 +2247,7 @@ Medium yellow, Strong red, Dual green, Staff magenta, as TheRisqe's style pictur
 the style's name replaces the number, in the same colour. The weapon-name transient rests in
 the hollow between the bars, above the pills.
 It is the layout document [radial.json](../crates/sjk-viewer/assets/hud/radial.json): the
-default layout's other widgets (crosshair, team rows, votes, kill feed, timer, lagometer)
+default layout's other widgets (crosshair, team rows, votes, timer, lagometer)
 plus `arc` widgets, which `hud.json` overrides cannot yet replace for this style.
 Widgets are placed in 1080-line pixels that grow with the window height and `cg_hudScale`;
 the ring group's drop is a widget's `offset_fraction` instead, a fraction of the screen's

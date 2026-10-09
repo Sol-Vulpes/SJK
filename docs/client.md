@@ -1421,6 +1421,53 @@ retail's colours and highlight art on the classic menus and the theme's with
 the SJK UI. "Game HUD files" stays on the tab for lists the picker does not
 find.
 
+## Kill feed
+
+`cg_killfeed` (on by default, Settings > HUD > "Kill feed") lists the last kills
+at the top right of the HUD, in every HUD style
+([kill_feed.rs](../crates/sjk-viewer/src/hud/kill_feed.rs)). Each entry is
+`killer [icon] victim`, or `[skull] victim` for a suicide or a death to the world
+(a fall, lava, a trigger), on a dark plate; an entry where the viewed player
+killed or died has a stronger plate and a white outline. Names are read from the
+players' info when the kill arrives, as the console's kill message is, and keep
+their colour codes; they are not tinted by team, as the console, chat and
+scoreboard draw them. A name too long for its room ends in an ellipsis.
+
+The icon is the HUD's picture for the means of death: the weapon's own
+`gfx/hud/w_icon_*` (the saber's `w_icon_lightsaber`), mapped from each `MOD_*` to
+the weapon whose shots carry it in OpenJK's `g_weapon.c` (the sentry gun has its
+item picture), or an installed icon pack's `hud/mod/*` picture, which takes its
+place. A dark Force kill (lightning or grip, which the obituary does not tell
+apart) without such a picture shows Force Lightning's holocron, and a player
+knocked to their death (`KILLED_FORCETOSS`) Force Push's. Causes no weapon deals
+(water, lava, crushing, telefrags, unknown causes) show the skull, which is drawn
+from shapes, not a game picture. A weapon whose picture did not load shows a
+short word instead (`SABER`, `ROCKET`, `FORCE`).
+
+Up to five entries show, the newest at the top so it is always right under the
+readouts above; each holds five seconds of server time and fades out over one.
+The feed stands under whatever the HUD already
+draws at the top right — the FPS readout, team overlay, duel portrait, snapshot,
+inventory and powerup column — and never reaches left of the vote panel's right
+edge, so it does not cover the top centre's vote and timer. It is part of the
+HUD's draw list, so it hides whenever the HUD does: scoreboard held,
+`cg_drawHud 0` or `cg_draw2D 0`, intermission, menus and the console. Names draw
+in the HUD's font (Inter, or SJK HUD with `cg_classicHudFont`), which the feed
+measures them in.
+
+| Cvar | Default | Effect |
+| --- | --- | --- |
+| `cg_killfeed` | 1 | Show the feed |
+| `cg_killfeedX`, `cg_killfeedY` | 0 | Move it left and down, in 640x480 units |
+| `cg_killfeedTextSize` | 0.8 | Name size; 0.8 is the normal size, 0 uses it |
+| `cg_killfeedIconSize` | 12 | Icon size in 640x480 units; 0 uses 18 |
+| `cg_killfeedColors` | 0 | Tint icons by cause of death (TaystJK's colours) |
+
+The feed replaces an earlier one-line obituary at the same cvar, which was off by
+default; a profile that saved that 0 has it moved once to 1
+(`cg_killfeedDefaultVersion`), and that feed's `cg_killfeedAlignment` and
+`cg_killfeedReverse` are gone.
+
 ## Nameplates
 
 `cg_nameplate` (on by default) draws MMO-style nameplates over players

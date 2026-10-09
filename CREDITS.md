@@ -67,6 +67,7 @@ Sol develops SJK and sets its direction. Sol's work includes:
 - unlockables kept at the SJK hub: the generic blade-skin renderer and the packs the
   hub delivers (the Sun blade's look and sounds), and looks (blade skins,
   Illuminate) every SJK player on a server sees;
+- the kill feed at the top right with weapon icons (`cg_killfeed`);
 - the console socket for external apps (after JoF EJK), muting in the
   background (after EternalJK) and the JA+ `flipkick` command (after JoF EJK);
 - the camera style setting, its locked camera after JoF EJK (`cg_cameraStyle`).

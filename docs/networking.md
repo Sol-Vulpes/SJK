@@ -79,7 +79,8 @@ messages took the male form. Those messages follow `CG_Obituary`
 (`cg_event.c:124-454`): each name ends with `^7`, so a colour a name leaves open
 stops there. `noname` remains only for a slot with no name at all, where OpenJK
 prints an empty one, and SJK prints a whole name where OpenJK cuts it to 29 bytes
-([snapshot_presentation.rs](../crates/sjk-viewer/src/snapshot_presentation.rs)).
+(`obituary_name`, [obituary.rs](../crates/sjk-client/src/obituary.rs), which the
+[kill feed](client.md#kill-feed) shares).
 
 ### Player-state arrays
 

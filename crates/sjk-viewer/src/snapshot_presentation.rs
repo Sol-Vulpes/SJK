@@ -130,30 +130,19 @@ fn format_obituary(
     localization: &Localization,
 ) -> String {
     use std::fmt::Write as _;
-    let target = obituary_name(game, event.target);
+    // Names come from the configstring's bytes: a name with a Latin-1 letter is
+    // not UTF-8, and reading the whole string as UTF-8 printed it as `noname`.
+    let target = sjk_client::obituary_name(game, event.target);
     let key = event.attacker_message.unwrap_or(event.message);
     let phrase = localization.strings.get(key).map_or(key, String::as_str);
     let mut line = String::with_capacity(128);
     if event.attacker_message.is_some() {
-        let attacker = obituary_name(game, event.attacker);
+        let attacker = sjk_client::obituary_name(game, event.attacker);
         let _ = write!(line, "{target}^7 {phrase} {attacker}^7");
     } else {
         let _ = write!(line, "{target}^7 {phrase}");
     }
     line
-}
-
-/// `CS_PLAYERS`: the first client's configstring.
-const CS_PLAYERS: usize = 1_131;
-
-/// A client's name for an obituary, read from the configstring's bytes: a name
-/// with a Latin-1 letter is not UTF-8, and reading the whole string as UTF-8
-/// printed such a player as `noname`. `noname` is left only for a slot with no
-/// name at all, where `CG_Obituary` would print an empty one.
-fn obituary_name(game: &GameState, client: u16) -> std::borrow::Cow<'_, str> {
-    game.config_string(CS_PLAYERS + usize::from(client))
-        .and_then(|info| sjk_client::LegacyClientInfo::new(info).name())
-        .unwrap_or(std::borrow::Cow::Borrowed("noname"))
 }
 
 impl GpuState {
@@ -484,6 +473,9 @@ fn update_demo_camera(gpu: &mut GpuState, session: &demo_playback::Session) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// `CS_PLAYERS`: the first client's configstring.
+    const CS_PLAYERS: usize = 1_131;
 
     fn kill(target: u16, attacker: u16, key: &'static str) -> sjk_client::ObituaryEvent {
         sjk_client::ObituaryEvent {

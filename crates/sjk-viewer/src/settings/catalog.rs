@@ -403,6 +403,11 @@ pub(super) const HUD: &[Setting] = &[
         kind: ValueKind::Bool,
     },
     Setting {
+        label: "Kill feed",
+        cvar: "cg_killfeed",
+        kind: ValueKind::Bool,
+    },
+    Setting {
         label: "Chat",
         cvar: "cg_drawChat",
         kind: ValueKind::Bool,

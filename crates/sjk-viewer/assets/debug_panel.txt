@@ -2778,3 +2778,14 @@ test: Hold TAB in FFA with 8 and with 32 players: a narrow, centred board; long 
 test: In team FFA and CTF the board starts beside the chat column; duel cards are centred.
 test: Settings > Scoreboard > Compact SJK scoreboard off: the old full-width board.
 note: Not seen on screen yet; world shots: duel6_sjk_scoreboard ignored test.
+
+[kill-feed]
+area: HUD
+title: Kill feed with weapon icons at the top right (SJK PR #58)
+change: Up to 5 kills: killer, weapon icon, victim; a skull for a suicide or world death.
+change: cg_killfeed is switched on once (cg_killfeedDefaultVersion) and has a Settings > HUD row.
+change: Your own kills and deaths get a stronger plate. The old one-line obituary is gone.
+test: Kill and get killed with saber, gun, Force lightning, push, fall: the icon fits the cause.
+test: Team FFA/CTF: the feed sits below FPS, team overlay and powerup column.
+test: cg_killfeed 0 in Settings > HUD hides it and stays off after a restart.
+note: Grip and lightning both show the lightning holocron. Not seen on screen yet.

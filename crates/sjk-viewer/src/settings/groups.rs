@@ -135,6 +135,7 @@ impl Group {
                 "cg_speedometer",
                 "cg_drawTeamOverlay",
                 "cg_lagometer",
+                "cg_killfeed",
                 "cg_drawChat",
                 crate::chat::emoji::CVAR,
                 crate::ground_hud::CVAR,

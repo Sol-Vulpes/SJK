@@ -428,6 +428,24 @@ impl ViewerConsole {
             }
             let _ = shell.cvars.set_text("cg_cameraStyleDefaultVersion", "1");
         }
+        // cg_killfeed was off by default (a one-line obituary) and every profile
+        // saved that 0, so the kill feed, on by default, would reach none. Move a
+        // saved 0 once to the default; a 0 chosen after this stays.
+        if matches!(
+            shell
+                .cvars
+                .get("cg_killfeedDefaultVersion")
+                .map(|cvar| &cvar.value),
+            Some(CvarValue::Integer(0))
+        ) {
+            if matches!(
+                shell.cvars.get("cg_killfeed").map(|cvar| &cvar.value),
+                Some(CvarValue::Integer(0))
+            ) {
+                let _ = shell.cvars.reset("cg_killfeed");
+            }
+            let _ = shell.cvars.set_text("cg_killfeedDefaultVersion", "1");
+        }
         retire_modern_ui(&mut shell.cvars);
         shell.push_log("^5SJK console ready. ^7Type cmdlist for commands.");
         Ok(Self {

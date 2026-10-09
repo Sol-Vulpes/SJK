@@ -265,6 +265,10 @@ const HELP: &[(&str, &str)] = &[
         "cg_lagometer",
         "A small graph of interpolation and snapshot delay, for spotting network trouble.",
     ),
+    (
+        "cg_killfeed",
+        "The last kills at the top right: killer, weapon icon, victim; a skull for suicides and falls.",
+    ),
     ("cg_drawChat", "Shows chat messages over the game."),
     (
         crate::chat::emoji::CVAR,
