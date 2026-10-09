@@ -155,9 +155,11 @@ timestamps in logs and JSON, and file names meant to sort.
 The site is static: `index.html`, `assets/style.css` and `assets/site.js` (release
 list, download entry, screenshot gallery). It wears the SJK UI's look
 ([sjk-ui.md](sjk-ui.md), Sol's request of 09/10/2026): the home page is the
-client's main page, SJK's emblem in its turning ring with the sections on an arc
-round it (the gold arc turns to the one under the pointer or keyboard), the latest
-release where the client lists recent servers, a profile card for Sol and key hints,
+client's main page, SJK's emblem in its turning ring with a plain menu beside it
+(a gold Download button, then the sections in one column; Sol found the first
+version's arc, whose entries grew and moved under the pointer, hard to use), the
+latest release where the client lists recent servers, a profile card for Sol with
+Sol's GitHub picture (the initial shows if it does not load),
 over shots of the client's tour of Yavin Training Grounds that cross-fade every 15
 seconds; What SJK brings is laid out as the client's Settings (a rail of categories,
 rows, a detail column with a screenshot). Below 900 px wide (or in a tall window) the

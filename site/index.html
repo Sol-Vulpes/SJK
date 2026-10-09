@@ -45,9 +45,9 @@
   </ul>
 </nav>
 
-<!-- The SJK UI's main page: the emblem in its turning ring, the page's entries
-     on an arc round it, the latest release where the client lists the servers
-     joined last, all floating on the tour of mp/duel6 (docs/sjk-ui.md). -->
+<!-- After the SJK UI's main page: the emblem in its turning ring, the menu
+     beside it, the latest release where the client lists the servers joined
+     last, all floating on the tour of mp/duel6 (docs/sjk-ui.md). -->
 <header class="home" id="top">
   <div class="backdrop" aria-hidden="true">
     <img class="shown" src="screenshots/tour-1.jpg" alt="">
@@ -59,7 +59,6 @@
     <div class="ring" aria-hidden="true">
       <div class="ticks"></div>
       <div class="gold-arc"></div>
-      <div class="beam"></div>
       <img class="emblem" src="assets/sjk-logo-512.png" alt="" width="380" height="380">
     </div>
 
@@ -68,14 +67,17 @@
       <h1>Sol JK</h1>
     </div>
 
-    <ul class="arc" aria-label="Sol JK">
-      <li style="--i: 0"><a class="chosen" id="download" href="https://github.com/Sol-Vulpes/SJK/releases/latest">Download<span class="line" id="download-line">Windows 10/11 and Linux, x64 · needs your own Jedi Academy</span></a></li>
-      <li style="--i: 1"><a href="#features">What SJK brings<span class="line">The SJK UI, the classic game, JA+ servers</span></a></li>
-      <li style="--i: 2" data-gallery-link hidden><a href="#screenshots">Screenshots<span class="line">Frames rendered by the client itself</span></a></li>
-      <li style="--i: 3"><a href="#changelog">What's new<span class="line">The latest releases' notes</span></a></li>
-      <li style="--i: 4"><a href="#install">Install<span class="line">Extract into GameData and play</span></a></li>
-      <li style="--i: 5"><a href="#credits">Credits<span class="line">Who makes SJK, and how to help</span></a></li>
-    </ul>
+    <nav class="menu" aria-label="Sol JK">
+      <a class="download" id="download" href="https://github.com/Sol-Vulpes/SJK/releases/latest">Download</a>
+      <p class="download-line" id="download-line">Windows 10/11 and Linux, x64 · needs your own Jedi Academy</p>
+      <ul>
+        <li><a href="#features">What SJK brings</a></li>
+        <li data-gallery-link hidden><a href="#screenshots">Screenshots</a></li>
+        <li><a href="#changelog">What's new</a></li>
+        <li><a href="#install">Install</a></li>
+        <li><a href="#credits">Credits</a></li>
+      </ul>
+    </nav>
 
     <aside class="recent" aria-labelledby="recent-title">
       <h2 id="recent-title">Latest release</h2>
@@ -91,7 +93,7 @@
     </aside>
 
     <a class="card" href="https://github.com/Sol-Vulpes">
-      <span class="disc" aria-hidden="true">S</span>
+      <span class="disc" aria-hidden="true">S<img src="https://github.com/Sol-Vulpes.png?size=144" alt="" width="72" height="72" onerror="this.remove()"></span>
       <span class="card-text">
         <span class="card-name">Sol</span>
         <span class="card-facts"><span class="tick" aria-hidden="true">✓</span> Develops SJK and sets its direction</span>
@@ -99,7 +101,6 @@
       </span>
     </a>
 
-    <p class="keys" aria-hidden="true"><kbd>Tab</kbd> Choose <kbd>Enter</kbd> Open <kbd>↓</kbd> Explore</p>
     <p class="version" id="version">Sol JK · Alpha</p>
   </div>
 </header>

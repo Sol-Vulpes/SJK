@@ -113,7 +113,7 @@ function enhanceDownload(release) {
   const platform = guessPlatform();
   const asset = assetFor(release, platform);
   const system = platform === "linux-x64" ? "Linux" : "Windows";
-  // The entry keeps its one word, as on the client's arc; its line names the build.
+  // The button keeps its one word; the line under it names the build.
   button.href = asset ? asset.browser_download_url : release.html_url;
   const line = document.getElementById("download-line");
   if (line) line.textContent = asset ? `Sol JK ${version} for ${system} x64` : `Sol JK ${version}`;
@@ -235,33 +235,6 @@ async function loadGallery() {
 const reducedMotion = typeof window !== "undefined"
   && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-/** The home page's arc, as the client's: the entry under the pointer or the
- * keyboard is chosen (gold, larger, its line shown) and the ring's gold arc
- * turns to it; Download, the page's main action, is chosen otherwise. */
-function setUpArc() {
-  const ring = document.querySelector(".home .ring");
-  const arc = document.querySelector(".arc");
-  const entries = [...document.querySelectorAll(".arc a")];
-  if (!ring || !arc || !entries.length) return;
-  const resting = entries[0];
-  const choose = (entry) => {
-    entries.forEach((e) => e.classList.toggle("chosen", e === entry));
-    const index = Number(entry.parentElement.style.getPropertyValue("--i")) || 0;
-    ring.style.setProperty("--a", `${(index - 2.5) * 16}deg`);
-  };
-  for (const entry of entries) {
-    entry.addEventListener("pointerenter", () => choose(entry));
-    entry.addEventListener("focus", () => choose(entry));
-  }
-  arc.addEventListener("pointerleave", () => {
-    if (!entries.includes(document.activeElement)) choose(resting);
-  });
-  arc.addEventListener("focusout", (event) => {
-    if (!entries.includes(event.relatedTarget)) choose(resting);
-  });
-  choose(resting);
-}
-
 /** Behind the home page, shots of the client's camera tour of Yavin Training
  * Grounds, 15 seconds each, crossing through the navy ground. */
 function setUpBackdrop() {
@@ -349,7 +322,6 @@ function setUpSettings() {
 if (typeof document !== "undefined") {
   document.documentElement.classList.add("js");
   document.addEventListener("DOMContentLoaded", () => {
-    setUpArc();
     setUpBackdrop();
     setUpNav();
     setUpSettings();
