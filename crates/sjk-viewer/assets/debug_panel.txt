@@ -327,6 +327,14 @@ test: High, JoFTemple: FPS no longer drops near the bobbing platforms (cg_drawFP
 test: Doors still block lamp light when closed and let it through when open.
 note: A bobbing platform's own shadow on lamp light no longer moves with it.
 
+[coarse-lamp-masks]
+area: Rendering & effects
+title: Huge light textures read at a coarser grain (JKLevel1 loads 3x faster)
+change: A material making over 4,096 lamps is cooked again from a coarser emission mask.
+change: JKLevel1 (JoF mission): 107,118 lamps become 40,682; load 91 s becomes about 28 s.
+test: High, join a JKLevel1 mission: the map loads much faster than before.
+test: The log has "a material over 4096 patches cooked" lines; strip-lit rooms look the same.
+
 # ---- HUD ----
 
 [menu-huds]

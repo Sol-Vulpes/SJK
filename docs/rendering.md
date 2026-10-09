@@ -237,6 +237,18 @@ exact single-cell reduction for aligned power-of-two blocks and the previous
 area-overlap calculation for other dimensions. These changes reduce preparation
 work without reducing source count, texture resolution or lighting quality.
 
+A material whose emission mask would cut it into more than 4,096 patches is cooked
+again from a coarser mask, one level (four times fewer texels) then two, and last
+from its mean, which has no limit (09/10/2026, `lamp_emitters.rs` `COARSER`; the log
+says `a material over 4096 patches cooked ...`). The dark gaps of a tiled strip-light
+texture keep its patches apart, and each sample tests every patch of the crowded
+cells: one `textures/imperial/dpred_striplight` material of `JKLevel1` took 63 s to
+make 51,957 patches. `JKLevel1` now loads in 28 s instead of 91 s at 4K on an RTX
+5080 (107,118 lamps become 40,682) and the strip lights' room looks the same in a
+paired capture; only maps with such materials change (the most one material of
+`mp/ffa5` makes is 942, of `JoFTemple` 2,399). Merging patches over a per-material
+budget was tried and dropped: merged sources sat behind walls and darkened rooms.
+
 ### Pipelines compiled at load
 
 A render pipeline created while a frame is recorded stalls that frame while the
