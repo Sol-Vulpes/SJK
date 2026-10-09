@@ -21,6 +21,7 @@ Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 
 ## Unreleased
 
+- Dynamic lights (sabers, muzzle flashes, explosions, Force effects) no longer light through walls: each active light (up to 32) traces a small shadow tile against the map every frame; r_dynamicLightShadows 0 turns it off _(Sol)_
 - Parallax mapping reaches farther: the depth fades only where it would move the texture by less than half a pixel (a floor keeps it to about 410 units at 1080p, not 90-160), and r_parallaxNearDistance (default 24 units, 0 is off) holds it back close to a surface so it stops swimming under the camera; r_materialMapsDebug 7 shows the reach _(Sol)_
 - Kill feed: up to five kills at the top right, newest first, each as killer, weapon icon and victim (a skull for a suicide or a fall), kept 5 s and then faded; cg_killfeed (Settings > HUD > Kill feed) is on by default once and replaces the old one-line obituary _(Sol)_
 - The compact SJK scoreboard is sized to its names and centred on the screen instead of always running the full width: the name column is 140-320 px, the numbers sit close behind it, a board that would cover the chat sits just right of it, and the duel cards share the centre _(Sol)_

@@ -2289,6 +2289,9 @@ impl GpuState {
             phases.mark(&mut encoder, "uploads");
         }
         if !self.world_hidden {
+            // Walls stop dynamic lights: their shadow tiles before any view lights with them.
+            self.world_materials
+                .trace_dynamic_light_shadows(&mut encoder, self.gpu_phases.as_ref());
             self.draw_scene_views(&mut encoder, &particle_ranges);
         }
         if let Some(phases) = &self.gpu_phases {

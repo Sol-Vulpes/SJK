@@ -1,7 +1,7 @@
 // Point lights on surfaces: the block's layout, the grid that finds a fragment's candidates,
-// and the two ways a light reaches a surface. The including program binds `point_lights`
-// (a `PointLightBlock`), and defines `realtime_active()` and a `VertexOutput` with
-// `world_position` and `world_normal`.
+// the two ways a light reaches a surface, and the static world's shadow on it. The including
+// program binds `point_lights` (a `PointLightBlock`), includes `point_light_octa.wgsl`, and
+// defines `realtime_active()` and a `VertexOutput` with `world_position` and `world_normal`.
 
 struct PointLight {
     origin_radius: vec4<f32>,
@@ -16,10 +16,14 @@ struct PointLightGrid {
     control: vec4<u32>,
     masks: array<vec4<u32>,432>,
 };
+// `shadows.x` lights have a static-world shadow tile this frame (`dynamic_light_shadows.rs`,
+// mapping in `point_light_octa.wgsl`): the GPU copies them in after the CPU's part.
 struct PointLightBlock {
     lights: array<PointLight, 32>,
     metadata: vec4<u32>,
     grid: PointLightGrid,
+    shadows: vec4<u32>,
+    tiles: array<vec4<u32>, 3136>,
 };
 
 // Bounds are shared by all cameras. Only finite surface laws use this mask;
@@ -34,6 +38,73 @@ fn finite_point_mask(world: vec3<f32>) -> u32 {
     let index = cell.x+(cell.y+cell.z*12u)*12u;
     return point_lights.grid.masks[index>>2u][index&3u];
 }
+// Tile texel `pixel` of light `index`: 255th of the reach in the low byte, normal code above.
+fn point_light_texel(index: u32, pixel: vec2<i32>) -> u32 {
+    let texel = index*POINT_TILE_TEXELS + u32(pixel.y)*POINT_TILE_EDGE + u32(pixel.x);
+    let word = point_lights.tiles[texel >> 3u][(texel >> 1u) & 3u];
+    return (word >> ((texel & 1u)*16u)) & 0xffffu;
+}
+// The share of light `index` that reaches `world` past the static world: 1 without a tile
+// this frame or beyond the light's reach. Four bilinear taps of its tile, each a ray near
+// the receiver's own:
+// - clear when nothing stops it before the receiver's distance or, with the surface's
+//   geometric `normal` (zero for a model's pixel), before the receiving plane (the lamps'
+//   test, `lamp_visibility_sample.wgsl`, so grazing floors never shadow themselves);
+// - beside when what stopped it leaves `world` in front of its face: the other face of the
+//   receiver's crease, the receiver's own surface further on, a step's edge;
+// - behind when `world` lies behind that face: a wall between it and the light.
+// Behind taps also discount beside ones (twice their share): a floor that runs on under a
+// wall reaches the receiving plane in front of it, which alone would light the room behind.
+// A stored distance can lie a 255th of the reach and half a unit past the real hit; within
+// that a hit counts as on the receiving plane, and within a unit more as level with a face.
+fn point_light_visibility(index: u32, world: vec3<f32>, normal: vec3<f32>) -> f32 {
+    if index >= point_lights.shadows.x { return 1.0; }
+    let light = point_lights.lights[index].origin_radius;
+    let delta = world - light.xyz;
+    let distance = length(delta);
+    let reach = point_light_reach(light.w);
+    if distance < 1e-3 || distance >= reach { return 1.0; }
+    let surface = dot(normal, normal) > 1e-12;
+    let unit = normal*inverseSqrt(max(dot(normal, normal), 1e-24));
+    let plane = dot(delta, unit);
+    let oriented = unit*select(-1.0, 1.0, plane >= 0.0);
+    let plane_distance = abs(plane);
+    let rounding = reach/255.0 + 0.5;
+    let at = point_light_tile_position(delta) - 0.5;
+    let base = vec2<i32>(floor(at));
+    let blend = at - floor(at);
+    var clear = 0.0;
+    var beside = 0.0;
+    var behind = 0.0;
+    for (var tap = 0u; tap < 4u; tap++) {
+        let corner = vec2(tap & 1u, tap >> 1u);
+        let pixel = point_light_tile_pixel(base + vec2<i32>(corner));
+        let ray = point_light_texel_direction(pixel);
+        let denominator = dot(ray, oriented);
+        // A ray leaving for the far side of the receiving plane never meets it.
+        if surface && denominator < 1e-4 { continue; }
+        let weights = select(1.0 - blend, blend, corner == vec2(1u));
+        let weight = weights.x*weights.y;
+        let texel = point_light_texel(index, pixel);
+        let level = texel & 255u;
+        let free = (f32(level) + 1.0)*reach/255.0 + 0.5;
+        if level == 255u || free >= distance ||
+            (surface && free*denominator - plane_distance > rounding*denominator) {
+            clear += weight;
+            continue;
+        }
+        let face = point_light_code_normal(texel >> 8u);
+        if dot(delta - ray*free, face) >= -(1.0 + rounding) {
+            beside += weight;
+        } else {
+            behind += weight;
+        }
+    }
+    let total = clear + beside + behind;
+    if total < 1e-6 { return 1.0; }
+    return (clear + beside*max(1.0 - 2.0*behind/total, 0.0))/total;
+}
+
 // The fragment's candidate point lights (`stage_fragment` sets it): emitted light and
 // dynamic-light modulation share one grid lookup instead of making one each.
 var<private> fragment_point_mask: u32;
@@ -56,7 +127,12 @@ fn emitted_light(input: VertexOutput) -> vec3<f32> {
         let distance = length(delta);
         let falloff = max(1.0-distance/max(light.origin_radius.w,0.001),0.0);
         let facing = max(dot(normal,delta/max(distance,0.001)),0.0);
-        result += light.color.rgb*falloff*falloff*facing;
+        let amount = falloff*falloff*facing;
+        // Walls between the light and this surface stop it (the geometric normal: a
+        // mapped one would shadow its own bumps).
+        if amount <= 0.0 { continue; }
+        result += light.color.rgb*amount*
+            point_light_visibility(index,input.world_position,input.world_normal);
     }
     return result;
 }
@@ -82,7 +158,9 @@ fn dynamic_light_modulation(input: VertexOutput) -> vec3<f32> {
         if distance < light.origin_radius.w && distance > 0.0001 {
             let attenuation = 1.0 - distance / light.origin_radius.w;
             let facing = max(dot(normal, delta / distance), 0.0);
-            result += light.color.rgb * attenuation * facing;
+            if facing <= 0.0 { continue; }
+            result += light.color.rgb * attenuation * facing *
+                point_light_visibility(index, input.world_position, input.world_normal);
         }
     }
     return result;

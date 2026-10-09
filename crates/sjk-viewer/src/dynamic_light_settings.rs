@@ -9,6 +9,9 @@ use std::sync::{
 #[path = "model_light_settings.rs"]
 mod model;
 
+/// The static world's shadows on dynamic lights (`dynamic_light_shadows.rs`); SJK's.
+pub(crate) const SHADOWS_CVAR: &str = "r_dynamicLightShadows";
+
 /// Retained `r_dynamiclight` policy; no frame-time registry lookup or locking.
 #[derive(Clone)]
 pub(crate) struct Settings(
@@ -16,6 +19,8 @@ pub(crate) struct Settings(
     model::Settings,
     crate::world_materials::lighting_mode::Settings,
     crate::world_materials::shadows::day::live::Clock,
+    /// [`SHADOWS_CVAR`].
+    Arc<AtomicBool>,
 );
 
 impl Default for Settings {
@@ -25,6 +30,7 @@ impl Default for Settings {
             model::Settings::default(),
             Default::default(),
             Default::default(),
+            Arc::new(AtomicBool::new(true)),
         )
     }
 }
@@ -41,11 +47,21 @@ impl Settings {
         ))?;
         let enabled = matches!(cvars.get("r_dynamiclight").map(|c| &c.value),
             Some(CvarValue::Integer(value)) if *value != 0);
+        cvars.register(CvarDefinition::new(
+            SHADOWS_CVAR,
+            1_i64,
+            CvarFlags::ARCHIVE,
+            "Walls stop dynamic lights, in real-time lighting (0 lights through them, as \
+             the original game); applies immediately",
+        ))?;
+        let shadows = matches!(cvars.get(SHADOWS_CVAR).map(|c| &c.value),
+            Some(CvarValue::Integer(value)) if *value != 0);
         let settings = Self(
             Arc::new(AtomicBool::new(enabled)),
             model::Settings::bind(cvars)?,
             crate::world_materials::lighting_mode::Settings::bind(cvars)?,
             crate::world_materials::shadows::day::live::Clock::bind(cvars)?,
+            Arc::new(AtomicBool::new(shadows)),
         );
         let changed = settings.clone();
         cvars.on_change("r_dynamiclight", move |change| {
@@ -53,7 +69,18 @@ impl Settings {
                 changed.0.store(value != 0, Ordering::Relaxed);
             }
         })?;
+        let changed = settings.4.clone();
+        cvars.on_change(SHADOWS_CVAR, move |change| {
+            if let CvarValue::Integer(value) = change.current {
+                changed.store(value != 0, Ordering::Relaxed);
+            }
+        })?;
         Ok(settings)
+    }
+
+    /// Whether walls stop dynamic lights ([`SHADOWS_CVAR`]).
+    pub(crate) fn shadows(&self) -> bool {
+        self.4.load(Ordering::Relaxed)
     }
 
     /// Gate the completed scene list before either world upload or entity lighting.
@@ -77,6 +104,31 @@ impl Settings {
         world.set_gap_close(self.3.gap_close());
         world.set_ambient_fill(self.3.ambient_fill());
         world.set_indirect_readability(self.3.indirect_readability());
-        world.update_scene_lighting_mode(queue, lights, self.1.enabled(), self.2.bits());
+        world.update_scene_lighting_mode(
+            queue,
+            lights,
+            self.1.enabled(),
+            self.2.bits(),
+            self.shadows(),
+        );
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn walls_stop_dynamic_lights_by_default_and_the_cvar_turns_it_off_live() {
+        let mut cvars = CvarRegistry::new();
+        let settings = Settings::bind(&mut cvars).expect("the settings bind");
+        assert!(settings.shadows());
+        let shadows = cvars.get(SHADOWS_CVAR).expect("registered");
+        assert_eq!(shadows.value, CvarValue::Integer(1));
+        assert!(shadows.flags.contains(CvarFlags::ARCHIVE));
+        cvars.set_text(SHADOWS_CVAR, "0").expect("set");
+        assert!(!settings.shadows());
+        cvars.set_text(SHADOWS_CVAR, "1").expect("set");
+        assert!(settings.shadows());
     }
 }

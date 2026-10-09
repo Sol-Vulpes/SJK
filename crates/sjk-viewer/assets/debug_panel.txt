@@ -2799,3 +2799,12 @@ change: r_materialMapsDebug 7 shows the reach: yellow full, green faded, red hel
 test: mp/ffa3 with the material pack, r_parallaxStrength 1: walk a long floor; relief shows farther.
 test: Back the third-person camera into a relief wall: r_parallaxNearDistance 0 swims, 24 holds.
 note: Steps are 4-24 plus 6 binary; check frame times with SJK_FRAME_BUDGET=1. Not seen on screen.
+
+[dynamic-light-shadows]
+area: Rendering & effects
+title: Dynamic lights stop at walls (SJK PR #56)
+change: A compute pass traces a 28x28 distance tile per active light against the BSP.
+change: r_dynamicLightShadows (default 1, console only) switches it; 0 is the old lighting.
+test: On mp/ffa3 hold a lit saber at a corner: the glow no longer reaches the far side of the wall.
+test: Toggle r_dynamicLightShadows 1/0 and compare; check frame times with SJK_GPU_PHASES.
+note: Doors and lifts do not block it; edges are soft. Not run on a GPU yet.

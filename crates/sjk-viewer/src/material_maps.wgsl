@@ -347,9 +347,12 @@ fn material_map_point_highlights(input: VertexOutput) {
         if distance >= light.origin_radius.w || distance <= 0.0001 { continue; }
         let direction = delta/distance;
         let facing = max(dot(material_map_surface.normal, direction), 0.0);
+        if facing <= 0.0 { continue; }
+        // A light behind a wall leaves no highlight either (`point_light_visibility`).
         material_map_highlight += light.color.rgb*(1.0 - distance/light.origin_radius.w)*facing
             *3.14159265*material_map_brdf(material_map_surface.normal, direction, view,
-                response.specular, response.roughness);
+                response.specular, response.roughness)
+            *point_light_visibility(index, input.world_position, input.world_normal);
     }
 }
 
