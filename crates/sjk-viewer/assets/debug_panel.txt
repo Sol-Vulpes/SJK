@@ -2808,3 +2808,14 @@ change: r_dynamicLightShadows (default 1, console only) switches it; 0 is the ol
 test: On mp/ffa3 hold a lit saber at a corner: the glow no longer reaches the far side of the wall.
 test: Toggle r_dynamicLightShadows 1/0 and compare; check frame times with SJK_GPU_PHASES.
 note: Doors and lifts do not block it; edges are soft. Not run on a GPU yet.
+
+[force-profile-server]
+area: Gameplay
+title: Force profile sent to the server, server rules shown (SJK PR #47)
+change: Each userinfo carries your profile fitted to the server's rules; Apply queues forcechanged.
+change: The Force page takes rank and free saber from the server; marks Off, Fixed, Team only.
+change: SJK UI Force page: a This server panel; disabled powers stay buyable and are sent.
+test: On a server with another rank or disabled powers: build a profile, Apply, respawn: it applies.
+test: Open the Force page there: the This server panel and the marks match the server's rules.
+test: Full Force duel on JA+ / jaPRO: powers the server holds back are usable in duels.
+note: Not run against a server. Possible gap: g_forceBasedTeams after a serverinfo change.

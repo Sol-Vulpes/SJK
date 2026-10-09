@@ -229,11 +229,19 @@ on the 16:9 frame, dark behind the form on the left and clear over the model.
   it, on the power's own level drops one; a level bought (by click or Right)
   sends a ring out from its mark. These are the only things that move on the
   page, and only answering the pointer or a purchase. Then Start over, Discard
-  and Apply (gold while there is something to apply).
+  and Apply (gold while there is something to apply). On a server, a power it
+  turns off, holds at a level or does not use keeps its marks and has an ember
+  note under its name (Off on this server, Fixed on this server, Team games
+  only), and under the side's five, This server lists its rules: the highest
+  rank and its points, free saber skills, the powers it turns off (past eight,
+  how many), whether team powers work, and that turned-off powers stay
+  pickable for full Force duels and an applied profile counts from the next
+  respawn ([client.md](client.md#force-profile-on-a-server)).
 - **Power box:** on the Force page, bottom right, the power under the pointer
   (or the keyboard) in big: its holocron, name, group, level, what it does in a
-  line or two, the next level's price (or Mastered, Team games only...) and
-  its levels' prices.
+  line or two, what the server does with it when it limits it, the next
+  level's price (or Mastered, Needs Saber offense 1...) and its levels'
+  prices.
 - **Caption:** beside the model, bottom right under a short gold rule, what the
   page shows of it: the model and its skin, the saber's style, hilt and blade,
   or (on the Force page with no power chosen) the side and rank.

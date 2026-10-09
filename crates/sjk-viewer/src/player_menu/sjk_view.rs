@@ -11,7 +11,7 @@
 //!
 //! Positions are pixels of the SJK UI's 16:9 frame ([`Frame`]).
 
-use super::force::{NextLevel, POWER_NAMES, POWER_NOTES};
+use super::force::{GT_TEAM, NextLevel, POWER_NAMES, POWER_NOTES};
 use super::force_icons::{power_texture, side_texture};
 use super::grid::{COLUMNS, GRID_SCROLL_TOKEN, MAX_VISIBLE_TILES, PART_ROW, TILE_BASE};
 use super::rows::{
@@ -195,6 +195,29 @@ fn force_groups(side: ForceSide) -> [ForceGroup; 3] {
             line: 1,
         },
     ]
+}
+
+/// The powers a `g_forcePowerDisable` mask turns off, by name, in
+/// `forcePowers_t` order ("Heal, Grip"); Jump and the saber skills it holds
+/// at a level instead are named with it ("Jump 1").
+fn server_off_list(mask: u32) -> String {
+    use std::fmt::Write as _;
+    let mut list = String::new();
+    for (index, name) in POWER_NAMES.iter().enumerate() {
+        if mask & (1 << index) == 0 {
+            continue;
+        }
+        if !list.is_empty() {
+            list.push_str(", ");
+        }
+        let _ = write!(list, "{}", SentenceCase(name));
+        match index {
+            1 => list.push_str(" 1"),
+            15 | 16 => list.push_str(" 3"),
+            _ => {}
+        }
+    }
+    list
 }
 
 /// The Force page's rows in the order the keys go through them: the sides,
@@ -1261,6 +1284,13 @@ impl PlayerMenu {
                 );
             }
         }
+        // Under the side's group, the server's rules.
+        self.sjk_server_rules(
+            frame,
+            COLUMN_X + half + GUTTER,
+            groups_top + GROUP_HEADING + 5.0 * CELL + GROUP_GAP,
+            half,
+        );
         // The actions.
         // Under the Lightsaber group, the left column's second.
         let actions_top = groups_top
@@ -1298,6 +1328,110 @@ impl PlayerMenu {
                 row as u16,
             );
         }
+    }
+
+    /// What the server the client plays on allows, in the column from `x`,
+    /// `top`, `width` wide: its highest rank, free saber skills, the powers it
+    /// turns off, whether team powers work; off a server, that one will say.
+    fn sjk_server_rules(&mut self, frame: &Frame, x: f32, top: f32, width: f32) {
+        let s = frame.s;
+        kit::heading_in(
+            &mut self.canvas,
+            frame,
+            x,
+            top + GROUP_HEADING * 0.5,
+            width,
+            "This server",
+            color::GOLD,
+        );
+        let mut y = top + GROUP_HEADING + 4.0;
+        // Each line wrapped to the column, 24 pixels a line, moving `y` on.
+        let line = |canvas: &mut crate::menu_widgets::MenuCanvas,
+                    y: &mut f32,
+                    words: &str,
+                    colour: Color| {
+            for part in wrap(words, 36) {
+                text(
+                    canvas,
+                    TextFamily::Body,
+                    format_args!("{part}"),
+                    frame.rect(x + 14.0, *y, width - 28.0, 24.0),
+                    16.0 * s,
+                    colour,
+                    FontWeight::Regular,
+                    TextAlign::Start,
+                );
+                *y += 24.0;
+            }
+        };
+        let Some(server) = self.force.server() else {
+            line(
+                &mut self.canvas,
+                &mut y,
+                "Not on a server. A server can lower the highest rank and turn powers \
+                 off; its rules show here once you join.",
+                color::MUTED,
+            );
+            return;
+        };
+        let rank = server.max_rank.min(7);
+        line(
+            &mut self.canvas,
+            &mut y,
+            &format!(
+                "Highest rank: {} ({} points)",
+                super::classic::force_page::mastery(rank),
+                sjk_client::mastery_points(rank)
+            ),
+            color::TEXT,
+        );
+        if server.free_saber {
+            line(
+                &mut self.canvas,
+                &mut y,
+                "Saber offense and defense 1 are free",
+                color::TEXT,
+            );
+        }
+        let off = server.disabled_mask & ((1 << POWER_NAMES.len()) - 1);
+        match off.count_ones() {
+            0 => line(
+                &mut self.canvas,
+                &mut y,
+                "Every power is allowed",
+                color::TEXT,
+            ),
+            // A long list would run past the page: the rows say which.
+            count @ 9.. => line(
+                &mut self.canvas,
+                &mut y,
+                &format!("{count} powers off, marked on their rows"),
+                color::EMBER,
+            ),
+            _ => line(
+                &mut self.canvas,
+                &mut y,
+                &format!("Off: {}", server_off_list(off)),
+                color::EMBER,
+            ),
+        }
+        if server.gametype < GT_TEAM {
+            line(
+                &mut self.canvas,
+                &mut y,
+                "Team powers: team games only",
+                color::MUTED,
+            );
+        }
+        y += 8.0;
+        line(
+            &mut self.canvas,
+            &mut y,
+            "Powers it turns off stay yours to pick, for full Force duels. \
+             Applied in play, they change when you respawn.",
+            color::QUIET,
+        );
+        debug_assert!(y <= BOTTOM, "the server's rules run to {y}");
     }
 
     /// The points left as a gold bar under the page's first line; a hovered
@@ -1374,8 +1508,9 @@ impl PlayerMenu {
         let usable = level > 0
             || !matches!(
                 self.force.next_level(index),
-                NextLevel::OtherSide | NextLevel::TeamOnly | NextLevel::NeedsOffense
+                NextLevel::OtherSide | NextLevel::NeedsOffense
             );
+        let limit = self.force.server_limit(index);
         if focused {
             kit::band(&mut self.canvas, frame, area);
         }
@@ -1393,11 +1528,16 @@ impl PlayerMenu {
             name_x = x + height + 4.0;
         }
         let marks_x = x + width - 10.0 - 3.0 * DISC - 2.0 * DISC_GAP;
+        // A power the server limits keeps its name, raised over a note saying so.
+        let name_rect = match limit {
+            Some(_) => frame.rect(name_x, top + 3.0, marks_x - name_x - 6.0, 24.0),
+            None => frame.rect(name_x, top, marks_x - name_x - 6.0, height),
+        };
         text(
             &mut self.canvas,
             TextFamily::Body,
             format_args!("{}", SentenceCase(POWER_NAMES[index])),
-            frame.rect(name_x, top, marks_x - name_x - 6.0, height),
+            name_rect,
             17.0 * s,
             match (usable, focused) {
                 (false, _) => color::QUIET,
@@ -1411,6 +1551,18 @@ impl PlayerMenu {
             },
             TextAlign::Start,
         );
+        if let Some(limit) = limit {
+            text(
+                &mut self.canvas,
+                TextFamily::Body,
+                format_args!("{}", limit.tag()),
+                frame.rect(name_x, top + 24.0, marks_x - name_x - 6.0, 18.0),
+                13.0 * s,
+                color::alpha(color::EMBER, if usable { 0.95 } else { 0.6 }),
+                FontWeight::Regular,
+                TextAlign::Start,
+            );
+        }
         let tint = power_tint(index);
         let target = hovered
             .filter(|(hovered_power, _)| *hovered_power == index && usable)
@@ -1690,9 +1842,20 @@ impl PlayerMenu {
                 color::EMBER,
             ),
             NextLevel::OtherSide => ("The other side's power".to_owned(), color::QUIET),
-            NextLevel::TeamOnly => ("Team games only".to_owned(), color::QUIET),
             NextLevel::NeedsOffense => ("Needs Saber offense 1".to_owned(), color::EMBER),
         };
+        if let Some(limit) = self.force.server_limit(index) {
+            text(
+                &mut self.canvas,
+                TextFamily::Body,
+                format_args!("{}", limit.describe()),
+                frame.rect(x + 24.0, y + height - 72.0, width - 48.0, 26.0),
+                17.0 * s,
+                color::EMBER,
+                FontWeight::Semibold,
+                TextAlign::Start,
+            );
+        }
         text(
             &mut self.canvas,
             TextFamily::Body,
@@ -2227,5 +2390,47 @@ mod tests {
             (PlayerMenu::sjk_slider_ratio(track, 110.0 + TRACK_WIDTH * 0.5) - 0.5).abs() < 1e-4
         );
         assert_eq!(PlayerMenu::sjk_slider_ratio(track, 0.0), 0.0);
+    }
+
+    /// The Force page on servers with every rule to show: each power's note
+    /// and the server's panel stay in the draw list's room, and the panel ends
+    /// above the keys (a debug assertion in the panel checks its last line).
+    #[test]
+    fn the_force_page_shows_a_servers_rules_within_its_room() {
+        // None, two, seven, the eight longest names (the most a list shows),
+        // and all of them.
+        let longest = [5, 7, 9, 11, 12, 15, 16, 17].map(|bit| 1_u32 << bit);
+        let longest = longest.iter().fold(0, |mask, bit| mask | bit);
+        for mask in [
+            0,
+            0b100_0001,
+            0b1_1110_0000_0110_0001,
+            longest,
+            (1 << 18) - 1,
+        ] {
+            let mut menu = PlayerMenu::new();
+            menu.set_sjk(true);
+            menu.force.load_on_server(
+                "7-2-031330310000030333",
+                sjk_client::ForceLegalizeRules {
+                    max_rank: 5,
+                    free_saber: true,
+                    team_side: None,
+                    gametype: 0,
+                    disabled_mask: mask,
+                },
+            );
+            menu.set_page(ProfilePage::Force);
+            menu.selected = FORCE_POWER_ROW; // the power box, with its note
+            draw(&mut menu);
+            let list = menu.canvas.draw_list();
+            assert!(
+                list.len() < list.limit(),
+                "mask {mask:b}: the draw list is full"
+            );
+            let (text, slots) = menu.canvas.text_budget();
+            assert!(text < slots, "mask {mask:b}: {text} of {slots} text runs");
+        }
+        assert_eq!(server_off_list(0b100_0011), "Heal, Jump 1, Grip");
     }
 }

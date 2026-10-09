@@ -9,6 +9,8 @@
 #                               made it when that is not the piece's owner.
 
 = Sol
++ 09/10/2026 | SJK #47 | Send an applied Force profile to the server and show its Force rules
+- ee1d9c9 |  | Send an applied Force profile to the server and show its Force rules
 + 09/10/2026 | SJK #56 | Stop dynamic lights at walls with per-light shadow tiles
 - 9a77028 |  | Stop dynamic lights at walls with per-light shadow tiles
 + 09/10/2026 | SJK #54 | Extend parallax to where it shows and hold it still near the camera
