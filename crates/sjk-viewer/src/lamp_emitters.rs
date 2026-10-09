@@ -121,16 +121,62 @@ fn cook_emitters(
     })
 }
 
+/// A material whose mask cuts it into more patches than this is cooked again from a
+/// coarser mask ([`COARSER`]). Following every strip of a tiled strip-light texture made
+/// 51,957 patches of one `JKLevel1` material in 63 s, as dark gaps keep patches apart
+/// and each sample tests every patch of the crowded cells. Stock maps stay well under
+/// it: the most one material of `mp/ffa5` makes is 942, of `JoFTemple` 2,399.
+const MASK_PATCH_LIMIT: usize = 4096;
+/// A mask level past the last of any emission texture (they are at most 64 texels), so
+/// sampling it reads the mean and adds no texture subdivision.
+const MEAN_LOD: u32 = 16;
+/// Mask levels added on each cook of a material: as authored, then four and sixteen
+/// times coarser, then its mean, which has no patch limit.
+const COARSER: [u32; 4] = [0, 1, 2, MEAN_LOD];
+
 fn cook_emitter(
     vertices: &[Corner],
     indices: &[u32],
     emitter: &Emitter<'_>,
     edge: f32,
 ) -> (Vec<Lamp>, u32) {
+    let (coarser, cooked) = COARSER
+        .into_iter()
+        .find_map(|coarser| {
+            Some((
+                coarser,
+                cook_emitter_at(vertices, indices, emitter, edge, coarser)?,
+            ))
+        })
+        .expect("a mean cook has no patch limit");
+    if coarser > 0 {
+        crate::log::progress(format_args!(
+            "Emitting geometry: a material over {MASK_PATCH_LIMIT} patches cooked {}              ({} patches)",
+            if coarser >= MEAN_LOD {
+                "from its mean".to_owned()
+            } else {
+                format!("{coarser} mask levels coarser")
+            },
+            cooked.0.len()
+        ));
+    }
+    cooked
+}
+
+/// Cook one material from its mask `coarser` levels down; `None` when that makes more
+/// than [`MASK_PATCH_LIMIT`] patches, short of the mean ([`MEAN_LOD`]).
+fn cook_emitter_at(
+    vertices: &[Corner],
+    indices: &[u32],
+    emitter: &Emitter<'_>,
+    edge: f32,
+    coarser: u32,
+) -> Option<(Vec<Lamp>, u32)> {
+    let mean = coarser >= MEAN_LOD;
     let mut max_lod = 0;
     let radiance = Vec3::from_array(emitter.radiance);
     if !radiance.is_finite() || luma(radiance) <= 1e-4 {
-        return (Vec::new(), 0);
+        return Some((Vec::new(), 0));
     }
     let mut patches: Vec<Patch> = Vec::new();
     let mut cells: HashMap<IVec3, Vec<usize>> = HashMap::new();
@@ -140,11 +186,13 @@ fn cook_emitter(
         for t in indices[range.start as usize..range.end as usize].chunks_exact(3) {
             let corners = [t[0], t[1], t[2]].map(|i| vertices[i as usize]);
             // A huge tiled face must not reduce mask detail on other fixtures.
-            let lod = (emitter.texture.span(corners.map(uv)) / TEXTURE_WORK_PER_TRIANGLE.sqrt())
-                .max(1.)
-                .log2()
-                .ceil() as u32;
-            max_lod = max_lod.max(lod);
+            let mask_lod = (emitter.texture.span(corners.map(uv))
+                / TEXTURE_WORK_PER_TRIANGLE.sqrt())
+            .max(1.)
+            .log2()
+            .ceil() as u32;
+            max_lod = max_lod.max(mask_lod);
+            let lod = mask_lod.saturating_add(coarser);
             let texel_step = 2f32.powi(lod as i32);
             pending.push((corners, 0u32));
             while let Some((corners, depth)) = pending.pop() {
@@ -196,6 +244,9 @@ fn cook_emitter(
                     id
                 });
                 patches[id].add(sample.points, sample.colors, sample.area);
+                if !mean && patches.len() > MASK_PATCH_LIMIT {
+                    return None;
+                }
             }
         }
     }
@@ -218,7 +269,7 @@ fn cook_emitter(
             lamp.radius = reach + lamp.axis_u.length().max(lamp.axis_v.length());
         }
     }
-    (result, max_lod)
+    Some((result, max_lod))
 }
 
 fn find_patch(
@@ -259,4 +310,16 @@ fn find_patch(
         }
     }
     None
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn every_material_ends_in_a_cook_without_a_patch_limit() {
+        assert_eq!(COARSER.first(), Some(&0), "the authored mask comes first");
+        assert!(COARSER.windows(2).all(|pair| pair[0] < pair[1]));
+        assert_eq!(COARSER.last(), Some(&MEAN_LOD));
+    }
 }

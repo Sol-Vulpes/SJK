@@ -21,6 +21,7 @@ Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 
 ## Unreleased
 
+- Maps with large tiled light textures load much faster with SJK's lighting: a material that would make more than 4,096 lights is read at a coarser grain, so JoFJKMission's JKLevel1 loads in about 28 s instead of 91 s and looks the same _(Sol)_
 - Platforms and parts that never stop moving (bobbing, rotating, swinging) no longer block the map's lamps, which made the lighting redo work every frame: JoFTemple runs about 40% faster with SJK's lighting while its platforms move _(Sol)_
 - Maps load faster where fullbright models with a lit shine (such as JoFTemple's statues) were taken for light fixtures: they no longer become thousands of lights, so JoFTemple loads in 16 s instead of 23 s with SJK's lighting _(Sol)_
 - Ultra low graphics: a switch under Graphics quality (Video and First setup) that brings back the original game's look, baked map lighting without SJK's sun, shadows, reflections, material maps or post-processing, for the most frames on heavy maps such as JoFTemple; turning it off restores your settings. Maps also load faster without SJK's lighting, as their lamps are no longer built when nothing uses them _(Sol)_

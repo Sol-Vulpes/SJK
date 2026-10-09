@@ -9,6 +9,8 @@
 #                               made it when that is not the piece's owner.
 
 = Sol
++ 09/10/2026 | - | Cook a material with too many lamp patches from a coarser mask
+- dd6d00e |  | Cook a material with too many lamp patches from a coarser mask
 + 09/10/2026 | - | Movers that never stop block no lamp
 - 5eaf6b3 |  | Movers that never stop block no lamp
 - 4751749 |  | Format the endless mover test
