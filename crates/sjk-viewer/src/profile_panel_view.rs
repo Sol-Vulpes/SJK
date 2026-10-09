@@ -123,7 +123,6 @@ fn who(inputs: &Inputs<'_>) -> Who {
             if !since.is_empty() {
                 lines.push((format!("Member since {since}"), color::MUTED));
             }
-            lines.push((format!("Key id {}", me.key_id), color::QUIET));
             let earlier: Vec<&str> = me
                 .names
                 .iter()

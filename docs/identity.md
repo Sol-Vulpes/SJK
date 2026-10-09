@@ -404,7 +404,7 @@ menu; or the `profile` command) is the player's SJK profile as other players rea
 on the hub, in the SJK UI's look in every menu style:
 
 - who they are: the hub name with its colours, Verified by the SJK team or not yet,
-  the date the key was registered (`Member since`), the key id and up to three other
+  the date the key was registered (`Member since`) and up to three other
   names worn (the switch, the key and the hub are on the Identity page, in Settings,
   Network, since 09/10/2026);
 - their record, from the achievement counts kept on this PC (players defeated, saber
@@ -687,7 +687,10 @@ sends its counts, which the page says.
   verified, the key id and the key file's location and the players the hub knows here.
   The key id and the file (whose path names the Windows account) are bullets and
   "(hidden)" until Show key is pressed, every time the page opens (not saved), so a
-  player can open it on a stream (09/10/2026, Sol's request). Its controls are
+  player can open it on a stream (09/10/2026, Sol's request). Elsewhere the player's
+  own key id is never printed: not on the Profile page, nor on their own row of the
+  Players cards, their own sender card or the SJK chat page's side panel for their own
+  message (`player_identity::printable_key_id`); other players' key ids still show. Its controls are
   optional: the on/off switch, a bio field with Save, a button that copies the key id
   (to the clipboard, never on screen), Show key. The words do the same without it: `identity bio <text>` sets the bio,
   `identity key` shows the key id and file, `identity who [slot]` lists the players the hub

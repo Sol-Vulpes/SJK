@@ -445,6 +445,18 @@ pub(crate) fn own_key_id() -> Option<String> {
         .map(|service| service.with_snapshot(|snapshot| snapshot.key_id.clone()))
 }
 
+/// `key_id` as a card or a list prints it beside a player: `None` for the player's own
+/// key, kept off screen in play like the Identity page keeps it hidden, so a stream does
+/// not show it.
+pub(crate) fn printable_key_id(key_id: &str) -> Option<&str> {
+    others_key_id(key_id, own_key_id().as_deref())
+}
+
+/// `key_id` unless it is `own`.
+fn others_key_id<'a>(key_id: &'a str, own: Option<&str>) -> Option<&'a str> {
+    (own != Some(key_id)).then_some(key_id)
+}
+
 /// Send a staff request through the service; false when the service has not started.
 pub(crate) fn staff(request: sjk_identity::StaffRequest) -> bool {
     lock()
@@ -633,6 +645,21 @@ pub(crate) fn shutdown() {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn only_the_players_own_key_id_stays_off_screen() {
+        let own = Some("0123456789abcdef");
+        assert_eq!(others_key_id("0123456789abcdef", own), None);
+        assert_eq!(
+            others_key_id("fedcba9876543210", own),
+            Some("fedcba9876543210")
+        );
+        // Before the identity started every key prints.
+        assert_eq!(
+            others_key_id("0123456789abcdef", None),
+            Some("0123456789abcdef")
+        );
+    }
 
     #[test]
     fn the_tag_is_none_before_the_service_starts() {

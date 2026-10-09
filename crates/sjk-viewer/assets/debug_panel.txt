@@ -3102,3 +3102,13 @@ change: Same for rebound keys in Key bindings; a name cut short has it at its co
 test: SJK UI Settings > Gameplay: change short and long rows; the dot sits just after each name.
 test: Try ui_textScale 1.2, ui_letterSpacing 0.1 and 4K: the dot keeps the same small gap.
 test: Key bindings: rebind a key; the dot follows the action's name.
+
+[key-quiet]
+area: Menus & settings
+title: Your own key id off screen; SJK page without Profile
+change: Own key id gone from SJK Profile, own Players card, own sender card, SJK chat panel.
+change: Other players' key ids still show. Main page SJK page: What's new, Update, Credits.
+test: Profile > SJK Profile: no Key id line. Esc > Players, your row: Known as only.
+test: SJK chat: click your own message, then someone else's: only theirs shows a key id.
+note: Not tried in a game.
+

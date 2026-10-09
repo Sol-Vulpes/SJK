@@ -7,6 +7,16 @@ SJK currently contains a native client and standard dedicated server in a
 20-crate Rust workspace. This page records scope and verification, rather than
 claiming complete parity from the presence of an implementation.
 
+## The player's own key id off screen; the SJK page without Profile
+
+Branch `personal/key-quiet` (09/10/2026, Windows 11), Sol's answers on the Profile
+screen: the player's own key id is no longer printed on the SJK Profile tab, their own
+row of the in-game Players cards (SJK and classic), their own sender card or the SJK
+chat page's side panel for their own message (`player_identity::printable_key_id`,
+unit-tested); other players' key ids still show. The main page's SJK page loses its
+Profile entry (What's new, Update, Credits, Back), the main Profile button and the
+profile card opening the screen. Not tried in the game.
+
 ## Profile screen: one row of tabs, the key in Settings, Browse for the picture
 
 Branch `personal/profile-tabs` (09/10/2026, based on `9d8b9da5`, Windows 11), Sol's

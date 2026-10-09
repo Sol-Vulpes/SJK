@@ -58,6 +58,12 @@ impl Person {
             (false, _) => "Not known to the SJK hub",
         }
     }
+    /// The key id the card prints: none for the player's own.
+    fn printed_key(&self) -> Option<&str> {
+        self.key_id
+            .as_deref()
+            .and_then(crate::player_identity::printable_key_id)
+    }
 }
 
 /// A card to draw: who, whether they are muted on this PC (the button then
@@ -94,7 +100,7 @@ pub(crate) fn size(person: &Person, u: f32) -> [f32; 2] {
     if person.hub_name.is_some() {
         height += 20.0;
     }
-    if person.key_id.is_some() {
+    if person.printed_key().is_some() {
         height += 20.0;
     }
     if person.place != Place::Unknown {
@@ -236,7 +242,7 @@ pub(crate) fn draw(
         );
         y += 20.0 * u;
     }
-    if let Some(key) = &person.key_id {
+    if let Some(key) = person.printed_key() {
         line(canvas, y, 14.0 * u, color::QUIET, format_args!("Key {key}"));
         y += 20.0 * u;
     }
