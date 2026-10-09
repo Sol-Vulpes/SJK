@@ -106,6 +106,33 @@ impl<'a> Measure<'a> {
         }
         text.len()
     }
+
+    /// [`Measure::width`] to the right edge of the last visible letter's ink: the
+    /// room after it (its side bearing, the letter spacing) left out, so a mark set
+    /// a gap after a word sits that gap from its last letter whatever the letter.
+    pub(crate) fn ink_width(&self, text: &str, size: f32, face: TextFace) -> f32 {
+        let width = self.width(text, size, face);
+        let mut last = None;
+        let mut chars = text.char_indices().peekable();
+        while let Some((at, c)) = chars.next() {
+            if c == '^' && chars.peek().is_some_and(|(_, next)| next.is_ascii_digit()) {
+                chars.next();
+                continue;
+            }
+            last = Some(at);
+        }
+        let Some(at) = last else {
+            return width;
+        };
+        let size = size * self.style.scale;
+        let scale = size / self.font.height.max(1.0);
+        let glyph = self
+            .font
+            .glyph(face, crate::text::glyph_byte_at(text, at).0);
+        let after =
+            (glyph.advance - glyph.offset_x - glyph.width) * scale + self.style.tracking * size;
+        (width - after).max(0.0)
+    }
 }
 
 /// `text` cut into rows, the first `first` wide (what the name before it leaves) and

@@ -844,12 +844,17 @@ pub(crate) fn reset(canvas: &mut MenuCanvas, frame: &Frame, x: f32, y: f32, toke
     canvas.hit_region(token, target);
 }
 
-/// The gold dot after a label whose setting differs from its default.
+/// [`changed_dot`]'s radius, in frame pixels.
+pub(crate) const CHANGED_DOT_RADIUS: f32 = 3.5;
+
+/// The gold dot after a label whose setting differs from its default, centred
+/// on (`x`, `y`).
 pub(crate) fn changed_dot(canvas: &mut MenuCanvas, frame: &Frame, x: f32, y: f32) {
+    let r = CHANGED_DOT_RADIUS;
     pill(
         canvas,
         frame,
-        [x - 3.5, y - 3.5, 7.0, 7.0],
+        [x - r, y - r, r * 2.0, r * 2.0],
         color::GOLD_BRIGHT,
     );
 }

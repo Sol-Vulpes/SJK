@@ -3058,3 +3058,12 @@ test: Ride a swoop or fighter on a vehicle map: bars follow damage, speed, shots
 test: Try cg_hudScale 1.5 and 4K.
 test: Leave the vehicle: the normal HUD returns.
 note: Not tried in a game. Damage icons, no-ammo flash and passengers are not done.
+
+[changed-dot]
+area: Menus & settings
+title: Changed-setting dot right after the setting's name
+change: The gold dot is placed from the name's real drawn width, not a guess per letter.
+change: Same for rebound keys in Key bindings; a name cut short has it at its column's end.
+test: SJK UI Settings > Gameplay: change short and long rows; the dot sits just after each name.
+test: Try ui_textScale 1.2, ui_letterSpacing 0.1 and 4K: the dot keeps the same small gap.
+test: Key bindings: rebind a key; the dot follows the action's name.

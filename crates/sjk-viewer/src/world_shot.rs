@@ -625,6 +625,65 @@ mod tests {
         });
     }
 
+    /// Settings' changed dots: Gameplay with several rows off their defaults
+    /// (short and long names) at 1080p, at 4K, and with the player's larger,
+    /// wider-spaced menu text; then Key bindings with a few keys rebound.
+    #[test]
+    #[ignore = "renders with the GPU and the installed game data named by JKA_GAME_DATA"]
+    fn duel6_settings_changed_dots() {
+        for (size, style, suffix) in [
+            ([1920, 1080], None, "1080p"),
+            ([3840, 2160], None, "4k"),
+            ([1920, 1080], Some(("1.2", "0.1")), "styled"),
+        ] {
+            on_big_stack(move || {
+                let menu = menu::ClientMenu::new(true, String::new());
+                let mut cvars = vec![
+                    ("ui_menuStyle", "sjk"),
+                    (crate::settings::quick::HIDE_CVAR, "1"),
+                    ("cg_simpleItems", "1"),
+                    ("cg_forceModel", "1"),
+                    ("cg_saberTrail", "0"),
+                    ("cg_shieldBrightness", "3"),
+                    ("cg_spProtAbsColor", "1"),
+                    ("cg_remaps", "0"),
+                    ("cg_thirdPersonTargetDamp", "0.75"),
+                    ("cg_errorDecay", "250"),
+                ];
+                if let Some((scale, tracking)) = style {
+                    cvars.push((crate::text::style::SCALE_CVAR, scale));
+                    cvars.push((crate::text::style::TRACKING_CVAR, tracking));
+                }
+                let Some((mut gpu, _profile)) = open("maps/mp/duel6.bsp", size, Some(menu), &cvars)
+                else {
+                    return;
+                };
+                let _ = frame(&mut gpu, 4);
+                if let (Some(menu), Some(console)) =
+                    (gpu.client_menu.as_mut(), gpu.console.as_ref())
+                {
+                    menu.open_sjk_settings(console, 6, crate::player_menu::ReturnTarget::MainMenu);
+                }
+                gpu.ui_epoch -= std::time::Duration::from_millis(2_000);
+                let name = format!("settings-changed-dots-{suffix}");
+                println!("{}", shoot(&mut gpu, 6, &name).display());
+                if let Some(console) = gpu.console.as_mut() {
+                    console.rebind_action("+back", 0, "K");
+                    console.rebind_action("+movedown", 1, "J");
+                    console.rebind_action("+speed", 1, "N");
+                    console.rebind_action("+left", 1, "H");
+                }
+                if let (Some(menu), Some(console)) =
+                    (gpu.client_menu.as_mut(), gpu.console.as_ref())
+                {
+                    menu.sjk_keys_for_shot(console, "+forward", false);
+                }
+                let name = format!("keys-changed-dots-{suffix}");
+                println!("{}", shoot(&mut gpu, 6, &name).display());
+            });
+        }
+    }
+
     /// A new profile's first start: no menu style saved, so the SJK UI, and
     /// First setup opening by itself on its Menu style row; then the style
     /// switched to classic from there, First setup staying.

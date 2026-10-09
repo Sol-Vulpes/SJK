@@ -7,6 +7,19 @@ SJK currently contains a native client and standard dedicated server in a
 20-crate Rust workspace. This page records scope and verification, rather than
 claiming complete parity from the presence of an implementation.
 
+## Settings' changed dot placed from the drawn name
+
+Branch `personal/changed-dot` (09/10/2026, Windows 11): Sol reported the gold
+"changed from default" dot in the SJK UI's Settings sitting on the letters or
+well after them. Its place was guessed from the name's character count (0.4 em a
+character). It is now set from the name's width as the body font draws it
+(`Measure::ink_width`, the player's text size and spacing included), 8 frame
+pixels after the last letter, or after the column's end for a name cut short;
+Key bindings' rows share the code. A unit test draws names through the renderer
+at 1080p, 4K and a styled size and checks the gap; world shots
+(`duel6_settings_changed_dots`) show Gameplay and Key bindings before and after.
+Not tried in the game.
+
 ## Console `forcepowers` changes reach the server
 
 Branch `personal/force-console` (09/10/2026, based on `bc8ac6b`, Windows 11):

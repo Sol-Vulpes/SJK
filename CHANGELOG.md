@@ -19,6 +19,10 @@ tests check this file):
 Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 -->
 
+## Unreleased
+
+- The gold dot after a changed setting (and after a rebound key) in the SJK UI's Settings sits right after the name's last letter at every size, instead of over the letters or far after them _(Sol)_
+
 ## 2026.1009.1 (Alpha) | 09/10/2026
 
 SJK's lighting got much faster on heavy maps such as JoFTemple, with an Ultra low switch for the

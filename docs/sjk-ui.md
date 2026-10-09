@@ -545,6 +545,10 @@ mock-up draws it.
     the HUD (the last two open their full-screen pickers); a field for text.
   - The focused row has a soft band and a gold bar at its left; a row changed
     from its default a gold dot after its name, and when focused the reset arrow.
+    The dot is placed from the name's width as the body font draws it (the
+    player's `ui_textScale` and `ui_letterSpacing` included), 8 pixels after
+    its last letter; a name cut short at its column has it at the column's end.
+    Key bindings' rows place theirs the same way.
   - A list opens under its field (over it near the bottom), its choice in use
     marked with a gold dot; the controls under it are left out while it is open.
 - **Detail:** on the right (x 1360, 464 wide), the focused setting: its
