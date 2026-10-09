@@ -7,6 +7,49 @@ SJK currently contains a native client and standard dedicated server in a
 20-crate Rust workspace. This page records scope and verification, rather than
 claiming complete parity from the presence of an implementation.
 
+## Parallax reaches farther and holds still up close
+
+Branch `feat/parallax-range` (08/10/2026, based on `a6230f9`, Linux): Sol asked for
+parallax to show farther away, and for something to be done when the camera is too
+close. Its far limits were a fade below 20° above the surface and from 1.5 to 4 texels a
+pixel along the longer side of the pixel's footprint, which a grazing view stretches: with
+a 1024-texel map a floor went flat 90 to 160 units ahead of a standing player. Up close
+nothing limited it: the parallax on screen grows as 1/distance from the surface, so the
+third-person camera pressed against a wall saw several times the shift, swimming and
+stretching the texture over relief edges, where the offset's jumps also picked blurred mip
+levels. Now ([rendering](rendering.md#parallax)) the depth fades where it would move the
+texture by less than half a pixel, below 8.6° and at mip levels 2 to 4 (at 1080p a floor
+keeps it to about 410 units and loses it by 920, a wall seen at 45° to 570 and 1,920);
+within `r_parallaxNearDistance` (default 24 units, live, console only) of a surface's plane
+it stops growing on screen; the march takes 4 to 24 linear steps by the texels it crosses
+(at most 31 reads of the height a pixel, against 25); and the maps and the diffuse image
+are read with the coordinates' own derivatives. `r_materialMapsDebug 7` shows the reach.
+
+Verified on Linux with Rust 1.97: formatting, the locked workspace build and tests (1639
+passed, 51 ignored) pass, and workspace Clippy finishes without errors and without a
+warning in the changed files. Unit tests cover the new cvar's bits (the default leaves the
+word empty, clamping, steps of 4, apart from every other field, the shader decoding them),
+view 7, the offset reads with explicit derivatives in both lighting modes, the material
+programs validating with naga, and a CPU model of the shader's limits: floors and walls
+keep parallax farther than before, the fade has no ring or jump, wherever it keeps less
+than the old limits the old ones moved the texture by less than half a pixel, the near
+limit holds the parallax on screen constant inside 24 units, the steps stay within 4 to
+24, and the shader still holds the modelled arithmetic.
+
+Not seen on screen: no GPU or game data was available, so nothing was rendered; the
+ranges come from the model and the cost is estimated. To check in game, on a map with a
+generated pack (sand on `mp/siege_desert`, stone floors on `mp/ffa3`):
+`r_parallaxStrength 1` exaggerates the relief and `r_materialMapsDebug 7` shows how far
+it reaches (yellow the whole depth, green faded, red held back near the camera); walk a
+long floor, back the third-person camera into a relief wall and compare
+`r_parallaxNearDistance 0` with 24, and compare frame times with `SJK_FRAME_BUDGET=1`.
+Offline, the world shot `world_shot::notes::world_notes` with
+`SJK_NOTES_CVARS=r_materialMapsDebug=7,r_parallaxStrength=1` on a note at a parallax
+floor shows the far limit, and on a note written against a relief wall, with and without
+`r_parallaxNearDistance=0`, the near one. Known: grazing views now keep parallax down to
+8.6° (it was 20°), so the open note of sand too deep at grazing angles may return at high
+strengths.
+
 ## Percent signs and quotes in chat
 
 Branch `fix/chat-percent` (08/10/2026, based on `15cf7a9`, Linux): a `%` typed in

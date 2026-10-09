@@ -56,6 +56,9 @@ var<private> material_map_kernel: f32;
 var<private> material_map_albedo: vec3<f32>;
 // Specular light, added after the albedo product and dynamic-light modulation.
 var<private> material_map_highlight: vec3<f32>;
+// How the parallax march ran, for `r_materialMapsDebug 7`: the share of the depth the far
+// limits keep, the share the near limit keeps, and the linear steps taken out of 24.
+var<private> material_map_parallax_reach: vec3<f32>;
 
 fn material_map_flags() -> u32 { return u32(material_map.control.x); }
 fn material_map_layout() -> u32 { return u32(material_map.control.y); }
@@ -68,26 +71,37 @@ fn material_map_prepare(input: VertexOutput) {
     var geometric = normalize(input.world_normal);
     if (flags & 8u) != 0u && dot(geometric, view) < 0.0 { geometric = -geometric; }
     let uv = select(input.stage_uv, input.secondary_uv, (flags & 4u) != 0u);
+    // The maps (and the diffuse image, `material_map_program.rs`) are read at the offset
+    // coordinates with the coordinates' own derivatives: where the offset jumps, at the
+    // edge of a relief, its derivative would otherwise pick a blurred mip level along the
+    // edge, a seam that grows as the camera closes in and the texture is magnified.
+    let uv_dx = dpdx(uv);
+    let uv_dy = dpdy(uv);
     let along = input.material_tangent.xyz - geometric*dot(geometric, input.material_tangent.xyz);
     let framed = dot(along, along) > 1e-6;
     let tangent = along*inverseSqrt(max(dot(along, along), 1e-12));
     let bitangent = select(1.0, -1.0, input.material_tangent.w < 0.0)*cross(geometric, tangent);
     var offset = vec2(0.0);
+    material_map_parallax_reach = vec3(0.0);
     if (flags & 3u) == 3u {
-        offset = material_map_parallax(uv, view, tangent, bitangent, geometric)*f32(framed);
+        offset = material_map_parallax(uv, uv_dx, uv_dy, view, tangent, bitangent,
+            geometric)*f32(framed);
     }
     // Flags and layout are per stage (uniform), so each map is only read when present.
     var texel = vec4(0.5, 0.5, 1.0, 1.0);
     if (flags & 1u) != 0u {
-        texel = textureSample(material_map_normal, material_map_sampler, uv + offset);
+        texel = textureSampleGrad(material_map_normal, material_map_sampler, uv + offset,
+            uv_dx, uv_dy);
     }
     var specular = vec4(0.0);
     if material_map_layout() != 0u {
-        specular = textureSample(material_map_specular, material_map_sampler, uv + offset);
+        specular = textureSampleGrad(material_map_specular, material_map_sampler, uv + offset,
+            uv_dx, uv_dy);
     }
     var emission = vec3(0.0);
     if (flags & 16u) != 0u {
-        emission = textureSample(material_map_emission, material_map_sampler, uv + offset).rgb;
+        emission = textureSampleGrad(material_map_emission, material_map_sampler, uv + offset,
+            uv_dx, uv_dy).rgb;
     }
     var normal = geometric;
     if framed {
@@ -114,34 +128,65 @@ fn material_map_prepare(input: VertexOutput) {
 }
 
 // rend2 `GetParallaxOffset` and `RayIntersectDisplaceMap`: march the view ray through the
-// depth in the normal map's alpha, 16 linear then 8 binary steps.
-fn material_map_parallax(uv: vec2<f32>, view: vec3<f32>, tangent: vec3<f32>,
-    bitangent: vec3<f32>, normal: vec3<f32>) -> vec2<f32> {
+// depth in the normal map's alpha, in linear steps then 6 binary ones, with SJK's limits:
+// - rend2 offsets by depth / cos, which grows without bound toward grazing views and makes
+//   the texture swim as the view moves; the offset is limited to depth / 0.35 (Welsh's
+//   offset limiting).
+// - Far: the depth fades out where all of it would move the texture by less than half a
+//   pixel on screen (gone at an eighth), below about 8.6 degrees above the surface (gone
+//   at 2.9) and where the sampler reads mip levels 2 to 4 (4 to 16 texels a pixel), which
+//   no longer hold the relief. The first limit grows with the depth and the resolution,
+//   so parallax reaches about as far as it shows.
+// - Near: closer to the surface's plane than `r_parallaxNearDistance`, the depth shrinks
+//   with the camera's distance, so the parallax keeps the size on screen it had at that
+//   distance instead of growing without bound (and swimming and stretching the texture)
+//   as the camera closes in.
+// - Two linear steps per texel of the mip level read along the ray, 4 to 24: a shallow
+//   or distant relief takes few reads, and a deep one seen up close is not cut in layers.
+// `dx` and `dy` are the screen derivatives of `uv`.
+fn material_map_parallax(uv: vec2<f32>, dx: vec2<f32>, dy: vec2<f32>, view: vec3<f32>,
+    tangent: vec3<f32>, bitangent: vec3<f32>, normal: vec3<f32>) -> vec2<f32> {
     let size = vec2<f32>(textureDimensions(material_map_normal));
     let tangent_view = vec3(dot(view, tangent), dot(view, bitangent), dot(view, normal));
     let square = select(vec3(size.y/size.x, 1.0, 1.0), vec3(1.0, size.x/size.y, 1.0),
         size.y <= size.x);
     let direction = normalize(tangent_view*square);
-    let dx = dpdx(uv);
-    let dy = dpdy(uv);
-    // rend2 offsets by depth / cos, which grows without bound toward grazing views and
-    // makes the texture swim as the view moves; and where the height map is minified
-    // the march reads mip levels that no longer hold the relief. The depth fades out
-    // below about 20 degrees above the surface and from 1.5 to 4 texels per pixel, and
-    // the offset is limited to depth / 0.35 (Welsh's offset limiting) on the way.
+    let mode = point_lights.metadata.z;
     // `r_parallaxStrength` (lighting-mode bits 2-7, `world_lighting_mode.rs`, where zero
     // bits are the default 0.1) scales the depth; 0 leaves the surface flat.
-    let strength = f32((((point_lights.metadata.z >> 2u) + 4u) & 63u))/40.0;
-    let texels = max(length(dx*size), length(dy*size));
-    let fade = strength*smoothstep(0.15, 0.35, direction.z)*(1.0 - smoothstep(1.5, 4.0, texels));
-    if fade <= 0.0 { return vec2(0.0); }
-    let ds = direction.xy*(-material_map.normal_scale.w*fade/max(direction.z, 0.35));
+    let strength = f32((((mode >> 2u) + 4u) & 63u))/40.0;
+    // The offset of the whole depth, and the pixels it moves the texture on screen: the
+    // inverse of the coordinates' screen derivatives applied to it.
+    let reach = direction.xy*(-material_map.normal_scale.w*strength/max(direction.z, 0.35));
+    let area = max(abs(dx.x*dy.y - dx.y*dy.x), 1e-30);
+    let pixels = length(vec2(dy.y*reach.x - dy.x*reach.y, dx.x*reach.y - dx.y*reach.x))/area;
+    // Level-0 texels per pixel at the mip level a 16x anisotropic sampler reads.
+    let major = max(length(dx*size), length(dy*size));
+    let minor = min(length(dx*size), length(dy*size));
+    let footprint = max(minor, major/16.0);
+    let far = smoothstep(0.125, 0.5, pixels)*smoothstep(0.05, 0.15, direction.z)
+        *(1.0 - smoothstep(4.0, 16.0, footprint));
+    // `r_parallaxNearDistance` (lighting-mode bits 12-15 in units of 4, where zero bits are
+    // the default 24; 0 turns the limit off). `tangent_view.z` is the camera's distance from
+    // the surface's plane.
+    let near_distance = f32((((mode >> 12u) + 6u) & 15u))*4.0;
+    let near = select(1.0, clamp(tangent_view.z/max(near_distance, 1.0), 0.0, 1.0),
+        near_distance > 0.0);
+    // Written so that NaN (a camera exactly on the surface) also leaves it flat.
+    if !(far*near > 0.0) {
+        material_map_parallax_reach = vec3(far, near, 0.0);
+        return vec2(0.0);
+    }
+    let ds = reach*(far*near);
+    let steps = clamp(ceil(2.0*length(ds*size)/max(footprint, 1.0)), 4.0, 24.0);
+    material_map_parallax_reach = vec3(far, near, steps/24.0);
     let bias = material_map.control.z;
     let start = uv - bias*ds;
-    var size_step = 1.0/16.0;
+    var size_step = 1.0/steps;
     var depth = 0.0;
     var best = 1.0;
-    for (var i = 0; i < 15; i++) {
+    let linear = clamp(i32(steps), 4, 24);
+    for (var i = 1; i < linear; i++) {
         depth += size_step;
         if depth >= textureSampleGrad(material_map_normal, material_map_sampler,
             start + ds*depth, dx, dy).a {
@@ -150,7 +195,7 @@ fn material_map_parallax(uv: vec2<f32>, view: vec3<f32>, tangent: vec3<f32>,
         }
     }
     depth = best;
-    for (var i = 0; i < 8; i++) {
+    for (var i = 0; i < 6; i++) {
         size_step *= 0.5;
         if depth >= textureSampleGrad(material_map_normal, material_map_sampler,
             start + ds*depth, dx, dy).a {
@@ -343,6 +388,15 @@ fn material_map_finish(output: vec4<f32>) -> vec4<f32> {
     if view == 4u {
         // The probe reflection alone, black where no captured probe serves the surface.
         return vec4(material_map_reflected, lit.a);
+    }
+    if view == 7u {
+        // Parallax reach (`material_map_parallax`): red the share of the depth the far
+        // limits keep, green the share the near limit keeps, blue the linear steps of 24.
+        // Yellow is the whole depth; it turns green where distance or a grazing view fades
+        // it out and red where the camera's closeness holds it back. Stages without
+        // parallax keep their colour.
+        if (material_map_flags() & 3u) != 3u { return lit; }
+        return vec4(material_map_parallax_reach, lit.a);
     }
     let surface = material_map_surface;
     if view == 1u {

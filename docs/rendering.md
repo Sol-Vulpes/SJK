@@ -264,7 +264,8 @@ work without reducing source count, texture resolution or lighting quality.
 | `r_specularMapping` | Specular, roughness and metalness maps on the same surfaces; default 1 (rend2: 0), restart required |
 | `r_parallaxMapping` | Parallax from the height in `_nh`/`normalHeightMap` images; needs `r_normalMapping`; default 1 (at `r_parallaxStrength` 0.1; rend2: 0), restart required |
 | `r_parallaxStrength` | Depth of parallax, a multiplier on the stage's `parallaxDepth` (rend2's 0.05 without one), 0 (flat) to 1.575 in steps of 1/40; default 0.1 (Sol's choice: generated height is a guess from paint, and the full depth swam), live, archived; Settings slider 0–1 |
-| `r_materialMapsDebug` | Material-mapped surfaces only: 1 mapped normal as colour, 2 tint by maps found, 3 normal-map relief, 4 reflection probes alone, 5 without reflection probes, 6 emission maps alone; default 0, live, not archived |
+| `r_parallaxNearDistance` | Units from a surface's plane inside which its parallax stops growing on screen as the camera closes in (see [Parallax](#parallax)), 0 (off) to 60 in steps of 4; default 24, live, archived, console only |
+| `r_materialMapsDebug` | Material-mapped surfaces only: 1 mapped normal as colour, 2 tint by maps found, 3 normal-map relief, 4 reflection probes alone, 5 without reflection probes, 6 emission maps alone, 7 parallax reach; default 0, live, not archived |
 | `r_emissiveMaps` | Emission maps (`<texture>_e`, SJK's) on lightmapped world surfaces; default 1, restart required. See [Emission maps](#emission-maps) |
 | `r_emissionStrength` | Brightness of emission maps, 0 (off) to 7.97 in steps of 1/32; default 1, live, archived |
 | `r_emissiveGlow` | Dynamic-glow halo around emitting texels (with `r_DynamicGlow 1`); default 1, live, archived |
@@ -1267,11 +1268,9 @@ Shading lives in [material_maps.wgsl](../crates/sjk-viewer/src/material_maps.wgs
 - With specular maps, surfaces reflect the nearest reflection probe (below), with
   rend2's split-sum `CalcIBLContribution`; without a captured probe, real-time
   lighting keeps its sky rim.
-- Parallax uses rend2's 16 linear and 8 binary steps through the height, with
-  two limits rend2 lacks: the depth fades out below about 20° above the surface
-  and where the height map is minified (1.5 to 4 texels per pixel), and the
-  offset is at most depth / 0.35 (Welsh's offset limiting). rend2's depth / cos
-  grows without bound toward grazing views; Sol saw generated relief swim.
+- Parallax marches rend2's view ray through the height with limits rend2 lacks
+  ([Parallax](#parallax)): the offset is at most depth / 0.35, the depth fades out
+  where it would no longer show, and near the camera it stops growing on screen.
   `r_parallaxStrength` scales the depth live (lighting-mode bits 2–7, which decode
   to the default 0.1 when empty); SJK draws a tenth of it by default, 0 flattens it.
 - Specular anti-aliasing (Kaplanyan and Hoffman; Tokuyoshi and Kaplanyan's bound):
@@ -1281,6 +1280,65 @@ Shading lives in [material_maps.wgsl](../crates/sjk-viewer/src/material_maps.wgs
 - The probe reflection follows half the mapped tilt: generated normal maps guess
   relief from paint, and at full tilt every guessed bump warped the reflected
   room as the view moved. Highlights keep the full mapped normal.
+
+### Parallax
+
+rend2's `RayIntersectDisplaceMap` marches the view ray through the depth in the normal
+map's alpha (16 linear and 8 binary steps) and offsets the texture by depth / cos, which
+grows without bound toward grazing views; Sol saw generated relief swim.
+`material_map_parallax` in [material_maps.wgsl](../crates/sjk-viewer/src/material_maps.wgsl)
+keeps the march and limits it:
+
+- **Offset.** At most depth / 0.35 (Welsh's offset limiting).
+- **Far.** The depth fades out where all of it would move the texture by less than half
+  a pixel on screen (gone at an eighth), below 8.6° above the surface (gone at 2.9°) and
+  where the sampler reads mip levels 2 to 4 (4 to 16 texels a pixel, at the level a 16×
+  anisotropic sampler picks), which no longer hold the relief. Until 08/10/2026 it faded
+  below 20° (gone at 8.6°) and from 1.5 to 4 texels a pixel along the longer side of the
+  pixel's footprint, which a grazing view stretches: floors lost their parallax a few
+  metres ahead. The first limit grows with the depth and the resolution, so deeper
+  relief and 4K keep parallax farther. Where the new limits keep less
+  than the old ones did (views close to head-on, far away), the old ones moved the
+  texture by less than half a pixel, in every view the tests sweep.
+- **Near.** Closer to the surface's plane than `r_parallaxNearDistance` (default 24
+  units), the depth shrinks in proportion to the camera's distance from that plane, so
+  the parallax keeps the size on screen it had at that distance. Without the limit it
+  grows as 1/distance: the third-person camera pressed 4 units from a wall saw six times
+  the parallax it had at 24 units, swimming as the camera moved and stretching the
+  texture over every relief edge. A first-person eye stays 15 units from a wall and keeps
+  15/24 of the depth; floors (60 units below a standing eye, 36 crouched) keep all of it.
+  `r_parallaxNearDistance 0` turns the limit off, for comparison.
+- **Steps.** Two linear steps per texel of the mip level the ray crosses, 4 to 24, then 6
+  binary steps and rend2's final interpolation: a pixel reads the height at most 11 times
+  (4 steps) to 31 (24 steps), against rend2's 25. A shallow or distant relief takes the
+  fewest; a deep one seen up close the most, so its layers no longer show.
+- **Mip seams.** The maps and the diffuse image are read at the offset coordinates with
+  the coordinates' own screen derivatives. Implicit derivatives took in the offset's,
+  whose jump at a relief edge picked a blurred mip level along the edge: a seam that grew
+  as the camera came closer and the texture was magnified.
+
+How far the whole depth reaches, before and after, in units from the camera, at the
+default depth for a texture repeating every 128 units (retail's scale 0.5) with a
+1024-texel map (an HD pack's; a 256-texel map in brackets), 1920 pixels across a 90°
+view:
+
+| Surface | Whole depth to | Gone by |
+| --- | --- | --- |
+| Floor, standing eye (60 units up) | 90 (170) → 410 | 160 (340) → 920 |
+| Wall seen at 45° | 140 (560) → 570 (910) | 340 (1,360) → 1,920 (3,480) |
+
+At 3840 pixels across, walls keep it about twice as far and floors to the 2.9° limit
+(about 1,200 units). The numbers come from
+[a model of the shader's limits](../crates/sjk-viewer/src/material_map_parallax_tests.rs),
+whose tests also check that the limits fade without a ring, that the near limit holds the
+parallax on screen, that the steps stay within 4 to 24, and that the shader keeps the
+modelled arithmetic. Cost: surfaces past the old limits now march too, mostly with 4
+linear steps (at most 11 reads); estimated, not measured.
+
+`r_materialMapsDebug 7` shows the reach on parallax stages: red is the share of the
+depth the far limits keep, green the share the near limit keeps, blue the linear steps
+out of 24. Yellow is the whole depth; it turns green where distance or a grazing view
+fades it out and red where the camera's closeness holds it back.
 
 ### Lamp and bounce direction in real-time lighting
 
@@ -1394,7 +1452,8 @@ it found, for example `material maps (normal+specular+parallax): 429 stages,
 branch in the material program; the ordinary programs do not change): 1 shows the
 mapped world-space normal as colour, 2 tints each stage by the maps it found (red
 parallax, green normal, blue specular, so normal plus specular is cyan), 3 shows
-the normal map's relief, four times its departure from the face, on grey.
+the normal map's relief, four times its departure from the face, on grey, and 7 how much
+of the parallax depth each pixel keeps ([Parallax](#parallax)).
 Surfaces without maps keep their ordinary look in every view, so 2 shows at a
 glance which surfaces take maps.
 
