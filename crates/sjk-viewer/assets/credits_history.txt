@@ -9,6 +9,8 @@
 #                               made it when that is not the piece's owner.
 
 = Sol
++ 09/10/2026 | - | The sun behind the site's emblem
+- f8b651f |  | Bring the sun back behind the site's emblem, in CSS
 + 09/10/2026 | - | Draw the pilot's vehicle HUD and crosshair
 - e568ea1 |  | Draw the pilot's vehicle HUD and crosshair
 + 09/10/2026 | - | Name the pilots sealed inside vehicles on nameplates

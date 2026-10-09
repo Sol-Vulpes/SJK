@@ -164,14 +164,17 @@ over shots of the client's tour of Yavin Training Grounds that cross-fade every 
 seconds; What SJK brings is laid out as the client's Settings (a rail of categories,
 rows, a detail column with a screenshot). Below 900 px wide (or in a tall window) the
 home page stacks into a list. Its pictures are the client's own off-screen renders
-([screenshots/README.md](../site/screenshots/README.md)). `assets/effects.js` adds
-the home page's WebGPU effects (a sunburst behind the emblem, drifting dust and a
-saber trail on the pointer) with the MIT-licensed
+([screenshots/README.md](../site/screenshots/README.md)). The sun behind the
+emblem (a warm glow, uneven god rays and an 18-ray sunburst turning against each
+other) is CSS (`.sun` in `style.css`), so every browser shows it; it once was a
+WebGPU layer, which headless Chrome cannot capture in a screenshot.
+`assets/effects.js` adds drifting dust and a saber trail on the pointer with the
+MIT-licensed
 [Shaders](https://github.com/shader-effects-inc/shaders) library, vendored as
 `assets/vendor/shaders/shaders-4.0.0.js` with its license so no other server is
 contacted; its telemetry is turned off. When the visitor asks for reduced motion
 (Windows' "Animation effects" off does), the scene is drawn once and held still,
-without the saber trail, and the backdrop stays on its first shot. Without WebGPU
+without the saber trail; the backdrop stays on its first shot and the sun stops turning. Without WebGPU
 the script adds nothing. To
 update the library, replace the vendored file with a release's
 `dist/js/bundle.js` and check that `disableTelemetry` still stops its telemetry.

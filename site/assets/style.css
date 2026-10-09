@@ -153,6 +153,51 @@ kbd:first-child { margin-left: 0; }
   mask: radial-gradient(closest-side, transparent 95%, #000 95.5%, #000 97.5%, transparent 98%);
   filter: drop-shadow(0 0 6px rgba(255, 217, 122, 0.7));
 }
+/* The sun behind the emblem, as the client's emblem layer draws it: a warm
+   glow, uneven god rays turning one way and an 18-ray sunburst the other. */
+.sun {
+  position: absolute; left: 50%; top: 50%;
+  width: calc(var(--u) * 1500); height: calc(var(--u) * 1500);
+  translate: -50% -50%;
+  pointer-events: none;
+  mix-blend-mode: screen;
+}
+.sun > * { position: absolute; inset: 0; border-radius: 50%; }
+.glow {
+  inset: 22%;
+  background: radial-gradient(closest-side, rgba(255, 196, 96, 0.55), rgba(242, 150, 60, 0.18) 45%, transparent 75%);
+  animation: glow 4.2s ease-in-out infinite alternate;
+}
+.godrays {
+  background: conic-gradient(
+    rgba(255, 207, 112, 0.5) 0deg 4deg, transparent 4deg 19deg,
+    rgba(255, 207, 112, 0.32) 19deg 21deg, transparent 21deg 41deg,
+    rgba(255, 207, 112, 0.45) 41deg 47deg, transparent 47deg 70deg,
+    rgba(255, 207, 112, 0.28) 70deg 72deg, transparent 72deg 96deg,
+    rgba(255, 207, 112, 0.5) 96deg 101deg, transparent 101deg 118deg,
+    rgba(255, 207, 112, 0.3) 118deg 121deg, transparent 121deg 150deg,
+    rgba(255, 207, 112, 0.42) 150deg 155deg, transparent 155deg 178deg,
+    rgba(255, 207, 112, 0.26) 178deg 180deg, transparent 180deg 203deg,
+    rgba(255, 207, 112, 0.5) 203deg 209deg, transparent 209deg 232deg,
+    rgba(255, 207, 112, 0.3) 232deg 235deg, transparent 235deg 262deg,
+    rgba(255, 207, 112, 0.44) 262deg 266deg, transparent 266deg 290deg,
+    rgba(255, 207, 112, 0.28) 290deg 293deg, transparent 293deg 318deg,
+    rgba(255, 207, 112, 0.48) 318deg 324deg, transparent 324deg 341deg,
+    rgba(255, 207, 112, 0.3) 341deg 343deg, transparent 343deg 360deg);
+  -webkit-mask: radial-gradient(closest-side, #000 12%, rgba(0, 0, 0, 0.5) 40%, transparent 100%);
+  mask: radial-gradient(closest-side, #000 12%, rgba(0, 0, 0, 0.5) 40%, transparent 100%);
+  filter: blur(calc(var(--u) * 10));
+  animation: turn 180s linear infinite;
+}
+.burst {
+  inset: 18%;
+  background: repeating-conic-gradient(rgba(255, 220, 140, 0.5) 0deg 4deg, transparent 4deg 20deg);
+  -webkit-mask: radial-gradient(closest-side, #000 20%, rgba(0, 0, 0, 0.35) 55%, transparent 100%);
+  mask: radial-gradient(closest-side, #000 20%, rgba(0, 0, 0, 0.35) 55%, transparent 100%);
+  filter: blur(calc(var(--u) * 7));
+  animation: turn 240s linear infinite reverse;
+}
+@keyframes glow { from { opacity: 0.7; } to { opacity: 1; } }
 .emblem {
   position: absolute; left: 50%; top: 50%;
   width: calc(var(--u) * 380); height: calc(var(--u) * 380);
@@ -487,7 +532,7 @@ h3 {
 
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
-  .emblem, .ticks, .backdrop img.shown, .cat { animation: none !important; }
+  .emblem, .ticks, .sun > *, .backdrop img.shown, .cat { animation: none !important; }
   .fx, .backdrop img, .nav, .menu ul a { transition: none; }
 }
 
