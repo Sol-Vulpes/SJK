@@ -136,10 +136,9 @@ pub(crate) fn worn_skin(
     enabled: bool,
     snapshot: Option<&sjk_identity::Snapshot>,
 ) -> Option<&'static str> {
-    let skin = crate::unlockables::blade_skin(setting)?;
     crate::unlockables::Holdings::of(enabled, snapshot)
-        .unlock(skin.id)
-        .map(|_| skin.name)
+        .worn_blade_skin(setting)
+        .map(|skin| skin.name)
 }
 
 /// The summary of a player named `name` (their model and blade `detail`), with the

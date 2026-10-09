@@ -66,9 +66,7 @@ impl ViewerConsole {
         match action {
             PanelAction::None => {}
             PanelAction::Close => self.close_unlockables_panel(),
-            PanelAction::Wear(id) => {
-                self.set_cvar(SABER_SKIN_CVAR, id);
-            }
+            PanelAction::Wear(id) => crate::unlockables::wear(self, id),
         }
     }
 

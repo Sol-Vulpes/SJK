@@ -6,6 +6,7 @@
 //! is the exception: it edits a draft that only its Apply action writes
 //! (see `force`).
 
+mod blade_skins;
 mod classic;
 mod controller;
 mod cosmetics;
@@ -136,6 +137,10 @@ impl Default for Draft {
     }
 }
 
+/// Draw commands the screen has room for: the Saber page's blade choice draws
+/// up to six live swatches, a hundred and more shapes each with every effect.
+const DRAWS: usize = 1_280;
+
 /// Fixed-storage controller and retained draw list for the player screen.
 pub(crate) struct PlayerMenu {
     canvas: MenuCanvas,
@@ -191,6 +196,8 @@ pub(crate) struct PlayerMenu {
     sjk: bool,
     /// The SJK UI's hilt lists: the first saber's and the second's.
     sjk_hilts: [sjk_view::HiltList; 2],
+    /// The SJK UI Saber page's blade: the stock one or a blade skin owned.
+    blade_choice: blade_skins::BladeChoice,
     /// The Force level last bought and when (menu clock seconds), for the
     /// ring the SJK UI sends out from it.
     sjk_burst: Option<(usize, u8, f64)>,
@@ -209,7 +216,7 @@ pub(crate) struct PlayerMenu {
 impl PlayerMenu {
     pub(crate) fn new() -> Self {
         Self {
-            canvas: MenuCanvas::new(),
+            canvas: MenuCanvas::with_draw_capacity(DRAWS),
             loader: None,
             icon_vfs: None,
             icons: model_icons::ModelIcons::new(),
@@ -240,6 +247,7 @@ impl PlayerMenu {
             classic_style: false,
             sjk: false,
             sjk_hilts: Default::default(),
+            blade_choice: blade_skins::BladeChoice::new(),
             sjk_burst: None,
             classic: classic::ClassicState::default(),
             classic_dirty: false,
@@ -269,7 +277,16 @@ impl PlayerMenu {
         self.set_page(ProfilePage::ALL[index.min(2)]);
     }
 
-    /// Whether a field takes the keys: the name, the model search or a number typed.
+    /// Read the blade skins the player owns and wears for the Saber page's blade
+    /// choice, twice a second while it draws.
+    pub(crate) fn follow_blade_skins(&mut self, console: &ViewerConsole) {
+        if self.is_sjk() && self.page == ProfilePage::Saber {
+            self.blade_choice.follow(console);
+        }
+    }
+
+    /// Whether a field takes the keys: the name, a search (the model's or the
+    /// hilts') or a number typed.
     pub(crate) fn typing(&self) -> bool {
         self.name_editing || self.search_editing || self.numeric.is_some()
     }
@@ -400,6 +417,21 @@ impl PlayerMenu {
     #[cfg(test)]
     pub(crate) fn server_rules_for_shot(&mut self, rules: sjk_client::ForceLegalizeRules) {
         self.force.load_on_server("7-2-031330310000030333", rules);
+    }
+
+    /// Show the Saber page's hilt search as `search` (typed when `typing`) and
+    /// offer the blade skins `unlocks` own, for the world shots.
+    pub(crate) fn saber_for_shot(
+        &mut self,
+        console: &ViewerConsole,
+        search: &str,
+        typing: bool,
+        unlocks: Vec<sjk_identity::Unlock>,
+    ) {
+        self.saber.set_search(search);
+        self.search_editing = typing;
+        self.blade_choice.preview = Some(unlocks);
+        self.blade_choice.read(console);
     }
 
     /// Make the draft Dual (not written to the profile), for the world shots.

@@ -7,6 +7,25 @@ SJK currently contains a native client and standard dedicated server in a
 20-crate Rust workspace. This page records scope and verification, rather than
 claiming complete parity from the presence of an implementation.
 
+## Saber tab: hilt search and the blade skins owned
+
+Branch `personal/saber-search` (10/10/2026, Windows 11), Sol's request ("make saber
+searchable and let us select unlocked saber shaders"). The SJK UI Profile screen's
+Saber tab has a hilt search, a field at the right of the hilt lists' heading drawn as
+the Character page's Search, filtering by any part of a hilt's name or file name
+(Escape clears it; a kept search clears with Escape before the screen closes; Dual's
+two lists show four lines each to leave room), and a Blade row offering the stock blade
+and every blade skin the player's hub profile lists as the Collection's swatches
+shrunk; picking one sets `cg_saberSkin` through the Collection's code
+([sjk-ui.md](sjk-ui.md#character),
+[unlockables.md](unlockables.md#saber-tabs-blade-choice)). The player screen's canvas
+holds 1,280 draw commands (up to about 650 measured with five skins carrying every
+effect). Verified: `cargo test -p sjk-viewer` with tests of the search (typing from the
+field, matches, Left and Right, a click, nothing found, Escape, Dual and Staff) and the
+blade choice (offered skins, picking, stepping, a pending choice, the canvas), and the
+world shot `duel6_sjk_saber_page` (1080p, `ui_textScale` 1.2, 4K with it) with the
+hub's pack. Not tried in the game.
+
 ## The player's own key id off screen; the SJK page without Profile
 
 Branch `personal/key-quiet` (09/10/2026, Windows 11), Sol's answers on the Profile

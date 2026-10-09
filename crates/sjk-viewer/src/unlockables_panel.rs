@@ -21,6 +21,7 @@ use winit::keyboard::{KeyCode, PhysicalKey};
 
 #[path = "unlockables_panel_view.rs"]
 mod view;
+pub(crate) use view::swatch;
 
 /// The cards, one token each, and their Equip or Unequip buttons.
 const CARD_BASE: u16 = 1_200;

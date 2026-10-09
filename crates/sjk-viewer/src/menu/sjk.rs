@@ -123,6 +123,9 @@ impl ClientMenu {
             }
             super::ClientPhase::Player => {
                 let reveal = self.screen_reveal();
+                if let Some(console) = console {
+                    self.player.follow_blade_skins(console);
+                }
                 self.player.append_sjk(target, viewport, reveal);
             }
             _ => self.append_sjk_home(target, console, viewport),

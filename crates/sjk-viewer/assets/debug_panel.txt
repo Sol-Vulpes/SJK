@@ -3112,3 +3112,17 @@ test: Profile > SJK Profile: no Key id line. Esc > Players, your row: Known as o
 test: SJK chat: click your own message, then someone else's: only theirs shows a key id.
 note: Not tried in a game.
 
+[saber-search]
+area: Menus & settings
+title: Saber tab: hilt search and a Blade row for owned blade skins
+change: A field right of the Hilt heading filters the hilt lists by any part of a name.
+change: Blade row: the stock blade and each blade skin you own, as small Collection swatches.
+change: Picking one sets cg_saberSkin as Collection's Equip does. Dual lists show 4 lines now.
+test: Profile > Saber: click the field (or Up to it, Enter) and type ka: matches only, N found.
+test: Left/Right on the list stay in the matches; Esc clears the search, a second Esc leaves.
+test: Type zzz: No hilt matches "zzz". Dual: the one search filters both hands' lists.
+test: With skins owned: click one on the Blade row; the model wears it within half a second.
+test: Identity off, or no skins: only the stock blade, with a line saying why.
+test: ui_textScale 1.2 at 4K: field, Blade name and hint fit; nothing clipped.
+note: Locked skins are not listed on the Saber tab; Collection shows them.
+

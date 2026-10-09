@@ -114,7 +114,7 @@ fn stroke(
 
 /// What a swatch shows.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub(super) enum Shown {
+pub(crate) enum Shown {
     /// The skin, alive.
     Skin,
     /// Locked: grey and still, under a padlock.
@@ -176,6 +176,86 @@ pub(super) fn blade(
         padlock(canvas, frame, x + width * 0.5, centre);
     }
     shown
+}
+
+/// The height the Unlockables page draws a swatch at (frame pixels); a small one is
+/// that swatch shrunk.
+const CARD_HEIGHT: f32 = 224.0;
+
+/// A frame drawing a swatch `rect[3] / CARD_HEIGHT` times its card size into `rect`
+/// (frame pixels of `frame`), and the swatch's own rectangle in it.
+fn shrunk(frame: &Frame, rect: [f32; 4]) -> (Frame, [f32; 4]) {
+    let [x, y, width, height] = rect;
+    let k = height / CARD_HEIGHT;
+    let small = Frame {
+        s: frame.s * k,
+        origin: frame.point(x, y),
+    };
+    (small, [0.0, 0.0, width / k, CARD_HEIGHT])
+}
+
+/// An owned blade skin as [`blade`] draws it on its card, shrunk into `rect` (frame
+/// pixels): the Saber tab's blade choice.
+pub(crate) fn small_blade(
+    canvas: &mut MenuCanvas,
+    frame: &Frame,
+    rect: [f32; 4],
+    skin: Option<&LoadedSkin>,
+    seconds: f32,
+) -> Shown {
+    let (small, rect) = shrunk(frame, rect);
+    blade(canvas, &small, rect, skin, true, seconds)
+}
+
+/// The stock blade in `colour` from the same hilt, still, in a swatch shrunk into
+/// `rect` (frame pixels) as [`small_blade`]'s: the Saber tab's first blade choice.
+pub(crate) fn small_stock(canvas: &mut MenuCanvas, frame: &Frame, rect: [f32; 4], colour: Color) {
+    let (small, [x, y, width, height]) = shrunk(frame, rect);
+    let frame = &small;
+    let s = frame.s;
+    push(
+        canvas,
+        DrawCommand::RoundedRect {
+            rect: frame.rect(x, y, width, height),
+            radius: 14.0 * s,
+            color: Color::new(0.016, 0.024, 0.05, 0.94),
+        },
+    );
+    let centre = y + height * 0.5;
+    let hilt = 84.0;
+    let start = x + 26.0 + hilt;
+    let length = width - (start - x) - 34.0;
+    let tint = |alpha: f32| Color::new(colour.r, colour.g, colour.b, alpha);
+    // The stock blade: its colour's glow round a white core.
+    for (half, alpha) in [(30.0, 0.12), (16.0, 0.4), (9.0, 0.85)] {
+        capsule(
+            canvas,
+            frame,
+            [
+                start - 4.0,
+                centre - half,
+                length + 4.0 + half * 0.4,
+                half * 2.0,
+            ],
+            tint(alpha),
+        );
+    }
+    capsule(
+        canvas,
+        frame,
+        [start, centre - 4.0, length, 8.0],
+        Color::new(1.0, 1.0, 1.0, 1.0),
+    );
+    hilt_at(canvas, frame, start, centre, hilt, true);
+    push(
+        canvas,
+        DrawCommand::Border {
+            rect: frame.rect(x, y, width, height),
+            radius: 14.0 * s,
+            width: 1.2 * s,
+            color: color::alpha(color::HOLO, 0.22),
+        },
+    );
 }
 
 /// `a` to `b` by `t`.

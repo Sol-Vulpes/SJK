@@ -132,3 +132,81 @@ fn held_on_the_stage() {
     gpu.ui_epoch -= std::time::Duration::from_millis(3_000);
     println!("{}", shoot(&mut gpu, 8, "duel6-sun-blade-held").display());
 }
+
+/// The SJK UI Profile screen's Saber tab from the main page, on the menu map's stage:
+/// the hilt search being typed ("ka") with its matches, and the blade choice offering
+/// the stock blade and every blade skin (made-up grants; the Storm worn, the model
+/// holding it); then a kept search that finds nothing with no skin owned; then Dual
+/// with every skin. At 1080p, with the menu text at its largest (`ui_textScale` 1.2),
+/// and at 4K with it, as Sol plays. No canvas runs out of room.
+#[test]
+#[ignore = "renders with the GPU and the installed game data named by JKA_GAME_DATA"]
+fn duel6_sjk_saber_page() {
+    on_big_stack(|| {
+        mount_test_packs();
+        let unlocks = || {
+            crate::unlockables::blade_skins()
+                .map(|skin| sjk_identity::Unlock {
+                    id: skin.id.to_owned(),
+                    granted: 1_791_336_225,
+                    note: String::new(),
+                })
+                .collect::<Vec<_>>()
+        };
+        for (size, scale, suffix) in [
+            ([1920, 1080], None, ""),
+            ([1920, 1080], Some("1.2"), "-text-1.2"),
+            ([3840, 2160], Some("1.2"), "-4k"),
+        ] {
+            let mut cvars = vec![
+                ("ui_menuStyle", "sjk"),
+                (crate::settings::quick::HIDE_CVAR, "1"),
+                (crate::unlockables::SABER_SKIN_CVAR, "saber_storm"),
+                ("name", "^1Sol^7Vulpes"),
+            ];
+            if let Some(scale) = scale {
+                cvars.push((crate::text::style::SCALE_CVAR, scale));
+            }
+            let menu = menu::ClientMenu::new(true, String::new());
+            let Some((mut gpu, _profile)) = open("maps/mp/duel6.bsp", size, Some(menu), &cvars)
+            else {
+                return;
+            };
+            // The shots have no hub: they own the unlocks, as a profile listing them would.
+            gpu.looks.shot_owns_unlocks = true;
+            let _ = frame(&mut gpu, 4);
+            if let (Some(menu), Some(console)) = (gpu.client_menu.as_mut(), gpu.console.as_ref()) {
+                menu.open_player_hub(console, crate::player_menu::ReturnTarget::MainMenu);
+            }
+            // Search typed, then (the same rows: Style, Search, Hilt, Blade) the
+            // search kept finding nothing and no skin, then Dual on its blade row.
+            let steps: [(&str, bool, bool, usize, &str); 3] = [
+                ("ka", true, true, 1, "search"),
+                ("zzz", false, false, 3, "none"),
+                ("", false, true, 3, "dual"),
+            ];
+            for (search, typing, owned, row, part) in steps {
+                if let (Some(menu), Some(console)) =
+                    (gpu.client_menu.as_mut(), gpu.console.as_ref())
+                {
+                    if part == "dual" {
+                        menu.player_dual_for_shot();
+                    }
+                    menu.player_page_for_shot(1, row);
+                    let owned = if owned { unlocks() } else { Vec::new() };
+                    menu.player_saber_for_shot(console, search, typing, owned);
+                }
+                let _ = frame(&mut gpu, 2);
+                gpu.ui_epoch -= std::time::Duration::from_millis(3_000);
+                let name = format!("duel6-saber-{part}{suffix}");
+                println!("{}", shoot(&mut gpu, 30, &name).display());
+                assert!(
+                    !gpu.client_menu
+                        .as_ref()
+                        .is_some_and(menu::ClientMenu::player_overflowed),
+                    "{name}"
+                );
+            }
+        }
+    });
+}

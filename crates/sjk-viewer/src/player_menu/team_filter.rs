@@ -107,28 +107,44 @@ impl PlayerMenu {
     /// Backspace deletes, Enter keeps the search, Escape clears it.
     pub(super) fn edit_search(&mut self, event: &winit::event::KeyEvent, key: KeyCode) {
         let mut text = self.search.clone();
-        match key {
-            KeyCode::Escape => {
-                text.clear();
-                self.search_editing = false;
-            }
-            KeyCode::Enter | KeyCode::NumpadEnter => self.search_editing = false,
-            KeyCode::Backspace => {
-                text.pop();
-            }
-            _ => {
-                if let Some(typed) = event.text.as_deref() {
-                    text.extend(
-                        typed
-                            .chars()
-                            .filter(|character| !character.is_control())
-                            .take(MAX_SEARCH.saturating_sub(text.chars().count())),
-                    );
-                }
-            }
-        }
+        self.search_editing = type_search(&mut text, event, key);
         self.set_search(&text);
     }
+
+    /// A key while the Saber page's hilt search is typed, as [`Self::edit_search`].
+    pub(super) fn edit_hilt_search(&mut self, event: &winit::event::KeyEvent, key: KeyCode) {
+        let mut text = self.saber.search().to_owned();
+        self.search_editing = type_search(&mut text, event, key);
+        self.saber.set_search(&text);
+    }
+}
+
+/// A key typed into a search field holding `text`: Escape clears it,
+/// Backspace deletes, Enter keeps it, other keys add their text (up to
+/// [`MAX_SEARCH`] characters). Returns whether typing goes on.
+fn type_search(text: &mut String, event: &winit::event::KeyEvent, key: KeyCode) -> bool {
+    match key {
+        KeyCode::Escape => {
+            text.clear();
+            return false;
+        }
+        KeyCode::Enter | KeyCode::NumpadEnter => return false,
+        KeyCode::Backspace => {
+            text.pop();
+        }
+        _ => {
+            if let Some(typed) = event.text.as_deref() {
+                let room = MAX_SEARCH.saturating_sub(text.chars().count());
+                text.extend(
+                    typed
+                        .chars()
+                        .filter(|character| !character.is_control())
+                        .take(room),
+                );
+            }
+        }
+    }
+    true
 }
 
 /// Longest search, in characters (what the classic field shows).

@@ -92,12 +92,61 @@ fn blade_rgb(index: u8, rgb: Option<[u8; 3]>) -> [u8; 3] {
 
 pub(super) struct SaberMenu {
     draft: SaberDraft,
+    /// Words a listed hilt's name must contain (the SJK UI's hilt search; empty
+    /// lists every hilt the style allows).
+    search: String,
 }
 
 impl SaberMenu {
     pub(super) fn new() -> Self {
         Self {
             draft: SaberDraft::default(),
+            search: String::with_capacity(32),
+        }
+    }
+
+    /// The hilt search as typed.
+    pub(super) fn search(&self) -> &str {
+        &self.search
+    }
+
+    /// Change the hilt search to `text`.
+    pub(super) fn set_search(&mut self, text: &str) {
+        if self.search != text {
+            self.search.clear();
+            self.search.push_str(text);
+        }
+    }
+
+    /// The hilts the first saber's list (`second` false) or the second's offers,
+    /// in the catalogue's order (the game's load order), with each one's place
+    /// among the hilts the style allows (what [`Self::select`] takes): the
+    /// style's hilts whose name or file name holds every word of the search.
+    pub(super) fn listed<'a>(
+        &'a self,
+        catalog: &'a LegacyAssetCatalog,
+        second: bool,
+    ) -> impl Iterator<Item = (usize, &'a LegacySaberDefinition)> + 'a {
+        let style = self.hand_style(second);
+        catalog
+            .saber_hilts
+            .iter()
+            .filter(move |hilt| allowed(hilt, style))
+            .enumerate()
+            .filter(|(_, hilt)| {
+                let search = self.search.trim();
+                search.is_empty()
+                    || super::team_filter::search_matches(search, &hilt.display_name)
+                    || super::team_filter::search_matches(search, &hilt.name)
+            })
+    }
+
+    /// The style a hand's hilts must suit: the second saber is a single one.
+    fn hand_style(&self, second: bool) -> SaberStyle {
+        if second {
+            SaberStyle::Single
+        } else {
+            self.draft.style
         }
     }
 
@@ -274,31 +323,34 @@ impl SaberMenu {
         }
     }
 
+    /// Step the hand's hilt `direction` through the hilts listed (the search's
+    /// matches); a hilt the search leaves out steps in from the list's edge.
     fn cycle_hilt(&mut self, catalog: &LegacyAssetCatalog, second: bool, direction: isize) {
-        let style = if second {
-            SaberStyle::Single
-        } else {
-            self.draft.style
-        };
-        let count = self.filtered_count(catalog, second);
-        if count == 0 {
-            return;
+        let current = self.hilt(second);
+        let (mut count, mut at, mut first, mut last) = (0, None, None, None);
+        for (index, hilt) in self.listed(catalog, second) {
+            if hilt.name.eq_ignore_ascii_case(current) {
+                at = Some(count);
+            }
+            first = first.or(Some(index));
+            last = Some(index);
+            count += 1;
         }
-        let current = catalog
-            .saber_hilts
-            .iter()
-            .filter(|hilt| allowed(hilt, style))
-            .position(|hilt| hilt.name.eq_ignore_ascii_case(self.hilt(second)))
-            .unwrap_or(0);
-        self.select(catalog, wrap(current, direction, count), second);
+        let target = match at {
+            Some(at) => self
+                .listed(catalog, second)
+                .nth(wrap(at, direction, count))
+                .map(|(index, _)| index),
+            None if direction > 0 => first,
+            None => last,
+        };
+        if let Some(index) = target {
+            self.select(catalog, index, second);
+        }
     }
 
     pub(super) fn select(&mut self, catalog: &LegacyAssetCatalog, index: usize, second: bool) {
-        let style = if second {
-            SaberStyle::Single
-        } else {
-            self.draft.style
-        };
+        let style = self.hand_style(second);
         let Some(hilt) = catalog
             .saber_hilts
             .iter()
@@ -348,19 +400,6 @@ impl SaberMenu {
             let packed = slot.map_or(0, pack_saber_rgb);
             console.set_cvar(cvar, &packed.to_string());
         }
-    }
-
-    pub(super) fn filtered_count(&self, catalog: &LegacyAssetCatalog, second: bool) -> usize {
-        let style = if second {
-            SaberStyle::Single
-        } else {
-            self.draft.style
-        };
-        catalog
-            .saber_hilts
-            .iter()
-            .filter(|hilt| allowed(hilt, style))
-            .count()
     }
 }
 
