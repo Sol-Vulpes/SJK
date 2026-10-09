@@ -114,19 +114,45 @@ impl Runtime {
         }
     }
 
-    /// Publish one lighting-mode word in the already allocated scene block.
+    /// Publish one lighting-mode word in the already allocated scene block, and plan the
+    /// lights' shadow tiles when walls stop them (`shadows`, `dynamic_light_shadows.rs`).
     pub(crate) fn update_scene_lighting_mode(
         &self,
         queue: &crate::frame_queue::FrameQueue,
         lights: &PointLightList,
         model_pixels: bool,
         mode: u32,
+        shadows: bool,
     ) {
         let mut block: GpuPointLightBlock = lights.gpu_block();
         block.metadata[1] = u32::from(model_pixels);
         block.metadata[2] = mode;
         self.lighting_mode.set(mode);
+        // Only the CPU part: its zero shadow header hides the last frame's tiles until
+        // this frame's trace copies its own in.
         queue.write_buffer(&self.dynamic_light_buffer, 0, bytemuck::bytes_of(&block));
+        if let Some(tracer) = self.dynamic_light_shadows() {
+            tracer.plan(lights.as_slice().len(), shadows);
+        }
+    }
+
+    /// Trace this frame's dynamic-light shadow tiles into the point-light block; before
+    /// any pass that reads it. `phases` marks the work for the frame budget.
+    pub(crate) fn trace_dynamic_light_shadows(
+        &self,
+        encoder: &mut wgpu::CommandEncoder,
+        phases: Option<&crate::gpu_phases::Profiler>,
+    ) {
+        if let Some(tracer) = self.dynamic_light_shadows()
+            && tracer.encode(encoder)
+            && let Some(phases) = phases
+        {
+            phases.mark(encoder, "dlight-shadows");
+        }
+    }
+
+    fn dynamic_light_shadows(&self) -> Option<&dynamic_light_shadows::Tracer> {
+        self.gi.as_ref()?.dynamic_light_shadows.as_ref()
     }
 
     #[allow(clippy::too_many_arguments)]

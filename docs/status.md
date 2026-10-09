@@ -7,6 +7,34 @@ SJK currently contains a native client and standard dedicated server in a
 20-crate Rust workspace. This page records scope and verification, rather than
 claiming complete parity from the presence of an implementation.
 
+## Dynamic lights stop at walls
+
+Branch `fix/dynamic-light-leaks` (08/10/2026, based on `a6230f9`, Linux): Sol reported
+that dynamic lights leak through walls and round corners, which breaks immersion. A
+surface took a saber's, bolt's or explosion's light by distance and facing alone
+(`dynamic_light_modulation` and `emitted_light` in `point_lights.wgsl`, the material-map
+highlights and the per-pixel model light), so the floor of the room behind a wall, or of
+the corridor round a corner, was lit like open ground. Each frame every dynamic light now
+gets a small octahedral tile of the static world around it, traced on the GPU against the
+lamps' triangles, and every surface and per-pixel model checks it before taking the light
+([rendering](rendering.md#dynamic-lights-and-walls)); `r_dynamicLightShadows 0` restores
+the old look. Real-time lighting only: baked lightmaps (`r_dayNight 0`) have no triangles
+to trace, and movers (doors) do not stop dynamic light.
+
+Verified on Linux: unit tests replay the trace and the receivers' test in Rust on small
+scenes (lit floors, walls, creases and stairs stay fully lit; a wall leaves the room behind
+it dark, at most 3% of a large light's strength near its foot; a corner stops the light
+wrapping round; the edge is soft and ordered; a light a hair inside the face it hit still
+lights its side), pin the block layout against the programs and the uniform limit, the
+tile mapping, the normal codes and the cvar, and validate the tracer and every changed
+program with naga; workspace formatting, the locked build, tests and Clippy (no new
+warnings). Not seen on screen and not timed: no GPU or game data were available. The owner
+should ignite a saber beside a wall and at a corner on a real-time-lit map (`mp/ffa3`) and
+look at the far side with `r_dynamicLightShadows` 1 and 0, check stairs and wall feet near
+the saber for dark bands, and time `dlight-shadows` with `SJK_GPU_PHASES`; the world shot
+`world_shot::notes::world_notes` with notes written on the floor beside a corner or
+doorway, run again with `SJK_NOTES_CVARS=r_dynamicLightShadows=0`, compares the two.
+
 ## Percent signs and quotes in chat
 
 Branch `fix/chat-percent` (08/10/2026, based on `15cf7a9`, Linux): a `%` typed in

@@ -16,6 +16,7 @@ BSP geometry, PVS visibility, lightmaps, shader stages and legacy models.
 | Secondary views | [scene_views.rs](../crates/sjk-viewer/src/scene_views.rs) |
 | Sun and real-time lighting | [sun_shadows.rs](../crates/sjk-viewer/src/sun_shadows.rs) |
 | Movers in lamp shadows | [mover_occlusion.rs](../crates/sjk-viewer/src/mover_occlusion.rs) |
+| Dynamic lights and walls | [dynamic_light_shadows.rs](../crates/sjk-viewer/src/dynamic_light_shadows.rs) |
 | Post processing | [post_aa.rs](../crates/sjk-viewer/src/post_aa.rs) |
 | Dynamic glow | [post_glow.rs](../crates/sjk-viewer/src/post_glow.rs), [glow_pass.rs](../crates/sjk-viewer/src/glow_pass.rs) |
 | Eye adaptation | [post_exposure.rs](../crates/sjk-viewer/src/post_exposure.rs) |
@@ -275,6 +276,7 @@ work without reducing source count, texture resolution or lighting quality.
 | `r_floorReflections` | Polished floors mirror the scene (see [Floor reflections](#floor-reflections)); default 1, live |
 | `r_DynamicGlow` | Halo around `glow` shader stages: 0 off, 1 on (default), 2 saber blades only, 3 the glow alone (debug); live. See [Dynamic glow](#dynamic-glow) |
 | `r_dynamicGlowStyle` | Glow blur: 1 EternalJK rd-vulkan's (default), 0 retail rd-vanilla's; live |
+| `r_dynamicLightShadows` | Walls stop dynamic lights (sabers, bolts, explosions) in real-time lighting, 1 (default, SJK) or 0 (they light through, as retail); live, console only, archived. See [Dynamic lights and walls](#dynamic-lights-and-walls) |
 
 See [day_night.rs](../crates/sjk-viewer/src/day_night.rs),
 [sun_shadow_settings.rs](../crates/sjk-viewer/src/sun_shadow_settings.rs) and
@@ -642,8 +644,50 @@ figure above does not include them; it was not measured.
 
 Not covered: a train or lift that travels outside its box does not shadow lamps it
 reaches there; alpha-tested and blended mover faces let light through, like those of
-the static world; dynamic lights still cast no shadows; baked lightmaps (`r_dayNight 0`)
-are unchanged.
+the static world; movers do not stop dynamic lights (the static world does, see
+[Dynamic lights and walls](#dynamic-lights-and-walls)); baked lightmaps
+(`r_dayNight 0`) are unchanged.
+
+## Dynamic lights and walls
+
+Saber glow, bolts, explosions, Force effects and the other dynamic lights (the frame's
+point-light list, at most 32) stop at the static world in real-time lighting: a saber by a
+wall no longer lights the floor of the room behind it, nor the corridor round a corner
+([dynamic_light_shadows.rs](../crates/sjk-viewer/src/dynamic_light_shadows.rs)).
+Before, a surface took a dynamic light by distance and facing alone
+([point_lights.wgsl](../crates/sjk-viewer/src/point_lights.wgsl)), so every floor, ceiling
+and wall within its radius that faced it was lit, whatever stood between.
+
+- **Tiles.** Each frame, before any view draws, every light gets a 28×28 octahedral tile
+  (the lamps' mapping): per direction, how far the light gets before the static triangles
+  of the lamp visibility stop it, in 255ths of its reach (radius plus 8 units), and the
+  normal of what stops it. Glass, grates and sky let it through, as for the lamps. The GPU
+  traces them (784 rays a light, 25,088 for a full list) and copies them into the
+  point-light uniform block after the CPU's part (58,208 bytes in all), so the programs
+  read them without a new binding. A frame that traces none reads every light unshadowed.
+- **Receivers.** World surfaces, their material-map highlights and models lit per pixel
+  (`r_modelPixelLight`) take four bilinear taps of the light's tile. A tap is clear when
+  its ray gets as far as the receiver, or past the receiving plane (the lamps' test, so
+  grazing floors never shadow themselves). Otherwise what stopped it decides: a receiver
+  in front of that face (the other face of a crease, the next step of a stair) keeps the
+  light, one behind it (a wall between) loses it. Taps that find a wall between also
+  discount those that only passed beside a face, so a floor running on under a wall does
+  not light the room behind it. The geometric normal is used, never a normal map's.
+- **Edges.** Shadows are soft over about a texel (6.4°); in the tests their edge reaches a
+  tenth of the distance into the shadow and a fifth into the light. Seen past a wall's
+  foot almost edge-on, a large light (an explosion 90 units from the wall) leaves a trace
+  within a texel of the foot behind it: under 3% of its strength, 0.1% of what used to
+  come through.
+
+`r_dynamicLightShadows 0` lights through walls again for comparisons. `SJK_GPU_PHASES`
+times the trace as `dlight-shadows`. Unit tests follow the shaders' arithmetic in Rust on
+small scenes (a wall, a corner, stairs, a light just inside the face it hit) and validate
+the programs; nothing here has been rendered or timed on a GPU yet.
+
+Not covered: baked lightmaps (`r_dayNight 0`) build no triangles, so dynamic lights pass
+walls there as in the original game; movers are not in the triangles, so a closed door lets
+dynamic light through; models lit once each (`r_modelPixelLight 0`) are unchanged; dynamic
+lights still cast no shadows of actors or movers.
 
 ## Indirect lighting and dark-area readability
 
