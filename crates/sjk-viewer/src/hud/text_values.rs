@@ -26,7 +26,6 @@ impl HudOverlay {
             202 => &self.vote_keys,
             203 => &self.team_vote_heading,
             204 => &self.team_vote_text,
-            value @ 300..=307 => &self.kill_rows[(value - 300) as usize],
             310 => &self.crosshair_name,
             311 => &self.match_timer,
             312 => &self.warmup_text,
@@ -38,6 +37,7 @@ impl HudOverlay {
             318 => &self.enemy_info.name,
             319 => &self.enemy_info.detail,
             value @ 400..=415 => self.icons.text((value - 400) as usize),
+            value @ kill_feed::TEXT_FIRST..=kill_feed::TEXT_LAST => self.kill_feed.text(value),
             _ => selection::text(id),
         }
     }
@@ -50,13 +50,14 @@ impl HudOverlay {
 /// `CG_DrawTimer` and `CG_DrawEnemyInfo` paint with `FONT_MEDIUM`; the Force and
 /// inventory selection names use `UI_SMALLFONT` (`FONT_SMALL`); vote, team
 /// overlay, snapshot and `CG_DrawDisconnect` draw console characters
-/// (`CG_DrawSmallString`, `CG_DrawStringExt`, `CG_DrawBigString`), and
-/// obituaries are console prints (`CG_Obituary`).
+/// (`CG_DrawSmallString`, `CG_DrawStringExt`, `CG_DrawBigString`). Retail has no
+/// kill feed (obituaries are console prints, `CG_Obituary`): SJK's
+/// ([`super::kill_feed`]) stays on the HUD font it is measured in.
 pub(super) fn retail_font(id: TextId) -> Option<RetailFont> {
     match id.0 {
         310..=312 | 318 | 319 => Some(RetailFont::Medium),
         1000..=1022 | 1100..=1111 => Some(RetailFont::Small),
-        101..=138 | 200..=204 | 300..=307 | 313 | 316 => Some(RetailFont::Console),
+        101..=138 | 200..=204 | 313 | 316 => Some(RetailFont::Console),
         _ => None,
     }
 }
@@ -69,9 +70,18 @@ mod retail_font_tests {
     fn crosshair_name_uses_the_medium_font_and_status_values_their_own() {
         assert_eq!(retail_font(TextId(310)), Some(RetailFont::Medium));
         assert_eq!(retail_font(TextId(1003)), Some(RetailFont::Small));
-        assert_eq!(retail_font(TextId(302)), Some(RetailFont::Console));
-        // Health, ammo and the selector headings stay on the HUD font.
-        for id in [0, 6, 14, 100, 1200, 1201] {
+        assert_eq!(retail_font(TextId(101)), Some(RetailFont::Console));
+        // Health, ammo, the selector headings and the kill feed stay on the HUD font.
+        for id in [
+            0,
+            6,
+            14,
+            100,
+            1200,
+            1201,
+            kill_feed::TEXT_FIRST,
+            kill_feed::TEXT_LAST,
+        ] {
             assert_eq!(retail_font(TextId(id)), None);
         }
     }

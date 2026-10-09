@@ -766,6 +766,12 @@ pub(super) fn register_daily_cvars(cvars: &mut CvarRegistry) -> Result<(), sjk_s
             archive,
             "Internal migration marker for the ejk camera style default",
         ),
+        CvarDefinition::new(
+            "cg_killfeedDefaultVersion",
+            0_i64,
+            archive,
+            "Internal migration marker for the kill feed being on by default",
+        ),
     ];
     for definition in definitions {
         cvars.register(definition)?;

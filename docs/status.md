@@ -7,6 +7,40 @@ SJK currently contains a native client and standard dedicated server in a
 20-crate Rust workspace. This page records scope and verification, rather than
 claiming complete parity from the presence of an implementation.
 
+## Kill feed with icons
+
+Branch `feat/kill-feed` (08/10/2026, based on `fix/obituary-names`, Linux): Sol
+asked for an optional kill feed at the top right with icons: `Name [saber icon]
+Name` for a saber kill, a skull for a suicide or a death to the world, and weapon
+icons for other weapons. `cg_killfeed` (Settings > HUD > "Kill feed") now shows
+the last five kills, newest at the top, each `killer [icon] victim` or `[skull]
+victim` with the names in their colours, for five seconds and a one-second fade
+([client.md](client.md#kill-feed), [kill_feed.rs](../crates/sjk-viewer/src/hud/kill_feed.rs)).
+Icons are the HUD's cause-of-death pictures: the weapon's `w_icon_*` (an icon
+pack's `hud/mod/*` when installed), Force Lightning's or Push's holocron for dark
+Force kills and Force tosses, a drawn skull for solo deaths and causes without a
+weapon, a short word for a picture that did not load. The feed stands under the
+top right's FPS, team overlay, duel portrait, snapshot, inventory and powerups,
+keeps clear of the top centre, and hides with the HUD. It replaces the
+off-by-default one-line obituary of the same cvar: `cg_killfeed` defaults to 1, a
+saved 0 is moved to 1 once (`cg_killfeedDefaultVersion`, as other defaults moved;
+[sjk.md](sjk.md#defaults) puts new profiles on Sol's choices and says nothing
+against a new HUD widget being on), and that line's alignment and reverse cvars
+are gone. The console's kill line and the feed share one name reader.
+
+Verified on Linux with Rust 1.97: unit tests of the means-of-death marks (picture,
+holocron, word, skull), each weapon's `MOD_*` falling back to that weapon's
+picture as in OpenJK, suicides and world deaths without a killer, the viewed
+player's entries, names kept from the moment of the kill, the five-entry ring,
+hold and fade, kills from an earlier timeline, the area under the top right's
+stack and right of the centre, and a full feed of long names and every mark kind
+drawing inside its area and command budget at 1080p, 1280x1024 and 4K; the HUD's
+draw list gained room for it. Formatting, the locked workspace build and tests
+pass; workspace Clippy finishes without errors and with no warning on a changed
+line. Not seen on screen: there is no GPU or game data here, so the feed's look,
+the skull, the icon sizes and the stacking under the team overlay and FPS were
+not checked in a running client.
+
 ## Player names in kill messages
 
 Branch `fix/obituary-names` (08/10/2026, based on `a6230f9`, Linux): Sol reported

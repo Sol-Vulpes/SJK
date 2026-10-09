@@ -24,13 +24,6 @@ pub(crate) fn register(cvars: &mut CvarRegistry) -> Result<(), sjk_shell::CvarEr
         ),
         ("cg_drawCrosshairNamesColours", 1, "Colored target names"),
         ("cg_drawTeamOverlayWeapons", 0, "Show teammate weapons"),
-        ("cg_killfeed", 0, "Show the obituary feed"),
-        (
-            "cg_killfeedAlignment",
-            0,
-            "Obituaries: 0 right, 1 left, 2 center",
-        ),
-        ("cg_killfeedReverse", 0, "Show attacker before victim"),
     ] {
         cvars.register(CvarDefinition::new(
             name,
@@ -57,21 +50,6 @@ pub(crate) fn register(cvars: &mut CvarRegistry) -> Result<(), sjk_shell::CvarEr
         ("cg_gunX", 0.0, "View weapon forward offset"),
         ("cg_gunY", 0.0, "View weapon left offset"),
         ("cg_gunZ", 0.0, "View weapon upward offset"),
-        (
-            "cg_killfeedX",
-            0.0,
-            "Obituary horizontal offset in virtual units",
-        ),
-        (
-            "cg_killfeedY",
-            0.0,
-            "Obituary vertical offset in virtual units",
-        ),
-        (
-            "cg_killfeedTextSize",
-            0.8,
-            "Obituary text scale; zero uses default",
-        ),
     ] {
         cvars.register(CvarDefinition::new(name, value, CvarFlags::ARCHIVE, help))?;
     }
@@ -118,14 +96,6 @@ pub(super) struct Policy {
     pub(super) team: [f32; 3],
     /// Include weapons in teammate gear text.
     pub(super) team_weapons: bool,
-    /// Obituary feed visibility.
-    pub(super) kills: bool,
-    /// Obituary horizontal alignment.
-    pub(super) kill_align: i64,
-    /// Attacker-first obituary phrasing.
-    pub(super) kill_reverse: bool,
-    /// Obituary virtual offsets and text multiplier, sampled before drawing.
-    pub(super) kill_geometry: [f32; 3],
 }
 
 impl Default for Policy {
@@ -158,17 +128,6 @@ impl Policy {
                 f("cg_drawteamoverlayscale", 1.0).clamp(0.1, 4.0),
             ],
             team_weapons: i("cg_drawteamoverlayweapons", 0) != 0,
-            kills: i("cg_killfeed", 0) != 0,
-            kill_align: i("cg_killfeedalignment", 0),
-            kill_reverse: i("cg_killfeedreverse", 0) != 0,
-            kill_geometry: [
-                f("cg_killfeedx", 0.0),
-                f("cg_killfeedy", 0.0),
-                match f("cg_killfeedtextsize", 0.8) {
-                    0.0 => 1.0,
-                    value => (value / 0.8).clamp(0.1, 8.0),
-                },
-            ],
         }
     }
 
@@ -176,7 +135,6 @@ impl Policy {
     pub(super) fn visible(self, binding: Option<&str>) -> bool {
         match binding {
             Some("vote_panel") => self.vote,
-            Some("kill_feed") => self.kills,
             Some("match_timer" | "team_rows") => self.upper,
             _ => true,
         }
@@ -206,6 +164,7 @@ impl HudOverlay {
         console: Option<&ViewerConsole>,
     ) {
         self.family = Policy::read(console);
+        self.kill_feed.sample(console);
         self.icons.update(snapshot, game, console);
         self.targeting.update(console, &snapshot.player);
         self.inventory_bits = if snapshot.player.health() > 0
@@ -258,14 +217,20 @@ impl HudOverlay {
         [snapshot, inventory, team]
     }
 
-    /// Append independent score and diagnostic text without a backplate.
-    pub(super) fn emit_family(&mut self, viewport: [f32; 2]) {
+    /// Append independent score and diagnostic text without a backplate; returns
+    /// the bottom of what it drew at the top right (duel portrait, snapshot,
+    /// inventory), or zero.
+    pub(super) fn emit_family(&mut self, viewport: [f32; 2]) -> f32 {
         self.targeting
             .emit(&mut self.draw_list, viewport, self.theme);
         self.enemy_info
             .emit(&mut self.draw_list, viewport, self.theme);
         let s = crate::ui_scale::height_scale(viewport[1]);
         let [snapshot_top, inventory_top, _] = self.upper_right_stack();
+        let mut bottom = self.enemy_info.bottom() * s;
+        if self.family.upper && self.family.snapshot {
+            bottom = bottom.max((snapshot_top + 28.0) * s);
+        }
         if self.family.upper && self.family.inventory {
             let mut row = 0;
             for tag in 1..12 {
@@ -288,6 +253,7 @@ impl HudOverlay {
                     letter_spacing: 0.0,
                 });
                 row += 1;
+                bottom = bottom.max((inventory_top + row as f32 * 26.0) * s);
             }
         }
         for (enabled, id, y, offset) in [
@@ -323,6 +289,7 @@ impl HudOverlay {
                 letter_spacing: 0.0,
             });
         }
+        bottom
     }
 }
 
@@ -339,22 +306,6 @@ pub(super) fn gear(text: &mut String, entry: TeamInfo, weapons: bool) {
     if !weapons {
         let end = text.find(" · ").map_or(text.len(), |i| i + " · ".len());
         text.drain(..end);
-    }
-}
-
-/// Change participant order without discarding the obituary's cause.
-pub(super) fn obituary(
-    text: &mut String,
-    victim: &str,
-    attacker: &str,
-    phrase: &str,
-    reverse: bool,
-) {
-    text.clear();
-    if reverse {
-        let _ = write!(text, "{attacker} → {victim} ({phrase})");
-    } else {
-        let _ = write!(text, "{victim} {phrase} {attacker}");
     }
 }
 

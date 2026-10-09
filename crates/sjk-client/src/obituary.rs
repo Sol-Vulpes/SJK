@@ -160,6 +160,16 @@ impl Default for ObituaryTracker {
     }
 }
 
+/// A client's name as the kill messages show it: the `n` key of its `CS_PLAYERS`
+/// string with its colour codes, read from the string's bytes
+/// ([`crate::LegacyClientInfo::name`]), or `noname` for a slot with no name at all,
+/// where `CG_Obituary` would print an empty one.
+pub fn obituary_name(game: &GameState, client: u16) -> std::borrow::Cow<'_, str> {
+    game.config_string(CS_PLAYERS + usize::from(client))
+        .and_then(|info| crate::LegacyClientInfo::new(info).name())
+        .unwrap_or(std::borrow::Cow::Borrowed("noname"))
+}
+
 /// Select the exact localization key used by `CG_Obituary`.
 pub fn legacy_obituary(
     entity: &EntityState,

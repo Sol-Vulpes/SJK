@@ -204,7 +204,7 @@ pub use npc_identity::{
     legacy_npc_saber_names_borrowed, legacy_npc_state, legacy_vehicle_name,
 };
 pub use obituary::{
-    EV_OBITUARY, Gender, KillFeed, ObituaryEvent, ObituaryTracker, legacy_obituary,
+    EV_OBITUARY, Gender, KillFeed, ObituaryEvent, ObituaryTracker, legacy_obituary, obituary_name,
 };
 pub use player_angle_rules::{PredictedPoseFields, legacy_predicted_pose};
 pub use player_angles::{

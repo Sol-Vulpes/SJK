@@ -8,6 +8,11 @@ use sjk_vfs::VirtualFileSystem;
 /// then the weapon selection row's art: each weapon's `_na` (no ammo) icon and the
 /// staff and dual saber icons.
 pub(super) const COUNT: usize = 117;
+/// First of the cause-of-death cells, by `meansOfDeath_t`: an icon pack's
+/// `hud/mod/*`, else the weapon's own picture ([`MOD_ITEMS`]); the kill feed's icons.
+pub(super) const MEANS_FIRST: usize = 51;
+/// Cause-of-death cells, `MOD_UNKNOWN` to `MOD_TEAM_CHANGE`.
+pub(super) const MEANS_COUNT: usize = 43;
 /// First of the 19 `_na` weapon icons, by weapon (`cgs.media.weaponIcons_NA`).
 pub(super) const EMPTY_WEAPONS: usize = 96;
 /// `cgs.media.weaponIconsStaff` and `weaponIconsAkimbo` (JoF EJK `cg_main.c`).
@@ -15,7 +20,7 @@ pub(super) const SABER_STAFF: usize = 115;
 pub(super) const SABER_DUAL: usize = 116;
 
 /// Stock weapon ordinals -> existing bg_itemlist entries (bg_misc.c:1241-1619).
-pub(super) const WEAPONS: [usize; 19] = [
+pub(crate) const WEAPONS: [usize; 19] = [
     0, 19, 20, 21, 22, 25, 26, 27, 28, 29, 30, 31, 35, 36, 37, 23, 24, 38, 39,
 ];
 /// Stock timed powerup slots -> BG_FindItemForPowerup (bg_misc.c:1999-2011).
@@ -66,8 +71,9 @@ const MOD_NAMES: [&str; 43] = [
     "generic",
     "generic",
 ];
-// Modern retail fallback: the actual weapon icon, never synthetic substitute art.
-const MOD_ITEMS: [usize; 43] = [
+/// Each cause of death's fallback, the bg_itemlist entry of the weapon (or item)
+/// that deals it: the actual weapon icon, never synthetic substitute art.
+pub(crate) const MOD_ITEMS: [usize; 43] = [
     0, 19, 20, 21, 22, 22, 25, 25, 26, 26, 26, 27, 28, 28, 28, 29, 29, 30, 30, 31, 31, 31, 31, 35,
     35, 36, 36, 37, 0, 23, 23, 0, 9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 ];
@@ -102,7 +108,7 @@ pub(super) fn load(
     let table = std::array::from_fn(|slot| {
         let name = match slot {
             0..=50 => items[slot].to_owned(),
-            51..=93 => format!("hud/mod/{}", MOD_NAMES[slot - 51]),
+            MEANS_FIRST..=93 => format!("hud/mod/{}", MOD_NAMES[slot - MEANS_FIRST]),
             94 => "gfx/hud/mpi_rflag_ys".to_owned(),
             95 => "gfx/hud/mpi_bflag_ys".to_owned(),
             EMPTY_WEAPONS..SABER_STAFF => {
@@ -120,7 +126,7 @@ pub(super) fn load(
             return None;
         }
         let pixels = decode(vfs, shaders, &name).or_else(|| {
-            let item = *MOD_ITEMS.get(slot.wrapping_sub(51))?;
+            let item = *MOD_ITEMS.get(slot.wrapping_sub(MEANS_FIRST))?;
             (item != 0)
                 .then(|| decode(vfs, shaders, items[item]))
                 .flatten()
@@ -145,7 +151,7 @@ pub(super) fn load(
 }
 
 /// TaystJK hud_shared.c:31-75; the method-of-death colour, not name colour.
-pub(super) fn tint(method: usize) -> [f32; 3] {
+pub(crate) fn tint(method: usize) -> [f32; 3] {
     match method {
         1 | 4 | 5 => [0.0, 1.0, 1.0],
         2 => [1.0, 1.0, 0.0],
