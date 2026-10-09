@@ -80,6 +80,12 @@ pub(super) fn register_daily_cvars(cvars: &mut CvarRegistry) -> Result<(), sjk_s
             "Shader remaps: 0 off, 1 skip player textures, 2 all (default, as EternalJK)",
         ),
         CvarDefinition::new(
+            crate::graphics_quality::RESTORE_CVAR,
+            "",
+            archive,
+            "The graphics settings the Ultra low switch turned off, restored when it is turned off",
+        ),
+        CvarDefinition::new(
             crate::remap_blocked_maps::CVAR,
             "",
             archive,

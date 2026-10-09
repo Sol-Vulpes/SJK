@@ -714,6 +714,11 @@ impl SettingsMenu {
         let Some(setting) = self.rows().get(self.selected) else {
             return;
         };
+        if setting.cvar == crate::graphics_quality::ULTRA_LOW_ROW {
+            crate::graphics_quality::toggle_ultra_low(console);
+            self.refresh(console);
+            return;
+        }
         let next = match (setting.kind, console.cvar(setting.cvar)) {
             (ValueKind::Bool, Some(CvarValue::Bool(value))) => (!value).to_string(),
             (ValueKind::Bool, Some(value)) => if switch_on(value) { "0" } else { "1" }.to_owned(),
@@ -841,15 +846,24 @@ impl SettingsMenu {
         self.hud.read(console);
         let hud = self.hud.label();
         self.values.clear();
-        self.values
-            .extend(self.rows().iter().map(|setting| match setting.kind {
+        self.values.extend(self.rows().iter().map(|setting| {
+            match setting.kind {
                 ValueKind::DisplayMode => display.label().to_owned(),
                 ValueKind::HudPicker => hud.clone(),
                 ValueKind::WheelPages => wheel_pages_text(console),
                 ValueKind::Quality => crate::graphics_quality::shown(console).to_owned(),
+                ValueKind::Bool if setting.cvar == crate::graphics_quality::ULTRA_LOW_ROW => {
+                    if crate::graphics_quality::ultra_low(console) {
+                        "ON"
+                    } else {
+                        "OFF"
+                    }
+                    .to_owned()
+                }
                 ValueKind::Bool => toggle_text(console, setting.cvar),
                 _ => row_text(console, setting),
-            }));
+            }
+        }));
         self.defaults.clear();
         self.defaults.extend(
             self.rows()
@@ -1051,7 +1065,10 @@ mod tests {
         let (_directory, console) = console();
         for setting in rows() {
             // Rows whose value is not one cvar's (resolution, display mode, HUD,
-            // the quick wheel's pages, graphics quality).
+            // the quick wheel's pages, graphics quality and its Ultra low switch).
+            if setting.cvar == crate::graphics_quality::ULTRA_LOW_ROW {
+                continue;
+            }
             if matches!(
                 setting.kind,
                 ValueKind::Resolution

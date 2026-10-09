@@ -2684,6 +2684,12 @@ These are ordinary cvar defaults, not a config imported at launch. They are the
 High level of [graphics quality](client.md#graphics-quality), which sets the
 costly ones together.
 
+When sun and sky, light shafts and both sun shadows are off (the Performance and
+Ultra low levels), a map loads without extracting its lamps (`Lamps: none` in the
+log): no pass reads them there, the shadow runtime is never installed and the
+world shows its lightmaps. Lamp extraction, its grid and refinement took about
+4.5 s of `JoFTemple`'s load on 09/10/2026 (see [status](status.md#joftemple-frame-rate-and-ultra-low)).
+
 Saved values take precedence, including explicitly disabled effects. The client
 saves every archived setting, so a `config.cfg` written before a default changed
 keeps the old value (for example `r_dayHour 11` or `r_sceneBloom 0`); a fresh

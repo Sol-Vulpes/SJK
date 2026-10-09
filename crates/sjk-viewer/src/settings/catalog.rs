@@ -81,6 +81,11 @@ pub(super) const VIDEO: &[Setting] = &[
         kind: ValueKind::Quality,
     },
     Setting {
+        label: "Ultra low (restart)",
+        cvar: crate::graphics_quality::ULTRA_LOW_ROW,
+        kind: ValueKind::Bool,
+    },
+    Setting {
         label: "Resolution",
         cvar: "r_resolution",
         kind: ValueKind::Resolution,
@@ -766,6 +771,11 @@ pub(super) const RENDER_IMAGE: &[Setting] = &[
         kind: ValueKind::Bool,
     },
     Setting {
+        label: "Ambient occlusion",
+        cvar: "r_ssao",
+        kind: ValueKind::Bool,
+    },
+    Setting {
         label: "Sunbeam dust (0 off)",
         cvar: crate::dust_motes::CVAR,
         kind: ValueKind::Float {
@@ -787,6 +797,16 @@ pub(super) const RENDER_IMAGE: &[Setting] = &[
     Setting {
         label: "Floor mirrors",
         cvar: "r_floorReflections",
+        kind: ValueKind::Bool,
+    },
+    Setting {
+        label: "Normal maps (restart)",
+        cvar: "r_normalMapping",
+        kind: ValueKind::Bool,
+    },
+    Setting {
+        label: "Specular maps (restart)",
+        cvar: "r_specularMapping",
         kind: ValueKind::Bool,
     },
     Setting {

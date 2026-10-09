@@ -299,6 +299,17 @@ test: Change one setting by hand: the row reads Custom; step it: it starts at th
 test: graphicsquality ultra names Ultra and what needs a restart; graphicsquality alone shows it.
 note: The first row is pre-selected, so a stray Backspace there replaces 22 settings.
 
+[ultra-low]
+area: Menus & settings
+title: Ultra low switch under Graphics quality (Video and First setup): the original look
+change: Ultra low is a fifth level: Performance plus normal/specular maps and SSAO off.
+change: The switch keeps your settings and puts them back when turned off.
+change: With no sun, shafts or sun shadows the map loads without its lamps (faster loads).
+test: First setup: turn Ultra low on, restart, join JoFTemple: baked lighting, high FPS.
+test: The log says "Lamps: none"; Graphics quality reads Ultra low.
+test: Turn it off and restart: your previous level (or custom settings) is back.
+test: graphicsquality ultralow sets it from the console.
+
 # ---- HUD ----
 
 [menu-huds]

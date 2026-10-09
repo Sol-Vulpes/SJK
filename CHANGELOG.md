@@ -21,6 +21,7 @@ Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 
 ## Unreleased
 
+- Ultra low graphics: a switch under Graphics quality (Video and First setup) that brings back the original game's look, baked map lighting without SJK's sun, shadows, reflections, material maps or post-processing, for the most frames on heavy maps such as JoFTemple; turning it off restores your settings. Maps also load faster without SJK's lighting, as their lamps are no longer built when nothing uses them _(Sol)_
 - A blade skin's sounds now play over the stock saber sounds instead of replacing them: the normal ignition, switching off, swings and hum are still heard below, with the skin's on top; a thrown saber hums both too _(Sol)_
 - Fixes from reviewing the saber switch sounds, profile pictures and chat mute: no sound list growth from retail's .mp3-only saber sounds, a player never shows another's picture after a hub change and a hub's oversized picture is refused, a reconnect redraws muted players as Kyle, muting slot 0 no longer silences every saber block, and a mute list that is not UTF-8 still loads _(Sol)_
 - Mute a player from their name in chat: hover a name in the in-game chat (composer open), the menu dock or the chat page for their card with Mute or Unmute. A muted player's chat is hidden, they show as Kyle with the default blue saber (no blade skin, hat or cape), and none of their sounds play; the list is kept in chat-mutes.txt and survives restarts _(Sol)_

@@ -466,6 +466,10 @@ impl SettingsMenu {
         }
         if matches!(setting.kind, ValueKind::Quality) {
             Level::High.apply(console);
+        } else if setting.cvar == crate::graphics_quality::ULTRA_LOW_ROW {
+            if crate::graphics_quality::ultra_low(console) {
+                crate::graphics_quality::toggle_ultra_low(console);
+            }
         } else if let Some(default) = console.cvar_default(setting.cvar).map(CvarValue::as_text) {
             console.set_cvar(setting.cvar, &default);
         }
@@ -953,6 +957,12 @@ pub(super) fn row_default(console: &ViewerConsole, setting: &Setting) -> RowDefa
             changed: Level::current(console) != Some(Level::High),
         };
     }
+    if setting.cvar == crate::graphics_quality::ULTRA_LOW_ROW {
+        return RowDefault {
+            text: Some("Off".to_owned()),
+            changed: crate::graphics_quality::ultra_low(console),
+        };
+    }
     // The HUD row names a HUD that two cvars select together; the quick
     // wheel's pages are a file, restored to the defaults in their editor.
     if matches!(
@@ -1151,8 +1161,8 @@ mod tests {
         assert!(menu.open_dropdown(&console, row));
         let open = menu.dropdown.as_ref().unwrap();
         assert_eq!(open.picks, Level::ALL.map(Pick::Quality));
-        assert_eq!(open.current, 2);
-        menu.apply_pick(&mut console, 3);
+        assert_eq!(open.current, 3);
+        menu.apply_pick(&mut console, 4);
         assert_eq!(Level::current(&console), Some(Level::Ultra));
         assert_eq!(menu.values[row], "Ultra");
         assert!(menu.defaults[row].changed);

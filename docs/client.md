@@ -1045,7 +1045,7 @@ main menu and the in-game pop-up), after Video. The page has four tabs:
 
 | Tab | Settings |
 | --- | --- |
-| IMAGE | HDR scene and exposure, eye adaptation (`r_autoExposure`) and its range in EV, filmic tone curve, bloom, dynamic glow (`r_DynamicGlow` 0-3) and its blur style (`r_dynamicGlowStyle`), FXAA, supersampling (`r_superSample`), soft particles, sunbeam dust (`r_dustMotes`), per-pixel model lighting, reflection probes (`r_cubeMapping`), floor mirrors (`r_floorReflections`), parallax mapping (`r_parallaxMapping`) and its depth (`r_parallaxStrength`), emission maps (`r_emissiveMaps`), their strength (`r_emissionStrength`) and glow halo (`r_emissiveGlow`) |
+| IMAGE | HDR scene and exposure, eye adaptation (`r_autoExposure`) and its range in EV, filmic tone curve, bloom, dynamic glow (`r_DynamicGlow` 0-3) and its blur style (`r_dynamicGlowStyle`), FXAA, supersampling (`r_superSample`), soft particles, ambient occlusion (`r_ssao`), sunbeam dust (`r_dustMotes`), per-pixel model lighting, reflection probes (`r_cubeMapping`), floor mirrors (`r_floorReflections`), normal and specular maps (`r_normalMapping`, `r_specularMapping`), parallax mapping (`r_parallaxMapping`) and its depth (`r_parallaxStrength`), emission maps (`r_emissiveMaps`), their strength (`r_emissionStrength`) and glow halo (`r_emissiveGlow`) |
 | LIGHTING | Sun and sky (`r_dayNight`), live lighting tier, time of day, day length, sunlight brightness, ambient fill and its corner shading, indirect boost, emission-map lights (`r_emissiveLights`), light shafts (`r_volumetrics`) and their clarity |
 | SHADOWS | World and character sun shadows, shadow resolution, sharp and close cascade distances, filter taps, slit closing, contact shadows |
 | WEATHER | Weather (`r_weather`), its density (`r_weatherDensity`), quality (`r_weatherQuality`), forced weather (`r_weatherForce`), ground fog (`r_weatherFog`) and volumetric clouds (`r_clouds`); see [Weather](rendering.md#weather) |
@@ -1068,34 +1068,47 @@ See [catalog.rs](../crates/sjk-viewer/src/settings/catalog.rs).
 
 The first row of VIDEO, and of [First setup](#first-setup), is Graphics quality
 ([graphics_quality.rs](../crates/sjk-viewer/src/graphics_quality.rs)): one choice
-of four levels that sets the costly rendering settings together, from Performance
-(the most frames per second) to Ultra (the best look). The level is not saved
+of five levels that sets the costly rendering settings together, from Ultra low
+(the most frames per second, the original game's look) to Ultra (the best look). The level is not saved
 on its own: the row shows whichever level the settings match, and Custom once
 one of them has been changed on its own; stepping from Custom starts at the
 level the settings are nearest. High is the [default visual
 profile](rendering.md#default-visual-profile), so a fresh profile reads High,
 and Backspace (classic+) returns to it. The `graphicsquality` command names the
-level, or sets it with `graphicsquality performance|balanced|high|ultra`.
+level, or sets it with `graphicsquality ultralow|performance|balanced|high|ultra`.
 
-| Setting | Performance | Balanced | High | Ultra |
-| --- | --- | --- | --- | --- |
-| HDR scene, bloom, FXAA, soft particles, per-pixel model lighting | off | on | on | on |
-| Dynamic glow (`r_DynamicGlow`) | off | on | on | on |
-| Sunbeam dust (`r_dustMotes`) | 0 | 0.5 | 1 | 1 |
-| Reflection probes, floor mirrors | off | off | on | on |
-| Parallax mapping, emission maps and their halo | off | on | on | on |
-| Sun and sky (`r_dayNight`) | off | on | on | on |
-| Emission-map lights (`r_emissiveLights`) | 0 | 1 | 1 | 1 |
-| Light shafts (`r_volumetrics`) | 0 | 1 | 3 | 3 |
-| World and character sun shadows | off | on | on | on |
-| Shadow resolution | 1024 | 1024 | 2048 | 4096 |
-| Shadow filter taps | 8 | 8 | 16 | 24 |
-| Weather density | 1 | 1.5 | 2 | 2 |
-| Weather quality | 0 | 1 | 2 | 3 |
-| Volumetric clouds | off | on | on | on |
+| Setting | Ultra low | Performance | Balanced | High | Ultra |
+| --- | --- | --- | --- | --- | --- |
+| HDR scene, bloom, FXAA, soft particles, per-pixel model lighting | off | off | on | on | on |
+| Ambient occlusion (`r_ssao`) | off | on | on | on | on |
+| Dynamic glow (`r_DynamicGlow`) | off | off | on | on | on |
+| Sunbeam dust (`r_dustMotes`) | 0 | 0 | 0.5 | 1 | 1 |
+| Reflection probes, floor mirrors | off | off | off | on | on |
+| Normal and specular maps | off | on | on | on | on |
+| Parallax mapping, emission maps and their halo | off | off | on | on | on |
+| Sun and sky (`r_dayNight`) | off | off | on | on | on |
+| Emission-map lights (`r_emissiveLights`) | 0 | 0 | 1 | 1 | 1 |
+| Light shafts (`r_volumetrics`) | 0 | 0 | 1 | 3 | 3 |
+| World and character sun shadows | off | off | on | on | on |
+| Shadow resolution | 1024 | 1024 | 1024 | 2048 | 4096 |
+| Shadow filter taps | 8 | 8 | 8 | 16 | 24 |
+| Weather density | 1 | 1 | 1.5 | 2 | 2 |
+| Weather quality | 0 | 0 | 1 | 2 | 3 |
+| Volumetric clouds | off | off | on | on | on |
 
 Performance is close to the retail look: baked lightmaps without SJK's sun,
-shadows or light shafts, and no post-processing. Everything else is left as the
+shadows or light shafts, and no post-processing. Ultra low is the retail look
+itself: Performance with a material pack's normal and specular maps and ambient
+occlusion off too, so surfaces show their lightmap and paint only. Under both, a
+map loads without building its lamps (see [rendering](rendering.md#default-visual-profile)),
+which no pass reads there.
+
+The row under Graphics quality, **Ultra low** (VIDEO and First setup), is the
+same level as a switch: on while every setting matches Ultra low. Turning it on
+keeps the player's values of every setting in the table (`r_ultraLowRestore`,
+archived) before applying Ultra low; turning it off puts them back, custom
+values included, or High when Ultra low was picked as a level and nothing was
+kept. Like the level, it needs a restart for the lighting to change. Everything else is left as the
 player set it: the FPS cap, vertical sync, resolution and supersampling (which
 multiplies the pixels drawn, so even Ultra leaves it to the player), the taste
 settings (exposure, time of day, tone curve, glow style, parallax depth,
@@ -1114,7 +1127,7 @@ The tabbed settings screen's last tab, FIRST SETUP (called Quick setup before
 06/10/2026)
 ([quick.rs](../crates/sjk-viewer/src/settings/quick.rs)), gathers the settings worth
 choosing on a first start: first, under a Graphics heading, the graphics quality
-([Graphics quality](#graphics-quality)); under a Styles heading, the menu style
+([Graphics quality](#graphics-quality)) and its Ultra low switch; under a Styles heading, the menu style
 (SJK or Classic) and the camera style (EJK or SJK, [Camera
 style](#camera-style));
 then resolution, display mode, vsync, field of view, mouse
