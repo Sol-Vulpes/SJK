@@ -2908,3 +2908,14 @@ test: Hover a name in the dock, on the chat page and in game chat (composer open
 test: Mute a player on a server: no chat from them, a Kyle with a blue saber, no sounds from them.
 test: Restart: they are still muted; Unmute brings everything back.
 note: Not tried in a game; a player who renames or claims no identity is not matched by key.
+
+[review-fixes]
+area: Console & chat
+title: Fixes for saber switch sounds, profile pictures and chat mute
+change: Retail's .mp3-only saber sounds are registered once; served pictures are limited to 256 px.
+change: A reconnect redraws muted players as Kyle; an ownerless saber block is not slot 0's.
+change: A mute list that is not UTF-8 loads; picture slots that moved are uploaded again.
+test: Mute a player, disconnect and rejoin the server: they are Kyle with the default saber again.
+test: Mute client 0 on a server: other players' saber blocks still sound.
+test: Change identity or hub in a game with pictures showing: each player keeps their own picture.
+note: Not tried in a game.

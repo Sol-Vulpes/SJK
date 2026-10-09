@@ -21,6 +21,7 @@ Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 
 ## Unreleased
 
+- Fixes from reviewing the saber switch sounds, profile pictures and chat mute: no sound list growth from retail's .mp3-only saber sounds, a player never shows another's picture after a hub change and a hub's oversized picture is refused, a reconnect redraws muted players as Kyle, muting slot 0 no longer silences every saber block, and a mute list that is not UTF-8 still loads _(Sol)_
 - Mute a player from their name in chat: hover a name in the in-game chat (composer open), the menu dock or the chat page for their card with Mute or Unmute. A muted player's chat is hidden, they show as Kyle with the default blue saber (no blade skin, hat or cape), and none of their sounds play; the list is kept in chat-mutes.txt and survives restarts _(Sol)_
 - The SJK profile card, bottom left of the SJK UI's main page and in the in-game menu: your picture (or your initial), name and verified tick, medals and achievements, model and blade; a click opens your Profile. Upload a 128 px square picture from the Profile page (drop a PNG, JPEG or TGA on the window, or sjkavatar <file>); other players' pictures show on the player card and Staff can take one down _(Sol)_
 - SJK chat is written in its own gold, outside the game's colour codes, a sender's tag, name and tick stay on the first row and the message goes on there, and a verified sender shows the tick alone _(Sol)_

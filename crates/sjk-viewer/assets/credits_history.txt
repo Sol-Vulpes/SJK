@@ -9,6 +9,8 @@
 #                               made it when that is not the piece's owner.
 
 = Sol
++ 09/10/2026 | - | Fix what the review of PRs #61, #62 and #64 found
+- 6184cca |  | Fix what the review of PRs #61, #62 and #64 found
 + 09/10/2026 | SJK #64 | Mute a player from their name in chat: chat, model and sounds
 - 4560f60 |  | Mute a player from their name in chat: chat, model and sounds
 - 9d79584 |  | Draw a muted player without their blade skin or holocron

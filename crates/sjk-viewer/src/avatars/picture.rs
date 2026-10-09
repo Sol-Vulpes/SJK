@@ -10,6 +10,12 @@ use sjk_identity::avatar::SIZE;
 pub(crate) const FILE_MAX: u64 = 16 * 1024 * 1024;
 /// Largest width or height a picture may have.
 const EDGE_MAX: u32 = 8_192;
+/// The most a picture the hub serves may be a side: the hub re-encodes every upload at
+/// [`SIZE`], so a larger one is not its own, and a small file could otherwise decode
+/// to hundreds of megabytes (an 8,192 pixel square PNG is under 256 KB).
+const SERVED_EDGE_MAX: u32 = 256;
+/// The most a served picture's decoding may allocate.
+const SERVED_DECODE_LIMIT: u64 = 4 * 1024 * 1024;
 /// Smallest width or height a picture may have.
 pub(crate) const EDGE_MIN: u32 = 32;
 /// Most memory a decoder may take for one picture.
@@ -101,7 +107,7 @@ fn prepare_as(
     if bytes.len() as u64 > FILE_MAX {
         return Err(PictureError::TooLarge);
     }
-    let image = decode(bytes, None, fallback)?;
+    let image = decode(bytes, None, fallback, EDGE_MAX, DECODE_LIMIT)?;
     let (width, height) = image.dimensions();
     if width.min(height) < EDGE_MIN {
         return Err(PictureError::TooSmall);
@@ -125,7 +131,14 @@ fn prepare_as(
 /// A picture the hub served, as [`SIZE`] square RGBA pixels; `None` when it is not a
 /// square PNG.
 pub(crate) fn decode_served(png: &[u8]) -> Option<Vec<u8>> {
-    let image = decode(png, Some(image::ImageFormat::Png), None).ok()?;
+    let image = decode(
+        png,
+        Some(image::ImageFormat::Png),
+        None,
+        SERVED_EDGE_MAX,
+        SERVED_DECODE_LIMIT,
+    )
+    .ok()?;
     let (width, height) = image.dimensions();
     if width != height || width == 0 {
         return None;
@@ -142,6 +155,8 @@ fn decode(
     bytes: &[u8],
     format: Option<image::ImageFormat>,
     fallback: Option<image::ImageFormat>,
+    edge_max: u32,
+    alloc_max: u64,
 ) -> Result<RgbaImage, PictureError> {
     let mut reader = image::ImageReader::new(std::io::Cursor::new(bytes));
     match format {
@@ -165,9 +180,9 @@ fn decode(
         return Err(PictureError::NotAPicture);
     }
     let mut limits = image::Limits::default();
-    limits.max_image_width = Some(EDGE_MAX);
-    limits.max_image_height = Some(EDGE_MAX);
-    limits.max_alloc = Some(DECODE_LIMIT);
+    limits.max_image_width = Some(edge_max);
+    limits.max_image_height = Some(edge_max);
+    limits.max_alloc = Some(alloc_max);
     reader.limits(limits);
     reader
         .decode()
@@ -248,6 +263,21 @@ mod tests {
         image::load_from_memory_with_format(png, image::ImageFormat::Png)
             .unwrap()
             .into_rgba8()
+    }
+
+    /// A picture the hub serves is SIZE square, or a little over; a large one is
+    /// refused before it is decoded.
+    #[test]
+    fn a_served_picture_over_the_size_limit_is_not_decoded() {
+        let flat = |side| picture(side, side, image::ImageFormat::Png, |_, _| [9, 9, 9, 255]);
+        let size = sjk_identity::avatar::SIZE;
+        assert_eq!(
+            decode_served(&flat(size)).map(|rgba| rgba.len()),
+            Some((size * size * 4) as usize)
+        );
+        assert!(decode_served(&flat(2 * size)).is_some());
+        assert!(decode_served(&flat(SERVED_EDGE_MAX + 1)).is_none());
+        assert!(decode_served(&flat(2_048)).is_none());
     }
 
     #[test]

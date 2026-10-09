@@ -173,11 +173,14 @@ impl MuteList {
 
 /// Read the list from `path`; a missing file is an empty list.
 pub(crate) fn load(path: &Path) -> io::Result<MuteList> {
-    let mut text = String::new();
+    let mut bytes = Vec::new();
     match std::fs::File::open(path) {
         Ok(file) => {
-            file.take(MAX_FILE_BYTES).read_to_string(&mut text)?;
-            Ok(MuteList::parse(&text))
+            // Read as bytes: a hand edit or the size limit cutting a name can leave
+            // text that is not UTF-8, and refusing it would have the next mute save
+            // over the whole list.
+            file.take(MAX_FILE_BYTES).read_to_end(&mut bytes)?;
+            Ok(MuteList::parse(&String::from_utf8_lossy(&bytes)))
         }
         Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(MuteList::default()),
         Err(error) => Err(error),
@@ -310,6 +313,22 @@ mod tests {
 
     const SOL: &str = "0123456789abcdef";
     const FOX: &str = "fedcba9876543210";
+
+    /// A list with a byte that is not UTF-8 (a hand edit, a name cut by the size
+    /// limit) loses that one name's bytes, not the other mutes.
+    #[test]
+    fn a_list_that_is_not_utf8_still_loads() {
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join(FILE);
+        let mut bytes = format!("{SOL}\tSol\n-\tR\u{e9}mi\n").into_bytes();
+        bytes.extend_from_slice(b"-\tBad\xffName\n");
+        bytes.extend_from_slice(format!("{FOX}\tFox\n").as_bytes());
+        std::fs::write(&path, bytes).unwrap();
+        let list = load(&path).expect("read as bytes");
+        assert!(list.contains(Some(SOL), "Sol"));
+        assert!(list.contains(Some(FOX), "Fox"));
+        assert_eq!(list.entries().len(), 4);
+    }
 
     #[test]
     fn players_are_muted_and_unmuted_by_key_or_by_name() {

@@ -120,3 +120,39 @@ fn only_brush_models_add_their_midpoint() {
     unknown.set_raw_field(MODEL_INDEX, 9);
     assert_eq!(adapter.sound_origin(&unknown), [8.0, 16.0, 32.0]);
 }
+
+/// A `.wav` asked for that only exists as `.mp3` (retail's `enemy_saber_on`) is
+/// registered once however often it is asked for.
+#[test]
+fn a_wav_that_resolves_to_an_mp3_is_registered_once() {
+    let mut vfs = VirtualFileSystem::new();
+    vfs.mount_memory(
+        "test",
+        [("sound/weapons/saber/saberon.mp3", b"on".to_vec())],
+    )
+    .unwrap();
+    let mut sounds = Vec::new();
+    let mut registered = 0;
+    let mut register = |_: &str, _: &[u8]| {
+        registered += 1;
+        Some(sjk_audio::SoundHandle(registered))
+    };
+    let first = super::intern_sound(
+        &mut sounds,
+        &vfs,
+        "sound/weapons/saber/saberon.wav",
+        &mut register,
+    );
+    for _ in 0..5 {
+        let again = super::intern_sound(
+            &mut sounds,
+            &vfs,
+            "sound/weapons/saber/SABERON.wav",
+            &mut register,
+        );
+        assert_eq!(again, first);
+    }
+    assert_eq!(sounds.len(), 1);
+    assert_eq!(&*sounds[0].path, "sound/weapons/saber/saberon.mp3");
+    assert_eq!(registered, 1);
+}
