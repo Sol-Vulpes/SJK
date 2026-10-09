@@ -269,7 +269,7 @@ test: Check the same in the in-game settings menu.
 [fps-cap-auto]
 area: Menus & settings
 title: FPS cap follows the monitor; caps hold their exact rate
-change: com_maxfps defaults to -1 = AUTO (125, or the monitor's refresh with com_maxfpsMonitor 1); 0 is uncapped.
+change: com_maxfps -1 = AUTO: 125, or the monitor's refresh with com_maxfpsMonitor 1; 0 is uncapped.
 change: An old saved 1000 becomes AUTO once. Caps no longer run ~7% low (240 gave 223).
 test: Settings > Video: FPS cap shows AUTO; with Detect refresh rate on, cg_drawFPS 1 reads your rate.
 test: Right from AUTO gives 0 (uncapped), then 25, 50...; dragging to the far left gives AUTO.
