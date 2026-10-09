@@ -2070,8 +2070,9 @@ data, so a PK3 with the same paths replaces them. Sol generated the art; see
 
 ## Blade skins
 
-A blade skin is an unlockable saber look ([unlockables.md](unlockables.md)); the
-first is the Sun blade (`saber_sun`). Its look and sounds are a blade-skin file and
+A blade skin is an unlockable saber look ([unlockables.md](unlockables.md)): the Sun
+(`saber_sun`), Storm (`saber_storm`), Void (`saber_void`), Frost (`saber_frost`) and
+Prism (`saber_prism`) blades. Its look and sounds are a blade-skin file and
 sound files in a pack the SJK hub delivers ([unlockables.md](unlockables.md#packs)),
 drawn by the generic renderer described in
 [rendering.md](rendering.md#saber-blade-skins); with no pack the skin is the stock

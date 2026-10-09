@@ -4,11 +4,13 @@
 //! in a corona graded from the file's inside colour to its rim, breathing as its light
 //! flickers in a soft haze, flame loops rising off it, granules drifting along it and,
 //! when the skin has flares, now and then a bright flare running from the hilt to the
-//! tip (as `saber.wgsl` animates the real blade). A locked one is drawn grey and still,
-//! under a padlock; an owned one whose pack has not come yet is drawn still in neutral
-//! grey, and the page says its look downloads from the SJK hub.
+//! tip (as `saber.wgsl` animates the real blade), and, when the skin has them, lightning
+//! arcs flashing off it, motes drifting round it and its colours turning through their
+//! hues. A locked one is drawn grey and still, under a padlock; an owned one whose pack
+//! has not come yet is drawn still in neutral grey, and the page says its look downloads
+//! from the SJK hub.
 
-use crate::blade_skin_file::{BladeSkinDef, Rgb};
+use crate::blade_skin_file::{Arcs, BladeSkinDef, Motes, Rgb};
 use crate::menu::sjk::{Frame, color};
 use crate::menu_widgets::MenuCanvas;
 use crate::saber_skins::LoadedSkin;
@@ -22,6 +24,12 @@ const HAZE_LAYERS: usize = 9;
 const FLARE_LAYERS: usize = 8;
 const PROMINENCES: usize = 6;
 const GRANULES: usize = 12;
+/// Motes drawn, and the straight runs of an arc's zigzag.
+const MOTES: usize = 14;
+const ARC_RUNS: usize = 7;
+/// The swatch's blade stands for a stock one this long (units), for the skins' rates
+/// along it.
+const BLADE_UNITS: f32 = 40.0;
 
 fn push(canvas: &mut MenuCanvas, command: DrawCommand) {
     let _ = canvas.draw_list_mut().push(command);
@@ -54,6 +62,54 @@ fn disc(canvas: &mut MenuCanvas, frame: &Frame, x: f32, y: f32, radius: f32, col
 /// `value`'s fractional part.
 fn fract(value: f32) -> f32 {
     value - value.floor()
+}
+
+/// A repeatable pseudo-random number in [0, 1) for `seed`.
+fn draw(seed: f32) -> f32 {
+    fract((seed * 12.9898).sin() * 43_758.547)
+}
+
+/// A straight stroke from `a` to `b` (frame pixels), `width` thick: an arc of a circle
+/// many times its length, so it is straight to the eye, with round caps.
+fn stroke(
+    canvas: &mut MenuCanvas,
+    frame: &Frame,
+    a: [f32; 2],
+    b: [f32; 2],
+    width: f32,
+    colour: Color,
+) {
+    let (dx, dy) = (b[0] - a[0], b[1] - a[1]);
+    let length = dx.hypot(dy);
+    if length < 0.5 {
+        return;
+    }
+    let offset = length * 12.0;
+    let centre = [
+        (a[0] + b[0]) * 0.5 - dy / length * offset,
+        (a[1] + b[1]) * 0.5 + dx / length * offset,
+    ];
+    let radius = offset.hypot(length * 0.5);
+    let angle = |p: [f32; 2]| (p[1] - centre[1]).atan2(p[0] - centre[0]);
+    let start = angle(a);
+    let mut sweep = angle(b) - start;
+    if sweep > std::f32::consts::PI {
+        sweep -= std::f32::consts::TAU;
+    } else if sweep < -std::f32::consts::PI {
+        sweep += std::f32::consts::TAU;
+    }
+    push(
+        canvas,
+        DrawCommand::Arc {
+            center: frame.point(centre[0], centre[1]),
+            radius: radius * frame.s,
+            width: width * frame.s,
+            start,
+            sweep,
+            color: colour,
+            knockout: None,
+        },
+    );
 }
 
 /// What a swatch shows.
@@ -163,6 +219,15 @@ fn lit_blade(
 ) {
     let s = frame.s;
     const WHITE: Rgb = [1.0; 3];
+    // A skin whose hue turns: every colour turned as the blade is at `along` (0 at the
+    // hilt, 1 at the tip) now; the others as they are.
+    let hued = |rgb: Rgb, along: f32| match def.hue {
+        Some(hue) => {
+            crate::saber_skins::turn_hue(rgb, t * hue.rate + along * BLADE_UNITS * hue.along)
+        }
+        None => rgb,
+    };
+    let ui = |rgb: Rgb, alpha: f32| ui(hued(rgb, 0.5), alpha);
     // The corona breathes slowly and unevenly, as the blade's light flickers.
     let breath = 1.0
         + def
@@ -313,6 +378,164 @@ fn lit_blade(
         3.0 + 1.5 * breath,
         ui(gradient(def, 0.85), 0.55),
     );
+    if let Some(motes) = &def.motes {
+        swatch_motes(
+            canvas,
+            frame,
+            motes,
+            [start, centre],
+            length,
+            corona,
+            t,
+            &hued,
+        );
+    }
+    if let Some(arcs) = &def.arcs {
+        swatch_arcs(
+            canvas,
+            frame,
+            arcs,
+            [start, centre],
+            length,
+            corona,
+            t,
+            &hued,
+        );
+    }
+}
+
+/// The skin's motes round the blade from `at` (its hilt end, frame pixels) along `length`,
+/// `corona` pixels a capsule radius: a few specks drifting as the field does, twinkling,
+/// showing between the motes' inner and outer radii and, by their focus, toward the tip.
+#[allow(clippy::too_many_arguments)]
+fn swatch_motes(
+    canvas: &mut MenuCanvas,
+    frame: &Frame,
+    motes: &Motes,
+    at: [f32; 2],
+    length: f32,
+    corona: f32,
+    t: f32,
+    hued: &dyn Fn(Rgb, f32) -> Rgb,
+) {
+    let count = ((motes.density * 2.5).min(1.0) * MOTES as f32).round() as usize;
+    let band = motes.outer - motes.inner;
+    for index in 0..count {
+        let i = index as f32;
+        let along = fract(draw(i + 0.5) + t * motes.drift.along / BLADE_UNITS);
+        // Toward the tip by the focus.
+        let along = 1.0 - (1.0 - along) * (1.0 - 0.75 * motes.focus);
+        let out = motes.inner + band * fract(draw(i + 7.3) + t * motes.drift.out / band.max(0.01));
+        // Fading in after the inner radius and out before the outer one.
+        let k = (out - motes.inner) / band.max(0.01);
+        let shown = (k / 0.25).min(1.0) * ((1.0 - k) / 0.4).min(1.0);
+        let twinkle = if motes.twinkle > 0.0 {
+            0.5 + 0.5
+                * (t * motes.twinkle * std::f32::consts::TAU * (0.5 + draw(i + 3.1))
+                    + draw(i + 9.9) * 6.0)
+                    .sin()
+        } else {
+            1.0
+        };
+        let side = if index % 2 == 0 { -1.0 } else { 1.0 };
+        let (x, y) = (at[0] + along * length, at[1] + side * out * corona);
+        let half = 1.6 + 1.2 * motes.size;
+        capsule(
+            canvas,
+            frame,
+            [
+                x - half * motes.stretch,
+                y - half,
+                2.0 * half * motes.stretch,
+                2.0 * half,
+            ],
+            ui(
+                hued(motes.color, along),
+                (0.25 + 0.75 * twinkle)
+                    * shown.max(0.0)
+                    * (0.45 + 0.25 * motes.brightness).min(1.0),
+            ),
+        );
+    }
+}
+
+/// The skin's lightning arcs from the blade at `at` (its hilt end, frame pixels) along
+/// `length`: each strike a zigzag leaving the blade and coming back a span further on
+/// (or leaping off the tip), bulging out to one side by the arcs' reach, flashing and
+/// fading by their decay, re-shaped by their jitter.
+#[allow(clippy::too_many_arguments)]
+fn swatch_arcs(
+    canvas: &mut MenuCanvas,
+    frame: &Frame,
+    arcs: &Arcs,
+    at: [f32; 2],
+    length: f32,
+    corona: f32,
+    t: f32,
+    hued: &dyn Fn(Rgb, f32) -> Rgb,
+) {
+    for arc in 0..arcs.count.min(crate::blade_skin_file::MAX_ARCS) {
+        let a = arc as f32;
+        let phase = t * arcs.rate + a * 0.618;
+        let (cycle, age) = (phase.floor(), fract(phase));
+        if draw(cycle + a * 31.0) < arcs.threshold {
+            continue;
+        }
+        let light = (1.0 - age).powf(arcs.decay);
+        let span = arcs.span.low + (arcs.span.high - arcs.span.low) * draw(cycle * 1.3 + a);
+        let from_tip = draw(cycle * 0.7 + a * 5.0) < arcs.tip;
+        let (first, last) = if from_tip {
+            (1.0 - 0.15 * span, 1.0 + 0.35 * span)
+        } else {
+            let first = draw(cycle * 2.1 + a * 3.0) * (1.0 - span);
+            (first, first + span)
+        };
+        let side = if draw(cycle * 3.7 + a) < 0.5 {
+            -1.0
+        } else {
+            1.0
+        };
+        let shape = (t * arcs.jitter).floor() + a * 17.0;
+        let reach = (arcs.reach * corona).min(70.0);
+        let jag = arcs.jag * corona;
+        let point = |run: usize| {
+            let k = run as f32 / ARC_RUNS as f32;
+            let bulge = if from_tip {
+                (k * std::f32::consts::FRAC_PI_2).sin()
+            } else {
+                (k * std::f32::consts::PI).sin()
+            };
+            let zig = if run == 0 || (run == ARC_RUNS && !from_tip) {
+                0.0
+            } else {
+                draw(shape + run as f32 * 1.7) * 2.0 - 1.0
+            };
+            let along = first + (last - first) * k;
+            [
+                at[0] + along.min(1.08) * length,
+                at[1] + side * (bulge * reach + zig * jag * bulge.sqrt()),
+            ]
+        };
+        for run in 0..ARC_RUNS {
+            let fade = if from_tip {
+                1.0 - run as f32 / ARC_RUNS as f32
+            } else {
+                1.0
+            };
+            let along = first + (last - first) * run as f32 / ARC_RUNS as f32;
+            let colour = hued(arcs.color, along);
+            let (a, b) = (point(run), point(run + 1));
+            stroke(canvas, frame, a, b, 5.0, ui(colour, 0.22 * light * fade));
+            stroke(
+                canvas,
+                frame,
+                a,
+                b,
+                1.8,
+                ui(mix(colour, [1.0; 3], 0.4), 0.95 * light * fade),
+            );
+        }
+    }
 }
 
 /// A grey, still blade: locked (`light` 1), or owned with its look still to come
@@ -485,6 +708,95 @@ mod tests {
             seconds,
         );
         (shown, canvas.draw_list().commands().to_vec())
+    }
+
+    /// The colour of the first opaque shape, the core: it moves only with a turning hue.
+    fn core_colour(commands: &[DrawCommand]) -> Color {
+        commands
+            .iter()
+            .find_map(|command| match command {
+                DrawCommand::RoundedRect { color, .. } if color.a == 1.0 => Some(*color),
+                _ => None,
+            })
+            .expect("a core")
+    }
+
+    #[test]
+    fn arcs_motes_and_a_turning_hue_show_inside_the_swatch() {
+        let def = crate::blade_skin_file::parse(
+            "saber_sun",
+            &crate::blade_skin_file::tests::sample_with_effects(),
+        )
+        .unwrap();
+        let skin = LoadedSkin::new("saber_sun", def, &sjk_vfs::VirtualFileSystem::new()).unwrap();
+        let plain = crate::saber_skins::tests::loaded_sample(1);
+        let plain = plain.get("saber_sun");
+        // Lightning strokes (long thin arcs of big circles) come and go.
+        let strokes = |skin: Option<&LoadedSkin>, seconds: f32| {
+            drawn(skin, true, seconds)
+                .1
+                .iter()
+                .filter(
+                    |command| matches!(command, DrawCommand::Arc { radius, .. } if *radius > 40.0),
+                )
+                .count()
+        };
+        let struck: Vec<usize> = (0..40)
+            .map(|step| strokes(Some(&skin), step as f32 * 0.05))
+            .collect();
+        assert!(struck.iter().any(|count| *count > 0), "{struck:?}");
+        assert!((0..40).all(|step| strokes(plain, step as f32 * 0.05) == 0));
+        // Motes: more shapes than the plain sample at the same time.
+        assert!(drawn(Some(&skin), true, 0.3).1.len() > drawn(plain, true, 0.3).1.len());
+        // The hue turns the core's colour with time; without one it holds.
+        assert_ne!(
+            core_colour(&drawn(Some(&skin), true, 0.0).1),
+            core_colour(&drawn(Some(&skin), true, 3.0).1)
+        );
+        assert_eq!(
+            core_colour(&drawn(plain, true, 0.0).1),
+            core_colour(&drawn(plain, true, 3.0).1)
+        );
+        // Everything stays inside the swatch, the strokes' ends too.
+        let frame = Frame::new([1920.0, 1080.0]);
+        let swatch = frame.rect(100.0, 100.0, 380.0, 200.0);
+        for step in 0..60 {
+            for command in drawn(Some(&skin), true, step as f32 * 0.17).1 {
+                let rect = match command {
+                    DrawCommand::RoundedRect { rect, .. } => rect,
+                    DrawCommand::Arc {
+                        center,
+                        radius,
+                        start,
+                        sweep,
+                        ..
+                    } if radius > 40.0 => {
+                        for angle in [start, start + sweep] {
+                            let (x, y) = (
+                                center[0] + radius * angle.cos(),
+                                center[1] + radius * angle.sin(),
+                            );
+                            assert!(
+                                x >= swatch.x
+                                    && x <= swatch.right()
+                                    && y >= swatch.y
+                                    && y <= swatch.y + swatch.height,
+                                "a stroke ends at ({x}, {y})"
+                            );
+                        }
+                        continue;
+                    }
+                    _ => continue,
+                };
+                assert!(
+                    rect.x >= swatch.x - 0.5
+                        && rect.y >= swatch.y - 0.5
+                        && rect.right() <= swatch.right() + 0.5
+                        && rect.y + rect.height <= swatch.y + swatch.height + 0.5,
+                    "{rect:?} at step {step}"
+                );
+            }
+        }
     }
 
     #[test]

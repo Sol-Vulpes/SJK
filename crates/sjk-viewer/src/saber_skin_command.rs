@@ -163,8 +163,16 @@ mod tests {
     fn the_listing_says_owned_locked_and_worn() {
         let owned = [sun()];
         let lines = listing("saber_sun", Holdings::Known(&owned));
-        assert_eq!(lines.len(), 2);
+        // A line, then one per blade skin of the catalogue.
+        let skins = crate::unlockables::blade_skins().count();
+        assert_eq!(lines.len(), 1 + skins);
         assert!(lines[1].contains("saber_sun  Sun blade"), "{}", lines[1]);
+        assert!(
+            lines[2].contains("saber_storm  Storm blade"),
+            "{}",
+            lines[2]
+        );
+        assert!(lines[2].contains("locked"), "{}", lines[2]);
         assert!(
             lines[1].contains("owned since 07/10/2026^7, worn"),
             "{}",
@@ -180,8 +188,12 @@ mod tests {
         );
         let lines = listing("saber_moon", Holdings::IdentityOff);
         assert!(lines[1].contains("locked^7: Given by the SJK team."));
-        assert!(lines[2].contains("\"saber_moon\", which this client does not know"));
-        assert!(lines[3].contains("need the SJK identity"), "{}", lines[3]);
+        assert!(lines[1 + skins].contains("\"saber_moon\", which this client does not know"));
+        assert!(
+            lines[2 + skins].contains("need the SJK identity"),
+            "{}",
+            lines[2 + skins]
+        );
     }
 
     #[test]

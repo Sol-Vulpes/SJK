@@ -27,7 +27,8 @@ const PLAYER_ROW: f32 = 50.0;
 /// The medals' rows and the achievements' rows.
 const SECTION_TOP: f32 = 330.0;
 const MEDAL_ROW: f32 = 76.0;
-const UNLOCK_ROW: f32 = 58.0;
+/// An unlockable's row: compact, so the whole catalogue fits above the keys.
+const UNLOCK_ROW: f32 = 42.0;
 const ACHIEVEMENT_ROW: f32 = 34.0;
 const ACHIEVEMENTS_SHOWN: usize = 18;
 /// The keys' line.
@@ -418,8 +419,8 @@ impl Panel {
                 &mut self.ui,
                 TextFamily::Display,
                 format_args!("{}", unlockable.name),
-                frame.rect(MIDDLE_X, y + 4.0, 260.0, 28.0),
-                21.0 * s,
+                frame.rect(MIDDLE_X, y + 1.0, 260.0, 24.0),
+                19.0 * s,
                 if held {
                     color::GOLD_BRIGHT
                 } else {
@@ -443,8 +444,8 @@ impl Panel {
                 &mut self.ui,
                 TextFamily::Body,
                 format_args!("{line}"),
-                frame.rect(MIDDLE_X, y + 32.0, 260.0, 20.0),
-                14.0 * s,
+                frame.rect(MIDDLE_X, y + 24.0, 260.0, 18.0),
+                13.0 * s,
                 color::QUIET,
                 FontWeight::Regular,
                 TextAlign::Start,
@@ -455,7 +456,7 @@ impl Panel {
             kit::button(
                 &mut self.ui,
                 frame,
-                [right - 236.0, y + 8.0, 96.0, 40.0],
+                [right - 236.0, y + 3.0, 96.0, 36.0],
                 "Unlock",
                 true,
                 !held,
@@ -465,7 +466,7 @@ impl Panel {
             kit::button(
                 &mut self.ui,
                 frame,
-                [right - 128.0, y + 8.0, 128.0, 40.0],
+                [right - 128.0, y + 3.0, 128.0, 36.0],
                 "Relock",
                 false,
                 held,
@@ -708,6 +709,40 @@ mod tests {
                 })
                 .collect(),
             ..profile("aaaaaaaaaaaaaaaa", "x")
+        }
+    }
+
+    /// Every unlockable of the catalogue has its row, with Relock when held and Unlock
+    /// when not.
+    #[test]
+    fn every_unlockable_has_its_row() {
+        let inter = crate::text::load_modern(1.0, None).expect("Inter");
+        let staff = StaffState::default();
+        let mut me = crowded();
+        let mut panel = Panel::new();
+        panel.open(true);
+        panel.build(
+            &Inputs {
+                me: Some(&me),
+                staff: &staff,
+            },
+            &inter.font,
+            [1920.0, 1080.0],
+        );
+        for index in 0..crate::unlockables::ALL.len() as u16 {
+            assert!(panel.order.contains(&(RELOCK_BASE + index)), "row {index}");
+        }
+        me.unlocks.clear();
+        panel.build(
+            &Inputs {
+                me: Some(&me),
+                staff: &staff,
+            },
+            &inter.font,
+            [1920.0, 1080.0],
+        );
+        for index in 0..crate::unlockables::ALL.len() as u16 {
+            assert!(panel.order.contains(&(UNLOCK_BASE + index)), "row {index}");
         }
     }
 

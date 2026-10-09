@@ -76,6 +76,64 @@ updated for both looks and the moments but not run. To try it: on the main menu,
 `debug_medal all Thank you from the SJK team` in the console (it closes, and the four
 medals show one after another), or `debug_medal bug_hunter x3` in a match, then open
 the game menu.
+## More blade skins, and a round tip for them
+
+Branch `feat/more-blade-skins` (09/10/2026, based on `personal/blade-skins`, Linux), with
+the hub's `feat/more-blade-skins`: Sol found the Sun blade's tip square and asked for it
+to be fixed, then for more blade skins, an electric one first
+([unlockables.md](unlockables.md)).
+
+- The square tip: the core line is a flat quad from behind the hilt to the tip
+  (`saber.wgsl` `vertex_main`, as `RB_SurfaceLine`), and the generated core's fringe
+  is still about a fifth of its brightness at the quad's end and sides, so its end and
+  corners showed as a bright square: plainest with the Sun's wide, bright fringe over a
+  tip glow half as bright as the shaft's (stock blades end the same way, their white
+  core hidden in their glow). Past the tip, too, the corona's grading and flame tongues
+  were taken from the distance across only (`out = abs(x)`), so they ran on straight as
+  a column, and a widening corona widened only sideways. Fixed in the generic shading,
+  for skins only: the core narrows on a quarter circle over its last `core.tip`
+  half-widths (default 1.5) to a rounded point, cut softly at that edge; past the tip
+  the corona widens round the tip, its distance out is taken from the tip and its
+  tongues run on round it. Along the shaft nothing changed; retail and RGB blades are
+  untouched.
+- New generic, optional sections of the blade-skin file, all drawing nothing when
+  absent (so the Sun draws as before but for its tip): lightning `arcs` (up to 4: struck
+  at random places, bulging off the blade or leaping from the tip, jagged, re-shaped,
+  crawling and fading), drifting `motes` (sparks, specks, shards in a field of cells
+  round the blade, drifting along, outward or inward, twinkling) and a turning `hue`
+  (by time, along and out; the light turns with it). The uniform grows from 21 to 31
+  `vec4`s a skin (3968 bytes for the 8 skins), still written only when skins load; the
+  loops are bounded (4 arcs, one mote cell a fragment).
+- New skins (the hub's catalogue and pack, and this client's catalogue):
+  `saber_storm` (Storm: white-blue core, lightning arcs, sparks at the tip, electric
+  buzz), `saber_void` (Void: hollow black core in a violet rim, star specks drifting in,
+  low drone), `saber_frost` (Frost: ice core with a pointed tip, crystalline veins,
+  trailing shards, chiming hum) and `saber_prism` (Prism: a rainbow running along the
+  blade and turning, a chord hum). Their looks and sounds are in the hub's private
+  repository only.
+- The Unlockables page shows two cards at a time and scrolls (to the card chosen, and
+  with the mouse wheel) with a scroll bar and a line saying which show; the Staff page's
+  unlockable rows are 42 pixels so all five fit; the swatches draw arcs, motes and hue.
+
+Verified (Ubuntu 24.04, Rust 1.97, no GPU): `cargo fmt --all --check`,
+`cargo build --locked --workspace`, `cargo test --locked --workspace` (1668 passed,
+viewer 1263, 60 ignored, none failed) and
+`cargo clippy --locked --workspace --all-targets` (no warning on a changed line), each
+with the shared target directory's per-package profile settings so other worktrees'
+builds could not stand in; unit tests: the format's new fields, ranges, refusals and
+absent sections, the uniform's lanes and its 31-`vec4` layout matched by name against
+`saber.wgsl`, a CPU copy of the tip's maths (shaft unchanged, a quarter circle, the
+square corners cut, the glow round past the tip) and of the hue turn, both checked to be
+what the shader holds, `saber.wgsl` validated by naga, the swatch's arcs, motes and hue
+inside its frame, the page's scrolling, every Staff row, and the catalogue pinned to the
+same list as the hub's; the hub's built pack, given through `SJK_TEST_PACKS`, read by the
+strict parser with every sound found (an ignored test). The looks were judged only from
+images of a CPU copy of the skin shading (side on, no world), the sounds only by their
+levels and spectra. Not seen on a GPU (no world shot: this machine has none), not heard,
+not measured for frame time, not tried with a real hub. Deploy and merge order: the
+hub's commit first (its pack and catalogue are safe for clients without this change:
+the Sun's file is unchanged, and such a client leaves out the four new files, logging a
+line for each, and does not know their ids), then PR #45, then this branch.
 
 ## Force profile and kill feed follow-ups
 

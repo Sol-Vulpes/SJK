@@ -185,7 +185,11 @@ fn the_uniform_holds_the_files_parameters_where_the_shader_reads_them() {
     assert_eq!(one.core_white, [0.9, 1.0, 1.0, 0.5]);
     assert_eq!(one.core_fringe_cool, [0.1, 0.5, 0.6, 0.25]);
     assert_eq!(one.core_fringe_hot, [0.3, 0.9, 0.8, 0.5]);
-    assert_eq!(one.core_fringe, [0.8, 0.4, 0.9, 0.0]);
+    // w: the rounded tip, the default when the file does not say.
+    assert_eq!(
+        one.core_fringe,
+        [0.8, 0.4, 0.9, crate::blade_skin_file::DEFAULT_TIP]
+    );
     assert_eq!(one.core_breathe, [0.05, 8.0, 0.5, 3.0]);
     assert_eq!(one.rim_cool, [0.0, 0.2, 0.4, 0.7]);
     assert_eq!(one.rim_hot, [0.1, 0.5, 0.7, 1.0]);
@@ -203,10 +207,179 @@ fn the_uniform_holds_the_files_parameters_where_the_shader_reads_them() {
     assert_eq!(one.shimmer_b, [0.0; 4], "no second wave");
     assert_eq!(one.tongue_a, [0.4, 11.0, 2.0, 3.0]);
     assert_eq!(one.tongue_b, [0.3, 0.8, 0.4, 1.2]);
+    // No arcs, motes or hue in the file: zeros, which the shader draws as nothing, so a
+    // skin written before them (the Sun's) draws as it did.
+    for (lane, name) in [
+        (one.arc_color, "arc_color"),
+        (one.arc_shape, "arc_shape"),
+        (one.arc_strike, "arc_strike"),
+        (one.arc_place, "arc_place"),
+        (one.arc_motion, "arc_motion"),
+        (one.mote_color, "mote_color"),
+        (one.mote_field, "mote_field"),
+        (one.mote_motion, "mote_motion"),
+        (one.mote_band, "mote_band"),
+        (one.hue, "hue"),
+    ] {
+        assert_eq!(lane, [0.0; 4], "{name}");
+    }
     // Past the loaded skins, zeros.
     assert!(uniforms[1..].iter().all(|u| *u == SkinUniform::default()));
     let bytes: &[u8] = bytemuck::cast_slice(&uniforms);
-    assert_eq!(bytes.len(), MAX_SKINS * 21 * 16);
+    assert_eq!(bytes.len(), MAX_SKINS * 31 * 16);
+    // The eight skins' array stays well inside the smallest uniform binding WebGPU
+    // guarantees (16 KiB).
+    assert!(bytes.len() <= 16 * 1024);
+}
+
+#[test]
+fn arcs_motes_and_hue_reach_the_uniform_where_the_shader_reads_them() {
+    let text = crate::blade_skin_file::tests::sample_with_effects();
+    let def = crate::blade_skin_file::parse("saber_sun", &text).unwrap();
+    let one = SkinUniform::of(&def);
+    assert_eq!(one.core_fringe[3], 2.5, "core.tip");
+    assert_eq!(one.arc_color, [0.7, 0.8, 1.0, 2.0]);
+    assert_eq!(one.arc_shape, [0.15, 0.5, 0.4, 0.6]);
+    assert_eq!(one.arc_strike, [3.0, 6.0, 0.3, 1.5]);
+    assert_eq!(one.arc_place, [1.1, 0.2, 0.5, 0.25]);
+    assert_eq!(one.arc_motion, [20.0, 12.0, 0.0, 0.0]);
+    assert_eq!(one.mote_color, [0.9, 0.9, 1.0, 1.5]);
+    assert_eq!(one.mote_field, [0.3, 0.8, 2.5, 0.2]);
+    assert_eq!(one.mote_motion, [-2.0, 1.5, 4.0, 2.0]);
+    assert_eq!(one.mote_band, [0.4, 1.7, 0.6, 0.0]);
+    assert_eq!(one.hue, [0.1, 0.02, 0.2, 0.0]);
+    // The light turns with the blade's middle; without a hue it holds.
+    let skin = LoadedSkin::new("saber_sun", def, &VirtualFileSystem::new()).unwrap();
+    let color = skin.color(0);
+    assert_eq!(
+        color.hue,
+        [0.1, 0.02 * 20.0],
+        "the turn at the middle of 40 units"
+    );
+    assert_ne!(color.light_at(0), color.light_at(2_500));
+    assert_eq!(color.light_at(0), turn_hue(color.light, color.hue[1]));
+    let plain = sample_color();
+    assert_eq!(plain.hue, [0.0; 2]);
+    assert_eq!(plain.light_at(1_234), plain.light);
+}
+
+#[test]
+fn turning_the_hue_keeps_grey_and_goes_round_the_colours() {
+    let close = |a: [f32; 3], b: [f32; 3]| a.iter().zip(b).all(|(x, y)| (x - y).abs() < 1e-5);
+    // Grey stays grey; no turn is no change; a whole turn comes back.
+    assert!(close(turn_hue([0.4; 3], 0.37), [0.4; 3]));
+    assert_eq!(turn_hue([0.9, 0.3, 0.1], 0.0), [0.9, 0.3, 0.1]);
+    assert!(close(turn_hue([0.9, 0.3, 0.1], 1.0), [0.9, 0.3, 0.1]));
+    // A third of a turn takes red to green and green to blue.
+    assert!(close(turn_hue([1.0, 0.0, 0.0], 1.0 / 3.0), [0.0, 1.0, 0.0]));
+    assert!(close(turn_hue([0.0, 1.0, 0.0], 1.0 / 3.0), [0.0, 0.0, 1.0]));
+    // Never a negative channel (the blend adds).
+    for step in 0..24 {
+        let turned = turn_hue([1.0, 0.05, 0.1], step as f32 / 24.0);
+        assert!(turned.iter().all(|c| *c >= 0.0), "{turned:?}");
+    }
+    // The shader turns it the same way.
+    let shader = include_str!("saber.wgsl");
+    assert!(shader.contains(
+        "let turned = color * c + cross(axis, color) * s + axis * dot(axis, color) * (1.0 - c);"
+    ));
+}
+
+/// `saber.wgsl`'s `skin_tip_taper`, mirrored: how much of the core line's width is left
+/// `along` units from the hilt with a rounded tip `cap` units long.
+fn tip_taper(along: f32, length: f32, cap: f32) -> f32 {
+    let into = ((along - (length - cap)) / cap.max(0.0001)).clamp(0.0, 1.0);
+    if into <= 0.0 {
+        return 1.0;
+    }
+    (1.0 - into * into).max(0.0001).sqrt()
+}
+
+/// `saber.wgsl`'s `skin_glow` past the tip, mirrored: the distance out from the blade (the
+/// tip past it) of a point `x` across and `y` along the projected blade, `shaft` long, and
+/// how far round the tip it lies (`around` less `along`) for a capsule of radius `r`.
+fn glow_out(x: f32, y: f32, shaft: f32, r: f32) -> (f32, f32) {
+    let beyond = (y - shaft).max(0.0);
+    let radial = if beyond > 0.0 {
+        x.hypot(beyond)
+    } else {
+        x.abs()
+    };
+    let around = if beyond > 0.0 {
+        r * beyond.atan2(x.abs().max(0.0001))
+    } else {
+        0.0
+    };
+    (radial, around)
+}
+
+#[test]
+fn a_skinned_blade_ends_round_not_square() {
+    let (length, radius) = (40.0, 1.0);
+    let cap = crate::blade_skin_file::DEFAULT_TIP * radius;
+    // The core line keeps its whole width along the shaft (the look there is unchanged)...
+    for along in [-1.0, 0.0, 10.0, 30.0, length - cap] {
+        assert_eq!(tip_taper(along, length, cap), 1.0, "{along}");
+    }
+    // ...and narrows on a quarter circle to a point at the tip.
+    for into in [0.2_f32, 0.6, 0.8, 0.95] {
+        let along = length - cap + into * cap;
+        let left = tip_taper(along, length, cap);
+        assert!(
+            (left * left + into * into - 1.0).abs() < 1e-4,
+            "{into}: {left}"
+        );
+    }
+    assert!(tip_taper(length, length, cap) <= 0.01);
+    // The quad's corners at the tip (across ±half the line) map past the texture's edge,
+    // so they are cut: no square corner. Across is `x / 2r`, the texture edge at 0.5.
+    for (x, along) in [(radius, length), (0.9 * radius, length - 0.1 * cap)] {
+        let across = x / (2.0 * radius) / tip_taper(along, length, cap);
+        assert!(across > 0.5, "{x} at {along}: {across}");
+    }
+    // The tip's centre line is inside it.
+    let across = 0.0 / tip_taper(length - 0.05 * cap, length, cap);
+    assert!(across < 0.5);
+    // The glow past the tip: its distance out is the same in every direction from the
+    // tip (round), where it used to be the distance across only (a straight band).
+    let shaft = 40.0;
+    let r = 3.0;
+    for distance in [0.5_f32, 1.5, 3.0] {
+        let outs: Vec<f32> = (0..=8)
+            .map(|step| {
+                let angle = std::f32::consts::FRAC_PI_2 * step as f32 / 8.0;
+                let (x, y) = (distance * angle.cos(), shaft + distance * angle.sin());
+                glow_out(x, y, shaft, r).0
+            })
+            .collect();
+        assert!(
+            outs.iter().all(|out| (out - distance).abs() < 1e-4),
+            "{outs:?}"
+        );
+    }
+    // Along the shaft, the distance across and the place along exactly as before.
+    for x in [-2.5_f32, 0.0, 0.7, 4.0] {
+        assert_eq!(glow_out(x, 12.0, shaft, r), (x.abs(), 0.0));
+    }
+    // Round the tip, the tongues' place runs on from the side to the top, continuously.
+    let (_, side) = glow_out(2.0, shaft + 0.0001, shaft, r);
+    let (_, top) = glow_out(0.0, shaft + 2.0, shaft, r);
+    assert!(side < 0.001 && (top - r * std::f32::consts::FRAC_PI_2).abs() < 1e-3);
+    // The shader does what is mirrored here.
+    let shader = include_str!("saber.wgsl");
+    for line in [
+        "let into = clamp((along - (length - cap)) / max(cap, 0.0001), 0.0, 1.0);",
+        "return select(sqrt(max(1.0 - into * into, 0.0001)), 1.0, into <= 0.0);",
+        "across /= skin_tip_taper(along, input.length, skin.core_fringe.w * input.radius);",
+        "let beyond = max(input.blade.y - input.shaft, 0.0);",
+        "shaded.blade = vec2(x / widen, min(input.blade.y, input.shaft) + beyond / widen);",
+        "let radial = select(abs(x), length(vec2(x, beyond)), beyond > 0.0);",
+        "let out = radial / (r * widen);",
+        "let around = select(along, along + r * atan2(beyond, max(abs(x), 0.0001)), beyond > 0.0);",
+        "core *= clamp((0.5 - abs(uv.x - 0.5)) / max(footprint, 0.00001) + 0.5, 0.0, 1.0);",
+    ] {
+        assert!(shader.contains(line), "saber.wgsl lost {line:?}");
+    }
 }
 
 #[test]

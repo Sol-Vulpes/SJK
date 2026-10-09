@@ -56,6 +56,30 @@ pub(crate) const SAMPLE: &str = r#"{
   }
 }"#;
 
+/// The made-up sections of the optional effects: a rounded tip of 2.5 half-widths,
+/// lightning arcs, motes and a turning hue (made-up values, no real skin's).
+pub(crate) const EFFECTS: &str = r#""arcs": {
+    "count": 3, "color": [0.7, 0.8, 1.0], "brightness": 2.0, "width": 0.15, "halo": 0.5,
+    "reach": 1.1, "jag": 0.4, "kinks": 0.6, "span": {"low": 0.2, "high": 0.5},
+    "rate": 6.0, "jitter": 20.0, "threshold": 0.3, "tip": 0.25, "crawl": 12.0, "decay": 1.5
+  },
+  "motes": {
+    "color": [0.9, 0.9, 1.0], "brightness": 1.5, "density": 0.3, "cells": 0.8,
+    "rings": 2.5, "size": 0.2, "stretch": 2.0, "drift": {"along": -2.0, "out": 1.5},
+    "twinkle": 4.0, "inner": 0.4, "outer": 1.7, "focus": 0.6
+  },
+  "hue": {"rate": 0.1, "along": 0.02, "out": 0.2},
+  "trail": [0.2, 0.8, 0.9],"#;
+
+/// [`SAMPLE`] with [`EFFECTS`] and `core.tip` 2.5.
+pub(crate) fn sample_with_effects() -> String {
+    sample_with(r#""trail": [0.2, 0.8, 0.9],"#, EFFECTS).replacen(
+        r#""breathe": {"amount": 0.05, "rate": 8.0, "along": 0.5, "seed": 3.0}"#,
+        r#""breathe": {"amount": 0.05, "rate": 8.0, "along": 0.5, "seed": 3.0}, "tip": 2.5"#,
+        1,
+    )
+}
+
 /// The sample with `field`'s text (as written in [`SAMPLE`]) replaced by `with`.
 pub(crate) fn sample_with(field: &str, with: &str) -> String {
     assert!(SAMPLE.contains(field), "{field}");
@@ -165,6 +189,97 @@ fn unknown_or_missing_fields_and_bad_values_are_refused_by_name() {
         parse("Saber Test", SAMPLE)
             .unwrap_err()
             .contains("not an unlock id")
+    );
+}
+
+#[test]
+fn the_effects_are_optional_and_absent_ones_draw_nothing() {
+    // Without them (as the Sun's file was written): the default tip and no effects.
+    let plain = parse("saber_test", SAMPLE).unwrap();
+    assert_eq!(plain.core.tip, DEFAULT_TIP);
+    assert_eq!((plain.arcs, plain.motes, plain.hue), (None, None, None));
+    let def = parse("saber_test", &sample_with_effects()).unwrap();
+    assert_eq!(def.core.tip, 2.5);
+    let arcs = def.arcs.unwrap();
+    assert_eq!((arcs.count, arcs.span.high, arcs.decay), (3, 0.5, 1.5));
+    let motes = def.motes.unwrap();
+    assert_eq!((motes.drift.along, motes.focus), (-2.0, 0.6));
+    assert_eq!(def.hue.unwrap().out, 0.2);
+}
+
+#[test]
+fn the_effects_are_checked_strictly_by_name() {
+    let effects = sample_with_effects();
+    let refused = |from: &str, to: &str, says: &str| {
+        assert!(effects.contains(from), "{from}");
+        let why = parse("saber_test", &effects.replacen(from, to, 1)).unwrap_err();
+        assert!(why.contains(says), "{why:?} should say {says:?}");
+    };
+    refused(
+        r#""tip": 2.5"#,
+        r#""tip": 0.1"#,
+        "core.tip must be 0.5 to 8",
+    );
+    refused(
+        r#""count": 3"#,
+        r#""count": 5"#,
+        "arcs.count must be 0 to 4",
+    );
+    refused(
+        r#""width": 0.15"#,
+        r#""width": 0.0"#,
+        "arcs.width must be 0.02 to 1",
+    );
+    refused(
+        r#""span": {"low": 0.2, "high": 0.5}"#,
+        r#""span": {"low": 0.6, "high": 0.5}"#,
+        "arcs.span.low must be at most arcs.span.high",
+    );
+    refused(
+        r#""rate": 6.0"#,
+        r#""rate": 0.0"#,
+        "arcs.rate must be 0.05 to 60",
+    );
+    refused(
+        r#""decay": 1.5"#,
+        r#""decay": 9.0"#,
+        "arcs.decay must be 0 to 8",
+    );
+    refused(r#", "decay": 1.5"#, "", "missing field `decay`");
+    refused(
+        r#""jitter": 20.0"#,
+        r#""jiter": 20.0"#,
+        "unknown field `jiter`",
+    );
+    refused(
+        r#""density": 0.3"#,
+        r#""density": 1.3"#,
+        "motes.density must be 0 to 1",
+    );
+    refused(
+        r#""stretch": 2.0"#,
+        r#""stretch": 3.0"#,
+        "motes.size × motes.stretch must be at most 0.5",
+    );
+    refused(
+        r#""outer": 1.7"#,
+        r#""outer": 0.3"#,
+        "motes.inner must be below",
+    );
+    refused(
+        r#""drift": {"along": -2.0, "out": 1.5}"#,
+        r#""drift": {"along": -2.0, "out": 11.0}"#,
+        "motes.drift.out must be -10 to 10",
+    );
+    refused(
+        r#""out": 0.2}"#,
+        r#""out": 5.0}"#,
+        "hue.out must be -4 to 4",
+    );
+    refused(
+        r#""hue": {"rate": 0.1, "along": 0.02, "out": 0.2}"#,
+        r#""hue": {"rate": 0.1, "along": 0.02}"#,
+        "missing field `out`",
     );
 }
 

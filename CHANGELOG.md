@@ -21,6 +21,7 @@ Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 
 ## Unreleased
 
+- Blade skins: the Sun blade's tip is rounded instead of square, and skins can have lightning arcs, drifting motes and turning hues; four new skins from the SJK hub (Storm, Void, Frost, Prism). The Unlockables page shows two cards at a time and scrolls _(Sol)_
 - New medals get a pop-up in the menu style in use (floating over the scene in the SJK UI, a classic+ box in the classic menus) with an award animation, the Jedi Master fanfare from the game data and a Next or Close button; debug_medal <id> [x<count>] [note] rehearses it without touching the hub _(Sol)_
 - The SJK UI's Force page keeps Apply, Discard and Start over clear of the This server text (Apply spans the left column, the other two sit under it), and a right click on a Force level removes it; a left click only buys up to a level _(Sol)_
 - On servers with force-based teams, a change to the server's settings no longer sends you the wrong side's Force profile; your nameplate's own Force powers match what the server grants the profile sent; and the kill feed shows Force Grip's holocron for a grip kill instead of Lightning's _(Sol)_

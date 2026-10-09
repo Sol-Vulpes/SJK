@@ -18,8 +18,12 @@
 // from its blade-skin file (blade_skin_file.rs) in the uniform array `skins`: a hot core
 // with a fringe, a corona graded from its rim to the inside, granulation drifting along
 // the blade, flame tongues licking outward, shimmer, and flares running from the hilt to
-// the tip, swelling the glow. Nothing here knows any one skin. The dynamic glow pass
-// shades the glow the same way, so its bloom follows the flares.
+// the tip, swelling the glow; optionally lightning arcs, drifting motes and a turning hue.
+// A skin's blade ends round: past the tip the corona widens, grades from its inside to its
+// rim and licks out about the tip, and the core line narrows to a rounded point over its
+// last `tip` half-widths (the stock line ends flat, hidden under its glow). Nothing here
+// knows any one skin. The dynamic glow pass shades the glow the same way, so its bloom
+// follows the flares and arcs.
 struct Camera {
     view_projection: mat4x4<f32>,
     position: vec3<f32>,
@@ -52,7 +56,7 @@ struct Skin {
     // Fringe colours, cool and hot; w: fringe_heat base and grain.
     core_fringe_cool: vec4<f32>,
     core_fringe_hot: vec4<f32>,
-    // Fringe brightness: base, grain, flare.
+    // Fringe brightness: base, grain, flare; w the rounded tip's length in half-widths.
     core_fringe: vec4<f32>,
     // The core's breathing across: amount, rate, along, seed.
     core_breathe: vec4<f32>,
@@ -84,6 +88,21 @@ struct Skin {
     // Tongues: along, offset, out, speed; then edge low and high, low, range.
     tongue_a: vec4<f32>,
     tongue_b: vec4<f32>,
+    // Lightning arcs: colour and brightness; width, halo, jag, kinks; count, rate,
+    // threshold, decay; reach, span low and high, tip share; jitter, crawl. No arcs: zeros.
+    arc_color: vec4<f32>,
+    arc_shape: vec4<f32>,
+    arc_strike: vec4<f32>,
+    arc_place: vec4<f32>,
+    arc_motion: vec4<f32>,
+    // Motes: colour and brightness; density, cells, rings, size; drift along and out,
+    // twinkle, stretch; inner, outer, focus. No motes: zeros.
+    mote_color: vec4<f32>,
+    mote_field: vec4<f32>,
+    mote_motion: vec4<f32>,
+    mote_band: vec4<f32>,
+    // Hue turning: turns a second, per unit along, per capsule radius out. None: zeros.
+    hue: vec4<f32>,
 }
 
 @group(2) @binding(0)
@@ -227,6 +246,9 @@ fn glow_capsule(input: VertexOutput) -> vec3<f32> {
 // --- Blade skins ---------------------------------------------------------------------------
 
 const PI: f32 = 3.14159265;
+const TAU: f32 = 6.2831853;
+// Most lightning arcs a skin may have (blade_skin_file.rs `MAX_ARCS`).
+const MAX_ARCS: i32 = 4;
 
 // PCG hash of a lattice point, in [0, 1].
 fn skin_hash(cell: vec2<i32>) -> f32 {
@@ -247,6 +269,15 @@ fn skin_noise(p: vec2<f32>) -> f32 {
     let c = skin_hash(cell + vec2(0, 1));
     let d = skin_hash(cell + vec2(1, 1));
     return mix(mix(a, b, u.x), mix(c, d, u.x), u.y);
+}
+
+// Piecewise-linear noise in [-1, 1]: straight runs between random corners, one a unit of
+// `k`, on lattice row `row`.
+fn skin_zigzag(k: f32, row: i32) -> f32 {
+    let i = floor(k);
+    let a = skin_hash(vec2(i32(i), row));
+    let b = skin_hash(vec2(i32(i) + 1, row));
+    return mix(a, b, k - i) * 2.0 - 1.0;
 }
 
 // The skin's number, below MAX_SKINS.
@@ -301,7 +332,126 @@ fn skin_along(input: VertexOutput) -> f32 {
     return mix(-1.0, input.length, input.blade.y);
 }
 
-fn skin_glow(input: VertexOutput) -> vec3<f32> {
+// How much of the core line's width is left `along` units from the hilt: all of it until the
+// last `cap` units, then a quarter circle down to nothing at the tip, so the line ends in a
+// rounded point instead of a square.
+fn skin_tip_taper(along: f32, length: f32, cap: f32) -> f32 {
+    let into = clamp((along - (length - cap)) / max(cap, 0.0001), 0.0, 1.0);
+    // Exactly 1 along the shaft, whatever the GPU's square root.
+    return select(sqrt(max(1.0 - into * into, 0.0001)), 1.0, into <= 0.0);
+}
+
+// Lightning arcs at `along` (world units from the hilt, running on past the tip) and `x`
+// (signed across): `count` arcs, each struck anew `rate` times a second at a random place
+// (strikes whose draw is under `threshold` stay dark), a jagged filament leaving the blade,
+// bulging out to one side up to `reach` capsule radii (`r`) and coming back a `span` of the
+// blade further on, crawling `crawl` units a second; a share `tip` of the strikes leap from
+// just below the tip into the air (up to `room` units past it) and die out there. A strike
+// flashes and fades by `decay`, re-shaped `jitter` times a second (the crackle). A filament
+// thinner than a pixel widens to it and dims, so it does not break up at a distance.
+fn skin_arcs(
+    skin: Skin, along: f32, x: f32, r: f32, length: f32, room: f32, pixel: f32, time: f32,
+    seed: f32,
+) -> f32 {
+    let strike = skin.arc_strike;
+    let place = skin.arc_place;
+    let shape = skin.arc_shape;
+    let motion = skin.arc_motion;
+    let seeded = i32(seed * 4096.0);
+    let width = max(shape.x, pixel);
+    var total = 0.0;
+    for (var arc = 0; arc < min(i32(strike.x), MAX_ARCS); arc++) {
+        let phase = time * strike.y + seed * 3.1 + f32(arc) * 0.618;
+        let cycle = i32(floor(phase));
+        let age = fract(phase);
+        let row = arc * 7919 + seeded;
+        if skin_hash(vec2(cycle, row)) < strike.z {
+            continue;
+        }
+        let pick = skin_hash(vec2(cycle, row + 101));
+        let side = select(-1.0, 1.0, skin_hash(vec2(cycle, row + 303)) < 0.5);
+        var t: f32;
+        var bulge: f32;
+        var fade = 1.0;
+        if skin_hash(vec2(cycle, row + 404)) < place.w {
+            // From just below the tip into the air past it, bending away and dying out.
+            let span = (0.8 + 0.6 * pick) * room;
+            t = (along - (length - 0.35 * span)) / span;
+            bulge = sin(0.5 * PI * clamp(t, 0.0, 1.0));
+            fade = 1.0 - clamp(t, 0.0, 1.0);
+        } else {
+            let span = mix(place.y, place.z, pick) * length;
+            let start = skin_hash(vec2(cycle, row + 202)) * (length - span)
+                + motion.y * age / max(strike.y, 0.0001);
+            t = (along - start) / span;
+            bulge = sin(PI * clamp(t, 0.0, 1.0));
+        }
+        if t < 0.0 || t > 1.0 {
+            continue;
+        }
+        let jagged = i32(floor(time * motion.x + f32(arc) * 0.37)) * 13 + arc * 131 + seeded;
+        let k = along * shape.w + f32(arc) * 17.0;
+        let jag = skin_zigzag(k, jagged) + 0.45 * skin_zigzag(k * 2.7 + 5.0, jagged + 57);
+        let offset = side * bulge * place.x * r + jag * shape.z * r * sqrt(bulge);
+        let d = (x - offset) / width;
+        let filament = shape.x / width * exp(-d * d) + shape.y * 0.35 * exp(-d * d / 16.0);
+        total += pow(1.0 - age, strike.w) * fade * filament;
+    }
+    return total;
+}
+
+// Motes at `around` (world units along the blade and on round its tip) and `out` (capsule
+// radii from the blade's axis, or from the tip past it), on the `left` or right: a field of
+// specks in cells, `cells` a unit along by `rings` a radius out, a share `density` of them
+// holding one, `size` of its cell across and `stretch` times that along. The field drifts
+// `drift_along` units a second toward the tip and `drift_out` radii a second outward
+// (negative: inward); each speck twinkles about `twinkle` times a second; they show between
+// `inner` and `outer` radii out, by `focus` only toward the tip, and not behind the hilt
+// (`along`, unclamped).
+fn skin_motes(
+    skin: Skin, around: f32, out: f32, left: bool, along: f32, length: f32, time: f32,
+    seed: f32,
+) -> f32 {
+    let field = skin.mote_field;
+    let motion = skin.mote_motion;
+    let band = skin.mote_band;
+    let p_along = (around - time * motion.x) * field.y;
+    let column = i32(floor(p_along));
+    // Each column of cells is staggered outward by its own amount, so they do not line up.
+    let p_out = (out - time * motion.y) * field.z + skin_hash(vec2(column, 4242));
+    let cell = vec2(column, i32(floor(p_out)) + i32(seed * 4096.0) * 3 + select(0, 7777, left));
+    if skin_hash(cell) >= field.x {
+        return 0.0;
+    }
+    let half = vec2(field.w * motion.w, field.w);
+    let centre = half + (1.0 - 2.0 * half)
+        * vec2(skin_hash(cell + vec2(0, 911)), skin_hash(cell + vec2(37, 0)));
+    let d = (vec2(fract(p_along), fract(p_out)) - centre) / half;
+    let falloff = max(1.0 - dot(d, d), 0.0);
+    var twinkle = 1.0;
+    if motion.z > 0.0 {
+        let rate = motion.z * (0.5 + skin_hash(cell + vec2(3, 5)));
+        twinkle = 0.5 + 0.5 * sin(TAU * (time * rate + skin_hash(cell + vec2(7, 2))));
+    }
+    let span = band.y - band.x;
+    let shown = smoothstep(band.x, band.x + 0.25 * span, out)
+        * (1.0 - smoothstep(band.y - 0.4 * span, band.y, out));
+    let toward_tip = mix(1.0, smoothstep(0.6 * length, length, around), band.z);
+    return falloff * falloff * twinkle * shown * toward_tip * smoothstep(0.0, 2.0, along);
+}
+
+// `color` turned `turns` round the grey axis (a hue shift keeping its brightness and
+// saturation), negative channels clipped: the blend adds.
+fn skin_turn_hue(color: vec3<f32>, turns: f32) -> vec3<f32> {
+    let axis = vec3(0.57735027);
+    let c = cos(TAU * turns);
+    let s = sin(TAU * turns);
+    let turned = color * c + cross(axis, color) * s + axis * dot(axis, color) * (1.0 - c);
+    return max(turned, vec3(0.0));
+}
+
+// The glow, `pixel` world units across a screen pixel.
+fn skin_glow(input: VertexOutput, pixel: f32) -> vec3<f32> {
     let skin = skins[skin_index(input)];
     let time = input.animation.x;
     let seed = input.animation.y;
@@ -313,15 +463,23 @@ fn skin_glow(input: VertexOutput) -> vec3<f32> {
         + skin_wave(skin.shimmer_b, time, along, seed);
     let swell = skin.swell;
     let widen = min(1.0 + shimmer + swell.y * (grain - 0.5) + swell.z * flare, swell.x);
+    // Past the tip (`beyond`, projected units) the capsule ends round: it widens about the
+    // tip as it widens about the shaft, and the distance out is taken from the tip, so the
+    // corona's grading and its tongues go round the end instead of running on straight.
+    let x = input.blade.x;
+    let beyond = max(input.blade.y - input.shaft, 0.0);
     var shaded = input;
-    shaded.blade.x = input.blade.x / widen;
+    shaded.blade = vec2(x / widen, min(input.blade.y, input.shaft) + beyond / widen);
     let capsule = glow_capsule(shaded) / widen;
-    // Flame tongues licking outward in the corona's edge.
     let r = chain_radius(input.radius, input.length, clamp(along / max(input.length, 0.0001), 0.0, 1.0));
-    let out = abs(input.blade.x) / (r * widen);
+    let radial = select(abs(x), length(vec2(x, beyond)), beyond > 0.0);
+    let out = radial / (r * widen);
+    // Along the blade and on round the tip's quarter circle.
+    let around = select(along, along + r * atan2(beyond, max(abs(x), 0.0001)), beyond > 0.0);
+    // Flame tongues licking outward in the corona's edge.
     let ta = skin.tongue_a;
     let tb = skin.tongue_b;
-    let tongue = skin_noise(vec2(along * ta.x + seed * ta.y, out * ta.z - time * ta.w));
+    let tongue = skin_noise(vec2(around * ta.x + seed * ta.y, out * ta.z - time * ta.w));
     let edge = smoothstep(tb.x, tb.y, out);
     let flicker = mix(1.0, tb.z + tb.w * tongue, edge);
     // The inside colour by the core, the rim's at the edge; granulation and flares heat it.
@@ -333,10 +491,36 @@ fn skin_glow(input: VertexOutput) -> vec3<f32> {
         clamp(inner * inner * (share.x + share.y * grain) + flare * share.z, 0.0, 1.0));
     let light = skin.brightness;
     let brightness = (light.x + light.y * grain + light.z * flare) * flicker;
-    return capsule * color * brightness;
+    var glow = capsule * color * brightness;
+    if skin.arc_strike.x > 0.0 || skin.mote_field.x > 0.0 {
+        // Both fade out before the quad's edge (vertex_main's `extent`) instead of being cut.
+        let extent = max(chain_radius(input.radius, input.length, 0.0) * swell.x, input.hilt);
+        let room = (1.0 - smoothstep(0.75, 1.0, abs(x) / extent))
+            * (1.0 - smoothstep(0.75, 1.0, beyond / extent));
+        if skin.arc_strike.x > 0.0 {
+            // Along the axis and straight on past the tip.
+            let reach = select(input.blade.y / max(input.shaft, 0.0001) * input.length,
+                input.length + beyond, beyond > 0.0);
+            let arcs = skin_arcs(skin, reach, x, r, input.length, extent, pixel, time, seed);
+            glow += arcs * room * skin.arc_color.rgb * skin.arc_color.w;
+        }
+        if skin.mote_field.x > 0.0 {
+            let unclamped = input.blade.y / max(input.shaft, 0.0001) * input.length;
+            let motes = skin_motes(skin, around, radial / r, x < 0.0, unclamped, input.length,
+                time, seed);
+            glow += motes * room * skin.mote_color.rgb * skin.mote_color.w;
+        }
+    }
+    let hue = skin.hue;
+    if any(hue.xyz != vec3(0.0)) {
+        glow = skin_turn_hue(glow, time * hue.x + around * hue.y + radial / r * hue.z);
+    }
+    return glow;
 }
 
-fn skin_core(input: VertexOutput, texel: vec4<f32>) -> vec3<f32> {
+// The core line: `uv` its texture coordinates (`core_coordinates`) and `footprint` how far
+// they move in a pixel, which softens the rounded tip's edge.
+fn skin_core(input: VertexOutput, texel: vec4<f32>, uv: vec2<f32>, footprint: f32) -> vec3<f32> {
     let skin = skins[skin_index(input)];
     let time = input.animation.x;
     let seed = input.animation.y;
@@ -344,20 +528,32 @@ fn skin_core(input: VertexOutput, texel: vec4<f32>) -> vec3<f32> {
     let grain = skin_granulation(skin, along, time, seed);
     let flare = skin_flares(skin, along, input.length, time, seed);
     let bright = skin.core_fringe;
-    let fringe = mix(skin.core_fringe_cool.rgb, skin.core_fringe_hot.rgb,
+    var fringe = mix(skin.core_fringe_cool.rgb, skin.core_fringe_hot.rgb,
         skin.core_fringe_cool.w + skin.core_fringe_hot.w * grain)
         * (bright.x + bright.y * grain + bright.z * flare);
-    return CORE_DRAWS * (skin.core_white.rgb * texel.r * (1.0 + skin.core_white.w * flare)
+    let hue = skin.hue;
+    if any(hue.xyz != vec3(0.0)) {
+        fringe = skin_turn_hue(fringe, time * hue.x + along * hue.y);
+    }
+    var core = CORE_DRAWS * (skin.core_white.rgb * texel.r * (1.0 + skin.core_white.w * flare)
         + fringe * texel.g);
+    // In the rounded tip the line is cut at the narrowing edge `core_coordinates` maps to the
+    // texture's border (which the sampler would otherwise smear out to the quad's corners).
+    if along > input.length - skin.core_fringe.w * input.radius {
+        core *= clamp((0.5 - abs(uv.x - 0.5)) / max(footprint, 0.00001) + 0.5, 0.0, 1.0);
+    }
+    return core;
 }
 
-// The core line's texture coordinates; a skin's core breathes a little across.
+// The core line's texture coordinates; a skin's core breathes a little across and narrows to
+// its rounded tip.
 fn core_coordinates(input: VertexOutput) -> vec2<f32> {
     var across = input.blade.x / (2.0 * input.radius);
     if input.kind >= KIND_SKIN {
         let along = mix(-1.0, input.length, input.blade.y);
-        let breathe = skins[skin_index(input)].core_breathe;
-        across *= 1.0 + skin_wave(breathe, input.animation.x, along, input.animation.y);
+        let skin = skins[skin_index(input)];
+        across *= 1.0 + skin_wave(skin.core_breathe, input.animation.x, along, input.animation.y);
+        across /= skin_tip_taper(along, input.length, skin.core_fringe.w * input.radius);
     }
     return vec2(0.5 + across, 1.0 - input.blade.y);
 }
@@ -365,25 +561,30 @@ fn core_coordinates(input: VertexOutput) -> vec2<f32> {
 // Dynamic glow: the glow capsule only; the core line's shader has no `glow` stage.
 @fragment
 fn fragment_glow(input: VertexOutput) -> @location(0) vec4<f32> {
+    // Taken before any branch (uniform control flow).
+    let pixel = fwidth(input.blade.x);
     if input.hilt <= 0.0 { discard; }
-    if input.kind >= KIND_SKIN { return vec4(skin_glow(input), 1.0); }
+    if input.kind >= KIND_SKIN { return vec4(skin_glow(input, pixel), 1.0); }
     return vec4(glow_capsule(input) * input.color, 1.0);
 }
 
 @fragment
 fn fragment_main(input: VertexOutput) -> @location(0) vec4<f32> {
     // v runs from the tip (0) to behind the hilt (1), as DoLine's texture coordinates do.
-    // Derivatives are taken before any branch (uniform control flow); the glow ignores them.
+    // Derivatives are taken before any branch (uniform control flow); the glow ignores the
+    // core's and a skin's glow takes the pixel's size.
     let core_uv = core_coordinates(input);
     let core_dx = dpdx(core_uv);
     let core_dy = dpdy(core_uv);
+    let pixel = fwidth(input.blade.x);
     if input.hilt > 0.0 {
-        if input.kind >= KIND_SKIN { return vec4(skin_glow(input), 1.0); }
+        if input.kind >= KIND_SKIN { return vec4(skin_glow(input, pixel), 1.0); }
         return vec4(glow_capsule(input) * input.color, 1.0);
     }
     var texel = textureSampleGrad(core_texture, core_sampler, core_uv, core_dx, core_dy);
     if input.kind >= KIND_SKIN {
-        return vec4(skin_core(input, texel), 1.0);
+        let footprint = abs(core_dx.x) + abs(core_dy.x);
+        return vec4(skin_core(input, texel, core_uv, footprint), 1.0);
     }
     if input.kind == KIND_NEUTRAL {
         // Neutral core: red = white-hot core, green = tinted fringe.

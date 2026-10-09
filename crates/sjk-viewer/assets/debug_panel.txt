@@ -2858,3 +2858,13 @@ test: debug_medal bug_hunter x3 in the SJK UI: three pop-ups, Next, then Close o
 test: Same with ui_menuStyle classic: the box with NEXT / CLOSE; Enter, Space, Escape and click work.
 test: debug_medal alone lists the ids; restart: nothing was saved as seen.
 note: Not seen or heard in a game yet.
+
+[more-blade-skins]
+area: Rendering & effects
+title: Rounded blade tips; arcs, motes and hues for blade skins (SJK PR #60)
+change: The core narrows to a rounded tip; the corona and flames wrap round it. Retail blades unchanged.
+change: New skin options arcs, motes and hue; Storm, Void, Frost and Prism come from the hub pack.
+change: The Unlockables page scrolls (keys and wheel); Staff unlock rows are 42 px.
+test: Wear the Sun blade: the tip is rounded, the shaft as before. Wear Storm, Void, Frost, Prism.
+test: Unlockables: scroll with Down and the wheel.
+note: Needs the hub pack of SJK-hub PR #4 for the new skins; values may need tuning on screen.

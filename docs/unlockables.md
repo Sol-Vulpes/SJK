@@ -1,8 +1,9 @@
 # Unlockables and looks
 
 Unlockables are cosmetic things an SJK player owns at the hub (`cl_hubUrl`,
-sjk.dfox.app): the first is the **Sun blade**, a saber blade skin with its own
-look and sounds. Their art is SJK's own and not in this repository: the hub delivers it
+sjk.dfox.app): saber blade skins with their own look and sounds, the **Sun**,
+**Storm**, **Void**, **Frost** and **Prism** blades. Their art is SJK's own and not in
+this repository: the hub delivers it
 to SJK clients in packs ([Packs](#packs)), and the client draws it with open, generic
 code from data ([Blade-skin files](#blade-skin-files)). A player's *look* (the blade skin they wear and whether their
 Illuminate holocron is lit) travels through the hub, so every SJK player on the
@@ -14,6 +15,13 @@ Status (08/10/2026): designed with Sol the same day and built on
 `feat/unlocks-looks` (Sol-Vulpes/SJK-hub, stacked on `feat/chat-emotes`). The
 hub's side is not deployed, so nothing has been seen with real players yet. Each
 section below says what is built and how it was verified.
+
+09/10/2026, branch `feat/more-blade-skins` (stacked on `personal/blade-skins`, with the
+hub's `feat/more-blade-skins`): a skinned blade's tip is round instead of square
+([Blade skins](#blade-skins)); the generic shading gained lightning arcs, drifting motes
+and a turning hue, and the catalogue the Storm, Void, Frost and Prism blades. Checked
+by unit tests and a CPU copy of the shader's maths rendered to images; not yet seen on a
+GPU or heard.
 
 ## Decisions
 
@@ -42,8 +50,41 @@ meaning.
 | Id | Name | Kind | How to get it |
 | --- | --- | --- | --- |
 | `saber_sun` | Sun blade | blade skin | Given by the SJK team. |
+| `saber_storm` | Storm blade | blade skin | Given by the SJK team. |
+| `saber_void` | Void blade | blade skin | Given by the SJK team. |
+| `saber_frost` | Frost blade | blade skin | Given by the SJK team. |
+| `saber_prism` | Prism blade | blade skin | Given by the SJK team. |
 
-A client ignores an id it does not know.
+A client ignores an id it does not know. Both catalogues' tests pin this exact list
+(ids, names, order), so a change to one fails until the other follows.
+
+What each looks and sounds like, in words (the values and the sounds themselves are
+the hub's, described in its `scripts/blade_skin_sounds.py` and `saber_skin_sounds.py`):
+
+- **Sun**: a white-gold core in an orange corona graded from red at its rim to gold
+  inside, granules drifting along it, flame tongues licking out of its edge and, now
+  and then, a bright flare running from the hilt to the tip; a warm flickering light;
+  a solar roar.
+- **Storm**: a white-blue core in a violet-to-electric-blue corona that crackles; a few
+  thin, jagged white-blue lightning arcs at a time, struck again and again at random
+  places, leaving the blade, bulging out to one side and coming back further along,
+  crawling toward the tip and re-shaping as they fade; some leap from the tip into the
+  air instead; white sparks spray from round the tip; a fast-flickering light; an
+  electric buzz with sizzle and crackle.
+- **Void**: a hollow blade: the inside of its glow is black (nothing is added there, so
+  the world shows through), its rim violet, with a faint deep-violet line for a core
+  and a dark round mouth at the tip; slow tendrils licking inward and rare slow magenta
+  surges; pale star specks drift in from outside and fade as they reach it; a low,
+  slowly beating drone.
+- **Frost**: a pale ice-white core ending in a long pointed icicle tip, in an icy blue
+  corona with a soft cold haze; faint crystalline veins by the core that re-form now
+  and then; thin frost shards glinting as they trail toward the hilt and round the tip;
+  a soft hum under shimmering bell tones and tiny ice tinkles.
+- **Prism**: a white core whose fringe and corona run through the rainbow along the
+  blade, the spectrum sliding slowly with time and the rim a different hue from the
+  inside (refraction bands), sharp bright bands drifting along it and coloured
+  sparkles; its light turns through the colours with the blade's middle; a chord in
+  detuned voices under a slowly sweeping resonance.
 
 ## Hub protocol (additions to version 1)
 
@@ -207,11 +248,27 @@ from the looks.
   8): drawn as its own saber material after the neutral RGB pair, with its glow/core
   pair (the pack's images or generated from the file's profiles), coloured and animated
   in `saber.wgsl` from per-instance time, a per-blade seed and the file's parameters
-  (core, corona gradient, granulation, flame tongues, shimmer, flares); the dynamic glow
+  (core, corona gradient, granulation, flame tongues, shimmer, flares and, when the
+  file has them, lightning arcs, drifting motes and a turning hue); the dynamic glow
   pass gets the same animation ([rendering.md](rendering.md#saber-blade-skins)). Its
-  trail and light colours and the light's flicker are the file's. Retail and RGB blades
-  are unchanged. A skin whose pack is not loaded (no hub yet, a client offline that never
-  had it) is the stock blade, sounds too.
+  trail and light colours and the light's flicker (and hue, when it turns) are the
+  file's. Retail and RGB blades are unchanged. A skin whose pack is not loaded (no hub
+  yet, a client offline that never had it) is the stock blade, sounds too.
+- A skinned blade ends round (09/10/2026; Sol saw the Sun's tip square). The core line
+  is a flat quad from behind the hilt to the tip, and the generated core's fringe is
+  still about a fifth of its brightness at the quad's edges and end, so its end and
+  corners showed as a bright square, plainest with a wide, bright fringe like the Sun's
+  over a tip glow half as bright as the shaft's (stock blades draw the same flat line,
+  but their white core is hidden in their glow). Past the tip, too, the corona's
+  grading and its flame tongues were taken from the distance across only, so they ran
+  on straight beyond the tip as a column, and a widening corona widened only sideways.
+  Now, for skins only: over its last `core.tip` half-widths the core line narrows on a
+  quarter circle to a rounded point and is cut (softly, over a pixel) at that edge;
+  past the tip the corona widens about the tip as about the shaft, its distance out is
+  measured from the tip, and the tongues run on round it. Along the shaft nothing
+  changed. Pinned by a test of a CPU copy of the tip's maths (the shaft unchanged, the
+  quarter circle, the corners cut, the glow round past the tip) that also checks the
+  shader holds the same expressions.
 - Shown for every client whose entry in the viewer's `SaberSkins` table is set: in the
   game, in first person, thrown, and on the menu stage (the Character page) for the
   local player. Once a frame (`GpuState::sync_saber_skins`) the table takes every
@@ -267,6 +324,9 @@ an unknown or missing field, a wrong type or a value outside its range refuses t
 and the log names the file and the field. A file whose id is not a blade skin of the
 client's catalogue is left out (a newer pack may hold skins an older client does not
 know). `grain` below is the granulation in [0, 1], `flare` the flares' sum at a point.
+`arcs`, `motes` and `hue` are optional sections (09/10/2026): a file without one draws
+none of it (its lanes of the uniform are zeros), so files written before them draw as
+they did; when present, every field of the section is required.
 
 | Field | Meaning | Range |
 | --- | --- | --- |
@@ -278,6 +338,7 @@ know). `grain` below is the granulation in [0, 1], `flare` the flares' sum at a 
 | `core.fringe_cool`, `fringe_hot` | Fringe colours, mixed by `fringe_heat` `base + grain × grain` | 0-4 |
 | `core.fringe_brightness` | `base + grain × grain + flare × flare` | base 0-10 |
 | `core.breathe` | The core's width breathing: `amount × sin(time × rate + along × along + seed × seed)` | amount 0-0.5 |
+| `core.tip` | Optional: the rounded tip's length in core half-widths, over which the line narrows on a quarter circle to a point; default 1.5 | 0.5-8 |
 | `corona.rim_cool`, `rim_hot`, `inner` | Rim colours (mixed by `rim_heat` `grain × grain + flare × flare`) and the inside colour | 0-4 |
 | `corona.inner_width` | How far out the inside colour reaches, in capsule radii | 0.01-1 |
 | `corona.inner_mix` | The inside colour's share: `inside² × (base + grain × grain) + flare × flare` | |
@@ -288,7 +349,21 @@ know). `grain` below is the granulation in [0, 1], `flare` the flares' sum at a 
 | `granulation.low`, `high` | The sum's contrast (smoothstep) | 0-1, low < high |
 | `flares` | `count` tracks; track n's rate `rate + rate_step × n + rate_seed × seed`, phase offsets `phase_seed`, `phase_step`; lit when its draw ≥ `threshold`; runs from `overshoot` units before the hilt to past the tip; `size + size_jitter × random` long | count 0-8, threshold 0-1 |
 | `shimmer` | Up to 2 waves (as `breathe`) widening the corona | amount 0-0.5 |
-| `tongues` | Noise at `(along × along + seed × offset, out × out − time × speed)`, from `edge_low` to `edge_high` capsule radii out, brightness `low + range × noise` | edge 0-2, low < high |
+| `tongues` | Noise at `(along × along + seed × offset, out × out − time × speed)`, from `edge_low` to `edge_high` capsule radii out, brightness `low + range × noise`; past the tip `out` is the distance from the tip and `along` runs on round it | edge 0-2, low < high |
+| `arcs.count`, `color`, `brightness` | Lightning arcs at once, their colour and brightness | 0-4, 0-4, 0-10 |
+| `arcs.width`, `halo` | A filament's half-width (units; one thinner than a pixel widens to it and dims) and its soft halo's share (four widths wide) | 0.02-1, 0-2 |
+| `arcs.reach`, `jag`, `kinks` | How far an arc bulges out and how far its corners zigzag (capsule radii), and corners a unit along: piecewise-linear noise of two octaves | 0-2, 0-1, 0.05-4 |
+| `arcs.span` | `low`, `high`: a strike's length, a share of the blade | 0.05-1, low ≤ high |
+| `arcs.rate`, `threshold`, `jitter` | Strikes a second per arc, each at a new random place and side (a strike shows when its draw ≥ `threshold`), re-shaped `jitter` times a second | 0.05-60, 0-1, 0-120 |
+| `arcs.tip` | The share of strikes that leap from just below the tip into the air (dying out on the way) instead of coming back to the blade | 0-1 |
+| `arcs.crawl`, `decay` | Units a second a strike crawls along the blade (negative: hiltward); its light `(1 − age)^decay` over the strike (0 holds it) | -100-100, 0-8 |
+| `motes.color`, `brightness` | Motes' colour and brightness | 0-4, 0-10 |
+| `motes.density`, `cells`, `rings` | A field of cells, `cells` a unit along and `rings` a capsule radius out (each column staggered), `density` of them holding a mote | 0-1, 0.05-8, 0.5-16 |
+| `motes.size`, `stretch` | A mote's half-width as a share of its cell, and how many times longer it is along the blade (`size × stretch` at most 0.5) | 0.02-0.5, 1-8 |
+| `motes.drift` | `along` units a second toward the tip, `out` capsule radii a second outward (negative: inward); round the tip they flow round it | -100-100, -10-10 |
+| `motes.twinkle` | About how many times a second each twinkles (0: steady) | 0-60 |
+| `motes.inner`, `outer`, `focus` | Where (radii out) they appear and are gone; `focus` 1 shows them only toward and round the tip | 0-2, 0-2.5, 0-1 |
+| `hue` | `rate` turns a second, `along` turns a unit along the blade, `out` turns a capsule radius out: the glow's and the core fringe's colours turned round the grey axis (brightness and saturation kept), and the light's with the blade's middle | -10-10, -1-1, -4-4 |
 | `trail` | Blur trail colour | 0-1 |
 | `light.color` | Dynamic light colour (stock gain) | 0-4 |
 | `light.flicker` | `amount` and up to 2 `waves` (`rate`, `weight`, `phase` per hilt): brightness `1 − amount + amount × Σ weight × sin(t × rate + phase × hilt phase)` | amount 0-1 |
@@ -323,25 +398,36 @@ and the `unlockables` command:
 
 - a card per catalogue entry: a live swatch (a blade skin drawn with the UI's shapes
   from its loaded file's colours, flicker and flares, moving: a breathing corona, flame
-  loops and granules, a flare running hilt to tip; grey and still under a padlock when
-  locked; owned but with its pack not loaded yet, a neutral still blade and "Its look
-  downloads from the SJK hub"), its kind, name and what it is,
+  loops and granules, a flare running hilt to tip, and the file's lightning arcs, motes
+  and turning hue when it has them; grey and still under a padlock when locked; owned
+  but with its pack not loaded yet, a neutral still blade and "Its look downloads from
+  the SJK hub"), its kind, name and what it is,
   owned (`Yours since dd/mm/yyyy, from the SJK team` and the team's note) or locked
   (how to get it), and Equip or Unequip for an owned blade skin, which sets
   `cg_saberSkin`;
+- two cards show at a time: the list scrolls to the card chosen (the arrows, Tab) and
+  with the mouse wheel (a card scrolled away is not chosen), with a scroll bar beside
+  the cards and a line under them ("Unlockables 1 to 2 of 5: 3 more below (Down or the
+  mouse wheel)."); with every card shown, the "More to come" card instead;
 - what the player wears and how unlockables work on the right;
 - with the identity off, no hub or no answer yet, the page says so ("Unlockables need
   the SJK identity") and the cards are neither owned nor locked.
 
 The Staff page lists every unlockable for the player found, with Unlock (sending the
-note field's text) and Relock ([identity.md](identity.md#staff)).
+note field's text) and Relock ([identity.md](identity.md#staff)), in rows of 42 pixels
+so the whole catalogue fits above the keys.
 
 Verified: unit tests (keys, pointer, focus, equip, every state fitting at 1080p, 4K,
 4:3 and 21:9, the swatch moving and staying inside its frame, the Staff page's Unlock
 and Relock) and the world shots `duel6_sjk_unlockables` (owned and worn, locked,
-identity off, 4:3), `duel6_sjk_profile` and `duel6_sjk_staff`.
+identity off, 4:3), `duel6_sjk_profile` and `duel6_sjk_staff`. With five skins
+(09/10/2026): unit tests of the scrolling (keys, the wheel, Enter on a card scrolled
+to, opening again at the top), of the swatch's arcs, motes and hue staying inside its
+frame, and of every unlockable having its Staff row; the world shots were not run
+again (no GPU on that machine).
 
 ## Planned, not built
 
-Achievements and medals granting unlockables, more blade skins, other kinds of
-unlockable (holocron skins, trails, emotes).
+Achievements and medals granting unlockables, other kinds of unlockable (holocron
+skins, trails, emotes). Up to 8 blade skins load at once (the renderer's slots); a ninth
+needs more slots first.

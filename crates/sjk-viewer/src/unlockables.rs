@@ -40,13 +40,43 @@ impl Unlockable {
 }
 
 /// Every unlockable, in the hub's catalogue order (the order profiles list them in).
-pub(crate) const ALL: [Unlockable; 1] = [Unlockable {
-    id: "saber_sun",
-    name: "Sun blade",
-    kind: Kind::BladeSkin,
-    description: "A white-gold core in an orange corona, flares running along it, and its own sounds.",
-    how_to_get: "Given by the SJK team.",
-}];
+pub(crate) const ALL: [Unlockable; 5] = [
+    Unlockable {
+        id: "saber_sun",
+        name: "Sun blade",
+        kind: Kind::BladeSkin,
+        description: "A white-gold core in an orange corona, flares running along it, and its own sounds.",
+        how_to_get: "Given by the SJK team.",
+    },
+    Unlockable {
+        id: "saber_storm",
+        name: "Storm blade",
+        kind: Kind::BladeSkin,
+        description: "A white-blue core crackling with lightning that leaps off it, sparks at its tip.",
+        how_to_get: "Given by the SJK team.",
+    },
+    Unlockable {
+        id: "saber_void",
+        name: "Void blade",
+        kind: Kind::BladeSkin,
+        description: "A dark core in a violet rim, star specks drifting into it, and a deep hum.",
+        how_to_get: "Given by the SJK team.",
+    },
+    Unlockable {
+        id: "saber_frost",
+        name: "Frost blade",
+        kind: Kind::BladeSkin,
+        description: "A pale ice core with a pointed tip, frost shards trailing it, and a chiming hum.",
+        how_to_get: "Given by the SJK team.",
+    },
+    Unlockable {
+        id: "saber_prism",
+        name: "Prism blade",
+        kind: Kind::BladeSkin,
+        description: "A white core in a corona whose colours run through the rainbow, slowly turning.",
+        how_to_get: "Given by the SJK team.",
+    },
+];
 
 /// The unlockable `id` names (spaces round it and case ignored), if this client knows it.
 pub(crate) fn find(id: &str) -> Option<&'static Unlockable> {
@@ -201,6 +231,27 @@ mod tests {
                 .contains("SJK identity")
         );
         assert_eq!(Holdings::Waiting.unlock("saber_sun"), None);
+    }
+
+    /// The hub's catalogue (`src/unlocks.rs` in Sol-Vulpes/SJK-hub) lists exactly these, in
+    /// this order and with these names; its test pins the same list, so a change to one
+    /// side fails until the other follows.
+    #[test]
+    fn the_catalogue_matches_the_hubs() {
+        let listed: Vec<(&str, &str)> = ALL.iter().map(|u| (u.id, u.name)).collect();
+        assert_eq!(
+            listed,
+            [
+                ("saber_sun", "Sun blade"),
+                ("saber_storm", "Storm blade"),
+                ("saber_void", "Void blade"),
+                ("saber_frost", "Frost blade"),
+                ("saber_prism", "Prism blade"),
+            ]
+        );
+        assert!(ALL.iter().all(Unlockable::is_blade_skin));
+        // The blade skins fit the renderer's slots, every one loaded at once.
+        assert!(blade_skins().count() <= crate::saber_skins::MAX_SKINS);
     }
 
     #[test]

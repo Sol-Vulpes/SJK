@@ -344,7 +344,7 @@ Looks are public to every SJK player on the server, as badges are.
 
 ## Asset packs
 
-The art of the unlockable cosmetics (the Sun blade's look and sounds) is not part of
+The art of the unlockable cosmetics (each blade skin's look and sounds) is not part of
 SJK's code: the hub serves it as *asset packs*, PK3 files (`PROTOCOL.md`, "Assets"), so
 every SJK client can draw every player's look. The identity worker keeps a copy of
 each in `assets/` beside `identity.key` (`assets::FOLDER`), one `<name>.pk3` per pack,
