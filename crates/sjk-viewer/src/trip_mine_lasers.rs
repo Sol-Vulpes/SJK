@@ -117,9 +117,9 @@ impl Beams {
 }
 
 /// The beam's `Line` is an `org2fromTrace` primitive: it runs from the mine to
-/// whatever solid its facing hits (`CFxScheduler::CreateEffect`). SJK's lines take
-/// only their authored `origin2`, which for this beam is a zero-length offset, so
-/// the lines just spawned are stretched to the traced end.
+/// whatever solid its facing hits (`CFxScheduler::CreateEffect`). A spawned line
+/// would trace that itself when first drawn; a mine replays its beam every cgame
+/// frame, so the lines just spawned are given the kept trace's end instead.
 fn trace_end(
     origin: Vec3,
     direction: Vec3,
@@ -208,6 +208,7 @@ pub(crate) fn spawn(
         for particle in particles.get_mut(first..).into_iter().flatten() {
             if let Some(streak) = &mut particle.streak {
                 *streak = end - particle.motion.sample().origin;
+                particle.trace_streak = false;
             }
         }
     }

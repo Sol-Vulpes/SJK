@@ -75,6 +75,23 @@ pub(crate) struct Mesh {
     slots: Vec<u8>,
 }
 
+/// End an `org2fromTrace` line at the first solid between its origin and its untraced
+/// end, once, before it is first drawn: `CFxScheduler::CreateEffect` traces when it
+/// creates the line (`FxScheduler.cpp:1392-1418`), as electricity's end is traced below.
+pub(crate) fn resolve_traced_streak(
+    particle: &mut Particle,
+    bsp: &Bsp,
+    scratch: &mut TraceScratch,
+) {
+    if !std::mem::take(&mut particle.trace_streak) {
+        return;
+    }
+    if let Some(streak) = &mut particle.streak {
+        let start = particle.motion.sample().origin;
+        *streak = trace_endpoint(start, start + *streak, bsp, scratch) - start;
+    }
+}
+
 impl Default for Mesh {
     fn default() -> Self {
         Self {
