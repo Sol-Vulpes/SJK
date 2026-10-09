@@ -9,6 +9,8 @@
 #                               made it when that is not the piece's owner.
 
 = Sol
++ 09/10/2026 | - | Add an Ultra low graphics level and switch, skip unused lamps at load
+- 38a865c |  | Add an Ultra low graphics level and switch, skip unused lamps at load
 + 09/10/2026 | - | In-game menu: seven entries, Profile with tabs, team and vote on the match card, an icon row
 - 7fa069e |  | Rework the SJK UI's in-game menu and add the Profile screen
 - a164b8b |  | UI renderer: shapes after the emblem's light are alpha blended

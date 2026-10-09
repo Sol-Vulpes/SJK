@@ -943,6 +943,7 @@ impl GpuState {
                 &mover_catalog.meshes,
                 context.filtering,
                 context.sun_shadows.day.enabled,
+                context.sun_shadows.enabled,
                 context.material_maps,
             )?;
         world_materials.bind_geometry(&geometry);

@@ -7,6 +7,57 @@ SJK currently contains a native client and standard dedicated server in a
 20-crate Rust workspace. This page records scope and verification, rather than
 claiming complete parity from the presence of an implementation.
 
+## JoFTemple frame rate and Ultra low
+
+Branch `personal/ultra-low` (09/10/2026, based on `8e2ac60`, Windows 11, RTX 5080,
+Vulkan): Sol and another tester lose many frames on `JoFTemple` (`{JoF}TempleV1.pk3`)
+and Sol asked why, and for a simple switch, also in First setup, back to the
+original game's look.
+
+Measured with a scratch release world shot (not committed) at 3840x2160, the
+spawn camera, `SJK_GPU_PHASES`, 200 frames after 400 of warm-up:
+
+| Settings | GPU frame | Wall p50 | Load to first frame |
+| --- | --- | --- | --- |
+| High, movers still | ~8 ms | 8.4 ms | 23 s |
+| High, the 15 `func_bobbing` moving | ~13 ms | 12.3 ms | 23 s |
+| Performance, bobbing | 1.15 ms | 1.25 ms | 16 s |
+| Ultra low, bobbing | 0.33 ms | 0.77 ms | 9 s |
+| `mp/ffa5`, `mp/ffa3`, High | ~3.1 ms | 3.2-3.4 ms | |
+
+What the map asks of real-time lighting: 58,124 area lights (stock maps have a few
+hundred to 10,000), 407 inline movers (143 `func_door`, 129 `func_usable`, 15
+`func_bobbing`, 11,843 door tiles), 89 floor mirror planes and 174 lightmaps. The
+light pass is 4.5-6.6 ms against 0.7 ms on stock maps: hiding every mover takes
+about 1.5-2.5 ms off it, since mover surfaces are lit directly rather than from
+the lamp cache. Moving bobbers add about 3 ms of floor mirrors and 1 ms of light
+pass, as their door tiles are traced again and the cache re-baked. 44,065 of the
+lamps are the map's two statues (`models/map_objects/joftemple/shree_statue`,
+`aldro_statue`): their shaders draw an opaque base stage over the `$lightmap`
+stage, so they show fullbright as in retail and the [self-lit fixture
+rule](rendering.md#inferring-fixture-light-from-legacy-materials) makes every
+patch of them a lamp. Leaving them out (a scratch test) took the load from 23 to
+16 s but the frame only from 12.3 to 11.8 ms, so the lamp count is mostly a load
+cost; the per-frame cost is the directly lit receivers and the mirrors.
+
+Built ([client.md](client.md#graphics-quality)): a fifth graphics quality level,
+Ultra low, below Performance, which also turns off normal and specular maps and
+ambient occlusion (`r_ssao`), each now with a Settings row; the **Ultra low**
+switch under Graphics quality in VIDEO and First setup, on while the settings are
+Ultra low's, keeping the player's values and putting them back when turned off;
+and no lamp extraction at load when sun and sky, light shafts and sun shadows are
+all off ([rendering](rendering.md#default-visual-profile)).
+
+Verified: `cargo fmt --all --check`, `cargo build --locked --workspace`, `cargo
+test --locked --workspace` and `cargo clippy --locked --workspace --all-targets`;
+new unit tests for the level's values, the switch's keep and restore across a
+profile restart, the command's `ultralow` and the First setup order; world shots
+of First setup in both menu styles show the switch. Not verified: no client was
+started on a server, so the switch was not flipped in game and the restart path,
+populated matches, other GPUs and the look under Ultra low are Sol's to test.
+Not done: the statues' lamps, the cost of directly lit movers and the mirrors'
+re-render while movers move (all under High) are left for their own change.
+
 ## In-game menu rework and the Profile screen
 
 SJK-only branch `personal/ingame-menu-2` (09/10/2026, Rust stable), Sol's request of

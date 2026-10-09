@@ -23,6 +23,7 @@ pub(crate) fn create_filtered_runtime(
     mover_meshes: &[super::super::movers::Mesh],
     filtering: super::filtering::Policy,
     realtime: bool,
+    lamps: bool,
     material_maps: super::material_maps::Settings,
 ) -> Result<(Runtime, usize), Box<dyn Error>> {
     build(
@@ -40,6 +41,7 @@ pub(crate) fn create_filtered_runtime(
         true,
         filtering,
         realtime,
+        lamps,
         material_maps,
     )
 }
@@ -60,6 +62,7 @@ fn build(
     collapse: bool,
     filtering: super::filtering::Policy,
     realtime: bool,
+    lamps_wanted: bool,
     material_maps: super::material_maps::Settings,
 ) -> Result<(Runtime, usize), Box<dyn Error>> {
     let started = Instant::now();
@@ -314,42 +317,53 @@ fn build(
         .filter(|material| material.mapped_emission)
         .map(emitter)
         .collect();
-    let mut extra = Vec::new();
-    if !mapped.is_empty() {
-        let mut lamps = crate::lamp_lights::collect_patches(&positions, geometry.1, &mapped);
-        let found = lamps.len();
-        super::material_maps::lights::keep_brightest(&mut lamps);
+    // Without sun shadows, light shafts or real-time lighting (Performance and
+    // Ultra low) no pass reads the lamps and the map shows its lightmaps; finding
+    // them is seconds of a large map's load, so it is skipped.
+    let lamps = if lamps_wanted {
+        let mut extra = Vec::new();
+        if !mapped.is_empty() {
+            let mut lamps = crate::lamp_lights::collect_patches(&positions, geometry.1, &mapped);
+            let found = lamps.len();
+            super::material_maps::lights::keep_brightest(&mut lamps);
+            crate::log::progress(format_args!(
+                "Emission maps: {} area lights from {} materials ({found} before the cap of {})",
+                lamps.len(),
+                mapped.len(),
+                super::material_maps::lights::MAX_LAMPS
+            ));
+            extra = lamps;
+        }
+        extra.extend(effect_lamps::extract(bsp, vfs, shaders)?);
+        extra.extend(static_lamps::extract(
+            bsp,
+            vfs,
+            shaders,
+            &forge.fallback_lightmap,
+        )?);
+        extra.extend(flare_lamps::extract(&pending, &positions, geometry.1));
+        let lamps = crate::lamp_lights::LampSet::extract(&positions, geometry.1, &emitters, extra);
+        let brightest = lamps
+            .lamps
+            .iter()
+            .max_by(|a, b| a.power.total_cmp(&b.power));
         crate::log::progress(format_args!(
-            "Emission maps: {} area lights from {} materials ({found} before the cap of {})",
-            lamps.len(),
-            mapped.len(),
-            super::material_maps::lights::MAX_LAMPS
+            "Lamps: {} area lights from {} emissive materials; \
+            brightest {:?}; grid {:?} cells of {} units at {:?}",
+            lamps.lamps.len(),
+            emitters.len(),
+            brightest,
+            lamps.counts,
+            lamps.cell,
+            lamps.origin
         ));
-        extra = lamps;
-    }
-    extra.extend(effect_lamps::extract(bsp, vfs, shaders)?);
-    extra.extend(static_lamps::extract(
-        bsp,
-        vfs,
-        shaders,
-        &forge.fallback_lightmap,
-    )?);
-    extra.extend(flare_lamps::extract(&pending, &positions, geometry.1));
-    let lamps = crate::lamp_lights::LampSet::extract(&positions, geometry.1, &emitters, extra);
-    let brightest = lamps
-        .lamps
-        .iter()
-        .max_by(|a, b| a.power.total_cmp(&b.power));
-    crate::log::progress(format_args!(
-        "Lamps: {} area lights from {} emissive materials; \
-        brightest {:?}; grid {:?} cells of {} units at {:?}",
-        lamps.lamps.len(),
-        emitters.len(),
-        brightest,
-        lamps.counts,
-        lamps.cell,
-        lamps.origin
-    ));
+        lamps
+    } else {
+        crate::log::progress(format_args!(
+            "Lamps: none (baked lighting without sun shadows or light shafts)"
+        ));
+        crate::lamp_lights::LampSet::default()
+    };
     let mut result = finish_runtime(device, queue, forge, sky, fog, pending, resolved)?;
     result.0.remaps.sources = materials
         .iter()

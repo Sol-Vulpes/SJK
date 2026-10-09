@@ -113,7 +113,11 @@ const HELP: &[(&str, &str)] = &[
     // VIDEO
     (
         crate::graphics_quality::ROW_NAME,
-        "Sets the costly graphics together: Performance for the most FPS, Ultra for the best look. Shadows and light shafts need a restart.",
+        "Sets the costly graphics together: Ultra low for the most FPS, Ultra for the best look. Shadows and light shafts need a restart.",
+    ),
+    (
+        crate::graphics_quality::ULTRA_LOW_ROW,
+        "The original game's look: baked map lighting, no sun, shadows, reflections or material maps. Off restores your settings.",
     ),
     (
         "r_resolution",
@@ -503,6 +507,10 @@ const HELP: &[(&str, &str)] = &[
         "Smoke and dust fade where they meet walls instead of cutting into them.",
     ),
     (
+        "r_ssao",
+        "Darkens corners and creases of the map's walls and floors a little.",
+    ),
+    (
         crate::dust_motes::CVAR,
         "Dust drifting in sunbeams; needs light shafts. 0 is off.",
     ),
@@ -543,6 +551,14 @@ const HELP: &[(&str, &str)] = &[
     (
         "r_floorReflections",
         "Mirror-like reflections on polished floors.",
+    ),
+    (
+        "r_normalMapping",
+        "Surface relief from a material pack's normal maps: bricks and stone catch the light.",
+    ),
+    (
+        "r_specularMapping",
+        "Shine from a material pack's specular maps: metal and wet stone glint.",
     ),
     (
         "r_parallaxMapping",
