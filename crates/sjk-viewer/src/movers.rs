@@ -24,6 +24,8 @@ pub(crate) struct Mesh {
     /// The clusters and areas `reach` touches, to tell a mover the server removed from one
     /// it left out of the snapshot (`mover_occlusion::Sight`).
     pub(crate) sight: crate::world_materials::mover_occlusion::Sight,
+    /// It never stops (`mover_occlusion::endless`): it blocks no lamp.
+    pub(crate) endless: bool,
     pub(crate) draws: Vec<ActorDraw>,
 }
 
@@ -67,6 +69,7 @@ pub(crate) fn build_catalog(bsp: &Bsp, flattened: &FlattenedScene) -> Catalog {
                 model_index: Some(model_index),
                 reach: [lower.to_array(), upper.to_array()],
                 sight: crate::world_materials::mover_occlusion::Sight::new(bsp, lower, upper),
+                endless: crate::world_materials::mover_occlusion::endless(entity),
                 draws,
             })
         })

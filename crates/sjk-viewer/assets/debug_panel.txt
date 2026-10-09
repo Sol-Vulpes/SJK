@@ -318,6 +318,15 @@ change: JoFTemple: 58,124 lamps become 14,059 and the map loads about 7 s faster
 test: High, join JoFTemple: the log's Lamps: line says about 14,059 area lights.
 test: The gold statues still look fullbright but no longer light the room around them.
 
+[endless-movers]
+area: Rendering & effects
+title: Bobbing, rotating and swinging movers no longer block lamps
+change: func_bobbing, func_rotating and func_pendulum get no door tiles: no endless re-bakes.
+change: JoFTemple at 4K, platforms moving: 12.1 ms a frame becomes 7.4 ms (High).
+test: High, JoFTemple: FPS no longer drops near the bobbing platforms (cg_drawFPS 1).
+test: Doors still block lamp light when closed and let it through when open.
+note: A bobbing platform's own shadow on lamp light no longer moves with it.
+
 # ---- HUD ----
 
 [menu-huds]

@@ -622,7 +622,12 @@ otherwise come from a trace of the static world only, done once when the map loa
   bobbing ones) get their bounds grown on every side by their largest extent. A lamp
   whose reach touches that box, and that sees into it past the static world (a CPU ray
   from the lamp gets through to one of 27 points spread through the box), gets a door
-  tile.
+  tile. Movers that never stop (`func_bobbing`, `func_rotating`, `func_pendulum`) get
+  none and block no lamp (09/10/2026): each of their pose changes traced the tiles
+  again and re-baked the cache around them every frame for good. On `JoFTemple` (4K,
+  RTX 5080) its 15 bobbing platforms cost about 4.7 ms a frame, mostly the floor
+  mirrors' lighting (3.4 → 0.7 ms); the frame went from 12.1 to 7.4 ms with them
+  moving. They still cast sun shadows.
 - **Door tiles.** They sit after the lamps' own tiles in the static visibility atlas,
   at the same resolution: only as many as fit without lowering it (the most powerful
   lamps first when there are more). Each holds the lamp's distances to the movers alone,

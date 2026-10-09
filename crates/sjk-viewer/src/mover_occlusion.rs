@@ -35,6 +35,8 @@ pub(crate) struct Occluder {
     pub(crate) seen_by: Option<Vec<u32>>,
     /// Where the server would show it from ([`Sight`]).
     pub(crate) sight: Sight,
+    /// It never stops ([`endless`]): no lamp gets a door tile for it.
+    pub(crate) endless: bool,
 }
 
 impl Occluder {
@@ -54,6 +56,7 @@ impl Occluder {
             reach,
             seen_by: None,
             sight: Sight::default(),
+            endless: false,
         })
     }
 }
@@ -169,6 +172,17 @@ pub(crate) fn reach(entity: Option<&sjk_entity::Entity>, lower: Vec3, upper: Vec
             (lower - grow, upper + grow)
         }
     }
+}
+
+/// Whether a mover moves for as long as the map runs: `func_bobbing`, `func_rotating`
+/// and `func_pendulum`. Every pose change traces its door tiles again and re-bakes the
+/// lamp cache around it, every frame without end (on `JoFTemple` 15 bobbing platforms
+/// cost about 4 ms a frame at 4K), so it blocks no lamp; it still casts sun shadows.
+pub(crate) fn endless(entity: Option<&sjk_entity::Entity>) -> bool {
+    matches!(
+        entity.and_then(sjk_entity::Entity::classname),
+        Some("func_bobbing" | "func_rotating" | "func_pendulum")
+    )
 }
 
 /// Whether a lamp's sphere of influence touches a box.
