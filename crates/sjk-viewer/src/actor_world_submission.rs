@@ -81,6 +81,9 @@ struct Sinks<'a> {
     hooks: grapple_rope::Hooks,
     /// Every player's weapon charge, for the glow on its muzzle.
     charges: crate::charge_flash::Charges,
+    /// Client slots muted on this PC (bits): drawn with the default saber colour
+    /// and without hat or cape (`muted_players.rs`).
+    muted: u32,
 }
 
 /// Submit all presented actor-like entities without allocating frame storage.
@@ -267,6 +270,7 @@ pub(crate) fn submit(
                 .as_ref()
                 .and_then(|_| gpu.local_prediction.predicted_state()),
         ),
+        muted: gpu.muted_players.slots().muted,
     };
     let thrown = snapshot
         .zip(game_state)
@@ -472,6 +476,16 @@ fn submit_actor(
     if mesh.is_some_and(|index| sinks.actor_meshes[index].surfaces.weapon_lost) {
         equipment = None;
     }
+    // A player muted on this PC, or their body, has the default blade colour.
+    let client = match mesh.and_then(|index| sinks.actor_meshes[index].body_identity.as_ref()) {
+        Some(body) => u64::from(body.client_num) + 1,
+        None if entity.kind == EntityKind::Actor => entity.id.get(),
+        None => 0,
+    };
+    let muted = crate::muted_players::entity_muted(sinks.muted, client);
+    if muted {
+        equipment = equipment.map(crate::muted_players::equipment);
+    }
     // A hidden trickster keeps only a saber in flight (`cg_players.c:11732-11746`).
     if let Some((equipment, held_mesh)) = equipment
         .filter(|held| !trick.hidden || held.primary_in_flight)
@@ -547,8 +561,9 @@ fn submit_actor(
         } else {
             sinks.actor_groups[mesh].push(instance);
         }
-        // JoF EJK's hat and cape, on the body's bolts (`CG_Player`).
-        if entity.kind == EntityKind::Actor {
+        // JoF EJK's hat and cape, on the body's bolts (`CG_Player`); none on a
+        // player muted on this PC.
+        if entity.kind == EntityKind::Actor && !muted {
             // `EF_DEAD`; the local player's flags are its player state's.
             const EF_DEAD: u32 = 1 << 1;
             let flags = if local {

@@ -335,6 +335,11 @@ pub struct LegacySoundDecision {
     pub additional: bool,
     /// Engine-generic playback request.
     pub request: PlayRequest,
+    /// The client the event names as having caused this sound, when that is not its
+    /// source: the attacker of a saber hit or block (`otherEntityNum2`), the speaker
+    /// of a voice command (`groundEntityNum`), the sender of a chat message. A
+    /// presentation filter can silence a player by it (SJK's local mute).
+    pub cause: Option<u16>,
 }
 
 /// Background-track transition requested by `EV_PRIVATE_DUEL`.
@@ -514,6 +519,20 @@ impl EventSubject {
     }
 }
 
+/// The client an event names as having caused its sounds when its source (a
+/// temporary entity) is not theirs: `EV_SABER_HIT` and `EV_SABER_BLOCK` carry the
+/// saber's owner in `otherEntityNum2` (`w_saber.c`), `EV_VOICECMD_SOUND` the speaker
+/// in `groundEntityNum` (`g_cmds.c`). `None` for the rest, whose source says whose
+/// they are.
+fn event_cause(event: u16, entity: &EventSubject) -> Option<u16> {
+    let client = match event {
+        30 | 31 => entity.other2,
+        75 => entity.ground,
+        _ => return None,
+    };
+    (usize::from(client) < MAX_CLIENTS).then_some(client)
+}
+
 /// Stateful codemp sound-event resolver and duplicate-event latch.
 pub struct LegacySoundAdapter {
     predicted_events: crate::predicted_events::PredictedEventLedger,
@@ -564,6 +583,8 @@ pub struct LegacySoundAdapter {
     player_external_event: u16,
     pain_deadline: Box<[i32]>,
     local_health_pain: bool,
+    /// The client the event being resolved names as its cause ([`event_cause`]).
+    cause: Option<u16>,
     client_config_hash: [u64; MAX_CLIENTS],
     ledger: LegacySoundLedger,
     loops: LegacyLoopAdapter,
@@ -791,6 +812,7 @@ impl LegacySoundAdapter {
             player_external_event: 0,
             pain_deadline: vec![i32::MIN; MAX_ENTITIES].into_boxed_slice(),
             local_health_pain: false,
+            cause: None,
             client_config_hash,
             ledger: LegacySoundLedger::default(),
             loops,
@@ -859,10 +881,12 @@ impl LegacySoundAdapter {
             let local = self.local.pending()[index];
             let client = snapshot.player.client_num();
             let (event, sound, channel) = (local.event, local.sound, local.channel);
+            self.cause = local.cause;
             self.emit(
                 event, sound, client, channel, true, false, [0.0; 3], snapshot,
             );
         }
+        self.cause = None;
         self.decisions.len()
     }
 
@@ -980,6 +1004,7 @@ impl LegacySoundAdapter {
             self.local.team_event(parameter);
             return;
         }
+        self.cause = event_cause(event, &entity);
         let source = entity.number;
         let client = usize::from(entity.client_num).min(MAX_CLIENTS - 1);
         let variant = deterministic_variant(source, event, parameter);
@@ -1549,6 +1574,7 @@ impl LegacySoundAdapter {
             sound,
             handle,
             additional,
+            cause: self.cause,
             request: PlayRequest {
                 origin: if listener_relative || local {
                     None
@@ -1921,7 +1947,25 @@ mod config_strings;
 
 #[cfg(test)]
 mod tests {
-    use super::WEAPON_PATHS;
+    use super::{EventSubject, WEAPON_PATHS, event_cause};
+    use sjk_protocol::{EntityState, LEGACY_ENTITY_FIELDS};
+
+    #[test]
+    fn saber_hits_blocks_and_voice_commands_name_who_caused_them() {
+        let mut event = EventSubject::entity(&EntityState::zero(300, &LEGACY_ENTITY_FIELDS));
+        event.other2 = 4;
+        event.ground = 7;
+        // EV_SABER_HIT and EV_SABER_BLOCK: the saber's owner; EV_VOICECMD_SOUND: the
+        // speaker. Their temporary entity is the source, not the player.
+        assert_eq!(event_cause(30, &event), Some(4));
+        assert_eq!(event_cause(31, &event), Some(4));
+        assert_eq!(event_cause(75, &event), Some(7));
+        // A footstep's source is the player already; an entity past the clients is
+        // nobody.
+        assert_eq!(event_cause(2, &event), None);
+        event.other2 = 1_023;
+        assert_eq!(event_cause(30, &event), None);
+    }
 
     const WP_STUN_BATON: usize = 1; // codemp/game/bg_weapons.h:33
     const WP_MELEE: usize = 2; // codemp/game/bg_weapons.h:34

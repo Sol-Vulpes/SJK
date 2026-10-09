@@ -35,9 +35,14 @@ impl GpuState {
 
     fn copy_body_actor(
         &mut self,
-        body: sjk_client::BodyIdentity,
+        mut body: sjk_client::BodyIdentity,
         time: i64,
     ) -> Result<(), Box<dyn Error>> {
+        // The body of a player muted on this PC looks as they did: Kyle, the default saber.
+        if self.muted_players.contains(u16::from(body.client_num)) {
+            body.appearance = crate::muted_players::appearance(&body.appearance);
+            crate::muted_players::sabers(&mut body.sabers);
+        }
         let id = EntityId::new(u64::from(body.entity_num) + 1);
         for name in body.sabers.iter().flatten() {
             self.load_hilt(name)?;

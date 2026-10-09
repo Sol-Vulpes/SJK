@@ -46,6 +46,7 @@ impl ChatOverlay {
             hub: Some(HubLine {
                 id: message.id,
                 verified: message.verified,
+                staff: message.staff,
                 key_id: message.key_id.clone(),
             }),
         });

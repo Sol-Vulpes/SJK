@@ -154,18 +154,28 @@ impl GpuState {
                 self.clientinfo_watch.local_identity,
                 forcing::team(game_state, client),
             );
-            let Some(appearance) = legacy_client_appearance_forced(
-                game_state,
-                client,
-                override_model.as_deref().or(forced),
-            ) else {
+            // A player muted on this PC is drawn as Kyle with the default saber
+            // (`muted_players.rs`), whatever else forces a model.
+            let muted = self.muted_players.contains(client);
+            let model = if muted {
+                Some(crate::muted_players::MODEL)
+            } else {
+                override_model.as_deref().or(forced)
+            };
+            let Some(appearance) = legacy_client_appearance_forced(game_state, client, model)
+            else {
                 return Ok(());
             };
             let mut names = client_saber_names(Some(game_state), client);
             if i32::from(client) == game_state.client_num {
                 forcing::sabers(&mut names, &self.clientinfo_watch.overrides[2]);
             }
-            (appearance, names)
+            if muted {
+                crate::muted_players::sabers(&mut names);
+                (crate::muted_players::appearance(&appearance), names)
+            } else {
+                (appearance, names)
+            }
         };
         for name in saber_names.iter().flatten() {
             self.load_hilt(name)?;

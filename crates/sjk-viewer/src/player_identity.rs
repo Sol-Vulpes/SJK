@@ -51,10 +51,6 @@ struct Runtime {
     /// Whether the SJK chat was last told on (`cl_sjkChat`).
     sent_chat: Option<bool>,
     next_sync: Option<Instant>,
-    /// Keys the player muted in the SJK chat, on this PC for this session.
-    muted: Vec<String>,
-    /// Counts changes to `muted`.
-    muted_revision: u64,
 }
 
 static RUNTIME: Mutex<Runtime> = Mutex::new(Runtime {
@@ -65,8 +61,6 @@ static RUNTIME: Mutex<Runtime> = Mutex::new(Runtime {
     sent_name: None,
     sent_chat: None,
     next_sync: None,
-    muted: Vec::new(),
-    muted_revision: 0,
 });
 
 fn lock() -> MutexGuard<'static, Runtime> {
@@ -466,24 +460,26 @@ pub(crate) fn take_emotes() -> Vec<sjk_identity::Emote> {
         .unwrap_or_default()
 }
 
-/// The keys the player muted in the SJK chat.
-pub(crate) fn muted_keys() -> Vec<String> {
-    lock().muted.clone()
-}
-
-/// Mute or unmute `key_id` in the SJK chat on this PC.
-pub(crate) fn set_muted(key_id: &str, muted: bool) {
-    let mut runtime = lock();
-    runtime.muted.retain(|key| key != key_id);
-    if muted {
-        runtime.muted.push(key_id.to_owned());
-    }
-    runtime.muted_revision += 1;
-}
-
-/// Counts changes to the mutes, so what is derived from them can be kept.
-pub(crate) fn mutes_revision() -> u64 {
-    lock().muted_revision
+/// Read the hub's claims on the server being played (none when the service has not
+/// started), as the mute list matches them to slots (`chat_mutes.rs`). Keep `read`
+/// short: the service waits.
+pub(crate) fn with_claims<R>(read: impl FnOnce(&[crate::chat_mutes::Claim<'_>]) -> R) -> R {
+    let runtime = lock();
+    let Some(service) = runtime.service.as_ref() else {
+        return read(&[]);
+    };
+    service.with_snapshot(|snapshot| {
+        let claims: Vec<_> = snapshot
+            .players
+            .iter()
+            .map(|player| crate::chat_mutes::Claim {
+                slot: player.slot,
+                claimed_name: &player.claimed_name,
+                key_id: &player.key_id,
+            })
+            .collect();
+        read(&claims)
+    })
 }
 
 /// Ask the hub for another player's profile (their bio).
@@ -525,26 +521,6 @@ mod tests {
         assert!(!emote("wave".to_owned()));
         assert!(with_chat(|chat| chat.revision).is_none());
         assert!(take_emotes().is_empty());
-    }
-
-    #[test]
-    fn local_mutes_are_by_key() {
-        let muted = |key: &str| muted_keys().iter().any(|muted| muted == key);
-        let before = mutes_revision();
-        assert!(!muted("0123456789abcdef"));
-        set_muted("0123456789abcdef", true);
-        assert!(muted("0123456789abcdef"));
-        assert!(!muted("fedcba9876543210"));
-        set_muted("0123456789abcdef", true);
-        assert_eq!(
-            muted_keys()
-                .iter()
-                .filter(|key| *key == "0123456789abcdef")
-                .count(),
-            1
-        );
-        set_muted("0123456789abcdef", false);
-        assert!(!muted("0123456789abcdef"));
-        assert!(mutes_revision() > before);
+        assert_eq!(with_claims(|claims| claims.len()), 0);
     }
 }

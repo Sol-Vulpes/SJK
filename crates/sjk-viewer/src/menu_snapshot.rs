@@ -1401,16 +1401,22 @@ fn sjk_home_snapshot() {
             name: "^5JoF^7 Jedi",
             text: "anyone up for duels on ffa3?",
             verified: true,
+            staff: false,
+            key_id: "0123456789abcdef",
         },
         DockLine {
             name: "^1Fox",
             text: "in 5 min, finishing a CTF",
             verified: false,
+            staff: false,
+            key_id: "fedcba9876543210",
         },
         DockLine {
             name: "Kyle",
             text: "the new HUD looks great, but the force bar in the corner feels a bit too small at 4K",
             verified: false,
+            staff: false,
+            key_id: "00000000000000ff",
         },
     ];
     // Name, window, page, chosen entry, focused server, servers.

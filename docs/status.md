@@ -7,6 +7,45 @@ SJK currently contains a native client and standard dedicated server in a
 20-crate Rust workspace. This page records scope and verification, rather than
 claiming complete parity from the presence of an implementation.
 
+## Muting a player from a name in chat
+
+Branch `feat/sjk-chat-mute` (08/10/2026, based on `feat/sjk-chat-look`, Linux): Sol
+asked that resting the pointer on a player's name in chat show their profile with Mute
+or Unmute, and that a mute hide their chat (SJK chat and, when they can be matched to a
+slot, game chat), draw them as `kyle/default` with the default saber and colour while
+they are on the server, and silence every sound they cause, on this PC only. A profile
+card ([profile_card.rs](../crates/sjk-viewer/src/profile_card.rs)) now shows beside a
+name under the pointer in the game's chat while the composer is open, on the main
+page's dock and on the SJK chat page; the Players page's card is that page's right
+column and could not be reused. The page's session-only mute became one list kept in
+`chat-mutes.txt` beside `config.cfg` (key, or `-`, and the last name seen), which the
+card, the page and the dock share. Muted slots are matched as the scoreboard's badges
+are, by the hub's claim under the name shown, else by name with colour codes and
+symbols ignored (the card says "matched by name"); a game line the server does not
+attribute (JA+) is hidden when it starts with a muted slot's name. The slots are a bit
+mask worked out only when the list, the hub's claims or the players change; the
+renderer swaps the model, sabers, blade colour and hat or cape, and the sound filter
+tests the source entity and, for saber hits and blocks, voice commands and chat beeps,
+the cause the sound events now name (`LegacySoundDecision::cause`)
+([hub-chat.md](hub-chat.md#muting-a-player)).
+
+Verified on Linux with Rust 1.97: `cargo fmt --all --check`, `cargo build --locked
+--workspace`, `cargo test --locked --workspace` (1664 passed, 51 ignored) and `cargo
+clippy --locked --workspace --all-targets` (exit 0, no warning in the changed code).
+New unit tests: the mute list (by key and by name, colours ignored; a newer name kept;
+its file written and read back, bad lines left out); slot matching (a claim under the
+shown name, another key's claim never matched by name, the own slot never muted,
+locating a player by claim then by name); the slots worked out only when their inputs
+change; the model (Kyle, a team's red or blue kept), sabers (`single_1` in each hand)
+and blade colour of a muted player; the sound filter (their entity, a sound naming them
+as its cause, a saber they threw, nobody else) and the causes the sound events name
+(saber hit, block, voice command, a chat beep's sender); a muted slot's game lines
+hidden and shown again, a JA+ line by its leading name; hovering a name in the game's
+feed, on the dock and on the page shows the card, which stays while the pointer is on
+it, and Mute asks for that player once, then offers Unmute. Not verified: no client was
+started (no GPU, display, hub or game data here), so the card, Kyle and the silence
+were not seen or heard in a game, nor with players matched through a real hub.
+
 ## SJK chat in its own gold, on one line, with the tick alone
 
 Branch `feat/sjk-chat-look` (08/10/2026, based on `a6230f9`, Linux): Sol asked for

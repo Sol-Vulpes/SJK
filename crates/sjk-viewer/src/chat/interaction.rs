@@ -172,7 +172,12 @@ impl ChatOverlay {
         {
             menu.selected = None;
         }
-        if self.edit_pointer(event) {
+        // The profile card lies over the feed and may reach the composer: a press on
+        // it is the card's.
+        let on_card = matches!(event, InputEvent::PointerPress { position, .. }
+            if self.card.is_some()
+                && self.ui.rect_for(card::CARD).is_some_and(|rect| rect.contains(position)));
+        if !on_card && self.edit_pointer(event) {
             return;
         }
         if let InputEvent::PointerPress {
@@ -183,9 +188,9 @@ impl ChatOverlay {
             // Match the canvas's reverse paint order: popovers cover the
             // composer, which covers the feed. Otherwise release activates a
             // different widget than the one recorded here and is discarded.
-            self.pressed_action = ACTIONS
+            self.pressed_action = [card::CARD_MUTE, card::CARD]
                 .into_iter()
-                .rev()
+                .chain(ACTIONS.into_iter().rev())
                 .chain([MENU_BACK, LATEST, SJK, TEAM, GLOBAL])
                 .chain(0..MAX_VISIBLE as u16)
                 .find(|token| {
@@ -285,6 +290,7 @@ impl ChatOverlay {
                 self.player_menu = None;
             }
             token if ACTIONS.contains(&token) => self.player_action(token),
+            card::CARD_MUTE => self.toggle_card_mute(),
             _ => {}
         }
     }

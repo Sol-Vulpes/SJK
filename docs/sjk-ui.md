@@ -170,7 +170,9 @@ one (4:3, 5:4) scales the frame down to its width.
   "SJK chat" and the online count, the last five lines sitting on a field (each the
   name, the verified tick for a verified sender and the text in the SJK chat's gold,
   cut to one row), the field, and Open chat in gold under
-  it, which opens the SJK chat page. Down past the last server reaches the field
+  it, which opens the SJK chat page. Resting the pointer on a name shows the sender's
+  profile card beside it, with Mute ([hub-chat.md](hub-chat.md#muting-a-player)).
+  Down past the last server reaches the field
   (the gold arc turns to it); Enter types and every key goes to the field until Enter
   sends or Escape stops. Not shown with `cl_sjkChat 0`.
 - **Corners:** the player, bottom left (a gold ring with their initial, their
@@ -334,7 +336,16 @@ overlay routes their text to the UI's families (`console_sjk_pages.rs`).
   after them and wrapping when too long, with Staff and how long ago on the right of
   its first row; a chosen one is banded and shown on the right with Mute on this PC and, for
   staff, Delete for everyone, Mute and Unmute at the hub. "N older: Page Up" and "N
-  newer: Page Down" mark the ends when it scrolls.
+  newer: Page Down" mark the ends when it scrolls. Resting the pointer on a name shows
+  the sender's profile card over the page, beside the name, with Mute or Unmute
+  ([hub-chat.md](hub-chat.md#muting-a-player)).
+- **Profile card** ([profile_card.rs](../crates/sjk-viewer/src/profile_card.rs),
+  08/10/2026, Sol's request): a name under the pointer in the game's chat (composer
+  open), on the main page's dock and on the SJK chat page. A 340-wide navy card with a
+  holo edge: the name and the verified tick alone, "SJK player" (gold, with "SJK staff")
+  or "Not known to the SJK hub", the hub name when it differs, the key, where they are
+  on the server being played, their medals' medallions, Mute or Unmute (gold edged) and
+  what that does. It sits right of the name, or left of it at the screen's edge.
 - **Credits** ([credits_sjk.rs](../crates/sjk-viewer/src/credits_sjk.rs), since
   08/10/2026, Sol's request: restyle Credits but keep its sun): on the left SJK's
   emblem (220 across, centred at (300, 330)) is the page's sun, the one memorable

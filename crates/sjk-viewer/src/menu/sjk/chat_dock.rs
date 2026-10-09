@@ -1,12 +1,22 @@
 //! What the main page's docked SJK chat shows ([`super::home::ChatDock`]), read from
-//! the identity service only when the chat changed: its last lines, who is online
-//! and why it cannot send or read.
+//! the identity service only when the chat or the mute list changed: its last lines,
+//! who is online and why it cannot send or read. Muted senders' lines are left out.
 
 use super::home::{ChatDock, DockLine};
-use crate::player_identity;
+use crate::{player_identity, player_mutes};
 
 /// Lines the dock keeps, as many as it shows.
 pub(crate) const LINES: usize = 5;
+
+/// One message the dock keeps.
+#[derive(Debug, Default)]
+struct Line {
+    name: String,
+    text: String,
+    verified: bool,
+    staff: bool,
+    key_id: String,
+}
 
 /// The dock's copy of the chat.
 #[derive(Default)]
@@ -14,8 +24,8 @@ pub(crate) struct DockCache {
     /// The chat's revision, outcome serial and mutes revision last read; `None` while
     /// the service is not running.
     mark: Option<Option<(u64, u64, u64)>>,
-    /// Name, text and verified, oldest first.
-    lines: Vec<(String, String, bool)>,
+    /// The last messages, oldest first.
+    lines: Vec<Line>,
     online: u32,
     live: bool,
     /// Why the hub refused the last message.
@@ -27,7 +37,7 @@ pub(crate) struct DockCache {
 impl DockCache {
     /// Read the chat again if it changed since the last frame.
     pub(crate) fn refresh(&mut self) {
-        let mutes = player_identity::mutes_revision();
+        let mutes = player_mutes::revision();
         let mark = player_identity::with_chat(|chat| {
             (
                 chat.revision,
@@ -41,7 +51,7 @@ impl DockCache {
         self.mark = Some(mark);
         self.lines.clear();
         self.refused.clear();
-        let muted = player_identity::muted_keys();
+        let muted = player_mutes::muted_keys();
         let read = player_identity::with_chat(|chat| {
             let shown = chat
                 .messages
@@ -49,11 +59,13 @@ impl DockCache {
                 .filter(|message| !muted.contains(&message.key_id));
             let skip = shown.clone().count().saturating_sub(LINES);
             for message in shown.skip(skip) {
-                self.lines.push((
-                    sjk_identity::chat::for_display(&message.name),
-                    crate::sjk_chat_look::message_text(&message.text),
-                    message.verified,
-                ));
+                self.lines.push(Line {
+                    name: sjk_identity::chat::for_display(&message.name),
+                    text: crate::sjk_chat_look::message_text(&message.text),
+                    verified: message.verified,
+                    staff: message.staff,
+                    key_id: message.key_id.clone(),
+                });
             }
             if let Some(outcome) = chat.outcome.as_ref().filter(|outcome| !outcome.sent) {
                 self.refused.clone_from(&outcome.message);
@@ -68,11 +80,13 @@ impl DockCache {
 
     /// The dock's view.
     pub(crate) fn view<'a>(&'a self, lines: &'a mut [DockLine<'a>; LINES]) -> ChatDock<'a> {
-        for (slot, (name, text, verified)) in lines.iter_mut().zip(&self.lines) {
+        for (slot, line) in lines.iter_mut().zip(&self.lines) {
             *slot = DockLine {
-                name,
-                text,
-                verified: *verified,
+                name: &line.name,
+                text: &line.text,
+                verified: line.verified,
+                staff: line.staff,
+                key_id: &line.key_id,
             };
         }
         let notice = if !self.local.is_empty() {
@@ -97,4 +111,6 @@ pub(crate) const BLANK: DockLine<'static> = DockLine {
     name: "",
     text: "",
     verified: false,
+    staff: false,
+    key_id: "",
 };

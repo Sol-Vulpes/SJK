@@ -255,6 +255,13 @@ impl ClientMenu {
                 console.open_sjk_chat_panel();
                 MenuAction::None
             }
+            home::Action::Mute => {
+                // Local only: the list on this PC (`player_mutes.rs`).
+                if let Some((key_id, name)) = self.home.take_mute() {
+                    crate::player_mutes::set_muted(Some(&key_id), &name, true);
+                }
+                MenuAction::None
+            }
         }
     }
 

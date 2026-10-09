@@ -37,6 +37,10 @@ const ENTRY_TOKEN: u16 = 0;
 const SERVER_TOKEN: u16 = 20;
 const CHAT_TOKEN: u16 = 40;
 const OPEN_CHAT_TOKEN: u16 = 41;
+/// The dock's names, one a row, and the profile card a name shows with its Mute.
+const DOCK_NAME_TOKEN: u16 = 42;
+const CARD_TOKEN: u16 = 50;
+const CARD_MUTE_TOKEN: u16 = 51;
 /// The longest message typed in the dock, as the hub takes it.
 const DRAFT_MAX: usize = sjk_identity::chat::TEXT_MAX;
 
@@ -101,6 +105,9 @@ pub(crate) enum Action {
     SendChat,
     /// Open the SJK chat's page.
     OpenChat,
+    /// Mute, on this PC, the player whose profile card the dock showed (its Mute,
+    /// [`Home::take_mute`]).
+    Mute,
     /// Exit to the desktop.
     Quit,
 }
@@ -240,6 +247,17 @@ pub(crate) struct DockLine<'a> {
     pub(crate) name: &'a str,
     pub(crate) text: &'a str,
     pub(crate) verified: bool,
+    pub(crate) staff: bool,
+    /// The sender's SJK key, for their profile card.
+    pub(crate) key_id: &'a str,
+}
+
+/// The profile card a dock name shows under the pointer: who, and the name it is
+/// beside.
+#[derive(Debug)]
+struct DockCard {
+    person: crate::profile_card::Person,
+    anchor: Rect,
 }
 
 /// Where the keyboard is.
@@ -269,6 +287,10 @@ pub(crate) struct Home {
     draft: Option<String>,
     /// What Enter sent from the field, until the menu takes it.
     sent: Option<String>,
+    /// The profile card on show over the dock.
+    card: Option<DockCard>,
+    /// The key and name of the player its Mute asked for, until the menu takes them.
+    muting: Option<(String, String)>,
 }
 
 impl Default for Home {
@@ -282,6 +304,8 @@ impl Default for Home {
             dock: false,
             draft: None,
             sent: None,
+            card: None,
+            muting: None,
         }
     }
 }
@@ -315,6 +339,11 @@ impl Home {
     /// What Enter sent from the chat's field.
     pub(crate) fn take_draft(&mut self) -> String {
         self.sent.take().unwrap_or_default()
+    }
+
+    /// The key and name of the player the dock's card asked to mute ([`Action::Mute`]).
+    pub(crate) fn take_mute(&mut self) -> Option<(String, String)> {
+        self.muting.take()
     }
 
     /// A key while typing in the chat's field: text goes into it, Backspace takes a
@@ -456,6 +485,17 @@ impl Home {
                     self.draft = None;
                     return Some(Action::OpenChat);
                 }
+                return None;
+            }
+            CARD_MUTE_TOKEN if self.dock => {
+                // The dock shows only players not muted: its card offers Mute.
+                let card = if activate { self.card.take() } else { None };
+                let card = card?;
+                self.muting = Some((card.person.key_id.unwrap_or_default(), card.person.name));
+                return Some(Action::Mute);
+            }
+            CARD_TOKEN => return None,
+            token if (DOCK_NAME_TOKEN..DOCK_NAME_TOKEN + DOCK_ROWS as u16).contains(&token) => {
                 return None;
             }
             _ => {}
@@ -664,6 +704,11 @@ pub(crate) fn build(
     player(canvas, &frame, view);
     hints(canvas, &frame, home, !view.servers.is_empty());
     version(canvas, &frame, view);
+    // The card goes over everything, its targets last.
+    match &view.chat {
+        Some(dock) => dock_card(canvas, &frame, viewport, home, dock),
+        None => home.card = None,
+    }
     canvas.pop_opacity();
     let selected = match home.focus {
         Focus::Arc => ENTRY_TOKEN + home.entry as u16,
@@ -909,13 +954,15 @@ fn chat_dock(canvas: &mut MenuCanvas, frame: &Frame, home: &Home, dock: &ChatDoc
     let first_row = DOCK_ROWS - shown;
     for (row, line) in dock.lines[dock.lines.len() - shown..].iter().enumerate() {
         let top = DOCK_TOP + 40.0 + (first_row + row) as f32 * DOCK_ROW;
-        dock_line(
+        let name = dock_line(
             canvas,
             frame.rect(COLUMN_X, top, COLUMN_WIDTH, DOCK_ROW - 4.0),
             line,
             dock.measure,
             15.0 * s,
         );
+        // Resting the pointer on the name shows the sender's profile card.
+        canvas.hit_region(DOCK_NAME_TOKEN + row as u16, name);
     }
     if shown == 0 {
         body(
@@ -1010,7 +1057,7 @@ fn dock_line(
     line: &DockLine<'_>,
     measure: Option<crate::sjk_chat_look::Measure<'_>>,
     size: f32,
-) {
+) -> Rect {
     use crate::sjk_chat_look;
     use crate::text::TextFace;
     let width = |value: &str, face| match measure {
@@ -1069,6 +1116,79 @@ fn dock_line(
         sjk_chat_look::GOLD,
         format_args!("{}", line.text),
     );
+    Rect::new(rect.x, rect.y, name_width + 1.0, rect.height)
+}
+
+/// Follow the pointer over the dock's names (the last frame's): the profile card of
+/// the sender under it, kept while the pointer is on the card, else none; then draw it
+/// beside the name, over the page.
+fn dock_card(
+    canvas: &mut MenuCanvas,
+    frame: &Frame,
+    viewport: [f32; 2],
+    home: &mut Home,
+    dock: &ChatDock<'_>,
+) {
+    let shown = dock.lines.len().min(DOCK_ROWS);
+    let first = dock.lines.len() - shown;
+    let hovered = (0..shown).find(|row| canvas.token_hovered(DOCK_NAME_TOKEN + *row as u16));
+    match hovered {
+        Some(row) => {
+            let line = &dock.lines[first + row];
+            let anchor = canvas
+                .rect_for(DOCK_NAME_TOKEN + row as u16)
+                .unwrap_or_default();
+            match &mut home.card {
+                Some(card)
+                    if card.person.name == line.name
+                        && card.person.key_id.as_deref() == Some(line.key_id) =>
+                {
+                    card.anchor = anchor;
+                }
+                _ => {
+                    home.card = Some(DockCard {
+                        person: dock_person(line),
+                        anchor,
+                    });
+                }
+            }
+        }
+        None if canvas.token_hovered(CARD_TOKEN) || canvas.token_hovered(CARD_MUTE_TOKEN) => {}
+        None => home.card = None,
+    }
+    let Some(card) = home.card.as_ref() else {
+        return;
+    };
+    let size = crate::profile_card::size(&card.person, frame.s);
+    let origin = crate::profile_card::beside(card.anchor, size, viewport, 12.0 * frame.s);
+    crate::profile_card::draw(
+        canvas,
+        &crate::profile_card::Card {
+            person: &card.person,
+            muted: false,
+            measure: dock.measure.as_ref(),
+        },
+        origin,
+        frame.s,
+        crate::profile_card::Tokens {
+            card: CARD_TOKEN,
+            mute: CARD_MUTE_TOKEN,
+        },
+    );
+}
+
+/// Who a dock line's sender is. The dock leaves muted senders out, and the main page
+/// is not on a server, so where they are is not known.
+fn dock_person(line: &DockLine<'_>) -> crate::profile_card::Person {
+    crate::profile_card::Person {
+        name: line.name.to_owned(),
+        key_id: (!line.key_id.is_empty()).then(|| line.key_id.to_owned()),
+        hub_name: None,
+        verified: line.verified,
+        staff: line.staff,
+        medals: crate::medals::Medals::default(),
+        place: crate::profile_card::Place::Unknown,
+    }
 }
 
 /// The player, bottom left: a gold ring with their initial, their name, and
@@ -1344,11 +1464,15 @@ mod tests {
             name: "^2Sol",
             text: "gg all",
             verified: true,
+            staff: true,
+            key_id: "0123456789abcdef",
         },
         DockLine {
             name: "Fox",
             text: "a long message that will not fit on one row of the dock at all, cut",
             verified: false,
+            staff: false,
+            key_id: "fedcba9876543210",
         },
     ];
 
@@ -1432,6 +1556,61 @@ mod tests {
         assert!(runs.contains(&"^2Sol"), "{runs:?}");
         assert!(runs.contains(&"gg all"), "{runs:?}");
         assert!(runs.contains(&"Open chat"), "{runs:?}");
+    }
+
+    #[test]
+    fn resting_on_a_dock_name_shows_the_profile_card_with_mute() {
+        use sjk_ui::{InputEvent, Vec2};
+        let servers = [server("a")];
+        let mut canvas = MenuCanvas::new();
+        let mut home = Home {
+            dock: true,
+            ..Home::default()
+        };
+        let draw = |canvas: &mut MenuCanvas, home: &mut Home| {
+            build(
+                canvas,
+                VIEWPORTS[0],
+                home,
+                &view(&servers, Some(dock())),
+                1.0,
+            );
+        };
+        let centre = |rect: Rect| Vec2::new(rect.x + rect.width * 0.5, rect.y + rect.height * 0.5);
+        draw(&mut canvas, &mut home);
+        assert!(home.card.is_none());
+        let name = canvas.rect_for(DOCK_NAME_TOKEN).expect("Sol's name");
+        canvas.pointer(InputEvent::PointerMove(centre(name)));
+        draw(&mut canvas, &mut home);
+        let runs: Vec<&str> = canvas.text_runs().collect();
+        for wanted in ["SJK player, SJK staff", "Key 0123456789abcdef", "Mute"] {
+            assert!(runs.contains(&wanted), "{wanted:?} in {runs:?}");
+        }
+        let card = canvas.rect_for(CARD_TOKEN).expect("the card");
+        assert!(
+            card.x >= name.right() || card.right() <= name.x,
+            "beside the name: {card:?} {name:?}"
+        );
+        let [width, height] = VIEWPORTS[0];
+        assert!(card.x >= 0.0 && card.right() <= width && card.bottom() <= height);
+        // Onto the card: it stays; Mute mutes Sol, the dock's first line.
+        let mute = canvas.rect_for(CARD_MUTE_TOKEN).expect("Mute");
+        canvas.pointer(InputEvent::PointerMove(centre(mute)));
+        draw(&mut canvas, &mut home);
+        assert!(home.card.is_some());
+        // Away from both: gone.
+        canvas.pointer(InputEvent::PointerMove(Vec2::new(4.0, 4.0)));
+        draw(&mut canvas, &mut home);
+        assert!(home.card.is_none());
+        canvas.pointer(InputEvent::PointerMove(centre(name)));
+        draw(&mut canvas, &mut home);
+        assert_eq!(home.pointer(CARD_MUTE_TOKEN, true, 1), Some(Action::Mute));
+        assert_eq!(
+            home.take_mute(),
+            Some(("0123456789abcdef".to_owned(), "^2Sol".to_owned()))
+        );
+        assert_eq!(home.pointer(CARD_MUTE_TOKEN, true, 1), None, "once");
+        assert_eq!(home.take_mute(), None);
     }
 
     #[test]

@@ -2,8 +2,9 @@
 //! hand the service the player's settings and where they are playing, the new
 //! medal pop-up the medals of the player's own profile (`medal_popup.rs`), and the
 //! achievements their counts (`achievements_frame.rs`). Each frame it also lets the
-//! chat feed follow the SJK chat (`sjk_chat_frame.rs`) and starts and ends emotes
-//! (`emotes_frame.rs`).
+//! chat feed follow the SJK chat (`sjk_chat_frame.rs`), starts and ends emotes
+//! (`emotes_frame.rs`) and follows the players muted on this PC
+//! (`muted_players_frame.rs`).
 
 use super::*;
 use sjk_identity::Settings;
@@ -14,6 +15,7 @@ impl GpuState {
     pub(crate) fn update_identity(&mut self) {
         self.update_sjk_chat();
         self.update_emotes();
+        self.update_muted_players();
         if !player_identity::due() {
             return;
         }

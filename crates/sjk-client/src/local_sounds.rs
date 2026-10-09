@@ -67,6 +67,9 @@ pub(crate) struct LegacyLocalSound {
     pub(crate) event: LegacySoundEvent,
     pub(crate) sound: Option<u16>,
     pub(crate) channel: u32,
+    /// The sender of the chat message a beep is for, when the server names them
+    /// ([`crate::LegacySoundDecision::cause`]).
+    pub(crate) cause: Option<u16>,
 }
 
 /// `cgs.media` handles this module needs, interned into the adapter's bank.
@@ -247,7 +250,7 @@ impl LegacyLocalSounds {
                     let private = self.chat_mode == 2
                         && verb == b"chat"
                         && command.command.windows(7).any(|bytes| bytes == b"^7]: ^6");
-                    self.push(
+                    if self.push(
                         LegacySoundEvent::ChatBeep,
                         if private {
                             self.media.private_chat
@@ -255,10 +258,12 @@ impl LegacyLocalSounds {
                             self.media.talk
                         },
                         CHAN_LOCAL_SOUND,
-                    );
+                    ) {
+                        self.name_sender(&command.command);
+                    }
                 }
                 b"tchat" | b"ltchat" => {
-                    self.push(
+                    if self.push(
                         LegacySoundEvent::TeamChatBeep,
                         if self.chat_mode == 2 && verb == b"tchat" {
                             self.media.team_chat
@@ -266,7 +271,9 @@ impl LegacyLocalSounds {
                             self.media.talk
                         },
                         CHAN_LOCAL_SOUND,
-                    );
+                    ) {
+                        self.name_sender(&command.command);
+                    }
                 }
                 b"map_restart" => self.map_restart(),
                 _ => {}
@@ -402,15 +409,33 @@ impl LegacyLocalSounds {
         }
     }
 
-    fn push(&mut self, event: LegacySoundEvent, sound: Option<u16>, channel: u32) {
-        if self.pending.len() < MAX_LOCAL_SOUNDS_PER_SNAPSHOT {
-            self.pending.push(LegacyLocalSound {
-                event,
-                sound,
-                channel,
-            });
+    /// Queue a sound; false when the snapshot's room is full.
+    fn push(&mut self, event: LegacySoundEvent, sound: Option<u16>, channel: u32) -> bool {
+        if self.pending.len() >= MAX_LOCAL_SOUNDS_PER_SNAPSHOT {
+            return false;
+        }
+        self.pending.push(LegacyLocalSound {
+            event,
+            sound,
+            channel,
+            cause: None,
+        });
+        true
+    }
+
+    /// The beep just pushed is for chat `command`: name its sender.
+    fn name_sender(&mut self, command: &[u8]) {
+        let sender = chat_sender(command);
+        if let Some(beep) = self.pending.last_mut() {
+            beep.cause = sender;
         }
     }
+}
+
+/// The sender of chat `command`: the slot `G_SayTo` appends, as the chat feed reads
+/// it (`chat::server_chat_event`); `None` when the server names none.
+fn chat_sender(command: &[u8]) -> Option<u16> {
+    crate::chat::server_chat_event(&crate::tokenize_command(command)).and_then(|event| event.sender)
 }
 
 fn fnv1a(bytes: &[u8]) -> u64 {
@@ -435,4 +460,18 @@ fn config_int(game_state: &GameState, index: usize) -> i32 {
 
 fn info_int(info: &[u8], key: &str) -> i32 {
     crate::sound_events::config_info_value(info, key).map_or(0, |value| atoi(value.as_bytes()))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::chat_sender;
+
+    #[test]
+    fn a_chat_beep_names_the_slot_the_server_appends() {
+        assert_eq!(chat_sender(b"chat \"\x19^2Sol^7\x19: gg\" 5"), Some(5));
+        assert_eq!(chat_sender(b"tchat \"\x19(Sol)\x19: go\" \"12\""), Some(12));
+        // Servers that send no slot, or one past the clients, name nobody.
+        assert_eq!(chat_sender(b"chat \"Sol: hi\""), None);
+        assert_eq!(chat_sender(b"chat \"Sol: hi\" 40"), None);
+    }
 }

@@ -32,9 +32,14 @@ pub(super) fn submit(
     else {
         return false;
     };
-    let Some(owner) = thrown.and_then(|thrown| thrown.get(number)) else {
+    let Some(mut owner) = thrown.and_then(|thrown| thrown.get(number)) else {
         return false;
     };
+    // A player muted on this PC throws the default saber in the default colour.
+    if crate::muted_players::entity_muted(sinks.muted, u64::from(owner.owner) + 1) {
+        owner.name = crate::muted_players::SABER;
+        owner.color = crate::muted_players::BLADE;
+    }
     let Some(catalog) = sinks.saber_hilts else {
         return false;
     };

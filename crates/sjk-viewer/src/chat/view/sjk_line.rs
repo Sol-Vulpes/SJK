@@ -84,6 +84,8 @@ pub(in crate::chat) struct Line<'a> {
     pub(in crate::chat) marks: &'a [u16],
     /// The emoji pictures, while `cg_chatBoxEmojis` is on.
     pub(in crate::chat) emojis: Option<&'a emoji::Emojis>,
+    /// The pointer rests on the name (its profile card shows): it is lit.
+    pub(in crate::chat) hovered: bool,
 }
 
 /// Draw `line` with its first row's top-left at `origin`, at `alpha`; returns the
@@ -112,6 +114,11 @@ pub(in crate::chat) fn draw(
     let ink = Color::new(0.982, 0.987, 0.996, alpha);
     let name = &line.name[..prefix.name_end];
     let name_x = x + prefix.name_x();
+    let name_rect = name::ink_bounds(font, name, [name_x, y], size);
+    if line.hovered {
+        // As a game line's name under the pointer (`view.rs`).
+        ui.accent_bar(name_rect, Color::new(0.70, 0.88, 0.98, 0.16));
+    }
     ui.text(
         name,
         Rect::new(name_x, y, prefix.name_width + 1.0, row_box(g)),
@@ -120,7 +127,6 @@ pub(in crate::chat) fn draw(
         FontWeight::Semibold,
         0.0,
     );
-    let name_rect = name::ink_bounds(font, name, [name_x, y], size);
     if prefix.verified {
         sjk_chat_look::tick(
             ui.draw_list_mut(),
