@@ -73,6 +73,20 @@ impl Look {
     fn dot(self) -> bool {
         self.shape == PICTURES as i64
     }
+
+    /// The look while riding a vehicle: `CG_DrawCrosshair` doubles `cg_crosshairSize`
+    /// ("bigger by default"), but a later assignment gives a crosshair sized in pixels
+    /// (`cg_crosshairSizeScale 0`, or picture 10) its plain size again.
+    pub(crate) fn in_vehicle(self) -> Self {
+        if self.scaled && !self.dot() {
+            Self {
+                size: self.size * 2.0,
+                ..self
+            }
+        } else {
+            self
+        }
+    }
 }
 
 /// The crosshair's rectangle in pixels. `center` is where its middle goes, as a
@@ -111,8 +125,21 @@ pub(crate) fn emit(
         return true;
     }
     // Picture 10 is EternalJK's pixel-sized white dot, whatever the target.
-    let [r, g, b, a] = if look.dot() { [1.0; 4] } else { color };
-    // A full draw list keeps the procedural crosshair rather than showing none.
+    let color = if look.dot() { [1.0; 4] } else { color };
+    emit_picture(list, texture, look, center, color, viewport)
+}
+
+/// Draw `texture` as the crosshair, tinted `color`. A full draw list answers false so
+/// the caller keeps the procedural crosshair rather than showing none.
+pub(crate) fn emit_picture(
+    list: &mut DrawList,
+    texture: TextureId,
+    look: Look,
+    center: [f32; 2],
+    color: [f32; 4],
+    viewport: [f32; 2],
+) -> bool {
+    let [r, g, b, a] = color;
     list.push(DrawCommand::TexturedQuad {
         rect: rect(look, center, viewport),
         texture,
@@ -137,6 +164,20 @@ mod tests {
         // Out of range values are clamped once: no negative slot, and 11 is the dot.
         assert_eq!(look(-1), look(0));
         assert_eq!(look(11), look(10));
+    }
+
+    #[test]
+    fn a_vehicle_doubles_a_scaled_crosshair_only() {
+        assert_eq!(Look::new(1, 24.0, true).in_vehicle().size, 48.0);
+        // Pixel sizes are reassigned after the doubling in `CG_DrawCrosshair`.
+        assert_eq!(Look::new(1, 24.0, false).in_vehicle().size, 24.0);
+        assert_eq!(Look::new(10, 24.0, true).in_vehicle().size, 24.0);
+        let doubled = rect(
+            Look::new(1, 24.0, true).in_vehicle(),
+            [0.5, 0.5],
+            [1920.0, 1080.0],
+        );
+        assert_eq!((doubled.width, doubled.height), (108.0, 108.0));
     }
 
     #[test]

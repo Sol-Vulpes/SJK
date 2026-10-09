@@ -127,6 +127,9 @@ pub struct VehicleInfo {
     /// `riderAnim` (an animation number, -1 for a name not known).
     pub rider_anim: i32,
     pub droid_npc: Option<Vec<u8>>,
+    /// `crosshairShader`: the picture cgame draws as the crosshair while riding
+    /// (`crosshairShaderHandle`); the game module never uses it.
+    pub crosshair_shader: Option<Vec<u8>>,
     pub sound_on: i32,
     pub sound_take_off: i32,
     pub sound_loop: i32,
@@ -323,7 +326,7 @@ pub(crate) static VEHICLE_FIELDS: &[Field<VehicleInfo>] = fields![VehicleInfo;
     "icon_back" => ClientOnly,
     "icon_right" => ClientOnly,
     "icon_left" => ClientOnly,
-    "crosshairShader" => ClientOnly,
+    "crosshairShader" => Text(crosshair_shader),
     "shieldShader" => ClientOnly,
     "health_front" => Int(health_front),
     "health_back" => Int(health_back),

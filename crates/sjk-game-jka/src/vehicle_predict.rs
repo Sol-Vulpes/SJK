@@ -191,6 +191,13 @@ impl RidePrediction {
         self.vehicle.state()
     }
 
+    /// The predicted vehicle's `m_iTurboTime` (`CG_DrawVehicleTurboRecharge` and
+    /// `CG_DrawVehicleSpeed` read it): when the turbo in use ends, and so when the recharge
+    /// starts. `None` while the vehicle is out of its holder, which is only during a command.
+    pub fn turbo_time(&self) -> Option<i32> {
+        self.own.as_ref().map(|vehicle| vehicle.turbo_time)
+    }
+
     /// The predicted `vehOrientation`.
     pub fn orientation(&self) -> [f32; 3] {
         self.own

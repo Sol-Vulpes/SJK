@@ -444,6 +444,8 @@ pub(crate) fn readout(gpu: &GpuState, time: i32) -> Option<Readout> {
         || player.health() <= 0
         || gpu.gameplay_input.held(crate::input::GameButton::Scores)
         || gpu.quick_wheel.hides_hud()
+        // CG_DrawVehicleHud: no player HUD in a vehicle that hides its rider.
+        || gpu.hud.vehicle.hides_player()
     {
         return None;
     }

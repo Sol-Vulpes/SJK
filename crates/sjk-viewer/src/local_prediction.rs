@@ -331,6 +331,18 @@ impl LocalPrediction {
             .map(|ride| ride.state().hacking_time)
     }
 
+    /// The predicted vehicle's speed and turbo time for the vehicle HUD
+    /// (`cg.predictedVehicleState.speed` and `m_pVehicle->m_iTurboTime`), when the ride
+    /// predicted is vehicle `number`.
+    pub(crate) fn vehicle_readout(&self, number: u16) -> Option<(f32, Option<i32>)> {
+        let ride = self
+            .rides
+            .preview
+            .as_ref()
+            .or(self.rides.committed.as_ref())?;
+        (ride.number() == number).then(|| (ride.state().speed, ride.turbo_time()))
+    }
+
     /// Render the piloted vehicle from the same command as the predicted camera,
     /// as CG_AddPacketEntities does with cg.predictedVehicleState.
     pub(crate) fn vehicle_pose(&self) -> Option<crate::vehicle_pose::Predicted> {

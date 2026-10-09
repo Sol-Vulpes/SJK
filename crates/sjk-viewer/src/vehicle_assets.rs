@@ -27,6 +27,7 @@ pub(crate) struct VehicleLook {
     pub(crate) variant: String,
     pub(crate) kind: VehicleKind,
     pub(crate) camera: crate::camera::VehicleProfile,
+    pub(crate) hud: crate::hud::vehicle::Profile,
 }
 
 /// The look of vehicle `name`, if any mounted `.veh` file defines it. A dozen small text
@@ -61,6 +62,7 @@ pub(crate) fn look(vfs: &VirtualFileSystem, name: &str) -> Option<VehicleLook> {
             _ => VehicleKind::Upright,
         },
         camera: crate::camera::VehicleProfile::from_vehicle(info),
+        hud: crate::hud::vehicle::Profile::from_info(info),
     })
 }
 

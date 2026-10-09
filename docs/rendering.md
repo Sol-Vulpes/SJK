@@ -2386,9 +2386,29 @@ corner. Pictures resolve through shader scripts and are packed once per load
 into one atlas, each stored no larger than a 2160-line screen draws it (at most
 512 texels); additive shaders (`blendFunc GL_ONE GL_ONE`) draw after the
 alpha-blended ones. Score and `--` text use the HUD font (Inter, or `arialnb`
-with `cg_classicHudFont`) rather than retail's `ergoec`. Not drawn: vehicle and
-siege HUD menus, the out-of-Force flash, and item text or owner-draw fields,
-which the retail and the checked custom HUDs do not use.
+with `cg_classicHudFont`) rather than retail's `ergoec`. Not drawn: siege HUD
+menus, the out-of-Force flash, and item text or owner-draw fields, which the retail
+and the checked custom HUDs do not use.
+
+The pilot's vehicle HUD is SJK's own, in every `cg_hudStyle`
+([hud/vehicle.rs](../crates/sjk-viewer/src/hud/vehicle.rs)): a vector strip at the
+bottom centre laid out on `swoopvehiclehud`'s 640x80 units (hull above, speed, shield
+and ammunition below), scaled by the window height and `cg_hudScale`, with its numbers
+in the HUD font. It follows `CG_DrawVehicleHud` (`cg_draw.c`): hull `stats[STAT_HEALTH]`
+of `armor` in 12 tics, shield `stats[STAT_ARMOR]` of `shields` in five, `speed` of
+`speedMax` in five (red and flashing every 200 ms while the turbo burns), `ammo[0]` and
+`ammo[1]` of `weap1AmmoMax` and `weap2AmmoMax` (one row, or two of four tics for two
+weapons, as stock loops), the turbo recharge bar (green once ready) and the
+weapons-linked mark. A tic is full while the value covers it, faded by the covered part
+for one tic and absent beyond. The maxima come from the vehicle's `.veh` definition,
+read with the vehicle's model; the values from the snapshot's vehicle player state
+(only the pilot receives it), with the predicted ride's speed and turbo time where
+prediction runs. A vehicle with `hideRider` takes the player's status, weapon and
+game-data HUD away, as stock does. In a vehicle the crosshair is doubled (when
+`cg_dynamicCrosshair` is below 2, and the size is scaled) and is the `.veh`'s
+`crosshairShader` picture when it names one. Not drawn: the damage icons of
+`vehicledamagehud` and `enemyvehicledamagehud`, the no-ammo warning flash and the
+weapons-linked sound.
 
 `cg_hudStyle classic` selects SJK's classic layout in either font. Under `game`,
 SJK's default layout ([default.json](../crates/sjk-viewer/assets/hud/default.json),

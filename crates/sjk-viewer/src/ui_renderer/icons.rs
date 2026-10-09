@@ -73,8 +73,11 @@ pub(crate) const EMOJI_ICON_CELLS: u32 = 4 * COLUMNS;
 pub(crate) const AVATAR_ICON_FIRST: u32 = EMOJI_ICON_FIRST + EMOJI_ICON_CELLS;
 /// Picture cells: two rows, the cache's pictures and the upload's preview.
 pub(crate) const AVATAR_ICON_CELLS: u32 = 2 * COLUMNS;
+/// The cell holding the riding vehicle's crosshair picture (`crosshairShader` of its
+/// `.veh`), after the pictures'. One cell: it is replaced when the pilot changes vehicle.
+pub(crate) const VEHICLE_CROSSHAIR_ICON: u32 = AVATAR_ICON_FIRST + AVATAR_ICON_CELLS;
 /// Every icon cell.
-pub(crate) const ATLAS_CELLS: u32 = AVATAR_ICON_FIRST + AVATAR_ICON_CELLS;
+pub(crate) const ATLAS_CELLS: u32 = VEHICLE_CROSSHAIR_ICON + 1;
 const TOTAL_CELLS: u32 = ATLAS_CELLS;
 const ATLAS_HEIGHT: u32 = TOTAL_CELLS.div_ceil(COLUMNS) * ICON_SIZE;
 
