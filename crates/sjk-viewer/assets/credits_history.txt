@@ -9,6 +9,8 @@
 #                               made it when that is not the piece's owner.
 
 = Sol
++ 09/10/2026 | - | Fullbright paint with a lit shine is not a lamp
+- 4d150d6 |  | Do not take paint with a lit shine for a self-lit lamp
 + 09/10/2026 | - | Add an Ultra low graphics level and switch, skip unused lamps at load
 - 38a865c |  | Add an Ultra low graphics level and switch, skip unused lamps at load
 + 09/10/2026 | - | In-game menu: seven entries, Profile with tabs, team and vote on the match card, an icon row

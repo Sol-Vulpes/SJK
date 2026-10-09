@@ -524,6 +524,13 @@ examines the surviving stage suffix, so an opaque luminous face following an
 additive stage is eligible. Bright texels qualify an otherwise unlit fixture even
 when dark housing lowers the whole-image average; power still uses the complete
 area-weighted mask. Ordinary diffuse/vertex/entity-lit paint remains excluded.
+So is paint with a visible `alphaGen lightingSpecular` stage (09/10/2026): a shine
+computed from the light reaching the surface means the author meant it lit, even when
+an opaque stage hides its lightmap stage by mistake and it shows fullbright.
+`JoFTemple`'s two statues were such paint; their dense meshes made 44,065 of the
+map's 58,124 lamps, and leaving them out took its load at 4K on an RTX 5080 from
+23 s to 16 s, with the frame unchanged (about 12 ms). They still show fullbright;
+they no longer light the room around them.
 A model surface's luminous pieces share a range calculated from their combined
 power, so texture subdivision does not give every small piece a prematurely
 short reach. Their summed energy is unchanged. This shared range is per placed

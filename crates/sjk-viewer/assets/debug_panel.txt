@@ -310,6 +310,14 @@ test: The log says "Lamps: none"; Graphics quality reads Ultra low.
 test: Turn it off and restart: your previous level (or custom settings) is back.
 test: graphicsquality ultralow sets it from the console.
 
+[self-lit-specular]
+area: Rendering & effects
+title: Fullbright models with a lit shine are no longer lights (JoFTemple statues)
+change: Paint with an alphaGen lightingSpecular stage no longer counts as a self-lit lamp.
+change: JoFTemple: 58,124 lamps become 14,059 and the map loads about 7 s faster (High).
+test: High, join JoFTemple: the log's Lamps: line says about 14,059 area lights.
+test: The gold statues still look fullbright but no longer light the room around them.
+
 # ---- HUD ----
 
 [menu-huds]
