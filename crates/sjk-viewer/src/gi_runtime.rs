@@ -209,11 +209,13 @@ impl super::Runtime {
         runtime.fixtures = Some(fixtures);
         let started = std::time::Instant::now();
         for occluder in &mut self.mover_occluders {
-            occluder.seen_by = Some(super::mover_occlusion::seen_by(
-                &self.lamps.lamps,
-                occluder.reach,
-                |from, to| geometry.blocked(from, to),
-            ));
+            occluder.seen_by = Some(if occluder.endless {
+                Vec::new()
+            } else {
+                super::mover_occlusion::seen_by(&self.lamps.lamps, occluder.reach, |from, to| {
+                    geometry.blocked(from, to)
+                })
+            });
         }
         crate::log::progress(format_args!(
             "Mover occluders: {} movers, lamps that see them found in {:.0} ms",
@@ -265,6 +267,7 @@ impl super::Runtime {
                 let mut occluder =
                     super::mover_occlusion::Occluder::new(mesh, triangles, (lower, upper))?;
                 occluder.sight = mover_meshes[mesh].sight;
+                occluder.endless = mover_meshes[mesh].endless;
                 Some(occluder)
             })
             .collect()

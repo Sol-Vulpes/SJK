@@ -87,6 +87,23 @@ fn a_plat_drops_by_its_height_and_still_brushes_keep_their_bounds() {
 }
 
 #[test]
+fn movers_that_never_stop_are_endless() {
+    for class in ["func_bobbing", "func_rotating", "func_pendulum"] {
+        assert!(endless(Some(&entity(&[("classname", class)]))), "{class}");
+    }
+    for class in [
+        "func_door",
+        "func_plat",
+        "func_train",
+        "func_static",
+        "func_usable",
+    ] {
+        assert!(!endless(Some(&entity(&[("classname", class)]))), "{class}");
+    }
+    assert!(!endless(None));
+}
+
+#[test]
 fn unknown_movers_grow_by_their_largest_extent() {
     let train = entity(&[("classname", "func_train")]);
     assert_eq!(
