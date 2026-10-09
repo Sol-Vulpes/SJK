@@ -654,7 +654,7 @@ fn a_followed_player_is_voiced_once_from_its_playerstate() {
 }
 
 #[test]
-fn a_blade_skin_replaces_both_hilts_once_per_switch() {
+fn a_blade_skin_plays_once_per_switch_over_the_hilts() {
     let mut fixture = Fixture::new();
     fixture.wear(&[LOCAL, DUAL]);
     let skin = |switch| (switch, "sound/sjk/skin_on");
@@ -662,35 +662,44 @@ fn a_blade_skin_replaces_both_hilts_once_per_switch() {
         view(WP_MELEE, 0),
         &[player(DUAL, WP_MELEE, 0), player(STAFF, WP_MELEE, 0)],
     );
-    // The wearers ignite with the skin's one sound, the staff with its own hilt.
+    // The wearers ignite with their hilts' sounds and the skin's one sound over them
+    // (once, not per hand); the staff has its own hilt only.
     let played = fixture.step(
         view(WP_SABER, 0),
         &[player(DUAL, WP_SABER, 0), player(STAFF, WP_SABER, 0)],
     );
     assert_eq!(
         names(&played),
-        [skin(On), skin(On), (On, "staff_on"), (On, "enemy_saber_on")]
+        [
+            (On, "single2_on"),
+            (On, "enemy_saber_on"),
+            skin(On),
+            (On, "single2_on"),
+            (On, "dual2_on"),
+            skin(On),
+            (On, "staff_on"),
+            (On, "enemy_saber_on")
+        ]
     );
     let sources: Vec<u32> = played.iter().map(|played| played.source).collect();
-    assert_eq!(sources, [LOCAL, DUAL, STAFF, STAFF].map(u32::from));
-    assert!(
-        played[..2]
-            .iter()
-            .all(|played| played.channel == CHAN_AUTO && !played.additional)
+    assert_eq!(
+        sources,
+        [LOCAL, LOCAL, LOCAL, DUAL, DUAL, DUAL, STAFF, STAFF].map(u32::from)
     );
+    // The skin's sound is the third of each wearer's, added to the hilts' two.
+    for index in [2, 5] {
+        assert!(played[index].channel == CHAN_AUTO && played[index].additional);
+    }
+    assert!(!played[0].additional && played[1].additional && !played[3].additional);
     let played = fixture.step(
         view(PISTOL, 0),
         &[player(DUAL, WP_MELEE, 0), player(STAFF, PISTOL, 0)],
     );
-    assert_eq!(
-        names(&played),
-        [
-            (Off, "sound/sjk/skin_off"),
-            (Off, "sound/sjk/skin_off"),
-            (Off, "staff_off")
-        ]
-    );
-    // Taken off, the hilts' own sounds come back.
+    let skin_off = (Off, "sound/sjk/skin_off");
+    let heard = names(&played);
+    assert_eq!(heard.iter().filter(|name| **name == skin_off).count(), 2);
+    assert_eq!(heard.last(), Some(&(Off, "staff_off")));
+    // Taken off, the hilts' own sounds alone.
     fixture.wear(&[]);
     assert_eq!(
         names(&fixture.step(view(WP_SABER, 0), &[])),
@@ -704,25 +713,32 @@ fn a_blade_skin_voices_the_unholster_and_toggle_once_and_the_switch_adds_nothing
     fixture.wear(&[DUAL]);
     let local = view(WP_SABER, 0);
     fixture.step(local, &[player(DUAL, WP_SABER, 2)]);
-    // An attack's unholster: the skin's ignition once, in place of both hilts.
+    // An attack's unholster: both hilts' ignitions, the skin's once over them.
     let unholster = with_field(player(DUAL, WP_SABER, 0), 28, EV_SABER_UNHOLSTER);
     let snapshot = fixture.snapshot(local, std::slice::from_ref(&unholster));
     fixture.adapter.observe_snapshot(&snapshot);
     assert_eq!(
         names(&fixture.played()),
-        [(SaberUnholster, "sound/sjk/skin_on")]
+        [
+            (SaberUnholster, "single2_on"),
+            (SaberUnholster, "dual2_on"),
+            (SaberUnholster, "sound/sjk/skin_on")
+        ]
     );
     assert_eq!(fixture.adapter.observe_saber_switches(&snapshot, local), 0);
     // The server's toggle: the `G_Sound` of a hilt's `soundOn` where the wearer
-    // stands is the skin's (`TOGGLE_REACH`), and the held weapon does not change,
-    // so cgame's switch path stays silent.
+    // stands plays the stock sound and the skin's over it (`TOGGLE_REACH`), and the
+    // held weapon does not change, so cgame's switch path stays silent.
     let lit = player(DUAL, WP_SABER, 0);
     let toggle = general_sound(100, SLOT_SINGLE2_ON, lit.trajectory_base());
     let snapshot = fixture.snapshot(local, &[with_field(lit, 71, 2), toggle]);
     fixture.adapter.observe_snapshot(&snapshot);
     assert_eq!(
         names(&fixture.played()),
-        [(LegacySoundEvent::General, "sound/sjk/skin_on")]
+        [
+            (LegacySoundEvent::General, "single2_on"),
+            (LegacySoundEvent::General, "sound/sjk/skin_on")
+        ]
     );
     assert_eq!(fixture.adapter.observe_saber_switches(&snapshot, local), 0);
     // A weapon switch has no server sound: only the switch path's one ignition.
@@ -731,7 +747,14 @@ fn a_blade_skin_voices_the_unholster_and_toggle_once_and_the_switch_adds_nothing
     fixture.adapter.observe_snapshot(&snapshot);
     assert!(fixture.played().is_empty());
     fixture.adapter.observe_saber_switches(&snapshot, local);
-    assert_eq!(names(&fixture.played()), [(On, "sound/sjk/skin_on")]);
+    assert_eq!(
+        names(&fixture.played()),
+        [
+            (On, "single2_on"),
+            (On, "dual2_on"),
+            (On, "sound/sjk/skin_on")
+        ]
+    );
     // A client not wearing it keeps its hilts on the same event.
     fixture.wear(&[]);
     let snapshot = fixture.snapshot(local, std::slice::from_ref(&unholster));

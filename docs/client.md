@@ -967,11 +967,11 @@ player's entity; a second saber adds its own, and a two-handed hilt drops a seco
 one. `EV_CHANGE_WEAPON` has no select sound for the saber, so nothing is doubled.
 `EV_SABER_UNHOLSTER` plays the player's own hilts too; an NPC's keeps the stock
 `saberon`, and so does a player whose clientinfo names no hilt (no server sends
-one). A player wearing a [blade skin](#blade-skins) comes first: its skin's single
-ignition or switching-off sound plays once for the switch or the unholster, in
-place of both hilts' sounds; without one, each hilt's `soundOn`/`soundOff`, then
-the defaults above. The server's toggle stays the skin's general-sound replacement,
-which the switch path never adds to, since the held weapon does not change.
+one). A player wearing a [blade skin](#blade-skins) also has its skin's single
+ignition or switching-off sound play once for the switch or the unholster, over
+both hilts' sounds, which keep playing; each hilt's `soundOn`/`soundOff`, then
+the defaults above. The server's toggle plays the stock sound and the skin's over
+it, which the switch path never adds to, since the held weapon does not change.
 
 cgame's quirks are kept. A single saber's ignition also plays `enemy_saber_on`,
 the default sound of its removed second slot, as the server's toggle does. A
@@ -2149,19 +2149,21 @@ is kept and shows once unlocked). `unlockables` opens the Unlockables page (also
 Profile page's See unlockables), where owned skins are equipped and unequipped
 ([sjk-ui.md](sjk-ui.md#sjks-pages)).
 
-A skin brings its own sounds, heard for each player wearing it: its ignition for
+A skin brings its own sounds, heard for each player wearing it, over the stock ones,
+which keep playing (the skin's sound goes on a channel of its own, so that it does not
+cut the stock one): its ignition for
 `EV_SABER_UNHOLSTER`, its ignition or switching off once when the player draws the
 saber from another weapon or puts a lit one away
 ([saber ignition sounds](#saber-ignition-and-retraction-sounds)), and for a general sound that is a stock `saberon*`/`saberoff*`
 or any `.sab` `soundOn`/`soundOff` (the game's `G_Sound` gives these no owner, so
 the player whose origin is nearest the sound, within 64 units, is taken), its hum
-for both sabers' hum loop, and three swings for `EV_SABER_ATTACK` and the animation
-`saberhup` cues, ahead of a hilt's own `swingSound`s
+once beside the sabers' hum loops, and three swings for `EV_SABER_ATTACK` and the
+animation `saberhup` cues, over a hilt's own `swingSound`s
 ([saber_sound_overrides.rs](../crates/sjk-client/src/saber_sound_overrides.rs)).
 The viewer registers the skins' sounds with the gamestate's sound tables and passes
 the per-client table every frame. With no skin worn every path is the stock one. A
-thrown saber hums its owner's skin too: the flying saber entity's `loopSound` (the
-stock hum or the hilt's `soundLoop`) is replaced while the owner it names
+thrown saber hums its owner's skin too: over the flying saber entity's `loopSound` (the
+stock hum or the hilt's `soundLoop`), while the owner it names
 (`genericenemyindex`) wears one. A skin's sounds are the game paths its file names, read from its pack below all game
 data (`VirtualFileSystem::with_lower`), so a PK3 with the same paths replaces them. They
 are registered when the gamestate's tables are built and again, at once, when a pack

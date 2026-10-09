@@ -167,8 +167,11 @@ and plays those sounds with cgame's quirks, and `EV_SABER_UNHOLSTER` plays the
 player's own hilts instead of the stock `saberon`
 ([client.md](client.md#saber-ignition-and-retraction-sounds)). Merged with the
 blade skins (`ba17416`): a client wearing one hears its skin's single ignition or
-switching-off sound on these switches and on `EV_SABER_UNHOLSTER`, in place of
-both hilts; without one, each hilt's `soundOn`/`soundOff`, then their defaults.
+switching-off sound on these switches and on `EV_SABER_UNHOLSTER`; each hilt's
+`soundOn`/`soundOff`, then their defaults, play for every client. Since 09/10/2026
+(`personal/saber-skin-layers`) a skin's sounds (ignition, switching off, swings, hum,
+a thrown saber's hum) play over the stock ones instead of replacing them: the skin's
+sound is added on a channel of its own, so the stock sound is not cut.
 
 Verified on Linux: unit tests pin the hilt sounds (`notInMP`, a removed second
 saber, one dropped beside a two-handed staff), the local switch from fists or a gun

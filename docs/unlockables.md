@@ -282,13 +282,13 @@ from the looks.
   state's: following (spectating) someone, the state is theirs (`PMF_FOLLOW`), and they
   keep their own hub look, blades, thrown saber and sounds alike (`looks::ViewSlots`).
 - Sounds, per player wearing it: ignition and switching off, the hum loop and three
-  swings replace the stock ones, at the paths the file names in its pack. The viewer
+  swings play over the stock ones, which keep playing below (each on a channel of its
+  own, so the skin's does not cut them), at the paths the file names in its pack. The viewer
   passes the table to the audio adapter every frame
   (`LegacySoundAdapter::set_saber_sound_overrides`, [client.md](client.md#blade-skins)),
   so other players' sounds follow their looks too; a pack arriving mid-session has its
-  sounds registered at once. A thrown saber hums the skin's hum as well: the saber
-  entity's own `loopSound` is replaced while its owner (`genericenemyindex`) wears a
-  skin.
+  sounds registered at once. A thrown saber hums the skin's hum as well: over the saber
+  entity's own `loopSound`, while its owner (`genericenemyindex`) wears a skin.
 - Verified: unit tests against a made-up test skin (material slots, the uniform's
   layout and values, colours and flicker, the table following the looks, the gated own
   skin and the loaded skins, loading from a pack with images and sounds, a runtime

@@ -183,9 +183,10 @@ fn without_a_set_every_saber_sound_is_stock() {
 }
 
 #[test]
-fn only_the_wearer_ignites_and_swings_with_the_set() {
+fn only_the_wearer_ignites_and_swings_with_the_set_over_the_stock_sounds() {
     let mut adapter = adapter();
     wear(&mut adapter, SKINNED);
+    let stock_on = "sound/weapons/saber/saberon.wav".to_owned();
     let sounds = played(
         &mut adapter,
         vec![
@@ -193,14 +194,19 @@ fn only_the_wearer_ignites_and_swings_with_the_set() {
             with_event(player_entity(STOCK, AT_STOCK), 33, 0),
         ],
     );
+    // The wearer's stock ignition stays, the set's on top of it.
     assert_eq!(
         sounds,
         [
+            (SKINNED, stock_on.clone()),
             (SKINNED, SET.on.to_owned()),
-            (STOCK, "sound/weapons/saber/saberon.wav".to_owned()),
+            (STOCK, stock_on),
         ]
     );
-    // Swings: every parameter picks one of the set's three, for the wearer only.
+    let decisions = adapter.decisions();
+    assert!(!decisions[0].additional && decisions[1].additional && !decisions[2].additional);
+    // Swings: every parameter adds one of the set's three over the stock swing, for the
+    // wearer only.
     let mut heard = std::collections::BTreeSet::new();
     for round in 0..24_u16 {
         // The event's two sequence bits tell each round's event from the last.
@@ -212,9 +218,14 @@ fn only_the_wearer_ignites_and_swings_with_the_set() {
                 with_event(player_entity(STOCK, AT_STOCK), event, round as u8),
             ],
         );
-        assert!(SET.swings.contains(&sounds[0].1.as_str()), "{sounds:?}");
-        assert!(sounds[1].1.starts_with("sound/weapons/saber/saberhup"));
-        heard.insert(sounds[0].1.clone());
+        assert_eq!(sounds.len(), 3, "{sounds:?}");
+        assert!(sounds[0].1.starts_with("sound/weapons/saber/saberhup"));
+        assert!(SET.swings.contains(&sounds[1].1.as_str()), "{sounds:?}");
+        assert!(sounds[2].1.starts_with("sound/weapons/saber/saberhup"));
+        // The set's swing is on a channel of its own, so the stock swing is not cut.
+        let decisions = adapter.decisions();
+        assert_ne!(decisions[0].request.channel, decisions[1].request.channel);
+        heard.insert(sounds[1].1.clone());
     }
     assert_eq!(heard.len(), 3);
 }
@@ -240,11 +251,15 @@ fn a_general_saber_toggle_follows_the_nearest_player() {
         ],
     );
     let paths: Vec<&str> = sounds.iter().map(|(_, path)| path.as_str()).collect();
+    // The wearer's toggles keep the stock sound and add the set's after it.
     assert_eq!(
         paths,
         [
+            "sound/weapons/saber/saberon.wav",
             SET.on,
+            "sound/weapons/saber/saberoff.wav",
             SET.off,
+            "sound/custom/ignite.wav",
             SET.on,
             "sound/weapons/explosion.wav",
             "sound/weapons/saber/saberon.wav",
@@ -261,11 +276,12 @@ fn the_local_player_is_found_by_its_own_origin() {
         &mut adapter,
         vec![general_sound(100, 2, [-490.0, 0.0, 0.0])],
     );
-    assert_eq!(sounds[0].1, SET.off);
+    assert_eq!(sounds.last().unwrap().1, SET.off);
+    assert_eq!(sounds.len(), 2);
 }
 
 #[test]
-fn the_wearer_hums_with_the_set() {
+fn the_wearer_hums_with_the_set_over_the_stock_hum() {
     let mut adapter = adapter();
     let hums = |adapter: &mut LegacySoundAdapter| {
         let snapshot = snapshot(vec![
@@ -276,7 +292,12 @@ fn the_wearer_hums_with_the_set() {
         adapter
             .loop_decisions()
             .iter()
-            .filter(|decision| decision.kind == LegacyLoopKind::SaberHumPrimary)
+            .filter(|decision| {
+                matches!(
+                    decision.kind,
+                    LegacyLoopKind::SaberHumPrimary | LegacyLoopKind::SaberHumSkin
+                )
+            })
             .map(|decision| {
                 (
                     decision.request.source.0 as u16,
@@ -301,7 +322,11 @@ fn the_wearer_hums_with_the_set() {
     );
     assert_eq!(
         hums(&mut adapter),
-        [(SKINNED, SET.hum.to_owned()), (STOCK, stock.clone())]
+        [
+            (SKINNED, stock.clone()),
+            (SKINNED, SET.hum.to_owned()),
+            (STOCK, stock.clone())
+        ]
     );
     adapter.set_saber_sound_overrides(&[None; SABER_SOUND_CLIENTS]);
     assert_eq!(
@@ -321,7 +346,7 @@ fn thrown_saber(number: u16, owner: u16) -> EntityState {
 }
 
 #[test]
-fn a_thrown_saber_hums_with_its_owners_set() {
+fn a_thrown_saber_hums_with_its_owners_set_over_its_own() {
     let mut game = game_state();
     game.replace_config_string(CS_SOUNDS + 5, b"sound/weapons/saber/saberhum1.wav".to_vec())
         .unwrap();
@@ -359,7 +384,11 @@ fn a_thrown_saber_hums_with_its_owners_set() {
     wear(&mut adapter, SKINNED);
     assert_eq!(
         flying(&mut adapter),
-        [(200, SET.hum.to_owned()), (201, stock)]
+        [
+            (200, stock.clone()),
+            (200, SET.hum.to_owned()),
+            (201, stock)
+        ]
     );
 }
 
@@ -390,7 +419,13 @@ fn a_set_registered_mid_session_is_worn_once_the_clients_are_given_again() {
         &mut adapter,
         vec![with_event(player_entity(SKINNED, AT_SKINNED), 33, 0)],
     );
-    assert_eq!(sounds, [(SKINNED, SET.on.to_owned())]);
+    assert_eq!(
+        sounds,
+        [
+            (SKINNED, "sound/weapons/saber/saberon.wav".to_owned()),
+            (SKINNED, SET.on.to_owned())
+        ]
+    );
 }
 
 #[test]

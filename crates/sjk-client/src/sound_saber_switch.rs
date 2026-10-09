@@ -26,11 +26,11 @@
 //! `enemy_saber_on` for a single saber, as the server's toggle does
 //! (`g_cmds.c` `Cmd_ToggleSaber_f`); retraction checks the second hilt's model.
 //!
-//! A blade skin (an SJK unlockable, [`super::saber_overrides`]) comes first: a client
-//! wearing one ignites and retracts with its set's single `on` or `off`, once per
-//! switch, in place of both hilts' sounds, as its `EV_SABER_UNHOLSTER` already does.
-//! Without one, each hilt's `soundOn`/`soundOff` plays, or the
-//! `WP_SaberSetDefaults` sound where its definition authors none. A client whose
+//! Each hilt's `soundOn`/`soundOff` plays, or the `WP_SaberSetDefaults` sound where
+//! its definition authors none. A blade skin (an SJK unlockable,
+//! [`super::saber_overrides`]) plays over them: a client wearing one also ignites and
+//! retracts with its set's single `on` or `off`, once per switch, as its
+//! `EV_SABER_UNHOLSTER` does. A client whose
 //! clientinfo names no hilt (no real server sends one) keeps the stock `saberon`.
 
 use super::*;
@@ -492,21 +492,19 @@ impl LegacySoundAdapter {
         self.decisions.len()
     }
 
-    /// What `client` plays for `switch`: its blade skin's one sound when it wears
-    /// one, else each hand's own (`soundOn`/`soundOff` or their defaults).
-    fn switch_sounds(&self, client: u16, switch: Switch) -> [Option<u16>; 2] {
+    /// What `client` plays for `switch`: each hand's own (`soundOn`/`soundOff` or their
+    /// defaults), then its blade skin's one sound on top when it wears one.
+    fn switch_sounds(&self, client: u16, switch: Switch) -> [Option<u16>; 3] {
         let skin = match switch {
             Switch::On => self.saber_overrides.on(client),
             Switch::Off => self.saber_overrides.off(client),
         };
-        skin.map_or_else(
-            || self.saber_switch.hands(client).sounds(switch),
-            |sound| [Some(sound), None],
-        )
+        let [first, second] = self.saber_switch.hands(client).sounds(switch);
+        [first, second, skin]
     }
 
     /// `EV_SABER_UNHOLSTER` from a client: each hand's `soundOn`
-    /// (`cg_event.c:2381-2407`), or the blade skin's ignition.
+    /// (`cg_event.c:2381-2407`), and the blade skin's ignition over them.
     pub(super) fn emit_unholster(&mut self, client: u16, origin: [f32; 3], snapshot: &Snapshot) {
         let sounds = self.switch_sounds(client, Switch::On);
         self.emit_hands(
@@ -522,7 +520,7 @@ impl LegacySoundAdapter {
     fn emit_hands(
         &mut self,
         event: LegacySoundEvent,
-        sounds: [Option<u16>; 2],
+        sounds: [Option<u16>; 3],
         client: u16,
         origin: [f32; 3],
         snapshot: &Snapshot,
