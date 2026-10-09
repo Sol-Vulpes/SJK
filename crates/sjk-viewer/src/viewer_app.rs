@@ -182,6 +182,7 @@ impl ApplicationHandler for ViewerApplication {
                     audio.sync_gains(gpu.console.as_ref());
                 }
                 gpu.pointer_focus(focused);
+                gpu.display_focus_changed(focused);
             }
             WindowEvent::Occluded(_) => {
                 if let Some(console) = &mut gpu.console {

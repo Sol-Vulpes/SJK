@@ -453,6 +453,11 @@ struct GpuState {
     ground_hud: ground_hud::GroundHud,
     /// Display mode last applied to the window; `None` forces a reapply.
     applied_display: Option<settings::DisplayMode>,
+    /// Exclusive fullscreen is paused while the window lacks focus, so Alt+Tab
+    /// and Win+D reach the desktop (`runtime_settings.rs`).
+    display_suspended: bool,
+    /// When the window's display mode last changed.
+    display_changed_at: Instant,
     /// The world is not drawn this frame: the classic menu style covers the
     /// screen with retail's opaque menu or loading screen.
     world_hidden: bool,
@@ -1304,6 +1309,8 @@ impl GpuState {
             menu_hud,
             ground_hud,
             applied_display: Some(settings::DisplayMode::Windowed),
+            display_suspended: false,
+            display_changed_at: Instant::now(),
             world_hidden: false,
             applied_resolution: [size.width, size.height],
             refresh_cap: std::cell::Cell::new(None),

@@ -2455,6 +2455,19 @@ mode. Stock JA's fullscreen is always the exclusive kind. Choosing Windowed leav
 returns to the last fullscreen kind. Exclusive fullscreen without a monitor mode
 of that size falls back to borderless.
 
+Exclusive fullscreen is paused while the window lacks focus: winit makes an
+exclusive window topmost and keeps the monitor's video mode, which left the game
+over the desktop after Alt+Tab or Win+D. On focus loss the window goes windowed
+(restoring the desktop mode and the window's earlier placement) and `r_resolution`
+is not re-requested; on focus gain, such as restoring from the taskbar, it enters
+the exclusive mode again. A loss within 0.75 s of a display change is ignored so
+a focus flicker caused by the switch cannot loop. Borderless and windowed are
+unaffected. The logic is in `apply_display` and `display_focus_changed`
+([runtime_settings.rs](../crates/sjk-viewer/src/runtime_settings.rs)) and
+`suspended_after_focus` ([display.rs](../crates/sjk-viewer/src/settings/display.rs));
+the unit tests cover the decision, not Windows' behaviour, which is unverified
+in the real client (a player reported Alt+Tab and Win+D failing in exclusive mode).
+
 Enter or a click on the Resolution row opens a list of the monitor's video-mode
 sizes, grouped by aspect ratio with the monitor's own first and the size in use
 highlighted. Windowed and borderless also list the classic presets that fit the

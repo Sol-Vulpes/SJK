@@ -419,6 +419,8 @@ impl GpuState {
         );
         to.cursor_position = self.cursor_position;
         to.applied_display = self.applied_display;
+        to.display_suspended = self.display_suspended;
+        to.display_changed_at = self.display_changed_at;
         to.applied_resolution = self.applied_resolution;
         // Preserve a remote connection's command floor across world installs.
         // A local authority has an independent timeline that must never stamp

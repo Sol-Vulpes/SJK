@@ -3,7 +3,9 @@
 use super::console::ViewerConsole;
 use super::pointer_input::MouseLook;
 use super::{DepthTarget, GpuState};
-use crate::settings::{DisplayMode, MonitorModes, exclusive_supported, exclusive_video_mode};
+use crate::settings::{
+    DisplayMode, MonitorModes, exclusive_supported, exclusive_video_mode, suspended_after_focus,
+};
 use std::time::{Duration, Instant};
 use winit::dpi::PhysicalSize;
 use winit::window::Fullscreen;
@@ -77,36 +79,8 @@ impl GpuState {
         {
             menu.set_monitor_modes(MonitorModes::query(window), console);
         }
-        let display = DisplayMode::requested(console);
         let vsync = console.bool_cvar("r_vsync").unwrap_or(false);
-        let resolution = console
-            .text_value("r_resolution")
-            .and_then(parse_resolution);
-        let exclusive = display == DisplayMode::Exclusive;
-        // An exclusive video mode is the resolution, so a new size re-enters it.
-        let resized = exclusive && resolution.is_some_and(|size| size != self.applied_resolution);
-        if Some(display) != self.applied_display || resized {
-            window.set_fullscreen(fullscreen_for(window, display, resolution));
-            // Leaving fullscreen restores the old window size; ask for
-            // r_resolution again in case it changed meanwhile.
-            if display == DisplayMode::Windowed
-                && self
-                    .applied_display
-                    .is_some_and(|applied| applied != DisplayMode::Windowed)
-            {
-                self.applied_resolution = [0; 2];
-            }
-            self.applied_display = Some(display);
-            if let Some(size) = resolution.filter(|_| exclusive) {
-                self.applied_resolution = size;
-            }
-        }
-        if let Some([width, height]) = resolution
-            && [width, height] != self.applied_resolution
-        {
-            let _ = window.request_inner_size(PhysicalSize::new(width, height));
-            self.applied_resolution = [width, height];
-        }
+        self.apply_display();
         let present_mode = preferred_present_mode(&self.present_modes, vsync);
         if present_mode != self.configuration.present_mode {
             self.configuration.present_mode = present_mode;
@@ -120,6 +94,75 @@ impl GpuState {
                 self.configuration.width,
                 self.configuration.height,
             );
+        }
+    }
+
+    /// Apply the requested display mode and `r_resolution` to the window.
+    ///
+    /// While exclusive fullscreen is suspended (the window lost focus) the
+    /// window is windowed and `r_resolution` is left alone, so the exclusive
+    /// size is entered again unchanged when focus returns.
+    fn apply_display(&mut self) {
+        let (Some(console), Some(window)) = (&self.console, &self.window) else {
+            return;
+        };
+        let requested = DisplayMode::requested(console);
+        let display = requested.while_suspended(self.display_suspended);
+        let suspended = display != requested;
+        let resolution = console
+            .text_value("r_resolution")
+            .and_then(parse_resolution);
+        let exclusive = display == DisplayMode::Exclusive;
+        // An exclusive video mode is the resolution, so a new size re-enters it.
+        let resized = exclusive && resolution.is_some_and(|size| size != self.applied_resolution);
+        if Some(display) != self.applied_display || resized {
+            window.set_fullscreen(fullscreen_for(window, display, resolution));
+            self.display_changed_at = Instant::now();
+            // Leaving fullscreen restores the old window size; ask for
+            // r_resolution again in case it changed meanwhile.
+            if display == DisplayMode::Windowed
+                && !suspended
+                && self
+                    .applied_display
+                    .is_some_and(|applied| applied != DisplayMode::Windowed)
+            {
+                self.applied_resolution = [0; 2];
+            }
+            self.applied_display = Some(display);
+            if let Some(size) = resolution.filter(|_| exclusive) {
+                self.applied_resolution = size;
+            }
+        }
+        if let Some([width, height]) = resolution
+            && !suspended
+            && [width, height] != self.applied_resolution
+        {
+            let _ = window.request_inner_size(PhysicalSize::new(width, height));
+            self.applied_resolution = [width, height];
+        }
+    }
+
+    /// The window gained or lost focus: pause exclusive fullscreen while it is
+    /// away and enter it again on return.
+    ///
+    /// An exclusive window is topmost and holds the monitor's video mode, and
+    /// winit does nothing about that on focus loss, so Alt+Tab and Win+D left
+    /// the game over the desktop. Applied here, not on the next frame: a
+    /// minimised window draws none.
+    pub(crate) fn display_focus_changed(&mut self, focused: bool) {
+        let exclusive_active = self
+            .window
+            .as_ref()
+            .is_some_and(|window| matches!(window.fullscreen(), Some(Fullscreen::Exclusive(_))));
+        let suspended = suspended_after_focus(
+            self.display_suspended,
+            exclusive_active,
+            self.display_changed_at.elapsed(),
+            focused,
+        );
+        if suspended != self.display_suspended {
+            self.display_suspended = suspended;
+            self.apply_display();
         }
     }
 

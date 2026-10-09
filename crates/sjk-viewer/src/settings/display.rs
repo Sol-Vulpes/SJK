@@ -9,6 +9,7 @@
 //! not change the monitor's mode and switches away instantly.
 
 use crate::console::ViewerConsole;
+use std::time::Duration;
 use winit::window::Window;
 
 /// Cvar choosing the kind of fullscreen `r_fullscreen 1` gives.
@@ -56,6 +57,18 @@ impl DisplayMode {
         }
     }
 
+    /// The mode to apply while the window is `suspended` (see
+    /// [`suspended_after_focus`]): exclusive fullscreen becomes windowed, which
+    /// restores the desktop's video mode and drops the topmost window level
+    /// winit gives an exclusive window; the other modes are unaffected.
+    pub(crate) fn while_suspended(self, suspended: bool) -> Self {
+        if suspended && self == Self::Exclusive {
+            Self::Windowed
+        } else {
+            self
+        }
+    }
+
     /// The name the settings screen shows.
     pub(crate) fn label(self) -> &'static str {
         match self {
@@ -93,6 +106,29 @@ impl DisplayMode {
                 console.set_cvar("r_fullscreen", "1");
             }
         }
+    }
+}
+
+/// How soon after entering a display mode a focus loss is taken for a side
+/// effect of the switch itself, not the player leaving (Alt+Tab, Win+D).
+pub(crate) const FOCUS_LOSS_GRACE: Duration = Duration::from_millis(750);
+
+/// Whether exclusive fullscreen is suspended after a focus change. An exclusive
+/// window is topmost and owns the video mode, so it would stay over the desktop
+/// after Alt+Tab or Win+D: losing focus suspends it, and gaining focus (the
+/// window restored from the taskbar) resumes it. A loss within
+/// [`FOCUS_LOSS_GRACE`] of the last display change is ignored, so a focus
+/// flicker caused by the switch cannot loop suspend and resume.
+pub(crate) fn suspended_after_focus(
+    suspended: bool,
+    exclusive_active: bool,
+    since_display_change: Duration,
+    focused: bool,
+) -> bool {
+    if focused {
+        false
+    } else {
+        suspended || (exclusive_active && since_display_change >= FOCUS_LOSS_GRACE)
     }
 }
 
@@ -182,6 +218,46 @@ mod tests {
             DisplayMode::Windowed.effective(false),
             DisplayMode::Windowed
         );
+    }
+
+    #[test]
+    fn suspended_exclusive_is_windowed() {
+        use DisplayMode::*;
+        assert_eq!(Exclusive.while_suspended(true), Windowed);
+        assert_eq!(Exclusive.while_suspended(false), Exclusive);
+        assert_eq!(Borderless.while_suspended(true), Borderless);
+        assert_eq!(Windowed.while_suspended(true), Windowed);
+    }
+
+    #[test]
+    fn focus_loss_suspends_exclusive_and_gain_resumes() {
+        let settled = FOCUS_LOSS_GRACE;
+        assert!(suspended_after_focus(false, true, settled, false));
+        assert!(!suspended_after_focus(true, false, Duration::ZERO, true));
+        assert!(!suspended_after_focus(false, true, settled, true));
+    }
+
+    #[test]
+    fn focus_loss_leaves_other_modes_alone() {
+        // Borderless, windowed and the exclusive request that fell back to
+        // borderless are not exclusive on the window.
+        assert!(!suspended_after_focus(
+            false,
+            false,
+            FOCUS_LOSS_GRACE,
+            false
+        ));
+    }
+
+    #[test]
+    fn focus_loss_right_after_a_switch_is_ignored() {
+        let early = FOCUS_LOSS_GRACE - Duration::from_millis(1);
+        assert!(!suspended_after_focus(false, true, early, false));
+    }
+
+    #[test]
+    fn repeated_focus_loss_stays_suspended() {
+        assert!(suspended_after_focus(true, false, Duration::ZERO, false));
     }
 
     #[test]
