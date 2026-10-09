@@ -11,8 +11,9 @@ fixes. A profile saved with the old default `classic` moves to `sjk` once
 
 Status (08/10/2026): the main page, Settings (with the key bindings),
 Character, What's new, Update, Identity, Credits, Servers (the server browser),
-the loading screen, the scoreboard, the in-game menu, Camera control, the
-report and note dialog (Report a bug) and the new medal pop-up are done. Every other
+the loading screen, the scoreboard, the in-game menu (reworked 09/10/2026), the
+Profile screen, Camera control, the report and note dialog (Report a bug) and the
+new medal pop-up are done. Every other
 screen opens in its classic+ version, which
 covers the map as the classic style does.
 The other style: First setup's Menu style row, Settings > Interface > Menu style, or
@@ -152,12 +153,12 @@ one (4:3, 5:4) scales the frame down to its width.
 - **Arc:** the page's entries on an arc of radius 440 round the ring's right
   side, 16 degrees apart; the chosen one gold and larger, with a line saying
   what it opens. The pages:
-  - Main: Play, Character (the player screen), Settings (the settings screen),
-    SJK, Quit.
+  - Main: Play, Character (the [Profile screen](#profile-screen) on its Character
+    tab), Settings (the settings screen), SJK, Quit.
   - Play: Join a server (the browser), Create a game, Back.
-  - SJK: What's new (the changelog), Update, Credits, Profile, Back. The arc
-    holds five entries (a sixth curls back into the ring), so Identity opens
-    from the Profile page.
+  - SJK: What's new (the changelog), Update, Credits, Profile (the Profile screen
+    on its Profile tab), Back. The arc holds five entries (a sixth curls back into
+    the ring), so Identity is the Profile screen's third tab.
   - Quit: Quit to desktop (ember when chosen), Stay. It opens on Stay.
   A page's name stands small over its first entry.
 - **Recent servers:** a column on the right (its rule at x 1470) of the servers
@@ -187,8 +188,8 @@ one (4:3, 5:4) scales the frame down to its width.
 Keys: Up and Down move along the arc; Enter takes the entry; Right (or Tab)
 moves to the servers, Up and Down choose one, Enter joins it, Left or Escape
 returns to the arc. Left from the arc chooses the profile card (the gold arc turns
-to it), Enter opens the Profile page, and Right, Up, Tab or Escape return to the
-arc. Escape on a page returns to the main page, on the entry that
+to it), Enter opens the Profile screen on its Profile tab, and Right, Up, Tab or
+Escape return to the arc. Escape on a page returns to the main page, on the entry that
 opened it; on the main page it opens Quit's page. The pointer chooses by
 hovering and acts with a click. A server with a password opens the browser's
 password prompt.
@@ -214,14 +215,16 @@ open it). Bottom left on the 16:9 frame, from (84, 932), 474 by 96:
   chosen, "Open your profile, medals and achievements" in gold instead.
 
 The pointer chooses it by hovering (a dark band with a gold edge round it) and a click
-opens the Profile page. What it says is gathered twice a second from the settings,
+opens the Profile screen on its Profile tab. What it says is gathered twice a second from the settings,
 the identity service and the achievement counts (`profile_card::refresh`); a frame
 reads it in place. The same card stands bottom left in the in-game menu.
 
 ## Character
 
 [player_menu/sjk_view.rs](../crates/sjk-viewer/src/player_menu/sjk_view.rs): the
-player screen, opened by the main page's Character. The model stands on duel6's
+player screen, the [Profile screen](#profile-screen)'s Character tab (the screen's
+tabs at its top right), opened by the main page's Character and the in-game menu's
+Profile. The model stands on duel6's
 stage in the map's own light, holding the saber draft lit, and every change
 shows on it at once (`menu_stage`). The screen is laid out
 on the 16:9 frame, dark behind the form on the left and clear over the model.
@@ -300,7 +303,7 @@ the rows, tiles, tabs and back key answer to the screen's tokens, each row
 registering its control before the whole row so the token's rectangle is the
 control's.
 
-Opened from a game (the in-game menu's Character), where the menu map's stage
+Opened from a game (the in-game menu's Profile), where the menu map's stage
 is not, the same screen shows with "Game menu" as its way back, over the match
 dimmed by half, and the model stands right of the form in a live preview of its
 own (`menu_stage::preview`, the classic pages' preview, asked for by
@@ -314,7 +317,9 @@ opened from a game.
 ## SJK's pages
 
 What's new, Update, Identity, Profile and Credits, which the main page's SJK page opens
-(and their console commands), and the Staff, Unlockables and SJK chat pages have the
+(and their console commands; Identity and Profile as the [Profile
+screen](#profile-screen)'s tabs, Credits and What's new also from the in-game menu's
+row of icons), and the Staff, Unlockables and SJK chat pages have the
 SJK UI's look in this style (Profile, Staff, Unlockables and SJK chat in every style): drawn in its
 families over the map darkened as Settings is (Update as a pop-up card, as First
 setup), each with the way back (Esc, "Back") and its name at the top and its
@@ -348,7 +353,10 @@ overlay routes their text to the UI's families (`console_sjk_pages.rs`).
 - **Profile** ([profile_panel_view.rs](../crates/sjk-viewer/src/profile_panel_view.rs),
   08/10/2026, Sol's request: a real profile with the medals and an editable bio, and
   an achievements board): drawn in this look in every menu style. The top bar has
-  Profile and Achievements as segments at its right. Profile: three columns, who
+  Profile and Achievements as segments at its right when the page is on its own (the
+  `profile` and `achievements` commands); as the Profile screen's Profile tab the
+  screen's tabs stand there instead, and the in-game menu's Achievements shows the
+  board alone, without either (`profile_panel::Mode`). Profile: three columns, who
   the player is (their picture, a disc 104 across with "Add a picture" or "Change
   picture" under it, beside the hub name in its colours at 38, verified, member since,
   key id, other names; then Identity settings) over "Your record" (eight numbers in two
@@ -841,23 +849,30 @@ name, the header's right side).
 
 ## In-game menu
 
-[sjk_view.rs](../crates/sjk-viewer/src/ingame_menu/sjk_view.rs) draws it and
-[sjk_actions.rs](../crates/sjk-viewer/src/ingame_menu/sjk_actions.rs) holds what
-its entries do. Escape in a match opens it; the match keeps drawing, under a
-dark fade from the left edge (deep there, clear by the middle), on the main
-page's 16:9 frame.
+[sjk_view.rs](../crates/sjk-viewer/src/ingame_menu/sjk_view.rs) draws it,
+[sjk_dock.rs](../crates/sjk-viewer/src/ingame_menu/sjk_dock.rs) its row of icons and
+the match card's controls, [sjk_focus.rs](../crates/sjk-viewer/src/ingame_menu/sjk_focus.rs)
+holds what the row and the card offer and how the keys move between them, and
+[sjk_actions.rs](../crates/sjk-viewer/src/ingame_menu/sjk_actions.rs) what they do.
+Escape in a match opens it; the match keeps drawing, under a dark fade from the left
+edge (deep there, clear by the middle), on the main page's 16:9 frame. Sol asked for
+fewer buttons on 09/10/2026: the list has seven entries, Team and Vote moved onto the
+match card, and Camera control and SJK's pages into a row of small icons (the SJK page
+is gone).
 
 - **Arc:** a compact version of the main page's: the page's entries on an arc
   whose centre lies off the frame's left edge (radius 580, the middle entry at x
   440), 68 apart (50 for eleven or twelve, 36 for more, smaller type), the
-  chosen one gold and larger with a line under it saying what it opens; a page's
-  name stands small over its first entry. Beside them a lit holo rail with a
-  gold mark that eases to the chosen entry, and inside the curve SJK's emblem
+  chosen one gold and larger with a line under it saying what it opens (while the
+  list has the keyboard; white and without its line while the row or the card has
+  it); a page's name stands small over its first entry. Beside them a lit holo rail
+  with a gold mark that eases to the chosen entry, and inside the curve SJK's emblem
   in its turning ring. Leaving entries are ember when chosen; Back and Stay are
   quiet, as is the main page's Leave.
 - **Pages:**
-  - Main: Resume, Team, Players, Vote, Character, Settings, Servers, Camera
-    control, SJK, Leave.
+  - Main: Resume, Profile (the [Profile screen](#profile-screen), on the tab shown
+    last, Character the first time), Achievements (the achievements board alone),
+    Players, Settings, Servers, Leave.
   - Players: a small scoreboard in place of the arc ([identity.md](identity.md#player-reports)):
     the title and how many are on the server (or why the player cannot report, in
     ember), then a table from x 340 to 1330 under a darker fade: a team's colour
@@ -873,55 +888,131 @@ page's 16:9 frame.
     reasons are dimmed and passed over, and Back's line says why. A reason opens
     the report card ([Report a bug](#report-a-bug-and-its-dialogs)); Escape
     returns to the player's row.
-  - Team: Join the game and Spectate, or in a team game Auto-join, Red team,
-    Blue team (each with its colour and players) and Spectate; the side the
-    player is on is quiet ("Your team", "You are watching") and passed over by
-    the keys. In Siege, Team opens the class list (the shared rows, a row's
-    detail after its label).
-  - Vote: Vote yes and Vote no (the vote on, with its counts, under them;
-    passed over while none is on), Call a vote; without a vote on, Vote opens
-    Call a vote directly, whose lists (map, game type, kick, warmup, limits)
-    are the shared call-vote lists. Voting or calling a vote returns to the
-    match, as retail's pop-ups do.
-  - SJK: What's new, Credits, Profile, Identity, Report a bug, Report a player, SJK chat
-    (the Players page).
-  - Leave: Leave the server, Quit to desktop (ember when chosen), Stay. It opens on Stay, since its rows act at once.
+  - Team (the J key's, `teammenu`): Join the game and Spectate, or in a team game
+    Auto-join, Red team, Blue team (each with its colour and players) and Spectate;
+    the side the player is on is quiet ("Your team", "You are watching") and passed
+    over by the keys. In Siege the card's Class and side opens the class list (the
+    shared rows, a row's detail after its label).
+  - Call a vote (the card's link): its lists (map, game type, kick, warmup, limits)
+    are the shared call-vote lists. Calling a vote returns to the match, as
+    retail's pop-ups do.
+  - Leave: Leave the server, Quit to desktop (ember when chosen), Stay. It opens on
+    Stay, since its rows act at once.
+- **Row of icons:** under the emblem, from (96, 852), icons 54 across and 66 apart:
+  Camera control (the settings `camera` icon; F8 opens it too), What's new (the
+  wheel's `whats_new`), Credits (`credits`), Report a bug (`other_controls`, the
+  tools), SJK chat (`text`, the quill) and, only for a staff key (the hub's `staff`
+  flag, `profile_card::Summary::staff`), Staff tools (`identity`), dimmer than the
+  others. Each is drawn at 78 % (Staff at 50 %) and, hovered or focused, whole with
+  a gold ring (bright gold when focused); the one hovered or focused is named over
+  the row in gold (Rajdhani 24) with its key cap (F8 for Camera control) and what it
+  opens. Only on the main page. What's new, Credits, SJK chat and Staff tools open
+  their console pages over the menu, which shows again when they close; Report a
+  bug opens the report card; Camera control its panel.
 - **Profile card:** the main page's [profile card](#profile-card), bottom left at
-  the same place, on every page whose arc leaves it room (every page of up to twelve
-  entries; not Players and Report a player, whose table and player card take the
-  screen). Hovering lights it, a click opens the Profile page over the menu; the
-  keys reach the Profile page through SJK > Profile. The Players page's player card
-  shows the chosen player's picture (or their initial) before their name when the
-  hub knows them.
+  the same place, under the row of icons, on every page whose arc leaves it room
+  (every page of up to twelve entries; not Players and Report a player, whose table
+  and player card take the screen). Hovering lights it, a click opens the Profile
+  screen on its Profile tab. The Players page's player card shows the chosen
+  player's picture (or their initial) before their name when the hub knows them.
 - **Match card:** on the right (x 1360, 464 wide) over its own fade: the
   server's name with its colours and its address, a rule, the map without
   `mp/`, its mode and limits in words ("FFA, 30 frags, 20 minutes"), then the
   numbers: the player's score and place ("3rd", "of 14"; "Tied" when tied) or,
   in a team game, both teams' scores (the player's marked "Your team") and the
   player's score, and the clock (time left of the time limit, or played); under
-  a rule how many play, watch and fit, and "You are spectating" for a
-  spectator. It reads the live session each frame and the server's info once
-  a second; without a server (a map explored alone) it hides.
-- **Keys:** bottom centre: Up Down choose, Enter open (report on Players, write
-  on Report a player), Esc resume (back on a page).
+  a rule how many play, watch and fit. It reads the live session each frame and
+  the server's info once a second; without a server (a map explored alone) it
+  hides, with its controls. On the main page it carries the controls:
+  - **The vote on**, over the card from y 166: "A vote is on" in gold with the count
+    ("4 yes, 1 no") at the right, the question (Rajdhani 30, two lines at most), and
+    Yes and No as gold kit buttons (140 by 40). Voting returns to the match, as
+    retail's pop-up does.
+  - **Your side**, from y 700 under the numbers: "Your side" and the side (Red team
+    or Blue team in its colour, Playing, or Watching), then the kit's buttons, three
+    to the card's width: Join red and Join blue (a mark of the side's colour on each)
+    and Spectate in a team game, Join and Spectate otherwise, Class and side (200
+    wide, Siege's class list) and Spectate in Siege. The side the player is on is
+    dimmed and passed over. A side sends `team red`, `team blue`, `team free` or
+    `team s` and returns to the match, as the Team page does.
+  - **Call a vote**, quiet at the card's foot while no vote is on (muted Rajdhani 21,
+    gold and underlined when hovered or focused, with "Map, mode, kick, limits"
+    after it), opening the call-vote page.
+- **Keys:** bottom centre, what has the keyboard: the list's (Up Down choose, Tab
+  icons and match, Enter open, Esc resume), the row's (Left Right choose, Tab match,
+  Enter open, Esc list), the card's (Arrows choose, Tab list, Enter vote, join,
+  spectate or open, Esc list), and a page's (Up Down choose, Enter open, report on
+  Players, write on Report a player, Esc back).
 
-Escape on a page returns to the main page on the entry that opened it (a
-call-vote list to its row of Call a vote); on the main page it resumes. The
-pointer chooses by hovering and acts with a click. Character, Settings and
-Servers hand over to their screens over the match and come back on their
-entry: Settings, Servers and Character are the SJK UI's, Settings opened on the
-category last shown, all with "Game menu" as their way back (Character's model
-in a live preview, as there is no stage in a match: see Character). Camera
-control opens its panel in the SJK UI's look ([Camera control](#camera-control)).
-Server info and Controls have no entries:
-the card shows the server and Settings holds the key bindings. The Report a bug
-button the other looks put at the bottom is left out; SJK's page has it.
+Keyboard first: on the main page Up and Down move along the list (passing over
+nothing: every entry can be taken); Right from the list enters the card on its first
+control; Tab moves the keyboard from the list to the row of icons (its first), from
+there to the card (its first control that can be taken) and back to the list,
+Shift+Tab the other way, a part with nothing to offer skipped. In the row Left and
+Right move between the icons, Up returns to the list. On the card Left and Right move
+along a line of controls (the vote's Yes and No, the side's buttons; Left from a
+line's first returns to the list), Up and Down between its lines, nearest the
+control's place. Enter acts on what has the keyboard; Escape returns to the list from
+the row or the card, and from the list resumes the match. A control that goes away (a
+vote ends, Staff tools for a key no longer staff) gives the keyboard to the card's
+first control, or the list. Escape on a page returns to the main page on the entry
+that opened it, or on the card control that did (the side's buttons from Team and
+Siege, Call a vote from the call-vote page; a list returns to its row of Call a
+vote). The pointer: hovering an entry, an icon or a control gives it the keyboard, a
+click acts. Settings and Servers hand over to their screens over the match and come
+back on their entry, Settings opened on the category last shown, both with "Game
+menu" as their way back; Profile hands over to the Profile screen, which comes back
+on Profile. Server info and Controls have no entries: the card shows the server and
+Settings holds the key bindings. The Report a bug button the other looks put at the
+bottom is left out; the row of icons has it.
+
+The classic menus keep their own in-game bar (`classic.rs`): its Join, Vote, Call
+Vote, Profile and SJK pop-up are unchanged, and F8 (or `cameracontrol`) opens Camera
+control there.
+
+## Profile screen
+
+[profile_hub.rs](../crates/sjk-viewer/src/profile_hub.rs) (09/10/2026, Sol's request:
+one Profile in the menu for the character and the SJK profile). Three existing
+screens shown as one, each with the same strip of tabs at its top right: Character
+(the player screen, with its own Character, Saber and Force pages), Profile (the
+console's Profile page: bio, medals, record) and Identity (the console's Identity
+page: the key and sharing it). Each keeps its state, layout, keys and pointer; the
+strip is the new part.
+
+- **Strip:** the kit's segments ending at x 1824 on the top bar's middle line (y 87),
+  as the Profile page's own segments stood: Character, Profile, Identity, the one on
+  show gold; under it, right-aligned, the key caps Ctrl Tab "next tab". On the
+  Profile tab it stands in the place of the page's Profile and Achievements segments.
+- **Keys:** Ctrl+Tab shows the next tab, Ctrl+Shift+Tab the one before, wrapping,
+  from any tab and even while a field is typed in (Tab alone keeps moving within a
+  screen, as everywhere in the UI). A click on a tab shows it; the click never reaches
+  the screen under the strip (the switch hit-tests the strip's own segments,
+  `profile_hub::tab_at`). Escape leaves as each tab's own way back does: to the game
+  menu on its Profile entry (the console's pages close over the game menu, which
+  waits under them), or to the main page.
+- **Profile tab:** the page without its Tabs stop (the keyboard starts on the
+  picture); See the board shows the achievements board within the tab ("Esc Profile"
+  as its way back), and Escape there returns to the profile first. Identity settings
+  opens the Identity tab.
+- **Opened by:** the in-game menu's Profile (the tab shown last in the run, Character
+  the first time) and its profile card (Profile); the main page's Character
+  (Character, on the menu map's stage) and SJK > Profile (Profile), and its profile
+  card. The `profile`, `achievements` and `identity` commands and the classic menus
+  keep the pages on their own.
+
+The game menu's Achievements opens the board alone (`profile_panel::Mode::Board`: no
+tabs, "Esc Back"). Unlockables are not part of it: Sol has not decided whether
+achievements give anything (every hat and cape stays free for everyone), so the board
+shows achievements only; something they gave would join the board in that mode, and
+the page's Profile tab keeps See unlockables as before.
 
 ## Camera control
 
 [shot/sjk_view.rs](../crates/sjk-viewer/src/ingame_menu/shot/sjk_view.rs): the
 panel for framing shots ([client.md](client.md#camera-control) has what it
-does), opened by the in-game menu's Camera control or F8. Sol renamed it from Shot
+does), opened by the in-game menu's camera icon (its row of icons), F8, the
+`cameracontrol` command or the quick wheel's Camera control. Sol renamed it from Shot
 controls and asked for this look on 08/10/2026. Its purpose is the scene, so the
 match draws undimmed over most of the window, and the panel is a column down the
 right edge:
@@ -967,7 +1058,7 @@ hero look draws it, renamed.
 [text_dialog_sjk.rs](../crates/sjk-viewer/src/text_dialog_sjk.rs) draws the
 text dialog as the SJK UI's pop-up card (Sol's request, 08/10/2026). One dialog
 serves three things, and all three take this look with the SJK UI's menus:
-Report a bug (the in-game menu's SJK page), a player report's few words
+Report a bug (the in-game menu's row of icons), a player report's few words
 (Players, a player, a reason) and a world note (`inspect` twice,
 [client.md](client.md#player-card)). The classic+ look stays with the classic
 menus ([identity.md](identity.md#bug-reports)).
@@ -1106,15 +1197,20 @@ nine moments, 1080p, 4K, 4:3, 21:9 and 720 lines, in the families and in Inter).
 - The in-game menu keeps the in-game menu's pages, rows and actions
   (`ingame_menu::InGameMenu`, `Page`): `InGameMenu::is_sjk` picks the SJK UI's
   look (`is_classic` no longer covers it), `sjk_view::prepare` writes the rows
-  it words its own way (Main, Team, Vote, SJK, Leave) with their hints, and
+  it words its own way (Main, Team, Leave) with their hints, and
   the shared rows (Siege, the call-vote lists) keep theirs, a "label  /
   detail" row splitting into label and hint. `GpuState::activate_sjk_ui_row`
   acts on its own rows before the shared actions; `back_or_close_game_menu`
   goes to `sjk_view::parent` (the entry that opened the page). The keys pass
   over rows that cannot be taken (`InGameMenu::sjk_step`); a screen handed
   over to returns on its entry (`InGameMenu::return_row`, read by
-  `MenuAction::ReturnToGameMenu`). The match card (`sjk_view::Card`) is
-  refreshed from the session by `GpuState::refresh_game_menu_card`. Settings
+  `MenuAction::ReturnToGameMenu`). The main page's row of icons and card controls
+  are `sjk_focus`'s model (`Icon`, `Control`, `Controls::for_match`, `Focus`,
+  `step`), built each frame from the view (`View::staff` from the profile card's
+  summary) and kept on `InGameMenu` for the keys (`GpuState::sjk_main_key`) and the
+  pointer (`sjk_main_pointer`, tokens 800 for the icons and 820 for the controls). The
+  match card (`sjk_view::Card`) is refreshed from the session by
+  `GpuState::refresh_game_menu_card`. Settings
   opened from it is `ClientMenu::open_sjk_settings_from_game`; Settings' and
   Key bindings' top bar take their way back from `settings::Rail::back`. The 2D
   pass now also runs while the game menu is open without a session
@@ -1142,10 +1238,15 @@ nine moments, 1080p, 4K, 4:3, 21:9 and 720 lines, in the families and in Inter).
   without a server;
   `duel6_sjk_ingame` the in-game menu over
   duel6 on a made-up match (`Card::for_shot`, `InGameMenu::sjk_for_shot`):
-  the main page, Team in a CTF, a vote on, the installed maps to vote for,
-  Leave, a spectator's card and Settings opened from it;
+  the main page without a vote and with one, the keyboard in the row of icons, the
+  side's buttons in a CTF, Staff tools shown, a spectator in an FFA, a Siege, Team
+  in a CTF, the installed maps to vote for, Leave, a 4:3 window and Settings opened
+  from it; `duel6_sjk_profile_screen` the Profile screen opened from the game menu
+  on its Character tab, Ctrl+Tab through Profile and Identity, the game menu's
+  Achievements board, a 4:3 window, and its Character tab from the main page on the
+  menu map's stage;
   `duel6_camera_control` Camera control over duel6 on a made-up match: the
-  in-game menu with its entry chosen, the panel's Camera and Sun pages, a number
+  in-game menu with its camera icon focused, the panel's Camera and Sun pages, a number
   typed, the Sun page where the sun cannot be set, a 4:3 window and the classic
   menus' bar and panel;
   `duel6_quick_wheel` the quick wheel's ring over duel6 (General, the change to

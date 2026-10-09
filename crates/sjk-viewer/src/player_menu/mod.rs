@@ -199,6 +199,9 @@ pub(crate) struct PlayerMenu {
     classic_dirty: bool,
     /// The model preview has a frame to show (set by the renderer).
     preview_ready: bool,
+    /// Shown as the Character tab of the Profile screen ([`crate::profile_hub`]):
+    /// the SJK UI's view draws the screen's tabs at its top right.
+    hub: bool,
 }
 
 impl PlayerMenu {
@@ -239,7 +242,19 @@ impl PlayerMenu {
             classic: classic::ClassicState::default(),
             classic_dirty: false,
             preview_ready: false,
+            hub: false,
         }
+    }
+
+    /// Show the screen as the Profile screen's Character tab (`true`), or on its
+    /// own; [`Self::open`] puts it back on its own.
+    pub(crate) fn set_hub(&mut self, hub: bool) {
+        self.hub = hub;
+    }
+
+    /// Whether the screen is the Profile screen's Character tab.
+    pub(crate) fn is_hub(&self) -> bool {
+        self.hub
     }
 
     pub(crate) fn draw_list(&self) -> &DrawList {

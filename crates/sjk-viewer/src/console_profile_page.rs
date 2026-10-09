@@ -3,7 +3,7 @@
 //! is open, as for the Identity page. It is drawn in the SJK UI's look whatever the
 //! menu style (`console_sjk_pages.rs`).
 
-use super::profile_panel::{Inputs, PanelAction, Tab};
+use super::profile_panel::{Inputs, Mode, PanelAction, Tab};
 use super::*;
 use sjk_ui::InputEvent;
 
@@ -25,9 +25,25 @@ impl ViewerConsole {
         self.open_profile_panel(tab);
     }
 
-    /// Show the page on `tab` (the SJK menus' Profile and Achievements entries).
+    /// Show the page on `tab`, on its own (the `profile` and `achievements` commands).
     pub(crate) fn open_profile_panel(&mut self, tab: Tab) {
+        self.open_profile_panel_as(tab, Mode::Pages);
+    }
+
+    /// Show the achievements board alone (the game menu's Achievements).
+    pub(crate) fn open_achievements(&mut self) {
+        self.open_profile_panel_as(Tab::Achievements, Mode::Board);
+    }
+
+    /// Show the page on `tab` as `mode` says.
+    fn open_profile_panel_as(&mut self, tab: Tab, mode: Mode) {
         let owns_console = !self.open;
+        self.show_profile_panel(tab, owns_console, mode);
+    }
+
+    /// Show the page on `tab` as `mode` says; closing it closes the console too when
+    /// `owns_console`.
+    fn show_profile_panel(&mut self, tab: Tab, owns_console: bool, mode: Mode) {
         if !self.open {
             self.set_open(true);
         }
@@ -42,7 +58,53 @@ impl ViewerConsole {
         self.sjk_chat_panel.close();
         self.unlockables_panel.close();
         self.dead_key.settle();
-        self.profile_panel.open(tab, owns_console);
+        self.profile_panel.open_as(tab, owns_console, mode);
+    }
+
+    /// The Profile screen's tab the console shows ([`crate::profile_hub`]): its
+    /// Profile or Identity page opened as one of the screen's tabs.
+    pub(crate) fn profile_hub_tab(&self) -> Option<crate::profile_hub::Tab> {
+        if !self.open {
+            None
+        } else if self.profile_panel.is_open() && self.profile_panel.mode() == Mode::Hub {
+            Some(crate::profile_hub::Tab::Profile)
+        } else if self.identity_panel.is_open() && self.identity_panel.is_hub() {
+            Some(crate::profile_hub::Tab::Identity)
+        } else {
+            None
+        }
+    }
+
+    /// Show the Profile screen's Profile or Identity tab in place of the console. When
+    /// another of its tabs showed here, the console still closes with it if that one
+    /// had opened it.
+    pub(crate) fn open_profile_hub_page(&mut self, tab: crate::profile_hub::Tab) {
+        let owns_console = if self.profile_hub_tab().is_some() {
+            let profile = self.profile_panel.close();
+            let identity = self.identity_panel.close();
+            profile || identity
+        } else {
+            !self.open
+        };
+        if tab == crate::profile_hub::Tab::Identity {
+            self.open_identity_panel_owned(owns_console);
+            self.identity_panel.set_hub(true);
+        } else {
+            self.show_profile_panel(Tab::Profile, owns_console, Mode::Hub);
+        }
+    }
+
+    /// Close the Profile screen's page the console shows (for its Character tab), and
+    /// the console with it when the page had opened it.
+    pub(crate) fn close_profile_hub_page(&mut self) {
+        if self.profile_hub_tab().is_none() {
+            return;
+        }
+        let profile = self.profile_panel.close();
+        let identity = self.identity_panel.close();
+        if profile || identity {
+            self.set_open(false);
+        }
     }
 
     fn close_profile_panel(&mut self) {
@@ -71,9 +133,12 @@ impl ViewerConsole {
             }
             PanelAction::Identity => {
                 // The Identity page takes the console over; Escape there closes both
-                // when the Profile page had opened the console.
+                // when the Profile page had opened the console. On the Profile screen
+                // it is the screen's Identity tab.
+                let hub = self.profile_panel.mode() == Mode::Hub;
                 let owns_console = self.profile_panel.close();
                 self.open_identity_panel_owned(owns_console);
+                self.identity_panel.set_hub(hub);
             }
             PanelAction::Save { bio } => {
                 // The page shows the hub's answer, or why nothing could be sent.

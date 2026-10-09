@@ -2058,6 +2058,7 @@ fn in_game_menu(shots: &Snapshot, art: ArtSet) {
             red_players: 3,
             blue_players: 2,
             vote_active: page == Popup::Vote,
+            staff: false,
             _frame: std::marker::PhantomData,
         };
         let mut vertices = Vec::new();

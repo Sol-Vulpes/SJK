@@ -326,6 +326,17 @@ pub(super) fn switch(runs: &mut Vec<Run>, start: usize, source: Source) -> bool 
     true
 }
 
+/// An untextured shape (a fill, a ring, an arc) at vertex `start`. Shapes draw
+/// the same under any alpha-blended bind group, so they stay in the current run,
+/// but not in the emblem light's additive one: a gold button drawn after the
+/// emblem in the same list (the in-game menu's card) added itself onto the
+/// scene and showed it through. Back to the alpha-blended atlas.
+pub(super) fn untextured(runs: &mut Vec<Run>, start: usize) {
+    if runs.last().is_some_and(|run| run.source.additive()) {
+        let _ = switch(runs, start, Source::Atlas);
+    }
+}
+
 /// Begin the next layer (draw list) at vertex `start`. Its untextured shapes
 /// stay in the current run, so a layer that ended on the emblem's light
 /// would draw the next one's additively: a pop-up card's dark glass and scrim
@@ -357,6 +368,24 @@ mod tests {
         begin_layer(&mut runs, 24);
         assert_eq!(runs.len(), 4);
         assert_eq!(runs[3].source, Source::Art(ArtPiece::Background));
+    }
+
+    #[test]
+    fn a_shape_after_the_light_is_alpha_blended() {
+        let mut runs = vec![Run {
+            start: 0,
+            source: Source::Atlas,
+        }];
+        assert!(switch(&mut runs, 6, Source::Emblem(EmblemLayer::Lights)));
+        untextured(&mut runs, 12);
+        assert_eq!(
+            runs.last().map(|run| (run.start, run.source)),
+            Some((12, Source::Atlas))
+        );
+        // Under an alpha-blended picture a shape stays in its run.
+        assert!(switch(&mut runs, 18, Source::Art(ArtPiece::Background)));
+        untextured(&mut runs, 24);
+        assert_eq!(runs.len(), 4);
     }
 
     #[test]

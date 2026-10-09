@@ -738,94 +738,99 @@ mod tests {
         });
     }
 
+    /// A made-up profile with medals, worn names, a record and half the achievements,
+    /// for the Profile page's shots.
+    fn profile_preview() -> crate::console::profile_panel::Preview {
+        use crate::console::profile_panel::Preview;
+        let medal = |id: &str, count| sjk_identity::Medal {
+            id: id.to_owned(),
+            count,
+            awarded: 1_791_336_225,
+            note: String::new(),
+        };
+        let me = sjk_identity::Profile {
+            key_id: "44f3d0b36c9b2510".to_owned(),
+            key: String::new(),
+            name: "^1Sol^7Vulpes".to_owned(),
+            bio: "Saber duelist, mostly staff and yellow. On JoF most evenings.
+
+Found the fog bug, ask me about it!"
+                .to_owned(),
+            verified: true,
+            staff: false,
+            created: 1_791_250_000,
+            names: ["^1Sol^7Vulpes", "^4Fox", "Sol"]
+                .iter()
+                .map(|name| sjk_identity::WornName {
+                    name: (*name).to_owned(),
+                    first_seen: 0,
+                    last_seen: 0,
+                })
+                .collect(),
+            medals: vec![medal("early_tester", 1), medal("bug_hunter", 2)],
+            achievements: Vec::new(),
+            avatar: String::new(),
+            unlocks: vec![sjk_identity::Unlock {
+                id: "saber_sun".to_owned(),
+                granted: 1_791_336_225,
+                note: String::new(),
+            }],
+        };
+        let snapshot = sjk_identity::Snapshot {
+            status: sjk_identity::Status::Online,
+            key_id: me.key_id.clone(),
+            me: Some(me),
+            server: None,
+            players: Vec::new(),
+            profiles: std::collections::HashMap::new(),
+            notice: None,
+            revision: 0,
+            report: None,
+            note: None,
+            player_report: None,
+            avatar: None,
+            look_outcome: None,
+            packs_revision: 0,
+            assets_note: None,
+        };
+        let standings = crate::achievements::ALL
+            .iter()
+            .enumerate()
+            .map(|(index, kind)| crate::achievements::Standing {
+                kind,
+                progress: match index % 3 {
+                    0 => kind.goal,
+                    1 => kind.goal * 2 / 5,
+                    _ => 0,
+                },
+                unlocked: (index % 3 == 0).then_some(1_791_336_225 + index as i64 * 3_600),
+            })
+            .collect();
+        let record = vec![
+            ("Players defeated", "412".to_owned()),
+            ("Saber kills", "388".to_owned()),
+            ("Best streak", "9".to_owned()),
+            ("Duels won", "57".to_owned()),
+            ("Flags captured", "6".to_owned()),
+            ("Maps played", "14".to_owned()),
+            ("Servers played", "3".to_owned()),
+            ("Time played", "23 h 40 min".to_owned()),
+        ];
+        Preview {
+            snapshot,
+            standings,
+            record,
+        }
+    }
+
     /// The Profile page over the live duel6: a made-up profile with medals, worn names, a
     /// record and half the achievements, the bio being written, the achievements board,
     /// the page with the identity off (the shots' own), and a 4:3 window.
     #[test]
     #[ignore = "renders with the GPU and the installed game data named by JKA_GAME_DATA"]
     fn duel6_sjk_profile() {
-        use crate::console::profile_panel::{Preview, Tab};
-        let preview = || {
-            let medal = |id: &str, count| sjk_identity::Medal {
-                id: id.to_owned(),
-                count,
-                awarded: 1_791_336_225,
-                note: String::new(),
-            };
-            let me = sjk_identity::Profile {
-                key_id: "44f3d0b36c9b2510".to_owned(),
-                key: String::new(),
-                name: "^1Sol^7Vulpes".to_owned(),
-                bio: "Saber duelist, mostly staff and yellow. On JoF most evenings.
-
-Found the fog bug, ask me about it!"
-                    .to_owned(),
-                verified: true,
-                staff: false,
-                created: 1_791_250_000,
-                names: ["^1Sol^7Vulpes", "^4Fox", "Sol"]
-                    .iter()
-                    .map(|name| sjk_identity::WornName {
-                        name: (*name).to_owned(),
-                        first_seen: 0,
-                        last_seen: 0,
-                    })
-                    .collect(),
-                medals: vec![medal("early_tester", 1), medal("bug_hunter", 2)],
-                achievements: Vec::new(),
-                avatar: String::new(),
-                unlocks: vec![sjk_identity::Unlock {
-                    id: "saber_sun".to_owned(),
-                    granted: 1_791_336_225,
-                    note: String::new(),
-                }],
-            };
-            let snapshot = sjk_identity::Snapshot {
-                status: sjk_identity::Status::Online,
-                key_id: me.key_id.clone(),
-                me: Some(me),
-                server: None,
-                players: Vec::new(),
-                profiles: std::collections::HashMap::new(),
-                notice: None,
-                revision: 0,
-                report: None,
-                note: None,
-                player_report: None,
-                avatar: None,
-                look_outcome: None,
-                packs_revision: 0,
-                assets_note: None,
-            };
-            let standings = crate::achievements::ALL
-                .iter()
-                .enumerate()
-                .map(|(index, kind)| crate::achievements::Standing {
-                    kind,
-                    progress: match index % 3 {
-                        0 => kind.goal,
-                        1 => kind.goal * 2 / 5,
-                        _ => 0,
-                    },
-                    unlocked: (index % 3 == 0).then_some(1_791_336_225 + index as i64 * 3_600),
-                })
-                .collect();
-            let record = vec![
-                ("Players defeated", "412".to_owned()),
-                ("Saber kills", "388".to_owned()),
-                ("Best streak", "9".to_owned()),
-                ("Duels won", "57".to_owned()),
-                ("Flags captured", "6".to_owned()),
-                ("Maps played", "14".to_owned()),
-                ("Servers played", "3".to_owned()),
-                ("Time played", "23 h 40 min".to_owned()),
-            ];
-            Preview {
-                snapshot,
-                standings,
-                record,
-            }
-        };
+        use crate::console::profile_panel::Tab;
+        let preview = profile_preview;
         on_big_stack(move || {
             let menu = menu::ClientMenu::new(true, String::new());
             let cvars = [
@@ -1446,119 +1451,294 @@ like this one.",
         });
     }
 
-    /// The SJK UI's in-game menu over duel6 as a match would show it, on a
-    /// made-up match (there is no server): the main page over an FFA, Team in
-    /// a CTF with the player on blue, the ballot of a vote on, the call-vote
-    /// maps (the installed ones), Leave with Quit chosen, the main page while
-    /// spectating, and Settings opened from the menu.
+    /// The SJK UI's Profile screen over duel6: opened from the game menu on its
+    /// Character tab (the model in its live preview), then Ctrl+Tab to the Profile tab
+    /// (a made-up profile), the Identity tab and round to Character; the game menu's
+    /// Achievements board; a 4:3 window; and from the main page, on the menu map's
+    /// stage.
     #[test]
     #[ignore = "renders with the GPU and the installed game data named by JKA_GAME_DATA"]
-    fn duel6_sjk_ingame() {
-        use crate::ingame_menu::{Page, ShotView, sjk_view::Card};
+    fn duel6_sjk_profile_screen() {
+        use crate::profile_hub::Tab;
         on_big_stack(|| {
-            // The main menu stays closed: the client is "in the match".
-            let menu = menu::ClientMenu::new(false, String::new());
             let cvars = [
                 ("ui_menuStyle", "sjk"),
                 (crate::settings::quick::HIDE_CVAR, "1"),
             ];
+            for size in [[1920, 1080], [1440, 1080]] {
+                let suffix = if size[0] == 1920 { "" } else { "-4x3" };
+                let menu = menu::ClientMenu::new(false, String::new());
+                let Some((mut gpu, _profile)) = open("maps/mp/duel6.bsp", size, Some(menu), &cvars)
+                else {
+                    return;
+                };
+                let shots =
+                    menu_backdrop::tour_for("Yavin Training Grounds").expect("duel6's tour");
+                let (yaw, pitch) = look(shots[3].from, shots[3].at);
+                aim(&mut gpu, shots[3].from, yaw, pitch);
+                gpu.is_menu_world = false;
+                gpu.game_menu = true;
+                if let Some(console) = gpu.console.as_mut() {
+                    console.close_for_connection();
+                    console.preview_profile(profile_preview());
+                }
+                let _ = frame(&mut gpu, 20);
+                // As the game menu's Profile opens it the first time.
+                gpu.open_profile_hub_from_game(None);
+                assert_eq!(gpu.profile_hub_tab(), Some(Tab::Character));
+                let _ = frame(&mut gpu, 60);
+                let name = format!("duel6-profile-screen-character{suffix}");
+                println!("{}", shoot(&mut gpu, 4, &name).display());
+                for (tab, part) in [(Tab::Profile, "profile"), (Tab::Identity, "identity")] {
+                    gpu.profile_hub_next_for_shot();
+                    assert_eq!(gpu.profile_hub_tab(), Some(tab));
+                    for _ in 0..240 {
+                        let _ = frame(&mut gpu, 1);
+                        if crate::medals::art::decoded().is_some() {
+                            break;
+                        }
+                    }
+                    let name = format!("duel6-profile-screen-{part}{suffix}");
+                    println!("{}", shoot(&mut gpu, 6, &name).display());
+                }
+                // Round to Character: the console's page closes, the game menu waits
+                // under it on Profile.
+                gpu.profile_hub_next_for_shot();
+                assert_eq!(gpu.profile_hub_tab(), Some(Tab::Character));
+                assert!(!gpu.game_menu);
+                if size[0] != 1920 {
+                    continue;
+                }
+                // The game menu's Achievements: the board alone.
+                if let Some(menu) = gpu.client_menu.as_mut() {
+                    menu.leave_player_hub();
+                }
+                gpu.game_menu = true;
+                if let Some(console) = gpu.console.as_mut() {
+                    console.open_achievements();
+                }
+                assert_eq!(gpu.profile_hub_tab(), None);
+                println!(
+                    "{}",
+                    shoot(&mut gpu, 6, "duel6-ingame-achievements").display()
+                );
+            }
+            // From the main page: the Character tab on the menu map's stage.
+            let menu = menu::ClientMenu::new(true, String::new());
             let Some((mut gpu, _profile)) =
                 open("maps/mp/duel6.bsp", [1920, 1080], Some(menu), &cvars)
             else {
                 return;
             };
-            // A player's view down the south-west path towards the tower.
-            let shots = menu_backdrop::tour_for("Yavin Training Grounds").expect("duel6's tour");
-            let shot = &shots[0];
-            let (yaw, pitch) = look(shot.from, shot.at);
-            aim(&mut gpu, shot.from, yaw, pitch);
-            // Without a server or a menu the console drops: the game menu is
-            // up from the start, as in a match.
-            gpu.game_menu = true;
-            if let Some(console) = gpu.console.as_mut() {
-                console.close_for_connection();
-            }
-            let _ = frame(&mut gpu, 60);
-            let ffa = ShotView {
-                team: 0,
-                team_game: false,
-                red_players: 0,
-                blue_players: 0,
-                vote_active: true,
-            };
-            let ctf = ShotView {
-                team: 2,
-                team_game: true,
-                red_players: 4,
-                blue_players: 3,
-                vote_active: true,
-            };
-            let watching = ShotView { team: 3, ..ffa };
-            let vfs = gpu.vfs.clone();
-            gpu.in_game_menu.refresh_callvote(None, vfs.as_deref());
-            let pages: [(&str, Page, usize, Card, ShotView); 6] = [
-                (
-                    "duel6-ingame",
-                    Page::Main,
-                    0,
-                    Card::for_shot(false, false),
-                    ffa,
-                ),
-                (
-                    "duel6-ingame-team",
-                    Page::Team,
-                    1,
-                    Card::for_shot(true, false),
-                    ctf,
-                ),
-                (
-                    "duel6-ingame-vote",
-                    Page::Vote,
-                    0,
-                    Card::for_shot(false, false),
-                    ffa,
-                ),
-                (
-                    "duel6-ingame-maps",
-                    Page::VoteMap,
-                    3,
-                    Card::for_shot(false, false),
-                    ffa,
-                ),
-                (
-                    "duel6-ingame-leave",
-                    Page::Leave,
-                    1,
-                    Card::for_shot(false, false),
-                    ffa,
-                ),
-                (
-                    "duel6-ingame-watching",
-                    Page::Main,
-                    4,
-                    Card::for_shot(false, true),
-                    watching,
-                ),
-            ];
-            for (name, page, row, card, view) in pages {
-                gpu.in_game_menu.sjk_for_shot(card, view);
-                gpu.game_menu_page = page;
-                gpu.game_menu_row = row;
-                // Long enough for the gold mark to settle.
-                println!("{}", shoot(&mut gpu, 16, name).display());
-            }
-            // Settings, opened from the menu: its way back is the game menu.
-            gpu.game_menu = false;
+            let _ = frame(&mut gpu, 10);
             if let (Some(menu), Some(console)) = (gpu.client_menu.as_mut(), gpu.console.as_ref()) {
-                menu.open_sjk_settings_from_game(console);
+                menu.open_player_hub(console, crate::player_menu::ReturnTarget::MainMenu);
             }
-            println!("{}", shoot(&mut gpu, 8, "duel6-ingame-settings").display());
+            assert_eq!(gpu.profile_hub_tab(), Some(Tab::Character));
+            println!(
+                "{}",
+                shoot(&mut gpu, 150, "duel6-profile-screen-main").display()
+            );
+            gpu.profile_hub_next_for_shot();
+            assert_eq!(gpu.profile_hub_tab(), Some(Tab::Profile));
+            assert!(!gpu.game_menu, "the main page stays under it");
+        });
+    }
+
+    /// The SJK UI's in-game menu over duel6 as a match would show it, on a
+    /// made-up match (there is no server): the main page over an FFA without a vote
+    /// and with one, the keyboard in the row of icons, the card's side buttons in a
+    /// CTF, Staff tools shown, a spectator in an FFA, a Siege, Team (the J key's) in a
+    /// CTF, the call-vote maps (the installed ones), Leave with Quit chosen, a 4:3
+    /// window, and Settings opened from the menu.
+    #[test]
+    #[ignore = "renders with the GPU and the installed game data named by JKA_GAME_DATA"]
+    fn duel6_sjk_ingame() {
+        use crate::ingame_menu::sjk_focus::{Control, Focus, Icon};
+        use crate::ingame_menu::{Page, ShotView, sjk_view::Card};
+        use sjk_client::LegacyTeamChoice;
+        on_big_stack(|| {
+            for size in [[1920, 1080], [1440, 1080]] {
+                // The main menu stays closed: the client is "in the match".
+                let menu = menu::ClientMenu::new(false, String::new());
+                let cvars = [
+                    ("ui_menuStyle", "sjk"),
+                    (crate::settings::quick::HIDE_CVAR, "1"),
+                ];
+                let Some((mut gpu, _profile)) = open("maps/mp/duel6.bsp", size, Some(menu), &cvars)
+                else {
+                    return;
+                };
+                // A player's view down the south-west path towards the tower.
+                let shots =
+                    menu_backdrop::tour_for("Yavin Training Grounds").expect("duel6's tour");
+                let shot = &shots[0];
+                let (yaw, pitch) = look(shot.from, shot.at);
+                aim(&mut gpu, shot.from, yaw, pitch);
+                // Without a server or a menu the console drops: the game menu is
+                // up from the start, as in a match.
+                gpu.game_menu = true;
+                if let Some(console) = gpu.console.as_mut() {
+                    console.close_for_connection();
+                }
+                let _ = frame(&mut gpu, 60);
+                let ffa = ShotView {
+                    team: 0,
+                    team_game: false,
+                    red_players: 0,
+                    blue_players: 0,
+                    vote_active: false,
+                    staff: false,
+                    siege: false,
+                };
+                let ffa_vote = ShotView {
+                    vote_active: true,
+                    ..ffa
+                };
+                let ctf = ShotView {
+                    team: 2,
+                    team_game: true,
+                    red_players: 4,
+                    blue_players: 3,
+                    vote_active: false,
+                    staff: false,
+                    siege: false,
+                };
+                let staff = ShotView {
+                    vote_active: true,
+                    staff: true,
+                    ..ctf
+                };
+                let watching = ShotView { team: 3, ..ffa };
+                let siege = ShotView {
+                    team: 1,
+                    siege: true,
+                    ..ctf
+                };
+                let vfs = gpu.vfs.clone();
+                gpu.in_game_menu.refresh_callvote(None, vfs.as_deref());
+                let red = Control::Team(LegacyTeamChoice::Red);
+                let join = Control::Team(LegacyTeamChoice::Free);
+                let pages: Vec<(&str, Page, usize, Card, ShotView, Focus)> = if size[0] == 1920 {
+                    vec![
+                        (
+                            "duel6-ingame",
+                            Page::Main,
+                            0,
+                            Card::for_shot(false, false),
+                            ffa,
+                            Focus::List,
+                        ),
+                        (
+                            "duel6-ingame-vote",
+                            Page::Main,
+                            1,
+                            Card::for_shot(false, false),
+                            ffa_vote,
+                            Focus::List,
+                        ),
+                        (
+                            "duel6-ingame-row",
+                            Page::Main,
+                            0,
+                            Card::for_shot(false, false),
+                            ffa,
+                            Focus::Row(Icon::WhatsNew),
+                        ),
+                        (
+                            "duel6-ingame-card",
+                            Page::Main,
+                            0,
+                            Card::for_shot(true, false),
+                            ctf,
+                            Focus::Card(red),
+                        ),
+                        (
+                            "duel6-ingame-staff",
+                            Page::Main,
+                            0,
+                            Card::for_shot(true, false),
+                            staff,
+                            Focus::Row(Icon::Staff),
+                        ),
+                        (
+                            "duel6-ingame-watching",
+                            Page::Main,
+                            0,
+                            Card::for_shot(false, true),
+                            watching,
+                            Focus::Card(join),
+                        ),
+                        (
+                            "duel6-ingame-siege",
+                            Page::Main,
+                            0,
+                            Card::for_siege_shot(),
+                            siege,
+                            Focus::Card(Control::SiegeClass),
+                        ),
+                        (
+                            "duel6-ingame-team",
+                            Page::Team,
+                            1,
+                            Card::for_shot(true, false),
+                            ctf,
+                            Focus::List,
+                        ),
+                        (
+                            "duel6-ingame-maps",
+                            Page::VoteMap,
+                            3,
+                            Card::for_shot(false, false),
+                            ffa,
+                            Focus::List,
+                        ),
+                        (
+                            "duel6-ingame-leave",
+                            Page::Leave,
+                            1,
+                            Card::for_shot(false, false),
+                            ffa,
+                            Focus::List,
+                        ),
+                    ]
+                } else {
+                    vec![(
+                        "duel6-ingame-4x3",
+                        Page::Main,
+                        0,
+                        Card::for_shot(true, false),
+                        staff,
+                        Focus::Card(Control::VoteYes),
+                    )]
+                };
+                for (name, page, row, card, view, focus) in pages {
+                    gpu.in_game_menu.sjk_for_shot(card, view);
+                    gpu.game_menu_page = page;
+                    gpu.game_menu_row = row;
+                    gpu.in_game_menu.focus = focus;
+                    // Long enough for the gold mark to settle.
+                    println!("{}", shoot(&mut gpu, 16, name).display());
+                    assert_eq!(gpu.in_game_menu.focus, focus, "{name}: the keyboard stays");
+                }
+                if size[0] != 1920 {
+                    continue;
+                }
+                // Settings, opened from the menu: its way back is the game menu.
+                gpu.game_menu = false;
+                if let (Some(menu), Some(console)) =
+                    (gpu.client_menu.as_mut(), gpu.console.as_ref())
+                {
+                    menu.open_sjk_settings_from_game(console);
+                }
+                println!("{}", shoot(&mut gpu, 8, "duel6-ingame-settings").display());
+            }
         });
     }
 
     /// Camera control over duel6 as a match would show it, on a made-up match
-    /// (there is no server): the game menu with its Camera control entry
-    /// chosen, then the panel on its Camera page; in the SJK UI also the Sun
+    /// (there is no server): the game menu with its camera icon focused (the
+    /// SJK UI's row of icons), then the panel on its Camera page; in the SJK UI also the Sun
     /// page, a number being typed and the Sun page where the sun cannot be
     /// set, and a 4:3 window; the classic bar and its panel, opened by F8.
     #[test]
@@ -1567,7 +1747,8 @@ like this one.",
         use crate::ingame_menu::shot::SUN;
         use crate::ingame_menu::{
             Page, ShotView,
-            sjk_view::{Card, Entry},
+            sjk_focus::{Focus, Icon},
+            sjk_view::Card,
         };
         on_big_stack(|| {
             for (style, size, prefix) in [
@@ -1601,10 +1782,14 @@ like this one.",
                         red_players: 0,
                         blue_players: 0,
                         vote_active: false,
+                        staff: false,
+                        siege: false,
                     };
                     gpu.in_game_menu
                         .sjk_for_shot(Card::for_shot(false, false), ffa);
-                    gpu.game_menu_row = Entry::Shot.index();
+                    // Its icon in the row under the emblem, with the keyboard.
+                    gpu.game_menu_row = 0;
+                    gpu.in_game_menu.focus = Focus::Row(Icon::Camera);
                 } else {
                     // The classic bar has no entry: F8 opens the panel there.
                     gpu.game_menu_row = 0;
@@ -1929,6 +2114,8 @@ like this one.",
                         red_players: 6,
                         blue_players: 6,
                         vote_active: false,
+                        staff: false,
+                        siege: false,
                     };
                     gpu.in_game_menu
                         .sjk_for_shot(Card::for_shot(true, false), ctf);

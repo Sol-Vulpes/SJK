@@ -219,7 +219,7 @@ classic+ look ([text_dialog_classic.rs](../crates/sjk-viewer/src/text_dialog_cla
 the text in a retail list box, gold Send and Cancel, the description line under the box,
 and a gold REPORT A BUG on retail's red band at the bottom of the canvas. With the SJK UI
 the dialog is its pop-up card and there is no button (Report a bug is on the in-game
-menu's SJK page): [sjk-ui.md](sjk-ui.md#report-a-bug-and-its-dialogs).
+menu's row of icons): [sjk-ui.md](sjk-ui.md#report-a-bug-and-its-dialogs).
 
 ## Medals
 
@@ -395,8 +395,10 @@ only to registered keys; a client keeps them to draw looks and does not pass the
 
 ## Profile
 
-The Profile page (the SJK UI's main page > SJK > Profile, the classic menu's SJK
-page, the in-game SJK menu, or the `profile` command) is the player's SJK profile
+The Profile page (the SJK UI's [Profile screen](sjk-ui.md#profile-screen), its
+Profile tab, opened by the main page > SJK > Profile and the in-game menu's Profile;
+the classic menu's SJK page and in-game SJK menu; or the `profile` command) is the
+player's SJK profile
 as other players read it on the hub, in the SJK UI's look in every menu style:
 
 - who they are: the hub name with its colours, Verified by the SJK team or not yet,
@@ -593,8 +595,9 @@ dedicated server would vouch for are not built.
 
 Staff is a flag on a key, like verified, that only the hub operator sets; a player
 cannot ask for it or set it. Profiles carry it, so anyone can see who is staff. A
-staff key gets the SJK team's tools in the game: the Profile page shows Staff tools
-(and the `staff` command opens them; for any other key it says they are for staff).
+staff key gets the SJK team's tools in the game: the Profile page shows Staff tools,
+as does the SJK UI in-game menu's row of icons (and the `staff` command opens them; for
+any other key it says they are for staff).
 
 The Staff page ([staff_panel.rs](../crates/sjk-viewer/src/staff_panel.rs), the SJK
 UI's look) finds players (a name or part of one, colour codes ignored; a key id; or,

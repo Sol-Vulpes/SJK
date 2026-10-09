@@ -111,6 +111,7 @@ impl crate::GpuState {
                 self.game_menu_page = crate::ingame_menu::Page::Main;
                 // The SJK UI comes back on the entry that opened the screen.
                 self.game_menu_row = self.in_game_menu.return_row();
+                self.in_game_menu.focus = crate::ingame_menu::sjk_focus::Focus::List;
             }
         }
     }

@@ -19,6 +19,7 @@ impl PlayerMenu {
 
     pub(crate) fn open(&mut self, console: &ViewerConsole, target: ReturnTarget) {
         self.return_target = target;
+        self.hub = false;
         self.read_console(console);
         self.saber.open(console);
         self.force.open(console);

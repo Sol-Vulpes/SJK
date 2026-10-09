@@ -9,6 +9,9 @@
 #                               made it when that is not the piece's owner.
 
 = Sol
++ 09/10/2026 | - | In-game menu: seven entries, Profile with tabs, team and vote on the match card, an icon row
+- 7fa069e |  | Rework the SJK UI's in-game menu and add the Profile screen
+- a164b8b |  | UI renderer: shapes after the emblem's light are alpha blended
 + 09/10/2026 | - | Play a blade skin's sounds over the stock saber sounds
 - 2092b53 |  | Play a blade skin's sounds over the stock saber sounds
 + 09/10/2026 | - | Fix what the review of PRs #61, #62 and #64 found

@@ -176,6 +176,7 @@ mod player_skin;
 mod pointer_input;
 mod presentation_clock;
 mod profile_card;
+mod profile_hub;
 mod projectiles;
 mod quick_wheel;
 mod remap_blocked_maps;
@@ -466,6 +467,8 @@ struct GpuState {
     gameplay_input: input::GameplayInput,
     /// Windows Alt code being typed into a text field.
     alt_code: input::alt_code::AltCode,
+    /// The SJK UI's Profile screen: which tab shows, switched here.
+    profile_hub: profile_hub::Hub,
     pointer_captured: bool,
     cursor_policy: pointer_input::CursorPolicy,
     cursor_position: [f32; 2],
@@ -1309,6 +1312,7 @@ impl GpuState {
             far_plane,
             gameplay_input: input::GameplayInput::default(),
             alt_code: input::alt_code::AltCode::default(),
+            profile_hub: profile_hub::Hub::default(),
             pointer_captured: false,
             cursor_policy: pointer_input::CursorPolicy::new(),
             cursor_position: [0.0; 2],
@@ -1761,6 +1765,7 @@ impl GpuState {
                 red_players: team_sizes[0],
                 blue_players: team_sizes[1],
                 vote_active: self.vote_active(),
+                staff: profile_card::with(|summary| summary.staff),
                 _frame: std::marker::PhantomData,
             };
             if self.in_game_menu.is_sjk() {

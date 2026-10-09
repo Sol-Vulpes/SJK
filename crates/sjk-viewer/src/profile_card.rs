@@ -43,6 +43,8 @@ pub(crate) struct Summary {
     pub(crate) avatar: String,
     pub(crate) hub: HubState,
     pub(crate) verified: bool,
+    /// The hub made their key staff: the game menu offers Staff tools.
+    pub(crate) staff: bool,
     /// Medals the SJK team gave them (those the client knows).
     pub(crate) medals: usize,
     /// Achievements unlocked, of how many.
@@ -58,6 +60,7 @@ static SUMMARY: Mutex<Summary> = Mutex::new(Summary {
     avatar: String::new(),
     hub: HubState::Off,
     verified: false,
+    staff: false,
     medals: 0,
     unlocked: 0,
     achievements: 0,
@@ -73,6 +76,7 @@ pub(crate) static NOBODY: Summary = Summary {
     avatar: String::new(),
     hub: HubState::Off,
     verified: false,
+    staff: false,
     medals: 0,
     unlocked: 0,
     achievements: 21,
@@ -174,6 +178,7 @@ pub(crate) fn summarise(
             .unwrap_or_default(),
         hub,
         verified: online && me.is_some_and(|me| me.verified),
+        staff: online && me.is_some_and(|me| me.staff),
         medals: me
             .filter(|_| online)
             .map_or(0, |me| crate::medals::Medals::from_wire(&me.medals).len()),

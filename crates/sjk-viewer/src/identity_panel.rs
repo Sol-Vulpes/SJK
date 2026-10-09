@@ -143,6 +143,9 @@ pub(crate) struct Panel {
     open: bool,
     /// The page opened the console, so closing the page closes it too.
     owns_console: bool,
+    /// Shown as the Profile screen's Identity tab ([`crate::profile_hub`]): the SJK
+    /// UI's look draws the screen's tabs at its top right.
+    hub: bool,
     ui: MenuCanvas,
     focus: Focus,
     /// The bio being typed.
@@ -352,6 +355,7 @@ impl Panel {
         Self {
             open: false,
             owns_console: false,
+            hub: false,
             ui: MenuCanvas::with_capacities(160, 640, 512),
             focus: Focus::Toggle,
             bio: String::new(),
@@ -375,6 +379,7 @@ impl Panel {
     pub(crate) fn open(&mut self, owns_console: bool) {
         self.open = true;
         self.owns_console = owns_console;
+        self.hub = false;
         self.focus = Focus::Toggle;
         self.edited = false;
         self.message.clear();
@@ -390,6 +395,17 @@ impl Panel {
 
     pub(crate) fn draw_list(&self) -> &sjk_ui::DrawList {
         self.ui.draw_list()
+    }
+
+    /// Show the page as the Profile screen's Identity tab (`true`), or on its own;
+    /// [`Self::open`] puts it back on its own.
+    pub(crate) fn set_hub(&mut self, hub: bool) {
+        self.hub = hub;
+    }
+
+    /// Whether the page is the Profile screen's Identity tab.
+    pub(crate) fn is_hub(&self) -> bool {
+        self.hub
     }
 
     /// The retail `art` the classic+ look can draw.

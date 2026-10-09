@@ -272,6 +272,10 @@ impl GpuState {
     }
 
     fn route_pointer(&mut self, event: InputEvent) -> bool {
+        // The Profile screen's tabs, over whichever of its screens shows.
+        if !self.text_dialog.is_open() && self.profile_hub_pointer(event) {
+            return true;
+        }
         if self
             .console
             .as_ref()
@@ -318,16 +322,16 @@ impl GpuState {
                 return true;
             }
             if let Some((kind, row)) = self.in_game_menu.pointer(event) {
-                // The SJK UI's profile card opens the Profile page over the menu.
+                // The SJK UI's profile card opens the Profile screen on its Profile tab.
                 if row == usize::from(crate::ingame_menu::sjk_view::CARD_TOKEN)
                     && self.in_game_menu.is_sjk()
                 {
                     if kind == UiEventKind::Activate {
-                        if let Some(console) = &mut self.console {
-                            console.open_profile_panel(crate::console::profile_panel::Tab::Profile);
-                        }
-                        self.sync_cursor_policy();
+                        self.open_profile_hub_from_game(Some(crate::profile_hub::Tab::Profile));
                     }
+                    return true;
+                }
+                if self.sjk_main_pointer(kind, row) {
                     return true;
                 }
                 if let Some(tab) = crate::ingame_menu::classic::bar_tab(row) {
@@ -338,6 +342,8 @@ impl GpuState {
                     && matches!(kind, UiEventKind::HoverEnter | UiEventKind::Hover)
                 {
                     self.game_menu_row = row;
+                    // Hovering an entry gives the list the keyboard.
+                    self.in_game_menu.focus = crate::ingame_menu::sjk_focus::Focus::List;
                 }
                 if row < self.game_menu_row_count()
                     && kind == UiEventKind::Activate

@@ -65,7 +65,8 @@ impl ClientMenu {
                 MenuAction::None
             }
             MainDestination::Player => {
-                self.open_player(console, ReturnTarget::MainMenu);
+                // The SJK UI's Profile screen, on its Character tab.
+                self.open_player_hub(console, ReturnTarget::MainMenu);
                 MenuAction::None
             }
             MainDestination::Settings { tab } => {
@@ -100,6 +101,11 @@ impl ClientMenu {
             }
             MainDestination::Identity => {
                 console.open_identity_panel();
+                MenuAction::None
+            }
+            MainDestination::Profile if self.menu_style == MenuStyle::Sjk => {
+                // The SJK UI's Profile screen, on its Profile tab.
+                console.open_profile_hub_page(crate::profile_hub::Tab::Profile);
                 MenuAction::None
             }
             MainDestination::Profile => {

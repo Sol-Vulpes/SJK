@@ -44,6 +44,9 @@ impl Panel {
             FontWeight::Semibold,
             TextAlign::Start,
         );
+        if self.hub {
+            crate::profile_hub::strip(&mut self.ui, &frame, crate::profile_hub::Tab::Identity);
+        }
         text(
             &mut self.ui,
             TextFamily::Display,
