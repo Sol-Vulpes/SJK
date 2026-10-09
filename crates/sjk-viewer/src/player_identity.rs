@@ -296,6 +296,15 @@ pub(crate) fn snapshot() -> Option<Snapshot> {
     lock().service.as_ref().map(Service::snapshot)
 }
 
+/// Read the identity service's snapshot where it is, without copying it; `None`
+/// before the service started.
+pub(crate) fn with_snapshot<R>(read: impl FnOnce(&Snapshot) -> R) -> Option<R> {
+    lock()
+        .service
+        .as_ref()
+        .map(|service| service.with_snapshot(read))
+}
+
 /// Why the key file could not be used, if that is why there is no identity.
 pub(crate) fn key_error() -> Option<String> {
     lock().key_error.clone()

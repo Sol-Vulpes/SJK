@@ -60,6 +60,12 @@ impl MenuCanvas {
         Self::with_text_capacity(128)
     }
 
+    /// [`Self::new`] with room for `draws` draw commands, for a screen that draws
+    /// more shapes than an ordinary one (the Saber page's blade swatches).
+    pub(crate) fn with_draw_capacity(draws: usize) -> Self {
+        Self::with_capacities(MAX_TEXT, 128, draws)
+    }
+
     /// Reserve screen-specific text storage before entering the frame loop.
     pub(crate) fn with_text_capacity(text_bytes: usize) -> Self {
         Self::with_capacities(MAX_TEXT, text_bytes, MAX_DRAW)

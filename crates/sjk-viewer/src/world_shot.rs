@@ -741,7 +741,8 @@ mod tests {
             let path = shoot(&mut gpu, 6, name);
             println!("{}", path.display());
             // The Saber page (the saber thrown out to its shot), the Force page.
-            for (page, row, suffix) in [(1, 2, "saber"), (2, 4, "force")] {
+            // Saber's row 4 is the first blade's colour (Style, Search, Hilt, Blade).
+            for (page, row, suffix) in [(1, 4, "saber"), (2, 4, "force")] {
                 if let Some(menu) = gpu.client_menu.as_mut() {
                     menu.player_page_for_shot(page, row);
                 }
@@ -776,7 +777,7 @@ mod tests {
             // Dual sabers: the two hands' hilt lists side by side.
             if let Some(menu) = gpu.client_menu.as_mut() {
                 menu.player_dual_for_shot();
-                menu.player_page_for_shot(1, 1);
+                menu.player_page_for_shot(1, 2);
             }
             let _ = frame(&mut gpu, 2);
             gpu.ui_epoch -= std::time::Duration::from_millis(3_000);
@@ -1552,7 +1553,7 @@ like this one.",
                 "{}",
                 shoot(&mut gpu, 4, "duel6-character-in-game").display()
             );
-            for (page, row, suffix) in [(1, 1, "saber"), (2, 4, "force")] {
+            for (page, row, suffix) in [(1, 2, "saber"), (2, 4, "force")] {
                 if let Some(menu) = gpu.client_menu.as_mut() {
                     menu.player_page_for_shot(page, row);
                 }

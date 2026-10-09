@@ -16,7 +16,7 @@ use crate::unlockables::{Kind, Unlockable};
 use sjk_ui::{Color, DrawCommand, FontWeight, TextAlign};
 
 #[path = "unlockables_swatch.rs"]
-mod swatch;
+pub(crate) mod swatch;
 
 /// The page's left edge and width, and where the header starts (frame pixels).
 const LEFT_X: f32 = 96.0;
@@ -64,7 +64,7 @@ struct Showing<'a> {
 /// What the player wears, in big, and a line under it.
 fn wearing(inputs: &Inputs<'_>) -> (String, String) {
     match crate::unlockables::blade_skin(inputs.setting) {
-        Some(skin) if inputs.holdings.unlock(skin.id).is_some() => (
+        Some(skin) if inputs.holdings.can_wear(skin) => (
             skin.name.to_owned(),
             "In your hand, on the Character page and for SJK players on your server.".to_owned(),
         ),
@@ -131,8 +131,9 @@ impl Panel {
         let frame = frame.shifted(0.0, self.shift());
         self.header(&frame, inputs);
         self.side(&frame, inputs);
-        let worn = crate::unlockables::blade_skin(inputs.setting)
-            .filter(|skin| inputs.holdings.unlock(skin.id).is_some())
+        let worn = inputs
+            .holdings
+            .worn_blade_skin(inputs.setting)
             .map(|skin| skin.id);
         let count = crate::unlockables::ALL.len();
         let rows = count.div_ceil(COLUMNS);
@@ -150,7 +151,7 @@ impl Panel {
             let is_worn = worn == Some(unlockable.id);
             // What Enter does on it, shown or scrolled away.
             self.cards[index] = Card {
-                wear: (grant.is_some() && unlockable.is_blade_skin()).then_some(if is_worn {
+                wear: inputs.holdings.can_wear(unlockable).then_some(if is_worn {
                     ""
                 } else {
                     unlockable.id

@@ -79,13 +79,18 @@ const SPECIES_ROWS: [CharacterRow; 10] = [
     CharacterRow::Cape,
 ];
 
-/// Rows of the saber page; the second-saber rows only exist for Dual. The
-/// channel sliders are always there: they show the stock colour's tint and
-/// moving one makes the colour custom.
+/// Rows of the saber page; the second-saber rows only exist for Dual, the
+/// hilt search and the blade skin only in the SJK UI. The channel sliders are
+/// always there: they show the stock colour's tint and moving one makes the
+/// colour custom.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(super) enum SaberRow {
     Style,
+    /// SJK UI: words the hilt lists' names must contain.
+    Search,
     Hilt,
+    /// SJK UI: the stock blade or a blade skin the player owns (`cg_saberSkin`).
+    Skin,
     Blade,
     Red,
     Green,
@@ -101,7 +106,9 @@ impl SaberRow {
     pub(super) fn label(self) -> &'static str {
         match self {
             Self::Style => "Style",
+            Self::Search => "Search",
             Self::Hilt => "Hilt",
+            Self::Skin => "Blade",
             Self::Blade => "Blade colour",
             Self::Red | Self::SecondRed => "Red",
             Self::Green | Self::SecondGreen => "Green",
@@ -138,7 +145,7 @@ impl SaberRow {
     }
 }
 
-const SABER_ROW_CAPACITY: usize = 11;
+const SABER_ROW_CAPACITY: usize = 13;
 
 /// The saber page's rows for the current draft, built without allocating.
 #[derive(Clone, Copy, Debug)]
@@ -192,7 +199,13 @@ impl PlayerMenu {
             len: 0,
         };
         rows.push(SaberRow::Style);
+        if self.is_sjk() {
+            rows.push(SaberRow::Search);
+        }
         rows.push(SaberRow::Hilt);
+        if self.is_sjk() {
+            rows.push(SaberRow::Skin);
+        }
         rows.push(SaberRow::Blade);
         rows.extend([SaberRow::Red, SaberRow::Green, SaberRow::Blue]);
         if self.saber.style() == saber::SaberStyle::Dual {
@@ -224,10 +237,11 @@ impl PlayerMenu {
                 .character_rows()
                 .get(self.selected)
                 .is_some_and(|row| !matches!(row, CharacterRow::Name | CharacterRow::Search)),
-            ProfilePage::Saber => self
-                .saber_rows()
-                .get(self.selected)
-                .is_some_and(|row| row.channel().is_none() && !row.is_blade()),
+            ProfilePage::Saber => self.saber_rows().get(self.selected).is_some_and(|row| {
+                row.channel().is_none()
+                    && !row.is_blade()
+                    && !matches!(row, SaberRow::Search | SaberRow::Skin)
+            }),
             ProfilePage::Force => self.selected < FORCE_RESET_ROW,
         }
     }

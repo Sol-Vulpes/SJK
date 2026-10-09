@@ -93,10 +93,37 @@ const HILT_SCROLL: u16 = 1_090;
 /// second's to `HILT_BASE + HILT_STRIDE + i`.
 const HILT_BASE: u16 = 1_100;
 const HILT_STRIDE: u16 = 300;
-/// A hilt list's sub-heading, its rows' height and how many show.
+/// A hilt list's sub-heading, its rows' height and how many show: six of two
+/// columns for Single and Staff, four for each of Dual's two lists side by side,
+/// which leave room for both blades.
 const HILT_HEAD: f32 = 32.0;
 const HILT_ROW: f32 = 34.0;
 const HILT_ROWS: usize = 6;
+const DUAL_HILT_ROWS: usize = 4;
+/// The hilt search's field, at the right of the lists' heading line: beside one
+/// list's heading, and beside Dual's "Left hand".
+const SEARCH_WIDTH: f32 = 240.0;
+const DUAL_SEARCH_WIDTH: f32 = 170.0;
+/// The blade choice's swatches (the Collection's, shrunk) and the gap between
+/// them, from `SKIN_X` so that all of them (the stock blade and every blade
+/// skin) end at the controls' edge.
+const SKIN_HEIGHT: f32 = 44.0;
+const SKIN_WIDTH: f32 = SKIN_HEIGHT * 400.0 / 224.0;
+const SKIN_GAP: f32 = 6.0;
+const SKIN_CHOICES: usize = crate::unlockables::ALL.len() + 1;
+const SKIN_X: f32 =
+    CONTROL_RIGHT - SKIN_CHOICES as f32 * SKIN_WIDTH - (SKIN_CHOICES - 1) as f32 * SKIN_GAP;
+/// Blade choice `i` (0 the stock blade) answers to `SKIN_BASE + i`.
+const SKIN_BASE: u16 = 1_060;
+
+/// Hilt lines a list shows for `style`.
+fn hilt_rows(style: SaberStyle) -> usize {
+    if style == SaberStyle::Dual {
+        DUAL_HILT_ROWS
+    } else {
+        HILT_ROWS
+    }
+}
 
 /// The pointer token of hilt `index` in the first saber's list, or the
 /// second's.
@@ -125,6 +152,9 @@ pub(super) struct HiltList {
     /// The columns it was laid out in (two for Single and Staff, one each
     /// for Dual's): a change lays it out afresh.
     columns: usize,
+    /// The hilt search it was laid out for: a change shows the list from its
+    /// top (or round the chosen hilt, when the search keeps it).
+    query: String,
 }
 
 /// The pointer token of level `level` (1 to 3) of power `power`.
@@ -310,15 +340,28 @@ impl PlayerMenu {
             }
             ProfilePage::Saber => {
                 let hilt_row = |second: bool| {
-                    self.saber_rows().iter().position(|row| {
-                        *row == if second {
-                            SaberRow::SecondHilt
-                        } else {
-                            SaberRow::Hilt
-                        }
+                    self.saber_row(if second {
+                        SaberRow::SecondHilt
+                    } else {
+                        SaberRow::Hilt
                     })
                 };
-                if let Some(style) = token
+                let skin_row = self.saber_row(SaberRow::Skin);
+                if let Some(choice) = token
+                    .checked_sub(SKIN_BASE)
+                    .map(usize::from)
+                    .filter(|choice| *choice < self.blade_choice.count())
+                {
+                    let row = skin_row?;
+                    if hover {
+                        self.selected = row;
+                    } else if activate {
+                        self.selected = row;
+                        self.blade_choice.pick(console, choice);
+                    } else {
+                        return None;
+                    }
+                } else if let Some(style) = token
                     .checked_sub(STYLE_BASE)
                     .and_then(|index| STYLES.get(usize::from(index)))
                 {
@@ -358,7 +401,8 @@ impl PlayerMenu {
                         return None;
                     }
                 } else if activate
-                    && [hilt_row(false), hilt_row(true)].contains(&Some(usize::from(token)))
+                    && [hilt_row(false), hilt_row(true), skin_row]
+                        .contains(&Some(usize::from(token)))
                 {
                     self.selected = usize::from(token);
                 } else {
@@ -386,6 +430,11 @@ impl PlayerMenu {
         }
     }
 
+    /// Where `row` is on the Saber page, when the page has it.
+    fn saber_row(&self, row: SaberRow) -> Option<usize> {
+        self.saber_rows().iter().position(|each| *each == row)
+    }
+
     /// The rows of the Saber and Force pages in the order they show them
     /// (`None` on the Character page, whose rows go in their own order): the
     /// Saber page's hilt lists before its blades (Dual's two side by side),
@@ -397,7 +446,10 @@ impl PlayerMenu {
             ProfilePage::Saber => {
                 let rows = self.saber_rows();
                 let first = |row: &SaberRow| {
-                    !matches!(row, SaberRow::Style | SaberRow::Hilt | SaberRow::SecondHilt)
+                    !matches!(
+                        row,
+                        SaberRow::Style | SaberRow::Search | SaberRow::Hilt | SaberRow::SecondHilt
+                    )
                 };
                 Some(
                     rows.iter()
@@ -863,16 +915,23 @@ impl PlayerMenu {
             focused,
             STYLE_BASE,
         );
-        // The hilts.
+        // The hilts, the search in their heading line (beside the second list's
+        // for Dual).
         let lists_top = ROWS_TOP + ROW + 8.0;
         let half = (COLUMN_WIDTH - GUTTER) * 0.5;
-        let height = HILT_HEAD + HILT_ROWS as f32 * HILT_ROW + 12.0;
+        let height = HILT_HEAD + hilt_rows(style) as f32 * HILT_ROW + 12.0;
         if style == SaberStyle::Dual {
-            for (second, x, heading) in [
-                (false, COLUMN_X, "Right hand"),
-                (true, COLUMN_X + half + GUTTER, "Left hand"),
+            for (second, x, heading, search) in [
+                (false, COLUMN_X, "Right hand", None),
+                (
+                    true,
+                    COLUMN_X + half + GUTTER,
+                    "Left hand",
+                    Some(DUAL_SEARCH_WIDTH),
+                ),
             ] {
-                self.sjk_hilt_list(frame, second, [x, lists_top, half, height], 1, heading);
+                let area = [x, lists_top, half, height];
+                self.sjk_hilt_list(frame, second, area, 1, heading, search);
             }
         } else {
             let heading = if style == SaberStyle::Staff {
@@ -886,12 +945,21 @@ impl PlayerMenu {
                 [COLUMN_X, lists_top, COLUMN_WIDTH, height],
                 2,
                 heading,
+                Some(SEARCH_WIDTH),
             );
         }
-        // The blades.
+        // The blade, then each blade's colour.
         let mut top = lists_top + height + 10.0;
         for (index, row) in rows.iter().enumerate() {
-            if matches!(row, SaberRow::Style | SaberRow::Hilt | SaberRow::SecondHilt) {
+            if matches!(
+                row,
+                SaberRow::Style | SaberRow::Search | SaberRow::Hilt | SaberRow::SecondHilt
+            ) {
+                continue;
+            }
+            if *row == SaberRow::Skin {
+                self.sjk_blade_choice(frame, index, top);
+                top += ROW;
                 continue;
             }
             let area = [COLUMN_X, top, COLUMN_WIDTH, ROW];
@@ -966,28 +1034,11 @@ impl PlayerMenu {
         }
     }
 
-    /// The hilts the first saber's list (`second` false) or the second's
-    /// offers, in the catalogue's order (the game's load order).
-    fn sjk_hilt_names(&self, second: bool) -> Vec<(String, String)> {
-        let style = if second {
-            SaberStyle::Single
-        } else {
-            self.saber.style()
-        };
-        catalog_of(&self.loader).map_or_else(Vec::new, |catalog| {
-            catalog
-                .saber_hilts
-                .iter()
-                .filter(|hilt| super::saber::allowed(hilt, style))
-                .map(|hilt| (hilt.name.clone(), hilt.display_name.clone()))
-                .collect()
-        })
-    }
-
-    /// One hilt list on `area` under its `heading`: the hilts in `columns`
-    /// columns, row after row, the chosen one gold with a dot, scrolled to
-    /// keep a newly chosen one in view; the wheel scrolls it, a click
-    /// chooses.
+    /// One hilt list on `area` under its `heading`: the hilts the search lists
+    /// ([`super::saber::SaberMenu::listed`]) in `columns` columns, row after row,
+    /// the chosen one gold with a dot, scrolled to keep a newly chosen one in
+    /// view; the wheel scrolls it, a click chooses. With `search` (its width) the
+    /// hilt search's field stands at the right of its heading line.
     fn sjk_hilt_list(
         &mut self,
         frame: &Frame,
@@ -995,20 +1046,29 @@ impl PlayerMenu {
         area: Area,
         columns: usize,
         heading: &str,
+        search: Option<f32>,
     ) {
         let s = frame.s;
         let row = self
-            .saber_rows()
-            .iter()
-            .position(|each| {
-                *each
-                    == if second {
-                        SaberRow::SecondHilt
-                    } else {
-                        SaberRow::Hilt
-                    }
+            .saber_row(if second {
+                SaberRow::SecondHilt
+            } else {
+                SaberRow::Hilt
             })
             .unwrap_or(1);
+        let shown_lines = hilt_rows(self.saber.style());
+        // How many hilts the search lists, and where the chosen one is among them.
+        let (count, chosen) = catalog_of(&self.loader).map_or((0, None), |catalog| {
+            let mut count = 0;
+            let mut chosen = None;
+            for (_, hilt) in self.saber.listed(catalog, second) {
+                if hilt.name.eq_ignore_ascii_case(self.saber.hilt(second)) {
+                    chosen = Some(count);
+                }
+                count += 1;
+            }
+            (count, chosen)
+        });
         let [x, y, width, height] = area;
         if self.selected == row {
             kit::band(&mut self.canvas, frame, area);
@@ -1019,58 +1079,96 @@ impl PlayerMenu {
         let list = usize::from(second);
         self.canvas
             .scroll_region(HILT_SCROLL + list as u16, frame.rect(x, y, width, height));
+        let field_x = search.map(|field| x + width - 12.0 - field);
+        // The heading's rule runs to the field, or is left out where only a stub
+        // of it would show (beside Dual's "Left hand"; the kit puts the rule 8.5
+        // pixels a character and 22 after the label).
+        let rule_width = field_x.map_or(width - 34.0, |field_x| {
+            let room = field_x - 16.0 - (x + 22.0);
+            let label = 8.5 * heading.chars().count() as f32 + 22.0;
+            if room - label < 24.0 { 0.0 } else { room }
+        });
         kit::heading(
             &mut self.canvas,
             frame,
             x + 22.0,
             y + HILT_HEAD * 0.5,
-            width - 34.0,
+            rule_width,
             heading,
         );
-        let names = self.sjk_hilt_names(second);
-        let chosen = names
-            .iter()
-            .position(|(name, _)| name.eq_ignore_ascii_case(self.saber.hilt(second)));
-        let lines = names.len().div_ceil(columns);
+        if let (Some(field_x), Some(field), Some(search_row)) =
+            (field_x, search, self.saber_row(SaberRow::Search))
+        {
+            let control = [field_x, y + 1.0, field, HILT_HEAD - 2.0];
+            self.sjk_hilt_search(frame, search_row, control, count);
+        }
+        let lines = count.div_ceil(columns);
         let state = &mut self.sjk_hilts[list];
+        let query = self.saber.search();
+        let searched = state.query != query;
+        if searched {
+            state.query.clear();
+            state.query.push_str(query);
+            state.first = 0;
+        }
         // A hilt chosen since the last frame (by the keys, say) comes into
         // view; the first time the list shows, in its middle.
-        if state.columns != columns || !state.chosen.eq_ignore_ascii_case(self.saber.hilt(second)) {
-            let first_show = state.chosen.is_empty() || state.columns != columns;
+        if searched
+            || state.columns != columns
+            || !state.chosen.eq_ignore_ascii_case(self.saber.hilt(second))
+        {
+            let first_show = !searched && (state.chosen.is_empty() || state.columns != columns);
             state.columns = columns;
             state.chosen.clear();
             state.chosen.push_str(self.saber.hilt(second));
             if let Some(line) = chosen.map(|index| index / columns) {
                 if first_show {
-                    state.first = line.saturating_sub(HILT_ROWS / 2);
+                    state.first = line.saturating_sub(shown_lines / 2);
                 } else if line < state.first {
                     state.first = line;
-                } else if line >= state.first + HILT_ROWS {
-                    state.first = line + 1 - HILT_ROWS;
+                } else if line >= state.first + shown_lines {
+                    state.first = line + 1 - shown_lines;
                 }
             }
         }
-        state.first = state.first.min(lines.saturating_sub(HILT_ROWS));
+        state.first = state.first.min(lines.saturating_sub(shown_lines));
         let first = state.first;
-        if names.is_empty() {
-            text(
-                &mut self.canvas,
-                TextFamily::Body,
-                format_args!("No hilts found"),
-                frame.rect(x + 22.0, y + HILT_HEAD + 6.0, width - 44.0, HILT_ROW),
-                17.0 * s,
-                color::MUTED,
-                FontWeight::Regular,
-                TextAlign::Start,
-            );
+        if count == 0 {
+            let empty = frame.rect(x + 22.0, y + HILT_HEAD + 6.0, width - 44.0, HILT_ROW);
+            if query.trim().is_empty() {
+                text(
+                    &mut self.canvas,
+                    TextFamily::Body,
+                    format_args!("No hilts found"),
+                    empty,
+                    17.0 * s,
+                    color::MUTED,
+                    FontWeight::Regular,
+                    TextAlign::Start,
+                );
+            } else {
+                text(
+                    &mut self.canvas,
+                    TextFamily::Body,
+                    format_args!("No hilt matches \"{}\"", query.trim()),
+                    empty,
+                    17.0 * s,
+                    color::MUTED,
+                    FontWeight::Regular,
+                    TextAlign::Start,
+                );
+            }
         }
         let cell_width = (width - 24.0) / columns as f32;
-        for line in first..(first + HILT_ROWS).min(lines) {
-            for column in 0..columns {
-                let index = line * columns + column;
-                let Some((_, label)) = names.get(index) else {
-                    break;
-                };
+        if let Some(catalog) = catalog_of(&self.loader) {
+            let listed = self
+                .saber
+                .listed(catalog, second)
+                .enumerate()
+                .skip(first * columns)
+                .take(shown_lines * columns);
+            for (at, (index, hilt)) in listed {
+                let (line, column) = (at / columns, at % columns);
                 let cell = [
                     x + 12.0 + column as f32 * cell_width,
                     y + HILT_HEAD + 6.0 + (line - first) as f32 * HILT_ROW,
@@ -1079,7 +1177,7 @@ impl PlayerMenu {
                 ];
                 let rect = frame.rect(cell[0], cell[1], cell[2], cell[3]);
                 let token = hilt_token(second, index);
-                let picked = chosen == Some(index);
+                let picked = chosen == Some(at);
                 let hovered = self.canvas.token_hovered(token);
                 if picked || hovered {
                     let _ = self.canvas.draw_list_mut().push(DrawCommand::RoundedRect {
@@ -1102,7 +1200,7 @@ impl PlayerMenu {
                 text(
                     &mut self.canvas,
                     TextFamily::Body,
-                    format_args!("{label}"),
+                    format_args!("{}", hilt.display_name),
                     frame.rect(cell[0] + 12.0, cell[1], cell[2] - 40.0, cell[3]),
                     17.0 * s,
                     match (picked, hovered) {
@@ -1116,18 +1214,145 @@ impl PlayerMenu {
                 self.canvas.hit_region(token, rect);
             }
         }
-        if lines > HILT_ROWS {
+        if lines > shown_lines {
             self.canvas.scrollbar(
                 HILT_SCROLL + list as u16,
                 frame.rect(
                     x + width - 8.0,
                     y + HILT_HEAD + 6.0,
                     3.0,
-                    HILT_ROWS as f32 * HILT_ROW,
+                    shown_lines as f32 * HILT_ROW,
                 ),
                 first,
-                HILT_ROWS,
+                shown_lines,
                 lines,
+            );
+        }
+    }
+
+    /// The hilt search's field on `control`, as the Character page's model
+    /// search: its words with the caret while typed and how many hilts it
+    /// lists (`found`), or what to type.
+    fn sjk_hilt_search(&mut self, frame: &Frame, row: usize, control: Area, found: usize) {
+        let focused = self.selected == row;
+        let editing = self.search_editing;
+        let search = self.saber.search();
+        if search.is_empty() && !editing {
+            kit::field(
+                &mut self.canvas,
+                frame,
+                control,
+                format_args!("Search hilts"),
+                focused,
+                false,
+            );
+        } else {
+            let caret = if editing { "_" } else { "" };
+            kit::field(
+                &mut self.canvas,
+                frame,
+                control,
+                format_args!("{search}{caret}   {found} found"),
+                focused || editing,
+                false,
+            );
+        }
+        let [x, y, width, height] = control;
+        self.canvas
+            .hit_region(row as u16, frame.rect(x, y, width, height));
+    }
+
+    /// The blade row at `top`: the stock blade in the first blade's colour, then
+    /// each blade skin the player owns, as the Collection's swatches shrunk, the
+    /// one worn ringed gold; under the row's name the name of the one under the
+    /// pointer (or worn); with no skin to offer, a line saying why.
+    fn sjk_blade_choice(&mut self, frame: &Frame, index: usize, top: f32) {
+        use crate::console::unlockables_panel::swatch;
+        let s = frame.s;
+        let area = [COLUMN_X, top, COLUMN_WIDTH, ROW];
+        let focused = index == self.selected;
+        if focused {
+            kit::band(&mut self.canvas, frame, area);
+        }
+        let count = self.blade_choice.count();
+        let chosen = self.blade_choice.chosen();
+        let y = top + (ROW - SKIN_HEIGHT) * 0.5;
+        let span = count as f32 * (SKIN_WIDTH + SKIN_GAP) - SKIN_GAP;
+        self.sjk_targets(frame, index, [SKIN_X, y, span, SKIN_HEIGHT], area);
+        let seconds = crate::menu::art::motion::seconds() as f32;
+        let colour = saber_color(self.saber.color(false), self.saber.custom_rgb(false));
+        let mut named = chosen;
+        for choice in 0..count {
+            let x = SKIN_X + choice as f32 * (SKIN_WIDTH + SKIN_GAP);
+            let rect = [x, y, SKIN_WIDTH, SKIN_HEIGHT];
+            let token = SKIN_BASE + choice as u16;
+            let hovered = self.canvas.token_hovered(token);
+            if hovered {
+                named = choice;
+            }
+            match self.blade_choice.get(choice).flatten() {
+                None => swatch::small_stock(&mut self.canvas, frame, rect, colour),
+                Some(skin) => {
+                    let look = self.blade_choice.look(skin.id);
+                    let _ = swatch::small_blade(&mut self.canvas, frame, rect, look, seconds);
+                }
+            }
+            if choice == chosen || hovered {
+                let _ = self.canvas.draw_list_mut().push(DrawCommand::Border {
+                    rect: frame.rect(x - 2.0, y - 2.0, SKIN_WIDTH + 4.0, SKIN_HEIGHT + 4.0),
+                    radius: 6.0 * s,
+                    width: if choice == chosen { 2.5 * s } else { 1.5 * s },
+                    color: if choice == chosen {
+                        color::GOLD_BRIGHT
+                    } else {
+                        Color::new(1.0, 1.0, 1.0, 0.6)
+                    },
+                });
+            }
+            self.canvas
+                .hit_region(token, frame.rect(x, y, SKIN_WIDTH, SKIN_HEIGHT));
+        }
+        // The row's name, and under it the blade's.
+        text(
+            &mut self.canvas,
+            TextFamily::Body,
+            format_args!("{}", SaberRow::Skin.label()),
+            frame.rect(LABEL_X, top + 4.0, SKIN_X - LABEL_X - 8.0, 24.0),
+            19.0 * s,
+            if focused {
+                Color::new(1.0, 1.0, 1.0, 1.0)
+            } else {
+                color::alpha(color::TEXT, 0.88)
+            },
+            FontWeight::Regular,
+            TextAlign::Start,
+        );
+        let skin = self.blade_choice.get(named).flatten();
+        text(
+            &mut self.canvas,
+            TextFamily::Body,
+            format_args!("{}", skin.map_or("Stock blade", |skin| skin.name)),
+            frame.rect(LABEL_X, top + 28.0, SKIN_X - LABEL_X - 8.0, 20.0),
+            15.0 * s,
+            if skin.is_some() {
+                color::GOLD_BRIGHT
+            } else {
+                color::MUTED
+            },
+            FontWeight::Regular,
+            TextAlign::Start,
+        );
+        if let Some(hint) = self.blade_choice.hint() {
+            let x = SKIN_X + SKIN_WIDTH + 16.0;
+            text(
+                &mut self.canvas,
+                TextFamily::Body,
+                format_args!("{hint}"),
+                frame.rect(x, top + (ROW - 22.0) * 0.5, CONTROL_RIGHT - x, 22.0),
+                15.0 * s,
+                color::MUTED,
+                FontWeight::Regular,
+                TextAlign::Start,
             );
         }
     }
@@ -1908,7 +2133,9 @@ impl PlayerMenu {
                 format!(
                     "{}, {}",
                     self.saber.hilt_label(catalog_of(&self.loader), false),
-                    blade_word(self.saber.color(false))
+                    self.blade_choice
+                        .worn()
+                        .map_or(blade_word(self.saber.color(false)), |skin| skin.name)
                 ),
             ),
             ProfilePage::Force => (
@@ -1987,7 +2214,10 @@ impl PlayerMenu {
                 Some(CharacterRow::Name | CharacterRow::Search) => RowKind::Type,
                 _ => RowKind::Step,
             },
-            ProfilePage::Saber => RowKind::Step,
+            ProfilePage::Saber => match self.saber_rows().get(self.selected) {
+                Some(SaberRow::Search) => RowKind::Type,
+                _ => RowKind::Step,
+            },
             ProfilePage::Force if self.selected >= FORCE_RESET_ROW => RowKind::Act,
             ProfilePage::Force => RowKind::Step,
         }
@@ -2087,12 +2317,30 @@ mod tests {
 
     // The grid's eight tiles fill the column.
     const _: () = assert!(TILE > 70.0 && TILE < 80.0);
-    // Dual sabers (the style, the hilt lists, eight blade rows) end above
-    // the keys.
+    // Dual sabers (the style, the hilt lists, the blade and eight blade colour
+    // rows) end above the keys, as one saber with its six-line list does.
     const _: () = assert!(
-        ROWS_TOP + ROW + 8.0 + HILT_HEAD + HILT_ROWS as f32 * HILT_ROW + 12.0 + 10.0 + 8.0 * ROW
+        ROWS_TOP
+            + ROW
+            + 8.0
+            + HILT_HEAD
+            + DUAL_HILT_ROWS as f32 * HILT_ROW
+            + 12.0
+            + 10.0
+            + 9.0 * ROW
             < BOTTOM
     );
+    const _: () = assert!(
+        ROWS_TOP + ROW + 8.0 + HILT_HEAD + HILT_ROWS as f32 * HILT_ROW + 12.0 + 10.0 + 5.0 * ROW
+            < BOTTOM
+    );
+    // Dual's search field leaves "Left hand" room at the largest text
+    // (`ui_textScale` 1.2; Rajdhani SemiBold at 22 is 8.5 pixels a character).
+    const _: () = assert!(
+        (COLUMN_WIDTH - GUTTER) * 0.5 - 12.0 - DUAL_SEARCH_WIDTH - 22.0 > 1.2 * 8.5 * 9.0 + 8.0
+    );
+    // The blade choice's swatches leave the row's name room.
+    const _: () = assert!(SKIN_X - LABEL_X > 110.0);
     // Force: the groups under the sides, the actions under Lightsaber, and the
     // power box above the keys.
     const _: () = assert!(
@@ -2111,9 +2359,11 @@ mod tests {
     // A power's name keeps room beside its three level cells.
     const _: () =
         assert!((COLUMN_WIDTH - GUTTER) * 0.5 - CELL - 10.0 - 3.0 * DISC - 2.0 * DISC_GAP > 120.0);
-    // The token ranges stay apart: the levels, the style buttons, the lists'
-    // wheel areas, then the hilts.
-    const _: () = assert!(LEVEL_BASE + 18 * 3 <= STYLE_BASE && STYLE_BASE + 3 <= HILT_SCROLL);
+    // The token ranges stay apart: the levels, the blade choices, the style
+    // buttons, the lists' wheel areas, then the hilts.
+    const _: () = assert!(LEVEL_BASE + 18 * 3 <= SKIN_BASE);
+    const _: () = assert!(SKIN_BASE + SKIN_CHOICES as u16 <= STYLE_BASE);
+    const _: () = assert!(STYLE_BASE + 3 <= HILT_SCROLL);
     const _: () = assert!(HILT_SCROLL + 2 <= HILT_BASE);
 
     /// The screen in the SJK UI on `page`, Dual sabers when `dual`, drawn at
@@ -2370,11 +2620,13 @@ mod tests {
             .map(|index| rows[index])
             .collect();
         assert_eq!(
-            order[..4],
+            order[..6],
             [
                 SaberRow::Style,
+                SaberRow::Search,
                 SaberRow::Hilt,
                 SaberRow::SecondHilt,
+                SaberRow::Skin,
                 SaberRow::Blade
             ]
         );
@@ -2389,6 +2641,190 @@ mod tests {
                 .sjk_key_order()
                 .is_none()
         );
+    }
+
+    /// The screen in the SJK UI on its Saber page over a catalogue of five single
+    /// hilts and a staff, drawn once.
+    fn with_hilts() -> PlayerMenu {
+        let source: String = [
+            ("single_1", "Katarn", "SABER_SINGLE"),
+            ("single_2", "Arbiter", "SABER_SINGLE"),
+            ("single_3", "Kazeshini", "SABER_SINGLE"),
+            ("single_4", "Dark katana", "SABER_SINGLE"),
+            ("single_5", "Praetor", "SABER_SINGLE"),
+            ("staff_1", "Reborn staff", "SABER_STAFF"),
+        ]
+        .map(|(id, name, kind)| format!("{id}\n{{\n\tname \"{name}\"\n\tsaberType {kind}\n}}\n"))
+        .concat();
+        let mut vfs = sjk_vfs::VirtualFileSystem::new();
+        vfs.mount_memory("base", [("ext_data/sabers/test.sab", source.into_bytes())])
+            .unwrap();
+        let mut menu = PlayerMenu::new();
+        menu.set_sjk(true);
+        menu.attach_catalogue(Arc::new(vfs));
+        let loader = menu.loader.as_mut().unwrap();
+        loader.request();
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(10);
+        while loader.catalog().is_none() && std::time::Instant::now() < deadline {
+            loader.poll();
+            std::thread::sleep(std::time::Duration::from_millis(1));
+        }
+        assert_eq!(catalog_of(&menu.loader).unwrap().saber_hilts.len(), 6);
+        menu.set_page(ProfilePage::Saber);
+        draw(&mut menu);
+        menu
+    }
+
+    /// The display names the first list shows.
+    fn shown_hilts(menu: &PlayerMenu) -> Vec<&str> {
+        let catalog = catalog_of(&menu.loader).unwrap();
+        menu.saber
+            .listed(catalog, false)
+            .filter(|(index, _)| menu.canvas.rect_for(hilt_token(false, *index)).is_some())
+            .map(|(_, hilt)| hilt.display_name.as_str())
+            .collect()
+    }
+
+    /// The search types from its field (Enter, or a click on it) and lists the hilts
+    /// whose name holds it, ignoring case; Left and Right keep to those, a click on
+    /// one chooses that hilt, an empty result says so, and Escape clears the search
+    /// before it leaves.
+    #[test]
+    fn the_hilt_search_lists_the_matching_hilts_and_the_keys_keep_to_them() {
+        let directory = tempfile::tempdir().unwrap();
+        let mut console = ViewerConsole::new(directory.path().join("config.cfg")).unwrap();
+        let mut menu = with_hilts();
+        assert_eq!(
+            shown_hilts(&menu),
+            ["Katarn", "Arbiter", "Kazeshini", "Dark katana", "Praetor"]
+        );
+        let search = menu.saber_row(SaberRow::Search).expect("a search row");
+        let hilts = menu.saber_row(SaberRow::Hilt).expect("a hilt row");
+        assert!(search < hilts);
+        // A click on the field starts typing.
+        let field = menu.canvas.rect_for(search as u16).expect("the field");
+        click(
+            &mut menu,
+            &mut console,
+            sjk_ui::Vec2::new(field.x + field.width * 0.5, field.y + field.height * 0.5),
+        );
+        assert!(menu.search_editing && menu.typing());
+        assert_eq!(menu.selected, search);
+        assert_eq!(menu.sjk_row_kind(), RowKind::Type);
+        menu.saber.set_search("KAT");
+        draw(&mut menu);
+        assert_eq!(shown_hilts(&menu), ["Katarn", "Dark katana"]);
+        menu.search_editing = false;
+        // Left and Right step through the matches only.
+        menu.selected = hilts;
+        menu.adjust(&mut console, 1);
+        assert_eq!(menu.saber.hilt(false), "single_4");
+        menu.adjust(&mut console, 1);
+        assert_eq!(menu.saber.hilt(false), "single_1");
+        menu.adjust(&mut console, -1);
+        assert_eq!(console.text_value("saber1"), Some("single_4"));
+        // A click picks the hilt drawn under it.
+        draw(&mut menu);
+        let katarn = menu.canvas.rect_for(hilt_token(false, 0)).expect("Katarn");
+        click(
+            &mut menu,
+            &mut console,
+            sjk_ui::Vec2::new(katarn.x + 10.0, katarn.y + katarn.height * 0.5),
+        );
+        assert_eq!(menu.saber.hilt(false), "single_1");
+        // Nothing matches: the list says so and the keys leave the hilt be.
+        menu.saber.set_search("zzz");
+        draw(&mut menu);
+        assert!(shown_hilts(&menu).is_empty());
+        assert!(!menu.canvas.overflowed());
+        menu.adjust(&mut console, 1);
+        assert_eq!(menu.saber.hilt(false), "single_1");
+        // Escape clears the search, then leaves.
+        assert_eq!(menu.escape(), PlayerMenuResult::None);
+        assert_eq!(menu.saber.search(), "");
+        assert_eq!(
+            menu.escape(),
+            PlayerMenuResult::Back(ReturnTarget::MainMenu)
+        );
+        // The search filters both of Dual's lists, and Staff's staves.
+        menu.saber.set_search("ka");
+        menu.saber
+            .set_style(SaberStyle::Dual, catalog_of(&menu.loader));
+        draw(&mut menu);
+        assert!(!menu.canvas.overflowed());
+        let catalog = catalog_of(&menu.loader).unwrap();
+        assert_eq!(menu.saber.listed(catalog, true).count(), 3);
+        menu.saber
+            .set_style(SaberStyle::Staff, catalog_of(&menu.loader));
+        menu.saber.set_search("reborn");
+        let catalog = catalog_of(&menu.loader).unwrap();
+        assert_eq!(menu.saber.listed(catalog, false).count(), 1);
+    }
+
+    /// The blade row offers the stock blade and every skin owned, drawn as the
+    /// Collection's swatches with all their effects within the canvas (Dual too); a
+    /// click on one wears it as Equip does, and the caption names it.
+    #[test]
+    fn the_blade_row_offers_the_owned_skins_and_a_click_wears_one() {
+        let directory = tempfile::tempdir().unwrap();
+        let mut console = ViewerConsole::new(directory.path().join("config.cfg")).unwrap();
+        // Every skin with every effect (lightning, motes, a turning hue): the most
+        // shapes a swatch draws.
+        let looks = || {
+            let sample = crate::blade_skin_file::tests::sample_with_effects();
+            let skins = crate::unlockables::blade_skins()
+                .map(|skin| {
+                    let def = crate::blade_skin_file::parse(skin.id, &sample).unwrap();
+                    let packs = sjk_vfs::VirtualFileSystem::new();
+                    crate::saber_skins::LoadedSkin::new(skin.id, def, &packs).unwrap()
+                })
+                .collect();
+            Arc::new(crate::saber_skins::LoadedSkins::of(skins, 1))
+        };
+        for dual in [false, true] {
+            let mut menu = drawn(ProfilePage::Saber, dual);
+            menu.blade_choice.set_looks(looks());
+            menu.blade_choice.preview = Some(
+                crate::unlockables::ALL
+                    .iter()
+                    .map(|unlockable| sjk_identity::Unlock {
+                        id: unlockable.id.to_owned(),
+                        granted: 1_791_336_225,
+                        note: String::new(),
+                    })
+                    .collect(),
+            );
+            menu.blade_choice.read(&console);
+            // The arcs strike and the flare runs at some times only.
+            for _ in 0..8 {
+                draw(&mut menu);
+                assert!(!menu.canvas.overflowed(), "dual {dual}");
+                std::thread::sleep(std::time::Duration::from_millis(40));
+            }
+            let row = menu.saber_row(SaberRow::Skin).expect("a blade row");
+            for choice in 0..SKIN_CHOICES {
+                assert!(menu.canvas.rect_for(SKIN_BASE + choice as u16).is_some());
+            }
+            let storm = menu.canvas.rect_for(SKIN_BASE + 2).unwrap();
+            click(
+                &mut menu,
+                &mut console,
+                sjk_ui::Vec2::new(storm.x + storm.width * 0.5, storm.y + storm.height * 0.5),
+            );
+            assert_eq!(menu.selected, row);
+            assert_eq!(
+                console.text_value(crate::unlockables::SABER_SKIN_CVAR),
+                Some(crate::unlockables::ALL[1].id)
+            );
+            assert_eq!(menu.blade_choice.chosen(), 2);
+            // The keys step along it, back to the stock blade.
+            menu.adjust(&mut console, -1);
+            menu.adjust(&mut console, -1);
+            assert_eq!(
+                console.text_value(crate::unlockables::SABER_SKIN_CVAR),
+                Some("")
+            );
+        }
     }
 
     #[test]

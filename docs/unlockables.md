@@ -33,7 +33,7 @@ GPU or heard.
 | How a look travels | Stored on the key's live claim, listed in presence for players who arrive later, and sent through the feed as a live event when it changes. |
 | Illuminate | Free for everyone; its lit state is part of the look so others see the holocron. |
 | Feed with chat off | The feed reads while the player is on a game server whatever `cl_sjkChat` says (chat stays hidden); in the menus it reads only with chat on. |
-| Choosing | A new Unlockables page (SJK UI look) lists every unlockable, owned or locked, and equips them; `cg_saberSkin` holds the choice. |
+| Choosing | A new Unlockables page (SJK UI look) lists every unlockable, owned or locked, and equips them; the Profile screen's Saber tab offers the owned blade skins too (10/10/2026); `cg_saberSkin` holds the choice. |
 | Art (looks, sounds) | SJK's own, all rights reserved, not under the code's GPLv2: kept in the hub's private repository and served by the hub to registered SJK keys as packs. The code that draws it stays open and generic: no skin's values, sounds or pictures are in this repository or its history to come. |
 | Delivery | The identity service downloads the hub's packs into `assets/` beside `identity.key` (at start once registered, then every 6 hours, only when a pack's SHA-256 changed); the viewer mounts every cached pack at start and a new one at once, below the game data, so a PK3 with the same paths replaces their files. A cached pack mounts with the identity off too. |
 | Format | A blade skin is a JSON file, `skins/blades/<unlock id>.bladeskin`, holding every parameter of the generic shading, its trail, light and sound paths. The format is documented here; the files are art. |
@@ -433,6 +433,36 @@ identity off, 4:3), `duel6_sjk_profile` and `duel6_sjk_staff`. With five skins
 to, opening again at the top), of the swatch's arcs, motes and hue staying inside its
 frame, and of every unlockable having its Staff row; the world shots were not run
 again (no GPU on that machine).
+
+### Saber tab's blade choice
+
+Built 10/10/2026 (Sol's request: choose an unlocked blade skin where the saber is
+made), [player_menu/blade_skins.rs](../crates/sjk-viewer/src/player_menu/blade_skins.rs),
+drawn by the Saber page ([sjk-ui.md](sjk-ui.md#character)). In the SJK UI the
+Profile screen's Saber tab has a Blade row: the stock blade in the first blade's
+colour, then every blade skin the player's own hub profile lists, in catalogue
+order, each drawn as its Collection swatch shrunk (`swatch::small_blade`, the same
+drawing scaled; the stock one `swatch::small_stock`). Locked skins are not listed
+there, the Collection shows them; with the identity off, no hub, the hub not
+answered yet or no skin owned, only the stock blade shows, with a line saying why.
+What the player owns is read twice a second while the tab shows (and when the screen
+opens), without copying the identity's state (`player_identity::with_snapshot`).
+
+Picking a blade (a click, or Left and Right on the row) sets `cg_saberSkin` through
+`unlockables::wear`, which the Collection's Equip and Unequip use too, by the same
+rules (`Holdings::can_wear`, `Holdings::worn_blade_skin`, which the profile card
+also reads); the stock blade sets it empty. A click on the blade already shown
+chosen writes nothing, so a skin chosen before the hub answered stays chosen. The
+stage model (or the live preview, opened from a game) wears the skin once the looks
+read the setting again, within half a second, as after Equip. The classic menus are
+unchanged.
+
+Verified: unit tests (the stock blade and the owned skins offered in catalogue order,
+locked and unknown ids left out, picking and stepping writing the setting, a pending
+choice kept, the hint without skins or identity, a click on a swatch wearing it, the
+page with every skin carrying every effect within the screen's canvas, Dual too) and
+the world shot `duel6_sjk_saber_page` with the hub's pack (`SJK_TEST_PACKS`); not
+tried in the game.
 
 ## Planned, not built
 

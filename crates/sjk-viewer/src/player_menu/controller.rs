@@ -3,7 +3,7 @@
 
 use super::rows::{
     CharacterRow, FORCE_APPLY_ROW, FORCE_DISCARD_ROW, FORCE_POWER_ROW, FORCE_RESET_ROW,
-    FORCE_SIDE_ROW,
+    FORCE_SIDE_ROW, SaberRow,
 };
 use super::*;
 use sjk_client::{ForceSide, LegacyCatalogStatus, LegacySpecies};
@@ -28,6 +28,8 @@ impl PlayerMenu {
         self.name_editing = false;
         self.search_editing = false;
         self.search.clear();
+        self.saber.set_search("");
+        self.blade_choice.read(console);
         self.page = ProfilePage::Character;
         self.selected = 0;
         self.resolved_catalogue = false;
@@ -312,6 +314,11 @@ impl PlayerMenu {
                 let Some(row) = self.saber_rows().get(self.selected).copied() else {
                     return;
                 };
+                match row {
+                    SaberRow::Search => return,
+                    SaberRow::Skin => return self.blade_choice.step(console, direction),
+                    _ => {}
+                }
                 let catalog = catalog_of(&self.loader);
                 self.saber.adjust(row, direction, catalog);
                 self.saber.apply(console);
@@ -347,8 +354,13 @@ impl PlayerMenu {
         if self.begin_numeric(self.selected) {
             return;
         }
-        let search_row = self.page == ProfilePage::Character
-            && self.character_rows().get(self.selected) == Some(&CharacterRow::Search);
+        let search_row = match self.page {
+            ProfilePage::Character => {
+                self.character_rows().get(self.selected) == Some(&CharacterRow::Search)
+            }
+            ProfilePage::Saber => self.saber_rows().get(self.selected) == Some(&SaberRow::Search),
+            ProfilePage::Force => false,
+        };
         match (self.page, self.selected) {
             (ProfilePage::Character, 0) => {
                 self.name_before_edit.clone_from(&self.draft.name);
@@ -399,7 +411,10 @@ impl PlayerMenu {
             return self.edit_name(event, key, console);
         }
         if self.search_editing {
-            self.edit_search(event, key);
+            match self.page {
+                ProfilePage::Saber => self.edit_hilt_search(event, key),
+                _ => self.edit_search(event, key),
+            }
             return PlayerMenuResult::None;
         }
         if event.repeat {
@@ -415,7 +430,7 @@ impl PlayerMenu {
         let count = self.row_count().max(1);
         let pages = ProfilePage::ALL.len();
         match key {
-            KeyCode::Escape => return PlayerMenuResult::Back(self.return_target),
+            KeyCode::Escape => return self.escape(),
             KeyCode::Tab | KeyCode::BracketRight => {
                 self.set_page(ProfilePage::ALL[(self.page.index() + 1) % pages]);
             }
@@ -437,6 +452,16 @@ impl PlayerMenu {
             _ => {}
         }
         PlayerMenuResult::None
+    }
+
+    /// Escape outside a field: on the Saber page a hilt search kept after
+    /// typing clears first (the SJK UI); else the screen closes.
+    pub(super) fn escape(&mut self) -> PlayerMenuResult {
+        if self.page == ProfilePage::Saber && !self.saber.search().is_empty() {
+            self.saber.set_search("");
+            return PlayerMenuResult::None;
+        }
+        PlayerMenuResult::Back(self.return_target)
     }
 
     pub(super) fn edit_name(

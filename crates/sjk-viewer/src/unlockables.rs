@@ -95,6 +95,12 @@ pub(crate) fn blade_skins() -> impl Iterator<Item = &'static Unlockable> {
     ALL.iter().filter(|unlockable| unlockable.is_blade_skin())
 }
 
+/// Wear blade skin `id`, `""` for the stock blade: what the Collection's Equip and
+/// Unequip and the Saber tab's blade choice do.
+pub(crate) fn wear(console: &mut crate::console::ViewerConsole, id: &str) {
+    console.set_cvar(SABER_SKIN_CVAR, id);
+}
+
 /// What this client knows of the unlocks the player's own hub profile lists, by the
 /// same rule as the gate on what they wear (`player_identity::owns_unlock`).
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -130,6 +136,18 @@ impl<'a> Holdings<'a> {
             Self::Known(unlocks) => unlocks.iter().find(|unlock| unlock.id == id),
             _ => None,
         }
+    }
+
+    /// Whether the player may wear `unlockable`: a blade skin their profile lists. The
+    /// Collection's Equip and the Saber tab's blade choice offer these.
+    pub(crate) fn can_wear(&self, unlockable: &Unlockable) -> bool {
+        unlockable.is_blade_skin() && self.unlock(unlockable.id).is_some()
+    }
+
+    /// The blade skin the player wears: the one `setting` (`cg_saberSkin`) names, while
+    /// their profile lists it; `None` for the stock blade.
+    pub(crate) fn worn_blade_skin(&self, setting: &str) -> Option<&'static Unlockable> {
+        blade_skin(setting).filter(|skin| self.can_wear(skin))
     }
 
     /// Why what the player holds is not known, in a sentence; `None` once it is.

@@ -1136,4 +1136,17 @@ impl ClientMenu {
     pub(crate) fn player_dual_for_shot(&mut self) {
         self.player.dual_for_shot();
     }
+
+    /// The Saber page's hilt search showing `search` (typed when `typing`) and its
+    /// blade choice offering what `unlocks` own (world shots).
+    #[cfg(test)]
+    pub(crate) fn player_saber_for_shot(
+        &mut self,
+        console: &ViewerConsole,
+        search: &str,
+        typing: bool,
+        unlocks: Vec<sjk_identity::Unlock>,
+    ) {
+        self.player.saber_for_shot(console, search, typing, unlocks);
+    }
 }

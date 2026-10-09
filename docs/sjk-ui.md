@@ -244,12 +244,28 @@ on the 16:9 frame, dark behind the form on the left and clear over the model.
   under a sub-heading (Hilt, or Staff), in two columns, six lines on show,
   scrolled by the wheel or its bar, the chosen one gold with a dot and kept in
   view (in the middle when the list first shows); for Dual two lists side by
-  side, Right hand and Left hand. The hilts come in the game's load order, as
-  JoF EJK lists them (`legacy_saber_load_order`). Under them the blade's colour
-  as seven chips (the six stock colours and the custom one, ringed gold when
-  chosen), its red, green and blue sliders (a digit types the number), and the
-  second blade's for Dual. The camera cuts to the saber shot, where the model
-  throws the saber to float and turn before it.
+  side, Right hand and Left hand, four lines each. The hilts come in the game's
+  load order, as JoF EJK lists them (`legacy_saber_load_order`). The hilt search
+  (10/10/2026, Sol's request) is a field at the right of the lists' heading line
+  (beside Left hand for Dual), drawn as the Character page's Search ("Search
+  hilts", then the words typed and "N found"): Enter or a click types in it, and
+  the lists show only the hilts whose name or file name holds every word typed,
+  ignoring case ("No hilt matches" when none does); one search filters both of
+  Dual's lists, and Left and Right on a list step through its matches. Escape
+  while typing clears it, as on Character; a search kept with Enter clears with
+  Escape, and the next Escape leaves. Under the lists the Blade row (10/10/2026,
+  Sol's request): the stock blade in the first blade's colour, then every blade
+  skin the player's hub profile lists, each the Collection's swatch shrunk to 79
+  by 44 (moving as there; [unlockables.md](unlockables.md#saber-tabs-blade-choice)),
+  the one worn ringed gold, and under the row's name the name of the one under
+  the pointer or worn; with no skin owned, or the identity off, only the stock
+  blade and a line saying why. Then the blade's colour as seven chips (the six
+  stock colours and the custom one, ringed gold when chosen), its red, green
+  and blue sliders (a digit types the number), and the second blade's for Dual.
+  The camera cuts to the saber shot, where the model throws the saber to float
+  and turn before it. World shot: `world_shot::saber_skins::duel6_sjk_saber_page`
+  (the search typed, a search finding nothing with no skin owned, Dual; at 1080p,
+  with `ui_textScale` 1.2, and at 4K with it).
 - **Force:** the mastery ("Jedi Master") and the points left of the rank's
   ("18 of 100 points left", and "not applied yet" while the draft differs)
   over a gold bar of the points left; the Light and Dark sides as two cards
@@ -289,17 +305,20 @@ on the 16:9 frame, dark behind the form on the left and clear over the model.
   do it) and Tab with the next page's name.
 
 The keys are the player screen's shared ones: Up and Down choose a row (on the Saber and
-Force pages in the order they show them: both hilt lists before the blades,
+Force pages in the order they show them: the hilt search, both hilt lists, the
+Blade row and the blades' colours,
 the Force groups' powers in their order, the other side's skipped), Left and
-Right change it (a hilt list's choice moves one hilt), Enter types or acts, Tab
+Right change it (a hilt list's choice moves one hilt, the Blade row's one
+blade), Enter types or acts, Tab
 and `[` `]` change page (on the Profile screen, its tabs: from Force on to SJK
 Profile), Escape returns to the main page (dropping an
 unapplied Force draft, as before). The pointer: a click on a control acts (‹ ›
 by the half of the control it lands on, a chip picks the colour drawn under
-it, a slider follows, a style button, a hilt, a level), a click elsewhere on a
+it, a slider follows, a style button, a hilt, a blade, a level, the search
+field types), a click elsewhere on a
 row (a Force power's holocron or name too) only chooses it, a click on a tile
-picks that model. The SJK view's own targets (levels, style buttons,
-hilts and the lists' wheel areas, tokens from 1000) go to
+picks that model. The SJK view's own targets (levels, the Blade row's
+blades, style buttons, hilts and the lists' wheel areas, tokens from 1000) go to
 `PlayerMenu::sjk_pointer` before the screen's shared pointer handling.
 
 It is the player screen's shared state and controller with a view of its own:
