@@ -2744,3 +2744,10 @@ change: New log lines: Stage table: compiled N pipelines; Light pass: ... compil
 test: Join a server on a big map: the first seconds in play stay smooth; compare with main.
 test: SJK_FRAME_BUDGET=1 prints frame-budget lines; check the max after the load.
 note: Not measured on a GPU yet; first run after an update has a cold shader cache.
+
+[door-sounds]
+area: Audio
+title: Door sounds come from the middle of the door (SJK PR #53)
+change: Brush models (doors, buttons, breakables) sound from the middle of their model.
+test: Open and close doors on mp/ffa and duel maps: the start and end sounds are heard.
+note: The saber ignition sound when switching weapons is a separate gap, not fixed here.

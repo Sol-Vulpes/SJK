@@ -936,6 +936,21 @@ possible. Animation selection, movement, saber timing and network events are
 unchanged. Animation-driven effect/footprint marks and gameplay event actions
 remain outside this audio adapter.
 
+## Door and mover sounds
+
+A brush entity (a door, lift, button or breakable) has its entity origin at the
+world origin unless the map gave it an origin brush, so codemp plays its sounds
+from the middle of its model (`CG_SetEntitySoundPosition`, `cg_ents.c:118-132`).
+SJK does the same: an event sound on a brush entity, such as a door's start and
+end sounds (`EV_PLAYDOORSOUND`), and the position the mixer moves the entity's
+sounds to on every snapshot are its origin plus its inline model's midpoint
+(`LegacySoundAdapter::sound_origin` in
+[sound_events.rs](../crates/sjk-client/src/sound_events.rs), with the midpoints
+taken from the map when its sound tables are built). A mover's loop already came
+from the same point. That origin is the entity's `pos.trBase`, where codemp
+evaluates its trajectory, so a door that turns back halfway sounds from where
+its move began.
+
 ## Renderer settings
 
 SJK's own cvars have engine names: rendering ones are `r_*` (`r_sceneHdr`,

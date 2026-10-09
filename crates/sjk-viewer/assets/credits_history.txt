@@ -9,6 +9,8 @@
 #                               made it when that is not the piece's owner.
 
 = Sol
++ 09/10/2026 | SJK #53 | Play door sounds from the middle of the door's model
+- 247c8d6 |  | Play door sounds from the middle of the door's model
 + 09/10/2026 | SJK #51 | Compile real-time lighting pipelines at map load, not in play
 - 198f1b2 |  | Compile real-time lighting pipelines at map load, not in play
 + 09/10/2026 | SJK #50 | Add com_maxfpsMonitor, off by default, for AUTO's monitor-rate cap

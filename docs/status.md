@@ -208,6 +208,34 @@ lines (`compiled N pipeline keys`, `Stage table: compiled N pipelines at load`,
 converged`, `Reflection probes`, `Mover occlusion`, `client N now wears`) place each
 cost. Comparisons: `SJK_LAMP_CACHE=0`, `SJK_MOVER_OCCLUSION=0`, `SJK_STAGE_TABLE=0`,
 `r_cubeMapping 0` (restart) and `r_clouds 0`.
+## Door start sounds
+
+Branch `fix/start-sounds` (08/10/2026, based on `a6230f9`, Linux): Sol reported that
+a door's first sound is not heard when it opens, and the same for a lightsaber's
+ignition. A door is a brush model whose entity origin is the world origin unless the
+map gave it an origin brush. In codemp its start and end sounds (`EV_PLAYDOORSOUND`,
+`S_StartSound` without an origin) come from the middle of its model
+(`CG_SetEntitySoundPosition`); SJK played them at the entity origin, on most maps
+too far away to be heard, while the door's loop already came from its middle, and the
+mixer moved the door's sounds back to that origin at every snapshot. The sound
+adapter now places a brush entity's sounds at its origin plus its inline model's
+midpoint, taken from the map when the sound tables are built, and the per-snapshot
+source positions use the same point ([client.md](client.md#door-and-mover-sounds)).
+
+The lightsaber was not found to share the cause. The ignition sounds a server sends,
+the toggle's `EV_GENERAL_SOUND` at the player and `EV_SABER_UNHOLSTER` when an attack
+ignites the saber (also predicted locally), are resolved and played at the player:
+traced in the code, and a throwaway sound-adapter test produced the toggle's sound
+there. The one ignition SJK does not play is cgame's own, when a player switches to
+the saber from another weapon such as melee (`CG_CheckPlayerG2Weapons`, `CG_Player`:
+the saber's `soundOn`, and `soundOff` when switching away); it is left for a separate
+change, as nothing shows yet that it is the case Sol heard.
+
+Verified on Linux: new unit tests place a door's start and end sounds at the middle of
+its model (both came from the world origin before the change) and add a model's
+midpoint only for brush models. Formatting, the locked workspace build and tests pass,
+and workspace Clippy reports no warning in the changed code. Not verified: no client
+was run, so neither door nor saber was heard in game.
 
 ## Percent signs and quotes in chat
 
