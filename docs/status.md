@@ -261,6 +261,42 @@ workspace build and tests pass; workspace Clippy finishes without errors, and it
 warnings are all in code this change does not touch. Not verified: not seen in
 game; Sol's victim's exact name is unknown, so a name that is `noname` for another
 reason (none found in the code) would remain.
+## Teleport and spawn beam
+
+Branch `fix/teleport-spawn-beam` (08/10/2026, based on `a6230f9`, Linux): Sol reported
+that the green beam shown when a player teleports or spawns appeared in a weird
+position. Where the event plays it already matched `cg_event.c` (the player's box
+dropped onto the floor, forward axis straight up). The beam itself is made of
+`org2fromTrace` lines, which `CFxScheduler::CreateEffect` ends where a trace from the
+line's origin along that axis meets a solid (`FxScheduler.cpp:1392-1418`): it stands
+from the floor to the ceiling or sky. SJK's lines took only their authored `origin2` as
+an offset (`effect_runtime.rs`), which these lines leave at zero, so each beam line drew
+as a camera-facing square around the player's feet instead of a column. Every
+`org2fromTrace` line is now traced once, before it is first drawn, as electricity bolts
+already were ([rendering](rendering.md#entity-render-effects)). The other traced lines
+(`env/beam`, `mp/jedispawn`) are stretched the same way; `EV_BECOME_JEDIMASTER`, whose
+`cg_event.c` block is the teleport's with `mp/jedispawn`, now drops and points its
+effect as the teleport events do (it played at the player's origin along their angles,
+which would have laid its beam sideways); and the floor drop uses `MASK_SOLID`, terrain
+included. Trip mine beams keep their cached traces. The retail `mp/spawn.efx` was not
+available here; the public copies of `mp/jedispawn` and `env/beam`, its siblings, are
+two such lines and an emitter. JoF EJK's source was not found publicly; EternalJK's
+`cg_event.c` places the effect as OpenJK does, adding only `cg_noTeleFX` and a duel
+filter.
+
+Verified on Linux: unit tests in a made-up room (a beam-shaped test effect runs from
+the dropped box's origin, and from 20 units below it inside the floor slab, up to the
+ceiling, traced once; the box lands 16 units above the floor and on terrain, and plays
+nothing over a void; the offset end turns with the effect; the three events point
+straight up whatever the player faces). The beam and terrain tests fail on the old
+code. Workspace formatting, the locked build, the locked tests and workspace Clippy (no
+warning in the changed code) pass. Not seen on screen (no GPU or game data here, and no
+world shot plays effects): in game, respawn (`kill`) under a roof and in the open, watch
+another player spawn, and teleport (a map teleporter, or `setviewpos` on an SJK server
+with cheats); the beam should rise from the floor where the player stands to the
+ceiling or sky, as in EternalJK. A Jedi Master pickup should show the same.
+Known: stock's floor trace also stops on solid entities such as a lift (SJK's uses the
+world only), and `traceImpactFx` on a traced line is not played.
 
 ## Percent signs and quotes in chat
 

@@ -837,9 +837,22 @@ from their entity's own power bit, so both the combined and the plain shell show
 ([force_overlays.rs](../crates/sjk-client/src/force_overlays.rs)). JoF EJK's
 base-enhanced server check is not ported.
 
-`EV_PLAYER_TELEPORT_IN/OUT` play `mp/spawn` where the player's box (mins z -16, maxs z 40)
-lands when dropped up to 4096 units, as `cg_event.c` does, not at the player's centre;
-over a void no effect plays.
+`EV_PLAYER_TELEPORT_IN/OUT` play `mp/spawn`, and `EV_BECOME_JEDIMASTER` plays
+`mp/jedispawn`, where the player's box (mins z -16, maxs z 40) lands when dropped up to
+4096 units against `MASK_SOLID` (terrain included), as `cg_event.c` does
+(`:2409-2430`, `:2699-2751`), not at the player's centre; over a void no effect plays.
+The effect's forward axis is straight up (`ang = (0, 0, 1)`), whichever way the player
+faces. Its green beam is drawn by `org2fromTrace` lines: `CFxScheduler::CreateEffect`
+ends such a line where a trace from its origin along the forward axis meets a solid,
+at most 16,384 units away (`FxScheduler.cpp:1392-1418`), so the beam stands from the
+floor to the ceiling or sky.
+SJK traces every `org2fromTrace` line once, before it is first drawn
+([effect_geometry.rs](../crates/sjk-viewer/src/effect_geometry.rs)
+`resolve_traced_streak`), with `org2isOffset` moving the untraced end as electricity
+does. Lines used to take only their authored `origin2`, so a traced line had no length
+and drew as a camera-facing square at the floor. Trip mine beams keep their own cached
+trace. Stock's `CG_Trace` also stops the dropped box on solid entities such as a lift;
+SJK drops it onto the world only, and `traceImpactFx` on a traced line is not played.
 
 The Force Speed afterimages use it: two copies of the actor in its current pose
 at alpha 100 and 50, spaced by `(int)(6 * speed * 0.004)` units along the

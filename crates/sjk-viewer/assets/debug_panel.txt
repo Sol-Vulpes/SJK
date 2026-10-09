@@ -2759,3 +2759,12 @@ change: A name with an accented letter or symbol is printed, not replaced by non
 change: Each name ends in ^7, so an open colour does not tint the rest of the line.
 test: Kill or be killed by a player named with e-acute: the console line shows the name.
 test: A name left in an open colour (^1Red) does not tint the words after it.
+
+[teleport-beam]
+area: Rendering & effects
+title: Teleport and spawn beam stands up (SJK PR #52)
+change: org2fromTrace effect lines are traced once and reach the ceiling or sky.
+change: The floor drop uses MASK_SOLID; the Jedi Master spawn effect points straight up.
+test: Respawn (kill) under a roof and in the open: the beam rises from your feet.
+test: Use a map teleporter (or setviewpos with cheats): the same beam; pick up a Jedi Master.
+note: Other traced lines (env/beam) now draw long, as in OpenJK. Not seen on screen yet.

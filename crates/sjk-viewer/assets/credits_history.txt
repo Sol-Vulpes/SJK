@@ -9,6 +9,8 @@
 #                               made it when that is not the piece's owner.
 
 = Sol
++ 09/10/2026 | SJK #52 | Trace org2fromTrace lines so the teleport and spawn beam stands up
+- 36735f9 |  | Trace org2fromTrace lines so the teleport and spawn beam stands up
 + 09/10/2026 | SJK #57 | Print Latin-1 player names in kill messages instead of noname
 - 000896f |  | Print Latin-1 player names in kill messages instead of noname
 + 09/10/2026 | SJK #53 | Play door sounds from the middle of the door's model

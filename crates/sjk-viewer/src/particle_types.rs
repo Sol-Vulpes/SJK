@@ -24,6 +24,10 @@ pub(crate) struct Particle {
     pub(crate) start_length: f32,
     pub(crate) end_length: f32,
     pub(crate) streak: Option<Vec3>,
+    /// `streak` still points at an `org2fromTrace` line's untraced end
+    /// ([`crate::effect_shapes::origin2_trace_target`]); the first draw traces it
+    /// ([`crate::effect_geometry::resolve_traced_streak`]).
+    pub(crate) trace_streak: bool,
     pub(crate) normal: Option<Vec3>,
     pub(crate) alpha: crate::effect_envelope::Envelope,
     pub(crate) use_alpha: bool,
