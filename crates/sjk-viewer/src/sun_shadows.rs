@@ -615,7 +615,23 @@ impl super::Runtime {
                 started.elapsed().as_secs_f64() * 1e3
             ));
         }
+        // The light pass's first frame would otherwise compile these mid-frame.
+        let realtime = settings.day.enabled && shadow.light.is_some();
         self.shadows = Some(shadow);
+        if realtime && self.forge.model_sun.is_some() {
+            let started = std::time::Instant::now();
+            self.prewarm_depth_prime();
+            let cached = self.prewarm_cached_receivers();
+            crate::log::progress(format_args!(
+                "Light pass: depth priming{} pipelines compiled at load in {:.0} ms",
+                if cached {
+                    " and lamp cache receiver"
+                } else {
+                    ""
+                },
+                started.elapsed().as_secs_f64() * 1e3
+            ));
+        }
     }
     /// Mirror the main-view shader's live-material gate, including neutral resources
     /// before a valid frame. Secondary views select their legacy pipelines separately.

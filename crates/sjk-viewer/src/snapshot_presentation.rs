@@ -122,39 +122,27 @@ pub(crate) fn observe(
     sinks.counters.saber_flare_latches += impact.flare_latches as u64;
 }
 
+/// The console line `CG_Obituary` prints (`cg_event.c:124-454`): each name ends
+/// with `^7` (`S_COLOR_WHITE`), so a colour left open in a name stops there.
 fn format_obituary(
     event: sjk_client::ObituaryEvent,
     game: &GameState,
     localization: &Localization,
 ) -> String {
     use std::fmt::Write as _;
-    let target = client_name(game, event.target);
+    // Names come from the configstring's bytes: a name with a Latin-1 letter is
+    // not UTF-8, and reading the whole string as UTF-8 printed it as `noname`.
+    let target = sjk_client::obituary_name(game, event.target);
     let key = event.attacker_message.unwrap_or(event.message);
     let phrase = localization.strings.get(key).map_or(key, String::as_str);
     let mut line = String::with_capacity(128);
     if event.attacker_message.is_some() {
-        let attacker = client_name(game, event.attacker);
-        let _ = write!(line, "{target} {phrase} {attacker}");
+        let attacker = sjk_client::obituary_name(game, event.attacker);
+        let _ = write!(line, "{target}^7 {phrase} {attacker}^7");
     } else {
-        let _ = write!(line, "{target} {phrase}");
+        let _ = write!(line, "{target}^7 {phrase}");
     }
     line
-}
-
-fn client_name(game: &GameState, client: u16) -> &str {
-    let Some(info) = game.config_string(1_131 + usize::from(client)) else {
-        return "noname";
-    };
-    let Ok(info) = std::str::from_utf8(info) else {
-        return "noname";
-    };
-    let mut fields = info.trim_start_matches('\\').split('\\');
-    while let (Some(key), Some(value)) = (fields.next(), fields.next()) {
-        if matches!(key, "n" | "name") {
-            return value;
-        }
-    }
-    "noname"
 }
 
 impl GpuState {
@@ -479,5 +467,76 @@ fn update_demo_camera(gpu: &mut GpuState, session: &demo_playback::Session) {
         let to_target = target - gpu.camera_position;
         gpu.camera_yaw = to_target.y.atan2(to_target.x);
         gpu.camera_pitch = (to_target.z / to_target.length().max(1.0)).asin();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// `CS_PLAYERS`: the first client's configstring.
+    const CS_PLAYERS: usize = 1_131;
+
+    fn kill(target: u16, attacker: u16, key: &'static str) -> sjk_client::ObituaryEvent {
+        sjk_client::ObituaryEvent {
+            target,
+            attacker,
+            means_of_death: 3,
+            message: "",
+            attacker_message: Some(key),
+            local_fragged: false,
+            local_was_killed: false,
+            server_time: 0,
+        }
+    }
+
+    fn players(entries: &[(u16, &[u8])]) -> GameState {
+        let mut game = GameState::empty_local(0);
+        for (client, info) in entries {
+            game.replace_config_string(CS_PLAYERS + usize::from(*client), info.to_vec())
+                .unwrap();
+        }
+        game
+    }
+
+    /// Sol's `noname was sabered by {JoF}emiah{I}`: the victim's name has a
+    /// Latin-1 letter (`é`, byte 0xE9), so the whole configstring is not UTF-8.
+    #[test]
+    fn a_latin1_name_is_printed_not_noname() {
+        let game = players(&[
+            (3, b"n\\R\xe9mi\\t\\0\\model\\kyle/default\\ds\\m"),
+            (7, b"n\\{JoF}emiah{I}\\t\\0\\model\\jedi_hm\\ds\\m"),
+        ]);
+        let mut localization = Localization::default();
+        localization
+            .strings
+            .insert("KILLED_SABER".into(), "was sabered by".into());
+        assert_eq!(
+            format_obituary(kill(3, 7, "KILLED_SABER"), &game, &localization),
+            "Rémi^7 was sabered by {JoF}emiah{I}^7"
+        );
+    }
+
+    /// `CG_Obituary` ends each name with `^7`, so a colour a name leaves open
+    /// does not run into the rest of the line.
+    #[test]
+    fn each_name_ends_in_white() {
+        let game = players(&[(0, b"\\n\\^1Red"), (1, b"\\n\\^4Blue")]);
+        let line = format_obituary(kill(0, 1, "KILLED_SABER"), &game, &Localization::default());
+        assert_eq!(line, "^1Red^7 KILLED_SABER ^4Blue^7");
+        let mut fall = kill(0, 0, "");
+        fall.attacker_message = None;
+        fall.message = "SUICIDE_FALLDEATH_MALE";
+        assert_eq!(
+            format_obituary(fall, &game, &Localization::default()),
+            "^1Red^7 SUICIDE_FALLDEATH_MALE"
+        );
+    }
+
+    #[test]
+    fn only_a_slot_without_a_name_is_noname() {
+        let game = players(&[(1, b"\\n\\Sol\\t\\0")]);
+        let line = format_obituary(kill(5, 1, "KILLED_SABER"), &game, &Localization::default());
+        assert_eq!(line, "noname^7 KILLED_SABER Sol^7");
     }
 }

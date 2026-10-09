@@ -137,6 +137,7 @@ mod trip_mine_lasers;
 mod viewer_app;
 use object_meshes::StaticModelMesh;
 mod achievements_frame;
+mod blade_skin_file;
 mod bug_report;
 mod emotes;
 mod emotes_frame;
@@ -145,6 +146,8 @@ mod identity_command;
 mod identity_frame;
 mod illuminate;
 mod live_session;
+mod looks;
+mod looks_frame;
 mod net_timing;
 mod particle_motion;
 mod particle_physics;
@@ -175,6 +178,8 @@ mod saber_defs;
 mod saber_gpu;
 mod saber_hilts;
 mod saber_rgb;
+mod saber_skin_command;
+mod saber_skins;
 mod saber_submission;
 mod saber_trail;
 mod saber_trail_gpu;
@@ -188,6 +193,7 @@ mod settings;
 mod settings_icons;
 mod shared_geometry;
 mod sjk_chat_frame;
+mod sjk_packs;
 mod sky_stage;
 mod snapshot_presentation;
 mod static_models;
@@ -197,6 +203,7 @@ mod text_select;
 mod ui_renderer;
 mod ui_scale;
 mod ui_target;
+mod unlockables;
 mod update;
 mod version_overlay;
 mod wall_hold_pose;
@@ -325,11 +332,19 @@ struct GpuState {
     first_person_view: first_person_view::Tracker,
     model_material_overrides: model_materials::Overrides,
     saber_hilts: Option<saber::HiltCatalog>,
+    /// Who wears which blade skin (`saber_skins.rs`).
+    saber_skins: saber_skins::SaberSkins,
+    /// The blade skins the packs brought (`sjk_packs.rs`), as uploaded to `saber_gpu`.
+    blade_skins: std::sync::Arc<saber_skins::LoadedSkins>,
     saber_states: saber_trail::StateSlab,
     saber_trail_segments: saber_trail::SegmentPool,
     speed_trails: actor_world_submission::speed_trail::Trails,
     /// Illuminate's holocron, the client's own Force-wheel light.
     illuminate: illuminate::Holocron,
+    /// The other players' holocrons, lit by their looks.
+    illuminate_others: illuminate::Others,
+    /// What each player wears that SJK draws (blade skin, Illuminate).
+    looks: looks::Looks,
     trick_fades: sjk_client::LegacyTrickFades,
     projectiles: Vec<projectiles::Presented>,
     missile_effects: LegacyMissileEffects,
@@ -1179,10 +1194,14 @@ impl GpuState {
 
             model_material_overrides,
             saber_hilts,
+            saber_skins: Default::default(),
+            blade_skins: Default::default(),
             saber_states: saber_trail::StateSlab::default(),
             saber_trail_segments: saber_trail::SegmentPool::default(),
             speed_trails: Default::default(),
             illuminate: Default::default(),
+            illuminate_others: Default::default(),
+            looks: Default::default(),
             trick_fades: Default::default(),
             projectiles: Vec::with_capacity(sjk_protocol::MAX_LEGACY_ENTITIES),
             missile_effects,
@@ -1905,6 +1924,7 @@ impl GpuState {
         self.particle_groups.iter_mut().for_each(Vec::clear);
         self.dynamic_lights.clear();
         self.submit_illuminate(presentation_time, visual_now);
+        self.sync_saber_skins(game_audio, presentation_time);
         let debug_missiles = effect_debug::sync(self.console.as_ref());
         let active_snapshot = first_person_view::presented_snapshot(
             self.live_session.as_ref(),
@@ -2274,6 +2294,9 @@ impl GpuState {
             phases.mark(&mut encoder, "uploads");
         }
         if !self.world_hidden {
+            // Walls stop dynamic lights: their shadow tiles before any view lights with them.
+            self.world_materials
+                .trace_dynamic_light_shadows(&mut encoder, self.gpu_phases.as_ref());
             self.draw_scene_views(&mut encoder, &particle_ranges);
         }
         if let Some(phases) = &self.gpu_phases {

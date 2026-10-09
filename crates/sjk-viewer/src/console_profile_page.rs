@@ -40,6 +40,7 @@ impl ViewerConsole {
         self.identity_panel.close();
         self.staff_panel.close();
         self.sjk_chat_panel.close();
+        self.unlockables_panel.close();
         self.dead_key.settle();
         self.profile_panel.open(tab, owns_console);
     }
@@ -59,6 +60,13 @@ impl ViewerConsole {
                 self.open_staff_panel();
                 if owns_console {
                     self.staff_panel_owns_console();
+                }
+            }
+            PanelAction::Unlockables => {
+                let owns_console = self.profile_panel.close();
+                self.open_unlockables_panel();
+                if owns_console {
+                    self.unlockables_panel_owns_console();
                 }
             }
             PanelAction::Identity => {

@@ -25,13 +25,18 @@
 //! sounds of `WP_RemoveSaber` (`bg_saberLoad.c:2187-2199`), so ignition also plays
 //! `enemy_saber_on` for a single saber, as the server's toggle does
 //! (`g_cmds.c` `Cmd_ToggleSaber_f`); retraction checks the second hilt's model.
+//!
+//! A blade skin (an SJK unlockable, [`super::saber_overrides`]) comes first: a client
+//! wearing one ignites and retracts with its set's single `on` or `off`, once per
+//! switch, in place of both hilts' sounds, as its `EV_SABER_UNHOLSTER` already does.
+//! Without one, each hilt's `soundOn`/`soundOff` plays, or the
+//! `WP_SaberSetDefaults` sound where its definition authors none. A client whose
+//! clientinfo names no hilt (no real server sends one) keeps the stock `saberon`.
 
 use super::*;
 use crate::LegacyClientInfo;
 use crate::pmove::MovementState;
-use crate::saber_definitions::{
-    LEGACY_DEFAULT_SABER_OFF, LEGACY_DEFAULT_SABER_ON, LegacySaberDefinition,
-};
+use crate::saber_definitions::LegacySaberDefinition;
 use sjk_protocol::PlayerState;
 use std::collections::BTreeMap;
 
@@ -50,6 +55,13 @@ const GT_TEAM: i32 = 6; // bg_public.h gametype_t
 const CS_SERVERINFO: usize = 0;
 const CS_PLAYERS: usize = 1_131;
 const DEFAULT_SABER: &str = "Kyle"; // bg_public.h:42
+/// `WP_SaberSetDefaults` ignition sound, kept by a definition without `soundOn`
+/// and by a removed second saber (`bg_saberLoad.c:416`, `WP_RemoveSaber`).
+const DEFAULT_SABER_ON: &str = "sound/weapons/saber/enemy_saber_on.wav";
+/// `WP_SaberSetDefaults` retraction sound (`bg_saberLoad.c:418`).
+const DEFAULT_SABER_OFF: &str = "sound/weapons/saber/enemy_saber_off.wav";
+/// The stock ignition SJK has always played for `EV_SABER_UNHOLSTER`.
+pub(super) const STOCK_SABER_ON: &str = "sound/weapons/saber/saberon.mp3";
 
 /// The local view's weapon fields as cgame reads them every frame
 /// (`cg.predictedPlayerState`): the predicted state in live play, the presented
@@ -474,16 +486,29 @@ impl LegacySoundAdapter {
                 Switch::On => LegacySoundEvent::SaberSwitchOn,
                 Switch::Off => LegacySoundEvent::SaberSwitchOff,
             };
-            let sounds = self.saber_switch.hands(client).sounds(switch);
+            let sounds = self.switch_sounds(client, switch);
             self.emit_hands(event, sounds, client, origin, snapshot);
         }
         self.decisions.len()
     }
 
+    /// What `client` plays for `switch`: its blade skin's one sound when it wears
+    /// one, else each hand's own (`soundOn`/`soundOff` or their defaults).
+    fn switch_sounds(&self, client: u16, switch: Switch) -> [Option<u16>; 2] {
+        let skin = match switch {
+            Switch::On => self.saber_overrides.on(client),
+            Switch::Off => self.saber_overrides.off(client),
+        };
+        skin.map_or_else(
+            || self.saber_switch.hands(client).sounds(switch),
+            |sound| [Some(sound), None],
+        )
+    }
+
     /// `EV_SABER_UNHOLSTER` from a client: each hand's `soundOn`
-    /// (`cg_event.c:2381-2407`).
+    /// (`cg_event.c:2381-2407`), or the blade skin's ignition.
     pub(super) fn emit_unholster(&mut self, client: u16, origin: [f32; 3], snapshot: &Snapshot) {
-        let sounds = self.saber_switch.hands(client).sounds(Switch::On);
+        let sounds = self.switch_sounds(client, Switch::On);
         self.emit_hands(
             LegacySoundEvent::SaberUnholster,
             sounds,
@@ -572,18 +597,16 @@ fn hands(
     if config.is_empty() {
         return Hands::default();
     }
-    let mut sound = |path: &str| (!path.is_empty()).then(|| intern(path));
     let [first, second] = raw_saber_names(config);
     let mut hands = Hands::default();
+    let Some(first) = first else {
+        // No hilt named: the stock ignition SJK played before it read hilts.
+        hands.on[0] = Some(intern(STOCK_SABER_ON));
+        return hands;
+    };
+    let mut sound = |path: &str| (!path.is_empty()).then(|| intern(path));
     // The first saber can never be removed; `none` leaves it unloaded.
-    let first = first
-        .filter(|name| !removes(name))
-        .map(|name| definition(definitions, name))
-        .or_else(|| {
-            first
-                .is_none()
-                .then(|| definition(definitions, DEFAULT_SABER))
-        });
+    let first = (!removes(first)).then(|| definition(definitions, first));
     let first_two_handed = first.flatten().is_some_and(|hilt| hilt.two_handed);
     if let Some(first) = first {
         let (on, off) = sound_paths(first);
@@ -604,11 +627,14 @@ fn hands(
     hands
 }
 
-/// A loaded hand's `soundOn` and `soundOff`, or the `WP_SaberSetDefaults` ones.
+/// A loaded hand's `soundOn` and `soundOff`, or the `WP_SaberSetDefaults` ones
+/// where it authors none.
 fn sound_paths(definition: Option<&LegacySaberDefinition>) -> (&str, &str) {
-    definition.map_or(
-        (LEGACY_DEFAULT_SABER_ON, LEGACY_DEFAULT_SABER_OFF),
-        |hilt| (hilt.sound_on.as_str(), hilt.sound_off.as_str()),
+    let on = definition.and_then(|hilt| hilt.sound_on.as_deref());
+    let off = definition.and_then(|hilt| hilt.sound_off.as_deref());
+    (
+        on.unwrap_or(DEFAULT_SABER_ON),
+        off.unwrap_or(DEFAULT_SABER_OFF),
     )
 }
 

@@ -1,22 +1,25 @@
 //! Match-information projection into retained HUD storage.
 
 use super::*;
-use sjk_client::{CrosshairName, KillFeed, WarmupText};
+use sjk_client::{CrosshairName, ObituaryTracker, WarmupText};
 use std::fmt::Write as _;
 
 impl HudOverlay {
+    /// `local_client` is the viewed player's client number, whose kills and
+    /// deaths the kill feed marks.
+    #[allow(clippy::too_many_arguments)]
     pub(crate) fn update_match_information(
         &mut self,
         game: &GameState,
         server_time: i32,
-        feed: &KillFeed,
+        obituaries: &ObituaryTracker,
+        local_client: u16,
         lagometer: &sjk_client::LagometerSamples,
         crosshair: Option<CrosshairName>,
         interrupted: bool,
-        localization: &Localization,
     ) {
-        self.update_kill_feed(game, feed, server_time, localization);
-        self.icons.obituary(feed);
+        self.kill_feed
+            .observe(obituaries, game, server_time, local_client);
         self.crosshair_name.clear();
         self.crosshair_alpha = 0.0;
         self.crosshair_teammate = false;
@@ -43,41 +46,5 @@ impl HudOverlay {
         }
         self.interrupted = interrupted;
         self.lagometer.clone_from(lagometer);
-    }
-
-    /// Only the newest obituary is presented, and only briefly; the full
-    /// list lives in the console log.
-    fn update_kill_feed(
-        &mut self,
-        game: &GameState,
-        feed: &KillFeed,
-        server_time: i32,
-        localization: &Localization,
-    ) {
-        self.kill_len = 0;
-        self.kill_alpha = 0.0;
-        let Some(event) = feed.newest(0) else { return };
-        let age = server_time.saturating_sub(event.server_time).max(0) as u64;
-        self.kill_alpha = transient_alpha(age, KILL_HOLD_MS, KILL_FADE_MS);
-        if self.kill_alpha <= 0.0 {
-            return;
-        }
-        self.kill_len = 1;
-        let target = client_name_and_team(game, event.target).0;
-        let attacker = client_name_and_team(game, event.attacker).0;
-        let key = event.attacker_message.unwrap_or(event.message);
-        let phrase = localization.strings.get(key).map_or(key, String::as_str);
-        self.kill_rows[0].clear();
-        if event.attacker_message.is_some() {
-            family::obituary(
-                &mut self.kill_rows[0],
-                &target,
-                &attacker,
-                phrase,
-                self.family.kill_reverse,
-            );
-        } else {
-            let _ = write!(self.kill_rows[0], "{target} {phrase}");
-        }
     }
 }

@@ -11,6 +11,20 @@ const HIDDEN: u16 = 3;
 const PISTOL: u8 = 4;
 const EV_CHANGE_WEAPON: u32 = 26;
 const EV_SABER_UNHOLSTER: u32 = 33;
+/// `CS_SOUNDS` slot of a hilt's own `soundOn`, as the server's toggle plays it.
+const SLOT_SINGLE2_ON: u8 = 1;
+
+/// A blade skin's sounds (an SJK unlockable), worn in place of the hilts'.
+const SKIN: SaberSoundSet<'static> = SaberSoundSet {
+    on: "sound/sjk/skin_on.wav",
+    off: "sound/sjk/skin_off.wav",
+    hum: "sound/sjk/skin_hum.wav",
+    swings: [
+        "sound/sjk/skin_swing1.wav",
+        "sound/sjk/skin_swing2.wav",
+        "sound/sjk/skin_swing3.wav",
+    ],
+};
 
 const SABERS: &str = r#"
 Kyle
@@ -83,8 +97,17 @@ impl Fixture {
         ] {
             files.push((format!("sound/weapons/saber/{name}.wav"), b"RIFF".to_vec()));
         }
+        for path in [SKIN.on, SKIN.off, SKIN.hum].into_iter().chain(SKIN.swings) {
+            files.push((path.to_owned(), b"RIFF".to_vec()));
+        }
         vfs.mount_memory("base", files).unwrap();
         let mut game_state = GameState::empty_local(i32::from(LOCAL));
+        game_state
+            .replace_config_string(
+                CS_SOUNDS + usize::from(SLOT_SINGLE2_ON),
+                b"sound/weapons/saber/single2_on.wav".to_vec(),
+            )
+            .unwrap();
         for (client, sabers) in [
             (LOCAL, "st\\single_2\\st2\\none"),
             (DUAL, "st\\single_2\\st2\\dual_2"),
@@ -99,10 +122,12 @@ impl Fixture {
                 .unwrap();
         }
         let mut next_handle = 0;
-        let adapter = LegacySoundAdapter::new(&game_state, &vfs, |_, _| {
+        let mut register = |_: &str, _: &[u8]| {
             next_handle += 1;
             Some(SoundHandle(next_handle))
-        });
+        };
+        let mut adapter = LegacySoundAdapter::new(&game_state, &vfs, &mut register);
+        adapter.register_saber_sound_sets(&[SKIN], &vfs, &mut register);
         Self {
             game_state,
             vfs,
@@ -110,6 +135,15 @@ impl Fixture {
             time: 1_000,
             next_handle,
         }
+    }
+
+    /// The clients wearing the blade skin, as the viewer gives them every frame.
+    fn wear(&mut self, clients: &[u16]) {
+        let mut worn = [None; SABER_SOUND_CLIENTS];
+        for client in clients {
+            worn[usize::from(*client)] = Some(0);
+        }
+        self.adapter.set_saber_sound_overrides(&worn);
     }
 
     /// A `CS_PLAYERS` change, delivered as the viewer does before a snapshot.
@@ -240,6 +274,17 @@ fn with_field(mut state: EntityState, field: usize, value: u32) -> EntityState {
     state
 }
 
+/// `G_Sound`'s temporary entity: `EV_GENERAL_SOUND` with no owner, at `origin`.
+fn general_sound(number: u16, slot: u8, origin: [f32; 3]) -> EntityState {
+    let mut state = EntityState::zero(number, &LEGACY_ENTITY_FIELDS);
+    state.set_raw_field(8, 18 + 76); // ET_EVENTS + EV_GENERAL_SOUND
+    state.set_raw_field(42, u32::from(slot));
+    for (field, value) in [2, 1, 4].into_iter().zip(origin) {
+        state.set_raw_field(field, value.to_bits());
+    }
+    state
+}
+
 use LegacySoundEvent::{SaberSwitchOff as Off, SaberSwitchOn as On, SaberUnholster};
 
 #[test]
@@ -298,19 +343,49 @@ fn hilts_resolve_like_cg_new_client_info() {
 }
 
 #[test]
-fn definitions_default_to_the_enemy_saber_sounds() {
+fn unauthored_hilt_sounds_fall_back_to_the_defaults() {
     let mut vfs = VirtualFileSystem::new();
     vfs.mount_memory("base", [("ext_data/sabers/test.sab", SABERS.as_bytes())])
         .unwrap();
     let definitions = crate::legacy_saber_definitions(&vfs).unwrap();
+    // A definition keeps only what its `.sab` authors.
     let plain = &definitions["plain"];
-    assert_eq!(plain.sound_on, "sound/weapons/saber/enemy_saber_on.wav");
-    assert_eq!(plain.sound_off, "sound/weapons/saber/enemy_saber_off.wav");
+    assert_eq!(
+        (plain.sound_on.as_deref(), plain.sound_off.as_deref()),
+        (None, None)
+    );
     assert!(!plain.two_handed);
     assert!(definitions["staff_1"].two_handed);
     assert_eq!(
-        definitions["dual_2"].sound_off,
-        "sound/weapons/saber/dual2_off.wav"
+        definitions["dual_2"].sound_off.as_deref(),
+        Some("sound/weapons/saber/dual2_off.wav")
+    );
+    let mut paths: Vec<String> = Vec::new();
+    let mut resolve = |config: &str| {
+        let mut intern = |path: &str| {
+            paths.push(path.to_owned());
+            (paths.len() - 1) as u16
+        };
+        let hands = super::hands(config.as_bytes(), &definitions, &mut intern);
+        let path = |sound: Option<u16>| sound.map(|index| paths[usize::from(index)].clone());
+        [Switch::On, Switch::Off].map(|switch| hands.sounds(switch).map(path))
+    };
+    let saber = |name: &str| Some(format!("sound/weapons/saber/{name}.wav"));
+    // A hilt that authors none plays `WP_SaberSetDefaults`' sounds.
+    assert_eq!(
+        resolve(&player_config("st\\plain\\st2\\none")),
+        [
+            [saber("enemy_saber_on"), saber("enemy_saber_on")],
+            [saber("enemy_saber_off"), None]
+        ]
+    );
+    // A clientinfo naming no hilt keeps the stock ignition.
+    assert_eq!(
+        resolve("\\n\\Player\\model\\kyle/default"),
+        [
+            [Some("sound/weapons/saber/saberon.mp3".to_owned()), None],
+            [None, None]
+        ]
     );
 }
 
@@ -575,5 +650,94 @@ fn a_followed_player_is_voiced_once_from_its_playerstate() {
         played
             .iter()
             .all(|played| played.source == u32::from(DUAL) && played.origin.is_none())
+    );
+}
+
+#[test]
+fn a_blade_skin_replaces_both_hilts_once_per_switch() {
+    let mut fixture = Fixture::new();
+    fixture.wear(&[LOCAL, DUAL]);
+    let skin = |switch| (switch, "sound/sjk/skin_on");
+    fixture.step(
+        view(WP_MELEE, 0),
+        &[player(DUAL, WP_MELEE, 0), player(STAFF, WP_MELEE, 0)],
+    );
+    // The wearers ignite with the skin's one sound, the staff with its own hilt.
+    let played = fixture.step(
+        view(WP_SABER, 0),
+        &[player(DUAL, WP_SABER, 0), player(STAFF, WP_SABER, 0)],
+    );
+    assert_eq!(
+        names(&played),
+        [skin(On), skin(On), (On, "staff_on"), (On, "enemy_saber_on")]
+    );
+    let sources: Vec<u32> = played.iter().map(|played| played.source).collect();
+    assert_eq!(sources, [LOCAL, DUAL, STAFF, STAFF].map(u32::from));
+    assert!(
+        played[..2]
+            .iter()
+            .all(|played| played.channel == CHAN_AUTO && !played.additional)
+    );
+    let played = fixture.step(
+        view(PISTOL, 0),
+        &[player(DUAL, WP_MELEE, 0), player(STAFF, PISTOL, 0)],
+    );
+    assert_eq!(
+        names(&played),
+        [
+            (Off, "sound/sjk/skin_off"),
+            (Off, "sound/sjk/skin_off"),
+            (Off, "staff_off")
+        ]
+    );
+    // Taken off, the hilts' own sounds come back.
+    fixture.wear(&[]);
+    assert_eq!(
+        names(&fixture.step(view(WP_SABER, 0), &[])),
+        [(On, "single2_on"), (On, "enemy_saber_on")]
+    );
+}
+
+#[test]
+fn a_blade_skin_voices_the_unholster_and_toggle_once_and_the_switch_adds_nothing() {
+    let mut fixture = Fixture::new();
+    fixture.wear(&[DUAL]);
+    let local = view(WP_SABER, 0);
+    fixture.step(local, &[player(DUAL, WP_SABER, 2)]);
+    // An attack's unholster: the skin's ignition once, in place of both hilts.
+    let unholster = with_field(player(DUAL, WP_SABER, 0), 28, EV_SABER_UNHOLSTER);
+    let snapshot = fixture.snapshot(local, std::slice::from_ref(&unholster));
+    fixture.adapter.observe_snapshot(&snapshot);
+    assert_eq!(
+        names(&fixture.played()),
+        [(SaberUnholster, "sound/sjk/skin_on")]
+    );
+    assert_eq!(fixture.adapter.observe_saber_switches(&snapshot, local), 0);
+    // The server's toggle: the `G_Sound` of a hilt's `soundOn` where the wearer
+    // stands is the skin's (`TOGGLE_REACH`), and the held weapon does not change,
+    // so cgame's switch path stays silent.
+    let lit = player(DUAL, WP_SABER, 0);
+    let toggle = general_sound(100, SLOT_SINGLE2_ON, lit.trajectory_base());
+    let snapshot = fixture.snapshot(local, &[with_field(lit, 71, 2), toggle]);
+    fixture.adapter.observe_snapshot(&snapshot);
+    assert_eq!(
+        names(&fixture.played()),
+        [(LegacySoundEvent::General, "sound/sjk/skin_on")]
+    );
+    assert_eq!(fixture.adapter.observe_saber_switches(&snapshot, local), 0);
+    // A weapon switch has no server sound: only the switch path's one ignition.
+    fixture.step(local, &[player(DUAL, WP_MELEE, 0)]);
+    let snapshot = fixture.snapshot(local, &[player(DUAL, WP_SABER, 0)]);
+    fixture.adapter.observe_snapshot(&snapshot);
+    assert!(fixture.played().is_empty());
+    fixture.adapter.observe_saber_switches(&snapshot, local);
+    assert_eq!(names(&fixture.played()), [(On, "sound/sjk/skin_on")]);
+    // A client not wearing it keeps its hilts on the same event.
+    fixture.wear(&[]);
+    let snapshot = fixture.snapshot(local, std::slice::from_ref(&unholster));
+    fixture.adapter.observe_snapshot(&snapshot);
+    assert_eq!(
+        names(&fixture.played()),
+        [(SaberUnholster, "single2_on"), (SaberUnholster, "dual2_on")]
     );
 }

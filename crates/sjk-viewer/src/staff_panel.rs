@@ -1,6 +1,6 @@
 //! The Staff page: for a player the hub's operator made staff, the SJK team's tools
 //! in the game (`docs/identity.md`, "Staff"): find a player, give or take back their
-//! medals, clear their achievements. Every action is a request signed by the
+//! medals, unlock or relock their unlockables, clear their achievements. Every action is a request signed by the
 //! player's own key (`sjk_identity::StaffRequest`); the hub refuses it from any other
 //! key, and the page only opens for a key whose profile says staff.
 //!
@@ -33,9 +33,12 @@ const GIVE_BASE: u16 = 1_150;
 const TAKE_BASE: u16 = 1_160;
 /// Clear, one token per achievement of the catalogue.
 const CLEAR_BASE: u16 = 1_170;
+/// Unlock and Relock, one token per unlockable of the catalogue.
+const UNLOCK_BASE: u16 = 1_250;
+const RELOCK_BASE: u16 = 1_270;
 /// Longest search, as the hub takes it.
 const QUERY_MAX: usize = 64;
-/// Longest note with a medal, as the hub takes it.
+/// Longest note with a medal or an unlock, as the hub takes it.
 const NOTE_MAX: usize = 200;
 /// How long Clear all waits for its second press.
 const CONFIRM_FOR: Duration = Duration::from_secs(3);
@@ -62,9 +65,11 @@ struct Shown {
     /// The players' keys in the list, in order.
     players: Vec<String>,
     me: Option<String>,
-    /// The chosen player's key, and how many of each medal they hold.
+    /// The chosen player's key, how many of each medal they hold and which
+    /// unlockables.
     target: Option<String>,
     medals: [u32; crate::medals::Medal::COUNT],
+    unlocks: [bool; crate::unlockables::ALL.len()],
 }
 
 pub(crate) struct Panel {
@@ -249,6 +254,37 @@ impl Panel {
                 }
             }
             token
+                if (UNLOCK_BASE..UNLOCK_BASE + crate::unlockables::ALL.len() as u16)
+                    .contains(&token) =>
+            {
+                let index = usize::from(token - UNLOCK_BASE);
+                match target {
+                    Some(key_id) if !self.shown.unlocks[index] => {
+                        PanelAction::Request(StaffRequest::Unlock {
+                            key_id,
+                            unlock: crate::unlockables::ALL[index].id.to_owned(),
+                            note: self.note.trim().to_owned(),
+                        })
+                    }
+                    _ => PanelAction::None,
+                }
+            }
+            token
+                if (RELOCK_BASE..RELOCK_BASE + crate::unlockables::ALL.len() as u16)
+                    .contains(&token) =>
+            {
+                let index = usize::from(token - RELOCK_BASE);
+                match target {
+                    Some(key_id) if self.shown.unlocks[index] => {
+                        PanelAction::Request(StaffRequest::Relock {
+                            key_id,
+                            unlock: crate::unlockables::ALL[index].id.to_owned(),
+                        })
+                    }
+                    _ => PanelAction::None,
+                }
+            }
+            token
                 if (CLEAR_BASE..CLEAR_BASE + crate::achievements::ALL.len() as u16)
                     .contains(&token) =>
             {
@@ -263,6 +299,12 @@ impl Panel {
             }
             _ => PanelAction::None,
         }
+    }
+
+    /// Choose the player with `key_id`, for a world shot.
+    #[cfg(test)]
+    pub(crate) fn choose_for_shot(&mut self, key_id: &str) {
+        self.selected = Some(key_id.to_owned());
     }
 
     /// Move the keyboard `by` controls along the order the last frame laid out.
@@ -375,6 +417,7 @@ mod tests {
             names: Vec::new(),
             medals: Vec::new(),
             achievements: Vec::new(),
+            unlocks: Vec::new(),
         }
     }
 
@@ -455,6 +498,52 @@ mod tests {
         );
         // Not held: nothing to take back.
         assert_eq!(panel.activate(TAKE_BASE + 2), PanelAction::None);
+    }
+
+    #[test]
+    fn unlockables_are_unlocked_and_relocked_as_held() {
+        let (mut panel, me, _) = drawn(Vec::new());
+        assert!(panel.order.contains(&UNLOCK_BASE), "Unlock is offered");
+        assert!(!panel.order.contains(&RELOCK_BASE), "nothing to relock");
+        panel.note = " for testing ".into();
+        assert_eq!(panel.activate(RELOCK_BASE), PanelAction::None);
+        assert_eq!(
+            panel.activate(UNLOCK_BASE),
+            PanelAction::Request(StaffRequest::Unlock {
+                key_id: me.key_id.clone(),
+                unlock: "saber_sun".into(),
+                note: "for testing".into()
+            })
+        );
+        // Once the profile lists it: Relock, and no second Unlock.
+        let held = Profile {
+            unlocks: vec![sjk_identity::Unlock {
+                id: "saber_sun".into(),
+                granted: 1,
+                note: String::new(),
+            }],
+            ..me.clone()
+        };
+        let staff = StaffState::default();
+        let fonts = crate::text::load_modern(1.0, None).expect("Inter");
+        panel.build(
+            &Inputs {
+                me: Some(&held),
+                staff: &staff,
+            },
+            &fonts.font,
+            [1920.0, 1080.0],
+        );
+        assert!(panel.order.contains(&RELOCK_BASE));
+        assert!(!panel.order.contains(&UNLOCK_BASE));
+        assert_eq!(panel.activate(UNLOCK_BASE), PanelAction::None);
+        assert_eq!(
+            panel.activate(RELOCK_BASE),
+            PanelAction::Request(StaffRequest::Relock {
+                key_id: me.key_id,
+                unlock: "saber_sun".into()
+            })
+        );
     }
 
     #[test]

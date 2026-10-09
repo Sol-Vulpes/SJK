@@ -37,6 +37,7 @@ md4.workspace = true
 pollster = "1.0.0"
 rodio = { version = "0.20.1", default-features = false, features = ["minimp3", "wav"] }
 ringbuf = "0.4.8"
+serde.workspace = true
 serde_json.workspace = true
 tempfile = "3.27.0"
 zip.workspace = true

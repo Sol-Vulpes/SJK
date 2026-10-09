@@ -119,6 +119,7 @@ pub(super) fn submit(sinks: &mut Sinks<'_>, client: u16, hand: Vec3, now: Instan
             start_length: 1.0,
             end_length: 1.0,
             streak: Some(Vec3::from_array(hook) - hand),
+            trace_streak: false,
             normal: None,
             alpha: constant(1.0),
             use_alpha: true,

@@ -43,8 +43,6 @@ pub(super) struct WidgetData<'a> {
     pub(super) vote_active: bool,
     /// team vote active binding supplied by the owning HUD.
     pub(super) team_vote_active: bool,
-    /// kill len binding supplied by the owning HUD.
-    pub(super) kill_len: usize,
     /// crosshair name binding supplied by the owning HUD.
     pub(super) crosshair_name: bool,
     /// timer binding supplied by the owning HUD.
@@ -114,7 +112,6 @@ impl HudDataSource for WidgetData<'_> {
             "draw_crosshair" => Some(self.visibility.crosshair),
             "draw_team" => Some(self.visibility.team_overlay && self.team_len != 0),
             "draw_vote" => Some(self.visibility.hud && (self.vote_active || self.team_vote_active)),
-            "draw_kill_feed" => Some(self.visibility.hud && self.kill_len != 0),
             "draw_crosshair_name" => Some(self.visibility.crosshair_names && self.crosshair_name),
             "draw_timer" => Some(self.visibility.timer && self.timer),
             "draw_warmup" => Some(self.visibility.hud && self.warmup),
