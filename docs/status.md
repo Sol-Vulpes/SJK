@@ -71,6 +71,23 @@ review fixed the followed player wearing the spectator's skin, looks lost to a 4
 a failed claim, looks read across a server change, and a relocked skin lingering on
 its owner's screen, each with a test); giving a saber on/off sound to the nearest
 skinned player within 64 units is a guess, as the game sends it with no owner.
+## Clicks on the SJK UI's Character screen
+
+Branch `fix/sjk-character-clicks` (08/10/2026, based on `a6230f9`, Linux). Sol
+reported that clicks on the Character screen (saber colours and other controls)
+landed beside where they were aimed. The SJK UI's rows give their token the
+control's own rectangle, but its ‹ › controls and blade chips were hit-tested as
+on the older form, by a value zone in the right 48% of the control: a click just
+right of a ‹ ›'s middle stepped back, a chip click took the chip to its left (and
+any click on the left half the first chip), and a click on a Force power's name
+stepped the power instead of only choosing its row. They now follow the control
+as drawn ([sjk-ui.md](sjk-ui.md)).
+
+Verified on Linux: unit tests of the halves and chips, and pointer clicks on the
+drawn SJK UI (every blade chip at its centre and edges, a power's holocron and
+name after buying a level), which fail without the fix; formatting, the locked
+workspace build and tests pass, and workspace Clippy finishes without errors and
+with no warning on a changed line. Not seen in a running client or on screen.
 
 ## Percent signs and quotes in chat
 

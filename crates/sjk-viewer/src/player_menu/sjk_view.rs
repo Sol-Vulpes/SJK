@@ -426,8 +426,14 @@ impl PlayerMenu {
     }
 
     /// Whether a click at `point` on row token `token` lands outside the
-    /// row's control, so it only chooses the row.
+    /// row's control, so it only chooses the row. A Force power's row has
+    /// none: its level marks are targets of their own.
     pub(super) fn sjk_beside_control(&self, token: u16, point: sjk_ui::Vec2) -> bool {
+        if self.page == ProfilePage::Force
+            && (FORCE_POWER_ROW..FORCE_RESET_ROW).contains(&usize::from(token))
+        {
+            return true;
+        }
         let Some(rect) = self.canvas.rect_for(token) else {
             return false;
         };
@@ -1986,6 +1992,77 @@ mod tests {
             }
         }
         assert_eq!(hilt_of(HILT_BASE - 1), None);
+    }
+
+    /// A press and release of the primary button at `position`.
+    fn click(menu: &mut PlayerMenu, console: &mut ViewerConsole, position: sjk_ui::Vec2) {
+        let button = sjk_ui::PointerButton::Primary;
+        for event in [
+            sjk_ui::InputEvent::PointerMove(position),
+            sjk_ui::InputEvent::PointerPress { position, button },
+            sjk_ui::InputEvent::PointerRelease { position, button },
+        ] {
+            let _ = menu.handle_pointer(event, console);
+        }
+    }
+
+    /// Every chip of the blade row takes the click aimed at it: its centre
+    /// and its edges. Measured against the form's value zone, a click picked
+    /// a chip to the left of the one under the pointer.
+    #[test]
+    fn a_click_on_a_blade_chip_chooses_that_colour() {
+        let directory = tempfile::tempdir().unwrap();
+        let mut console = ViewerConsole::new(directory.path().join("config.cfg")).unwrap();
+        let mut menu = drawn(ProfilePage::Saber, false);
+        let row = menu
+            .saber_rows()
+            .iter()
+            .position(|row| row.is_blade())
+            .expect("a blade row");
+        let control = menu.canvas.rect_for(row as u16).expect("the chips' area");
+        let share = control.width / PALETTE.len() as f32;
+        let middle = control.y + control.height * 0.5;
+        for (chip, colour) in PALETTE.iter().enumerate().rev() {
+            for offset in [0.5, 0.15, 0.85] {
+                let x = control.x + share * (chip as f32 + offset);
+                click(&mut menu, &mut console, sjk_ui::Vec2::new(x, middle));
+                assert_eq!(menu.saber.color(false), *colour, "chip {chip} at {offset}");
+                draw(&mut menu);
+            }
+        }
+    }
+
+    /// A click on a power's name only chooses its row; its marks buy.
+    #[test]
+    fn a_click_on_a_powers_name_does_not_change_it() {
+        let directory = tempfile::tempdir().unwrap();
+        let mut console = ViewerConsole::new(directory.path().join("config.cfg")).unwrap();
+        let mut menu = drawn(ProfilePage::Force, false);
+        let push = 3;
+        let mark = menu
+            .canvas
+            .rect_for(level_token(push, 2))
+            .expect("Push's second level");
+        let centre = sjk_ui::Vec2::new(mark.x + mark.width * 0.5, mark.y + mark.height * 0.5);
+        click(&mut menu, &mut console, centre);
+        assert_eq!(menu.force.allocation().levels[push], 2);
+        draw(&mut menu);
+        let row = menu
+            .canvas
+            .rect_for((FORCE_POWER_ROW + push) as u16)
+            .expect("Push's row");
+        // Its holocron, the start of its name and its end, short of the marks.
+        for share in [0.05, 0.3, 0.55] {
+            let name = sjk_ui::Vec2::new(row.x + row.width * share, row.y + row.height * 0.5);
+            click(&mut menu, &mut console, name);
+            assert_eq!(menu.selected, FORCE_POWER_ROW + push);
+            assert_eq!(
+                menu.force.allocation().levels[push],
+                2,
+                "a click at {share}"
+            );
+            draw(&mut menu);
+        }
     }
 
     #[test]

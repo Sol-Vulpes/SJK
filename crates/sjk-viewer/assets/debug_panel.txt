@@ -2709,3 +2709,12 @@ title: Looping sounds no longer drop out
 change: Saber hums and ambient loops keep playing while each frame's loops are re-sent.
 test: Stand near looping sounds (your saber, other sabers, map ambience); listen for crackles.
 test: Optional: SJK_TRACE_AUDIO=1; logs/last-client.log shows split loop frames=N every 5 s.
+
+[sjk-character-clicks]
+area: Menus & settings
+title: Clicks land on the SJK UI Character screen's controls (SJK PR #46)
+change: A blade chip click picks that chip; a < > control turns by the half clicked.
+change: A click on a Force power's name only chooses it; its level marks buy.
+test: Character > Saber: click each colour chip, then both halves of the < > controls.
+test: Character > Force: click a power's name (nothing changes), then its level marks.
+note: Not seen on screen yet; the classic pages are unchanged.

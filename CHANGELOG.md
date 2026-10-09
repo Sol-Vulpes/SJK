@@ -21,6 +21,7 @@ Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 
 ## Unreleased
 
+- On the SJK UI's Character screen, a click on a saber colour, a < > control or a Force power now lands where it was aimed: it picks the blade chip under the pointer and turns a < > control by the half you click, and a click on a Force power's name only chooses it _(Sol)_
 - Unlockables: blade skins your SJK identity owns at the SJK hub, first the Sun blade, a white-gold core in an orange corona with flares running along it, an amber trail, a warm flickering light and its own ignition, hum and swing sounds; its look and sounds come from the SJK hub as a pack the client downloads (kept in assets beside identity.key), so a blade skin shows once its pack has arrived. Every SJK player on your server sees and hears the skin you wear, and now sees your Illuminate holocron too. The Unlockables page (Profile, or the unlockables command) shows what you own and equips it; saberskin does it from the console; for now the SJK team gives them _(Sol)_
 
 ## 2026.1008.2 (Alpha) | 08/10/2026
