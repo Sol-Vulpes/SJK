@@ -7,6 +7,39 @@ SJK currently contains a native client and standard dedicated server in a
 20-crate Rust workspace. This page records scope and verification, rather than
 claiming complete parity from the presence of an implementation.
 
+## Report dialog: caret and editing
+
+Branch `personal/report-dialog` (09/10/2026, based on `bc8ac6ba`, Windows 11): players
+reported that the caret of Report a bug is misplaced, that the letters cannot be gone
+back over, that the arrows do nothing and that the buttons cannot be clicked. Read in
+code: the text dialog kept only a string (Backspace popped its last character, Left,
+Right, Home, End and Delete did nothing), and drew the caret at the end of the last
+wrapped line with the font's unstyled width, while the renderer applies `ui_textScale`
+and `ui_letterSpacing`, so the caret drifted from the glyphs and a scaled text wrapped
+wider than its box (the classic look appended a `|` to the last line). Now the dialog
+has an insertion point (`console::line_edit::LineEdit`, the console's editor) and a
+layout of the wrapped lines ([text_dialog_field.rs](../crates/sjk-viewer/src/text_dialog_field.rs))
+measured with the renderer's own style; Left/Right/Up/Down/Home/End/Delete/Backspace,
+Ctrl words, insertion and paste at the caret within the same limits, click to place,
+and the arrows walking Send/Cancel are in both looks, which draw a caret bar between
+the glyphs. A refused Send was a small gold line under the box; it is a red band by the
+buttons, shown after a refused Send and already while Send has the keyboard or the
+pointer (Send is dimmed until the text would pass, which read as a dead button).
+
+Verified: unit tests (`text_dialog`, `text_dialog::field`, `text_dialog::sjk`): editing at
+the caret, Ctrl words, limits and the character filter at the caret, the arrows over
+the buttons, the caret's x equal to the renderer's measure of the line before it for
+five text styles and two spacings on every wrapped line, Up/Down/Home/End over wrapped
+lines, click placement, the caret bar of the SJK card at 1080 lines and 4K in three
+styles and of the classic look, the pointer reaching the classic look's field, Send
+and Cancel, and the refusal band before and after the press.
+
+Not verified: no game was started (keys, the OS cursor and a real pointer were not tried);
+no click defect was found in code: the pointer routing, the hit regions and the tokens of
+both looks are covered by tests, so "cannot be clicked" is attributed to the dimmed Send
+with its easy-to-miss reason; if a click really is lost in a running client it needs a
+log of that session.
+
 ## JoFTemple frame rate and Ultra low
 
 Branch `personal/ultra-low` (09/10/2026, based on `8e2ac60`, Windows 11, RTX 5080,

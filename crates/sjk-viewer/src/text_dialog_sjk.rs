@@ -11,13 +11,14 @@
 //! drawing is this look's. Everything is laid out on the SJK UI's 16:9 frame
 //! ([`Frame`]) and drawn with its kit.
 
+use super::field::{Face, FieldLayout};
 use super::{
     CANCEL_TOKEN, CLOSE_TOKEN, EDIT_TOKEN, FIELD_TOKEN, Focus, Kind, LINES, Phase, SEND_TOKEN,
     TextDialog,
 };
 use crate::menu::sjk::{Frame, TextTarget, color, key_hint, key_hint_width, kit, text, wrap};
 use crate::menu_widgets::{MenuCanvas, TextFamily};
-use crate::text::UiFont;
+use crate::text::{TextStyle, UiFont};
 use sjk_ui::{Color, DrawCommand, FontWeight, Rect, TextAlign};
 
 /// The card: centred on the frame, as tall as its parts.
@@ -59,6 +60,8 @@ const TEXT_SIZE: f32 = 19.0;
 /// What the scene keeps of its light under a note's card, whose selection should
 /// still show round it (a report's card takes [`kit::scrim`]'s).
 const NOTE_SCRIM: f32 = 0.5;
+/// Why a Send was refused: warm red, as retail's warnings are.
+const WARN: Color = Color::new(1.0, 0.44, 0.4, 1.0);
 /// The rules every kind keeps to as it is typed.
 const RULES: &str = "Letters, digits, spaces and . , ! ? ' - : ( ) only";
 
@@ -69,6 +72,8 @@ struct View<'a> {
     focus: Focus,
     message: &'a str,
     phase: &'a Phase,
+    /// The insertion point, a byte offset in `text`.
+    cursor: usize,
     /// The caret is lit this frame.
     caret: bool,
     /// The text would be accepted (Send is gold).
@@ -77,7 +82,7 @@ struct View<'a> {
 
 /// `text` with its first letter a capital and a full stop after it unless it ends in
 /// one already, for a reason given in lower case ("the SJK identity is off").
-struct Sentence<'a>(&'a str);
+pub(super) struct Sentence<'a>(pub(super) &'a str);
 
 impl std::fmt::Display for Sentence<'_> {
     fn fmt(&self, out: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -96,20 +101,23 @@ impl TextDialog {
     /// Draw the SJK UI's card over the whole frame, its text to `target`.
     pub(crate) fn append_sjk(&mut self, target: TextTarget<'_>, viewport: [f32; 2]) {
         // The fonts outlive the target's vertex lists: measure with them, then append.
-        let (display, body) = match &target {
-            TextTarget::Families(fonts, _) => (fonts.display.1, fonts.body.1),
-            TextTarget::Inter(_, font) => (*font, *font),
+        // The text is drawn in the player's menu text style, which the field measures with.
+        let (display, body, style) = match &target {
+            TextTarget::Families(fonts, style) => (fonts.display.1, fonts.body.1, *style),
+            TextTarget::Inter(_, font) => (*font, *font, font.style()),
         };
-        self.build_sjk(display, body, viewport);
+        self.build_sjk(display, body, style, viewport);
         target.append(&self.ui, viewport);
     }
 
     /// Lay the card out on the dialog's canvas, measuring with the `display` and
-    /// `body` families' metrics.
-    fn build_sjk(&mut self, display: &UiFont, body: &UiFont, viewport: [f32; 2]) {
+    /// `body` families' metrics, the body's text drawn in `style`.
+    fn build_sjk(&mut self, display: &UiFont, body: &UiFont, style: TextStyle, viewport: [f32; 2]) {
         let Self {
             kind: Some(kind),
             text,
+            edit,
+            layout,
             focus,
             message,
             ui,
@@ -126,6 +134,7 @@ impl TextDialog {
             focus: *focus,
             message,
             phase,
+            cursor: edit.cursor(text),
             caret: *focus == Focus::Field
                 && *phase == Phase::Writing
                 && (epoch.elapsed().as_millis() / 500).is_multiple_of(2),
@@ -143,7 +152,7 @@ impl TextDialog {
         }
         kit::card(ui, &frame, [CARD_X, CARD_TOP, CARD_WIDTH, CARD_HEIGHT]);
         heading(ui, &frame, display, &view);
-        field(ui, &frame, body, &view);
+        field(ui, &frame, body, style, layout, &view);
         if *phase == Phase::Writing {
             info(ui, &frame, &view);
         }
@@ -270,9 +279,17 @@ fn fit<'t>(font: &UiFont, value: &'t str, size: f32, width: f32) -> (&'t str, bo
     (shown.trim_end(), true)
 }
 
-/// The text's field: its lines (the last [`LINES`] of a longer text), the gold caret
-/// while it has the keyboard, "Type here" while it is empty; dimmed after Send.
-fn field(ui: &mut MenuCanvas, frame: &Frame, body: &UiFont, view: &View<'_>) {
+/// The text's field: its lines (scrolled to keep the caret in view), the gold caret at the
+/// insertion point while it has the keyboard, "Type here" while it is empty; dimmed after
+/// Send. The wrap, the caret and the clicks measure with the player's text style.
+fn field(
+    ui: &mut MenuCanvas,
+    frame: &Frame,
+    body: &UiFont,
+    style: TextStyle,
+    layout: &mut FieldLayout,
+    view: &View<'_>,
+) {
     let s = frame.s;
     let writing = *view.phase == Phase::Writing;
     let focused = writing && view.focus == Focus::Field;
@@ -311,11 +328,19 @@ fn field(ui: &mut MenuCanvas, frame: &Frame, body: &UiFont, view: &View<'_>) {
     } else {
         color::alpha(color::TEXT, 0.6)
     };
-    let mut caret_at = None;
+    let face = Face::new(body, style, size, 0.0);
+    layout.lay_out(view.text, &face, inner * s);
+    let (caret_line, caret_x) = layout.locate(view.text, view.cursor);
+    let top = row(0);
+    layout.show(caret_line, LINES, [top.x, top.y], row(1).y - top.y);
+    let (first, shown) = layout.visible();
     if view.text.is_empty() {
-        let placeholder = if view.caret { 10.0 } else { 0.0 };
+        // Held clear of the caret whenever the field has the keyboard, so it does not
+        // jump as the caret blinks.
         let mut rect = row(0);
-        rect.x += placeholder * s;
+        if focused {
+            rect.x += 10.0 * s;
+        }
         text(
             ui,
             TextFamily::Body,
@@ -326,41 +351,24 @@ fn field(ui: &mut MenuCanvas, frame: &Frame, body: &UiFont, view: &View<'_>) {
             FontWeight::Regular,
             TextAlign::Start,
         );
-        caret_at = Some((0, 0.0));
-    } else {
-        let lines = super::wrap_to(view.text, body, size, 0.0, inner * s);
-        let first = lines.len().saturating_sub(LINES);
-        let shown = &lines[first..];
-        for (line, part) in shown.iter().enumerate() {
-            text(
-                ui,
-                TextFamily::Body,
-                format_args!("{part}"),
-                row(line),
-                size,
-                ink,
-                FontWeight::Regular,
-                TextAlign::Start,
-            );
-        }
-        if let Some(last) = shown.last() {
-            let scale = size / body.height.max(1.0);
-            let width = crate::text::visible_text_width(body, last, scale);
-            caret_at = Some((shown.len() - 1, width));
-        }
     }
-    if view.caret
-        && let Some((line, width)) = caret_at
-    {
-        let line_rect = row(line);
-        let height = 24.0 * s;
+    for (line, range) in shown.iter().enumerate() {
+        text(
+            ui,
+            TextFamily::Body,
+            format_args!("{}", &view.text[range.clone()]),
+            row(line),
+            size,
+            ink,
+            FontWeight::Regular,
+            TextAlign::Start,
+        );
+    }
+    if view.caret && caret_line >= first {
+        let line_rect = row(caret_line - first);
+        let height = (24.0 * style.scale).min(LINE - 2.0) * s;
         let _ = ui.draw_list_mut().push(DrawCommand::SolidRect {
-            rect: Rect::new(
-                line_rect.x + width + 2.0 * s,
-                line_rect.y + (line_rect.height - height) * 0.5,
-                2.0 * s,
-                height,
-            ),
+            rect: caret_rect(line_rect, caret_x, height, s),
             color: color::GOLD_BRIGHT,
         });
     }
@@ -368,6 +376,16 @@ fn field(ui: &mut MenuCanvas, frame: &Frame, body: &UiFont, view: &View<'_>) {
     if writing || matches!(view.phase, Phase::Failed(_)) {
         ui.hit_region(FIELD_TOKEN, rect);
     }
+}
+
+/// The caret's bar, centred on the boundary `x` pixels into `line`, `height` high.
+fn caret_rect(line: Rect, x: f32, height: f32, s: f32) -> Rect {
+    Rect::new(
+        line.x + x - 1.0 * s,
+        line.y + (line.height - height) * 0.5,
+        2.0 * s,
+        height,
+    )
 }
 
 /// Under the field while writing: the rules, the count against the limit (gold at
@@ -400,14 +418,30 @@ fn info(ui: &mut MenuCanvas, frame: &Frame, view: &View<'_>) {
         FontWeight::Regular,
         TextAlign::End,
     );
-    if !view.message.is_empty() {
+    // Why a Send was refused, or what it would be refused for while the pointer or the
+    // keyboard is on Send, in a warm band just above the buttons.
+    let previewing = !view.ready && (view.focus == Focus::Send || ui.token_hovered(SEND_TOKEN));
+    let reason = if !view.message.is_empty() {
+        Some(view.message)
+    } else if previewing {
+        super::refusal(view.kind, view.text)
+    } else {
+        None
+    };
+    if let Some(reason) = reason {
+        let band = frame.rect(TEXT_X, MESSAGE_Y - 2.0, TEXT_WIDTH, 28.0);
+        let _ = ui.draw_list_mut().push(DrawCommand::RoundedRect {
+            rect: band,
+            radius: 8.0 * s,
+            color: color::alpha(WARN, 0.14),
+        });
         text(
             ui,
             TextFamily::Body,
-            format_args!("{}", Sentence(view.message)),
-            frame.rect(TEXT_X + 4.0, MESSAGE_Y, TEXT_WIDTH, 24.0),
+            format_args!("{}", Sentence(reason)),
+            frame.rect(TEXT_X + 12.0, MESSAGE_Y, TEXT_WIDTH - 24.0, 24.0),
             16.0 * s,
-            color::GOLD_BRIGHT,
+            WARN,
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -617,7 +651,12 @@ mod tests {
     }
 
     fn draw(dialog: &mut TextDialog, fonts: &Fonts, viewport: [f32; 2]) {
-        dialog.build_sjk(&fonts.display.font, &fonts.body.font, viewport);
+        dialog.build_sjk(
+            &fonts.display.font,
+            &fonts.body.font,
+            TextStyle::NEUTRAL,
+            viewport,
+        );
     }
 
     fn click(dialog: &mut TextDialog, token: u16) -> Action {
@@ -889,5 +928,195 @@ mod tests {
         for token in [FIELD_TOKEN, EDIT_TOKEN, CLOSE_TOKEN] {
             assert!(inside(dialog.ui.rect_for(token).expect("drawn")), "{token}");
         }
+    }
+
+    /// The gold caret bar the last draw left, if it is lit.
+    fn caret_bar(dialog: &TextDialog) -> Option<Rect> {
+        dialog
+            .ui
+            .draw_list()
+            .commands()
+            .iter()
+            .find_map(|command| match command {
+                DrawCommand::SolidRect { rect, color }
+                    if *color == color::GOLD_BRIGHT && rect.width < 6.0 =>
+                {
+                    Some(*rect)
+                }
+                _ => None,
+            })
+    }
+
+    const LONG: &str = "The door by the tower's foot flickers when I walk through it, and the light behind it goes black for a second. I expected it to open smoothly, as it does on ffa3. It happens every time on this server, in every match I have played since the last update, and it did not before it. The same door on duel6 is fine, so it looks like a problem with how the lightmap of that one surface is read.";
+
+    /// The caret sits between the two glyphs of the insertion point, whatever the player's
+    /// text size and spacing, wherever in the text it is, and the lines stay in the field.
+    #[test]
+    fn the_caret_follows_the_insertion_point_in_any_text_style() {
+        use crate::text::{TextFace, visible_text_width_style};
+        let fonts = fonts();
+        let body = &fonts.body.font;
+        for viewport in [[1920.0, 1080.0], [3840.0, 2160.0]] {
+            for (scale, tracking) in [(1.0, 0.0), (1.2, 0.1), (0.8, -0.05)] {
+                let style = TextStyle { scale, tracking };
+                let mut dialog = sjk(Kind::Report);
+                typed(&mut dialog, LONG);
+                // From the end back to the middle of the text, then to its start.
+                for back in [0, 130, usize::MAX] {
+                    if back == usize::MAX {
+                        dialog.key(KeyCode::Home, None);
+                        dialog.set_control(true);
+                        dialog.key(KeyCode::Home, None);
+                        dialog.set_control(false);
+                    } else {
+                        for _ in 0..back {
+                            dialog.key(KeyCode::ArrowLeft, None);
+                        }
+                    }
+                    dialog.caret_for_shot();
+                    dialog.build_sjk(&fonts.display.font, body, style, viewport);
+                    let frame = Frame::new(viewport);
+                    let at = dialog.edit.cursor(&dialog.text);
+                    let (line, _) = dialog.layout.locate(&dialog.text, at);
+                    let (first, shown) = dialog.layout.visible();
+                    assert!(shown.len() <= LINES && line >= first && line < first + shown.len());
+                    let range = &shown[line - first];
+                    let size = TEXT_SIZE * frame.s * scale;
+                    let measure = |text: &str| {
+                        visible_text_width_style(
+                            body,
+                            text,
+                            size / body.height,
+                            TextFace::Regular,
+                            tracking * size,
+                        )
+                    };
+                    let row = frame.rect(
+                        TEXT_X + FIELD_PAD_X,
+                        FIELD_TOP + FIELD_PAD_Y + (line - first) as f32 * LINE,
+                        TEXT_WIDTH - FIELD_PAD_X * 2.0,
+                        LINE,
+                    );
+                    let bar = caret_bar(&dialog).expect("lit");
+                    let centre = bar.x + bar.width * 0.5;
+                    let expected = row.x + measure(&dialog.text[range.start..at]);
+                    assert!(
+                        (centre - expected).abs() < 0.02,
+                        "{viewport:?} {scale} {at}: {centre} against {expected}"
+                    );
+                    assert!(bar.y >= row.y && bar.bottom() <= row.bottom(), "{bar:?}");
+                    for range in shown {
+                        let width = measure(&dialog.text[range.clone()]);
+                        assert!(width <= row.width, "{scale}: {width} wide");
+                    }
+                }
+            }
+        }
+    }
+
+    /// A click in the field puts the caret between the glyphs it lands on; the field
+    /// keeps the keyboard, and typing goes in at the caret.
+    #[test]
+    fn a_click_places_the_caret() {
+        use crate::text::{TextFace, visible_text_width_style};
+        let fonts = fonts();
+        let body = &fonts.body.font;
+        let viewport = [1920.0, 1080.0];
+        let style = TextStyle {
+            scale: 1.2,
+            tracking: 0.05,
+        };
+        let mut dialog = sjk(Kind::Report);
+        typed(&mut dialog, LONG);
+        dialog.focus = Focus::Cancel;
+        dialog.build_sjk(&fonts.display.font, body, style, viewport);
+        let size = TEXT_SIZE * 1.2;
+        let before = |count: usize| {
+            visible_text_width_style(
+                body,
+                &dialog.text[..count],
+                size / body.height,
+                TextFace::Regular,
+                style.tracking * size,
+            )
+        };
+        // Just right of the boundary after the ninth character of the first line, a little
+        // below the middle of its row.
+        let point = Vec2::new(
+            TEXT_X + FIELD_PAD_X + before(9) + 1.0,
+            FIELD_TOP + FIELD_PAD_Y + LINE * 0.5 + 3.0,
+        );
+        click_point(&mut dialog, point);
+        assert_eq!(dialog.focus, Focus::Field);
+        assert_eq!(dialog.edit.cursor(&dialog.text), 9);
+        typed(&mut dialog, "X");
+        assert_eq!(&dialog.text[..12], "The door Xby");
+        // A click on the last visible row lands on that row, past its end at its end.
+        dialog.build_sjk(&fonts.display.font, body, style, viewport);
+        let point = Vec2::new(
+            TEXT_X + TEXT_WIDTH - 4.0,
+            FIELD_TOP + FIELD_PAD_Y + LINE * 5.5,
+        );
+        click_point(&mut dialog, point);
+        let (line, _) = dialog
+            .layout
+            .locate(&dialog.text, dialog.edit.cursor(&dialog.text));
+        let (first, shown) = dialog.layout.visible();
+        assert_eq!(line, first + shown.len() - 1);
+        assert_eq!(dialog.edit.cursor(&dialog.text), shown[shown.len() - 1].end);
+    }
+
+    fn click_point(dialog: &mut TextDialog, at: Vec2) -> Action {
+        let button = PointerButton::Primary;
+        dialog.handle_pointer(InputEvent::PointerMove(at));
+        dialog.handle_pointer(InputEvent::PointerPress {
+            position: at,
+            button,
+        });
+        dialog.handle_pointer(InputEvent::PointerRelease {
+            position: at,
+            button,
+        })
+    }
+
+    /// The reason a Send would be refused shows, in a warm band, as soon as Send has the
+    /// keyboard or the pointer, not only after it was pressed.
+    #[test]
+    fn why_send_is_refused_shows_before_and_after_the_press() {
+        let fonts = fonts();
+        let viewport = [1920.0, 1080.0];
+        let band = |dialog: &TextDialog| {
+            dialog.ui.draw_list().commands().iter().any(|command| {
+                matches!(command, DrawCommand::RoundedRect { color, .. }
+                        if *color == color::alpha(WARN, 0.14))
+            })
+        };
+        let mut dialog = sjk(Kind::Report);
+        typed(&mut dialog, "short");
+        draw(&mut dialog, &fonts, viewport);
+        assert!(!band(&dialog), "nothing to say while writing");
+        // The pointer on Send says why it would not go.
+        let rect = dialog.ui.rect_for(SEND_TOKEN).expect("drawn");
+        dialog.handle_pointer(InputEvent::PointerMove(Vec2::new(
+            rect.x + 4.0,
+            rect.y + 4.0,
+        )));
+        draw(&mut dialog, &fonts, viewport);
+        draw(&mut dialog, &fonts, viewport);
+        assert!(band(&dialog));
+        // So does the keyboard, and pressing it leaves the reason up while typing goes on.
+        dialog.handle_pointer(InputEvent::PointerLeave);
+        draw(&mut dialog, &fonts, viewport);
+        assert!(!band(&dialog));
+        dialog.key(KeyCode::Tab, None);
+        draw(&mut dialog, &fonts, viewport);
+        assert!(band(&dialog));
+        dialog.key(KeyCode::Enter, None);
+        assert!(!dialog.message.is_empty());
+        draw(&mut dialog, &fonts, viewport);
+        assert!(band(&dialog));
+        typed(&mut dialog, " door on ffa3");
+        draw(&mut dialog, &fonts, viewport);
+        assert!(!band(&dialog), "sendable text has nothing to explain");
     }
 }

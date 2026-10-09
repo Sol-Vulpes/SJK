@@ -10,6 +10,8 @@
 //! Send was refused, and a description for every control. Every control answers to the
 //! dialog's tokens, so the keyboard and the pointer serve both looks.
 
+use super::field::Face;
+use super::sjk::Sentence;
 use super::{CANCEL_TOKEN, FIELD_TOKEN, Focus, Kind, LAUNCH_TOKEN, SEND_TOKEN, TextDialog};
 use crate::console::browser::classic::{
     FRAME, LABEL, LIST_BACK, LIST_BORDER, VALUE, border, fill, text, with_alpha,
@@ -146,6 +148,16 @@ impl TextDialog {
         );
         let caret = focused && (self.epoch.elapsed().as_millis() / 500).is_multiple_of(2);
         let [x, y, width, _] = FIELD;
+        // The wrap, the caret and the clicks measure as the text is drawn: at this size and
+        // spacing, in the player's text style.
+        let face = Face::new(font, font.style(), 11.0 * place.scale, 0.3 * place.scale);
+        self.layout
+            .lay_out(&self.text, &face, (width - 12.0) * place.scale);
+        let (caret_line, caret_x) = self.layout.locate(&self.text, self.edit.cursor(&self.text));
+        let top = place.rect([x + 6.0, y + 4.0, width - 12.0, LINE]);
+        self.layout
+            .show(caret_line, LINES, [top.x, top.y], LINE * place.scale);
+        let (first, shown) = self.layout.visible();
         if self.text.is_empty() && !focused {
             text(
                 ui,
@@ -157,30 +169,34 @@ impl TextDialog {
                 FontWeight::Regular,
                 TextAlign::Start,
             );
-        } else {
-            let mut lines = super::wrap_to(
-                &self.text,
-                font,
-                11.0 * place.scale,
-                0.3 * place.scale,
-                (width - 12.0) * place.scale,
+        }
+        for (row, range) in shown.iter().enumerate() {
+            text(
+                ui,
+                &place,
+                format_args!("{}", &self.text[range.clone()]),
+                [x + 6.0, y + 4.0 + row as f32 * LINE, width - 12.0, LINE],
+                11.0,
+                VALUE,
+                FontWeight::Regular,
+                TextAlign::Start,
             );
-            if caret && let Some(last) = lines.last_mut() {
-                last.push('|');
-            }
-            let first = lines.len().saturating_sub(LINES);
-            for (row, line) in lines[first..].iter().enumerate() {
-                text(
-                    ui,
-                    &place,
-                    format_args!("{line}"),
-                    [x + 6.0, y + 4.0 + row as f32 * LINE, width - 12.0, LINE],
-                    11.0,
-                    VALUE,
-                    FontWeight::Regular,
-                    TextAlign::Start,
-                );
-            }
+        }
+        if caret && caret_line >= first {
+            // A bar between two glyphs, level with the text.
+            let bar = place.scale.max(1.0);
+            let height = face.size() * 1.05;
+            let row = top.y + (caret_line - first) as f32 * LINE * place.scale;
+            fill(
+                ui,
+                Rect::new(
+                    top.x + caret_x - bar * 0.5,
+                    row + (LINE * place.scale - height) * 0.5,
+                    bar,
+                    height,
+                ),
+                GOLD,
+            );
         }
         ui.hit_region(FIELD_TOKEN, field);
 
@@ -211,12 +227,27 @@ impl TextDialog {
             FontWeight::Regular,
             TextAlign::End,
         );
-        if !self.message.is_empty() {
+        // Why a Send was refused, or what it would be refused for while the pointer or the
+        // keyboard is on Send.
+        let previewing = self.focus == Focus::Send || ui.token_hovered(SEND_TOKEN);
+        let reason = if !self.message.is_empty() {
+            Some(self.message.as_str())
+        } else if previewing {
+            super::refusal(kind, &self.text)
+        } else {
+            None
+        };
+        if let Some(reason) = reason {
+            fill(
+                ui,
+                place.rect([MESSAGE[0], MESSAGE[1] - 1.0, MESSAGE[2], MESSAGE[3] + 2.0]),
+                with_alpha(ERROR, 0.16),
+            );
             text(
                 ui,
                 &place,
-                format_args!("{}", self.message),
-                MESSAGE,
+                format_args!("{}", Sentence(reason)),
+                [MESSAGE[0] + 4.0, MESSAGE[1], MESSAGE[2] - 8.0, MESSAGE[3]],
                 10.0,
                 ERROR,
                 FontWeight::Semibold,

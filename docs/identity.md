@@ -144,7 +144,9 @@ plays on); they are kept in `avatars/` in the settings folder.
 bug button sits centred at the bottom of the screen (also Escape, SJK, Report a bug); it
 closes the game menu and opens the text dialog
 ([text_dialog.rs](../crates/sjk-viewer/src/text_dialog.rs)): a panel in the middle of the
-screen with a text box, a character count, Send and Cancel (Escape cancels too). As it is
+screen with a text box, a character count, Send and Cancel (Escape cancels too). The text
+has an insertion point (Left, Right, Up, Down, Home, End, Backspace, Delete, Ctrl for
+words, a click in the box) and a Send the rules refuse says why in a red band. As it is
 typed or pasted, only letters and digits of any
 script, spaces and `. , ! ? ' - : ( )` are kept (line breaks become spaces), up to 600
 characters. Enter or Send checks the hub's rules (a refusal is shown in the panel, which
