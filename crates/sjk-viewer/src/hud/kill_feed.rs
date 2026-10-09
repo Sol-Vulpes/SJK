@@ -9,7 +9,7 @@
 //! death: an icon pack's `hud/mod/*` when one is installed, else the weapon's own
 //! `gfx/hud/w_icon_*` (`MOD_ITEMS` in [`super::icons::assets`], the weapon each
 //! `MOD_*` belongs to in OpenJK's `g_weapon.c`). A dark Force kill (lightning or
-//! grip, which the obituary does not tell apart) falls back to Force Lightning's
+//! grip, told apart by the killer's active powers) falls back to that power's
 //! holocron, and a player knocked to their death (`KILLED_FORCETOSS`) to Force
 //! Push's. Suicides, deaths to the world and causes no weapon deals get a skull
 //! drawn from shapes; a weapon whose picture did not load gets a short word.
@@ -48,9 +48,10 @@ pub(crate) const TEXT_FIRST: u32 = 500;
 /// Last text id of the feed.
 pub(crate) const TEXT_LAST: u32 = TEXT_FIRST + 3 * CAPACITY as u32 - 1;
 
-/// `FP_PUSH` and `FP_LIGHTNING` (`forcePowers_t`), the holocrons that stand in
-/// for a Force toss and a dark Force kill.
+/// `FP_PUSH`, `FP_GRIP` and `FP_LIGHTNING` (`forcePowers_t`), the holocrons that
+/// stand in for a Force toss and a dark Force kill.
 const FP_PUSH: u8 = 3;
+const FP_GRIP: u8 = 6;
 const FP_LIGHTNING: u8 = 7;
 
 // Geometry in 1080-line pixels, grown with the window and `cg_hudScale`.
@@ -236,6 +237,7 @@ pub(crate) enum Mark {
 /// the cause's word, or the skull for causes no weapon deals.
 pub(crate) fn mark(
     means: u8,
+    attacker_force: u32,
     solo: bool,
     picture: Option<TextureId>,
     holocron: impl Fn(u8) -> Option<TextureId>,
@@ -244,10 +246,26 @@ pub(crate) fn mark(
         return Mark::Skull;
     }
     let cause = cause(means);
-    if let Some(picture) = picture.or_else(|| cause.holocron.and_then(holocron)) {
+    if let Some(picture) =
+        picture.or_else(|| holocron_power(means, attacker_force).and_then(holocron))
+    {
         return Mark::Picture(picture);
     }
     cause.word.map_or(Mark::Skull, Mark::Word)
+}
+
+/// The holocron of a dark Force kill (`MOD_FORCE_DARK` covers two powers): Force
+/// Grip's when only the attacker's grip was active as the kill landed, else
+/// Force Lightning's. Other causes keep their own ([`cause`]).
+pub(crate) fn holocron_power(means: u8, attacker_force: u32) -> Option<u8> {
+    let power = cause(means).holocron?;
+    let grip = attacker_force & (1 << FP_GRIP) != 0;
+    let lightning = attacker_force & (1 << FP_LIGHTNING) != 0;
+    Some(if power == FP_LIGHTNING && grip && !lightning {
+        FP_GRIP
+    } else {
+        power
+    })
 }
 
 /// Opacity of an entry `age` milliseconds after its kill.
@@ -265,6 +283,8 @@ struct Entry {
     killer: String,
     victim: String,
     means: u8,
+    /// The killer's active Force powers (see [`holocron_power`]).
+    attacker_force: u32,
     /// A suicide or a death to the world: no killer.
     solo: bool,
     /// The viewed player killed or died.
@@ -280,6 +300,7 @@ impl Entry {
             killer: String::with_capacity(96),
             victim: String::with_capacity(96),
             means: 0,
+            attacker_force: 0,
             solo: true,
             local: false,
             start: i32::MIN,
@@ -369,6 +390,7 @@ impl Feed {
         // The console's two-part line (`victim message`) has no killer.
         entry.solo = event.attacker_message.is_none();
         entry.means = event.means_of_death;
+        entry.attacker_force = event.attacker_force;
         entry.start = event.server_time;
         entry.local = event.target == local || (!entry.solo && event.attacker == local);
         entry.victim.clear();
@@ -445,6 +467,7 @@ impl Feed {
             let entry = &self.entries[slot];
             let mark = mark(
                 entry.means,
+                entry.attacker_force,
                 entry.solo,
                 art.icons.means(entry.means),
                 |power| art.holocrons.get(usize::from(power)).copied().flatten(),
@@ -703,15 +726,41 @@ mod tests {
         let picture = Some(TextureId(7));
         let holocron = |power: u8| (power == FP_LIGHTNING).then_some(TextureId(9));
         let none = |_: u8| None;
-        assert_eq!(mark(3, false, picture, none), Mark::Picture(TextureId(7)));
-        assert_eq!(mark(3, false, None, none), Mark::Word("SABER"));
-        assert_eq!(mark(31, false, None, holocron), Mark::Picture(TextureId(9)));
-        assert_eq!(mark(31, false, None, none), Mark::Word("FORCE"));
+        assert_eq!(
+            mark(3, 0, false, picture, none),
+            Mark::Picture(TextureId(7))
+        );
+        assert_eq!(mark(3, 0, false, None, none), Mark::Word("SABER"));
+        assert_eq!(
+            mark(31, 0, false, None, holocron),
+            Mark::Picture(TextureId(9))
+        );
+        assert_eq!(mark(31, 0, false, None, none), Mark::Word("FORCE"));
         // Pushed into lava by someone: no weapon, the skull.
-        assert_eq!(mark(35, false, None, holocron), Mark::Skull);
+        assert_eq!(mark(35, 0, false, None, holocron), Mark::Skull);
         // Suicides and deaths to the world are always the skull.
-        assert_eq!(mark(20, true, picture, holocron), Mark::Skull);
-        assert_eq!(mark(38, true, None, holocron), Mark::Skull);
+        assert_eq!(mark(20, 0, true, picture, holocron), Mark::Skull);
+        assert_eq!(mark(38, 0, true, None, holocron), Mark::Skull);
+    }
+
+    /// `MOD_FORCE_DARK` is Force Lightning's holocron unless the attacker's grip
+    /// alone was active.
+    #[test]
+    fn a_grip_kill_shows_the_grip_holocron() {
+        let grip = 1 << FP_GRIP;
+        let lightning = 1 << FP_LIGHTNING;
+        assert_eq!(holocron_power(31, 0), Some(FP_LIGHTNING));
+        assert_eq!(holocron_power(31, lightning), Some(FP_LIGHTNING));
+        assert_eq!(holocron_power(31, grip), Some(FP_GRIP));
+        assert_eq!(holocron_power(31, grip | lightning), Some(FP_LIGHTNING));
+        // Other causes keep their own holocron, or none.
+        assert_eq!(holocron_power(38, grip), Some(FP_PUSH));
+        assert_eq!(holocron_power(3, grip), None);
+        let picture = |power: u8| Some(TextureId(u32::from(power)));
+        assert_eq!(
+            mark(31, grip, false, None, picture),
+            Mark::Picture(TextureId(u32::from(FP_GRIP)))
+        );
     }
 
     #[test]
