@@ -7,6 +7,22 @@ SJK currently contains a native client and standard dedicated server in a
 20-crate Rust workspace. This page records scope and verification, rather than
 claiming complete parity from the presence of an implementation.
 
+## Saber change without a respawn on JA+ servers
+
+Branch `personal/saber-command` (09/10/2026): a player reported that a saber
+changed in the menu applies only after respawning. The cvars `saber1`/`saber2`
+are read by stock servers at spawn. JA+ and jaPRO servers also accept a `saber
+<saber1> [<saber2>]` client command (jaPRO `Cmd_Saber_f`; JoF EJK's
+`CG_Saber_f` sends it when `serverMod >= SVMOD_JAPLUS`). `SaberChangeNotifier`
+(`sjk-client/src/saber_command.rs`) now watches the two cvars each frame, so the
+menu and a console `set` share one path, and sends the command once the userinfo
+has gone out, once per changed selection, at most once a second, only for the
+`JaPlus` and `TaystJk` compat profiles. The argument format (one name for a
+single saber, two for a pair, `saber2` `none` or empty meaning single) is taken
+from those two reference sources; it has not been tried on a live server.
+Unit tests cover the command string, the profile gate, the connect baseline,
+dedupe, the userinfo and interval holds and the reset on a new server.
+
 ## JoFTemple frame rate and Ultra low
 
 Branch `personal/ultra-low` (09/10/2026, based on `8e2ac60`, Windows 11, RTX 5080,
@@ -756,7 +772,7 @@ effect as the teleport events do (it played at the player's origin along their a
 which would have laid its beam sideways); and the floor drop uses `MASK_SOLID`, terrain
 included. Trip mine beams keep their cached traces. The retail `mp/spawn.efx` was not
 available here; the public copies of `mp/jedispawn` and `env/beam`, its siblings, are
-two such lines and an emitter. JoF EJK's source was not found publicly; EternalJK's
+two such lines and an emitter. JoF EJK's source was not found publicly; JoF EJK's
 `cg_event.c` places the effect as OpenJK does, adding only `cg_noTeleFX` and a duel
 filter.
 
@@ -2509,7 +2525,7 @@ damping eases the camera once per 50 ms; EternalJK eases once per frame of
 the result does not depend on the frame rate. SJK registers `cg_cameraFPS` (a
 float) and follows EternalJK above 15; `cg_cameraFPS 0` (below 15) keeps the stock
 damping. The damping is timed by the predicted command time, the clock the focus
-moves on; timing it by the presentation clock made the camera stutter. EternalJK's
+moves on; timing it by the presentation clock made the camera stutter. JoF EJK's
 look also needs `cg_fov 90` and `cg_thirdPersonRange 80`. Unit tests cover one
 125 fps step against EternalJK's per-frame formula, frame-rate independence with a
 still and a moving ideal point, the stock path at 0 and no elapsed time. Checked in
@@ -2595,7 +2611,7 @@ EternalJK.
 
 Implemented:
 
-- Players' animations are remapped before they are shown, as EternalJK's
+- Players' animations are remapped before they are shown, as JoF EJK's
   `CG_Player` does (`cg_players.c:10665-10730` at EternalJK a40e793): without a
   saber in hand, two-handed, dual and staff runs and walks play as the ordinary
   ones; a thrown saber's standing torso follows the legs; the old Bryar's
@@ -2648,7 +2664,7 @@ colours were not checked in game yet.
 
 ## Dismemberment and disintegration
 
-Branch `feat/dismember-disintegrate`: cut-off limbs (`cg_dismember`, EternalJK's
+Branch `feat/dismember-disintegrate`: cut-off limbs (`cg_dismember`, JoF EJK's
 `CG_General` limb case) and bodies burning away (`EF_DISINTEGRATION`,
 `CG_Disintegration`), as described in
 [client.md](client.md#dismemberment-and-disintegration). `cg_dismember` defaults to
@@ -2978,7 +2994,7 @@ restores on a live server and their visual result remain unverified.
 
 ## Shader remap clearing and setting
 
-Local change against `af65396` (2026-10-05, Windows 11) adds EternalJK's
+Local change against `af65396` (2026-10-05, Windows 11) adds JoF EJK's
 `clearRemaps` console command and a Settings > GAME row for `cg_remaps`
 (0 off / 1 map / 2 all; the default stays 1). EternalJK's `R_ClearRemaps_f`
 (`codemp/rd-vanilla/tr_init.cpp`) resets every renderer shader's remap and keeps

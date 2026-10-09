@@ -180,6 +180,14 @@ Settings and SJK in place of retail's Controls and Setup:
     `color1`/`color2` 6 (`SABER_RGB`) and the tint in `cp_sbRGB1`/`cp_sbRGB2`
     (`r | g << 8 | b << 16`), as JoF EJK's `UI_UpdateSaberColor` writes them.
     A swatch brings a stock colour back.
+    A changed saber (hilt pick here or `set saber1 ...` in the console) is
+    applied at once on JA+ and jaPRO-lineage servers: after the userinfo flush
+    the client sends `saber <saber1>` for a single saber or `saber <saber1>
+    <saber2>` for a pair, as JoF EJK's `CG_Saber_f` does, at most once a
+    second and once per changed selection. Stock and unknown servers read
+    `saber1`/`saber2` only at spawn, so there the change waits for the next
+    respawn. The server may refuse the command (jaPRO: standing still, FFA
+    only, not in a duel) and says so in a `print`; it is not retried.
   - Force: retail's in-game `ingame_playerforce` window, here on both
     frames, editing the same draft as the SJK UI's Force tab. It keeps retail's
     frame, title band, gold mastery line, blue and red side bars and level
@@ -840,7 +848,7 @@ collapses the camera onto its target, the view uses the intended forward directi
 instead of constructing an undefined look-at matrix.
 
 Pitch limits, pitch-offset direction and turn-dependent damping follow the
-multiplayer reference. How fast the camera closes the gap follows EternalJK's
+multiplayer reference. How fast the camera closes the gap follows JoF EJK's
 `cg_cameraFPS` (default 125, as EternalJK): the damping cvars apply per frame of
 that rate whatever the real frame rate, and the ideal point's own movement is
 compensated (EternalJK `CG_DampPosition`), so the camera stays close behind a

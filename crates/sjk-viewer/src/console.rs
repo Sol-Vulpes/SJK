@@ -209,6 +209,8 @@ pub(crate) struct ViewerConsole {
     script_vfs: Option<Arc<sjk_vfs::VirtualFileSystem>>,
     config_directory: PathBuf,
     force_profile: sjk_client::ForceProfileNegotiator,
+    /// Sends the `saber` command when the saber changes on a JA+ or jaPRO-lineage server.
+    saber_change: sjk_client::SaberChangeNotifier,
     movement_policy_log: Option<[i32; 4]>,
     window_options: window_options::Options,
     chat_log: chat_log::ChatLog,

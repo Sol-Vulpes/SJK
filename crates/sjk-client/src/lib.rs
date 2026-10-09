@@ -81,6 +81,7 @@ pub use permanent_entities::{legacy_permanent_visible, legacy_scene_entities};
 mod presentation_equipment;
 mod reliable_pacing;
 mod saber_clash_flare;
+mod saber_command;
 mod saber_definitions;
 mod saber_move;
 use sjk_game_jka::saber_move_data;
@@ -238,6 +239,7 @@ pub use pure_checksums::{legacy_pure_checksum_command, legacy_server_is_pure};
 pub use saber_clash_flare::{
     LegacySaberClashFlare, LegacySaberClashSample, LegacySaberClashVisibility,
 };
+pub use saber_command::{SaberChangeNotifier, profile_accepts_saber_command, saber_command};
 pub use saber_definitions::{
     LegacySaberColor, LegacySaberDefinition, LegacySaberType, legacy_saber_definitions,
     legacy_saber_movement, legacy_sabers_forbid_rolls,

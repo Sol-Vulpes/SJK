@@ -510,6 +510,7 @@ impl ViewerConsole {
             script_vfs: None,
             config_directory,
             force_profile: ForceProfileNegotiator::default(),
+            saber_change: sjk_client::SaberChangeNotifier::default(),
             movement_policy_log: None,
             window_options,
             chat_log: chat_log::ChatLog::default(),
@@ -533,6 +534,7 @@ impl ViewerConsole {
         // Every frame: a rejoin retry falls due seconds after the userinfo
         // that preceded it went out, when nothing is left to flush.
         self.poll_force_rejoin(session, now);
+        self.poll_saber_change(session, now);
     }
 
     fn send_userinfo(&mut self, session: &mut ClientSession, now: Instant) {
@@ -579,6 +581,28 @@ impl ViewerConsole {
         }
         if let Some(notice) = output.notice {
             self.shell.push_log(notice);
+        }
+    }
+
+    /// Tell a JA+ or jaPRO-lineage server about a saber changed since the last
+    /// frame (menu or console), so it applies without a respawn.
+    fn poll_saber_change(&mut self, session: &mut ClientSession, now: Instant) {
+        let settled = !self.userinfo_dirty.load(Ordering::Acquire);
+        let saber1 = self.text_value("saber1").unwrap_or_default().to_owned();
+        let saber2 = self.text_value("saber2").unwrap_or_default().to_owned();
+        let Some(command) =
+            self.saber_change
+                .poll(session.compat_profile(), &saber1, &saber2, settled, now)
+        else {
+            return;
+        };
+        match session.send_reliable_command(&command) {
+            Ok(()) => self
+                .shell
+                .push_log(format!("^5Saber: ^7{}", String::from_utf8_lossy(&command))),
+            Err(error) => self
+                .shell
+                .push_log(format!("^1Could not send saber change: {error}")),
         }
     }
 
@@ -696,6 +720,7 @@ impl ViewerConsole {
         self.refresh_movement_cvars(game);
         let raw = String::from_utf8_lossy(game.config_string(0).unwrap_or_default());
         self.force_profile.reset();
+        self.saber_change.reset();
         let value = format!("profile={profile} server={server} CS_SERVERINFO={raw}");
         if let Ok(mut status) = self.server_status.write() {
             *status = value.clone();
