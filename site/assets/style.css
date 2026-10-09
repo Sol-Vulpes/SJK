@@ -128,11 +128,9 @@ kbd:first-child { margin-left: 0; }
 }
 
 .ring {
-  --a: -40deg;
   position: absolute;
   left: calc(var(--u) * (620 - 340)); top: calc(var(--u) * (540 - 340));
   width: calc(var(--u) * 680); height: calc(var(--u) * 680);
-  transition: --a 0.3s ease;
 }
 .ticks, .gold-arc { position: absolute; inset: 0; border-radius: 50%; }
 /* A ring of tick marks, longer every 30 degrees, turning once every four minutes. */
@@ -148,20 +146,12 @@ kbd:first-child { margin-left: 0; }
   content: ""; position: absolute; inset: 11.5%; border-radius: 50%;
   border: 1px solid rgba(168, 207, 255, 0.3);
 }
-/* The 24-degree gold arc, easing to point at the chosen entry. */
+/* The 24-degree gold arc, pointing at the menu. */
 .gold-arc {
-  background: conic-gradient(from calc(var(--a) + 90deg - 12deg), var(--gold-bright) 0 24deg, transparent 24deg);
+  background: conic-gradient(from 78deg, var(--gold-bright) 0 24deg, transparent 24deg);
   -webkit-mask: radial-gradient(closest-side, transparent 95%, #000 95.5%, #000 97.5%, transparent 98%);
   mask: radial-gradient(closest-side, transparent 95%, #000 95.5%, #000 97.5%, transparent 98%);
   filter: drop-shadow(0 0 6px rgba(255, 217, 122, 0.7));
-}
-@property --a { syntax: "<angle>"; inherits: true; initial-value: -40deg; }
-.beam {
-  position: absolute; left: 50%; top: 50%;
-  width: 22%; height: 0;
-  border-top: 2px dotted rgba(255, 217, 122, 0.8);
-  transform-origin: 0 0;
-  transform: rotate(var(--a)) translateX(calc(var(--u) * 336));
 }
 .emblem {
   position: absolute; left: 50%; top: 50%;
@@ -186,35 +176,43 @@ h1 {
   color: var(--text);
 }
 
-/* The entries on an arc of radius 440 round the ring, 16 degrees apart. */
-.arc { list-style: none; margin: 0; padding: 0; }
-.arc li {
-  --t: calc((var(--i) - 2.5) * 16deg);
+/* The menu: one column beside the ring, the download first. */
+.menu {
   position: absolute;
-  left: calc(var(--u) * (620 + 440 * cos(var(--t))));
-  top: calc(var(--u) * (540 + 440 * sin(var(--t))));
+  left: calc(var(--u) * 1010); top: 50%;
   translate: 0 -50%;
 }
-.arc li[hidden] { display: none; }
-.arc a {
+.download {
+  display: inline-block;
+  padding: calc(var(--u) * 14) calc(var(--u) * 44);
+  font: 700 calc(var(--u) * 40)/1 var(--display);
+  color: #1a1206; text-decoration: none;
+  background: linear-gradient(180deg, var(--gold-bright), var(--gold));
+  border-radius: 999px;
+  box-shadow: 0 0 24px rgba(232, 184, 74, 0.35);
+  transition: box-shadow 0.2s, filter 0.2s;
+}
+.download:hover, .download:focus-visible { color: #000; filter: brightness(1.08); box-shadow: 0 0 34px rgba(255, 217, 122, 0.6); }
+.download-line {
+  margin: calc(var(--u) * 12) 0 calc(var(--u) * 34);
+  font-size: calc(var(--u) * 17); color: var(--muted);
+}
+.menu ul { list-style: none; margin: 0; padding: 0; border-left: 1px solid var(--rule); }
+.menu li[hidden] { display: none; }
+.menu ul a {
   display: block; position: relative;
-  font: 600 calc(var(--u) * 44)/1 var(--display);
-  color: var(--text);
-  text-decoration: none;
-  white-space: nowrap;
+  padding: calc(var(--u) * 8) 0 calc(var(--u) * 8) calc(var(--u) * 24);
+  font: 600 calc(var(--u) * 34)/1.1 var(--display);
+  color: var(--text); text-decoration: none;
   text-shadow: 0 2px 12px rgba(0, 0, 0, 0.6);
-  transition: color 0.2s, font-size 0.2s;
+  transition: color 0.15s;
 }
-.arc a.chosen { color: var(--gold-bright); font-size: calc(var(--u) * 68); font-weight: 700; }
-.arc a:focus-visible { outline: none; }
-.arc .line {
-  position: absolute; left: 0; top: 100%;
-  margin-top: calc(var(--u) * 6);
-  font: 400 calc(var(--u) * 18)/1.3 var(--body);
-  color: var(--muted);
-  opacity: 0; transition: opacity 0.2s;
+.menu ul a::before {
+  content: ""; position: absolute; left: -2px; top: 22%; bottom: 22%;
+  width: 3px; background: var(--gold-bright); opacity: 0; transition: opacity 0.15s;
 }
-.arc a.chosen .line { opacity: 1; }
+.menu ul a:hover, .menu ul a:focus-visible { color: var(--gold-bright); outline: none; }
+.menu ul a:hover::before, .menu ul a:focus-visible::before { opacity: 1; }
 
 /* Where the client lists the servers joined last: a column with its rule. */
 .recent {
@@ -259,7 +257,9 @@ h1 {
   border: 2px solid var(--gold);
   background: #3f6e3a;
   font: 700 calc(var(--u) * 34)/1 var(--display);
+  position: relative; overflow: hidden;
 }
+.disc img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .card-text { display: grid; gap: calc(var(--u) * 2); }
 .card-name { font: 600 calc(var(--u) * 27)/1.1 var(--display); }
 .card-facts, .card-hint { font-size: calc(var(--u) * 15); line-height: 1.3; color: var(--muted); }
@@ -267,15 +267,6 @@ h1 {
 .card-hint { display: none; color: var(--gold-bright); }
 .card:hover .card-hint, .card:focus-visible .card-hint { display: block; }
 
-.keys {
-  position: absolute; margin: 0;
-  left: 50%; top: calc(var(--u) * 1000);
-  translate: -50% 0;
-  white-space: nowrap;
-  font-size: calc(var(--u) * 16); color: var(--muted);
-}
-.keys kbd { font-size: calc(var(--u) * 15); margin-left: calc(var(--u) * 36); }
-.keys kbd:first-child { margin-left: 0; }
 .version {
   position: absolute; margin: 0;
   right: calc(var(--u) * 96); top: calc(var(--u) * 960);
@@ -287,18 +278,15 @@ h1 {
   .home { display: block; place-items: normal; padding: 4.5rem 16px 2.5rem; }
   .frame { width: auto; aspect-ratio: auto; container-type: normal; display: flex; flex-direction: column; gap: 1.6rem; }
   .frame > * { --u: calc(min(100vw, 560px) / 1100); position: static !important; translate: none !important; }
-  .ring { width: min(72vw, 360px); height: min(72vw, 360px); margin: 0 auto; position: relative !important; }
+  .ring { width: min(72vw, 360px); height: min(72vw, 360px); margin: 0 auto; position: relative !important; left: auto; top: auto; }
   .ring .emblem { position: absolute !important; translate: -50% -50% !important; width: 56%; height: 56%; }
-  .beam { display: none; }
   .title { text-align: center; order: -1; }
   .eyebrow { font-size: 0.85rem; }
   h1 { font-size: 3rem; }
-  .arc { display: grid; gap: 0.15rem; }
-  .arc li { position: static; translate: none; }
-  .arc a, .arc a.chosen { font-size: 1.7rem; padding: 0.35rem 0; }
-  .arc a.chosen { font-size: 2rem; }
-  .arc .line { position: static; display: block; font-size: 0.9rem; margin-top: 0.2rem; }
-  .arc a:not(.chosen) .line { display: none; }
+  .menu { translate: none; }
+  .download { padding: 0.7rem 2rem; font-size: 1.6rem; }
+  .download-line { font-size: 0.9rem; margin: 0.5rem 0 1.2rem; }
+  .menu ul a { font-size: 1.5rem; padding: 0.35rem 0 0.35rem 1rem; }
   .recent { width: auto; padding-left: 1rem; }
   .recent h2 { font-size: 1.3rem; margin-bottom: 0.5rem; }
   .recent * + h2 { margin-top: 1.4rem; }
@@ -308,7 +296,6 @@ h1 {
   .disc { width: 3.4rem; height: 3.4rem; font-size: 1.6rem; }
   .card-name { font-size: 1.3rem; }
   .card-facts, .card-hint { font-size: 0.85rem; }
-  .keys { display: none; }
   .version { font-size: 1rem; text-align: right; }
 }
 
@@ -501,7 +488,7 @@ h3 {
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   .emblem, .ticks, .backdrop img.shown, .cat { animation: none !important; }
-  .ring, .fx, .backdrop img, .nav { transition: none; }
+  .fx, .backdrop img, .nav, .menu ul a { transition: none; }
 }
 
 .settings > *, .cat > *, .steps > *, .credits > *, .gallery > * { min-width: 0; }

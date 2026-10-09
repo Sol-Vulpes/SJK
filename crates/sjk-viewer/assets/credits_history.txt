@@ -9,6 +9,8 @@
 #                               made it when that is not the piece's owner.
 
 = Sol
++ 09/10/2026 | - | Plain home menu, GitHub picture
+- 35c8764 |  | Make the site's home menu a plain column, with Sol's GitHub picture
 + 09/10/2026 | - | The site in the SJK UI's look
 - 13bb528 |  | Give the site the SJK UI's look, with the client's own renders
 + 09/10/2026 | - | JoFTemple status
