@@ -75,6 +75,10 @@ pub(crate) struct GameAudio {
     trace_due: Option<Instant>,
     /// Players muted on this PC, whose sounds are not played (`audio_mute.rs`).
     mute: crate::audio_mute::AudioMute,
+    /// The blade skins whose sounds the gamestate's tables get (`saber_skins.rs`).
+    blade_skins: Arc<crate::saber_skins::LoadedSkins>,
+    /// The generation of the blade skins registered in `legacy`, once it is ready.
+    saber_sets_generation: Option<u64>,
 }
 
 impl GameAudio {
@@ -100,6 +104,17 @@ impl GameAudio {
             }
         }
     }
+    /// Which blade skin's sound set each client slot wears (`saber_skins.rs`); cheap,
+    /// called every frame. Until the gamestate's tables are ready there is nothing to set.
+    pub(crate) fn set_saber_sound_overrides(
+        &mut self,
+        clients: &[Option<u8>; sjk_client::SABER_SOUND_CLIENTS],
+    ) {
+        if let Some(adapter) = &mut self.legacy {
+            adapter.set_saber_sound_overrides(clients);
+        }
+    }
+
     /// Create the one process-lifetime output stream and its decode worker.
     pub(crate) fn start() -> Option<Self> {
         let output = AudioOutput::start(MixerConfig {
@@ -123,6 +138,8 @@ impl GameAudio {
             legacy_load: None,
             sound_table_refresh: None,
             legacy_vfs: None,
+            blade_skins: Arc::default(),
+            saber_sets_generation: None,
             map_music: None,
             duel_music: None,
             deferred_snapshots: VecDeque::with_capacity(16),
@@ -193,9 +210,14 @@ impl GameAudio {
                 snapshot.player.client_num(),
             )))));
         for entity in &snapshot.entities {
+            // `CG_SetEntitySoundPosition`: a door's sounds follow its middle.
+            let origin = self.legacy.as_ref().map_or_else(
+                || entity.trajectory_base(),
+                |adapter| adapter.sound_origin(entity),
+            );
             self.output.send(AudioCommand::SourcePosition(
                 SourceId(u32::from(entity.number())),
-                entity.trajectory_base(),
+                origin,
             ));
         }
         if self.legacy.is_none() {

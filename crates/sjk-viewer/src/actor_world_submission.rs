@@ -40,6 +40,8 @@ struct Sinks<'a> {
     overrides: &'a mut Vec<entity_materials::OverrideInstance>,
     entity_instances: &'a mut Vec<EntityInstance>,
     saber_hilts: Option<&'a saber::HiltCatalog>,
+    /// Who wears which blade skin.
+    saber_skins: &'a crate::saber_skins::SaberSkins,
     saber_states: &'a mut saber_trail::StateSlab,
     saber_segments: &'a mut saber_trail::SegmentPool,
     /// Trail edges for held and flying blades; `None` with `cg_saberTrail 0`.
@@ -212,6 +214,7 @@ pub(crate) fn submit(
         overrides: &mut gpu.pickup_override_instances,
         entity_instances: &mut gpu.entity_instances,
         saber_hilts: gpu.saber_hilts.as_ref(),
+        saber_skins: &gpu.saber_skins,
         saber_states: &mut gpu.saber_states,
         saber_segments: &mut gpu.saber_trail_segments,
         trail_edges: trails.then(|| {
@@ -716,6 +719,7 @@ fn submit_equipment(
     let origin = Vec3::from_array(transform.translation);
     if saber_submission::submit(
         entity.id.get(),
+        sinks.saber_skins.get(entity.id.get()),
         std::array::from_fn(|hand| {
             let mesh = &sinks.actor_meshes[actor_mesh];
             mesh.saber_names[hand]

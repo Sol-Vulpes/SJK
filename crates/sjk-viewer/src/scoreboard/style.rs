@@ -10,7 +10,8 @@
 //! the old default `classic`, so it moves once to `auto`
 //! (`cg_scoreboardStyleDefaultVersion`, in the console's start); a look chosen
 //! after that keeps it whatever the menu style. `cg_compactScoreboard` (on by
-//! default) packs the SJK look's rows so every player fits one column.
+//! default) packs the SJK look's rows so every player fits one column, in a
+//! board as wide as its names, centred.
 
 use crate::console::ViewerConsole;
 use crate::menu::style::MenuStyle;

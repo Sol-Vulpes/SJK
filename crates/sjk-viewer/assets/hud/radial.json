@@ -729,40 +729,6 @@
    }
   },
   {
-   "id": "kill_feed",
-   "kind": "repeater",
-   "binding": "kill_feed",
-   "anchor": "top_left",
-   "offset": {
-    "x": 32.0,
-    "y": 28.0
-   },
-   "size": {
-    "width": {
-     "unit": "px",
-     "value": 640.0
-    },
-    "height": {
-     "unit": "px",
-     "value": 28.0
-    }
-   },
-   "visibility": {
-    "kind": "flag",
-    "binding": "draw_kill_feed"
-   },
-   "layer": 7,
-   "style": {
-    "foreground": {
-     "r": 1.0,
-     "g": 1.0,
-     "b": 1.0,
-     "a": 0.978
-    },
-    "type_scale": 1.0
-   }
-  },
-  {
    "id": "crosshair_name",
    "kind": "text",
    "binding": "crosshair_name",

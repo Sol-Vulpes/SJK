@@ -1,5 +1,6 @@
 //! Application of shell cvars to the native window, renderer, and frame loop.
 
+use super::console::ViewerConsole;
 use super::pointer_input::MouseLook;
 use super::{DepthTarget, GpuState};
 use crate::settings::{DisplayMode, MonitorModes, exclusive_supported, exclusive_video_mode};
@@ -123,21 +124,14 @@ impl GpuState {
     }
 
     pub(crate) fn maximum_fps(&self) -> u32 {
-        let normal = match self
-            .console
-            .as_ref()
-            .and_then(|console| console.integer_cvar("com_maxfps"))
-        {
-            Some(value) if value >= 0 => u32::try_from(value).unwrap_or(u32::MAX),
-            _ => self.refresh_rate_cap(),
-        };
-        self.console
-            .as_ref()
-            .map_or(normal, |console| console.window_fps(normal))
+        let console = self.console.as_ref();
+        let normal = normal_cap(console, || self.refresh_rate_cap());
+        console.map_or(normal, |console| console.window_fps(normal))
     }
 
-    /// `com_maxfps -1`: the refresh rate of the window's monitor, rounded to whole
-    /// hertz (59.94 Hz caps at 60), or stock's 125 when it cannot be read.
+    /// `com_maxfps -1` with [`MONITOR_CAP_CVAR`] on: the refresh rate of the
+    /// window's monitor, rounded to whole hertz (59.94 Hz caps at 60), or
+    /// stock's 125 when it cannot be read.
     fn refresh_rate_cap(&self) -> u32 {
         let now = Instant::now();
         if let Some((read, cap)) = self.refresh_cap.get()
@@ -161,11 +155,30 @@ impl GpuState {
     }
 }
 
-/// Stock's `com_maxfps` default, used when the monitor reports no refresh rate.
+/// Whether `com_maxfps -1` (AUTO) follows the monitor's refresh rate. Off (0,
+/// the default), AUTO caps at stock's 125 and the monitor's rate is never read.
+/// Registered and cached for frame reads with the other frame caps
+/// (`console_window_options.rs`).
+pub(crate) const MONITOR_CAP_CVAR: &str = "com_maxfpsMonitor";
+/// Stock's `com_maxfps` default: AUTO's cap with [`MONITOR_CAP_CVAR`] off, or
+/// when the monitor reports no refresh rate.
 const UNKNOWN_REFRESH_CAP: u32 = 125;
 /// How long a monitor refresh-rate reading is reused; moving the window to
 /// another monitor is picked up within this.
 const REFRESH_RECHECK: Duration = Duration::from_secs(1);
+
+/// The cap `com_maxfps` asks for, before the unfocused and minimized caps: its
+/// value from 0 up (0 is uncapped), else AUTO. AUTO is `monitor_cap` with
+/// [`MONITOR_CAP_CVAR`] on, and with it off (or no console) stock's 125, the
+/// cap of a monitor whose rate is unknown; `monitor_cap` is called only with it
+/// on.
+fn normal_cap(console: Option<&ViewerConsole>, monitor_cap: impl FnOnce() -> u32) -> u32 {
+    match console.and_then(|console| console.integer_cvar("com_maxfps")) {
+        Some(value) if value >= 0 => u32::try_from(value).unwrap_or(u32::MAX),
+        _ if console.is_some_and(ViewerConsole::auto_fps_follows_monitor) => monitor_cap(),
+        _ => UNKNOWN_REFRESH_CAP,
+    }
+}
 
 fn refresh_cap_from_millihertz(millihertz: u32) -> u32 {
     match millihertz.saturating_add(500) / 1000 {
@@ -238,7 +251,19 @@ pub(crate) fn preferred_present_mode(
 
 #[cfg(test)]
 mod refresh_cap_tests {
-    use super::refresh_cap_from_millihertz;
+    use super::{MONITOR_CAP_CVAR, normal_cap, refresh_cap_from_millihertz};
+    use crate::console::ViewerConsole;
+    use sjk_shell::CvarValue;
+
+    /// A monitor that must not be asked.
+    fn unread() -> u32 {
+        panic!("the monitor's refresh rate was read")
+    }
+
+    /// A monitor reporting `millihertz`.
+    fn monitor(millihertz: u32) -> impl FnOnce() -> u32 {
+        move || refresh_cap_from_millihertz(millihertz)
+    }
 
     #[test]
     fn rounds_reported_rates_to_whole_hertz() {
@@ -250,5 +275,69 @@ mod refresh_cap_tests {
     #[test]
     fn a_zero_rate_falls_back_to_stock() {
         assert_eq!(refresh_cap_from_millihertz(0), 125);
+    }
+
+    /// A new profile has the monitor's rate off, so AUTO (the `com_maxfps`
+    /// default) caps at 125 without asking the monitor, as for a monitor that
+    /// reports no rate; so does a run without a console.
+    #[test]
+    fn off_by_default_auto_caps_at_stock_without_reading_the_monitor() {
+        let directory = tempfile::tempdir().unwrap();
+        let console = ViewerConsole::new(directory.path().join("config.cfg")).unwrap();
+        assert_eq!(
+            console.cvar_default(MONITOR_CAP_CVAR),
+            Some(&CvarValue::Integer(0))
+        );
+        assert!(!console.auto_fps_follows_monitor());
+        assert_eq!(console.integer_cvar("com_maxfps"), Some(-1));
+        assert_eq!(normal_cap(Some(&console), unread), 125);
+        assert_eq!(normal_cap(None, unread), 125);
+    }
+
+    /// On, AUTO follows the monitor as before: its rate in whole hertz, or 125
+    /// when it reports none. The setting is archived and leaves `com_maxfps`
+    /// as it was.
+    #[test]
+    fn on_auto_follows_the_monitor_and_stays_on() {
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("config.cfg");
+        let mut console = ViewerConsole::new(path.clone()).unwrap();
+        assert!(console.set_cvar(MONITOR_CAP_CVAR, "1"));
+        assert!(console.auto_fps_follows_monitor());
+        assert_eq!(normal_cap(Some(&console), monitor(143_856)), 144);
+        assert_eq!(normal_cap(Some(&console), monitor(59_940)), 60);
+        assert_eq!(normal_cap(Some(&console), monitor(240_000)), 240);
+        assert_eq!(normal_cap(Some(&console), monitor(0)), 125);
+        drop(console);
+        let console = ViewerConsole::new(path).unwrap();
+        assert!(console.auto_fps_follows_monitor());
+        assert_eq!(console.integer_cvar("com_maxfps"), Some(-1));
+        assert_eq!(normal_cap(Some(&console), monitor(165_000)), 165);
+    }
+
+    /// A cap the player set, uncapped included, is kept with the setting off
+    /// or on, and a profile saved before the setting existed keeps its cap and
+    /// gets the setting off.
+    #[test]
+    fn a_cap_the_player_set_is_kept_either_way() {
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("config.cfg");
+        let mut console = ViewerConsole::new(path.clone()).unwrap();
+        for setting in ["0", "1"] {
+            assert!(console.set_cvar(MONITOR_CAP_CVAR, setting));
+            for cap in [0, 60, 240, 1000] {
+                assert!(console.set_cvar("com_maxfps", &cap.to_string()));
+                assert_eq!(normal_cap(Some(&console), unread), cap);
+            }
+        }
+        drop(console);
+        std::fs::write(
+            &path,
+            "seta com_maxfpsDefaultVersion 1\nseta com_maxfps 144\n",
+        )
+        .unwrap();
+        let console = ViewerConsole::new(path).unwrap();
+        assert!(!console.auto_fps_follows_monitor());
+        assert_eq!(normal_cap(Some(&console), unread), 144);
     }
 }

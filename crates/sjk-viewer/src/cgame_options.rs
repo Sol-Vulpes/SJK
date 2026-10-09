@@ -5,6 +5,7 @@ use sjk_shell::{CvarDefinition, CvarFlags, CvarRegistry};
 /// Register only options consumed by presentation paths in this batch.
 pub(crate) fn register(cvars: &mut CvarRegistry) -> Result<(), sjk_shell::CvarError> {
     crate::hud::family::register(cvars)?;
+    crate::hud::kill_feed::register(cvars)?;
     crate::hud::movement::register(cvars)?;
     for (name, value, help) in [
         (

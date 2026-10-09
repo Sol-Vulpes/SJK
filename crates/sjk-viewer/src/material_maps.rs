@@ -10,7 +10,9 @@
 //! and `r_emissiveMaps`, sampled at startup like rend2's latched cvars. SJK turns
 //! them all on by default (Sol's choice; rend2 defaults the first three
 //! off); they act only where a pack supplies maps. `r_parallaxStrength`
-//! (`world_lighting_mode.rs`, live, default 0.1) scales the parallax depth. Off, no
+//! (`world_lighting_mode.rs`, live, default 0.1) scales the parallax depth and
+//! `r_parallaxNearDistance` (live, default 24 units) holds it back near the camera
+//! (`material_map_parallax_tests.rs` models both limits). Off, no
 //! image is looked up, no layout, buffer or program exists and every stage compiles
 //! exactly as before. On without maps, a map load only looks the map names up in the
 //! file index; no layout, buffer or program is created either. On, a stage with maps
@@ -30,6 +32,9 @@ pub(crate) mod frames;
 pub(super) mod gpu;
 #[path = "material_map_images.rs"]
 mod images;
+#[cfg(test)]
+#[path = "material_map_parallax_tests.rs"]
+mod parallax_tests;
 #[path = "material_map_program.rs"]
 pub(super) mod program;
 #[path = "reflection_probes.rs"]

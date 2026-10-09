@@ -288,6 +288,24 @@ impl Default for ForceLegalizeRules {
     }
 }
 
+impl ForceLegalizeRules {
+    /// The rules a profile the client sends must meet: these, but keeping the
+    /// powers `g_forcePowerDisable` turns off.
+    ///
+    /// `BG_LegalizedForcePowers` (`bg_misc.c`) zeroes a disabled power in the
+    /// server's own copy before it counts points and without calling the
+    /// profile illegal, so `WP_InitForcePowers` never parks a player for one.
+    /// Kept in the sent profile, they cost points here (so the profile still
+    /// fits once a mod lets them back) and are there for a mod that restores
+    /// them, as jaPRO does in Force duels for its own disable list.
+    pub const fn for_sent_profile(self) -> Self {
+        Self {
+            disabled_mask: 0,
+            ..self
+        }
+    }
+}
+
 /// Result of BaseJKA force-profile legalization.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct LegalizedForcePowers {

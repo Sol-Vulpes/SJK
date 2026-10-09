@@ -267,6 +267,8 @@ impl ViewerConsole {
 
     pub(crate) fn clear_server_info(&mut self) {
         self.movement_policy_log = None;
+        // Off a server the profile goes out as written, with nothing pending.
+        self.force_profile.reset();
         if let Ok(mut status) = self.server_status.write() {
             *status = "Not connected".to_owned();
         }

@@ -3,8 +3,8 @@
 //! medal pop-up the medals of the player's own profile (`medal_popup.rs`), and the
 //! achievements their counts (`achievements_frame.rs`). Each frame it also lets the
 //! chat feed follow the SJK chat (`sjk_chat_frame.rs`), starts and ends emotes
-//! (`emotes_frame.rs`) and follows the players muted on this PC
-//! (`muted_players_frame.rs`).
+//! (`emotes_frame.rs`), keeps the players' looks (`looks_frame.rs`) and follows the
+//! players muted on this PC (`muted_players_frame.rs`).
 
 use super::*;
 use sjk_identity::Settings;
@@ -16,7 +16,9 @@ impl GpuState {
         self.update_sjk_chat();
         self.update_emotes();
         self.update_muted_players();
-        if !player_identity::due() {
+        let due = player_identity::due();
+        self.update_looks(due);
+        if !due {
             return;
         }
         let Some(console) = self.console.as_ref() else {
@@ -40,6 +42,8 @@ impl GpuState {
         });
         let chat = console.bool_cvar("cl_sjkChat") != Some(false);
         player_identity::apply(console.config_directory(), settings, name, location, chat);
+        let (packs_revision, assets_note) = player_identity::packs();
+        crate::sjk_packs::follow_identity(packs_revision, assets_note);
         self.offer_medals();
         self.update_achievements();
     }

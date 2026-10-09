@@ -50,6 +50,8 @@ struct Runtime {
     sent_name: Option<String>,
     /// Whether the SJK chat was last told on (`cl_sjkChat`).
     sent_chat: Option<bool>,
+    /// The look the service was last given (`looks.rs`).
+    sent_look: Option<sjk_identity::Look>,
     next_sync: Option<Instant>,
 }
 
@@ -60,6 +62,7 @@ static RUNTIME: Mutex<Runtime> = Mutex::new(Runtime {
     sent_location: None,
     sent_name: None,
     sent_chat: None,
+    sent_look: None,
     next_sync: None,
 });
 
@@ -143,11 +146,14 @@ pub(crate) fn apply(
                     identity.key_id(),
                     KEY_FILE
                 ));
-                runtime.service = Some(Service::start_with_feed(
+                let service = Service::start_with_feed(
                     identity,
                     Box::new(make_hub),
                     Some(Box::new(make_feed_hub)),
-                ));
+                );
+                // The hub's packs (unlockables' art) are kept beside the key.
+                service.keep_assets(crate::sjk_packs::directory_in(config_directory));
+                runtime.service = Some(service);
             }
             Err(error) => {
                 crate::log::progress(format_args!("identity: {error}"));
@@ -179,6 +185,15 @@ pub(crate) fn apply(
         }
         runtime.sent_location = location;
     }
+}
+
+/// How many packs the service has written to the cache folder (`sjk_packs.rs`
+/// mounts them again when it changes; 0 before the service starts), and what its
+/// last pack check did. Read twice a second.
+pub(crate) fn packs() -> (u64, Option<String>) {
+    lock().service.as_ref().map_or((0, None), |service| {
+        service.with_snapshot(|snapshot| (snapshot.packs_revision, snapshot.assets_note.clone()))
+    })
 }
 
 /// Send a bug report through the service; false when the service has not started.
@@ -460,6 +475,64 @@ pub(crate) fn take_emotes() -> Vec<sjk_identity::Emote> {
         .unwrap_or_default()
 }
 
+/// The looks the feed received since the last call for `server`, the game server the
+/// player is on, under the feed's current reading (`Service::take_looks`).
+pub(crate) fn take_looks(server: Option<SocketAddr>) -> sjk_identity::ReceivedLooks {
+    lock()
+        .service
+        .as_ref()
+        .map(|service| service.take_looks(server))
+        .unwrap_or_default()
+}
+
+/// Read the known players on the server (their looks); `None` when the service has
+/// not started. Keep `read` short.
+pub(crate) fn with_roster<R>(read: impl FnOnce(&[sjk_identity::Presence]) -> R) -> Option<R> {
+    lock()
+        .service
+        .as_ref()
+        .map(|service| service.with_snapshot(|snapshot| read(&snapshot.players)))
+}
+
+/// Whether the player's own hub profile lists unlock `id`: false with the identity
+/// off, no hub or before the hub answered.
+pub(crate) fn owns_unlock(id: &str) -> bool {
+    lock().service.as_ref().is_some_and(|service| {
+        service.with_snapshot(|snapshot| {
+            !matches!(
+                snapshot.status,
+                sjk_identity::Status::Disabled | sjk_identity::Status::NoHub
+            ) && snapshot
+                .me
+                .as_ref()
+                .is_some_and(|me| me.unlocks.iter().any(|unlock| unlock.id == id))
+        })
+    })
+}
+
+/// Give the service the look the player wears, when it is not the one it was last
+/// given; false when the service has not started.
+pub(crate) fn set_look(look: &sjk_identity::Look) -> bool {
+    let mut runtime = lock();
+    let runtime = &mut *runtime;
+    let Some(service) = runtime.service.as_ref() else {
+        return false;
+    };
+    if newly(&mut runtime.sent_look, look) {
+        service.set_look(look.clone());
+    }
+    true
+}
+
+/// Whether `value` is not the one last `sent`, which then becomes it.
+fn newly<T: Clone + PartialEq>(sent: &mut Option<T>, value: &T) -> bool {
+    if sent.as_ref() == Some(value) {
+        return false;
+    }
+    *sent = Some(value.clone());
+    true
+}
+
 /// Read the hub's claims on the server being played (none when the service has not
 /// started), as the mute list matches them to slots (`chat_mutes.rs`). Keep `read`
 /// short: the service waits.
@@ -522,5 +595,22 @@ mod tests {
         assert!(with_chat(|chat| chat.revision).is_none());
         assert!(take_emotes().is_empty());
         assert_eq!(with_claims(|claims| claims.len()), 0);
+        assert_eq!(take_looks(None), sjk_identity::ReceivedLooks::default());
+        assert!(with_roster(|players| players.len()).is_none());
+        assert!(!owns_unlock("saber_sun"));
+        assert!(!set_look(&sjk_identity::Look::default()));
+    }
+
+    #[test]
+    fn the_look_is_given_only_when_it_changes() {
+        let lit = sjk_identity::Look {
+            saber: String::new(),
+            illuminate: true,
+        };
+        let mut sent = None;
+        assert!(newly(&mut sent, &lit));
+        assert!(!newly(&mut sent, &lit));
+        assert!(newly(&mut sent, &sjk_identity::Look::default()));
+        assert!(newly(&mut sent, &lit));
     }
 }

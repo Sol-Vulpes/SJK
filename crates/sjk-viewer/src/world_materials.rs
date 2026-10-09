@@ -8,6 +8,8 @@
 mod depth_prime;
 #[path = "world_material_draw.rs"]
 mod draw;
+#[path = "dynamic_light_shadows.rs"]
+pub(crate) mod dynamic_light_shadows;
 #[path = "gi_probe_domain.rs"]
 mod gi_probe_domain;
 #[path = "indirect_draws.rs"]
@@ -107,6 +109,7 @@ macro_rules! stage_shader {
             include_str!("geometry_stage.wgsl"),
             include_str!("stage_runtime.wgsl"),
             include_str!("point_lights.wgsl"),
+            include_str!("point_light_octa.wgsl"),
             include_str!("world_lighting_mode.wgsl"),
             include_str!("light_grid_sample.wgsl"),
             include_str!("model_light_grid.wgsl"),

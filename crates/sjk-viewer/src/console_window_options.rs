@@ -1,5 +1,5 @@
-//! Window events, cached focus-dependent frame caps and the away talk balloon; no
-//! simulation policy.
+//! Window events, cached frame-cap settings (the focus-dependent caps and whether
+//! AUTO follows the monitor) and the away talk balloon; no simulation policy.
 use super::console_cvars::IntegerSetting;
 use super::*;
 
@@ -11,6 +11,8 @@ const UNFOCUSED_CAP: i64 = 30;
 pub(super) struct Options {
     unfocused_cap: IntegerSetting,
     minimized_cap: IntegerSetting,
+    /// [`crate::runtime_settings::MONITOR_CAP_CVAR`], read every frame.
+    monitor_cap: IntegerSetting,
     unfocused_chatbox: IntegerSetting,
     minimized_chatbox: IntegerSetting,
     mute_away: IntegerSetting,
@@ -34,6 +36,12 @@ impl Options {
                 "com_maxfpsMinimized",
                 50,
                 "Minimized frame cap; zero uses the normal cap",
+            ),
+            (
+                crate::runtime_settings::MONITOR_CAP_CVAR,
+                0,
+                "1: com_maxfps -1 (AUTO) follows the monitor's refresh rate (125 when \
+                 unknown); 0: AUTO caps at 125 without reading the monitor",
             ),
             (
                 "cl_unfocusedChatbox",
@@ -90,6 +98,7 @@ impl Options {
         Ok(Self {
             unfocused_cap: IntegerSetting::bind(cvars, "com_maxfpsUnfocused", UNFOCUSED_CAP)?,
             minimized_cap: IntegerSetting::bind(cvars, "com_maxfpsMinimized", 50)?,
+            monitor_cap: IntegerSetting::bind(cvars, crate::runtime_settings::MONITOR_CAP_CVAR, 0)?,
             unfocused_chatbox: IntegerSetting::bind(cvars, "cl_unfocusedChatbox", 1)?,
             minimized_chatbox: IntegerSetting::bind(cvars, "cl_minimizedChatbox", 1)?,
             mute_away: IntegerSetting::bind(cvars, "snd_mute_losefocus", 1)?,
@@ -123,6 +132,12 @@ impl ViewerConsole {
                 .cvars
                 .restore_text("com_minimized", if minimized { "1" } else { "0" });
         }
+    }
+
+    /// Whether `com_maxfps -1` (AUTO) follows the monitor's refresh rate
+    /// ([`crate::runtime_settings::MONITOR_CAP_CVAR`]), without a name lookup.
+    pub(crate) fn auto_fps_follows_monitor(&self) -> bool {
+        self.window_options.monitor_cap.enabled()
     }
 
     /// Stock common.cpp:1528-1533 priority, using callbacks rather than frame lookups.

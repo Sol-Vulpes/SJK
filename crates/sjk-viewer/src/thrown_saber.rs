@@ -75,19 +75,24 @@ pub(super) fn submit(
         rotation: hilt_rotation.to_array(),
         ..transform
     };
+    let color = sinks
+        .saber_skins
+        .blade_color(owner_entity, BladeColor::from_rgb(owner.color));
     if let Some((hilt, blades)) = submit_hilt(
         owner,
+        color,
         pose,
         blade_rotation,
         catalog,
         sinks.object_groups,
         sinks.saber_instances,
+        sinks.presentation_time,
     ) {
-        add_trails(sinks, owner_entity, hilt, &blades, owner.color);
+        add_trails(sinks, owner_entity, hilt, &blades, color);
         crate::saber_submission::lights::append(
             sinks.lights,
             &blades,
-            BladeColor::from_rgb(owner.color),
+            color,
             hilt.num_blades,
             hilt.no_dlight,
             sinks.presentation_time,
@@ -106,7 +111,7 @@ fn add_trails(
     owner_entity: u64,
     hilt: crate::saber_hilts::Hilt,
     blades: &[Option<saber::Blade>; 8],
-    color: [u8; 3],
+    color: BladeColor,
 ) {
     let Some(edges) = sinks.trail_edges.as_mut() else {
         return;
@@ -116,7 +121,6 @@ fn add_trails(
         .entity(EntityId::new(owner_entity))
         .and_then(|owner| owner.equipment())
         .map_or(0, |equipment| equipment.trail_duration_millis);
-    let color = BladeColor::from_rgb(color);
     for (index, blade) in blades.iter().enumerate() {
         let (Some(blade), Some(hilt_blade)) = (blade, hilt.blade(index)) else {
             continue;
@@ -137,14 +141,18 @@ fn add_trails(
     }
 }
 
-/// Emit one hilt at `transform` and each lit primary blade at `rotation`.
+/// Emit one hilt at `transform` and each lit primary blade at `rotation` in `color`
+/// (the owner's skin over its saber colour).
+#[allow(clippy::too_many_arguments)]
 pub(super) fn submit_hilt(
     owner: LegacyThrownSaber<'_>,
+    color: BladeColor,
     transform: Transform,
     rotation: Quat,
     catalog: &HiltCatalog,
     objects: &mut [Vec<ActorInstance>],
     blades: &mut Vec<Instance>,
+    presentation_time: i64,
 ) -> Option<(crate::saber_hilts::Hilt, [Option<saber::Blade>; 8])> {
     // CG_Player owns manual rendering only while saberInFlight (10050-10055);
     // CG_General ignores the lingering modelGhoul2=127 entity (cg_ents.c:871).
@@ -158,7 +166,7 @@ pub(super) fn submit_hilt(
         transform.scale,
     ));
     let origin = Vec3::from_array(transform.translation);
-    let color = BladeColor::from_rgb(owner.color);
+    let owner_entity = u64::from(owner.owner) + 1;
     let mut light_blades = [None; 8];
     for index in 0..usize::from(hilt.num_blades) {
         if index > 0 && !owner.extra_blades {
@@ -168,14 +176,11 @@ pub(super) fn submit_hilt(
             continue;
         };
         let blade = saber::world_blade(origin, rotation, blade.socket, blade.length, blade.radius);
+        // The seed of the same blade in the hand, so its animation carries on in flight.
+        let key = owner_entity.wrapping_mul(24) + index as u64;
         blades.extend(Instance::pair(blade, color).map(|i| {
-            i.with_contact(
-                u64::from(owner.owner) + 1,
-                2,
-                index,
-                !hilt.no_wall_marks,
-                hilt.no_dlight,
-            )
+            i.with_contact(owner_entity, 2, index, !hilt.no_wall_marks, hilt.no_dlight)
+                .with_animation(presentation_time as f64 * 0.001, key as u32)
         }));
         light_blades[index] = Some(blade);
     }

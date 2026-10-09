@@ -18,8 +18,10 @@ fn finish_model_light(position: vec3<f32>, source: EntityLight) -> EntityLight {
         let source = point_lights.lights[index];
         let toward = source.origin_radius.xyz - position;
         let distance = max(length(toward), 16.0);
+        // Within the light's reach, the static world between it and this pixel stops it
+        // (`point_light_visibility`, with no surface plane: a model is not in the tile).
         let strength = 16.0 * source.origin_radius.w * source.origin_radius.w /
-            (distance * distance);
+            (distance * distance) * point_light_visibility(index, position, vec3(0.0));
         light.directed += strength * source.color.rgb;
         direction += strength * grid_unit(toward);
     }

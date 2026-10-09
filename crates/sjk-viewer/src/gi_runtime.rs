@@ -16,6 +16,8 @@ pub(crate) struct Header {
 /// Immutable voxel buffers (kept alive by the bind group) plus the surface table.
 pub(crate) struct Runtime {
     pub(crate) fixtures: Option<super::lamp_geometry::Runtime>,
+    /// Point-light shadow tiles traced against `fixtures` (`dynamic_light_shadows.rs`).
+    pub(crate) dynamic_light_shadows: Option<super::dynamic_light_shadows::Tracer>,
 
     /// CPU copy, kept for dead-probe tests at probe installation.
     pub(crate) world: crate::gi_voxels::VoxelWorld,
@@ -139,6 +141,7 @@ impl Runtime {
             layout,
             bind_group,
             fixtures: None,
+            dynamic_light_shadows: None,
         }
     }
 }
@@ -195,11 +198,15 @@ impl super::Runtime {
             })
             .collect();
         let geometry = super::lamp_geometry::geometry::Geometry::new(&triangles);
-        runtime.fixtures = Some(super::lamp_geometry::Runtime::new(
+        let fixtures =
+            super::lamp_geometry::Runtime::new(device, &geometry, &self.surfaces_by_source);
+        // Dynamic lights stop at the same walls as the lamps.
+        runtime.dynamic_light_shadows = Some(super::dynamic_light_shadows::Tracer::new(
             device,
-            &geometry,
-            &self.surfaces_by_source,
+            &fixtures,
+            &self.dynamic_light_buffer,
         ));
+        runtime.fixtures = Some(fixtures);
         let started = std::time::Instant::now();
         for occluder in &mut self.mover_occluders {
             occluder.seen_by = Some(super::mover_occlusion::seen_by(

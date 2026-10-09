@@ -52,6 +52,7 @@ pub(super) fn pair(
             start_length: 1.0,
             end_length: 1.0,
             streak: None,
+            trace_streak: false,
             normal: None,
             alpha: envelope(1.0, 1.0),
             use_alpha: false,
