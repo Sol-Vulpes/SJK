@@ -1057,7 +1057,9 @@ command a `q` completes to. Not yet run in a game window.
 ### Importing from another client
 
 A `.cfg` file dropped on the window (winit's `DroppedFile`), at any time, opens the
-Import page over whatever is on show
+Import page over whatever is on show (a picture file, PNG, JPEG or TGA, opens the
+Profile page's picture panel instead, as does any other file dropped while that page
+shows: [Identity](#identity))
 ([config_import.rs](../crates/sjk-viewer/src/config_import.rs),
 [config_import_panel.rs](../crates/sjk-viewer/src/config_import_panel.rs)); the
 First setup screen says so. `firstsetup import <path>` does the same from the
@@ -1788,7 +1790,17 @@ are in [identity.md](identity.md).
   bio (written there, up to 6 lines under the hub's rules), their record from the
   achievement counts, and a second tab, the achievements board (`achievements`). It
   has the SJK UI's look in every menu style; its Identity settings button opens the
-  Identity page ([identity.md](identity.md#profile)).
+  Identity page ([identity.md](identity.md#profile)). The SJK UI's main page and
+  in-game menu show a profile card bottom left (picture, name, verified, medals and
+  achievements unlocked) that opens it with a click
+  ([sjk-ui.md](sjk-ui.md#profile-card)).
+- A picture: drop a PNG, JPEG or TGA on the window (or type `sjkavatar <file>`; a
+  path's words may be left unquoted), see it on the Profile page cropped to a square
+  and made 128 pixels across, and press Use this picture to send it to the hub, where
+  everyone sees it. `sjkavatar clear` (or Remove picture there, pressed twice) takes it
+  down and `sjkavatar` alone opens the picture panel. Other players' pictures are
+  downloaded when first shown and kept in `avatars/` beside `identity.key` (at most
+  256 pictures, 8 MB) ([identity.md](identity.md#pictures)).
 - Achievements are counted in matches on servers and kept in `achievements.json`
   beside `identity.key`, sent to the hub with the identity on; an unlock says so in the
   console and as a centre print ([identity.md](identity.md#achievements)).

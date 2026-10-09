@@ -553,3 +553,96 @@ fn the_service_reads_the_chat_on_its_own_thread() {
     wait_for("the feed to stop", &|chat| !chat.live);
     service.shutdown(Duration::from_secs(5));
 }
+
+/// A PNG of `edge` square opaque pixels of one colour, written by hand (stored deflate
+/// blocks), so the test needs no image library.
+fn plain_png(edge: u32, rgb: [u8; 3]) -> Vec<u8> {
+    fn crc32(bytes: &[u8]) -> u32 {
+        let mut crc = !0_u32;
+        for &byte in bytes {
+            crc ^= u32::from(byte);
+            for _ in 0..8 {
+                crc = if crc & 1 == 1 {
+                    (crc >> 1) ^ 0xEDB8_8320
+                } else {
+                    crc >> 1
+                };
+            }
+        }
+        !crc
+    }
+    fn chunk(out: &mut Vec<u8>, kind: &[u8; 4], data: &[u8]) {
+        out.extend((data.len() as u32).to_be_bytes());
+        let mut body = kind.to_vec();
+        body.extend(data);
+        out.extend(&body);
+        out.extend(crc32(&body).to_be_bytes());
+    }
+    // Each row: filter type 0, then its pixels.
+    let row: Vec<u8> = std::iter::once(0)
+        .chain(rgb.iter().copied().cycle().take(edge as usize * 3))
+        .collect();
+    let raw = row.repeat(edge as usize);
+    let mut zlib = vec![0x78, 0x01];
+    let blocks: Vec<&[u8]> = raw.chunks(65_535).collect();
+    for (index, block) in blocks.iter().enumerate() {
+        zlib.push(u8::from(index + 1 == blocks.len()));
+        let length = block.len() as u16;
+        zlib.extend(length.to_le_bytes());
+        zlib.extend((!length).to_le_bytes());
+        zlib.extend(*block);
+    }
+    let (mut a, mut b) = (1_u32, 0_u32);
+    for &byte in &raw {
+        a = (a + u32::from(byte)) % 65_521;
+        b = (b + a) % 65_521;
+    }
+    zlib.extend(((b << 16) | a).to_be_bytes());
+    let mut out = b"\x89PNG\r\n\x1a\n".to_vec();
+    let mut header = Vec::new();
+    header.extend(edge.to_be_bytes());
+    header.extend(edge.to_be_bytes());
+    header.extend([8, 2, 0, 0, 0]);
+    chunk(&mut out, b"IHDR", &header);
+    chunk(&mut out, b"IDAT", &zlib);
+    chunk(&mut out, b"IEND", &[]);
+    out
+}
+
+#[test]
+#[ignore = "needs a running hub (SJK_HUB_TEST_URL)"]
+fn a_picture_is_sent_read_back_by_version_and_taken_down() {
+    let mut hub = hub();
+    let me = Identity::generate().unwrap();
+    hub.register(&me, Some("PictureTester")).unwrap();
+    let before = hub.profile(&me.key_id()).unwrap();
+    assert!(before.avatar.is_empty());
+    let profile = hub.set_avatar(&me, &plain_png(128, [40, 80, 160])).unwrap();
+    assert!(
+        sjk_identity::avatar::valid_version(&profile.avatar),
+        "{}",
+        profile.avatar
+    );
+    let png = hub.avatar(&me.key_id(), &profile.avatar).unwrap();
+    assert!(png.starts_with(sjk_identity::avatar::PNG_SIGNATURE));
+    // Anyone reads the version in the profile.
+    assert_eq!(hub.profile(&me.key_id()).unwrap().avatar, profile.avatar);
+    // The hub checks what it takes.
+    let bad = hub.set_avatar(&me, b"not a png").unwrap_err();
+    assert!(
+        matches!(bad, HubError::Rejected { ref code, .. } if code == "bad_avatar"),
+        "{bad:?}"
+    );
+    let tiny = hub.set_avatar(&me, &plain_png(16, [1, 2, 3])).unwrap_err();
+    assert!(
+        matches!(tiny, HubError::Rejected { ref code, .. } if code == "avatar_size"),
+        "{tiny:?}"
+    );
+    let gone = hub.remove_avatar(&me).unwrap();
+    assert!(gone.avatar.is_empty());
+    let missing = hub.avatar(&me.key_id(), &profile.avatar).unwrap_err();
+    assert!(
+        matches!(missing, HubError::Rejected { status: 404, .. }),
+        "{missing:?}"
+    );
+}

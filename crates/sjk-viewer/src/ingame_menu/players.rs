@@ -66,6 +66,8 @@ pub(crate) struct HubMark {
     pub(crate) verified: bool,
     /// The medals the SJK team gave them.
     pub(crate) medals: crate::medals::Medals,
+    /// Their picture's version, empty for none.
+    pub(crate) avatar: String,
 }
 
 /// One client on the server.
@@ -513,12 +515,14 @@ impl State {
                         name: "Vulpes".to_owned(),
                         verified: false,
                         medals: shot_medals(&["jof_clan"]),
+                        avatar: String::new(),
                     }),
                     2 | 3 => Some(HubMark {
                         key_id: "fedcba9876543210".to_owned(),
                         name: "Sol".to_owned(),
                         verified: true,
                         medals: shot_medals(&["early_tester", "early_contributor", "bug_hunter"]),
+                        avatar: String::new(),
                     }),
                     _ => None,
                 },
@@ -579,6 +583,7 @@ mod tests {
                 name: "Troll".to_owned(),
                 verified: false,
                 medals: crate::medals::Medals::default(),
+                avatar: String::new(),
             })
         });
         let slots: Vec<u8> = state.shown().iter().map(|p| p.slot).collect();

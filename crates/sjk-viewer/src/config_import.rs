@@ -167,11 +167,27 @@ fn without_comment(line: &str) -> &str {
     line
 }
 
+/// Whether a file dropped on the window is the player's new picture
+/// (`docs/identity.md`, "Pictures") rather than a setup to import: a picture file by its
+/// extension at any time, and while the Profile page shows any file but a `.cfg`, so
+/// the page says why a file is no picture.
+fn dropped_picture(path: &Path, profile_shown: bool) -> bool {
+    let config = path
+        .extension()
+        .is_some_and(|extension| extension.eq_ignore_ascii_case("cfg"));
+    crate::avatars::picture::looks_like_picture(path) || (profile_shown && !config)
+}
+
 impl crate::GpuState {
-    /// A file was dropped on the window: show the Import page with what it holds.
+    /// A file was dropped on the window: a picture goes to the Profile page, anything
+    /// else to the Import page, with what it holds.
     pub(crate) fn file_dropped(&mut self, path: &Path) {
         if let Some(console) = &mut self.console {
-            console.open_config_import(Some(path));
+            if dropped_picture(path, console.profile_panel_shown()) {
+                console.profile_load_picture(path);
+            } else {
+                console.open_config_import(Some(path));
+            }
         }
         self.sync_cursor_policy();
     }
@@ -180,6 +196,19 @@ impl crate::GpuState {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_dropped_picture_goes_to_the_profile_and_a_config_to_the_import() {
+        let path = Path::new;
+        assert!(dropped_picture(path("me.PNG"), false));
+        assert!(dropped_picture(path("dir/me.jpeg"), false));
+        assert!(!dropped_picture(path("jampconfig.cfg"), false));
+        assert!(!dropped_picture(path("notes.txt"), false));
+        // While the Profile page shows, any other file is tried as a picture (and
+        // refused there with the reason); a config still goes to the import.
+        assert!(dropped_picture(path("me.webp"), true));
+        assert!(!dropped_picture(path("autoexec.CFG"), true));
+    }
 
     #[test]
     fn a_saved_config_gives_name_model_fov_and_the_whole_bind_table() {

@@ -173,6 +173,7 @@ mod tests {
                 names: Vec::new(),
                 medals: Vec::new(),
                 achievements: Vec::new(),
+                avatar: String::new(),
             }),
             server: None,
             players: vec![Presence {
@@ -182,6 +183,7 @@ mod tests {
                 name: "Fox".to_owned(),
                 verified: true,
                 medals: Vec::new(),
+                avatar: String::new(),
             }],
             profiles: HashMap::new(),
             notice: None,
@@ -189,6 +191,7 @@ mod tests {
             report: None,
             note: None,
             player_report: None,
+            avatar: None,
         }
     }
 
@@ -245,6 +248,7 @@ mod tests {
                 names: Vec::new(),
                 medals: Vec::new(),
                 achievements: Vec::new(),
+                avatar: String::new(),
             },
         );
         let lines = who_lines(&shown, Some(3));

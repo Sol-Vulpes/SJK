@@ -1,23 +1,31 @@
-//! The Profile page: the player's SJK profile as others see it on the hub (name,
-//! verified flag, names worn, medals and bio), their own record from the achievement
-//! counts, and the achievements board (`docs/identity.md`, "Profile" and
-//! "Achievements"). The bio is written here, under the hub's rules
+//! The Profile page: the player's SJK profile as others see it on the hub (picture,
+//! name, verified flag, names worn, medals and bio), their own record from the
+//! achievement counts, and the achievements board (`docs/identity.md`, "Profile",
+//! "Pictures" and "Achievements"). The bio is written here, under the hub's rules
 //! (`sjk_identity::bio`): what cannot be in a bio cannot be typed, and what the hub
 //! sends back is shown only through those rules.
 //!
-//! Opened by the SJK menus' Profile entry or the `profile` and `achievements`
-//! commands; its Identity settings button opens the Identity page (the key, the
-//! switch that shares it, the hub). Like the Identity page it lives in the console and is drawn
-//! in place of it, always in the SJK UI's look ([`view`]). Tab moves between the tabs,
-//! the bio and its buttons; Left and Right switch tabs from the tabs; Enter saves the
-//! bio from the field (Shift+Enter starts a new line); Escape goes back.
+//! The picture is changed here too: the player's picture on the left opens the picture
+//! panel in the bio's place. A picture file dropped on the window (or named to the
+//! `sjkavatar` command) is read on a worker thread, cropped and scaled
+//! (`avatars::picture`) and shown as a preview; Use this picture sends it to the hub.
+//!
+//! Opened by the SJK menus' Profile entry, the profile card or the `profile` and
+//! `achievements` commands; its Identity settings button opens the Identity page (the
+//! key, the switch that shares it, the hub). Like the Identity page it lives in the
+//! console and is drawn in place of it, always in the SJK UI's look ([`view`]). Tab
+//! moves between the tabs, the picture, the bio and their buttons; Left and Right
+//! switch tabs from the tabs; Enter saves the bio from the field (Shift+Enter starts a
+//! new line); Escape goes back.
 
 use crate::achievements::Standing;
+use crate::avatars::picture::{PictureError, Prepared};
 use crate::menu_widgets::{BACK_TOKEN, MenuCanvas};
 use sjk_identity::bio;
 use sjk_identity::{Snapshot, Status};
 use sjk_ui::{InputEvent, UiEventKind};
-use std::time::Instant;
+use std::sync::mpsc::Receiver;
+use std::time::{Duration, Instant};
 use winit::event::{ElementState, KeyEvent};
 use winit::keyboard::{KeyCode, PhysicalKey};
 
@@ -31,6 +39,12 @@ const REVERT_TOKEN: u16 = 1_012;
 const BOARD_TOKEN: u16 = 1_013;
 const IDENTITY_TOKEN: u16 = 1_014;
 const STAFF_TOKEN: u16 = 1_015;
+const PICTURE_TOKEN: u16 = 1_016;
+const USE_TOKEN: u16 = 1_017;
+const REMOVE_TOKEN: u16 = 1_018;
+const BIO_BACK_TOKEN: u16 = 1_019;
+/// How long Remove picture waits for its second press.
+const REMOVE_CONFIRM: Duration = Duration::from_secs(3);
 
 /// The page's two tabs.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -51,12 +65,41 @@ impl Tab {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum Focus {
     Tabs,
+    /// The player's picture, which opens the picture panel.
+    Picture,
     Identity,
     Staff,
     Bio,
     Save,
     Revert,
+    /// The picture panel's Use this picture, Remove picture and Done.
+    UsePicture,
+    RemovePicture,
+    BioBack,
     Board,
+}
+
+/// What the Profile tab's middle column shows.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum Middle {
+    Bio,
+    Picture,
+}
+
+/// A picture file being made ready on a worker thread.
+struct Reading {
+    /// The file's name, as the panel says it.
+    name: String,
+    result: Receiver<Result<Prepared, PictureError>>,
+}
+
+/// A change of picture on its way to the hub.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+struct Changing {
+    /// The service's last picture outcome before it, to tell the hub's answer.
+    serial_before: u64,
+    /// Taking the picture down rather than sending one.
+    removing: bool,
 }
 
 /// What the console does after the page handled an event.
@@ -72,6 +115,12 @@ pub(crate) enum PanelAction {
     Identity,
     /// Open the Staff page.
     Staff,
+    /// Send this PNG to the hub as the player's picture.
+    SetAvatar {
+        png: Vec<u8>,
+    },
+    /// Take the player's picture down at the hub.
+    RemoveAvatar,
 }
 
 /// A save on its way: the bio sent and the service's notice before it, to tell the
@@ -112,6 +161,21 @@ pub(crate) struct Panel {
     writable: bool,
     /// The hub made the player's key staff: Staff tools are offered.
     staff: bool,
+    /// The Profile tab's middle column: the bio or the picture panel.
+    middle: Middle,
+    /// A picture file being read, the picture ready to send (its file's name and PNG)
+    /// and a change on its way.
+    reading: Option<Reading>,
+    ready: Option<(String, Vec<u8>)>,
+    changing: Option<Changing>,
+    /// The service's last picture outcome, by serial.
+    avatar_serial: u64,
+    /// The hub holds a picture of the player.
+    has_picture: bool,
+    /// What the picture panel says last, and whether it is good news.
+    picture_message: Option<(String, bool)>,
+    /// When Remove picture was pressed once, waiting for the second press.
+    remove_armed: Option<Instant>,
     epoch: Instant,
     /// What a world shot shows in place of the live identity and counts.
     #[cfg(test)]
@@ -171,6 +235,14 @@ impl Panel {
             message: String::new(),
             writable: false,
             staff: false,
+            middle: Middle::Bio,
+            reading: None,
+            ready: None,
+            changing: None,
+            avatar_serial: 0,
+            has_picture: false,
+            picture_message: None,
+            remove_armed: None,
             epoch: Instant::now(),
             #[cfg(test)]
             preview: None,
@@ -188,14 +260,209 @@ impl Panel {
         self.tab = tab;
         self.focus = Focus::Tabs;
         self.message.clear();
+        if self.reading.is_none() && self.ready.is_none() && self.changing.is_none() {
+            self.middle = Middle::Bio;
+        }
     }
 
-    /// Hide the page; returns whether it had opened the console.
+    /// Hide the page; returns whether it had opened the console. A picture read but
+    /// not sent is dropped.
     pub(crate) fn close(&mut self) -> bool {
         let owned = self.open && self.owns_console;
         self.open = false;
         self.owns_console = false;
+        if self.ready.take().is_some() {
+            crate::avatars::set_preview(None);
+        }
+        self.reading = None;
+        self.picture_message = None;
         owned
+    }
+
+    /// Show the picture panel in the bio's place.
+    pub(crate) fn show_picture(&mut self) {
+        self.tab = Tab::Profile;
+        self.middle = Middle::Picture;
+        self.remove_armed = None;
+    }
+
+    /// Read the picture file at `path` on a worker thread and show it, once ready, as
+    /// the picture about to be sent (a file dropped on the window, `sjkavatar <file>`).
+    pub(crate) fn load_picture(&mut self, path: std::path::PathBuf) {
+        self.show_picture();
+        self.focus = Focus::UsePicture;
+        if self.ready.take().is_some() {
+            crate::avatars::set_preview(None);
+        }
+        let name = path
+            .file_name()
+            .map(|name| name.to_string_lossy().into_owned())
+            .unwrap_or_default();
+        let (outbox, result) = std::sync::mpsc::channel();
+        let spawned = std::thread::Builder::new()
+            .name("sjk-picture".to_owned())
+            .spawn(move || {
+                let _ = outbox.send(crate::avatars::picture::prepare_file(&path));
+            });
+        match spawned {
+            Ok(_) => {
+                self.picture_message = None;
+                self.reading = Some(Reading { name, result });
+            }
+            Err(error) => {
+                self.picture_message = Some((format!("Cannot read pictures now: {error}"), false));
+            }
+        }
+    }
+
+    /// Take the picture down at the hub (`sjkavatar clear`), without the second press.
+    pub(crate) fn remove_picture_now(&mut self) -> PanelAction {
+        self.show_picture();
+        self.focus = Focus::RemovePicture;
+        self.start_change(true)
+    }
+
+    /// Say why a picture change could not be sent at all.
+    pub(crate) fn picture_failed(&mut self, why: &str) {
+        self.changing = None;
+        self.picture_message = Some((why.to_owned(), false));
+    }
+
+    /// What the middle column shows.
+    #[cfg(test)]
+    pub(crate) fn middle(&self) -> Middle {
+        self.middle
+    }
+
+    /// Start sending the ready picture (`removing` false) or taking the picture down.
+    fn start_change(&mut self, removing: bool) -> PanelAction {
+        self.remove_armed = None;
+        if !self.writable {
+            self.picture_message = Some((
+                "Pictures need the SJK identity on and the SJK hub answering".to_owned(),
+                false,
+            ));
+            return PanelAction::None;
+        }
+        if self.changing.is_some() {
+            return PanelAction::None;
+        }
+        let action = if removing {
+            PanelAction::RemoveAvatar
+        } else {
+            match &self.ready {
+                Some((_, png)) => PanelAction::SetAvatar { png: png.clone() },
+                None => return PanelAction::None,
+            }
+        };
+        self.changing = Some(Changing {
+            serial_before: self.avatar_serial,
+            removing,
+        });
+        self.picture_message = None;
+        action
+    }
+
+    /// Remove picture: the first press asks for a second within [`REMOVE_CONFIRM`].
+    fn press_remove(&mut self) -> PanelAction {
+        if !self.writable || !self.has_picture {
+            return PanelAction::None;
+        }
+        match self.remove_armed {
+            Some(at) if at.elapsed() < REMOVE_CONFIRM => self.start_change(true),
+            _ => {
+                self.remove_armed = Some(Instant::now());
+                self.picture_message = Some((
+                    "Press Remove picture again to take your picture down".to_owned(),
+                    false,
+                ));
+                PanelAction::None
+            }
+        }
+    }
+
+    /// Escape: from the picture panel back to the bio first, else close the page.
+    fn escape(&mut self) -> PanelAction {
+        if self.middle == Middle::Picture && self.tab == Tab::Profile {
+            self.back_to_bio();
+            PanelAction::None
+        } else {
+            PanelAction::Close
+        }
+    }
+
+    /// Back from the picture panel to the bio, dropping a picture read but not sent.
+    fn back_to_bio(&mut self) {
+        self.middle = Middle::Bio;
+        self.focus = Focus::Picture;
+        self.remove_armed = None;
+        if self.ready.take().is_some() {
+            crate::avatars::set_preview(None);
+        }
+        self.reading = None;
+        self.picture_message = None;
+    }
+
+    /// Take in a picture the worker finished reading, and the hub's answer to a change.
+    fn sync_picture(&mut self, inputs: &Inputs<'_>) {
+        if let Some(reading) = &self.reading
+            && let Ok(result) = reading.result.try_recv()
+        {
+            let name = self
+                .reading
+                .take()
+                .map(|reading| reading.name)
+                .unwrap_or_default();
+            match result {
+                Ok(prepared) => {
+                    crate::avatars::set_preview(Some(&prepared.rgba));
+                    self.ready = Some((name, prepared.png));
+                    self.picture_message = Some((
+                        "This is how it will look. Use this picture to show it to everyone."
+                            .to_owned(),
+                        true,
+                    ));
+                }
+                Err(error) => {
+                    crate::avatars::set_preview(None);
+                    self.picture_message = Some((error.to_string(), false));
+                }
+            }
+        }
+        let snapshot = inputs.snapshot;
+        let me = snapshot.and_then(|snapshot| snapshot.me.as_ref());
+        self.has_picture = me.is_some_and(|me| !me.avatar.is_empty());
+        let outcome = snapshot.and_then(|snapshot| snapshot.avatar.as_ref());
+        let serial = outcome.map_or(0, |outcome| outcome.serial);
+        if let (Some(changing), Some(outcome)) = (self.changing, outcome)
+            && serial != changing.serial_before
+        {
+            self.changing = None;
+            if outcome.sent {
+                if changing.removing {
+                    self.picture_message = Some(("Your picture is gone".to_owned(), true));
+                } else {
+                    if let Some(me) = me {
+                        crate::avatars::adopt_preview(&me.key_id, &me.avatar);
+                    }
+                    self.ready = None;
+                    self.picture_message =
+                        Some(("Saved. Everyone sees your new picture.".to_owned(), true));
+                }
+            } else {
+                let why = if outcome.message.contains("not connected") {
+                    "Not sent: the SJK hub is not answering (is the identity on?)".to_owned()
+                } else {
+                    format!("Not sent: {}", outcome.message)
+                };
+                self.picture_message = Some((why, false));
+            }
+        }
+        self.avatar_serial = serial;
+        if !self.writable {
+            // A change cannot be answered without the hub.
+            self.changing = None;
+        }
     }
 
     pub(crate) fn tab(&self) -> Tab {
@@ -215,6 +482,7 @@ impl Panel {
             .and_then(|snapshot| snapshot.me.as_ref());
         self.writable = inputs.enabled && me.is_some();
         self.staff = self.writable && me.is_some_and(|me| me.staff);
+        self.sync_picture(inputs);
         if !self.staff && self.focus == Focus::Staff {
             self.focus = Focus::Tabs;
         }
@@ -277,30 +545,24 @@ impl Panel {
     }
 
     /// The controls Tab visits on this tab, in order.
-    fn order(&self) -> &'static [Focus] {
-        if self.staff && self.tab == Tab::Profile {
-            return &[
-                Focus::Tabs,
-                Focus::Identity,
-                Focus::Staff,
-                Focus::Bio,
-                Focus::Save,
-                Focus::Revert,
-                Focus::Board,
-            ];
+    fn order(&self) -> Vec<Focus> {
+        if self.tab == Tab::Achievements {
+            return vec![Focus::Tabs];
         }
-        match (self.tab, self.writable) {
-            (Tab::Achievements, _) => &[Focus::Tabs],
-            (Tab::Profile, false) => &[Focus::Tabs, Focus::Identity, Focus::Board],
-            (Tab::Profile, true) => &[
-                Focus::Tabs,
-                Focus::Identity,
-                Focus::Bio,
-                Focus::Save,
-                Focus::Revert,
-                Focus::Board,
-            ],
+        let mut order = vec![Focus::Tabs, Focus::Picture, Focus::Identity];
+        if self.staff {
+            order.push(Focus::Staff);
         }
+        match (self.middle, self.writable) {
+            (Middle::Bio, true) => order.extend([Focus::Bio, Focus::Save, Focus::Revert]),
+            (Middle::Bio, false) => {}
+            (Middle::Picture, true) => {
+                order.extend([Focus::UsePicture, Focus::RemovePicture, Focus::BioBack]);
+            }
+            (Middle::Picture, false) => order.push(Focus::BioBack),
+        }
+        order.push(Focus::Board);
+        order
     }
 
     fn step(&mut self, forward: bool) {
@@ -327,11 +589,21 @@ impl Panel {
                 self.show(next);
                 PanelAction::None
             }
+            Focus::Picture => {
+                self.show_picture();
+                PanelAction::None
+            }
             Focus::Identity => PanelAction::Identity,
             Focus::Staff => PanelAction::Staff,
             Focus::Bio | Focus::Save => self.save(notice),
             Focus::Revert => {
                 self.revert();
+                PanelAction::None
+            }
+            Focus::UsePicture => self.start_change(false),
+            Focus::RemovePicture => self.press_remove(),
+            Focus::BioBack => {
+                self.back_to_bio();
                 PanelAction::None
             }
             Focus::Board => {
@@ -356,7 +628,7 @@ impl Panel {
         };
         let typing = self.focus == Focus::Bio && self.writable;
         match key {
-            KeyCode::Escape => return PanelAction::Close,
+            KeyCode::Escape => return self.escape(),
             KeyCode::Tab => self.step(!shift),
             KeyCode::ArrowDown if !typing => self.step(true),
             KeyCode::ArrowUp if !typing => self.step(false),
@@ -441,6 +713,23 @@ impl Panel {
                 self.show(Tab::Achievements);
                 PanelAction::None
             }
+            Some(PICTURE_TOKEN) if self.tab == Tab::Profile => {
+                self.focus = Focus::Picture;
+                self.show_picture();
+                PanelAction::None
+            }
+            Some(USE_TOKEN) if self.middle == Middle::Picture => {
+                self.focus = Focus::UsePicture;
+                self.start_change(false)
+            }
+            Some(REMOVE_TOKEN) if self.middle == Middle::Picture => {
+                self.focus = Focus::RemovePicture;
+                self.press_remove()
+            }
+            Some(BIO_BACK_TOKEN) if self.middle == Middle::Picture => {
+                self.back_to_bio();
+                PanelAction::None
+            }
             _ => PanelAction::None,
         }
     }
@@ -458,6 +747,10 @@ impl Panel {
     fn focus_token(&self) -> u16 {
         match self.focus {
             Focus::Tabs => TAB_TOKEN + self.tab.index() as u16,
+            Focus::Picture => PICTURE_TOKEN,
+            Focus::UsePicture => USE_TOKEN,
+            Focus::RemovePicture => REMOVE_TOKEN,
+            Focus::BioBack => BIO_BACK_TOKEN,
             Focus::Identity => IDENTITY_TOKEN,
             Focus::Staff => STAFF_TOKEN,
             Focus::Bio => BIO_TOKEN,
@@ -486,6 +779,7 @@ mod tests {
             names: Vec::new(),
             medals: Vec::new(),
             achievements: Vec::new(),
+            avatar: String::new(),
         }
     }
 
@@ -502,6 +796,7 @@ mod tests {
             report: None,
             note: None,
             player_report: None,
+            avatar: None,
         }
     }
 
@@ -594,7 +889,10 @@ mod tests {
             ..inputs(None)
         });
         assert!(!panel.writable);
-        assert_eq!(panel.order(), [Focus::Tabs, Focus::Identity, Focus::Board]);
+        assert_eq!(
+            panel.order(),
+            [Focus::Tabs, Focus::Picture, Focus::Identity, Focus::Board]
+        );
         panel.bio = "hello there".to_owned();
         assert_eq!(panel.save(None), PanelAction::None);
     }
@@ -603,7 +901,7 @@ mod tests {
     fn tab_walks_the_controls_and_enter_switches_tabs() {
         let shot = snapshot(Some(me("")), None);
         let mut panel = opened(&shot);
-        let steps: Vec<Focus> = (0..6)
+        let steps: Vec<Focus> = (0..7)
             .map(|_| {
                 panel.step(true);
                 panel.focus
@@ -612,6 +910,7 @@ mod tests {
         assert_eq!(
             steps,
             [
+                Focus::Picture,
                 Focus::Identity,
                 Focus::Bio,
                 Focus::Save,
@@ -629,5 +928,169 @@ mod tests {
         panel.focus = Focus::Board;
         let _ = panel.activate(None);
         assert_eq!(panel.tab(), Tab::Achievements);
+    }
+
+    /// A PNG file of `width` x `height` in `dir`.
+    fn picture_file(dir: &std::path::Path, width: u32, height: u32) -> std::path::PathBuf {
+        let path = dir.join("me.png");
+        image::RgbaImage::from_pixel(width, height, image::Rgba([30, 60, 90, 255]))
+            .save(&path)
+            .unwrap();
+        path
+    }
+
+    /// Sync until the worker has read the picture.
+    fn wait_for_picture(panel: &mut Panel, snapshot: &Snapshot) {
+        for _ in 0..500 {
+            panel.sync(&inputs(Some(snapshot)));
+            if panel.reading.is_none() {
+                return;
+            }
+            std::thread::sleep(std::time::Duration::from_millis(10));
+        }
+        panic!("the picture was not read");
+    }
+
+    fn outcome(serial: u64, sent: bool, message: &str) -> Option<sjk_identity::ReportOutcome> {
+        Some(sjk_identity::ReportOutcome {
+            serial,
+            sent,
+            message: message.to_owned(),
+        })
+    }
+
+    #[test]
+    fn a_dropped_picture_is_shown_then_sent_and_the_hubs_answer_said() {
+        let dir = tempfile::tempdir().unwrap();
+        let shot = snapshot(Some(me("")), None);
+        let mut panel = opened(&shot);
+        panel.load_picture(picture_file(dir.path(), 300, 200));
+        assert_eq!(panel.middle(), Middle::Picture);
+        wait_for_picture(&mut panel, &shot);
+        let (name, png) = panel.ready.clone().expect("ready to send");
+        assert_eq!(name, "me.png");
+        let sent = image::load_from_memory(&png).unwrap();
+        assert_eq!(
+            (sent.width(), sent.height()),
+            (sjk_identity::avatar::SIZE, sjk_identity::avatar::SIZE)
+        );
+        assert!(
+            panel
+                .picture_message
+                .as_ref()
+                .is_some_and(|(_, good)| *good)
+        );
+        // Use this picture sends it, once.
+        panel.focus = Focus::UsePicture;
+        assert_eq!(panel.activate(None), PanelAction::SetAvatar { png });
+        assert_eq!(
+            panel.activate(None),
+            PanelAction::None,
+            "already on its way"
+        );
+        // The hub took it: the profile has its version.
+        let mut saved = snapshot(
+            Some(Profile {
+                avatar: "0123456789abcdef".to_owned(),
+                ..me("")
+            }),
+            None,
+        );
+        saved.avatar = outcome(1, true, "saved");
+        panel.sync(&inputs(Some(&saved)));
+        assert_eq!(
+            panel.picture_message,
+            Some(("Saved. Everyone sees your new picture.".to_owned(), true))
+        );
+        assert!(panel.ready.is_none() && panel.changing.is_none());
+        assert!(panel.has_picture);
+        // Remove picture asks for a second press, then takes it down.
+        panel.focus = Focus::RemovePicture;
+        assert_eq!(panel.activate(None), PanelAction::None);
+        assert_eq!(panel.activate(None), PanelAction::RemoveAvatar);
+        let mut refused = saved.clone();
+        refused.avatar = outcome(2, false, "you changed your picture as often as you may");
+        panel.sync(&inputs(Some(&refused)));
+        let (message, good) = panel.picture_message.clone().unwrap();
+        assert!(
+            !good && message.contains("as often as you may"),
+            "{message}"
+        );
+        // Escape leaves the picture panel for the bio before it leaves the page.
+        assert_eq!(panel.escape(), PanelAction::None);
+        assert_eq!(panel.middle(), Middle::Bio);
+        assert_eq!(panel.escape(), PanelAction::Close);
+    }
+
+    #[test]
+    fn a_file_that_is_no_picture_says_why_and_nothing_is_sent() {
+        let dir = tempfile::tempdir().unwrap();
+        let shot = snapshot(Some(me("")), None);
+        let mut panel = opened(&shot);
+        let text = dir.path().join("notes.png");
+        std::fs::write(&text, "not a picture at all").unwrap();
+        panel.load_picture(text);
+        wait_for_picture(&mut panel, &shot);
+        assert!(panel.ready.is_none());
+        let (message, good) = panel.picture_message.clone().unwrap();
+        assert!(!good && message.contains("not a picture"), "{message}");
+        panel.focus = Focus::UsePicture;
+        assert_eq!(panel.activate(None), PanelAction::None);
+        // Too small.
+        panel.load_picture(picture_file(dir.path(), 20, 20));
+        wait_for_picture(&mut panel, &shot);
+        assert!(
+            panel
+                .picture_message
+                .clone()
+                .unwrap()
+                .0
+                .contains("too small")
+        );
+    }
+
+    #[test]
+    fn without_the_hub_a_picture_cannot_be_sent() {
+        let dir = tempfile::tempdir().unwrap();
+        let mut panel = Panel::new();
+        panel.open(Tab::Profile, true);
+        let offline = Inputs {
+            enabled: false,
+            ..inputs(None)
+        };
+        panel.sync(&offline);
+        panel.load_picture(picture_file(dir.path(), 128, 128));
+        for _ in 0..500 {
+            panel.sync(&offline);
+            if panel.reading.is_none() {
+                break;
+            }
+            std::thread::sleep(std::time::Duration::from_millis(10));
+        }
+        assert!(panel.ready.is_some(), "it can still be looked at");
+        assert_eq!(panel.start_change(false), PanelAction::None);
+        assert!(
+            panel
+                .picture_message
+                .clone()
+                .unwrap()
+                .0
+                .contains("identity on")
+        );
+        assert_eq!(
+            panel.order(),
+            [
+                Focus::Tabs,
+                Focus::Picture,
+                Focus::Identity,
+                Focus::BioBack,
+                Focus::Board
+            ]
+        );
+        // `sjkavatar clear` without the hub says so too.
+        assert_eq!(panel.remove_picture_now(), PanelAction::None);
+        // Closing the page drops the picture that was not sent.
+        panel.close();
+        assert!(panel.ready.is_none());
     }
 }

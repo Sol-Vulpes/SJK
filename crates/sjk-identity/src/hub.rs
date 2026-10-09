@@ -108,6 +108,25 @@ pub trait Hub: Send {
             "this hub client does not read the feed".to_owned(),
         ))
     }
+    /// Make `png` (already cropped and scaled, `crate::avatar`) the identity's picture;
+    /// the hub answers with the key's profile, whose `avatar` is the new version.
+    fn set_avatar(&mut self, _identity: &Identity, _png: &[u8]) -> Result<Profile, HubError> {
+        Err(HubError::Protocol(
+            "this hub client does not send pictures".to_owned(),
+        ))
+    }
+    /// Take the identity's picture down; the hub answers with the key's profile.
+    fn remove_avatar(&mut self, _identity: &Identity) -> Result<Profile, HubError> {
+        Err(HubError::Protocol(
+            "this hub client does not send pictures".to_owned(),
+        ))
+    }
+    /// The PNG of `version` of `key_id`'s picture, as the hub serves it.
+    fn avatar(&mut self, _key_id: &str, _version: &str) -> Result<Vec<u8>, HubError> {
+        Err(HubError::Protocol(
+            "this hub client does not read pictures".to_owned(),
+        ))
+    }
     /// Any player's public profile.
     fn profile(&mut self, key_id: &str) -> Result<Profile, HubError>;
     /// Say the identity's player is in `slot` of `server` as `name`.
@@ -288,6 +307,34 @@ impl HttpHub {
         ))
     }
 
+    /// An unsigned `GET` of `path` whose answer is bytes, at most `limit` of them; an
+    /// error answer is the hub's JSON, as for [`HttpHub::send`].
+    fn fetch(&self, path: &str, limit: u64) -> Result<Vec<u8>, HubError> {
+        let url = format!("{}{path}", self.base);
+        let mut response = self
+            .agent
+            .get(&url)
+            .call()
+            .map_err(|error| HubError::Network(error.to_string()))?;
+        let status = response.status().as_u16();
+        let bytes = response
+            .body_mut()
+            .with_config()
+            .limit(limit)
+            .read_to_vec()
+            .map_err(|error| HubError::Network(error.to_string()))?;
+        if status < 400 {
+            return Ok(bytes);
+        }
+        let value: Value = serde_json::from_slice(&bytes)
+            .map_err(|_| HubError::Protocol(format!("status {status}, not JSON")))?;
+        Err(HubError::Rejected {
+            status,
+            code: value["error"].as_str().unwrap_or("error").to_owned(),
+            message: value["message"].as_str().unwrap_or_default().to_owned(),
+        })
+    }
+
     fn call(
         &self,
         method: &str,
@@ -405,6 +452,13 @@ fn staff_call(request: &StaffRequest) -> (&'static str, Value) {
             "/v1/staff/chat-mute",
             json!({ "key_id": key_id, "muted": muted }),
         ),
+        StaffRequest::AvatarRemove { key_id } => {
+            ("/v1/staff/avatar-remove", json!({ "key_id": key_id }))
+        }
+        StaffRequest::AvatarBlock { key_id, blocked } => (
+            "/v1/staff/avatar-block",
+            json!({ "key_id": key_id, "blocked": blocked }),
+        ),
     }
 }
 
@@ -518,6 +572,30 @@ impl Hub for HttpHub {
             StaffRequest::ChatDelete { .. } | StaffRequest::ChatMute { .. } => Ok(Vec::new()),
             _ => Ok(vec![parse(answer)?]),
         }
+    }
+
+    fn set_avatar(&mut self, identity: &Identity, png: &[u8]) -> Result<Profile, HubError> {
+        parse(self.send_bytes(Some(identity), "PUT", "/v1/avatar", png, "image/png")?)
+    }
+
+    fn remove_avatar(&mut self, identity: &Identity) -> Result<Profile, HubError> {
+        parse(self.send(Some(identity), "DELETE", "/v1/avatar", None)?)
+    }
+
+    fn avatar(&mut self, key_id: &str, version: &str) -> Result<Vec<u8>, HubError> {
+        if !crate::avatar::valid_key_id(key_id) || !crate::avatar::valid_version(version) {
+            return Err(HubError::Protocol(
+                "a picture is named by a key id and a version".to_owned(),
+            ));
+        }
+        let png = self.fetch(
+            &crate::avatar::path(key_id, version),
+            crate::avatar::ANSWER_MAX,
+        )?;
+        if !png.starts_with(crate::avatar::PNG_SIGNATURE) {
+            return Err(HubError::Protocol("the picture is not a PNG".to_owned()));
+        }
+        Ok(png)
     }
 
     fn profile(&mut self, key_id: &str) -> Result<Profile, HubError> {
@@ -677,11 +755,38 @@ mod tests {
             staff_call(&StaffRequest::Search("so".into())),
             ("/v1/staff/search", json!({"query": "so"}))
         );
+        assert_eq!(
+            staff_call(&StaffRequest::AvatarRemove {
+                key_id: "0123456789abcdef".into()
+            }),
+            (
+                "/v1/staff/avatar-remove",
+                json!({"key_id": "0123456789abcdef"})
+            )
+        );
+        assert_eq!(
+            staff_call(&StaffRequest::AvatarBlock {
+                key_id: "0123456789abcdef".into(),
+                blocked: true
+            }),
+            (
+                "/v1/staff/avatar-block",
+                json!({"key_id": "0123456789abcdef", "blocked": true})
+            )
+        );
     }
 
     #[test]
     fn a_key_id_is_checked_before_a_request_is_made() {
         let mut hub = HttpHub::new("https://hub.example", "t").unwrap();
         assert!(matches!(hub.profile("../etc"), Err(HubError::Protocol(_))));
+        assert!(matches!(
+            hub.avatar("../etc", "0123456789abcdef"),
+            Err(HubError::Protocol(_))
+        ));
+        assert!(matches!(
+            hub.avatar("0123456789abcdef", "../x"),
+            Err(HubError::Protocol(_))
+        ));
     }
 }

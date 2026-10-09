@@ -159,17 +159,20 @@ impl ClientMenu {
         }
         let mut lines = [chat_dock::BLANK; chat_dock::LINES];
         let chat = chat_on.then(|| self.chat_dock.view(&mut lines));
-        let view = home::HomeView {
-            name,
-            model,
-            blade_name: console.map_or("blue", blade_name),
-            servers: &servers[..count],
-            version: env!("SJK_BUILD_VERSION"),
-            update: update.as_deref(),
-            seconds: super::art::motion::seconds(),
-            chat,
-        };
-        home::build(&mut self.ui, viewport, &mut self.home, &view, reveal);
+        crate::profile_card::with(|summary| {
+            let view = home::HomeView {
+                name,
+                model,
+                blade_name: console.map_or("blue", blade_name),
+                servers: &servers[..count],
+                version: env!("SJK_BUILD_VERSION"),
+                update: update.as_deref(),
+                seconds: super::art::motion::seconds(),
+                chat,
+                summary,
+            };
+            home::build(&mut self.ui, viewport, &mut self.home, &view, reveal);
+        });
         target.append(&self.ui, viewport);
     }
 

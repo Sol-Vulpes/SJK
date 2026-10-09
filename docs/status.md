@@ -7,6 +7,61 @@ SJK currently contains a native client and standard dedicated server in a
 20-crate Rust workspace. This page records scope and verification, rather than
 claiming complete parity from the presence of an implementation.
 
+## SJK profile card and players' pictures
+
+Branch `feat/sjk-profile-card` (08/10/2026, based on `a6230f9`, Linux). Sol asked
+for the name and circle at the bottom left of the main menu to show the player's SJK
+profile, for a small square picture players upload as theirs, for the same in the
+in-game Escape menu, and for a click on it to open the profile and achievements.
+
+- The SJK UI's main page and in-game menu show a profile card bottom left
+  ([sjk-ui.md](sjk-ui.md#profile-card)) in place of the name and circle: the
+  player's picture (or their initial on a colour from their key), the name in its
+  colours, the verified badge, a line such as "Verified · 2 medals · 12/21
+  achievements" (or why the hub is not answering) and their model and blade. A click
+  (on the main page also Left, then Enter) opens the Profile page. The classic menus
+  have no such corner and keep their layout; their SJK page opens the Profile page.
+- Pictures ([identity.md](identity.md#pictures)): the Profile page's picture opens a
+  picture panel. A picture file dropped on the window, or `sjkavatar <file>`, is read,
+  cropped to a square from its middle and scaled to 128 pixels on a worker thread,
+  previewed, and sent with Use this picture as a signed `PUT /v1/avatar`;
+  `sjkavatar clear` or Remove picture takes it down. Other players' pictures show on
+  the in-game Players page's card and the Staff page (where staff have Take picture
+  down); they are fetched by version on a worker, decoded there, kept in memory (31 in
+  the UI atlas) and in `avatars/` in the settings folder (256 files, 8 MB at most).
+- sjk-identity gained the `avatar` module, `avatar` in Profile and Presence, the
+  upload, removal and download requests, `Service::set_avatar`/`remove_avatar` with
+  `Snapshot::avatar`, and the staff requests to take a picture down or stop a key's
+  uploads.
+
+It needs the hub's branch `feat/avatars` (Sol-Vulpes/SJK-hub) deployed first. Against
+a hub without it, profiles carry no picture (the stand-ins show) and an upload says
+the hub does not take pictures yet.
+
+Verified on Linux with Rust 1.97: workspace formatting, the locked build, the locked
+tests and Clippy (no warning on a changed line). Unit tests pin the crop, scale and
+PNG encoding (wide, tall, JPEG, TGA, transparency, refusals with their reasons, a
+header claiming a huge picture), the round cut, the served picture's checks, the
+memory cache (asked once, versions, the renderer that holds it, the bound that keeps
+what is on screen, retries), the folder (names, versions, file and byte bounds), the
+card's line and stand-in colours, the card fitting its corner clear of the page's
+other text at 1080 lines, 4K, 4:3 and 21:9 on the main page and on every
+in-game page with room for it, its pointer and keys, the picture panel's layout and
+its drop, preview, send, refusal, removal and offline flows, where a dropped file
+goes, the command's words, the staff page's Take picture down, and the service
+sending a picture only once registered. Against a local `sjk-hub` built from
+`feat/avatars` (a fresh database, a few tests per start because of its registration
+limit), the ignored end-to-end tests passed: a picture sent, read back by its version,
+refused when not a PNG or too small, and taken down (`hub_e2e`); the viewer's worker
+downloading a JPEG made ready as the Profile page does and keeping it in its folder;
+and the other hub tests but the staff one (it needs a staff key's seed). The service's
+chat test passes only once the hub's chat holds a message: a fresh hub holds the first
+poll 25 seconds, longer than the test waits, as before this change.
+
+Not verified: nothing was seen on screen (no GPU or display here), so the card, the
+picture panel and the atlas upload of pictures were never looked at; dropping a file
+on a real window and the production hub were not tried.
+
 ## Percent signs and quotes in chat
 
 Branch `fix/chat-percent` (08/10/2026, based on `15cf7a9`, Linux): a `%` typed in

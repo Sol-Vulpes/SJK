@@ -1,7 +1,8 @@
 //! The Profile page's drawing, in the SJK UI's look over the map whatever the menu
-//! style: the top bar with the two tabs; on Profile, who the player is and their
-//! record on the left, the bio in the middle and their medals and achievements on the
-//! right; on Achievements, the board, three columns of cards.
+//! style: the top bar with the two tabs; on Profile, the player's picture, who they are
+//! and their record on the left, the bio (or the picture panel) in the middle and their
+//! medals and achievements on the right; on Achievements, the board, three columns of
+//! cards.
 
 use super::*;
 use crate::achievements::medallion::{self, tint};
@@ -40,6 +41,12 @@ const COLUMNS: usize = 3;
 const MEDALS_SHOWN: usize = 4;
 /// Most unlocks the Profile tab lists.
 const UNLOCKS_SHOWN: usize = 4;
+/// The player's picture at the top of the left column, and the text beside it.
+const PICTURE_SIZE: f32 = 104.0;
+const WHO_X: f32 = LEFT_X + PICTURE_SIZE + 24.0;
+const WHO_WIDTH: f32 = LEFT_WIDTH - PICTURE_SIZE - 24.0;
+/// The picture panel's large picture.
+const LARGE_PICTURE: f32 = 220.0;
 
 /// What the page says when the player holds no medal yet.
 const NO_MEDALS: &str =
@@ -49,6 +56,10 @@ const NO_MEDALS: &str =
 struct Who {
     headline: String,
     lines: Vec<(String, Color)>,
+    /// Their key id and picture's version, empty when the hub has not answered.
+    key_id: String,
+    avatar: String,
+    verified: bool,
 }
 
 fn who(inputs: &Inputs<'_>) -> Who {
@@ -58,6 +69,9 @@ fn who(inputs: &Inputs<'_>) -> Who {
             .iter()
             .map(|line| ((*line).to_owned(), color::MUTED))
             .collect(),
+        key_id: String::new(),
+        avatar: String::new(),
+        verified: false,
     };
     if !inputs.enabled {
         return plain(
@@ -84,6 +98,13 @@ fn who(inputs: &Inputs<'_>) -> Who {
                 (error.clone(), color::MUTED),
                 ("Retrying automatically.".to_owned(), color::QUIET),
             ],
+            key_id: snapshot.key_id.clone(),
+            avatar: snapshot
+                .me
+                .as_ref()
+                .map(|me| me.avatar.clone())
+                .unwrap_or_default(),
+            verified: false,
         },
         Status::Online => {
             let Some(me) = &snapshot.me else {
@@ -123,6 +144,9 @@ fn who(inputs: &Inputs<'_>) -> Who {
                     me.name.clone()
                 },
                 lines,
+                key_id: me.key_id.clone(),
+                avatar: me.avatar.clone(),
+                verified: me.verified,
             }
         }
     }
@@ -177,8 +201,12 @@ impl Panel {
         );
         match self.tab {
             Tab::Profile => {
-                self.left_column(&frame, inputs);
-                self.bio_column(&frame, body);
+                let who = who(inputs);
+                self.left_column(&frame, inputs, &who);
+                match self.middle {
+                    Middle::Bio => self.bio_column(&frame, body),
+                    Middle::Picture => self.picture_column(&frame, &who),
+                }
                 self.right_column(&frame, inputs);
             }
             Tab::Achievements => self.board(&frame, inputs.standings),
@@ -187,27 +215,77 @@ impl Panel {
         self.ui.finish(self.focus_token());
     }
 
-    fn left_column(&mut self, frame: &Frame, inputs: &Inputs<'_>) {
+    fn left_column(&mut self, frame: &Frame, inputs: &Inputs<'_>, who: &Who) {
         let s = frame.s;
-        let who = who(inputs);
+        // The player's picture: a click (or Enter) opens the picture panel.
+        let lit = self.focus == Focus::Picture || self.ui.token_hovered(PICTURE_TOKEN);
+        let radius = PICTURE_SIZE * 0.5;
+        crate::profile_card::avatar(
+            &mut self.ui,
+            frame.point(LEFT_X + radius, TOP + radius),
+            radius * s,
+            &crate::profile_card::Avatar {
+                key_id: &who.key_id,
+                version: &who.avatar,
+                name: &who.headline,
+                verified: who.verified,
+                preview: false,
+                lit,
+            },
+        );
+        text(
+            &mut self.ui,
+            TextFamily::Body,
+            format_args!(
+                "{}",
+                if self.has_picture {
+                    "Change picture"
+                } else {
+                    "Add a picture"
+                }
+            ),
+            frame.rect(
+                LEFT_X - 8.0,
+                TOP + PICTURE_SIZE + 8.0,
+                PICTURE_SIZE + 16.0,
+                22.0,
+            ),
+            14.0 * s,
+            if lit {
+                color::GOLD_BRIGHT
+            } else {
+                color::QUIET
+            },
+            FontWeight::Regular,
+            TextAlign::Center,
+        );
+        self.ui.hit_region(
+            PICTURE_TOKEN,
+            frame.rect(
+                LEFT_X - 8.0,
+                TOP - 4.0,
+                PICTURE_SIZE + 16.0,
+                PICTURE_SIZE + 38.0,
+            ),
+        );
         text(
             &mut self.ui,
             TextFamily::Display,
-            format_args!("{}", cut(&who.headline, 40)),
-            frame.rect(LEFT_X, TOP, LEFT_WIDTH, 56.0),
-            44.0 * s,
+            format_args!("{}", cut(&who.headline, 28)),
+            frame.rect(WHO_X, TOP, WHO_WIDTH, 50.0),
+            38.0 * s,
             color::TEXT,
             FontWeight::Semibold,
             TextAlign::Start,
         );
-        let mut y = TOP + 64.0;
+        let mut y = TOP + 56.0;
         for (line, colour) in &who.lines {
-            for part in wrap(line, 60).take(3) {
+            for part in wrap(line, 44).take(3) {
                 text(
                     &mut self.ui,
                     TextFamily::Body,
                     format_args!("{part}"),
-                    frame.rect(LEFT_X, y, LEFT_WIDTH, 26.0),
+                    frame.rect(WHO_X, y, WHO_WIDTH, 26.0),
                     17.0 * s,
                     *colour,
                     FontWeight::Regular,
@@ -216,7 +294,7 @@ impl Panel {
                 y += 26.0;
             }
         }
-        let button_y = y.max(TOP + 150.0) + 8.0;
+        let button_y = y.max(TOP + PICTURE_SIZE + 38.0) + 8.0;
         kit::button(
             &mut self.ui,
             frame,
@@ -484,6 +562,163 @@ impl Panel {
             );
             y += 24.0;
         }
+    }
+
+    /// The picture panel, in the bio's place: the picture large (the one about to be
+    /// sent, else the player's), what is happening, how to change it, and Use this
+    /// picture, Remove picture and Done.
+    fn picture_column(&mut self, frame: &Frame, who: &Who) {
+        let s = frame.s;
+        kit::heading(
+            &mut self.ui,
+            frame,
+            MIDDLE_X,
+            TOP + 20.0,
+            MIDDLE_WIDTH,
+            "Your picture",
+        );
+        let preview = self.ready.is_some();
+        let radius = LARGE_PICTURE * 0.5;
+        crate::profile_card::avatar(
+            &mut self.ui,
+            frame.point(MIDDLE_X + radius, BIO_TOP + radius),
+            radius * s,
+            &crate::profile_card::Avatar {
+                key_id: &who.key_id,
+                version: &who.avatar,
+                name: &who.headline,
+                verified: who.verified,
+                preview,
+                lit: preview,
+            },
+        );
+        let side_x = MIDDLE_X + LARGE_PICTURE + 30.0;
+        let side_width = MIDDLE_WIDTH - LARGE_PICTURE - 30.0;
+        let headline = match (&self.reading, &self.ready, self.changing) {
+            (_, _, Some(changing)) if changing.removing => "Taking it down...",
+            (_, _, Some(_)) => "Sending...",
+            (Some(_), _, _) => "Reading the picture...",
+            (_, Some(_), _) => "Your new picture",
+            _ if self.has_picture => "Your picture",
+            _ => "No picture yet",
+        };
+        text(
+            &mut self.ui,
+            TextFamily::Display,
+            format_args!("{headline}"),
+            frame.rect(side_x, BIO_TOP + 8.0, side_width, 36.0),
+            30.0 * s,
+            color::TEXT,
+            FontWeight::Semibold,
+            TextAlign::Start,
+        );
+        let file = self
+            .reading
+            .as_ref()
+            .map(|reading| reading.name.as_str())
+            .or_else(|| self.ready.as_ref().map(|(name, _)| name.as_str()));
+        let mut y = BIO_TOP + 50.0;
+        let detail = match file {
+            Some(name) => cut(name, 40),
+            None => "Everyone sees it beside your name".to_owned(),
+        };
+        text(
+            &mut self.ui,
+            TextFamily::Body,
+            format_args!("{detail}"),
+            frame.rect(side_x, y, side_width, 24.0),
+            16.0 * s,
+            color::MUTED,
+            FontWeight::Regular,
+            TextAlign::Start,
+        );
+        y += 36.0;
+        let message = match &self.picture_message {
+            Some(message) => Some(message.clone()),
+            None if !self.writable => Some((
+                "Pictures need the SJK identity on and the SJK hub answering".to_owned(),
+                false,
+            )),
+            None => None,
+        };
+        if let Some((message, good)) = message {
+            for part in wrap(&message, 44).take(4) {
+                text(
+                    &mut self.ui,
+                    TextFamily::Body,
+                    format_args!("{part}"),
+                    frame.rect(side_x, y, side_width, 24.0),
+                    16.0 * s,
+                    if good {
+                        color::GOLD_BRIGHT
+                    } else {
+                        color::EMBER
+                    },
+                    FontWeight::Regular,
+                    TextAlign::Start,
+                );
+                y += 24.0;
+            }
+        }
+        let mut y = BIO_TOP + LARGE_PICTURE + 28.0;
+        for line in [
+            "Drop a picture file on this window: a PNG, JPEG or TGA of up to 16 MB. Or type sjkavatar and the file's path in the console.",
+            "It is cropped to a square from its middle and made 128 pixels across. Everyone can see it, so keep it friendly: the SJK team takes down pictures that are not.",
+        ] {
+            for part in wrap(line, 80) {
+                text(
+                    &mut self.ui,
+                    TextFamily::Body,
+                    format_args!("{part}"),
+                    frame.rect(MIDDLE_X, y, MIDDLE_WIDTH, 24.0),
+                    16.0 * s,
+                    color::MUTED,
+                    FontWeight::Regular,
+                    TextAlign::Start,
+                );
+                y += 24.0;
+            }
+            y += 10.0;
+        }
+        let buttons_y = y + 14.0;
+        let busy = self.changing.is_some() || self.reading.is_some();
+        kit::button(
+            &mut self.ui,
+            frame,
+            [MIDDLE_X, buttons_y, 220.0, 46.0],
+            "Use this picture",
+            true,
+            self.writable && self.ready.is_some() && !busy,
+            self.focus == Focus::UsePicture,
+            USE_TOKEN,
+        );
+        let armed = self
+            .remove_armed
+            .is_some_and(|at| at.elapsed() < REMOVE_CONFIRM);
+        kit::button(
+            &mut self.ui,
+            frame,
+            [MIDDLE_X + 236.0, buttons_y, 220.0, 46.0],
+            if armed {
+                "Press again"
+            } else {
+                "Remove picture"
+            },
+            false,
+            self.writable && self.has_picture && !busy,
+            self.focus == Focus::RemovePicture,
+            REMOVE_TOKEN,
+        );
+        kit::button(
+            &mut self.ui,
+            frame,
+            [MIDDLE_X + MIDDLE_WIDTH - 130.0, buttons_y, 130.0, 46.0],
+            "Done",
+            false,
+            true,
+            self.focus == Focus::BioBack,
+            BIO_BACK_TOKEN,
+        );
     }
 
     fn right_column(&mut self, frame: &Frame, inputs: &Inputs<'_>) {
@@ -776,6 +1011,10 @@ impl Panel {
             Focus::Bio | Focus::Save => "save",
             Focus::Revert => "revert",
             Focus::Board => "open",
+            Focus::Picture => "change picture",
+            Focus::UsePicture => "use this picture",
+            Focus::RemovePicture => "remove picture",
+            Focus::BioBack => "back to your bio",
         };
         let mut keys: Vec<(&[&str], &str)> = vec![(&["Tab"], "next"), (&["Enter"], enter)];
         if typing {
@@ -892,6 +1131,7 @@ mod tests {
             })
             .collect(),
             achievements: Vec::new(),
+            avatar: String::new(),
         }
     }
 
@@ -979,6 +1219,85 @@ mod tests {
             }
         }
         let _ = &families.display;
+    }
+
+    /// The picture panel fits the canvas in each of its states, keeps to the middle
+    /// column, and its controls (and the picture that opens it) answer the pointer
+    /// above the keys, at 1080 lines, 4K, 4:3 and 21:9.
+    #[test]
+    fn the_picture_panel_fits_its_column_and_answers_the_pointer() {
+        let families = fonts();
+        let record = record();
+        let standings = standings();
+        let online = snapshot(Some(full_profile()), Some("saved"));
+        for viewport in [
+            [1920.0, 1080.0],
+            [3840.0, 2160.0],
+            [1440.0, 1080.0],
+            [2560.0, 1080.0],
+        ] {
+            let frame = Frame::new(viewport);
+            for state in 0..5 {
+                let mut panel = Panel::new();
+                panel.open(Tab::Profile, true);
+                panel.middle = Middle::Picture;
+                match state {
+                    0 => {}
+                    1 => {
+                        panel.ready = Some((
+                            "a picture file whose name goes on and on and on.png".into(),
+                            vec![1],
+                        ));
+                    }
+                    2 => {
+                        panel.changing = Some(Changing {
+                            serial_before: 0,
+                            removing: true,
+                        });
+                    }
+                    3 => {
+                        panel.picture_message = Some((
+                            "That picture is too big: at most 16 MB and 8192 pixels a side. "
+                                .repeat(3),
+                            false,
+                        ));
+                    }
+                    _ => panel.remove_armed = Some(Instant::now()),
+                }
+                for focus in [
+                    Focus::Picture,
+                    Focus::UsePicture,
+                    Focus::RemovePicture,
+                    Focus::BioBack,
+                ] {
+                    panel.focus = focus;
+                    let inputs = Inputs {
+                        enabled: state != 4,
+                        snapshot: Some(&online),
+                        standings: &standings,
+                        record: &record,
+                    };
+                    panel.build(&inputs, &families.body.font, viewport);
+                    assert!(!panel.ui.overflowed(), "{state} {viewport:?}");
+                    let keys = frame.point(0.0, KEYS_Y)[1];
+                    for token in [PICTURE_TOKEN, USE_TOKEN, REMOVE_TOKEN, BIO_BACK_TOKEN] {
+                        let rect = panel.ui.rect_for(token).expect("the control's area");
+                        assert!(rect.x >= 0.0 && rect.right() <= viewport[0], "{token}");
+                        assert!(rect.y >= 0.0 && rect.bottom() < keys, "{token} {state}");
+                    }
+                    let (middle, right) =
+                        (frame.point(MIDDLE_X, 0.0)[0], frame.point(RIGHT_X, 0.0)[0]);
+                    for command in panel.ui.draw_list().commands() {
+                        if let DrawCommand::Text { rect, .. } = command
+                            && rect.x >= middle - 0.5
+                            && rect.x < right
+                        {
+                            assert!(rect.right() <= right - 20.0 * frame.s, "{state} {rect:?}");
+                        }
+                    }
+                }
+            }
+        }
     }
 
     /// The bio's lines fit the box's width and a long bio shows its end.

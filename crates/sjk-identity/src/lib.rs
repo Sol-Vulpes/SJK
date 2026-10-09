@@ -8,6 +8,7 @@
 
 #![warn(missing_docs)]
 
+pub mod avatar;
 pub mod bio;
 pub mod chat;
 pub mod feed;

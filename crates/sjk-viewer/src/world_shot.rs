@@ -751,6 +751,7 @@ Found the fog bug, ask me about it!"
                     .collect(),
                 medals: vec![medal("early_tester", 1), medal("bug_hunter", 2)],
                 achievements: Vec::new(),
+                avatar: String::new(),
             };
             let snapshot = sjk_identity::Snapshot {
                 status: sjk_identity::Status::Online,
@@ -764,6 +765,7 @@ Found the fog bug, ask me about it!"
                 report: None,
                 note: None,
                 player_report: None,
+                avatar: None,
             };
             let standings = crate::achievements::ALL
                 .iter()
@@ -873,6 +875,7 @@ like this one.",
             names: Vec::new(),
             medals: Vec::new(),
             achievements: Vec::new(),
+            avatar: String::new(),
         };
         let medal = |id: &str, count| sjk_identity::Medal {
             id: id.to_owned(),

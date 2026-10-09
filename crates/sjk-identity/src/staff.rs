@@ -1,7 +1,8 @@
 //! Staff requests (`PROTOCOL.md`, "Staff"): what a key the hub's operator made staff
 //! may do from inside the game: find players, give and take back medals, clear
-//! achievements. The hub refuses every one from a key that is not staff; the client
-//! only offers them to a player whose own profile says `staff`.
+//! achievements, moderate the SJK chat and players' pictures. The hub refuses every
+//! one from a key that is not staff; the client only offers them to a player whose
+//! own profile says `staff`.
 
 use crate::wire::Profile;
 
@@ -46,6 +47,18 @@ pub enum StaffRequest {
         /// Mute (true) or unmute.
         muted: bool,
     },
+    /// Take a key's picture down.
+    AvatarRemove {
+        /// The key.
+        key_id: String,
+    },
+    /// Stop a key from uploading pictures (taking its picture down), or let it again.
+    AvatarBlock {
+        /// The key.
+        key_id: String,
+        /// Stop (true) or let again.
+        blocked: bool,
+    },
 }
 
 impl StaffRequest {
@@ -56,7 +69,9 @@ impl StaffRequest {
             Self::Award { key_id, .. }
             | Self::Unaward { key_id, .. }
             | Self::ClearAchievements { key_id, .. }
-            | Self::ChatMute { key_id, .. } => Some(key_id),
+            | Self::ChatMute { key_id, .. }
+            | Self::AvatarRemove { key_id }
+            | Self::AvatarBlock { key_id, .. } => Some(key_id),
         }
     }
 }
@@ -111,5 +126,12 @@ pub(crate) fn done(request: &StaffRequest, count: usize) -> String {
         StaffRequest::ChatDelete { .. } => "Deleted the message".to_owned(),
         StaffRequest::ChatMute { muted: true, .. } => "Muted in the chat".to_owned(),
         StaffRequest::ChatMute { muted: false, .. } => "Unmuted in the chat".to_owned(),
+        StaffRequest::AvatarRemove { .. } => "Took the picture down".to_owned(),
+        StaffRequest::AvatarBlock { blocked: true, .. } => {
+            "Stopped their pictures and took theirs down".to_owned()
+        }
+        StaffRequest::AvatarBlock { blocked: false, .. } => {
+            "They may upload pictures again".to_owned()
+        }
     }
 }

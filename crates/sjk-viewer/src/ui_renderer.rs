@@ -61,6 +61,15 @@ pub(crate) fn medal_icon(index: usize) -> sjk_ui::TextureId {
     sjk_ui::TextureId(icons::MEDAL_ICON_FIRST + index as u32)
 }
 
+/// Atlas cells reserved for players' pictures (`avatars`).
+pub(crate) const AVATAR_ICON_CELLS: usize = icons::AVATAR_ICON_CELLS as usize;
+
+/// `TexturedQuad` texture naming picture cell `index` (`avatars`).
+pub(crate) fn avatar_icon(index: usize) -> sjk_ui::TextureId {
+    debug_assert!(index < AVATAR_ICON_CELLS);
+    sjk_ui::TextureId(icons::AVATAR_ICON_FIRST + index as u32)
+}
+
 /// The verified badge's pixels in one cell, as the renderer uploads them, for the
 /// off-screen snapshots.
 #[cfg(test)]
