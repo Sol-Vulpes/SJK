@@ -54,8 +54,8 @@ impl BladeColor {
 
     /// The colour an instance with `material` and per-instance `tint` was made from. A
     /// skin's instance carries its light colour as its tint ([`Self::tint`]), so the
-    /// skin comes back with that light (and that as its trail) and no flicker: enough
-    /// for a contact's light.
+    /// skin comes back with that light (and that as its trail), no flicker and no hue
+    /// turning: enough for a contact's light.
     pub(crate) fn from_material(material: u32, tint: [f32; 3]) -> Self {
         if let Some(color) = Color::ALL.get(material as usize) {
             return Self::Retail(*color);
@@ -69,6 +69,7 @@ impl BladeColor {
                 trail: tint,
                 light: tint,
                 flicker: Default::default(),
+                hue: [0.0; 2],
             });
         }
         Self::Rgb(tint.map(|c| (c * 255.).round().clamp(0., 255.) as u8))

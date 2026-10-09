@@ -67,3 +67,34 @@ fn a_broken_pack_is_skipped_and_the_others_still_mount() {
             .is_some()
     );
 }
+
+/// The SJK hub's packs (its `assets/dist`, named by `SJK_TEST_PACKS`) hold a blade-skin
+/// file for every blade skin of this client's catalogue that this client reads, and every
+/// sound each names. The hub's art is not in this repository, so this runs by hand.
+#[test]
+#[ignore = "needs the SJK hub's packs, named by SJK_TEST_PACKS"]
+fn the_hubs_packs_hold_every_blade_skin_of_the_catalogue() {
+    let directory = std::env::var_os("SJK_TEST_PACKS").expect("SJK_TEST_PACKS");
+    let packs = pack_file_system(Path::new(&directory));
+    let skins = LoadedSkins::load(packs.clone(), 1);
+    let expected: Vec<&str> = crate::unlockables::blade_skins()
+        .map(|skin| skin.id)
+        .collect();
+    let mut loaded: Vec<&str> = skins.ids().collect();
+    loaded.sort_unstable();
+    let mut wanted = expected.clone();
+    wanted.sort_unstable();
+    assert_eq!(
+        loaded, wanted,
+        "every blade skin, read by the strict parser"
+    );
+    for set in skins.sound_sets() {
+        for path in [set.on, set.off, set.hum].into_iter().chain(set.swings) {
+            let sound = packs.read(path).unwrap();
+            assert!(
+                sound.is_some_and(|sound| sound.bytes.starts_with(b"RIFF")),
+                "{path} is not a WAV in the packs"
+            );
+        }
+    }
+}

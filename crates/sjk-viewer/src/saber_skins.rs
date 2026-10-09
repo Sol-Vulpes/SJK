@@ -77,10 +77,43 @@ pub(crate) struct SkinColor {
     /// The dynamic light's colour (before `saber_lights`' gain).
     pub(crate) light: [f32; 3],
     pub(crate) flicker: LightFlicker,
+    /// The skin's hue turning (`hue` in its file), for the light: turns a second, and the
+    /// turn at the middle of a stock 40-unit blade. Zeros hold the light's colour.
+    pub(crate) hue: [f32; 2],
 }
 
-/// One skin's parameters as `saber.wgsl`'s `Skin` holds them: 21 `vec4`s. The layout
-/// is the shader's; see there for what each lane is.
+impl SkinColor {
+    /// The light's colour at `time_millis`: the file's, turned with the hue of the
+    /// blade's middle when the skin's hue turns.
+    pub(crate) fn light_at(&self, time_millis: i64) -> [f32; 3] {
+        let [rate, middle] = self.hue;
+        if rate == 0.0 && middle == 0.0 {
+            return self.light;
+        }
+        let t = (time_millis.rem_euclid(1_024_000)) as f32 * 0.001;
+        turn_hue(self.light, t * rate + middle)
+    }
+}
+
+/// `rgb` turned `turns` round the grey axis, negative channels clipped: the CPU's copy of
+/// `saber.wgsl`'s `skin_turn_hue` (a hue shift keeping brightness and saturation).
+pub(crate) fn turn_hue(rgb: [f32; 3], turns: f32) -> [f32; 3] {
+    let axis = 1.0 / 3.0_f32.sqrt();
+    let (s, c) = (std::f32::consts::TAU * turns).sin_cos();
+    let along_axis = axis * (rgb[0] + rgb[1] + rgb[2]) * axis * (1.0 - c);
+    // axis × rgb, with every axis component equal.
+    let cross = [
+        axis * (rgb[2] - rgb[1]),
+        axis * (rgb[0] - rgb[2]),
+        axis * (rgb[1] - rgb[0]),
+    ];
+    std::array::from_fn(|i| (rgb[i] * c + cross[i] * s + along_axis).max(0.0))
+}
+
+/// One skin's parameters as `saber.wgsl`'s `Skin` holds them: 31 `vec4`s (496 bytes, so
+/// the [`MAX_SKINS`] array is 3968 bytes). The layout is the shader's; see there for what
+/// each lane is. A section the skin's file leaves out (arcs, motes, hue) is zeros, which
+/// the shader draws as nothing.
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default, PartialEq, Pod, Zeroable)]
 pub(crate) struct SkinUniform {
@@ -105,6 +138,16 @@ pub(crate) struct SkinUniform {
     shimmer_b: [f32; 4],
     tongue_a: [f32; 4],
     tongue_b: [f32; 4],
+    arc_color: [f32; 4],
+    arc_shape: [f32; 4],
+    arc_strike: [f32; 4],
+    arc_place: [f32; 4],
+    arc_motion: [f32; 4],
+    mote_color: [f32; 4],
+    mote_field: [f32; 4],
+    mote_motion: [f32; 4],
+    mote_band: [f32; 4],
+    hue: [f32; 4],
 }
 
 impl SkinUniform {
@@ -135,7 +178,7 @@ impl SkinUniform {
                 c.fringe_brightness.base,
                 c.fringe_brightness.grain,
                 c.fringe_brightness.flare,
-                0.0,
+                c.tip,
             ],
             core_breathe: wave(&c.breathe),
             rim_cool: rgb(r.rim_cool, r.inner_width),
@@ -164,7 +207,39 @@ impl SkinUniform {
             shimmer_b: shimmer(1),
             tongue_a: [t.along, t.offset, t.out, t.speed],
             tongue_b: [t.edge_low, t.edge_high, t.low, t.range],
+            ..Self::default()
         }
+        .with_arcs(def.arcs.as_ref())
+        .with_motes(def.motes.as_ref())
+        .with_hue(def.hue.as_ref())
+    }
+
+    fn with_arcs(mut self, arcs: Option<&crate::blade_skin_file::Arcs>) -> Self {
+        if let Some(a) = arcs {
+            self.arc_color = [a.color[0], a.color[1], a.color[2], a.brightness];
+            self.arc_shape = [a.width, a.halo, a.jag, a.kinks];
+            self.arc_strike = [a.count as f32, a.rate, a.threshold, a.decay];
+            self.arc_place = [a.reach, a.span.low, a.span.high, a.tip];
+            self.arc_motion = [a.jitter, a.crawl, 0.0, 0.0];
+        }
+        self
+    }
+
+    fn with_motes(mut self, motes: Option<&crate::blade_skin_file::Motes>) -> Self {
+        if let Some(m) = motes {
+            self.mote_color = [m.color[0], m.color[1], m.color[2], m.brightness];
+            self.mote_field = [m.density, m.cells, m.rings, m.size];
+            self.mote_motion = [m.drift.along, m.drift.out, m.twinkle, m.stretch];
+            self.mote_band = [m.inner, m.outer, m.focus, 0.0];
+        }
+        self
+    }
+
+    fn with_hue(mut self, hue: Option<&crate::blade_skin_file::Hue>) -> Self {
+        if let Some(h) = hue {
+            self.hue = [h.rate, h.along, h.out, 0.0];
+        }
+        self
     }
 }
 
@@ -223,6 +298,10 @@ impl LoadedSkin {
                 amount: flicker.amount,
                 waves,
             },
+            hue: self
+                .def
+                .hue
+                .map_or([0.0; 2], |hue| [hue.rate, hue.along * 20.0]),
         }
     }
 }

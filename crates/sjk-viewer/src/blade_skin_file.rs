@@ -4,11 +4,13 @@
 //!
 //! `skins/blades/<unlock id>.bladeskin` is a JSON object holding every parameter of the
 //! generic blade-skin shading in `saber.wgsl` (colours, corona, granulation, flares,
-//! shimmer, flame tongues), the trail and light colours, the light's flicker, the sounds'
+//! shimmer, flame tongues, the core's rounded tip and, optionally, lightning arcs, drifting
+//! motes and a turning hue), the trail and light colours, the light's flicker, the sounds'
 //! game paths and, optionally, glow and core images (otherwise the engine generates the
 //! grey glow/core pair from the two profiles). Parsing is strict: an unknown field, a
 //! missing one or a value out of its range refuses the whole file, and the log names
-//! the file and why.
+//! the file and why. A section a skin leaves out is drawn as nothing (no arcs, no motes,
+//! no hue turning), so files written before a section existed draw as they did.
 
 use crate::saber_rgb::{CoreProfile, GlowProfile};
 use serde::Deserialize;
@@ -26,6 +28,10 @@ pub(crate) const MAX_FLARES: u32 = 8;
 const MAX_WAVES: usize = 2;
 /// Granulation octaves a skin may have.
 const MAX_OCTAVES: usize = 2;
+/// Most lightning arcs a skin may have at once (`MAX_ARCS` in `saber.wgsl`).
+pub(crate) const MAX_ARCS: u32 = 4;
+/// The core's rounded tip when a file does not say (`core.tip`), in core half-widths.
+pub(crate) const DEFAULT_TIP: f32 = 1.5;
 
 /// A linear RGB colour.
 pub(crate) type Rgb = [f32; 3];
@@ -57,6 +63,15 @@ pub(crate) struct BladeSkinDef {
     #[serde(default)]
     pub(crate) shimmer: Vec<ShimmerWave>,
     pub(crate) tongues: Tongues,
+    /// Lightning arcs; none when absent.
+    #[serde(default)]
+    pub(crate) arcs: Option<Arcs>,
+    /// Drifting motes (sparks, specks, shards); none when absent.
+    #[serde(default)]
+    pub(crate) motes: Option<Motes>,
+    /// A hue turning with time, along the blade and outward; none when absent.
+    #[serde(default)]
+    pub(crate) hue: Option<Hue>,
     /// The blur trail's vertex colour.
     pub(crate) trail: Rgb,
     pub(crate) light: Light,
@@ -87,6 +102,14 @@ pub(crate) struct Core {
     pub(crate) fringe_brightness: BaseGrainFlare,
     /// The core's width breathing across.
     pub(crate) breathe: ShimmerWave,
+    /// How long the core's rounded tip is, in core half-widths: over that length the
+    /// line narrows on a quarter circle to a point ([`DEFAULT_TIP`] when absent).
+    #[serde(default = "default_tip")]
+    pub(crate) tip: f32,
+}
+
+fn default_tip() -> f32 {
+    DEFAULT_TIP
 }
 
 /// The glow capsule: a gradient from the rim to the inside, widened by shimmer,
@@ -184,6 +207,91 @@ pub(crate) struct Tongues {
     /// Their brightness: `low + range × noise`.
     pub(crate) low: f32,
     pub(crate) range: f32,
+}
+
+/// Lightning arcs: jagged filaments struck again and again at random places, leaving the
+/// blade, bulging out to one side and coming back, or leaping from the tip into the air.
+#[derive(Clone, Debug, Deserialize, PartialEq)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct Arcs {
+    /// Arcs at once, 0 to [`MAX_ARCS`].
+    pub(crate) count: u32,
+    pub(crate) color: Rgb,
+    pub(crate) brightness: f32,
+    /// The filament's half-width (units) and its soft halo's share (four widths wide).
+    pub(crate) width: f32,
+    pub(crate) halo: f32,
+    /// How far an arc bulges out, and how far its corners zigzag, in capsule radii.
+    pub(crate) reach: f32,
+    pub(crate) jag: f32,
+    /// Zigzag corners a unit along the blade.
+    pub(crate) kinks: f32,
+    /// A strike's length, a share of the blade between `low` and `high`.
+    pub(crate) span: Span,
+    /// Strikes a second, per arc.
+    pub(crate) rate: f32,
+    /// Times a second a strike changes its shape (the crackle; 0 keeps it).
+    pub(crate) jitter: f32,
+    /// A strike shows when its random draw in [0, 1] is at least this.
+    pub(crate) threshold: f32,
+    /// The share of strikes that leap from the tip into the air.
+    pub(crate) tip: f32,
+    /// How fast a strike crawls along the blade, units a second (negative: hiltward).
+    pub(crate) crawl: f32,
+    /// How fast a strike fades: its light is `(1 − age)^decay` (0 holds it).
+    pub(crate) decay: f32,
+}
+
+/// `low` to `high`.
+#[derive(Clone, Copy, Debug, Deserialize, PartialEq)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct Span {
+    pub(crate) low: f32,
+    pub(crate) high: f32,
+}
+
+/// Motes: small specks in a field of cells round the blade, drifting with it.
+#[derive(Clone, Debug, Deserialize, PartialEq)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct Motes {
+    pub(crate) color: Rgb,
+    pub(crate) brightness: f32,
+    /// The share of cells holding a mote.
+    pub(crate) density: f32,
+    /// Cells a unit along the blade and a capsule radius out.
+    pub(crate) cells: f32,
+    pub(crate) rings: f32,
+    /// A mote's half-width, a share of its cell, and how many times longer it is along
+    /// the blade.
+    pub(crate) size: f32,
+    pub(crate) stretch: f32,
+    pub(crate) drift: Drift,
+    /// About how many times a second a mote twinkles (0: steady).
+    pub(crate) twinkle: f32,
+    /// Where (capsule radii out) motes appear and where they are gone.
+    pub(crate) inner: f32,
+    pub(crate) outer: f32,
+    /// 0: all along the blade; 1: only toward and round the tip.
+    pub(crate) focus: f32,
+}
+
+/// How the motes' field moves: `along` units a second toward the tip (negative: toward
+/// the hilt), `out` capsule radii a second outward (negative: inward).
+#[derive(Clone, Copy, Debug, Deserialize, PartialEq)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct Drift {
+    pub(crate) along: f32,
+    pub(crate) out: f32,
+}
+
+/// The glow's and the core fringe's hue, turned round the grey axis by `rate` turns a
+/// second, `along` turns a unit along the blade and `out` turns a capsule radius out.
+#[derive(Clone, Copy, Debug, Deserialize, PartialEq)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct Hue {
+    pub(crate) rate: f32,
+    pub(crate) along: f32,
+    pub(crate) out: f32,
 }
 
 /// The blade's dynamic light.
@@ -348,6 +456,7 @@ impl BladeSkinDef {
         factor("core.fringe_brightness.grain", c.fringe_brightness.grain)?;
         factor("core.fringe_brightness.flare", c.fringe_brightness.flare)?;
         wave("core.breathe", &c.breathe)?;
+        within("core.tip", c.tip, 0.5, 8.0)?;
         let r = &self.corona;
         colour("corona.rim_cool", r.rim_cool, 4.0)?;
         colour("corona.rim_hot", r.rim_hot, 4.0)?;
@@ -426,6 +535,17 @@ impl BladeSkinDef {
         }
         within("tongues.low", t.low, 0.0, 10.0)?;
         factor("tongues.range", t.range)?;
+        if let Some(arcs) = &self.arcs {
+            arcs.check()?;
+        }
+        if let Some(motes) = &self.motes {
+            motes.check()?;
+        }
+        if let Some(hue) = &self.hue {
+            within("hue.rate", hue.rate, -10.0, 10.0)?;
+            within("hue.along", hue.along, -1.0, 1.0)?;
+            within("hue.out", hue.out, -4.0, 4.0)?;
+        }
         colour("trail", self.trail, 1.0)?;
         colour("light.color", self.light.color, 4.0)?;
         within("light.flicker.amount", self.light.flicker.amount, 0.0, 1.0)?;
@@ -449,6 +569,62 @@ impl BladeSkinDef {
             game_path(&format!("sounds.swings[{index}]"), swing)?;
         }
         Ok(())
+    }
+}
+
+impl Arcs {
+    fn check(&self) -> Result<(), String> {
+        if self.count > MAX_ARCS {
+            return Err(format!(
+                "arcs.count must be 0 to {MAX_ARCS}, not {}",
+                self.count
+            ));
+        }
+        colour("arcs.color", self.color, 4.0)?;
+        within("arcs.brightness", self.brightness, 0.0, 10.0)?;
+        within("arcs.width", self.width, 0.02, 1.0)?;
+        within("arcs.halo", self.halo, 0.0, 2.0)?;
+        within("arcs.reach", self.reach, 0.0, 2.0)?;
+        within("arcs.jag", self.jag, 0.0, 1.0)?;
+        within("arcs.kinks", self.kinks, 0.05, 4.0)?;
+        within("arcs.span.low", self.span.low, 0.05, 1.0)?;
+        within("arcs.span.high", self.span.high, 0.05, 1.0)?;
+        if self.span.low > self.span.high {
+            return Err("arcs.span.low must be at most arcs.span.high".to_owned());
+        }
+        within("arcs.rate", self.rate, 0.05, 60.0)?;
+        within("arcs.jitter", self.jitter, 0.0, 120.0)?;
+        within("arcs.threshold", self.threshold, 0.0, 1.0)?;
+        within("arcs.tip", self.tip, 0.0, 1.0)?;
+        within("arcs.crawl", self.crawl, -100.0, 100.0)?;
+        within("arcs.decay", self.decay, 0.0, 8.0)
+    }
+}
+
+impl Motes {
+    fn check(&self) -> Result<(), String> {
+        colour("motes.color", self.color, 4.0)?;
+        within("motes.brightness", self.brightness, 0.0, 10.0)?;
+        within("motes.density", self.density, 0.0, 1.0)?;
+        within("motes.cells", self.cells, 0.05, 8.0)?;
+        within("motes.rings", self.rings, 0.5, 16.0)?;
+        within("motes.size", self.size, 0.02, 0.5)?;
+        within("motes.stretch", self.stretch, 1.0, 8.0)?;
+        if self.size * self.stretch > 0.5 {
+            return Err(format!(
+                "motes.size × motes.stretch must be at most 0.5 (a mote stays in its cell), not {}",
+                self.size * self.stretch
+            ));
+        }
+        within("motes.drift.along", self.drift.along, -100.0, 100.0)?;
+        within("motes.drift.out", self.drift.out, -10.0, 10.0)?;
+        within("motes.twinkle", self.twinkle, 0.0, 60.0)?;
+        within("motes.inner", self.inner, 0.0, 2.0)?;
+        within("motes.outer", self.outer, 0.0, 2.5)?;
+        if self.inner >= self.outer {
+            return Err("motes.inner must be below motes.outer".to_owned());
+        }
+        within("motes.focus", self.focus, 0.0, 1.0)
     }
 }
 

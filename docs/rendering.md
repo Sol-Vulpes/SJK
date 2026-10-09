@@ -858,8 +858,9 @@ decision; head descendants such as hair and helmets are masked too.
 
 ## Saber blade skins
 
-A blade skin replaces a saber blade's colour (not its hilt) with a look of its own; the
-first is the Sun blade, an SJK unlockable ([unlockables.md](unlockables.md#blade-skins)).
+A blade skin replaces a saber blade's colour (not its hilt) with a look of its own: the
+Sun, Storm, Void, Frost and Prism blades, SJK unlockables
+([unlockables.md](unlockables.md#blade-skins)).
 The renderer is generic and data-driven: a skin's look is a blade-skin file in a pack
 the SJK hub delivers ([unlockables.md](unlockables.md#blade-skin-files)), and no skin's
 values are in the code. [saber_skins.rs](../crates/sjk-viewer/src/saber_skins.rs) holds
@@ -877,10 +878,11 @@ stock blade.
   neutral pair (`generated_glow`/`generated_core`; the neutral pair's bytes are
   unchanged and pinned by a test). Retail and RGB blades keep their materials and
   shading unchanged.
-- **Parameters.** The skins' parameters are a uniform array of 8 `Skin` structs of 21
-  `vec4`s (`SkinUniform`, bind group 2 of the saber pipelines), written only when skins
-  load (`saber_gpu::Runtime::upload_skins`), never per frame. Each instance's material
-  slot selects its skin.
+- **Parameters.** The skins' parameters are a uniform array of 8 `Skin` structs of 31
+  `vec4`s (`SkinUniform`, 3968 bytes in all, bind group 2 of the saber pipelines),
+  written only when skins load (`saber_gpu::Runtime::upload_skins`), never per frame.
+  Each instance's material slot selects its skin. The lanes of a section a file leaves
+  out (arcs, motes, hue) are zeros, which draw nothing, and the code skips them.
 - **Animation.** `saber.wgsl` colours and animates a skin from two per-instance values,
   presentation seconds wrapped at 1024 s and a per-blade seed
   (`Instance::with_animation`; the seed follows the entity, saber and blade, so a thrown
@@ -892,19 +894,51 @@ stock blade.
   rim colours to its inside colour; the core is the file's hot colour with a fringe
   between two colours. The glow capsule may reach `corona.reach` (1 to 2) times the
   stock one; the effect bounds allow for 2 (`MAX_GLOW_REACH`). `fragment_glow` shades
-  the glow the same way, so the dynamic glow's bloom follows the flares.
+  the glow the same way, so the dynamic glow's bloom follows the flares and arcs.
+- **Arcs, motes and hue** (09/10/2026, generic, optional). Lightning arcs: up to 4 per
+  skin (`MAX_ARCS`), each struck again `rate` times a second at a random place from
+  hashes of its strike number and the blade's seed: a filament whose offset from the
+  axis bulges `sin(π t)` out to one side over its span (or, for tip strikes, leaves
+  from just below the tip and dies out in the air past it) plus two octaves of
+  piecewise-linear noise (straight runs between random corners) re-drawn `jitter` times
+  a second, drawn as a Gaussian line with a halo; a filament thinner than a pixel
+  (`fwidth` of the glow's across coordinate, taken in both fragment entry points before
+  any branch) widens to one and dims, so it does not break up at a distance. Motes: a
+  field of cells along the blade and out from it (each column staggered), drifting with
+  time, a share of the cells holding a speck with a smooth compact falloff, twinkling,
+  shown between two radii and optionally only toward the tip; one cell is read per
+  fragment. Both use the blade's coordinates round its tip and fade out before the
+  quad's edge instead of being cut. Hue: the glow's colour (with its arcs and motes) and
+  the core's fringe turned round the grey axis by time, distance along and distance out,
+  negative channels clipped (the blend adds); the light turns with the blade's middle
+  (`SkinColor::light_at`, its CPU copy `saber_skins::turn_hue`).
+- **Round end** (09/10/2026). For skins only, the core line narrows on a quarter circle
+  over its last `core.tip` half-widths (`skin_tip_taper`) to a rounded point and is cut
+  at that edge over a pixel (the sampler would otherwise smear the texture's border out
+  to the quad's square corners); past the tip the corona widens about the tip as about
+  the shaft, and its distance out (for its grading, its tongues, motes and hue) is
+  measured from the tip, its tongues running on round it. The stock line ends flat (as
+  `RB_SurfaceLine` does), hidden in its glow; a skin's brighter, wider fringe showed
+  the flat end as a square. Along the shaft the skin's look is unchanged.
 - **Trail and light.** The skin's file gives its trail colour, its light colour (with
   the stock gain) and the light's flicker (an amount and up to two waves, phased per
   hilt).
 
 Per frame this adds one 8-byte vertex attribute per blade and nothing else on the
-CPU; the noise is only evaluated for skinned blades. The world shot `duel6_sun_blade`
+CPU; the noise is only evaluated for skinned blades. A skin with arcs and motes costs,
+per glow fragment, a bounded loop of at most 4 arcs (about 9 hashes each, fewer for an
+arc not lit or not there) and about 6 hashes for its mote cell, on top of the earlier
+granulation, flares and tongues; retail and RGB blades only gain one `fwidth`. Not
+measured on a GPU yet. The world shot `duel6_sun_blade`
 ([world_shot_saber_skins.rs](../crates/sjk-viewer/src/world_shot_saber_skins.rs)),
 given the hub's pack through `SJK_TEST_PACKS`, draws the Sun between a stock orange and
 a stock blue blade, the Sun close up every 0.3 s, and the Character page's model holding
 it; reviewed by eye on one GPU (08/10/2026), and again after the move to blade-skin
 files against shots of the earlier built-in Sun (same day), not on other GPUs or in a
-live match.
+live match. The round end, arcs, motes and hue (09/10/2026) were checked by naga's
+validation, unit tests of CPU copies of the tip's and the hue's maths (which also check
+the shader holds the same expressions) and images rendered by a scratch CPU copy of the
+skin shading, side on, on a machine without a GPU; not yet by a world shot.
 
 ## Saber trails
 

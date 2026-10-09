@@ -1,8 +1,9 @@
 //! The Unlockables page's drawing, in the SJK UI's look: how many the player owns (or
 //! why that is not known) under the top bar; down the left a card per unlockable, its
 //! live swatch beside its kind, name, what it is, owned (date and the team's note) or
-//! locked (how to get it), and Equip or Unequip; on the right what the player wears and
-//! how unlockables work.
+//! locked (how to get it), and Equip or Unequip, as many as fit ([`ROWS_SHOWN`]) with a
+//! scroll bar and a line saying which show and how to see the others; on the right what
+//! the player wears and how unlockables work.
 
 use super::*;
 use crate::menu::sjk::{
@@ -34,6 +35,9 @@ const SIDE_X: f32 = 1_012.0;
 const SIDE_WIDTH: f32 = LEFT_X + WIDTH - SIDE_X;
 /// The keys' line.
 const KEYS_Y: f32 = 1_010.0;
+/// Rows of cards that fit between the header and the keys; the others scroll.
+pub(super) const ROWS_SHOWN: usize =
+    ((KEYS_Y - 16.0 - CARDS_TOP + GAP) / (CARD_HEIGHT + GAP)) as usize;
 
 /// How unlockables work, as the side column says it.
 const ABOUT: [&str; 3] = [
@@ -57,26 +61,23 @@ struct Showing<'a> {
 }
 
 /// What the player wears, in big, and a line under it.
-fn wearing(inputs: &Inputs<'_>) -> (String, &'static str) {
+fn wearing(inputs: &Inputs<'_>) -> (String, String) {
     match crate::unlockables::blade_skin(inputs.setting) {
         Some(skin) if inputs.holdings.unlock(skin.id).is_some() => (
             skin.name.to_owned(),
-            "In your hand, on the Character page and for SJK players on your server.",
+            "In your hand, on the Character page and for SJK players on your server.".to_owned(),
         ),
         Some(skin) if inputs.holdings.reason().is_none() => (
             "Stock blade".to_owned(),
-            match skin.id {
-                "saber_sun" => "The Sun blade is chosen and shows once unlocked.",
-                _ => "The blade skin chosen shows once unlocked.",
-            },
+            format!("The {} is chosen and shows once unlocked.", skin.name),
         ),
         Some(_) => (
             "Stock blade".to_owned(),
-            "The blade skin chosen shows once the hub says it is yours.",
+            "The blade skin chosen shows once the hub says it is yours.".to_owned(),
         ),
         None => (
             "Stock blade".to_owned(),
-            "Equip a blade skin you own to wear it.",
+            "Equip a blade skin you own to wear it.".to_owned(),
         ),
     }
 }
@@ -119,24 +120,50 @@ impl Panel {
         let worn = crate::unlockables::blade_skin(inputs.setting)
             .filter(|skin| inputs.holdings.unlock(skin.id).is_some())
             .map(|skin| skin.id);
+        let count = crate::unlockables::ALL.len();
+        let rows = count.div_ceil(COLUMNS);
+        // The chosen card always shows: the list scrolls to it.
+        let row = usize::from(self.focus.saturating_sub(CARD_BASE)).min(count - 1) / COLUMNS;
+        if row < self.first {
+            self.first = row;
+        } else if row >= self.first + ROWS_SHOWN {
+            self.first = row + 1 - ROWS_SHOWN;
+        }
+        self.first = self.first.min(rows.saturating_sub(ROWS_SHOWN));
         for (index, unlockable) in crate::unlockables::ALL.iter().enumerate() {
-            let y = CARDS_TOP + (index / COLUMNS) as f32 * (CARD_HEIGHT + GAP);
             let token = CARD_BASE + index as u16;
-            self.cards[index] = Card::default();
-            if y + CARD_HEIGHT > KEYS_Y - 16.0 {
+            let grant = inputs.holdings.unlock(unlockable.id);
+            let is_worn = worn == Some(unlockable.id);
+            // What Enter does on it, shown or scrolled away.
+            self.cards[index] = Card {
+                wear: (grant.is_some() && unlockable.is_blade_skin()).then_some(if is_worn {
+                    ""
+                } else {
+                    unlockable.id
+                }),
+            };
+            self.order.push(token);
+            let Some(shown_row) = (index / COLUMNS)
+                .checked_sub(self.first)
+                .filter(|shown_row| *shown_row < ROWS_SHOWN)
+            else {
                 continue;
-            }
+            };
+            let y = CARDS_TOP + shown_row as f32 * (CARD_HEIGHT + GAP);
             let showing = Showing {
                 unlockable,
-                grant: inputs.holdings.unlock(unlockable.id),
+                grant,
                 holdings: inputs.holdings,
-                worn: worn == Some(unlockable.id),
+                worn: is_worn,
                 focused: self.focus == token,
             };
             self.card(&frame, index, [LEFT_X, y], showing, seconds);
-            self.order.push(token);
         }
-        self.more_to_come(&frame);
+        if rows > ROWS_SHOWN {
+            self.scrolled(&frame, rows);
+        } else {
+            self.more_to_come(&frame);
+        }
         self.keys(&frame);
         if !self.order.contains(&self.focus) {
             self.focus = self.order.first().copied().unwrap_or(CARD_BASE);
@@ -256,6 +283,45 @@ impl Panel {
             }
             y += 14.0;
         }
+    }
+
+    /// With more cards than fit: a scroll bar beside them and, under them, which show and
+    /// how to see the others.
+    fn scrolled(&mut self, frame: &Frame, rows: usize) {
+        let s = frame.s;
+        let count = crate::unlockables::ALL.len();
+        let height = ROWS_SHOWN as f32 * (CARD_HEIGHT + GAP) - GAP;
+        let bar_x = LEFT_X + CARD_WIDTH + 14.0;
+        let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
+            rect: frame.rect(bar_x, CARDS_TOP, 5.0, height),
+            radius: 2.5 * s,
+            color: color::alpha(color::HOLO, 0.12),
+        });
+        let thumb = height * ROWS_SHOWN as f32 / rows as f32;
+        let travel = (height - thumb) * self.first as f32 / (rows - ROWS_SHOWN) as f32;
+        let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
+            rect: frame.rect(bar_x, CARDS_TOP + travel, 5.0, thumb),
+            radius: 2.5 * s,
+            color: color::alpha(color::HOLO, 0.55),
+        });
+        let from = self.first * COLUMNS + 1;
+        let to = ((self.first + ROWS_SHOWN) * COLUMNS).min(count);
+        let (above, below) = (from - 1, count - to);
+        let how = match (above, below) {
+            (0, _) => format!("{below} more below (Down or the mouse wheel)"),
+            (_, 0) => format!("{above} more above (Up or the mouse wheel)"),
+            _ => format!("{above} above, {below} below (Up, Down or the mouse wheel)"),
+        };
+        text(
+            &mut self.ui,
+            TextFamily::Body,
+            format_args!("Unlockables {from} to {to} of {count}: {how}."),
+            frame.rect(LEFT_X + 4.0, CARDS_TOP + height + 18.0, CARD_WIDTH, 24.0),
+            16.0 * s,
+            color::MUTED,
+            FontWeight::Regular,
+            TextAlign::Start,
+        );
     }
 
     /// Under the last card, while there is room: what is planned.
@@ -478,7 +544,6 @@ impl Panel {
                         focused,
                         equip,
                     );
-                    self.cards[index].wear = Some(if worn { "" } else { unlockable.id });
                 }
             }
             None => {

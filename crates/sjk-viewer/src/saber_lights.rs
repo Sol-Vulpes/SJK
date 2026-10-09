@@ -7,7 +7,8 @@ use glam::Vec3;
 /// Keep CG_DoSaber/CG_DoSaberLight source selection with a broader emissive light.
 /// Flicker uses a deterministic presentation-time seed, not the simulation RNG; a blade
 /// skin's light also flickers in brightness, as its file says
-/// ([`crate::saber_skins::LightFlicker`]).
+/// ([`crate::saber_skins::LightFlicker`]), and turns its hue with the blade's when the
+/// skin's does ([`crate::saber_skins::SkinColor::light_at`]).
 pub(crate) fn append(
     output: &mut PointLightList,
     blades: &[Option<Blade>; 8],
@@ -20,12 +21,13 @@ pub(crate) fn append(
     if disabled {
         return;
     }
-    // A skin's light flickers as its file says; the stock colours hold steady.
-    let gain = match color {
-        BladeColor::Skin(skin) => 1.8 * skin.flicker.at(time, seed),
-        _ => 1.8,
+    // A skin's light flickers (and turns its hue) as its file says; the stock colours
+    // hold steady.
+    let (light, gain) = match color {
+        BladeColor::Skin(skin) => (skin.light_at(time), 1.8 * skin.flicker.at(time, seed)),
+        _ => (rgb(color), 1.8),
     };
-    let color = rgb(color).map(|c| c * gain);
+    let color = light.map(|c| c * gain);
     let jitter = ((time as u64)
         .wrapping_mul(1664525)
         .wrapping_add(seed.wrapping_mul(1013904223))

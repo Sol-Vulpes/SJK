@@ -648,14 +648,59 @@ mod cutoff_tests {
             crate::saber_skins::MAX_SKINS
         )));
         assert!(shader.contains("var<uniform> skins: array<Skin, MAX_SKINS>;"));
-        // `Skin` is 21 vec4s, as `SkinUniform`.
+        // `Skin` is 31 vec4s, as `SkinUniform`.
         assert_eq!(
             std::mem::size_of::<crate::saber_skins::SkinUniform>(),
-            21 * 16
+            31 * 16
         );
         let skin = &shader[shader.find("struct Skin {").unwrap()..];
         let skin = &skin[..skin.find('}').unwrap()];
-        assert_eq!(skin.matches(": vec4<f32>,").count(), 21);
+        assert_eq!(skin.matches(": vec4<f32>,").count(), 31);
+        // In `SkinUniform`'s order (its lanes are pinned by `saber_skins`' tests).
+        let lanes: Vec<&str> = skin
+            .lines()
+            .filter_map(|line| line.trim().strip_suffix(": vec4<f32>,"))
+            .collect();
+        assert_eq!(
+            lanes,
+            [
+                "core_white",
+                "core_fringe_cool",
+                "core_fringe_hot",
+                "core_fringe",
+                "core_breathe",
+                "rim_cool",
+                "rim_hot",
+                "inner",
+                "inner_mix",
+                "brightness",
+                "swell",
+                "grain_coarse",
+                "grain_fine",
+                "grain_mix",
+                "flare_rate",
+                "flare_shape",
+                "flare_size",
+                "shimmer_a",
+                "shimmer_b",
+                "tongue_a",
+                "tongue_b",
+                "arc_color",
+                "arc_shape",
+                "arc_strike",
+                "arc_place",
+                "arc_motion",
+                "mote_color",
+                "mote_field",
+                "mote_motion",
+                "mote_band",
+                "hue",
+            ]
+        );
+        assert!(shader.contains(&format!(
+            "const MAX_ARCS: i32 = {};",
+            crate::blade_skin_file::MAX_ARCS
+        )));
         assert!(shader.contains("@location(6) blade_animation: vec2<f32>"));
     }
 

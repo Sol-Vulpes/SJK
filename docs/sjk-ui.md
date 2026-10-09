@@ -326,7 +326,7 @@ overlay routes their text to the UI's families (`console_sjk_pages.rs`).
   player's name at 38 and facts over the middle and right; Medals: each medal's
   medallion (dim when not held), name and count, date given, Give (gold) and Take
   back, then the note's field (sent with the next medal or unlock); Unlockables under
-  it: each unlockable of the catalogue in rows of 58, its name (gold when held) and
+  it: each unlockable of the catalogue in rows of 42 (all five fit), its name at 19 (gold when held) and
   its date or "Not held" with its id, Unlock (gold) and Relock, as the medals' Give
   and Take back; Achievements: Clear all (Press again while it waits),
   each achievement with a count, its date or count and Clear, and a line on what
@@ -336,7 +336,7 @@ overlay routes their text to the UI's families (`console_sjk_pages.rs`).
 - **Unlockables** ([unlockables_panel_view.rs](../crates/sjk-viewer/src/unlockables_panel_view.rs),
   08/10/2026, [unlockables.md](unlockables.md#unlockables-page)): drawn in this look in
   every menu style, opened by Profile's See unlockables or `unlockables`. Under the top
-  bar how many the player owns at 38 ("1 of 1 owned") over a line, or why it is not
+  bar how many the player owns at 38 ("1 of 5 owned") over a line, or why it is not
   known ("Identity is off", "No hub is set", "Contacting the hub...") with what to do,
   and a holo rule. Down the left a card per unlockable (852 by 268, radius 18): navy
   glass with a gold edge when owned (brighter when worn), white while chosen; its
@@ -345,12 +345,18 @@ overlay routes their text to the UI's families (`console_sjk_pages.rs`).
   in the file's colours from its rim to its inside that breathes with its light's
   flicker in nine layers of haze, small flame loops rising and sinking, granules
   drifting, and once a cycle of its first flare track a flare running from hilt to
-  tip; locked, a grey still blade under a padlock; owned with its pack not loaded yet,
+  tip, and the skin's lightning arcs (thin strokes zigzagging off the blade), motes and
+  turning hue when it has them; locked, a grey still blade under a padlock; owned with
+  its pack not loaded yet,
   a lighter grey still blade and "Its look downloads from the SJK hub"); then the kind in holo, the state at the right (Worn, Owned in gold, or
   Locked), the name at 34 (gold when owned), what it is, "Yours since dd/mm/yyyy, from
   the SJK team" in gold with the team's note in quotes, or "How to get it: ...", and
   Equip (gold) or Unequip, or an inert Locked (Needs identity, Needs a hub, Waiting)
-  pill. Under the cards, a quiet outlined "More to come" card. On the right "You wear"
+  pill. Two cards show at a time (09/10/2026, five blade skins): the list scrolls to
+  the card chosen and with the mouse wheel, a 5-pixel holo scroll bar beside the cards
+  and under them "Unlockables 1 to 2 of 5: 3 more below (Down or the mouse wheel)." in
+  muted body text; with every card shown, a quiet outlined "More to come" card
+  instead. On the right "You wear"
   with the blade at 36 (gold when a skin shows) and a line, then "How unlockables
   work". Keys: Up and Down (and Left, Right) choose a card, Tab and Shift+Tab walk
   them, Enter or Space equips or unequips, Esc back; a click on Equip or Unequip acts,

@@ -5,9 +5,11 @@
 //!
 //! Opened by the Profile page's Unlockables button or the `unlockables` command. Like
 //! the Staff page it lives in the console and has the SJK UI's look in every menu style
-//! ([`view`]). The arrows move between the cards (Up and Down by rows), Tab and
-//! Shift+Tab walk them, Enter or Space equips or unequips the one chosen, Escape goes
-//! back; a click on Equip or Unequip acts, on a card it only chooses it.
+//! ([`view`]). The cards that do not fit scroll: the list follows the card chosen, and the
+//! mouse wheel scrolls it (choosing a card it brings into view). The arrows move between
+//! the cards (Up and Down by rows), Tab and Shift+Tab walk them, Enter or Space equips or
+//! unequips the one chosen, Escape goes back; a click on Equip or Unequip acts, on a card
+//! it only chooses it.
 
 use crate::menu_widgets::{BACK_TOKEN, MenuCanvas};
 use crate::unlockables::{self, Holdings};
@@ -55,9 +57,12 @@ pub(crate) struct Panel {
     ui: MenuCanvas,
     /// The card the keyboard is on, by its token.
     focus: u16,
-    /// The cards in the order Tab visits them, laid out by the last frame.
+    /// Every card in the order Tab visits them, shown or scrolled away, as the last frame
+    /// laid them out.
     order: Vec<u16>,
     cards: [Card; unlockables::ALL.len()],
+    /// The first card shown; the cards above it are scrolled away.
+    first: usize,
     epoch: Instant,
     /// The blade skins the hub's packs brought, the swatches' looks (`sjk_packs.rs`);
     /// taken again only when they change ([`Panel::follow_skins`]).
@@ -85,6 +90,7 @@ impl Panel {
             focus: CARD_BASE,
             order: Vec::with_capacity(unlockables::ALL.len()),
             cards: [Card::default(); unlockables::ALL.len()],
+            first: 0,
             epoch: Instant::now(),
             skins: Default::default(),
             #[cfg(test)]
@@ -111,6 +117,7 @@ impl Panel {
         self.open = true;
         self.owns_console = owns_console;
         self.focus = CARD_BASE;
+        self.first = 0;
     }
 
     /// Closing the page closes the console too.
@@ -193,8 +200,31 @@ impl Panel {
         PanelAction::None
     }
 
+    /// Scroll the cards a row down (`by` 1) or up (-1), choosing the nearest card shown
+    /// when the chosen one leaves the view.
+    fn scroll(&mut self, by: isize) {
+        let rows = unlockables::ALL.len().div_ceil(COLUMNS);
+        let last = rows.saturating_sub(view::ROWS_SHOWN);
+        self.first = self.first.saturating_add_signed(by).min(last);
+        let shown = self.first * COLUMNS..(self.first + view::ROWS_SHOWN) * COLUMNS;
+        let index = usize::from(self.focus.saturating_sub(CARD_BASE));
+        if !shown.contains(&index) {
+            let index = index.clamp(shown.start, shown.end.min(unlockables::ALL.len()) - 1);
+            self.focus = CARD_BASE + index as u16;
+        }
+    }
+
     /// A pointer event.
     pub(crate) fn handle_pointer(&mut self, event: InputEvent) -> PanelAction {
+        if let InputEvent::PointerWheel { delta, .. } = event {
+            // Up (positive) shows the cards above.
+            if delta.y > 0.0 {
+                self.scroll(-1);
+            } else if delta.y < 0.0 {
+                self.scroll(1);
+            }
+            return PanelAction::None;
+        }
         let Some(event) = self.ui.pointer(event) else {
             return PanelAction::None;
         };
@@ -245,7 +275,11 @@ mod tests {
             holdings: Holdings::Known(&owned),
             setting: "",
         });
-        assert_eq!(panel.order, [CARD_BASE]);
+        // Every card is in the order, the ones scrolled away too.
+        let all: Vec<u16> = (0..unlockables::ALL.len() as u16)
+            .map(|index| CARD_BASE + index)
+            .collect();
+        assert_eq!(panel.order, all);
         assert_eq!(
             panel.key(KeyCode::Enter, false),
             PanelAction::Wear("saber_sun")
@@ -310,6 +344,76 @@ mod tests {
         assert_eq!(panel.focus, CARD_BASE + 1, "Tab comes round");
         let _ = panel.key(KeyCode::Tab, true);
         assert_eq!(panel.focus, CARD_BASE);
+    }
+
+    #[test]
+    fn the_cards_scroll_to_the_one_chosen_and_with_the_wheel() {
+        let fonts = crate::text::load_modern(1.0, None).expect("Inter");
+        let storm = Unlock {
+            id: "saber_storm".into(),
+            ..sun()
+        };
+        let prism = Unlock {
+            id: "saber_prism".into(),
+            ..sun()
+        };
+        let owned = [sun(), storm, prism];
+        let inputs = Inputs {
+            holdings: Holdings::Known(&owned),
+            setting: "",
+        };
+        let mut panel = drawn(&inputs);
+        let count = unlockables::ALL.len();
+        assert!(count > view::ROWS_SHOWN, "more cards than fit");
+        let shown = |panel: &Panel| -> Vec<u16> {
+            (0..count as u16)
+                .map(|index| CARD_BASE + index)
+                .filter(|token| panel.ui.rect_for(*token).is_some())
+                .collect()
+        };
+        assert_eq!(shown(&panel), [CARD_BASE, CARD_BASE + 1]);
+        // Down to the last card: the list follows, and Enter equips it.
+        for _ in 0..count {
+            let _ = panel.key(KeyCode::ArrowDown, false);
+            panel.build(&inputs, &fonts.font, [1920.0, 1080.0]);
+        }
+        let last = CARD_BASE + count as u16 - 1;
+        assert_eq!(panel.focus, last);
+        assert!(shown(&panel).contains(&last), "{:?}", shown(&panel));
+        assert_eq!(shown(&panel).len(), view::ROWS_SHOWN);
+        assert_eq!(
+            panel.key(KeyCode::Enter, false),
+            PanelAction::Wear("saber_prism")
+        );
+        // The wheel up scrolls back a row at a time, the choice following into view.
+        let wheel = |panel: &mut Panel, y: f32| {
+            panel.handle_pointer(InputEvent::PointerWheel {
+                position: sjk_ui::Vec2::new(400.0, 500.0),
+                delta: sjk_ui::Vec2::new(0.0, y),
+            })
+        };
+        for _ in 0..count {
+            assert_eq!(wheel(&mut panel, 1.0), PanelAction::None);
+            panel.build(&inputs, &fonts.font, [1920.0, 1080.0]);
+        }
+        assert_eq!(shown(&panel), [CARD_BASE, CARD_BASE + 1]);
+        assert_eq!(panel.focus, CARD_BASE + 1, "the nearest card shown");
+        // And down again; it stops at the end.
+        for _ in 0..count {
+            let _ = wheel(&mut panel, -1.0);
+            panel.build(&inputs, &fonts.font, [1920.0, 1080.0]);
+        }
+        assert!(shown(&panel).contains(&last));
+        // A card scrolled away is still equipped by Enter once chosen: Storm, owned.
+        panel.focus = CARD_BASE + 1;
+        assert_eq!(
+            panel.key(KeyCode::Enter, false),
+            PanelAction::Wear("saber_storm")
+        );
+        // Opening again starts at the top.
+        panel.open(true);
+        panel.build(&inputs, &fonts.font, [1920.0, 1080.0]);
+        assert_eq!(shown(&panel), [CARD_BASE, CARD_BASE + 1]);
     }
 
     #[test]
