@@ -3,7 +3,7 @@
 //! `ingame_player`, `ingame_player2` and `ingame_saber`, laid out from the
 //! retail `ui/jamp` item rectangles on the 640x480 menu canvas.
 //!
-//! They edit the same drafts as the modern player screen and write them the
+//! They edit the same drafts as the SJK UI's Character and write them the
 //! same way (immediately), so the two styles cannot disagree. What differs
 //! is the presentation and the flow: the profile page's head grid, Custom
 //! leading to character creation, and Apply leading on to lightsaber
@@ -16,7 +16,7 @@
 //!
 //! SJK adds two pages retail's main menu lacked: the Force page (retail's
 //! in-game `ingame_playerforce`, on both frames, editing the same draft as
-//! the modern Force tab), and JoF EJK's cosmetics window for hats and capes.
+//! the SJK UI's Force tab), and JoF EJK's cosmetics window for hats and capes.
 //! The profile page reaches both and sums up the Force profile.
 
 mod cosmetics_page;
@@ -100,7 +100,7 @@ impl PlayerMenu {
         self.classic_style
     }
 
-    /// Draw the modern screen in the SJK UI's view (`sjk`), or not.
+    /// Draw the screen in the SJK UI's view (`sjk`), or not.
     pub(crate) fn set_sjk(&mut self, sjk: bool) {
         self.sjk = sjk;
     }

@@ -152,7 +152,8 @@ impl GpuState {
                 .as_ref()
                 .map(menu::ClientMenu::stage_sabers),
         };
-        // Only the modern Saber tab throws the saber to its shot.
+        // Only the Saber page over the menu map's stage (not a preview)
+        // throws the saber to its shot.
         let thrown = preview.is_none() && wanted.as_ref().is_some_and(|sabers| sabers.thrown);
         let focus = self
             .client_menu

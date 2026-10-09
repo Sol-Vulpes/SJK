@@ -13,6 +13,7 @@ pub(crate) fn register_commands(
         "moveright",
         "moveup",
         "movedown",
+        "duck",
         "left",
         "right",
         "lookup",

@@ -141,6 +141,7 @@ pub(crate) fn push(
         start_length: 1.0,
         end_length: 1.0,
         streak: None,
+        trace_streak: false,
         normal: None,
         alpha: constant(0.7),
         use_alpha: true,

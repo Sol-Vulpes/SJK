@@ -4,7 +4,6 @@
 //! plain data rows.
 
 use super::Shot;
-use crate::world_props::PropSpec;
 
 /// One authored camera pose along a route, angles in degrees.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -164,24 +163,6 @@ const YAVIN_TRAINING_SABER: Route = Route {
     focus: Some([-399.6, -417.3, 392.0]),
 };
 
-/// mp/ffa3's big gate at the end of the browser corridor: one `door_lrg`
-/// face whose texture already restarts at x 704 (two mirrored leaves), so
-/// that seam is the split. Opening, the leaves push 24 units back into the
-/// recess (void lies behind the face) and slide into the flanking walls
-/// (x 520..552 and 856..888, 16 units in front of the door plane), which
-/// hide them from anywhere in the corridor.
-const TATOOINE_FFA_GATE: PropSpec = PropSpec {
-    map_message: "Tatooine FFA",
-    shader: "textures/desert/door_lrg",
-    bounds: ([528.0, -1_488.0, -144.0], [880.0, -1_488.0, 144.0]),
-    split_axis: 0,
-    split_at: 704.0,
-    unseal: [0.0, -24.0, 0.0],
-    travel: 184.0,
-    doorway_origin: [704.0, -1_488.0, -144.0],
-    doorway_yaw: 270.0,
-};
-
 /// One shot of a map's camera tour behind the main menu: the camera glides
 /// from `from` to `to` while looking at `at`.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -288,8 +269,6 @@ pub(crate) fn tour_for(message: &str) -> Option<&'static [TourShot]> {
         .map(|tour| tour.shots)
 }
 
-const PROPS: &[PropSpec] = &[TATOOINE_FFA_GATE];
-
 const ROUTES: &[Route] = &[
     TATOOINE_FFA_BROWSER,
     TATOOINE_FFA_SETTINGS,
@@ -298,11 +277,6 @@ const ROUTES: &[Route] = &[
     YAVIN_TRAINING_PLAYER,
     YAVIN_TRAINING_SABER,
 ];
-
-/// World props authored for the map whose worldspawn message is `message`.
-pub(crate) fn props_for<'a>(message: &'a str) -> impl Iterator<Item = &'static PropSpec> + 'a {
-    PROPS.iter().filter(move |prop| prop.map_message == message)
-}
 
 /// Route authored for `shot` on the map whose worldspawn message is
 /// `message`.

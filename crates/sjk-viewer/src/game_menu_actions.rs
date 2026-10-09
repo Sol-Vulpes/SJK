@@ -21,7 +21,7 @@ impl GpuState {
 
     pub(crate) fn game_menu_row_count(&self) -> usize {
         self.in_game_menu
-            .row_count(self.game_menu_page, self.is_team_game(), self.vote_active())
+            .row_count(self.game_menu_page, self.is_team_game())
     }
 
     pub(crate) fn back_or_close_game_menu(&mut self) {
@@ -54,8 +54,8 @@ impl GpuState {
         if self.in_game_menu.is_sjk() && self.activate_sjk_ui_row() {
             return;
         }
+        // Both looks take the main and Leave pages' rows themselves.
         match self.game_menu_page {
-            GameMenuPage::Main => self.activate_main_menu_row(),
             GameMenuPage::Team => self.activate_team_row(),
             GameMenuPage::Siege => match self.in_game_menu.siege_action(self.game_menu_row) {
                 ingame_menu::CallVoteAction::Send(command) => {
@@ -73,52 +73,9 @@ impl GpuState {
             },
             GameMenuPage::About => self.open_game_menu_page(GameMenuPage::Main),
             GameMenuPage::Sjk => self.activate_sjk_row(),
-            GameMenuPage::Leave => self.activate_leave_row(),
             GameMenuPage::Players => self.activate_players_row(self.game_menu_row),
             GameMenuPage::ReportPlayer => self.activate_report_player_row(self.game_menu_row),
             page if page.is_vote_page() => self.activate_callvote_row(page),
-            _ => {}
-        }
-    }
-
-    fn activate_main_menu_row(&mut self) {
-        let active = self.vote_active();
-        match self.game_menu_row {
-            0 => self.back_or_close_game_menu(),
-            1 => {
-                if !self.open_siege_classes() {
-                    self.open_game_menu_page(GameMenuPage::Team);
-                }
-            }
-            2 => self.open_browser_from_game(),
-            3 => self.open_player_menu_from_game(),
-            4 => self.open_game_menu_page(GameMenuPage::Sjk),
-            5 => {
-                let game_state = self
-                    .live_session
-                    .as_ref()
-                    .map(sjk_client::ClientSession::game_state);
-                self.in_game_menu
-                    .refresh_about(game_state, self.last_connect_address.as_deref());
-                self.open_game_menu_page(GameMenuPage::About);
-            }
-            6 => self.open_settings_from_game(0),
-            7 => self.open_settings_from_game(crate::settings::SettingsMenu::keybinds_tab()),
-            8 => {
-                let game_state = self
-                    .live_session
-                    .as_ref()
-                    .map(sjk_client::ClientSession::game_state);
-                self.in_game_menu
-                    .refresh_callvote(game_state, self.vfs.as_deref());
-                self.open_game_menu_page(GameMenuPage::CallVote);
-            }
-            9 if active => self.send_vote(true),
-            10 if active => self.send_vote(false),
-            row if row == if active { 11 } else { 9 } => self.open_shot_panel(),
-            row if row == if active { 12 } else { 10 } => {
-                self.open_game_menu_page(GameMenuPage::Leave)
-            }
             _ => {}
         }
     }
@@ -165,14 +122,6 @@ impl GpuState {
     }
 
     /// The leave page doubles as the confirmation: each entry is the action.
-    fn activate_leave_row(&mut self) {
-        match self.game_menu_row {
-            0 => self.disconnect_to_menu(),
-            1 => self.quit_requested = true,
-            _ => self.open_game_menu_page(GameMenuPage::Main),
-        }
-    }
-
     fn activate_team_row(&mut self) {
         let team = if self.is_team_game() {
             [
@@ -211,15 +160,6 @@ impl GpuState {
                 self.open_game_menu_page(GameMenuPage::Main);
             }
             ingame_menu::CallVoteAction::None => {}
-        }
-    }
-
-    /// Hand over to the shell's settings screen on `tab`; it returns to
-    /// the game menu when closed.
-    pub(crate) fn open_settings_from_game(&mut self, tab: usize) {
-        if let (Some(menu), Some(console)) = (&mut self.client_menu, &self.console) {
-            menu.open_settings_from(console, crate::player_menu::ReturnTarget::InGame, tab);
-            self.game_menu = false;
         }
     }
 

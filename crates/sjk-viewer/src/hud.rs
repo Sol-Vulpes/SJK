@@ -1,4 +1,4 @@
-//! Modern data-driven in-game HUD over authoritative snapshot values.
+//! Data-driven in-game HUD over authoritative snapshot values.
 
 mod data_source;
 use data_source::*;
@@ -12,6 +12,7 @@ pub(crate) mod force_wheel;
 pub(crate) mod icons;
 pub(crate) mod identification;
 mod info;
+pub(crate) mod kill_feed;
 pub(crate) mod movement;
 pub(crate) mod nameplate;
 mod nameplate_math;
@@ -45,7 +46,9 @@ use sjk_ui::{
 use std::path::Path;
 
 const WIDGET_LIMIT: usize = 64;
-const DRAW_LIMIT: usize = 384;
+/// The HUD's draw commands: the 384 its other widgets had, and room for a full
+/// kill feed (55).
+const DRAW_LIMIT: usize = 384 + kill_feed::CAPACITY * kill_feed::ENTRY_COMMANDS;
 const DEFAULT_LAYOUT: &str = include_str!("../assets/hud/default.json");
 /// The weapon name fades over this long at the end of its life.
 const WEAPON_FADE_MS: u64 = 600;
@@ -53,10 +56,6 @@ const WEAPON_FADE_MS: u64 = 600;
 /// fade together last as long as the weapon selection row (`WEAPON_SELECT_TIME`), which
 /// replaces the name while it shows, so the name never appears after the row ends.
 const WEAPON_HOLD_MS: u64 = crate::weapon_select::SHOW.as_millis() as u64 - WEAPON_FADE_MS;
-/// The newest obituary stays this long at the top left, then fades.
-const KILL_HOLD_MS: u64 = 2_500;
-const KILL_FADE_MS: u64 = 700;
-
 /// Opacity of a transient that holds for `hold` ms and fades over `fade` ms.
 fn transient_alpha(age_ms: u64, hold: u64, fade: u64) -> f32 {
     if age_ms <= hold {
@@ -200,9 +199,8 @@ pub(crate) struct HudOverlay {
     vote_keys: String,
     yes_keys: String,
     no_keys: String,
-    kill_rows: [String; 8],
-    kill_len: usize,
-    kill_alpha: f32,
+    /// The kill feed at the top right.
+    pub(crate) kill_feed: kill_feed::Feed,
     crosshair_name: String,
     speed: options::Speed,
     crosshair_alpha: f32,
@@ -228,8 +226,11 @@ pub(crate) struct HudOverlay {
 /// Which bundled layout document the status HUD is drawn from.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) enum HudLook {
-    /// SJK's modern layout (the classic one without the modern font).
-    Modern,
+    /// Under the game-data HUD: the default layout (or a `hud.json` override),
+    /// whose crosshair, team rows, votes, kill feed, timer and lagometer stay
+    /// while the game HUD draws the status, and whose status widgets stand in
+    /// when its files give none; the classic layout with `cg_classicHudFont`.
+    Game,
     /// SJK's classic layout.
     Classic,
     /// SJK's radial layout: arcs around the crosshair.
@@ -309,9 +310,7 @@ impl HudOverlay {
             vote_keys: String::with_capacity(96),
             yes_keys: String::with_capacity(48),
             no_keys: String::with_capacity(48),
-            kill_rows: std::array::from_fn(|_| String::with_capacity(128)),
-            kill_len: 0,
-            kill_alpha: 0.0,
+            kill_feed: kill_feed::Feed::default(),
             crosshair_name: String::with_capacity(64),
             speed: options::Speed::default(),
             crosshair_alpha: 0.0,
@@ -321,7 +320,7 @@ impl HudOverlay {
             interrupted: false,
             lagometer: sjk_client::LagometerSamples::new(),
             default_document: HudLayoutDocument::from_json(DEFAULT_LAYOUT)
-                .expect("bundled modern HUD document is valid"),
+                .expect("bundled default HUD document is valid"),
             classic_document: HudLayoutDocument::from_json(CLASSIC_LAYOUT)
                 .expect("bundled classic HUD document is valid"),
             override_document,
@@ -365,11 +364,11 @@ impl HudOverlay {
         let document = match look {
             HudLook::Radial => &self.radial_document,
             HudLook::Classic => &self.classic_document,
-            HudLook::Modern if font.is_modern() => self
+            HudLook::Game if font.is_modern() => self
                 .override_document
                 .as_ref()
                 .unwrap_or(&self.default_document),
-            HudLook::Modern => &self.classic_document,
+            HudLook::Game => &self.classic_document,
         };
         // The nameplates' bars wear this HUD's health, armour and Force colours.
         let meter = |binding: &str| {
@@ -405,7 +404,6 @@ impl HudOverlay {
             team_len: self.team_len,
             vote_active: self.vote_active,
             team_vote_active: self.team_vote_active,
-            kill_len: self.kill_len,
             crosshair_name: !self.crosshair_name.is_empty(),
             timer: !self.match_timer.is_empty(),
             warmup: !self.warmup_text.is_empty(),
@@ -419,6 +417,7 @@ impl HudOverlay {
         }
         let dpi_scale =
             crate::ui_scale::height_scale(viewport[1]).max(2.0 / 3.0) * user_scale.clamp(0.25, 2.0);
+        let hero_scale = crate::ui_scale::height_scale(viewport[1]) * user_scale.clamp(0.25, 2.0);
         // Layout runs in logical pixels: the screen's size is its physical size over the scale.
         let logical_screen = [viewport[0] / dpi_scale, viewport[1] / dpi_scale];
         self.tree.clear();
@@ -469,39 +468,43 @@ impl HudOverlay {
             .values
             .is_some_and(|value| value.ammo.is_some_and(|ammo| ammo <= 5));
         let pulse = Tween::pulse(0.68, 1.0, time_ms, self.theme.motion.slow);
+        // Bottom of what stands at the top right, which the kill feed goes under.
+        let mut top_right = 0.0_f32;
         for (index, (widget, rect)) in document.widgets.iter().zip(rectangles).enumerate() {
             if !visible[index] {
                 continue;
             }
+            let rect = if widget.binding.as_deref() == Some("team_rows") {
+                let mut rect = self.family.team_rect(*rect, viewport);
+                if self.family.team[1] == 0.0 {
+                    rect.y = rect.y.max(upper_right_bottom);
+                }
+                top_right = top_right.max(widgets::team_bottom(
+                    rect,
+                    hero_scale * self.family.team[2],
+                    self.team_len,
+                ));
+                rect
+            } else {
+                *rect
+            };
             widgets::emit(
                 &mut self.draw_list,
                 self.theme,
                 widget,
-                if widget.binding.as_deref() == Some("team_rows") {
-                    let mut rect = self.family.team_rect(*rect, viewport);
-                    if self.family.team[1] == 0.0 {
-                        rect.y = rect.y.max(upper_right_bottom);
-                    }
-                    rect
-                } else {
-                    *rect
-                },
+                rect,
                 &widgets::EmitContext {
                     data: &data,
                     family: self.family,
                     targeting: self.targeting.policy,
-                    icons: &self.icons,
                     viewport,
                     dpi_scale,
-                    hero_scale: crate::ui_scale::height_scale(viewport[1])
-                        * user_scale.clamp(0.25, 2.0),
+                    hero_scale,
                     low_health,
                     low_ammo,
                     pulse,
                     team_side: self.team_side,
                     team_len: self.team_len,
-                    kill_len: self.kill_len,
-                    kill_alpha: self.kill_alpha,
                     crosshair_alpha: self.crosshair_alpha,
                     crosshair_teammate: self.crosshair_teammate,
                     lagometer: &self.lagometer,
@@ -532,14 +535,28 @@ impl HudOverlay {
                     user_scale,
                 ),
             }
-            self.emit_family(viewport);
-            self.icons.emit(
+            top_right = top_right.max(self.emit_family(viewport));
+            top_right = top_right.max(self.icons.emit(
                 &mut self.draw_list,
                 viewport,
                 visibility,
                 self.family.upper,
                 self.weapon_select.shown.is_some(),
                 self.weapon_alpha,
+            ));
+            let options = self.kill_feed.options();
+            if options.fps {
+                top_right = top_right.max(crate::console_overlay::fps_bottom(viewport[1]));
+            }
+            self.kill_feed.emit(
+                &mut self.draw_list,
+                kill_feed::Area::below(viewport, hero_scale, dpi_scale, top_right, options),
+                kill_feed::Art {
+                    icons: &self.icons,
+                    holocrons: &self.force_wheel_icons,
+                },
+                font,
+                self.theme,
             );
             self.guides.emit(&mut self.draw_list, viewport);
         }

@@ -1,11 +1,9 @@
 //! Native main-menu and server-browser input/presentation on the shared UI path.
 
-pub(crate) mod address_view;
 pub(crate) mod art;
 mod controller;
 mod pointer;
 
-mod browser_details;
 pub(crate) mod browser_filters;
 pub(crate) mod browser_table;
 pub(crate) mod browser_view;
@@ -22,7 +20,6 @@ pub(crate) mod levelshot;
 pub(crate) mod main_view;
 mod map_picker;
 mod map_picker_view;
-pub(crate) mod network_view;
 pub(crate) mod sjk;
 pub(crate) mod style;
 
@@ -40,47 +37,6 @@ use sjk_ui::{AbstractAction, DrawList, InputEvent};
 use style::MenuStyle;
 use winit::event::{ElementState, KeyEvent};
 use winit::keyboard::{KeyCode, PhysicalKey};
-
-/// One top-level entry: the label and the one-line hint shown while selected.
-pub(crate) struct MainItem {
-    pub(crate) label: &'static str,
-    pub(crate) hint: &'static str,
-}
-
-const MAIN_ITEMS: [MainItem; 8] = [
-    MainItem {
-        label: "Play",
-        hint: "Browse and join servers",
-    },
-    MainItem {
-        label: "Create game",
-        hint: "Host a match with bots on this machine",
-    },
-    MainItem {
-        label: "Player",
-        hint: "Name, model, saber and Force",
-    },
-    MainItem {
-        label: "Settings",
-        hint: "Video, audio, controls and keys",
-    },
-    MainItem {
-        label: "Changelog",
-        hint: "What changed in each SJK release, and who made it",
-    },
-    MainItem {
-        label: "Credits",
-        hint: "The people who make SJK",
-    },
-    MainItem {
-        label: "Update",
-        hint: "Check for a newer SJK release and install it",
-    },
-    MainItem {
-        label: "Quit",
-        hint: "Exit to desktop",
-    },
-];
 
 /// Hand the loaded map and mounted assets to the menu layer.
 pub(crate) fn attach_world(
@@ -111,6 +67,7 @@ pub(crate) fn upload_menu_images(
     shaders: &sjk_shader::ShaderCatalog,
 ) {
     let Some(menu) = menu else { return };
+    menu.follow_renderer(renderer.id());
     match menu.state.phase() {
         ClientPhase::Player => menu.player.upload_icons(renderer, queue),
         ClientPhase::Keybinds => menu.keybinds.upload_icons(renderer, queue),
@@ -134,7 +91,7 @@ pub(crate) fn upload_menu_images(
                 });
             }
         }
-        ClientPhase::Connecting(_) | ClientPhase::ConnectionError if menu.is_classic() => {
+        ClientPhase::Connecting(_) | ClientPhase::ConnectionError => {
             let map = menu.loading.map().to_owned();
             if !map.is_empty() {
                 menu.create_game.service_levelshot_for(&map, |image| {
@@ -165,7 +122,6 @@ pub(crate) struct ClientMenu {
     browser_focus: u16,
     /// Last clicked browser row and when, for double-click joining.
     browser_last_click: Option<(u16, std::time::Instant)>,
-    main_selection: usize,
     /// Layout of the main menu (`ui_menuStyle`).
     menu_style: MenuStyle,
     /// Page and entry of the classic main menu.
@@ -196,8 +152,8 @@ pub(crate) struct ClientMenu {
     loading: classic::loading::ClassicLoading,
     /// The world is not drawn under the menu this frame (classic style).
     world_hidden: bool,
-    /// The retail background drawn under the modern screens the classic
-    /// pages open, while the world is hidden.
+    /// The retail background drawn under the screens the classic pages open,
+    /// while the world is hidden.
     classic_backdrop: MenuCanvas,
     /// The dark of the backdrop tour's fades ([`Self::world_fade`]).
     world_fade: MenuCanvas,
@@ -229,16 +185,15 @@ pub(crate) struct ClientMenu {
     backdrop: Option<crate::menu_backdrop::Backdrop>,
     /// Map of the server being joined, as the browser row advertised it.
     destination_map: Option<String>,
-    /// The preview of that map can be shown: the gate may open.
-    destination_ready: bool,
-    /// Last gate request logged, so the log only records changes.
-    gate_logged: bool,
     /// First setup was offered in this run (`offer_first_setup`).
     first_setup_offered: bool,
+    /// The renderer ([`crate::ui_renderer::ShapeRenderer::id`]) the menu's
+    /// images were uploaded into; another one (a world change) has none of them.
+    uploaded_into: Option<u64>,
 }
 
 /// Backdrop shot each client phase is presented over. A connect stays on
-/// the browser shot: the gate there is what opens onto the server.
+/// the browser shot, behind the loading screen.
 fn shot_for(phase: &ClientPhase, player: &PlayerMenu) -> Shot {
     match phase {
         ClientPhase::Browser
@@ -251,8 +206,7 @@ fn shot_for(phase: &ClientPhase, player: &PlayerMenu) -> Shot {
     }
 }
 
-/// Whether `phase` is a connect in progress, during which the backdrop's
-/// gate opens.
+/// Whether `phase` is a connect in progress.
 fn connecting(phase: &ClientPhase) -> bool {
     matches!(phase, ClientPhase::Connecting(_))
 }
@@ -264,7 +218,6 @@ impl ClientMenu {
             browser: ServerBrowser::new(master),
             browser_focus: 1_000,
             browser_last_click: None,
-            main_selection: 0,
             menu_style: MenuStyle::default(),
             classic: classic::ClassicMain::new(),
             home: sjk::home::Home::default(),
@@ -298,104 +251,45 @@ impl ClientMenu {
             classic_info: false,
             password_target: None,
             destination_map: None,
-            destination_ready: false,
-            gate_logged: false,
             first_setup_offered: false,
             password: String::with_capacity(64),
             address_editing: false,
             address_input: String::with_capacity(256),
             address_error: String::with_capacity(96),
             backdrop: None,
+            uploaded_into: None,
         }
+    }
+
+    /// Upload the menu's images again when `renderer` is not the one they
+    /// went into: every world has a renderer of its own, while the menu moves
+    /// between worlds, so the icons of a cache that thinks itself filled would
+    /// be drawn from empty cells (black squares) or from cells the other world
+    /// filled with something else.
+    fn follow_renderer(&mut self, renderer: u64) {
+        if self.uploaded_into == Some(renderer) {
+            return;
+        }
+        self.uploaded_into = Some(renderer);
+        self.player.forget_uploads();
+        self.keybinds.forget_uploads();
+        self.settings.forget_hud_preview_upload();
+        self.create_game.forget_levelshot_upload();
     }
 
     /// Advance the live-map backdrop toward the current screen's shot and
     /// return the camera for this frame, once a map is loaded.
     pub(crate) fn drive_backdrop(&mut self, millis: u64) -> Option<Sample> {
         let shot = shot_for(self.state.phase(), &self.player);
-        // The classic style shows retail's loading screen instead, and the
-        // SJK UI its own: the gate stays shut and the joined world appears
-        // when it is live.
-        let gate = connecting(self.state.phase())
-            && self.destination_ready
-            && !self.menu_style.classic_screens();
-        if gate != self.gate_logged {
-            self.gate_logged = gate;
-            crate::log::progress(format_args!(
-                "gate wanted={gate} at {millis} ms (phase {:?}, destination ready={})",
-                self.state.phase(),
-                self.destination_ready
-            ));
-        }
-        self.backdrop.as_mut().map(|backdrop| {
-            backdrop.set_gate(gate);
-            backdrop.drive(shot, millis)
-        })
-    }
-
-    /// Whether the joined server's world is built and waiting behind the
-    /// gate; the glide through the gate holds until it is.
-    pub(crate) fn set_world_ready(&mut self, ready: bool) {
-        if let Some(backdrop) = &mut self.backdrop {
-            backdrop.set_world_ready(ready);
-        }
-    }
-
-    /// How far the backdrop's gate prop is open: only during a connect, so
-    /// the gate of a map joined for play stands where the server has it.
-    pub(crate) fn gate_open(&self, millis: u64) -> f32 {
-        match &self.backdrop {
-            Some(backdrop) if connecting(self.state.phase()) && !self.is_classic() => {
-                backdrop.gate_open(millis)
-            }
-            _ => 0.0,
-        }
-    }
-
-    /// Whether a finished join may cut to the server world: the camera has
-    /// flown through the gate, or there is no gate flight on this map.
-    pub(crate) fn gate_crossed(&self, millis: u64) -> bool {
-        match &self.backdrop {
-            Some(backdrop) if connecting(self.state.phase()) && !self.is_classic() => {
-                backdrop.gate_crossed(millis)
-            }
-            _ => true,
-        }
-    }
-
-    /// Progress of the glide through the gate during a connect (diagnostics).
-    pub(crate) fn passage_progress(&self, millis: u64) -> f32 {
-        match &self.backdrop {
-            Some(backdrop) if connecting(self.state.phase()) => backdrop.passage_progress(millis),
-            _ => 0.0,
-        }
-    }
-
-    /// A cue the backdrop's gate passed while opening, with where its dust
-    /// falls from.
-    pub(crate) fn take_gate_cue(&mut self) -> Option<(crate::world_props::GateCue, [[f32; 3]; 2])> {
-        self.backdrop.as_mut()?.take_gate_cue()
-    }
-
-    /// The menu world is back after a game: its gate is shut and the glide
-    /// through it over, whatever state the join left them in.
-    pub(crate) fn reset_gate(&mut self) {
-        self.destination_ready = false;
-        if let Some(backdrop) = &mut self.backdrop {
-            backdrop.reset_gate();
-        }
+        self.backdrop
+            .as_mut()
+            .map(|backdrop| backdrop.drive(shot, millis))
     }
 
     /// Whether the joined server's map is still loading behind this menu.
     /// Whether a join is in progress (connecting or loading the map).
     pub(crate) fn is_connecting(&self) -> bool {
         connecting(self.state.phase())
-    }
-
-    /// Whether the menus' screens are the classic ones: the classic style, or
-    /// the SJK UI on a screen it has no version of yet.
-    pub(crate) fn is_classic(&self) -> bool {
-        self.menu_style.classic_screens()
     }
 
     /// Whether a screen of the SJK UI's own is on show (its main page, its
@@ -472,15 +366,15 @@ impl ClientMenu {
         self.world_fade.draw_list()
     }
 
-    /// The retail background drawn under a modern screen while the world is
-    /// hidden; built in [`Self::append_overlay`].
+    /// The retail background drawn under a screen the classic pages opened
+    /// while the world is hidden; built in [`Self::append_overlay`].
     pub(crate) fn backdrop_draw_list(&self) -> Option<&DrawList> {
         self.backdrop_draw_list_wanted()
             .then(|| self.classic_backdrop.draw_list())
     }
 
     fn backdrop_draw_list_wanted(&self) -> bool {
-        let modern_screen = matches!(
+        let opened_screen = matches!(
             self.state.phase(),
             ClientPhase::Browser
                 | ClientPhase::Settings
@@ -488,7 +382,7 @@ impl ClientMenu {
                 | ClientPhase::Player
                 | ClientPhase::CreateGame
         );
-        self.world_hidden && modern_screen
+        self.world_hidden && opened_screen
     }
 
     /// The map the browser row of the server being joined advertised
@@ -497,11 +391,6 @@ impl ClientMenu {
         self.destination_map
             .as_deref()
             .filter(|map| !map.is_empty())
-    }
-
-    /// Whether the world beyond the gate is ready to be shown.
-    pub(crate) fn set_destination_ready(&mut self, ready: bool) {
-        self.destination_ready = ready;
     }
 
     /// The player model that stands on the backdrop's stage: only while a
@@ -560,11 +449,6 @@ impl ClientMenu {
         self.backdrop
             .as_ref()
             .map_or(1.0, |backdrop| backdrop.reveal(shot))
-    }
-
-    /// Apply the player's accent colour to every screen this menu draws.
-    pub(crate) fn set_accent(&mut self, accent: sjk_ui::Color) {
-        self.ui.set_accent(accent);
     }
 
     /// Whether the settings screen wants the window's monitor facts.
@@ -680,7 +564,7 @@ impl ClientMenu {
                 self.state.open_keybinds();
                 MenuAction::None
             }
-            // The classic+ and modern settings show the quick wheel's editor on
+            // The classic+ and tabbed settings show the quick wheel's editor on
             // its own (the SJK UI's has its category, `sjk_settings_result`).
             SettingsResult::OpenWheelPages => {
                 self.settings
@@ -978,17 +862,17 @@ impl ClientMenu {
             }
             ClientPhase::MainMenu => match key {
                 KeyCode::ArrowUp | KeyCode::KeyW => {
-                    self.navigate_main(AbstractAction::Previous);
+                    self.navigate_classic(AbstractAction::Previous);
                     MenuAction::None
                 }
                 KeyCode::ArrowDown | KeyCode::KeyS | KeyCode::Tab => {
-                    self.navigate_main(AbstractAction::Next);
+                    self.navigate_classic(AbstractAction::Next);
                     MenuAction::None
                 }
                 KeyCode::Enter | KeyCode::NumpadEnter | KeyCode::Space => {
-                    self.activate_main(console)
+                    self.activate_classic(console)
                 }
-                KeyCode::Escape if self.menu_style == MenuStyle::Classic => {
+                KeyCode::Escape => {
                     self.cancel_classic();
                     MenuAction::None
                 }
@@ -1050,7 +934,7 @@ impl ClientMenu {
     /// Selection metadata consumed by the shared backdrop/highlight shader.
     pub(crate) fn visual_selection(&self) -> (f32, f32) {
         match self.state.phase() {
-            ClientPhase::MainMenu => (1.0, self.main_selection as f32),
+            ClientPhase::MainMenu => (1.0, 0.0),
             ClientPhase::Browser => (2.0, self.browser.selected() as f32),
             ClientPhase::Settings => {
                 let (selected, root) = self.settings.visual_selection();
@@ -1121,7 +1005,6 @@ impl ClientMenu {
 
     pub(crate) fn return_to_main_menu(&mut self) {
         self.state.main_menu();
-        self.main_selection = 0;
         self.classic.reset();
         self.home.reset();
     }

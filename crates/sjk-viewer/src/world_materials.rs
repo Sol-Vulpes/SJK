@@ -8,6 +8,8 @@
 mod depth_prime;
 #[path = "world_material_draw.rs"]
 mod draw;
+#[path = "dynamic_light_shadows.rs"]
+pub(crate) mod dynamic_light_shadows;
 #[path = "gi_probe_domain.rs"]
 mod gi_probe_domain;
 #[path = "indirect_draws.rs"]
@@ -20,6 +22,8 @@ pub(crate) mod lamp_geometry;
 mod lighting_environment;
 #[path = "world_lighting_mode.rs"]
 pub(crate) mod lighting_mode;
+#[path = "mover_occlusion.rs"]
+pub(crate) mod mover_occlusion;
 
 #[cfg(test)]
 #[path = "world_shader_fxc_tests.rs"]
@@ -105,6 +109,7 @@ macro_rules! stage_shader {
             include_str!("geometry_stage.wgsl"),
             include_str!("stage_runtime.wgsl"),
             include_str!("point_lights.wgsl"),
+            include_str!("point_light_octa.wgsl"),
             include_str!("world_lighting_mode.wgsl"),
             include_str!("light_grid_sample.wgsl"),
             include_str!("model_light_grid.wgsl"),
@@ -297,6 +302,9 @@ pub(crate) struct Runtime {
     surfaces_by_source: Vec<crate::gi_voxels::Surface>,
     /// Local lights from the map's emissive faces (real-time mode).
     lamps: crate::lamp_lights::LampSet,
+    /// The movers' opaque casters (`mover_occlusion.rs`): door tiles for the lamps near
+    /// them and, with or without, the far sun cascade's refreshes.
+    pub(crate) mover_occluders: Vec<mover_occlusion::Occluder>,
     /// One bind group for every opaque static world stage, where the device allows.
     stage_table: Option<stage_table::Table>,
 
@@ -485,6 +493,7 @@ fn finish_runtime(
         gi: None,
         surfaces_by_source,
         lamps: crate::lamp_lights::LampSet::default(),
+        mover_occluders: Vec::new(),
         active: Default::default(),
         indirect: None,
         stage_table: None,

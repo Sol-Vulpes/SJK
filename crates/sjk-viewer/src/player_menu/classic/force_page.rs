@@ -32,6 +32,9 @@ const LIGHT_TINT: Color = Color::new(0.36, 0.66, 1.0, 1.0);
 const DARK_TINT: Color = Color::new(1.0, 0.33, 0.28, 1.0);
 /// A level the points left cannot pay for.
 const SHORT: Color = Color::new(1.0, 0.4, 0.3, 1.0);
+/// A power the server the client plays on turns off, holds at a level or
+/// does not use: still bought here, so not greyed out.
+const SERVER_LIMIT: Color = Color::new(1.0, 0.62, 0.25, 1.0);
 /// Stars of a power that cannot be bought here (a team power outside team
 /// games, Saber Defend or Throw without Attack). Retail's `grColor` (0.2) all
 /// but vanished on the window, hiding the costs; this grey still reads as
@@ -140,10 +143,15 @@ impl PlayerMenu {
         let allocation = self.force.allocation();
         let rank = allocation.rank;
         let side = allocation.side;
+        // On a server below Jedi Master, the rank is its highest.
+        let limit = match self.force.server() {
+            Some(server) if server.max_rank < 7 => " (this server's highest)",
+            _ => "",
+        };
         self.label_fmt(
             place,
             at([15.0, 36.0, 570.0, 16.0]),
-            format_args!("Force Mastery: {}", mastery(rank)),
+            format_args!("Force Mastery: {}{limit}", mastery(rank)),
             14.0,
             GOLD,
             FontWeight::Semibold,
@@ -374,11 +382,8 @@ impl PlayerMenu {
         };
         let level = self.force.allocation().levels[index];
         let next = self.force.next_level(index);
-        let usable = level > 0
-            || !matches!(
-                next,
-                NextLevel::OtherSide | NextLevel::TeamOnly | NextLevel::NeedsOffense
-            );
+        let usable = level > 0 || !matches!(next, NextLevel::OtherSide | NextLevel::NeedsOffense);
+        let limited = self.force.server_limit(index).is_some();
         let [x, y, _, h] = canvas;
         if active {
             self.piece(place, ArtPiece::BlendBox2, canvas);
@@ -399,6 +404,7 @@ impl PlayerMenu {
         };
         let color = match (usable, active) {
             (false, _) => DISABLED,
+            (true, _) if limited => SERVER_LIMIT,
             (true, true) => hover,
             (true, false) => rest,
         };
@@ -677,7 +683,6 @@ impl PlayerMenu {
             NextLevel::Costs(_) => (None, LABEL),
             NextLevel::Short(_) => (None, SHORT),
             NextLevel::OtherSide => (Some("The other side's power"), DISABLED),
-            NextLevel::TeamOnly => (Some("Team games only"), DISABLED),
             NextLevel::NeedsOffense => (Some("Requires Saber Attack 1"), SHORT),
         };
         match (fixed, next) {
@@ -717,15 +722,27 @@ impl PlayerMenu {
             FontWeight::Regular,
             TextAlign::Start,
         );
-        self.label_fmt(
-            place,
-            [x + 6.0, y + 68.0, w - 12.0, 13.0],
-            format_args!("Spent on it: {spent} points"),
-            11.0,
-            VALUE,
-            FontWeight::Regular,
-            TextAlign::Start,
-        );
+        // What the server does with it, in place of the spending, when it limits it.
+        match self.force.server_limit(index) {
+            Some(limit) => self.label(
+                place,
+                [x + 6.0, y + 68.0, w - 12.0, 13.0],
+                limit.describe(),
+                11.0,
+                SERVER_LIMIT,
+                FontWeight::Semibold,
+                TextAlign::Start,
+            ),
+            None => self.label_fmt(
+                place,
+                [x + 6.0, y + 68.0, w - 12.0, 13.0],
+                format_args!("Spent on it: {spent} points"),
+                11.0,
+                VALUE,
+                FontWeight::Regular,
+                TextAlign::Start,
+            ),
+        }
     }
 
     /// The profile at a glance: the side's emblem, mastery and spending.
@@ -779,15 +796,57 @@ impl PlayerMenu {
             FontWeight::Regular,
             TextAlign::Start,
         );
+        let Some(server) = self.force.server() else {
+            self.label_fmt(
+                place,
+                [x + 6.0, y + 61.0, w - 12.0, 13.0],
+                format_args!("{used} of {total} points spent"),
+                11.0,
+                VALUE,
+                FontWeight::Regular,
+                TextAlign::Start,
+            );
+            return;
+        };
         self.label_fmt(
             place,
-            [x + 6.0, y + 61.0, w - 12.0, 13.0],
+            [x + 6.0, y + 54.0, w - 12.0, 13.0],
             format_args!("{used} of {total} points spent"),
             11.0,
             VALUE,
             FontWeight::Regular,
             TextAlign::Start,
         );
+        // The server's line: how many powers it turns off (their names are
+        // drawn in its colour), or that it allows them all.
+        let off = (0..POWER_LABELS.len())
+            .filter(|index| server.disabled_mask & (1 << index) != 0)
+            .count();
+        let at = [x + 6.0, y + 68.0, w - 12.0, 13.0];
+        let (weight, align) = (FontWeight::Semibold, TextAlign::Start);
+        match off {
+            0 => self.label(
+                place,
+                at,
+                "This server allows every power",
+                11.0,
+                VALUE,
+                weight,
+                align,
+            ),
+            _ => self.label_fmt(
+                place,
+                at,
+                format_args!(
+                    "This server turns {off} power{} off",
+                    if off == 1 { "" } else { "s" }
+                ),
+                11.0,
+                SERVER_LIMIT,
+                weight,
+                align,
+            ),
+        }
     }
 }
 
@@ -864,7 +923,7 @@ mod drawing_tests {
         menu.snapshot_focus_power(focus);
         let font = crate::text::load_modern(1.0, None).unwrap().font;
         let mut vertices = Vec::new();
-        menu.append_classic(&mut vertices, &font, [1920.0, 1080.0], 1.0);
+        menu.append(&mut vertices, &font, [1920.0, 1080.0], 1.0);
         menu
     }
 
@@ -917,7 +976,7 @@ mod drawing_tests {
                     let alpha = row.map_or(0.0, |color| color.a);
                     let usable = !matches!(
                         menu.force.next_level(index),
-                        NextLevel::OtherSide | NextLevel::TeamOnly | NextLevel::NeedsOffense
+                        NextLevel::OtherSide | NextLevel::NeedsOffense
                     ) || menu.force.allocation().levels[index] > 0;
                     let wanted = if usable { 1.0 } else { UNUSABLE_ICON };
                     assert_eq!(alpha, wanted, "{frame:?} {} holocron", POWER_LABELS[index]);

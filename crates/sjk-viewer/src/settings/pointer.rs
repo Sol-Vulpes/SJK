@@ -205,7 +205,7 @@ impl SettingsMenu {
     /// clicked half points, like its `<` and `>`; anything else steps on.
     fn click_direction(&self, kind: ValueKind, row: usize, x: f32) -> i32 {
         match (kind, self.ui.rect_for(row as u16)) {
-            (ValueKind::Choice(_) | ValueKind::DisplayMode, Some(rect)) => {
+            (ValueKind::Choice(_) | ValueKind::DisplayMode | ValueKind::Quality, Some(rect)) => {
                 cycler_direction(rect, x) as i32
             }
             _ => 1,

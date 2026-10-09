@@ -8,7 +8,7 @@
 //! command last. Every change is saved at once to `wheel.json`
 //! ([`crate::quick_wheel::pages`]).
 //!
-//! In the SJK UI it is a category of Settings' rail; the classic+ and modern
+//! In the SJK UI it is a category of Settings' rail; the classic+ and tabbed
 //! settings open it from Interface's "Quick wheel pages" row as a screen of its
 //! own in the SJK UI's look ([`WheelMode`]). [`super::wheel_editor_view`] draws it.
 
@@ -24,7 +24,7 @@ pub(crate) enum WheelMode {
     /// A category of the SJK UI's Settings: Escape leaves Settings, Tab goes
     /// on to the next category.
     Category,
-    /// Opened from a settings row (classic+, modern): Escape returns to it.
+    /// Opened from a settings row (classic+, tabbed): Escape returns to it.
     Overlay,
 }
 

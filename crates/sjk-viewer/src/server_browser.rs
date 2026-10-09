@@ -9,7 +9,9 @@ pub(crate) mod filters;
 
 #[cfg(test)]
 pub(crate) use details::DetailPlayer;
-pub(crate) use details::{DetailsState, DetailsView, Fact};
+#[cfg(test)]
+pub(crate) use details::DetailsView;
+pub(crate) use details::{DetailsState, Fact};
 pub(crate) use discover::gametype_name;
 
 use sjk_client::CompatProfile;
@@ -93,7 +95,6 @@ pub(crate) struct ServerBrowser {
     refresh: Option<Receiver<fetch::Fetched>>,
     visible: Vec<usize>,
     filter: String,
-    filter_display: String,
     sort: SortColumn,
     descending: bool,
     favorites: BTreeSet<SocketAddr>,
@@ -113,8 +114,6 @@ impl ServerBrowser {
             .as_deref()
             .map(load_favorites)
             .unwrap_or_default();
-        let mut filter_display = String::with_capacity(80);
-        filter_display.push_str("FILTER  ALL SERVERS");
         Self {
             master,
             entries: Vec::new(),
@@ -127,7 +126,6 @@ impl ServerBrowser {
             refresh: None,
             visible: Vec::with_capacity(MAX_BROWSER_SERVERS),
             filter: String::with_capacity(64),
-            filter_display,
             sort: SortColumn::Ping,
             descending: false,
             favorites,
@@ -161,9 +159,6 @@ impl ServerBrowser {
         self.visible
             .get(row)
             .and_then(|index| self.entries.get(*index))
-    }
-    pub(crate) fn filter_display(&self) -> &str {
-        &self.filter_display
     }
     /// The typed filter text alone.
     pub(crate) fn filter_text(&self) -> &str {
@@ -199,12 +194,10 @@ impl ServerBrowser {
 
     pub(crate) fn push_filter(&mut self, text: &str) {
         self.filter.push_str(text);
-        self.update_filter_display();
         self.rebuild_visible();
     }
     pub(crate) fn pop_filter(&mut self) {
         self.filter.pop();
-        self.update_filter_display();
         self.rebuild_visible();
     }
     /// Forget the typed filter: every server shows again.
@@ -213,7 +206,6 @@ impl ServerBrowser {
             return;
         }
         self.filter.clear();
-        self.update_filter_display();
         self.rebuild_visible();
     }
 
@@ -412,16 +404,6 @@ impl ServerBrowser {
         });
         self.selected = self.selected.min(self.visible.len().saturating_sub(1));
         self.scroll = self.scroll.min(self.max_scroll());
-    }
-
-    fn update_filter_display(&mut self) {
-        self.filter_display.clear();
-        self.filter_display.push_str("FILTER  ");
-        self.filter_display.push_str(if self.filter.is_empty() {
-            "ALL SERVERS"
-        } else {
-            &self.filter
-        });
     }
 }
 

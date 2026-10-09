@@ -155,8 +155,8 @@ is a small scoreboard of everyone on the server: each connected client's name, s
 and ping (the client asks the server for scores every two seconds while it shows) and what
 the hub knows of them (an SJK player, or a verified one, from the presence list), sixteen a
 page with More players... and Back under them. The SJK UI draws it as a table with the
-chosen player's card on the right (main page > Players); the classic and modern menus list
-it in the SJK pop-up's Report a player. Enter on a player opens the Report page: seven
+chosen player's card on the right (main page > Players); the classic menus list it in the
+SJK pop-up's Report a player. Enter on a player opens the Report page: seven
 reasons (cheating, harassment or hate, griefing, exploiting a bug, an offensive name, spam
 or advertising, something else) and Back. A reason closes the menu and opens the text
 dialog for a few words (10 to 300 characters, the bug reports' alphabet and noise rules);
@@ -167,7 +167,7 @@ report names them as they were.
 
 Only a verified SJK player may report (`player_identity::report_gate`): with the identity
 off, the hub not answering yet, an unverified key or a game on this PC, the Players page
-says why under its title (the classic and modern pages in their first line), and the Report
+says why under its title (the classic pages in their first line), and the Report
 page's reasons are dimmed, Back carrying the reason; yourself and bots cannot be reported
 either. The service refuses an unverified key before anything is sent, and the hub checks
 everything again: verified keys only, a live claim of the reporter on that server, nobody
@@ -242,7 +242,7 @@ Where they show:
   never the columns, and fewer show where the name would keep less than half its room
   (the SJK UI: a third). Derived only when the roster or the rows change.
 - The player card (`inspect`): the medallions in a row under the hub name; a pinned card
-  names them too, with a repeatable one's count.
+  names them too in small print, with a repeatable one's count.
 - The SJK UI's Players page: the chosen player's card lists their medallions and names.
 - The Identity page: the player's own medals, each with its whole picture, name and
   count, description, the date it was given (`dd/mm/yyyy`) and the team's note; with

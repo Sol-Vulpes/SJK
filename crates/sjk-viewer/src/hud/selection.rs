@@ -71,7 +71,7 @@ impl HudOverlay {
     }
 
     /// Draw the Force selector as the retail icon bar (classic and game HUD
-    /// styles) rather than the modern list.
+    /// styles) rather than the radial HUD's list.
     pub(crate) fn set_force_wheel_bar(&mut self, bar: bool) {
         self.force_wheel_bar = bar;
     }

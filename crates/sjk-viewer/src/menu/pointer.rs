@@ -63,20 +63,10 @@ impl ClientMenu {
             ClientPhase::MainMenu if self.menu_style == MenuStyle::Sjk => {
                 self.sjk_home_pointer(token, event.kind == UiEventKind::Activate, console)
             }
-            ClientPhase::MainMenu if self.menu_style == MenuStyle::Classic => {
+            ClientPhase::MainMenu => {
                 self.classic.select(usize::from(token));
                 if event.kind == UiEventKind::Activate {
                     self.activate_classic(console)
-                } else {
-                    MenuAction::None
-                }
-            }
-            ClientPhase::MainMenu => {
-                if usize::from(token) < MAIN_ITEMS.len() {
-                    self.main_selection = usize::from(token);
-                }
-                if event.kind == UiEventKind::Activate {
-                    self.activate_main(console)
                 } else {
                     MenuAction::None
                 }

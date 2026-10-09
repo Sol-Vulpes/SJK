@@ -235,14 +235,9 @@ impl Drop for WorldInstallTask {
 }
 
 impl GpuState {
-    /// Open the gate once its destination is playable, independently of joining.
-    pub(crate) fn world_settled(&mut self) -> bool {
-        self.portal.ready()
-    }
-
     pub(crate) fn poll_world_install(&mut self) -> Result<Option<GpuState>, Box<dyn Error>> {
         if self.is_menu_world {
-            return self.poll_gate_destination();
+            return self.poll_destination();
         }
         if self.join_task.is_some()
             || self
@@ -302,11 +297,7 @@ impl GpuState {
         if !self.resident.snapshot_ready() {
             return Ok(None);
         }
-        if self.world_install_task.is_some() {
-            if self.holds_world_install(Instant::now()) {
-                return Ok(None);
-            }
-            let task = self.world_install_task.as_mut().expect("checked above");
+        if let Some(task) = self.world_install_task.as_mut() {
             return match task.poll() {
                 WorldInstallPoll::Pending => Ok(None),
                 WorldInstallPoll::Failed(error) => Err(error.into()),
@@ -463,13 +454,9 @@ impl GpuState {
                 .or(loaded.live_session.take());
         } else {
             loaded.pending_map_reload = loaded.resident.session.is_some();
-            // The classic style keeps its loading screen over this world
-            // instead of letting the player walk it while the game loads.
-            let classic = loaded
-                .client_menu
-                .as_ref()
-                .is_some_and(crate::menu::ClientMenu::is_classic);
-            if !classic {
+            // The menus keep their loading screen over this world instead
+            // of letting the player walk it while the game loads.
+            if loaded.client_menu.is_none() {
                 loaded.start_exploring();
             }
         }

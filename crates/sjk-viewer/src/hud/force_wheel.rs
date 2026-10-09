@@ -4,7 +4,7 @@
 //!
 //! In the classic and game HUD styles the Force selector is this row of icons: the
 //! selected entry large in the middle, up to three neighbours on each side in wheel
-//! order, and its name under it in the small font, in `CT_ICON_BLUE`. SJK's modern
+//! order, and its name under it in the small font, in `CT_ICON_BLUE`. SJK's radial
 //! HUD keeps its own list ([`super::selection`]). Sizes and places are retail's
 //! 640x480 ones, anchored to the bottom centre and scaled with `cg_hudScale`; icons
 //! stay square on wide screens, as EternalJK's `widthRatioCoef` keeps them. Like

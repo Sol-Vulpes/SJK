@@ -1374,7 +1374,7 @@ fn draw_detail(
                 );
             }
         }
-        DetailsState::Failed(..) => note(ui, "The server did not say who is playing."),
+        DetailsState::Failed(_) => note(ui, "The server did not say who is playing."),
         _ => note(ui, "Asking the server who is playing..."),
     }
 }

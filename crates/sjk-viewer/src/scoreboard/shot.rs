@@ -305,25 +305,6 @@ pub(super) fn append(gpu: &mut crate::GpuState, viewport: [f32; 2]) {
             );
             return;
         }
-        super::style::ScoreboardStyle::Modern => {
-            let header = super::view::MatchHeader {
-                map: "mp/duel6",
-                mode: "FFA",
-                team_scores: shot.team_scores,
-                team_game: false,
-                local_client: shot.local.client,
-            };
-            super::view::build(ui, rows, header, viewport);
-            ui.finish(u16::MAX);
-            ui.append_text_routed(
-                &mut gpu.game_fonts,
-                |_, text| Some(super::retail_font(text)),
-                &mut gpu.text_vertices,
-                &gpu.ui_font,
-                viewport,
-            );
-            return;
-        }
         super::style::ScoreboardStyle::Sjk => {}
     }
     let header = SjkHeader {
@@ -335,6 +316,7 @@ pub(super) fn append(gpu: &mut crate::GpuState, viewport: [f32; 2]) {
         local: shot.local,
         killer: shot.killer,
         duel: shot.duel,
+        compact: super::style::compact(gpu.console.as_ref()),
     };
     let measure = match gpu.game_fonts.sjk_metrics() {
         Some((display, body)) => Measure {
@@ -363,7 +345,23 @@ pub(super) fn append(gpu: &mut crate::GpuState, viewport: [f32; 2]) {
 mod tests {
     use super::*;
 
-    /// Every made-up match fits the board's canvas at 1080 lines and 4K.
+    /// The shot's match facts, compact or not.
+    fn header(shot: &Shot, compact: bool) -> SjkHeader<'static> {
+        SjkHeader {
+            map: "mp/duel6",
+            gametype: shot.gametype,
+            limits: shot.limits,
+            elapsed: Some(shot.elapsed),
+            team_scores: shot.team_scores,
+            local: shot.local,
+            killer: shot.killer,
+            duel: shot.duel,
+            compact,
+        }
+    }
+
+    /// Every made-up match fits the board's canvas at 1080 lines and 4K, 5:4,
+    /// 4:3, 21:9 and 32:9.
     #[test]
     fn every_shot_fits_the_canvas() {
         for game in [
@@ -377,28 +375,142 @@ mod tests {
             board.show_for_shot(game);
             assert!(board.rows.len() <= 32, "{game:?}");
             let shot = board.shot.as_ref().expect("a shot");
-            let header = SjkHeader {
-                map: "mp/duel6",
-                gametype: shot.gametype,
-                limits: shot.limits,
-                elapsed: Some(shot.elapsed),
-                team_scores: shot.team_scores,
-                local: shot.local,
-                killer: shot.killer,
-                duel: shot.duel,
-            };
-            for viewport in [[1920.0, 1080.0], [3840.0, 2160.0]] {
-                sjk::build(
-                    &mut board.ui,
-                    &board.rows,
-                    &header,
-                    FlagIcons::default(),
-                    Measure::default(),
-                    &mut board.motion,
-                    viewport,
-                );
-                board.ui.finish(u16::MAX);
-                assert!(!board.ui.overflowed(), "{game:?} at {viewport:?}");
+            let headers = [header(shot, false), header(shot, true)];
+            for header in &headers {
+                for viewport in [
+                    [1920.0, 1080.0],
+                    [3840.0, 2160.0],
+                    [1280.0, 1024.0],
+                    [1440.0, 1080.0],
+                    [2560.0, 1080.0],
+                    [3440.0, 1440.0],
+                    [3840.0, 1080.0],
+                    [5120.0, 1440.0],
+                ] {
+                    sjk::build(
+                        &mut board.ui,
+                        &board.rows,
+                        header,
+                        FlagIcons::default(),
+                        Measure::default(),
+                        &mut board.motion,
+                        viewport,
+                    );
+                    board.ui.finish(u16::MAX);
+                    assert!(
+                        !board.ui.overflowed(),
+                        "{game:?} at {viewport:?}, compact {}",
+                        header.compact
+                    );
+                }
+            }
+        }
+    }
+
+    /// The lists' left and right edges at 1080 lines (frame pixels): the
+    /// span of the thin rules under their labels.
+    fn edges(board: &mut Scoreboard, measure: Measure<'_>, compact: bool) -> [f32; 2] {
+        let header = header(board.shot.as_ref().expect("a shot"), compact);
+        sjk::build(
+            &mut board.ui,
+            &board.rows,
+            &header,
+            FlagIcons::default(),
+            measure,
+            &mut board.motion,
+            [1920.0, 1080.0],
+        );
+        board.ui.finish(u16::MAX);
+        let rule = crate::menu::sjk::color::alpha(crate::menu::sjk::color::HOLO, 0.22);
+        board
+            .ui
+            .draw_list()
+            .commands()
+            .iter()
+            .filter_map(|command| match command {
+                sjk_ui::DrawCommand::SolidRect { rect, color } if *color == rule => Some(*rect),
+                _ => None,
+            })
+            .fold([f32::MAX, f32::MIN], |[left, right], rect| {
+                [left.min(rect.x), right.max(rect.x + rect.width)]
+            })
+    }
+
+    /// Measured in the UI's own families at 1080 lines, the compact board
+    /// hugs its names: a free-for-all of 8 or of 32 is centred and under
+    /// half the full board's 1144 pixels, a team game is narrower than it
+    /// (`--nocapture` prints them all).
+    #[test]
+    fn compact_widths_in_the_ui_families() {
+        let load = |family| {
+            crate::text::load_family(family, 1.0, None)
+                .expect("a bundled family")
+                .font
+        };
+        let display = load(&crate::text::DISPLAY);
+        let body = load(&crate::text::BODY);
+        let measure = Measure {
+            display: Some(&display),
+            body: Some(&body),
+        };
+        let mut board = Scoreboard::new();
+        for (name, game, players, deaths, team) in [
+            ("free for all of 8", Match::Free, 8, false, None),
+            (
+                "free for all of 8, deaths counted",
+                Match::Free,
+                8,
+                true,
+                None,
+            ),
+            ("free for all of 32", Match::Crowd, 32, false, None),
+            (
+                "free for all of 32, deaths counted",
+                Match::Crowd,
+                32,
+                true,
+                None,
+            ),
+            ("team FFA, 6 a side", Match::Capture, 12, false, Some(6)),
+            (
+                "capture the flag, 6 a side",
+                Match::Capture,
+                12,
+                false,
+                None,
+            ),
+        ] {
+            board.show_for_shot(game);
+            if game == Match::Capture {
+                board.rows.retain(|row| row.team != 3);
+            } else {
+                // The ones watching play too, for 32.
+                for row in &mut board.rows {
+                    row.team = 0;
+                }
+            }
+            board.rows.truncate(players);
+            assert_eq!(board.rows.len(), players, "{name}");
+            for row in &mut board.rows {
+                row.deaths = deaths.then_some(i32::from(row.client_num % 7));
+            }
+            if let (Some(gametype), Some(shot)) = (team, board.shot.as_mut()) {
+                shot.gametype = gametype;
+            }
+            let [full_left, full_right] = edges(&mut board, measure, false);
+            let [left, right] = edges(&mut board, measure, true);
+            println!(
+                "{name}: full {} ({full_left} to {full_right}), compact {:.1} ({left:.1} to {right:.1})",
+                full_right - full_left,
+                right - left,
+            );
+            assert!((full_right - full_left - 1144.0).abs() < 0.5, "{name}");
+            if game == Match::Capture {
+                assert!(right - left < 1144.0, "{name}: {left} {right}");
+                assert!(left >= 680.0 - 0.5, "{name}: {left}");
+            } else {
+                assert!(right - left < 560.0, "{name}: {left} {right}");
+                assert!(((left + right) * 0.5 - 960.0).abs() < 0.5, "{name}");
             }
         }
     }

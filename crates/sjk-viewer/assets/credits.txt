@@ -47,7 +47,9 @@ did: Eye adaptation, dynamic glow, metal materials and many renderer fixes
 did: SJK identity and its hub, player reports, the changelog and these credits
 did: The Profile page and achievements counted in matches, with their board
 did: Staff tools in the game: medals and achievements for the SJK team
+did: SJK chat through the hub, seen in the menus and in games, and the path for emotes
 did: Unlockables: the Sun blade skin and looks every SJK player sees
+did: The kill feed with weapon icons
 link: https://github.com/Sol-Vulpes/SJK
 link: https://sol-vulpes.github.io/SJK/
 
@@ -55,7 +57,7 @@ link: https://sol-vulpes.github.io/SJK/
 
 [Creyon]
 github: Creyon94
-role: Contributor and tester: 23 merged pull requests, EternalJK parity
+role: Contributor and tester: 24 merged pull requests, EternalJK parity
 medal: early_contributor
 did: #2 #7 Duel challenges from names with symbols, centre prints kept whole
 did: #3 The third-person camera damped per frame as EternalJK (cg_cameraFPS)
@@ -73,6 +75,7 @@ did: #21 fx_debug and cg_debugMissiles diagnostics
 did: #23 Smooth melee kicks, predicted in a joined game and held still on JA+
 did: #30 Chat emojis: EternalJK's pictures in chat
 did: #31 Console input shown in its colour codes
+did: #44 % and quotes in chat arrive as typed, as EternalJK sends them
 link: Creyon's pull requests | https://github.com/Sol-Vulpes/SJK/pulls?q=is%3Apr+author%3ACreyon94
 
 [Lumaya]

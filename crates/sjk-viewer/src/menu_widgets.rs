@@ -1,13 +1,12 @@
-//! Shared modern menu widgets built on renderer-neutral `sjk-ui` primitives.
+//! Shared menu widgets built on renderer-neutral `sjk-ui` primitives.
 
 mod contrast;
 mod hero;
 mod input;
-mod layout;
 mod text;
 mod vote;
 pub(crate) use contrast::MenuContrast;
-pub(crate) use hero::{HeroColumn, Scrim};
+pub(crate) use hero::Scrim;
 pub(crate) use vote::VoteLayout;
 mod controls;
 mod form;
@@ -35,25 +34,6 @@ pub(crate) struct ButtonStyle<'a> {
     pub(crate) enabled: bool,
     pub(crate) accent: Option<Color>,
     pub(crate) badge: Option<&'a str>,
-}
-
-impl ButtonStyle<'_> {
-    pub(crate) const fn plain(selected: bool) -> Self {
-        Self {
-            selected,
-            enabled: true,
-            accent: None,
-            badge: None,
-        }
-    }
-}
-
-/// Exact centered-card geometry. `content_height` excludes the two padding bands.
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub(crate) struct ContentCard {
-    pub(crate) panel: Rect,
-    pub(crate) content: Rect,
-    pub(crate) padding: f32,
 }
 
 /// Semantic action attached to one focusable screen widget.
@@ -190,14 +170,6 @@ impl MenuCanvas {
         });
     }
 
-    /// Draw a one-pixel visual divider.
-    pub(crate) fn separator(&mut self, rect: Rect) {
-        let _ = self.draw.push(DrawCommand::SolidRect {
-            rect,
-            color: Color::new(1.0, 1.0, 1.0, 0.09),
-        });
-    }
-
     /// Draw a draggable scrollbar and register its entire track for pointer input.
     pub(crate) fn scrollbar(
         &mut self,
@@ -233,17 +205,6 @@ impl MenuCanvas {
     /// Draw a semantic accent bar supplied by the calling screen.
     pub(crate) fn accent_bar(&mut self, rect: Rect, color: Color) {
         let _ = self.draw.push(DrawCommand::SolidRect { rect, color });
-    }
-
-    /// Add a focusable button and return its physical rectangle.
-    pub(crate) fn button(
-        &mut self,
-        token: MenuToken,
-        label: &str,
-        rect: Rect,
-        selected: bool,
-    ) -> Rect {
-        self.button_styled(token, label, rect, ButtonStyle::plain(selected))
     }
 
     /// Add a button with optional accent, status badge, and disabled semantics.
@@ -405,11 +366,6 @@ impl MenuCanvas {
 
     pub(crate) fn theme(&self) -> Theme {
         self.theme
-    }
-
-    /// Override the theme accent (the player's `ui_accent`).
-    pub(crate) fn set_accent(&mut self, accent: Color) {
-        self.theme.accent = accent;
     }
 }
 

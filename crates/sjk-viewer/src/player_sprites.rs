@@ -71,6 +71,7 @@ pub(super) fn submit(
         start_length: 1.0,
         end_length: 1.0,
         streak: None,
+        trace_streak: false,
         normal: None,
         alpha: constant(1.0),
         use_alpha: true,

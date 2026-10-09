@@ -7,8 +7,8 @@
 //!
 //! SJK adds the classic+ parts: a detail box for the selected entry (its kind,
 //! value and default, and its whole description), the "shown of total" count,
-//! and a description for every control. Every control answers to the modern
-//! view's tokens ([`super::pointer`]), so the keyboard, pointer and wheel
+//! and a description for every control. Every control answers to the
+//! browser's tokens ([`super::pointer`]), so the keyboard, pointer and wheel
 //! handling serve both looks.
 
 use super::pointer::{
@@ -76,8 +76,12 @@ struct Button {
 }
 
 impl Browser {
-    /// Draw the classic+ browser over the whole frame (see [`Browser::append`]).
-    pub(super) fn append_classic(
+    /// Draw the classic+ browser over the whole frame. Overlay text draws
+    /// above every overlay's shapes, so menus and chat build no text while it
+    /// is open (see `Console::covers_frame`), and any other text appended
+    /// earlier this frame is dropped rather than shown through the browser.
+    /// The SJK UI's look is drawn by `append_sjk` instead.
+    pub(crate) fn append(
         &mut self,
         vertices: &mut Vec<TextVertex>,
         font: &UiFont,
@@ -267,7 +271,7 @@ impl Browser {
                 place.rect(thumb),
                 if active { FOCUS } else { view::gold(0.8) },
             );
-            // Wider than the bar so it can be caught; dragged as the modern one.
+            // Wider than the bar so it can be caught.
             self.ui.scroll_region(
                 SCROLLBAR_TOKEN,
                 place.rect([track[0] - 3.0, track[1], track[2] + 6.0, track[3]]),

@@ -100,9 +100,10 @@ Old clients ignore all of it, so it stays `/v1/`.
 
 ## In the game
 
-- The chat overlay has a fourth channel, SJK. `messagemode5` (I by default; a profile
-  gets I only when it is free and nothing is bound to `messagemode5`) opens the
-  composer on it; Tab cycles All, Team and SJK. Enter on SJK hands the text to the hub,
+- The chat overlay has a fourth channel, SJK. `messagemode5` (I by default in a new
+  profile or a whole imported config, when I is free and nothing is bound to
+  `messagemode5`; an existing profile binds it in Settings > Key bindings > Other)
+  opens the composer on it; Tab cycles All, Team and SJK. Enter on SJK hands the text to the hub,
   never to the game server.
 - Hub messages join the chat feed tagged SJK in the SJK UI's gold (`#E8B84A`, apart
   from the game's blues), SJK VERIFIED for a verified sender. Names and texts go

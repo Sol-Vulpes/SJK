@@ -320,7 +320,8 @@ impl SettingsMenu {
             | ValueKind::Resolution
             | ValueKind::DisplayMode
             | ValueKind::HudPicker
-            | ValueKind::WheelPages => {
+            | ValueKind::WheelPages
+            | ValueKind::Quality => {
                 let open = self.dropdown.as_ref().is_some_and(|open| open.row == row);
                 kit::field(
                     &mut self.ui,
@@ -703,7 +704,7 @@ impl SettingsMenu {
             {
                 keys.push(match setting.kind {
                     ValueKind::Bool => (&["Enter"][..], "switch"),
-                    ValueKind::Choice(_) | ValueKind::DisplayMode
+                    ValueKind::Choice(_) | ValueKind::DisplayMode | ValueKind::Quality
                         if segment_choices(setting.kind).is_none() =>
                     {
                         (&["Enter"][..], "choices")

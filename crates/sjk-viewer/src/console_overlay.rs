@@ -1,6 +1,18 @@
 //! Console overlay ordering, including the full-frame command browser.
 use super::*;
 
+/// Top of the FPS readout's line, in window pixels.
+const FPS_TOP: f32 = 18.0;
+/// The FPS readout's line box at 1080 lines, before the frame's text scale.
+const FPS_LINE: f32 = 31.0;
+
+/// Bottom of the FPS readout at the top right, for a window `viewport_height`
+/// pixels tall, with the frame's text scale (`main.rs`: the height scale, at
+/// least 0.85). The HUD's kill feed stands under it.
+pub(crate) fn fps_bottom(viewport_height: f32) -> f32 {
+    FPS_TOP + FPS_LINE * ui_scale::height_scale(viewport_height).max(0.85)
+}
+
 impl GpuState {
     pub(super) fn console_covers_frame(&self) -> bool {
         self.console
@@ -55,12 +67,12 @@ impl GpuState {
         if !covers_frame && hud::family::fps(self.console.as_ref()) {
             // CG_DrawFPS draws console characters (CG_DrawBigString). The line is
             // 0.8 times Inter's 38.7-pixel line at 1080 lines, in any font.
-            let scale = ui_scale::glyph_scale(font, 31.0, text_scale);
+            let scale = ui_scale::glyph_scale(font, FPS_LINE, text_scale);
             append_text(
                 vertices,
                 font,
                 self.frame_pacer.label(),
-                [(viewport[0] - 780.0).max(8.0), 18.0],
+                [(viewport[0] - 780.0).max(8.0), FPS_TOP],
                 scale,
                 viewport,
             );
@@ -68,11 +80,10 @@ impl GpuState {
     }
 
     /// Lay out and upload the classic console's own layer
-    /// ([`console_backdrop`]), drawn after all other 2D text; empty for the
-    /// modern console or under the full-frame browser.
+    /// ([`console_backdrop`]), drawn after all other 2D text; empty under the
+    /// full-frame browser.
     fn append_classic_console(&mut self, viewport: [f32; 2], covers_frame: bool) {
-        let classic = !covers_frame && game_font::grid_console(self.console.as_ref());
-        let Some(console) = self.console.as_mut().filter(|_| classic) else {
+        let Some(console) = self.console.as_mut().filter(|_| !covers_frame) else {
             self.console_layer.clear();
             return;
         };

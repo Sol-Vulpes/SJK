@@ -57,6 +57,8 @@ pub(crate) const ACTIONS: &[BindableAction] = &[
     action(Movement, "Strafe right", "+moveright", "d"),
     action(Movement, "Jump", "+moveup", "SPACE"),
     action(Movement, "Crouch", "+movedown", "c"),
+    // JoF EJK's `+duck`: crouch without rolling.
+    action(Movement, "Crouch, no roll (JoF)", "+duck", ""),
     action(Movement, "Walk", "+speed", "SHIFT"),
     action(Movement, "Center view", "centerview", "END"),
     action(Movement, "Turn left", "+left", "LEFTARROW"),

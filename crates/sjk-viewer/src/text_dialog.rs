@@ -20,9 +20,9 @@
 //! first. A note always closes on Send: its screenshot is taken of the next frame.
 
 use crate::menu::art::ArtSet;
-use crate::menu_widgets::{ButtonStyle, MenuCanvas};
+use crate::menu_widgets::MenuCanvas;
 use crate::text::{TextVertex, UiFont};
-use sjk_ui::{Color, DrawCommand, FontWeight, InputEvent, Rect, TextAlign, UiEventKind};
+use sjk_ui::{InputEvent, UiEventKind};
 use std::time::Instant;
 use winit::event::{ElementState, KeyEvent};
 use winit::keyboard::{KeyCode, PhysicalKey};
@@ -48,10 +48,8 @@ const EDIT_TOKEN: u16 = 965;
 /// Which look the dialog is drawn in, following `ui_menuStyle`.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub(crate) enum Look {
-    /// The modern panel.
-    #[default]
-    Modern,
     /// The classic+ pop-up, with the retail menu art it can draw.
+    #[default]
     Classic,
     /// The SJK UI's pop-up card.
     Sjk,
@@ -485,41 +483,15 @@ impl TextDialog {
         })
     }
 
-    /// Draw the Report a bug button centred at the bottom of the screen.
+    /// Draw the Report a bug button centred at the bottom of the screen (the
+    /// classic menus only; the SJK UI has it on its Sol JK page).
     pub(crate) fn append_launcher(
         &mut self,
         vertices: &mut Vec<TextVertex>,
         font: &UiFont,
         viewport: [f32; 2],
     ) {
-        if self.look == Look::Classic {
-            self.append_launcher_classic(vertices, font, viewport);
-            return;
-        }
-        let s = crate::ui_scale::height_scale(viewport[1]);
-        let ui = &mut self.launcher;
-        ui.begin_transparent(viewport);
-        let width = 220.0 * s;
-        let height = 46.0 * s;
-        let rect = Rect::new(
-            (viewport[0] - width) * 0.5,
-            viewport[1] - height - 36.0 * s,
-            width,
-            height,
-        );
-        ui.button_styled(
-            LAUNCH_TOKEN,
-            "Report a bug",
-            rect,
-            ButtonStyle {
-                selected: false,
-                enabled: true,
-                accent: Some(Color::new(1.0, 0.45, 0.42, 1.0)),
-                badge: None,
-            },
-        );
-        ui.finish(0);
-        ui.append_text(vertices, font, viewport);
+        self.append_launcher_classic(vertices, font, viewport);
     }
 
     pub(crate) fn launcher_draw_list(&self) -> &sjk_ui::DrawList {
@@ -550,178 +522,7 @@ impl TextDialog {
             );
             return;
         }
-        if self.look == Look::Classic {
-            self.append_classic(&kind, vertices, font, viewport);
-            return;
-        }
-        let s = crate::ui_scale::height_scale(viewport[1]);
-        let ui = &mut self.ui;
-        ui.begin_transparent(viewport);
-        let theme = ui.theme();
-        let _ = ui.draw_list_mut().push(DrawCommand::SolidRect {
-            rect: Rect::new(0.0, 0.0, viewport[0], viewport[1]),
-            color: Color::new(0.0, 0.0, 0.0, 0.45),
-        });
-        let width = (viewport[0] - 32.0 * s).min(780.0 * s);
-        let pad = 24.0 * s;
-        let line = 24.0 * s;
-        let box_height = LINES as f32 * line + 20.0 * s;
-        let height = pad * 2.0 + 40.0 * s + 26.0 * s + box_height + 30.0 * s + 22.0 * s + 56.0 * s;
-        let card = Rect::new(
-            (viewport[0] - width) * 0.5,
-            (viewport[1] - height) * 0.5,
-            width,
-            height,
-        );
-        ui.panel(card);
-        let left = card.x + pad;
-        let inner = card.width - pad * 2.0;
-        let mut y = card.y + pad;
-        let (title, subject, accent) = match &kind {
-            Kind::Report => (
-                "Report a bug",
-                "What went wrong? Where were you, and what did you expect?".to_owned(),
-                Color::new(1.0, 0.45, 0.42, 1.0),
-            ),
-            Kind::Note { subject } => (
-                "Note for Claude",
-                subject.clone(),
-                Color::new(1.0, 0.78, 0.36, 1.0),
-            ),
-            Kind::PlayerReport { subject, .. } => (
-                "Report a player",
-                subject.clone(),
-                Color::new(1.0, 0.478, 0.239, 1.0),
-            ),
-        };
-        let _ = ui.draw_list_mut().push(DrawCommand::SolidRect {
-            rect: Rect::new(card.x, card.y + 14.0 * s, 4.0 * s, 40.0 * s),
-            color: accent,
-        });
-        ui.text(
-            title,
-            Rect::new(left, y, inner, 36.0 * s),
-            26.0 * s,
-            theme.foreground,
-            FontWeight::Semibold,
-            0.0,
-        );
-        y += 40.0 * s;
-        let room = (inner / (14.0 * s * 0.55)) as usize;
-        let subject = clip(&subject, room);
-        ui.text(
-            &subject,
-            Rect::new(left, y, inner, 22.0 * s),
-            14.0 * s,
-            theme.muted,
-            FontWeight::Regular,
-            0.0,
-        );
-        y += 26.0 * s;
-        let field = Rect::new(left, y, inner, box_height);
-        let focused = self.focus == Focus::Field;
-        ui.text_field(field, focused);
-        ui.hit_region(FIELD_TOKEN, field);
-        let size = 16.0 * s;
-        let caret = focused && (self.epoch.elapsed().as_millis() / 500).is_multiple_of(2);
-        if self.text.is_empty() && !focused {
-            ui.text(
-                "Type here",
-                Rect::new(left + 14.0 * s, y + 10.0 * s, inner - 28.0 * s, line),
-                size,
-                theme.muted,
-                FontWeight::Regular,
-                0.0,
-            );
-        } else {
-            let mut lines = wrap_to(&self.text, font, size, 0.0, inner - 28.0 * s);
-            if caret && let Some(last) = lines.last_mut() {
-                last.push('|');
-            }
-            let first = lines.len().saturating_sub(LINES);
-            for (row, text) in lines[first..].iter().enumerate() {
-                ui.text(
-                    text,
-                    Rect::new(
-                        left + 14.0 * s,
-                        y + 10.0 * s + row as f32 * line,
-                        inner - 28.0 * s,
-                        line,
-                    ),
-                    size,
-                    theme.foreground,
-                    FontWeight::Regular,
-                    0.0,
-                );
-            }
-        }
-        y += box_height + 8.0 * s;
-        let count = format!("{} / {}", self.text.chars().count(), limit(&kind));
-        ui.text_aligned(
-            &count,
-            Rect::new(left, y, inner, 20.0 * s),
-            12.0 * s,
-            theme.muted,
-            FontWeight::Regular,
-            0.0,
-            TextAlign::End,
-        );
-        let hint = match kind {
-            Kind::Report => "Letters, digits, spaces and . , ! ? ' - : ( ) only",
-            Kind::Note { .. } => "Saved and sent with a screenshot to the SJK team",
-            Kind::PlayerReport { .. } => {
-                "What happened? Sent to the SJK team with who, where and when"
-            }
-        };
-        ui.text(
-            hint,
-            Rect::new(left, y, inner - 120.0 * s, 20.0 * s),
-            12.0 * s,
-            theme.muted,
-            FontWeight::Regular,
-            0.0,
-        );
-        y += 30.0 * s;
-        if !self.message.is_empty() {
-            ui.text(
-                &self.message,
-                Rect::new(left, y, inner, 20.0 * s),
-                13.0 * s,
-                Color::new(1.0, 0.45, 0.4, 1.0),
-                FontWeight::Semibold,
-                0.0,
-            );
-        }
-        y += 22.0 * s;
-        let button = 150.0 * s;
-        let cancel = Rect::new(card.right() - pad - button, y, button, 44.0 * s);
-        let send = Rect::new(cancel.x - 12.0 * s - button, y, button, 44.0 * s);
-        ui.button_styled(
-            SEND_TOKEN,
-            "Send",
-            send,
-            ButtonStyle {
-                selected: self.focus == Focus::Send,
-                enabled: true,
-                accent: Some(accent),
-                badge: None,
-            },
-        );
-        ui.button(CANCEL_TOKEN, "Cancel", cancel, self.focus == Focus::Cancel);
-        ui.text(
-            "Enter sends, Escape cancels",
-            Rect::new(left, y, send.x - left - 12.0 * s, 44.0 * s),
-            12.0 * s,
-            theme.muted,
-            FontWeight::Regular,
-            0.0,
-        );
-        ui.finish(match self.focus {
-            Focus::Field => FIELD_TOKEN,
-            Focus::Send => SEND_TOKEN,
-            Focus::Cancel => CANCEL_TOKEN,
-        });
-        ui.append_text(vertices, font, viewport);
+        self.append_classic(&kind, vertices, font, viewport);
     }
 
     /// Whether the dialog is drawn as the SJK UI's card.

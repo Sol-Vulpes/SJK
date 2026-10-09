@@ -9,7 +9,11 @@ struct LampGrid { origin: vec4<i32>, counts: vec4<u32>, cell: vec4<f32>, offsets
     let pitch = resolution+2u;
     let tile = id.xy/pitch;
     let lamp = tile.x+tile.y*lamps.offsets.w;
-    if lamp>=lamps.counts.w { textureStore(distances,id.xy,vec4(0.0)); return; }
+    // Mover door tiles (`mover_occlusion.wgsl`) start unblocked until traced.
+    if lamp>=lamps.counts.w {
+        textureStore(distances,id.xy,vec4(select(0.0,1e20,lamp<lamps.counts.w+lamps.selection.w)));
+        return;
+    }
     let pixel = vec2<f32>(id.xy%pitch)-1.0;
     let direction = lamp_octa_direction((pixel+0.5)/f32(resolution)*2.0-1.0);
     let source = bitcast<vec4<f32>>(data[lamp*5u]);

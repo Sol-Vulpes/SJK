@@ -6,51 +6,42 @@
 //! `cg_ents.c:2890-2898`, where `SOLID_BMODEL` selects `inlineDrawModel`.
 
 use super::scene_flatten::FlattenedScene;
-use super::world_props::{self, Leaf};
 use super::{ActorDraw, ActorInstance};
 use sjk_bsp::Bsp;
 
 use sjk_client::{LegacyMoverPresentation, legacy_present_mover};
 use sjk_protocol::Snapshot;
-use std::time::Instant;
 
 #[path = "brush_scene.rs"]
 mod scene;
 pub(crate) use scene::append_frame;
 
-/// One renderable partition of the map's existing mesh: an inline model,
-/// or a detached world prop (`model_index` none).
+/// One renderable partition of the map's existing mesh: an inline model.
 pub(crate) struct Mesh {
     pub(crate) model_index: Option<usize>,
+    /// The world box the model can move through (`mover_occlusion::reach`).
+    pub(crate) reach: [[f32; 3]; 2],
+    /// The clusters and areas `reach` touches, to tell a mover the server removed from one
+    /// it left out of the snapshot (`mover_occlusion::Sight`).
+    pub(crate) sight: crate::world_materials::mover_occlusion::Sight,
     pub(crate) draws: Vec<ActorDraw>,
 }
 
-/// Map-initialized mover meshes plus an O(1) inline-model lookup table and
-/// the detached world props that share the mover draw path.
+/// Map-initialized mover meshes plus an O(1) inline-model lookup table.
 pub(crate) struct Catalog {
     pub(crate) meshes: Vec<Mesh>,
     mesh_by_model: Vec<Option<usize>>,
-    props: Vec<Leaf>,
-}
-
-impl Catalog {
-    /// The map's gate prop, if it has one: the first authored prop (see
-    /// `menu_backdrop::routes`).
-    pub(crate) fn gate(&self) -> Option<&Leaf> {
-        self.props.first()
-    }
 }
 
 /// An ET_MOVER evaluated at the current presentation time.
 pub(crate) type Presented = LegacyMoverPresentation;
 
-/// Build reusable draw ranges for all inline models and detach the map's
-/// world props. Geometry, material indices, shader stages, and lightmaps
-/// remain owned by the world pipeline.
-pub(crate) fn build_catalog(bsp: &Bsp, flattened: &mut FlattenedScene) -> Catalog {
-    let detached = world_props::detach(bsp, flattened);
+/// Build reusable draw ranges for all inline models. Geometry, material
+/// indices, shader stages, and lightmaps remain owned by the world pipeline.
+pub(crate) fn build_catalog(bsp: &Bsp, flattened: &FlattenedScene) -> Catalog {
+    let spawns = spawn_entities(bsp);
     let mut mesh_by_model = vec![None; bsp.render().models().len()];
-    let mut meshes = (1..bsp.render().models().len())
+    let meshes = (1..bsp.render().models().len())
         .filter_map(|model_index| {
             let model = bsp.render().inline_model(model_index)?;
             let draws = flattened
@@ -65,8 +56,17 @@ pub(crate) fn build_catalog(bsp: &Bsp, flattened: &mut FlattenedScene) -> Catalo
                     material: draw.material,
                 })
                 .collect::<Vec<_>>();
+            let entity = spawns.get(&model_index);
+            let bounds = &bsp.render().models()[model_index];
+            let (lower, upper) = crate::world_materials::mover_occlusion::reach(
+                entity,
+                glam::Vec3::from_array(bounds.minimums),
+                glam::Vec3::from_array(bounds.maximums),
+            );
             (!draws.is_empty()).then_some(Mesh {
                 model_index: Some(model_index),
+                reach: [lower.to_array(), upper.to_array()],
+                sight: crate::world_materials::mover_occlusion::Sight::new(bsp, lower, upper),
                 draws,
             })
         })
@@ -76,18 +76,30 @@ pub(crate) fn build_catalog(bsp: &Bsp, flattened: &mut FlattenedScene) -> Catalo
             mesh_by_model[model_index] = Some(mesh_index);
         }
     }
-    let props = detached
-        .into_iter()
-        .map(|detached| {
-            let (mesh, leaf) = detached.placed(meshes.len());
-            meshes.push(mesh);
-            leaf
-        })
-        .collect();
     Catalog {
         meshes,
         mesh_by_model,
-        props,
+    }
+}
+
+/// The map's entities that spawn a brush model, by inline model index (`"model" "*N"`).
+fn spawn_entities(bsp: &Bsp) -> std::collections::HashMap<usize, sjk_entity::Entity> {
+    let Ok(entities) = sjk_entity::parse_entity_lump(bsp.entities()) else {
+        return Default::default();
+    };
+    entities
+        .into_iter()
+        .filter_map(|entity| {
+            let model = entity.get("model")?.strip_prefix('*')?.parse().ok()?;
+            Some((model, entity))
+        })
+        .collect()
+}
+
+impl Catalog {
+    /// The mesh drawing inline model `model_index`, if it has surfaces.
+    pub(crate) fn mesh_of(&self, model_index: usize) -> Option<usize> {
+        self.mesh_by_model.get(model_index).copied().flatten()
     }
 }
 
@@ -109,18 +121,9 @@ pub(crate) fn collect(snapshot: &Snapshot, at_time: i32, output: &mut Vec<Presen
 fn append_instances_with_views(
     presented: &[Presented],
     catalog: &Catalog,
-    props_open: f32,
     groups: &mut [Vec<ActorInstance>],
     view_flags: impl Fn(u16) -> u32,
 ) {
-    const IDENTITY: [f32; 4] = [0.0, 0.0, 0.0, 1.0];
-    for leaf in &catalog.props {
-        groups[leaf.mesh].push(ActorInstance::new(
-            leaf.offset(props_open),
-            IDENTITY,
-            [1.0; 3],
-        ));
-    }
     for mover in presented.iter().filter(|mover| mover.visible) {
         let Some(mesh_index) = catalog
             .mesh_by_model

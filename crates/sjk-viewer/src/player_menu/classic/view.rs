@@ -75,7 +75,9 @@ const SWATCH_ART: [ArtPiece; 6] = [
 ];
 
 impl PlayerMenu {
-    pub(in crate::player_menu) fn append_classic(
+    /// Draw the classic profile pages at `reveal` opacity; the SJK UI draws its
+    /// own view (`append_sjk`).
+    pub(crate) fn append(
         &mut self,
         vertices: &mut Vec<TextVertex>,
         font: &UiFont,

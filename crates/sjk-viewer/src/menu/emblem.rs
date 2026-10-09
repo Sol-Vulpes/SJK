@@ -1,7 +1,7 @@
 //! SJK's emblem on the main menus: the gold starburst with the JK blade.
 //!
 //! The classic main page shows it in the ring, where retail played its
-//! `video/ja01` logo, and the modern main page above its title. It is bundled
+//! `video/ja01` logo, and the SJK UI's main page in its holo ring. It is bundled
 //! (`assets/branding`, made by `scripts/sjk_branding.py`), so it shows with
 //! or without the player's retail artwork.
 //!

@@ -2,8 +2,8 @@
 //! and bind group per retail image, outside the shared icon atlas.
 //!
 //! The pieces are full-screen backgrounds and frames (up to 1024 square in
-//! retail, more in HD packs); the atlas is sized for 128-pixel icons, a
-//! banner and one map preview, and its cells are spoken for. A texture per
+//! retail, more in HD packs); the atlas is sized for 128-pixel icons, and its
+//! cells are spoken for. A texture per
 //! piece keeps the atlas untouched and lets HD replacements keep their
 //! resolution. The shape renderer switches bind groups between draw runs
 //! only where a textured quad names a different source, so the draw order

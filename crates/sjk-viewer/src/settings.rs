@@ -174,6 +174,8 @@ enum Pick {
     Value(&'static str),
     /// A display mode.
     Mode(DisplayMode),
+    /// A graphics quality level.
+    Quality(crate::graphics_quality::Level),
 }
 
 /// A classic+ dropdown open on row `row`: its choices, the highlighted one
@@ -334,18 +336,13 @@ impl SettingsMenu {
     }
 
     /// Whether First setup's rows are on show: its classic group (the SJK UI's
-    /// category or pop-up), or the modern FIRST SETUP tab.
+    /// category or pop-up), or the tabbed screen's FIRST SETUP tab.
     pub(crate) fn on_first_setup(&self) -> bool {
         match self.section {
             Section::Group(group) => group == Group::Quick,
             Section::General => self.tab == QUICK_TAB,
             _ => false,
         }
-    }
-
-    /// Index of the tab that carries the "Key bindings" row.
-    pub(crate) fn keybinds_tab() -> usize {
-        KEYBINDS_TAB
     }
 
     /// Index of the tab captioned `caption` (`"AUDIO"`), if there is one.
@@ -754,6 +751,14 @@ impl SettingsMenu {
                 self.refresh(console);
                 return;
             }
+            (ValueKind::Quality, _) => {
+                // Custom settings step from the level they are nearest.
+                crate::graphics_quality::Level::nearest(console)
+                    .step(direction)
+                    .apply(console);
+                self.refresh(console);
+                return;
+            }
             _ => return,
         };
         console.set_cvar(setting.cvar, &next);
@@ -841,6 +846,7 @@ impl SettingsMenu {
                 ValueKind::DisplayMode => display.label().to_owned(),
                 ValueKind::HudPicker => hud.clone(),
                 ValueKind::WheelPages => wheel_pages_text(console),
+                ValueKind::Quality => crate::graphics_quality::shown(console).to_owned(),
                 ValueKind::Bool => toggle_text(console, setting.cvar),
                 _ => row_text(console, setting),
             }));
@@ -866,6 +872,34 @@ fn section_settings(section: Section, tab: usize) -> &'static [Setting] {
         },
         Section::Group(group) => group.rows(),
         Section::Search => search::rows(),
+    }
+}
+
+/// Whether `cvar` has a row on a general or renderer tab that can show
+/// `value`: a switch's 0 or 1, or a number within its slider's range.
+#[cfg(test)]
+pub(crate) fn row_takes(cvar: &str, value: &str) -> bool {
+    let row = (0..TABS.len())
+        .map(settings)
+        .chain([
+            RENDER_IMAGE,
+            RENDER_LIGHTING,
+            RENDER_SHADOWS,
+            RENDER_WEATHER,
+        ])
+        .flatten()
+        .find(|setting| setting.cvar.eq_ignore_ascii_case(cvar));
+    let Some(row) = row else {
+        return false;
+    };
+    let number = value.parse::<f64>();
+    match (row.kind, number) {
+        (ValueKind::Bool, Ok(number)) => number == 0.0 || number == 1.0,
+        (ValueKind::Integer { min, max, .. }, Ok(number)) => {
+            number.fract() == 0.0 && (min as f64..=max as f64).contains(&number)
+        }
+        (ValueKind::Float { min, max, .. }, Ok(number)) => (min..=max).contains(&number),
+        _ => false,
     }
 }
 
@@ -983,36 +1017,6 @@ mod tests {
         assert_eq!(float_text(-2.5), "-2.5");
     }
 
-    /// First setup's Menu style row, picked away from the classic panel,
-    /// carries on as the modern FIRST SETUP tab, not Interface, which also
-    /// has the row.
-    #[test]
-    fn first_setup_carries_on_as_its_modern_tab() {
-        let (_directory, console) = console();
-        let mut menu = SettingsMenu::new();
-        menu.open_classic_group(
-            &console,
-            Group::Quick,
-            crate::menu::classic::panel::Frame::Main,
-        );
-        menu.select_cvar(crate::menu::style::CVAR);
-        menu.leave_classic();
-        menu.continue_modern(&console);
-        assert_eq!((menu.section, menu.tab), (Section::General, QUICK_TAB));
-        assert_eq!(menu.rows()[menu.selected].cvar, crate::menu::style::CVAR);
-        // Interface's own row still carries on as Interface's tab.
-        menu.open_classic_group(
-            &console,
-            Group::Interface,
-            crate::menu::classic::panel::Frame::Main,
-        );
-        menu.select_cvar(crate::menu::style::CVAR);
-        menu.leave_classic();
-        menu.continue_modern(&console);
-        assert_ne!(menu.tab, QUICK_TAB);
-        assert_eq!(menu.rows()[menu.selected].cvar, crate::menu::style::CVAR);
-    }
-
     const SECTIONS: [(Section, usize); 2] = [
         (Section::General, TABS.len()),
         (Section::Renderer, RENDERER_TABS.len()),
@@ -1047,13 +1051,14 @@ mod tests {
         let (_directory, console) = console();
         for setting in rows() {
             // Rows whose value is not one cvar's (resolution, display mode, HUD,
-            // the quick wheel's pages).
+            // the quick wheel's pages, graphics quality).
             if matches!(
                 setting.kind,
                 ValueKind::Resolution
                     | ValueKind::DisplayMode
                     | ValueKind::HudPicker
                     | ValueKind::WheelPages
+                    | ValueKind::Quality
             ) {
                 continue;
             }

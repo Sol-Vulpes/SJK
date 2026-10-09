@@ -12,13 +12,36 @@ pub(super) fn new(
     scene: [u32; 2],
     light_divisor: u32,
     lamp_set: &crate::lamp_lights::LampSet,
+    occluders: &[super::super::mover_occlusion::Occluder],
+    cache_pages: Option<&super::super::lamp_cache::Pages>,
     bounds: [Vec3; 2],
     domain: &super::super::gi_probe_domain::Domain,
 ) -> Runtime {
-    let mut lamps = crate::lamp_lights::Gpu::new(device, lamp_set);
-    if let Some(geometry) = gi.and_then(|gi| gi.fixtures.as_ref()) {
+    // `SJK_MOVER_OCCLUSION=0` leaves movers out of lamp shadows, for comparisons; the far
+    // sun cascade still follows them. Door tiles need the traced atlas.
+    let fixtures = gi.and_then(|gi| gi.fixtures.as_ref());
+    let door_occluders = if fixtures.is_none()
+        || std::env::var_os("SJK_MOVER_OCCLUSION").is_some_and(|value| value == "0")
+    {
+        &[][..]
+    } else {
+        occluders
+    };
+    let mut lamps = crate::lamp_lights::Gpu::new(device, lamp_set, door_occluders);
+    if let Some(geometry) = fixtures {
         lamps.prepare_visibility(device, queue, geometry);
     }
+    // Every shadow-casting mover is tracked, door tiles or not: the far cascade redraws
+    // when one moves.
+    let doors = lamps.take_doors();
+    let movers = super::super::mover_occlusion::gpu::Runtime::new(
+        device,
+        &lamps,
+        doors,
+        &lamp_set.lamps,
+        occluders,
+        cache_pages,
+    );
     let lamp_shadows = settings
         .day
         .enabled
@@ -72,6 +95,7 @@ pub(super) fn new(
     let far = settings.world.then(|| FarCascade {
         cascade: cascade("SJK far sun cascade"),
         rendered: std::cell::Cell::new(None),
+        movers: std::cell::Cell::new((0, None)),
     });
     let close = settings.world.then(|| cascade("SJK close sun cascade"));
     let held = settings.world.then(|| {
@@ -355,6 +379,7 @@ pub(super) fn new(
         sampler,
         bounds,
         lamps,
+        movers,
         lamp_shadows,
         caster,
         receiver_pipelines,

@@ -35,8 +35,8 @@ During a live map change the old world is only a backdrop beneath a loading
 notice: it has no local gameplay authority. Intermission remains owned by the
 remote session, including its normal camera, scores, chat and ready controls.
 The viewer does not depend on the dedicated-server crate or construct a native
-game while loading maps. Early entry through the menu gate still uses the
-movement-only predictor before the remote session attaches.
+game while loading maps. Early entry into a joined world before a server player
+exists still uses the movement-only predictor.
 
 The waiting transport sends neutral commands on a separate timer and continues
 receiving lifecycle events and messages. A matching prepared map can be reused
@@ -47,8 +47,10 @@ CPU preparation and GPU installation own immutable destination inputs. Supersedi
 transitions discard their channels; GPU construction checks cancellation between
 build stages. Only a completed world is adopted. A prepared gamestate's content
 selection must match before attaching a session without rebuilding, and a restart
-must receive a fresh snapshot before attachment. The FFA3 gate hands over its
-actual prepared world rather than constructing a duplicate at entry. The parked
+must receive a fresh snapshot before attachment. A join from the menu hands over
+the destination world prepared while it connected
+([portal.rs](../crates/sjk-viewer/src/portal.rs)) rather than constructing a
+duplicate at entry. The parked
 menu world remains separately owned for cancellation/disconnection.
 
 PK3 checksum inventory uses the validated ZIP central directory, retaining archive

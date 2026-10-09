@@ -2,7 +2,7 @@
 
 use sjk_shell::{CvarDefinition, CvarFlags, CvarRegistry};
 use std::sync::Arc;
-use std::sync::atomic::{AtomicI64, Ordering};
+use std::sync::atomic::{AtomicI64, AtomicU64, Ordering};
 
 /// `cl_maxpackets` default: one packet per user command (125 a second), as
 /// JoF EJK. Stock's 30 and EternalJK's 63 batch two to four commands a packet.
@@ -39,6 +39,26 @@ impl IntegerSetting {
     }
 }
 
+/// Change counter for a cvar that frame code reads again only after it changes.
+pub(super) struct RevisionSetting(Arc<AtomicU64>);
+
+impl RevisionSetting {
+    /// Bind before config loading so an archived value counts as a change.
+    pub(super) fn bind(cvars: &mut CvarRegistry, name: &str) -> Result<Self, sjk_shell::CvarError> {
+        let revision = Arc::new(AtomicU64::new(0));
+        let changed = Arc::clone(&revision);
+        cvars.on_change(name, move |_| {
+            changed.fetch_add(1, Ordering::Relaxed);
+        })?;
+        Ok(Self(revision))
+    }
+
+    /// Read the change count without allocation or locking.
+    pub(super) fn value(&self) -> u64 {
+        self.0.load(Ordering::Relaxed)
+    }
+}
+
 pub(super) fn register_daily_cvars(cvars: &mut CvarRegistry) -> Result<(), sjk_shell::CvarError> {
     crate::frame_target::aa::register(cvars)?;
     crate::frame_target::scale::register(cvars)?;
@@ -58,6 +78,12 @@ pub(super) fn register_daily_cvars(cvars: &mut CvarRegistry) -> Result<(), sjk_s
             2_i64,
             archive,
             "Shader remaps: 0 off, 1 skip player textures, 2 all (default, as EternalJK)",
+        ),
+        CvarDefinition::new(
+            crate::remap_blocked_maps::CVAR,
+            "",
+            archive,
+            "Maps whose server shader remaps are ignored, as with cg_remaps 0: mp/ffa4 mp/duel6",
         ),
         CvarDefinition::new(
             "cg_forceEnemyModel",
@@ -179,12 +205,6 @@ pub(super) fn register_daily_cvars(cvars: &mut CvarRegistry) -> Result<(), sjk_s
             "Synchronize presentation (0/1)",
         ),
         CvarDefinition::new(
-            "ui_accent",
-            "ember",
-            archive,
-            "Menu accent: ember, amber, blue, green, violet, neutral, or RRGGBB hex",
-        ),
-        CvarDefinition::new(
             crate::menu_widgets::MenuContrast::CVAR,
             "standard",
             archive,
@@ -194,7 +214,7 @@ pub(super) fn register_daily_cvars(cvars: &mut CvarRegistry) -> Result<(), sjk_s
             crate::menu::style::CVAR,
             crate::menu::style::MenuStyle::DEFAULT_NAME,
             archive,
-            "Menu layout: sjk (the SJK UI), classic (after the original Jedi Academy menus) or modern",
+            "Menu layout: sjk (the SJK UI) or classic (after the original Jedi Academy menus)",
         ),
         CvarDefinition::new(
             "r_gamma",
@@ -234,7 +254,7 @@ pub(super) fn register_daily_cvars(cvars: &mut CvarRegistry) -> Result<(), sjk_s
             "cg_hudScale",
             0.7_f64,
             archive,
-            "Size multiplier for the modern HUD widgets (0.25 to 2)",
+            "Size multiplier for the HUD (0.25 to 2)",
         ),
         CvarDefinition::new(
             "cg_thirdPersonRange",
@@ -298,7 +318,8 @@ pub(super) fn register_daily_cvars(cvars: &mut CvarRegistry) -> Result<(), sjk_s
             "com_maxfps",
             -1_i64,
             archive | CvarFlags::OMIT_DEFAULT,
-            "Maximum rendered frames per second; -1 matches the monitor's refresh rate              (125 when unknown), 0 is uncapped",
+            "Maximum rendered frames per second; -1 (AUTO) is 125, or the monitor's refresh \
+             rate with com_maxfpsMonitor 1; 0 is uncapped",
         ),
         CvarDefinition::new("cg_drawFPS", false, archive, "Display FPS and frame time"),
         CvarDefinition::new(
@@ -368,6 +389,20 @@ pub(super) fn register_daily_cvars(cvars: &mut CvarRegistry) -> Result<(), sjk_s
             true,
             archive,
             "Run by default; the walk key walks",
+        ),
+        // JoF EJK's `cl_idrive` (`cl_input.cpp`, default 0) and SJK's
+        // `cl_idriveDelay` ([`crate::input::idrive`]).
+        CvarDefinition::new(
+            crate::input::idrive::CVAR,
+            0_i64,
+            archive,
+            "Last-pressed movement key wins: 0 off, 1 all directions, 2 jump/crouch only",
+        ),
+        CvarDefinition::new(
+            crate::input::idrive::DELAY_CVAR,
+            0_i64,
+            archive,
+            "cl_idrive: milliseconds a reversal stays neutral before the new key wins (0-1000)",
         ),
         // Retail defaults: `codemp/cgame/cg_xcvar.h` cg_marks 1, cg_shadows 1,
         // cg_drawGun 1.
@@ -652,7 +687,13 @@ pub(super) fn register_daily_cvars(cvars: &mut CvarRegistry) -> Result<(), sjk_s
             crate::scoreboard::style::CVAR,
             crate::scoreboard::style::ScoreboardStyle::DEFAULT_NAME,
             archive,
-            "Scoreboard layout: auto (sjk with the SJK UI's menus, else classic), sjk, classic (after the retail scoreboard), or modern",
+            "Scoreboard layout: auto (sjk with the SJK UI's menus, else classic), sjk, or classic (after the retail scoreboard)",
+        ),
+        CvarDefinition::new(
+            crate::scoreboard::style::COMPACT_CVAR,
+            true,
+            archive,
+            "SJK scoreboard: thin rows, so every player fits in one column, as wide as the names and centred",
         ),
         CvarDefinition::new(
             "cg_smallScoreboard",
@@ -694,7 +735,7 @@ pub(super) fn register_daily_cvars(cvars: &mut CvarRegistry) -> Result<(), sjk_s
             "com_maxfpsDefaultVersion",
             0_i64,
             archive,
-            "Internal migration marker for the refresh-rate com_maxfps default",
+            "Internal migration marker for the AUTO com_maxfps default",
         ),
         CvarDefinition::new(
             "cl_bindDefaultsVersion",
@@ -731,6 +772,12 @@ pub(super) fn register_daily_cvars(cvars: &mut CvarRegistry) -> Result<(), sjk_s
             0_i64,
             archive,
             "Internal migration marker for the ejk camera style default",
+        ),
+        CvarDefinition::new(
+            "cg_killfeedDefaultVersion",
+            0_i64,
+            archive,
+            "Internal migration marker for the kill feed being on by default",
         ),
     ];
     for definition in definitions {

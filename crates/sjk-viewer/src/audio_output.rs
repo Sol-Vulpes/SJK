@@ -7,12 +7,14 @@ use sjk_audio::{
 };
 use std::sync::{
     Arc,
-    atomic::{AtomicU32, AtomicU64, Ordering},
-    mpsc::{SyncSender, sync_channel},
+    atomic::{AtomicBool, AtomicU32, AtomicU64, Ordering},
+    mpsc::{Receiver, SyncSender, sync_channel},
 };
 use std::thread::{self, JoinHandle};
 use std::time::{Duration, Instant};
 
+#[path = "audio_feed.rs"]
+mod feed;
 #[path = "audio_pending.rs"]
 mod pending;
 
@@ -191,8 +193,12 @@ pub(super) struct AudioOutput {
     _stream: Option<OutputStream>,
     pub(super) description: String,
     commands: HeapProd<AudioCommand>,
+    /// Whether the callback still drains `commands`; a stopped stream is not waited on.
+    feed: feed::Feed,
     decode_jobs: Option<SyncSender<DecodeJob>>,
     decoder: Option<JoinHandle<()>>,
+    /// Set as the output is dropped: the decoder stops waiting for queue room.
+    closing: Arc<AtomicBool>,
     pub(super) stats: Arc<OutputStats>,
     pub(super) show: bool,
     pub(super) started: std::collections::VecDeque<SoundHandle>,
@@ -222,48 +228,31 @@ impl AudioOutput {
         };
         let description = describe_default_device();
         crate::log::progress(format_args!("audio output: {description}"));
+        let (mut audio, source) = Self::assemble(config, description)?;
+        if let Err(error) = output.play_raw(source) {
+            crate::log::progress(format_args!("audio mixer could not start: {error}"));
+            return None;
+        }
+        audio._stream = Some(stream);
+        Some(audio)
+    }
+
+    /// The queues, the decode worker and the source the device's callback pulls.
+    fn assemble(config: MixerConfig, description: String) -> Option<(Self, MixerSource)> {
         let (command_producer, command_consumer) = HeapRb::new(COMMANDS).split();
         let (registration_producer, registration_consumer) = HeapRb::new(COMMANDS).split();
         let (decode_sender, decode_receiver) = sync_channel::<DecodeJob>(DECODE_JOBS);
         let stats = Arc::new(OutputStats::default());
-        let decoder_stats = Arc::clone(&stats);
-        let decoder = thread::Builder::new()
-            .name("sjk-audio-decode".into())
-            .spawn(move || {
-                let mut registrations = registration_producer;
-                while let Ok(job) = decode_receiver.recv() {
-                    let mut action = match job {
-                        DecodeJob::Sound {
-                            handle,
-                            bytes,
-                            extension,
-                        } => DecodedAction::Register(
-                            handle,
-                            decode_encoded(&bytes, &extension, SAMPLE_RATE).unwrap_or_else(|_| {
-                                decoder_stats
-                                    .decode_failures
-                                    .fetch_add(1, Ordering::Relaxed);
-                                DecodedSound::silence()
-                            }),
-                        ),
-                        DecodeJob::StopMusic => DecodedAction::StopMusic,
-                        DecodeJob::StartMusic(intro, repeating) => {
-                            DecodedAction::StartMusic(intro, repeating)
-                        }
-                    };
-                    loop {
-                        match registrations.try_push(action) {
-                            Ok(()) => break,
-                            Err(returned) => {
-                                action = returned;
-                                thread::yield_now();
-                            }
-                        }
-                    }
-                }
-            })
-            .ok()?;
-        if let Err(error) = output.play_raw(MixerSource {
+        let closing = Arc::new(AtomicBool::new(false));
+        let decoder = {
+            let stats = Arc::clone(&stats);
+            let closing = Arc::clone(&closing);
+            thread::Builder::new()
+                .name("sjk-audio-decode".into())
+                .spawn(move || decode(&decode_receiver, registration_producer, &stats, &closing))
+                .ok()?
+        };
+        let source = MixerSource {
             mixer: Mixer::new(config),
             commands: command_consumer,
             registrations: registration_consumer,
@@ -272,24 +261,24 @@ impl AudioOutput {
             running: true,
             stats: Arc::clone(&stats),
             pending: pending::PendingStarts::new(),
-        }) {
-            crate::log::progress(format_args!("audio mixer could not start: {error}"));
-            return None;
-        }
-        Some(Self {
-            _stream: Some(stream),
+        };
+        let audio = Self {
+            _stream: None,
             description,
             commands: command_producer,
+            feed: feed::Feed::default(),
             decode_jobs: Some(decode_sender),
             decoder: Some(decoder),
+            closing,
             stats,
             show: false,
             started: std::collections::VecDeque::with_capacity(64),
             cache: std::cell::RefCell::new(Vec::new()),
-        })
+        };
+        Some((audio, source))
     }
 
-    pub(super) fn send(&mut self, mut command: AudioCommand) {
+    pub(super) fn send(&mut self, command: AudioCommand) {
         if self.show
             && let AudioCommand::Play(handle, _) = &command
         {
@@ -298,14 +287,14 @@ impl AudioOutput {
             }
             self.started.push_back(*handle);
         }
-        loop {
-            match self.commands.try_push(command) {
-                Ok(()) => return,
-                Err(returned) => {
-                    command = returned;
-                    thread::yield_now();
-                }
-            }
+        // Never wait for good on a callback that stopped (its device went away): the
+        // game would stop answering. Every frame sends its state again.
+        let pushed = self.feed.push(&mut self.commands, command, feed::PATIENCE);
+        if pushed == (feed::Pushed::Dropped { stopped: true }) {
+            crate::log::progress(format_args!(
+                "audio output stopped taking sound (its device went away?); sounds are \
+                 dropped until it resumes or snd_restart opens the output again"
+            ));
         }
     }
 
@@ -350,10 +339,44 @@ impl AudioOutput {
 impl Drop for AudioOutput {
     fn drop(&mut self) {
         self.decode_jobs.take();
+        self.closing.store(true, Ordering::Release);
         if let Some(decoder) = self.decoder.take() {
             let _ = decoder.join();
         }
         let _ = self.commands.try_push(AudioCommand::Shutdown);
+    }
+}
+
+/// The decode worker: decode each job and queue its registration for the callback, in
+/// order, until the jobs end or the output closes.
+fn decode(
+    jobs: &Receiver<DecodeJob>,
+    mut registrations: HeapProd<DecodedAction>,
+    stats: &OutputStats,
+    closing: &AtomicBool,
+) {
+    while let Ok(job) = jobs.recv() {
+        if closing.load(Ordering::Acquire) {
+            return;
+        }
+        let action = match job {
+            DecodeJob::Sound {
+                handle,
+                bytes,
+                extension,
+            } => DecodedAction::Register(
+                handle,
+                decode_encoded(&bytes, &extension, SAMPLE_RATE).unwrap_or_else(|_| {
+                    stats.decode_failures.fetch_add(1, Ordering::Relaxed);
+                    DecodedSound::silence()
+                }),
+            ),
+            DecodeJob::StopMusic => DecodedAction::StopMusic,
+            DecodeJob::StartMusic(intro, repeating) => DecodedAction::StartMusic(intro, repeating),
+        };
+        if !feed::push_until_closed(&mut registrations, action, closing, feed::PATIENCE) {
+            return;
+        }
     }
 }
 
@@ -420,4 +443,74 @@ fn apply_command(mixer: &mut Mixer, command: AudioCommand) -> bool {
         AudioCommand::Shutdown => return false,
     }
     true
+}
+
+#[cfg(test)]
+mod stopped_stream_tests {
+    use super::*;
+    use std::sync::mpsc::channel;
+
+    /// Long enough for the work below; the old endless waits never finished it.
+    const LIMIT: Duration = Duration::from_secs(20);
+
+    /// An output whose source no device pulls: the callback of a stream that ended.
+    fn detached() -> (AudioOutput, MixerSource) {
+        AudioOutput::assemble(
+            MixerConfig {
+                voices: VOICES,
+                loops: LOOPS,
+                sample_rate: SAMPLE_RATE,
+                loop_attenuation: sjk_client::legacy_sound_attenuation(0),
+                doppler: sjk_client::legacy_doppler_config(true),
+            },
+            "detached".into(),
+        )
+        .expect("decode worker starts")
+    }
+
+    #[test]
+    fn a_stopped_callback_does_not_hold_the_render_thread() {
+        let (done, finished) = channel();
+        std::thread::spawn(move || {
+            let (mut output, mut source) = detached();
+            // Several seconds of a live game's commands (a listener and gains each
+            // frame, a position for each entity of each snapshot), far past the queue.
+            for _ in 0..COMMANDS * 4 {
+                output.send(AudioCommand::Gains(0.0, 0.0));
+            }
+            let stalled = output.feed.stalled();
+            // A callback that drains the queue again (one mix block) ends the stall.
+            let _ = source.next();
+            output.send(AudioCommand::Gains(0.5, 0.25));
+            let _ = done.send((stalled, output.feed.stalled()));
+        });
+        assert_eq!(finished.recv_timeout(LIMIT), Ok((true, false)));
+    }
+
+    #[test]
+    fn dropping_the_output_does_not_wait_on_a_stopped_callback() {
+        let (done, finished) = channel();
+        std::thread::spawn(move || {
+            let (output, source) = detached();
+            let decoded = |count: u64| {
+                let started = Instant::now();
+                while output.stats.decode_failures.load(Ordering::Relaxed) < count {
+                    assert!(started.elapsed() < LIMIT, "decoder stalled at {count}");
+                    thread::sleep(Duration::from_millis(1));
+                }
+            };
+            // Fill the registration queue nothing drains, then give the decoder one
+            // more sound, which it holds waiting for room (`snd_restart`, quitting).
+            for index in 0..COMMANDS {
+                output.decode(SoundHandle(index as u32), b"none", "wav");
+            }
+            decoded(COMMANDS as u64);
+            output.decode(SoundHandle(COMMANDS as u32), b"none", "wav");
+            decoded(COMMANDS as u64 + 1);
+            drop(output);
+            drop(source);
+            let _ = done.send(());
+        });
+        assert_eq!(finished.recv_timeout(LIMIT), Ok(()));
+    }
 }

@@ -55,6 +55,9 @@ pub(super) enum ValueKind {
     /// The quick wheel's pages (`wheel.json`, not a cvar): Enter opens their
     /// editor ([`super::wheel_editor`]).
     WheelPages,
+    /// The graphics quality level ([`crate::graphics_quality`], not a cvar):
+    /// steps or lists the levels, each setting the renderer's costly cvars.
+    Quality,
 }
 
 #[derive(Clone, Copy)]
@@ -73,6 +76,11 @@ pub(crate) const RESOLUTIONS: &[&str] = &[
 ];
 pub(super) const VIDEO: &[Setting] = &[
     Setting {
+        label: "Graphics quality",
+        cvar: crate::graphics_quality::ROW_NAME,
+        kind: ValueKind::Quality,
+    },
+    Setting {
         label: "Resolution",
         cvar: "r_resolution",
         kind: ValueKind::Resolution,
@@ -88,13 +96,18 @@ pub(super) const VIDEO: &[Setting] = &[
         kind: ValueKind::Bool,
     },
     Setting {
-        label: "FPS cap (AUTO = monitor, 0 = off)",
+        label: "FPS cap (AUTO, 0 = off)",
         cvar: "com_maxfps",
         kind: ValueKind::Integer {
             min: -1,
             max: 2000,
             step: 25,
         },
+    },
+    Setting {
+        label: "Detect refresh rate",
+        cvar: crate::runtime_settings::MONITOR_CAP_CVAR,
+        kind: ValueKind::Bool,
     },
     Setting {
         label: "Field of view",
@@ -199,6 +212,11 @@ pub(super) const HUD_OPTIONS: &[Setting] = &[
         label: "Scoreboard style",
         cvar: crate::scoreboard::style::CVAR,
         kind: ValueKind::Choice(&crate::scoreboard::style::ScoreboardStyle::NAMES),
+    },
+    Setting {
+        label: "Compact SJK scoreboard",
+        cvar: crate::scoreboard::style::COMPACT_CVAR,
+        kind: ValueKind::Bool,
     },
     Setting {
         label: "Scoreboard client IDs",
@@ -385,6 +403,11 @@ pub(super) const HUD: &[Setting] = &[
         kind: ValueKind::Bool,
     },
     Setting {
+        label: "Kill feed",
+        cvar: "cg_killfeed",
+        kind: ValueKind::Bool,
+    },
+    Setting {
         label: "Chat",
         cvar: "cg_drawChat",
         kind: ValueKind::Bool,
@@ -439,6 +462,24 @@ pub(super) const CONTROLS: &[Setting] = &[
         label: "Always run",
         cvar: "cl_run",
         kind: ValueKind::Bool,
+    },
+    Setting {
+        label: "Last key wins (0 off, 1 all, 2 jump/crouch)",
+        cvar: crate::input::idrive::CVAR,
+        kind: ValueKind::Integer {
+            min: 0,
+            max: 2,
+            step: 1,
+        },
+    },
+    Setting {
+        label: "Last key wins delay (ms)",
+        cvar: crate::input::idrive::DELAY_CVAR,
+        kind: ValueKind::Integer {
+            min: 0,
+            max: crate::input::idrive::MAX_DELAY_MILLIS as i64,
+            step: 5,
+        },
     },
 ];
 pub(super) const GAME: &[Setting] = &[
@@ -534,11 +575,6 @@ pub(super) const GAME: &[Setting] = &[
         },
     },
     Setting {
-        label: "Menu accent",
-        cvar: "ui_accent",
-        kind: ValueKind::Choice(&["ember", "amber", "blue", "green", "violet", "neutral"]),
-    },
-    Setting {
         label: "Menu contrast",
         cvar: "ui_menuContrast",
         kind: ValueKind::Choice(&["off", "standard", "strong"]),
@@ -604,8 +640,7 @@ pub(super) const NETWORK: &[Setting] = &[
         },
     },
 ];
-/// Text size and spacing, and the console's style. Menu rows keep their layout;
-/// modern console rows follow `con_lineSpacing`.
+/// Text size and spacing, and the console's style. Menu rows keep their layout.
 pub(super) const TEXT: &[Setting] = &[
     Setting {
         label: "Console style",
@@ -635,15 +670,6 @@ pub(super) const TEXT: &[Setting] = &[
         cvar: "con_scale",
         kind: ValueKind::Float {
             min: 0.5,
-            max: 2.0,
-            step: 0.05,
-        },
-    },
-    Setting {
-        label: "Console line spacing",
-        cvar: "con_lineSpacing",
-        kind: ValueKind::Float {
-            min: 0.8,
             max: 2.0,
             step: 0.05,
         },

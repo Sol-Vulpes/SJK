@@ -1,5 +1,5 @@
 //! What the SJK UI's in-game menu ([`super::sjk_view`]) does where it differs
-//! from the modern menu: its main page's entries, its Vote and Leave pages,
+//! from the shared pages: its main page's entries, its Vote and Leave pages,
 //! Escape returning to the entry that opened a page, and the match card read
 //! from the live session. Siege's classes, the call-vote lists, Team's rows and
 //! SJK's keep the shared actions (`game_menu_actions.rs`).
@@ -15,7 +15,7 @@ const PERS_RANK: usize = 2;
 
 impl GpuState {
     /// Activate the focused row of an SJK UI page whose rows are its own.
-    /// Returns false for rows that act as in the modern menu.
+    /// Returns false for rows that keep the shared actions.
     pub(crate) fn activate_sjk_ui_row(&mut self) -> bool {
         let row = self.game_menu_row;
         match self.game_menu_page {

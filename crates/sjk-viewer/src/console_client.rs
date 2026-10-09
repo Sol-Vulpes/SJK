@@ -38,6 +38,14 @@ pub(super) const COMMANDS: &[(&str, &str)] = &[
         "clearRemaps",
         "Clear server and local shader replacements until new ones arrive",
     ),
+    (
+        "blockRemaps",
+        "Ignore server shader remaps on a map, the loaded one by default: blockRemaps [map]",
+    ),
+    (
+        "unblockRemaps",
+        "Allow server shader remaps on a blocked map again: unblockRemaps [map]",
+    ),
     ("speedometer", "Configure supported speedometer flags"),
     ("strafehelper", "Configure supported airborne CGAZ flags"),
     ("play", "Play local sound files"),
@@ -113,6 +121,10 @@ pub(super) const COMMANDS: &[(&str, &str)] = &[
     (
         crate::menu::first_setup::COMMAND,
         crate::menu::first_setup::HELP,
+    ),
+    (
+        crate::graphics_quality::COMMAND,
+        crate::graphics_quality::HELP,
     ),
     ("cmd", "Forward arguments as a reliable server command"),
     ("clientinfo", "Print client state and userinfo"),
@@ -431,6 +443,9 @@ impl crate::GpuState {
             "remapshader" | "listremaps" | "clearremaps" => {
                 return self.remap_command(&name, args);
             }
+            "blockremaps" | "unblockremaps" => {
+                return self.remap_block_command(name == "blockremaps", args);
+            }
             "speedometer" | "strafehelper" => {
                 return hud_commands::execute(
                     self.console.as_mut().ok_or("Console unavailable")?,
@@ -539,6 +554,10 @@ impl crate::GpuState {
             crate::quick_wheel::OPEN_COMMAND => return self.open_quick_wheel(args),
             crate::quick_wheel::RUN_COMMAND => return self.release_quick_wheel(),
             crate::hud::nameplate::COMMAND => return self.nameplate_command(args),
+            crate::graphics_quality::COMMAND => {
+                let console = self.console.as_mut().ok_or("Console unavailable")?;
+                return crate::graphics_quality::command(console, args);
+            }
             crate::menu::first_setup::COMMAND
                 if args.first().is_some_and(|arg| {
                     arg.eq_ignore_ascii_case(crate::menu::first_setup::IMPORT)

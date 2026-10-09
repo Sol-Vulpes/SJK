@@ -4,7 +4,7 @@
 //! the `menu_blendbox` title band, a retail list box of releases whose selected
 //! row sits on `menu_blendbox2`, a detail box with the selected release, a gold
 //! Close button and the description line under the box. Every control answers
-//! to the modern view's tokens, so the keyboard, pointer and wheel serve both.
+//! to the page's tokens, so the keyboard, pointer and wheel serve both looks.
 
 use super::{BACK_TOKEN, LineKind, PANE_BAR_TOKEN, PANE_TOKEN, Panel, ROW_BASE, ROW_LIMIT};
 use crate::console::browser::classic::{
@@ -59,8 +59,10 @@ fn line_height(kind: LineKind) -> f32 {
 }
 
 impl Panel {
-    /// Draw the classic+ page over the whole frame (see [`Panel::append`]).
-    pub(super) fn append_classic(
+    /// Draw the classic+ page over the whole frame. As with the debug panel,
+    /// text other overlays appended earlier this frame is dropped rather than
+    /// shown through. The SJK UI's look is drawn by `append_sjk` instead.
+    pub(crate) fn append(
         &mut self,
         vertices: &mut Vec<TextVertex>,
         font: &UiFont,
@@ -315,7 +317,7 @@ impl Panel {
                 place.rect(thumb),
                 if active { FOCUS } else { view::gold(0.8) },
             );
-            // Wider than the bar so it can be caught; dragged as the modern one.
+            // Wider than the bar so it can be caught.
             self.ui.scroll_region(
                 PANE_BAR_TOKEN,
                 place.rect([track[0] - 3.0, track[1], track[2] + 6.0, track[3]]),

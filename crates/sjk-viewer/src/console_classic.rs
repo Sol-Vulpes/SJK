@@ -62,7 +62,7 @@ const OVERSTRIKE_CURSOR: [f32; 2] = [1.0, 15.0];
 const CURSOR_COLUMNS: f32 = 7.0;
 /// Selected text: the bar colour, translucent so the text stays readable.
 const HIGHLIGHT: [f32; 4] = [0.509, 0.609, 0.847, 0.4];
-/// Start colour of an error line, as the modern console draws it.
+/// Start colour of an error line.
 const ERROR_COLOR: [f32; 4] = [1.0, 0.55, 0.52, 1.0];
 /// Scrollback rows per Page Up or Page Down, or per wheel step (`Con_PageUp`).
 pub(super) const PAGE_ROWS: usize = 2;
@@ -128,8 +128,7 @@ impl Grid {
 }
 
 /// Width of a cell in pixels for a viewport and `con_scale`: 8 at 1080 lines,
-/// growing with the height (the console's 0.75 floor on the UI scale, as the
-/// modern console), whole.
+/// growing with the height (with a 0.75 floor on the UI scale), whole.
 pub(super) fn cell_width(viewport: [f32; 2], scale: f32) -> f32 {
     let ui = crate::ui_scale::height_scale(viewport[1]).max(MIN_UI_SCALE);
     (CELL_WIDTH * scale * ui).round().max(1.0)
@@ -623,7 +622,7 @@ impl ViewerConsole {
             || self.sjk_chat_panel.is_open()
             || self.config_import.is_open()
         {
-            // The test list is drawn alone, as over the modern console.
+            // The test list and the full-frame pages are drawn alone.
             return;
         }
         let options = self.options();

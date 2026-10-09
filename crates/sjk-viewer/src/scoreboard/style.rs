@@ -1,7 +1,7 @@
 //! The `cg_scoreboardStyle` setting and the classic scoreboard's options.
 //!
-//! `modern` is SJK's floating table ([`super::view`]); `classic` follows the
-//! retail scoreboard as EternalJK-derived clients draw it ([`super::classic`]),
+//! `classic` follows the retail scoreboard as EternalJK-derived clients draw it
+//! ([`super::classic`]),
 //! with their `cg_smallScoreboard`, `cg_showClientIDs`,
 //! `cg_drawScoreboardIcons` and `cg_drawScoreboardPlayerCount` options; `sjk`
 //! is the SJK UI's own ([`super::sjk`]). `auto`, the default, follows the menu
@@ -9,19 +9,29 @@
 //! otherwise (what SJK drew before the choice existed). Every profile had saved
 //! the old default `classic`, so it moves once to `auto`
 //! (`cg_scoreboardStyleDefaultVersion`, in the console's start); a look chosen
-//! after that keeps it whatever the menu style.
+//! after that keeps it whatever the menu style. `cg_compactScoreboard` (on by
+//! default) packs the SJK look's rows so every player fits one column, in a
+//! board as wide as its names, centred.
 
 use crate::console::ViewerConsole;
 use crate::menu::style::MenuStyle;
 
 /// Archived cvar naming the scoreboard style.
 pub(crate) const CVAR: &str = "cg_scoreboardStyle";
+/// Archived cvar: the SJK look's thin rows, every player in one column.
+pub(crate) const COMPACT_CVAR: &str = "cg_compactScoreboard";
+
+/// Whether the SJK look packs its rows (`cg_compactScoreboard`, on unless
+/// switched off).
+pub(crate) fn compact(console: Option<&ViewerConsole>) -> bool {
+    console
+        .and_then(|console| console.bool_cvar(COMPACT_CVAR))
+        .unwrap_or(true)
+}
 
 /// Layout family of the scoreboard, as drawn.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub(crate) enum ScoreboardStyle {
-    /// SJK's floating table beside the chat column.
-    Modern,
     /// The retail layout: centred columns, team bands and the client ID.
     #[default]
     Classic,
@@ -31,18 +41,16 @@ pub(crate) enum ScoreboardStyle {
 
 impl ScoreboardStyle {
     /// Values the settings screen offers: `auto` first, then each look.
-    pub(crate) const NAMES: [&'static str; 4] = ["auto", "sjk", "classic", "modern"];
+    pub(crate) const NAMES: [&'static str; 3] = ["auto", "sjk", "classic"];
     /// The `cg_scoreboardStyle` value of a new profile: follow the menu style.
     pub(crate) const DEFAULT_NAME: &'static str = Self::NAMES[0];
 
-    /// The look the cvar `value` gives under the menu style `menus`: `modern`
-    /// (any case) or `0` the modern one, `sjk` the SJK UI's, `classic` the
-    /// classic one; `auto` (or no value) the SJK UI's while the menus are the
-    /// SJK UI and the classic one otherwise. A mistyped value keeps the classic
-    /// board, as it did before `auto` and `sjk` existed.
+    /// The look the cvar `value` gives under the menu style `menus`: `sjk` the
+    /// SJK UI's, `classic` the classic one; `auto` (or no value) the SJK UI's
+    /// while the menus are the SJK UI and the classic one otherwise. A mistyped
+    /// value keeps the classic board, as it did before `auto` and `sjk` existed.
     pub(crate) fn resolve(value: Option<&str>, menus: MenuStyle) -> Self {
         match value.map(str::trim) {
-            Some(text) if text.eq_ignore_ascii_case("modern") || text == "0" => Self::Modern,
             Some(text) if text.eq_ignore_ascii_case("sjk") => Self::Sjk,
             None => Self::follow(menus),
             Some(text) if text.eq_ignore_ascii_case("auto") => Self::follow(menus),
@@ -121,16 +129,14 @@ impl ClassicOptions {
 mod tests {
     use super::*;
 
-    const EVERY_MENU: [MenuStyle; 3] = [MenuStyle::Modern, MenuStyle::Classic, MenuStyle::Sjk];
+    const EVERY_MENU: [MenuStyle; 2] = [MenuStyle::Classic, MenuStyle::Sjk];
 
     #[test]
-    fn modern_needs_an_explicit_value() {
+    fn a_mistyped_value_keeps_the_classic_board() {
         for menus in EVERY_MENU {
             let resolve = |value| ScoreboardStyle::resolve(value, menus);
             assert_eq!(resolve(Some("")), ScoreboardStyle::Classic);
             assert_eq!(resolve(Some("modrn")), ScoreboardStyle::Classic);
-            assert_eq!(resolve(Some(" Modern ")), ScoreboardStyle::Modern);
-            assert_eq!(resolve(Some("0")), ScoreboardStyle::Modern);
         }
     }
 
@@ -141,13 +147,9 @@ mod tests {
                 ScoreboardStyle::resolve(value, MenuStyle::Sjk),
                 ScoreboardStyle::Sjk
             );
-            // Any other menu style keeps the board SJK drew before: classic.
+            // The classic menus keep the board SJK drew before: classic.
             assert_eq!(
                 ScoreboardStyle::resolve(value, MenuStyle::Classic),
-                ScoreboardStyle::Classic
-            );
-            assert_eq!(
-                ScoreboardStyle::resolve(value, MenuStyle::Modern),
                 ScoreboardStyle::Classic
             );
         }
@@ -159,10 +161,6 @@ mod tests {
             assert_eq!(
                 ScoreboardStyle::resolve(Some("classic"), menus),
                 ScoreboardStyle::Classic
-            );
-            assert_eq!(
-                ScoreboardStyle::resolve(Some("modern"), menus),
-                ScoreboardStyle::Modern
             );
             assert_eq!(
                 ScoreboardStyle::resolve(Some(" SJK "), menus),
@@ -180,8 +178,7 @@ mod tests {
             [
                 ScoreboardStyle::Classic,
                 ScoreboardStyle::Sjk,
-                ScoreboardStyle::Classic,
-                ScoreboardStyle::Modern
+                ScoreboardStyle::Classic
             ]
         );
         assert_eq!(ScoreboardStyle::DEFAULT_NAME, "auto");

@@ -9,6 +9,82 @@
 #                               made it when that is not the piece's owner.
 
 = Sol
++ 09/10/2026 | - | Shorten the com_maxfps line in the debug panel to the 96-character limit
+- 4d37015 |  | Shorten the com_maxfps line in the debug panel to the 96-character limit
++ 09/10/2026 | SJK #48 | Poll the Force-profile rejoin retries every frame, not in duels
+- 1969b32 |  | Poll the Force-profile rejoin retries every frame, not in duels
++ 09/10/2026 | SJK #47 | Send an applied Force profile to the server and show its Force rules
+- ee1d9c9 |  | Send an applied Force profile to the server and show its Force rules
++ 09/10/2026 | SJK #56 | Stop dynamic lights at walls with per-light shadow tiles
+- 9a77028 |  | Stop dynamic lights at walls with per-light shadow tiles
++ 09/10/2026 | SJK #54 | Extend parallax to where it shows and hold it still near the camera
+- 085afe6 |  | Extend parallax to where it shows and hold it still near the camera
++ 09/10/2026 | SJK #58 | Add a kill feed with weapon icons at the top right
+- fd9be84 |  | Add a kill feed with weapon icons at the top right
++ 09/10/2026 | SJK #55 | Size the compact SJK scoreboard to its names and centre it
+- 77c115e |  | Size the compact SJK scoreboard to its names and centre it
++ 09/10/2026 | SJK #52 | Trace org2fromTrace lines so the teleport and spawn beam stands up
+- 36735f9 |  | Trace org2fromTrace lines so the teleport and spawn beam stands up
++ 09/10/2026 | SJK #57 | Print Latin-1 player names in kill messages instead of noname
+- 000896f |  | Print Latin-1 player names in kill messages instead of noname
++ 09/10/2026 | SJK #53 | Play door sounds from the middle of the door's model
+- 247c8d6 |  | Play door sounds from the middle of the door's model
++ 09/10/2026 | SJK #51 | Compile real-time lighting pipelines at map load, not in play
+- 198f1b2 |  | Compile real-time lighting pipelines at map load, not in play
++ 09/10/2026 | SJK #50 | Add com_maxfpsMonitor, off by default, for AUTO's monitor-rate cap
+- 1f83a9d |  | Add com_maxfpsMonitor, off by default, for AUTO's monitor-rate cap
++ 09/10/2026 | SJK #49 | Stop waiting forever on an audio output that stopped
+- 6c7891a |  | Stop waiting forever on an audio output that stopped
++ 09/10/2026 | SJK #46 | Fix where clicks land on the SJK UI's Character screen
+- 17a0a8b |  | Fix where clicks land on the SJK UI's Character screen
++ 08/10/2026 | SJK #45 | Unlockable blade skins and looks every SJK player sees
+- b0ab957 |  | Let a file system read another's mounts below its own
+- 141dd45 |  | Let a client's blade skin replace its saber sounds
+- 443f83a |  | Add unlockable blade skins and looks every SJK player sees
+- 463840a |  | Document unlockables, looks and the hub's asset packs
++ 08/10/2026 | - | Release 2026.1008.2 (Alpha)
+- a6230f9 |  | Release 2026.1008.2 (Alpha)
++ 08/10/2026 | SJK #41 | Add JoF EJK's +duck: crouch without rolling
+- 7e936c9 |  | Add JoF EJK's +duck: crouch without rolling
++ 08/10/2026 | SJK #40 | Light vertex-lit remap targets; cg_remapsBlockedMaps to ignore remaps per map
+- fbf2f46 |  | Light vertex-coloured remap targets with the map's live light
+- e49822a |  | Add cg_remapsBlockedMaps to ignore server remaps on listed maps
++ 08/10/2026 | SJK #42 | Compact SJK scoreboard by default; hide the HUD while scores are held
+- fca86a4 |  | Compact SJK scoreboard by default; hide the HUD while scores are held
++ 08/10/2026 | SJK #39 | Let movers shadow lamps and the far sun cascade
+- ec35028 |  | Let movers shadow lamps and the far sun cascade
+- 2a802fa |  | Count a still, turned mover as still
+- e9b983c |  | Let slow mover motion add up to a trace
+- 792cb09 |  | Let the far sun cascade follow movers without door tiles
+- 8313250 |  | Free the light of movers the server takes out of the snapshot
+- ef86729 |  | Keep the lamp cache's bake targets only while movers re-bake it
+- ec4e84a |  | Test only a mover's named clusters for whether a snapshot holds it
+- 40619ef |  | Rewrap the lamp cache Baker's doc comment
++ 08/10/2026 | SJK #36 | SJK chat through the hub, and the path for emotes
+- 460187b |  | Plan SJK chat and emotes through the hub
+- 4bacaa5 |  | sjk-identity: chat rules and the feed's types
+- c0daae7 |  | sjk-identity: chat, emote and feed requests
+- 99dd077 |  | sjk-identity: sending chat and emotes, and the feed thread
+- dd93b25 |  | SJK chat setting and the identity glue
+- f44808c |  | SJK chat as a fourth channel in the game
+- df43d41 |  | SJK chat docked on the main page
+- e644096 |  | SJK chat page
+- 1d462e9 |  | Emotes: the catalogue format, playing emotes and the sjkemote command
+- f69f54e |  | SJK chat: lines sit on the dock's field; the page's tags join the time
+- 81646c0 |  | Document the SJK chat and the emotes path
+- 584df47 |  | SJK chat: no backlog over the game, and mutes reach lines already shown
+- 4ba2626 |  | SJK chat page: say what a staff request came to
+- e873ee1 |  | Document the feed's limits and the review's fixes
++ 08/10/2026 | SJK #37 | Add cl_idrive and a live cl_idriveDelay for opposing movement keys
+- 8ee146c |  | Add cl_idrive and a live cl_idriveDelay for opposing movement keys
++ 08/10/2026 | SJK #35 | Add graphics quality levels at the top of First setup
+- dd33529 |  | Add graphics quality levels at the top of First setup
++ 08/10/2026 | SJK #38 | Reload the menu's images when it moves to another world's renderer
+- 97a5246 |  | Reload the menu's images when it moves to another world's renderer
++ 08/10/2026 | SJK #34 | Remove the modern UI style, leaving the SJK UI and classic menus
+- e0f5038 |  | Remove the modern UI style, leaving the SJK UI and classic menus
++ 08/10/2026 | SJK #33 | Polish the player card: hips anchor, Escape unpins, small medal names
+- 92743ac |  | Polish the player card: hips anchor, Escape unpins, small medal names
 + 08/10/2026 | SJK #32 | Keep the replaced surface's lighting on shader remaps
 - 82d4108 |  | Keep the replaced surface's lighting on shader remaps
 + 08/10/2026 | - | Achievement unlocked pop-up with JKA's secret-area sound
@@ -773,6 +849,8 @@
 - 0d215f1 |  | Initial JKR source
 
 = Creyon
++ 08/10/2026 | SJK #44 | Send and show % and quotes in chat as EternalJK does
+- 3dc0fdb |  | Send and show % and quotes in chat as EternalJK does
 + 08/10/2026 | SJK #30 | Show JoF EternalJK's chat emojis
 - dc0cbcc |  | Show JoF EternalJK's chat emojis
 + 08/10/2026 | SJK #31 | Show the console input in its colour codes, as EternalJK does

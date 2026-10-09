@@ -29,6 +29,11 @@ impl GpuState {
             state.catalogue = Some(emotes::load(vfs));
         }
         for emote in received {
+            // The hub's id is shown in the console as it came when no catalogue entry
+            // names it: only an id that could name an emote may.
+            if !emotes::valid_id(&emote.emote) {
+                continue;
+            }
             let shown = player_identity::shown_name(session.game_state(), usize::from(emote.slot));
             if !emotes::trusted(&emote, shown.as_deref()) {
                 continue;

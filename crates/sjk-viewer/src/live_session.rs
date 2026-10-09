@@ -211,7 +211,10 @@ impl GpuState {
             .unwrap_or_default();
         // A frame slower than 8 ms makes a command for each slot it passed; the
         // first carries the frame's presses, the rest the keys still held.
+        let last_stamp = due.as_slice().last().copied().unwrap_or_default();
         for &stamp in due.as_slice() {
+            self.gameplay_input
+                .set_command_age(u64::try_from(last_stamp.saturating_sub(stamp)).unwrap_or(0));
             let mut command = self.gameplay_input.user_command(
                 stamp,
                 self.camera_pitch,
@@ -257,6 +260,7 @@ impl GpuState {
             }
             self.pending_generic_command = 0;
         }
+        self.gameplay_input.set_command_age(0);
         self.send_due_packet(now);
     }
 

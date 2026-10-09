@@ -44,6 +44,17 @@ pub(crate) struct Pages {
     stream: Vec<f32>,
     /// Per layer: the joined index runs of the surfaces baked into it.
     runs: Vec<Vec<Range<u32>>>,
+    /// Per layer: each surface baked into it, for partial refreshes.
+    surfaces: Vec<Vec<CachedSurface>>,
+}
+
+/// A surface of a cache layer: the texels it covers, `[x0, y0, x1, y1)`, and its world
+/// bounds.
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) struct CachedSurface {
+    pub(crate) texels: [u32; 4],
+    pub(crate) lower: glam::Vec3,
+    pub(crate) upper: glam::Vec3,
 }
 
 /// One candidate surface: its index range, lightmap page and whether it is a static,
@@ -54,6 +65,16 @@ pub(crate) struct Surface {
 }
 
 impl Pages {
+    /// Per layer, its surfaces' texels and world bounds.
+    pub(crate) fn surfaces(&self) -> &[Vec<CachedSurface>] {
+        &self.surfaces
+    }
+
+    /// Texels per layer edge.
+    pub(crate) fn resolution(&self) -> u32 {
+        self.resolution
+    }
+
     /// `None` when the map has no lightmapped static surface worth caching.
     pub(crate) fn plan(
         positions: &[[f32; 3]],
@@ -123,6 +144,7 @@ impl Pages {
 
         let mut stream = vec![0f32; positions.len()];
         let mut runs: Vec<Vec<Range<u32>>> = vec![Vec::new(); layers.len()];
+        let mut cached: Vec<Vec<CachedSurface>> = vec![Vec::new(); layers.len()];
         for &(index, scale, _) in &measured {
             if scale / resolution as f32 > COARSEST * spacing {
                 continue;
@@ -133,6 +155,28 @@ impl Pages {
                 stream[i as usize] = (layer + 1) as f32;
             }
             runs[layer as usize].push(surface.indices.clone());
+            let range = &indices[surface.indices.start as usize..surface.indices.end as usize];
+            let (mut lower, mut upper) = (glam::Vec3::INFINITY, glam::Vec3::NEG_INFINITY);
+            let (mut low, mut high) = (glam::Vec2::INFINITY, glam::Vec2::NEG_INFINITY);
+            for &i in range {
+                let p = glam::Vec3::from_array(positions[i as usize]);
+                let c = glam::Vec2::from_array(coordinates[i as usize]);
+                (lower, upper) = (lower.min(p), upper.max(p));
+                (low, high) = (low.min(c), high.max(c));
+            }
+            let size = resolution as f32;
+            let texel =
+                |v: f32, round: fn(f32) -> f32| (round(v * size).max(0.) as u32).min(resolution);
+            cached[layer as usize].push(CachedSurface {
+                texels: [
+                    texel(low.x, f32::floor),
+                    texel(low.y, f32::floor),
+                    texel(high.x, f32::ceil),
+                    texel(high.y, f32::ceil),
+                ],
+                lower,
+                upper,
+            });
         }
         for layer in &mut runs {
             *layer = join(std::mem::take(layer));
@@ -144,6 +188,7 @@ impl Pages {
             resolution,
             stream,
             runs,
+            surfaces: cached,
         })
     }
 }
@@ -190,6 +235,9 @@ pub(crate) struct Cache {
     directions: Option<(wgpu::TextureView, Vec<wgpu::TextureView>)>,
     sampler: wgpu::Sampler,
     baked: std::cell::Cell<bool>,
+    /// Kept after the first bake only while movers re-bake the cache (`Cache::refresh`);
+    /// its scratch targets take [`Cache::baker_bytes`].
+    baker: std::cell::RefCell<Option<Baker>>,
 }
 
 #[repr(C)]
@@ -269,6 +317,7 @@ impl Cache {
                 ..Default::default()
             }),
             baked: std::cell::Cell::new(false),
+            baker: std::cell::RefCell::new(None),
         }
     }
 
@@ -362,8 +411,11 @@ impl Cache {
         })
     }
 
-    /// Bake every layer into `encoder` the first time a frame lights the map. Pipelines
-    /// and scratch targets live only for this call.
+    /// Bake every layer into `encoder` the first time a frame lights the map. With `keep`
+    /// (movers will re-bake parts of it) the pipelines and scratch targets stay for
+    /// [`Cache::refresh`]; otherwise they live only for this call, as their memory
+    /// ([`Cache::baker_bytes`]) would serve nothing.
+    #[allow(clippy::too_many_arguments)]
     pub(crate) fn bake_once(
         &self,
         device: &wgpu::Device,
@@ -372,12 +424,249 @@ impl Cache {
         indices: &wgpu::Buffer,
         lamps: &crate::lamp_lights::Gpu,
         bounds: [glam::Vec3; 2],
+        keep: bool,
     ) {
         if self.baked.replace(true) {
             return;
         }
-        use wgpu::util::DeviceExt;
         let started = std::time::Instant::now();
+        let baker = Baker::new(device, self, bounds);
+        let light_group = baker.light_group(device, lamps);
+        for index in 0..self.layers.len() {
+            self.bake_layer(
+                &baker,
+                &light_group,
+                encoder,
+                vertices,
+                indices,
+                index,
+                None,
+            );
+        }
+        if keep {
+            *self.baker.borrow_mut() = Some(baker);
+        }
+        crate::log::progress(format_args!(
+            "Lamp light cache: bake encoded in {:.1} ms{}",
+            started.elapsed().as_secs_f64() * 1000.,
+            if keep {
+                format!(
+                    "; bake targets kept for mover refreshes, {:.1} MiB",
+                    self.baker_bytes() as f64 / 1048576.
+                )
+            } else {
+                String::new()
+            }
+        ));
+    }
+
+    /// GPU memory of the bake's scratch targets: two depth targets and one or two colour
+    /// targets at the cache's resolution.
+    pub(crate) fn baker_bytes(&self) -> u64 {
+        bake_target_bytes(self.resolution, self.directions.is_some())
+    }
+
+    /// Bake `regions` (layer, texel rectangle `[x0, y0, x1, y1)`) again with the lamps'
+    /// current visibility: a mover's shadow changed there (`mover_occlusion.rs`). Nothing
+    /// before the first bake, which already sees it. The bake's targets are made again
+    /// if the first bake did not keep them, and then kept.
+    #[allow(clippy::too_many_arguments)]
+    pub(crate) fn refresh(
+        &self,
+        device: &wgpu::Device,
+        encoder: &mut wgpu::CommandEncoder,
+        vertices: &wgpu::Buffer,
+        indices: &wgpu::Buffer,
+        lamps: &crate::lamp_lights::Gpu,
+        bounds: [glam::Vec3; 2],
+        regions: &[(u32, [u32; 4])],
+    ) {
+        if regions.is_empty() || !self.baked.get() {
+            return;
+        }
+        let mut baker = self.baker.borrow_mut();
+        let baker = baker.get_or_insert_with(|| Baker::new(device, self, bounds));
+        let light_group = baker.light_group(device, lamps);
+        for &(layer, rect) in regions {
+            if (layer as usize) < self.layers.len() {
+                self.bake_layer(
+                    baker,
+                    &light_group,
+                    encoder,
+                    vertices,
+                    indices,
+                    layer as usize,
+                    Some(rect),
+                );
+            }
+        }
+    }
+
+    /// One layer: its surfaces' extents, their light, then the steep and rim passes over
+    /// the whole layer. With `region`, only that rectangle is cleared and lit again; the
+    /// post passes still cover the layer, which outside it can only poison a few more
+    /// texels (evaluated directly), never change their light.
+    #[allow(clippy::too_many_arguments)]
+    fn bake_layer(
+        &self,
+        baker: &Baker,
+        light_group: &wgpu::BindGroup,
+        encoder: &mut wgpu::CommandEncoder,
+        vertices: &wgpu::Buffer,
+        indices: &wgpu::Buffer,
+        index: usize,
+        region: Option<[u32; 4]>,
+    ) {
+        let layer = &self.layers[index];
+        let runs = &self.runs[index];
+        let direction = self.directions.as_ref().map(|(_, layers)| &layers[index]);
+        let scissor = |pass: &mut wgpu::RenderPass<'_>| {
+            if let Some([x0, y0, x1, y1]) = region {
+                pass.set_scissor_rect(x0, y0, x1 - x0, y1 - y0);
+            }
+        };
+        let color = |view, keep: bool| {
+            Some(wgpu::RenderPassColorAttachment {
+                view,
+                resolve_target: None,
+                depth_slice: None,
+                ops: wgpu::Operations {
+                    load: if keep {
+                        wgpu::LoadOp::Load
+                    } else {
+                        wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT)
+                    },
+                    store: wgpu::StoreOp::Store,
+                },
+            })
+        };
+        for (target, clear, pipeline) in [
+            (&baker.nearest, 1., &baker.near_pipeline),
+            (&baker.farthest, 0., &baker.far_pipeline),
+        ] {
+            let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                label: Some("SJK lamp cache extent"),
+                color_attachments: &[],
+                depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
+                    view: target,
+                    depth_ops: Some(wgpu::Operations {
+                        load: wgpu::LoadOp::Clear(clear),
+                        store: wgpu::StoreOp::Store,
+                    }),
+                    stencil_ops: None,
+                }),
+                timestamp_writes: None,
+                occlusion_query_set: None,
+                multiview_mask: None,
+            });
+            pass.set_pipeline(pipeline);
+            pass.set_bind_group(0, &baker.extent_group, &[]);
+            scissor(&mut pass);
+            pass.set_vertex_buffer(0, vertices.slice(..));
+            pass.set_index_buffer(indices.slice(..), wgpu::IndexFormat::Uint32);
+            for run in runs {
+                pass.draw_indexed(run.clone(), 0, 0..1);
+            }
+        }
+        let targets = || [Some(layer), direction].into_iter().flatten();
+        if region.is_some() {
+            // Empty the rectangle: texels no surface covers any more take rim again.
+            let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                label: Some("SJK lamp cache clear"),
+                color_attachments: &targets().map(|v| color(v, true)).collect::<Vec<_>>(),
+                depth_stencil_attachment: None,
+                timestamp_writes: None,
+                occlusion_query_set: None,
+                multiview_mask: None,
+            });
+            pass.set_pipeline(&baker.clear_pipeline);
+            pass.set_bind_group(0, &baker.from_rim, &[]);
+            scissor(&mut pass);
+            pass.draw(0..3, 0..1);
+        }
+        {
+            let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                label: Some("SJK lamp cache light"),
+                color_attachments: &targets()
+                    .map(|v| color(v, region.is_some()))
+                    .collect::<Vec<_>>(),
+                depth_stencil_attachment: None,
+                timestamp_writes: None,
+                occlusion_query_set: None,
+                multiview_mask: None,
+            });
+            pass.set_pipeline(&baker.light_pipeline);
+            pass.set_bind_group(0, light_group, &[]);
+            scissor(&mut pass);
+            pass.set_vertex_buffer(0, vertices.slice(..));
+            pass.set_index_buffer(indices.slice(..), wgpu::IndexFormat::Uint32);
+            for run in runs {
+                pass.draw_indexed(run.clone(), 0, 0..1);
+            }
+        }
+        // Poison texels too steep to interpolate, then add one texel of rim.
+        let from_layer = baker.rim_group(layer, direction);
+        for (target, target_direction, source, pipeline) in [
+            (
+                &baker.rim,
+                baker.rim_direction.as_ref(),
+                &from_layer,
+                &baker.steep_pipeline,
+            ),
+            (layer, direction, &baker.from_rim, &baker.rim_pipeline),
+        ] {
+            let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                label: Some("SJK lamp cache rim"),
+                color_attachments: &[Some(target), target_direction]
+                    .into_iter()
+                    .flatten()
+                    .map(|v| color(v, false))
+                    .collect::<Vec<_>>(),
+                depth_stencil_attachment: None,
+                timestamp_writes: None,
+                occlusion_query_set: None,
+                multiview_mask: None,
+            });
+            pass.set_pipeline(pipeline);
+            pass.set_bind_group(0, source, &[]);
+            pass.draw(0..3, 0..1);
+        }
+    }
+}
+
+/// The bake's scratch targets at `resolution`: nearest and farthest depth (Depth32Float),
+/// the rim target ([`FORMAT`]) and, with directions, the rim directions
+/// ([`DIRECTION_FORMAT`]).
+fn bake_target_bytes(resolution: u32, directed: bool) -> u64 {
+    let per_texel = 4 + 4 + TEXEL_BYTES + if directed { DIRECTION_TEXEL_BYTES } else { 0 };
+    u64::from(resolution).pow(2) * per_texel
+}
+
+/// The bake's pipelines, groups and scratch targets, kept after the first bake while
+/// movers refresh the cache. The light group is made per bake: the lamps' buffers change
+/// with the lighting settings.
+struct Baker {
+    nearest: wgpu::TextureView,
+    farthest: wgpu::TextureView,
+    rim: wgpu::TextureView,
+    rim_direction: Option<wgpu::TextureView>,
+    uniform: wgpu::Buffer,
+    extent_group: wgpu::BindGroup,
+    light_layout: wgpu::BindGroupLayout,
+    rim_layout: wgpu::BindGroupLayout,
+    from_rim: wgpu::BindGroup,
+    near_pipeline: wgpu::RenderPipeline,
+    far_pipeline: wgpu::RenderPipeline,
+    light_pipeline: wgpu::RenderPipeline,
+    steep_pipeline: wgpu::RenderPipeline,
+    rim_pipeline: wgpu::RenderPipeline,
+    clear_pipeline: wgpu::RenderPipeline,
+    device: wgpu::Device,
+}
+
+impl Baker {
+    fn new(device: &wgpu::Device, cache: &Cache, bounds: [glam::Vec3; 2]) -> Self {
+        use wgpu::util::DeviceExt;
         // Two surfaces sharing lightmap space differ in world position. An oblique
         // projection of it, kept as nearest and farthest depth per texel, exposes them.
         let axis = glam::Vec3::new(0.5477, 0.3651, 0.7518);
@@ -403,8 +692,8 @@ impl Cache {
             usage: wgpu::BufferUsages::UNIFORM,
         });
         let extent = wgpu::Extent3d {
-            width: self.resolution,
-            height: self.resolution,
+            width: cache.resolution,
+            height: cache.resolution,
             depth_or_array_layers: 1,
         };
         let scratch = |label, format, usage| {
@@ -434,7 +723,7 @@ impl Cache {
             depth_usage,
         );
         let rim = scratch("SJK lamp cache rim", FORMAT, depth_usage);
-        let directed = self.directions.is_some();
+        let directed = cache.directions.is_some();
         let rim_direction = directed.then(|| {
             scratch(
                 "SJK lamp cache rim directions",
@@ -482,28 +771,6 @@ impl Cache {
                 resource: uniform.as_entire_binding(),
             }],
         });
-        let mut entries = lamps.entries(0).to_vec();
-        entries.push(lamps.visibility_entry(6));
-        entries.extend([
-            wgpu::BindGroupEntry {
-                binding: 7,
-                resource: uniform.as_entire_binding(),
-            },
-            wgpu::BindGroupEntry {
-                binding: 8,
-                resource: wgpu::BindingResource::TextureView(&nearest),
-            },
-            wgpu::BindGroupEntry {
-                binding: 9,
-                resource: wgpu::BindingResource::TextureView(&farthest),
-            },
-        ]);
-        let light_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: None,
-            layout: &light_layout,
-            entries: &entries,
-        });
-
         let extent_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("SJK lamp cache extent"),
             source: wgpu::ShaderSource::Wgsl(include_str!("lamp_cache_bake.wgsl").into()),
@@ -664,99 +931,87 @@ impl Cache {
         };
         let from_rim = rim_group(&rim, rim_direction.as_ref());
 
-        let color = |view| {
-            Some(wgpu::RenderPassColorAttachment {
-                view,
-                resolve_target: None,
-                depth_slice: None,
-                ops: wgpu::Operations {
-                    load: wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT),
-                    store: wgpu::StoreOp::Store,
-                },
-            })
-        };
-        for (index, (layer, runs)) in self.layers.iter().zip(&self.runs).enumerate() {
-            let direction = self.directions.as_ref().map(|(_, layers)| &layers[index]);
-            for (target, clear, pipeline) in [
-                (&nearest, 1., &near_pipeline),
-                (&farthest, 0., &far_pipeline),
-            ] {
-                let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                    label: Some("SJK lamp cache extent"),
-                    color_attachments: &[],
-                    depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
-                        view: target,
-                        depth_ops: Some(wgpu::Operations {
-                            load: wgpu::LoadOp::Clear(clear),
-                            store: wgpu::StoreOp::Store,
-                        }),
-                        stencil_ops: None,
-                    }),
-                    timestamp_writes: None,
-                    occlusion_query_set: None,
-                    multiview_mask: None,
-                });
-                pass.set_pipeline(pipeline);
-                pass.set_bind_group(0, &extent_group, &[]);
-                pass.set_vertex_buffer(0, vertices.slice(..));
-                pass.set_index_buffer(indices.slice(..), wgpu::IndexFormat::Uint32);
-                for run in runs {
-                    pass.draw_indexed(run.clone(), 0, 0..1);
-                }
-            }
-            {
-                let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                    label: Some("SJK lamp cache light"),
-                    color_attachments: &[Some(layer), direction]
-                        .into_iter()
-                        .flatten()
-                        .map(color)
-                        .collect::<Vec<_>>(),
-                    depth_stencil_attachment: None,
-                    timestamp_writes: None,
-                    occlusion_query_set: None,
-                    multiview_mask: None,
-                });
-                pass.set_pipeline(&light_pipeline);
-                pass.set_bind_group(0, &light_group, &[]);
-                pass.set_vertex_buffer(0, vertices.slice(..));
-                pass.set_index_buffer(indices.slice(..), wgpu::IndexFormat::Uint32);
-                for run in runs {
-                    pass.draw_indexed(run.clone(), 0, 0..1);
-                }
-            }
-            // Poison texels too steep to interpolate, then add one texel of rim.
-            let from_layer = rim_group(layer, direction);
-            for (target, target_direction, source, pipeline) in [
-                (&rim, rim_direction.as_ref(), &from_layer, &steep_pipeline),
-                (layer, direction, &from_rim, &rim_pipeline),
-            ] {
-                let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                    label: Some("SJK lamp cache rim"),
-                    color_attachments: &[Some(target), target_direction]
-                        .into_iter()
-                        .flatten()
-                        .map(color)
-                        .collect::<Vec<_>>(),
-                    depth_stencil_attachment: None,
-                    timestamp_writes: None,
-                    occlusion_query_set: None,
-                    multiview_mask: None,
-                });
-                pass.set_pipeline(pipeline);
-                pass.set_bind_group(0, source, &[]);
-                pass.draw(0..3, 0..1);
-            }
+        let clear_pipeline = post(if directed { "clear_directed" } else { "clear" });
+        Self {
+            nearest,
+            farthest,
+            rim,
+            rim_direction,
+            uniform,
+            extent_group,
+            light_layout,
+            rim_layout,
+            from_rim,
+            near_pipeline,
+            far_pipeline,
+            light_pipeline,
+            steep_pipeline,
+            rim_pipeline,
+            clear_pipeline,
+            device: device.clone(),
         }
-        crate::log::progress(format_args!(
-            "Lamp light cache: bake encoded in {:.1} ms",
-            started.elapsed().as_secs_f64() * 1000.
-        ));
+    }
+
+    fn light_group(
+        &self,
+        device: &wgpu::Device,
+        lamps: &crate::lamp_lights::Gpu,
+    ) -> wgpu::BindGroup {
+        let mut entries = lamps.entries(0).to_vec();
+        entries.push(lamps.visibility_entry(6));
+        entries.extend([
+            wgpu::BindGroupEntry {
+                binding: 7,
+                resource: self.uniform.as_entire_binding(),
+            },
+            wgpu::BindGroupEntry {
+                binding: 8,
+                resource: wgpu::BindingResource::TextureView(&self.nearest),
+            },
+            wgpu::BindGroupEntry {
+                binding: 9,
+                resource: wgpu::BindingResource::TextureView(&self.farthest),
+            },
+        ]);
+        device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: None,
+            layout: &self.light_layout,
+            entries: &entries,
+        })
+    }
+
+    fn rim_group(
+        &self,
+        view: &wgpu::TextureView,
+        direction: Option<&wgpu::TextureView>,
+    ) -> wgpu::BindGroup {
+        let entries = [view]
+            .into_iter()
+            .chain(direction)
+            .enumerate()
+            .map(|(binding, view)| wgpu::BindGroupEntry {
+                binding: binding as u32,
+                resource: wgpu::BindingResource::TextureView(view),
+            })
+            .collect::<Vec<_>>();
+        self.device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: None,
+            layout: &self.rim_layout,
+            entries: &entries,
+        })
     }
 }
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn the_kept_bake_targets_take_20_bytes_a_texel_with_directions() {
+        const MIB: u64 = 1 << 20;
+        assert_eq!(super::bake_target_bytes(2048, true), 80 * MIB);
+        assert_eq!(super::bake_target_bytes(2048, false), 64 * MIB);
+        assert_eq!(super::bake_target_bytes(1024, true), 20 * MIB);
+    }
+
     #[test]
     fn bake_and_rim_programs_validate_with_directions() {
         let light = format!(
@@ -773,6 +1028,7 @@ mod tests {
             include_str!("lamp_cache_rim.wgsl")
         );
         crate::wgsl_source::validate(&rim);
+        assert!(rim.contains("fn clear(") && rim.contains("fn clear_directed("));
         for entry in ["steep", "rim", "steep_directed", "rim_directed"] {
             assert!(rim.contains(&format!("fn {entry}(")), "{entry}");
         }

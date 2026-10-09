@@ -9,8 +9,7 @@
 //! it has its main page ([`home`]), Settings ([`settings`]), Character
 //! (`player_menu::sjk_view`), Servers ([`browser`]) and the loading screen
 //! ([`loading`]), drawn with the controls of its [`kit`]; every other screen
-//! opens in its classic version
-//! ([`super::style::MenuStyle::classic_screens`]).
+//! opens in its classic version.
 //!
 //! Text is set in two families ([`TextFamily`]): Rajdhani for navigation,
 //! titles and numbers, Exo 2 for the rest; both are bundled vector fonts

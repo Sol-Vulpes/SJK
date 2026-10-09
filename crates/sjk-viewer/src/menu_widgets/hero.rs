@@ -1,5 +1,6 @@
-//! Full-bleed "hero" widgets for screens drawn over the live map: a
-//! readability scrim, box-free list entries, and keyboard key caps.
+//! Full-bleed "hero" widgets for the screens drawn over the live map that
+//! have no classic or SJK UI version yet (Create game, the renderer settings):
+//! a readability scrim, accent sweeps and keyboard key caps.
 
 use super::contrast::{self, FadeSegment};
 use super::{FormLayout, MenuCanvas};
@@ -50,32 +51,18 @@ fn vertical(rect: Rect, start: Color, end: Color) -> DrawCommand {
 /// scales with viewport height so 1080p, ultrawide and 4K keep the same
 /// proportions.
 #[derive(Clone, Copy, Debug)]
-pub(crate) struct HeroColumn {
-    pub(crate) scale: f32,
-    pub(crate) margin: f32,
-    pub(crate) column_width: f32,
+struct HeroColumn {
+    margin: f32,
+    column_width: f32,
 }
 
 impl HeroColumn {
-    pub(crate) fn new(viewport: [f32; 2]) -> Self {
+    fn new(viewport: [f32; 2]) -> Self {
         let scale = crate::ui_scale::height_scale(viewport[1]);
-        let margin = (viewport[0] * 0.075).max(72.0 * scale);
         Self {
-            scale,
-            margin,
+            margin: (viewport[0] * 0.075).max(72.0 * scale),
             column_width: (viewport[0] * 0.42).clamp(360.0 * scale, 560.0 * scale),
         }
-    }
-
-    /// Pointer target of list row `row` when the list starts at `top` with
-    /// `row_height`-tall entries.
-    pub(crate) fn row_rect(&self, top: f32, row: usize, row_height: f32) -> Rect {
-        Rect::new(
-            self.margin,
-            top + row as f32 * row_height,
-            self.column_width,
-            row_height,
-        )
     }
 }
 
@@ -95,15 +82,6 @@ pub(crate) enum Scrim {
 }
 
 impl MenuCanvas {
-    /// Scale the existing translucent column, without changing its geometry.
-    pub(crate) fn column_tint_opacity(&mut self, rect: Rect, opacity: f32) {
-        let _ = self.draw.push(horizontal(
-            Rect::new(rect.x, rect.y, rect.width * 0.54, rect.height),
-            ink(0.95 * opacity.clamp(0.0, 1.0)),
-            ink(0.0),
-        ));
-    }
-
     /// Begin a screen over the live world with `scrim` so the chrome stays
     /// readable over any map lighting. Everything up to [`Self::end_hero`]
     /// is drawn at `opacity`, which lets a screen fade in as the backdrop
@@ -136,16 +114,6 @@ impl MenuCanvas {
             ink(0.0),
             ink(0.84),
         ));
-    }
-
-    /// The column scrim of [`Scrim::Column`] for screens drawn over the live
-    /// match without one (the in-game menu), only while `ui_menuContrast`
-    /// is on; with it off the match stays untinted.
-    pub(crate) fn readability_column(&mut self, viewport: [f32; 2]) {
-        if self.readability_coverage() > 0.0 {
-            let column = text_column_right(viewport);
-            self.held_fade(viewport, viewport[0] * 0.54, 0.95, 0.0, 0.0, column);
-        }
     }
 
     /// Rounded backing at the `ui_menuContrast` floor behind text that sits
@@ -187,122 +155,6 @@ impl MenuCanvas {
     /// Close the opacity group opened by [`Self::begin_hero`].
     pub(crate) fn end_hero(&mut self) {
         self.pop_opacity();
-    }
-
-    /// Box-free list entry: label, an accent sweep and a one-line hint while
-    /// selected, a softer sweep while hovered. `rect` is the pointer target.
-    pub(crate) fn hero_item(
-        &mut self,
-        token: u16,
-        label: &str,
-        hint: &str,
-        rect: Rect,
-        selected: bool,
-        scale: f32,
-    ) -> Rect {
-        self.hero_entry(token, label, hint, rect, selected, true, scale)
-    }
-
-    /// [`Self::hero_item`] that can be disabled: a dimmed entry that keeps
-    /// its pointer target but is neither focusable nor highlighted.
-    pub(crate) fn hero_entry(
-        &mut self,
-        token: u16,
-        label: &str,
-        hint: &str,
-        rect: Rect,
-        selected: bool,
-        enabled: bool,
-        scale: f32,
-    ) -> Rect {
-        if !enabled {
-            self.text(
-                label,
-                Rect::new(rect.x, rect.y + 8.0 * scale, rect.width, 40.0 * scale),
-                34.0 * scale,
-                Color::new(0.916, 0.945, 0.973, 0.583),
-                FontWeight::Regular,
-                0.4 * scale,
-            );
-            self.interactive(token, rect, false, false);
-            return rect;
-        }
-        let hovered = self.token_hovered(token) || self.token_pressed(token);
-        if selected || hovered {
-            self.accent_sweep(rect, if selected { 0.17 } else { 0.08 }, 28.0 * scale);
-        }
-        let foreground = if selected {
-            self.theme.foreground
-        } else if hovered {
-            Color::new(0.973, 0.987, 1.0, 0.964)
-        } else {
-            Color::new(0.916, 0.945, 0.973, 0.854)
-        };
-        self.text(
-            label,
-            Rect::new(rect.x, rect.y + 8.0 * scale, rect.width, 40.0 * scale),
-            34.0 * scale,
-            foreground,
-            if selected {
-                FontWeight::Semibold
-            } else {
-                FontWeight::Regular
-            },
-            0.4 * scale,
-        );
-        if selected {
-            self.text(
-                hint,
-                Rect::new(rect.x, rect.y + 48.0 * scale, rect.width, 20.0 * scale),
-                15.0 * scale,
-                self.theme.muted,
-                FontWeight::Regular,
-                0.1 * scale,
-            );
-        }
-        self.interactive(token, rect, true, false);
-        rect
-    }
-
-    /// Text-only hero entry with a narrow accent line, never a tinted backplate.
-    pub(crate) fn hero_line_entry(
-        &mut self,
-        token: u16,
-        label: &str,
-        rect: Rect,
-        selected: bool,
-        scale: f32,
-    ) {
-        let theme = self.theme();
-        let active = selected || self.token_hovered(token) || self.token_pressed(token);
-        if active {
-            let _ = self.draw_list_mut().push(DrawCommand::SolidRect {
-                rect: Rect::new(
-                    rect.x - 18.0 * scale,
-                    rect.y + 8.0 * scale,
-                    3.0 * scale,
-                    34.0 * scale,
-                ),
-                color: theme.accent,
-            });
-        }
-        self.text(
-            label,
-            Rect::new(rect.x, rect.y + 8.0 * scale, rect.width, 40.0 * scale),
-            34.0 * scale,
-            if active {
-                theme.foreground
-            } else {
-                theme.muted
-            },
-            if active {
-                FontWeight::Semibold
-            } else {
-                FontWeight::Regular
-            },
-            0.4 * scale,
-        );
-        self.interactive(token, rect, true, false);
     }
 
     /// Accent gradient fading out to the right, starting `inset` left of

@@ -88,6 +88,7 @@ mod glow_pass;
 mod gpu_context;
 mod gpu_phases;
 mod gpu_texture;
+mod graphics_quality;
 mod ground_hud;
 mod hud;
 mod hud_runtime;
@@ -123,6 +124,7 @@ mod muzzle_flash;
 mod notice;
 mod npc_refresh;
 mod object_meshes;
+mod oblique_clip;
 mod particle_atlas;
 mod particle_draw;
 mod peek;
@@ -167,6 +169,7 @@ mod pointer_input;
 mod presentation_clock;
 mod projectiles;
 mod quick_wheel;
+mod remap_blocked_maps;
 mod render_helpers;
 mod runtime_settings;
 mod saber;
@@ -211,7 +214,6 @@ mod wgsl_source;
 mod window_icon;
 mod world_materials;
 mod world_notes;
-mod world_props;
 #[cfg(test)]
 mod world_shot;
 mod world_stage;
@@ -500,6 +502,8 @@ struct GpuState {
     world_load_state: session_transition::LoadStateMachine,
     world_load_started: Option<Instant>,
     world_load_map: String,
+    /// Whether `world_load_map` is in `cg_remapsBlockedMaps`.
+    remap_blocked_maps: remap_blocked_maps::Cache,
     snapshot_observations: snapshot_presentation::Counters,
     obituaries: sjk_client::ObituaryTracker,
     /// What the player does in matches, for the achievements (`achievements.rs`).
@@ -682,7 +686,7 @@ impl GpuState {
             Vec::new()
         };
         load_profile.mark("player-models")?;
-        let mover_catalog = movers::build_catalog(&bsp, &mut flattened);
+        let mover_catalog = movers::build_catalog(&bsp, &flattened);
         let decal_surfaces = decal_marks::DecalSurfaces::from_flattened(&flattened, &bsp);
         let mut object_meshes = object_meshes::load(
             &vfs,
@@ -901,7 +905,7 @@ impl GpuState {
             });
         let game_fonts = game_font::GameFonts::preload(
             preload_game_fonts || game_font::enabled(console.as_ref()),
-            game_font::grid_console(console.as_ref()),
+            console.is_some(),
             &game_font::Device {
                 device: &device,
                 queue: &queue,
@@ -927,7 +931,12 @@ impl GpuState {
                 context.material_maps,
             )?;
         world_materials.bind_geometry(&geometry);
-        world_materials.install_gi(&device, &flattened, context.sun_shadows.day.enabled);
+        world_materials.install_gi(
+            &device,
+            &flattened,
+            &mover_catalog.meshes,
+            context.sun_shadows.day.enabled,
+        );
         let scene_views = scene_views::Runtime::new(
             &device,
             &camera_layout,
@@ -1328,6 +1337,7 @@ impl GpuState {
             world_load_state: session_transition::LoadStateMachine::new(),
             world_load_started: None,
             world_load_map: String::with_capacity(64),
+            remap_blocked_maps: Default::default(),
             snapshot_observations: snapshot_presentation::Counters::default(),
             obituaries: sjk_client::ObituaryTracker::new(),
             achievement_tracker: achievements::tracker::Tracker::default(),
@@ -1587,16 +1597,14 @@ impl GpuState {
         };
         self.hud.weapon_select.shown = self.sample_weapon_select(intermission_view.is_some());
         // JoF EJK's Force wheel (the retail icon bar) with the retail-looking HUDs.
-        self.hud.set_force_wheel_bar(!matches!(
-            hud_style,
-            menu_hud::HudStyle::Modern | menu_hud::HudStyle::Radial
-        ));
+        self.hud
+            .set_force_wheel_bar(hud_style != menu_hud::HudStyle::Radial);
         let hud_layout = self.hud.layout(
             hud_font,
             match hud_style {
                 menu_hud::HudStyle::Radial => hud::HudLook::Radial,
                 menu_hud::HudStyle::Classic => hud::HudLook::Classic,
-                _ => hud::HudLook::Modern,
+                menu_hud::HudStyle::Game => hud::HudLook::Game,
             },
             viewport,
             runtime_settings::hud_scale(self.console.as_ref()),
@@ -2012,7 +2020,7 @@ impl GpuState {
                 .update(snapshot, presentation_time as i32);
         } else {
             self.projectiles.clear();
-            if !self.resident.exploring() {
+            if !self.resident.exploring() && !world_shot_movers_pinned() {
                 self.movers.clear();
             }
             self.pickups.clear();
@@ -2060,7 +2068,7 @@ impl GpuState {
             }
         }
         self.prepare_scene_views(view, projection, presentation_time as i32);
-        movers::append_frame(self, presentation_time, visual_now);
+        movers::append_frame(self, presentation_time);
         self.static_models.append_instances(&mut self.object_groups);
         pickups::simple::append_frame(self, visual_now);
         // The charge glow on the view gun's muzzle (`cg_weapons.c` charge bits), after
@@ -2104,13 +2112,6 @@ impl GpuState {
         if let Some(phases) = &self.gpu_phases {
             phases.begin(&mut encoder);
         }
-        // The map being joined shows through the open gate: it is drawn
-        // first, and the menu world draws over it without its own sky.
-        let portal =
-            menu_backdrop::gate_doorway(self, visual_now).map_or(portal::View::Absent, |doorway| {
-                let shader_time = presentation_time as f32 * 0.001;
-                self.draw_portal(&mut encoder, &target_view, doorway, shader_time)
-            });
         dynamic_lights::entities::finish(self, presentation_time, visual_now, game_audio);
         let detached_flight = self.free_camera_active();
         let object_groups = &mut self.object_groups;
@@ -2288,6 +2289,9 @@ impl GpuState {
             phases.mark(&mut encoder, "uploads");
         }
         if !self.world_hidden {
+            // Walls stop dynamic lights: their shadow tiles before any view lights with them.
+            self.world_materials
+                .trace_dynamic_light_shadows(&mut encoder, self.gpu_phases.as_ref());
             self.draw_scene_views(&mut encoder, &particle_ranges);
         }
         if let Some(phases) = &self.gpu_phases {
@@ -2300,7 +2304,6 @@ impl GpuState {
             self.encode_world_scene(
                 &mut encoder,
                 &target_view,
-                portal,
                 source_cluster,
                 &particle_ranges,
                 has_entity_instances,
@@ -2387,3 +2390,14 @@ mod particle_atlas_sampling;
 
 mod depth_target;
 use depth_target::DepthTarget;
+
+/// World shots place movers by hand (`world_shot::movers`); nothing else keeps them
+/// without a snapshot.
+#[cfg(test)]
+fn world_shot_movers_pinned() -> bool {
+    world_shot::MOVERS_PINNED.with(std::cell::Cell::get)
+}
+#[cfg(not(test))]
+fn world_shot_movers_pinned() -> bool {
+    false
+}

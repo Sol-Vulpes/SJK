@@ -1,9 +1,9 @@
-//! The classic Setup page's own groups. Retail's `setup.menu` and the modern
-//! settings tabs cut the settings differently, so classic+ regroups them by
+//! The classic Setup page's own groups. Retail's `setup.menu` and the settings
+//! screen's tabs cut the settings differently, so classic+ regroups them by
 //! what they are about (`docs/classic-plus.md`): gameplay options, the
 //! menus and console, the HUD, the scoreboard. Each group lists its rows'
 //! cvars; the settings come from the catalogue, so a group shows the same
-//! rows the modern tabs do.
+//! rows the tabs do.
 
 use super::catalog::*;
 use std::sync::OnceLock;
@@ -46,7 +46,7 @@ impl Group {
         Self::Scoreboard,
     ];
 
-    /// The group's name, as the one tab of the modern screen showing it.
+    /// The group's name, as the one tab of the tabbed screen showing it.
     const CAPTIONS: [&'static str; 6] = [
         "GAME OPTIONS",
         "INTERFACE",
@@ -93,14 +93,12 @@ impl Group {
             ],
             Self::Interface => &[
                 crate::menu::style::CVAR,
-                "ui_accent",
                 "ui_menuContrast",
                 crate::game_font::CVAR,
                 crate::text::style::SCALE_CVAR,
                 crate::text::style::TRACKING_CVAR,
                 crate::console::console_options::STYLE_CVAR,
                 "con_scale",
-                "con_lineSpacing",
                 crate::quick_wheel::pages::FILE,
                 crate::quick_wheel::SOUNDS_CVAR,
             ],
@@ -137,12 +135,14 @@ impl Group {
                 "cg_speedometer",
                 "cg_drawTeamOverlay",
                 "cg_lagometer",
+                "cg_killfeed",
                 "cg_drawChat",
                 crate::chat::emoji::CVAR,
                 crate::ground_hud::CVAR,
             ],
             Self::Scoreboard => &[
                 crate::scoreboard::style::CVAR,
+                crate::scoreboard::style::COMPACT_CVAR,
                 "cg_showClientIDs",
                 "cg_drawScoreboardIcons",
                 "cg_smallScoreboard",
@@ -175,6 +175,7 @@ impl Group {
             // Its headings are its tabs' names ([`graphics_tabs`]).
             Self::Scoreboard | Self::Graphics => &[],
             Self::Quick => &[
+                (crate::graphics_quality::ROW_NAME, "Graphics"),
                 (crate::menu::style::CVAR, "Styles"),
                 ("r_resolution", "Display"),
                 ("sensitivity", "Aim"),

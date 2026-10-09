@@ -85,9 +85,10 @@ pub(crate) fn spawn_snapshot_particles(
         } else {
             Vec3::from_array(entity.trajectory_base())
         };
-        let origin = if matches!(raw_event, 64 | 65) {
-            // `EV_PLAYER_TELEPORT_IN/OUT` (`cg_event.c:3470-3490`) drop the player box
-            // 4096 units onto the floor and play `mp/spawn` there; nothing below, no effect.
+        let origin = if matches!(raw_event, 34 | 64 | 65) {
+            // `EV_PLAYER_TELEPORT_IN/OUT` and `EV_BECOME_JEDIMASTER` (`cg_event.c:2409-2430,
+            // 2699-2751`) drop the player box 4096 units onto the floor and play `mp/spawn`
+            // or `mp/jedispawn` there; nothing below, no effect.
             match teleport_floor(bsp, trace_scratch, origin) {
                 Some(floor) => floor,
                 None => continue,
@@ -126,7 +127,9 @@ fn teleport_floor(
     scratch: &mut sjk_bsp::TraceScratch,
     origin: Vec3,
 ) -> Option<Vec3> {
-    const CONTENTS_SOLID: u32 = 1;
+    // `MASK_SOLID`, `CONTENTS_SOLID | CONTENTS_TERRAIN` (`bg_public.h:1225`), as
+    // `cg_event.c` traces it.
+    const MASK_SOLID: u32 = 0x0000_1001;
     let bounds = sjk_bsp::Aabb::new([-15.0, -15.0, -16.0], [15.0, 15.0, 40.0]).ok()?;
     let end = origin - Vec3::Z * 4096.0;
     let trace = bsp.trace_box_with(
@@ -134,7 +137,7 @@ fn teleport_floor(
         origin.to_array(),
         end.to_array(),
         bounds,
-        CONTENTS_SOLID,
+        MASK_SOLID,
     );
     (trace.fraction < 1.0).then(|| Vec3::from_array(trace.end_position))
 }
@@ -348,15 +351,29 @@ pub(crate) fn spawn_effect(
             } else {
                 particle_rotation * sampled_acceleration
             };
+            let line_origin2 = || {
+                Vec3::from_array(component.origin2.sample([
+                    random_unit(particle_seed.wrapping_add(20)),
+                    random_unit(particle_seed.wrapping_add(21)),
+                    random_unit(particle_seed.wrapping_add(22)),
+                ]))
+            };
+            // An `org2fromTrace` line (the beams of `mp/spawn`, `mp/jedispawn`, `env/beam`)
+            // ends where a trace along its forward axis meets a solid. Its streak points at
+            // the untraced end until the first draw traces it; taken as an offset from the
+            // origin, as other lines are, it had no length and drew as a square at the origin.
+            let trace_streak =
+                component.kind == ComponentKind::Line && component.spawn_flags.origin2_from_trace;
             let streak = match component.kind {
-                ComponentKind::Line => Some(
-                    particle_rotation
-                        * Vec3::from_array(component.origin2.sample([
-                            random_unit(particle_seed.wrapping_add(20)),
-                            random_unit(particle_seed.wrapping_add(21)),
-                            random_unit(particle_seed.wrapping_add(22)),
-                        ])),
+                ComponentKind::Line if trace_streak => Some(
+                    crate::effect_shapes::origin2_trace_target(
+                        component,
+                        particle_origin,
+                        particle_rotation,
+                        line_origin2(),
+                    ) - particle_origin,
                 ),
+                ComponentKind::Line => Some(particle_rotation * line_origin2()),
                 ComponentKind::Tail => Some(-velocity),
                 _ => None,
             };
@@ -437,6 +454,7 @@ pub(crate) fn spawn_effect(
                     .end
                     .sample(random_unit(particle_seed.wrapping_add(24))),
                 streak,
+                trace_streak,
                 normal,
                 alpha: crate::effect_envelope::Envelope::from_curve(
                     component.alpha,
@@ -525,3 +543,7 @@ fn random_unit(mut seed: u32) -> f32 {
     seed ^= seed >> 16;
     (seed as f64 / u32::MAX as f64) as f32
 }
+
+#[cfg(test)]
+#[path = "effect_runtime_tests.rs"]
+mod tests;

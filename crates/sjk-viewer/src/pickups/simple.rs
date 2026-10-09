@@ -145,6 +145,7 @@ pub(crate) fn append_frame(gpu: &mut crate::GpuState, now: Instant) {
             start_length: 1.0,
             end_length: 1.0,
             streak: None,
+            trace_streak: false,
             normal: None,
             alpha: constant(item.simple_color[3]),
             use_alpha: true,

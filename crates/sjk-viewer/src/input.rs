@@ -4,6 +4,7 @@ use sjk_protocol::UserCommand;
 pub(crate) mod alt_code;
 pub(crate) mod dead_key;
 pub(crate) mod flip_kick;
+pub(crate) mod idrive;
 pub(crate) mod motion;
 
 mod selection_commands;
@@ -38,6 +39,9 @@ pub(crate) enum GameButton {
     /// `+force_stasis` (JoF EJK `cl_input.cpp`): the usercmd Stasis button, sent
     /// only where a JoF JA+ server granted Stasis ([`sjk_client::force_wheel`]).
     ForceStasis,
+    /// `+duck` (JoF EJK `CG_NorollDown_f`): crouch without rolling. See
+    /// [`GameplayInput::up_move`].
+    Duck,
 }
 
 /// One-shot action emitted by a non-button bind command.
@@ -88,6 +92,8 @@ pub(crate) struct GameplayInput {
     pub(crate) motion: motion::Motion,
     /// `cl_run`: the walk key toggles walking instead of running.
     always_run: bool,
+    /// `cl_idrive` and `cl_idriveDelay`: the last-pressed key of a pair wins.
+    idrive: idrive::Idrive,
     focused: bool,
     reset_after_buffer: bool,
 }
@@ -103,6 +109,7 @@ impl Default for GameplayInput {
             held: [state::KeyState::default(); 32],
             motion: motion::Motion::default(),
             always_run: true,
+            idrive: idrive::Idrive::default(),
             focused: true,
             reset_after_buffer: false,
         }
@@ -178,6 +185,18 @@ impl GameplayInput {
     /// Latch `cl_run` (retail default 1); see `user_command`.
     pub(crate) fn set_always_run(&mut self, always_run: bool) {
         self.always_run = always_run;
+    }
+
+    /// Latch `cl_idrive` and `cl_idriveDelay`; see [`idrive`].
+    pub(crate) fn set_idrive(&mut self, idrive: idrive::Idrive) {
+        self.idrive = idrive;
+    }
+
+    /// The command about to be built was made `millis` before the frame's sample time
+    /// (0 for the last or only command of a frame), so `cl_idriveDelay` is counted in
+    /// command time. Reset it to 0 after the commands of a frame.
+    pub(crate) fn set_command_age(&mut self, millis: u64) {
+        self.motion.command_age = millis;
     }
 
     pub(crate) fn held(&self, button: GameButton) -> bool {
@@ -258,7 +277,9 @@ impl GameplayInput {
         // `CL_KeyMove` (`codemp/client/cl_input.cpp:888-895`): running when
         // `in_speed.active ^ cl_run->integer`, otherwise `BUTTON_WALKING` with
         // `movespeed` 46 instead of 127. With `cl_run 1` the walk key walks.
-        let walking = !(self.held(GameButton::Speed) ^ self.always_run);
+        // `+duck` walks for the command after its press ([`Self::up_move`]).
+        let walking = !(self.held(GameButton::Speed) ^ self.always_run)
+            || self.held[GameButton::Duck.slot()].pressed;
         let movespeed = if walking { 46 } else { 127 };
         buttons = (buttons & !16) | u16::from(walking) * 16;
         UserCommand {
@@ -280,13 +301,18 @@ impl GameplayInput {
                 movespeed,
                 self.motion.side
                     + if self.held(GameButton::Strafe) {
-                        movespeed as f32
-                            * (self.fraction(GameButton::Right) - self.fraction(GameButton::Left))
+                        let (right, left) = self.idrive_pair(
+                            GameButton::Right,
+                            GameButton::Left,
+                            self.fraction(GameButton::Right),
+                            self.fraction(GameButton::Left),
+                        );
+                        movespeed as f32 * (right - left)
                     } else {
                         0.0
                     },
             ),
-            up_move: self.axis(GameButton::Up, GameButton::Down, movespeed, 0.0),
+            up_move: self.up_move(movespeed),
             buttons,
             weapon,
             force_selection: self.selection.force.unwrap_or(force_selection),
@@ -294,6 +320,31 @@ impl GameplayInput {
             generic_command,
             ..UserCommand::default()
         }
+    }
+
+    /// Jump and crouch, with `+duck` as JoF EJK plays it (`cg_consolecmds.c`
+    /// `CG_NorollDown_f`): its press lets go of jump and walks for one frame, then
+    /// it crouches like `+movedown`. Moving into a crouch rolls only from a running
+    /// legs animation (`bg_pmove.c` `PM_Footsteps`), and one walking command
+    /// replaces it with the walk; once crouched, the legs crouch instead.
+    /// EJK walks with `+speed`, which runs under `cl_run 0`; SJK always walks.
+    fn up_move(&self, speed: i8) -> i8 {
+        let duck = &self.held[GameButton::Duck.slot()];
+        if duck.pressed {
+            return self
+                .axis(GameButton::Up, GameButton::Down, speed, 0.0)
+                .min(0);
+        }
+        // In EJK `+duck` presses `+movedown`, so the two share one key state: the
+        // longer-held of the two is the crouch key, for `cl_idrive` too.
+        let crouch = if self.movement_fraction(GameButton::Duck)
+            > self.movement_fraction(GameButton::Down)
+        {
+            GameButton::Duck
+        } else {
+            GameButton::Down
+        };
+        self.axis(GameButton::Up, crouch, speed, 0.0)
     }
 
     /// Apply one command resolved by the bind table.
@@ -311,6 +362,10 @@ impl GameplayInput {
                 .and_then(|word| word.parse().ok())
                 .unwrap_or(self.motion.now);
             let changed = self.held[button.slot()].event(pressed, key, time);
+            if changed && pressed && button == GameButton::Duck {
+                // EJK's `-moveup`: a typed release, letting go of every jump key.
+                self.held[GameButton::Up.slot()].event(false, None, time);
+            }
             if !pressed && button == GameButton::Mlook {
                 return Some(InputAction::MlookReleased);
             }
@@ -378,6 +433,8 @@ fn button_for_command(command: &str) -> Option<GameButton> {
         "moveright" => Some(GameButton::MoveRight),
         "moveup" => Some(GameButton::Up),
         "movedown" => Some(GameButton::Down),
+        // JoF EJK `cg_consolecmds.c` (`+duck`): crouch without rolling.
+        "duck" => Some(GameButton::Duck),
         "speed" => Some(GameButton::Speed),
         "attack" => Some(GameButton::Button(0)),
         "altattack" => Some(GameButton::Button(7)),
@@ -637,6 +694,131 @@ mod tests {
         assert_eq!(buttons(&input) & BUTTON_12, 0);
     }
 
+    /// One 8 ms command ending at `now`, returning its forward move.
+    fn forward_move(input: &mut GameplayInput, now: u64) -> i8 {
+        let look = crate::pointer_input::MouseLook {
+            sensitivity: 5.0,
+            yaw_scale: 0.022,
+            pitch_scale: 0.022,
+            invert: false,
+        };
+        input.sample_motion(now, look);
+        let forward = input
+            .user_command(0, 0.0, 0.0, [0; 3], 0, 0, 0)
+            .forward_move;
+        input.finish_command();
+        forward
+    }
+
+    #[test]
+    fn idrive_reverses_to_the_last_pressed_key_after_its_delay() {
+        let mut input = GameplayInput::default();
+        input.set_idrive(idrive::Idrive {
+            mode: 1,
+            delay_millis: 16,
+        });
+        forward_move(&mut input, 100);
+        input.apply("+forward 17 100");
+        assert_eq!(forward_move(&mut input, 108), 127);
+        input.apply("+back 31 108");
+        assert_eq!(forward_move(&mut input, 116), 0);
+        assert_eq!(forward_move(&mut input, 124), -127);
+        input.apply("-back 31 124");
+        // Letting the newer key go keeps the pair neutral for the delay too.
+        assert_eq!(forward_move(&mut input, 132), 0);
+        assert_eq!(forward_move(&mut input, 140), 127);
+    }
+
+    /// Commands every `step` ms after `now` until one moves by `until`; the moves
+    /// before it, and the time of the last command.
+    fn moves_until(
+        input: &mut GameplayInput,
+        mut now: u64,
+        step: u64,
+        until: i8,
+    ) -> (Vec<i8>, u64) {
+        let mut before = Vec::new();
+        loop {
+            now += step;
+            let moved = forward_move(input, now);
+            if moved == until {
+                return (before, now);
+            }
+            before.push(moved);
+            assert!(before.len() < 100, "never reached {until}: {before:?}");
+        }
+    }
+
+    #[test]
+    fn idrive_keeps_its_neutral_gap_at_every_command_step() {
+        // A command is made every `step` ms (125, 142, 250 and 333 FPS): the commands
+        // strictly inside the delay after a press, or after the newer key's release,
+        // are neutral, so neither reversal is ever instant.
+        for step in [8_u64, 7, 4, 3] {
+            for delay in [16_u64, 50] {
+                let gap = (delay.div_ceil(step) - 1) as usize;
+                let mut input = GameplayInput::default();
+                input.set_idrive(idrive::Idrive {
+                    mode: 1,
+                    delay_millis: delay,
+                });
+                forward_move(&mut input, 1000);
+                input.apply("+forward 17 1000");
+                let (_, mut now) = moves_until(&mut input, 1000, step, 127);
+                for _ in 0..10 {
+                    now += step;
+                    assert_eq!(forward_move(&mut input, now), 127);
+                }
+                input.apply(&format!("+back 31 {now}"));
+                let (before, reached) = moves_until(&mut input, now, step, -127);
+                assert_eq!(before, vec![0; gap], "press, step {step} delay {delay}");
+                now = reached;
+                for _ in 0..10 {
+                    now += step;
+                    assert_eq!(forward_move(&mut input, now), -127);
+                }
+                input.apply(&format!("-back 31 {now}"));
+                let (before, _) = moves_until(&mut input, now, step, 127);
+                assert_eq!(before, vec![0; gap], "release, step {step} delay {delay}");
+            }
+        }
+    }
+
+    #[test]
+    fn idrive_counts_its_delay_in_command_time_not_frame_time() {
+        // A 16 ms frame makes two commands, stamped 8 ms apart. The press was at
+        // 2000: the first command (made at 2008) is inside the 16 ms delay, the second
+        // (2016) is not. Evaluated at the frame's time both would be 2016.
+        let mut input = GameplayInput::default();
+        input.set_idrive(idrive::Idrive {
+            mode: 1,
+            delay_millis: 16,
+        });
+        let look = crate::pointer_input::MouseLook {
+            sensitivity: 5.0,
+            yaw_scale: 0.022,
+            pitch_scale: 0.022,
+            invert: false,
+        };
+        input.sample_motion(1000, look);
+        input.apply("+forward 17 1000");
+        input.sample_motion(2000, look);
+        input.finish_command();
+        input.apply("+back 31 2000");
+        input.sample_motion(2016, look);
+        let mut moves = Vec::new();
+        for age in [8, 0] {
+            input.set_command_age(age);
+            moves.push(
+                input
+                    .user_command(0, 0.0, 0.0, [0; 3], 0, 0, 0)
+                    .forward_move,
+            );
+        }
+        input.set_command_age(0);
+        assert_eq!(moves, [0, -127]);
+    }
+
     #[test]
     fn tap_sets_a_button_for_one_command() {
         let mut input = GameplayInput::default();
@@ -644,5 +826,156 @@ mod tests {
         assert_ne!(buttons(&input) & (1 << 5), 0);
         input.finish_command();
         assert_eq!(buttons(&input) & (1 << 5), 0);
+    }
+
+    const BUTTON_WALKING: u16 = 1 << 4;
+
+    fn command(input: &GameplayInput) -> UserCommand {
+        input.user_command(0, 0.0, 0.0, [0; 3], 0, 0, 0)
+    }
+
+    #[test]
+    fn duck_walks_one_command_then_crouches() {
+        let mut input = GameplayInput::default();
+        assert!(GameplayInput::recognizes("+duck"));
+        input.apply("+forward 17 0");
+        input.apply("+duck 46 0");
+        // The walk that takes the legs out of their running animation, so no roll.
+        let first = command(&input);
+        assert_ne!(first.buttons & BUTTON_WALKING, 0);
+        assert_eq!((first.forward_move, first.up_move), (46, 0));
+        input.finish_command();
+        let second = command(&input);
+        assert_eq!(second.buttons & BUTTON_WALKING, 0);
+        assert_eq!((second.forward_move, second.up_move), (127, -127));
+        input.apply("-duck 46 10");
+        input.finish_command();
+        assert_eq!(command(&input).up_move, 0);
+    }
+
+    #[test]
+    fn duck_lets_go_of_jump_and_walks_under_cl_run_0() {
+        let mut input = GameplayInput::default();
+        input.set_always_run(false);
+        input.apply("+speed 42 0");
+        input.apply("+moveup 57 0");
+        input.apply("+duck 46 0");
+        assert!(!input.held(GameButton::Up));
+        let first = command(&input);
+        assert_ne!(first.buttons & BUTTON_WALKING, 0, "EJK's +speed would run");
+        assert_eq!(first.up_move, 0);
+        input.finish_command();
+        assert_eq!(command(&input).up_move, -127);
+    }
+
+    #[test]
+    fn duck_and_crouch_share_the_crouch() {
+        let mut input = GameplayInput::default();
+        input.apply("+movedown 99 0");
+        input.apply("+duck 46 0");
+        assert_eq!(
+            command(&input).up_move,
+            -46,
+            "still crouched, at walking speed"
+        );
+        input.finish_command();
+        input.apply("-duck 46 10");
+        assert_eq!(command(&input).up_move, -127);
+    }
+
+    /// One command ending at `now`, returning (walking, forward move, up move).
+    fn step_command(input: &mut GameplayInput, now: u64) -> (bool, i8, i8) {
+        let look = crate::pointer_input::MouseLook {
+            sensitivity: 5.0,
+            yaw_scale: 0.022,
+            pitch_scale: 0.022,
+            invert: false,
+        };
+        input.sample_motion(now, look);
+        let c = command(input);
+        input.finish_command();
+        (c.buttons & BUTTON_WALKING != 0, c.forward_move, c.up_move)
+    }
+
+    #[test]
+    fn cl_idrive_still_resolves_jump_and_crouch() {
+        // With cl_idrive 1 or 2 a crouch pressed after a held jump wins.
+        for mode in [1, 2] {
+            let mut input = GameplayInput::default();
+            input.set_idrive(idrive::Idrive {
+                mode,
+                delay_millis: 0,
+            });
+            step_command(&mut input, 1000);
+            input.apply("+moveup 57 1000");
+            assert_eq!(step_command(&mut input, 1008).2, 127);
+            input.apply("+movedown 99 1008");
+            assert_eq!(
+                step_command(&mut input, 1016).2,
+                -127,
+                "mode {mode}: crouch pressed last wins"
+            );
+        }
+    }
+
+    #[test]
+    fn duck_walks_one_command_then_crouches_at_every_command_step() {
+        // 125, 142, 250 and 333 FPS command steps, with the press anywhere in a step.
+        for step in [8_u64, 7, 4, 3] {
+            for offset in [0_u64, 1, step - 1] {
+                let mut input = GameplayInput::default();
+                let mut now = 1000;
+                step_command(&mut input, now);
+                input.apply(&format!("+forward 17 {now}"));
+                for _ in 0..5 {
+                    now += step;
+                    assert_eq!(step_command(&mut input, now), (false, 127, 0));
+                }
+                input.apply(&format!("+duck 46 {}", now + offset));
+                now += step;
+                assert_eq!(
+                    step_command(&mut input, now),
+                    (true, 46, 0),
+                    "step {step} offset {offset}"
+                );
+                for _ in 0..10 {
+                    now += step;
+                    assert_eq!(
+                        step_command(&mut input, now),
+                        (false, 127, -127),
+                        "step {step} offset {offset}"
+                    );
+                }
+                input.apply(&format!("-duck 46 {}", now + offset));
+                now += step;
+                let released = step_command(&mut input, now);
+                assert!(released.2 <= 0 && !released.0, "step {step}: {released:?}");
+                now += step;
+                assert_eq!(
+                    step_command(&mut input, now),
+                    (false, 127, 0),
+                    "step {step} offset {offset}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn a_jump_pressed_while_ducking_wins_under_cl_idrive() {
+        // EJK: +duck's typed +movedown carries no press time, so a jump pressed while
+        // ducking wins under cl_idrive; without it the two cancel.
+        for (mode, expected) in [(0, 0), (1, 127), (2, 127)] {
+            let mut input = GameplayInput::default();
+            input.set_idrive(idrive::Idrive {
+                mode,
+                delay_millis: 0,
+            });
+            step_command(&mut input, 1000);
+            input.apply("+duck 46 1000");
+            step_command(&mut input, 1008);
+            assert_eq!(step_command(&mut input, 1016).2, -127);
+            input.apply("+moveup 57 1016");
+            assert_eq!(step_command(&mut input, 1024).2, expected, "mode {mode}");
+        }
     }
 }

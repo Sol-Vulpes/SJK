@@ -4,6 +4,14 @@
 //! written while the player picks: Apply writes `forcepowers` once, Discard
 //! returns the draft to what was last applied, and closing the screen
 //! drops an unapplied draft (the next open reads the cvar again).
+//!
+//! On a server the draft takes the server's rank ceiling and free saber
+//! skills, which decide whether it keeps the profile it is sent
+//! (`WP_InitForcePowers` parks a player whose profile it had to cut). What the
+//! server merely will not let be used, its `g_forcePowerDisable` powers and
+//! team powers outside team games, stays buyable and is marked
+//! ([`ForceMenu::server_limit`]): the profile keeps them for a mod's full
+//! Force duel or the next server.
 
 use crate::console::ViewerConsole;
 use sjk_client::{
@@ -58,7 +66,41 @@ pub(super) const POWER_NOTES: [&str; 18] = [
 const DEFAULT_FORCEPOWERS: &str = "7-1-032330000000001333";
 
 /// `GT_TEAM` (`bg_public.h`): team powers are legal from here on.
-const GT_TEAM: i32 = 6;
+pub(super) const GT_TEAM: i32 = 6;
+
+/// Why the server the client plays on will not let a power be used as the
+/// draft holds it.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(super) enum ServerLimit {
+    /// `g_forcePowerDisable` turns it off.
+    Disabled,
+    /// `g_forcePowerDisable` holds it at this level (Jump at 1, Saber Offense
+    /// and Defense at 3, as `BG_LegalizedForcePowers` sets them).
+    Fixed(u8),
+    /// A team power on a server that is not playing a team game.
+    TeamGamesOnly,
+}
+
+impl ServerLimit {
+    /// The few words a power's row says of it.
+    pub(super) fn tag(self) -> &'static str {
+        match self {
+            Self::Disabled => "Off on this server",
+            Self::Fixed(_) => "Fixed on this server",
+            Self::TeamGamesOnly => "Team games only",
+        }
+    }
+
+    /// What the page says of it.
+    pub(super) fn describe(self) -> &'static str {
+        match self {
+            Self::Disabled => "Disabled on this server",
+            Self::Fixed(1) => "Held at level 1 on this server",
+            Self::Fixed(_) => "Held at level 3 on this server",
+            Self::TeamGamesOnly => "Not used here: team games only",
+        }
+    }
+}
 
 /// What buying the next level of a power would take.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -73,8 +115,6 @@ pub(super) enum NextLevel {
     Short(u8),
     /// The other side's power.
     OtherSide,
-    /// A team power outside team games.
-    TeamOnly,
     /// Saber Defense or Throw without Saber Offense, which legalization
     /// clears (`UI_ForcePowerRank_HandleKey`).
     NeedsOffense,
@@ -84,7 +124,10 @@ pub(super) struct ForceMenu {
     allocation: ForceAllocation,
     /// The profile `forcepowers` holds: read on open, replaced on Apply.
     applied: ForceAllocation,
+    /// What the draft is kept legal under.
     rules: ForceLegalizeRules,
+    /// The rules of the server the client plays on, read on open.
+    server: Option<ForceLegalizeRules>,
     encoded: String,
     /// The template the draft was last loaded from, until it is edited.
     template: Option<String>,
@@ -98,6 +141,7 @@ impl ForceMenu {
             applied: allocation.clone(),
             allocation,
             rules: ForceLegalizeRules::default(),
+            server: None,
             template: None,
         }
     }
@@ -106,24 +150,31 @@ impl ForceMenu {
         let raw = console
             .text_value("forcepowers")
             .unwrap_or(DEFAULT_FORCEPOWERS);
-        let server_rank = console.integer_cvar("ui_rankChange").unwrap_or(0);
-        let rules = ForceLegalizeRules {
-            gametype: console.integer_cvar("g_gametype").unwrap_or(0) as i32,
-            free_saber: console.integer_cvar("ui_freesaber").unwrap_or(0) != 0,
-            ..ForceLegalizeRules::default()
-        };
-        self.load(raw, server_rank, rules);
+        self.load(raw, console.server_force_rules());
     }
 
-    /// Start a fresh draft from `raw` under `rules` (whose rank ceiling is
-    /// replaced by the profile's own rank, or `server_rank` when positive).
-    fn load(&mut self, raw: &str, server_rank: i64, mut rules: ForceLegalizeRules) {
+    /// Start a fresh draft from `raw` as on a server with `rules`, for tests.
+    #[cfg(test)]
+    pub(super) fn load_on_server(&mut self, raw: &str, rules: ForceLegalizeRules) {
+        self.load(raw, Some(rules));
+    }
+
+    /// Start a fresh draft from `raw`, at the server's rank and with its free
+    /// saber skills on one (`server`), at the profile's own rank off one.
+    fn load(&mut self, raw: &str, server: Option<ForceLegalizeRules>) {
         let mut allocation = ForceAllocation::parse(raw).unwrap_or_default();
-        if server_rank > 0 {
-            allocation.rank = u8::try_from(server_rank).unwrap_or(7).min(7);
+        if let Some(server) = server {
+            allocation.rank = server.max_rank.min(7);
         }
-        rules.max_rank = allocation.rank;
-        self.rules = rules;
+        self.server = server;
+        self.rules = ForceLegalizeRules {
+            max_rank: allocation.rank,
+            free_saber: server.is_some_and(|server| server.free_saber),
+            // Kept for what a server only marks: team powers, disabled ones.
+            gametype: GT_TEAM,
+            team_side: None,
+            disabled_mask: 0,
+        };
         self.allocation = legalize_force_powers(&allocation.encode(), self.rules).allocation;
         // What was read counts as applied: opening never writes the cvar.
         self.applied.clone_from(&self.allocation);
@@ -153,15 +204,6 @@ impl ForceMenu {
         self.allocation.remaining_points(self.rules.free_saber)
     }
 
-    /// Whether power `index` can hold levels on the draft's side in this
-    /// gametype; legalization clears it otherwise.
-    pub(super) fn is_available(&self, index: usize) -> bool {
-        ForcePower::ALL.get(index).is_some_and(|power| {
-            power.side().is_none_or(|side| side == self.allocation.side)
-                && !(power.is_team_power() && self.rules.gametype < GT_TEAM)
-        })
-    }
-
     /// Whether the draft differs from the applied profile.
     pub(super) fn is_dirty(&self) -> bool {
         self.allocation != self.applied
@@ -177,6 +219,26 @@ impl ForceMenu {
         self.rules.free_saber
     }
 
+    /// The rules of the server the client plays on, when it is on one.
+    pub(super) fn server(&self) -> Option<ForceLegalizeRules> {
+        self.server
+    }
+
+    /// Why the server will not let power `index` be used as the draft has it,
+    /// if it will not.
+    pub(super) fn server_limit(&self, index: usize) -> Option<ServerLimit> {
+        let server = self.server?;
+        let power = ForcePower::ALL.get(index).copied()?;
+        if server.disabled_mask & (1 << index) != 0 {
+            return Some(match power {
+                ForcePower::Levitation => ServerLimit::Fixed(1),
+                ForcePower::SaberOffense | ForcePower::SaberDefense => ServerLimit::Fixed(3),
+                _ => ServerLimit::Disabled,
+            });
+        }
+        (power.is_team_power() && server.gametype < GT_TEAM).then_some(ServerLimit::TeamGamesOnly)
+    }
+
     /// What raising power `index` one level would take.
     pub(super) fn next_level(&self, index: usize) -> NextLevel {
         let Some(power) = ForcePower::ALL.get(index).copied() else {
@@ -187,9 +249,6 @@ impl ForceMenu {
             .is_some_and(|side| side != self.allocation.side)
         {
             return NextLevel::OtherSide;
-        }
-        if power.is_team_power() && self.rules.gametype < GT_TEAM {
-            return NextLevel::TeamOnly;
         }
         if matches!(power, ForcePower::SaberDefense | ForcePower::SaberThrow)
             && self.allocation.levels[ForcePower::SaberOffense as usize] == 0
@@ -298,10 +357,11 @@ impl ForceMenu {
         self.refresh_encoded();
     }
 
-    /// Write the draft to `forcepowers`; nothing happens when it is unchanged.
+    /// Write the draft to `forcepowers` and, on a server, have the server read
+    /// it; nothing happens when it is unchanged.
     pub(super) fn apply(&mut self, console: &mut ViewerConsole) {
         if let Some(value) = self.commit() {
-            console.set_cvar("forcepowers", value);
+            console.apply_forcepowers(value);
         }
     }
 
@@ -326,7 +386,7 @@ mod tests {
 
     fn menu(raw: &str) -> ForceMenu {
         let mut menu = ForceMenu::new();
-        menu.load(raw, 0, ForceLegalizeRules::default());
+        menu.load(raw, None);
         menu
     }
 
@@ -400,7 +460,8 @@ mod tests {
         let mut menu = menu(DEFAULT_FORCEPOWERS);
         assert_eq!(menu.next_level(3), NextLevel::Mastered); // Push 3
         assert_eq!(menu.next_level(6), NextLevel::OtherSide); // Grip, dark
-        assert_eq!(menu.next_level(11), NextLevel::TeamOnly);
+        assert_eq!(menu.next_level(11), NextLevel::Costs(1)); // Team Heal
+        assert_eq!(menu.server_limit(11), None, "off a server");
         assert_eq!(menu.next_level(2), NextLevel::Costs(6)); // Speed 2 -> 3
         assert_eq!(menu.cost_to(0, 3), 12); // Heal 0 -> 3: 2 + 4 + 6
         menu.reset();
@@ -431,25 +492,41 @@ mod tests {
         assert_eq!(menu.allocation().levels[1], 1);
     }
 
+    /// A rank 4 (30 points) free-for-all with Heal (bit 0), Jump (1) and
+    /// Grip (6) disabled and free saber skills.
+    fn adept_server() -> ForceLegalizeRules {
+        ForceLegalizeRules {
+            max_rank: 4,
+            free_saber: true,
+            team_side: None,
+            gametype: 0,
+            disabled_mask: 0b100_0011,
+        }
+    }
+
     #[test]
-    fn availability_follows_side_and_gametype() {
-        let mut menu = menu(DEFAULT_FORCEPOWERS);
-        assert!(menu.is_available(0)); // Heal, light
-        assert!(!menu.is_available(6)); // Grip, dark
-        assert!(menu.is_available(1)); // Jump, neutral
-        assert!(!menu.is_available(11)); // Team Heal outside team games
-        menu.set_side(ForceSide::Dark);
-        assert!(!menu.is_available(0));
-        assert!(menu.is_available(6));
-        menu.load(
-            DEFAULT_FORCEPOWERS,
-            0,
-            ForceLegalizeRules {
-                gametype: GT_TEAM,
-                ..ForceLegalizeRules::default()
-            },
-        );
-        assert!(menu.is_available(11));
-        assert!(!menu.is_available(12)); // Team Energize is dark
+    fn on_a_server_the_draft_takes_its_rank_and_marks_what_it_will_not_use() {
+        let mut menu = ForceMenu::new();
+        // Push 3 and the saber skills at 2: 20 of the 30 points.
+        menu.load("7-1-010300000000000220", Some(adept_server()));
+        assert_eq!(menu.allocation().rank, 4);
+        assert_eq!(menu.total_points(), 30);
+        assert!(menu.free_saber());
+        assert_eq!(menu.remaining_points(), 10);
+        assert!(!menu.is_dirty());
+        assert_eq!(menu.server_limit(0), Some(ServerLimit::Disabled));
+        assert_eq!(menu.server_limit(1), Some(ServerLimit::Fixed(1)));
+        assert_eq!(menu.server_limit(6), Some(ServerLimit::Disabled));
+        assert_eq!(menu.server_limit(11), Some(ServerLimit::TeamGamesOnly));
+        assert_eq!(menu.server_limit(3), None);
+        // A disabled power and a team power can still be bought, for the
+        // profile's full Force duels or the next server.
+        assert!(menu.set_level(3, 0)); // Push 3 -> 0 frees 10 points
+        assert!(menu.set_level(0, 2)); // Heal 2: 6 points
+        assert!(menu.step(11, true)); // Team Heal 1: 1 point
+        assert_eq!(menu.allocation().levels[0], 2);
+        assert_eq!(menu.allocation().levels[11], 1);
+        assert_eq!(menu.remaining_points(), 13);
+        assert_eq!(menu.commit(), Some("4-1-210000000001000220"));
     }
 }

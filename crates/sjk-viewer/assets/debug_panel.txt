@@ -83,6 +83,31 @@ test: A message with no colour codes is one colour on every row, as it is on the
 test: cg_chatBoxEmojis 1, a long coloured line with :poop: wraps and keeps its colour after it.
 note: Unit-tested only; not run in game yet. The typed draft is one scrolling row, unchanged.
 
+[sjk-chat]
+area: Console & chat
+title: SJK chat through the hub, and the path for emotes (SJK PR #36)
+change: A fourth chat channel, SJK: I opens its composer, Tab cycles All, Team and SJK.
+change: The main menu docks it under Recent servers; sjkchat opens its page, where you can mute.
+change: sjkemote <id> relays an emote through the hub; cl_sjkChat 0 turns the chat off.
+test: Settings > Key bindings > Other: bind SJK chat to a key if your profile has no I yet.
+test: In a game press I, type a line, Enter: it shows tagged SJK; the game server sees nothing.
+test: In the main menu the dock under Recent servers shows the chat, or Not connected.
+test: cl_sjkChat 0, or cl_identity 0: no polling, and Enter on SJK says why it cannot send.
+test: Normal chat (Y, T, U), the console and the in-game SJK menu behave as before.
+note: Needs the hub's chat routes deployed; until then the dock stays on Not connected.
+note: Tab from Team now goes to SJK: read the composer's channel before pressing Enter.
+
+[chat-percent-quotes]
+area: Console & chat
+title: % and quotes in chat arrive as typed, as EternalJK sends them (SJK PR #44)
+change: A % in a chat line goes out as the escape EternalJK uses and shows as % again.
+change: A " goes out as two apostrophes and shows as " again, for SJK and EternalJK players.
+change: The chat box counts the longer escapes in its length limit; the console keeps them.
+test: On a JoF or JA+ server say 100% done and say "hi": both show as typed in the chat box.
+test: Have a JoF EternalJK player say the same: SJK shows the % and the quotes too.
+test: Type 60 percent signs: the box stops at 15, and the sent line is never cut mid-escape.
+note: The console copy of a chat line keeps the escapes, as in EternalJK.
+
 # ---- Input ----
 
 [locked-binds]
@@ -123,6 +148,30 @@ test: On a server, aim at a player and press U: the chat box opens addressed to 
 test: Press U aiming at nobody: nothing opens. Key bindings > Other lists U on Whisper.
 test: A bind of your own on U (for example taunt) is still there after a restart.
 note: Lumaya did not check the physical U targeting in game.
+
+[last-key-wins]
+area: Input
+title: cl_idrive: the last pressed movement key wins; cl_idriveDelay (SJK PR #37)
+change: cl_idrive 1 makes the key pressed last win a pair; 2 does it for jump/crouch only.
+change: cl_idriveDelay keeps the pair neutral that many ms after a press and after a release.
+change: Default 0 for both: nothing changes until you set them (Settings > Controls).
+test: cl_idrive 1: hold W, then S too, release S: you go back, then forward, never both.
+test: Same for A/D and jump/crouch; cl_idrive 2 only changes jump and crouch.
+test: cl_idriveDelay 20: the reversal stops for a moment first, on a press and on a release.
+test: Below 125 FPS (com_maxfps 60) the delay still gives at least one neutral step.
+note: Not tried on a server; what a server's nerf check detects is unknown.
+
+[duck-no-roll]
+area: Input
+title: +duck crouches without rolling, as in JoF EternalJK (SJK PR #41)
+change: +duck lets go of jump and walks for one user command, then crouches like +movedown.
+change: That walk takes the legs out of the run, so crouching while running does not roll.
+change: No default key: bind it in Controls > Movement > Crouch, no roll (JoF).
+test: Bind C to Crouch, no roll; run forward and press C: you crouch-walk, never roll.
+test: Same while running backwards and strafing; plain +movedown on another key still rolls.
+test: Hold SPACE, press C: the jump is let go and you crouch; release C: you stand up.
+test: With cl_idrive 2: hold C, then SPACE: you jump; let go of SPACE: you crouch again.
+note: A roll on landing while crouched (PM_CrashLand) is not prevented, in EJK either.
 
 # ---- Menus & settings ----
 
@@ -220,12 +269,35 @@ test: Check the same in the in-game settings menu.
 [fps-cap-auto]
 area: Menus & settings
 title: FPS cap follows the monitor; caps hold their exact rate
-change: com_maxfps defaults to -1 = AUTO (monitor refresh, 125 if unknown); 0 is uncapped.
+change: com_maxfps -1 = AUTO: 125, or the monitor's refresh with com_maxfpsMonitor 1; 0 is uncapped.
 change: An old saved 1000 becomes AUTO once. Caps no longer run ~7% low (240 gave 223).
-test: Settings > Video: FPS cap shows AUTO; cg_drawFPS 1 reads your refresh rate (240).
+test: Settings > Video: FPS cap shows AUTO; with Detect refresh rate on, cg_drawFPS 1 reads your rate.
 test: Right from AUTO gives 0 (uncapped), then 25, 50...; dragging to the far left gives AUTO.
 test: com_maxfps 144 then 60: cg_drawFPS holds 144 and 60, not a few frames below.
 test: Record with OBS uncapped vs AUTO: compare skipped frames in the OBS log.
+
+[menu-images-world-change]
+area: Menus & settings
+title: Menu pictures survive a join, a map change and a disconnect (SJK PR #38)
+change: Every world has its own icon atlas; the menu now loads its pictures again in a new one.
+change: Covers model squares, Force and part icons, key pictures, map and HUD previews.
+test: Open Character, close it, join a local server, open Character: no black or wrong squares.
+test: Change map, then disconnect to the menu, and open Character again: the squares are right.
+test: Repeat for Force (classic), Controls pictures, Create game preview and the HUD picker.
+test: Both menu styles (ui_menuStyle sjk and classic) and the in-game menu's Character page.
+note: Not tried in a running client.
+
+[graphics-quality]
+area: Menus & settings
+title: Graphics quality levels at the top of First setup and Video (SJK PR #35)
+change: Performance, Balanced, High and Ultra set 22 rendering cvars together (docs/client.md).
+change: A fresh profile reads High; a hand change reads Custom; nothing is applied on its own.
+change: Also the graphicsquality console command; Backspace or right-click returns to High.
+test: Fresh profile, First setup (SJK UI card and classic Setup): the top row reads High.
+test: Pick Performance: shadows, light shafts and post-processing go off after a restart.
+test: Change one setting by hand: the row reads Custom; step it: it starts at the nearest level.
+test: graphicsquality ultra names Ultra and what needs a restart; graphicsquality alone shows it.
+note: The first row is pre-selected, so a stray Backspace there replaces 22 settings.
 
 # ---- HUD ----
 
@@ -262,6 +334,32 @@ change: HUD widget text (crosshair name, kill feed, timer, warmup, vote) 1.33x -
 change: FPS and weapon labels 1.35x -> 2x at 4K; Windows display scaling no longer changes them.
 test: At 3840x2160: crosshair name, kill feed, timer, FPS and weapon name are clearly bigger.
 test: cg_hudScale 0.5 and 1.5 at 4K: nothing overflows the screen edges.
+
+[card-polish]
+area: HUD
+title: Player card polish: hips anchor, Escape unpins, small medal names (SJK PR #33)
+change: The card's leader starts at the player's hips (lower when they crouch), not at the head.
+change: Escape unpins a pinned card instead of opening the game menu; with no pin it is as before.
+change: No duel record line; medal names are small print; dot, emblem and VERIFIED sit centred.
+test: Look at a player and press inspect: the card points at their hips, also when they crouch.
+test: With the card pinned press Escape: it unpins and no menu opens; Escape again opens it.
+test: Pin a player with several medals: the names are small, about 52 characters to a line.
+test: cg_playerCard 0, then Escape: the game menu opens as before.
+note: Not tried in a running client; how far a crouch drops the hips (HIP_DROP 0.5) is an estimate.
+
+[compact-scoreboard]
+area: HUD
+title: Compact SJK scoreboard; the HUD hides while scores are held (SJK PR #42)
+change: cg_compactScoreboard 1 (default): SJK scoreboard rows 20-32 tall, a full server in one column.
+change: Holding the scoreboard hides the HUD (status, weapon, timer, crosshair, votes); chat stays.
+change: Settings > Scoreboard > Compact SJK scoreboard off gives the old layout back.
+test: SJK UI, local server, FFA with 20+ bots: hold Tab: one column, names and pings readable.
+test: Team game, 16 vs 16 bots: both teams listed in full, no "and n more".
+test: Hold Tab: health, ammo, timer, crosshair and kill feed go, chat stays; let go: all back.
+test: cg_scoreboardStyle classic: Tab hides the HUD too. cg_drawScores 0: Tab leaves the HUD.
+test: Compact SJK scoreboard off, 30 players: two lists side by side as before.
+note: Not tried in a running client: the HUD hiding and the compact board over a real match.
+note: Alt+Tab while holding Tab leaves the board and the hidden HUD up until Tab is pressed again.
 
 # ---- Rendering & effects ----
 
@@ -412,6 +510,52 @@ test: remapShader <old> <new> on a map: the surface keeps its shadows; clearRema
 test: Glowing, sky and effect targets with their own stages look as before.
 note: Checked offline on mp/duel6 only; not on a live server or with a $lightmap target shader.
 
+[mover-light]
+area: Rendering & effects
+title: Doors, lifts and other movers block lamp light (SJK PR #39)
+change: Closed doors, lifts and other moving brushes stop the light of lamps behind them.
+change: Open, hidden, broken or switched-off ones let it through again.
+change: The far sun shadows follow movers too, at most four times a second.
+test: siege_hoth, High quality: by the closed hangar door, no lamp light leaks onto the floor.
+test: Open and close that door: the light comes through as it opens and goes as it closes.
+test: Break a breakable wall or switch off a force field by a lamp: no shadow stays behind.
+test: Outdoors, watch a moving lift's sun shadow from far away: it follows the lift.
+note: SJK_MOVER_OCCLUSION=0 leaves movers out of lamp light, to compare with the same build.
+note: Not tried on screen yet: the door tracer, the partial re-bakes and the far cascade refresh.
+
+[remap-vertex-light]
+area: Rendering & effects
+title: Vertex-lit remap targets take the map's live light (SJK PR #40)
+change: A remap to an rgbGen vertex shader on a lightmapped surface takes real-time light.
+change: It kept its static bake before: brighter than its neighbours and blind to lamps.
+test: JA+ server on mp/ffa4, real-time lighting: the remapped trim, flag and rock door match.
+test: The purple lamp near them lights them as it lights the unremapped walls.
+note: Checked offline on mp/ffa4 with the five remaps as local ones (Linux), not on a server.
+
+[remap-blocked-maps]
+area: Rendering & effects
+title: cg_remapsBlockedMaps ignores server remaps on chosen maps (SJK PR #40)
+change: cg_remapsBlockedMaps lists maps where server remaps are ignored, as cg_remaps 0 there.
+change: blockRemaps [map] adds the loaded map (or a named one); unblockRemaps [map] removes it.
+test: On a server that remaps the map: blockRemaps; the server's remaps go at once.
+test: listRemaps says the map is blocked; the map's own and local remapShader remaps still apply.
+test: unblockRemaps brings them back; after a restart the list is still in cg_remapsBlockedMaps.
+note: Not run in game yet. The map's own worldspawn remaps are never blocked.
+
+[blade-skins]
+area: Rendering & effects
+title: Unlockable blade skins, and others see your look (SJK PR #45)
+change: Blade skins come in asset packs the hub serves; the first is the Sun blade (an unlock).
+change: Others on the server see your skin, and your lit Illuminate holocron, through the hub.
+change: Profile > Unlockables (or unlockables) lists them; saberskin equips one.
+test: Hub with unlocks and packs: sjk-hub unlock <key_id> saber_sun, or Staff page > Unlock.
+test: Profile > Unlockables: the Sun swatch is drawn; equip it, join a server, ignite the saber.
+test: A second SJK player on the server sees your skin, and your holocron by your shoulder.
+test: Relock it on the Staff page: your blade goes back to the stock look.
+test: With no skin, retail and RGB blades look exactly as before.
+note: Needs the hub's unlocks and asset packs (SJK-hub #2 and #3), not deployed when merged.
+note: Not run in a game against the deployed hub; the sounds have not been heard yet.
+
 # ---- Audio ----
 
 # ---- Gameplay ----
@@ -468,6 +612,20 @@ change: Walking through players in a private duel (or out of yours) no longer sn
 test: JA+: two players duel, walk through them; while duelling, walk through a bystander.
 
 # ---- More changes ----
+
+[remove-modern-ui]
+area: Menus & settings
+title: Only the SJK UI and classic menus: the modern style is gone
+change: ui_menuStyle is sjk or classic; the modern main page, browser and game menu are gone.
+change: cg_scoreboardStyle, con_style and cg_hudStyle lose modern; ui_accent and the ffa3 gate go.
+change: A saved modern (or 0) is reset at start; con_lineSpacing, con_maxLines are dropped.
+test: config.cfg with ui_menuStyle, con_style and cg_hudStyle "modern": start the client.
+test: The SJK UI opens with its console and scoreboard, and the game HUD shows in a match.
+test: Classic menus: Create game, Setup > Renderer, Update and F8 Camera control still open.
+test: Join from mp/ffa3 (classic) and mp/duel6 (SJK UI): the loading screen, then the game.
+test: mp/ffa3: the big gate at the end of the browser corridor looks as before.
+test: HUD picker: SJK radial and SJK classic, no SJK modern; Text only still shows a HUD.
+note: Older entries that test the modern style or its console, scoreboard or HUD no longer apply.
 
 [sjk-standalone]
 area: Menus & settings
@@ -1855,7 +2013,7 @@ area: Input
 title: The HUD hides while the quick wheel is open
 change: Holding the wheel hides what HUD off hides; chat and nameplates stay.
 test: In a match, hold Q: health, ammo, timer and crosshair vanish; let go: they come back.
-test: Same with each HUD style (Game, the default, then Radial, Modern, Classic).
+test: Same with each HUD style (Game, the default, then Radial, Classic).
 
 [wheel-icons-sounds]
 area: Input
@@ -2321,7 +2479,7 @@ change: Main menu entry and page, the in-game menu's page, Quit, version line an
 change: Also the window title, the console's ready line and the programs' version information.
 test: Main page: the fourth entry reads SJK; its page title reads SJK; Quit's hint: Leave SJK.
 test: Bottom of the main page: SJK <version>. Update card: This is SJK <version>.
-test: In a match, Esc: the SJK entry and page; modern menus: Quit SJK.
+test: In a match, Esc: the SJK entry and page; classic menus: the SJK button.
 test: The window title and the console's first line say SJK.
 note: Credits keep "Sol JK" for Sol's own section, as the name's origin.
 
@@ -2551,3 +2709,122 @@ title: Looping sounds no longer drop out
 change: Saber hums and ambient loops keep playing while each frame's loops are re-sent.
 test: Stand near looping sounds (your saber, other sabers, map ambience); listen for crackles.
 test: Optional: SJK_TRACE_AUDIO=1; logs/last-client.log shows split loop frames=N every 5 s.
+
+[sjk-character-clicks]
+area: Menus & settings
+title: Clicks land on the SJK UI Character screen's controls (SJK PR #46)
+change: A blade chip click picks that chip; a < > control turns by the half clicked.
+change: A click on a Force power's name only chooses it; its level marks buy.
+test: Character > Saber: click each colour chip, then both halves of the < > controls.
+test: Character > Force: click a power's name (nothing changes), then its level marks.
+note: Not seen on screen yet; the classic pages are unchanged.
+
+[audio-device-lost]
+area: Audio
+title: A lost sound device no longer freezes the game (SJK PR #49)
+change: A sound queue nothing drains waits 250 ms once, then drops sounds instead of hanging.
+change: The log says: audio output stopped taking sound; snd_restart opens the output again.
+test: In a match, switch off the headset or disable the playback device: the game keeps running.
+test: Alt+Tab away a long while, then back: the window returns. snd_restart brings sound back.
+note: Not reproduced on Windows; the cause is from the code (WASAPI device invalidated).
+
+[fps-monitor-detect]
+area: Menus & settings
+title: Detect refresh rate is a setting, off by default (SJK PR #50)
+change: com_maxfpsMonitor 0 (default): AUTO caps at 125 and the monitor is never read.
+change: com_maxfpsMonitor 1 (Settings > Video > Detect refresh rate): AUTO follows the monitor.
+test: Default profile: cg_drawFPS 1 holds 125; turn Detect refresh rate on: it reads your rate.
+test: com_maxfps 144 holds 144 with the setting on or off.
+
+[prewarm-lighting]
+area: Rendering & effects
+title: Lighting pipelines compile at map load (SJK PR #51)
+change: The stage table, depth priming and lamp cache receiver pipelines compile while loading.
+change: New log lines: Stage table: compiled N pipelines; Light pass: ... compiled at load.
+test: Join a server on a big map: the first seconds in play stay smooth; compare with main.
+test: SJK_FRAME_BUDGET=1 prints frame-budget lines; check the max after the load.
+note: Not measured on a GPU yet; first run after an update has a cold shader cache.
+
+[door-sounds]
+area: Audio
+title: Door sounds come from the middle of the door (SJK PR #53)
+change: Brush models (doors, buttons, breakables) sound from the middle of their model.
+test: Open and close doors on mp/ffa and duel maps: the start and end sounds are heard.
+note: The saber ignition sound when switching weapons is a separate gap, not fixed here.
+
+[obituary-latin1]
+area: Console & chat
+title: Kill messages print Latin-1 names (SJK PR #57)
+change: A name with an accented letter or symbol is printed, not replaced by noname.
+change: Each name ends in ^7, so an open colour does not tint the rest of the line.
+test: Kill or be killed by a player named with e-acute: the console line shows the name.
+test: A name left in an open colour (^1Red) does not tint the words after it.
+
+[teleport-beam]
+area: Rendering & effects
+title: Teleport and spawn beam stands up (SJK PR #52)
+change: org2fromTrace effect lines are traced once and reach the ceiling or sky.
+change: The floor drop uses MASK_SOLID; the Jedi Master spawn effect points straight up.
+test: Respawn (kill) under a roof and in the open: the beam rises from your feet.
+test: Use a map teleporter (or setviewpos with cheats): the same beam; pick up a Jedi Master.
+note: Other traced lines (env/beam) now draw long, as in OpenJK. Not seen on screen yet.
+
+[scoreboard-width]
+area: HUD
+title: Compact SJK scoreboard is narrower and centred (SJK PR #55)
+change: Name column fits the longest name (140-320 px); numbers follow 48 px after it.
+change: Centred; if that covers the chat it sits just right of it. Duel cards share the centre.
+test: Hold TAB in FFA with 8 and with 32 players: a narrow, centred board; long names end in ...
+test: In team FFA and CTF the board starts beside the chat column; duel cards are centred.
+test: Settings > Scoreboard > Compact SJK scoreboard off: the old full-width board.
+note: Not seen on screen yet; world shots: duel6_sjk_scoreboard ignored test.
+
+[kill-feed]
+area: HUD
+title: Kill feed with weapon icons at the top right (SJK PR #58)
+change: Up to 5 kills: killer, weapon icon, victim; a skull for a suicide or world death.
+change: cg_killfeed is switched on once (cg_killfeedDefaultVersion) and has a Settings > HUD row.
+change: Your own kills and deaths get a stronger plate. The old one-line obituary is gone.
+test: Kill and get killed with saber, gun, Force lightning, push, fall: the icon fits the cause.
+test: Team FFA/CTF: the feed sits below FPS, team overlay and powerup column.
+test: cg_killfeed 0 in Settings > HUD hides it and stays off after a restart.
+note: Grip and lightning both show the lightning holocron. Not seen on screen yet.
+
+[parallax-range]
+area: Rendering & effects
+title: Parallax reaches farther and holds still near the camera (SJK PR #54)
+change: Depth fades below half a pixel of shift, below 8.6 degrees, and where mips 2-4 are read.
+change: r_parallaxNearDistance (24, 0 = off, console only) shrinks the depth close to a surface.
+change: r_materialMapsDebug 7 shows the reach: yellow full, green faded, red held back.
+test: mp/ffa3 with the material pack, r_parallaxStrength 1: walk a long floor; relief shows farther.
+test: Back the third-person camera into a relief wall: r_parallaxNearDistance 0 swims, 24 holds.
+note: Steps are 4-24 plus 6 binary; check frame times with SJK_FRAME_BUDGET=1. Not seen on screen.
+
+[dynamic-light-shadows]
+area: Rendering & effects
+title: Dynamic lights stop at walls (SJK PR #56)
+change: A compute pass traces a 28x28 distance tile per active light against the BSP.
+change: r_dynamicLightShadows (default 1, console only) switches it; 0 is the old lighting.
+test: On mp/ffa3 hold a lit saber at a corner: the glow no longer reaches the far side of the wall.
+test: Toggle r_dynamicLightShadows 1/0 and compare; check frame times with SJK_GPU_PHASES.
+note: Doors and lifts do not block it; edges are soft. Not run on a GPU yet.
+
+[force-profile-server]
+area: Gameplay
+title: Force profile sent to the server, server rules shown (SJK PR #47)
+change: Each userinfo carries your profile fitted to the server's rules; Apply queues forcechanged.
+change: The Force page takes rank and free saber from the server; marks Off, Fixed, Team only.
+change: SJK UI Force page: a This server panel; disabled powers stay buyable and are sent.
+test: On a server with another rank or disabled powers: build a profile, Apply, respawn: it applies.
+test: Open the Force page there: the This server panel and the marks match the server's rules.
+test: Full Force duel on JA+ / jaPRO: powers the server holds back are usable in duels.
+note: Not run against a server. Possible gap: g_forceBasedTeams after a serverinfo change.
+
+[force-rejoin-retries]
+area: Gameplay
+title: Force profile rejoin retries go out (SJK PR #48)
+change: The negotiator is polled every frame; retries ask for the team again 5.5 s apart, 3 times.
+change: No retries in duel and power duel, where spectating is the queue.
+test: On a mod that sends nfr on its own and parks you: you are sent back to your team.
+test: Wait in a duel queue after an nfr: you are not put into the game by retries.
+note: Stock servers no longer park a player for an SJK profile (SJK PR #47).

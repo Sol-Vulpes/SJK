@@ -200,6 +200,7 @@ impl GpuState {
         });
         self.refresh_npc_actors();
         self.refresh_cosmetics();
+        let mode = self.remap_mode();
         let remaps = self
             .live_session
             .as_ref()
@@ -211,7 +212,6 @@ impl GpuState {
             })
             .unwrap_or(&self.config_string_refresh.initial_remaps);
         if let Some(vfs) = self.vfs.as_ref() {
-            let mode = self.console.as_ref().map_or(1, |c| c.remap_mode());
             if let Err(error) = self.world_materials.refresh_remaps(
                 &self.device,
                 &self.queue,

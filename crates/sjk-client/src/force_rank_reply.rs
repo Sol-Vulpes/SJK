@@ -98,6 +98,19 @@ pub fn force_rules_from_serverinfo(
     }
 }
 
+/// The server's Force rules as `CS_SERVERINFO` advertises them, with its
+/// `g_maxForceRank` as the rank ceiling (`WP_InitForcePowers` puts an out of
+/// range one back to Jedi Master, `w_force.c:164-167`).
+pub fn server_force_rules(game_state: &GameState) -> ForceLegalizeRules {
+    let max_rank = game_state
+        .config_string(CS_SERVERINFO)
+        .and_then(|raw| std::str::from_utf8(raw).ok())
+        .and_then(|text| InfoString::parse(text).ok())
+        .and_then(|info| info.get_i32("g_maxForceRank"))
+        .unwrap_or(0);
+    force_rules_from_serverinfo(game_state, max_rank, 0)
+}
+
 /// The userinfo value and reliable command answering one `nfr` notice.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ForceRankReply {

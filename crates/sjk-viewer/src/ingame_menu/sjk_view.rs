@@ -9,7 +9,7 @@
 //! Siege's classes), Players (a small scoreboard, drawn as a table with the chosen
 //! player's card on the right) and its Report page, Vote and the call-vote lists,
 //! SJK and Leave. Their rows
-//! are the modern menu's where they are the same (Siege's, the call-vote
+//! are the shared ones where they are the same (Siege's, the call-vote
 //! lists') and this module's where they differ ([`prepare`]); what a row does
 //! is in `sjk_actions.rs` and, for the shared pages, `game_menu_actions.rs`.
 //!
@@ -118,8 +118,8 @@ pub(crate) mod leave {
     pub(crate) const STAY: usize = 2;
 }
 
-/// How many rows `page` has where the SJK UI's rows differ from the modern
-/// menu's; `None` for the pages it shares (Siege, the call-vote lists).
+/// How many rows `page` has where the SJK UI has rows of its own; `None` for
+/// the pages it shares (Siege, the call-vote lists).
 pub(crate) fn row_count(page: Page, team_game: bool) -> Option<usize> {
     match page {
         Page::Main => Some(Entry::MAIN.len()),

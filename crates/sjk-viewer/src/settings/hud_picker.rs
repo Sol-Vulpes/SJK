@@ -111,7 +111,6 @@ impl HudPicker {
             return self.choices[index].label.clone();
         }
         match self.selected.style {
-            Some(HudStyle::Modern) => "SJK modern",
             Some(HudStyle::Classic) => "SJK classic",
             Some(HudStyle::Radial) => "SJK radial",
             _ => "Game HUD",
@@ -249,6 +248,12 @@ impl SettingsMenu {
             }
             _ => {}
         }
+    }
+
+    /// Upload the highlighted HUD's preview again, into another world's
+    /// texture.
+    pub(crate) fn forget_hud_preview_upload(&mut self) {
+        self.hud.shown = None;
     }
 
     /// Per frame while the settings are up: read the HUD list when it is
@@ -509,7 +514,7 @@ impl SettingsMenu {
             }
             (None, false, _) => Some(match choice.style {
                 HudStyle::Classic => "SJK's classic layout: drawn by SJK, no game files needed.",
-                _ => "SJK's own modern HUD: drawn by SJK, no game files needed.",
+                _ => "SJK's radial layout: drawn by SJK, no game files needed.",
             }),
             (None, true, true) => Some("No preview: these files describe no HUD SJK can draw."),
             (None, true, false) => Some("Drawing the preview..."),
@@ -592,7 +597,7 @@ impl SettingsMenu {
 }
 
 /// The picker's colours: retail's option panel (`setup.menu`) on the
-/// classic menus, the theme's on the modern ones.
+/// classic menus, the theme's otherwise.
 struct Palette {
     art: Option<ArtSet>,
     scrim: Color,
@@ -680,7 +685,8 @@ mod tests {
         }
         assert_eq!(menu.values[row], "SJK radial");
         assert_eq!(console.text_value(STYLE_CVAR), Some("radial"));
-        for _ in 0..3 {
+        // SJK's classic layout, then round to the first.
+        for _ in 0..2 {
             menu.adjust(&mut console, 1);
         }
         assert_eq!(menu.values[row], "Jedi Academy");
@@ -688,8 +694,8 @@ mod tests {
         assert_eq!(console.text_value(PACK_CVAR), Some("assets1.pk3"));
         assert_eq!(console.text_value(FILES_CVAR), Some("ui/jahud.txt"));
         menu.adjust(&mut console, -1);
-        assert_eq!(menu.values[row], "SJK modern");
-        assert_eq!(console.text_value(STYLE_CVAR), Some("modern"));
+        assert_eq!(menu.values[row], "SJK classic");
+        assert_eq!(console.text_value(STYLE_CVAR), Some("classic"));
     }
 
     #[test]

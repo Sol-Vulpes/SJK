@@ -12,8 +12,8 @@ Sol develops SJK and sets its direction. Sol's work includes:
 
 - the Sol JK name, README, credits and website;
 - the SJK emblem, provided by Sol: in the classic menu's ring (in place of the
-  retail logo video) and above the modern menu's title, as the programs' and
-  window's icons, and on the README, release notes and site;
+  retail logo video) and the SJK UI's holo ring, as the programs' and window's
+  icons, and on the README, release notes and site;
 - SJK's slider entry habits (type to open, Space steps, clicking away applies);
 - the classic menu style as the default, and classic+ (the classic style
   modernised: the guide, the option panels' detail box and default marks, the
@@ -67,6 +67,7 @@ Sol develops SJK and sets its direction. Sol's work includes:
 - unlockables kept at the SJK hub: the generic blade-skin renderer and the packs the
   hub delivers (the Sun blade's look and sounds), and looks (blade skins,
   Illuminate) every SJK player on a server sees;
+- the kill feed at the top right with weapon icons (`cg_killfeed`);
 - the console socket for external apps (after JoF EJK), muting in the
   background (after EternalJK) and the JA+ `flipkick` command (after JoF EJK);
 - the camera style setting, its locked camera after JoF EJK (`cg_cameraStyle`).
@@ -76,7 +77,7 @@ Sol develops SJK and sets its direction. Sol's work includes:
 Creyon and Lumaya wear the SJK team's Early Contributor medal, shown on their
 cards of the in-game credits page.
 
-Creyon ([Creyon94](https://github.com/Creyon94)), contributor and tester, has 23
+Creyon ([Creyon94](https://github.com/Creyon94)), contributor and tester, has 24
 pull requests merged into SJK, most of them bringing SJK in line with EternalJK
 ([all of them](https://github.com/Sol-Vulpes/SJK/pulls?q=is%3Apr+author%3ACreyon94)):
 
@@ -105,7 +106,10 @@ pull requests merged into SJK, most of them bringing SJK in line with EternalJK
   and the kicker held still through JA+'s own kicks, as JoF EternalJK;
 - #30 chat emojis: JoF EternalJK's pictures in place of their names in chat
   (`cg_chatBoxEmojis`, `listEmojis`);
-- #31 the console input row drawn in its colour codes, as EternalJK.
+- #31 the console input row drawn in its colour codes, as EternalJK;
+- #44 `%` and `"` in chat sent as EternalJK sends them (a degree sign, slash and dot,
+  and two apostrophes) and shown as typed, so SJK and EternalJK players see each
+  other's percent signs and quotes.
 
 Lumaya ([lumayaa](https://github.com/lumayaa)), contributor, has 5 pull requests
 merged into SJK

@@ -67,7 +67,7 @@ const SPARKS: usize = 64;
 const RAY_GOLD: Color = Color::new(0.910, 0.722, 0.290, 1.0);
 const SUN_GOLD: Color = Color::new(1.0, 0.812, 0.439, 1.0);
 
-/// The page's colours: the modern theme's, or retail's for the classic menus.
+/// The page's colours: retail's, as the classic menus have them.
 #[derive(Clone, Copy)]
 struct Palette {
     accent: Color,
@@ -82,21 +82,6 @@ struct Palette {
 }
 
 impl Palette {
-    fn modern(accent: Color, foreground: Color, muted: Color) -> Self {
-        Self {
-            accent,
-            shine: Color::new(1.0, 0.96, 0.88, 1.0),
-            title: foreground,
-            text: Color::new(0.916, 0.945, 0.973, 0.94),
-            muted,
-            deep: [
-                Color::new(0.020, 0.030, 0.055, 0.97),
-                Color::new(0.004, 0.006, 0.012, 0.99),
-            ],
-            card: Color::new(0.06, 0.08, 0.12, 0.72),
-        }
-    }
-
     /// Retail gold (`1 .682 0`), title blue (`.549 .854 1`) and list lilac.
     fn classic() -> Self {
         Self {
@@ -284,8 +269,7 @@ pub(crate) struct Panel {
     /// Height of the laid-out content, and where its closing notice sits.
     content: f32,
     notice_y: f32,
-    classic: bool,
-    /// The SJK UI's look (`credits_sjk.rs`).
+    /// The SJK UI's look (`credits_sjk.rs`), else the classic one.
     sjk: bool,
     opened_at: f64,
     /// The clock at the last frame, for smooth scrolling.
@@ -338,7 +322,6 @@ impl Panel {
             reveal: None,
             content: 0.0,
             notice_y: 0.0,
-            classic: false,
             sjk: false,
             opened_at: 0.0,
             last_frame: 0.0,
@@ -372,17 +355,9 @@ impl Panel {
         owned
     }
 
-    /// Choose the palette: retail's with the classic menus, else the theme's.
-    pub(crate) fn set_classic(&mut self, classic: bool) {
-        if self.classic != classic {
-            self.laid_out_for = None;
-        }
-        self.classic = classic;
-    }
-
     /// Whether the classic palette is drawn, so its text uses the retail font.
     pub(crate) fn is_classic(&self) -> bool {
-        self.classic
+        !self.sjk
     }
 
     /// Draw the SJK UI's look (`sjk`), in its families, or not.
@@ -395,7 +370,7 @@ impl Panel {
 
     /// Whether the SJK UI's look is drawn.
     pub(crate) fn is_sjk(&self) -> bool {
-        self.sjk && !self.classic
+        self.sjk
     }
 
     /// Skip the opening and unfolding animations, for snapshots.
@@ -790,12 +765,7 @@ impl Panel {
         let now = self.glide();
 
         self.ui.begin_transparent(viewport);
-        let theme = self.ui.theme();
-        let palette = if self.classic {
-            Palette::classic()
-        } else {
-            Palette::modern(theme.accent, theme.foreground, theme.muted)
-        };
+        let palette = Palette::classic();
         let since = (now - self.opened_at).max(0.0) as f32;
         backdrop(&mut self.ui, viewport, palette, now as f32);
 
@@ -809,7 +779,7 @@ impl Panel {
                 error,
                 Rect::new(0.0, top + header_height(s), viewport[0], 24.0 * s),
                 16.0 * s,
-                theme.critical,
+                self.ui.theme().critical,
                 FontWeight::Regular,
                 0.2 * s,
                 TextAlign::Center,

@@ -16,6 +16,8 @@ pub(crate) struct Header {
 /// Immutable voxel buffers (kept alive by the bind group) plus the surface table.
 pub(crate) struct Runtime {
     pub(crate) fixtures: Option<super::lamp_geometry::Runtime>,
+    /// Point-light shadow tiles traced against `fixtures` (`dynamic_light_shadows.rs`).
+    pub(crate) dynamic_light_shadows: Option<super::dynamic_light_shadows::Tracer>,
 
     /// CPU copy, kept for dead-probe tests at probe installation.
     pub(crate) world: crate::gi_voxels::VoxelWorld,
@@ -139,19 +141,23 @@ impl Runtime {
             layout,
             bind_group,
             fixtures: None,
+            dynamic_light_shadows: None,
         }
     }
 }
 
 impl super::Runtime {
-    /// Voxelise the world draws once and keep them resident; a no-op unless enabled.
+    /// Voxelise the world draws once and keep them resident; a no-op unless enabled. The
+    /// movers' casters are gathered either way, for the far sun cascade.
     pub(crate) fn install_gi(
         &mut self,
         device: &wgpu::Device,
         flat: &crate::scene_flatten::FlattenedScene,
+        mover_meshes: &[crate::movers::Mesh],
         enabled: bool,
     ) {
         self.gi = None;
+        self.mover_occluders = self.gather_mover_occluders(flat, mover_meshes);
         if !enabled {
             return;
         }
@@ -191,12 +197,77 @@ impl super::Runtime {
                     })
             })
             .collect();
-        runtime.fixtures = Some(super::lamp_geometry::Runtime::new(
+        let geometry = super::lamp_geometry::geometry::Geometry::new(&triangles);
+        let fixtures =
+            super::lamp_geometry::Runtime::new(device, &geometry, &self.surfaces_by_source);
+        // Dynamic lights stop at the same walls as the lamps.
+        runtime.dynamic_light_shadows = Some(super::dynamic_light_shadows::Tracer::new(
             device,
-            &triangles,
-            &self.surfaces_by_source,
+            &fixtures,
+            &self.dynamic_light_buffer,
+        ));
+        runtime.fixtures = Some(fixtures);
+        let started = std::time::Instant::now();
+        for occluder in &mut self.mover_occluders {
+            occluder.seen_by = Some(super::mover_occlusion::seen_by(
+                &self.lamps.lamps,
+                occluder.reach,
+                |from, to| geometry.blocked(from, to),
+            ));
+        }
+        crate::log::progress(format_args!(
+            "Mover occluders: {} movers, lamps that see them found in {:.0} ms",
+            self.mover_occluders.len(),
+            started.elapsed().as_secs_f64() * 1e3
         ));
         self.gi = Some(runtime);
+    }
+
+    /// Each inline mover's opaque casters in its model space, by the same rule as the
+    /// static triangles: alpha-tested grates and blended glass let light through.
+    fn gather_mover_occluders(
+        &self,
+        flat: &crate::scene_flatten::FlattenedScene,
+        mover_meshes: &[crate::movers::Mesh],
+    ) -> Vec<super::mover_occlusion::Occluder> {
+        let mut triangles = vec![Vec::new(); mover_meshes.len()];
+        for material in &self.materials {
+            if material.blended
+                || material.flare
+                || !material
+                    .stages
+                    .first()
+                    .is_some_and(|stage| stage.shadow_caster)
+            {
+                continue;
+            }
+            for draw in &material.mover_draws {
+                let Some(list) = triangles.get_mut(draw.mesh) else {
+                    continue;
+                };
+                list.extend(
+                    flat.indices[draw.indices.start as usize..draw.indices.end as usize]
+                        .as_chunks::<3>()
+                        .0
+                        .iter()
+                        .map(|t| {
+                            t.map(|i| glam::Vec3::from_array(flat.vertices[i as usize].position))
+                        }),
+                );
+            }
+        }
+        triangles
+            .into_iter()
+            .enumerate()
+            .filter(|(mesh, _)| mover_meshes[*mesh].model_index.is_some())
+            .filter_map(|(mesh, triangles)| {
+                let [lower, upper] = mover_meshes[mesh].reach.map(glam::Vec3::from_array);
+                let mut occluder =
+                    super::mover_occlusion::Occluder::new(mesh, triangles, (lower, upper))?;
+                occluder.sight = mover_meshes[mesh].sight;
+                Some(occluder)
+            })
+            .collect()
     }
 
     /// Build the voxel world from opaque static world draws with their source materials.

@@ -8,7 +8,7 @@
 //!
 //! SJK adds the count of characters against the limit, the rules a report follows, why a
 //! Send was refused, and a description for every control. Every control answers to the
-//! modern view's tokens, so the keyboard and the pointer serve both looks.
+//! dialog's tokens, so the keyboard and the pointer serve both looks.
 
 use super::{CANCEL_TOKEN, FIELD_TOKEN, Focus, Kind, LAUNCH_TOKEN, SEND_TOKEN, TextDialog};
 use crate::console::browser::classic::{

@@ -112,6 +112,10 @@ pub(super) fn lines(text: &str) -> [&str; HELP_LINES] {
 const HELP: &[(&str, &str)] = &[
     // VIDEO
     (
+        crate::graphics_quality::ROW_NAME,
+        "Sets the costly graphics together: Performance for the most FPS, Ultra for the best look. Shadows and light shafts need a restart.",
+    ),
+    (
         "r_resolution",
         "The window's size, or the screen mode in exclusive fullscreen. Enter opens the list of sizes.",
     ),
@@ -125,7 +129,11 @@ const HELP: &[(&str, &str)] = &[
     ),
     (
         "com_maxfps",
-        "Most frames drawn per second. AUTO follows the monitor's refresh rate; 0 draws as fast as it can.",
+        "Most frames drawn per second. AUTO is 125, or the monitor's refresh rate with Detect refresh rate on; 0 is uncapped.",
+    ),
+    (
+        crate::runtime_settings::MONITOR_CAP_CVAR,
+        "AUTO on the FPS cap follows the monitor's refresh rate. Off, AUTO caps at 125 and the monitor is not read.",
     ),
     (
         "cg_fov",
@@ -257,6 +265,10 @@ const HELP: &[(&str, &str)] = &[
         "cg_lagometer",
         "A small graph of interpolation and snapshot delay, for spotting network trouble.",
     ),
+    (
+        "cg_killfeed",
+        "The last kills at the top right: killer, weapon icon, victim; a skull for suicides and falls.",
+    ),
     ("cg_drawChat", "Shows chat messages over the game."),
     (
         crate::chat::emoji::CVAR,
@@ -292,6 +304,14 @@ const HELP: &[(&str, &str)] = &[
         "Moving the mouse forward looks down instead of up.",
     ),
     ("cl_run", "Run by default; the Walk key walks."),
+    (
+        crate::input::idrive::CVAR,
+        "Opposite movement keys move toward the one pressed last instead of cancelling. 1 all, 2 jump/crouch.",
+    ),
+    (
+        crate::input::idrive::DELAY_CVAR,
+        "Stand still this long after pressing the opposite key before it takes over; some servers punish instant flips.",
+    ),
     // GAME
     (
         "cg_simpleItems",
@@ -349,14 +369,13 @@ const HELP: &[(&str, &str)] = &[
         "cg_errorDecay",
         "Smooths the view over this many milliseconds when the server corrects you; 0 snaps.",
     ),
-    ("ui_accent", "Accent colour of the modern menus."),
     (
         "ui_menuContrast",
-        "Darkens the backdrop behind the modern menus for easier reading.",
+        "Darkens the backdrop behind Create game and the settings screens drawn over the map, for easier reading.",
     ),
     (
         crate::menu::style::CVAR,
-        "The SJK UI, SJK's own menus over the live map; classic menus after the original game's; or the modern ones.",
+        "The SJK UI, SJK's own menus over the live map; or classic menus after the original game's.",
     ),
     (
         crate::quick_wheel::pages::FILE,
@@ -411,6 +430,10 @@ const HELP: &[(&str, &str)] = &[
         "Auto matches the menus: SJK's own with the SJK UI, else the classic one after the original game's.",
     ),
     (
+        crate::scoreboard::style::COMPACT_CVAR,
+        "Thinner rows on SJK's scoreboard, so every player fits in one column, in a board as wide as its names, centred.",
+    ),
+    (
         "cg_showClientIDs",
         "Shows each player's client number on the scoreboard.",
     ),
@@ -425,7 +448,7 @@ const HELP: &[(&str, &str)] = &[
     // TEXT
     (
         crate::console::console_options::STYLE_CVAR,
-        "The console's look: classic, after EternalJK's, or SJK's modern one.",
+        "The console's look: the SJK UI's with its menus, or classic, after EternalJK's.",
     ),
     (crate::text::style::SCALE_CVAR, "Size of the menu text."),
     (
@@ -433,10 +456,6 @@ const HELP: &[(&str, &str)] = &[
         "Extra space between letters in the menus and the console.",
     ),
     ("con_scale", "Size of the console text."),
-    (
-        "con_lineSpacing",
-        "Space between the modern console's lines.",
-    ),
     // IMAGE
     (
         "r_sceneHdr",
@@ -735,7 +754,7 @@ mod tests {
             row_label("Adaptation: max darken, EV (HDR)"),
             ("Adaptation: max darken, EV", Timing::Now)
         );
-        assert_eq!(row_label("FPS cap (AUTO = monitor, 0 = off)").0, "FPS cap");
+        assert_eq!(row_label("FPS cap (AUTO, 0 = off)").0, "FPS cap");
         assert_eq!(
             row_label("Supersampling, 1 off (restart)").0,
             "Supersampling, 1 off"

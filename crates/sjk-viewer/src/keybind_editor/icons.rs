@@ -121,10 +121,18 @@ impl BindIcons {
 
     /// Start decoding (once) and collect what the worker finished.
     pub(super) fn poll(&mut self) {
-        if let Some(vfs) = self.vfs.take() {
-            self.loader.request_paths(vfs, requests());
+        if self.loader.is_idle()
+            && let Some(vfs) = &self.vfs
+        {
+            self.loader.request_paths(Arc::clone(vfs), requests());
         }
         self.loader.poll();
+    }
+
+    /// Forget the uploaded pictures (the atlas is another world's): the
+    /// next poll decodes them again.
+    pub(super) fn forget_uploads(&mut self) {
+        self.loader = IconLoader::new();
     }
 
     /// Count every picture as uploaded (snapshots draw without a GPU).

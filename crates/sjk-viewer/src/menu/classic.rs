@@ -2,16 +2,17 @@
 //! the retail Jedi Academy multiplayer menus so long-time players find
 //! things where they expect them. Not a port of the `.menu` scripts: pages
 //! and entries are declared in [`layout`], drawn with the shared menu
-//! widgets in [`view`], and lead to the same screens as the modern style
-//! through [`MainDestination`].
+//! widgets in [`view`], and lead to the same screens as the SJK UI through
+//! [`MainDestination`].
 //!
 //! Implemented: the main menu with its Play (multiplayer) and quit pages,
 //! the Setup and Controls option panels ([`panel`]) on the main menu and as
 //! the in-game pop-ups, SJK's renderer page in the same layout (its groups
 //! open from Setup's RENDERER), the server browser ([`browser`]) and the
-//! in-game menu ([`crate::ingame_menu`]). The other screens these pages open
-//! (Create game, Player) are still the modern ones; the follow-up plan is
-//! kept in `docs/client.md`.
+//! in-game menu ([`crate::ingame_menu`]). Create game, the tabbed settings
+//! and the key-binding editor these pages open have no classic version yet:
+//! they keep SJK's hero look over the retail background; the follow-up plan
+//! is kept in `docs/client.md`.
 
 pub(crate) mod browser;
 pub(crate) mod layout;
@@ -270,11 +271,9 @@ impl ClientMenu {
         }
     }
 
-    /// The classic panel to draw this frame, while the classic style is on.
+    /// The classic panel to draw this frame, if one is open.
     pub(super) fn classic_panel_frame(&self) -> Option<PanelFrame> {
-        let panel = self
-            .classic_panel
-            .filter(|_| self.menu_style.classic_screens())?;
+        let panel = self.classic_panel?;
         // The one list of bindings marks the category being looked at.
         let active = match panel.page {
             Page::Controls => self
@@ -293,7 +292,7 @@ impl ClientMenu {
     }
 
     /// Close the classic panel, leaving the settings and key-binding
-    /// screens in their modern form.
+    /// screens in their tabbed form.
     pub(super) fn leave_classic_panel(&mut self) -> bool {
         self.settings.leave_classic();
         self.keybinds.leave_classic();

@@ -10,7 +10,6 @@ mod motion;
 pub(crate) mod shot;
 mod sjk;
 pub(crate) mod style;
-mod view;
 
 use crate::game_font::{GameFonts, RetailFont};
 use crate::menu_widgets::MenuCanvas;
@@ -119,9 +118,8 @@ impl Scoreboard {
         }
     }
 
-    /// Whether the scoreboard draws this frame. The modern style shows while
-    /// `requested`; the classic and SJK ones also fade in and, once released,
-    /// out. Nothing draws while it is not `allowed`.
+    /// Whether the scoreboard draws this frame: it fades in while `requested`
+    /// and, once released, out. Nothing draws while it is not `allowed`.
     pub(crate) fn present(
         &mut self,
         console: Option<&crate::console::ViewerConsole>,
@@ -133,16 +131,8 @@ impl Scoreboard {
         if self.shot.is_some() {
             return self.motion.present(true, true, std::time::Instant::now());
         }
-        match self.style {
-            style::ScoreboardStyle::Modern => {
-                self.motion.hide();
-                requested && allowed
-            }
-            style::ScoreboardStyle::Classic | style::ScoreboardStyle::Sjk => {
-                self.motion
-                    .present(requested, allowed, std::time::Instant::now())
-            }
-        }
+        self.motion
+            .present(requested, allowed, std::time::Instant::now())
     }
 
     pub(crate) fn draw_list(&self) -> &DrawList {
@@ -202,6 +192,7 @@ impl Scoreboard {
                     local: Some((player.health(), player.armor())),
                     ..duelists(game)
                 },
+                compact: style::compact(options),
             };
             // Measured in the families that will draw the text.
             let measure = match fonts.sjk_metrics() {
@@ -236,48 +227,23 @@ impl Scoreboard {
             }
             return;
         }
-        if self.style == style::ScoreboardStyle::Classic {
-            let header = classic::ClassicHeader {
-                hostname: &self.hostname,
-                max_clients: self.max_clients,
-                gametype: self.gametype,
-                fraglimit: self.fraglimit,
-                team_scores: session.team_scores(),
-                local: local_status,
-                killer,
-            };
-            classic::build(
-                &mut self.ui,
-                &self.rows,
-                &header,
-                style::ClassicOptions::from_console(options),
-                &self.icons,
-                flags,
-                &mut self.motion,
-                viewport,
-            );
-            self.ui.finish(u16::MAX);
-            self.ui.append_text_routed(
-                fonts,
-                |_, text| Some(retail_font(text)),
-                vertices,
-                font,
-                viewport,
-            );
-            return;
-        }
-        // The modern table lists scored clients only.
-        let scored = self.rows.iter().take_while(|row| row.has_score).count();
-        view::build(
+        let header = classic::ClassicHeader {
+            hostname: &self.hostname,
+            max_clients: self.max_clients,
+            gametype: self.gametype,
+            fraglimit: self.fraglimit,
+            team_scores: session.team_scores(),
+            local: local_status,
+            killer,
+        };
+        classic::build(
             &mut self.ui,
-            &self.rows[..scored],
-            view::MatchHeader {
-                map: &self.map,
-                mode: &self.mode,
-                team_scores: session.team_scores(),
-                team_game: self.team_game,
-                local_client: local,
-            },
+            &self.rows,
+            &header,
+            style::ClassicOptions::from_console(options),
+            &self.icons,
+            flags,
+            &mut self.motion,
             viewport,
         );
         self.ui.finish(u16::MAX);
@@ -619,6 +585,18 @@ fn byte_signature(bytes: &[u8]) -> u64 {
 /// Automatic intermission scores and the ordinary held scoreboard share one layout.
 pub(crate) fn requested(gpu: &crate::GpuState, intermission: bool) -> bool {
     intermission || gpu.gameplay_input.held(crate::input::GameButton::Scores)
+}
+
+/// While the scoreboard is held the HUD steps aside, as for the quick wheel:
+/// the status, weapon, timers, crosshair and the game-data HUD hide; chat and
+/// the board stay. Not with `cg_drawScores 0`, when holding it shows nothing.
+pub(crate) fn hides_hud(gpu: &crate::GpuState) -> bool {
+    requested(gpu, false)
+        && gpu
+            .console
+            .as_ref()
+            .and_then(|console| console.bool_cvar("cg_drawScores"))
+            .unwrap_or(true)
 }
 
 #[cfg(test)]

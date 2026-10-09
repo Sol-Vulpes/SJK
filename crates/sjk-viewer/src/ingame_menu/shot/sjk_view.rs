@@ -773,11 +773,11 @@ mod tests {
             fades.last().expect("fades").end,
             color::alpha(color::SPACE, 0.86)
         );
-        // The modern look is renamed too.
+        // The classic menus' panel is renamed too.
         for state in [panel, Panel::default()] {
-            let mut modern = MenuCanvas::new();
-            super::super::view::build(&state, &mut modern, [1_920.0, 1_080.0]);
-            let runs: Vec<&str> = modern.text_runs().collect();
+            let mut classic = MenuCanvas::new();
+            super::super::view::build(&state, &mut classic, [1_920.0, 1_080.0]);
+            let runs: Vec<&str> = classic.text_runs().collect();
             assert!(runs.contains(&"CAMERA CONTROL"), "{runs:?}");
             assert!(
                 runs.iter()
@@ -791,10 +791,10 @@ mod tests {
             sun_mode: SunMode::Manual,
             ..Panel::default()
         };
-        let mut modern = MenuCanvas::new();
-        super::super::view::build(&manual, &mut modern, [1_920.0, 1_080.0]);
+        let mut classic = MenuCanvas::new();
+        super::super::view::build(&manual, &mut classic, [1_920.0, 1_080.0]);
         assert!(
-            modern
+            classic
                 .text_runs()
                 .any(|run| run == "Manual · camera control owns the sun")
         );
@@ -882,18 +882,18 @@ mod tests {
         assert_eq!(back.first(), Some(&HIDE));
         assert_eq!(back.len(), expected.len());
         assert!(back.contains(&7) && !back.contains(&(VALUE_BASE + 7)));
-        // The modern look's slider is one stop too, and every control is on
-        // its way.
-        let modern = walk(super::super::view::build, true);
+        // The classic menus' panel's slider is one stop too, and every
+        // control is on its way.
+        let classic = walk(super::super::view::build, true);
         for token in [SUN, PRESET, 0, 3, 6, 7, LIVE, HUD, ORBIT, STOP, RESET, HIDE] {
-            let stops = modern
+            let stops = classic
                 .iter()
                 .filter(|stop| {
                     crate::menu_widgets::numeric::value_row(**stop).unwrap_or(usize::from(**stop))
                         == usize::from(token)
                 })
                 .count();
-            assert_eq!(stops, 1, "{token} in {modern:?}");
+            assert_eq!(stops, 1, "{token} in {classic:?}");
         }
     }
 

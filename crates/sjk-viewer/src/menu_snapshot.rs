@@ -1237,10 +1237,10 @@ fn identity_page(shots: &Snapshot, art: ArtSet) {
             hub_url: "http://127.0.0.1:8787",
         },
     ];
-    for (case, classic) in cases.iter().flat_map(|case| [(case, false), (case, true)]) {
+    for case in &cases {
         let mut panel = Panel::new();
         panel.open(false);
-        panel.set_look(classic, art);
+        panel.set_art(art);
         panel.preview(case.bio, case.focus, case.message);
         let inputs = Inputs {
             enabled: case.enabled,
@@ -1251,11 +1251,7 @@ fn identity_page(shots: &Snapshot, art: ArtSet) {
         };
         let mut vertices = Vec::new();
         panel.append(&inputs, &mut vertices, &shots.font.font, VIEWPORT);
-        let name = if classic {
-            format!("{}-classic", case.name)
-        } else {
-            case.name.to_owned()
-        };
+        let name = format!("{}-classic", case.name);
         shots.save(&name, panel.draw_list(), &vertices, true);
     }
 }
@@ -1284,37 +1280,27 @@ fn text_dialog(shots: &Snapshot, art: ArtSet) {
         ),
         ("note-dialog", note, "", false, ""),
     ];
-    for classic in [false, true] {
-        let suffix = if classic { "-classic" } else { "" };
-        let mut dialog = TextDialog::default();
-        dialog.set_look(
-            if classic {
-                crate::text_dialog::Look::Classic
-            } else {
-                crate::text_dialog::Look::Modern
-            },
-            art,
-        );
+    let mut dialog = TextDialog::default();
+    dialog.set_look(crate::text_dialog::Look::Classic, art);
+    let mut vertices = Vec::new();
+    dialog.append_launcher(&mut vertices, &shots.font.font, VIEWPORT);
+    shots.save(
+        "report-launcher-classic",
+        dialog.launcher_draw_list(),
+        &vertices,
+        true,
+    );
+    for (name, kind, text, on_send, message) in &cases {
+        dialog.open(kind.clone());
+        dialog.preview(text, *on_send, message);
         let mut vertices = Vec::new();
-        dialog.append_launcher(&mut vertices, &shots.font.font, VIEWPORT);
+        dialog.append(&mut vertices, &shots.font.font, VIEWPORT);
         shots.save(
-            &format!("report-launcher{suffix}"),
-            dialog.launcher_draw_list(),
+            &format!("{name}-classic"),
+            dialog.draw_list(),
             &vertices,
             true,
         );
-        for (name, kind, text, on_send, message) in &cases {
-            dialog.open(kind.clone());
-            dialog.preview(text, *on_send, message);
-            let mut vertices = Vec::new();
-            dialog.append(&mut vertices, &shots.font.font, VIEWPORT);
-            shots.save(
-                &format!("{name}{suffix}"),
-                dialog.draw_list(),
-                &vertices,
-                true,
-            );
-        }
     }
 }
 
@@ -1954,68 +1940,55 @@ fn force_wheel(shots: &mut Snapshot, vfs: &sjk_vfs::VirtualFileSystem) {
     }
 }
 
-/// The console's command browser in both looks: the modern one and the
-/// classic+ one the classic console uses (`console_browser_classic.rs`).
+/// The console's command browser in the classic+ look the classic console uses
+/// (`console_browser_classic.rs`).
 fn console_browser(shots: &Snapshot, art: ArtSet) {
-    for (name, style) in [
-        ("console-browser-modern", "modern"),
-        ("console-browser-classic", "classic"),
-    ] {
-        let directory = tempfile::tempdir().expect("scratch profile");
-        let mut console = crate::console::ViewerConsole::new(directory.path().join("config.cfg"))
-            .expect("console");
-        console.set_cvar("con_style", style);
-        // A changed cvar shows its default beside it.
-        console.set_cvar("con_height", "0.75");
-        console.set_browser_art(art);
-        console.open_browser_on("con_");
-        let mut vertices = Vec::new();
-        console.append_overlay(&mut vertices, &shots.font.font, VIEWPORT, 1.0);
-        shots.save(name, console.draw_list(), &vertices, true);
-    }
+    let directory = tempfile::tempdir().expect("scratch profile");
+    let mut console =
+        crate::console::ViewerConsole::new(directory.path().join("config.cfg")).expect("console");
+    console.set_cvar("con_style", "classic");
+    // A changed cvar shows its default beside it.
+    console.set_cvar("con_height", "0.75");
+    console.set_browser_art(art);
+    console.open_browser_on("con_");
+    let mut vertices = Vec::new();
+    console.append_overlay(&mut vertices, &shots.font.font, VIEWPORT, 1.0);
+    shots.save(
+        "console-browser-classic",
+        console.draw_list(),
+        &vertices,
+        true,
+    );
 }
 
-/// The changelog page on the unreleased changes and on a full release, and
-/// both main menus with their Changelog entry.
+/// The changelog page on two releases, the credits page, and the classic main
+/// menu with its Changelog entry.
 fn changelog(shots: &Snapshot, art: ArtSet) {
     let directory = tempfile::tempdir().expect("scratch profile");
     let mut console =
         crate::console::ViewerConsole::new(directory.path().join("config.cfg")).expect("console");
     console.open_changelog();
-    for (name, release, classic) in [
-        ("changelog-unreleased", 0, false),
-        ("changelog-release", 1, false),
-        ("changelog-classic", 1, true),
-        ("changelog-classic-alpha1", 3, true),
-    ] {
-        console.set_changelog_look(classic, art);
+    console.set_page_art(art);
+    for (name, release) in [("changelog-classic", 1), ("changelog-classic-alpha1", 3)] {
         console.changelog_mut().select(release);
         let mut vertices = Vec::new();
         console.append_overlay(&mut vertices, &shots.font.font, VIEWPORT, 1.0);
-        shots.save(name, console.draw_list(), &vertices, classic);
+        shots.save(name, console.draw_list(), &vertices, true);
     }
     // Scrolled by pixels, or to a person's panel with their folds open.
     enum At {
         Pixels(f32),
         Person(u16),
     }
-    for (name, classic, at, viewport) in [
-        ("credits", false, At::Pixels(0.0), VIEWPORT),
-        ("credits-scrolled", false, At::Pixels(600.0), VIEWPORT),
-        ("credits-classic", true, At::Pixels(0.0), VIEWPORT),
-        ("credits-wide", false, At::Pixels(0.0), [2560.0, 1080.0]),
-        ("credits-end", false, At::Pixels(100_000.0), VIEWPORT),
-        ("credits-unfolded", false, At::Person(0), VIEWPORT),
-        ("credits-unfolded-classic", true, At::Person(2), VIEWPORT),
-        (
-            "credits-unfolded-bishop",
-            false,
-            At::Person(1),
-            [2560.0, 1080.0],
-        ),
+    for (name, at, viewport) in [
+        ("credits", At::Pixels(0.0), VIEWPORT),
+        ("credits-scrolled", At::Pixels(600.0), VIEWPORT),
+        ("credits-wide", At::Pixels(0.0), [2560.0, 1080.0]),
+        ("credits-end", At::Pixels(100_000.0), VIEWPORT),
+        ("credits-unfolded", At::Person(0), VIEWPORT),
+        ("credits-unfolded-bishop", At::Person(1), [2560.0, 1080.0]),
     ] {
         console.open_credits();
-        console.set_credits_look(classic);
         let mut vertices = Vec::new();
         match at {
             At::Pixels(pixels) => {
@@ -2046,11 +2019,6 @@ fn changelog(shots: &Snapshot, art: ArtSet) {
     let mut vertices = Vec::new();
     canvas.append_text(&mut vertices, &shots.font.font, VIEWPORT);
     shots.save("sjk-page", canvas.draw_list(), &vertices, false);
-    let mut canvas = crate::menu_widgets::MenuCanvas::new();
-    crate::menu::main_view::build(&mut canvas, VIEWPORT, 4, 1.0);
-    let mut vertices = Vec::new();
-    canvas.append_text(&mut vertices, &shots.font.font, VIEWPORT);
-    shots.save("main-modern", canvas.draw_list(), &vertices, false);
 }
 
 fn in_game_menu(shots: &Snapshot, art: ArtSet) {
@@ -2213,19 +2181,17 @@ fn medals_snapshot() {
         ("medals-identity", &with),
         ("medals-identity-none", &without),
     ] {
-        for classic in [false, true] {
-            let mut panel = Panel::new();
-            panel.open(false);
-            panel.set_look(classic, art);
-            let mut vertices = Vec::new();
-            panel.append(&inputs(snapshot), &mut vertices, &shots.font.font, VIEWPORT);
-            let name = if classic {
-                format!("{name}-classic")
-            } else {
-                name.to_owned()
-            };
-            shots.save(&name, panel.draw_list(), &vertices, true);
-        }
+        let mut panel = Panel::new();
+        panel.open(false);
+        panel.set_art(art);
+        let mut vertices = Vec::new();
+        panel.append(&inputs(snapshot), &mut vertices, &shots.font.font, VIEWPORT);
+        shots.save(
+            &format!("{name}-classic"),
+            panel.draw_list(),
+            &vertices,
+            true,
+        );
     }
     let display = crate::text::load_family(&crate::text::DISPLAY, 1.0, None).expect("Rajdhani");
     let body = crate::text::load_family(&crate::text::BODY, 1.0, None).expect("Exo 2");

@@ -13,10 +13,10 @@ Status (08/10/2026): the main page, Settings (with the key bindings),
 Character, What's new, Update, Identity, Credits, Servers (the server browser),
 the loading screen, the scoreboard, the in-game menu, Camera control and the
 report and note dialog (Report a bug) are done. Every other
-screen opens in its classic+ version (`MenuStyle::classic_screens`), which
+screen opens in its classic+ version, which
 covers the map as the classic style does.
-Other styles: First setup's first row, Settings > Interface > Menu style, or
-`ui_menuStyle classic`/`modern`; restart for the style's map behind the main page.
+The other style: First setup's Menu style row, Settings > Interface > Menu style, or
+`ui_menuStyle classic`; restart for the style's map behind the main page.
 
 ## Design
 
@@ -190,7 +190,7 @@ password prompt.
 [player_menu/sjk_view.rs](../crates/sjk-viewer/src/player_menu/sjk_view.rs): the
 player screen, opened by the main page's Character. The model stands on duel6's
 stage in the map's own light, holding the saber draft lit, and every change
-shows on it at once (the modern screen's `menu_stage`). The screen is laid out
+shows on it at once (`menu_stage`). The screen is laid out
 on the 16:9 frame, dark behind the form on the left and clear over the model.
 
 - **Top:** the way back (Esc, "Main menu") and the player's name, with its
@@ -229,31 +229,40 @@ on the 16:9 frame, dark behind the form on the left and clear over the model.
   it, on the power's own level drops one; a level bought (by click or Right)
   sends a ring out from its mark. These are the only things that move on the
   page, and only answering the pointer or a purchase. Then Start over, Discard
-  and Apply (gold while there is something to apply).
+  and Apply (gold while there is something to apply). On a server, a power it
+  turns off, holds at a level or does not use keeps its marks and has an ember
+  note under its name (Off on this server, Fixed on this server, Team games
+  only), and under the side's five, This server lists its rules: the highest
+  rank and its points, free saber skills, the powers it turns off (past eight,
+  how many), whether team powers work, and that turned-off powers stay
+  pickable for full Force duels and an applied profile counts from the next
+  respawn ([client.md](client.md#force-profile-on-a-server)).
 - **Power box:** on the Force page, bottom right, the power under the pointer
   (or the keyboard) in big: its holocron, name, group, level, what it does in a
-  line or two, the next level's price (or Mastered, Team games only...) and
-  its levels' prices.
+  line or two, what the server does with it when it limits it, the next
+  level's price (or Mastered, Needs Saber offense 1...) and its levels'
+  prices.
 - **Caption:** beside the model, bottom right under a short gold rule, what the
   page shows of it: the model and its skin, the saber's style, hilt and blade,
   or (on the Force page with no power chosen) the side and rank.
 - **Keys:** bottom right, the focused row's (Left Right change, Enter type or
   do it) and Tab with the next page's name.
 
-The keys are the modern screen's: Up and Down choose a row (on the Saber and
+The keys are the player screen's shared ones: Up and Down choose a row (on the Saber and
 Force pages in the order they show them: both hilt lists before the blades,
 the Force groups' powers in their order, the other side's skipped), Left and
 Right change it (a hilt list's choice moves one hilt), Enter types or acts, Tab
 and `[` `]` change page, Escape returns to the main page (dropping an
 unapplied Force draft, as before). The pointer: a click on a control acts (‹ ›
-by the half it lands on, a chip picks its colour, a slider follows, a style
-button, a hilt, a level), a click elsewhere on a row only chooses it, a click
-on a tile picks that model. The SJK view's own targets (levels, style buttons,
+by the half of the control it lands on, a chip picks the colour drawn under
+it, a slider follows, a style button, a hilt, a level), a click elsewhere on a
+row (a Force power's holocron or name too) only chooses it, a click on a tile
+picks that model. The SJK view's own targets (levels, style buttons,
 hilts and the lists' wheel areas, tokens from 1000) go to
-`PlayerMenu::sjk_pointer` before the modern screen's pointer.
+`PlayerMenu::sjk_pointer` before the screen's shared pointer handling.
 
-It is the modern screen's state and controller with another view: the rows,
-tiles, tabs and back key answer to the modern screen's tokens, each row
+It is the player screen's shared state and controller with a view of its own:
+the rows, tiles, tabs and back key answer to the screen's tokens, each row
 registering its control before the whole row so the token's rectangle is the
 control's.
 
@@ -495,7 +504,7 @@ The rows are a classic+ panel's (`settings::ClassicRows`), so the search over
 every setting, the lists, the defaults and typed numbers are the classic+
 panels' own; only the drawing and the frame are the SJK UI's. Changing Menu
 style on the screen (it is on Interface) hands over to the classic+ panel of the
-same group (Graphics: the renderer's image tab), or to the modern screen.
+same group (Graphics: the renderer's image tab).
 
 ### First setup
 
@@ -510,7 +519,9 @@ Settings screen.
 - **Top:** "First setup", what it is for, and how to bring another client's
   .cfg over.
 - **Rows:** First setup's rows as Settings draws them, its column moved into
-  the card, under its sub-headings (Styles first: menu and camera style).
+  the card, under its sub-headings (Graphics first, the [graphics
+  quality](client.md#graphics-quality) level, whose list opens on Enter; then
+  Styles: menu and camera style).
   Eleven lines show; the rest scroll inside the card. The focused row's help
   sits in two lines under them (left out while a list is open).
 - **Foot,** always in view under a rule: the "Don't show at start" tick box
@@ -524,9 +535,8 @@ scrolling lines (`ClassicRows::pinned`): the keyboard reaches it after the last
 row (Up from the first wraps to it), Enter or a click flips it, Backspace
 returns it to its default. Done or Escape goes back to the main page; All
 settings or Tab opens the Settings screen on First setup. The pop-up has no
-search. Picking the classic or modern style on its Menu style row goes on as
-that style's First setup, and picking the SJK UI on theirs comes back to the
-pop-up. In a game the SJK UI's First setup is still the classic panel.
+search. Picking the classic style on its Menu style row goes on as that style's
+First setup, and picking the SJK UI on the classic one comes back to the pop-up. In a game the SJK UI's First setup is still the classic panel.
 
 ### Quick wheel
 
@@ -561,7 +571,7 @@ detail's columns:
 - **Keys:** bottom right, what has the keyboard's, and Tab for the next group.
 
 Outside the SJK UI the editor draws the same columns on its own over the
-classic+ or modern settings (the navy ground, "Esc Settings" and "Quick wheel"
+classic+ or tabbed settings (the navy ground, "Esc Settings" and "Quick wheel"
 as its title), moved 190 left where the rail would be. The editor has its own
 canvas (1024 draw commands); every state of a full wheel fits it (a test).
 
@@ -619,8 +629,7 @@ pointer: a click on a row chooses it and a second within 0.4 s joins it; a
 header sorts; a switch's row flips it; the game type steps back on its left
 half and on on its right half.
 
-Joining shows the SJK UI's loading screen (Loading); mp/duel6 has no gate to
-fly through.
+Joining shows the SJK UI's loading screen (Loading).
 
 ## Loading
 
@@ -707,7 +716,8 @@ and out as the classic board does, settling into place as it opens.
   the map, "Killed by" and the name while you are dead.
 - **Where:** the columns start at x 680 of the frame, right of the chat column
   the scoreboard keeps for messages and the composer (`scoreboard::layout`, 640
-  pixels of a 1080-line window), and end at 1824.
+  pixels of a 1080-line window), and end at 1824. A compact board is narrower
+  and centred (below).
 - **Rows:** under muted column labels and a thin holo rule, one row each,
   52 tall at most, with a hairline under it: the place (Rajdhani; ties share
   it), the name with its colours (Exo 2), SJK's emblem right after it for a
@@ -717,15 +727,41 @@ and out as the classic board does, settling into place as it opens.
   Your row has the UI's band with its gold bar, and its place, score, bars and
   ping in gold. Bots and players still joining are muted, with "Bot", "Joining"
   or "Connecting" for their ping.
+- **Compact** (`cg_compactScoreboard`, Settings > Scoreboard > "Compact SJK
+  scoreboard", on by default): rows are 32 tall at most and as thin as 20, and
+  a list splits in two only when even 20 would not fit, so a full server (32 in
+  free for all, or 32 on one team) stands in one column. Names and numbers scale
+  with the thinner rows (names 16 to 20, numbers 17 to 22). The board is sized
+  from what it shows, not the screen (`sjk::Board`): the name column is as wide
+  as the longest name with its emblem, bars and "Ready", measured in the
+  families that draw it, at least 140 and at most 320 frame pixels (a longer
+  name ends in an ellipsis), the same for both teams; the first number's right
+  edge stands 48 after it, each number column is its widest label plus 14 (48
+  at least), and the ping column keeps its 100. A player's medal bars are not
+  held to a third of the name column as on the full board: the column widens
+  for all of them (three at most). The whole board is centred on the screen,
+  or, where that would put it over the chat column, stands 40 right of the
+  column (as near the middle as the chat allows); it never ends past 1824 or
+  grows wider than the full board, the name column giving way (to 100 at the
+  least). A duel's cards keep their size about that middle, the players
+  waiting centred under them. The dim behind the columns follows the board,
+  fading out on both sides, and "Watching" starts at its left edge. In the UI's
+  families at 1080 lines (`scoreboard::shot` tests, on the world shot's made-up
+  names), a free for all of 8 is 440 frame pixels wide (500 with deaths
+  counted) and of 32, 411 (471), centred; a Team FFA of 6 a side is 835 and
+  capture the flag of 6 a side 1142, both from 680 beside the chat column
+  (four number columns and a player's three medal bars leave capture little to
+  gain), against 1144 for the full board in every mode. Off, the sizes below
+  apply and the board fills 680 to 1824 as before.
 - **Free for all** (and Holocron, Jedi Master): one list by place; once rows
   would be thinner than 34 pixels (past 22 players) two lists side by side, 16
-  each at 32.
+  each at 32. Compact keeps it one list (32 players at 23.6).
 - **Team games:** the two teams side by side, red left and blue right, each
   under its head: the team's score in Rajdhani 76 (muted while it trails), the
   team's name in its muted colour with how many play, and a thin rule in that
   colour. Capture modes show score, captures, assists and defends (no minutes,
   for room) and a carried flag's icon before the name. A team too long for
-  rows of 26 pixels ends with "and n more", keeping your row.
+  rows of 26 pixels (20 compact) ends with "and n more", keeping your row.
 - **Duel and power duel:** the duelists (`CS_CLIENT_DUELISTS`, else the
   players not spectating) as two facing cards about the board's middle with
   "vs" between them: the name (Rajdhani 44), the score large (112, gold for
@@ -733,12 +769,15 @@ and out as the classic board does, settling into place as it opens.
   shield"; your health and shield from your snapshot, an opponent's health when
   the server shares it, `g_showDuelHealths`), over a rule, gold under your
   card. A power duel's pair stack two smaller cards facing the lone duelist.
-  Under them "Waiting to duel": everyone else in turn, with their record.
+  Under them "Waiting to duel": everyone else in turn, with their record
+  (compact: one list up to 21, then two).
 - **Spectators:** one line at the bottom, "Watching" then their names without
   colours.
 
 A full server fits the board's canvas (320 text runs, 1024 draw commands) in
-every mode, at 1080 lines and 4K (unit tests). The look draws in the UI's
+every mode, at 1080 lines and 4K, 5:4, 4:3, 21:9 and 32:9 (unit tests, which
+also pin the compact board's centring, its clearance of the chat column and
+its widths). The look draws in the UI's
 families, which load for it even with another menu style when it is chosen on
 its own; their metrics place what follows a measured run (the emblem after a
 name, the header's right side).
@@ -856,8 +895,8 @@ right edge:
 The focused control has the kit's band (a slider's or switch's whole row, a tab)
 or a button's white edge. It is the panel's state, tokens, keys and pointer
 (`shot::Panel`), drawn by another view: `InGameMenu::append_sjk` builds it when
-the page is `Page::Shot`. With the classic and modern menus the modern panel
-draws as before, renamed.
+the page is `Page::Shot`. With the classic menus a right-edge panel in SJK's
+hero look draws it, renamed.
 
 ## Report a bug and its dialogs
 
@@ -866,8 +905,8 @@ text dialog as the SJK UI's pop-up card (Sol's request, 08/10/2026). One dialog
 serves three things, and all three take this look with the SJK UI's menus:
 Report a bug (the in-game menu's SJK page), a player report's few words
 (Players, a player, a reason) and a world note (`inspect` twice,
-[client.md](client.md#player-card)). The classic+ and modern looks stay with
-their styles ([identity.md](identity.md#bug-reports)).
+[client.md](client.md#player-card)). The classic+ look stays with the classic
+menus ([identity.md](identity.md#bug-reports)).
 
 - **Card:** 920 wide and 592 tall, centred on the frame, with the browser
   prompts' glass, shadow and holo edge (`kit::card`), over the scene darkened
@@ -915,9 +954,9 @@ button acts.
 
 ## Implementation
 
-- `ui_menuStyle` has a third value, `sjk` (`menu::style::MenuStyle::Sjk`).
-  `MenuStyle::classic_screens` is true for it, so every screen without an SJK UI
-  version opens its classic one; the main page dispatches to `menu::sjk::home`.
+- `ui_menuStyle sjk` (`menu::style::MenuStyle::Sjk`) is the default beside
+  `classic`. Every screen without an SJK UI version opens its classic one; the
+  main page dispatches to `menu::sjk::home`.
   `ClientMenu::sjk_screen` says when one of the SJK UI's own screens is on show
   (the main page, Settings without a picker open, Character, Servers, the
   loading screen): the map is drawn under it (the loading screen leaves it out
@@ -929,7 +968,7 @@ button acts.
   lit rail, cycler, colour chips, button and rank pips), in frame pixels
   (`menu::sjk::Frame`).
 - The player screen's style: `PlayerMenu::set_sjk` (from `set_menu_art`) draws
-  the modern screen in the SJK UI's view; `ClientMenu::sjk_screen` covers the
+  the screen in the SJK UI's view; `ClientMenu::sjk_screen` covers the
   player phase then, so the map and the stage model show under it.
 - Settings is the classic+ panel's state with another view: the menu opens a
   category's rows as the classic+ panels do, keeps `classic_panel` empty and
@@ -996,7 +1035,8 @@ button acts.
   ground);
   `duel6_sjk_scoreboard` the scoreboard on
   made-up matches (`scoreboard::shot`: free for all with 14 and with 30
-  players, capture the flag, a duel, a power duel, and a 4:3 window), drawn
+  players, the 30 again without compact rows, capture the flag, a duel, a
+  power duel, and a 4:3 window), drawn
   without a server;
   `duel6_sjk_ingame` the in-game menu over
   duel6 on a made-up match (`Card::for_shot`, `InGameMenu::sjk_for_shot`):
@@ -1004,14 +1044,14 @@ button acts.
   Leave, a spectator's card and Settings opened from it;
   `duel6_camera_control` Camera control over duel6 on a made-up match: the
   in-game menu with its entry chosen, the panel's Camera and Sun pages, a number
-  typed, the Sun page where the sun cannot be set, a 4:3 window and the modern
-  look;
+  typed, the Sun page where the sun cannot be set, a 4:3 window and the classic
+  menus' bar and panel;
   `duel6_quick_wheel` the quick wheel's ring over duel6 (General, the change to
   Weather half-way, Weather, the middle, 4:3, in Inter, and three full pages of
   the second board's icons, `duel6-wheel-icons-1` to `-3`) and
   `duel6_quick_wheel_settings` its Settings category (pages, the sound switch
   off, a choice, the catalogue, a custom choice, a new page) and the editor over
-  the classic+ and modern settings;
+  the classic+ settings;
   `duel6_sjk_credits` Credits over duel6: the top, Creyon's and Lumaya's
   panels with their folds open and their medals, Creyon's work unfolded, and
   the end of the page.
@@ -1052,5 +1092,4 @@ classic version:
 3. Create a game.
 
 `sjk` became the default `ui_menuStyle` before these were done. mp/duel6 has
-its tour, player stage and saber shot; it has no gate, which mp/ffa3's browser
-flies through on a join.
+its tour, player stage and saber shot.

@@ -4,6 +4,9 @@ use crate::{GpuState, pointer_input::MouseLook};
 
 pub(crate) struct Motion {
     pub now: u64,
+    /// How long before `now` the command being built was made: a frame slower than
+    /// 8 ms makes several commands, each at its own time ([`GameplayInput::set_command_age`]).
+    pub command_age: u64,
     previous_time: u64,
     command_millis: u64,
     pub freelook: bool,
@@ -28,6 +31,7 @@ impl Default for Motion {
     fn default() -> Self {
         Self {
             now: 0,
+            command_age: 0,
             previous_time: 0,
             command_millis: 0,
             freelook: true,
@@ -116,6 +120,7 @@ impl GameButton {
             Self::Strafe => 28,
             Self::Mlook => 29,
             Self::ForceStasis => 30,
+            Self::Duck => 31,
         }
     }
 }
@@ -132,6 +137,31 @@ impl GameplayInput {
         self.held[button.slot()].fraction
     }
 
+    /// A pair's fractions after `cl_idrive` ([`super::idrive`]).
+    pub(super) fn idrive_pair(
+        &self,
+        positive: GameButton,
+        negative: GameButton,
+        positive_fraction: f32,
+        negative_fraction: f32,
+    ) -> (f32, f32) {
+        let key = |button: GameButton, fraction| {
+            let state = &self.held[button.slot()];
+            super::idrive::Key {
+                fraction,
+                pressed_at: state.pressed_at,
+                released_at: state.released_at,
+                active: state.active,
+            }
+        };
+        self.idrive.resolve(
+            positive == GameButton::Up,
+            key(positive, positive_fraction),
+            key(negative, negative_fraction),
+            self.motion.now.saturating_sub(self.motion.command_age),
+        )
+    }
+
     pub(super) fn axis(
         &self,
         positive: GameButton,
@@ -139,9 +169,15 @@ impl GameplayInput {
         speed: i8,
         mouse: f32,
     ) -> i8 {
+        let (positive, negative) = self.idrive_pair(
+            positive,
+            negative,
+            self.movement_fraction(positive),
+            self.movement_fraction(negative),
+        );
         // Stock truncates each contribution as it adds to the integer movement axis.
-        let positive = (speed as f32 * self.movement_fraction(positive)) as i32;
-        let negative = (positive as f32 - speed as f32 * self.movement_fraction(negative)) as i32;
+        let positive = (speed as f32 * positive) as i32;
+        let negative = (positive as f32 - speed as f32 * negative) as i32;
         (negative as f32 + mouse).clamp(-127.0, 127.0) as i8
     }
 

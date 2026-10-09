@@ -2,7 +2,8 @@
 
 use super::*;
 use sjk_client::{
-    ForceProfileNegotiator, LegacyTeamChoice, force_rank_reply, force_rules_from_serverinfo,
+    ForceAllocation, ForceLegalizeRules, ForceProfileNegotiator, LegacyTeamChoice,
+    force_rank_reply, force_rules_from_serverinfo, legalize_force_powers,
 };
 use sjk_protocol::GameState;
 
@@ -92,12 +93,6 @@ impl ViewerConsole {
                 "Password used only when joining a locked server",
             ),
             CvarDefinition::new(
-                "con_maxLines",
-                32_i64,
-                CvarFlags::ARCHIVE,
-                "Maximum visible console lines",
-            ),
-            CvarDefinition::new(
                 "fs_gameData",
                 "",
                 CvarFlags::ARCHIVE,
@@ -145,6 +140,8 @@ impl ViewerConsole {
         let smooth_clients =
             console_cvars::IntegerSetting::bind(&mut cvars, "cg_smoothClients", 0)?;
         let remaps = console_cvars::IntegerSetting::bind(&mut cvars, "cg_remaps", 2)?;
+        let remap_blocked_maps =
+            console_cvars::RevisionSetting::bind(&mut cvars, crate::remap_blocked_maps::CVAR)?;
         let draw_fog = console_cvars::IntegerSetting::bind(&mut cvars, "r_drawfog", 2)?;
         let packet_dup = console_cvars::IntegerSetting::bind(&mut cvars, "cl_packetdup", 1)?;
         let max_packets = console_cvars::IntegerSetting::bind(
@@ -299,7 +296,7 @@ impl ViewerConsole {
         }
         // com_maxfps defaulted to 1000 and every archived cvar was saved, so each
         // existing profile carries that old default. Move it once to the new
-        // refresh-rate default (-1); a 1000 chosen after this stays.
+        // default, AUTO (-1); a 1000 chosen after this stays.
         if matches!(
             shell
                 .cvars
@@ -373,7 +370,7 @@ impl ViewerConsole {
         }
         // ui_menuStyle defaulted to classic and every profile saved it, so the
         // SJK UI, the new default, would reach none. Move a saved classic once
-        // to the default; a classic (or modern) chosen after this stays.
+        // to the default; a classic chosen after this stays.
         if matches!(
             shell
                 .cvars
@@ -432,6 +429,25 @@ impl ViewerConsole {
             }
             let _ = shell.cvars.set_text("cg_cameraStyleDefaultVersion", "1");
         }
+        // cg_killfeed was off by default (a one-line obituary) and every profile
+        // saved that 0, so the kill feed, on by default, would reach none. Move a
+        // saved 0 once to the default; a 0 chosen after this stays.
+        if matches!(
+            shell
+                .cvars
+                .get("cg_killfeedDefaultVersion")
+                .map(|cvar| &cvar.value),
+            Some(CvarValue::Integer(0))
+        ) {
+            if matches!(
+                shell.cvars.get("cg_killfeed").map(|cvar| &cvar.value),
+                Some(CvarValue::Integer(0))
+            ) {
+                let _ = shell.cvars.reset("cg_killfeed");
+            }
+            let _ = shell.cvars.set_text("cg_killfeedDefaultVersion", "1");
+        }
+        retire_modern_ui(&mut shell.cvars);
         shell.push_log("^5SJK console ready. ^7Type cmdlist for commands.");
         Ok(Self {
             shell,
@@ -462,6 +478,7 @@ impl ViewerConsole {
             smooth_clients,
             draw_fog,
             remaps,
+            remap_blocked_maps,
             packet_dup,
             max_packets,
             post_color,
@@ -503,11 +520,18 @@ impl ViewerConsole {
         })
     }
 
-    /// Flush an effective profile change through OpenJK's reliable userinfo command.
+    /// Flush an effective profile change through OpenJK's reliable userinfo
+    /// command, then send what the Force profile exchange has due.
     pub(crate) fn flush_userinfo(&mut self, session: &mut ClientSession, now: Instant) {
-        if !self.userinfo_dirty.load(Ordering::Acquire) {
-            return;
+        if self.userinfo_dirty.load(Ordering::Acquire) {
+            self.send_userinfo(session, now);
         }
+        // Every frame: a rejoin retry falls due seconds after the userinfo
+        // that preceded it went out, when nothing is left to flush.
+        self.poll_force_rejoin(session, now);
+    }
+
+    fn send_userinfo(&mut self, session: &mut ClientSession, now: Instant) {
         let result = self
             .userinfo()
             .map_err(|error| error.to_string())
@@ -536,7 +560,6 @@ impl ViewerConsole {
                     .push_log(format!("^1Could not update userinfo: {error}"));
             }
         }
-        self.poll_force_rejoin(session, now);
     }
 
     /// Send the queued `forcechanged` reply and bounded `team` retries.
@@ -560,24 +583,44 @@ impl ViewerConsole {
         self.force_profile.note_team_choice(choice);
     }
 
-    /// Adopt the `forcepowers` value negotiated while joining a server.
+    /// Report the `forcepowers` value sent while joining a server when it is
+    /// not the player's own (later userinfo is fitted the same way).
     pub(crate) fn note_server_forcepowers(&mut self, negotiated: &str) {
         let preferred = self.text_value("forcepowers").unwrap_or_default();
-        let value = (negotiated != preferred).then(|| negotiated.to_owned());
-        if value.is_some() {
+        if negotiated != preferred {
             self.shell.push_log(format!(
                 "^5Force profile adjusted to server limits: ^7{negotiated}"
             ));
         }
-        self.force_profile.set_server_forcepowers(value);
     }
 
-    /// The Force profile the server plays the local player with: the one negotiated
-    /// for it, else the player's own `forcepowers`.
-    pub(crate) fn own_forcepowers(&self) -> Option<&str> {
-        self.force_profile
-            .server_forcepowers()
-            .or_else(|| self.text_value("forcepowers"))
+    /// The Force profile the server plays the local player with: the player's
+    /// own `forcepowers` as the server's rules leave it (its disabled powers
+    /// dropped), or as written off a server.
+    pub(crate) fn own_force_allocation(&self) -> Option<ForceAllocation> {
+        let preferred = self.text_value("forcepowers")?;
+        match self.force_profile.server_rules() {
+            Some(rules) => Some(legalize_force_powers(preferred, rules).allocation),
+            None => ForceAllocation::parse(preferred).ok(),
+        }
+    }
+
+    /// The Force rules of the server the client plays on (`None` off one, or
+    /// in a demo), `g_forcePowerDisable` included.
+    pub(crate) fn server_force_rules(&self) -> Option<ForceLegalizeRules> {
+        self.force_profile.server_rules()
+    }
+
+    /// Make `value` the player's Force profile; on a server, have it read it
+    /// (`forcechanged` once the userinfo carrying it is out): at once while
+    /// spectating, at the next respawn in play.
+    pub(crate) fn apply_forcepowers(&mut self, value: &str) {
+        if self.set_cvar("forcepowers", value) {
+            self.force_profile.profile_applied();
+            // The `forcechanged` goes out after the userinfo flush, which an
+            // unchanged value would not start.
+            self.userinfo_dirty.store(true, Ordering::Release);
+        }
     }
 
     /// Refresh `serverinfo` and profile-specific completion from the active session.
@@ -589,6 +632,8 @@ impl ViewerConsole {
             session.compat_profile(),
             session.server(),
         );
+        self.force_profile
+            .set_server_rules(Some(sjk_client::server_force_rules(session.game_state())));
     }
 
     /// Refresh demo serverinfo through the same status and completion path as live play.
@@ -686,16 +731,22 @@ impl ViewerConsole {
         if !update.open_profile {
             return;
         }
+        // The notice's rank and team (the side `g_forceBasedTeams` holds the
+        // player to) become the rules the sent profile is fitted to.
         let rules = force_rules_from_serverinfo(game_state, update.rank, update.team);
+        self.force_profile.set_server_rules(Some(rules));
         let current = self
-            .force_profile
-            .server_forcepowers()
-            .or_else(|| self.text_value("forcepowers"))
+            .text_value("forcepowers")
             .unwrap_or_default()
             .to_owned();
-        let reply = force_rank_reply(&current, rules, self.force_profile.rejoin_team());
+        let reply = force_rank_reply(
+            &current,
+            rules.for_sent_profile(),
+            self.force_profile.rejoin_team(),
+        );
+        // The reply waits for this userinfo, carrying the fitted profile.
+        self.userinfo_dirty.store(true, Ordering::Release);
         if reply.changed {
-            self.userinfo_dirty.store(true, Ordering::Release);
             self.shell.push_log(format!(
                 "^5Force profile adjusted to server limits: ^7{}",
                 reply.forcepowers
@@ -711,6 +762,34 @@ impl ViewerConsole {
         let _ = self.shell.cvars.set_text("ui_myteam", "3");
         self.shell
             .push_log("^5Server moved you to spectator mode pending the Force profile check");
+    }
+}
+
+/// The modern menus, scoreboard, console and HUD are retired: a saved `modern`
+/// (or the `0` that also named it) goes back to the setting's default, the SJK
+/// UI and the styles that follow it, and the settings only they read are
+/// dropped from the profile instead of being kept as user cvars.
+fn retire_modern_ui(cvars: &mut CvarRegistry) {
+    for style in [
+        crate::menu::style::CVAR,
+        crate::scoreboard::style::CVAR,
+        super::console_options::STYLE_CVAR,
+        crate::menu_hud::STYLE_CVAR,
+    ] {
+        if cvars.get(style).is_some_and(|cvar| {
+            let value = cvar.value.as_text();
+            value.trim().eq_ignore_ascii_case("modern") || value.trim() == "0"
+        }) {
+            let _ = cvars.reset(style);
+        }
+    }
+    for retired in [
+        "ui_accent",
+        "con_lineSpacing",
+        "con_maxLines",
+        "con_datetime",
+    ] {
+        let _ = cvars.unset(retired);
     }
 }
 
@@ -768,5 +847,49 @@ mod tests {
         .unwrap();
         let console = ViewerConsole::new(chosen).unwrap();
         assert_eq!(console.shell.binds.get("q"), Some("+wheel general"));
+    }
+
+    /// A profile saved with the retired modern styles starts on the defaults,
+    /// and the settings only they read are gone; other saved styles stay.
+    #[test]
+    fn saved_modern_styles_go_back_to_the_defaults() {
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("config.cfg");
+        std::fs::write(
+            &path,
+            "seta ui_menuStyle \"modern\"\nseta cg_scoreboardStyle \"0\"\n\
+             seta con_style \"Modern\"\nseta cg_hudStyle \"modern\"\n\
+             seta ui_accent \"blue\"\nseta con_lineSpacing \"1.2\"\n\
+             seta con_maxLines \"40\"\nseta con_datetime \"1\"\n",
+        )
+        .unwrap();
+        let console = ViewerConsole::new(path).unwrap();
+        assert_eq!(console.text_value("ui_menuStyle"), Some("sjk"));
+        assert_eq!(console.text_value("cg_scoreboardStyle"), Some("auto"));
+        assert_eq!(console.text_value("con_style"), Some("auto"));
+        assert_eq!(console.text_value("cg_hudStyle"), Some("game"));
+        for retired in [
+            "ui_accent",
+            "con_lineSpacing",
+            "con_maxLines",
+            "con_datetime",
+        ] {
+            assert!(console.shell.cvars.get(retired).is_none(), "{retired}");
+        }
+        // The other looks stay as chosen.
+        let chosen = directory.path().join("chosen.cfg");
+        std::fs::write(
+            &chosen,
+            "seta ui_menuStyleDefaultVersion \"1\"\nseta ui_menuStyle \"classic\"\n\
+             seta cg_scoreboardStyleDefaultVersion \"1\"\nseta cg_scoreboardStyle \"classic\"\n\
+             seta con_styleDefaultVersion \"1\"\nseta con_style \"sjk\"\n\
+             seta cg_hudStyle \"radial\"\n",
+        )
+        .unwrap();
+        let console = ViewerConsole::new(chosen).unwrap();
+        assert_eq!(console.text_value("ui_menuStyle"), Some("classic"));
+        assert_eq!(console.text_value("cg_scoreboardStyle"), Some("classic"));
+        assert_eq!(console.text_value("con_style"), Some("sjk"));
+        assert_eq!(console.text_value("cg_hudStyle"), Some("radial"));
     }
 }

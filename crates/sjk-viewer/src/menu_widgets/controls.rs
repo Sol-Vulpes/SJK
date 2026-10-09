@@ -74,46 +74,6 @@ impl MenuCanvas {
         }
     }
 
-    /// A row of plain colour chips filling the value zone in equal cells,
-    /// only the `active` one ringed in white. Pointer cells match
-    /// [`palette_index`](super::palette_index).
-    pub(crate) fn form_palette(&mut self, zone: Rect, chips: &[Color], active: usize, scale: f32) {
-        let cell = zone.width / chips.len().max(1) as f32;
-        let gap = (6.0 * scale).min(cell * 0.25);
-        let height = 18.0 * scale;
-        let y = zone.y + (zone.height - height) * 0.5;
-        for (index, chip) in chips.iter().enumerate() {
-            let rect = Rect::new(
-                zone.x + cell * index as f32 + gap * 0.5,
-                y,
-                cell - gap,
-                height,
-            );
-            let radius = height * 0.5;
-            let _ = self.draw.push(DrawCommand::RoundedRect {
-                rect,
-                radius,
-                color: *chip,
-            });
-            if index == active {
-                // A white ring set off from the chip marks the active one.
-                let inset = -3.0 * scale;
-                let halo = Rect::new(
-                    rect.x + inset,
-                    rect.y + inset,
-                    rect.width - inset * 2.0,
-                    rect.height - inset * 2.0,
-                );
-                let _ = self.draw.push(DrawCommand::Border {
-                    rect: halo,
-                    radius: radius - inset,
-                    width: 2.0 * scale,
-                    color: Color::new(1.0, 1.0, 1.0, 0.95),
-                });
-            }
-        }
-    }
-
     /// Pill toggle: filled in `color` with the knob right while `on`, a faint
     /// outline with the knob left otherwise.
     pub(crate) fn toggle_pill(&mut self, rect: Rect, on: bool, color: Color) {

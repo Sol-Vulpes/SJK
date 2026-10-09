@@ -33,8 +33,8 @@ HUD, audio, screenshots and demo playback.
   in the controls editor;
 - more reliable joining of public servers (lost handshake packets and lost
   gamestates are recovered) and support for older 72-bone player models;
-- an FPS cap that follows the monitor's refresh rate by default and holds its
-  exact rate;
+- an FPS cap that holds its exact rate and can follow the monitor's refresh
+  rate;
 - optional rend2-style material maps for world surfaces, with a local generator;
 - gameplay and presentation fixes (third-person camera, Force Speed afterimages,
   saber trails, death animations, key names for non-US keyboard layouts and
@@ -104,8 +104,8 @@ saved game-data setting; known installation locations are also checked. The
 explicit positional form `sjk /path/to/GameData --connect HOST:PORT`
 remains supported. See [client launch](docs/client.md#launch) for discovery order.
 Use the in-game menus for controls, graphics, audio and player settings;
-Settings > Interface > Menu style (GAME on the modern menus), or First setup's
-first row, switches between the SJK UI, the classic and the modern menus.
+Settings > Interface > Menu style, or First setup's first row, switches
+between the SJK UI and the classic menus.
 
 Settings and player-created files live in `GameData/SJK/`: `config.cfg`,
 `marks.txt`, favorites, friends, screenshots, demos and optional chat logs.

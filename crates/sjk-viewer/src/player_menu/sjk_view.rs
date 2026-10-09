@@ -2,16 +2,16 @@
 //! player's name as the screen's title, the three pages as tabs under it,
 //! their rows in a column on the left drawn with the SJK UI's kit, and the
 //! model standing on the menu map's stage on the right, a caption beside it as
-//! in a gallery. It is the modern screen's state with another view: the rows,
-//! the grid's tiles, the tabs and the back key answer to the modern screen's
-//! tokens, so its keys and pointer work unchanged. Each row registers its
+//! in a gallery. It is the player screen's shared state with a view of its own:
+//! the rows, the grid's tiles, the tabs and the back key answer to the
+//! screen's tokens, so its keys and pointer work unchanged. Each row registers its
 //! control first and then the whole row, so a token's rectangle is its
 //! control's ([`MenuCanvas::rect_for`]); a click on a row outside its control
 //! only chooses the row (`pointer.rs`).
 //!
 //! Positions are pixels of the SJK UI's 16:9 frame ([`Frame`]).
 
-use super::force::{NextLevel, POWER_NAMES, POWER_NOTES};
+use super::force::{GT_TEAM, NextLevel, POWER_NAMES, POWER_NOTES};
 use super::force_icons::{power_texture, side_texture};
 use super::grid::{COLUMNS, GRID_SCROLL_TOKEN, MAX_VISIBLE_TILES, PART_ROW, TILE_BASE};
 use super::rows::{
@@ -197,6 +197,29 @@ fn force_groups(side: ForceSide) -> [ForceGroup; 3] {
     ]
 }
 
+/// The powers a `g_forcePowerDisable` mask turns off, by name, in
+/// `forcePowers_t` order ("Heal, Grip"); Jump and the saber skills it holds
+/// at a level instead are named with it ("Jump 1").
+fn server_off_list(mask: u32) -> String {
+    use std::fmt::Write as _;
+    let mut list = String::new();
+    for (index, name) in POWER_NAMES.iter().enumerate() {
+        if mask & (1 << index) == 0 {
+            continue;
+        }
+        if !list.is_empty() {
+            list.push_str(", ");
+        }
+        let _ = write!(list, "{}", SentenceCase(name));
+        match index {
+            1 => list.push_str(" 1"),
+            15 | 16 => list.push_str(" 3"),
+            _ => {}
+        }
+    }
+    list
+}
+
 /// The Force page's rows in the order the keys go through them: the sides,
 /// the groups' powers (Neutral, the side's, Lightsaber), then the actions.
 pub(super) fn force_key_order(side: ForceSide) -> Vec<usize> {
@@ -248,7 +271,7 @@ impl PlayerMenu {
         target.append(&self.canvas, viewport);
     }
 
-    /// The SJK UI's own pointer targets, before the modern screen's:
+    /// The SJK UI's own pointer targets, before the screen's shared ones:
     /// - a level cell chooses its power's row when hovered and, clicked, sets
     ///   the power to that level (its own level steps it down one, as
     ///   classic+'s stars do);
@@ -256,7 +279,7 @@ impl PlayerMenu {
     /// - a hilt chooses that hilt, the wheel over a list scrolls it, and a
     ///   click on a list beside its hilts only chooses its row.
     ///
-    /// `None` leaves the event to the modern screen.
+    /// `None` leaves the event to the shared handling.
     pub(super) fn sjk_pointer(
         &mut self,
         kind: sjk_ui::UiEventKind,
@@ -426,8 +449,14 @@ impl PlayerMenu {
     }
 
     /// Whether a click at `point` on row token `token` lands outside the
-    /// row's control, so it only chooses the row.
+    /// row's control, so it only chooses the row. A Force power's row has
+    /// none: its level marks are targets of their own.
     pub(super) fn sjk_beside_control(&self, token: u16, point: sjk_ui::Vec2) -> bool {
+        if self.page == ProfilePage::Force
+            && (FORCE_POWER_ROW..FORCE_RESET_ROW).contains(&usize::from(token))
+        {
+            return true;
+        }
         let Some(rect) = self.canvas.rect_for(token) else {
             return false;
         };
@@ -1255,6 +1284,13 @@ impl PlayerMenu {
                 );
             }
         }
+        // Under the side's group, the server's rules.
+        self.sjk_server_rules(
+            frame,
+            COLUMN_X + half + GUTTER,
+            groups_top + GROUP_HEADING + 5.0 * CELL + GROUP_GAP,
+            half,
+        );
         // The actions.
         // Under the Lightsaber group, the left column's second.
         let actions_top = groups_top
@@ -1292,6 +1328,110 @@ impl PlayerMenu {
                 row as u16,
             );
         }
+    }
+
+    /// What the server the client plays on allows, in the column from `x`,
+    /// `top`, `width` wide: its highest rank, free saber skills, the powers it
+    /// turns off, whether team powers work; off a server, that one will say.
+    fn sjk_server_rules(&mut self, frame: &Frame, x: f32, top: f32, width: f32) {
+        let s = frame.s;
+        kit::heading_in(
+            &mut self.canvas,
+            frame,
+            x,
+            top + GROUP_HEADING * 0.5,
+            width,
+            "This server",
+            color::GOLD,
+        );
+        let mut y = top + GROUP_HEADING + 4.0;
+        // Each line wrapped to the column, 24 pixels a line, moving `y` on.
+        let line = |canvas: &mut crate::menu_widgets::MenuCanvas,
+                    y: &mut f32,
+                    words: &str,
+                    colour: Color| {
+            for part in wrap(words, 36) {
+                text(
+                    canvas,
+                    TextFamily::Body,
+                    format_args!("{part}"),
+                    frame.rect(x + 14.0, *y, width - 28.0, 24.0),
+                    16.0 * s,
+                    colour,
+                    FontWeight::Regular,
+                    TextAlign::Start,
+                );
+                *y += 24.0;
+            }
+        };
+        let Some(server) = self.force.server() else {
+            line(
+                &mut self.canvas,
+                &mut y,
+                "Not on a server. A server can lower the highest rank and turn powers \
+                 off; its rules show here once you join.",
+                color::MUTED,
+            );
+            return;
+        };
+        let rank = server.max_rank.min(7);
+        line(
+            &mut self.canvas,
+            &mut y,
+            &format!(
+                "Highest rank: {} ({} points)",
+                super::classic::force_page::mastery(rank),
+                sjk_client::mastery_points(rank)
+            ),
+            color::TEXT,
+        );
+        if server.free_saber {
+            line(
+                &mut self.canvas,
+                &mut y,
+                "Saber offense and defense 1 are free",
+                color::TEXT,
+            );
+        }
+        let off = server.disabled_mask & ((1 << POWER_NAMES.len()) - 1);
+        match off.count_ones() {
+            0 => line(
+                &mut self.canvas,
+                &mut y,
+                "Every power is allowed",
+                color::TEXT,
+            ),
+            // A long list would run past the page: the rows say which.
+            count @ 9.. => line(
+                &mut self.canvas,
+                &mut y,
+                &format!("{count} powers off, marked on their rows"),
+                color::EMBER,
+            ),
+            _ => line(
+                &mut self.canvas,
+                &mut y,
+                &format!("Off: {}", server_off_list(off)),
+                color::EMBER,
+            ),
+        }
+        if server.gametype < GT_TEAM {
+            line(
+                &mut self.canvas,
+                &mut y,
+                "Team powers: team games only",
+                color::MUTED,
+            );
+        }
+        y += 8.0;
+        line(
+            &mut self.canvas,
+            &mut y,
+            "Powers it turns off stay yours to pick, for full Force duels. \
+             Applied in play, they change when you respawn.",
+            color::QUIET,
+        );
+        debug_assert!(y <= BOTTOM, "the server's rules run to {y}");
     }
 
     /// The points left as a gold bar under the page's first line; a hovered
@@ -1368,8 +1508,9 @@ impl PlayerMenu {
         let usable = level > 0
             || !matches!(
                 self.force.next_level(index),
-                NextLevel::OtherSide | NextLevel::TeamOnly | NextLevel::NeedsOffense
+                NextLevel::OtherSide | NextLevel::NeedsOffense
             );
+        let limit = self.force.server_limit(index);
         if focused {
             kit::band(&mut self.canvas, frame, area);
         }
@@ -1387,11 +1528,16 @@ impl PlayerMenu {
             name_x = x + height + 4.0;
         }
         let marks_x = x + width - 10.0 - 3.0 * DISC - 2.0 * DISC_GAP;
+        // A power the server limits keeps its name, raised over a note saying so.
+        let name_rect = match limit {
+            Some(_) => frame.rect(name_x, top + 3.0, marks_x - name_x - 6.0, 24.0),
+            None => frame.rect(name_x, top, marks_x - name_x - 6.0, height),
+        };
         text(
             &mut self.canvas,
             TextFamily::Body,
             format_args!("{}", SentenceCase(POWER_NAMES[index])),
-            frame.rect(name_x, top, marks_x - name_x - 6.0, height),
+            name_rect,
             17.0 * s,
             match (usable, focused) {
                 (false, _) => color::QUIET,
@@ -1405,6 +1551,18 @@ impl PlayerMenu {
             },
             TextAlign::Start,
         );
+        if let Some(limit) = limit {
+            text(
+                &mut self.canvas,
+                TextFamily::Body,
+                format_args!("{}", limit.tag()),
+                frame.rect(name_x, top + 24.0, marks_x - name_x - 6.0, 18.0),
+                13.0 * s,
+                color::alpha(color::EMBER, if usable { 0.95 } else { 0.6 }),
+                FontWeight::Regular,
+                TextAlign::Start,
+            );
+        }
         let tint = power_tint(index);
         let target = hovered
             .filter(|(hovered_power, _)| *hovered_power == index && usable)
@@ -1684,9 +1842,20 @@ impl PlayerMenu {
                 color::EMBER,
             ),
             NextLevel::OtherSide => ("The other side's power".to_owned(), color::QUIET),
-            NextLevel::TeamOnly => ("Team games only".to_owned(), color::QUIET),
             NextLevel::NeedsOffense => ("Needs Saber offense 1".to_owned(), color::EMBER),
         };
+        if let Some(limit) = self.force.server_limit(index) {
+            text(
+                &mut self.canvas,
+                TextFamily::Body,
+                format_args!("{}", limit.describe()),
+                frame.rect(x + 24.0, y + height - 72.0, width - 48.0, 26.0),
+                17.0 * s,
+                color::EMBER,
+                FontWeight::Semibold,
+                TextAlign::Start,
+            );
+        }
         text(
             &mut self.canvas,
             TextFamily::Body,
@@ -1988,6 +2157,77 @@ mod tests {
         assert_eq!(hilt_of(HILT_BASE - 1), None);
     }
 
+    /// A press and release of the primary button at `position`.
+    fn click(menu: &mut PlayerMenu, console: &mut ViewerConsole, position: sjk_ui::Vec2) {
+        let button = sjk_ui::PointerButton::Primary;
+        for event in [
+            sjk_ui::InputEvent::PointerMove(position),
+            sjk_ui::InputEvent::PointerPress { position, button },
+            sjk_ui::InputEvent::PointerRelease { position, button },
+        ] {
+            let _ = menu.handle_pointer(event, console);
+        }
+    }
+
+    /// Every chip of the blade row takes the click aimed at it: its centre
+    /// and its edges. Measured against the form's value zone, a click picked
+    /// a chip to the left of the one under the pointer.
+    #[test]
+    fn a_click_on_a_blade_chip_chooses_that_colour() {
+        let directory = tempfile::tempdir().unwrap();
+        let mut console = ViewerConsole::new(directory.path().join("config.cfg")).unwrap();
+        let mut menu = drawn(ProfilePage::Saber, false);
+        let row = menu
+            .saber_rows()
+            .iter()
+            .position(|row| row.is_blade())
+            .expect("a blade row");
+        let control = menu.canvas.rect_for(row as u16).expect("the chips' area");
+        let share = control.width / PALETTE.len() as f32;
+        let middle = control.y + control.height * 0.5;
+        for (chip, colour) in PALETTE.iter().enumerate().rev() {
+            for offset in [0.5, 0.15, 0.85] {
+                let x = control.x + share * (chip as f32 + offset);
+                click(&mut menu, &mut console, sjk_ui::Vec2::new(x, middle));
+                assert_eq!(menu.saber.color(false), *colour, "chip {chip} at {offset}");
+                draw(&mut menu);
+            }
+        }
+    }
+
+    /// A click on a power's name only chooses its row; its marks buy.
+    #[test]
+    fn a_click_on_a_powers_name_does_not_change_it() {
+        let directory = tempfile::tempdir().unwrap();
+        let mut console = ViewerConsole::new(directory.path().join("config.cfg")).unwrap();
+        let mut menu = drawn(ProfilePage::Force, false);
+        let push = 3;
+        let mark = menu
+            .canvas
+            .rect_for(level_token(push, 2))
+            .expect("Push's second level");
+        let centre = sjk_ui::Vec2::new(mark.x + mark.width * 0.5, mark.y + mark.height * 0.5);
+        click(&mut menu, &mut console, centre);
+        assert_eq!(menu.force.allocation().levels[push], 2);
+        draw(&mut menu);
+        let row = menu
+            .canvas
+            .rect_for((FORCE_POWER_ROW + push) as u16)
+            .expect("Push's row");
+        // Its holocron, the start of its name and its end, short of the marks.
+        for share in [0.05, 0.3, 0.55] {
+            let name = sjk_ui::Vec2::new(row.x + row.width * share, row.y + row.height * 0.5);
+            click(&mut menu, &mut console, name);
+            assert_eq!(menu.selected, FORCE_POWER_ROW + push);
+            assert_eq!(
+                menu.force.allocation().levels[push],
+                2,
+                "a click at {share}"
+            );
+            draw(&mut menu);
+        }
+    }
+
     #[test]
     fn the_force_page_groups_powers_as_classic_plus_and_skips_the_other_side() {
         use super::super::classic::layout::{DARK_POWERS, LIGHT_POWERS};
@@ -2150,5 +2390,47 @@ mod tests {
             (PlayerMenu::sjk_slider_ratio(track, 110.0 + TRACK_WIDTH * 0.5) - 0.5).abs() < 1e-4
         );
         assert_eq!(PlayerMenu::sjk_slider_ratio(track, 0.0), 0.0);
+    }
+
+    /// The Force page on servers with every rule to show: each power's note
+    /// and the server's panel stay in the draw list's room, and the panel ends
+    /// above the keys (a debug assertion in the panel checks its last line).
+    #[test]
+    fn the_force_page_shows_a_servers_rules_within_its_room() {
+        // None, two, seven, the eight longest names (the most a list shows),
+        // and all of them.
+        let longest = [5, 7, 9, 11, 12, 15, 16, 17].map(|bit| 1_u32 << bit);
+        let longest = longest.iter().fold(0, |mask, bit| mask | bit);
+        for mask in [
+            0,
+            0b100_0001,
+            0b1_1110_0000_0110_0001,
+            longest,
+            (1 << 18) - 1,
+        ] {
+            let mut menu = PlayerMenu::new();
+            menu.set_sjk(true);
+            menu.force.load_on_server(
+                "7-2-031330310000030333",
+                sjk_client::ForceLegalizeRules {
+                    max_rank: 5,
+                    free_saber: true,
+                    team_side: None,
+                    gametype: 0,
+                    disabled_mask: mask,
+                },
+            );
+            menu.set_page(ProfilePage::Force);
+            menu.selected = FORCE_POWER_ROW; // the power box, with its note
+            draw(&mut menu);
+            let list = menu.canvas.draw_list();
+            assert!(
+                list.len() < list.limit(),
+                "mask {mask:b}: the draw list is full"
+            );
+            let (text, slots) = menu.canvas.text_budget();
+            assert!(text < slots, "mask {mask:b}: {text} of {slots} text runs");
+        }
+        assert_eq!(server_off_list(0b100_0011), "Heal, Jump 1, Grip");
     }
 }

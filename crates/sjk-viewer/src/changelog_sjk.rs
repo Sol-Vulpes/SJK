@@ -264,7 +264,7 @@ impl Panel {
     /// Wrap the chosen release for the reading column by characters (its
     /// families are not measured here); credits keep their own case.
     fn wrap_sjk(&mut self) {
-        // Keyed apart from the modern pane's measured wrap.
+        // Keyed apart from the classic+ pane's measured wrap.
         let key = (self.selected, u32::MAX, NOTES_CHARS as u32);
         if self.wrapped_for == Some(key) {
             return;

@@ -11,12 +11,10 @@ use crate::frame_target::aa::glow::Mode;
 use crate::*;
 
 impl GpuState {
-    /// Draw this frame's glowing stages for the main view. `world_view` is false for the
-    /// menu portal's views, which glow nowhere.
+    /// Draw this frame's glowing stages for the main view.
     pub(crate) fn encode_glow(
         &self,
         encoder: &mut wgpu::CommandEncoder,
-        world_view: bool,
         source_cluster: Option<usize>,
         particle_ranges: &effect_submission::Ranges,
     ) {
@@ -26,7 +24,7 @@ impl GpuState {
         let live = self.context.post_color.glow().live();
         glow.set_live(&self.queue, live);
         let depth_size = self.depth.view.texture().size();
-        if !world_view || glow.size() != [depth_size.width, depth_size.height] {
+        if glow.size() != [depth_size.width, depth_size.height] {
             glow.set_drawn(&self.queue, false, false);
             return;
         }
