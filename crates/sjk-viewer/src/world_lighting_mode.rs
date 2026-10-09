@@ -46,6 +46,21 @@ fn parallax_bits(value: f64) -> u32 {
     ((steps + 60) & 63) << PARALLAX_SHIFT
 }
 
+/// `r_parallaxNearDistance` in the mode word: bits 12..16 hold `(distance / 4 + 10) mod
+/// 16`, so a word without them means the default 24 units. Steps of 4 units up to 60.
+pub(crate) const PARALLAX_NEAR_SHIFT: u32 = 12;
+const PARALLAX_NEAR_BITS: u32 = 15 << PARALLAX_NEAR_SHIFT;
+/// `r_parallaxNearDistance` when nothing sets it: closer to a surface's plane than this
+/// many units, its parallax stops growing on screen (`material_maps.wgsl`). A first-person
+/// eye stays 15 units from a wall (the player's half width) and the third-person camera 4.
+const PARALLAX_NEAR_DEFAULT: i64 = 24;
+
+/// The mode word's bits for the parallax near distance `value` (clamped to 0..60 units).
+fn parallax_near_bits(value: f64) -> u32 {
+    let steps = (value.clamp(0., 60.) / 4.).round() as u32;
+    ((steps + 10) & 15) << PARALLAX_NEAR_SHIFT
+}
+
 /// A number from a cvar value; `fallback` for text.
 fn number(value: &CvarValue, fallback: f64) -> f64 {
     match value {
@@ -85,8 +100,8 @@ impl Settings {
             "Material-map surfaces (r_normalMapping/r_specularMapping/r_emissiveMaps): \
              1 mapped normal as colour, 2 tint by maps found (green normal, blue specular, \
              red parallax), 3 normal-map relief x4 on grey, 4 reflection probes alone, \
-             5 without reflection probes, 6 emission maps alone; other surfaces unchanged; \
-             live",
+             5 without reflection probes, 6 emission maps alone, 7 parallax reach (red far \
+             limits, green near limit, blue steps); other surfaces unchanged; live",
         ))?;
         cvars.register(CvarDefinition::new(
             "r_normalMapStrength",
@@ -101,6 +116,13 @@ impl Settings {
             CvarFlags::ARCHIVE,
             "Depth of parallax on material-mapped surfaces (r_parallaxMapping), 0 flat .. \
              1.575; 1 the pack's full depth, default 0.1; live",
+        ))?;
+        cvars.register(CvarDefinition::new(
+            "r_parallaxNearDistance",
+            PARALLAX_NEAR_DEFAULT,
+            CvarFlags::ARCHIVE,
+            "Units from a surface inside which its parallax stops growing on screen as the \
+             camera closes in, 0 (off) .. 60 in steps of 4; default 24; live",
         ))?;
         cvars.register(CvarDefinition::new(
             "r_emissionStrength",
@@ -139,6 +161,11 @@ impl Settings {
         cvars.on_change("r_parallaxStrength", move |change| {
             changed.set_parallax(&change.current)
         })?;
+        settings.set_parallax_near(&cvars.get("r_parallaxNearDistance").unwrap().value);
+        let changed = settings.clone();
+        cvars.on_change("r_parallaxNearDistance", move |change| {
+            changed.set_parallax_near(&change.current)
+        })?;
         settings.set_emission(&cvars.get("r_emissionStrength").unwrap().value);
         let changed = settings.clone();
         cvars.on_change("r_emissionStrength", move |change| {
@@ -172,6 +199,16 @@ impl Settings {
             });
     }
 
+    /// `r_parallaxNearDistance`; a non-number leaves the default.
+    fn set_parallax_near(&self, value: &CvarValue) {
+        let bits = parallax_near_bits(number(value, PARALLAX_NEAR_DEFAULT as f64));
+        let _ = self
+            .0
+            .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |word| {
+                Some(word & !PARALLAX_NEAR_BITS | bits)
+            });
+    }
+
     /// `r_emissiveGlow`: 0 sets [`NO_EMISSIVE_GLOW`].
     fn set_emissive_glow(&self, value: &CvarValue) {
         if number(value, 1.) != 0. {
@@ -181,10 +218,10 @@ impl Settings {
         }
     }
 
-    /// `r_materialMapsDebug` 0..6; other values show the scene unchanged.
+    /// `r_materialMapsDebug` 0..7; other values show the scene unchanged.
     fn set_debug(&self, value: &CvarValue) {
         let view = match value {
-            CvarValue::Integer(value @ 0..=6) => *value as u32,
+            CvarValue::Integer(value @ 0..=7) => *value as u32,
             _ => 0,
         };
         let _ = self
@@ -248,8 +285,11 @@ mod tests {
         assert_eq!(settings.bits() >> DEBUG_SHIFT, 3);
         cvars.set_text("r_materialMapsDebug", "5").expect("set");
         assert_eq!(settings.bits() >> DEBUG_SHIFT, 5);
-        // Out of range shows the scene unchanged rather than another view.
+        // 7, the parallax reach, is the last view the three bits hold.
         cvars.set_text("r_materialMapsDebug", "7").expect("set");
+        assert_eq!(settings.bits() >> DEBUG_SHIFT, 7);
+        // Out of range shows the scene unchanged rather than another view.
+        cvars.set_text("r_materialMapsDebug", "8").expect("set");
         assert_eq!(settings.bits(), 1);
         cvars.set_text("r_fullbright", "0").expect("set");
         cvars.set_text("r_materialMapsDebug", "1").expect("set");
@@ -312,8 +352,62 @@ mod tests {
         );
         // The shader decodes the same bits.
         assert!(
-            include_str!("material_maps.wgsl")
-                .contains("f32((((point_lights.metadata.z >> 2u) + 4u) & 63u))/40.0")
+            include_str!("material_maps.wgsl").contains("f32((((mode >> 2u) + 4u) & 63u))/40.0")
+        );
+    }
+
+    #[test]
+    fn parallax_near_distance_default_is_the_empty_word() {
+        let mut cvars = CvarRegistry::new();
+        let settings = Settings::bind(&mut cvars).expect("registers");
+        assert_eq!(
+            cvars
+                .get("r_parallaxNearDistance")
+                .expect("registered")
+                .value,
+            CvarValue::Integer(24)
+        );
+        // The default 24 units leaves the word empty.
+        assert_eq!(settings.bits(), 0);
+        let decode = |bits: u32| (((bits >> PARALLAX_NEAR_SHIFT) + 6) & 15) * 4;
+        assert_eq!(decode(0), 24);
+        cvars.set_text("r_parallaxNearDistance", "0").expect("set");
+        assert_eq!(decode(settings.bits()), 0);
+        cvars.set_text("r_parallaxNearDistance", "60").expect("set");
+        assert_eq!(decode(settings.bits()), 60);
+        // Past the range it clamps; between steps it takes the nearest.
+        cvars
+            .set_text("r_parallaxNearDistance", "500")
+            .expect("set");
+        assert_eq!(decode(settings.bits()), 60);
+        cvars.set_text("r_parallaxNearDistance", "-8").expect("set");
+        assert_eq!(decode(settings.bits()), 0);
+        cvars.set_text("r_parallaxNearDistance", "17").expect("set");
+        assert_eq!(decode(settings.bits()), 16);
+        // Its bits sit between the emission-glow bit and the normal strength, apart from
+        // every other field.
+        cvars.set_text("r_parallaxStrength", "0.5").expect("set");
+        cvars.set_text("r_materialMapsDebug", "7").expect("set");
+        cvars.set_text("r_normalMapStrength", "2").expect("set");
+        cvars.set_text("r_emissionStrength", "3").expect("set");
+        cvars.set_text("r_emissiveGlow", "0").expect("set");
+        cvars.set_text("r_fullbright", "1").expect("set");
+        assert_eq!(decode(settings.bits()), 16);
+        assert_eq!(settings.bits() >> DEBUG_SHIFT & 7, 7);
+        assert_eq!(
+            PARALLAX_NEAR_BITS
+                & (3 | PARALLAX_BITS
+                    | DEBUG_BITS
+                    | NO_EMISSIVE_GLOW
+                    | STRENGTH_BITS
+                    | EMISSION_BITS),
+            0
+        );
+        cvars.set_text("r_parallaxNearDistance", "24").expect("set");
+        assert_eq!(settings.bits() & PARALLAX_NEAR_BITS, 0);
+        // The shader decodes the same bits.
+        assert!(
+            include_str!("material_maps.wgsl").contains("f32((((mode >> 12u) + 6u) & 15u))*4.0")
         );
     }
 

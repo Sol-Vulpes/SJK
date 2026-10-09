@@ -88,7 +88,7 @@ pub(crate) fn prepare(timing: &mut frame_pacing::budget::Timer, inputs: Inputs<'
 
     let capacity =
         crate::particle_types::INSTANCE_CAPACITY.saturating_sub(inputs.entity_instances.len());
-    'particles: for particle in inputs.particles.iter() {
+    'particles: for particle in inputs.particles.iter_mut() {
         if !matches!(
             particle.shape,
             PrimitiveShape::Billboard | PrimitiveShape::FrameBillboard
@@ -99,6 +99,8 @@ pub(crate) fn prepare(timing: &mut frame_pacing::budget::Timer, inputs: Inputs<'
         if age < particle.delay {
             continue;
         }
+        crate::effect_geometry::resolve_traced_streak(particle, inputs.bsp, inputs.trace_scratch);
+        let particle = &*particle;
         let seconds = age.saturating_sub(particle.delay).as_secs_f32();
         let progress = (seconds / particle.lifetime.as_secs_f32()).clamp(0.0, 1.0);
         let motion = particle.motion.sample();

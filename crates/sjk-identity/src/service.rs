@@ -1,19 +1,23 @@
 //! The background service that keeps the player registered with the hub, repeats
-//! their game-server claim while they play, and reads who else on that server is
-//! known. Nothing here blocks a frame: the viewer sends [`Command`]s through
+//! their game-server claim while they play, tells the hub the look they wear there,
+//! and reads who else on that server is known. Nothing here blocks a frame: the viewer sends [`Command`]s through
 //! [`Service`] and reads a [`Snapshot`].
+//!
+//! Once registered, and only when told where ([`Service::keep_assets`]), it also keeps
+//! the hub's asset packs ([`crate::assets`]) in a cache folder.
 //!
 //! The service is inert while it is disabled or has no hub address: it makes no
 //! request of any kind.
 
-use crate::feed::{ChatState, FeedShared, FeedWorker};
+use crate::feed::{ChatState, FeedShared, FeedWorker, QueuedLook, ReceivedLooks};
 use crate::hub::{Hub, HubError};
 use crate::keys::Identity;
 use crate::report::{BugReport, PlayerReport, WorldNote};
 use crate::staff::{StaffRequest, StaffState};
-use crate::wire::{Achievement, Emote, Presence, Profile, names_match};
+use crate::wire::{Achievement, Emote, Look, Presence, Profile, Unlock, names_match};
 use std::collections::{BTreeMap, HashMap, VecDeque};
 use std::net::SocketAddr;
+use std::path::PathBuf;
 use std::sync::mpsc::{Receiver, RecvTimeoutError, Sender, channel};
 use std::sync::{Arc, Mutex, MutexGuard};
 use std::time::{Duration, Instant};
@@ -25,6 +29,9 @@ const POLL_EVERY: Duration = Duration::from_secs(15);
 /// How often the player's own profile is read again while registered, so a medal
 /// the SJK team gives during a session shows without a restart.
 const PROFILE_EVERY: Duration = Duration::from_secs(600);
+/// Shortest time between two readings of the own profile brought forward because its
+/// unlocks look out of date (a skin refused, or taken back at the hub).
+const PROFILE_SOON: Duration = Duration::from_secs(30);
 /// Shortest time between two sendings of the achievement counts.
 const ACHIEVEMENTS_EVERY: Duration = Duration::from_secs(60);
 /// How long counts the hub held back (over an hourly allowance) wait before they are
@@ -35,6 +42,15 @@ const RETRY_MIN: Duration = Duration::from_secs(10);
 const RETRY_MAX: Duration = Duration::from_secs(120);
 /// Longest the worker sleeps without looking at its commands.
 const IDLE_MAX: Duration = Duration::from_secs(60);
+/// Shortest time between two looks sent: the hub takes one a second.
+const LOOK_EVERY: Duration = Duration::from_secs(1);
+/// How long a look waits after the hub said too many (429: `look_quota`, or the
+/// address's `rate_limited`), refused the signature (401) or failed.
+const LOOK_AGAIN: Duration = Duration::from_secs(10);
+/// How often the hub's list of asset packs is read while registered.
+const ASSETS_EVERY: Duration = Duration::from_secs(6 * 3_600);
+/// First wait after an asset check fell short, doubled up to [`ASSETS_EVERY`].
+const ASSETS_RETRY_MIN: Duration = Duration::from_secs(60);
 
 /// What the player has configured.
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
@@ -98,6 +114,14 @@ pub struct Snapshot {
     pub note: Option<ReportOutcome>,
     /// The outcome of the last player report sent with [`Service::player_report`].
     pub player_report: Option<ReportOutcome>,
+    /// What became of the last look sent ([`Service::set_look`]).
+    pub look_outcome: Option<ReportOutcome>,
+    /// Counts the asset packs written into the folder given to
+    /// [`Service::keep_assets`], so the viewer knows to mount them again.
+    pub packs_revision: u64,
+    /// What the last check of the asset packs did, for the log. Asset packs are
+    /// cosmetic: a failure shows here, never in [`Snapshot::status`].
+    pub assets_note: Option<String>,
 }
 
 /// What became of a bug report or a world note.
@@ -125,6 +149,9 @@ impl Snapshot {
             report: None,
             note: None,
             player_report: None,
+            look_outcome: None,
+            packs_revision: 0,
+            assets_note: None,
         }
     }
 
@@ -162,6 +189,12 @@ enum Command {
     Emote(String),
     /// Whether the SJK chat is on.
     SetChat(bool),
+    /// The look the player wears.
+    Look(Look),
+    /// The feed relayed a look event of the player's own key: its id and blade skin.
+    OwnLook(u64, String),
+    /// The folder to keep the hub's asset packs in.
+    AssetsDir(PathBuf),
     Stop,
 }
 
@@ -216,6 +249,48 @@ struct Worker {
     feed: Arc<Mutex<FeedShared>>,
     /// What the chat shows; the worker writes the outcome of what it sends.
     chat: Arc<Mutex<ChatState>>,
+    /// The look the viewer last gave.
+    look: Look,
+    /// The claim (server, slot and name) the hub accepted last, while it holds it: a
+    /// look lives on it.
+    look_claim: Option<(String, u8, String)>,
+    /// The look the hub holds for the key: on the accepted claim, or, with none
+    /// accepted now, on a claim that may still be live.
+    look_held: Held,
+    /// When the next look may go.
+    due_look: Instant,
+    /// Blade skins the hub said the key does not hold, and the unlocks the profile
+    /// listed then: they are not sent again until those change.
+    look_refused: Vec<String>,
+    look_refused_for: Vec<Unlock>,
+    /// The feed id of the last look the hub took from this worker.
+    look_id: Option<u64>,
+    /// When the own profile may next be read early ([`Worker::profile_soon`]).
+    profile_soon_after: Instant,
+    /// The folder the asset packs are kept in; without one none is asked for.
+    assets_dir: Option<PathBuf>,
+    /// When the asset packs are next checked, and the wait after the next shortfall.
+    due_assets: Instant,
+    assets_backoff: Duration,
+}
+
+/// What the hub holds as the player's look.
+#[derive(Clone, Debug, Eq, PartialEq)]
+enum Held {
+    /// Not known: the worker just started (a client that stopped without releasing may
+    /// have left a live claim with a look), a claim failed (the last one may still be
+    /// live, its look with it) or a release failed. The look goes on the next accepted
+    /// claim whatever it is.
+    Unknown,
+    /// This look; [`Look::default`] for none, as a new claim starts.
+    Look(Look),
+}
+
+impl Held {
+    /// No look: what a new claim starts with.
+    fn none() -> Self {
+        Self::Look(Look::default())
+    }
 }
 
 /// The refusal of anything sent before the hub answered the registration.
@@ -285,13 +360,48 @@ impl Worker {
             chat_on: false,
             feed: Arc::default(),
             chat: Arc::default(),
+            look: Look::default(),
+            look_claim: None,
+            look_held: Held::Unknown,
+            due_look: now,
+            look_refused: Vec::new(),
+            look_refused_for: Vec::new(),
+            look_id: None,
+            profile_soon_after: now,
+            assets_dir: None,
+            due_assets: now,
+            assets_backoff: ASSETS_RETRY_MIN,
         }
     }
 
-    /// Tell the feed thread what to read: the hub, only while the identity is on, the
-    /// hub answered the registration and the chat is on; and the server played on.
+    /// Read the own profile soon: its unlocks look out of date. At most once every
+    /// [`PROFILE_SOON`], and never later than it was due anyway.
+    fn profile_soon(&mut self, now: Instant) {
+        let at = self.profile_soon_after.max(now);
+        if at < self.due_profile {
+            self.due_profile = at;
+            self.profile_soon_after = at + PROFILE_SOON;
+        }
+    }
+
+    /// The feed relayed look `id` of the player's own key, with blade skin `saber`.
+    /// One the hub made after the last this worker sent, wearing another skin than
+    /// the one to send, is the hub taking the skin back (staff relocked it): the
+    /// profile's unlocks are out of date.
+    fn own_look_seen(&mut self, id: u64, saber: &str, now: Instant) {
+        if self.look_id.is_none_or(|sent| id > sent) && saber != self.look_to_send().saber {
+            self.profile_soon(now);
+        }
+    }
+
+    /// Tell the feed thread what to read: the hub, only while the identity is on and
+    /// the hub answered the registration, and then on a game server (for its looks
+    /// and emotes, whatever the chat says) or with the chat on; the server played on;
+    /// and whether the chat shows. Another hub or server, or none, is a new
+    /// generation: the looks read before are dropped.
     fn publish_feed(&self) {
-        let url = (self.settings.enabled && self.registered && self.chat_on && self.hub.is_some())
+        let reading = self.chat_on || self.location.is_some();
+        let url = (self.settings.enabled && self.registered && reading && self.hub.is_some())
             .then(|| self.settings.hub_url.trim().to_owned());
         let wanted = FeedShared {
             url,
@@ -299,8 +409,19 @@ impl Worker {
                 .location
                 .as_ref()
                 .map(|location| location.server.to_string()),
+            chat: self.chat_on,
+            generation: 0,
         };
         let mut shared = lock_feed(&self.feed);
+        let generation = if (&shared.url, &shared.server) == (&wanted.url, &wanted.server) {
+            shared.generation
+        } else {
+            shared.generation + 1
+        };
+        let wanted = FeedShared {
+            generation,
+            ..wanted
+        };
         if *shared != wanted {
             *shared = wanted;
         }
@@ -373,11 +494,20 @@ impl Worker {
         due
     }
 
-    /// Withdraw the claim the hub holds, if any, ignoring a failure: it expires.
+    /// Withdraw the claim the hub holds, if any, ignoring a failure: it expires. The
+    /// look on it goes with it; after a failure the hub may hold both a while longer.
     fn release(&mut self) {
-        if let (Some(server), Some(hub)) = (self.claimed.take(), self.hub.as_mut()) {
-            let _ = hub.release(&self.identity, &server);
+        match (self.claimed.take(), self.hub.as_mut()) {
+            (Some(server), Some(hub)) => {
+                self.look_held = match hub.release(&self.identity, &server) {
+                    Ok(()) => Held::none(),
+                    Err(_) => Held::Unknown,
+                };
+            }
+            (Some(_), None) => self.look_held = Held::Unknown,
+            (None, _) => {}
         }
+        self.look_claim = None;
         self.update(|snapshot| {
             snapshot.server = None;
             snapshot.players.clear();
@@ -437,6 +567,15 @@ impl Worker {
             Command::Chat(text) => self.send_chat(&text),
             Command::Emote(emote) => self.send_emote(&emote),
             Command::SetChat(on) => self.chat_on = on,
+            Command::Look(look) => self.look = look,
+            Command::OwnLook(id, saber) => self.own_look_seen(id, &saber, now),
+            Command::AssetsDir(dir) => {
+                if self.assets_dir.as_ref() != Some(&dir) {
+                    self.assets_dir = Some(dir);
+                    self.due_assets = now;
+                    self.assets_backoff = ASSETS_RETRY_MIN;
+                }
+            }
             Command::Stop => self.release(),
         }
         self.publish_feed();
@@ -656,6 +795,7 @@ impl Worker {
                     self.name_sent = name;
                     self.backoff = RETRY_MIN;
                     self.due_profile = now + PROFILE_EVERY;
+                    self.due_assets = now;
                     self.update(|snapshot| {
                         snapshot.me = Some(profile);
                         snapshot.status = Status::Online;
@@ -669,6 +809,7 @@ impl Worker {
             }
         }
         self.run_due(now);
+        self.keep_assets(now);
         let mut wait = IDLE_MAX;
         if self.location.is_some() {
             wait = wait
@@ -685,7 +826,129 @@ impl Worker {
         if !self.lookups.is_empty() {
             wait = Duration::ZERO;
         }
+        if self.look_waiting() {
+            wait = wait.min(self.due_look.saturating_duration_since(now));
+        }
+        if self.assets_dir.is_some() {
+            wait = wait.min(self.due_assets.saturating_duration_since(now));
+        }
         wait
+    }
+
+    /// Check the hub's asset packs if a folder was given and the check is due: one
+    /// reading of the list, and a download of each pack the folder does not hold as
+    /// listed. Next time is [`ASSETS_EVERY`] later; a shortfall worth trying again
+    /// soon waits [`ASSETS_RETRY_MIN`], doubling, instead. Cosmetic: the status stays.
+    fn keep_assets(&mut self, now: Instant) {
+        let (Some(dir), Some(hub)) = (self.assets_dir.as_ref(), self.hub.as_mut()) else {
+            return;
+        };
+        if now < self.due_assets {
+            return;
+        }
+        let refresh = crate::assets::refresh(hub.as_mut(), &self.identity, dir);
+        let wait = match &refresh.problem {
+            Some(crate::assets::Problem::Soon(_)) => {
+                let wait = self.assets_backoff;
+                self.assets_backoff = (self.assets_backoff * 2).min(ASSETS_EVERY);
+                wait
+            }
+            _ => {
+                self.assets_backoff = ASSETS_RETRY_MIN;
+                ASSETS_EVERY
+            }
+        };
+        self.due_assets = now + wait;
+        let note = format!("{}; next check in {} s", refresh.summary(), wait.as_secs());
+        self.update(|snapshot| {
+            snapshot.packs_revision += refresh.written.len() as u64;
+            snapshot.assets_note = Some(note);
+        });
+    }
+
+    /// The look to send: the one the viewer gave, without a blade skin the hub said
+    /// the key does not hold while the profile's unlocks are the same.
+    fn look_to_send(&mut self) -> Look {
+        if !self.look_refused.is_empty() {
+            let same = lock(&self.snapshot)
+                .me
+                .as_ref()
+                .is_some_and(|me| me.unlocks == self.look_refused_for);
+            if !same {
+                self.look_refused.clear();
+            }
+        }
+        let mut look = self.look.clone();
+        if self.look_refused.contains(&look.saber) {
+            look.saber.clear();
+        }
+        look
+    }
+
+    /// Whether the hub's claim should get another look than the one it holds.
+    fn look_waiting(&mut self) -> bool {
+        self.look_claim.is_some() && Held::Look(self.look_to_send()) != self.look_held
+    }
+
+    /// Send the look for the accepted claim if it changed and one may go.
+    fn send_look(&mut self, now: Instant) {
+        if now < self.due_look || !self.look_waiting() {
+            return;
+        }
+        let look = self.look_to_send();
+        let (Some((server, _, _)), Some(hub)) = (self.look_claim.clone(), self.hub.as_mut()) else {
+            return;
+        };
+        let outcome = hub.look(&self.identity, &server, &look);
+        self.due_look = now + LOOK_EVERY;
+        match &outcome {
+            Ok(id) => {
+                self.look_held = Held::Look(look.clone());
+                self.look_id = Some(*id);
+            }
+            // The skin is not the key's (or not the hub's): the rest of the look still
+            // goes, without it, until the profile changes. Not the key's while its
+            // profile said so: the profile is out of date.
+            Err(HubError::Rejected { code, .. })
+                if (code == "not_unlocked" || code == "bad_look") && !look.saber.is_empty() =>
+            {
+                if code == "not_unlocked" {
+                    self.profile_soon(now);
+                }
+                self.look_refused_for = lock(&self.snapshot)
+                    .me
+                    .as_ref()
+                    .map(|me| me.unlocks.clone())
+                    .unwrap_or_default();
+                self.look_refused.push(look.saber.clone());
+            }
+            // The claim lapsed at the hub: the next accepted claim sends the look again.
+            Err(HubError::Rejected { code, .. }) if code == "not_on_server" => {
+                self.look_claim = None;
+                self.look_held = Held::none();
+            }
+            // Too many: the key's look quota, or the address's allowance (429
+            // `rate_limited`) shared with the chat and emotes. A signature refused
+            // (401, the clock still off after the one retry) is not final either.
+            Err(HubError::Rejected {
+                status: 401 | 429, ..
+            }) => {
+                self.due_look = now + LOOK_AGAIN;
+            }
+            // Any other refusal (an older hub without looks) is not repeated until the
+            // look or the claim changes.
+            Err(HubError::Rejected { status, .. }) if (400..500).contains(status) => {
+                self.look_held = Held::Look(look.clone());
+            }
+            Err(_) => self.due_look = now + LOOK_AGAIN,
+        }
+        self.update(|snapshot| {
+            let serial = snapshot
+                .look_outcome
+                .as_ref()
+                .map_or(1, |last| last.serial + 1);
+            snapshot.look_outcome = Some(outcome_of(serial, outcome.map(|_| String::new())));
+        });
     }
 
     /// Whether the hub should hear the achievement counts: they changed since they
@@ -781,9 +1044,23 @@ impl Worker {
                     Ok(()) => {
                         self.claimed = Some(server.clone());
                         self.due_claim = now + CLAIM_EVERY;
+                        // Renewing the same claim keeps its look; another server,
+                        // slot or name starts with none. With no claim accepted before
+                        // (released, lapsed, failed or none yet), what the hub holds
+                        // stays as it was known, or unknown.
+                        let claim = (server.clone(), location.slot, location.name.clone());
+                        if self.look_claim.as_ref() != Some(&claim)
+                            && self.look_claim.replace(claim).is_some()
+                        {
+                            self.look_held = Held::none();
+                        }
                     }
                     Err(failure) => {
                         self.due_claim = now + self.backoff;
+                        // The claim may lapse meanwhile, and its look with it, or
+                        // still be live with it: what the hub holds is not known.
+                        self.look_claim = None;
+                        self.look_held = Held::Unknown;
                         error = Some(failure);
                     }
                 }
@@ -817,6 +1094,8 @@ impl Worker {
                 }
             }
         }
+        // A look is cosmetic: what became of it is in its outcome, not the status.
+        self.send_look(now);
         match error.or(counts_error) {
             Some(failure) => {
                 self.backoff = (self.backoff * 2).min(RETRY_MAX);
@@ -848,6 +1127,11 @@ pub struct Service {
     staff: Arc<Mutex<StaffState>>,
     chat: Arc<Mutex<ChatState>>,
     emotes: Arc<Mutex<VecDeque<Emote>>>,
+    looks: Arc<Mutex<VecDeque<QueuedLook>>>,
+    /// What the feed is told to read, for the looks' generation.
+    feed: Arc<Mutex<FeedShared>>,
+    /// The player's own key id, to recognise its looks in the feed.
+    key_id: String,
     /// Set to end the feed thread, which ends after its poll at the latest.
     feed_stop: Arc<std::sync::atomic::AtomicBool>,
     finished: Mutex<Receiver<()>>,
@@ -870,7 +1154,8 @@ impl Service {
         make_hub: HubFactory,
         make_feed_hub: Option<HubFactory>,
     ) -> Self {
-        let snapshot = Arc::new(Mutex::new(Snapshot::new(identity.key_id())));
+        let key_id = identity.key_id();
+        let snapshot = Arc::new(Mutex::new(Snapshot::new(key_id.clone())));
         let staff = Arc::new(Mutex::new(StaffState::default()));
         let (commands, inbox) = channel();
         let (done, finished) = channel();
@@ -883,7 +1168,9 @@ impl Service {
             Instant::now(),
         );
         let chat = Arc::clone(&worker.chat);
+        let feed = Arc::clone(&worker.feed);
         let emotes = Arc::new(Mutex::new(VecDeque::new()));
+        let looks = Arc::new(Mutex::new(VecDeque::new()));
         let feed_stop = Arc::new(std::sync::atomic::AtomicBool::new(false));
         if let Some(make_feed_hub) = make_feed_hub {
             let feed = FeedWorker::new(
@@ -892,6 +1179,7 @@ impl Service {
                 Arc::clone(&worker.feed),
                 Arc::clone(&chat),
                 Arc::clone(&emotes),
+                Arc::clone(&looks),
                 Instant::now(),
             );
             let stop = Arc::clone(&feed_stop);
@@ -929,6 +1217,9 @@ impl Service {
             staff,
             chat,
             emotes,
+            looks,
+            feed,
+            key_id,
             feed_stop,
             finished: Mutex::new(finished),
             note_tags: std::sync::atomic::AtomicU64::new(0),
@@ -938,6 +1229,16 @@ impl Service {
     /// Apply the player's settings; the service starts or stops talking to the hub.
     pub fn configure(&self, settings: Settings) {
         let _ = self.commands.send(Command::Configure(settings));
+    }
+
+    /// Keep the hub's asset packs in `directory` (the settings folder's
+    /// [`crate::assets::FOLDER`], beside `identity.key`): once registered, at once and
+    /// every 6 hours, the worker reads the hub's list and downloads each pack the folder
+    /// does not hold as listed, checked against the list's size and SHA-256 and written
+    /// in one rename. [`Snapshot::packs_revision`] counts the packs written. Until this
+    /// is called no asset is asked for.
+    pub fn keep_assets(&self, directory: PathBuf) {
+        let _ = self.commands.send(Command::AssetsDir(directory));
     }
 
     /// The player is on a game server (call again if `slot` or `name` changes).
@@ -1028,7 +1329,9 @@ impl Service {
         read(&lock(&self.snapshot))
     }
 
-    /// Turn the SJK chat on or off: the feed reads the hub only while it is on.
+    /// Turn the SJK chat on or off. Off, the feed still reads the hub while the
+    /// player is on a game server (for its looks and emotes) but keeps no message; in
+    /// the menus it reads only with the chat on.
     pub fn set_chat(&self, on: bool) {
         let _ = self.commands.send(Command::SetChat(on));
     }
@@ -1054,6 +1357,36 @@ impl Service {
         crate::feed::lock(&self.emotes).drain(..).collect()
     }
 
+    /// The look the player wears (`PROTOCOL.md`, "Looks"). The worker keeps the
+    /// latest and sends it once its claim on a server is accepted, again when it
+    /// changes or the claim does (another server, slot or name), at most once a
+    /// second; a blade skin the hub says the key does not hold is left out until the
+    /// profile changes. What became of it arrives in [`Snapshot::look_outcome`].
+    pub fn set_look(&self, look: Look) {
+        let _ = self.commands.send(Command::Look(look));
+    }
+
+    /// The looks the feed received since the last call, oldest first: those it read
+    /// for `server`, the game server the player is on, under the current reading. A
+    /// poll still under way when the server changed or the identity went off brings
+    /// none, and [`ReceivedLooks::generation`] tells when every look had before is out
+    /// of date. The newest look of the player's own key goes to the worker, which reads
+    /// the own profile again soon when the hub took a skin back.
+    pub fn take_looks(&self, server: Option<SocketAddr>) -> ReceivedLooks {
+        let received = crate::feed::take_looks(&self.feed, &self.looks, server);
+        if let Some(own) = received
+            .events
+            .iter()
+            .rev()
+            .find(|event| event.key_id == self.key_id)
+        {
+            let _ = self
+                .commands
+                .send(Command::OwnLook(own.id, own.saber.clone()));
+        }
+        received
+    }
+
     /// Withdraw the claim and stop, waiting at most `timeout` for it. The feed thread
     /// is told to stop and ends after its poll, without being waited for.
     pub fn shutdown(&self, timeout: Duration) {
@@ -1071,6 +1404,7 @@ impl Service {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::assets::{FOLDER, Pack, sha256_hex, write_pack};
     use std::sync::atomic::{AtomicBool, Ordering};
 
     /// A hub that records what it is asked.
@@ -1083,11 +1417,56 @@ mod tests {
         cap: Arc<Mutex<Option<u64>>>,
         /// The achievements the fake hub holds, as its profiles list them.
         held: Arc<Mutex<Vec<Achievement>>>,
+        /// The unlocks the fake hub holds for the player's key.
+        owned: Arc<Mutex<Vec<String>>>,
+        /// Refusals the next looks get, in order.
+        look_refusals: Arc<Mutex<VecDeque<HubError>>>,
+        /// The asset packs the fake hub serves, by name.
+        packs: Arc<Mutex<BTreeMap<String, Vec<u8>>>>,
+        /// Bytes every pack download gets instead of the pack's own.
+        served: Arc<Mutex<Option<Vec<u8>>>>,
+        /// Refusals the next readings of the asset list get, in order.
+        asset_refusals: Arc<Mutex<VecDeque<HubError>>>,
     }
 
     impl Fake {
         fn log(&self) -> Vec<String> {
             self.log.lock().unwrap().clone()
+        }
+
+        fn unlocks(&self) -> Vec<Unlock> {
+            self.owned
+                .lock()
+                .unwrap()
+                .iter()
+                .map(|id| Unlock {
+                    id: id.clone(),
+                    granted: 1,
+                    note: String::new(),
+                })
+                .collect()
+        }
+
+        /// The asset list readings and pack downloads asked for.
+        fn asset_requests(&self) -> Vec<String> {
+            self.log()
+                .into_iter()
+                .filter(|line| line.starts_with("asset"))
+                .collect()
+        }
+
+        fn serve(&self, name: &str, bytes: &[u8]) {
+            self.packs
+                .lock()
+                .unwrap()
+                .insert(name.to_owned(), bytes.to_vec());
+        }
+
+        fn looks(&self) -> Vec<String> {
+            self.log()
+                .into_iter()
+                .filter(|line| line.starts_with("look "))
+                .collect()
         }
 
         fn record(&self, line: String) -> Result<(), HubError> {
@@ -1112,16 +1491,22 @@ mod tests {
             names: Vec::new(),
             medals: Vec::new(),
             achievements: Vec::new(),
+            unlocks: Vec::new(),
         }
     }
 
     impl Hub for Fake {
         fn register(&mut self, _: &Identity, name: Option<&str>) -> Result<Profile, HubError> {
+            let unlocks = self.unlocks();
             match name {
-                Some(name) => self
-                    .record(format!("register {name}"))
-                    .map(|()| profile(name)),
-                None => self.record("register".to_owned()).map(|()| profile("")),
+                Some(name) => self.record(format!("register {name}")).map(|()| Profile {
+                    unlocks,
+                    ..profile(name)
+                }),
+                None => self.record("register".to_owned()).map(|()| Profile {
+                    unlocks,
+                    ..profile("")
+                }),
             }
         }
         fn set_bio(&mut self, _: &Identity, bio: &str) -> Result<Profile, HubError> {
@@ -1130,6 +1515,7 @@ mod tests {
         fn profile(&mut self, key_id: &str) -> Result<Profile, HubError> {
             self.record(format!("lookup {key_id}")).map(|()| Profile {
                 achievements: self.held.lock().unwrap().clone(),
+                unlocks: self.unlocks(),
                 ..profile("Other")
             })
         }
@@ -1180,6 +1566,50 @@ mod tests {
         fn emote(&mut self, _: &Identity, server: &str, emote: &str) -> Result<u64, HubError> {
             Fake::record(self, format!("emote {emote} on {server}")).map(|()| 13)
         }
+        fn look(&mut self, _: &Identity, server: &str, look: &Look) -> Result<u64, HubError> {
+            Fake::record(
+                self,
+                format!("look {server} {:?} {}", look.saber, look.illuminate),
+            )?;
+            if let Some(refusal) = self.look_refusals.lock().unwrap().pop_front() {
+                return Err(refusal);
+            }
+            if !look.saber.is_empty() && !self.owned.lock().unwrap().contains(&look.saber) {
+                return Err(HubError::Rejected {
+                    status: 403,
+                    code: "not_unlocked".to_owned(),
+                    message: "this key does not hold that unlock".to_owned(),
+                });
+            }
+            Ok(15)
+        }
+        fn assets(&mut self, _: &Identity) -> Result<Vec<Pack>, HubError> {
+            Fake::record(self, "assets".to_owned())?;
+            if let Some(refusal) = self.asset_refusals.lock().unwrap().pop_front() {
+                return Err(refusal);
+            }
+            let packs = self.packs.lock().unwrap();
+            Ok(packs
+                .iter()
+                .map(|(name, bytes)| Pack {
+                    name: name.clone(),
+                    size: bytes.len() as u64,
+                    sha256: sha256_hex(bytes),
+                })
+                .collect())
+        }
+        fn asset(&mut self, _: &Identity, name: &str) -> Result<Vec<u8>, HubError> {
+            Fake::record(self, format!("asset {name}"))?;
+            if let Some(bytes) = self.served.lock().unwrap().clone() {
+                return Ok(bytes);
+            }
+            self.packs
+                .lock()
+                .unwrap()
+                .get(name)
+                .cloned()
+                .ok_or_else(|| refused(404, "not_found"))
+        }
         fn set_achievements(
             &mut self,
             _: &Identity,
@@ -1218,6 +1648,22 @@ mod tests {
                     }],
                     ..profile("Target")
                 }],
+                StaffRequest::Unlock { key_id, unlock, .. } => {
+                    self.owned.lock().unwrap().push(unlock.clone());
+                    vec![Profile {
+                        key_id: key_id.clone(),
+                        unlocks: self.unlocks(),
+                        ..profile("Target")
+                    }]
+                }
+                StaffRequest::Relock { key_id, unlock } => {
+                    self.owned.lock().unwrap().retain(|id| id != unlock);
+                    vec![Profile {
+                        key_id: key_id.clone(),
+                        unlocks: self.unlocks(),
+                        ..profile("Target")
+                    }]
+                }
                 StaffRequest::Unaward { key_id, .. }
                 | StaffRequest::ClearAchievements { key_id, .. } => vec![Profile {
                     key_id: key_id.clone(),
@@ -1327,7 +1773,7 @@ mod tests {
     }
 
     #[test]
-    fn the_feed_runs_only_when_registered_with_chat_on() {
+    fn the_feed_runs_when_registered_with_chat_on_or_on_a_server() {
         let fake = Fake::default();
         fake.fail.store(true, Ordering::SeqCst);
         let t0 = Instant::now();
@@ -1342,14 +1788,389 @@ mod tests {
         worker.tick(t0 + Duration::from_secs(30));
         assert_eq!(url().as_deref(), Some("https://hub"));
         assert_eq!(lock_feed(&shared).server, None);
-        worker.handle(Command::Enter(here(3, "Sol")), t0);
-        assert_eq!(lock_feed(&shared).server.as_deref(), Some("1.2.3.4:29070"));
+        assert!(lock_feed(&shared).chat);
+        // In the menus the chat off stops the reading.
         worker.handle(Command::SetChat(false), t0);
         assert_eq!(url(), None);
+        // On a server it reads anyway, for the looks and emotes, the chat hidden.
+        worker.handle(Command::Enter(here(3, "Sol")), t0);
+        assert_eq!(url().as_deref(), Some("https://hub"));
+        assert_eq!(lock_feed(&shared).server.as_deref(), Some("1.2.3.4:29070"));
+        assert!(!lock_feed(&shared).chat);
+        worker.handle(Command::SetChat(true), t0);
+        assert!(url().is_some() && lock_feed(&shared).chat);
+        worker.handle(Command::SetChat(false), t0);
+        worker.handle(Command::Leave, t0);
+        assert_eq!(url(), None, "back in the menus with the chat off");
         worker.handle(Command::SetChat(true), t0);
         assert!(url().is_some());
         worker.handle(Command::Configure(Settings::default()), t0);
         assert_eq!(url(), None, "identity off");
+    }
+
+    #[test]
+    fn another_server_or_the_identity_off_is_a_new_reading_for_the_looks() {
+        let fake = Fake::default();
+        let t0 = Instant::now();
+        let (mut worker, _) = worker(&fake, t0);
+        let shared = Arc::clone(&worker.feed);
+        let generation = || lock_feed(&shared).generation;
+        worker.handle(Command::Configure(on("https://hub")), t0);
+        worker.tick(t0);
+        worker.handle(Command::Enter(here(3, "Sol")), t0);
+        let first = generation();
+        // The chat, a slot or a name change nothing of what is read.
+        worker.handle(Command::SetChat(true), t0);
+        worker.handle(Command::Enter(here(4, "Sol")), t0);
+        assert_eq!(generation(), first);
+        let elsewhere = Location {
+            server: "5.6.7.8:29070".parse().unwrap(),
+            ..here(4, "Sol")
+        };
+        worker.handle(Command::Enter(elsewhere), t0);
+        let second = generation();
+        assert!(second > first);
+        worker.handle(Command::Configure(Settings::default()), t0);
+        assert!(generation() > second, "identity off");
+    }
+
+    fn lit(saber: &str) -> Look {
+        Look {
+            saber: saber.to_owned(),
+            illuminate: true,
+        }
+    }
+
+    #[test]
+    fn the_look_goes_once_the_claim_is_accepted_and_at_most_once_a_second() {
+        let fake = Fake::default();
+        fake.owned.lock().unwrap().push("saber_sun".to_owned());
+        let t0 = Instant::now();
+        let (mut worker, snapshot) = worker(&fake, t0);
+        // Without a claim there is nowhere to wear it.
+        worker.handle(Command::Look(lit("")), t0);
+        worker.handle(Command::Configure(on("https://hub")), t0);
+        worker.tick(t0);
+        assert!(fake.looks().is_empty());
+        worker.handle(Command::Enter(here(3, "Sol")), t0);
+        worker.tick(t0);
+        assert_eq!(
+            fake.log()[1..],
+            [
+                "claim 1.2.3.4:29070 3 Sol",
+                "presence 1.2.3.4:29070",
+                "look 1.2.3.4:29070 \"\" true",
+            ]
+        );
+        assert!(lock(&snapshot).look_outcome.as_ref().unwrap().sent);
+        // Changes within the second wait, and only the latest goes.
+        let ms = |ms| t0 + Duration::from_millis(ms);
+        worker.handle(Command::Look(lit("saber_sun")), ms(200));
+        assert_eq!(worker.tick(ms(200)), Duration::from_millis(800));
+        worker.handle(Command::Look(Look::default()), ms(500));
+        worker.tick(ms(500));
+        worker.handle(Command::Look(lit("saber_sun")), ms(700));
+        worker.tick(ms(700));
+        assert_eq!(fake.looks().len(), 1);
+        worker.tick(ms(1_000));
+        assert_eq!(
+            fake.looks(),
+            [
+                "look 1.2.3.4:29070 \"\" true",
+                "look 1.2.3.4:29070 \"saber_sun\" true"
+            ]
+        );
+        // The same look is not sent again, nor with the claim renewed.
+        worker.handle(Command::Look(lit("saber_sun")), ms(2_000));
+        worker.tick(ms(2_000));
+        worker.tick(t0 + Duration::from_secs(46));
+        assert_eq!(fake.looks().len(), 2);
+    }
+
+    #[test]
+    fn a_new_claim_gets_the_look_again_and_no_look_sends_nothing() {
+        let fake = Fake::default();
+        let t0 = Instant::now();
+        let (mut worker, _) = worker(&fake, t0);
+        worker.handle(Command::Configure(on("https://hub")), t0);
+        worker.handle(Command::Enter(here(3, "Sol")), t0);
+        worker.tick(t0);
+        // A client that stopped without releasing may have left a live claim with a
+        // look: the first accepted claim gets the look, even none.
+        assert_eq!(fake.looks(), ["look 1.2.3.4:29070 \"\" false"]);
+        // Another slot: a new claim, which starts with no look, so none goes.
+        let t1 = t0 + Duration::from_secs(5);
+        worker.handle(Command::Enter(here(4, "Sol")), t1);
+        worker.tick(t1);
+        assert_eq!(fake.log().last().unwrap(), "presence 1.2.3.4:29070");
+        assert_eq!(fake.looks().len(), 1);
+        worker.handle(Command::Look(lit("")), t1);
+        worker.tick(t1);
+        assert_eq!(fake.looks().len(), 2);
+        // Another slot again: the new claim gets the look again.
+        let t2 = t1 + Duration::from_secs(5);
+        worker.handle(Command::Enter(here(5, "Sol")), t2);
+        worker.tick(t2);
+        assert_eq!(fake.log().last().unwrap(), "look 1.2.3.4:29070 \"\" true");
+        assert_eq!(fake.looks().len(), 3);
+        // Another server: the old claim is withdrawn and the new one gets it.
+        let elsewhere = Location {
+            server: "5.6.7.8:29070".parse().unwrap(),
+            ..here(5, "Sol")
+        };
+        let t3 = t2 + Duration::from_secs(5);
+        worker.handle(Command::Enter(elsewhere), t3);
+        worker.tick(t3);
+        assert_eq!(fake.log().last().unwrap(), "look 5.6.7.8:29070 \"\" true");
+        // A claim that failed may have lapsed: the next accepted one sends it again.
+        fake.fail.store(true, Ordering::SeqCst);
+        let t4 = t3 + Duration::from_secs(46);
+        worker.tick(t4);
+        fake.fail.store(false, Ordering::SeqCst);
+        worker.tick(t4 + Duration::from_secs(30));
+        assert_eq!(fake.looks().len(), 5);
+        // Leaving needs nothing: the release drops it.
+        worker.handle(Command::Leave, t4 + Duration::from_secs(31));
+        assert_eq!(fake.log().last().unwrap(), "release 5.6.7.8:29070");
+        // Back on the server: a new claim after a release starts with no look.
+        let t5 = t4 + Duration::from_secs(40);
+        worker.handle(Command::Look(Look::default()), t5);
+        worker.handle(Command::Enter(here(5, "Sol")), t5);
+        worker.tick(t5);
+        assert_eq!(fake.log().last().unwrap(), "presence 1.2.3.4:29070");
+        assert_eq!(fake.looks().len(), 5);
+    }
+
+    #[test]
+    fn after_a_failed_claim_the_look_goes_whatever_it_is() {
+        let fake = Fake::default();
+        fake.owned.lock().unwrap().push("saber_sun".to_owned());
+        let t0 = Instant::now();
+        let (mut worker, _) = worker(&fake, t0);
+        worker.handle(Command::Configure(on("https://hub")), t0);
+        worker.handle(Command::Enter(here(3, "Sol")), t0);
+        worker.handle(Command::Look(lit("saber_sun")), t0);
+        worker.tick(t0);
+        assert_eq!(fake.looks(), ["look 1.2.3.4:29070 \"saber_sun\" true"]);
+        // The renewal fails (it timed out, say) while the hub still holds the claim and
+        // its look; meanwhile the look goes back to none.
+        fake.fail.store(true, Ordering::SeqCst);
+        let t1 = t0 + Duration::from_secs(46);
+        worker.tick(t1);
+        worker.handle(Command::Look(Look::default()), t1);
+        fake.fail.store(false, Ordering::SeqCst);
+        // The same claim is accepted again: the hub may still hold the Sun, so none goes.
+        let t2 = t1 + Duration::from_secs(30);
+        worker.tick(t2);
+        assert_eq!(
+            fake.looks().last().unwrap(),
+            "look 1.2.3.4:29070 \"\" false"
+        );
+        assert_eq!(fake.looks().len(), 2);
+        // Known again: not repeated.
+        worker.tick(t2 + Duration::from_secs(46));
+        assert_eq!(fake.looks().len(), 2);
+    }
+
+    fn refused(status: u16, code: &str) -> HubError {
+        HubError::Rejected {
+            status,
+            code: code.to_owned(),
+            message: String::new(),
+        }
+    }
+
+    #[test]
+    fn a_look_refused_for_too_many_or_the_signature_goes_again_later() {
+        let fake = Fake::default();
+        let t0 = Instant::now();
+        let (mut worker, snapshot) = worker(&fake, t0);
+        worker.handle(Command::Configure(on("https://hub")), t0);
+        worker.handle(Command::Enter(here(3, "Sol")), t0);
+        worker.tick(t0);
+        let sent = fake.looks().len();
+        for (status, code) in [(429, "rate_limited"), (429, "look_quota"), (401, "clock")] {
+            fake.look_refusals
+                .lock()
+                .unwrap()
+                .push_back(refused(status, code));
+        }
+        let mut at = t0 + LOOK_EVERY;
+        worker.handle(Command::Look(lit("")), at);
+        for (n, code) in ["rate_limited", "look_quota", "clock"].iter().enumerate() {
+            worker.tick(at);
+            assert_eq!(fake.looks().len(), sent + n + 1, "{code}");
+            assert!(!lock(&snapshot).look_outcome.clone().unwrap().sent);
+            // Not again within the wait, then again.
+            worker.tick(at + LOOK_AGAIN - Duration::from_millis(1));
+            assert_eq!(fake.looks().len(), sent + n + 1, "{code}");
+            at += LOOK_AGAIN;
+        }
+        worker.tick(at);
+        assert_eq!(fake.looks().len(), sent + 4);
+        assert!(lock(&snapshot).look_outcome.clone().unwrap().sent);
+        // Another refusal (an older hub) is not repeated.
+        fake.look_refusals
+            .lock()
+            .unwrap()
+            .push_back(refused(404, "not_found"));
+        worker.handle(Command::Look(Look::default()), at);
+        worker.tick(at + LOOK_AGAIN);
+        worker.tick(at + LOOK_AGAIN * 3);
+        assert_eq!(fake.looks().len(), sent + 5);
+    }
+
+    fn profile_reads(fake: &Fake) -> usize {
+        fake.log()
+            .iter()
+            .filter(|line| line.starts_with("lookup"))
+            .count()
+    }
+
+    #[test]
+    fn a_refused_skin_reads_the_own_profile_soon_at_most_twice_a_minute() {
+        let fake = Fake::default();
+        let t0 = Instant::now();
+        let (mut worker, _) = worker(&fake, t0);
+        worker.handle(Command::Configure(on("https://hub")), t0);
+        worker.handle(Command::Enter(here(3, "Sol")), t0);
+        // The profile listed the Sun, but staff took it back: the hub refuses it.
+        worker.handle(Command::Look(lit("saber_sun")), t0);
+        assert_eq!(
+            worker.tick(t0),
+            Duration::ZERO,
+            "the profile is due at once"
+        );
+        assert_eq!(fake.looks(), ["look 1.2.3.4:29070 \"saber_sun\" true"]);
+        assert_eq!(profile_reads(&fake), 0);
+        let ms = |ms| t0 + Duration::from_millis(ms);
+        worker.tick(ms(10));
+        assert_eq!(profile_reads(&fake), 1);
+        // Refused again: not before 30 seconds from the last early reading.
+        worker.handle(Command::Look(lit("saber_moon")), ms(2_000));
+        worker.tick(ms(2_000));
+        assert_eq!(
+            fake.looks().last().unwrap(),
+            "look 1.2.3.4:29070 \"saber_moon\" true"
+        );
+        worker.tick(ms(29_000));
+        assert_eq!(profile_reads(&fake), 1);
+        worker.tick(ms(30_010));
+        assert_eq!(profile_reads(&fake), 2);
+    }
+
+    #[test]
+    fn the_hub_taking_the_own_skin_back_reads_the_own_profile_soon() {
+        let fake = Fake::default();
+        fake.owned.lock().unwrap().push("saber_sun".to_owned());
+        let t0 = Instant::now();
+        let (mut worker, _) = worker(&fake, t0);
+        worker.handle(Command::Configure(on("https://hub")), t0);
+        worker.handle(Command::Enter(here(3, "Sol")), t0);
+        worker.handle(Command::Look(lit("saber_sun")), t0);
+        worker.tick(t0);
+        // The fake hub numbers it 15. The feed brings it back: nothing to do.
+        let t1 = t0 + Duration::from_secs(1);
+        worker.handle(Command::OwnLook(15, "saber_sun".into()), t1);
+        // An older one, or a newer one with the same skin, is not news either.
+        worker.handle(Command::OwnLook(12, String::new()), t1);
+        worker.handle(Command::OwnLook(16, "saber_sun".into()), t1);
+        worker.tick(t1);
+        assert_eq!(profile_reads(&fake), 0);
+        // Staff relock it: the hub's event takes the skin off.
+        worker.handle(Command::OwnLook(20, String::new()), t1);
+        worker.tick(t1);
+        assert_eq!(profile_reads(&fake), 1);
+        // Another within the 30 seconds waits for them.
+        worker.handle(Command::OwnLook(21, String::new()), t1);
+        worker.tick(t1 + Duration::from_secs(29));
+        assert_eq!(profile_reads(&fake), 1);
+        worker.tick(t1 + Duration::from_secs(30));
+        assert_eq!(profile_reads(&fake), 2);
+    }
+
+    #[test]
+    fn a_blade_skin_the_key_lacks_is_left_out_until_the_profile_changes() {
+        let fake = Fake::default();
+        let t0 = Instant::now();
+        let (mut worker, snapshot) = worker(&fake, t0);
+        worker.handle(Command::Configure(on("https://hub")), t0);
+        worker.handle(Command::Enter(here(3, "Sol")), t0);
+        worker.handle(Command::Look(lit("saber_sun")), t0);
+        worker.tick(t0);
+        assert_eq!(fake.looks(), ["look 1.2.3.4:29070 \"saber_sun\" true"]);
+        let outcome = lock(&snapshot).look_outcome.clone().unwrap();
+        assert!(!outcome.sent);
+        // A second later the Illuminate still goes, without the skin, and then nothing.
+        let t1 = t0 + Duration::from_secs(1);
+        worker.tick(t1);
+        worker.tick(t1 + Duration::from_secs(5));
+        assert_eq!(
+            fake.looks()[1..],
+            ["look 1.2.3.4:29070 \"\" true".to_owned()]
+        );
+        // Another skin is tried and refused; back to the first, which stays out: the
+        // hub already holds the look without a skin, so nothing goes.
+        worker.handle(
+            Command::Look(lit("saber_moon")),
+            t1 + Duration::from_secs(5),
+        );
+        worker.tick(t1 + Duration::from_secs(5));
+        worker.handle(Command::Look(lit("saber_sun")), t1 + Duration::from_secs(7));
+        worker.tick(t1 + Duration::from_secs(7));
+        worker.tick(t1 + Duration::from_secs(8));
+        assert_eq!(
+            fake.looks()[2..],
+            ["look 1.2.3.4:29070 \"saber_moon\" true".to_owned()]
+        );
+        // Staff unlock it on the player's own key: the profile changes, it goes.
+        let me = lock(&snapshot).me.clone().unwrap().key_id;
+        worker.handle(
+            Command::Staff(StaffRequest::Unlock {
+                key_id: me,
+                unlock: "saber_sun".into(),
+                note: String::new(),
+            }),
+            t1 + Duration::from_secs(9),
+        );
+        worker.tick(t1 + Duration::from_secs(9));
+        assert_eq!(
+            fake.looks().last().unwrap(),
+            "look 1.2.3.4:29070 \"saber_sun\" true"
+        );
+        assert!(lock(&snapshot).look_outcome.clone().unwrap().sent);
+    }
+
+    #[test]
+    fn staff_unlock_and_relock_change_the_profile_they_answer() {
+        let fake = Fake::default();
+        let t0 = Instant::now();
+        let (mut worker, snapshot) = worker(&fake, t0);
+        worker.handle(Command::Configure(on("https://hub")), t0);
+        worker.tick(t0);
+        let staff = Arc::clone(&worker.staff);
+        let me = lock(&snapshot).me.clone().unwrap().key_id;
+        worker.handle(
+            Command::Staff(StaffRequest::Unlock {
+                key_id: me.clone(),
+                unlock: "saber_sun".into(),
+                note: "Thanks".into(),
+            }),
+            t0,
+        );
+        assert_eq!(staff.lock().unwrap().message, "Unlocked saber_sun");
+        let unlocks = |snapshot: &Mutex<Snapshot>| lock(snapshot).me.clone().unwrap().unlocks;
+        assert_eq!(unlocks(&snapshot)[0].id, "saber_sun");
+        worker.handle(
+            Command::Staff(StaffRequest::Relock {
+                key_id: me,
+                unlock: "saber_sun".into(),
+            }),
+            t0,
+        );
+        assert_eq!(staff.lock().unwrap().message, "Took back saber_sun");
+        assert!(unlocks(&snapshot).is_empty());
+        assert_eq!(staff.lock().unwrap().players[0].unlocks, []);
     }
 
     #[test]
@@ -1451,6 +2272,230 @@ mod tests {
         assert_eq!(state().message, "only SJK staff can do this");
     }
 
+    /// A worker told to keep the asset packs in a fresh folder and switched on; the
+    /// folder's parent goes when the [`tempfile::TempDir`] does.
+    fn keeping_assets(
+        fake: &Fake,
+        now: Instant,
+    ) -> (Worker, Arc<Mutex<Snapshot>>, tempfile::TempDir, PathBuf) {
+        let (mut worker, snapshot) = worker(fake, now);
+        let root = tempfile::tempdir().unwrap();
+        let dir = root.path().join(FOLDER);
+        worker.handle(Command::AssetsDir(dir.clone()), now);
+        worker.handle(Command::Configure(on("https://hub")), now);
+        (worker, snapshot, root, dir)
+    }
+
+    #[test]
+    fn asset_packs_are_downloaded_once_registered_and_again_only_when_they_change() {
+        let fake = Fake::default();
+        fake.serve("sjk_skins", b"sun v1");
+        let t0 = Instant::now();
+        let (mut worker, snapshot, _root, dir) = keeping_assets(&fake, t0);
+        worker.tick(t0);
+        assert_eq!(fake.log()[0], "register");
+        assert_eq!(fake.asset_requests(), ["assets", "asset sjk_skins"]);
+        assert_eq!(std::fs::read(dir.join("sjk_skins.pk3")).unwrap(), b"sun v1");
+        assert_eq!(lock(&snapshot).packs_revision, 1);
+        assert!(
+            lock(&snapshot)
+                .assets_note
+                .as_ref()
+                .unwrap()
+                .contains("sjk_skins")
+        );
+        // Not again for six hours.
+        worker.tick(t0 + Duration::from_secs(3_600));
+        assert_eq!(fake.asset_requests().len(), 2);
+        // Then the list again; the pack matches, so it is not downloaded.
+        let t1 = t0 + ASSETS_EVERY;
+        worker.tick(t1);
+        assert_eq!(
+            fake.asset_requests(),
+            ["assets", "asset sjk_skins", "assets"]
+        );
+        assert_eq!(lock(&snapshot).packs_revision, 1);
+        // A new version of the pack is downloaded and replaces the old.
+        fake.serve("sjk_skins", b"sun v2");
+        let t2 = t1 + ASSETS_EVERY;
+        worker.tick(t2);
+        assert_eq!(fake.asset_requests()[3..], ["assets", "asset sjk_skins"]);
+        assert_eq!(std::fs::read(dir.join("sjk_skins.pk3")).unwrap(), b"sun v2");
+        assert_eq!(lock(&snapshot).packs_revision, 2);
+        // A pack the hub no longer lists stays for offline use.
+        fake.packs.lock().unwrap().clear();
+        worker.tick(t2 + ASSETS_EVERY);
+        assert_eq!(fake.asset_requests().len(), 6);
+        assert!(dir.join("sjk_skins.pk3").exists());
+        assert_eq!(lock(&snapshot).packs_revision, 2);
+        assert_eq!(lock(&snapshot).status, Status::Online);
+    }
+
+    #[test]
+    fn a_pack_unlike_its_listing_is_refused_and_the_cached_one_kept() {
+        let fake = Fake::default();
+        fake.serve("sjk_skins", b"sun v2");
+        let t0 = Instant::now();
+        let (mut worker, snapshot, _root, dir) = keeping_assets(&fake, t0);
+        write_pack(&dir, "sjk_skins", b"sun v1").unwrap();
+        // The same length, other bytes: the hash differs.
+        *fake.served.lock().unwrap() = Some(b"sun v3".to_vec());
+        worker.tick(t0);
+        assert_eq!(fake.asset_requests(), ["assets", "asset sjk_skins"]);
+        assert_eq!(std::fs::read(dir.join("sjk_skins.pk3")).unwrap(), b"sun v1");
+        assert!(!dir.join(".sjk_skins.pk3.part").exists());
+        assert_eq!(lock(&snapshot).packs_revision, 0);
+        let note = lock(&snapshot).assets_note.clone().unwrap();
+        assert!(note.contains("SHA-256"), "{note}");
+        assert_eq!(lock(&snapshot).status, Status::Online, "cosmetic");
+        // Tried again a minute later; another length is refused too.
+        worker.tick(t0 + Duration::from_secs(59));
+        assert_eq!(fake.asset_requests().len(), 2);
+        *fake.served.lock().unwrap() = Some(b"sun v2, longer".to_vec());
+        let t1 = t0 + ASSETS_RETRY_MIN;
+        worker.tick(t1);
+        assert_eq!(fake.asset_requests().len(), 4);
+        assert!(
+            lock(&snapshot)
+                .assets_note
+                .as_ref()
+                .unwrap()
+                .contains("14 bytes")
+        );
+        assert_eq!(std::fs::read(dir.join("sjk_skins.pk3")).unwrap(), b"sun v1");
+        // The right bytes, two minutes later, are written.
+        *fake.served.lock().unwrap() = None;
+        worker.tick(t1 + ASSETS_RETRY_MIN * 2);
+        assert_eq!(std::fs::read(dir.join("sjk_skins.pk3")).unwrap(), b"sun v2");
+        assert_eq!(lock(&snapshot).packs_revision, 1);
+    }
+
+    #[test]
+    fn asset_check_failures_back_off_and_success_resets_the_wait() {
+        let fake = Fake::default();
+        fake.serve("sjk_skins", b"sun");
+        for refusal in [
+            HubError::Network("down".to_owned()),
+            refused(401, "bad_signature"),
+            refused(503, "error"),
+            refused(429, "rate_limited"),
+        ] {
+            fake.asset_refusals.lock().unwrap().push_back(refusal);
+        }
+        let t0 = Instant::now();
+        let (mut worker, snapshot, _root, _dir) = keeping_assets(&fake, t0);
+        worker.tick(t0);
+        assert_eq!(fake.asset_requests(), ["assets"]);
+        assert_eq!(lock(&snapshot).status, Status::Online, "cosmetic");
+        // The worker wakes for the next check.
+        assert!(worker.tick(t0 + Duration::from_secs(30)) <= Duration::from_secs(30));
+        let mut at = t0;
+        for (n, wait) in [60, 120, 240, 480].into_iter().enumerate() {
+            worker.tick(at + Duration::from_secs(wait - 1));
+            assert_eq!(fake.asset_requests().len(), n + 1, "not before {wait} s");
+            at += Duration::from_secs(wait);
+            worker.tick(at);
+        }
+        assert_eq!(
+            fake.asset_requests()[4..],
+            ["assets", "asset sjk_skins"],
+            "the fifth reading succeeds"
+        );
+        assert_eq!(lock(&snapshot).packs_revision, 1);
+        // Success: the next check is six hours on, and the next failure waits a minute.
+        fake.asset_refusals
+            .lock()
+            .unwrap()
+            .push_back(HubError::Network("down".to_owned()));
+        worker.tick(at + ASSETS_EVERY - Duration::from_secs(1));
+        assert_eq!(fake.asset_requests().len(), 6);
+        at += ASSETS_EVERY;
+        worker.tick(at);
+        assert_eq!(fake.asset_requests().len(), 7);
+        worker.tick(at + ASSETS_RETRY_MIN);
+        assert_eq!(fake.asset_requests().len(), 8);
+        assert_eq!(lock(&snapshot).status, Status::Online);
+    }
+
+    #[test]
+    fn an_older_hub_without_assets_is_asked_again_in_six_hours() {
+        let fake = Fake::default();
+        fake.asset_refusals
+            .lock()
+            .unwrap()
+            .push_back(refused(404, "not_found"));
+        let t0 = Instant::now();
+        let (mut worker, snapshot, _root, dir) = keeping_assets(&fake, t0);
+        worker.tick(t0);
+        worker.tick(t0 + ASSETS_RETRY_MIN);
+        worker.tick(t0 + Duration::from_secs(3_600));
+        assert_eq!(fake.asset_requests(), ["assets"]);
+        assert!(
+            lock(&snapshot)
+                .assets_note
+                .as_ref()
+                .unwrap()
+                .contains("not_found")
+        );
+        worker.tick(t0 + ASSETS_EVERY);
+        assert_eq!(fake.asset_requests(), ["assets", "assets"]);
+        assert!(crate::assets::cached_packs(&dir).is_empty());
+        assert_eq!(lock(&snapshot).status, Status::Online);
+    }
+
+    #[test]
+    fn no_asset_is_asked_for_while_off_unregistered_or_without_a_folder() {
+        let fake = Fake::default();
+        fake.serve("sjk_skins", b"sun");
+        let t0 = Instant::now();
+        // Registered, but told no folder.
+        let (mut worker, snapshot) = worker(&fake, t0);
+        worker.handle(Command::Configure(on("https://hub")), t0);
+        worker.tick(t0);
+        worker.tick(t0 + ASSETS_EVERY);
+        assert!(fake.log().contains(&"register".to_owned()));
+        assert!(fake.asset_requests().is_empty());
+        // A folder, with the identity off: nothing at all.
+        let root = tempfile::tempdir().unwrap();
+        let dir = root.path().join(FOLDER);
+        let t1 = t0 + ASSETS_EVERY * 2;
+        worker.handle(
+            Command::Configure(Settings {
+                enabled: false,
+                hub_url: "https://hub".into(),
+            }),
+            t1,
+        );
+        worker.handle(Command::AssetsDir(dir.clone()), t1);
+        let before = fake.log().len();
+        worker.tick(t1);
+        worker.tick(t1 + ASSETS_EVERY);
+        assert_eq!(fake.log().len(), before);
+        // On, but the registration fails: no asset request either.
+        fake.fail.store(true, Ordering::SeqCst);
+        let t2 = t1 + ASSETS_EVERY * 2;
+        worker.handle(Command::Configure(on("https://hub")), t2);
+        worker.tick(t2);
+        assert!(fake.asset_requests().is_empty());
+        assert!(!dir.exists());
+        // Registered: checked at once.
+        fake.fail.store(false, Ordering::SeqCst);
+        let t3 = t2 + Duration::from_secs(30);
+        worker.tick(t3);
+        assert_eq!(fake.asset_requests(), ["assets", "asset sjk_skins"]);
+        assert_eq!(lock(&snapshot).packs_revision, 1);
+        // Off and on again: checked again at once; the pack matches.
+        worker.handle(Command::Configure(Settings::default()), t3);
+        worker.tick(t3);
+        worker.handle(Command::Configure(on("https://hub")), t3);
+        worker.tick(t3);
+        assert_eq!(
+            fake.asset_requests(),
+            ["assets", "asset sjk_skins", "assets"]
+        );
+        assert_eq!(lock(&snapshot).packs_revision, 1);
+    }
+
     #[test]
     fn nothing_is_sent_while_disabled_or_without_a_hub() {
         let fake = Fake::default();
@@ -1486,13 +2531,15 @@ mod tests {
             [
                 "register",
                 "claim 1.2.3.4:29070 3 Sol",
-                "presence 1.2.3.4:29070"
+                "presence 1.2.3.4:29070",
+                // What the hub held for the key before the start is not known.
+                "look 1.2.3.4:29070 \"\" false"
             ]
         );
         assert_eq!(lock(&snapshot).status, Status::Online);
         // Nothing is due for a while, then the roster, then the claim.
         worker.tick(t0 + Duration::from_secs(10));
-        assert_eq!(fake.log().len(), 3);
+        assert_eq!(fake.log().len(), 4);
         worker.tick(t0 + Duration::from_secs(16));
         assert_eq!(fake.log().last().unwrap(), "presence 1.2.3.4:29070");
         worker.tick(t0 + Duration::from_secs(46));
@@ -1588,6 +2635,7 @@ mod tests {
             name: "Sol".to_owned(),
             verified: true,
             medals: Vec::new(),
+            look: None,
         }];
         let t0 = Instant::now();
         let (mut worker, snapshot) = worker(&fake, t0);

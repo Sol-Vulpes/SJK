@@ -63,6 +63,494 @@ updated for both looks and the moments but not run. To try it: on the main menu,
 medals show one after another), or `debug_medal bug_hunter x3` in a match, then open
 the game menu.
 
+## Unlockables: the Sun blade, and looks through the hub
+
+SJK-only branch `personal/saber-skins` (08/10/2026, stacked on `personal/sjk-chat`,
+Ubuntu 24.04, Rust 1.99) with the hub's `feat/unlocks-looks` (stacked on
+`feat/chat-emotes`): Sol asked for unlockable saber blade skins, a golden/orange sun
+blade with flares and its own sounds first, seen by everyone, and for others to see
+Illuminate too ([unlockables.md](unlockables.md)). Built: the hub keeps unlocks per key
+(operator and staff grant them) and a look (blade skin, Illuminate lit) on each live
+claim, lists it in presence and sends changes through the feed; the client sends its
+own look, gated by its unlocks, keeps every slot's look under the badges' name rule,
+draws the Sun blade (an animated material in `saber.wgsl`, amber trail, warm
+flickering light) and plays its synthesized sounds (ignition, off, hum, three swings,
+also for a thrown saber) for every player wearing it, puts a holocron by every other
+lit player's shoulder (light for the 4 nearest), and has the Unlockables page
+(Profile, `unlockables`), `saberskin` and Unlock/Relock on the Staff page. The feed now
+reads on a game server with `cl_sjkChat 0` (chat stays hidden).
+
+The same day Sol asked for the skin's art to stay SJK's own: the client's renderer is
+now generic and data-driven (a `skins/blades/<id>.bladeskin` JSON file per skin holds
+every shading parameter, the trail, light, flicker and sound paths; up to 8 skins in a
+uniform array, rebuilt only when skins load), and the Sun's file and sounds moved to a
+pack in the hub's private repository (`assets/packs/sjk_skins`), served by the hub
+(`GET /v1/assets`, `/v1/assets/<name>`) under "all rights reserved". The identity
+service downloads changed packs into `assets/` beside `identity.key` (after
+registering, then every 6 hours; size and SHA-256 checked, written in one rename,
+backing off from a minute to 6 hours); the viewer mounts every cached pack at start
+(identity on or off) and a new one at once, loading its skins and registering their
+sounds mid-session. Nothing of the Sun's look or sounds remains in this repository
+(the WAVs, `scripts/saber_skin_sounds.py` and the shader's constants are gone; the
+Unlockables swatch draws from the loaded file, or says the look downloads from the
+hub). Verified: `cargo fmt --all --check`, `cargo build --locked --workspace`,
+`cargo test --locked --workspace` (1659 passed, viewer 1254, 59 ignored, none failed)
+and `cargo clippy --locked --workspace --all-targets` (no warning on a changed line);
+unit tests against a made-up test skin (format, ranges and errors, the
+uniform's layout, loading from a pack, a runtime mount, flicker, mid-session sound
+registration, the neutral pair's bytes unchanged), `saber.wgsl` validated by naga, the
+identity service's pack tests with a fake hub (only changed packs downloaded, a
+mismatch refused and not written, the size cap, atomic write, backoff, nothing while
+off) and its `hub_e2e` assets tests against the hub's assets work built on this PC;
+the `duel6_sun_blade` and Unlockables world shots with a pack zipped from the hub's
+sources (`SJK_TEST_PACKS`), compared with shots of the built-in Sun rendered from the
+previous commit in the same session: the blades are pixel-identical (the only
+differences are isolated single pixels in the air and on the floor, such as also differ
+between two runs of the old build; none on a blade), and the swatch keeps its colours (its flare period now follows the skin's
+flare rate, 2.63 s instead of 2.6). Not verified: a download from the deployed hub,
+a pack arriving during a real match, Windows (replacing a pack the viewer holds open).
+
+Verified: `cargo fmt --all --check`, `cargo build --locked --workspace`,
+`cargo test --locked --workspace` (viewer 1241 passed, 44 ignored; every crate passed)
+and `cargo clippy --locked --workspace --all-targets` (no warning on a changed line);
+unit tests for the wire, the look worker (coalescing, resend on a new claim, refusals),
+the feed with chat off, the looks table, the gating, the per-client sound overrides,
+the skin material and its instance layout, the bundled sounds (format, loop point) and
+the page; `hub_e2e` against the new hub built and run on this PC (looks, chat off,
+staff unlock and relock); the hub's own suite (101 unit, 69 API, 3 command line). World
+shots looked at: `duel6_sun_blade` (beside stock orange and blue, close-ups over time,
+held on the Character page), `other_players_holocrons_on_duel6`, the Unlockables page
+(owned, locked, identity off, 4:3), Profile and Staff. Not verified: nothing ran
+against the deployed hub (it has neither chat nor looks yet) or with other players in a
+match; the sounds were not listened to; follow mode with real players is untested (a
+review fixed the followed player wearing the spectator's skin, looks lost to a 429 or
+a failed claim, looks read across a server change, and a relocked skin lingering on
+its owner's screen, each with a test); giving a saber on/off sound to the nearest
+skinned player within 64 units is a guess, as the game sends it with no owner.
+## Clicks on the SJK UI's Character screen
+
+Branch `fix/sjk-character-clicks` (08/10/2026, based on `a6230f9`, Linux). Sol
+reported that clicks on the Character screen (saber colours and other controls)
+landed beside where they were aimed. The SJK UI's rows give their token the
+control's own rectangle, but its ‹ › controls and blade chips were hit-tested as
+on the older form, by a value zone in the right 48% of the control: a click just
+right of a ‹ ›'s middle stepped back, a chip click took the chip to its left (and
+any click on the left half the first chip), and a click on a Force power's name
+stepped the power instead of only choosing its row. They now follow the control
+as drawn ([sjk-ui.md](sjk-ui.md)).
+
+Verified on Linux: unit tests of the halves and chips, and pointer clicks on the
+drawn SJK UI (every blade chip at its centre and edges, a power's holocron and
+name after buying a level), which fail without the fix; formatting, the locked
+workspace build and tests pass, and workspace Clippy finishes without errors and
+with no warning on a changed line. Not seen in a running client or on screen.
+## A sound device that goes away no longer freezes the game
+
+Branch `fix/alt-tab-hang` (08/10/2026, based on `a6230f9`, Linux): Sol reported that
+after alt-tabbing away for a long while (AFK a few times), alt-tabbing back did
+nothing: the window never came back and the game had to be killed; short alt-tabs
+were fine. The likely cause is the sound output, not the window. The render thread
+pushed every sound command into the mixer's queue and, while it was full, waited for
+the audio callback to make room, without limit (`AudioOutput::send`). Windows ends an
+output stream for good when its device goes away (cpal's WASAPI thread returns on
+`AUDCLNT_E_DEVICE_INVALIDATED` and the callback is never called again): a headset
+or Bluetooth speaker switching itself off after minutes of silence, which a window
+muted in the background by `snd_mute_losefocus` plays, or a monitor's speakers while
+the display sleeps. The 8,192-command queue then fills within seconds (gains,
+listener and loops each frame, a position for each entity of each snapshot) and the
+game stops answering, which shows only at the Alt+Tab back. Time away matters
+because the device has to go away first. A full queue now waits at most 250 ms, once;
+then commands are dropped (each frame sends its state again) until the queue drains,
+and the log says `audio output stopped taking sound`. The decode worker keeps sounds
+in order and still waits for room, but stops when the output is dropped, so
+`snd_restart` (which opens the output again) and quitting do not hang on it either
+([client.md](client.md#configuration-and-content)).
+
+Verified on Linux: unit tests of a queue nothing drains (one bounded wait, then
+every push dropped at once even with an hour's patience; room again ends the stall;
+a slow callback is still waited for; the decoder waits until the output closes), of
+an output whose callback stopped receiving four queues of commands, and of dropping
+an output whose decoder waits; the two output tests time out with the old waits.
+Formatting, the locked build, tests and Clippy (no warning in the changed code)
+pass. Not verified: nothing was reproduced on Windows, and that Sol's device went
+away while he was AFK is inferred, not seen in a log. To check it, in a match switch
+off or unplug the headset, or disable the playback device (Settings > System >
+Sound), focused or not: the previous release should freeze within seconds; this one
+should go on silently, log the line, and `snd_restart` should bring the sound back
+once a device is there. If the freeze
+remains with sound working, the window side is next and unchanged here: where Vulkan
+reports a minimised window's swapchain out of date, every frame reconfigures it at
+the old size (`Resized` to 0×0 is ignored), waiting for the GPU each time, and a
+redraw request that never arrives leaves the event loop polling instead of sleeping.
+## Monitor refresh-rate detection off by default
+
+Branch `feat/monitor-rate-cvar` (08/10/2026, based on `a6230f9`, Linux): Sol asked
+for a cvar to turn off the detection of the monitor's refresh rate, off by default.
+`com_maxfps -1` (AUTO, the default) capped frames at the refresh rate of the
+monitor holding the window, re-read once a second, or at 125 when the monitor
+reported none ([runtime_settings.rs](../crates/sjk-viewer/src/runtime_settings.rs)).
+`com_maxfpsMonitor` (archived, default 0; Settings > Video > Detect refresh rate)
+now decides: at 0 the monitor's rate is never read and AUTO caps at 125, as for a
+monitor that reports none; at 1 AUTO follows the monitor as before. The frame loop
+reads it from a change-callback cache, without a name lookup. A `com_maxfps` the
+player set is left alone, and nothing is migrated: the cvar is new, so no profile
+has saved it and the default reaches existing profiles
+([client.md](client.md#configuration-and-content)).
+
+Verified on Linux with Rust 1.97: unit tests pin the default (0, AUTO at 125
+without reading the monitor, also without a console), the monitor's rate in whole
+hertz and the 125 fallback when on, the setting saved and loaded, and a cap the
+player set (0 to 1000, and 144 from a profile saved before the cvar) kept either
+way; formatting, the locked workspace build and tests pass, and workspace Clippy
+reports no warning on a changed line. Not verified: no client was run (no GPU,
+display or game data), so neither the cap in either state nor the new Settings row
+was seen on screen.
+## Low frame rate for a while after a map load
+
+Branch `perf/after-load-stalls` (08/10/2026, based on `a6230f9`, Linux). Sol reported
+that after a map load the frame rate sometimes sits around 10 FPS for a while before
+recovering, and asked what else could hog frame time. Read from the code (no GPU or
+game data here), the first seconds of a map stack several one-off costs on the render
+thread and the GPU, in this order of likely weight:
+
+1. **Pipelines compiled mid-frame.** In real-time lighting (on devices with binding
+   arrays) the static world draws through the stage table, whose program and pipelines
+   were compiled on first draw (`stage_table.rs` `Table::pipeline`), as were the lamp
+   cache's receiver pipelines (`light_receivers.rs` `cached`) and depth priming: the
+   first frame compiled one pipeline per visible key, later frames more as surfaces
+   came into view. A cold driver cache (after an SJK or driver update) costs about half
+   a second per program. Still compiled in a frame: glow variants (`world_glow.rs`), the
+   lamp cache's bake pipelines, clouds and weather (`weather.rs`), and models loaded
+   mid-match.
+2. **Players' models on the render thread** (`config_string_refresh.rs`,
+   `clientinfo_refresh.rs`): every changed `CS_PLAYERS` or `CS_MODELS` string of a frame
+   loads its model there (files, textures, materials, pipelines), and each load
+   regrows the shared geometry buffers by copying all of them and waits for the frame
+   in flight (`shared_geometry.rs`, `FrameQueue::submit`). Team, model and saber
+   changes after a map change depend on the server, one reason it happens sometimes.
+3. **Lamp cache bake** (`lamp_cache.rs` `bake_once`): every layer of the cache (up to
+   512 MiB), each texel evaluating its lamps, in the first lit frame: a one-frame GPU
+   burst, after its bake pipelines are compiled in that frame.
+4. **Movers in lamp shadows** (`mover_occlusion_gpu.rs`): the first snapshot queues
+   every door tile, so their cache regions are baked again over the next frames (four
+   layers every 100 ms, then every frame), each with full-layer steep and rim passes.
+5. **Reflection probes** (maps with specular maps, `reflection_capture.rs`): a whole
+   probe, six scene renders with their light passes, per frame for up to 64 frames.
+6. **GI probes** (`gi_probes.rs`): three passes over every probe are queued at
+   installation, then the first frame with the far cascade relights 8,192 probes a
+   frame (32 times the steady 256) until all are done.
+
+In steady play: floor mirrors (up to six scene renders), every map video decoded each
+frame, lamp cache re-bakes every 100 ms while doors and lifts near lamps move, and GI
+and reflection refreshes while the day clock runs.
+
+Changed: map installation, on its own thread, now also compiles the stage table's
+program and pipelines (both lighting variants of every stage it holds, static-world or
+entity as drawn), the depth-priming pipelines and, on maps with a lamp cache, the
+cached receiver pipelines ([rendering](rendering.md#pipelines-compiled-at-load)). The
+pipelines are the ones the frames would have created, so the picture is unchanged; the
+load takes longer by those compiles instead. Nothing else changed: items 2 to 6 alter
+what the first frames show or need restructuring, and want a GPU measurement first.
+
+Verified on Linux: unit tests of which table pipelines are compiled (static and model
+stages, off-table stages, movers and flares, shared keys); workspace formatting, the
+locked build, tests and Clippy (no warnings on changed lines). Not measured: no GPU,
+game or timing run, so neither the stall nor the gain has been seen. To measure, in a
+release build on the same map and server before and after: `SJK_FRAME_BUDGET=1`
+prints a `frame-budget` line every half second (mean, p99, max, worst frame's phases)
+and, with timestamp support, `gpu-phases` every 32 frames; the load log's `[+ms]`
+lines (`compiled N pipeline keys`, `Stage table: compiled N pipelines at load`,
+`Light pass: ... compiled at load`, `Lamp light cache: bake encoded`, `GI probes
+converged`, `Reflection probes`, `Mover occlusion`, `client N now wears`) place each
+cost. Comparisons: `SJK_LAMP_CACHE=0`, `SJK_MOVER_OCCLUSION=0`, `SJK_STAGE_TABLE=0`,
+`r_cubeMapping 0` (restart) and `r_clouds 0`.
+## Door start sounds
+
+Branch `fix/start-sounds` (08/10/2026, based on `a6230f9`, Linux): Sol reported that
+a door's first sound is not heard when it opens, and the same for a lightsaber's
+ignition. A door is a brush model whose entity origin is the world origin unless the
+map gave it an origin brush. In codemp its start and end sounds (`EV_PLAYDOORSOUND`,
+`S_StartSound` without an origin) come from the middle of its model
+(`CG_SetEntitySoundPosition`); SJK played them at the entity origin, on most maps
+too far away to be heard, while the door's loop already came from its middle, and the
+mixer moved the door's sounds back to that origin at every snapshot. The sound
+adapter now places a brush entity's sounds at its origin plus its inline model's
+midpoint, taken from the map when the sound tables are built, and the per-snapshot
+source positions use the same point ([client.md](client.md#door-and-mover-sounds)).
+
+The lightsaber was not found to share the cause. The ignition sounds a server sends,
+the toggle's `EV_GENERAL_SOUND` at the player and `EV_SABER_UNHOLSTER` when an attack
+ignites the saber (also predicted locally), are resolved and played at the player:
+traced in the code, and a throwaway sound-adapter test produced the toggle's sound
+there. The one ignition SJK does not play is cgame's own, when a player switches to
+the saber from another weapon such as melee (`CG_CheckPlayerG2Weapons`, `CG_Player`:
+the saber's `soundOn`, and `soundOff` when switching away); it is left for a separate
+change, as nothing shows yet that it is the case Sol heard.
+
+Verified on Linux: new unit tests place a door's start and end sounds at the middle of
+its model (both came from the world origin before the change) and add a model's
+midpoint only for brush models. Formatting, the locked workspace build and tests pass,
+and workspace Clippy reports no warning in the changed code. Not verified: no client
+was run, so neither door nor saber was heard in game.
+## Kill feed with icons
+
+Branch `feat/kill-feed` (08/10/2026, based on `fix/obituary-names`, Linux): Sol
+asked for an optional kill feed at the top right with icons: `Name [saber icon]
+Name` for a saber kill, a skull for a suicide or a death to the world, and weapon
+icons for other weapons. `cg_killfeed` (Settings > HUD > "Kill feed") now shows
+the last five kills, newest at the top, each `killer [icon] victim` or `[skull]
+victim` with the names in their colours, for five seconds and a one-second fade
+([client.md](client.md#kill-feed), [kill_feed.rs](../crates/sjk-viewer/src/hud/kill_feed.rs)).
+Icons are the HUD's cause-of-death pictures: the weapon's `w_icon_*` (an icon
+pack's `hud/mod/*` when installed), Force Lightning's or Push's holocron for dark
+Force kills and Force tosses, a drawn skull for solo deaths and causes without a
+weapon, a short word for a picture that did not load. The feed stands under the
+top right's FPS, team overlay, duel portrait, snapshot, inventory and powerups,
+keeps clear of the top centre, and hides with the HUD. It replaces the
+off-by-default one-line obituary of the same cvar: `cg_killfeed` defaults to 1, a
+saved 0 is moved to 1 once (`cg_killfeedDefaultVersion`, as other defaults moved;
+[sjk.md](sjk.md#defaults) puts new profiles on Sol's choices and says nothing
+against a new HUD widget being on), and that line's alignment and reverse cvars
+are gone. The console's kill line and the feed share one name reader.
+
+Verified on Linux with Rust 1.97: unit tests of the means-of-death marks (picture,
+holocron, word, skull), each weapon's `MOD_*` falling back to that weapon's
+picture as in OpenJK, suicides and world deaths without a killer, the viewed
+player's entries, names kept from the moment of the kill, the five-entry ring,
+hold and fade, kills from an earlier timeline, the area under the top right's
+stack and right of the centre, and a full feed of long names and every mark kind
+drawing inside its area and command budget at 1080p, 1280x1024 and 4K; the HUD's
+draw list gained room for it. Formatting, the locked workspace build and tests
+pass; workspace Clippy finishes without errors and with no warning on a changed
+line. Not seen on screen: there is no GPU or game data here, so the feed's look,
+the skull, the icon sizes and the stacking under the team overlay and FPS were
+not checked in a running client.
+
+## Player names in kill messages
+
+Branch `fix/obituary-names` (08/10/2026, based on `a6230f9`, Linux): Sol reported
+that a player killed or killing sometimes showed in the console as `noname`, as in
+`noname was sabered by {JoF}emiah{I}`. Cause: the console's kill message read the
+name after checking that the player's whole `CS_PLAYERS` configstring was UTF-8,
+and printed `noname` when it was not. Servers keep Latin-1 letters in names
+(`é` is byte 0xE9), so every player with an accented letter or a Windows-1252
+symbol in their name was `noname`; the same check gave such a player's gendered
+suicide message the male form. OpenJK prints the name's bytes. Fix: the name and
+gender are read from the string's bytes and the name decoded as the scoreboard
+and crosshair already do (`LegacyClientInfo::name`), and each name ends with `^7`
+as in `CG_Obituary`, so a colour left open in a name no longer tints the rest of
+the line ([networking.md](networking.md#player-text)). `noname` remains only
+for a slot with no name at all, where OpenJK prints an empty name.
+
+Verified on Linux with Rust 1.97: a unit test of the console line with Sol's
+example, the victim named `Rémi` in Latin-1 bytes, printed `noname^7 was sabered by
+{JoF}emiah{I}^7` before the fix and the name after it; further tests cover the
+`^7` after each name, the placeholder for an empty slot, the name accessor and a
+female player's falling death with a Latin-1 name. Formatting, the locked
+workspace build and tests pass; workspace Clippy finishes without errors, and its
+warnings are all in code this change does not touch. Not verified: not seen in
+game; Sol's victim's exact name is unknown, so a name that is `noname` for another
+reason (none found in the code) would remain.
+## Teleport and spawn beam
+
+Branch `fix/teleport-spawn-beam` (08/10/2026, based on `a6230f9`, Linux): Sol reported
+that the green beam shown when a player teleports or spawns appeared in a weird
+position. Where the event plays it already matched `cg_event.c` (the player's box
+dropped onto the floor, forward axis straight up). The beam itself is made of
+`org2fromTrace` lines, which `CFxScheduler::CreateEffect` ends where a trace from the
+line's origin along that axis meets a solid (`FxScheduler.cpp:1392-1418`): it stands
+from the floor to the ceiling or sky. SJK's lines took only their authored `origin2` as
+an offset (`effect_runtime.rs`), which these lines leave at zero, so each beam line drew
+as a camera-facing square around the player's feet instead of a column. Every
+`org2fromTrace` line is now traced once, before it is first drawn, as electricity bolts
+already were ([rendering](rendering.md#entity-render-effects)). The other traced lines
+(`env/beam`, `mp/jedispawn`) are stretched the same way; `EV_BECOME_JEDIMASTER`, whose
+`cg_event.c` block is the teleport's with `mp/jedispawn`, now drops and points its
+effect as the teleport events do (it played at the player's origin along their angles,
+which would have laid its beam sideways); and the floor drop uses `MASK_SOLID`, terrain
+included. Trip mine beams keep their cached traces. The retail `mp/spawn.efx` was not
+available here; the public copies of `mp/jedispawn` and `env/beam`, its siblings, are
+two such lines and an emitter. JoF EJK's source was not found publicly; EternalJK's
+`cg_event.c` places the effect as OpenJK does, adding only `cg_noTeleFX` and a duel
+filter.
+
+Verified on Linux: unit tests in a made-up room (a beam-shaped test effect runs from
+the dropped box's origin, and from 20 units below it inside the floor slab, up to the
+ceiling, traced once; the box lands 16 units above the floor and on terrain, and plays
+nothing over a void; the offset end turns with the effect; the three events point
+straight up whatever the player faces). The beam and terrain tests fail on the old
+code. Workspace formatting, the locked build, the locked tests and workspace Clippy (no
+warning in the changed code) pass. Not seen on screen (no GPU or game data here, and no
+world shot plays effects): in game, respawn (`kill`) under a roof and in the open, watch
+another player spawn, and teleport (a map teleporter, or `setviewpos` on an SJK server
+with cheats); the beam should rise from the floor where the player stands to the
+ceiling or sky, as in EternalJK. A Jedi Master pickup should show the same.
+Known: stock's floor trace also stops on solid entities such as a lift (SJK's uses the
+world only), and `traceImpactFx` on a traced line is not played.
+## Narrower, centred compact SJK scoreboard
+
+Branch `feat/compact-scoreboard-width` (08/10/2026, based on `a6230f9`, Linux): Sol
+found the compact SJK scoreboard far too wide, with much wasted space, and asked
+for the names much closer to the score and the board centred. The compact board
+filled 680 to 1824 frame pixels (1144) whatever it held, its name column taking
+what the numbers left (630 to 750 pixels in free for all, 316 a team). It is now
+sized from its content (`scoreboard::sjk::Board`): the name column as wide as the
+longest name with its emblem, medal bars and "Ready", measured in the families that
+draw it (140 to 320, a longer name ending in an ellipsis), the numbers 48 after it
+in columns as wide as their labels, the ping as before. It is centred on the
+screen, or stands just clear of the chat column where centring would cover it,
+never past 1824 or wider than before; the dim follows it, "Watching" starts at its
+edge, and a duel's cards and queue share its middle
+([sjk-ui.md](sjk-ui.md#scoreboard)). At 1080 lines in the UI's families, on the
+world shot's made-up names: free for all of 8, 1144 to 440 (740 to 1180, centred;
+500 with deaths counted); of 32, 1144 to 411 (471); Team FFA of 6 a side, 1144 to
+835 (from 680, beside the chat column); capture the flag of 6 a side, 1144 to 1142,
+where four number columns and a player's three medal bars leave little to gain. The
+full board (compact off), the classic board, colours, badges, header and the HUD
+hiding are unchanged.
+
+Verified on Linux: unit tests pin, at 16:9 at 1080 lines and 4K, 5:4, 4:3, 21:9
+(2560x1080, 3440x1440) and 32:9 (3840x1080, 5120x1440), the compact board centred
+or 40 clear of the chat column, never past 1824, 400 to 1144 wide, a duel's cards
+and queue on one middle; the full board's unchanged place; the numbers packed right
+after the name column; the name column following its names within its bounds, a long
+name stopping short of the score, a three-medal player's bars; every made-up match
+fitting the canvas both ways at all those sizes; the widths above with the bundled
+families. Workspace formatting, the locked build, tests and Clippy (no warning on a
+changed line). Not seen on screen (no GPU or game data here): the world shot
+`duel6_sjk_scoreboard`, run with `JKA_GAME_DATA` set (`cargo test --release -p
+sjk-viewer duel6_sjk_scoreboard -- --ignored`), writes the compact board to
+`target/world-shots/duel6-scoreboard-ffa.png`, `-full`, `-ctf`, `-duel`,
+`-power-duel` and `-4x3`, and the full one to `duel6-scoreboard-full-split`; nor
+seen over a real match, with a live chat beside it, or on an ultrawide screen.
+## Parallax reaches farther and holds still up close
+
+Branch `feat/parallax-range` (08/10/2026, based on `a6230f9`, Linux): Sol asked for
+parallax to show farther away, and for something to be done when the camera is too
+close. Its far limits were a fade below 20° above the surface and from 1.5 to 4 texels a
+pixel along the longer side of the pixel's footprint, which a grazing view stretches: with
+a 1024-texel map a floor went flat 90 to 160 units ahead of a standing player. Up close
+nothing limited it: the parallax on screen grows as 1/distance from the surface, so the
+third-person camera pressed against a wall saw several times the shift, swimming and
+stretching the texture over relief edges, where the offset's jumps also picked blurred mip
+levels. Now ([rendering](rendering.md#parallax)) the depth fades where it would move the
+texture by less than half a pixel, below 8.6° and at mip levels 2 to 4 (at 1080p a floor
+keeps it to about 410 units and loses it by 920, a wall seen at 45° to 570 and 1,920);
+within `r_parallaxNearDistance` (default 24 units, live, console only) of a surface's plane
+it stops growing on screen; the march takes 4 to 24 linear steps by the texels it crosses
+(at most 31 reads of the height a pixel, against 25); and the maps and the diffuse image
+are read with the coordinates' own derivatives. `r_materialMapsDebug 7` shows the reach.
+
+Verified on Linux with Rust 1.97: formatting, the locked workspace build and tests (1639
+passed, 51 ignored) pass, and workspace Clippy finishes without errors and without a
+warning in the changed files. Unit tests cover the new cvar's bits (the default leaves the
+word empty, clamping, steps of 4, apart from every other field, the shader decoding them),
+view 7, the offset reads with explicit derivatives in both lighting modes, the material
+programs validating with naga, and a CPU model of the shader's limits: floors and walls
+keep parallax farther than before, the fade has no ring or jump, wherever it keeps less
+than the old limits the old ones moved the texture by less than half a pixel, the near
+limit holds the parallax on screen constant inside 24 units, the steps stay within 4 to
+24, and the shader still holds the modelled arithmetic.
+
+Not seen on screen: no GPU or game data was available, so nothing was rendered; the
+ranges come from the model and the cost is estimated. To check in game, on a map with a
+generated pack (sand on `mp/siege_desert`, stone floors on `mp/ffa3`):
+`r_parallaxStrength 1` exaggerates the relief and `r_materialMapsDebug 7` shows how far
+it reaches (yellow the whole depth, green faded, red held back near the camera); walk a
+long floor, back the third-person camera into a relief wall and compare
+`r_parallaxNearDistance 0` with 24, and compare frame times with `SJK_FRAME_BUDGET=1`.
+Offline, the world shot `world_shot::notes::world_notes` with
+`SJK_NOTES_CVARS=r_materialMapsDebug=7,r_parallaxStrength=1` on a note at a parallax
+floor shows the far limit, and on a note written against a relief wall, with and without
+`r_parallaxNearDistance=0`, the near one. Known: grazing views now keep parallax down to
+8.6° (it was 20°), so the open note of sand too deep at grazing angles may return at high
+strengths.
+## Dynamic lights stop at walls
+
+Branch `fix/dynamic-light-leaks` (08/10/2026, based on `a6230f9`, Linux): Sol reported
+that dynamic lights leak through walls and round corners, which breaks immersion. A
+surface took a saber's, bolt's or explosion's light by distance and facing alone
+(`dynamic_light_modulation` and `emitted_light` in `point_lights.wgsl`, the material-map
+highlights and the per-pixel model light), so the floor of the room behind a wall, or of
+the corridor round a corner, was lit like open ground. Each frame every dynamic light now
+gets a small octahedral tile of the static world around it, traced on the GPU against the
+lamps' triangles, and every surface and per-pixel model checks it before taking the light
+([rendering](rendering.md#dynamic-lights-and-walls)); `r_dynamicLightShadows 0` restores
+the old look. Real-time lighting only: baked lightmaps (`r_dayNight 0`) have no triangles
+to trace, and movers (doors) do not stop dynamic light.
+
+Verified on Linux: unit tests replay the trace and the receivers' test in Rust on small
+scenes (lit floors, walls, creases and stairs stay fully lit; a wall leaves the room behind
+it dark, at most 3% of a large light's strength near its foot; a corner stops the light
+wrapping round; the edge is soft and ordered; a light a hair inside the face it hit still
+lights its side), pin the block layout against the programs and the uniform limit, the
+tile mapping, the normal codes and the cvar, and validate the tracer and every changed
+program with naga; workspace formatting, the locked build, tests and Clippy (no new
+warnings). Not seen on screen and not timed: no GPU or game data were available. The owner
+should ignite a saber beside a wall and at a corner on a real-time-lit map (`mp/ffa3`) and
+look at the far side with `r_dynamicLightShadows` 1 and 0, check stairs and wall feet near
+the saber for dark bands, and time `dlight-shadows` with `SJK_GPU_PHASES`; the world shot
+`world_shot::notes::world_notes` with notes written on the floor beside a corner or
+doorway, run again with `SJK_NOTES_CVARS=r_dynamicLightShadows=0`, compares the two.
+## Force-profile rejoin retries
+
+Branch `fix/force-rejoin-retries` (08/10/2026, based on the Force profile branch
+below, Linux). When a server parks the player in spectator over their Force
+profile (`nfr <rank> 1 <team>`), the client answers with `forcechanged "<TEAM>"`
+and was meant to ask for the team again up to three times, 5.5 s apart, while
+the player stayed parked. The negotiator was only polled after a userinfo
+flush, and a retry falls due seconds after that flush, so the retries never
+went out. It is now polled every frame (`ViewerConsole::flush_userinfo`; no
+allocation when idle). Retries are left out in duel and power duel, where
+spectating is the queue: OpenJK's `SetTeam` keeps a queued player spectating
+but announces and respawns them on every `team` request, and `Cmd_Team_f`
+refuses any change in power duel ([client.md](client.md#force-profile-on-a-server)).
+
+Verified on Linux: unit tests for the retries (three, then the notice) and for
+none in duel and power duel (fails without the change); formatting, the locked
+workspace build and tests, and workspace Clippy (no warning on a changed line).
+Not verified against a server: stock servers no longer park a player for an SJK
+profile (it is fitted to their rules), so this path needs a mod that sends `nfr`
+on its own. Known: a `team` typed in the console does not reach the negotiator,
+so a player who typed `team spectator` within the 16 seconds after such a park
+would be sent back once per remaining retry.
+
+## Force profile on a server
+
+Branch `claude/sleepy-noether-xv9qk9` (08/10/2026, based on `a6230f9`, Linux).
+Sol reported that on a server with other Force rules no profile they picked
+became usable, and asked to see which powers the server accepts while still
+picking any (for full Force duels).
+
+The value fitted to the server at join replaced `forcepowers` in every later
+userinfo of the connection, so a profile applied in play never reached the
+server, and nothing sent `forcechanged`, so the server would not have re-read it
+anyway. The page also never knew the server's rules: it read `ui_rankChange`
+(stale across servers, never set by a join) and `g_gametype` and `ui_freesaber`
+cvars that do not exist. Now each userinfo sends the player's profile fitted to
+the server's rules, keeping its `g_forcePowerDisable` powers (stock
+legalization drops them without parking the player), Apply on a server sends
+`forcechanged` after the userinfo, the page takes the server's rank and free
+saber skills, and the server's limits are marked but not enforced, with a This
+server panel in the SJK UI ([client.md](client.md#force-profile-on-a-server)).
+An `nfr` reply now always waits for a userinfo flush, which an unchanged profile
+did not start.
+
+Evidence: OpenJK `codemp` (`WP_InitForcePowers`, `BG_LegalizedForcePowers`,
+`Cmd_ForceChanged_f`, `ClientSpawn`'s `forceDoInit`, `UI_UpdateClientForcePowers`)
+and jaPRO's `g_forcePowerDisableFFA` for duel powers. Unit tests cover the sent
+profile (disabled powers kept, fitted to the rank's points, legal for the
+server), a later profile being the one sent, `forcechanged` after Apply only on
+a server and after the userinfo, the `nfr` rejoin retries, the page's server
+rank, free saber and limits, and the Force page drawn with every rule to show.
+On Linux, formatting, the locked workspace build and the locked workspace tests
+pass; workspace Clippy finishes without errors and none of its warnings is on a
+changed line.
+
+Not verified: nothing was run against a server, in a game or on screen (no game
+data or GPU here), so the server's re-read at respawn, JA+ and jaPRO full Force
+duels and the new panels' looks are unchecked.
+
 ## Percent signs and quotes in chat
 
 Branch `fix/chat-percent` (08/10/2026, based on `15cf7a9`, Linux): a `%` typed in

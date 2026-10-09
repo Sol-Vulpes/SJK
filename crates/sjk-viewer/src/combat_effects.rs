@@ -73,11 +73,13 @@ pub(crate) fn event_direction(event: u16, entity: &EntityState) -> [f32; 3] {
         let (pitch_sin, pitch_cos) = angles[0].to_radians().sin_cos();
         let (yaw_sin, yaw_cos) = angles[1].to_radians().sin_cos();
         [pitch_cos * yaw_cos, pitch_cos * yaw_sin, -pitch_sin]
-    } else if matches!(event, 64 | 65) {
-        // `EV_PLAYER_TELEPORT_IN/OUT` play `mp/spawn` along `ang = (0, 0, 1)`
-        // (`cg_event.c:3162-3176`): straight up. Its emitter flies at 3,000 units a second
-        // until it hits something; sent sideways it crossed open maps for its full eight
-        // seconds, shedding bolts thousands of units long.
+    } else if matches!(event, 34 | 64 | 65) {
+        // `EV_PLAYER_TELEPORT_IN/OUT` play `mp/spawn`, and `EV_BECOME_JEDIMASTER`
+        // `mp/jedispawn`, along `ang = (0, 0, 1)` (`cg_event.c:2409-2430,2699-2751`):
+        // straight up. The effects' emitter flies at 3,000 units a second until it hits
+        // something and their beam lines are traced along this axis; sent sideways the
+        // emitter crossed open maps for its full eight seconds, shedding bolts thousands
+        // of units long.
         [0.0, 0.0, 1.0]
     } else if angles == [0.0; 3] {
         [0.0, 1.0, 0.0]

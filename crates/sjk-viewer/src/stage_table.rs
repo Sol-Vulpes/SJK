@@ -61,8 +61,9 @@ pub(super) struct Table {
     table: Vec<Record>,
     images: Vec<wgpu::TextureView>,
     lightmaps: Vec<wgpu::TextureView>,
-    /// Table pipelines per pipeline key (static world, then entity), compiled on first
-    /// use against the current program.
+    /// Table pipelines per pipeline key (static world, then entity), compiled against the
+    /// current program at map load for the map's own stages ([`Table::prewarm`]) and on
+    /// first use for any other.
     pipelines: [Vec<std::cell::OnceCell<wgpu::RenderPipeline>>; 2],
     program: std::cell::OnceCell<(wgpu::PipelineLayout, wgpu::ShaderModule)>,
 }
@@ -462,12 +463,139 @@ impl Table {
             )
         }))
     }
+
+    /// Compile now, at map installation, the table pipelines this map's materials draw
+    /// with ([`warm_keys`]), so the first frames after the map goes live do not compile
+    /// them one by one on the render thread. Nothing without the real-time program (the
+    /// table then draws nothing). Returns how many pipelines exist afterwards.
+    pub(super) fn prewarm(&self, forge: &Forge, materials: &[Material]) -> usize {
+        if forge.model_sun.is_none() {
+            return 0;
+        }
+        let stages = materials.iter().enumerate().flat_map(|(index, material)| {
+            let drawn = Drawn::of(
+                material.flare,
+                !material.static_draws.is_empty(),
+                !material.mover_draws.is_empty(),
+            );
+            material
+                .stages
+                .iter()
+                .enumerate()
+                .map(move |(stage_index, stage)| {
+                    (
+                        drawn,
+                        self.record(index, stage_index).is_some(),
+                        [stage.pipeline, stage.live_pipeline],
+                    )
+                })
+        });
+        let warm = warm_keys(forge.pipeline_keys.len(), stages);
+        let mut compiled = 0;
+        for (list, entity) in warm.iter().zip([false, true]) {
+            for (index, _) in list.iter().enumerate().filter(|(_, wanted)| **wanted) {
+                compiled += usize::from(self.pipeline(forge, index, entity).is_some());
+            }
+        }
+        compiled
+    }
+}
+
+/// How a material's tabled stages are drawn (`draw_order` and `draw_entity_stages` in
+/// `world_material_draw.rs`): static world surfaces by instance index, materials without
+/// world draws (models) as entities. Mover draws and flares never use the table.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) enum Drawn {
+    Statics,
+    Entities,
+    Neither,
+}
+
+impl Drawn {
+    /// The same split as the load-time entity pipeline warm-up (`world_materials.rs`):
+    /// a material with static or mover draws is the world's, any other a model's.
+    pub(super) fn of(flare: bool, statics: bool, movers: bool) -> Self {
+        match (flare, statics, movers) {
+            (true, _, _) => Self::Neither,
+            (false, true, _) => Self::Statics,
+            (false, false, false) => Self::Entities,
+            (false, false, true) => Self::Neither,
+        }
+    }
+}
+
+/// Which table pipelines a map draws with, `[static world, entity]` per pipeline key:
+/// both lighting variants (scene and live emission) of every stage the table serves, as
+/// the main view and the secondary views pick either. `stages` yields each stage's
+/// [`Drawn`], whether the table holds it, and its two keys.
+pub(super) fn warm_keys(
+    key_count: usize,
+    stages: impl IntoIterator<Item = (Drawn, bool, [usize; 2])>,
+) -> [Vec<bool>; 2] {
+    let mut warm = [vec![false; key_count], vec![false; key_count]];
+    for (drawn, tabled, keys) in stages {
+        let list = match drawn {
+            _ if !tabled => continue,
+            Drawn::Statics => &mut warm[0],
+            Drawn::Entities => &mut warm[1],
+            Drawn::Neither => continue,
+        };
+        for key in keys {
+            if let Some(slot) = list.get_mut(key) {
+                *slot = true;
+            }
+        }
+    }
+    warm
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::wgsl_source::{crlf, lf};
+
+    #[test]
+    fn statics_and_models_warm_their_own_variant_of_both_keys() {
+        let warm = warm_keys(
+            6,
+            [
+                (Drawn::Statics, true, [0, 1]),
+                (Drawn::Entities, true, [2, 2]),
+                // Off the table (blended, deformed, material-mapped): entity pipelines.
+                (Drawn::Statics, false, [3, 3]),
+                (Drawn::Entities, false, [4, 4]),
+                // Movers and flares never draw through the table.
+                (Drawn::Neither, true, [5, 5]),
+            ],
+        );
+        assert_eq!(warm[0], [true, true, false, false, false, false]);
+        assert_eq!(warm[1], [false, false, true, false, false, false]);
+    }
+
+    #[test]
+    fn shared_keys_compile_once_and_unknown_keys_are_ignored() {
+        let warm = warm_keys(
+            2,
+            [
+                (Drawn::Statics, true, [1, 1]),
+                (Drawn::Statics, true, [1, 7]),
+            ],
+        );
+        assert_eq!(warm[0], [false, true]);
+        assert_eq!(warm[1], [false, false]);
+        let none = warm_keys(0, [(Drawn::Entities, true, [0, 0])]);
+        assert!(none.iter().all(Vec::is_empty));
+    }
+
+    #[test]
+    fn materials_split_like_the_entity_warm_up() {
+        assert_eq!(Drawn::of(false, true, false), Drawn::Statics);
+        assert_eq!(Drawn::of(false, true, true), Drawn::Statics);
+        assert_eq!(Drawn::of(false, false, false), Drawn::Entities);
+        assert_eq!(Drawn::of(false, false, true), Drawn::Neither);
+        assert_eq!(Drawn::of(true, true, false), Drawn::Neither);
+        assert_eq!(Drawn::of(true, false, false), Drawn::Neither);
+    }
 
     /// The embedded programs patch whatever line endings the checkout gave them, and a
     /// CRLF copy yields the same program as an LF one (#67).

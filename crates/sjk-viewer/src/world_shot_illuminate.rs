@@ -62,3 +62,52 @@ fn shoot_map(map: &str) {
         sheet(&images, 2, 960, &format!("holocron-{map}")).display()
     );
 }
+
+/// Other players' holocrons (`illuminate::Others`) on duel6, without a session: two
+/// lit players (slots 3 and 5) stand ahead of the first spawn's view facing it, so each
+/// holocron floats by their left shoulder, on the camera's right. One sheet: the
+/// spawn's view before they light, lit, from a step back and up, and close by the
+/// nearer one.
+#[test]
+#[ignore = "renders with the GPU and the installed game data named by JKA_GAME_DATA"]
+fn other_players_holocrons_on_duel6() {
+    on_big_stack(|| {
+        let Some((mut gpu, _profile)) = open("maps/mp/duel6.bsp", [1280, 720], None, &[]) else {
+            return;
+        };
+        let (spawn, yaw) = assets::initial_camera(&gpu.bsp).expect("a spawn point");
+        let turn = glam::Quat::from_rotation_z(yaw);
+        let eye = Vec3::from_array(spawn);
+        let facing = yaw + std::f32::consts::PI;
+        let players = [
+            (3, eye + turn * Vec3::new(70.0, 30.0, 0.0)),
+            (5, eye + turn * Vec3::new(120.0, -35.0, 0.0)),
+        ];
+        let target = eye + turn * Vec3::new(100.0, 0.0, -20.0);
+        let (look_yaw, look_pitch) = look(eye.to_array(), target.to_array());
+        aim(&mut gpu, eye.to_array(), look_yaw, look_pitch);
+        let mut images = vec![frame(&mut gpu, 40)];
+        gpu.illuminate_others.shot_players = players
+            .iter()
+            .map(|&(slot, at)| (slot, at, facing))
+            .collect();
+        images.push(frame(&mut gpu, 40));
+        let back = eye + turn * Vec3::new(-60.0, -30.0, 60.0);
+        let (look_yaw, look_pitch) = look(back.to_array(), target.to_array());
+        aim(&mut gpu, back.to_array(), look_yaw, look_pitch);
+        images.push(frame(&mut gpu, 12));
+        let near = crate::illuminate::Holocron::place(players[0].1, facing);
+        let close = near + turn * Vec3::new(-30.0, 8.0, 4.0);
+        let (look_yaw, look_pitch) = look(close.to_array(), near.to_array());
+        aim(&mut gpu, close.to_array(), look_yaw, look_pitch);
+        images.push(frame(&mut gpu, 12));
+        for (slot, at) in players {
+            let holocron = crate::illuminate::Holocron::place(at, facing);
+            println!("slot {slot}: eye {at:?}, holocron {holocron:?}");
+        }
+        println!(
+            "{}",
+            sheet(&images, 2, 960, "holocron-others-duel6").display()
+        );
+    });
+}

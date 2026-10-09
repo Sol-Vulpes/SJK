@@ -129,7 +129,11 @@ const HELP: &[(&str, &str)] = &[
     ),
     (
         "com_maxfps",
-        "Most frames drawn per second. AUTO follows the monitor's refresh rate; 0 draws as fast as it can.",
+        "Most frames drawn per second. AUTO is 125, or the monitor's refresh rate with Detect refresh rate on; 0 is uncapped.",
+    ),
+    (
+        crate::runtime_settings::MONITOR_CAP_CVAR,
+        "AUTO on the FPS cap follows the monitor's refresh rate. Off, AUTO caps at 125 and the monitor is not read.",
     ),
     (
         "cg_fov",
@@ -261,6 +265,10 @@ const HELP: &[(&str, &str)] = &[
         "cg_lagometer",
         "A small graph of interpolation and snapshot delay, for spotting network trouble.",
     ),
+    (
+        "cg_killfeed",
+        "The last kills at the top right: killer, weapon icon, victim; a skull for suicides and falls.",
+    ),
     ("cg_drawChat", "Shows chat messages over the game."),
     (
         crate::chat::emoji::CVAR,
@@ -335,7 +343,7 @@ const HELP: &[(&str, &str)] = &[
     ),
     (
         crate::illuminate::CVAR,
-        "Illuminate on the Force wheel: a holocron by your shoulder lights the way. Only you see it.",
+        "Illuminate on the Force wheel: a holocron by your shoulder lights the way. Other SJK players see it too.",
     ),
     (
         "cg_shieldBrightness",
@@ -423,7 +431,7 @@ const HELP: &[(&str, &str)] = &[
     ),
     (
         crate::scoreboard::style::COMPACT_CVAR,
-        "Thinner rows on SJK's scoreboard, so every player fits in one column.",
+        "Thinner rows on SJK's scoreboard, so every player fits in one column, in a board as wide as its names, centred.",
     ),
     (
         "cg_showClientIDs",
@@ -746,7 +754,7 @@ mod tests {
             row_label("Adaptation: max darken, EV (HDR)"),
             ("Adaptation: max darken, EV", Timing::Now)
         );
-        assert_eq!(row_label("FPS cap (AUTO = monitor, 0 = off)").0, "FPS cap");
+        assert_eq!(row_label("FPS cap (AUTO, 0 = off)").0, "FPS cap");
         assert_eq!(
             row_label("Supersampling, 1 off (restart)").0,
             "Supersampling, 1 off"

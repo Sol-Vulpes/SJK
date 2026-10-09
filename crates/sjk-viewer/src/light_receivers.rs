@@ -255,7 +255,8 @@ pub(super) struct Pipelines {
 
     entity: wgpu::RenderPipeline,
     light: wgpu::RenderPipeline,
-    /// Lamp cache variants, compiled on the first frame of a map that has a cache.
+    /// Lamp cache variants: compiled at installation for a map whose light pass uses them
+    /// (`prewarm_cached_receivers`), else on first use.
     cached: std::cell::OnceCell<Cached>,
     sources: Sources,
     /// The lighting passes also write the light buffer's direction target.
@@ -561,6 +562,25 @@ fn attribute_pipeline(
 }
 
 impl super::super::super::Runtime {
+    /// Compile the lamp cache's receiver pipelines at map installation when this map's
+    /// light pass will use them (the test [`Self::draw_receiver_lighting`] makes), instead
+    /// of in its first frame. Returns whether they are used.
+    pub(in crate::world_materials) fn prewarm_cached_receivers(&self) -> bool {
+        let Some(shadow) = &self.shadows else {
+            return false;
+        };
+        let (Some(buffer), Some(pipelines)) = (&shadow.light, &shadow.light_pipelines) else {
+            return false;
+        };
+        let used = self.lamp_cache.is_some()
+            && buffer.receivers.cache.is_some()
+            && shadow.cache_group.is_some();
+        if used {
+            pipelines.receivers.cached(&self.forge.device);
+        }
+        used
+    }
+
     /// Render the exact winning surface before evaluating its light, without repeated shading.
     pub(super) fn draw_receiver_lighting(
         &self,

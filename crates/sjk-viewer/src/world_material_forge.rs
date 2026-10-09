@@ -110,14 +110,14 @@ impl Forge {
             identity_instance,
             device: device.clone(),
             queue: queue.clone(),
-            point_lights: wgpu::util::DeviceExt::create_buffer_init(
-                device,
-                &wgpu::util::BufferInitDescriptor {
-                    label: Some("SJK fixed world point lights"),
-                    contents: bytemuck::bytes_of(&crate::dynamic_lights::empty_gpu_block()),
-                    usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-                },
-            ),
+            // The CPU's block, then the shadow tiles only the GPU writes
+            // (`dynamic_light_shadows.rs`); created zeroed, so with no lights and no tiles.
+            point_lights: device.create_buffer(&wgpu::BufferDescriptor {
+                label: Some("SJK fixed world point lights"),
+                size: crate::dynamic_lights::BLOCK_BYTES,
+                usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+                mapped_at_creation: false,
+            }),
             shader,
             format,
             repeat: create_sampler(device, false),

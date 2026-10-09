@@ -29,6 +29,8 @@ This page is the design and the current limits. The player-facing summary is
 | Achievements: catalogue, counts, tracker | [achievements.rs](../crates/sjk-viewer/src/achievements.rs), [achievements/tracker.rs](../crates/sjk-viewer/src/achievements/tracker.rs), [achievements_frame.rs](../crates/sjk-viewer/src/achievements_frame.rs) |
 | Achievements: medallion look, unlock pop-up | [achievements/medallion.rs](../crates/sjk-viewer/src/achievements/medallion.rs), [achievement_toast.rs](../crates/sjk-viewer/src/achievement_toast.rs) |
 | SJK chat and emotes | [hub-chat.md](hub-chat.md) |
+| Unlocks and looks (blade skin, Illuminate) | [unlockables.md](unlockables.md), [looks.rs](../crates/sjk-viewer/src/looks.rs), [looks_frame.rs](../crates/sjk-viewer/src/looks_frame.rs) |
+| Asset packs: list, download, cache | [assets.rs](../crates/sjk-identity/src/assets.rs) |
 | The hub itself and its protocol | repository Sol-Vulpes/SJK-hub (`PROTOCOL.md`) |
 
 The hub is a separate repository because it is deployed on its own schedule. The
@@ -56,6 +58,11 @@ vector that both test suites check, so a drift in either shows as a failing test
    that slot and its claimed name matches the name the game shows there (compared
    after lower-casing and dropping colour codes and symbols). The local player's own
    plate (`cg_nameplateSelf`) has the badge when their own key is verified.
+5. Once a claim is accepted the thread also tells the hub the player's *look* (the
+   blade skin they wear and whether their Illuminate holocron is lit), which lives on
+   the claim; other SJK clients on the server read it from the claims and the feed and
+   draw it, under the same name rule as the badges ([Unlocks and
+   looks](#unlocks-and-looks)).
 
 Verification is the operator's alone (the hub's `verify` command or its operator API,
 which list every key with its worn names); a player asks for nothing and sets nothing.
@@ -64,7 +71,10 @@ Nothing blocks a frame: the viewer compares settings and place with what the thr
 was last told twice a second, and the scoreboard re-derives its marks only when the
 hub's roster or its own rows change. While registered, the thread also reads the
 player's own profile again every ten minutes, so the verified flag and medals the SJK
-team changes reach a running client.
+team changes reach a running client. It reads it sooner, at most once every 30
+seconds, when its unlocks look out of date: the hub refused a blade skin
+(`not_unlocked`), or the feed relayed a look of the player's own key, newer than the
+last one sent, with another blade skin (staff took it back).
 
 ## What a badge proves
 
@@ -87,8 +97,11 @@ With `cl_identity` on and `cl_hubUrl` set the hub receives the player's public k
 and in-game name at start and whenever the name changes, the game server address,
 slot and in-game name for as long as they play, and sees their IP address. Claims
 are deleted 90 seconds after they stop being repeated; profiles and the worn-name
-history stay until the operator removes them. With either setting off the client
-sends nothing. Since 06/10/2026 `cl_hubUrl` defaults to `https://sjk.dfox.app` so players
+history stay until the operator removes them. While a claim lives, it carries the
+player's look (blade skin and Illuminate), dropped with the claim. Once registered, the client also asks for the hub's list of
+asset packs at start and every 6 hours and downloads the packs it lacks, which tells the
+hub which packs the key fetched and when ([Asset packs](#asset-packs)). With either setting
+off the client sends nothing. Since 06/10/2026 `cl_hubUrl` defaults to `https://sjk.dfox.app` so players
 set nothing: a default install makes a key and tells that hub where it plays. The
 Identity page, the setting's help and the changelog say what is sent and that
 `cl_identity 0` stops it.
@@ -289,6 +302,84 @@ Medals are public: anyone can read a key's profile and the presence list of a se
 so a player's medals, counts, dates and notes are visible to everyone, as their hub
 name and verified flag are. The client sends nothing about medals.
 
+## Unlocks and looks
+
+Unlocks are cosmetic things a key owns, granted by the hub's operator or staff
+(design, catalogue and status: [unlockables.md](unlockables.md)); the first is the Sun
+blade. A profile lists them (`"unlocks":[{"id","granted","note"}]`, the catalogue's
+order; older hubs send none, `Profile::unlocks`). Staff grant and take one back with
+`StaffRequest::Unlock` and `StaffRequest::Relock` (`/v1/staff/unlock`,
+`/v1/staff/relock`); the answer is the target's profile, which replaces the player's
+own when it is theirs, as for medals.
+
+A *look* is what a player wears that others draw: `{"saber":"..","illuminate":..}`, a
+blade-skin unlock id or `""`, and whether the Illuminate holocron is lit.
+
+- Sending: the viewer computes the own look twice a second from `cg_saberSkin`, kept
+  only while the own profile lists that unlock and the client knows the id, and the
+  local Illuminate, and hands it to `Service::set_look` when it changes. The worker
+  keeps the latest and sends `POST /v1/look` once its claim is accepted, again when
+  the look changes or the claim does (another server, slot or name), at most once a
+  second (changes in between are coalesced, the latest wins). When what the hub holds
+  is unknown (at the start, after a failed claim or a failed release, when an older
+  claim may still be live with a look) the next accepted claim gets the look even if
+  it is none. A `not_unlocked` or `bad_look` answer leaves that skin out (the look
+  goes with `saber:""`, so Illuminate still syncs) until the profile's unlocks change,
+  and a `not_unlocked` has the own profile read again soon (at most once every 30
+  seconds); too many (429: `look_quota`, or the address's `rate_limited`), a refused
+  signature (401, the clock still off after the one retry) and failures wait 10
+  seconds and go again; another refusal (an older hub) is not repeated until the look
+  or the claim changes. Leaving sends nothing: the release drops the look. `Snapshot::look_outcome` says what became of the last one.
+- Receiving: presence entries carry `look` (`Presence::look`) and the feed carries look
+  events (`Feed::looks`, `LookEvent`), queued for the viewer (`Service::take_looks`, the
+  newest 64, handing over only those read for the viewer's server under the feed's
+  current generation, `ReceivedLooks`; a new generation clears the viewer's hub looks). The viewer's `looks.rs` keeps one look per slot: the roster's when it
+  changes, the feed's as they come (newer, so they win until the roster changes
+  again), counted only while the game shows the claimed name in that slot, and cleared
+  on another server. The local player's own look comes from its settings.
+- Others' Illuminate shows by their left shoulder ([client.md](client.md#illuminate));
+  blade skins are drawn by the saber renderer from `Looks::saber_skin_id`.
+
+Looks are public to every SJK player on the server, as badges are.
+
+## Asset packs
+
+The art of the unlockable cosmetics (the Sun blade's look and sounds) is not part of
+SJK's code: the hub serves it as *asset packs*, PK3 files (`PROTOCOL.md`, "Assets"), so
+every SJK client can draw every player's look. The identity worker keeps a copy of
+each in `assets/` beside `identity.key` (`assets::FOLDER`), one `<name>.pk3` per pack,
+once the viewer gives it that folder (`Service::keep_assets`); the viewer mounts the
+packs it finds there (`assets::cached_packs`).
+
+- `GET /v1/assets`, signed: the list, `{"packs":[{"name","size","sha256"}]}`, sorted by
+  name. A pack name is 1 to 32 of `a` to `z`, `0` to `9` and `_`, a size at most 16 MiB
+  and a hash 64 lowercase hex digits; a list breaking any of that is refused whole.
+- `GET /v1/assets/<name>`, signed: the pack's bytes, read with a timeout of two minutes
+  and no more than 16 MiB of them.
+
+The worker reads the list only with the identity on, a hub and the key registered: at
+once after the registration (so at start, and again after the identity is switched off
+and on or the hub changes), then every 6 hours. It downloads a listed pack only when the
+folder has no `<name>.pk3` of the listed size and SHA-256. A download must be the
+listed size and hash, or it is refused and nothing is written; a good one goes to a
+temporary file in the same folder (`.<name>.pk3.part`), flushed to disk, then renamed
+over `<name>.pk3`, so the folder never holds a partial pack under a pack's name and an
+error leaves the old one as it was. Packs the hub no longer lists stay in the folder.
+`Snapshot::packs_revision` counts the packs written, so the viewer knows to mount them
+again, and `Snapshot::assets_note` says what the last check did, for the log.
+
+A check that falls short (the hub out of reach, a 5xx, too many downloads (429), a
+refused signature (401), a pack unlike its listing, the disk) is tried again after a
+minute, then two, doubling up to 6 hours; one that succeeds puts the next 6 hours on.
+Another 4xx (an older hub without assets answers 404) waits the full 6 hours. Packs are
+cosmetic: none of this changes the identity's status. Offline, or with the identity
+off, nothing is downloaded and the packs already in the folder are used as they are.
+
+The hub sees which packs a key downloads and when, and the address the requests come
+from: they are signed by the key. It allows 20 downloads an hour per address, and the list counts
+toward its general 30 requests a minute. Packs are SJK's, all rights reserved, served
+only to registered keys; a client keeps them to draw looks and does not pass them on.
+
 ## Profile
 
 The Profile page (the SJK UI's main page > SJK > Profile, the classic menu's SJK
@@ -429,6 +520,10 @@ themself until another is chosen, or with Me), and offers:
 - every medal of the catalogue with what the player holds: Give (Give +1 for a
   repeatable one already held), Take back (one award; a repeatable one counts down),
   and a note sent with the next medal, which everyone can read;
+- every unlockable of the catalogue with whether the player holds it (and since
+  when): Unlock (`StaffRequest::Unlock`, with the note field's text as the team's
+  note) and Relock (`StaffRequest::Relock`), as Give and Take back for medals; the
+  hub's answer replaces the chosen profile and shows in the status line;
 - the player's achievements at the hub, each with Clear, and Clear all, which waits
   for a second press within 3 seconds.
 
@@ -455,6 +550,11 @@ sends its counts, which the page says.
   localhost only.
 - `profile` opens the Profile page and `achievements` its board (again: closes it).
 - `staff` opens the Staff page, for a staff key only.
+- `cg_saberSkin` (archived, default empty) is the blade-skin unlock id the player
+  wears; it applies, and is sent, only while the own profile lists it
+  ([unlockables.md](unlockables.md)). `saberskin` lists the blade skins (owned or
+  locked) and `saberskin <id>`/`none` sets it; `unlockables` opens the Unlockables
+  page, where owned ones are equipped.
 - `cl_sjkChat` (default 1; Settings > Network > SJK chat) shows the SJK chat and reads
   it; `sjkchat` opens its page, `messagemode5` (I) its composer in a game, and
   `sjkemote <id>` sends an emote ([hub-chat.md](hub-chat.md)).
@@ -483,8 +583,9 @@ permissions.
 
 ## Planned, not built
 
-The hub is meant to grow: a signed asset manifest, music and video. None of that
-exists. The SJK chat and the emotes path are built ([hub-chat.md](hub-chat.md)). In the SJK UI the Identity page opens from the Profile
+The hub is meant to grow: music and video. None of that exists. The SJK chat and the
+emotes path ([hub-chat.md](hub-chat.md)) and the asset packs ([Asset packs](#asset-packs))
+are built. In the SJK UI the Identity page opens from the Profile
 page (its arc holds five entries), the in-game SJK menu and the `identity` command.
 Achievements a dedicated server would vouch for, and pictures for the achievements,
 are not made yet.

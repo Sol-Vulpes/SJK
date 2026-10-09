@@ -42,6 +42,8 @@ pub(super) fn run() -> Result<(), Box<dyn Error>> {
     // The build's commit and date too, so a log names exactly what ran.
     log::progress(format_args!("build: {}", crate::build_info::label()));
     assets::search_paths::initialize(&console)?;
+    // SJK's packs from the hub, cached beside identity.key, before any world mounts.
+    crate::sjk_packs::mount_at_start(console.config_directory());
     // The menu goes up first so its master-server fetch runs while the map
     // loads: the browser has servers by the time the main menu is on screen.
     let mut client_menu = menu::ClientMenu::new(open_main_menu, console.master_server()?);

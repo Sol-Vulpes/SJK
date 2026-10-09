@@ -33,8 +33,8 @@ HUD, audio, screenshots and demo playback.
   in the controls editor;
 - more reliable joining of public servers (lost handshake packets and lost
   gamestates are recovered) and support for older 72-bone player models;
-- an FPS cap that follows the monitor's refresh rate by default and holds its
-  exact rate;
+- an FPS cap that holds its exact rate and can follow the monitor's refresh
+  rate;
 - optional rend2-style material maps for world surfaces, with a local generator;
 - gameplay and presentation fixes (third-person camera, Force Speed afterimages,
   saber trails, death animations, key names for non-US keyboard layouts and

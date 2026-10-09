@@ -13,6 +13,7 @@ impl ViewerConsole {
             || self.identity_panel_pointer(event)
             || self.profile_panel_pointer(event)
             || self.staff_panel_pointer(event)
+            || self.unlockables_panel_pointer(event)
             || self.sjk_chat_panel_pointer(event)
             || self.debug_panel_pointer(event)
         {

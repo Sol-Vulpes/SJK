@@ -419,9 +419,7 @@ impl State {
                 .and_then(|c| c.integer_cvar(name))
                 .map_or(default, |value| value as f32)
         };
-        let profile = console
-            .and_then(ViewerConsole::own_forcepowers)
-            .and_then(|profile| sjk_client::ForceAllocation::parse(profile).ok());
+        let profile = console.and_then(ViewerConsole::own_force_allocation);
         self.settings = Settings {
             enabled: flag("cg_nameplate", true),
             range: number("cg_nameplaterange", 3000.0).clamp(500.0, 10_000.0),

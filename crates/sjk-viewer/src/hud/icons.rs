@@ -22,11 +22,6 @@ pub(crate) fn register(cvars: &mut sjk_shell::CvarRegistry) -> Result<(), sjk_sh
             1,
             "Timed powerup icons and countdowns",
         ),
-        (
-            "cg_killfeedColors",
-            0,
-            "Tint obituary icons by cause of death",
-        ),
     ] {
         cvars.register(sjk_shell::CvarDefinition::new(
             name,
@@ -35,12 +30,6 @@ pub(crate) fn register(cvars: &mut sjk_shell::CvarRegistry) -> Result<(), sjk_sh
             help,
         ))?;
     }
-    cvars.register(sjk_shell::CvarDefinition::new(
-        "cg_killfeedIconSize",
-        12.0,
-        sjk_shell::CvarFlags::ARCHIVE,
-        "Obituary icon size; zero uses 18 virtual units",
-    ))?;
     Ok(())
 }
 
@@ -74,13 +63,10 @@ pub(crate) struct Icons {
     enabled: bool,
     models: bool,
     powers: bool,
-    colors: bool,
-    size: f32,
     weapon: u8,
     alive: bool,
     seconds: [i32; 16],
     cty: bool,
-    method: usize,
     warned_model: bool,
 }
 
@@ -114,6 +100,15 @@ impl Icons {
         (item != 0).then(|| self.handles[item]).flatten()
     }
 
+    /// The loaded cause-of-death picture of `means` (`meansOfDeath_t`): an icon
+    /// pack's `hud/mod/*`, else the picture of the weapon that deals it.
+    pub(crate) fn means(&self, means: u8) -> Option<TextureId> {
+        let means = usize::from(means);
+        (means < assets::MEANS_COUNT)
+            .then(|| self.handles[assets::MEANS_FIRST + means])
+            .flatten()
+    }
+
     /// Icons with only `weapons`' own pictures, as `(weapon, texture)`, for the
     /// off-screen snapshots.
     #[cfg(test)]
@@ -126,6 +121,16 @@ impl Icons {
         }
         icons
     }
+
+    /// Icons with only `means`' cause-of-death pictures, as `(MOD_*, texture)`.
+    #[cfg(test)]
+    pub(crate) fn with_means(means: &[(u8, TextureId)]) -> Self {
+        let mut icons = Self::default();
+        for (means, texture) in means {
+            icons.handles[assets::MEANS_FIRST + usize::from(*means)] = Some(*texture);
+        }
+        icons
+    }
 }
 
 impl Default for Icons {
@@ -135,13 +140,10 @@ impl Default for Icons {
             enabled: true,
             models: false,
             powers: true,
-            colors: false,
-            size: 18.0,
             weapon: 0,
             alive: false,
             seconds: [-1; 16],
             cty: false,
-            method: 0,
             warned_model: false,
         }
     }
@@ -165,15 +167,6 @@ impl Icons {
         self.enabled = family::integer(console, "cg_drawicons", 1) != 0;
         self.models = family::integer(console, "cg_draw3dicons", 0) != 0;
         self.powers = family::integer(console, "cg_drawpowerupicons", 1) != 0;
-        self.colors = family::integer(console, "cg_killfeedcolors", 0) != 0;
-        let size = console
-            .and_then(|c| c.float_cvar("cg_killfeediconsize"))
-            .unwrap_or(0.0);
-        self.size = if size == 0.0 {
-            18.0
-        } else {
-            size.clamp(1.0, 96.0) as f32
-        };
         if self.models && !self.warned_model {
             eprintln!("3D HUD flag icons unavailable; use cg_draw3DIcons 0 for flat icons");
             self.warned_model = true;
@@ -195,13 +188,6 @@ impl Icons {
         }
     }
 
-    /// Preserve the cause from the existing shared feed, never a second event observer.
-    pub(super) fn obituary(&mut self, feed: &sjk_client::KillFeed) {
-        {
-            self.method = feed.newest(0).map_or(0, |e| usize::from(e.means_of_death));
-        }
-    }
-
     fn quad(&self, list: &mut DrawList, index: usize, rect: Rect, color: Color) -> bool {
         let Some(texture) = self.handles.get(index).copied().flatten() else {
             return false;
@@ -214,7 +200,8 @@ impl Icons {
         true
     }
 
-    /// Emit the status slots and the independently gated powerup column.
+    /// Emit the status slots and the independently gated powerup column; returns
+    /// the bottom of that column at the top right, or zero when it is empty.
     pub(super) fn emit(
         &self,
         list: &mut DrawList,
@@ -223,7 +210,7 @@ impl Icons {
         upper: bool,
         weapon_row: bool,
         weapon_alpha: f32,
-    ) {
+    ) -> f32 {
         let [w, h] = viewport;
         let s = crate::ui_scale::height_scale(h);
         let white = Color::new(1.0, 1.0, 1.0, 1.0);
@@ -259,8 +246,9 @@ impl Icons {
             }
         }
         if !self.powers || !upper {
-            return;
+            return 0.0;
         }
+        let mut bottom = 0.0;
         let mut y = 200.0 * s;
         for (power, seconds) in self.seconds.iter().copied().enumerate() {
             if seconds < 0 || assets::POWERS[power] == 0 {
@@ -277,7 +265,9 @@ impl Icons {
                 Rect::new(w - 100.0 * s, y, 64.0 * s, 64.0 * s),
                 white,
             ) {
+                bottom = y + 64.0 * s;
                 if !matches!(power, 4 | 5) && seconds < 999 {
+                    bottom = y + 84.0 * s;
                     let _ = list.push(DrawCommand::Text {
                         rect: Rect::new(w - 100.0 * s, y + 56.0 * s, 64.0 * s, 28.0 * s),
                         text: TextId(400 + power as u32),
@@ -292,30 +282,7 @@ impl Icons {
                 y += 86.0 * s;
             }
         }
-    }
-
-    /// Add an icon beside the existing obituary text and reserve its space.
-    pub(super) fn feed(&self, list: &mut DrawList, rect: &mut Rect, alpha: f32, scale: f32) {
-        let index = 51 + self.method.min(42);
-        let index = if self.handles[index].is_some() {
-            index
-        } else {
-            51
-        };
-        let size = self.size * scale;
-        let [r, g, b] = if self.colors {
-            assets::tint(self.method)
-        } else {
-            [1.0; 3]
-        };
-        if self.quad(
-            list,
-            index,
-            Rect::new(rect.right() - size, rect.y, size, size),
-            Color::new(r, g, b, alpha),
-        ) {
-            rect.width -= size + 8.0 * scale;
-        }
+        bottom
     }
 
     /// Borrow a precomputed decimal string; countdown updates allocate and format nothing.

@@ -277,12 +277,12 @@ pub(crate) fn update(
         gpu.hud.update_match_information(
             session.game_state(),
             presentation_time,
-            gpu.obituaries.feed(),
+            &gpu.obituaries,
+            snapshot.player.client_num(),
             &gpu.lagometer,
             crosshair,
             !session.is_local()
                 && sjk_client::connection_interrupted(presentation_time, snapshot.server_time),
-            &gpu.localization,
         );
     } else if let Some(session) = &gpu.demo_session {
         let snapshot = session.snapshot_at_or_before(presentation_time);
@@ -409,11 +409,11 @@ pub(crate) fn update(
         gpu.hud.update_match_information(
             session.game_state(),
             presentation_time,
-            gpu.obituaries.feed(),
+            &gpu.obituaries,
+            snapshot.player.client_num(),
             &gpu.lagometer,
             crosshair,
             false,
-            &gpu.localization,
         );
     }
     let game = gpu
