@@ -63,10 +63,13 @@ platforms moving): statues are no longer self-lit lamps (58,124 -> 14,059 lamps,
 and [load-time preparation](rendering.md#load-time-texture-and-light-preparation).
 Lighting movers at rest from the lamp cache was built and measured, then dropped: the
 light pass stayed at 4.4 ms, and with the lamp cache off altogether it is 4.3 ms, so
-lamp evaluation is not what this view's light pass spends. What it does spend (7.2 ms
-a frame against about 3 ms on `mp/ffa5` and `mp/ffa3`) is not identified; `r_dayDebug`
-set at the start of a world shot changed nothing there, so it needs a GPU profiler
-capture in the real client.
+the movers were not what this view's light pass spends. Sol's in-game run of a
+`perftest` script (`perfmark` steps, `SJK_GPU_PHASES`, RTX 5080 at 4K) showed a 5.7 ms
+light pass with every real-time term off, and the pass split into parts put 4.2 ms in
+the direct-lamp list: the great hall floor, lightmapped 3.6 times coarser than the lamp
+cache's spacing, was lit lamp by lamp. Caching surfaces up to 4 times coarser took the
+frame from 7.5 to 3.6 ms, level with `mp/ffa5` and `mp/ffa3`
+([rendering](rendering.md#movers-in-lamp-shadows)). Not yet checked in game.
 
 ## In-game menu rework and the Profile screen
 
