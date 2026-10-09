@@ -55,8 +55,18 @@ profile restart, the command's `ultralow` and the First setup order; world shots
 of First setup in both menu styles show the switch. Not verified: no client was
 started on a server, so the switch was not flipped in game and the restart path,
 populated matches, other GPUs and the look under Ultra low are Sol's to test.
-Not done: the statues' lamps, the cost of directly lit movers and the mirrors'
-re-render while movers move (all under High) are left for their own change.
+Follow-ups the same day (4K, RTX 5080, High, JoFTemple's spawn view with the bobbing
+platforms moving): statues are no longer self-lit lamps (58,124 -> 14,059 lamps, load
+23 -> 16 s); `func_bobbing`, `func_rotating` and `func_pendulum` block no lamp (frame
+12.1 -> 7.4 ms); a material over 4,096 patches is cooked from a coarser mask
+(`JKLevel1` load 91 -> 28 s); see [rendering](rendering.md#movers-in-lamp-shadows)
+and [load-time preparation](rendering.md#load-time-texture-and-light-preparation).
+Lighting movers at rest from the lamp cache was built and measured, then dropped: the
+light pass stayed at 4.4 ms, and with the lamp cache off altogether it is 4.3 ms, so
+lamp evaluation is not what this view's light pass spends. What it does spend (7.2 ms
+a frame against about 3 ms on `mp/ffa5` and `mp/ffa3`) is not identified; `r_dayDebug`
+set at the start of a world shot changed nothing there, so it needs a GPU profiler
+capture in the real client.
 
 ## In-game menu rework and the Profile screen
 
