@@ -47,7 +47,7 @@ migrated, except where the table says so. Where each is documented:
 | `ui_menuStyle` | `sjk` (the SJK UI), saved `classic` moved to `sjk` once, saved `modern` reset | [Menu style](client.md#menu-style) |
 | `ui_gameFont` | on | [UI ownership](rendering.md#ui-ownership) |
 | `cg_scoreboardStyle` | `auto` (SJK UI's with its menus, else `classic`), saved `modern` reset | [Scoreboard styles](client.md#scoreboard-styles) |
-| `cg_compactScoreboard` | on (SJK UI's scoreboard in one column) | [SJK UI scoreboard](sjk-ui.md#scoreboard) |
+| `cg_compactScoreboard` | on (SJK UI's scoreboard in one column, as wide as its names, centred) | [SJK UI scoreboard](sjk-ui.md#scoreboard) |
 | `cg_drawTimer`, `cg_drawTeamOverlay` | on | [status.md](status.md#gameplay-and-interface-defaults) |
 | `cg_dismember` | 2 | [Dismemberment](client.md#dismemberment-and-disintegration) |
 | `snaps` | 120 (slider to 125) | [status.md](status.md#gameplay-and-interface-defaults) |

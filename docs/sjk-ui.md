@@ -668,7 +668,8 @@ and out as the classic board does, settling into place as it opens.
   the map, "Killed by" and the name while you are dead.
 - **Where:** the columns start at x 680 of the frame, right of the chat column
   the scoreboard keeps for messages and the composer (`scoreboard::layout`, 640
-  pixels of a 1080-line window), and end at 1824.
+  pixels of a 1080-line window), and end at 1824. A compact board is narrower
+  and centred (below).
 - **Rows:** under muted column labels and a thin holo rule, one row each,
   52 tall at most, with a hairline under it: the place (Rajdhani; ties share
   it), the name with its colours (Exo 2), SJK's emblem right after it for a
@@ -682,8 +683,28 @@ and out as the classic board does, settling into place as it opens.
   scoreboard", on by default): rows are 32 tall at most and as thin as 20, and
   a list splits in two only when even 20 would not fit, so a full server (32 in
   free for all, or 32 on one team) stands in one column. Names and numbers scale
-  with the thinner rows (names 16 to 20, numbers 17 to 22). Off,
-  the sizes below apply.
+  with the thinner rows (names 16 to 20, numbers 17 to 22). The board is sized
+  from what it shows, not the screen (`sjk::Board`): the name column is as wide
+  as the longest name with its emblem, bars and "Ready", measured in the
+  families that draw it, at least 140 and at most 320 frame pixels (a longer
+  name ends in an ellipsis), the same for both teams; the first number's right
+  edge stands 48 after it, each number column is its widest label plus 14 (48
+  at least), and the ping column keeps its 100. A player's medal bars are not
+  held to a third of the name column as on the full board: the column widens
+  for all of them (three at most). The whole board is centred on the screen,
+  or, where that would put it over the chat column, stands 40 right of the
+  column (as near the middle as the chat allows); it never ends past 1824 or
+  grows wider than the full board, the name column giving way (to 100 at the
+  least). A duel's cards keep their size about that middle, the players
+  waiting centred under them. The dim behind the columns follows the board,
+  fading out on both sides, and "Watching" starts at its left edge. In the UI's
+  families at 1080 lines (`scoreboard::shot` tests, on the world shot's made-up
+  names), a free for all of 8 is 440 frame pixels wide (500 with deaths
+  counted) and of 32, 411 (471), centred; a Team FFA of 6 a side is 835 and
+  capture the flag of 6 a side 1142, both from 680 beside the chat column
+  (four number columns and a player's three medal bars leave capture little to
+  gain), against 1144 for the full board in every mode. Off, the sizes below
+  apply and the board fills 680 to 1824 as before.
 - **Free for all** (and Holocron, Jedi Master): one list by place; once rows
   would be thinner than 34 pixels (past 22 players) two lists side by side, 16
   each at 32. Compact keeps it one list (32 players at 23.6).
@@ -706,7 +727,9 @@ and out as the classic board does, settling into place as it opens.
   colours.
 
 A full server fits the board's canvas (320 text runs, 1024 draw commands) in
-every mode, at 1080 lines and 4K (unit tests). The look draws in the UI's
+every mode, at 1080 lines and 4K, 5:4, 4:3, 21:9 and 32:9 (unit tests, which
+also pin the compact board's centring, its clearance of the chat column and
+its widths). The look draws in the UI's
 families, which load for it even with another menu style when it is chosen on
 its own; their metrics place what follows a measured run (the emblem after a
 name, the header's right side).

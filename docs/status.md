@@ -7,6 +7,43 @@ SJK currently contains a native client and standard dedicated server in a
 20-crate Rust workspace. This page records scope and verification, rather than
 claiming complete parity from the presence of an implementation.
 
+## Narrower, centred compact SJK scoreboard
+
+Branch `feat/compact-scoreboard-width` (08/10/2026, based on `a6230f9`, Linux): Sol
+found the compact SJK scoreboard far too wide, with much wasted space, and asked
+for the names much closer to the score and the board centred. The compact board
+filled 680 to 1824 frame pixels (1144) whatever it held, its name column taking
+what the numbers left (630 to 750 pixels in free for all, 316 a team). It is now
+sized from its content (`scoreboard::sjk::Board`): the name column as wide as the
+longest name with its emblem, medal bars and "Ready", measured in the families that
+draw it (140 to 320, a longer name ending in an ellipsis), the numbers 48 after it
+in columns as wide as their labels, the ping as before. It is centred on the
+screen, or stands just clear of the chat column where centring would cover it,
+never past 1824 or wider than before; the dim follows it, "Watching" starts at its
+edge, and a duel's cards and queue share its middle
+([sjk-ui.md](sjk-ui.md#scoreboard)). At 1080 lines in the UI's families, on the
+world shot's made-up names: free for all of 8, 1144 to 440 (740 to 1180, centred;
+500 with deaths counted); of 32, 1144 to 411 (471); Team FFA of 6 a side, 1144 to
+835 (from 680, beside the chat column); capture the flag of 6 a side, 1144 to 1142,
+where four number columns and a player's three medal bars leave little to gain. The
+full board (compact off), the classic board, colours, badges, header and the HUD
+hiding are unchanged.
+
+Verified on Linux: unit tests pin, at 16:9 at 1080 lines and 4K, 5:4, 4:3, 21:9
+(2560x1080, 3440x1440) and 32:9 (3840x1080, 5120x1440), the compact board centred
+or 40 clear of the chat column, never past 1824, 400 to 1144 wide, a duel's cards
+and queue on one middle; the full board's unchanged place; the numbers packed right
+after the name column; the name column following its names within its bounds, a long
+name stopping short of the score, a three-medal player's bars; every made-up match
+fitting the canvas both ways at all those sizes; the widths above with the bundled
+families. Workspace formatting, the locked build, tests and Clippy (no warning on a
+changed line). Not seen on screen (no GPU or game data here): the world shot
+`duel6_sjk_scoreboard`, run with `JKA_GAME_DATA` set (`cargo test --release -p
+sjk-viewer duel6_sjk_scoreboard -- --ignored`), writes the compact board to
+`target/world-shots/duel6-scoreboard-ffa.png`, `-full`, `-ctf`, `-duel`,
+`-power-duel` and `-4x3`, and the full one to `duel6-scoreboard-full-split`; nor
+seen over a real match, with a live chat beside it, or on an ultrawide screen.
+
 ## Percent signs and quotes in chat
 
 Branch `fix/chat-percent` (08/10/2026, based on `15cf7a9`, Linux): a `%` typed in
