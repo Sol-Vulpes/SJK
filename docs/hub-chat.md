@@ -194,7 +194,9 @@ and plays changes.
   server, their model is drawn as `kyle/default` (Kyle's red or blue skin when a team
   game colours the teams, so the teams still show), each saber they hold or throw as
   `single_1` in the default blue (`color1` 4), with no hat or cape; a body they leave
-  stays so. Nothing whose source is their entity, or that the sound events name them as
+  stays so. Their look ([unlockables.md](unlockables.md#receiving)) is not drawn
+  either: no blade skin (so none of its sounds) and no lit Illuminate holocron
+  (`Looks::set_muted`). Nothing whose source is their entity, or that the sound events name them as
   the cause of, is played: footsteps, jumps, pain, death, taunts and voice, weapon fire
   and charging, saber swings, hum, hits and blocks (`otherEntityNum2`), Force sounds,
   their voice commands, the hum and wall scrapes of their sabers, and the chat beep of

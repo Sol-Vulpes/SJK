@@ -14,7 +14,9 @@
 //!
 //! The renderer reads [`Looks::saber_skin_id`], [`Looks::illuminated`] and
 //! [`Looks::own_saber_skin`] on `GpuState::looks`, and [`Looks::revision`] tells it
-//! when what is worn changed (`GpuState::sync_saber_skins`).
+//! when what is worn changed (`GpuState::sync_saber_skins`). A player muted on this PC
+//! (`docs/hub-chat.md`, "Muting a player") wears nothing: the stock blade, its sounds,
+//! no holocron ([`Looks::set_muted`]).
 
 use sjk_identity::Look;
 use sjk_protocol::{GameState, PlayerState};
@@ -117,8 +119,12 @@ pub(crate) struct Looks {
     pub(crate) server: Option<std::net::SocketAddr>,
     /// The feed's reading the hub looks are from (`ReceivedLooks::generation`).
     feed_generation: Option<u64>,
-    /// Counts changes to [`Self::worn`], so a reader can follow it cheaply.
+    /// Counts changes to [`Self::worn`] and [`Self::muted`], so a reader can follow
+    /// it cheaply.
     revision: u64,
+    /// Client slots muted on this PC (bits, `muted_players.rs`): their looks are not
+    /// drawn.
+    muted: u32,
     /// World shots own every unlock, having no hub.
     #[cfg(test)]
     pub(crate) shot_owns_unlocks: bool,
@@ -135,6 +141,7 @@ impl Default for Looks {
             server: None,
             feed_generation: None,
             revision: 0,
+            muted: 0,
             #[cfg(test)]
             shot_owns_unlocks: false,
         }
@@ -143,14 +150,33 @@ impl Default for Looks {
 
 impl Looks {
     /// The blade skin the player in `client` wears, a catalogue id; `None` for the
-    /// stock blade (and for a slot out of range).
+    /// stock blade (and for a slot out of range or muted on this PC).
     pub(crate) fn saber_skin_id(&self, client: usize) -> Option<&'static str> {
-        self.worn.get(client)?.saber_skin
+        self.shown(client)?.saber_skin
     }
 
-    /// Whether the player in `client` has their Illuminate holocron lit.
+    /// Whether the player in `client` has their Illuminate holocron lit (and is not
+    /// muted on this PC).
     pub(crate) fn illuminated(&self, client: usize) -> bool {
-        self.worn.get(client).is_some_and(|worn| worn.illuminate)
+        self.shown(client).is_some_and(|worn| worn.illuminate)
+    }
+
+    /// What the player in `client` is drawn wearing: nothing while they are muted on
+    /// this PC, which never mutes the local player's own slot.
+    fn shown(&self, client: usize) -> Option<&Worn> {
+        let muted = client < 32
+            && self.muted & (1 << client) != 0
+            && self.own_slot.map(usize::from) != Some(client);
+        self.worn.get(client).filter(|_| !muted)
+    }
+
+    /// The client slots muted on this PC changed (or not: this is called every frame):
+    /// their looks are no longer drawn, or are again.
+    pub(crate) fn set_muted(&mut self, slots: u32) {
+        if self.muted != slots {
+            self.muted = slots;
+            self.revision += 1;
+        }
     }
 
     /// The local player's own blade skin, gated by its profile's unlocks: for the
@@ -409,6 +435,34 @@ mod tests {
         let own = Worn::own("saber_sun", |_| true, false);
         looks.set_own(None, own);
         assert_eq!(looks.own_saber_skin(), Some("saber_sun"));
+    }
+
+    #[test]
+    fn a_muted_players_look_is_not_drawn() {
+        let mut looks = Looks::default();
+        looks.replace_roster([
+            (3, "Sol", Some(&look("saber_sun", true))),
+            (5, "Fox", Some(&look("saber_sun", true))),
+        ]);
+        looks.set_own(Some(1), Worn::own("saber_sun", |_| true, true));
+        looks.rebuild(shown);
+        let before = looks.revision();
+        // Slot 3 muted on this PC: the stock blade (so no skin sounds) and no holocron.
+        looks.set_muted(1 << 3 | 1 << 1);
+        assert!(looks.revision() > before, "the blades follow");
+        assert_eq!(looks.saber_skin_id(3), None);
+        assert!(!looks.illuminated(3));
+        assert_eq!(looks.saber_skin_id(5), Some("saber_sun"), "nobody else");
+        assert!(looks.illuminated(5));
+        // The local player's own slot is never muted.
+        assert_eq!(looks.saber_skin_id(1), Some("saber_sun"));
+        assert!(looks.illuminated(1));
+        let muted = looks.revision();
+        looks.set_muted(1 << 3 | 1 << 1);
+        assert_eq!(looks.revision(), muted, "no change, no new revision");
+        looks.set_muted(0);
+        assert_eq!(looks.saber_skin_id(3), Some("saber_sun"));
+        assert!(looks.illuminated(3));
     }
 
     #[test]

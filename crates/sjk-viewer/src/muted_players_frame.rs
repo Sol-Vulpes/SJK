@@ -2,7 +2,8 @@
 //! out a mute the chat's profile card asked for, and keep the muted slots of the
 //! server being played in step with the list, the hub's claims and the server's
 //! players. Each frame costs a few comparisons; the slots are worked out again only
-//! when one of those changed. The models, sabers and sounds follow in
+//! when one of those changed. Their looks (blade skin, holocron) go at once
+//! (`looks.rs`); the models, sabers and sounds follow in
 //! [`GpuState::refresh_muted_models`].
 
 use super::*;
@@ -21,6 +22,7 @@ impl GpuState {
                 player_mutes::set_roster(std::iter::empty(), None);
             }
             self.chat.set_muted_slots(0);
+            self.looks.set_muted(0);
             return;
         };
         let own = session.game_state().client_num;
@@ -39,7 +41,10 @@ impl GpuState {
                 player_mutes::slots()
             },
         );
-        self.chat.set_muted_slots(self.muted_players.slots().muted);
+        let muted = self.muted_players.slots().muted;
+        self.chat.set_muted_slots(muted);
+        // Their look too: the stock blade and its sounds, no holocron (`looks.rs`).
+        self.looks.set_muted(muted);
     }
 
     /// Draw the muted players as the stand-in, or as themselves again, when the muted

@@ -27,7 +27,9 @@ mask worked out only when the list, the hub's claims or the players change; the
 renderer swaps the model, sabers, blade colour and hat or cape, and the sound filter
 tests the source entity and, for saber hits and blocks, voice commands and chat beeps,
 the cause the sound events now name (`LegacySoundDecision::cause`)
-([hub-chat.md](hub-chat.md#muting-a-player)).
+([hub-chat.md](hub-chat.md#muting-a-player)). Merged with main (`bde59f7`, through
+`feat/sjk-chat-look`), a muted player's look goes too: no blade skin, so none of its
+sounds, and no lit Illuminate holocron (`Looks::set_muted`).
 
 Verified on Linux with Rust 1.97: `cargo fmt --all --check`, `cargo build --locked
 --workspace`, `cargo test --locked --workspace` (1664 passed, 51 ignored) and `cargo
@@ -42,7 +44,9 @@ as its cause, a saber they threw, nobody else) and the causes the sound events n
 (saber hit, block, voice command, a chat beep's sender); a muted slot's game lines
 hidden and shown again, a JA+ line by its leading name; hovering a name in the game's
 feed, on the dock and on the page shows the card, which stays while the pointer is on
-it, and Mute asks for that player once, then offers Unmute. Not verified: no client was
+it, and Mute asks for that player once, then offers Unmute. Merged with main, the same
+four checks pass (1836 passed, 59 ignored), with a test that a muted player's blade skin
+and holocron are not drawn while anyone else's and the own slot's are. Not verified: no client was
 started (no GPU, display, hub or game data here), so the card, Kyle and the silence
 were not seen or heard in a game, nor with players matched through a real hub.
 

@@ -183,7 +183,10 @@ again). A look counts only while the game shows the claimed name in its slot (th
 badges' rule); the names are compared when a roster or an event comes and twice a
 second, so a frame only reads a fixed table. Another server, leaving or a new feed
 generation clears them.
-An unknown skin id draws the stock blade. The local player's own look comes from its
+An unknown skin id draws the stock blade. A player muted on this PC
+([hub-chat.md](hub-chat.md#muting-a-player)) wears nothing while muted: the stock
+blade without the skin's sounds, no holocron (`Looks::set_muted`, which never mutes
+the own slot). The local player's own look comes from its
 settings, not the hub.
 
 What the renderer reads, on `GpuState::looks`:
