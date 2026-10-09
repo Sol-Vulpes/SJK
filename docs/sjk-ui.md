@@ -170,8 +170,9 @@ one (4:3, 5:4) scales the frame down to its width.
   time zone is needed). Before any join, the column offers the JoF server
   (`135.125.145.49:29070`) under "Start here".
 - **SJK chat:** docked under the servers (from y 700, [hub-chat.md](hub-chat.md)):
-  "SJK chat" and the online count, the last five lines sitting on a field (a gold dot
-  for a verified sender, each cut to one row), the field, and Open chat in gold under
+  "SJK chat" and the online count, the last five lines sitting on a field (each the
+  name, the verified tick for a verified sender and the text in the SJK chat's gold,
+  cut to one row), the field, and Open chat in gold under
   it, which opens the SJK chat page. Down past the last server reaches the field
   (the gold arc turns to it); Enter types and every key goes to the field until Enter
   sends or Escape stops. Not shown with `cl_sjkChat 0`.
@@ -377,9 +378,11 @@ overlay routes their text to the UI's families (`console_sjk_pages.rs`).
 - **SJK chat** ([sjk_chat_panel_view.rs](../crates/sjk-viewer/src/sjk_chat_panel_view.rs),
   08/10/2026, Sol's request, [hub-chat.md](hub-chat.md)): drawn in this look in every
   menu style. The online count in gold over a line on what the chat is; the messages
-  down the left, newest at the bottom over the field and Send (gold), each with its
-  name in its colours, Staff and Verified with how long ago on the right, and its text
-  wrapped; a chosen one is banded and shown on the right with Mute on this PC and, for
+  down the left, newest at the bottom over the field and Send (gold), each one flowing
+  line ([hub-chat.md](hub-chat.md#how-a-line-looks)): its name in its colours, the
+  verified tick for a verified sender, and its text in the SJK chat's gold going on
+  after them and wrapping when too long, with Staff and how long ago on the right of
+  its first row; a chosen one is banded and shown on the right with Mute on this PC and, for
   staff, Delete for everyone, Mute and Unmute at the hub. "N older: Page Up" and "N
   newer: Page Down" mark the ends when it scrolls.
 - **Credits** ([credits_sjk.rs](../crates/sjk-viewer/src/credits_sjk.rs), since

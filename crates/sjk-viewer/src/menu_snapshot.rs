@@ -1466,6 +1466,10 @@ fn sjk_home_snapshot() {
                 online: 12,
                 live: true,
                 notice: "",
+                measure: Some(crate::sjk_chat_look::Measure::new(
+                    &body.font,
+                    crate::text::TextStyle::NEUTRAL,
+                )),
             }),
         };
         home::build(&mut canvas, viewport, &mut home, &view, 1.0);

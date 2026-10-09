@@ -1,17 +1,19 @@
 //! The SJK chat page's drawing, in the SJK UI's look: the messages down the left,
 //! newest at the bottom over the field and Send, and the chosen message with what
-//! can be done about it on the right.
+//! can be done about it on the right. A message flows as one line, as SJK chat does
+//! everywhere ([`crate::sjk_chat_look`]): the name, the verified tick for a verified
+//! sender, then the text in the SJK chat's gold, wrapping only when it is too long.
 
 use super::*;
 use crate::menu::sjk::recent::ago;
-use crate::menu::sjk::{
-    Frame, TextTarget, color, key_hint, key_hint_width, kit, text, top_bar, wrap,
-};
+use crate::menu::sjk::{Frame, TextTarget, color, key_hint, key_hint_width, kit, text, top_bar};
 use crate::menu_widgets::TextFamily;
-use crate::text::UiFont;
+use crate::sjk_chat_look::{self, Measure};
+use crate::text::TextFace;
 use sjk_identity::ChatMessage;
 use sjk_identity::chat::for_display;
 use sjk_ui::{DrawCommand, FontWeight, TextAlign};
+use std::ops::Range;
 
 /// The columns (frame pixels).
 const LIST_X: f32 = 96.0;
@@ -22,12 +24,14 @@ const TOP: f32 = 170.0;
 /// The messages' area.
 const LIST_TOP: f32 = 236.0;
 const LIST_BOTTOM: f32 = 880.0;
-/// A message: its name row, each row of its text and the gap after it.
+/// A message: its first row (the name's), each row after it and the gap after it.
 const NAME_ROW: f32 = 28.0;
 const BODY_ROW: f32 = 24.0;
 const GAP: f32 = 12.0;
-/// Characters a row of a message holds (each row is also cut to the column).
-const WRAP_CHARS: usize = 136;
+/// The sizes of a message's name, its text and what is said of it (frame pixels).
+const NAME_SIZE: f32 = 19.0;
+const TEXT_SIZE: f32 = 17.0;
+const META_SIZE: f32 = 15.0;
 /// The field and Send.
 const FIELD_Y: f32 = 900.0;
 const FIELD_WIDTH: f32 = 1_040.0;
@@ -36,7 +40,71 @@ const KEYS_Y: f32 = 1_010.0;
 
 /// A message's height on the page, its text in `rows` rows.
 fn height(rows: usize) -> f32 {
-    NAME_ROW + rows.max(1) as f32 * BODY_ROW + GAP
+    NAME_ROW + rows.saturating_sub(1) as f32 * BODY_ROW + GAP
+}
+
+/// A message laid out on the page, in frame pixels.
+struct Laid {
+    /// The name as shown, with its colour codes.
+    name: String,
+    name_width: f32,
+    verified: bool,
+    /// Where the text starts on the first row, after the name, the tick and the colon.
+    indent: f32,
+    /// Staff, and how long ago it came, on the right of the first row.
+    meta: String,
+    staff: bool,
+    /// The text (or that its sender is muted here) and its rows.
+    text: String,
+    rows: Vec<Range<usize>>,
+    muted: bool,
+}
+
+/// Lay `message` out in the page's column, measured as `measure` draws at the frame
+/// scale `s`.
+fn lay(message: &ChatMessage, inputs: &Inputs<'_>, measure: &Measure<'_>, s: f32) -> Laid {
+    let s = s.max(0.001);
+    let width = |value: &str, size: f32, face| measure.width(value, size * s, face) / s;
+    let name = for_display(&message.name);
+    let name = if name.is_empty() {
+        "(no name)".to_owned()
+    } else {
+        name
+    };
+    let name_width = width(&name, NAME_SIZE, TextFace::Semibold).min(LIST_WIDTH * 0.4);
+    let tick = if message.verified {
+        sjk_chat_look::tick_room(NAME_SIZE)
+    } else {
+        0.0
+    };
+    let indent = name_width + tick + width(": ", TEXT_SIZE, TextFace::Regular);
+    let staff = if message.staff { "Staff  ·  " } else { "" };
+    let when = ago(u64::try_from(message.at).unwrap_or(0), inputs.now);
+    let meta = format!("{staff}{when}");
+    let meta_room = width(&meta, META_SIZE, TextFace::Regular) + 24.0;
+    let muted = inputs.muted.contains(&message.key_id);
+    let text = if muted {
+        "Muted on this PC".to_owned()
+    } else {
+        sjk_chat_look::message_text(&message.text)
+    };
+    let rows = sjk_chat_look::flow(
+        &text,
+        (LIST_WIDTH - indent - meta_room).max(0.0),
+        LIST_WIDTH,
+        |value, room| measure.fitting(value, room * s, TEXT_SIZE * s, TextFace::Regular),
+    );
+    Laid {
+        name,
+        name_width,
+        verified: message.verified,
+        indent,
+        meta,
+        staff: message.staff,
+        text,
+        rows,
+        muted,
+    }
 }
 
 impl Panel {
@@ -47,25 +115,22 @@ impl Panel {
         target: TextTarget<'_>,
         viewport: [f32; 2],
     ) {
-        let body = match &target {
-            TextTarget::Families(fonts, _) => fonts.body.1,
-            TextTarget::Inter(_, font) => *font,
-        };
-        self.build(inputs, body, viewport);
+        let measure = target.body_measure();
+        self.build(inputs, &measure, viewport);
         target.append(&self.ui, viewport);
     }
 
-    /// Lay the page out; `_body` is the body family, kept for measured layouts.
-    pub(super) fn build(&mut self, inputs: &Inputs<'_>, _body: &UiFont, viewport: [f32; 2]) {
+    /// Lay the page out, its messages measured in the body family (`measure`).
+    pub(super) fn build(&mut self, inputs: &Inputs<'_>, measure: &Measure<'_>, viewport: [f32; 2]) {
         let frame = Frame::new(viewport);
         self.order.clear();
         self.ui.begin_transparent(viewport);
         crate::settings::sjk_view::backdrop(&mut self.ui, viewport);
         top_bar(&mut self.ui, &frame, "Back", BACK_TOKEN, "SJK chat", None);
         self.status(&frame, inputs);
-        self.messages(&frame, inputs);
+        self.messages(&frame, inputs, measure);
         self.composer(&frame, inputs);
-        self.chosen(&frame, inputs);
+        self.chosen(&frame, inputs, measure);
         self.keys(&frame);
         if !self.order.contains(&self.focus) {
             self.focus = FIELD_TOKEN;
@@ -119,7 +184,7 @@ impl Panel {
     }
 
     /// The messages that fit, newest at the bottom, `scroll` messages up from it.
-    fn messages(&mut self, frame: &Frame, inputs: &Inputs<'_>) {
+    fn messages(&mut self, frame: &Frame, inputs: &Inputs<'_>, measure: &Measure<'_>) {
         let s = frame.s;
         self.shown.messages.clear();
         let empty = std::collections::VecDeque::new();
@@ -130,16 +195,19 @@ impl Panel {
         let mut room = LIST_BOTTOM - LIST_TOP;
         let mut first = messages.len().saturating_sub(self.scroll);
         let end = first;
+        let mut laid = Vec::with_capacity(MESSAGES_SHOWN);
         while first > 0 && end - first < MESSAGES_SHOWN {
             let message = &messages[first - 1];
-            let rows = self.body(message, inputs).len();
-            let needed = height(rows);
+            let layout = lay(message, inputs, measure, s);
+            let needed = height(layout.rows.len());
             if needed > room {
                 break;
             }
             room -= needed;
             first -= 1;
+            laid.push(layout);
         }
+        laid.reverse();
         if first == end {
             let line = if inputs.chat.is_some() && inputs.enabled {
                 "Nobody has said anything yet. Say hello."
@@ -158,62 +226,14 @@ impl Panel {
             );
         }
         let mut y = LIST_TOP + room;
-        for (index, message) in messages.range(first..end).enumerate() {
+        for (index, (message, laid)) in messages.range(first..end).zip(&laid).enumerate() {
             let token = MESSAGE_BASE + index as u16;
-            let body = self.body(message, inputs);
-            let tall = height(body.len());
+            let tall = height(laid.rows.len());
             let row = [LIST_X - 18.0, y - 4.0, LIST_WIDTH + 18.0, tall - 4.0];
             if self.focus == token || self.selected == Some(message.id) {
                 kit::band(&mut self.ui, frame, row);
             }
-            let name = for_display(&message.name);
-            text(
-                &mut self.ui,
-                TextFamily::Display,
-                format_args!("{}", if name.is_empty() { "(no name)" } else { &name }),
-                frame.rect(LIST_X, y, LIST_WIDTH - 440.0, NAME_ROW - 2.0),
-                20.0 * s,
-                color::TEXT,
-                FontWeight::Semibold,
-                TextAlign::Start,
-            );
-            let tags = match (message.staff, message.verified) {
-                (true, true) => "Staff, verified  ·  ",
-                (true, false) => "Staff  ·  ",
-                (false, true) => "Verified  ·  ",
-                (false, false) => "",
-            };
-            let when = ago(u64::try_from(message.at).unwrap_or(0), inputs.now);
-            text(
-                &mut self.ui,
-                TextFamily::Body,
-                format_args!("{tags}{when}"),
-                frame.rect(LIST_X + LIST_WIDTH - 420.0, y + 2.0, 420.0, NAME_ROW - 6.0),
-                15.0 * s,
-                if tags.is_empty() {
-                    color::QUIET
-                } else {
-                    color::GOLD_BRIGHT
-                },
-                FontWeight::Regular,
-                TextAlign::End,
-            );
-            let muted = inputs.muted.contains(&message.key_id);
-            for (line, rect_y) in body
-                .iter()
-                .zip((0..).map(|row| y + NAME_ROW + row as f32 * BODY_ROW))
-            {
-                text(
-                    &mut self.ui,
-                    TextFamily::Body,
-                    format_args!("{line}"),
-                    frame.rect(LIST_X, rect_y, LIST_WIDTH, BODY_ROW - 2.0),
-                    17.0 * s,
-                    if muted { color::QUIET } else { color::TEXT },
-                    FontWeight::Regular,
-                    TextAlign::Start,
-                );
-            }
+            self.message(frame, laid, y);
             self.ui
                 .hit_region(token, frame.rect(row[0], row[1], row[2], row[3]));
             self.order.push(token);
@@ -248,17 +268,92 @@ impl Panel {
         }
     }
 
-    /// A message's text in rows, or that its sender is muted here.
-    fn body(&self, message: &ChatMessage, inputs: &Inputs<'_>) -> Vec<String> {
-        if inputs.muted.contains(&message.key_id) {
-            return vec!["Muted on this PC".to_owned()];
+    /// Draw a laid out message whose first row's top is `y`: the name, the tick, the
+    /// colon and the text going on after them, then its other rows from the left
+    /// edge, and what is said of it on the right of the first row.
+    fn message(&mut self, frame: &Frame, laid: &Laid, y: f32) {
+        let s = frame.s;
+        let first = frame.rect(LIST_X, y, LIST_WIDTH, NAME_ROW - 2.0);
+        text(
+            &mut self.ui,
+            TextFamily::Body,
+            format_args!("{}", laid.name),
+            frame.rect(LIST_X, y, laid.name_width + 2.0, NAME_ROW - 2.0),
+            NAME_SIZE * s,
+            color::TEXT,
+            FontWeight::Semibold,
+            TextAlign::Start,
+        );
+        let mut x = LIST_X + laid.name_width;
+        if laid.verified {
+            let [left, _] = frame.point(x, y);
+            sjk_chat_look::tick(
+                self.ui.draw_list_mut(),
+                left,
+                first.y + first.height * 0.5,
+                NAME_SIZE * s,
+                1.0,
+            );
+            x += sjk_chat_look::tick_room(NAME_SIZE);
         }
-        let text = for_display(&message.text);
-        let rows: Vec<String> = wrap(&text, WRAP_CHARS).map(str::to_owned).collect();
-        if rows.is_empty() {
-            vec![String::new()]
+        text(
+            &mut self.ui,
+            TextFamily::Body,
+            format_args!(":"),
+            frame.rect(x, y, 12.0, NAME_ROW - 2.0),
+            TEXT_SIZE * s,
+            color::TEXT,
+            FontWeight::Regular,
+            TextAlign::Start,
+        );
+        text(
+            &mut self.ui,
+            TextFamily::Body,
+            format_args!("{}", laid.meta),
+            frame.rect(LIST_X + LIST_WIDTH - 420.0, y + 2.0, 420.0, NAME_ROW - 6.0),
+            META_SIZE * s,
+            if laid.staff {
+                color::GOLD_BRIGHT
+            } else {
+                color::QUIET
+            },
+            FontWeight::Regular,
+            TextAlign::End,
+        );
+        let colour = if laid.muted {
+            color::QUIET
         } else {
-            rows
+            sjk_chat_look::GOLD
+        };
+        for (row, range) in laid.rows.iter().enumerate() {
+            if range.is_empty() {
+                continue;
+            }
+            let rect = if row == 0 {
+                frame.rect(
+                    LIST_X + laid.indent,
+                    y,
+                    (LIST_WIDTH - laid.indent).max(1.0),
+                    NAME_ROW - 2.0,
+                )
+            } else {
+                frame.rect(
+                    LIST_X,
+                    y + NAME_ROW + (row - 1) as f32 * BODY_ROW,
+                    LIST_WIDTH,
+                    BODY_ROW - 2.0,
+                )
+            };
+            text(
+                &mut self.ui,
+                TextFamily::Body,
+                format_args!("{}", &laid.text[range.clone()]),
+                rect,
+                TEXT_SIZE * s,
+                colour,
+                FontWeight::Regular,
+                TextAlign::Start,
+            );
         }
     }
 
@@ -329,7 +424,7 @@ impl Panel {
 
     /// The chosen message's sender and what can be done: Mute here, and for staff
     /// Delete and Mute at the hub.
-    fn chosen(&mut self, frame: &Frame, inputs: &Inputs<'_>) {
+    fn chosen(&mut self, frame: &Frame, inputs: &Inputs<'_>, measure: &Measure<'_>) {
         let s = frame.s;
         kit::heading(
             &mut self.ui,
@@ -373,17 +468,32 @@ impl Panel {
         };
         let muted = inputs.muted.contains(&message.key_id);
         self.shown.chosen = Some((message.id, message.key_id.clone(), muted));
+        // The name in the body family, which the page measures, and the tick alone
+        // after it for a verified sender.
         let name = for_display(&message.name);
+        let size = 26.0;
+        let room = SIDE_WIDTH - sjk_chat_look::tick_room(size);
+        let width = (measure.width(&name, size * s, TextFace::Semibold) / s.max(0.001)).min(room);
+        let rect = frame.rect(SIDE_X, LIST_TOP + 8.0, width + 2.0, 34.0);
         text(
             &mut self.ui,
-            TextFamily::Display,
+            TextFamily::Body,
             format_args!("{name}"),
-            frame.rect(SIDE_X, LIST_TOP + 8.0, SIDE_WIDTH, 34.0),
-            28.0 * s,
+            rect,
+            size * s,
             color::TEXT,
             FontWeight::Semibold,
             TextAlign::Start,
         );
+        if message.verified {
+            sjk_chat_look::tick(
+                self.ui.draw_list_mut(),
+                frame.point(SIDE_X + width, 0.0)[0],
+                rect.y + rect.height * 0.5,
+                size * s,
+                1.0,
+            );
+        }
         text(
             &mut self.ui,
             TextFamily::Body,
@@ -508,6 +618,98 @@ impl Panel {
 mod tests {
     use super::super::tests::{chat, inputs, message};
     use super::*;
+    use crate::text::{TextStyle, UiFont};
+    use sjk_ui::{Color, Rect};
+
+    impl Panel {
+        /// [`Panel::build`] measuring in `font` without a text style.
+        pub(in crate::console) fn build_with(
+            &mut self,
+            inputs: &Inputs<'_>,
+            font: &UiFont,
+            viewport: [f32; 2],
+        ) {
+            self.build(inputs, &Measure::new(font, TextStyle::NEUTRAL), viewport);
+        }
+    }
+
+    /// Every text the page drew, with its rectangle and colour.
+    fn texts(panel: &Panel) -> Vec<(String, Rect, Color)> {
+        panel
+            .ui
+            .draw_list()
+            .commands()
+            .iter()
+            .filter_map(|command| match command {
+                DrawCommand::Text {
+                    rect, text, color, ..
+                } => Some((panel.ui.stored_text(*text).to_owned(), *rect, *color)),
+                _ => None,
+            })
+            .collect()
+    }
+
+    fn ticks(panel: &Panel) -> usize {
+        panel
+            .ui
+            .draw_list()
+            .commands()
+            .iter()
+            .filter(|command| {
+                matches!(command, DrawCommand::TexturedQuad { texture, .. }
+                    if *texture == crate::ui_renderer::VERIFIED_TEXTURE)
+            })
+            .count()
+    }
+
+    fn found<'a>(texts: &'a [(String, Rect, Color)], text: &str) -> &'a (String, Rect, Color) {
+        texts
+            .iter()
+            .find(|(drawn, ..)| drawn == text)
+            .unwrap_or_else(|| panic!("{text:?} not in {texts:?}"))
+    }
+
+    #[test]
+    fn a_message_flows_after_its_name_in_gold() {
+        let fonts = crate::text::load_modern(1.0, None).expect("Inter");
+        let mut state = chat(0);
+        let mut short = message(1, "aaaaaaaaaaaaaaaa", "gg ^1all");
+        short.name = "^2Sol".to_owned();
+        short.verified = true;
+        // As long as the hub takes, in wide letters: more than the column's row.
+        let long = message(2, "bbbbbbbbbbbbbbbb", &"WMWMWMWM ".repeat(17)[..150]);
+        state.messages.extend([short, long.clone()]);
+        let mut panel = Panel::new();
+        panel.open(true);
+        panel.build_with(&inputs(&state, &[], false), &fonts.font, [1920.0, 1080.0]);
+        let texts = texts(&panel);
+        let (_, name, _) = found(&texts, "^2Sol");
+        let (_, body, colour) = found(&texts, "gg all");
+        // Centred on the same line (the name's text is larger): the name's row.
+        assert!((name.y - body.y).abs() < 4.0, "on the name's row");
+        assert!(body.x > name.right());
+        assert_eq!(*colour, sjk_chat_look::GOLD);
+        // The name keeps its codes and is not gold.
+        assert_ne!(found(&texts, "^2Sol").2, sjk_chat_look::GOLD);
+        // The verified sender has the tick, and no word says so.
+        assert_eq!(ticks(&panel), 1);
+        assert!(
+            texts
+                .iter()
+                .all(|(text, ..)| !text.to_ascii_lowercase().contains("verified")),
+            "{texts:?}"
+        );
+        // The long one wraps: its rows after the first start at the column's edge.
+        let (_, long_name, _) = found(&texts, &long.name);
+        let rows: Vec<_> = texts
+            .iter()
+            .filter(|(_, rect, colour)| *colour == sjk_chat_look::GOLD && rect.y >= long_name.y)
+            .collect();
+        assert!(rows.len() >= 2, "{rows:?}");
+        assert!((rows[0].1.y - long_name.y).abs() < 4.0);
+        assert!(rows[1].1.y > rows[0].1.y + 10.0);
+        assert!(rows[1].1.x <= long_name.x + 0.5);
+    }
 
     /// Every focus, long messages, a muted sender, a refusal and staff fit the canvas
     /// at 1080p, 4K, 4:3 and 21:9, in the families and in Inter.
@@ -537,7 +739,7 @@ mod tests {
             panel.draft = "d".repeat(150);
             panel.selected = Some(130);
             let inputs = inputs(state, &muted, staff);
-            panel.build(&inputs, &inter.font, [1920.0, 1080.0]);
+            panel.build_with(&inputs, &inter.font, [1920.0, 1080.0]);
             for focus in panel.order.clone() {
                 for font in [&body.font, &inter.font] {
                     for viewport in [
@@ -547,7 +749,7 @@ mod tests {
                         [2560.0, 1080.0],
                     ] {
                         panel.focus = focus;
-                        panel.build(&inputs, font, viewport);
+                        panel.build_with(&inputs, font, viewport);
                         assert!(!panel.ui.overflowed(), "{focus} at {viewport:?}");
                     }
                 }
@@ -575,12 +777,12 @@ mod tests {
             staff_state: Some(old),
             ..inputs(&state, &[], true)
         };
-        panel.build(&quiet, &fonts.font, [1920.0, 1080.0]);
+        panel.build_with(&quiet, &fonts.font, [1920.0, 1080.0]);
         assert!(!runs(&panel).iter().any(|run| run == "Gave bug_hunter"));
         // Sent: waiting, then the hub's answer.
         panel.staff_sent(4);
         let waiting = StaffShown { busy: true, ..old };
-        panel.build(
+        panel.build_with(
             &Inputs {
                 staff_state: Some(waiting),
                 ..inputs(&state, &[], true)
@@ -599,7 +801,7 @@ mod tests {
             failed: true,
             busy: false,
         };
-        panel.build(
+        panel.build_with(
             &Inputs {
                 staff_state: Some(refused),
                 ..inputs(&state, &[], true)
@@ -624,7 +826,7 @@ mod tests {
         let state = chat(0);
         let mut off = inputs(&state, &[], false);
         off.chat = None;
-        panel.build(&off, &fonts.font, [1920.0, 1080.0]);
+        panel.build_with(&off, &fonts.font, [1920.0, 1080.0]);
         assert!(
             panel
                 .ui
@@ -632,14 +834,14 @@ mod tests {
                 .any(|run| run.starts_with("The SJK identity is off"))
         );
         off.enabled = false;
-        panel.build(&off, &fonts.font, [1920.0, 1080.0]);
+        panel.build_with(&off, &fonts.font, [1920.0, 1080.0]);
         assert!(
             panel
                 .ui
                 .text_runs()
                 .any(|run| run.starts_with("SJK chat is off"))
         );
-        panel.build(&inputs(&state, &[], false), &fonts.font, [1920.0, 1080.0]);
+        panel.build_with(&inputs(&state, &[], false), &fonts.font, [1920.0, 1080.0]);
         assert!(
             panel
                 .ui

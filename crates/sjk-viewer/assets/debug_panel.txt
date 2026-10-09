@@ -2878,3 +2878,11 @@ test: Switch from melee or a gun to the saber: the ignition is heard; back again
 test: Watch another player do the same with a single saber, dual sabers and a staff.
 test: The saber toggle key still sounds once.
 note: A single saber also plays enemy_saber_on as OpenJK does. Not heard in a game yet.
+
+[sjk-chat-look]
+area: Console & chat
+title: SJK chat in gold, on one line, tick only (SJK PR #63)
+change: SJK chat lines are #F5C756 in game, in the menu dock and on the chat page.
+change: The name row no longer breaks before the message; a verified sender shows the tick alone.
+test: Send SJK chat in a game, in the dock and on the page: gold, one line, tick only.
+test: A long message wraps like a normal chat line; names keep their own colours.

@@ -380,7 +380,7 @@ mod tests {
     /// The panel after one frame, so its controls are known.
     pub(super) fn drawn(panel: &mut Panel, inputs: &Inputs<'_>) {
         let fonts = crate::text::load_modern(1.0, None).expect("Inter");
-        panel.build(inputs, &fonts.font, [1920.0, 1080.0]);
+        panel.build_with(inputs, &fonts.font, [1920.0, 1080.0]);
     }
 
     fn press(panel: &mut Panel, key: KeyCode, text: Option<&str>) -> PanelAction {

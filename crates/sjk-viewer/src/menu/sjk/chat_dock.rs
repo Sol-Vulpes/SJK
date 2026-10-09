@@ -51,7 +51,7 @@ impl DockCache {
             for message in shown.skip(skip) {
                 self.lines.push((
                     sjk_identity::chat::for_display(&message.name),
-                    sjk_identity::chat::for_display(&message.text),
+                    crate::sjk_chat_look::message_text(&message.text),
                     message.verified,
                 ));
             }
@@ -87,6 +87,7 @@ impl DockCache {
             online: self.online,
             live: self.live,
             notice,
+            measure: None,
         }
     }
 }

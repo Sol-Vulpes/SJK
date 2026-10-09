@@ -193,6 +193,7 @@ mod settings;
 mod settings_icons;
 mod shared_geometry;
 mod sjk_chat_frame;
+mod sjk_chat_look;
 mod sjk_packs;
 mod sky_stage;
 mod snapshot_presentation;

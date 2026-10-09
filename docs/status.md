@@ -168,6 +168,36 @@ pass, with no new warnings. Not heard: nothing was run in a game or with retail
 assets. Whether retail ships `enemy_saber_on`, the second ignition sound of a single
 saber, and the timing of the predicted local switch against a live server are
 unchecked.
+## SJK chat in its own gold, on one line, with the tick alone
+
+Branch `feat/sjk-chat-look` (08/10/2026, based on `a6230f9`, Linux): Sol asked for
+SJK chat text in a special gold that is none of the game's colour codes, for an SJK
+chat line not to break straight after the name and its badge, and for a verified
+player to show only the verified tick by the name. The message is now drawn in
+`#F5C756` (`sjk_chat_look::GOLD`, [sjk_chat_look.rs](../crates/sjk-viewer/src/sjk_chat_look.rs))
+in the game's chat, on the main page's dock and on the SJK chat page, its own colour
+codes dropped; names keep theirs. The line broke at once because the game's chat
+feed drew a sender's name and tag on a row of their own with the message under it
+(`NAME_ADVANCE`, `chat/view.rs`), unlike the servers' chat lines, which carry the
+name in their text and flow; an SJK line now starts its first row with the SJK tag,
+the name, the tick and a colon and goes on there (`Wrapped::update_indented`,
+`chat/view/sjk_line.rs`), wrapping only when it is too long, and the page lays its
+lines out the same way. "SJK VERIFIED", "Verified" and the dock's gold dot gave way
+to the nameplates' verified seal after the name
+([hub-chat.md](hub-chat.md#how-a-line-looks)).
+
+Verified on Linux with Rust 1.97: `cargo fmt --all --check`, `cargo build --locked
+--workspace`, `cargo test --locked --workspace` (1643 passed, 51 ignored) and `cargo
+clippy --locked --workspace --all-targets` (exit 0, no warning in the changed code).
+New unit tests: the gold is far from every colour code in both palettes and from the
+SJK UI's accent; a message's codes are dropped; only SJK messages are drawn gold (game
+lines and the name are not); a short SJK line is one row with tag, name, tick, colon
+and message left to right on it; a long one wraps into as many rows as the same text
+in a game line, its later rows from the edge; a first word too wide for the name's row
+starts the next; a verified sender has the seal and no "verified" text; the dock's row
+and the page's line flow the same way. Not verified: no client was started (no GPU,
+display, hub or game data here), so nothing was seen on screen, in the retail fonts
+(`ui_gameFont`) or over a map, and no hub message was received.
 
 ## Force profile and kill feed follow-ups
 
