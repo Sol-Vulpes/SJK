@@ -21,6 +21,7 @@ Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 
 ## Unreleased
 
+- Maps load faster where fullbright models with a lit shine (such as JoFTemple's statues) were taken for light fixtures: they no longer become thousands of lights, so JoFTemple loads in 16 s instead of 23 s with SJK's lighting _(Sol)_
 - Ultra low graphics: a switch under Graphics quality (Video and First setup) that brings back the original game's look, baked map lighting without SJK's sun, shadows, reflections, material maps or post-processing, for the most frames on heavy maps such as JoFTemple; turning it off restores your settings. Maps also load faster without SJK's lighting, as their lamps are no longer built when nothing uses them _(Sol)_
 - The in-game menu has seven entries (Resume, Profile, Achievements, Players, Settings, Servers, Leave): your side, the vote on and Call a vote are on the match card, Camera control, What's new, Credits, Report a bug, SJK chat and Staff tools are small icons under the emblem, and Tab moves between the list, the icons and the card. Profile is one screen with Character, Profile and Identity as tabs (Ctrl+Tab), from the game menu and the main page; Camera control is also a quick wheel action and the cameracontrol command _(Sol)_
 - A blade skin's sounds now play over the stock saber sounds instead of replacing them: the normal ignition, switching off, swings and hum are still heard below, with the skin's on top; a thrown saber hums both too _(Sol)_

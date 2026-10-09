@@ -79,6 +79,11 @@ pub(super) const SELF_LIT_RADIANCE: f32 = 16.;
 /// Only where nothing else says what the material emits: a declared surface light or an
 /// additive glow stage has authority, and the paint under it stays paint. A full
 /// opaque replacement hides earlier stages, which cannot light its visible paint.
+///
+/// A visible `alphaGen lightingSpecular` stage rules it out: a shine computed from the
+/// light reaching the surface means the author meant a lit surface, not a light. Such
+/// paint shows fullbright when an opaque stage covers the lightmap stage by mistake, as
+/// on `JoFTemple`'s statues, whose dense meshes made 44,065 of the map's 58,124 lamps.
 pub(super) fn self_lit(definition: Option<&sjk_shader::ShaderDefinition>) -> bool {
     definition.is_some_and(|definition| {
         !definition.stages.is_empty()
@@ -96,6 +101,10 @@ pub(super) fn self_lit(definition: Option<&sjk_shader::ShaderDefinition>) -> boo
                         && stage_gain(stage).is_some()
                         && !stage.glow
                         && stage.blend != StageBlend::Add
+                        && !stage
+                            .alpha_generator
+                            .as_deref()
+                            .is_some_and(|alpha| alpha.eq_ignore_ascii_case("lightingspecular"))
                 })
     })
 }
@@ -228,4 +237,34 @@ fn additive_mean(image: &RgbaImage) -> [f32; 3] {
         count += 1;
     }
     sum.map(|c| (c / count.max(1) as f64) as f32)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn definition(script: &str) -> sjk_shader::ShaderDefinition {
+        sjk_shader::parse_shader_script(script.as_bytes(), "shaders/t.shader")
+            .unwrap()
+            .remove(0)
+    }
+
+    #[test]
+    fn fullbright_paint_is_a_self_lit_fixture() {
+        let lamp = definition("textures/t/lamp\n{\n{\nmap textures/t/lamp\n}\n}\n");
+        assert!(self_lit(Some(&lamp)));
+    }
+
+    #[test]
+    fn paint_with_a_lit_shine_is_not_a_light() {
+        // JoFTemple's statues: the base covers the lightmap stage, and the shine
+        // over it follows the light reaching the surface.
+        let statue = definition(
+            "models/t/statue\n{\n{\nmap $lightmap\nrgbGen identity\n}\n\
+             {\nmap models/t/statue_base\n}\n\
+             {\nmap models/t/statue_spec\nblendFunc GL_SRC_ALPHA GL_ONE\n\
+             alphaGen lightingSpecular\n}\n}\n",
+        );
+        assert!(!self_lit(Some(&statue)));
+    }
 }
