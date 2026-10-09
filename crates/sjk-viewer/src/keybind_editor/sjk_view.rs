@@ -11,13 +11,15 @@ use crate::menu::sjk::{Frame, TextTarget, color, key_hint, key_hint_width, kit, 
 use crate::menu_widgets::TextFamily;
 use crate::settings::Rail;
 use crate::settings::sjk_view::{
-    BODY_ADVANCE, CONTROL_RIGHT, DETAIL_TOP, DETAIL_WIDTH, DETAIL_X, KEYS_Y, LABEL_X, LINE,
-    ROWS_TOP, ROWS_WIDTH, ROWS_X, VISIBLE, backdrop, draw_rail, top_bar,
+    CONTROL_RIGHT, DETAIL_TOP, DETAIL_WIDTH, DETAIL_X, KEYS_Y, LABEL_X, LINE, ROWS_TOP, ROWS_WIDTH,
+    ROWS_X, VISIBLE, backdrop, draw_rail, row_name, top_bar,
 };
 use sjk_ui::{Color, DrawCommand, FontWeight, TextAlign};
 
 /// A key cap's height.
 const CAP: f32 = 34.0;
+/// How wide an action's name may run, clear of its caps.
+const NAME_COLUMN: f32 = 330.0;
 
 /// What a key slot shows.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -71,7 +73,7 @@ impl KeybindEditor {
             found,
         );
         draw_rail(&mut self.ui, &frame, rail);
-        self.sjk_rows(&frame, &list);
+        self.sjk_rows(&frame, &target.body_measure(), &list);
         let focused = list.position(self.selected).map(|_| self.selected);
         let searching = list.searching;
         self.classic = Some(list);
@@ -82,8 +84,14 @@ impl KeybindEditor {
         target.append(&self.ui, viewport);
     }
 
-    /// The list's lines on show: sub-headings and actions with their caps.
-    fn sjk_rows(&mut self, frame: &Frame, list: &super::classic_view::ClassicList) {
+    /// The list's lines on show: sub-headings and actions with their caps;
+    /// `measure` measures the actions' names.
+    fn sjk_rows(
+        &mut self,
+        frame: &Frame,
+        measure: &crate::sjk_chat_look::Measure<'_>,
+        list: &super::classic_view::ClassicList,
+    ) {
         let s = frame.s;
         self.visible = VISIBLE;
         let total = list.rows.len();
@@ -142,26 +150,18 @@ impl KeybindEditor {
             if icons {
                 label_x += 44.0;
             }
-            let label = ACTIONS[action].label;
-            text(
-                &mut self.ui,
-                TextFamily::Body,
-                format_args!("{label}"),
-                frame.rect(label_x, middle - 14.0, 330.0, 28.0),
-                19.0 * s,
-                if focused {
-                    Color::new(1.0, 1.0, 1.0, 1.0)
-                } else {
-                    color::alpha(color::TEXT, 0.88)
-                },
-                FontWeight::Regular,
-                TextAlign::Start,
-            );
             let keys = self.keys.get(action).cloned().unwrap_or_default();
-            if rebound(action, &keys) {
-                let width = (label.chars().count() as f32 * 19.0 * BODY_ADVANCE).min(320.0);
-                kit::changed_dot(&mut self.ui, frame, label_x + width + 12.0, middle);
-            }
+            row_name(
+                &mut self.ui,
+                frame,
+                measure,
+                ACTIONS[action].label,
+                label_x,
+                middle,
+                NAME_COLUMN,
+                focused,
+                rebound(action, &keys),
+            );
             let waiting = |slot| focused && self.capture && self.binding_slot == slot;
             let second = Slot::of(waiting(1), &keys[1]);
             let first = Slot::of(waiting(0), &keys[0]);

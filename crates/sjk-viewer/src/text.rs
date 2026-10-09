@@ -172,6 +172,15 @@ impl TextVertex {
     pub(crate) fn colour(&self) -> [f32; 4] {
         self.color
     }
+
+    /// The vertex's position in window pixels of `viewport`, for tests of where
+    /// a surface drew.
+    pub(crate) fn window_position(&self, viewport: [f32; 2]) -> [f32; 2] {
+        [
+            (self.position[0] + 1.0) * 0.5 * viewport[0],
+            (1.0 - self.position[1]) * 0.5 * viewport[1],
+        ]
+    }
 }
 
 impl TextVertex {

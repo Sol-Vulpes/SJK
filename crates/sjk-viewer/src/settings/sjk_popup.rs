@@ -57,7 +57,8 @@ impl SettingsMenu {
         kit::scrim(&mut self.ui, viewport);
         kit::card(&mut self.ui, &frame, CARD);
         self.popup_header(&frame);
-        let slots = self.sjk_rows(&rows, VISIBLE, LIST_BOTTOM);
+        let measure = target.body_measure();
+        let slots = self.sjk_rows(&rows, &measure, VISIBLE, LIST_BOTTOM);
         if self.dropdown.is_none() {
             self.popup_help(&frame);
         }

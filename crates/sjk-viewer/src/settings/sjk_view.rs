@@ -18,7 +18,9 @@ use crate::menu::sjk::{
     Frame, SEARCH_PILL, SearchPill, TextTarget, color, fade_across, key_hint, key_hint_width, kit,
     text, wrap,
 };
-use crate::menu_widgets::TextFamily;
+use crate::menu_widgets::{MenuCanvas, TextFamily};
+use crate::sjk_chat_look::Measure;
+use crate::text::TextFace;
 use sjk_ui::{Color, DrawCommand, FontWeight, TextAlign};
 
 /// The categories down the rail, as the menu lists them: each one's name and
@@ -54,6 +56,8 @@ pub(crate) const VISIBLE: usize = 14;
 pub(crate) const LABEL_X: f32 = ROWS_X + 22.0;
 pub(crate) const CONTROL_RIGHT: f32 = ROWS_X + ROWS_WIDTH - 44.0;
 pub(super) const CONTROL_LEFT: f32 = CONTROL_RIGHT - 330.0;
+/// How wide a row's name may run, clear of its control.
+const NAME_COLUMN: f32 = CONTROL_LEFT - LABEL_X - 30.0;
 const RESET_X: f32 = ROWS_X + ROWS_WIDTH - 22.0;
 /// A field's width, a slider's track and its number.
 const FIELD_WIDTH: f32 = 230.0;
@@ -70,9 +74,63 @@ pub(crate) const DETAIL_WIDTH: f32 = 464.0;
 /// The keys' line at the bottom.
 pub(crate) const KEYS_Y: f32 = 992.0;
 
-/// Body type's width per character, as a share of its size: Exo 2 sets a
-/// setting's name at about 0.4 em a character.
-pub(crate) const BODY_ADVANCE: f32 = 0.4;
+/// A row's name: its size, and the room between its last letter and the
+/// changed dot.
+const NAME_SIZE: f32 = 19.0;
+const DOT_GAP: f32 = 8.0;
+
+/// Where the changed dot's centre goes after a row's name, `label`, drawn from
+/// `x` in a column `column` wide (frame pixels): [`DOT_GAP`] after its last
+/// letter as `measure` finds it drawn (the player's text size and spacing, at
+/// `frame`'s scale), or after the column's end when the name fills it, as the
+/// renderer then cuts it short there.
+pub(crate) fn changed_dot_x(
+    frame: &Frame,
+    measure: &Measure<'_>,
+    label: &str,
+    x: f32,
+    column: f32,
+) -> f32 {
+    let s = frame.s.max(f32::EPSILON);
+    let ink = measure.ink_width(label, NAME_SIZE * s, TextFace::Regular) / s;
+    x + ink.min(column) + DOT_GAP + kit::CHANGED_DOT_RADIUS
+}
+
+/// A row's name, `label`, from `x` on the line whose middle is `middle`, cut
+/// short past `column` (frame pixels), white when `focused`; when `changed`,
+/// the gold dot after it ([`changed_dot_x`]), level with its letters' middle
+/// as [`text`] centres them.
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn row_name(
+    canvas: &mut MenuCanvas,
+    frame: &Frame,
+    measure: &Measure<'_>,
+    label: &str,
+    x: f32,
+    middle: f32,
+    column: f32,
+    focused: bool,
+    changed: bool,
+) {
+    text(
+        canvas,
+        TextFamily::Body,
+        format_args!("{label}"),
+        frame.rect(x, middle - 14.0, column, 28.0),
+        NAME_SIZE * frame.s,
+        if focused {
+            Color::new(1.0, 1.0, 1.0, 1.0)
+        } else {
+            color::alpha(color::TEXT, 0.88)
+        },
+        FontWeight::Regular,
+        TextAlign::Start,
+    );
+    if changed {
+        let dot = changed_dot_x(frame, measure, label, x, column);
+        kit::changed_dot(canvas, frame, dot, middle);
+    }
+}
 
 impl SettingsMenu {
     /// Draw the open panel rows as the SJK UI's Settings screen, with `rail`'s
@@ -95,7 +153,8 @@ impl SettingsMenu {
         backdrop(&mut self.ui, viewport);
         self.top_bar(&frame, rail.back);
         draw_rail(&mut self.ui, &frame, rail);
-        let slots = self.sjk_rows(&frame, VISIBLE, LIST_BOTTOM);
+        let measure = target.body_measure();
+        let slots = self.sjk_rows(&frame, &measure, VISIBLE, LIST_BOTTOM);
         self.sjk_detail(&frame, rail);
         self.sjk_keys(&frame);
         self.sjk_dropdown(&frame, &slots, VISIBLE, LIST_BOTTOM);
@@ -125,10 +184,11 @@ impl SettingsMenu {
 
     /// The rows on show, at most `visible` lines of them, and their controls,
     /// those under the open list (which ends above `list_bottom`) left out;
-    /// returns each shown row's line top.
+    /// returns each shown row's line top. `measure` measures their names.
     pub(super) fn sjk_rows(
         &mut self,
         frame: &Frame,
+        measure: &Measure<'_>,
         visible: usize,
         list_bottom: f32,
     ) -> Vec<(usize, f32)> {
@@ -180,7 +240,7 @@ impl SettingsMenu {
             let open = self.dropdown.as_ref().is_some_and(|open| open.row == row);
             let under_list = !open
                 && covered.is_some_and(|[_, y, _, height]| top + LINE > y && top < y + height);
-            self.sjk_row(frame, row, top, under_list);
+            self.sjk_row(frame, measure, row, top, under_list);
         }
         if lines.len() > visible {
             self.ui.scrollbar(
@@ -202,8 +262,14 @@ impl SettingsMenu {
     /// Row `row` on the line whose top is `top`: its band when focused, its
     /// name, the changed dot, its control (left out `under_list`) and the reset
     /// arrow.
-    fn sjk_row(&mut self, frame: &Frame, row: usize, top: f32, under_list: bool) {
-        let s = frame.s;
+    fn sjk_row(
+        &mut self,
+        frame: &Frame,
+        measure: &Measure<'_>,
+        row: usize,
+        top: f32,
+        under_list: bool,
+    ) {
         let Some(setting) = self.rows().get(row).copied() else {
             return;
         };
@@ -213,29 +279,21 @@ impl SettingsMenu {
             kit::band(&mut self.ui, frame, [ROWS_X, top, ROWS_WIDTH, LINE]);
         }
         let (label, _) = help::classic_label(setting.cvar, setting.label);
-        let label_width = CONTROL_LEFT - LABEL_X - 30.0;
-        text(
-            &mut self.ui,
-            TextFamily::Body,
-            format_args!("{label}"),
-            frame.rect(LABEL_X, middle - 14.0, label_width, 28.0),
-            19.0 * s,
-            if focused {
-                Color::new(1.0, 1.0, 1.0, 1.0)
-            } else {
-                color::alpha(color::TEXT, 0.88)
-            },
-            FontWeight::Regular,
-            TextAlign::Start,
-        );
         let changed = self
             .defaults
             .get(row)
             .is_some_and(|default| default.changed);
-        if changed {
-            let width = (label.chars().count() as f32 * 19.0 * BODY_ADVANCE).min(label_width);
-            kit::changed_dot(&mut self.ui, frame, LABEL_X + width + 12.0, middle);
-        }
+        row_name(
+            &mut self.ui,
+            frame,
+            measure,
+            label,
+            LABEL_X,
+            middle,
+            NAME_COLUMN,
+            focused,
+            changed,
+        );
         self.ui
             .hit_region(row as u16, frame.rect(ROWS_X, top, ROWS_WIDTH, LINE));
         if !under_list {
@@ -878,6 +936,9 @@ pub(crate) fn draw_rail(
 
 // Names, controls and the reset arrow in the rows' column, in order.
 const _: () = assert!(LABEL_X < CONTROL_LEFT && TRACK_X > CONTROL_LEFT);
+// A name filling its column leaves its changed dot short of the controls.
+const _: () =
+    assert!(LABEL_X + NAME_COLUMN + DOT_GAP + kit::CHANGED_DOT_RADIUS * 2.0 < CONTROL_LEFT);
 const _: () = assert!(CONTROL_RIGHT < RESET_X - 16.0 && RESET_X + 16.0 <= ROWS_X + ROWS_WIDTH);
 // The rail, the rows' column with its scrollbar and the detail column side by
 // side, inside the frame's margins.
@@ -891,6 +952,7 @@ const _: () = assert!(SEARCH[1] + SEARCH[3] < ROWS_TOP);
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::text::TextStyle;
 
     #[test]
     fn values_read_in_sentence_case() {
@@ -900,5 +962,86 @@ mod tests {
             Choices(&["off", "sjk", "strong"]).to_string(),
             "Off, SJK, Strong"
         );
+    }
+
+    /// The changed dot sits [`DOT_GAP`] after a row name's last letter as the
+    /// renderer draws it, for short and long names, at 1080p and 4K and in the
+    /// player's larger, wider-spaced text, level with the letters' middle; a
+    /// name cut short at its column puts it after the column's end, never over
+    /// the controls.
+    #[test]
+    fn the_changed_dot_follows_the_name_as_drawn() {
+        let mut font = crate::text::load_family(&crate::text::BODY, 1.5, None)
+            .expect("Exo 2")
+            .font;
+        let long = "A setting whose name runs on far past the room its row gives it";
+        let labels = ["Saber trail", "Everyone as my model", "Shader remaps", long];
+        let styles = [
+            ([1920.0, 1080.0], TextStyle::NEUTRAL),
+            ([3840.0, 2160.0], TextStyle::NEUTRAL),
+            (
+                [1920.0, 1080.0],
+                TextStyle {
+                    scale: 1.2,
+                    tracking: 0.1,
+                },
+            ),
+        ];
+        for (viewport, style) in styles {
+            font.set_style(style);
+            let measure = Measure::new(&font, style);
+            let frame = Frame::new(viewport);
+            let s = frame.s;
+            for label in labels {
+                let mut canvas = MenuCanvas::new();
+                canvas.begin_transparent(viewport);
+                row_name(
+                    &mut canvas,
+                    &frame,
+                    &measure,
+                    label,
+                    LABEL_X,
+                    500.0,
+                    NAME_COLUMN,
+                    true,
+                    true,
+                );
+                let dot = canvas
+                    .draw_list()
+                    .commands()
+                    .iter()
+                    .find_map(|command| match command {
+                        DrawCommand::RoundedRect { rect, .. } => Some(*rect),
+                        _ => None,
+                    })
+                    .expect("the changed dot");
+                let mut vertices = Vec::new();
+                canvas.append_text(&mut vertices, &font, viewport);
+                // The letters' right edge, their shadows (fainter) left out.
+                let ink = vertices
+                    .iter()
+                    .filter(|vertex| vertex.colour()[3] > 0.8)
+                    .map(|vertex| vertex.window_position(viewport)[0])
+                    .fold(f32::MIN, f32::max);
+                let gap = dot.x - ink;
+                let column_end = frame.point(LABEL_X + NAME_COLUMN, 0.0)[0];
+                let case = format!("{label:?} at {viewport:?} in {style:?}");
+                if label == long {
+                    assert!(ink <= column_end + 0.01, "{case}: {ink} past {column_end}");
+                    assert!(gap >= DOT_GAP * s - 0.01, "{case}: gap {gap}");
+                    assert!(
+                        (dot.x - column_end - DOT_GAP * s).abs() < 0.01,
+                        "{case}: dot at {}",
+                        dot.x
+                    );
+                } else {
+                    assert!(ink < column_end, "{case}: cut short");
+                    assert!((gap - DOT_GAP * s).abs() < 0.01, "{case}: gap {gap}");
+                }
+                assert!(dot.right() < frame.point(CONTROL_LEFT, 0.0)[0], "{case}");
+                let middle = dot.y + dot.height * 0.5;
+                assert!((middle - frame.point(0.0, 500.0)[1]).abs() < 0.01, "{case}");
+            }
+        }
     }
 }
