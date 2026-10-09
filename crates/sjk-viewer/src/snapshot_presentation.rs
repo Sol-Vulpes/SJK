@@ -487,6 +487,7 @@ mod tests {
             local_fragged: false,
             local_was_killed: false,
             server_time: 0,
+            attacker_force: 0,
         }
     }
 

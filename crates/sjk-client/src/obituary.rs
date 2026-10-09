@@ -43,6 +43,10 @@ pub struct ObituaryEvent {
     pub local_was_killed: bool,
     /// Snapshot server time at which the event was accepted.
     pub server_time: i32,
+    /// The attacker's `forcePowersActive` bits in that snapshot (0 when the
+    /// snapshot does not hold the attacker), which tell Force Grip from Force
+    /// Lightning, as `MOD_FORCE_DARK` covers both.
+    pub attacker_force: u32,
 }
 
 /// Eight-entry retained kill-feed ring. Oldest entries are overwritten.
@@ -127,12 +131,13 @@ impl ObituaryTracker {
                 continue;
             }
             let gender = client_gender(game, entity.other_entity_num());
-            let event = legacy_obituary(
+            let mut event = legacy_obituary(
                 entity,
                 snapshot.player.client_num(),
                 gender,
                 snapshot.server_time,
             );
+            event.attacker_force = attacker_force(snapshot, event.attacker);
             self.feed.push(event);
             self.decoded += 1;
         }
@@ -199,7 +204,24 @@ pub fn legacy_obituary(
         local_fragged: attacker == local_client && target != attacker,
         local_was_killed: target == local_client && attacker != target,
         server_time,
+        attacker_force: 0,
     }
+}
+
+/// The `forcePowersActive` bits of client `attacker` in `snapshot`, 0 when it
+/// holds no such client.
+fn attacker_force(snapshot: &Snapshot, attacker: u16) -> u32 {
+    if attacker >= MAX_CLIENTS {
+        return 0;
+    }
+    if attacker == snapshot.player.client_num() {
+        return snapshot.player.force_powers_active();
+    }
+    snapshot
+        .entities
+        .iter()
+        .find(|entity| entity.number() == attacker)
+        .map_or(0, EntityState::force_powers_active)
 }
 
 /// `cg_event.c:160-175`: water, slime, lava, crush, falling, suicide and
