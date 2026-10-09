@@ -1,12 +1,14 @@
-//! Per-player replacements for the stock saber sounds: a blade skin (an SJK unlockable,
+//! Per-player additions to the stock saber sounds: a blade skin (an SJK unlockable,
 //! drawn by the viewer) brings its own ignition, switching off, hum and swings, heard for
-//! every player wearing it and only for them.
+//! every player wearing it and only for them, on top of the stock sounds, which keep
+//! playing below.
 //!
 //! The viewer registers its skins' sound sets once per gamestate
 //! ([`LegacySoundAdapter::register_saber_sound_sets`]) and tells the adapter every frame
 //! which client slot wears which set
 //! ([`LegacySoundAdapter::set_saber_sound_overrides`]). With no set worn, every path
-//! below is the compatibility one, unchanged. Replaced, for a client wearing a set:
+//! below is the compatibility one, unchanged. Added, for a client wearing a set (each
+//! on a channel of its own, so it does not cut the stock sound):
 //!
 //! - `EV_SABER_UNHOLSTER` (the ignition the game predicts) plays the set's `on`;
 //! - cgame's own ignition and switching off as the player draws the saber from another
@@ -17,8 +19,9 @@
 //!   player's whose origin is nearest the event's, within [`TOGGLE_REACH`];
 //! - `EV_SABER_ATTACK` plays one of the three `swings` (as a `.sab` with
 //!   `swingSound1`-`3` does, `cg_event.c`);
-//! - the hum loop ([`crate::loop_sounds`]) plays `hum` for both sabers, and for the
-//!   saber while it is thrown (the flying saber entity's own `loopSound`).
+//! - the hum loop ([`crate::loop_sounds`]) plays `hum` once, whichever sabers are lit,
+//!   and for the saber while it is thrown (over the flying saber entity's own
+//!   `loopSound`).
 //!
 //! Animation swing cues are the viewer's (`actor_sounds.rs`).
 

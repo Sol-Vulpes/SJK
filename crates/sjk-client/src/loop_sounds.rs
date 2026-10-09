@@ -72,6 +72,8 @@ pub enum LegacyLoopKind {
     WeaponReady,
     SaberHumPrimary,
     SaberHumSecondary,
+    /// A blade skin's hum, over the saber's own.
+    SaberHumSkin,
     AmbientGlobal,
     AmbientLocal,
 }
@@ -87,6 +89,7 @@ impl LegacyLoopKind {
             Self::WeaponReady => "weapon_readySound",
             Self::SaberHumPrimary => "saber_primary_hum",
             Self::SaberHumSecondary => "saber_secondary_hum",
+            Self::SaberHumSkin => "saber_skin_hum",
             Self::AmbientGlobal => "ambient_global_set",
             Self::AmbientLocal => "ambient_local_set",
         }
@@ -136,7 +139,7 @@ pub(crate) struct LegacyLoopAdapter {
     sabers: [SaberLoops; MAX_CLIENTS],
     /// Registered hums of the replacement saber sound sets, by set.
     saber_hums: Vec<u16>,
-    /// The hum each client's blade skin plays instead of its sabers' own.
+    /// The hum each client's blade skin plays over its sabers' own.
     hum_overrides: [Option<u16>; MAX_CLIENTS],
     client_config_hash: [u64; MAX_CLIENTS],
     decisions: Vec<LegacyLoopDecision>,
@@ -423,9 +426,7 @@ impl LegacyLoopAdapter {
             self.push_soundset(sound, set_index, state.number(), origin);
             return;
         }
-        let sound = self
-            .thrown_saber_hum(state)
-            .or(self.cs_sounds[usize::from(configured)]);
+        let sound = self.cs_sounds[usize::from(configured)];
         let velocity = if state.entity_type() == ET_MISSILE {
             legacy_evaluate_trajectory_delta(
                 state.trajectory_delta(),
@@ -449,6 +450,17 @@ impl LegacyLoopAdapter {
             origin,
             velocity,
         );
+        // A thrown saber of a blade skin's wearer hums with the skin as well.
+        if let Some(hum) = self.thrown_saber_hum(state) {
+            self.push(
+                LegacyLoopKind::SaberHumSkin,
+                Some(hum),
+                None,
+                state.number(),
+                origin,
+                velocity,
+            );
+        }
     }
 
     fn add_weapon_loop(&mut self, state: &EntityState, origin: [f32; 3]) {
@@ -507,6 +519,9 @@ impl LegacyLoopAdapter {
                 [0.0; 3],
             );
         }
+        if primary_active || secondary_active {
+            self.push_skin_hum(client, state.number(), origin);
+        }
     }
 
     fn add_local_saber_loops(&mut self, snapshot: &Snapshot, listener_origin: [f32; 3]) {
@@ -545,6 +560,9 @@ impl LegacyLoopAdapter {
                 [0.0; 3],
             );
         }
+        if primary_active || secondary_active {
+            self.push_skin_hum(client, player.client_num(), listener_origin);
+        }
     }
 
     /// Register the replacement sets' hums, in set order
@@ -567,7 +585,7 @@ impl LegacyLoopAdapter {
             sets.map(|set| set.and_then(|set| self.saber_hums.get(usize::from(set)).copied()));
     }
 
-    /// A thrown saber's hum when its owner wears a blade skin: the skin's, in place of
+    /// A thrown saber's hum when its owner wears a blade skin: the skin's, to play over
     /// the `loopSound` the game gives the saber entity (`w_saber.c`'s `saberHumSound`
     /// or the hilt's `soundLoop`). `None` for any other entity or a stock owner.
     fn thrown_saber_hum(&self, state: &EntityState) -> Option<u16> {
@@ -578,16 +596,23 @@ impl LegacyLoopAdapter {
             .flatten()
     }
 
-    /// A client's hums: its sabers' own, or its blade skin's for both (the second is then
-    /// the same sound on the same source, which `push` keeps once).
+    /// A client's sabers' own hums, which a blade skin's hum plays over
+    /// ([`Self::push_skin_hum`]).
     fn saber_loops(&self, client: usize) -> SaberLoops {
-        let loops = self.sabers[client];
-        match self.hum_overrides[client] {
-            Some(hum) => SaberLoops {
-                primary: Some(hum),
-                secondary: loops.secondary.map(|_| hum),
-            },
-            None => loops,
+        self.sabers[client]
+    }
+
+    /// The blade skin's hum of a client wearing one, once for both sabers, over theirs.
+    fn push_skin_hum(&mut self, client: usize, source: u16, origin: [f32; 3]) {
+        if let Some(hum) = self.hum_overrides[client] {
+            self.push(
+                LegacyLoopKind::SaberHumSkin,
+                Some(hum),
+                None,
+                source,
+                origin,
+                [0.0; 3],
+            );
         }
     }
 

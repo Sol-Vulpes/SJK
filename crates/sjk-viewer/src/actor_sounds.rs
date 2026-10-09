@@ -85,11 +85,11 @@ pub(crate) fn update(gpu: &mut GpuState, time: i64, audio: &mut Option<GameAudio
             |cue, variant| match cue {
                 Cue::Sound { paths, channel } => {
                     let standard = &paths[variant % paths.len()];
-                    // A blade skin's swings replace the stock and the hilt's own.
-                    let path = skin
-                        .and_then(|skin| skin_swing(&skins, skin, standard, variant))
-                        .or_else(|| {
-                            gpu.saber_hilts.as_ref()?.animation_sound(
+                    let path = gpu
+                        .saber_hilts
+                        .as_ref()
+                        .and_then(|hilts| {
+                            hilts.animation_sound(
                                 mesh.saber_names[0].as_deref()?,
                                 standard,
                                 variant,
@@ -97,6 +97,13 @@ pub(crate) fn update(gpu: &mut GpuState, time: i64, audio: &mut Option<GameAudio
                         })
                         .unwrap_or(standard);
                     audio.play_animation(path, *channel, false, origin, id, is_local);
+                    // A blade skin's swing plays over the stock or the hilt's own, on a
+                    // channel of its own so that it does not cut it.
+                    if let Some(swing) =
+                        skin.and_then(|skin| skin_swing(&skins, skin, standard, variant))
+                    {
+                        audio.play_animation(swing, 0, false, origin, id, is_local);
+                    }
                 }
                 Cue::Footstep { right, heavy } => {
                     if !footsteps::allowed_class(footstep_class) {
@@ -158,7 +165,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn a_skin_replaces_only_the_stock_swing_cues() {
+    fn a_skin_adds_to_only_the_stock_swing_cues() {
         let skins = crate::saber_skins::tests::loaded_sample(1);
         let skin = skins.color_of("saber_sun").unwrap();
         assert_eq!(

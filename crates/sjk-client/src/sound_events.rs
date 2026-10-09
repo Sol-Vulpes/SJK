@@ -1136,6 +1136,8 @@ impl LegacySoundAdapter {
             }
             None => {}
         }
+        // A blade skin's sound for the event, played over the stock one.
+        let mut layered = None;
         let simple = match event {
             125..=127 => Some((
                 LegacySoundEvent::Pushed,
@@ -1323,15 +1325,16 @@ impl LegacySoundAdapter {
                     false,
                 ))
             }
-            29 => Some((
-                LegacySoundEvent::SaberAttack,
-                self.saber_overrides
-                    .swing(source, variant)
-                    .or(self.saber_attack[variant % 8]),
-                source,
-                CHAN_WEAPON,
-                false,
-            )),
+            29 => {
+                layered = self.saber_overrides.swing(source, variant);
+                Some((
+                    LegacySoundEvent::SaberAttack,
+                    self.saber_attack[variant % 8],
+                    source,
+                    CHAN_WEAPON,
+                    false,
+                ))
+            }
             30 => Some((
                 LegacySoundEvent::SaberHit,
                 self.saber_hit[variant % 3],
@@ -1405,18 +1408,19 @@ impl LegacySoundAdapter {
                         false,
                     )
                 }),
-            76 => Some((
-                LegacySoundEvent::General,
-                {
-                    let sound = self.configured_sound(parameter, client);
+            76 => {
+                let sound = self.configured_sound(parameter, client);
+                layered =
                     self.saber_overrides
-                        .general(sound, &self.sounds, entity.origin, snapshot)
-                        .or(sound)
-                },
-                source,
-                entity.general_channel,
-                false,
-            )),
+                        .general(sound, &self.sounds, entity.origin, snapshot);
+                Some((
+                    LegacySoundEvent::General,
+                    sound,
+                    source,
+                    entity.general_channel,
+                    false,
+                ))
+            }
             77 => Some((
                 LegacySoundEvent::Global,
                 self.configured_sound(parameter, client),
@@ -1496,6 +1500,20 @@ impl LegacySoundAdapter {
                 entity.origin,
                 snapshot,
             );
+            // A blade skin's sound plays over the stock one, on a channel of its own
+            // that the stock sound's does not cut.
+            if let Some(skin) = layered {
+                self.emit(
+                    kind,
+                    Some(skin),
+                    sound_source,
+                    CHAN_AUTO,
+                    listener_relative,
+                    true,
+                    entity.origin,
+                    snapshot,
+                );
+            }
         } else {
             match event {
                 15 if source == snapshot.player.client_num() => {
