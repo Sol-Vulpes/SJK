@@ -14,7 +14,7 @@ asked that resting the pointer on a player's name in chat show their profile wit
 or Unmute, and that a mute hide their chat (SJK chat and, when they can be matched to a
 slot, game chat), draw them as `kyle/default` with the default saber and colour while
 they are on the server, and silence every sound they cause, on this PC only. A profile
-card ([profile_card.rs](../crates/sjk-viewer/src/profile_card.rs)) now shows beside a
+card ([sender_card.rs](../crates/sjk-viewer/src/sender_card.rs)) now shows beside a
 name under the pointer in the game's chat while the composer is open, on the main
 page's dock and on the SJK chat page; the Players page's card is that page's right
 column and could not be reused. The page's session-only mute became one list kept in

@@ -8,7 +8,7 @@
 //! players the hub does not know, by name.
 
 use crate::chat_mutes::{self, MuteList, Slots};
-use crate::profile_card::Place;
+use crate::sender_card::Place;
 use std::path::{Path, PathBuf};
 use std::sync::{Mutex, MutexGuard};
 

@@ -1,11 +1,11 @@
 //! The profile card in the game's chat (`docs/hub-chat.md`, "Muting a player"). While
 //! the composer is open the pointer is free, and resting it on a name (an SJK chat
 //! sender's, or the name of a player the server says sent a line) shows their card
-//! ([`crate::profile_card`]) beside it, with Mute or Unmute. The card stays while the
+//! ([`crate::sender_card`]) beside it, with Mute or Unmute. The card stays while the
 //! pointer moves onto it. A muted player's lines are hidden as ignored ones are.
 
 use super::*;
-use crate::profile_card::{self, Person, Place};
+use crate::sender_card::{self, Person, Place};
 use sjk_ui::Rect;
 
 /// The card's pointer targets, after the player menu's.
@@ -136,18 +136,18 @@ impl ChatOverlay {
             return;
         };
         let measure = crate::sjk_chat_look::Measure::new(font, crate::text::TextStyle::NEUTRAL);
-        let size = profile_card::size(&card.person, g.scale);
-        let origin = profile_card::beside(card.anchor, size, viewport, 10.0 * g.scale);
-        profile_card::draw(
+        let size = sender_card::size(&card.person, g.scale);
+        let origin = sender_card::beside(card.anchor, size, viewport, 10.0 * g.scale);
+        sender_card::draw(
             &mut self.ui,
-            &profile_card::Card {
+            &sender_card::Card {
                 person: &card.person,
                 muted: card.muted,
                 measure: Some(&measure),
             },
             origin,
             g.scale,
-            profile_card::Tokens {
+            sender_card::Tokens {
                 card: CARD,
                 mute: CARD_MUTE,
             },

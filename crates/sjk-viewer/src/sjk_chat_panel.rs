@@ -3,7 +3,7 @@
 //! long ago each message came; a field to write in and Send; and, for a chosen
 //! message, Mute on this PC, and for SJK staff Delete and Mute at the hub. Resting the
 //! pointer on a name shows the sender's profile card with Mute or Unmute
-//! ([`crate::profile_card`], "Muting a player").
+//! ([`crate::sender_card`], "Muting a player").
 //!
 //! Opened by the main page's docked chat (Open chat), the `sjkchat` command or the
 //! in-game SJK menu. Like the Staff page it lives in the console and has the SJK UI's
@@ -125,7 +125,7 @@ pub(crate) struct Panel {
 /// ([`Panel::place_card`]), so it shows a frame later.
 struct Hovered {
     id: u64,
-    person: crate::profile_card::Person,
+    person: crate::sender_card::Person,
     anchor: sjk_ui::Rect,
     placed: bool,
 }
@@ -184,7 +184,7 @@ impl Panel {
     /// (`place`, from their key and name). Called before the chat's lock is taken.
     pub(crate) fn place_card(
         &mut self,
-        place: impl FnOnce(Option<&str>, &str) -> crate::profile_card::Place,
+        place: impl FnOnce(Option<&str>, &str) -> crate::sender_card::Place,
     ) {
         if let Some(card) = self.card.as_mut().filter(|card| !card.placed) {
             card.person.place = place(card.person.key_id.as_deref(), &card.person.name);
@@ -544,7 +544,7 @@ mod tests {
 
     #[test]
     fn resting_on_a_name_shows_the_profile_card_with_mute() {
-        use crate::profile_card::Place;
+        use crate::sender_card::Place;
         use sjk_ui::{InputEvent, Rect, Vec2};
         let centre = |rect: Rect| Vec2::new(rect.x + rect.width * 0.5, rect.y + rect.height * 0.5);
         let chat = chat(3);

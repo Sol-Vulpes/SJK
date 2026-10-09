@@ -381,7 +381,7 @@ overlay routes their text to the UI's families (`console_sjk_pages.rs`).
   newer: Page Down" mark the ends when it scrolls. Resting the pointer on a name shows
   the sender's profile card over the page, beside the name, with Mute or Unmute
   ([hub-chat.md](hub-chat.md#muting-a-player)).
-- **Profile card** ([profile_card.rs](../crates/sjk-viewer/src/profile_card.rs),
+- **Profile card** ([sender_card.rs](../crates/sjk-viewer/src/sender_card.rs),
   08/10/2026, Sol's request): a name under the pointer in the game's chat (composer
   open), on the main page's dock and on the SJK chat page. A 340-wide navy card with a
   holo edge: the name and the verified tick alone, "SJK player" (gold, with "SJK staff")

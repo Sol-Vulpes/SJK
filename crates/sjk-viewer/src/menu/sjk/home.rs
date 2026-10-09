@@ -256,7 +256,7 @@ pub(crate) struct DockLine<'a> {
 /// beside.
 #[derive(Debug)]
 struct DockCard {
-    person: crate::profile_card::Person,
+    person: crate::sender_card::Person,
     anchor: Rect,
 }
 
@@ -1159,18 +1159,18 @@ fn dock_card(
     let Some(card) = home.card.as_ref() else {
         return;
     };
-    let size = crate::profile_card::size(&card.person, frame.s);
-    let origin = crate::profile_card::beside(card.anchor, size, viewport, 12.0 * frame.s);
-    crate::profile_card::draw(
+    let size = crate::sender_card::size(&card.person, frame.s);
+    let origin = crate::sender_card::beside(card.anchor, size, viewport, 12.0 * frame.s);
+    crate::sender_card::draw(
         canvas,
-        &crate::profile_card::Card {
+        &crate::sender_card::Card {
             person: &card.person,
             muted: false,
             measure: dock.measure.as_ref(),
         },
         origin,
         frame.s,
-        crate::profile_card::Tokens {
+        crate::sender_card::Tokens {
             card: CARD_TOKEN,
             mute: CARD_MUTE_TOKEN,
         },
@@ -1179,15 +1179,15 @@ fn dock_card(
 
 /// Who a dock line's sender is. The dock leaves muted senders out, and the main page
 /// is not on a server, so where they are is not known.
-fn dock_person(line: &DockLine<'_>) -> crate::profile_card::Person {
-    crate::profile_card::Person {
+fn dock_person(line: &DockLine<'_>) -> crate::sender_card::Person {
+    crate::sender_card::Person {
         name: line.name.to_owned(),
         key_id: (!line.key_id.is_empty()).then(|| line.key_id.to_owned()),
         hub_name: None,
         verified: line.verified,
         staff: line.staff,
         medals: crate::medals::Medals::default(),
-        place: crate::profile_card::Place::Unknown,
+        place: crate::sender_card::Place::Unknown,
     }
 }
 

@@ -610,14 +610,14 @@ impl Panel {
                 _ => {
                     self.card = Some(Hovered {
                         id: message.id,
-                        person: crate::profile_card::Person {
+                        person: crate::sender_card::Person {
                             name: laid.name.clone(),
                             key_id: Some(message.key_id.clone()),
                             hub_name: None,
                             verified: message.verified,
                             staff: message.staff,
                             medals: crate::medals::Medals::default(),
-                            place: crate::profile_card::Place::Unknown,
+                            place: crate::sender_card::Place::Unknown,
                         },
                         anchor,
                         placed: false,
@@ -649,18 +649,18 @@ impl Panel {
             .is_some_and(|key| inputs.muted.contains(key));
         self.shown.card_muted = muted;
         let s = frame.s;
-        let size = crate::profile_card::size(&card.person, s);
-        let origin = crate::profile_card::beside(card.anchor, size, viewport, 12.0 * s);
-        crate::profile_card::draw(
+        let size = crate::sender_card::size(&card.person, s);
+        let origin = crate::sender_card::beside(card.anchor, size, viewport, 12.0 * s);
+        crate::sender_card::draw(
             &mut self.ui,
-            &crate::profile_card::Card {
+            &crate::sender_card::Card {
                 person: &card.person,
                 muted,
                 measure: Some(measure),
             },
             origin,
             s,
-            crate::profile_card::Tokens {
+            crate::sender_card::Tokens {
                 card: CARD_TOKEN,
                 mute: CARD_MUTE_TOKEN,
             },

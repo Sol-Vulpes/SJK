@@ -37,7 +37,7 @@ The hub's side is described in Sol-Vulpes/SJK-hub (`PROTOCOL.md`, "Chat", "Emote
 | Viewer glue | [player_identity.rs](../crates/sjk-viewer/src/player_identity.rs) |
 | Muting a player: the list, matching slots | [chat_mutes.rs](../crates/sjk-viewer/src/chat_mutes.rs), [player_mutes.rs](../crates/sjk-viewer/src/player_mutes.rs) |
 | Muting a player: drawn as Kyle, silenced | [muted_players.rs](../crates/sjk-viewer/src/muted_players.rs), [muted_players_frame.rs](../crates/sjk-viewer/src/muted_players_frame.rs), [audio_mute.rs](../crates/sjk-viewer/src/audio_mute.rs) |
-| Profile card (pointer on a name) | [profile_card.rs](../crates/sjk-viewer/src/profile_card.rs), [chat/card.rs](../crates/sjk-viewer/src/chat/card.rs) |
+| Profile card (pointer on a name) | [sender_card.rs](../crates/sjk-viewer/src/sender_card.rs), [chat/card.rs](../crates/sjk-viewer/src/chat/card.rs) |
 | In-game SJK channel | [chat/sjk.rs](../crates/sjk-viewer/src/chat/sjk.rs), [chat/view/sjk_line.rs](../crates/sjk-viewer/src/chat/view/sjk_line.rs), [sjk_chat_frame.rs](../crates/sjk-viewer/src/sjk_chat_frame.rs) |
 | How a line looks everywhere (gold, tick, flow) | [sjk_chat_look.rs](../crates/sjk-viewer/src/sjk_chat_look.rs) |
 | Main page dock | [home.rs](../crates/sjk-viewer/src/menu/sjk/home.rs), [chat_dock.rs](../crates/sjk-viewer/src/menu/sjk/chat_dock.rs) |
@@ -177,7 +177,7 @@ to the hub or the game server, and the game is unchanged; only what this client 
 and plays changes.
 
 - **Where:** rest the pointer on a name and the player's profile card shows beside it
-  ([profile_card.rs](../crates/sjk-viewer/src/profile_card.rs)), in the SJK UI's look
+  ([sender_card.rs](../crates/sjk-viewer/src/sender_card.rs)), in the SJK UI's look
   wherever it is: in the game's chat while the composer is open (the pointer is free
   then), on an SJK chat sender's name or on the name of a player the server says sent
   the line ([chat/card.rs](../crates/sjk-viewer/src/chat/card.rs)); on the main page's
