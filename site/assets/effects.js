@@ -1,9 +1,9 @@
 // Sol JK site: WebGPU effects from the MIT-licensed Shaders library
 // (https://github.com/shader-effects-inc/shaders, vendored as
 // vendor/shaders/shaders-4.0.0.js so no third-party server is contacted, with its
-// telemetry off). The home page gets a slow sunburst behind the emblem, as the
-// client's main page has, drifting dust and a lightsaber trail that follows the
-// pointer. When the
+// telemetry off). The home page gets drifting dust and a lightsaber trail that
+// follows the pointer; the sun behind the emblem is CSS (style.css, `.sun`), so
+// every browser shows it. When the
 // visitor asks for reduced motion (Windows' "Animation effects" off does), the
 // same scene is drawn once and held still, without the trail. Without WebGPU
 // the script does nothing and the CSS starfield stays.
@@ -23,24 +23,8 @@ const pace = (speed) => (reducedMotion ? 0 : speed);
 const STILL_AFTER_MS = 400;
 
 /** The home page's layers, bottom to top, in the site's gold and the client's saber blue. */
-function heroPreset(emblem) {
+function heroPreset() {
   const components = [
-    {
-      type: "SunBurst",
-      id: "sun",
-      props: {
-        center: emblem,
-        color: "#ffcf70",
-        background: "transparent",
-        rayCount: 18,
-        softness: 0.7,
-        radius: 0.3,
-        feather: 0.85,
-        speed: pace(0.04),
-        opacity: 0.32,
-        blendMode: "screen",
-      },
-    },
     {
       type: "FloatingParticles",
       props: {
@@ -77,19 +61,6 @@ function heroPreset(emblem) {
   return { components };
 }
 
-/** Where the emblem's centre falls on the home page's canvas, which fills the
- * home page (0 to 1 from the top left). */
-function fitHero(canvas, header) {
-  const box = header.getBoundingClientRect();
-  const emblem = header.querySelector(".emblem");
-  if (!emblem || !box.width || !box.height) return { x: 0.32, y: 0.5 };
-  const mark = emblem.getBoundingClientRect();
-  return {
-    x: (mark.left + mark.width / 2 - box.left) / box.width,
-    y: (mark.top + mark.height / 2 - box.top) / box.height,
-  };
-}
-
 async function start() {
   if (!navigator.gpu) return;
   const header = document.querySelector(".home");
@@ -109,9 +80,8 @@ async function start() {
   canvas.className = "fx fx-hero";
   canvas.setAttribute("aria-hidden", "true");
   header.prepend(canvas);
-  const emblem = fitHero(canvas, header);
   try {
-    const shader = await createShader(canvas, heroPreset(emblem), {
+    const shader = await createShader(canvas, heroPreset(), {
       disableTelemetry: true,
       onReady: () => canvas.classList.add("fx-ready"),
       // A terminal failure leaves the canvas empty: drop it, the CSS backdrop
@@ -129,10 +99,7 @@ async function start() {
       hold = setTimeout(() => shader.pause(), STILL_AFTER_MS);
     };
     holdStill();
-    window.addEventListener("resize", () => {
-      shader.update("sun", { center: fitHero(canvas, header) });
-      holdStill();
-    }, { passive: true });
+    window.addEventListener("resize", holdStill, { passive: true });
   } catch (error) {
     canvas.remove();
     console.info("Site effects failed:", error);
