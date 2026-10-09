@@ -275,6 +275,19 @@ pub(crate) fn texture(key_id: &str, version: &str) -> Option<TextureId> {
     lock().texture(key_id, version)
 }
 
+impl Avatars {
+    /// Forget the pictures that failed to load. A slot's place in the cache is its
+    /// cell in the renderer's atlas, so the slots after a dropped one move to other
+    /// cells: none is in its atlas any more, and each is uploaded again.
+    fn drop_missing(&mut self) {
+        self.slots
+            .retain(|slot| !matches!(slot.state, State::Missing(_)));
+        for slot in &mut self.slots {
+            slot.uploaded_into = None;
+        }
+    }
+}
+
 /// Tell the cache where pictures come from: the hub's address (empty for none) and the
 /// settings folder. A change lets pictures that could not be had be asked for again.
 pub(crate) fn configure(config_directory: Option<&std::path::Path>, hub_url: &str) {
@@ -285,9 +298,7 @@ pub(crate) fn configure(config_directory: Option<&std::path::Path>, hub_url: &st
     }
     avatars.hub_url = hub_url.to_owned();
     avatars.dir = dir;
-    avatars
-        .slots
-        .retain(|slot| !matches!(slot.state, State::Missing(_)));
+    avatars.drop_missing();
 }
 
 /// Show `rgba` ([`sjk_identity::avatar::SIZE`] square, not yet round) as the preview of
@@ -473,6 +484,35 @@ mod tests {
         // A new version is a new picture.
         assert_eq!(avatars.texture(&key(1), &version(2)), None);
         assert_eq!(inbox.try_iter().count(), 1);
+    }
+
+    #[test]
+    fn dropping_failed_pictures_uploads_the_ones_that_moved_again() {
+        let (mut avatars, _inbox) = cache();
+        for (index, ready) in [true, false, true].into_iter().enumerate() {
+            avatars.slots.push(Slot {
+                key_id: key(index as u64),
+                version: version(1),
+                state: if ready {
+                    State::Ready(vec![1; 16].into())
+                } else {
+                    State::Missing(Instant::now())
+                },
+                used: 1,
+                uploaded_into: Some(7),
+            });
+        }
+        avatars.drop_missing();
+        assert_eq!(avatars.slots.len(), 2);
+        // The third picture now stands at index 1, whose atlas cell holds another.
+        assert_eq!(avatars.slots[1].key_id, key(2));
+        assert_eq!(avatars.texture(&key(2), &version(1)), None);
+        assert!(
+            avatars
+                .slots
+                .iter()
+                .all(|slot| slot.uploaded_into.is_none())
+        );
     }
 
     #[test]

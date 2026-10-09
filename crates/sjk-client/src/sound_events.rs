@@ -333,6 +333,10 @@ impl LegacySoundEvent {
 pub struct RegisteredLegacySound {
     /// Resolved case-insensitive VFS path, including extension fallback.
     pub path: Box<str>,
+    /// The path asked for, which differs from `path` when an extension fallback
+    /// resolved it (`.wav` asked, `.mp3` found): a later request for it finds this
+    /// entry instead of reading the file and adding another.
+    pub requested: Box<str>,
     /// Decoded engine-bank handle; absent when the source asset is unavailable.
     pub handle: Option<SoundHandle>,
 }
@@ -541,7 +545,10 @@ impl EventSubject {
 /// they are.
 fn event_cause(event: u16, entity: &EventSubject) -> Option<u16> {
     let client = match event {
-        30 | 31 => entity.other2,
+        30 => entity.other2,
+        // Stock `w_saber.c` sends a thrown saber's or a missile's block with no owner
+        // (`otherEntityNum2` stays 0), which is no sign of client 0.
+        31 if entity.other2 != 0 => entity.other2,
         75 => entity.ground,
         _ => return None,
     };
@@ -1965,10 +1972,10 @@ pub(crate) fn intern_sound(
     requested: &str,
     register: &mut impl FnMut(&str, &[u8]) -> Option<SoundHandle>,
 ) -> u16 {
-    if let Some(index) = sounds
-        .iter()
-        .position(|sound| sound.path.eq_ignore_ascii_case(requested))
-    {
+    if let Some(index) = sounds.iter().position(|sound| {
+        sound.path.eq_ignore_ascii_case(requested)
+            || sound.requested.eq_ignore_ascii_case(requested)
+    }) {
         return index as u16;
     }
     let mut resolved = requested.to_owned();
@@ -2001,6 +2008,7 @@ pub(crate) fn intern_sound(
     let index = sounds.len() as u16;
     sounds.push(RegisteredLegacySound {
         path: resolved.into_boxed_str(),
+        requested: requested.into(),
         handle,
     });
     index
@@ -2028,6 +2036,11 @@ mod tests {
         assert_eq!(event_cause(30, &event), Some(4));
         assert_eq!(event_cause(31, &event), Some(4));
         assert_eq!(event_cause(75, &event), Some(7));
+        // A block with no owner is not client 0's.
+        event.other2 = 0;
+        assert_eq!(event_cause(31, &event), None);
+        assert_eq!(event_cause(30, &event), Some(0));
+        event.other2 = 4;
         // A footstep's source is the player already; an entity past the clients is
         // nobody.
         assert_eq!(event_cause(2, &event), None);

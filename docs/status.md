@@ -7,6 +7,25 @@ SJK currently contains a native client and standard dedicated server in a
 20-crate Rust workspace. This page records scope and verification, rather than
 claiming complete parity from the presence of an implementation.
 
+## Review fixes for SJK PRs #61, #62 and #64
+
+SJK-only branch `personal/review-fixes` (09/10/2026, Rust stable), from the review
+before those three merged. #61: a `.wav` the game data only holds as `.mp3` (retail's
+`enemy_saber_on`) was read and registered again on every player config change;
+`RegisteredLegacySound` now remembers the path asked for and `intern_sound` matches it.
+#62: after the hub URL or identity changed, the pictures that failed to load were
+dropped and the later slots moved to other atlas cells without being uploaded again, so a
+player could show another's picture (`Avatars::drop_missing` re-uploads them); a
+picture the hub serves is decoded under a 256 pixel, 4 MB limit, since a small 8,192
+pixel PNG decoded to 256 MB. #64: a reconnect kept the old applied mask, so a muted
+player was not rebuilt as the stand-in (`MutedPlayers::clear` resets it); an
+`EV_SABER_BLOCK` with no owner (stock sends 0) no longer counts as client 0's, which
+silenced every block when slot 0 was muted; a mute list that is not UTF-8 is read
+lossily instead of failing and being saved over. Not fixed: a muted slot's old chat
+lines come back when another player takes the slot (the lines are judged by slot
+number), and each player config change parses the `.sab` files once for the saber
+switch sounds. Verified: `cargo fmt --all --check`, `cargo test --locked --workspace`.
+
 ## Force page: buttons clear of This server, right click removes a level
 
 SJK-only branch `personal/force-page-layout` (09/10/2026, Rust stable), from Sol's

@@ -84,6 +84,9 @@ impl MutedPlayers {
         let had = self.inputs.is_some();
         self.slots = Slots::default();
         self.inputs = None;
+        // The next server's players are all drawn as themselves until worked out
+        // again, so a mute that comes back to the same slots must rebuild them.
+        self.applied = 0;
         had
     }
 }
@@ -229,7 +232,12 @@ mod tests {
             "own slot moved"
         );
         assert_eq!(asked.get(), 3, "worked out only when an input changed");
+        players.applied = 0b1000;
         assert!(players.clear());
+        assert_eq!(
+            players.applied, 0,
+            "a new server starts with nothing applied"
+        );
         assert_eq!(players.slots(), Slots::default());
         assert!(!players.clear(), "nothing left to forget");
     }
