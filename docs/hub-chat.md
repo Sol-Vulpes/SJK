@@ -23,7 +23,7 @@ The hub's side is described in Sol-Vulpes/SJK-hub (`PROTOCOL.md`, "Chat", "Emote
 | --- | --- |
 | Who may write | Any registered SJK key; reading the feed needs a registered key too. |
 | History | In the hub's memory only: the last 200 messages, gone on a restart. |
-| Menus | A docked box on the SJK UI's main page and a full SJK chat page. |
+| Menus | A docked box on the SJK UI's main page and in-game menu, and a full SJK chat page. |
 | Emote ids | Open: the hub relays any well-formed id; the catalogue is client data. |
 
 ## Pieces
@@ -40,7 +40,7 @@ The hub's side is described in Sol-Vulpes/SJK-hub (`PROTOCOL.md`, "Chat", "Emote
 | Sender card (pointer on a name) | [sender_card.rs](../crates/sjk-viewer/src/sender_card.rs), [chat/card.rs](../crates/sjk-viewer/src/chat/card.rs) |
 | In-game SJK channel | [chat/sjk.rs](../crates/sjk-viewer/src/chat/sjk.rs), [chat/view/sjk_line.rs](../crates/sjk-viewer/src/chat/view/sjk_line.rs), [sjk_chat_frame.rs](../crates/sjk-viewer/src/sjk_chat_frame.rs) |
 | How a line looks everywhere (gold, tick, flow) | [sjk_chat_look.rs](../crates/sjk-viewer/src/sjk_chat_look.rs) |
-| Main page dock | [home.rs](../crates/sjk-viewer/src/menu/sjk/home.rs), [chat_dock.rs](../crates/sjk-viewer/src/menu/sjk/chat_dock.rs) |
+| The dock (main page, in-game menu) | [chat_dock.rs](../crates/sjk-viewer/src/menu/sjk/chat_dock.rs), placed by [home.rs](../crates/sjk-viewer/src/menu/sjk/home.rs) and [ingame_menu/sjk_view.rs](../crates/sjk-viewer/src/ingame_menu/sjk_view.rs) |
 | SJK chat page | [sjk_chat_panel.rs](../crates/sjk-viewer/src/sjk_chat_panel.rs), [sjk_chat_panel_view.rs](../crates/sjk-viewer/src/sjk_chat_panel_view.rs), [console_sjk_chat_page.rs](../crates/sjk-viewer/src/console_sjk_chat_page.rs) |
 | Emotes | [emotes.rs](../crates/sjk-viewer/src/emotes.rs), [emotes_frame.rs](../crates/sjk-viewer/src/emotes_frame.rs) |
 
@@ -125,12 +125,24 @@ Old clients ignore all of it, so it stays `/v1/`.
 
 ## In the menus
 
-- SJK UI main page: the chat is docked under Recent servers. Its last five lines (the
-  verified tick after a verified sender's name), cut to one row each, sit on the field,
-  with the online count by its name; resting the pointer on a name shows the sender's
-  sender card with Mute. Down past the last server (or a click) reaches the field;
-  Enter types (every key goes to the field), Enter sends, Escape stops. Open chat opens
-  the page. A line under the field says why a message could not go.
+- SJK UI main page: the chat is docked under Recent servers. Its last messages (the
+  verified tick after a verified sender's name) sit on the field, newest at the bottom,
+  with the online count by its name. The box keeps its height (five one-row messages)
+  and each message takes as many rows as it needs (Sol's request, 10/10/2026: a long
+  one was cut to one row), so a long message pushes older ones out; a message taller
+  than the whole box (150 characters at a larger `ui_textScale`) shows its first rows
+  with its name, the last one ending in an ellipsis, and Open chat shows the rest.
+  Resting the pointer on a name shows the sender's sender card with Mute. Down past the
+  last server (or a click) reaches the field; Enter types (every key goes to the
+  field), Enter sends, Escape stops. Open chat opens the page. A line under the field
+  says why a message could not go.
+- SJK UI in-game menu (Escape in a match): the same dock, drawn by the same code
+  ([chat_dock.rs](../crates/sjk-viewer/src/menu/sjk/chat_dock.rs)), under the match
+  between the row of icons and the card ([sjk-ui.md](sjk-ui.md#in-game-menu)). Tab
+  reaches its field after the card; Enter types, and while typing every key goes to
+  the field, the console key and the game's bindings included; Escape stops typing.
+  The sender card shows above the dock and says where the player is on the server.
+  The classic in-game menu has no dock.
 - The SJK chat page (a console page in the SJK UI's look in every menu style): the
   history, newest at the bottom, each a flowing line (name, tick, text) with Staff and
   how long ago on the right of its first row ("3 minutes ago", as the main page's
@@ -166,9 +178,11 @@ request, 08/10/2026):
   flowed. Now the first row holds the SJK tag, the name, the tick and a colon, and the
   message goes on after them (`Wrapped::update_indented` in `chat/layout.rs`, drawn by
   `chat/view/sjk_line.rs`); a first word too wide for what is left of that row starts
-  the next. The page lays its lines out the same way, measured in its body family
-  (`sjk_chat_look::flow`), and the dock's single row sets name, tick and text one after
-  another.
+  the next. The page and the docks lay their lines out the same way, measured in their
+  body family (`sjk_chat_look::flow`, `flow_each` for the docks, which lay out every
+  frame without allocating). A message's own colour codes are dropped, so its wrapped
+  rows need no colour carried over; the name, which keeps its codes, stays on the
+  first row.
 
 ## Muting a player
 

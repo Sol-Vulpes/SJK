@@ -217,6 +217,25 @@ impl ClientMenu {
         }
     }
 
+    /// Made-up SJK chat messages (sender, text, verified) and who is online in the main
+    /// page's dock, and `draft` typed in its field (world shots).
+    #[cfg(test)]
+    pub(crate) fn sjk_home_chat_for_shot(
+        &mut self,
+        lines: &[(&str, &str, bool)],
+        online: u32,
+        draft: Option<&str>,
+    ) {
+        self.chat_dock.for_shot(lines, online);
+        self.home.chat_for_shot(draft);
+    }
+
+    /// Whether the main page's last frame ran out of room on its canvas (world shots).
+    #[cfg(test)]
+    pub(crate) fn sjk_home_overflowed(&self) -> bool {
+        self.ui.overflowed()
+    }
+
     /// A key on the SJK UI's main page.
     pub(super) fn sjk_home_key(
         &mut self,
@@ -258,13 +277,8 @@ impl ClientMenu {
             home::Action::Quit => MenuAction::Quit,
             home::Action::SendChat => {
                 let text = self.home.take_draft();
-                self.chat_dock.local = if console.bool_cvar("cl_sjkChat") == Some(false) {
-                    "SJK chat is off (Settings > Network)"
-                } else if crate::player_identity::chat(text) {
-                    ""
-                } else {
-                    "Turn the SJK identity on to chat"
-                };
+                self.chat_dock
+                    .send(text, console.bool_cvar("cl_sjkChat") != Some(false));
                 MenuAction::None
             }
             home::Action::OpenChat => {

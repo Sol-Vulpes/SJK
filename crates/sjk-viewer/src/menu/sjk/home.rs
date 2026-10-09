@@ -20,6 +20,7 @@
 //! window: a wider window shows more map at the sides, a narrower one scales
 //! the frame down to fit its width.
 
+use super::chat_dock::{self, Dock, DockAction};
 use super::recent::Ago;
 use super::{Frame, color, fade, fade_across, key_hint, key_hint_width, text};
 use crate::menu::MainDestination;
@@ -44,8 +45,14 @@ const CARD_TOKEN: u16 = 50;
 const SENDER_NAME_TOKEN: u16 = 60;
 const SENDER_CARD_TOKEN: u16 = 70;
 const SENDER_MUTE_TOKEN: u16 = 71;
-/// The longest message typed in the dock, as the hub takes it.
-const DRAFT_MAX: usize = sjk_identity::chat::TEXT_MAX;
+/// The dock's targets ([`chat_dock`]).
+const DOCK_TOKENS: chat_dock::Tokens = chat_dock::Tokens {
+    field: CHAT_TOKEN,
+    open: OPEN_CHAT_TOKEN,
+    names: SENDER_NAME_TOKEN,
+    card: SENDER_CARD_TOKEN,
+    mute: SENDER_MUTE_TOKEN,
+};
 
 /// The pages the ring shows.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -224,41 +231,7 @@ pub(crate) struct HomeView<'a> {
     pub(crate) summary: &'a crate::profile_card::Summary,
 }
 
-/// The SJK chat as the dock shows it.
-#[derive(Clone, Copy, Debug)]
-pub(crate) struct ChatDock<'a> {
-    /// The last messages, oldest first; the dock shows the last that fit.
-    pub(crate) lines: &'a [DockLine<'a>],
-    /// Keys reading the chat lately.
-    pub(crate) online: u32,
-    /// The hub answered the last poll.
-    pub(crate) live: bool,
-    /// Why the chat cannot send or read, or what became of the last message.
-    pub(crate) notice: &'a str,
-    /// How the body family measures, to set a line's runs one after another; without
-    /// it they are placed by an estimate.
-    pub(crate) measure: Option<crate::sjk_chat_look::Measure<'a>>,
-}
-
-/// One message of the dock.
-#[derive(Clone, Copy, Debug)]
-pub(crate) struct DockLine<'a> {
-    /// The sender's name with its colour codes.
-    pub(crate) name: &'a str,
-    pub(crate) text: &'a str,
-    pub(crate) verified: bool,
-    pub(crate) staff: bool,
-    /// The sender's SJK key, for their sender card.
-    pub(crate) key_id: &'a str,
-}
-
-/// The sender card a dock name shows under the pointer (`sender_card.rs`): who, and
-/// the name it is beside.
-#[derive(Debug)]
-struct SenderCard {
-    person: crate::sender_card::Person,
-    anchor: Rect,
-}
+pub(crate) use super::chat_dock::{ChatDock, DockLine};
 
 /// Where the keyboard is.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -285,14 +258,8 @@ pub(crate) struct Home {
     last: f64,
     /// Whether the last frame docked the chat.
     dock: bool,
-    /// What is typed in the chat's field, while typing.
-    draft: Option<String>,
-    /// What Enter sent from the field, until the menu takes it.
-    sent: Option<String>,
-    /// The sender card on show over the dock.
-    sender_card: Option<SenderCard>,
-    /// The key and name of the player its Mute asked for, until the menu takes them.
-    muting: Option<(String, String)>,
+    /// The docked chat's field and sender card.
+    chat: Dock,
 }
 
 impl Default for Home {
@@ -304,10 +271,7 @@ impl Default for Home {
             arc: None,
             last: 0.0,
             dock: false,
-            draft: None,
-            sent: None,
-            sender_card: None,
-            muting: None,
+            chat: Dock::default(),
         }
     }
 }
@@ -325,73 +289,56 @@ impl Home {
         }
     }
 
+    /// `draft` typed in the dock's field, the keyboard there; without one, the keyboard
+    /// on the arc (world shots).
+    #[cfg(test)]
+    pub(crate) fn chat_for_shot(&mut self, draft: Option<&str>) {
+        match draft {
+            Some(draft) => {
+                self.focus = Focus::Chat;
+                self.chat.type_for_shot(draft);
+            }
+            None => {
+                self.focus = Focus::Arc;
+                self.chat.stop_typing();
+            }
+        }
+    }
+
     /// Back on the main page's first entry, the keyboard on the arc.
     pub(crate) fn reset(&mut self) {
         self.page = Page::Main;
         self.entry = 0;
         self.focus = Focus::Arc;
-        self.draft = None;
+        self.chat.stop_typing();
     }
 
     /// Whether the chat's field takes the keys.
     pub(crate) fn is_typing(&self) -> bool {
-        self.draft.is_some()
+        self.chat.is_typing()
     }
 
     /// What Enter sent from the chat's field.
     pub(crate) fn take_draft(&mut self) -> String {
-        self.sent.take().unwrap_or_default()
+        self.chat.take_draft()
     }
 
     /// The key and name of the player the dock's card asked to mute ([`Action::Mute`]).
     pub(crate) fn take_mute(&mut self) -> Option<(String, String)> {
-        self.muting.take()
+        self.chat.take_mute()
     }
 
     /// Give the dock's sender card on show its player's picture version (`picture`, from
     /// their key) until it is known. Called before the page is built, outside any lock.
     pub(crate) fn place_sender_card(&mut self, picture: impl FnOnce(&str) -> Option<String>) {
-        if let Some(card) = self
-            .sender_card
-            .as_mut()
-            .filter(|card| card.person.avatar.is_none())
-            && let Some(key_id) = &card.person.key_id
-        {
-            card.person.avatar = picture(key_id);
-        }
+        self.chat.picture_sender_card(picture);
     }
 
     /// A key while typing in the chat's field: text goes into it, Backspace takes a
     /// character back, Enter sends, Escape stops; every other key is swallowed, so no
     /// menu key acts.
     pub(crate) fn typing_key(&mut self, key: KeyCode, text: Option<&str>) -> Option<Action> {
-        let draft = self.draft.as_mut()?;
-        match key {
-            KeyCode::Escape => self.draft = None,
-            KeyCode::Enter | KeyCode::NumpadEnter => {
-                if draft.trim().is_empty() {
-                    self.draft = None;
-                } else {
-                    // The draft stays for `take_draft`.
-                    let text = std::mem::take(draft);
-                    self.draft = None;
-                    self.sent = Some(text);
-                    return Some(Action::SendChat);
-                }
-            }
-            KeyCode::Backspace => {
-                draft.pop();
-            }
-            _ => {
-                for c in text.unwrap_or_default().chars().filter(|c| !c.is_control()) {
-                    if draft.chars().count() >= DRAFT_MAX {
-                        break;
-                    }
-                    draft.push(c);
-                }
-            }
-        }
-        None
+        self.chat.typing_key(key, text).map(|_| Action::SendChat)
     }
 
     fn entries(&self) -> &'static [Entry] {
@@ -467,7 +414,7 @@ impl Home {
                 self.focus = Focus::Arc;
             }
             (KeyCode::Enter | KeyCode::NumpadEnter | KeyCode::Space, Focus::Chat) => {
-                self.draft = Some(String::new());
+                self.chat.start_typing();
             }
             (
                 KeyCode::ArrowLeft | KeyCode::KeyA | KeyCode::Tab | KeyCode::Escape,
@@ -499,37 +446,19 @@ impl Home {
             self.focus = Focus::Arc;
             return if activate { self.take() } else { None };
         }
+        if self.dock
+            && let Some(reply) = self.chat.pointer(DOCK_TOKENS, token, activate)
+        {
+            if token == CHAT_TOKEN || token == OPEN_CHAT_TOKEN {
+                self.focus = Focus::Chat;
+            }
+            return reply.map(|action| match action {
+                DockAction::Send => Action::SendChat,
+                DockAction::Open => Action::OpenChat,
+                DockAction::Mute => Action::Mute,
+            });
+        }
         match token {
-            CHAT_TOKEN if self.dock => {
-                self.focus = Focus::Chat;
-                if activate && self.draft.is_none() {
-                    self.draft = Some(String::new());
-                }
-                return None;
-            }
-            OPEN_CHAT_TOKEN if self.dock => {
-                self.focus = Focus::Chat;
-                if activate {
-                    self.draft = None;
-                    return Some(Action::OpenChat);
-                }
-                return None;
-            }
-            SENDER_MUTE_TOKEN if self.dock => {
-                // The dock shows only players not muted: its card offers Mute.
-                let card = if activate {
-                    self.sender_card.take()
-                } else {
-                    None
-                };
-                let card = card?;
-                self.muting = Some((card.person.key_id.unwrap_or_default(), card.person.name));
-                return Some(Action::Mute);
-            }
-            SENDER_CARD_TOKEN => return None,
-            token if (SENDER_NAME_TOKEN..SENDER_NAME_TOKEN + DOCK_ROWS as u16).contains(&token) => {
-                return None;
-            }
             CARD_TOKEN => {
                 self.focus = Focus::Card;
                 return activate.then_some(Action::Open(MainDestination::Profile));
@@ -573,12 +502,13 @@ const COLUMN_X: f32 = 1500.0;
 const COLUMN_WIDTH: f32 = 324.0;
 const COLUMN_TOP: f32 = 236.0;
 const SERVER_HEIGHT: f32 = 96.0;
-/// The docked chat: its top, a message row's height and how many rows show.
-const DOCK_TOP: f32 = 700.0;
-const DOCK_ROW: f32 = 26.0;
-const DOCK_ROWS: usize = 5;
-/// The field's top, under the rows.
-const DOCK_FIELD: f32 = DOCK_TOP + 40.0 + DOCK_ROWS as f32 * DOCK_ROW + 8.0;
+/// The docked chat, under the servers.
+const DOCK: chat_dock::Place = chat_dock::Place {
+    x: COLUMN_X,
+    top: 700.0,
+    width: COLUMN_WIDTH,
+    card_above: false,
+};
 
 /// Angle (radians) of entry `index` of `count` round the ring.
 fn entry_angle(index: usize, count: usize) -> f32 {
@@ -643,7 +573,7 @@ pub(crate) fn build(
     // The gold arc points at the chosen entry, or at the servers.
     home.dock = view.chat.is_some();
     if !home.dock {
-        home.draft = None;
+        home.chat.hide();
         if home.focus == Focus::Chat {
             home.focus = Focus::Arc;
         }
@@ -655,7 +585,7 @@ pub(crate) fn build(
             let y = COLUMN_TOP + 64.0 + (index as f32 + 0.5) * SERVER_HEIGHT;
             (y - RING[1]).atan2(COLUMN_X - RING[0])
         }
-        Focus::Chat => (DOCK_FIELD + 16.0 - RING[1]).atan2(COLUMN_X - RING[0]),
+        Focus::Chat => (DOCK.field_top() + 16.0 - RING[1]).atan2(COLUMN_X - RING[0]),
         Focus::Card => {
             let centre = crate::profile_card::PICTURE[1] + crate::profile_card::PICTURE_SIZE * 0.5;
             (centre - RING[1]).atan2(crate::profile_card::PICTURE[0] + 200.0 - RING[0])
@@ -739,7 +669,16 @@ pub(crate) fn build(
 
     servers(canvas, &frame, home, view);
     if let Some(dock) = &view.chat {
-        chat_dock(canvas, &frame, home, dock);
+        let focused = home.focus == Focus::Chat;
+        chat_dock::draw(
+            canvas,
+            &frame,
+            DOCK,
+            &mut home.chat,
+            dock,
+            focused,
+            DOCK_TOKENS,
+        );
     }
     crate::profile_card::draw(
         canvas,
@@ -760,8 +699,18 @@ pub(crate) fn build(
     version(canvas, &frame, view);
     // The card goes over everything, its targets last.
     match &view.chat {
-        Some(dock) => dock_sender_card(canvas, &frame, viewport, home, dock),
-        None => home.sender_card = None,
+        Some(dock) => {
+            chat_dock::sender_card(
+                canvas,
+                &frame,
+                viewport,
+                DOCK,
+                &mut home.chat,
+                dock,
+                DOCK_TOKENS,
+            );
+        }
+        None => home.chat.sender_card = None,
     }
     canvas.pop_opacity();
     let selected = match home.focus {
@@ -960,294 +909,6 @@ fn servers(canvas: &mut MenuCanvas, frame: &Frame, home: &Home, view: &HomeView<
     }
 }
 
-/// The SJK chat under the servers: its name and who is online, its last lines, the
-/// field and Open chat.
-fn chat_dock(canvas: &mut MenuCanvas, frame: &Frame, home: &Home, dock: &ChatDock<'_>) {
-    let s = frame.s;
-    text(
-        canvas,
-        TextFamily::Display,
-        format_args!("SJK chat"),
-        frame.rect(COLUMN_X, DOCK_TOP, COLUMN_WIDTH, 30.0),
-        24.0 * s,
-        color::TEXT,
-        FontWeight::Regular,
-        TextAlign::Start,
-    );
-    let status = frame.rect(COLUMN_X, DOCK_TOP + 4.0, COLUMN_WIDTH, 24.0);
-    let body = |canvas: &mut MenuCanvas, rect, colour, align, value: std::fmt::Arguments<'_>| {
-        text(
-            canvas,
-            TextFamily::Body,
-            value,
-            rect,
-            15.0 * s,
-            colour,
-            FontWeight::Regular,
-            align,
-        );
-    };
-    if dock.live {
-        body(
-            canvas,
-            status,
-            color::MUTED,
-            TextAlign::End,
-            format_args!("{} online", dock.online),
-        );
-    } else {
-        body(
-            canvas,
-            status,
-            color::QUIET,
-            TextAlign::End,
-            format_args!("Not connected"),
-        );
-    }
-    // The lines sit on the field, the newest last, as chats do.
-    let shown = dock.lines.len().min(DOCK_ROWS);
-    let first_row = DOCK_ROWS - shown;
-    for (row, line) in dock.lines[dock.lines.len() - shown..].iter().enumerate() {
-        let top = DOCK_TOP + 40.0 + (first_row + row) as f32 * DOCK_ROW;
-        let name = dock_line(
-            canvas,
-            frame.rect(COLUMN_X, top, COLUMN_WIDTH, DOCK_ROW - 4.0),
-            line,
-            dock.measure,
-            15.0 * s,
-        );
-        // Resting the pointer on the name shows the sender's sender card.
-        canvas.hit_region(SENDER_NAME_TOKEN + row as u16, name);
-    }
-    if shown == 0 {
-        body(
-            canvas,
-            frame.rect(
-                COLUMN_X,
-                DOCK_TOP + 40.0 + (DOCK_ROWS - 1) as f32 * DOCK_ROW,
-                COLUMN_WIDTH,
-                DOCK_ROW - 4.0,
-            ),
-            color::QUIET,
-            TextAlign::Start,
-            format_args!("Nobody has said anything yet"),
-        );
-    }
-    let field = frame.rect(COLUMN_X - 14.0, DOCK_FIELD, COLUMN_WIDTH + 24.0, 34.0);
-    let focused = home.focus == Focus::Chat || canvas.token_hovered(CHAT_TOKEN);
-    let _ = canvas.draw_list_mut().push(DrawCommand::RoundedRect {
-        rect: field,
-        radius: 8.0 * s,
-        color: color::alpha(color::HOLO, if focused { 0.14 } else { 0.07 }),
-    });
-    if focused {
-        let _ = canvas.draw_list_mut().push(DrawCommand::RoundedRect {
-            rect: frame.rect(COLUMN_X - 14.0, DOCK_FIELD + 6.0, 3.0, 22.0),
-            radius: 1.5 * s,
-            color: color::GOLD_BRIGHT,
-        });
-    }
-    let inside = frame.rect(COLUMN_X, DOCK_FIELD + 5.0, COLUMN_WIDTH - 4.0, 24.0);
-    match home.draft.as_deref() {
-        // The end of a long draft shows, as in a field that scrolls.
-        Some(draft) => {
-            let start = draft
-                .char_indices()
-                .rev()
-                .nth(34)
-                .map_or(0, |(index, _)| index);
-            body(
-                canvas,
-                inside,
-                color::TEXT,
-                TextAlign::Start,
-                format_args!("{}_", &draft[start..]),
-            );
-        }
-        None if focused => body(
-            canvas,
-            inside,
-            color::MUTED,
-            TextAlign::Start,
-            format_args!("Enter to talk to every SJK player"),
-        ),
-        None => body(
-            canvas,
-            inside,
-            color::QUIET,
-            TextAlign::Start,
-            format_args!("Say something to every SJK player"),
-        ),
-    }
-    canvas.hit_region(CHAT_TOKEN, field);
-    let below = DOCK_FIELD + 42.0;
-    if !dock.notice.is_empty() {
-        body(
-            canvas,
-            frame.rect(COLUMN_X, below, COLUMN_WIDTH - 96.0, 20.0),
-            color::QUIET,
-            TextAlign::Start,
-            format_args!("{}", dock.notice),
-        );
-    }
-    let open = frame.rect(COLUMN_X + COLUMN_WIDTH - 96.0, below - 2.0, 96.0, 24.0);
-    let lit = canvas.token_hovered(OPEN_CHAT_TOKEN);
-    body(
-        canvas,
-        open,
-        if lit { color::GOLD_BRIGHT } else { color::GOLD },
-        TextAlign::End,
-        format_args!("Open chat"),
-    );
-    canvas.hit_region(OPEN_CHAT_TOKEN, open);
-}
-
-/// One message of the dock on its one row, as SJK chat lines look everywhere
-/// ([`crate::sjk_chat_look`]): the name in its colours, the verified tick alone for
-/// a verified sender, a colon, then the message in the SJK chat's gold, cut at the
-/// column's edge. `size` is the text size in window pixels.
-fn dock_line(
-    canvas: &mut MenuCanvas,
-    rect: Rect,
-    line: &DockLine<'_>,
-    measure: Option<crate::sjk_chat_look::Measure<'_>>,
-    size: f32,
-) -> Rect {
-    use crate::sjk_chat_look;
-    use crate::text::TextFace;
-    let width = |value: &str, face| match measure {
-        Some(measure) => measure.width(value, size, face),
-        // About the body family's mean advance; colour codes take no room.
-        None => {
-            let codes = value
-                .as_bytes()
-                .windows(2)
-                .filter(|pair| pair[0] == b'^' && pair[1].is_ascii_digit())
-                .count();
-            value.chars().count().saturating_sub(codes * 2) as f32 * size * 0.52
-        }
-    };
-    let run = |canvas: &mut MenuCanvas, rect, colour, value: std::fmt::Arguments<'_>| {
-        text(
-            canvas,
-            TextFamily::Body,
-            value,
-            rect,
-            size,
-            colour,
-            FontWeight::Regular,
-            TextAlign::Start,
-        );
-    };
-    let name_width = width(line.name, TextFace::Regular).min(rect.width * 0.55);
-    run(
-        canvas,
-        Rect::new(rect.x, rect.y, name_width + 1.0, rect.height),
-        color::TEXT,
-        format_args!("{}", line.name),
-    );
-    let mut x = rect.x + name_width;
-    if line.verified {
-        sjk_chat_look::tick(
-            canvas.draw_list_mut(),
-            x,
-            rect.y + rect.height * 0.5,
-            size,
-            1.0,
-        );
-        x += sjk_chat_look::tick_room(size);
-    }
-    let colon = width(": ", TextFace::Regular);
-    run(
-        canvas,
-        Rect::new(x, rect.y, colon, rect.height),
-        color::TEXT,
-        format_args!(":"),
-    );
-    x += colon;
-    run(
-        canvas,
-        Rect::new(x, rect.y, (rect.right() - x).max(1.0), rect.height),
-        sjk_chat_look::GOLD,
-        format_args!("{}", line.text),
-    );
-    Rect::new(rect.x, rect.y, name_width + 1.0, rect.height)
-}
-
-/// Follow the pointer over the dock's names (the last frame's): the sender card of
-/// the sender under it, kept while the pointer is on the card, else none; then draw it
-/// beside the name, over the page.
-fn dock_sender_card(
-    canvas: &mut MenuCanvas,
-    frame: &Frame,
-    viewport: [f32; 2],
-    home: &mut Home,
-    dock: &ChatDock<'_>,
-) {
-    let shown = dock.lines.len().min(DOCK_ROWS);
-    let first = dock.lines.len() - shown;
-    let hovered = (0..shown).find(|row| canvas.token_hovered(SENDER_NAME_TOKEN + *row as u16));
-    match hovered {
-        Some(row) => {
-            let line = &dock.lines[first + row];
-            let anchor = canvas
-                .rect_for(SENDER_NAME_TOKEN + row as u16)
-                .unwrap_or_default();
-            match &mut home.sender_card {
-                Some(card)
-                    if card.person.name == line.name
-                        && card.person.key_id.as_deref() == Some(line.key_id) =>
-                {
-                    card.anchor = anchor;
-                }
-                _ => {
-                    home.sender_card = Some(SenderCard {
-                        person: dock_person(line),
-                        anchor,
-                    });
-                }
-            }
-        }
-        None if canvas.token_hovered(SENDER_CARD_TOKEN)
-            || canvas.token_hovered(SENDER_MUTE_TOKEN) => {}
-        None => home.sender_card = None,
-    }
-    let Some(card) = home.sender_card.as_ref() else {
-        return;
-    };
-    let size = crate::sender_card::size(&card.person, frame.s);
-    let origin = crate::sender_card::beside(card.anchor, size, viewport, 12.0 * frame.s);
-    crate::sender_card::draw(
-        canvas,
-        &crate::sender_card::Card {
-            person: &card.person,
-            muted: false,
-            measure: dock.measure.as_ref(),
-        },
-        origin,
-        frame.s,
-        crate::sender_card::Tokens {
-            card: SENDER_CARD_TOKEN,
-            mute: SENDER_MUTE_TOKEN,
-        },
-    );
-}
-
-/// Who a dock line's sender is. The dock leaves muted senders out, and the main page
-/// is not on a server, so where they are is not known.
-fn dock_person(line: &DockLine<'_>) -> crate::sender_card::Person {
-    crate::sender_card::Person {
-        name: line.name.to_owned(),
-        key_id: (!line.key_id.is_empty()).then(|| line.key_id.to_owned()),
-        hub_name: None,
-        verified: line.verified,
-        staff: line.staff,
-        medals: crate::medals::Medals::default(),
-        place: crate::sender_card::Place::Unknown,
-        avatar: None,
-    }
-}
-
 /// The keys of the page, bottom centre.
 fn hints(canvas: &mut MenuCanvas, frame: &Frame, home: &Home, servers: bool) {
     let s = frame.s;
@@ -1375,8 +1036,8 @@ mod tests {
     }
 
     // Four servers end above the corners' text, and the dock between them.
-    const _: () = assert!(COLUMN_TOP + 64.0 + 4.0 * SERVER_HEIGHT < DOCK_TOP);
-    const _: () = assert!(DOCK_FIELD + 42.0 + 22.0 < 962.0);
+    const _: () = assert!(COLUMN_TOP + 64.0 + 4.0 * SERVER_HEIGHT < DOCK.top);
+    const _: () = assert!(DOCK.bottom() < 962.0);
 
     #[test]
     fn pages_open_and_close_on_the_ring() {
@@ -1648,7 +1309,7 @@ mod tests {
         };
         let centre = |rect: Rect| Vec2::new(rect.x + rect.width * 0.5, rect.y + rect.height * 0.5);
         draw(&mut canvas, &mut home);
-        assert!(home.sender_card.is_none());
+        assert!(home.chat.sender_card.is_none());
         let name = canvas.rect_for(SENDER_NAME_TOKEN).expect("Sol's name");
         canvas.pointer(InputEvent::PointerMove(centre(name)));
         draw(&mut canvas, &mut home);
@@ -1667,11 +1328,11 @@ mod tests {
         let mute = canvas.rect_for(SENDER_MUTE_TOKEN).expect("Mute");
         canvas.pointer(InputEvent::PointerMove(centre(mute)));
         draw(&mut canvas, &mut home);
-        assert!(home.sender_card.is_some());
+        assert!(home.chat.sender_card.is_some());
         // Away from both: gone.
         canvas.pointer(InputEvent::PointerMove(Vec2::new(4.0, 4.0)));
         draw(&mut canvas, &mut home);
-        assert!(home.sender_card.is_none());
+        assert!(home.chat.sender_card.is_none());
         canvas.pointer(InputEvent::PointerMove(centre(name)));
         draw(&mut canvas, &mut home);
         assert_eq!(home.pointer(SENDER_MUTE_TOKEN, true, 1), Some(Action::Mute));
@@ -1758,7 +1419,7 @@ mod tests {
         });
         home.place_sender_card(|_| Some("00000000000000aa".to_owned()));
         home.place_sender_card(|_| panic!("known now"));
-        let card = home.sender_card.as_ref().expect("the card");
+        let card = home.chat.sender_card.as_ref().expect("the card");
         assert_eq!(card.person.avatar.as_deref(), Some("00000000000000aa"));
     }
 
@@ -1864,13 +1525,13 @@ mod tests {
         assert_eq!(home.typing_key(KeyCode::ArrowUp, None), None);
         assert_eq!(home.typing_key(KeyCode::Tab, Some("\t")), None);
         assert_eq!(home.focus, Focus::Chat);
-        assert_eq!(home.draft.as_deref(), Some("ws "));
+        assert_eq!(home.chat.draft.as_deref(), Some("ws "));
         home.typing_key(KeyCode::Backspace, Some("\u{8}"));
-        assert_eq!(home.draft.as_deref(), Some("ws"));
+        assert_eq!(home.chat.draft.as_deref(), Some("ws"));
         for _ in 0..200 {
             home.typing_key(KeyCode::KeyA, Some("a"));
         }
-        assert_eq!(home.draft.as_ref().unwrap().chars().count(), 150);
+        assert_eq!(home.chat.draft.as_ref().unwrap().chars().count(), 150);
     }
 
     #[test]

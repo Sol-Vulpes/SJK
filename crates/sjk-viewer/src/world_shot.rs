@@ -1930,6 +1930,146 @@ like this one.",
         });
     }
 
+    /// The SJK chat docked on the main page and in the in-game menu, on made-up messages
+    /// (a long one wrapping onto rows of its own, the newest too tall for the box at the
+    /// larger text style): the main page, then something typed in its field; the in-game
+    /// menu over an FFA, the sender card of a name under the pointer, then the chat's
+    /// field typing with a vote on and Staff tools shown. At 1080p, 4:3 and 4K, with the
+    /// plain text style and Sol's (`ui_textScale 1.2`). No canvas runs out of room.
+    #[test]
+    #[ignore = "renders with the GPU and the installed game data named by JKA_GAME_DATA"]
+    fn duel6_sjk_chat_dock() {
+        use crate::ingame_menu::sjk_focus::Focus;
+        use crate::ingame_menu::sjk_view::{CHAT_TOKENS, Card};
+        use crate::ingame_menu::{Page, ShotView};
+        const LINES: [(&str, &str, bool); 5] = [
+            ("^5JoF^7 Jedi", "anyone up for duels on ffa3?", true),
+            ("^1Fox", "in 5 min, finishing a CTF", false),
+            (
+                "Kyle",
+                "the new HUD looks great, but the force bar in the corner feels a bit too \
+                 small at 4K and the clock could move a little to the left",
+                false,
+            ),
+            ("^3Lumaya", "gg", true),
+            (
+                "^2Sol",
+                "the chat dock wraps now: a long message goes on over as many lines as it \
+                 needs instead of being cut at the edge of the column",
+                true,
+            ),
+        ];
+        for (size, scale, suffix) in [
+            ([1920, 1080], None, "1080p"),
+            ([1920, 1080], Some("1.2"), "1080p-styled"),
+            ([1440, 1080], None, "4x3"),
+            ([1440, 1080], Some("1.2"), "4x3-styled"),
+            ([3840, 2160], Some("1.2"), "4k-styled"),
+        ] {
+            let cvars = move || {
+                let mut cvars = vec![
+                    ("ui_menuStyle", "sjk"),
+                    (crate::settings::quick::HIDE_CVAR, "1"),
+                    ("name", "^1Sol^7Vulpes"),
+                ];
+                if let Some(scale) = scale {
+                    cvars.push((crate::text::style::SCALE_CVAR, scale));
+                }
+                cvars
+            };
+            on_big_stack(move || {
+                let menu = menu::ClientMenu::new(true, String::new());
+                let Some((mut gpu, _profile)) =
+                    open("maps/mp/duel6.bsp", size, Some(menu), &cvars())
+                else {
+                    return;
+                };
+                gpu.ui_epoch -= std::time::Duration::from_millis(2_000);
+                let _ = frame(&mut gpu, 20);
+                for (draft, name) in [
+                    (None, format!("duel6-chat-dock-{suffix}")),
+                    (
+                        Some("on my way, save me a spot on the JoF server tonight"),
+                        format!("duel6-chat-dock-{suffix}-typing"),
+                    ),
+                ] {
+                    if let Some(menu) = gpu.client_menu.as_mut() {
+                        menu.sjk_home_chat_for_shot(&LINES, 12, draft);
+                    }
+                    println!("{}", shoot(&mut gpu, 6, &name).display());
+                    let menu = gpu.client_menu.as_ref().expect("the menu");
+                    assert!(!menu.sjk_home_overflowed(), "{name}");
+                }
+            });
+            on_big_stack(move || {
+                // The main menu stays closed: the client is "in the match".
+                let menu = menu::ClientMenu::new(false, String::new());
+                let Some((mut gpu, _profile)) =
+                    open("maps/mp/duel6.bsp", size, Some(menu), &cvars())
+                else {
+                    return;
+                };
+                let shots =
+                    menu_backdrop::tour_for("Yavin Training Grounds").expect("duel6's tour");
+                let shot = &shots[0];
+                let (yaw, pitch) = look(shot.from, shot.at);
+                aim(&mut gpu, shot.from, yaw, pitch);
+                gpu.game_menu = true;
+                if let Some(console) = gpu.console.as_mut() {
+                    console.close_for_connection();
+                }
+                let _ = frame(&mut gpu, 60);
+                let ffa = ShotView {
+                    team: 0,
+                    team_game: false,
+                    red_players: 0,
+                    blue_players: 0,
+                    vote_active: false,
+                    staff: false,
+                    siege: false,
+                };
+                let busy = ShotView {
+                    vote_active: true,
+                    staff: true,
+                    ..ffa
+                };
+                gpu.game_menu_page = Page::Main;
+                gpu.game_menu_row = 0;
+                gpu.in_game_menu
+                    .sjk_for_shot(Card::for_shot(false, false), ffa);
+                gpu.in_game_menu.chat_for_shot(&LINES, 12, None);
+                gpu.in_game_menu.focus = Focus::List;
+                let name = format!("duel6-ingame-chat-{suffix}");
+                println!("{}", shoot(&mut gpu, 16, &name).display());
+                assert!(!gpu.in_game_menu.overflowed(), "{name}");
+                // The pointer on the newest message's sender: their card.
+                if let Some(rect) = gpu.in_game_menu.rect_for(CHAT_TOKENS.name(1)) {
+                    let _ = gpu.in_game_menu.pointer(sjk_ui::InputEvent::PointerMove(
+                        sjk_ui::Vec2::new(rect.x + rect.width * 0.5, rect.y + rect.height * 0.5),
+                    ));
+                    let name = format!("duel6-ingame-chat-{suffix}-card");
+                    println!("{}", shoot(&mut gpu, 4, &name).display());
+                    assert!(!gpu.in_game_menu.overflowed(), "{name}");
+                    let _ = gpu
+                        .in_game_menu
+                        .pointer(sjk_ui::InputEvent::PointerMove(sjk_ui::Vec2::new(2.0, 2.0)));
+                }
+                gpu.in_game_menu
+                    .sjk_for_shot(Card::for_shot(false, false), busy);
+                gpu.in_game_menu.chat_for_shot(
+                    &LINES,
+                    12,
+                    Some("gg, rematch on ffa3 after this one?"),
+                );
+                gpu.in_game_menu.focus = Focus::Chat;
+                let name = format!("duel6-ingame-chat-{suffix}-typing");
+                println!("{}", shoot(&mut gpu, 8, &name).display());
+                assert!(!gpu.in_game_menu.overflowed(), "{name}");
+                assert_eq!(gpu.in_game_menu.focus, Focus::Chat, "{name}");
+            });
+        }
+    }
+
     /// Camera control over duel6 as a match would show it, on a made-up match
     /// (there is no server): the game menu with its camera icon focused (the
     /// SJK UI's row of icons), then the panel on its Camera page; in the SJK UI also the Sun

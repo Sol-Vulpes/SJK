@@ -1783,6 +1783,11 @@ impl GpuState {
                 if view.page != GameMenuPage::Shot {
                     self.refresh_game_menu_card();
                 }
+                let chat_on = self
+                    .console
+                    .as_ref()
+                    .is_some_and(|console| console.bool_cvar("cl_sjkChat") != Some(false));
+                self.in_game_menu.sync_chat(chat_on);
                 let target = ingame_menu::sjk_view::text_target(
                     &mut self.game_fonts,
                     &mut self.text_vertices,

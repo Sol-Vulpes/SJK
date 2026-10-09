@@ -1,9 +1,11 @@
 //! Retained in-game menu: the pages reached with Escape during a match, drawn
 //! with `ui_menuStyle sjk` as the SJK UI's arc and match card ([`sjk_view`]),
-//! or with `ui_menuStyle classic` as the retail bar and pop-ups ([`classic`]).
+//! with the SJK chat docked under the match, or with `ui_menuStyle classic` as the
+//! retail bar and pop-ups ([`classic`]).
 
 use crate::menu::art::ArtSet;
 use crate::menu::sjk::TextTarget;
+use crate::menu::sjk::chat_dock::{self, DockAction};
 use crate::menu::style::MenuStyle;
 use crate::menu_widgets::MenuCanvas;
 use crate::text::{TextVertex, UiFont};
@@ -117,6 +119,12 @@ pub(crate) struct InGameMenu {
     /// frame drew them, for the keys and the pointer.
     controls: sjk_focus::Controls,
     staff: bool,
+    /// The SJK UI's docked SJK chat on the main page: what it keeps between frames, its
+    /// copy of the chat, whether `cl_sjkChat` is on and whether the last frame docked it.
+    chat: chat_dock::Dock,
+    chat_cache: chat_dock::DockCache,
+    chat_on: bool,
+    chat_shown: bool,
     /// The world shots' made-up match facts in place of the frame's.
     #[cfg(test)]
     shot_view: Option<ShotView>,
@@ -159,6 +167,10 @@ impl InGameMenu {
             focus: sjk_focus::Focus::List,
             controls: sjk_focus::Controls::none(),
             staff: false,
+            chat: chat_dock::Dock::default(),
+            chat_cache: chat_dock::DockCache::default(),
+            chat_on: false,
+            chat_shown: false,
             #[cfg(test)]
             shot_view: None,
         }
@@ -205,6 +217,78 @@ impl InGameMenu {
     /// The SJK UI's match card controls, as the last frame drew them.
     pub(crate) fn sjk_controls(&self) -> &sjk_focus::Controls {
         &self.controls
+    }
+
+    /// Whether the last frame docked the SJK chat on the SJK UI's main page.
+    pub(crate) fn sjk_chat(&self) -> bool {
+        self.chat_shown
+    }
+
+    /// Follow `cl_sjkChat` (`on`): the dock shows only while it is on, its copy of the
+    /// chat read again when the chat changed.
+    pub(crate) fn sync_chat(&mut self, on: bool) {
+        self.chat_on = on;
+        if on {
+            self.chat_cache.refresh();
+        }
+    }
+
+    /// Whether the docked chat's field takes the keys.
+    pub(crate) fn chat_typing(&self) -> bool {
+        self.chat.is_typing()
+    }
+
+    /// Start typing in the docked chat's field.
+    pub(crate) fn start_chat_typing(&mut self) {
+        if self.chat_shown {
+            self.chat.start_typing();
+        }
+    }
+
+    /// Stop typing in the docked chat's field, what was typed dropped.
+    pub(crate) fn stop_chat_typing(&mut self) {
+        self.chat.stop_typing();
+    }
+
+    /// A key while typing in the docked chat's field ([`chat_dock::Dock::typing_key`]).
+    pub(crate) fn chat_key(
+        &mut self,
+        key: winit::keyboard::KeyCode,
+        text: Option<&str>,
+    ) -> Option<DockAction> {
+        self.chat.typing_key(key, text)
+    }
+
+    /// The pointer over (or clicking) `token`: `None` when it is not the docked chat's,
+    /// else what the dock asks.
+    pub(crate) fn chat_pointer(
+        &mut self,
+        token: usize,
+        activate: bool,
+    ) -> Option<Option<DockAction>> {
+        let token = u16::try_from(token).ok()?;
+        if !self.chat_shown {
+            return None;
+        }
+        self.chat.pointer(sjk_view::CHAT_TOKENS, token, activate)
+    }
+
+    /// Whether `token` is the docked chat's field or its Open chat, which take the
+    /// keyboard when hovered.
+    pub(crate) fn chat_takes_focus(token: usize) -> bool {
+        token == usize::from(sjk_view::CHAT_TOKENS.field)
+            || token == usize::from(sjk_view::CHAT_TOKENS.open)
+    }
+
+    /// Hand what Enter sent from the docked chat's field to the hub.
+    pub(crate) fn send_chat(&mut self) {
+        let text = self.chat.take_draft();
+        self.chat_cache.send(text, self.chat_on);
+    }
+
+    /// Mute on this PC the player the docked chat's card asked for.
+    pub(crate) fn mute_from_chat(&mut self) {
+        chat_dock::mute(&mut self.chat);
     }
 
     /// The card control a pointer token names, as the last frame drew them.
@@ -256,13 +340,27 @@ impl InGameMenu {
             self.active_page = Page::Shot;
             self.shot.build_sjk(&mut self.canvas, viewport);
         } else {
-            self.build_sjk(view, viewport);
+            let measure = target.body_measure();
+            self.build_sjk_measured(view, viewport, Some(measure));
         }
         target.append(&self.canvas, viewport);
     }
 
-    /// Lay `view`'s page out on the canvas in the SJK UI's look.
+    /// Lay `view`'s page out on the canvas in the SJK UI's look, the docked chat's text
+    /// estimated (tests).
+    #[cfg(test)]
     fn build_sjk(&mut self, view: View<'_>, viewport: [f32; 2]) {
+        self.build_sjk_measured(view, viewport, None);
+    }
+
+    /// Lay `view`'s page out on the canvas in the SJK UI's look, the docked chat's text
+    /// measured with `measure` (else estimated).
+    fn build_sjk_measured(
+        &mut self,
+        view: View<'_>,
+        viewport: [f32; 2],
+        measure: Option<crate::sjk_chat_look::Measure<'_>>,
+    ) {
         #[cfg(test)]
         let view = match self.shot_view {
             Some(shot) => View {
@@ -295,22 +393,41 @@ impl InGameMenu {
             sjk_focus::Controls::none()
         };
         let icons = sjk_focus::Icon::shown(self.staff);
+        // The SJK chat docks on the main page while it is on.
+        let chat = main && self.chat_on;
+        self.chat_shown = chat;
+        if !chat {
+            self.chat.hide();
+        }
         self.focus = if main {
-            self.focus.settle(icons, &self.controls)
+            self.focus.settle(icons, &self.controls, chat)
         } else {
             sjk_focus::Focus::List
         };
+        // The sender card's picture and place, asked before the profile card's lock.
+        self.chat
+            .picture_sender_card(crate::player_identity::avatar_version);
+        self.chat.locate_sender_card(crate::player_mutes::place);
+        let mut lines = [chat_dock::BLANK; chat_dock::LINES];
+        let chat_view = chat.then(|| chat_dock::ChatDock {
+            measure,
+            ..self.chat_cache.view(&mut lines)
+        });
         let count = self.row_count;
         let rows = sjk_view::Rows {
             labels: &self.rows[..count],
             hints: &self.hints[..count],
             enabled: &self.enabled[..count],
         };
-        let extras = if main {
+        let mut extras = if main {
             sjk_view::Extras {
                 focus: self.focus,
                 icons,
                 controls: &self.controls,
+                chat: chat_view.map(|view| sjk_view::Chat {
+                    dock: &mut self.chat,
+                    view,
+                }),
             }
         } else {
             sjk_view::Extras::NONE
@@ -323,7 +440,7 @@ impl InGameMenu {
                 card: &self.card,
                 players: &self.players,
             },
-            &extras,
+            &mut extras,
             &mut self.motion,
             viewport,
         );
@@ -494,6 +611,32 @@ impl InGameMenu {
         self.style = MenuStyle::Sjk;
         self.card = card;
         self.shot_view = Some(view);
+    }
+
+    /// Whether the last frame ran out of room on the canvas (world shots).
+    pub(crate) fn overflowed(&self) -> bool {
+        self.canvas.overflowed()
+    }
+
+    /// Where the last frame put the pointer target `token` (world shots).
+    pub(crate) fn rect_for(&self, token: u16) -> Option<sjk_ui::Rect> {
+        self.canvas.rect_for(token)
+    }
+
+    /// Made-up SJK chat messages (sender, text, verified) and who is online in the
+    /// docked chat, and `draft` typed in its field (world shots and tests).
+    pub(crate) fn chat_for_shot(
+        &mut self,
+        lines: &[(&str, &str, bool)],
+        online: u32,
+        draft: Option<&str>,
+    ) {
+        self.chat_cache.for_shot(lines, online);
+        self.chat_on = true;
+        match draft {
+            Some(draft) => self.chat.type_for_shot(draft),
+            None => self.chat.stop_typing(),
+        }
     }
 }
 
@@ -777,5 +920,65 @@ mod sjk_tests {
         menu.set_style(MenuStyle::Classic, ArtSet::default());
         menu.remember_return(4);
         assert_eq!(menu.return_row(), 0, "the classic look opens on the first");
+    }
+
+    /// The SJK chat docks on the main page while `cl_sjkChat` is on: Enter on its field
+    /// types, the keys go to the field, Enter sends (here without the identity, so the
+    /// dock says to turn it on); another page, or the chat turned off, stops the typing
+    /// and gives the keyboard back to the list.
+    #[test]
+    fn the_docked_chat_types_sends_and_goes_with_its_page() {
+        use winit::keyboard::KeyCode;
+        let mut menu = sjk_menu();
+        menu.card = sjk_view::Card::for_shot(false, false);
+        menu.chat_for_shot(&[("Fox", "gg", false)], 3, None);
+        menu.build_sjk(view(Page::Main, 0, false, 0), [1_920.0, 1_080.0]);
+        assert!(menu.sjk_chat());
+        assert!(
+            menu.rect_for(sjk_view::CHAT_TOKENS.field).is_some(),
+            "the field"
+        );
+        // A click on the field types; the keys go into it; Enter sends.
+        assert_eq!(
+            menu.chat_pointer(usize::from(sjk_view::CHAT_TOKENS.field), true),
+            Some(None)
+        );
+        assert!(menu.chat_typing());
+        for (key, text) in [(KeyCode::KeyW, "w"), (KeyCode::KeyS, "s")] {
+            assert_eq!(menu.chat_key(key, Some(text)), None);
+        }
+        assert_eq!(menu.chat_key(KeyCode::Tab, Some("\t")), None);
+        assert_eq!(
+            menu.chat_key(KeyCode::Enter, Some("\r")),
+            Some(DockAction::Send)
+        );
+        menu.send_chat();
+        assert!(!menu.chat_typing());
+        assert_eq!(menu.chat_cache.local, "Turn the SJK identity on to chat");
+        // Escape stops typing first, the keyboard staying on the field.
+        menu.focus = sjk_focus::Focus::Chat;
+        menu.start_chat_typing();
+        assert_eq!(menu.chat_key(KeyCode::Escape, None), None);
+        assert!(!menu.chat_typing());
+        menu.build_sjk(view(Page::Main, 0, false, 0), [1_920.0, 1_080.0]);
+        assert_eq!(menu.focus, sjk_focus::Focus::Chat);
+        // Another page: no dock, no typing, the list.
+        menu.start_chat_typing();
+        menu.build_sjk(view(Page::Leave, 0, false, 0), [1_920.0, 1_080.0]);
+        assert!(!menu.sjk_chat() && !menu.chat_typing());
+        assert_eq!(menu.focus, sjk_focus::Focus::List);
+        assert_eq!(
+            menu.chat_pointer(usize::from(sjk_view::CHAT_TOKENS.field), true),
+            None
+        );
+        // The chat turned off: the main page without it.
+        menu.focus = sjk_focus::Focus::Chat;
+        menu.sync_chat(false);
+        menu.build_sjk(view(Page::Main, 0, false, 0), [1_920.0, 1_080.0]);
+        assert!(!menu.sjk_chat());
+        assert_eq!(menu.focus, sjk_focus::Focus::List);
+        assert!(menu.rect_for(sjk_view::CHAT_TOKENS.field).is_none());
+        menu.start_chat_typing();
+        assert!(!menu.chat_typing(), "nothing to type in");
     }
 }

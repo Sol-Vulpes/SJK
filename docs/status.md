@@ -7,6 +7,29 @@ SJK currently contains a native client and standard dedicated server in a
 20-crate Rust workspace. This page records scope and verification, rather than
 claiming complete parity from the presence of an implementation.
 
+## The SJK chat dock wraps, and docks in the in-game menu
+
+Branch `personal/chat-dock` (10/10/2026, Windows 11), Sol's request. The SJK UI main
+page's docked SJK chat lays each message out over as many rows as it needs, measured in
+the body family with the text style (`sjk_chat_look::flow_each`), in a box of fixed
+height that shows the newest messages that fit; a message taller than the box shows its
+first rows with its name and an ellipsis. The dock is one piece of code
+(`menu::sjk::chat_dock`: `Dock`, `DockCache`, `draw`, `sender_card`), drawn by the main
+page and by the SJK UI's in-game menu, where it sits under the match between the row of
+icons and the card, joins the Tab cycle (list, icons, card, chat) and takes every key
+while typing, ahead of the console key and the bindings
+([sjk-ui.md](sjk-ui.md#in-game-menu), [hub-chat.md](hub-chat.md#in-the-menus)).
+
+Verified: `cargo test -p sjk-viewer` with unit tests of the wrapping (whole text kept,
+rows under rows, older messages pushed out, the cut message at `ui_textScale 1.2`),
+typing and the pointer, the focus model's chat moves, the in-game dock typing, sending
+without an identity and going away with its page or `cl_sjkChat 0`, its sender card
+above the dock in five window shapes, and every in-game main page with the chat within
+its canvas; the world shot `duel6_sjk_chat_dock` (main page and in-game menu at 1080p,
+4:3 and 4K, plain and `ui_textScale 1.2`, typing, a sender card, no canvas
+overflowing) and `duel6_sjk_ingame`. Not tried in the game: the key routing while
+typing in a match (`GpuState::sjk_chat_typing`) has no test of its own.
+
 ## Profile tabs at a larger text size; a shorter Profile line
 
 Branch `personal/tab-fit` (10/10/2026, Windows 11), Sol's report: at `ui_textScale

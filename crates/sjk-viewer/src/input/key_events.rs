@@ -65,6 +65,11 @@ impl GpuState {
             self.chat_key(&event);
             return;
         }
+        // Typing in the SJK UI game menu's docked chat: the console key and the
+        // bindings type there too.
+        if !console_open && typed && self.sjk_chat_typing(&event) {
+            return;
+        }
         if self.route_console_key(&event) {
             return;
         }
@@ -167,6 +172,7 @@ impl GpuState {
                 self.game_menu_page = GameMenuPage::Main;
                 self.game_menu_row = 0;
                 self.in_game_menu.focus = crate::ingame_menu::sjk_focus::Focus::List;
+                self.in_game_menu.stop_chat_typing();
             }
             return;
         }

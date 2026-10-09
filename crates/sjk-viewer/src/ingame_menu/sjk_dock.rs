@@ -29,7 +29,8 @@ const SIDE_TOP: f32 = 700.0;
 const BUTTON: f32 = 40.0;
 const BUTTON_GAP: f32 = 12.0;
 
-/// The token the canvas focuses: the list's chosen row, an icon or a card control.
+/// The token the canvas focuses: the list's chosen row, an icon, a card control or the
+/// docked chat's field.
 pub(super) fn focus_token(row: usize, extras: &Extras<'_>) -> u16 {
     match extras.focus {
         Focus::List => row as u16,
@@ -40,6 +41,7 @@ pub(super) fn focus_token(row: usize, extras: &Extras<'_>) -> u16 {
             .iter()
             .position(|placed| placed.control == control)
             .map_or(row as u16, |index| CONTROL_TOKEN + index as u16),
+        Focus::Chat => CHAT_TOKENS.field,
     }
 }
 

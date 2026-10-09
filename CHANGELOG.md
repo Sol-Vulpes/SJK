@@ -21,6 +21,7 @@ Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 
 ## Unreleased
 
+- The SJK chat docked on the main page shows a long message whole, wrapped onto as many lines as it needs instead of cut at the column's edge, and the SJK UI's in-game menu (Escape in a match) docks the same chat under the match: read it, type and send, rest the pointer on a name for the sender's card _(Sol)_
 - The Profile screen's tabs make room for a larger menu text size (ui_textScale, ui_letterSpacing), so Achievements is no longer cut, and the main page's Profile line is shorter, clear of the servers _(Sol)_
 - Your own SJK key id is no longer printed on the Profile screen, your Players card, your sender card or the SJK chat's side panel; the SJK page of the main menu loses its Profile entry, now the main Profile button _(Sol)_
 - The Profile screen has one row of tabs: Character, Saber, Force, SJK Profile, Achievements, Medals (each medal with its picture, what it is for and when it was given, and the ones still to get) and Collection (every unlockable, owned or locked, with how to get it); the in-game menu's Achievements entry is now a tab, and the main page's Character button reads Profile _(Sol)_
