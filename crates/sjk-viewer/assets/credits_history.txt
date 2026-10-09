@@ -9,6 +9,8 @@
 #                               made it when that is not the piece's owner.
 
 = Sol
++ 09/10/2026 | SJK #48 | Poll the Force-profile rejoin retries every frame, not in duels
+- 1969b32 |  | Poll the Force-profile rejoin retries every frame, not in duels
 + 09/10/2026 | SJK #47 | Send an applied Force profile to the server and show its Force rules
 - ee1d9c9 |  | Send an applied Force profile to the server and show its Force rules
 + 09/10/2026 | SJK #56 | Stop dynamic lights at walls with per-light shadow tiles

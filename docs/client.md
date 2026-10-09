@@ -616,7 +616,13 @@ Apply on a server sends the new profile and then `forcechanged`, as stock
 `UI_UpdateClientForcePowers` does: the server reads it at once while you
 spectate and at your next respawn in play (it prints that it will). A
 `forcepowers` typed in the console is sent fitted the same way, without the
-`forcechanged`.
+`forcechanged`. When a server still parks you in spectator over your profile
+(`nfr <rank> 1 <team>`, which a mod can send for its own reasons), SJK answers
+as the stock Force menu would, `forcechanged` with the team you last chose from
+the game menu, and if you are still spectating it asks for that team again up
+to three times, 5.5 seconds apart (a server refuses a second team change within
+five seconds), then says to use the join menu. Not in duel or power duel, where
+waiting as a spectator is the queue.
 
 Opened on a server, the Force page takes the server's highest rank and free
 saber skills, which decide whether the server keeps the profile it is sent. What

@@ -21,6 +21,7 @@ Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 
 ## Unreleased
 
+- A server that parks you in spectator over your Force profile is now answered again as intended: the up to three rejoin retries are polled every frame (they never went out), and not in duel or power duel, where waiting as a spectator is the queue _(Sol)_
 - Force profile on a server with other Force rules: the profile you apply is sent to the server (read at once as a spectator, else at your next respawn), the Force page takes the server's rank and free saber skills from it and marks the powers it turns off and the team powers outside team games, and the SJK UI's Force page has a This server panel _(Sol)_
 - Dynamic lights (sabers, muzzle flashes, explosions, Force effects) no longer light through walls: each active light (up to 32) traces a small shadow tile against the map every frame; r_dynamicLightShadows 0 turns it off _(Sol)_
 - Parallax mapping reaches farther: the depth fades only where it would move the texture by less than half a pixel (a floor keeps it to about 410 units at 1080p, not 90-160), and r_parallaxNearDistance (default 24 units, 0 is off) holds it back close to a surface so it stops swimming under the camera; r_materialMapsDebug 7 shows the reach _(Sol)_

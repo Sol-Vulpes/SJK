@@ -2819,3 +2819,12 @@ test: On a server with another rank or disabled powers: build a profile, Apply, 
 test: Open the Force page there: the This server panel and the marks match the server's rules.
 test: Full Force duel on JA+ / jaPRO: powers the server holds back are usable in duels.
 note: Not run against a server. Possible gap: g_forceBasedTeams after a serverinfo change.
+
+[force-rejoin-retries]
+area: Gameplay
+title: Force profile rejoin retries go out (SJK PR #48)
+change: The negotiator is polled every frame; retries ask for the team again 5.5 s apart, 3 times.
+change: No retries in duel and power duel, where spectating is the queue.
+test: On a mod that sends nfr on its own and parks you: you are sent back to your team.
+test: Wait in a duel queue after an nfr: you are not put into the game by retries.
+note: Stock servers no longer park a player for an SJK profile (SJK PR #47).
