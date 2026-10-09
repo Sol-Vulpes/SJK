@@ -118,6 +118,7 @@ pub(crate) fn update(
 ) {
     let (view_target, view_up, vertical_fov) = view;
     hud::tints::update(gpu, view_position, presentation_time, intermission);
+    hud::vehicle_feed::sample(gpu, presentation_time);
     let scoreboard = gpu.gameplay_input.held(input::GameButton::Scores);
     let labels_hidden = scoreboard
         || intermission

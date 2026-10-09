@@ -96,6 +96,25 @@ ordinary weapon's flash sound; stock plays nothing for them (`cg_event.c:2751-27
 retail, is not played, so vehicle fire is silent. The retail `.vwp` data was not
 available to confirm what each effect holds. Unit-tested only, not heard in a game.
 
+## Vehicle HUD
+
+Branch `personal/vehicle-hud` (09/10/2026, based on `bc8ac6ba`), after the report
+"in a vehicle we have no vehicle HUD". The pilot now gets stock's vehicle meters (hull,
+shield, speed, ammunition, turbo recharge, weapons-linked mark) and crosshair, and a
+vehicle that hides its rider replaces the player's status and weapon HUD, as
+`CG_DrawVehicleHud` does; layout and sources are in
+[rendering.md](rendering.md#game-data-hud). `Snapshot.vehicle_player` supplies the values (its
+`stats[STAT_HEALTH]` is the hull, `stats[STAT_ARMOR]` the shield, `ammo[0..2]`), the
+`.veh` file the maxima and `crosshairShader`, and the ride prediction the speed and
+turbo time. Unit tests cover the tic and turbo mapping, clamping, visibility, hiding,
+the layout bounds at 1080p, 4K (also with `cg_hudScale 1.5`) and ultra-wide, text
+resolution, the crosshair rules and the `.veh` parse. An off-screen CPU raster of the
+draw list at 1920x1080 showed the layout (not committed). Not run in the client or
+against a live vehicle server: that `STAT_HEALTH` and `STAT_ARMOR` of the vehicle's
+player state carry what stock reads, the look at 4K, and the third-person `cg_groundHud`
+(which still draws while riding) are unverified. Not done: the damage icons, the
+no-ammo flash and the weapons-linked sound.
+
 ## JoFTemple frame rate and Ultra low
 
 Branch `personal/ultra-low` (09/10/2026, based on `8e2ac60`, Windows 11, RTX 5080,
@@ -2809,8 +2828,9 @@ Branch `feat/classic-crosshair`: the crosshair is retail's picture,
 - When a picture is missing, or the HUD draw list is full, the procedural cross is
   drawn instead.
 
-Not done: EternalJK's doubled size in a vehicle, the vehicle's own crosshair and
-the item-pickup pulse of `cg_dynamicCrosshair 3`. Unit tests cover the picture
+The vehicle's doubled size and its own `crosshairShader` picture are done (see
+[Vehicle HUD](#vehicle-hud)). Not done: the item-pickup pulse of
+`cg_dynamicCrosshair 3`. Unit tests cover the picture
 order, the clamp, sizes, the missing-picture and full-list fallbacks and the
 EternalJK pack override. Checked in game on Windows 11 before the later
 changes, which were not re-tested in game and rest on unit tests and the workspace
@@ -4084,7 +4104,8 @@ TheRisqe Radial HUD PK3 (33 pictures, centred on the crosshair) and JoF's
 tic fades and digits matched the reference logic. Unit tests cover the reader,
 item resolution, tic/number/blink/ammo-colour logic, `cg_hudFiles` values,
 widescreen placement and atlas packing. The checks are not bundled. Not run in
-the client; vehicle/siege HUD menus and the out-of-Force flash are not drawn.
+the client; siege HUD menus and the out-of-Force flash are not drawn (the vehicle HUD
+is [SJK's own](#vehicle-hud)).
 Formatting, locked workspace build/tests passed.
 
 ## Manual slider entry preview

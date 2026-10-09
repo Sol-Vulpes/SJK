@@ -9,6 +9,21 @@
 #                               made it when that is not the piece's owner.
 
 = Sol
++ 09/10/2026 | - | Draw the pilot's vehicle HUD and crosshair
+- e568ea1 |  | Draw the pilot's vehicle HUD and crosshair
++ 09/10/2026 | - | Name the pilots sealed inside vehicles on nameplates
+- ee09779 |  | Name the pilots sealed inside vehicles on nameplates
+- 41d8033 |  | Stop vehicles playing an ordinary weapon's fire sound
++ 09/10/2026 | - | Give the report dialog a real insertion point and a caret that fits
+- 1eac3e9 |  | Give the report dialog a real insertion point and a caret that fits
++ 09/10/2026 | - | Apply a changed saber at once on JA+ and jaPRO servers
+- 3e72004 |  | Apply a changed saber at once on JA+ and jaPRO servers
++ 09/10/2026 | - | Derive the saber stance base in the client's prediction
+- 36035ab |  | Derive the saber stance base in the client's prediction
++ 09/10/2026 | - | Leave exclusive fullscreen when the window loses focus
+- a6e0818 |  | Leave exclusive fullscreen when the window loses focus
++ 09/10/2026 | - | Tell the server about a console forcepowers change
+- fa0b8ca |  | Tell the server about a console forcepowers change
 + 09/10/2026 | - | Plain home menu, GitHub picture
 - 35c8764 |  | Make the site's home menu a plain column, with Sol's GitHub picture
 + 09/10/2026 | - | The site in the SJK UI's look

@@ -2986,3 +2986,75 @@ test: Swing the saber: the stock swing keeps playing under the skin's swing.
 test: Leave the saber lit: the stock hum and the skin's hum play together.
 test: Take the skin off: only the stock saber sounds, as before.
 note: Not tried by ear in a game.
+
+# ---- Hub bug reports, 09/10/2026 ----
+
+[saber-stance-base]
+area: Gameplay
+title: Blue style with one saber or blade off no longer restarts
+change: The client derives the saber stance base each command, as stock does, so a half staff
+change: or a dual with one saber off keeps its style instead of re-igniting on every swing.
+test: Staff saber, blue (fast) style, switch one blade off, then swing: no restart, no ignite sound.
+test: Dual sabers, switch the second off, blue style, swing: same.
+test: Yellow and red style, and a single saber, still swing as before.
+note: Not tried in a game. A single blade at blue style had no known cause.
+
+[fullscreen-alt-tab]
+area: Menus & settings
+title: Alt-Tab and Win+D leave exclusive fullscreen
+change: Losing focus in exclusive fullscreen drops to a window; focus back enters it again.
+test: r_fullscreen 1 with r_exclusiveFullscreen 1: Alt-Tab to the desktop, then back to the game.
+test: Win+D, then restore the game from the taskbar.
+test: Borderless and windowed modes behave as before.
+note: Not tried in a game. The window shows briefly on Alt-Tab.
+
+[force-console-forcechanged]
+area: Gameplay
+title: A forcepowers typed in the console reaches the server
+change: Changing forcepowers in the console or a cfg now sends forcechanged, like Apply does.
+test: On a server, set forcepowers with a lower Jump level, then kill: the new level applies.
+test: Force page Apply still sends it once.
+note: Whether JA+ re-reads the profile at the respawn was never tested.
+
+[saber-command-japlus]
+area: Gameplay
+title: A saber picked in the menu applies at once on JA+ servers
+change: On JA+ and jaPRO servers the client sends the saber command after saber1/saber2 change.
+test: On a JA+ server in FFA, standing still, pick another saber in the menu: it changes at once.
+test: Pick a dual pair, then a single saber.
+test: On a stock server nothing is sent and the change waits for the respawn.
+note: The command comes from the JoF EJK source. The server refuses it while moving, and in duels.
+
+[report-dialog-editing]
+area: Menus & settings
+title: Report a bug: arrow keys, caret and a clearer Send
+change: The dialog has a real insertion point, word moves and a caret drawn between the glyphs.
+change: Why Send is refused shows in a red band above the buttons.
+test: Escape > SJK > Report a bug: type, move with Left, Right, Home, End, Delete, Ctrl+Left.
+test: Click inside the text: the caret goes there. Change ui_textScale: the caret stays on glyphs.
+test: Send with too little text: the red band says why. Try the classic look too.
+note: A click that still fails needs logs/last-client.log.
+
+[vehicle-pilot-nameplates]
+area: HUD
+title: Pilots of vehicles get a nameplate
+change: A pilot hidden inside a fighter or walker is named above the vehicle.
+test: With nameplates on, watch someone fly a swoop or fighter on T2_Wedge: name and team show.
+note: Name and team only, no bars. Not tried in a game.
+
+[vehicle-fire-silent]
+area: Audio
+title: Vehicle weapons no longer play an ordinary gun's sound
+change: Stock plays no sound for the fire event of a vehicle; the muzzle effect is not done yet.
+test: Fire a vehicle's weapons: no blaster flash sound from the vehicle.
+note: Vehicle gunfire is silent for now.
+
+[vehicle-hud]
+area: HUD
+title: Vehicle HUD for the pilot
+change: Hull, shield, speed, ammo and turbo bars at the bottom centre while piloting.
+change: Fighters hide the player's own status HUD; the crosshair is doubled, or the .veh one.
+test: Ride a swoop or fighter on a vehicle map: bars follow damage, speed, shots and turbo.
+test: Try cg_hudScale 1.5 and 4K.
+test: Leave the vehicle: the normal HUD returns.
+note: Not tried in a game. Damage icons, no-ammo flash and passengers are not done.

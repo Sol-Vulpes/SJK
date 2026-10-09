@@ -26,6 +26,8 @@ pub(crate) mod targeting;
 mod text_values;
 pub(crate) mod tints;
 mod update;
+pub(crate) mod vehicle;
+pub(crate) mod vehicle_feed;
 mod vitals_estimate;
 mod vote;
 mod widgets;
@@ -147,6 +149,8 @@ pub(crate) struct HudOverlay {
     family: family::Policy,
     pub(crate) targeting: targeting::State,
     pub(crate) enemy_info: enemy_info::State,
+    /// The pilot's vehicle HUD and the crosshair it changes.
+    pub(crate) vehicle: vehicle::State,
     score_text: String,
     snapshot_text: String,
 
@@ -251,6 +255,11 @@ impl HudOverlay {
         self.force_wheel_icons
     }
 
+    /// How much larger the procedural crosshair is drawn while riding a vehicle.
+    pub(crate) fn vehicle_crosshair_factor(&self) -> f32 {
+        self.vehicle.crosshair_factor(self.targeting.policy.look)
+    }
+
     pub(crate) fn new() -> Self {
         let override_document = crate::platform::user_config_file()
             .ok()
@@ -264,6 +273,7 @@ impl HudOverlay {
             family: family::Policy::default(),
             targeting: targeting::State::default(),
             enemy_info: enemy_info::State::default(),
+            vehicle: vehicle::State::default(),
             identification: identification::State::default(),
             card: player_card::State::default(),
             nameplate: nameplate::State::default(),
@@ -453,15 +463,28 @@ impl HudOverlay {
         );
         self.draw_list.clear();
         self.tints.emit(&mut self.draw_list, viewport);
+        // A pilot's crosshair is doubled, and is the vehicle's own picture when its
+        // `.veh` names one that loaded.
+        let crosshair_look = self.vehicle.crosshair_look(self.targeting.policy.look);
         self.crosshair_picture_drawn = visibility.crosshair
-            && crosshair::emit(
-                &mut self.draw_list,
-                &self.crosshair_pictures,
-                self.targeting.policy.look,
-                self.targeting.center(viewport),
-                self.targeting.color,
-                viewport,
-            );
+            && match self.vehicle.crosshair_picture() {
+                Some(texture) => crosshair::emit_picture(
+                    &mut self.draw_list,
+                    texture,
+                    crosshair_look,
+                    self.targeting.center(viewport),
+                    self.targeting.color,
+                    viewport,
+                ),
+                None => crosshair::emit(
+                    &mut self.draw_list,
+                    &self.crosshair_pictures,
+                    crosshair_look,
+                    self.targeting.center(viewport),
+                    self.targeting.color,
+                    viewport,
+                ),
+            };
         let mut output = HudLayout::default();
         let low_health = self.values.is_some_and(|value| value.health <= 25);
         let low_ammo = self
@@ -513,6 +536,10 @@ impl HudOverlay {
             );
         }
         if visibility.hud {
+            if visibility.status {
+                self.vehicle
+                    .emit(&mut self.draw_list, self.theme, viewport, user_scale);
+            }
             self.speed.emit(&mut self.draw_list, self.theme, viewport);
             let selector = self
                 .selector

@@ -1606,6 +1606,8 @@ impl GpuState {
             presentation_time as i32,
             intermission_view.is_some(),
         );
+        // A vehicle that hides its rider takes the player's status and weapon HUD.
+        let hud_visibility = self.hud.vehicle.apply(hud_visibility);
         let hud_style = menu_hud::HudStyle::read(self.console.as_ref());
         // The radial look is laid out for the bundled font (Inter), whatever
         // `cg_classicHudFont` says: its numbers are aligned to that font's metrics.
@@ -1667,7 +1669,7 @@ impl GpuState {
             crosshair: hud::options::crosshair_size(
                 self.console.as_ref(),
                 hud_visibility.crosshair && !self.hud.crosshair_picture_drawn,
-            ),
+            ) * self.hud.vehicle_crosshair_factor(),
             hud_visible: f32::from(hud_visibility.hud),
             status_visible: 0.0,
             menu_kind,

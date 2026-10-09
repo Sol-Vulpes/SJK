@@ -36,6 +36,7 @@ impl HudOverlay {
             317 => &self.targeting.position,
             318 => &self.enemy_info.name,
             319 => &self.enemy_info.detail,
+            value @ vehicle::TEXT_FIRST..=vehicle::TEXT_LAST => self.vehicle.text(value),
             value @ 400..=415 => self.icons.text((value - 400) as usize),
             value @ kill_feed::TEXT_FIRST..=kill_feed::TEXT_LAST => self.kill_feed.text(value),
             _ => selection::text(id),
