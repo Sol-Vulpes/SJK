@@ -2868,3 +2868,13 @@ change: The Unlockables page scrolls (keys and wheel); Staff unlock rows are 42 
 test: Wear the Sun blade: the tip is rounded, the shaft as before. Wear Storm, Void, Frost, Prism.
 test: Unlockables: scroll with Down and the wheel.
 note: Needs the hub pack of SJK-hub PR #4 for the new skins; values may need tuning on screen.
+
+[saber-switch-sounds]
+area: Audio
+title: Saber ignition when switching weapons (SJK PR #61)
+change: Switching to the saber plays its ignition; switching away with it lit plays the retraction.
+change: The same for other players; staffs drop the second saber; skin sounds come first.
+test: Switch from melee or a gun to the saber: the ignition is heard; back again: the retraction.
+test: Watch another player do the same with a single saber, dual sabers and a staff.
+test: The saber toggle key still sounds once.
+note: A single saber also plays enemy_saber_on as OpenJK does. Not heard in a game yet.

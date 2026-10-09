@@ -247,7 +247,7 @@ pub use server_address::{LegacyAddressError, LegacyServerAddress};
 pub use server_clock::ServerClock;
 pub use session_transition::{SessionTransition, SessionTransitionKind};
 pub use sound_events::{
-    LegacyMusicAction, LegacySoundAdapter, LegacySoundDecision, LegacySoundEvent,
+    LegacyMusicAction, LegacySaberView, LegacySoundAdapter, LegacySoundDecision, LegacySoundEvent,
     LegacySoundLedger, RegisteredLegacySound, SABER_SOUND_CLIENTS, SaberSoundSet, TOGGLE_REACH,
     normal_attenuation as legacy_sound_attenuation,
 };

@@ -58,6 +58,9 @@ pub struct LegacySaberDefinition {
     pub not_in_mp: bool,
     /// Whether `noRolls 1` sets `SFL_NO_ROLLS` for this hilt.
     pub no_rolls: bool,
+    /// Whether `twoHanded 1` sets `SFL_TWO_HANDED`: such a hilt is never a second
+    /// saber and drops one (`WP_SetSaber`, `bg_saberLoad.c:2237-2247`).
+    pub two_handed: bool,
     /// Authored BG_AdjustClientSpeed multiplier, defaulting to one.
     pub move_speed_scale: f32,
     /// `animSpeedScale`: a saber attack's animation speed (`BG_SaberStartTransAnim`).
@@ -189,6 +192,7 @@ fn parse(source: &str) -> Vec<LegacySaberDefinition> {
         let mut sound_loop = "sound/weapons/saber/saberhum3.wav".to_owned();
         let mut sound_on = None;
         let mut sound_off = None;
+        let mut two_handed = false;
         let mut num_blades = 1_u8;
         let mut blade_style2_start = 0_u8;
         let mut trail_style = 0_u8;
@@ -238,6 +242,8 @@ fn parse(source: &str) -> Vec<LegacySaberDefinition> {
                 "soundloop" => sound_loop.clone_from(value),
                 "soundon" => sound_on = Some(value.to_ascii_lowercase()),
                 "soundoff" => sound_off = Some(value.to_ascii_lowercase()),
+                // `Saber_ParseTwoHanded`, codemp/game/bg_saberLoad.c:884-892.
+                "twohanded" => two_handed |= value.parse::<i32>().unwrap_or(0) != 0,
                 "spinsound" => sound_spin = Some(value.to_ascii_lowercase()),
                 "swingsound1" => sound_swing[0] = Some(value.to_ascii_lowercase()),
                 "swingsound2" => sound_swing[1] = Some(value.to_ascii_lowercase()),
@@ -295,6 +301,7 @@ fn parse(source: &str) -> Vec<LegacySaberDefinition> {
             default_color,
             not_in_mp,
             no_rolls,
+            two_handed,
             move_speed_scale,
             anim_speed_scale,
         });

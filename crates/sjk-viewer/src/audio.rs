@@ -13,7 +13,8 @@ use crate::console::ViewerConsole;
 use sjk_audio::{ChannelId, MixerConfig, PlayRequest, SoundHandle, SourceId};
 use sjk_bsp::Bsp;
 use sjk_client::{
-    LegacyMaintainedActionKind, LegacyMusicAction, LegacySoundAdapter, legacy_evaluate_trajectory,
+    LegacyMaintainedActionKind, LegacyMusicAction, LegacySaberView, LegacySoundAdapter,
+    legacy_evaluate_trajectory,
 };
 use sjk_protocol::{EntityState, GameState, Snapshot};
 use sjk_runtime::{EntityId, World};
@@ -336,6 +337,32 @@ impl GameAudio {
 
     pub(crate) fn deferred_start_stats(&self) -> (u64, f64) {
         (self.deferred_starts, self.maximum_deferred_start_ms)
+    }
+
+    /// Play cgame's saber ignition/retraction for weapon switches, once per rendered
+    /// frame as `CG_AddPacketEntities` runs: `predicted` is the live predicted state
+    /// (`cg.predictedPlayerState`); without it the snapshot's playerstate is the view.
+    pub(crate) fn observe_saber_switches(
+        &mut self,
+        snapshot: &Snapshot,
+        predicted: Option<&sjk_client::pmove::MovementState>,
+    ) {
+        let Some(adapter) = &mut self.legacy else {
+            return;
+        };
+        let view = predicted.map_or_else(
+            || LegacySaberView::from_player_state(&snapshot.player),
+            LegacySaberView::from_movement_state,
+        );
+        adapter.observe_saber_switches(snapshot, view);
+        for decision in adapter.decisions() {
+            if let Some(handle) = decision.handle
+                && controls::allows_event(decision.event, self.footsteps, self.chat_beeps)
+            {
+                self.output
+                    .send(AudioCommand::Play(handle, decision.request));
+            }
+        }
     }
 
     /// Rebuild all codemp loops at rendered cadence from interpolated origins.

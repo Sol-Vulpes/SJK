@@ -134,6 +134,40 @@ not measured for frame time, not tried with a real hub. Deploy and merge order: 
 hub's commit first (its pack and catalogue are safe for clients without this change:
 the Sun's file is unchanged, and such a client leaves out the four new files, logging a
 line for each, and does not know their ids), then PR #45, then this branch.
+## Saber ignition on a weapon switch
+
+Branch `fix/saber-switch-sounds` (08/10/2026, based on `a6230f9`, Linux): Sol
+reported that a lightsaber turned on made no ignition sound. The server's own
+ignition sounds (the toggle's sound event, and `EV_SABER_UNHOLSTER` when an attack
+ignites the saber) already played. What SJK never played was cgame's own sound when
+a player draws the saber from another weapon or puts a lit one away: OpenJK's
+`CG_CheckPlayerG2Weapons` and `CG_Player` play each hilt's `soundOn` or `soundOff`
+on that switch, and the server sends nothing for it (`EV_CHANGE_WEAPON` has no
+saber select sound). SJK now tracks the weapon bolted to each player as cgame does
+and plays those sounds with cgame's quirks, and `EV_SABER_UNHOLSTER` plays the
+player's own hilts instead of the stock `saberon`
+([client.md](client.md#saber-ignition-and-retraction-sounds)). Merged with the
+blade skins (`ba17416`): a client wearing one hears its skin's single ignition or
+switching-off sound on these switches and on `EV_SABER_UNHOLSTER`, in place of
+both hilts; without one, each hilt's `soundOn`/`soundOff`, then their defaults.
+
+Verified on Linux: unit tests pin the hilt sounds (`notInMP`, a removed second
+saber, one dropped beside a two-handed staff), the local switch from fists or a gun
+(each hilt once, `CHAN_AUTO`, the listener's own entity), retraction of a lit saber
+only, remote dual and staff switches from the player's position, and silence for a
+player coming into view, a caught or knocked-away saber, the dead, and the server's
+toggle and unholster events. They also pin one ignition per hilt when
+`EV_CHANGE_WEAPON` arrives, the reset on a new map and on a reused client slot, a
+new hilt, and a followed player voiced once. Breaking three of the rules on purpose
+fails four of these tests. Two more pin the blade skin first: one sound per switch
+and per unholster for a wearer (dual sabers included), the hilts again once it is
+taken off, and a server toggle the skin replaces with nothing added by the switch
+path; dropping the skin from the switch path fails them and two of the skins' own
+tests. Workspace formatting, the locked build, tests and Clippy
+pass, with no new warnings. Not heard: nothing was run in a game or with retail
+assets. Whether retail ships `enemy_saber_on`, the second ignition sound of a single
+saber, and the timing of the predicted local switch against a live server are
+unchecked.
 
 ## Force profile and kill feed follow-ups
 

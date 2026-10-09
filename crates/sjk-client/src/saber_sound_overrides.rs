@@ -9,6 +9,8 @@
 //! below is the compatibility one, unchanged. Replaced, for a client wearing a set:
 //!
 //! - `EV_SABER_UNHOLSTER` (the ignition the game predicts) plays the set's `on`;
+//! - cgame's own ignition and switching off as the player draws the saber from another
+//!   weapon or puts a lit one away ([`super::saber_switch`]) play `on` or `off`, once;
 //! - `EV_GENERAL_SOUND` of a stock `saberon*`/`saberoff*` sound, or of any `.sab`
 //!   `soundOn`/`soundOff`, plays `on`/`off`. The game's `G_Sound` puts these on a
 //!   temporary entity with no owner (`g_utils.c`), so the sound is taken as the
@@ -136,6 +138,11 @@ impl SaberSoundOverrides {
     /// The set's ignition.
     pub(crate) fn on(&self, source: u16) -> Option<u16> {
         self.for_source(source).map(|set| set.on)
+    }
+
+    /// The set's switching off.
+    pub(crate) fn off(&self, source: u16) -> Option<u16> {
+        self.for_source(source).map(|set| set.off)
     }
 
     /// The replacement for a general sound `sound` started at `origin`: the set's on or

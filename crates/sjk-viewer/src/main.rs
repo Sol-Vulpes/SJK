@@ -1936,6 +1936,11 @@ impl GpuState {
                 .as_ref()
                 .map_or(&self.live_world, demo_playback::Session::world);
             if let Some(audio) = game_audio {
+                let predicted = self
+                    .local_prediction
+                    .predicted_state()
+                    .filter(|_| self.live_session.is_some());
+                audio.observe_saber_switches(snapshot, predicted);
                 audio.update_frame_loops(
                     snapshot,
                     presentation_time as i32,
