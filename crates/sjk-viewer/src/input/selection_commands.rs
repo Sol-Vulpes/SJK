@@ -11,6 +11,10 @@ pub(super) fn register(shell: &mut sjk_shell::Shell) -> Result<(), sjk_shell::Co
             "forceprev",
             "Select previous usable Force power (Use held: inventory)",
         ),
+        (
+            "forceselect",
+            "Select Force wheel entry N (forcePowers_t number; 18-20 JoF's, 21 Illuminate)",
+        ),
         ("invnext", "Select next inventory item"),
         ("invprev", "Select previous inventory item"),
         (

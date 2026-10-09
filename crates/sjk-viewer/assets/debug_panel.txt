@@ -2072,6 +2072,20 @@ test: Settings > Quick wheel: Wheel sounds Off, then use the wheel: silent. Swit
 test: Settings > Quick wheel: every choice and catalogue line has an icon; the rail shows a ring.
 note: Too loud, too quiet or the wrong sound? Tell Claude which one; volumes are 0.4/0.5/0.5.
 
+[wheel-force-page]
+area: Input
+title: Quick wheel Force page: your usable powers, a scroll down from General
+change: New default page between General and Weather; old wheel.json files get it once.
+change: Live: the powers you can use now (Illuminate, JA+ Dash/Stasis/Repulse too), gold dot = selected.
+change: Instant powers are used and selected; Grip, Lightning, Drain, Stasis are only selected.
+test: Light side in a match: hold Q, scroll down to Force: Push at the top, 9 powers + Illuminate.
+test: Point at Heal, let go: you heal and the Force bar shows Heal; F (Use Force) now heals.
+test: Point at Grip / Lightning on a dark build, let go: nothing fires; hold F: it grips / zaps.
+test: Spectating or at the main menu: the Force page says No Force powers here.
+test: Settings > Quick wheel > Force: note instead of choices; Delete twice, then Add the Force page.
+test: JA+ admin with every power (amempower): 12 on Force, the rest on Force 2 after it.
+note: Order: neutral (Push Pull Speed Sense), light or dark in F-key order, then JoF, Illuminate.
+
 [vertex-lit-maps]
 area: Rendering & effects
 title: Material maps on vertex-lit terrain, sand and rock

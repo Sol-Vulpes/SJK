@@ -8,6 +8,11 @@
 //! command last. Every change is saved at once to `wheel.json`
 //! ([`crate::quick_wheel::pages`]).
 //!
+//! The Force page is renamed, moved and removed like any page, but its choices
+//! are the player's powers ([`crate::quick_wheel::force_page`]): its middle column
+//! says so instead of listing choices, and its preview is an example. Removed, a
+//! row under Add a page puts it back.
+//!
 //! In the SJK UI it is a category of Settings' rail; the classic+ and tabbed
 //! settings open it from Interface's "Quick wheel pages" row as a screen of its
 //! own in the SJK UI's look ([`WheelMode`]). [`super::wheel_editor_view`] draws it.
@@ -98,6 +103,7 @@ pub(super) const PAGE_UP: u16 = 3043;
 pub(super) const PAGE_DOWN: u16 = 3044;
 pub(super) const PAGE_REMOVE: u16 = 3045;
 pub(super) const SOUNDS: u16 = 3046;
+pub(super) const ADD_FORCE: u16 = 3047;
 pub(super) const CHOICE_BASE: u16 = 3100;
 pub(super) const ADD_CHOICE: u16 = 3140;
 pub(super) const CHOICE_UP: u16 = 3143;
@@ -236,15 +242,42 @@ impl WheelEditor {
         self.rows[1] = self.rows[1].min(self.choice_rows() - 1);
     }
 
-    /// Rows of the pages column: the pages, Add a page, Restore the defaults,
-    /// the wheel's sounds.
+    /// Rows of the pages column: the pages, Add a page, Add the Force page
+    /// (while the wheel has none), Restore the defaults, the wheel's sounds.
     pub(super) fn page_rows(&self) -> usize {
-        self.pages.len() + 3
+        self.sounds_row() + 1
+    }
+
+    /// The pages column's row that puts the Force page back, while it is missing.
+    pub(super) fn force_row(&self) -> Option<usize> {
+        (!self.pages.iter().any(|page| page.force)).then_some(self.pages.len() + 1)
+    }
+
+    /// The pages column's row of Restore the default pages.
+    pub(super) fn restore_row(&self) -> usize {
+        self.pages.len() + 1 + usize::from(self.force_row().is_some())
     }
 
     /// The pages column's row of the wheel's sounds.
     pub(super) fn sounds_row(&self) -> usize {
-        self.pages.len() + 2
+        self.restore_row() + 1
+    }
+
+    /// Whether the shown page is the Force page, whose choices are the
+    /// player's powers.
+    pub(super) fn force_shown(&self) -> bool {
+        self.pages.get(self.page).is_some_and(|page| page.force)
+    }
+
+    /// Put the Force page back, and show it.
+    fn add_force(&mut self, console: &mut ViewerConsole) {
+        let Some(page) = console.wheel_pages.add_force_page() else {
+            return;
+        };
+        self.sync(console);
+        self.page = page;
+        self.column = Column::Pages;
+        self.rows[0] = page;
     }
 
     /// Turn the wheel's sounds on or off.
@@ -376,12 +409,17 @@ impl WheelEditor {
         match (self.column, self.row()) {
             (Column::Pages, row) if row < pages => {
                 self.page = row;
-                self.column = Column::Choices;
                 self.rows[1] = 0;
+                // The Force page has no choices to go to.
+                if !self.force_shown() {
+                    self.column = Column::Choices;
+                }
             }
             (Column::Pages, row) if row == pages => self.add_page(console),
-            (Column::Pages, row) if row == pages + 1 => self.restore(console),
+            (Column::Pages, row) if Some(row) == self.force_row() => self.add_force(console),
+            (Column::Pages, row) if row == self.restore_row() => self.restore(console),
             (Column::Pages, _) => self.toggle_sounds(console),
+            (Column::Choices, _) if self.force_shown() => {}
             (Column::Choices, row) => match self.choices().get(row) {
                 Some(Slot::Custom { .. }) => self.open_custom(Some(row)),
                 Some(Slot::Action(_)) => self.open_picker(Some(row)),
@@ -691,7 +729,9 @@ impl SettingsMenu {
                 if editor.column == Column::Pages && editor.rows[0] < editor.pages.len() {
                     editor.page = editor.rows[0];
                 }
-                editor.column = Column::Choices;
+                if !editor.force_shown() {
+                    editor.column = Column::Choices;
+                }
             }
             KeyCode::Enter | KeyCode::NumpadEnter | KeyCode::Space => editor.activate(console),
             KeyCode::Delete => editor.remove(console),
@@ -781,9 +821,19 @@ impl WheelEditor {
                 self.column = Column::Pages;
                 self.rows[0] = usize::from(token - PAGE_BASE);
             }
-            ADD_PAGE | RESTORE => {
+            ADD_PAGE => {
                 self.column = Column::Pages;
-                self.rows[0] = pages + usize::from(token == RESTORE);
+                self.rows[0] = pages;
+            }
+            RESTORE => {
+                self.column = Column::Pages;
+                self.rows[0] = self.restore_row();
+            }
+            ADD_FORCE => {
+                if let Some(row) = self.force_row() {
+                    self.column = Column::Pages;
+                    self.rows[0] = row;
+                }
             }
             SOUNDS => {
                 self.column = Column::Pages;
@@ -850,6 +900,7 @@ impl WheelEditor {
                 }
             }
             ADD_PAGE => self.add_page(console),
+            ADD_FORCE => self.add_force(console),
             RESTORE => {
                 self.confirm = confirm.filter(|confirm| *confirm == Confirm::Restore);
                 self.column = Column::Pages;
@@ -954,15 +1005,16 @@ mod tests {
         let (directory, mut console) = console();
         let mut menu = SettingsMenu::new();
         menu.open_wheel_editor(&console, WheelMode::Overlay);
-        // Down past the two pages to Add a page: a new page, named at once.
-        press(&mut menu, &mut console, KeyCode::ArrowDown);
-        press(&mut menu, &mut console, KeyCode::ArrowDown);
+        // Down past the three pages to Add a page: a new page, named at once.
+        for _ in 0..3 {
+            press(&mut menu, &mut console, KeyCode::ArrowDown);
+        }
         press(&mut menu, &mut console, KeyCode::Enter);
-        assert_eq!(names(&console), ["General", "Weather", "Page 3"]);
+        assert_eq!(names(&console), ["General", "Force", "Weather", "Page 4"]);
         type_text(&mut menu, &mut console, "Duels");
         press(&mut menu, &mut console, KeyCode::Enter);
-        assert_eq!(names(&console)[2], "Duels");
-        assert_eq!(console.wheel_pages.pages()[2].id, "duels");
+        assert_eq!(names(&console)[3], "Duels");
+        assert_eq!(console.wheel_pages.pages()[3].id, "duels");
         // Its choices: add an action from the catalogue.
         press(&mut menu, &mut console, KeyCode::Enter);
         assert_eq!(menu.wheel.column, Column::Choices);
@@ -977,7 +1029,7 @@ mod tests {
             press(&mut menu, &mut console, KeyCode::ArrowDown);
         }
         press(&mut menu, &mut console, KeyCode::Enter);
-        assert_eq!(console.wheel_pages.pages()[2].choices, [Slot::Action(duel)]);
+        assert_eq!(console.wheel_pages.pages()[3].choices, [Slot::Action(duel)]);
         // A custom command: picked last in the catalogue, then named and typed.
         press(&mut menu, &mut console, KeyCode::ArrowDown);
         press(&mut menu, &mut console, KeyCode::Enter);
@@ -991,7 +1043,7 @@ mod tests {
         type_text(&mut menu, &mut console, "ready");
         press(&mut menu, &mut console, KeyCode::Enter);
         assert_eq!(
-            console.wheel_pages.pages()[2].choices[1],
+            console.wheel_pages.pages()[3].choices[1],
             Slot::Custom {
                 label: "Ready".into(),
                 command: "ready".into()
@@ -1001,16 +1053,16 @@ mod tests {
         console.set_shift(true);
         press(&mut menu, &mut console, KeyCode::ArrowUp);
         console.set_shift(false);
-        assert_eq!(console.wheel_pages.pages()[2].choices[0].label(), "Ready");
+        assert_eq!(console.wheel_pages.pages()[3].choices[0].label(), "Ready");
         assert_eq!(menu.wheel.rows[1], 0);
         press(&mut menu, &mut console, KeyCode::Delete);
-        assert_eq!(console.wheel_pages.pages()[2].choices.len(), 1);
+        assert_eq!(console.wheel_pages.pages()[3].choices.len(), 1);
         // Left to the pages, the page moved up before Weather.
         press(&mut menu, &mut console, KeyCode::ArrowLeft);
         console.set_shift(true);
         press(&mut menu, &mut console, KeyCode::ArrowUp);
         console.set_shift(false);
-        assert_eq!(names(&console), ["General", "Duels", "Weather"]);
+        assert_eq!(names(&console), ["General", "Force", "Duels", "Weather"]);
         // All of it is in the file.
         let saved = crate::quick_wheel::pages::WheelPages::load(directory.path());
         assert_eq!(saved.pages(), console.wheel_pages.pages());
@@ -1025,25 +1077,44 @@ mod tests {
         let mut menu = SettingsMenu::new();
         menu.open_wheel_editor(&console, WheelMode::Category);
         press(&mut menu, &mut console, KeyCode::Delete);
-        assert_eq!(console.wheel_pages.pages().len(), 2, "asks first");
+        assert_eq!(console.wheel_pages.pages().len(), 3, "asks first");
         // Any other key keeps it.
         press(&mut menu, &mut console, KeyCode::ArrowDown);
         press(&mut menu, &mut console, KeyCode::Delete);
-        assert_eq!(console.wheel_pages.pages().len(), 2);
+        assert_eq!(console.wheel_pages.pages().len(), 3);
+        press(&mut menu, &mut console, KeyCode::Delete);
+        assert_eq!(names(&console), ["Force", "Weather"]);
+        // The Force page goes the same way, and a row offers it back.
+        assert_eq!(menu.wheel.force_row(), None);
+        press(&mut menu, &mut console, KeyCode::Delete);
         press(&mut menu, &mut console, KeyCode::Delete);
         assert_eq!(names(&console), ["Weather"]);
+        assert_eq!(menu.wheel.force_row(), Some(2));
         // The last page stays.
         assert_eq!(menu.wheel.rows[0], 0);
         press(&mut menu, &mut console, KeyCode::Delete);
         press(&mut menu, &mut console, KeyCode::Delete);
         assert_eq!(names(&console), ["Weather"]);
         assert_eq!(menu.wheel.confirm, None);
-        // Restore: Up from the first row wraps to the sounds, then to it; Enter
-        // twice.
+        // Up from the first row wraps to the sounds, then Restore, then Add the
+        // Force page: it comes back last, as there is no General.
         press(&mut menu, &mut console, KeyCode::ArrowUp);
         assert_eq!(menu.wheel.rows[0], menu.wheel.sounds_row());
         press(&mut menu, &mut console, KeyCode::ArrowUp);
-        assert_eq!(menu.wheel.rows[0], 2);
+        assert_eq!(menu.wheel.rows[0], menu.wheel.restore_row());
+        press(&mut menu, &mut console, KeyCode::ArrowUp);
+        press(&mut menu, &mut console, KeyCode::Enter);
+        assert_eq!(names(&console), ["Weather", "Force"]);
+        assert_eq!((menu.wheel.rows[0], menu.wheel.page), (1, 1));
+        assert_eq!(menu.wheel.force_row(), None);
+        // On the Force page, Enter and Right stay with the pages: no choices.
+        press(&mut menu, &mut console, KeyCode::Enter);
+        press(&mut menu, &mut console, KeyCode::ArrowRight);
+        assert_eq!(menu.wheel.column, Column::Pages);
+        // Restore: Enter twice.
+        press(&mut menu, &mut console, KeyCode::ArrowDown);
+        press(&mut menu, &mut console, KeyCode::ArrowDown);
+        assert_eq!(menu.wheel.rows[0], menu.wheel.restore_row());
         press(&mut menu, &mut console, KeyCode::Enter);
         assert!(!console.wheel_pages.is_default());
         press(&mut menu, &mut console, KeyCode::Enter);
@@ -1107,7 +1178,7 @@ mod tests {
         let mut menu = SettingsMenu::new();
         menu.open_wheel_editor(&console, WheelMode::Category);
         // Under the pages, Add a page and Restore: the last row.
-        for _ in 0..4 {
+        for _ in 0..5 {
             press(&mut menu, &mut console, KeyCode::ArrowDown);
         }
         assert_eq!(menu.wheel.rows[0], menu.wheel.sounds_row());
@@ -1134,8 +1205,9 @@ mod tests {
         let (_directory, console) = console();
         let mut editor = WheelEditor::default();
         editor.open(&console, WheelMode::Category);
-        // Q opens the page used last; General has no key of its own.
+        // Q opens the page used last; General and Force have no key of their own.
         assert_eq!(editor.keys[0], "Q (last page)");
-        assert_eq!(editor.keys[1], "R");
+        assert_eq!(editor.keys[1], "Q (last page)");
+        assert_eq!(editor.keys[2], "R");
     }
 }

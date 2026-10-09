@@ -3,7 +3,9 @@
 //! sub-headed, the focused row on the UI's band with its own small controls at
 //! its end; on the right a live preview of the page's ring and what the focused
 //! item does, the catalogue while a choice is picked, or a custom choice's form;
-//! the keys of what has the keyboard bottom right.
+//! the keys of what has the keyboard bottom right. The Force page's middle column
+//! says that its choices follow the player's powers, and its preview is an example
+//! ring of a light-side build.
 //!
 //! Positions are pixels of the SJK UI's 16:9 frame ([`Frame`]), in the columns of
 //! Settings' rows and detail; outside the SJK UI (classic+, tabbed) the same
@@ -16,6 +18,7 @@ use super::*;
 use crate::menu::sjk::{Frame, TextTarget, color, key_hint, key_hint_width, kit, text, wrap};
 use crate::menu_widgets::{MenuCanvas, TextFamily};
 use crate::quick_wheel::catalog::ACTIONS;
+use crate::quick_wheel::force_page;
 use crate::quick_wheel::pages::{MAX_CHOICES, MAX_PAGES, Slot};
 use crate::quick_wheel::ring;
 use sjk_ui::{Color, DrawCommand, FontWeight, TextAlign};
@@ -47,8 +50,9 @@ const OVERLAY_SHIFT: f32 = -190.0;
 const _: () = assert!(PAGES_X + PAGES_WIDTH < CHOICES_X);
 const _: () = assert!(CHOICES_X + CHOICES_WIDTH < DETAIL_X);
 const _: () = assert!(TOP + (MAX_CHOICES + 2) as f32 * LINE < KEYS_Y - 20.0);
-// Eight pages, Add a page, Restore, then the Sound heading and its switch.
-const _: () = assert!(TOP + (MAX_PAGES + 5) as f32 * LINE < KEYS_Y - 20.0);
+// Eight pages, Add a page, Add the Force page (while it is missing), Restore, then
+// the Sound heading and its switch.
+const _: () = assert!(TOP + (MAX_PAGES + 6) as f32 * LINE < KEYS_Y - 20.0);
 const _: () = assert!(PICK_TOP + PICK_LINES as f32 * PICK_LINE < KEYS_Y - 20.0);
 
 impl SettingsMenu {
@@ -216,10 +220,18 @@ impl WheelEditor {
                 self.page_buttons(frame, middle, index);
             } else {
                 let count = self.pages[index].choices.len();
+                let force = self.pages[index].force;
                 text(
                     &mut self.ui,
                     TextFamily::Body,
-                    format_args!("{}", ChoiceCount(count)),
+                    format_args!(
+                        "{}",
+                        if force {
+                            "Your powers".to_owned()
+                        } else {
+                            ChoiceCount(count).to_string()
+                        }
+                    ),
                     frame.rect(PAGES_X + PAGES_WIDTH - 150.0, middle - 12.0, 130.0, 24.0),
                     16.0 * s,
                     color::MUTED,
@@ -243,14 +255,31 @@ impl WheelEditor {
             },
             !full,
         );
+        // The Force page, removed: a row puts it back.
+        if let Some(row) = self.force_row() {
+            self.action_row(
+                frame,
+                [PAGES_X, PAGES_WIDTH],
+                row + 1,
+                focus == Some(row),
+                ADD_FORCE,
+                if full {
+                    "Force page: 8 pages at most"
+                } else {
+                    "+  Add the Force page"
+                },
+                !full,
+            );
+        }
         let restore = match (self.default, self.confirm == Some(Confirm::Restore)) {
             (true, _) => "These are the default pages",
-            (false, true) => "Enter again: General and Weather",
+            (false, true) => "Enter again to restore them",
             (false, false) => "Restore the default pages",
         };
         let confirming = self.confirm == Some(Confirm::Restore);
-        let top = TOP + LINE * (add + 2) as f32;
-        if focus == Some(add + 1) {
+        let restore_row = self.restore_row();
+        let top = TOP + LINE * (restore_row + 1) as f32;
+        if focus == Some(restore_row) {
             kit::band(&mut self.ui, frame, [PAGES_X, top, PAGES_WIDTH, LINE]);
         }
         self.ui
@@ -279,11 +308,11 @@ impl WheelEditor {
             &mut self.ui,
             frame,
             PAGES_X,
-            TOP + LINE * (add + 3) as f32 + 36.0,
+            TOP + LINE * (restore_row + 2) as f32 + 36.0,
             PAGES_WIDTH,
             "Sound",
         );
-        let top = TOP + LINE * (add + 4) as f32;
+        let top = TOP + LINE * (restore_row + 3) as f32;
         let focused = focus == Some(self.sounds_row());
         if focused {
             kit::band(&mut self.ui, frame, [PAGES_X, top, PAGES_WIDTH, LINE]);
@@ -387,6 +416,10 @@ impl WheelEditor {
             CHOICES_WIDTH,
             &heading,
         );
+        if self.force_shown() {
+            self.draw_force_note(frame);
+            return;
+        }
         let focus =
             (self.column == Column::Choices && self.picker.is_none()).then_some(self.rows[1]);
         let picking = self.picker.map(|picker| picker.at);
@@ -495,6 +528,45 @@ impl WheelEditor {
         );
     }
 
+    /// The Force page's middle column: no choices to edit, what fills it instead.
+    fn draw_force_note(&mut self, frame: &Frame) {
+        let s = frame.s;
+        let top = TOP + LINE;
+        text(
+            &mut self.ui,
+            TextFamily::Body,
+            format_args!("Follows your Force powers"),
+            frame.rect(
+                CHOICES_X + 22.0,
+                top + LINE * 0.5 - 14.0,
+                CHOICES_WIDTH - 44.0,
+                28.0,
+            ),
+            19.0 * s,
+            color::GOLD_BRIGHT,
+            FontWeight::Regular,
+            TextAlign::Start,
+        );
+        let words = "Its choices are set by the game, not here: every power you can use when the wheel opens, Push first, Illuminate last. An instant power is used at once and selected; Grip, Lightning, Drain and Stasis are only selected, for your Use Force key. Past 12 powers the rest go on a second page.";
+        for (line, part) in wrap(words, 40).take(8).enumerate() {
+            text(
+                &mut self.ui,
+                TextFamily::Body,
+                format_args!("{part}"),
+                frame.rect(
+                    CHOICES_X + 22.0,
+                    top + LINE + line as f32 * 28.0,
+                    CHOICES_WIDTH - 44.0,
+                    26.0,
+                ),
+                17.0 * s,
+                color::MUTED,
+                FontWeight::Regular,
+                TextAlign::Start,
+            );
+        }
+    }
+
     /// A row that does one thing (add a page, add a choice) on line `line` of a
     /// column at `[x, width]`.
     #[allow(clippy::too_many_arguments)]
@@ -534,14 +606,27 @@ impl WheelEditor {
     fn draw_preview(&mut self, frame: &Frame) {
         let s = frame.s;
         let slots = self.choices().to_vec();
-        let choices: Vec<ring::Choice<'_>> = slots
-            .iter()
-            .map(|slot| ring::Choice {
-                label: slot.label(),
-                icon: slot.icon(),
-                on: false,
-            })
-            .collect();
+        let force = self.force_shown();
+        let example = if force { force_example() } else { Vec::new() };
+        let choices: Vec<ring::Choice<'_>> = if force {
+            example
+                .iter()
+                .map(|choice| ring::Choice {
+                    label: &choice.label,
+                    icon: choice.icon,
+                    on: choice.on,
+                })
+                .collect()
+        } else {
+            slots
+                .iter()
+                .map(|slot| ring::Choice {
+                    label: slot.label(),
+                    icon: slot.icon().map(crate::ui_renderer::wheel_icon),
+                    on: false,
+                })
+                .collect()
+        };
         let highlighted =
             (self.column == Column::Choices && self.rows[1] < slots.len()).then_some(self.rows[1]);
         let name = self
@@ -561,6 +646,7 @@ impl WheelEditor {
                 neighbours: None,
                 arrival: (1.0, 0.0),
                 hint: false,
+                empty: &ring::EMPTY,
             },
         );
         let mut y = PREVIEW[1] + ring::REACH * PREVIEW_SCALE + 30.0;
@@ -588,7 +674,11 @@ impl WheelEditor {
                     &mut self.ui,
                     frame,
                     &mut y,
-                    "Hold the key and point at a choice, let go to run it. While it is open, scroll or click to change page; a bare +wheel opens on the page shown last.",
+                    if page.force {
+                        "An example: in a game the page holds the Force powers you can use as the wheel opens, the one selected marked."
+                    } else {
+                        "Hold the key and point at a choice, let go to run it. While it is open, scroll or click to change page; a bare +wheel opens on the page shown last."
+                    },
                 );
             }
             (Column::Pages, row) if row == pages => note(
@@ -597,11 +687,17 @@ impl WheelEditor {
                 &mut y,
                 "A new page starts empty; name it, then add its choices. Up to 8 pages.",
             ),
-            (Column::Pages, row) if row == pages + 1 => note(
+            (Column::Pages, row) if Some(row) == self.force_row() => note(
                 &mut self.ui,
                 frame,
                 &mut y,
-                "Back to the wheel's own two pages, General and Weather. Your pages and choices are removed.",
+                "The page of your Force powers, back after General (or last), its choices set by the game.",
+            ),
+            (Column::Pages, row) if row == self.restore_row() => note(
+                &mut self.ui,
+                frame,
+                &mut y,
+                "Back to the wheel's own pages, General, Force and Weather. Your pages and choices are removed.",
             ),
             (Column::Pages, _) => note(
                 &mut self.ui,
@@ -906,8 +1002,10 @@ impl WheelEditor {
             }
             (None, None, None) => match (self.column, self.row()) {
                 (Column::Pages, row) if row < pages => {
+                    if !self.pages[row].force {
+                        keys.push((&["Enter"][..], "choices"));
+                    }
                     keys.extend([
-                        (&["Enter"][..], "choices"),
                         (&["F2"][..], "rename"),
                         (&["Shift", "Up", "Down"][..], "move"),
                         (&["Delete"][..], "remove"),
@@ -956,6 +1054,23 @@ impl std::fmt::Display for ChoiceCount {
             count => write!(formatter, "{count} choices"),
         }
     }
+}
+
+/// The Force page's example ring: a light-side build with Illuminate, Protect
+/// selected, in the Force bar's pictures.
+fn force_example() -> Vec<crate::quick_wheel::ShownChoice> {
+    const LIGHT: [u8; 9] = [3, 4, 2, 14, 0, 9, 10, 5, 11];
+    let known = LIGHT.iter().fold(0, |known, slot| known | 1 << slot);
+    force_page::choices(&force_page::Powers {
+        known: sjk_client::force_wheel::client_known(known, true),
+        selected: 9,
+        flamethrower: false,
+        icons: std::array::from_fn(|slot| {
+            Some(sjk_ui::TextureId(
+                crate::ui_renderer::FORCE_WHEEL_ICON_FIRST + slot as u32,
+            ))
+        }),
+    })
 }
 
 /// Width the focused page row's controls take at its end.
@@ -1254,12 +1369,18 @@ mod tests {
             );
         };
         draw(&mut menu);
-        // Hovering Weather focuses it without showing it; a click shows it.
-        let weather = centre(&menu, PAGE_BASE + 1);
-        hover(&mut menu, &mut console, weather);
-        assert_eq!((menu.wheel.rows[0], menu.wheel.page), (1, 0));
-        click(&mut menu, &mut console, weather);
+        // The Force page shown: no choices, so no Add a choice to point at.
+        let force = centre(&menu, PAGE_BASE + 1);
+        click(&mut menu, &mut console, force);
         assert_eq!(menu.wheel.page, 1);
+        draw(&mut menu);
+        assert!(menu.wheel.ui.rect_for(ADD_CHOICE).is_none());
+        // Hovering Weather focuses it without showing it; a click shows it.
+        let weather = centre(&menu, PAGE_BASE + 2);
+        hover(&mut menu, &mut console, weather);
+        assert_eq!((menu.wheel.rows[0], menu.wheel.page), (2, 1));
+        click(&mut menu, &mut console, weather);
+        assert_eq!(menu.wheel.page, 2);
         // Add a choice: hovered, then clicked, opens the catalogue.
         draw(&mut menu);
         let add = centre(&menu, ADD_CHOICE);
@@ -1279,12 +1400,12 @@ mod tests {
         let at = centre(&menu, PICK_BASE + slot);
         click(&mut menu, &mut console, at);
         assert!(menu.wheel.picker.is_none());
-        assert_eq!(console.wheel_pages.pages()[1].choices.len(), 9);
+        assert_eq!(console.wheel_pages.pages()[2].choices.len(), 9);
         // The focused choice's cross removes it.
         draw(&mut menu);
         let at = centre(&menu, CHOICE_REMOVE);
         click(&mut menu, &mut console, at);
-        assert_eq!(console.wheel_pages.pages()[1].choices.len(), 8);
+        assert_eq!(console.wheel_pages.pages()[2].choices.len(), 8);
         // The way back closes the editor.
         draw(&mut menu);
         let at = centre(&menu, BACK);

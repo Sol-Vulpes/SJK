@@ -7,6 +7,25 @@ SJK currently contains a native client and standard dedicated server in a
 20-crate Rust workspace. This page records scope and verification, rather than
 claiming complete parity from the presence of an implementation.
 
+## Quick wheel: a Force page of the player's powers
+
+Branch `personal/force-wheel-page` (10/10/2026, based on `915475f9`, Windows 11),
+Sol's request. The quick wheel's defaults are General, Force and Weather; a
+`wheel.json` of version 1 gets the Force page once, after General, and is written
+as version 2 (unit-tested, with the removed page staying removed and a full wheel
+left alone). The page is live: the powers the Force bar's known bits allow, in a
+fixed order (neutral, light or dark in F-key order, JoF's, Illuminate), the
+selected one marked; instant powers run `forceselect <n>; force_*` (the retail
+`genCmds_t` binds, JoF's server commands, `force_illuminate`), held ones (Grip,
+Lightning, Drain, Stasis) only `forceselect <n>`, a new local command
+(`Selection::select`, unit-tested). Up to 12 on the ring, drawn smaller; more go
+on "Force 2". Settings > Quick wheel shows a note instead of choices, an example
+preview, and Add the Force page once it is removed. World shots
+`duel6_quick_wheel_force` (light, dark, every power and Force 2, none, no game, 4K
+at `ui_textScale 1.2`) and `duel6_quick_wheel_settings` were looked at. Not tried
+in a game: whether `force_*` from the wheel and the selection reach a real server
+as from the F-keys is unverified.
+
 ## Saber tab: hilt search and the blade skins owned
 
 Branch `personal/saber-search` (10/10/2026, Windows 11), Sol's request ("make saber

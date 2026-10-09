@@ -60,14 +60,25 @@ pub(crate) fn load(
     })
 }
 
-/// `CG_ForceSelectIcon`: the picture of wheel entry `slot`.
-fn icon(icons: &[Option<TextureId>; ICONS], slot: u8, flamethrower: bool) -> Option<TextureId> {
+/// `CG_ForceSelectIcon`: the picture of wheel entry `slot` (the quick wheel's
+/// Force page shows it too).
+pub(crate) fn icon(
+    icons: &[Option<TextureId>; ICONS],
+    slot: u8,
+    flamethrower: bool,
+) -> Option<TextureId> {
     let index = match slot {
         force_wheel::STASIS => JUMP,
         LIGHTNING if flamethrower => FLAMETHROWER,
         _ => usize::from(slot),
     };
     icons.get(index).copied().flatten()
+}
+
+/// The name the bar shows under wheel entry `slot` (retail's, as Dark Rage and
+/// Sense); `flamethrower` names Lightning the flamethrower.
+pub(crate) fn name(slot: u8, flamethrower: bool) -> &'static str {
+    super::selection::text(super::selection::name_id(slot, flamethrower))
 }
 
 /// Icons drawn left and right of the centre one, at most three each side.

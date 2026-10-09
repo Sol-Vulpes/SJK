@@ -986,7 +986,7 @@ const IDENTITY_TEXT: &str = "Hidden: open to see";
 fn wheel_pages_text(console: &ViewerConsole) -> String {
     let pages = &console.wheel_pages;
     match (pages.pages().len(), pages.is_default()) {
-        (_, true) => "General, Weather".to_owned(),
+        (_, true) => "General, Force, Weather".to_owned(),
         (1, false) => "1 page".to_owned(),
         (count, false) => format!("{count} pages"),
     }

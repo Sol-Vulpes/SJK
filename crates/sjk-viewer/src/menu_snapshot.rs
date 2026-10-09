@@ -1782,8 +1782,10 @@ fn quick_wheels(shots: &mut Snapshot) {
             .insert(crate::ui_renderer::wheel_icon(index).0, icon);
     }
     let shown = |marked: &[usize]| -> Vec<ShownPage> {
+        // The Force page is left out: it needs a game's powers.
         pages::defaults()
             .iter()
+            .filter(|page| !page.force)
             .map(|page| ShownPage {
                 id: page.id.clone(),
                 name: page.name.clone(),
@@ -1794,10 +1796,11 @@ fn quick_wheels(shots: &mut Snapshot) {
                     .map(|(index, slot)| crate::quick_wheel::ShownChoice {
                         label: slot.label().to_owned(),
                         command: slot.command().to_owned(),
-                        icon: slot.icon(),
+                        icon: slot.icon().map(crate::ui_renderer::wheel_icon),
                         on: marked.contains(&index),
                     })
                     .collect(),
+                force: false,
             })
             .collect()
     };

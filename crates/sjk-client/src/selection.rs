@@ -124,6 +124,36 @@ impl Selection {
         }
     }
 
+    /// Select Force wheel entry `slot` at once (`forceselect`, SJK's quick wheel
+    /// Force page): a real power becomes the selection sent, a pseudo-slot the one
+    /// `+useforce` uses, as if `forcenext` had stopped on it. Nothing changes, and
+    /// false is returned, for an entry not on the player's wheel or while
+    /// spectating or following, where cycling cannot select either.
+    pub fn select(&mut self, player: &PlayerState, time: i32, slot: u8) -> bool {
+        if player.movement_type() == 4 || player.movement_flags() & 4096 != 0 {
+            return false;
+        }
+        self.sync(player, time);
+        if !force_wheel::valid(self.known(player), slot) {
+            return false;
+        }
+        if force_wheel::is_pseudo(slot) {
+            self.pseudo = Some(slot);
+        } else {
+            self.pseudo = None;
+            self.force = Some(slot);
+        }
+        self.force_time = Some(time);
+        true
+    }
+
+    /// The Force wheel entry selected now: a pseudo-slot, else the local
+    /// selection, else the server's.
+    pub fn selected_force(&self, player: &PlayerState) -> u8 {
+        self.pseudo
+            .unwrap_or_else(|| self.force.unwrap_or_else(|| player.selected_force_power()))
+    }
+
     /// The selected JoF pseudo-slot, which `+useforce` uses instead of a power.
     pub fn wheel_pseudo(&self) -> Option<u8> {
         self.pseudo
@@ -286,6 +316,37 @@ mod tests {
         selection.set_illuminate(false);
         selection.sync(&push, 30);
         assert_eq!(selection.wheel_pseudo(), None);
+    }
+
+    #[test]
+    fn selecting_an_entry_directly_follows_the_wheel() {
+        // Heal, Push and Grip known, Repulse granted, the server on Heal.
+        let player = player(1 | (1 << 3) | (1 << 6) | (1 << REPULSE), 0);
+        let mut selection = Selection::default();
+        assert_eq!(selection.selected_force(&player), 0);
+        assert!(selection.select(&player, 100, 6));
+        assert_eq!((selection.force, selection.wheel_pseudo()), (Some(6), None));
+        assert_eq!(selection.view(&player, 110).unwrap().selected, 6);
+        // A pseudo-slot is used by +useforce; the power sent stays.
+        assert!(selection.select(&player, 120, REPULSE));
+        assert_eq!(
+            (selection.force, selection.wheel_pseudo()),
+            (Some(6), Some(REPULSE))
+        );
+        assert_eq!(selection.selected_force(&player), REPULSE);
+        assert!(selection.select(&player, 130, 3));
+        assert_eq!(selection.selected_force(&player), 3);
+        // Off the wheel: unknown, Jump, Illuminate while it is off.
+        assert!(!selection.select(&player, 140, 4));
+        assert!(!selection.select(&player, 140, 1));
+        assert!(!selection.select(&player, 140, force_wheel::ILLUMINATE));
+        assert_eq!(selection.selected_force(&player), 3);
+        selection.set_illuminate(true);
+        assert!(selection.select(&player, 150, force_wheel::ILLUMINATE));
+        // A spectator selects nothing.
+        let mut spectator = player.clone();
+        spectator.set_raw_field(63, 4);
+        assert!(!Selection::default().select(&spectator, 0, 3));
     }
 
     #[test]

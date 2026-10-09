@@ -1,13 +1,14 @@
 //! The quick wheel's pages: what each holds and in what order, kept in
 //! `wheel.json` in the profile folder (`GameData/SJK/`) once the player changes
-//! them in Settings. Without the file the wheel has its two first pages, General
-//! and Weather. The file is JSON rather than cvars because a page is a list and a
+//! them in Settings. Without the file the wheel has General, Force and Weather.
+//! The file is JSON rather than cvars because a page is a list and a
 //! custom choice a free console command (quotes, semicolons), which a `config.cfg`
 //! line would have to escape and whose length a cvar would cap.
 //!
 //! ```json
-//! { "version": 1, "pages": [
+//! { "version": 2, "pages": [
 //!   { "id": "general", "name": "General", "choices": ["third_person", "hud"] },
+//!   { "id": "force", "name": "Force", "kind": "force" },
 //!   { "id": "duels", "name": "Duels", "choices": ["duel", {"name": "Ready", "command": "ready"}] }
 //! ] }
 //! ```
@@ -15,7 +16,12 @@
 //! A choice is an action of the catalogue by its id ([`super::catalog::ACTIONS`]),
 //! or an object naming a console command. A page's `id` is what `+wheel <id>`
 //! opens it with; it is made from the page's first name and kept when the page
-//! is renamed, so a bind keeps working.
+//! is renamed, so a bind keeps working. The Force page (`"kind": "force"`, one at
+//! most) holds no choices of its own: the wheel fills it with the player's Force
+//! powers as it opens ([`super::force_page`]).
+//!
+//! Version 2 brought the Force page: a version 1 file gets it once, after General
+//! (else last), unless the wheel already has eight pages ([`WheelPages::load`]).
 
 use super::catalog::{self, ACTIONS, State};
 use serde_json::{Value, json};
@@ -28,6 +34,13 @@ pub(crate) const MAX_PAGES: usize = 8;
 /// Most choices a page holds: ten round icons fill the ring with a gap between
 /// each, the highlighted one grown, at any window size.
 pub(crate) const MAX_CHOICES: usize = 10;
+/// Most powers the Force page shows on one ring, its icons drawn a little smaller
+/// ([`super::ring`]); the rest go on a second page right after it.
+pub(crate) const MAX_FORCE_CHOICES: usize = 12;
+/// The file's version: 2 since the Force page.
+const VERSION: u64 = 2;
+/// The Force page's id in the defaults.
+pub(crate) const FORCE_ID: &str = "force";
 /// Longest page name, and longest name of a custom choice, in characters.
 pub(crate) const NAME_CHARS: usize = 20;
 pub(crate) const LABEL_CHARS: usize = 24;
@@ -85,6 +98,8 @@ pub(crate) struct Page {
     pub(crate) id: String,
     pub(crate) name: String,
     pub(crate) choices: Vec<Slot>,
+    /// The Force page: no choices of its own, the player's powers instead.
+    pub(crate) force: bool,
 }
 
 impl Page {
@@ -97,14 +112,27 @@ impl Page {
                 .filter_map(|id| catalog::action_index(id))
                 .map(Slot::Action)
                 .collect(),
+            force: false,
+        }
+    }
+
+    /// The Force page as the defaults have it.
+    fn force() -> Self {
+        Self {
+            id: FORCE_ID.to_owned(),
+            name: "Force".to_owned(),
+            choices: Vec::new(),
+            force: true,
         }
     }
 }
 
-/// The pages the wheel has with nothing saved.
+/// The pages the wheel has with nothing saved: General, Force (a scroll down
+/// from General) and Weather.
 pub(crate) fn defaults() -> Vec<Page> {
     vec![
         Page::of("general", "General", &catalog::GENERAL),
+        Page::force(),
         Page::of("weather", "Weather", &catalog::WEATHER),
     ]
 }
@@ -118,23 +146,30 @@ pub(crate) struct WheelPages {
 
 impl WheelPages {
     /// The pages kept in `directory` (the profile folder), or the defaults when
-    /// it has none or the file cannot be read.
+    /// it has none or the file cannot be read. A file from before the Force page
+    /// (version 1) gets it once, after General (else last), and is saved so: a
+    /// player who then removes it keeps it removed. A wheel of eight pages is
+    /// left as it is (Settings can add the page later).
     pub(crate) fn load(directory: &Path) -> Self {
         let path = directory.join(FILE);
-        let pages = match std::fs::read(&path) {
+        let (pages, version) = match std::fs::read(&path) {
             Ok(bytes) => parse(&bytes).unwrap_or_else(|| {
                 crate::log::progress(format_args!(
                     "warning: {} is not a quick wheel file; using the default pages",
                     path.display()
                 ));
-                defaults()
+                (defaults(), VERSION)
             }),
-            Err(_) => defaults(),
+            Err(_) => (defaults(), VERSION),
         };
-        Self {
+        let mut pages = Self {
             path: Some(path),
             pages,
+        };
+        if version < VERSION && pages.add_force_page().is_some() {
+            crate::log::progress(format_args!("quick wheel: the Force page added"));
         }
+        pages
     }
 
     /// The defaults, kept nowhere (tests).
@@ -153,6 +188,30 @@ impl WheelPages {
     /// Whether the pages are the defaults.
     pub(crate) fn is_default(&self) -> bool {
         self.pages == defaults()
+    }
+
+    /// Whether the wheel has its Force page.
+    pub(crate) fn has_force_page(&self) -> bool {
+        self.pages.iter().any(|page| page.force)
+    }
+
+    /// Put the Force page back: after the page whose id is `general`, else at
+    /// the end; its index, or `None` when the wheel has it already or has
+    /// [`MAX_PAGES`]. Its id is `force` unless another page took it.
+    pub(crate) fn add_force_page(&mut self) -> Option<usize> {
+        if self.has_force_page() || self.pages.len() >= MAX_PAGES {
+            return None;
+        }
+        let at = self
+            .pages
+            .iter()
+            .position(|page| page.id == "general")
+            .map_or(self.pages.len(), |general| general + 1);
+        let mut page = Page::force();
+        page.id = self.unique_id(FORCE_ID, None);
+        self.pages.insert(at, page);
+        self.save();
+        Some(at)
     }
 
     /// The page `name` names: its id, else its name, ignoring case and spaces.
@@ -186,6 +245,7 @@ impl WheelPages {
             id,
             name,
             choices: Vec::new(),
+            force: false,
         });
         self.save();
         Some(self.pages.len() - 1)
@@ -252,7 +312,9 @@ impl WheelPages {
             Slot::Action(index) if index < ACTIONS.len() => Slot::Action(index),
             Slot::Action(_) => return None,
         };
-        let choices = &mut self.pages.get_mut(page)?.choices;
+        // The Force page's choices are the player's powers, never set by hand.
+        let page = self.pages.get_mut(page).filter(|page| !page.force)?;
+        let choices = &mut page.choices;
         let index = match at {
             Some(at) if at < choices.len() => {
                 choices[at] = slot;
@@ -293,7 +355,7 @@ impl WheelPages {
         to
     }
 
-    /// Back to the two first pages: the file is removed, so later versions'
+    /// Back to the default pages: the file is removed, so later versions'
     /// defaults reach this profile too.
     pub(crate) fn restore_defaults(&mut self) {
         self.pages = defaults();
@@ -372,10 +434,12 @@ fn step(index: usize, direction: i32, count: usize) -> Option<usize> {
     (index < count && (0..count as i64).contains(&to) && to != index as i64).then_some(to as usize)
 }
 
-/// The pages a `wheel.json` holds; `None` when it is not one.
-fn parse(bytes: &[u8]) -> Option<Vec<Page>> {
+/// The pages a `wheel.json` holds and its version (1 when it names none);
+/// `None` when it is not one.
+fn parse(bytes: &[u8]) -> Option<(Vec<Page>, u64)> {
     let value: Value = serde_json::from_slice(bytes).ok()?;
     let items = value.get("pages")?.as_array()?;
+    let version = value.get("version").and_then(Value::as_u64).unwrap_or(1);
     let mut pages = WheelPages {
         path: None,
         pages: Vec::new(),
@@ -389,16 +453,27 @@ fn parse(bytes: &[u8]) -> Option<Vec<Page>> {
         else {
             continue;
         };
+        let force = item.get("kind").and_then(Value::as_str) == Some("force");
+        // One Force page: a second would show the same powers.
+        if force && pages.has_force_page() {
+            continue;
+        }
         let choices = item
             .get("choices")
             .and_then(Value::as_array)
+            .filter(|_| !force)
             .map(|choices| choices.iter().filter_map(slot).take(MAX_CHOICES).collect())
             .unwrap_or_default();
         let wanted = item.get("id").and_then(Value::as_str).unwrap_or(&name);
         let id = pages.unique_id(wanted, None);
-        pages.pages.push(Page { id, name, choices });
+        pages.pages.push(Page {
+            id,
+            name,
+            choices,
+            force,
+        });
     }
-    (!pages.pages.is_empty()).then_some(pages.pages)
+    (!pages.pages.is_empty()).then_some((pages.pages, version))
 }
 
 /// A choice as `wheel.json` writes it; `None` for an unknown action or an
@@ -435,10 +510,14 @@ fn write(path: &Path, pages: &[Page]) -> std::io::Result<()> {
                     Slot::Custom { label, command } => json!({"name": label, "command": command}),
                 })
                 .collect();
-            json!({"id": page.id, "name": page.name, "choices": choices})
+            if page.force {
+                json!({"id": page.id, "name": page.name, "kind": "force"})
+            } else {
+                json!({"id": page.id, "name": page.name, "choices": choices})
+            }
         })
         .collect();
-    let bytes = serde_json::to_vec_pretty(&json!({"version": 1, "pages": pages}))
+    let bytes = serde_json::to_vec_pretty(&json!({"version": VERSION, "pages": pages}))
         .map_err(std::io::Error::other)?;
     // Written whole beside the file, then moved over it, so a crash never
     // leaves half a file.
@@ -459,7 +538,7 @@ mod tests {
     }
 
     #[test]
-    fn without_a_file_the_wheel_has_general_and_weather() {
+    fn without_a_file_the_wheel_has_general_force_and_weather() {
         let directory = tempfile::tempdir().unwrap();
         let pages = WheelPages::load(directory.path());
         assert!(pages.is_default());
@@ -468,14 +547,16 @@ mod tests {
             .iter()
             .map(|page| page.name.as_str())
             .collect();
-        assert_eq!(names, ["General", "Weather"]);
+        assert_eq!(names, ["General", "Force", "Weather"]);
         assert_eq!(pages.pages()[0].choices.len(), 8);
-        assert_eq!(pages.pages()[1].choices[2].command(), "r_weatherForce 2");
+        assert!(pages.pages()[1].force && pages.pages()[1].choices.is_empty());
+        assert_eq!(pages.pages()[2].choices[2].command(), "r_weatherForce 2");
         assert_eq!(pages.pages()[0].choices[0].label(), "Third person");
         // Nothing is written until something changes.
         assert!(!directory.path().join(FILE).exists());
         // Binds name a page by id or name, whatever the case and spacing.
-        assert_eq!(pages.find("weather"), Some(1));
+        assert_eq!(pages.find("force"), Some(1));
+        assert_eq!(pages.find("weather"), Some(2));
         assert_eq!(pages.find(" General "), Some(0));
         assert_eq!(pages.find("hail"), None);
         assert_eq!(pages.find(""), None);
@@ -499,12 +580,21 @@ mod tests {
         assert_eq!(pages.find("duels"), Some(duels));
         assert_eq!(pages.find("1v1 Duels"), Some(duels));
         pages.move_page(duels, -1);
-        assert_eq!(pages.pages()[1].name, "1v1 duels");
-        pages.move_choice(1, 1, -1);
-        assert_eq!(pages.pages()[1].choices[0].label(), "Ready");
+        assert_eq!(pages.pages()[2].name, "1v1 duels");
+        pages.move_choice(2, 1, -1);
+        assert_eq!(pages.pages()[2].choices[0].label(), "Ready");
         let saved = WheelPages::load(directory.path());
         assert_eq!(saved.pages(), pages.pages());
         assert!(!saved.is_default());
+        // The Force page is kept as a page of its own kind, without choices.
+        assert!(
+            saved
+                .pages()
+                .iter()
+                .any(|page| page.force && page.id == "force")
+        );
+        let force = saved.pages().iter().position(|page| page.force).unwrap();
+        assert_eq!(pages.set_choice(force, None, Slot::Action(duel)), None);
         // Back to the defaults: the file goes.
         pages.restore_defaults();
         assert!(pages.is_default());
@@ -515,14 +605,17 @@ mod tests {
     #[test]
     fn limits_hold_and_the_last_page_stays() {
         let mut pages = WheelPages::unsaved();
-        // Full pages take no more; a full wheel no more pages.
+        // Full pages take no more; a full wheel no more pages, nor the
+        // Force page back.
         assert_eq!(pages.set_choice(0, None, Slot::Action(0)), Some(8));
         assert_eq!(pages.set_choice(0, None, Slot::Action(0)), Some(9));
         assert_eq!(pages.set_choice(0, None, Slot::Action(0)), None);
         // In place of a choice still works on a full page.
         assert_eq!(pages.set_choice(0, Some(9), Slot::Action(2)), Some(9));
+        assert!(pages.remove_page(1));
         while pages.add_page("").is_some() {}
         assert_eq!(pages.pages().len(), MAX_PAGES);
+        assert_eq!(pages.add_force_page(), None);
         assert_eq!(pages.pages()[2].name, "Page 3");
         assert_eq!(pages.pages()[2].id, "page3");
         // Blank or unfinished custom choices are refused, long ones cut.
@@ -566,7 +659,9 @@ mod tests {
         )
         .unwrap();
         let pages = WheelPages::load(directory.path());
-        assert_eq!(pages.pages().len(), 2);
+        // The two pages read, and the Force page a file without a version gets.
+        assert_eq!(pages.pages().len(), 3);
+        assert!(pages.pages()[2].force);
         let mine = &pages.pages()[0];
         assert_eq!((mine.id.as_str(), mine.name.as_str()), ("mine", "Mine"));
         assert_eq!(mine.choices.len(), 2);
@@ -576,5 +671,63 @@ mod tests {
         assert!(WheelPages::load(directory.path()).is_default());
         std::fs::write(&path, br#"{"pages": []}"#).unwrap();
         assert!(WheelPages::load(directory.path()).is_default());
+    }
+
+    #[test]
+    fn a_file_from_before_the_force_page_gets_it_once() {
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join(FILE);
+        // A version 1 file with its own pages: Force goes in after General.
+        std::fs::write(
+            &path,
+            br#"{"version": 1, "pages": [
+                {"id": "duels", "name": "Duels", "choices": ["duel"]},
+                {"id": "general", "name": "Mine", "choices": ["hud"]},
+                {"id": "weather", "name": "Weather", "choices": ["rain"]}
+            ]}"#,
+        )
+        .unwrap();
+        let mut pages = WheelPages::load(directory.path());
+        let ids: Vec<_> = pages.pages().iter().map(|page| page.id.as_str()).collect();
+        assert_eq!(ids, ["duels", "general", "force", "weather"]);
+        assert_eq!(pages.pages()[1].choices.len(), 1, "the player's pages stay");
+        // Saved as version 2: removed, it stays removed.
+        assert!(
+            std::fs::read_to_string(&path)
+                .unwrap()
+                .contains("\"version\": 2")
+        );
+        assert!(pages.remove_page(2));
+        assert!(!WheelPages::load(directory.path()).has_force_page());
+        // Settings can put it back.
+        assert_eq!(pages.add_force_page(), Some(2));
+        assert_eq!(pages.add_force_page(), None);
+        // Without General it goes last; a page called force keeps its id.
+        std::fs::write(
+            &path,
+            br#"{"pages": [{"id": "force", "name": "Pushes", "choices": ["afk"]}]}"#,
+        )
+        .unwrap();
+        let pages = WheelPages::load(directory.path());
+        let ids: Vec<_> = pages.pages().iter().map(|page| page.id.as_str()).collect();
+        assert_eq!(ids, ["force", "force2"]);
+        assert!(pages.pages()[1].force);
+        // A full version 1 wheel is left as it is; a second Force page is dropped.
+        let full: Vec<String> = (0..MAX_PAGES)
+            .map(|index| format!(r#"{{"name": "P{index}", "choices": []}}"#))
+            .collect();
+        std::fs::write(&path, format!(r#"{{"pages": [{}]}}"#, full.join(","))).unwrap();
+        assert!(!WheelPages::load(directory.path()).has_force_page());
+        std::fs::write(
+            &path,
+            br#"{"version": 2, "pages": [
+                {"name": "Force", "kind": "force", "choices": ["rain"]},
+                {"name": "Again", "kind": "force"}
+            ]}"#,
+        )
+        .unwrap();
+        let pages = WheelPages::load(directory.path());
+        assert_eq!(pages.pages().len(), 1);
+        assert!(pages.pages()[0].force && pages.pages()[0].choices.is_empty());
     }
 }

@@ -9,6 +9,8 @@
 #                               made it when that is not the piece's owner.
 
 = Sol
++ 10/10/2026 | - | A live Force page on the quick wheel
+- 55b9458 |  | Add a live Force page to the quick wheel
 + 10/10/2026 | - | Hilt search and blade skin choice on the Saber tab
 - 454e31c |  | Saber tab: hilt search and a Blade row for owned blade skins
 + 10/10/2026 | - | Profile tabs fit the text style, shorter Profile line

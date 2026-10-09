@@ -2153,6 +2153,14 @@ Stasis has none and shows Jump's. Power names are retail's (Dark Rage, Sense).
 SJK's own [Illuminate](#illuminate) is the wheel's last entry on every server.
 See [hud/force_wheel.rs](../crates/sjk-viewer/src/hud/force_wheel.rs).
 
+`forceselect <n>` (SJK's) selects wheel entry `n` at once, by its
+`forcePowers_t` number (18 Stasis, 19 Repulse, 20 Dash, 21 Illuminate), as if
+`forcenext` had stopped on it: a real power becomes the selection the user
+command sends, a pseudo-slot the one `+useforce` uses, and the bar shows it. An
+entry not on the player's wheel, or spectating, selects nothing
+([`Selection::select`](../crates/sjk-client/src/selection.rs)). The quick wheel's
+[Force page](#force-page) runs it.
+
 ## Illuminate
 
 Illuminate is a free power every player has, SJK's own and not a game power: a
@@ -2247,8 +2255,8 @@ new sets. The Sun's sounds have not been checked by ear in a game.
 
 SJK's quick wheel ([quick_wheel.rs](../crates/sjk-viewer/src/quick_wheel.rs)):
 hold the key, a ring of choices opens in the middle of the screen, move the mouse
-towards one and let go to run it. The wheel has pages (General and Weather unless
-the player changed them); while it is open, the mouse wheel and buttons change
+towards one and let go to run it. The wheel has pages (General, Force and Weather
+unless the player changed them); while it is open, the mouse wheel and buttons change
 page. Letting go with the mouse still near the middle, or Escape, runs nothing;
 opening the console, chat or a menu closes the wheel. While it is open the mouse
 moves its pointer instead of the view and the HUD steps aside as `cg_drawHud 0`
@@ -2288,6 +2296,50 @@ While the wheel is open:
   attack. Their releases are the wheel's too, while an attack held before the
   wheel opened is released as usual.
 
+### Force page
+
+The Force page (Sol's request, 10/10/2026;
+[force_page.rs](../crates/sjk-viewer/src/quick_wheel/force_page.rs)) is a default
+page, a scroll down from General. It is live: as the wheel opens it holds the
+Force powers the player can use right now, read from the latest snapshot as the
+[Force bar](#force-wheel) reads them (`forcePowersKnown`, set for a power with a
+level above 0), with JoF JA+'s Dash, Stasis and Repulse where the server grants
+them and [Illuminate](#illuminate) while `cg_illuminate` is on. Jump and the saber
+powers are passive and left out. Each choice shows the Force bar's picture and
+name (Stasis borrows Jump's, merc mode's Lightning is the Flamethrower), and the
+power selected now wears the gold dot.
+
+| Power | Choosing it runs |
+| --- | --- |
+| Push, Pull, Speed, Sense | `forceselect <n>; force_throw` (`force_pull`, `force_speed`, `force_seeing`) |
+| Heal, Protect, Absorb, Mind Trick, Team Heal | `forceselect <n>; force_heal` (`force_protect`, `force_absorb`, `force_distract`, `force_healother`) |
+| Dark Rage, Team Energize | `forceselect <n>; force_rage` (`force_forcepowerother`) |
+| Grip, Lightning, Drain, Stasis | `forceselect <n>` only |
+| Dash, Repulse, Illuminate | `forceselect <n>; force_dash` (`force_repulse`, `force_illuminate`) |
+
+An instant power is used at once by its own command (the `genCmds_t` usercmd
+values retail's F1-F12 binds send, JoF's server commands, SJK's toggle) and
+selected, as the Force bar would leave it, so the Use Force key uses it next. A
+held power cannot be held from a wheel that runs on letting go, so choosing Grip,
+Lightning, Drain or Stasis only selects it for `+useforce`.
+
+The order is fixed, so a power keeps its place round the ring while the build
+does: the neutral powers (Push, Pull, Speed, Sense), the light side's (Heal,
+Protect, Absorb, Mind Trick, Team Heal) or the dark side's (Grip, Lightning, Dark
+Rage, Drain, Team Energize), each in the retail default keys' order (F1 to F12),
+then Dash, Stasis, Repulse and Illuminate. A usual build is 9 powers, 10 with
+Illuminate; the page holds 12, its pictures drawn at ten-twelfths of their size
+so the gap between them stays. Past 12 (an admin's every-power build on JA+, up
+to 18) the rest continue on a second page right after it, "Force 2", reached by the
+same scroll or click; a bare `+wheel` that last showed Force 2 opens on Force when
+the second page is gone. Shrinking 18 onto one ring would make every picture
+half-size for a build almost nobody has, and an inner ring would put two choices
+in one direction from the middle, which the wheel's pointer cannot tell apart.
+
+Out of a game (or in a demo, where the choices could not act), spectating or
+following, and with no usable power, the page stays in its place and says "No
+Force powers here", so the pages keep their order and their dots.
+
 ### Look
 
 The ring is drawn in the SJK UI's look ([ring.rs](../crates/sjk-viewer/src/quick_wheel/ring.rs),
@@ -2310,7 +2362,8 @@ braces round a dot (`{•}`), so several custom choices on a page look alike: th
 middle names the highlighted one. A choice whose picture is missing shows its
 name on a navy disc with a holo rim (two lines at most). A page holds at most 10
 choices (ten icons fill the ring with a gap between each, the highlighted one
-grown); an empty page says "Nothing here yet".
+grown; the Force page holds 12, drawn smaller); an empty page says "Nothing here
+yet".
 
 ### Sounds
 
@@ -2363,14 +2416,17 @@ With the classic+ menus that row (Interface, and the tabbed settings' GAME tab)
 opens the same editor on its own, in the SJK UI's look over the settings, Escape
 returning to the row ([wheel_editor.rs](../crates/sjk-viewer/src/settings/wheel_editor.rs)).
 
-- **Pages** (left): each page with how many choices it has, the one whose
-  choices show in gold; Add a page (at most 8), then Restore the default pages
-  (Enter twice, or two clicks); under them, Sound's "Wheel sounds" switch
+- **Pages** (left): each page with how many choices it has ("Your powers" for
+  the Force page), the one whose choices show in gold; Add a page (at most 8),
+  Add the Force page (only while it has been removed: it goes back after General,
+  else last), then Restore the default pages (Enter twice, or two clicks); under them, Sound's "Wheel sounds" switch
   (`cg_wheelSounds`: Enter, Space or a click). Up and Down choose (the choices
   follow), Enter or Right goes to the page's choices, F2 or Rename names it,
   Shift (or Ctrl) with Up or Down moves it, Delete twice removes it (not the
-  last one). A new page is named at once ("Page 3" if left blank); names are 20
-  characters at most.
+  last one). A new page is named at once ("Page 4" if left blank); names are 20
+  characters at most. The Force page is renamed, moved and removed the same way,
+  but has no choices to go to: the middle column says they follow your Force
+  powers and how they act, and the preview is an example (a light-side build).
 - **Choices** (middle): the page's choices in ring order (the first at the top,
   then clockwise), each with its picture and group, then Add a choice. Enter
   changes a choice from the catalogue (a custom one opens its form), Shift with
@@ -2392,23 +2448,29 @@ Every change is saved at once.
 The pages are kept in `wheel.json` in the profile folder
 ([pages.rs](../crates/sjk-viewer/src/quick_wheel/pages.rs)), written (whole, then
 moved over the old file) when the player changes them; without the file the
-wheel has General and Weather, and Restore the default pages removes it so a
-later version's defaults reach the profile. A JSON file rather than cvars: a page
+wheel has General, Force and Weather, and Restore the default pages removes it so
+a later version's defaults reach the profile. A JSON file rather than cvars: a page
 is a list, a custom choice a free console command (quotes, semicolons) that a
 `config.cfg` line would have to escape and a cvar's length would cap.
 
 ```json
-{ "version": 1, "pages": [
+{ "version": 2, "pages": [
   { "id": "general", "name": "General", "choices": ["third_person", "nameplates", "hud"] },
+  { "id": "force", "name": "Force", "kind": "force" },
   { "id": "duels", "name": "Duels", "choices": ["duel", {"name": "Ready", "command": "ready"}] }
 ] }
 ```
 
-A choice is an action's id or a `{name, command}` object. Reading keeps what it
-can: unknown action ids, unnamed pages and incomplete custom choices are left
-out, pages past 8 and choices past 10 cut, a repeated id numbered; a file that is
-not JSON, or has no page, reads as the defaults (and is kept until the next
-change).
+A choice is an action's id or a `{name, command}` object; the Force page is
+`"kind": "force"`, without choices (one at most: a second is left out). Reading
+keeps what it can: unknown action ids, unnamed pages and incomplete custom choices
+are left out, pages past 8 and choices past 10 cut, a repeated id numbered; a
+file that is not JSON, or has no page, reads as the defaults (and is kept until
+the next change). Version 2 brought the Force page: a file of version 1 (or none)
+gets it once as it is read, after the page whose id is `general` (else last), and
+is written back as version 2, so a player who removes the page afterwards keeps
+it removed; a wheel of 8 pages is left as it is (Settings' Add the Force page,
+after removing a page, or Restore, brings it).
 
 ## Configuration and content
 

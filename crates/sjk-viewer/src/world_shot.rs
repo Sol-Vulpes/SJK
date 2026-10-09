@@ -2085,6 +2085,80 @@ like this one.",
         });
     }
 
+    /// The quick wheel's Force page over duel6 without a server, the powers set
+    /// for the shot: a light-side build with Illuminate (Protect selected, the
+    /// mouse on Push), a dark-side one, every power (twelve on the ring, the rest
+    /// on Force 2), no power at all, and the light build at 4K with Sol's menu
+    /// text size (`ui_textScale 1.2`).
+    #[test]
+    #[ignore = "renders with the GPU and the installed game data named by JKA_GAME_DATA"]
+    fn duel6_quick_wheel_force() {
+        use std::time::{Duration, Instant};
+        const NEUTRAL: u32 = (1 << 2) | (1 << 3) | (1 << 4) | (1 << 14);
+        const LIGHT: u32 = NEUTRAL | 1 | (1 << 5) | (1 << 9) | (1 << 10) | (1 << 11);
+        const DARK: u32 = NEUTRAL | (1 << 6) | (1 << 7) | (1 << 8) | (1 << 12) | (1 << 13);
+        // Jump and the saber powers known too, as every build has them.
+        const PASSIVE: u32 = (1 << 1) | (7 << 15);
+        const ILLUMINATE: u32 = 1 << sjk_client::force_wheel::ILLUMINATE;
+        on_big_stack(|| {
+            for (size, scale, prefix) in [
+                ([1920, 1080], "1", "duel6-wheel-force"),
+                ([3840, 2160], "1.2", "duel6-wheel-force-4k"),
+            ] {
+                let cvars = [
+                    ("ui_menuStyle", "sjk"),
+                    ("ui_textScale", scale),
+                    (crate::settings::quick::HIDE_CVAR, "1"),
+                ];
+                let Some((mut gpu, _profile)) = open("maps/mp/duel6.bsp", size, None, &cvars)
+                else {
+                    return;
+                };
+                let shots = menu_backdrop::tour_for("Yavin Training Grounds").expect("the tour");
+                let (yaw, pitch) = look(shots[0].from, shots[0].at);
+                aim(&mut gpu, shots[0].from, yaw, pitch);
+                if let Some(console) = gpu.console.as_mut() {
+                    console.close_for_connection();
+                }
+                gpu.quick_wheel.shot = true;
+                let _ = frame(&mut gpu, 60);
+                let bound = [String::from("force"), "81".to_owned(), "1000".to_owned()];
+                let builds: &[(&str, u32, u8, [f32; 2])] = if prefix == "duel6-wheel-force" {
+                    &[
+                        ("light", LIGHT | PASSIVE | ILLUMINATE, 9, [0.0, -90.0]),
+                        ("dark", DARK | PASSIVE | ILLUMINATE, 7, [70.0, 50.0]),
+                        ("every", u32::MAX, 3, [-60.0, -60.0]),
+                        ("none", PASSIVE, 0, [0.0, -90.0]),
+                    ]
+                } else {
+                    &[("light", LIGHT | PASSIVE | ILLUMINATE, 9, [0.0, -90.0])]
+                };
+                for &(build, known, selected, pointer) in builds {
+                    gpu.quick_wheel.force_for_shot = Some((known, selected));
+                    gpu.quick_wheel.cancel();
+                    gpu.open_quick_wheel(&bound).expect("the wheel opens");
+                    gpu.quick_wheel.moved(pointer);
+                    let name = format!("{prefix}-{build}");
+                    println!("{}", shoot(&mut gpu, 4, &name).display());
+                    if build == "every" {
+                        let settled = Instant::now() - Duration::from_secs(1);
+                        gpu.quick_wheel.turn(1, settled);
+                        let name = format!("{prefix}-every-2");
+                        println!("{}", shoot(&mut gpu, 4, &name).display());
+                    }
+                }
+                // Out of a game: the page says so.
+                gpu.quick_wheel.force_for_shot = None;
+                gpu.quick_wheel.cancel();
+                gpu.open_quick_wheel(&bound).expect("the wheel opens");
+                println!(
+                    "{}",
+                    shoot(&mut gpu, 4, &format!("{prefix}-no-game")).display()
+                );
+            }
+        });
+    }
+
     /// Three pages holding every action of the wheel's second icon board, the
     /// custom command's icon and, to compare, three of the first board's.
     fn second_board_pages() -> Vec<crate::quick_wheel::ShownPage> {
@@ -2155,11 +2229,12 @@ like this one.",
                         ShownChoice {
                             label: slot.label().to_owned(),
                             command: slot.command().to_owned(),
-                            icon: slot.icon(),
+                            icon: slot.icon().map(crate::ui_renderer::wheel_icon),
                             on: false,
                         }
                     })
                     .collect(),
+                force: false,
             })
             .collect()
     }
@@ -2188,8 +2263,10 @@ like this one.",
             };
             let _ = frame(&mut gpu, 20);
             gpu.ui_epoch -= std::time::Duration::from_millis(2_000);
-            let steps: [(&str, Keys); 7] = [
+            let steps: [(&str, Keys); 8] = [
                 ("duel6-wheel-settings", &[]),
+                // The Force page: a note instead of choices, an example ring.
+                ("duel6-wheel-settings-force", &[(ArrowDown, None)]),
                 // Down past the pages, Add a page and Restore to the sounds,
                 // switched off; switched on again before the next step, then
                 // Down wraps back to General.
@@ -2232,6 +2309,7 @@ like this one.",
                     &[
                         (Enter, None),
                         (ArrowLeft, None),
+                        (ArrowDown, None),
                         (ArrowDown, None),
                         (ArrowDown, None),
                         (Enter, None),
