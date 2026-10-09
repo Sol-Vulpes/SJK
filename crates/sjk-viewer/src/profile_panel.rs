@@ -12,11 +12,11 @@
 //!
 //! Opened by the SJK menus' Profile entry, the profile card or the `profile` and
 //! `achievements` commands; its Identity settings button opens the Identity page (the
-//! key, the switch that shares it, the hub). Like the Identity page it lives in the
-//! console and is drawn in place of it, always in the SJK UI's look ([`view`]). Tab
-//! moves between the tabs, the picture, the bio and their buttons; Left and Right
-//! switch tabs from the tabs; Enter saves the bio from the field (Shift+Enter starts a
-//! new line); Escape goes back.
+//! key, the switch that shares it, the hub), and See unlockables the Unlockables page.
+//! Like the Identity page it lives in the console and is drawn in place of it, always
+//! in the SJK UI's look ([`view`]). Tab moves between the tabs, the picture, the bio and
+//! their buttons; Left and Right switch tabs from the tabs; Enter saves the bio from the
+//! field (Shift+Enter starts a new line); Escape goes back.
 
 use crate::achievements::Standing;
 use crate::avatars::picture::{PictureError, Prepared};
@@ -39,10 +39,11 @@ const REVERT_TOKEN: u16 = 1_012;
 const BOARD_TOKEN: u16 = 1_013;
 const IDENTITY_TOKEN: u16 = 1_014;
 const STAFF_TOKEN: u16 = 1_015;
-const PICTURE_TOKEN: u16 = 1_016;
-const USE_TOKEN: u16 = 1_017;
-const REMOVE_TOKEN: u16 = 1_018;
-const BIO_BACK_TOKEN: u16 = 1_019;
+const UNLOCKABLES_TOKEN: u16 = 1_016;
+const PICTURE_TOKEN: u16 = 1_017;
+const USE_TOKEN: u16 = 1_018;
+const REMOVE_TOKEN: u16 = 1_019;
+const BIO_BACK_TOKEN: u16 = 1_020;
 /// How long Remove picture waits for its second press.
 const REMOVE_CONFIRM: Duration = Duration::from_secs(3);
 
@@ -77,6 +78,7 @@ enum Focus {
     RemovePicture,
     BioBack,
     Board,
+    Unlockables,
 }
 
 /// What the Profile tab's middle column shows.
@@ -121,6 +123,8 @@ pub(crate) enum PanelAction {
     },
     /// Take the player's picture down at the hub.
     RemoveAvatar,
+    /// Open the Unlockables page.
+    Unlockables,
 }
 
 /// A save on its way: the bio sent and the service's notice before it, to tell the
@@ -561,7 +565,7 @@ impl Panel {
             }
             (Middle::Picture, false) => order.push(Focus::BioBack),
         }
-        order.push(Focus::Board);
+        order.extend([Focus::Board, Focus::Unlockables]);
         order
     }
 
@@ -610,6 +614,7 @@ impl Panel {
                 self.show(Tab::Achievements);
                 PanelAction::None
             }
+            Focus::Unlockables => PanelAction::Unlockables,
         }
     }
 
@@ -730,6 +735,10 @@ impl Panel {
                 self.back_to_bio();
                 PanelAction::None
             }
+            Some(UNLOCKABLES_TOKEN) if self.tab == Tab::Profile => {
+                self.focus = Focus::Unlockables;
+                PanelAction::Unlockables
+            }
             _ => PanelAction::None,
         }
     }
@@ -757,6 +766,7 @@ impl Panel {
             Focus::Save => SAVE_TOKEN,
             Focus::Revert => REVERT_TOKEN,
             Focus::Board => BOARD_TOKEN,
+            Focus::Unlockables => UNLOCKABLES_TOKEN,
         }
     }
 }
@@ -780,6 +790,7 @@ mod tests {
             medals: Vec::new(),
             achievements: Vec::new(),
             avatar: String::new(),
+            unlocks: Vec::new(),
         }
     }
 
@@ -797,6 +808,9 @@ mod tests {
             note: None,
             player_report: None,
             avatar: None,
+            look_outcome: None,
+            packs_revision: 0,
+            assets_note: None,
         }
     }
 
@@ -891,7 +905,13 @@ mod tests {
         assert!(!panel.writable);
         assert_eq!(
             panel.order(),
-            [Focus::Tabs, Focus::Picture, Focus::Identity, Focus::Board]
+            [
+                Focus::Tabs,
+                Focus::Picture,
+                Focus::Identity,
+                Focus::Board,
+                Focus::Unlockables
+            ]
         );
         panel.bio = "hello there".to_owned();
         assert_eq!(panel.save(None), PanelAction::None);
@@ -901,7 +921,7 @@ mod tests {
     fn tab_walks_the_controls_and_enter_switches_tabs() {
         let shot = snapshot(Some(me("")), None);
         let mut panel = opened(&shot);
-        let steps: Vec<Focus> = (0..7)
+        let steps: Vec<Focus> = (0..8)
             .map(|_| {
                 panel.step(true);
                 panel.focus
@@ -916,9 +936,13 @@ mod tests {
                 Focus::Save,
                 Focus::Revert,
                 Focus::Board,
+                Focus::Unlockables,
                 Focus::Tabs
             ]
         );
+        panel.focus = Focus::Unlockables;
+        assert_eq!(panel.activate(None), PanelAction::Unlockables);
+        panel.focus = Focus::Tabs;
         assert_eq!(panel.activate(None), PanelAction::None);
         assert_eq!(panel.tab(), Tab::Achievements);
         assert_eq!(panel.order(), [Focus::Tabs]);
@@ -1084,7 +1108,8 @@ mod tests {
                 Focus::Picture,
                 Focus::Identity,
                 Focus::BioBack,
-                Focus::Board
+                Focus::Board,
+                Focus::Unlockables
             ]
         );
         // `sjkavatar clear` without the hub says so too.

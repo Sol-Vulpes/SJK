@@ -4,8 +4,9 @@
 //! achievements their counts (`achievements_frame.rs`), the picture cache where
 //! pictures come from (`avatars.rs`) and the profile card what it shows
 //! (`profile_card.rs`). Each frame it also lets the chat feed follow the SJK chat
-//! (`sjk_chat_frame.rs`), starts and ends emotes (`emotes_frame.rs`) and puts the
-//! pictures that finished loading into the UI's atlas.
+//! (`sjk_chat_frame.rs`), starts and ends emotes (`emotes_frame.rs`), keeps the
+//! players' looks (`looks_frame.rs`) and puts the pictures that finished loading into
+//! the UI's atlas.
 
 use super::*;
 use sjk_identity::Settings;
@@ -17,7 +18,9 @@ impl GpuState {
         self.update_sjk_chat();
         self.update_emotes();
         avatars::service(&self.ui_shapes, &self.queue);
-        if !player_identity::due() {
+        let due = player_identity::due();
+        self.update_looks(due);
+        if !due {
             return;
         }
         let Some(console) = self.console.as_ref() else {
@@ -48,6 +51,8 @@ impl GpuState {
         };
         avatars::configure(Some(console.config_directory()), pictures_from);
         player_identity::apply(console.config_directory(), settings, name, location, chat);
+        let (packs_revision, assets_note) = player_identity::packs();
+        crate::sjk_packs::follow_identity(packs_revision, assets_note);
         profile_card::refresh(console);
         self.offer_medals();
         self.update_achievements();

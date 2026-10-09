@@ -39,10 +39,73 @@ pub struct Profile {
     /// hubs older than achievements).
     #[serde(default)]
     pub achievements: Vec<Achievement>,
+    /// Unlockables the key holds, in the hub's catalogue order (absent from hubs
+    /// older than unlocks).
+    #[serde(default)]
+    pub unlocks: Vec<Unlock>,
     /// The version of the key's picture (`crate::avatar`), empty for none (and from hubs
     /// older than pictures).
     #[serde(default)]
     pub avatar: String,
+}
+
+/// One unlockable a key holds (`PROTOCOL.md`, "Unlocks"): granted by the hub's
+/// operator or staff. A client shows and wears only the ids it knows.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
+pub struct Unlock {
+    /// The unlockable's id (`saber_sun`).
+    pub id: String,
+    /// When it was granted, unix seconds.
+    #[serde(default)]
+    pub granted: i64,
+    /// Public plain text from the team, often empty. Never markup.
+    #[serde(default)]
+    pub note: String,
+}
+
+/// What a player wears that others draw (`PROTOCOL.md`, "Looks"). The default is
+/// the stock blade with the holocron out, which is also what a claim without a
+/// look means.
+#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq)]
+pub struct Look {
+    /// A blade-skin unlock id, or empty for the stock blade.
+    #[serde(default)]
+    pub saber: String,
+    /// Whether the Illuminate holocron is lit.
+    #[serde(default)]
+    pub illuminate: bool,
+}
+
+/// A look worn on a game server, as the feed relays it when it changes: the slot and
+/// name come from the wearer's claim, as an emote's do.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
+pub struct LookEvent {
+    /// Its id in the feed's sequence.
+    pub id: u64,
+    /// When the hub took it, unix seconds.
+    pub at: i64,
+    /// The wearer's slot on the server, from their claim.
+    pub slot: u8,
+    /// The name the wearer claimed the game shows there.
+    pub claimed_name: String,
+    /// The wearer's key id.
+    pub key_id: String,
+    /// The blade-skin unlock id, or empty for the stock blade.
+    #[serde(default)]
+    pub saber: String,
+    /// Whether the Illuminate holocron is lit.
+    #[serde(default)]
+    pub illuminate: bool,
+}
+
+impl LookEvent {
+    /// The look it carries.
+    pub fn look(&self) -> Look {
+        Look {
+            saber: self.saber.clone(),
+            illuminate: self.illuminate,
+        }
+    }
 }
 
 /// A milestone of the player's own play (`PROTOCOL.md`, "Achievements"): how far its
@@ -130,6 +193,10 @@ pub struct Presence {
     /// pictures), so a client fetches it without a profile per player.
     #[serde(default)]
     pub avatar: String,
+    /// What the claimant wears, when their claim has a look (absent otherwise, and
+    /// from hubs older than looks).
+    #[serde(default)]
+    pub look: Option<Look>,
 }
 
 /// One SJK chat message (`PROTOCOL.md`, "Chat"), as the feed carries it. Show its
@@ -183,6 +250,9 @@ pub struct Feed {
     /// New emotes on the server asked about.
     #[serde(default)]
     pub emotes: Vec<Emote>,
+    /// New looks on the server asked about (absent from hubs older than looks).
+    #[serde(default)]
+    pub looks: Vec<LookEvent>,
     /// Messages staff deleted.
     #[serde(default)]
     pub deleted: Vec<u64>,
@@ -295,6 +365,70 @@ mod tests {
         // Lists a hub leaves out are empty.
         let quiet: Feed = serde_json::from_str(r#"{"next":3}"#).unwrap();
         assert!(quiet.chat.is_empty() && quiet.emotes.is_empty() && quiet.deleted.is_empty());
+    }
+
+    #[test]
+    fn unlocks_and_looks_parse_and_older_hubs_send_none() {
+        let profile: Profile = serde_json::from_str(
+            r#"{"key_id":"aa","key":"bb","name":"Sol","bio":"","verified":true,"created":5,
+                "unlocks":[{"id":"saber_sun","granted":1791000000,"note":"Thanks"},
+                           {"id":"from_the_future","granted":7}]}"#,
+        )
+        .unwrap();
+        assert_eq!(
+            profile.unlocks,
+            [
+                Unlock {
+                    id: "saber_sun".to_owned(),
+                    granted: 1_791_000_000,
+                    note: "Thanks".to_owned(),
+                },
+                Unlock {
+                    id: "from_the_future".to_owned(),
+                    granted: 7,
+                    note: String::new(),
+                },
+            ]
+        );
+        let old: Profile = serde_json::from_str(
+            r#"{"key_id":"aa","key":"bb","name":"Sol","bio":"","verified":true,"created":5}"#,
+        )
+        .unwrap();
+        assert!(old.unlocks.is_empty(), "an older hub sends no unlocks");
+        let presence: Presence = serde_json::from_str(
+            r#"{"slot":3,"claimed_name":"x","key_id":"aa","name":"Sol","verified":false,
+                "look":{"saber":"saber_sun","illuminate":true}}"#,
+        )
+        .unwrap();
+        assert_eq!(
+            presence.look,
+            Some(Look {
+                saber: "saber_sun".to_owned(),
+                illuminate: true,
+            })
+        );
+        let bare: Presence = serde_json::from_str(
+            r#"{"slot":3,"claimed_name":"x","key_id":"aa","name":"Sol","verified":false}"#,
+        )
+        .unwrap();
+        assert_eq!(bare.look, None, "a claim without a look, or an older hub");
+        let feed: Feed = serde_json::from_str(
+            r#"{"next":15,"looks":[{"id":15,"at":9,"slot":3,"claimed_name":"^2Sol",
+                "key_id":"aa","saber":"","illuminate":true}]}"#,
+        )
+        .unwrap();
+        let event = &feed.looks[0];
+        assert_eq!((event.id, event.slot), (15, 3));
+        assert_eq!(event.claimed_name, "^2Sol");
+        assert_eq!(
+            event.look(),
+            Look {
+                saber: String::new(),
+                illuminate: true,
+            }
+        );
+        let quiet: Feed = serde_json::from_str(r#"{"next":3,"emotes":[]}"#).unwrap();
+        assert!(quiet.looks.is_empty(), "an older hub sends no looks");
     }
 
     #[test]

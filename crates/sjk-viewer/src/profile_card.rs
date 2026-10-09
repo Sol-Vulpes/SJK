@@ -33,8 +33,10 @@ pub(crate) enum HubState {
 pub(crate) struct Summary {
     /// The in-game name, with its colour codes.
     pub(crate) name: String,
-    /// Their model and blade, as a line ("Kyle, blue saber").
+    /// Their model and blade, as a line ("Kyle, blue saber", "Kyle, Sun blade").
     pub(crate) detail: String,
+    /// The name of the blade skin they wear (`unlockables`), while they own it.
+    pub(crate) skin: Option<&'static str>,
     /// Their key id, empty without an identity.
     pub(crate) key_id: String,
     /// Their picture's version, empty for none.
@@ -51,6 +53,7 @@ pub(crate) struct Summary {
 static SUMMARY: Mutex<Summary> = Mutex::new(Summary {
     name: String::new(),
     detail: String::new(),
+    skin: None,
     key_id: String::new(),
     avatar: String::new(),
     hub: HubState::Off,
@@ -65,6 +68,7 @@ static SUMMARY: Mutex<Summary> = Mutex::new(Summary {
 pub(crate) static NOBODY: Summary = Summary {
     name: String::new(),
     detail: String::new(),
+    skin: None,
     key_id: String::new(),
     avatar: String::new(),
     hub: HubState::Off,
@@ -94,24 +98,44 @@ pub(crate) fn refresh(console: &crate::console::ViewerConsole) {
         .and_then(|model| model.split('/').next())
         .filter(|model| !model.is_empty())
         .unwrap_or("kyle");
-    let detail = format!(
-        "{}, {} saber",
-        crate::menu::classic::view::Sentence(model),
-        crate::menu::sjk::blade_name(console)
-    );
     let snapshot = crate::player_identity::snapshot();
     let enabled = console.bool_cvar("cl_identity") == Some(true);
+    let skin = worn_skin(
+        console
+            .text_value(crate::unlockables::SABER_SKIN_CVAR)
+            .unwrap_or_default(),
+        enabled,
+        snapshot.as_ref(),
+    );
+    let detail = Detail::Model(model, crate::menu::sjk::blade_name(console), skin).to_string();
     let held = snapshot
         .as_ref()
         .and_then(|snapshot| snapshot.me.as_ref())
         .map(|me| me.achievements.clone())
         .unwrap_or_default();
     let standings = crate::achievements::standings(&held);
-    let summary = summarise(name, detail, enabled, snapshot.as_ref(), &standings);
+    let summary = Summary {
+        skin,
+        ..summarise(name, detail, enabled, snapshot.as_ref(), &standings)
+    };
     let mut current = lock();
     if *current != summary {
         *current = summary;
     }
+}
+
+/// The name of the blade skin the player wears: the one `setting` (`cg_saberSkin`)
+/// names, while their own profile holds it, the rule their look follows
+/// (`unlockables::Holdings`, `player_identity::owns_unlock`).
+pub(crate) fn worn_skin(
+    setting: &str,
+    enabled: bool,
+    snapshot: Option<&sjk_identity::Snapshot>,
+) -> Option<&'static str> {
+    let skin = crate::unlockables::blade_skin(setting)?;
+    crate::unlockables::Holdings::of(enabled, snapshot)
+        .unlock(skin.id)
+        .map(|_| skin.name)
 }
 
 /// The summary of a player named `name` (their model and blade `detail`), with the
@@ -137,6 +161,8 @@ pub(crate) fn summarise(
     Summary {
         name: name.to_owned(),
         detail,
+        // The caller knows the setting (`refresh`).
+        skin: None,
         key_id: snapshot
             .filter(|_| enabled)
             .map(|snapshot| snapshot.key_id.clone())
@@ -207,15 +233,19 @@ pub(crate) const AREA: [f32; 4] = [
 pub(crate) enum Detail<'a> {
     /// As written.
     Line(&'a str),
-    /// The player's model and blade colour ("Kyle, blue saber").
-    Model(&'a str, &'a str),
+    /// The player's model, blade colour and the blade skin they wear, if any ("Kyle,
+    /// blue saber", "Kyle, Sun blade").
+    Model(&'a str, &'a str, Option<&'a str>),
 }
 
 impl std::fmt::Display for Detail<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Line(line) => f.write_str(line),
-            Self::Model(model, blade) => write!(
+            Self::Model(model, _, Some(skin)) => {
+                write!(f, "{}, {skin}", crate::menu::classic::view::Sentence(model))
+            }
+            Self::Model(model, blade, None) => write!(
                 f,
                 "{}, {blade} saber",
                 crate::menu::classic::view::Sentence(model)
@@ -468,6 +498,7 @@ mod tests {
                 })
                 .collect(),
             achievements: Vec::new(),
+            unlocks: Vec::new(),
             avatar: "fedcba9876543210".to_owned(),
         }
     }
@@ -486,6 +517,9 @@ mod tests {
             note: None,
             player_report: None,
             avatar: None,
+            look_outcome: None,
+            packs_revision: 0,
+            assets_note: None,
         }
     }
 
@@ -584,6 +618,36 @@ mod tests {
     }
 
     #[test]
+    fn the_card_names_the_blade_skin_worn_while_it_is_owned() {
+        let owned = Profile {
+            unlocks: vec![sjk_identity::Unlock {
+                id: "saber_sun".to_owned(),
+                granted: 1,
+                note: String::new(),
+            }],
+            ..me()
+        };
+        let online = snapshot(Status::Online, Some(owned));
+        assert_eq!(
+            worn_skin("saber_sun", true, Some(&online)),
+            Some("Sun blade")
+        );
+        assert_eq!(
+            Detail::Model("kyle", "blue", Some("Sun blade")).to_string(),
+            "Kyle, Sun blade"
+        );
+        assert_eq!(
+            Detail::Model("kyle", "blue", None).to_string(),
+            "Kyle, blue saber"
+        );
+        // Not owned, none chosen, or the identity off: the stock blade's colour.
+        let plain = snapshot(Status::Online, Some(me()));
+        assert_eq!(worn_skin("saber_sun", true, Some(&plain)), None);
+        assert_eq!(worn_skin("", true, Some(&online)), None);
+        assert_eq!(worn_skin("saber_sun", false, Some(&online)), None);
+    }
+
+    #[test]
     fn the_initial_skips_colour_codes_and_symbols() {
         assert_eq!(initial("^5JoF^7 Jedi"), 'J');
         assert_eq!(initial("{JoF}solol"), 'J');
@@ -636,7 +700,7 @@ mod tests {
                 &frame,
                 &Card {
                     name: &summary.name,
-                    detail: Detail::Model("kyle", "blue"),
+                    detail: Detail::Model("kyle", "blue", None),
                     summary: &summary,
                     lit: true,
                 },

@@ -189,14 +189,19 @@ Settings and SJK in place of retail's Controls and Setup:
     user folder (beside `config.cfg`). The window is as wide as the in-game
     profile. SJK lays the powers out in two columns, the neutral powers over the saber skills and the chosen
     side's five beside them, each with its holocron (`gfx/mp/f_icon_*`), whole
-    whenever the power can be bought (a team power outside team games, or
-    Saber Defend or Throw without Attack, keeps its holocron at 55% and its
-    stars a readable grey, where retail's near-black hid their costs), and
+    whenever the power can be bought (Saber Defend or Throw without Attack
+    keeps its holocron at 55% and its stars a readable grey, where retail's
+    near-black hid their costs), and
     adds Light and Dark cards with the side emblems, a points meter that shows
     a hovered star's price (red when the points left cannot pay it) and a
     panel for the hovered or focused power: its holocron, level, the next
-    level's cost or why it cannot be bought (other side, team games only,
-    Saber Attack 1 needed), every level's cost and what it has taken. A click
+    level's cost or why it cannot be bought (other side, Saber Attack 1
+    needed), every level's cost and what it has taken, or what the server does
+    with it. On a server, the names of the powers it turns off, holds at a
+    level or does not use are amber, the mastery line says when the rank is
+    the server's highest, and the panel with nothing focused says how many
+    powers the server turns off (see [Force profile on a
+    server](#force-profile-on-a-server)). A click
     on a power raises it a level and the right button lowers it, as retail's
     did; a click on a star sets that level (on the power's top star, one
     below). Left and Right step the focused power. Reset, Discard and Apply
@@ -597,6 +602,44 @@ the pointer by their place on screen, so a long list never runs into other
 controls' pointer tokens. The Search row under Team colour (Enter to type)
 filters the grid as the classic profile's search does (see above).
 
+### Force profile on a server
+
+`forcepowers` is the player's own profile. On a server, every userinfo sends it
+fitted to the server's rules from `CS_SERVERINFO` (`g_maxForceRank`, free saber
+skills when every other weapon is off, the game type), as stock
+`BG_LegalizedForcePowers` would fit it, but keeping the powers
+`g_forcePowerDisable` turns off: the server drops those from its own copy
+without calling the profile illegal, so sending them never parks the player in
+spectator, and a mod that gives them back in a full Force duel finds them
+(jaPRO lets the powers its `g_forcePowerDisableFFA` holds back work in duels).
+Apply on a server sends the new profile and then `forcechanged`, as stock
+`UI_UpdateClientForcePowers` does: the server reads it at once while you
+spectate and at your next respawn in play (it prints that it will). A
+`forcepowers` typed in the console is sent fitted the same way, without the
+`forcechanged`. When a server still parks you in spectator over your profile
+(`nfr <rank> 1 <team>`, which a mod can send for its own reasons), SJK answers
+as the stock Force menu would, `forcechanged` with the team you last chose from
+the game menu, and if you are still spectating it asks for that team again up
+to three times, 5.5 seconds apart (a server refuses a second team change within
+five seconds), then says to use the join menu. Not in duel or power duel, where
+waiting as a spectator is the queue.
+
+Opened on a server, the Force page takes the server's highest rank and free
+saber skills, which decide whether the server keeps the profile it is sent. What
+the server only will not let be used stays buyable and is marked: its disabled
+powers ("Off on this server"; Jump "fixed" at 1 and Saber Offense and Defense
+at 3, as the server holds them), and team powers outside team games ("Team
+games only"). They cost points like any other, so the profile still fits where
+they work. The SJK UI's Force page lists the server's rules under the side's
+powers (This server: the highest rank and its points, free saber skills, the
+powers it turns off or, past eight, how many, whether team powers work); off a
+server it says a server's rules show there once you join, and team powers can
+be bought. A mod's own limits that are not in `CS_SERVERINFO` (jaPRO's
+`g_forcePowerDisableFFA`) cannot be shown. The rules are in
+[force_profile_negotiation.rs](../crates/sjk-client/src/force_profile_negotiation.rs)
+and the page's handling in
+[force.rs](../crates/sjk-viewer/src/player_menu/force.rs).
+
 ## Player models
 
 A player's or NPC's appearance (`models/players/<model>/<skin>`) loads its
@@ -936,6 +979,21 @@ possible. Animation selection, movement, saber timing and network events are
 unchanged. Animation-driven effect/footprint marks and gameplay event actions
 remain outside this audio adapter.
 
+## Door and mover sounds
+
+A brush entity (a door, lift, button or breakable) has its entity origin at the
+world origin unless the map gave it an origin brush, so codemp plays its sounds
+from the middle of its model (`CG_SetEntitySoundPosition`, `cg_ents.c:118-132`).
+SJK does the same: an event sound on a brush entity, such as a door's start and
+end sounds (`EV_PLAYDOORSOUND`), and the position the mixer moves the entity's
+sounds to on every snapshot are its origin plus its inline model's midpoint
+(`LegacySoundAdapter::sound_origin` in
+[sound_events.rs](../crates/sjk-client/src/sound_events.rs), with the midpoints
+taken from the map when its sound tables are built). A mover's loop already came
+from the same point. That origin is the entity's `pos.trBase`, where codemp
+evaluates its trajectory, so a door that turns back halfway sounds from where
+its move began.
+
 ## Renderer settings
 
 SJK's own cvars have engine names: rendering ones are `r_*` (`r_sceneHdr`,
@@ -963,7 +1021,9 @@ Changing a value saves it like any other setting. Switches over numeric cvars
 show ON/OFF and write 1/0. Defaults are unchanged (see
 [Default visual profile](rendering.md#default-visual-profile)). Diagnostics such
 as `r_dayDebug` stay console-only, as do the speeds and key of
-[eye adaptation](rendering.md#eye-adaptation); the ground HUD stays on the HUD
+[eye adaptation](rendering.md#eye-adaptation) and the distance inside which parallax
+stops growing near the camera (`r_parallaxNearDistance`, [Parallax](rendering.md#parallax));
+the ground HUD stays on the HUD
 tab, and exclusive fullscreen (`r_exclusiveFullscreen`) stays on VIDEO's
 display-mode row. Eye adaptation holds still while this page is open, so
 exposure changes made here show at once instead of being eased.
@@ -1333,7 +1393,7 @@ and the game-data HUD; chat stays, `scoreboard::hides_hud`), unless
   ([SJK UI](sjk-ui.md#scoreboard)): columns floating over the darkened game in
   the UI's type, the teams side by side, the duelists as facing cards. Its
   compact rows (`cg_compactScoreboard`, on by default) keep a full server in
-  one column;
+  one column, in a board as wide as its names, centred clear of the chat;
 - `classic`, the retail scoreboard as EternalJK-derived clients such as JoF EJK
   draw it (below).
 
@@ -1407,6 +1467,54 @@ Enter or a click uses the HUD and closes; Escape closes. The picker takes
 retail's colours and highlight art on the classic menus and the theme's with
 the SJK UI. "Game HUD files" stays on the tab for lists the picker does not
 find.
+
+## Kill feed
+
+`cg_killfeed` (on by default, Settings > HUD > "Kill feed") lists the last kills
+at the top right of the HUD, in every HUD style
+([kill_feed.rs](../crates/sjk-viewer/src/hud/kill_feed.rs)). Each entry is
+`killer [icon] victim`, or `[skull] victim` for a suicide or a death to the world
+(a fall, lava, a trigger), on a dark plate; an entry where the viewed player
+killed or died has a stronger plate and a white outline. Names are read from the
+players' info when the kill arrives, as the console's kill message is, and keep
+their colour codes; they are not tinted by team, as the console, chat and
+scoreboard draw them. A name too long for its room ends in an ellipsis.
+
+The icon is the HUD's picture for the means of death: the weapon's own
+`gfx/hud/w_icon_*` (the saber's `w_icon_lightsaber`), mapped from each `MOD_*` to
+the weapon whose shots carry it in OpenJK's `g_weapon.c` (the sentry gun has its
+item picture), or an installed icon pack's `hud/mod/*` picture, which takes its
+place. A dark Force kill (`MOD_FORCE_DARK`, lightning or grip) without such a
+picture shows Force Grip's holocron when only the killer's grip was active in the
+snapshot of the kill (`ObituaryEvent::attacker_force`), else Force Lightning's, and a player
+knocked to their death (`KILLED_FORCETOSS`) Force Push's. Causes no weapon deals
+(water, lava, crushing, telefrags, unknown causes) show the skull, which is drawn
+from shapes, not a game picture. A weapon whose picture did not load shows a
+short word instead (`SABER`, `ROCKET`, `FORCE`).
+
+Up to five entries show, the newest at the top so it is always right under the
+readouts above; each holds five seconds of server time and fades out over one.
+The feed stands under whatever the HUD already
+draws at the top right — the FPS readout, team overlay, duel portrait, snapshot,
+inventory and powerup column — and never reaches left of the vote panel's right
+edge, so it does not cover the top centre's vote and timer. It is part of the
+HUD's draw list, so it hides whenever the HUD does: scoreboard held,
+`cg_drawHud 0` or `cg_draw2D 0`, intermission, menus and the console. Names draw
+in the HUD's font (Inter, or SJK HUD with `cg_classicHudFont`), which the feed
+measures them in.
+
+| Cvar | Default | Effect |
+| --- | --- | --- |
+| `cg_killfeed` | 1 | Show the feed |
+| `cg_killfeedX`, `cg_killfeedY` | 0 | Move it left and down, in 640x480 units |
+| `cg_killfeedTextSize` | 0.8 | Name size; 0.8 is the normal size, 0 uses it |
+| `cg_killfeedIconSize` | 12 | Icon size in 640x480 units; 0 uses 18 |
+| `cg_killfeedColors` | 0 | Tint icons by cause of death (TaystJK's colours) |
+
+The feed replaces an earlier one-line obituary at the same cvar, which was off by
+default; a profile that saved that 0 has it moved once to 1
+(`cg_killfeedDefaultVersion`), and that feed's `cg_killfeedAlignment` and
+`cg_killfeedReverse` are gone.
 
 ## Nameplates
 
@@ -1790,9 +1898,10 @@ are in [identity.md](identity.md).
   bio (written there, up to 6 lines under the hub's rules), their record from the
   achievement counts, and a second tab, the achievements board (`achievements`). It
   has the SJK UI's look in every menu style; its Identity settings button opens the
-  Identity page ([identity.md](identity.md#profile)). The SJK UI's main page and
-  in-game menu show a profile card bottom left (picture, name, verified, medals and
-  achievements unlocked) that opens it with a click
+  Identity page ([identity.md](identity.md#profile)) and See unlockables the
+  Unlockables page (`unlockables`, [unlockables.md](unlockables.md#unlockables-page)).
+  The SJK UI's main page and in-game menu show a profile card bottom left (picture,
+  name, verified, medals and achievements unlocked) that opens it with a click
   ([sjk-ui.md](sjk-ui.md#profile-card)).
 - A picture: drop a PNG, JPEG or TGA on the window (or type `sjkavatar <file>`; a
   path's words may be left unquoted), see it on the Profile page cropped to a square
@@ -1801,6 +1910,8 @@ are in [identity.md](identity.md).
   down and `sjkavatar` alone opens the picture panel. Other players' pictures are
   downloaded when first shown and kept in `avatars/` beside `identity.key` (at most
   256 pictures, 8 MB) ([identity.md](identity.md#pictures)).
+- Blade skins: `cg_saberSkin` and `saberskin` choose the one worn, shown only while the
+  hub profile owns it ([Blade skins](#blade-skins)).
 - Achievements are counted in matches on servers and kept in `achievements.json`
   beside `identity.key`, sent to the hub with the identity on; an unlock says so in the
   console and as a centre print ([identity.md](identity.md#achievements)).
@@ -1919,9 +2030,11 @@ See [hud/force_wheel.rs](../crates/sjk-viewer/src/hud/force_wheel.rs).
 
 Illuminate is a free power every player has, SJK's own and not a game power: a
 holocron that floats by the player's left shoulder, turning slowly and bobbing,
-with a warm point light (300 units) that lights the way in dark maps. Only this
-client sees it; no server knows of it and other players, SJK ones included, do
-not see it. It is the Force wheel's last entry (and the radial HUD's list's), with its
+with a warm point light (300 units) that lights the way in dark maps. No game
+server knows of it: its lit state travels through the SJK hub as part of the
+player's look ([unlockables.md](unlockables.md)), so other SJK players on the same
+server see it by that player (below); players on stock clients do not. It is the
+Force wheel's last entry (and the radial HUD's list's), with its
 own holocron icon; `+useforce` on it turns the holocron on or off, and the
 `force_illuminate` command does the same from a bind (Settings > Key bindings >
 Force powers). It is never sent as the selected power: the client sets its
@@ -1939,11 +2052,63 @@ on or off for the client's run, not saved. Its light is added first each frame,
 so a full light list never drops it, but `r_dynamiclight 0` puts it out with the
 others.
 
+Other SJK players' holocrons show when their look says lit (with `cl_identity` on and
+a hub; their claimed name must match the name the game shows in their slot, as for
+badges). Each floats by that player's left shoulder, placed from their entity's
+interpolated origin, eye height (crouching lowers it) and view yaw, with the same fade,
+bob, turn and trailing as one's own (each slot's bob and turn a little out of step).
+The cube always shows for another player, in first and third person, while the game
+draws them; dead, hidden, cloaked or out of the snapshot, it goes out where it was.
+`cg_illuminate 0` only takes one's own off the wheel. All the cubes show, but only
+the four nearest the camera add their light, so the frame's 32 lights stay for the
+weapons and sabers.
+
 The cube, its two pictures (lit metal, and the emblem alone for the glowing
 stage), its shader and the wheel icon are bundled and mounted below all game
 data, so a PK3 with the same paths replaces them. Sol generated the art; see
 [assets/holocron](../crates/sjk-viewer/assets/holocron/README.md) and
 [illuminate.rs](../crates/sjk-viewer/src/illuminate.rs).
+
+## Blade skins
+
+A blade skin is an unlockable saber look ([unlockables.md](unlockables.md)); the
+first is the Sun blade (`saber_sun`). Its look and sounds are a blade-skin file and
+sound files in a pack the SJK hub delivers ([unlockables.md](unlockables.md#packs)),
+drawn by the generic renderer described in
+[rendering.md](rendering.md#saber-blade-skins); with no pack the skin is the stock
+blade. `cg_saberSkin` (archived, default
+empty) holds the skin the player wears by unlock id; empty or an unknown id is the
+stock blade. It shows only while the player's own hub profile lists that unlock
+(`Looks::own_saber_skin`, read twice a second) and its pack is loaded: with the
+identity off, no hub, no answer yet, the unlock missing or no pack, the stock blade
+shows, in the hand, in first person, thrown and on the Character page. Other players'
+skins are their looks from the hub ([unlockables.md](unlockables.md#receiving)), copied
+into the per-client table (`GpuState::sync_saber_skins`) only when the looks or the
+loaded skins change.
+
+`saberskin` lists the blade skins, owned (since when) or locked (how to get it), and
+which is worn; `saberskin <id>` or `saberskin none` sets `cg_saberSkin` (a locked one
+is kept and shows once unlocked). `unlockables` opens the Unlockables page (also the
+Profile page's See unlockables), where owned skins are equipped and unequipped
+([sjk-ui.md](sjk-ui.md#sjks-pages)).
+
+A skin brings its own sounds, heard for each player wearing it: its ignition for
+`EV_SABER_UNHOLSTER` and for a general sound that is a stock `saberon*`/`saberoff*`
+or any `.sab` `soundOn`/`soundOff` (the game's `G_Sound` gives these no owner, so
+the player whose origin is nearest the sound, within 64 units, is taken), its hum
+for both sabers' hum loop, and three swings for `EV_SABER_ATTACK` and the animation
+`saberhup` cues, ahead of a hilt's own `swingSound`s
+([saber_sound_overrides.rs](../crates/sjk-client/src/saber_sound_overrides.rs)).
+The viewer registers the skins' sounds with the gamestate's sound tables and passes
+the per-client table every frame. With no skin worn every path is the stock one. A
+thrown saber hums its owner's skin too: the flying saber entity's `loopSound` (the
+stock hum or the hilt's `soundLoop`) is replaced while the owner it names
+(`genericenemyindex`) wears one. A skin's sounds are the game paths its file names, read from its pack below all game
+data (`VirtualFileSystem::with_lower`), so a PK3 with the same paths replaces them. They
+are registered when the gamestate's tables are built and again, at once, when a pack
+arrives mid-session (`GameAudio::follow_blade_skins`, which also decodes a skin's
+sounds afresh in case the new pack changed them); the per-client table then names the
+new sets. The Sun's sounds have not been checked by ear in a game.
 
 ## Quick wheels
 
@@ -2150,17 +2315,24 @@ See [platform.rs](../crates/sjk-viewer/src/platform.rs) and
 Edit settings through the client, or edit the file while the client is stopped
 so autosaving cannot overwrite your changes.
 
-`com_maxfps` defaults to `-1` (AUTO in Settings > Video): frames are capped at the
-refresh rate of the monitor holding the window, rounded to whole hertz and
-re-read once a second, or at stock's 125 when the monitor reports none. `0` is
-uncapped. The old default, 1000, saved in every existing profile, is reset to
-AUTO once on first launch (marker `com_maxfpsDefaultVersion`); a cap chosen
-afterwards is kept. The default is not saved to the configuration. On the slider
+`com_maxfps` defaults to `-1` (AUTO in Settings > Video); `0` is uncapped. The
+old default, 1000, saved in every existing profile, is reset to AUTO once on
+first launch (marker `com_maxfpsDefaultVersion`); a cap chosen afterwards is
+kept. The default is not saved to the configuration. On the slider
 AUTO is the rail's left end: arrows step AUTO, 0, 25, 50 and so on, and typing
 `-1` selects it. An uncapped
 client saturates the GPU; screen recorders and streamers sharing it then skip
 frames (OBS reported 83% skipped for encoding lag against an uncapped client at
 4K). See [runtime_settings.rs](../crates/sjk-viewer/src/runtime_settings.rs).
+
+AUTO caps frames at stock's 125 unless `com_maxfpsMonitor` (archived, default 0;
+Settings > Video > Detect refresh rate) is 1: then AUTO is the refresh rate of
+the monitor holding the window, rounded to whole hertz and re-read once a second,
+or 125 when the monitor reports none. At 0 the monitor's rate is never read, so
+AUTO caps as it does for a monitor that reports none. Sol asked for the detection
+to be off by default (08/10/2026). The setting changes only what AUTO means: a
+`com_maxfps` the player set stays as set. It is new, so no profile has saved it
+and its default reaches existing profiles without a migration.
 
 A window without focus has caps of its own: `com_maxfpsUnfocused` (SJK's default
 30; EternalJK's 0 keeps the normal cap) and `com_maxfpsMinimized` (50), where 0
@@ -2174,6 +2346,20 @@ and music gains to zero and keeps mixing, so music and loops carry on silently a
 come back where they are. The change is applied from the focus and minimize
 events themselves, since a minimized window may draw no frame; see
 [console_window_options.rs](../crates/sjk-viewer/src/console_window_options.rs).
+
+The game never waits for good on a sound device that stopped. Windows ends an
+output stream when its device goes away: a headset or Bluetooth speaker that
+switches itself off after a while of silence (which a muted background window
+plays), a monitor's speakers while the display sleeps, a change of the device's
+format. The stream's callback then no longer empties the mixer's queue of 8,192
+commands, and the render thread used to wait for room in it without end, so the
+game stopped answering seconds later and Alt+Tab never brought it back. A full
+queue now waits at most 250 ms, once; then commands are dropped (every frame sends
+its state again) until the queue drains, and the log says `audio output stopped
+taking sound`. The game goes on silently; `snd_restart` opens the output again, on
+the device that is then the default. The decode worker keeps sounds in order and
+waits for room as before, but stops when the output is dropped, so `snd_restart` and
+quitting do not wait on it. See [audio_feed.rs](../crates/sjk-viewer/src/audio_feed.rs).
 
 The Video tab's Display mode row offers Windowed, Borderless fullscreen and,
 where the windowing system supports it, Exclusive fullscreen (Wayland does not).

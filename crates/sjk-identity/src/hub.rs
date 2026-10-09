@@ -1,9 +1,12 @@
 //! Talking to the hub: the [`Hub`] operations and their HTTPS implementation.
 
+use crate::assets::{PACK_MAX, Pack};
 use crate::keys::{Identity, random_bytes};
 use crate::report::{BugReport, PlayerReport, WorldNote};
 use crate::staff::StaffRequest;
-use crate::wire::{Achievement, Achievements, Feed, Players, Presence, Profile, authorization};
+use crate::wire::{
+    Achievement, Achievements, Feed, Look, Players, Presence, Profile, authorization,
+};
 use serde::de::DeserializeOwned;
 use serde_json::{Value, json};
 use std::collections::BTreeMap;
@@ -13,6 +16,8 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 const TIMEOUT: Duration = Duration::from_secs(10);
 /// Largest answer read, in bytes.
 const ANSWER_MAX: u64 = 256 * 1024;
+/// Longest a pack's download may take (up to [`PACK_MAX`] bytes).
+const ASSET_TIMEOUT: Duration = Duration::from_secs(120);
 
 /// Why a hub request failed.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -95,7 +100,14 @@ pub trait Hub: Send {
             "this hub client does not send emotes".to_owned(),
         ))
     }
-    /// What is new after `after` (chat, and the emotes of `server`), waiting up to `wait`
+    /// Wear `look` for the claim the identity holds on `server` (`PROTOCOL.md`,
+    /// "Looks"); the hub answers with the feed id of its event.
+    fn look(&mut self, _identity: &Identity, _server: &str, _look: &Look) -> Result<u64, HubError> {
+        Err(HubError::Protocol(
+            "this hub client does not send looks".to_owned(),
+        ))
+    }
+    /// What is new after `after` (chat, and the emotes and looks of `server`), waiting up to `wait`
     /// seconds at the hub for something to come.
     fn feed(
         &mut self,
@@ -125,6 +137,18 @@ pub trait Hub: Send {
     fn avatar(&mut self, _key_id: &str, _version: &str) -> Result<Vec<u8>, HubError> {
         Err(HubError::Protocol(
             "this hub client does not read pictures".to_owned(),
+        ))
+    }
+    /// The asset packs the hub serves (`PROTOCOL.md`, "Assets"), sorted by name.
+    fn assets(&mut self, _identity: &Identity) -> Result<Vec<Pack>, HubError> {
+        Err(HubError::Protocol(
+            "this hub client does not read assets".to_owned(),
+        ))
+    }
+    /// The bytes of asset pack `name`, at most [`PACK_MAX`].
+    fn asset(&mut self, _identity: &Identity, _name: &str) -> Result<Vec<u8>, HubError> {
+        Err(HubError::Protocol(
+            "this hub client does not read assets".to_owned(),
         ))
     }
     /// Any player's public profile.
@@ -192,6 +216,26 @@ pub fn valid_base_url(url: &str) -> bool {
         None => authority.split(':').next().unwrap_or_default(),
     };
     !host.is_empty() && (secure || matches!(host, "localhost" | "127.0.0.1" | "::1"))
+}
+
+/// A JSON answer of `status`, read up to [`ANSWER_MAX`].
+fn read_json(
+    response: &mut ureq::http::Response<ureq::Body>,
+    status: u16,
+) -> Result<Value, HubError> {
+    let text = response
+        .body_mut()
+        .with_config()
+        .limit(ANSWER_MAX)
+        .read_to_string()
+        .map_err(|error| HubError::Network(error.to_string()))?;
+    serde_json::from_str(&text)
+        .map_err(|_| HubError::Protocol(format!("status {status}, not JSON")))
+}
+
+/// The error after the hub refused the timestamp twice.
+fn clock_disagrees() -> HubError {
+    HubError::Protocol("the hub's clock keeps disagreeing".to_owned())
 }
 
 fn unix_now() -> i64 {
@@ -263,53 +307,45 @@ impl HttpHub {
     ) -> Result<Value, HubError> {
         for attempt in 0..2 {
             let url = format!("{}{path}", self.base);
-            let nonce =
-                random_bytes::<12>().map_err(|error| HubError::Network(error.to_string()))?;
-            let header = signer.map(|identity| {
-                authorization(
-                    identity,
-                    method,
-                    path,
-                    body,
-                    unix_now() + self.clock_offset,
-                    nonce,
-                )
-            });
+            let header = signer
+                .map(|identity| self.authorization(identity, method, path, body))
+                .transpose()?;
             let mut response = self.call(method, &url, header.as_deref(), body, content_type)?;
             let status = response.status().as_u16();
-            let text = response
-                .body_mut()
-                .with_config()
-                .limit(ANSWER_MAX)
-                .read_to_string()
-                .map_err(|error| HubError::Network(error.to_string()))?;
-            let value: Value = serde_json::from_str(&text)
-                .map_err(|_| HubError::Protocol(format!("status {status}, not JSON")))?;
+            let value = read_json(&mut response, status)?;
             if status < 400 {
                 return Ok(value);
             }
-            let code = value["error"].as_str().unwrap_or("error").to_owned();
-            if code == "clock"
-                && attempt == 0
-                && let Some(server_time) = value["server_time"].as_i64()
-            {
-                self.clock_offset = server_time - unix_now();
-                continue;
+            if let Some(refusal) = self.refusal(status, &value, attempt == 0) {
+                return Err(refusal);
             }
-            return Err(HubError::Rejected {
-                status,
-                code,
-                message: value["message"].as_str().unwrap_or_default().to_owned(),
-            });
         }
-        Err(HubError::Protocol(
-            "the hub's clock keeps disagreeing".to_owned(),
+        Err(clock_disagrees())
+    }
+
+    /// The `Authorization` header of a request signed by `identity` now, by the hub's
+    /// clock as far as it is known.
+    fn authorization(
+        &self,
+        identity: &Identity,
+        method: &str,
+        path: &str,
+        body: &[u8],
+    ) -> Result<String, HubError> {
+        let nonce = random_bytes::<12>().map_err(|error| HubError::Network(error.to_string()))?;
+        Ok(authorization(
+            identity,
+            method,
+            path,
+            body,
+            unix_now() + self.clock_offset,
+            nonce,
         ))
     }
 
     /// An unsigned `GET` of `path` whose answer is bytes, at most `limit` of them; an
     /// error answer is the hub's JSON, as for [`HttpHub::send`].
-    fn fetch(&self, path: &str, limit: u64) -> Result<Vec<u8>, HubError> {
+    fn fetch(&mut self, path: &str, limit: u64) -> Result<Vec<u8>, HubError> {
         let url = format!("{}{path}", self.base);
         let mut response = self
             .agent
@@ -317,22 +353,83 @@ impl HttpHub {
             .call()
             .map_err(|error| HubError::Network(error.to_string()))?;
         let status = response.status().as_u16();
-        let bytes = response
-            .body_mut()
-            .with_config()
-            .limit(limit)
-            .read_to_vec()
-            .map_err(|error| HubError::Network(error.to_string()))?;
         if status < 400 {
-            return Ok(bytes);
+            return response
+                .body_mut()
+                .with_config()
+                .limit(limit)
+                .read_to_vec()
+                .map_err(|error| HubError::Network(error.to_string()));
         }
-        let value: Value = serde_json::from_slice(&bytes)
-            .map_err(|_| HubError::Protocol(format!("status {status}, not JSON")))?;
-        Err(HubError::Rejected {
+        let value = read_json(&mut response, status)?;
+        Err(self
+            .refusal(status, &value, false)
+            .unwrap_or_else(clock_disagrees))
+    }
+
+    /// The error of an answer of `status` 400 or more carrying `value`; `None` when the
+    /// hub refused the timestamp and `may_retry`: its clock is learned and the request
+    /// should go again.
+    fn refusal(&mut self, status: u16, value: &Value, may_retry: bool) -> Option<HubError> {
+        let code = value["error"].as_str().unwrap_or("error").to_owned();
+        if code == "clock"
+            && may_retry
+            && let Some(server_time) = value["server_time"].as_i64()
+        {
+            self.clock_offset = server_time - unix_now();
+            return None;
+        }
+        Some(HubError::Rejected {
             status,
-            code: value["error"].as_str().unwrap_or("error").to_owned(),
+            code,
             message: value["message"].as_str().unwrap_or_default().to_owned(),
         })
+    }
+
+    /// A signed `GET` of raw bytes, at most `limit` of them, with its own `timeout`
+    /// (an asset pack). An error answer is read as [`HttpHub::send`] reads it,
+    /// retrying once with the hub's clock.
+    fn get_bytes(
+        &mut self,
+        identity: &Identity,
+        path: &str,
+        limit: u64,
+        timeout: Duration,
+    ) -> Result<Vec<u8>, HubError> {
+        for attempt in 0..2 {
+            let url = format!("{}{path}", self.base);
+            let header = self.authorization(identity, "GET", path, b"")?;
+            let mut response = self
+                .agent
+                .get(&url)
+                .header("Authorization", header.as_str())
+                .config()
+                .timeout_global(Some(timeout))
+                .build()
+                .call()
+                .map_err(|error| HubError::Network(error.to_string()))?;
+            let status = response.status().as_u16();
+            if status < 400 {
+                // One byte over the limit is read, so a longer answer is an error.
+                return match response
+                    .body_mut()
+                    .with_config()
+                    .limit(limit + 1)
+                    .read_to_vec()
+                {
+                    Ok(bytes) if bytes.len() as u64 <= limit => Ok(bytes),
+                    Ok(_) | Err(ureq::Error::BodyExceedsLimit(_)) => {
+                        Err(HubError::Protocol("pack too large".to_owned()))
+                    }
+                    Err(error) => Err(HubError::Network(error.to_string())),
+                };
+            }
+            let value = read_json(&mut response, status)?;
+            if let Some(refusal) = self.refusal(status, &value, attempt == 0) {
+                return Err(refusal);
+            }
+        }
+        Err(clock_disagrees())
     }
 
     fn call(
@@ -427,6 +524,11 @@ fn feed_path(after: u64, server: Option<&str>, wait: u64) -> String {
     path
 }
 
+/// `POST /v1/look`'s body: exactly the server and the look's two fields.
+fn look_body(server: &str, look: &Look) -> Value {
+    json!({ "server": server, "saber": look.saber, "illuminate": look.illuminate })
+}
+
 /// A staff request's path and body.
 fn staff_call(request: &StaffRequest) -> (&'static str, Value) {
     match request {
@@ -442,6 +544,18 @@ fn staff_call(request: &StaffRequest) -> (&'static str, Value) {
         StaffRequest::Unaward { key_id, medal } => (
             "/v1/staff/unaward",
             json!({ "key_id": key_id, "medal": medal }),
+        ),
+        StaffRequest::Unlock {
+            key_id,
+            unlock,
+            note,
+        } => (
+            "/v1/staff/unlock",
+            json!({ "key_id": key_id, "unlock": unlock, "note": note }),
+        ),
+        StaffRequest::Relock { key_id, unlock } => (
+            "/v1/staff/relock",
+            json!({ "key_id": key_id, "unlock": unlock }),
         ),
         StaffRequest::ClearAchievements { key_id, id } => (
             "/v1/staff/clear-achievements",
@@ -652,6 +766,28 @@ impl Hub for HttpHub {
             .ok_or_else(|| HubError::Protocol("the emote answer has no id".to_owned()))
     }
 
+    fn look(&mut self, identity: &Identity, server: &str, look: &Look) -> Result<u64, HubError> {
+        let body = look_body(server, look);
+        let answer = self.send(Some(identity), "POST", "/v1/look", Some(body))?;
+        answer["id"]
+            .as_u64()
+            .ok_or_else(|| HubError::Protocol("the look answer has no id".to_owned()))
+    }
+
+    fn assets(&mut self, identity: &Identity) -> Result<Vec<Pack>, HubError> {
+        crate::assets::manifest(self.send(Some(identity), "GET", "/v1/assets", None)?)
+    }
+
+    fn asset(&mut self, identity: &Identity, name: &str) -> Result<Vec<u8>, HubError> {
+        if !crate::assets::valid_name(name) {
+            return Err(HubError::Protocol(
+                "a pack name is 1 to 32 of a to z, 0 to 9 and _".to_owned(),
+            ));
+        }
+        let path = format!("/v1/assets/{name}");
+        self.get_bytes(identity, &path, PACK_MAX, ASSET_TIMEOUT)
+    }
+
     fn feed(
         &mut self,
         identity: &Identity,
@@ -777,6 +913,47 @@ mod tests {
     }
 
     #[test]
+    fn a_look_sends_exactly_the_protocols_fields() {
+        let look = Look {
+            saber: "saber_sun".to_owned(),
+            illuminate: true,
+        };
+        assert_eq!(
+            look_body("1.2.3.4:29070", &look),
+            json!({"server": "1.2.3.4:29070", "saber": "saber_sun", "illuminate": true})
+        );
+        assert_eq!(
+            look_body("[::1]:29070", &Look::default()).to_string(),
+            r#"{"illuminate":false,"saber":"","server":"[::1]:29070"}"#
+        );
+    }
+
+    #[test]
+    fn staff_unlocks_send_the_protocols_fields() {
+        assert_eq!(
+            staff_call(&StaffRequest::Unlock {
+                key_id: "0123456789abcdef".into(),
+                unlock: "saber_sun".into(),
+                note: "Thanks".into(),
+            }),
+            (
+                "/v1/staff/unlock",
+                json!({"key_id": "0123456789abcdef", "unlock": "saber_sun", "note": "Thanks"})
+            )
+        );
+        assert_eq!(
+            staff_call(&StaffRequest::Relock {
+                key_id: "0123456789abcdef".into(),
+                unlock: "saber_sun".into(),
+            }),
+            (
+                "/v1/staff/relock",
+                json!({"key_id": "0123456789abcdef", "unlock": "saber_sun"})
+            )
+        );
+    }
+
+    #[test]
     fn a_key_id_is_checked_before_a_request_is_made() {
         let mut hub = HttpHub::new("https://hub.example", "t").unwrap();
         assert!(matches!(hub.profile("../etc"), Err(HubError::Protocol(_))));
@@ -786,6 +963,11 @@ mod tests {
         ));
         assert!(matches!(
             hub.avatar("0123456789abcdef", "../x"),
+            Err(HubError::Protocol(_))
+        ));
+        let identity = Identity::from_seed([7; 32]);
+        assert!(matches!(
+            hub.asset(&identity, "../etc"),
             Err(HubError::Protocol(_))
         ));
     }

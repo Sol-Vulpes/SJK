@@ -690,7 +690,11 @@ pub(crate) fn build(
         &frame,
         &crate::profile_card::Card {
             name: view.name,
-            detail: crate::profile_card::Detail::Model(view.model, view.blade_name),
+            detail: crate::profile_card::Detail::Model(
+                view.model,
+                view.blade_name,
+                view.summary.skin,
+            ),
             summary: view.summary,
             lit: home.focus == Focus::Card,
         },

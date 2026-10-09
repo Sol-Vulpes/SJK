@@ -103,7 +103,9 @@ the camera behind glides through its tour (The map behind); on the loading
 screen a gold arc turns once every three seconds and the destination's
 levelshot fades in (0.45 s); on Credits the sun (its sunburst, god rays and
 sparks) keeps turning and rising, and the page's rows rise into place as it
-opens or a fold unfolds. Nothing else moves on its own.
+opens or a fold unfolds; on Unlockables an owned unlockable's swatch lives (a blade
+skin's corona breathes, flame loops rise and a flare runs along it, as its file says). Nothing else
+moves on its own.
 
 ## The map behind
 
@@ -200,8 +202,9 @@ open it). Bottom left on the 16:9 frame, from (84, 932), 474 by 96:
   given ("2 medals", left out with none) and the achievements unlocked ("12/21
   achievements"); without the hub it says "SJK identity off", "Connecting to the hub"
   or "SJK hub out of reach", still with this PC's achievements;
-- their model and blade ("Kyle, blue saber"); when the card is chosen, "Open your
-  profile, medals and achievements" in gold instead.
+- their model and blade ("Kyle, blue saber", or "Kyle, Sun blade" while they wear a
+  blade skin their profile holds, [unlockables.md](unlockables.md)); when the card is
+  chosen, "Open your profile, medals and achievements" in gold instead.
 
 The pointer chooses it by hovering (a dark band with a gold edge round it) and a click
 opens the Profile page. What it says is gathered twice a second from the settings,
@@ -252,11 +255,19 @@ on the 16:9 frame, dark behind the form on the left and clear over the model.
   it, on the power's own level drops one; a level bought (by click or Right)
   sends a ring out from its mark. These are the only things that move on the
   page, and only answering the pointer or a purchase. Then Start over, Discard
-  and Apply (gold while there is something to apply).
+  and Apply (gold while there is something to apply). On a server, a power it
+  turns off, holds at a level or does not use keeps its marks and has an ember
+  note under its name (Off on this server, Fixed on this server, Team games
+  only), and under the side's five, This server lists its rules: the highest
+  rank and its points, free saber skills, the powers it turns off (past eight,
+  how many), whether team powers work, and that turned-off powers stay
+  pickable for full Force duels and an applied profile counts from the next
+  respawn ([client.md](client.md#force-profile-on-a-server)).
 - **Power box:** on the Force page, bottom right, the power under the pointer
   (or the keyboard) in big: its holocron, name, group, level, what it does in a
-  line or two, the next level's price (or Mastered, Team games only...) and
-  its levels' prices.
+  line or two, what the server does with it when it limits it, the next
+  level's price (or Mastered, Needs Saber offense 1...) and its levels'
+  prices.
 - **Caption:** beside the model, bottom right under a short gold rule, what the
   page shows of it: the model and its skin, the saber's style, hilt and blade,
   or (on the Force page with no power chosen) the side and rank.
@@ -269,9 +280,10 @@ the Force groups' powers in their order, the other side's skipped), Left and
 Right change it (a hilt list's choice moves one hilt), Enter types or acts, Tab
 and `[` `]` change page, Escape returns to the main page (dropping an
 unapplied Force draft, as before). The pointer: a click on a control acts (‹ ›
-by the half it lands on, a chip picks its colour, a slider follows, a style
-button, a hilt, a level), a click elsewhere on a row only chooses it, a click
-on a tile picks that model. The SJK view's own targets (levels, style buttons,
+by the half of the control it lands on, a chip picks the colour drawn under
+it, a slider follows, a style button, a hilt, a level), a click elsewhere on a
+row (a Force power's holocron or name too) only chooses it, a click on a tile
+picks that model. The SJK view's own targets (levels, style buttons,
 hilts and the lists' wheel areas, tokens from 1000) go to
 `PlayerMenu::sjk_pointer` before the screen's shared pointer handling.
 
@@ -294,7 +306,8 @@ opened from a game.
 ## SJK's pages
 
 What's new, Update, Identity, Profile and Credits, which the main page's SJK page opens
-(and their console commands), have the SJK UI's look in this style: drawn in its
+(and their console commands), and the Staff, Unlockables and SJK chat pages have the
+SJK UI's look in this style (Profile, Staff, Unlockables and SJK chat in every style): drawn in its
 families over the map darkened as Settings is (Update as a pop-up card, as First
 setup), each with the way back (Esc, "Back") and its name at the top and its
 keys bottom right. They stay the
@@ -333,8 +346,10 @@ overlay routes their text to the UI's families (`console_sjk_pages.rs`).
   key id, other names; then Identity settings) over "Your record" (eight numbers in two
   columns) and "Unlocked lately"; "About you", the bio's box (620 by 300, Exo 2 at 18,
   wrapped by measured width, the end being written kept in view) with its counts,
-  Revert and Save (gold) and the rules; Medals (pictures at 84) and Achievements (how
-  many unlocked, a gold bar, See the board). Achievements: how many unlocked with a
+  Revert and Save (gold) and the rules; Medals (pictures at 84), Achievements (how
+  many unlocked, a gold bar, See the board) and Unlockables (how many owned at 30, or
+  a line saying they are kept on the hub, and See unlockables, which opens the
+  Unlockables page; Tab reaches it after See the board). Achievements: how many unlocked with a
   bar, then the 21 cards in three columns of seven (560 by 94): a medallion ringed by
   the count in the category's colour (Combat ember, Duels and flags gold, Journeys
   holo, Community green), filled and gold once unlocked, the goal inside; the name,
@@ -355,10 +370,38 @@ overlay routes their text to the UI's families (`console_sjk_pages.rs`).
   player's picture (a disc 64 across), name at 38 and facts over the middle and
   right, and Take picture down at the right (dimmed without one); Medals: each medal's
   medallion (dim when not held), name and count, date given, Give (gold) and Take
-  back, then the note's field; Achievements: Clear all (Press again while it waits),
+  back, then the note's field (sent with the next medal or unlock); Unlockables under
+  it: each unlockable of the catalogue in rows of 58, its name (gold when held) and
+  its date or "Not held" with its id, Unlock (gold) and Relock, as the medals' Give
+  and Take back; Achievements: Clear all (Press again while it waits),
   each achievement with a count, its date or count and Clear, and a line on what
   clearing does. The last request's answer bottom left (gold, ember when refused).
-  World shot: `world_shot::tests::duel6_sjk_staff`.
+  World shot: `world_shot::tests::duel6_sjk_staff` (the player's own, then another
+  holding the Sun blade).
+- **Unlockables** ([unlockables_panel_view.rs](../crates/sjk-viewer/src/unlockables_panel_view.rs),
+  08/10/2026, [unlockables.md](unlockables.md#unlockables-page)): drawn in this look in
+  every menu style, opened by Profile's See unlockables or `unlockables`. Under the top
+  bar how many the player owns at 38 ("1 of 1 owned") over a line, or why it is not
+  known ("Identity is off", "No hub is set", "Contacting the hub...") with what to do,
+  and a holo rule. Down the left a card per unlockable (852 by 268, radius 18): navy
+  glass with a gold edge when owned (brighter when worn), white while chosen; its
+  swatch (400 by 224), the one memorable thing, drawn live with the UI's shapes from
+  the skin's loaded blade-skin file (a blade from a steel hilt: a hot core, a corona
+  in the file's colours from its rim to its inside that breathes with its light's
+  flicker in nine layers of haze, small flame loops rising and sinking, granules
+  drifting, and once a cycle of its first flare track a flare running from hilt to
+  tip; locked, a grey still blade under a padlock; owned with its pack not loaded yet,
+  a lighter grey still blade and "Its look downloads from the SJK hub"); then the kind in holo, the state at the right (Worn, Owned in gold, or
+  Locked), the name at 34 (gold when owned), what it is, "Yours since dd/mm/yyyy, from
+  the SJK team" in gold with the team's note in quotes, or "How to get it: ...", and
+  Equip (gold) or Unequip, or an inert Locked (Needs identity, Needs a hub, Waiting)
+  pill. Under the cards, a quiet outlined "More to come" card. On the right "You wear"
+  with the blade at 36 (gold when a skin shows) and a line, then "How unlockables
+  work". Keys: Up and Down (and Left, Right) choose a card, Tab and Shift+Tab walk
+  them, Enter or Space equips or unequips, Esc back; a click on Equip or Unequip acts,
+  on a card it chooses it. The swatches are the only thing moving. World shot:
+  `world_shot::unlockables::duel6_sjk_unlockables` (with the hub's pack through
+  `SJK_TEST_PACKS`, and once with no pack for the placeholder).
 - **SJK chat** ([sjk_chat_panel_view.rs](../crates/sjk-viewer/src/sjk_chat_panel_view.rs),
   08/10/2026, Sol's request, [hub-chat.md](hub-chat.md)): drawn in this look in every
   menu style. The online count in gold over a line on what the chat is; the messages
@@ -703,7 +746,8 @@ and out as the classic board does, settling into place as it opens.
   the map, "Killed by" and the name while you are dead.
 - **Where:** the columns start at x 680 of the frame, right of the chat column
   the scoreboard keeps for messages and the composer (`scoreboard::layout`, 640
-  pixels of a 1080-line window), and end at 1824.
+  pixels of a 1080-line window), and end at 1824. A compact board is narrower
+  and centred (below).
 - **Rows:** under muted column labels and a thin holo rule, one row each,
   52 tall at most, with a hairline under it: the place (Rajdhani; ties share
   it), the name with its colours (Exo 2), SJK's emblem right after it for a
@@ -717,8 +761,28 @@ and out as the classic board does, settling into place as it opens.
   scoreboard", on by default): rows are 32 tall at most and as thin as 20, and
   a list splits in two only when even 20 would not fit, so a full server (32 in
   free for all, or 32 on one team) stands in one column. Names and numbers scale
-  with the thinner rows (names 16 to 20, numbers 17 to 22). Off,
-  the sizes below apply.
+  with the thinner rows (names 16 to 20, numbers 17 to 22). The board is sized
+  from what it shows, not the screen (`sjk::Board`): the name column is as wide
+  as the longest name with its emblem, bars and "Ready", measured in the
+  families that draw it, at least 140 and at most 320 frame pixels (a longer
+  name ends in an ellipsis), the same for both teams; the first number's right
+  edge stands 48 after it, each number column is its widest label plus 14 (48
+  at least), and the ping column keeps its 100. A player's medal bars are not
+  held to a third of the name column as on the full board: the column widens
+  for all of them (three at most). The whole board is centred on the screen,
+  or, where that would put it over the chat column, stands 40 right of the
+  column (as near the middle as the chat allows); it never ends past 1824 or
+  grows wider than the full board, the name column giving way (to 100 at the
+  least). A duel's cards keep their size about that middle, the players
+  waiting centred under them. The dim behind the columns follows the board,
+  fading out on both sides, and "Watching" starts at its left edge. In the UI's
+  families at 1080 lines (`scoreboard::shot` tests, on the world shot's made-up
+  names), a free for all of 8 is 440 frame pixels wide (500 with deaths
+  counted) and of 32, 411 (471), centred; a Team FFA of 6 a side is 835 and
+  capture the flag of 6 a side 1142, both from 680 beside the chat column
+  (four number columns and a player's three medal bars leave capture little to
+  gain), against 1144 for the full board in every mode. Off, the sizes below
+  apply and the board fills 680 to 1824 as before.
 - **Free for all** (and Holocron, Jedi Master): one list by place; once rows
   would be thinner than 34 pixels (past 22 players) two lists side by side, 16
   each at 32. Compact keeps it one list (32 players at 23.6).
@@ -741,7 +805,9 @@ and out as the classic board does, settling into place as it opens.
   colours.
 
 A full server fits the board's canvas (320 text runs, 1024 draw commands) in
-every mode, at 1080 lines and 4K (unit tests). The look draws in the UI's
+every mode, at 1080 lines and 4K, 5:4, 4:3, 21:9 and 32:9 (unit tests, which
+also pin the compact board's centring, its clearance of the chat column and
+its widths). The look draws in the UI's
 families, which load for it even with another menu style when it is chosen on
 its own; their metrics place what follows a measured run (the emblem after a
 name, the header's right side).

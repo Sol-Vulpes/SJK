@@ -8,7 +8,7 @@
 //!   the tangent and light direction on two more varyings;
 //! - the fragment stage first resolves the mapped normal, the specular sample and
 //!   the parallax offset (`material_map_prepare`), and samples the diffuse image
-//!   at the offset texture coordinate;
+//!   at the offset texture coordinate, with the coordinate's own derivatives;
 //! - the lightmap (or the real-time light buffer) response is replaced by
 //!   `material_map_lightmap`, and on vertex-lit paint the vertex colours' response
 //!   by `material_map_vertex_light`; point lights use the mapped normal, and highlights
@@ -50,13 +50,20 @@ pub(in crate::world_materials) fn source(realtime: bool) -> String {
             "    fragment_point_mask = finite_point_mask(input.world_position);\n    \
              material_map_prepare(input);\n",
         ),
+        // The diffuse image at the parallax offset, with the coordinates' own derivatives
+        // (as the maps are read in `material_map_prepare`): the offset's jumps at relief
+        // edges must not choose the mip level.
         (
             "textureSample(stage_images, stage_sampler, uv, frame)",
-            "textureSample(stage_images, stage_sampler, uv + material_map_surface.uv_offset, frame)",
+            "textureSampleGrad(stage_images, stage_sampler, uv + material_map_surface.uv_offset, \
+             frame, dpdx(uv), dpdy(uv))",
         ),
         (
-            "input.secondary_uv, secondary_frame)",
-            "input.secondary_uv + material_map_surface.uv_offset, secondary_frame)",
+            "textureSample(secondary_images, secondary_sampler,\n                \
+             input.secondary_uv, secondary_frame)",
+            "textureSampleGrad(secondary_images, secondary_sampler,\n                \
+             input.secondary_uv + material_map_surface.uv_offset, secondary_frame,\n                \
+             dpdx(input.secondary_uv), dpdy(input.secondary_uv))",
         ),
         (
             "    var output = apply_lighting_mode(input, texel, secondary_texel);",
@@ -188,6 +195,31 @@ mod tests {
             // The views replace the final colour after every other hook ran.
             assert!(source.contains("return material_map_finish(output);"));
         }
+    }
+
+    #[test]
+    fn offset_reads_take_the_coordinates_own_derivatives() {
+        for realtime in [false, true] {
+            let source = source(realtime);
+            // The diffuse image at the parallax offset, primary and secondary bundle.
+            assert!(source.contains(
+                "textureSampleGrad(stage_images, stage_sampler, \
+                 uv + material_map_surface.uv_offset, frame, dpdx(uv), dpdy(uv))"
+            ));
+            assert!(source.contains(
+                "input.secondary_uv + material_map_surface.uv_offset, secondary_frame,\n                \
+                 dpdx(input.secondary_uv), dpdy(input.secondary_uv))"
+            ));
+            assert!(!source.contains("uv_offset, frame)"));
+        }
+        // No map is read at the offset with implicit derivatives.
+        let maps = include_str!("material_maps.wgsl");
+        assert!(!maps.contains("textureSample(material_map_"));
+        assert_eq!(
+            maps.matches("uv + offset,\n            uv_dx, uv_dy)")
+                .count(),
+            3
+        );
     }
 
     #[test]

@@ -1146,6 +1146,7 @@ fn identity_page(shots: &Snapshot, art: ArtSet) {
             medals: Vec::new(),
             achievements: Vec::new(),
             avatar: String::new(),
+            unlocks: Vec::new(),
         }),
         server: None,
         players: vec![
@@ -1157,6 +1158,7 @@ fn identity_page(shots: &Snapshot, art: ArtSet) {
                 verified: true,
                 medals: Vec::new(),
                 avatar: String::new(),
+                look: None,
             },
             Presence {
                 slot: 7,
@@ -1166,6 +1168,7 @@ fn identity_page(shots: &Snapshot, art: ArtSet) {
                 verified: false,
                 medals: Vec::new(),
                 avatar: String::new(),
+                look: None,
             },
         ],
         profiles: std::collections::HashMap::new(),
@@ -1175,6 +1178,9 @@ fn identity_page(shots: &Snapshot, art: ArtSet) {
         note: None,
         player_report: None,
         avatar: None,
+        look_outcome: None,
+        packs_revision: 0,
+        assets_note: None,
     };
     let online = hub(Status::Online, "^1Sol", &["^4Vulpes", "Padawan"]);
     let fresh = hub(Status::Online, "Padawan", &[]);
@@ -2152,6 +2158,7 @@ fn medals_snapshot() {
             medals,
             achievements: Vec::new(),
             avatar: String::new(),
+            unlocks: Vec::new(),
         }),
         server: None,
         players: Vec::new(),
@@ -2162,6 +2169,9 @@ fn medals_snapshot() {
         note: None,
         player_report: None,
         avatar: None,
+        look_outcome: None,
+        packs_revision: 0,
+        assets_note: None,
     };
     let with = hub(shot_medals());
     let without = hub(Vec::new());

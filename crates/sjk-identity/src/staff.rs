@@ -1,8 +1,8 @@
 //! Staff requests (`PROTOCOL.md`, "Staff"): what a key the hub's operator made staff
-//! may do from inside the game: find players, give and take back medals, clear
-//! achievements, moderate the SJK chat and players' pictures. The hub refuses every
-//! one from a key that is not staff; the client only offers them to a player whose
-//! own profile says `staff`.
+//! may do from inside the game: find players, give and take back medals and
+//! unlockables, clear achievements, moderate the SJK chat and players' pictures. The
+//! hub refuses every one from a key that is not staff; the client only offers them to
+//! a player whose own profile says `staff`.
 
 use crate::wire::Profile;
 
@@ -27,6 +27,22 @@ pub enum StaffRequest {
         key_id: String,
         /// The medal's id.
         medal: String,
+    },
+    /// Grant an unlockable (`PROTOCOL.md`, "Unlocks").
+    Unlock {
+        /// The key that gets it.
+        key_id: String,
+        /// The unlockable's id.
+        unlock: String,
+        /// Shown with it; may be empty.
+        note: String,
+    },
+    /// Take an unlockable back.
+    Relock {
+        /// The key that holds it.
+        key_id: String,
+        /// The unlockable's id.
+        unlock: String,
     },
     /// Clear achievements.
     ClearAchievements {
@@ -68,6 +84,8 @@ impl StaffRequest {
             Self::Search(_) | Self::ChatDelete { .. } => None,
             Self::Award { key_id, .. }
             | Self::Unaward { key_id, .. }
+            | Self::Unlock { key_id, .. }
+            | Self::Relock { key_id, .. }
             | Self::ClearAchievements { key_id, .. }
             | Self::ChatMute { key_id, .. }
             | Self::AvatarRemove { key_id }
@@ -119,6 +137,8 @@ pub(crate) fn done(request: &StaffRequest, count: usize) -> String {
         },
         StaffRequest::Award { medal, .. } => format!("Gave {medal}"),
         StaffRequest::Unaward { medal, .. } => format!("Took back {medal}"),
+        StaffRequest::Unlock { unlock, .. } => format!("Unlocked {unlock}"),
+        StaffRequest::Relock { unlock, .. } => format!("Took back {unlock}"),
         StaffRequest::ClearAchievements { id, .. } if id.is_empty() => {
             "Cleared every achievement".to_owned()
         }

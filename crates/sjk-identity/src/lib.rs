@@ -8,6 +8,7 @@
 
 #![warn(missing_docs)]
 
+pub mod assets;
 pub mod avatar;
 pub mod bio;
 pub mod chat;
@@ -19,13 +20,14 @@ pub mod service;
 pub mod staff;
 pub mod wire;
 
-pub use feed::ChatState;
+pub use assets::Pack;
+pub use feed::{ChatState, ReceivedLooks};
 pub use hub::{HttpHub, Hub, HubError, valid_base_url};
 pub use keys::{Identity, KeyError};
 pub use report::{BugReport, Category, PlayerReport, WorldNote};
 pub use service::{HubFactory, Location, ReportOutcome, Service, Settings, Snapshot, Status};
 pub use staff::{StaffRequest, StaffState};
 pub use wire::{
-    Achievement, ChatMessage, Emote, Feed, Medal, Presence, Profile, WornName, names_match,
-    normal_form,
+    Achievement, ChatMessage, Emote, Feed, Look, LookEvent, Medal, Presence, Profile, Unlock,
+    WornName, names_match, normal_form,
 };

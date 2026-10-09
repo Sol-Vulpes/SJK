@@ -43,6 +43,10 @@ pub struct ObituaryEvent {
     pub local_was_killed: bool,
     /// Snapshot server time at which the event was accepted.
     pub server_time: i32,
+    /// The attacker's `forcePowersActive` bits in that snapshot (0 when the
+    /// snapshot does not hold the attacker), which tell Force Grip from Force
+    /// Lightning, as `MOD_FORCE_DARK` covers both.
+    pub attacker_force: u32,
 }
 
 /// Eight-entry retained kill-feed ring. Oldest entries are overwritten.
@@ -127,12 +131,13 @@ impl ObituaryTracker {
                 continue;
             }
             let gender = client_gender(game, entity.other_entity_num());
-            let event = legacy_obituary(
+            let mut event = legacy_obituary(
                 entity,
                 snapshot.player.client_num(),
                 gender,
                 snapshot.server_time,
             );
+            event.attacker_force = attacker_force(snapshot, event.attacker);
             self.feed.push(event);
             self.decoded += 1;
         }
@@ -158,6 +163,16 @@ impl Default for ObituaryTracker {
     fn default() -> Self {
         Self::new()
     }
+}
+
+/// A client's name as the kill messages show it: the `n` key of its `CS_PLAYERS`
+/// string with its colour codes, read from the string's bytes
+/// ([`crate::LegacyClientInfo::name`]), or `noname` for a slot with no name at all,
+/// where `CG_Obituary` would print an empty one.
+pub fn obituary_name(game: &GameState, client: u16) -> std::borrow::Cow<'_, str> {
+    game.config_string(CS_PLAYERS + usize::from(client))
+        .and_then(|info| crate::LegacyClientInfo::new(info).name())
+        .unwrap_or(std::borrow::Cow::Borrowed("noname"))
 }
 
 /// Select the exact localization key used by `CG_Obituary`.
@@ -189,7 +204,24 @@ pub fn legacy_obituary(
         local_fragged: attacker == local_client && target != attacker,
         local_was_killed: target == local_client && attacker != target,
         server_time,
+        attacker_force: 0,
     }
+}
+
+/// The `forcePowersActive` bits of client `attacker` in `snapshot`, 0 when it
+/// holds no such client.
+fn attacker_force(snapshot: &Snapshot, attacker: u16) -> u32 {
+    if attacker >= MAX_CLIENTS {
+        return 0;
+    }
+    if attacker == snapshot.player.client_num() {
+        return snapshot.player.force_powers_active();
+    }
+    snapshot
+        .entities
+        .iter()
+        .find(|entity| entity.number() == attacker)
+        .map_or(0, EntityState::force_powers_active)
 }
 
 /// `cg_event.c:160-175`: water, slime, lava, crush, falling, suicide and
@@ -262,17 +294,13 @@ fn client_gender(game: &GameState, client: u16) -> Gender {
     let Some(info) = game.config_string(CS_PLAYERS + usize::from(client)) else {
         return Gender::Male;
     };
-    let sex = crate::sound_events::config_info_value(info, "ds")
-        .or_else(|| crate::sound_events::config_info_value(info, "sex"));
-    let Some(sex) = sex else {
+    // Read from the bytes, not a UTF-8 view of the whole string: a name with a
+    // Latin-1 letter (`é` is byte 0xE9) must not cost the player their gender.
+    let info = crate::LegacyClientInfo::new(info);
+    let Some(sex) = info.bytes("ds").or_else(|| info.bytes("sex")) else {
         return Gender::Male;
     };
-    match sex
-        .as_bytes()
-        .first()
-        .copied()
-        .map(|value| value.to_ascii_lowercase())
-    {
+    match sex.first().copied().map(|value| value.to_ascii_lowercase()) {
         Some(b'f') => Gender::Female,
         Some(b'n') => Gender::Neuter,
         _ => Gender::Male,
@@ -292,5 +320,36 @@ fn event_number(entity: &EntityState, raw: u16) -> u16 {
         u16::from(entity.entity_type() - ET_EVENTS)
     } else {
         raw & EVENT_MASK
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use sjk_protocol::LEGACY_ENTITY_FIELDS;
+
+    /// A self-kill by `client` with `means`, as the event entity carries it.
+    fn self_kill(client: u16, means: u8) -> EntityState {
+        let mut entity = EntityState::zero(200, &LEGACY_ENTITY_FIELDS);
+        entity.set_raw_field(8, u32::from(ET_EVENTS) + u32::from(EV_OBITUARY));
+        entity.set_raw_field(59, u32::from(client));
+        entity.set_raw_field(39, u32::from(client));
+        entity.set_raw_field(42, u32::from(means));
+        entity
+    }
+
+    #[test]
+    fn a_latin1_name_keeps_the_players_gender() {
+        let mut game = GameState::empty_local(1);
+        game.replace_config_string(
+            CS_PLAYERS + 4,
+            b"n\\Zo\xe9\\t\\0\\model\\jan\\ds\\f".to_vec(),
+        )
+        .unwrap();
+        let gender = client_gender(&game, 4);
+        assert_eq!(gender, Gender::Female);
+        let event = legacy_obituary(&self_kill(4, 38), 0, gender, 0);
+        assert_eq!(event.message, "SUICIDE_FALLDEATH_FEMALE");
+        assert_eq!(event.attacker_message, None);
     }
 }

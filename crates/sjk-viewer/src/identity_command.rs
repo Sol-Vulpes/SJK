@@ -174,6 +174,7 @@ mod tests {
                 medals: Vec::new(),
                 achievements: Vec::new(),
                 avatar: String::new(),
+                unlocks: Vec::new(),
             }),
             server: None,
             players: vec![Presence {
@@ -184,6 +185,7 @@ mod tests {
                 verified: true,
                 medals: Vec::new(),
                 avatar: String::new(),
+                look: None,
             }],
             profiles: HashMap::new(),
             notice: None,
@@ -192,6 +194,9 @@ mod tests {
             note: None,
             player_report: None,
             avatar: None,
+            look_outcome: None,
+            packs_revision: 0,
+            assets_note: None,
         }
     }
 
@@ -249,6 +254,7 @@ mod tests {
                 medals: Vec::new(),
                 achievements: Vec::new(),
                 avatar: String::new(),
+                unlocks: Vec::new(),
             },
         );
         let lines = who_lines(&shown, Some(3));

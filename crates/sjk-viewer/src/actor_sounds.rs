@@ -30,6 +30,8 @@ pub(crate) fn update(gpu: &mut GpuState, time: i64, audio: &mut Option<GameAudio
         .local_prediction
         .predicted_state()
         .filter(|_| !gpu.free_camera_active());
+    // The loaded skins' swings, shared (one count, no copy) so the meshes can be walked.
+    let skins = std::sync::Arc::clone(&gpu.blade_skins);
     for mesh in &mut gpu.actor_meshes {
         if let Some(prefetch) = mesh.preview.event_sounds.take() {
             audio.absorb_animation_prefetch(&prefetch);
@@ -54,6 +56,7 @@ pub(crate) fn update(gpu: &mut GpuState, time: i64, audio: &mut Option<GameAudio
         mesh.audio_events.last_time = Some(time);
         let id = entity.id.get();
         let is_local = local == Some(id);
+        let skin = gpu.saber_skins.get(id);
         let footstep_class = snapshot
             .and_then(|s| {
                 s.entities
@@ -82,12 +85,15 @@ pub(crate) fn update(gpu: &mut GpuState, time: i64, audio: &mut Option<GameAudio
             |cue, variant| match cue {
                 Cue::Sound { paths, channel } => {
                     let standard = &paths[variant % paths.len()];
-                    let path = mesh.saber_names[0]
-                        .as_deref()
-                        .and_then(|name| {
-                            gpu.saber_hilts
-                                .as_ref()?
-                                .animation_sound(name, standard, variant)
+                    // A blade skin's swings replace the stock and the hilt's own.
+                    let path = skin
+                        .and_then(|skin| skin_swing(&skins, skin, standard, variant))
+                        .or_else(|| {
+                            gpu.saber_hilts.as_ref()?.animation_sound(
+                                mesh.saber_names[0].as_deref()?,
+                                standard,
+                                variant,
+                            )
                         })
                         .unwrap_or(standard);
                     audio.play_animation(path, *channel, false, origin, id, is_local);
@@ -130,6 +136,38 @@ pub(crate) fn update(gpu: &mut GpuState, time: i64, audio: &mut Option<GameAudio
                     }
                 }
             },
+        );
+    }
+}
+
+/// The swing loaded blade skin `skin` plays for a stock `saberhup` animation cue.
+fn skin_swing<'a>(
+    skins: &'a crate::saber_skins::LoadedSkins,
+    skin: crate::saber_skins::SkinColor,
+    standard: &str,
+    variant: usize,
+) -> Option<&'a str> {
+    if !standard.starts_with("sound/weapons/saber/saberhup") {
+        return None;
+    }
+    skins.swing(skin.index, variant)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_skin_replaces_only_the_stock_swing_cues() {
+        let skins = crate::saber_skins::tests::loaded_sample(1);
+        let skin = skins.color_of("saber_sun").unwrap();
+        assert_eq!(
+            skin_swing(&skins, skin, "sound/weapons/saber/saberhup3.wav", 4),
+            Some("sound/test/blade/s2.wav")
+        );
+        assert_eq!(
+            skin_swing(&skins, skin, "sound/weapons/saber/saberspin1.wav", 0),
+            None
         );
     }
 }

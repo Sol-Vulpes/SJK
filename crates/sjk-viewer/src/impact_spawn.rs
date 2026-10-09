@@ -190,6 +190,7 @@ pub(crate) fn spawn_line(
         start_length: 1.0,
         end_length: 1.0,
         streak: Some(Vec3::from_array(line.end) - start),
+        trace_streak: false,
         normal: None,
         alpha: crate::effect_envelope::Envelope::from_values(
             line.alpha[0],

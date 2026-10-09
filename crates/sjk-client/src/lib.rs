@@ -158,7 +158,9 @@ pub use force_profile::{
 pub use force_profile_negotiation::{
     EnterPlayOutcome, ForceProfileNegotiator, RejoinOutput, enter_play, server_legal_forcepowers,
 };
-pub use force_rank_reply::{ForceRankReply, force_rank_reply, force_rules_from_serverinfo};
+pub use force_rank_reply::{
+    ForceRankReply, force_rank_reply, force_rules_from_serverinfo, server_force_rules,
+};
 pub use ghoul2_pose::{LegacyGhoul2Animator, LegacyGhoul2PosePolicy};
 pub use impact_events::{
     EV_DISRUPTOR_HIT, EV_DISRUPTOR_MAIN_SHOT, EV_DISRUPTOR_SNIPER_MISS, EV_DISRUPTOR_SNIPER_SHOT,
@@ -204,7 +206,7 @@ pub use npc_identity::{
     legacy_npc_saber_names_borrowed, legacy_npc_state, legacy_vehicle_name,
 };
 pub use obituary::{
-    EV_OBITUARY, Gender, KillFeed, ObituaryEvent, ObituaryTracker, legacy_obituary,
+    EV_OBITUARY, Gender, KillFeed, ObituaryEvent, ObituaryTracker, legacy_obituary, obituary_name,
 };
 pub use player_angle_rules::{PredictedPoseFields, legacy_predicted_pose};
 pub use player_angles::{
@@ -246,7 +248,8 @@ pub use server_clock::ServerClock;
 pub use session_transition::{SessionTransition, SessionTransitionKind};
 pub use sound_events::{
     LegacyMusicAction, LegacySoundAdapter, LegacySoundDecision, LegacySoundEvent,
-    LegacySoundLedger, RegisteredLegacySound, normal_attenuation as legacy_sound_attenuation,
+    LegacySoundLedger, RegisteredLegacySound, SABER_SOUND_CLIENTS, SaberSoundSet, TOGGLE_REACH,
+    normal_attenuation as legacy_sound_attenuation,
 };
 pub use taystjk_cosmetics::{
     CosmeticUnlock, CosmeticUnlockTable, MAX_COSMETIC_UNLOCKS, apply_taystjk_cosmetics,

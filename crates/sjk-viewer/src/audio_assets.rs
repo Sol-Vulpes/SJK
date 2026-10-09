@@ -289,7 +289,7 @@ impl GpuState {
                     .map(demo_playback::Session::game_state)
             });
         if let Some(game_state) = game_state {
-            audio.install_gamestate(game_state, Arc::clone(vfs));
+            audio.install_gamestate(game_state, Arc::clone(vfs), &self.bsp);
         }
         audio.music_value =
             game_state.map(|game| game.config_string(2).unwrap_or_default().to_vec());

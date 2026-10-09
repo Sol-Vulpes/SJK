@@ -45,7 +45,7 @@ fn a_player_registers_with_the_name_they_wear_claims_and_leaves() {
     // Two keys may wear the same name: the name proves nothing, the key does.
     hub.register(&other, Some(&name)).unwrap();
 
-    let server = format!("10.99.{}.{}:29070", &suffix[..2].len(), 7);
+    let server = format!("10.99.{}.{}:29070", suffix[..2].len(), 7);
     hub.claim(&me, &server, 3, "^1Test").unwrap();
     let players = hub.presence(&server).unwrap();
     assert_eq!(players.len(), 1);
@@ -551,6 +551,273 @@ fn the_service_reads_the_chat_on_its_own_thread() {
     // Turning the chat off stops the reading.
     service.set_chat(false);
     wait_for("the feed to stop", &|chat| !chat.live);
+    service.shutdown(Duration::from_secs(5));
+}
+
+#[test]
+#[ignore = "needs a running hub (SJK_HUB_TEST_URL; SJK_HUB_TEST_ADMIN_KEY for the unlocked half)"]
+fn looks_travel_with_the_claim_and_the_feed() {
+    use sjk_identity::Look;
+    use std::time::Duration;
+
+    let url = std::env::var("SJK_HUB_TEST_URL").expect("SJK_HUB_TEST_URL");
+    let mut hub = hub();
+    let me = Identity::generate().unwrap();
+    let other = Identity::generate().unwrap();
+    hub.register(&me, Some("^2Looky")).unwrap();
+    hub.register(&other, None).unwrap();
+    let server = format!(
+        "10.96.0.{}:29070",
+        u8::from_str_radix(&me.key_id()[..2], 16).unwrap()
+    );
+    let lit = Look {
+        saber: String::new(),
+        illuminate: true,
+    };
+    let nowhere = hub.look(&me, &server, &lit).unwrap_err();
+    assert!(
+        matches!(nowhere, HubError::Rejected { ref code, .. } if code == "not_on_server"),
+        "{nowhere:?}"
+    );
+    hub.claim(&me, &server, 3, "^2Looky").unwrap();
+    // A fresh claim has no look.
+    let bare = hub.presence(&server).unwrap();
+    assert_eq!(bare[0].look, None);
+    // Something in the feed's sequence, so the reader's next `after` is not 0 (which
+    // gives no looks) on a fresh hub.
+    hub.chat(&other, "looks are coming", "").unwrap();
+    let start = hub.feed(&other, 0, Some(&server), 0).unwrap();
+    assert!(start.looks.is_empty(), "after 0 gives no looks");
+    let id = hub.look(&me, &server, &lit).unwrap();
+    assert!(id > 0);
+    let players = hub.presence(&server).unwrap();
+    assert_eq!(players[0].look, Some(lit.clone()));
+    let feed = hub.feed(&other, start.next, Some(&server), 0).unwrap();
+    let event = &feed.looks[0];
+    assert_eq!(event.id, id);
+    assert_eq!((event.slot, event.claimed_name.as_str()), (3, "^2Looky"));
+    assert_eq!(event.look(), lit);
+    // A blade skin the key does not hold is refused, and does not count.
+    let sun = Look {
+        saber: "saber_sun".to_owned(),
+        illuminate: true,
+    };
+    let refused = hub.look(&me, &server, &sun).unwrap_err();
+    assert!(
+        matches!(refused, HubError::Rejected { ref code, .. } if code == "not_unlocked"),
+        "{refused:?}"
+    );
+    // Renewing the claim keeps the look.
+    hub.claim(&me, &server, 3, "^2Looky").unwrap();
+    assert_eq!(hub.presence(&server).unwrap()[0].look, Some(lit.clone()));
+    let Some(admin) = operator_key() else {
+        eprintln!("no SJK_HUB_TEST_ADMIN_KEY: the unlocked half is skipped");
+        hub.release(&me, &server).unwrap();
+        return;
+    };
+    let granted = ureq::post(&format!(
+        "{url}/admin/v1/identities/{}/unlocks",
+        me.key_id()
+    ))
+    .header("Authorization", &format!("Bearer {admin}"))
+    .header("Content-Type", "application/json")
+    .send(r#"{"unlock":"saber_sun","note":"e2e"}"#)
+    .unwrap();
+    assert_eq!(granted.status().as_u16(), 200);
+    let profile = hub.profile(&me.key_id()).unwrap();
+    assert_eq!(profile.unlocks[0].id, "saber_sun");
+    assert_eq!(profile.unlocks[0].note, "e2e");
+    std::thread::sleep(Duration::from_millis(1_100));
+    hub.look(&me, &server, &sun).unwrap();
+    assert_eq!(hub.presence(&server).unwrap()[0].look, Some(sun));
+    // Another slot is another claim: it starts with no look.
+    hub.claim(&me, &server, 5, "^2Looky").unwrap();
+    assert_eq!(hub.presence(&server).unwrap()[0].look, None);
+    hub.release(&me, &server).unwrap();
+}
+
+#[test]
+#[ignore = "needs a running hub (SJK_HUB_TEST_URL)"]
+fn the_service_wears_its_look_on_its_claim_and_reads_looks_with_the_chat_off() {
+    use sjk_identity::{Location, Look, Service, Settings};
+    use std::time::{Duration, Instant};
+
+    let url = std::env::var("SJK_HUB_TEST_URL").expect("SJK_HUB_TEST_URL");
+    let make: sjk_identity::HubFactory = Box::new(|url| {
+        HttpHub::new(url, "sjk-identity-test").map(|hub| Box::new(hub) as Box<dyn Hub>)
+    });
+    let make_feed: sjk_identity::HubFactory = Box::new(|url| {
+        HttpHub::with_timeout(url, "sjk-identity-test", sjk_identity::feed::TIMEOUT)
+            .map(|hub| Box::new(hub) as Box<dyn Hub>)
+    });
+    let me = Identity::generate().unwrap();
+    let server = format!(
+        "10.95.0.{}:29070",
+        u8::from_str_radix(&me.key_id()[..2], 16).unwrap()
+    );
+    let service = Service::start_with_feed(me, make, Some(make_feed));
+    service.set_name("^5Lamp".to_owned());
+    service.set_chat(false);
+    // The skin is not the key's: Illuminate still goes, without it.
+    service.set_look(Look {
+        saber: "saber_sun".to_owned(),
+        illuminate: true,
+    });
+    service.configure(Settings {
+        enabled: true,
+        hub_url: url,
+    });
+    service.enter(Location {
+        server: server.parse().unwrap(),
+        slot: 6,
+        name: "^5Lamp".to_owned(),
+    });
+    let mut hub = hub();
+    let lit = Look {
+        saber: String::new(),
+        illuminate: true,
+    };
+    let until = Instant::now() + Duration::from_secs(15);
+    let worn = loop {
+        let worn = hub
+            .presence(&server)
+            .unwrap()
+            .first()
+            .and_then(|p| p.look.clone());
+        if worn.as_ref() == Some(&lit) || Instant::now() > until {
+            break worn;
+        }
+        std::thread::sleep(Duration::from_millis(200));
+    };
+    assert_eq!(worn, Some(lit));
+    // The feed reads on the server with the chat off: the service's own look event
+    // may have come before the reader started, so a change is made and awaited.
+    service.set_look(Look::default());
+    let until = Instant::now() + Duration::from_secs(15);
+    let put_out = |look: &sjk_identity::LookEvent| look.slot == 6 && !look.illuminate;
+    let mut looks = Vec::new();
+    while !looks.iter().any(put_out) && Instant::now() < until {
+        looks.extend(service.take_looks(server.parse().ok()).events);
+        std::thread::sleep(Duration::from_millis(200));
+    }
+    assert!(looks.iter().any(put_out), "{looks:?}");
+    assert!(service.with_chat(|chat| chat.messages.is_empty() && !chat.live));
+    service.shutdown(Duration::from_secs(5));
+}
+
+#[test]
+#[ignore = "needs a running hub (SJK_HUB_TEST_URL) and its staff key (SJK_HUB_TEST_STAFF_SEED)"]
+fn a_staff_key_unlocks_and_relocks() {
+    use sjk_identity::StaffRequest;
+    let mut hub = hub();
+    let hex = std::env::var("SJK_HUB_TEST_STAFF_SEED").expect("SJK_HUB_TEST_STAFF_SEED");
+    let mut seed = [0_u8; 32];
+    for (index, byte) in seed.iter_mut().enumerate() {
+        *byte = u8::from_str_radix(&hex[index * 2..index * 2 + 2], 16).unwrap();
+    }
+    let staff = Identity::from_seed(seed);
+    let player = Identity::generate().unwrap();
+    hub.register(&staff, Some("^1Staffer")).unwrap();
+    hub.register(&player, None).unwrap();
+    assert!(
+        hub.profile(&staff.key_id()).unwrap().staff,
+        "make {} staff",
+        staff.key_id()
+    );
+    let unlock = StaffRequest::Unlock {
+        key_id: player.key_id(),
+        unlock: "saber_sun".to_owned(),
+        note: "For testing".to_owned(),
+    };
+    let answered = hub.staff(&staff, &unlock).unwrap();
+    assert_eq!(answered[0].key_id, player.key_id());
+    assert_eq!(answered[0].unlocks[0].id, "saber_sun");
+    assert_eq!(answered[0].unlocks[0].note, "For testing");
+    let again = hub.staff(&staff, &unlock).unwrap_err();
+    assert!(
+        matches!(again, HubError::Rejected { ref code, .. } if code == "already_unlocked"),
+        "{again:?}"
+    );
+    let relock = StaffRequest::Relock {
+        key_id: player.key_id(),
+        unlock: "saber_sun".to_owned(),
+    };
+    assert!(hub.staff(&staff, &relock).unwrap()[0].unlocks.is_empty());
+    let gone = hub.staff(&staff, &relock).unwrap_err();
+    assert!(
+        matches!(gone, HubError::Rejected { ref code, .. } if code == "not_unlocked"),
+        "{gone:?}"
+    );
+}
+
+#[test]
+#[ignore = "needs a running hub (SJK_HUB_TEST_URL)"]
+fn asset_packs_are_listed_and_download_as_listed() {
+    use sjk_identity::assets::{PACK_MAX, check, sha256_hex};
+
+    let mut hub = hub();
+    let stranger = Identity::generate().unwrap();
+    let refused = hub.assets(&stranger).unwrap_err();
+    assert!(
+        matches!(refused, HubError::Rejected { status: 403, ref code, .. } if code == "not_registered"),
+        "{refused:?}"
+    );
+    let me = Identity::generate().unwrap();
+    hub.register(&me, None).unwrap();
+    // The hub may serve none; whatever it lists downloads as listed.
+    let packs = hub.assets(&me).unwrap();
+    assert!(packs.windows(2).all(|pair| pair[0].name < pair[1].name));
+    for pack in &packs {
+        let bytes = hub.asset(&me, &pack.name).unwrap();
+        assert!(bytes.len() as u64 <= PACK_MAX);
+        assert_eq!(check(pack, &bytes), Ok(()), "{}", pack.name);
+        assert_eq!(sha256_hex(&bytes), pack.sha256);
+    }
+    let missing = hub.asset(&me, "no_such_pack_here").unwrap_err();
+    assert!(
+        matches!(missing, HubError::Rejected { status: 404, ref code, .. } if code == "not_found"),
+        "{missing:?}"
+    );
+}
+
+#[test]
+#[ignore = "needs a running hub (SJK_HUB_TEST_URL)"]
+fn the_service_keeps_the_hubs_packs_in_its_folder() {
+    use sjk_identity::assets::{FOLDER, cached_packs, file_sha256};
+    use sjk_identity::{Service, Settings};
+    use std::time::{Duration, Instant};
+
+    let url = std::env::var("SJK_HUB_TEST_URL").expect("SJK_HUB_TEST_URL");
+    let me = Identity::generate().unwrap();
+    let listed = {
+        let mut hub = hub();
+        hub.register(&me, None).unwrap();
+        hub.assets(&me).unwrap()
+    };
+    let make: sjk_identity::HubFactory = Box::new(|url| {
+        HttpHub::new(url, "sjk-identity-test").map(|hub| Box::new(hub) as Box<dyn Hub>)
+    });
+    let root = tempfile::tempdir().unwrap();
+    let dir = root.path().join(FOLDER);
+    let service = Service::start(me, make);
+    service.keep_assets(dir.clone());
+    service.configure(Settings {
+        enabled: true,
+        hub_url: url,
+    });
+    let until = Instant::now() + Duration::from_secs(30);
+    while service.with_snapshot(|snapshot| snapshot.assets_note.is_none()) {
+        assert!(Instant::now() < until, "{:?}", service.snapshot());
+        std::thread::sleep(Duration::from_millis(50));
+    }
+    let snapshot = service.snapshot();
+    assert_eq!(snapshot.packs_revision, listed.len() as u64, "{snapshot:?}");
+    let cached = cached_packs(&dir);
+    assert_eq!(cached.len(), listed.len());
+    for (path, pack) in cached.iter().zip(&listed) {
+        assert_eq!(path, &dir.join(format!("{}.pk3", pack.name)));
+        assert_eq!(file_sha256(path).unwrap(), pack.sha256);
+    }
     service.shutdown(Duration::from_secs(5));
 }
 

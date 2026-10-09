@@ -598,6 +598,9 @@ mod tests {
             note: None,
             player_report: None,
             avatar: None,
+            look_outcome: None,
+            packs_revision: 0,
+            assets_note: None,
         }
     }
 
@@ -624,6 +627,7 @@ mod tests {
             medals: Vec::new(),
             achievements: Vec::new(),
             avatar: String::new(),
+            unlocks: Vec::new(),
         }
     }
 
@@ -685,6 +689,7 @@ mod tests {
             verified: true,
             medals: Vec::new(),
             avatar: String::new(),
+            look: None,
         }];
         let shown = view(&inputs(Some(&state)));
         assert_eq!(shown.headline, "Sol");
@@ -780,6 +785,7 @@ mod tests {
                 verified: false,
                 medals: Vec::new(),
                 avatar: String::new(),
+                look: None,
             })
             .collect();
         assert_eq!(view(&inputs(Some(&state))).players.len(), PLAYERS_SHOWN);

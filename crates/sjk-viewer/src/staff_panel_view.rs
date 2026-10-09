@@ -1,6 +1,7 @@
 //! The Staff page's drawing, in the SJK UI's look: the search pill in the top bar,
 //! the players found down the left, the chosen player's picture and name (with Take
-//! picture down) over their medals with Give and Take back in the middle, and their
+//! picture down) over their medals with Give and Take back and their unlockables with
+//! Unlock and Relock in the middle, and their
 //! achievements with Clear on the right.
 
 use super::*;
@@ -27,6 +28,7 @@ const PLAYER_ROW: f32 = 50.0;
 /// The medals' rows and the achievements' rows.
 const SECTION_TOP: f32 = 330.0;
 const MEDAL_ROW: f32 = 76.0;
+const UNLOCK_ROW: f32 = 58.0;
 const ACHIEVEMENT_ROW: f32 = 34.0;
 const ACHIEVEMENTS_SHOWN: usize = 18;
 /// The keys' line.
@@ -92,15 +94,23 @@ impl Panel {
         self.shown.picture = target
             .as_ref()
             .is_some_and(|profile| !profile.avatar.is_empty());
+        self.shown.unlocks = [false; crate::unlockables::ALL.len()];
         if let Some(profile) = &target {
             for medal in &profile.medals {
                 if let Some(known) = Medal::from_id(&medal.id) {
                     self.shown.medals[known.index()] = medal.count.max(1);
                 }
             }
+            for (held, unlockable) in self.shown.unlocks.iter_mut().zip(&crate::unlockables::ALL) {
+                *held = profile
+                    .unlocks
+                    .iter()
+                    .any(|unlock| unlock.id == unlockable.id);
+            }
             let mine = self.shown.me.as_deref() == Some(profile.key_id.as_str());
             self.header(&frame, profile, mine);
             self.medals(&frame, profile);
+            self.unlockables(&frame, profile);
             self.achievements(&frame, profile, mine);
         }
         self.status(&frame, inputs.staff);
@@ -384,7 +394,7 @@ impl Panel {
         text(
             &mut self.ui,
             TextFamily::Body,
-            format_args!("Note with the next medal (optional, everyone reads it)"),
+            format_args!("Note with the next medal or unlock (optional, everyone reads it)"),
             frame.rect(MIDDLE_X, y, MIDDLE_WIDTH, 22.0),
             15.0 * s,
             color::MUTED,
@@ -417,6 +427,91 @@ impl Panel {
             frame.rect(field[0], field[1], field[2], field[3]),
         );
         self.order.push(NOTE_TOKEN);
+    }
+
+    /// Every unlockable of the catalogue, held or not, with Unlock and Relock, under the
+    /// note's field.
+    fn unlockables(&mut self, frame: &Frame, profile: &Profile) {
+        let s = frame.s;
+        let top = SECTION_TOP + Medal::COUNT as f32 * MEDAL_ROW + 128.0;
+        kit::heading(
+            &mut self.ui,
+            frame,
+            MIDDLE_X,
+            top,
+            MIDDLE_WIDTH,
+            "Unlockables",
+        );
+        for (index, unlockable) in crate::unlockables::ALL.iter().enumerate() {
+            let y = top + 18.0 + index as f32 * UNLOCK_ROW;
+            if y + UNLOCK_ROW > KEYS_Y - 16.0 {
+                break;
+            }
+            let held = self.shown.unlocks[index];
+            text(
+                &mut self.ui,
+                TextFamily::Display,
+                format_args!("{}", unlockable.name),
+                frame.rect(MIDDLE_X, y + 4.0, 260.0, 28.0),
+                21.0 * s,
+                if held {
+                    color::GOLD_BRIGHT
+                } else {
+                    color::MUTED
+                },
+                FontWeight::Semibold,
+                TextAlign::Start,
+            );
+            let granted = profile
+                .unlocks
+                .iter()
+                .find(|unlock| unlock.id == unlockable.id)
+                .map(|unlock| crate::medals::date_text(unlock.granted))
+                .filter(|date| !date.is_empty());
+            let line = match (held, granted) {
+                (false, _) => format!("Not held: {}", unlockable.id),
+                (true, Some(date)) => format!("Unlocked {date}"),
+                (true, None) => "Held".to_owned(),
+            };
+            text(
+                &mut self.ui,
+                TextFamily::Body,
+                format_args!("{line}"),
+                frame.rect(MIDDLE_X, y + 32.0, 260.0, 20.0),
+                14.0 * s,
+                color::QUIET,
+                FontWeight::Regular,
+                TextAlign::Start,
+            );
+            let unlock = UNLOCK_BASE + index as u16;
+            let relock = RELOCK_BASE + index as u16;
+            let right = MIDDLE_X + MIDDLE_WIDTH;
+            kit::button(
+                &mut self.ui,
+                frame,
+                [right - 236.0, y + 8.0, 96.0, 40.0],
+                "Unlock",
+                true,
+                !held,
+                self.focus == unlock,
+                unlock,
+            );
+            kit::button(
+                &mut self.ui,
+                frame,
+                [right - 128.0, y + 8.0, 128.0, 40.0],
+                "Relock",
+                false,
+                held,
+                self.focus == relock,
+                relock,
+            );
+            if held {
+                self.order.push(relock);
+            } else {
+                self.order.push(unlock);
+            }
+        }
     }
 
     /// The player's achievements with a count, each with Clear, and Clear all.
@@ -636,6 +731,14 @@ mod tests {
                     progress: kind.goal / 2 + 1,
                     goal: kind.goal,
                     unlocked: 0,
+                })
+                .collect(),
+            unlocks: crate::unlockables::ALL
+                .iter()
+                .map(|unlockable| sjk_identity::Unlock {
+                    id: unlockable.id.into(),
+                    granted: 1_791_336_225,
+                    note: "n".repeat(200),
                 })
                 .collect(),
             ..profile("aaaaaaaaaaaaaaaa", "x")

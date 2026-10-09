@@ -248,6 +248,12 @@ mod movers;
 #[path = "world_shot_illuminate.rs"]
 mod holocron;
 
+#[path = "world_shot_saber_skins.rs"]
+mod saber_skins;
+
+#[path = "world_shot_unlockables.rs"]
+mod unlockables;
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -752,6 +758,11 @@ Found the fog bug, ask me about it!"
                 medals: vec![medal("early_tester", 1), medal("bug_hunter", 2)],
                 achievements: Vec::new(),
                 avatar: String::new(),
+                unlocks: vec![sjk_identity::Unlock {
+                    id: "saber_sun".to_owned(),
+                    granted: 1_791_336_225,
+                    note: String::new(),
+                }],
             };
             let snapshot = sjk_identity::Snapshot {
                 status: sjk_identity::Status::Online,
@@ -766,6 +777,9 @@ Found the fog bug, ask me about it!"
                 note: None,
                 player_report: None,
                 avatar: None,
+                look_outcome: None,
+                packs_revision: 0,
+                assets_note: None,
             };
             let standings = crate::achievements::ALL
                 .iter()
@@ -876,6 +890,7 @@ like this one.",
             medals: Vec::new(),
             achievements: Vec::new(),
             avatar: String::new(),
+            unlocks: Vec::new(),
         };
         let medal = |id: &str, count| sjk_identity::Medal {
             id: id.to_owned(),
@@ -904,6 +919,11 @@ like this one.",
             sjk_identity::Profile {
                 verified: true,
                 medals: vec![medal("early_contributor", 1)],
+                unlocks: vec![sjk_identity::Unlock {
+                    id: "saber_sun".to_owned(),
+                    granted: 1_791_336_225,
+                    note: String::new(),
+                }],
                 ..profile("9a0c51e2b7d34f80", "^5Creyon")
             },
             profile("1f2e3d4c5b6a7980", "^3Lumaya"),
@@ -938,6 +958,11 @@ like this one.",
                 }
             }
             println!("{}", shoot(&mut gpu, 6, "duel6-staff").display());
+            // Another player, holding the Sun blade: Relock offered, Unlock not.
+            if let Some(console) = gpu.console.as_mut() {
+                console.staff_choose("9a0c51e2b7d34f80");
+            }
+            println!("{}", shoot(&mut gpu, 6, "duel6-staff-other").display());
         });
     }
 
