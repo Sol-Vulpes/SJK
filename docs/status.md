@@ -7,6 +7,29 @@ SJK currently contains a native client and standard dedicated server in a
 20-crate Rust workspace. This page records scope and verification, rather than
 claiming complete parity from the presence of an implementation.
 
+## Console `forcepowers` changes reach the server
+
+Branch `personal/force-console` (09/10/2026, based on `bc8ac6b`, Windows 11):
+a player on a JA+/JoF server (build 2026.1007.3) set Force Jump to level 1,
+killed themselves to respawn and kept Jump 3.
+
+Two causes. Builds up to 2026.1008.2 sent the profile fitted at join in every
+later userinfo and sent no `forcechanged`, so no profile applied in play reached
+the server; PR #47 (`ee1d9c9`, merged in `99b7485`) fixed that for the Force
+page's Apply and is in no release yet. A `forcepowers` typed in the console or
+set by a config still sent its userinfo but no `forcechanged`, and a server
+(`Cmd_ForceChanged_f`) re-reads a changed profile only when told to. Now a
+change of the `forcepowers` cvar on a server queues `forcechanged` behind the
+userinfo that carries it (`ForceProfileNegotiator::profile_applied` says whether
+it queued, found a reply already waiting, or had no server rules), and the
+console logs which, with the reason when nothing is sent. A change before a
+connection is left to the join, which sends the profile and `forcechanged`.
+
+Unit tests cover the three outcomes, a console change queued once, and Apply not
+sending it twice. Not verified: nothing was run against a server or a game, so
+whether JA+ or JoF re-reads the profile at the respawn after `forcechanged` (the
+server's `forceDoInit`, stock OpenJK) is still unchecked there.
+
 ## JoFTemple frame rate and Ultra low
 
 Branch `personal/ultra-low` (09/10/2026, based on `8e2ac60`, Windows 11, RTX 5080,

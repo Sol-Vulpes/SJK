@@ -163,6 +163,9 @@ pub(crate) struct ViewerConsole {
     /// The Import page (a dropped `.cfg`), drawn in place of the console while open.
     config_import: config_import_panel::Panel,
     userinfo_dirty: Arc<AtomicBool>,
+    /// `forcepowers` changed (console, config or menu) and the Force-profile
+    /// exchange has not yet been told: see `note_forcepowers_change`.
+    forcepowers_changed: Arc<AtomicBool>,
     show_timedelta: crate::net_timing::CvarSetting,
     time_nudge: crate::presentation_clock::CvarSetting,
     smooth_clients: console_cvars::IntegerSetting,

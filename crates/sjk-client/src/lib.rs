@@ -156,7 +156,8 @@ pub use force_profile::{
     ForceSide, LegalizedForcePowers, legalize_force_powers, mastery_points,
 };
 pub use force_profile_negotiation::{
-    EnterPlayOutcome, ForceProfileNegotiator, RejoinOutput, enter_play, server_legal_forcepowers,
+    EnterPlayOutcome, ForceProfileNegotiator, ProfileApplied, RejoinOutput, enter_play,
+    server_legal_forcepowers,
 };
 pub use force_rank_reply::{
     ForceRankReply, force_rank_reply, force_rules_from_serverinfo, server_force_rules,
