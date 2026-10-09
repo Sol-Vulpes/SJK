@@ -1,8 +1,10 @@
 //! The quick wheel: hold a key, a ring of choices opens in the middle of the
 //! screen, move the mouse towards one and let go to run it (SJK only).
 //!
-//! The wheel has pages ([`pages`]: General and Weather unless the player changed
-//! them in Settings > Quick wheel, kept in `wheel.json`). `+wheel <page>` opens it
+//! The wheel has pages ([`pages`]: General, Force and Weather unless the player
+//! changed them in Settings > Quick wheel, kept in `wheel.json`). The Force page is
+//! live: as the wheel opens it holds the Force powers the player can use
+//! ([`force_page`]), continued on a second page past twelve. `+wheel <page>` opens it
 //! on that page (named by its id or its name) while its key is held; a bare
 //! `+wheel` opens it on the page shown last (the first one in a new run).
 //! `-wheel` (the key's release) runs the highlighted choice. While it is open the
@@ -22,6 +24,7 @@
 //! none: nothing ran.
 
 pub(crate) mod catalog;
+pub(crate) mod force_page;
 pub(crate) mod pages;
 pub(crate) mod ring;
 
@@ -31,8 +34,8 @@ use crate::audio::ui_cues::{self, Cue};
 use crate::menu_widgets::MenuCanvas;
 use crate::text::{TextStyle, TextVertex, UiFont};
 use catalog::State;
-use pages::MAX_CHOICES;
-use sjk_ui::DrawList;
+use pages::{MAX_CHOICES, MAX_FORCE_CHOICES};
+use sjk_ui::{DrawList, TextureId};
 use std::time::{Duration, Instant};
 
 /// The console commands opening and running the wheel.
@@ -74,6 +77,8 @@ pub(crate) struct ShownPage {
     pub(crate) id: String,
     pub(crate) name: String,
     pub(crate) choices: Vec<ShownChoice>,
+    /// The Force page (or its second page): the player's powers.
+    pub(crate) force: bool,
 }
 
 /// A choice as the open wheel shows it.
@@ -81,7 +86,8 @@ pub(crate) struct ShownPage {
 pub(crate) struct ShownChoice {
     pub(crate) label: String,
     pub(crate) command: String,
-    pub(crate) icon: Option<usize>,
+    /// Its picture in the UI atlas: a wheel icon, or a Force power's.
+    pub(crate) icon: Option<TextureId>,
     pub(crate) on: bool,
 }
 
@@ -122,6 +128,10 @@ pub(crate) struct QuickWheel {
     /// Drawn without a game (world shots).
     #[cfg(test)]
     pub(crate) shot: bool,
+    /// The Force known and selected that the Force page shows without a game
+    /// (world shots).
+    #[cfg(test)]
+    pub(crate) force_for_shot: Option<(u32, u8)>,
 }
 
 impl Default for QuickWheel {
@@ -136,6 +146,8 @@ impl Default for QuickWheel {
             canvas: MenuCanvas::with_capacities(48, 48, 256),
             #[cfg(test)]
             shot: false,
+            #[cfg(test)]
+            force_for_shot: None,
         }
     }
 }
@@ -333,8 +345,13 @@ impl QuickWheel {
                 label: "",
                 icon: None,
                 on: false,
-            }; MAX_CHOICES];
-            let count = page.choices.len().min(MAX_CHOICES);
+            }; MAX_FORCE_CHOICES];
+            let most = if page.force {
+                MAX_FORCE_CHOICES
+            } else {
+                MAX_CHOICES
+            };
+            let count = page.choices.len().min(most);
             for (slot, choice) in choices.iter_mut().zip(&page.choices) {
                 *slot = ring::Choice {
                     label: &choice.label,
@@ -377,6 +394,11 @@ impl QuickWheel {
                     neighbours,
                     arrival,
                     hint: true,
+                    empty: if page.force {
+                        &[force_page::EMPTY]
+                    } else {
+                        &ring::EMPTY
+                    },
                 },
             );
         }
@@ -437,13 +459,19 @@ fn in_effect(console: &crate::console::ViewerConsole, state: State) -> bool {
     }
 }
 
-/// Every page as the wheel shows it, from `console`'s pages and cvars.
-pub(crate) fn shown_pages(console: &crate::console::ViewerConsole) -> Vec<ShownPage> {
-    console
-        .wheel_pages
-        .pages()
-        .iter()
-        .map(|page| ShownPage {
+/// Every page as the wheel shows it, from `console`'s pages and cvars and the
+/// player's Force (`force`, none out of a game): the Force page may become two.
+pub(crate) fn shown_pages(
+    console: &crate::console::ViewerConsole,
+    force: Option<&force_page::Powers>,
+) -> Vec<ShownPage> {
+    let mut shown = Vec::with_capacity(pages::MAX_PAGES + 1);
+    for page in console.wheel_pages.pages() {
+        if page.force {
+            shown.extend(force_page::pages(&page.id, &page.name, force));
+            continue;
+        }
+        shown.push(ShownPage {
             id: page.id.clone(),
             name: page.name.clone(),
             choices: page
@@ -452,12 +480,23 @@ pub(crate) fn shown_pages(console: &crate::console::ViewerConsole) -> Vec<ShownP
                 .map(|slot| ShownChoice {
                     label: slot.label().to_owned(),
                     command: slot.command().to_owned(),
-                    icon: slot.icon(),
+                    icon: slot.icon().map(crate::ui_renderer::wheel_icon),
                     on: in_effect(console, slot.state()),
                 })
                 .collect(),
-        })
-        .collect()
+            force: false,
+        });
+    }
+    shown
+}
+
+/// Where in `shown` the page with id `id` is; the Force page's second page,
+/// gone since (fewer powers), falls back to the first.
+fn shown_index(shown: &[ShownPage], id: &str) -> Option<usize> {
+    shown.iter().position(|page| page.id == id).or_else(|| {
+        let first = id.strip_suffix(force_page::SECOND)?;
+        shown.iter().position(|page| page.id == first)
+    })
 }
 
 /// Per frame: close the wheel while a menu, the console or chat has the
@@ -486,15 +525,42 @@ pub(crate) fn append(gpu: &mut crate::GpuState, viewport: [f32; 2], visible: boo
 }
 
 impl crate::GpuState {
+    /// The player's Force for the Force page: from the live game's latest
+    /// snapshot, as the Force bar reads it; none out of a game (a demo too: its
+    /// choices could not act) or while spectating or following.
+    fn force_powers(&self) -> Option<force_page::Powers> {
+        let Some(session) = &self.live_session else {
+            #[cfg(test)]
+            if let Some((known, selected)) = self.quick_wheel.force_for_shot {
+                return Some(force_page::Powers {
+                    known,
+                    selected,
+                    flamethrower: false,
+                    icons: self.hud.power_icons(),
+                });
+            }
+            return None;
+        };
+        let player = &session.latest_snapshot().player;
+        if player.movement_type() == 4 || player.movement_flags() & 4096 != 0 {
+            return None;
+        }
+        let selection = &self.gameplay_input.selection;
+        Some(force_page::Powers {
+            known: selection.known(player),
+            selected: selection.selected_force(player),
+            flamethrower: self.hud.flamethrower_shown(),
+            icons: self.hud.power_icons(),
+        })
+    }
+
     /// `+wheel [page]`: open the wheel on that page, or on the page shown last.
     pub(crate) fn open_quick_wheel(&mut self, args: &[String]) -> Result<Vec<String>, String> {
+        let force = self.force_powers();
         let console = self.console.as_ref().ok_or("no console")?;
         let store = &console.wheel_pages;
-        let last = store
-            .pages()
-            .iter()
-            .position(|page| page.id == self.quick_wheel.last_page())
-            .unwrap_or(0);
+        let pages = shown_pages(console, force.as_ref());
+        let last = shown_index(&pages, self.quick_wheel.last_page()).unwrap_or(0);
         // A bound key adds its number and time after the name; a typed command does not.
         let named = args
             .first()
@@ -502,7 +568,7 @@ impl crate::GpuState {
             .filter(|name| name.parse::<u64>().is_err());
         let page = match named.map(|name| store.find(name)) {
             None => last,
-            Some(Some(page)) => page,
+            Some(Some(page)) => shown_index(&pages, &store.pages()[page].id).unwrap_or(last),
             // A bind naming a page since removed opens the last one.
             Some(None) if args.len() >= 3 => last,
             Some(None) => {
@@ -510,7 +576,6 @@ impl crate::GpuState {
                 return Err(format!("usage: +wheel [{}]", ids.join(" | ")));
             }
         };
-        let pages = shown_pages(console);
         self.quick_wheel
             .set_sounds(console.bool_cvar(SOUNDS_CVAR).unwrap_or(true));
         self.quick_wheel.open(pages, page, Instant::now());
@@ -532,12 +597,16 @@ mod tests {
     use super::*;
     use sjk_ui::DrawCommand;
 
+    /// The default pages, out of a game: General, Force (empty) and Weather.
     fn shown() -> Vec<ShownPage> {
         let directory = tempfile::tempdir().unwrap();
         let console =
             crate::console::ViewerConsole::new(directory.path().join("config.cfg")).unwrap();
-        shown_pages(&console)
+        shown_pages(&console, None)
     }
+
+    /// The default pages' Weather.
+    const WEATHER: usize = 2;
 
     #[test]
     fn the_pointer_picks_the_choice_it_points_at_clockwise_from_the_top() {
@@ -558,18 +627,22 @@ mod tests {
     fn releasing_runs_the_highlighted_choice_once_and_the_middle_runs_nothing() {
         let now = Instant::now();
         let mut wheel = QuickWheel::default();
-        wheel.open(shown(), 1, now);
+        wheel.open(shown(), WEATHER, now);
         assert!(wheel.is_open());
         wheel.moved([300.0, 0.0]);
         assert_eq!(wheel.release().as_deref(), Some("r_weatherForce 2"));
         assert!(!wheel.is_open());
         assert_eq!(wheel.release(), None);
-        wheel.open(shown(), 1, now);
+        wheel.open(shown(), WEATHER, now);
         wheel.moved([5.0, 5.0]);
         assert_eq!(wheel.release(), None);
-        wheel.open(shown(), 1, now);
+        wheel.open(shown(), WEATHER, now);
         wheel.moved([0.0, -200.0]);
         wheel.cancel();
+        assert_eq!(wheel.release(), None);
+        // The Force page out of a game: nothing to run.
+        wheel.open(shown(), 1, now);
+        wheel.moved([0.0, -200.0]);
         assert_eq!(wheel.release(), None);
     }
 
@@ -595,7 +668,7 @@ mod tests {
         assert!(wheel.hides_hud());
         let _ = wheel.release();
         assert!(!wheel.hides_hud(), "letting go brings the HUD back");
-        wheel.open(shown(), 1, now);
+        wheel.open(shown(), WEATHER, now);
         wheel.cancel();
         assert!(!wheel.hides_hud(), "so does cancelling it");
     }
@@ -608,27 +681,27 @@ mod tests {
         assert!(!wheel.button(Button::Left, true, now));
         assert!(!wheel.button(Button::Left, false, now));
         wheel.scrolled(-40.0, now);
-        wheel.open(shown(), 0, now);
+        wheel.open(shown(), 1, now);
         wheel.moved([80.0, 0.0]);
         // A notch down goes on a page, keeping where the mouse points.
         wheel.scrolled(-40.0, now);
-        assert_eq!(wheel.page(), Some(1));
+        assert_eq!(wheel.page(), Some(WEATHER));
         assert_eq!(wheel.last_page(), "weather");
         assert_eq!(wheel.release().as_deref(), Some("r_weatherForce 2"));
         // A notch up goes back, wrapping round from the first page.
         wheel.open(shown(), 0, now);
         wheel.scrolled(40.0, now);
-        assert_eq!(wheel.page(), Some(1));
+        assert_eq!(wheel.page(), Some(WEATHER));
         // A trackpad's small steps add up to a notch.
         for _ in 0..3 {
             wheel.scrolled(15.0, now);
         }
-        assert_eq!(wheel.page(), Some(0));
+        assert_eq!(wheel.page(), Some(1));
         // A left click goes back, a right click on; their releases are the wheel's.
         assert!(wheel.button(Button::Right, true, now));
-        assert_eq!(wheel.page(), Some(1));
+        assert_eq!(wheel.page(), Some(WEATHER));
         assert!(wheel.button(Button::Left, true, now));
-        assert_eq!(wheel.page(), Some(0));
+        assert_eq!(wheel.page(), Some(1));
         wheel.cancel();
         assert!(wheel.button(Button::Right, false, now));
         assert!(wheel.button(Button::Left, false, now));
@@ -643,8 +716,8 @@ mod tests {
         let mut wheel = QuickWheel::default();
         wheel.open(shown(), 0, now);
         wheel.moved([0.0, -90.0]);
-        wheel.open(shown(), 1, now);
-        assert_eq!(wheel.page(), Some(1));
+        wheel.open(shown(), WEATHER, now);
+        assert_eq!(wheel.page(), Some(WEATHER));
         assert_eq!(wheel.release().as_deref(), Some("r_weatherForce 0"));
         let mut single = shown();
         single.truncate(1);
@@ -657,7 +730,7 @@ mod tests {
     #[test]
     fn every_page_lays_out_its_choices_and_names_them() {
         let now = Instant::now();
-        for page in 0..2 {
+        for page in [0, WEATHER] {
             let mut wheel = QuickWheel::default();
             let pages = shown();
             let pictured = pages[page]
@@ -728,10 +801,10 @@ mod tests {
         assert!(wheel.button(Button::Left, true, now));
         assert!(wheel.button(Button::Left, false, now));
         assert_eq!(ui_cues::take_posted(), [Cue::WheelPage]);
-        wheel.open(shown(), 1, now);
+        wheel.open(shown(), WEATHER, now);
         assert_eq!(ui_cues::take_posted(), [Cue::WheelPage]);
         // The same page again: nothing.
-        wheel.open(shown(), 1, now);
+        wheel.open(shown(), WEATHER, now);
         assert!(ui_cues::take_posted().is_empty());
         // Moving within the choice it points at on the new page: none.
         wheel.moved([2.0, 2.0]);
@@ -766,9 +839,70 @@ mod tests {
         wheel.open(shown(), 0, now);
         wheel.moved([0.0, -60.0]);
         wheel.moved([80.0, 0.0]);
-        wheel.scrolled(-40.0, now);
+        wheel.scrolled(40.0, now);
         assert!(wheel.release().is_some());
         assert!(ui_cues::take_posted().is_empty());
+    }
+
+    /// Every power: the Force page (12) and its second page (6) after it.
+    fn with_every_power() -> Vec<ShownPage> {
+        let directory = tempfile::tempdir().unwrap();
+        let console =
+            crate::console::ViewerConsole::new(directory.path().join("config.cfg")).unwrap();
+        let powers = force_page::Powers {
+            known: u32::MAX,
+            selected: 3,
+            flamethrower: false,
+            icons: [Some(TextureId(7)); crate::hud::force_wheel::ICONS],
+        };
+        shown_pages(&console, Some(&powers))
+    }
+
+    #[test]
+    fn the_force_page_runs_its_power_and_continues_on_a_second_page() {
+        let now = Instant::now();
+        let pages = with_every_power();
+        let ids: Vec<&str> = pages.iter().map(|page| page.id.as_str()).collect();
+        assert_eq!(ids, ["general", "force", "force~2", "weather"]);
+        let mut wheel = QuickWheel::default();
+        wheel.open(pages.clone(), 1, now);
+        // Twelve round the ring: the top one is Push, used and selected.
+        wheel.moved([0.0, -90.0]);
+        wheel.build([1920.0, 1080.0], now);
+        let quads = wheel
+            .draw_list()
+            .commands()
+            .iter()
+            .filter(|c| matches!(c, DrawCommand::TexturedQuad { .. }))
+            .count();
+        assert_eq!(quads, MAX_FORCE_CHOICES);
+        assert!(wheel.canvas.text_runs().any(|text| text == "Push"));
+        assert_eq!(
+            wheel.release().as_deref(),
+            Some("forceselect 3; force_throw")
+        );
+        // A scroll down: Force 2, its first choice Drain, which is only selected.
+        wheel.open(pages, 1, now);
+        wheel.moved([0.0, -90.0]);
+        wheel.scrolled(-40.0, now);
+        assert_eq!(wheel.last_page(), "force~2");
+        assert_eq!(wheel.release().as_deref(), Some("forceselect 13"));
+        // Opened again with fewer powers, the second page gone: the first.
+        let fewer = shown();
+        assert_eq!(shown_index(&fewer, wheel.last_page()), Some(1));
+        assert_eq!(shown_index(&fewer, "weather"), Some(WEATHER));
+        assert_eq!(shown_index(&fewer, "hail"), None);
+    }
+
+    #[test]
+    fn the_empty_force_page_says_so() {
+        let now = Instant::now();
+        let mut wheel = QuickWheel::default();
+        wheel.open(shown(), 1, now);
+        wheel.build([1920.0, 1080.0], now);
+        let texts: Vec<&str> = wheel.canvas.text_runs().collect();
+        assert!(texts.contains(&force_page::EMPTY), "{texts:?}");
+        assert!(!texts.contains(&"Nothing here yet"));
     }
 
     #[test]
@@ -779,11 +913,12 @@ mod tests {
             icon: None,
             on: true,
         };
-        let pages: Vec<ShownPage> = (0..pages::MAX_PAGES)
+        let pages: Vec<ShownPage> = (0..=pages::MAX_PAGES)
             .map(|index| ShownPage {
                 id: format!("page{index}"),
                 name: "Twenty characters ok".to_owned(),
-                choices: vec![choice.clone(); MAX_CHOICES],
+                choices: vec![choice.clone(); MAX_FORCE_CHOICES],
+                force: index == 4,
             })
             .collect();
         let mut wheel = QuickWheel::default();

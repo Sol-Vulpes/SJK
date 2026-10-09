@@ -255,6 +255,11 @@ impl HudOverlay {
         self.force_wheel_icons
     }
 
+    /// Whether the Force selector shows Lightning as JA+ merc mode's flamethrower.
+    pub(crate) fn flamethrower_shown(&self) -> bool {
+        self.flamethrower_shown
+    }
+
     /// How much larger the procedural crosshair is drawn while riding a vehicle.
     pub(crate) fn vehicle_crosshair_factor(&self) -> f32 {
         self.vehicle.crosshair_factor(self.targeting.policy.look)

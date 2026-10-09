@@ -59,6 +59,9 @@ pub(crate) enum InputAction {
     WeaponCycle(i8),
     /// Local force/inventory cycling; never a reliable server command.
     SelectionCycle(bool, i8),
+    /// `forceselect <entry>`: select that Force wheel entry at once (the quick
+    /// wheel's Force page); local, as cycling is.
+    ForceSelect(u8),
     RequestScores,
     TeamMenu,
     Vote(bool),
@@ -243,6 +246,7 @@ impl GameplayInput {
                     | "weapprev"
                     | "forcenext"
                     | "forceprev"
+                    | "forceselect"
                     | "invnext"
                     | "invprev"
                     | "teammenu"
@@ -396,6 +400,10 @@ impl GameplayInput {
             "weapprev" => Some(InputAction::WeaponCycle(-1)),
             "forcenext" => Some(InputAction::SelectionCycle(false, 1)),
             "forceprev" => Some(InputAction::SelectionCycle(false, -1)),
+            "forceselect" => words
+                .next()
+                .and_then(|word| word.parse::<u8>().ok())
+                .map(InputAction::ForceSelect),
             "invnext" => Some(InputAction::SelectionCycle(true, 1)),
             "invprev" => Some(InputAction::SelectionCycle(true, -1)),
             "teammenu" | "joinmenu" => Some(InputAction::TeamMenu),
@@ -563,6 +571,19 @@ impl super::GpuState {
                     self.weapon_selected_at = None;
                 }
             }
+            Some(InputAction::ForceSelect(slot)) => {
+                if let Some(session) = &self.live_session {
+                    let time = self.server_clock.server_time(std::time::Instant::now());
+                    if self.gameplay_input.selection.select(
+                        &session.latest_snapshot().player,
+                        time,
+                        slot,
+                    ) {
+                        // CG_Draw2D shows only the most recent selector.
+                        self.weapon_selected_at = None;
+                    }
+                }
+            }
             Some(InputAction::RequestScores) => {
                 if let Some(session) = self.communication_session_mut()
                     && let Err(error) = session.send_reliable_command(b"score")
@@ -669,6 +690,18 @@ mod tests {
             input.apply("messagemode5"),
             Some(InputAction::SjkMessageMode)
         );
+    }
+
+    #[test]
+    fn forceselect_names_a_wheel_entry() {
+        let mut input = GameplayInput::default();
+        assert!(GameplayInput::recognizes("forceselect 3"));
+        assert_eq!(
+            input.apply("forceselect 21"),
+            Some(InputAction::ForceSelect(21))
+        );
+        assert_eq!(input.apply("forceselect"), None);
+        assert_eq!(input.apply("forceselect push"), None);
     }
 
     #[test]

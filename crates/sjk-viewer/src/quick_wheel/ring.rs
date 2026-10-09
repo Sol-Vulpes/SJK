@@ -9,9 +9,10 @@
 //! Sizes are pixels of a 1080-line window times [`Ring::unit`]; the navy is deep
 //! enough that every line reads over any scene.
 
+use super::pages::{MAX_CHOICES, MAX_FORCE_CHOICES};
 use crate::menu::sjk::{color, text, wrap};
 use crate::menu_widgets::{MenuCanvas, TextFamily};
-use sjk_ui::{Color, DrawCommand, FontWeight, Rect, TextAlign};
+use sjk_ui::{Color, DrawCommand, FontWeight, Rect, TextAlign, TextureId};
 use std::f32::consts::{FRAC_PI_2, TAU};
 
 /// Where the choices sit from the middle, and the band they sit on.
@@ -27,14 +28,16 @@ const OUTER: f32 = RADIUS + BAND * 0.5;
 pub(crate) const REACH: f32 = OUTER + 18.0;
 /// How far a page's choices turn as they arrive, in radians.
 const ARRIVAL_TURN: f32 = 0.38;
+/// What an empty page says, on two lines.
+pub(crate) const EMPTY: [&str; 2] = ["Nothing here yet", "Add choices in Settings"];
 
 /// One choice as the ring shows it.
 #[derive(Clone, Copy, Debug)]
 pub(crate) struct Choice<'a> {
     pub(crate) label: &'a str,
-    /// Its picture's index in [`super::catalog::ICONS`]; without one, a disc
-    /// with its name.
-    pub(crate) icon: Option<usize>,
+    /// Its picture in the UI atlas (a wheel icon, a Force power's); without one,
+    /// a disc with its name.
+    pub(crate) icon: Option<TextureId>,
     /// In effect: a gold dot outside the band.
     pub(crate) on: bool,
 }
@@ -60,6 +63,8 @@ pub(crate) struct Ring<'a> {
     pub(crate) arrival: (f32, f32),
     /// The line under the ring saying how to change page.
     pub(crate) hint: bool,
+    /// What the middle says when the page has no choices ([`EMPTY`]).
+    pub(crate) empty: &'a [&'a str],
 }
 
 /// Angle of choice `index` of `count`, clockwise from straight up.
@@ -123,6 +128,13 @@ fn ease(progress: f32) -> f32 {
     1.0 - rest * rest * rest
 }
 
+/// How much smaller the pictures are drawn for `count` choices: as large as for
+/// ten up to ten, then shrunk with their share of the ring (the Force page's
+/// twelve), so the gap between them stays.
+fn icon_scale(count: usize) -> f32 {
+    (MAX_CHOICES as f32 / count.max(1) as f32).min(1.0)
+}
+
 /// Draw `ring` into `canvas`.
 pub(crate) fn draw(canvas: &mut MenuCanvas, ring: &Ring<'_>) {
     let u = ring.unit;
@@ -131,6 +143,7 @@ pub(crate) fn draw(canvas: &mut MenuCanvas, ring: &Ring<'_>) {
     let step = TAU / count.max(1) as f32;
     let arrived = ease(ring.arrival.0);
     let turn = -ring.arrival.1 * (1.0 - arrived) * ARRIVAL_TURN;
+    let fit = icon_scale(count);
     // The ground: a soft halo round the outside, the band from the middle
     // disc's rim to the outer edge, the middle disc darker still.
     arc(
@@ -199,13 +212,13 @@ pub(crate) fn draw(canvas: &mut MenuCanvas, ring: &Ring<'_>) {
         disc(
             canvas,
             spot,
-            (ICON_LIT + 34.0) * u,
+            (ICON_LIT + 34.0) * fit * u,
             color::alpha(color::GOLD, 0.07),
         );
         disc(
             canvas,
             spot,
-            (ICON_LIT + 16.0) * u,
+            (ICON_LIT + 16.0) * fit * u,
             color::alpha(color::GOLD, 0.12),
         );
         // At most a choice's share of a full ring of eight, so a page of two
@@ -237,7 +250,7 @@ pub(crate) fn draw(canvas: &mut MenuCanvas, ring: &Ring<'_>) {
         let at = angle(index, count) + turn;
         let spot = towards(centre, at, RADIUS * u);
         let lit = ring.highlighted == Some(index);
-        let size = if lit { ICON_LIT } else { ICON } * u;
+        let size = if lit { ICON_LIT } else { ICON } * fit * u;
         if lit {
             arc(
                 canvas,
@@ -251,11 +264,11 @@ pub(crate) fn draw(canvas: &mut MenuCanvas, ring: &Ring<'_>) {
         }
         let rect = Rect::new(spot[0] - size * 0.5, spot[1] - size * 0.5, size, size);
         match choice.icon {
-            Some(icon) => push(
+            Some(texture) => push(
                 canvas,
                 DrawCommand::TexturedQuad {
                     rect,
-                    texture: crate::ui_renderer::wheel_icon(icon),
+                    texture,
                     color: Color::new(1.0, 1.0, 1.0, if lit { 1.0 } else { 0.86 }),
                 },
             ),
@@ -389,10 +402,7 @@ fn middle(canvas: &mut MenuCanvas, ring: &Ring<'_>, arrived: f32) {
             TextAlign::Center,
         ),
         None if ring.choices.is_empty() => {
-            for (line, words) in ["Nothing here yet", "Add choices in Settings"]
-                .iter()
-                .enumerate()
-            {
+            for (line, words) in ring.empty.iter().enumerate() {
                 text(
                     canvas,
                     TextFamily::Body,
@@ -512,9 +522,18 @@ mod tests {
 
     #[test]
     fn ten_choices_fit_the_ring_with_room_between_them() {
-        // Ten round icons round the ring leave a gap, the grown one included.
-        let room = TAU * RADIUS / super::super::pages::MAX_CHOICES as f32;
-        assert!(room - (ICON + ICON_LIT) * 0.5 > 12.0, "{room}");
+        // Ten round icons round the ring leave a gap, the grown one included;
+        // the Force page's twelve, drawn smaller, as much.
+        for count in [MAX_CHOICES, MAX_FORCE_CHOICES] {
+            let room = TAU * RADIUS / count as f32;
+            let fit = icon_scale(count);
+            assert!(
+                room - (ICON + ICON_LIT) * 0.5 * fit > 12.0,
+                "{count}: {room}"
+            );
+        }
+        assert_eq!(icon_scale(MAX_CHOICES), 1.0);
+        assert!(icon_scale(MAX_FORCE_CHOICES) > 0.8, "still readable");
     }
 
     // The middle disc stays inside the band's inner edge.

@@ -645,19 +645,25 @@ detail's columns:
   name and how many choices it has, the page whose choices show in gold (a gold
   bar at its left while the focus is elsewhere); the focused row has the band
   and, at its end, Rename, up, down and remove as small round controls (remove
-  turns ember while it waits for a second Delete). Then "+ Add a page" in gold
-  and Restore the default pages (muted; quiet "These are the default pages"
-  when they are; ember while it waits for a second Enter). Under a "Sound"
+  turns ember while it waits for a second Delete); the Force page's count reads
+  "Your powers". Then "+ Add a page" in gold, "+ Add the Force page" in gold
+  while that page has been removed, and Restore the default pages (muted; quiet
+  "These are the default pages" when they are; ember "Enter again to restore
+  them" while it waits for a second Enter). Under a "Sound"
   sub-heading a line below, "Wheel sounds" with the kit's switch
   (`cg_wheelSounds`; the pages column's last row: Enter, Space or a click
   switches it, and the right column says what it does).
 - **Choices** (x 870, 400 wide), under "On <page>": each choice's picture (a holo
   ring without one; a custom command's is the `{•}` disc), its name and, muted
   on the right, its group or "Custom";
-  the focused one's up, down and remove; then "+ Add a choice".
+  the focused one's up, down and remove; then "+ Add a choice". The Force page
+  has none: "Follows your Force powers" in gold and a muted paragraph on what
+  fills it and how its powers act (since 10/10/2026).
 - **Right column** (the detail's, x 1360): the page's ring as the wheel draws
   it at 0.78 of its size, the focused choice highlighted, then facts (Key in
-  gold, Bind and Runs in holo) and a line of help. Picking a choice: its title
+  gold, Bind and Runs in holo) and a line of help. For the Force page the ring
+  is an example, a light-side build with Illuminate in the Force bar's pictures,
+  Protect marked selected. Picking a choice: its title
   ("Change Rain", "Add to Weather") with Cancel, then the catalogue, 17 lines of
   40 under the groups' sub-headings, the highlighted line on the band, "On the
   page" in gold after actions the page has. A custom choice: its title, what a
@@ -1297,9 +1303,12 @@ nine moments, 1080p, 4K, 4:3, 21:9 and 720 lines, in the families and in Inter).
   `duel6_quick_wheel` the quick wheel's ring over duel6 (General, the change to
   Weather half-way, Weather, the middle, 4:3, in Inter, and three full pages of
   the second board's icons, `duel6-wheel-icons-1` to `-3`) and
-  `duel6_quick_wheel_settings` its Settings category (pages, the sound switch
-  off, a choice, the catalogue, a custom choice, a new page) and the editor over
-  the classic+ settings;
+  `duel6_quick_wheel_settings` its Settings category (pages, the Force page, the
+  sound switch off, a choice, the catalogue, a custom choice, a new page) and the
+  editor over the classic+ settings; `duel6_quick_wheel_force` the Force page
+  with the powers set for the shot (`duel6-wheel-force-light`, `-dark`, `-every`
+  and `-every-2` for Force 2, `-none`, `-no-game`, and the light build at 4K with
+  `ui_textScale 1.2`);
   `duel6_sjk_credits` Credits over duel6: the top, Creyon's and Lumaya's
   panels with their folds open and their medals, Creyon's work unfolded, and
   the end of the page.
