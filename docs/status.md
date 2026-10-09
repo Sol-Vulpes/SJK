@@ -236,6 +236,31 @@ its model (both came from the world origin before the change) and add a model's
 midpoint only for brush models. Formatting, the locked workspace build and tests pass,
 and workspace Clippy reports no warning in the changed code. Not verified: no client
 was run, so neither door nor saber was heard in game.
+## Player names in kill messages
+
+Branch `fix/obituary-names` (08/10/2026, based on `a6230f9`, Linux): Sol reported
+that a player killed or killing sometimes showed in the console as `noname`, as in
+`noname was sabered by {JoF}emiah{I}`. Cause: the console's kill message read the
+name after checking that the player's whole `CS_PLAYERS` configstring was UTF-8,
+and printed `noname` when it was not. Servers keep Latin-1 letters in names
+(`é` is byte 0xE9), so every player with an accented letter or a Windows-1252
+symbol in their name was `noname`; the same check gave such a player's gendered
+suicide message the male form. OpenJK prints the name's bytes. Fix: the name and
+gender are read from the string's bytes and the name decoded as the scoreboard
+and crosshair already do (`LegacyClientInfo::name`), and each name ends with `^7`
+as in `CG_Obituary`, so a colour left open in a name no longer tints the rest of
+the line ([networking.md](networking.md#player-text)). `noname` remains only
+for a slot with no name at all, where OpenJK prints an empty name.
+
+Verified on Linux with Rust 1.97: a unit test of the console line with Sol's
+example, the victim named `Rémi` in Latin-1 bytes, printed `noname^7 was sabered by
+{JoF}emiah{I}^7` before the fix and the name after it; further tests cover the
+`^7` after each name, the placeholder for an empty slot, the name accessor and a
+female player's falling death with a Latin-1 name. Formatting, the locked
+workspace build and tests pass; workspace Clippy finishes without errors, and its
+warnings are all in code this change does not touch. Not verified: not seen in
+game; Sol's victim's exact name is unknown, so a name that is `noname` for another
+reason (none found in the code) would remain.
 
 ## Percent signs and quotes in chat
 

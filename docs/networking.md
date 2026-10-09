@@ -68,6 +68,19 @@ typed `€` or `’` draws the same glyph as byte 0x80 or 0x92 from another clie
 and the modern font fills those slots with the Windows-1252 characters instead
 of blank C1 controls.
 
+A player's name is read from the bytes of the `n` key of its `CS_PLAYERS`
+configstring and decoded on its own (`LegacyClientInfo::name`,
+[client_info.rs](../crates/sjk-client/src/client_info.rs)), never from a UTF-8
+view of the whole string: the server keeps Latin-1 letters in names
+(`ClientCleanName` drops only control bytes and a few unused Windows-1252 ones),
+and one such byte (`é` is 0xE9) made the whole string invalid UTF-8, so the
+console's kill messages printed that player as `noname` and the gendered suicide
+messages took the male form. Those messages follow `CG_Obituary`
+(`cg_event.c:124-454`): each name ends with `^7`, so a colour a name leaves open
+stops there. `noname` remains only for a slot with no name at all, where OpenJK
+prints an empty one, and SJK prints a whole name where OpenJK cuts it to 29 bytes
+([snapshot_presentation.rs](../crates/sjk-viewer/src/snapshot_presentation.rs)).
+
 ### Player-state arrays
 
 The snapshot's `stats`, `persistant` and `ammo` arrays carry 16-bit entries that

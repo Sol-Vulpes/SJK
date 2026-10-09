@@ -2751,3 +2751,11 @@ title: Door sounds come from the middle of the door (SJK PR #53)
 change: Brush models (doors, buttons, breakables) sound from the middle of their model.
 test: Open and close doors on mp/ffa and duel maps: the start and end sounds are heard.
 note: The saber ignition sound when switching weapons is a separate gap, not fixed here.
+
+[obituary-latin1]
+area: Console & chat
+title: Kill messages print Latin-1 names (SJK PR #57)
+change: A name with an accented letter or symbol is printed, not replaced by noname.
+change: Each name ends in ^7, so an open colour does not tint the rest of the line.
+test: Kill or be killed by a player named with e-acute: the console line shows the name.
+test: A name left in an open colour (^1Red) does not tint the words after it.
