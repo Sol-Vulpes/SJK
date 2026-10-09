@@ -112,13 +112,19 @@ function enhanceDownload(release) {
   const version = versionOf(release);
   const platform = guessPlatform();
   const asset = assetFor(release, platform);
-  if (asset) {
-    button.href = asset.browser_download_url;
-    button.textContent = `Download ${version} for ${platform === "linux-x64" ? "Linux" : "Windows"}`;
-  } else {
-    button.href = release.html_url;
-    button.textContent = `Download ${version}`;
+  const system = platform === "linux-x64" ? "Linux" : "Windows";
+  // The entry keeps its one word, as on the client's arc; its line names the build.
+  button.href = asset ? asset.browser_download_url : release.html_url;
+  const line = document.getElementById("download-line");
+  if (line) line.textContent = asset ? `Sol JK ${version} for ${system} x64` : `Sol JK ${version}`;
+  const name = document.getElementById("release-name");
+  if (name) name.innerHTML = `<a href="${escapeHtml(release.html_url)}">${escapeHtml(release.name || version)}</a>`;
+  const note = document.getElementById("release-note");
+  if (note && release.published_at) {
+    note.textContent = `Released ${euDate(release.published_at)} · needs your own copy of Jedi Academy`;
   }
+  const corner = document.getElementById("version");
+  if (corner) corner.textContent = `Sol JK ${version}`;
   if (files) {
     const links = ["windows-x64", "linux-x64"]
       .map((p) => [p, assetFor(release, p)])
@@ -128,6 +134,14 @@ function enhanceDownload(release) {
     files.innerHTML = links.join(" · ");
     files.hidden = false;
   }
+}
+
+/** A date as SJK writes them for people: dd/mm/yyyy, in the reader's time zone. */
+function euDate(iso) {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "";
+  const two = (n) => String(n).padStart(2, "0");
+  return `${two(date.getDate())}/${two(date.getMonth() + 1)}/${date.getFullYear()}`;
 }
 
 function renderReleases(releases) {
@@ -141,10 +155,9 @@ function renderReleases(releases) {
     return;
   }
   target.innerHTML = shown.map((r) => {
-    const date = r.published_at ? new Date(r.published_at) : null;
-    const when = date ? `<time datetime="${escapeHtml(r.published_at)}">${date.toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" })}</time>` : "";
+    const when = r.published_at ? `<time datetime="${escapeHtml(r.published_at)}">${euDate(r.published_at)}</time>` : "";
     const title = escapeHtml(r.name || r.tag_name);
-    return `<article class="panel release">
+    return `<article class="release">
       <header><h3><a href="${escapeHtml(r.html_url)}">${title}</a></h3>${when}</header>
       <div class="release-body">${renderMarkdown(r.body)}</div>
     </article>`;
@@ -219,13 +232,132 @@ async function loadGallery() {
   });
 }
 
+const reducedMotion = typeof window !== "undefined"
+  && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+/** The home page's arc, as the client's: the entry under the pointer or the
+ * keyboard is chosen (gold, larger, its line shown) and the ring's gold arc
+ * turns to it; Download, the page's main action, is chosen otherwise. */
+function setUpArc() {
+  const ring = document.querySelector(".home .ring");
+  const arc = document.querySelector(".arc");
+  const entries = [...document.querySelectorAll(".arc a")];
+  if (!ring || !arc || !entries.length) return;
+  const resting = entries[0];
+  const choose = (entry) => {
+    entries.forEach((e) => e.classList.toggle("chosen", e === entry));
+    const index = Number(entry.parentElement.style.getPropertyValue("--i")) || 0;
+    ring.style.setProperty("--a", `${(index - 2.5) * 16}deg`);
+  };
+  for (const entry of entries) {
+    entry.addEventListener("pointerenter", () => choose(entry));
+    entry.addEventListener("focus", () => choose(entry));
+  }
+  arc.addEventListener("pointerleave", () => {
+    if (!entries.includes(document.activeElement)) choose(resting);
+  });
+  arc.addEventListener("focusout", (event) => {
+    if (!entries.includes(event.relatedTarget)) choose(resting);
+  });
+  choose(resting);
+}
+
+/** Behind the home page, shots of the client's camera tour of Yavin Training
+ * Grounds, 15 seconds each, crossing through the navy ground. */
+function setUpBackdrop() {
+  const shots = [...document.querySelectorAll(".backdrop img")];
+  if (shots.length < 2 || reducedMotion) return;
+  let current = 0;
+  setInterval(() => {
+    if (document.hidden) return;
+    const next = shots[(current + 1) % shots.length];
+    const show = () => {
+      shots[current].classList.remove("shown");
+      next.classList.add("shown");
+      current = shots.indexOf(next);
+    };
+    if (next.dataset.src) {
+      next.addEventListener("load", show, { once: true });
+      next.src = next.dataset.src;
+      delete next.dataset.src;
+    } else {
+      show();
+    }
+  }, 15000);
+}
+
+/** The top line stays away while the home page fills the screen, and marks
+ * the section being read. */
+function setUpNav() {
+  const nav = document.querySelector(".nav");
+  const home = document.querySelector(".home");
+  if (!nav || !home || !("IntersectionObserver" in window)) return;
+  new IntersectionObserver(([entry]) => {
+    nav.classList.toggle("away", entry.intersectionRatio > 0.3);
+  }, { threshold: [0, 0.3, 1] }).observe(home);
+  const links = new Map([...nav.querySelectorAll("ul a")].map((a) => [a.getAttribute("href").slice(1), a]));
+  const spy = new IntersectionObserver((entries) => {
+    for (const entry of entries) {
+      if (entry.isIntersecting) links.forEach((a, id) => a.classList.toggle("chosen", id === entry.target.id));
+    }
+  }, { rootMargin: "-40% 0px -55% 0px" });
+  links.forEach((_, id) => {
+    const section = document.getElementById(id);
+    if (section) spy.observe(section);
+  });
+}
+
+/** What SJK brings, as the client's Settings: one category on show, chosen
+ * on the rail by a click or the arrow keys. Without the script all are listed. */
+function setUpSettings() {
+  const settings = document.querySelector("[data-settings]");
+  if (!settings) return;
+  const rail = settings.querySelector(".rail");
+  const tabs = [...rail.querySelectorAll("a")];
+  const cats = tabs.map((a) => document.getElementById(a.getAttribute("href").slice(1)));
+  if (cats.some((c) => !c)) return;
+  settings.classList.add("tabbed");
+  rail.setAttribute("role", "tablist");
+  const show = (index, focus) => {
+    tabs.forEach((tab, i) => {
+      const chosen = i === index;
+      tab.classList.toggle("chosen", chosen);
+      tab.setAttribute("role", "tab");
+      tab.setAttribute("aria-selected", String(chosen));
+      tab.tabIndex = chosen ? 0 : -1;
+      cats[i].setAttribute("role", "tabpanel");
+      cats[i].classList.toggle("shown", chosen);
+    });
+    if (focus) tabs[index].focus();
+  };
+  tabs.forEach((tab, i) => {
+    tab.addEventListener("click", (event) => {
+      event.preventDefault();
+      show(i, false);
+    });
+  });
+  rail.addEventListener("keydown", (event) => {
+    const at = tabs.indexOf(document.activeElement);
+    const step = { ArrowDown: 1, ArrowRight: 1, ArrowUp: -1, ArrowLeft: -1 }[event.key];
+    if (at < 0 || !step) return;
+    event.preventDefault();
+    show((at + step + tabs.length) % tabs.length, true);
+  });
+  show(0, false);
+}
+
 if (typeof document !== "undefined") {
+  document.documentElement.classList.add("js");
   document.addEventListener("DOMContentLoaded", () => {
+    setUpArc();
+    setUpBackdrop();
+    setUpNav();
+    setUpSettings();
     loadReleases();
     loadGallery();
   });
 }
 
 if (typeof module !== "undefined") {
-  module.exports = { escapeHtml, inline, renderMarkdown, latestRelease, assetFor, versionOf };
+  module.exports = { escapeHtml, inline, renderMarkdown, latestRelease, assetFor, versionOf, euDate };
 }

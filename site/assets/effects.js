@@ -1,8 +1,9 @@
 // Sol JK site: WebGPU effects from the MIT-licensed Shaders library
 // (https://github.com/shader-effects-inc/shaders, vendored as
 // vendor/shaders/shaders-4.0.0.js so no third-party server is contacted, with its
-// telemetry off). The hero gets golden god rays, a slow sunburst behind the
-// emblem, drifting dust and a lightsaber trail that follows the pointer. When the
+// telemetry off). The home page gets a slow sunburst behind the emblem, as the
+// client's main page has, drifting dust and a lightsaber trail that follows the
+// pointer. When the
 // visitor asks for reduced motion (Windows' "Animation effects" off does), the
 // same scene is drawn once and held still, without the trail. Without WebGPU
 // the script does nothing and the CSS starfield stays.
@@ -21,32 +22,19 @@ const pace = (speed) => (reducedMotion ? 0 : speed);
 /** How long a still scene runs before it is paused, so it has drawn a frame. */
 const STILL_AFTER_MS = 400;
 
-/** The hero's layers, bottom to top, in the site's gold and the client's saber blue. */
-function heroPreset(emblemY) {
+/** The home page's layers, bottom to top, in the site's gold and the client's saber blue. */
+function heroPreset(emblem) {
   const components = [
-    {
-      type: "Godrays",
-      props: {
-        center: { x: 0.5, y: -0.08 },
-        rayColor: "#e8b84a",
-        backgroundColor: "transparent",
-        density: 0.22,
-        intensity: 0.55,
-        spotty: 0.6,
-        speed: pace(0.18),
-        opacity: 0.55,
-      },
-    },
     {
       type: "SunBurst",
       id: "sun",
       props: {
-        center: { x: 0.5, y: emblemY },
+        center: emblem,
         color: "#ffcf70",
         background: "transparent",
         rayCount: 18,
         softness: 0.7,
-        radius: 0.42,
+        radius: 0.3,
         feather: 0.85,
         speed: pace(0.04),
         opacity: 0.32,
@@ -89,19 +77,22 @@ function heroPreset(emblemY) {
   return { components };
 }
 
-/** Size the hero canvas from the top of the page to just below the header, and
- * return where the emblem's centre falls on it (0 at the top, 1 at the bottom). */
+/** Where the emblem's centre falls on the home page's canvas, which fills the
+ * home page (0 to 1 from the top left). */
 function fitHero(canvas, header) {
-  const top = (element) => element.getBoundingClientRect().top + window.scrollY;
-  const height = Math.ceil(top(header) + header.offsetHeight + 120);
-  canvas.style.height = `${height}px`;
+  const box = header.getBoundingClientRect();
   const emblem = header.querySelector(".emblem");
-  return emblem ? (top(emblem) + emblem.offsetHeight / 2) / height : 0.25;
+  if (!emblem || !box.width || !box.height) return { x: 0.32, y: 0.5 };
+  const mark = emblem.getBoundingClientRect();
+  return {
+    x: (mark.left + mark.width / 2 - box.left) / box.width,
+    y: (mark.top + mark.height / 2 - box.top) / box.height,
+  };
 }
 
 async function start() {
   if (!navigator.gpu) return;
-  const header = document.querySelector(".hero");
+  const header = document.querySelector(".home");
   if (!header) return;
 
   let createShader;
@@ -117,10 +108,10 @@ async function start() {
   const canvas = document.createElement("canvas");
   canvas.className = "fx fx-hero";
   canvas.setAttribute("aria-hidden", "true");
-  document.body.prepend(canvas);
-  const emblemY = fitHero(canvas, header);
+  header.prepend(canvas);
+  const emblem = fitHero(canvas, header);
   try {
-    const shader = await createShader(canvas, heroPreset(emblemY), {
+    const shader = await createShader(canvas, heroPreset(emblem), {
       disableTelemetry: true,
       onReady: () => canvas.classList.add("fx-ready"),
       // A terminal failure leaves the canvas empty: drop it, the CSS backdrop
@@ -139,7 +130,7 @@ async function start() {
     };
     holdStill();
     window.addEventListener("resize", () => {
-      shader.update("sun", { center: { x: 0.5, y: fitHero(canvas, header) } });
+      shader.update("sun", { center: fitHero(canvas, header) });
       holdStill();
     }, { passive: true });
   } catch (error) {

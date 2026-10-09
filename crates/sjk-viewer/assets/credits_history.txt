@@ -9,6 +9,8 @@
 #                               made it when that is not the piece's owner.
 
 = Sol
++ 09/10/2026 | - | The site in the SJK UI's look
+- 13bb528 |  | Give the site the SJK UI's look, with the client's own renders
 + 09/10/2026 | - | JoFTemple status
 - f02c626 |  | Record what JoFTemple's light pass spent
 + 09/10/2026 | - | Cache coarsely lightmapped surfaces, time the light pass in parts
