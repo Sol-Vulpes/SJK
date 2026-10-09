@@ -37,6 +37,8 @@ const ENTRY_TOKEN: u16 = 0;
 const SERVER_TOKEN: u16 = 20;
 const CHAT_TOKEN: u16 = 40;
 const OPEN_CHAT_TOKEN: u16 = 41;
+/// The player's profile card, bottom left.
+const CARD_TOKEN: u16 = 50;
 /// The longest message typed in the dock, as the hub takes it.
 const DRAFT_MAX: usize = sjk_identity::chat::TEXT_MAX;
 
@@ -215,6 +217,8 @@ pub(crate) struct HomeView<'a> {
     pub(crate) seconds: f64,
     /// The SJK chat, docked under the servers; `None` while it is off.
     pub(crate) chat: Option<ChatDock<'a>>,
+    /// What the profile card says of the player's SJK profile.
+    pub(crate) summary: &'a crate::profile_card::Summary,
 }
 
 /// The SJK chat as the dock shows it.
@@ -249,6 +253,8 @@ enum Focus {
     Server(usize),
     /// The SJK chat's field.
     Chat,
+    /// The player's profile card, bottom left.
+    Card,
 }
 
 /// The page's state: which page of the ring, its chosen entry, the keyboard's
@@ -392,6 +398,19 @@ impl Home {
             (KeyCode::ArrowRight | KeyCode::KeyD | KeyCode::Tab, Focus::Arc) if servers > 0 => {
                 self.focus = Focus::Server(0);
             }
+            (KeyCode::ArrowLeft | KeyCode::KeyA, Focus::Arc) => self.focus = Focus::Card,
+            (KeyCode::Enter | KeyCode::NumpadEnter | KeyCode::Space, Focus::Card) => {
+                return Some(Action::Open(MainDestination::Profile));
+            }
+            (
+                KeyCode::ArrowRight
+                | KeyCode::KeyD
+                | KeyCode::ArrowUp
+                | KeyCode::KeyW
+                | KeyCode::Tab
+                | KeyCode::Escape,
+                Focus::Card,
+            ) => self.focus = Focus::Arc,
             (KeyCode::ArrowUp | KeyCode::KeyW, Focus::Server(index)) => {
                 self.focus = Focus::Server((index + servers - 1) % servers);
             }
@@ -457,6 +476,10 @@ impl Home {
                     return Some(Action::OpenChat);
                 }
                 return None;
+            }
+            CARD_TOKEN => {
+                self.focus = Focus::Card;
+                return activate.then_some(Action::Open(MainDestination::Profile));
             }
             _ => {}
         }
@@ -580,6 +603,10 @@ pub(crate) fn build(
             (y - RING[1]).atan2(COLUMN_X - RING[0])
         }
         Focus::Chat => (DOCK_FIELD + 16.0 - RING[1]).atan2(COLUMN_X - RING[0]),
+        Focus::Card => {
+            let centre = crate::profile_card::PICTURE[1] + crate::profile_card::PICTURE_SIZE * 0.5;
+            (centre - RING[1]).atan2(crate::profile_card::PICTURE[0] + 200.0 - RING[0])
+        }
     };
     let arc = home.arc_towards(target, seconds);
     let sweep = 0.42;
@@ -661,7 +688,21 @@ pub(crate) fn build(
     if let Some(dock) = &view.chat {
         chat_dock(canvas, &frame, home, dock);
     }
-    player(canvas, &frame, view);
+    crate::profile_card::draw(
+        canvas,
+        &frame,
+        &crate::profile_card::Card {
+            name: view.name,
+            detail: crate::profile_card::Detail::Model(
+                view.model,
+                view.blade_name,
+                view.summary.skin,
+            ),
+            summary: view.summary,
+            lit: home.focus == Focus::Card,
+        },
+        CARD_TOKEN,
+    );
     hints(canvas, &frame, home, !view.servers.is_empty());
     version(canvas, &frame, view);
     canvas.pop_opacity();
@@ -669,6 +710,7 @@ pub(crate) fn build(
         Focus::Arc => ENTRY_TOKEN + home.entry as u16,
         Focus::Server(index) => SERVER_TOKEN + index as u16,
         Focus::Chat => CHAT_TOKEN,
+        Focus::Card => CARD_TOKEN,
     };
     canvas.finish(selected);
 }
@@ -1071,72 +1113,6 @@ fn dock_line(
     );
 }
 
-/// The player, bottom left: a gold ring with their initial, their name, and
-/// their model and blade.
-fn player(canvas: &mut MenuCanvas, frame: &Frame, view: &HomeView<'_>) {
-    let s = frame.s;
-    let _ = canvas.draw_list_mut().push(DrawCommand::Arc {
-        center: frame.point(122.0, 990.0),
-        radius: 25.0 * s,
-        width: 2.0 * s,
-        start: 0.0,
-        sweep: std::f32::consts::TAU,
-        color: color::alpha(color::GOLD, 0.85),
-        knockout: None,
-    });
-    let initial = initial(view.name);
-    text(
-        canvas,
-        TextFamily::Display,
-        format_args!("{initial}"),
-        frame.rect(96.0, 972.0, 52.0, 36.0),
-        30.0 * s,
-        color::GOLD_BRIGHT,
-        FontWeight::Semibold,
-        TextAlign::Center,
-    );
-    text(
-        canvas,
-        TextFamily::Display,
-        format_args!("{}", view.name),
-        frame.rect(166.0, 962.0, 560.0, 30.0),
-        26.0 * s,
-        color::TEXT,
-        FontWeight::Regular,
-        TextAlign::Start,
-    );
-    text(
-        canvas,
-        TextFamily::Body,
-        format_args!(
-            "{}, {} saber",
-            crate::menu::classic::view::Sentence(view.model),
-            view.blade_name
-        ),
-        frame.rect(166.0, 994.0, 560.0, 22.0),
-        16.0 * s,
-        color::MUTED,
-        FontWeight::Regular,
-        TextAlign::Start,
-    );
-}
-
-/// The first letter of `name` past its colour codes and clan tags' symbols,
-/// in capitals; `S` for a name with none.
-fn initial(name: &str) -> char {
-    let mut characters = name.chars().peekable();
-    while let Some(character) = characters.next() {
-        if character == '^' && characters.peek().is_some_and(char::is_ascii_digit) {
-            characters.next();
-            continue;
-        }
-        if character.is_alphanumeric() {
-            return character.to_ascii_uppercase();
-        }
-    }
-    'S'
-}
-
 /// The keys of the page, bottom centre.
 fn hints(canvas: &mut MenuCanvas, frame: &Frame, home: &Home, servers: bool) {
     let s = frame.s;
@@ -1170,6 +1146,11 @@ fn hints(canvas: &mut MenuCanvas, frame: &Frame, home: &Home, servers: bool) {
             (&["Enter"], "type"),
             (&["Up"], "servers"),
             (&["Left"], "back"),
+        ],
+        Focus::Card => [
+            (&["Enter"], "open your profile"),
+            (&["Right"], "back"),
+            (&["Esc"], "back"),
         ],
     };
     let gap = 28.0 * s;
@@ -1362,6 +1343,80 @@ mod tests {
             update: Some("2026.1009.1"),
             seconds: 1.0,
             chat,
+            summary: &crate::profile_card::NOBODY,
+        }
+    }
+
+    #[test]
+    fn the_keys_and_the_pointer_reach_the_profile_card() {
+        let mut home = Home::default();
+        home.key(KeyCode::ArrowLeft, 1);
+        assert_eq!(home.focus, Focus::Card);
+        assert_eq!(
+            home.key(KeyCode::Enter, 1),
+            Some(Action::Open(MainDestination::Profile))
+        );
+        // Escape on the card goes back to the arc; it does not ask to quit.
+        home.key(KeyCode::Escape, 1);
+        assert_eq!((home.focus, home.page), (Focus::Arc, Page::Main));
+        home.key(KeyCode::ArrowLeft, 1);
+        home.key(KeyCode::ArrowRight, 1);
+        assert_eq!(home.focus, Focus::Arc);
+        // Hovering chooses it, a click opens the profile.
+        assert_eq!(home.pointer(CARD_TOKEN, false, 1), None);
+        assert_eq!(home.focus, Focus::Card);
+        assert_eq!(
+            home.pointer(CARD_TOKEN, true, 1),
+            Some(Action::Open(MainDestination::Profile))
+        );
+    }
+
+    /// The card answers the pointer in the bottom-left corner of every window, and no
+    /// other text of the page reaches into it.
+    #[test]
+    fn the_profile_card_has_its_corner_to_itself() {
+        let servers = [server("JoF")];
+        for viewport in VIEWPORTS {
+            for focus in [Focus::Arc, Focus::Card, Focus::Server(0), Focus::Chat] {
+                let mut canvas = MenuCanvas::new();
+                let mut home = Home {
+                    focus,
+                    ..Home::default()
+                };
+                build(
+                    &mut canvas,
+                    viewport,
+                    &mut home,
+                    &view(&servers, Some(dock())),
+                    1.0,
+                );
+                let area = canvas.rect_for(CARD_TOKEN).expect("the card");
+                assert!(
+                    area.x >= 0.0 && area.bottom() <= viewport[1],
+                    "{viewport:?}"
+                );
+                assert!(area.right() < viewport[0] * 0.5, "{viewport:?}");
+                let inside = |rect: Rect| {
+                    rect.x >= area.x - 0.5
+                        && rect.right() <= area.right() + 0.5
+                        && rect.y >= area.y - 0.5
+                        && rect.bottom() <= area.bottom() + 0.5
+                };
+                let overlaps = |rect: Rect| {
+                    rect.x < area.right()
+                        && rect.right() > area.x
+                        && rect.y < area.bottom()
+                        && rect.bottom() > area.y
+                };
+                for command in canvas.draw_list().commands() {
+                    if let DrawCommand::Text { rect, .. } = command {
+                        assert!(
+                            inside(*rect) || !overlaps(*rect),
+                            "{viewport:?} {focus:?}: {rect:?} reaches into the card"
+                        );
+                    }
+                }
+            }
         }
     }
 
@@ -1598,13 +1653,5 @@ mod tests {
         assert!(next > 1.0 && next < 2.0);
         home.arc = Some(3.0);
         assert!(home.arc_towards(-3.0, 10.1) > 3.0);
-    }
-
-    #[test]
-    fn the_initial_skips_colour_codes_and_symbols() {
-        assert_eq!(initial("^5JoF^7 Jedi"), 'J');
-        assert_eq!(initial("{JoF}solol"), 'J');
-        assert_eq!(initial("^1^2"), 'S');
-        assert_eq!(initial("sol"), 'S');
     }
 }

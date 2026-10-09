@@ -69,8 +69,12 @@ pub(crate) const MEDAL_ICON_CELLS: u32 = 8;
 pub(crate) const EMOJI_ICON_FIRST: u32 = MEDAL_ICON_FIRST + MEDAL_ICON_CELLS;
 /// Emoji cells: four rows, room for EternalJK's 256 (`MAX_LOADABLE_EMOJIS`).
 pub(crate) const EMOJI_ICON_CELLS: u32 = 4 * COLUMNS;
+/// First of the players' pictures' cells (`avatars`), after the emojis'.
+pub(crate) const AVATAR_ICON_FIRST: u32 = EMOJI_ICON_FIRST + EMOJI_ICON_CELLS;
+/// Picture cells: two rows, the cache's pictures and the upload's preview.
+pub(crate) const AVATAR_ICON_CELLS: u32 = 2 * COLUMNS;
 /// Every icon cell.
-pub(crate) const ATLAS_CELLS: u32 = EMOJI_ICON_FIRST + EMOJI_ICON_CELLS;
+pub(crate) const ATLAS_CELLS: u32 = AVATAR_ICON_FIRST + AVATAR_ICON_CELLS;
 const TOTAL_CELLS: u32 = ATLAS_CELLS;
 const ATLAS_HEIGHT: u32 = TOTAL_CELLS.div_ceil(COLUMNS) * ICON_SIZE;
 

@@ -2886,3 +2886,14 @@ change: SJK chat lines are #F5C756 in game, in the menu dock and on the chat pag
 change: The name row no longer breaks before the message; a verified sender shows the tick alone.
 test: Send SJK chat in a game, in the dock and on the page: gold, one line, tick only.
 test: A long message wraps like a normal chat line; names keep their own colours.
+
+[profile-card]
+area: Menus & settings
+title: SJK profile card and profile pictures (SJK PR #62)
+change: A card bottom left of the SJK UI main page and the in-game menu; a click opens Profile.
+change: Profile > picture: drop a PNG/JPEG/TGA or sjkavatar <file>; cropped square, 128 px, signed.
+change: Other players' pictures show on the Players page card; Staff has Take picture down.
+test: Main page: the card shows picture or initial, name, tick, medals, achievements, model, blade.
+test: Drop a picture on the Profile page: preview, Use this picture; sjkavatar clear removes it.
+test: In game Esc menu: the same card; open the Players page: other players' pictures.
+note: Needs the hub of SJK-hub PR #5; a hub without it says it does not take pictures yet.

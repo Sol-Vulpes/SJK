@@ -1,6 +1,7 @@
 //! The Staff page's drawing, in the SJK UI's look: the search pill in the top bar,
-//! the players found down the left, the chosen player's medals with Give and Take
-//! back and their unlockables with Unlock and Relock in the middle, and their
+//! the players found down the left, the chosen player's picture and name (with Take
+//! picture down) over their medals with Give and Take back and their unlockables with
+//! Unlock and Relock in the middle, and their
 //! achievements with Clear on the right.
 
 use super::*;
@@ -91,6 +92,9 @@ impl Panel {
         let target = self.target(inputs).cloned();
         self.shown.target = target.as_ref().map(|profile| profile.key_id.clone());
         self.shown.medals = [0; Medal::COUNT];
+        self.shown.picture = target
+            .as_ref()
+            .is_some_and(|profile| !profile.avatar.is_empty());
         self.shown.unlocks = [false; crate::unlockables::ALL.len()];
         if let Some(profile) = &target {
             for medal in &profile.medals {
@@ -223,7 +227,8 @@ impl Panel {
             .or_else(|| inputs.me.map(|me| me.key_id.clone()))
     }
 
-    /// The chosen player's name and facts over the middle and right columns.
+    /// The chosen player's picture, name and facts over the middle and right columns,
+    /// and Take picture down at the right.
     fn header(&mut self, frame: &Frame, profile: &Profile, mine: bool) {
         let s = frame.s;
         let name = if profile.name.is_empty() {
@@ -231,16 +236,42 @@ impl Panel {
         } else {
             cut(&profile.name, 40)
         };
+        let radius = 32.0;
+        crate::profile_card::avatar(
+            &mut self.ui,
+            frame.point(MIDDLE_X + radius, TOP + 26.0),
+            radius * s,
+            &crate::profile_card::Avatar {
+                key_id: &profile.key_id,
+                version: &profile.avatar,
+                name: &profile.name,
+                verified: profile.verified,
+                preview: false,
+                lit: false,
+            },
+        );
+        let name_x = MIDDLE_X + radius * 2.0 + 18.0;
         text(
             &mut self.ui,
             TextFamily::Display,
             format_args!("{name}"),
-            frame.rect(MIDDLE_X, TOP - 6.0, 1_100.0, 48.0),
+            frame.rect(name_x, TOP - 6.0, 760.0, 48.0),
             38.0 * s,
             color::TEXT,
             FontWeight::Semibold,
             TextAlign::Start,
         );
+        kit::button(
+            &mut self.ui,
+            frame,
+            [1_824.0 - 240.0, TOP, 240.0, 42.0],
+            "Take picture down",
+            false,
+            self.shown.picture,
+            self.focus == PICTURE_DOWN_TOKEN,
+            PICTURE_DOWN_TOKEN,
+        );
+        self.order.push(PICTURE_DOWN_TOKEN);
         let mut facts = vec![format!("Key id {}", profile.key_id)];
         if profile.verified {
             facts.push("verified".to_owned());
@@ -255,11 +286,14 @@ impl Panel {
         if mine {
             facts.push("this is you".to_owned());
         }
+        if !profile.avatar.is_empty() {
+            facts.push("has a picture".to_owned());
+        }
         text(
             &mut self.ui,
             TextFamily::Body,
             format_args!("{}", facts.join(", ")),
-            frame.rect(MIDDLE_X, TOP + 46.0, 1_100.0, 24.0),
+            frame.rect(name_x, TOP + 46.0, 760.0, 24.0),
             16.0 * s,
             color::MUTED,
             FontWeight::Regular,

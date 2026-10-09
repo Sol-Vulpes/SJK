@@ -114,6 +114,9 @@ pub struct Snapshot {
     pub note: Option<ReportOutcome>,
     /// The outcome of the last player report sent with [`Service::player_report`].
     pub player_report: Option<ReportOutcome>,
+    /// The outcome of the last picture change ([`Service::set_avatar`],
+    /// [`Service::remove_avatar`]): sent when the hub took it.
+    pub avatar: Option<ReportOutcome>,
     /// What became of the last look sent ([`Service::set_look`]).
     pub look_outcome: Option<ReportOutcome>,
     /// Counts the asset packs written into the folder given to
@@ -149,6 +152,7 @@ impl Snapshot {
             report: None,
             note: None,
             player_report: None,
+            avatar: None,
             look_outcome: None,
             packs_revision: 0,
             assets_note: None,
@@ -189,6 +193,10 @@ enum Command {
     Emote(String),
     /// Whether the SJK chat is on.
     SetChat(bool),
+    /// A new picture, a PNG already cropped and scaled (`crate::avatar`).
+    SetAvatar(Vec<u8>),
+    /// Take the picture down.
+    RemoveAvatar,
     /// The look the player wears.
     Look(Look),
     /// The feed relayed a look event of the player's own key: its id and blade skin.
@@ -300,6 +308,23 @@ fn not_connected() -> HubError {
 
 /// What the player is told of a report or a note: what the hub stored it as, or why
 /// it did not.
+/// A hub from before pictures has no `/v1/avatar`: say so in words rather than as the
+/// bare status its router answers with.
+fn older_hub(error: HubError) -> HubError {
+    match error {
+        HubError::Protocol(why)
+            if why.starts_with("status 404") || why.starts_with("status 405") =>
+        {
+            HubError::Rejected {
+                status: 404,
+                code: "no_pictures".to_owned(),
+                message: "this SJK hub does not take pictures yet".to_owned(),
+            }
+        }
+        other => other,
+    }
+}
+
 fn outcome_of(serial: u64, outcome: Result<String, HubError>) -> ReportOutcome {
     match outcome {
         Ok(message) => ReportOutcome {
@@ -567,6 +592,8 @@ impl Worker {
             Command::Chat(text) => self.send_chat(&text),
             Command::Emote(emote) => self.send_emote(&emote),
             Command::SetChat(on) => self.chat_on = on,
+            Command::SetAvatar(png) => self.change_avatar(Some(&png)),
+            Command::RemoveAvatar => self.change_avatar(None),
             Command::Look(look) => self.look = look,
             Command::OwnLook(id, saber) => self.own_look_seen(id, &saber, now),
             Command::AssetsDir(dir) => {
@@ -681,6 +708,35 @@ impl Worker {
                 serial,
                 outcome.map(|id| format!("player report #{id}")),
             ));
+        });
+    }
+
+    /// Send the player's new picture (`Some`, a PNG) or take it down (`None`), once
+    /// registered; the profile the hub answers with replaces the player's own.
+    fn change_avatar(&mut self, png: Option<&[u8]>) {
+        let outcome = match (self.hub.as_mut(), self.registered, png) {
+            (_, _, Some(png)) if png.len() > crate::avatar::UPLOAD_MAX => Err(HubError::Rejected {
+                status: 413,
+                code: "too_large".to_owned(),
+                message: "the picture is larger than the hub takes".to_owned(),
+            }),
+            (Some(hub), true, Some(png)) => hub.set_avatar(&self.identity, png),
+            (Some(hub), true, None) => hub.remove_avatar(&self.identity),
+            _ => Err(not_connected()),
+        }
+        .map_err(older_hub);
+        self.update(|snapshot| {
+            let serial = snapshot.avatar.as_ref().map_or(1, |last| last.serial + 1);
+            let outcome = outcome.map(|profile| {
+                let done = if profile.avatar.is_empty() {
+                    "removed"
+                } else {
+                    "saved"
+                };
+                snapshot.me = Some(profile);
+                done.to_owned()
+            });
+            snapshot.avatar = Some(outcome_of(serial, outcome));
         });
     }
 
@@ -1262,6 +1318,18 @@ impl Service {
         let _ = self.commands.send(Command::SetBio(bio));
     }
 
+    /// Make `png` (cropped and scaled to [`crate::avatar::SIZE`] square) the player's
+    /// picture; the outcome arrives in [`Snapshot::avatar`], the new version in the
+    /// profile's `avatar`.
+    pub fn set_avatar(&self, png: Vec<u8>) {
+        let _ = self.commands.send(Command::SetAvatar(png));
+    }
+
+    /// Take the player's picture down; the outcome arrives in [`Snapshot::avatar`].
+    pub fn remove_avatar(&self) {
+        let _ = self.commands.send(Command::RemoveAvatar);
+    }
+
     /// The counts the client keeps for the achievements it counts, by id: sent to the
     /// hub once registered, at most once a minute, and again when the hub held part
     /// back. The hub's answer arrives in the profile's `achievements`.
@@ -1491,6 +1559,7 @@ mod tests {
             names: Vec::new(),
             medals: Vec::new(),
             achievements: Vec::new(),
+            avatar: String::new(),
             unlocks: Vec::new(),
         }
     }
@@ -1511,6 +1580,15 @@ mod tests {
         }
         fn set_bio(&mut self, _: &Identity, bio: &str) -> Result<Profile, HubError> {
             self.record(format!("bio {bio}")).map(|()| profile(""))
+        }
+        fn set_avatar(&mut self, _: &Identity, png: &[u8]) -> Result<Profile, HubError> {
+            Fake::record(self, format!("avatar {} bytes", png.len())).map(|()| Profile {
+                avatar: "0123456789abcdef".to_owned(),
+                ..profile("Sol")
+            })
+        }
+        fn remove_avatar(&mut self, _: &Identity) -> Result<Profile, HubError> {
+            Fake::record(self, "avatar removed".to_owned()).map(|()| profile("Sol"))
         }
         fn profile(&mut self, key_id: &str) -> Result<Profile, HubError> {
             self.record(format!("lookup {key_id}")).map(|()| Profile {
@@ -1665,7 +1743,9 @@ mod tests {
                     }]
                 }
                 StaffRequest::Unaward { key_id, .. }
-                | StaffRequest::ClearAchievements { key_id, .. } => vec![Profile {
+                | StaffRequest::ClearAchievements { key_id, .. }
+                | StaffRequest::AvatarRemove { key_id }
+                | StaffRequest::AvatarBlock { key_id, .. } => vec![Profile {
                     key_id: key_id.clone(),
                     ..profile("Target")
                 }],
@@ -1725,6 +1805,76 @@ mod tests {
 
     fn chat_outcome(worker: &Worker) -> ReportOutcome {
         lock_chat(&worker.chat).outcome.clone().unwrap()
+    }
+
+    #[test]
+    fn a_hub_without_pictures_is_said_in_words() {
+        let older = older_hub(HubError::Protocol("status 404, not JSON".to_owned()));
+        assert!(
+            matches!(&older, HubError::Rejected { message, .. } if message.contains("does not take pictures")),
+            "{older:?}"
+        );
+        assert!(matches!(
+            older_hub(HubError::Protocol("status 405, not JSON".to_owned())),
+            HubError::Rejected { .. }
+        ));
+        // Other answers keep what they say.
+        assert!(matches!(
+            older_hub(HubError::Protocol("status 500, not JSON".to_owned())),
+            HubError::Protocol(_)
+        ));
+        assert!(matches!(
+            older_hub(HubError::Network("down".to_owned())),
+            HubError::Network(_)
+        ));
+    }
+
+    #[test]
+    fn a_picture_is_sent_once_registered_and_its_profile_kept() {
+        let fake = Fake::default();
+        let t0 = Instant::now();
+        let (mut worker, snapshot) = worker(&fake, t0);
+        worker.handle(Command::SetAvatar(vec![1; 300]), t0);
+        let first = lock(&snapshot).avatar.clone().unwrap();
+        assert!(!first.sent && first.message.contains("not connected"));
+        assert!(
+            fake.log().is_empty(),
+            "nothing goes before the registration"
+        );
+        worker.handle(Command::Configure(on("https://hub")), t0);
+        worker.tick(t0);
+        worker.handle(Command::SetAvatar(vec![1; 300]), t0);
+        let saved = lock(&snapshot).avatar.clone().unwrap();
+        assert_eq!(
+            (saved.serial, saved.sent, saved.message.as_str()),
+            (2, true, "saved")
+        );
+        assert_eq!(
+            lock(&snapshot).me.as_ref().unwrap().avatar,
+            "0123456789abcdef"
+        );
+        // Larger than the hub takes: refused here, nothing sent.
+        worker.handle(
+            Command::SetAvatar(vec![0; crate::avatar::UPLOAD_MAX + 1]),
+            t0,
+        );
+        let big = lock(&snapshot).avatar.clone().unwrap();
+        assert!(!big.sent && big.serial == 3);
+        worker.handle(Command::RemoveAvatar, t0);
+        let removed = lock(&snapshot).avatar.clone().unwrap();
+        assert_eq!((removed.sent, removed.message.as_str()), (true, "removed"));
+        assert!(lock(&snapshot).me.as_ref().unwrap().avatar.is_empty());
+        let sent: Vec<String> = fake
+            .log()
+            .into_iter()
+            .filter(|line| line.starts_with("avatar"))
+            .collect();
+        assert_eq!(sent, ["avatar 300 bytes", "avatar removed"]);
+        // A refusal is the hub's message.
+        fake.fail.store(true, Ordering::SeqCst);
+        worker.handle(Command::SetAvatar(vec![1; 10]), t0);
+        let failed = lock(&snapshot).avatar.clone().unwrap();
+        assert!(!failed.sent && failed.message.contains("down"));
     }
 
     #[test]
@@ -2635,6 +2785,7 @@ mod tests {
             name: "Sol".to_owned(),
             verified: true,
             medals: Vec::new(),
+            avatar: String::new(),
             look: None,
         }];
         let t0 = Instant::now();

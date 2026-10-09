@@ -1145,6 +1145,7 @@ fn identity_page(shots: &Snapshot, art: ArtSet) {
                 .collect(),
             medals: Vec::new(),
             achievements: Vec::new(),
+            avatar: String::new(),
             unlocks: Vec::new(),
         }),
         server: None,
@@ -1156,6 +1157,7 @@ fn identity_page(shots: &Snapshot, art: ArtSet) {
                 name: "Fox".to_owned(),
                 verified: true,
                 medals: Vec::new(),
+                avatar: String::new(),
                 look: None,
             },
             Presence {
@@ -1165,6 +1167,7 @@ fn identity_page(shots: &Snapshot, art: ArtSet) {
                 name: String::new(),
                 verified: false,
                 medals: Vec::new(),
+                avatar: String::new(),
                 look: None,
             },
         ],
@@ -1174,6 +1177,7 @@ fn identity_page(shots: &Snapshot, art: ArtSet) {
         report: None,
         note: None,
         player_report: None,
+        avatar: None,
         look_outcome: None,
         packs_revision: 0,
         assets_note: None,
@@ -1471,6 +1475,7 @@ fn sjk_home_snapshot() {
                     crate::text::TextStyle::NEUTRAL,
                 )),
             }),
+            summary: &crate::profile_card::NOBODY,
         };
         home::build(&mut canvas, viewport, &mut home, &view, 1.0);
         let (mut display_text, mut body_text) = (Vec::new(), Vec::new());
@@ -2156,6 +2161,7 @@ fn medals_snapshot() {
             names: Vec::new(),
             medals,
             achievements: Vec::new(),
+            avatar: String::new(),
             unlocks: Vec::new(),
         }),
         server: None,
@@ -2166,6 +2172,7 @@ fn medals_snapshot() {
         report: None,
         note: None,
         player_report: None,
+        avatar: None,
         look_outcome: None,
         packs_revision: 0,
         assets_note: None,

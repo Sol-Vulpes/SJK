@@ -21,6 +21,7 @@ Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 
 ## Unreleased
 
+- The SJK profile card, bottom left of the SJK UI's main page and in the in-game menu: your picture (or your initial), name and verified tick, medals and achievements, model and blade; a click opens your Profile. Upload a 128 px square picture from the Profile page (drop a PNG, JPEG or TGA on the window, or sjkavatar <file>); other players' pictures show on the player card and Staff can take one down _(Sol)_
 - SJK chat is written in its own gold, outside the game's colour codes, a sender's tag, name and tick stay on the first row and the message goes on there, and a verified sender shows the tick alone _(Sol)_
 - Lightsaber ignition and retraction sounds play when a player switches to or from the saber, for you and for other players, as in OpenJK; a client's saber unholster event plays that player's own saber sounds; a blade skin's sound replaces them _(Sol, after OpenJK)_
 - Blade skins: the Sun blade's tip is rounded instead of square, and skins can have lightning arcs, drifting motes and turning hues; four new skins from the SJK hub (Storm, Void, Frost, Prism). The Unlockables page shows two cards at a time and scrolls _(Sol)_

@@ -9,6 +9,8 @@
 #                               made it when that is not the piece's owner.
 
 = Sol
++ 09/10/2026 | SJK #62 | Show the SJK profile card and let players upload a picture
+- 9dd36a2 |  | Show the SJK profile card and let players upload a picture
 + 09/10/2026 | SJK #63 | Show SJK chat in its own gold, on one line, with the tick alone
 - 566c3fb |  | Show SJK chat in its own gold, on one line, with the tick alone
 + 09/10/2026 | SJK #61 | Play cgame's saber ignition when switching to or from the saber

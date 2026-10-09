@@ -597,6 +597,7 @@ mod tests {
             report: None,
             note: None,
             player_report: None,
+            avatar: None,
             look_outcome: None,
             packs_revision: 0,
             assets_note: None,
@@ -625,6 +626,7 @@ mod tests {
             names: Vec::new(),
             medals: Vec::new(),
             achievements: Vec::new(),
+            avatar: String::new(),
             unlocks: Vec::new(),
         }
     }
@@ -686,6 +688,7 @@ mod tests {
             name: "Kit".to_owned(),
             verified: true,
             medals: Vec::new(),
+            avatar: String::new(),
             look: None,
         }];
         let shown = view(&inputs(Some(&state)));
@@ -781,6 +784,7 @@ mod tests {
                 name: format!("p{slot}"),
                 verified: false,
                 medals: Vec::new(),
+                avatar: String::new(),
                 look: None,
             })
             .collect();

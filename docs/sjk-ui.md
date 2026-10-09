@@ -176,16 +176,42 @@ one (4:3, 5:4) scales the frame down to its width.
   it, which opens the SJK chat page. Down past the last server reaches the field
   (the gold arc turns to it); Enter types and every key goes to the field until Enter
   sends or Escape stops. Not shown with `cl_sjkChat 0`.
-- **Corners:** the player, bottom left (a gold ring with their initial, their
-  name with its colours, their model and blade); the keys of the page, bottom
-  centre; the version and a newer release found, bottom right.
+- **Corners:** the player's [profile card](#profile-card), bottom left; the keys
+  of the page, bottom centre; the version and a newer release found, bottom right.
 
 Keys: Up and Down move along the arc; Enter takes the entry; Right (or Tab)
 moves to the servers, Up and Down choose one, Enter joins it, Left or Escape
-returns to the arc. Escape on a page returns to the main page, on the entry that
+returns to the arc. Left from the arc chooses the profile card (the gold arc turns
+to it), Enter opens the Profile page, and Right, Up, Tab or Escape return to the
+arc. Escape on a page returns to the main page, on the entry that
 opened it; on the main page it opens Quit's page. The pointer chooses by
 hovering and acts with a click. A server with a password opens the browser's
 password prompt.
+
+### Profile card
+
+[profile_card.rs](../crates/sjk-viewer/src/profile_card.rs) (08/10/2026, Sol's
+request: the name and circle in the corner show the SJK profile, with a picture, and
+open it). Bottom left on the 16:9 frame, from (84, 932), 474 by 96:
+
+- the player's picture, a disc 72 across at (96, 944): their picture once it is
+  loaded, else the first letter of their name (past colour codes and symbols) on a
+  colour picked from their key; ringed holo, gold when verified, bright gold when the
+  card is chosen, with the verified badge at its foot for a verified key
+  ([identity.md](identity.md#pictures));
+- their name with its colours (Exo 2 at 27);
+- a line of what the SJK hub says: "Verified" (gold) or "SJK player", the medals
+  given ("2 medals", left out with none) and the achievements unlocked ("12/21
+  achievements"); without the hub it says "SJK identity off", "Connecting to the hub"
+  or "SJK hub out of reach", still with this PC's achievements;
+- their model and blade ("Kyle, blue saber", or "Kyle, Sun blade" while they wear a
+  blade skin their profile holds, [unlockables.md](unlockables.md)); when the card is
+  chosen, "Open your profile, medals and achievements" in gold instead.
+
+The pointer chooses it by hovering (a dark band with a gold edge round it) and a click
+opens the Profile page. What it says is gathered twice a second from the settings,
+the identity service and the achievement counts (`profile_card::refresh`); a frame
+reads it in place. The same card stands bottom left in the in-game menu.
 
 ## Character
 
@@ -318,9 +344,10 @@ overlay routes their text to the UI's families (`console_sjk_pages.rs`).
   08/10/2026, Sol's request: a real profile with the medals and an editable bio, and
   an achievements board): drawn in this look in every menu style. The top bar has
   Profile and Achievements as segments at its right. Profile: three columns, who
-  the player is (hub name in its colours at 44, verified, member since, key id,
-  other names, Identity settings) over "Your record" (eight numbers in two columns)
-  and "Unlocked lately"; "About you", the bio's box (620 by 300, Exo 2 at 18,
+  the player is (their picture, a disc 104 across with "Add a picture" or "Change
+  picture" under it, beside the hub name in its colours at 38, verified, member since,
+  key id, other names; then Identity settings) over "Your record" (eight numbers in two
+  columns) and "Unlocked lately"; "About you", the bio's box (620 by 300, Exo 2 at 18,
   wrapped by measured width, the end being written kept in view) with its counts,
   Revert and Save (gold) and the rules; Medals (pictures at 84), Achievements (how
   many unlocked, a gold bar, See the board) and Unlockables (how many owned at 30, or
@@ -330,12 +357,21 @@ overlay routes their text to the UI's families (`console_sjk_pages.rs`).
   the count in the category's colour (Combat ember, Duels and flags gold, Journeys
   holo, Community green), filled and gold once unlocked, the goal inside; the name,
   the category, what to do, a bar and the count or the date. World shot:
-  `world_shot::tests::duel6_sjk_profile`.
+  `world_shot::tests::duel6_sjk_profile`. The picture (a click, or Enter on it after
+  Tab) opens the picture panel in the bio's place (08/10/2026): "Your picture", the
+  picture 220 across (the one about to be sent, ringed bright gold, else the
+  player's), beside it a headline (No picture yet, Reading the picture..., Your new
+  picture, Sending..., Taking it down...), the file's name and the last message (gold,
+  ember when something went wrong), under it how to choose one (drop a file on the
+  window, `sjkavatar`) and that everyone sees it, then Use this picture (gold), Remove
+  picture (Press again while it waits) and Done. Escape returns to the bio first
+  ([identity.md](identity.md#pictures)).
 - **Staff** ([staff_panel_view.rs](../crates/sjk-viewer/src/staff_panel_view.rs),
   08/10/2026, for staff keys, [identity.md](identity.md#staff)): the top bar's
   search pill finds players; Me and Seen lately over the list of players found (14
   rows of 50, the chosen one banded, tags Staff and Verified in gold); the chosen
-  player's name at 38 and facts over the middle and right; Medals: each medal's
+  player's picture (a disc 64 across), name at 38 and facts over the middle and
+  right, and Take picture down at the right (dimmed without one); Medals: each medal's
   medallion (dim when not held), name and count, date given, Give (gold) and Take
   back, then the note's field (sent with the next medal or unlock); Unlockables under
   it: each unlockable of the catalogue in rows of 42 (all five fit), its name at 19 (gold when held) and
@@ -834,6 +870,13 @@ page's 16:9 frame.
   - SJK: What's new, Credits, Profile, Identity, Report a bug, Report a player, SJK chat
     (the Players page).
   - Leave: Leave the server, Quit to desktop (ember when chosen), Stay. It opens on Stay, since its rows act at once.
+- **Profile card:** the main page's [profile card](#profile-card), bottom left at
+  the same place, on every page whose arc leaves it room (every page of up to twelve
+  entries; not Players and Report a player, whose table and player card take the
+  screen). Hovering lights it, a click opens the Profile page over the menu; the
+  keys reach the Profile page through SJK > Profile. The Players page's player card
+  shows the chosen player's picture (or their initial) before their name when the
+  hub knows them.
 - **Match card:** on the right (x 1360, 464 wide) over its own fade: the
   server's name with its colours and its address, a rule, the map without
   `mp/`, its mode and limits in words ("FFA, 30 frags, 20 minutes"), then the

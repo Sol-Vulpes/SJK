@@ -287,6 +287,7 @@ pub(crate) fn hub_mark(slot: u8, shown: &str) -> Option<crate::ingame_menu::play
                 name: player.name.clone(),
                 verified: player.verified,
                 medals: crate::medals::Medals::from_wire(&player.medals),
+                avatar: player.avatar.clone(),
             })
     })
 }
@@ -384,6 +385,26 @@ pub(crate) fn set_bio(bio: String) -> bool {
         .service
         .as_ref()
         .map(|service| service.set_bio(bio))
+        .is_some()
+}
+
+/// Ask the hub to make `png` the player's picture; false when the service has not
+/// started (the identity is off). The outcome shows in [`Snapshot::avatar`].
+pub(crate) fn set_avatar(png: Vec<u8>) -> bool {
+    lock()
+        .service
+        .as_ref()
+        .map(|service| service.set_avatar(png))
+        .is_some()
+}
+
+/// Ask the hub to take the player's picture down; false when the service has not
+/// started.
+pub(crate) fn remove_avatar() -> bool {
+    lock()
+        .service
+        .as_ref()
+        .map(Service::remove_avatar)
         .is_some()
 }
 
@@ -595,6 +616,8 @@ mod tests {
         assert!(own_key_id().is_none());
         assert!(!set_achievement_counts(&std::collections::BTreeMap::new()));
         assert!(!chat("hi".to_owned()));
+        assert!(!set_avatar(vec![1, 2, 3]));
+        assert!(!remove_avatar());
         assert!(!emote("wave".to_owned()));
         assert!(with_chat(|chat| chat.revision).is_none());
         assert!(take_emotes().is_empty());

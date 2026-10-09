@@ -196,6 +196,7 @@ mod tests {
             medals: Vec::new(),
             achievements: Vec::new(),
             unlocks: vec![unlock.clone()],
+            avatar: String::new(),
         };
         let snapshot = |status, me| Snapshot {
             status,
@@ -209,6 +210,7 @@ mod tests {
             report: None,
             note: None,
             player_report: None,
+            avatar: None,
             look_outcome: None,
             packs_revision: 0,
             assets_note: None,

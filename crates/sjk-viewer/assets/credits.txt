@@ -50,6 +50,7 @@ did: Staff tools in the game: medals and achievements for the SJK team
 did: SJK chat through the hub, seen in the menus and in games, and the path for emotes
 did: Unlockables: the Sun blade skin and looks every SJK player sees
 did: The kill feed with weapon icons
+did: The SJK profile card and profile pictures
 link: https://github.com/Sol-Vulpes/SJK
 link: https://sol-vulpes.github.io/SJK/
 

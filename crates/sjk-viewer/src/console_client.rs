@@ -120,6 +120,7 @@ pub(super) const COMMANDS: &[(&str, &str)] = &[
         crate::identity_command::COMMAND,
         crate::identity_command::HELP,
     ),
+    (crate::avatar_command::COMMAND, crate::avatar_command::HELP),
     (crate::hud::nameplate::COMMAND, crate::hud::nameplate::HELP),
     ("togglemenu", "Toggle the in-game menu"),
     (
@@ -555,6 +556,7 @@ impl crate::GpuState {
                 self.sync_cursor_policy();
             }
             crate::identity_command::COMMAND => return self.identity_command(args),
+            crate::avatar_command::COMMAND => return self.avatar_command(args),
             crate::weather::COMMAND => return self.weather_command(args),
             crate::quick_wheel::OPEN_COMMAND => return self.open_quick_wheel(args),
             crate::quick_wheel::RUN_COMMAND => return self.release_quick_wheel(),
