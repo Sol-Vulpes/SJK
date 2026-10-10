@@ -1,6 +1,11 @@
 //! The system clipboard, through the desktop's own tools: text out for `viewpos` and `mark`,
 //! text in for the console's Ctrl+V. winit has no clipboard and this is a console
 //! convenience, not a frame path: a missing tool only means nothing is copied or pasted.
+//!
+//! On Windows the clipboard is read and set directly (`clipboard-win`): Ctrl+V waited for
+//! a PowerShell to start, about a quarter of a second in the middle of play (the
+//! `hitch: 248 ms ... between-frames` of 10/10/2026). PowerShell stays the fallback of a
+//! copy the direct call could not make.
 use std::io::Write;
 use std::process::{Child, Command, Stdio};
 use std::sync::Mutex;
@@ -178,6 +183,10 @@ impl CopyTool {
 /// tool in [`COPY`].
 pub(crate) fn copy(text: &str) -> bool {
     stop_pending_copy();
+    #[cfg(windows)]
+    if clipboard_win::set_clipboard_string(text).is_ok() {
+        return true;
+    }
     let deadline = Instant::now() + COPY_WAIT;
     COPY.iter()
         .filter(|tool| tool.accepts(text))
@@ -263,9 +272,13 @@ fn finish_pending_copy() {
     }
 }
 
-/// The clipboard's text, if a tool gave any.
+/// The clipboard's text, if a tool gave any. On Windows, straight from the clipboard:
+/// nothing there as text (or the clipboard held by another program) pastes nothing.
 pub(crate) fn paste() -> Option<String> {
     finish_pending_copy();
+    if cfg!(windows) {
+        return direct_paste();
+    }
     PASTE.iter().find_map(|tool| {
         let output = Command::new(tool.argv[0])
             .args(&tool.argv[1..])
@@ -281,6 +294,16 @@ pub(crate) fn paste() -> Option<String> {
             Decode::CodeUnits => decode_code_units(&output.stdout),
         }
     })
+}
+
+#[cfg(windows)]
+fn direct_paste() -> Option<String> {
+    clipboard_win::get_clipboard_string().ok()
+}
+
+#[cfg(not(windows))]
+fn direct_paste() -> Option<String> {
+    None
 }
 
 /// A paste tool's output as text, without a leading byte-order mark.

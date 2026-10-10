@@ -320,6 +320,14 @@ test: The log has no run of "menu world: loading maps/mp/duel6.bsp again" lines.
 test: Disconnect to the menu: duel6 comes back once, within a few seconds.
 note: Seen 10/10 on a JoF map change: 13,865 rebuild starts in the log.
 
+[fast-paste]
+area: Console & chat
+title: Ctrl+V no longer freezes the game for a quarter of a second (Windows)
+change: The clipboard is read and set directly instead of through PowerShell.
+test: In a match, paste into chat and the console: text comes at once, no hitch line.
+test: Accented and emoji text pastes intact; viewpos/mark copies still reach the clipboard.
+note: Was hitch 248 ms between-frames on each paste.
+
 [model-mips]
 area: Rendering & effects
 title: No hitch when high-resolution player models appear: mip chains built on a worker

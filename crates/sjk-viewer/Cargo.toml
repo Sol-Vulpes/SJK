@@ -49,6 +49,11 @@ winit = { version = "0.30.13", default-features = false, features = ["rwh_06", "
 ureq = { version = "3", default-features = false, features = ["rustls", "gzip"] }
 sha2 = "0.11.0"
 
+[target.'cfg(windows)'.dependencies]
+# Ctrl+V and copies read and set the clipboard directly: starting PowerShell for them
+# took about a quarter of a second, a hitch in the middle of play.
+clipboard-win = "5.4.0"
+
 [build-dependencies]
 # Windows icon and version resource; the build script uses it only for Windows targets.
 winresource = { version = "0.1.31", default-features = false }
