@@ -2007,7 +2007,9 @@ are in [identity.md](identity.md).
   (`achievements`) and, on the Profile screen, the medals on a tab of their own. It
   has the SJK UI's look in every menu style; See unlockables opens the Unlockables
   page (`unlockables`, [unlockables.md](unlockables.md#unlockables-page)), the Profile
-  screen's Collection tab in the SJK UI ([identity.md](identity.md#profile)).
+  screen's Collection tab in the SJK UI ([identity.md](identity.md#profile)); See holocrons
+  opens the Holocrons page (`holocrons`, [holocrons.md](holocrons.md#the-holocrons-tab)), the
+  Profile screen's Holocrons tab in the SJK UI.
   The SJK UI's main page and in-game menu show a profile card bottom left (picture,
   name, verified, medals and achievements unlocked) that opens it with a click
   ([sjk-ui.md](sjk-ui.md#profile-card)).

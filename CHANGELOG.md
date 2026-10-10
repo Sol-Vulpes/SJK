@@ -25,6 +25,7 @@ Holocrons: loot you earn by playing. For now they are collected and shown; they 
 opened yet and give nothing.
 
 - Holocron drops: after every 30 minutes of active play on a server (moving, looking or pressing keys, in the match, out of the menus, not spectating) the SJK hub can drop a holocron of one of four tiers, Uncommon (60%), Rare (28%), Legendary (10.5%) or Mythical (1.5%), at most 8 a day and 1 Mythical a day for you; a new one shows once in a pop-up on the main menu or the game menu (a centre print says so in a match) in its tier's colour, and several show one after another. Legendary and Mythical drops are told to every SJK player in the SJK chat as a line in the tier's colour with a small gem; yours also show as "You found ...". The SJK team can give one with a note (Staff page). debug_holocron <tier|all> [x<count>] tries the pop-up without the hub _(Sol)_
+- The Profile screen has a Holocrons tab (and a `holocrons` command; the Profile page's See holocrons in the classic menus): a holocron turns in the world behind it in the look and light of the tier you choose (Uncommon, Rare, Legendary, Mythical), dimmed with a padlock when you hold none of that tier; beside it, the four tiers with how many you hold and the odds of a drop, how long to your next holocron and how many dropped today, and your ten newest holocrons. Holocrons cannot be opened yet _(Sol)_
 
 ## 2026.1010.1 (Alpha) | 10/10/2026
 

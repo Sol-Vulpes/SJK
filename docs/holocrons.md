@@ -5,7 +5,7 @@ the client shows them. They cannot be opened yet, grant nothing and are only col
 and shown (Sol's decision, 10/10/2026). This page is the design, the decisions and what
 is checked; the wire is the hub's `PROTOCOL.md` ("Holocrons") in Sol-Vulpes/SJK-hub,
 decided together with the client and built in parallel. Players read the pop-up, the chat
-lines and, once built, the Profile screen's Holocrons tab.
+lines and the Profile screen's Holocrons tab.
 
 ## Pieces
 
@@ -20,6 +20,8 @@ lines and, once built, the Profile screen's Holocrons tab.
 | `holocrons_seen.txt` | [holocrons/seen.rs](../crates/sjk-viewer/src/holocrons/seen.rs) |
 | The chat lines' words and the tier gem | [holocrons/line.rs](../crates/sjk-viewer/src/holocrons/line.rs), [holocrons/gem.rs](../crates/sjk-viewer/src/holocrons/gem.rs), [sjk_chat_look.rs](../crates/sjk-viewer/src/sjk_chat_look.rs) |
 | The tiers' pictures in the UI atlas | [holocrons/icons.rs](../crates/sjk-viewer/src/holocrons/icons.rs), [ui_renderer/icons.rs](../crates/sjk-viewer/src/ui_renderer/icons.rs), [hud/icons.rs](../crates/sjk-viewer/src/hud/icons.rs) |
+| The Holocrons tab (the page, its drawing, the console side) | [holocrons_panel.rs](../crates/sjk-viewer/src/holocrons_panel.rs), [holocrons_panel_view.rs](../crates/sjk-viewer/src/holocrons_panel_view.rs), [console_holocrons_page.rs](../crates/sjk-viewer/src/console_holocrons_page.rs) |
+| The tab's 3D holocron, the camera's shot behind it | [holocrons/stage.rs](../crates/sjk-viewer/src/holocrons/stage.rs), [menu_backdrop/routes.rs](../crates/sjk-viewer/src/menu_backdrop/routes.rs) |
 | `debug_holocron` | [holocrons/rehearsal.rs](../crates/sjk-viewer/src/holocrons/rehearsal.rs) |
 | Give holocron and Remove on the Staff page | [staff_panel.rs](../crates/sjk-viewer/src/staff_panel.rs), [staff_panel_view.rs](../crates/sjk-viewer/src/staff_panel_view.rs) |
 | The hub's rolls, caps and storage | repository Sol-Vulpes/SJK-hub (`PROTOCOL.md`, `src/holocrons.rs`) |
@@ -156,6 +158,51 @@ line goes into the game's feed as the player's own. The console closes so the po
 at once on a menu. Nothing is sent to the hub, and rehearsed holocrons (numbered from
 4,000,000,000) are never written to `holocrons_seen.txt`.
 
+### The Holocrons tab
+
+The Profile screen's eighth tab in the SJK UI ([sjk-ui.md](sjk-ui.md#profile-screen)); with
+the classic menus the Profile page's See holocrons or the `holocrons` command open the same
+page on its own, in the SJK UI's look as the Unlockables page does. Left, the world is left
+clear for one 3D holocron; right, over a dark panel, the four tiers (their picture, name in
+the tier's colour, how many are held or a dash while the hub has not answered, and the odds
+of a drop), what the chosen tier is, "Next holocron in about N minutes of play" with a bar
+and "n of 8 today", the newest ten holocrons (tier, `dd/mm/yyyy HH:MM` in UTC, and for a gift
+"Gift from the SJK team" with the note) and, when the identity is off, no hub is set or the
+hub has not answered, the reason ("Holocrons need the SJK identity"). There is no button
+that opens a holocron: opening does not exist yet and the page says so.
+
+- **Keys and pointer:** Up and Down (or Left and Right, Tab and Shift+Tab, the wheel, 1 to
+  4, Home and End) choose the tier; Escape goes back; a click on a row chooses it; Ctrl+Tab
+  is the Profile screen's. Enter does nothing.
+- **The 3D holocron** is a normal object of the world pass, not a stage of the Character
+  tab: an instance of the chosen look's model and a point light in the tier's colour
+  ([holocrons/stage.rs](../crates/sjk-viewer/src/holocrons/stage.rs)), floating before the
+  camera on the ray through the clear left of the 16:9 frame (`STAGE_AT`), 64 units ahead,
+  scaled to a fixed size on screen in every window shape. It turns and bobs as Illuminate's
+  does (`illuminate::idle_rotation`, `idle_bob`). A new tier shrinks the old look away in
+  0.12 s and grows the new one in 0.32 s. While the tab shows, the backdrop camera parks on
+  its own shot (`Shot::Holocrons`, a route on duel6, where the toured camera cuts to it;
+  other maps keep the main vantage), and the classic menu style stops hiding the world
+  under it. Over a match (the game menu's Profile screen) it floats before the game's
+  camera. The Character tab's stage was not used because that stage is the player model's
+  (one actor with a pose, sabers and cosmetics) and is not drawn in a match, while the tab
+  needs a rigid model that swaps by tier and works in both.
+- **A tier of its own** is a model of its own. A surface's shader is named by its model
+  file, so the shared `holocron.md3` (shader `models/sjk/holocron`) would draw the base look
+  for every tier whatever shader was given. `scripts/holocron_assets.py` writes
+  `holocron_<tier>.md3` (the same cube, surface shader `models/sjk/holocron_<tier>`), they
+  are mounted with the other files and loaded with the map's rigid models; a test checks
+  each names its tier's shader and is the base cube otherwise. Illuminate's holocron is
+  unchanged.
+- **A tier held none of** (or not known) shows the locked look and not nothing, so all four
+  can be seen: `holocron_locked.md3` with its shader `models/sjk/holocron_locked`, the face
+  drained of colour and dark, no glow, lit by a light a fifth as strong in the tier's colour;
+  a padlock stands over the tier's name and by its row's count, and the caption says "None
+  held yet: shown dimmed".
+- The hub's counts, list and progress are copied from the identity's snapshot twice a second
+  while the page is open (`Data::of`), never per frame, and the hub is asked for fresh
+  progress when the page opens (at most every 30 seconds).
+
 ## For other screens: the client's list
 
 [holocrons.rs](../crates/sjk-viewer/src/holocrons.rs) is the one list the rest of the
@@ -164,19 +211,18 @@ client reads; the Profile screen's Holocrons tab is built on it.
 - `TIERS: [Tier; COUNT]`, `tiers()`, `Tier::from_id` / `by_id(id)`, `colour(id)`, `name(id)`;
   a `Tier` has `id`, `name`, `colour` (`colour_alpha(a)`), `per_mille`, `odds` text, `index`,
   `icon_path()`, `article()` and `is_announced()`.
-- `counts() -> Option<[u32; COUNT]>` (the own profile's counts in tier order),
-  `recent() -> Option<Vec<Entry>>` (the own recent holocrons, newest first, known tiers
-  only; an `Entry` has `id`, `tier`, `dropped`, `gift`, `note` and `when()`), both `None`
-  until the hub answered; `entries(list)` and `counts_of(counts)` for a profile read some
-  other way.
-- `progress() -> Option<HolocronProgress>`, `refresh()` (ask the hub again when a tab opens)
+- `entries(list)` (known tiers only, in the hub's order, an `Entry` has `id`, `tier`,
+  `dropped`, `gift`, `note` and `when()`) and `counts_of(counts)` read a profile's holocrons;
+  the Holocrons tab reads the own profile and `snapshot.holocrons` (the progress) once
+  in `holocrons_panel::Data::of`.
+- `refresh()` (ask the hub again when a tab opens)
   and `next_text(&progress)` ("Next holocron in about 20 minutes of play", or "Daily limit
   reached: 8 of 8 holocrons today").
 - `icons::texture(index)` is the atlas cell of a tier's picture, uploaded with the HUD's
-  pictures; `hud.holocron_icons` says which loaded. `gem::draw(list, centre, half, colour,
-  alpha, rows)` draws the fallback.
-- The 3D stage is the Illuminate holocron's model (`models/sjk/holocron.md3`), tinted by
-  the tab.
+  pictures; `hud.holocron_icons` says which loaded (`icons::is_loaded(index)` for the pages the
+  console draws). `gem::draw(list, centre, half, colour, alpha, rows)` draws the fallback.
+- `Tier::light` is the colour of the tier's point light and `Tier::about()` what the tab says of
+  the tier. The 3D holocron's models are `stage::TIER_MODELS` and `stage::LOCKED_MODEL`.
 
 ## Checked and not checked
 
@@ -194,8 +240,18 @@ hub (`crates/sjk-identity/tests/hub_e2e.rs` has an ignored test that needs one),
 or with the art of the tiers (the pop-up draws the gem until the pictures are mounted); the
 input hooks and the 500 ms comparison are not covered by a test of their own.
 
+The Holocrons tab (10/10/2026): unit tests for its keys, wheel and clicks, the stage request
+for the chosen tier (and the locked look), the data from every identity state, the twice a second
+read, every state at 1080p, 4K, 4:3 and 21:9 on the Profile screen and on its own, the 3D
+holocron's placement in those windows and its swap, and the tier models' and shaders'
+mounting (`illuminate::tests::every_tier_has_a_cube_naming_its_own_shader`). The world shots
+`world_shot::holocrons_tab::duel6_sjk_holocrons` and `duel6_sjk_holocrons_windows` (off-screen
+renders on duel6 with made-up holdings) were rendered and looked at on this machine: the tab
+in the SJK UI with each tier chosen, a tier held none of, the identity off, and 4:3, 21:9, 4K,
+`ui_textScale 1.2` and the classic style. Not tried: in a game (the holocron over a match, its
+place in third person and with another cg_fov), on another map than duel6, with real hub data,
+the keys and clicks in a running client, or the swap's motion (the shots are stills).
+
 ## Planned, not built
 
-Opening holocrons, anything a holocron grants, and the Profile screen's Holocrons tab (a
-3D holocron on the menu stage that cycles by tier, the counts, the list of recent drops,
-the progress and the odds).
+Opening holocrons and anything a holocron grants.
