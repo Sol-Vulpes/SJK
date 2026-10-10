@@ -2281,8 +2281,7 @@ white washes (separators, borders, hover fills) look fainter than before.
 
 ### Menu readability
 
-SJK's hero screens (Create game and its map picker, the tabbed settings, the
-key-binding editor) draw their text straight over the live map, so a left-hand
+SJK's hero screens (the tabbed settings, the key-binding editor) draw their text straight over the live map, so a left-hand
 scrim darkens the world behind the text column. The archived cvar `ui_menuContrast`
 (Settings, GAME tab) sets how far that scrim is held under the text:
 
@@ -2294,8 +2293,7 @@ scrim darkens the world behind the text column. The archived cvar `ui_menuContra
 
 With a level on, each scrim keeps its original fade but does not drop below
 the required darkness until the right edge of the text column, then eases
-back over 12% of the screen width. The map picker's caption gets the same
-floor, and dimmed labels gain just enough opacity to reach 4.5:1 on that
+back over 12% of the screen width. Dimmed labels gain just enough opacity to reach 4.5:1 on that
 backing.
 Disabled entries (drawn under 0.7 opacity) keep their dimmed look. The
 figures follow the [UI colour model](#ui-colour-model): luminance linearises

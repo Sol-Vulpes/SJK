@@ -505,7 +505,13 @@ pub(crate) fn prepare(gpu: &mut GpuState) {
     }
     let load = enabled && !fonts.attempted;
     let load_console = console && !fonts.console_attempted;
-    let load_sjk = !fonts.sjk_attempted && sjk_families(gpu.console.as_ref());
+    // An SJK UI screen shown in every menu style (Create game) wants them too.
+    let load_sjk = !fonts.sjk_attempted
+        && (sjk_families(gpu.console.as_ref())
+            || gpu
+                .client_menu
+                .as_ref()
+                .is_some_and(crate::menu::ClientMenu::sjk_screen));
     if load || load_console || load_sjk {
         let device = Device {
             device: &gpu.device,

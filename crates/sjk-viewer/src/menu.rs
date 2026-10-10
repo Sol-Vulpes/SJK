@@ -307,24 +307,26 @@ impl ClientMenu {
     }
 
     /// Whether a screen of the SJK UI's own is on show (its main page, its
-    /// Settings, Character, Servers or its loading screen), which sits over
-    /// the live map where the classic pages cover it and draws in the UI's
-    /// families. The loading screen covers the map itself when it has to
-    /// ([`Self::sjk_loading_hides_world`]).
+    /// Settings, Character, Servers, Create game or its loading screen), which
+    /// sits over the live map where the classic pages cover it and draws in
+    /// the UI's families. Create game has no classic+ version, so it is the
+    /// SJK UI's in every menu style. The loading screen covers the map itself
+    /// when it has to ([`Self::sjk_loading_hides_world`]).
     pub(crate) fn sjk_screen(&self) -> bool {
-        self.menu_style == MenuStyle::Sjk
-            && match self.state.phase() {
-                ClientPhase::MainMenu => true,
-                ClientPhase::Settings => {
-                    self.sjk_settings_on_show() && !self.settings.picker_open()
+        matches!(self.state.phase(), ClientPhase::CreateGame)
+            || self.menu_style == MenuStyle::Sjk
+                && match self.state.phase() {
+                    ClientPhase::MainMenu => true,
+                    ClientPhase::Settings => {
+                        self.sjk_settings_on_show() && !self.settings.picker_open()
+                    }
+                    ClientPhase::Keybinds => self.sjk_settings_on_show(),
+                    ClientPhase::Player => self.player.is_sjk(),
+                    ClientPhase::Browser
+                    | ClientPhase::Connecting(_)
+                    | ClientPhase::ConnectionError => true,
+                    _ => false,
                 }
-                ClientPhase::Keybinds => self.sjk_settings_on_show(),
-                ClientPhase::Player => self.player.is_sjk(),
-                ClientPhase::Browser
-                | ClientPhase::Connecting(_)
-                | ClientPhase::ConnectionError => true,
-                _ => false,
-            }
     }
 
     /// Whether the connect or loading screen covers the screen: a connect

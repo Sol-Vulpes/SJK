@@ -1,11 +1,10 @@
 //! Pointer input on the Create game screen: hover selects a row, a click on
 //! a cycler steps it the way its half points, a click on Start starts, the
-//! wheel moves the selection and the footer cap goes back.
+//! wheel moves the selection and the top bar's Esc cap goes back.
 
-use super::create_game::{CreateGameMenu, CreateGameResult, ROWS, Row};
+use super::create_game::{BACK_TOKEN, CreateGameMenu, CreateGameResult, ROWS, Row};
 use super::map_picker::PickerResult;
 use crate::console::ViewerConsole;
-use crate::menu_widgets::{BACK_TOKEN, cycler_direction};
 use sjk_ui::{InputEvent, UiEventKind};
 
 impl CreateGameMenu {
@@ -61,7 +60,7 @@ impl CreateGameMenu {
     }
 
     /// Pointer on the open map list: hover highlights, a click picks, the
-    /// wheel scrolls and the footer cap closes the list.
+    /// wheel scrolls and the top bar's Esc cap closes the list.
     fn picker_pointer(
         &mut self,
         kind: UiEventKind,
@@ -89,4 +88,10 @@ impl CreateGameMenu {
         }
         CreateGameResult::None
     }
+}
+
+/// Which way a click at `x` turns a cycler over `rect`: its left half steps
+/// back, its right half on, as its carets point.
+fn cycler_direction(rect: sjk_ui::Rect, x: f32) -> isize {
+    if x < rect.x + rect.width * 0.5 { -1 } else { 1 }
 }

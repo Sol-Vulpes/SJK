@@ -26,6 +26,7 @@ A Collection of everything you gather in SJK, with your own character showing wh
 and holocrons: loot you earn by playing. For now they are collected and shown; they cannot be
 opened yet and give nothing.
 
+- Create game and its map list are drawn in the SJK UI's look, with the classic menus too: the match's rows under Match and Server, a gold Start button, the chosen map's picture with its game type, bots, limits and who can join, and a map list with a search pill and each map's game types _(Sol)_
 - The console feed, the console lines that showed for a few seconds at the top left while playing, is off by default; turn it back on with Settings > Interface > Console feed (con_drawNotify 1). Chat, centre prints and the kill feed still show, and the console keeps every line _(Sol)_
 - A new Collection, under Profile on the main page and in the game menu, holds what you collect: Medals hanging from a rail, Achievements as a wall of medallions by category with the ones nearest to unlock, Shaders (the blade skins, now called saber shaders), Toys (Illuminate) and Nameplates (ornaments to come); the Profile screen keeps Character, Saber, Force and SJK Profile, and the collection, achievements and unlockables commands open its tabs _(Sol)_
 - On the Collection's Shaders, Toys and Nameplates your own character stands beside the page (on the menu map, or in a live preview in a match): it holds the saber shader you choose, a locked one too as a preview only you see, the Illuminate holocron floats by it, and your nameplate stands over its head _(Sol)_

@@ -94,9 +94,13 @@ impl ClientMenu {
                 let reveal = self.screen_reveal();
                 self.player.append(vertices, font, viewport, reveal);
             }
+            // The SJK UI's in every menu style (it has no classic+ version),
+            // drawn in the UI's families by `append_sjk_screen`; here, from a
+            // caller without them, in Inter.
             ClientPhase::CreateGame => {
                 let reveal = self.screen_reveal();
-                self.create_game.append(vertices, font, viewport, reveal);
+                let target = sjk::TextTarget::Inter(vertices, font);
+                self.create_game.append(target, viewport, reveal);
             }
             ClientPhase::InGame => {}
         }
