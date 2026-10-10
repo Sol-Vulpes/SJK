@@ -8,7 +8,7 @@ mod sjk_line;
 
 use super::*;
 use crate::menu_widgets::MenuCanvas;
-use crate::text::{Carry, TextFace, visible_text_width_face};
+use crate::text::{Carry, TextFace, visible_text_width_face, visible_text_width_style};
 use layout::Geometry;
 use sjk_ui::{Color, DrawCommand, Easing, FontWeight, Rect, TextAlign};
 
@@ -139,11 +139,17 @@ impl ChatOverlay {
                 .map(|hub| sjk_line::Prefix::new(&line.name, hub.verified, hub.tier, font, g));
             let wrap_width = g.width - 12.0 * g.scale;
             match &sjk {
-                Some(prefix) => {
-                    line.wrap
-                        .update_indented(&line.body, font, wrap_width, g.font, prefix.width())
-                }
-                None => line.wrap.update(&line.body, font, wrap_width, g.font),
+                Some(prefix) => line.wrap.update_spaced(
+                    &line.body,
+                    font,
+                    wrap_width,
+                    g.font,
+                    prefix.width(),
+                    g.spacing,
+                ),
+                None => line
+                    .wrap
+                    .update_spaced(&line.body, font, wrap_width, g.font, 0.0, g.spacing),
             }
             let rows = if line.muted { 1 } else { line.wrap.len };
             let header = if line.name.is_empty() || sjk.is_some() {
@@ -313,6 +319,7 @@ impl ChatOverlay {
                             marks: &line.emojis,
                             emojis: self.options.emojis.then_some(&self.emojis),
                             truncated,
+                            spacing: g.spacing,
                         },
                         font,
                         Rect::new(x, body_y + row as f32 * g.row, g.width, row_box(g)),
@@ -335,6 +342,8 @@ struct BodyRow<'a> {
     /// The pictures, while `cg_chatBoxEmojis` is on; off, a mark is a blank.
     emojis: Option<&'a emoji::Emojis>,
     truncated: bool,
+    /// Extra room after each character (`cg_chatBoxLetterSpacing`), in pixels.
+    spacing: f32,
 }
 
 /// Draw a body row: as one text when it holds no emoji, else as its text runs
@@ -359,7 +368,7 @@ fn body_row(
             size,
             color,
             FontWeight::Regular,
-            0.0,
+            row.spacing,
             TextAlign::Start,
         );
         return;
@@ -377,10 +386,16 @@ fn body_row(
                 size,
                 color,
                 FontWeight::Regular,
-                0.0,
+                row.spacing,
                 TextAlign::Start,
             );
-            x += visible_text_width_face(font, run, size / font.height, TextFace::Regular);
+            x += visible_text_width_style(
+                font,
+                run,
+                size / font.height,
+                TextFace::Regular,
+                row.spacing,
+            );
             colour = colour.after(run);
         }
         let Some(mark) = after.chars().next() else {
@@ -498,6 +513,7 @@ mod tests {
                 marks: &marks,
                 emojis: shown.then_some(&emojis),
                 truncated,
+                spacing: 0.0,
             },
             &font,
             Rect::new(10.0, 20.0, 400.0, 13.0),

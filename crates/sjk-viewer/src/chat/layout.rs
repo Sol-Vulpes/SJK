@@ -25,6 +25,8 @@ pub(super) struct Geometry {
     pub(super) width: f32,
     pub(super) row: f32,
     pub(super) font: f32,
+    /// Extra room after each message character, in pixels (`cg_chatBoxLetterSpacing`).
+    pub(super) spacing: f32,
 }
 
 impl Geometry {
@@ -39,6 +41,7 @@ impl Geometry {
             width: (620.0 * scale).min(viewport[0] - left * 2.0).max(1.0),
             row: 18.0 * scale * ROW_PITCH,
             font: 18.0 * scale,
+            spacing: 0.0,
         }
     }
 }
@@ -53,6 +56,7 @@ pub(super) struct Wrapped {
     /// Room the first row leaves at its start (an SJK chat line's tag and name).
     indent: f32,
     size: f32,
+    spacing: f32,
     font_height: f32,
     font_modern: bool,
 }
@@ -66,6 +70,7 @@ impl Default for Wrapped {
             width: 0.0,
             indent: 0.0,
             size: 0.0,
+            spacing: 0.0,
             font_height: 0.0,
             font_modern: true,
         }
@@ -73,18 +78,14 @@ impl Default for Wrapped {
 }
 
 impl Wrapped {
-    /// Cache boundaries, never strings. Long words break at a character boundary,
-    /// never between a colour code's `^` and its digit ([`fitting_end`]), and each
-    /// row keeps the colour code in force where it starts ([`Self::carry`]).
+    /// [`Self::update_spaced`] with no indent or spacing.
+    #[cfg(test)]
     pub(super) fn update(&mut self, value: &str, font: &UiFont, width: f32, size: f32) {
-        self.update_indented(value, font, width, size, 0.0);
+        self.update_spaced(value, font, width, size, 0.0, 0.0);
     }
 
-    /// [`Self::update`] for a body whose first row starts `indent` in, after what is
-    /// drawn before it on that row (an SJK chat line's tag and name): the body goes
-    /// on along the name's row and wraps only when it is too long. A first word that
-    /// does not fit after the name but fits a whole row starts the next row instead,
-    /// the first row then empty.
+    /// [`Self::update_spaced`] with no spacing.
+    #[cfg(test)]
     pub(super) fn update_indented(
         &mut self,
         value: &str,
@@ -93,10 +94,33 @@ impl Wrapped {
         size: f32,
         indent: f32,
     ) {
+        self.update_spaced(value, font, width, size, indent, 0.0);
+    }
+
+    /// Cache boundaries, never strings. Long words break at a character boundary,
+    /// never between a colour code's `^` and its digit ([`fitting_end`]), and each
+    /// row keeps the colour code in force where it starts ([`Self::carry`]).
+    ///
+    /// The first row starts `indent` in, after what is drawn before it on that row
+    /// (an SJK chat line's tag and name): the body goes on along the name's row and
+    /// wraps only when it is too long. A first word that does not fit after the name
+    /// but fits a whole row starts the next row instead, the first row then empty.
+    /// Each character but an emoji picture takes `spacing` more pixels, as the body
+    /// is drawn with `cg_chatBoxLetterSpacing`.
+    pub(super) fn update_spaced(
+        &mut self,
+        value: &str,
+        font: &UiFont,
+        width: f32,
+        size: f32,
+        indent: f32,
+        spacing: f32,
+    ) {
         if self.len > 0
             && self.width == width
             && self.indent == indent
             && self.size == size
+            && self.spacing == spacing
             && self.font_height == font.height
             && self.font_modern == font.is_modern()
         {
@@ -105,6 +129,7 @@ impl Wrapped {
         self.width = width;
         self.indent = indent;
         self.size = size;
+        self.spacing = spacing;
         self.font_height = font.height;
         self.font_modern = font.is_modern();
         self.len = 0;
@@ -116,7 +141,7 @@ impl Wrapped {
             } else {
                 width
             };
-            let mut end = start + fitting_end(&value[start..], font, room, size);
+            let mut end = start + fitting_end_spaced(&value[start..], font, room, size, spacing);
             if end < value.len() {
                 match value[start..end].rfind(' ') {
                     Some(space) if space > 0 => end = start + space,
@@ -127,7 +152,15 @@ impl Wrapped {
                             .find(' ')
                             .map_or(value.len(), |at| start + at);
                         if word > end
-                            && word <= start + fitting_end(&value[start..], font, width, size)
+                            && word
+                                <= start
+                                    + fitting_end_spaced(
+                                        &value[start..],
+                                        font,
+                                        width,
+                                        size,
+                                        spacing,
+                                    )
                         {
                             end = start;
                         }
@@ -154,6 +187,17 @@ impl Wrapped {
 
 /// Work is linear in the bounded text length, with no temporary substring copies.
 pub(super) fn fitting_end(value: &str, font: &UiFont, width: f32, size: f32) -> usize {
+    fitting_end_spaced(value, font, width, size, 0.0)
+}
+
+/// [`fitting_end`] with `spacing` pixels after each character but an emoji picture.
+pub(super) fn fitting_end_spaced(
+    value: &str,
+    font: &UiFont,
+    width: f32,
+    size: f32,
+    spacing: f32,
+) -> usize {
     let mut used = 0.0;
     let mut chars = value.char_indices().peekable();
     // Colour codes are zero-width, and truncating between `^` and its digit
@@ -167,11 +211,12 @@ pub(super) fn fitting_end(value: &str, font: &UiFont, width: f32, size: f32) -> 
         used += if super::emoji::mark_index(c).is_some() {
             super::emoji::advance(size)
         } else {
-            text::visible_text_width_face(
+            text::visible_text_width_style(
                 font,
                 &value[i..end],
                 size / font.height,
                 TextFace::Regular,
+                spacing,
             )
         };
         if (used > width || end > 480) && i > 0 {
@@ -400,6 +445,18 @@ mod tests {
         // A word wider than any row is broken where the name's row ends.
         let word = "x".repeat(50);
         assert_eq!(indented(&word, 40, 30)[0], "x".repeat(10));
+    }
+
+    #[test]
+    fn letter_spacing_wraps_sooner_and_is_part_of_the_cached_wrap() {
+        let font = test_font();
+        let body = "a".repeat(30);
+        let mut wrapped = Wrapped::default();
+        // Ten 8-unit characters fill 80 units; with 2 more each, eight do.
+        wrapped.update_spaced(&body, &font, 80.0, 12.0, 0.0, 0.0);
+        assert_eq!(wrapped.rows[0], 0..10);
+        wrapped.update_spaced(&body, &font, 80.0, 12.0, 0.0, 2.0);
+        assert_eq!(wrapped.rows[0], 0..8);
     }
 
     #[test]

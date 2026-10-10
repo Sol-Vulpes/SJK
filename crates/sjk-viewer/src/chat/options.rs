@@ -11,6 +11,8 @@ pub(super) struct Options {
     pub(super) lines: usize,
     /// Multiplier for the modern conversation font.
     pub(super) font: f32,
+    /// Extra room after each message character, in 1080p pixels at font scale 1.
+    pub(super) spacing: f32,
     /// Left edge in virtual 640-wide coordinates.
     pub(super) x: f32,
     /// Bottom edge in virtual 480-high coordinates.
@@ -48,6 +50,7 @@ impl Options {
             lifetime: integer("cg_chatbox", 10000).max(0) as u64,
             lines: integer("cg_chatboxlines", 5).clamp(1, MAX_VISIBLE as i64) as usize,
             font: scalar(console, "cg_chatboxfontsize", 1.0).clamp(0.25, 3.0),
+            spacing: scalar(console, "cg_chatboxletterspacing", 0.0).clamp(-2.0, 8.0),
             x: scalar(console, "cg_chatboxx", 30.0).clamp(0.0, 600.0),
             height: scalar(console, "cg_chatboxheight", 350.0).clamp(0.0, 480.0),
             width: scalar(console, "cg_chatboxcutofflength", 350.0).clamp(60.0, 640.0),
@@ -73,6 +76,7 @@ impl Options {
         g.font *= self.font;
         g.row *= self.font;
         g.scale *= self.font;
+        g.spacing = self.spacing * g.scale;
         g
     }
 }

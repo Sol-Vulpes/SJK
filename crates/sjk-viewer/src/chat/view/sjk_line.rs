@@ -224,6 +224,7 @@ pub(in crate::chat) fn draw(
                 marks: line.marks,
                 emojis: line.emojis,
                 truncated,
+                spacing: g.spacing,
             },
             font,
             Rect::new(

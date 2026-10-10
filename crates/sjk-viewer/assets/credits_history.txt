@@ -9,6 +9,8 @@
 #                               made it when that is not the piece's owner.
 
 = Sol
++ 10/10/2026 | - | Chat letter spacing option, cg_chatBoxLetterSpacing
+- 416a529 |  | Chat letter spacing: cg_chatBoxLetterSpacing and Settings > HUD row
 + 10/10/2026 | - | Create game and its map picker in the SJK look in every style
 - 94177d4 |  | Draw Create game and its map list in the SJK UI look, in every menu style
 + 10/10/2026 | - | Resolution list as an SJK card, hero settings screen and key editor removed

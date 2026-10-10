@@ -24,6 +24,17 @@
 
 # ---- Console & chat ----
 
+[chat-letter-spacing]
+area: Console & chat
+title: Chat letter spacing (cg_chatBoxLetterSpacing, Settings > HUD)
+change: cg_chatBoxLetterSpacing (default 0, -2 to 8, 1080p pixels) spaces chat message letters.
+change: Settings > HUD > Chat letter spacing sets it; wrapping measures the same spacing.
+test: Settings > HUD > Chat letter spacing to 3: chat messages spread out, names unchanged.
+test: Say a long message: it wraps sooner and no row runs past the chat box.
+test: Set it to -1: letters pack closer. Back to 0: chat looks as before.
+test: A coloured message and an SJK chat line (gold) both follow the setting.
+note: Unit tests only; not tried in a game.
+
 [chat-clan-names]
 area: Console & chat
 title: SJK chat names keep the marks around clan tags ({JoF}, \o/, Latin-1 symbols)
