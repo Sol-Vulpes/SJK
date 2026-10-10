@@ -959,17 +959,27 @@ fn skin_core(input: VertexOutput, texel: vec4<f32>, uv: vec2<f32>, footprint: f3
 // its rounded tip and moves with a glitch or the hologram's jitter (in core half-widths,
 // the glow's radius about three of them).
 fn core_coordinates(input: VertexOutput) -> vec2<f32> {
-    var across = input.blade.x / (2.0 * input.radius);
+    var across = input.blade.x / (2.0 * input.radius) * core_stretch(input);
     if input.kind >= KIND_SKIN {
         let along = mix(-1.0, input.length, input.blade.y);
         let skin = skins[skin_index(input)];
-        across *= 1.0 + skin_wave(skin.core_breathe, input.animation.x, along, input.animation.y);
-        across /= skin_tip_taper(along, input.length, skin.core_fringe.w * input.radius);
         let moved = skin_glitch(skin, along, input.animation.x, input.animation.y).x
             + skin_jitter(skin, input.animation.x, input.animation.y);
         across -= 1.5 * moved;
     }
     return vec2(0.5 + across, 1.0 - input.blade.y);
+}
+
+// How much a skin's core line is stretched across here: its breathing, and its rounded tip,
+// where the width left goes to nothing (1 for a stock line).
+fn core_stretch(input: VertexOutput) -> f32 {
+    if input.kind < KIND_SKIN {
+        return 1.0;
+    }
+    let along = mix(-1.0, input.length, input.blade.y);
+    let skin = skins[skin_index(input)];
+    return (1.0 + skin_wave(skin.core_breathe, input.animation.x, along, input.animation.y))
+        / skin_tip_taper(along, input.length, skin.core_fringe.w * input.radius);
 }
 
 // The colour split a glitch gives the core at this fragment, in texture units across.
@@ -1005,6 +1015,11 @@ fn fragment_main(input: VertexOutput) -> @location(0) vec4<f32> {
         if input.kind >= KIND_SKIN { return vec4(skin_glow(input, pixel), 1.0); }
         return vec4(glow_capsule(input) * input.color, 1.0);
     }
+    // How far the core's `u` moves in a pixel, from the straight line's across scaled by the
+    // stretch here: the derivatives of `core_uv` itself blow up on the tip's last row, where
+    // the stretch runs to a hundred within one pixel, and the rounded tip's cut then left
+    // half the line's width lit there, a bar across the tip.
+    let footprint = pixel / (2.0 * input.radius) * core_stretch(input);
     var texel = textureSampleGrad(core_texture, core_sampler, core_uv, core_dx, core_dy);
     let split = core_split(input);
     if split > 0.0 {
@@ -1012,16 +1027,15 @@ fn fragment_main(input: VertexOutput) -> @location(0) vec4<f32> {
         let offset = vec2(split, 0.0);
         let red = textureSampleGrad(core_texture, core_sampler, core_uv + offset, core_dx, core_dy);
         let blue = textureSampleGrad(core_texture, core_sampler, core_uv - offset, core_dx, core_dy);
-        let skin = skin_core(input, texel, core_uv, abs(core_dx.x) + abs(core_dy.x));
+        let skin = skin_core(input, texel, core_uv, footprint);
         return vec4(
-            skin_core(input, red, core_uv + offset, abs(core_dx.x) + abs(core_dy.x)).r,
+            skin_core(input, red, core_uv + offset, footprint).r,
             skin.g,
-            skin_core(input, blue, core_uv - offset, abs(core_dx.x) + abs(core_dy.x)).b,
+            skin_core(input, blue, core_uv - offset, footprint).b,
             1.0,
         );
     }
     if input.kind >= KIND_SKIN {
-        let footprint = abs(core_dx.x) + abs(core_dy.x);
         return vec4(skin_core(input, texel, core_uv, footprint), 1.0);
     }
     if input.kind == KIND_NEUTRAL {

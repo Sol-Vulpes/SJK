@@ -20,6 +20,7 @@ Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 -->
 ## Unreleased
 
+- Saber shaders no longer draw a thin bar across the blade's tip _(Sol)_
 - The body shield-hit flash is a little brighter by default: two passes (cg_shieldBrightness 2); a profile still on the old default 1 (or 4) moves to 2 once, other values stay _(Sol)_
 
 ## 2026.1011.1 (Alpha) | 11/10/2026

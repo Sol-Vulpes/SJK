@@ -358,6 +358,17 @@ fn a_skinned_blade_ends_round_not_square() {
         let across = x / (2.0 * radius) / tip_taper(along, length, cap);
         assert!(across > 0.5, "{x} at {along}: {across}");
     }
+    // On the tip's last row the cut's softening is the straight line's pixel, stretched as
+    // the line is: everything but the centre stays dark. (The derivatives of the stretched
+    // coordinate ran to a hundred there, and the cut left half the width lit: a bar.)
+    let pixel = 0.4 / (2.0 * radius);
+    let left = tip_taper(length, length, cap);
+    for x in [0.25 * radius, 0.5 * radius, radius] {
+        let across = x / (2.0 * radius) / left;
+        let footprint = pixel / left;
+        let cut = ((0.5 - across) / footprint + 0.5).clamp(0.0, 1.0);
+        assert_eq!(cut, 0.0, "{x}");
+    }
     // The tip's centre line is inside it.
     let across = 0.0 / tip_taper(length - 0.05 * cap, length, cap);
     assert!(across < 0.5);
@@ -391,7 +402,9 @@ fn a_skinned_blade_ends_round_not_square() {
     for line in [
         "let into = clamp((along - (length - cap)) / max(cap, 0.0001), 0.0, 1.0);",
         "return select(sqrt(max(1.0 - into * into, 0.0001)), 1.0, into <= 0.0);",
-        "across /= skin_tip_taper(along, input.length, skin.core_fringe.w * input.radius);",
+        "/ skin_tip_taper(along, input.length, skin.core_fringe.w * input.radius);",
+        "var across = input.blade.x / (2.0 * input.radius) * core_stretch(input);",
+        "let footprint = pixel / (2.0 * input.radius) * core_stretch(input);",
         "let beyond = max(input.blade.y - input.shaft, 0.0);",
         "shaded.blade = vec2(x / widen, min(input.blade.y, input.shaft) + beyond / widen);",
         "let radial = select(abs(x), length(vec2(x, beyond)), beyond > 0.0);",

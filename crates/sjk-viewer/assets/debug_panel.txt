@@ -737,6 +737,13 @@ test: Disconnect during a join or a map load, and reconnect from the menu: no st
 test: Classic menus: disconnect, then switch to the SJK UI: duel6 is there.
 note: Before: about 11-12 GB after a few maps. FPS with the smaller blocks not measured yet.
 
+[saber-tip-bar]
+area: Rendering & effects
+title: Saber shaders: no thin bar across the blade's tip
+change: The rounded tip of a shader blade's core no longer leaves a one-pixel bar at its end.
+test: Wear Banner, Heartbeat or Hologram, hold the blade up: the tip ends in a round point.
+test: Look closely from a few distances and angles: no line just above the tip.
+
 [chroma-shaders]
 area: Rendering & effects
 title: Chroma saber shaders take your saber colour, marked with a colour wheel
