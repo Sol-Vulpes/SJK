@@ -123,6 +123,7 @@ pub(crate) fn row_labels(
         illuminate: true,
         name: "",
         stock: color::HOLO,
+        grid: false,
     };
     counts(&inputs).iter().map(|count| count.label()).collect()
 }
@@ -374,12 +375,18 @@ impl Panel {
     /// The keys of the tab on show, right-aligned at the bottom.
     fn keys(&mut self, frame: &Frame, inputs: &Inputs<'_>) {
         let s = frame.s;
-        let mut keys: Vec<(&[&str], &str)> = Vec::with_capacity(5);
+        let mut keys: Vec<(&[&str], &str)> = Vec::with_capacity(6);
         match self.tab {
             Tab::Medals => keys.push((&["Left", "Right"], "choose")),
             Tab::Achievements => keys.push((&["Arrows"], "choose")),
             Tab::Shaders => {
-                keys.push((&["Up", "Down"], "choose"));
+                if self.grid {
+                    keys.push((&["Arrows"], "choose"));
+                    keys.push((&["V"], "list"));
+                } else {
+                    keys.push((&["Up", "Down"], "choose"));
+                    keys.push((&["V"], "grid"));
+                }
                 let worn = self.shader_rows.get(self.shader).and_then(|row| row.wear);
                 match worn {
                     Some("") if self.shader > 0 => keys.push((&["Enter"], "unequip")),

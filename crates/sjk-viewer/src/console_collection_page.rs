@@ -91,6 +91,12 @@ impl ViewerConsole {
             PanelAction::None => {}
             PanelAction::Close => self.close_collection_panel(),
             PanelAction::Wear(id) => crate::unlockables::wear(self, id),
+            PanelAction::ShaderView(grid) => {
+                self.set_cvar(
+                    super::collection_panel::SHADER_VIEW_CVAR,
+                    if grid { "1" } else { "0" },
+                );
+            }
             PanelAction::Illuminate(on) => {
                 self.pending_illuminate = Some(on);
                 // The page shows it at once; the viewer applies it next frame.
@@ -187,6 +193,7 @@ impl ViewerConsole {
         let name = self.text_value("name").unwrap_or_default().to_owned();
         let illuminate = self.illuminate_lit();
         let stock = self.stock_blade();
+        let grid = self.integer_cvar(super::collection_panel::SHADER_VIEW_CVAR) == Some(1);
         let enabled = self.bool_cvar("cl_identity") == Some(true);
         let snapshot = crate::player_identity::snapshot();
         let held = snapshot
@@ -208,6 +215,7 @@ impl ViewerConsole {
                 illuminate,
                 name: &name,
                 stock,
+                grid,
             };
             self.collection_panel.append_sjk(&inputs, target, viewport);
             self.collection_panel.preview = Some(unlocks);
@@ -222,6 +230,7 @@ impl ViewerConsole {
             illuminate,
             name: &name,
             stock,
+            grid,
         };
         self.collection_panel.append_sjk(&inputs, target, viewport);
     }

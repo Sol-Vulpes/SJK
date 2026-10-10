@@ -44,6 +44,7 @@ fifteen choices no longer fit. Seen in off-screen GPU renders on duel6 (world sh
 | Choosing | The Collection's Shaders tab (SJK UI look; the Unlockables page until 10/10/2026) lists every blade skin, owned or locked, previews the chosen one on the player's own saber and equips owned ones; the Profile screen's Saber tab offers the owned blade skins too (10/10/2026); `cg_saberSkin` holds the choice. |
 | Art (looks, sounds) | SJK's own, all rights reserved, not under the code's GPLv2: kept in the hub's private repository and served by the hub to registered SJK keys as packs. The code that draws it stays open and generic: no skin's values, sounds or pictures are in this repository or its history to come. |
 | Delivery | The identity service downloads the hub's packs into `assets/` beside `identity.key` (at start once registered, then every 6 hours, only when a pack's SHA-256 changed); the viewer mounts every cached pack at start and a new one at once, below the game data, so a PK3 with the same paths replaces their files. A cached pack mounts with the identity off too. |
+| Tiers | Every saber shader has a tier, the holocrons' four (Uncommon, Rare, Legendary, Mythical), their names and colours (10/10/2026, Sol's tiers; [Tiers](#tiers)). Uncommon is for plainer shaders to come (colours, no effects). |
 | Format | A blade skin is a JSON file, `skins/blades/<unlock id>.bladeskin`, holding every parameter of the generic shading, its trail, light and sound paths. The format is documented here; the files are art. |
 
 ## Catalogue
@@ -347,6 +348,40 @@ from the looks.
   built-in Sun. Not verified: the sounds by ear, a live match, another player's skin
   from a real hub, a pack downloaded from the deployed hub.
 
+### Tiers
+
+Built 10/10/2026 (Sol's request: give shaders qualities, as more come, plainer ones
+too). Every blade skin has a tier (`Unlockable::tier`, `unlockables::Rarity` in
+[unlockables.rs](../crates/sjk-viewer/src/unlockables.rs)), one of the holocrons' four,
+with the holocron tier's name (`Tier::label`) and colour
+([holocrons.rs](../crates/sjk-viewer/src/holocrons.rs)) so a Rare shader and a Rare
+holocron look alike:
+
+| Tier | Shaders |
+| --- | --- |
+| Mythical | Sun, Void, Molten, Spectral |
+| Legendary | Storm, Unstable, Chameleon, Prism (provisional) |
+| Rare | Frost, Hologram, Runic, Heartbeat, Glitch (provisional), Banner (provisional) |
+| Uncommon | none yet: the plainer, colour-only shaders to come |
+
+Sol placed eleven; Prism, Glitch and Banner are placed provisionally until Sol says
+otherwise. The tier is the client catalogue's only: the hub does not need it yet (it
+will when holocrons drop shaders, [Planned](#planned-not-built)).
+
+- Lists: the Collection's Shaders tab and the Saber tab's Blade row list the rarest
+  first, then in catalogue order within a tier (`unlockables::blade_skins_by_tier`),
+  the stock blade first. Profiles, the hub and the Staff page keep the catalogue's
+  order.
+- Shown: the Collection's rack frames each swatch in its tier's colour (quieter when
+  locked) and names the tier at the right of its state line; its cards carry a band of
+  the tier's colour along the top, a frame and the tier's name; beside the model a pill
+  in the tier's colour stands over the kind line; the Saber tab's swatches have a thin
+  edge in it; the player card frames the worn shader's swatch in it and writes its name
+  in the colour lifted toward white.
+- Verified: unit tests (every shader's tier, the order, the holocrons' names and
+  colours) and the world shots of the Collection (`duel6_sjk_collection`); not tried
+  in the game.
+
 ### Chromas
 
 Built 10/10/2026 (Sol's request: mark the shaders that can be coloured). A **chroma**
@@ -512,19 +547,31 @@ in the SJK UI's look in every menu style; in the SJK UI the main page's and the
 in-game menu's Collection open it, with the classic menus `unlockables` (and the
 Profile page's See the collection) open it on its own:
 
-- a rack, a row to each: the stock blade (in the player's `color1`), then every
-  blade skin with a live swatch (drawn with the UI's shapes from its loaded file's
+- a rack, a row to each, or a grid of cards (below): the stock blade (in the player's
+  `color1`), then every blade skin, the rarest [tier](#tiers) first, with a live swatch
+  framed in its tier's colour (drawn with the UI's shapes from its loaded file's
   colours, flicker and flares, moving: a breathing corona, flame loops and granules, a
   flare running hilt to tip, and the file's lightning arcs, motes and turning hue when
   it has them; grey and still under a padlock when locked; owned but with its pack not
   loaded yet, a neutral still blade; a chroma in the player's colour, with its colour
-  wheel before its name), its name and its state (Worn, Yours, Locked) under it; a
-  click chooses a row, a double click (within 0.4 s) wears an owned one as Equip does
+  wheel before its name), its name and its state (Worn, Yours, Locked) under it, its
+  tier's name at the right of that line in its colour; a click chooses a row, a double click (within 0.4 s) wears an owned one as Equip does
   (a locked one stays a preview, the worn one stays on);
+- the grid (10/10/2026, Sol's request, so many shaders scroll quickly): cards of
+  164 by 196 frame pixels, five to a line, three lines shown, each with a band of its
+  tier's colour along the top, a frame in it (gold and thicker for the chosen one), the
+  live swatch, the chroma's wheel, the name without "blade", the tier's name and the
+  state. The arrows move in two directions (Left and Right a card, Up and Down a line,
+  stopping at the ends), the wheel scrolls a line a notch keeping the chosen card in
+  view, a click chooses, a double click wears an owned one as on the rack, and a thin
+  bar at the right shows where it is once there are more lines than three. Two
+  switches left of the kinds (three bars: the rack; four squares: the grid) and V
+  change the view; `ui_shaderView` (archived, 0 the rack, 1 the grid) keeps it;
 - the player's model holding the chosen blade, on the menu map's stage or in the
   page's live preview over a match: a locked one too, as a preview this screen alone
   draws (`PreviewSkin`; nothing is set or sent);
-- beside the model what the chosen one is: its kind, its name and, at the column's
+- beside the model what the chosen one is: its tier as a pill in the tier's colour,
+  its kind, its name and, at the column's
   right end, its state pill (10/10/2026: the name ends short of the pill, ellipsised,
   instead of the pill following a measured name, which overlapped it when the drawn
   face was wider than the measure), owned (`Yours since dd/mm/yyyy, from the
@@ -542,9 +589,11 @@ one button that applies.
 Verified: unit tests (keys, pointer, the worn one chosen on opening, equip and unequip,
 a locked one previewed but never equipped, every row and its words within the canvas
 at 1080p, 4K, 4:3 and 21:9, the swatch moving and staying inside its frame, the Staff
-page's Unlock and Relock) and the world shot `duel6_sjk_collection` (the Sun worn on
-the stage, the Storm previewed, a 4:3 window, the in-game preview, the classic menus)
-with the hub's pack; not tried in the game.
+page's Unlock and Relock; the grid's switches and V, its arrows in two directions, its
+wheel, a double click on a card, every card above the keys at the four shapes) and the
+world shot `duel6_sjk_collection` (the Sun worn on the stage, the Storm previewed, the
+grid with five owned, a 4:3 window and its grid, the in-game preview, the classic
+menus) with the hub's pack; not tried in the game.
 
 ### Saber tab's blade choice
 
@@ -597,7 +646,9 @@ deployed when built, nothing tried in the game.
 ## Planned, not built
 
 Achievements granting unlockables (with harder goals), holocrons dropping blade skins
-(parked: pool, odds and duplicates undecided), other kinds of unlockable (holocron
+(parked: pool, odds and duplicates undecided; the shaders' [tiers](#tiers) would then
+be the hub's too, to roll a shader of a holocron's tier), Uncommon shaders (colours
+only), other kinds of unlockable (holocron
 skins, trails, emotes). Up to 16 blade skins load at once (the renderer's slots; the
 uniform array is 13312 bytes of the 16 KiB WebGPU guarantees, so a seventeenth needs
 fewer lanes per skin or a storage buffer first).

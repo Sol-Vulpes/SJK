@@ -16,6 +16,11 @@ pub(super) fn register(cvars: &mut CvarRegistry) -> Result<(), sjk_shell::CvarEr
         ),
         ("ui_browserShowFull", 1, "Show full servers"),
         (
+            "ui_shaderView",
+            0,
+            "Collection, Shaders: 0 lists the shaders, 1 shows them as a grid of cards",
+        ),
+        (
             "ui_browserShowPasswordProtected",
             1,
             "Show password-protected servers",

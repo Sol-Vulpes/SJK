@@ -1333,6 +1333,13 @@ impl PlayerMenu {
                         seconds,
                         swatch::chroma_turn(look, swatch::rgb_bytes(colour)),
                     );
+                    // A thin edge in the shader's tier colour.
+                    let _ = self.canvas.draw_list_mut().push(DrawCommand::Border {
+                        rect: frame.rect(x, y, SKIN_WIDTH, SKIN_HEIGHT),
+                        radius: 4.0 * s,
+                        width: 1.2 * s,
+                        color: color::alpha(skin.tier.colour(), 0.85),
+                    });
                     // A chroma's mark in the swatch's top right corner, over the glass.
                     if skin.chroma {
                         swatch::chroma_mark(
@@ -2877,16 +2884,20 @@ mod tests {
                     "{choice}"
                 );
             }
-            let storm = menu.canvas.rect_for(SKIN_BASE + 2).unwrap();
+            // The second skin of the row, the rarest listed first.
+            let second = menu.canvas.rect_for(SKIN_BASE + 2).unwrap();
             click(
                 &mut menu,
                 &mut console,
-                sjk_ui::Vec2::new(storm.x + storm.width * 0.5, storm.y + storm.height * 0.5),
+                sjk_ui::Vec2::new(
+                    second.x + second.width * 0.5,
+                    second.y + second.height * 0.5,
+                ),
             );
             assert_eq!(menu.selected, row);
             assert_eq!(
                 console.text_value(crate::unlockables::SABER_SKIN_CVAR),
-                Some(crate::unlockables::ALL[1].id)
+                Some(crate::unlockables::blade_skins_by_tier()[1].id)
             );
             assert_eq!(menu.blade_choice.chosen(), 2);
             // The keys step along it, back to the stock blade.

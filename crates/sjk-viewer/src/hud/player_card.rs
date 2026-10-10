@@ -1022,6 +1022,19 @@ impl State {
                     crate::console::collection_panel::swatch::chroma_turn(look.skin, rgb)
                 }),
             );
+            // A thin edge in the shader's tier colour, which its name takes too.
+            let tier = card
+                .shader
+                .and_then(crate::unlockables::blade_skin)
+                .map(|skin| skin.tier.colour());
+            if let Some(tier) = tier {
+                let _ = self.list.push(DrawCommand::Border {
+                    rect: Rect::new(swatch[0], swatch[1], swatch[2], swatch[3]),
+                    radius: 3.0 * unit,
+                    width: 1.2 * unit,
+                    color: Color::new(tier.r, tier.g, tier.b, 0.9),
+                });
+            }
             // A chroma's colour wheel between the swatch and its name.
             let chroma = card.shader.is_some_and(crate::unlockables::is_chroma);
             let mut text_x = left + swatch[2] + 8.0 * unit;
@@ -1046,7 +1059,11 @@ impl State {
                 T_SHADER,
                 Rect::new(text_x, y + row(1.0), left + beside(y) - text_x, row(22.0)),
                 15.0 * unit,
-                white(0.92),
+                // The tier's colour lifted toward white, to read on the dark card.
+                tier.map_or(white(0.92), |tier| {
+                    let lift = |channel: f32| channel + (1.0 - channel) * 0.35;
+                    Color::new(lift(tier.r), lift(tier.g), lift(tier.b), 0.95 * a)
+                }),
                 FontWeight::Semibold,
                 TextAlign::Start,
             );

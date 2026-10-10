@@ -1105,9 +1105,16 @@ for the run.
 - **Shaders:** "1 of 5 owned" (or why that is not known) over a line, beside the kinds
   as pills: Saber with its count, and Body ("soon", not offered yet). Then the rack, a
   row of 106 to each: the stock blade first (its swatch in the player's `color1`), then
-  every blade skin, each with its live swatch ([unlockables.md](unlockables.md)) alive
+  every blade skin, the rarest tier first (10/10/2026: Mythical, Legendary, Rare, then
+  Uncommon, the holocrons' tiers and colours), each with its live swatch
+  ([unlockables.md](unlockables.md#tiers)) framed in its tier's colour, alive
   when owned, grey and still under a padlock when not, its name at 28 and its state
-  (Worn, Yours, Locked, "In your colour"); the one chosen banded with a gold mark. Six
+  (Worn, Yours, Locked, "In your colour") with the tier's name at the line's right in
+  its colour; the one chosen banded with a gold mark. Or, switched by the two marks
+  left of the kinds (three bars, four squares) or V and kept in `ui_shaderView`, a grid
+  of cards five to a line, three lines shown (each card: a tier band and frame, the
+  swatch, the name without "blade", the tier and the state), the arrows moving in two
+  directions ([unlockables.md](unlockables.md#shaders-tab)). Six
   rows show at a time (10/10/2026, fifteen no longer fit): the rack scrolls just enough
   to keep the chosen row in view (a pointer over the rows never scrolls it), the wheel
   scrolls it a row a notch, the chosen row kept in view, and a thin bar at its right
@@ -1115,7 +1122,7 @@ for the run.
   model holds the chosen blade, a locked one too ("Preview on your saber: not yours
   yet" over the stage): the preview is drawn by this screen only and never sent
   (`collection_panel::PreviewSkin`, `menu_stage`'s `skin_override`). Beside the model
-  (x 1300 to 1824, from y 618): "Saber shader" or "Your saber", the name at 56 (gold
+  (x 1300 to 1824, from y 618): the tier as a pill in its colour (over the line), "Saber shader" or "Your saber", the name at 56 (gold
   when owned) with its state as a tag, what it is, "Yours since dd/mm/yyyy, from the
   SJK team" with the note (", with your Bug Hunter medal" when a medal brings it), or "How to get it: ...", and Equip (gold), Unequip or "Wear
   the stock blade". It opens on what is worn. Up and Down choose, Enter equips or

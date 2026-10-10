@@ -631,7 +631,7 @@ impl Panel {
             text(
                 &mut self.ui,
                 TextFamily::Display,
-                format_args!("{}", tier.name.trim_end_matches(" Holocron")),
+                format_args!("{}", tier.label),
                 frame.rect(x + 38.0, chips_y + 6.0, TIER_CHIP[0] - 42.0, 30.0),
                 16.0 * s,
                 if chosen { color::TEXT } else { color::MUTED },

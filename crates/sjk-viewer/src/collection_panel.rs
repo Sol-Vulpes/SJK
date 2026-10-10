@@ -59,10 +59,27 @@ const DOUBLE_CLICK: std::time::Duration = std::time::Duration::from_millis(400);
 const WEAR_TOKEN: u16 = 1_300;
 const TOY_TOKEN: u16 = 1_310;
 const TOY_SWITCH_TOKEN: u16 = 1_311;
-/// The Shaders tab's rows: the stock blade, then every blade skin.
+/// The Shaders tab's view switches: the rack (a list) and the grid of cards.
+const LIST_VIEW_TOKEN: u16 = 1_312;
+const GRID_VIEW_TOKEN: u16 = 1_313;
+/// The Shaders tab's rows: the stock blade, then every blade skin, the rarest first
+/// ([`unlockables::blade_skins_by_tier`]).
 const SHADER_ROWS: usize = 1 + unlockables::ALL.len();
+const _: () = assert!(SHADER_BASE as usize + SHADER_ROWS <= WEAR_TOKEN as usize);
 /// Shader rows the rack shows at once; it scrolls to the rest.
 const RACK_SHOWN: usize = 6;
+/// The grid's cards a line, and the lines it shows at once; it scrolls a line at a time.
+const GRID_COLUMNS: usize = 5;
+const GRID_LINES_SHOWN: usize = 3;
+/// Archived: how the Shaders tab lists the shaders, 0 the rack, 1 the grid of cards.
+pub(crate) const SHADER_VIEW_CVAR: &str = "ui_shaderView";
+
+/// The blade skin of shader row `row`: `None` for the stock blade (row 0) or past the end.
+fn shader_skin(row: usize) -> Option<&'static unlockables::Unlockable> {
+    row.checked_sub(1)
+        .and_then(|index| unlockables::blade_skins_by_tier().get(index))
+        .copied()
+}
 
 /// What the console does after the page handled an event.
 #[derive(Debug, Eq, PartialEq)]
@@ -76,6 +93,8 @@ pub(crate) enum PanelAction {
     Illuminate(bool),
     /// Show a tab another page draws: the Holocrons page.
     Hub(Tab),
+    /// Set [`SHADER_VIEW_CVAR`]: the grid of cards (`true`) or the rack.
+    ShaderView(bool),
 }
 
 /// Where the player's model stands behind Shaders, Toys and Nameplates this frame, as
@@ -129,6 +148,8 @@ pub(crate) struct Inputs<'a> {
     pub(crate) name: &'a str,
     /// The stock blade's colour (`color1`), for its swatch.
     pub(crate) stock: sjk_ui::Color,
+    /// [`SHADER_VIEW_CVAR`]: the Shaders tab shows the grid of cards.
+    pub(crate) grid: bool,
 }
 
 /// What the last frame showed of a shader's row, for keys and clicks.
@@ -156,6 +177,12 @@ pub(crate) struct Panel {
     shader: usize,
     /// The first shader row the rack shows (it scrolls, [`RACK_SHOWN`] at a time).
     shader_first: usize,
+    /// The Shaders tab shows the grid of cards, as the last frame's inputs said (or a
+    /// switch since).
+    grid: bool,
+    /// The first line of cards the grid shows (it scrolls, [`GRID_LINES_SHOWN`] at a
+    /// time).
+    grid_first: usize,
     /// The shader row last clicked and when, for a double click's Equip.
     last_click: Option<(u16, Instant)>,
     /// How many medals the last frame showed.
@@ -197,6 +224,8 @@ impl Panel {
             achievement: usize::MAX,
             shader: 0,
             shader_first: 0,
+            grid: false,
+            grid_first: 0,
             last_click: None,
             medals_shown: 0,
             shader_rows: [ShaderRow::default(); SHADER_ROWS],
@@ -286,8 +315,7 @@ impl Panel {
             Tab::Shaders => Some(StageWish {
                 skin: match self.shader {
                     0 => PreviewSkin::Stock,
-                    row => unlockables::ALL
-                        .get(row - 1)
+                    row => shader_skin(row)
                         .map_or(PreviewSkin::Worn, |skin| PreviewSkin::Skin(skin.id)),
                 },
                 holocron: false,
@@ -382,11 +410,40 @@ impl Panel {
         self.key(key, shift, illuminate)
     }
 
+    /// Switch the Shaders tab to the grid of cards (`true`) or the rack.
+    fn set_grid(&mut self, grid: bool) -> PanelAction {
+        self.grid = grid;
+        PanelAction::ShaderView(grid)
+    }
+
     /// A pressed key, by its code.
     fn key(&mut self, key: KeyCode, shift: bool, illuminate: bool) -> PanelAction {
         let vertical = self.tab == Tab::Shaders;
+        if self.tab == Tab::Shaders && self.grid {
+            // The grid: Left and Right step a card, Up and Down a line, stopping at
+            // the ends (a short last line takes Down to its last card).
+            let last = SHADER_ROWS - 1;
+            match key {
+                KeyCode::ArrowLeft => self.shader = self.shader.min(last).saturating_sub(1),
+                KeyCode::ArrowRight => self.shader = (self.shader + 1).min(last),
+                KeyCode::ArrowUp => {
+                    self.shader = self.shader.checked_sub(GRID_COLUMNS).unwrap_or(self.shader);
+                }
+                KeyCode::ArrowDown if self.shader / GRID_COLUMNS < last / GRID_COLUMNS => {
+                    self.shader = (self.shader + GRID_COLUMNS).min(last);
+                }
+                _ => {}
+            }
+            if matches!(
+                key,
+                KeyCode::ArrowLeft | KeyCode::ArrowRight | KeyCode::ArrowUp | KeyCode::ArrowDown
+            ) {
+                return PanelAction::None;
+            }
+        }
         match key {
             KeyCode::Escape => return PanelAction::Close,
+            KeyCode::KeyV if self.tab == Tab::Shaders => return self.set_grid(!self.grid),
             KeyCode::Tab => self.step(if shift { -1 } else { 1 }, true),
             KeyCode::ArrowLeft if !vertical => self.step(-1, false),
             KeyCode::ArrowRight if !vertical => self.step(1, false),
@@ -416,6 +473,24 @@ impl Panel {
         if let InputEvent::PointerWheel { delta, .. } = event
             && self.tab == Tab::Shaders
         {
+            if self.grid {
+                // The wheel scrolls the grid a line a notch; the chosen card stays in
+                // view.
+                let lines = SHADER_ROWS.div_ceil(GRID_COLUMNS);
+                let last = lines.saturating_sub(GRID_LINES_SHOWN);
+                self.grid_first = if delta.y > 0.0 {
+                    self.grid_first.saturating_sub(1)
+                } else if delta.y < 0.0 {
+                    (self.grid_first + 1).min(last)
+                } else {
+                    self.grid_first
+                };
+                let line = (self.shader / GRID_COLUMNS)
+                    .clamp(self.grid_first, self.grid_first + GRID_LINES_SHOWN - 1);
+                self.shader =
+                    (line * GRID_COLUMNS + self.shader % GRID_COLUMNS).min(SHADER_ROWS - 1);
+                return PanelAction::None;
+            }
             // The wheel scrolls the rack a row a notch; the chosen row stays in view.
             let last = SHADER_ROWS.saturating_sub(RACK_SHOWN);
             self.shader_first = if delta.y > 0.0 {
@@ -470,6 +545,8 @@ impl Panel {
         }
         match token {
             BACK_TOKEN => PanelAction::Close,
+            LIST_VIEW_TOKEN => self.set_grid(false),
+            GRID_VIEW_TOKEN => self.set_grid(true),
             WEAR_TOKEN | TOY_TOKEN | TOY_SWITCH_TOKEN => self.activate(illuminate),
             token => match crate::profile_hub::collection_tab_of(token) {
                 Some(Tab::Holocrons) => PanelAction::Hub(Tab::Holocrons),
@@ -546,7 +623,15 @@ mod tests {
             illuminate: true,
             name: "^1Sol^7Vulpes",
             stock: sjk_ui::Color::new(0.16, 0.48, 1.0, 1.0),
+            grid: false,
         }
+    }
+
+    /// The shader row of blade skin `id`.
+    pub(super) fn row_of(id: &str) -> usize {
+        (1..SHADER_ROWS)
+            .find(|&row| shader_skin(row).is_some_and(|skin| skin.id == id))
+            .unwrap()
     }
 
     /// The panel open on `tab` after one frame of `inputs`, so its things are known.
@@ -562,10 +647,7 @@ mod tests {
     fn shaders_open_on_what_is_worn_and_enter_equips_and_unequips() {
         let owned = [sun()];
         let mut panel = drawn(Tab::Shaders, &inputs(Holdings::Known(&owned), "saber_sun"));
-        let sun_row = 1 + unlockables::ALL
-            .iter()
-            .position(|skin| skin.id == "saber_sun")
-            .unwrap();
+        let sun_row = row_of("saber_sun");
         assert_eq!(panel.shader, sun_row, "the worn one is chosen");
         assert_eq!(
             panel.stage_wish().map(|wish| wish.skin),
@@ -609,7 +691,7 @@ mod tests {
         ] {
             let mut panel = drawn(Tab::Shaders, &inputs(holdings, ""));
             let _ = panel.key(KeyCode::ArrowDown, false, true);
-            let id = unlockables::ALL[0].id;
+            let id = shader_skin(1).unwrap().id;
             assert_eq!(
                 panel.stage_wish().map(|wish| wish.skin),
                 Some(PreviewSkin::Skin(id)),
@@ -743,14 +825,7 @@ mod tests {
             }
             action
         };
-        let row = |id: &str| {
-            SHADER_BASE
-                + 1
-                + unlockables::ALL
-                    .iter()
-                    .position(|skin| skin.id == id)
-                    .unwrap() as u16
-        };
+        let row = |id: &str| SHADER_BASE + row_of(id) as u16;
         let start = Instant::now();
         let later = |millis: u64| start + std::time::Duration::from_millis(millis);
         let mut panel = drawn(Tab::Shaders, &inputs(Holdings::Known(&owned), ""));
@@ -837,10 +912,7 @@ mod tests {
             }
             action
         };
-        let sun_row = 1 + unlockables::ALL
-            .iter()
-            .position(|skin| skin.id == "saber_sun")
-            .unwrap() as u16;
+        let sun_row = row_of("saber_sun") as u16;
         assert_eq!(click(&mut panel, SHADER_BASE + sun_row), PanelAction::None);
         assert_eq!(panel.shader, usize::from(sun_row));
         let fonts = crate::text::load_modern(1.0, None).expect("Inter");
@@ -864,5 +936,211 @@ mod tests {
             [1920.0, 1080.0],
         );
         assert_eq!(click(&mut panel, BACK_TOKEN), PanelAction::Close);
+    }
+
+    #[test]
+    fn the_shaders_list_the_rarest_first_after_the_stock_blade() {
+        assert_eq!(shader_skin(0), None, "the stock blade first");
+        let tiers: Vec<_> = (1..SHADER_ROWS)
+            .map(|row| shader_skin(row).unwrap().tier)
+            .collect();
+        assert!(tiers.windows(2).all(|pair| pair[0] >= pair[1]), "{tiers:?}");
+        assert_eq!(shader_skin(1).unwrap().id, "saber_sun");
+        assert_eq!(shader_skin(SHADER_ROWS), None);
+        let panel = drawn(Tab::Shaders, &inputs(Holdings::Known(&[]), ""));
+        let names: Vec<_> = panel.ui.text_runs().collect();
+        let at = |name: &str| names.iter().position(|run| *run == name).unwrap();
+        assert!(at("Sun blade") < at("Void blade"));
+        assert!(at("Mythical") < at("Legendary"), "{names:?}");
+    }
+
+    /// The panel on Shaders in the grid after one frame.
+    fn grid(holdings: Holdings<'_>, setting: &str, viewport: [f32; 2]) -> Panel {
+        let mut panel = Panel::new();
+        panel.open(Tab::Shaders, true, true, ReturnTarget::MainMenu);
+        let fonts = crate::text::load_modern(1.0, None).expect("Inter");
+        let shown = Inputs {
+            grid: true,
+            ..inputs(holdings, setting)
+        };
+        panel.build(&shown, &fonts.font, viewport);
+        panel
+    }
+
+    #[test]
+    fn v_and_the_switches_change_the_view_and_say_so() {
+        let mut panel = drawn(Tab::Shaders, &inputs(Holdings::Known(&[]), ""));
+        assert!(!panel.grid);
+        assert_eq!(
+            panel.key(KeyCode::KeyV, false, true),
+            PanelAction::ShaderView(true)
+        );
+        assert!(panel.grid);
+        assert_eq!(
+            panel.key(KeyCode::KeyV, false, true),
+            PanelAction::ShaderView(false)
+        );
+        // V is the Shaders tab's only.
+        panel.show(Tab::Medals);
+        assert_eq!(panel.key(KeyCode::KeyV, false, true), PanelAction::None);
+        // The switches answer a click.
+        let mut panel = drawn(Tab::Shaders, &inputs(Holdings::Known(&[]), ""));
+        for (token, grid) in [(GRID_VIEW_TOKEN, true), (LIST_VIEW_TOKEN, false)] {
+            let rect = panel.ui.rect_for(token).expect("a switch");
+            let at = sjk_ui::Vec2::new(rect.x + rect.width * 0.5, rect.y + rect.height * 0.5);
+            let mut action = PanelAction::None;
+            for event in [
+                InputEvent::PointerMove(at),
+                InputEvent::PointerPress {
+                    position: at,
+                    button: sjk_ui::PointerButton::Primary,
+                },
+                InputEvent::PointerRelease {
+                    position: at,
+                    button: sjk_ui::PointerButton::Primary,
+                },
+            ] {
+                let next = panel.handle_pointer(event, true);
+                if next != PanelAction::None {
+                    action = next;
+                }
+            }
+            assert_eq!(action, PanelAction::ShaderView(grid));
+        }
+        // The page follows the setting it is given each frame.
+        let panel = grid(Holdings::Known(&[]), "", [1920.0, 1080.0]);
+        assert!(panel.grid);
+    }
+
+    #[test]
+    fn the_arrows_move_in_two_directions_on_the_grid() {
+        let mut panel = grid(Holdings::Known(&[]), "", [1920.0, 1080.0]);
+        assert_eq!(panel.shader, 0);
+        let _ = panel.key(KeyCode::ArrowLeft, false, true);
+        assert_eq!(panel.shader, 0, "stops at the start");
+        let _ = panel.key(KeyCode::ArrowRight, false, true);
+        assert_eq!(panel.shader, 1);
+        let _ = panel.key(KeyCode::ArrowDown, false, true);
+        assert_eq!(panel.shader, 1 + GRID_COLUMNS);
+        let _ = panel.key(KeyCode::ArrowUp, false, true);
+        assert_eq!(panel.shader, 1);
+        let _ = panel.key(KeyCode::ArrowUp, false, true);
+        assert_eq!(panel.shader, 1, "stops at the first line");
+        for _ in 0..SHADER_ROWS {
+            let _ = panel.key(KeyCode::ArrowDown, false, true);
+        }
+        let last_line = (SHADER_ROWS - 1) / GRID_COLUMNS;
+        assert_eq!(panel.shader / GRID_COLUMNS, last_line);
+        for _ in 0..SHADER_ROWS {
+            let _ = panel.key(KeyCode::ArrowRight, false, true);
+        }
+        assert_eq!(panel.shader, SHADER_ROWS - 1, "stops at the last card");
+    }
+
+    #[test]
+    fn the_wheel_scrolls_the_grid_a_line_and_keeps_the_card_shown() {
+        let mut panel = grid(Holdings::Known(&[]), "", [1920.0, 1080.0]);
+        let lines = SHADER_ROWS.div_ceil(GRID_COLUMNS);
+        let wheel = |panel: &mut Panel, y: f32| {
+            let _ = panel.handle_pointer(
+                InputEvent::PointerWheel {
+                    position: sjk_ui::Vec2::new(500.0, 500.0),
+                    delta: sjk_ui::Vec2::new(0.0, y),
+                },
+                false,
+            );
+        };
+        for _ in 0..lines + 2 {
+            wheel(&mut panel, -1.0);
+        }
+        assert_eq!(panel.grid_first, lines.saturating_sub(GRID_LINES_SHOWN));
+        let line = panel.shader / GRID_COLUMNS;
+        assert!((panel.grid_first..panel.grid_first + GRID_LINES_SHOWN).contains(&line));
+        for _ in 0..lines + 2 {
+            wheel(&mut panel, 1.0);
+        }
+        assert_eq!(panel.grid_first, 0);
+    }
+
+    #[test]
+    fn a_double_click_on_a_card_wears_an_owned_shader() {
+        let owned = [sun()];
+        let mut panel = grid(Holdings::Known(&owned), "", [1920.0, 1080.0]);
+        let token = SHADER_BASE + row_of("saber_sun") as u16;
+        let rect = panel.ui.rect_for(token).expect("the Sun's card");
+        let at = sjk_ui::Vec2::new(rect.x + rect.width * 0.5, rect.y + rect.height * 0.5);
+        let start = Instant::now();
+        let mut click = |millis: u64| {
+            let now = start + std::time::Duration::from_millis(millis);
+            let mut action = PanelAction::None;
+            for event in [
+                InputEvent::PointerMove(at),
+                InputEvent::PointerPress {
+                    position: at,
+                    button: sjk_ui::PointerButton::Primary,
+                },
+                InputEvent::PointerRelease {
+                    position: at,
+                    button: sjk_ui::PointerButton::Primary,
+                },
+            ] {
+                let next = panel.pointer_at(event, true, now);
+                if next != PanelAction::None {
+                    action = next;
+                }
+            }
+            action
+        };
+        assert_eq!(click(0), PanelAction::None);
+        assert_eq!(click(200), PanelAction::Wear("saber_sun"));
+    }
+
+    /// Every card in view, its words and the switches fit the canvas above the keys,
+    /// inside the cards' column, at 1080 lines, 4K, 4:3 and 21:9, wherever it scrolls.
+    #[test]
+    fn the_grid_fits_over_the_keys_at_every_shape() {
+        let sun = [sun()];
+        let font = crate::text::load_modern(1.0, None).expect("Inter").font;
+        for viewport in [
+            [1_920.0, 1_080.0],
+            [3_840.0, 2_160.0],
+            [1_440.0, 1_080.0],
+            [2_560.0, 1_080.0],
+        ] {
+            for chosen in [0, SHADER_ROWS - 1] {
+                let mut panel = Panel::new();
+                panel.open(Tab::Shaders, true, true, ReturnTarget::MainMenu);
+                panel.shader = chosen;
+                let shown = Inputs {
+                    grid: true,
+                    ..inputs(Holdings::Known(&sun), "saber_sun")
+                };
+                panel.build(&shown, &font, viewport);
+                assert!(!panel.ui.overflowed(), "{viewport:?}");
+                let frame = crate::menu::sjk::Frame::new(viewport);
+                let keys = frame.point(0.0, view::KEYS_Y)[1];
+                let first = panel.grid_first * GRID_COLUMNS;
+                let shown_cards = first..(first + GRID_COLUMNS * GRID_LINES_SHOWN).min(SHADER_ROWS);
+                assert!(shown_cards.contains(&chosen), "{chosen}");
+                let switches = [
+                    panel.ui.rect_for(LIST_VIEW_TOKEN).unwrap(),
+                    panel.ui.rect_for(GRID_VIEW_TOKEN).unwrap(),
+                ];
+                for index in 0..SHADER_ROWS {
+                    let area = panel.ui.rect_for(SHADER_BASE + index as u16);
+                    assert_eq!(area.is_some(), shown_cards.contains(&index), "{index}");
+                    if let Some(area) = area {
+                        assert!(area.bottom() <= keys, "{index} {viewport:?}");
+                        assert!(area.right() <= viewport[0], "{index} {viewport:?}");
+                        for switch in switches {
+                            assert!(switch.bottom() <= area.y, "{viewport:?}");
+                        }
+                    }
+                }
+                // The switches clear the kinds' pills.
+                let pills_left = frame.rect(view::LEFT_X + 560.0, 0.0, 0.0, 0.0).x;
+                assert!(switches[1].right() < pills_left, "{viewport:?}");
+            }
+        }
     }
 }
