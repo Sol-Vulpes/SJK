@@ -160,6 +160,9 @@ pub(crate) struct HudOverlay {
     force_wheel_bar: bool,
     /// The bar's map-lifetime pictures.
     force_wheel_icons: [Option<sjk_ui::TextureId>; force_wheel::ICONS],
+    /// The holocron tiers' pictures in the UI atlas (`holocrons/icons.rs`), where they
+    /// loaded.
+    pub(crate) holocron_icons: [Option<sjk_ui::TextureId>; crate::holocrons::COUNT],
     /// The classic crosshair's map-lifetime pictures.
     pub(crate) crosshair_pictures: [Option<sjk_ui::TextureId>; crosshair::PICTURES],
     /// The last layout drew the crosshair picture, so `hud.wgsl` skips its own.
@@ -303,6 +306,7 @@ impl HudOverlay {
             selector: None,
             force_wheel_bar: false,
             force_wheel_icons: [None; force_wheel::ICONS],
+            holocron_icons: [None; crate::holocrons::COUNT],
             crosshair_pictures: [None; crosshair::PICTURES],
             crosshair_picture_drawn: false,
             flamethrower: Default::default(),

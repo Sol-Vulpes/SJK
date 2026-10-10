@@ -61,6 +61,8 @@ pub(crate) struct DockLine<'a> {
     pub(crate) staff: bool,
     /// The sender's SJK key, for their sender card.
     pub(crate) key_id: &'a str,
+    /// The message is a holocron drop of this tier: no name, the tier's gem and colour.
+    pub(crate) tier: Option<&'static crate::holocrons::Tier>,
 }
 
 /// A blank line for the dock's array.
@@ -70,6 +72,7 @@ pub(crate) const BLANK: DockLine<'static> = DockLine {
     verified: false,
     staff: false,
     key_id: "",
+    tier: None,
 };
 
 /// Where a page docks the chat, in frame pixels: the left edge of its text, its top
@@ -309,6 +312,7 @@ struct Line {
     verified: bool,
     staff: bool,
     key_id: String,
+    tier: Option<&'static crate::holocrons::Tier>,
 }
 
 /// The dock's copy of the chat.
@@ -356,15 +360,17 @@ impl DockCache {
             let shown = chat
                 .messages
                 .iter()
-                .filter(|message| !muted.contains(&message.key_id));
+                .filter(|message| !muted.contains(&message.key_id))
+                .filter_map(|message| Some((message, sjk_chat_look::shown(message)?)));
             let skip = shown.clone().count().saturating_sub(LINES);
-            for message in shown.skip(skip) {
+            for (message, shown) in shown.skip(skip) {
                 self.lines.push(Line {
-                    name: sjk_identity::chat::for_display(&message.name),
-                    text: sjk_chat_look::message_text(&message.text),
-                    verified: message.verified,
+                    name: shown.name,
+                    text: shown.text,
+                    verified: message.verified && shown.tier.is_none(),
                     staff: message.staff,
                     key_id: message.key_id.clone(),
+                    tier: shown.tier,
                 });
             }
             if let Some(outcome) = chat.outcome.as_ref().filter(|outcome| !outcome.sent) {
@@ -399,6 +405,7 @@ impl DockCache {
                 verified: line.verified,
                 staff: line.staff,
                 key_id: &line.key_id,
+                tier: line.tier,
             };
         }
         let notice = if !self.local.is_empty() {
@@ -432,6 +439,7 @@ impl DockCache {
                 verified: *verified,
                 staff: false,
                 key_id: format!("{:016x}", index + 1),
+                tier: None,
             })
             .collect();
         self.online = online;
@@ -478,14 +486,20 @@ impl Lay<'_> {
             .min(self.width * 0.55)
     }
 
-    /// Where the text starts on the first row: after the name, the tick and a colon.
+    /// Where the text starts on the first row: after the name, the tick (or a drop's
+    /// gem) and a colon (a drop has no name, so none).
     fn indent(&self, line: &DockLine<'_>) -> f32 {
-        let tick = if line.verified {
+        let tick = if line.verified || line.tier.is_some() {
             sjk_chat_look::tick_room(self.size)
         } else {
             0.0
         };
-        self.name_width(line) + tick + self.width(": ", TextFace::Regular)
+        let colon = if line.name.is_empty() {
+            0.0
+        } else {
+            self.width(": ", TextFace::Regular)
+        };
+        self.name_width(line) + tick + colon
     }
 
     /// Hand each row of `line`'s text to `row`, as a chat line wraps after its name.
@@ -782,9 +796,21 @@ fn message(
     };
     let name_width = lay.name_width(line);
     let name = Rect::new(first.x, first.y, name_width + 1.0, first.height);
-    run(canvas, name, color::TEXT, format_args!("{}", line.name));
+    if !line.name.is_empty() {
+        run(canvas, name, color::TEXT, format_args!("{}", line.name));
+    }
     let mut x = first.x + name_width;
-    if line.verified {
+    if let Some(tier) = line.tier {
+        sjk_chat_look::gem_mark(
+            canvas.draw_list_mut(),
+            x,
+            first.y + first.height * 0.5,
+            lay.size,
+            tier,
+            1.0,
+        );
+        x += sjk_chat_look::tick_room(lay.size);
+    } else if line.verified {
         sjk_chat_look::tick(
             canvas.draw_list_mut(),
             x,
@@ -794,13 +820,15 @@ fn message(
         );
         x += sjk_chat_look::tick_room(lay.size);
     }
-    let colon = lay.width(": ", TextFace::Regular);
-    run(
-        canvas,
-        Rect::new(x, first.y, colon, first.height),
-        color::TEXT,
-        format_args!(":"),
-    );
+    if !line.name.is_empty() {
+        let colon = lay.width(": ", TextFace::Regular);
+        run(
+            canvas,
+            Rect::new(x, first.y, colon, first.height),
+            color::TEXT,
+            format_args!(":"),
+        );
+    }
     let indent = lay.indent(line);
     let cut = rows < lay.rows(line);
     let mut row = 0;
@@ -824,7 +852,12 @@ fn message(
         } else {
             &line.text[range]
         };
-        run(canvas, rect, sjk_chat_look::GOLD, format_args!("{shown}"));
+        run(
+            canvas,
+            rect,
+            sjk_chat_look::text_colour(line.tier),
+            format_args!("{shown}"),
+        );
     });
     name
 }
@@ -937,6 +970,7 @@ mod tests {
             verified: false,
             staff: false,
             key_id: "0123456789abcdef",
+            tier: None,
         }
     }
 
@@ -986,6 +1020,66 @@ mod tests {
 
     const LONG: &str = "the new HUD looks great, but the force bar in the corner feels a bit too \
                         small at 4K and the clock could move left";
+
+    /// A holocron drop in the dock has no name or colon: the tier's gem, then its
+    /// sentence in the tier's colour.
+    #[test]
+    fn a_holocron_drop_is_a_gem_and_one_sentence_in_the_tiers_colour() {
+        let tier = &crate::holocrons::TIERS[3];
+        let drop = DockLine {
+            tier: Some(tier),
+            ..line("", "Sol found a Mythical Holocron!")
+        };
+        let lines = [line("Fox", "gg"), drop];
+        let font = crate::text::test_font();
+        let mut canvas = MenuCanvas::with_capacities(32, 64, 128);
+        let frame = Frame::new(VIEWPORT);
+        canvas.begin_transparent(VIEWPORT);
+        let mut dock = Dock::default();
+        draw(
+            &mut canvas,
+            &frame,
+            PLACE,
+            &mut dock,
+            &ChatDock {
+                lines: &lines,
+                online: 2,
+                live: true,
+                notice: "",
+                measure: Some(Measure::new(&font, TextStyle::NEUTRAL)),
+            },
+            false,
+            TOKENS,
+        );
+        let runs: Vec<(String, sjk_ui::Color)> = canvas
+            .draw_list()
+            .commands()
+            .iter()
+            .filter_map(|command| match command {
+                DrawCommand::Text { text, color, .. } => {
+                    Some((canvas.stored_text(*text).to_owned(), *color))
+                }
+                _ => None,
+            })
+            .collect();
+        let sentence = runs
+            .iter()
+            .find(|(text, _)| text == "Sol found a Mythical Holocron!")
+            .expect("the sentence");
+        assert_eq!(sentence.1, tier.colour);
+        assert_eq!(
+            runs.iter().filter(|(text, _)| text == ":").count(),
+            1,
+            "Fox's colon only"
+        );
+        let gem = canvas
+            .draw_list()
+            .commands()
+            .iter()
+            .filter(|command| matches!(command, DrawCommand::SolidRect { .. }))
+            .count();
+        assert!(gem >= crate::holocrons::gem::MARK_ROWS);
+    }
 
     #[test]
     fn a_long_message_wraps_onto_rows_of_its_own_whole() {

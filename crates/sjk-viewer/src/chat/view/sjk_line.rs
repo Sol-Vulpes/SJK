@@ -6,6 +6,7 @@
 //! long ([`layout::Wrapped::update_indented`]).
 
 use super::*;
+use crate::holocrons::Tier;
 use crate::sjk_chat_look;
 use crate::text::visible_text_width_style;
 
@@ -24,10 +25,18 @@ pub(in crate::chat) struct Prefix {
     name_width: f32,
     verified: bool,
     colon_width: f32,
+    /// The line is a holocron drop: its mark is the tier's gem, not the verified tick.
+    tier: Option<&'static Tier>,
 }
 
 impl Prefix {
-    pub(in crate::chat) fn new(name: &str, verified: bool, font: &UiFont, g: &Geometry) -> Self {
+    pub(in crate::chat) fn new(
+        name: &str,
+        verified: bool,
+        tier: Option<&'static Tier>,
+        font: &UiFont,
+        g: &Geometry,
+    ) -> Self {
         let size = g.font;
         let tag_size = size * 0.62;
         let scale = size / font.height.max(1.0);
@@ -44,7 +53,8 @@ impl Prefix {
             ),
             name_end,
             name_width: visible_text_width_face(font, &name[..name_end], scale, TextFace::Semibold),
-            verified,
+            verified: verified || tier.is_some(),
+            tier,
             colon_width: if name.is_empty() {
                 0.0
             } else {
@@ -86,6 +96,8 @@ pub(in crate::chat) struct Line<'a> {
     pub(in crate::chat) emojis: Option<&'a emoji::Emojis>,
     /// The pointer rests on the name (its profile card shows): it is lit.
     pub(in crate::chat) hovered: bool,
+    /// The line is a holocron drop of this tier.
+    pub(in crate::chat) tier: Option<&'static Tier>,
 }
 
 /// Draw `line` with its first row's top-left at `origin`, at `alpha`; returns the
@@ -119,15 +131,26 @@ pub(in crate::chat) fn draw(
         // As a game line's name under the pointer (`view.rs`).
         ui.accent_bar(name_rect, Color::new(0.70, 0.88, 0.98, 0.16));
     }
-    ui.text(
-        name,
-        Rect::new(name_x, y, prefix.name_width + 1.0, row_box(g)),
-        size,
-        ink,
-        FontWeight::Semibold,
-        0.0,
-    );
-    if prefix.verified {
+    if !name.is_empty() {
+        ui.text(
+            name,
+            Rect::new(name_x, y, prefix.name_width + 1.0, row_box(g)),
+            size,
+            ink,
+            FontWeight::Semibold,
+            0.0,
+        );
+    }
+    if let Some(tier) = prefix.tier {
+        sjk_chat_look::gem_mark(
+            ui.draw_list_mut(),
+            name_x + prefix.name_width,
+            middle,
+            size,
+            tier,
+            alpha,
+        );
+    } else if prefix.verified {
         sjk_chat_look::tick(
             ui.draw_list_mut(),
             name_x + prefix.name_width,
@@ -158,7 +181,10 @@ pub(in crate::chat) fn draw(
         );
         return name_rect;
     }
-    let colour = sjk_chat_look::gold(alpha);
+    let colour = line.tier.map_or_else(
+        || sjk_chat_look::gold(alpha),
+        |tier| tier.colour_alpha(alpha),
+    );
     for (row, range) in line.wrap.rows[..line.wrap.len].iter().enumerate() {
         if range.is_empty() {
             continue;
@@ -208,6 +234,7 @@ mod tests {
             verified,
             staff: false,
             text: text.to_owned(),
+            holocron: None,
         }
     }
 
@@ -339,6 +366,88 @@ mod tests {
             assert!(row(index).y > row(index - 1).y);
             assert!(row(index).x < name.x, "later rows start at the edge");
         }
+    }
+
+    fn drop(id: u64, name: &str, tier: &str, own: bool) -> ChatMessage {
+        ChatMessage {
+            name: name.to_owned(),
+            verified: true,
+            holocron: Some(sjk_identity::DropMark {
+                tier: tier.to_owned(),
+                own,
+            }),
+            ..message(id, name, "", true)
+        }
+    }
+
+    /// A holocron drop is one sentence in its tier's colour (not the SJK chat's gold),
+    /// with the tier's gem where the tick goes: no name column, no colon, no tick.
+    #[test]
+    fn a_holocron_drop_is_one_sentence_in_its_tiers_colour_with_a_gem() {
+        use crate::holocrons::TIERS;
+        let chat = feed(
+            &[],
+            vec![
+                drop(1, "^2Sol", "legendary", false),
+                drop(2, "^2Sol", "uncommon", true),
+                drop(3, "^2Sol", "from_the_future", false),
+                message(4, "Fox", "gg", false),
+            ],
+        );
+        assert_eq!(chat.lines.len(), 3, "the unknown tier is left out");
+        let texts = texts(&chat);
+        let (_, grand, colour) = drawn(&texts, "Sol found a Legendary Holocron!");
+        assert_eq!(rgb(*colour), rgb(TIERS[2].colour));
+        let (_, own, colour) = drawn(&texts, "You found an Uncommon Holocron.");
+        assert_eq!(rgb(*colour), rgb(TIERS[0].colour));
+        assert!(own.y > grand.y, "in the order they came");
+        assert_eq!(
+            texts.iter().filter(|(text, ..)| text == ":").count(),
+            1,
+            "Fox's colon only: {texts:?}"
+        );
+        assert!(
+            !texts.iter().any(|(text, ..)| text.is_empty()),
+            "a drop has no empty name run"
+        );
+        assert!(ticks(&chat).is_empty(), "the gem stands for the tick");
+        // Each drop draws a gem; the SJK tag is on every line.
+        let bars = chat
+            .ui
+            .draw_list()
+            .commands()
+            .iter()
+            .filter(|command| matches!(command, DrawCommand::SolidRect { .. }))
+            .count();
+        assert!(bars >= 2 * crate::holocrons::gem::MARK_ROWS, "{bars}");
+        let tags = texts.iter().filter(|(text, ..)| text == "SJK").count();
+        assert_eq!(tags, 3);
+        // The sentence follows the tag on its row.
+        let (_, tag, _) = drawn(&texts, "SJK");
+        assert!(grand.x > tag.right());
+    }
+
+    /// A muted player's drops are not shown at all, not hidden behind a note.
+    #[test]
+    fn a_muted_players_drops_are_left_out() {
+        let mut chat = ChatOverlay::new();
+        let now = Instant::now();
+        let state = |messages| ChatState {
+            messages,
+            loaded: Some(1),
+            ..ChatState::default()
+        };
+        chat.sync_sjk(&state(Default::default()), |_| false, now);
+        let troll = drop(2, "Troll", "mythical", false);
+        let friend = drop(3, "Fox", "mythical", false);
+        let key = troll.key_id.clone();
+        chat.sync_sjk(
+            &state([troll, friend].into_iter().collect()),
+            |candidate| candidate == key,
+            now,
+        );
+        let bodies: Vec<&str> = chat.lines.iter().map(|line| line.body.as_str()).collect();
+        assert_eq!(bodies, ["Fox found a Mythical Holocron!"]);
     }
 
     #[test]

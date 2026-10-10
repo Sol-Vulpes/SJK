@@ -1290,6 +1290,8 @@ mod tests {
             achievements: Vec::new(),
             avatar: String::new(),
             unlocks: Vec::new(),
+            holocron_counts: Default::default(),
+            holocrons: Vec::new(),
         }
     }
 

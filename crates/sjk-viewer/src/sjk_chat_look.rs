@@ -52,6 +52,65 @@ pub(crate) fn tick(list: &mut DrawList, x: f32, middle: f32, size: f32, alpha: f
     rect
 }
 
+/// What an SJK chat message shows as, in the docked chat and on the chat page: a
+/// message's name and text, or a holocron drop's one sentence with no name, in its tier's
+/// colour ([`crate::holocrons::line`]).
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) struct Shown {
+    /// The sender's name with its colour codes; empty for a drop.
+    pub(crate) name: String,
+    pub(crate) text: String,
+    /// The tier of a holocron drop.
+    pub(crate) tier: Option<&'static crate::holocrons::Tier>,
+}
+
+/// `message` as it shows; `None` for a drop of a tier this client does not know.
+pub(crate) fn shown(message: &sjk_identity::ChatMessage) -> Option<Shown> {
+    if message.holocron.is_none() {
+        return Some(Shown {
+            name: sjk_identity::chat::for_display(&message.name),
+            text: message_text(&message.text),
+            tier: None,
+        });
+    }
+    let words = crate::holocrons::line::words(message)?;
+    Some(Shown {
+        name: String::new(),
+        text: words.text,
+        tier: Some(words.tier),
+    })
+}
+
+/// The colour a line's text is drawn in: its tier's for a holocron drop, else the SJK
+/// chat's gold.
+pub(crate) fn text_colour(tier: Option<&crate::holocrons::Tier>) -> Color {
+    tier.map_or(GOLD, |tier| tier.colour)
+}
+
+/// Draw a holocron drop's mark (the tier's gem, in place of the verified tick) after a
+/// name drawn at `size` that ends at `x`, centred on the height `middle`, at `alpha`.
+/// Returns where it was drawn; the room it takes is [`tick_room`]'s.
+pub(crate) fn gem_mark(
+    list: &mut DrawList,
+    x: f32,
+    middle: f32,
+    size: f32,
+    tier: &crate::holocrons::Tier,
+    alpha: f32,
+) -> Rect {
+    let side = tick_side(size);
+    let rect = Rect::new(x + size * 0.2, middle - side * 0.5, side, side);
+    crate::holocrons::gem::draw(
+        list,
+        [rect.x + side * 0.5, middle],
+        side * 0.5,
+        tier.colour,
+        alpha,
+        crate::holocrons::gem::MARK_ROWS,
+    );
+    rect
+}
+
 /// Text widths as a font draws them in a text style: the menus' sizes and letter
 /// spacing (`ui_textScale`, `ui_letterSpacing`) apply when their text is drawn, so a
 /// line laid out run after run is measured with them.

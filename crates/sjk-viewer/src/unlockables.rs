@@ -215,6 +215,8 @@ mod tests {
             achievements: Vec::new(),
             unlocks: vec![unlock.clone()],
             avatar: String::new(),
+            holocron_counts: Default::default(),
+            holocrons: Vec::new(),
         };
         let snapshot = |status, me| Snapshot {
             status,
@@ -232,6 +234,7 @@ mod tests {
             look_outcome: None,
             packs_revision: 0,
             assets_note: None,
+            holocrons: None,
         };
         let online = snapshot(Status::Online, Some(me));
         assert_eq!(Holdings::of(false, Some(&online)), Holdings::IdentityOff);

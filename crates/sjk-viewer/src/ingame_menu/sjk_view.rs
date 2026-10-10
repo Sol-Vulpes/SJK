@@ -1912,6 +1912,7 @@ mod tests {
             verified: true,
             staff: false,
             key_id: "0123456789abcdef",
+            tier: None,
         },
         chat_dock::DockLine {
             name: "Kyle",
@@ -1920,6 +1921,7 @@ mod tests {
             verified: false,
             staff: false,
             key_id: "00000000000000ff",
+            tier: None,
         },
         chat_dock::DockLine {
             name: "^1Fox",
@@ -1927,6 +1929,7 @@ mod tests {
             verified: false,
             staff: false,
             key_id: "fedcba9876543210",
+            tier: None,
         },
     ];
 

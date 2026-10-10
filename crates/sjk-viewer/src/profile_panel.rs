@@ -967,6 +967,8 @@ mod tests {
             achievements: Vec::new(),
             avatar: String::new(),
             unlocks: Vec::new(),
+            holocron_counts: Default::default(),
+            holocrons: Vec::new(),
         }
     }
 
@@ -987,6 +989,7 @@ mod tests {
             look_outcome: None,
             packs_revision: 0,
             assets_note: None,
+            holocrons: None,
         }
     }
 
