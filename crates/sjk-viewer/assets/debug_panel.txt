@@ -3097,6 +3097,7 @@ test: Medals: yours lit with date and note, the others dimmed "Not given yet".
 test: In a match, Esc > Profile; leave on Medals with Esc; Esc > Profile opens on Medals.
 test: Console: profile, achievements, unlockables open their tabs; again closes them.
 note: Classic menus keep the old pages. Collection is one constant if it gets another name.
+note: 10/10: Achievements, Medals and Collection moved to the new Collection screen.
 
 [identity-hidden]
 area: Menus & settings
@@ -3217,16 +3218,34 @@ note: Not tried against the hub.
 
 [holocrons-tab]
 area: Menus & settings
-title: Profile screen: Holocrons tab
-change: The Profile screen has an eighth tab, Holocrons (also: holocrons); classic: See it.
+title: Collection: Holocrons tab
+change: The Collection has a sixth tab, Holocrons (also: holocrons); classic: See it.
 change: A 3D holocron turns on the left in the chosen tier's look and light; none held: dark.
 change: Right: the tiers with counts and odds, the next holocron, the newest ten. No Open yet.
-test: SJK UI: Profile, Ctrl+Tab to Holocrons (or type holocrons).
+test: SJK UI: Collection, Ctrl+Tab to Holocrons (or type holocrons).
 test: Up and Down, Tab, 1 to 4 and a click choose a tier; the holocron swaps at once.
 test: Each tier has its own face and light: green, blue, purple, gold (gold has a sheen).
 test: debug_holocron all, then holocrons: counts stay as the hub says; none held shows dimmed.
 test: Identity off (cl_identity 0): "Identity is off", every count a dash, every holocron dimmed.
 test: ui_textScale 1.2 and a 4:3 window: nothing is cut. Escape goes back.
-test: In a match (game menu, Profile, Holocrons): the holocron floats before the view.
+test: In a match (game menu, Collection, Holocrons): the holocron floats before the view.
 test: Classic menus: holocrons opens the page over the map; Profile's See holocrons too.
 note: World shots only (duel6, off-screen); not tried in a game or against the hub.
+
+# ---- Collection, 10/10/2026 ----
+
+[collection]
+area: Menus & settings
+title: Collection: Medals, Achievements, Shaders, Toys, Nameplates
+change: New Collection screen under Profile (main page and Esc menu); Profile keeps 4 tabs.
+change: Medals on a rail; Achievements by category; Toys: Illuminate; Nameplates: none yet.
+change: Shaders = blade skins: the model holds the chosen one, a locked one as a local preview.
+test: Main page > Collection: the camera goes to your model on Shaders, Toys and Nameplates.
+test: Shaders: Up/Down; the model's saber changes; a locked one says Preview, cannot equip.
+test: Equip / Unequip on an owned one; Esc; the main page card and Profile > Saber agree.
+test: Toys: Enter switches On the Force wheel (cg_illuminate); the holocron floats by you.
+test: Nameplates: your plate over your model's head, dashed marks; try a 4:3 window too.
+test: In a match, Esc > Collection: the model shows in a preview; Esc returns on Collection.
+test: Console: collection, achievements, unlockables open their tabs; Ctrl+Tab goes round.
+note: Classic menus: the same commands open the page on its own, the model in a preview.
+note: Not tried in a game.

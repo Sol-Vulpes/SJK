@@ -200,7 +200,7 @@ impl ViewerConsole {
             || self.identity_panel_key(event)
             || self.profile_panel_key(event)
             || self.staff_panel_key(event)
-            || self.unlockables_panel_key(event)
+            || self.collection_panel_key(event)
             || self.holocrons_panel_key(event)
             || self.sjk_chat_panel_key(event)
             || self.debug_panel_key(event)

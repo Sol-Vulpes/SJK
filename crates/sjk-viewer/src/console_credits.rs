@@ -26,7 +26,7 @@ impl ViewerConsole {
         self.changelog.close();
         self.identity_panel.close();
         self.profile_panel.close();
-        self.unlockables_panel.close();
+        self.collection_panel.close();
         self.holocrons_panel.close();
         self.staff_panel.close();
         self.sjk_chat_panel.close();

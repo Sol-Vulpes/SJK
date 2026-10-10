@@ -59,6 +59,10 @@ impl GpuState {
                 self.in_game_menu.remember_return(row);
                 self.open_profile_hub_from_game(None);
             }
+            Entry::Collection => {
+                self.in_game_menu.remember_return(row);
+                self.open_collection_from_game();
+            }
             Entry::Players => self.open_players_page(),
             Entry::Settings => {
                 self.in_game_menu.remember_return(row);

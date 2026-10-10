@@ -33,7 +33,7 @@ GPU or heard.
 | How a look travels | Stored on the key's live claim, listed in presence for players who arrive later, and sent through the feed as a live event when it changes. |
 | Illuminate | Free for everyone; its lit state is part of the look so others see the holocron. |
 | Feed with chat off | The feed reads while the player is on a game server whatever `cl_sjkChat` says (chat stays hidden); in the menus it reads only with chat on. |
-| Choosing | A new Unlockables page (SJK UI look) lists every unlockable, owned or locked, and equips them; the Profile screen's Saber tab offers the owned blade skins too (10/10/2026); `cg_saberSkin` holds the choice. |
+| Choosing | The Collection's Shaders tab (SJK UI look; the Unlockables page until 10/10/2026) lists every blade skin, owned or locked, previews the chosen one on the player's own saber and equips owned ones; the Profile screen's Saber tab offers the owned blade skins too (10/10/2026); `cg_saberSkin` holds the choice. |
 | Art (looks, sounds) | SJK's own, all rights reserved, not under the code's GPLv2: kept in the hub's private repository and served by the hub to registered SJK keys as packs. The code that draws it stays open and generic: no skin's values, sounds or pictures are in this repository or its history to come. |
 | Delivery | The identity service downloads the hub's packs into `assets/` beside `identity.key` (at start once registered, then every 6 hours, only when a pack's SHA-256 changed); the viewer mounts every cached pack at start and a new one at once, below the game data, so a PK3 with the same paths replaces their files. A cached pack mounts with the identity off too. |
 | Format | A blade skin is a JSON file, `skins/blades/<unlock id>.bladeskin`, holding every parameter of the generic shading, its trail, light and sound paths. The format is documented here; the files are art. |
@@ -43,7 +43,7 @@ GPU or heard.
 Fixed, in the hub (`src/unlocks.rs`) and in the client
 ([unlockables.rs](../crates/sjk-viewer/src/unlockables.rs), the one client list of
 public metadata: id, name, kind, a line on what it is and how to get it; the looks, the
-blade skins, `saberskin`, the Unlockables page and the Staff page all read it); a new
+blade skins, `saberskin`, the Collection and the Staff page all read it); a new
 unlockable needs both, and a blade skin also its file in a pack. Ids never change
 meaning.
 
@@ -167,8 +167,8 @@ Built.
   the same and the answer says it shows only once unlocked. An unknown id is refused.
   Tab completes the command's name; its argument has no completion (the console
   completes command and cvar names only).
-- `unlockables` opens (or closes) the Unlockables page: in the SJK UI the Profile
-  screen's Collection tab.
+- `unlockables` opens (or closes) the Collection on its Shaders tab: in the SJK UI
+  the Collection screen ([sjk-ui.md](sjk-ui.md#collection)).
 
 Verified by unit tests (the listing, the answers, the cvar set even when locked, the
 gate); not yet used against the deployed hub.
@@ -391,48 +391,45 @@ entity is not in the snapshot), showing only its light in first person.
 Unit tests and an off-screen shot on duel6 (two holocrons placed for remote players
 without a session); not yet seen with real players, nor in follow mode.
 
-### Unlockables page
+### Shaders tab
 
-Built ([unlockables_panel.rs](../crates/sjk-viewer/src/unlockables_panel.rs), drawing
-in [unlockables_panel_view.rs](../crates/sjk-viewer/src/unlockables_panel_view.rs) and
-[unlockables_swatch.rs](../crates/sjk-viewer/src/unlockables_swatch.rs); layout in
-[sjk-ui.md](sjk-ui.md#sjks-pages)). An SJK page in the SJK UI's look in every menu
-style, as the Staff and Profile pages. In the SJK UI it is the
-[Profile screen](sjk-ui.md#profile-screen)'s Collection tab (09/10/2026, Sol's request
-to see all that can be unlocked, the locked too, beside the profile; the name is one
-constant, `profile_hub::COLLECTION`), opened by the tab, the Profile tab's See the
-collection and the `unlockables` command; with the classic menus the Profile page's
-See unlockables and `unlockables` open it on its own:
+Players read blade skins as saber **shaders** (10/10/2026, Sol's name, so body
+shaders can follow): the player-facing words say "saber shader", the code and the hub
+keep "blade skin" and the ids.
 
-- a card per catalogue entry: a live swatch (a blade skin drawn with the UI's shapes
-  from its loaded file's colours, flicker and flares, moving: a breathing corona, flame
-  loops and granules, a flare running hilt to tip, and the file's lightning arcs, motes
-  and turning hue when it has them; grey and still under a padlock when locked; owned
-  but with its pack not loaded yet, a neutral still blade and "Its look downloads from
-  the SJK hub"), its kind, name and what it is,
-  owned (`Yours since dd/mm/yyyy, from the SJK team` and the team's note) or locked
-  (how to get it), and Equip or Unequip for an owned blade skin, which sets
-  `cg_saberSkin`;
-- two cards show at a time: the list scrolls to the card chosen (the arrows, Tab) and
-  with the mouse wheel (a card scrolled away is not chosen), with a scroll bar beside
-  the cards and a line under them ("Unlockables 1 to 2 of 5: 3 more below (Down or the
-  mouse wheel)."); with every card shown, the "More to come" card instead;
-- what the player wears and how unlockables work on the right;
-- with the identity off, no hub or no answer yet, the page says so ("Unlockables need
-  the SJK identity") and the cards are neither owned nor locked.
+Built 08/10/2026 as the Unlockables page, the Profile screen's Collection tab in the
+SJK UI; since 10/10/2026 the [Collection](sjk-ui.md#collection)'s Shaders tab
+([collection_shaders.rs](../crates/sjk-viewer/src/collection_shaders.rs), its swatches
+in [collection_swatch.rs](../crates/sjk-viewer/src/collection_swatch.rs)). An SJK page
+in the SJK UI's look in every menu style; in the SJK UI the main page's and the
+in-game menu's Collection open it, with the classic menus `unlockables` (and the
+Profile page's See the collection) open it on its own:
+
+- a rack, a row to each: the stock blade (in the player's `color1`), then every
+  blade skin with a live swatch (drawn with the UI's shapes from its loaded file's
+  colours, flicker and flares, moving: a breathing corona, flame loops and granules, a
+  flare running hilt to tip, and the file's lightning arcs, motes and turning hue when
+  it has them; grey and still under a padlock when locked; owned but with its pack not
+  loaded yet, a neutral still blade), its name and its state (Worn, Yours, Locked);
+- the player's model holding the chosen blade, on the menu map's stage or in the
+  page's live preview over a match: a locked one too, as a preview this screen alone
+  draws (`PreviewSkin`; nothing is set or sent);
+- beside the model what the chosen one is, owned (`Yours since dd/mm/yyyy, from the
+  SJK team` and the team's note) or how to get it, and Equip, Unequip or Wear the
+  stock blade, which set `cg_saberSkin`;
+- with the identity off, no hub or no answer yet, the tab says so and no skin is
+  owned.
 
 The Staff page lists every unlockable for the player found, with Unlock (sending the
 note field's text) and Relock ([identity.md](identity.md#staff)), in rows of 42 pixels
 so the whole catalogue fits above the keys.
 
-Verified: unit tests (keys, pointer, focus, equip, every state fitting at 1080p, 4K,
-4:3 and 21:9, the swatch moving and staying inside its frame, the Staff page's Unlock
-and Relock) and the world shots `duel6_sjk_unlockables` (owned and worn, locked,
-identity off, 4:3), `duel6_sjk_profile` and `duel6_sjk_staff`. With five skins
-(09/10/2026): unit tests of the scrolling (keys, the wheel, Enter on a card scrolled
-to, opening again at the top), of the swatch's arcs, motes and hue staying inside its
-frame, and of every unlockable having its Staff row; the world shots were not run
-again (no GPU on that machine).
+Verified: unit tests (keys, pointer, the worn one chosen on opening, equip and unequip,
+a locked one previewed but never equipped, every row and its words within the canvas
+at 1080p, 4K, 4:3 and 21:9, the swatch moving and staying inside its frame, the Staff
+page's Unlock and Relock) and the world shot `duel6_sjk_collection` (the Sun worn on
+the stage, the Storm previewed, a 4:3 window, the in-game preview, the classic menus)
+with the hub's pack; not tried in the game.
 
 ### Saber tab's blade choice
 

@@ -1,6 +1,6 @@
 //! Console side of the Holocrons page (see `holocrons_panel.rs`): opening it, asking the
 //! hub for fresh progress, routing keys and pointer events to it, and saying what the 3D
-//! holocron behind it shows, as for the Unlockables page. It is drawn in the SJK UI's look
+//! holocron behind it shows, as for the Collection page. It is drawn in the SJK UI's look
 //! whatever the menu style (`console_sjk_pages.rs`).
 
 use super::holocrons_panel::{Data, PanelAction};
@@ -44,16 +44,10 @@ impl ViewerConsole {
         self.profile_panel.close();
         self.staff_panel.close();
         self.sjk_chat_panel.close();
-        self.unlockables_panel.close();
+        self.collection_panel.close();
         self.dead_key.settle();
         self.holocrons_panel.open(owns_console);
         crate::holocrons::refresh();
-    }
-
-    /// Closing the page closes the console too (it was opened from the Profile page,
-    /// which had opened it).
-    pub(super) fn holocrons_panel_owns_console(&mut self) {
-        self.holocrons_panel.own_console();
     }
 
     fn close_holocrons_panel(&mut self) {
@@ -66,6 +60,10 @@ impl ViewerConsole {
         match action {
             PanelAction::None => {}
             PanelAction::Close => self.close_holocrons_panel(),
+            PanelAction::Hub(tab) => {
+                let target = self.profile_hub_return;
+                self.open_profile_hub_page(tab, target);
+            }
         }
     }
 
@@ -107,6 +105,17 @@ impl ViewerConsole {
             }
         }
         let enabled = self.bool_cvar("cl_identity") == Some(true);
+        if self.holocrons_panel.is_hub() {
+            let snapshot = crate::player_identity::snapshot();
+            let held = snapshot
+                .as_ref()
+                .and_then(|snapshot| snapshot.me.as_ref())
+                .map(|me| me.achievements.clone())
+                .unwrap_or_default();
+            let standings = crate::achievements::standings(&held);
+            let row = super::collection_panel::row_labels(enabled, snapshot.as_ref(), &standings);
+            self.holocrons_panel.set_collection_row(row);
+        }
         self.holocrons_panel
             .refresh(std::time::Instant::now(), || Data::read(enabled));
         self.holocrons_panel.append_sjk(target, viewport);
@@ -156,7 +165,7 @@ mod tests {
             console.holocrons_stage().is_none(),
             "no stage while it is closed"
         );
-        console.open_profile_panel(super::super::profile_panel::Tab::Profile);
+        console.open_profile_panel();
         console.toggle_holocrons_panel();
         assert!(console.holocrons_panel.is_open());
         assert!(!console.profile_panel.is_open());
@@ -177,8 +186,10 @@ mod tests {
         assert!(!console.holocrons_panel.is_open());
         assert!(console.is_open());
         assert!(console.holocrons_stage().is_none());
+        // From a closed console it closes the console it took over.
+        console.set_open(false);
         console.toggle_holocrons_panel();
-        console.holocrons_panel_owns_console();
+        assert!(console.is_open());
         console.toggle_holocrons_panel();
         assert!(!console.is_open(), "it closes the console it took over");
     }
@@ -190,11 +201,11 @@ mod tests {
         let directory = tempfile::tempdir().unwrap();
         let mut console = ViewerConsole::new(directory.path().join("config.cfg")).unwrap();
         console.open_holocrons_panel();
-        console.toggle_unlockables_panel();
+        console.toggle_collection_panel(Some(crate::profile_hub::Tab::Shaders));
         assert!(!console.holocrons_panel.is_open());
         assert!(console.holocrons_stage().is_none());
         console.open_holocrons_panel();
-        assert!(!console.unlockables_panel.is_open());
+        assert!(!console.collection_panel.is_open());
         console.set_open(false);
         assert!(!console.holocrons_panel.is_open());
         assert!(console.holocrons_stage().is_none());

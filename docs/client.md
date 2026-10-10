@@ -1998,18 +1998,19 @@ are in [identity.md](identity.md).
   the bio (`identity name` says the name is the one played under), `identity key` prints
   the key id and file,
   `identity who [slot]` lists known players (with a slot, that player's bio).
-- The Profile page (in the SJK UI the Profile screen's SJK Profile, Achievements and
-  Medals tabs, opened by its main page's Profile and profile card and the in-game
-  menu's Profile; the classic menu's SJK page and in-game SJK menu; or the `profile`
-  command) shows the player's profile as others read it on the hub: name, verified,
-  member since, other names, medals, the bio (written there, up to 6 lines under the
-  hub's rules), their record from the achievement counts, the achievements board
-  (`achievements`) and, on the Profile screen, the medals on a tab of their own. It
-  has the SJK UI's look in every menu style; See unlockables opens the Unlockables
-  page (`unlockables`, [unlockables.md](unlockables.md#unlockables-page)), the Profile
-  screen's Collection tab in the SJK UI ([identity.md](identity.md#profile)); See holocrons
-  opens the Holocrons page (`holocrons`, [holocrons.md](holocrons.md#the-holocrons-tab)), the
-  Profile screen's Holocrons tab in the SJK UI.
+- The Profile page (in the SJK UI the Profile screen's SJK Profile tab, opened by its
+  main page's Profile and profile card and the in-game menu's Profile; the classic
+  menu's SJK page and in-game SJK menu; or the `profile` command) shows the player's
+  profile as others read it on the hub: name, verified, member since, other names,
+  medals (on its own only), the bio (written there, up to 6 lines under the hub's
+  rules), their record from the achievement counts and how many achievements and
+  shaders they hold. It
+  has the SJK UI's look in every menu style; See the board and See the collection
+  open the Collection (`collection`, `achievements`, `unlockables`;
+  [sjk-ui.md](sjk-ui.md#collection)): medals, achievements, saber shaders
+  ([unlockables.md](unlockables.md#shaders-tab)), toys, nameplates and holocrons
+  (`holocrons`, [holocrons.md](holocrons.md#the-holocrons-tab)), a screen of its own in
+  the SJK UI ([identity.md](identity.md#profile)); See holocrons opens its Holocrons.
   The SJK UI's main page and in-game menu show a profile card bottom left (picture,
   name, verified, medals and achievements unlocked) that opens it with a click
   ([sjk-ui.md](sjk-ui.md#profile-card)).
@@ -2237,10 +2238,10 @@ loaded skins change.
 
 `saberskin` lists the blade skins, owned (since when) or locked (how to get it), and
 which is worn; `saberskin <id>` or `saberskin none` sets `cg_saberSkin` (a locked one
-is kept and shows once unlocked). `unlockables` opens the Unlockables page (the Profile screen's Collection tab in the
-SJK UI; also the Profile page's See unlockables), where owned skins are equipped and
-unequipped
-([sjk-ui.md](sjk-ui.md#sjks-pages)).
+is kept and shows once unlocked). `unlockables` opens the Collection on its Shaders
+tab (also the Profile page's See the collection), where owned skins are equipped and
+unequipped and any is previewed on the player's own saber
+([sjk-ui.md](sjk-ui.md#collection)).
 
 A skin brings its own sounds, heard for each player wearing it, over the stock ones,
 which keep playing (the skin's sound goes on a channel of its own, so that it does not

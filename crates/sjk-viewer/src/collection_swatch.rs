@@ -1,5 +1,6 @@
-//! The Unlockables page's live swatches: each unlockable drawn small with the UI's
-//! shapes, moving as it does in the game. A blade skin lies across its swatch from a
+//! The Collection's live swatches (its Shaders tab, and the Profile screen's Saber
+//! tab): each blade skin drawn small with the UI's shapes, moving as it does in the
+//! game. A blade skin lies across its swatch from a
 //! steel hilt, drawn from its loaded blade-skin file (`blade_skin_file.rs`): a hot core
 //! in a corona graded from the file's inside colour to its rim, breathing as its light
 //! flickers in a soft haze, flame loops rising off it, granules drifting along it and,
@@ -7,8 +8,7 @@
 //! tip (as `saber.wgsl` animates the real blade), and, when the skin has them, lightning
 //! arcs flashing off it, motes drifting round it and its colours turning through their
 //! hues. A locked one is drawn grey and still, under a padlock; an owned one whose pack
-//! has not come yet is drawn still in neutral grey, and the page says its look downloads
-//! from the SJK hub.
+//! has not come yet is drawn still in neutral grey.
 
 use crate::blade_skin_file::{Arcs, BladeSkinDef, Motes, Rgb};
 use crate::menu::sjk::{Frame, color};
@@ -125,7 +125,7 @@ pub(crate) enum Shown {
 
 /// Draw a blade skin across the swatch `rect` (frame pixels) at `seconds`: `skin` its
 /// loaded file, if its pack is loaded; `owned` lights it. Says what it showed.
-pub(super) fn blade(
+pub(crate) fn blade(
     canvas: &mut MenuCanvas,
     frame: &Frame,
     rect: [f32; 4],
@@ -178,8 +178,8 @@ pub(super) fn blade(
     shown
 }
 
-/// The height the Unlockables page draws a swatch at (frame pixels); a small one is
-/// that swatch shrunk.
+/// The height [`blade`] draws a swatch at (frame pixels); a small one is that swatch
+/// shrunk.
 const CARD_HEIGHT: f32 = 224.0;
 
 /// A frame drawing a swatch `rect[3] / CARD_HEIGHT` times its card size into `rect`
@@ -205,6 +205,20 @@ pub(crate) fn small_blade(
 ) -> Shown {
     let (small, rect) = shrunk(frame, rect);
     blade(canvas, &small, rect, skin, true, seconds)
+}
+
+/// A blade skin as [`blade`] draws it, owned (alive) or not (grey under a padlock),
+/// shrunk into `rect` (frame pixels): the Collection's rack.
+pub(crate) fn small_swatch(
+    canvas: &mut MenuCanvas,
+    frame: &Frame,
+    rect: [f32; 4],
+    skin: Option<&LoadedSkin>,
+    owned: bool,
+    seconds: f32,
+) -> Shown {
+    let (small, rect) = shrunk(frame, rect);
+    blade(canvas, &small, rect, skin, owned, seconds)
 }
 
 /// The stock blade in `colour` from the same hilt, still, in a swatch shrunk into

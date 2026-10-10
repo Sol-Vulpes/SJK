@@ -155,6 +155,8 @@ impl Data {
 pub(crate) enum PanelAction {
     None,
     Close,
+    /// Show another of the Collection screen's tabs (a click on the row).
+    Hub(crate::profile_hub::Tab),
 }
 
 pub(crate) struct Panel {
@@ -165,6 +167,8 @@ pub(crate) struct Panel {
     hub: bool,
     /// What the Profile screen's tabs put at the top.
     hub_header: crate::profile_hub::Header,
+    /// The Collection row's counts after each tab's name, in the row's order.
+    row: Vec<String>,
     ui: MenuCanvas,
     /// The tier chosen, an index into [`holocrons::TIERS`].
     selected: usize,
@@ -189,6 +193,7 @@ impl Panel {
             owns_console: false,
             hub: false,
             hub_header: crate::profile_hub::Header::default(),
+            row: Vec::new(),
             ui: MenuCanvas::with_capacities(96, 160, 1_100),
             selected: 0,
             data: Data::nothing(State::Waiting),
@@ -224,6 +229,11 @@ impl Panel {
     }
 
     /// What the Profile screen's tabs put at the top.
+    /// Put `row`'s counts after the Collection's tabs' names.
+    pub(crate) fn set_collection_row(&mut self, row: Vec<String>) {
+        self.row = row;
+    }
+
     pub(crate) fn hub_header(&self) -> &crate::profile_hub::Header {
         &self.hub_header
     }
@@ -231,11 +241,6 @@ impl Panel {
     /// Put `header` at the top on the Profile screen.
     pub(crate) fn set_hub_header(&mut self, header: crate::profile_hub::Header) {
         self.hub_header = header;
-    }
-
-    /// Closing the page closes the console too.
-    pub(crate) fn own_console(&mut self) {
-        self.owns_console = true;
     }
 
     /// Hide the page; returns whether it had opened the console.
@@ -372,6 +377,10 @@ impl Panel {
                 self.select(usize::from(token - ROW_BASE));
                 PanelAction::None
             }
+            Some(token) if self.hub => match crate::profile_hub::collection_tab_of(token) {
+                Some(tab) if tab != crate::profile_hub::Tab::Holocrons => PanelAction::Hub(tab),
+                _ => PanelAction::None,
+            },
             _ => PanelAction::None,
         }
     }

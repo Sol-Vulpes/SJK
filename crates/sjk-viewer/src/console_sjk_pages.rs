@@ -28,7 +28,7 @@ impl ViewerConsole {
         // The Profile page has the SJK UI's look in every menu style.
         if self.profile_panel.is_open()
             || self.staff_panel.is_open()
-            || self.unlockables_panel.is_open()
+            || self.collection_panel.is_open()
             || self.holocrons_panel.is_open()
             || self.sjk_chat_panel.is_open()
         {
@@ -58,8 +58,8 @@ impl ViewerConsole {
             self.append_profile_panel(target, viewport);
         } else if self.staff_panel.is_open() {
             self.append_staff_panel(target, viewport);
-        } else if self.unlockables_panel.is_open() {
-            self.append_unlockables_panel(target, viewport);
+        } else if self.collection_panel.is_open() {
+            self.append_collection_panel(target, viewport);
         } else if self.holocrons_panel.is_open() {
             self.append_holocrons_panel(target, viewport);
         } else if self.sjk_chat_panel.is_open() {

@@ -1,0 +1,189 @@
+//! World shots of the Collection screen ([`crate::console::collection_panel`]) over the
+//! live duel6 in the SJK UI, on a made-up profile (two medals, the Sun blade owned and
+//! worn, some achievements): from the main page, every tab, the model on the menu map's
+//! stage behind Shaders (the Sun, then the locked Storm previewed on the saber), Toys
+//! (the Illuminate holocron by it) and Nameplates (the plate over its head); the same
+//! in a 4:3 window; then from the game menu over a match, the model in the page's live
+//! preview; and the page on its own as the classic menus open it. The blade skins' looks
+//! come from the packs `SJK_TEST_PACKS` names. Ignored like the other world shots.
+
+use super::*;
+use crate::player_menu::ReturnTarget;
+use crate::profile_hub::{Screen, Tab};
+
+/// The made-up grant.
+fn sun() -> sjk_identity::Unlock {
+    sjk_identity::Unlock {
+        id: "saber_sun".to_owned(),
+        granted: 1_791_336_225,
+        note: "Thanks for testing the blades with us".to_owned(),
+    }
+}
+
+/// A made-up profile with the achievements half done.
+fn preview() -> crate::console::profile_panel::Preview {
+    let mut preview = super::tests::profile_preview();
+    let held: Vec<sjk_identity::Achievement> = crate::achievements::ALL
+        .iter()
+        .enumerate()
+        .map(|(index, kind)| sjk_identity::Achievement {
+            id: kind.id.to_owned(),
+            progress: if index % 2 == 0 {
+                kind.goal
+            } else {
+                kind.goal * (index as u64 % 7 + 1) / 9
+            },
+            goal: kind.goal,
+            unlocked: if index % 2 == 0 { 1_791_336_225 } else { 0 },
+        })
+        .collect();
+    preview.standings = crate::achievements::standings(&held);
+    preview
+}
+
+/// The Collection's page ran out of room.
+fn overflowed(gpu: &GpuState) -> bool {
+    gpu.console
+        .as_ref()
+        .is_some_and(crate::console::ViewerConsole::profile_pages_overflowed)
+}
+
+/// The part of a tab's name in a shot's file name.
+fn part(tab: Tab) -> String {
+    tab.label().to_lowercase().replace(' ', "-")
+}
+
+#[test]
+#[ignore = "renders with the GPU and the installed game data named by JKA_GAME_DATA"]
+fn duel6_sjk_collection() {
+    on_big_stack(|| {
+        super::saber_skins::mount_test_packs();
+        let cvars = [
+            ("ui_menuStyle", "sjk"),
+            (crate::settings::quick::HIDE_CVAR, "1"),
+            (crate::unlockables::SABER_SKIN_CVAR, "saber_sun"),
+            ("name", "^1Sol^7Vulpes"),
+        ];
+        for size in [[1920, 1080], [1440, 1080]] {
+            let suffix = if size[0] == 1920 { "" } else { "-4x3" };
+            let Some((mut gpu, _profile)) = open(
+                "maps/mp/duel6.bsp",
+                size,
+                Some(menu::ClientMenu::new(true, String::new())),
+                &cvars,
+            ) else {
+                return;
+            };
+            // The shots have no hub: they own the unlocks, as a profile listing them would.
+            gpu.looks.shot_owns_unlocks = true;
+            let _ = frame(&mut gpu, 10);
+            if let Some(console) = gpu.console.as_mut() {
+                console.preview_profile(preview());
+                console.preview_collection(Some(vec![sun()]), 0.8);
+                console.open_profile_hub_page(Tab::Medals, ReturnTarget::MainMenu);
+            }
+            assert_eq!(gpu.profile_hub_tab(), Some(Tab::Medals));
+            for _ in 0..240 {
+                let _ = frame(&mut gpu, 1);
+                if crate::medals::art::decoded().is_some() {
+                    break;
+                }
+            }
+            for tab in &Screen::Collection.tabs()[..5] {
+                gpu.profile_hub_show_for_shot(*tab);
+                assert_eq!(gpu.profile_hub_tab(), Some(*tab));
+                // The camera goes to the player's shot behind the model's tabs.
+                let frames = if tab.index() >= 2 { 150 } else { 8 };
+                gpu.ui_epoch -= std::time::Duration::from_millis(3_000);
+                let name = format!("duel6-collection-{}{suffix}", part(*tab));
+                println!("{}", shoot(&mut gpu, frames, &name).display());
+                assert!(!overflowed(&gpu), "{tab:?}{suffix}");
+            }
+            if size[0] != 1920 {
+                continue;
+            }
+            // A locked one, previewed on the saber.
+            gpu.profile_hub_show_for_shot(Tab::Shaders);
+            let storm = 1 + crate::unlockables::ALL
+                .iter()
+                .position(|skin| skin.id == "saber_storm")
+                .expect("the Storm blade");
+            if let Some(console) = gpu.console.as_mut() {
+                console.collection_shader_for_shot(storm);
+            }
+            println!(
+                "{}",
+                shoot(&mut gpu, 30, "duel6-collection-shaders-preview").display()
+            );
+            // Ctrl+Tab goes on to Holocrons (the Holocrons page, under the same row) and
+            // comes round to Medals, on the same screen.
+            gpu.profile_hub_show_for_shot(Tab::Nameplates);
+            gpu.profile_hub_next_for_shot();
+            assert_eq!(gpu.profile_hub_tab(), Some(Tab::Holocrons));
+            println!(
+                "{}",
+                shoot(&mut gpu, 150, "duel6-collection-holocrons").display()
+            );
+            assert!(!overflowed(&gpu), "Holocrons");
+            gpu.profile_hub_next_for_shot();
+            assert_eq!(gpu.profile_hub_tab(), Some(Tab::Medals));
+        }
+        // From the game menu, over a "match" (no server): the live preview.
+        let Some((mut gpu, _profile)) = open(
+            "maps/mp/duel6.bsp",
+            [1920, 1080],
+            Some(menu::ClientMenu::new(false, String::new())),
+            &cvars,
+        ) else {
+            return;
+        };
+        gpu.looks.shot_owns_unlocks = true;
+        let shots = menu_backdrop::tour_for("Yavin Training Grounds").expect("duel6's tour");
+        let (yaw, pitch) = look(shots[3].from, shots[3].at);
+        aim(&mut gpu, shots[3].from, yaw, pitch);
+        gpu.is_menu_world = false;
+        gpu.game_menu = true;
+        if let Some(console) = gpu.console.as_mut() {
+            console.close_for_connection();
+            console.preview_profile(preview());
+            console.preview_collection(Some(vec![sun()]), 0.8);
+        }
+        let _ = frame(&mut gpu, 20);
+        gpu.open_collection_from_game();
+        assert_eq!(gpu.profile_hub_tab(), Some(Tab::Medals));
+        for tab in [Tab::Achievements, Tab::Shaders, Tab::Toys] {
+            gpu.profile_hub_show_for_shot(tab);
+            let name = format!("duel6-collection-in-game-{}", part(tab));
+            println!("{}", shoot(&mut gpu, 40, &name).display());
+            assert!(!overflowed(&gpu), "in game {tab:?}");
+        }
+        // Escape returns to the game menu, on Collection.
+        if let Some(console) = gpu.console.as_mut() {
+            console.close_profile_hub_page();
+        }
+        assert!(gpu.game_menu, "back on the game menu");
+        assert_eq!(
+            gpu.game_menu_row,
+            crate::ingame_menu::sjk_view::Entry::Collection.index()
+        );
+        // On its own, as the classic menus' `collection` opens it.
+        let Some((mut gpu, _profile)) = open(
+            "maps/mp/duel6.bsp",
+            [1920, 1080],
+            Some(menu::ClientMenu::new(true, String::new())),
+            &[("ui_menuStyle", "classic")],
+        ) else {
+            return;
+        };
+        let _ = frame(&mut gpu, 10);
+        if let Some(console) = gpu.console.as_mut() {
+            console.preview_profile(preview());
+            console.preview_collection_alone(Tab::Shaders, Some(vec![sun()]), 0.8);
+        }
+        println!(
+            "{}",
+            shoot(&mut gpu, 30, "duel6-collection-classic").display()
+        );
+        assert!(!overflowed(&gpu), "on its own");
+    });
+}

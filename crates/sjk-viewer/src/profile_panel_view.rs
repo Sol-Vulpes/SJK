@@ -1,13 +1,11 @@
 //! The Profile page's drawing, in the SJK UI's look over the map whatever the menu
-//! style: the top bar with the two tabs, or on the Profile screen its title and row of
-//! tabs ([`crate::profile_hub::header`]) with the page moved down under them; on
-//! Profile, the player's picture, who they are and their record on the left, the bio
-//! (or the picture panel) in the middle and their medals (on its own only),
-//! achievements and unlockables on the right; on Achievements, the board, three columns
-//! of cards; on Medals, the medals (`profile_panel_medals.rs`).
+//! style: the top bar, or on the Profile screen its title and row of tabs
+//! ([`crate::profile_hub::header`]) with the page moved down under them; the player's
+//! picture, who they are and their record on the left, the bio (or the picture panel)
+//! in the middle and their medals (on its own only), achievements and collection on the
+//! right, each with the way to the Collection.
 
 use super::*;
-use crate::achievements::medallion::{self, tint};
 use crate::menu::sjk::{
     Frame, TextTarget, color, key_hint, key_hint_width, kit, text, top_bar, wrap,
 };
@@ -32,13 +30,6 @@ const BIO_HEIGHT: f32 = 300.0;
 const BIO_PAD: f32 = 20.0;
 const BIO_LINE: f32 = 26.0;
 const BIO_SIZE: f32 = 18.0;
-/// The board's cards: three columns, their size and gaps.
-const CARD_TOP: f32 = 236.0;
-const CARD_WIDTH: f32 = 560.0;
-const CARD_HEIGHT: f32 = 94.0;
-const CARD_GAP_X: f32 = 24.0;
-const CARD_GAP_Y: f32 = 10.0;
-const COLUMNS: usize = 3;
 /// Most medals the Profile tab lists.
 const MEDALS_SHOWN: usize = 3;
 /// Most unlocks the Profile tab lists.
@@ -186,48 +177,24 @@ impl Panel {
         self.ui.begin_transparent(viewport);
         crate::settings::sjk_view::backdrop(&mut self.ui, viewport);
         match self.mode {
-            Mode::Pages => {
-                let title = match self.tab {
-                    Tab::Profile => "Profile",
-                    Tab::Achievements => "Achievements",
-                    Tab::Medals => "Medals",
-                };
-                top_bar(&mut self.ui, &frame, "Back", BACK_TOKEN, title, None);
-                kit::segments(
-                    &mut self.ui,
-                    &frame,
-                    1_824.0,
-                    87.0,
-                    &["Profile", "Achievements"],
-                    self.tab.index(),
-                    self.focus == Focus::Tabs,
-                    TAB_TOKEN,
-                );
-            }
-            Mode::Hub => {
-                let tab = match self.tab {
-                    Tab::Profile => HubTab::Profile,
-                    Tab::Achievements => HubTab::Achievements,
-                    Tab::Medals => HubTab::Medals,
-                };
-                crate::profile_hub::header(&mut self.ui, &frame, &self.hub_header, BACK_TOKEN, tab);
-            }
+            Mode::Pages => top_bar(&mut self.ui, &frame, "Back", BACK_TOKEN, "Profile", None),
+            Mode::Hub => crate::profile_hub::header(
+                &mut self.ui,
+                &frame,
+                &self.hub_header,
+                BACK_TOKEN,
+                HubTab::Profile,
+            ),
         }
         // Under the Profile screen's row of tabs the page moves down.
         let page = frame.shifted(0.0, self.shift());
-        match self.tab {
-            Tab::Profile => {
-                let who = who(inputs);
-                self.left_column(&page, inputs, &who);
-                match self.middle {
-                    Middle::Bio => self.bio_column(&page, body),
-                    Middle::Picture => self.picture_column(&page, &who),
-                }
-                self.right_column(&page, inputs);
-            }
-            Tab::Achievements => self.board(&page, inputs.standings),
-            Tab::Medals => self.medals(&page, inputs),
+        let who = who(inputs);
+        self.left_column(&page, inputs, &who);
+        match self.middle {
+            Middle::Bio => self.bio_column(&page, body),
+            Middle::Picture => self.picture_column(&page, &who),
         }
+        self.right_column(&page, inputs);
         self.keys(&frame);
         self.ui.finish(self.focus_token());
     }
@@ -780,8 +747,8 @@ impl Panel {
         );
     }
 
-    /// The medals (on its own only: the Profile screen has a tab for them), the
-    /// achievements and the unlockables.
+    /// The medals (on its own only: the Collection has them), the achievements and the
+    /// collection.
     fn right_column(&mut self, frame: &Frame, inputs: &Inputs<'_>) {
         let y = if self.mode == Mode::Hub {
             TOP + 20.0
@@ -925,11 +892,7 @@ impl Panel {
     /// How many unlockables the player owns, and the way to their page, from `y`.
     fn unlockables(&mut self, frame: &Frame, inputs: &Inputs<'_>, y: f32) {
         let s = frame.s;
-        let (heading, button) = if self.mode == Mode::Hub {
-            (crate::profile_hub::COLLECTION, "See the collection")
-        } else {
-            ("Unlockables", "See unlockables")
-        };
+        let (heading, button) = (crate::profile_hub::COLLECTION, "See the collection");
         kit::heading(&mut self.ui, frame, RIGHT_X, y, RIGHT_WIDTH, heading);
         let holdings = crate::unlockables::Holdings::of(inputs.enabled, inputs.snapshot);
         let (line, size, colour) = if holdings.reason().is_none() {
@@ -938,13 +901,13 @@ impl Panel {
                 .filter(|unlockable| holdings.unlock(unlockable.id).is_some())
                 .count();
             (
-                format!("{owned} of {} owned", crate::unlockables::ALL.len()),
+                format!("{owned} of {} shaders owned", crate::unlockables::ALL.len()),
                 30.0,
                 color::TEXT,
             )
         } else {
             (
-                "Blade skins and more, kept on the SJK hub".to_owned(),
+                "Medals, shaders, toys and more, kept on the SJK hub".to_owned(),
                 17.0,
                 color::MUTED,
             )
@@ -1020,187 +983,11 @@ impl Panel {
         );
     }
 
-    /// The achievements board: how many are unlocked, then every achievement's card.
-    /// Under the Profile screen's tabs the note stands beside the count.
-    fn board(&mut self, frame: &Frame, standings: &[Standing]) {
-        let s = frame.s;
-        let hub = self.mode == Mode::Hub;
-        // On the Profile screen the count stands a little higher and the cards start
-        // under it, so all seven rows still fit over the keys.
-        let top = if hub { TOP - 14.0 } else { TOP - 4.0 };
-        let unlocked = standings
-            .iter()
-            .filter(|standing| standing.unlocked.is_some())
-            .count();
-        text(
-            &mut self.ui,
-            TextFamily::Display,
-            format_args!("{unlocked} of {} unlocked", standings.len()),
-            frame.rect(LEFT_X, top, 520.0, 44.0),
-            34.0 * s,
-            color::TEXT,
-            FontWeight::Semibold,
-            TextAlign::Start,
-        );
-        bar(
-            &mut self.ui,
-            frame,
-            [LEFT_X + 360.0, top + 18.0, 560.0, 8.0],
-            if standings.is_empty() {
-                0.0
-            } else {
-                unlocked as f32 / standings.len() as f32
-            },
-            color::GOLD,
-        );
-        let (note_x, note_y, note_width) = if hub {
-            (LEFT_X + 950.0, top + 2.0, 778.0)
-        } else {
-            (LEFT_X, TOP + 36.0, 1_200.0)
-        };
-        for (index, part) in wrap(
-            "Counted on this PC in your matches on servers, and kept on the SJK hub with your identity on.",
-            if hub { 80 } else { 120 },
-        )
-        .enumerate()
-        {
-            text(
-                &mut self.ui,
-                TextFamily::Body,
-                format_args!("{part}"),
-                frame.rect(note_x, note_y + index as f32 * 20.0, note_width, 24.0),
-                15.0 * s,
-                color::QUIET,
-                FontWeight::Regular,
-                TextAlign::Start,
-            );
-        }
-        let card_top = if hub { CARD_TOP - 18.0 } else { CARD_TOP };
-        let bottom = KEYS_Y - 16.0 - self.shift();
-        for (index, standing) in standings.iter().enumerate() {
-            let column = index % COLUMNS;
-            let row = index / COLUMNS;
-            let x = LEFT_X + column as f32 * (CARD_WIDTH + CARD_GAP_X);
-            let y = card_top + row as f32 * (CARD_HEIGHT + CARD_GAP_Y);
-            if y + CARD_HEIGHT > bottom {
-                break;
-            }
-            self.card(frame, standing, x, y);
-        }
-    }
-
-    /// One achievement's card at (`x`, `y`).
-    fn card(&mut self, frame: &Frame, standing: &Standing, x: f32, y: f32) {
-        let s = frame.s;
-        let kind = standing.kind;
-        let done = standing.unlocked.is_some();
-        let hue = tint(kind.category);
-        let rect = frame.rect(x, y, CARD_WIDTH, CARD_HEIGHT);
-        let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
-            rect,
-            radius: 14.0 * s,
-            color: if done {
-                Color::new(0.07, 0.09, 0.16, 0.92)
-            } else {
-                color::alpha(color::SPACE, 0.62)
-            },
-        });
-        let _ = self.ui.draw_list_mut().push(DrawCommand::Border {
-            rect,
-            radius: 14.0 * s,
-            width: 1.2 * s,
-            color: if done {
-                color::alpha(color::GOLD, 0.55)
-            } else {
-                color::alpha(color::HOLO, 0.18)
-            },
-        });
-        // The medallion: a ring filling with the count, gold and lit once unlocked.
-        let fraction = standing.fraction();
-        medallion::draw(
-            &mut self.ui,
-            medallion::Medallion {
-                kind,
-                centre: frame.point(x + 50.0, y + CARD_HEIGHT * 0.5),
-                radius: 31.0 * s,
-                fraction,
-                done,
-            },
-        );
-        let text_x = x + 98.0;
-        let text_width = CARD_WIDTH - 98.0 - 18.0;
-        text(
-            &mut self.ui,
-            TextFamily::Display,
-            format_args!("{}", kind.name),
-            frame.rect(text_x, y + 10.0, text_width - 130.0, 30.0),
-            24.0 * s,
-            if done {
-                color::GOLD_BRIGHT
-            } else {
-                color::TEXT
-            },
-            FontWeight::Semibold,
-            TextAlign::Start,
-        );
-        text(
-            &mut self.ui,
-            TextFamily::Display,
-            format_args!("{}", kind.category.name()),
-            frame.rect(text_x + text_width - 150.0, y + 12.0, 150.0, 24.0),
-            15.0 * s,
-            color::alpha(hue, 0.9),
-            FontWeight::Regular,
-            TextAlign::End,
-        );
-        text(
-            &mut self.ui,
-            TextFamily::Body,
-            format_args!("{}", kind.description),
-            frame.rect(text_x, y + 40.0, text_width, 22.0),
-            15.0 * s,
-            color::MUTED,
-            FontWeight::Regular,
-            TextAlign::Start,
-        );
-        let status = match standing.unlocked {
-            Some(at) if at > 0 => format!("Unlocked {}", crate::medals::date_text(at)),
-            Some(_) => "Unlocked".to_owned(),
-            None => format!(
-                "{} / {}",
-                kind.amount(standing.progress),
-                kind.amount(kind.goal)
-            ),
-        };
-        bar(
-            &mut self.ui,
-            frame,
-            [text_x, y + 72.0, text_width - 170.0, 6.0],
-            fraction,
-            if done { color::GOLD } else { hue },
-        );
-        text(
-            &mut self.ui,
-            TextFamily::Body,
-            format_args!("{status}"),
-            frame.rect(text_x + text_width - 160.0, y + 64.0, 160.0, 22.0),
-            14.0 * s,
-            if done {
-                color::GOLD_BRIGHT
-            } else {
-                color::QUIET
-            },
-            FontWeight::Regular,
-            TextAlign::End,
-        );
-    }
-
     /// The keys of what has the keyboard, right-aligned at the bottom.
     fn keys(&mut self, frame: &Frame) {
         let s = frame.s;
         let typing = self.focus == Focus::Bio && self.writable;
         let enter = match self.focus {
-            Focus::Tabs => "switch tab",
             Focus::Staff => "open",
             Focus::Bio | Focus::Save => "save",
             Focus::Revert => "revert",
@@ -1211,21 +998,12 @@ impl Panel {
             Focus::RemovePicture => "remove picture",
             Focus::BioBack => "back to your bio",
         };
-        let mut keys: Vec<(&[&str], &str)> = match (self.mode, self.tab) {
-            // The board and the medals have nothing to choose on the Profile screen.
-            (Mode::Hub, Tab::Achievements | Tab::Medals) => Vec::new(),
-            _ => vec![(&["Tab"], "next"), (&["Enter"], enter)],
-        };
+        let mut keys: Vec<(&[&str], &str)> = vec![(&["Tab"], "next"), (&["Enter"], enter)];
         if typing {
             keys.push((&["Shift", "Enter"], "new line"));
         }
         if self.mode == Mode::Hub {
-            let tab = match self.tab {
-                Tab::Profile => HubTab::Profile,
-                Tab::Achievements => HubTab::Achievements,
-                Tab::Medals => HubTab::Medals,
-            };
-            keys.push((&["Ctrl", "Tab"], tab.next(true).label()));
+            keys.push((&["Ctrl", "Tab"], HubTab::Profile.next(true).label()));
         }
         keys.push((&["Esc"], "back"));
         let gap = 30.0 * s;
@@ -1386,9 +1164,9 @@ mod tests {
             ..snapshot(None, None)
         };
         for (enabled, shot) in [(true, Some(&online)), (true, Some(&offline)), (false, None)] {
-            for tab in [Tab::Profile, Tab::Achievements, Tab::Medals] {
+            {
                 for focus in [
-                    Focus::Tabs,
+                    Focus::Picture,
                     Focus::Staff,
                     Focus::Browse,
                     Focus::Bio,
@@ -1407,7 +1185,7 @@ mod tests {
                         ] {
                             for mode in [Mode::Pages, Mode::Hub] {
                                 let mut panel = Panel::new();
-                                panel.open_as(tab, true, mode);
+                                panel.open_as(true, mode);
                                 panel.focus = focus;
                                 panel.message = "a bio uses letters, digits, spaces and simple punctuation (no emoji or symbols)".into();
                                 let inputs = Inputs {
@@ -1419,7 +1197,7 @@ mod tests {
                                 panel.build(&inputs, body, viewport);
                                 assert!(
                                     !panel.ui.overflowed(),
-                                    "{tab:?} {focus:?} {mode:?} {enabled} at {viewport:?}"
+                                    "{focus:?} {mode:?} {enabled} at {viewport:?}"
                                 );
                                 // The Profile screen's tabs answer where they are drawn.
                                 let strip = panel.ui.rect_for(crate::profile_hub::TOKEN);
@@ -1455,7 +1233,7 @@ mod tests {
             for (state, mode) in (0..5).flat_map(|state| [(state, Mode::Pages), (state, Mode::Hub)])
             {
                 let mut panel = Panel::new();
-                panel.open_as(Tab::Profile, true, mode);
+                panel.open_as(true, mode);
                 panel.middle = Middle::Picture;
                 match state {
                     0 => {}
@@ -1560,65 +1338,6 @@ mod tests {
                 crate::text::visible_text_width(body, line, scale) <= room,
                 "{line}"
             );
-        }
-    }
-
-    #[test]
-    fn the_board_shows_every_achievement_and_the_tabs_answer_the_pointer() {
-        let fonts = fonts();
-        let standings = standings();
-        let record = record();
-        let online = snapshot(Some(full_profile()), None);
-        let mut panel = Panel::new();
-        panel.open(Tab::Achievements, true);
-        let inputs = Inputs {
-            enabled: true,
-            snapshot: Some(&online),
-            standings: &standings,
-            record: &record,
-        };
-        panel.build(&inputs, &fonts.body.font, [1920.0, 1080.0]);
-        let names: usize = panel
-            .ui
-            .draw_list()
-            .commands()
-            .iter()
-            .filter(|command| matches!(command, DrawCommand::Arc { .. }))
-            .count();
-        assert!(
-            names >= achievements::ALL.len(),
-            "every card has its medallion"
-        );
-        let tab = panel.ui.rect_for(TAB_TOKEN).expect("the Profile tab");
-        let at = sjk_ui::Vec2::new(tab.x + tab.width * 0.5, tab.y + tab.height * 0.5);
-        for event in [
-            InputEvent::PointerMove(at),
-            InputEvent::PointerPress {
-                position: at,
-                button: sjk_ui::PointerButton::Primary,
-            },
-            InputEvent::PointerRelease {
-                position: at,
-                button: sjk_ui::PointerButton::Primary,
-            },
-        ] {
-            let _ = panel.handle_pointer(event, None);
-        }
-        assert_eq!(panel.tab(), Tab::Profile);
-        // On the Profile screen every card shows too, under the row of tabs.
-        for viewport in [[1920.0, 1080.0], [1440.0, 1080.0]] {
-            let mut panel = Panel::new();
-            panel.open_as(Tab::Achievements, true, Mode::Hub);
-            panel.build(&inputs, &fonts.body.font, viewport);
-            let medallions = panel
-                .ui
-                .draw_list()
-                .commands()
-                .iter()
-                .filter(|command| matches!(command, DrawCommand::Arc { .. }))
-                .count();
-            assert!(medallions >= achievements::ALL.len(), "{viewport:?}");
-            clear_of_the_row(&panel, viewport);
         }
     }
 }

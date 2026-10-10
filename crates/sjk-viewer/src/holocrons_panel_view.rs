@@ -191,18 +191,19 @@ impl Panel {
         self.ui.begin_transparent(viewport);
         backdrop(&mut self.ui, viewport);
         if self.hub {
-            crate::profile_hub::header(
+            crate::profile_hub::collection_header(
                 &mut self.ui,
                 &frame,
-                &self.hub_header,
+                crate::profile_hub::back_words(self.hub_header.back),
                 BACK_TOKEN,
                 crate::profile_hub::Tab::Holocrons,
+                (&self.row, 1.0),
             );
         } else {
             top_bar(&mut self.ui, &frame, "Back", BACK_TOKEN, "Holocrons", None);
         }
         let keys = frame;
-        // Under the Profile screen's row of tabs the page moves down.
+        // Under the Collection screen's row of tabs the page moves down.
         let frame = frame.shifted(
             0.0,
             if self.hub {
@@ -778,14 +779,14 @@ mod tests {
         }
     }
 
-    /// The Profile screen's tabs are drawn by the page and answer where they are drawn.
+    /// The Collection screen's tabs are drawn by the page and answer where they are drawn.
     #[test]
     fn the_hub_page_draws_the_screens_tabs_with_holocrons_lit() {
         let mut panel = Panel::new();
         panel.open(true);
         panel.set_hub(true);
         panel.build([1920.0, 1080.0]);
-        for tab in crate::profile_hub::Tab::ALL {
+        for tab in crate::profile_hub::Screen::Collection.tabs() {
             assert!(
                 panel
                     .ui

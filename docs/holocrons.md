@@ -5,7 +5,7 @@ the client shows them. They cannot be opened yet, grant nothing and are only col
 and shown (Sol's decision, 10/10/2026). This page is the design, the decisions and what
 is checked; the wire is the hub's `PROTOCOL.md` ("Holocrons") in Sol-Vulpes/SJK-hub,
 decided together with the client and built in parallel. Players read the pop-up, the chat
-lines and the Profile screen's Holocrons tab.
+lines and the Collection's Holocrons tab.
 
 ## Pieces
 
@@ -162,9 +162,10 @@ at once on a menu. Nothing is sent to the hub, and rehearsed holocrons (numbered
 
 ### The Holocrons tab
 
-The Profile screen's eighth tab in the SJK UI ([sjk-ui.md](sjk-ui.md#profile-screen)); with
-the classic menus the Profile page's See holocrons or the `holocrons` command open the same
-page on its own, in the SJK UI's look as the Unlockables page does. Left, the world is left
+The Collection's sixth tab in the SJK UI ([sjk-ui.md](sjk-ui.md#collection); the Profile
+screen's eighth until the Collection was made, the same day); with the classic menus the
+Profile page's See holocrons or the `holocrons` command open the same page on its own, in
+the SJK UI's look as the Collection page does. Left, the world is left
 clear for one 3D holocron; right, over a dark panel, the four tiers (their picture, name in
 the tier's colour, how many are held or a dash while the hub has not answered, and the odds
 of a drop), what the chosen tier is, "Next holocron in about N minutes of play" with a bar
@@ -208,7 +209,7 @@ that opens a holocron: opening does not exist yet and the page says so.
 ## For other screens: the client's list
 
 [holocrons.rs](../crates/sjk-viewer/src/holocrons.rs) is the one list the rest of the
-client reads; the Profile screen's Holocrons tab is built on it.
+client reads; the Collection's Holocrons tab is built on it.
 
 - `TIERS: [Tier; COUNT]`, `tiers()`, `Tier::from_id` / `by_id(id)`, `colour(id)`, `name(id)`;
   a `Tier` has `id`, `name`, `colour` (`colour_alpha(a)`), `per_mille`, `odds` text, `index`,

@@ -102,6 +102,10 @@ pub(super) const COMMANDS: &[(&str, &str)] = &[
         crate::console::PROFILE_HELP,
     ),
     (
+        crate::console::COLLECTION_COMMAND,
+        crate::console::COLLECTION_HELP,
+    ),
+    (
         crate::console::ACHIEVEMENTS_COMMAND,
         crate::console::ACHIEVEMENTS_HELP,
     ),
@@ -524,13 +528,28 @@ impl crate::GpuState {
                 }
                 self.sync_cursor_policy();
             }
-            // The SJK UI shows them as the Profile screen's tabs.
+            // The SJK UI shows them as the Profile and Collection screens' tabs.
             crate::console::PROFILE_COMMAND if self.in_game_menu.is_sjk() => {
                 self.toggle_profile_hub(crate::profile_hub::Tab::Profile);
             }
             crate::console::PROFILE_COMMAND => {
                 if let Some(console) = &mut self.console {
-                    console.toggle_profile_panel(crate::console::profile_panel::Tab::Profile);
+                    console.toggle_profile_panel();
+                }
+                self.sync_cursor_policy();
+            }
+            crate::console::COLLECTION_COMMAND if self.in_game_menu.is_sjk() => {
+                let tab = self
+                    .console
+                    .as_ref()
+                    .map_or(crate::profile_hub::Tab::Medals, |console| {
+                        console.collection_tab()
+                    });
+                self.toggle_profile_hub(tab);
+            }
+            crate::console::COLLECTION_COMMAND => {
+                if let Some(console) = &mut self.console {
+                    console.toggle_collection_panel(None);
                 }
                 self.sync_cursor_policy();
             }
@@ -551,11 +570,11 @@ impl crate::GpuState {
                 self.sync_cursor_policy();
             }
             crate::console::UNLOCKABLES_COMMAND if self.in_game_menu.is_sjk() => {
-                self.toggle_profile_hub(crate::profile_hub::Tab::Collection);
+                self.toggle_profile_hub(crate::profile_hub::Tab::Shaders);
             }
             crate::console::UNLOCKABLES_COMMAND => {
                 if let Some(console) = &mut self.console {
-                    console.toggle_unlockables_panel();
+                    console.toggle_collection_panel(Some(crate::profile_hub::Tab::Shaders));
                 }
                 self.sync_cursor_policy();
             }
@@ -573,7 +592,7 @@ impl crate::GpuState {
             }
             crate::console::ACHIEVEMENTS_COMMAND => {
                 if let Some(console) = &mut self.console {
-                    console.toggle_profile_panel(crate::console::profile_panel::Tab::Achievements);
+                    console.toggle_collection_panel(Some(crate::profile_hub::Tab::Achievements));
                 }
                 self.sync_cursor_policy();
             }

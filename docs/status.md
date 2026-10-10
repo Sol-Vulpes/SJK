@@ -7,6 +7,39 @@ SJK currently contains a native client and standard dedicated server in a
 20-crate Rust workspace. This page records scope and verification, rather than
 claiming complete parity from the presence of an implementation.
 
+## The Collection: medals, achievements, shaders, toys and nameplates
+
+Branch `personal/collection` (10/10/2026, based on `bca3ac2e`, Windows 11), Sol's
+request, its design picked from a canvas of mock-ups ("the vault"). The achievements,
+medals and unlockables leave the Profile screen (now Character, Saber, Force, SJK
+Profile) for a screen of their own, the Collection, under Profile on the main page's
+arc (six entries, 12.5 degrees apart) and in the in-game menu (seven entries), with
+tabs Medals (hanging from a rail), Achievements (a wall of medallions by category, the
+one chosen up close with "Next up"), Shaders (the blade skins, renamed for players: the
+stock blade and every skin in a rack, Body "soon"), Toys (Illuminate, with its Force
+wheel switch) and Nameplates (none yet: the three places ornaments will go, and the
+player's nameplate over their model). Behind Shaders, Toys and Nameplates the player's
+model stands on the menu map's stage (the camera goes to the player's shot), or shows
+in the page's live preview over a match and in the classic menus; it holds the chosen
+shader, a locked one too as a local preview, the holocron floats by it on Toys and its
+nameplate stands over its head on Nameplates. Commands: `collection` (new),
+`achievements` and `unlockables` open its tabs; the Profile page's See the board and
+See the collection open it. Docs: [sjk-ui.md](sjk-ui.md#collection),
+[unlockables.md](unlockables.md#shaders-tab).
+
+Verified: `cargo test -p sjk-viewer` with unit tests of the two screens' rows (each
+screen's tabs wrapping within it, the Collection's counts, rows within the frame at the
+largest text style, the areas answering the pointer), the Collection's keys, pointer,
+equipping, the locked preview never equipped, the toy's switch, the stage wish, and
+every tab within its canvas over the keys at 1080p, 4K, 4:3 and 21:9; the world shots
+`duel6_sjk_collection` (every tab from the main page on the stage, the Storm previewed,
+4:3, the in-game preview, the classic menus' page), `duel6_sjk_profile_screen`,
+`duel6_sjk_profile`, `duel6_sjk_menu`, `duel6_sjk_ingame` and
+`duel6_sjk_profile_tabs_styled` were looked at. The nameplate's height over the head was
+measured on a world shot for the stage's stance. Not tried in the game: the camera's
+move to the player's shot and back when the Collection opens and closes on the main
+page, the preview over a real match, sounds.
+
 ## Holocron drops: the client
 
 Branch `personal/holocrons` (10/10/2026, based on `bca3ac2e`, Windows 11), Sol's feature,

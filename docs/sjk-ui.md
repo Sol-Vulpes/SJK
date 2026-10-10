@@ -12,8 +12,8 @@ fixes. A profile saved with the old default `classic` moves to `sjk` once
 Status (08/10/2026): the main page, Settings (with the key bindings),
 Character, What's new, Update, Identity, Credits, Servers (the server browser),
 the loading screen, the scoreboard, the in-game menu (reworked 09/10/2026), the
-Profile screen, Camera control, the report and note dialog (Report a bug) and the
-new medal pop-up are done. Every other
+Profile screen, the Collection (10/10/2026), Camera control, the report and note
+dialog (Report a bug) and the new medal pop-up are done. Every other
 screen opens in its classic+ version, which
 covers the map as the classic style does.
 The other style: First setup's Menu style row, Settings > Interface > Menu style, or
@@ -104,8 +104,9 @@ the camera behind glides through its tour (The map behind); on the loading
 screen a gold arc turns once every three seconds and the destination's
 levelshot fades in (0.45 s); on Credits the sun (its sunburst, god rays and
 sparks) keeps turning and rising, and the page's rows rise into place as it
-opens or a fold unfolds; on Unlockables an owned unlockable's swatch lives (a blade
-skin's corona breathes, flame loops rise and a flare runs along it, as its file says);
+opens or a fold unfolds; on the Collection's Shaders an owned blade skin's swatch
+lives (its corona breathes, flame loops rise and a flare runs along it, as its file
+says) and the model on the stage holds the chosen blade;
 a new medal arrives in its ceremony and, the screen's one memorable thing, breathes
 gently while it waits ([New medal](#new-medal)). Nothing else moves on its own.
 
@@ -151,15 +152,16 @@ one (4:3, 5:4) scales the frame down to its width.
   chosen entry, a dotted gold beam reaching towards it, and turns to the servers
   while they have the keyboard.
 - **Arc:** the page's entries on an arc of radius 440 round the ring's right
-  side, 16 degrees apart; the chosen one gold and larger, with a line saying
-  what it opens. The pages:
+  side, 16 degrees apart (12.5 for six, so the ends keep clear of the ring); the
+  chosen one gold and larger, with a line saying what it opens. The pages:
   - Main: Play, Profile (the [Profile screen](#profile-screen) on its Character
-    tab; it read Character until 09/10/2026), Settings (the settings screen), SJK,
-    Quit.
+    tab; it read Character until 09/10/2026), Collection (the
+    [Collection](#collection), since 10/10/2026), Settings (the settings screen),
+    SJK, Quit.
   - Play: Join a server (the browser), Create a game, Back.
   - SJK: What's new (the changelog), Update, Credits, Back (the Profile screen is
-    the main page's Profile, and its profile card). The arc holds five entries (a sixth curls back
-    into the ring); the identity's key is in Settings, Network.
+    the main page's Profile, and its profile card). The arc holds six entries (a
+    seventh curls back into the ring); the identity's key is in Settings, Network.
   - Quit: Quit to desktop (ember when chosen), Stay. It opens on Stay.
   A page's name stands small over its first entry.
 - **Recent servers:** a column on the right (its rule at x 1470) of the servers
@@ -217,7 +219,7 @@ open it). Bottom left on the 16:9 frame, from (84, 932), 474 by 96:
   or "SJK hub out of reach", still with this PC's achievements;
 - their model and blade ("Kyle, blue saber", or "Kyle, Sun blade" while they wear a
   blade skin their profile holds, [unlockables.md](unlockables.md)); when the card is
-  chosen, "Open your profile, medals and achievements" in gold instead.
+  chosen, "Open your profile: picture, bio and record" in gold instead.
 
 The pointer chooses it by hovering (a dark band with a gold edge round it) and a click
 opens the Profile screen on its SJK Profile tab. What it says is gathered twice a second from the settings,
@@ -237,7 +239,7 @@ on the 16:9 frame, dark behind the form on the left and clear over the model.
 - **Top:** the way back (Esc, "Main menu") and the player's name, with its
   colours, as the title; under it the pages as tabs, Character, Saber and
   Force, the one on show gold and underlined. As the Profile screen (the SJK UI
-  always opens it so) the row holds the screen's seven tabs instead
+  always opens it so) the row holds the screen's four tabs instead
   ([Profile screen](#profile-screen)).
 - **Character:** Name (a field; Enter types), Team colour, Search (a field that
   filters the grid), Model (‹ › steps through the grid), the model grid (eight
@@ -344,11 +346,11 @@ opened from a game.
 ## SJK's pages
 
 What's new, Update, Identity, Profile and Credits, which the main page's SJK page opens
-(and their console commands; Profile and Unlockables as the [Profile
-screen](#profile-screen)'s tabs, Identity from Settings, Network, Credits and What's
-new also from the in-game menu's row of icons), and the Staff, Unlockables and SJK
-chat pages have the
-SJK UI's look in this style (Profile, Staff, Unlockables and SJK chat in every style): drawn in its
+(and their console commands; Profile as the [Profile screen](#profile-screen)'s
+tab, the Collection as its own screen, Identity from Settings, Network, Credits and
+What's new also from the in-game menu's row of icons), and the Staff, Collection and
+SJK chat pages have the
+SJK UI's look in this style (Profile, Staff, Collection and SJK chat in every style): drawn in its
 families over the map darkened as Settings is (Update as a pop-up card, as First
 setup), each with the way back (Esc, "Back") and its name at the top and its
 keys bottom right. They stay the
@@ -381,47 +383,33 @@ overlay routes their text to the UI's families (`console_sjk_pages.rs`).
   (picture, name in gold, description, date given, the team's note), or says how
   medals come ([identity.md](identity.md#medals)).
 - **Profile** ([profile_panel_view.rs](../crates/sjk-viewer/src/profile_panel_view.rs),
-  08/10/2026, Sol's request: a real profile with the medals and an editable bio, and
-  an achievements board): drawn in this look in every menu style. On its own (the
-  `profile` and `achievements` commands with the classic menus) the top bar has
-  Profile and Achievements as segments at its right; in the SJK UI it is the Profile
-  screen's SJK Profile, Achievements and Medals tabs, under the screen's title and
-  row of tabs, moved down 44 pixels (`profile_panel::Mode`). Profile: three columns,
-  who the player is (their picture, a disc 104 across with "Add a picture" or "Change
-  picture" under it, beside the hub name in its colours at 38, verified, member since,
-  other names; then Staff tools for a staff key) over "Your record" (eight
-  numbers in two columns) and "Unlocked lately"; "About you", the bio's box (620 by
-  300, Exo 2 at 18, wrapped by measured width, the end being written kept in view)
-  with its counts, Revert and Save (gold) and the rules; Medals (pictures at 84, on
-  its own only: the Profile screen has a Medals tab), Achievements (how many unlocked,
-  a gold bar, See the board) and Unlockables (Collection on the Profile screen: how
-  many owned at 30, or a line saying they are kept on the hub, and See unlockables or
-  See the collection; Tab reaches it after See the board). On the Profile screen See
-  the board and See the collection show those tabs. Achievements: how many unlocked
-  with a bar (on the Profile screen the note stands beside it, so all seven rows fit
-  under the tabs), then the 21 cards in three columns of seven (560 by 94): a medallion ringed by
-  the count in the category's colour (Combat ember, Duels and flags gold, Journeys
-  holo, Community green), filled and gold once unlocked, the goal inside; the name,
-  the category, what to do, a bar and the count or the date. World shot:
-  `world_shot::tests::duel6_sjk_profile`. The picture (a click, or Enter on it after
-  Tab) opens the picture panel in the bio's place (08/10/2026): "Your picture", the
-  picture 220 across (the one about to be sent, ringed bright gold, else the
-  player's), beside it a headline (No picture yet, Reading the picture..., Your new
-  picture, Sending..., Taking it down...), the file's name and the last message (gold,
-  ember when something went wrong, the reason a picture was refused), under it
-  Browse... (Choosing... while the system's file dialog is open) beside "Choose a
-  picture file on this PC, or drop one on this window", what a picture may be and that
-  everyone sees it, then Use this picture (gold), Remove picture (Press again while it
-  waits) and Done. Escape returns to the bio first
-  ([identity.md](identity.md#pictures)).
-- **Medals** ([profile_panel_medals.rs](../crates/sjk-viewer/src/profile_panel_medals.rs),
-  09/10/2026, the Profile screen's Medals tab): how many medals at 34 ("2 medals", "No
-  medals yet", or why they are not known) with a line beside it, then every medal the
-  client knows as a card (852 by 300, two columns), the ones given first: the whole
-  medal on its ribbon (260 across), its name at 32 (with the count for one given
-  again), when it was given ("Given 07/10/2026", "Given 2 times, last on ..."), what it
-  is for and the SJK team's note in quotes; the ones not given dimmed, saying "Not
-  given yet" and what they are for.
+  08/10/2026, Sol's request: a real profile with the medals and an editable bio):
+  drawn in this look in every menu style. On its own (the `profile` command with the
+  classic menus) the top bar says Profile; in the SJK UI it is the Profile screen's
+  SJK Profile tab, under the screen's title and row of tabs, moved down 44 pixels
+  (`profile_panel::Mode`). Three columns: who the player is (their picture, a disc 104
+  across with "Add a picture" or "Change picture" under it, beside the hub name in its
+  colours at 38, verified, member since, other names; then Staff tools for a staff
+  key) over "Your record" (eight numbers in two columns) and "Unlocked lately"; "About
+  you", the bio's box (620 by 300, Exo 2 at 18, wrapped by measured width, the end
+  being written kept in view) with its counts, Revert and Save (gold) and the rules;
+  Medals (pictures at 84, on its own only), Achievements (how many unlocked, a gold
+  bar, See the board) and Collection (how many shaders owned at 30, or a line saying
+  they are kept on the hub, and See the collection; Tab reaches it after See the
+  board). See the board opens the [Collection](#collection) on Achievements, See the
+  collection on Medals (as the Collection screen in the SJK UI, on its own in the
+  classic menus). Until 10/10/2026 the page also held the achievements board and the
+  medals as tabs. World shot: `world_shot::tests::duel6_sjk_profile`. The picture (a
+  click, or Enter on it after Tab) opens the picture panel in the bio's place
+  (08/10/2026): "Your picture", the picture 220 across (the one about to be sent,
+  ringed bright gold, else the player's), beside it a headline (No picture yet,
+  Reading the picture..., Your new picture, Sending..., Taking it down...), the file's
+  name and the last message (gold, ember when something went wrong, the reason a
+  picture was refused), under it Browse... (Choosing... while the system's file
+  dialog is open) beside "Choose a picture file on this PC, or drop one on this
+  window", what a picture may be and that everyone sees it, then Use this picture
+  (gold), Remove picture (Press again while it waits) and Done. Escape returns to the
+  bio first ([identity.md](identity.md#pictures)).
 - **Staff** ([staff_panel_view.rs](../crates/sjk-viewer/src/staff_panel_view.rs),
   08/10/2026, for staff keys, [identity.md](identity.md#staff)): the top bar's
   search pill finds players; Me and Seen lately over the list of players found (14
@@ -437,37 +425,8 @@ overlay routes their text to the UI's families (`console_sjk_pages.rs`).
   clearing does. The last request's answer bottom left (gold, ember when refused).
   World shot: `world_shot::tests::duel6_sjk_staff` (the player's own, then another
   holding the Sun blade).
-- **Unlockables** ([unlockables_panel_view.rs](../crates/sjk-viewer/src/unlockables_panel_view.rs),
-  08/10/2026, [unlockables.md](unlockables.md#unlockables-page)): drawn in this look in
-  every menu style: the Profile screen's Collection tab in the SJK UI (moved down
-  under its tabs), else opened by Profile's See unlockables or `unlockables`. Under the
-  top bar how many the player owns at 38 ("1 of 5 owned") over a line, or why it is not
-  known ("Identity is off", "No hub is set", "Contacting the hub...") with what to do,
-  and a holo rule. Down the left a card per unlockable (852 by 268, radius 18): navy
-  glass with a gold edge when owned (brighter when worn), white while chosen; its
-  swatch (400 by 224), the one memorable thing, drawn live with the UI's shapes from
-  the skin's loaded blade-skin file (a blade from a steel hilt: a hot core, a corona
-  in the file's colours from its rim to its inside that breathes with its light's
-  flicker in nine layers of haze, small flame loops rising and sinking, granules
-  drifting, and once a cycle of its first flare track a flare running from hilt to
-  tip, and the skin's lightning arcs (thin strokes zigzagging off the blade), motes and
-  turning hue when it has them; locked, a grey still blade under a padlock; owned with
-  its pack not loaded yet,
-  a lighter grey still blade and "Its look downloads from the SJK hub"); then the kind in holo, the state at the right (Worn, Owned in gold, or
-  Locked), the name at 34 (gold when owned), what it is, "Yours since dd/mm/yyyy, from
-  the SJK team" in gold with the team's note in quotes, or "How to get it: ...", and
-  Equip (gold) or Unequip, or an inert Locked (Needs identity, Needs a hub, Waiting)
-  pill. Two cards show at a time (09/10/2026, five blade skins): the list scrolls to
-  the card chosen and with the mouse wheel, a 5-pixel holo scroll bar beside the cards
-  and under them "Unlockables 1 to 2 of 5: 3 more below (Down or the mouse wheel)." in
-  muted body text; with every card shown, a quiet outlined "More to come" card
-  instead. On the right "You wear"
-  with the blade at 36 (gold when a skin shows) and a line, then "How unlockables
-  work". Keys: Up and Down (and Left, Right) choose a card, Tab and Shift+Tab walk
-  them, Enter or Space equips or unequips, Esc back; a click on Equip or Unequip acts,
-  on a card it chooses it. The swatches are the only thing moving. World shot:
-  `world_shot::unlockables::duel6_sjk_unlockables` (with the hub's pack through
-  `SJK_TEST_PACKS`, and once with no pack for the placeholder).
+- **Collection**: its own screen since 10/10/2026, drawn in this look in every menu
+  style ([Collection](#collection)); it replaces the Unlockables page.
 - **SJK chat** ([sjk_chat_panel_view.rs](../crates/sjk-viewer/src/sjk_chat_panel_view.rs),
   08/10/2026, Sol's request, [hub-chat.md](hub-chat.md)): drawn in this look in every
   menu style. The online count in gold over a line on what the chat is; the messages
@@ -916,7 +875,9 @@ Escape in a match opens it; the match keeps drawing, under a dark fade from the 
 edge (deep there, clear by the middle), on the main page's 16:9 frame. Sol asked for
 fewer buttons on 09/10/2026: the list has six entries, Team and Vote moved onto the
 match card, and Camera control and SJK's pages into a row of small icons (the SJK page
-is gone); the same day Achievements became a tab of Profile, leaving six.
+is gone); the same day Achievements became a tab of Profile, leaving six. On
+10/10/2026 the Collection (medals, achievements, shaders, toys, nameplates) got an
+entry of its own under Profile, making seven.
 
 - **Arc:** a compact version of the main page's: the page's entries on an arc
   whose centre lies off the frame's left edge (radius 580, the middle entry at x
@@ -929,9 +890,8 @@ is gone); the same day Achievements became a tab of Profile, leaving six.
   quiet, as is the main page's Leave.
 - **Pages:**
   - Main: Resume, Profile (the [Profile screen](#profile-screen), on the tab shown
-    last, Character the first time), Players, Settings, Servers, Leave.
-    Achievements, an entry of its own until 09/10/2026, is a tab of the Profile
-    screen.
+    last, Character the first time), Collection (the [Collection](#collection), on
+    the tab shown last, Medals the first time), Players, Settings, Servers, Leave.
   - Players: a small scoreboard in place of the arc ([identity.md](identity.md#player-reports)):
     the title and how many are on the server (or why the player cannot report, in
     ember), then a table from x 340 to 1330 under a darker fade: a team's colour
@@ -1049,27 +1009,120 @@ control there.
 
 [profile_hub.rs](../crates/sjk-viewer/src/profile_hub.rs) (09/10/2026, Sol's requests:
 one Profile in the menu for the character and the SJK profile, then one row of tabs
-for all of it). Existing screens shown as one, under one row of eight tabs: Character,
-Saber and Force (the player screen's pages), SJK Profile (the console's Profile page:
-picture, bio, record, the achievements, collection and holocrons in brief), Achievements (its
-board), Medals (its [Medals](#sjks-pages) tab), Collection (the Unlockables page:
-every unlockable, owned and locked, with how to get it) and Holocrons (10/10/2026, see
-below). Each keeps its state, layout,
-keys and pointer; the row is the player screen's own tabs grown to eight.
+for all of it; 10/10/2026 the achievements, medals and unlockables moved to the
+[Collection](#collection)). Existing screens shown as one, under one row of four tabs:
+Character, Saber and Force (the player screen's pages) and SJK Profile (the console's
+Profile page: picture, bio, record, the achievements and collection in brief). Each
+keeps its state, layout, keys and pointer; the row is the player screen's own tabs
+grown to four. The same module serves the Collection screen's row
+(`profile_hub::Screen`): a tab belongs to one screen, Ctrl+Tab stays within it.
 
 - **Row:** under the title (the player's name, with the way back before it: "Game
   menu" or "Main menu"), from x 96 at y 146, the names in Rajdhani at 26, 48 apart,
   measured from the font (`text::display_width`); the one on show gold with a gold
   underline, one hovered brighter. Whichever screen shows draws it at the same place
   (`profile_hub::tabs`, `profile_hub::header`), so switching between the player
-  screen and the console's pages keeps the title and the row still; the console's
-  pages move what they show down 44 pixels under it. "Collection" is one constant
-  (`profile_hub::COLLECTION`): Sol had no name for the page of everything one can
-  unlock, so it is a one-line rename.
-- **Holocrons tab** ([holocrons_panel.rs](../crates/sjk-viewer/src/holocrons_panel.rs),
+  screen and the console's page keeps the title and the row still; the console's
+  page moves what it shows down 44 pixels under it.
+- **Keys:** Ctrl+Tab shows the next tab, Ctrl+Shift+Tab the one before, wrapping,
+  from any tab and even while a field is typed in. On Character, Saber and Force, Tab
+  (Shift+Tab back), `]` and `[` walk all four, as they walked the three pages
+  (unless a field there is typed in); on SJK Profile Tab moves within the page, as
+  everywhere in the UI. Each tab's keys line names the next tab. A click on a tab
+  shows it; the click never reaches the screen under the row (the switch hit-tests the
+  row itself, `profile_hub::tab_at`). Escape leaves as each tab's own way back does:
+  to the game menu on its Profile entry (the console's page closes over the game
+  menu, which waits under it), or to the main page.
+- **SJK Profile tab:** the page without its top bar's title (the keyboard starts on
+  the picture), its medals left to the Collection and its Identity settings button
+  gone (the identity is in Settings, Network); See the board and See the collection
+  open the Collection screen on Achievements and Medals.
+- **Opened by:** the in-game menu's Profile (the tab shown last in the run, Character
+  the first time; the tab a console page turned to itself counts too) and its profile
+  card (SJK Profile); the main page's Profile (Character, on the menu map's stage) and
+  its profile card (SJK Profile). In the SJK UI the `profile` command opens it on SJK
+  Profile (again to close it), returning to the main page from the menus, else to
+  the game menu; with the classic menus it opens the page on its own, as before.
+
+## Collection
+
+[collection_panel.rs](../crates/sjk-viewer/src/collection_panel.rs) and its views
+(`collection_view.rs`, `collection_medals.rs`, `collection_achievements.rs`,
+`collection_shaders.rs`, `collection_toys.rs`, `collection_nameplates.rs`), 10/10/2026,
+Sol's request: take the achievements, medals and unlockables out of the Profile screen
+into a screen of their own, "a real collection, things players can collect in the
+future", with tabs Medals, Achievements, Shaders (the blade skins, renamed: saber now,
+body later), Toys and Nameplates (ornaments for the nameplate), then Holocrons (the
+loot-box drops, built the same day as a Profile tab and moved here). Sol picked the
+direction from a design canvas (`the vault`): every thing has its place from the
+start, the ones the player lacks dimmed; each tab shows its things on the left and
+the one chosen up close on the right.
+
+It is one console page (like the Profile page), drawn in this look in every menu style:
+in the SJK UI the main page's and the in-game menu's Collection (its way back "Main
+menu" or "Game menu"), else the `collection`, `achievements` and `unlockables`
+commands open it on its own ("Back"); the `holocrons` command opens its Holocrons tab
+(the Holocrons page). It remembers its tab and what is chosen on each
+for the run.
+
+- **Top:** the way back and "Collection" as the title; at the top right how many of
+  all things the player holds ("15 of 30 collected") over a tick for each thing,
+  grouped by tab, lit gold for the ones held. Under the title the row of tabs
+  (`profile_hub::collection_header`), each name with its count after it in small
+  Rajdhani ("2/3", "11/21", how many holocrons for Holocrons; nothing while unknown or empty), the one on show gold and
+  underlined. Drawn in Inter (the families not loaded, the classic menus), the row
+  makes room for the wider face.
+- **Medals:** "2 of 3 medals" (or why they are not known) over a line; every medal
+  the client knows hangs by its ribbon from a lit holo rail (x 96 to 1000, y 336, a
+  bead at each end), up to 226 apart, the ones given first in colour on a soft gold
+  glow, the others dark; under each its name (with the count for one given again) and
+  "Given dd/mm/yyyy", "Given 2 times" or "Not given yet". The one chosen has a gold
+  mark on the rail at its clasp and a brighter glow; up close on the right (x 1120 to
+  1824) the whole medal at 400 on its glow, its name at 54 (gold when given), when it
+  was given, what it is for, the team's note in quotes under "From the SJK team", and
+  who sees it. A dotted rail and "More medals will hang here as the SJK team adds
+  them." stand under the rail. Left and Right choose; hovering chooses.
+- **Achievements:** "11 of 21 unlocked" with a gold bar; then a wall, a row to each
+  category (Combat, Duels and flags, Journeys, Community) under its name in its colour
+  and "5 of 9", each achievement's medallion (`achievements::medallion`, radius 33,
+  104 apart: the ring filling with the count in the category's colour, filled and
+  gold once unlocked, the goal inside) with its name under it, the one chosen ringed
+  bright gold. Up close on the right: the medallion at radius 104 on a glow, the name
+  at 50, the category, what to do, a bar with "19 / 25" and "6 more to go" or
+  "Unlocked dd/mm/yyyy"; under it "Next up", the three locked ones nearest to
+  unlocking with their medallion, bar and count; and how the counts are kept. It opens
+  on the locked one nearest to unlocking. The arrows choose (Up and Down to the next
+  category's, near the column).
+- **Shaders:** "1 of 5 owned" (or why that is not known) over a line, beside the kinds
+  as pills: Saber with its count, and Body ("soon", not offered yet). Then the rack, a
+  row of 106 to each: the stock blade first (its swatch in the player's `color1`), then
+  every blade skin, each with its live swatch ([unlockables.md](unlockables.md)) alive
+  when owned, grey and still under a padlock when not, its name at 28 and its state
+  (Worn, Yours, Locked, "In your colour"); the one chosen banded with a gold mark. The
+  model holds the chosen blade, a locked one too ("Preview on your saber: not yours
+  yet" over the stage): the preview is drawn by this screen only and never sent
+  (`collection_panel::PreviewSkin`, `menu_stage`'s `skin_override`). Beside the model
+  (x 1300 to 1824, from y 618): "Saber shader" or "Your saber", the name at 56 (gold
+  when owned) with its state as a tag, what it is, "Yours since dd/mm/yyyy, from the
+  SJK team" with the note, or "How to get it: ...", and Equip (gold), Unequip or "Wear
+  the stock blade". It opens on what is worn. Up and Down choose, Enter equips or
+  unequips (`cg_saberSkin`).
+- **Toys:** "1 toy", things to use in a match. Illuminate's holocron (the Force
+  wheel's picture) in its niche, ringed gold on a glow, "Everyone's"; a dotted line for
+  the toys to come. The holocron floats lit by the model on the stage
+  (`illuminate::submit_stage_holocron`); beside the model what it is, how to use it
+  and "On the Force wheel" with its switch (`cg_illuminate`, Enter or a click).
+- **Nameplates:** none exist yet. "No nameplates yet"; three empty places, dashed, each
+  with a drawing of where its kind will go: Crest (before the name), Frame (round the
+  plate), Trail (under the plate). Over the model's head (projected from the stage
+  model's head with the last frame's view, `GpuState::frame_view`; over the preview's
+  head without a stage) the player's nameplate as a match draws it near: the name in
+  its colours, the shield, health and Force bars, with dashed marks at the three places.
+- **Holocrons** ([holocrons_panel.rs](../crates/sjk-viewer/src/holocrons_panel.rs),
   [holocrons_panel_view.rs](../crates/sjk-viewer/src/holocrons_panel_view.rs),
   [holocrons.md](holocrons.md#the-holocrons-tab), 10/10/2026, Sol's holocron drops): a
-  console page like Collection, with the world left clear on the left: a 3D holocron turns
+  console page of its own (the Collection's sixth tab; the Collection's row is drawn on it,
+  its counts read from the identity, `collection_panel::row_labels`), with the world left clear on the left: a 3D holocron turns
   and bobs there in the look of the tier chosen, with that tier's colour of point light
   (the backdrop camera parks on its own shot: duel6's garden, a cut through dark on the
   tour; the classic style does not hide the world under it); under it the tier's name at 46
@@ -1085,34 +1138,32 @@ keys and pointer; the row is the player screen's own tabs grown to eight.
   small picture, the tier's name, `dd/mm/yyyy HH:MM` and, for a gift, "Gift from the SJK
   team" with the note. Keys: Up and Down (Left and Right, Tab, the wheel, 1 to 4, Home, End)
   choose the tier, which swaps the 3D holocron at once (it shrinks away and the new look
-  grows in); a click on a row chooses it; Ctrl+Tab goes on to Character; Escape leaves.
-  There is no Open: opening does not exist yet. The `holocrons` command opens it on the
-  Profile screen (again to close); the SJK Profile tab's Holocrons block has See holocrons
-  (the classic menus' Profile page too, opening the page on its own). The classic Profile
+  grows in); a click on a row chooses it; Ctrl+Tab goes on to Medals; Escape leaves.
+  There is no Open: opening does not exist yet. The `holocrons` command opens it as the
+  Collection's tab (again to close); the SJK Profile tab's Holocrons block has See holocrons
+  (the classic menus' Profile page too, opening the page on its own). Until the
+  Collection (10/10/2026, the same day) it was the Profile screen's eighth tab. The classic Profile
   page lists three medals, not four, to make room for that block. World shots:
   `world_shot::holocrons_tab` (`duel6_sjk_holocrons`: each tier, one held none of, the
   identity off, waiting; `duel6_sjk_holocrons_windows`: 4:3, 21:9, 4K, `ui_textScale 1.2`,
   the classic style). Not tried in a game.
-- **Keys:** Ctrl+Tab shows the next tab, Ctrl+Shift+Tab the one before, wrapping,
-  from any tab and even while a field is typed in. On Character, Saber and Force, Tab
-  (Shift+Tab back), `]` and `[` walk all eight, as they walked the three pages
-  (unless a field there is typed in); on the console's tabs Tab moves within the page,
-  as everywhere in the UI. Each tab's keys line names the next tab. A click on a tab
-  shows it; the click never reaches the screen under the row (the switch hit-tests the
-  row itself, `profile_hub::tab_at`). Escape leaves as each tab's own way back does:
-  to the game menu on its Profile entry (the console's pages close over the game menu,
-  which waits under them), or to the main page.
-- **SJK Profile tab:** the page without its segments (the keyboard starts on the
-  picture), its medals moved to the Medals tab and its Identity settings button gone
-  (the identity is in Settings, Network); See the board and See the collection show
-  those tabs. Achievements and Medals have nothing to choose: Escape closes them.
-- **Opened by:** the in-game menu's Profile (the tab shown last in the run, Character
-  the first time; the tab a console page turned to itself counts too) and its profile
-  card (SJK Profile); the main page's Profile (Character, on the menu map's stage) and
-  its profile card (SJK Profile). In the SJK UI the `profile`,
-  `achievements`, `unlockables` and `holocrons` commands open it on SJK Profile,
-  Achievements, Collection and Holocrons (again to close it), returning to the main page from the menus, else to
-  the game menu; with the classic menus they open the pages on their own, as before.
+- **The model:** behind Shaders, Toys and Nameplates the page darkens only the left
+  and the bottom. From the main page the backdrop camera goes to the player's shot
+  (`ClientMenu::set_collection_stage`, which first reads the model, sabers and
+  cosmetics from the cvars when the player screen is closed) and the model stands on
+  the stage (`Backstage::World`); over a match, and in the classic menus, it shows in
+  the page's live preview at (760, 110, 820, 840) (`Backstage::Preview`, as the
+  in-game Character tab's). Without either the page draws the swatch or the picture
+  itself. In a window narrower than 16:9 the words beside the model keep a soft dark
+  pad.
+- **Keys and pointer:** the keys line names what the arrows and Enter do on the tab,
+  Ctrl+Tab and the next tab, Esc back. Ctrl+Tab (Ctrl+Shift+Tab back) changes tab, as
+  on the Profile screen; a click on a tab shows it; hovering a thing chooses it; a
+  click on Equip, Unequip, the toy or its switch acts.
+
+World shot: `world_shot::collection::duel6_sjk_collection` (every tab from the main
+page, the Storm previewed, a 4:3 window, the in-game preview, and the page on its own
+in the classic menus; the blade skins from `SJK_TEST_PACKS`).
 
 ## Camera control
 
@@ -1365,10 +1416,11 @@ nine moments, 1080p, 4K, 4:3, 21:9 and 720 lines, in the families and in Inter).
   from it; `duel6_sjk_chat_dock` the docked chat on made-up messages, on the main page
   (and typing) and in the in-game menu (a sender's card, typing with a vote on), at
   1080p, 4:3 and 4K with the plain text style and `ui_textScale 1.2`; `duel6_sjk_profile_screen` the Profile screen opened from the game menu
-  on its Character tab, Ctrl+Tab through the seven tabs and round, the game menu's
+  on its Character tab, Ctrl+Tab through the four tabs and round, the game menu's
   Profile opening again on the tab left last, the picture panel with Browse..., a 4:3
-  window, and from the main page its Character tab on the menu map's stage and its
-  Collection tab, each canvas checked not to have run out of room;
+  window, and from the main page its Character tab on the menu map's stage, each
+  canvas checked not to have run out of room; `duel6_sjk_collection` (in
+  `world_shot_collection.rs`) the Collection;
   `duel6_camera_control` Camera control over duel6 on a made-up match: the
   in-game menu with its camera icon focused, the panel's Camera and Sun pages, a number
   typed, the Sun page where the sun cannot be set, a 4:3 window and the classic

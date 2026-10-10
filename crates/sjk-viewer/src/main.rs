@@ -485,6 +485,9 @@ struct GpuState {
     alt_code: input::alt_code::AltCode,
     /// The SJK UI's Profile screen: which tab shows, switched here.
     profile_hub: profile_hub::Hub,
+    /// The last frame's view, for placing 2D over the world outside the HUD pass (the
+    /// Collection's nameplate over the stage model).
+    frame_view: Option<hud::identification::Camera>,
     pointer_captured: bool,
     cursor_policy: pointer_input::CursorPolicy,
     cursor_position: [f32; 2],
@@ -1336,6 +1339,7 @@ impl GpuState {
             gameplay_input: input::GameplayInput::default(),
             alt_code: input::alt_code::AltCode::default(),
             profile_hub: profile_hub::Hub::default(),
+            frame_view: None,
             pointer_captured: false,
             cursor_policy: pointer_input::CursorPolicy::new(),
             cursor_position: [0.0; 2],
@@ -1614,6 +1618,13 @@ impl GpuState {
         let text_scale = ui_scale::height_scale(viewport[1]).max(0.85);
         menu_hud::MenuHud::sync(self);
         hud_visibility.menu_hud = self.menu_hud.active();
+        self.frame_view = Some(hud::identification::Camera {
+            eye: view_position,
+            target: view_target,
+            up: view_up,
+            fov,
+            viewport,
+        });
         hud_runtime::update(
             self,
             view_position,

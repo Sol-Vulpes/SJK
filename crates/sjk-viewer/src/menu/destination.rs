@@ -29,6 +29,9 @@ pub(crate) enum MainDestination {
     Identity,
     /// The Profile page, drawn by the console over the menu.
     Profile,
+    /// The Collection (medals, achievements, shaders, toys, nameplates), drawn by the
+    /// console over the menu, on the tab it showed last.
+    Collection,
     /// Exit to the desktop.
     Quit,
 }
@@ -112,7 +115,17 @@ impl ClientMenu {
                 MenuAction::None
             }
             MainDestination::Profile => {
-                console.open_profile_panel(crate::console::profile_panel::Tab::Profile);
+                console.open_profile_panel();
+                MenuAction::None
+            }
+            MainDestination::Collection if self.menu_style == MenuStyle::Sjk => {
+                // The SJK UI's Collection screen.
+                let tab = console.collection_tab();
+                console.open_profile_hub_page(tab, ReturnTarget::MainMenu);
+                MenuAction::None
+            }
+            MainDestination::Collection => {
+                console.open_collection_panel();
                 MenuAction::None
             }
             MainDestination::Quit => MenuAction::Quit,

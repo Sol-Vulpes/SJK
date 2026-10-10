@@ -327,7 +327,7 @@ pub(crate) fn draw(canvas: &mut MenuCanvas, frame: &Frame, card: &Card<'_>, toke
     );
     let (detail, tone) = if card.lit {
         (
-            Detail::Line("Open your profile, medals and achievements"),
+            Detail::Line("Open your profile: picture, bio and record"),
             color::GOLD_BRIGHT,
         )
     } else {
