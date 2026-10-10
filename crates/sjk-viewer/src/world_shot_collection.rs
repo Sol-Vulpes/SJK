@@ -158,10 +158,13 @@ fn duel6_sjk_collection() {
             console.preview_profile(preview());
             console.preview_collection(Some(vec![sun()]), 0.8);
         }
+        // A match's view: `cg_fov 80` widened for 16:9 renders about 64 degrees up the
+        // window (`GpuState::scope_fov`), narrower than the menu map's 90.
+        gpu.field_of_view = 64.3;
         let _ = frame(&mut gpu, 20);
         gpu.open_collection_from_game();
         assert_eq!(gpu.profile_hub_tab(), Some(Tab::Medals));
-        for tab in [Tab::Achievements, Tab::Shaders, Tab::Toys] {
+        for tab in [Tab::Achievements, Tab::Shaders, Tab::Toys, Tab::Holocrons] {
             gpu.profile_hub_show_for_shot(tab);
             let name = format!("duel6-collection-in-game-{}", part(tab));
             println!("{}", shoot(&mut gpu, 40, &name).display());

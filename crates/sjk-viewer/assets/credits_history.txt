@@ -9,6 +9,8 @@
 #                               made it when that is not the piece's owner.
 
 = Sol
++ 10/10/2026 | - | The Holocrons tab's holocron centred over a match
+- 9c9429b |  | Place the Holocrons tab's holocron from the rendered view in a match
 + 10/10/2026 | - | Chroma saber shaders take your saber colour, marked with a colour wheel
 - 8e745cf |  | Add chroma saber shaders, marked with a colour wheel
 + 10/10/2026 | - | Illuminate is a toy: toy_illuminate, no longer a Force power
