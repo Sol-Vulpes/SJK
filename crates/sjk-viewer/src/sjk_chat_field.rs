@@ -8,7 +8,8 @@
 //! tabs become spaces and runs of spaces one, characters outside the chat's alphabet are
 //! dropped, a `^` is kept only before a digit (a colour code, counted as two characters
 //! as the field counts them), and the paste stops at [`MAX`] characters, never splitting
-//! a colour code.
+//! a colour code. A GIPHY link is pasted as its shortest address
+//! ([`crate::chat_gifs::link::shortened`]), so a share link with its query fits.
 
 use sjk_identity::chat::TEXT_MAX;
 use winit::keyboard::KeyCode;
@@ -53,6 +54,12 @@ pub(crate) fn type_into(draft: &mut String, text: &str) {
 
 /// Pasted `text` added to `draft` as the chat takes it (see the module's rules).
 pub(crate) fn paste_into(draft: &mut String, text: &str) {
+    // Spaces first, so a link split from its neighbours by a line break is found.
+    let spaced: String = text
+        .chars()
+        .map(|c| if c.is_whitespace() { ' ' } else { c })
+        .collect();
+    let text = crate::chat_gifs::link::shortened(&spaced);
     let mut count = draft.chars().count();
     // A space after a space (or at the start) would be tidied away by the hub anyway.
     let mut after_space = draft.is_empty() || draft.ends_with(' ');
@@ -102,6 +109,29 @@ mod tests {
         assert!(!is_paste(KeyCode::KeyV, Some("k"), false, true));
         assert!(!is_paste(KeyCode::Insert, None, false, false));
         assert!(!is_paste(KeyCode::Insert, None, true, true));
+    }
+
+    #[test]
+    fn a_giphy_share_link_is_pasted_short_enough_to_send() {
+        let share = concat!(
+            "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExbWx2dTRqZ2NrOXJ5c3B3ZDhvN2x6",
+            "ZWZ3NHN4bjd2bWJ2Z3V0aGh6bSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3o7TKSjRrfIPjeiVyM/",
+            "giphy.gif?cid=790b7611&ep=v1_internal_gif_by_id&rid=giphy.gif&ct=g"
+        );
+        assert!(share.chars().count() > MAX);
+        assert_eq!(
+            pasted("look ", &format!("{share}!")),
+            "look https://giphy.com/gifs/3o7TKSjRrfIPjeiVyM!"
+        );
+        assert_eq!(
+            pasted(
+                "",
+                "https://giphy.com/gifs/funny-cat-3o7TKSjRrfIPjeiVyM?utm_source=x"
+            ),
+            "https://giphy.com/gifs/3o7TKSjRrfIPjeiVyM"
+        );
+        // Other links are pasted as they are.
+        assert_eq!(pasted("", "https://example.com/a"), "https://example.com/a");
     }
 
     #[test]
