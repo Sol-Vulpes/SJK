@@ -3,7 +3,8 @@
 //! screen's Character, Saber and Force are the player screen's pages (`player_menu`),
 //! its SJK Profile the console's Profile page (`profile_panel`: bio, picture and
 //! record). The Collection screen's Medals, Achievements, Shaders, Toys and Nameplates
-//! are the console's Collection page (`collection`), one page turning between its tabs.
+//! are the console's Collection page (`collection_panel`), one page turning between its
+//! tabs, and its Holocrons the console's Holocrons page (`holocrons_panel`).
 //! Each screen keeps its state, keys and pointer; the Profile row is the player screen's
 //! own tabs grown to four ([`tabs`]), drawn at the same place by whichever screen shows,
 //! with the tab on show lit, and the switch between them is here.
@@ -28,7 +29,8 @@ use winit::keyboard::{KeyCode, PhysicalKey};
 pub(crate) enum Screen {
     /// The character and the SJK profile.
     Profile,
-    /// What the player collects: medals, achievements, shaders, toys, nameplates.
+    /// What the player collects: medals, achievements, shaders, toys, nameplates and
+    /// holocrons.
     Collection,
 }
 
@@ -70,25 +72,38 @@ pub(crate) enum Tab {
     Toys,
     /// Ornaments for the nameplate over the player's head.
     Nameplates,
+    /// The player's holocrons, the loot-box drops, a 3D holocron cycled by tier.
+    Holocrons,
 }
 
 const PROFILE_TABS: [Tab; 4] = [Tab::Character, Tab::Saber, Tab::Force, Tab::Profile];
-const COLLECTION_TABS: [Tab; 5] = [
+const COLLECTION_TABS: [Tab; 6] = [
     Tab::Medals,
     Tab::Achievements,
     Tab::Shaders,
     Tab::Toys,
     Tab::Nameplates,
+    Tab::Holocrons,
 ];
 const PROFILE_LABELS: [&str; 4] = ["Character", "Saber", "Force", "SJK Profile"];
-const COLLECTION_LABELS: [&str; 5] = ["Medals", "Achievements", "Shaders", "Toys", "Nameplates"];
+const COLLECTION_LABELS: [&str; 6] = [
+    "Medals",
+    "Achievements",
+    "Shaders",
+    "Toys",
+    "Nameplates",
+    HOLOCRONS,
+];
 
 /// The Collection screen's title: one place to rename it.
 pub(crate) const COLLECTION: &str = "Collection";
 
+/// The name of the tab of the player's holocrons, the loot-box drops.
+pub(crate) const HOLOCRONS: &str = "Holocrons";
+
 impl Tab {
     #[cfg(test)]
-    pub(crate) const ALL: [Self; 9] = [
+    pub(crate) const ALL: [Self; 10] = [
         Self::Character,
         Self::Saber,
         Self::Force,
@@ -98,6 +113,7 @@ impl Tab {
         Self::Shaders,
         Self::Toys,
         Self::Nameplates,
+        Self::Holocrons,
     ];
 
     /// The screen the tab is on.
@@ -116,6 +132,7 @@ impl Tab {
             Self::Force | Self::Shaders => 2,
             Self::Profile | Self::Toys => 3,
             Self::Nameplates => 4,
+            Self::Holocrons => 5,
         }
     }
 
@@ -657,8 +674,9 @@ mod tests {
         assert_eq!(Tab::Force.next(true), Tab::Profile);
         assert_eq!(Tab::Profile.next(true), Tab::Character);
         assert_eq!(Tab::Character.next(false), Tab::Profile);
-        assert_eq!(Tab::Medals.next(false), Tab::Nameplates);
-        assert_eq!(Tab::Nameplates.next(true), Tab::Medals);
+        assert_eq!(Tab::Medals.next(false), Tab::Holocrons);
+        assert_eq!(Tab::Nameplates.next(true), Tab::Holocrons);
+        assert_eq!(Tab::Holocrons.next(true), Tab::Medals);
         assert_eq!(Tab::Achievements.next(true), Tab::Shaders);
         for screen in [Screen::Profile, Screen::Collection] {
             for (index, tab) in screen.tabs().iter().enumerate() {
@@ -675,7 +693,8 @@ mod tests {
         assert_eq!(Tab::Profile.label(), "SJK Profile");
         assert_eq!(Tab::Nameplates.label(), "Nameplates");
         assert_eq!(collection_tab_of(TOKEN + 2), Some(Tab::Shaders));
-        assert_eq!(collection_tab_of(TOKEN + 5), None);
+        assert_eq!(collection_tab_of(TOKEN + 5), Some(Tab::Holocrons));
+        assert_eq!(collection_tab_of(TOKEN + 6), None);
         assert_eq!(collection_tab_of(TOKEN - 1), None);
     }
 
@@ -716,7 +735,7 @@ mod tests {
     /// Collection's row, with its counts, answers its page's pointer.
     #[test]
     fn the_rows_answer_where_they_are_drawn() {
-        let counts: Vec<String> = ["2/4", "11/21", "1/5", "1/1", ""]
+        let counts: Vec<String> = ["2/4", "11/21", "1/5", "1/1", "", "12"]
             .iter()
             .map(|count| (*count).to_owned())
             .collect();

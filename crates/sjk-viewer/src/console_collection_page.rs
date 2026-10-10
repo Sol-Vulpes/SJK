@@ -45,7 +45,11 @@ impl ViewerConsole {
 
     /// The Collection's tab on show, or shown last (Medals the first time).
     pub(crate) fn collection_tab(&self) -> Tab {
-        self.collection_panel.tab()
+        if self.holocrons_last {
+            Tab::Holocrons
+        } else {
+            self.collection_panel.tab()
+        }
     }
 
     /// Show the page on `tab`, as the SJK UI's Collection screen returning to `back`
@@ -70,6 +74,7 @@ impl ViewerConsole {
         self.profile_panel.close();
         self.staff_panel.close();
         self.sjk_chat_panel.close();
+        self.holocrons_panel.close();
         self.dead_key.settle();
         self.collection_panel.open(tab, owns_console, hub, back);
     }
@@ -87,6 +92,17 @@ impl ViewerConsole {
             PanelAction::Wear(id) => crate::unlockables::wear(self, id),
             PanelAction::Illuminate(on) => {
                 self.set_cvar(crate::illuminate::CVAR, if on { "1" } else { "0" });
+            }
+            PanelAction::Hub(tab) => {
+                // A tab of another page: the Holocrons page.
+                let back = self.collection_panel.back();
+                if self.collection_panel.is_hub() {
+                    self.open_profile_hub_page(tab, back);
+                } else if tab == Tab::Holocrons {
+                    let owns_console = self.collection_panel.close();
+                    self.show_holocrons_panel(owns_console);
+                    self.holocrons_last = true;
+                }
             }
         }
     }
@@ -228,11 +244,13 @@ impl ViewerConsole {
         self.collection_panel.choose_shader_for_shot(row);
     }
 
-    /// Whether the Profile page's or the Collection page's last frame ran out of room on
-    /// its canvas, for the world shots.
+    /// Whether the Profile page's, the Collection page's or the Holocrons page's last
+    /// frame ran out of room on its canvas, for the world shots.
     #[cfg(test)]
     pub(crate) fn profile_pages_overflowed(&self) -> bool {
-        self.profile_panel.overflowed() || self.collection_panel.overflowed()
+        self.profile_panel.overflowed()
+            || self.collection_panel.overflowed()
+            || self.holocrons_panel.overflowed()
     }
 
     /// The page's draw list while it is shown.

@@ -21,10 +21,15 @@ Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 
 ## Unreleased
 
-A Collection of everything you gather in SJK, with your own character showing what you pick.
+A Collection of everything you gather in SJK, with your own character showing what you pick,
+and holocrons: loot you earn by playing. For now they are collected and shown; they cannot be
+opened yet and give nothing.
 
 - A new Collection, under Profile on the main page and in the game menu, holds what you collect: Medals hanging from a rail, Achievements as a wall of medallions by category with the ones nearest to unlock, Shaders (the blade skins, now called saber shaders), Toys (Illuminate) and Nameplates (ornaments to come); the Profile screen keeps Character, Saber, Force and SJK Profile, and the collection, achievements and unlockables commands open its tabs _(Sol)_
 - On the Collection's Shaders, Toys and Nameplates your own character stands beside the page (on the menu map, or in a live preview in a match): it holds the saber shader you choose, a locked one too as a preview only you see, the Illuminate holocron floats by it, and your nameplate stands over its head _(Sol)_
+- Holocron drops: after every 30 minutes of active play on a server (moving, looking or pressing keys, in the match, out of the menus, not spectating) the SJK hub can drop a holocron of one of four tiers, Uncommon (60%), Rare (28%), Legendary (10.5%) or Mythical (1.5%), at most 8 a day and 1 Mythical a day for you; a new one shows once in a pop-up on the main menu or the game menu (a centre print says so in a match) in its tier's colour, and several show one after another. Legendary and Mythical drops are told to every SJK player in the SJK chat as a line in the tier's colour with a small gem; yours also show as "You found ...". The SJK team can give one with a note (Staff page). debug_holocron <tier|all> [x<count>] tries the pop-up without the hub _(Sol)_
+- The Collection has a Holocrons tab (and a `holocrons` command; the Profile page's See holocrons in the classic menus): a holocron turns in the world behind it in the look and light of the tier you choose (Uncommon, Rare, Legendary, Mythical), dimmed with a padlock when you hold none of that tier; beside it, the four tiers with how many you hold and the odds of a drop, how long to your next holocron and how many dropped today, and your ten newest holocrons. Holocrons cannot be opened yet _(Sol)_
+- Players with the JoF clan's tag in their name ({JoF}, jof., [JOF] and so on, in any case, with no letter touching it) get the clan's J-o-F emblem on the left of their name in the game chat, the SJK chat, the scoreboard, the player card and the Players page; the JoF Clan medal is gone, replaced by this tag _(Sol)_
 
 ## 2026.1010.1 (Alpha) | 10/10/2026
 

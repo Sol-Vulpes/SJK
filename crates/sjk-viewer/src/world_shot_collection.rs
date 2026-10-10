@@ -89,7 +89,7 @@ fn duel6_sjk_collection() {
                     break;
                 }
             }
-            for tab in Screen::Collection.tabs() {
+            for tab in &Screen::Collection.tabs()[..5] {
                 gpu.profile_hub_show_for_shot(*tab);
                 assert_eq!(gpu.profile_hub_tab(), Some(*tab));
                 // The camera goes to the player's shot behind the model's tabs.
@@ -115,8 +115,16 @@ fn duel6_sjk_collection() {
                 "{}",
                 shoot(&mut gpu, 30, "duel6-collection-shaders-preview").display()
             );
-            // Ctrl+Tab comes round to Medals, on the same screen.
+            // Ctrl+Tab goes on to Holocrons (the Holocrons page, under the same row) and
+            // comes round to Medals, on the same screen.
             gpu.profile_hub_show_for_shot(Tab::Nameplates);
+            gpu.profile_hub_next_for_shot();
+            assert_eq!(gpu.profile_hub_tab(), Some(Tab::Holocrons));
+            println!(
+                "{}",
+                shoot(&mut gpu, 150, "duel6-collection-holocrons").display()
+            );
+            assert!(!overflowed(&gpu), "Holocrons");
             gpu.profile_hub_next_for_shot();
             assert_eq!(gpu.profile_hub_tab(), Some(Tab::Medals));
         }

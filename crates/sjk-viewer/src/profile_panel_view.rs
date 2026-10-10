@@ -31,7 +31,7 @@ const BIO_PAD: f32 = 20.0;
 const BIO_LINE: f32 = 26.0;
 const BIO_SIZE: f32 = 18.0;
 /// Most medals the Profile tab lists.
-const MEDALS_SHOWN: usize = 4;
+const MEDALS_SHOWN: usize = 3;
 /// Most unlocks the Profile tab lists.
 const UNLOCKS_SHOWN: usize = 4;
 /// The player's picture at the top of the left column, and the text beside it.
@@ -757,6 +757,7 @@ impl Panel {
         };
         self.achievements_block(frame, inputs, y);
         self.unlockables(frame, inputs, y + 176.0);
+        self.holocrons(frame, inputs, y + 322.0);
     }
 
     /// The medals given, up to [`MEDALS_SHOWN`], from the column's top; returns the y
@@ -933,6 +934,55 @@ impl Panel {
         );
     }
 
+    /// How many holocrons the player holds, and the way to their page, from `y`.
+    fn holocrons(&mut self, frame: &Frame, inputs: &Inputs<'_>, y: f32) {
+        let s = frame.s;
+        let heading = if self.mode == Mode::Hub {
+            crate::profile_hub::HOLOCRONS
+        } else {
+            "Holocrons"
+        };
+        kit::heading(&mut self.ui, frame, RIGHT_X, y, RIGHT_WIDTH, heading);
+        let known = inputs
+            .snapshot
+            .filter(|_| inputs.enabled)
+            .and_then(|snapshot| snapshot.me.as_ref())
+            .map(|me| {
+                crate::holocrons::counts_of(&me.holocron_counts)
+                    .iter()
+                    .sum::<u32>()
+            });
+        let (line, size, colour) = match known {
+            Some(1) => ("1 holocron".to_owned(), 30.0, color::TEXT),
+            Some(total) => (format!("{total} holocrons"), 30.0, color::TEXT),
+            None => (
+                "Found by playing, kept on the SJK hub".to_owned(),
+                17.0,
+                color::MUTED,
+            ),
+        };
+        text(
+            &mut self.ui,
+            TextFamily::Display,
+            format_args!("{line}"),
+            frame.rect(RIGHT_X, y + 26.0, RIGHT_WIDTH, 40.0),
+            size * s,
+            colour,
+            FontWeight::Semibold,
+            TextAlign::Start,
+        );
+        kit::button(
+            &mut self.ui,
+            frame,
+            [RIGHT_X, y + 76.0, 240.0, 46.0],
+            "See holocrons",
+            false,
+            true,
+            self.focus == Focus::Holocrons,
+            HOLOCRONS_TOKEN,
+        );
+    }
+
     /// The keys of what has the keyboard, right-aligned at the bottom.
     fn keys(&mut self, frame: &Frame) {
         let s = frame.s;
@@ -941,7 +991,7 @@ impl Panel {
             Focus::Staff => "open",
             Focus::Bio | Focus::Save => "save",
             Focus::Revert => "revert",
-            Focus::Board | Focus::Unlockables => "open",
+            Focus::Board | Focus::Unlockables | Focus::Holocrons => "open",
             Focus::Picture => "change picture",
             Focus::Browse => "choose a file",
             Focus::UsePicture => "use this picture",
@@ -1050,24 +1100,20 @@ mod tests {
                     last_seen: 0,
                 })
                 .collect(),
-            medals: [
-                "early_tester",
-                "early_contributor",
-                "bug_hunter",
-                "jof_clan",
-                "unknown",
-            ]
-            .iter()
-            .map(|id| Medal {
-                id: (*id).to_owned(),
-                count: 3,
-                awarded: 1_759_900_000,
-                note: "a note".to_owned(),
-            })
-            .collect(),
+            medals: ["early_tester", "early_contributor", "bug_hunter", "unknown"]
+                .iter()
+                .map(|id| Medal {
+                    id: (*id).to_owned(),
+                    count: 3,
+                    awarded: 1_759_900_000,
+                    note: "a note".to_owned(),
+                })
+                .collect(),
             achievements: Vec::new(),
             avatar: String::new(),
             unlocks: Vec::new(),
+            holocron_counts: Default::default(),
+            holocrons: Vec::new(),
         }
     }
 
@@ -1128,6 +1174,7 @@ mod tests {
                     Focus::Revert,
                     Focus::Board,
                     Focus::Unlockables,
+                    Focus::Holocrons,
                 ] {
                     for body in [&families.body.font, &inter.font] {
                         for viewport in [

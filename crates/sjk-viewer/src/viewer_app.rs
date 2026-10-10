@@ -151,6 +151,9 @@ impl ApplicationHandler for ViewerApplication {
                 is_synthetic,
                 ..
             } => {
+                if !is_synthetic && event.state.is_pressed() {
+                    holocrons::activity::input();
+                }
                 if gpu.gameplay_input.accepts_keyboard(is_synthetic)
                     && !gpu
                         .console
@@ -162,8 +165,16 @@ impl ApplicationHandler for ViewerApplication {
             }
             WindowEvent::CursorMoved { position, .. } => gpu.pointer_moved(position),
             WindowEvent::CursorLeft { .. } => gpu.pointer_left(),
-            WindowEvent::MouseInput { state, button, .. } => gpu.pointer_button(button, state),
-            WindowEvent::MouseWheel { delta, .. } => gpu.pointer_wheel(delta),
+            WindowEvent::MouseInput { state, button, .. } => {
+                if state.is_pressed() {
+                    holocrons::activity::input();
+                }
+                gpu.pointer_button(button, state)
+            }
+            WindowEvent::MouseWheel { delta, .. } => {
+                holocrons::activity::input();
+                gpu.pointer_wheel(delta)
+            }
             WindowEvent::DroppedFile(path) => gpu.file_dropped(&path),
             WindowEvent::Focused(focused) => {
                 if !focused {
@@ -249,6 +260,9 @@ impl ApplicationHandler for ViewerApplication {
         event: DeviceEvent,
     ) {
         if let (Some(gpu), DeviceEvent::MouseMotion { delta }) = (&mut self.gpu, event) {
+            if delta != (0.0, 0.0) {
+                holocrons::activity::input();
+            }
             gpu.pointer_motion(delta);
         }
     }

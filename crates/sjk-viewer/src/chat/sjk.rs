@@ -23,9 +23,18 @@ impl ChatOverlay {
     /// anything a hub sends is shown, the text without its colour codes, as it is
     /// drawn in the SJK chat's gold ([`crate::sjk_chat_look::message_text`]).
     fn push_sjk(&mut self, message: &ChatMessage, muted: bool, now: Instant) {
-        let name = sjk_identity::chat::for_display(&message.name);
-        let body = crate::sjk_chat_look::message_text(&message.text);
-        let (body, emojis) = if self.options.emojis {
+        // A holocron drop is one sentence with no sender column, in its tier's colour.
+        let drop = crate::holocrons::line::words(message);
+        let name = if drop.is_some() {
+            String::new()
+        } else {
+            sjk_identity::chat::for_display(&message.name)
+        };
+        let body = match &drop {
+            Some(words) => words.text.clone(),
+            None => crate::sjk_chat_look::message_text(&message.text),
+        };
+        let (body, emojis) = if self.options.emojis && drop.is_none() {
             self.emojis.markup(&body)
         } else {
             (body, Vec::new())
@@ -45,15 +54,36 @@ impl ChatOverlay {
             y: None,
             hub: Some(HubLine {
                 id: message.id,
-                verified: message.verified,
+                verified: message.verified && drop.is_none(),
                 staff: message.staff,
                 key_id: message.key_id.clone(),
+                tier: drop.map(|words| words.tier),
             }),
         });
         if self.is_typing() && self.scroll > 0 {
             self.scroll = (self.scroll + 1).min(self.lines.len().saturating_sub(1));
             self.unread = (self.unread + 1).min(HISTORY_LIMIT);
         }
+    }
+
+    /// Put the line a holocron drop of `tier` makes into the feed, for `debug_holocron`
+    /// (as the player's own drop). The real lines come from the hub's feed
+    /// ([`Self::sync_sjk`]).
+    pub(crate) fn rehearse_holocron(&mut self, tier: &str, now: Instant) {
+        let message = ChatMessage {
+            id: u64::MAX,
+            at: 0,
+            key_id: String::new(),
+            name: String::new(),
+            verified: false,
+            staff: false,
+            text: String::new(),
+            holocron: Some(sjk_identity::DropMark {
+                tier: tier.to_owned(),
+                own: true,
+            }),
+        };
+        self.push_sjk(&message, false, now);
     }
 
     /// Whether the SJK chat's `mark` (its revision, outcome serial and the mutes'
@@ -133,7 +163,13 @@ impl ChatOverlay {
             _ => true,
         });
         for message in messages.iter().filter(|message| message.id > seen) {
-            self.push_sjk(message, muted(&message.key_id), now);
+            let muted = muted(&message.key_id);
+            // A muted player's drops are not shown, rather than hidden behind a note;
+            // a drop of a tier this client does not know is left out.
+            if message.holocron.is_some() && (muted || crate::holocrons::line::unknown(message)) {
+                continue;
+            }
+            self.push_sjk(message, muted, now);
         }
         self.sjk_seen = Some(newest);
     }
@@ -155,6 +191,7 @@ mod tests {
             verified: id.is_multiple_of(2),
             staff: false,
             text: text.to_owned(),
+            holocron: None,
         }
     }
 

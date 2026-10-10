@@ -46,7 +46,7 @@ mod toys;
 #[path = "collection_view.rs"]
 mod view;
 
-pub(crate) use view::MODEL_AREA;
+pub(crate) use view::{MODEL_AREA, row_labels};
 
 /// The things' tokens: the medals, the achievements, the shaders' rows, the shader's
 /// Equip or Unequip, the toy and its switch.
@@ -68,6 +68,8 @@ pub(crate) enum PanelAction {
     Wear(&'static str),
     /// Put Illuminate on the Force wheel (`cg_illuminate`), or take it off.
     Illuminate(bool),
+    /// Show a tab another page draws: the Holocrons page.
+    Hub(Tab),
 }
 
 /// Where the player's model stands behind Shaders, Toys and Nameplates this frame, as
@@ -222,9 +224,10 @@ impl Panel {
         self.show(tab);
     }
 
-    /// Turn to `tab`, if it is one of the Collection's.
+    /// Turn to `tab`, if it is one of the Collection's this page draws (Holocrons is
+    /// the Holocrons page).
     pub(crate) fn show(&mut self, tab: Tab) {
-        if tab.screen() == crate::profile_hub::Screen::Collection {
+        if tab.screen() == crate::profile_hub::Screen::Collection && tab != Tab::Holocrons {
             self.tab = tab;
         }
     }
@@ -407,12 +410,14 @@ impl Panel {
         match token {
             BACK_TOKEN => PanelAction::Close,
             WEAR_TOKEN | TOY_TOKEN | TOY_SWITCH_TOKEN => self.activate(illuminate),
-            token => {
-                if let Some(tab) = crate::profile_hub::collection_tab_of(token) {
+            token => match crate::profile_hub::collection_tab_of(token) {
+                Some(Tab::Holocrons) => PanelAction::Hub(Tab::Holocrons),
+                Some(tab) => {
                     self.tab = tab;
+                    PanelAction::None
                 }
-                PanelAction::None
-            }
+                None => PanelAction::None,
+            },
         }
     }
 

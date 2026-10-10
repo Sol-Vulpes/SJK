@@ -29,6 +29,7 @@ impl ViewerConsole {
         if self.profile_panel.is_open()
             || self.staff_panel.is_open()
             || self.collection_panel.is_open()
+            || self.holocrons_panel.is_open()
             || self.sjk_chat_panel.is_open()
         {
             return true;
@@ -59,6 +60,8 @@ impl ViewerConsole {
             self.append_staff_panel(target, viewport);
         } else if self.collection_panel.is_open() {
             self.append_collection_panel(target, viewport);
+        } else if self.holocrons_panel.is_open() {
+            self.append_holocrons_panel(target, viewport);
         } else if self.sjk_chat_panel.is_open() {
             self.append_sjk_chat_panel(target, viewport);
         } else if self.changelog.is_open() {

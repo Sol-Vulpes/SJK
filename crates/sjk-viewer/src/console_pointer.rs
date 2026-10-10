@@ -14,6 +14,7 @@ impl ViewerConsole {
             || self.profile_panel_pointer(event)
             || self.staff_panel_pointer(event)
             || self.collection_panel_pointer(event)
+            || self.holocrons_panel_pointer(event)
             || self.sjk_chat_panel_pointer(event)
             || self.debug_panel_pointer(event)
         {

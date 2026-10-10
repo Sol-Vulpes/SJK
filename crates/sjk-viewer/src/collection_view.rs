@@ -44,17 +44,19 @@ pub(super) struct Count {
 }
 
 impl Count {
-    /// What the tab's name says after it: "2/4", empty when unknown or empty.
+    /// What the tab's name says after it: "2/4", how many for a tab with no set total
+    /// (the holocrons held), empty when unknown or none.
     fn label(self) -> String {
         match self.held {
             Some(held) if self.total > 0 => format!("{held}/{}", self.total),
+            Some(held) if held > 0 => held.to_string(),
             _ => String::new(),
         }
     }
 }
 
 /// Each tab's count, in the row's order.
-pub(super) fn counts(inputs: &Inputs<'_>) -> [Count; 5] {
+pub(super) fn counts(inputs: &Inputs<'_>) -> [Count; 6] {
     let medals = medals::held(inputs);
     let achievements = inputs
         .standings
@@ -89,7 +91,40 @@ pub(super) fn counts(inputs: &Inputs<'_>) -> [Count; 5] {
             held: Some(0),
             total: 0,
         },
+        // The holocrons are opened, not kept: how many, and no total.
+        Count {
+            held: inputs
+                .snapshot
+                .filter(|_| inputs.enabled)
+                .and_then(|snapshot| snapshot.me.as_ref())
+                .map(|me| {
+                    crate::holocrons::counts_of(&me.holocron_counts)
+                        .iter()
+                        .sum::<u32>() as usize
+                }),
+            total: 0,
+        },
     ]
+}
+
+/// The Collection row's counts, for the Holocrons page, which draws the row without the
+/// Collection page's inputs.
+pub(crate) fn row_labels(
+    enabled: bool,
+    snapshot: Option<&sjk_identity::Snapshot>,
+    standings: &[Standing],
+) -> Vec<String> {
+    let inputs = Inputs {
+        enabled,
+        snapshot,
+        holdings: unlockables::Holdings::of(enabled, snapshot),
+        setting: "",
+        standings,
+        illuminate: true,
+        name: "",
+        stock: color::HOLO,
+    };
+    counts(&inputs).iter().map(|count| count.label()).collect()
 }
 
 /// A soft round glow of `colour` at (`x`, `y`) (frame pixels), `radius` across its
@@ -265,10 +300,15 @@ impl Panel {
 
     /// How many of all the things the player holds, at the top right: the words, and a
     /// tick for each thing, lit for the ones held, a group to a tab.
-    fn tally(&mut self, frame: &Frame, counts: &[Count; 5]) {
+    fn tally(&mut self, frame: &Frame, counts: &[Count; 6]) {
         let s = frame.s;
+        // Only the things with a set total: the holocrons are opened, not collected.
         let total: usize = counts.iter().map(|count| count.total).sum();
-        let held: usize = counts.iter().filter_map(|count| count.held).sum();
+        let held: usize = counts
+            .iter()
+            .filter(|count| count.total > 0)
+            .filter_map(|count| count.held)
+            .sum();
         text(
             &mut self.ui,
             TextFamily::Display,

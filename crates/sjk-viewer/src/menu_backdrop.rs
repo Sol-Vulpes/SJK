@@ -36,6 +36,10 @@ pub(crate) enum Shot {
     /// Where the thrown saber floats (between the tower walls on mp/ffa3),
     /// reached from the player stage.
     Saber,
+    /// The Profile screen's Holocrons tab: a view over open ground, left clear for
+    /// the 3D holocron, which floats before the camera wherever it is
+    /// (`holocrons::stage`). A map without a route for it keeps the main vantage.
+    Holocrons,
 }
 
 /// Fraction of the flight over which the destination screen fades in. It
@@ -96,10 +100,16 @@ impl Backdrop {
     pub(crate) fn from_bsp(bsp: &Bsp) -> Option<Self> {
         let main = Vantage::from_bsp(bsp)?;
         let message = worldspawn_message(bsp);
-        let routes = [Shot::Browser, Shot::Settings, Shot::Player, Shot::Saber]
-            .into_iter()
-            .filter_map(|shot| routes::route_for(message.as_deref()?, shot))
-            .collect::<Vec<_>>();
+        let routes = [
+            Shot::Browser,
+            Shot::Settings,
+            Shot::Player,
+            Shot::Saber,
+            Shot::Holocrons,
+        ]
+        .into_iter()
+        .filter_map(|shot| routes::route_for(message.as_deref()?, shot))
+        .collect::<Vec<_>>();
         let mut backdrop = Self::new(main, &routes);
         if let Some(shots) = message.as_deref().and_then(routes::tour_for) {
             // Each start shuffles the tour differently.
@@ -456,6 +466,11 @@ pub(crate) fn standalone_menu_visible(gpu: &GpuState) -> bool {
 /// loading screen keeps the menu map under it until the destination's
 /// levelshot covers it, and leaves out a server's world.
 pub(crate) fn classic_hides_world(gpu: &GpuState) -> bool {
+    // The Holocrons tab floats a 3D holocron in the world, which the page leaves clear
+    // on the left, in every menu style.
+    if holocrons_shown(gpu) {
+        return false;
+    }
     gpu.client_menu.as_ref().is_some_and(|menu| {
         if menu.sjk_loading_on_show() {
             return menu.sjk_loading_hides_world(gpu.is_menu_world);
@@ -494,6 +509,13 @@ pub(crate) fn menu_holds_view(
     menu.is_visible() && (!sessions || (menu_world && menu.is_connecting()))
 }
 
+/// Whether the Profile screen's Holocrons page is open.
+fn holocrons_shown(gpu: &GpuState) -> bool {
+    gpu.console
+        .as_ref()
+        .is_some_and(|console| console.holocrons_stage().is_some())
+}
+
 /// Fly or park the free camera on the current screen's shot while a
 /// standalone menu is up.
 pub(crate) fn drive(gpu: &mut GpuState, now: Instant) {
@@ -501,6 +523,10 @@ pub(crate) fn drive(gpu: &mut GpuState, now: Instant) {
         return;
     }
     let millis = now.duration_since(gpu.ui_epoch).as_millis() as u64;
+    let holocrons = holocrons_shown(gpu);
+    if let Some(menu) = gpu.client_menu.as_mut() {
+        menu.set_holocron_shot(holocrons);
+    }
     let Some(sample) = gpu
         .client_menu
         .as_mut()

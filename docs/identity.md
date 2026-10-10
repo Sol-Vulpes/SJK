@@ -33,6 +33,7 @@ This page is the design and the current limits. The player-facing summary is
 | SJK chat and emotes | [hub-chat.md](hub-chat.md) |
 | Unlocks and looks (blade skin, Illuminate) | [unlockables.md](unlockables.md), [looks.rs](../crates/sjk-viewer/src/looks.rs), [looks_frame.rs](../crates/sjk-viewer/src/looks_frame.rs) |
 | Asset packs: list, download, cache | [assets.rs](../crates/sjk-identity/src/assets.rs) |
+| Holocron drops: tiers, active flag, pop-up, chat lines, staff tools | [holocrons.md](holocrons.md), [holocrons.rs](../crates/sjk-viewer/src/holocrons.rs), [holocron_popup.rs](../crates/sjk-viewer/src/holocron_popup.rs) |
 | The hub itself and its protocol | repository Sol-Vulpes/SJK-hub (`PROTOCOL.md`) |
 
 The hub is a separate repository because it is deployed on its own schedule. The
@@ -52,7 +53,11 @@ vector that both test suites check, so a drift in either shows as a failing test
    two keys may wear one name: the name proves nothing, the key does.
 3. While the client is in a live, non-local session, the thread repeats a *claim*
    every 45 seconds: "this key is in slot N of server S, shown as NAME". Claims
-   live 90 seconds at the hub and are withdrawn when the player leaves or quits.
+   live 90 seconds at the hub and are withdrawn when the player leaves or quits. A claim
+   also says `"active": true` while the player is actively playing (in their own view,
+   mid-match, out of the menus, with input in the last two minutes), which is how the hub
+   counts play time toward the next holocron ([holocrons.md](holocrons.md#earning)); the
+   flag is left out otherwise.
 4. The thread reads the hub's list of claims for the server every 15 seconds. The
    scoreboard marks a row with SJK's emblem, in gold when verified, the player card
    shows the hub name, and a verified player's nameplate gets a gold badge after the
@@ -100,11 +105,17 @@ and in-game name at start and whenever the name changes, the game server address
 slot and in-game name for as long as they play, and sees their IP address. Claims
 are deleted 90 seconds after they stop being repeated; profiles and the worn-name
 history stay until the operator removes them. While a claim lives, it carries the
-player's look (blade skin and Illuminate), dropped with the claim. Once registered, the client also asks for the hub's list of
+player's look (blade skin and Illuminate), dropped with the claim, and whether the
+player is actively playing. Since holocrons (10/10/2026) the hub also keeps, until the
+operator removes the identity, the key's active play time carried toward the next
+holocron, when it last claimed and every holocron dropped for it (tier, time, source, a
+staff note and the address it dropped from, for a per-address limit); the profile lists
+the counts and recent holocrons publicly and legendary and mythical drops are told to
+every SJK client with the key's hub name ([holocrons.md](holocrons.md#what-the-hub-stores-and-privacy)). Once registered, the client also asks for the hub's list of
 asset packs at start and every 6 hours and downloads the packs it lacks, which tells the
 hub which packs the key fetched and when ([Asset packs](#asset-packs)). With either setting
 off the client sends nothing. Since 06/10/2026 `cl_hubUrl` defaults to `https://sjk.dfox.app` so players
-set nothing: a default install makes a key and tells that hub where it plays. The
+set nothing: a default install makes a key and tells that hub where it plays and whether it is active. The
 Identity page, the setting's help and the changelog say what is sent and that
 `cl_identity 0` stops it.
 
@@ -226,7 +237,7 @@ menu's row of icons): [sjk-ui.md](sjk-ui.md#report-a-bug-and-its-dialogs).
 ## Medals
 
 A medal is recognition the SJK team gives a player by hand: for testing SJK early,
-contributing to its code, finding bugs, or belonging to the JoF clan. A medal grants
+contributing to its code or finding bugs. A medal grants
 nothing: no setting, cosmetic, power or right comes with it, on any server. Players do
 not ask for medals or choose them; the SJK team gives them.
 
@@ -235,7 +246,6 @@ not ask for medals or choose them; the SJK team gives them.
 | Early Tester | `early_tester` | Helped test SJK in its early days. | no |
 | Early Contributor | `early_contributor` | Contributed to SJK's code in its early days. | no |
 | Bug Hunter | `bug_hunter` | Found bugs that got fixed. | yes, with a count ("Bug Hunter x2") |
-| JoF Clan | `jof_clan` | A member of the JoF clan. | no |
 
 The hub lists a key's medals in its profile (`"medals":[{"id","count","awarded","note"}]`:
 the count, when it was last given and a short note from the team, often empty) and in its
@@ -245,15 +255,17 @@ send none. The catalogue is [medals.rs](../crates/sjk-viewer/src/medals.rs): eac
 name, description, ribbon colours and two pictures in `assets/medals` (`<id>.png`, the
 whole medal on its ribbon, 512 square; `<id>_small.png`, the medallion alone, 128
 square, for anything under about 64 pixels). A new medal is one entry there and two
-pictures; new art is a file replacement. The JoF Clan picture is provisional.
+pictures; new art is a file replacement. The JoF Clan medal (`jof_clan`) was dropped on
+10/10/2026 for the [JoF clan tag](#jof-clan-tag); a client ignores an old award of it as
+an unknown id.
 
 Where they show:
 
 - The scoreboard, every style: up to three small ribbon bars after the SJK emblem, on
   rows whose claim the emblem trusts (the claimed name matches the name the game shows).
   They are coloured rectangles drawn from the catalogue (Early Tester amber with black
-  stripes, Early Contributor navy with a white centre stripe, Bug Hunter emerald and JoF
-  Clan crimson with black edges), sized after the emblem; they take room from the name,
+  stripes, Early Contributor navy with a white centre stripe, Bug Hunter emerald with
+  black edges), sized after the emblem; they take room from the name,
   never the columns, and fewer show where the name would keep less than half its room
   (the SJK UI: a third). Derived only when the roster or the rows change.
 - The player card (`inspect`): the medallions in a row under the hub name; a pinned card
@@ -316,6 +328,27 @@ Where they show:
 Medals are public: anyone can read a key's profile and the presence list of a server,
 so a player's medals, counts, dates and notes are visible to everyone, as their hub
 name and verified flag are. The client sends nothing about medals.
+
+
+## JoF clan tag
+
+A player whose name carries the JoF clan's tag gets the clan's emblem (J, o, F) on the
+left of their name, tinted crimson. It is read from the name alone, so it shows what a
+player says, not something the hub vouches for; it needs no hub and no SJK identity.
+[jof_tag.rs](../crates/sjk-viewer/src/jof_tag.rs) holds the rule, the size and the drawing.
+
+The rule (the clan's): `jof` in any case, with no letter right before the J (the name
+starts there or a separator comes first: a space, a bracket, a dot, a digit...) and no
+letter right after the F. Colour codes are dropped first. `{JoF}Name`, `jof.Name`,
+`[JOF] Name`, `Name-JoF` and `^1J^7oF` count; `Joffrey`, `MrJoF` and `Jofa` do not. Any
+Unicode letter counts as a letter.
+
+Where it shows: the game chat's name rows, SJK chat lines in the feed, the SJK UI's chat
+dock and chat page, the scoreboard (classic and SJK, list rows and duel cards), the player
+card (`inspect`) and the SJK UI Players page's card. Not on nameplates.
+
+The emblem is `assets/branding/jof-emblem.png` (128 square, white on transparent, one icon
+atlas cell), rendered from the clan's SVG path by `scripts/jof_emblem.py`.
 
 ## Unlocks and looks
 
@@ -636,7 +669,10 @@ themself until another is chosen, or with Me), and offers:
 - the player's achievements at the hub, each with Clear, and Clear all, which waits
   for a second press within 3 seconds;
 - the player's picture beside their name, with Take picture down
-  ([Pictures](#pictures)).
+  ([Pictures](#pictures));
+- the player's holocrons: the four tiers to choose and Give (`StaffRequest::HolocronGive`,
+  with the note field's text as the team's note), and their four newest with Remove
+  (`StaffRequest::HolocronRemove`) ([holocrons.md](holocrons.md#staff)).
 
 Each action is a request signed by the staff member's own key (`PROTOCOL.md`,
 "Staff"); the hub refuses it from a key that is not staff, keeps a log of every staff
@@ -679,6 +715,8 @@ sends its counts, which the page says.
   secret-area sound with each achievement's pop-up.
 - `debug_medal <id|all> [x<count>] [note]` shows made-up medals in the new medal
   pop-up, sending nothing ([Medals](#medals)).
+- `debug_holocron <tier|all> [x<count>]` shows made-up holocrons in the drop pop-up,
+  sending nothing ([holocrons.md](holocrons.md#debug_holocron)).
 - The Identity page (Settings > Network > SJK identity key, main menu > SJK > IDENTITY
   in the classic menus, the in-game SJK menu, or the `identity` command) shows what the
   hub knows: the name worn now and up to three earlier ones, whether the key is

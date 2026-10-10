@@ -14,7 +14,9 @@ use crate::hub::{Hub, HubError};
 use crate::keys::Identity;
 use crate::report::{BugReport, PlayerReport, WorldNote};
 use crate::staff::{StaffRequest, StaffState};
-use crate::wire::{Achievement, Emote, Look, Presence, Profile, Unlock, names_match};
+use crate::wire::{
+    Achievement, Emote, HolocronState, Look, Presence, Profile, Unlock, names_match,
+};
 use std::collections::{BTreeMap, HashMap, VecDeque};
 use std::net::SocketAddr;
 use std::path::PathBuf;
@@ -32,6 +34,13 @@ const PROFILE_EVERY: Duration = Duration::from_secs(600);
 /// Shortest time between two readings of the own profile brought forward because its
 /// unlocks look out of date (a skin refused, or taken back at the hub).
 const PROFILE_SOON: Duration = Duration::from_secs(30);
+/// How often the progress toward the next holocron is read while registered.
+const HOLOCRONS_EVERY: Duration = Duration::from_secs(300);
+/// Shortest time between two readings of it brought forward (a drop of the player's
+/// own key, or the viewer asking), and the profile's early reading for a drop.
+const HOLOCRONS_SOON: Duration = Duration::from_secs(30);
+/// How long a hub that refused the reading (from before holocrons) is left alone.
+const HOLOCRONS_AGAIN: Duration = Duration::from_secs(3_600);
 /// Shortest time between two sendings of the achievement counts.
 const ACHIEVEMENTS_EVERY: Duration = Duration::from_secs(60);
 /// How long counts the hub held back (over an hourly allowance) wait before they are
@@ -125,6 +134,53 @@ pub struct Snapshot {
     /// What the last check of the asset packs did, for the log. Asset packs are
     /// cosmetic: a failure shows here, never in [`Snapshot::status`].
     pub assets_note: Option<String>,
+    /// How far the player is from their next holocron, as the hub last said (read at
+    /// the registration, every few minutes, after a drop of their own and on
+    /// [`Service::refresh_holocrons`]). `None` before the hub answered, or from a hub
+    /// older than holocrons. Cosmetic: a failure leaves [`Snapshot::status`] alone.
+    pub holocrons: Option<HolocronProgress>,
+}
+
+/// How far the player's key is from its next holocron (`GET /v1/holocrons`).
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct HolocronProgress {
+    /// Seconds of active play carried toward the next holocron, when it was read.
+    pub progress_secs: u64,
+    /// Seconds of active play for one holocron.
+    pub every_secs: u64,
+    /// Holocrons dropped in the 24 hours before it was read.
+    pub today: u32,
+    /// The most a key can earn in 24 hours.
+    pub daily_cap: u32,
+    /// The hub's clock when it answered, unix seconds.
+    pub server_time: i64,
+    /// When this client read it.
+    pub read_at: Instant,
+}
+
+impl HolocronProgress {
+    fn new(state: HolocronState, read_at: Instant) -> Self {
+        Self {
+            progress_secs: state.progress_secs,
+            every_secs: state.every_secs,
+            today: state.today,
+            daily_cap: state.daily_cap,
+            server_time: state.server_time,
+            read_at,
+        }
+    }
+
+    /// Seconds of active play left to the next holocron as read: the hub's
+    /// `every_secs - progress_secs`. It does not count down on its own; the player
+    /// may be playing or not.
+    pub fn remaining_secs(&self) -> u64 {
+        self.every_secs.saturating_sub(self.progress_secs)
+    }
+
+    /// Whether the day's cap is reached, so no holocron drops until one is a day old.
+    pub fn capped(&self) -> bool {
+        self.daily_cap > 0 && self.today >= self.daily_cap
+    }
 }
 
 /// What became of a bug report or a world note.
@@ -156,6 +212,7 @@ impl Snapshot {
             look_outcome: None,
             packs_revision: 0,
             assets_note: None,
+            holocrons: None,
         }
     }
 
@@ -203,6 +260,12 @@ enum Command {
     OwnLook(u64, String),
     /// The folder to keep the hub's asset packs in.
     AssetsDir(PathBuf),
+    /// Whether the player is actively playing (`Service::set_active`).
+    Active(bool),
+    /// The feed relayed a holocron drop of the player's own key.
+    OwnDrop,
+    /// The viewer wants fresh holocron progress.
+    RefreshHolocrons,
     Stop,
 }
 
@@ -280,6 +343,12 @@ struct Worker {
     /// When the asset packs are next checked, and the wait after the next shortfall.
     due_assets: Instant,
     assets_backoff: Duration,
+    /// Whether the player is actively playing: sent with every claim.
+    active: bool,
+    /// When the progress toward the next holocron is next read, and when it may next
+    /// be read early.
+    due_holocrons: Instant,
+    holocrons_soon_after: Instant,
 }
 
 /// What the hub holds as the player's look.
@@ -396,7 +465,27 @@ impl Worker {
             assets_dir: None,
             due_assets: now,
             assets_backoff: ASSETS_RETRY_MIN,
+            active: false,
+            due_holocrons: now,
+            holocrons_soon_after: now,
         }
+    }
+
+    /// Read the holocron progress soon, at most once every [`HOLOCRONS_SOON`], and
+    /// never later than it was due anyway.
+    fn holocrons_soon(&mut self, now: Instant) {
+        let at = self.holocrons_soon_after.max(now);
+        if at < self.due_holocrons {
+            self.due_holocrons = at;
+            self.holocrons_soon_after = at + HOLOCRONS_SOON;
+        }
+    }
+
+    /// A holocron dropped for the player's own key: their profile lists it and their
+    /// progress changed, so both are read again soon.
+    fn own_drop(&mut self, now: Instant) {
+        self.profile_soon(now);
+        self.holocrons_soon(now);
     }
 
     /// Read the own profile soon: its unlocks look out of date. At most once every
@@ -603,6 +692,9 @@ impl Worker {
                     self.assets_backoff = ASSETS_RETRY_MIN;
                 }
             }
+            Command::Active(active) => self.active = active,
+            Command::OwnDrop => self.own_drop(now),
+            Command::RefreshHolocrons => self.holocrons_soon(now),
             Command::Stop => self.release(),
         }
         self.publish_feed();
@@ -852,6 +944,7 @@ impl Worker {
                     self.backoff = RETRY_MIN;
                     self.due_profile = now + PROFILE_EVERY;
                     self.due_assets = now;
+                    self.due_holocrons = now;
                     self.update(|snapshot| {
                         snapshot.me = Some(profile);
                         snapshot.status = Status::Online;
@@ -865,6 +958,7 @@ impl Worker {
             }
         }
         self.run_due(now);
+        self.keep_holocrons(now);
         self.keep_assets(now);
         let mut wait = IDLE_MAX;
         if self.location.is_some() {
@@ -888,7 +982,29 @@ impl Worker {
         if self.assets_dir.is_some() {
             wait = wait.min(self.due_assets.saturating_duration_since(now));
         }
-        wait
+        wait.min(self.due_holocrons.saturating_duration_since(now))
+    }
+
+    /// Read the progress toward the next holocron if it is due. Cosmetic, like the asset
+    /// packs: the status stays. A hub that refuses (from before holocrons) is asked
+    /// again in an hour, one that cannot be reached after [`RETRY_MAX`].
+    fn keep_holocrons(&mut self, now: Instant) {
+        if now < self.due_holocrons {
+            return;
+        }
+        let Some(hub) = self.hub.as_mut() else {
+            return;
+        };
+        match hub.holocrons(&self.identity) {
+            Ok(state) => {
+                self.due_holocrons = now + HOLOCRONS_EVERY;
+                self.update(|snapshot| {
+                    snapshot.holocrons = Some(HolocronProgress::new(state, now));
+                });
+            }
+            Err(HubError::Network(_)) => self.due_holocrons = now + RETRY_MAX,
+            Err(_) => self.due_holocrons = now + HOLOCRONS_AGAIN,
+        }
     }
 
     /// Check the hub's asset packs if a folder was given and the check is due: one
@@ -1096,7 +1212,13 @@ impl Worker {
         if let Some(location) = self.location.clone() {
             let server = location.server.to_string();
             if now >= self.due_claim {
-                match hub.claim(&self.identity, &server, location.slot, &location.name) {
+                match hub.claim(
+                    &self.identity,
+                    &server,
+                    location.slot,
+                    &location.name,
+                    self.active,
+                ) {
                     Ok(()) => {
                         self.claimed = Some(server.clone());
                         self.due_claim = now + CLAIM_EVERY;
@@ -1225,6 +1347,7 @@ impl Service {
         );
         let chat = Arc::clone(&worker.chat);
         let feed = Arc::clone(&worker.feed);
+        let own_drops = commands.clone();
         let emotes = Arc::new(Mutex::new(VecDeque::new()));
         let looks = Arc::new(Mutex::new(VecDeque::new()));
         let feed_stop = Arc::new(std::sync::atomic::AtomicBool::new(false));
@@ -1236,6 +1359,9 @@ impl Service {
                 Arc::clone(&chat),
                 Arc::clone(&emotes),
                 Arc::clone(&looks),
+                Box::new(move || {
+                    let _ = own_drops.send(Command::OwnDrop);
+                }),
                 Instant::now(),
             );
             let stop = Arc::clone(&feed_stop);
@@ -1295,6 +1421,21 @@ impl Service {
     /// is called no asset is asked for.
     pub fn keep_assets(&self, directory: PathBuf) {
         let _ = self.commands.send(Command::AssetsDir(directory));
+    }
+
+    /// Whether the player is actively playing right now: on a live game server, not
+    /// spectating, not at the intermission, not in a menu, and with input in the last
+    /// two minutes. Every claim says so, and the hub counts the time between claims
+    /// toward the player's next holocron only while it does (`PROTOCOL.md`,
+    /// "Holocrons"). Defaults to false, which earns nothing.
+    pub fn set_active(&self, active: bool) {
+        let _ = self.commands.send(Command::Active(active));
+    }
+
+    /// Ask for fresh holocron progress ([`Snapshot::holocrons`]); read at most once
+    /// every 30 seconds, for a page that shows it as it opens.
+    pub fn refresh_holocrons(&self) {
+        let _ = self.commands.send(Command::RefreshHolocrons);
     }
 
     /// The player is on a game server (call again if `slot` or `name` changes).
@@ -1495,6 +1636,11 @@ mod tests {
         served: Arc<Mutex<Option<Vec<u8>>>>,
         /// Refusals the next readings of the asset list get, in order.
         asset_refusals: Arc<Mutex<VecDeque<HubError>>>,
+        /// The holocron progress the fake hub reports; none is a hub from before
+        /// holocrons, which refuses the reading.
+        progress: Arc<Mutex<Option<HolocronState>>>,
+        /// How many times the holocron progress was asked for.
+        holocron_reads: Arc<Mutex<usize>>,
     }
 
     impl Fake {
@@ -1561,6 +1707,8 @@ mod tests {
             achievements: Vec::new(),
             avatar: String::new(),
             unlocks: Vec::new(),
+            holocron_counts: crate::wire::HolocronCounts::default(),
+            holocrons: Vec::new(),
         }
     }
 
@@ -1603,8 +1751,19 @@ mod tests {
             server: &str,
             slot: u8,
             name: &str,
+            active: bool,
         ) -> Result<(), HubError> {
-            self.record(format!("claim {server} {slot} {name}"))
+            let tail = if active { " active" } else { "" };
+            self.record(format!("claim {server} {slot} {name}{tail}"))
+        }
+        fn holocrons(&mut self, _: &Identity) -> Result<HolocronState, HubError> {
+            // Counted apart from the log, which the other tests read whole.
+            *self.holocron_reads.lock().unwrap() += 1;
+            if self.fail.load(Ordering::SeqCst) {
+                return Err(HubError::Network("down".to_owned()));
+            }
+            let state = *self.progress.lock().unwrap();
+            state.ok_or_else(|| refused(404, "not_found"))
         }
         fn release(&mut self, _: &Identity, server: &str) -> Result<(), HubError> {
             self.record(format!("release {server}"))
@@ -1742,6 +1901,25 @@ mod tests {
                         ..profile("Target")
                     }]
                 }
+                StaffRequest::HolocronGive { key_id, tier, note } => vec![Profile {
+                    key_id: key_id.clone(),
+                    holocron_counts: crate::wire::HolocronCounts {
+                        legendary: u32::from(tier == "legendary"),
+                        ..Default::default()
+                    },
+                    holocrons: vec![crate::wire::Holocron {
+                        id: 41,
+                        tier: tier.clone(),
+                        dropped: 1,
+                        source: "staff".to_owned(),
+                        note: note.clone(),
+                    }],
+                    ..profile("Target")
+                }],
+                StaffRequest::HolocronRemove { key_id, .. } => vec![Profile {
+                    key_id: key_id.clone(),
+                    ..profile("Target")
+                }],
                 StaffRequest::Unaward { key_id, .. }
                 | StaffRequest::ClearAchievements { key_id, .. }
                 | StaffRequest::AvatarRemove { key_id }
@@ -1801,6 +1979,210 @@ mod tests {
             .into_iter()
             .filter(|line| line.starts_with("achievements"))
             .collect()
+    }
+
+    fn holocron_reads(fake: &Fake) -> usize {
+        *fake.holocron_reads.lock().unwrap()
+    }
+
+    fn progress(secs: u64) -> HolocronState {
+        HolocronState {
+            progress_secs: secs,
+            every_secs: 1_800,
+            today: 2,
+            daily_cap: 8,
+            server_time: 1_791_000_000,
+        }
+    }
+
+    fn claims(fake: &Fake) -> Vec<String> {
+        fake.log()
+            .into_iter()
+            .filter(|line| line.starts_with("claim"))
+            .collect()
+    }
+
+    #[test]
+    fn claims_say_active_only_while_the_player_is() {
+        let fake = Fake::default();
+        let t0 = Instant::now();
+        let (mut worker, _) = worker(&fake, t0);
+        worker.handle(Command::Configure(on("https://hub")), t0);
+        worker.handle(Command::Enter(here(3, "Sol")), t0);
+        worker.tick(t0);
+        let at = |seconds| t0 + Duration::from_secs(seconds);
+        // Telling the service sends nothing by itself; the next claim carries it.
+        worker.handle(Command::Active(true), at(10));
+        assert_eq!(claims(&fake).len(), 1);
+        worker.tick(at(46));
+        worker.handle(Command::Active(false), at(50));
+        worker.tick(at(91));
+        worker.handle(Command::Active(true), at(100));
+        worker.tick(at(136));
+        assert_eq!(
+            claims(&fake),
+            [
+                "claim 1.2.3.4:29070 3 Sol",
+                "claim 1.2.3.4:29070 3 Sol active",
+                "claim 1.2.3.4:29070 3 Sol",
+                "claim 1.2.3.4:29070 3 Sol active",
+            ]
+        );
+    }
+
+    #[test]
+    fn holocron_progress_is_read_after_registering_and_every_few_minutes() {
+        let fake = Fake::default();
+        *fake.progress.lock().unwrap() = Some(progress(600));
+        let t0 = Instant::now();
+        let (mut worker, snapshot) = worker(&fake, t0);
+        assert!(lock(&snapshot).holocrons.is_none());
+        worker.handle(Command::Configure(on("https://hub")), t0);
+        worker.tick(t0);
+        assert_eq!(holocron_reads(&fake), 1);
+        let read = lock(&snapshot).holocrons.expect("the progress");
+        assert_eq!(
+            (
+                read.progress_secs,
+                read.every_secs,
+                read.today,
+                read.daily_cap
+            ),
+            (600, 1_800, 2, 8)
+        );
+        assert_eq!(read.remaining_secs(), 1_200);
+        assert!(!read.capped());
+        assert_eq!(read.server_time, 1_791_000_000);
+        worker.tick(t0 + HOLOCRONS_EVERY - Duration::from_secs(1));
+        assert_eq!(holocron_reads(&fake), 1, "not yet");
+        *fake.progress.lock().unwrap() = Some(HolocronState {
+            today: 8,
+            ..progress(1_790)
+        });
+        worker.tick(t0 + HOLOCRONS_EVERY);
+        assert_eq!(holocron_reads(&fake), 2);
+        let again = lock(&snapshot).holocrons.expect("the progress");
+        assert_eq!(again.remaining_secs(), 10);
+        assert!(again.capped(), "8 of 8 today");
+        assert_eq!(lock(&snapshot).status, Status::Online);
+    }
+
+    #[test]
+    fn a_hub_without_holocrons_is_asked_again_in_an_hour_and_the_status_stays() {
+        let fake = Fake::default();
+        let t0 = Instant::now();
+        let (mut worker, snapshot) = worker(&fake, t0);
+        worker.handle(Command::Configure(on("https://hub")), t0);
+        worker.tick(t0);
+        assert_eq!(holocron_reads(&fake), 1);
+        assert!(lock(&snapshot).holocrons.is_none());
+        assert_eq!(lock(&snapshot).status, Status::Online);
+        worker.tick(t0 + HOLOCRONS_AGAIN - Duration::from_secs(1));
+        assert_eq!(holocron_reads(&fake), 1);
+        // Asking for it (a page opening) reads it now, once the half minute is out.
+        worker.handle(Command::RefreshHolocrons, t0 + Duration::from_secs(10));
+        worker.tick(t0 + Duration::from_secs(10));
+        assert_eq!(holocron_reads(&fake), 2);
+        *fake.progress.lock().unwrap() = Some(progress(0));
+        worker.tick(t0 + Duration::from_secs(10) + HOLOCRONS_AGAIN);
+        assert!(lock(&snapshot).holocrons.is_some());
+    }
+
+    #[test]
+    fn a_failing_hub_is_asked_again_soon_without_a_failed_status_from_the_reading() {
+        let fake = Fake::default();
+        *fake.progress.lock().unwrap() = Some(progress(0));
+        let t0 = Instant::now();
+        let (mut worker, snapshot) = worker(&fake, t0);
+        worker.handle(Command::Configure(on("https://hub")), t0);
+        worker.tick(t0);
+        assert_eq!(holocron_reads(&fake), 1);
+        fake.fail.store(true, Ordering::SeqCst);
+        worker.tick(t0 + HOLOCRONS_EVERY);
+        let reads = holocron_reads(&fake);
+        assert_eq!(reads, 2);
+        worker.tick(t0 + HOLOCRONS_EVERY + Duration::from_secs(1));
+        assert_eq!(holocron_reads(&fake), reads, "waits for the retry");
+        fake.fail.store(false, Ordering::SeqCst);
+        worker.tick(t0 + HOLOCRONS_EVERY + RETRY_MAX);
+        assert_eq!(holocron_reads(&fake), reads + 1);
+        assert!(lock(&snapshot).holocrons.is_some());
+    }
+
+    #[test]
+    fn a_drop_of_the_own_key_reads_the_profile_and_progress_soon_at_most_twice_a_minute() {
+        let fake = Fake::default();
+        *fake.progress.lock().unwrap() = Some(progress(0));
+        let t0 = Instant::now();
+        let (mut worker, _) = worker(&fake, t0);
+        worker.handle(Command::Configure(on("https://hub")), t0);
+        worker.tick(t0);
+        assert_eq!((profile_reads(&fake), holocron_reads(&fake)), (0, 1));
+        let at = |seconds| t0 + Duration::from_secs(seconds);
+        worker.handle(Command::OwnDrop, at(5));
+        worker.tick(at(5));
+        assert_eq!((profile_reads(&fake), holocron_reads(&fake)), (1, 2));
+        // Another within the half minute waits for it.
+        worker.handle(Command::OwnDrop, at(15));
+        worker.tick(at(15));
+        worker.tick(at(34));
+        assert_eq!((profile_reads(&fake), holocron_reads(&fake)), (1, 2));
+        worker.tick(at(35));
+        assert_eq!((profile_reads(&fake), holocron_reads(&fake)), (2, 3));
+        // Asking for the progress alone is throttled the same way.
+        worker.handle(Command::RefreshHolocrons, at(40));
+        worker.tick(at(40));
+        assert_eq!(holocron_reads(&fake), 3);
+        worker.tick(at(65));
+        assert_eq!(holocron_reads(&fake), 4);
+        assert_eq!(
+            profile_reads(&fake),
+            2,
+            "a refresh is not a profile reading"
+        );
+    }
+
+    #[test]
+    fn staff_give_and_remove_a_holocron_and_the_answer_replaces_the_profile() {
+        let fake = Fake::default();
+        let t0 = Instant::now();
+        let (mut worker, snapshot) = worker(&fake, t0);
+        worker.handle(Command::Configure(on("https://hub")), t0);
+        worker.tick(t0);
+        let staff = Arc::clone(&worker.staff);
+        let me = lock(&snapshot).me.clone().unwrap().key_id;
+        worker.handle(
+            Command::Staff(StaffRequest::HolocronGive {
+                key_id: me.clone(),
+                tier: "legendary".into(),
+                note: "For the fog bug".into(),
+            }),
+            t0,
+        );
+        assert_eq!(staff.lock().unwrap().message, "Gave a legendary holocron");
+        let own = lock(&snapshot).me.clone().unwrap();
+        assert_eq!(own.holocron_counts.legendary, 1);
+        assert_eq!(own.holocrons[0].note, "For the fog bug");
+        assert_eq!(staff.lock().unwrap().players[0].holocrons[0].id, 41);
+        worker.handle(
+            Command::Staff(StaffRequest::HolocronRemove { key_id: me, id: 41 }),
+            t0,
+        );
+        assert_eq!(staff.lock().unwrap().message, "Took back holocron #41");
+        assert!(lock(&snapshot).me.clone().unwrap().holocrons.is_empty());
+        // Only staff may: a plain key is refused here, before the hub hears it.
+        lock(&snapshot).me.as_mut().unwrap().staff = false;
+        let before = fake.log().len();
+        worker.handle(
+            Command::Staff(StaffRequest::HolocronGive {
+                key_id: "0123456789abcdef".into(),
+                tier: "rare".into(),
+                note: String::new(),
+            }),
+            t0,
+        );
+        assert_eq!(fake.log().len(), before);
+        assert!(staff.lock().unwrap().failed);
     }
 
     fn chat_outcome(worker: &Worker) -> ReportOutcome {

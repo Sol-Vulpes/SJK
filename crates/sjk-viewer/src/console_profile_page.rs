@@ -46,6 +46,7 @@ impl ViewerConsole {
         self.staff_panel.close();
         self.sjk_chat_panel.close();
         self.collection_panel.close();
+        self.holocrons_panel.close();
         self.dead_key.settle();
         self.profile_panel.open_as(owns_console, mode);
     }
@@ -60,6 +61,8 @@ impl ViewerConsole {
             Some(HubTab::Profile)
         } else if self.collection_panel.is_open() && self.collection_panel.is_hub() {
             Some(self.collection_panel.tab())
+        } else if self.holocrons_panel.is_open() && self.holocrons_panel.is_hub() {
+            Some(HubTab::Holocrons)
         } else {
             None
         }
@@ -77,17 +80,18 @@ impl ViewerConsole {
     /// Show tab `tab` of the Profile or Collection screen (one the console shows) in
     /// place of the console, returning to `target`. When another of the screens' pages
     /// showed here, the console still closes with it if that one had opened it; between
-    /// the Collection's tabs the page only turns.
+    /// the Collection page's own tabs the page only turns. The Collection's Holocrons is
+    /// the Holocrons page.
     pub(crate) fn open_profile_hub_page(&mut self, tab: HubTab, target: ReturnTarget) {
         if tab.player_page().is_some() {
             // The player screen's pages are not the console's.
             return;
         }
         let current = self.profile_hub_tab();
-        if tab.screen() == Screen::Collection
-            && current.is_some_and(|current| current.screen() == Screen::Collection)
-        {
+        let on_page = |tab: HubTab| tab.screen() == Screen::Collection && tab != HubTab::Holocrons;
+        if on_page(tab) && current.is_some_and(on_page) {
             self.collection_panel.show(tab);
+            self.holocrons_last = false;
             return;
         }
         if current == Some(tab) {
@@ -96,16 +100,26 @@ impl ViewerConsole {
         let owns_console = if current.is_some() {
             let profile = self.profile_panel.close();
             let collection = self.collection_panel.close();
-            profile || collection
+            let holocrons = self.holocrons_panel.close();
+            profile || collection || holocrons
         } else {
             !self.open
         };
-        match tab.screen() {
-            Screen::Profile => {
+        match tab {
+            HubTab::Profile => {
                 self.profile_hub_return = target;
                 self.show_profile_panel(owns_console, Mode::Hub);
             }
-            Screen::Collection => self.show_collection_panel(tab, owns_console, true, target),
+            HubTab::Holocrons => {
+                self.profile_hub_return = target;
+                self.show_holocrons_panel(owns_console);
+                self.holocrons_panel.set_hub(true);
+                self.holocrons_last = true;
+            }
+            _ => {
+                self.show_collection_panel(tab, owns_console, true, target);
+                self.holocrons_last = false;
+            }
         }
     }
 
@@ -117,7 +131,8 @@ impl ViewerConsole {
         }
         let profile = self.profile_panel.close();
         let collection = self.collection_panel.close();
-        if profile || collection {
+        let holocrons = self.holocrons_panel.close();
+        if profile || collection || holocrons {
             self.set_open(false);
         }
     }

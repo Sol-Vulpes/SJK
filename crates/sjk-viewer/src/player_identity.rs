@@ -52,6 +52,9 @@ struct Runtime {
     sent_chat: Option<bool>,
     /// The look the service was last given (`looks.rs`).
     sent_look: Option<sjk_identity::Look>,
+    /// Whether the service was last told the player is actively playing
+    /// (`holocrons/activity.rs`).
+    sent_active: Option<bool>,
     next_sync: Option<Instant>,
     /// Keys whose profile was asked for their picture's version ([`avatar_version`]),
     /// newest last, so each is asked once.
@@ -66,6 +69,7 @@ static RUNTIME: Mutex<Runtime> = Mutex::new(Runtime {
     sent_name: None,
     sent_chat: None,
     sent_look: None,
+    sent_active: None,
     next_sync: None,
     picture_lookups: Vec::new(),
 });
@@ -466,6 +470,45 @@ fn others_key_id<'a>(key_id: &'a str, own: Option<&str>) -> Option<&'a str> {
     (own != Some(key_id)).then_some(key_id)
 }
 
+/// The player's own key id and what their profile holds of holocrons (their counts and
+/// their recent list, newest first), read in place; `None` before the hub answered or
+/// with the feature off. Keep `read` short: the service waits.
+pub(crate) fn with_own_holocrons<R>(
+    read: impl FnOnce(&str, &sjk_identity::HolocronCounts, &[sjk_identity::Holocron]) -> R,
+) -> Option<R> {
+    lock().service.as_ref()?.with_snapshot(|snapshot| {
+        let me = snapshot.me.as_ref()?;
+        if matches!(
+            snapshot.status,
+            sjk_identity::Status::Disabled | sjk_identity::Status::NoHub
+        ) {
+            return None;
+        }
+        Some(read(&snapshot.key_id, &me.holocron_counts, &me.holocrons))
+    })
+}
+
+/// Ask the service for fresh holocron progress (it reads at most every 30 seconds).
+pub(crate) fn refresh_holocrons() {
+    if let Some(service) = lock().service.as_ref() {
+        service.refresh_holocrons();
+    }
+}
+
+/// Tell the service whether the player is actively playing, when that is not what it
+/// was last told; false when the service has not started.
+pub(crate) fn set_active(active: bool) -> bool {
+    let mut runtime = lock();
+    let runtime = &mut *runtime;
+    let Some(service) = runtime.service.as_ref() else {
+        return false;
+    };
+    if newly(&mut runtime.sent_active, &active) {
+        service.set_active(active);
+    }
+    true
+}
+
 /// Send a staff request through the service; false when the service has not started.
 pub(crate) fn staff(request: sjk_identity::StaffRequest) -> bool {
     lock()
@@ -680,6 +723,8 @@ mod tests {
         assert_eq!(hub_mark(3, "Sol"), None);
         assert!(player_report_outcome().is_none());
         assert!(own_medals().is_none());
+        assert!(with_own_holocrons(|_, _, _| ()).is_none());
+        assert!(!set_active(true));
         assert!(own_achievements().is_none());
         assert!(!is_staff());
         assert!(staff_state().is_none());

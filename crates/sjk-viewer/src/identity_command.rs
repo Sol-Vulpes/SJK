@@ -175,6 +175,8 @@ mod tests {
                 achievements: Vec::new(),
                 avatar: String::new(),
                 unlocks: Vec::new(),
+                holocron_counts: Default::default(),
+                holocrons: Vec::new(),
             }),
             server: None,
             players: vec![Presence {
@@ -197,6 +199,7 @@ mod tests {
             look_outcome: None,
             packs_revision: 0,
             assets_note: None,
+            holocrons: None,
         }
     }
 
@@ -255,6 +258,8 @@ mod tests {
                 achievements: Vec::new(),
                 avatar: String::new(),
                 unlocks: Vec::new(),
+                holocron_counts: Default::default(),
+                holocrons: Vec::new(),
             },
         );
         let lines = who_lines(&shown, Some(3));

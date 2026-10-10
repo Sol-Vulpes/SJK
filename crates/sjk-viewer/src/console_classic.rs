@@ -619,6 +619,7 @@ impl ViewerConsole {
             || self.profile_panel.is_open()
             || self.staff_panel.is_open()
             || self.collection_panel.is_open()
+            || self.holocrons_panel.is_open()
             || self.sjk_chat_panel.is_open()
             || self.config_import.is_open()
         {

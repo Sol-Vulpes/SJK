@@ -504,6 +504,8 @@ mod tests {
             achievements: Vec::new(),
             unlocks: Vec::new(),
             avatar: "fedcba9876543210".to_owned(),
+            holocron_counts: Default::default(),
+            holocrons: Vec::new(),
         }
     }
 
@@ -524,6 +526,7 @@ mod tests {
             look_outcome: None,
             packs_revision: 0,
             assets_note: None,
+            holocrons: None,
         }
     }
 

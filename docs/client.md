@@ -2008,8 +2008,9 @@ are in [identity.md](identity.md).
   has the SJK UI's look in every menu style; See the board and See the collection
   open the Collection (`collection`, `achievements`, `unlockables`;
   [sjk-ui.md](sjk-ui.md#collection)): medals, achievements, saber shaders
-  ([unlockables.md](unlockables.md#shaders-tab)), toys and nameplates, a screen of its
-  own in the SJK UI ([identity.md](identity.md#profile)).
+  ([unlockables.md](unlockables.md#shaders-tab)), toys, nameplates and holocrons
+  (`holocrons`, [holocrons.md](holocrons.md#the-holocrons-tab)), a screen of its own in
+  the SJK UI ([identity.md](identity.md#profile)); See holocrons opens its Holocrons.
   The SJK UI's main page and in-game menu show a profile card bottom left (picture,
   name, verified, medals and achievements unlocked) that opens it with a click
   ([sjk-ui.md](sjk-ui.md#profile-card)).
@@ -2046,11 +2047,19 @@ are in [identity.md](identity.md).
   ([identity.md](identity.md#medals), [sjk-ui.md](sjk-ui.md#new-medal)).
 - `debug_medal <id> [x<count>] [note]` (`debug_medal all [note]` for every medal,
   alone it lists the ids: `early_tester`, `early_contributor`, `bug_hunter`, which
-  takes a count, and `jof_clan`) shows made-up medals as if the SJK team had just given
+  takes a count) shows made-up medals as if the SJK team had just given
   them, through the same queue, centre print, pop-up, ceremony and sound, to try them
   without the hub. It sends nothing and never writes `medals_seen.txt`; the console
   closes so the pop-up shows at once on the main menu (in a match, open the game
   menu).
+- `debug_holocron <tier|all> [x<count>]` (alone it lists the tiers `uncommon`, `rare`,
+  `legendary` and `mythical` with their odds) shows made-up holocron drops as if the hub
+  had just dropped them, through the same queue, centre print, pop-up, ceremony and sound,
+  and puts the first one's chat line in the game's feed, to try them without the hub. It
+  sends nothing and never writes `holocrons_seen.txt`
+  ([holocrons.md](holocrons.md#debug_holocron)). A holocron the hub drops while you play
+  shows the same way, once, and appears as a chat line in its tier's colour
+  ([holocrons.md](holocrons.md)).
 - SJK chat: one conversation for every SJK player, through the hub, in games and in
   the menus ([hub-chat.md](hub-chat.md)). In a game, I (`messagemode5`) opens the
   composer on the SJK channel (Tab cycles All, Team and SJK); hub messages show in the
@@ -2202,7 +2211,10 @@ weapons and sabers.
 
 The cube, its two pictures (lit metal, and the emblem alone for the glowing
 stage), its shader and the wheel icon are bundled and mounted below all game
-data, so a PK3 with the same paths replaces them. Sol generated the art; see
+data, so a PK3 with the same paths replaces them. The same cube also has four
+loot-box tiers (uncommon green, rare blue, legendary purple, mythical gold and
+shiny): other pictures and shaders on the one model, with their icons and point-light
+colours, bundled the same way. Sol generated the art; see
 [assets/holocron](../crates/sjk-viewer/assets/holocron/README.md) and
 [illuminate.rs](../crates/sjk-viewer/src/illuminate.rs).
 

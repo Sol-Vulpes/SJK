@@ -1052,7 +1052,8 @@ grown to four. The same module serves the Collection screen's row
 Sol's request: take the achievements, medals and unlockables out of the Profile screen
 into a screen of their own, "a real collection, things players can collect in the
 future", with tabs Medals, Achievements, Shaders (the blade skins, renamed: saber now,
-body later), Toys and Nameplates (ornaments for the nameplate). Sol picked the
+body later), Toys and Nameplates (ornaments for the nameplate), then Holocrons (the
+loot-box drops, built the same day as a Profile tab and moved here). Sol picked the
 direction from a design canvas (`the vault`): every thing has its place from the
 start, the ones the player lacks dimmed; each tab shows its things on the left and
 the one chosen up close on the right.
@@ -1060,17 +1061,18 @@ the one chosen up close on the right.
 It is one console page (like the Profile page), drawn in this look in every menu style:
 in the SJK UI the main page's and the in-game menu's Collection (its way back "Main
 menu" or "Game menu"), else the `collection`, `achievements` and `unlockables`
-commands open it on its own ("Back"). It remembers its tab and what is chosen on each
+commands open it on its own ("Back"); the `holocrons` command opens its Holocrons tab
+(the Holocrons page). It remembers its tab and what is chosen on each
 for the run.
 
 - **Top:** the way back and "Collection" as the title; at the top right how many of
-  all things the player holds ("15 of 31 collected") over a tick for each thing,
+  all things the player holds ("15 of 30 collected") over a tick for each thing,
   grouped by tab, lit gold for the ones held. Under the title the row of tabs
   (`profile_hub::collection_header`), each name with its count after it in small
-  Rajdhani ("2/4", "11/21"; nothing while unknown or empty), the one on show gold and
+  Rajdhani ("2/3", "11/21", how many holocrons for Holocrons; nothing while unknown or empty), the one on show gold and
   underlined. Drawn in Inter (the families not loaded, the classic menus), the row
   makes room for the wider face.
-- **Medals:** "2 of 4 medals" (or why they are not known) over a line; every medal
+- **Medals:** "2 of 3 medals" (or why they are not known) over a line; every medal
   the client knows hangs by its ribbon from a lit holo rail (x 96 to 1000, y 336, a
   bead at each end), up to 226 apart, the ones given first in colour on a soft gold
   glow, the others dark; under each its name (with the count for one given again) and
@@ -1116,6 +1118,35 @@ for the run.
   model's head with the last frame's view, `GpuState::frame_view`; over the preview's
   head without a stage) the player's nameplate as a match draws it near: the name in
   its colours, the shield, health and Force bars, with dashed marks at the three places.
+- **Holocrons** ([holocrons_panel.rs](../crates/sjk-viewer/src/holocrons_panel.rs),
+  [holocrons_panel_view.rs](../crates/sjk-viewer/src/holocrons_panel_view.rs),
+  [holocrons.md](holocrons.md#the-holocrons-tab), 10/10/2026, Sol's holocron drops): a
+  console page of its own (the Collection's sixth tab; the Collection's row is drawn on it,
+  its counts read from the identity, `collection_panel::row_labels`), with the world left clear on the left: a 3D holocron turns
+  and bobs there in the look of the tier chosen, with that tier's colour of point light
+  (the backdrop camera parks on its own shot: duel6's garden, a cut through dark on the
+  tour; the classic style does not hide the world under it); under it the tier's name at 46
+  in its colour, a padlock and "None held yet: shown dimmed" for a tier held none of, whose
+  holocron shows dark and drained. On the right (x 1000 to 1824, over a dark panel): how
+  many holocrons the player holds at 38 (or "Identity is off", "No hub is set",
+  "Contacting the hub..." with the reason under it), the four tiers as rows of 60 (the
+  tier's picture, its name at 27 in its colour, "60% of drops", the count held at 32 with
+  "held" under it, or a dash before the hub answers, a padlock by a zero; the chosen row
+  tinted in its colour with a white ring), the chosen tier's description, that holocrons
+  cannot be opened yet, "Next holocron in about 20 minutes of play" with "3 of 8 today" and
+  a gold bar, and "Recent holocrons" (times in UTC): the newest ten in two columns, each a
+  small picture, the tier's name, `dd/mm/yyyy HH:MM` and, for a gift, "Gift from the SJK
+  team" with the note. Keys: Up and Down (Left and Right, Tab, the wheel, 1 to 4, Home, End)
+  choose the tier, which swaps the 3D holocron at once (it shrinks away and the new look
+  grows in); a click on a row chooses it; Ctrl+Tab goes on to Medals; Escape leaves.
+  There is no Open: opening does not exist yet. The `holocrons` command opens it as the
+  Collection's tab (again to close); the SJK Profile tab's Holocrons block has See holocrons
+  (the classic menus' Profile page too, opening the page on its own). Until the
+  Collection (10/10/2026, the same day) it was the Profile screen's eighth tab. The classic Profile
+  page lists three medals, not four, to make room for that block. World shots:
+  `world_shot::holocrons_tab` (`duel6_sjk_holocrons`: each tier, one held none of, the
+  identity off, waiting; `duel6_sjk_holocrons_windows`: 4:3, 21:9, 4K, `ui_textScale 1.2`,
+  the classic style). Not tried in a game.
 - **The model:** behind Shaders, Toys and Nameplates the page darkens only the left
   and the bottom. From the main page the backdrop camera goes to the player's shot
   (`ClientMenu::set_collection_stage`, which first reads the model, sabers and

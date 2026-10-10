@@ -41,6 +41,7 @@ impl ViewerConsole {
         self.identity_panel.close();
         self.profile_panel.close();
         self.collection_panel.close();
+        self.holocrons_panel.close();
         self.sjk_chat_panel.close();
         self.dead_key.settle();
         self.staff_panel.open(owns_console);

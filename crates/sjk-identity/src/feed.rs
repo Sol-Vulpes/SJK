@@ -10,6 +10,12 @@
 //! server, for the looks and emotes, but keeps no message: [`ChatState`] stays as an
 //! idle feed leaves it. With no hub to read it makes no request.
 //!
+//! A holocron drop (`PROTOCOL.md`, "The feed") joins the chat's messages in the feed's
+//! order as a [`ChatMessage`] whose [`ChatMessage::holocron`] is set, so the game's
+//! chat, the docked chat and the chat page show it where it was said. A drop of the
+//! player's own key also tells the identity worker ([`OwnDrop`]), which reads the own
+//! profile and holocron progress again soon.
+//!
 //! Another game server starts the reading again from `after` 0, whose answer carries
 //! that server's looks of the last minute. The looks queued for the viewer carry the
 //! server they were read for and the reading's generation ([`FeedShared::generation`],
@@ -20,7 +26,7 @@
 use crate::hub::Hub;
 use crate::keys::Identity;
 use crate::service::{HubFactory, ReportOutcome};
-use crate::wire::{ChatMessage, Emote, Feed, LookEvent};
+use crate::wire::{ChatMessage, DropEvent, DropMark, Emote, Feed, LookEvent};
 use std::collections::VecDeque;
 use std::net::SocketAddr;
 use std::sync::{Arc, Mutex, MutexGuard};
@@ -43,6 +49,9 @@ pub(crate) const IDLE: Duration = Duration::from_secs(1);
 const EMOTES_WAITING: usize = 64;
 /// Looks waiting for the viewer, the newest kept.
 const LOOKS_WAITING: usize = 64;
+
+/// What the feed thread calls when a holocron dropped for the player's own key.
+pub(crate) type OwnDrop = Box<dyn Fn() + Send>;
 
 /// What the chat shows.
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
@@ -138,6 +147,12 @@ pub(crate) struct FeedWorker {
     looks: Arc<Mutex<VecDeque<QueuedLook>>>,
     hub: Option<Box<dyn Hub>>,
     url: Option<String>,
+    /// The player's own key id, to tell their drops from others'.
+    key_id: String,
+    /// Called when a drop of the player's own key arrives.
+    own_drop: OwnDrop,
+    /// The newest own drop told of, so a replay of the feed's last minute is not news.
+    own_drop_told: u64,
     /// The game server read for, as last told.
     server: Option<String>,
     /// Whether the chat shows, as last told.
@@ -150,6 +165,7 @@ pub(crate) struct FeedWorker {
 }
 
 impl FeedWorker {
+    #[allow(clippy::too_many_arguments)]
     pub(crate) fn new(
         identity: Identity,
         make_hub: HubFactory,
@@ -157,9 +173,13 @@ impl FeedWorker {
         state: Arc<Mutex<ChatState>>,
         emotes: Arc<Mutex<VecDeque<Emote>>>,
         looks: Arc<Mutex<VecDeque<QueuedLook>>>,
+        own_drop: OwnDrop,
         now: Instant,
     ) -> Self {
         Self {
+            key_id: identity.key_id(),
+            own_drop,
+            own_drop_told: 0,
             identity,
             make_hub,
             shared,
@@ -222,6 +242,7 @@ impl FeedWorker {
         self.hub = url.as_deref().and_then(|url| (self.make_hub)(url).ok());
         self.url = url;
         self.after = 0;
+        self.own_drop_told = 0;
         self.due = now;
         self.backoff = RETRY_MIN;
         self.clear_chat();
@@ -264,6 +285,7 @@ impl FeedWorker {
     /// Take an answer to a poll made as `polled` says into the state: its messages
     /// only while the chat shows, its looks marked with the reading they belong to.
     fn apply(&mut self, mut feed: Feed, polled: &FeedShared) {
+        self.tell_own_drops(&feed.drops);
         if self.chat {
             self.apply_chat(&mut feed);
         }
@@ -279,6 +301,19 @@ impl FeedWorker {
         });
         queue(&self.looks, looks, LOOKS_WAITING);
         self.after = feed.next;
+    }
+
+    /// Tell the worker of the newest drop for the player's own key not told of yet.
+    fn tell_own_drops(&mut self, drops: &[DropEvent]) {
+        let newest = drops
+            .iter()
+            .filter(|drop| drop.key_id == self.key_id)
+            .map(|drop| drop.id)
+            .max();
+        if let Some(id) = newest.filter(|id| *id > self.own_drop_told) {
+            self.own_drop_told = id;
+            (self.own_drop)();
+        }
     }
 
     /// Take an answer's messages, deletions and online count into the chat.
@@ -300,7 +335,14 @@ impl FeedWorker {
                 .retain(|message| !feed.deleted.contains(&message.id));
             changed |= state.messages.len() != before;
         }
-        for message in feed.chat.drain(..) {
+        // Drops share the messages' ids: merged, the chat keeps the order they came in.
+        let mut incoming = std::mem::take(&mut feed.chat);
+        if !feed.drops.is_empty() {
+            let own = &self.key_id;
+            incoming.extend(feed.drops.drain(..).map(|drop| drop_message(drop, own)));
+            incoming.sort_by_key(|message| message.id);
+        }
+        for message in incoming {
             if state
                 .messages
                 .back()
@@ -318,6 +360,24 @@ impl FeedWorker {
         if changed {
             state.revision += 1;
         }
+    }
+}
+
+/// The chat entry for `drop`, as `own` (the player's key id) sees it. Its text is left
+/// empty: the viewer words the line from its tier.
+fn drop_message(drop: DropEvent, own: &str) -> ChatMessage {
+    ChatMessage {
+        id: drop.id,
+        at: drop.at,
+        holocron: Some(DropMark {
+            own: drop.key_id == own,
+            tier: drop.tier,
+        }),
+        key_id: drop.key_id,
+        name: drop.name,
+        verified: drop.verified,
+        staff: false,
+        text: String::new(),
     }
 }
 
@@ -375,7 +435,14 @@ mod tests {
         fn profile(&mut self, _: &str) -> Result<Profile, HubError> {
             unreachable!()
         }
-        fn claim(&mut self, _: &Identity, _: &str, _: u8, _: &str) -> Result<(), HubError> {
+        fn claim(
+            &mut self,
+            _: &Identity,
+            _: &str,
+            _: u8,
+            _: &str,
+            _: bool,
+        ) -> Result<(), HubError> {
             unreachable!()
         }
         fn release(&mut self, _: &Identity, _: &str) -> Result<(), HubError> {
@@ -418,6 +485,7 @@ mod tests {
             verified: false,
             staff: false,
             text: text.to_owned(),
+            holocron: None,
         }
     }
 
@@ -438,6 +506,8 @@ mod tests {
         looks: Arc<Mutex<VecDeque<QueuedLook>>>,
         worker: FeedWorker,
         made: Arc<Mutex<Vec<String>>>,
+        /// How many times the worker was told of a drop for the player's own key.
+        told: Arc<std::sync::atomic::AtomicUsize>,
     }
 
     fn rig(now: Instant) -> Rig {
@@ -447,7 +517,9 @@ mod tests {
         let emotes = Arc::new(Mutex::new(VecDeque::new()));
         let looks = Arc::new(Mutex::new(VecDeque::new()));
         let made = Arc::new(Mutex::new(Vec::new()));
+        let told = Arc::new(std::sync::atomic::AtomicUsize::new(0));
         let (factory, log) = (hub.clone(), Arc::clone(&made));
+        let counter = Arc::clone(&told);
         let make: HubFactory = Box::new(move |url| {
             log.lock().unwrap().push(url.to_owned());
             Ok(Box::new(factory.clone()))
@@ -459,6 +531,9 @@ mod tests {
             Arc::clone(&state),
             Arc::clone(&emotes),
             Arc::clone(&looks),
+            Box::new(move || {
+                counter.fetch_add(1, Ordering::SeqCst);
+            }),
             now,
         );
         Rig {
@@ -469,6 +544,7 @@ mod tests {
             looks,
             worker,
             made,
+            told,
         }
     }
 
@@ -502,6 +578,96 @@ mod tests {
         fn show_chat(&self, on: bool) {
             lock(&self.shared).chat = on;
         }
+    }
+
+    fn drop_event(id: u64, key_id: &str, tier: &str) -> DropEvent {
+        DropEvent {
+            id,
+            at: 0,
+            key_id: key_id.to_owned(),
+            name: "^2Sol".to_owned(),
+            tier: tier.to_owned(),
+            verified: true,
+        }
+    }
+
+    #[test]
+    fn drops_join_the_chat_in_the_feeds_order() {
+        let t0 = Instant::now();
+        let mut rig = rig(t0);
+        rig.read("https://hub", None);
+        let own = Identity::from_seed([1; 32]).key_id();
+        rig.script(Ok(Feed {
+            next: 5,
+            chat: vec![message(3, "gg"), message(5, "wp")],
+            drops: vec![
+                drop_event(4, "ff", "legendary"),
+                drop_event(2, &own, "rare"),
+            ],
+            online: 1,
+            ..Feed::default()
+        }));
+        rig.worker.step(t0);
+        let state = lock(&rig.state).clone();
+        let ids: Vec<u64> = state.messages.iter().map(|m| m.id).collect();
+        assert_eq!(ids, [2, 3, 4, 5], "one sequence, drops among messages");
+        let marks: Vec<Option<(&str, bool)>> = state
+            .messages
+            .iter()
+            .map(|m| m.holocron.as_ref().map(|d| (d.tier.as_str(), d.own)))
+            .collect();
+        assert_eq!(
+            marks,
+            [Some(("rare", true)), None, Some(("legendary", false)), None]
+        );
+        let first = &state.messages[0];
+        assert_eq!(
+            (first.name.as_str(), first.text.as_str(), first.verified),
+            ("^2Sol", "", true)
+        );
+        // A replay of what was shown is skipped like any message.
+        rig.script(Ok(Feed {
+            next: 5,
+            drops: vec![drop_event(4, "ff", "legendary")],
+            ..Feed::default()
+        }));
+        rig.worker.step(t0 + POLL_GAP);
+        assert_eq!(lock(&rig.state).messages.len(), 4);
+    }
+
+    #[test]
+    fn a_drop_for_the_own_key_tells_the_worker_once_even_with_the_chat_off() {
+        let t0 = Instant::now();
+        let mut rig = rig(t0);
+        rig.read("https://hub", None);
+        rig.show_chat(false);
+        let own = Identity::from_seed([1; 32]).key_id();
+        rig.script(Ok(Feed {
+            next: 8,
+            drops: vec![
+                drop_event(7, "ff", "mythical"),
+                drop_event(8, &own, "uncommon"),
+            ],
+            ..Feed::default()
+        }));
+        rig.worker.step(t0);
+        assert_eq!(rig.told.load(Ordering::SeqCst), 1, "the own key's only");
+        assert!(lock(&rig.state).messages.is_empty(), "the chat is off");
+        // The same drop again (a reader that started over) is not news; a newer one is.
+        rig.script(Ok(Feed {
+            next: 8,
+            drops: vec![drop_event(8, &own, "uncommon")],
+            ..Feed::default()
+        }));
+        rig.worker.step(t0 + POLL_GAP);
+        assert_eq!(rig.told.load(Ordering::SeqCst), 1);
+        rig.script(Ok(Feed {
+            next: 9,
+            drops: vec![drop_event(9, &own, "rare")],
+            ..Feed::default()
+        }));
+        rig.worker.step(t0 + POLL_GAP * 2);
+        assert_eq!(rig.told.load(Ordering::SeqCst), 2);
     }
 
     #[test]

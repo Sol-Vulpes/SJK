@@ -424,6 +424,7 @@ mod tests {
             verified: id.is_multiple_of(3),
             staff: id.is_multiple_of(5),
             text: text.to_owned(),
+            holocron: None,
         }
     }
 

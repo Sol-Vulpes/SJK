@@ -24,6 +24,16 @@
 
 # ---- Console & chat ----
 
+[jof-tag]
+area: Console & chat
+title: JoF emblem beside names with the JoF tag; JoF Clan medal removed
+change: A name with jof (any case, no letter touching it) gets the clan's J-o-F emblem on its left.
+change: Game chat, SJK chat (feed, dock, page), scoreboards, player card, Players page.
+test: Rename to {JoF}Test, say something: the crimson emblem sits left of your name in chat.
+test: Open the scoreboard (classic and SJK) and inspect yourself (X): the emblem is there too.
+test: Rename to Joffrey or MrJoF: no emblem.
+note: The JoF Clan medal is gone (hub cleanup separate).
+
 [tell-grapple]
 area: Console & chat
 title: tell by player name, typed +button12 and +grapple
@@ -3162,6 +3172,65 @@ test: While typing, W, S, ~ and binds go into the field; Esc stops typing, Esc a
 test: Pointer on a name: the card shows above the dock, with Mute. Open chat opens the page.
 note: cl_sjkChat 0 hides both docks; identity off: "Turn the SJK identity on to chat".
 note: Not tried in a game.
+
+[holocron-popup]
+area: Menus & settings
+title: Holocron drop pop-up and debug_holocron
+change: A new holocron shows once, large, in its tier's colour, on the main menu or the game menu.
+change: Several show one after another (1 of 3); a centre print says so in a match. Fanfare as medals.
+change: holocrons_seen.txt keeps the highest number shown; a fresh PC shows the newest 20 once.
+test: Console: debug_holocron all - the four tiers show one after another; Next, Next, Next, Close.
+test: debug_holocron mythical x3: "1 of 3"; Enter, Space, Right, Esc or a click finish the entrance.
+test: In a match: debug_holocron rare: a centre print, no pop-up over play; the game menu shows it.
+test: Each tier's colour: green, blue, purple, gold. With the art in: the picture, else a drawn gem.
+test: Then quit and start: nothing shows again (debug_holocron never writes holocrons_seen.txt).
+note: Medals go first. Same look with the classic menus. Not tried in a game.
+
+[holocron-chat]
+area: Console & chat
+title: Holocron drops as SJK chat lines in the tier colour
+change: A drop is one line, "Sol found a Legendary Holocron!", with a small gem; yours: "You found ...".
+change: Same in the game feed, the docked chat and the chat page; legendary and mythical reach everyone.
+test: debug_holocron legendary in a match: a purple line with a gem shows in the game chat feed.
+test: Hub with --holocron-every 20, playing: your drop shows in the game feed, the dock and the page.
+test: Mute a player on this PC: their drops no longer show in any of the three places.
+note: Only the game feed line is rehearsed offline. Not tried against the hub.
+
+[holocron-earning]
+area: Gameplay
+title: Claims say whether you are actively playing (holocron progress)
+change: Every claim to the hub says active only in a live game of someone else's, in your own view.
+change: Not spectating or following, not at the intermission, not in a menu, input in the last 2 min.
+test: Play on a local server (not your own hosted game) with the hub at --holocron-every 60.
+test: Keep moving: a pop-up comes after about a minute of play; stand still 2 min: no progress.
+test: Spectate, sit in the game menu or the scoreboard freeze: the progress does not move.
+note: Needs the hub with holocrons. The hub stores your active time and drops (docs/identity.md).
+
+[holocron-staff]
+area: Menus & settings
+title: Staff page: Give holocron and Remove
+change: Under the players: a tier to choose, Give (with the note) and the player's recent holocrons.
+change: Remove takes one back by its number. The Staff page lists 10 players now, not 14.
+test: As staff: Staff page, choose a player, type a note, pick Rare, Give: "Gave a rare holocron".
+test: Their holocron list shows it with the gem and date; Remove: status "Took back holocron #n".
+test: Give to yourself: the pop-up shows on the main menu or the game menu (a gift, with the note).
+note: Not tried against the hub.
+
+[holocrons-tab]
+area: Menus & settings
+title: Collection: Holocrons tab
+change: The Collection has a sixth tab, Holocrons (also: holocrons); classic: See it.
+change: A 3D holocron turns on the left in the chosen tier's look and light; none held: dark.
+change: Right: the tiers with counts and odds, the next holocron, the newest ten. No Open yet.
+test: SJK UI: Collection, Ctrl+Tab to Holocrons (or type holocrons).
+test: Up and Down, Tab, 1 to 4 and a click choose a tier; the holocron swaps at once.
+test: Each tier has its own face and light: green, blue, purple, gold (gold has a sheen).
+test: debug_holocron all, then holocrons: counts stay as the hub says; none held shows dimmed.
+test: Identity off (cl_identity 0): "Identity is off", every count a dash, every holocron dimmed.
+test: ui_textScale 1.2 and a 4:3 window: nothing is cut. Escape goes back.
+test: In a match (game menu, Collection, Holocrons): the holocron floats before the view.
+test: Classic menus: holocrons opens the page over the map; Profile's See holocrons too.
+note: World shots only (duel6, off-screen); not tried in a game or against the hub.
 
 # ---- Collection, 10/10/2026 ----
 

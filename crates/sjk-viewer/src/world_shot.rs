@@ -258,6 +258,9 @@ mod saber_skins;
 #[path = "world_shot_collection.rs"]
 mod collection;
 
+#[path = "world_shot_holocrons.rs"]
+mod holocrons_tab;
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -880,6 +883,8 @@ Found the fog bug, ask me about it!"
                 granted: 1_791_336_225,
                 note: String::new(),
             }],
+            holocron_counts: Default::default(),
+            holocrons: Vec::new(),
         };
         let snapshot = sjk_identity::Snapshot {
             status: sjk_identity::Status::Online,
@@ -897,6 +902,7 @@ Found the fog bug, ask me about it!"
             look_outcome: None,
             packs_revision: 0,
             assets_note: None,
+            holocrons: None,
         };
         let standings = crate::achievements::ALL
             .iter()
@@ -1008,6 +1014,8 @@ like this one.",
             achievements: Vec::new(),
             avatar: String::new(),
             unlocks: Vec::new(),
+            holocron_counts: Default::default(),
+            holocrons: Vec::new(),
         };
         let medal = |id: &str, count, note: &str| sjk_identity::Medal {
             id: id.to_owned(),

@@ -163,6 +163,21 @@ const YAVIN_TRAINING_SABER: Route = Route {
     focus: Some([-399.6, -417.3, 392.0]),
 };
 
+/// mp/duel6 holocrons: the tower and the quarter garden from the south-west path,
+/// high enough over it that the garden's greens, not a wall, fill the clear left of the
+/// screen; the Holocrons tab floats its holocron before this camera, which the page's
+/// dark panel on the right leaves free. A toured map cuts to it, so the one waypoint is
+/// the shot itself.
+const YAVIN_TRAINING_HOLOCRONS: Route = Route {
+    map_message: "Yavin Training Grounds",
+    shot: Shot::Holocrons,
+    from: Shot::Main,
+    millis: 1_000,
+    points: &[point([-405.0, -424.0, 394.0], 70.0, -2.0)],
+    stage: None,
+    focus: None,
+};
+
 /// One shot of a map's camera tour behind the main menu: the camera glides
 /// from `from` to `to` while looking at `at`.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -276,6 +291,7 @@ const ROUTES: &[Route] = &[
     TATOOINE_FFA_SABER,
     YAVIN_TRAINING_PLAYER,
     YAVIN_TRAINING_SABER,
+    YAVIN_TRAINING_HOLOCRONS,
 ];
 
 /// Route authored for `shot` on the map whose worldspawn message is

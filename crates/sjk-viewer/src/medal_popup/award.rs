@@ -185,7 +185,7 @@ pub(crate) fn span(t: f32, from: f32, to: f32) -> f32 {
     ((t - from) / (to - from)).clamp(0.0, 1.0)
 }
 
-fn ease_out_cubic(x: f32) -> f32 {
+pub(crate) fn ease_out_cubic(x: f32) -> f32 {
     1.0 - (1.0 - x).powi(3)
 }
 
@@ -434,7 +434,7 @@ impl Stage {
 }
 
 /// A disc of `radius` round `centre`.
-fn disc(list: &mut sjk_ui::DrawList, centre: [f32; 2], radius: f32, colour: Color) {
+pub(crate) fn disc(list: &mut sjk_ui::DrawList, centre: [f32; 2], radius: f32, colour: Color) {
     let _ = list.push(DrawCommand::RoundedRect {
         rect: Rect::new(
             centre[0] - radius,
@@ -448,7 +448,7 @@ fn disc(list: &mut sjk_ui::DrawList, centre: [f32; 2], radius: f32, colour: Colo
 }
 
 /// A four-pointed sparkle `reach` long each way from `centre`: two thin bars.
-fn sparkle(list: &mut sjk_ui::DrawList, centre: [f32; 2], reach: f32, alpha: f32) {
+pub(crate) fn sparkle(list: &mut sjk_ui::DrawList, centre: [f32; 2], reach: f32, alpha: f32) {
     let thin = (reach * 0.16).max(1.0);
     let colour = Color::new(1.0, 0.97, 0.88, alpha);
     for (width, height) in [(reach * 2.0, thin), (thin, reach * 2.0)] {
@@ -503,7 +503,7 @@ fn shine(list: &mut sjk_ui::DrawList, rect: Rect, texture: TextureId, at: f32, s
     }
 }
 
-fn with_alpha(colour: Color, alpha: f32) -> Color {
+pub(crate) fn with_alpha(colour: Color, alpha: f32) -> Color {
     Color::new(colour.r, colour.g, colour.b, colour.a * alpha)
 }
 
@@ -704,7 +704,7 @@ mod tests {
     fn the_medal_grows_about_its_medallion() {
         let stage = Stage {
             rect: Rect::new(0.0, 0.0, 400.0, 400.0),
-            texture: crate::medals::Medal::JofClan.art(),
+            texture: crate::medals::Medal::BugHunter.art(),
             palette: Palette {
                 gold: Color::new(1.0, 0.8, 0.3, 1.0),
                 bright: Color::new(1.0, 0.9, 0.5, 1.0),
