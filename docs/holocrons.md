@@ -251,9 +251,16 @@ mounting (`illuminate::tests::every_tier_has_a_cube_naming_its_own_shader`). The
 `world_shot::holocrons_tab::duel6_sjk_holocrons` and `duel6_sjk_holocrons_windows` (off-screen
 renders on duel6 with made-up holdings) were rendered and looked at on this machine: the tab
 in the SJK UI with each tier chosen, a tier held none of, the identity off, and 4:3, 21:9, 4K,
-`ui_textScale 1.2` and the classic style. Not tried: in a game (the holocron over a match, its
-place in third person and with another cg_fov), on another map than duel6, with real hub data,
-the keys and clicks in a running client, or the swap's motion (the shots are stills).
+`ui_textScale 1.2` and the classic style. Not tried: on another map than duel6, with real hub
+data, the keys and clicks in a running client, or the swap's motion (the shots are stills).
+
+Over a match (10/10/2026, Sol's report: the holocron sat too far right in a game): it is
+placed from the view the frame renders (`GpuState::frame_view`: the third-person camera
+too) with that view's own vertical field. It took the renderer's vertical field for the
+horizontal `cg_fov` and narrowed it again, so its offset to the left came out about three
+quarters of what it should (and it floated before the eye, not the third-person camera).
+The unit test projects it back through the view at 90 and 64 degrees in four windows, and
+the world shot `duel6_sjk_collection` renders it from the game menu at a match's field.
 
 ## Planned, not built
 

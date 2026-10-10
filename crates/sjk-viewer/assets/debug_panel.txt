@@ -3256,6 +3256,7 @@ test: debug_holocron all, then holocrons: counts stay as the hub says; none held
 test: Identity off (cl_identity 0): "Identity is off", every count a dash, every holocron dimmed.
 test: ui_textScale 1.2 and a 4:3 window: nothing is cut. Escape goes back.
 test: In a match (game menu, Collection, Holocrons): the holocron floats before the view.
+test: Third person and another cg_fov: the holocron stays over its tier name, left of the list.
 test: Classic menus: holocrons opens the page over the map; Profile's See holocrons too.
 note: World shots only (duel6, off-screen); not tried in a game or against the hub.
 

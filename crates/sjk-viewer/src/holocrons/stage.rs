@@ -10,8 +10,9 @@
 //! `object_groups`, loaded with the map's other rigid models ([`models`]), and a point
 //! light, so the menu map's stage (the Character tab's) is not needed: it floats before
 //! the backdrop camera ([`place`]), which the tab asks to park on its own shot
-//! ([`crate::menu_backdrop::Shot::Holocrons`]). Over a match (the game menu's Profile
-//! screen) it floats before the game's camera.
+//! ([`crate::menu_backdrop::Shot::Holocrons`]). Over a match (the game menu's Collection)
+//! it floats before the game's camera, the third-person one too: it is placed from the
+//! view the frame renders (`GpuState::frame_view`), with that view's own field.
 //!
 //! A tier is a model of its own because a surface's shader is named by its model file
 //! (`scripts/holocron_assets.py` writes `holocron_<tier>.md3` naming
@@ -25,6 +26,7 @@ use super::COUNT;
 use crate::GpuState;
 use crate::actor_instance::ActorInstance;
 use crate::dynamic_lights::PointLight;
+use crate::hud::identification::Camera;
 use glam::Vec3;
 use std::time::Instant;
 
@@ -83,9 +85,6 @@ const DISTANCE: f32 = 64.0;
 const RADIUS: f32 = 190.0;
 /// The cube's edge in the model (`HOLOCRON_EDGE` in `scripts/holocron_assets.py`).
 const EDGE: f32 = 6.0;
-/// The legacy vertical field of view the renderer uses over the menu map: `cg_fov`
-/// taken as vertical (`GpuState::field_of_view`).
-const MENU_FOV: f32 = 90.0;
 
 /// The look on show and how far it has grown (0 gone, 1 full size).
 #[derive(Clone, Copy, Debug, Default)]
@@ -131,42 +130,22 @@ impl Stage {
     }
 }
 
-/// The vertical field of view (radians) over a match, from the legacy horizontal
-/// `cg_fov` taken on a 4:3 screen (`CG_CalcFov`), and over the menu map ([`MENU_FOV`]).
-fn vertical_fov(in_match: bool, cg_fov: f32) -> f32 {
-    if in_match {
-        2.0 * ((cg_fov.to_radians() * 0.5).tan() * 0.75).atan()
-    } else {
-        MENU_FOV.to_radians()
-    }
-}
-
-/// Where the holocron floats and how large to draw it, for a camera at `eye` looking
-/// along `yaw` and `pitch` (radians) with the vertical field of view `fov`, in a window of
-/// `viewport` pixels: on the ray through the frame point `at` (1920 by 1080 frame
-/// pixels), [`DISTANCE`] ahead, its edge as wide as [`SIZE`] frame pixels at `at`. Returns
-/// the centre and the model's scale.
-pub(crate) fn place(
-    eye: Vec3,
-    yaw: f32,
-    pitch: f32,
-    fov: f32,
-    viewport: [f32; 2],
-    at: [f32; 2],
-) -> (Vec3, f32) {
+/// Where the holocron floats and how large to draw it before `view` (the camera the frame
+/// renders, its vertical field and window): on the ray through the frame point `at` (1920
+/// by 1080 frame pixels), [`DISTANCE`] ahead, its edge as wide as [`SIZE`] frame pixels
+/// at `at`. Returns the centre and the model's scale.
+pub(crate) fn place(view: &Camera, at: [f32; 2]) -> (Vec3, f32) {
+    let viewport = view.viewport;
     let frame = crate::menu::sjk::Frame::new(viewport);
     let [x, y] = frame.point(at[0], at[1]);
     let (ndc_x, ndc_y) = (x / viewport[0] * 2.0 - 1.0, 1.0 - y / viewport[1] * 2.0);
-    let half = (fov * 0.5).tan();
+    let half = (view.fov.to_radians() * 0.5).tan();
     let aspect = viewport[0] / viewport[1];
-    let forward = Vec3::new(
-        yaw.cos() * pitch.cos(),
-        yaw.sin() * pitch.cos(),
-        pitch.sin(),
-    );
-    let right = Vec3::new(yaw.sin(), -yaw.cos(), 0.0);
+    // The basis `Camera::project` reads the view with.
+    let forward = (view.target - view.eye).normalize_or_zero();
+    let right = forward.cross(view.up).normalize_or_zero();
     let up = right.cross(forward);
-    let centre = eye
+    let centre = view.eye
         + forward * DISTANCE
         + right * (ndc_x * half * aspect * DISTANCE)
         + up * (ndc_y * half * DISTANCE);
@@ -186,20 +165,27 @@ impl GpuState {
         let Some((request, level)) = self.holocron_stage.advance(wanted, now) else {
             return;
         };
-        let viewport = [
-            self.configuration.width as f32,
-            self.configuration.height as f32,
-        ];
-        let in_match = self.live_session.is_some() || self.demo_session.is_some();
-        let fov = vertical_fov(in_match, self.field_of_view);
-        let (centre, scale) = place(
-            self.camera_position,
-            self.camera_yaw,
-            self.camera_pitch,
-            fov,
-            viewport,
-            crate::console::holocrons_panel::STAGE_AT,
-        );
+        // The view this frame renders (set before the world is submitted), else the
+        // camera's eye and angles with the renderer's vertical field.
+        let view = self.frame_view.unwrap_or_else(|| {
+            let (yaw, pitch) = (self.camera_yaw, self.camera_pitch);
+            let forward = Vec3::new(
+                yaw.cos() * pitch.cos(),
+                yaw.sin() * pitch.cos(),
+                pitch.sin(),
+            );
+            Camera {
+                eye: self.camera_position,
+                target: self.camera_position + forward,
+                up: Vec3::Z,
+                fov: self.field_of_view,
+                viewport: [
+                    self.configuration.width as f32,
+                    self.configuration.height as f32,
+                ],
+            }
+        });
+        let (centre, scale) = place(&view, crate::console::holocrons_panel::STAGE_AT);
         let seconds = now.saturating_duration_since(self.ui_epoch).as_secs_f32();
         #[cfg(test)]
         let seconds = self.holocron_stage_seconds.unwrap_or(seconds);
@@ -359,58 +345,51 @@ mod tests {
     }
 
     /// The holocron sits on the ray through the frame point asked, [`DISTANCE`] ahead of
-    /// the camera, in every window shape, and as wide on screen as [`SIZE`] frame pixels.
+    /// the camera, in every window shape, with the menu's field and a match's narrower
+    /// one (a match over 16:9 at `cg_fov 80` renders about 64 degrees up the window: the
+    /// view's own field, never converted again), and as wide on screen as [`SIZE`] frame
+    /// pixels.
     #[test]
     fn it_floats_where_the_page_leaves_room_in_every_window() {
         let eye = Vec3::new(10.0, -20.0, 300.0);
         let (yaw, pitch) = (0.7_f32, -0.1_f32);
-        for viewport in [
-            [1920.0, 1080.0],
-            [3840.0, 2160.0],
-            [1440.0, 1080.0],
-            [2560.0, 1080.0],
-        ] {
-            let at = crate::console::holocrons_panel::STAGE_AT;
-            let (centre, scale) = place(eye, yaw, pitch, MENU_FOV.to_radians(), viewport, at);
-            // Project it back onto the window.
-            let forward = Vec3::new(
-                yaw.cos() * pitch.cos(),
-                yaw.sin() * pitch.cos(),
-                pitch.sin(),
-            );
-            let right = Vec3::new(yaw.sin(), -yaw.cos(), 0.0);
-            let up = right.cross(forward);
-            let offset = centre - eye;
-            let depth = offset.dot(forward);
-            assert!((depth - DISTANCE).abs() < 1e-3, "{viewport:?}");
-            let half = (MENU_FOV.to_radians() * 0.5).tan();
-            let aspect = viewport[0] / viewport[1];
-            let ndc = [
-                offset.dot(right) / (depth * half * aspect),
-                offset.dot(up) / (depth * half),
-            ];
-            let pixel = [
-                (ndc[0] + 1.0) * 0.5 * viewport[0],
-                (1.0 - ndc[1]) * 0.5 * viewport[1],
-            ];
-            let frame = crate::menu::sjk::Frame::new(viewport);
-            let want = frame.point(at[0], at[1]);
-            assert!(
-                (pixel[0] - want[0]).abs() < 0.5 && (pixel[1] - want[1]).abs() < 0.5,
-                "{viewport:?}: {pixel:?} against {want:?}"
-            );
-            // Its edge across the window is SIZE frame pixels.
-            let edge_pixels = scale * EDGE / (2.0 * half * DISTANCE) * viewport[1];
-            assert!((edge_pixels - SIZE * frame.s).abs() < 0.5, "{viewport:?}");
-            // Left of the middle of the window, where the list is not.
-            assert!(pixel[0] < viewport[0] * 0.5, "{viewport:?}");
+        let forward = Vec3::new(
+            yaw.cos() * pitch.cos(),
+            yaw.sin() * pitch.cos(),
+            pitch.sin(),
+        );
+        for fov in [90.0, 64.3] {
+            for viewport in [
+                [1920.0, 1080.0],
+                [3840.0, 2160.0],
+                [1440.0, 1080.0],
+                [2560.0, 1080.0],
+            ] {
+                let view = Camera {
+                    eye,
+                    target: eye + forward * 10.0,
+                    up: Vec3::Z,
+                    fov,
+                    viewport,
+                };
+                let at = crate::console::holocrons_panel::STAGE_AT;
+                let (centre, scale) = place(&view, at);
+                assert!(((centre - eye).dot(forward) - DISTANCE).abs() < 1e-3);
+                // Projected back as the HUD projects the world, it lands on the point.
+                let pixel = view.project(centre).expect("in view");
+                let frame = crate::menu::sjk::Frame::new(viewport);
+                let want = frame.point(at[0], at[1]);
+                assert!(
+                    (pixel[0] - want[0]).abs() < 0.5 && (pixel[1] - want[1]).abs() < 0.5,
+                    "{fov} {viewport:?}: {pixel:?} against {want:?}"
+                );
+                // Its edge across the window is SIZE frame pixels.
+                let half = (fov.to_radians() * 0.5).tan();
+                let edge_pixels = scale * EDGE / (2.0 * half * DISTANCE) * viewport[1];
+                assert!((edge_pixels - SIZE * frame.s).abs() < 0.5, "{viewport:?}");
+                // Left of the middle of the window, where the list is not.
+                assert!(pixel[0] < viewport[0] * 0.5, "{viewport:?}");
+            }
         }
-    }
-
-    #[test]
-    fn a_match_uses_the_legacy_vertical_field() {
-        assert!((vertical_fov(false, 80.0) - MENU_FOV.to_radians()).abs() < 1e-6);
-        // 90 degrees across a 4:3 screen is about 73.7 degrees up it.
-        assert!((vertical_fov(true, 90.0).to_degrees() - 73.74).abs() < 0.05);
     }
 }
