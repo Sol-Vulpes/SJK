@@ -584,8 +584,13 @@ impl Panel {
         self.focus = self.order[next];
     }
 
-    /// A key.
-    pub(crate) fn handle_key(&mut self, event: &KeyEvent, shift: bool) -> PanelAction {
+    /// A key, with Shift and Ctrl held or not.
+    pub(crate) fn handle_key(
+        &mut self,
+        event: &KeyEvent,
+        shift: bool,
+        control: bool,
+    ) -> PanelAction {
         if event.state != ElementState::Pressed {
             return PanelAction::None;
         }
@@ -629,7 +634,8 @@ impl Panel {
             _ if typing && !event.repeat => {
                 let pasted;
                 let text = match event.text.as_deref() {
-                    Some("\u{16}") => {
+                    // Ctrl+V (Windows hands the letter without Ctrl) or Shift+Insert.
+                    text if crate::sjk_chat_field::is_paste(key, text, shift, control) => {
                         pasted = crate::console::clipboard::paste().unwrap_or_default();
                         pasted.as_str()
                     }

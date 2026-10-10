@@ -20,10 +20,13 @@ pub(crate) const MAX: usize = TEXT_MAX;
 /// Ctrl+V on Windows types this character.
 const CONTROL_V: &str = "\u{16}";
 
-/// Whether a pressed `key` that typed `text` pastes: Ctrl+V (the character it types, or
-/// Ctrl with V where the layout types nothing), or Shift+Insert.
+/// Whether a pressed `key` that typed `text` pastes: Ctrl+V, or Shift+Insert. With Ctrl
+/// held, Windows hands the key's letter without Ctrl (`v`, the layout's own letter, as
+/// the in-game chat reads it); the Ctrl character itself, or Ctrl with V where the layout
+/// types nothing, count too.
 pub(crate) fn is_paste(key: KeyCode, text: Option<&str>, shift: bool, control: bool) -> bool {
     text == Some(CONTROL_V)
+        || (control && text.is_some_and(|text| text.eq_ignore_ascii_case("v")))
         || (control && key == KeyCode::KeyV && text.is_none())
         || (shift && !control && key == KeyCode::Insert)
 }
@@ -103,6 +106,11 @@ mod tests {
     fn ctrl_v_and_shift_insert_paste() {
         assert!(is_paste(KeyCode::KeyV, Some("\u{16}"), false, true));
         assert!(is_paste(KeyCode::KeyV, None, false, true));
+        // What Windows sends for Ctrl+V: the letter, Ctrl left out of the text.
+        assert!(is_paste(KeyCode::KeyV, Some("v"), false, true));
+        assert!(is_paste(KeyCode::KeyV, Some("V"), true, true));
+        // A layout whose V sits on another key (Dvorak's `.` key) pastes there.
+        assert!(is_paste(KeyCode::Period, Some("v"), false, true));
         assert!(is_paste(KeyCode::Insert, None, true, false));
         assert!(!is_paste(KeyCode::KeyV, Some("v"), false, false));
         // Another layout's letter on that key is typed, not a paste.
