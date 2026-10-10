@@ -10,7 +10,7 @@ mod interaction;
 mod layout;
 mod options;
 mod player_actions;
-mod sjk;
+pub(crate) mod sjk;
 mod social;
 
 mod view;
@@ -118,6 +118,8 @@ pub(crate) struct ChatOverlay {
     sjk_outcome: u64,
     /// The SJK chat's revision, outcome serial and mutes revision last followed.
     sjk_mark: Option<(u64, u64, u64)>,
+    /// When the SJK chat's sound last played (`chat/sjk.rs`, [`sjk::SOUND_GAP`]).
+    sjk_sound_at: Option<Instant>,
 }
 
 impl ChatOverlay {
@@ -160,6 +162,7 @@ impl ChatOverlay {
             sjk_epoch: None,
             sjk_outcome: 0,
             sjk_mark: None,
+            sjk_sound_at: None,
         }
     }
 

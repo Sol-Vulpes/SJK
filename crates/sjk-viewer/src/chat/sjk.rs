@@ -117,36 +117,40 @@ impl ChatOverlay {
     /// player muted a key). The backlog a hub sends when the reading starts is only
     /// marked, never replayed over the game: nothing is marked before the hub's first
     /// answer, and a new reading (`ChatState::loaded`) marks again.
+    ///
+    /// Returns the id the feed had seen when messages newer than it joined the feed now
+    /// (those with a higher id in `state`), `None` when nothing new joined: a marked
+    /// backlog is not news ([`new_from_others`] picks the ones worth a sound).
     pub(crate) fn sync_sjk(
         &mut self,
         state: &ChatState,
         muted: impl Fn(&str) -> bool,
         now: Instant,
-    ) {
+    ) -> Option<u64> {
         for line in &mut self.lines {
             if let Some(hub) = &line.hub {
                 line.muted = muted(&hub.key_id);
             }
         }
         let Some(epoch) = state.loaded else {
-            return;
+            return None;
         };
         let messages = &state.messages;
         let newest = messages.back().map_or(0, |message| message.id);
         if self.sjk_epoch != Some(epoch) {
             self.sjk_epoch = Some(epoch);
             self.sjk_seen = Some(newest);
-            return;
+            return None;
         }
         let seen = match self.sjk_seen {
             // A first look, or a hub whose ids began again: mark, show nothing.
             None => {
                 self.sjk_seen = Some(newest);
-                return;
+                return None;
             }
             Some(seen) if newest < seen => {
                 self.sjk_seen = Some(newest);
-                return;
+                return None;
             }
             Some(seen) => seen,
         };
@@ -172,7 +176,41 @@ impl ChatOverlay {
             self.push_sjk(message, muted, now);
         }
         self.sjk_seen = Some(newest);
+        (newest > seen).then_some(seen)
     }
+
+    /// Whether the SJK chat's sound may play at `now`: at most once in
+    /// [`SOUND_GAP`], so a burst of messages plays it once. It counts as played.
+    pub(crate) fn sjk_sound_due(&mut self, now: Instant) -> bool {
+        if self
+            .sjk_sound_at
+            .is_some_and(|at| now.saturating_duration_since(at) < SOUND_GAP)
+        {
+            return false;
+        }
+        self.sjk_sound_at = Some(now);
+        true
+    }
+}
+
+/// The shortest time between two of the SJK chat's sounds.
+pub(crate) const SOUND_GAP: std::time::Duration = std::time::Duration::from_secs(1);
+
+/// Whether `messages` hold one newer than `after` worth the SJK chat's sound: a message
+/// (not a holocron drop) from another player (`own` says whether a key is the player's)
+/// not muted on this PC (`muted`).
+pub(crate) fn new_from_others<'a>(
+    messages: impl IntoIterator<Item = &'a ChatMessage>,
+    after: u64,
+    own: impl Fn(&str) -> bool,
+    muted: impl Fn(&str) -> bool,
+) -> bool {
+    messages.into_iter().any(|message| {
+        message.id > after
+            && message.holocron.is_none()
+            && !own(&message.key_id)
+            && !muted(&message.key_id)
+    })
 }
 
 #[cfg(test)]
@@ -342,6 +380,57 @@ mod tests {
         later.messages.pop_back();
         chat.sync_sjk(&later, |_| false, now);
         assert_eq!(chat.lines.front().map(|line| line.body.as_str()), Some("x"));
+    }
+
+    #[test]
+    fn only_messages_newer_than_the_feed_had_seen_are_news() {
+        let mut chat = ChatOverlay::new();
+        let now = Instant::now();
+        // The hub not answered yet, then its backlog at start or a reconnection: no news.
+        assert_eq!(chat.sync_sjk(&ChatState::default(), |_| false, now), None);
+        assert_eq!(
+            chat.sync_sjk(&hub(&[(1, "old"), (2, "older")]), |_| false, now),
+            None
+        );
+        assert_eq!(
+            chat.sync_sjk(&hub(&[(1, "old"), (2, "older")]), |_| false, now),
+            None
+        );
+        let state = hub(&[(1, "old"), (2, "older"), (3, "new"), (4, "newer")]);
+        assert_eq!(chat.sync_sjk(&state, |_| false, now), Some(2));
+        assert_eq!(chat.sync_sjk(&state, |_| false, now), None, "once");
+        // A new reading of the hub marks its backlog again.
+        let again = loaded(2, state.messages.clone());
+        assert_eq!(chat.sync_sjk(&again, |_| false, now), None);
+    }
+
+    #[test]
+    fn a_sound_is_for_others_messages_not_own_muted_or_drops() {
+        let mut messages: Vec<ChatMessage> = (1..=4).map(|id| message(id, "hi")).collect();
+        messages[3].holocron = Some(sjk_identity::DropMark {
+            tier: "legendary".to_owned(),
+            own: false,
+        });
+        let own = message(2, "").key_id;
+        let troll = message(3, "").key_id;
+        let news = |after| new_from_others(&messages, after, |key| key == own, |key| key == troll);
+        assert!(news(0), "message 1 is another player's");
+        assert!(
+            !news(1),
+            "2 is the player's own, 3 muted, 4 a holocron drop"
+        );
+        assert!(!news(4), "nothing newer");
+        assert!(new_from_others(&messages, 1, |_| false, |_| false));
+    }
+
+    #[test]
+    fn a_burst_plays_the_sound_once_a_second() {
+        let mut chat = ChatOverlay::new();
+        let start = Instant::now();
+        assert!(chat.sjk_sound_due(start));
+        assert!(!chat.sjk_sound_due(start + std::time::Duration::from_millis(300)));
+        assert!(!chat.sjk_sound_due(start + std::time::Duration::from_millis(999)));
+        assert!(chat.sjk_sound_due(start + SOUND_GAP));
     }
 
     #[test]

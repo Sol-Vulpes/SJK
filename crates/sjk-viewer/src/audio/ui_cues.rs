@@ -1,8 +1,8 @@
 //! Interface sound cues: hover, click and back posted by every menu canvas as
 //! it routes input, the stage model's saber throw and catch posted by the
 //! menu stage, the quick wheel's page, move and run cues, the achievement
-//! pop-up's chime and the new medal's fanfare, all played once per frame by
-//! the audio owner.
+//! pop-up's chime, the new medal's fanfare and the SJK chat's sound for a new
+//! message, all played once per frame by the audio owner.
 //!
 //! The posters live inside screens that have no audio access, so cues go
 //! through one process-wide atomic mailbox. A cue is a bit, not a queue:
@@ -35,6 +35,9 @@ pub(crate) enum Cue {
     Achievement = 256,
     /// A new medal began its entrance on the medal pop-up (`medal_popup.rs`).
     Medal = 512,
+    /// A new SJK chat message from another player (`sjk_chat_frame.rs`); its sound is
+    /// made in memory, not a file of [`CUE_SOUNDS`] (`sjk_chat_sound.rs`).
+    SjkChat = 1024,
 }
 
 /// `(cue, sound path, volume)` — the game's own sounds, looked up through
@@ -109,6 +112,9 @@ pub(crate) fn play_pending(audio: &mut GameAudio) {
             audio.play_local(path, *volume, UI_SOURCE, ChannelId(index as u32));
         }
     }
+    if pending & Cue::SjkChat as u16 != 0 {
+        audio.play_sjk_chat(UI_SOURCE, ChannelId(CUE_SOUNDS.len() as u32));
+    }
 }
 
 #[cfg(test)]
@@ -122,6 +128,7 @@ mod tests {
             let bit = cue as u16;
             assert_eq!(bit.count_ones(), 1, "{cue:?}");
             assert_eq!(bits & bit, 0, "{cue:?} twice");
+            assert_ne!(cue, Cue::SjkChat, "made in memory, never a file");
             bits |= bit;
             // The game's sounds, or its short music stingers (the medal's fanfare).
             assert!(
@@ -140,5 +147,7 @@ mod tests {
         assert!(volume(Cue::WheelMove) < volume(Cue::Hover));
         assert!(volume(Cue::WheelRun) < volume(Cue::Click));
         assert!(volume(Cue::WheelPage) < 1.0);
+        assert_eq!(bits & Cue::SjkChat as u16, 0);
+        assert_eq!((Cue::SjkChat as u16).count_ones(), 1);
     }
 }

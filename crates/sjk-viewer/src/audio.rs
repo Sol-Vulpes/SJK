@@ -6,6 +6,7 @@
 //! mode is the callback overrunning its real-time budget; `underruns` counts
 //! mix blocks that took longer than the block duration to render.
 
+pub(crate) mod sjk_chat_sound;
 pub(crate) mod ui_cues;
 
 use crate::audio_output::{AudioCommand, AudioOutput, LOOPS, SAMPLE_RATE, VOICES};

@@ -7,6 +7,21 @@ SJK currently contains a native client and standard dedicated server in a
 20-crate Rust workspace. This page records scope and verification, rather than
 claiming complete parity from the presence of an implementation.
 
+## SJK chat sound
+
+Branch `personal/chat-sound` (10/10/2026, based on `c513abee`, Windows 11), Sol's
+request: a sound when an SJK chat message arrives; none played before. A new message
+from another player, newer than what the feed had seen, plays a variant of JKA's chat
+sound made from the game's own `sound/player/talk` when SJK starts (quicker and higher,
+cut, faded, a short echo; nothing of JKA's audio ships), in the menus and in games; not
+for the player's own messages, muted players, holocron drops or the backlog at start, at
+most once a second ([hub-chat.md](hub-chat.md#a-sound-for-a-new-message)).
+`cl_sjkChatSound` (default 1, Settings > Network > SJK chat sound) switches it, under the
+master `cg_chatSounds`. Verified by unit tests (the sound's length, pitch, fade, echo taps
+and level; when it plays; the settings row) and against the sound Sol chose, made from the
+retail file: correlation 0.9993, RMS 0.03321 against 0.03319, peak 0.527 against 0.527.
+Not heard in the client, in the menus or in a game.
+
 ## Staff: verify, merge players, linked keys
 
 Branch `personal/staff-merge` (10/10/2026, based on `6b13a8cd`, Windows 11), with the

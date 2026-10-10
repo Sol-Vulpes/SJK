@@ -33,6 +33,18 @@ test: Wear a name like {JoF}Sol, send an SJK chat message: feed, dock and page s
 test: The chat page's online window shows the braces; a holocron drop line too.
 test: A message with {JoF} is still refused (messages keep their alphabet).
 
+[sjk-chat-sound]
+area: Audio
+title: SJK chat sound: a variant of the talk sound when another player's SJK message arrives
+change: A new SJK chat message from someone else plays a higher, shorter talk sound with an echo.
+change: Made from the game's own sound/player/talk at start; not for own, muted or old messages.
+change: Settings > Network > SJK chat sound (cl_sjkChatSound, default 1); cg_chatSounds 0 too.
+test: In the menus, have another SJK player write in SJK chat: the sound plays once.
+test: In a match, the same: it plays over the game, with the game's chat beep unchanged.
+test: Your own message, a muted player's and a holocron drop line: no sound.
+test: Several messages within a second: one sound. Restart with history: no sound for it.
+test: Turn SJK chat sound off, then cg_chatSounds 0 with it on: silent both times.
+
 [console-feed]
 area: Console & chat
 title: Console feed (top left notify lines) off by default, con_drawNotify
