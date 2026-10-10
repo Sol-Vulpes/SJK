@@ -6,7 +6,7 @@ use std::collections::HashMap;
 /// Parsed `.gla` skeletons keyed by animation path. Every humanoid player
 /// model shares `_humanoid.gla` (tens of MB), so the menu's stage keeps
 /// one parsed copy across model switches instead of re-reading it.
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub(crate) struct GlaCache {
     animations: HashMap<String, Arc<Gla>>,
     audio: HashMap<(String, String), AnimationAudio>,
@@ -18,6 +18,17 @@ type AnimationAudio = (
 );
 
 impl GlaCache {
+    /// Keep what `other` parsed (a copy handed to a loading worker), entries this
+    /// cache lacks only.
+    pub(crate) fn absorb(&mut self, other: Self) {
+        for (path, animation) in other.animations {
+            self.animations.entry(path).or_insert(animation);
+        }
+        for (key, audio) in other.audio {
+            self.audio.entry(key).or_insert(audio);
+        }
+    }
+
     fn get(
         &mut self,
         path: &str,

@@ -728,7 +728,13 @@ changed during the match (`/model`, or a new player in a used slot), as
 `CG_LoadClientInfo` falls back to `DEFAULT_MODEL`: the player is not left in
 their previous model, and the log says `client N Kyle in place of <model>`. A
 model that failed is not loaded again until the next map
-([clientinfo_refresh.rs](../crates/sjk-viewer/src/clientinfo_refresh.rs)). Files are read as
+([clientinfo_refresh.rs](../crates/sjk-viewer/src/clientinfo_refresh.rs)). A model
+that changes during the match (a join, `/model`, a forced-model or mute change) is
+read on a worker, at most three at once: its files, its mesh and its textures
+decoded there, then uploaded by the render thread, one model a frame
+([player_loads.rs](../crates/sjk-viewer/src/player_loads.rs)); until then the player
+keeps the model they had, and a new player shows the stand-in actor. Loaded inside
+one frame before 11/10/2026, it was a stutter players felt on every join. Files are read as
 rd-vanilla and the retail cgame read them, so a model EternalJK draws and
 animates is not swapped for Kyle:
 

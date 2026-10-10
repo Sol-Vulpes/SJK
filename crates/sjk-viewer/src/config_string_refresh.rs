@@ -107,6 +107,7 @@ impl GpuState {
             return;
         }
         self.refresh_muted_models(audio);
+        self.poll_player_loads();
         let mut changes = ConfigStringDirty::default();
         if let Some(session) = &mut self.live_session {
             session.drain_config_string_changes(|index| changes.mark(index));

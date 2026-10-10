@@ -718,7 +718,7 @@ impl crate::GpuState {
             queue: &self.queue,
             camera_layout: &self.camera_layout,
             scene_format: self.context.scene_format(),
-            images: vfs.as_deref().map(|vfs| (vfs, &self.shaders)),
+            images: vfs.as_deref().map(|vfs| (vfs, &*self.shaders)),
             bsp: &self.bsp,
             camera: camera.camera_position,
             view_projection: camera.view_projection,

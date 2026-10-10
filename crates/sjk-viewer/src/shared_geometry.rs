@@ -1,12 +1,14 @@
 //! The combined vertex/index buffers every world, actor and object draw reads
-//! from. They are uploaded once at map load and can grow when a match needs
-//! geometry the load did not know about (a player's new model, a hilt nobody
-//! carried yet): the buffers are reallocated with the old contents copied on
-//! the GPU and the new mesh appended behind them. That happens per change, not
-//! per frame, so the hot path only ever sees a plain buffer handle.
+//! from. They are uploaded once at map load with room to spare ([`room`]) and
+//! take geometry the load did not know about (a player's new model, a hilt
+//! nobody carried yet) behind what they hold: a write into the spare room while
+//! it lasts, else a reallocation with the old contents copied on the GPU and
+//! room to spare again. Growing by exactly the new mesh made every model that
+//! came in during a match reallocate and copy the whole map's geometry. That
+//! happens per change, not per frame, so the hot path only ever sees a plain
+//! buffer handle.
 
 use super::{ActorDraw, GpuVertex, PreviewVertexRange};
-use wgpu::util::DeviceExt;
 
 #[path = "geometry_environment.rs"]
 pub(crate) mod environment;
@@ -20,6 +22,9 @@ pub(crate) struct SharedGeometry {
     quad_buffer: wgpu::Buffer,
     vertex_count: u32,
     index_count: u32,
+    /// What the buffers can hold; the quad lookup has one entry a vertex.
+    vertex_capacity: u32,
+    index_capacity: u32,
     environment_buffer: wgpu::Buffer,
     pub(crate) environment: environment::State,
     /// Static skin inputs and per-actor joint palettes, independent of CPU trace storage.
@@ -40,29 +45,74 @@ const VERTEX_USAGE: wgpu::BufferUsages = wgpu::BufferUsages::VERTEX
 const INDEX_USAGE: wgpu::BufferUsages = wgpu::BufferUsages::INDEX
     .union(wgpu::BufferUsages::COPY_DST)
     .union(wgpu::BufferUsages::COPY_SRC);
+const QUAD_USAGE: wgpu::BufferUsages = wgpu::BufferUsages::STORAGE
+    .union(wgpu::BufferUsages::COPY_DST)
+    .union(wgpu::BufferUsages::COPY_SRC);
+
+/// Spare room past `count` elements: a quarter more, and at least `least` (about
+/// a dozen player models' worth for vertices and indices).
+pub(crate) fn room(count: u32, least: u32) -> u32 {
+    count.saturating_add((count / 4).max(least))
+}
+/// Vertices and indices always spare.
+const LEAST_VERTICES: u32 = 1 << 17;
+const LEAST_INDICES: u32 = 3 << 17;
+
+/// A buffer of `capacity` bytes starting with `contents`.
+fn buffer_with(
+    device: &wgpu::Device,
+    label: &str,
+    usage: wgpu::BufferUsages,
+    contents: &[u8],
+    capacity: u64,
+) -> wgpu::Buffer {
+    let size = capacity
+        .max(contents.len() as u64)
+        .max(32)
+        .next_multiple_of(wgpu::COPY_BUFFER_ALIGNMENT);
+    let buffer = device.create_buffer(&wgpu::BufferDescriptor {
+        label: Some(label),
+        size,
+        usage,
+        mapped_at_creation: true,
+    });
+    if !contents.is_empty() {
+        buffer
+            .slice(..contents.len() as u64)
+            .get_mapped_range_mut()
+            .expect("a buffer mapped at creation")
+            .copy_from_slice(contents);
+    }
+    buffer.unmap();
+    buffer
+}
 
 impl SharedGeometry {
     /// Upload the load-time scene.
     pub(crate) fn upload(device: &wgpu::Device, vertices: &[GpuVertex], indices: &[u32]) -> Self {
-        let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("SJK world vertices"),
-            contents: if vertices.is_empty() {
-                &[0; std::mem::size_of::<GpuVertex>()]
-            } else {
-                bytemuck::cast_slice(vertices)
-            },
-            usage: VERTEX_USAGE,
-        });
-        let index_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("SJK world indices"),
-            contents: if indices.is_empty() {
-                &[0; 4]
-            } else {
-                bytemuck::cast_slice(indices)
-            },
-            usage: INDEX_USAGE,
-        });
-        let quad_buffer = quads::upload(device, vertices.len(), indices, 0);
+        let vertex_capacity = room(vertices.len() as u32, LEAST_VERTICES);
+        let index_capacity = room(indices.len() as u32, LEAST_INDICES);
+        let vertex_buffer = buffer_with(
+            device,
+            "SJK world vertices",
+            VERTEX_USAGE,
+            bytemuck::cast_slice(vertices),
+            u64::from(vertex_capacity) * std::mem::size_of::<GpuVertex>() as u64,
+        );
+        let index_buffer = buffer_with(
+            device,
+            "SJK world indices",
+            INDEX_USAGE,
+            bytemuck::cast_slice(indices),
+            u64::from(index_capacity) * 4,
+        );
+        let quad_buffer = buffer_with(
+            device,
+            "SJK quad lookup",
+            QUAD_USAGE,
+            bytemuck::cast_slice(&quads::references(vertices.len(), indices, 0)),
+            u64::from(vertex_capacity) * std::mem::size_of::<quads::QuadRef>() as u64,
+        );
         let environment = environment::State::default();
         let environment_buffer = environment::buffer(device, &environment.data);
         let deform_binding =
@@ -74,6 +124,8 @@ impl SharedGeometry {
             deform_binding,
             vertex_count: vertices.len() as u32,
             index_count: indices.len() as u32,
+            vertex_capacity,
+            index_capacity,
             environment_buffer,
             environment,
             skinning: crate::actor_pose::gpu_skinning::Buffers::empty(device),
@@ -102,46 +154,78 @@ impl SharedGeometry {
                     .ok_or("shared geometry index overflow")
             })
             .collect::<Result<Vec<u32>, _>>()?;
-        let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-            label: Some("SJK shared geometry growth"),
-        });
-        self.vertex_buffer = grow(
-            device,
-            queue,
-            &mut encoder,
+        let refs = quads::references(vertices.len(), indices, placement.vertex_base);
+        let vertex_size = std::mem::size_of::<GpuVertex>() as u64;
+        let quad_size = std::mem::size_of::<quads::QuadRef>() as u64;
+        let vertex_total = self
+            .vertex_count
+            .checked_add(vertices.len() as u32)
+            .ok_or("shared geometry vertex overflow")?;
+        let index_total = self
+            .index_count
+            .checked_add(rebased.len() as u32)
+            .ok_or("shared geometry index overflow")?;
+        if vertex_total > self.vertex_capacity || index_total > self.index_capacity {
+            // Out of room: reallocate with room to spare again, the old contents
+            // copied on the GPU.
+            self.vertex_capacity = self.vertex_capacity.max(room(vertex_total, LEAST_VERTICES));
+            self.index_capacity = self.index_capacity.max(room(index_total, LEAST_INDICES));
+            let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("SJK shared geometry growth"),
+            });
+            self.vertex_buffer = grow(
+                device,
+                &mut encoder,
+                &self.vertex_buffer,
+                u64::from(self.vertex_count) * vertex_size,
+                u64::from(self.vertex_capacity) * vertex_size,
+                "SJK world vertices",
+                VERTEX_USAGE,
+            );
+            self.index_buffer = grow(
+                device,
+                &mut encoder,
+                &self.index_buffer,
+                u64::from(self.index_count) * 4,
+                u64::from(self.index_capacity) * 4,
+                "SJK world indices",
+                INDEX_USAGE,
+            );
+            self.quad_buffer = grow(
+                device,
+                &mut encoder,
+                &self.quad_buffer,
+                u64::from(self.vertex_count) * quad_size,
+                u64::from(self.vertex_capacity) * quad_size,
+                "SJK quad lookup",
+                QUAD_USAGE,
+            );
+            self.rebind(device);
+            queue.submit(std::iter::once(encoder.finish()));
+        }
+        // Into the spare room; the queue writes after the copies above.
+        let write = |buffer: &wgpu::Buffer, offset: u64, bytes: &[u8]| {
+            if !bytes.is_empty() {
+                queue.write_buffer(buffer, offset, bytes);
+            }
+        };
+        write(
             &self.vertex_buffer,
-            u64::from(self.vertex_count) * std::mem::size_of::<GpuVertex>() as u64,
-            "SJK world vertices",
-            VERTEX_USAGE,
+            u64::from(self.vertex_count) * vertex_size,
             bytemuck::cast_slice(vertices),
         );
-        self.index_buffer = grow(
-            device,
-            queue,
-            &mut encoder,
+        write(
             &self.index_buffer,
             u64::from(self.index_count) * 4,
-            "SJK world indices",
-            INDEX_USAGE,
             bytemuck::cast_slice(&rebased),
         );
-        let refs = quads::references(vertices.len(), indices, placement.vertex_base);
-        self.quad_buffer = grow(
-            device,
-            queue,
-            &mut encoder,
+        write(
             &self.quad_buffer,
-            u64::from(self.vertex_count) * std::mem::size_of::<quads::QuadRef>() as u64,
-            "SJK quad lookup",
-            wgpu::BufferUsages::STORAGE
-                | wgpu::BufferUsages::COPY_DST
-                | wgpu::BufferUsages::COPY_SRC,
+            u64::from(self.vertex_count) * quad_size,
             bytemuck::cast_slice(&refs),
         );
-        self.rebind(device);
-        queue.submit(std::iter::once(encoder.finish()));
-        self.vertex_count += vertices.len() as u32;
-        self.index_count += rebased.len() as u32;
+        self.vertex_count = vertex_total;
+        self.index_count = index_total;
         Ok(placement)
     }
 
@@ -188,29 +272,28 @@ impl SharedGeometry {
     }
 }
 
-/// A copy of `old` with `appended` behind it. The GPU copy and the queued
-/// write touch disjoint byte ranges, so their order does not matter.
+/// A buffer of `capacity` bytes starting with the first `used` bytes of `old`,
+/// copied by `encoder`.
 fn grow(
     device: &wgpu::Device,
-    queue: &crate::frame_queue::FrameQueue,
     encoder: &mut wgpu::CommandEncoder,
     old: &wgpu::Buffer,
-    old_size: u64,
+    used: u64,
+    capacity: u64,
     label: &str,
     usage: wgpu::BufferUsages,
-    appended: &[u8],
 ) -> wgpu::Buffer {
     let new = device.create_buffer(&wgpu::BufferDescriptor {
         label: Some(label),
-        size: (old_size + appended.len() as u64).max(32),
+        size: capacity
+            .max(used)
+            .max(32)
+            .next_multiple_of(wgpu::COPY_BUFFER_ALIGNMENT),
         usage,
         mapped_at_creation: false,
     });
-    if old_size != 0 {
-        encoder.copy_buffer_to_buffer(old, 0, &new, 0, old_size);
-    }
-    if !appended.is_empty() {
-        queue.write_buffer(&new, old_size, appended);
+    if used != 0 {
+        encoder.copy_buffer_to_buffer(old, 0, &new, 0, used);
     }
     new
 }

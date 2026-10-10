@@ -13,6 +13,7 @@ Format, read by the client (crates/sjk-viewer/src/changelog_data.rs, whose
 tests check this file):
 - "## <version> | <dd/mm/yyyy>" starts a release ("## Unreleased" for main
   after the last release, without a date);
+- Fewer stutters when players join or change model: their model now loads in the background and the player keeps their old model (or a stand-in) for that moment; the game also stops copying all of the map's geometry for each new model and prepares glow effects ahead of time _(Sol)_
 - The body shield-hit flash is quieter by default: one pass instead of four (cg_shieldBrightness 1, the stock look); a profile still on the old default 4 moves to 1 once, other values stay _(Lumaya)_
 - The red damage indicator near the crosshair is off by default; Settings > HUD > Damage hitmarker (cg_hitMarker 1) brings it back at once. Camera kick and hit sounds are unchanged _(Lumaya)_
 - Asset browser: Settings > Game > Asset browser (or the assetbrowser command) lists the installed PK3 packs and turns each on or off for the next start without moving files; the retail base packs stay on, and built-in content, hub unlocks, loose files and packs a server sends are not affected _(Lumaya)_

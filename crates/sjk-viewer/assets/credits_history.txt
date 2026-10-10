@@ -9,6 +9,8 @@
 #                               made it when that is not the piece's owner.
 
 = Sol
++ 10/10/2026 | - | Players' models loaded off the render thread, spare geometry room, glow warmed
+- 5ddfd07 |  | Load players' models off the render thread; spare geometry room; warm glow
 + 10/10/2026 | - | Always-on gameplay hitch lines in the client log
 - 0d60bb2 |  | Log gameplay hitches with their slowest frame phases
 + 10/10/2026 | - | Config saved only when a setting changes, off the main thread

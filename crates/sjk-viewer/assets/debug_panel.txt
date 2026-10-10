@@ -609,6 +609,18 @@ test: Change map, resize, Alt+Tab back: no hitch lines in the 2 s after each.
 test: The lines show in the console (not on screen) and in qconsole.log with logfile 1.
 note: Unit tests only; not tried in a game.
 
+[player-async]
+area: Rendering & effects
+title: Players joining or changing model no longer stutter: models load in the background
+change: A new or changed player model is read on a worker; the render thread only uploads it.
+change: The player keeps their old model meanwhile; a new player shows the stand-in.
+change: Geometry buffers keep spare room; glow pipelines compile with their materials.
+test: Busy server: watch while players join or change /model: no hitch, model pops in.
+test: /model to a custom model and back several times: right model each time, no Kyle.
+test: A model you do not have: Kyle, log "using Kyle", no retry every frame.
+test: cg_forcemodel 1 then 0 on a full server: brief stand-ins, no long freeze.
+note: Hilts, NPCs, corpses and cosmetics still load in one frame. Not tested in game yet.
+
 [menu-world-drop]
 area: Rendering & effects
 title: Less RAM on servers: menu map not kept during matches, tighter GPU memory
