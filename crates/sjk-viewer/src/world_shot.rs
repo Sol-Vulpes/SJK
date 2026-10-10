@@ -870,6 +870,7 @@ mod tests {
             note: note.to_owned(),
         };
         let me = sjk_identity::Profile {
+            keys: Vec::new(),
             key_id: "44f3d0b36c9b2510".to_owned(),
             key: String::new(),
             name: "^1Sol^7Vulpes".to_owned(),
@@ -910,6 +911,7 @@ Found the fog bug, ask me about it!"
         let snapshot = sjk_identity::Snapshot {
             status: sjk_identity::Status::Online,
             key_id: me.key_id.clone(),
+            local_key_id: me.key_id.clone(),
             me: Some(me),
             server: None,
             players: Vec::new(),
@@ -1024,6 +1026,7 @@ like this one.",
     #[ignore = "renders with the GPU and the installed game data named by JKA_GAME_DATA"]
     fn duel6_sjk_staff() {
         let profile = |key: &str, name: &str| sjk_identity::Profile {
+            keys: Vec::new(),
             key_id: key.to_owned(),
             key: String::new(),
             name: name.to_owned(),
@@ -1079,6 +1082,7 @@ like this one.",
                     note: String::new(),
                     medal: None,
                 }],
+                keys: vec!["9a0c51e2b7d34f80".to_owned(), "5d4c3b2a19087f6e".to_owned()],
                 ..profile("9a0c51e2b7d34f80", "^5Creyon")
             },
             profile("1f2e3d4c5b6a7980", "^3Lumaya"),
@@ -1118,6 +1122,16 @@ like this one.",
                 console.staff_choose("9a0c51e2b7d34f80");
             }
             println!("{}", shoot(&mut gpu, 6, "duel6-staff-other").display());
+            // Their keys, one linked, and Fox's key ready to merge in.
+            if let Some(console) = gpu.console.as_mut() {
+                console.staff_merge("0b1c2d3e4f5a6b7c", false);
+            }
+            println!("{}", shoot(&mut gpu, 6, "duel6-staff-keys").display());
+            // The confirmation: who is kept, who goes, for good.
+            if let Some(console) = gpu.console.as_mut() {
+                console.staff_merge("0b1c2d3e4f5a6b7c", true);
+            }
+            println!("{}", shoot(&mut gpu, 6, "duel6-staff-merge").display());
         });
     }
 

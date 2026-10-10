@@ -389,8 +389,8 @@ pub(crate) fn profiles_revision() -> u64 {
     })
 }
 
-/// The player's own key id and the medals their profile lists, once the hub has
-/// answered; `None` before that or with the feature off. Read twice a second at most,
+/// This PC's key id (the pop-up's seen list is kept per key, whatever person the key
+/// belongs to) and the medals the player's profile lists, once the hub has answered; `None` before that or with the feature off. Read twice a second at most,
 /// for the new medal pop-up.
 pub(crate) fn own_medals() -> Option<(String, Vec<sjk_identity::Medal>)> {
     lock().service.as_ref()?.with_snapshot(|snapshot| {
@@ -401,7 +401,7 @@ pub(crate) fn own_medals() -> Option<(String, Vec<sjk_identity::Medal>)> {
         ) {
             return None;
         }
-        Some((snapshot.key_id.clone(), me.medals.clone()))
+        Some((snapshot.local_key_id.clone(), me.medals.clone()))
     })
 }
 
@@ -494,7 +494,8 @@ pub(crate) fn is_staff() -> bool {
     })
 }
 
-/// The player's own key id, once the service started.
+/// The player's own id at the hub, once the service started: this PC's key id, or the
+/// id of the person it is linked to once the hub said so (`Snapshot::key_id`).
 pub(crate) fn own_key_id() -> Option<String> {
     lock()
         .service
@@ -514,7 +515,8 @@ fn others_key_id<'a>(key_id: &'a str, own: Option<&str>) -> Option<&'a str> {
     (own != Some(key_id)).then_some(key_id)
 }
 
-/// The player's own key id and what their profile holds of holocrons (their counts and
+/// This PC's key id (for the pop-up's seen list, kept per key) and what the player's
+/// profile holds of holocrons (their counts and
 /// their recent list, newest first), read in place; `None` before the hub answered or
 /// with the feature off. Keep `read` short: the service waits.
 pub(crate) fn with_own_holocrons<R>(
@@ -528,7 +530,11 @@ pub(crate) fn with_own_holocrons<R>(
         ) {
             return None;
         }
-        Some(read(&snapshot.key_id, &me.holocron_counts, &me.holocrons))
+        Some(read(
+            &snapshot.local_key_id,
+            &me.holocron_counts,
+            &me.holocrons,
+        ))
     })
 }
 

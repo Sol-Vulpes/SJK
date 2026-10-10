@@ -154,6 +154,13 @@ impl ViewerConsole {
         self.staff_panel.choose_for_shot(key_id);
     }
 
+    /// Show the page's Keys and merge view with `from` to merge in, confirming it when
+    /// `confirm`, for a world shot.
+    #[cfg(test)]
+    pub(crate) fn staff_merge(&mut self, from: &str, confirm: bool) {
+        self.staff_panel.merge_for_shot(from, confirm);
+    }
+
     /// The page's draw list while it is shown.
     pub(super) fn staff_panel_draw_list(&self) -> Option<&sjk_ui::DrawList> {
         (self.open && self.staff_panel.is_open()).then(|| self.staff_panel.draw_list())

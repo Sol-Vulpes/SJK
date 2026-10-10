@@ -872,6 +872,7 @@ pub(crate) mod tests {
 
     pub(crate) fn me(bio: &str) -> Profile {
         Profile {
+            keys: Vec::new(),
             key_id: "0123456789abcdef".to_owned(),
             key: String::new(),
             name: "^1Sol".to_owned(),
@@ -891,6 +892,7 @@ pub(crate) mod tests {
 
     pub(crate) fn snapshot(me: Option<Profile>, notice: Option<&str>) -> Snapshot {
         Snapshot {
+            local_key_id: "0123456789abcdef".to_owned(),
             status: Status::Online,
             key_id: "0123456789abcdef".to_owned(),
             me,

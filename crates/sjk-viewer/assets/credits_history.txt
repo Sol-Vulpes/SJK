@@ -9,6 +9,8 @@
 #                               made it when that is not the piece's owner.
 
 = Sol
++ 10/10/2026 | - | Staff tools verify players and merge a reset key into its player; several keys per player
+- cb9eabc |  | Staff page: verify players, merge a reset key's player, linked keys
 + 10/10/2026 | - | Import a config file row in First setup, Browse on the Import page
 - a583e11 |  | Browse for a config to import: First setup row and Import page button
 + 10/10/2026 | - | The Holocrons tab's holocron centred over a match

@@ -652,7 +652,7 @@ dedicated server would vouch for are not built.
 
 ## Staff
 
-Staff is a flag on a key, like verified, that only the hub operator sets; a player
+Staff is a flag on a player, like verified, that only the hub operator sets; a player
 cannot ask for it or set it. Profiles carry it, so anyone can see who is staff. A
 staff key gets the SJK team's tools in the game: the Profile page shows Staff tools,
 as does the SJK UI in-game menu's row of icons (and the `staff` command opens them; for
@@ -676,12 +676,18 @@ themself until another is chosen, or with Me), and offers:
   ([Pictures](#pictures));
 - the player's holocrons: the four tiers to choose and Give (`StaffRequest::HolocronGive`,
   with the note field's text as the team's note), and their four newest with Remove
-  (`StaffRequest::HolocronRemove`) ([holocrons.md](holocrons.md#staff)).
+  (`StaffRequest::HolocronRemove`) ([holocrons.md](holocrons.md#staff));
+- Verify beside Take picture down (`StaffRequest::Verify`): it reads Unverify while the
+  player is verified and takes the mark away again;
+- the right column's second tab, Keys and merge: the player's main key and their
+  linked keys, each with Unlink (`StaffRequest::Unlink`, which waits for a second press
+  within 3 seconds), then Merge another key into this player ([Players with several
+  keys](#players-with-several-keys)).
 
 Each action is a request signed by the staff member's own key (`PROTOCOL.md`,
 "Staff"); the hub refuses it from a key that is not staff, keeps a log of every staff
-action, and limits a staff key to 120 requests an hour. Staff cannot make staff,
-verify keys or change names and bios.
+action, and limits a staff key to 120 requests an hour. Staff cannot make staff or change names
+and bios.
 
 Clearing achievements at the hub alone does not stick for the ones a client counts:
 the player's game sends its counts again. So when staff members clear their own,
@@ -692,6 +698,37 @@ the Arena, as the kill count goes to 0). The next kill, duel or map then unlocks
 again, which is how the unlock is tested. Clear all forgets every count on this PC.
 Clearing another player's client-counted achievements only lasts until their game
 sends its counts, which the page says.
+
+### Players with several keys
+
+A player is one main key and any number of linked keys (`Profile::keys`: the main key
+first; older hubs send none). A linked key signs as its player: the hub answers the
+player's id (`Profile::key_id`, the main key's) for it everywhere, in presence, the
+feed and profiles, so the player has one name, one set of medals, unlocks,
+achievements and holocrons, whichever PC they play from.
+
+Keys get linked by a merge, for a player who reset their key (deleted `identity.key`
+by accident, a new PC without the backup). On the Staff page, with the kept player
+chosen (the one with the history, usually), the Keys and merge tab takes the key id
+of the other player, typed or pasted (Ctrl+V), or Pick in list and then a click on them
+among the players found; the page says when it is not a key id, already this
+player's, or a staff player (who is never merged away). Merge... only asks: a card
+says who is kept and who is merged away, by name and key id, and that it cannot be
+undone, with Cancel first under the keyboard and Merge for good
+(`StaffRequest::Merge`). Everything of the merged-away player (medals, unlocks,
+achievements, holocrons, names, reports, the picture when the kept player has none, a
+verified mark) goes to the kept player and their keys become its linked keys; the hub's
+answer replaces the kept player on the page and takes the merged-away one out of the
+list. Unlink detaches one linked key: the key starts afresh the next time it is used
+(a new player at the hub, as a new key would be), and nothing it brought moves back.
+
+The client follows the person: once the hub answers the player's own profile,
+`Snapshot::key_id` is the player's id, so a linked key still recognises itself in the
+presence lists, its own holocron drops and looks in the feed, and on the Staff page.
+`Snapshot::local_key_id` stays this PC's key id: the Identity page shows and copies it,
+and what is kept per key on this PC (the medal and holocron pop-ups' seen lists) keeps
+using it. When staff unlink the key this PC uses, the client registers it again at
+once.
 
 ## Settings and commands
 

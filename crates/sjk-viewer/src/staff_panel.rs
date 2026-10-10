@@ -1,15 +1,17 @@
 //! The Staff page: for a player the hub's operator made staff, the SJK team's tools
-//! in the game (`docs/identity.md`, "Staff"): find a player, give or take back their
-//! medals, unlock or relock their unlockables, give or take back their holocrons, clear
-//! their achievements. Every action is a request signed by the
+//! in the game (`docs/identity.md`, "Staff"): find a player, verify them, give or take
+//! back their medals, unlock or relock their unlockables, give or take back their
+//! holocrons, clear their achievements, list their keys and unlink one, and merge
+//! another player into them (a player who reset their key). Every action is a request
+//! signed by the
 //! player's own key (`sjk_identity::StaffRequest`); the hub refuses it from any other
 //! key, and the page only opens for a key whose profile says staff.
 //!
 //! Opened by the Profile page's Staff tools button or the `staff` command. Like the
 //! Profile page it lives in the console and has the SJK UI's look ([`view`]). Tab
 //! and Shift+Tab walk every control; Enter or Space works the one focused; the
-//! search pill and the note take typing; Up and Down move through the players found;
-//! Escape goes back.
+//! search pill, the note and the merge field take typing; Up and Down move through the
+//! players found; Escape goes back (or lets go of a merge being confirmed or picked).
 
 use crate::menu_widgets::{BACK_TOKEN, MenuCanvas};
 use sjk_identity::{Profile, StaffRequest, StaffState};
@@ -45,11 +47,28 @@ const HOLOCRON_GIVE_TOKEN: u16 = 1_310;
 const HOLOCRON_REMOVE_BASE: u16 = 1_320;
 /// The chosen player's recent holocrons listed with Remove.
 const HOLOCRONS_SHOWN: usize = 4;
+/// Verify or Unverify the chosen player.
+const VERIFY_TOKEN: u16 = 1_400;
+/// The right column's two views: the achievements, or the keys and merging.
+const ACHIEVEMENTS_TAB_TOKEN: u16 = 1_401;
+const KEYS_TAB_TOKEN: u16 = 1_402;
+/// The key id of the player to merge away, Pick in list, Merge, and the confirmation's
+/// two buttons.
+const MERGE_FIELD_TOKEN: u16 = 1_403;
+const MERGE_PICK_TOKEN: u16 = 1_404;
+const MERGE_TOKEN: u16 = 1_405;
+const MERGE_CONFIRM_TOKEN: u16 = 1_406;
+const MERGE_CANCEL_TOKEN: u16 = 1_407;
+/// Unlink, one token per linked key listed.
+const UNLINK_BASE: u16 = 1_410;
+const LINKED_SHOWN: usize = 6;
+/// Longest text the merge field takes (a pasted key id with spaces round it).
+const MERGE_FIELD_MAX: usize = 40;
 /// Longest search, as the hub takes it.
 const QUERY_MAX: usize = 64;
 /// Longest note with a medal or an unlock, as the hub takes it.
 const NOTE_MAX: usize = 200;
-/// How long Clear all waits for its second press.
+/// How long Clear all and Unlink wait for their second press.
 const CONFIRM_FOR: Duration = Duration::from_secs(3);
 
 /// What the console does after the page handled an event.
@@ -68,6 +87,50 @@ pub(crate) struct Inputs<'a> {
     pub(crate) staff: &'a StaffState,
 }
 
+/// What the right column shows.
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+enum RightView {
+    #[default]
+    Achievements,
+    Keys,
+}
+
+/// A merge waiting for its confirmation: who is kept and who goes.
+#[derive(Clone, Debug, Eq, PartialEq)]
+struct PendingMerge {
+    kept: String,
+    from: String,
+}
+
+/// Why the merge field's key cannot be merged into the chosen player yet.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum MergeProblem {
+    /// Nothing typed or picked.
+    Empty,
+    /// Not 16 hex digits.
+    NotKey,
+    /// The chosen player's own key (main or linked).
+    Same,
+    /// A staff player, which the hub never merges away.
+    Staff,
+}
+
+impl MergeProblem {
+    fn words(self) -> &'static str {
+        match self {
+            Self::Empty => "Type or paste the other player's key id, or pick them in the list",
+            Self::NotKey => "A key id is 16 hex digits",
+            Self::Same => "That key is already this player's",
+            Self::Staff => "A staff player cannot be merged away",
+        }
+    }
+}
+
+/// The merge field's text as a key id: trimmed and lower case.
+fn merge_key(text: &str) -> String {
+    text.trim().to_ascii_lowercase()
+}
+
 /// What the last frame showed, for keys and clicks.
 #[derive(Debug, Default)]
 struct Shown {
@@ -84,6 +147,12 @@ struct Shown {
     /// The numbers of the holocrons listed with Remove, newest first, and how many.
     holocrons: [u64; HOLOCRONS_SHOWN],
     holocron_rows: usize,
+    /// The chosen player is verified.
+    verified: bool,
+    /// The chosen player's linked keys listed with Unlink.
+    linked: Vec<String>,
+    /// Why the merge field's key cannot be merged in, or `None` when it can.
+    merge_problem: Option<MergeProblem>,
 }
 
 pub(crate) struct Panel {
@@ -100,8 +169,17 @@ pub(crate) struct Panel {
     focus: u16,
     /// The controls in the order Tab visits them, laid out by the last frame.
     order: Vec<u16>,
-    /// When Clear all was pressed once.
-    confirm_all: Option<Instant>,
+    /// The button pressed once (Clear all, an Unlink) waiting for its second press,
+    /// and when.
+    confirm: Option<(u16, Instant)>,
+    /// What the right column shows.
+    right: RightView,
+    /// The merge field: the key id of the player to merge away.
+    merge_from: String,
+    /// The next player chosen in the list fills the merge field instead.
+    picking: bool,
+    /// A merge waiting for Merge for good or Cancel.
+    pending_merge: Option<PendingMerge>,
     shown: Shown,
     epoch: Instant,
     /// What a world shot shows in place of the live profile and answers.
@@ -141,7 +219,11 @@ impl Panel {
             holocron_tier: 0,
             focus: SEARCH_TOKEN,
             order: Vec::with_capacity(64),
-            confirm_all: None,
+            confirm: None,
+            right: RightView::Achievements,
+            merge_from: String::new(),
+            picking: false,
+            pending_merge: None,
             shown: Shown::default(),
             epoch: Instant::now(),
             #[cfg(test)]
@@ -158,7 +240,9 @@ impl Panel {
         self.open = true;
         self.owns_console = owns_console;
         self.focus = SEARCH_TOKEN;
-        self.confirm_all = None;
+        self.confirm = None;
+        self.picking = false;
+        self.pending_merge = None;
     }
 
     /// Closing the page closes the console too.
@@ -193,17 +277,58 @@ impl Panel {
             .or(me.filter(|me| me.key_id == key))
     }
 
-    /// Whether Clear all is waiting for its second press.
-    fn confirming(&self) -> bool {
-        self.confirm_all
-            .is_some_and(|at| at.elapsed() < CONFIRM_FOR)
+    /// Whether the button `token` is waiting for its second press.
+    fn confirming(&self, token: u16) -> bool {
+        self.confirm
+            .is_some_and(|(pressed, at)| pressed == token && at.elapsed() < CONFIRM_FOR)
+    }
+
+    /// A press of a button that needs two: whether this one is the second.
+    fn second_press(&mut self, token: u16) -> bool {
+        if self.confirming(token) {
+            self.confirm = None;
+            true
+        } else {
+            self.confirm = Some((token, Instant::now()));
+            false
+        }
+    }
+
+    /// Why `from`, the merge field's key, cannot be merged into `target` yet, knowing
+    /// the players found; `None` when it can.
+    fn merge_problem(
+        from: &str,
+        target: Option<&Profile>,
+        players: &[Profile],
+    ) -> Option<MergeProblem> {
+        if from.is_empty() {
+            return Some(MergeProblem::Empty);
+        }
+        if from.len() != 16 || !from.bytes().all(|byte| byte.is_ascii_hexdigit()) {
+            return Some(MergeProblem::NotKey);
+        }
+        if target.is_some_and(|target| target.has_key(from)) {
+            return Some(MergeProblem::Same);
+        }
+        if players
+            .iter()
+            .any(|player| player.has_key(from) && player.staff)
+        {
+            return Some(MergeProblem::Staff);
+        }
+        None
     }
 
     /// What Enter (or a click) on `token` does.
     fn activate(&mut self, token: u16) -> PanelAction {
         self.focus = token;
-        if token != CLEAR_ALL_TOKEN {
-            self.confirm_all = None;
+        if self.confirm.is_some_and(|(pressed, _)| pressed != token) {
+            self.confirm = None;
+        }
+        if token != MERGE_PICK_TOKEN
+            && !(PLAYER_BASE..PLAYER_BASE + PLAYERS_SHOWN as u16).contains(&token)
+        {
+            self.picking = false;
         }
         let target = self.shown.target.clone();
         match token {
@@ -213,6 +338,71 @@ impl Panel {
             ME_TOKEN => {
                 self.selected.clone_from(&self.shown.me);
                 PanelAction::None
+            }
+            VERIFY_TOKEN => match target {
+                Some(key_id) => PanelAction::Request(StaffRequest::Verify {
+                    key_id,
+                    verified: !self.shown.verified,
+                }),
+                None => PanelAction::None,
+            },
+            ACHIEVEMENTS_TAB_TOKEN => {
+                self.right = RightView::Achievements;
+                PanelAction::None
+            }
+            KEYS_TAB_TOKEN => {
+                self.right = RightView::Keys;
+                PanelAction::None
+            }
+            MERGE_FIELD_TOKEN => PanelAction::None,
+            MERGE_PICK_TOKEN => {
+                self.picking = !self.picking;
+                PanelAction::None
+            }
+            MERGE_TOKEN => {
+                if let Some(kept) = target
+                    && self.shown.merge_problem.is_none()
+                {
+                    self.pending_merge = Some(PendingMerge {
+                        kept,
+                        from: merge_key(&self.merge_from),
+                    });
+                    // Cancel first, so a hurried Enter does not merge.
+                    self.focus = MERGE_CANCEL_TOKEN;
+                }
+                PanelAction::None
+            }
+            MERGE_CANCEL_TOKEN => {
+                self.pending_merge = None;
+                self.focus = MERGE_TOKEN;
+                PanelAction::None
+            }
+            MERGE_CONFIRM_TOKEN => match self.pending_merge.take() {
+                // Only the merge confirmed for the player still chosen.
+                Some(merge) if target.as_deref() == Some(merge.kept.as_str()) => {
+                    self.merge_from.clear();
+                    self.focus = MERGE_FIELD_TOKEN;
+                    PanelAction::Request(StaffRequest::Merge {
+                        key_id: merge.kept,
+                        from: merge.from,
+                    })
+                }
+                _ => PanelAction::None,
+            },
+            token if (UNLINK_BASE..UNLINK_BASE + LINKED_SHOWN as u16).contains(&token) => {
+                let Some(key_id) = self
+                    .shown
+                    .linked
+                    .get(usize::from(token - UNLINK_BASE))
+                    .cloned()
+                else {
+                    return PanelAction::None;
+                };
+                if self.second_press(token) {
+                    PanelAction::Request(StaffRequest::Unlink { key_id })
+                } else {
+                    PanelAction::None
+                }
             }
             RECENT_TOKEN => {
                 self.query.clear();
@@ -229,20 +419,24 @@ impl Panel {
                 let Some(key_id) = target else {
                     return PanelAction::None;
                 };
-                if self.confirming() {
-                    self.confirm_all = None;
+                if self.second_press(CLEAR_ALL_TOKEN) {
                     PanelAction::Request(StaffRequest::ClearAchievements {
                         key_id,
                         id: String::new(),
                     })
                 } else {
-                    self.confirm_all = Some(Instant::now());
                     PanelAction::None
                 }
             }
             token if (PLAYER_BASE..PLAYER_BASE + PLAYERS_SHOWN as u16).contains(&token) => {
                 if let Some(key) = self.shown.players.get(usize::from(token - PLAYER_BASE)) {
-                    self.selected = Some(key.clone());
+                    if self.picking {
+                        // Picking the player to merge away: the chosen one stays.
+                        self.picking = false;
+                        self.merge_from.clone_from(key);
+                    } else {
+                        self.selected = Some(key.clone());
+                    }
                 }
                 PanelAction::None
             }
@@ -360,6 +554,22 @@ impl Panel {
         self.selected = Some(key_id.to_owned());
     }
 
+    /// Show the Keys and merge view with `from` in the merge field, and its confirmation
+    /// for the chosen player when `confirm`, for a world shot.
+    #[cfg(test)]
+    pub(crate) fn merge_for_shot(&mut self, from: &str, confirm: bool) {
+        self.right = RightView::Keys;
+        self.merge_from = from.to_owned();
+        self.pending_merge = None;
+        if confirm && let Some(kept) = self.shown.target.clone() {
+            self.pending_merge = Some(PendingMerge {
+                kept,
+                from: merge_key(from),
+            });
+            self.focus = MERGE_CANCEL_TOKEN;
+        }
+    }
+
     /// Move the keyboard `by` controls along the order the last frame laid out.
     fn step(&mut self, forward: bool) {
         if self.order.is_empty() {
@@ -382,9 +592,14 @@ impl Panel {
         let PhysicalKey::Code(key) = event.physical_key else {
             return PanelAction::None;
         };
-        let typing = matches!(self.focus, SEARCH_TOKEN | NOTE_TOKEN);
+        let typing = matches!(self.focus, SEARCH_TOKEN | NOTE_TOKEN | MERGE_FIELD_TOKEN);
         let in_list = (PLAYER_BASE..PLAYER_BASE + PLAYERS_SHOWN as u16).contains(&self.focus);
         match key {
+            // A merge being confirmed or picked is let go first.
+            KeyCode::Escape if self.pending_merge.is_some() => {
+                return self.activate(MERGE_CANCEL_TOKEN);
+            }
+            KeyCode::Escape if self.picking => self.picking = false,
             KeyCode::Escape => return PanelAction::Close,
             KeyCode::Tab => self.step(!shift),
             KeyCode::ArrowDown | KeyCode::ArrowUp if in_list => {
@@ -404,10 +619,10 @@ impl Panel {
             KeyCode::Enter | KeyCode::NumpadEnter => return self.activate(self.focus),
             KeyCode::Space if !typing => return self.activate(self.focus),
             KeyCode::Backspace if typing => {
-                let field = if self.focus == SEARCH_TOKEN {
-                    &mut self.query
-                } else {
-                    &mut self.note
+                let field = match self.focus {
+                    SEARCH_TOKEN => &mut self.query,
+                    MERGE_FIELD_TOKEN => &mut self.merge_from,
+                    _ => &mut self.note,
                 };
                 field.pop();
             }
@@ -421,11 +636,11 @@ impl Panel {
                     Some(text) => text,
                     None => return PanelAction::None,
                 };
-                if self.focus == SEARCH_TOKEN {
-                    type_into(&mut self.query, text, QUERY_MAX);
-                } else {
-                    type_into(&mut self.note, text, NOTE_MAX);
-                }
+                match self.focus {
+                    SEARCH_TOKEN => type_into(&mut self.query, text, QUERY_MAX),
+                    MERGE_FIELD_TOKEN => type_into(&mut self.merge_from, text, MERGE_FIELD_MAX),
+                    _ => type_into(&mut self.note, text, NOTE_MAX),
+                };
             }
             _ => {}
         }
@@ -443,7 +658,7 @@ impl Panel {
         match event.token {
             Some(BACK_TOKEN) => PanelAction::Close,
             // A click in a field puts the keyboard there; it searches on Enter.
-            Some(token @ (SEARCH_TOKEN | NOTE_TOKEN)) => {
+            Some(token @ (SEARCH_TOKEN | NOTE_TOKEN | MERGE_FIELD_TOKEN)) => {
                 self.focus = token;
                 PanelAction::None
             }
@@ -460,6 +675,7 @@ mod tests {
 
     pub(super) fn profile(key_id: &str, name: &str) -> Profile {
         Profile {
+            keys: Vec::new(),
             key_id: key_id.to_owned(),
             key: String::new(),
             name: name.to_owned(),
@@ -729,7 +945,7 @@ mod tests {
     fn clear_all_needs_a_second_press() {
         let (mut panel, me, _) = drawn(Vec::new());
         assert_eq!(panel.activate(CLEAR_ALL_TOKEN), PanelAction::None);
-        assert!(panel.confirming());
+        assert!(panel.confirming(CLEAR_ALL_TOKEN));
         assert_eq!(
             panel.activate(CLEAR_ALL_TOKEN),
             PanelAction::Request(StaffRequest::ClearAchievements {
@@ -748,6 +964,151 @@ mod tests {
                 id: "first_blood".into()
             })
         );
+    }
+
+    /// `panel` laid out again with `players` found and `me` as the player's own.
+    fn redraw(panel: &mut Panel, me: &Profile, players: Vec<Profile>) {
+        let staff = StaffState {
+            players,
+            ..StaffState::default()
+        };
+        let fonts = crate::text::load_modern(1.0, None).expect("Inter");
+        panel.build(
+            &Inputs {
+                me: Some(me),
+                staff: &staff,
+            },
+            &fonts.font,
+            [1920.0, 1080.0],
+        );
+    }
+
+    #[test]
+    fn verify_shows_the_state_and_sends_the_other() {
+        let (mut panel, me, _) = drawn(Vec::new());
+        assert!(panel.order.contains(&VERIFY_TOKEN));
+        assert_eq!(
+            panel.activate(VERIFY_TOKEN),
+            PanelAction::Request(StaffRequest::Verify {
+                key_id: me.key_id.clone(),
+                verified: true
+            })
+        );
+        let verified = Profile {
+            verified: true,
+            ..me.clone()
+        };
+        redraw(&mut panel, &verified, Vec::new());
+        assert_eq!(
+            panel.activate(VERIFY_TOKEN),
+            PanelAction::Request(StaffRequest::Verify {
+                key_id: me.key_id,
+                verified: false
+            })
+        );
+    }
+
+    #[test]
+    fn a_linked_key_is_unlinked_on_a_second_press_and_the_main_key_never() {
+        let (mut panel, me, _) = drawn(Vec::new());
+        let _ = panel.activate(KEYS_TAB_TOKEN);
+        let linked = Profile {
+            keys: vec![me.key_id.clone(), "cccccccccccccccc".into()],
+            ..me.clone()
+        };
+        redraw(&mut panel, &linked, Vec::new());
+        assert!(panel.order.contains(&UNLINK_BASE));
+        assert!(
+            !panel.order.contains(&(UNLINK_BASE + 1)),
+            "the main key has none"
+        );
+        assert_eq!(panel.activate(UNLINK_BASE), PanelAction::None);
+        assert!(panel.confirming(UNLINK_BASE));
+        assert_eq!(
+            panel.activate(UNLINK_BASE),
+            PanelAction::Request(StaffRequest::Unlink {
+                key_id: "cccccccccccccccc".into()
+            })
+        );
+        // Anything else in between starts again.
+        let _ = panel.activate(UNLINK_BASE);
+        let _ = panel.activate(KEYS_TAB_TOKEN);
+        assert_eq!(panel.activate(UNLINK_BASE), PanelAction::None);
+        assert_eq!(panel.activate(UNLINK_BASE + 1), PanelAction::None);
+    }
+
+    #[test]
+    fn a_merge_keeps_the_chosen_player_and_asks_before_it_goes() {
+        let reset = profile("bbbbbbbbbbbbbbbb", "Fox");
+        let (mut panel, me, _) = drawn(vec![reset.clone()]);
+        let _ = panel.activate(KEYS_TAB_TOKEN);
+        let players = vec![reset.clone()];
+        redraw(&mut panel, &me, players.clone());
+        assert_eq!(panel.shown.merge_problem, Some(MergeProblem::Empty));
+        assert!(!panel.order.contains(&MERGE_TOKEN), "nothing to merge yet");
+        // Typed: checked as a key id, never the chosen player's own.
+        for (typed, problem) in [
+            ("bbbb", Some(MergeProblem::NotKey)),
+            ("AAAAAAAAAAAAAAAA", Some(MergeProblem::Same)),
+            (" BBBBBBBBBBBBBBBB ", None),
+        ] {
+            panel.merge_from = typed.into();
+            redraw(&mut panel, &me, players.clone());
+            assert_eq!(panel.shown.merge_problem, problem, "{typed}");
+        }
+        // Merge only asks; Merge for good sends, keeping the chosen player.
+        assert_eq!(panel.activate(MERGE_TOKEN), PanelAction::None);
+        assert_eq!(panel.focus, MERGE_CANCEL_TOKEN, "Cancel has the keyboard");
+        redraw(&mut panel, &me, players.clone());
+        assert!(panel.order.contains(&MERGE_CONFIRM_TOKEN));
+        assert_eq!(
+            panel.activate(MERGE_CONFIRM_TOKEN),
+            PanelAction::Request(StaffRequest::Merge {
+                key_id: me.key_id.clone(),
+                from: "bbbbbbbbbbbbbbbb".into()
+            })
+        );
+        assert!(panel.merge_from.is_empty());
+        assert_eq!(panel.activate(MERGE_CONFIRM_TOKEN), PanelAction::None);
+        // Picked in the list: the field fills, the chosen player stays.
+        let _ = panel.activate(MERGE_PICK_TOKEN);
+        assert!(panel.picking);
+        assert_eq!(panel.activate(PLAYER_BASE), PanelAction::None);
+        assert!(!panel.picking);
+        assert_eq!(panel.merge_from, "bbbbbbbbbbbbbbbb");
+        redraw(&mut panel, &me, players.clone());
+        assert_eq!(panel.shown.target.as_deref(), Some(me.key_id.as_str()));
+        // Choosing another player lets a merge waiting for confirmation go.
+        let _ = panel.activate(MERGE_TOKEN);
+        assert!(panel.pending_merge.is_some());
+        panel.selected = Some("bbbbbbbbbbbbbbbb".into());
+        redraw(&mut panel, &me, players.clone());
+        assert!(panel.pending_merge.is_none());
+        assert_eq!(panel.activate(MERGE_CONFIRM_TOKEN), PanelAction::None);
+        // Escape cancels a waiting merge before it closes the page.
+        panel.selected = None;
+        redraw(&mut panel, &me, players);
+        let _ = panel.activate(MERGE_TOKEN);
+        assert!(panel.pending_merge.is_some());
+        assert_eq!(panel.activate(MERGE_CANCEL_TOKEN), PanelAction::None);
+        assert!(panel.pending_merge.is_none());
+    }
+
+    #[test]
+    fn a_staff_player_is_never_offered_to_merge_away() {
+        let other_staff = Profile {
+            staff: true,
+            keys: vec!["bbbbbbbbbbbbbbbb".into(), "cccccccccccccccc".into()],
+            ..profile("bbbbbbbbbbbbbbbb", "Mod")
+        };
+        let (mut panel, me, _) = drawn(vec![other_staff.clone()]);
+        let _ = panel.activate(KEYS_TAB_TOKEN);
+        // By a linked key too.
+        panel.merge_from = "cccccccccccccccc".into();
+        redraw(&mut panel, &me, vec![other_staff]);
+        assert_eq!(panel.shown.merge_problem, Some(MergeProblem::Staff));
+        assert_eq!(panel.activate(MERGE_TOKEN), PanelAction::None);
+        assert!(panel.pending_merge.is_none());
     }
 
     #[test]

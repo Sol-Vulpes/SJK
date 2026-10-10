@@ -3359,3 +3359,19 @@ test: Old profile with cg_illuminate 0 or 1: start: the holocron is out and cg_i
 test: Old bind to force_illuminate: Key bindings lists it as Toy: Illuminate and it still works.
 test: A wheel.json custom choice running force_illuminate still toggles it; Tab does not list it.
 note: Others still see your lit holocron through the hub. Not tried in a game.
+
+[staff-merge]
+area: Menus & settings
+title: Staff page: Verify, linked keys with Unlink, merge a reset key's player into the old one
+change: Verify / Unverify beside Take picture down; right column tab Keys and merge.
+change: Keys lists the main key and linked keys (Unlink on a second press); merge asks on a card.
+change: A linked key plays as its player: the hub answers the main key's id for it everywhere.
+test: Hub with the merge change. Staff page, choose a test player: Verify, the tick and tag show.
+test: Make a second key (move identity.key away, start, register), back to the first key.
+test: Choose the old player, Keys and merge: paste the new key id (or Pick in list, click it).
+test: Merge...: the card names who is kept and who goes; Cancel first; Esc cancels too.
+test: Merge for good: the new player leaves the list; the kept one lists the key as Linked.
+test: Play on the new key: your name, medals and holocrons are the old player's.
+test: Its Identity page shows its own key id. A staff player cannot be merged away (red line).
+test: Unlink the key (press twice): next start on that key is a fresh player, nothing moved back.
+note: Unit tests and world shots only; hub side built in parallel, not tried in a game.

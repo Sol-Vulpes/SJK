@@ -54,7 +54,7 @@ pub(crate) fn parse(args: &[String]) -> Result<Action, String> {
 pub(crate) fn key_lines(snapshot: Option<&Snapshot>, file: &std::path::Path) -> Vec<String> {
     match snapshot {
         Some(snapshot) => vec![
-            format!("Key id: {}", snapshot.key_id),
+            format!("Key id: {}", snapshot.local_key_id),
             format!(
                 "The private key is in {}. Back it up: losing it loses this identity, and nobody else may have it.",
                 file.display()
@@ -160,9 +160,11 @@ mod tests {
 
     fn snapshot() -> Snapshot {
         Snapshot {
+            local_key_id: "0123456789abcdef".to_owned(),
             status: Status::Online,
             key_id: "0123456789abcdef".to_owned(),
             me: Some(Profile {
+                keys: Vec::new(),
                 key_id: "0123456789abcdef".to_owned(),
                 key: String::new(),
                 name: "Sol".to_owned(),
@@ -247,6 +249,7 @@ mod tests {
         shown.profiles.insert(
             "fedcba9876543210".to_owned(),
             Profile {
+                keys: Vec::new(),
                 key_id: "fedcba9876543210".to_owned(),
                 key: String::new(),
                 name: "Fox".to_owned(),

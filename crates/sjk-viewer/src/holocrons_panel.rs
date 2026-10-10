@@ -530,6 +530,7 @@ mod tests {
         me: Option<sjk_identity::Profile>,
     ) -> sjk_identity::Snapshot {
         sjk_identity::Snapshot {
+            local_key_id: "0123456789abcdef".into(),
             status,
             key_id: "0123456789abcdef".into(),
             me,
@@ -552,6 +553,7 @@ mod tests {
 
     fn profile(holocrons: Vec<sjk_identity::Holocron>) -> sjk_identity::Profile {
         sjk_identity::Profile {
+            keys: Vec::new(),
             key_id: "0123456789abcdef".into(),
             key: String::new(),
             name: "Sol".into(),

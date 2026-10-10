@@ -71,7 +71,7 @@ impl ViewerConsole {
             PanelAction::Reveal => {}
             PanelAction::CopyKeyId => {
                 if let Some(snapshot) = crate::player_identity::snapshot()
-                    && crate::console::clipboard::copy(&snapshot.key_id)
+                    && crate::console::clipboard::copy(&snapshot.local_key_id)
                 {
                     self.identity_panel.note_copied();
                 }

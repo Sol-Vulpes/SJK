@@ -102,8 +102,14 @@ pub enum Status {
 pub struct Snapshot {
     /// The service's status.
     pub status: Status,
-    /// The player's own key id.
+    /// The player's own id at the hub: this PC's key id until the hub answered the
+    /// player's profile, then the id of the person that profile is (another one when
+    /// this key is linked to a person's main key). Presence, the feed and the pages
+    /// recognise the player by it.
     pub key_id: String,
+    /// This PC's key id (the key file's), whatever person it belongs to: for what is
+    /// kept per key on this PC (seen lists, counts) and the Identity page.
+    pub local_key_id: String,
     /// The player's profile at the hub, once registered.
     pub me: Option<Profile>,
     /// The game server being claimed on, if any.
@@ -201,6 +207,7 @@ impl Snapshot {
     fn new(key_id: String) -> Self {
         Self {
             status: Status::Disabled,
+            local_key_id: key_id.clone(),
             key_id,
             me: None,
             server: None,
@@ -217,6 +224,24 @@ impl Snapshot {
             packs_revision: 0,
             assets_note: None,
             holocrons: None,
+        }
+    }
+
+    /// Take `profile` as the player's own: the player's id follows the person it is
+    /// (a linked key's profile is its person's).
+    fn set_me(&mut self, profile: Profile) {
+        if self.key_id != profile.key_id {
+            self.key_id.clone_from(&profile.key_id);
+        }
+        self.me = Some(profile);
+    }
+
+    /// Forget the own profile (the identity off, another hub, a key unlinked): the
+    /// player is this PC's key again until the hub answers.
+    fn clear_me(&mut self) {
+        self.me = None;
+        if self.key_id != self.local_key_id {
+            self.key_id.clone_from(&self.local_key_id);
         }
     }
 
@@ -528,6 +553,7 @@ impl Worker {
                 .as_ref()
                 .map(|location| location.server.to_string()),
             chat: self.chat_on,
+            person: lock(&self.snapshot).key_id.clone(),
             generation: 0,
         };
         let mut shared = lock_feed(&self.feed);
@@ -714,7 +740,7 @@ impl Worker {
         self.hub = None;
         self.registered = false;
         self.name_sent = None;
-        self.update(|snapshot| snapshot.me = None);
+        self.update(Snapshot::clear_me);
         if settings.enabled && !settings.hub_url.trim().is_empty() {
             match (self.make_hub)(settings.hub_url.trim()) {
                 Ok(hub) => self.hub = Some(hub),
@@ -829,7 +855,7 @@ impl Worker {
                 } else {
                     "saved"
                 };
-                snapshot.me = Some(profile);
+                snapshot.set_me(profile);
                 done.to_owned()
             });
             snapshot.avatar = Some(outcome_of(serial, outcome));
@@ -856,7 +882,7 @@ impl Worker {
         };
         self.update(|snapshot| match outcome {
             Ok(profile) => {
-                snapshot.me = Some(profile);
+                snapshot.set_me(profile);
                 snapshot.notice = Some("saved".to_owned());
             }
             Err(error) => snapshot.notice = Some(error.to_string()),
@@ -891,10 +917,22 @@ impl Worker {
                 if matches!(request, StaffRequest::Search(_)) {
                     staff.players = profiles;
                 } else if let Some(profile) = profiles.first() {
+                    // The player merged away is part of the kept one now.
+                    if let StaffRequest::Merge { from, .. } = request {
+                        staff.remove(from, &profile.key_id);
+                    }
                     staff.replace(profile);
-                    // A change to the player's own key shows on their pages at once.
+                    // A change to the player's own person shows on their pages at once.
                     if Some(profile.key_id.as_str()) == me.as_ref().map(|me| me.key_id.as_str()) {
-                        lock(&self.snapshot).me = Some(profile.clone());
+                        lock(&self.snapshot).set_me(profile.clone());
+                    }
+                    // This PC's own key unlinked: it starts afresh, registering again.
+                    if let StaffRequest::Unlink { key_id } = request
+                        && *key_id == self.identity.key_id()
+                    {
+                        self.registered = false;
+                        self.name_sent = None;
+                        self.update(Snapshot::clear_me);
                     }
                 }
             }
@@ -950,7 +988,7 @@ impl Worker {
                     self.due_assets = now;
                     self.due_holocrons = now;
                     self.update(|snapshot| {
-                        snapshot.me = Some(profile);
+                        snapshot.set_me(profile);
                         snapshot.status = Status::Online;
                     });
                 }
@@ -1191,7 +1229,7 @@ impl Worker {
                 Ok(profile) => {
                     self.name_sent = self.name.clone();
                     self.due_profile = now + PROFILE_EVERY;
-                    lock(&self.snapshot).me = Some(profile);
+                    lock(&self.snapshot).set_me(profile);
                 }
                 Err(failure) => {
                     self.due_name = now + self.backoff;
@@ -1205,7 +1243,7 @@ impl Worker {
             match hub.profile(&self.identity.key_id()) {
                 Ok(profile) => {
                     self.due_profile = now + PROFILE_EVERY;
-                    lock(&self.snapshot).me = Some(profile);
+                    lock(&self.snapshot).set_me(profile);
                 }
                 Err(failure) => {
                     self.due_profile = now + self.backoff;
@@ -1312,8 +1350,6 @@ pub struct Service {
     looks: Arc<Mutex<VecDeque<QueuedLook>>>,
     /// What the feed is told to read, for the looks' generation.
     feed: Arc<Mutex<FeedShared>>,
-    /// The player's own key id, to recognise its looks in the feed.
-    key_id: String,
     /// Set to end the feed thread, which ends after its poll at the latest.
     feed_stop: Arc<std::sync::atomic::AtomicBool>,
     finished: Mutex<Receiver<()>>,
@@ -1405,7 +1441,6 @@ impl Service {
             emotes,
             looks,
             feed,
-            key_id,
             feed_stop,
             finished: Mutex::new(finished),
             note_tags: std::sync::atomic::AtomicU64::new(0),
@@ -1587,11 +1622,16 @@ impl Service {
     /// the own profile again soon when the hub took a skin back.
     pub fn take_looks(&self, server: Option<SocketAddr>) -> ReceivedLooks {
         let received = crate::feed::take_looks(&self.feed, &self.looks, server);
+        if received.events.is_empty() {
+            return received;
+        }
+        // The player's own id follows the person this key belongs to.
+        let own_id = lock(&self.snapshot).key_id.clone();
         if let Some(own) = received
             .events
             .iter()
             .rev()
-            .find(|event| event.key_id == self.key_id)
+            .find(|event| event.key_id == own_id)
         {
             let _ = self
                 .commands
@@ -1714,6 +1754,7 @@ mod tests {
             unlocks: Vec::new(),
             holocron_counts: crate::wire::HolocronCounts::default(),
             holocrons: Vec::new(),
+            keys: Vec::new(),
         }
     }
 
@@ -1933,6 +1974,22 @@ mod tests {
                     ..profile("Target")
                 }],
                 StaffRequest::ChatDelete { .. } | StaffRequest::ChatMute { .. } => Vec::new(),
+                StaffRequest::Verify { key_id, verified } => vec![Profile {
+                    key_id: key_id.clone(),
+                    verified: *verified,
+                    ..profile("Target")
+                }],
+                // The kept person, with the merged-away key linked to it.
+                StaffRequest::Merge { key_id, from } => vec![Profile {
+                    key_id: key_id.clone(),
+                    keys: vec![key_id.clone(), from.clone()],
+                    ..profile("Target")
+                }],
+                // The person the key was linked to, without it.
+                StaffRequest::Unlink { .. } => vec![Profile {
+                    keys: vec!["0123456789abcdef".to_owned()],
+                    ..profile("Sol")
+                }],
             })
         }
     }
@@ -2771,6 +2828,123 @@ mod tests {
         );
         worker.handle(Command::SetBio("  hello   there ".to_owned()), t0);
         assert_eq!(fake.log().last().unwrap(), "bio hello there");
+    }
+
+    #[test]
+    fn the_own_id_follows_the_person_the_key_belongs_to() {
+        let fake = Fake::default();
+        let t0 = Instant::now();
+        let (mut worker, snapshot) = worker(&fake, t0);
+        let local = Identity::from_seed([1; 32]).key_id();
+        assert_eq!(
+            lock(&snapshot).key_id,
+            local,
+            "this PC's key until the hub answers"
+        );
+        worker.handle(Command::Configure(on("https://hub")), t0);
+        worker.tick(t0);
+        // The fake hub answers for person 0123456789abcdef, as for a linked key.
+        let read = lock(&snapshot).clone();
+        assert_eq!(read.key_id, "0123456789abcdef");
+        assert_eq!(read.local_key_id, local, "the key file's id stays");
+        // The feed is told, so the player's own drops are still theirs.
+        assert_eq!(lock_feed(&worker.feed).person, "0123456789abcdef");
+        // The identity off: this PC's key again.
+        worker.handle(
+            Command::Configure(Settings {
+                enabled: false,
+                ..on("https://hub")
+            }),
+            t0,
+        );
+        let read = lock(&snapshot).clone();
+        assert!(read.me.is_none());
+        assert_eq!(read.key_id, local);
+        assert_eq!(lock_feed(&worker.feed).person, local);
+    }
+
+    #[test]
+    fn staff_verify_merge_and_unlink_update_the_list_they_answer() {
+        let fake = Fake::default();
+        let t0 = Instant::now();
+        let (mut worker, snapshot) = worker(&fake, t0);
+        worker.handle(Command::Configure(on("https://hub")), t0);
+        worker.tick(t0);
+        let staff = Arc::clone(&worker.staff);
+        let state = || staff.lock().unwrap().clone();
+        {
+            let mut staff = staff.lock().unwrap();
+            staff.players = vec![
+                Profile {
+                    key_id: "aaaaaaaaaaaaaaaa".into(),
+                    ..profile("Kept")
+                },
+                Profile {
+                    key_id: "bbbbbbbbbbbbbbbb".into(),
+                    keys: vec!["bbbbbbbbbbbbbbbb".into(), "cccccccccccccccc".into()],
+                    ..profile("Reset")
+                },
+                Profile {
+                    key_id: "dddddddddddddddd".into(),
+                    ..profile("Else")
+                },
+            ];
+        }
+        worker.handle(
+            Command::Staff(StaffRequest::Verify {
+                key_id: "aaaaaaaaaaaaaaaa".into(),
+                verified: true,
+            }),
+            t0,
+        );
+        assert_eq!(state().message, "Verified");
+        assert!(state().players[0].verified);
+        // Merging by a linked key of the merged-away person takes that person out.
+        worker.handle(
+            Command::Staff(StaffRequest::Merge {
+                key_id: "aaaaaaaaaaaaaaaa".into(),
+                from: "cccccccccccccccc".into(),
+            }),
+            t0,
+        );
+        let merged = state();
+        assert_eq!(merged.message, "Merged cccccccccccccccc into this player");
+        let ids: Vec<&str> = merged.players.iter().map(|p| p.key_id.as_str()).collect();
+        assert_eq!(ids, ["aaaaaaaaaaaaaaaa", "dddddddddddddddd"]);
+        assert_eq!(
+            merged.players[0].keys,
+            ["aaaaaaaaaaaaaaaa", "cccccccccccccccc"]
+        );
+        // Unlinking another key leaves this PC registered.
+        let registers = || {
+            fake.log()
+                .iter()
+                .filter(|l| l.starts_with("register"))
+                .count()
+        };
+        let before = registers();
+        worker.handle(
+            Command::Staff(StaffRequest::Unlink {
+                key_id: "cccccccccccccccc".into(),
+            }),
+            t0,
+        );
+        assert_eq!(state().message, "Unlinked cccccccccccccccc");
+        worker.tick(t0);
+        assert_eq!(registers(), before);
+        // Unlinking this PC's own key: it starts afresh and registers again.
+        let local = Identity::from_seed([1; 32]).key_id();
+        worker.handle(
+            Command::Staff(StaffRequest::Unlink {
+                key_id: local.clone(),
+            }),
+            t0,
+        );
+        assert!(lock(&snapshot).me.is_none());
+        assert_eq!(lock(&snapshot).key_id, local);
+        worker.tick(t0);
+        assert_eq!(registers(), before + 1);
+        assert!(lock(&snapshot).me.is_some());
     }
 
     #[test]

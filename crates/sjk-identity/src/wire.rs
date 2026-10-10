@@ -55,6 +55,27 @@ pub struct Profile {
     /// from hubs older than holocrons).
     #[serde(default)]
     pub holocrons: Vec<Holocron>,
+    /// The person's keys: the main key first, then the keys linked to it (absent from
+    /// hubs older than linked keys). A linked key signs as its person, so the hub
+    /// answers the person's [`Profile::key_id`] for it everywhere.
+    #[serde(default)]
+    pub keys: Vec<String>,
+}
+
+impl Profile {
+    /// The keys linked to the person's main key: every one of [`Profile::keys`] but the
+    /// main key (the first, which is also [`Profile::key_id`]).
+    pub fn linked_keys(&self) -> impl Iterator<Item = &str> {
+        self.keys
+            .iter()
+            .map(String::as_str)
+            .filter(move |key| *key != self.key_id)
+    }
+
+    /// Whether `key_id` is this person's: their main key or one linked to it.
+    pub fn has_key(&self, key_id: &str) -> bool {
+        self.key_id == key_id || self.keys.iter().any(|key| key == key_id)
+    }
 }
 
 /// The most holocrons a profile lists, as the hub caps them.
@@ -611,6 +632,26 @@ mod tests {
         .unwrap();
         assert_eq!(old.holocron_counts, HolocronCounts::default());
         assert!(old.holocrons.is_empty(), "an older hub sends none");
+    }
+
+    #[test]
+    fn a_persons_keys_parse_and_older_hubs_send_none() {
+        let person: Profile = serde_json::from_str(
+            r#"{"key_id":"aa","key":"bb","name":"Sol","bio":"","verified":true,"created":5,
+                "keys":["aa","cc","dd"]}"#,
+        )
+        .unwrap();
+        assert_eq!(person.keys, ["aa", "cc", "dd"]);
+        assert_eq!(person.linked_keys().collect::<Vec<_>>(), ["cc", "dd"]);
+        assert!(person.has_key("aa") && person.has_key("dd"));
+        assert!(!person.has_key("ee"));
+        let old: Profile = serde_json::from_str(
+            r#"{"key_id":"aa","key":"bb","name":"Sol","bio":"","verified":true,"created":5}"#,
+        )
+        .unwrap();
+        assert!(old.keys.is_empty(), "an older hub sends no keys");
+        assert_eq!(old.linked_keys().count(), 0);
+        assert!(old.has_key("aa"));
     }
 
     #[test]

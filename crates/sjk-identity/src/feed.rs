@@ -82,6 +82,9 @@ pub(crate) struct FeedShared {
     pub(crate) server: Option<String>,
     /// Whether the SJK chat shows: without it no message is kept.
     pub(crate) chat: bool,
+    /// The player's own id at the hub ([`crate::Snapshot::key_id`]), to tell their
+    /// drops from others'; empty for this PC's key.
+    pub(crate) person: String,
     /// Changes whenever `url` or `server` does: looks read before belong to another
     /// reading (another hub or server, or the identity since turned off).
     pub(crate) generation: u64,
@@ -147,8 +150,11 @@ pub(crate) struct FeedWorker {
     looks: Arc<Mutex<VecDeque<QueuedLook>>>,
     hub: Option<Box<dyn Hub>>,
     url: Option<String>,
-    /// The player's own key id, to tell their drops from others'.
+    /// The player's own id at the hub, to tell their drops from others': this PC's key
+    /// id, or the person's id the worker tells ([`FeedShared::person`]).
     key_id: String,
+    /// This PC's key id.
+    local_key_id: String,
     /// Called when a drop of the player's own key arrives.
     own_drop: OwnDrop,
     /// The newest own drop told of, so a replay of the feed's last minute is not news.
@@ -178,6 +184,7 @@ impl FeedWorker {
     ) -> Self {
         Self {
             key_id: identity.key_id(),
+            local_key_id: identity.key_id(),
             own_drop,
             own_drop_told: 0,
             identity,
@@ -201,6 +208,14 @@ impl FeedWorker {
     /// A poll blocks for as long as the hub holds it (at most [`WAIT`] seconds).
     pub(crate) fn step(&mut self, now: Instant) -> Duration {
         let shared = lock(&self.shared).clone();
+        let person = if shared.person.is_empty() {
+            &self.local_key_id
+        } else {
+            &shared.person
+        };
+        if *person != self.key_id {
+            self.key_id.clone_from(person);
+        }
         if shared.url != self.url {
             self.chat = shared.chat;
             self.switch(shared.url.clone(), now);
@@ -568,6 +583,7 @@ mod tests {
                 url: Some(url.to_owned()),
                 server: server.map(str::to_owned),
                 chat: true,
+                person: String::new(),
                 generation: shared.generation + 1,
             };
         }
