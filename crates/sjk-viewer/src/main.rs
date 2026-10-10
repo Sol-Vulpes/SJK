@@ -394,7 +394,7 @@ struct GpuState {
     /// Shared with the weather's cover survey thread.
     bsp: Arc<Bsp>,
     trace_scratch: TraceScratch,
-    /// `inspect` on the world: the selection and the note being written.
+    /// `worldnote`: the selection and the note being written.
     world_notes: world_notes::Notes,
     /// The note and bug report panel, and the Report a bug button (`text_dialog`).
     text_dialog: text_dialog::TextDialog,

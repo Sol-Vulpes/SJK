@@ -2099,8 +2099,9 @@ nothing a glance at the scoreboard would not: no health, Force or position.
   screen), and a second press or Escape hides it (Escape then does not open the game
   menu); it also drops when the player leaves or the map changes. After hiding it, the
   card does not return until the crosshair leaves that player. Behind you, the card is not drawn but stays pinned.
-- World notes: with no card pinned and no player under the crosshair, `inspect`
-  selects the world surface under the crosshair, or the mover whose bounds the view ray
+- World notes: `worldnote` (Settings > Key bindings > Interaction > World note; bound
+  to O by default, or `bind <key> worldnote`; until 10/10/2026 `inspect` did it when no
+  player was under the crosshair) selects the world surface under the crosshair, or the mover whose bounds the view ray
   meets first, and names it in a centre print (shader, BSP surface, lightmap or vertex
   lighting, distance). When a remap (the map's, the server's or a local `remapShader`)
   draws another shader over the surface, the print, `notes.txt` and `notes.jsonl`

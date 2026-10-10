@@ -1224,7 +1224,7 @@ hero look draws it, renamed.
 text dialog as the SJK UI's pop-up card (Sol's request, 08/10/2026). One dialog
 serves three things, and all three take this look with the SJK UI's menus:
 Report a bug (the in-game menu's row of icons), a player report's few words
-(Players, a player, a reason) and a world note (`inspect` twice,
+(Players, a player, a reason) and a world note (`worldnote` twice,
 [client.md](client.md#player-card)). The classic+ look stays with the classic
 menus ([identity.md](identity.md#bug-reports)).
 
