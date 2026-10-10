@@ -33,6 +33,25 @@ fn rack_window(first: usize, chosen: usize, rows: usize) -> usize {
     first.min(rows.saturating_sub(RACK_SHOWN))
 }
 
+/// The owned line of a shader the player holds: since when, and from the team or the
+/// medal that brings it (a medal the client does not know reads as the team).
+fn owned_line(grant: &sjk_identity::Unlock) -> String {
+    let date = crate::medals::date_text(grant.granted);
+    let from = grant
+        .medal
+        .as_deref()
+        .and_then(crate::medals::Medal::from_id)
+        .map_or_else(
+            || "from the SJK team".to_owned(),
+            |medal| format!("with your {} medal", medal.name()),
+        );
+    if date.is_empty() {
+        format!("Yours, {from}")
+    } else {
+        format!("Yours since {date}, {from}")
+    }
+}
+
 /// What a row shows: the stock blade, or a blade skin.
 #[derive(Clone, Copy)]
 struct Row {
@@ -409,17 +428,7 @@ impl Panel {
         let (line, colour) = match (row.skin, grant) {
             (None, _) if row.worn => ("What you hold now: no shader on.".to_owned(), color::MUTED),
             (None, _) => ("Wearing it takes your shader off.".to_owned(), color::MUTED),
-            (Some(_), Some(grant)) => {
-                let date = crate::medals::date_text(grant.granted);
-                (
-                    if date.is_empty() {
-                        "Yours, from the SJK team".to_owned()
-                    } else {
-                        format!("Yours since {date}, from the SJK team")
-                    },
-                    color::GOLD,
-                )
-            }
+            (Some(_), Some(grant)) => (owned_line(grant), color::GOLD),
             (Some(skin), None) => (format!("How to get it: {}", skin.how_to_get), color::MUTED),
         };
         text(
@@ -479,6 +488,31 @@ mod tests {
     use crate::menu::sjk::Frame;
 
     #[test]
+    fn the_owned_line_names_the_medal_that_brings_a_shader() {
+        let grant = |medal: Option<&str>| sjk_identity::Unlock {
+            id: "saber_glitch".to_owned(),
+            granted: 0,
+            note: String::new(),
+            medal: medal.map(str::to_owned),
+        };
+        assert_eq!(owned_line(&grant(None)), "Yours, from the SJK team");
+        assert_eq!(
+            owned_line(&grant(Some("bug_hunter"))),
+            "Yours, with your Bug Hunter medal"
+        );
+        assert_eq!(
+            owned_line(&grant(Some("from_the_future"))),
+            "Yours, from the SJK team"
+        );
+        let dated = sjk_identity::Unlock {
+            granted: 1_791_000_000,
+            ..grant(Some("early_tester"))
+        };
+        assert!(owned_line(&dated).starts_with("Yours since "));
+        assert!(owned_line(&dated).ends_with(", with your Early Tester medal"));
+    }
+
+    #[test]
     fn the_rack_scrolls_only_to_keep_the_chosen_row_in_view() {
         let rows = SHADER_ROWS;
         assert!(rows > RACK_SHOWN, "more shaders than the rack shows");
@@ -530,6 +564,7 @@ mod tests {
             id: "saber_sun".into(),
             granted: 1_791_336_225,
             note: "a long note from the team ".repeat(8),
+            medal: None,
         }];
         let font = crate::text::load_modern(1.0, None).expect("Inter").font;
         for viewport in [

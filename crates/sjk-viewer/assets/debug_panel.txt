@@ -3266,3 +3266,16 @@ test: Hologram: wireframe and scan lines. Runic: your name in glyphs scrolling t
 test: Chameleon: colour changes with the map's light. Banner: red/blue in CTF, silver in FFA.
 test: Heartbeat: a double beat once a second, its light beats too. Listen to each one's sounds.
 note: World shots only (duel6, off-screen); not tried in a game, sounds not heard.
+
+[medal-shaders]
+area: Menus & settings
+title: Medals bring saber shaders: Bug Hunter Glitch, Early Tester Hologram, Contributor Runic
+change: The hub derives the blade from the medal; taking the medal back takes the blade.
+change: Collection Shaders says "with your Bug Hunter medal"; the Medals tab names the shader.
+test: Hub with feat/medal-blades. Award yourself Bug Hunter: Collection > Shaders, Glitch is Yours.
+test: The owned line reads "Yours since dd/mm/yyyy, with your Bug Hunter medal". Equip it.
+test: Collection > Medals: each medal says "Comes with the ... blade, a saber shader."
+test: Wear Glitch in a match, take the medal back (Staff page): the blade goes stock at once.
+test: Grant Glitch by hand too, then take the medal back: the blade stays (from the SJK team).
+test: Locked Hologram/Runic: "How to get it" names the Early Tester / Early Contributor medal.
+note: Unit tests only (client and hub); hub not deployed when built, not tried in a game.

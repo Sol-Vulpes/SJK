@@ -123,6 +123,16 @@ impl Medal {
         }
     }
 
+    /// The saber blade (an unlockable's id) the medal brings while held: the hub's
+    /// `MedalKind::grants`.
+    pub(crate) const fn blade(self) -> &'static str {
+        match self {
+            Self::EarlyTester => "saber_hologram",
+            Self::EarlyContributor => "saber_runic",
+            Self::BugHunter => "saber_glitch",
+        }
+    }
+
     /// Whether the SJK team may give it again, so its count can pass 1.
     pub(crate) const fn repeatable(self) -> bool {
         matches!(self, Self::BugHunter)
@@ -321,6 +331,23 @@ pub(crate) fn date_text(seconds: i64) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn every_medal_brings_its_own_blade_which_says_so() {
+        for medal in Medal::ALL {
+            let blade = crate::unlockables::blade_skin(medal.blade()).expect("a blade skin");
+            assert!(
+                blade.how_to_get.contains(medal.name()),
+                "{}: {}",
+                medal.id(),
+                blade.how_to_get
+            );
+            let others = Medal::ALL
+                .iter()
+                .filter(|other| other.blade() == medal.blade());
+            assert_eq!(others.count(), 1);
+        }
+    }
 
     fn wire(id: &str, count: u32) -> sjk_identity::Medal {
         sjk_identity::Medal {

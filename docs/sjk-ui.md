@@ -1081,7 +1081,8 @@ for the run.
   "Given dd/mm/yyyy", "Given 2 times" or "Not given yet". The one chosen has a gold
   mark on the rail at its clasp and a brighter glow; up close on the right (x 1120 to
   1824) the whole medal at 400 on its glow, its name at 54 (gold when given), when it
-  was given, what it is for, the team's note in quotes under "From the SJK team", and
+  was given, what it is for with the saber shader it brings ("Comes with the Glitch
+  blade, a saber shader."), the team's note in quotes under "From the SJK team", and
   who sees it. A dotted rail and "More medals will hang here as the SJK team adds
   them." stand under the rail. Left and Right choose; hovering chooses.
 - **Achievements:** "11 of 21 unlocked" with a gold bar; then a wall, a row to each
@@ -1110,7 +1111,7 @@ for the run.
   (`collection_panel::PreviewSkin`, `menu_stage`'s `skin_override`). Beside the model
   (x 1300 to 1824, from y 618): "Saber shader" or "Your saber", the name at 56 (gold
   when owned) with its state as a tag, what it is, "Yours since dd/mm/yyyy, from the
-  SJK team" with the note, or "How to get it: ...", and Equip (gold), Unequip or "Wear
+  SJK team" with the note (", with your Bug Hunter medal" when a medal brings it), or "How to get it: ...", and Equip (gold), Unequip or "Wear
   the stock blade". It opens on what is worn. Up and Down choose, Enter equips or
   unequips (`cg_saberSkin`).
 - **Toys:** "1 toy", things to use in a match. Illuminate's holocron (the Force

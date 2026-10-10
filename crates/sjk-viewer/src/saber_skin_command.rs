@@ -156,6 +156,7 @@ mod tests {
             id: "saber_sun".into(),
             granted: 1_791_336_225,
             note: String::new(),
+            medal: None,
         }
     }
 

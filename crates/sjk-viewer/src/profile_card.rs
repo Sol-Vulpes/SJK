@@ -631,6 +631,7 @@ mod tests {
                 id: "saber_sun".to_owned(),
                 granted: 1,
                 note: String::new(),
+                medal: None,
             }],
             ..me()
         };

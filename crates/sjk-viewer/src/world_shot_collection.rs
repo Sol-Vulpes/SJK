@@ -17,6 +17,7 @@ fn sun() -> sjk_identity::Unlock {
         id: "saber_sun".to_owned(),
         granted: 1_791_336_225,
         note: "Thanks for testing the blades with us".to_owned(),
+        medal: None,
     }
 }
 

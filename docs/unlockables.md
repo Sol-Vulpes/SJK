@@ -37,7 +37,7 @@ fifteen choices no longer fit. Seen in off-screen GPU renders on duel6 (world sh
 | --- | --- |
 | Who sees a look | Every SJK player on the same game server, through the hub. |
 | Who may wear an unlockable | Only a key the hub lists it for. The hub refuses to relay a look whose blade skin the key does not own (`not_unlocked`). |
-| How one is unlocked | The hub operator or staff grant it by hand for now (Staff page, operator command). Achievements or medals granting them are planned, not built. |
+| How one is unlocked | The hub operator or staff grant it by hand (Staff page, operator command), and since 10/10/2026 a medal brings one while held: Bug Hunter the Glitch, Early Tester the Hologram, Early Contributor the Runic blade ([Medal shaders](#medal-shaders)). Achievements granting them are an idea for later, with harder goals than today's; holocrons dropping them are parked until Sol decides the pool and odds. |
 | How a look travels | Stored on the key's live claim, listed in presence for players who arrive later, and sent through the feed as a live event when it changes. |
 | Illuminate | Free for everyone; its lit state is part of the look so others see the holocron. |
 | Feed with chat off | The feed reads while the player is on a game server whatever `cl_sjkChat` says (chat stays hidden); in the menus it reads only with chat on. |
@@ -65,9 +65,9 @@ meaning.
 | `saber_unstable` | Unstable blade | blade skin | Given by the SJK team. |
 | `saber_molten` | Molten blade | blade skin | Given by the SJK team. |
 | `saber_spectral` | Spectral blade | blade skin | Given by the SJK team. |
-| `saber_glitch` | Glitch blade | blade skin | Given by the SJK team. |
-| `saber_hologram` | Hologram blade | blade skin | Given by the SJK team. |
-| `saber_runic` | Runic blade | blade skin | Given by the SJK team. |
+| `saber_glitch` | Glitch blade | blade skin | Comes with the Bug Hunter medal, for as long as you hold it. |
+| `saber_hologram` | Hologram blade | blade skin | Comes with the Early Tester medal, for as long as you hold it. |
+| `saber_runic` | Runic blade | blade skin | Comes with the Early Contributor medal, for as long as you hold it. |
 | `saber_chameleon` | Chameleon blade | blade skin | Given by the SJK team. |
 | `saber_banner` | Banner blade | blade skin | Given by the SJK team. |
 | `saber_heartbeat` | Heartbeat blade | blade skin | Given by the SJK team. |
@@ -481,7 +481,8 @@ Profile page's See the collection) open it on its own:
   page's live preview over a match: a locked one too, as a preview this screen alone
   draws (`PreviewSkin`; nothing is set or sent);
 - beside the model what the chosen one is, owned (`Yours since dd/mm/yyyy, from the
-  SJK team` and the team's note) or how to get it, and Equip, Unequip or Wear the
+  SJK team` and the team's note, or `..., with your Bug Hunter medal` when a medal
+  brings it) or how to get it, and Equip, Unequip or Wear the
   stock blade, which set `cg_saberSkin`;
 - with the identity off, no hub or no answer yet, the tab says so and no skin is
   owned.
@@ -528,9 +529,28 @@ page with every skin carrying every effect within the screen's canvas, Dual too)
 the world shot `duel6_sjk_saber_page` with the hub's pack (`SJK_TEST_PACKS`); not
 tried in the game.
 
+## Medal shaders
+
+Built 10/10/2026, branch `personal/medal-blades` (with the hub's `feat/medal-blades`),
+Sol's decision: Bug Hunter brings the Glitch blade, Early Tester the Hologram, Early
+Contributor the Runic. The hub derives the unlock from the medal when it reads a profile
+or a look (no grant row), lists it in the profile's `unlocks` with `medal` set to the
+medal's id while no grant by hand covers it, and takes it back with the medal's last
+award, clearing it off a live look with a look event. A grant by hand of the same blade
+is separate and outlives the medal. The client ([wire.rs](../crates/sjk-identity/src/wire.rs)
+`Unlock::medal`, absent from older hubs) wears it like any unlock (`Holdings::can_wear`
+is unchanged); the Collection's Shaders tab says "Yours since dd/mm/yyyy, with your Bug
+Hunter medal", its Medals tab adds "Comes with the Glitch blade, a saber shader." under
+what the medal is for, and the three blades' "How to get it" names the medal
+(`Medal::blade` in [medals.rs](../crates/sjk-viewer/src/medals.rs) pins the pairs, a
+test checks the texts). Verified: unit tests (client and hub, the hub's covering award,
+counted awards, revoke, a grant by hand surviving, relock and the look); the hub not
+deployed when built, nothing tried in the game.
+
 ## Planned, not built
 
-Achievements and medals granting unlockables, other kinds of unlockable (holocron
+Achievements granting unlockables (with harder goals), holocrons dropping blade skins
+(parked: pool, odds and duplicates undecided), other kinds of unlockable (holocron
 skins, trails, emotes). Up to 16 blade skins load at once (the renderer's slots; the
 uniform array is 13312 bytes of the 16 KiB WebGPU guarantees, so a seventeenth needs
 fewer lanes per skin or a storage buffer first).

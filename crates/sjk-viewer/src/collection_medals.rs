@@ -289,10 +289,16 @@ impl Panel {
             TextAlign::Center,
         );
         y += 36.0;
+        let blade = crate::unlockables::find(showing.medal.blade())
+            .map_or("a saber shader", |blade| blade.name);
+        let about = format!(
+            "{} Comes with the {blade}, a saber shader.",
+            showing.medal.description()
+        );
         y = centred_lines(
             &mut self.ui,
             frame,
-            showing.medal.description(),
+            &about,
             [SHOWCASE_X, y, SHOWCASE_WIDTH],
             56,
             2,

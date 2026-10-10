@@ -237,9 +237,13 @@ menu's row of icons): [sjk-ui.md](sjk-ui.md#report-a-bug-and-its-dialogs).
 ## Medals
 
 A medal is recognition the SJK team gives a player by hand: for testing SJK early,
-contributing to its code or finding bugs. A medal grants
-nothing: no setting, cosmetic, power or right comes with it, on any server. Players do
-not ask for medals or choose them; the SJK team gives them.
+contributing to its code or finding bugs. Since 10/10/2026 (Sol's decision) each medal
+brings one saber shader for as long as the player holds it: Early Tester the Hologram
+blade, Early Contributor the Runic blade, Bug Hunter the Glitch blade. The hub derives
+it from the medal and takes it back with the medal's last award, off the player's look
+too ([unlockables.md](unlockables.md#decisions)). Nothing else comes with a medal: no
+setting, power or right, on any server. Players do not ask for medals or choose them;
+the SJK team gives them.
 
 | Medal | Id | For | Given again |
 | --- | --- | --- | --- |
@@ -567,8 +571,8 @@ clients show the stand-in.
 
 ## Achievements
 
-An achievement is a milestone of the player's own play. Like a medal it grants
-nothing. The catalogue, in [achievements.rs](../crates/sjk-viewer/src/achievements.rs)
+An achievement is a milestone of the player's own play. It grants nothing (saber
+shaders for harder achievements are an idea for later, not built). The catalogue, in [achievements.rs](../crates/sjk-viewer/src/achievements.rs)
 and in the hub (same ids):
 
 | Achievement | Id | Goal | Counted by |
