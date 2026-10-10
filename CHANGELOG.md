@@ -13,6 +13,7 @@ Format, read by the client (crates/sjk-viewer/src/changelog_data.rs, whose
 tests check this file):
 - "## <version> | <dd/mm/yyyy>" starts a release ("## Unreleased" for main
   after the last release, without a date);
+- Asset browser: Settings > Game > Asset browser (or the assetbrowser command) lists the installed PK3 packs and turns each on or off for the next start without moving files; the retail base packs stay on, and built-in content, hub unlocks, loose files and packs a server sends are not affected _(Lumaya)_
 - Models the server lists but nothing uses are no longer loaded when a map starts: one is read on another thread the first time something shows it (map props, stock weapons and items, effect models and players still load at the start), which should shorten joins and save memory; a rare model can show a moment late _(Lumaya)_
 - Your own pistol shot no longer plays its sound twice when the server's snapshot arrives before the shot is predicted: your own snapshot entity adds no event sounds, as the original cgame builds it from the player state _(Lumaya, after OpenJK)_
 - Players holding the multiplayer pistol show the blaster pistol model in third person instead of the old Bryar's, so a DL-44 replacement pack applies there too; the old Bryar keeps its own model _(Lumaya, after OpenJK)_

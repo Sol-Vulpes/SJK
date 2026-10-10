@@ -61,6 +61,8 @@ pub(super) enum ValueKind {
     /// Import a config file (not a cvar): Enter opens the Import page with
     /// the file dialog over it ([`crate::config_import`]).
     ImportPage,
+    /// Open the installed PK3 pack browser.
+    AssetBrowser,
 }
 
 /// The "SJK identity key" row's name in place of a cvar: the command that opens the
@@ -508,6 +510,11 @@ pub(super) const CONTROLS: &[Setting] = &[
     },
 ];
 pub(super) const GAME: &[Setting] = &[
+    Setting {
+        label: "Asset browser",
+        cvar: "assetbrowser",
+        kind: ValueKind::AssetBrowser,
+    },
     Setting {
         label: "Simple pickup icons",
         cvar: "cg_simpleItems",

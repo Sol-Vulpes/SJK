@@ -639,6 +639,7 @@ impl SettingsMenu {
                 | ValueKind::WheelPages
                 | ValueKind::IdentityPage
                 | ValueKind::ImportPage
+                | ValueKind::AssetBrowser
                 | ValueKind::Quality => {
                     let open = self.dropdown.as_ref().is_some_and(|open| open.row == row);
                     place.choice_field(
@@ -850,6 +851,9 @@ impl SettingsMenu {
             ValueKind::WheelPages => "ENTER to edit the pages and their choices",
             ValueKind::IdentityPage => "ENTER to open your key's page; the key stays hidden",
             ValueKind::ImportPage => "ENTER to choose a .cfg from another client",
+            ValueKind::AssetBrowser => {
+                "ENTER to enable or disable installed PK3 packs for the next start"
+            }
         });
         if self
             .defaults
@@ -981,6 +985,7 @@ pub(super) fn row_default(console: &ViewerConsole, setting: &Setting) -> RowDefa
             | ValueKind::WheelPages
             | ValueKind::IdentityPage
             | ValueKind::ImportPage
+            | ValueKind::AssetBrowser
     ) {
         return RowDefault::default();
     }

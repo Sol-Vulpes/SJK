@@ -3633,3 +3633,13 @@ change: The first entity that shows one loads it on a worker thread and installs
 test: Join a modded server with custom models: items and props appear, maybe a moment late.
 test: Compare the join time and memory with the last release on the same server.
 note: Lumaya measured only a duel6 test: no before/after of the join time.
+
+[asset-browser]
+area: Menus
+title: Asset browser: turn PK3 packs off (SJK PR #68)
+change: Settings > Game > Asset browser (assetbrowser) lists installed PK3s; Enter or click toggles.
+change: A disabled pack is skipped at the next start (fs_disabledPaks); retail assets0-3 stay on.
+change: Files stay in place; EternalJK extras, crosshairs and emoji packs follow the same choice.
+test: Open it, disable a HD pack from base, restart: its look is gone; enable it again, restart.
+test: Select assets0.pk3 and press Enter: it says the retail pack is required.
+note: Lumaya did not check pure servers or a real match; the card was checked on a GPU test.

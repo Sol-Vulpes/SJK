@@ -48,6 +48,8 @@ pub(crate) enum SettingsResult {
     /// First setup's "Import a config file" row: the Import page and the
     /// file dialog, over the settings.
     OpenImport,
+    /// The installed-pack browser, over the settings.
+    OpenAssets,
     /// A button of the classic panel screen around the options: index into
     /// its page's slots.
     Classic(usize),
@@ -635,6 +637,8 @@ impl SettingsMenu {
                         return SettingsResult::OpenWheelPages;
                     } else if matches!(setting.kind, ValueKind::IdentityPage) {
                         return SettingsResult::OpenIdentity;
+                    } else if matches!(setting.kind, ValueKind::AssetBrowser) {
+                        return SettingsResult::OpenAssets;
                     } else if matches!(setting.kind, ValueKind::ImportPage) {
                         return SettingsResult::OpenImport;
                     } else if classic && self.open_dropdown(console, self.selected) {
@@ -795,6 +799,7 @@ impl SettingsMenu {
                 ValueKind::WheelPages => wheel_pages_text(console),
                 ValueKind::IdentityPage => IDENTITY_TEXT.to_owned(),
                 ValueKind::ImportPage => IMPORT_TEXT.to_owned(),
+                ValueKind::AssetBrowser => "Browse packs".to_owned(),
                 ValueKind::Quality => crate::graphics_quality::shown(console).to_owned(),
                 ValueKind::Bool if setting.cvar == crate::graphics_quality::ULTRA_LOW_ROW => {
                     if crate::graphics_quality::ultra_low(console) {
@@ -1037,6 +1042,7 @@ mod tests {
                     | ValueKind::WheelPages
                     | ValueKind::IdentityPage
                     | ValueKind::ImportPage
+                    | ValueKind::AssetBrowser
                     | ValueKind::Quality
             ) {
                 continue;

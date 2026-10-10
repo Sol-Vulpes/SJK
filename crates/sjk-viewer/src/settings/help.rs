@@ -435,6 +435,10 @@ const HELP: &[(&str, &str)] = &[
         "Bring your name, model, field of view and keys from another client's .cfg, such as jampconfig.cfg. Enter picks the file.",
     ),
     (
+        "assetbrowser",
+        "Enable or disable installed PK3 packs for the next client start. Retail base packs stay enabled; files stay in place.",
+    ),
+    (
         "rate",
         "Most data per second the server may send you; raise it on a fast connection.",
     ),

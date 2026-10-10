@@ -474,6 +474,7 @@ impl ViewerConsole {
             socket,
             presentation: ConsolePresentation::new(),
             browser: super::browser::Browser::new(),
+            asset_browser: Default::default(),
             debug_panel: super::debug_panel::Panel::new(&config_directory),
             changelog: super::changelog::Panel::new(),
             credits: super::credits::Panel::new(),

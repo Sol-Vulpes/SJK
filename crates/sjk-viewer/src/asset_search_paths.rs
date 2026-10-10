@@ -8,6 +8,9 @@ use std::sync::OnceLock;
 use std::sync::atomic::{AtomicBool, Ordering};
 
 static STARTUP: OnceLock<Options> = OnceLock::new();
+
+#[path = "asset_pack_policy.rs"]
+pub(crate) mod pack_policy;
 /// The cosmetics packs were named in the log (every world mounts them).
 static COSMETICS_LOGGED: AtomicBool = AtomicBool::new(false);
 
@@ -32,6 +35,7 @@ pub(crate) struct Options {
     debug: bool,
     /// Prefer base-game shader definitions; immutable after startup.
     pub(crate) protect_shaders: bool,
+    disabled: pack_policy::Disabled,
 }
 
 impl Default for Options {
@@ -44,6 +48,7 @@ impl Default for Options {
             directory_first: false,
             debug: false,
             protect_shaders: true,
+            disabled: Default::default(),
         }
     }
 }
@@ -51,6 +56,12 @@ impl Default for Options {
 /// Register startup preferences; edits apply on next process launch, not a map reload.
 pub(crate) fn register(cvars: &mut CvarRegistry) -> Result<(), sjk_shell::CvarError> {
     for definition in [
+        CvarDefinition::new(
+            pack_policy::CVAR,
+            "[]",
+            CvarFlags::ARCHIVE,
+            "Disabled installed PK3 packs (JSON list); edit in assetbrowser; client restart required",
+        ),
         CvarDefinition::new(
             "fs_game",
             "",
@@ -113,7 +124,7 @@ pub(crate) fn startup() -> &'static Options {
 }
 
 impl Options {
-    fn from_console(console: &ViewerConsole) -> Result<Self, Box<dyn Error>> {
+    pub(crate) fn from_console(console: &ViewerConsole) -> Result<Self, Box<dyn Error>> {
         let game = console.text_value("fs_game").unwrap_or("").to_owned();
         let basegame = console.text_value("fs_basegame").unwrap_or("").to_owned();
         validate_directory(&game)?;
@@ -123,6 +134,9 @@ impl Options {
             .filter(|value| !value.is_empty())
             .map(PathBuf::from);
         Ok(Self {
+            disabled: pack_policy::Disabled::parse(
+                console.text_value(pack_policy::CVAR).unwrap_or("[]"),
+            )?,
             game,
             basegame,
             home,
@@ -172,6 +186,7 @@ impl Options {
         sjk_vfs::pk3_search_order(&directory)
             .unwrap_or_default()
             .into_iter()
+            .filter(|archive| self.disabled.allows(archive))
             .filter(|archive| carries_jof_content(archive))
             .collect()
     }
@@ -199,6 +214,7 @@ impl Options {
             .unwrap_or_default()
             .into_iter()
             .rev()
+            .filter(|archive| self.disabled.allows(archive))
             .filter_map(|archive| {
                 let mut probe = VirtualFileSystem::new();
                 probe.mount_pk3(&archive).ok()?;
@@ -233,6 +249,7 @@ impl Options {
             .unwrap_or_default()
             .into_iter()
             .rev()
+            .filter(|archive| self.disabled.allows(archive))
         {
             let mut probe = VirtualFileSystem::new();
             if probe.mount_pk3(&archive).is_err() {
@@ -297,12 +314,16 @@ impl Options {
             if !self.directory_first {
                 vfs.mount_directory(&directory)?;
             }
-            vfs.mount_pk3_directory_with_warnings(&directory, |path, error| {
-                crate::log::progress(format_args!(
-                    "warning: skipping PK3 {}: {error}",
-                    path.display(),
-                ));
-            })?;
+            for archive in sjk_vfs::pk3_search_order(&directory)? {
+                if self.disabled.allows(&archive) {
+                    if let Err(error) = vfs.mount_pk3(&archive) {
+                        crate::log::progress(format_args!(
+                            "warning: skipping PK3 {}: {error}",
+                            archive.display()
+                        ));
+                    }
+                }
+            }
             if self.directory_first {
                 vfs.mount_directory(&directory)?;
             }
@@ -444,6 +465,55 @@ mod tests {
             ..Options::default()
         };
         assert!(whole.cosmetic_packs(install.path()).is_empty());
+    }
+
+    #[test]
+    fn disabling_a_pack_restores_the_lower_priority_asset_and_can_be_undone() {
+        let install = tempfile::tempdir().unwrap();
+        let base = install.path().join("base");
+        std::fs::create_dir_all(&base).unwrap();
+        pk3(&base.join("a.pk3"), &["models/fixture.md3"]);
+        pk3(&base.join("zzz.pk3"), &["models/fixture.md3"]);
+        let mut options = Options::default();
+        let source = |options: &Options| {
+            options
+                .mount(install.path())
+                .unwrap()
+                .read("models/fixture.md3")
+                .unwrap()
+                .unwrap()
+                .source
+                .mount_name
+                .to_string()
+        };
+        assert!(source(&options).ends_with("zzz.pk3"));
+        options.disabled.toggle("BASE/ZZZ.PK3");
+        assert!(source(&options).ends_with("a.pk3"));
+        options.disabled.toggle("base/zzz.pk3");
+        assert!(source(&options).ends_with("zzz.pk3"));
+    }
+
+    #[test]
+    fn disabled_eternaljk_packs_do_not_reenter_as_supplemental_assets() {
+        let install = tempfile::tempdir().unwrap();
+        let folder = install.path().join("EternalJK");
+        std::fs::create_dir_all(&folder).unwrap();
+        pk3(
+            &folder.join("extras.pk3"),
+            &[
+                "models/cosmetics/hats/example.md3",
+                "gfx/2d/crosshaira.png",
+                "gfx/emoji/example.png",
+            ],
+        );
+        let mut options = Options::default();
+        assert_eq!(options.cosmetic_packs(install.path()).len(), 1);
+        assert_eq!(options.eternaljk_crosshairs(install.path()).len(), 1);
+        assert_eq!(options.eternaljk_emojis(install.path()).len(), 1);
+        options.disabled.toggle("eternaljk/extras.pk3");
+        assert!(options.cosmetic_packs(install.path()).is_empty());
+        assert!(options.eternaljk_crosshairs(install.path()).is_empty());
+        assert!(options.eternaljk_emojis(install.path()).is_empty());
     }
 
     #[test]

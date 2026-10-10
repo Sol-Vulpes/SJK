@@ -73,6 +73,7 @@ pub(super) const COMMANDS: &[(&str, &str)] = &[
         "Compose SJK chat, which every SJK player shares through the SJK hub",
     ),
     ("toggleconsole", "Toggle the console"),
+    (super::asset_browser::COMMAND, super::asset_browser::HELP),
     (
         "consolebrowser",
         "Search commands and cvars and edit cvar values (F3 in the console)",
@@ -530,6 +531,14 @@ impl crate::GpuState {
             "consolebrowser" => {
                 if let Some(console) = &mut self.console {
                     console.open_browser();
+                }
+                self.sync_cursor_policy();
+            }
+            super::asset_browser::COMMAND => {
+                if let Some(console) = &mut self.console {
+                    console
+                        .open_asset_browser(&self.game_data)
+                        .map_err(|error| error.to_string())?;
                 }
                 self.sync_cursor_policy();
             }
