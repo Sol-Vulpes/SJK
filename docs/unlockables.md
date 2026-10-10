@@ -23,6 +23,14 @@ and a turning hue, and the catalogue the Storm, Void, Frost and Prism blades. Ch
 by unit tests and a CPU copy of the shader's maths rendered to images; not yet seen on a
 GPU or heard.
 
+10/10/2026, branch `personal/saber-shaders` (with the hub's `feat/saber-shaders`): nine
+more saber shaders (Unstable, Molten, Spectral, Glitch, Hologram, Runic, Chameleon,
+Banner, Heartbeat) and the generic sections they use ([Blade-skin
+files](#blade-skin-files), [rendering.md](rendering.md#saber-blade-skins)); up to 16
+skins load at once. The Collection's rack and the Saber tab's blade row scroll, as
+fifteen choices no longer fit. Seen in off-screen GPU renders on duel6 (world shot
+`duel6_second_blades`); not in a live match, not heard.
+
 ## Decisions
 
 | Question | Decision |
@@ -54,6 +62,15 @@ meaning.
 | `saber_void` | Void blade | blade skin | Given by the SJK team. |
 | `saber_frost` | Frost blade | blade skin | Given by the SJK team. |
 | `saber_prism` | Prism blade | blade skin | Given by the SJK team. |
+| `saber_unstable` | Unstable blade | blade skin | Given by the SJK team. |
+| `saber_molten` | Molten blade | blade skin | Given by the SJK team. |
+| `saber_spectral` | Spectral blade | blade skin | Given by the SJK team. |
+| `saber_glitch` | Glitch blade | blade skin | Given by the SJK team. |
+| `saber_hologram` | Hologram blade | blade skin | Given by the SJK team. |
+| `saber_runic` | Runic blade | blade skin | Given by the SJK team. |
+| `saber_chameleon` | Chameleon blade | blade skin | Given by the SJK team. |
+| `saber_banner` | Banner blade | blade skin | Given by the SJK team. |
+| `saber_heartbeat` | Heartbeat blade | blade skin | Given by the SJK team. |
 
 A client ignores an id it does not know. Both catalogues' tests pin this exact list
 (ids, names, order), so a change to one fails until the other follows.
@@ -85,6 +102,32 @@ the hub's, described in its `scripts/blade_skin_sounds.py` and `saber_skin_sound
   inside (refraction bands), sharp bright bands drifting along it and coloured
   sparkles; its light turns through the colours with the blade's middle; a chord in
   detuned voices under a slowly sweeping resonance.
+- **Unstable**: a raw red blade whose glow's edge is frayed by fast noise and whose
+  length now and then falters (cut short for an instant), sparks spitting off it, a
+  hard-flickering light; a torn, stuttering buzz under dense crackle.
+- **Molten**: a dim, dark-red core split by bright orange lava cracks (veins) running
+  through the core and the inside of the glow, embers dripping off it and falling as
+  gravity pulls them, whichever way the blade is held; a bubbling, sizzling rumble.
+- **Spectral**: a pale, see-through blue-white blade with a wide soft glow and faint
+  wisps; swinging, it leaves up to four fading afterimages of its glow where it was;
+  an airy pad under a whisper, with echoes.
+- **Glitch**: a teal blade whose red and blue part from its green; on random draws
+  blocks of it jump sideways and flash, now and then the whole blade; a gated buzz with
+  digital blips.
+- **Hologram**: a hollow blue projection drawn as a wireframe (two side lines and rings
+  round the blade) with scan lines running along it, jittering sideways now and then;
+  a clean tone, a projector whine and a scan tick.
+- **Runic**: a dim gold core with glyphs scrolling toward the tip that spell its
+  wearer's name (SJK's own stroke glyphs, one per letter); a chord of fifths with bell
+  glints.
+- **Chameleon**: a pale blade that takes the colour of the light where it is (the map's
+  light grid, saturation raised), so it changes from place to place and map to map; a
+  body whose resonance slowly morphs.
+- **Banner**: its wearer's team colour in team games (red, blue), silver outside a team,
+  rippling like a flag; a warm buzz and fluttering cloth.
+- **Heartbeat**: a warm crimson blade that beats with a slow double heartbeat (lub-dub,
+  once a second), brightening and swelling with each beat, its light beating with it;
+  a drone with a heartbeat.
 
 ## Hub protocol (additions to version 1)
 
@@ -249,7 +292,7 @@ from the looks.
 
 - A blade skin's look is its blade-skin file, loaded from the packs
   ([saber_skins.rs](../crates/sjk-viewer/src/saber_skins.rs) `LoadedSkins`, at most
-  8): drawn as its own saber material after the neutral RGB pair, with its glow/core
+  16): drawn as its own saber material after the neutral RGB pair, with its glow/core
   pair (the pack's images or generated from the file's profiles), coloured and animated
   in `saber.wgsl` from per-instance time, a per-blade seed and the file's parameters
   (core, corona gradient, granulation, flame tongues, shimmer, flares and, when the
@@ -328,9 +371,12 @@ an unknown or missing field, a wrong type or a value outside its range refuses t
 and the log names the file and the field. A file whose id is not a blade skin of the
 client's catalogue is left out (a newer pack may hold skins an older client does not
 know). `grain` below is the granulation in [0, 1], `flare` the flares' sum at a point.
-`arcs`, `motes` and `hue` are optional sections (09/10/2026): a file without one draws
-none of it (its lanes of the uniform are zeros), so files written before them draw as
-they did; when present, every field of the section is required.
+`arcs`, `motes` and `hue` are optional sections (09/10/2026), and so are `sputter`,
+`glitch`, `scan`, `pulse`, `ghosts`, `embers`, `veins`, `team`, `ambient` and `glyphs`
+(10/10/2026, [blade_skin_effects.rs](../crates/sjk-viewer/src/blade_skin_effects.rs)): a
+file without one draws none of it (its lanes of the uniform are zeros), so files written
+before them draw as they did; when present, every field of the section is required.
+`team` and `ambient` may not both be given.
 
 | Field | Meaning | Range |
 | --- | --- | --- |
@@ -368,6 +414,26 @@ they did; when present, every field of the section is required.
 | `motes.twinkle` | About how many times a second each twinkles (0: steady) | 0-60 |
 | `motes.inner`, `outer`, `focus` | Where (radii out) they appear and are gone; `focus` 1 shows them only toward and round the tip | 0-2, 0-2.5, 0-1 |
 | `hue` | `rate` turns a second, `along` turns a unit along the blade, `out` turns a capsule radius out: the glow's and the core fringe's colours turned round the grey axis (brightness and saturation kept), and the light's with the blade's middle | -10-10, -1-1, -4-4 |
+| `sputter.ragged`, `scale`, `speed` | How far noise frays the glow's edge (a share of its width), its cells a unit along and how fast it runs | 0-1, 0.05-8, -100-100 |
+| `sputter.cut`, `rate`, `threshold` | The most of the blade a sputter cuts off (a share of its length); draws a second, a draw sputtering when its value is at least `threshold` | 0-0.5, 0-60, 0-1 |
+| `glitch.split` | How far red and blue part from green, capsule radii (doubled in a glitch) | 0-1 |
+| `glitch.blocks`, `rate`, `threshold` | A block's length (units); draws a second, a block glitching when its draw is at least `threshold` (the whole blade when a rarer draw passes halfway past it) | 0.5-40, 0.05-60, 0-1 |
+| `glitch.shift`, `flash` | How far a glitched block jumps (radii) and how much it brightens | 0-1, 0-4 |
+| `scan.color`, `brightness` | The hologram's wireframe colour and brightness | 0-4, 0-10 |
+| `scan.lines`, `speed`, `depth` | Scan lines a unit along, how fast they run (units a second) and how deep they darken the glow and core | 0.05-8, -100-100, 0-1 |
+| `scan.rings`, `edge`, `width`, `hollow` | Wireframe rings a unit along (0: none), where its side lines run and their half-width (radii), how much the inside is dimmed | 0-2, 0.1-1.5, 0.01-0.5, 0-1 |
+| `scan.jitter`, `jitter_rate` | How far a jitter throws the projection sideways (radii) and draws a second (a quarter of them jitter) | 0-0.5, 0-60 |
+| `pulse.rate`, `amount`, `second`, `gap`, `width`, `swell` | A heartbeat on the clock (no seed, so blades and their lights beat together): beats a second, how much a beat brightens, the second beat's share and seconds after the first (which peaks 0.1 s into a cycle), a beat's half-length (s) and how much it widens the glow | 0.1-4, 0-2, 0-1, 0.05-1, 0.01-0.5, 0-0.5 |
+| `ghosts.count`, `spacing`, `fade` | Afterimages: the blade's pose kept every `spacing` ms, the last `count` drawn again as glow alone, each `fade` of the one before; a pose the blade has not moved from is skipped | 1-4, 10-250, 0-1 |
+| `embers.color`, `brightness` | The embers' colour and brightness | 0-4, 0-10 |
+| `embers.density`, `cells`, `fall`, `life` | The share of drip places dripping, places a unit along, how fast they fall (units a second, accelerating) and how long one lasts (s) | 0-1, 0.05-4, 1-400, 0.1-4 |
+| `embers.size`, `spread` | An ember's radius (units) and how much its way strays sideways | 0.05-2, 0-1 |
+| `veins.color`, `brightness` | The veins' colour and brightness in the glow's inside | 0-4, 0-10 |
+| `veins.scale`, `speed`, `width`, `core` | Ridged noise cells a unit, how fast they run along, a vein's half-width (share of a cell) and how bright they show in the core | 0.05-8, -100-100, 0.01-0.5, 0-10 |
+| `team.amount`, `red`, `blue`, `none` | The share of its colour the glow and core fringe take from the wearer's team: red, blue, or none outside a team | 0-1, 0-4 each |
+| `ambient.amount`, `saturate`, `floor` | The share of its colour taken from the light where the blade is (the grid's ambient and half its directed light at its hilt end, at full brightness), how much its saturation is raised and each channel's least | 0-1, 0-4, 0-1 |
+| `glyphs.color`, `brightness` | The glyphs' colour and brightness | 0-4, 0-10 |
+| `glyphs.size`, `spacing`, `speed`, `width` | A glyph's height along the blade and the gap after it (units), how fast they scroll toward the tip and a stroke's width (a share of a glyph): the wearer's name, a letter each, a cell left empty between repeats | 1-20, 0-10, -100-100, 0.02-0.3 |
 | `trail` | Blur trail colour | 0-1 |
 | `light.color` | Dynamic light colour (stock gain) | 0-4 |
 | `light.flicker` | `amount` and up to 2 `waves` (`rate`, `weight`, `phase` per hilt): brightness `1 − amount + amount × Σ weight × sin(t × rate + phase × hilt phase)` | amount 0-1 |
@@ -421,8 +487,9 @@ Profile page's See the collection) open it on its own:
   owned.
 
 The Staff page lists every unlockable for the player found, with Unlock (sending the
-note field's text) and Relock ([identity.md](identity.md#staff)), in rows of 42 pixels
-so the whole catalogue fits above the keys.
+note field's text) and Relock ([identity.md](identity.md#staff)), two to a row of 36
+pixels (10/10/2026) so the whole catalogue (fourteen) fits above the keys, each with the
+one button that applies.
 
 Verified: unit tests (keys, pointer, the worn one chosen on opening, equip and unequip,
 a locked one previewed but never equipped, every row and its words within the canvas
@@ -464,5 +531,6 @@ tried in the game.
 ## Planned, not built
 
 Achievements and medals granting unlockables, other kinds of unlockable (holocron
-skins, trails, emotes). Up to 8 blade skins load at once (the renderer's slots); a ninth
-needs more slots first.
+skins, trails, emotes). Up to 16 blade skins load at once (the renderer's slots; the
+uniform array is 13312 bytes of the 16 KiB WebGPU guarantees, so a seventeenth needs
+fewer lanes per skin or a storage buffer first).

@@ -189,8 +189,10 @@ mod runtime_settings;
 mod saber;
 mod saber_clash_flare;
 mod saber_defs;
+mod saber_ghosts;
 mod saber_gpu;
 mod saber_hilts;
+mod saber_persona;
 mod saber_rgb;
 mod saber_skin_command;
 mod saber_skins;
@@ -2250,6 +2252,11 @@ impl GpuState {
             &mut self.pickup_override_instances,
             self.world_materials.fogs(),
         );
+        // Saber shaders taking the colour of the light where they are read the grid too.
+        saber_persona::light_instances(saber_instances, &self.blade_skins, |at| {
+            let light = self.entity_lighting.sample(&self.bsp, at, &[]);
+            std::array::from_fn(|i| light.ambient[i] + 0.5 * light.directed[i])
+        });
         let global_particle_seconds = presentation_time as f32 * 0.001;
         player_shadows::request_all(
             &self.player_shadows,

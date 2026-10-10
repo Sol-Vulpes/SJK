@@ -20,6 +20,19 @@ const ROW_HEIGHT: f32 = 96.0;
 const SWATCH: [f32; 2] = [380.0, 84.0];
 const RACK_WIDTH: f32 = 860.0;
 
+/// The first row the rack shows, from the one it showed first: moved just enough that
+/// the chosen row is in view, never past either end.
+fn rack_window(first: usize, chosen: usize, rows: usize) -> usize {
+    let first = if chosen < first {
+        chosen
+    } else if chosen >= first + RACK_SHOWN {
+        chosen + 1 - RACK_SHOWN
+    } else {
+        first
+    };
+    first.min(rows.saturating_sub(RACK_SHOWN))
+}
+
 /// What a row shows: the stock blade, or a blade skin.
 #[derive(Clone, Copy)]
 struct Row {
@@ -93,8 +106,11 @@ impl Panel {
         self.lead(frame, &headline, line);
         self.kinds(frame, owned);
         let unlocks = matches!(inputs.holdings, unlockables::Holdings::Known(_));
+        // The rack scrolls just enough to keep the chosen row in view.
+        self.shader_first = rack_window(self.shader_first, self.shader, rows.len());
+        let first = self.shader_first;
         for (index, row) in rows.iter().enumerate() {
-            let y = RACK_TOP + index as f32 * ROW_STEP;
+            let y = RACK_TOP + index.wrapping_sub(first) as f32 * ROW_STEP;
             self.shader_rows[index] = ShaderRow {
                 wear: match row.skin {
                     // The stock blade, worn by taking the skin off.
@@ -103,12 +119,37 @@ impl Panel {
                     Some(_) => None,
                 },
             };
-            self.rack_row(frame, *row, index, y, inputs, seconds);
+            if (first..first + RACK_SHOWN).contains(&index) {
+                self.rack_row(frame, *row, index, y, inputs, seconds);
+            }
         }
+        self.rack_scroll_bar(frame, first, rows.len());
         if let Some(row) = rows.get(self.shader).copied() {
             self.shader_beside_model(frame, row, inputs, seconds);
         }
         let _ = s;
+    }
+
+    /// The rack's scroll bar at its right, when it holds more rows than it shows.
+    fn rack_scroll_bar(&mut self, frame: &Frame, first: usize, rows: usize) {
+        if rows <= RACK_SHOWN {
+            return;
+        }
+        let s = frame.s;
+        let x = LEFT_X - 12.0 + RACK_WIDTH + 8.0;
+        let height = RACK_SHOWN as f32 * ROW_STEP - (ROW_STEP - ROW_HEIGHT);
+        let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
+            rect: frame.rect(x, RACK_TOP, 4.0, height),
+            radius: 2.0 * s,
+            color: color::alpha(color::HOLO, 0.14),
+        });
+        let thumb = height * RACK_SHOWN as f32 / rows as f32;
+        let top = RACK_TOP + (height - thumb) * first as f32 / (rows - RACK_SHOWN) as f32;
+        let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
+            rect: frame.rect(x, top, 4.0, thumb),
+            radius: 2.0 * s,
+            color: color::GOLD,
+        });
     }
 
     /// The kinds of shader along the lead: Saber, and Body to come.
@@ -437,6 +478,49 @@ mod tests {
     use super::*;
     use crate::menu::sjk::Frame;
 
+    #[test]
+    fn the_rack_scrolls_only_to_keep_the_chosen_row_in_view() {
+        let rows = SHADER_ROWS;
+        assert!(rows > RACK_SHOWN, "more shaders than the rack shows");
+        // Within the window the rack holds still (a pointer moving over the rows
+        // chooses them without scrolling them away).
+        assert_eq!(rack_window(0, RACK_SHOWN - 1, rows), 0);
+        assert_eq!(rack_window(3, 4, rows), 3);
+        // Past either end it moves just enough.
+        assert_eq!(rack_window(0, RACK_SHOWN, rows), 1);
+        assert_eq!(rack_window(5, 2, rows), 2);
+        assert_eq!(rack_window(0, rows - 1, rows), rows - RACK_SHOWN);
+        assert_eq!(rack_window(40, 0, rows), 0);
+    }
+
+    #[test]
+    fn the_wheel_scrolls_the_rack_and_keeps_the_chosen_row_shown() {
+        let mut panel = Panel::new();
+        panel.open(Tab::Shaders, true, true, ReturnTarget::MainMenu);
+        // As the first frame leaves it, the stock blade worn.
+        panel.shader = 0;
+        let wheel = |panel: &mut Panel, y: f32| {
+            let _ = panel.handle_pointer(
+                InputEvent::PointerWheel {
+                    position: sjk_ui::Vec2::new(500.0, 500.0),
+                    delta: sjk_ui::Vec2::new(0.0, y),
+                },
+                false,
+            );
+        };
+        for _ in 0..3 {
+            wheel(&mut panel, -1.0);
+        }
+        assert_eq!(panel.shader_first, 3);
+        assert_eq!(panel.shader, 3, "the chosen row follows into view");
+        for _ in 0..40 {
+            wheel(&mut panel, -1.0);
+        }
+        assert_eq!(panel.shader_first, SHADER_ROWS - RACK_SHOWN);
+        wheel(&mut panel, 1.0);
+        assert_eq!(panel.shader_first, SHADER_ROWS - RACK_SHOWN - 1);
+    }
+
     /// Every row and the words beside the model fit the canvas over the keys, for an
     /// owned and worn skin, a locked one and the stock blade, with and without a model,
     /// at 1080 lines, 4K, 4:3 and 21:9.
@@ -474,9 +558,17 @@ mod tests {
                             assert!(rect.right() <= viewport[0] + 1.0, "{rect:?}");
                         }
                     }
+                    // The rows in view answer the pointer, above the keys; the rest
+                    // are scrolled off.
+                    let first = panel.shader_first;
+                    assert!((first..first + RACK_SHOWN).contains(&row), "{row}");
                     for index in 0..SHADER_ROWS {
-                        let area = panel.ui.rect_for(SHADER_BASE + index as u16).unwrap();
-                        assert!(area.bottom() <= keys, "{index} {viewport:?}");
+                        let area = panel.ui.rect_for(SHADER_BASE + index as u16);
+                        let shown = (first..first + RACK_SHOWN).contains(&index);
+                        assert_eq!(area.is_some(), shown, "{index}");
+                        if let Some(area) = area {
+                            assert!(area.bottom() <= keys, "{index} {viewport:?}");
+                        }
                     }
                 }
             }

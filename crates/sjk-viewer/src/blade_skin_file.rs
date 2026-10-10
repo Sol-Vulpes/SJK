@@ -10,10 +10,15 @@
 //! grey glow/core pair from the two profiles). Parsing is strict: an unknown field, a
 //! missing one or a value out of its range refuses the whole file, and the log names
 //! the file and why. A section a skin leaves out is drawn as nothing (no arcs, no motes,
-//! no hue turning), so files written before a section existed draw as they did.
+//! no hue turning), so files written before a section existed draw as they did. The
+//! sections added after those ([`effects`]: sputter, glitch, scan, pulse, ghosts, embers,
+//! veins, team, ambient, glyphs) follow the same rule.
 
 use crate::saber_rgb::{CoreProfile, GlowProfile};
 use serde::Deserialize;
+
+#[path = "blade_skin_effects.rs"]
+pub(crate) mod effects;
 
 /// Where blade-skin files are.
 pub(crate) const FOLDER: &str = "skins/blades";
@@ -72,6 +77,27 @@ pub(crate) struct BladeSkinDef {
     /// A hue turning with time, along the blade and outward; none when absent.
     #[serde(default)]
     pub(crate) hue: Option<Hue>,
+    /// The later optional sections ([`effects`]); each none when absent.
+    #[serde(default)]
+    pub(crate) sputter: Option<effects::Sputter>,
+    #[serde(default)]
+    pub(crate) glitch: Option<effects::Glitch>,
+    #[serde(default)]
+    pub(crate) scan: Option<effects::Scan>,
+    #[serde(default)]
+    pub(crate) pulse: Option<effects::Pulse>,
+    #[serde(default)]
+    pub(crate) ghosts: Option<effects::Ghosts>,
+    #[serde(default)]
+    pub(crate) embers: Option<effects::Embers>,
+    #[serde(default)]
+    pub(crate) veins: Option<effects::Veins>,
+    #[serde(default)]
+    pub(crate) team: Option<effects::Team>,
+    #[serde(default)]
+    pub(crate) ambient: Option<effects::Ambient>,
+    #[serde(default)]
+    pub(crate) glyphs: Option<effects::Glyphs>,
     /// The blur trail's vertex colour.
     pub(crate) trail: Rgb,
     pub(crate) light: Light,
@@ -546,6 +572,7 @@ impl BladeSkinDef {
             within("hue.along", hue.along, -1.0, 1.0)?;
             within("hue.out", hue.out, -4.0, 4.0)?;
         }
+        self.effects().check()?;
         colour("trail", self.trail, 1.0)?;
         colour("light.color", self.light.color, 4.0)?;
         within("light.flicker.amount", self.light.flicker.amount, 0.0, 1.0)?;
@@ -569,6 +596,24 @@ impl BladeSkinDef {
             game_path(&format!("sounds.swings[{index}]"), swing)?;
         }
         Ok(())
+    }
+}
+
+impl BladeSkinDef {
+    /// The later optional sections, borrowed.
+    pub(crate) fn effects(&self) -> effects::Effects<'_> {
+        effects::Effects {
+            sputter: self.sputter.as_ref(),
+            glitch: self.glitch.as_ref(),
+            scan: self.scan.as_ref(),
+            pulse: self.pulse.as_ref(),
+            ghosts: self.ghosts.as_ref(),
+            embers: self.embers.as_ref(),
+            veins: self.veins.as_ref(),
+            team: self.team.as_ref(),
+            ambient: self.ambient.as_ref(),
+            glyphs: self.glyphs.as_ref(),
+        }
     }
 }
 

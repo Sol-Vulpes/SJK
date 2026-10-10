@@ -3249,3 +3249,20 @@ test: In a match, Esc > Collection: the model shows in a preview; Esc returns on
 test: Console: collection, achievements, unlockables open their tabs; Ctrl+Tab goes round.
 note: Classic menus: the same commands open the page on its own, the model in a preview.
 note: Not tried in a game.
+
+# ---- Saber shaders, 10/10/2026 ----
+
+[saber-shaders-2]
+area: Rendering & effects
+title: Nine new saber shaders: Unstable, Molten, Spectral, Glitch, Hologram and more
+change: Unstable, Molten, Spectral, Glitch, Hologram, Runic, Chameleon, Banner, Heartbeat.
+change: Each with its own sounds (hub pack); the Collection rack and Saber tab row now scroll.
+test: Hub with feat/saber-shaders, grant them (Staff page), Collection > Shaders: 15 rows scroll.
+test: Wheel and Up/Down move the rack; hovering a row does not scroll it.
+test: Profile > Saber: the Blade row shows 6 swatches, chevrons, Left/Right scroll along.
+test: Unstable: ragged red edge, length falters now and then. Molten: lava cracks, embers fall.
+test: Spectral: swing it, fading afterimages trail. Glitch: blocks jump, colours split.
+test: Hologram: wireframe and scan lines. Runic: your name in glyphs scrolling to the tip.
+test: Chameleon: colour changes with the map's light. Banner: red/blue in CTF, silver in FFA.
+test: Heartbeat: a double beat once a second, its light beats too. Listen to each one's sounds.
+note: World shots only (duel6, off-screen); not tried in a game, sounds not heard.

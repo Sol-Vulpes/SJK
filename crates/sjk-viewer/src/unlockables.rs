@@ -40,7 +40,7 @@ impl Unlockable {
 }
 
 /// Every unlockable, in the hub's catalogue order (the order profiles list them in).
-pub(crate) const ALL: [Unlockable; 5] = [
+pub(crate) const ALL: [Unlockable; 14] = [
     Unlockable {
         id: "saber_sun",
         name: "Sun blade",
@@ -74,6 +74,69 @@ pub(crate) const ALL: [Unlockable; 5] = [
         name: "Prism blade",
         kind: Kind::BladeSkin,
         description: "A white core in a corona whose colours run through the rainbow, slowly turning.",
+        how_to_get: "Given by the SJK team.",
+    },
+    Unlockable {
+        id: "saber_unstable",
+        name: "Unstable blade",
+        kind: Kind::BladeSkin,
+        description: "A raw red core that crackles and sputters, its edge ragged and its length faltering.",
+        how_to_get: "Given by the SJK team.",
+    },
+    Unlockable {
+        id: "saber_molten",
+        name: "Molten blade",
+        kind: Kind::BladeSkin,
+        description: "A dark rock core split by glowing lava cracks, embers dripping off it and falling.",
+        how_to_get: "Given by the SJK team.",
+    },
+    Unlockable {
+        id: "saber_spectral",
+        name: "Spectral blade",
+        kind: Kind::BladeSkin,
+        description: "A pale, see-through blade that leaves fading afterimages of itself when it swings.",
+        how_to_get: "Given by the SJK team.",
+    },
+    Unlockable {
+        id: "saber_glitch",
+        name: "Glitch blade",
+        kind: Kind::BladeSkin,
+        description: "A blade whose colours split apart, blocks of it jumping sideways now and then.",
+        how_to_get: "Given by the SJK team.",
+    },
+    Unlockable {
+        id: "saber_hologram",
+        name: "Hologram blade",
+        kind: Kind::BladeSkin,
+        description: "A wireframe projection with scan lines running along it, jittering like a training hologram.",
+        how_to_get: "Given by the SJK team.",
+    },
+    Unlockable {
+        id: "saber_runic",
+        name: "Runic blade",
+        kind: Kind::BladeSkin,
+        description: "A gold core with glyphs scrolling along it that spell its wearer's name.",
+        how_to_get: "Given by the SJK team.",
+    },
+    Unlockable {
+        id: "saber_chameleon",
+        name: "Chameleon blade",
+        kind: Kind::BladeSkin,
+        description: "A blade that takes the colour of the light where it is, changing from map to map.",
+        how_to_get: "Given by the SJK team.",
+    },
+    Unlockable {
+        id: "saber_banner",
+        name: "Banner blade",
+        kind: Kind::BladeSkin,
+        description: "Your team's colour in team games, rippling like a flag; silver outside them.",
+        how_to_get: "Given by the SJK team.",
+    },
+    Unlockable {
+        id: "saber_heartbeat",
+        name: "Heartbeat blade",
+        kind: Kind::BladeSkin,
+        description: "A warm, deep blade that pulses with a slow double heartbeat, its light beating with it.",
         how_to_get: "Given by the SJK team.",
     },
 ];
@@ -270,6 +333,15 @@ mod tests {
                 ("saber_void", "Void blade"),
                 ("saber_frost", "Frost blade"),
                 ("saber_prism", "Prism blade"),
+                ("saber_unstable", "Unstable blade"),
+                ("saber_molten", "Molten blade"),
+                ("saber_spectral", "Spectral blade"),
+                ("saber_glitch", "Glitch blade"),
+                ("saber_hologram", "Hologram blade"),
+                ("saber_runic", "Runic blade"),
+                ("saber_chameleon", "Chameleon blade"),
+                ("saber_banner", "Banner blade"),
+                ("saber_heartbeat", "Heartbeat blade"),
             ]
         );
         assert!(ALL.iter().all(Unlockable::is_blade_skin));

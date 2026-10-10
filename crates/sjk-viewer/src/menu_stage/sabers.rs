@@ -236,9 +236,13 @@ impl GpuState {
         // the one the Collection's Shaders tab shows.
         let skin = match self.menu_stage.skin_override {
             Some(crate::console::collection_panel::PreviewSkin::Stock) => None,
-            Some(crate::console::collection_panel::PreviewSkin::Skin(id)) => {
-                self.blade_skins.color_of(id)
-            }
+            Some(crate::console::collection_panel::PreviewSkin::Skin(id)) => self
+                .blade_skins
+                .color_of(id)
+                .map(|skin| crate::saber_skins::SkinColor {
+                    persona: self.saber_skins.local_persona(),
+                    ..skin
+                }),
             _ => self.saber_skins.local(),
         };
         let stage = &mut self.menu_stage;

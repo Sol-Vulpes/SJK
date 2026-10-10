@@ -58,6 +58,8 @@ const TOY_TOKEN: u16 = 1_310;
 const TOY_SWITCH_TOKEN: u16 = 1_311;
 /// The Shaders tab's rows: the stock blade, then every blade skin.
 const SHADER_ROWS: usize = 1 + unlockables::ALL.len();
+/// Shader rows the rack shows at once; it scrolls to the rest.
+const RACK_SHOWN: usize = 6;
 
 /// What the console does after the page handled an event.
 #[derive(Debug, Eq, PartialEq)]
@@ -145,6 +147,8 @@ pub(crate) struct Panel {
     medal: usize,
     achievement: usize,
     shader: usize,
+    /// The first shader row the rack shows (it scrolls, [`RACK_SHOWN`] at a time).
+    shader_first: usize,
     /// How many medals the last frame showed.
     medals_shown: usize,
     shader_rows: [ShaderRow; SHADER_ROWS],
@@ -183,6 +187,7 @@ impl Panel {
             // The first frame chooses the one nearest to unlocking.
             achievement: usize::MAX,
             shader: 0,
+            shader_first: 0,
             medals_shown: 0,
             shader_rows: [ShaderRow::default(); SHADER_ROWS],
             backstage: Backstage::None,
@@ -391,6 +396,23 @@ impl Panel {
 
     /// A pointer event; `illuminate` is `cg_illuminate`.
     pub(crate) fn handle_pointer(&mut self, event: InputEvent, illuminate: bool) -> PanelAction {
+        if let InputEvent::PointerWheel { delta, .. } = event
+            && self.tab == Tab::Shaders
+        {
+            // The wheel scrolls the rack a row a notch; the chosen row stays in view.
+            let last = SHADER_ROWS.saturating_sub(RACK_SHOWN);
+            self.shader_first = if delta.y > 0.0 {
+                self.shader_first.saturating_sub(1)
+            } else if delta.y < 0.0 {
+                (self.shader_first + 1).min(last)
+            } else {
+                self.shader_first
+            };
+            self.shader = self
+                .shader
+                .clamp(self.shader_first, self.shader_first + RACK_SHOWN - 1);
+            return PanelAction::None;
+        }
         let Some(event) = self.ui.pointer(event) else {
             return PanelAction::None;
         };

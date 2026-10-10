@@ -7,14 +7,18 @@
 //! when the skin has flares, now and then a bright flare running from the hilt to the
 //! tip (as `saber.wgsl` animates the real blade), and, when the skin has them, lightning
 //! arcs flashing off it, motes drifting round it and its colours turning through their
-//! hues. A locked one is drawn grey and still, under a padlock; an owned one whose pack
-//! has not come yet is drawn still in neutral grey.
+//! hues, and the later sections' looks ([`effects`]). A locked one is drawn grey and
+//! still, under a padlock; an owned one whose pack has not come yet is drawn still in
+//! neutral grey.
 
 use crate::blade_skin_file::{Arcs, BladeSkinDef, Motes, Rgb};
 use crate::menu::sjk::{Frame, color};
 use crate::menu_widgets::MenuCanvas;
 use crate::saber_skins::LoadedSkin;
 use sjk_ui::{Color, DrawCommand, Gradient};
+
+#[path = "collection_swatch_effects.rs"]
+mod effects;
 
 /// The share of each flare cycle its knot runs.
 const FLARE_RUN: f32 = 0.62;
@@ -313,13 +317,18 @@ fn lit_blade(
 ) {
     let s = frame.s;
     const WHITE: Rgb = [1.0; 3];
+    let shaping = effects::Shaping::of(def, t);
+    // A sputter cuts the blade short for a moment.
+    let length = length * shaping.shown;
     // A skin whose hue turns: every colour turned as the blade is at `along` (0 at the
-    // hilt, 1 at the tip) now; the others as they are.
-    let hued = |rgb: Rgb, along: f32| match def.hue {
-        Some(hue) => {
-            crate::saber_skins::turn_hue(rgb, t * hue.rate + along * BLADE_UNITS * hue.along)
-        }
-        None => rgb,
+    // hilt, 1 at the tip) now; the others as they are. A tint draws them toward it.
+    let hued = |rgb: Rgb, along: f32| {
+        shaping.tinted(match def.hue {
+            Some(hue) => {
+                crate::saber_skins::turn_hue(rgb, t * hue.rate + along * BLADE_UNITS * hue.along)
+            }
+            None => rgb,
+        })
     };
     let ui = |rgb: Rgb, alpha: f32| ui(hued(rgb, 0.5), alpha);
     // The corona breathes slowly and unevenly, as the blade's light flickers.
@@ -331,8 +340,11 @@ fn lit_blade(
             .iter()
             .enumerate()
             .map(|(index, wave)| 0.05 * (t * wave.rate + 1.7 * index as f32).sin() * wave.weight)
-            .sum::<f32>();
+            .sum::<f32>()
+        + 0.12 * shaping.beat;
     let end = start + length;
+    let corona = 13.0 * breath;
+    effects::ghosts(canvas, frame, def, [start, centre], length, corona, &ui);
     // The light it casts on the swatch, and its haze: many faint layers, so the glow
     // falls off softly instead of in bands.
     for step in 0..HAZE_LAYERS {
@@ -353,7 +365,6 @@ fn lit_blade(
     }
     // Flame loops rising off the corona and sinking back, drifting tipward, above and
     // below in turn, when the skin has tongues.
-    let corona = 13.0 * breath;
     if def.tongues.range != 0.0 {
         for index in 0..PROMINENCES {
             let i = index as f32;
@@ -429,6 +440,11 @@ fn lit_blade(
         [start + 1.0, centre - 2.6, length - 2.0, 5.2],
         ui(mix(def.core.white, WHITE, 0.5), 1.0),
     );
+    let at = [start, centre];
+    effects::veins(canvas, frame, def, at, length, t, &ui);
+    effects::scan(canvas, frame, def, at, length, corona, t, &ui);
+    effects::glyphs(canvas, frame, def, at, length, t, &ui);
+    effects::embers(canvas, frame, def, at, length, t, &ui);
     // A flare: a bright knot running from the hilt to the tip once a cycle of the skin's
     // first track, swelling and fading, its light soft round it.
     let phase = fract(t * def.flares.rate);
@@ -496,6 +512,7 @@ fn lit_blade(
             &hued,
         );
     }
+    effects::glitch(canvas, frame, def, [start, centre], length, t);
 }
 
 /// The skin's motes round the blade from `at` (its hilt end, frame pixels) along `length`,

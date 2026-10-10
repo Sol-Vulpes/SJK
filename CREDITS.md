@@ -73,6 +73,10 @@ Sol develops SJK and sets its direction. Sol's work includes:
   Illuminate) every SJK player on a server sees;
 - the Collection: medals on a rail, achievements as a wall of medallions, saber
   shaders previewed on the player's own model, toys and nameplates to come;
+- nine more saber shaders (Unstable, Molten, Spectral, Glitch, Hologram, Runic,
+  Chameleon, Banner, Heartbeat) and the generic shading they use: a sputtering edge,
+  glitches, hologram scan lines, a heartbeat, afterimages, falling embers, veins, a
+  team or surroundings tint and glyphs spelling the wearer's name;
 - the kill feed at the top right with weapon icons (`cg_killfeed`);
 - the SJK profile card and the profile pictures kept at the SJK hub;
 - muting a player from their name in chat (chat, model, saber and sounds);

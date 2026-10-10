@@ -210,3 +210,145 @@ fn duel6_sjk_saber_page() {
         }
     });
 }
+
+/// The second set of saber shaders (10/10/2026), each id with what its close-up shows.
+const SECOND_SET: [&str; 9] = [
+    "saber_unstable",
+    "saber_molten",
+    "saber_spectral",
+    "saber_glitch",
+    "saber_hologram",
+    "saber_runic",
+    "saber_chameleon",
+    "saber_banner",
+    "saber_heartbeat",
+];
+
+/// The second set of saber shaders on duel6: all nine standing side by side at two
+/// times, then each alone up close, lying across the view over the floor, at eight
+/// moments (sheets `duel6-blade-<name>`). The Spectral's afterimages trail a swing down
+/// from above, the Runic spells "SolVulpes", the Banner is shown outside a team, red and
+/// blue, the Chameleon in two places' light, the Heartbeat through a beat.
+#[test]
+#[ignore = "renders with the GPU and the installed game data named by JKA_GAME_DATA"]
+fn duel6_second_blades() {
+    on_big_stack(|| {
+        mount_test_packs();
+        let Some((mut gpu, _profile)) = open("maps/mp/duel6.bsp", [1280, 720], None, &[]) else {
+            return;
+        };
+        let (spawn, yaw) = assets::initial_camera(&gpu.bsp).expect("a spawn point");
+        let turn = glam::Quat::from_rotation_z(yaw);
+        let eye = Vec3::from_array(spawn);
+        let ahead = |x: f32, y: f32, z: f32| eye + turn * Vec3::new(x, y, z);
+        gpu.saber_skins.shot_persona = crate::saber_persona::Persona::of(b"^1Sol^7Vulpes", 0);
+        // All nine standing, a little tilted as if held.
+        gpu.saber_skins.shot_blades = SECOND_SET
+            .iter()
+            .enumerate()
+            .map(|(index, id)| {
+                let offset = (index as f32 - 4.0) * 8.5;
+                (
+                    Blade {
+                        base: ahead(70.0, -offset, -24.0).to_array(),
+                        direction: (turn * Vec3::new(0.0, -0.006 * offset, 1.0))
+                            .normalize()
+                            .to_array(),
+                        length: 40.0,
+                        radius: 3.0,
+                    },
+                    ShotColor::Skin(id),
+                    index as u32 + 1,
+                )
+            })
+            .collect();
+        let (look_yaw, look_pitch) = look(eye.to_array(), ahead(70.0, 0.0, -6.0).to_array());
+        aim(&mut gpu, eye.to_array(), look_yaw, look_pitch);
+        let mut lineup = Vec::new();
+        for (index, seconds) in [2.6, 5.15].into_iter().enumerate() {
+            gpu.saber_skins.shot_seconds = Some(seconds);
+            lineup.push(frame(&mut gpu, if index == 0 { 40 } else { 4 }));
+        }
+        println!(
+            "{}",
+            sheet(&lineup, 1, 1280, "duel6-blades-lineup").display()
+        );
+        // Each alone, up close.
+        let lying = |at: Vec3, down: f32| Blade {
+            base: at.to_array(),
+            direction: (turn * Vec3::new(0.0, -1.0, down)).normalize().to_array(),
+            length: 40.0,
+            radius: 3.0,
+        };
+        // Closer than the Sun's, so the glyphs, veins and scan lines read.
+        let camera = ahead(27.0, 0.0, -15.0);
+        let (look_yaw, look_pitch) = look(camera.to_array(), ahead(44.0, 0.0, -24.0).to_array());
+        for id in SECOND_SET {
+            let blade = lying(ahead(44.0, 20.0, -26.0), 0.12);
+            gpu.saber_skins.shot_blades = vec![(blade, ShotColor::Skin(id), 2)];
+            aim(&mut gpu, camera.to_array(), look_yaw, look_pitch);
+            let mut close = Vec::new();
+            for step in 0..8 {
+                let seconds = 3.0 + f64::from(step) * 0.13;
+                gpu.saber_skins.shot_seconds = Some(seconds);
+                gpu.saber_skins.shot_ghosts.clear();
+                gpu.saber_skins.shot_persona =
+                    crate::saber_persona::Persona::of(b"^1Sol^7Vulpes", 0);
+                match id {
+                    // A swing down from above: the poses it passed, 45 ms apart.
+                    "saber_spectral" => {
+                        let fade = [0.45_f32, 0.2, 0.09, 0.04];
+                        for (back, light) in fade.into_iter().enumerate() {
+                            let lift = (back as f32 + 1.0) * 3.5 * (1.0 + step as f32 * 0.1);
+                            gpu.saber_skins.shot_ghosts.push((
+                                lying(ahead(44.0, 20.0, -26.0 + lift), 0.12 + 0.05 * back as f32),
+                                id,
+                                light,
+                            ));
+                        }
+                    }
+                    // Outside a team, then red, then blue.
+                    "saber_banner" => {
+                        let team = [0, 0, 0, 1, 1, 1, 2, 2][step as usize];
+                        gpu.saber_skins.shot_persona =
+                            crate::saber_persona::Persona::of(b"Sol", team);
+                    }
+                    _ => {}
+                }
+                close.push(frame(&mut gpu, 4));
+            }
+            let name = format!("duel6-blade-{}", id.trim_start_matches("saber_"));
+            println!("{}", sheet(&close, 2, 960, &name).display());
+        }
+        // The Chameleon elsewhere: its colour is the light's where it is.
+        let mut places = Vec::new();
+        for (forward, side, height) in [
+            (44.0, 20.0, -26.0),
+            (160.0, -120.0, -10.0),
+            (-200.0, 90.0, 0.0),
+        ] {
+            let at = ahead(forward, side, height);
+            gpu.saber_skins.shot_blades =
+                vec![(lying(at, 0.12), ShotColor::Skin("saber_chameleon"), 2)];
+            let camera = at + turn * Vec3::new(-26.0, -20.0, 18.0);
+            let (look_yaw, look_pitch) = look(
+                camera.to_array(),
+                (at + turn * Vec3::new(0.0, -20.0, 2.0)).to_array(),
+            );
+            aim(&mut gpu, camera.to_array(), look_yaw, look_pitch);
+            gpu.saber_skins.shot_seconds = Some(3.0);
+            places.push(frame(&mut gpu, 6));
+            // The light each instance took from the grid.
+            let lights: Vec<String> = gpu
+                .saber_instances
+                .iter()
+                .map(|i| format!("{:08x}", i.persona_lanes()[0]))
+                .collect();
+            println!("chameleon at {at:?}: lights {lights:?}");
+        }
+        println!(
+            "{}",
+            sheet(&places, 3, 640, "duel6-blade-chameleon-places").display()
+        );
+    });
+}

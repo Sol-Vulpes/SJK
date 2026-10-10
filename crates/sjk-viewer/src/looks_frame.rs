@@ -71,6 +71,18 @@ impl GpuState {
         };
         if due {
             player_identity::set_look(&own.to_look());
+            // Who sits where, and the own name, for the saber shaders drawn from them.
+            let slots = session.map_or_else(
+                || [crate::saber_persona::Persona::default(); crate::saber_skins::MAX_CLIENTS],
+                |session| crate::saber_persona::Persona::of_slots(session.game_state()),
+            );
+            let name = self
+                .console
+                .as_ref()
+                .and_then(|console| console.text_cvar("name").ok())
+                .unwrap_or_default();
+            self.saber_skins
+                .set_personas(slots, crate::saber_persona::Persona::of(name.as_bytes(), 0));
         }
         if own != self.looks.own() || own_slot != self.looks.own_slot() {
             self.looks.set_own(own_slot, own);

@@ -105,16 +105,25 @@ const DUAL_HILT_ROWS: usize = 4;
 const SEARCH_WIDTH: f32 = 240.0;
 const DUAL_SEARCH_WIDTH: f32 = 170.0;
 /// The blade choice's swatches (the Collection's, shrunk) and the gap between
-/// them, from `SKIN_X` so that all of them (the stock blade and every blade
-/// skin) end at the controls' edge.
+/// them, from `SKIN_X` so that the ones shown (at most `SKIN_SHOWN` of the stock
+/// blade and every blade skin owned, scrolled to keep the chosen one in view)
+/// end at the controls' edge.
 const SKIN_HEIGHT: f32 = 44.0;
 const SKIN_WIDTH: f32 = SKIN_HEIGHT * 400.0 / 224.0;
 const SKIN_GAP: f32 = 6.0;
-const SKIN_CHOICES: usize = crate::unlockables::ALL.len() + 1;
+const SKIN_SHOWN: usize = 6;
 const SKIN_X: f32 =
-    CONTROL_RIGHT - SKIN_CHOICES as f32 * SKIN_WIDTH - (SKIN_CHOICES - 1) as f32 * SKIN_GAP;
+    CONTROL_RIGHT - SKIN_SHOWN as f32 * SKIN_WIDTH - (SKIN_SHOWN - 1) as f32 * SKIN_GAP;
 /// Blade choice `i` (0 the stock blade) answers to `SKIN_BASE + i`.
 const SKIN_BASE: u16 = 1_060;
+
+/// The first of the blade choices the row shows: the chosen one kept third from
+/// the left where it can be, the window never past either end.
+fn skin_window(chosen: usize, count: usize) -> usize {
+    chosen
+        .saturating_sub(2)
+        .min(count.saturating_sub(SKIN_SHOWN))
+}
 
 /// Hilt lines a list shows for `style`.
 fn hilt_rows(style: SaberStyle) -> usize {
@@ -1276,14 +1285,34 @@ impl PlayerMenu {
         }
         let count = self.blade_choice.count();
         let chosen = self.blade_choice.chosen();
+        let first = skin_window(chosen, count);
+        let shown = count.min(SKIN_SHOWN);
         let y = top + (ROW - SKIN_HEIGHT) * 0.5;
-        let span = count as f32 * (SKIN_WIDTH + SKIN_GAP) - SKIN_GAP;
+        let span = shown as f32 * (SKIN_WIDTH + SKIN_GAP) - SKIN_GAP;
         self.sjk_targets(frame, index, [SKIN_X, y, span, SKIN_HEIGHT], area);
         let seconds = crate::menu::art::motion::seconds() as f32;
         let colour = saber_color(self.saber.color(false), self.saber.custom_rgb(false));
         let mut named = chosen;
-        for choice in 0..count {
-            let x = SKIN_X + choice as f32 * (SKIN_WIDTH + SKIN_GAP);
+        // More blades on either side than the row shows: a chevron there.
+        for (more, x, mark) in [
+            (first > 0, SKIN_X - 14.0, "‹"),
+            (first + shown < count, SKIN_X + span + 3.0, "›"),
+        ] {
+            if more {
+                text(
+                    &mut self.canvas,
+                    TextFamily::Body,
+                    format_args!("{mark}"),
+                    frame.rect(x, y, 11.0, SKIN_HEIGHT),
+                    22.0 * s,
+                    color::GOLD_BRIGHT,
+                    FontWeight::Regular,
+                    TextAlign::Center,
+                );
+            }
+        }
+        for choice in first..first + shown {
+            let x = SKIN_X + (choice - first) as f32 * (SKIN_WIDTH + SKIN_GAP);
             let rect = [x, y, SKIN_WIDTH, SKIN_HEIGHT];
             let token = SKIN_BASE + choice as u16;
             let hovered = self.canvas.token_hovered(token);
@@ -1317,7 +1346,7 @@ impl PlayerMenu {
             &mut self.canvas,
             TextFamily::Body,
             format_args!("{}", SaberRow::Skin.label()),
-            frame.rect(LABEL_X, top + 4.0, SKIN_X - LABEL_X - 8.0, 24.0),
+            frame.rect(LABEL_X, top + 4.0, SKIN_X - LABEL_X - 16.0, 24.0),
             19.0 * s,
             if focused {
                 Color::new(1.0, 1.0, 1.0, 1.0)
@@ -1332,7 +1361,7 @@ impl PlayerMenu {
             &mut self.canvas,
             TextFamily::Body,
             format_args!("{}", skin.map_or("Stock blade", |skin| skin.name)),
-            frame.rect(LABEL_X, top + 28.0, SKIN_X - LABEL_X - 8.0, 20.0),
+            frame.rect(LABEL_X, top + 28.0, SKIN_X - LABEL_X - 16.0, 20.0),
             15.0 * s,
             if skin.is_some() {
                 color::GOLD_BRIGHT
@@ -2341,6 +2370,22 @@ mod tests {
     );
     // The blade choice's swatches leave the row's name room.
     const _: () = assert!(SKIN_X - LABEL_X > 110.0);
+
+    #[test]
+    fn the_blade_choice_scrolls_to_keep_the_chosen_one_shown() {
+        // Every blade skin and the stock one: more than the row shows.
+        let count = crate::unlockables::ALL.len() + 1;
+        assert!(count > SKIN_SHOWN);
+        for chosen in 0..count {
+            let first = skin_window(chosen, count);
+            assert!((first..first + SKIN_SHOWN).contains(&chosen), "{chosen}");
+            assert!(first + SKIN_SHOWN <= count);
+        }
+        assert_eq!(skin_window(0, count), 0);
+        assert_eq!(skin_window(count - 1, count), count - SKIN_SHOWN);
+        // Few enough to show them all: no scrolling.
+        assert_eq!(skin_window(3, 4), 0);
+    }
     // Force: the groups under the sides, the actions under Lightsaber, and the
     // power box above the keys.
     const _: () = assert!(
@@ -2362,7 +2407,7 @@ mod tests {
     // The token ranges stay apart: the levels, the blade choices, the style
     // buttons, the lists' wheel areas, then the hilts.
     const _: () = assert!(LEVEL_BASE + 18 * 3 <= SKIN_BASE);
-    const _: () = assert!(SKIN_BASE + SKIN_CHOICES as u16 <= STYLE_BASE);
+    const _: () = assert!(SKIN_BASE + (crate::unlockables::ALL.len() + 1) as u16 <= STYLE_BASE);
     const _: () = assert!(STYLE_BASE + 3 <= HILT_SCROLL);
     const _: () = assert!(HILT_SCROLL + 2 <= HILT_BASE);
 
@@ -2802,8 +2847,14 @@ mod tests {
                 std::thread::sleep(std::time::Duration::from_millis(40));
             }
             let row = menu.saber_row(SaberRow::Skin).expect("a blade row");
-            for choice in 0..SKIN_CHOICES {
-                assert!(menu.canvas.rect_for(SKIN_BASE + choice as u16).is_some());
+            // The stock blade chosen: the first six shown, the rest scrolled off.
+            let choices = crate::unlockables::ALL.len() + 1;
+            for choice in 0..choices {
+                assert_eq!(
+                    menu.canvas.rect_for(SKIN_BASE + choice as u16).is_some(),
+                    choice < SKIN_SHOWN,
+                    "{choice}"
+                );
             }
             let storm = menu.canvas.rect_for(SKIN_BASE + 2).unwrap();
             click(

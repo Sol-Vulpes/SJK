@@ -108,6 +108,17 @@ pub(crate) fn submit(
                     .with_animation(presentation_time as f64 * 0.001, key as u32)
                 }),
             );
+            if let BladeColor::Skin(skin) = color
+                && let Some(spec) = skin.ghosts
+            {
+                state.ghosts.record(blade, presentation_time, spec);
+                saber_instances.extend(
+                    state
+                        .ghosts
+                        .instances(blade, color, spec)
+                        .map(|i| i.with_animation(presentation_time as f64 * 0.001, key as u32)),
+                );
+            }
             light_blades[blade_index] = Some(blade);
             if let Some(edges) = trails.as_deref_mut()
                 && let Some(quad) = state.trail.update(

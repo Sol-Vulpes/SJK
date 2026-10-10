@@ -7,6 +7,28 @@ SJK currently contains a native client and standard dedicated server in a
 20-crate Rust workspace. This page records scope and verification, rather than
 claiming complete parity from the presence of an implementation.
 
+## Nine more saber shaders
+
+Branch `personal/saber-shaders` (10/10/2026, based on `fa97d354`, Windows 11), with the
+hub's `feat/saber-shaders`, Sol's request: the Unstable, Molten, Spectral, Glitch,
+Hologram, Runic, Chameleon, Banner and Heartbeat blades
+([unlockables.md](unlockables.md#catalogue)). The generic blade-skin shading gains ten
+optional sections (sputter, glitch, scan, pulse, ghosts, embers, veins, team, ambient,
+glyphs; [rendering.md](rendering.md#saber-blade-skins)), instances carry who wears them
+(team, name, the light where they are), up to 16 skins load at once, and the
+Collection's rack and the Saber tab's blade row scroll. Unlocking is unchanged (staff or
+operator by hand).
+
+Verified: `cargo fmt --all --check`, `cargo build --locked --workspace`, `cargo test
+--locked --workspace` and `cargo clippy --locked --workspace --all-targets`; `saber.wgsl`
+validated by naga; unit tests of the new sections' parsing and ranges, the uniform's
+52-lane layout matched by name against the shader, names spelt as glyph codes, every
+letter's glyph distinct (a CPU copy pinned to the shader's text), afterimage poses, the
+heartbeat's CPU copy for the light, the rack's and the blade row's scrolling. The world
+shot `duel6_second_blades` with the hub's built pack (all 14 skins load through the strict
+parser) was reviewed by eye on one GPU. Not verified: a live match, other players' looks
+through a deployed hub, the sounds by ear, the cost of the new sections on a GPU.
+
 ## The Collection: medals, achievements, shaders, toys and nameplates
 
 Branch `personal/collection` (10/10/2026, based on `bca3ac2e`, Windows 11), Sol's

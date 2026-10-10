@@ -70,6 +70,8 @@ impl BladeColor {
                 light: tint,
                 flicker: Default::default(),
                 hue: [0.0; 2],
+                ghosts: None,
+                persona: Default::default(),
             });
         }
         Self::Rgb(tint.map(|c| (c * 255.).round().clamp(0., 255.) as u8))
