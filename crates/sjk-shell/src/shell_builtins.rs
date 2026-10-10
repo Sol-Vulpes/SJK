@@ -1,6 +1,5 @@
 use super::*;
 use crate::{CvarDefinition, CvarError, CvarFlags, CvarValue, ShellError, save_config};
-use std::path::Path;
 
 impl Shell {
     pub(super) fn set_command(
@@ -138,21 +137,23 @@ impl Shell {
     }
 
     pub(super) fn write_config_command(
-        &self,
+        &mut self,
         arguments: &[String],
     ) -> Result<Vec<String>, ShellError> {
         let path = match arguments {
-            [] => self
-                .config_path
-                .as_deref()
-                .ok_or(ShellError::NoConfigPath)?,
-            [path] => Path::new(path),
+            [] => self.config_path.clone().ok_or(ShellError::NoConfigPath)?,
+            [path] => PathBuf::from(path),
             _ => return Err(ShellError::Usage("writeconfig [path]")),
         };
         if self.config_load_failed {
             return Err(ShellError::ConfigLoadFailed);
         }
-        save_config(path, &self.cvars, &self.binds)?;
+        // The profile's own file goes through the saver, after its queued writes.
+        if self.config_path.as_deref() == Some(path.as_path()) {
+            self.save()?;
+        } else {
+            save_config(&path, &self.cvars, &self.binds)?;
+        }
         Ok(vec![format!("wrote {}", path.display())])
     }
 }

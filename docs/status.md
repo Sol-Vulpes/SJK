@@ -1,5 +1,26 @@
 # Status and priorities
 
+## Config saved only on real changes
+
+Branch `personal/config-save`, based on `a4ea2316` (10/10/2026, Windows).
+Found: every bound key press rewrote `config.cfg` on the main thread. Each
+command frame ended in a save (`execute_buffered_frame`, `execute_bound_command`,
+`apply_cvar` on any cvar, archived or not), and a `wait` script kept the buffer
+busy so it saved every frame: 13 KB of text, `create_dir_all`, a temporary file
+and a rename, 0.8 ms median on an NVMe SSD, can be far more with antivirus/HDD.
+Now `CvarRegistry::archive_revision` (restamped only when an archived cvar is
+added, removed, or changes value or flags) and `BindTable::revision` (bind,
+unbind, clear) say whether the file is out of date. `persist()` and a call at the
+end of each frame's console upkeep run `Shell::autosave`: two comparisons when
+nothing changed; once the state has held still for 2 s (`CONFIG_SAVE_DELAY`), the
+text is built on the main thread and written by one background thread
+(`sjk-shell` `config_saver.rs`), in queue order. Writes happen at once, after the
+writer drains, on exit (the console's `Drop`), `writeconfig`, and `exec
+config.cfg`. Verified by: new unit tests (key presses do not write, an archived
+change writes once after the delay, an unarchived one never, the exit save
+writes), the existing viewer and shell suites, fmt and Clippy. Not tried in a
+game.
+
 ## Quieter body damage flash
 
 Branch `fix/subtle-damage-shader`, based on `0c76ff03` (2026-10-10,

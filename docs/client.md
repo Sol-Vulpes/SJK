@@ -2682,6 +2682,18 @@ See [platform.rs](../crates/sjk-viewer/src/platform.rs) and
 Edit settings through the client, or edit the file while the client is stopped
 so autosaving cannot overwrite your changes.
 
+Autosaving writes `config.cfg` only when an archived cvar or a binding changed:
+key presses, `+`/`-` buttons and unarchived cvars never touch the file. A change
+is saved once the archived state has held still for 2 seconds
+(`CONFIG_SAVE_DELAY`), so a dragged slider or a script setting many cvars writes
+once. The text is built on the main thread and written, through a temporary file
+and a rename, by one background thread that takes the saves in order. The file
+is written at once, on the main thread, when the client exits (every exit drops
+the console), on `writeconfig`, and before `exec config.cfg` reads it back. Until
+10/10/2026 every command frame, so every bound key press, rewrote the whole file
+on the main thread. See [config_saver.rs](../crates/sjk-shell/src/config_saver.rs)
+and `Shell::autosave` in [shell.rs](../crates/sjk-shell/src/shell.rs).
+
 `com_maxfps` defaults to `-1` (AUTO in Settings > Video); `0` is uncapped. The
 old default, 1000, saved in every existing profile, is reset to AUTO once on
 first launch (marker `com_maxfpsDefaultVersion`); a cap chosen afterwards is

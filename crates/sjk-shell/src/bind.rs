@@ -6,10 +6,20 @@ use std::collections::BTreeMap;
 use std::fmt::{Display, Formatter};
 
 /// Case-insensitive stable key binding table.
-#[derive(Clone, Debug, Default, Eq, PartialEq)]
+#[derive(Clone, Debug, Default)]
 pub struct BindTable {
     bindings: BTreeMap<String, Binding>,
+    /// Stamp of the bindings ([`Self::revision`]); not part of equality.
+    revision: u64,
 }
+
+impl PartialEq for BindTable {
+    fn eq(&self, other: &Self) -> bool {
+        self.bindings == other.bindings
+    }
+}
+
+impl Eq for BindTable {}
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 struct Binding {
@@ -28,27 +38,43 @@ impl BindTable {
         let normalized = normalize_key(key)?;
         let command = command.into();
         if command.is_empty() {
-            self.bindings.remove(&normalized);
+            if self.bindings.remove(&normalized).is_some() {
+                self.revision = crate::revision::next();
+            }
             return Ok(());
         }
-        self.bindings.insert(
-            normalized,
-            Binding {
-                key: crate::key_names::canonical_key(key).unwrap().to_owned(),
-                command,
-            },
-        );
+        let binding = Binding {
+            key: crate::key_names::canonical_key(key).unwrap().to_owned(),
+            command,
+        };
+        // A script that rebinds a key to what it already runs changes nothing saved.
+        if self.bindings.get(&normalized) != Some(&binding) {
+            self.bindings.insert(normalized, binding);
+            self.revision = crate::revision::next();
+        }
         Ok(())
     }
 
     /// Remove a binding case-insensitively.
     pub fn unbind(&mut self, key: &str) -> bool {
-        normalize_key(key).is_ok_and(|key| self.bindings.remove(&key).is_some())
+        let removed = normalize_key(key).is_ok_and(|key| self.bindings.remove(&key).is_some());
+        if removed {
+            self.revision = crate::revision::next();
+        }
+        removed
     }
 
     /// Remove every binding.
     pub fn clear(&mut self) {
+        self.revision = crate::revision::next();
         self.bindings.clear();
+    }
+
+    /// A stamp of the bindings: it changes with every bind, unbind or clear, so
+    /// an equal stamp means the same bindings. Stamps are unique across tables;
+    /// every new table starts empty at 0.
+    pub fn revision(&self) -> u64 {
+        self.revision
     }
 
     /// Return a key's command script case-insensitively.

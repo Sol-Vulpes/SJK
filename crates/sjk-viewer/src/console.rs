@@ -90,6 +90,9 @@ pub(crate) use console_demo::Action as DemoAction;
 mod console_client;
 #[path = "console_command.rs"]
 mod console_command;
+#[cfg(test)]
+#[path = "console_config_save_tests.rs"]
+mod console_config_save_tests;
 #[path = "console_forward.rs"]
 mod console_forward;
 #[path = "console_keyboard.rs"]
@@ -865,8 +868,23 @@ impl ViewerConsole {
         self.edit.to_end(&self.input);
     }
 
-    fn persist(&mut self) {
-        if let Err(error) = self.shell.save() {
+    /// Let the config file catch up with a change. Cheap: nothing is written here
+    /// unless an archived cvar or a bind changed and then held still for
+    /// [`sjk_shell::CONFIG_SAVE_DELAY`], and then on a background thread
+    /// ([`sjk_shell::Shell::autosave`]). Also run once per frame.
+    pub(crate) fn persist(&mut self) {
+        if let Err(error) = self.shell.autosave(std::time::Instant::now()) {
+            self.shell
+                .push_log(format!("^1Could not save config: {error}"));
+        }
+    }
+
+    /// Write pending config changes now, on this thread, so a test can read
+    /// config.cfg back. The client's own read-backs (`exec config.cfg`,
+    /// `writeconfig`, exit) go through the shell's synchronous save.
+    #[cfg(test)]
+    pub(crate) fn flush_config(&mut self) {
+        if let Err(error) = self.shell.save_if_dirty() {
             self.shell
                 .push_log(format!("^1Could not save config: {error}"));
         }
@@ -890,6 +908,8 @@ impl ViewerConsole {
 }
 
 impl Drop for ViewerConsole {
+    /// Every exit path drops the console: write what the debounce still holds,
+    /// after any background write, before the process ends.
     fn drop(&mut self) {
         let _ = self.shell.save();
     }

@@ -72,5 +72,9 @@ impl GpuState {
             self.apply_console_demo_action(action);
         }
         self.run_client_commands(audio);
+        // Save settings changed this frame or earlier, once they hold still.
+        if let Some(console) = self.console.as_mut() {
+            console.persist();
+        }
     }
 }
