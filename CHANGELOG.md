@@ -13,6 +13,19 @@ Format, read by the client (crates/sjk-viewer/src/changelog_data.rs, whose
 tests check this file):
 - "## <version> | <dd/mm/yyyy>" starts a release ("## Unreleased" for main
   after the last release, without a date);
+- other lines up to the first item are the release's introduction;
+- "- <change> _(<credit>)_" is one change; every change ends with its credit;
+- ASCII only, as the menu font draws bytes.
+Add each release's notes here when it is tagged (docs/sjk.md "Releases").
+-->
+## 2026.1010.2 (Alpha) | 10/10/2026
+
+Smoother play: no more stutter when players join or change model or when you press keys, far
+less memory on servers, a low-FPS helper (help_fps) that offers EJK graphics (Ultra low renamed)
+and graphics settings that apply without a restart. Also a Collection of everything you gather,
+holocrons earned by playing (collected and shown, not opened yet), saber shader tiers, nine new
+blades and GIFs in the SJK chat.
+
 - Fewer stutters when players join or change model: their model now loads in the background and the player keeps their old model (or a stand-in) for that moment; the game also stops copying all of the map's geometry for each new model and prepares glow effects ahead of time _(Sol)_
 - The body shield-hit flash is quieter by default: one pass instead of four (cg_shieldBrightness 1, the stock look); a profile still on the old default 4 moves to 1 once, other values stay _(Lumaya)_
 - The red damage indicator near the crosshair is off by default; Settings > HUD > Damage hitmarker (cg_hitMarker 1) brings it back at once. Camera kick and hit sounds are unchanged _(Lumaya)_
@@ -21,17 +34,6 @@ tests check this file):
 - Your own pistol shot no longer plays its sound twice when the server's snapshot arrives before the shot is predicted: your own snapshot entity adds no event sounds, as the original cgame builds it from the player state _(Lumaya, after OpenJK)_
 - Players holding the multiplayer pistol show the blaster pistol model in third person instead of the old Bryar's, so a DL-44 replacement pack applies there too; the old Bryar keeps its own model _(Lumaya, after OpenJK)_
 - Low FPS help: a few seconds after a map loads, SJK times its lighting, and when it keeps you under your FPS target a pop-up offers EJK graphics (with a Don't suggest this again tick); type help_fps for the same pop-up any time. Ultra low graphics are now called EJK graphics (graphicsquality ejk; ultralow still works) _(Sol)_
-- other lines up to the first item are the release's introduction;
-- "- <change> _(<credit>)_" is one change; every change ends with its credit;
-- ASCII only, as the menu font draws bytes.
-Add each release's notes here when it is tagged (docs/sjk.md "Releases").
--->
-## Unreleased
-
-A Collection of everything you gather in SJK, with your own character showing what you pick,
-and holocrons: loot you earn by playing. For now they are collected and shown; they cannot be
-opened yet and give nothing.
-
 - Pressing bound keys no longer rewrites config.cfg: settings and binds are saved only when one of them changed, 2 seconds after the last change and off the main thread, and at once when SJK closes, so key presses cannot stutter a frame on a slow disk or with antivirus scanning _(Sol)_
 - Stutters during play are written to the log: a frame over 33 ms and three times the recent median adds a "hitch:" line with the work that took the time (at most one a second), and a "hitches:" count each minute that had any. They also show in the console, and in qconsole.log with logfile 1, to send with a stutter report _(Sol)_
 - The cards for achievements, medals and holocrons wait while SJK is alt-tabbed out or minimised and show when you come back, going on from where they were; the big medal and holocron pop-ups also wait to start. A new SJK version found at start now shows a card too: Update available, with the version and Main menu > Update _(Sol)_

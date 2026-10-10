@@ -9,6 +9,8 @@
 #                               made it when that is not the piece's owner.
 
 = Sol
++ 10/10/2026 | - | Release 2026.1010.2 notes, warning-free build
+- 8f86739 |  | Release 2026.1010.2 (Alpha)
 + 10/10/2026 | - | EJK graphics offered when a map's lighting keeps the FPS low, help_fps; Ultra low renamed EJK
 - cfeb1e0 |  | Offer EJK graphics when a map's lighting keeps the FPS low; help_fps
 - a98a3a6 |  | Store cg_fpsHelp as a switch; the card's shot test reloads as the game does

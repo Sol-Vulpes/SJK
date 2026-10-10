@@ -389,29 +389,11 @@ names later) join the shared vertex, index and quad buffers
 made at map load with room to spare, a quarter more than the map and at least 128k
 vertices and 384k indices (about a dozen player models), so a model is written into
 that room; only past it are they made again, with room to spare again, the old
-contents copied on the GPU and the frame's submit waited for. Before 11/10/2026 they
+contents copied on the GPU and the frame's submit waited for. Before 10/10/2026 they
 grew by exactly the new model, so every model copied the whole map's geometry.
 
 A model's materials are compiled when it is installed, with their pipelines; their
-glow variants too since 11/10/2026, and the map's at load
-(`Runtime::warm_glow`, [world_glow.rs](../crates/sjk-viewer/src/world_glow.rs)),
-rather than on the first frame something glows. Those compiles still run on the
-render thread when a model is installed: a driver compile it has not cached (the first
-time on a PC, or after a driver or SJK update) can take tens of milliseconds.
-
-## Geometry and pipelines added during a match
-
-Models that come in during a match (a player's new model, a hilt, a model a server
-names later) join the shared vertex, index and quad buffers
-([shared_geometry.rs](../crates/sjk-viewer/src/shared_geometry.rs)). The buffers are
-made at map load with room to spare, a quarter more than the map and at least 128k
-vertices and 384k indices (about a dozen player models), so a model is written into
-that room; only past it are they made again, with room to spare again, the old
-contents copied on the GPU and the frame's submit waited for. Before 11/10/2026 they
-grew by exactly the new model, so every model copied the whole map's geometry.
-
-A model's materials are compiled when it is installed, with their pipelines; their
-glow variants too since 11/10/2026, and the map's at load
+glow variants too since 10/10/2026, and the map's at load
 (`Runtime::warm_glow`, [world_glow.rs](../crates/sjk-viewer/src/world_glow.rs)),
 rather than on the first frame something glows. Those compiles still run on the
 render thread when a model is installed: a driver compile it has not cached (the first
