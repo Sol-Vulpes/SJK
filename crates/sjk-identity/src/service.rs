@@ -59,6 +59,11 @@ const LOOK_AGAIN: Duration = Duration::from_secs(10);
 /// How often the hub's list of asset packs is read while registered.
 const ASSETS_EVERY: Duration = Duration::from_secs(6 * 3_600);
 /// First wait after an asset check fell short, doubled up to [`ASSETS_EVERY`].
+/// How often the crash folder is looked at again while registered: a report a worker
+/// thread's panic left while the game went on goes within the hour.
+const CRASHES_EVERY: Duration = Duration::from_secs(3_600);
+/// How long reports the hub could not take wait before the next try.
+const CRASHES_AGAIN: Duration = Duration::from_secs(600);
 const ASSETS_RETRY_MIN: Duration = Duration::from_secs(60);
 
 /// What the player has configured.
@@ -143,6 +148,11 @@ pub struct Snapshot {
     /// What the last check of the asset packs did, for the log. Asset packs are
     /// cosmetic: a failure shows here, never in [`Snapshot::status`].
     pub assets_note: Option<String>,
+    /// Counts crash reports the hub took ([`Service::send_crashes`]).
+    pub crashes_sent: u64,
+    /// What the last round of crash reports did, for the log, once a round sent,
+    /// dropped or kept back anything.
+    pub crash_note: Option<String>,
     /// How far the player is from their next holocron, as the hub last said (read at
     /// the registration, every few minutes, after a drop of their own and on
     /// [`Service::refresh_holocrons`]). `None` before the hub answered, or from a hub
@@ -223,6 +233,8 @@ impl Snapshot {
             look_outcome: None,
             packs_revision: 0,
             assets_note: None,
+            crashes_sent: 0,
+            crash_note: None,
             holocrons: None,
         }
     }
@@ -289,6 +301,8 @@ enum Command {
     OwnLook(u64, String),
     /// The folder to keep the hub's asset packs in.
     AssetsDir(PathBuf),
+    /// The folder crash reports wait in, or none to send none.
+    Crashes(Option<PathBuf>),
     /// Whether the player is actively playing (`Service::set_active`).
     Active(bool),
     /// The feed relayed a holocron drop of the player's own key.
@@ -369,6 +383,10 @@ struct Worker {
     profile_soon_after: Instant,
     /// The folder the asset packs are kept in; without one none is asked for.
     assets_dir: Option<PathBuf>,
+    /// The folder crash reports wait in; without one none is sent.
+    crash_dir: Option<PathBuf>,
+    /// When the crash folder is next looked at.
+    due_crashes: Instant,
     /// When the asset packs are next checked, and the wait after the next shortfall.
     due_assets: Instant,
     assets_backoff: Duration,
@@ -492,6 +510,8 @@ impl Worker {
             look_id: None,
             profile_soon_after: now,
             assets_dir: None,
+            crash_dir: None,
+            due_crashes: now,
             due_assets: now,
             assets_backoff: ASSETS_RETRY_MIN,
             active: false,
@@ -720,6 +740,12 @@ impl Worker {
                     self.assets_dir = Some(dir);
                     self.due_assets = now;
                     self.assets_backoff = ASSETS_RETRY_MIN;
+                }
+            }
+            Command::Crashes(dir) => {
+                if self.crash_dir != dir {
+                    self.crash_dir = dir;
+                    self.due_crashes = now;
                 }
             }
             Command::Active(active) => self.active = active,
@@ -1002,6 +1028,7 @@ impl Worker {
         self.run_due(now);
         self.keep_holocrons(now);
         self.keep_assets(now);
+        self.send_crashes(now);
         let mut wait = IDLE_MAX;
         if self.location.is_some() {
             wait = wait
@@ -1023,6 +1050,9 @@ impl Worker {
         }
         if self.assets_dir.is_some() {
             wait = wait.min(self.due_assets.saturating_duration_since(now));
+        }
+        if self.crash_dir.is_some() {
+            wait = wait.min(self.due_crashes.saturating_duration_since(now));
         }
         wait.min(self.due_holocrons.saturating_duration_since(now))
     }
@@ -1077,6 +1107,42 @@ impl Worker {
         self.update(|snapshot| {
             snapshot.packs_revision += refresh.written.len() as u64;
             snapshot.assets_note = Some(note);
+        });
+    }
+
+    /// Send the crash reports waiting in the folder given, if it is time: next time
+    /// [`CRASHES_EVERY`] later, or [`CRASHES_AGAIN`] when some had to wait.
+    fn send_crashes(&mut self, now: Instant) {
+        let (Some(dir), Some(hub)) = (self.crash_dir.as_ref(), self.hub.as_mut()) else {
+            return;
+        };
+        if now < self.due_crashes {
+            return;
+        }
+        let unix = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map_or(0, |since| since.as_secs());
+        let name = self.name.clone().unwrap_or_default();
+        let round = crate::crash::send_pending(hub.as_mut(), &self.identity, dir, &name, unix);
+        self.due_crashes = now
+            + if round.waiting > 0 {
+                CRASHES_AGAIN
+            } else {
+                CRASHES_EVERY
+            };
+        if round == crate::crash::Round::default() {
+            return;
+        }
+        let mut note = format!("crash reports: {} sent", round.sent.len());
+        if round.dropped > 0 {
+            note.push_str(&format!(", {} dropped", round.dropped));
+        }
+        if let Some(problem) = &round.problem {
+            note.push_str(&format!(", {} waiting ({problem})", round.waiting));
+        }
+        self.update(|snapshot| {
+            snapshot.crashes_sent += round.sent.len() as u64;
+            snapshot.crash_note = Some(note);
         });
     }
 
@@ -1460,6 +1526,13 @@ impl Service {
     /// is called no asset is asked for.
     pub fn keep_assets(&self, directory: PathBuf) {
         let _ = self.commands.send(Command::AssetsDir(directory));
+    }
+
+    /// Send the crash reports waiting in `directory` (`crate::crash`) once registered,
+    /// and look there again every hour; [`Snapshot::crash_note`] says what went.
+    /// `None` sends none from now on.
+    pub fn send_crashes(&self, directory: Option<PathBuf>) {
+        let _ = self.commands.send(Command::Crashes(directory));
     }
 
     /// Whether the player is actively playing right now: on a live game server, not

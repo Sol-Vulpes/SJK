@@ -41,6 +41,7 @@ mod console_backdrop;
 mod console_overlay;
 mod console_runtime;
 mod cosmetics;
+mod crash_report;
 mod crosshair_scan;
 mod cut_trace;
 mod damage_feedback;
@@ -293,10 +294,13 @@ use winit::keyboard::{KeyCode, PhysicalKey};
 use winit::window::{Window, WindowAttributes, WindowId};
 fn main() {
     log::init();
+    crash_report::install();
     if let Err(error) = app_launch::run() {
         log::progress(format_args!("sjk: {error}"));
+        crash_report::fatal_error(&error.to_string());
         std::process::exit(1);
     }
+    crash_report::clean_exit();
     // Keep the last achievement counts, then withdraw the identity claim on the hub.
     achievements::sync(None, true);
     player_identity::shutdown();

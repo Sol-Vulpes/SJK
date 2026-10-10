@@ -427,6 +427,10 @@ const HELP: &[(&str, &str)] = &[
         "The SJK hub's address (https://...). Empty means no hub: nothing is sent.",
     ),
     (
+        crate::crash_report::CVAR,
+        "After a crash, the next start sends the SJK team a report: system, map, the error, recent console lines (no chat). Off sends none.",
+    ),
+    (
         "cl_sjkChat",
         "The chat every SJK player shares through the SJK hub, in menus and games. Off hides it.",
     ),

@@ -9,6 +9,8 @@
 #                               made it when that is not the piece's owner.
 
 = Sol
++ 11/10/2026 | - | Crash reports sent to the SJK hub
+- d9cd26b |  | Send crash reports to the SJK hub at the next start
 + 11/10/2026 | - | Client mods: JA+ tools and JoF tools
 - e9a4d92 |  | Add client mods: JA+ tools (japlus.*) and JoF tools (jof.*)
 + 10/10/2026 | - | Ctrl+V without a PowerShell on Windows

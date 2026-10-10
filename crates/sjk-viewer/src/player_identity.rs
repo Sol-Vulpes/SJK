@@ -62,6 +62,8 @@ struct Runtime {
     /// Keys whose profile the player card asked for ([`hub_info`]) and when, newest
     /// last, so each is asked at most every [`CARD_LOOKUP_EVERY`].
     card_lookups: Vec<(String, Instant)>,
+    /// The crash folder last handed to the service, if any was.
+    sent_crash_dir: Option<Option<std::path::PathBuf>>,
 }
 
 static RUNTIME: Mutex<Runtime> = Mutex::new(Runtime {
@@ -76,6 +78,7 @@ static RUNTIME: Mutex<Runtime> = Mutex::new(Runtime {
     next_sync: None,
     picture_lookups: Vec::new(),
     card_lookups: Vec::new(),
+    sent_crash_dir: None,
 });
 
 fn lock() -> MutexGuard<'static, Runtime> {
@@ -216,6 +219,32 @@ pub(crate) fn report(report: sjk_identity::BugReport) -> bool {
     };
     service.report(report);
     true
+}
+
+/// Have the service send the crash reports waiting in `dir`, or none (`None`).
+pub(crate) fn send_crashes(dir: Option<std::path::PathBuf>) {
+    let mut runtime = lock();
+    let runtime = &mut *runtime;
+    let Some(service) = runtime.service.as_ref() else {
+        return;
+    };
+    if runtime.sent_crash_dir.as_ref() != Some(&dir) {
+        service.send_crashes(dir.clone());
+        runtime.sent_crash_dir = Some(dir);
+    }
+}
+
+/// How many crash reports the hub took this session and what the last round did,
+/// once a round did anything.
+pub(crate) fn crash_outcome() -> Option<(u64, String)> {
+    lock().service.as_ref().and_then(|service| {
+        service.with_snapshot(|snapshot| {
+            snapshot
+                .crash_note
+                .clone()
+                .map(|note| (snapshot.crashes_sent, note))
+        })
+    })
 }
 
 /// Send a world note through the service: its tag for [`note_image`], or `None` when

@@ -12,6 +12,7 @@ pub mod assets;
 pub mod avatar;
 pub mod bio;
 pub mod chat;
+pub mod crash;
 pub mod feed;
 pub mod hub;
 mod keys;
@@ -21,6 +22,7 @@ pub mod staff;
 pub mod wire;
 
 pub use assets::Pack;
+pub use crash::CrashReport;
 pub use feed::{ChatState, ReceivedLooks};
 pub use hub::{HttpHub, Hub, HubError, valid_base_url};
 pub use keys::{Identity, KeyError};

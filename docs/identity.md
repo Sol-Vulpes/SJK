@@ -123,6 +123,16 @@ A bug report (Escape, SJK, Report a bug) is sent only when the player presses En
 on it: its text, the map, the client build, the game server's address and the in-game
 name the player wears, signed with the player's key. The hub keeps it until the operator removes it.
 
+A crash report ([Crash reports](#crash-reports)) is sent at the start after SJK
+crashed, while `cl_crashReports` (default 1) and identity are on: the client build, the
+operating system, the graphics adapter and driver, the map and game server, how long the
+game ran, the error with where in the code it happened and the backtrace, and the last
+console and diagnostic lines (chat lines are left out, the player's own folder is
+replaced by `%USERPROFILE%`), with the in-game name the player wears, signed with the
+player's key. The hub keeps the newest 5000 until the operator removes them. With
+`cl_crashReports 0` nothing is sent and the report stays on the PC
+(`crashes/last-crash.txt`).
+
 A player report (Escape, Players, or Escape, SJK, Report a player) is sent only by a
 verified player who chooses a player and a reason and presses Send: the reason and its few
 words, the reported player's slot and the name the game shows for them, the key the hub's
@@ -172,6 +182,48 @@ everything again and limits reports per key (3 a day, 20 once verified, 5 an hou
 repeat within a day), per address (3 in 10 minutes) and overall (300 a day, 5000 kept),
 so a troll with fresh keys gets little through and nothing that is not plain words. The
 operator reads them with the hub's `reports` command or `/admin/v1/reports`.
+
+## Crash reports
+
+[crash_report.rs](../crates/sjk-viewer/src/crash_report.rs) (the game's side) and
+[crash.rs](../crates/sjk-identity/src/crash.rs) (the format, the folder and the sending),
+since 11/10/2026. A crash leaves a report in `crashes/` beside the configuration
+(`GameData/SJK` or `%APPDATA%\SJK`), in one of three ways:
+
+- `panic`: the panic hook `install` sets in `main` (after the standard one, which still
+  prints to stderr) writes the message, `file:line:column`, the thread, a backtrace and the
+  last 150 lines of the trail. Any thread counts, also one whose panic the game survives
+  (a model worker, a frame's submission); a session writes at most three, one per place.
+- `error`: the fatal error `main` prints before closing (`crash_report::fatal_error`).
+- `unclean`: each session keeps `crashes/running-<pid>.json`, written again every 30 s
+  with where the player is and the last 60 lines; a clean exit removes it. The next start
+  turns a marker left by a dead process that wrote no report into a report: an abort, a
+  stack overflow, a driver or Windows ending the process, or the player killing it. On
+  Windows a running game holds its marker open without sharing deletion, so a second
+  game cannot take a live one's; elsewhere a marker written in the last 90 s counts as
+  live.
+
+The trail is every console line as it is kept (through `Shell::set_line_tap`), colour
+codes removed, except chat lines (`push_chat_line` keeps them out), and every
+`log::progress` diagnostic. Each report is also written as plain text to
+`crashes/last-crash.txt`, which a player can send by hand. Paths under the player's own
+folder become `%USERPROFILE%`.
+
+With `cl_crashReports` on, the report waits in `crashes/pending/` (20 at most, the oldest
+make room). Once registered, the identity service sends what waits (`POST /v1/crash`,
+hub `PROTOCOL.md`, "Crash reports") at start and every hour, oldest first: one the hub
+took, or already had (409), moves to `crashes/sent/` (the newest 10 stay); one it refuses
+for good (400, 403, 413) is dropped; at the first it cannot take now (no answer, a limit,
+a hub without crash reports) the rest wait 10 minutes. A report older than 14 days is
+dropped unsent. Text is cut to the hub's limits first (message 4000 characters,
+backtrace 16000, log 16000 keeping its newest lines, the body under 45 000 bytes), and a
+name the hub refuses is sent empty instead. The console says when SJK closed
+unexpectedly last time and when a report went. With `cl_crashReports 0` only
+`last-crash.txt` is written, and identity off sends nothing either.
+
+The hub groups reports by kind, the location's file and the message's first line (digits
+aside), so one bug across builds is one group; the operator reads them with the hub's
+`crash-groups`, `crashes`, `crash <id>` commands or `/admin/v1/crashes`.
 
 ## Player reports
 
@@ -765,6 +817,9 @@ once.
   ([unlockables.md](unlockables.md)). `saberskin` lists the blade skins (owned or
   locked) and `saberskin <id>`/`none` sets it; `unlockables` opens the Collection's
   Shaders tab, where owned ones are equipped.
+- `cl_crashReports` (default 1; Settings > Network > Send crash reports) sends crash
+  reports to the hub at the next start ([Crash reports](#crash-reports)); 0 keeps them on
+  the PC.
 - `cl_sjkChat` (default 1; Settings > Network > SJK chat) shows the SJK chat and reads
   it; `sjkchat` opens its page, `messagemode5` (I) its composer in a game, and
   `sjkemote <id>` sends an emote ([hub-chat.md](hub-chat.md)).

@@ -5,7 +5,8 @@
 //! pictures come from (`avatars.rs`) and the profile card what it shows
 //! (`profile_card.rs`), and the hub whether the player is actively playing
 //! (`holocrons_frame.rs`). Each frame it also lets the chat feed follow the SJK chat
-//! (`sjk_chat_frame.rs`), starts and ends emotes (`emotes_frame.rs`), keeps the
+//! (`sjk_chat_frame.rs`), keeps crash reports up to date and sent
+//! (`crash_report.rs`), starts and ends emotes (`emotes_frame.rs`), keeps the
 //! players' looks (`looks_frame.rs`), follows the players muted on this PC
 //! (`muted_players_frame.rs`), notes the Profile screen's tab on show
 //! (`profile_hub.rs`), puts the pictures that finished loading into the UI's atlas and
@@ -67,5 +68,6 @@ impl GpuState {
         self.offer_holocrons();
         self.update_achievements();
         self.update_holocron_activity();
+        self.follow_crash_reports();
     }
 }

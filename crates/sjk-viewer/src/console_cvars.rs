@@ -573,6 +573,12 @@ pub(super) fn register_daily_cvars(cvars: &mut CvarRegistry) -> Result<(), sjk_s
             "Keep an identity key and tell the SJK hub which game server you are on, so other SJK players see your badge (0 sends nothing)",
         ),
         CvarDefinition::new(
+            crate::crash_report::CVAR,
+            true,
+            archive,
+            "Send a report to the SJK team when SJK crashes (build, system, graphics card, map, server, the error and the last console lines without chat), at the next start through the SJK hub (0 keeps it on this PC only)",
+        ),
+        CvarDefinition::new(
             "cl_hubUrl",
             crate::player_identity::DEFAULT_HUB_URL,
             archive,

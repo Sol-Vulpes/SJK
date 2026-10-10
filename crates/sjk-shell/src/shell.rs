@@ -93,6 +93,8 @@ pub struct Shell {
     config_load_failed: bool,
     config_saver: crate::config_saver::ConfigSaver,
     file_log: file_log::FileLog,
+    /// Sees every line as it is kept ([`Shell::set_line_tap`]).
+    line_tap: Option<fn(&str)>,
     lines: VecDeque<ConsoleLine>,
     log_capacity: usize,
     /// Lines ever appended, so frontends can name a line across scrollback trimming.
@@ -113,6 +115,7 @@ impl Shell {
             config_load_failed: false,
             config_saver: Default::default(),
             file_log: file_log::FileLog::default(),
+            line_tap: None,
             lines: VecDeque::with_capacity(DEFAULT_LOG_CAPACITY),
             log_capacity: DEFAULT_LOG_CAPACITY,
             lines_written: 0,
@@ -244,6 +247,12 @@ impl Shell {
     /// Append application-originated text to bounded scrollback.
     pub fn push_log(&mut self, text: impl Into<String>) {
         self.push_line(ConsoleLineKind::Log, text.into());
+    }
+
+    /// Hand every line the scrollback keeps to `tap` as well, as it is kept (a
+    /// frontend's crash trail); `cl_noprint` silences it too.
+    pub fn set_line_tap(&mut self, tap: fn(&str)) {
+        self.line_tap = Some(tap);
     }
 
     /// Append application-originated text to scrollback only, never to the
@@ -428,6 +437,9 @@ impl Shell {
         }
         if self.lines.len() == self.log_capacity {
             self.lines.pop_front();
+        }
+        if let Some(tap) = self.line_tap {
+            tap(&text);
         }
         let written_millis = self.command_clock_millis();
         // Local time, as `Com_RealTime` stamps console text; frontends that draw

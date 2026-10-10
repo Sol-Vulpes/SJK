@@ -242,6 +242,8 @@ impl ViewerConsole {
         let new_profile = !config_path.exists();
         shell.set_config_path(config_path);
         shell.set_log_path(config_directory.join("qconsole.log"));
+        shell.set_line_tap(crate::crash_report::trail);
+        crate::crash_report::set_directory(&config_directory);
         if let Err(error) = shell.load() {
             shell.push_log(format!("^1Could not load config: {error}"));
             // Also to stderr, which is what the launcher captures. A failed load
