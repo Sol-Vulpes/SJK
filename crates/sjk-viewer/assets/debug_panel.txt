@@ -310,6 +310,16 @@ note: A roll on landing while crouched (PM_CrashLand) is not prevented, in EJK e
 
 # ---- Menus & settings ----
 
+[model-pipelines]
+area: Rendering & effects
+title: No hitch when some players' models appear: their pipelines compile on a worker
+change: A new model's missing pipelines (entity, glow, fog) compile off the render thread first.
+change: The player keeps their old model (or the stand-in) until then.
+test: Busy server: players with unusual models join; no "hitch: ... config-refresh" lines.
+test: Log shows "compiling N pipelines for ... off the render thread", then "now wears".
+test: Glowing models (Tavion) and fogged maps: model looks right on its first frame.
+note: Seen 10/10: 30-85 ms for Jaina, CosmicReborn, yesphantom, sungal.
+
 [join-hitch]
 area: Rendering & effects
 title: No hitch when players join: saber definitions read once a map

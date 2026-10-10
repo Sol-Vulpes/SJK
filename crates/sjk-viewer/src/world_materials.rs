@@ -51,6 +51,8 @@ mod gpu;
 pub(crate) mod material_maps;
 #[path = "model_light_grid.rs"]
 mod model_grid;
+#[path = "world_pipeline_jobs.rs"]
+pub(crate) mod pipeline_jobs;
 #[path = "world_ssao.rs"]
 pub(crate) mod ssao;
 #[path = "world_texture_prepare.rs"]
@@ -343,6 +345,9 @@ pub(crate) struct Runtime {
     glow_order: Vec<PassRef>,
     /// Glow-target variants of the pipeline keys, compiled on first glow draw.
     glow_pipelines: glow::Pipelines,
+    /// Bumped when the pipeline slots empty for a new program, so pipelines a worker
+    /// compiled against the old one are dropped ([`pipeline_jobs`]).
+    pipeline_generation: u32,
     dynamic_light_buffer: wgpu::Buffer,
     lighting_mode: std::cell::Cell<u32>,
     forge: Forge,
@@ -525,6 +530,7 @@ fn finish_runtime(
         blended_order,
         glow_order,
         glow_pipelines: glow::Pipelines::default(),
+        pipeline_generation: 0,
         dynamic_light_buffer,
         lighting_mode: std::cell::Cell::new(0),
         forge,

@@ -5,7 +5,10 @@
 //! worker reads and parses the model, builds its mesh and decodes its textures
 //! ([`crate::world_materials::warm_entity_materials`]); the render thread only uploads
 //! it, one model a frame. Meanwhile the slot keeps the model it had, or shows the
-//! stand-in actor until the first one is in (`actor_world_submission.rs`).
+//! stand-in actor until the first one is in (`actor_world_submission.rs`). A model whose
+//! materials need pipelines the map had not compiled waits for another worker to compile
+//! them (`world_pipeline_jobs.rs`) before it is put on its player: compiled on the render
+//! thread they cost up to 85 ms.
 
 use super::*;
 use std::sync::mpsc::{self, Receiver, TryRecvError};
@@ -41,11 +44,21 @@ struct Task {
     receiver: Receiver<Prepared>,
 }
 
+/// A model uploaded but not yet drawn: its pipelines are being compiled.
+struct Compiling {
+    client: u16,
+    appearance: Appearance,
+    /// `None` once the player wanted another model: the pipelines still go in.
+    mesh: Option<ActorMesh>,
+    receiver: Receiver<Compiled>,
+}
+
 /// The loads of one world.
 #[derive(Default)]
 pub(crate) struct Loads {
     running: Vec<Task>,
     waiting: Vec<Request>,
+    compiling: Vec<Compiling>,
 }
 
 /// What a worker needs from the world.
@@ -66,6 +79,11 @@ impl Loads {
                 .waiting
                 .iter()
                 .any(|request| request.client == client && request.appearance == *appearance)
+            || self.compiling.iter().any(|compiling| {
+                compiling.client == client
+                    && compiling.appearance == *appearance
+                    && compiling.mesh.is_some()
+            })
     }
 
     /// Forget `client`'s load: the player wants another model, the one they wear, or
@@ -73,6 +91,25 @@ impl Loads {
     pub(crate) fn cancel(&mut self, client: u16) {
         self.running.retain(|task| task.client != client);
         self.waiting.retain(|request| request.client != client);
+        for compiling in &mut self.compiling {
+            if compiling.client == client {
+                compiling.mesh = None;
+            }
+        }
+    }
+
+    /// The first model whose pipelines are compiled, with them; workers that stopped
+    /// leave their slots to compile on first draw.
+    fn take_compiled(&mut self) -> Option<(Compiling, Option<Compiled>)> {
+        for position in 0..self.compiling.len() {
+            let compiled = match self.compiling[position].receiver.try_recv() {
+                Ok(compiled) => Some(compiled),
+                Err(TryRecvError::Empty) => continue,
+                Err(TryRecvError::Disconnected) => None,
+            };
+            return Some((self.compiling.remove(position), compiled));
+        }
+        None
     }
 
     /// Queue `request` in place of any earlier one for its player.
@@ -195,12 +232,22 @@ impl GpuState {
         })
     }
 
-    /// Once a frame: start waiting loads and put one finished model on its player.
+    /// Once a frame: start waiting loads, put a model whose pipelines are ready on its
+    /// player, and upload one finished model.
     pub(crate) fn poll_player_loads(&mut self) {
         let mut loads = std::mem::take(&mut self.clientinfo_watch.loads);
         loads.start(|| self.player_load_sources());
         let finished = loads.take_finished();
+        let compiled = loads.take_compiled();
         self.clientinfo_watch.loads = loads;
+        if let Some((compiling, pipelines)) = compiled {
+            if let Some(pipelines) = pipelines {
+                self.world_materials.install_pipelines(pipelines);
+            }
+            if let Some(mesh) = compiling.mesh {
+                self.place_client_mesh(compiling.client, mesh, &compiling.appearance);
+            }
+        }
         let Some((client, appearance, prepared)) = finished else {
             return;
         };
@@ -223,16 +270,43 @@ impl GpuState {
             ));
             self.clientinfo_watch.failed.insert(appearance.clone());
         }
-        let mesh = match self.upload_built_actor(loaded.mesh, loaded.scene, &appearance) {
-            Ok(mesh) => mesh,
-            Err(error) => {
-                log::progress(format_args!(
-                    "client {client}: model upload failed: {error}"
-                ));
-                return;
-            }
-        };
-        self.place_client_mesh(client, mesh, &appearance);
+        let (mesh, jobs) =
+            match self.upload_built_actor_deferred(loaded.mesh, loaded.scene, &appearance) {
+                Ok(uploaded) => uploaded,
+                Err(error) => {
+                    log::progress(format_args!(
+                        "client {client}: model upload failed: {error}"
+                    ));
+                    return;
+                }
+            };
+        if jobs.is_empty() {
+            self.place_client_mesh(client, mesh, &appearance);
+            return;
+        }
+        let pipelines = jobs.len();
+        let (sender, receiver) = mpsc::channel();
+        let spawned = std::thread::Builder::new()
+            .name("sjk-model-pipelines".into())
+            .spawn(move || {
+                let _ = sender.send(jobs.compile());
+            });
+        if let Err(error) = spawned {
+            // The slots compile on the model's first draw instead.
+            log::progress(format_args!("model pipeline compiler: {error}"));
+            self.place_client_mesh(client, mesh, &appearance);
+            return;
+        }
+        log::progress(format_args!(
+            "client {client}: compiling {pipelines} pipelines for {}/{} off the render thread",
+            appearance.model, appearance.variant
+        ));
+        self.clientinfo_watch.loads.compiling.push(Compiling {
+            client,
+            appearance,
+            mesh: Some(mesh),
+            receiver,
+        });
     }
 }
 
