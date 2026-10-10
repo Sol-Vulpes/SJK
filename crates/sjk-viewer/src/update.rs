@@ -2,8 +2,9 @@
 //! against the release's checksums and replace the programs beside the running
 //! one (`docs/client.md`, "Updates").
 //!
-//! The check runs on a worker thread at start-up (`cl_autoUpdate`) and from the
-//! menu's Update page; neither blocks a frame. The state they share is read
+//! The check runs on a worker thread at start-up (`cl_autoUpdate`), again every
+//! [`RECHECK`] while the client runs and found nothing new, and from the menu's
+//! Update page; none blocks a frame. The state they share is read
 //! with [`state`]. Nothing is installed without the player pressing Install, and
 //! the new version starts when the client exits ([`restart_if_requested`]), so
 //! the settings the old one saves on its way out are not overwritten.
@@ -17,7 +18,7 @@ use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use std::sync::{Mutex, MutexGuard};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 /// The repository that publishes SJK's releases.
 const REPOSITORY: &str = "Sol-Vulpes/SJK";
@@ -33,6 +34,10 @@ const PLATFORM: Option<&str> = if cfg!(all(target_os = "windows", target_arch = 
 const LOOKUP_TIMEOUT: Duration = Duration::from_secs(20);
 /// Longest the ZIP download may take.
 const DOWNLOAD_TIMEOUT: Duration = Duration::from_secs(900);
+/// How long a running client waits to ask again after finding nothing new (or
+/// failing to ask), so a release made while players are in a match reaches them
+/// as its card without a restart.
+pub(crate) const RECHECK: Duration = Duration::from_secs(30 * 60);
 
 /// A release file: its name, address and size in bytes.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -79,6 +84,8 @@ pub(crate) enum State {
 }
 
 static STATE: Mutex<State> = Mutex::new(State::Idle);
+/// When the last check started.
+static LAST_CHECK: Mutex<Option<Instant>> = Mutex::new(None);
 static RESTART: AtomicBool = AtomicBool::new(false);
 /// Rises with every change of [`STATE`], so a frame can see one without locking it.
 static GENERATION: AtomicU32 = AtomicU32::new(0);
@@ -276,8 +283,25 @@ pub(crate) fn check(installed: &str) {
         }
         *state = State::Checking;
     }
+    *LAST_CHECK.lock().unwrap_or_else(|e| e.into_inner()) = Some(Instant::now());
     changed();
     std::thread::spawn(move || set(check_now(&installed)));
+}
+
+/// Check again when one was made at least [`RECHECK`] ago and found nothing new or
+/// failed; a release found, being installed or installed is left as it is.
+pub(crate) fn recheck_if_due(installed: &str, now: Instant) {
+    let last = *LAST_CHECK.lock().unwrap_or_else(|e| e.into_inner());
+    if !due(last, &lock(), now) {
+        return;
+    }
+    check(installed);
+}
+
+/// Whether a check made at `last` that ended in `state` should be made again at `now`.
+fn due(last: Option<Instant>, state: &State, now: Instant) -> bool {
+    matches!(state, State::UpToDate | State::Failed(_))
+        && last.is_some_and(|last| now.saturating_duration_since(last) >= RECHECK)
 }
 
 fn check_now(installed: &str) -> State {
@@ -554,6 +578,21 @@ pub(crate) fn open_page(url: &str) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_running_client_asks_again_only_after_nothing_new() {
+        let start = Instant::now();
+        let later = start + RECHECK;
+        assert!(due(Some(start), &State::UpToDate, later));
+        assert!(due(Some(start), &State::Failed("offline".into()), later));
+        assert!(!due(Some(start), &State::UpToDate, start + RECHECK / 2));
+        // Never asked (cl_autoUpdate off at start), or asking now: not yet.
+        assert!(!due(None, &State::UpToDate, later));
+        assert!(!due(Some(start), &State::Checking, later));
+        // A release found or installed stays as it is.
+        assert!(!due(Some(start), &State::Installed, later));
+        assert!(!due(Some(start), &State::Unversioned, later));
+    }
 
     #[test]
     fn versions_compare_by_date_then_counter() {

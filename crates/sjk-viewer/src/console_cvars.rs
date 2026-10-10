@@ -564,7 +564,7 @@ pub(super) fn register_daily_cvars(cvars: &mut CvarRegistry) -> Result<(), sjk_s
             "cl_autoUpdate",
             true,
             archive,
-            "Look for a newer SJK release when the client starts (the Update page installs it)",
+            "Look for a newer SJK release at start and every 30 minutes while running (the Update page installs it)",
         ),
         CvarDefinition::new(
             "cl_identity",

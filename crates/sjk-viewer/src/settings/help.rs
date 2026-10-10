@@ -404,7 +404,7 @@ const HELP: &[(&str, &str)] = &[
     ),
     (
         "cl_autoUpdate",
-        "Looks for a newer SJK release at start and says so on the main menu. Install it from the Update page.",
+        "Looks for a newer SJK release at start and every 30 minutes while SJK runs, and says so with a card. Install it from the Update page.",
     ),
     (
         "ui_hideFirstSetup",

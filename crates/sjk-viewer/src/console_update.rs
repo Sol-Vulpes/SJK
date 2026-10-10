@@ -47,6 +47,23 @@ impl ViewerConsole {
         });
     }
 
+    /// Once a frame: with `cl_autoUpdate` on, ask GitHub again every
+    /// [`crate::update::RECHECK`] while nothing new was found.
+    pub(crate) fn recheck_for_updates(&self) {
+        if self.bool_cvar("cl_autoUpdate") != Some(true) {
+            return;
+        }
+        let pretend = self.text_cvar("cl_updateAs").unwrap_or_default().trim();
+        crate::update::recheck_if_due(
+            if pretend.is_empty() {
+                crate::build_info::VERSION
+            } else {
+                pretend
+            },
+            std::time::Instant::now(),
+        );
+    }
+
     /// The start-up check, when `cl_autoUpdate` is on. It also finds out that a
     /// local build has no version, so the Update page has an answer at once.
     pub(crate) fn check_for_updates_at_launch(&self) {

@@ -1,5 +1,15 @@
 # Status and priorities
 
+## Update check while running
+
+Branch `personal/update-recheck` (10/10/2026, based on `726a346a`, Windows 11), Sol's
+request after releasing 2026.1010.2 that the auto update tell players to update: the
+client only asked GitHub at start, so players in a match heard of a release on their next
+start. With `cl_autoUpdate` on it now asks again every 30 minutes while the last check found
+nothing new or failed (`update::recheck_if_due`), and the Update card comes as at start.
+Verified by a unit test of the rule; not tried in a game. The first release it helps is the
+next one.
+
 ## Config saved only on real changes
 
 Branch `personal/config-save`, based on `a4ea2316` (10/10/2026, Windows).

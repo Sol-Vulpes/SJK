@@ -18,6 +18,10 @@ tests check this file):
 - ASCII only, as the menu font draws bytes.
 Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 -->
+## Unreleased
+
+- SJK looks for a new version every 30 minutes while it runs, not only when it starts, so a release made while you play shows its Update card within half an hour _(Sol)_
+
 ## 2026.1010.2 (Alpha) | 10/10/2026
 
 Smoother play: no more stutter when players join or change model or when you press keys, far
