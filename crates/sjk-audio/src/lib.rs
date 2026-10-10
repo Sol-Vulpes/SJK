@@ -102,6 +102,18 @@ impl DecodedSound {
             samples: Box::new([0.0]),
         }
     }
+
+    /// Mono PCM already at the mixer's rate, such as a sound made from another one.
+    pub fn from_samples(samples: Vec<f32>) -> Self {
+        Self {
+            samples: samples.into_boxed_slice(),
+        }
+    }
+
+    /// The decoded mono samples.
+    pub fn samples(&self) -> &[f32] {
+        &self.samples
+    }
 }
 
 /// Decode WAV or MP3 bytes and resample them before the audio thread sees them.

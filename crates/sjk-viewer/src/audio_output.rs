@@ -211,6 +211,14 @@ enum DecodeJob {
         bytes: Box<[u8]>,
         extension: Box<str>,
     },
+    /// A sound made from a decoded one: `make` turns its mixer-rate samples into the
+    /// new sound's (`sjk_chat_sound.rs`).
+    Variant {
+        handle: SoundHandle,
+        bytes: Box<[u8]>,
+        extension: Box<str>,
+        make: fn(&[f32], u32) -> Vec<f32>,
+    },
     StartMusic(SoundHandle, SoundHandle),
     StopMusic,
 }
@@ -317,6 +325,34 @@ impl AudioOutput {
         }
     }
 
+    /// Decode `bytes` on the worker, as [`Self::decode`] does, and register under `handle`
+    /// what `make` makes of the samples (at [`SAMPLE_RATE`]) instead of the samples.
+    pub(super) fn decode_variant(
+        &self,
+        handle: SoundHandle,
+        bytes: &[u8],
+        extension: &str,
+        make: fn(&[f32], u32) -> Vec<f32>,
+    ) {
+        self.cache
+            .borrow_mut()
+            .push((handle, bytes.len(), extension.to_owned()));
+        let Some(sender) = &self.decode_jobs else {
+            return;
+        };
+        let job = DecodeJob::Variant {
+            handle,
+            bytes: bytes.into(),
+            extension: extension.into(),
+            make,
+        };
+        if sender.try_send(job).is_err() {
+            crate::log::progress(format_args!(
+                "audio decode queue is full; dropping {handle:?}"
+            ));
+        }
+    }
+
     pub(super) fn stop_music(&self) {
         if let Some(sender) = &self.decode_jobs {
             let _ = sender.try_send(DecodeJob::StopMusic);
@@ -370,6 +406,21 @@ fn decode(
                     stats.decode_failures.fetch_add(1, Ordering::Relaxed);
                     DecodedSound::silence()
                 }),
+            ),
+            DecodeJob::Variant {
+                handle,
+                bytes,
+                extension,
+                make,
+            } => DecodedAction::Register(
+                handle,
+                match decode_encoded(&bytes, &extension, SAMPLE_RATE) {
+                    Ok(decoded) => DecodedSound::from_samples(make(decoded.samples(), SAMPLE_RATE)),
+                    Err(_) => {
+                        stats.decode_failures.fetch_add(1, Ordering::Relaxed);
+                        DecodedSound::silence()
+                    }
+                },
             ),
             DecodeJob::StopMusic => DecodedAction::StopMusic,
             DecodeJob::StartMusic(intro, repeating) => DecodedAction::StartMusic(intro, repeating),

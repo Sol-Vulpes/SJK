@@ -573,6 +573,12 @@ pub(super) fn register_daily_cvars(cvars: &mut CvarRegistry) -> Result<(), sjk_s
             "Show the SJK chat, which every SJK player shares through the SJK hub, and read it (0 hides it and stops reading)",
         ),
         CvarDefinition::new(
+            crate::sjk_chat_frame::SOUND_CVAR,
+            true,
+            archive,
+            "Play a sound when another player's SJK chat message arrives (cg_chatSounds 0 silences it too)",
+        ),
+        CvarDefinition::new(
             "cl_updateAs",
             "",
             CvarFlags::NONE,

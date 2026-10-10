@@ -123,6 +123,39 @@ Old clients ignore all of it, so it stays `/v1/`.
   emotes, but no message reaches the game's feed, the dock or the page; in the menus it
   stops.
 
+## A sound for a new message
+
+A new SJK chat message from another player plays a sound (Sol's request, 10/10/2026),
+in the menus and in a game, wherever the chat is on. Before this, SJK chat messages
+played nothing.
+
+- **The sound** is a variant of JKA's chat sound, made from the game's own file when
+  SJK starts: the player's `sound/player/talk` (`.wav`, else `.mp3`) is read through the
+  game's file system and decoded as every sound is, then played 1.122 times faster (so
+  higher and shorter, read through a band-limited windowed-sinc kernel), cut to 0.60
+  seconds with its last 0.15 faded out linearly, given two echoes 70 and 140 ms later
+  (0.3 and 0.15 of it beside 0.8 of itself, all times 0.6, not fed back) and brought to
+  the talk sound's own level (times 1.5494): 0.74 seconds at 44.1 kHz
+  ([sjk_chat_sound.rs](../crates/sjk-viewer/src/audio/sjk_chat_sound.rs), `variant`). It
+  is made once, on the audio's decode worker, when the audio first meets the game data
+  (`configure_audio`), and kept in memory only. Nothing of JKA's audio ships with SJK;
+  game data without the file makes no sound, said once in the log.
+- **When:** a message newer than what the feed had already seen joins it
+  (`ChatOverlay::sync_sjk`, [chat/sjk.rs](../crates/sjk-viewer/src/chat/sjk.rs)), so the
+  backlog the hub sends at start, on a reconnection or from a new hub plays nothing, as
+  it is not replayed in the game's feed either. Not for the player's own messages (any
+  of their keys: their id at the hub, this PC's key, the keys linked to them), not for a
+  player muted on this PC, not for holocron drops. At most once a second
+  (`chat::sjk::SOUND_GAP`), so a burst plays it once.
+- **How it plays:** as the game's chat beep does, beside the listener at full volume
+  under `s_volume`, through the interface cues' mailbox (`ui_cues::Cue::SjkChat`) on a
+  channel of its own, so it never cuts a menu sound or the game's beep.
+- **Switches:** `cl_sjkChatSound` (archived, default 1; Settings > Network > SJK chat
+  sound, under SJK chat, so in every settings screen and settings search). The master
+  chat sound switch `cg_chatSounds` gates it too: 0 silences every chat sound, the
+  game's `cg_chatBeep` and `cg_teamChatBeep` already, and SJK chat is chat. With
+  `cl_sjkChat 0` no message arrives, so nothing plays.
+
 ## In the menus
 
 - SJK UI main page: the chat is docked under Recent servers. Its last messages (the
@@ -373,6 +406,15 @@ to a week back; the list is not deployed yet.
   by name, the card on a name in the feed, the dock and the page, the hidden lines,
   Kyle and the default saber, and the sound filter ([status.md](status.md#muting-a-player-from-a-name-in-chat)).
   Not seen or heard in a game.
+
+- The chat's sound (10/10/2026, Windows 11): unit tests for its making (0.74 seconds
+  from a long talk sound, the quickened length and pitch, the highs kept, the fade
+  reaching silence at 0.60 seconds, the echo taps on an impulse at 70 and 140 ms, the
+  level and the clamp), for when it plays (only messages newer than the feed had seen,
+  not the backlog, not the player's own, a muted player's or a drop, once a second) and
+  the settings row. Made from the retail `talk.mp3` it matched the sound Sol chose,
+  sample for sample: correlation 0.9993, RMS 0.03321 against 0.03319, the
+  difference's RMS 0.0012, peak 0.527 against 0.527. Not heard in the client.
 
 Not verified: no client was started, so nothing was seen in a game or over the map;
 nothing went through Cloudflare's tunnel or the deployed hub (which does not have the

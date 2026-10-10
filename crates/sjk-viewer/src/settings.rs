@@ -1076,6 +1076,15 @@ mod tests {
             .position(|cvar| *cvar == "cl_hubUrl")
             .unwrap();
         assert_eq!(network.get(hub + 1), Some(&"cl_sjkChat"));
+        // Its sound right under it, on by default.
+        assert_eq!(
+            network.get(hub + 2),
+            Some(&crate::sjk_chat_frame::SOUND_CVAR)
+        );
+        assert_eq!(
+            console.bool_cvar(crate::sjk_chat_frame::SOUND_CVAR),
+            Some(true)
+        );
     }
 
     #[test]

@@ -636,6 +636,11 @@ pub(super) const NETWORK: &[Setting] = &[
         kind: ValueKind::Bool,
     },
     Setting {
+        label: "SJK chat sound",
+        cvar: crate::sjk_chat_frame::SOUND_CVAR,
+        kind: ValueKind::Bool,
+    },
+    Setting {
         label: "SJK identity key",
         cvar: IDENTITY_ROW,
         kind: ValueKind::IdentityPage,

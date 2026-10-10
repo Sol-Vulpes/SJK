@@ -411,6 +411,10 @@ const HELP: &[(&str, &str)] = &[
         "The chat every SJK player shares through the SJK hub, in menus and games. Off hides it.",
     ),
     (
+        crate::sjk_chat_frame::SOUND_CVAR,
+        "A sound when another player's SJK chat message arrives, in menus and games. Chat sounds off (cg_chatSounds 0) silences it too.",
+    ),
+    (
         super::catalog::IDENTITY_ROW,
         "Your SJK key: switch it on, back it up, copy its id. Enter opens it; the key stays hidden until Show.",
     ),
