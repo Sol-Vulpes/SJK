@@ -395,9 +395,15 @@ grew by exactly the new model, so every model copied the whole map's geometry.
 A model's materials are compiled when it is installed, with their pipelines; their
 glow variants too since 10/10/2026, and the map's at load
 (`Runtime::warm_glow`, [world_glow.rs](../crates/sjk-viewer/src/world_glow.rs)),
-rather than on the first frame something glows. Those compiles still run on the
-render thread when a model is installed: a driver compile it has not cached (the first
-time on a PC, or after a driver or SJK update) can take tens of milliseconds.
+rather than on the first frame something glows. A player's model (the async loads
+of `player_loads.rs`) no longer compiles its pipelines on the render thread: its
+materials are appended without them (`append_entity_materials_deferred`),
+`Runtime::pipeline_jobs` lists the entity, glow and fog variants they lack, a worker
+compiles them (`world_pipeline_jobs.rs`), and the model is put on its player once
+`install_pipelines` has filled the slots. Before, a model bringing new pipeline keys
+cost 30 to 85 ms in one frame in Sol's 10/10/2026 logs (3 to 6 ms a pipeline); the fog
+pipelines are now compiled on first use like the others. Hilts, NPCs and models a
+server names later still compile on the render thread.
 
 ## Graphics reload
 

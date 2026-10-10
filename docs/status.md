@@ -13,6 +13,21 @@ stop. `shell_is_off_server` now requires no join in flight, and a rebuild starts
 once every 5 s (`RETRY`). Verified by a unit test of the retry rule and the viewer suite;
 not tried on a server's map change.
 
+## Player model pipelines compiled off the render thread
+
+Branch `personal/model-pipelines` (10/10/2026, based on `10d953ed`, Windows 11). Sol's
+`hitch:` lines showed `config-refresh` 30 to 85 ms the frame some players' models went
+on (Jaina, CosmicReborn, yesphantom, sungal, jaina_rogue), not others: models whose
+stages need pipeline keys the map had not used compiled 2 entity, glow and fog
+variants per key there (3 to 6 ms each from the load profile). Now the async player
+load appends the materials without compiling (`append_entity_materials_deferred`),
+compiles what `Runtime::pipeline_jobs` lists on a `sjk-model-pipelines` worker, and
+places the model once `install_pipelines` has filled the slots (a generation number
+drops results made against a program that changed). Fog pipelines became lazy slots
+like the entity and glow ones. Verified by the viewer suite (release), fmt and Clippy;
+not tried in a game. Log line: `client N: compiling K pipelines for <model> off the
+render thread`.
+
 ## Join hitch: saber definitions read once
 
 Branch `personal/join-hitch` (10/10/2026, based on `5b0bc8ef`, Windows 11). Sol's

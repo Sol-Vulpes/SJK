@@ -414,7 +414,7 @@ impl Runtime {
     /// Compile `materials` as entity materials of this runtime (no world
     /// surfaces of their own) and return the source index of the first one:
     /// draws that use them refer to `base + position in materials`. Existing
-    /// materials keep their indices.
+    /// materials keep their indices. Their new pipelines compile now.
     pub(crate) fn append_entity_materials(
         &mut self,
         device: &wgpu::Device,
@@ -423,6 +423,22 @@ impl Runtime {
         shaders: &ShaderCatalog,
         materials: &[ViewerMaterial],
     ) -> Result<usize, Box<dyn Error>> {
+        let (base, jobs) =
+            self.append_entity_materials_deferred(device, queue, vfs, shaders, materials)?;
+        self.install_pipelines(jobs.compile());
+        Ok(base)
+    }
+
+    /// [`Self::append_entity_materials`] without compiling their new pipelines: the
+    /// returned jobs do, on a worker ([`pipeline_jobs`]), before anything draws with them.
+    pub(crate) fn append_entity_materials_deferred(
+        &mut self,
+        device: &wgpu::Device,
+        queue: &crate::frame_queue::FrameQueue,
+        vfs: &VirtualFileSystem,
+        shaders: &ShaderCatalog,
+        materials: &[ViewerMaterial],
+    ) -> Result<(usize, pipeline_jobs::Jobs), Box<dyn Error>> {
         let base = self.source_to_runtime.len();
         let mut image_cache = ImageCache::with_capacity(64);
         let known = self.forge.pipeline_keys.len();
@@ -467,8 +483,7 @@ impl Runtime {
                 fog_pass: shaders
                     .get(&key.shader)
                     .map_or(FogPass::Equal, |d| d.fog_pass()),
-                fog_pipeline: self.fog.pipeline_with_geometry(
-                    device,
+                fog_pipeline: self.fog.slot(
                     self.forge.format,
                     shaders
                         .get(&key.shader)
@@ -493,17 +508,20 @@ impl Runtime {
                 mover_draws: Vec::new(),
             });
         }
-        for key in self.forge.pipeline_keys[known..].to_vec() {
-            self.push_pipelines(device, key);
+        for _ in known..self.forge.pipeline_keys.len() {
+            self.push_pipeline_slots();
         }
-        // With the model, not on its first glowing frame.
-        let first_material = self.materials.len() - materials.len();
-        self.warm_glow(first_material..self.materials.len());
         // A loaded model's stages join the map's stage table.
         if let Some(table) = &mut self.stage_table {
             table.append(device, &self.forge, &self.materials);
         }
-        Ok(base)
+        // With the model, not on its first (glowing, fogged) frame.
+        let first_material = self.materials.len() - materials.len();
+        let jobs = self.pipeline_jobs(
+            known..self.forge.pipeline_keys.len(),
+            first_material..self.materials.len(),
+        );
+        Ok((base, jobs))
     }
 
     /// Append one empty slot per list for the next key.
@@ -535,19 +553,39 @@ impl Runtime {
         } else {
             &self.entity_no_depth_pipelines[index]
         };
-        slot.get_or_init(|| {
-            let (layout, shader) = self.forge.program_for(self.forge.pipeline_keys[index]);
+        slot.get_or_init(|| self.make_entity_pipeline(index, depth)())
+    }
+
+    /// What compiles the entity pipeline of key `index`, on any thread.
+    fn make_entity_pipeline(
+        &self,
+        index: usize,
+        depth: bool,
+    ) -> impl FnOnce() -> wgpu::RenderPipeline + Send + 'static {
+        let key = self.forge.pipeline_keys[index];
+        let (layout, shader) = self.forge.program_for(key);
+        let (device, layout, shader) = (self.forge.device.clone(), layout.clone(), shader.clone());
+        let format = self.forge.format;
+        move || {
             timed(usize::from(!depth), || {
-                create_entity_pipeline(
-                    &self.forge.device,
-                    layout,
-                    shader,
-                    self.forge.format,
-                    self.forge.pipeline_keys[index],
-                    depth,
-                )
+                create_entity_pipeline(&device, &layout, &shader, format, key, depth)
             })
-        })
+        }
+    }
+
+    /// A job for the entity pipeline of key `index` when it is not compiled yet.
+    pub(super) fn entity_job(&self, index: usize, depth: bool, jobs: &mut pipeline_jobs::Jobs) {
+        let slot = if depth {
+            &self.entity_pipelines[index]
+        } else {
+            &self.entity_no_depth_pipelines[index]
+        };
+        if slot.get().is_none() {
+            jobs.push(
+                pipeline_jobs::Slot::Entity { index, depth },
+                self.make_entity_pipeline(index, depth),
+            );
+        }
     }
 
     /// Draw detached geometry with the entity vertex path (buffer 0 vertices,

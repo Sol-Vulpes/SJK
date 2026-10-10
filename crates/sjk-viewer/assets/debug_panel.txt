@@ -320,6 +320,16 @@ test: The log has no run of "menu world: loading maps/mp/duel6.bsp again" lines.
 test: Disconnect to the menu: duel6 comes back once, within a few seconds.
 note: Seen 10/10 on a JoF map change: 13,865 rebuild starts in the log.
 
+[model-pipelines]
+area: Rendering & effects
+title: No hitch when some players' models appear: their pipelines compile on a worker
+change: A new model's missing pipelines (entity, glow, fog) compile off the render thread first.
+change: The player keeps their old model (or the stand-in) until then.
+test: Busy server: players with unusual models join; no "hitch: ... config-refresh" lines.
+test: Log shows "compiling N pipelines for ... off the render thread", then "now wears".
+test: Glowing models (Tavion) and fogged maps: model looks right on its first frame.
+note: Seen 10/10: 30-85 ms for Jaina, CosmicReborn, yesphantom, sungal.
+
 [join-hitch]
 area: Rendering & effects
 title: No hitch when players join: saber definitions read once a map

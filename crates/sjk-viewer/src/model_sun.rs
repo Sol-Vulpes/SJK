@@ -383,5 +383,6 @@ impl super::Runtime {
         self.entity_pipelines = (0..count).map(|_| std::cell::OnceCell::new()).collect();
         self.entity_no_depth_pipelines = (0..count).map(|_| std::cell::OnceCell::new()).collect();
         self.glow_pipelines.reset(count);
+        self.pipeline_generation = self.pipeline_generation.wrapping_add(1);
     }
 }

@@ -102,25 +102,44 @@ impl Runtime {
         } else {
             &self.glow_pipelines.no_depth
         };
-        slots[index].get_or_init(|| {
-            let scene_key = self.forge.pipeline_keys[index];
-            // Material-mapped stages draw through the glow variant of their program, which
-            // writes only the emission of stages drawn here for their emission map.
-            let (layout, shader) = match &self.forge.material_maps {
-                Some(maps) if scene_key.geometry & super::material_maps::PIPELINE_BIT != 0 => {
-                    maps.glow_program(&self.forge)
-                }
-                _ => self.forge.program_for(scene_key),
-            };
-            create_entity_pipeline(
-                &self.forge.device,
-                layout,
-                shader,
-                crate::frame_target::aa::glow::world_format(self.forge.format),
-                key(scene_key),
-                depth,
-            )
-        })
+        slots[index].get_or_init(|| self.make_glow_pipeline(index, depth)())
+    }
+
+    /// What compiles the glow pipeline of key `index`, on any thread.
+    fn make_glow_pipeline(
+        &self,
+        index: usize,
+        depth: bool,
+    ) -> impl FnOnce() -> wgpu::RenderPipeline + Send + 'static {
+        let scene_key = self.forge.pipeline_keys[index];
+        // Material-mapped stages draw through the glow variant of their program, which
+        // writes only the emission of stages drawn here for their emission map.
+        let (layout, shader) = match &self.forge.material_maps {
+            Some(maps) if scene_key.geometry & super::material_maps::PIPELINE_BIT != 0 => {
+                maps.glow_program(&self.forge)
+            }
+            _ => self.forge.program_for(scene_key),
+        };
+        let (device, layout, shader) = (self.forge.device.clone(), layout.clone(), shader.clone());
+        let format = crate::frame_target::aa::glow::world_format(self.forge.format);
+        move || create_entity_pipeline(&device, &layout, &shader, format, key(scene_key), depth)
+    }
+
+    /// A job for the depth-tested glow pipeline of key `index` when it is not compiled yet.
+    pub(super) fn glow_job(&self, index: usize, jobs: &mut super::pipeline_jobs::Jobs) {
+        if self.glow_pipelines.depth[index].get().is_none() {
+            jobs.push(
+                super::pipeline_jobs::Slot::Glow { index },
+                self.make_glow_pipeline(index, true),
+            );
+        }
+    }
+
+    /// Put a depth-tested glow pipeline a worker compiled in its slot.
+    pub(super) fn install_glow(&self, index: usize, pipeline: wgpu::RenderPipeline) {
+        if let Some(cell) = self.glow_pipelines.depth.get(index) {
+            let _ = cell.set(pipeline);
+        }
     }
 
     /// Whether the main view shows any glowing world pass or entity this frame. Walks

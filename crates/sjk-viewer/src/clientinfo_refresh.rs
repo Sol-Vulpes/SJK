@@ -16,6 +16,7 @@ use super::*;
 use crate::actor_load::{build_actor_mesh, client_saber_names};
 use crate::player_assets::{GlaCache, load_player_appearance_with};
 use crate::shared_geometry::relocate;
+use crate::world_materials::pipeline_jobs::{Compiled, Jobs as PipelineJobs};
 use sjk_client::legacy_client_appearance_forced;
 
 #[path = "corpse_actors.rs"]
@@ -322,15 +323,28 @@ impl GpuState {
     }
 
     /// Upload a mesh built from a preview ([`build_actor_mesh`]): its materials, its
-    /// geometry into the shared buffers and its GPU skin.
+    /// geometry into the shared buffers and its GPU skin; its new pipelines compile now.
     pub(crate) fn upload_built_actor(
+        &mut self,
+        mesh: ActorMesh,
+        scene: FlattenedScene,
+        appearance: &Appearance,
+    ) -> Result<ActorMesh, Box<dyn Error>> {
+        let (mesh, jobs) = self.upload_built_actor_deferred(mesh, scene, appearance)?;
+        self.world_materials.install_pipelines(jobs.compile());
+        Ok(mesh)
+    }
+
+    /// [`Self::upload_built_actor`], leaving its new pipelines to the returned jobs: the
+    /// mesh must not be drawn before they are installed, or its first draw compiles them.
+    pub(crate) fn upload_built_actor_deferred(
         &mut self,
         mut mesh: ActorMesh,
         scene: FlattenedScene,
         appearance: &Appearance,
-    ) -> Result<ActorMesh, Box<dyn Error>> {
+    ) -> Result<(ActorMesh, PipelineJobs), Box<dyn Error>> {
         let vfs = self.vfs.clone().ok_or("no VFS")?;
-        let material_base = self.world_materials.append_entity_materials(
+        let (material_base, jobs) = self.world_materials.append_entity_materials_deferred(
             &self.device,
             &self.queue,
             &vfs,
@@ -360,7 +374,7 @@ impl GpuState {
                 appearance.model
             )),
         }
-        Ok(mesh)
+        Ok((mesh, jobs))
     }
 
     /// Make sure the hilt catalog can answer for `name`, loading the `.sab`
