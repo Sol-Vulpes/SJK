@@ -71,7 +71,7 @@ impl ViewerConsole {
                 "cp_pluginDisable",
                 i64::from(sjk_client::PLUGIN_DISABLE_DEFAULT),
                 user,
-                "JA+ plugin features this client disables (bits; see pluginDisable)",
+                "JA+ plugin features this client disables (bits; see japlus.plugin)",
             ),
             CvarDefinition::new("handicap", 100_i64, user, "Starting health percentage"),
             CvarDefinition::new("sex", "male", user, "Player voice sex token"),
@@ -179,6 +179,8 @@ impl ViewerConsole {
         super::socket::register_command(&mut shell, &socket)?;
         let client_commands = console_client::Commands::default();
         console_client::register(&mut shell, &client_commands)?;
+        let mut mods = crate::mods::Mods::new();
+        mods.register(&mut shell)?;
         shell.set_command_frame(0);
         let server_status = Arc::new(RwLock::new("Not connected".to_owned()));
         for command in ["serverinfo", "status"] {
@@ -483,6 +485,8 @@ impl ViewerConsole {
         }
         retire_force_illuminate(&mut shell);
         shell.push_log("^5SJK console ready. ^7Type cmdlist for commands.");
+        // The saved switches decide which mods' commands exist from the start.
+        mods.sync(&mut shell);
         Ok(Self {
             shell,
             open: false,
@@ -544,6 +548,8 @@ impl ViewerConsole {
             pending_chat: std::collections::VecDeque::with_capacity(16),
 
             client_commands,
+            mods,
+            server_profile: None,
             script_vfs: None,
             config_directory,
             force_profile: ForceProfileNegotiator::default(),
@@ -782,6 +788,19 @@ impl ViewerConsole {
         }
     }
 
+    /// Complete the server's commands: the profile's own, then those of the mods
+    /// that are on.
+    pub(crate) fn refresh_server_help(&mut self) {
+        let mut help: Vec<_> = self
+            .server_profile
+            .iter()
+            .flat_map(compat_console_commands)
+            .map(|command| (command.name.to_owned(), command.description.to_owned()))
+            .collect();
+        help.extend(self.mods.server_help());
+        self.shell.replace_external_command_help(help);
+    }
+
     fn update_server_info(
         &mut self,
         game: &GameState,
@@ -796,10 +815,13 @@ impl ViewerConsole {
         if let Ok(mut status) = self.server_status.write() {
             *status = value.clone();
         }
-        self.shell.replace_external_command_help(
-            compat_console_commands(profile)
-                .map(|command| (command.name.to_owned(), command.description.to_owned())),
-        );
+        self.mods.set_server(Some(sjk_mod::Server {
+            kind: crate::mods::server_kind(profile),
+            address: server.to_string(),
+            info: raw.into_owned(),
+        }));
+        self.server_profile = Some(profile.clone());
+        self.refresh_server_help();
         self.shell.push_log(value);
     }
 

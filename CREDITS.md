@@ -96,7 +96,10 @@ Sol develops SJK and sets its direction. Sol's work includes:
   (`help_fps`), and the graphics reload that applies the
   renderer's start-only settings without restarting SJK or leaving the server;
 - lighter memory on servers (the menu world dropped during matches, smaller GPU
-  memory blocks).
+  memory blocks);
+- client mods kept out of the core client and off until switched on: JA+ tools
+  (`japlus.*`: admin teleports, auto login and plugin options, after JoF EJK) and
+  JoF tools (`jof.*`, completion of the JoF servers' commands).
 
 ## Contributors to SJK
 

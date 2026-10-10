@@ -105,8 +105,7 @@ impl ViewerConsole {
                     .as_ref()
                     .ok_or("No asset search path attached")?,
             )),
-            "serverconfig" => self.server_config(session),
-            "plugindisable" => self.plugin_disable(args),
+            "mods" => Ok(self.mods_listing()),
             _ => Err(format!("Unsupported client command: {name}")),
         }
     }

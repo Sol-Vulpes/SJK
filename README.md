@@ -25,8 +25,9 @@ HUD, audio, screenshots and demo playback.
 - a classic scoreboard with client IDs, and HUDs drawn from the game's own menu
   files, so the retail HUD and custom HUD packs work;
 - JA+ support: the client identifies as the JA+ plugin, predicts JA+ movement,
-  saber rules, `g_debugMelee`, the grapple and duel pass-through, and adds
-  `serverconfig` and `pluginDisable`;
+  saber rules, `g_debugMelee`, the grapple and duel pass-through;
+- client mods, off until switched on: JA+ tools (`japlus.*` admin teleports,
+  auto login and plugin options) and JoF tools (`jof.*`);
 - vector versions of the retail game fonts on every retail text surface, tighter
   console and chat rows, and text that scales at high resolutions;
 - a renderer settings page, sharp levelshots, and MOUSE1, MOUSE2 and ESC locked

@@ -18,6 +18,9 @@ general contributor rules.
   release ZIPs, the `GameData/SJK/` folder and messages.
 - New settings get neutral engine names (`r_*`, `cg_*`, `cl_*`, ...), never a
   `sjk_` prefix, and must not collide with EternalJK or rend2 settings.
+- A client mod's commands and settings start with its id and a dot
+  (`japlus.guntele`, `jof.commands`), and its switch is `mod_<id>`
+  ([mods.md](mods.md)).
 - Every toy is a `toy_<name>` command (`toy_illuminate`); a toy has no Force wheel
   entry, and one with a setting names it `cg_toy<Name>...`. Illuminate has none: it is
   always available and lit only for the client's run.

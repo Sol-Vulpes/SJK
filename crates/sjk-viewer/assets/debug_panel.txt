@@ -160,13 +160,28 @@ test: A player with 0xAC (Alt+0172) in the name: scoreboard, chat, crosshair sho
 test: Same with Classic game fonts on and off; the logo sits on the line like a capital.
 note: Others see a stray A-circumflex before it when this client sends it (UTF-8 on the wire).
 
-[japlus-commands]
+[client-mods]
 area: Console & chat
-title: JA+ serverconfig and pluginDisable commands
-change: serverconfig lists a JA+ server's jp_cinfo options; forwarded on jaPRO/TaystJK.
-change: pluginDisable lists the 15 JA+ plugin features; pluginDisable <id> toggles one.
-test: On a JA+ server: serverconfig, then pluginDisable and pluginDisable 9 (toggle back).
-test: On a base server: serverconfig says the server runs neither.
+title: Client mods: JA+ tools and JoF tools, off until switched on
+change: Settings > Game options has JA+ tools (mod_japlus) and JoF tools (mod_jof), both off.
+change: Their commands start with japlus. and jof.; mods lists them with their switches.
+change: serverconfig and pluginDisable are now japlus.serverconfig and japlus.plugin.
+test: Type japlus.guntele with JA+ tools off: it says how to switch the mod on.
+test: Switch JA+ tools on in Settings, type japlus. then Tab: the commands are listed.
+test: On a JA+ server: japlus.serverconfig, then japlus.plugin and japlus.plugin 9 (and back).
+test: On a JA+ server with JA+ tools on, type am then Tab: amtele, amlogin and emotes complete.
+test: Type mods: both mods are listed with on/off.
+
+[japlus-teleports]
+area: Gameplay
+title: JA+ admin teleports: japlus.guntele, goto, bring, teleoffset, mark/recall
+change: JoF EJK's teleGun, goto, get, amTeleOffset and PTelemark/PTele, through JA+ amtele.
+change: japlus.autologin sends amlogin with the password saved for this server.
+test: Log in as JA+ admin; aim at a wall and japlus.guntele: you land on the spot.
+test: japlus.guntele 300: you move 300 units the way you look.
+test: Aim at a bot: japlus.bring puts it in front of you; japlus.goto takes you to it.
+test: japlus.teleoffset 0 0 200 lifts you; set japlus.loginServer1/Pass1, japlus.autologin.
+note: Needs JA+ admin rights on the server; without them the server refuses amtele.
 
 [console-input-colours]
 area: Console & chat

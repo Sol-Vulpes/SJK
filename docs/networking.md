@@ -41,8 +41,9 @@ rows read as players (unique client numbers below 32, a ping of -1 to 999, a
 non-negative time).
 Player blade tints in a player configstring's `c3`/`c4` keys are read for every
 profile; the JA+ 2.4 server module formats both keys too. The JA+ client
-plugin's `serverconfig` and `pluginDisable` commands are client commands (see
-[client.md](client.md#useful-console-commands)).
+plugin's `serverconfig` and `pluginDisable` commands are the JA+ tools mod's
+`japlus.serverconfig` and `japlus.plugin` ([mods.md](mods.md)); the setting stays
+in the core client.
 
 ### Player text
 

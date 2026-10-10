@@ -3194,18 +3194,13 @@ crouch key of the jump/crouch pair, as `+movedown` is. Unlike EJK, whose `-duck`
 also lets go of every `+movedown` and `+speed` key, `-duck` releases only itself. See
 [input.rs](../crates/sjk-viewer/src/input.rs) (`up_move`).
 
-`serverconfig` lists a JA+ server's options from the `jp_cinfo` value in its
-serverinfo (flip kick, roll fix mode, DFA variants, kata, ledge grab, alternate
-dimension and the rest), as the JA+ client plugin and EternalJK print them
-locally; on jaPRO/TaystJK it is forwarded to the server, which answers it, and
-elsewhere it reports that the server runs neither. `pluginDisable` lists the
-fifteen JA+ client-plugin features with `Allowed`/`Disallowed`, and
-`pluginDisable <id>` toggles one bit of the archived userinfo cvar
-`cp_pluginDisable` (a set bit disables the feature). Its default, 1536, disables
-the holstered saber and ledge grab, which need JA+ animations SJK does not have.
-JA+ and TaystJK/jaPRO servers receive it from the connect packet on, and a
-toggle sends a userinfo update ([networking.md](networking.md)).
-See [console_mod_commands.rs](../crates/sjk-viewer/src/console_mod_commands.rs).
+`cp_pluginDisable` is the archived userinfo cvar a JA+ server reads to switch its
+client-plugin features off for this client (a set bit disables one). Its default,
+1536, disables the holstered saber and ledge grab, which need JA+ animations SJK
+does not have. JA+ and TaystJK/jaPRO servers receive it from the connect packet
+on, and a change sends a userinfo update ([networking.md](networking.md)). The
+JA+ tools mod lists and toggles its bits (`japlus.plugin`) and lists a JA+
+server's options (`japlus.serverconfig`); see [mods.md](mods.md).
 
 The console input line has a caret, drawn as stock's underscore: Left and Right
 move it, Ctrl+Left and Ctrl+Right by word, Home and End to either end, and Shift

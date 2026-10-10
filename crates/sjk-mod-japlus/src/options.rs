@@ -1,23 +1,19 @@
-//! Client commands of the JA+ client plugin: `serverconfig` and `pluginDisable`.
+//! `japlus.serverconfig` and `japlus.plugin`: the JA+ client plugin's
+//! `serverconfig` and `pluginDisable`.
 //!
-//! On JA+ the plugin answers `serverconfig` itself from the server's
-//! `jp_cinfo` (EternalJK `codemp/cgame/cg_consolecmds.c:505-530`, reading the
-//! value `cg_servercmds.c:230` takes from `CS_SERVERINFO`); jaPRO/TaystJK
-//! implement it on the server, so it is forwarded there. `pluginDisable` views
-//! and toggles the bits of `cp_pluginDisable`, the userinfo cvar a JA+ server
-//! reads to switch plugin features off for this client (bit names from the JA+
-//! 1.4B4 plugin's `cgamex86.dll`, in EternalJK's order at
-//! `cg_consolecmds.c:1160-1185`; a set bit disables the feature).
+//! On JA+ the plugin answers `serverconfig` itself from the server's `jp_cinfo`
+//! (EternalJK `codemp/cgame/cg_consolecmds.c:505-530`); jaPRO answers it on the
+//! server, so it is forwarded there. `japlus.plugin` views and toggles the bits of
+//! `cp_pluginDisable`, the userinfo a JA+ server reads to switch plugin features off
+//! for this client (bit names from the JA+ 1.4B4 plugin's `cgamex86.dll`, in
+//! EternalJK's order at `cg_consolecmds.c:1160-1185`; a set bit disables the
+//! feature). The setting itself is the core client's: it is sent to every server.
 
-use super::super::*;
-use sjk_client::{ClientSession, CompatProfile};
-use sjk_protocol::{InfoString, JaPlusCapabilities};
+use sjk_mod::{Host, ServerKind};
+use sjk_protocol::JaPlusCapabilities;
 
 /// The userinfo cvar holding the plugin's disabled-feature bits.
-pub(super) const PLUGIN_DISABLE: &str = "cp_pluginDisable";
-/// Holstered saber (512) and ledge grab (1024) off: both need JA+ animations
-/// the client does not have (EternalJK `cg_xcvar.h:166`; TaystJK sends the same).
-const PLUGIN_DISABLE_DEFAULT: i64 = 1_536;
+pub(crate) const PLUGIN_DISABLE: &str = "cp_pluginDisable";
 
 /// JA+ plugin features in `cp_pluginDisable` bit order.
 const PLUGIN_FEATURES: [&str; 15] = [
@@ -58,19 +54,6 @@ const SERVER_OPTIONS: [(u32, &str); 12] = [
     (JaPlusCapabilities::LEDGE_GRAB, "Ledge grab"),
 ];
 
-/// Register `cp_pluginDisable` unless another module already owns it.
-pub(super) fn register(cvars: &mut CvarRegistry) -> Result<(), sjk_shell::CvarError> {
-    if cvars.get(PLUGIN_DISABLE).is_none() {
-        cvars.register(CvarDefinition::new(
-            PLUGIN_DISABLE,
-            PLUGIN_DISABLE_DEFAULT,
-            CvarFlags::ARCHIVE | CvarFlags::USER_INFO,
-            "JA+ plugin features this client disables (bits; see pluginDisable)",
-        ))?;
-    }
-    Ok(())
-}
-
 fn yes_no(on: bool) -> &'static str {
     if on { "^2Yes" } else { "^1No" }
 }
@@ -109,22 +92,31 @@ fn server_option_lines(capabilities: JaPlusCapabilities) -> Vec<String> {
     lines
 }
 
-/// `jp_cinfo` from the session's `CS_SERVERINFO` (0 when absent).
-fn server_capabilities(session: &ClientSession) -> JaPlusCapabilities {
-    let value = session
-        .game_state()
-        .config_string(0)
-        .and_then(|bytes| std::str::from_utf8(bytes).ok())
-        .and_then(|text| InfoString::parse(text).ok())
-        .and_then(|info| info.get_i32("jp_cinfo"))
-        .unwrap_or(0);
-    JaPlusCapabilities(value as u32)
+/// `japlus.serverconfig`: list JA+ options locally, ask jaPRO.
+pub(crate) fn server_config(host: &mut dyn Host) -> Result<Vec<String>, String> {
+    let server = host.server().ok_or("Not connected to a server.")?;
+    match server.kind {
+        ServerKind::JaPlus => {
+            let bits = server
+                .info("jp_cinfo")
+                .and_then(|value| value.trim().parse::<i64>().ok())
+                .unwrap_or(0);
+            Ok(server_option_lines(JaPlusCapabilities(bits as u32)))
+        }
+        ServerKind::JaPro => {
+            host.send("serverconfig")?;
+            Ok(Vec::new())
+        }
+        ServerKind::BaseJka | ServerKind::Other => {
+            Ok(vec!["^5Server is not running JA+ or jaPRO.".into()])
+        }
+    }
 }
 
 /// The plugin feature list with each feature's state under `bits`.
 fn plugin_lines(bits: i64) -> Vec<String> {
     let mut lines = vec![
-        "Usage: pluginDisable [id]  (toggles a JA+ plugin feature)".to_owned(),
+        "Usage: japlus.plugin [id]  (toggles a JA+ plugin feature)".to_owned(),
         "^5ID ^7<----> ^5Feature".to_owned(),
     ];
     lines.extend(
@@ -144,7 +136,7 @@ fn state(bits: i64, id: usize) -> &'static str {
     }
 }
 
-/// Parse a `pluginDisable` id and return the toggled bits.
+/// Parse a plugin feature id and return the toggled bits.
 fn toggle(bits: i64, argument: &str) -> Result<(usize, i64), String> {
     let id = argument
         .trim()
@@ -153,61 +145,41 @@ fn toggle(bits: i64, argument: &str) -> Result<(usize, i64), String> {
         .filter(|id| *id < PLUGIN_FEATURES.len())
         .ok_or_else(|| {
             format!(
-                "pluginDisable: invalid id {argument} [0, {}]",
+                "japlus.plugin: invalid id {argument} [0, {}]",
                 PLUGIN_FEATURES.len() - 1
             )
         })?;
     Ok((id, bits ^ (1 << id)))
 }
 
-impl ViewerConsole {
-    /// `serverconfig`: list JA+ options locally, forward to jaPRO/TaystJK.
-    pub(super) fn server_config(
-        &mut self,
-        session: Option<&mut ClientSession>,
-    ) -> Result<Vec<String>, String> {
-        let session = session.ok_or("Not connected to a server.")?;
-        match session.compat_profile() {
-            CompatProfile::JaPlus { .. } => Ok(server_option_lines(server_capabilities(session))),
-            CompatProfile::TaystJk => {
-                session
-                    .send_reliable_command(b"serverconfig")
-                    .map_err(|error| error.to_string())?;
-                Ok(Vec::new())
-            }
-            CompatProfile::BaseJka | CompatProfile::Unknown(_) => {
-                Ok(vec!["^5Server is not running JA+ or jaPRO.".into()])
-            }
-        }
-    }
-
-    /// `pluginDisable [id]`: list the JA+ plugin features or toggle one.
-    pub(super) fn plugin_disable(&mut self, args: &[String]) -> Result<Vec<String>, String> {
-        let bits = self.integer_cvar(PLUGIN_DISABLE).unwrap_or(0);
-        let [argument] = args else {
-            return if args.is_empty() {
-                Ok(plugin_lines(bits))
-            } else {
-                Err("usage: pluginDisable [id]".into())
-            };
+/// `japlus.plugin [id]`: list the JA+ plugin features or toggle one.
+pub(crate) fn plugin(args: &[String], host: &mut dyn Host) -> Result<Vec<String>, String> {
+    let bits = host
+        .cvar(PLUGIN_DISABLE)
+        .and_then(|value| value.trim().parse::<i64>().ok())
+        .unwrap_or(0);
+    let [argument] = args else {
+        return if args.is_empty() {
+            Ok(plugin_lines(bits))
+        } else {
+            Err("usage: japlus.plugin [id]".into())
         };
-        let (id, bits) = toggle(bits, argument)?;
-        self.shell
-            .cvars
-            .set_value(PLUGIN_DISABLE, CvarValue::Integer(bits))
-            .map_err(|error| error.to_string())?;
-        self.persist();
-        Ok(vec![format!(
-            "^5{} ^7=> {}",
-            PLUGIN_FEATURES[id],
-            state(bits, id)
-        )])
-    }
+    };
+    let (id, bits) = toggle(bits, argument)?;
+    host.set_cvar(PLUGIN_DISABLE, &bits.to_string())?;
+    Ok(vec![format!(
+        "^5{} ^7=> {}",
+        PLUGIN_FEATURES[id],
+        state(bits, id)
+    )])
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// The core client's default: holstered saber and ledge grab off.
+    const PLUGIN_DISABLE_DEFAULT: i64 = 1_536;
 
     #[test]
     fn lists_the_local_ja_plus_server_options() {
