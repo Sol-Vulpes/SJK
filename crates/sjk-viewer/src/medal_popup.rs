@@ -759,7 +759,10 @@ mod tests {
     fn each_medal_has_its_fanfare_and_a_press_first_finishes_its_entrance() {
         ui_cues::take_posted();
         let mut popup = MedalPopup::default();
-        popup.rehearse(vec![award(Medal::EarlyTester, 1), award(Medal::JofClan, 1)]);
+        popup.rehearse(vec![
+            award(Medal::EarlyTester, 1),
+            award(Medal::EarlyContributor, 1),
+        ]);
         let start = Instant::now();
         popup.open_next(start);
         // Not seen yet (the console over it): no ceremony, no sound.
@@ -784,7 +787,7 @@ mod tests {
         assert!(ui_cues::take_posted().is_empty(), "a key while it leaves");
         let gone = after(start, 0.5 + EXIT + 0.01);
         popup.update(gone, true, true);
-        assert_eq!(shown(&popup), Some(Medal::JofClan));
+        assert_eq!(shown(&popup), Some(Medal::EarlyContributor));
         assert!(
             ui_cues::take_posted().is_empty(),
             "the next begins next frame"
@@ -850,15 +853,15 @@ mod tests {
         popup.offer(directory.path(), "aa", &[wire("early_tester", 1)]);
         assert!(popup.pending() && !popup.queue[0].rehearsal);
         let mut fresh = MedalPopup::default();
-        fresh.rehearse(vec![award(Medal::JofClan, 1)]);
-        fresh.offer(directory.path(), "aa", &[wire("jof_clan", 1)]);
+        fresh.rehearse(vec![award(Medal::EarlyContributor, 1)]);
+        fresh.offer(directory.path(), "aa", &[wire("early_contributor", 1)]);
         assert_eq!(fresh.queue.len(), 1);
         assert!(
             !fresh.queue[0].rehearsal,
             "the real one replaces the rehearsal"
         );
         let mut early = MedalPopup::default();
-        early.rehearse(vec![award(Medal::JofClan, 1)]);
+        early.rehearse(vec![award(Medal::EarlyContributor, 1)]);
         early.offer(directory.path(), "bb", &[]);
         assert_eq!(
             early.queue.len(),
@@ -869,7 +872,7 @@ mod tests {
         assert!(
             early
                 .hint()
-                .is_some_and(|text| text.starts_with("New SJK medal: JoF Clan"))
+                .is_some_and(|text| text.starts_with("New SJK medal: Early Contributor"))
         );
     }
 
@@ -879,10 +882,10 @@ mod tests {
     fn a_real_medal_is_remembered_when_its_button_is_taken() {
         let directory = tempfile::tempdir().expect("a folder");
         let mut popup = MedalPopup::default();
-        popup.offer(directory.path(), "aa", &[wire("jof_clan", 1)]);
+        popup.offer(directory.path(), "aa", &[wire("early_contributor", 1)]);
         let now = open_settled(&mut popup, Instant::now());
         popup.press(now, false);
         let seen = Seen::load(directory.path(), "aa");
-        assert!(!seen.is_new(&award(Medal::JofClan, 1)));
+        assert!(!seen.is_new(&award(Medal::EarlyContributor, 1)));
     }
 }

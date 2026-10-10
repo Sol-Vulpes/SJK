@@ -43,9 +43,9 @@ const YOUR_NAME: &str = "^1Sol^7Fox";
 
 const NAMES: [&str; 31] = [
     "^1Kael^7Varn",
-    "^3Mira",
+    "^1{JoF}^3Mira",
     "^5Tor^7ren",
-    "Ashla",
+    "jof.Ashla",
     "^2Vex",
     "^6Nyx",
     "^4Daro",
@@ -105,11 +105,11 @@ fn row(client: u8, name: &str, team: u8, score: i32) -> ScoreRow {
             }),
             11 => Some(Tag {
                 verified: true,
-                medals: medals(&["jof_clan"], 1),
+                medals: medals(&["early_contributor"], 1),
             }),
             3 => Some(Tag {
                 verified: false,
-                medals: medals(&["early_tester", "bug_hunter", "jof_clan"], 2),
+                medals: medals(&["early_tester", "bug_hunter"], 2),
             }),
             _ => None,
         },

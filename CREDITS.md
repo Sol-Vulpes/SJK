@@ -50,6 +50,8 @@ Sol develops SJK and sets its direction. Sol's work includes:
 - medals, the recognition the SJK team gives players, on the scoreboard, the
   player card and the Identity page, with medal pictures generated and chosen by
   Sol;
+- the JoF clan tag: the clan's emblem beside the names that carry its tag, in
+  the chats, on the scoreboard and on player cards;
 - the radial HUD (`cg_hudStyle radial`, after TheRisqe's Radial HUD) and the
   HUD meters' overheal bands;
 - nameplates with estimated health, shield and Force, held-weapon and Force

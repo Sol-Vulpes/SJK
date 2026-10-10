@@ -708,6 +708,28 @@ impl RowDraw<'_> {
         } else {
             name_rect
         };
+        // The JoF emblem on the name's left ([`crate::jof_tag`]).
+        let name_rect = if crate::jof_tag::tagged(&row.name) {
+            let side = crate::jof_tag::side(name_size);
+            let room = crate::jof_tag::room(side);
+            crate::jof_tag::draw(
+                name_rect.x,
+                name_rect.y + name_rect.height * 0.5,
+                side,
+                1.0,
+                |command| {
+                    let _ = ui.draw_list_mut().push(command);
+                },
+            );
+            Rect::new(
+                name_rect.x + room,
+                name_rect.y,
+                (name_rect.width - room).max(0.0),
+                name_rect.height,
+            )
+        } else {
+            name_rect
+        };
         ui.text_aligned(
             &row.name,
             name_rect,

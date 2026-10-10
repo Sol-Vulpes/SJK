@@ -687,10 +687,20 @@ impl State {
         } else {
             inner
         };
+        // The JoF emblem on the name's left ([`crate::jof_tag`]).
+        let jof = if crate::jof_tag::tagged(&card.texts[T_NAME]) {
+            let side = crate::jof_tag::side(23.0 * unit);
+            crate::jof_tag::draw(left, y + row(30.0) * 0.5, side, a, |command| {
+                let _ = self.list.push(command);
+            });
+            crate::jof_tag::room(side)
+        } else {
+            0.0
+        };
         put_text(
             &mut self.list,
             T_NAME,
-            Rect::new(left, y, head_width, row(30.0)),
+            Rect::new(left + jof, y, head_width - jof, row(30.0)),
             23.0 * unit,
             white(1.0),
             FontWeight::Semibold,
@@ -1022,8 +1032,9 @@ mod tests {
         assert!(unnamed.texts[T_VERIFIED].is_empty());
     }
 
+    /// Every medal there is fits one line; a second one waits for more medals.
     #[test]
-    fn long_medal_names_take_a_second_line() {
+    fn the_whole_catalogue_fits_one_line_of_names() {
         let medal = |id: &str| sjk_identity::Medal {
             id: id.to_owned(),
             count: 1,
@@ -1039,7 +1050,6 @@ mod tests {
                     medal("early_tester"),
                     medal("early_contributor"),
                     medal("bug_hunter"),
-                    medal("jof_clan"),
                 ]),
             }),
         );
@@ -1047,8 +1057,8 @@ mod tests {
             card.texts[T_MEDALS],
             "Early Tester, Early Contributor, Bug Hunter"
         );
-        assert_eq!(card.texts[T_MEDALS_MORE], "JoF Clan");
-        assert_eq!(card.medal_lines(), 2);
+        assert!(card.texts[T_MEDALS_MORE].is_empty());
+        assert_eq!(card.medal_lines(), 1);
     }
 
     #[test]

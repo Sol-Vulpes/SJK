@@ -1322,21 +1322,15 @@ mod tests {
                     last_seen: 0,
                 })
                 .collect(),
-            medals: [
-                "early_tester",
-                "early_contributor",
-                "bug_hunter",
-                "jof_clan",
-                "unknown",
-            ]
-            .iter()
-            .map(|id| Medal {
-                id: (*id).to_owned(),
-                count: 3,
-                awarded: 1_759_900_000,
-                note: "a note".to_owned(),
-            })
-            .collect(),
+            medals: ["early_tester", "early_contributor", "bug_hunter", "unknown"]
+                .iter()
+                .map(|id| Medal {
+                    id: (*id).to_owned(),
+                    count: 3,
+                    awarded: 1_759_900_000,
+                    note: "a note".to_owned(),
+                })
+                .collect(),
             achievements: Vec::new(),
             avatar: String::new(),
             unlocks: Vec::new(),

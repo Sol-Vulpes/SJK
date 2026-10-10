@@ -137,7 +137,7 @@ mod tests {
         let seen = Seen::parse(text, "aa");
         assert!(!seen.is_new(&award(Medal::EarlyTester, 1)));
         assert!(!seen.is_new(&award(Medal::BugHunter, 2)));
-        assert!(seen.is_new(&award(Medal::JofClan, 1)));
+        assert!(seen.is_new(&award(Medal::EarlyContributor, 1)));
         let again = Seen::parse(&seen.text(), "aa");
         assert_eq!(again, seen);
         assert!(seen.text().contains("from_the_future 4"));
@@ -153,9 +153,9 @@ mod tests {
     fn the_file_is_saved_in_the_settings_folder() {
         let directory = tempfile::tempdir().expect("a folder");
         let mut seen = Seen::load(directory.path(), "aa");
-        seen.mark(&award(Medal::JofClan, 1));
+        seen.mark(&award(Medal::EarlyContributor, 1));
         seen.save(directory.path()).expect("saved");
         let loaded = Seen::load(directory.path(), "aa");
-        assert!(!loaded.is_new(&award(Medal::JofClan, 1)));
+        assert!(!loaded.is_new(&award(Medal::EarlyContributor, 1)));
     }
 }

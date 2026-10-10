@@ -1,6 +1,7 @@
 //! An SJK chat line in the feed (`docs/hub-chat.md`): one flowing line, as a game
 //! chat line is, never a name row with the message under it. Its first row starts
-//! with a small SJK tag, the sender's name in its own colour codes and, for a
+//! with a small SJK tag, the JoF emblem for a sender with the clan's tag
+//! ([`crate::jof_tag`]), the sender's name in its own colour codes and, for a
 //! verified sender, the verified tick alone; the message follows on the same row in
 //! the SJK chat's gold ([`crate::sjk_chat_look::GOLD`]) and wraps only when it is too
 //! long ([`layout::Wrapped::update_indented`]).
@@ -24,6 +25,8 @@ pub(in crate::chat) struct Prefix {
     pub(in crate::chat) name_end: usize,
     name_width: f32,
     verified: bool,
+    /// The name carries the JoF tag: the clan's emblem comes before it.
+    jof: bool,
     colon_width: f32,
     /// The line is a holocron drop: its mark is the tier's gem, not the verified tick.
     tier: Option<&'static Tier>,
@@ -55,6 +58,7 @@ impl Prefix {
             name_width: visible_text_width_face(font, &name[..name_end], scale, TextFace::Semibold),
             verified: verified || tier.is_some(),
             tier,
+            jof: crate::jof_tag::tagged(name),
             colon_width: if name.is_empty() {
                 0.0
             } else {
@@ -63,9 +67,19 @@ impl Prefix {
         }
     }
 
-    /// Where the name starts after the tag.
-    fn name_x(&self) -> f32 {
+    /// Where the JoF emblem's ink starts after the tag.
+    fn jof_x(&self) -> f32 {
         self.tag_width + self.size * 0.35
+    }
+
+    /// Where the name starts after the tag and the JoF emblem.
+    fn name_x(&self) -> f32 {
+        self.jof_x()
+            + if self.jof {
+                crate::jof_tag::room(crate::jof_tag::side(self.size))
+            } else {
+                0.0
+            }
     }
 
     /// Where the colon starts after the name and its tick.
@@ -123,6 +137,17 @@ pub(in crate::chat) fn draw(
         FontWeight::Semibold,
         prefix.tag_size * 0.08,
     );
+    if prefix.jof {
+        crate::jof_tag::draw(
+            x + prefix.jof_x(),
+            middle,
+            crate::jof_tag::side(size),
+            alpha,
+            |command| {
+                let _ = ui.draw_list_mut().push(command);
+            },
+        );
+    }
     let ink = Color::new(0.982, 0.987, 0.996, alpha);
     let name = &line.name[..prefix.name_end];
     let name_x = x + prefix.name_x();

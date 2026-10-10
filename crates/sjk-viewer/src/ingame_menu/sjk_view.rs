@@ -1193,11 +1193,28 @@ fn player_card(
         None => CARD_X,
     };
     let name_width = CARD_X + CARD_WIDTH - name_x;
+    // The JoF emblem on the name's left ([`crate::jof_tag`]).
+    let jof = if crate::jof_tag::tagged(&player.name) {
+        let side = crate::jof_tag::side(38.0);
+        let emblem = frame.rect(name_x, y + 23.0 - side * 0.5, side, side);
+        crate::jof_tag::draw(
+            emblem.x,
+            emblem.y + emblem.height * 0.5,
+            emblem.height,
+            1.0,
+            |command| {
+                let _ = canvas.draw_list_mut().push(command);
+            },
+        );
+        crate::jof_tag::room(side)
+    } else {
+        0.0
+    };
     text(
         canvas,
         TextFamily::Display,
         format_args!("{}", player.name),
-        frame.rect(name_x, y, name_width, 46.0),
+        frame.rect(name_x + jof, y, name_width - jof, 46.0),
         38.0 * s,
         color::TEXT,
         FontWeight::Regular,

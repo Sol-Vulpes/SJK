@@ -2116,7 +2116,6 @@ fn shot_medals() -> Vec<sjk_identity::Medal> {
             1_791_336_225,
             "The fog that followed the camera floor, the flickering door on ffa3 and the lost lightmaps.",
         ),
-        medal("jof_clan", 1, 1_790_900_000, ""),
     ]
 }
 
