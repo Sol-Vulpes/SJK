@@ -5,9 +5,10 @@
 //! ceremony it borrows:
 //!
 //! - When: on the main menu, or when the game menu opens in a match, never over play. A
-//!   holocron that arrives during a match is announced once with a centre print saying
-//!   where to see it; the pop-up waits for the game menu. While it shows, the menu under
-//!   it is not drawn and takes no input. A new medal goes first.
+//!   holocron that arrives during a match is announced once by a card at the top of the
+//!   screen, as an achievement is ([`crate::unlock_toast`]), saying where to see it; the
+//!   pop-up waits for the game menu and takes the card back as it opens. While it shows,
+//!   the menu under it is not drawn and takes no input. A new medal goes first.
 //! - What was shown is kept in `holocrons_seen.txt` ([`crate::holocrons::seen`]): the
 //!   highest holocron number shown, so each shows once per identity, and an install that
 //!   already held holocrons when it first read its profile shows the newest 20.
@@ -29,6 +30,7 @@ use crate::holocrons::seen::Seen;
 use crate::holocrons::{self, COUNT, Entry, FIRST_READ_MAX};
 use crate::medal_popup::award::{ENTRANCE, EXIT};
 use crate::menu_widgets::MenuCanvas;
+use crate::unlock_toast::{self, Unlock};
 use sjk_identity::Holocron;
 use sjk_ui::{InputEvent, TextureId, UiEventKind};
 use std::collections::VecDeque;
@@ -48,6 +50,8 @@ struct Queued {
     entry: Entry,
     /// Made up by `debug_holocron`: shown like any other, never counted as seen.
     rehearsal: bool,
+    /// Its card was given in a match ([`HolocronPopup::announce`]).
+    announced: bool,
 }
 
 /// The holocron on show and where its ceremony is.
@@ -127,8 +131,6 @@ pub(crate) struct HolocronPopup {
     /// The key, the number of holocrons and the highest number last offered, so an
     /// unchanged profile is skipped without reading its list.
     last: Option<(String, usize, u64)>,
-    /// The centre print about the waiting holocrons was given.
-    hinted: bool,
     /// The tiers' pictures in the UI atlas, where they loaded.
     icons: [Option<TextureId>; COUNT],
     /// How many holocrons `debug_holocron` made, so each gets a number of its own.
@@ -151,7 +153,6 @@ impl Default for HolocronPopup {
             seen: None,
             directory: PathBuf::new(),
             last: None,
-            hinted: false,
             icons: [None; COUNT],
             rehearsed: 0,
             #[cfg(test)]
@@ -210,26 +211,22 @@ impl HolocronPopup {
         if fresh.len() > FIRST_READ_MAX {
             fresh.drain(..fresh.len() - FIRST_READ_MAX);
         }
-        if fresh.is_empty() {
-            return;
-        }
-        self.hinted = false;
         self.queue.extend(fresh.into_iter().map(|entry| Queued {
             entry,
             rehearsal: false,
+            announced: false,
         }));
     }
 
     /// Queue `entries` as made-up arrivals (`debug_holocron`): they go through the same
-    /// queue, centre print, ceremony and sound as the hub's, but are never counted as
-    /// seen.
+    /// queue, card, ceremony and sound as the hub's, but are never counted as seen.
     pub(crate) fn rehearse(&mut self, entries: Vec<Entry>) {
         self.rehearsed += entries.len() as u64;
         self.queue.extend(entries.into_iter().map(|entry| Queued {
             entry,
             rehearsal: true,
+            announced: false,
         }));
-        self.hinted = false;
     }
 
     /// The number to give the first of the next rehearsed holocrons: each has one of its
@@ -264,23 +261,22 @@ impl HolocronPopup {
         }
     }
 
-    /// The centre print for a match, once per new holocron: what came and where to see it.
-    pub(crate) fn hint(&mut self) -> Option<String> {
-        if self.hinted || self.queue.is_empty() {
-            return None;
+    /// The cards for a match, once per new holocron: each waiting holocron not announced
+    /// yet goes to `show`, at most [`unlock_toast::AT_ONCE`] of one arrival (the rest wait
+    /// for the pop-up all the same).
+    pub(crate) fn announce(&mut self, mut show: impl FnMut(Unlock)) {
+        let mut shown = 0;
+        for waiting in self.queue.iter_mut().filter(|waiting| !waiting.announced) {
+            waiting.announced = true;
+            if shown < unlock_toast::AT_ONCE {
+                shown += 1;
+                show(Unlock::Holocron {
+                    tier: waiting.entry.tier,
+                    id: waiting.entry.id,
+                    gift: waiting.entry.gift,
+                });
+            }
         }
-        self.hinted = true;
-        let names: Vec<&str> = self
-            .queue
-            .iter()
-            .map(|waiting| waiting.entry.tier.name)
-            .collect();
-        let what = if names.len() == 1 {
-            format!("New SJK holocron: {}", names[0])
-        } else {
-            format!("New SJK holocrons: {}", names.join(", "))
-        };
-        Some(format!("{what}\nOpen the game menu to see it"))
     }
 
     /// Move the ceremony on to `now`. A holocron on show begins (with its fanfare) once
@@ -437,10 +433,10 @@ impl crate::GpuState {
         });
     }
 
-    /// Open the pop-up when a holocron waits and the main menu or the game menu is up, or
-    /// announce it once with a centre print during a match, and move its ceremony on. A
-    /// medal on show or waiting goes first. Returns whether the pop-up draws this frame
-    /// (not under the console).
+    /// Open the pop-up when a holocron waits and the main menu or the game menu is up (its
+    /// cards go), or announce it once with a card during a match, and move its ceremony
+    /// on. A medal on show or waiting goes first. Returns whether the pop-up draws this
+    /// frame (not under the console).
     pub(crate) fn prepare_holocron_popup(&mut self, console_covers_frame: bool) -> bool {
         let now = Instant::now();
         let console_open = self
@@ -448,21 +444,21 @@ impl crate::GpuState {
             .as_ref()
             .is_some_and(crate::console::ViewerConsole::is_open);
         let medals = self.medal_popup.is_open() || self.medal_popup.pending();
-        if !self.holocron_popup.is_open() && self.holocron_popup.pending() && !medals {
+        if !self.holocron_popup.is_open() && self.holocron_popup.pending() {
             let main_menu = self.live_session.is_none()
                 && self
                     .client_menu
                     .as_ref()
                     .is_some_and(crate::menu::ClientMenu::on_main_menu);
             let menu = self.game_menu || main_menu;
-            if menu && !console_open && !self.text_dialog.is_open() {
+            // Only the pop-up waits for the medals: the cards queue with theirs.
+            if menu && !medals && !console_open && !self.text_dialog.is_open() {
                 self.holocron_popup.open_next(now);
-            } else if !menu
-                && self.live_session.is_some()
-                && let Some(message) = self.holocron_popup.hint()
-            {
-                self.chat
-                    .receive(sjk_client::ServerEventKind::CenterPrint, message, None, now);
+                self.unlock_toast
+                    .withdraw(now, |unlock| matches!(unlock, Unlock::Holocron { .. }));
+            } else if !menu && self.live_session.is_some() {
+                let toast = &mut self.unlock_toast;
+                self.holocron_popup.announce(|unlock| toast.push(unlock));
             }
         }
         let visible = self.holocron_popup.is_open() && !console_open && !console_covers_frame;
@@ -489,7 +485,8 @@ impl crate::GpuState {
     /// `debug_holocron`: queue made-up holocrons as if the hub had just dropped them
     /// ([`holocrons::rehearsal`]); alone, list the tiers. Nothing is sent and
     /// `holocrons_seen.txt` is left alone. The console closes so the ceremony shows at
-    /// once over a menu, and the first one's chat line shows in the game's feed.
+    /// once over a menu (or the cards over play in a match), and the first one's chat line
+    /// shows in the game's feed.
     pub(crate) fn debug_holocron_command(
         &mut self,
         args: &[String],
@@ -602,6 +599,13 @@ mod tests {
         after(start, ENTRANCE + 0.1)
     }
 
+    /// The names on the cards a match would show now.
+    fn cards(popup: &mut HolocronPopup) -> Vec<String> {
+        let mut names = Vec::new();
+        popup.announce(|unlock| names.push(unlock.name().to_string()));
+        names
+    }
+
     /// Take the button at `now` and let the holocron lift away.
     fn next(popup: &mut HolocronPopup, now: Instant) -> Instant {
         popup.press(now, true);
@@ -624,9 +628,8 @@ mod tests {
         popup.offer(directory.path(), "aa", &list);
         assert!(popup.pending() && !popup.is_open());
         assert_eq!(popup.queue.len(), 2, "the unknown tier is left out");
-        let hint = popup.hint().expect("a centre print");
-        assert!(hint.contains("Rare Holocron, Legendary Holocron"), "{hint}");
-        assert_eq!(popup.hint(), None, "said once");
+        assert_eq!(cards(&mut popup), ["Rare Holocron", "Legendary Holocron"]);
+        assert!(cards(&mut popup).is_empty(), "said once");
         let start = Instant::now();
         let now = open_settled(&mut popup, start);
         assert_eq!(shown(&popup), Some(5));
@@ -660,6 +663,10 @@ mod tests {
         popup.offer(directory.path(), "aa", &list);
         let ids: Vec<u64> = popup.queue.iter().map(|waiting| waiting.entry.id).collect();
         assert_eq!(ids, (11..=30).collect::<Vec<u64>>());
+        // In a match, three cards say so; the pop-up shows all twenty.
+        assert_eq!(cards(&mut popup).len(), unlock_toast::AT_ONCE);
+        assert!(cards(&mut popup).is_empty());
+        assert_eq!(popup.queue.len(), 20);
         // Once the last is taken, the older ten never come back.
         let start = Instant::now();
         let mut now = open_settled(&mut popup, start);
@@ -773,11 +780,7 @@ mod tests {
             1,
             "the identity arriving keeps rehearsals"
         );
-        assert!(
-            early
-                .hint()
-                .is_some_and(|text| text.starts_with("New SJK holocron: Uncommon Holocron"))
-        );
+        assert_eq!(cards(&mut early), ["Uncommon Holocron"]);
         // Each rehearsal gets a number of its own.
         assert_eq!(early.rehearsal_base(), holocrons::rehearsal::FIRST_ID + 1);
         early.rehearse(vec![entry(1, 0), entry(2, 0)]);

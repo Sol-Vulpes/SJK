@@ -7,6 +7,29 @@ SJK currently contains a native client and standard dedicated server in a
 20-crate Rust workspace. This page records scope and verification, rather than
 claiming complete parity from the presence of an implementation.
 
+## Medal and holocron cards in a match
+
+Branch `personal/unlock-toasts` (10/10/2026, based on `fd3ebc38`, Windows 11), Sol's
+request: a medal or holocron that arrives during a match is announced like an achievement,
+while the large pop-up still opens with the game menu. The achievement pop-up became the
+unlock pop-up ([unlock_toast.rs](../crates/sjk-viewer/src/unlock_toast.rs)): the same card
+and animation for an achievement, a medal ("New medal", the medallion's picture, the name
+with its count, what it is for) or a holocron ("New holocron", the tier's icon or gem, the
+burst and name in the tier's colour, where it came from and its odds), with "Open the game
+menu to see it" in the category's place for the last two and the achievements' chime. It
+replaces the centre print; one arrival brings at most three cards, the large pop-up takes
+back the cards of what it shows as it opens, and a holocron's card no longer waits for a
+medal still unseen. Settings > Sound > Achievement sound is now Unlock sound (same
+`cg_achievementSound`). Verified: unit tests for the queue with the three kinds (a medal
+given again is a new card, the same holocron is not), the large pop-up taking its cards
+back, the cards' words, every unlock's words fitting the card in the families and Inter
+and the card fitting the canvas and the screen at five window shapes, and the pop-ups
+announcing each new medal (or count) and holocron once, at most three of one arrival;
+off-screen world shots (`duel6_unlock_toast`) of the medal's and each tier's card, in its
+burst and held, over duel6 at 1920x1080 and 1440x1080 (the tiers' icons loaded) were
+reviewed, and the achievement's moments look as before. Not tried in a game: the cards
+over a live match, the chime, and Esc taking the card back.
+
 ## SJK chat paste
 
 Branch `personal/chat-paste` (10/10/2026, based on `a70d6ec0`, Windows 11), Sol's

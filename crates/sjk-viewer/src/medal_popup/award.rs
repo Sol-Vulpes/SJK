@@ -1,8 +1,9 @@
 //! A new medal's ceremony, shared by the pop-up's two looks (`sjk_view.rs`,
 //! `classic_view.rs`): when it is, and how the medal and its light are drawn.
 //!
-//! The achievement pop-up's card (`achievement_toast.rs`) is small and brief; a medal
-//! is rarer and given by hand, so it takes the middle of the screen. Over
+//! The unlock pop-up's card (`unlock_toast.rs`) is small and brief, and only announces
+//! a medal during a match; a medal is rarer and given by hand, so it takes the middle of
+//! the screen. Over
 //! [`ENTRANCE`] seconds the whole medal comes down into place on its ribbon, growing
 //! from a third of its size past its own and settling (ease-out, a little overshoot);
 //! as it lands, light bursts from the medallion (a glow, two gold rings running out,

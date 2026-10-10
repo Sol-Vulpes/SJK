@@ -177,8 +177,8 @@ const HELP: &[(&str, &str)] = &[
         "Silences the game while its window is alt-tabbed out or minimised.",
     ),
     (
-        crate::achievement_toast::SOUND_CVAR,
-        "Plays the secret-area chime when an achievement's pop-up appears.",
+        crate::unlock_toast::SOUND_CVAR,
+        "Plays the secret-area chime with each unlock card: an achievement, or a new medal or holocron in a match.",
     ),
     // HUD
     (

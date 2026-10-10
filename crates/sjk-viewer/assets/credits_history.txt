@@ -9,6 +9,8 @@
 #                               made it when that is not the piece's owner.
 
 = Sol
++ 10/10/2026 | - | Medals and holocrons that arrive in a match show the achievement card; the big pop-up still opens with the game menu
+- ba0f71a |  | Announce medals and holocrons in a match with the achievement card
 + 10/10/2026 | - | Ctrl+V and Shift+Insert paste in the SJK chat page and docks, filtered to what the chat sends
 - b8b7c36 |  | Paste into the SJK chat page and docks (Ctrl+V, Shift+Insert)
 + 10/10/2026 | - | Menu world dropped during matches, small GPU memory blocks

@@ -199,8 +199,8 @@ pub(super) const AUDIO: &[Setting] = &[
         kind: ValueKind::Bool,
     },
     Setting {
-        label: "Achievement sound",
-        cvar: crate::achievement_toast::SOUND_CVAR,
+        label: "Unlock sound",
+        cvar: crate::unlock_toast::SOUND_CVAR,
         kind: ValueKind::Bool,
     },
 ];

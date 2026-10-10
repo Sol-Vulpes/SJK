@@ -2671,7 +2671,7 @@ test: Restart: no pop-up again. Delete medals_seen.txt beside identity.key: it s
 test: Identity page (SJK UI, modern, classic): medals with picture, x2 count, dd/mm/yyyy, note.
 test: Join a server with another medal holder: ribbons after the emblem in Tab (every style).
 test: X on them: medallions under the hub name; pinned, their names. Esc > Players: the card.
-test: Get a medal mid-match (wait up to 10 min): a centre print; Esc opens the pop-up.
+test: Get a medal mid-match (wait up to 10 min): a card at the top; Esc opens the pop-up.
 note: Not started in a game: only off-screen renders and unit tests were checked.
 
 [console-sjk-designs]
@@ -3392,11 +3392,11 @@ note: Not tried in a game.
 area: Menus & settings
 title: Holocron drop pop-up and debug_holocron
 change: A new holocron shows once, large, in its tier's colour, on the main menu or the game menu.
-change: Several show one after another (1 of 3); a centre print says so in a match. Fanfare as medals.
+change: Several show one after another (1 of 3); a card says so in a match. Fanfare as medals.
 change: holocrons_seen.txt keeps the highest number shown; a fresh PC shows the newest 20 once.
 test: Console: debug_holocron all - the four tiers show one after another; Next, Next, Next, Close.
 test: debug_holocron mythical x3: "1 of 3"; Enter, Space, Right, Esc or a click finish the entrance.
-test: In a match: debug_holocron rare: a centre print, no pop-up over play; the game menu shows it.
+test: In a match: debug_holocron rare: a card at the top, no pop-up over play; Esc shows it.
 test: Each tier's colour: green, blue, purple, gold. With the art in: the picture, else a drawn gem.
 test: Then quit and start: nothing shows again (debug_holocron never writes holocrons_seen.txt).
 note: Medals go first. Same look with the classic menus. Not tried in a game.
@@ -3549,3 +3549,19 @@ test: Play on the new key: your name, medals and holocrons are the old player's.
 test: Its Identity page shows its own key id. A staff player cannot be merged away (red line).
 test: Unlink the key (press twice): next start on that key is a fresh player, nothing moved back.
 note: Unit tests and world shots only; hub side built in parallel, not tried in a game.
+
+# ---- Unlock cards, 10/10/2026 ----
+
+[unlock-cards]
+area: HUD
+title: New medals and holocrons in a match: the achievement card; the big pop-up still on Esc
+change: A medal or holocron that comes mid-match shows the achievement card, not a centre print.
+change: Medal: medallion, name (x2), what it is for. Holocron: icon or gem, light in its tier colour.
+change: Esc still opens the big pop-up, which takes the card away. Settings > Sound > Unlock sound.
+test: In a match: debug_medal bug_hunter x2 - "New medal", Bug Hunter x2, chime; no centre print.
+test: Press Esc while the card shows: the big medal pop-up opens; after Close the card is gone.
+test: debug_holocron all in a match: three cards in turn (green, blue, purple); Esc shows all four.
+test: debug_holocron rare, then unlock an achievement: the cards queue and never overlap.
+test: Settings > Sound > Unlock sound off: the cards still show, without the chime.
+test: On the main menu: debug_holocron rare - the big pop-up as before, no card.
+note: Unit tests and world shots only; not tried in a game.

@@ -1,4 +1,3 @@
-mod achievement_toast;
 mod achievements;
 mod actor_instance;
 mod actor_load;
@@ -223,6 +222,7 @@ mod text_select;
 mod ui_renderer;
 mod ui_scale;
 mod ui_target;
+mod unlock_toast;
 mod unlockables;
 mod update;
 mod version_overlay;
@@ -410,8 +410,9 @@ struct GpuState {
     medal_popup: medal_popup::MedalPopup,
     /// The holocron drop pop-up (`holocron_popup`).
     holocron_popup: holocron_popup::HolocronPopup,
-    /// The achievement pop-up over play and the menus (`achievement_toast`).
-    achievement_toast: achievement_toast::AchievementToast,
+    /// The unlock pop-up over play and the menus (`unlock_toast`): achievements, and
+    /// medals and holocrons that arrive in a match.
+    unlock_toast: unlock_toast::UnlockToast,
     /// A bug report is on its way to the hub (`bug_report`).
     bug_report_waiting: bool,
     /// The outcome last shown, so the next one is told apart.
@@ -1285,7 +1286,7 @@ impl GpuState {
             text_dialog: text_dialog::TextDialog::default(),
             medal_popup: medal_popup::MedalPopup::default(),
             holocron_popup: holocron_popup::HolocronPopup::default(),
-            achievement_toast: achievement_toast::AchievementToast::default(),
+            unlock_toast: unlock_toast::UnlockToast::default(),
             bug_report_waiting: false,
             bug_report_serial: 0,
             entity_lighting,
@@ -1907,9 +1908,9 @@ impl GpuState {
         } else if reload_shown {
             self.append_reload_card(viewport);
         }
-        // An achievement unlocked: its pop-up over play or the menus, never input-taking.
-        let achievement_toast =
-            self.append_achievement_toast(viewport, console_covers_frame || medal_popup);
+        // An achievement unlocked, or a medal or holocron in a match: its card over play or
+        // the menus, never input-taking.
+        let unlock_toast = self.append_unlock_toast(viewport, console_covers_frame || medal_popup);
         self.world_notes.draw_highlight(viewport);
         // The menu camera tour's fades, over the menu world only.
         let world_fade = menu_backdrop::standalone_menu_visible(self)
@@ -1951,7 +1952,7 @@ impl GpuState {
             medal_shown.then(|| self.medal_popup.draw_list()),
             holocron_shown.then(|| self.holocron_popup.draw_list()),
             reload_shown.then(|| self.graphics_reload.card.draw_list()),
-            achievement_toast.then(|| self.achievement_toast.draw_list()),
+            unlock_toast.then(|| self.unlock_toast.draw_list()),
         ];
         self.ui_shapes
             .prepare_layers(&self.queue, layers.into_iter().flatten(), viewport);

@@ -1524,17 +1524,32 @@ like this one.",
         });
     }
 
-    /// The achievement pop-up over play on the live duel6 (no menu), at 1920x1080 and
-    /// 1440x1080: coming in (the ring sweeping, the burst, the glint), held and
-    /// leaving, each moment held still; a sheet of the top of the screen at every
-    /// moment; then over the SJK UI's main page.
+    /// The unlock pop-up over play on the live duel6 (no menu), at 1920x1080 and
+    /// 1440x1080: an achievement's card coming in (the ring sweeping, the burst, the
+    /// glint), held and leaving, each moment held still, and a sheet of the top of the
+    /// screen at every moment; a medal's and each holocron tier's card, coming in and
+    /// held, on a sheet; then an achievement's over the SJK UI's main page.
     #[test]
     #[ignore = "renders with the GPU and the installed game data named by JKA_GAME_DATA"]
-    fn duel6_achievement_toast() {
-        use crate::achievement_toast::{AchievementToast, ENTER, HOLD, LEAVE};
+    fn duel6_unlock_toast() {
+        use crate::unlock_toast::{ENTER, HOLD, LEAVE, Unlock, UnlockToast};
         on_big_stack(|| {
-            let streak = crate::achievements::find("streak_5").expect("Rampage");
-            let lightning = crate::achievements::find("dark_side_25").expect("Unlimited Power");
+            let streak =
+                Unlock::Achievement(crate::achievements::find("streak_5").expect("Rampage"));
+            let lightning = Unlock::Achievement(
+                crate::achievements::find("dark_side_25").expect("Unlimited Power"),
+            );
+            let mut others = vec![Unlock::Medal {
+                medal: crate::medals::Medal::BugHunter,
+                count: 2,
+            }];
+            for (index, tier) in crate::holocrons::TIERS.iter().enumerate() {
+                others.push(Unlock::Holocron {
+                    tier,
+                    id: index as u64,
+                    gift: index == 0,
+                });
+            }
             let moments = [
                 (0.1, "entering"),
                 (0.25, "landing"),
@@ -1566,7 +1581,7 @@ like this one.",
                 std::fs::create_dir_all(directory()).expect("the shot directory");
                 let mut tops = Vec::new();
                 for (at, name) in moments {
-                    gpu.achievement_toast = AchievementToast::preview(&[streak, lightning], at);
+                    gpu.unlock_toast = UnlockToast::preview(&[streak, lightning], at);
                     let image = frame(&mut gpu, 3);
                     let path = directory().join(format!("{prefix}-{name}.png"));
                     image.save(&path).expect("write the shot");
@@ -1579,6 +1594,20 @@ like this one.",
                     "{}",
                     sheet(&tops, 2, 760, &format!("{prefix}-moments")).display()
                 );
+                let mut cards = Vec::new();
+                for unlock in &others {
+                    for at in [0.7, 2.5] {
+                        gpu.unlock_toast = UnlockToast::preview(&[*unlock], at);
+                        let image = frame(&mut gpu, 3);
+                        let width = image.width().min(760);
+                        let x = (image.width() - width) / 2;
+                        cards.push(image::imageops::crop_imm(&image, x, 50, width, 240).to_image());
+                    }
+                }
+                println!(
+                    "{}",
+                    sheet(&cards, 2, 760, &format!("{prefix}-medal-holocrons")).display()
+                );
             }
             let menu = menu::ClientMenu::new(true, String::new());
             let Some((mut gpu, _profile)) =
@@ -1587,7 +1616,7 @@ like this one.",
                 return;
             };
             let _ = frame(&mut gpu, 10);
-            gpu.achievement_toast = AchievementToast::preview(&[lightning], 2.5);
+            gpu.unlock_toast = UnlockToast::preview(&[lightning], 2.5);
             println!("{}", shoot(&mut gpu, 6, "duel6-achievement-menu").display());
         });
     }

@@ -283,8 +283,12 @@ Where they show:
   count rise, it shows it once, large, with its name, description, date and note, and
   several show one after another ("1 of 3"). It
   opens on the main menu, or when the game menu opens in a match, never over play: a
-  medal that arrives during a match is announced once by a centre print pointing to the
-  game menu. While it shows, the menu under it is neither drawn nor given input. What was
+  medal that arrives during a match is announced once by the achievements' card at the
+  top of the screen ([Achievements](#achievements); since 10/10/2026, Sol's request, in
+  place of a centre print): "New medal", "Open the game menu to see it", the name (with
+  its count), what it is for and the medallion's picture in a gold ring, with the
+  achievements' chime. The pop-up takes the card back as it opens. While it shows, the
+  menu under it is neither drawn nor given input. What was
   shown is kept in `medals_seen.txt` beside `identity.key` (the key id, then one
   `<id> <count>` a line; ids the build does not know are kept), so each medal and each
   new count shows once per identity, and an install that already held medals when it
@@ -317,7 +321,7 @@ Where they show:
   rehearses receiving medals offline: `debug_medal <id> [x<count>] [note]` (a count for
   Bug Hunter only), `debug_medal all [note]` for every medal, `debug_medal` alone for the
   ids. It makes the list a hub profile would carry (dated today), which is read as the
-  hub's is and queued like a real arrival, so the centre print in a match, the pop-up
+  hub's is and queued like a real arrival, so the card in a match, the pop-up
   on a menu, the ceremony, the fanfare and Next can all be tried; the console closes so
   it shows at once over a menu. Nothing is sent to the hub, and rehearsed medals are
   never written to `medals_seen.txt`, so a medal the team gives later still shows (a
@@ -635,12 +639,18 @@ asked. It takes no input and pauses nothing, over play and over the menus alike.
 slides down and grows into place in under half a second while a gold ring sweeps
 round the medallion, light bursts from it (a glow, a ring of light, sparks), its edge
 flares and a glint crosses the card; it holds five seconds and fades out. Several
-unlocks queue and show one after another. It waits while the console is open or the
-medal pop-up shows. Each pop-up plays `sound/interface/secret_area.mp3`, the
+unlocks queue and show one after another. It waits while the console is open or a
+large pop-up shows. Each pop-up plays `sound/interface/secret_area.mp3`, the
 single-player game's sound for a secret area found (its game module plays it with the
 `@SP_INGAME_SECRET_AREA` centre print), which multiplayer installs have in the shared
-`assets0.pk3`; `cg_achievementSound 0` (Settings > Sound > Achievement sound) leaves it
-out. The board shows every
+`assets0.pk3`; `cg_achievementSound 0` (Settings > Sound > Unlock sound) leaves it
+out. The same card ([unlock_toast.rs](../crates/sjk-viewer/src/unlock_toast.rs))
+announces a new medal ([Medals](#medals)) or holocron
+([holocrons.md](holocrons.md#the-pop-up)) that arrives during a match, in the queue with
+the achievements: "New medal" or "New holocron", "Open the game menu to see it" where the
+category stands, the medallion's picture or the tier's icon, and a holocron's light in its
+tier's colour. One arrival brings at most three cards, and the large pop-up that opens with
+the game menu takes back the cards of what it shows. The board shows every
 achievement in three columns: a medallion with the goal that fills with the count,
 gold once unlocked, the name, the category (Combat, Duels and flags, Journeys,
 Community), what to do, a bar and the count or the date it was unlocked.
@@ -752,8 +762,9 @@ once.
 - `cl_sjkChat` (default 1; Settings > Network > SJK chat) shows the SJK chat and reads
   it; `sjkchat` opens its page, `messagemode5` (I) its composer in a game, and
   `sjkemote <id>` sends an emote ([hub-chat.md](hub-chat.md)).
-- `cg_achievementSound` (default 1; Settings > Sound > Achievement sound) plays the
-  secret-area sound with each achievement's pop-up.
+- `cg_achievementSound` (default 1; Settings > Sound > Unlock sound) plays the
+  secret-area sound with each unlock card: an achievement's, or a new medal's or
+  holocron's in a match.
 - `debug_medal <id|all> [x<count>] [note]` shows made-up medals in the new medal
   pop-up, sending nothing ([Medals](#medals)).
 - `debug_holocron <tier|all> [x<count>]` shows made-up holocrons in the drop pop-up,

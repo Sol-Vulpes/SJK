@@ -2083,7 +2083,9 @@ are in [identity.md](identity.md).
   hub profile owns it ([Blade skins](#blade-skins)).
 - Achievements are counted in matches on servers and kept in `achievements.json`
   beside `identity.key`, sent to the hub with the identity on; an unlock says so in the
-  console and as a centre print ([identity.md](identity.md#achievements)).
+  console and with a card at the top of the screen, the same card that announces a new
+  medal or holocron during a match ([identity.md](identity.md#achievements)).
+  Settings > Sound > Unlock sound (`cg_achievementSound`) turns its chime off.
 - The scoreboard (every style) draws SJK's emblem at the end of the name of a
   player the hub knows (the SJK UI's right after the name), in gold when the
   hub's operator vouches for them, then up to three ribbon bars for the medals the
@@ -2095,22 +2097,24 @@ are in [identity.md](identity.md).
   picture, name, description, the date it was given (`dd/mm/yyyy`) and the team's note;
   the classic+ box names them in its status with their medallions. With none, a line
   says how medals come. A medal new to the client shows once in a pop-up on the main
-  menu or when the game menu opens, arriving in a short ceremony with the game's
+  menu or when the game menu opens (during a match a card at the top of the screen says
+  it came first), arriving in a short ceremony with the game's
   Jedi Master fanfare (`music/goodsmall.mp3`, silent without game data); Enter, Space,
   Right, Escape or a click finish the entrance, then take Next or Close. It has the
   SJK UI's look with its menus and the classic+ look with the classic ones
   ([identity.md](identity.md#medals), [sjk-ui.md](sjk-ui.md#new-medal)).
 - `debug_medal <id> [x<count>] [note]` (`debug_medal all [note]` for every medal,
   alone it lists the ids: `early_tester`, `early_contributor`, `bug_hunter`, which
-  takes a count) shows made-up medals as if the SJK team had just given
-  them, through the same queue, centre print, pop-up, ceremony and sound, to try them
-  without the hub. It sends nothing and never writes `medals_seen.txt`; the console
+  takes a count) shows made-up medals as if the SJK team had just given them, through
+  the same queue, card (in a match), pop-up, ceremony and sound, to try them without the
+  hub. It sends nothing and never writes `medals_seen.txt`; the console
   closes so the pop-up shows at once on the main menu (in a match, open the game
   menu).
 - `debug_holocron <tier|all> [x<count>]` (alone it lists the tiers `uncommon`, `rare`,
   `legendary` and `mythical` with their odds) shows made-up holocron drops as if the hub
-  had just dropped them, through the same queue, centre print, pop-up, ceremony and sound,
-  and puts the first one's chat line in the game's feed, to try them without the hub. It
+  had just dropped them, through the same queue, card (in a match), pop-up, ceremony and
+  sound, and puts the first one's chat line in the game's feed, to try them without the
+  hub. It
   sends nothing and never writes `holocrons_seen.txt`
   ([holocrons.md](holocrons.md#debug_holocron)). A holocron the hub drops while you play
   shows the same way, once, and appears as a chat line in its tier's colour
