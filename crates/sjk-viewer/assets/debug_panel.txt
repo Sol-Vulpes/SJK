@@ -2136,6 +2136,13 @@ test: ui_menuStyle classic: update, then firstsetup import: both are SJK pop-up 
 test: Classic, in a match: Camera control (F8) is the SJK column, in Rajdhani/Exo 2.
 test: Classic: Profile and Collection text is in the SJK fonts, not Inter.
 
+[hero-removal]
+area: Menus & settings
+title: The old full-screen form look is gone, and Menu contrast with it
+change: Its widgets and the ui_menuContrast setting are removed; every page uses the SJK look.
+test: Settings > Interface: no Menu contrast row; every other row still works.
+test: Open Create game, Settings, Update, Import, test list: all in the SJK look, both styles.
+
 [first-setup-import]
 area: Menus & settings
 title: First setup at every start; import name, model, FOV and keys from a .cfg

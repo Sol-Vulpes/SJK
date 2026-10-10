@@ -98,17 +98,17 @@ the live map, with its own browser, settings tabs, in-game menu, scoreboard
 joined. It is gone. The console's start puts a saved `modern` (or `0`) in any of
 those settings back to its default (the SJK UI, `auto`, `auto` and `game`) and
 drops the settings only it read (`ui_accent`, `con_lineSpacing`, `con_maxLines`,
-`con_datetime`) from the profile (`retire_modern_ui` in
-[console_session.rs](../crates/sjk-viewer/src/console_session.rs)). A few
-screens the classic pages and the SJK UI open have no version of their own yet
-and keep that style's hero look: the Update
-page and Camera control with the classic menus. The settings have no hero look
-left since 10/10/2026: the resolution list is the SJK UI's pop-up card in
-every style, and a way to settings without a classic+ panel (a main-menu
-destination, the classic renderer route, First setup's fallback) opens the SJK
-UI's Settings or Key bindings, drawn in the UI's own type whatever the style.
-Create game and its map picker are the SJK UI's in every menu style since
-10/10/2026 ([SJK UI](sjk-ui.md#create-game)).
+`con_datetime`, and since 10/10/2026 `ui_menuContrast`) from the profile
+(`retire_modern_ui` in
+[console_session.rs](../crates/sjk-viewer/src/console_session.rs)). The modern
+style's full-screen form look, which some screens kept after it, is gone too
+(10/10/2026, Sol's request that no trace of it stay): every screen or page with
+no classic+ version of its own has the SJK UI's look in every menu style. That is
+Create game and its map picker ([SJK UI](sjk-ui.md#create-game)), the Update and
+Import pages, Camera control, the test list, the resolution list (a pop-up card)
+and, for a way to settings without a classic+ panel (a main-menu destination, the
+classic renderer route, First setup's fallback), the SJK UI's Settings or Key
+bindings. The SJK UI's fonts load in every menu style for them.
 
 The SJK UI is SJK's own menus drawn over the live map in SJK's type
 ([SJK UI](sjk-ui.md)). It has its main page: the emblem in a
@@ -580,8 +580,8 @@ are in [destination.rs](../crates/sjk-viewer/src/menu/destination.rs).
 Planned follow-ups, each a new page or screen module, following the retail
 `ui/jamp` menus:
 
-- Classic versions of the screens the classic pages still open in SJK's hero
-  look: Join Server's `findplayer` and `createfavorite` pop-ups, Create
+- Classic versions of screens the classic pages open in the SJK UI's look, or
+  do not have yet: Join Server's `findplayer` and `createfavorite` pop-ups, Create
   Server (`createserver`, `advancedcreateserver`),
   Solo Game (`quickgame`).
 - Retail option items SJK has no setting for (video quality presets, colour

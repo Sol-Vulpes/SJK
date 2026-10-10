@@ -1302,8 +1302,8 @@ right edge:
 The focused control has the kit's band (a slider's or switch's whole row, a tab)
 or a button's white edge. It is the panel's state, tokens, keys and pointer
 (`shot::Panel`), drawn by another view: `InGameMenu::append_sjk` builds it when
-the page is `Page::Shot`. With the classic menus a right-edge panel in SJK's
-hero look draws it, renamed.
+the page is `Page::Shot`, in every menu style (the classic menus' right-edge
+panel was removed on 10/10/2026).
 
 ## Report a bug and its dialogs
 

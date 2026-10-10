@@ -869,6 +869,8 @@ fn retire_modern_ui(cvars: &mut CvarRegistry) {
         "con_lineSpacing",
         "con_maxLines",
         "con_datetime",
+        // Darkened the backdrop of the old form screens, removed on 10/10/2026.
+        "ui_menuContrast",
     ] {
         let _ = cvars.unset(retired);
     }

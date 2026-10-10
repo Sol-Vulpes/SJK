@@ -1223,7 +1223,7 @@ mod tests {
         );
         let fonts = row_of(&menu, crate::game_font::CVAR);
         assert!(!menu.open_dropdown(&console, fonts));
-        let contrast = row_of(&menu, "ui_menuContrast");
+        let contrast = row_of(&menu, crate::console::console_options::STYLE_CVAR);
         assert!(!menu.open_dropdown(&console, contrast));
         // A longer choice still opens a list: Video's display modes.
         let mut video = SettingsMenu::new();
@@ -1238,8 +1238,10 @@ mod tests {
             },
         );
         assert_eq!(
-            console.cvar("ui_menuContrast").map(CvarValue::as_text),
-            Some("strong".to_owned())
+            console
+                .cvar(crate::console::console_options::STYLE_CVAR)
+                .map(CvarValue::as_text),
+            Some("classic".to_owned())
         );
         assert!(menu.defaults[contrast].changed);
         menu.activate_control(&mut console, RowControl::Reset(contrast));

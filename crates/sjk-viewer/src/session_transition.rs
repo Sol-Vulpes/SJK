@@ -75,7 +75,7 @@ fn disconnect_reason(reason: Option<String>) -> String {
     reason.unwrap_or_else(|| "Server closed the connection".to_owned())
 }
 
-/// Surface a server or netchan failure in stderr, scrollback, and the hero screen.
+/// Surface a server or netchan failure in stderr, scrollback, and the menus.
 pub(crate) fn show_disconnect(
     reason: String,
     console: Option<&mut crate::console::ViewerConsole>,

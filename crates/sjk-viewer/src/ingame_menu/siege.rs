@@ -1,4 +1,4 @@
-//! Retained hero class list; selection sends the stock class command, not userinfo.
+//! Retained siege class list; selection sends the stock class command, not userinfo.
 use super::{InGameMenu, siege_data::Classes};
 use sjk_protocol::GameState;
 use sjk_vfs::VirtualFileSystem;
@@ -28,7 +28,7 @@ impl State {
         self.visible().len() + 3 + usize::from(self.paged())
     }
 
-    /// Fill already allocated hero-menu text slots without allocating.
+    /// Fill already allocated menu text slots without allocating.
     pub fn prepare(&self, rows: &mut [String; 24]) -> usize {
         rows[0].push_str(if self.team == 0 {
             "Red team  /  switch to Blue"

@@ -62,7 +62,7 @@ impl ServerBrowser {
         // Fall back to each switch's own default rather than a shared one: an
         // unresolvable mode or ping cap must not silently hide every server.
         let number = |name, fallback| console.integer_cvar(name).unwrap_or(fallback);
-        // Hero UI has no separate create-game selector: these two inputs share a mode.
+        // The menus have no separate create-game selector: these two inputs share a mode.
         // If both changed together, the explicit network mode wins.
         let actual = number("ui_actualnetgametype", default.mode.into()) as i32;
         let mode = if actual != self.filters.mode {
