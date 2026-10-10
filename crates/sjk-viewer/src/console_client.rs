@@ -111,6 +111,10 @@ pub(super) const COMMANDS: &[(&str, &str)] = &[
         crate::console::UNLOCKABLES_HELP,
     ),
     (
+        crate::console::HOLOCRONS_COMMAND,
+        crate::console::HOLOCRONS_HELP,
+    ),
+    (
         crate::console::SJK_CHAT_COMMAND,
         crate::console::SJK_CHAT_HELP,
     ),
@@ -552,6 +556,15 @@ impl crate::GpuState {
             crate::console::UNLOCKABLES_COMMAND => {
                 if let Some(console) = &mut self.console {
                     console.toggle_unlockables_panel();
+                }
+                self.sync_cursor_policy();
+            }
+            crate::console::HOLOCRONS_COMMAND if self.in_game_menu.is_sjk() => {
+                self.toggle_profile_hub(crate::profile_hub::Tab::Holocrons);
+            }
+            crate::console::HOLOCRONS_COMMAND => {
+                if let Some(console) = &mut self.console {
+                    console.toggle_holocrons_panel();
                 }
                 self.sync_cursor_policy();
             }

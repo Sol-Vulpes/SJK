@@ -11,6 +11,17 @@ use super::{COUNT, TIERS};
 use sjk_shader::ShaderCatalog;
 use sjk_ui::TextureId;
 use sjk_vfs::VirtualFileSystem;
+use std::sync::atomic::{AtomicU8, Ordering};
+
+/// Which tiers' pictures were uploaded (bit `index`): the pages the console draws, which
+/// do not hold the HUD, ask [`is_loaded`] to know whether a tier draws its picture or its
+/// gem.
+static LOADED: AtomicU8 = AtomicU8::new(0);
+
+/// Whether the picture of tier `index` is in the atlas (else it draws as a gem).
+pub(crate) fn is_loaded(index: usize) -> bool {
+    LOADED.load(Ordering::Relaxed) & (1 << index) != 0
+}
 
 /// The icon cell of tier `index`.
 pub(crate) const fn texture(index: usize) -> TextureId {
@@ -23,12 +34,19 @@ pub(crate) fn load(
     shaders: &ShaderCatalog,
     mut upload: impl FnMut(TextureId, &[u8]),
 ) -> [Option<TextureId>; COUNT] {
-    std::array::from_fn(|index| {
+    let loaded: [Option<TextureId>; COUNT] = std::array::from_fn(|index| {
         let pixels = crate::hud::icons::assets::decode(vfs, shaders, &TIERS[index].icon_path())?;
         let id = texture(index);
         upload(id, pixels.as_raw());
         Some(id)
-    })
+    });
+    let mask = loaded
+        .iter()
+        .enumerate()
+        .filter(|(_, id)| id.is_some())
+        .fold(0_u8, |mask, (index, _)| mask | 1 << index);
+    LOADED.store(mask, Ordering::Relaxed);
+    loaded
 }
 
 #[cfg(test)]

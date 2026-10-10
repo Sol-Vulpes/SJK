@@ -45,6 +45,7 @@ const REVERT_TOKEN: u16 = 1_012;
 const BOARD_TOKEN: u16 = 1_013;
 const STAFF_TOKEN: u16 = 1_015;
 const UNLOCKABLES_TOKEN: u16 = 1_016;
+const HOLOCRONS_TOKEN: u16 = 1_022;
 const PICTURE_TOKEN: u16 = 1_017;
 const USE_TOKEN: u16 = 1_018;
 const REMOVE_TOKEN: u16 = 1_019;
@@ -100,6 +101,7 @@ enum Focus {
     BioBack,
     Board,
     Unlockables,
+    Holocrons,
 }
 
 /// What the Profile tab's middle column shows.
@@ -146,6 +148,8 @@ pub(crate) enum PanelAction {
     RemoveAvatar,
     /// Open the Unlockables page.
     Unlockables,
+    /// Open the Holocrons page.
+    Holocrons,
 }
 
 /// A save on its way: the bio sent and the service's notice before it, to tell the
@@ -715,7 +719,7 @@ impl Panel {
             // A picture can still be chosen and looked at without the hub.
             (Middle::Picture, false) => order.extend([Focus::Browse, Focus::BioBack]),
         }
-        order.extend([Focus::Board, Focus::Unlockables]);
+        order.extend([Focus::Board, Focus::Unlockables, Focus::Holocrons]);
         order
     }
 
@@ -768,6 +772,7 @@ impl Panel {
             }
             Focus::Board => self.see_board(),
             Focus::Unlockables => self.see_unlockables(),
+            Focus::Holocrons => self.see_holocrons(),
         }
     }
 
@@ -786,6 +791,15 @@ impl Panel {
             PanelAction::Hub(HubTab::Collection)
         } else {
             PanelAction::Unlockables
+        }
+    }
+
+    /// See the holocrons: the Profile screen's Holocrons tab, else their page.
+    fn see_holocrons(&self) -> PanelAction {
+        if self.mode == Mode::Hub {
+            PanelAction::Hub(HubTab::Holocrons)
+        } else {
+            PanelAction::Holocrons
         }
     }
 
@@ -915,6 +929,10 @@ impl Panel {
                 self.focus = Focus::Unlockables;
                 self.see_unlockables()
             }
+            Some(HOLOCRONS_TOKEN) if self.tab == Tab::Profile => {
+                self.focus = Focus::Holocrons;
+                self.see_holocrons()
+            }
             _ => PanelAction::None,
         }
     }
@@ -943,6 +961,7 @@ impl Panel {
             Focus::Revert => REVERT_TOKEN,
             Focus::Board => BOARD_TOKEN,
             Focus::Unlockables => UNLOCKABLES_TOKEN,
+            Focus::Holocrons => HOLOCRONS_TOKEN,
         }
     }
 }
@@ -1088,6 +1107,8 @@ mod tests {
         assert_eq!(panel.activate(None), PanelAction::Hub(HubTab::Achievements));
         panel.focus = Focus::Unlockables;
         assert_eq!(panel.activate(None), PanelAction::Hub(HubTab::Collection));
+        panel.focus = Focus::Holocrons;
+        assert_eq!(panel.activate(None), PanelAction::Hub(HubTab::Holocrons));
         for tab in [Tab::Achievements, Tab::Medals] {
             panel.show_hub_tab(tab);
             assert!(panel.is_open());
@@ -1172,7 +1193,8 @@ mod tests {
                 Focus::Tabs,
                 Focus::Picture,
                 Focus::Board,
-                Focus::Unlockables
+                Focus::Unlockables,
+                Focus::Holocrons
             ]
         );
         panel.bio = "hello there".to_owned();
@@ -1183,7 +1205,7 @@ mod tests {
     fn tab_walks_the_controls_and_enter_switches_tabs() {
         let shot = snapshot(Some(me("")), None);
         let mut panel = opened(&shot);
-        let steps: Vec<Focus> = (0..7)
+        let steps: Vec<Focus> = (0..8)
             .map(|_| {
                 panel.step(true);
                 panel.focus
@@ -1198,11 +1220,14 @@ mod tests {
                 Focus::Revert,
                 Focus::Board,
                 Focus::Unlockables,
+                Focus::Holocrons,
                 Focus::Tabs
             ]
         );
         panel.focus = Focus::Unlockables;
         assert_eq!(panel.activate(None), PanelAction::Unlockables);
+        panel.focus = Focus::Holocrons;
+        assert_eq!(panel.activate(None), PanelAction::Holocrons);
         panel.focus = Focus::Tabs;
         assert_eq!(panel.activate(None), PanelAction::None);
         assert_eq!(panel.tab(), Tab::Achievements);
@@ -1373,7 +1398,8 @@ mod tests {
                 Focus::Browse,
                 Focus::BioBack,
                 Focus::Board,
-                Focus::Unlockables
+                Focus::Unlockables,
+                Focus::Holocrons
             ]
         );
         // `sjkavatar clear` without the hub says so too.

@@ -152,6 +152,9 @@ pub(crate) struct ClientMenu {
     loading: classic::loading::ClassicLoading,
     /// The world is not drawn under the menu this frame (classic style).
     world_hidden: bool,
+    /// The Profile screen's Holocrons tab is open over the menu: the backdrop camera
+    /// parks on its shot ([`Shot::Holocrons`]).
+    holocron_shot: bool,
     /// The retail background drawn under the screens the classic pages open,
     /// while the world is hidden.
     classic_backdrop: MenuCanvas,
@@ -194,7 +197,12 @@ pub(crate) struct ClientMenu {
 
 /// Backdrop shot each client phase is presented over. A connect stays on
 /// the browser shot, behind the loading screen.
-fn shot_for(phase: &ClientPhase, player: &PlayerMenu) -> Shot {
+fn shot_for(phase: &ClientPhase, player: &PlayerMenu, holocrons: bool) -> Shot {
+    // The Profile screen's Holocrons tab (a console page over the main menu) asks for
+    // its own shot whatever the phase.
+    if holocrons {
+        return Shot::Holocrons;
+    }
     match phase {
         ClientPhase::Browser
         | ClientPhase::Connecting(_)
@@ -236,6 +244,7 @@ impl ClientMenu {
             art: art::ArtSet::default(),
             loading: classic::loading::ClassicLoading::default(),
             world_hidden: false,
+            holocron_shot: false,
             classic_backdrop: MenuCanvas::new(),
             world_fade: MenuCanvas::new(),
             keybinds_direct: false,
@@ -280,7 +289,7 @@ impl ClientMenu {
     /// Advance the live-map backdrop toward the current screen's shot and
     /// return the camera for this frame, once a map is loaded.
     pub(crate) fn drive_backdrop(&mut self, millis: u64) -> Option<Sample> {
-        let shot = shot_for(self.state.phase(), &self.player);
+        let shot = shot_for(self.state.phase(), &self.player, self.holocron_shot);
         self.backdrop
             .as_mut()
             .map(|backdrop| backdrop.drive(shot, millis))
@@ -320,6 +329,12 @@ impl ClientMenu {
             self.state.phase(),
             ClientPhase::Connecting(_) | ClientPhase::ConnectionError
         )
+    }
+
+    /// Tell the menu whether the Holocrons tab is open over it, to park the camera on its
+    /// shot.
+    pub(crate) fn set_holocron_shot(&mut self, on: bool) {
+        self.holocron_shot = on;
     }
 
     /// Tell the menu whether the world is drawn under it this frame.
@@ -445,7 +460,7 @@ impl ClientMenu {
             // Over a live match the backdrop camera is not flying anywhere.
             return 1.0;
         }
-        let shot = shot_for(self.state.phase(), &self.player);
+        let shot = shot_for(self.state.phase(), &self.player, self.holocron_shot);
         self.backdrop
             .as_ref()
             .map_or(1.0, |backdrop| backdrop.reveal(shot))

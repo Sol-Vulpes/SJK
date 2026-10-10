@@ -39,6 +39,10 @@ pub(crate) mod credits;
 pub(crate) mod debug_panel;
 #[path = "demo_director.rs"]
 pub(crate) mod director;
+#[path = "console_holocrons_page.rs"]
+mod holocrons_page;
+#[path = "holocrons_panel.rs"]
+pub(crate) mod holocrons_panel;
 #[path = "identity_panel.rs"]
 pub(crate) mod identity_panel;
 #[path = "console_profile_page.rs"]
@@ -55,6 +59,7 @@ pub(crate) mod staff_panel;
 mod unlockables_page;
 #[path = "unlockables_panel.rs"]
 pub(crate) mod unlockables_panel;
+pub(crate) use holocrons_page::{HOLOCRONS_COMMAND, HOLOCRONS_HELP};
 pub(crate) use sjk_chat_page::{SJK_CHAT_COMMAND, SJK_CHAT_HELP};
 pub(crate) use staff_page::{STAFF_COMMAND, STAFF_HELP};
 pub(crate) use unlockables_page::{UNLOCKABLES_COMMAND, UNLOCKABLES_HELP};
@@ -159,6 +164,8 @@ pub(crate) struct ViewerConsole {
     profile_panel: profile_panel::Panel,
     staff_panel: staff_panel::Panel,
     unlockables_panel: unlockables_panel::Panel,
+    /// The Holocrons page, the Profile screen's Holocrons tab in the SJK UI.
+    holocrons_panel: holocrons_panel::Panel,
     /// Where the Profile screen returns while one of its tabs shows here
     /// ([`crate::profile_hub`]).
     profile_hub_return: crate::player_menu::ReturnTarget,
@@ -322,6 +329,7 @@ impl ViewerConsole {
                 || self.profile_panel.is_open()
                 || self.staff_panel.is_open()
                 || self.unlockables_panel.is_open()
+                || self.holocrons_panel.is_open()
                 || self.sjk_chat_panel.is_open()
                 || self.config_import.is_open())
     }
@@ -734,6 +742,9 @@ impl ViewerConsole {
         if let Some(draw_list) = self.unlockables_panel_draw_list() {
             return draw_list;
         }
+        if let Some(draw_list) = self.holocrons_panel_draw_list() {
+            return draw_list;
+        }
         if let Some(draw_list) = self.sjk_chat_panel_draw_list() {
             return draw_list;
         }
@@ -800,6 +811,7 @@ impl ViewerConsole {
             self.profile_panel.close();
             self.staff_panel.close();
             self.unlockables_panel.close();
+            self.holocrons_panel.close();
             self.sjk_chat_panel.close();
             self.config_import.close();
         }

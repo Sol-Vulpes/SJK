@@ -258,6 +258,9 @@ mod saber_skins;
 #[path = "world_shot_unlockables.rs"]
 mod unlockables;
 
+#[path = "world_shot_holocrons.rs"]
+mod holocrons_tab;
+
 #[cfg(test)]
 mod tests {
     use super::*;

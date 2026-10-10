@@ -46,6 +46,7 @@ impl ViewerConsole {
         self.profile_panel.close();
         self.staff_panel.close();
         self.sjk_chat_panel.close();
+        self.holocrons_panel.close();
         self.dead_key.settle();
         self.unlockables_panel.open(owns_console);
     }
@@ -159,11 +160,13 @@ impl ViewerConsole {
         self.unlockables_panel.shot_seconds = Some(seconds);
     }
 
-    /// Whether the Profile page's or the Unlockables page's last frame ran out of
+    /// Whether the Profile page's, the Unlockables page's or the Holocrons page's last frame ran out of
     /// room on its canvas, for the world shots.
     #[cfg(test)]
     pub(crate) fn profile_pages_overflowed(&self) -> bool {
-        self.profile_panel.overflowed() || self.unlockables_panel.overflowed()
+        self.profile_panel.overflowed()
+            || self.unlockables_panel.overflowed()
+            || self.holocrons_panel.overflowed()
     }
 
     /// The page's draw list while it is shown.

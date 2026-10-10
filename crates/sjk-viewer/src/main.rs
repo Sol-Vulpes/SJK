@@ -357,6 +357,11 @@ struct GpuState {
     illuminate: illuminate::Holocron,
     /// The other players' holocrons, lit by their looks.
     illuminate_others: illuminate::Others,
+    /// The Holocrons tab's 3D holocron ([`holocrons::stage`]).
+    holocron_stage: holocrons::stage::Stage,
+    /// The time its turn and bob are drawn at, instead of the clock's, for a world shot.
+    #[cfg(test)]
+    holocron_stage_seconds: Option<f32>,
     /// What each player wears that SJK draws (blade skin, Illuminate).
     looks: looks::Looks,
     trick_fades: sjk_client::LegacyTrickFades,
@@ -1227,6 +1232,9 @@ impl GpuState {
             speed_trails: Default::default(),
             illuminate: Default::default(),
             illuminate_others: Default::default(),
+            holocron_stage: Default::default(),
+            #[cfg(test)]
+            holocron_stage_seconds: None,
             looks: Default::default(),
             trick_fades: Default::default(),
             projectiles: Vec::with_capacity(sjk_protocol::MAX_LEGACY_ENTITIES),
@@ -1968,6 +1976,7 @@ impl GpuState {
         self.particle_groups.iter_mut().for_each(Vec::clear);
         self.dynamic_lights.clear();
         self.submit_illuminate(presentation_time, visual_now);
+        self.submit_holocron_stage(visual_now);
         self.sync_saber_skins(game_audio, presentation_time);
         let debug_missiles = effect_debug::sync(self.console.as_ref());
         let active_snapshot = first_person_view::presented_snapshot(

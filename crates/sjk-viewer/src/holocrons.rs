@@ -2,11 +2,13 @@
 //! stores them; the client shows them. They cannot be opened yet and grant nothing.
 //!
 //! This is the one place that says which tiers the client knows and how each looks: its
-//! wire id, name, colour and odds ([`TIERS`]), and what the player's own profile and the
-//! hub say about them ([`counts`], [`recent`], [`progress`]). Everything that draws a
+//! wire id, name, colour and odds ([`TIERS`]), and how a profile's entries and the hub's
+//! progress read ([`entries`], [`counts_of`], [`next_text`]). Everything that draws a
 //! holocron reads these: the drop pop-up ([`crate::holocron_popup`]), the chat lines
-//! ([`line`]), the staff page and the Profile screen's Holocrons tab. An id the client
-//! does not know is left out.
+//! ([`line`]), the staff page and the Profile screen's Holocrons tab (which reads the
+//! counts, the list and the progress from the identity's snapshot once, in
+//! [`crate::console::holocrons_panel::Data::of`]). An id the client does not know is left
+//! out.
 //!
 //! | piece | module |
 //! | --- | --- |
@@ -16,6 +18,7 @@
 //! | the chat lines' words | [`line`] |
 //! | `debug_holocron` | [`rehearsal`] |
 //! | `holocrons_seen.txt` | [`seen`] |
+//! | the Holocrons tab's 3D holocron | [`stage`] |
 //!
 //! Adding a tier is one entry in [`TIERS`] (the hub's catalogue has the same ids, names
 //! and order) and its icon `gfx/sjk/holocron_<id>.png`.
@@ -26,6 +29,7 @@ pub(crate) mod icons;
 pub(crate) mod line;
 pub(crate) mod rehearsal;
 pub(crate) mod seen;
+pub(crate) mod stage;
 
 use sjk_identity::{Holocron, HolocronCounts, HolocronProgress};
 use sjk_ui::Color;
@@ -63,6 +67,10 @@ pub(crate) struct Tier {
     pub(crate) odds: &'static str,
     /// Position in [`TIERS`].
     pub(crate) index: usize,
+    /// The colour of the point light the Profile screen's holocron casts, linear RGB on
+    /// the scale of Illuminate's `[1.5, 1.3, 1.0]` and not clamped: the one in
+    /// `scripts/holocron_assets.py` (`Tier.light`) and `assets/holocron/README.md`.
+    pub(crate) light: [f32; 3],
 }
 
 /// Every tier, in the hub's catalogue order (`uncommon`, `rare`, `legendary`,
@@ -75,6 +83,7 @@ pub(crate) const TIERS: [Tier; COUNT] = [
         per_mille: 600,
         odds: "60%",
         index: 0,
+        light: [0.55, 1.50, 0.60],
     },
     Tier {
         id: "rare",
@@ -83,6 +92,7 @@ pub(crate) const TIERS: [Tier; COUNT] = [
         per_mille: 280,
         odds: "28%",
         index: 1,
+        light: [0.50, 1.00, 1.75],
     },
     Tier {
         id: "legendary",
@@ -91,6 +101,7 @@ pub(crate) const TIERS: [Tier; COUNT] = [
         per_mille: 105,
         odds: "10.5%",
         index: 2,
+        light: [1.25, 0.45, 1.75],
     },
     Tier {
         id: "mythical",
@@ -99,6 +110,7 @@ pub(crate) const TIERS: [Tier; COUNT] = [
         per_mille: 15,
         odds: "1.5%",
         index: 3,
+        light: [1.85, 1.30, 0.40],
     },
 ];
 
@@ -114,6 +126,19 @@ impl Tier {
     /// ([`gem`]).
     pub(crate) fn icon_path(&self) -> String {
         format!("gfx/sjk/holocron_{}", self.id)
+    }
+
+    /// What the Profile screen says of the tier under its list: how often it drops, who
+    /// hears of a drop, and nothing a holocron grants (it grants nothing yet).
+    pub(crate) const fn about(&self) -> &'static str {
+        match self.index {
+            0 => "The commonest holocron: about 6 in 10 drops.",
+            1 => "About 3 in 10 drops.",
+            2 => "About 1 in 10 drops. Every SJK player sees it in chat when one drops.",
+            _ => {
+                "About 1 in 67 drops, at most 1 a day for a player. Every SJK player sees it in chat when one drops."
+            }
+        }
     }
 
     /// "a" or "an" for the name: "an Uncommon Holocron", "a Rare Holocron".
@@ -137,26 +162,20 @@ impl Tier {
     }
 }
 
-/// The tiers in order.
-#[allow(dead_code)] // the Profile screen's Holocrons tab reads it
-pub(crate) fn tiers() -> &'static [Tier; COUNT] {
-    &TIERS
-}
-
 /// The tier the hub's `id` names, if the client knows it.
-#[allow(dead_code)] // the Profile screen's Holocrons tab reads it
+#[allow(dead_code)] // for screens that know a tier by the hub's id
 pub(crate) fn by_id(id: &str) -> Option<&'static Tier> {
     Tier::from_id(id)
 }
 
 /// The colour of the tier `id` names; the chat's gold for an id the client does not know.
-#[allow(dead_code)] // the Profile screen's Holocrons tab reads it
+#[allow(dead_code)] // for screens that know a tier by the hub's id
 pub(crate) fn colour(id: &str) -> Color {
     by_id(id).map_or(crate::sjk_chat_look::GOLD, |tier| tier.colour)
 }
 
 /// The name of the tier `id` names, if the client knows it.
-#[allow(dead_code)] // the Profile screen's Holocrons tab reads it
+#[allow(dead_code)] // for screens that know a tier by the hub's id
 pub(crate) fn name(id: &str) -> Option<&'static str> {
     by_id(id).map(|tier| tier.name)
 }
@@ -220,31 +239,8 @@ pub(crate) fn when_text(seconds: i64) -> String {
     format!("{date} {:02}:{:02}", of_day / 3_600, of_day % 3_600 / 60)
 }
 
-/// How many of each tier the player's own profile counts, once the hub answered; `None`
-/// before that, with the identity off, or while the hub is out of reach.
-#[allow(dead_code)] // the Profile screen's Holocrons tab reads it
-pub(crate) fn counts() -> Option<[u32; COUNT]> {
-    crate::player_identity::with_own_holocrons(|_, counts, _| counts_of(counts))
-}
-
-/// The player's own recent holocrons, newest first (the hub lists at most 100), in the
-/// tiers the client knows. `None` before the hub answered. Allocates: for a screen's
-/// own sake once per change, not every frame.
-#[allow(dead_code)] // the Profile screen's Holocrons tab reads it
-pub(crate) fn recent() -> Option<Vec<Entry>> {
-    crate::player_identity::with_own_holocrons(|_, _, list| entries(list))
-}
-
-/// How far the player is from their next holocron, as the hub last said; `None` before
-/// it answered or from a hub older than holocrons.
-#[allow(dead_code)] // the Profile screen's Holocrons tab reads it
-pub(crate) fn progress() -> Option<HolocronProgress> {
-    crate::player_identity::holocron_progress()
-}
-
 /// Ask the hub for fresh progress (a page that shows it, as it opens); at most once
 /// every 30 seconds.
-#[allow(dead_code)] // the Profile screen's Holocrons tab reads it
 pub(crate) fn refresh() {
     crate::player_identity::refresh_holocrons();
 }
@@ -252,7 +248,6 @@ pub(crate) fn refresh() {
 /// What the progress says in a line: how long to the next holocron, or that the day's
 /// limit is reached. The time does not count down on its own (it is as the hub last said,
 /// and counts only while the player plays), so it is rounded up to whole minutes.
-#[allow(dead_code)] // the Profile screen's Holocrons tab reads it
 pub(crate) fn next_text(progress: &HolocronProgress) -> String {
     if progress.capped() {
         return format!(
@@ -447,16 +442,5 @@ mod tests {
             next_text(&progress(300, 8)),
             "Daily limit reached: 8 of 8 holocrons today"
         );
-    }
-
-    #[test]
-    fn nothing_is_known_before_the_identity_starts() {
-        assert_eq!(counts(), None);
-        assert!(recent().is_none());
-        assert!(progress_of_nothing());
-    }
-
-    fn progress_of_nothing() -> bool {
-        super::progress().is_none()
     }
 }

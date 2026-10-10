@@ -488,14 +488,7 @@ pub(crate) fn with_own_holocrons<R>(
     })
 }
 
-/// How far the player is from their next holocron, as the hub last said.
-#[allow(dead_code)] // the Profile screen's Holocrons tab reads it
-pub(crate) fn holocron_progress() -> Option<sjk_identity::HolocronProgress> {
-    with_snapshot(|snapshot| snapshot.holocrons).flatten()
-}
-
 /// Ask the service for fresh holocron progress (it reads at most every 30 seconds).
-#[allow(dead_code)] // the Profile screen's Holocrons tab reads it
 pub(crate) fn refresh_holocrons() {
     if let Some(service) = lock().service.as_ref() {
         service.refresh_holocrons();
@@ -731,7 +724,6 @@ mod tests {
         assert!(player_report_outcome().is_none());
         assert!(own_medals().is_none());
         assert!(with_own_holocrons(|_, _, _| ()).is_none());
-        assert!(holocron_progress().is_none());
         assert!(!set_active(true));
         assert!(own_achievements().is_none());
         assert!(!is_staff());

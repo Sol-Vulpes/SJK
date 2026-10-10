@@ -57,6 +57,11 @@ pub(super) fn load<'a>(
         model: crate::illuminate::MODEL.to_owned(),
         variant: String::new(),
     });
+    // The Profile screen's Holocrons tab: a model per tier and the locked look.
+    appearances.extend(crate::holocrons::stage::models().map(|model| Appearance {
+        model: model.to_owned(),
+        variant: String::new(),
+    }));
     static_models::extend_appearances(bsp, &mut appearances);
     first_person_weapon::Catalog::extend_appearances(&mut appearances);
     appearances.extend(
