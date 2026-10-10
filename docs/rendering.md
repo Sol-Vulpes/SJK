@@ -448,7 +448,11 @@ Windows that memory also shows in the process's RAM in Task Manager.
   ([menu_world.rs](../crates/sjk-viewer/src/menu_world.rs)); keeping it parked
   during the match held a second world, about 4.8 GB of the process at 4K on
   duel6. The last server's world stays under the menus for the few seconds it
-  takes (duel6: about 2 to 4 s).
+  takes (duel6: about 2 to 4 s). A join in flight is not "off a server", and a
+  rebuild starts at most once every 5 s: in 2026.1010.2 a server map change that
+  timed out made the client reconnect, the join cancelled each rebuild and the next
+  frame started one again, 13,865 map reads in Sol's log, which stalled the join and
+  could exhaust memory.
 - A map change still builds the next world while the last one lives. With
   `MemoryHints::Performance` (128 to 256 MiB blocks) the blocks the old world
   shared with the new one stayed partly used once it was dropped, about 2 GB of

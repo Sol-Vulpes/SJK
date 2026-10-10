@@ -9,6 +9,10 @@
 #                               made it when that is not the piece's owner.
 
 = Sol
++ 10/10/2026 | - | Map change no longer loops reloading the menu map
+- 9d5076b |  | Stop the menu world rebuild loop during a reconnect
++ 10/10/2026 | - | Drop the empty Unreleased section after 2026.1010.3
+- 10d953e |  | Drop the empty Unreleased section after 2026.1010.3
 + 10/10/2026 | - | Release 2026.1010.3 hotfix notes
 - b733b35 |  | Release 2026.1010.3 (Alpha)
 + 10/10/2026 | - | No hitch when players join: saber definitions read once a map
