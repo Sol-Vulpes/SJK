@@ -1,11 +1,5 @@
 # SJK UI
 
-The installed-pack browser (`assetbrowser`) uses the SJK UI's card and font
-families in every menu style. It lists ten pack rows at a time, with keyboard,
-wheel and click controls; each row describes the choice for the next start.
-The console owns input while it is open, and closing the browser restores the
-previous console state. See [installed PK3 choices](client.md#launch).
-
 The SJK UI (`ui_menuStyle sjk`) is SJK's own menu style: SJK's menus redesigned
 from the ground up, drawn over the live map in SJK's own type. It keeps the
 feeling of Jedi Academy's menus (gold for what you choose, holo blue line-work,
@@ -25,6 +19,17 @@ screen opens in its classic+ version, which
 covers the map as the classic style does.
 The other style: First setup's Menu style row, Settings > Interface > Menu style, or
 `ui_menuStyle classic`; restart for the style's map behind the main page.
+
+**Every feature has its SJK UI (Sol's rule, 11/10/2026).** Anything a player
+sees or uses that a change adds (a screen, page, pop-up, overlay, setting row or
+browser) comes with its SJK UI version in the same change; a classic+-only
+version is not accepted. The opposite is fine: a feature can exist in the SJK UI
+alone, and then it draws its SJK look in every menu style, as Profile, the
+Collection and Create game do. A new setting goes in the settings catalogue and
+one of the SJK Settings categories; a new page is drawn with the kit
+(`menu::sjk::kit`). A contribution that arrives with only a classic+ view gets
+its SJK UI before it is merged. Fixes to an existing classic+ screen alone are
+fine.
 
 ## Design
 
@@ -624,6 +629,14 @@ every setting, the lists, the defaults and typed numbers are the classic+
 panels' own; only the drawing and the frame are the SJK UI's. Changing Menu
 style on the screen (it is on Interface) hands over to the classic+ panel of the
 same group (Graphics: the renderer's image tab).
+
+Gameplay's first row, under Asset packs, is Asset browser ("Browse packs";
+`assetbrowser` in the console, `asset_pack_browser.rs`): Enter opens the
+installed-pack browser, an SJK UI card in every menu style. It lists ten pack
+rows at a time, with keyboard, wheel and click controls; each row says what the
+pack will be at the next start (Enabled, Disabled, Required). The console owns
+input while it is open, and closing it restores the previous console state. See
+[installed PK3 choices](client.md#launch).
 
 ### First setup
 

@@ -95,6 +95,8 @@ Contributions reach `main` through pull requests, one topic per pull request.
   Every commit should build; fold fixups into their commit before review.
 - Before opening a pull request, rebase onto the current `main` and run the
   workspace checks above. Include the wiki updates the change requires.
+- A change that adds something players see or use includes its SJK UI version
+  ([the rule](sjk-ui.md#sjk-ui)); a classic+ view alone is not enough.
 - The description states what changed and why, the exact checks and their
   results, the platform they ran on and what remains unverified, as in a handoff.
 - Assistants push only to the contributor's fork or a branch they were
