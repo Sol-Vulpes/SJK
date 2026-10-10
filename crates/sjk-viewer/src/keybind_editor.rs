@@ -2,7 +2,7 @@
 
 use super::{TextVertex, UiFont};
 use crate::console::ViewerConsole;
-use crate::menu_widgets::{BACK_TOKEN, FormLayout, MenuCanvas, Scrim, TAB_BASE};
+use crate::menu_widgets::{BACK_TOKEN, MenuCanvas, TAB_BASE};
 mod catalog;
 mod classic_view;
 mod icons;
@@ -156,19 +156,13 @@ impl KeybindEditor {
         self.icons.upload(renderer, queue);
     }
 
+    /// Open on the tabbed categories, without a classic+ list (tests).
+    #[cfg(test)]
     pub(crate) fn open(&mut self, console: &ViewerConsole) {
         self.capture = false;
         if self.classic.take().is_some() {
             self.set_tab(self.tab);
         }
-        self.refresh(console);
-    }
-
-    /// Open on category tab `category` (retail's controls pages, in
-    /// [`catalog::Category`] order), clamped to the last tab.
-    pub(crate) fn open_category(&mut self, console: &ViewerConsole, category: usize) {
-        self.classic = None;
-        self.set_tab(category.min(CATEGORIES.len() - 1));
         self.refresh(console);
     }
 
@@ -383,104 +377,6 @@ impl KeybindEditor {
     fn scroll_to_ratio(&mut self, ratio: f32) {
         let max_first = self.list_len().saturating_sub(self.visible);
         self.first = (ratio.clamp(0.0, 1.0) * max_first as f32).round() as usize;
-    }
-
-    pub(crate) fn append(
-        &mut self,
-        vertices: &mut Vec<TextVertex>,
-        font: &UiFont,
-        viewport: [f32; 2],
-        reveal: f32,
-    ) {
-        let layout = FormLayout::new(viewport);
-        let s = layout.scale;
-        self.ui.begin_hero(viewport, reveal, Scrim::Full);
-        self.ui.form_header(
-            &layout,
-            "SJK   /   SETTINGS",
-            "KEY BINDINGS",
-            if self.capture {
-                "Press a key or mouse button.  Escape or a click cancels; a conflicting bind moves here."
-            } else if self.selected_slot_locked() {
-                "MOUSE1, MOUSE2 and ESCAPE are locked here; the console's bind command can still change them."
-            } else {
-                "Click either key slot to bind it. Delete clears the selected slot."
-            },
-        );
-        self.ui.form_tabs(&layout, &CATEGORIES, self.tab);
-        let rows_bottom = viewport[1] - 80.0 * s;
-        self.visible = (((rows_bottom - layout.rows_y) / layout.row_height)
-            .floor()
-            .max(1.0)) as usize;
-        let rows = self.rows();
-        self.first = self.first.min(rows.len().saturating_sub(self.visible));
-        let shown = rows.start + self.first..rows.end.min(rows.start + self.first + self.visible);
-        for (slot, action) in shown.enumerate() {
-            self.row_view(&layout, action, slot);
-        }
-        if rows.len() > self.visible {
-            let first_row = layout.row_rect(0);
-            self.ui.scrollbar(
-                SCROLLBAR_TOKEN,
-                Rect::new(
-                    first_row.right() + 14.0 * s,
-                    first_row.y,
-                    5.0 * s,
-                    self.visible as f32 * layout.row_height,
-                ),
-                self.first,
-                self.visible,
-                rows.len(),
-            );
-        }
-        self.ui.form_footer_actions(
-            &layout,
-            &[
-                ("DEL", "Unbind", UNBIND_TOKEN),
-                ("R", "Reset defaults", RESET_TOKEN),
-                ("ESC", "Back", BACK_TOKEN),
-            ],
-        );
-        self.ui.end_hero();
-        self.ui.finish(self.selected as u16);
-        self.ui.append_text(vertices, font, viewport);
-    }
-
-    /// One action row at slot `slot`: label left, secondary and primary
-    /// keys right-aligned in the value zone; the capture prompt replaces the
-    /// primary key while a press is awaited.
-    fn row_view(&mut self, layout: &FormLayout, action: usize, slot: usize) {
-        let s = layout.scale;
-        let rect = layout.row_rect(slot);
-        let selected = action == self.selected;
-        self.ui.form_row_frame(rect, action as u16, selected, s);
-        self.ui.form_label(rect, ACTIONS[action].label, selected, s);
-        let zone = layout.value_zone(rect);
-        let half = zone.width * 0.5;
-        let primary = Rect::new(zone.x + half, zone.y, half, zone.height);
-        let secondary = Rect::new(zone.x, zone.y, half - 12.0 * s, zone.height);
-        self.ui
-            .hit_region(SECONDARY_BASE + action as u16, secondary);
-        let color = self.ui.form_value_color(selected);
-        if self.capture && selected {
-            let accent = self.ui.theme().accent;
-            let target = if self.binding_slot == 0 {
-                primary
-            } else {
-                secondary
-            };
-            self.ui.form_value("PRESS A KEY", target, accent, s);
-            return;
-        }
-        let [first, second] = match self.keys.get(action) {
-            Some(keys) => [keys[0].as_str(), keys[1].as_str()],
-            None => ["UNBOUND", "-"],
-        };
-        // Locked keys read as fixed: muted, like the secondary slot.
-        let muted = self.ui.theme().muted;
-        let first_color = if is_locked_key(first) { muted } else { color };
-        self.ui.form_value(first, primary, first_color, s);
-        self.ui.form_value(second, secondary, muted, s);
     }
 
     fn refresh(&mut self, console: &ViewerConsole) {

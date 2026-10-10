@@ -19,11 +19,9 @@ mod pointer;
 pub(crate) mod quick;
 mod resolution;
 mod resolution_list;
-mod scroll;
 mod search;
 mod sjk_popup;
 pub(crate) mod sjk_view;
-mod view;
 mod wheel_editor;
 mod wheel_editor_view;
 
@@ -42,7 +40,6 @@ pub(crate) use wheel_editor::WheelMode;
 pub(crate) enum SettingsResult {
     None,
     Back,
-    OpenKeybinds,
     /// The "Quick wheel pages" row: the SJK UI shows its Quick wheel category,
     /// the other styles the editor on its own ([`WheelMode`]).
     OpenWheelPages,
@@ -215,32 +212,10 @@ enum Section {
     Search,
 }
 
-/// A row after a tab's settings that opens another screen.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-enum Action {
-    Keybinds,
-    Renderer,
-}
-
-impl Action {
-    fn label(self) -> &'static str {
-        match self {
-            Self::Keybinds => "Key bindings",
-            Self::Renderer => "Renderer",
-        }
-    }
-}
-
 pub(crate) struct SettingsMenu {
     section: Section,
-    /// The renderer section was opened on its own (the classic Setup page's
-    /// RENDERER entry), so backing out leaves the screen instead of returning
-    /// to the Video tab.
-    renderer_direct: bool,
     tab: usize,
     selected: usize,
-    /// Which rows show; keeps the selection on screen.
-    scroll: scroll::RowScroll,
     values: Vec<String>,
     /// Each row's default and whether its value differs (classic+ panels).
     defaults: Vec<classic_view::RowDefault>,
@@ -291,10 +266,27 @@ impl SettingsMenu {
         )
     }
 
-    /// The resolution list or the HUD picker covers the screen; both draw
-    /// themselves whatever the menu style.
-    pub(crate) fn picker_open(&self) -> bool {
-        self.picker.is_open() || self.hud.is_open()
+    /// The HUD picker covers the screen; it draws itself whatever the menu
+    /// style ([`Self::append_hud_overlay`]).
+    pub(crate) fn hud_picker_open(&self) -> bool {
+        self.hud.is_open()
+    }
+
+    /// The resolution list covers the screen: the SJK UI's card
+    /// ([`Self::append_resolutions_sjk`]), whatever the menu style.
+    pub(crate) fn resolutions_open(&self) -> bool {
+        self.picker.is_open()
+    }
+
+    /// Draw the open resolution list as the SJK UI's card.
+    pub(crate) fn append_resolutions_sjk(
+        &mut self,
+        target: crate::menu::sjk::TextTarget<'_>,
+        viewport: [f32; 2],
+        reveal: f32,
+    ) {
+        self.sjk_controls = None;
+        self.append_resolutions(target, viewport, reveal);
     }
 
     /// The rows are a classic+ panel's (a group, a span of a tab, a search),
@@ -311,10 +303,8 @@ impl SettingsMenu {
     pub(crate) fn new() -> Self {
         Self {
             section: Section::General,
-            renderer_direct: false,
             tab: 0,
             selected: 0,
-            scroll: scroll::RowScroll::new(),
             values: Vec::with_capacity(12),
             defaults: Vec::with_capacity(20),
             detail_facts: String::with_capacity(96),
@@ -338,11 +328,6 @@ impl SettingsMenu {
         }
     }
 
-    /// Index of the first-start FIRST SETUP tab.
-    pub(crate) fn quick_tab() -> usize {
-        QUICK_TAB
-    }
-
     /// Whether First setup's rows are on show: its classic group (the SJK UI's
     /// category or pop-up), or the tabbed screen's FIRST SETUP tab.
     pub(crate) fn on_first_setup(&self) -> bool {
@@ -353,19 +338,19 @@ impl SettingsMenu {
         }
     }
 
+    /// The caption of tab `tab` (`"AUDIO"`), if there is one.
+    pub(crate) fn tab_caption(tab: usize) -> Option<&'static str> {
+        TABS.get(tab).copied()
+    }
+
     /// Index of the tab captioned `caption` (`"AUDIO"`), if there is one.
     pub(crate) fn tab_index(caption: &str) -> Option<usize> {
         TABS.iter().position(|tab| *tab == caption)
     }
 
-    pub(crate) fn open(&mut self, console: &ViewerConsole) {
-        self.open_tab(console, 0);
-    }
-
     /// Open on tab `tab` (clamped to the catalogue).
     pub(crate) fn open_tab(&mut self, console: &ViewerConsole, tab: usize) {
         self.section = Section::General;
-        self.renderer_direct = false;
         self.tab = tab.min(TABS.len() - 1);
         self.selected = 0;
         self.editing = None;
@@ -378,29 +363,9 @@ impl SettingsMenu {
         self.refresh(console);
     }
 
-    fn enter_renderer(&mut self, console: &ViewerConsole) {
-        self.section = Section::Renderer;
-        self.tab = 0;
-        self.selected = 0;
-        self.editing = None;
-        self.numeric = None;
-        self.classic = None;
-        self.refresh(console);
-    }
-
-    /// Back out of the form: the renderer section returns to the Video tab's
-    /// Renderer row, as JoF EJK's advanced renderer page returns to Video,
-    /// unless it was opened on its own.
-    fn back(&mut self, console: &ViewerConsole) -> SettingsResult {
-        if self.section == Section::Renderer && !self.renderer_direct {
-            self.section = Section::General;
-            self.tab = RENDERER_TAB;
-            self.selected = self.rows().len();
-            self.editing = None;
-            self.numeric = None;
-            self.refresh(console);
-            return SettingsResult::None;
-        }
+    /// Leave the screen; a search or a list closes first where the keys
+    /// handle them.
+    fn back(&self) -> SettingsResult {
         SettingsResult::Back
     }
 
@@ -419,36 +384,6 @@ impl SettingsMenu {
         section_settings(self.section, self.tab)
     }
 
-    /// The row after the settings that opens another screen, if this tab has
-    /// one. Classic panels show spans of a tab without it.
-    fn action(&self) -> Option<Action> {
-        if self.classic.is_some() {
-            return None;
-        }
-        match (self.section, self.tab) {
-            (Section::General, KEYBINDS_TAB | QUICK_TAB) => Some(Action::Keybinds),
-            (Section::General, RENDERER_TAB) => Some(Action::Renderer),
-            _ => None,
-        }
-    }
-
-    /// Selectable rows: the settings plus the action row.
-    fn row_count(&self) -> usize {
-        self.rows().len() + usize::from(self.action().is_some())
-    }
-
-    /// Activate the action row.
-    fn activate_action(&mut self, console: &ViewerConsole) -> SettingsResult {
-        match self.action() {
-            Some(Action::Keybinds) => SettingsResult::OpenKeybinds,
-            Some(Action::Renderer) => {
-                self.enter_renderer(console);
-                SettingsResult::None
-            }
-            None => SettingsResult::None,
-        }
-    }
-
     /// Switch to tab `tab` of the current section.
     fn select_tab(&mut self, console: &ViewerConsole, tab: usize) {
         self.tab = tab % self.tabs().len();
@@ -457,11 +392,13 @@ impl SettingsMenu {
         self.refresh(console);
     }
 
-    /// Open the renderer settings on their own; backing out leaves the screen.
-    pub(crate) fn open_renderer(&mut self, console: &ViewerConsole) {
+    /// Open the renderer settings ([`RENDERER_TABS`]) on their first tab.
+    fn open_renderer(&mut self, console: &ViewerConsole) {
         self.open_tab(console, RENDERER_TAB);
-        self.enter_renderer(console);
-        self.renderer_direct = true;
+        self.section = Section::Renderer;
+        self.tab = 0;
+        self.selected = 0;
+        self.refresh(console);
     }
 
     /// Whether the screen wants [`Self::set_monitor_modes`] (it just opened).
@@ -486,7 +423,7 @@ impl SettingsMenu {
     fn has_rows(&self) -> bool {
         match &self.classic {
             Some(classic) => classic.rows().next().is_some(),
-            None => self.row_count() > 0,
+            None => !self.rows().is_empty(),
         }
     }
 
@@ -495,7 +432,7 @@ impl SettingsMenu {
     fn shows(&self, row: usize) -> bool {
         match &self.classic {
             Some(classic) => classic.shows(row),
-            None => row < self.row_count(),
+            None => row < self.rows().len(),
         }
     }
 
@@ -507,7 +444,7 @@ impl SettingsMenu {
                 self.selected = row;
             }
         } else {
-            let count = self.row_count();
+            let count = self.rows().len();
             if count > 0 {
                 self.selected =
                     (self.selected as i32 + direction).rem_euclid(count as i32) as usize;
@@ -649,7 +586,7 @@ impl SettingsMenu {
         }
         if !self.has_rows() {
             return match key {
-                KeyCode::Escape => self.back(console),
+                KeyCode::Escape => self.back(),
                 _ => SettingsResult::None,
             };
         }
@@ -675,11 +612,6 @@ impl SettingsMenu {
             KeyCode::ArrowDown | KeyCode::KeyS => self.step_selection(1),
             KeyCode::ArrowLeft | KeyCode::KeyA => self.adjust(console, -1),
             KeyCode::ArrowRight | KeyCode::KeyD => self.adjust(console, 1),
-            KeyCode::Enter | KeyCode::NumpadEnter | KeyCode::Space
-                if self.action().is_some() && self.selected == self.rows().len() =>
-            {
-                return self.activate_action(console);
-            }
             // SJK: Space keeps stepping a slider; Enter opens its entry.
             KeyCode::Space
                 if self.rows().get(self.selected).is_some_and(|setting| {
@@ -712,7 +644,7 @@ impl SettingsMenu {
                     }
                 }
             }
-            KeyCode::Escape => return self.back(console),
+            KeyCode::Escape => return self.back(),
             // Classic+: back to the default.
             KeyCode::Backspace | KeyCode::Delete if classic => {
                 self.reset_to_default(console, self.selected);
@@ -846,10 +778,8 @@ impl SettingsMenu {
                 self.selected = *first;
             }
         } else {
-            let count = self.row_count();
-            if count > 0 {
-                self.selected = self.scroll.wheel(direction, count, self.selected);
-            }
+            let last = self.rows().len().saturating_sub(1) as i32;
+            self.selected = (self.selected as i32 + direction).clamp(0, last) as usize;
         }
     }
 
@@ -1184,17 +1114,10 @@ mod tests {
     }
 
     #[test]
-    fn the_video_row_opens_the_renderer_and_back_returns_to_it() {
+    fn the_renderer_settings_open_on_their_first_tab_and_back_out_of_the_screen() {
         let (_directory, console) = console();
         let mut menu = SettingsMenu::new();
-        menu.open_tab(&console, RENDERER_TAB);
-        assert_eq!(menu.action(), Some(Action::Renderer));
-        assert_eq!(menu.row_count(), VIDEO.len() + 1);
-        menu.selected = VIDEO.len();
-        assert!(matches!(
-            menu.activate_action(&console),
-            SettingsResult::None
-        ));
+        menu.open_renderer(&console);
         assert_eq!(
             (menu.section, menu.tab, menu.selected),
             (Section::Renderer, 0, 0)
@@ -1203,34 +1126,17 @@ mod tests {
         assert_eq!(menu.values.len(), RENDER_IMAGE.len());
         menu.select_tab(&console, RENDERER_TABS.len());
         assert_eq!(menu.tab, 0, "renderer tabs wrap within their own section");
-        assert!(matches!(menu.back(&console), SettingsResult::None));
-        assert_eq!(
-            (menu.section, menu.tab, menu.selected),
-            (Section::General, RENDERER_TAB, VIDEO.len())
-        );
-        assert!(matches!(menu.back(&console), SettingsResult::Back));
-    }
-
-    #[test]
-    fn the_renderer_opened_on_its_own_backs_out_of_the_screen() {
-        let (_directory, console) = console();
-        let mut menu = SettingsMenu::new();
-        menu.open_renderer(&console);
-        assert_eq!((menu.section, menu.tab), (Section::Renderer, 0));
-        assert_eq!(menu.action(), None);
-        assert!(matches!(menu.back(&console), SettingsResult::Back));
+        assert!(matches!(menu.back(), SettingsResult::Back));
         // A later ordinary open is the general screen again.
         menu.open_tab(&console, RENDERER_TAB);
         assert_eq!(menu.section, Section::General);
-        assert_eq!(menu.action(), Some(Action::Renderer));
     }
 
     #[test]
     fn switch_rows_toggle_integer_and_float_cvars() {
         let (_directory, mut console) = console();
         let mut menu = SettingsMenu::new();
-        menu.open_tab(&console, RENDERER_TAB);
-        menu.enter_renderer(&console);
+        menu.open_renderer(&console);
         for (tab, cvar) in [(0, "r_sceneBloom"), (2, "r_contactShadows")] {
             menu.select_tab(&console, tab);
             menu.selected = menu

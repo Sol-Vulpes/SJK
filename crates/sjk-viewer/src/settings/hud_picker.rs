@@ -348,6 +348,19 @@ impl SettingsMenu {
         }
     }
 
+    /// Draw the open picker over the SJK UI's Settings (the classic+ panels
+    /// draw it themselves, with their art), in the theme's colours.
+    pub(crate) fn append_hud_overlay(
+        &mut self,
+        vertices: &mut Vec<TextVertex>,
+        font: &UiFont,
+        viewport: [f32; 2],
+        reveal: f32,
+    ) {
+        self.sjk_controls = None;
+        self.append_hud_picker(vertices, font, viewport, reveal, None);
+    }
+
     /// Draw the open picker over the screen: retail colours and art with
     /// `art` (the classic menus), the theme's otherwise.
     pub(super) fn append_hud_picker(

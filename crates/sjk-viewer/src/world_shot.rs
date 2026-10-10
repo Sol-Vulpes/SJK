@@ -759,6 +759,102 @@ mod tests {
         });
     }
 
+    /// A 4K monitor's video modes, for the resolution list's shots.
+    fn shot_monitor() -> crate::settings::MonitorModes {
+        crate::settings::MonitorModes {
+            sizes: vec![
+                [3840, 2160],
+                [2560, 1600],
+                [2560, 1440],
+                [1920, 1200],
+                [1920, 1080],
+                [1680, 1050],
+                [1600, 900],
+                [1440, 900],
+                [1366, 768],
+                [1280, 1024],
+                [1280, 960],
+                [1280, 800],
+                [1280, 720],
+                [1024, 768],
+                [800, 600],
+                [640, 480],
+            ],
+            desktop: Some([3840, 2160]),
+            exclusive: true,
+        }
+    }
+
+    /// The settings without the old hero form, at 1080p and 4K with Sol's
+    /// larger menu text (`ui_textScale 1.2`): the resolution list as the SJK
+    /// UI's card over its Settings and over a classic+ panel, then the
+    /// classic Graphics page's renderer route, which opens the SJK UI's
+    /// Settings on Graphics.
+    #[test]
+    #[ignore = "renders with the GPU and the installed game data named by JKA_GAME_DATA"]
+    fn duel6_settings_sjk_only() {
+        for (size, suffix) in [([1920, 1080], "1080p"), ([3840, 2160], "4k")] {
+            on_big_stack(move || {
+                let menu = menu::ClientMenu::new(true, String::new());
+                let cvars = [
+                    ("ui_menuStyle", "sjk"),
+                    (crate::settings::quick::HIDE_CVAR, "1"),
+                    (crate::text::style::SCALE_CVAR, "1.2"),
+                ];
+                let Some((mut gpu, _profile)) = open("maps/mp/duel6.bsp", size, Some(menu), &cvars)
+                else {
+                    return;
+                };
+                // A 4K monitor's desktop size in use: more sizes than the card
+                // shows, the longest tags.
+                if let Some(console) = gpu.console.as_mut() {
+                    console.set_cvar("r_resolution", "3840x2160");
+                }
+                let _ = frame(&mut gpu, 4);
+                if let (Some(menu), Some(console)) =
+                    (gpu.client_menu.as_mut(), gpu.console.as_ref())
+                {
+                    menu.open_sjk_settings(console, 1, crate::player_menu::ReturnTarget::MainMenu);
+                    menu.set_monitor_modes(shot_monitor(), console);
+                    menu.resolutions_for_shot(console);
+                }
+                gpu.ui_epoch -= std::time::Duration::from_millis(2_000);
+                let name = format!("resolution-list-sjk-{suffix}");
+                println!("{}", shoot(&mut gpu, 6, &name).display());
+                if let Some(console) = gpu.console.as_mut() {
+                    console.set_cvar(crate::menu::style::CVAR, "classic");
+                }
+                let _ = frame(&mut gpu, 4);
+                if let (Some(menu), Some(console)) =
+                    (gpu.client_menu.as_mut(), gpu.console.as_ref())
+                {
+                    menu.open_classic_panel(
+                        console,
+                        crate::menu::classic::layout::Page::Setup,
+                        crate::menu::classic::layout::Entry::Video,
+                        crate::menu::classic::panel::Frame::Main,
+                        crate::player_menu::ReturnTarget::MainMenu,
+                    );
+                    menu.set_monitor_modes(shot_monitor(), console);
+                    menu.resolutions_for_shot(console);
+                }
+                let name = format!("resolution-list-classic-{suffix}");
+                println!("{}", shoot(&mut gpu, 6, &name).display());
+                if let (Some(menu), Some(console)) =
+                    (gpu.client_menu.as_mut(), gpu.console.as_ref())
+                {
+                    menu.classic_renderer_for_shot(
+                        console,
+                        crate::menu::classic::panel::Frame::Main,
+                    );
+                }
+                gpu.ui_epoch -= std::time::Duration::from_millis(2_000);
+                let name = format!("classic-renderer-route-{suffix}");
+                println!("{}", shoot(&mut gpu, 6, &name).display());
+            });
+        }
+    }
+
     /// The player screen on duel6's stage: the model standing where the
     /// route puts it, seen from the route's camera, in the style `style`.
     fn duel6_player(style: &'static str, name: &'static str) {

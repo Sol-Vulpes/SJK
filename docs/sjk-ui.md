@@ -562,7 +562,16 @@ mock-up draws it.
     Off after it); a slider (a gold-filled track and its number, which a click
     or a typed digit opens for typing); segments for a choice of up to three; a
     field with a caret for a longer list, the display mode, the resolution and
-    the HUD (the last two open their full-screen pickers); a field for text.
+    the HUD (the last two open their pickers); a field for text.
+  - The resolution list is a pop-up card over the darkened map (x 600, 720
+    wide, as tall as its rows, `settings/resolution_list.rs`), in every menu
+    style since 10/10/2026 (it was the old hero form): Resolution and what the
+    size means in the display mode, then up to 14 rows of a size and its aspect
+    ratio, the desktop's size tagged, the one in use in gold with its dot and
+    tag, the highlighted one on the band, a thin scroll mark when there are
+    more; the keys' line under the card (Up/Down, PgUp/PgDn, Enter, Esc, whose
+    cap is the pointer's way back). Home/End and the wheel move too; Enter or a
+    click picks, Esc returns to the rows.
   - The focused row has a soft band and a gold bar at its left; a row changed
     from its default a gold dot after its name, and when focused the reset arrow.
     The dot is placed from the name's width as the body font draws it (the

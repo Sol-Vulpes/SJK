@@ -20,13 +20,10 @@ pub(super) const TABS: [&str; 9] = [
 pub(crate) const FIRST_SETUP_CAPTION: &str = "FIRST SETUP";
 /// The first-start tab (`settings/quick.rs`); last, so the other tabs keep their numbers.
 pub(super) const QUICK_TAB: usize = 8;
-/// The tab whose last row opens the key-binding editor.
-pub(super) const KEYBINDS_TAB: usize = 3;
-/// The tab whose last row opens the renderer settings ([`RENDERER_TABS`]).
+/// The tab the renderer settings ([`RENDERER_TABS`]) open from.
 pub(super) const RENDERER_TAB: usize = 0;
-/// Tabs of the renderer settings, SJK's own rendering cvars, reached
-/// from the last row of [`VIDEO`] as JoF EJK reaches its advanced renderer page
-/// from Video.
+/// Tabs of the renderer settings, SJK's own rendering cvars, which the
+/// classic Graphics page's panels and the SJK UI's Graphics show.
 pub(super) const RENDERER_TABS: [&str; 4] = ["IMAGE", "LIGHTING", "SHADOWS", "WEATHER"];
 
 #[derive(Clone, Copy)]

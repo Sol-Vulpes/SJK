@@ -13,6 +13,7 @@ Format, read by the client (crates/sjk-viewer/src/changelog_data.rs, whose
 tests check this file):
 - "## <version> | <dd/mm/yyyy>" starts a release ("## Unreleased" for main
   after the last release, without a date);
+- The resolution list opens as a card in the SJK UI's look, in both menu styles, and the last screens that still used the old settings form (the tabbed settings, the renderer page and the key bindings on their own) now open the SJK UI's Settings or Key bindings _(Sol)_
 - other lines up to the first item are the release's introduction;
 - "- <change> _(<credit>)_" is one change; every change ends with its credit;
 - ASCII only, as the menu font draws bytes.

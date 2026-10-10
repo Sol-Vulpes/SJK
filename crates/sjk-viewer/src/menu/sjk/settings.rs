@@ -119,6 +119,15 @@ const RAIL: [(&str, &str); CATEGORIES.len()] = {
 
 /// The category First setup is.
 pub(crate) const FIRST_SETUP: usize = 0;
+/// The category gathering the renderer rows (`Group::Graphics`).
+pub(crate) const GRAPHICS: usize = 2;
+const _: () = assert!(matches!(
+    CATEGORIES[GRAPHICS].shows,
+    Shows::Rows(Panel::Group(Group::Graphics))
+));
+/// The category of the key bindings.
+pub(crate) const KEYS: usize = 5;
+const _: () = assert!(matches!(CATEGORIES[KEYS].shows, Shows::Keys));
 /// The category the quick wheel's pages are.
 pub(crate) const QUICK_WHEEL: usize = 9;
 const _: () = assert!(matches!(CATEGORIES[QUICK_WHEEL].shows, Shows::Wheel));
@@ -169,7 +178,6 @@ impl ClientMenu {
                 self.keybinds.open_classic(console, 0, Span::ALL);
                 self.keybinds.set_elsewhere(0);
                 // Escape leaves the screen, as it does from Settings' rows.
-                self.keybinds_direct = true;
                 self.settings_return = target;
                 self.renderer_panel = None;
                 self.classic_panel = None;
@@ -204,7 +212,6 @@ impl ClientMenu {
             self.settings
                 .open_wheel_editor(console, crate::settings::WheelMode::Category);
         }
-        self.keybinds_direct = false;
         self.settings_return = target;
         self.renderer_panel = None;
         self.classic_panel = None;
@@ -213,6 +220,30 @@ impl ClientMenu {
             category: index,
         };
         self.state.open_settings();
+    }
+
+    /// Open the SJK UI's Settings on the category holding the rows of the
+    /// tabbed catalogue's tab `tab` (a classic Setup entry's), returning to
+    /// `target`.
+    pub(crate) fn open_sjk_settings_on_tab(
+        &mut self,
+        console: &ViewerConsole,
+        tab: usize,
+        target: ReturnTarget,
+    ) {
+        let category = SettingsMenu::tab_caption(tab).map_or(OPENING, category_of_tab);
+        self.open_sjk_settings(console, category, target);
+    }
+
+    /// Open the SJK UI's Settings on Graphics, which gathers the renderer
+    /// rows, returning to `target`.
+    pub(crate) fn open_sjk_renderer(&mut self, console: &ViewerConsole, target: ReturnTarget) {
+        self.open_sjk_settings(console, GRAPHICS, target);
+    }
+
+    /// Open the SJK UI's Key bindings, returning to `target`.
+    pub(crate) fn open_sjk_keys(&mut self, console: &ViewerConsole, target: ReturnTarget) {
+        self.open_sjk_settings(console, KEYS, target);
     }
 
     /// Open First setup as the SJK UI's pop-up over the map, returning to
@@ -343,9 +374,15 @@ impl ClientMenu {
         }
     }
 
-    /// Draw the SJK UI's Settings, or First setup's pop-up.
+    /// Draw the SJK UI's Settings, First setup's pop-up, or the resolution
+    /// list's card over either.
     pub(crate) fn append_sjk_settings(&mut self, target: TextTarget<'_>, viewport: [f32; 2]) {
         let reveal = self.screen_reveal();
+        if self.settings.resolutions_open() {
+            self.settings
+                .append_resolutions_sjk(target, viewport, reveal);
+            return;
+        }
         if self.settings.popup() {
             self.settings.append_sjk_popup(target, viewport, reveal);
             return;
@@ -357,6 +394,27 @@ impl ClientMenu {
         };
         self.settings.append_sjk(target, viewport, reveal, &rail);
     }
+}
+
+/// The category holding the rows of the tabbed catalogue's tab `caption`:
+/// the one showing that tab, or the classic Setup group gathering its rows.
+fn category_of_tab(caption: &str) -> usize {
+    let group = match caption {
+        "GAME" => Some(Group::GameOptions),
+        "TEXT" => Some(Group::Interface),
+        "HUD" => Some(Group::Hud),
+        "HUD+" => Some(Group::Scoreboard),
+        crate::settings::FIRST_SETUP_CAPTION => Some(Group::Quick),
+        _ => None,
+    };
+    CATEGORIES
+        .iter()
+        .position(|category| match (category.shows, group) {
+            (Shows::Rows(Panel::Group(shown)), Some(wanted)) => shown == wanted,
+            (Shows::Rows(Panel::Settings { caption: shown, .. }), None) => shown == caption,
+            _ => false,
+        })
+        .unwrap_or(OPENING)
 }
 
 #[cfg(test)]
@@ -620,5 +678,99 @@ mod tests {
         menu.set_menu_style(super::super::super::MenuStyle::Classic, &console);
         let panel = menu.classic_panel.expect("a classic panel");
         assert_eq!(panel.page, Page::Controls);
+    }
+
+    /// The main menu's ways to settings without a classic+ panel open the SJK
+    /// UI's Settings, under either style: a tab on the category holding its
+    /// rows, the renderer on Graphics, the key bindings on Key bindings; each
+    /// closes back to the main menu.
+    #[test]
+    fn the_destinations_open_the_sjk_settings_in_either_style() {
+        use super::super::super::destination::MainDestination;
+        use crate::keybind_editor::EditorResult;
+        let (_directory, mut console) = console();
+        for style in [
+            super::super::super::MenuStyle::Sjk,
+            super::super::super::MenuStyle::Classic,
+        ] {
+            let mut menu = menu();
+            menu.menu_style = style;
+            for (caption, label) in [
+                ("VIDEO", "Display"),
+                ("AUDIO", "Sound"),
+                ("HUD", "HUD"),
+                ("CONTROLS", "Mouse"),
+                ("GAME", "Gameplay"),
+                ("NETWORK", "Network"),
+                ("HUD+", "Scoreboard"),
+                ("TEXT", "Interface"),
+                (crate::settings::FIRST_SETUP_CAPTION, "First setup"),
+            ] {
+                let tab = SettingsMenu::tab_index(caption).unwrap();
+                menu.open_main_destination(MainDestination::Settings { tab }, &mut console);
+                assert!(
+                    menu.sjk_settings_on_show() && menu.sjk_screen(),
+                    "{caption}"
+                );
+                assert_eq!(CATEGORIES[menu.sjk_settings.category].label, label);
+                menu.settings_result(SettingsResult::Back, &mut console);
+                assert_eq!(*menu.state.phase(), ClientPhase::MainMenu);
+            }
+            menu.open_main_destination(MainDestination::Renderer, &mut console);
+            assert!(menu.sjk_settings_on_show() && menu.sjk_screen());
+            assert_eq!(menu.sjk_settings.category, GRAPHICS);
+            assert!(menu.settings.renderer_open());
+            menu.settings_result(SettingsResult::Back, &mut console);
+            assert_eq!(*menu.state.phase(), ClientPhase::MainMenu);
+            menu.open_main_destination(MainDestination::Keybinds { category: 2 }, &mut console);
+            assert_eq!(*menu.state.phase(), ClientPhase::Keybinds);
+            assert!(menu.sjk_settings_on_show() && menu.sjk_screen());
+            assert_eq!(menu.sjk_settings.category, KEYS);
+            menu.keybinds_result(EditorResult::Back, &mut console);
+            assert_eq!(*menu.state.phase(), ClientPhase::MainMenu);
+        }
+    }
+
+    /// The resolution list is the SJK UI's card: the screen stays the SJK
+    /// UI's while it is open, and closing it shows the rows again.
+    #[test]
+    fn the_resolution_list_stays_on_the_sjk_screen() {
+        let (_directory, console) = console();
+        let mut menu = menu();
+        let display = CATEGORIES
+            .iter()
+            .position(|category| category.label == "Display")
+            .unwrap();
+        menu.open_sjk_settings(&console, display, ReturnTarget::MainMenu);
+        menu.resolutions_for_shot(&console);
+        assert!(menu.settings.resolutions_open());
+        assert!(menu.sjk_settings_on_show() && menu.sjk_screen());
+    }
+
+    /// The classic Graphics page's renderer route opens the SJK UI's Settings
+    /// on Graphics, and backing out shows the classic panel it came from
+    /// again, in game too.
+    #[test]
+    fn the_classic_renderer_route_returns_to_its_panel() {
+        let (_directory, mut console) = console();
+        for (frame, target) in [
+            (PanelFrame::Main, ReturnTarget::MainMenu),
+            (PanelFrame::InGame, ReturnTarget::InGame),
+        ] {
+            let mut menu = menu();
+            menu.menu_style = super::super::super::MenuStyle::Classic;
+            menu.classic_renderer_for_shot(&console, frame);
+            assert!(menu.sjk_settings_on_show() && menu.sjk_screen());
+            assert_eq!(menu.sjk_settings.category, GRAPHICS);
+            assert_eq!(menu.settings_return, target);
+            menu.settings_result(SettingsResult::Back, &mut console);
+            let panel = menu.classic_panel.expect("the classic panel again");
+            assert_eq!(
+                (panel.page, panel.entry),
+                (Page::Graphics, Entry::RenderImage)
+            );
+            assert_eq!(panel.frame, frame);
+            assert!(!menu.sjk_settings_on_show());
+        }
     }
 }

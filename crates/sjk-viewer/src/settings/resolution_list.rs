@@ -1,18 +1,47 @@
 //! The resolution list of the settings screen: Enter or a click on the
-//! Resolution row opens it over the form, in the hero-form style of the map
-//! list. Rows show each size with its aspect-ratio group, the size in use
-//! highlighted and tagged; arrows, pages, Home/End or the wheel move, Enter
-//! or a click picks and Esc (or the footer cap) goes back to the form.
+//! Resolution row opens it, in every menu style, as the SJK UI's pop-up card
+//! over the darkened screen (`docs/sjk-ui.md`, Settings). Rows show each size
+//! with its aspect-ratio group, the size in use in gold with its dot and
+//! tagged, the desktop's size tagged; arrows, pages, Home/End or the wheel
+//! move, Enter or a click picks and Esc (or its key cap under the card) goes
+//! back to the rows. Positions are pixels of the SJK UI's 16:9 frame
+//! ([`Frame`]).
 
 use super::resolution::{self, parse_size};
 use super::*;
-use crate::menu_widgets::{BACK_TOKEN, FormLayout, Scrim};
-use sjk_ui::{Color, FontWeight, InputEvent, TextAlign, UiEventKind};
+use crate::menu::sjk::{Frame, TextTarget, color, key_hint, key_hint_width, kit, text};
+use crate::menu_widgets::TextFamily;
+use sjk_ui::{DrawCommand, FontWeight, InputEvent, TextAlign, UiEventKind};
 
-/// Footer caps; only the back cap, which doubles as the pointer's way out.
-const KEY_HINTS: [(&str, &str); 1] = [("ESC", "Back")];
-/// Height of one list row at scale 1.
-const ROW_HEIGHT: f32 = 44.0;
+/// The way back's target: the Esc cap under the card.
+const BACK_TOKEN: u16 = 900;
+/// The card's left edge, top and width; it is as tall as the rows it shows.
+const CARD_X: f32 = 600.0;
+const CARD_TOP: f32 = 80.0;
+const CARD_WIDTH: f32 = 720.0;
+/// The card's inner margin, and its text's column.
+const MARGIN: f32 = 48.0;
+const TEXT_X: f32 = CARD_X + MARGIN;
+const TEXT_WIDTH: f32 = CARD_WIDTH - MARGIN * 2.0;
+/// The first row's top, a row's height and most rows shown before the list
+/// scrolls.
+const ROWS_TOP: f32 = CARD_TOP + 140.0;
+const ROW: f32 = 48.0;
+const ROWS: usize = 14;
+/// Room for a size ("3840 x 2160"), and for the in-use dot after the tags.
+const SIZE_WIDTH: f32 = 220.0;
+const DOT_ROOM: f32 = 26.0;
+/// The keys' line under the card, and the room between its hints.
+const KEYS: [(&[&str], &str); 4] = [
+    (&["Up", "Down"], "Choose"),
+    (&["PgUp", "PgDn"], "Page"),
+    (&["Enter"], "Pick"),
+    (&["Esc"], "Back"),
+];
+const KEY_GAP: f32 = 22.0;
+
+// The card, with every row, and the keys under it inside the frame.
+const _: () = assert!(ROWS_TOP + ROWS as f32 * ROW + MARGIN * 0.5 + 28.0 + 24.0 <= 1080.0);
 
 impl SettingsMenu {
     /// The `r_resolution` size in use.
@@ -44,6 +73,8 @@ impl SettingsMenu {
             DisplayMode::Borderless => "Used when windowed; borderless fills the desktop.",
             DisplayMode::Exclusive => "The monitor's video modes, by aspect ratio.",
         };
+        // The card's page, so the size in use opens in mid view.
+        self.picker.set_page(ROWS);
         self.picker
             .open(&self.choices, Self::current_resolution(console), note);
     }
@@ -121,109 +152,181 @@ impl SettingsMenu {
         self.refresh(console);
     }
 
-    /// Build the open list at `reveal` opacity and append its text.
+    /// Draw the open list at `reveal` opacity as the SJK UI's pop-up card
+    /// over the darkened screen, whatever the menu style.
     pub(super) fn append_resolutions(
         &mut self,
-        vertices: &mut Vec<TextVertex>,
-        font: &UiFont,
+        target: TextTarget<'_>,
         viewport: [f32; 2],
         reveal: f32,
     ) {
-        let layout = FormLayout::new(viewport);
-        let s = layout.scale;
-        self.ui.begin_hero(viewport, reveal, Scrim::Full);
-        self.ui.form_header(
-            &layout,
-            "SJK   /   SETTINGS",
-            "Resolution",
-            self.picker.note(),
+        let frame = Frame::new(viewport);
+        let s = frame.s;
+        self.picker.set_page(ROWS);
+        let shown = self
+            .picker
+            .choices()
+            .len()
+            .saturating_sub(self.picker.first())
+            .min(ROWS);
+        let height = ROWS_TOP - CARD_TOP + shown.max(1) as f32 * ROW + MARGIN * 0.5;
+        self.ui.begin_transparent(viewport);
+        self.ui.push_opacity(reveal);
+        kit::scrim(&mut self.ui, viewport);
+        kit::card(&mut self.ui, &frame, [CARD_X, CARD_TOP, CARD_WIDTH, height]);
+        text(
+            &mut self.ui,
+            TextFamily::Display,
+            format_args!("Resolution"),
+            frame.rect(TEXT_X, CARD_TOP + 30.0, TEXT_WIDTH, 52.0),
+            40.0 * s,
+            color::TEXT,
+            FontWeight::Semibold,
+            TextAlign::Start,
         );
-        let row_height = ROW_HEIGHT * s;
-        let list_bottom = viewport[1] - 110.0 * s;
-        self.picker.set_page(
-            ((list_bottom - layout.rows_y) / row_height)
-                .floor()
-                .max(1.0) as usize,
+        text(
+            &mut self.ui,
+            TextFamily::Body,
+            format_args!("{}", self.picker.note()),
+            frame.rect(TEXT_X, CARD_TOP + 88.0, TEXT_WIDTH, 26.0),
+            18.0 * s,
+            color::MUTED,
+            FontWeight::Regular,
+            TextAlign::Start,
         );
-        self.resolution_rows(&layout, row_height);
-        self.ui.form_footer(&layout, &KEY_HINTS);
-        self.ui.end_hero();
+        self.resolution_rows(&frame);
+        self.resolution_keys(&frame, CARD_TOP + height + 28.0);
+        self.ui.pop_opacity();
         let focus = self.picker.selected().saturating_sub(self.picker.first());
         self.ui.finish(focus as u16);
-        self.ui.append_text(vertices, font, viewport);
+        target.append(&self.ui, viewport);
     }
 
-    /// The visible rows; row token `i` is list position `first + i`.
-    fn resolution_rows(&mut self, layout: &FormLayout, row_height: f32) {
-        let s = layout.scale;
-        let theme = self.ui.theme();
+    /// The visible rows, each the size, its aspect ratio and tags, the
+    /// highlighted one on the band and the one in use in gold with its dot;
+    /// row token `i` is list position `first + i`.
+    fn resolution_rows(&mut self, frame: &Frame) {
+        let s = frame.s;
         let (first, page) = (self.picker.first(), self.picker.page());
         let count = self.picker.choices().len();
         let current = self.picker.current();
-        let width = layout.column_width - 18.0 * s;
+        let right = CARD_X + CARD_WIDTH - MARGIN;
         for slot in 0..page.min(count.saturating_sub(first)) {
             let position = first + slot;
             let Some(&choice) = self.picker.choices().get(position) else {
                 break;
             };
+            let top = ROWS_TOP + slot as f32 * ROW;
+            let middle = top + ROW * 0.5;
+            let token = slot as u16;
             let selected = position == self.picker.selected();
             let in_use = Some(choice.size) == current;
-            let rect = Rect::new(
-                layout.margin,
-                layout.rows_y + slot as f32 * row_height,
-                width,
-                row_height,
-            );
-            self.ui.form_row_frame(rect, slot as u16, selected, s);
-            let text_y = rect.y + (row_height - 22.0 * s) * 0.5;
+            let band = [TEXT_X - 16.0, top, TEXT_WIDTH + 32.0, ROW];
+            if selected {
+                kit::band(&mut self.ui, frame, band);
+            }
             let [w, h] = choice.size;
-            self.ui.text_fmt_aligned(
-                format_args!("{w} x {h}"),
-                Rect::new(rect.x, text_y, rect.width * 0.5, 22.0 * s),
-                17.0 * s,
-                if selected || in_use {
-                    theme.foreground
-                } else {
-                    Color::new(0.916, 0.945, 0.973, 0.896)
+            text(
+                &mut self.ui,
+                TextFamily::Display,
+                format_args!("{w} \u{d7} {h}"),
+                frame.rect(TEXT_X + 8.0, middle - 15.0, SIZE_WIDTH, 30.0),
+                23.0 * s,
+                match (selected, in_use) {
+                    (true, _) => color::TEXT,
+                    (false, true) => color::GOLD_BRIGHT,
+                    (false, false) => color::alpha(color::TEXT, 0.88),
                 },
-                if selected || in_use {
-                    FontWeight::Semibold
-                } else {
-                    FontWeight::Regular
-                },
-                0.2 * s,
+                FontWeight::Regular,
                 TextAlign::Start,
             );
             let tag = match (in_use, choice.desktop) {
-                (true, true) => "   ·   desktop   ·   in use",
-                (true, false) => "   ·   in use",
-                (false, true) => "   ·   desktop",
+                (true, true) => "   \u{b7}   Desktop   \u{b7}   In use",
+                (true, false) => "   \u{b7}   In use",
+                (false, true) => "   \u{b7}   Desktop",
                 (false, false) => "",
             };
-            let x = rect.x + rect.width * 0.5;
-            self.ui.text_fmt_aligned(
+            let tags_x = TEXT_X + 8.0 + SIZE_WIDTH;
+            text(
+                &mut self.ui,
+                TextFamily::Body,
                 format_args!("{}{tag}", choice.aspect),
-                Rect::new(x, text_y + 2.0 * s, rect.right() - x, 20.0 * s),
-                14.0 * s,
-                if selected || in_use {
-                    theme.accent
+                frame.rect(tags_x, middle - 12.0, right - DOT_ROOM - tags_x, 24.0),
+                16.0 * s,
+                if in_use {
+                    color::GOLD_BRIGHT
                 } else {
-                    theme.muted
+                    color::MUTED
                 },
                 FontWeight::Regular,
-                0.4 * s,
                 TextAlign::End,
             );
+            if in_use {
+                self.resolution_shape(
+                    [right - 10.0, middle - 4.0, 8.0, 8.0],
+                    color::GOLD_BRIGHT,
+                    frame,
+                );
+            }
+            let [x, y, width, height] = band;
+            self.ui.hit_region(token, frame.rect(x, y, width, height));
         }
         if count > page {
-            let track = Rect::new(
-                layout.margin + layout.column_width - 4.0 * s,
-                layout.rows_y,
-                3.0 * s,
-                row_height * page as f32,
+            // Where the view lies in the list: a track at the card's right
+            // edge and its thumb.
+            let track = [CARD_X + CARD_WIDTH - 20.0, ROWS_TOP, 4.0, page as f32 * ROW];
+            let thumb = (page as f32 / count as f32).clamp(0.08, 1.0) * track[3];
+            let travel = (track[3] - thumb) * first as f32 / (count - page) as f32;
+            self.resolution_shape(track, color::alpha(color::HOLO, 0.12), frame);
+            self.resolution_shape(
+                [track[0], track[1] + travel, track[2], thumb],
+                color::alpha(color::HOLO, 0.55),
+                frame,
             );
-            self.ui.list_scroll_mark(track, first, page, count, s);
         }
+    }
+
+    /// A small rounded shape over frame rectangle `rect`: the in-use dot, the
+    /// scroll track and its thumb.
+    fn resolution_shape(&mut self, rect: [f32; 4], colour: sjk_ui::Color, frame: &Frame) {
+        let [x, y, width, height] = rect;
+        let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
+            rect: frame.rect(x, y, width, height),
+            radius: width.min(height) * 0.5 * frame.s,
+            color: colour,
+        });
+    }
+
+    /// The keys' line under the card, centred, its top at `y`; Esc's cap is
+    /// the pointer's way back.
+    fn resolution_keys(&mut self, frame: &Frame, y: f32) {
+        let s = frame.s;
+        let width = KEYS
+            .iter()
+            .map(|(keys, action)| key_hint_width(keys, action, s) + KEY_GAP * s)
+            .sum::<f32>()
+            - KEY_GAP * s;
+        let [centre, top] = frame.point(CARD_X + CARD_WIDTH * 0.5, y);
+        let mut x = centre - width * 0.5;
+        for (keys, action) in KEYS {
+            let start = x;
+            x = key_hint(&mut self.ui, keys, action, x, top, s);
+            if keys == ["Esc"] {
+                self.ui
+                    .hit_region(BACK_TOKEN, Rect::new(start, top, x - start, 24.0 * s));
+            }
+            x += KEY_GAP * s;
+        }
+    }
+}
+
+#[cfg(test)]
+impl SettingsMenu {
+    /// Select the Resolution row and open its list, as Enter there does
+    /// (world shots, tests).
+    pub(crate) fn resolutions_for_shot(&mut self, console: &ViewerConsole) {
+        self.select_cvar("r_resolution");
+        self.open_resolutions(console);
     }
 }
 

@@ -160,9 +160,6 @@ pub(crate) struct ClientMenu {
     classic_backdrop: MenuCanvas,
     /// The dark of the backdrop tour's fades ([`Self::world_fade`]).
     world_fade: MenuCanvas,
-    /// The key-binding editor was opened straight from a classic Controls
-    /// entry, so closing it leaves the settings screen out.
-    keybinds_direct: bool,
     settings: SettingsMenu,
     /// Where the settings screen (and the key-bindings editor it hosts)
     /// returns when closed: the main menu, or the game menu that opened it.
@@ -251,7 +248,6 @@ impl ClientMenu {
             holocron_shot: false,
             classic_backdrop: MenuCanvas::new(),
             world_fade: MenuCanvas::new(),
-            keybinds_direct: false,
             settings: SettingsMenu::new(),
             settings_return: ReturnTarget::MainMenu,
             browser_return: ReturnTarget::MainMenu,
@@ -312,19 +308,25 @@ impl ClientMenu {
     /// families. The loading screen covers the map itself when it has to
     /// ([`Self::sjk_loading_hides_world`]).
     pub(crate) fn sjk_screen(&self) -> bool {
-        self.menu_style == MenuStyle::Sjk
-            && match self.state.phase() {
-                ClientPhase::MainMenu => true,
-                ClientPhase::Settings => {
-                    self.sjk_settings_on_show() && !self.settings.picker_open()
-                }
-                ClientPhase::Keybinds => self.sjk_settings_on_show(),
-                ClientPhase::Player => self.player.is_sjk(),
-                ClientPhase::Browser
-                | ClientPhase::Connecting(_)
-                | ClientPhase::ConnectionError => true,
-                _ => false,
+        // Its Settings and Key bindings, whatever the style: the screens a
+        // classic page has no classic+ panel for open them too.
+        let settings = match self.state.phase() {
+            ClientPhase::Settings => {
+                self.sjk_settings_on_show() && !self.settings.hud_picker_open()
             }
+            ClientPhase::Keybinds => self.sjk_settings_on_show(),
+            _ => false,
+        };
+        settings
+            || self.menu_style == MenuStyle::Sjk
+                && match self.state.phase() {
+                    ClientPhase::MainMenu => true,
+                    ClientPhase::Player => self.player.is_sjk(),
+                    ClientPhase::Browser
+                    | ClientPhase::Connecting(_)
+                    | ClientPhase::ConnectionError => true,
+                    _ => false,
+                }
     }
 
     /// Whether the connect or loading screen covers the screen: a connect
@@ -582,20 +584,6 @@ impl ClientMenu {
         }
     }
 
-    /// Open the settings screen on `tab`, returning to `target` when closed.
-    pub(crate) fn open_settings_from(
-        &mut self,
-        console: &ViewerConsole,
-        target: ReturnTarget,
-        tab: usize,
-    ) {
-        self.leave_sjk_settings();
-        self.settings.open_tab(console, tab);
-        self.renderer_panel = None;
-        self.settings_return = target;
-        self.state.open_settings();
-    }
-
     /// Act on what the settings screen asked for.
     pub(super) fn settings_result(
         &mut self,
@@ -624,12 +612,6 @@ impl ClientMenu {
                     }
                 }
                 self.close_settings()
-            }
-            SettingsResult::OpenKeybinds => {
-                self.keybinds.open(console);
-                self.keybinds_direct = false;
-                self.state.open_keybinds();
-                MenuAction::None
             }
             // The classic+ and tabbed settings show the quick wheel's editor on
             // its own (the SJK UI's has its category, `sjk_settings_result`).
@@ -670,7 +652,7 @@ impl ClientMenu {
             return action;
         }
         match result {
-            EditorResult::Back => self.close_keybinds(console),
+            EditorResult::Back => self.close_keybinds(),
             EditorResult::Classic(index) => self.classic_panel_button(index, console),
             EditorResult::ClassicCycle(direction) => {
                 self.classic_panel_cycle(direction, console);
@@ -1192,6 +1174,34 @@ impl ClientMenu {
     #[cfg(test)]
     pub(crate) fn select_setting_for_shot(&mut self, cvar: &str) {
         self.settings.select_cvar(cvar);
+    }
+
+    /// Open the resolution list from the Resolution row of the settings on
+    /// show, as Enter there does (world shots).
+    #[cfg(test)]
+    pub(crate) fn resolutions_for_shot(&mut self, console: &ViewerConsole) {
+        self.settings.resolutions_for_shot(console);
+    }
+
+    /// The renderer settings opened from the classic Graphics page's panel
+    /// in `frame` (the main menu's or the in-game one), as its renderer entry
+    /// does (world shots, tests).
+    #[cfg(test)]
+    pub(crate) fn classic_renderer_for_shot(
+        &mut self,
+        console: &ViewerConsole,
+        frame: classic::panel::Frame,
+    ) {
+        let target = match frame {
+            classic::panel::Frame::Main => ReturnTarget::MainMenu,
+            classic::panel::Frame::InGame => ReturnTarget::InGame,
+        };
+        let page = classic::layout::Page::Graphics;
+        let entry = classic::layout::Entry::RenderImage;
+        self.open_classic_panel(console, page, entry, frame, target);
+        if let Some(panel) = self.classic_panel {
+            self.open_renderer_from_panel(console, panel);
+        }
     }
 
     /// Show the player screen's page `index` with row `row` selected (world
