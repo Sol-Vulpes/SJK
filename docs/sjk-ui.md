@@ -1113,8 +1113,10 @@ for the run.
   its colour; the one chosen banded with a gold mark. Or, switched by the two marks
   left of the kinds (three bars, four squares) or V and kept in `ui_shaderView`, a grid
   of cards five to a line, three lines shown (each card: a tier band and frame, the
-  swatch, the name without "blade", the tier and the state), the arrows moving in two
-  directions ([unlockables.md](unlockables.md#shaders-tab)). Six
+  swatch, the name without "blade", the tier and the state; the chosen card lifted
+  over a shadow with a white outline), the arrows moving in two directions; from Rare up
+  the cards, the rack's swatch frames and the tier pill carry the tier's animated
+  effects ([unlockables.md](unlockables.md#rarity-effects), `ui_rarityEffects`) ([unlockables.md](unlockables.md#shaders-tab)). Six
   rows show at a time (10/10/2026, fifteen no longer fit): the rack scrolls just enough
   to keep the chosen row in view (a pointer over the rows never scrolls it), the wheel
   scrolls it a row a notch, the chosen row kept in view, and a thin bar at its right

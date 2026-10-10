@@ -1035,6 +1035,17 @@ impl State {
                     color: Color::new(tier.r, tier.g, tier.b, 0.9),
                 });
             }
+            // Its tier's breath, quiet: the HUD shows only that much of a tier's show.
+            if let Some(skin) = card.shader.and_then(crate::unlockables::blade_skin) {
+                crate::rarity_fx::draw(
+                    &mut self.list,
+                    crate::rarity_fx::Item::of(skin.tier, true, crate::rarity_fx::Size::Tiny),
+                    Rect::new(swatch[0], swatch[1], swatch[2], swatch[3]),
+                    3.0 * unit,
+                    unit,
+                    look.seconds,
+                );
+            }
             // A chroma's colour wheel between the swatch and its name.
             let chroma = card.shader.is_some_and(crate::unlockables::is_chroma);
             let mut text_x = left + swatch[2] + 8.0 * unit;

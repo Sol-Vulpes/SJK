@@ -378,6 +378,39 @@ will when holocrons drop shaders, [Planned](#planned-not-built)).
   in the tier's colour stands over the kind line; the Saber tab's swatches have a thin
   edge in it; the player card frames the worn shader's swatch in it and writes its name
   in the colour lifted toward white.
+- Animated: every tier from Rare up has its rarity effects there
+  ([Rarity effects](#rarity-effects)).
+
+### Rarity effects
+
+Built 10/10/2026 (Sol's request: small light animated touches that show off how rare a
+thing is, for shaders, holocrons and what comes later).
+[rarity_fx.rs](../crates/sjk-viewer/src/rarity_fx.rs) draws them for any tier, with the
+UI's own shapes into the frame's draw list (no texture, no pipeline of its own), at most
+30 commands an item, every one inside the item's frame, the same picture at the same
+moment (no state, no randomness). Each tier up adds to the one under it:
+
+| Tier | Effect |
+| --- | --- |
+| Uncommon | none |
+| Rare | the frame's glow breathes: a soft pulse every 3 seconds |
+| Legendary | the breath, and a slanted sheen sweeping left to right (1.4 seconds of every 4, each frame at its own moment so a page does not flash at once) |
+| Mythical | the sheen, a bright spark running round the border with a short tail (a lap in 3.2 seconds), and on cards and tiles four faint motes rising inside |
+
+- Sizes: `Full` (the Collection's cards, the Holocrons tab's tier rows) has all of it;
+  `Small` (the rack's swatch frames, the detail's tier pill, the Saber tab's swatches)
+  leaves out the motes and has a shorter sheen; `Tiny` (the player card's shader row)
+  only breathes, quietly.
+- Locked: a shader not held (or a holocron tier not held) only breathes, at about a
+  third of the strength, so what the player holds stands out.
+- `ui_rarityEffects` (archived, default 1; Settings > Interface > Rarity effects) turns
+  them off: the tier frames stay, still.
+- The chosen card of the grid is marked apart from any tier: it lifts 5 pixels over a
+  shadow and a white outline goes round it (until 10/10/2026 a gold border, which read
+  like Mythical's gold frame).
+- Not used: the holocron pop-up, which has its own ceremony in the tier's colour (rings,
+  light, ticks), and the SJK chat's gem marks, too small at text size for a frame to
+  show.
 - Verified: unit tests (every shader's tier, the order, the holocrons' names and
   colours) and the world shots of the Collection (`duel6_sjk_collection`); not tried
   in the game.

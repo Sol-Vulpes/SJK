@@ -19,6 +19,7 @@ tests check this file):
 Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 -->
 - Saber shaders have tiers, the same as holocrons: Mythical (Sun, Void, Molten, Spectral), Legendary (Storm, Unstable, Chameleon, Prism), Rare (Frost, Hologram, Runic, Heartbeat, Glitch, Banner), and Uncommon for plainer ones to come; the Collection and the Saber tab list the rarest first and show each tier in its colour, and the Collection's Shaders can show a grid of cards (V, or the two marks by Saber; ui_shaderView keeps it) _(Sol)_
+- Rarity shows itself: Rare frames breathe, Legendary ones catch a sweeping sheen and Mythical ones a spark running round the border with motes rising, on the Collection's shader cards and swatches, the Holocrons tab, the Saber tab and the player card (Uncommon stays plain; locked ones only breathe faintly); the chosen card of the grid lifts with a white outline; Settings > Interface > Rarity effects (ui_rarityEffects) turns them off _(Sol)_
 
 ## Unreleased
 

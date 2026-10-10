@@ -48,6 +48,11 @@ message by its gem, its wording and having no sender column. Each tier's picture
 (the list in [illuminate.rs](../crates/sjk-viewer/src/illuminate.rs)); where it is missing
 the tier draws as a gem made of shapes ([holocrons/gem.rs](../crates/sjk-viewer/src/holocrons/gem.rs)).
 
+The Holocrons tab's tier rows carry the tiers' rarity effects (10/10/2026): from Rare up
+a breathing frame, Legendary's sheen, Mythical's running spark and motes, faint for a
+tier not held ([unlockables.md](unlockables.md#rarity-effects), off with
+`ui_rarityEffects 0`).
+
 ## Earning
 
 - Every claim to the hub carries `"active": true` only when the player is actively

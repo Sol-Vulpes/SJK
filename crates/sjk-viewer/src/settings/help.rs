@@ -374,6 +374,10 @@ const HELP: &[(&str, &str)] = &[
         "Darkens the backdrop behind Create game and the settings screens drawn over the map, for easier reading.",
     ),
     (
+        crate::rarity_fx::CVAR,
+        "Animates rarity: Rare frames breathe, Legendary ones catch a sheen, Mythical ones a running spark. Off keeps the tier frames still.",
+    ),
+    (
         crate::menu::style::CVAR,
         "The SJK UI, SJK's own menus over the live map; or classic menus after the original game's.",
     ),

@@ -242,3 +242,79 @@ fn duel6_sjk_collection() {
         assert!(!overflowed(&gpu), "on its own");
     });
 }
+
+/// The rarity effects (`rarity_fx`) in motion: the Shaders grid with every tier owned
+/// at moments a third of a second apart over one sheen's period (the files
+/// `duel6-rarity-grid-<n>`), the list at two moments, and the Holocrons tab.
+#[test]
+#[ignore = "renders with the GPU and the installed game data named by JKA_GAME_DATA"]
+fn duel6_sjk_rarity_effects() {
+    on_big_stack(|| {
+        super::saber_skins::mount_test_packs();
+        let cvars = [
+            ("ui_menuStyle", "sjk"),
+            (crate::settings::quick::HIDE_CVAR, "1"),
+            (crate::unlockables::SABER_SKIN_CVAR, "saber_sun"),
+            ("name", "^1Sol^7Vulpes"),
+        ];
+        let Some((mut gpu, _profile)) = open(
+            "maps/mp/duel6.bsp",
+            [1920, 1080],
+            Some(menu::ClientMenu::new(true, String::new())),
+            &cvars,
+        ) else {
+            return;
+        };
+        gpu.looks.shot_owns_unlocks = true;
+        let _ = frame(&mut gpu, 10);
+        let owned: Vec<sjk_identity::Unlock> = crate::unlockables::ALL
+            .iter()
+            .filter(|skin| !matches!(skin.id, "saber_molten" | "saber_frost" | "saber_banner"))
+            .map(|skin| sjk_identity::Unlock {
+                id: skin.id.to_owned(),
+                ..sun()
+            })
+            .collect();
+        if let Some(console) = gpu.console.as_mut() {
+            console.preview_profile(preview());
+            console.preview_collection(Some(owned.clone()), 0.0);
+            console.open_profile_hub_page(Tab::Shaders, ReturnTarget::MainMenu);
+        }
+        gpu.profile_hub_show_for_shot(Tab::Shaders);
+        if let Some(console) = gpu.console.as_mut() {
+            let _ = console.set_cvar(crate::console::collection_panel::SHADER_VIEW_CVAR, "1");
+            // Void, a Mythical, chosen: its white outline beside the worn Sun's gold.
+            console.collection_shader_for_shot(2);
+        }
+        let _ = frame(&mut gpu, 150);
+        for step in 0..12 {
+            let seconds = step as f32 / 3.0;
+            if let Some(console) = gpu.console.as_mut() {
+                console.preview_collection(Some(owned.clone()), seconds);
+            }
+            let name = format!("duel6-rarity-grid-{step:02}");
+            println!("{}", shoot(&mut gpu, 2, &name).display());
+            assert!(!overflowed(&gpu), "the grid at {seconds}");
+        }
+        if let Some(console) = gpu.console.as_mut() {
+            let _ = console.set_cvar(crate::console::collection_panel::SHADER_VIEW_CVAR, "0");
+            console.collection_shader_for_shot(1);
+        }
+        for (step, seconds) in [0.4_f32, 2.2].into_iter().enumerate() {
+            if let Some(console) = gpu.console.as_mut() {
+                console.preview_collection(Some(owned.clone()), seconds);
+            }
+            let name = format!("duel6-rarity-list-{step}");
+            println!("{}", shoot(&mut gpu, 2, &name).display());
+            assert!(!overflowed(&gpu), "the list at {seconds}");
+        }
+        gpu.profile_hub_show_for_shot(Tab::Nameplates);
+        gpu.profile_hub_next_for_shot();
+        assert_eq!(gpu.profile_hub_tab(), Some(Tab::Holocrons));
+        println!(
+            "{}",
+            shoot(&mut gpu, 150, "duel6-rarity-holocrons").display()
+        );
+        assert!(!overflowed(&gpu), "Holocrons");
+    });
+}
