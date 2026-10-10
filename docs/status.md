@@ -7,6 +7,24 @@ SJK currently contains a native client and standard dedicated server in a
 20-crate Rust workspace. This page records scope and verification, rather than
 claiming complete parity from the presence of an implementation.
 
+## SJK chat page: who is online
+
+Branch `personal/chat-online` (10/10/2026, based on `c378cabb`, Windows 11), Sol's
+request: "add a small window on the SJK chat (only when it is big) to quickly see who is
+online/active, and the most recent active players that are offline". The SJK chat page
+(the big chat; the docks are unchanged) has a window over Chosen message, which moved down
+under it: Online (playing first) and Recently active, or, from a hub without the list,
+the count and Recently in chat ([hub-chat.md](hub-chat.md#who-is-online)). The hub gives
+only the online count today, so the client reads a proposed optional `people` field of the
+feed (`sjk_identity::People`, kept in `ChatState::people`) and falls back on the chat's
+senders without it; the hub side is not built. Verified by unit tests (the derivation:
+order, dedup, the "more" row, recent leaving out who is online, the fallback skipping
+drops; the feed keeping and clearing the list; parsing; the window's rows, cut names,
+card, click and fit at 1080p, 4K, 4:3 and 21:9), the workspace checks and the world shots
+`duel6_sjk_chat_page` (listed, a card from the window, a chosen message, unlisted; 1080p
+and 4K with `ui_textScale 1.2`), looked at. Not tried in a game or against a hub that
+sends `people`.
+
 ## Illuminate is a toy: `toy_illuminate`
 
 Branch `personal/toy-illuminate` (10/10/2026, based on `75c455c2`, Windows 11), Sol's

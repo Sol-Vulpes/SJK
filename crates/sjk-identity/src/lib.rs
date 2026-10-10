@@ -31,6 +31,6 @@ pub use service::{
 pub use staff::{StaffRequest, StaffState};
 pub use wire::{
     Achievement, ChatMessage, DropEvent, DropMark, Emote, Feed, HOLOCRONS_LISTED, Holocron,
-    HolocronCounts, HolocronState, Look, LookEvent, Medal, Presence, Profile, Unlock, WornName,
-    names_match, normal_form,
+    HolocronCounts, HolocronState, Look, LookEvent, Medal, People, Person, Presence, Profile,
+    Unlock, WornName, names_match, normal_form,
 };

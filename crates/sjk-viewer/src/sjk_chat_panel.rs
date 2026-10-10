@@ -1,9 +1,10 @@
 //! The SJK chat page (`docs/hub-chat.md`): the chat every SJK player shares through
 //! the SJK hub, in full. The history with names, verified and staff marks and how
-//! long ago each message came; a field to write in and Send; and, for a chosen
-//! message, Mute on this PC, and for SJK staff Delete and Mute at the hub. Resting the
-//! pointer on a name shows the sender's sender card with Mute or Unmute
-//! ([`crate::sender_card`], "Muting a player").
+//! long ago each message came; a field to write in and Send; a small window of who is
+//! online and who was seen most recently ([`people`]); and, for a chosen message, Mute
+//! on this PC, and for SJK staff Delete and Mute at the hub. Resting the pointer on a
+//! name, in the chat or the window, shows that player's sender card with Mute or
+//! Unmute ([`crate::sender_card`], "Muting a player").
 //!
 //! Opened by the main page's docked chat (Open chat), the `sjkchat` command or the
 //! in-game SJK menu. Like the Staff page it lives in the console and has the SJK UI's
@@ -18,6 +19,8 @@ use std::time::Instant;
 use winit::event::{ElementState, KeyEvent};
 use winit::keyboard::{KeyCode, PhysicalKey};
 
+#[path = "sjk_chat_people.rs"]
+mod people;
 #[path = "sjk_chat_panel_view.rs"]
 mod view;
 
@@ -35,6 +38,9 @@ const CARD_TOKEN: u16 = 1_360;
 const CARD_MUTE_TOKEN: u16 = 1_361;
 /// The names of the messages on show, one token each.
 const NAME_BASE: u16 = 1_370;
+/// The players in the who-is-online window, one token each.
+const PERSON_BASE: u16 = 1_420;
+const PEOPLE_SHOWN: usize = people::ONLINE_ROWS + people::RECENT_ROWS;
 /// Longest message, as the hub takes it.
 const DRAFT_MAX: usize = sjk_identity::chat::TEXT_MAX;
 /// Messages Page Up and Page Down scroll by.
@@ -96,6 +102,8 @@ struct Shown {
     total: usize,
     /// Whether the sender card's player is muted here.
     card_muted: bool,
+    /// The keys of the players in the who-is-online window, by token.
+    people: Vec<String>,
 }
 
 pub(crate) struct Panel {
@@ -118,16 +126,28 @@ pub(crate) struct Panel {
     /// The sender card on show.
     card: Option<Hovered>,
     epoch: Instant,
+    /// The chat to show in place of the live one, for a world shot.
+    #[cfg(test)]
+    pub(crate) preview: Option<ChatState>,
 }
 
-/// The sender card on show: the message whose sender it is about, who, and the name
-/// it is beside. Where they are on the server is asked outside the chat's lock
-/// ([`Panel::place_card`]), so it shows a frame later.
+/// The sender card on show: the message whose sender it is about (or the player in the
+/// who-is-online window), who, and the name it is beside. Where they are on the server
+/// is asked outside the chat's lock ([`Panel::place_card`]), so it shows a frame later.
 struct Hovered {
-    id: u64,
+    source: CardSource,
     person: crate::sender_card::Person,
     anchor: sjk_ui::Rect,
     placed: bool,
+}
+
+/// What a sender card on show is about.
+#[derive(Clone, Debug, Eq, PartialEq)]
+enum CardSource {
+    /// The sender of the message with this id.
+    Message(u64),
+    /// The player with this key in the who-is-online window.
+    Person(String),
 }
 
 impl Default for Panel {
@@ -151,6 +171,8 @@ impl Panel {
             shown: Shown::default(),
             card: None,
             epoch: Instant::now(),
+            #[cfg(test)]
+            preview: None,
         }
     }
 
@@ -202,6 +224,24 @@ impl Panel {
         }
     }
 
+    /// Choose the message with `id`, for a world shot.
+    #[cfg(test)]
+    pub(crate) fn choose_for_shot(&mut self, id: u64) {
+        self.selected = Some(id);
+    }
+
+    /// Rest the pointer on the name of the `index`th player of the who-is-online
+    /// window, as the last frame laid it out, or on the field for `None`, for a world
+    /// shot.
+    #[cfg(test)]
+    pub(crate) fn hover_person_for_shot(&mut self, index: Option<u16>) {
+        let token = index.map_or(FIELD_TOKEN, |index| PERSON_BASE + index);
+        if let Some(rect) = self.ui.rect_for(token) {
+            let centre = sjk_ui::Vec2::new(rect.x + rect.width * 0.5, rect.y + rect.height * 0.5);
+            let _ = self.handle_pointer(InputEvent::PointerMove(centre));
+        }
+    }
+
     pub(crate) fn draw_list(&self) -> &sjk_ui::DrawList {
         self.ui.draw_list()
     }
@@ -228,6 +268,24 @@ impl Panel {
         {
             // A click on a name chooses its message, as one on the row does.
             return self.activate(MESSAGE_BASE + index);
+        }
+        if let Some(index) = token
+            .checked_sub(PERSON_BASE)
+            .filter(|index| usize::from(*index) < PEOPLE_SHOWN)
+        {
+            // A click on a player in the window chooses their newest message on show;
+            // the card shows under the pointer either way.
+            let key = self.shown.people.get(usize::from(index));
+            let newest = key.and_then(|key| {
+                self.shown
+                    .messages
+                    .iter()
+                    .rposition(|(_, sender)| sender == key)
+            });
+            if let Some(at) = newest {
+                return self.activate(MESSAGE_BASE + at as u16);
+            }
+            return PanelAction::None;
         }
         self.focus = token;
         let chosen = self.shown.chosen.clone();
@@ -435,6 +493,7 @@ mod tests {
                 .collect(),
             revision: 1,
             online: 9,
+            people: None,
             live: true,
             outcome: None,
             loaded: Some(1),
@@ -573,7 +632,7 @@ mod tests {
         let _ = panel.handle_pointer(InputEvent::PointerMove(centre(name)));
         drawn(&mut panel, &inputs(&chat, &[], false));
         let card = panel.card.as_ref().expect("the card");
-        assert_eq!(card.id, 2);
+        assert_eq!(card.source, CardSource::Message(2));
         assert_eq!(card.person.name, "^2Player 2");
         assert_eq!(card.person.place, Place::Unknown, "placed outside the lock");
         // Where they are comes from outside the chat's lock, once.

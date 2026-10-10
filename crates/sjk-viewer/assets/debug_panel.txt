@@ -24,6 +24,18 @@
 
 # ---- Console & chat ----
 
+[chat-online]
+area: Console & chat
+title: SJK chat page: who is online and who was seen last
+change: The SJK chat page has a window over Chosen message: Online (count, playing first)
+change: and Recently active with how long ago. Pointer on a name: their card; click: newest msg.
+change: Until the hub lists people: the count and Recently in chat (the last senders).
+test: Open the SJK chat page (sjkchat): the window sits top right, the count by Online.
+test: Rest the pointer on a name in it: the card opens left of the window, Mute works.
+test: Click a name that spoke: its newest message is chosen; Chosen message sits under it.
+test: Turn cl_sjkChat 0: the window says it shows once the hub answers.
+note: The deployed hub has no people list yet: expect Recently in chat for now.
+
 [jof-tag]
 area: Console & chat
 title: JoF emblem beside names with the JoF tag; JoF Clan medal removed

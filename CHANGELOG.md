@@ -43,6 +43,8 @@ opened yet and give nothing.
 - Importing another client's config no longer needs dragging a file or typing a path: First setup has an Import a config file row (near the end) that opens a file window listing .cfg files, and the Import page has a Browse button (B) to pick another one _(Sol)_
 
 - Chroma saber shaders: the Storm, Unstable, Spectral, Glitch, Hologram, Runic and Heartbeat blades now take your saber's colour (each saber its own, color1 and color2; a white custom colour keeps the shader's own), and everyone sees them in your colour; a small colour wheel marks them in the Collection, on the Saber tab and on the player card. On the Collection's Shaders a double click wears an owned shader, and a long name no longer runs under its Worn / Yours / Locked label _(Sol)_
+- The SJK chat page has a small window of who is online: the SJK players reading the chat now (those playing a match first, marked playing) and the ones seen most recently, with how long ago; rest the pointer on a name for their card. Until the SJK hub lists them it shows how many are reading and the last players who spoke _(Sol)_
+
 ## 2026.1010.1 (Alpha) | 10/10/2026
 
 The Profile screen becomes one row of tabs, with Medals and a Collection of everything to unlock;

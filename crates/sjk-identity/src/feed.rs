@@ -26,7 +26,7 @@
 use crate::hub::Hub;
 use crate::keys::Identity;
 use crate::service::{HubFactory, ReportOutcome};
-use crate::wire::{ChatMessage, DropEvent, DropMark, Emote, Feed, LookEvent};
+use crate::wire::{ChatMessage, DropEvent, DropMark, Emote, Feed, LookEvent, People};
 use std::collections::VecDeque;
 use std::net::SocketAddr;
 use std::sync::{Arc, Mutex, MutexGuard};
@@ -58,11 +58,14 @@ pub(crate) type OwnDrop = Box<dyn Fn() + Send>;
 pub struct ChatState {
     /// The last messages, oldest first.
     pub messages: VecDeque<ChatMessage>,
-    /// Counts changes to `messages`, `online` and `live`, so a reader that derives from
+    /// Counts changes to `messages`, `online`, `people` and `live`, so a reader that derives from
     /// them knows when to derive again.
     pub revision: u64,
     /// Keys that read the chat in the last minute, as the hub last said.
     pub online: u32,
+    /// Who reads the chat now and who read it last, as the hub last listed them;
+    /// `None` until it does (hubs before the list never do).
+    pub people: Option<People>,
     /// The last poll reached the hub.
     pub live: bool,
     /// What became of the last message or emote sent.
@@ -268,6 +271,7 @@ impl FeedWorker {
         state.messages.clear();
         state.live = false;
         state.online = 0;
+        state.people = None;
         state.revision += 1;
     }
 
@@ -316,13 +320,20 @@ impl FeedWorker {
         }
     }
 
-    /// Take an answer's messages, deletions and online count into the chat.
+    /// Take an answer's messages, deletions, online count and people into the chat.
     fn apply_chat(&self, feed: &mut Feed) {
         let mut state = lock(&self.state);
         let mut changed =
             !state.live || state.online != feed.online || state.loaded != Some(self.epoch);
         state.live = true;
         state.online = feed.online;
+        // The hub lists them now and then: an answer without the list keeps the last.
+        if let Some(people) = feed.people.take()
+            && state.people.as_ref() != Some(&people)
+        {
+            state.people = Some(people);
+            changed = true;
+        }
         // Ids that go backwards mean the hub restarted: its backlog starts afresh.
         if feed.next < self.after {
             changed |= !state.messages.is_empty();
@@ -678,6 +689,54 @@ mod tests {
         assert!(rig.asked().is_empty());
         assert!(rig.made.lock().unwrap().is_empty());
         assert!(!lock(&rig.state).live);
+    }
+
+    #[test]
+    fn the_people_listed_stay_until_the_hub_lists_others_or_the_chat_goes_off() {
+        use crate::wire::Person;
+        let t0 = Instant::now();
+        let mut rig = rig(t0);
+        rig.read("https://hub", None);
+        let people = |names: &[&str]| People {
+            online: names
+                .iter()
+                .map(|name| Person {
+                    key_id: format!("{name:0>16}"),
+                    name: (*name).to_owned(),
+                    ..Person::default()
+                })
+                .collect(),
+            recent: Vec::new(),
+        };
+        let with = |next, listed: Option<People>| {
+            Ok(Feed {
+                next,
+                online: 3,
+                people: listed,
+                ..Feed::default()
+            })
+        };
+        rig.script(answer(1, vec![message(1, "a")]));
+        rig.worker.step(t0);
+        assert_eq!(lock(&rig.state).people, None, "a hub that lists nobody");
+        rig.script(with(1, Some(people(&["Sol", "Fox"]))));
+        rig.worker.step(t0 + POLL_GAP);
+        let state = lock(&rig.state).clone();
+        assert_eq!(state.people, Some(people(&["Sol", "Fox"])));
+        // An answer without the list keeps it; the same list changes nothing.
+        rig.script(with(1, None));
+        rig.script(with(1, Some(people(&["Sol", "Fox"]))));
+        rig.worker.step(t0 + POLL_GAP * 2);
+        rig.worker.step(t0 + POLL_GAP * 3);
+        assert_eq!(*lock(&rig.state), state);
+        rig.script(with(1, Some(people(&["Fox"]))));
+        rig.worker.step(t0 + POLL_GAP * 4);
+        let state = lock(&rig.state).clone();
+        assert_eq!(state.people, Some(people(&["Fox"])));
+        // The chat off: nobody shows.
+        rig.show_chat(false);
+        rig.worker.step(t0 + POLL_GAP * 5);
+        assert_eq!(lock(&rig.state).people, None);
     }
 
     #[test]
