@@ -15,7 +15,7 @@ use crate::menu_widgets::TextFamily;
 use crate::sjk_chat_look::{self, Measure};
 use crate::text::TextFace;
 use sjk_identity::ChatMessage;
-use sjk_identity::chat::for_display;
+use sjk_identity::chat::name_for_display;
 use sjk_ui::{DrawCommand, FontWeight, TextAlign};
 use std::ops::Range;
 
@@ -90,7 +90,7 @@ struct Laid {
 fn lay(message: &ChatMessage, inputs: &Inputs<'_>, measure: &Measure<'_>, s: f32) -> Laid {
     let s = s.max(0.001);
     let width = |value: &str, size: f32, face| measure.width(value, size * s, face) / s;
-    let name = for_display(&message.name);
+    let name = name_for_display(&message.name);
     let name = if name.is_empty() {
         "(no name)".to_owned()
     } else {
@@ -578,7 +578,7 @@ impl Panel {
                 color: color::alpha(color::QUIET, 0.8),
             }
         });
-        let full = for_display(&row.name);
+        let full = name_for_display(&row.name);
         let full = if full.is_empty() {
             "(no name)".to_owned()
         } else {
@@ -784,7 +784,7 @@ impl Panel {
         let muted = inputs.muted.contains(&message.key_id);
         // The name in the body family, which the page measures, and the tick alone
         // after it for a verified sender.
-        let name = for_display(&message.name);
+        let name = name_for_display(&message.name);
         self.shown.chosen = Some((message.id, message.key_id.clone(), name.clone(), muted));
         let size = 26.0;
         let room = SIDE_WIDTH - sjk_chat_look::tick_room(size);

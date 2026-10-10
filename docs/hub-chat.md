@@ -111,8 +111,14 @@ Old clients ignore all of it, so it stays `/v1/`.
   never to the game server.
 - Hub messages join the chat feed as one flowing line ([How a line
   looks](#how-a-line-looks)): a small SJK tag, the name, the verified tick for a
-  verified sender, then the message in the SJK chat's gold. Names and texts go
-  through `chat::for_display`. Messages staff delete leave the feed, and muting a
+  verified sender, then the message in the SJK chat's gold. Texts go through
+  `chat::for_display`, names through `chat::name_for_display`: a name keeps every
+  character a Jedi Academy name can draw, all of Windows-1252 that prints (`{ }`,
+  `\`, `` ` ``, Latin-1's symbols such as guillemets and the section sign, the
+  bullet, dagger and trade mark), so clan tags show as worn (Sol's request,
+  10/10/2026); the soft hyphen and what reorders or prints nothing stay out, as from
+  a message, which keeps the bio's alphabet. Messages staff delete leave the feed,
+  and muting a
   player ([Muting a player](#muting-a-player)) hides their lines already there. While
   the composer is open, resting the pointer on a sender's name shows their profile
   card with Mute or Unmute. Joining a game
@@ -353,7 +359,8 @@ to a week back; the list is not deployed yet.
   readers behind one address, 40 reads a minute per key), staff delete and
   mute with the log, the operator's API and commands. `cargo test` and `cargo clippy
   --all-targets` pass.
-- Client: unit tests for the rules (identical to the hub's), `for_display`, the feed
+- Client: unit tests for the rules (identical to the hub's), `for_display` and
+  `name_for_display`, the feed
   thread against a scripted hub (order, repeats, 200 kept, deletions, a new hub, a
   restarted hub, turning the chat off, the 2 second gap, back-off), the worker
   (rules before sending, emotes needing a server, the feed only when registered with

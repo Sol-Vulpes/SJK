@@ -3,10 +3,16 @@
 //! line of the bio's alphabet (`crate::bio::allowed`) and colour codes, so it shows the
 //! same in every SJK font and hides, reorders or piles up nothing. The service checks a
 //! message before sending it; a message read from a hub is shown through
-//! [`for_display`], which drops what the rules would refuse.
+//! [`for_display`], which drops what the rules would refuse. A sender's name, which the
+//! hub keeps as worn, is shown through [`name_for_display`], whose alphabet adds the
+//! marks players put around clan tags ([`name_allowed`]).
 
 /// Longest message, in characters.
 pub const TEXT_MAX: usize = 150;
+/// Longest name shown, in characters: the hub's limit for the name a message carries.
+pub const NAME_MAX: usize = 64;
+/// Windows-1252's characters in 0x80..=0x9F, which a Jedi Academy name can hold.
+const WINDOWS_1252_HIGH: &str = "€‚ƒ„…†‡ˆ‰Š‹ŒŽ‘’“”•–—˜™š›œžŸ";
 /// Longest run of one character.
 const RUN_MAX: usize = 8;
 
@@ -99,11 +105,35 @@ pub fn check(raw: &str) -> Result<String, ChatError> {
 /// to 8 and the whole to [`TEXT_MAX`] characters. A message that passes [`check`]
 /// comes back unchanged.
 pub fn for_display(raw: &str) -> String {
-    let mut kept = String::with_capacity(raw.len().min(TEXT_MAX * 4));
+    shown(raw, crate::bio::allowed, TEXT_MAX)
+}
+
+/// Whether a sender's name may show `c`: the message alphabet, and every other
+/// character a Jedi Academy name can draw, which is all of Windows-1252 that prints
+/// (SJK's fonts draw each of them): ASCII's other symbols (`{ } \` and `` ` ``),
+/// Latin-1's (`« » ¤ § · ×`) and the typographic ones (`• † ™ …`), the marks players
+/// put around clan tags. The soft hyphen, which prints nothing, stays out.
+pub fn name_allowed(c: char) -> bool {
+    crate::bio::allowed(c)
+        || (matches!(c, '!'..='~' | '\u{A1}'..='\u{FF}') && c != '\u{AD}')
+        || WINDOWS_1252_HIGH.contains(c)
+}
+
+/// A sender's name as a page may show it whatever a hub sent: as [`for_display`]
+/// shows a message, with [`name_allowed`]'s alphabet and cut to [`NAME_MAX`]
+/// characters.
+pub fn name_for_display(raw: &str) -> String {
+    shown(raw, name_allowed, NAME_MAX)
+}
+
+/// `raw` with only `allowed` characters and colour codes, tidied, runs cut to 8 and the
+/// whole to `max` characters.
+fn shown(raw: &str, allowed: fn(char) -> bool, max: usize) -> String {
+    let mut kept = String::with_capacity(raw.len().min(max * 4));
     let mut chars = raw.chars().peekable();
     while let Some(c) = chars.next() {
         match c {
-            '\n' | '\r' | '\t' => kept.push(' '),
+            '\n' | '\r' | '\t' | '\u{A0}' => kept.push(' '),
             '^' => {
                 if let Some(&next) = chars.peek()
                     && next.is_ascii_digit()
@@ -113,7 +143,7 @@ pub fn for_display(raw: &str) -> String {
                     let _ = chars.next();
                 }
             }
-            c if crate::bio::allowed(c) => kept.push(c),
+            c if allowed(c) => kept.push(c),
             _ => {}
         }
     }
@@ -135,7 +165,7 @@ pub fn for_display(raw: &str) -> String {
         if run.1 > RUN_MAX {
             continue;
         }
-        if count >= TEXT_MAX {
+        if count >= max {
             break;
         }
         out.push(c);
@@ -178,6 +208,45 @@ mod tests {
             assert!(
                 shown.is_empty() || check(&shown) == Ok(shown.clone()),
                 "{raw:?} -> {shown:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn names_keep_the_marks_around_clan_tags() {
+        for name in [
+            "{JoF}^1Sol",
+            "\\o/ `Fox`",
+            "«Ð» ¤§·× ^5Kyle",
+            "•JoF• Sol™ † …",
+            "[JoF]|=<Sol>=|~*",
+        ] {
+            assert_eq!(name_for_display(name), name);
+        }
+        // A message keeps its own alphabet.
+        assert_eq!(for_display("{JoF} Sol"), "JoF Sol");
+        assert_eq!(check("{JoF}"), Err(ChatError::Characters));
+    }
+
+    #[test]
+    fn names_drop_what_prints_nothing_or_reorders() {
+        assert_eq!(name_for_display("a\u{AD}b\u{200B}c"), "abc");
+        assert_eq!(name_for_display("x\u{202E}y\u{0301} \u{1F600}"), "xy");
+        assert_eq!(name_for_display("Sol\u{A0}\u{A0}Fox"), "Sol Fox");
+        assert_eq!(name_for_display("a\u{7}\u{85}b"), "ab");
+        assert_eq!(name_for_display("^1red ^x ^"), "^1red x");
+        assert_eq!(name_for_display(&"=".repeat(20)), "=".repeat(RUN_MAX));
+        assert_eq!(
+            name_for_display(&"ab".repeat(100)).chars().count(),
+            NAME_MAX
+        );
+        // Every character comes out only where the alphabet allows it.
+        for c in (0..0x3000).filter_map(char::from_u32).filter(|&c| c != '^') {
+            let shown = name_for_display(&format!("a{c}b"));
+            assert!(
+                shown == format!("a{c}b") && name_allowed(c)
+                    || ["ab", "a b"].contains(&shown.as_str()) && !name_allowed(c),
+                "{c:?} -> {shown:?}"
             );
         }
     }

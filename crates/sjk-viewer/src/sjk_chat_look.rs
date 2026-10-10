@@ -68,7 +68,7 @@ pub(crate) struct Shown {
 pub(crate) fn shown(message: &sjk_identity::ChatMessage) -> Option<Shown> {
     if message.holocron.is_none() {
         return Some(Shown {
-            name: sjk_identity::chat::for_display(&message.name),
+            name: sjk_identity::chat::name_for_display(&message.name),
             text: message_text(&message.text),
             tier: None,
         });
