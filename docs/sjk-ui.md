@@ -1118,11 +1118,14 @@ for the run.
   SJK team" with the note (", with your Bug Hunter medal" when a medal brings it), or "How to get it: ...", and Equip (gold), Unequip or "Wear
   the stock blade". It opens on what is worn. Up and Down choose, Enter equips or
   unequips (`cg_saberSkin`).
-- **Toys:** "1 toy", things to use in a match. Illuminate's holocron (the Force
-  wheel's picture) in its niche, ringed gold on a glow, "Everyone's"; a dotted line for
+- **Toys:** "1 toy", things to use in a match. Illuminate's holocron (its icon)
+  in its niche, ringed gold on a glow, "Everyone's"; a dotted line for
   the toys to come. The holocron floats lit by the model on the stage
   (`illuminate::submit_stage_holocron`); beside the model what it is, how to use it
-  and "On the Force wheel" with its switch (`cg_illuminate`, Enter or a click).
+  and "Holocron lit" with its switch: on while the holocron is lit, and Enter or a
+  click lights it or puts it out (the `toy_illuminate` toggle, set to the state
+  wanted; the viewer owns the state, the console mirrors it each frame). The keys line
+  says "Enter: light" or "Enter: put out".
 - **Nameplates:** none exist yet. "No nameplates yet"; three empty places, dashed, each
   with a drawing of where its kind will go: Crest (before the name), Frame (round the
   plate), Trail (under the plate). Over the model's head (projected from the stage

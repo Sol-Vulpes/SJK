@@ -934,7 +934,7 @@ mod tests {
         assert!(!toys.force);
         assert_eq!(toys.choices.len(), 1);
         assert_eq!(toys.choices[0].label, "Illuminate");
-        assert_eq!(toys.choices[0].command, "force_illuminate");
+        assert_eq!(toys.choices[0].command, "toy_illuminate");
         assert!(toys.choices[0].icon.is_some(), "the holocron's picture");
         // The gold dot follows the holocron: out, then lit.
         assert!(!toys.choices[0].on);
@@ -952,7 +952,7 @@ mod tests {
         );
         assert!(!texts.contains(&"Nothing here yet"), "{texts:?}");
         assert!(!wheel.canvas.overflowed());
-        assert_eq!(wheel.release().as_deref(), Some("force_illuminate"));
+        assert_eq!(wheel.release().as_deref(), Some("toy_illuminate"));
     }
 
     #[test]

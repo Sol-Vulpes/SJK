@@ -1,7 +1,8 @@
 //! Console side of the Collection page (see `collection_panel.rs`): opening it on a
-//! tab, setting `cg_saberSkin` when it equips or unequips a shader and `cg_illuminate`
-//! when it puts Illuminate on the Force wheel or takes it off, and routing keys and
-//! pointer events to it, as for the Staff page. It is drawn in the SJK UI's look
+//! tab, setting `cg_saberSkin` when it equips or unequips a shader and asking the viewer
+//! to light the Illuminate holocron or put it out (the lit state is the viewer's,
+//! mirrored here for the page: [`ViewerConsole::set_illuminate_lit`]), and routing keys
+//! and pointer events to it, as for the Staff page. It is drawn in the SJK UI's look
 //! whatever the menu style (`console_sjk_pages.rs`).
 
 use super::collection_panel::{Backstage, Inputs, PanelAction, StageWish};
@@ -91,7 +92,9 @@ impl ViewerConsole {
             PanelAction::Close => self.close_collection_panel(),
             PanelAction::Wear(id) => crate::unlockables::wear(self, id),
             PanelAction::Illuminate(on) => {
-                self.set_cvar(crate::illuminate::CVAR, if on { "1" } else { "0" });
+                self.pending_illuminate = Some(on);
+                // The page shows it at once; the viewer applies it next frame.
+                self.illuminate_lit = on;
             }
             PanelAction::Hub(tab) => {
                 // A tab of another page: the Holocrons page.
@@ -107,9 +110,19 @@ impl ViewerConsole {
         }
     }
 
-    /// `cg_illuminate`: Illuminate is on the Force wheel.
-    fn illuminate_on_wheel(&self) -> bool {
-        self.integer_cvar(crate::illuminate::CVAR).unwrap_or(1) != 0
+    /// Whether the Illuminate holocron is lit, as the viewer last said.
+    fn illuminate_lit(&self) -> bool {
+        self.illuminate_lit
+    }
+
+    /// The viewer says whether the holocron is lit, once a frame, for the Toys tab.
+    pub(crate) fn set_illuminate_lit(&mut self, lit: bool) {
+        self.illuminate_lit = lit;
+    }
+
+    /// The Toys tab asked to light the holocron (`true`) or put it out, once.
+    pub(crate) fn take_illuminate_request(&mut self) -> Option<bool> {
+        self.pending_illuminate.take()
     }
 
     /// Give a pressed key to the open page; false when the page is closed.
@@ -117,7 +130,7 @@ impl ViewerConsole {
         if !self.collection_panel.is_open() {
             return false;
         }
-        let illuminate = self.illuminate_on_wheel();
+        let illuminate = self.illuminate_lit();
         let action = self
             .collection_panel
             .handle_key(event, self.shift, illuminate);
@@ -130,7 +143,7 @@ impl ViewerConsole {
         if !self.collection_panel.is_open() {
             return false;
         }
-        let illuminate = self.illuminate_on_wheel();
+        let illuminate = self.illuminate_lit();
         let action = self.collection_panel.handle_pointer(event, illuminate);
         self.collection_panel_action(action);
         true
@@ -172,7 +185,7 @@ impl ViewerConsole {
             .unwrap_or_default()
             .to_owned();
         let name = self.text_value("name").unwrap_or_default().to_owned();
-        let illuminate = self.illuminate_on_wheel();
+        let illuminate = self.illuminate_lit();
         let stock = self.stock_blade();
         let enabled = self.bool_cvar("cl_identity") == Some(true);
         let snapshot = crate::player_identity::snapshot();
@@ -264,7 +277,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn the_page_opens_alone_and_its_actions_set_the_cvars() {
+    fn the_page_opens_alone_and_its_actions_set_the_cvars_and_ask_for_the_holocron() {
         let directory = tempfile::tempdir().unwrap();
         let mut console = ViewerConsole::new(directory.path().join("config.cfg")).unwrap();
         console.open_profile_panel();
@@ -279,10 +292,17 @@ mod tests {
         assert_eq!(console.text_cvar(SABER_SKIN_CVAR).unwrap(), "saber_sun");
         console.collection_panel_action(PanelAction::Wear(""));
         assert_eq!(console.text_cvar(SABER_SKIN_CVAR).unwrap(), "");
-        console.collection_panel_action(PanelAction::Illuminate(false));
-        assert!(!console.illuminate_on_wheel());
+        // The holocron's state is the viewer's: the page asks, shows the answer at
+        // once and the viewer takes the request once.
+        console.set_illuminate_lit(false);
+        assert_eq!(console.take_illuminate_request(), None);
         console.collection_panel_action(PanelAction::Illuminate(true));
-        assert!(console.illuminate_on_wheel());
+        assert!(console.illuminate_lit());
+        assert_eq!(console.take_illuminate_request(), Some(true));
+        assert_eq!(console.take_illuminate_request(), None);
+        console.collection_panel_action(PanelAction::Illuminate(false));
+        assert!(!console.illuminate_lit());
+        assert_eq!(console.take_illuminate_request(), Some(false));
         // It was opened with the console already open (the Profile page's).
         console.collection_panel_action(PanelAction::Close);
         assert!(!console.collection_panel.is_open());

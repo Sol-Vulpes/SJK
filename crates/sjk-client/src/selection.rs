@@ -22,8 +22,6 @@ pub struct Selection {
     pseudo: Option<u8>,
     force_time: Option<i32>,
     item_time: Option<i32>,
-    /// `cg_illuminate`: the wheel has SJK's Illuminate ([`force_wheel::ILLUMINATE`]).
-    illuminate: bool,
 }
 
 /// Read-only selector projection for a renderer, with no strings or allocations.
@@ -56,8 +54,7 @@ impl Selection {
         self.sync(player, time);
         let known = self.known(player);
         // CG_NoUseableForce checks known bits only, not energy or force levels;
-        // JoF EJK counts the granted pseudo-slots as usable. Illuminate does not
-        // count: without Force, the keys still walk the inventory, as in stock.
+        // JoF EJK counts the granted pseudo-slots as usable.
         if inventory || use_held || known & (FORCE_MASK | force_wheel::PSEUDO_MASK) == 0 {
             let current = self.inventory.unwrap_or_else(|| item_tag(player));
             let mut next = current as i32;
@@ -159,15 +156,9 @@ impl Selection {
         self.pseudo
     }
 
-    /// Put SJK's Illuminate on the wheel or take it off (`cg_illuminate`).
-    pub fn set_illuminate(&mut self, illuminate: bool) {
-        self.illuminate = illuminate;
-    }
-
-    /// The player's `forcePowersKnown` as the wheel reads it: the server's bits,
-    /// with Illuminate's as [`Selection::set_illuminate`] last set it.
+    /// The player's `forcePowersKnown` as the wheel reads it: the server's bits.
     pub fn known(&self, player: &PlayerState) -> u32 {
-        force_wheel::client_known(player.raw_field(51).unwrap_or(0), self.illuminate)
+        player.raw_field(51).unwrap_or(0)
     }
 
     /// Reset expired Force overrides and consumed items to authoritative selection.
@@ -220,8 +211,7 @@ impl Selection {
             available: if inventory {
                 player.stats[2] & ITEM_MASK
             } else {
-                self.known(player)
-                    & (FORCE_MASK | force_wheel::PSEUDO_MASK | force_wheel::CLIENT_MASK)
+                self.known(player) & (FORCE_MASK | force_wheel::PSEUDO_MASK)
             },
             selected: if inventory {
                 self.inventory.unwrap_or_else(|| item_tag(player))
@@ -299,23 +289,32 @@ mod tests {
     }
 
     #[test]
-    fn illuminate_ends_the_wheel_while_the_setting_is_on() {
-        // Push alone, the server sending Illuminate's bit set: the client decides.
-        let push = player((1 << 3) | force_wheel::CLIENT_MASK, 3);
+    fn the_selector_never_offers_a_toy_or_a_bit_nothing_grants() {
+        // Slot 21 was Illuminate's: set by a server or not, it is no entry now, and
+        // a player with nothing else known gets no Force selector at all.
+        let only = player(1 << 21, 21);
         let mut selection = Selection::default();
-        selection.cycle(Some(&push), 0, false, 1, false);
+        selection.cycle(Some(&only), 0, false, 1, false);
+        assert_eq!((selection.wheel_pseudo(), selection.force), (None, None));
+        assert!(!selection.select(&only, 10, 21));
+        assert!(selection.view(&only, 20).is_none());
+        // With real powers known, the selector's bits stay the powers and JoF's.
+        let both = player((1 << 3) | (1 << 21), 3);
+        selection.cycle(Some(&both), 100, false, 1, false);
+        let view = selection.view(&both, 110).unwrap();
+        assert_eq!(view.available, 1 << 3);
+        assert_eq!(selection.known(&both) & force_wheel::PSEUDO_MASK, 0);
+    }
+
+    #[test]
+    fn a_gun_server_without_force_leaves_the_keys_on_the_inventory() {
+        // No Force at all: forcenext walks the items, as in stock.
+        let mut gunner = player(0, 0);
+        gunner.stats[2] = 1 << 3;
+        let mut selection = Selection::default();
+        selection.cycle(Some(&gunner), 0, false, 1, false);
         assert_eq!(selection.wheel_pseudo(), None);
-        selection.set_illuminate(true);
-        selection.cycle(Some(&push), 10, false, 1, false);
-        assert_eq!(selection.wheel_pseudo(), Some(force_wheel::ILLUMINATE));
-        assert_eq!(
-            selection.view(&push, 20).unwrap().selected,
-            force_wheel::ILLUMINATE
-        );
-        // Turned off: the selection goes with it.
-        selection.set_illuminate(false);
-        selection.sync(&push, 30);
-        assert_eq!(selection.wheel_pseudo(), None);
+        assert_eq!(selection.inventory, Some(3));
     }
 
     #[test]
@@ -336,28 +335,14 @@ mod tests {
         assert_eq!(selection.selected_force(&player), REPULSE);
         assert!(selection.select(&player, 130, 3));
         assert_eq!(selection.selected_force(&player), 3);
-        // Off the wheel: unknown, Jump, Illuminate while it is off.
+        // Off the wheel: unknown, Jump, and slot 21, which nothing grants.
         assert!(!selection.select(&player, 140, 4));
         assert!(!selection.select(&player, 140, 1));
-        assert!(!selection.select(&player, 140, force_wheel::ILLUMINATE));
+        assert!(!selection.select(&player, 140, 21));
         assert_eq!(selection.selected_force(&player), 3);
-        selection.set_illuminate(true);
-        assert!(selection.select(&player, 150, force_wheel::ILLUMINATE));
         // A spectator selects nothing.
         let mut spectator = player.clone();
         spectator.set_raw_field(63, 4);
         assert!(!Selection::default().select(&spectator, 0, 3));
-    }
-
-    #[test]
-    fn illuminate_alone_leaves_the_keys_on_the_inventory() {
-        // No Force at all (a gun server): forcenext walks the items, as in stock.
-        let mut gunner = player(0, 0);
-        gunner.stats[2] = 1 << 3;
-        let mut selection = Selection::default();
-        selection.set_illuminate(true);
-        selection.cycle(Some(&gunner), 0, false, 1, false);
-        assert_eq!(selection.wheel_pseudo(), None);
-        assert_eq!(selection.inventory, Some(3));
     }
 }

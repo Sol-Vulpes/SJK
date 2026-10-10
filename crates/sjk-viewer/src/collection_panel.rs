@@ -16,7 +16,7 @@
 //!
 //! Keys: the arrows choose (on Achievements Up and Down move between the categories),
 //! Tab and Shift+Tab walk the things, Enter or Space equips or unequips the shader
-//! chosen or switches Illuminate on the Force wheel, Ctrl+Tab changes tab (the
+//! chosen or lights and puts out the Illuminate holocron, Ctrl+Tab changes tab (the
 //! switch's, [`crate::profile_hub`]), Escape goes back. The pointer chooses by
 //! hovering; a click on a button acts, on a tab shows it.
 
@@ -68,7 +68,8 @@ pub(crate) enum PanelAction {
     Close,
     /// Set `cg_saberSkin` to this id (`""` for the stock blade).
     Wear(&'static str),
-    /// Put Illuminate on the Force wheel (`cg_illuminate`), or take it off.
+    /// Light the Illuminate holocron (`true`) or put it out: the same as `toy_illuminate`,
+    /// set rather than toggled.
     Illuminate(bool),
     /// Show a tab another page draws: the Holocrons page.
     Hub(Tab),
@@ -118,7 +119,8 @@ pub(crate) struct Inputs<'a> {
     pub(crate) setting: &'a str,
     /// Every achievement with the player's progress.
     pub(crate) standings: &'a [Standing],
-    /// `cg_illuminate`: Illuminate is on the Force wheel.
+    /// The Illuminate holocron is lit now (the client's own state, kept in the console
+    /// by the viewer each frame).
     pub(crate) illuminate: bool,
     /// The `name` cvar, for the nameplate.
     pub(crate) name: &'a str,
@@ -356,7 +358,7 @@ impl Panel {
         *chosen = next as usize;
     }
 
-    /// A key; `illuminate` is `cg_illuminate`.
+    /// A key; `illuminate` is whether the holocron is lit.
     pub(crate) fn handle_key(
         &mut self,
         event: &KeyEvent,
@@ -394,7 +396,7 @@ impl Panel {
         PanelAction::None
     }
 
-    /// A pointer event; `illuminate` is `cg_illuminate`.
+    /// A pointer event; `illuminate` is whether the holocron is lit.
     pub(crate) fn handle_pointer(&mut self, event: InputEvent, illuminate: bool) -> PanelAction {
         if let InputEvent::PointerWheel { delta, .. } = event
             && self.tab == Tab::Shaders
@@ -582,7 +584,7 @@ mod tests {
     }
 
     #[test]
-    fn the_toy_switches_illuminate_and_only_the_kit_tabs_want_the_stage() {
+    fn the_toy_lights_and_puts_out_illuminate_and_only_the_kit_tabs_want_the_stage() {
         let mut panel = drawn(Tab::Toys, &inputs(Holdings::Known(&[]), ""));
         assert_eq!(
             panel.key(KeyCode::Enter, false, true),
@@ -624,6 +626,59 @@ mod tests {
         assert_eq!(panel.shader, 0, "Tab comes round");
         let _ = panel.key(KeyCode::Tab, true, true);
         assert_eq!(panel.shader, SHADER_ROWS - 1);
+    }
+
+    /// The Toys tab's switch and plinth light the holocron when it is out and put it out
+    /// when it is lit, whichever state the page was told, and its words name the new
+    /// command, not the Force wheel.
+    #[test]
+    fn the_toys_switch_lights_or_puts_out_by_the_state_it_is_told() {
+        let click = |panel: &mut Panel, token: u16, lit: bool| {
+            let rect = panel.ui.rect_for(token).expect("a pointer area");
+            let at = sjk_ui::Vec2::new(rect.x + rect.width * 0.5, rect.y + rect.height * 0.5);
+            let mut action = PanelAction::None;
+            for event in [
+                InputEvent::PointerMove(at),
+                InputEvent::PointerPress {
+                    position: at,
+                    button: sjk_ui::PointerButton::Primary,
+                },
+                InputEvent::PointerRelease {
+                    position: at,
+                    button: sjk_ui::PointerButton::Primary,
+                },
+            ] {
+                let next = panel.handle_pointer(event, lit);
+                if next != PanelAction::None {
+                    action = next;
+                }
+            }
+            action
+        };
+        for (token, lit, wanted) in [
+            (TOY_SWITCH_TOKEN, false, true),
+            (TOY_SWITCH_TOKEN, true, false),
+            (TOY_TOKEN, false, true),
+        ] {
+            let mut shown = inputs(Holdings::Known(&[]), "");
+            shown.illuminate = lit;
+            let mut panel = drawn(Tab::Toys, &shown);
+            assert_eq!(
+                click(&mut panel, token, lit),
+                PanelAction::Illuminate(wanted),
+                "token {token}, lit {lit}"
+            );
+            let all = panel.ui.text_runs().collect::<Vec<_>>().join(
+                "
+",
+            );
+            assert!(all.contains("toy_illuminate"), "{all}");
+            assert!(all.contains("Holocron lit"), "{all}");
+            assert!(
+                !all.contains("Force wheel") && !all.contains("force_illuminate"),
+                "{all}"
+            );
+        }
     }
 
     #[test]

@@ -7,6 +7,34 @@ SJK currently contains a native client and standard dedicated server in a
 20-crate Rust workspace. This page records scope and verification, rather than
 claiming complete parity from the presence of an implementation.
 
+## Illuminate is a toy: `toy_illuminate`
+
+Branch `personal/toy-illuminate` (10/10/2026, based on `75c455c2`, Windows 11), Sol's
+request: "change the Illuminate toy to not be a force power, but just a toy, and change
+also the name of the command; all toys would probably start with toy_". Illuminate left
+the Force wheel for good: the pseudo-slot 21, the known bit the client set for it, its
+`+useforce` remap, `Selection::set_illuminate`, the bar's and radial list's entry and
+name, and `forceselect 21` are removed with their tests (`force_wheel::MAX_SLOTS` is 21
+again; the flamethrower's icon and name moved back down one). The command is
+`toy_illuminate` ([client.md](client.md#illuminate)); every toy is a `toy_<name>` command
+([sjk.md](sjk.md#names)). `force_illuminate` is a hidden alias: the input dispatcher
+recognises it but it is registered nowhere, so completion and `cmdlist` never list it,
+and a saved bind is renamed on load. `cg_illuminate` (the Force wheel switch) is
+removed instead of becoming the lit state: the holocron stays out at every start as
+before, so a saved 0 or 1 has no meaning; a load drops the saved cvar, which leaves
+nothing lit or unusable and needs no version marker (it changes nothing once run).
+The Collection's Toys tab has a "Holocron lit" switch (the console asks, the viewer
+applies, the console mirrors the state each frame); the key-binding row is
+Interaction > Toy: Illuminate; the icon is `gfx/sjk/toy_illuminate.png`. Verified by
+unit tests (the Force bar and selector never offer Illuminate with any bits, the
+command and its alias, the hidden registration, the profile migration, the Toys tab's
+click and keys, the quick wheel choice), the workspace checks, and the world shots
+`duel6_sjk_collection` (with a new Toys-lit shot: the switch, "put out" in the keys
+line, the icon from the quick wheel's atlas cells) and `duel6_quick_wheel*` (the Force
+page with 9 powers and Force 2 with JoF's icons, Toys, the Settings editor), re-rendered
+and looked at; not tried in a game: the holocron on a key, in the wheel and on the
+tab, and others seeing it through the hub.
+
 ## Quick wheel: Force first, a Toys page; a Melee bind
 
 Branch `personal/quick-wheel-toys` (10/10/2026, based on `aa95e8cb`, Windows 11), Sol's
@@ -14,9 +42,9 @@ requests. The quick wheel's default order is now Force, General, Toys, Weather, 
 run's bare `+wheel` opens on the Force page ("make the force wheel the first wheel to
 appear by default"). A Toys page (`+wheel toys`; "a toy wheel too for the force
 illuminate and future toy") is an ordinary page of a new catalogue group, Toys, one entry
-per toy: Illuminate (`force_illuminate`, the gold dot following the holocron's lit state,
-which no cvar holds) moved there from the Force page, which now lists Force powers only;
-the Force bar's own Illuminate entry and the command are unchanged. `wheel.json` is
+per toy: Illuminate (`toy_illuminate`, then `force_illuminate`; the gold dot following the
+holocron's lit state, which no cvar holds) moved there from the Force page, which now lists
+Force powers only (the Force bar's own Illuminate entry went in the next section). `wheel.json` is
 version 3: a file whose pages are exactly the version 2 defaults is removed (the new
 defaults apply), any other keeps its pages and gains the Toys page once after its Force
 page (else last), a removed Toys page stays removed and a full wheel is left alone
@@ -70,8 +98,8 @@ Profile) for a screen of their own, the Collection, under Profile on the main pa
 arc (six entries, 12.5 degrees apart) and in the in-game menu (seven entries), with
 tabs Medals (hanging from a rail), Achievements (a wall of medallions by category, the
 one chosen up close with "Next up"), Shaders (the blade skins, renamed for players: the
-stock blade and every skin in a rack, Body "soon"), Toys (Illuminate, with its Force
-wheel switch) and Nameplates (none yet: the three places ornaments will go, and the
+stock blade and every skin in a rack, Body "soon"), Toys (Illuminate, with its switch
+to light it) and Nameplates (none yet: the three places ornaments will go, and the
 player's nameplate over their model). Behind Shaders, Toys and Nameplates the player's
 model stands on the menu map's stage (the camera goes to the player's shot), or shows
 in the page's live preview over a match and in the classic menus; it holds the chosen
@@ -161,9 +189,9 @@ General, Toys, Weather: see the first section); a
 `wheel.json` of version 1 gets the Force page once, after General, and is written
 back (unit-tested, with the removed page staying removed and a full wheel
 left alone). The page is live: the powers the Force bar's known bits allow, in a
-fixed order (neutral, light or dark in F-key order, JoF's, Illuminate), the
+fixed order (neutral, light or dark in F-key order, JoF's), the
 selected one marked; instant powers run `forceselect <n>; force_*` (the retail
-`genCmds_t` binds, JoF's server commands, `force_illuminate`), held ones (Grip,
+`genCmds_t` binds, JoF's server commands), held ones (Grip,
 Lightning, Drain, Stasis) only `forceselect <n>`, a new local command
 (`Selection::select`, unit-tested). Up to 12 on the ring, drawn smaller; more go
 on "Force 2". Settings > Quick wheel shows a note instead of choices, an example
@@ -2100,7 +2128,7 @@ was started and no hub was contacted, so the live roster, the refresh, the pop-u
 timing, keys and pointer in a running client are unchecked. The hub side is in its own
 repository.
 
-## Illuminate
+## Illuminate (as a Force wheel entry; since 10/10/2026 a toy, see the first section)
 
 Branch `personal/force-illuminate` (08/10/2026, based on `b9db8c0`,
 Windows 11): Sol asked for a free power every player has, a light to see better

@@ -50,7 +50,7 @@ impl GpuState {
         }
         let own_slot =
             session.and_then(|session| u8::try_from(session.game_state().client_num).ok());
-        let lit = self.illuminate.lit() && self.illuminate_enabled();
+        let lit = self.illuminate.lit();
         let saber_skin = if due {
             let setting = self
                 .console

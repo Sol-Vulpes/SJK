@@ -2226,8 +2226,7 @@ like this one.",
     /// for the shot: a light-side build (Protect selected, the mouse on Push), a
     /// dark-side one, every power (twelve on the ring, the rest on Force 2), no
     /// power at all, and the light build at 4K with Sol's menu text size
-    /// (`ui_textScale 1.2`). Illuminate's bit is set in the builds, as the client
-    /// sets it for the Force bar: the page leaves it out.
+    /// (`ui_textScale 1.2`). Illuminate is a toy: no build shows it.
     #[test]
     #[ignore = "renders with the GPU and the installed game data named by JKA_GAME_DATA"]
     fn duel6_quick_wheel_force() {
@@ -2237,8 +2236,6 @@ like this one.",
         const DARK: u32 = NEUTRAL | (1 << 6) | (1 << 7) | (1 << 8) | (1 << 12) | (1 << 13);
         // Jump and the saber powers known too, as every build has them.
         const PASSIVE: u32 = (1 << 1) | (7 << 15);
-        // Illuminate's bit, which the client sets for the Force bar.
-        const ILLUMINATE: u32 = 1 << sjk_client::force_wheel::ILLUMINATE;
         on_big_stack(|| {
             for (size, scale, prefix) in [
                 ([1920, 1080], "1", "duel6-wheel-force"),
@@ -2264,13 +2261,13 @@ like this one.",
                 let bound = [String::from("force"), "81".to_owned(), "1000".to_owned()];
                 let builds: &[(&str, u32, u8, [f32; 2])] = if prefix == "duel6-wheel-force" {
                     &[
-                        ("light", LIGHT | PASSIVE | ILLUMINATE, 9, [0.0, -90.0]),
-                        ("dark", DARK | PASSIVE | ILLUMINATE, 7, [70.0, 50.0]),
+                        ("light", LIGHT | PASSIVE, 9, [0.0, -90.0]),
+                        ("dark", DARK | PASSIVE, 7, [70.0, 50.0]),
                         ("every", u32::MAX, 3, [-60.0, -60.0]),
                         ("none", PASSIVE, 0, [0.0, -90.0]),
                     ]
                 } else {
-                    &[("light", LIGHT | PASSIVE | ILLUMINATE, 9, [0.0, -90.0])]
+                    &[("light", LIGHT | PASSIVE, 9, [0.0, -90.0])]
                 };
                 for &(build, known, selected, pointer) in builds {
                     gpu.quick_wheel.force_for_shot = Some((known, selected));

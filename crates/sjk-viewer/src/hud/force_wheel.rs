@@ -28,12 +28,10 @@ const JUMP: usize = 1;
 /// `FP_LIGHTNING`.
 const LIGHTNING: u8 = 7;
 /// JoF EJK's own pictures (`CG_RegisterGraphics`), from `jofclient-assets.pk3`,
-/// and SJK's Illuminate holocron, which the client bundles ([`crate::illuminate`]).
-const JOF_ICONS: [(usize, &str); 4] = [
+const JOF_ICONS: [(usize, &str); 3] = [
     (force_wheel::REPULSE as usize, "gfx/jof/force_repulse"),
     (force_wheel::DASH as usize, "gfx/jof/force_dash"),
     (FLAMETHROWER, "gfx/jof/force_flamethrower"),
-    (force_wheel::ILLUMINATE as usize, crate::illuminate::ICON),
 ];
 /// `colorTable[CT_ICON_BLUE]` (`q_color.c`).
 const ICON_BLUE: Color = Color::new(0.567, 0.685, 1.0, 0.75);
@@ -282,6 +280,26 @@ mod tests {
     #[test]
     fn a_selection_off_the_wheel_draws_nothing() {
         assert!(placements(&view(1 << 3, 4), [640.0, 480.0], 1.0, |_| true).is_none());
+    }
+
+    #[test]
+    fn the_bar_never_offers_illuminate_in_any_state() {
+        // Every bit the server could send, slot 21 (once Illuminate's) included: the
+        // wheel holds the 14 selectable powers and JoF's three, no more, and nothing
+        // is named Illuminate.
+        let (slots, count) = force_wheel::build(u32::MAX);
+        assert_eq!(count, 14 + 3);
+        for slot in &slots[..count] {
+            assert_ne!(name(*slot, false), "Illuminate");
+            assert_ne!(name(*slot, true), "Illuminate");
+        }
+        assert_eq!(name(21, false), "Flamethrower");
+        assert!(placements(&view(1 << 21, 21), [640.0, 480.0], 1.0, |_| true).is_none());
+        assert!(
+            (0..32u8)
+                .map(|slot| name(slot, false))
+                .all(|name| name != "Illuminate")
+        );
     }
 
     #[test]

@@ -103,6 +103,15 @@ fn duel6_sjk_collection() {
             if size[0] != 1920 {
                 continue;
             }
+            // Toys with the holocron lit (`toy_illuminate`): the switch is on.
+            gpu.profile_hub_show_for_shot(Tab::Toys);
+            gpu.illuminate.set_on(true);
+            gpu.ui_epoch -= std::time::Duration::from_millis(3_000);
+            println!(
+                "{}",
+                shoot(&mut gpu, 60, "duel6-collection-toys-lit").display()
+            );
+            gpu.illuminate.set_on(false);
             // A locked one, previewed on the saber.
             gpu.profile_hub_show_for_shot(Tab::Shaders);
             let storm = 1 + crate::unlockables::ALL

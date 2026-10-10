@@ -9,6 +9,10 @@
 #                               made it when that is not the piece's owner.
 
 = Sol
++ 10/10/2026 | - | Illuminate is a toy: toy_illuminate, no longer a Force power
+- f440faf |  | Make Illuminate a toy: toy_illuminate, off the Force wheel, a lit switch on the Toys tab
+- 508a8cf |  | Document Illuminate as a toy: toy_illuminate, the toy_ naming rule, changelog, test list
+- 482fdec |  | Status: name the world shots that checked the Illuminate toy
 + 10/10/2026 | - | Design page for the cards a holocron will hold
 - a81ab23 |  | Design the card collection a holocron will hold (planned, not built)
 + 10/10/2026 | - | Firstsetup import takes quoted Windows paths

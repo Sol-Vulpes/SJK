@@ -1,10 +1,10 @@
-//! Illuminate, SJK's own Force-wheel entry ([`sjk_client::force_wheel::ILLUMINATE`]):
+//! Illuminate, SJK's own toy (`toy_illuminate`; not a Force power):
 //! a holocron that floats by the local player's left shoulder, turning slowly, and
 //! lights the way with a warm point light. No game server knows of it: its lit state
 //! travels through the SJK hub as part of the player's look (`looks.rs`), so other SJK
-//! players on the server see it by that player ([`Others`]). `+useforce` on its wheel
-//! entry, or the `force_illuminate` command, turns it on and off; `cg_illuminate 0`
-//! takes it off the wheel and puts it out. In first person only its light shows (the
+//! players on the server see it by that player ([`Others`]). The `toy_illuminate`
+//! command turns it on and off, always available; the lit state is the client's run
+//! only, not saved. In first person only its light shows (the
 //! cube is drawn for mirrors, like the body); another player's cube always shows while
 //! that player is drawn, except a followed (spectated) player's in first person, which
 //! is drawn as one's own.
@@ -21,11 +21,15 @@ use sjk_protocol::{EntityState, PlayerState};
 use sjk_vfs::{VfsError, VirtualFileSystem};
 use std::time::Instant;
 
-/// Archived; 1 (default) puts Illuminate on the Force wheel.
-pub(crate) const CVAR: &str = "cg_illuminate";
+/// The toy's console command (a toy is a `toy_<name>` command).
+pub(crate) const COMMAND: &str = "toy_illuminate";
+/// The command's old name, while it was a Force-wheel entry: still runs
+/// [`COMMAND`] for a bind or a wheel choice saved under it, but is not listed.
+pub(crate) const OLD_COMMAND: &str = "force_illuminate";
+/// The setting that put it on the Force wheel, retired: a saved one is dropped, so
+/// that neither 0 (off the wheel) nor 1 (on it) means anything now.
+pub(crate) const OLD_CVAR: &str = "cg_illuminate";
 pub(crate) const MODEL: &str = "models/sjk/holocron.md3";
-/// The wheel's picture (`gfx/sjk/force_illuminate.png`).
-pub(crate) const ICON: &str = "gfx/sjk/force_illuminate";
 
 /// A bundled file's bytes, by its name in `assets/holocron`.
 macro_rules! bundled {
@@ -51,10 +55,7 @@ const FILES: [(&str, &[u8]); 30] = [
         "models/sjk/holocron_glow.jpg",
         bundled!("holocron_glow.jpg"),
     ),
-    (
-        "gfx/sjk/force_illuminate.png",
-        bundled!("force_illuminate.png"),
-    ),
+    ("gfx/sjk/toy_illuminate.png", bundled!("toy_illuminate.png")),
     ("shaders/sjk_holocron.shader", bundled!("holocron.shader")),
     (
         "models/sjk/holocron_uncommon.md3",
@@ -422,20 +423,9 @@ impl Others {
 }
 
 impl GpuState {
-    /// `cg_illuminate`: Illuminate is on the Force wheel.
-    pub(crate) fn illuminate_enabled(&self) -> bool {
-        self.console
-            .as_ref()
-            .and_then(|console| console.integer_cvar(CVAR))
-            .unwrap_or(1)
-            != 0
-    }
-
-    /// `force_illuminate`, or `+useforce` on the wheel's Illuminate.
+    /// `toy_illuminate`: light the holocron, or put it out.
     pub(crate) fn toggle_illuminate(&mut self) {
-        if self.illuminate_enabled() {
-            self.illuminate.toggle();
-        }
+        self.illuminate.toggle();
     }
 
     /// Add this frame's holocrons and their lights: the local player's, then the
@@ -468,12 +458,6 @@ impl GpuState {
 
     /// The local player's holocron.
     fn submit_own_holocron(&mut self, mesh: Option<usize>, presentation_time: i64, now: Instant) {
-        let enabled = self.illuminate_enabled();
-        if !enabled {
-            self.illuminate.on = false;
-            self.illuminate.level = 0.0;
-            return;
-        }
         let anchor = self
             .live_session
             .as_ref()
@@ -856,6 +840,25 @@ mod tests {
             t += 1.0 / 60.0;
         }
         pose
+    }
+
+    #[test]
+    fn toggling_lights_it_and_puts_it_out_and_set_on_names_the_state() {
+        let mut holocron = Holocron::default();
+        assert!(!holocron.lit());
+        holocron.toggle();
+        assert!(holocron.lit());
+        holocron.toggle();
+        assert!(!holocron.lit());
+        // The Collection's switch names the state it wants; asking twice changes nothing.
+        holocron.set_on(true);
+        holocron.set_on(true);
+        assert!(holocron.lit());
+        holocron.set_on(false);
+        assert!(!holocron.lit());
+        // The toy's command is its own name, never a Force power's.
+        assert_eq!(COMMAND, "toy_illuminate");
+        assert!(COMMAND.starts_with("toy_"));
     }
 
     #[test]

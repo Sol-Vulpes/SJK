@@ -619,7 +619,7 @@ mod tests {
         assert!(!toys.force);
         assert_eq!(toys.choices.len(), 1);
         assert_eq!(toys.choices[0].label(), "Illuminate");
-        assert_eq!(toys.choices[0].command(), "force_illuminate");
+        assert_eq!(toys.choices[0].command(), "toy_illuminate");
         assert_eq!(toys.choices[0].state(), State::Illuminate);
         assert!(toys.choices[0].icon().is_some());
         // Nothing is written until something changes.
