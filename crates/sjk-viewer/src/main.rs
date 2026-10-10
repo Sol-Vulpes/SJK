@@ -1809,7 +1809,15 @@ impl GpuState {
                 staff: profile_card::with(|summary| summary.staff),
                 _frame: std::marker::PhantomData,
             };
-            if self.in_game_menu.is_sjk() {
+            if view.page == GameMenuPage::Shot && !self.in_game_menu.is_sjk() {
+                // Camera control has only the SJK UI's look, in every menu style.
+                let target = ingame_menu::sjk_view::text_target(
+                    &mut self.game_fonts,
+                    &mut self.text_vertices,
+                    &self.ui_font,
+                );
+                self.in_game_menu.append_sjk(view, target, viewport);
+            } else if self.in_game_menu.is_sjk() {
                 // Camera control has no match card.
                 if view.page != GameMenuPage::Shot {
                     self.refresh_game_menu_card();

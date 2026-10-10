@@ -8,7 +8,7 @@
 use super::*;
 use crate::menu::sjk::{Frame, TextTarget, color, key_hint, key_hint_width, kit, text, wrap};
 use crate::menu_widgets::TextFamily;
-use sjk_ui::TextAlign;
+use sjk_ui::{FontWeight, TextAlign};
 
 /// The card's left edge, top and width; it is as tall as what it says.
 const CARD_X: f32 = 540.0;

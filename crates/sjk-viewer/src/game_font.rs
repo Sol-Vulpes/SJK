@@ -505,7 +505,9 @@ pub(crate) fn prepare(gpu: &mut GpuState) {
     }
     let load = enabled && !fonts.attempted;
     let load_console = console && !fonts.console_attempted;
-    let load_sjk = !fonts.sjk_attempted && sjk_families(gpu.console.as_ref());
+    // The SJK UI's families: every menu style draws SJK's own pages (Profile,
+    // Update, Import, Camera control, ...) in them.
+    let load_sjk = !fonts.sjk_attempted;
     if load || load_console || load_sjk {
         let device = Device {
             device: &gpu.device,
@@ -522,25 +524,6 @@ pub(crate) fn prepare(gpu: &mut GpuState) {
             fonts.load_sjk(&device, gpu.logo_glyph.as_ref());
         }
     }
-}
-
-/// Whether `console` has the SJK UI on (`ui_menuStyle sjk`), which draws in
-/// its own families.
-pub(crate) fn sjk_ui(console: Option<&crate::console::ViewerConsole>) -> bool {
-    console.is_some_and(|console| {
-        crate::menu::style::MenuStyle::from_cvar(console.text_value(crate::menu::style::CVAR))
-            == crate::menu::style::MenuStyle::Sjk
-    })
-}
-
-/// Whether something `console` has on draws in the SJK UI's families: the SJK
-/// UI's menus, its scoreboard or its console chosen on their own
-/// (`cg_scoreboardStyle sjk`, `con_style sjk`).
-fn sjk_families(console: Option<&crate::console::ViewerConsole>) -> bool {
-    sjk_ui(console)
-        || crate::scoreboard::style::ScoreboardStyle::from_console(console)
-            == crate::scoreboard::style::ScoreboardStyle::Sjk
-        || console.is_some_and(|console| console.console_style().is_sjk())
 }
 
 /// Whether `console` draws the classic console, whose background is the

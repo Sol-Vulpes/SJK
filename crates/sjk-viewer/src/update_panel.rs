@@ -2,14 +2,13 @@
 //! again, install it or read its notes (state and work in `update.rs`).
 //!
 //! Opened by the main menu's Update entry or the `update` console command.
-//! The SJK UI draws it in its own look (`update_panel_sjk.rs`); the classic
-//! menus, which have no version of it, in SJK's hero look. Like the changelog page it lives in the console and is drawn
-//! in place of it, so it opens over the menus and in a match.
+//! It is drawn in the SJK UI's look in every menu style (`update_panel_sjk.rs`).
+//! Like the changelog page it lives in the console and is drawn in place of it,
+//! so it opens over the menus and in a match.
 
-use crate::menu_widgets::{BACK_TOKEN, FormLayout, MenuCanvas, Scrim};
-use crate::text::{TextVertex, UiFont};
+use crate::menu_widgets::{BACK_TOKEN, MenuCanvas};
 use crate::update::{self, State};
-use sjk_ui::{Color, FontWeight, InputEvent, Rect, UiEventKind};
+use sjk_ui::{InputEvent, UiEventKind};
 use winit::event::{ElementState, KeyEvent};
 use winit::keyboard::{KeyCode, PhysicalKey};
 
@@ -41,8 +40,6 @@ pub(crate) struct Panel {
     open: bool,
     /// The page opened the console, so closing the page closes it too.
     owns_console: bool,
-    /// The SJK UI's look (`update_panel_sjk.rs`).
-    sjk: bool,
     ui: MenuCanvas,
 }
 
@@ -158,23 +155,12 @@ impl Panel {
         Self {
             open: false,
             owns_console: false,
-            sjk: false,
             ui: MenuCanvas::with_text_capacity(64),
         }
     }
 
     pub(crate) fn is_open(&self) -> bool {
         self.open
-    }
-
-    /// Draw the SJK UI's look (`sjk`), in its families, or the hero one.
-    pub(crate) fn set_sjk(&mut self, sjk: bool) {
-        self.sjk = sjk;
-    }
-
-    /// Whether the SJK UI's look is drawn.
-    pub(crate) fn is_sjk(&self) -> bool {
-        self.sjk
     }
 
     /// Show the page; `owns_console` when the console was closed before it.
@@ -257,78 +243,6 @@ impl Panel {
             }
             _ => PanelAction::None,
         }
-    }
-
-    /// Draw the page over the whole frame; text other overlays appended earlier
-    /// this frame is dropped rather than shown through.
-    pub(crate) fn append(
-        &mut self,
-        vertices: &mut Vec<TextVertex>,
-        font: &UiFont,
-        viewport: [f32; 2],
-    ) {
-        vertices.clear();
-        let installed = crate::build_info::VERSION;
-        let view = view(&update::state(), installed);
-        let layout = FormLayout::new(viewport);
-        let s = layout.scale;
-        self.ui.begin_hero(viewport, 1.0, Scrim::Wide);
-        self.ui.form_header(
-            &layout,
-            "SJK   /   UPDATES",
-            "UPDATE",
-            crate::build_info::label(),
-        );
-        let theme = self.ui.theme();
-        let x = layout.margin;
-        let card = Rect::new(
-            x,
-            viewport[1] * 0.17 + 140.0 * s,
-            (viewport[0] - x * 2.0).min(820.0 * s),
-            210.0 * s,
-        );
-        self.ui.panel(card);
-        let pad = 28.0 * s;
-        let width = card.width - pad * 2.0;
-        self.ui.text(
-            &view.headline,
-            Rect::new(card.x + pad, card.y + pad, width, 36.0 * s),
-            28.0 * s,
-            theme.foreground,
-            FontWeight::Semibold,
-            0.0,
-        );
-        self.ui.text(
-            &view.detail,
-            Rect::new(card.x + pad, card.y + pad + 52.0 * s, width, 44.0 * s),
-            16.0 * s,
-            theme.muted,
-            FontWeight::Regular,
-            0.2 * s,
-        );
-        if let Some(progress) = view.progress {
-            let track = Rect::new(card.x + pad, card.bottom() - pad - 8.0 * s, width, 8.0 * s);
-            self.ui.accent_bar(track, Color::new(1.0, 1.0, 1.0, 0.12));
-            self.ui.accent_bar(
-                Rect::new(track.x, track.y, track.width * progress, track.height),
-                theme.accent,
-            );
-        }
-        let mut hints: Vec<(&str, &str, u16)> = Vec::new();
-        if let Some(primary) = view.primary {
-            hints.push(("ENTER", primary, PRIMARY_TOKEN));
-        }
-        if view.check {
-            hints.push(("C", "Check again", CHECK_TOKEN));
-        }
-        if view.notes {
-            hints.push(("N", "Release notes", NOTES_TOKEN));
-        }
-        hints.push(("ESC", "Close", BACK_TOKEN));
-        self.ui.form_footer_actions(&layout, &hints);
-        self.ui.end_hero();
-        self.ui.finish(PRIMARY_TOKEN);
-        self.ui.append_text(vertices, font, viewport);
     }
 }
 

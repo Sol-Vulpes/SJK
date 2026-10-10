@@ -3,13 +3,12 @@
 //! window, by `firstsetup import` or by First setup's "Import a config file"
 //! row; Browse (B) picks the file with the system's file dialog. Like the Update
 //! page it lives in the console and is drawn in place of it, so it opens over the
-//! menus and in a match. The SJK UI draws it as its own pop-up card
-//! (`config_import_panel_sjk.rs`); the classic menus in SJK's hero look.
+//! menus and in a match. It is drawn as the SJK UI's pop-up card in every menu
+//! style (`config_import_panel_sjk.rs`).
 
 use crate::config_import::{Found, Item};
-use crate::menu_widgets::{BACK_TOKEN, FormLayout, MenuCanvas, Scrim};
-use crate::text::{TextVertex, UiFont};
-use sjk_ui::{FontWeight, InputEvent, Rect, UiEventKind};
+use crate::menu_widgets::{BACK_TOKEN, MenuCanvas};
+use sjk_ui::{FontWeight, InputEvent, UiEventKind};
 use std::path::PathBuf;
 use std::sync::mpsc::Receiver;
 
@@ -73,8 +72,6 @@ pub(crate) struct Panel {
     browsing: Option<Receiver<Option<PathBuf>>>,
     /// What opens the file dialog ([`pick_config`]; tests put their own).
     picker: fn() -> Option<PathBuf>,
-    /// The SJK UI's look (`config_import_panel_sjk.rs`).
-    sjk: bool,
 }
 
 impl Panel {
@@ -89,17 +86,7 @@ impl Panel {
             ui: MenuCanvas::with_text_capacity(64),
             browsing: None,
             picker: pick_config,
-            sjk: false,
         }
-    }
-
-    /// Draw the SJK UI's look (`sjk`), in its families, or the hero one.
-    pub(crate) fn set_sjk(&mut self, sjk: bool) {
-        self.sjk = sjk;
-    }
-
-    pub(crate) fn is_sjk(&self) -> bool {
-        self.sjk
     }
 
     /// Browse: open the system's file dialog on a worker thread; the file chosen is
@@ -305,154 +292,6 @@ impl Panel {
                     "added to yours"
                 }
             ),
-        }
-    }
-
-    /// Draw the page over the whole frame; text other overlays appended earlier
-    /// this frame is dropped rather than shown through.
-    pub(crate) fn append(
-        &mut self,
-        vertices: &mut Vec<TextVertex>,
-        font: &UiFont,
-        viewport: [f32; 2],
-    ) {
-        vertices.clear();
-        let layout = FormLayout::new(viewport);
-        let s = layout.scale;
-        self.ui.begin_hero(viewport, 1.0, Scrim::Wide);
-        let subtitle = match &self.state {
-            State::Loaded(_) => format!("From {}. Tick what to copy into SJK.", self.file),
-            _ if self.file.is_empty() => {
-                "Bring your name, model, field of view and keys from another client.".to_owned()
-            }
-            _ => format!("From {}.", self.file),
-        };
-        self.ui
-            .form_header(&layout, "SJK   /   FIRST SETUP", "IMPORT", &subtitle);
-        let theme = self.ui.theme();
-        let mut hints: Vec<(&str, &str, u16)> = Vec::new();
-        match &self.state {
-            State::Loaded(found) => {
-                for (row, (item, ticked)) in self.rows.iter().enumerate() {
-                    let rect = layout.row_rect(row);
-                    let selected = row == self.selected;
-                    self.ui.form_row_frame(rect, row as u16, selected, s);
-                    self.ui.form_label(rect, item.label(), selected, s);
-                    let zone = layout.value_zone(rect);
-                    let pill = Rect::new(
-                        zone.right() - 44.0 * s,
-                        rect.y + 14.0 * s,
-                        44.0 * s,
-                        22.0 * s,
-                    );
-                    self.ui.toggle_pill(pill, *ticked, theme.accent);
-                    let value = Self::value(found, *item);
-                    let color = self.ui.form_value_color(selected);
-                    self.ui.form_value(
-                        &value,
-                        Rect::new(zone.x, rect.y, zone.width - 60.0 * s, rect.height),
-                        color,
-                        s,
-                    );
-                }
-                if found.unknown_keys > 0 {
-                    let rect = layout.row_rect(self.rows.len());
-                    let note = unknown_note(found.unknown_keys);
-                    self.ui.text(
-                        &note,
-                        Rect::new(rect.x, rect.y + 16.0 * s, rect.width, 20.0 * s),
-                        14.0 * s,
-                        theme.muted,
-                        FontWeight::Regular,
-                        0.2 * s,
-                    );
-                }
-                if self.chosen().is_some() {
-                    hints.push(("ENTER", "Import", IMPORT_TOKEN));
-                }
-                hints.push(("SPACE", "Tick", TICK_TOKEN));
-                hints.push(("B", "Other file", BROWSE_TOKEN));
-                hints.push(("ESC", "Cancel", BACK_TOKEN));
-            }
-            State::Waiting => {
-                let headline = if self.browsing.is_some() {
-                    "Choose your config in the file window"
-                } else {
-                    "Browse for a .cfg file, or drop one here"
-                };
-                self.card(
-                    &layout,
-                    headline,
-                    &[
-                        "Press B to pick your config, for example GameData/base/jampconfig.cfg",
-                        "or the one in your mod's folder, or drag it from its folder onto SJK.",
-                        "Or type: firstsetup import \"C:\\path\\to\\jampconfig.cfg\"",
-                    ],
-                );
-                hints.push(("B", "Browse", BROWSE_TOKEN));
-                hints.push(("ESC", "Close", BACK_TOKEN));
-            }
-            State::Failed(reason) => {
-                let reason = reason.clone();
-                self.card(
-                    &layout,
-                    "Nothing imported",
-                    &[&reason, "Browse for another .cfg file, or drop one here."],
-                );
-                hints.push(("B", "Browse", BROWSE_TOKEN));
-                hints.push(("ESC", "Close", BACK_TOKEN));
-            }
-            State::Done(lines) => {
-                let lines = lines.clone();
-                let lines: Vec<&str> = lines.iter().map(String::as_str).collect();
-                self.card(&layout, "Imported", &lines);
-                hints.push(("ENTER", "Done", IMPORT_TOKEN));
-            }
-        }
-        self.ui.form_footer_actions(&layout, &hints);
-        self.ui.end_hero();
-        self.ui.finish(self.selected as u16);
-        self.ui.append_text(vertices, font, viewport);
-    }
-
-    /// A headline and a few lines in a card under the header.
-    fn card(&mut self, layout: &FormLayout, headline: &str, lines: &[&str]) {
-        let s = layout.scale;
-        let theme = self.ui.theme();
-        let viewport = layout.viewport;
-        let x = layout.margin;
-        let pad = 28.0 * s;
-        let line_height = 24.0 * s;
-        let card = Rect::new(
-            x,
-            layout.rows_y,
-            (viewport[0] - x * 2.0).min(820.0 * s),
-            pad * 2.0 + 52.0 * s + line_height * lines.len() as f32,
-        );
-        self.ui.panel(card);
-        let width = card.width - pad * 2.0;
-        self.ui.text(
-            headline,
-            Rect::new(card.x + pad, card.y + pad, width, 36.0 * s),
-            28.0 * s,
-            theme.foreground,
-            FontWeight::Semibold,
-            0.0,
-        );
-        for (index, line) in lines.iter().enumerate() {
-            self.ui.text(
-                line,
-                Rect::new(
-                    card.x + pad,
-                    card.y + pad + 52.0 * s + line_height * index as f32,
-                    width,
-                    line_height,
-                ),
-                16.0 * s,
-                theme.muted,
-                FontWeight::Regular,
-                0.2 * s,
-            );
         }
     }
 }

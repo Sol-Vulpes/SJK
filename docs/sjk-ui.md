@@ -877,8 +877,7 @@ A full server fits the board's canvas (320 text runs, 1024 draw commands) in
 every mode, at 1080 lines and 4K, 5:4, 4:3, 21:9 and 32:9 (unit tests, which
 also pin the compact board's centring, its clearance of the chat column and
 its widths). The look draws in the UI's
-families, which load for it even with another menu style when it is chosen on
-its own; their metrics place what follows a measured run (the emblem after a
+families, which load in every menu style; their metrics place what follows a measured run (the emblem after a
 name, the header's right side).
 
 ## In-game menu
@@ -1421,7 +1420,8 @@ nine moments, 1080p, 4K, 4:3, 21:9 and 720 lines, in the families and in Inter).
   (`frame_overlays.rs`), which an explored map's game menu needed too.
 - Fonts: `text::load_family` rasterizes a family's two faces into one atlas, as
   Inter's, taking glyphs a face lacks from its fallback family. The SJK UI's
-  families load the first time the style is on, rasterized at 1.5x (glyphs 144
+  families load at the first frame in every menu style (since 10/10/2026: SJK's
+  own pages have only this look), rasterized at 1.5x (glyphs 144
   pixels tall, sharp at 4K), into GPU layers kept by `game_font::GameFonts`.
   `MenuCanvas::set_family` tags each text run with its family
   (`menu_widgets::TextFamily`), and `append_text_families` routes the runs to

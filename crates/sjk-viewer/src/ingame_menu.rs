@@ -455,8 +455,9 @@ impl InGameMenu {
         viewport: [f32; 2],
     ) {
         if view.page == Page::Shot {
+            // Camera control has only the SJK UI's look; its text in this font.
             self.active_page = Page::Shot;
-            self.shot.build(&mut self.canvas, viewport);
+            self.shot.build_sjk(&mut self.canvas, viewport);
             self.canvas.append_text(vertices, font, viewport);
             return;
         }

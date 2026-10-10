@@ -626,10 +626,8 @@ impl ViewerConsole {
     ) {
         // Overlay text draws above every overlay's shapes, so the browser replaces the
         // console's drawing rather than covering it.
-        if self.append_config_import(vertices, font, viewport)
-            || self.append_credits(vertices, font, viewport)
+        if self.append_credits(vertices, font, viewport)
             || self.append_changelog(vertices, font, viewport)
-            || self.append_update_panel(vertices, font, viewport)
             || self.append_identity_panel(vertices, font, viewport)
             || self.append_debug_panel(vertices, font, viewport)
         {
