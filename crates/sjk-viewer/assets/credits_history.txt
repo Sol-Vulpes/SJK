@@ -9,6 +9,10 @@
 #                               made it when that is not the piece's owner.
 
 = Sol
++ 10/10/2026 | - | Force page first, a Toys page, a Melee bind, warnings fixed
+- 42cc3f6 |  | Remove three unused-code warnings
+- e9bed8b |  | Quick wheel: the Force page first, and a Toys page
+- bf5ced6 |  | Add a Melee key binding, weapmelee
 + 10/10/2026 | - | The player card shows the worn saber shader and the SJK profile
 - 72aabf4 |  | Show the worn saber shader and the SJK profile on the player card
 + 10/10/2026 | - | World notes get their own key; Inspect is for players only

@@ -2110,17 +2110,17 @@ note: Too loud, too quiet or the wrong sound? Tell Claude which one; volumes are
 
 [wheel-force-page]
 area: Input
-title: Quick wheel Force page: your usable powers, a scroll down from General
-change: New default page between General and Weather; old wheel.json files get it once.
-change: Live: the powers you can use now (Illuminate, JA+ Dash/Stasis/Repulse too), gold dot = selected.
+title: Quick wheel Force page: your usable powers, the first page of the wheel
+change: Default order is now Force, General, Toys, Weather: a new run's Q opens on Force.
+change: Live: the powers you can use now (JA+ Dash/Stasis/Repulse too), gold dot = selected.
 change: Instant powers are used and selected; Grip, Lightning, Drain, Stasis are only selected.
-test: Light side in a match: hold Q, scroll down to Force: Push at the top, 9 powers + Illuminate.
+test: Light side in a match: hold Q: it opens on Force, Push at the top, 9 powers, no Illuminate.
 test: Point at Heal, let go: you heal and the Force bar shows Heal; F (Use Force) now heals.
 test: Point at Grip / Lightning on a dark build, let go: nothing fires; hold F: it grips / zaps.
 test: Spectating or at the main menu: the Force page says No Force powers here.
 test: Settings > Quick wheel > Force: note instead of choices; Delete twice, then Add the Force page.
 test: JA+ admin with every power (amempower): 12 on Force, the rest on Force 2 after it.
-note: Order: neutral (Push Pull Speed Sense), light or dark in F-key order, then JoF, Illuminate.
+note: Order: neutral (Push Pull Speed Sense), light or dark in F-key order, then JoF.
 
 [vertex-lit-maps]
 area: Rendering & effects
@@ -3305,3 +3305,27 @@ test: Wear Glitch in a match, take the medal back (Staff page): the blade goes s
 test: Grant Glitch by hand too, then take the medal back: the blade stays (from the SJK team).
 test: Locked Hologram/Runic: "How to get it" names the Early Tester / Early Contributor medal.
 note: Unit tests only (client and hub); hub not deployed when built, not tried in a game.
+
+[wheel-toys]
+area: Input
+title: Quick wheel Toys page: Illuminate (and future toys) leaves the Force page
+change: New default page Toys (+wheel toys) holds Illuminate; the Force page lists Force powers only.
+change: An old wheel.json with the shipped pages becomes Force, General, Toys, Weather; others get Toys.
+change: Toys is an ordinary page: Settings > Quick wheel > Add a choice > Toys brings Illuminate back.
+test: In a match hold Q, scroll to Toys: Illuminate alone; let go on it: the holocron toggles.
+test: With the holocron lit, open Toys: Illuminate wears the gold dot; out, no dot.
+test: Bind +wheel toys to a spare key: it opens straight on Toys.
+test: Settings > Quick wheel > Toys: delete Illuminate, Add a choice, Toys group: add it back.
+test: Old profile (wheel.json written by an earlier build, pages as shipped): Force first, Toys added.
+test: Old profile with a renamed page or a custom choice: its pages stay, Toys follows the Force page.
+note: With cg_illuminate 0 the choice does nothing, as force_illuminate. Not tried in a game.
+
+[weapmelee]
+area: Input
+title: Melee bind: weapmelee selects the fists, never the saber
+change: New unbound action Settings > Key bindings > Weapons > Melee (fists), command weapmelee.
+change: Saber / melee (weapon 1) is unchanged: the saber when you hold one (a second press switches it).
+test: Bind a key to Melee (fists), saber out in a match: you switch to the fists.
+test: Press it again with the fists out, or where you hold none: nothing happens.
+test: Type weapmelee in the console: same; Tab completes the name.
+note: Selects WP_MELEE only; the stun baton is another weapon. Not tried in a game.

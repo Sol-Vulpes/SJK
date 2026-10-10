@@ -99,6 +99,8 @@ pub(crate) const ACTIONS: &[BindableAction] = &[
     action(Weapons, "Previous weapon", "weapprev", "MWHEELUP"),
     // `weapon N` selects weapon `N + 2` of `weapon_t`; the labels name it.
     action(Weapons, "Saber / melee", "weapon 1", "1"),
+    // SJK: the fists by name (`weapon 1` is the saber while one is held); unbound.
+    action(Weapons, "Melee (fists)", "weapmelee", ""),
     action(Weapons, "Blaster pistol", "weapon 2", "2"),
     action(Weapons, "Blaster rifle", "weapon 3", "3"),
     action(Weapons, "Disruptor rifle", "weapon 4", "4"),

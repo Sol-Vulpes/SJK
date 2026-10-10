@@ -2142,10 +2142,11 @@ like this one.",
     }
 
     /// The quick wheel over duel6 as a player holding its key sees it, without a
-    /// server: General with a choice highlighted, the change to Weather caught
-    /// half-way, Weather settled with the mouse on Rain, the pointer still in the
-    /// middle; a 4:3 window; and in Inter, with the classic menus (whose style
-    /// does not load the SJK UI's families).
+    /// server: General with a choice highlighted, the change to Toys caught
+    /// half-way, Toys settled with the mouse on Illuminate (lit), then Weather
+    /// settled with the mouse on Rain, the pointer still in the middle; a 4:3
+    /// window; and in Inter, with the classic menus (whose style does not load the
+    /// SJK UI's families).
     #[test]
     #[ignore = "renders with the GPU and the installed game data named by JKA_GAME_DATA"]
     fn duel6_quick_wheel() {
@@ -2189,6 +2190,17 @@ like this one.",
                 gpu.quick_wheel
                     .turn(1, Instant::now() - Duration::from_millis(45));
                 println!("{}", shoot(&mut gpu, 1, "duel6-wheel-switching").display());
+                // Toys, with the holocron lit: its one choice wears the gold dot.
+                gpu.illuminate.set_on(true);
+                gpu.quick_wheel.cancel();
+                gpu.open_quick_wheel(&bound("toys"))
+                    .expect("the wheel opens");
+                gpu.quick_wheel.moved([0.0, -90.0]);
+                println!("{}", shoot(&mut gpu, 4, "duel6-wheel-toys").display());
+                gpu.illuminate.set_on(false);
+                gpu.quick_wheel.cancel();
+                gpu.open_quick_wheel(&bound("weather"))
+                    .expect("the wheel opens");
                 gpu.quick_wheel.moved([70.0, 50.0]);
                 println!("{}", shoot(&mut gpu, 12, "duel6-wheel-weather").display());
                 gpu.quick_wheel.cancel();
@@ -2211,10 +2223,11 @@ like this one.",
     }
 
     /// The quick wheel's Force page over duel6 without a server, the powers set
-    /// for the shot: a light-side build with Illuminate (Protect selected, the
-    /// mouse on Push), a dark-side one, every power (twelve on the ring, the rest
-    /// on Force 2), no power at all, and the light build at 4K with Sol's menu
-    /// text size (`ui_textScale 1.2`).
+    /// for the shot: a light-side build (Protect selected, the mouse on Push), a
+    /// dark-side one, every power (twelve on the ring, the rest on Force 2), no
+    /// power at all, and the light build at 4K with Sol's menu text size
+    /// (`ui_textScale 1.2`). Illuminate's bit is set in the builds, as the client
+    /// sets it for the Force bar: the page leaves it out.
     #[test]
     #[ignore = "renders with the GPU and the installed game data named by JKA_GAME_DATA"]
     fn duel6_quick_wheel_force() {
@@ -2224,6 +2237,7 @@ like this one.",
         const DARK: u32 = NEUTRAL | (1 << 6) | (1 << 7) | (1 << 8) | (1 << 12) | (1 << 13);
         // Jump and the saber powers known too, as every build has them.
         const PASSIVE: u32 = (1 << 1) | (7 << 15);
+        // Illuminate's bit, which the client sets for the Force bar.
         const ILLUMINATE: u32 = 1 << sjk_client::force_wheel::ILLUMINATE;
         on_big_stack(|| {
             for (size, scale, prefix) in [
@@ -2389,12 +2403,17 @@ like this one.",
             let _ = frame(&mut gpu, 20);
             gpu.ui_epoch -= std::time::Duration::from_millis(2_000);
             let steps: [(&str, Keys); 8] = [
+                // The Force page, the first: a note instead of choices, an
+                // example ring.
                 ("duel6-wheel-settings", &[]),
-                // The Force page: a note instead of choices, an example ring.
-                ("duel6-wheel-settings-force", &[(ArrowDown, None)]),
+                // The Toys page: Illuminate, from the catalogue's Toys.
+                (
+                    "duel6-wheel-settings-toys",
+                    &[(ArrowDown, None), (ArrowDown, None)],
+                ),
                 // Down past the pages, Add a page and Restore to the sounds,
                 // switched off; switched on again before the next step, then
-                // Down wraps back to General.
+                // Down wraps back to Force and on to General.
                 (
                     "duel6-wheel-settings-sounds",
                     &[
@@ -2409,6 +2428,7 @@ like this one.",
                     "duel6-wheel-settings-choice",
                     &[
                         (Enter, None),
+                        (ArrowDown, None),
                         (ArrowDown, None),
                         (ArrowRight, None),
                         (ArrowDown, None),

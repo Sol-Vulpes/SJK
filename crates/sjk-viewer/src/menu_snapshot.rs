@@ -1875,7 +1875,7 @@ fn quick_wheel_snapshot() {
     quick_wheels(&mut shots);
 }
 
-/// Both default pages of the quick wheel over a match, the mouse pushed towards one
+/// The default pages of the quick wheel over a match, the mouse pushed towards one
 /// choice, the choices in effect marked (in Inter: these snapshots have no SJK UI
 /// families; `world_shot::tests::duel6_quick_wheel` draws the real thing).
 fn quick_wheels(shots: &mut Snapshot) {
@@ -1913,8 +1913,8 @@ fn quick_wheels(shots: &mut Snapshot) {
     };
     let cases: [(&str, usize, [f32; 2], &[usize]); 3] = [
         ("quick-wheel-general", 0, [60.0, -60.0], &[1, 2]),
-        ("quick-wheel-weather", 1, [80.0, 20.0], &[0, 6, 7]),
-        ("quick-wheel-weather-middle", 1, [6.0, -4.0], &[3, 6, 7]),
+        ("quick-wheel-weather", 2, [80.0, 20.0], &[0, 6, 7]),
+        ("quick-wheel-weather-middle", 2, [6.0, -4.0], &[3, 6, 7]),
     ];
     for (name, page, pointer, marked) in cases {
         let mut state = QuickWheel::default();

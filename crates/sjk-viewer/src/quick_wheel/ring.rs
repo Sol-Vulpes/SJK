@@ -9,7 +9,7 @@
 //! Sizes are pixels of a 1080-line window times [`Ring::unit`]; the navy is deep
 //! enough that every line reads over any scene.
 
-use super::pages::{MAX_CHOICES, MAX_FORCE_CHOICES};
+use super::pages::MAX_CHOICES;
 use crate::menu::sjk::{color, text, wrap};
 use crate::menu_widgets::{MenuCanvas, TextFamily};
 use sjk_ui::{Color, DrawCommand, FontWeight, Rect, TextAlign, TextureId};
@@ -504,6 +504,7 @@ fn neighbours(canvas: &mut MenuCanvas, ring: &Ring<'_>, previous: &str, next: &s
 
 #[cfg(test)]
 mod tests {
+    use super::super::pages::MAX_FORCE_CHOICES;
     use super::*;
 
     #[test]

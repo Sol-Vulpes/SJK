@@ -16,7 +16,7 @@ use std::sync::Arc;
 /// action with a picture. `weapon N` selects weapon `N + 2` of
 /// `weapon_t` (`weapon 1` the saber, else melee; `weapon 10` cycles the
 /// explosives), as `legacy_direct_weapon` reads it.
-const ICONS: [(&str, &str); 38] = [
+const ICONS: [(&str, &str); 39] = [
     // INTERACTION
     ("sv_saberswitch", "gfx/hud/w_icon_lightsaber.tga"),
     ("saberAttackCycle", "gfx/hud/saber_med.tga"),
@@ -28,6 +28,7 @@ const ICONS: [(&str, &str); 38] = [
     ("use_electrobinoculars", "gfx/hud/i_icon_zoom.tga"),
     // WEAPONS
     ("weapon 1", "gfx/hud/w_icon_lightsaber.tga"),
+    ("weapmelee", "gfx/hud/w_icon_melee.tga"),
     ("weapon 2", "gfx/hud/w_icon_blaster_pistol.tga"),
     ("weapon 3", "gfx/hud/w_icon_blaster.tga"),
     ("weapon 4", "gfx/hud/w_icon_disruptor.tga"),
@@ -178,8 +179,9 @@ mod tests {
     #[test]
     fn every_weapon_slot_and_force_power_has_a_picture() {
         for (index, action) in ACTIONS.iter().enumerate() {
-            let pictured =
-                action.command.starts_with("weapon ") || action.command.contains("force_");
+            let pictured = action.command.starts_with("weapon ")
+                || action.command == "weapmelee"
+                || action.command.contains("force_");
             if pictured {
                 assert!(texture(index).is_some(), "{}", action.command);
             }
