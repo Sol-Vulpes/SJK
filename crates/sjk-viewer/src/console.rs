@@ -631,7 +631,6 @@ impl ViewerConsole {
             || self.append_changelog(vertices, font, viewport)
             || self.append_update_panel(vertices, font, viewport)
             || self.append_identity_panel(vertices, font, viewport)
-            || self.append_debug_panel(vertices, font, viewport)
         {
             return;
         }

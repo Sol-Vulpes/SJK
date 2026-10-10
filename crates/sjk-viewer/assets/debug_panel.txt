@@ -242,6 +242,19 @@ test: Long chat messages that wrap, a name line, several messages: tight but rea
 test: ui_letterSpacing 0.05 with the console open: caret and selection still line up.
 test: ui_textScale 0.8 and 1.2 on every menu screen: labels fit, titles do not collide.
 
+[debug-panel-sjk]
+area: Menus & settings
+title: Test list (debug_panel) redrawn as an SJK UI page in every menu style
+change: Top bar Test list with To test / Tested / All tabs; entries with tick boxes on the left.
+change: The chosen entry on the right: area, title, tick, What changed, To test, Note (gold band).
+change: The old hero header, form tabs, row frames and footer caps are gone from it.
+test: debug_panel with ui_menuStyle sjk, then classic: same SJK page, keys at the bottom right.
+test: Up/Down, Page Up/Down, Home/End choose; Space, Enter or a click on a tick box ticks.
+test: Tab and Shift+Tab change tabs; on To test a ticked entry leaves and the next is chosen.
+test: Wheel scrolls the list, the scrollbar drags; Esc or the Back cap closes.
+test: Open the command browser (F3), then debug_panel: the test list draws over it.
+test: ui_textScale 1.2: long titles end in an ellipsis, nothing overlaps.
+
 [menu-contrast]
 area: Menus & settings
 title: Menu contrast floor behind text

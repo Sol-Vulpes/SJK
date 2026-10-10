@@ -4,16 +4,19 @@
 //! moving to the detail pane never changes the selection on the way.
 
 use super::{Panel, PanelAction, Step, TABS, WHEEL_ROWS};
-use crate::menu_widgets::{BACK_TOKEN, TAB_BASE};
 use sjk_ui::{InputEvent, UiEventKind};
 
+/// The way back (the top bar's Esc cap).
+pub(super) const BACK_TOKEN: u16 = 900;
+/// Tab `i` answers to `TAB_BASE + i`.
+pub(super) const TAB_BASE: u16 = 500;
 /// Row `slot` on screen answers to `ROW_BASE + slot`.
 pub(super) const ROW_BASE: u16 = 1_000;
 /// The tick box of row `slot` answers to `TICK_BASE + slot`.
 pub(super) const TICK_BASE: u16 = 1_100;
 /// Most rows drawn at once, so row and tick tokens never overlap.
 pub(super) const ROW_LIMIT: usize = (TICK_BASE - ROW_BASE) as usize;
-/// Footer cap that ticks or unticks the selected entry.
+/// Key hint that ticks or unticks the selected entry.
 pub(super) const TOGGLE_TOKEN: u16 = 904;
 /// Tick box on the detail pane.
 pub(super) const DETAIL_TICK_TOKEN: u16 = 905;

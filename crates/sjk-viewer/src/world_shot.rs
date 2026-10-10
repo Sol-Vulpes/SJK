@@ -878,6 +878,43 @@ mod tests {
         });
     }
 
+    /// The debug panel's test list (`debug_panel`), drawn in the SJK UI's look in
+    /// every menu style: the first entry with notes chosen on the All tab, a tick's
+    /// outcome bottom left. At 1080p with the plain text style and at 4K with Sol's
+    /// (`ui_textScale 1.2`), with `ui_menuStyle sjk` and `classic`.
+    #[test]
+    #[ignore = "renders with the GPU and the installed game data named by JKA_GAME_DATA"]
+    fn duel6_debug_panel() {
+        for style in ["sjk", "classic"] {
+            for (size, scale, suffix) in [
+                ([1920, 1080], None, "1080p"),
+                ([3840, 2160], Some("1.2"), "4k-styled"),
+            ] {
+                on_big_stack(move || {
+                    let menu = menu::ClientMenu::new(true, String::new());
+                    let mut cvars = vec![
+                        ("ui_menuStyle", style),
+                        (crate::settings::quick::HIDE_CVAR, "1"),
+                    ];
+                    if let Some(scale) = scale {
+                        cvars.push((crate::text::style::SCALE_CVAR, scale));
+                    }
+                    let Some((mut gpu, _profile)) =
+                        open("maps/mp/duel6.bsp", size, Some(menu), &cvars)
+                    else {
+                        return;
+                    };
+                    let _ = frame(&mut gpu, 10);
+                    if let Some(console) = gpu.console.as_mut() {
+                        console.debug_panel_for_shot();
+                    }
+                    let name = format!("duel6-debug-panel-{style}-{suffix}");
+                    println!("{}", shoot(&mut gpu, 6, &name).display());
+                });
+            }
+        }
+    }
+
     /// A made-up profile with medals, worn names, a record and half the achievements,
     /// for the Profile page's shots.
     pub(super) fn profile_preview() -> crate::console::profile_panel::Preview {

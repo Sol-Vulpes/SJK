@@ -31,8 +31,6 @@ pub(super) struct Entry {
     pub(super) changes: Vec<String>,
     pub(super) tests: Vec<String>,
     pub(super) notes: Vec<String>,
-    /// The area in capitals, for the list's second line.
-    pub(super) meta: String,
 }
 
 /// Why the test list could not be read; `line` is 1-based.
@@ -117,7 +115,6 @@ impl Draft {
         if self.tests.is_empty() {
             return Err(error("has no test step"));
         }
-        let meta = area.to_uppercase();
         Ok(Entry {
             id: self.id,
             area,
@@ -125,7 +122,6 @@ impl Draft {
             changes: self.changes,
             tests: self.tests,
             notes: self.notes,
-            meta,
         })
     }
 }
@@ -229,15 +225,14 @@ mod tests {
     }
 
     #[test]
-    fn entries_get_their_display_labels() {
+    fn entries_keep_their_area_and_lists() {
         let entries = parse(
             "[a]\narea: Menus & settings\ntitle: T\ntest: Step\n\
              [b]\narea: Audio\ntitle: U\nchange: C\ntest: Step\nnote: N\n",
         )
         .unwrap();
         assert_eq!(entries[0].area, "Menus & settings");
-        assert_eq!(entries[0].meta, "MENUS & SETTINGS");
-        assert_eq!(entries[1].meta, "AUDIO");
+        assert_eq!(entries[1].area, "Audio");
         assert_eq!(entries[1].changes, ["C"]);
         assert_eq!(entries[1].notes, ["N"]);
     }

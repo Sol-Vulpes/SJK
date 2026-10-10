@@ -1,4 +1,6 @@
-//! SJK's pages (What's new, Update, Identity, Credits, Import) in the SJK UI's look:
+//! SJK's pages (What's new, Update, Identity, Credits, Import) in the SJK UI's look
+//! (and the pages drawn in it in every style: Profile, Staff, Collection, Holocrons,
+//! SJK chat and the debug panel's test list):
 //! with `ui_menuStyle sjk` they are drawn by their SJK views, in the UI's
 //! families ([`crate::menu::sjk::TextTarget`]), over the map. Opening, closing
 //! and their keys and pointer stay the console's, as for the other looks.
@@ -42,8 +44,9 @@ impl ViewerConsole {
             && !self.update_panel.is_open()
             && !self.identity_panel.is_open()
         {
-            // The test list draws over the browser when both are open.
-            return !self.debug_panel.is_open() && self.browser.is_open() && self.browser.is_sjk();
+            // The test list has the SJK UI's look in every menu style and draws
+            // over the browser when both are open.
+            return self.debug_panel.is_open() || (self.browser.is_open() && self.browser.is_sjk());
         }
         if self.changelog.is_open() {
             return self.changelog.is_sjk();
@@ -93,6 +96,8 @@ impl ViewerConsole {
                 key_file: &key_file,
             };
             self.identity_panel.append_sjk(&inputs, target, viewport);
+        } else if self.debug_panel.is_open() {
+            self.append_debug_panel(target, viewport);
         } else if self.browser.is_open() {
             self.browser.append_sjk(target, viewport);
         }

@@ -16,8 +16,9 @@
 //! Like the command and cvar browser, the panel lives in the console and is drawn in
 //! place of it, so it opens over the main menu, the in-game menus and a live match.
 //! Run with the console closed (a bound key), it opens the console behind itself and
-//! closes it again when the panel closes. Drawing is in `debug_panel_view.rs`,
-//! pointer input in `debug_panel_pointer.rs`.
+//! closes it again when the panel closes. It is drawn in the SJK UI's look in every
+//! menu style (`debug_panel_view.rs`, routed by `console_sjk_pages.rs`), pointer
+//! input in `debug_panel_pointer.rs`.
 
 use crate::menu_widgets::MenuCanvas;
 use std::fmt::Write as _;
@@ -40,7 +41,7 @@ pub(crate) const COMMAND: &str = "debug_panel";
 pub(crate) const HELP: &str = "Toggle the test list of Sol's build, with tested ticks";
 
 /// Filter tabs; `Tab` and `Shift+Tab` cycle them.
-const TABS: [&str; 3] = ["TO TEST", "TESTED", "ALL"];
+const TABS: [&str; 3] = ["To test", "Tested", "All"];
 /// Rows one wheel notch scrolls.
 const WHEEL_ROWS: isize = 3;
 
@@ -78,11 +79,13 @@ pub(crate) struct Panel {
     selected: usize,
     /// First visible row on screen.
     first: usize,
-    /// Rows that fit, as measured by the last `append`.
+    /// Rows that fit, as laid out by the last `append_sjk`.
     rows: usize,
-    /// `"<ticked> of <total> tested"` under the title.
+    /// `"<ticked> of <total> tested"` at the top right.
     summary: String,
-    /// Outcome of the last tick, or a load or save error, shown in the footer.
+    /// The chosen entry's lines wrapped to the detail column, reused every frame.
+    lines: Vec<view::Line>,
+    /// Outcome of the last tick, or a load or save error, shown at the bottom left.
     status: String,
     status_error: bool,
     path: PathBuf,
@@ -114,10 +117,11 @@ impl Panel {
             first: 0,
             rows: 1,
             summary: String::new(),
+            lines: Vec::with_capacity(64),
             status,
             status_error,
             path,
-            ui: MenuCanvas::with_text_capacity(128),
+            ui: MenuCanvas::with_text_capacity(192),
         };
         panel.apply_saved(saved);
         panel.rebuild_visible(None);
@@ -226,11 +230,7 @@ impl Panel {
         self.reveal_selection();
         let ticked = self.tested.iter().filter(|&&tested| tested).count();
         self.summary.clear();
-        let _ = write!(
-            self.summary,
-            "{ticked} of {} tested   /   Sol's build only",
-            self.entries.len()
-        );
+        let _ = write!(self.summary, "{ticked} of {} tested", self.entries.len());
     }
 
     fn set_tab(&mut self, tab: usize) {
@@ -293,6 +293,21 @@ impl Panel {
     fn scroll_by(&mut self, rows: isize) {
         let max_first = self.visible.len().saturating_sub(self.rows);
         self.first = self.first.saturating_add_signed(rows).min(max_first);
+    }
+
+    /// Select the first entry with notes on the ALL tab, for a world shot.
+    #[cfg(test)]
+    pub(crate) fn select_noted_for_shot(&mut self) {
+        self.set_tab(2);
+        if let Some(position) = self
+            .visible
+            .iter()
+            .position(|&index| !self.entries[index].notes.is_empty())
+        {
+            self.selected = position;
+            self.reveal_selection();
+        }
+        self.status = format!("Ticked {}", self.entries[self.visible[0]].title);
     }
 
     /// Scroll so the list shows `ratio` (0 = top, 1 = bottom) of the entries.
