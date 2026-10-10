@@ -1,8 +1,9 @@
 //! Resolution choices for the settings screen and the list that picks one.
 //!
 //! The choices are the monitor's video-mode sizes, grouped by aspect ratio
-//! with the monitor's own aspect first and the largest size first in each
-//! group. A window can be any size, so outside exclusive fullscreen the
+//! with the monitor's own aspect first, then the others by how close their
+//! shape is to it (16:10 after 16:9, then 3:2, 4:3, 5:4), and the largest size
+//! first in each group. A window can be any size, so outside exclusive fullscreen the
 //! classic presets that fit the monitor and the current custom size are
 //! offered too; exclusive fullscreen offers only real video modes.
 
@@ -58,12 +59,19 @@ pub(super) fn aspect_name([width, height]: [u32; 2]) -> &'static str {
         .map_or(OTHER_ASPECT, |(name, _)| name)
 }
 
-/// Sort position of an aspect group: named ratios narrow to wide, then other.
-fn aspect_rank(aspect: &str) -> usize {
+/// The width/height ratio of a named aspect group; `None` for "Other".
+fn aspect_ratio(aspect: &str) -> Option<f32> {
     ASPECTS
         .iter()
-        .position(|(name, _)| *name == aspect)
-        .unwrap_or(ASPECTS.len())
+        .find(|(name, _)| *name == aspect)
+        .map(|(_, ratio)| *ratio)
+}
+
+/// How far an aspect group's shape is from `reference` (a width/height ratio):
+/// the size of the log of their quotient, so 16:10 is nearer 16:9 than 4:3 is,
+/// and a group as much wider counts as much as one narrower. "Other" is last.
+fn aspect_distance(aspect: &str, reference: f32) -> f32 {
+    aspect_ratio(aspect).map_or(f32::INFINITY, |ratio| (ratio / reference).ln().abs())
 }
 
 /// Parse `r_resolution` text (`1920x1080`).
@@ -75,7 +83,7 @@ pub(super) fn parse_size(text: &str) -> Option<[u32; 2]> {
 }
 
 /// Fill `out` with the sizes on offer, grouped by aspect ratio (the
-/// monitor's first) and largest first within a group.
+/// monitor's first, then the nearest shapes) and largest first within a group.
 pub(super) fn build_choices(
     monitor: Option<&MonitorModes>,
     current: Option<[u32; 2]>,
@@ -111,15 +119,17 @@ pub(super) fn build_choices(
         }
     }
     let native = desktop.map_or("", aspect_name);
+    // Without a known monitor shape the groups are ordered from 16:9's.
+    let reference = aspect_ratio(native).unwrap_or(16.0 / 9.0);
     out.sort_by(|a, b| {
-        let group = |choice: &ResolutionChoice| {
-            (
-                choice.aspect != native,
-                aspect_rank(choice.aspect),
-                choice.aspect,
-            )
-        };
-        group(a).cmp(&group(b)).then_with(|| b.size.cmp(&a.size))
+        (a.aspect != native)
+            .cmp(&(b.aspect != native))
+            .then_with(|| {
+                aspect_distance(a.aspect, reference)
+                    .total_cmp(&aspect_distance(b.aspect, reference))
+            })
+            .then_with(|| a.aspect.cmp(b.aspect))
+            .then_with(|| b.size.cmp(&a.size))
     });
 }
 
@@ -375,8 +385,8 @@ mod tests {
     }
 
     #[test]
-    fn the_monitors_aspect_comes_first_largest_first() {
-        let monitor = monitor(
+    fn the_monitors_aspect_comes_first_then_the_nearest_shapes() {
+        let wide = monitor(
             &[
                 [2560, 1440],
                 [1920, 1080],
@@ -387,19 +397,35 @@ mod tests {
             [2560, 1440],
         );
         let mut out = Vec::new();
-        build_choices(Some(&monitor), Some([1920, 1080]), true, &mut out);
+        build_choices(Some(&wide), Some([1920, 1080]), true, &mut out);
         assert_eq!(
             sizes(&out),
             [
                 [2560, 1440],
                 [1920, 1080],
-                [1280, 1024],
-                [1024, 768],
                 [1680, 1050],
+                [1024, 768],
+                [1280, 1024],
             ]
         );
         assert!(out[0].desktop);
         assert!(!out[1].desktop);
+        // A 4:3 monitor: 5:4 is next to it, 16:10 before 16:9, 21:9 last.
+        let square = monitor(
+            &[
+                [2560, 1080],
+                [1920, 1080],
+                [1680, 1050],
+                [1280, 1024],
+                [1024, 768],
+            ],
+            [1024, 768],
+        );
+        build_choices(Some(&square), None, true, &mut out);
+        assert_eq!(
+            out.iter().map(|choice| choice.aspect).collect::<Vec<_>>(),
+            ["4:3", "5:4", "16:10", "16:9", "21:9"]
+        );
     }
 
     #[test]
