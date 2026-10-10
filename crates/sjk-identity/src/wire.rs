@@ -414,6 +414,47 @@ pub struct Feed {
     /// Keys that read the feed in the last minute.
     #[serde(default)]
     pub online: u32,
+    /// Who reads the chat now and who read it last (absent from hubs that do not
+    /// list them, and from answers the hub leaves them out of).
+    #[serde(default)]
+    pub people: Option<People>,
+}
+
+/// The feed's `people` (`PROTOCOL.md`, "The feed"): the keys reading the feed now and
+/// the ones that read it most recently.
+#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq)]
+pub struct People {
+    /// Keys that read the feed in the last minute, the same ones `online` counts.
+    #[serde(default)]
+    pub online: Vec<Person>,
+    /// Keys that read it before that, most recently seen first.
+    #[serde(default)]
+    pub recent: Vec<Person>,
+}
+
+/// One SJK player of [`People`].
+#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq)]
+pub struct Person {
+    /// Their key id.
+    pub key_id: String,
+    /// Their display name, as the hub's profiles say.
+    #[serde(default)]
+    pub name: String,
+    /// Whether the hub's operator vouches for them.
+    #[serde(default)]
+    pub verified: bool,
+    /// Whether they are SJK staff.
+    #[serde(default)]
+    pub staff: bool,
+    /// Their picture's version, `""` for none.
+    #[serde(default)]
+    pub avatar: String,
+    /// When they last read the feed, unix seconds.
+    #[serde(default)]
+    pub seen: i64,
+    /// They hold a live claim marked active: they are playing a match now.
+    #[serde(default)]
+    pub playing: bool,
 }
 
 /// The text a request's signature covers.
@@ -520,6 +561,29 @@ mod tests {
         // Lists a hub leaves out are empty.
         let quiet: Feed = serde_json::from_str(r#"{"next":3}"#).unwrap();
         assert!(quiet.chat.is_empty() && quiet.emotes.is_empty() && quiet.deleted.is_empty());
+        assert_eq!(quiet.people, None, "a hub that does not list them");
+    }
+
+    #[test]
+    fn a_feed_answer_with_people_parses() {
+        let feed: Feed = serde_json::from_str(
+            r#"{"next":3,"online":2,"people":{"online":[{"key_id":"aa","name":"^2Sol",
+                "verified":true,"staff":true,"avatar":"0123456789abcdef","seen":100,
+                "playing":true},{"key_id":"bb","name":"Fox","seen":90}],
+                "recent":[{"key_id":"cc","name":"Kyle","seen":40}]}}"#,
+        )
+        .unwrap();
+        let people = feed.people.expect("people");
+        assert_eq!(people.online.len(), 2);
+        let sol = &people.online[0];
+        assert!(sol.verified && sol.staff && sol.playing);
+        assert_eq!((sol.avatar.as_str(), sol.seen), ("0123456789abcdef", 100));
+        // Fields a hub leaves out are off or empty.
+        let fox = &people.online[1];
+        assert!(!fox.verified && !fox.playing && fox.avatar.is_empty());
+        assert_eq!(people.recent[0].name, "Kyle");
+        let empty: Feed = serde_json::from_str(r#"{"next":3,"people":{}}"#).unwrap();
+        assert_eq!(empty.people, Some(People::default()));
     }
 
     #[test]

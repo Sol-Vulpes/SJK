@@ -2612,6 +2612,156 @@ like this one.",
         });
     }
 
+    /// The SJK chat page over the live duel6 with its who-is-online window, on made-up
+    /// players: a hub that lists them (some playing, more than the window holds, a long
+    /// name, the recently seen), then the card of a player in the window under the
+    /// pointer, a chosen message under the window, and a hub that does not list them
+    /// (the count and the last senders). At 1080p with the plain text style and at 4K
+    /// with Sol's (`ui_textScale 1.2`).
+    #[test]
+    #[ignore = "renders with the GPU and the installed game data named by JKA_GAME_DATA"]
+    fn duel6_sjk_chat_page() {
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map_or(0, |since| since.as_secs() as i64);
+        let lines: [(&str, &str, &str, bool); 6] = [
+            (
+                "9a0c51e2b7d34f80",
+                "^5Creyon",
+                "anyone up for duels on ffa3?",
+                true,
+            ),
+            (
+                "0b1c2d3e4f5a6b7c",
+                "Padawan^1Fox",
+                "in 5 min, finishing a CTF",
+                false,
+            ),
+            ("1f2e3d4c5b6a7980", "^3Lumaya", "gg", true),
+            (
+                "44f3d0b36c9b2510",
+                "^1Sol^7Vulpes",
+                "the chat page shows who is online now, on the right",
+                true,
+            ),
+            (
+                "7c6b5a4f3e2d1c0b",
+                "Kyle",
+                "nice, I can see who is around",
+                false,
+            ),
+            (
+                "0b1c2d3e4f5a6b7c",
+                "Padawan^1Fox",
+                "back, who wants a duel?",
+                false,
+            ),
+        ];
+        let messages = lines
+            .iter()
+            .enumerate()
+            .map(
+                |(index, (key, name, text, verified))| sjk_identity::ChatMessage {
+                    id: index as u64 + 1,
+                    at: now - (lines.len() - index) as i64 * 140,
+                    key_id: (*key).to_owned(),
+                    name: (*name).to_owned(),
+                    verified: *verified,
+                    staff: index == 3,
+                    text: (*text).to_owned(),
+                    holocron: None,
+                },
+            )
+            .collect();
+        let person =
+            |key: &str, name: &str, ago: i64, playing: bool, verified: bool| sjk_identity::Person {
+                key_id: key.to_owned(),
+                name: name.to_owned(),
+                verified,
+                seen: now - ago,
+                playing,
+                ..sjk_identity::Person::default()
+            };
+        let listed = sjk_identity::ChatState {
+            messages,
+            revision: 1,
+            online: 7,
+            people: Some(sjk_identity::People {
+                online: vec![
+                    person("44f3d0b36c9b2510", "^1Sol^7Vulpes", 5, false, true),
+                    person("0b1c2d3e4f5a6b7c", "Padawan^1Fox", 10, true, false),
+                    person("9a0c51e2b7d34f80", "^5Creyon", 20, true, true),
+                    person("7c6b5a4f3e2d1c0b", "Kyle", 30, false, false),
+                    person(
+                        "2d3e4f5a6b7c8d9e",
+                        "^4The^7Longest^4Name^7On^4The^7Hub^4Today",
+                        15,
+                        false,
+                        false,
+                    ),
+                    person("3e4f5a6b7c8d9e0f", "Mara", 40, false, false),
+                    person("4f5a6b7c8d9e0f1a", "Bastila", 25, false, false),
+                ],
+                recent: vec![
+                    person("1f2e3d4c5b6a7980", "^3Lumaya", 600, false, true),
+                    person("5a6b7c8d9e0f1a2b", "Jan^2Ors", 3 * 3_600, false, false),
+                    person("6b7c8d9e0f1a2b3c", "Rosh", 30 * 3_600, false, false),
+                    person("7a8b9c0d1e2f3a4b", "^6Visas", 4 * 86_400, false, false),
+                ],
+            }),
+            live: true,
+            outcome: None,
+            loaded: Some(1),
+        };
+        let unlisted = sjk_identity::ChatState {
+            people: None,
+            ..listed.clone()
+        };
+        for (size, scale, suffix) in [
+            ([1920, 1080], None, "1080p"),
+            ([3840, 2160], Some("1.2"), "4k-styled"),
+        ] {
+            let (listed, unlisted) = (listed.clone(), unlisted.clone());
+            on_big_stack(move || {
+                let menu = menu::ClientMenu::new(true, String::new());
+                let mut cvars = vec![
+                    ("ui_menuStyle", "sjk"),
+                    (crate::settings::quick::HIDE_CVAR, "1"),
+                ];
+                if let Some(scale) = scale {
+                    cvars.push((crate::text::style::SCALE_CVAR, scale));
+                }
+                let Some((mut gpu, _profile)) = open("maps/mp/duel6.bsp", size, Some(menu), &cvars)
+                else {
+                    return;
+                };
+                let _ = frame(&mut gpu, 10);
+                if let Some(console) = gpu.console.as_mut() {
+                    console.preview_sjk_chat(listed.clone(), None);
+                }
+                let name = format!("duel6-sjk-chat-online-{suffix}");
+                println!("{}", shoot(&mut gpu, 6, &name).display());
+                // Fox's card, from the window (playing first, then by name: the second row).
+                if let Some(console) = gpu.console.as_mut() {
+                    console.sjk_chat_hover_person(Some(1));
+                }
+                let name = format!("duel6-sjk-chat-online-card-{suffix}");
+                println!("{}", shoot(&mut gpu, 6, &name).display());
+                if let Some(console) = gpu.console.as_mut() {
+                    console.preview_sjk_chat(listed.clone(), Some(4));
+                    console.sjk_chat_hover_person(None);
+                }
+                let name = format!("duel6-sjk-chat-online-chosen-{suffix}");
+                println!("{}", shoot(&mut gpu, 6, &name).display());
+                if let Some(console) = gpu.console.as_mut() {
+                    console.preview_sjk_chat(unlisted.clone(), None);
+                }
+                let name = format!("duel6-sjk-chat-online-unlisted-{suffix}");
+                println!("{}", shoot(&mut gpu, 6, &name).display());
+            });
+        }
+    }
+
     /// Report a bug and the dialogs sharing it as the SJK UI's card. Over duel6 from a
     /// player's view with no menu up, as in a match (no server, so no HUD): the empty
     /// report, a long text typed, a text refused, sending, sent, not sent (the real

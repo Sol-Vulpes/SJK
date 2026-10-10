@@ -159,6 +159,62 @@ Old clients ignore all of it, so it stays `/v1/`.
   itself: drawing asks for the player's own key (`printable_key_id`), which takes that
   lock again, and a lock held while drawing froze the game.
 
+## Who is online
+
+The SJK chat page (not the docks, which stay small) has a small window at the top of its
+right column, over the chosen message (Sol's request, 10/10/2026: "a small window on the
+SJK chat, only when it is big, to quickly see who is online/active, and the most recent
+active players that are offline"). It is drawn by
+[sjk_chat_panel_view.rs](../crates/sjk-viewer/src/sjk_chat_panel_view.rs) from what
+[sjk_chat_people.rs](../crates/sjk-viewer/src/sjk_chat_people.rs) derives.
+
+- **Online** (the heading carries the hub's count): the keys that read the feed in the
+  last 60 seconds, the same keys `online` counts, so an SJK client with the chat on, in
+  the menus or in a game, or one on a game server with the chat off. A gold dot and
+  "playing" mark a player holding a live claim marked active (in a match, playing, as
+  holocrons count it); a holo dot one who is not. Playing players come first, then by
+  name (colours and symbols aside), each key once. Five rows: with more, the last says
+  "and N more".
+- **Recently active**: keys that read the feed before that, not online now, most
+  recently seen first, four of them, each with how long ago ("11 minutes ago",
+  "yesterday", as the servers' list says).
+- Resting the pointer on a name shows the player's sender card with Mute or Unmute, as a
+  name in the chat does; it opens left of the window, so the window's other rows do not
+  show through it. A click chooses that player's newest message on show, if any.
+  Muted players stay listed, their names greyed. The player's own key is listed too.
+- **A hub that does not list them** (the `people` below absent, as from the deployed hub
+  today): the Online part keeps the count and says "This hub counts them but does not
+  say who", and the second part becomes **Recently in chat**: the last four senders,
+  newest first, each once, with when they last spoke (holocron drops are not messages).
+- Chat off, identity off or the hub not answered yet: the window says it shows once the
+  hub answers.
+
+The list rides on the feed the client already reads, so it needs no request of its own.
+The client keeps the last list it was given (`ChatState::people`) until the hub gives
+another, and forgets it when the chat is turned off or another hub is read.
+
+### Proposed feed addition: `people`
+
+Not in the hub yet; the client is built against it and falls back as above without it.
+
+    "people":{"online":[Person],"recent":[Person]}
+    Person: {"key_id":"..","name":"..","verified":false,"staff":false,"avatar":"<version>",
+             "seen":<unix s>,"playing":false}
+
+- Optional in a feed answer, so it stays `/v1/`. The hub adds it to a key's answer when
+  it last gave that key the list 20 seconds ago or more (the first answer after `after`
+  0 always has it), so the list costs one answer in a few and a reader's list is at most
+  about 45 seconds old. It never wakes a waiting poll: it rides on the next answer.
+- `online`: every key that read the feed in the last 60 seconds (as `online` counts),
+  at most 50, `playing` set for a key holding a live claim with `active` true.
+- `recent`: keys whose last feed read was more than 60 seconds and less than 7 days
+  ago, most recent `seen` first, at most 8.
+- `name`, `verified`, `staff` and `avatar` as in a Profile (the display name);
+  `seen` is the key's last feed read. A key the operator removed is not listed.
+- Nothing new is stored: the hub already keeps, in memory, when each key last read
+  the feed for the count; it only needs to keep that past the minute (in memory, up to
+  7 days, so a restart forgets it) and look up the profile fields.
+
 ## How a line looks
 
 Every SJK chat line looks the same wherever it shows, in the game's chat, on the dock
@@ -280,7 +336,10 @@ feed requests made on a game server (for the looks), with the server's address. 
 kept in the hub's memory only (the last 200), and gone when the hub restarts; a
 message staff delete stays in the staff log. Emotes are kept 10 seconds. The mute
 flag is the only new thing on the hub's disk. Local mutes stay on this PC
-(`chat-mutes.txt`, keys and names) and are never sent.
+(`chat-mutes.txt`, keys and names) and are never sent. With the proposed `people` list ([Who is online](#who-is-online)), every SJK
+player reading the chat would see which keys read the feed in the last minute,
+whether they are in a match (not which server), and when the others last read it, up
+to a week back; the list is not deployed yet.
 
 ## Verification
 

@@ -122,6 +122,8 @@ impl ViewerConsole {
         // which takes that lock again and would wait on itself for ever.
         // `None`: the identity is not running, and the page says so.
         let chat = crate::player_identity::with_chat(Clone::clone);
+        #[cfg(test)]
+        let chat = self.sjk_chat_panel.preview.clone().or(chat);
         let inputs = Inputs {
             chat: chat.as_ref(),
             muted: &muted,
@@ -131,6 +133,24 @@ impl ViewerConsole {
             staff_state: staff_shown,
         };
         self.sjk_chat_panel.append_sjk(&inputs, target, viewport);
+    }
+
+    /// Open the page on `chat` in place of the live one, `chosen` the message chosen,
+    /// for a world shot.
+    #[cfg(test)]
+    pub(crate) fn preview_sjk_chat(&mut self, chat: sjk_identity::ChatState, chosen: Option<u64>) {
+        self.open_sjk_chat_panel();
+        self.sjk_chat_panel.preview = Some(chat);
+        if let Some(id) = chosen {
+            self.sjk_chat_panel.choose_for_shot(id);
+        }
+    }
+
+    /// Rest the pointer on a player of the open page's who-is-online window, for a world
+    /// shot.
+    #[cfg(test)]
+    pub(crate) fn sjk_chat_hover_person(&mut self, index: Option<u16>) {
+        self.sjk_chat_panel.hover_person_for_shot(index);
     }
 
     /// The page's draw list while it is shown.
