@@ -4,9 +4,9 @@
 //! everywhere ([`crate::sjk_chat_look`]): the JoF emblem for the clan's tag
 //! ([`crate::jof_tag`]), the name, the verified tick for a verified
 //! sender, then the text in the SJK chat's gold, wrapping only when it is too long. Over
-//! the chosen message, a small window lists who is online and who was seen last
-//! ([`super::people`]). A name under the pointer, in either, shows that player's sender
-//! card over the page.
+//! the chosen message, a small window shows who is online and who was seen last as
+//! faces, their pictures or initials ([`super::people`]). A name in the chat or a face
+//! in the window under the pointer shows that player's sender card over the page.
 
 use super::*;
 use crate::menu::sjk::recent::ago;
@@ -41,17 +41,19 @@ const FIELD_Y: f32 = 900.0;
 const FIELD_WIDTH: f32 = 1_040.0;
 /// The keys' line.
 const KEYS_Y: f32 = 1_010.0;
-/// The who-is-online window: its box, its two parts' headings and first rows, and a
-/// player's row (frame pixels).
-const PEOPLE_BOX: [f32; 4] = [SIDE_X - 18.0, 204.0, SIDE_WIDTH + 36.0, 318.0];
+/// The who-is-online window: its left, top and width (its height follows what it
+/// shows), its first heading, from a heading to the faces under it, from the faces to
+/// the next heading, a quiet line's row and the room under the last part (frame pixels).
+const PEOPLE_X: f32 = SIDE_X - 18.0;
+const PEOPLE_TOP: f32 = 204.0;
+const PEOPLE_WIDTH: f32 = SIDE_WIDTH + 36.0;
 const ONLINE_Y: f32 = 230.0;
-const RECENT_Y: f32 = 394.0;
-const PERSON_ROW: f32 = 24.0;
-const PERSON_SIZE: f32 = 17.0;
-/// The room on a player's row for what is said of them ("playing", "3 minutes ago").
-const PERSON_META: f32 = 150.0;
-/// The chosen message's heading, under the window.
-const CHOSEN_TOP: f32 = 556.0;
+const UNDER_HEADING: f32 = 22.0;
+const PART_GAP: f32 = 34.0;
+const NOTE_ROW: f32 = 22.0;
+const PEOPLE_PAD: f32 = 18.0;
+/// The chosen message's heading, this far under the window.
+const CHOSEN_GAP: f32 = 34.0;
 
 /// A name under the pointer: whose card it shows, who, and the name's rectangle.
 type Shows = (CardSource, crate::sender_card::Person, sjk_ui::Rect);
@@ -170,21 +172,29 @@ impl Panel {
     pub(super) fn build(&mut self, inputs: &Inputs<'_>, measure: &Measure<'_>, viewport: [f32; 2]) {
         let frame = Frame::new(viewport);
         self.order.clear();
+        std::mem::swap(&mut self.shown.people, &mut self.previous_people);
         self.ui.begin_transparent(viewport);
         crate::settings::sjk_view::backdrop(&mut self.ui, viewport);
         top_bar(&mut self.ui, &frame, "Back", BACK_TOKEN, "SJK chat", None);
         self.status(&frame, inputs);
         let named = self.messages(&frame, inputs, measure);
-        let listed = self.people(&frame, inputs, measure);
+        let (listed, bottom) = self.people(&frame, inputs);
         self.follow_card(named.or(listed));
         self.composer(&frame, inputs);
-        self.chosen(&frame, inputs, measure);
+        self.chosen(&frame, inputs, measure, bottom + CHOSEN_GAP);
         self.keys(&frame);
         self.card(&frame, inputs, measure, viewport);
         if !self.order.contains(&self.focus) {
             self.focus = FIELD_TOKEN;
         }
         self.ui.finish(self.focus);
+        // The faces changed under a resting pointer (the hub's list came, or changed):
+        // the targets after them moved in the frame's list, so find what it rests on.
+        if self.shown.people != self.previous_people
+            && let Some(at) = self.pointer
+        {
+            let _ = self.ui.pointer(sjk_ui::InputEvent::PointerMove(at));
+        }
     }
 
     /// Who reads the chat, or why it cannot be read, and what it is.
@@ -305,6 +315,7 @@ impl Panel {
                     medals: crate::medals::Medals::default(),
                     place: crate::sender_card::Place::Unknown,
                     avatar: None,
+                    note: None,
                 };
                 hovered = Some((CardSource::Message(message.id), person, name));
             }
@@ -456,19 +467,46 @@ impl Panel {
     }
 
     /// The who-is-online window over the chosen message: who reads the chat now
-    /// (playing first) and who was seen most recently, or, from a hub that does not
-    /// list them, the count and the chat's last senders. Returns the player whose name
-    /// is under the pointer, for the card.
-    fn people(
-        &mut self,
-        frame: &Frame,
-        inputs: &Inputs<'_>,
-        measure: &Measure<'_>,
-    ) -> Option<Shows> {
+    /// (playing first) and who was seen most recently, as faces, or, from a hub that
+    /// does not list them, the count and the chat's last senders. Returns the player
+    /// whose face is under the pointer, for the card, and the window's bottom (frame
+    /// pixels), which follows what it shows.
+    fn people(&mut self, frame: &Frame, inputs: &Inputs<'_>) -> (Option<Shows>, f32) {
+        use super::people::{
+            FACES_WIDTH, ONLINE_RADIUS, RECENT_RADIUS, centre, columns, grid_height,
+        };
         let s = frame.s;
         self.shown.people.clear();
-        let [x, y, width, tall] = PEOPLE_BOX;
-        let rect = frame.rect(x, y, width, tall);
+        self.shown.unpictured.clear();
+        let chat = inputs.chat.filter(|chat| inputs.enabled && chat.live);
+        let listed = chat.map_or_else(Default::default, |chat| {
+            super::people::derive(chat, inputs.muted)
+        });
+        // Where each part goes, so the window can be drawn round them first.
+        let online_note = match chat {
+            None => Some("Shows once the SJK hub answers."),
+            Some(_) if !listed.listed => Some("This hub counts them but does not say who."),
+            Some(_) if listed.online.is_empty() => Some("Nobody else."),
+            Some(_) => None,
+        };
+        let online_columns = columns(FACES_WIDTH, ONLINE_RADIUS);
+        let recent_columns = columns(FACES_WIDTH, RECENT_RADIUS);
+        let online_faces = listed.online.len() + usize::from(listed.more > 0);
+        let online_top = ONLINE_Y + UNDER_HEADING;
+        let mut online_bottom =
+            online_top + grid_height(online_faces, online_columns, ONLINE_RADIUS);
+        if online_note.is_some() {
+            online_bottom = online_bottom.max(online_top + NOTE_ROW);
+        }
+        // The second part, once the hub has answered.
+        let recent_y = online_bottom + PART_GAP;
+        let recent_top = recent_y + UNDER_HEADING;
+        let bottom = match chat {
+            None => online_bottom,
+            Some(_) if listed.recent.is_empty() => recent_top + NOTE_ROW,
+            Some(_) => recent_top + grid_height(listed.recent.len(), recent_columns, RECENT_RADIUS),
+        } + PEOPLE_PAD;
+        let rect = frame.rect(PEOPLE_X, PEOPLE_TOP, PEOPLE_WIDTH, bottom - PEOPLE_TOP);
         let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
             rect,
             radius: 14.0 * s,
@@ -480,61 +518,69 @@ impl Panel {
             width: 1.0 * s,
             color: color::alpha(color::HOLO, 0.25),
         });
-        let chat = inputs.chat.filter(|chat| inputs.enabled && chat.live);
-        let listed = chat.map_or_else(Default::default, |chat| {
-            super::people::derive(chat, inputs.muted)
-        });
         let online = match chat {
             Some(_) => format!("Online  \u{b7}  {}", listed.count),
             None => "Online".to_owned(),
         };
         kit::heading(&mut self.ui, frame, SIDE_X, ONLINE_Y, SIDE_WIDTH, &online);
         let mut hovered = None;
-        let mut row_y = ONLINE_Y + 18.0;
-        let note = match chat {
-            None => Some("Shows once the SJK hub answers."),
-            Some(_) if !listed.listed => Some("This hub counts them but does not say who."),
-            Some(_) if listed.online.is_empty() => Some("Nobody else."),
-            Some(_) => None,
-        };
-        if let Some(note) = note {
-            self.quiet_row(frame, row_y, note);
+        if let Some(note) = online_note {
+            self.quiet_row(frame, online_top, note);
         }
-        for row in &listed.online {
+        for (index, row) in listed.online.iter().enumerate() {
+            let at = centre(index, online_columns, ONLINE_RADIUS, [SIDE_X, online_top]);
+            let note = if row.playing {
+                "Online now, in a match"
+            } else {
+                "Online now"
+            };
             hovered = self
-                .person(frame, row, row_y, true, inputs.now, measure)
+                .face(frame, row, at, ONLINE_RADIUS, true, note.to_owned())
                 .or(hovered);
-            row_y += PERSON_ROW;
         }
         if listed.more > 0 {
-            self.quiet_row(frame, row_y, &format!("and {} more", listed.more));
+            let at = centre(
+                listed.online.len(),
+                online_columns,
+                ONLINE_RADIUS,
+                [SIDE_X, online_top],
+            );
+            self.more_face(frame, at, ONLINE_RADIUS, listed.more);
         }
-        let recent = if chat.is_some() && !listed.listed {
-            "Recently in chat"
-        } else {
+        if chat.is_none() {
+            return (hovered, bottom);
+        }
+        let recent = if listed.listed {
             "Recently active"
+        } else {
+            "Recently in chat"
         };
-        kit::heading(&mut self.ui, frame, SIDE_X, RECENT_Y, SIDE_WIDTH, recent);
-        row_y = RECENT_Y + 18.0;
-        if chat.is_some() && listed.recent.is_empty() {
-            self.quiet_row(frame, row_y, "Nobody yet.");
+        kit::heading(&mut self.ui, frame, SIDE_X, recent_y, SIDE_WIDTH, recent);
+        if listed.recent.is_empty() {
+            self.quiet_row(frame, recent_top, "Nobody yet.");
         }
-        for row in &listed.recent {
+        for (index, row) in listed.recent.iter().enumerate() {
+            let at = centre(index, recent_columns, RECENT_RADIUS, [SIDE_X, recent_top]);
+            let when = ago(row.seen, inputs.now);
+            let note = if listed.listed {
+                format!("Seen {when}")
+            } else {
+                format!("Last spoke {when}")
+            };
             hovered = self
-                .person(frame, row, row_y, false, inputs.now, measure)
+                .face(frame, row, at, RECENT_RADIUS, false, note)
                 .or(hovered);
-            row_y += PERSON_ROW;
         }
-        hovered
+        (hovered, bottom)
     }
 
-    /// A quiet line in the who-is-online window, on the row whose top is `y`.
+    /// A quiet line in the who-is-online window, its top at `y`.
     fn quiet_row(&mut self, frame: &Frame, y: f32, line: &str) {
         text(
             &mut self.ui,
             TextFamily::Body,
             format_args!("{line}"),
-            frame.rect(SIDE_X + 18.0, y, SIDE_WIDTH - 18.0, PERSON_ROW - 2.0),
+            frame.rect(SIDE_X, y, SIDE_WIDTH, NOTE_ROW),
             15.0 * frame.s,
             color::QUIET,
             FontWeight::Regular,
@@ -542,133 +588,174 @@ impl Panel {
         );
     }
 
-    /// A player's row in the who-is-online window, its top at `y`: a dot (filled for
-    /// someone `online`, gold while they play), the name cut to its room, the tick for
-    /// a verified player and, on the right, "playing" or how long ago they were seen.
-    /// Returns them when the pointer is on their name.
-    fn person(
+    /// A player's face in the who-is-online window, a disc of `radius` round `at`
+    /// (frame pixels): their picture once it is loaded, else their initial on their
+    /// colour, as their card draws it; smaller and dimmed for someone not `online`,
+    /// greyed for someone muted here, ringed in gold under the pointer, with a gold dot
+    /// for someone in a match. Returns them, with `note` for their card, when the
+    /// pointer is on it.
+    fn face(
         &mut self,
         frame: &Frame,
         row: &super::people::Row,
-        y: f32,
+        at: [f32; 2],
+        radius: f32,
         online: bool,
-        now: u64,
-        measure: &Measure<'_>,
+        note: String,
     ) -> Option<Shows> {
         let s = frame.s;
         let token = PERSON_BASE + self.shown.people.len() as u16;
         self.shown.people.push(row.key_id.clone());
-        let middle = y + (PERSON_ROW - 2.0) * 0.5;
-        let dot = frame.rect(SIDE_X + 3.0, middle - 4.0, 8.0, 8.0);
-        let _ = self.ui.draw_list_mut().push(if online {
-            DrawCommand::RoundedRect {
-                rect: dot,
-                radius: 4.0 * s,
-                color: if row.playing {
-                    color::GOLD_BRIGHT
+        let centre = frame.point(at[0], at[1]);
+        let r = radius * s;
+        let square = sjk_ui::Rect::new(centre[0] - r, centre[1] - r, r * 2.0, r * 2.0);
+        let lit = self.ui.token_hovered(token);
+        // The version the hub listed, else one found for a sender (asked after the
+        // frame, outside the chat's lock).
+        let version = match &row.avatar {
+            Some(version) => Some(version.clone()),
+            None => {
+                let found = self.picture_of(&row.key_id).map(str::to_owned);
+                if found.is_none() {
+                    self.shown.unpictured.push(row.key_id.clone());
+                }
+                found
+            }
+        };
+        let texture = version
+            .as_deref()
+            .and_then(|version| crate::avatars::texture(&row.key_id, version));
+        let name = name_for_display(&row.name);
+        match texture {
+            Some(texture) => {
+                let tint = if row.muted {
+                    sjk_ui::Color::new(0.5, 0.52, 0.58, 0.45)
+                } else if online {
+                    sjk_ui::Color::new(1.0, 1.0, 1.0, 1.0)
                 } else {
-                    color::HOLO
-                },
+                    sjk_ui::Color::new(0.86, 0.88, 0.92, 0.82)
+                };
+                let _ = self.ui.draw_list_mut().push(DrawCommand::TexturedQuad {
+                    rect: square,
+                    texture,
+                    color: tint,
+                });
             }
+            None => {
+                let ground = if row.muted {
+                    color::alpha(color::QUIET, 0.22)
+                } else {
+                    let own = crate::profile_card::stand_in_colour(&row.key_id, &name);
+                    if online { own } else { color::alpha(own, 0.72) }
+                };
+                let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
+                    rect: square,
+                    radius: r,
+                    color: ground,
+                });
+                text(
+                    &mut self.ui,
+                    TextFamily::Display,
+                    format_args!("{}", super::people::letter(&name)),
+                    square,
+                    r * 1.1,
+                    if row.muted {
+                        color::QUIET
+                    } else if online {
+                        color::TEXT
+                    } else {
+                        color::MUTED
+                    },
+                    FontWeight::Semibold,
+                    TextAlign::Center,
+                );
+            }
+        }
+        let (ring, width) = if lit {
+            (color::GOLD_BRIGHT, 2.0 * s)
+        } else if row.muted {
+            (color::alpha(color::QUIET, 0.35), 1.5 * s)
+        } else if online {
+            (color::alpha(color::HOLO, 0.5), 1.5 * s)
         } else {
-            DrawCommand::Border {
-                rect: dot,
-                radius: 4.0 * s,
-                width: 1.0 * s,
-                color: color::alpha(color::QUIET, 0.8),
-            }
+            (color::alpha(color::HOLO, 0.25), 1.5 * s)
+        };
+        let _ = self.ui.draw_list_mut().push(DrawCommand::Arc {
+            center: centre,
+            radius: r + width,
+            width,
+            start: 0.0,
+            sweep: std::f32::consts::TAU,
+            color: ring,
+            knockout: None,
         });
-        let full = name_for_display(&row.name);
-        let full = if full.is_empty() {
-            "(no name)".to_owned()
-        } else {
-            full
-        };
-        let x = SIDE_X + 18.0;
-        let tick = if row.verified {
-            sjk_chat_look::tick_room(PERSON_SIZE)
-        } else {
-            0.0
-        };
-        let room = SIDE_WIDTH - 18.0 - PERSON_META - tick;
-        let scale = s.max(0.001);
-        let width = |value: &str| measure.width(value, PERSON_SIZE * s, TextFace::Semibold) / scale;
-        let shown = if width(&full) <= room {
-            full.clone()
-        } else {
-            let fits = (room - width("...")).max(0.0);
-            let cut = measure.fitting(&full, fits * s, PERSON_SIZE * s, TextFace::Semibold);
-            format!("{}...", &full[..cut])
-        };
-        let name_width = width(&shown).min(room);
-        let rect = frame.rect(x, y, name_width + 2.0, PERSON_ROW - 2.0);
-        text(
-            &mut self.ui,
-            TextFamily::Body,
-            format_args!("{shown}"),
-            rect,
-            PERSON_SIZE * s,
-            if row.muted { color::QUIET } else { color::TEXT },
-            FontWeight::Semibold,
-            TextAlign::Start,
-        );
-        if row.verified {
-            sjk_chat_look::tick(
-                self.ui.draw_list_mut(),
-                frame.point(x + name_width, 0.0)[0],
-                rect.y + rect.height * 0.5,
-                PERSON_SIZE * s,
-                1.0,
-            );
-        }
         if online && row.playing {
-            self.meta(frame, y, format_args!("playing"), color::GOLD_BRIGHT);
-        } else if !online {
-            self.meta(
-                frame,
-                y,
-                format_args!("{}", ago(row.seen, now)),
-                color::QUIET,
-            );
+            // In a match: a gold dot at the face's foot, right, rimmed by the ground.
+            let foot = [centre[0] + r * 0.72, centre[1] + r * 0.72];
+            let dot = if row.muted {
+                color::QUIET
+            } else {
+                color::GOLD_BRIGHT
+            };
+            for (size, colour) in [(7.0 * s, color::alpha(color::SPACE, 0.95)), (5.0 * s, dot)] {
+                let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
+                    rect: sjk_ui::Rect::new(foot[0] - size, foot[1] - size, size * 2.0, size * 2.0),
+                    radius: size,
+                    color: colour,
+                });
+            }
         }
-        self.ui.hit_region(token, rect);
-        self.ui.token_hovered(token).then(|| {
+        self.ui.hit_region(token, square);
+        lit.then(|| {
             let person = crate::sender_card::Person {
-                name: full,
+                name: if name.is_empty() {
+                    "(no name)".to_owned()
+                } else {
+                    name
+                },
                 key_id: Some(row.key_id.clone()),
                 hub_name: None,
                 verified: row.verified,
                 staff: row.staff,
                 medals: crate::medals::Medals::default(),
                 place: crate::sender_card::Place::Unknown,
-                avatar: row.avatar.clone(),
+                avatar: version,
+                note: Some(note),
             };
-            (CardSource::Person(row.key_id.clone()), person, rect)
+            (CardSource::Person(row.key_id.clone()), person, square)
         })
     }
 
-    /// What is said of a player in the who-is-online window, on the right of their row.
-    fn meta(
-        &mut self,
-        frame: &Frame,
-        y: f32,
-        line: std::fmt::Arguments<'_>,
-        colour: sjk_ui::Color,
-    ) {
+    /// The last online face of a full window: how many more players read the chat.
+    fn more_face(&mut self, frame: &Frame, at: [f32; 2], radius: f32, more: usize) {
+        let s = frame.s;
+        let centre = frame.point(at[0], at[1]);
+        let r = radius * s;
+        let square = sjk_ui::Rect::new(centre[0] - r, centre[1] - r, r * 2.0, r * 2.0);
+        let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
+            rect: square,
+            radius: r,
+            color: color::alpha(color::HOLO, 0.12),
+        });
+        let width = 1.5 * s;
+        let _ = self.ui.draw_list_mut().push(DrawCommand::Arc {
+            center: centre,
+            radius: r + width,
+            width,
+            start: 0.0,
+            sweep: std::f32::consts::TAU,
+            color: color::alpha(color::HOLO, 0.35),
+            knockout: None,
+        });
         text(
             &mut self.ui,
             TextFamily::Body,
-            line,
-            frame.rect(
-                SIDE_X + SIDE_WIDTH - PERSON_META,
-                y + 1.0,
-                PERSON_META,
-                PERSON_ROW - 4.0,
-            ),
-            14.0 * frame.s,
-            colour,
-            FontWeight::Regular,
-            TextAlign::End,
+            format_args!("+{more}"),
+            square,
+            if more > 99 { 0.62 } else { 0.78 } * r,
+            color::MUTED,
+            FontWeight::Semibold,
+            TextAlign::Center,
         );
     }
 
@@ -739,13 +826,13 @@ impl Panel {
 
     /// The chosen message's sender and what can be done: Mute here, and for staff
     /// Delete and Mute at the hub.
-    fn chosen(&mut self, frame: &Frame, inputs: &Inputs<'_>, measure: &Measure<'_>) {
+    fn chosen(&mut self, frame: &Frame, inputs: &Inputs<'_>, measure: &Measure<'_>, top: f32) {
         let s = frame.s;
         kit::heading(
             &mut self.ui,
             frame,
             SIDE_X,
-            CHOSEN_TOP,
+            top,
             SIDE_WIDTH,
             "Chosen message",
         );
@@ -767,12 +854,7 @@ impl Panel {
                     &mut self.ui,
                     TextFamily::Body,
                     format_args!("{line}"),
-                    frame.rect(
-                        SIDE_X,
-                        CHOSEN_TOP + 30.0 + row as f32 * 24.0,
-                        SIDE_WIDTH,
-                        22.0,
-                    ),
+                    frame.rect(SIDE_X, top + 30.0 + row as f32 * 24.0, SIDE_WIDTH, 22.0),
                     16.0 * s,
                     color::QUIET,
                     FontWeight::Regular,
@@ -789,7 +871,7 @@ impl Panel {
         let size = 26.0;
         let room = SIDE_WIDTH - sjk_chat_look::tick_room(size);
         let width = (measure.width(&name, size * s, TextFace::Semibold) / s.max(0.001)).min(room);
-        let rect = frame.rect(SIDE_X, CHOSEN_TOP + 28.0, width + 2.0, 34.0);
+        let rect = frame.rect(SIDE_X, top + 28.0, width + 2.0, 34.0);
         text(
             &mut self.ui,
             TextFamily::Body,
@@ -815,14 +897,14 @@ impl Panel {
                 &mut self.ui,
                 TextFamily::Body,
                 format_args!("Key id {key}"),
-                frame.rect(SIDE_X, CHOSEN_TOP + 66.0, SIDE_WIDTH, 22.0),
+                frame.rect(SIDE_X, top + 66.0, SIDE_WIDTH, 22.0),
                 15.0 * s,
                 color::MUTED,
                 FontWeight::Regular,
                 TextAlign::Start,
             );
         }
-        let mut y = CHOSEN_TOP + 110.0;
+        let mut y = top + 110.0;
         kit::button(
             &mut self.ui,
             frame,
@@ -909,7 +991,7 @@ impl Panel {
         });
     }
 
-    /// Show the sender card of the player whose name is under the pointer
+    /// Show the sender card of the player whose name or face is under the pointer
     /// (`hovered`), keep it while the pointer is on the card, else hide it.
     fn follow_card(&mut self, hovered: Option<Shows>) {
         match hovered {
@@ -951,11 +1033,11 @@ impl Panel {
         let s = frame.s;
         let size = crate::sender_card::size(&card.person, s);
         // A player of the who-is-online window has their card left of the window, over
-        // the chat's quiet top, rather than over the window's other rows (text draws
-        // over every shape, so a card over them would show them through it).
+        // the chat's quiet top, rather than over the window's other faces (text draws
+        // over every shape, so a card over them would show their initials through it).
         let origin = match card.source {
             CardSource::Person(_) => [
-                (frame.point(PEOPLE_BOX[0], 0.0)[0] - 12.0 * s - size[0]).max(0.0),
+                (frame.point(PEOPLE_X, 0.0)[0] - 12.0 * s - size[0]).max(0.0),
                 card.anchor.y.min(viewport[1] - size[1]).max(0.0),
             ],
             CardSource::Message(_) => {
@@ -1282,34 +1364,98 @@ mod tests {
         }
     }
 
-    /// The window lists who is online (playing first, a last row for the rest) and who
-    /// was seen last with how long ago, every name inside the window; a name under the
-    /// pointer shows its card, and a click chooses that player's newest message.
-    #[test]
-    fn the_window_lists_who_is_online_and_who_was_seen_last() {
-        use sjk_ui::{InputEvent, Vec2};
-        let fonts = crate::text::load_modern(1.0, None).expect("Inter");
+    /// The who-is-online window's rectangle as drawn (its border).
+    fn window(panel: &Panel, s: f32) -> Rect {
+        panel
+            .ui
+            .draw_list()
+            .commands()
+            .iter()
+            .find_map(|command| match command {
+                DrawCommand::Border {
+                    rect,
+                    radius,
+                    width,
+                    color,
+                } if (*radius - 14.0 * s).abs() < 0.01
+                    && (*width - s).abs() < 0.01
+                    && *color == color::alpha(color::HOLO, 0.25)
+                    && rect.y > 150.0 * s =>
+                {
+                    Some(*rect)
+                }
+                _ => None,
+            })
+            .expect("the window")
+    }
+
+    /// The faces' squares, by token, as the last frame laid them out.
+    fn faces(panel: &Panel) -> Vec<Rect> {
+        (0..panel.shown.people.len())
+            .map(|index| {
+                panel
+                    .ui
+                    .rect_for(PERSON_BASE + index as u16)
+                    .expect("a face")
+            })
+            .collect()
+    }
+
+    fn inside(rect: Rect, of: Rect) -> bool {
+        rect.x >= of.x
+            && rect.right() <= of.right()
+            && rect.y >= of.y
+            && rect.bottom() <= of.bottom()
+    }
+
+    /// Point the pointer at `at` and lay the page out again.
+    fn point_at(panel: &mut Panel, inputs: &Inputs<'_>, font: &UiFont, at: [f32; 2]) {
+        let _ = panel.handle_pointer(sjk_ui::InputEvent::PointerMove(sjk_ui::Vec2::new(
+            at[0], at[1],
+        )));
+        panel.build_with(inputs, font, [1920.0, 1080.0]);
+    }
+
+    /// The online players as a crowd of `count`, Sol first (verified, with a picture,
+    /// playing), then Zed (playing) and the others; two seen recently.
+    fn crowd(count: usize) -> sjk_identity::ChatState {
         let mut state = chat(3);
         let now = 1_791_400_000_i64;
-        let second = format!("{:016x}", 2);
-        let mut sol = listed_person(&second, "^2Sol", now, true);
-        sol.verified = true;
-        sol.avatar = "0123456789abcdef".to_owned();
-        let long = format!("A{}", "MW".repeat(16));
+        let mut online = vec![
+            sjk_identity::Person {
+                verified: true,
+                avatar: "0123456789abcdef".to_owned(),
+                ..listed_person(&format!("{:016x}", 2), "^2Sol", now, true)
+            },
+            listed_person("aaaaaaaaaaaaaaaa", "^1Zed", now, true),
+        ];
+        for n in 2..count {
+            online.push(listed_person(
+                &format!("{:016x}", 0x100 + n),
+                &format!("Player {n:02}"),
+                now,
+                false,
+            ));
+        }
+        online.truncate(count);
         state.people = Some(sjk_identity::People {
-            online: vec![
-                sol,
-                listed_person("aaaaaaaaaaaaaaaa", "Fox", now, false),
-                listed_person("bbbbbbbbbbbbbbbb", &long, now, false),
-                listed_person("cccccccccccccccc", "Kyle", now, false),
-                listed_person("dddddddddddddddd", "Mara", now, false),
-                listed_person("eeeeeeeeeeeeeeee", "Zed", now, false),
-            ],
+            online,
             recent: vec![
                 listed_person("ffffffffffffffff", "Bastila", now - 180, false),
-                listed_person("1111111111111111", "Jan", now - 7_200, false),
+                listed_person("1111111111111111", "^5jan", now - 7_200, false),
             ],
         });
+        state
+    }
+
+    /// The window shows who is online as faces in a grid (playing first, the last face
+    /// "+N" for the rest) and who was seen last as smaller ones, inside the window and
+    /// with no time written; each face shows its initial until its picture loads, and
+    /// a gold dot for a player in a match.
+    #[test]
+    fn the_window_shows_faces_in_a_grid_with_a_last_one_for_the_rest() {
+        let fonts = crate::text::load_modern(1.0, None).expect("Inter");
+        let state = crowd(20);
         let mut panel = Panel::new();
         panel.open(true);
         let inputs = inputs(&state, &[], false);
@@ -1317,102 +1463,293 @@ mod tests {
         let drawn = texts(&panel);
         found(&drawn, "Online  \u{b7}  9");
         found(&drawn, "Recently active");
-        let (_, sol, _) = found(&drawn, "^2Sol");
-        let (_, playing, colour) = found(&drawn, "playing");
-        assert!((sol.y - playing.y).abs() < 4.0 && *colour == color::GOLD_BRIGHT);
-        // Six online: four rows, then one for the other two.
-        found(&drawn, "and 2 more");
-        assert!(!drawn.iter().any(|(text, ..)| text == "Zed"), "{drawn:?}");
-        let (_, cut, _) = drawn
+        // Twenty online in eighteen faces: seventeen, then "+3".
+        let online = super::people::ONLINE_FACES - 1;
+        assert_eq!(panel.shown.people.len(), online + 2, "and two recent");
+        let (_, more, _) = found(&drawn, "+3");
+        let shown = faces(&panel);
+        let window = window(&panel, 1.0);
+        for face in shown.iter().chain([more]) {
+            assert!(inside(*face, window), "{face:?} in {window:?}");
+        }
+        assert!(inside(*more, window));
+        // Nine across, the tenth under the first; the "+3" in the last cell.
+        let (first, tenth) = (shown[0], shown[9]);
+        assert_eq!((first.width, first.height), (40.0, 40.0));
+        assert!((tenth.x - first.x).abs() < 0.01 && (tenth.y - first.y - 50.0).abs() < 0.01);
+        assert!((shown[1].x - first.x - 50.0).abs() < 0.01);
+        assert!((more.x - shown[8].x).abs() < 0.01);
+        assert!(
+            more.y >= tenth.y - 1.0 && more.y < tenth.bottom(),
+            "{more:?}"
+        );
+        // No two faces touch.
+        for (index, a) in shown.iter().enumerate() {
+            for b in &shown[index + 1..] {
+                assert!(
+                    a.right() < b.x || b.right() < a.x || a.bottom() < b.y || b.bottom() < a.y,
+                    "{a:?} and {b:?}"
+                );
+            }
+        }
+        // Recent faces are smaller, under their heading, under the online ones.
+        let recent = shown[online];
+        assert_eq!((recent.width, recent.height), (30.0, 30.0));
+        let (_, heading, _) = found(&drawn, "Recently active");
+        assert!(heading.y > tenth.bottom() && recent.y > heading.bottom() - 8.0);
+        // Their initials, colour codes aside, centred on their faces.
+        let (_, s_letter, _) = drawn
             .iter()
-            .find(|(text, ..)| text.starts_with("AMW") && text.ends_with("..."))
-            .unwrap_or_else(|| panic!("the long name cut: {drawn:?}"));
-        let (_, three, _) = found(&drawn, "3 minutes ago");
-        found(&drawn, "2 hours ago");
-        let [x, y, width, tall] = PEOPLE_BOX;
-        let window = Rect::new(x, y, width, tall);
-        for rect in [sol, cut, three] {
+            .find(|(text, rect, _)| text == "S" && inside(*rect, window))
+            .expect("Sol's initial");
+        assert!((s_letter.x + s_letter.width * 0.5 - (first.x + 20.0)).abs() < 0.5);
+        assert!(
+            drawn
+                .iter()
+                .any(|(text, rect, _)| text == "J" && inside(*rect, window))
+        );
+        // Gold dots for the two in a match, and nothing written of when anyone was seen.
+        let dots = panel
+            .ui
+            .draw_list()
+            .commands()
+            .iter()
+            .filter(|command| {
+                matches!(command, DrawCommand::RoundedRect { color, rect, .. }
+                    if *color == color::GOLD_BRIGHT && inside(*rect, window))
+            })
+            .count();
+        assert_eq!(dots, 2);
+        assert!(
+            !drawn.iter().any(|(text, rect, _)| inside(*rect, window)
+                && (text.contains("ago") || text == "playing")),
+            "{drawn:?}"
+        );
+        // The chosen message's heading under the window.
+        let (_, chosen, _) = found(&drawn, "Chosen message");
+        assert!(chosen.y > window.bottom());
+    }
+
+    /// The window is as tall as what it shows, so Chosen message comes up under a short
+    /// one; every face stays in the window and on screen at 1080p, 4K, 4:3 and 21:9.
+    #[test]
+    fn the_window_shrinks_to_its_faces_and_fits_every_screen() {
+        let fonts = crate::text::load_modern(1.0, None).expect("Inter");
+        let chosen_at = |state: &sjk_identity::ChatState| {
+            let mut panel = Panel::new();
+            panel.open(true);
+            panel.build_with(&inputs(state, &[], false), &fonts.font, [1920.0, 1080.0]);
+            let (_, chosen, _) = found(&texts(&panel), "Chosen message").clone();
+            (window(&panel, 1.0), chosen)
+        };
+        let (full, full_chosen) = chosen_at(&crowd(20));
+        let (one_row, one_row_chosen) = chosen_at(&crowd(5));
+        assert!(
+            (full.height - one_row.height - 50.0).abs() < 0.01,
+            "one row less"
+        );
+        assert!((full_chosen.y - one_row_chosen.y - 50.0).abs() < 0.01);
+        // Shorter than the window of names it replaced (318 tall, Chosen at 556).
+        assert!(full.bottom() < 522.0 && one_row_chosen.y < 556.0 - 15.0 - 100.0);
+        let state = crowd(20);
+        let mut panel = Panel::new();
+        panel.open(true);
+        panel.selected = Some(3);
+        let staff = inputs(&state, &[], true);
+        for viewport in [
+            [1920.0, 1080.0],
+            [3840.0, 2160.0],
+            [1440.0, 1080.0],
+            [2560.0, 1080.0],
+            [2560.0, 1440.0],
+            [1024.0, 768.0],
+        ] {
+            panel.build_with(&staff, &fonts.font, viewport);
+            assert!(!panel.ui.overflowed(), "{viewport:?}");
+            let s = Frame::new(viewport).s;
+            let window = window(&panel, s);
+            let screen = Rect::new(0.0, 0.0, viewport[0], viewport[1]);
+            assert!(inside(window, screen), "{viewport:?}");
+            for face in faces(&panel) {
+                assert!(
+                    inside(face, window),
+                    "{face:?} in {window:?} at {viewport:?}"
+                );
+                // A whole number of pixels across at 1080p and 4K: crisp discs.
+                if viewport == [3840.0, 2160.0] {
+                    assert!(face.width == 80.0 || face.width == 60.0, "{face:?}");
+                }
+            }
+            // The chosen message's tools under the window and above the keys.
+            let mute = panel.ui.rect_for(MUTE_TOKEN).expect("Mute");
+            let unmute = panel
+                .ui
+                .rect_for(HUB_UNMUTE_TOKEN)
+                .expect("Unmute at the hub");
+            let keys = Frame::new(viewport).point(0.0, KEYS_Y - 20.0)[1];
             assert!(
-                rect.x >= window.x
-                    && rect.right() <= window.right()
-                    && rect.y >= window.y
-                    && rect.bottom() <= window.bottom(),
-                "{rect:?} in {window:?}"
+                mute.y > window.bottom() && unmute.bottom() < keys,
+                "{viewport:?}"
             );
         }
-        assert!(cut.right() <= SIDE_X + SIDE_WIDTH - PERSON_META + 1.0);
-        // Hovering Sol's name: their card, with the picture the hub listed.
-        let name = panel.ui.rect_for(PERSON_BASE).expect("Sol's name");
-        let centre = Vec2::new(name.x + name.width * 0.5, name.y + name.height * 0.5);
-        let _ = panel.handle_pointer(InputEvent::PointerMove(centre));
+    }
+
+    /// A face under the pointer shows that player's card, left of the window, with when
+    /// they were about; the gap between two faces shows none; a click chooses their
+    /// newest message; a muted player's face is greyed.
+    #[test]
+    fn a_face_under_the_pointer_shows_its_card() {
+        let fonts = crate::text::load_modern(1.0, None).expect("Inter");
+        let state = crowd(5);
+        let muted = ["aaaaaaaaaaaaaaaa".to_owned()];
+        let mut panel = Panel::new();
+        panel.open(true);
+        let inputs = inputs(&state, &muted, false);
         panel.build_with(&inputs, &fonts.font, [1920.0, 1080.0]);
+        let shown = faces(&panel);
+        let centre = |rect: Rect| [rect.x + rect.width * 0.5, rect.y + rect.height * 0.5];
+        // Sol's face: their card, with the picture the hub listed and that they play.
+        point_at(&mut panel, &inputs, &fonts.font, centre(shown[0]));
         let card = panel.card.as_ref().expect("the card");
-        assert_eq!(card.source, CardSource::Person(second.clone()));
+        assert_eq!(card.source, CardSource::Person(format!("{:016x}", 2)));
         assert_eq!(card.person.avatar.as_deref(), Some("0123456789abcdef"));
+        assert_eq!(card.person.note.as_deref(), Some("Online now, in a match"));
         assert!(card.person.verified);
         let target = panel.ui.rect_for(CARD_TOKEN).expect("the card's target");
-        assert!(target.right() <= window.x, "left of the window: {target:?}");
+        assert!(
+            target.right() <= window(&panel, 1.0).x,
+            "left of the window: {target:?}"
+        );
+        assert!(found(&texts(&panel), "Online now, in a match").1.right() <= target.right());
+        // Lit: a gold ring round it.
+        assert!(panel.ui.draw_list().commands().iter().any(|command| matches!(
+            command,
+            DrawCommand::Arc { color, center, .. }
+                if *color == color::GOLD_BRIGHT && (center[0] - centre(shown[0])[0]).abs() < 0.01
+        )));
+        // Between two faces: no card.
+        point_at(
+            &mut panel,
+            &inputs,
+            &fonts.font,
+            [shown[0].right() + 5.0, centre(shown[0])[1]],
+        );
+        assert!(panel.card.is_none());
+        // A recent face: when they were seen, on the card only.
+        let recent = shown[5];
+        point_at(&mut panel, &inputs, &fonts.font, centre(recent));
+        let card = panel.card.as_ref().expect("the recent card");
+        assert_eq!(card.person.name, "Bastila");
+        assert_eq!(card.person.note.as_deref(), Some("Seen 3 minutes ago"));
+        found(&texts(&panel), "Seen 3 minutes ago");
+        // Zed is muted here: a grey disc, and Unmute on the card.
+        let zed = shown[1];
+        assert!(
+            panel
+                .ui
+                .draw_list()
+                .commands()
+                .iter()
+                .any(|command| matches!(
+                    command,
+                    DrawCommand::RoundedRect { color, rect, .. }
+                        if *color == color::alpha(color::QUIET, 0.22) && *rect == zed
+                ))
+        );
         // A click chooses their newest message on show; someone who said nothing, none.
         assert_eq!(panel.activate(PERSON_BASE), PanelAction::None);
         assert_eq!(panel.selected, Some(2));
         panel.selected = None;
         let _ = panel.activate(PERSON_BASE + 1);
         assert_eq!(panel.selected, None);
-        // It fits the canvas at every size, the chosen message's staff tools too.
-        panel.selected = Some(3);
-        let staff = super::super::tests::inputs(&state, &[], true);
-        for viewport in [
-            [1920.0, 1080.0],
-            [3840.0, 2160.0],
-            [1440.0, 1080.0],
-            [2560.0, 1080.0],
-        ] {
-            panel.build_with(&staff, &fonts.font, viewport);
-            assert!(!panel.ui.overflowed(), "{viewport:?}");
-        }
-        // The chosen message's tools stay under the window and above the keys.
-        panel.build_with(&staff, &fonts.font, [1920.0, 1080.0]);
-        let mute = panel.ui.rect_for(MUTE_TOKEN).expect("Mute");
-        let unmute = panel
-            .ui
-            .rect_for(HUB_UNMUTE_TOKEN)
-            .expect("Unmute at the hub");
-        assert!(mute.y > window.bottom() && unmute.bottom() < KEYS_Y - 20.0);
     }
 
-    /// A hub that does not list who is online: the count, and the last senders.
+    /// When the faces change under a pointer that does not move, what it rests on is
+    /// looked for again: the targets after the faces moved in the frame's list, and
+    /// without it the field's place would light a face and show its card.
+    #[test]
+    fn faces_changing_under_a_resting_pointer_do_not_light_another_target() {
+        let fonts = crate::text::load_modern(1.0, None).expect("Inter");
+        let (few, many) = (crowd(5), crowd(20));
+        let mut panel = Panel::new();
+        panel.open(true);
+        panel.build_with(&inputs(&few, &[], false), &fonts.font, [1920.0, 1080.0]);
+        let field = panel.ui.rect_for(FIELD_TOKEN).expect("the field");
+        let at = [field.x + 10.0, field.y + field.height * 0.5];
+        point_at(&mut panel, &inputs(&few, &[], false), &fonts.font, at);
+        assert!(panel.card.is_none());
+        for _ in 0..3 {
+            panel.build_with(&inputs(&many, &[], false), &fonts.font, [1920.0, 1080.0]);
+            assert!(
+                panel.card.is_none(),
+                "{:?}",
+                panel.card.as_ref().map(|card| &card.source)
+            );
+        }
+        // Resting on a face while the list grows: the face now under it.
+        let first = faces(&panel)[0];
+        point_at(
+            &mut panel,
+            &inputs(&many, &[], false),
+            &fonts.font,
+            [first.x + 20.0, first.y + 20.0],
+        );
+        assert!(panel.card.is_some());
+        for _ in 0..2 {
+            panel.build_with(&inputs(&few, &[], false), &fonts.font, [1920.0, 1080.0]);
+        }
+        let card = panel.card.as_ref().expect("still a card");
+        assert_eq!(card.source, CardSource::Person(format!("{:016x}", 2)));
+    }
+
+    /// A hub that does not list who is online: the count, and the last senders' faces,
+    /// newest first; their pictures are looked up after the frame, and their card says
+    /// when they last spoke.
     #[test]
     fn without_a_list_the_window_shows_the_count_and_the_last_senders() {
         let fonts = crate::text::load_modern(1.0, None).expect("Inter");
         let state = chat(3);
         let mut panel = Panel::new();
         panel.open(true);
-        panel.build_with(&inputs(&state, &[], false), &fonts.font, [1920.0, 1080.0]);
+        let inputs = inputs(&state, &[], false);
+        panel.build_with(&inputs, &fonts.font, [1920.0, 1080.0]);
         let drawn = texts(&panel);
         found(&drawn, "Online  \u{b7}  9");
         found(&drawn, "This hub counts them but does not say who.");
         found(&drawn, "Recently in chat");
-        let rows: Vec<f32> = ["^3Player 3", "^2Player 2", "^1Player 1"]
-            .iter()
-            .map(|name| {
-                drawn
-                    .iter()
-                    .filter(|(text, rect, _)| text == name && rect.x >= SIDE_X)
-                    .map(|(_, rect, _)| rect.y)
-                    .next()
-                    .unwrap_or_else(|| panic!("{name} in the window: {drawn:?}"))
-            })
-            .collect();
-        assert!(
-            rows.windows(2).all(|pair| pair[0] < pair[1]),
-            "newest first"
-        );
-        // Not reading: the window says why it is empty.
+        let keys: Vec<String> = [3, 2, 1].iter().map(|id| format!("{id:016x}")).collect();
+        assert_eq!(panel.shown.people, keys, "newest first");
+        let shown = faces(&panel);
+        assert!(shown.windows(2).all(|pair| pair[0].x < pair[1].x));
+        assert_eq!(shown[0].width, 30.0, "recent faces");
+        // Their pictures are not known: asked after the frame, kept once found.
+        assert_eq!(panel.shown.unpictured, keys);
+        let asked = std::cell::RefCell::new(Vec::new());
+        panel.find_pictures(|key| {
+            asked.borrow_mut().push(key.to_owned());
+            (key == keys[1]).then(|| "0123456789abcdef".to_owned())
+        });
+        assert_eq!(*asked.borrow(), keys);
+        panel.build_with(&inputs, &fonts.font, [1920.0, 1080.0]);
+        assert_eq!(panel.shown.unpictured, [keys[0].clone(), keys[2].clone()]);
+        let centre = |rect: Rect| [rect.x + rect.width * 0.5, rect.y + rect.height * 0.5];
+        point_at(&mut panel, &inputs, &fonts.font, centre(shown[1]));
+        let card = panel.card.as_ref().expect("the card");
+        assert_eq!(card.person.avatar.as_deref(), Some("0123456789abcdef"));
+        // Player 2 spoke at 1_791_300_120, the page's now is 1_791_400_000.
+        assert_eq!(card.person.note.as_deref(), Some("Last spoke yesterday"));
+        // Not reading: the window says why it is empty, and is only that tall.
         let mut quiet = state.clone();
         quiet.live = false;
-        panel.build_with(&inputs(&quiet, &[], false), &fonts.font, [1920.0, 1080.0]);
+        panel.build_with(&inputs_for(&quiet), &fonts.font, [1920.0, 1080.0]);
         let drawn = texts(&panel);
         found(&drawn, "Shows once the SJK hub answers.");
         found(&drawn, "Online");
+        assert!(!drawn.iter().any(|(text, ..)| text == "Recently active"));
+        assert!(panel.shown.people.is_empty());
+    }
+
+    fn inputs_for(chat: &sjk_identity::ChatState) -> Inputs<'_> {
+        inputs(chat, &[], false)
     }
 }

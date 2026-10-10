@@ -47,6 +47,9 @@ pub(crate) struct Person {
     /// Their picture's version, empty for none; `None` while not known (the place that
     /// shows the card asks, outside any lock: `player_identity::avatar_version`).
     pub(crate) avatar: Option<String>,
+    /// A line on when they were about, from the place that shows the card ("Online
+    /// now, in a match", "Seen 3 minutes ago"), or none.
+    pub(crate) note: Option<String>,
 }
 
 impl Person {
@@ -104,6 +107,9 @@ pub(crate) fn size(person: &Person, u: f32) -> [f32; 2] {
         height += 20.0;
     }
     if person.place != Place::Unknown {
+        height += 20.0;
+    }
+    if person.note.is_some() {
         height += 20.0;
     }
     if !person.medals.is_empty() {
@@ -279,6 +285,10 @@ pub(crate) fn draw(
             y += 20.0 * u;
         }
     }
+    if let Some(note) = &person.note {
+        line(canvas, y, 14.0 * u, color::MUTED, format_args!("{note}"));
+        y += 20.0 * u;
+    }
     if !person.medals.is_empty() {
         for (index, (medal, _)) in person.medals.iter().take(MEDALS).enumerate() {
             let _ = canvas.draw_list_mut().push(DrawCommand::TexturedQuad {
@@ -374,6 +384,7 @@ mod tests {
             medals: crate::medals::Medals::default(),
             place: Place::SlotByName(5),
             avatar: Some(String::new()),
+            note: None,
         }
     }
 
@@ -448,6 +459,26 @@ mod tests {
         let button = canvas.rect_for(TOKENS.mute).expect("the button");
         assert!(rect.contains(sjk_ui::Vec2::new(button.x + 1.0, button.y + 1.0)));
         assert!(button.bottom() <= rect.bottom());
+    }
+
+    /// A note from the place that shows the card (the chat page's window: when they
+    /// were about) takes a line of its own, inside the card.
+    #[test]
+    fn a_note_gets_its_line_and_the_card_grows_for_it() {
+        let plain = sol();
+        let noted = Person {
+            note: Some("Seen 3 minutes ago".to_owned()),
+            ..sol()
+        };
+        let (_, rect, texts, _) = drawn(&noted, false);
+        assert!(
+            texts.contains(&"Seen 3 minutes ago".to_owned()),
+            "{texts:?}"
+        );
+        assert_eq!(size(&noted, 1.0)[1], size(&plain, 1.0)[1] + 20.0);
+        assert_eq!(rect.height, size(&noted, 1.0)[1]);
+        let (_, _, texts, _) = drawn(&plain, false);
+        assert!(!texts.iter().any(|text| text.starts_with("Seen")));
     }
 
     #[test]

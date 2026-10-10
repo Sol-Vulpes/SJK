@@ -69,13 +69,16 @@ test: Restart the client: the switch keeps its value.
 
 [chat-online]
 area: Console & chat
-title: SJK chat page: who is online and who was seen last
-change: The SJK chat page has a window over Chosen message: Online (count, playing first)
-change: and Recently active with how long ago. Pointer on a name: their card; click: newest msg.
-change: Until the hub lists people: the count and Recently in chat (the last senders).
+title: SJK chat page: who is online and who was seen last, as faces
+change: Window over Chosen message: Online (count) and Recently active as round faces (hub
+change: picture, else the first letter); gold dot = in a match; past 18 online a "+N" face.
+change: Face under the pointer: their card, saying when seen. No hub list: Recently in chat.
 test: Open the SJK chat page (sjkchat): the window sits top right, the count by Online.
-test: Rest the pointer on a name in it: the card opens left of the window, Mute works.
-test: Click a name that spoke: its newest message is chosen; Chosen message sits under it.
+test: Faces are round and crisp at 4K; players with a picture show it, others a letter.
+test: Rest the pointer on a face: gold ring, the card opens left of the window, Mute works.
+test: The card of a recent face says when they were seen or last spoke; no time on faces.
+test: Click a face that spoke: its newest message is chosen; Chosen message sits under it.
+test: Mute someone from the card: their face greys. The window is only as tall as its faces.
 test: Turn cl_sjkChat 0: the window says it shows once the hub answers.
 note: The deployed hub has no people list yet: expect Recently in chat for now.
 

@@ -962,6 +962,7 @@ fn person(line: &DockLine<'_>) -> crate::sender_card::Person {
         medals: crate::medals::Medals::default(),
         place: crate::sender_card::Place::Unknown,
         avatar: None,
+        note: None,
     }
 }
 

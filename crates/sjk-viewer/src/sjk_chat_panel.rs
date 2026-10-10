@@ -40,7 +40,9 @@ const CARD_MUTE_TOKEN: u16 = 1_361;
 const NAME_BASE: u16 = 1_370;
 /// The players in the who-is-online window, one token each.
 const PERSON_BASE: u16 = 1_420;
-const PEOPLE_SHOWN: usize = people::ONLINE_ROWS + people::RECENT_ROWS;
+const PEOPLE_SHOWN: usize = people::ONLINE_FACES + people::RECENT_FACES;
+/// Pictures' versions the page keeps for faces whose row does not carry one.
+const PICTURES_KEPT: usize = 32;
 /// Longest message, as the hub takes it.
 const DRAFT_MAX: usize = sjk_identity::chat::TEXT_MAX;
 /// Messages Page Up and Page Down scroll by.
@@ -104,6 +106,9 @@ struct Shown {
     card_muted: bool,
     /// The keys of the players in the who-is-online window, by token.
     people: Vec<String>,
+    /// The keys of faces in the window drawn without knowing their picture: the
+    /// chat's last senders, whose messages do not say ([`Panel::find_pictures`]).
+    unpictured: Vec<String>,
 }
 
 pub(crate) struct Panel {
@@ -125,6 +130,14 @@ pub(crate) struct Panel {
     shown: Shown,
     /// The sender card on show.
     card: Option<Hovered>,
+    /// The pictures' versions found for faces without one (key, version; empty for
+    /// none), newest last.
+    pictures: Vec<(String, String)>,
+    /// Where the pointer last moved to, and the window's faces the frame before: the
+    /// canvas knows the target under the pointer by its place in the frame's list, so
+    /// when the faces change under a resting pointer it is looked for again.
+    pointer: Option<sjk_ui::Vec2>,
+    previous_people: Vec<String>,
     epoch: Instant,
     /// The chat to show in place of the live one, for a world shot.
     #[cfg(test)]
@@ -170,6 +183,9 @@ impl Panel {
             staff_after: None,
             shown: Shown::default(),
             card: None,
+            pictures: Vec::new(),
+            pointer: None,
+            previous_people: Vec::with_capacity(PEOPLE_SHOWN),
             epoch: Instant::now(),
             #[cfg(test)]
             preview: None,
@@ -224,13 +240,38 @@ impl Panel {
         }
     }
 
+    /// Find the pictures of the faces the last frame drew without one, through
+    /// `picture` (a key's picture version, empty for none, `None` while not known),
+    /// outside the chat's lock as [`Panel::place_card`] does.
+    pub(crate) fn find_pictures(&mut self, picture: impl Fn(&str) -> Option<String>) {
+        for key in std::mem::take(&mut self.shown.unpictured) {
+            if self.pictures.iter().any(|(known, _)| *known == key) {
+                continue;
+            }
+            if let Some(version) = picture(&key) {
+                if self.pictures.len() == PICTURES_KEPT {
+                    self.pictures.remove(0);
+                }
+                self.pictures.push((key, version));
+            }
+        }
+    }
+
+    /// The picture version found for `key_id`'s face, if any.
+    fn picture_of(&self, key_id: &str) -> Option<&str> {
+        self.pictures
+            .iter()
+            .find(|(key, _)| key == key_id)
+            .map(|(_, version)| version.as_str())
+    }
+
     /// Choose the message with `id`, for a world shot.
     #[cfg(test)]
     pub(crate) fn choose_for_shot(&mut self, id: u64) {
         self.selected = Some(id);
     }
 
-    /// Rest the pointer on the name of the `index`th player of the who-is-online
+    /// Rest the pointer on the face of the `index`th player of the who-is-online
     /// window, as the last frame laid it out, or on the field for `None`, for a world
     /// shot.
     #[cfg(test)]
@@ -453,6 +494,9 @@ impl Panel {
                 self.scroll = self.scroll.saturating_sub(1);
             }
             return PanelAction::None;
+        }
+        if let InputEvent::PointerMove(at) = event {
+            self.pointer = Some(at);
         }
         let Some(event) = self.ui.pointer(event) else {
             return PanelAction::None;

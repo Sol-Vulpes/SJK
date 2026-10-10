@@ -207,24 +207,39 @@ active players that are offline"). It is drawn by
 [sjk_chat_panel_view.rs](../crates/sjk-viewer/src/sjk_chat_panel_view.rs) from what
 [sjk_chat_people.rs](../crates/sjk-viewer/src/sjk_chat_people.rs) derives.
 
+Players show as faces, not names (Sol's request, 10/10/2026: "a little circle with their
+profile picture in it, maybe just that actually, and the letter if no picture, with
+mouse hover to see the profile card"): a disc with the player's hub picture, from the
+picture cache the cards use ([avatars.rs](../crates/sjk-viewer/src/avatars.rs)), or,
+until it loads and for a player without one, the first letter of their name (colour
+codes aside) on their own colour, as their card and profile draw it
+(`profile_card::stand_in_colour`). Verified and staff marks are left to the card.
+
 - **Online** (the heading carries the hub's count): the keys that read the feed in the
   last 60 seconds, the same keys `online` counts, so an SJK client with the chat on, in
-  the menus or in a game, or one on a game server with the chat off. A gold dot and
-  "playing" mark a player holding a live claim marked active (in a match, playing, as
-  holocrons count it); a holo dot one who is not. Playing players come first, then by
-  name (colours and symbols aside), each key once. Five rows: with more, the last says
-  "and N more".
+  the menus or in a game, or one on a game server with the chat off. A gold dot at the
+  foot of a face marks a player holding a live claim marked active (in a match,
+  playing, as holocrons count it). Playing players come first, then by name (colours
+  and symbols aside), each key once. Faces of 40 pixels at 1080p wrap nine to a row, two
+  rows at most: with more than 18 players the last face says "+N" of the rest.
 - **Recently active**: keys that read the feed before that, not online now, most
-  recently seen first, four of them, each with how long ago ("11 minutes ago",
-  "yesterday", as the servers' list says).
-- Resting the pointer on a name shows the player's sender card with Mute or Unmute, as a
-  name in the chat does; it opens left of the window, so the window's other rows do not
-  show through it. A click chooses that player's newest message on show, if any.
-  Muted players stay listed, their names greyed. The player's own key is listed too.
+  recently seen first, up to eight smaller, dimmed faces in one row. No time is written
+  on them: the card says it ("Seen 11 minutes ago", "Seen yesterday", as the servers'
+  list words it); an online player's card says "Online now" or "Online now, in a match".
+- Resting the pointer on a face shows the player's sender card with Mute or Unmute, as a
+  name in the chat does, and rings the face in gold; the card opens left of the window,
+  so the window's other faces do not show through it. A click chooses that player's
+  newest message on show, if any. Muted players stay, their faces greyed. The player's
+  own key is listed too.
+- The window is as tall as what it shows, so Chosen message sits right under it.
 - **A hub that does not list them** (the `people` below absent, as from the deployed hub
   today): the Online part keeps the count and says "This hub counts them but does not
-  say who", and the second part becomes **Recently in chat**: the last four senders,
-  newest first, each once, with when they last spoke (holocron drops are not messages).
+  say who", and the second part becomes **Recently in chat**: the faces of the last
+  eight senders, newest first, each once (holocron drops are not messages), their card
+  saying when they last spoke. A message does not carry its sender's picture version,
+  so the page asks, after the frame and outside the chat's lock, the profiles the
+  client knows (the hub's players on the server, else a profile fetched once per key, as
+  a sender card does) and keeps what it finds for 32 keys.
 - Chat off, identity off or the hub not answered yet: the window says it shows once the
   hub answers.
 

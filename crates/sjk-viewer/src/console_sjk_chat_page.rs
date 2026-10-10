@@ -106,6 +106,8 @@ impl ViewerConsole {
             crate::player_mutes::place,
             crate::player_identity::avatar_version,
         );
+        self.sjk_chat_panel
+            .find_pictures(crate::player_identity::avatar_version);
         let muted = crate::player_mutes::muted_keys();
         let staff = crate::player_identity::is_staff();
         let staff_state = staff.then(crate::player_identity::staff_state).flatten();

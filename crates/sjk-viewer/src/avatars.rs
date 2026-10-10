@@ -314,6 +314,15 @@ pub(crate) fn adopt_preview(key_id: &str, version: &str) {
     lock().adopt_preview(key_id, version);
 }
 
+/// Keep `rgba` ([`sjk_identity::avatar::SIZE`] square, not yet round) as `key_id`'s
+/// picture at `version`, as if the worker had loaded it, for a world shot.
+#[cfg(test)]
+pub(crate) fn insert_for_shot(key_id: &str, version: &str, rgba: &[u8]) {
+    let mut avatars = lock();
+    avatars.set_preview(Some(rgba));
+    avatars.adopt_preview(key_id, version);
+}
+
 /// Whether the preview is in the current renderer's atlas.
 pub(crate) fn preview_ready() -> bool {
     let avatars = lock();
