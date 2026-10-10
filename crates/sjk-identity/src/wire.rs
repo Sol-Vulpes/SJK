@@ -47,6 +47,117 @@ pub struct Profile {
     /// older than pictures).
     #[serde(default)]
     pub avatar: String,
+    /// How many holocrons of each tier the key has earned (absent from hubs older
+    /// than holocrons, which count as none).
+    #[serde(default)]
+    pub holocron_counts: HolocronCounts,
+    /// The key's recent holocrons, newest first, at most [`HOLOCRONS_LISTED`] (absent
+    /// from hubs older than holocrons).
+    #[serde(default)]
+    pub holocrons: Vec<Holocron>,
+}
+
+/// The most holocrons a profile lists, as the hub caps them.
+pub const HOLOCRONS_LISTED: usize = 100;
+
+/// How many holocrons of each tier a key has earned (`PROTOCOL.md`, "Holocrons"). All
+/// four are always present on the wire; a count the client does not know is none.
+#[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq)]
+pub struct HolocronCounts {
+    /// Uncommon holocrons.
+    #[serde(default)]
+    pub uncommon: u32,
+    /// Rare holocrons.
+    #[serde(default)]
+    pub rare: u32,
+    /// Legendary holocrons.
+    #[serde(default)]
+    pub legendary: u32,
+    /// Mythical holocrons.
+    #[serde(default)]
+    pub mythical: u32,
+}
+
+impl HolocronCounts {
+    /// The count of the tier whose wire id is `tier` (`uncommon`, `rare`, `legendary`,
+    /// `mythical`); 0 for an id this client does not know.
+    pub fn of(&self, tier: &str) -> u32 {
+        match tier {
+            "uncommon" => self.uncommon,
+            "rare" => self.rare,
+            "legendary" => self.legendary,
+            "mythical" => self.mythical,
+            _ => 0,
+        }
+    }
+
+    /// Every holocron the key has earned.
+    pub fn total(&self) -> u32 {
+        self.uncommon
+            .saturating_add(self.rare)
+            .saturating_add(self.legendary)
+            .saturating_add(self.mythical)
+    }
+}
+
+/// One holocron a key earned by playing, or that staff gave. It cannot be opened yet
+/// and grants nothing; it is only collected and shown.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
+pub struct Holocron {
+    /// Its number at the hub, which only rises: a client remembers the highest it has
+    /// shown.
+    pub id: u64,
+    /// Its tier's wire id; a client shows only the ids it knows.
+    pub tier: String,
+    /// When it dropped, unix seconds.
+    #[serde(default)]
+    pub dropped: i64,
+    /// `play`, or `staff` for a gift.
+    #[serde(default)]
+    pub source: String,
+    /// Public plain text from the team, only on a gift; often empty. Never markup.
+    #[serde(default)]
+    pub note: String,
+}
+
+/// The hub's answer to `GET /v1/holocrons` (`PROTOCOL.md`, "Holocrons"): how far the
+/// own key is from its next holocron.
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq)]
+pub struct HolocronState {
+    /// Seconds of active play carried toward the next holocron.
+    pub progress_secs: u64,
+    /// Seconds of active play for one holocron.
+    pub every_secs: u64,
+    /// Holocrons dropped in the last 24 hours.
+    #[serde(default)]
+    pub today: u32,
+    /// The most holocrons a key can earn in 24 hours.
+    #[serde(default)]
+    pub daily_cap: u32,
+    /// The hub's clock, unix seconds.
+    #[serde(default)]
+    pub server_time: i64,
+}
+
+/// A holocron dropping for a key, as the feed relays it (`PROTOCOL.md`, "The feed").
+/// Legendary and mythical drops reach every reader; uncommon and rare ones only the
+/// reader whose key it is.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
+pub struct DropEvent {
+    /// Its id in the feed's sequence.
+    pub id: u64,
+    /// When it dropped, unix seconds.
+    pub at: i64,
+    /// The key it dropped for.
+    pub key_id: String,
+    /// That key's hub display name, with colour codes. Show it only through
+    /// [`crate::chat::for_display`].
+    pub name: String,
+    /// The tier's wire id.
+    pub tier: String,
+    /// Whether the hub's operator vouches for the key.
+    #[serde(default)]
+    pub verified: bool,
 }
 
 /// One unlockable a key holds (`PROTOCOL.md`, "Unlocks"): granted by the hub's
@@ -219,6 +330,19 @@ pub struct ChatMessage {
     pub staff: bool,
     /// What they said.
     pub text: String,
+    /// Set when this "message" is a holocron drop the feed relayed (never read from
+    /// the wire): `text` is empty and the viewer words the line.
+    #[serde(skip)]
+    pub holocron: Option<DropMark>,
+}
+
+/// What marks a [`ChatMessage`] as a holocron drop.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct DropMark {
+    /// The tier's wire id.
+    pub tier: String,
+    /// The drop is the reader's own.
+    pub own: bool,
 }
 
 /// One emote on a game server (`PROTOCOL.md`, "Emotes"): the slot and name come from
@@ -253,6 +377,10 @@ pub struct Feed {
     /// New looks on the server asked about (absent from hubs older than looks).
     #[serde(default)]
     pub looks: Vec<LookEvent>,
+    /// New holocron drops this reader is told of (absent from hubs older than
+    /// holocrons).
+    #[serde(default)]
+    pub drops: Vec<DropEvent>,
     /// Messages staff deleted.
     #[serde(default)]
     pub deleted: Vec<u64>,
@@ -429,6 +557,83 @@ mod tests {
         );
         let quiet: Feed = serde_json::from_str(r#"{"next":3,"emotes":[]}"#).unwrap();
         assert!(quiet.looks.is_empty(), "an older hub sends no looks");
+    }
+
+    #[test]
+    fn holocrons_parse_in_profiles_and_older_hubs_send_none() {
+        let profile: Profile = serde_json::from_str(
+            r#"{"key_id":"aa","key":"bb","name":"Sol","bio":"","verified":true,"created":5,
+                "holocron_counts":{"uncommon":4,"rare":2,"legendary":1,"mythical":0},
+                "holocrons":[{"id":9,"tier":"legendary","dropped":1791000000,"source":"play","note":""},
+                             {"id":7,"tier":"rare","dropped":1790990000,"source":"staff","note":"Thanks"},
+                             {"id":3,"tier":"from_the_future","dropped":1}]}"#,
+        )
+        .unwrap();
+        assert_eq!(
+            profile.holocron_counts,
+            HolocronCounts {
+                uncommon: 4,
+                rare: 2,
+                legendary: 1,
+                mythical: 0
+            }
+        );
+        assert_eq!(profile.holocron_counts.total(), 7);
+        assert_eq!(profile.holocron_counts.of("rare"), 2);
+        assert_eq!(profile.holocron_counts.of("from_the_future"), 0);
+        let ids: Vec<u64> = profile
+            .holocrons
+            .iter()
+            .map(|holocron| holocron.id)
+            .collect();
+        assert_eq!(ids, [9, 7, 3]);
+        assert_eq!(profile.holocrons[1].source, "staff");
+        assert_eq!(profile.holocrons[1].note, "Thanks");
+        assert_eq!(profile.holocrons[2].source, "", "a missing field is empty");
+        let old: Profile = serde_json::from_str(
+            r#"{"key_id":"aa","key":"bb","name":"Sol","bio":"","verified":true,"created":5}"#,
+        )
+        .unwrap();
+        assert_eq!(old.holocron_counts, HolocronCounts::default());
+        assert!(old.holocrons.is_empty(), "an older hub sends none");
+    }
+
+    #[test]
+    fn the_holocron_state_and_drop_events_parse() {
+        let state: HolocronState = serde_json::from_str(
+            r#"{"progress_secs":600,"every_secs":1800,"today":3,"daily_cap":8,"server_time":1791000000}"#,
+        )
+        .unwrap();
+        assert_eq!(
+            state,
+            HolocronState {
+                progress_secs: 600,
+                every_secs: 1800,
+                today: 3,
+                daily_cap: 8,
+                server_time: 1_791_000_000,
+            }
+        );
+        let feed: Feed = serde_json::from_str(
+            r#"{"next":21,"drops":[{"id":20,"at":1791000001,"key_id":"aa","name":"^2Sol",
+                "tier":"legendary","verified":true},
+                {"id":21,"at":1791000002,"key_id":"bb","name":"Fox","tier":"rare"}]}"#,
+        )
+        .unwrap();
+        assert_eq!(feed.drops.len(), 2);
+        assert_eq!(
+            (feed.drops[0].tier.as_str(), feed.drops[0].verified),
+            ("legendary", true)
+        );
+        assert!(!feed.drops[1].verified, "absent is not verified");
+        let quiet: Feed = serde_json::from_str(r#"{"next":3}"#).unwrap();
+        assert!(quiet.drops.is_empty(), "an older hub sends no drops");
+        // A chat message is never a drop, whatever the wire says.
+        let message: ChatMessage = serde_json::from_str(
+            r#"{"id":1,"at":2,"key_id":"aa","name":"x","text":"y","holocron":{"tier":"rare","own":true}}"#,
+        )
+        .unwrap();
+        assert_eq!(message.holocron, None);
     }
 
     #[test]

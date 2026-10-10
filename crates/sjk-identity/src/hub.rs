@@ -5,7 +5,7 @@ use crate::keys::{Identity, random_bytes};
 use crate::report::{BugReport, PlayerReport, WorldNote};
 use crate::staff::StaffRequest;
 use crate::wire::{
-    Achievement, Achievements, Feed, Look, Players, Presence, Profile, authorization,
+    Achievement, Achievements, Feed, HolocronState, Look, Players, Presence, Profile, authorization,
 };
 use serde::de::DeserializeOwned;
 use serde_json::{Value, json};
@@ -153,14 +153,24 @@ pub trait Hub: Send {
     }
     /// Any player's public profile.
     fn profile(&mut self, key_id: &str) -> Result<Profile, HubError>;
-    /// Say the identity's player is in `slot` of `server` as `name`.
+    /// Say the identity's player is in `slot` of `server` as `name`. `active` says the
+    /// player is playing and not idle (`PROTOCOL.md`, "Holocrons"): the hub counts the
+    /// time since the last claim toward the key's next holocron only then. A hub
+    /// without holocrons ignores it.
     fn claim(
         &mut self,
         identity: &Identity,
         server: &str,
         slot: u8,
         name: &str,
+        active: bool,
     ) -> Result<(), HubError>;
+    /// How far the identity's key is from its next holocron (`GET /v1/holocrons`).
+    fn holocrons(&mut self, _identity: &Identity) -> Result<HolocronState, HubError> {
+        Err(HubError::Protocol(
+            "this hub client does not read holocrons".to_owned(),
+        ))
+    }
     /// Withdraw the identity's claim on `server`.
     fn release(&mut self, identity: &Identity, server: &str) -> Result<(), HubError>;
     /// The live claims on `server`.
@@ -529,6 +539,16 @@ fn look_body(server: &str, look: &Look) -> Value {
     json!({ "server": server, "saber": look.saber, "illuminate": look.illuminate })
 }
 
+/// `POST /v1/claim`'s body. `active` is sent only when true: the field is optional and
+/// absent means false, so a hub from before holocrons never sees an unknown field.
+fn claim_body(server: &str, slot: u8, name: &str, active: bool) -> Value {
+    let mut body = json!({"server": server, "slot": slot, "name": name});
+    if active {
+        body["active"] = json!(true);
+    }
+    body
+}
+
 /// A staff request's path and body.
 fn staff_call(request: &StaffRequest) -> (&'static str, Value) {
     match request {
@@ -572,6 +592,14 @@ fn staff_call(request: &StaffRequest) -> (&'static str, Value) {
         StaffRequest::AvatarBlock { key_id, blocked } => (
             "/v1/staff/avatar-block",
             json!({ "key_id": key_id, "blocked": blocked }),
+        ),
+        StaffRequest::HolocronGive { key_id, tier, note } => (
+            "/v1/staff/holocron-give",
+            json!({ "key_id": key_id, "tier": tier, "note": note }),
+        ),
+        StaffRequest::HolocronRemove { key_id, id } => (
+            "/v1/staff/holocron-remove",
+            json!({ "key_id": key_id, "id": id }),
         ),
     }
 }
@@ -725,10 +753,15 @@ impl Hub for HttpHub {
         server: &str,
         slot: u8,
         name: &str,
+        active: bool,
     ) -> Result<(), HubError> {
-        let body = json!({"server": server, "slot": slot, "name": name});
+        let body = claim_body(server, slot, name, active);
         self.send(Some(identity), "POST", "/v1/claim", Some(body))
             .map(|_| ())
+    }
+
+    fn holocrons(&mut self, identity: &Identity) -> Result<HolocronState, HubError> {
+        parse(self.send(Some(identity), "GET", "/v1/holocrons", None)?)
     }
 
     fn release(&mut self, identity: &Identity, server: &str) -> Result<(), HubError> {
@@ -949,6 +982,45 @@ mod tests {
             (
                 "/v1/staff/relock",
                 json!({"key_id": "0123456789abcdef", "unlock": "saber_sun"})
+            )
+        );
+    }
+
+    #[test]
+    fn a_claim_says_active_only_when_it_is() {
+        assert_eq!(
+            claim_body("1.2.3.4:29070", 3, "Sol", false),
+            json!({"server": "1.2.3.4:29070", "slot": 3, "name": "Sol"}),
+            "the body of a hub from before holocrons"
+        );
+        assert_eq!(
+            claim_body("1.2.3.4:29070", 3, "Sol", true),
+            json!({"server": "1.2.3.4:29070", "slot": 3, "name": "Sol", "active": true})
+        );
+    }
+
+    #[test]
+    fn staff_holocron_requests_send_the_protocols_fields() {
+        assert_eq!(
+            staff_call(&StaffRequest::HolocronGive {
+                key_id: "0123456789abcdef".into(),
+                tier: "legendary".into(),
+                note: "For the fog bug".into(),
+            }),
+            (
+                "/v1/staff/holocron-give",
+                json!({"key_id": "0123456789abcdef", "tier": "legendary",
+                       "note": "For the fog bug"})
+            )
+        );
+        assert_eq!(
+            staff_call(&StaffRequest::HolocronRemove {
+                key_id: "0123456789abcdef".into(),
+                id: 41,
+            }),
+            (
+                "/v1/staff/holocron-remove",
+                json!({"key_id": "0123456789abcdef", "id": 41})
             )
         );
     }
