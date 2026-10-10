@@ -103,6 +103,7 @@ impl crate::GpuState {
                 console.persist();
                 self.applied_resolution = [0; 2];
                 self.applied_display = None;
+                self.hitches.settle(std::time::Instant::now());
                 self.sync_runtime_cvars();
                 let mut lines =
                     vec!["Video settings reapplied; GPU device/resources retained.".into()];

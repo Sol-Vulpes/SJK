@@ -598,6 +598,17 @@ note: Alt+Tab while holding Tab leaves the board and the hidden HUD up until Tab
 
 # ---- Rendering & effects ----
 
+[hitch-log]
+area: Rendering & effects
+title: Gameplay hitch lines in the log and console (always on)
+change: A gameplay frame over 33 ms and 3x the recent median logs "hitch: <ms> (median <ms>)".
+change: It names the 3 largest phases; at most one a second, a "hitches:" count each 60 s.
+test: Play a few minutes on a local server: no hitch lines while it runs smoothly.
+test: Force a stall (exec a big cfg, open a heavy menu): one hitch line naming the phase.
+test: Change map, resize, Alt+Tab back: no hitch lines in the 2 s after each.
+test: The lines show in the console (not on screen) and in qconsole.log with logfile 1.
+note: Unit tests only; not tried in a game.
+
 [menu-world-drop]
 area: Rendering & effects
 title: Less RAM on servers: menu map not kept during matches, tighter GPU memory

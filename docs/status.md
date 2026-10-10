@@ -21,6 +21,20 @@ change writes once after the delay, an unarchived one never, the exit save
 writes), the existing viewer and shell suites, fmt and Clippy. Not tried in a
 game.
 
+## Gameplay hitch log
+
+Branch `personal/hitch-log`, based on `a4ea2316` (10/10/2026, Windows). Request:
+log random stutters players report, always on. Every gameplay frame's interval
+is compared with the median of the last 128; over 33 ms and three medians it
+logs one `hitch:` line with the three largest host phases of the long frame
+(and time between frames), at most one a second, plus a `hitches:` summary per
+60 s of gameplay that had any. Loads, transitions, unfocused windows and the
+2 s after a map change, resize, focus change or graphics reload are skipped.
+Lines go to stderr and the console scrollback (`qconsole.log` with
+`logfile 1`). See [rendering](rendering.md#gameplay-hitch-lines).
+Verified by unit tests (median, threshold, rate limit, summary, settling,
+phase ranking) and `cargo test --release -p sjk-viewer`; not tried in a game.
+
 ## Quieter body damage flash
 
 Branch `fix/subtle-damage-shader`, based on `0c76ff03` (2026-10-10,

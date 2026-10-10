@@ -1085,6 +1085,29 @@ loading/shader warmup from steady frames and CPU work from GPU timings. The
 500+ FPS target remains open; neither a single GPU timestamp nor an uncapped
 empty scene demonstrates it.
 
+#### Gameplay hitch lines
+
+Without any variable, the client logs stutters during play
+([hitch_log.rs](../crates/sjk-viewer/src/hitch_log.rs), 10/10/2026). It keeps the
+last 128 frame intervals (start to start, what the player sees) and calls one a hitch
+when it is over 33 ms and over three times their median. The line names the three
+largest parts of the frame that ran long: its host phases (the `frame_budget.rs`
+names, always measured) and `between-frames`, time outside that frame's measured work
+(event handling, a pacing wait, the OS):
+
+    hitch: 87.3 ms (median 4.1 ms) config-refresh 71.2, between-frames 9.0, hud 3.1
+
+At most one such line a second; every hitch still counts towards
+`hitches: N in the last 60 s, worst X ms`, written after each 60 s of gameplay that
+had one. Only gameplay counts: a live map on screen past its first frame, no load
+or transition under way, the window focused. Two seconds after a map change, a
+resize, a focus change, `vid_restart` or a graphics reload are ignored and start a
+new median, and an interval over 5 s is a pause (window drag, sleep), not a hitch.
+The lines go to stderr with the other `log::progress` lines (`play.bat` keeps them
+in `logs\last-client.log`) and to the console scrollback without notify lines, so a
+player can read them in the console or, with `logfile 1`, in `qconsole.log` in the
+client folder (`GameData/SJK/`) and send that file.
+
 ### First-person view weapon
 
 The first-person gun hangs on its `_hand.md3` tag rig, as `CG_AddViewWeapon` places

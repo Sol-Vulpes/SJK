@@ -438,6 +438,8 @@ impl GpuState {
         }
         to.graphics_reload.card = std::mem::take(&mut self.graphics_reload.card);
         to.load_event_gap = self.load_event_gap.clone();
+        to.hitches = std::mem::take(&mut self.hitches);
+        to.hitches.settle(now);
         to.completed_map_changes = self.completed_map_changes;
         to.gameplay_input.clear();
         to.gameplay_input.inherit_focus(&self.gameplay_input);

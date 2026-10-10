@@ -9,6 +9,8 @@
 #                               made it when that is not the piece's owner.
 
 = Sol
++ 10/10/2026 | - | Always-on gameplay hitch lines in the client log
+- 0d60bb2 |  | Log gameplay hitches with their slowest frame phases
 + 10/10/2026 | - | Config saved only when a setting changes, off the main thread
 - e1b1205 |  | Save config.cfg only when saved state changes, off the main thread
 + 10/10/2026 | - | SJK chat GIFs in the in-play chat box
