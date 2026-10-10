@@ -8,8 +8,8 @@ events a second time alongside player-state events. This follows OpenJK
 `codemp/cgame/cg_ents.c`'s `CG_AddPacketEntities` exclusion of the view client;
 temporary event entities and remote players retain their own event latches.
 Synthetic tests reproduced duplicate unpredicted pistol fire and external
-events before the fix, and cover repeated snapshots and 8/7/4/3 ms command
-steps. Audible verification of the reported intermittent DL-44 gunfire and
+events before the fix, and cover repeated snapshots at 8/7/4/3 ms intervals.
+Audible verification of the reported intermittent DL-44 gunfire and
 other potential duplicate-sound causes remains open.
 
 Reviewed 2026-10-04 against GitHub baseline `b394022` and the owner-approved
