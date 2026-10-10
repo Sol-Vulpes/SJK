@@ -68,6 +68,12 @@ impl GpuState {
             self.reload_card_choice(choice);
             return;
         }
+        // And the low-FPS card.
+        if !console_open && self.fps_card.is_open() {
+            let choice = self.fps_card.handle_key(&event);
+            self.fps_card_choice(choice);
+            return;
+        }
         // Ctrl+Tab changes the Profile screen's tab, whichever screen shows it.
         if self.profile_hub_key(&event) {
             return;

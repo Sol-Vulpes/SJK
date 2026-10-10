@@ -92,8 +92,8 @@ pub(super) const VIDEO: &[Setting] = &[
         kind: ValueKind::Quality,
     },
     Setting {
-        label: "Ultra low (reload)",
-        cvar: crate::graphics_quality::ULTRA_LOW_ROW,
+        label: "EJK graphics (reload)",
+        cvar: crate::graphics_quality::EJK_ROW,
         kind: ValueKind::Bool,
     },
     Setting {

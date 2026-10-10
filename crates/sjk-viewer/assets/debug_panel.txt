@@ -445,11 +445,11 @@ note: The first row is pre-selected, so a stray Backspace there replaces 22 sett
 
 [graphics-reload]
 area: Menus & settings
-title: Graphics reload: Ultra low, quality levels, HDR, shadows... apply without a restart
+title: Graphics reload: EJK graphics, quality levels, HDR, shadows... apply without a restart
 change: Settings marked (reload) apply when the graphics reload; vid_restart reloads them.
 change: Leaving Settings for the main or game menu pops a card: Reload now (Enter) or Later.
 change: On a server the map loads again in a few seconds and you stay connected.
-test: In a match: Esc, Settings, turn Ultra low on, back to the game menu: the card shows.
+test: In a match: Esc, Settings, turn EJK graphics on, back to the game menu: the card shows.
 test: Reload now: loading screen, then baked lighting, no sun; you are still on the server.
 test: Main menu: change HDR, back: card; Reload now: menu map rebuilt behind the card.
 test: Later: card goes; change another (reload) setting and it comes back. Try classic menus.
@@ -457,14 +457,14 @@ note: You stand still while it loads; a door you held open may close for a momen
 
 [ultra-low]
 area: Menus & settings
-title: Ultra low switch under Graphics quality (Video and First setup): the original look
-change: Ultra low is a fifth level: Performance plus normal/specular maps and SSAO off.
+title: EJK graphics switch under Graphics quality (Video and First setup): the original look
+change: EJK (Ultra low before) is a fifth level: Performance plus normal/specular maps, SSAO off.
 change: The switch keeps your settings and puts them back when turned off.
 change: With no sun, shafts or sun shadows the map loads without its lamps (faster loads).
-test: First setup: turn Ultra low on, Reload now, join JoFTemple: baked lighting, high FPS.
-test: The log says "Lamps: none"; Graphics quality reads Ultra low.
+test: First setup: turn EJK graphics on, Reload now, join JoFTemple: baked lighting, high FPS.
+test: The log says "Lamps: none"; Graphics quality reads EJK.
 test: Turn it off and reload: your previous level (or custom settings) is back.
-test: graphicsquality ultralow sets it from the console (then vid_restart).
+test: graphicsquality ejk (or ultralow) sets it from the console (then vid_restart).
 
 [self-lit-specular]
 area: Rendering & effects
@@ -571,6 +571,19 @@ note: Not tried in a running client: the HUD hiding and the compact board over a
 note: Alt+Tab while holding Tab leaves the board and the hidden HUD up until Tab is pressed again.
 
 # ---- Rendering & effects ----
+
+[fps-help]
+area: Rendering & effects
+title: Low FPS help: EJK graphics offered on heavy maps, help_fps opens it any time
+change: 6 s after a map loads, SJK times its lighting on the GPU for a few seconds.
+change: If it keeps you under your FPS target (60-144), a card offers EJK graphics.
+change: help_fps opens the same card; Ultra low is now called EJK graphics.
+test: Join JoFTemple on High at 4K: after ~10 s the card shows over the game menu.
+test: Use EJK graphics: the map reloads, baked lighting, you stay on the server.
+test: Tick Don't suggest this again (or D): no card on the next maps; cg_fpsHelp reads 0.
+test: Type help_fps in a match and on the main menu: the card, with numbers after a moment.
+test: The log line "fps help: frame ... ms, SJK lighting ... ms" appears on each map.
+note: The 40% share and the 60-144 FPS target are from JoFTemple only; other GPUs untested.
 
 [menu-world-drop]
 area: Rendering & effects

@@ -92,7 +92,8 @@ Sol develops SJK and sets its direction. Sol's work includes:
 - the console socket for external apps (after JoF EJK), muting in the
   background (after EternalJK) and the JA+ `flipkick` command (after JoF EJK);
 - the camera style setting, its locked camera after JoF EJK (`cg_cameraStyle`);
-- graphics quality levels with Ultra low, and the graphics reload that applies the
+- graphics quality levels with EJK graphics (Ultra low before), the low-FPS help
+  (`help_fps`), and the graphics reload that applies the
   renderer's start-only settings without restarting SJK or leaving the server;
 - lighter memory on servers (the menu world dropped during matches, smaller GPU
   memory blocks).

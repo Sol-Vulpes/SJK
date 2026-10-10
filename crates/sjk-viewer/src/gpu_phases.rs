@@ -1,6 +1,7 @@
-//! Optional per-pass GPU timing of the main frame: timestamps between the encoder's
-//! sections, resolved on a sampled frame and printed with the frame-budget report
-//! (`SJK_FRAME_BUDGET` or `SJK_GPU_PHASES`). Off, nothing is allocated or encoded.
+//! Per-pass GPU timing of the main frame: timestamps between the encoder's sections,
+//! resolved on a sampled frame. They are printed with the frame-budget report
+//! (`SJK_FRAME_BUDGET` or `SJK_GPU_PHASES`), and kept for the low-FPS help
+//! ([`crate::fps_help`]) while it watches. Neither on, nothing is encoded.
 use std::cell::{Cell, RefCell};
 use std::sync::{
     Arc,
@@ -33,20 +34,35 @@ pub(crate) struct Profiler {
     names: RefCell<Vec<&'static str>>,
     pending: Cell<bool>,
     mapped: Arc<AtomicBool>,
+    /// Requested by environment: every sampled frame is printed.
+    print: bool,
+    /// The low-FPS help wants samples.
+    watch: Cell<bool>,
+    /// The last sampled frame's times, until taken.
+    sample: Cell<Option<Sample>>,
+}
+
+/// One sampled frame's GPU time.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub(crate) struct Sample {
+    /// The whole main frame, milliseconds.
+    pub(crate) frame_ms: f32,
+    /// SJK's real-time lighting: the sections named `light-...`.
+    pub(crate) light_ms: f32,
 }
 
 impl Profiler {
-    /// Present only when requested by environment and supported by the device.
+    /// Present when the device has timestamps.
     pub(crate) fn new(
         device: &wgpu::Device,
         queue: &crate::frame_queue::FrameQueue,
     ) -> Option<Self> {
-        let wanted = std::env::var_os("SJK_FRAME_BUDGET").is_some()
+        let print = std::env::var_os("SJK_FRAME_BUDGET").is_some()
             || std::env::var_os("SJK_GPU_PHASES").is_some();
         let supported = device.features().contains(
             wgpu::Features::TIMESTAMP_QUERY | wgpu::Features::TIMESTAMP_QUERY_INSIDE_ENCODERS,
         );
-        if !wanted || !supported {
+        if !supported {
             return None;
         }
         let set = device.create_query_set(&wgpu::QuerySetDescriptor {
@@ -78,14 +94,32 @@ impl Profiler {
             names: RefCell::new(Vec::with_capacity(CAPACITY as usize)),
             pending: Cell::new(false),
             mapped: Arc::new(AtomicBool::new(false)),
+            print,
+            watch: Cell::new(false),
+            sample: Cell::new(None),
         })
     }
 
-    /// Start a frame; every `INTERVAL`th frame without a readback in flight is sampled.
+    /// Sample frames for [`Self::take_sample`] (`true`) or stop.
+    pub(crate) fn watch(&self, on: bool) {
+        self.watch.set(on);
+        if !on {
+            self.sample.set(None);
+        }
+    }
+
+    /// The last sampled frame's times, once.
+    pub(crate) fn take_sample(&self) -> Option<Sample> {
+        self.sample.take()
+    }
+
+    /// Start a frame; every `INTERVAL`th frame without a readback in flight is sampled,
+    /// while printing or watched.
     pub(crate) fn begin(&self, encoder: &mut wgpu::CommandEncoder) {
         let frame = self.frame.get().wrapping_add(1);
         self.frame.set(frame);
-        let active = frame % INTERVAL == 0 && !self.pending.get();
+        let active =
+            (self.print || self.watch.get()) && frame.is_multiple_of(INTERVAL) && !self.pending.get();
         self.active.set(active);
         if !active {
             return;
@@ -143,7 +177,8 @@ impl Profiler {
             });
     }
 
-    /// Print the sampled frame once its readback has landed; safe to call every frame.
+    /// Print or keep the sampled frame once its readback has landed; safe to call every
+    /// frame.
     pub(crate) fn report(&self) {
         if !self.pending.get() || !self.mapped.load(Ordering::Acquire) {
             return;
@@ -163,6 +198,21 @@ impl Profiler {
         let ms = |a: u64, b: u64| {
             b.saturating_sub(a) as f64 * f64::from(self.nanoseconds_per_tick) * 1e-6
         };
+        let light_ms = names
+            .iter()
+            .enumerate()
+            .filter(|(_, name)| name.starts_with("light-"))
+            .map(|(i, _)| ms(stamps[i], stamps[i + 1]))
+            .sum::<f64>();
+        if self.watch.get() {
+            self.sample.set(Some(Sample {
+                frame_ms: ms(stamps[0], stamps[count - 1]) as f32,
+                light_ms: light_ms as f32,
+            }));
+        }
+        if !self.print {
+            return;
+        }
         let mut line = format!(
             "gpu-phases frame={} total_ms={:.3}",
             self.frame.get(),

@@ -1,6 +1,6 @@
 //! Graphics quality levels: one choice that sets the renderer's costly
-//! settings together, from Ultra low (the most frames, the original game's
-//! look) to Ultra (the best look). High is the fresh profile's own values, so a new player reads High.
+//! settings together, from EJK (the most frames, the original game's look as
+//! EternalJK players know it) to Ultra (the best look). High is the fresh profile's own values, so a new player reads High.
 //! The level is not stored: it is whichever level the settings match, and
 //! Custom once one of them is changed on its own. Only settings with a row in
 //! Settings are touched, so every change a level makes can be seen and undone
@@ -13,23 +13,25 @@ use crate::console::ViewerConsole;
 pub(crate) const COMMAND: &str = "graphicsquality";
 /// Help text for completion and `cmdlist`.
 pub(crate) const HELP: &str =
-    "Show or set graphics quality: ultralow, performance, balanced, high or ultra";
+    "Show or set graphics quality: ejk, performance, balanced, high or ultra";
 /// The Settings row's stand-in for a cvar name: the command that sets it.
 pub(crate) const ROW_NAME: &str = COMMAND;
-/// The Ultra low switch's stand-in for a cvar name: it is on while the
-/// settings are Ultra low's, not a value of its own.
-pub(crate) const ULTRA_LOW_ROW: &str = "ultralow";
-/// What the Ultra low switch turned off, `cvar=value` pairs joined by `;`,
+/// The EJK graphics switch's stand-in for a cvar name: it is on while the
+/// settings are EJK's, not a value of its own. It was the Ultra low switch:
+/// the old name stays, as the stand-in and in `graphicsquality ultralow`.
+pub(crate) const EJK_ROW: &str = "ultralow";
+/// What the EJK graphics switch turned off, `cvar=value` pairs joined by `;`,
 /// so turning it off again restores the player's own settings.
 pub(crate) const RESTORE_CVAR: &str = "r_ultraLowRestore";
 
 /// A graphics quality level, cheapest first.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) enum Level {
-    /// The original game's look at the least cost: Performance with the
+    /// The original game's look at the least cost, named after EternalJK, the
+    /// client closest to it that players know (Ultra low before): Performance with the
     /// material packs' normal and specular maps and ambient occlusion off too,
     /// so maps show their baked lightmaps and nothing of SJK's lighting.
-    UltraLow,
+    Ejk,
     /// The most frames short of that: the retail look with SJK's lighting,
     /// shadows, post-processing and weather extras off.
     Performance,
@@ -42,7 +44,7 @@ pub(crate) enum Level {
     Ultra,
 }
 
-/// Each setting a level sets, with its value at Ultra low, Performance,
+/// Each setting a level sets, with its value at EJK, Performance,
 /// Balanced, High and Ultra. High is each setting's default (pinned by a test).
 const VALUES: &[(&str, [&str; 5])] = &[
     // Image.
@@ -81,7 +83,7 @@ const VALUES: &[(&str, [&str; 5])] = &[
 
 impl Level {
     pub(crate) const ALL: [Self; 5] = [
-        Self::UltraLow,
+        Self::Ejk,
         Self::Performance,
         Self::Balanced,
         Self::High,
@@ -91,7 +93,7 @@ impl Level {
     /// The level's name in Settings.
     pub(crate) fn label(self) -> &'static str {
         match self {
-            Self::UltraLow => "Ultra low",
+            Self::Ejk => "EJK",
             Self::Performance => "Performance",
             Self::Balanced => "Balanced",
             Self::High => "High",
@@ -103,9 +105,13 @@ impl Level {
         self as usize
     }
 
-    /// The level `name` names, in any case, with or without its space.
+    /// The level `name` names, in any case, with or without its space; Ultra
+    /// low is EJK's old name.
     fn parse(name: &str) -> Option<Self> {
         let name: String = name.split_whitespace().collect();
+        if name.eq_ignore_ascii_case("ultralow") {
+            return Some(Self::Ejk);
+        }
         Self::ALL
             .into_iter()
             .find(|level| level.command_name().eq_ignore_ascii_case(&name))
@@ -157,16 +163,16 @@ impl Level {
     }
 }
 
-/// Whether the Ultra low switch shows on: the settings are Ultra low's.
-pub(crate) fn ultra_low(console: &ViewerConsole) -> bool {
-    Level::current(console) == Some(Level::UltraLow)
+/// Whether the EJK graphics switch shows on: the settings are EJK's.
+pub(crate) fn ejk(console: &ViewerConsole) -> bool {
+    Level::current(console) == Some(Level::Ejk)
 }
 
-/// Flip the Ultra low switch. On, it keeps the player's value of every
-/// setting a level sets, then applies Ultra low; off, it puts the kept values
-/// back (High when none were kept, as after picking Ultra low as a level).
-pub(crate) fn toggle_ultra_low(console: &mut ViewerConsole) {
-    if ultra_low(console) {
+/// Flip the EJK graphics switch. On, it keeps the player's value of every
+/// setting a level sets, then applies EJK; off, it puts the kept values
+/// back (High when none were kept, as after picking EJK as a level).
+pub(crate) fn toggle_ejk(console: &mut ViewerConsole) {
+    if ejk(console) {
         let kept = console
             .cvar(RESTORE_CVAR)
             .map(sjk_shell::CvarValue::as_text)
@@ -188,7 +194,7 @@ pub(crate) fn toggle_ultra_low(console: &mut ViewerConsole) {
             .collect::<Vec<_>>()
             .join(";");
         console.set_cvar(RESTORE_CVAR, &kept);
-        Level::UltraLow.apply(console);
+        Level::Ejk.apply(console);
     }
 }
 
@@ -270,7 +276,7 @@ mod tests {
         }
         // The profile was saved: a new start reads the last level.
         let console = ViewerConsole::new(directory.path().join("config.cfg")).unwrap();
-        assert_eq!(Level::current(&console), Some(Level::UltraLow));
+        assert_eq!(Level::current(&console), Some(Level::Ejk));
     }
 
     #[test]
@@ -316,8 +322,8 @@ mod tests {
 
     #[test]
     fn steps_stop_at_the_ends() {
-        assert_eq!(Level::UltraLow.step(-1), Level::UltraLow);
-        assert_eq!(Level::Performance.step(-1), Level::UltraLow);
+        assert_eq!(Level::Ejk.step(-1), Level::Ejk);
+        assert_eq!(Level::Performance.step(-1), Level::Ejk);
         assert_eq!(Level::Performance.step(1), Level::Balanced);
         assert_eq!(Level::High.step(1), Level::Ultra);
         assert_eq!(Level::Ultra.step(1), Level::Ultra);
@@ -333,15 +339,18 @@ mod tests {
         assert!(command(&mut console, &["max".to_owned()]).is_err());
         assert_eq!(Level::current(&console), Some(Level::Ultra));
         command(&mut console, &["ultralow".to_owned()]).unwrap();
-        assert_eq!(Level::current(&console), Some(Level::UltraLow));
+        assert_eq!(Level::current(&console), Some(Level::Ejk));
         command(&mut console, &["Ultra Low".to_owned()]).unwrap();
-        assert_eq!(shown(&console), "Ultra low");
+        assert_eq!(shown(&console), "EJK");
+        Level::High.apply(&mut console);
+        command(&mut console, &["ejk".to_owned()]).unwrap();
+        assert_eq!(Level::current(&console), Some(Level::Ejk));
     }
 
     #[test]
-    fn ultra_low_turns_sjk_lighting_and_material_maps_off() {
+    fn ejk_turns_sjk_lighting_and_material_maps_off() {
         let (_directory, mut console) = console();
-        Level::UltraLow.apply(&mut console);
+        Level::Ejk.apply(&mut console);
         for cvar in [
             "r_dayNight",
             "r_worldSunShadows",
@@ -360,25 +369,25 @@ mod tests {
     }
 
     #[test]
-    fn the_ultra_low_switch_restores_the_players_settings() {
+    fn the_ejk_switch_restores_the_players_settings() {
         let (directory, mut console) = console();
         Level::Balanced.apply(&mut console);
         console.set_cvar("r_sunShadowTaps", "12");
-        assert!(!ultra_low(&console));
-        toggle_ultra_low(&mut console);
-        assert!(ultra_low(&console));
+        assert!(!ejk(&console));
+        toggle_ejk(&mut console);
+        assert!(ejk(&console));
         // Kept across a restart.
         let mut console = ViewerConsole::new(directory.path().join("config.cfg")).unwrap();
-        assert!(ultra_low(&console));
-        toggle_ultra_low(&mut console);
-        assert!(!ultra_low(&console));
+        assert!(ejk(&console));
+        toggle_ejk(&mut console);
+        assert!(!ejk(&console));
         assert!(holds(&console, "r_sunShadowTaps", "12"));
         console.set_cvar("r_sunShadowTaps", "8");
         assert_eq!(Level::current(&console), Some(Level::Balanced));
         assert!(holds(&console, RESTORE_CVAR, ""));
-        // Ultra low picked as a level has nothing kept: off is High.
-        Level::UltraLow.apply(&mut console);
-        toggle_ultra_low(&mut console);
+        // EJK picked as a level has nothing kept: off is High.
+        Level::Ejk.apply(&mut console);
+        toggle_ejk(&mut console);
         assert_eq!(Level::current(&console), Some(Level::High));
     }
 }

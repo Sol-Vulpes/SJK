@@ -77,6 +77,23 @@ with test GIFs at 1080p and 4K. Not seen in the game window or end to end throug
 hub. GIPHY share links with their tracking query are often over the chat's 150
 characters and are refused by the hub's rules (unchanged).
 
+## Low FPS help
+
+Branch `personal/help-fps` (11/10/2026, based on `a10730dc`, Windows 11, RTX 5080),
+Sol's request: detect a map whose lighting is heavy at load and suggest turning it off,
+with a "don't ask again" tick, a `help_fps` command to tell players, and Ultra low
+renamed EJK. A few seconds after a server's map is in, the GPU times of eight sampled
+frames decide; a card over the game menu offers EJK graphics (the Settings switch,
+then `vid_restart`) when the frame misses the FPS target (cap or monitor rate, 60 to
+144) with the lighting at least 40% of it ([client.md](client.md#low-fps-help)).
+The phase profiler now exists whenever the GPU has timestamps and samples only while
+the check or the card watches, or `SJK_GPU_PHASES` asks.
+
+Verified by unit tests (the target, the 40% rule on JoFTemple's numbers before and
+after its fix, the median, the card's keys and words, the rename and `ultralow` still
+naming EJK). Not tested in the game window: the check on a real map, the card in a
+match and its game menu, the reload it starts, other GPUs and maps for the thresholds.
+
 ## Memory on servers
 
 Branch `personal/menu-world-drop` (10/10/2026, based on `0c76ff03`, Windows 11, RTX

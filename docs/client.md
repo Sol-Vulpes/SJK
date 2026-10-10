@@ -1120,16 +1120,19 @@ See [catalog.rs](../crates/sjk-viewer/src/settings/catalog.rs).
 
 The first row of VIDEO, and of [First setup](#first-setup), is Graphics quality
 ([graphics_quality.rs](../crates/sjk-viewer/src/graphics_quality.rs)): one choice
-of five levels that sets the costly rendering settings together, from Ultra low
-(the most frames per second, the original game's look) to Ultra (the best look). The level is not saved
+of five levels that sets the costly rendering settings together, from EJK
+(the most frames per second, the original game's look, named after EternalJK, the
+client closest to it that players know; it was Ultra low until 11/10/2026) to Ultra
+(the best look). The level is not saved
 on its own: the row shows whichever level the settings match, and Custom once
 one of them has been changed on its own; stepping from Custom starts at the
 level the settings are nearest. High is the [default visual
 profile](rendering.md#default-visual-profile), so a fresh profile reads High,
 and Backspace (classic+) returns to it. The `graphicsquality` command names the
-level, or sets it with `graphicsquality ultralow|performance|balanced|high|ultra`.
+level, or sets it with `graphicsquality ejk|performance|balanced|high|ultra`
+(`ultralow` still names EJK).
 
-| Setting | Ultra low | Performance | Balanced | High | Ultra |
+| Setting | EJK | Performance | Balanced | High | Ultra |
 | --- | --- | --- | --- | --- | --- |
 | HDR scene, bloom, FXAA, soft particles, per-pixel model lighting | off | off | on | on | on |
 | Ambient occlusion (`r_ssao`) | off | on | on | on | on |
@@ -1149,18 +1152,18 @@ level, or sets it with `graphicsquality ultralow|performance|balanced|high|ultra
 | Volumetric clouds | off | off | on | on | on |
 
 Performance is close to the retail look: baked lightmaps without SJK's sun,
-shadows or light shafts, and no post-processing. Ultra low is the retail look
+shadows or light shafts, and no post-processing. EJK is the retail look
 itself: Performance with a material pack's normal and specular maps and ambient
 occlusion off too, so surfaces show their lightmap and paint only. Under both, a
 map loads without building its lamps (see [rendering](rendering.md#default-visual-profile)),
 which no pass reads there.
 
-The row under Graphics quality, **Ultra low** (VIDEO and First setup), is the
-same level as a switch: on while every setting matches Ultra low. Turning it on
+The row under Graphics quality, **EJK graphics** (VIDEO and First setup), is the
+same level as a switch: on while every setting matches EJK. Turning it on
 keeps the player's values of every setting in the table (`r_ultraLowRestore`,
-archived) before applying Ultra low; turning it off puts them back, custom
-values included, or High when Ultra low was picked as a level and nothing was
-kept. Like the level, it needs a [graphics reload](#graphics-reload) for the lighting to change. Everything else is left as the
+archived, its name from before the rename) before applying EJK; turning it off
+puts them back, custom values included, or High when EJK was picked as a level
+and nothing was kept. The [low-FPS help](#low-fps-help) offers the same switch. Like the level, it needs a [graphics reload](#graphics-reload) for the lighting to change. Everything else is left as the
 player set it: the FPS cap, vertical sync, resolution and supersampling (which
 multiplies the pixels drawn, so even Ultra leaves it to the player), the taste
 settings (exposure, time of day, tone curve, glow style, parallax depth,
@@ -1179,7 +1182,7 @@ yet measured.
 Some renderer settings are read only when the graphics start: HDR scene, FXAA,
 supersampling, sun and sky, sun shadows and their quality, light shafts, normal,
 specular, parallax and emission maps, reflection probes and texture filtering,
-so the graphics quality levels and the Ultra low switch too. They apply with a
+so the graphics quality levels and the EJK graphics switch too. They apply with a
 graphics reload rather than a restart of SJK
 ([graphics_reload.rs](../crates/sjk-viewer/src/graphics_reload.rs), [how it
 works](rendering.md#graphics-reload)):
@@ -1189,8 +1192,8 @@ works](rendering.md#graphics-reload)):
   first).
 - When one of them changed and the player is back on the main menu or the game
   menu (not in Settings, so changing several rows is not interrupted), a pop-up
-  card in the SJK UI's look, in every menu style, says what changed ("Ultra low
-  applies after a graphics reload", or the settings by name) with **Reload now**
+  card in the SJK UI's look, in every menu style, says what changed ("EJK graphics
+  apply after a graphics reload", or the settings by name) with **Reload now**
   (Enter) and **Later** (Escape). Later puts it away until another such setting
   changes; it waits for the medal and holocron pop-ups and the console.
 - On a server (or in a local game) the map loads again under the loading screen,
@@ -1208,13 +1211,47 @@ works](rendering.md#graphics-reload)):
 The console notices say so: `HDR setting changed: reload the graphics to apply
 (vid_restart)`.
 
+### Low FPS help
+
+SJK's real-time lighting (lamps, sun, sky light, shadows, light shafts) is most of
+what a heavy map costs: on `JoFTemple` at 4K it was 5.6 of the frame's 8.1 ms before
+its floor fix, and turning its parts off one at a time barely changed it
+([status](status.md#joftemple-frame-rate-and-ultra-low)). EJK graphics turn it off as
+a whole. The low-FPS help
+([fps_help.rs](../crates/sjk-viewer/src/fps_help.rs)) offers them when it matters:
+
+- Six seconds after a server's map is in (loading's last work is over by then), the
+  GPU times of eight sampled frames, one every 32 frames
+  ([gpu_phases.rs](../crates/sjk-viewer/src/gpu_phases.rs), timestamps when the GPU
+  has them), give the median frame and the part of it spent in the `light-...`
+  sections. The check is done once per map (each new world), not under EJK graphics,
+  and gives up 30 s after the map came in.
+- It offers EJK graphics when the frame misses the player's FPS target and the
+  lighting is at least 40% of it. The target is the FPS cap (`com_maxfps`, or the
+  monitor's rate for auto), kept between 60 and 144: an uncapped player is offered
+  them below 144 FPS of GPU time, not because the frame could be faster still. The
+  log says what it found: `fps help: frame 8.07 ms, SJK lighting 5.64 ms, target 144
+  FPS: EJK graphics offered` (or `fine`).
+- The offer is an SJK pop-up card over the game menu, which it opens and closes
+  again with it ([sjk-ui.md](sjk-ui.md#low-fps-help)): this map's numbers, what EJK
+  graphics turn off, **Use EJK graphics** (Enter: the switch, then `vid_restart`;
+  the map loads again and the player stays on the server) or **Not now** (Escape),
+  and a **Don't suggest this again** tick (D, `cg_fpsHelp 0`).
+- `help_fps` opens the same card at any time, on the menus or in a match, with the
+  numbers once the frames it times while open come in. With EJK graphics on, its
+  button turns them off and the player's settings come back.
+
+The 40% share and the 60 to 144 target were chosen from JoFTemple's numbers before
+and after its fix (offered at 8.1 ms with 5.6 of lighting, fine at 3.6 ms); they are
+not yet checked on other GPUs or maps.
+
 ## First setup
 
 The tabbed settings screen's last tab, FIRST SETUP (called Quick setup before
 06/10/2026)
 ([quick.rs](../crates/sjk-viewer/src/settings/quick.rs)), gathers the settings worth
 choosing on a first start: first, under a Graphics heading, the graphics quality
-([Graphics quality](#graphics-quality)) and its Ultra low switch; under a Styles heading, the menu style
+([Graphics quality](#graphics-quality)) and its EJK graphics switch; under a Styles heading, the menu style
 (SJK or Classic) and the camera style (EJK or SJK, [Camera
 style](#camera-style));
 then resolution, display mode, vsync, field of view, mouse

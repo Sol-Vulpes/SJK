@@ -658,8 +658,8 @@ impl SettingsMenu {
         let Some(setting) = self.rows().get(self.selected) else {
             return;
         };
-        if setting.cvar == crate::graphics_quality::ULTRA_LOW_ROW {
-            crate::graphics_quality::toggle_ultra_low(console);
+        if setting.cvar == crate::graphics_quality::EJK_ROW {
+            crate::graphics_quality::toggle_ejk(console);
             self.refresh(console);
             return;
         }
@@ -796,8 +796,8 @@ impl SettingsMenu {
                 ValueKind::IdentityPage => IDENTITY_TEXT.to_owned(),
                 ValueKind::ImportPage => IMPORT_TEXT.to_owned(),
                 ValueKind::Quality => crate::graphics_quality::shown(console).to_owned(),
-                ValueKind::Bool if setting.cvar == crate::graphics_quality::ULTRA_LOW_ROW => {
-                    if crate::graphics_quality::ultra_low(console) {
+                ValueKind::Bool if setting.cvar == crate::graphics_quality::EJK_ROW => {
+                    if crate::graphics_quality::ejk(console) {
                         "ON"
                     } else {
                         "OFF"
@@ -1025,8 +1025,8 @@ mod tests {
         let (_directory, console) = console();
         for setting in rows() {
             // Rows whose value is not one cvar's (resolution, display mode, HUD,
-            // the quick wheel's pages, graphics quality and its Ultra low switch).
-            if setting.cvar == crate::graphics_quality::ULTRA_LOW_ROW {
+            // the quick wheel's pages, graphics quality and its EJK graphics switch).
+            if setting.cvar == crate::graphics_quality::EJK_ROW {
                 continue;
             }
             if matches!(

@@ -1412,7 +1412,8 @@ nine moments, 1080p, 4K, 4:3, 21:9 and 720 lines, in the families and in Inter).
 [graphics_reload_card.rs](../crates/sjk-viewer/src/graphics_reload_card.rs): the pop-up
 that offers the [graphics reload](client.md#graphics-reload) once a setting the
 graphics read only at their start changed (Sol asked on 10/10/2026 for a warning and a
-reload instead of a restart, after turning Ultra low on mid-game changed nothing). It
+reload instead of a restart, after turning Ultra low, now EJK graphics, on mid-game
+changed nothing). It
 shows on the main page or over the game menu, never inside Settings, so several rows
 can be changed first, and after the medal and holocron pop-ups; the menus under it are
 not drawn and take no input. The same look in every menu style, on the 16:9 frame:
@@ -1420,7 +1421,7 @@ not drawn and take no input. The same look in every menu style, on the 16:9 fram
 - **Card:** the kit's card over its scrim, 760 wide from x 580, y 372, as tall as
   its words.
 - **Words:** "Graphics" in gold (Rajdhani 22), "Reload the graphics?" (Rajdhani 36),
-  then up to three lines of Exo 2 18 (muted): what changed ("Ultra low", "Balanced
+  then up to three lines of Exo 2 18 (muted): what changed ("EJK graphics", "Balanced
   graphics quality", or up to three settings by name, then "and N more") "applies
   after a graphics reload", and that the map (or the menu map) loads again in a few
   seconds, on a server without leaving it.
@@ -1429,6 +1430,27 @@ not drawn and take no input. The same look in every menu style, on the 16:9 fram
 - **Reloading:** on the main page the card stays while the menu map is built again,
   without its buttons: "Reloading the graphics..." and that it takes a few seconds.
   On a server the loading screen shows instead.
+
+## Low FPS help
+
+[fps_help_card.rs](../crates/sjk-viewer/src/fps_help_card.rs): the pop-up of the
+[low-FPS help](client.md#low-fps-help) (Sol asked on 11/10/2026 for a suggestion when
+a map's lighting is heavy, and a `help_fps` command to tell players). It shows on the
+menus or over the game menu, which it opens when it comes by itself in a match and
+closes again with it, after the medal, holocron and reload cards; the menus under it
+are not drawn and take no input. The same look in every menu style, on the 16:9 frame:
+
+- **Card:** the kit's card over its scrim, 800 wide from x 560, y 330, as tall as
+  its words.
+- **Words:** "FPS" in gold (Rajdhani 22), then (Rajdhani 36) "This map is heavy on
+  SJK's lighting" when offered, "Low FPS?" when asked, "EJK graphics are on" under
+  them; up to six lines of Exo 2 18 (muted): this map's GPU frame and lighting times
+  and the FPS they allow, when measured, then what EJK graphics turn off and that the
+  map loads again, on a server without leaving it.
+- **Foot:** the kit's tick and "Don't suggest this again" at the left; Not now
+  (outlined, 150) and Use EJK graphics (gold, 260; Turn EJK graphics off when on) at
+  the right; keys bottom right: D don't suggest, Esc not now, Enter use EJK (turn
+  off).
 
 ## Implementation
 

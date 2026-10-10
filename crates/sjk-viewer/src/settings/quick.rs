@@ -1,5 +1,5 @@
 //! The FIRST SETUP tab of Settings: the few settings worth choosing once on a first
-//! start (graphics quality and its Ultra low switch, the menu and camera styles,
+//! start (graphics quality and its EJK graphics switch, the menu and camera styles,
 //! display, aim, sound, the HUD, nameplates, the Force shells and the network
 //! opt-ins). The rows are the catalogue's own, looked up by
 //! cvar, so a change here is the same change the other tabs make; the last row,
@@ -28,7 +28,7 @@ const IMPORT_ROW: Setting = Setting {
 /// The tab's cvars, in order.
 const CVARS: &[&str] = &[
     crate::graphics_quality::ROW_NAME,
-    crate::graphics_quality::ULTRA_LOW_ROW,
+    crate::graphics_quality::EJK_ROW,
     crate::menu::style::CVAR,
     crate::camera::STYLE_CVAR,
     "r_resolution",
@@ -89,7 +89,7 @@ mod tests {
             cvars,
             [
                 crate::graphics_quality::ROW_NAME,
-                crate::graphics_quality::ULTRA_LOW_ROW,
+                crate::graphics_quality::EJK_ROW,
                 crate::menu::style::CVAR,
                 crate::camera::STYLE_CVAR
             ]

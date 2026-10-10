@@ -13,6 +13,7 @@ Format, read by the client (crates/sjk-viewer/src/changelog_data.rs, whose
 tests check this file):
 - "## <version> | <dd/mm/yyyy>" starts a release ("## Unreleased" for main
   after the last release, without a date);
+- Low FPS help: a few seconds after a map loads, SJK times its lighting, and when it keeps you under your FPS target a pop-up offers EJK graphics (with a Don't suggest this again tick); type help_fps for the same pop-up any time. Ultra low graphics are now called EJK graphics (graphicsquality ejk; ultralow still works) _(Sol)_
 - other lines up to the first item are the release's introduction;
 - "- <change> _(<credit>)_" is one change; every change ends with its credit;
 - ASCII only, as the menu font draws bytes.
@@ -27,7 +28,7 @@ opened yet and give nothing.
 - The cards for achievements, medals and holocrons wait while SJK is alt-tabbed out or minimised and show when you come back, going on from where they were; the big medal and holocron pop-ups also wait to start. A new SJK version found at start now shows a card too: Update available, with the version and Main menu > Update _(Sol)_
 - A new medal or holocron that comes during a match now shows as a card at the top of the screen, the same as an achievement (its picture, its name, what it is for or how rare it is, and the achievement chime) instead of a line in the middle of the screen; Esc still opens the big pop-up, which takes the card away. Settings > Sound > Achievement sound is now Unlock sound and covers these cards too _(Sol)_
 - SJK uses far less memory on servers: the menu map is no longer kept loaded during a match (it loads again in a few seconds when you leave), and graphics memory is packed tighter after map changes; at 4K about 7 GB instead of 11 to 12 GB _(Sol)_
-- Graphics settings that needed a restart (Ultra low, the graphics quality levels, HDR, FXAA, sun and sky, shadows, light shafts, material maps, reflection probes, texture filtering) now apply with a graphics reload: a pop-up offers it once you leave Settings, and vid_restart does it; on a server the map loads again in a few seconds and you stay connected _(Sol)_
+- Graphics settings that needed a restart (EJK graphics, the graphics quality levels, HDR, FXAA, sun and sky, shadows, light shafts, material maps, reflection probes, texture filtering) now apply with a graphics reload: a pop-up offers it once you leave Settings, and vid_restart does it; on a server the map loads again in a few seconds and you stay connected _(Sol)_
 - Chat letter spacing: Settings > HUD > Chat letter spacing (cg_chatBoxLetterSpacing, -2 to 8, default -0.5: a little tighter than before) spreads or packs the letters of chat messages; long messages wrap to match _(Sol)_
 - The resolution list opens as a card in the SJK UI's look, in both menu styles, and the last screens that still used the old settings form (the tabbed settings, the renderer page and the key bindings on their own) now open the SJK UI's Settings or Key bindings _(Sol)_
 - SJK chat names keep the marks players put around clan tags: {JoF}, \o/ and Latin-1 symbols such as guillemets now show in the feed, the dock, the chat page and its online window instead of being dropped; messages keep their own characters _(Sol)_

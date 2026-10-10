@@ -186,6 +186,7 @@ pub(super) const COMMANDS: &[(&str, &str)] = &[
     ("colorname", "Apply selected name colors"),
     ("colorstring", "Configure outgoing chat colors"),
     ("vid_restart", "Reapply video settings (device is retained)"),
+    (crate::fps_help::COMMAND, crate::fps_help::HELP),
     (
         "snd_restart",
         "Recreate audio output and reload sound assets",
@@ -692,6 +693,7 @@ impl crate::GpuState {
                     .set_minimized(true);
             }
             "fakenoclip" => return self.fake_noclip_command(),
+            crate::fps_help::COMMAND => return self.fps_help_command(),
             "freecam" => return self.free_camera_command(args),
             "peek" => return self.peek_command(args),
             "cosmetics" => return self.cosmetics_command(args),

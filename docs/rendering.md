@@ -2828,7 +2828,7 @@ High level of [graphics quality](client.md#graphics-quality), which sets the
 costly ones together.
 
 When sun and sky, light shafts and both sun shadows are off (the Performance and
-Ultra low levels), a map loads without extracting its lamps (`Lamps: none` in the
+EJK levels), a map loads without extracting its lamps (`Lamps: none` in the
 log): no pass reads them there, the shadow runtime is never installed and the
 world shows its lightmaps. Lamp extraction, its grid and refinement took about
 4.5 s of `JoFTemple`'s load on 09/10/2026 (see [status](status.md#joftemple-frame-rate-and-ultra-low)).
