@@ -93,6 +93,7 @@ impl Group {
             Self::Interface => &[
                 crate::menu::style::CVAR,
                 "ui_menuContrast",
+                crate::rarity_fx::CVAR,
                 crate::game_font::CVAR,
                 crate::text::style::SCALE_CVAR,
                 crate::text::style::TRACKING_CVAR,

@@ -1340,6 +1340,15 @@ impl PlayerMenu {
                         width: 1.2 * s,
                         color: color::alpha(skin.tier.colour(), 0.85),
                     });
+                    // Its tier's effects, small (the row holds owned shaders only).
+                    crate::rarity_fx::draw(
+                        self.canvas.draw_list_mut(),
+                        crate::rarity_fx::Item::of(skin.tier, true, crate::rarity_fx::Size::Small),
+                        frame.rect(x, y, SKIN_WIDTH, SKIN_HEIGHT),
+                        4.0 * s,
+                        s,
+                        seconds,
+                    );
                     // A chroma's mark in the swatch's top right corner, over the glass.
                     if skin.chroma {
                         swatch::chroma_mark(

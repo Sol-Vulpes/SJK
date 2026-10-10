@@ -9,6 +9,8 @@
 #                               made it when that is not the piece's owner.
 
 = Sol
++ 10/10/2026 | - | Rarity effects: Rare breathes, Legendary shines, Mythical sparks
+- 9e2b753 |  | Animate rarity: Rare breathes, Legendary shines, Mythical sparks
 + 10/10/2026 | - | SJK chat names keep the marks around clan tags
 - 42c0d4b |  | SJK chat: names keep the marks around clan tags
 + 10/10/2026 | - | The Import page as an SJK UI pop-up card

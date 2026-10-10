@@ -485,6 +485,17 @@ test: Custom RGB white: the chroma shows its own colours. Another player sees yo
 test: Collection > Shaders: colour wheels beside chroma names; double click an owned row.
 test: Detail beside the model: the long name ends before the Worn/Yours/Locked pill, at 4K.
 
+[rarity-fx]
+area: Menus & settings
+title: Rarity effects: Rare breathes, Legendary shines, Mythical sparks
+change: Collection > Shaders cards, swatch frames and tier pill animate by tier; Uncommon none.
+change: Holocrons tab rows too; locked ones only breathe faintly. Chosen grid card: white outline.
+change: Settings > Interface > Rarity effects (ui_rarityEffects) turns them off.
+test: Collection > Shaders, grid (V): Rare frames pulse, Legendary catch a sheen, Mythical a spark.
+test: The chosen card lifts with a white outline, apart from the worn Sun's gold frame.
+test: Rarity effects off: frames stay still. Back on: they move again at once.
+test: Saber tab swatches and the player card's shader row pulse gently.
+
 [shader-tiers]
 area: Menus & settings
 title: Saber shaders get tiers (as holocrons) and a grid of cards in the Collection

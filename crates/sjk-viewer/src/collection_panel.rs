@@ -218,7 +218,7 @@ impl Panel {
             hub: false,
             back: ReturnTarget::MainMenu,
             tab: Tab::Medals,
-            ui: MenuCanvas::with_capacities(160, 220, 1_400),
+            ui: MenuCanvas::with_capacities(160, 220, 2_048),
             medal: 0,
             // The first frame chooses the one nearest to unlocking.
             achievement: usize::MAX,

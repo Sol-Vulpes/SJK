@@ -12,6 +12,7 @@ use super::view::{LEAD_Y, LEFT_X, STAGE_TEXT_WIDTH, STAGE_TEXT_X, left_lines};
 use super::*;
 use crate::menu::sjk::{Frame, color, kit, text};
 use crate::menu_widgets::TextFamily;
+use crate::rarity_fx;
 use crate::unlockables::Unlockable;
 use sjk_ui::{DrawCommand, FontWeight, TextAlign};
 
@@ -29,6 +30,10 @@ const MARK_GAP: f32 = 10.0;
 /// The grid's cards: a card's size and the room between them (frame pixels).
 const CARD: [f32; 2] = [164.0, 196.0];
 const CARD_GAP: [f32; 2] = [10.0, 14.0];
+/// How far the chosen card lifts (frame pixels), and its outline's colour: white, so it
+/// never reads as a tier (Mythical's frame is gold).
+const CHOSEN_LIFT: f32 = 5.0;
+const CHOSEN_OUTLINE: sjk_ui::Color = sjk_ui::Color::new(1.0, 1.0, 1.0, 1.0);
 /// The view switches' side and where the first stands, left of the kinds.
 const SWITCH: f32 = 36.0;
 const SWITCH_X: f32 = LEFT_X + 466.0;
@@ -37,6 +42,8 @@ const SWITCH_X: f32 = LEFT_X + 466.0;
 const TAG_HEIGHT: f32 = 26.0;
 const TAG_MIN_WIDTH: f32 = 80.0;
 const TAG_GAP: f32 = 18.0;
+/// The detail's tier pill's height.
+const PILL_HEIGHT: f32 = 30.0;
 
 /// Where a rack row's words go (frame pixels, `[x, y, width, height]`), the row's top
 /// at `y`: the chroma mark (a chroma only) and the name on the first line, the name
@@ -369,9 +376,19 @@ impl Panel {
         let s = frame.s;
         let [x, y, width, height] = rect;
         let chosen = index == self.shader;
+        // The chosen card lifts off the grid, a shadow under it and a white outline
+        // round it: its own mark, apart from any tier's colour (Mythical's is gold).
+        let y = if chosen { y - CHOSEN_LIFT } else { y };
         let token = SHADER_BASE + index as u16;
         let hovered = self.ui.token_hovered(token);
         let area = frame.rect(x, y, width, height);
+        if chosen {
+            let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
+                rect: frame.rect(x + 2.0, y + CHOSEN_LIFT + 4.0, width - 4.0, height),
+                radius: 12.0 * s,
+                color: color::alpha(color::SPACE, 0.55),
+            });
+        }
         let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
             rect: area,
             radius: 12.0 * s,
@@ -393,13 +410,17 @@ impl Panel {
         let _ = self.ui.draw_list_mut().push(DrawCommand::Border {
             rect: area,
             radius: 12.0 * s,
-            width: if chosen { 2.4 } else { 1.2 } * s,
-            color: if chosen {
-                color::GOLD_BRIGHT
-            } else {
-                row.frame_colour()
-            },
+            width: if chosen { 1.8 } else { 1.2 } * s,
+            color: row.frame_colour(),
         });
+        if chosen {
+            let _ = self.ui.draw_list_mut().push(DrawCommand::Border {
+                rect: frame.rect(x - 3.0, y - 3.0, width + 6.0, height + 6.0),
+                radius: 15.0 * s,
+                width: 2.0 * s,
+                color: color::alpha(CHOSEN_OUTLINE, 0.95),
+            });
+        }
         let swatch_rect = [x + 8.0, y + 22.0, width - 16.0, 52.0];
         match row.skin {
             None => swatch::small_stock(self.ui.draw_list_mut(), frame, swatch_rect, inputs.stock),
@@ -435,7 +456,7 @@ impl Panel {
             frame.rect(x + 10.0, y + 86.0, name_width, 26.0),
             21.0 * s,
             match (chosen, row.owned) {
-                (true, _) => color::GOLD_BRIGHT,
+                (true, _) => CHOSEN_OUTLINE,
                 (false, true) => color::TEXT,
                 (false, false) => color::MUTED,
             },
@@ -479,6 +500,16 @@ impl Panel {
             FontWeight::Regular,
             TextAlign::Start,
         );
+        if let Some(tier) = row.tier() {
+            rarity_fx::draw(
+                self.ui.draw_list_mut(),
+                rarity_fx::Item::of(tier, row.owned, rarity_fx::Size::Full),
+                area,
+                12.0 * s,
+                s,
+                seconds,
+            );
+        }
         self.ui.hit_region(token, area);
     }
 
@@ -589,6 +620,16 @@ impl Panel {
             width: 1.4 * s,
             color: row.frame_colour(),
         });
+        if let Some(tier) = row.tier() {
+            rarity_fx::draw(
+                self.ui.draw_list_mut(),
+                rarity_fx::Item::of(tier, row.owned, rarity_fx::Size::Small),
+                frame.rect(rect[0], rect[1], rect[2], rect[3]),
+                10.0 * s,
+                s,
+                seconds,
+            );
+        }
         let chroma = row.skin.is_some_and(|skin| skin.chroma);
         let (mark, name, status) = rack_words(y, chroma);
         if let Some(tier) = row.tier() {
@@ -694,28 +735,36 @@ impl Panel {
             );
         }
         let mut y = 618.0;
-        // Its tier first, a pill in the tier's colour.
+        // Its tier first, a pill in the tier's colour, alive as its tier is.
         if let Some(tier) = row.tier() {
             let label = tier.label();
-            let pill_width = crate::text::display_width(label, 15.0) + 30.0;
-            let rect = frame.rect(x, y - 40.0, pill_width, TAG_HEIGHT);
+            let pill_width = crate::text::display_width(label, 17.0) + 34.0;
+            let rect = frame.rect(x, y - 44.0, pill_width, PILL_HEIGHT);
             let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
                 rect,
-                radius: 13.0 * s,
+                radius: PILL_HEIGHT * 0.5 * s,
                 color: color::alpha(tier.colour(), 0.16),
             });
             let _ = self.ui.draw_list_mut().push(DrawCommand::Border {
                 rect,
-                radius: 13.0 * s,
+                radius: PILL_HEIGHT * 0.5 * s,
                 width: 1.2 * s,
                 color: tier.colour(),
             });
+            rarity_fx::draw(
+                self.ui.draw_list_mut(),
+                rarity_fx::Item::of(tier, row.owned, rarity_fx::Size::Small),
+                rect,
+                PILL_HEIGHT * 0.5 * s,
+                s,
+                seconds,
+            );
             text(
                 &mut self.ui,
                 TextFamily::Display,
                 format_args!("{label}"),
-                frame.rect(x, y - 38.0, pill_width, 22.0),
-                15.0 * s,
+                frame.rect(x, y - 41.0, pill_width, 24.0),
+                17.0 * s,
                 tier.colour(),
                 FontWeight::Semibold,
                 TextAlign::Center,

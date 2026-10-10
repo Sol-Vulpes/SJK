@@ -594,6 +594,11 @@ pub(super) const GAME: &[Setting] = &[
         kind: ValueKind::Choice(&["off", "standard", "strong"]),
     },
     Setting {
+        label: "Rarity effects",
+        cvar: crate::rarity_fx::CVAR,
+        kind: ValueKind::Bool,
+    },
+    Setting {
         label: "Menu style",
         cvar: crate::menu::style::CVAR,
         kind: ValueKind::Choice(&crate::menu::style::MenuStyle::NAMES),

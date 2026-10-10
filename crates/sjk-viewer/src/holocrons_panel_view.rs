@@ -310,6 +310,18 @@ impl Panel {
                 radius: 2.5 * s,
                 color: tier.colour_alpha(if held { 1.0 } else { 0.4 }),
             });
+            // The tier's effects over its row, faint for a tier not held yet.
+            crate::rarity_fx::draw(
+                self.ui.draw_list_mut(),
+                crate::rarity_fx::Item {
+                    owned: held,
+                    ..crate::rarity_fx::Item::holocron(tier, crate::rarity_fx::Size::Full)
+                },
+                rect,
+                14.0 * s,
+                s,
+                crate::menu::art::motion::seconds() as f32,
+            );
             self.ui.hit_region(token, rect);
             picture(
                 &mut self.ui,

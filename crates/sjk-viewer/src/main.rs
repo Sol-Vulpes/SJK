@@ -183,6 +183,7 @@ mod profile_card;
 mod profile_hub;
 mod projectiles;
 mod quick_wheel;
+mod rarity_fx;
 mod remap_blocked_maps;
 mod render_helpers;
 mod runtime_settings;
