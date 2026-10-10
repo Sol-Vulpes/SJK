@@ -179,6 +179,23 @@ pub(crate) fn find(text: &str) -> Option<(GifId, Range<usize>)> {
     None
 }
 
+/// `text` with every GIPHY link written as its shortest address,
+/// `https://giphy.com/gifs/<id>` (the punctuation after it kept): GIPHY's share links
+/// carry a query that would take a message past the chat's length.
+pub(crate) fn shortened(text: &str) -> String {
+    text.split(' ')
+        .map(|word| match parse(word) {
+            Some(id) => format!(
+                "https://giphy.com/gifs/{}{}",
+                id.as_str(),
+                &word[trim_end(word).len()..]
+            ),
+            None => word.to_owned(),
+        })
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
 /// What a message link to a GIF shows in place of the address.
 pub(crate) const LABEL: &str = "GIF";
 

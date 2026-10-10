@@ -278,7 +278,9 @@ Only GIPHY: Tenor's API shut down on 30/06/2026.
   characters, though: GIPHY's share links with all their tracking words
   (`/media/v1.<long token>/<id>/giphy.gif?cid=...&ep=...&rid=...&ct=g`) are often longer
   and are refused (`chat_length`); the page's link (`giphy.com/gifs/<slug>-<id>`) or the
-  media link without its query fits.
+  media link without its query fits. Pasting (Ctrl+V) writes every GIPHY link as its
+  shortest address, `https://giphy.com/gifs/<id>` (`link::shortened`), so a copied share
+  link fits; a link typed by hand is sent as typed.
 
 ## Who is online
 
