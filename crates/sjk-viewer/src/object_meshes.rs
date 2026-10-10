@@ -1,6 +1,6 @@
 //! Load-time collection of the rigid network models a session can draw:
 //! items, held and view weapons, projectiles, effect models and the
-//! server-advertised `CS_MODELS` entries, plus the map's `misc_model_static` props.
+//! currently referenced rigid entity appearances, plus the map's `misc_model_static` props.
 
 use super::*;
 
@@ -31,14 +31,14 @@ pub(super) struct StaticModelMesh {
     pub(super) flash_bolt: Option<bolt::BoltMatrix>,
 }
 
-/// Gather every rigid model appearance the session may reference and append
+/// Gather preload defaults and the initial world's rigid appearances and append
 /// its frame-0 mesh to `flattened`. Models that fail to load are reported and
 /// skipped so one broken asset cannot take the map down.
 pub(super) fn load<'a>(
     vfs: &VirtualFileSystem,
     bsp: &Bsp,
     world: &World,
-    game_state: Option<&GameState>,
+    _game_state: Option<&GameState>,
     effect_names: impl Iterator<Item = &'a str>,
     vehicle_models: impl Iterator<Item = &'a str>,
     flattened: &mut FlattenedScene,
@@ -76,10 +76,8 @@ pub(super) fn load<'a>(
                 variant: String::new(),
             }),
     );
-    if let Some(game_state) = game_state {
-        // CS_MODELS has 512 slots; zero is the reserved no-model value.
-        appearances.extend((1..512).filter_map(|index| legacy_model_appearance(game_state, index)));
-    }
+    // CS_MODELS advertises possibilities, not the models in this snapshot.
+    // Unused entries load through model_demand when an entity needs them.
     let mut meshes = Vec::with_capacity(appearances.len());
     for appearance in appearances {
         // Brush models, vehicle names, NPC saber names and NPC bodies are

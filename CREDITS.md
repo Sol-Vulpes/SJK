@@ -136,7 +136,7 @@ pull requests merged into SJK, most of them bringing SJK in line with EternalJK
   and two apostrophes) and shown as typed, so SJK and EternalJK players see each
   other's percent signs and quotes.
 
-Lumaya ([lumayaa](https://github.com/lumayaa)), contributor, has 7 pull requests
+Lumaya ([lumayaa](https://github.com/lumayaa)), contributor, has 8 pull requests
 merged into SJK
 ([all of them](https://github.com/Sol-Vulpes/SJK/pulls?q=is%3Apr+author%3Alumayaa)):
 
@@ -155,6 +155,8 @@ merged into SJK
   world model and slot 16 keeps the Bryar one, so a DL-44 replacement shows in third person.
 - #66 one sound per pistol shot: the view client's snapshot entity adds no event sounds,
   as `CG_AddPacketEntities` builds it from the player state; remote shots are unchanged.
+- #67 server models on demand: the `CS_MODELS` entries no entity references are no longer
+  parsed and uploaded at map load; the first entity that shows one loads it on a worker thread.
 
 ## Origins: JKR, by Bishop
 

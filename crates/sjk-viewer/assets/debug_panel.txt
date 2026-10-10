@@ -3624,3 +3624,12 @@ change: Other players' shots, and events riding on separate event entities, are 
 test: On a server, fire the pistol (primary) many times: each shot is one sound, never doubled.
 test: Watch another player fire the pistol: you still hear every shot.
 note: Lumaya fixed a duplicate path found in tests; the doubled sound was not heard live.
+
+[models-on-demand]
+area: Rendering
+title: Server models load when first shown (SJK PR #67)
+change: Server-listed rigid models nothing references are no longer loaded at map load.
+change: The first entity that shows one loads it on a worker thread and installs it.
+test: Join a modded server with custom models: items and props appear, maybe a moment late.
+test: Compare the join time and memory with the last release on the same server.
+note: Lumaya measured only a duel6 test: no before/after of the join time.

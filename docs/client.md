@@ -5,6 +5,15 @@ Jedi Academy `GameData` directory with the retail `base/assets*.pk3` files.
 
 ## Launch
 
+Server `CS_MODELS` entries that no entity currently uses are not parsed or
+uploaded when the map starts. A newly referenced rigid model is prepared on
+one background worker and installed into that world's GPU buffers when ready;
+until then its draw is absent. Failed models are tried once per world, and a
+map change discards outstanding results. Map props, stock weapons/items and
+effect dependencies still preload. Player models already load for the current
+roster rather than the entire installed model catalogue; this change does not
+defer player bodies or reload files edited on disk.
+
 Local weapon and movement event sounds come from prediction or player-state
 events. The view client's ordinary snapshot entity is excluded from the
 entity-sound path, following OpenJK multiplayer, so a shot received before
