@@ -518,7 +518,7 @@ impl State {
                         key_id: "0123456789abcdef".to_owned(),
                         name: "Vulpes".to_owned(),
                         verified: false,
-                        medals: shot_medals(&["jof_clan"]),
+                        medals: shot_medals(&["bug_hunter"]),
                         avatar: String::new(),
                     }),
                     2 | 3 => Some(HubMark {

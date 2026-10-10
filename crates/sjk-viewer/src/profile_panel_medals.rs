@@ -299,7 +299,6 @@ mod tests {
                 (Medal::EarlyTester, true),
                 (Medal::BugHunter, true),
                 (Medal::EarlyContributor, false),
-                (Medal::JofClan, false),
             ]
         );
         assert_eq!(

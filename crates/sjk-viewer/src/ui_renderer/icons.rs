@@ -76,8 +76,11 @@ pub(crate) const AVATAR_ICON_CELLS: u32 = 2 * COLUMNS;
 /// The cell holding the riding vehicle's crosshair picture (`crosshairShader` of its
 /// `.veh`), after the pictures'. One cell: it is replaced when the pilot changes vehicle.
 pub(crate) const VEHICLE_CROSSHAIR_ICON: u32 = AVATAR_ICON_FIRST + AVATAR_ICON_CELLS;
+/// The cell holding the JoF clan's emblem (`ui_renderer::JOF_TEXTURE`), after the
+/// vehicle crosshair's.
+pub(crate) const JOF_ICON: u32 = VEHICLE_CROSSHAIR_ICON + 1;
 /// Every icon cell.
-pub(crate) const ATLAS_CELLS: u32 = VEHICLE_CROSSHAIR_ICON + 1;
+pub(crate) const ATLAS_CELLS: u32 = JOF_ICON + 1;
 const TOTAL_CELLS: u32 = ATLAS_CELLS;
 const ATLAS_HEIGHT: u32 = TOTAL_CELLS.div_ceil(COLUMNS) * ICON_SIZE;
 

@@ -698,6 +698,22 @@ impl Painter<'_> {
         );
     }
 
+    /// The JoF emblem ([`crate::jof_tag`]) `side` tall with its ink from `x`, centred
+    /// on `middle`, in the board's units.
+    fn jof(&mut self, x: f32, middle: f32, side: f32) {
+        let emblem = self.frame.rect(x, middle - side * 0.5, side, side);
+        let list = self.ui.draw_list_mut();
+        crate::jof_tag::draw(
+            emblem.x,
+            emblem.y + emblem.height * 0.5,
+            emblem.height,
+            1.0,
+            |command| {
+                let _ = list.push(command);
+            },
+        );
+    }
+
     fn is_local(&self, row: &ScoreRow) -> bool {
         u16::from(row.client_num) == self.header.local.client
     }
@@ -854,7 +870,8 @@ impl Painter<'_> {
         rows.iter()
             .filter(|row| member(row))
             .map(|row| {
-                let name = self.width(TextFamily::Body, &row.name, size, FontWeight::Regular);
+                let name = self.width(TextFamily::Body, &row.name, size, FontWeight::Regular)
+                    + jof_room(&row.name, size);
                 let marks = row.identity.map_or(0.0, |tag| {
                     let bars = super::identity_mark::ribbon_count(tag.medals, side, f32::MAX);
                     super::identity_mark::marks_width(side, bars) + 10.0
@@ -1265,26 +1282,41 @@ impl Painter<'_> {
         let name_colour = if row.bot { color::MUTED } else { color::TEXT };
         // The emblem of a player the hub knows sits on the name's outer side,
         // in the room the name leaves for it.
+        // The JoF emblem comes before the name, on its left.
         let room = width - 50.0;
-        let name_width = self
+        let jof = jof_room(&row.name, name_size);
+        let text_width = self
             .width(
                 TextFamily::Display,
                 &row.name,
                 name_size,
                 FontWeight::Semibold,
             )
-            .min(room);
+            .min(room - jof);
         self.run(
             TextFamily::Display,
             format_args!("{}", row.name),
-            if right { x } else { x + width - room },
+            if right {
+                x + jof
+            } else {
+                x + width - room + jof
+            },
             name_y,
-            room,
+            room - jof,
             name_size,
             name_colour,
             FontWeight::Semibold,
             align,
         );
+        if jof > 0.0 {
+            let start = if right {
+                x
+            } else {
+                x + width - text_width - jof
+            };
+            self.jof(start, name_y, crate::jof_tag::side(name_size));
+        }
+        let name_width = text_width + jof;
         if let Some(tag) = row.identity {
             let side = name_size * 0.62;
             // The bars go where the name leaves room on the card.
@@ -1591,7 +1623,10 @@ impl Painter<'_> {
         let side = name_size * 1.05;
         let ready = self.is_ready(row);
         let ready_width = if ready { 60.0 } else { 0.0 };
-        let full_name = self.width(TextFamily::Body, &row.name, name_size, FontWeight::Regular);
+        // The JoF emblem first, on the name's left.
+        let jof = jof_room(&row.name, name_size);
+        let full_name =
+            self.width(TextFamily::Body, &row.name, name_size, FontWeight::Regular) + jof;
         // The bars take no more than a third of the name's room; a compact
         // list, sized for its names, gives them what the name leaves.
         let ribbons = row.identity.map_or(0, |tag| {
@@ -1608,12 +1643,15 @@ impl Painter<'_> {
             0.0
         } + ready_width;
         let name_width = full_name.min((room - marks).max(0.0));
+        if jof > 0.0 {
+            self.jof(columns.name, middle, crate::jof_tag::side(name_size));
+        }
         self.run(
             TextFamily::Body,
             format_args!("{}", row.name),
-            columns.name,
+            columns.name + jof,
             middle,
-            (room - marks).max(0.0),
+            (room - marks - jof).max(0.0),
             name_size,
             if quiet {
                 color::alpha(color::MUTED, 0.85)
@@ -1813,6 +1851,16 @@ impl fmt::Display for Facts {
             }
         }
         Ok(())
+    }
+}
+
+/// The room the JoF emblem takes before `name` set at `size` ([`crate::jof_tag`]), or
+/// 0 when the name has no JoF tag.
+fn jof_room(name: &str, size: f32) -> f32 {
+    if crate::jof_tag::tagged(name) {
+        crate::jof_tag::room(crate::jof_tag::side(size))
+    } else {
+        0.0
     }
 }
 

@@ -355,7 +355,7 @@ mod tests {
                 for medal in Medal::ALL {
                     for others in [0, 3] {
                         let mut awards = vec![award(medal, &note)];
-                        awards.extend((0..others).map(|_| award(Medal::JofClan, "")));
+                        awards.extend((0..others).map(|_| award(Medal::EarlyContributor, "")));
                         for viewport in VIEWPORTS {
                             for (at, leaving) in MOMENTS {
                                 let mut popup = popup(awards.clone(), at, leaving);

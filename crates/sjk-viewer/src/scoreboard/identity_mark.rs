@@ -197,15 +197,7 @@ mod tests {
 
     #[test]
     fn at_most_three_bars_and_fewer_when_the_name_is_short() {
-        let all = tag(
-            false,
-            &[
-                "early_tester",
-                "early_contributor",
-                "bug_hunter",
-                "jof_clan",
-            ],
-        );
+        let all = tag(false, &["early_tester", "early_contributor", "bug_hunter"]);
         assert_eq!(ribbon_count(all.medals, 20.0, 1_000.0), 3);
         assert_eq!(ribbon_count(all.medals, 20.0, marks_width(20.0, 2)), 2);
         assert_eq!(ribbon_count(all.medals, 20.0, 25.0), 0);

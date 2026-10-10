@@ -100,6 +100,7 @@ mod impact_spawn;
 mod impacts;
 mod ingame_menu;
 mod input;
+mod jof_tag;
 mod keybind_editor;
 mod lamp_lights;
 mod launch;

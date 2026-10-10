@@ -226,7 +226,7 @@ menu's row of icons): [sjk-ui.md](sjk-ui.md#report-a-bug-and-its-dialogs).
 ## Medals
 
 A medal is recognition the SJK team gives a player by hand: for testing SJK early,
-contributing to its code, finding bugs, or belonging to the JoF clan. A medal grants
+contributing to its code or finding bugs. A medal grants
 nothing: no setting, cosmetic, power or right comes with it, on any server. Players do
 not ask for medals or choose them; the SJK team gives them.
 
@@ -235,7 +235,6 @@ not ask for medals or choose them; the SJK team gives them.
 | Early Tester | `early_tester` | Helped test SJK in its early days. | no |
 | Early Contributor | `early_contributor` | Contributed to SJK's code in its early days. | no |
 | Bug Hunter | `bug_hunter` | Found bugs that got fixed. | yes, with a count ("Bug Hunter x2") |
-| JoF Clan | `jof_clan` | A member of the JoF clan. | no |
 
 The hub lists a key's medals in its profile (`"medals":[{"id","count","awarded","note"}]`:
 the count, when it was last given and a short note from the team, often empty) and in its
@@ -245,15 +244,17 @@ send none. The catalogue is [medals.rs](../crates/sjk-viewer/src/medals.rs): eac
 name, description, ribbon colours and two pictures in `assets/medals` (`<id>.png`, the
 whole medal on its ribbon, 512 square; `<id>_small.png`, the medallion alone, 128
 square, for anything under about 64 pixels). A new medal is one entry there and two
-pictures; new art is a file replacement. The JoF Clan picture is provisional.
+pictures; new art is a file replacement. The JoF Clan medal (`jof_clan`) was dropped on
+10/10/2026 for the [JoF clan tag](#jof-clan-tag); a client ignores an old award of it as
+an unknown id.
 
 Where they show:
 
 - The scoreboard, every style: up to three small ribbon bars after the SJK emblem, on
   rows whose claim the emblem trusts (the claimed name matches the name the game shows).
   They are coloured rectangles drawn from the catalogue (Early Tester amber with black
-  stripes, Early Contributor navy with a white centre stripe, Bug Hunter emerald and JoF
-  Clan crimson with black edges), sized after the emblem; they take room from the name,
+  stripes, Early Contributor navy with a white centre stripe, Bug Hunter emerald with
+  black edges), sized after the emblem; they take room from the name,
   never the columns, and fewer show where the name would keep less than half its room
   (the SJK UI: a third). Derived only when the roster or the rows change.
 - The player card (`inspect`): the medallions in a row under the hub name; a pinned card
@@ -316,6 +317,27 @@ Where they show:
 Medals are public: anyone can read a key's profile and the presence list of a server,
 so a player's medals, counts, dates and notes are visible to everyone, as their hub
 name and verified flag are. The client sends nothing about medals.
+
+
+## JoF clan tag
+
+A player whose name carries the JoF clan's tag gets the clan's emblem (J, o, F) on the
+left of their name, tinted crimson. It is read from the name alone, so it shows what a
+player says, not something the hub vouches for; it needs no hub and no SJK identity.
+[jof_tag.rs](../crates/sjk-viewer/src/jof_tag.rs) holds the rule, the size and the drawing.
+
+The rule (the clan's): `jof` in any case, with no letter right before the J (the name
+starts there or a separator comes first: a space, a bracket, a dot, a digit...) and no
+letter right after the F. Colour codes are dropped first. `{JoF}Name`, `jof.Name`,
+`[JOF] Name`, `Name-JoF` and `^1J^7oF` count; `Joffrey`, `MrJoF` and `Jofa` do not. Any
+Unicode letter counts as a letter.
+
+Where it shows: the game chat's name rows, SJK chat lines in the feed, the SJK UI's chat
+dock and chat page, the scoreboard (classic and SJK, list rows and duel cards), the player
+card (`inspect`) and the SJK UI Players page's card. Not on nameplates.
+
+The emblem is `assets/branding/jof-emblem.png` (128 square, white on transparent, one icon
+atlas cell), rendered from the clan's SVG path by `scripts/jof_emblem.py`.
 
 ## Unlocks and looks
 

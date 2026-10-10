@@ -1,7 +1,8 @@
 //! The SJK chat page's drawing, in the SJK UI's look: the messages down the left,
 //! newest at the bottom over the field and Send, and the chosen message with what
 //! can be done about it on the right. A message flows as one line, as SJK chat does
-//! everywhere ([`crate::sjk_chat_look`]): the name, the verified tick for a verified
+//! everywhere ([`crate::sjk_chat_look`]): the JoF emblem for the clan's tag
+//! ([`crate::jof_tag`]), the name, the verified tick for a verified
 //! sender, then the text in the SJK chat's gold, wrapping only when it is too long. A
 //! name under the pointer shows its sender's sender card over the page.
 
@@ -48,6 +49,8 @@ fn height(rows: usize) -> f32 {
 struct Laid {
     /// The name as shown, with its colour codes.
     name: String,
+    /// The room the JoF emblem takes before the name ([`crate::jof_tag`]), or 0.
+    jof: f32,
     name_width: f32,
     verified: bool,
     /// Where the text starts on the first row, after the name, the tick and the colon.
@@ -72,13 +75,18 @@ fn lay(message: &ChatMessage, inputs: &Inputs<'_>, measure: &Measure<'_>, s: f32
     } else {
         name
     };
+    let jof = if crate::jof_tag::tagged(&message.name) {
+        crate::jof_tag::room(crate::jof_tag::side(NAME_SIZE))
+    } else {
+        0.0
+    };
     let name_width = width(&name, NAME_SIZE, TextFace::Semibold).min(LIST_WIDTH * 0.4);
     let tick = if message.verified {
         sjk_chat_look::tick_room(NAME_SIZE)
     } else {
         0.0
     };
-    let indent = name_width + tick + width(": ", TEXT_SIZE, TextFace::Regular);
+    let indent = jof + name_width + tick + width(": ", TEXT_SIZE, TextFace::Regular);
     let staff = if message.staff { "Staff  ·  " } else { "" };
     let when = ago(u64::try_from(message.at).unwrap_or(0), inputs.now);
     let meta = format!("{staff}{when}");
@@ -97,6 +105,7 @@ fn lay(message: &ChatMessage, inputs: &Inputs<'_>, measure: &Measure<'_>, s: f32
     );
     Laid {
         name,
+        jof,
         name_width,
         verified: message.verified,
         indent,
@@ -240,7 +249,7 @@ impl Panel {
             self.ui
                 .hit_region(token, frame.rect(row[0], row[1], row[2], row[3]));
             // The name over its row: resting the pointer on it shows the card.
-            let name = frame.rect(LIST_X, y, laid.name_width + 2.0, NAME_ROW - 2.0);
+            let name = frame.rect(LIST_X + laid.jof, y, laid.name_width + 2.0, NAME_ROW - 2.0);
             self.ui.hit_region(NAME_BASE + index as u16, name);
             if self.ui.token_hovered(NAME_BASE + index as u16) {
                 hovered = Some((message, laid, name));
@@ -278,23 +287,35 @@ impl Panel {
         }
     }
 
-    /// Draw a laid out message whose first row's top is `y`: the name, the tick, the
+    /// Draw a laid out message whose first row's top is `y`: the JoF emblem, the
+    /// name, the tick, the
     /// colon and the text going on after them, then its other rows from the left
     /// edge, and what is said of it on the right of the first row.
     fn message(&mut self, frame: &Frame, laid: &Laid, y: f32) {
         let s = frame.s;
         let first = frame.rect(LIST_X, y, LIST_WIDTH, NAME_ROW - 2.0);
+        if laid.jof > 0.0 {
+            crate::jof_tag::draw(
+                first.x,
+                first.y + first.height * 0.5,
+                crate::jof_tag::side(NAME_SIZE * s),
+                1.0,
+                |command| {
+                    let _ = self.ui.draw_list_mut().push(command);
+                },
+            );
+        }
         text(
             &mut self.ui,
             TextFamily::Body,
             format_args!("{}", laid.name),
-            frame.rect(LIST_X, y, laid.name_width + 2.0, NAME_ROW - 2.0),
+            frame.rect(LIST_X + laid.jof, y, laid.name_width + 2.0, NAME_ROW - 2.0),
             NAME_SIZE * s,
             color::TEXT,
             FontWeight::Semibold,
             TextAlign::Start,
         );
-        let mut x = LIST_X + laid.name_width;
+        let mut x = LIST_X + laid.jof + laid.name_width;
         if laid.verified {
             let [left, _] = frame.point(x, y);
             sjk_chat_look::tick(

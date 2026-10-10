@@ -704,7 +704,7 @@ mod tests {
     fn the_medal_grows_about_its_medallion() {
         let stage = Stage {
             rect: Rect::new(0.0, 0.0, 400.0, 400.0),
-            texture: crate::medals::Medal::JofClan.art(),
+            texture: crate::medals::Medal::BugHunter.art(),
             palette: Palette {
                 gold: Color::new(1.0, 0.8, 0.3, 1.0),
                 bright: Color::new(1.0, 0.9, 0.5, 1.0),

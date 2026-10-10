@@ -478,14 +478,24 @@ impl Lay<'_> {
             .min(self.width * 0.55)
     }
 
-    /// Where the text starts on the first row: after the name, the tick and a colon.
+    /// The room the JoF emblem takes before the name ([`crate::jof_tag`]), if any.
+    fn jof_room(&self, line: &DockLine<'_>) -> f32 {
+        if crate::jof_tag::tagged(line.name) {
+            crate::jof_tag::room(crate::jof_tag::side(self.size))
+        } else {
+            0.0
+        }
+    }
+
+    /// Where the text starts on the first row: after the JoF emblem, the name, the
+    /// tick and a colon.
     fn indent(&self, line: &DockLine<'_>) -> f32 {
         let tick = if line.verified {
             sjk_chat_look::tick_room(self.size)
         } else {
             0.0
         };
-        self.name_width(line) + tick + self.width(": ", TextFace::Regular)
+        self.jof_room(line) + self.name_width(line) + tick + self.width(": ", TextFace::Regular)
     }
 
     /// Hand each row of `line`'s text to `row`, as a chat line wraps after its name.
@@ -747,7 +757,8 @@ fn messages(
 }
 
 /// One message from `at` (frame pixels, the top of its room) on at most `rows` rows, as
-/// SJK chat lines look everywhere ([`crate::sjk_chat_look`]): the name in its colours,
+/// SJK chat lines look everywhere ([`crate::sjk_chat_look`]): the JoF emblem for the
+/// clan's tag ([`crate::jof_tag`]), the name in its colours,
 /// the verified tick alone for a verified sender, a colon, then the message in the SJK
 /// chat's gold going on after them and wrapping to the column's left edge. The last row
 /// of a message cut short ends in an ellipsis. Returns the name's rectangle.
@@ -780,10 +791,22 @@ fn message(
             TextAlign::Start,
         );
     };
+    let jof = lay.jof_room(line);
+    if jof > 0.0 {
+        crate::jof_tag::draw(
+            first.x,
+            first.y + first.height * 0.5,
+            crate::jof_tag::side(lay.size),
+            1.0,
+            |command| {
+                let _ = canvas.draw_list_mut().push(command);
+            },
+        );
+    }
     let name_width = lay.name_width(line);
-    let name = Rect::new(first.x, first.y, name_width + 1.0, first.height);
+    let name = Rect::new(first.x + jof, first.y, name_width + 1.0, first.height);
     run(canvas, name, color::TEXT, format_args!("{}", line.name));
-    let mut x = first.x + name_width;
+    let mut x = first.x + jof + name_width;
     if line.verified {
         sjk_chat_look::tick(
             canvas.draw_list_mut(),
