@@ -236,7 +236,9 @@ pub(crate) struct HomeView<'a> {
     pub(crate) summary: &'a crate::profile_card::Summary,
 }
 
-pub(crate) use super::chat_dock::{ChatDock, DockLine};
+pub(crate) use super::chat_dock::ChatDock;
+#[cfg(test)]
+pub(crate) use super::chat_dock::DockLine;
 
 /// Where the keyboard is.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

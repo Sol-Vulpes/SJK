@@ -2281,7 +2281,7 @@ mod tests {
         for viewport in VIEWPORTS {
             let mut canvas = MenuCanvas::new();
             let mut dock = Dock::default();
-            let mut draw = |canvas: &mut MenuCanvas, dock: &mut Dock| {
+            let draw = |canvas: &mut MenuCanvas, dock: &mut Dock| {
                 build(
                     canvas,
                     &view(Page::Main, 0, false, 0),
