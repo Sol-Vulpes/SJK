@@ -81,7 +81,7 @@ pub(super) fn register_daily_cvars(cvars: &mut CvarRegistry) -> Result<(), sjk_s
         ),
         CvarDefinition::new(
             crate::fps_help::CVAR,
-            1_i64,
+            true,
             archive,
             "Offer EJK graphics when a map's SJK lighting keeps the FPS low (help_fps shows it)",
         ),

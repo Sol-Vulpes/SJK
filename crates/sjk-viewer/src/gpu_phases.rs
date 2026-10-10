@@ -118,8 +118,9 @@ impl Profiler {
     pub(crate) fn begin(&self, encoder: &mut wgpu::CommandEncoder) {
         let frame = self.frame.get().wrapping_add(1);
         self.frame.set(frame);
-        let active =
-            (self.print || self.watch.get()) && frame.is_multiple_of(INTERVAL) && !self.pending.get();
+        let active = (self.print || self.watch.get())
+            && frame.is_multiple_of(INTERVAL)
+            && !self.pending.get();
         self.active.set(active);
         if !active {
             return;

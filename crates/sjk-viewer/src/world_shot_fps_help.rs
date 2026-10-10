@@ -22,6 +22,7 @@ fn fps_help_card() {
         let Some((mut gpu, _profile)) = open("maps/mp/duel6.bsp", size, Some(menu), &cvars) else {
             return;
         };
+        gpu.graphics_reload.map = "maps/mp/duel6.bsp".to_owned();
         let _ = frame(&mut gpu, 20);
         gpu.ui_epoch -= Duration::from_millis(2_000);
 
@@ -47,11 +48,25 @@ fn fps_help_card() {
         shoot(&mut gpu, 2, "fps-help-ticked");
         assert!(gpu.fps_card.is_open());
 
+        // EJK graphics as the card's button sets them: the switch, then the reload.
+        gpu.fps_card_choice(Some(crate::fps_help::card::Choice::Switch));
+        gpu.reload_graphics(&mut None).expect("the reload starts");
+        let started = std::time::Instant::now();
+        let rebuilt = loop {
+            let _ = gpu.render(&mut None);
+            if let Some(world) = gpu.poll_rebuild() {
+                break world;
+            }
+            assert!(
+                started.elapsed() < Duration::from_secs(120),
+                "duel6 built again"
+            );
+            std::thread::sleep(Duration::from_millis(16));
+        };
+        gpu = rebuilt;
+        attach_target(&mut gpu, size);
+        assert!(gpu.graphics_changes().is_empty());
         // `help_fps` with EJK graphics on: the button turns them off.
-        if let Some(console) = gpu.console.as_mut() {
-            crate::graphics_quality::toggle_ejk(console);
-        }
-        gpu.fps_help.finding = None;
         gpu.fps_help_command().expect("help_fps opens the card");
         shoot(&mut gpu, 2, "fps-help-ejk-on");
         assert!(gpu.fps_card.is_open());
