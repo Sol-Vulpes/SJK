@@ -271,8 +271,30 @@ pub(super) fn register(shell: &mut Shell, commands: &Commands) -> Result<(), Box
     Ok(())
 }
 
+/// The file of `firstsetup import <path>` as typed: the tokenizer reads a backslash
+/// inside quotes as an escape, which would eat a quoted Windows path's separators
+/// (`"C:\Users\..."`, as Explorer's Copy as path gives it). One pair of surrounding
+/// quotes is dropped and the rest kept as it is.
+fn raw_import_path(command: &str, tokens: &[String]) -> Option<String> {
+    if !(tokens.len() > 2
+        && tokens[0].eq_ignore_ascii_case(crate::menu::first_setup::COMMAND)
+        && tokens[1].eq_ignore_ascii_case(crate::menu::first_setup::IMPORT))
+    {
+        return None;
+    }
+    let (_, rest) = command.trim_start().split_once(char::is_whitespace)?;
+    let (_, raw) = rest.trim_start().split_once(char::is_whitespace)?;
+    let raw = raw.trim();
+    let raw = raw
+        .strip_prefix('"')
+        .and_then(|inner| inner.strip_suffix('"'))
+        .unwrap_or(raw);
+    Some(raw.to_owned())
+}
+
 impl Commands {
-    /// Retain a recognized service command, preserving rcon's raw argument text.
+    /// Retain a recognized service command, preserving rcon's and
+    /// `firstsetup import`'s raw argument text.
     pub fn queue(
         &mut self,
         command: &str,
@@ -294,6 +316,9 @@ impl Commands {
                 .map_or("", |(_, args)| args);
             self.pending
                 .push_back(vec![tokens[0].clone(), raw.to_owned()]);
+        } else if let Some(path) = raw_import_path(command, tokens) {
+            self.pending
+                .push_back(vec![tokens[0].clone(), tokens[1].clone(), path]);
         } else {
             self.pending.push_back(tokens.to_vec());
         }
@@ -696,5 +721,30 @@ impl crate::GpuState {
             }
         }
         Ok(Vec::new())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn import_path(command: &str) -> Option<String> {
+        raw_import_path(command, &sjk_shell::tokenize(command).unwrap())
+    }
+
+    #[test]
+    fn an_import_path_keeps_its_backslashes_quoted_or_not() {
+        let quoted = r#"firstsetup import "C:\Users\turin\Downloads\turin.cfg""#;
+        assert_eq!(
+            import_path(quoted).as_deref(),
+            Some(r"C:\Users\turin\Downloads\turin.cfg")
+        );
+        let spaced = r"firstsetup IMPORT  C:\My Games\jampconfig.cfg ";
+        assert_eq!(
+            import_path(spaced).as_deref(),
+            Some(r"C:\My Games\jampconfig.cfg")
+        );
+        assert_eq!(import_path("firstsetup import"), None);
+        assert_eq!(import_path("firstsetup"), None);
     }
 }

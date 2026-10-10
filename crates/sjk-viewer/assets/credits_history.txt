@@ -9,6 +9,8 @@
 #                               made it when that is not the piece's owner.
 
 = Sol
++ 10/10/2026 | - | Firstsetup import takes quoted Windows paths
+- 77a3c55 |  | firstsetup import: keep a quoted Windows path's backslashes
 + 10/10/2026 | - | Force page first, a Toys page, a Melee bind, warnings fixed
 - 42cc3f6 |  | Remove three unused-code warnings
 - e9bed8b |  | Quick wheel: the Force page first, and a Toys page

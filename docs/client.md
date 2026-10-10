@@ -1214,8 +1214,9 @@ shows: [Identity](#identity))
 ([config_import.rs](../crates/sjk-viewer/src/config_import.rs),
 [config_import_panel.rs](../crates/sjk-viewer/src/config_import_panel.rs)); the
 First setup screen says so. `firstsetup import <path>` does the same from the
-console (a path's words may be left unquoted; inside quotes a backslash escapes,
-so quoted Windows paths need forward slashes), and `firstsetup import` alone
+console (a path's words may be left unquoted, or quoted as Explorer's Copy as path
+gives them: the path is taken as typed, without the console's backslash escapes,
+and one pair of surrounding quotes is dropped), and `firstsetup import` alone
 explains how. The file is read, never run: only `seta`/`set`/`sets`/`setu`, a
 bare `name`, `model` or `cg_fov`, `bind`, `unbind` and `unbindall` count, `//`
 comments are skipped, and a file that is not UTF-8 is read as Latin-1, as the
