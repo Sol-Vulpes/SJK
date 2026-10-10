@@ -356,7 +356,7 @@ struct GpuState {
     saber_states: saber_trail::StateSlab,
     saber_trail_segments: saber_trail::SegmentPool,
     speed_trails: actor_world_submission::speed_trail::Trails,
-    /// Illuminate's holocron, the client's own Force-wheel light.
+    /// Illuminate's holocron, the client's own toy (`toy_illuminate`).
     illuminate: illuminate::Holocron,
     /// The other players' holocrons, lit by their looks.
     illuminate_others: illuminate::Others,

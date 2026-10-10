@@ -18,6 +18,9 @@ general contributor rules.
   release ZIPs, the `GameData/SJK/` folder and messages.
 - New settings get neutral engine names (`r_*`, `cg_*`, `cl_*`, ...), never a
   `sjk_` prefix, and must not collide with EternalJK or rend2 settings.
+- Every toy is a `toy_<name>` command (`toy_illuminate`); a toy has no Force wheel
+  entry, and one with a setting names it `cg_toy<Name>...`. Illuminate has none: it is
+  always available and lit only for the client's run.
 - The crates are SJK's too: `crates/sjk-*`, packages `sjk-*` (`cargo build -p
   sjk-viewer -p sjk-dedicated`) and Rust paths `sjk_*`. Environment variables for
   diagnostics are `SJK_*`; the game-data and server paths keep the neutral

@@ -2174,11 +2174,11 @@ where Stasis is not granted. On JA+, merc mode shows Lightning as the
 flamethrower until the player is seen using real lightning. Repulse, Dash and
 the flamethrower use JoF EJK's pictures from `EternalJK/jofclient-assets.pk3`;
 Stasis has none and shows Jump's. Power names are retail's (Dark Rage, Sense).
-SJK's own [Illuminate](#illuminate) is the wheel's last entry on every server.
+SJK's own [Illuminate](#illuminate) is a toy, not a Force power: it is not on the wheel.
 See [hud/force_wheel.rs](../crates/sjk-viewer/src/hud/force_wheel.rs).
 
 `forceselect <n>` (SJK's) selects wheel entry `n` at once, by its
-`forcePowers_t` number (18 Stasis, 19 Repulse, 20 Dash, 21 Illuminate), as if
+`forcePowers_t` number (18 Stasis, 19 Repulse, 20 Dash), as if
 `forcenext` had stopped on it: a real power becomes the selection the user
 command sends, a pseudo-slot the one `+useforce` uses, and the bar shows it. An
 entry not on the player's wheel, or spectating, selects nothing
@@ -2187,29 +2187,34 @@ entry not on the player's wheel, or spectating, selects nothing
 
 ## Illuminate
 
-Illuminate is a free power every player has, SJK's own and not a game power: a
-holocron that floats by the player's left shoulder, turning slowly and bobbing,
-with a warm point light (300 units) that lights the way in dark maps. No game
-server knows of it: its lit state travels through the SJK hub as part of the
-player's look ([unlockables.md](unlockables.md)), so other SJK players on the same
-server see it by that player (below); players on stock clients do not. It is the
-Force wheel's last entry (and the radial HUD's list's), with its
-own holocron icon; `+useforce` on it turns the holocron on or off, and the
-`force_illuminate` command does the same from a bind (Settings > Key bindings >
-Force powers) and from the quick wheel's [Toys page](#toys-page). It is never sent as the selected power: the client sets its
-`forcePowersKnown` bit itself ([`client_known`](../crates/sjk-client/src/force_wheel.rs))
-and swallows `+useforce` on it. Where the player has no Force at all,
-`forcenext` still walks the inventory, as in stock, and only the bind reaches it.
+Illuminate is a toy, SJK's own and free for every player (Sol's request, 10/10/2026:
+"not a force power, but just a toy"): a holocron that floats by the player's left
+shoulder, turning slowly and bobbing, with a warm point light (300 units) that
+lights the way in dark maps. No game server knows of it: its lit state travels
+through the SJK hub as part of the player's look ([unlockables.md](unlockables.md)),
+so other SJK players on the same server see it by that player (below); players on
+stock clients do not. It is not a Force power and is on no Force wheel, bar or
+list: the `toy_illuminate` command lights it or puts it out, from a bind
+(Settings > Key bindings > Interaction > Toy: Illuminate, unbound until a key is
+picked), from the quick wheel's [Toys page](#toys-page), or from the switch on the
+Collection's Toys tab ([SJK UI](sjk-ui.md#collection)). Every toy is a
+`toy_<name>` command ([sjk.md](sjk.md#names)).
 
-`cg_illuminate` (archived, default 1; Settings > Game > Illuminate holocron) puts
-it on the wheel; 0 takes it off and puts the holocron out. The holocron appears
-and goes out over 0.3 seconds, trails a moving player by at most 20 units and
-jumps with a teleport. It goes out while the player is dead, spectating,
-following someone or at the intermission, and comes back at the player. In first
-person only its light shows (the cube is drawn in mirrors, like the body). It is
-on or off for the client's run, not saved. Its light is added first each frame,
-so a full light list never drops it, but `r_dynamiclight 0` puts it out with the
-others.
+It is always there, with no setting that enables it, and it is out at every start:
+whether it is lit is the client's run only, not saved. The old Force wheel setting
+`cg_illuminate` is gone; a profile that still holds it (0, off the wheel, or 1, on
+it) has it dropped when it loads, so neither leaves the holocron lit or unusable.
+The command was `force_illuminate` while it was a Force wheel entry; that name
+still runs the toy, so a key bind or quick wheel choice saved under it works (the
+bind is renamed to `toy_illuminate` when the profile loads, so the key-binding
+editor lists it), but it is not listed in the console's completion or help.
+
+The holocron appears and goes out over 0.3 seconds, trails a moving player by at
+most 20 units and jumps with a teleport. It goes out while the player is dead,
+spectating, following someone or at the intermission, and comes back at the player.
+In first person only its light shows (the cube is drawn in mirrors, like the body).
+Its light is added first each frame, so a full light list never drops it, but
+`r_dynamiclight 0` puts it out with the others.
 
 Other SJK players' holocrons show when their look says lit (with `cl_identity` on and
 a hub; their claimed name must match the name the game shows in their slot, as for
@@ -2218,13 +2223,12 @@ interpolated origin, eye height (crouching lowers it) and view yaw, with the sam
 bob, turn and trailing as one's own (each slot's bob and turn a little out of step).
 The cube always shows for another player, in first and third person, while the game
 draws them; dead, hidden, cloaked or out of the snapshot, it goes out where it was.
-`cg_illuminate 0` only takes one's own off the wheel. All the cubes show, but only
-the four nearest the camera add their light, so the frame's 32 lights stay for the
-weapons and sabers.
+All the cubes show, but only the four nearest the camera add their light, so the
+frame's 32 lights stay for the weapons and sabers.
 
 The cube, its two pictures (lit metal, and the emblem alone for the glowing
-stage), its shader and the wheel icon are bundled and mounted below all game
-data, so a PK3 with the same paths replaces them. The same cube also has four
+stage), its shader and its icon are bundled and mounted below all game
+data, so a PK3 with the same paths replaces them (the picture is `gfx/sjk/toy_illuminate.png`). The same cube also has four
 loot-box tiers (uncommon green, rare blue, legendary purple, mythical gold and
 shiny): other pictures and shaders on the one model, with their icons and point-light
 colours, bundled the same way. Sol generated the art; see
@@ -2376,11 +2380,9 @@ illuminate and future toy") is a default page named Toys, `+wheel toys`, for
 live one: its choices come from the [catalogue](#choices)'s Toys group, one entry
 per toy, so a toy deleted from the page is added again in Settings > Quick wheel
 (Add a choice, Toys), and a future toy is one catalogue entry. Its default choice
-is Illuminate, which runs `force_illuminate` (the toggle the Force bar's Illuminate
-entry and the bind use) with the Illuminate holocron's picture. Its gold dot marks
-a lit holocron (the client's own state; no cvar holds it), and with `cg_illuminate
-0` the choice does nothing, as the command does not. Illuminate left the Force page
-when Toys came: the Force bar's own Illuminate entry is unchanged.
+is Illuminate, which runs `toy_illuminate` (the toggle the bind uses) with the
+Illuminate holocron's picture. Its gold dot marks a lit holocron (the client's own
+state; no cvar holds it).
 
 ### Look
 
@@ -2443,7 +2445,7 @@ by its groups in Settings:
 | Interface | Nameplates (`nameplates`, cycles), HUD on/off, Screenshot (`screenshotJPEG`), Game menu (`togglemenu`), First setup (`firstsetup`), Match timer, FPS counter, Speedometer, Lagometer (`toggle cg_...`), Console (`toggleconsole`), What's new (`changelog`) |
 | Player | Cosmetics, AFK, Team menu (`teammenu`), Spectate (`team spectator`), Respawn (`kill`), Inspect player, Engage duel, Saber style (`saberAttackCycle`), Saber on/off (`sv_saberswitch`) |
 | Emotes | Taunt, Bow, Meditate, Flourish, Gloat |
-| Toys | Illuminate (`force_illuminate`, marked while the holocron is lit) |
+| Toys | Illuminate (`toy_illuminate`, marked while the holocron is lit) |
 | Weather | The map's own weather, drizzle, rain, storm, snow (`r_weatherForce`), ground fog everywhere (`r_weatherFog` 1/2), clouds, weather on/off |
 | Time of day | Day (`r_dayHour 12`), Night (`r_dayHour 0`), with the spare sun and moon icons |
 | Votes, demos and server | Vote yes, Vote no, Record demo (`record`), Stop recording (`stoprecord`), Reconnect |

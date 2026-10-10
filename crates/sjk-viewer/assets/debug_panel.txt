@@ -2555,14 +2555,13 @@ note: Range is still cg_thirdPersonRange (80); your JoF EJK profile uses 100.
 [illuminate]
 area: Gameplay
 title: Illuminate: a holocron by your shoulder that lights the way (only you see it)
-change: SJK's own Force-wheel entry, last on the wheel everywhere, with the holocron icon.
-change: +useforce on it (or the force_illuminate bind) turns the holocron and its light on/off.
-change: cg_illuminate 0 (Settings > Game > Illuminate holocron) takes it off the wheel.
-test: In a match, forcenext to the last entry (Illuminate), press +useforce: holocron fades in.
+change: SJK's own toy, command toy_illuminate (first the Force wheel's last entry).
+change: It turns the holocron and its light on or off; see [toy-illuminate] for how.
+test: In a match, run toy_illuminate in the console: the holocron fades in.
 test: Third person: it floats by your left shoulder, turns, bobs, and trails you a little.
 test: A dark map (ffa4): the floor around you lights up warm; press again: it fades out.
 test: Die, spectate or follow someone: it goes out; respawn: it comes back at you.
-test: First person: no cube, only the light. Settings > Key bindings > Force: the bind.
+test: First person: no cube, only the light. Settings > Key bindings > Interaction: the bind.
 note: Tell me if it sits wrong with your camera (range 100) or feels too bright or too big.
 
 [sjk-name-menus]
@@ -3269,7 +3268,7 @@ change: Shaders = blade skins: the model holds the chosen one, a locked one as a
 test: Main page > Collection: the camera goes to your model on Shaders, Toys and Nameplates.
 test: Shaders: Up/Down; the model's saber changes; a locked one says Preview, cannot equip.
 test: Equip / Unequip on an owned one; Esc; the main page card and Profile > Saber agree.
-test: Toys: Enter switches On the Force wheel (cg_illuminate); the holocron floats by you.
+test: Toys: Enter lights or puts out the holocron (Holocron lit switch); it floats by you.
 test: Nameplates: your plate over your model's head, dashed marks; try a 4:3 window too.
 test: In a match, Esc > Collection: the model shows in a preview; Esc returns on Collection.
 test: Console: collection, achievements, unlockables open their tabs; Ctrl+Tab goes round.
@@ -3318,7 +3317,7 @@ test: Bind +wheel toys to a spare key: it opens straight on Toys.
 test: Settings > Quick wheel > Toys: delete Illuminate, Add a choice, Toys group: add it back.
 test: Old profile (wheel.json written by an earlier build, pages as shipped): Force first, Toys added.
 test: Old profile with a renamed page or a custom choice: its pages stay, Toys follows the Force page.
-note: With cg_illuminate 0 the choice does nothing, as force_illuminate. Not tried in a game.
+note: The choice runs toy_illuminate (it was force_illuminate). Not tried in a game.
 
 [weapmelee]
 area: Input
@@ -3329,3 +3328,17 @@ test: Bind a key to Melee (fists), saber out in a match: you switch to the fists
 test: Press it again with the fists out, or where you hold none: nothing happens.
 test: Type weapmelee in the console: same; Tab completes the name.
 note: Selects WP_MELEE only; the stun baton is another weapon. Not tried in a game.
+
+[toy-illuminate]
+area: Gameplay
+title: Illuminate is a toy now, not a Force power: toy_illuminate
+change: Gone from the Force bar and wheel; command toy_illuminate (force_illuminate still runs it).
+change: Always available, lit only for the run; cg_illuminate and its Settings row are gone.
+change: Collection > Toys has a Holocron lit switch; Key bindings > Interaction > Toy: Illuminate.
+test: In a match, forcenext round the Force bar and open Q > Force: no Illuminate anywhere.
+test: Bind a key to Toy: Illuminate: the holocron fades in and out; Q > Toys dot follows it.
+test: Collection > Toys: click the Holocron lit switch (or Enter): it lights; again: it goes out.
+test: Old profile with cg_illuminate 0 or 1: start: the holocron is out and cg_illuminate is gone.
+test: Old bind to force_illuminate: Key bindings lists it as Toy: Illuminate and it still works.
+test: A wheel.json custom choice running force_illuminate still toggles it; Tab does not list it.
+note: Others still see your lit holocron through the hub. Not tried in a game.
