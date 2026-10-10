@@ -2127,6 +2127,12 @@ test: In game, the Settings pop-up shows the same pages.
 test: firstsetup in the console opens First setup (quicksetup is gone).
 test: Modern style: Video > Renderer has a WEATHER tab with the weather rows.
 
+[resolution-order]
+area: Menus & settings
+title: Resolution list: nearest shapes after the monitor's own
+change: After the monitor's aspect, groups follow by closeness of shape (16:9, 16:10, 4:3, 5:4).
+test: Settings > Display > Resolution, Enter: 16:9 sizes, then 16:10, then 4:3, then 5:4.
+
 [pages-sjk-only]
 area: Menus & settings
 title: Update, Import and Camera control in the SJK look with classic menus; SJK fonts always

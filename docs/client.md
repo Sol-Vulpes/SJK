@@ -2650,8 +2650,10 @@ the unit tests cover the decision, not Windows' behaviour, which is unverified
 in the real client (a player reported Alt+Tab and Win+D failing in exclusive mode).
 
 Enter or a click on the Resolution row opens a list of the monitor's video-mode
-sizes, grouped by aspect ratio with the monitor's own first and the size in use
-highlighted. Windowed and borderless also list the classic presets that fit the
+sizes, grouped by aspect ratio with the monitor's own first, then the other
+groups by how close their shape is to it (on a 16:9 monitor 16:10, then 3:2,
+4:3, 5:4; since 10/10/2026, before which they ran narrow to wide), largest first
+in each, and the size in use highlighted. Windowed and borderless also list the classic presets that fit the
 monitor and a custom `r_resolution`; borderless fullscreen always fills the
 desktop and uses the size only when windowed. Left and Right step the row within
 its aspect-ratio group. See [display.rs](../crates/sjk-viewer/src/settings/display.rs)
