@@ -547,7 +547,7 @@ impl WheelEditor {
             FontWeight::Regular,
             TextAlign::Start,
         );
-        let words = "Its choices are set by the game, not here: every power you can use when the wheel opens, Push first, Illuminate last. An instant power is used at once and selected; Grip, Lightning, Drain and Stasis are only selected, for your Use Force key. Past 12 powers the rest go on a second page.";
+        let words = "Its choices are set by the game, not here: every power you can use when the wheel opens, Push first. An instant power is used at once and selected; Grip, Lightning, Drain and Stasis are only selected, for your Use Force key. Past 12 powers the rest go on a second page.";
         for (line, part) in wrap(words, 40).take(8).enumerate() {
             text(
                 &mut self.ui,
@@ -697,7 +697,7 @@ impl WheelEditor {
                 &mut self.ui,
                 frame,
                 &mut y,
-                "Back to the wheel's own pages, General, Force and Weather. Your pages and choices are removed.",
+                "Back to the wheel's own pages, Force, General, Toys and Weather. Your pages and choices are removed.",
             ),
             (Column::Pages, _) => note(
                 &mut self.ui,
@@ -1056,13 +1056,13 @@ impl std::fmt::Display for ChoiceCount {
     }
 }
 
-/// The Force page's example ring: a light-side build with Illuminate, Protect
-/// selected, in the Force bar's pictures.
+/// The Force page's example ring: a light-side build, Protect selected, in the
+/// Force bar's pictures.
 fn force_example() -> Vec<crate::quick_wheel::ShownChoice> {
     const LIGHT: [u8; 9] = [3, 4, 2, 14, 0, 9, 10, 5, 11];
     let known = LIGHT.iter().fold(0, |known, slot| known | 1 << slot);
     force_page::choices(&force_page::Powers {
-        known: sjk_client::force_wheel::client_known(known, true),
+        known: sjk_client::force_wheel::client_known(known, false),
         selected: 9,
         flamethrower: false,
         icons: std::array::from_fn(|slot| {
@@ -1306,6 +1306,9 @@ mod tests {
                     &[KeyCode::ArrowRight, KeyCode::F2][..],
                     &[KeyCode::F2][..],
                     &[KeyCode::Delete][..],
+                    // The pages after Force have choices to edit.
+                    &[KeyCode::ArrowDown, KeyCode::ArrowRight, KeyCode::Enter][..],
+                    &[KeyCode::ArrowDown, KeyCode::ArrowRight, KeyCode::F2][..],
                 ] {
                     menu.open_wheel_editor(&console, mode);
                     for key in keys {
@@ -1369,18 +1372,25 @@ mod tests {
             );
         };
         draw(&mut menu);
-        // The Force page shown: no choices, so no Add a choice to point at.
-        let force = centre(&menu, PAGE_BASE + 1);
-        click(&mut menu, &mut console, force);
+        // The Force page is shown first: no choices, so no Add a choice to
+        // point at.
+        assert_eq!(menu.wheel.page, 0);
+        assert!(menu.wheel.ui.rect_for(PAGE_BASE).is_some());
+        assert!(menu.wheel.ui.rect_for(ADD_CHOICE).is_none());
+        // Hovering General focuses it; a click shows its choices.
+        let general = centre(&menu, PAGE_BASE + 1);
+        hover(&mut menu, &mut console, general);
+        assert_eq!((menu.wheel.rows[0], menu.wheel.page), (1, 0));
+        click(&mut menu, &mut console, general);
         assert_eq!(menu.wheel.page, 1);
         draw(&mut menu);
-        assert!(menu.wheel.ui.rect_for(ADD_CHOICE).is_none());
+        assert!(menu.wheel.ui.rect_for(ADD_CHOICE).is_some());
         // Hovering Weather focuses it without showing it; a click shows it.
-        let weather = centre(&menu, PAGE_BASE + 2);
+        let weather = centre(&menu, PAGE_BASE + 3);
         hover(&mut menu, &mut console, weather);
-        assert_eq!((menu.wheel.rows[0], menu.wheel.page), (2, 1));
+        assert_eq!((menu.wheel.rows[0], menu.wheel.page), (3, 1));
         click(&mut menu, &mut console, weather);
-        assert_eq!(menu.wheel.page, 2);
+        assert_eq!(menu.wheel.page, 3);
         // Add a choice: hovered, then clicked, opens the catalogue.
         draw(&mut menu);
         let add = centre(&menu, ADD_CHOICE);
@@ -1400,12 +1410,12 @@ mod tests {
         let at = centre(&menu, PICK_BASE + slot);
         click(&mut menu, &mut console, at);
         assert!(menu.wheel.picker.is_none());
-        assert_eq!(console.wheel_pages.pages()[2].choices.len(), 9);
+        assert_eq!(console.wheel_pages.pages()[3].choices.len(), 9);
         // The focused choice's cross removes it.
         draw(&mut menu);
         let at = centre(&menu, CHOICE_REMOVE);
         click(&mut menu, &mut console, at);
-        assert_eq!(console.wheel_pages.pages()[2].choices.len(), 8);
+        assert_eq!(console.wheel_pages.pages()[3].choices.len(), 8);
         // The way back closes the editor.
         draw(&mut menu);
         let at = centre(&menu, BACK);

@@ -17,9 +17,11 @@ Each is 128x128, the UI atlas cell, on transparency with an anti-aliased round e
   `quick_wheel.png` (a ring of discs), which Settings' Quick wheel category wears
   on its rail.
 
-Every action has its icon. The atlas gives the wheel three rows of cells
-(`ui_renderer::WHEEL_ICON_CELLS`, 48), so four more icons fit before it needs
-another row.
+Every action has its icon. `illuminate` (the Toys page's choice) is not cut from a
+board: it is the holocron picture the client bundles for the Force bar
+([holocron](../holocron/README.md), `force_illuminate.png`, 128x128 as these are).
+The atlas gives the wheel three rows of cells (`ui_renderer::WHEEL_ICON_CELLS`, 48),
+so three more icons fit before it needs another row.
 
 ## Regenerating
 

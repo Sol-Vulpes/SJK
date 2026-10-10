@@ -625,7 +625,8 @@ The quick wheel's pages, edited (since 08/10/2026, Sol's request:
 keeps Settings' top bar (without the search) and rail and fills the rows' and
 detail's columns:
 
-- **Pages** (x 470, 360 wide), under a sub-heading: a row each (56 tall), its
+- **Pages** (x 470, 360 wide, in the wheel's order: Force, General, Toys, Weather
+  by default), under a sub-heading: a row each (56 tall), its
   name and how many choices it has, the page whose choices show in gold (a gold
   bar at its left while the focus is elsewhere); the focused row has the band
   and, at its end, Rename, up, down and remove as small round controls (remove
@@ -642,11 +643,14 @@ detail's columns:
   on the right, its group or "Custom";
   the focused one's up, down and remove; then "+ Add a choice". The Force page
   has none: "Follows your Force powers" in gold and a muted paragraph on what
-  fills it and how its powers act (since 10/10/2026).
+  fills it and how its powers act (since 10/10/2026). The Toys page (Illuminate)
+  is an ordinary page: its choices are listed, changed and removed like General's,
+  and the catalogue's Toys group, between Emotes and Weather, brings a deleted toy
+  back (the ring shows it with the holocron's picture).
 - **Right column** (the detail's, x 1360): the page's ring as the wheel draws
   it at 0.78 of its size, the focused choice highlighted, then facts (Key in
   gold, Bind and Runs in holo) and a line of help. For the Force page the ring
-  is an example, a light-side build with Illuminate in the Force bar's pictures,
+  is an example, a light-side build (nine powers) in the Force bar's pictures,
   Protect marked selected. Picking a choice: its title
   ("Change Rain", "Add to Weather") with Cancel, then the catalogue, 17 lines of
   40 under the groups' sub-headings, the highlighted line on the band, "On the
@@ -1433,11 +1437,11 @@ nine moments, 1080p, 4K, 4:3, 21:9 and 720 lines, in the families and in Inter).
   typed, the Sun page where the sun cannot be set, a 4:3 window and the classic
   menus' bar and panel;
   `duel6_quick_wheel` the quick wheel's ring over duel6 (General, the change to
-  Weather half-way, Weather, the middle, 4:3, in Inter, and three full pages of
-  the second board's icons, `duel6-wheel-icons-1` to `-3`) and
-  `duel6_quick_wheel_settings` its Settings category (pages, the Force page, the
-  sound switch off, a choice, the catalogue, a custom choice, a new page) and the
-  editor over the classic+ settings; `duel6_quick_wheel_force` the Force page
+  Toys half-way, Toys with the holocron lit, Weather, the middle, 4:3, in Inter,
+  and three full pages of the second board's icons, `duel6-wheel-icons-1` to `-3`)
+  and `duel6_quick_wheel_settings` its Settings category (the Force page first, the
+  Toys page, the sound switch off, a choice, the catalogue, a custom choice, a new
+  page) and the editor over the classic+ settings; `duel6_quick_wheel_force` the Force page
   with the powers set for the shot (`duel6-wheel-force-light`, `-dark`, `-every`
   and `-every-2` for Force 2, `-none`, `-no-game`, and the light build at 4K with
   `ui_textScale 1.2`);

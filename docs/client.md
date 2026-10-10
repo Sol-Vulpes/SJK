@@ -2183,7 +2183,7 @@ server see it by that player (below); players on stock clients do not. It is the
 Force wheel's last entry (and the radial HUD's list's), with its
 own holocron icon; `+useforce` on it turns the holocron on or off, and the
 `force_illuminate` command does the same from a bind (Settings > Key bindings >
-Force powers). It is never sent as the selected power: the client sets its
+Force powers) and from the quick wheel's [Toys page](#toys-page). It is never sent as the selected power: the client sets its
 `forcePowersKnown` bit itself ([`client_known`](../crates/sjk-client/src/force_wheel.rs))
 and swallows `+useforce` on it. Where the player has no Force at all,
 `forcenext` still walks the inventory, as in stock, and only the bind reaches it.
@@ -2269,8 +2269,8 @@ new sets. The Sun's sounds have not been checked by ear in a game.
 
 SJK's quick wheel ([quick_wheel.rs](../crates/sjk-viewer/src/quick_wheel.rs)):
 hold the key, a ring of choices opens in the middle of the screen, move the mouse
-towards one and let go to run it. The wheel has pages (General, Force and Weather
-unless the player changed them); while it is open, the mouse wheel and buttons change
+towards one and let go to run it. The wheel has pages (Force, General, Toys and
+Weather unless the player changed them); while it is open, the mouse wheel and buttons change
 page. Letting go with the mouse still near the middle, or Escape, runs nothing;
 opening the console, chat or a menu closes the wheel. While it is open the mouse
 moves its pointer instead of the view and the HUD steps aside as `cg_drawHud 0`
@@ -2283,9 +2283,9 @@ what typing it would.
 
 | Bind | Opens |
 | --- | --- |
-| `+wheel`, Q by default | On the page shown last in this run (the first page in a new run) |
+| `+wheel`, Q by default | On the page shown last in this run (the first page, Force by default, in a new run) |
 | `+wheel weather`, R by default | On Weather |
-| `+wheel <page>` | On that page, named by its id or its name (case and spaces ignored), e.g. `+wheel general` |
+| `+wheel <page>` | On that page, named by its id or its name (case and spaces ignored), e.g. `+wheel general` or `+wheel toys` |
 
 Q was `+wheel general` until 08/10/2026; a profile that saved that default has
 it moved once to `+wheel` (`cl_wheelBindVersion`), and a page bound on Q after
@@ -2293,8 +2293,8 @@ that, or on another key, stays.
 
 Q and R are in Settings > Key bindings > Other (Quick wheel, and Quick wheel,
 Weather); their defaults are bound only where a profile has nothing on Q or R. A
-page keeps its id (`general`, `weather`, or what a new page's first name made of
-it) when it is renamed, so a bind keeps working; a bind naming a page since
+page keeps its id (`force`, `general`, `toys`, `weather`, or what a new page's
+first name made of it) when it is renamed, so a bind keeps working; a bind naming a page since
 removed opens the page shown last. A second wheel key pressed while the wheel is
 open changes it to that key's page.
 
@@ -2314,12 +2314,14 @@ While the wheel is open:
 
 The Force page (Sol's request, 10/10/2026;
 [force_page.rs](../crates/sjk-viewer/src/quick_wheel/force_page.rs)) is a default
-page, a scroll down from General. It is live: as the wheel opens it holds the
-Force powers the player can use right now, read from the latest snapshot as the
-[Force bar](#force-wheel) reads them (`forcePowersKnown`, set for a power with a
-level above 0), with JoF JA+'s Dash, Stasis and Repulse where the server grants
-them and [Illuminate](#illuminate) while `cg_illuminate` is on. Jump and the saber
-powers are passive and left out. Each choice shows the Force bar's picture and
+page, and since 10/10/2026 (Sol: "make the force wheel the first wheel to appear by
+default") the first one, so a new run's bare `+wheel` opens on it. It is live: as
+the wheel opens it holds the Force powers the player can use right now, read from
+the latest snapshot as the [Force bar](#force-wheel) reads them
+(`forcePowersKnown`, set for a power with a level above 0), with JoF JA+'s Dash,
+Stasis and Repulse where the server grants them. Jump and the saber powers are
+passive and left out, and so is [Illuminate](#illuminate), which is not a Force
+power: it is on the [Toys page](#toys-page). Each choice shows the Force bar's picture and
 name (Stasis borrows Jump's, merc mode's Lightning is the Flamethrower), and the
 power selected now wears the gold dot.
 
@@ -2329,7 +2331,7 @@ power selected now wears the gold dot.
 | Heal, Protect, Absorb, Mind Trick, Team Heal | `forceselect <n>; force_heal` (`force_protect`, `force_absorb`, `force_distract`, `force_healother`) |
 | Dark Rage, Team Energize | `forceselect <n>; force_rage` (`force_forcepowerother`) |
 | Grip, Lightning, Drain, Stasis | `forceselect <n>` only |
-| Dash, Repulse, Illuminate | `forceselect <n>; force_dash` (`force_repulse`, `force_illuminate`) |
+| Dash, Repulse | `forceselect <n>; force_dash` (`force_repulse`) |
 
 An instant power is used at once by its own command (the `genCmds_t` usercmd
 values retail's F1-F12 binds send, JoF's server commands, SJK's toggle) and
@@ -2341,18 +2343,31 @@ The order is fixed, so a power keeps its place round the ring while the build
 does: the neutral powers (Push, Pull, Speed, Sense), the light side's (Heal,
 Protect, Absorb, Mind Trick, Team Heal) or the dark side's (Grip, Lightning, Dark
 Rage, Drain, Team Energize), each in the retail default keys' order (F1 to F12),
-then Dash, Stasis, Repulse and Illuminate. A usual build is 9 powers, 10 with
-Illuminate; the page holds 12, its pictures drawn at ten-twelfths of their size
-so the gap between them stays. Past 12 (an admin's every-power build on JA+, up
-to 18) the rest continue on a second page right after it, "Force 2", reached by the
+then Dash, Stasis and Repulse. A usual build is 9 powers; the page holds 12, its
+pictures drawn at ten-twelfths of their size so the gap between them stays. Past
+12 (an admin's every-power build on JA+, up to 17) the rest continue on a second page right after it, "Force 2", reached by the
 same scroll or click; a bare `+wheel` that last showed Force 2 opens on Force when
-the second page is gone. Shrinking 18 onto one ring would make every picture
+the second page is gone. Shrinking 17 onto one ring would make every picture
 half-size for a build almost nobody has, and an inner ring would put two choices
 in one direction from the middle, which the wheel's pointer cannot tell apart.
 
 Out of a game (or in a demo, where the choices could not act), spectating or
 following, and with no usable power, the page stays in its place and says "No
 Force powers here", so the pages keep their order and their dots.
+
+### Toys page
+
+The Toys page (Sol's request, 10/10/2026: "make a toy wheel too for the force
+illuminate and future toy") is a default page named Toys, `+wheel toys`, for
+[Illuminate](#illuminate) and future toys. It is an ordinary, editable page, not a
+live one: its choices come from the [catalogue](#choices)'s Toys group, one entry
+per toy, so a toy deleted from the page is added again in Settings > Quick wheel
+(Add a choice, Toys), and a future toy is one catalogue entry. Its default choice
+is Illuminate, which runs `force_illuminate` (the toggle the Force bar's Illuminate
+entry and the bind use) with the Illuminate holocron's picture. Its gold dot marks
+a lit holocron (the client's own state; no cvar holds it), and with `cg_illuminate
+0` the choice does nothing, as the command does not. Illuminate left the Force page
+when Toys came: the Force bar's own Illuminate entry is unchanged.
 
 ### Look
 
@@ -2415,6 +2430,7 @@ by its groups in Settings:
 | Interface | Nameplates (`nameplates`, cycles), HUD on/off, Screenshot (`screenshotJPEG`), Game menu (`togglemenu`), First setup (`firstsetup`), Match timer, FPS counter, Speedometer, Lagometer (`toggle cg_...`), Console (`toggleconsole`), What's new (`changelog`) |
 | Player | Cosmetics, AFK, Team menu (`teammenu`), Spectate (`team spectator`), Respawn (`kill`), Inspect player, Engage duel, Saber style (`saberAttackCycle`), Saber on/off (`sv_saberswitch`) |
 | Emotes | Taunt, Bow, Meditate, Flourish, Gloat |
+| Toys | Illuminate (`force_illuminate`, marked while the holocron is lit) |
 | Weather | The map's own weather, drizzle, rain, storm, snow (`r_weatherForce`), ground fog everywhere (`r_weatherFog` 1/2), clouds, weather on/off |
 | Time of day | Day (`r_dayHour 12`), Night (`r_dayHour 0`), with the spare sun and moon icons |
 | Votes, demos and server | Vote yes, Vote no, Record demo (`record`), Stop recording (`stoprecord`), Reconnect |
@@ -2433,7 +2449,8 @@ returning to the row ([wheel_editor.rs](../crates/sjk-viewer/src/settings/wheel_
 - **Pages** (left): each page with how many choices it has ("Your powers" for
   the Force page), the one whose choices show in gold; Add a page (at most 8),
   Add the Force page (only while it has been removed: it goes back after General,
-  else last), then Restore the default pages (Enter twice, or two clicks); under them, Sound's "Wheel sounds" switch
+  else last), then Restore the default pages (Force, General, Toys, Weather; Enter
+  twice, or two clicks); under them, Sound's "Wheel sounds" switch
   (`cg_wheelSounds`: Enter, Space or a click). Up and Down choose (the choices
   follow), Enter or Right goes to the page's choices, F2 or Rename names it,
   Shift (or Ctrl) with Up or Down moves it, Delete twice removes it (not the
@@ -2462,15 +2479,16 @@ Every change is saved at once.
 The pages are kept in `wheel.json` in the profile folder
 ([pages.rs](../crates/sjk-viewer/src/quick_wheel/pages.rs)), written (whole, then
 moved over the old file) when the player changes them; without the file the
-wheel has General, Force and Weather, and Restore the default pages removes it so
+wheel has Force, General, Toys and Weather, and Restore the default pages removes it so
 a later version's defaults reach the profile. A JSON file rather than cvars: a page
 is a list, a custom choice a free console command (quotes, semicolons) that a
 `config.cfg` line would have to escape and a cvar's length would cap.
 
 ```json
-{ "version": 2, "pages": [
-  { "id": "general", "name": "General", "choices": ["third_person", "nameplates", "hud"] },
+{ "version": 3, "pages": [
   { "id": "force", "name": "Force", "kind": "force" },
+  { "id": "general", "name": "General", "choices": ["third_person", "nameplates", "hud"] },
+  { "id": "toys", "name": "Toys", "choices": ["illuminate"] },
   { "id": "duels", "name": "Duels", "choices": ["duel", {"name": "Ready", "command": "ready"}] }
 ] }
 ```
@@ -2482,9 +2500,19 @@ are left out, pages past 8 and choices past 10 cut, a repeated id numbered; a
 file that is not JSON, or has no page, reads as the defaults (and is kept until
 the next change). Version 2 brought the Force page: a file of version 1 (or none)
 gets it once as it is read, after the page whose id is `general` (else last), and
-is written back as version 2, so a player who removes the page afterwards keeps
-it removed; a wheel of 8 pages is left as it is (Settings' Add the Force page,
-after removing a page, or Restore, brings it).
+is written back, so a player who removes the page afterwards keeps it removed; a
+wheel of 8 pages is left as it is (Settings' Add the Force page, after removing a
+page, or Restore, brings it).
+
+Version 3 (10/10/2026) made the Force page the first and added the Toys page, an
+ordinary page of the catalogue's Toys group. A file older than 3 whose pages are
+exactly what version 2 had as its defaults (General, Force and Weather, nothing
+renamed or changed in them) was never customised: it is removed and the wheel has
+the new defaults, in the new order. Any other file keeps its pages and their order
+and gains the Toys page once, after its Force page (else last), and is written back
+as version 3; a Toys page removed afterwards stays removed, a wheel of 8 pages is
+left alone (the file is not rewritten) and a page of the player's own called Toys
+keeps its id, the new one taking `toys2`.
 
 ## Configuration and content
 
@@ -2933,6 +2961,7 @@ one command and `cg_fkDuration` (default 50) lasts 0.4 s.
 `cg_fkSecondJumpDelay` starts the second jump at that frame (both 0). A server
 forbids it with bit 7 (`RESTRICT_FLIPKICKBIND`) of serverinfo `restricts`. See
 [flip_kick.rs](../crates/sjk-viewer/src/input/flip_kick.rs).
+
 
 `cl_idrive` is JoF EJK's "last key wins" input (archived, default 0): while both
 keys of a movement pair are held, the one pressed last moves the player instead of

@@ -7,6 +7,24 @@ SJK currently contains a native client and standard dedicated server in a
 20-crate Rust workspace. This page records scope and verification, rather than
 claiming complete parity from the presence of an implementation.
 
+## Quick wheel: Force first, a Toys page
+
+Branch `personal/quick-wheel-toys` (10/10/2026, based on `aa95e8cb`, Windows 11), Sol's
+requests. The quick wheel's default order is now Force, General, Toys, Weather, so a new
+run's bare `+wheel` opens on the Force page ("make the force wheel the first wheel to
+appear by default"). A Toys page (`+wheel toys`; "a toy wheel too for the force
+illuminate and future toy") is an ordinary page of a new catalogue group, Toys, one entry
+per toy: Illuminate (`force_illuminate`, the gold dot following the holocron's lit state,
+which no cvar holds) moved there from the Force page, which now lists Force powers only;
+the Force bar's own Illuminate entry and the command are unchanged. `wheel.json` is
+version 3: a file whose pages are exactly the version 2 defaults is removed (the new
+defaults apply), any other keeps its pages and gains the Toys page once after its Force
+page (else last), a removed Toys page stays removed and a full wheel is left alone
+(unit-tested in `pages.rs`, as the Force page's migration was). Verified by unit tests, the world shots
+`duel6_quick_wheel*` (re-rendered and looked at: Force first, Toys with the holocron lit,
+Force 2, the editor on Force and Toys) and the workspace checks; not tried in a game: that
+the holocron toggles from the wheel.
+
 ## Medal shaders
 
 Branch `personal/medal-blades` (10/10/2026, based on `8018e58e`, Windows 11), with the
@@ -133,9 +151,10 @@ typing in a match (`GpuState::sjk_chat_typing`) has no test of its own.
 ## Quick wheel: a Force page of the player's powers
 
 Branch `personal/force-wheel-page` (10/10/2026, based on `915475f9`, Windows 11),
-Sol's request. The quick wheel's defaults are General, Force and Weather; a
+Sol's request. The quick wheel's defaults were General, Force and Weather (now Force,
+General, Toys, Weather: see the first section); a
 `wheel.json` of version 1 gets the Force page once, after General, and is written
-as version 2 (unit-tested, with the removed page staying removed and a full wheel
+back (unit-tested, with the removed page staying removed and a full wheel
 left alone). The page is live: the powers the Force bar's known bits allow, in a
 fixed order (neutral, light or dark in F-key order, JoF's, Illuminate), the
 selected one marked; instant powers run `forceselect <n>; force_*` (the retail

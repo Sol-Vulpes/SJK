@@ -1,8 +1,9 @@
 //! The quick wheel's Force page: a live page whose choices are the Force powers the
 //! player can use right now, read from the playerstate as the wheel opens (the
 //! known bits the Force bar reads, [`sjk_client::force_wheel`], with JoF JA+'s
-//! Stasis, Repulse and Dash where granted and SJK's Illuminate while
-//! `cg_illuminate` is on). Jump and the saber powers are passive and left out.
+//! Stasis, Repulse and Dash where granted). Jump and the saber powers are passive
+//! and left out, and so is SJK's Illuminate, which is not a Force power: it has
+//! a choice of its own on the Toys page ([`super::catalog`]'s Toys).
 //!
 //! A choice selects its power (`forceselect`, so the Use Force key uses it next)
 //! and, for an instant power, uses it at once with its own command (`force_throw`,
@@ -12,26 +13,27 @@
 //!
 //! The order is fixed, so a power keeps its place round the ring while the build
 //! does: the neutral powers, then the light side's, then the dark side's, each in
-//! the retail default keys' order (F1 Push to F12 Drain), then JoF's abilities and
-//! Illuminate last. Up to [`MAX_FORCE_CHOICES`] go on the ring; the rest continue on
+//! the retail default keys' order (F1 Push to F12 Drain), then JoF's abilities last.
+//! Up to [`MAX_FORCE_CHOICES`] go on the ring; the rest continue on
 //! a second page right after it ("Force 2"), which only an admin's every-power
 //! build fills. Out of a game, spectating or with no power, the page says so.
 
 use super::pages::MAX_FORCE_CHOICES;
 use super::{ShownChoice, ShownPage};
 use crate::hud::force_wheel as bar;
-use sjk_client::force_wheel::{self, DASH, ILLUMINATE, REPULSE, STASIS};
+use sjk_client::force_wheel::{self, DASH, REPULSE, STASIS};
 use sjk_ui::TextureId;
 
-/// The page's order, by Force wheel entry (`forcePowers_t`, then the pseudo-slots).
-pub(crate) const ORDER: [u8; 18] = [
+/// The page's order, by Force wheel entry (`forcePowers_t`, then the pseudo-slots;
+/// Illuminate, the wheel's last entry, is not a power and is left out).
+pub(crate) const ORDER: [u8; 17] = [
     // Neutral: Push, Pull, Speed, Sense.
     3, 4, 2, 14, //
     // Light: Heal, Protect, Absorb, Mind Trick, Team Heal.
     0, 9, 10, 5, 11, //
     // Dark: Grip, Lightning, Dark Rage, Drain, Team Energize.
     6, 7, 8, 13, 12, //
-    DASH, STASIS, REPULSE, ILLUMINATE,
+    DASH, STASIS, REPULSE,
 ];
 
 /// What the id of the second page adds to the Force page's; never part of an id
@@ -69,7 +71,6 @@ pub(crate) fn use_command(slot: u8) -> Option<&'static str> {
         14 => "force_seeing",
         REPULSE => "force_repulse",
         DASH => "force_dash",
-        ILLUMINATE => force_wheel::ILLUMINATE_COMMAND,
         // Grip, Lightning, Drain, Stasis.
         _ => return None,
     })
@@ -166,20 +167,26 @@ mod tests {
         seen.sort_unstable();
         seen.dedup();
         assert_eq!(seen.len(), ORDER.len());
-        // Jump and the saber powers are never on it.
-        for passive in [1, 15, 16, 17] {
+        // Jump and the saber powers are never on it, nor Illuminate (a toy).
+        for passive in [1, 15, 16, 17, force_wheel::ILLUMINATE] {
             assert!(!ORDER.contains(&passive));
         }
-        // Every entry the Force bar can hold, and nothing else.
+        // Every entry the Force bar can hold but Illuminate, and nothing else.
         let (wheel, count) = force_wheel::build(u32::MAX >> (32 - force_wheel::MAX_SLOTS));
-        let mut bar: Vec<u8> = wheel[..count].to_vec();
+        let mut bar: Vec<u8> = wheel[..count]
+            .iter()
+            .copied()
+            .filter(|&slot| slot != force_wheel::ILLUMINATE)
+            .collect();
         bar.sort_unstable();
         assert_eq!(bar, seen);
     }
 
     #[test]
-    fn a_light_build_with_illuminate_is_ten_choices_on_one_ring() {
+    fn a_light_build_is_nine_choices_on_one_ring_and_illuminate_is_not_one() {
+        // The client sets Illuminate's bit for the Force bar; the page ignores it.
         let known = force_wheel::client_known(LIGHT, true);
+        assert!(force_wheel::valid(known, force_wheel::ILLUMINATE));
         let pages = pages("force", "Force", Some(&powers(known, 9)));
         assert_eq!(
             labels(&pages),
@@ -192,8 +199,7 @@ mod tests {
                 "Protect",
                 "Absorb",
                 "Mind Trick",
-                "Team Heal",
-                "Illuminate"
+                "Team Heal"
             ]]
         );
         // The selected power wears the dot, alone.
@@ -212,7 +218,6 @@ mod tests {
         assert_eq!(command(3), "forceselect 3; force_throw");
         assert_eq!(command(14), "forceselect 14; force_seeing");
         assert_eq!(command(REPULSE), "forceselect 19; force_repulse");
-        assert_eq!(command(ILLUMINATE), "forceselect 21; force_illuminate");
         for held in [6, 7, 13, STASIS] {
             assert_eq!(command(held), format!("forceselect {held}"));
         }
@@ -221,8 +226,7 @@ mod tests {
             if let Some(command) = use_command(slot) {
                 assert!(
                     crate::input::generic_commands::generic_command(command).is_some()
-                        || matches!(command, "force_repulse" | "force_dash")
-                        || command == force_wheel::ILLUMINATE_COMMAND,
+                        || matches!(command, "force_repulse" | "force_dash"),
                     "{command}"
                 );
             }
@@ -231,7 +235,7 @@ mod tests {
 
     #[test]
     fn past_twelve_the_rest_go_on_a_second_page() {
-        // Every power, JoF's three and Illuminate: 18.
+        // Every power and JoF's three: 17.
         let known = u32::MAX >> (32 - force_wheel::MAX_SLOTS);
         let pages = pages("force", "Force", Some(&powers(known, 0)));
         assert_eq!(pages.len(), 2);
@@ -242,14 +246,7 @@ mod tests {
         );
         assert_eq!(
             labels(&pages)[1],
-            [
-                "Drain",
-                "Team Energize",
-                "Dash",
-                "Stasis",
-                "Repulse",
-                "Illuminate"
-            ]
+            ["Drain", "Team Energize", "Dash", "Stasis", "Repulse"]
         );
         // Merc mode names Lightning the flamethrower; it is still only selected.
         let merc = Powers {

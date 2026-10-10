@@ -1,10 +1,11 @@
 //! The quick wheel: hold a key, a ring of choices opens in the middle of the
 //! screen, move the mouse towards one and let go to run it (SJK only).
 //!
-//! The wheel has pages ([`pages`]: General, Force and Weather unless the player
-//! changed them in Settings > Quick wheel, kept in `wheel.json`). The Force page is
-//! live: as the wheel opens it holds the Force powers the player can use
-//! ([`force_page`]), continued on a second page past twelve. `+wheel <page>` opens it
+//! The wheel has pages ([`pages`]: Force, General, Toys and Weather unless the
+//! player changed them in Settings > Quick wheel, kept in `wheel.json`). The Force
+//! page is live: as the wheel opens it holds the Force powers the player can use
+//! ([`force_page`]), continued on a second page past twelve. The Toys page is an
+//! ordinary one, Illuminate for now. `+wheel <page>` opens it
 //! on that page (named by its id or its name) while its key is held; a bare
 //! `+wheel` opens it on the page shown last (the first one in a new run).
 //! `-wheel` (the key's release) runs the highlighted choice. While it is open the
@@ -442,8 +443,9 @@ impl QuickWheel {
     }
 }
 
-/// Whether a choice in `state` is in effect in `console` now.
-fn in_effect(console: &crate::console::ViewerConsole, state: State) -> bool {
+/// Whether a choice in `state` is in effect in `console` now; `illuminate` is
+/// whether Illuminate's holocron is lit.
+fn in_effect(console: &crate::console::ViewerConsole, state: State, illuminate: bool) -> bool {
     let integer = |name: &str| {
         console
             .integer_cvar(name)
@@ -451,6 +453,7 @@ fn in_effect(console: &crate::console::ViewerConsole, state: State) -> bool {
     };
     match state {
         State::None => false,
+        State::Illuminate => illuminate,
         State::Equals(name, value) => integer(name) == Some(value),
         State::On(name) => integer(name).is_some_and(|value| value != 0),
         State::Near(name, value) => console
@@ -459,11 +462,13 @@ fn in_effect(console: &crate::console::ViewerConsole, state: State) -> bool {
     }
 }
 
-/// Every page as the wheel shows it, from `console`'s pages and cvars and the
-/// player's Force (`force`, none out of a game): the Force page may become two.
+/// Every page as the wheel shows it, from `console`'s pages and cvars, the
+/// player's Force (`force`, none out of a game) and whether Illuminate's holocron
+/// is lit: the Force page may become two.
 pub(crate) fn shown_pages(
     console: &crate::console::ViewerConsole,
     force: Option<&force_page::Powers>,
+    illuminate: bool,
 ) -> Vec<ShownPage> {
     let mut shown = Vec::with_capacity(pages::MAX_PAGES + 1);
     for page in console.wheel_pages.pages() {
@@ -481,7 +486,7 @@ pub(crate) fn shown_pages(
                     label: slot.label().to_owned(),
                     command: slot.command().to_owned(),
                     icon: slot.icon().map(crate::ui_renderer::wheel_icon),
-                    on: in_effect(console, slot.state()),
+                    on: in_effect(console, slot.state(), illuminate),
                 })
                 .collect(),
             force: false,
@@ -559,7 +564,7 @@ impl crate::GpuState {
         let force = self.force_powers();
         let console = self.console.as_ref().ok_or("no console")?;
         let store = &console.wheel_pages;
-        let pages = shown_pages(console, force.as_ref());
+        let pages = shown_pages(console, force.as_ref(), self.illuminate.lit());
         let last = shown_index(&pages, self.quick_wheel.last_page()).unwrap_or(0);
         // A bound key adds its number and time after the name; a typed command does not.
         let named = args
@@ -597,16 +602,24 @@ mod tests {
     use super::*;
     use sjk_ui::DrawCommand;
 
-    /// The default pages, out of a game: General, Force (empty) and Weather.
+    /// The default pages, out of a game: Force (empty), General, Toys, Weather.
     fn shown() -> Vec<ShownPage> {
+        shown_lit(false)
+    }
+
+    /// The same with Illuminate's holocron lit or not.
+    fn shown_lit(illuminate: bool) -> Vec<ShownPage> {
         let directory = tempfile::tempdir().unwrap();
         let console =
             crate::console::ViewerConsole::new(directory.path().join("config.cfg")).unwrap();
-        shown_pages(&console, None)
+        shown_pages(&console, None, illuminate)
     }
 
-    /// The default pages' Weather.
-    const WEATHER: usize = 2;
+    /// The default pages' places.
+    const FORCE: usize = 0;
+    const GENERAL: usize = 1;
+    const TOYS: usize = 2;
+    const WEATHER: usize = 3;
 
     #[test]
     fn the_pointer_picks_the_choice_it_points_at_clockwise_from_the_top() {
@@ -641,7 +654,7 @@ mod tests {
         wheel.cancel();
         assert_eq!(wheel.release(), None);
         // The Force page out of a game: nothing to run.
-        wheel.open(shown(), 1, now);
+        wheel.open(shown(), FORCE, now);
         wheel.moved([0.0, -200.0]);
         assert_eq!(wheel.release(), None);
     }
@@ -649,7 +662,7 @@ mod tests {
     #[test]
     fn the_pointer_stops_at_its_reach_and_still_turns() {
         let mut wheel = QuickWheel::default();
-        wheel.open(shown(), 0, Instant::now());
+        wheel.open(shown(), GENERAL, Instant::now());
         wheel.moved([1000.0, 0.0]);
         wheel.moved([0.0, 1000.0]);
         let open = wheel.open.unwrap();
@@ -681,7 +694,7 @@ mod tests {
         assert!(!wheel.button(Button::Left, true, now));
         assert!(!wheel.button(Button::Left, false, now));
         wheel.scrolled(-40.0, now);
-        wheel.open(shown(), 1, now);
+        wheel.open(shown(), TOYS, now);
         wheel.moved([80.0, 0.0]);
         // A notch down goes on a page, keeping where the mouse points.
         wheel.scrolled(-40.0, now);
@@ -696,12 +709,12 @@ mod tests {
         for _ in 0..3 {
             wheel.scrolled(15.0, now);
         }
-        assert_eq!(wheel.page(), Some(1));
+        assert_eq!(wheel.page(), Some(TOYS));
         // A left click goes back, a right click on; their releases are the wheel's.
         assert!(wheel.button(Button::Right, true, now));
         assert_eq!(wheel.page(), Some(WEATHER));
         assert!(wheel.button(Button::Left, true, now));
-        assert_eq!(wheel.page(), Some(1));
+        assert_eq!(wheel.page(), Some(TOYS));
         wheel.cancel();
         assert!(wheel.button(Button::Right, false, now));
         assert!(wheel.button(Button::Left, false, now));
@@ -730,7 +743,7 @@ mod tests {
     #[test]
     fn every_page_lays_out_its_choices_and_names_them() {
         let now = Instant::now();
-        for page in [0, WEATHER] {
+        for page in [GENERAL, WEATHER] {
             let mut wheel = QuickWheel::default();
             let pages = shown();
             let pictured = pages[page]
@@ -753,8 +766,12 @@ mod tests {
             let texts: Vec<&str> = wheel.canvas.text_runs().collect();
             // The page's name, the highlighted choice's, the neighbours and their
             // buttons, the hint, and the names of choices without pictures.
-            assert!(texts.contains(&if page == 0 { "General" } else { "Weather" }));
-            let first = if page == 0 {
+            assert!(texts.contains(&if page == GENERAL {
+                "General"
+            } else {
+                "Weather"
+            }));
+            let first = if page == GENERAL {
                 "Third person"
             } else {
                 "Map's weather"
@@ -773,7 +790,7 @@ mod tests {
         let mut wheel = QuickWheel::default();
         ui_cues::take_posted();
         // Opening, and moving about the middle, sound nothing.
-        wheel.open(shown(), 0, now);
+        wheel.open(shown(), GENERAL, now);
         wheel.moved([5.0, -5.0]);
         assert!(ui_cues::take_posted().is_empty());
         // Out of the middle onto the first choice: the move cue, once.
@@ -836,10 +853,10 @@ mod tests {
         let mut wheel = QuickWheel::default();
         ui_cues::take_posted();
         wheel.set_sounds(false);
-        wheel.open(shown(), 0, now);
+        wheel.open(shown(), GENERAL, now);
         wheel.moved([0.0, -60.0]);
         wheel.moved([80.0, 0.0]);
-        wheel.scrolled(40.0, now);
+        wheel.scrolled(-40.0, now);
         assert!(wheel.release().is_some());
         assert!(ui_cues::take_posted().is_empty());
     }
@@ -855,7 +872,7 @@ mod tests {
             flamethrower: false,
             icons: [Some(TextureId(7)); crate::hud::force_wheel::ICONS],
         };
-        shown_pages(&console, Some(&powers))
+        shown_pages(&console, Some(&powers), false)
     }
 
     #[test]
@@ -863,9 +880,9 @@ mod tests {
         let now = Instant::now();
         let pages = with_every_power();
         let ids: Vec<&str> = pages.iter().map(|page| page.id.as_str()).collect();
-        assert_eq!(ids, ["general", "force", "force~2", "weather"]);
+        assert_eq!(ids, ["force", "force~2", "general", "toys", "weather"]);
         let mut wheel = QuickWheel::default();
-        wheel.open(pages.clone(), 1, now);
+        wheel.open(pages.clone(), FORCE, now);
         // Twelve round the ring: the top one is Push, used and selected.
         wheel.moved([0.0, -90.0]);
         wheel.build([1920.0, 1080.0], now);
@@ -882,14 +899,14 @@ mod tests {
             Some("forceselect 3; force_throw")
         );
         // A scroll down: Force 2, its first choice Drain, which is only selected.
-        wheel.open(pages, 1, now);
+        wheel.open(pages, FORCE, now);
         wheel.moved([0.0, -90.0]);
         wheel.scrolled(-40.0, now);
         assert_eq!(wheel.last_page(), "force~2");
         assert_eq!(wheel.release().as_deref(), Some("forceselect 13"));
         // Opened again with fewer powers, the second page gone: the first.
         let fewer = shown();
-        assert_eq!(shown_index(&fewer, wheel.last_page()), Some(1));
+        assert_eq!(shown_index(&fewer, wheel.last_page()), Some(FORCE));
         assert_eq!(shown_index(&fewer, "weather"), Some(WEATHER));
         assert_eq!(shown_index(&fewer, "hail"), None);
     }
@@ -898,11 +915,44 @@ mod tests {
     fn the_empty_force_page_says_so() {
         let now = Instant::now();
         let mut wheel = QuickWheel::default();
-        wheel.open(shown(), 1, now);
+        wheel.open(shown(), FORCE, now);
         wheel.build([1920.0, 1080.0], now);
         let texts: Vec<&str> = wheel.canvas.text_runs().collect();
         assert!(texts.contains(&force_page::EMPTY), "{texts:?}");
         assert!(!texts.contains(&"Nothing here yet"));
+    }
+
+    #[test]
+    fn a_new_run_opens_on_the_force_page_and_the_toys_page_runs_illuminate() {
+        let now = Instant::now();
+        let pages = shown();
+        // Nothing shown last yet: a bare +wheel takes the first page, Force.
+        assert_eq!(shown_index(&pages, "").unwrap_or(0), FORCE);
+        assert_eq!(pages[FORCE].id, "force");
+        let toys = &pages[TOYS];
+        assert_eq!((toys.id.as_str(), toys.name.as_str()), ("toys", "Toys"));
+        assert!(!toys.force);
+        assert_eq!(toys.choices.len(), 1);
+        assert_eq!(toys.choices[0].label, "Illuminate");
+        assert_eq!(toys.choices[0].command, "force_illuminate");
+        assert!(toys.choices[0].icon.is_some(), "the holocron's picture");
+        // The gold dot follows the holocron: out, then lit.
+        assert!(!toys.choices[0].on);
+        assert!(shown_lit(true)[TOYS].choices[0].on);
+        // Opened, it is a ring of one that names it, not the empty page, and
+        // letting go on it runs the toggle.
+        let mut wheel = QuickWheel::default();
+        wheel.open(shown_lit(true), TOYS, now);
+        wheel.moved([0.0, -90.0]);
+        wheel.build([1920.0, 1080.0], now);
+        let texts: Vec<&str> = wheel.canvas.text_runs().collect();
+        assert!(
+            texts.contains(&"Toys") && texts.contains(&"Illuminate"),
+            "{texts:?}"
+        );
+        assert!(!texts.contains(&"Nothing here yet"), "{texts:?}");
+        assert!(!wheel.canvas.overflowed());
+        assert_eq!(wheel.release().as_deref(), Some("force_illuminate"));
     }
 
     #[test]
