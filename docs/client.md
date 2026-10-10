@@ -5,6 +5,12 @@ Jedi Academy `GameData` directory with the retail `base/assets*.pk3` files.
 
 ## Launch
 
+Local weapon and movement event sounds come from prediction or player-state
+events. The view client's ordinary snapshot entity is excluded from the
+entity-sound path, following OpenJK multiplayer, so a shot received before
+local prediction plays once. Remote and temporary entity events retain their
+independent latches, including during demo playback and spectating.
+
 The client program is `sjk` and the dedicated server `sjk-server` (`.exe` on
 Windows). Developer and diagnostic environment variables are named `SJK_*`
 (`SJK_TRACE_*`, `SJK_LAMP_*`, `SJK_GPU_*` and the like). On Windows both programs

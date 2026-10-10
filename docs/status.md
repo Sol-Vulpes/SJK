@@ -1,5 +1,17 @@
 # Status and priorities
 
+## Duplicate local pistol fire
+
+Branch `fix/duplicate-sound-events`, based on `0c76ff03` (2026-10-10,
+Windows): the local view client's ordinary snapshot entity no longer plays
+events a second time alongside player-state events. This follows OpenJK
+`codemp/cgame/cg_ents.c`'s `CG_AddPacketEntities` exclusion of the view client;
+temporary event entities and remote players retain their own event latches.
+Synthetic tests reproduced duplicate unpredicted pistol fire and external
+events before the fix, and cover repeated snapshots and 8/7/4/3 ms command
+steps. Audible verification of the reported intermittent DL-44 gunfire and
+other potential duplicate-sound causes remains open.
+
 Reviewed 2026-10-04 against GitHub baseline `b394022` and the owner-approved
 client, server, rendering and loading changes described below.
 

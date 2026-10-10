@@ -40,6 +40,15 @@ impl LegacySoundAdapter {
             if number >= MAX_ENTITIES {
                 continue;
             }
+            // CG_AddPacketEntities (codemp/cgame/cg_ents.c) does not re-add
+            // the view client's ordinary snapshot entity. Its events come
+            // from prediction/CG_CheckPlayerstateEvents instead, including
+            // when prediction has not emitted the sound yet (or in demos).
+            // Event-only entities retain their separate server lifetime.
+            if entity.number() == snapshot.player.client_num() && entity.entity_type() <= ET_EVENTS
+            {
+                continue;
+            }
             if self.seen_entity[number] != previous_epoch
                 && self.last_entity_time[number] < snapshot.server_time.saturating_sub(300)
             {

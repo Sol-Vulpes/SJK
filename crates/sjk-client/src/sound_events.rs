@@ -2056,6 +2056,10 @@ mod config_strings;
 mod origin_tests;
 
 #[cfg(test)]
+#[path = "sound_duplicate_tests.rs"]
+mod duplicate_tests;
+
+#[cfg(test)]
 mod tests {
     use super::{EventSubject, WEAPON_PATHS, event_cause, is_vehicle};
     use sjk_protocol::{EntityState, LEGACY_ENTITY_FIELDS};
