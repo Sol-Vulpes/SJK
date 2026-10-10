@@ -20,6 +20,10 @@ Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 -->
 ## Unreleased
 
+## 2026.1010.3 (Alpha) | 10/10/2026
+
+Hotfix: no more hitch when players join a server. SJK also checks for updates while it runs.
+
 - No more stutter when a player joins or changes sabers: the saber files are read once a map instead of at every change _(Sol)_
 - SJK looks for a new version every 30 minutes while it runs, not only when it starts, so a release made while you play shows its Update card within half an hour _(Sol)_
 

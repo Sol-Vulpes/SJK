@@ -9,6 +9,8 @@
 #                               made it when that is not the piece's owner.
 
 = Sol
++ 10/10/2026 | - | Release 2026.1010.3 hotfix notes
+- b733b35 |  | Release 2026.1010.3 (Alpha)
 + 10/10/2026 | - | No hitch when players join: saber definitions read once a map
 - b9422cd |  | Read saber definitions once per set of mounts (join hitch)
 + 10/10/2026 | - | Update check every 30 minutes while SJK runs
