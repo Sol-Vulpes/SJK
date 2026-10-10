@@ -1320,10 +1320,16 @@ impl PlayerMenu {
                 named = choice;
             }
             match self.blade_choice.get(choice).flatten() {
-                None => swatch::small_stock(&mut self.canvas, frame, rect, colour),
+                None => swatch::small_stock(self.canvas.draw_list_mut(), frame, rect, colour),
                 Some(skin) => {
                     let look = self.blade_choice.look(skin.id);
-                    let _ = swatch::small_blade(&mut self.canvas, frame, rect, look, seconds);
+                    let _ = swatch::small_blade(
+                        self.canvas.draw_list_mut(),
+                        frame,
+                        rect,
+                        look,
+                        seconds,
+                    );
                 }
             }
             if choice == chosen || hovered {

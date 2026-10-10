@@ -13,9 +13,9 @@
 
 use crate::blade_skin_file::{Arcs, BladeSkinDef, Motes, Rgb};
 use crate::menu::sjk::{Frame, color};
-use crate::menu_widgets::MenuCanvas;
+
 use crate::saber_skins::LoadedSkin;
-use sjk_ui::{Color, DrawCommand, Gradient};
+use sjk_ui::{Color, DrawCommand, DrawList, Gradient};
 
 #[path = "collection_swatch_effects.rs"]
 mod effects;
@@ -35,12 +35,12 @@ const ARC_RUNS: usize = 7;
 /// along it.
 const BLADE_UNITS: f32 = 40.0;
 
-fn push(canvas: &mut MenuCanvas, command: DrawCommand) {
-    let _ = canvas.draw_list_mut().push(command);
+fn push(canvas: &mut DrawList, command: DrawCommand) {
+    let _ = canvas.push(command);
 }
 
 /// A filled rounded rectangle, radius half its height (frame pixels).
-fn capsule(canvas: &mut MenuCanvas, frame: &Frame, rect: [f32; 4], colour: Color) {
+fn capsule(canvas: &mut DrawList, frame: &Frame, rect: [f32; 4], colour: Color) {
     let [x, y, width, height] = rect;
     let rect = frame.rect(x, y, width, height);
     push(
@@ -54,7 +54,7 @@ fn capsule(canvas: &mut MenuCanvas, frame: &Frame, rect: [f32; 4], colour: Color
 }
 
 /// A filled disc of `radius` round (`x`, `y`) (frame pixels).
-fn disc(canvas: &mut MenuCanvas, frame: &Frame, x: f32, y: f32, radius: f32, colour: Color) {
+fn disc(canvas: &mut DrawList, frame: &Frame, x: f32, y: f32, radius: f32, colour: Color) {
     capsule(
         canvas,
         frame,
@@ -76,7 +76,7 @@ fn draw(seed: f32) -> f32 {
 /// A straight stroke from `a` to `b` (frame pixels), `width` thick: an arc of a circle
 /// many times its length, so it is straight to the eye, with round caps.
 fn stroke(
-    canvas: &mut MenuCanvas,
+    canvas: &mut DrawList,
     frame: &Frame,
     a: [f32; 2],
     b: [f32; 2],
@@ -130,7 +130,7 @@ pub(crate) enum Shown {
 /// Draw a blade skin across the swatch `rect` (frame pixels) at `seconds`: `skin` its
 /// loaded file, if its pack is loaded; `owned` lights it. Says what it showed.
 pub(crate) fn blade(
-    canvas: &mut MenuCanvas,
+    canvas: &mut DrawList,
     frame: &Frame,
     rect: [f32; 4],
     skin: Option<&LoadedSkin>,
@@ -201,7 +201,7 @@ fn shrunk(frame: &Frame, rect: [f32; 4]) -> (Frame, [f32; 4]) {
 /// An owned blade skin as [`blade`] draws it on its card, shrunk into `rect` (frame
 /// pixels): the Saber tab's blade choice.
 pub(crate) fn small_blade(
-    canvas: &mut MenuCanvas,
+    canvas: &mut DrawList,
     frame: &Frame,
     rect: [f32; 4],
     skin: Option<&LoadedSkin>,
@@ -214,7 +214,7 @@ pub(crate) fn small_blade(
 /// A blade skin as [`blade`] draws it, owned (alive) or not (grey under a padlock),
 /// shrunk into `rect` (frame pixels): the Collection's rack.
 pub(crate) fn small_swatch(
-    canvas: &mut MenuCanvas,
+    canvas: &mut DrawList,
     frame: &Frame,
     rect: [f32; 4],
     skin: Option<&LoadedSkin>,
@@ -227,7 +227,7 @@ pub(crate) fn small_swatch(
 
 /// The stock blade in `colour` from the same hilt, still, in a swatch shrunk into
 /// `rect` (frame pixels) as [`small_blade`]'s: the Saber tab's first blade choice.
-pub(crate) fn small_stock(canvas: &mut MenuCanvas, frame: &Frame, rect: [f32; 4], colour: Color) {
+pub(crate) fn small_stock(canvas: &mut DrawList, frame: &Frame, rect: [f32; 4], colour: Color) {
     let (small, [x, y, width, height]) = shrunk(frame, rect);
     let frame = &small;
     let s = frame.s;
@@ -307,7 +307,7 @@ fn ui(rgb: Rgb, alpha: f32) -> Color {
 
 /// The skin `def` from `start` along `length`, centred on `centre`, at `t` seconds.
 fn lit_blade(
-    canvas: &mut MenuCanvas,
+    canvas: &mut DrawList,
     frame: &Frame,
     def: &BladeSkinDef,
     start: f32,
@@ -520,7 +520,7 @@ fn lit_blade(
 /// showing between the motes' inner and outer radii and, by their focus, toward the tip.
 #[allow(clippy::too_many_arguments)]
 fn swatch_motes(
-    canvas: &mut MenuCanvas,
+    canvas: &mut DrawList,
     frame: &Frame,
     motes: &Motes,
     at: [f32; 2],
@@ -576,7 +576,7 @@ fn swatch_motes(
 /// fading by their decay, re-shaped by their jitter.
 #[allow(clippy::too_many_arguments)]
 fn swatch_arcs(
-    canvas: &mut MenuCanvas,
+    canvas: &mut DrawList,
     frame: &Frame,
     arcs: &Arcs,
     at: [f32; 2],
@@ -652,7 +652,7 @@ fn swatch_arcs(
 /// A grey, still blade: locked (`light` 1), or owned with its look still to come
 /// (brighter).
 fn grey_blade(
-    canvas: &mut MenuCanvas,
+    canvas: &mut DrawList,
     frame: &Frame,
     start: f32,
     centre: f32,
@@ -680,14 +680,7 @@ fn grey_blade(
 }
 
 /// The steel hilt ending at `start`, `length` long.
-fn hilt_at(
-    canvas: &mut MenuCanvas,
-    frame: &Frame,
-    start: f32,
-    centre: f32,
-    length: f32,
-    lit: bool,
-) {
+fn hilt_at(canvas: &mut DrawList, frame: &Frame, start: f32, centre: f32, length: f32, lit: bool) {
     let s = frame.s;
     let shade = if lit { 1.0 } else { 0.55 };
     let steel = |level: f32| {
@@ -760,7 +753,7 @@ fn hilt_at(
 }
 
 /// A padlock centred on (`x`, `y`).
-fn padlock(canvas: &mut MenuCanvas, frame: &Frame, x: f32, y: f32) {
+fn padlock(canvas: &mut DrawList, frame: &Frame, x: f32, y: f32) {
     let s = frame.s;
     disc(canvas, frame, x, y, 30.0, color::alpha(color::SPACE, 0.82));
     push(
@@ -807,8 +800,7 @@ mod tests {
     use super::*;
 
     fn drawn(skin: Option<&LoadedSkin>, owned: bool, seconds: f32) -> (Shown, Vec<DrawCommand>) {
-        let mut canvas = MenuCanvas::with_capacities(8, 32, 400);
-        canvas.begin_transparent([1920.0, 1080.0]);
+        let mut canvas = DrawList::new(400);
         let frame = Frame::new([1920.0, 1080.0]);
         let shown = blade(
             &mut canvas,
@@ -818,7 +810,7 @@ mod tests {
             owned,
             seconds,
         );
-        (shown, canvas.draw_list().commands().to_vec())
+        (shown, canvas.commands().to_vec())
     }
 
     /// The colour of the first opaque shape, the core: it moves only with a turning hue.

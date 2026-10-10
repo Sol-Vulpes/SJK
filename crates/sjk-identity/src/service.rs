@@ -112,6 +112,9 @@ pub struct Snapshot {
     pub players: Vec<Presence>,
     /// Profiles fetched with [`Service::look_up`].
     pub profiles: HashMap<String, Profile>,
+    /// Counts profiles fetched into [`Snapshot::profiles`], so a reader that derived
+    /// something from one (the player card) knows when to read again.
+    pub profiles_revision: u64,
     /// The outcome of the last profile change or lookup, for the page to show.
     pub notice: Option<String>,
     /// Counts changes to [`Snapshot::players`], so a reader that caches what it
@@ -203,6 +206,7 @@ impl Snapshot {
             server: None,
             players: Vec::new(),
             profiles: HashMap::new(),
+            profiles_revision: 0,
             notice: None,
             revision: 0,
             report: None,
@@ -1263,9 +1267,9 @@ impl Worker {
         for key_id in std::mem::take(&mut self.lookups) {
             match hub.profile(&key_id) {
                 Ok(profile) => {
-                    lock(&self.snapshot)
-                        .profiles
-                        .insert(profile.key_id.clone(), profile);
+                    let mut snapshot = lock(&self.snapshot);
+                    snapshot.profiles.insert(profile.key_id.clone(), profile);
+                    snapshot.profiles_revision += 1;
                 }
                 Err(failure) => {
                     lock(&self.snapshot).notice = Some(failure.to_string());
