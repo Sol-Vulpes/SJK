@@ -9,6 +9,8 @@
 #                               made it when that is not the piece's owner.
 
 = Sol
++ 10/10/2026 | - | cg_chatBoxLetterSpacing defaults to -0.5
+- f04c87c |  | Chat letter spacing defaults to -0.5
 + 10/10/2026 | - | Resolution groups by closeness of shape
 - c5f390f |  | Resolution list: order aspect groups by closeness to the monitor's
 + 10/10/2026 | - | The old form look and Menu contrast removed
