@@ -310,6 +310,16 @@ note: A roll on landing while crouched (PM_CrashLand) is not prevented, in EJK e
 
 # ---- Menus & settings ----
 
+[menu-rebuild-loop]
+area: Gameplay
+title: Map change no longer loops reloading the menu map (could not join, crash)
+change: A reconnect in flight is not off-server: the menu world waits until the menus are really back.
+change: The menu world rebuild starts at most once every 5 s.
+test: Stay on a server through a map change (or a server restart): you rejoin the new map.
+test: The log has no run of "menu world: loading maps/mp/duel6.bsp again" lines.
+test: Disconnect to the menu: duel6 comes back once, within a few seconds.
+note: Seen 10/10 on a JoF map change: 13,865 rebuild starts in the log.
+
 [join-hitch]
 area: Rendering & effects
 title: No hitch when players join: saber definitions read once a map

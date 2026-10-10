@@ -1,5 +1,18 @@
 # Status and priorities
 
+## Menu world rebuild loop on a map change
+
+Branch `personal/menu-rebuild-loop` (10/10/2026, based on `10d953ed`, Windows 11). Sol
+and a player hit it on a JoF server's map change: Sol could not join again, the other
+player's client closed. In 2026.1010.2 the server stopped sending snapshots for 8 s, the
+client reconnected, and `Parked::restore_if_idle` (menu_world.rs) took the shell for
+"off a server" because it did not look at `join_task`; it started rebuilding the menu
+world, `poll_rebuild` cancelled that under the join, and the next frame started it
+again: 13,865 starts in the log, each a worker reading duel6 that the cancel did not
+stop. `shell_is_off_server` now requires no join in flight, and a rebuild starts at most
+once every 5 s (`RETRY`). Verified by a unit test of the retry rule and the viewer suite;
+not tried on a server's map change.
+
 ## Join hitch: saber definitions read once
 
 Branch `personal/join-hitch` (10/10/2026, based on `5b0bc8ef`, Windows 11). Sol's
