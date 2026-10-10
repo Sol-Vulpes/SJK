@@ -1605,7 +1605,7 @@ area: Rendering & effects
 title: Shield hits hug the body like single player
 change: A shield hit flashes a shell on the player's body instead of multiplayer's sphere.
 change: cg_shieldSphere 1 (Game options: Shield hit sphere) brings the sphere back.
-change: cg_shieldBrightness 1-12 (default 4) sets how bright the body shell is.
+change: cg_shieldBrightness 1-12 (default 1) sets how bright the body shell is.
 test: Take armor damage from another player or bot: the body flashes.
 test: Set cg_shieldSphere 1 and repeat: the sphere appears.
 test: Set cg_shieldBrightness 1, then 12: the body flash goes from faint to very strong.
@@ -3608,7 +3608,7 @@ test: Open Main menu > Update while the card shows (debug_update, then Update): 
 note: Unit tests and world shots only; not tried in a game.
 
 [held-pistol-model]
-area: Rendering
+area: Rendering & effects
 title: The held pistol uses the blaster pistol model (SJK PR #65)
 change: Weapon slot 4 (the multiplayer pistol) shows OpenJK's blaster pistol model in hand.
 change: The old Bryar (slot 16) keeps the Bryar model; first person and pickups are as before.
@@ -3626,7 +3626,7 @@ test: Watch another player fire the pistol: you still hear every shot.
 note: Lumaya fixed a duplicate path found in tests; the doubled sound was not heard live.
 
 [models-on-demand]
-area: Rendering
+area: Rendering & effects
 title: Server models load when first shown (SJK PR #67)
 change: Server-listed rigid models nothing references are no longer loaded at map load.
 change: The first entity that shows one loads it on a worker thread and installs it.
@@ -3635,7 +3635,7 @@ test: Compare the join time and memory with the last release on the same server.
 note: Lumaya measured only a duel6 test: no before/after of the join time.
 
 [asset-browser]
-area: Menus
+area: Menus & settings
 title: Asset browser: turn PK3 packs off (SJK PR #68)
 change: Settings > Game > Asset browser (assetbrowser) lists installed PK3s; Enter or click toggles.
 change: A disabled pack is skipped at the next start (fs_disabledPaks); retail assets0-3 stay on.
@@ -3652,3 +3652,12 @@ change: Settings > HUD > Damage hitmarker toggles it live; kick and hit sounds s
 test: Take damage with the default: no red indicator; the view still kicks and the sound plays.
 test: Set cg_hitMarker 1 and take damage: the red indicator shows toward the attacker.
 note: Lumaya checked it with a synthetic frame (no red off, red on); not in a live match.
+
+[shield-flash-quiet]
+area: Rendering & effects
+title: Body shield flash defaults to one pass (SJK PR #70)
+change: cg_shieldBrightness defaults to 1 (was 4); a saved 4 moves to 1 once, other values stay.
+change: Shader, colour, hit length and the sphere mode (cg_shieldSphere 1) are unchanged.
+test: Take armor damage from a bot: the body flash is faint, not the strong four-pass flash.
+test: Set cg_shieldBrightness 4 and restart: it stays 4; it does not move back to 1.
+note: Lumaya compared it on a GPU test (one pass fainter); not in a live match.

@@ -13,6 +13,7 @@ Format, read by the client (crates/sjk-viewer/src/changelog_data.rs, whose
 tests check this file):
 - "## <version> | <dd/mm/yyyy>" starts a release ("## Unreleased" for main
   after the last release, without a date);
+- The body shield-hit flash is quieter by default: one pass instead of four (cg_shieldBrightness 1, the stock look); a profile still on the old default 4 moves to 1 once, other values stay _(Lumaya)_
 - The red damage indicator near the crosshair is off by default; Settings > HUD > Damage hitmarker (cg_hitMarker 1) brings it back at once. Camera kick and hit sounds are unchanged _(Lumaya)_
 - Asset browser: Settings > Game > Asset browser (or the assetbrowser command) lists the installed PK3 packs and turns each on or off for the next start without moving files; the retail base packs stay on, and built-in content, hub unlocks, loose files and packs a server sends are not affected _(Lumaya)_
 - Models the server lists but nothing uses are no longer loaded when a map starts: one is read on another thread the first time something shows it (map props, stock weapons and items, effect models and players still load at the start), which should shorten joins and save memory; a rare model can show a moment late _(Lumaya)_

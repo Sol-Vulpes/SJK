@@ -184,3 +184,7 @@ impl LegacyOverlayRandom for FrameRandom {
         (self.next() % 255 + 1) as u8
     }
 }
+
+#[cfg(test)]
+#[path = "shield_flash_tests.rs"]
+mod shield_flash_tests;

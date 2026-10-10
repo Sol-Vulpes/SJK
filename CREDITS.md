@@ -136,7 +136,7 @@ pull requests merged into SJK, most of them bringing SJK in line with EternalJK
   and two apostrophes) and shown as typed, so SJK and EternalJK players see each
   other's percent signs and quotes.
 
-Lumaya ([lumayaa](https://github.com/lumayaa)), contributor, has 10 pull requests
+Lumaya ([lumayaa](https://github.com/lumayaa)), contributor, has 11 pull requests
 merged into SJK
 ([all of them](https://github.com/Sol-Vulpes/SJK/pulls?q=is%3Apr+author%3Alumayaa)):
 
@@ -161,6 +161,8 @@ merged into SJK
   turn each on or off for the next start (`fs_disabledPaks`), with the retail packs kept on.
 - #69 the damage indicator toggle: `cg_hitMarker` (Settings > HUD) shows the red
   damage-direction indicator near the crosshair; it is off by default, camera kick and sounds stay.
+- #70 a quieter shield flash: the body shield-hit shader runs one pass by default
+  (`cg_shieldBrightness 1`); a profile on the old default 4 moves to 1 once.
 
 ## Origins: JKR, by Bishop
 

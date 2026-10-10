@@ -459,6 +459,28 @@ impl ViewerConsole {
             let _ = shell.cvars.set_text("cg_killfeedDefaultVersion", "1");
         }
         retire_modern_ui(&mut shell.cvars);
+        // Older profiles archived the four-pass default. Move that value once;
+        // other strengths, and choices made after migration, remain deliberate.
+        if matches!(
+            shell
+                .cvars
+                .get("cg_shieldBrightnessDefaultVersion")
+                .map(|cvar| &cvar.value),
+            Some(CvarValue::Integer(0))
+        ) {
+            if matches!(
+                shell
+                    .cvars
+                    .get("cg_shieldBrightness")
+                    .map(|cvar| &cvar.value),
+                Some(CvarValue::Integer(4))
+            ) {
+                let _ = shell.cvars.reset("cg_shieldBrightness");
+            }
+            let _ = shell
+                .cvars
+                .set_text("cg_shieldBrightnessDefaultVersion", "1");
+        }
         retire_force_illuminate(&mut shell);
         shell.push_log("^5SJK console ready. ^7Type cmdlist for commands.");
         Ok(Self {
@@ -946,6 +968,26 @@ mod tests {
         let console = ViewerConsole::new(old).unwrap();
         let kept = console.float_cvar("sensitivity").unwrap();
         assert!((kept - 13.022).abs() < 1e-9, "{kept}");
+    }
+
+    #[test]
+    fn shield_flash_defaults_to_one_pass_and_migrates_four_only_once() {
+        let directory = tempfile::tempdir().unwrap();
+        let fresh = ViewerConsole::new(directory.path().join("new.cfg")).unwrap();
+        assert_eq!(fresh.integer_cvar("cg_shieldBrightness"), Some(1));
+        for saved in [1, 2, 4, 12] {
+            let path = directory.path().join(format!("old-{saved}.cfg"));
+            std::fs::write(&path, format!("seta cg_shieldBrightness {saved}\n")).unwrap();
+            let mut console = ViewerConsole::new(path.clone()).unwrap();
+            assert_eq!(
+                console.integer_cvar("cg_shieldBrightness"),
+                Some(if saved == 4 { 1 } else { saved })
+            );
+            assert!(console.set_cvar("cg_shieldBrightness", "4"));
+            drop(console);
+            let console = ViewerConsole::new(path).unwrap();
+            assert_eq!(console.integer_cvar("cg_shieldBrightness"), Some(4));
+        }
     }
 
     /// The nameplate's own powers are what the server grants the profile that is

@@ -1121,6 +1121,19 @@
 - 0874042 |  | Decode print and cp text as legacy bytes
 
 = Lumaya
++ 10/10/2026 | SJK #70 | Reduce the default body shield-hit flash
+- 7b7ad20 |  | Reduce the default body shield flash to one pass
++ 10/10/2026 | SJK #69 | Add a damage hitmarker toggle, disabled by default
+- c9b16ac |  | Make the damage hitmarker optional and disabled by default
++ 10/10/2026 | SJK #68 | Add an asset browser for enabling and disabling PK3 packs
+- cccff33 |  | Add persistent installed PK3 pack toggles
++ 10/10/2026 | SJK #67 | Load unused server models on demand
+- f5b0cac |  | Load unused server model assets on first reference
++ 10/10/2026 | SJK #66 | Avoid doubled local pistol-fire sounds from snapshot events
+- 7b2e542 |  | Skip duplicate local snapshot entity sounds
+- 2ff93f4 |  | Clarify duplicate sound test timing evidence
++ 10/10/2026 | SJK #65 | Fix the held DL-44/blaster-pistol model
+- ef4acdc |  | Use the blaster-pistol model for the held DL-44 slot
 + 08/10/2026 | SJK #25 | Default U to crosshair-target private chat
 - 31b9f6d |  | Default global chat to U
 - c9d6db8 |  | Migrate existing chat bindings to the U default

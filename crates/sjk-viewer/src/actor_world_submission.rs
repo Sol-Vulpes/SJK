@@ -171,7 +171,7 @@ pub(crate) fn submit(
         .console
         .as_ref()
         .and_then(|console| console.integer_cvar("cg_shieldBrightness"))
-        .unwrap_or(4)
+        .unwrap_or(1)
         .clamp(1, 12) as u32;
     let trails = gpu
         .console

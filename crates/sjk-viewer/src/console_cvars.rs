@@ -538,9 +538,15 @@ pub(super) fn register_daily_cvars(cvars: &mut CvarRegistry) -> Result<(), sjk_s
         ),
         CvarDefinition::new(
             "cg_shieldBrightness",
-            4_i64,
+            1_i64,
             archive,
             "How bright a shield hit shows on the body, 1 (stock) to 12; ignored by the sphere",
+        ),
+        CvarDefinition::new(
+            "cg_shieldBrightnessDefaultVersion",
+            0_i64,
+            archive,
+            "Internal migration marker for the quieter one-pass shield flash default",
         ),
         CvarDefinition::new(
             "ui_hideFirstSetup",
