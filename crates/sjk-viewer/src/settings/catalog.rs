@@ -647,6 +647,11 @@ pub(super) const NETWORK: &[Setting] = &[
         kind: ValueKind::Bool,
     },
     Setting {
+        label: "SJK chat GIFs",
+        cvar: crate::chat_gifs::CVAR,
+        kind: ValueKind::Bool,
+    },
+    Setting {
         label: "SJK identity key",
         cvar: IDENTITY_ROW,
         kind: ValueKind::IdentityPage,

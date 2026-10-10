@@ -69,6 +69,19 @@ test: Your own message, a muted player's and a holocron drop line: no sound.
 test: Several messages within a second: one sound. Restart with history: no sound for it.
 test: Turn SJK chat sound off, then cg_chatSounds 0 with it on: silent both times.
 
+[sjk-chat-gifs]
+area: Console & chat
+title: SJK chat GIFs: a GIPHY link shows its GIF under the message (cl_sjkChatGifs)
+change: A GIPHY link in an SJK chat message reads GIF and its GIF plays under it on the chat
+change: page and the docks (main page, game menu). Your PC loads it from GIPHY's media host.
+change: Settings > Network > SJK chat GIFs (cl_sjkChatGifs, default 1); off keeps the link.
+test: Send https://giphy.com/gifs/ followed by a GIF's slug and id: page and docks show it moving.
+test: The same GIF in two messages: both play, loaded once. Loading GIF shows first, briefly.
+test: A link with a made-up id: GIF unavailable under the line. Mute the sender: no GIF.
+test: Turn SJK chat GIFs off: the link shows as text, nothing is loaded (log has no GIF line).
+test: A media.giphy.com/media/<id>/giphy.gif link and an i.giphy.com/<id>.gif link work too.
+note: Unit tests and off-screen shots only; one real GIF fetched from GIPHY by a test.
+
 [console-feed]
 area: Console & chat
 title: Console feed (top left notify lines) off by default, con_drawNotify

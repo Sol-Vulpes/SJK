@@ -1015,6 +1015,9 @@ mod tests {
             console.bool_cvar(crate::sjk_chat_frame::SOUND_CVAR),
             Some(true)
         );
+        // Its GIFs under the sound, on by default.
+        assert_eq!(network.get(hub + 3), Some(&crate::chat_gifs::CVAR));
+        assert_eq!(console.bool_cvar(crate::chat_gifs::CVAR), Some(true));
     }
 
     #[test]

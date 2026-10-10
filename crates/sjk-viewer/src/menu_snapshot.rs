@@ -1521,6 +1521,7 @@ fn sjk_home_snapshot() {
             staff: false,
             key_id: "0123456789abcdef",
             tier: None,
+            gif: None,
         },
         DockLine {
             name: "^1Fox",
@@ -1529,6 +1530,7 @@ fn sjk_home_snapshot() {
             staff: false,
             key_id: "fedcba9876543210",
             tier: None,
+            gif: None,
         },
         DockLine {
             name: "Kyle",
@@ -1537,6 +1539,7 @@ fn sjk_home_snapshot() {
             staff: false,
             key_id: "00000000000000ff",
             tier: None,
+            gif: None,
         },
     ];
     // Name, window, page, chosen entry, focused server, servers.

@@ -423,6 +423,10 @@ const HELP: &[(&str, &str)] = &[
         "A sound when another player's SJK chat message arrives, in menus and games. Chat sounds off (cg_chatSounds 0) silences it too.",
     ),
     (
+        crate::chat_gifs::CVAR,
+        "GIPHY links in SJK chat show their GIF. Your PC loads it from GIPHY, which sees your address. Off keeps links as text.",
+    ),
+    (
         super::catalog::IDENTITY_ROW,
         "Your SJK key: switch it on, back it up, copy its id. Enter opens it; the key stays hidden until Show.",
     ),
