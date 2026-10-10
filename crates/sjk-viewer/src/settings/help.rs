@@ -383,11 +383,11 @@ const HELP: &[(&str, &str)] = &[
     ),
     (
         "mod_japlus",
-        "Adds the japlus. commands: admin teleports, auto login, JA+ plugin options and completion of JA+ server commands.",
+        "On JA+ servers: the japlus. commands (admin teleports, auto login, plugin options) and JA+ command completion.",
     ),
     (
         "mod_jof",
-        "Adds jof.commands and completion of the JoF servers' own commands: gun admin commands, jetpack, emotes.",
+        "On JoF servers: jof.commands and completion of their own commands (gun admin commands, jetpack, emotes).",
     ),
     (
         crate::rarity_fx::CVAR,

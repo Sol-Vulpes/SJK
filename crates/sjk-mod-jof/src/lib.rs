@@ -123,6 +123,14 @@ impl ClientMod for JoF {
         "Completion and help for the JoF community's JA+ server commands"
     }
 
+    fn servers(&self) -> &'static str {
+        "JoF"
+    }
+
+    fn loads_on(&self, server: &Server) -> bool {
+        is_jof(server)
+    }
+
     fn commands(&self) -> &'static [Command] {
         COMMANDS
     }

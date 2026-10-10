@@ -1,8 +1,8 @@
 # Client mods
 
 A client mod is a set of console commands and settings kept out of the core
-client. Each one is off until the player switches it on, so a player who never
-uses it sees none of its commands. The mods are built into the client; the line
+client. Each one loads only on the servers it is made for, so a player who never
+joins one sees none of its commands. The mods are built into the client; the line
 they are written against is the [sjk-mod](../crates/sjk-mod/src/lib.rs) crate.
 
 ## Rules
@@ -12,11 +12,18 @@ they are written against is the [sjk-mod](../crates/sjk-mod/src/lib.rs) crate.
   and a dot, then Tab, lists the mod's commands. Server commands keep their real
   names (`amtele`, `amkick`, emotes), so binds made for other clients still work;
   a mod only completes and describes them.
-- **The switch.** Mod `<id>` is on while its archived setting `mod_<id>` is 1. In
-  Settings it is a row of Game options ("JA+ tools", "JoF tools"). `mods` lists the
-  mods with their switches. Switching a mod on or off adds or removes its commands
-  on the next frame. A mod's own settings exist whether it is on or not, so saved
-  values are kept. A mod's command typed while the mod is off answers how to switch it on.
+- **Loading.** A mod's commands exist only on the servers it is made for: JA+
+  tools on every JA+ server, JoF tools on JoF servers (a JoF server is a JA+ one, so
+  both load there). Joining one loads the mod and leaving it unloads it, and Tab
+  completes its commands only while it is loaded. A mod's command typed elsewhere
+  says which servers it works on. A mod's own settings exist whether it is loaded
+  or not, so saved values are kept.
+- **The switch.** Each mod has an archived on/off setting, `mod_<id>`. It is on by
+  default (Sol's choice, 11/10/2026). In Settings it is a row of Game options ("JA+
+  tools", "JoF tools"). With the switch off, the mod does not load even on its servers.
+  Profiles saved while the mods were off by default are switched on once
+  (`mod_defaultVersion`). `mods` lists the mods: loaded, on (waiting for its
+  servers) or off.
 - **What stays in the core.** A mod adds commands a player types. What a server
   needs to be played correctly is not a mod: JA+ movement and saber prediction,
   `cjp_client`, `cp_pluginDisable` and its default, RGB sabers and cosmetics stay in

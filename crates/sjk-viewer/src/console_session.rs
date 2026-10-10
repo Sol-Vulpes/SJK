@@ -179,7 +179,7 @@ impl ViewerConsole {
         super::socket::register_command(&mut shell, &socket)?;
         let client_commands = console_client::Commands::default();
         console_client::register(&mut shell, &client_commands)?;
-        let mut mods = crate::mods::Mods::new();
+        let mods = crate::mods::Mods::new();
         mods.register(&mut shell)?;
         shell.set_command_frame(0);
         let server_status = Arc::new(RwLock::new("Not connected".to_owned()));
@@ -487,8 +487,7 @@ impl ViewerConsole {
         }
         retire_force_illuminate(&mut shell);
         shell.push_log("^5SJK console ready. ^7Type cmdlist for commands.");
-        // The saved switches decide which mods' commands exist from the start.
-        mods.sync(&mut shell);
+        mods.migrate_defaults(&mut shell);
         Ok(Self {
             shell,
             open: false,
@@ -823,6 +822,8 @@ impl ViewerConsole {
             info: raw.into_owned(),
         }));
         self.server_profile = Some(profile.clone());
+        // The mods made for this server load now; the others' commands go.
+        self.mods.sync(&mut self.shell);
         self.refresh_server_help();
         self.shell.push_log(value);
     }

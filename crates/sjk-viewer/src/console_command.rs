@@ -242,11 +242,10 @@ impl ViewerConsole {
             return vec!["This build carries no client mods.".into()];
         }
         list.into_iter()
-            .map(|(id, title, about, on)| {
+            .map(|(id, title, about, state)| {
                 format!(
-                    "^5{title}^7 ({}, {id}.*) {}^7: {about}",
-                    crate::mods::switch(id),
-                    if on { "^2on" } else { "^1off" }
+                    "^5{title}^7 ({}, {id}.*) {state}^7: {about}",
+                    crate::mods::switch(id)
                 )
             })
             .collect()
@@ -312,7 +311,11 @@ impl ViewerConsole {
 
     pub(crate) fn clear_server_info(&mut self) {
         self.movement_policy_log = None;
+        // Off a server no mod is loaded.
         self.mods.set_server(None);
+        self.server_profile = None;
+        self.mods.sync(&mut self.shell);
+        self.refresh_server_help();
         // Off a server the profile goes out as written, with nothing pending.
         self.force_profile.reset();
         if let Ok(mut status) = self.server_status.write() {
@@ -324,7 +327,7 @@ impl ViewerConsole {
 #[cfg(test)]
 mod tests {
     #[test]
-    fn a_mod_command_waits_for_its_switch() {
+    fn a_mod_command_waits_for_its_server() {
         let directory = tempfile::tempdir().unwrap();
         let mut console =
             crate::console::ViewerConsole::new(directory.path().join("config.cfg")).unwrap();
@@ -334,15 +337,19 @@ mod tests {
             console
                 .shell
                 .lines()
-                .any(|line| line.text.contains("mod_japlus 1"))
+                .any(|line| line.text.contains("JA+ servers only"))
         );
-        console.execute_console_line("mod_japlus 1", None);
+        console.mods.set_server(Some(sjk_mod::Server {
+            kind: sjk_mod::ServerKind::JaPlus,
+            address: "127.0.0.1:29070".into(),
+            info: String::new(),
+        }));
         console.execute_console_line("japlus.guntele 100", None);
         assert_eq!(
             console.client_commands.pending.back().map(Vec::as_slice),
             Some(&["japlus.guntele".to_owned(), "100".to_owned()][..])
         );
-        assert!(console.mods_listing()[0].contains("^2on"));
+        assert!(console.mods_listing()[0].contains("^2loaded"));
     }
 
     #[test]
