@@ -104,9 +104,18 @@ for a gift, the team's note. It follows the medal pop-up
 ([identity.md](identity.md#medals), [medal_popup.rs](../crates/sjk-viewer/src/medal_popup.rs)):
 
 - It opens on the main menu, or when the game menu opens in a match, never over play. A
-  holocron that arrives during a match is announced once with a centre print, "New SJK
-  holocron: Rare Holocron / Open the game menu to see it". While it shows, the menu under it
-  is neither drawn nor given input. A medal on show or waiting goes first.
+  holocron that arrives during a match is announced once by a card at the top of the
+  screen, the achievements' ([identity.md](identity.md#achievements),
+  [unlock_toast.rs](../crates/sjk-viewer/src/unlock_toast.rs); since 10/10/2026, Sol's
+  request, in place of a centre print): "New holocron", "Open the game menu to see it", the
+  name in the tier's light, "Found while playing: 28% of drops are Rare" (or "A gift from
+  the SJK team"), the tier's icon (its gem without one) in a ring that sweeps round, and the
+  burst, sparks and edge in the tier's colour, with the achievements' chime
+  (`cg_achievementSound`). It takes no input and leaves after about six seconds; one
+  arrival brings at most three cards (a reinstalled PC finding twenty shows three), and the
+  pop-up shows them all. When the pop-up opens it takes back the holocron cards still
+  showing or waiting. While it shows, the menu under it is neither drawn nor given input. A
+  medal on show or waiting goes first.
 - Each arrives in a ceremony of the medal's timing and light in the tier's colour (it comes
   down into place, rings and sparks run out, a ring of ticks turns, a glow breathes while it
   waits, the words fade up one group after another) with the multiplayer game's fanfare
@@ -160,9 +169,9 @@ To make room the player list shows 10 players instead of 14.
 
 `debug_holocron <tier|all> [x<count>]` (alone it lists the tiers and the odds) rehearses
 drops offline: `all` queues one of each tier, `rare x3` three of one (1 to 20). They go
-through the same queue, centre print, pop-up, ceremony and sound, and the first one's chat
-line goes into the game's feed as the player's own. The console closes so the pop-up shows
-at once on a menu. Nothing is sent to the hub, and rehearsed holocrons (numbered from
+through the same queue, card (in a match), pop-up, ceremony and sound, and the first one's
+chat line goes into the game's feed as the player's own. The console closes so the pop-up
+shows at once on a menu, or the cards over play in a match. Nothing is sent to the hub, and rehearsed holocrons (numbered from
 4,000,000,000) are never written to `holocrons_seen.txt`.
 
 ### The Holocrons tab

@@ -360,10 +360,10 @@ pub(super) fn register_daily_cvars(cvars: &mut CvarRegistry) -> Result<(), sjk_s
         CvarDefinition::new("s_doppler", true, archive, "Legacy looping-sound Doppler"),
         CvarDefinition::new("cg_footsteps", true, archive, "Play footstep sounds"),
         CvarDefinition::new(
-            crate::achievement_toast::SOUND_CVAR,
+            crate::unlock_toast::SOUND_CVAR,
             true,
             archive,
-            "Play the secret-area sound with the achievement pop-up",
+            "Play the secret-area sound with the unlock cards",
         ),
         // Stock defaults and units: `sensitivity` 5 scaling `m_yaw`/`m_pitch`
         // degrees per mouse count (`cl_main.cpp:2774,2802-2803`, applied in

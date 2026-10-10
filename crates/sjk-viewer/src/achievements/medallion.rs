@@ -2,7 +2,7 @@
 //! the medallion reads it (`1`, `100`, `1K`, `10h`) and the medallion itself, a ring
 //! filling with the count round the goal, gold and lit once unlocked. The Profile
 //! page's board (`profile_panel_view.rs`) and the unlock pop-up
-//! (`achievement_toast.rs`) share them, so the two look alike.
+//! (`unlock_toast.rs`) share them, so the two look alike.
 
 use super::{Category, Counter, Kind, Source};
 use crate::menu::sjk::{color, text};

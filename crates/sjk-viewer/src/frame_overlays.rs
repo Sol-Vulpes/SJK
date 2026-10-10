@@ -23,13 +23,13 @@ impl GpuState {
             || self.console.as_ref().is_some_and(|c| c.is_open())
             || !self.console_layer.is_empty()
             || self.client_menu.as_ref().is_some_and(|m| m.is_visible());
-        // A world shot's made-up scoreboard, quick wheel and achievement pop-up draw
+        // A world shot's made-up scoreboard, quick wheel and unlock pop-up draw
         // without a session.
         #[cfg(test)]
         let hud = hud
             || self.scoreboard.showing_shot()
             || self.quick_wheel.shown_without_a_game()
-            || self.achievement_toast.pending() > 0;
+            || self.unlock_toast.pending() > 0;
         let hyperspace = self.local_prediction.hyperspace_shade();
         let flares = hyperspace.is_none()
             && !self.world_hidden

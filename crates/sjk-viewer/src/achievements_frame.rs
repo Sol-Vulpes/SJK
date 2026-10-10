@@ -1,7 +1,7 @@
 //! The per-frame side of achievements (`achievements.rs`): each live snapshot goes to
 //! the tracker with the obituaries it brought, and twice a second (with the identity's
 //! turn, `identity_frame.rs`) the counts are loaded, synced with the hub, saved, and
-//! new unlocks announced with a console line and the pop-up (`achievement_toast.rs`).
+//! new unlocks announced with a console line and the pop-up (`unlock_toast.rs`).
 
 use super::*;
 
@@ -48,7 +48,8 @@ impl GpuState {
                 "^3Achievement unlocked: ^7{} ^5({})",
                 kind.name, kind.description
             ));
-            self.achievement_toast.push(kind);
+            self.unlock_toast
+                .push(crate::unlock_toast::Unlock::Achievement(kind));
         }
     }
 }

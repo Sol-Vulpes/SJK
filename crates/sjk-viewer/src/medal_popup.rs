@@ -4,10 +4,12 @@
 //! new medals show one after another.
 //!
 //! When: on the main menu, or when the game menu opens in a match, never over play.
-//! A medal that arrives during a match is announced once with a centre print saying
-//! where to see it; the pop-up waits for the game menu. While it shows, the menu under
-//! it is not drawn and takes no input. What was shown is kept in `medals_seen.txt`
-//! (`medals/seen.rs`), so each medal (and each new count) shows once per identity.
+//! A medal that arrives during a match is announced once by a card at the top of the
+//! screen, as an achievement is ([`crate::unlock_toast`]), saying where to see it; the
+//! pop-up waits for the game menu and takes the card back as it opens. While it shows,
+//! the menu under it is not drawn and takes no input. What was shown is kept in
+//! `medals_seen.txt` (`medals/seen.rs`), so each medal (and each new count) shows once
+//! per identity.
 //!
 //! Each medal arrives in a short ceremony ([`award`]) with the multiplayer game's
 //! fanfare (`audio/ui_cues.rs`): it comes down into place in a burst of gold light,
@@ -31,6 +33,7 @@ use crate::medals::{self, Award};
 use crate::menu::art::ArtSet;
 use crate::menu::style::MenuStyle;
 use crate::menu_widgets::MenuCanvas;
+use crate::unlock_toast::{self, Unlock};
 use award::{ENTRANCE, EXIT};
 use sjk_ui::{InputEvent, UiEventKind};
 use std::collections::VecDeque;
@@ -53,6 +56,8 @@ struct Queued {
     award: Award,
     /// Made up by `debug_medal`: shown like any other, never counted as seen.
     rehearsal: bool,
+    /// Its card was given in a match ([`MedalPopup::announce`]).
+    announced: bool,
 }
 
 /// The medal on show and where its ceremony is.
@@ -133,8 +138,6 @@ pub(crate) struct MedalPopup {
     directory: PathBuf,
     /// The key and the profile's list last offered, so an unchanged one is skipped.
     last: Option<(String, Vec<sjk_identity::Medal>)>,
-    /// The centre print about the waiting medals was given.
-    hinted: bool,
     /// The look, following `ui_menuStyle`, and the retail art the classic+ one can
     /// draw.
     style: MenuStyle,
@@ -157,7 +160,6 @@ impl Default for MedalPopup {
             seen: None,
             directory: PathBuf::new(),
             last: None,
-            hinted: false,
             style: MenuStyle::default(),
             art: ArtSet::default(),
             #[cfg(test)]
@@ -210,6 +212,7 @@ impl MedalPopup {
             let queued = Queued {
                 award,
                 rehearsal: false,
+                announced: false,
             };
             match self
                 .queue
@@ -224,20 +227,20 @@ impl MedalPopup {
             }
         }
         if added {
-            self.hinted = false;
             // Decode the pictures now, so the ceremony need not wait for them.
             crate::medals::art::request();
         }
     }
 
     /// Queue `awards` as made-up arrivals (`debug_medal`): they go through the same
-    /// queue, centre print, ceremony and sound as the hub's, but are never counted as
-    /// seen. A rehearsal of a medal already waiting as one replaces it.
+    /// queue, card, ceremony and sound as the hub's, but are never counted as seen. A
+    /// rehearsal of a medal already waiting as one replaces it.
     pub(crate) fn rehearse(&mut self, awards: Vec<Award>) {
         for award in awards {
             let queued = Queued {
                 award,
                 rehearsal: true,
+                announced: false,
             };
             match self
                 .queue
@@ -248,7 +251,6 @@ impl MedalPopup {
                 None => self.queue.push_back(queued),
             }
         }
-        self.hinted = false;
         crate::medals::art::request();
     }
 
@@ -273,23 +275,20 @@ impl MedalPopup {
         }
     }
 
-    /// The centre print for a match, once per new medal: what came and where to see it.
-    pub(crate) fn hint(&mut self) -> Option<String> {
-        if self.hinted || self.queue.is_empty() {
-            return None;
+    /// The cards for a match, once per new medal (or new count): each waiting medal
+    /// not announced yet goes to `show`, at most [`unlock_toast::AT_ONCE`] at a time.
+    pub(crate) fn announce(&mut self, mut show: impl FnMut(Unlock)) {
+        let mut shown = 0;
+        for waiting in self.queue.iter_mut().filter(|waiting| !waiting.announced) {
+            waiting.announced = true;
+            if shown < unlock_toast::AT_ONCE {
+                shown += 1;
+                show(Unlock::Medal {
+                    medal: waiting.award.medal,
+                    count: waiting.award.count,
+                });
+            }
         }
-        self.hinted = true;
-        let names: Vec<&str> = self
-            .queue
-            .iter()
-            .map(|waiting| waiting.award.medal.name())
-            .collect();
-        let what = if names.len() == 1 {
-            format!("New SJK medal: {}", names[0])
-        } else {
-            format!("New SJK medals: {}", names.join(", "))
-        };
-        Some(format!("{what}\nOpen the game menu to see it"))
     }
 
     /// Move the ceremony on to `now`. A medal on show begins (with its fanfare) once
@@ -454,6 +453,7 @@ impl MedalPopup {
                 .map(|award| Queued {
                     award,
                     rehearsal: true,
+                    announced: false,
                 })
                 .collect(),
             held: Some((at, leaving)),
@@ -492,9 +492,9 @@ impl crate::GpuState {
             .offer(console.config_directory(), &key_id, &list);
     }
 
-    /// Open the pop-up when a medal waits and the main menu or the game menu is up, or
-    /// announce it once with a centre print during a match, and move its ceremony on.
-    /// Returns whether the pop-up draws this frame (not under the console).
+    /// Open the pop-up when a medal waits and the main menu or the game menu is up (its
+    /// cards go), or announce it once with a card during a match, and move its ceremony
+    /// on. Returns whether the pop-up draws this frame (not under the console).
     pub(crate) fn prepare_medal_popup(&mut self, console_covers_frame: bool) -> bool {
         let now = Instant::now();
         let console_open = self
@@ -510,12 +510,11 @@ impl crate::GpuState {
             let menu = self.game_menu || main_menu;
             if menu && !console_open && !self.text_dialog.is_open() {
                 self.medal_popup.open_next(now);
-            } else if !menu
-                && self.live_session.is_some()
-                && let Some(message) = self.medal_popup.hint()
-            {
-                self.chat
-                    .receive(sjk_client::ServerEventKind::CenterPrint, message, None, now);
+                self.unlock_toast
+                    .withdraw(now, |unlock| matches!(unlock, Unlock::Medal { .. }));
+            } else if !menu && self.live_session.is_some() {
+                let toast = &mut self.unlock_toast;
+                self.medal_popup.announce(|unlock| toast.push(unlock));
             }
         }
         let visible = self.medal_popup.is_open() && !console_open && !console_covers_frame;
@@ -683,6 +682,13 @@ mod tests {
         after(start, ENTRANCE + 0.1)
     }
 
+    /// The names on the cards a match would show now.
+    fn cards(popup: &mut MedalPopup) -> Vec<String> {
+        let mut names = Vec::new();
+        popup.announce(|unlock| names.push(unlock.name().to_string()));
+        names
+    }
+
     /// Take the button at `now` and let the medal lift away.
     fn next(popup: &mut MedalPopup, now: Instant) -> Instant {
         popup.press(now, true);
@@ -702,12 +708,8 @@ mod tests {
             &[wire("early_tester", 1), wire("bug_hunter", 1)],
         );
         assert!(popup.pending() && !popup.is_open());
-        assert!(
-            popup
-                .hint()
-                .is_some_and(|text| text.contains("Early Tester, Bug Hunter"))
-        );
-        assert_eq!(popup.hint(), None, "said once");
+        assert_eq!(cards(&mut popup), ["Early Tester", "Bug Hunter"]);
+        assert!(cards(&mut popup).is_empty(), "said once");
         let start = Instant::now();
         let now = open_settled(&mut popup, start);
         assert_eq!(shown(&popup), Some(Medal::EarlyTester));
@@ -868,12 +870,21 @@ mod tests {
             1,
             "the identity arriving keeps rehearsals"
         );
-        // In a match the rehearsal's centre print is the hub's.
-        assert!(
-            early
-                .hint()
-                .is_some_and(|text| text.starts_with("New SJK medal: Early Contributor"))
-        );
+        // In a match the rehearsal's card is the hub's.
+        assert_eq!(cards(&mut early), ["Early Contributor"]);
+    }
+
+    /// A medal given again while its first count still waits has a card of its own,
+    /// with the new count.
+    #[test]
+    fn a_new_count_waiting_has_its_own_card() {
+        let directory = tempfile::tempdir().expect("a folder");
+        let mut popup = MedalPopup::default();
+        popup.offer(directory.path(), "aa", &[wire("bug_hunter", 1)]);
+        assert_eq!(cards(&mut popup), ["Bug Hunter"]);
+        popup.offer(directory.path(), "aa", &[wire("bug_hunter", 2)]);
+        assert_eq!(popup.queue.len(), 1);
+        assert_eq!(cards(&mut popup), ["Bug Hunter x2"]);
     }
 
     /// The real medal is written as seen when its button is taken, before it has

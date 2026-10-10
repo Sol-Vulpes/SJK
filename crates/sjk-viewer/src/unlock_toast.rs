@@ -1,35 +1,51 @@
-//! The achievement pop-up: when the player unlocks an achievement
-//! (`achievements_frame.rs`), a small card slides in at the top centre of the screen
-//! with the board's medallion (`achievements/medallion.rs`), "Achievement unlocked",
-//! the achievement's name, category and what it asked, and plays the single-player
-//! game's secret-area sound (`audio/ui_cues.rs`, off with `cg_achievementSound 0`).
+//! The unlock pop-up: a small card that slides in at the top centre of the screen when
+//! something comes to the player ([`Unlock`]), and plays the single-player game's
+//! secret-area sound (`audio/ui_cues.rs`, off with `cg_achievementSound 0`):
 //!
-//! Unlike the medal pop-up (`medal_popup.rs`) it is not modal: it takes no input and
-//! pauses nothing, over play as over the menus. It enters in [`ENTER`] seconds,
-//! sliding down and growing to its size while a gold ring sweeps round the medallion,
-//! light bursts from it (a glow, a ring of light, sparks) and a glint crosses the
-//! card; it holds [`HOLD`] seconds and fades out in [`LEAVE`]. Several unlocks queue
-//! and show one after another, each with its sound.
+//! - an achievement unlocked (`achievements_frame.rs`), with the board's medallion
+//!   (`achievements/medallion.rs`), "Achievement unlocked", its name, category and what
+//!   it asked;
+//! - a new medal or holocron that arrives during a match (`medal_popup.rs`,
+//!   `holocron_popup.rs`), with the medallion's picture or the tier's icon (its gem
+//!   without one), "New medal" or "New holocron", its name, what it is for or where it
+//!   came from, and where to see it: the large pop-up still waits for the game menu, and
+//!   takes the cards of what it shows away as it opens ([`UnlockToast::withdraw`]).
+//!
+//! Unlike the large pop-ups it is not modal: it takes no input and pauses nothing, over
+//! play as over the menus. It enters in [`ENTER`] seconds, sliding down and growing to
+//! its size while a ring sweeps round the medallion, light bursts from it (a glow, a
+//! ring of light, sparks) and a glint crosses the card; it holds [`HOLD`] seconds and
+//! fades out in [`LEAVE`]. The light is gold, a holocron's in its tier's colour. Several
+//! unlocks queue and show one after another, each with its sound.
 //!
 //! The top centre is free in play: the HUDs' gauges sit in the bottom corners,
 //! timers at the top right, notify lines at the top left, centre prints and the
 //! crosshair lower (`version_overlay.rs`), so the card covers neither the aim nor the
-//! chat. It waits while the console is open or the medal pop-up shows, and draws
+//! chat. It waits while the console is open or a large pop-up shows, and draws
 //! nothing, nor allocates, while no unlock waits.
 
 use crate::achievements::Kind;
 use crate::achievements::medallion::{self, Medallion, tint};
 use crate::audio::ui_cues::{self, Cue};
+use crate::holocrons::{Tier, gem, icons};
+use crate::medals::Medal;
 use crate::menu::sjk::{DISPLAY_CENTRE, color, text};
 use crate::menu_widgets::{MenuCanvas, TextFamily};
 use crate::text::{TextStyle, TextVertex, UiFont};
 use sjk_ui::{Color, DrawCommand, FontWeight, Gradient, Rect, TextAlign};
 use std::collections::VecDeque;
 use std::f32::consts::{FRAC_PI_2, PI, TAU};
+use std::fmt;
 use std::time::{Duration, Instant};
 
 /// The cvar that plays the sound with each pop-up (1, the default) or not (0).
 pub(crate) const SOUND_CVAR: &str = "cg_achievementSound";
+
+/// The most cards one arrival of medals or holocrons brings (a reinstalled PC may find
+/// twenty holocrons at once); the game menu's pop-up shows them all.
+pub(crate) const AT_ONCE: usize = 3;
+/// Where a medal's or a holocron's card says it is shown.
+pub(crate) const MENU_HINT: &str = "Open the game menu to see it";
 
 /// Seconds the card takes to come in.
 pub(crate) const ENTER: f32 = 0.45;
@@ -57,8 +73,10 @@ pub(crate) const TEXT_WIDTH: f32 = WIDTH - TEXT_X - 24.0;
 /// The name's and the description's type sizes.
 pub(crate) const NAME_SIZE: f32 = 32.0;
 pub(crate) const DESCRIPTION_SIZE: f32 = 16.0;
-/// The line over the name.
-const KICKER: &str = "ACHIEVEMENT UNLOCKED";
+/// The kicker's type size and letter spacing, and the tag's type size.
+const KICKER_SIZE: f32 = 15.0;
+const KICKER_SPACING: f32 = 2.6;
+const TAG_SIZE: f32 = 15.0;
 
 /// The sparks the burst throws: direction (degrees, 0 to the right, clockwise), how
 /// far each flies (pixels at 1080 lines), when it leaves (seconds) and its size.
@@ -150,17 +168,144 @@ fn ease_out_back(x: f32) -> f32 {
     1.0 + C3 * (x - 1.0).powi(3) + C1 * (x - 1.0).powi(2)
 }
 
-/// The achievement showing and since when.
+/// What a card announces.
+#[derive(Clone, Copy, Debug)]
+pub(crate) enum Unlock {
+    /// An achievement reached its goal.
+    Achievement(&'static Kind),
+    /// The SJK team gave a medal, `count` times in all for a repeatable one.
+    Medal { medal: Medal, count: u32 },
+    /// A holocron dropped, numbered `id` at the hub; `gift` when staff gave it.
+    Holocron {
+        tier: &'static Tier,
+        id: u64,
+        gift: bool,
+    },
+}
+
+impl Unlock {
+    /// The same arrival: the same achievement, medal and count, or holocron.
+    fn same(self, other: Self) -> bool {
+        match (self, other) {
+            (Self::Achievement(a), Self::Achievement(b)) => a.id == b.id,
+            (
+                Self::Medal { medal, count },
+                Self::Medal {
+                    medal: other,
+                    count: other_count,
+                },
+            ) => medal == other && count == other_count,
+            (Self::Holocron { id, .. }, Self::Holocron { id: other, .. }) => id == other,
+            _ => false,
+        }
+    }
+
+    /// The capitals over the name.
+    pub(crate) const fn kicker(self) -> &'static str {
+        match self {
+            Self::Achievement(_) => "ACHIEVEMENT UNLOCKED",
+            Self::Medal { .. } => "NEW MEDAL",
+            Self::Holocron { .. } => "NEW HOLOCRON",
+        }
+    }
+
+    /// The words at the kicker's line's end: an achievement's category, else where the
+    /// large pop-up shows it.
+    pub(crate) const fn tag(self) -> &'static str {
+        match self {
+            Self::Achievement(kind) => kind.category.name(),
+            Self::Medal { .. } | Self::Holocron { .. } => MENU_HINT,
+        }
+    }
+
+    /// The colour the card is washed with from the left.
+    fn hue(self) -> Color {
+        match self {
+            Self::Achievement(kind) => tint(kind.category),
+            Self::Medal { .. } => color::GOLD,
+            Self::Holocron { tier, .. } => tier.colour,
+        }
+    }
+
+    /// The light: the burst, the rings, the sparks, the name; a holocron's is its tier's
+    /// colour, lightened as its pop-up's.
+    fn light(self) -> Color {
+        match self {
+            Self::Holocron { tier, .. } => Color::new(
+                tier.colour.r * 0.5 + 0.5,
+                tier.colour.g * 0.5 + 0.5,
+                tier.colour.b * 0.5 + 0.5,
+                1.0,
+            ),
+            _ => color::GOLD_BRIGHT,
+        }
+    }
+
+    /// The card's edge.
+    fn edge(self) -> Color {
+        match self {
+            Self::Holocron { tier, .. } => tier.colour,
+            _ => color::GOLD,
+        }
+    }
+
+    /// The name, with a medal's count when it was given more than once.
+    pub(crate) const fn name(self) -> Name {
+        Name(self)
+    }
+
+    /// The line under the name.
+    pub(crate) const fn description(self) -> Description {
+        Description(self)
+    }
+}
+
+/// An unlock's name, written without allocating.
+pub(crate) struct Name(Unlock);
+
+impl fmt::Display for Name {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self.0 {
+            Unlock::Achievement(kind) => formatter.write_str(kind.name),
+            Unlock::Medal { medal, count } if count > 1 => {
+                write!(formatter, "{} x{count}", medal.name())
+            }
+            Unlock::Medal { medal, .. } => formatter.write_str(medal.name()),
+            Unlock::Holocron { tier, .. } => formatter.write_str(tier.name),
+        }
+    }
+}
+
+/// The line under an unlock's name, written without allocating: what an achievement
+/// asked, what a medal is for, where a holocron came from and how rare it is.
+pub(crate) struct Description(Unlock);
+
+impl fmt::Display for Description {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self.0 {
+            Unlock::Achievement(kind) => formatter.write_str(kind.description),
+            Unlock::Medal { medal, .. } => formatter.write_str(medal.description()),
+            Unlock::Holocron { gift: true, .. } => formatter.write_str("A gift from the SJK team"),
+            Unlock::Holocron { tier, .. } => write!(
+                formatter,
+                "Found while playing: {} of drops are {}",
+                tier.odds, tier.label
+            ),
+        }
+    }
+}
+
+/// The unlock showing and since when.
 #[derive(Clone, Copy)]
 struct Showing {
-    kind: &'static Kind,
+    unlock: Unlock,
     started: Instant,
 }
 
 /// The pop-up's state: the unlocks waiting, the one showing and its canvas.
-pub(crate) struct AchievementToast {
+pub(crate) struct UnlockToast {
     canvas: MenuCanvas,
-    queue: VecDeque<&'static Kind>,
+    queue: VecDeque<Unlock>,
     current: Option<Showing>,
     /// When the last pop-up ended, for the pause before the next.
     ended: Option<Instant>,
@@ -169,11 +314,11 @@ pub(crate) struct AchievementToast {
     held: Option<f32>,
 }
 
-impl Default for AchievementToast {
+impl Default for UnlockToast {
     fn default() -> Self {
         Self {
-            // Four text runs and about seventy shapes a frame.
-            canvas: MenuCanvas::with_capacities(8, 96, 128),
+            // Four text runs and about seventy shapes a frame, a hundred with a gem.
+            canvas: MenuCanvas::with_capacities(8, 96, 160),
             queue: VecDeque::with_capacity(4),
             current: None,
             ended: None,
@@ -183,14 +328,24 @@ impl Default for AchievementToast {
     }
 }
 
-impl AchievementToast {
-    /// `kind` was unlocked: its pop-up waits for those before it.
-    pub(crate) fn push(&mut self, kind: &'static Kind) {
+impl UnlockToast {
+    /// `unlock` came: its pop-up waits for those before it.
+    pub(crate) fn push(&mut self, unlock: Unlock) {
         let showing = self
             .current
-            .is_some_and(|current| current.kind.id == kind.id);
-        if !showing && !self.queue.iter().any(|waiting| waiting.id == kind.id) {
-            self.queue.push_back(kind);
+            .is_some_and(|current| current.unlock.same(unlock));
+        if !showing && !self.queue.iter().any(|waiting| waiting.same(unlock)) {
+            self.queue.push_back(unlock);
+        }
+    }
+
+    /// Take back the cards `which` picks, waiting or showing, at `now`: a large pop-up
+    /// shows what they announce.
+    pub(crate) fn withdraw(&mut self, now: Instant, which: impl Fn(Unlock) -> bool) {
+        self.queue.retain(|waiting| !which(*waiting));
+        if self.current.is_some_and(|showing| which(showing.unlock)) {
+            self.current = None;
+            self.ended = Some(now);
         }
     }
 
@@ -209,7 +364,7 @@ impl AchievementToast {
     }
 
     /// Move the pop-ups on to `now`: end the one whose time is up, and start the next
-    /// one waiting when it `may_show` (not under the console or the medal pop-up),
+    /// one waiting when it `may_show` (not under the console or a large pop-up),
     /// with its `sound`. Returns whether a pop-up draws this frame.
     pub(crate) fn update(&mut self, now: Instant, may_show: bool, sound: bool) -> bool {
         if let Some(showing) = self.current
@@ -222,8 +377,11 @@ impl AchievementToast {
             let rested = self
                 .ended
                 .is_none_or(|ended| now.saturating_duration_since(ended) >= GAP);
-            if rested && let Some(kind) = self.queue.pop_front() {
-                self.current = Some(Showing { kind, started: now });
+            if rested && let Some(unlock) = self.queue.pop_front() {
+                self.current = Some(Showing {
+                    unlock,
+                    started: now,
+                });
                 if sound {
                     ui_cues::post(Cue::Achievement);
                 }
@@ -242,7 +400,7 @@ impl AchievementToast {
             return;
         };
         let t = self.elapsed(showing, now);
-        draw(&mut self.canvas, showing.kind, t, viewport);
+        draw(&mut self.canvas, showing.unlock, t, viewport);
     }
 
     /// Append the pop-up's text: in the SJK UI's families when `fonts` has them, else
@@ -285,13 +443,14 @@ fn layout_scale(viewport: [f32; 2]) -> f32 {
     crate::ui_scale::height_scale(viewport[1]).min((viewport[0] - 32.0).max(1.0) / WIDTH)
 }
 
-/// Draw `kind`'s pop-up on `canvas` as it stands `t` seconds after it began.
-fn draw(canvas: &mut MenuCanvas, kind: &'static Kind, t: f32, viewport: [f32; 2]) {
+/// Draw `unlock`'s pop-up on `canvas` as it stands `t` seconds after it began.
+fn draw(canvas: &mut MenuCanvas, unlock: Unlock, t: f32, viewport: [f32; 2]) {
     let moment = Moment::at(t);
     let card = card_rect(viewport, t);
     let k = card.width / WIDTH;
     let at = |x: f32, y: f32| [card.x + x * k, card.y + y * k];
-    let hue = tint(kind.category);
+    let hue = unlock.hue();
+    let light = unlock.light();
     canvas.begin_transparent(viewport);
     canvas.push_opacity(moment.alpha);
     let list = canvas.draw_list_mut();
@@ -304,7 +463,7 @@ fn draw(canvas: &mut MenuCanvas, kind: &'static Kind, t: f32, viewport: [f32; 2]
             color: Color::new(0.0, 0.0, 0.0, alpha),
         });
     }
-    // A gold outline that leaves the card's edge as it lands, and fades.
+    // An outline of the light that leaves the card's edge as it lands, and fades.
     let pulse = span(t, 0.12, 1.0);
     if pulse > 0.0 && pulse < 1.0 {
         let grow = (4.0 + 26.0 * ease_out_cubic(pulse)) * k;
@@ -312,10 +471,10 @@ fn draw(canvas: &mut MenuCanvas, kind: &'static Kind, t: f32, viewport: [f32; 2]
             rect: grown(card, grow, 0.0),
             radius: RADIUS * k + grow,
             width: (2.0 * (1.0 - pulse) + 0.5) * k,
-            color: color::alpha(color::GOLD_BRIGHT, 0.6 * (1.0 - pulse).powi(3)),
+            color: color::alpha(light, 0.6 * (1.0 - pulse).powi(3)),
         });
     }
-    // The card: deep navy washed with the category's colour from the left.
+    // The card: deep navy washed with the unlock's colour from the left.
     let _ = list.push(DrawCommand::RoundedRect {
         rect: card,
         radius: RADIUS * k,
@@ -336,9 +495,9 @@ fn draw(canvas: &mut MenuCanvas, kind: &'static Kind, t: f32, viewport: [f32; 2]
         rect: card,
         radius: RADIUS * k,
         width: 1.5 * k,
-        color: color::alpha(color::GOLD, 0.55 + 0.4 * flash),
+        color: color::alpha(unlock.edge(), 0.55 + 0.4 * flash),
     });
-    // A gold rule along the card's top, brightest at its middle.
+    // A rule of the light along the card's top, brightest at its middle.
     let rule = Rect::new(
         card.x + 40.0 * k,
         card.y,
@@ -346,15 +505,11 @@ fn draw(canvas: &mut MenuCanvas, kind: &'static Kind, t: f32, viewport: [f32; 2]
         k.max(1.0),
     );
     for (half, start, end) in [
-        (
-            rule,
-            color::alpha(color::GOLD_BRIGHT, 0.0),
-            color::GOLD_BRIGHT,
-        ),
+        (rule, color::alpha(light, 0.0), light),
         (
             Rect::new(rule.right(), rule.y, rule.width, rule.height),
-            color::GOLD_BRIGHT,
-            color::alpha(color::GOLD_BRIGHT, 0.0),
+            light,
+            color::alpha(light, 0.0),
         ),
     ] {
         let _ = list.push(DrawCommand::GradientRect {
@@ -382,7 +537,7 @@ fn draw(canvas: &mut MenuCanvas, kind: &'static Kind, t: f32, viewport: [f32; 2]
                 radius * 2.0,
             ),
             radius,
-            color: color::alpha(color::GOLD_BRIGHT, alpha * (0.45 + 1.4 * burst)),
+            color: color::alpha(light, alpha * (0.45 + 1.4 * burst)),
         });
     }
     // A ring of light running out from the medallion.
@@ -394,7 +549,7 @@ fn draw(canvas: &mut MenuCanvas, kind: &'static Kind, t: f32, viewport: [f32; 2]
             width: (5.0 * (1.0 - wave) + 1.0) * k,
             start: 0.0,
             sweep: TAU,
-            color: color::alpha(color::GOLD_BRIGHT, 0.85 * (1.0 - wave).powf(1.5)),
+            color: color::alpha(light, 0.85 * (1.0 - wave).powf(1.5)),
             knockout: None,
         });
     }
@@ -423,7 +578,7 @@ fn draw(canvas: &mut MenuCanvas, kind: &'static Kind, t: f32, viewport: [f32; 2]
                     if back == 0.0 {
                         Color::new(1.0, 0.96, 0.85, 1.0)
                     } else {
-                        color::GOLD_BRIGHT
+                        light
                     },
                     fade * dim,
                 ),
@@ -431,18 +586,9 @@ fn draw(canvas: &mut MenuCanvas, kind: &'static Kind, t: f32, viewport: [f32; 2]
         }
     }
 
-    // The medallion, its gold ring sweeping round as the card comes in.
+    // The medallion, its ring sweeping round as the card comes in.
     let sweep = ease_in_out_cubic(span(t, 0.08, 0.7));
-    medallion::draw(
-        canvas,
-        Medallion {
-            kind,
-            centre,
-            radius: medal,
-            fraction: sweep,
-            done: true,
-        },
-    );
+    emblem(canvas, unlock, centre, medal, sweep);
     let list = canvas.draw_list_mut();
     if sweep > 0.0 && sweep < 1.0 {
         // The sweep's bright head.
@@ -477,7 +623,7 @@ fn draw(canvas: &mut MenuCanvas, kind: &'static Kind, t: f32, viewport: [f32; 2]
                 radius * 2.0,
             ),
             radius,
-            color: color::alpha(color::GOLD_BRIGHT, 0.45 * (1.0 - closed).powi(2)),
+            color: color::alpha(light, 0.45 * (1.0 - closed).powi(2)),
         });
     }
     // A glint crossing the card once the ring has closed.
@@ -512,26 +658,29 @@ fn draw(canvas: &mut MenuCanvas, kind: &'static Kind, t: f32, viewport: [f32; 2]
         let _ = list.push(DrawCommand::PopClip);
     }
 
-    // The words: the kicker and the category, the name, what it asked.
+    // The words: the kicker and its tag, the name, the line under it.
     let column = |y: f32, height: f32| {
         let [x, y] = at(TEXT_X, y);
         Rect::new(x, y, TEXT_WIDTH * k, height * k)
     };
     spaced(
         canvas,
-        format_args!("{KICKER}"),
+        format_args!("{}", unlock.kicker()),
         column(12.0, 24.0),
-        15.0 * k,
+        KICKER_SIZE * k,
         color::GOLD,
-        2.6 * k,
+        KICKER_SPACING * k,
     );
     text(
         canvas,
         TextFamily::Display,
-        format_args!("{}", kind.category.name()),
+        format_args!("{}", unlock.tag()),
         column(12.0, 24.0),
-        15.0 * k,
-        color::alpha(hue, 0.9),
+        TAG_SIZE * k,
+        match unlock {
+            Unlock::Achievement(_) => color::alpha(hue, 0.9),
+            _ => color::MUTED,
+        },
         FontWeight::Regular,
         TextAlign::End,
     );
@@ -540,17 +689,17 @@ fn draw(canvas: &mut MenuCanvas, kind: &'static Kind, t: f32, viewport: [f32; 2]
     text(
         canvas,
         TextFamily::Display,
-        format_args!("{}", kind.name),
+        format_args!("{}", unlock.name()),
         column(36.0, 40.0),
         NAME_SIZE * k,
-        color::GOLD_BRIGHT,
+        light,
         FontWeight::Semibold,
         TextAlign::Start,
     );
     text(
         canvas,
         TextFamily::Body,
-        format_args!("{}", kind.description),
+        format_args!("{}", unlock.description()),
         column(78.0, 24.0),
         DESCRIPTION_SIZE * k,
         color::TEXT,
@@ -560,6 +709,82 @@ fn draw(canvas: &mut MenuCanvas, kind: &'static Kind, t: f32, viewport: [f32; 2]
     canvas.pop_opacity();
     canvas.pop_opacity();
     canvas.finish(0);
+}
+
+/// Draw what `unlock` brought in the circle of `radius` round `centre`, its ring `sweep`
+/// of the way round: an achievement's medallion, a medal's medallion picture, a holocron's
+/// icon (its gem where the icon is missing), each in a lit disc.
+fn emblem(canvas: &mut MenuCanvas, unlock: Unlock, centre: [f32; 2], radius: f32, sweep: f32) {
+    let (picture, gem_colour) = match unlock {
+        Unlock::Achievement(kind) => {
+            medallion::draw(
+                canvas,
+                Medallion {
+                    kind,
+                    centre,
+                    radius,
+                    fraction: sweep,
+                    done: true,
+                },
+            );
+            return;
+        }
+        Unlock::Medal { medal, .. } => (Some((medal.icon(), 0.94)), None),
+        Unlock::Holocron { tier, .. } => {
+            if icons::is_loaded(tier.index) {
+                (Some((icons::texture(tier.index), 1.12)), None)
+            } else {
+                (None, Some(tier.colour))
+            }
+        }
+    };
+    // The medallion's line widths at this size.
+    let k = radius / MEDAL_RADIUS;
+    let disc = |radius: f32| {
+        Rect::new(
+            centre[0] - radius,
+            centre[1] - radius,
+            radius * 2.0,
+            radius * 2.0,
+        )
+    };
+    let list = canvas.draw_list_mut();
+    let _ = list.push(DrawCommand::RoundedRect {
+        rect: disc(radius),
+        radius,
+        color: color::alpha(unlock.hue(), 0.24),
+    });
+    if let Some((texture, scale)) = picture {
+        let _ = list.push(DrawCommand::TexturedQuad {
+            rect: disc(radius * scale),
+            texture,
+            color: Color::new(1.0, 1.0, 1.0, 1.0),
+        });
+    }
+    if let Some(colour) = gem_colour {
+        gem::draw(list, centre, radius * 0.62, colour, 1.0, gem::ROWS);
+    }
+    // The ring, as the medallion's: a faint whole one and the light's sweeping over it.
+    let _ = list.push(DrawCommand::Arc {
+        center: centre,
+        radius,
+        width: 3.0 * k,
+        start: 0.0,
+        sweep: TAU,
+        color: color::alpha(color::HOLO, 0.16),
+        knockout: None,
+    });
+    if sweep > 0.0 {
+        let _ = list.push(DrawCommand::Arc {
+            center: centre,
+            radius,
+            width: 4.0 * k,
+            start: -FRAC_PI_2,
+            sweep: TAU * sweep.min(1.0),
+            color: unlock.light(),
+            knockout: None,
+        });
+    }
 }
 
 /// `rect` grown by `by` on every side and moved `down`.
@@ -610,13 +835,13 @@ fn spaced(
 }
 
 #[cfg(test)]
-impl AchievementToast {
-    /// Show `kinds` one after another, the first held `at` seconds after it began,
+impl UnlockToast {
+    /// Show `unlocks` one after another, the first held `at` seconds after it began,
     /// for the off-screen shots.
-    pub(crate) fn preview(kinds: &[&'static Kind], at: f32) -> Self {
+    pub(crate) fn preview(unlocks: &[Unlock], at: f32) -> Self {
         let mut toast = Self::default();
-        for kind in kinds {
-            toast.push(kind);
+        for unlock in unlocks {
+            toast.push(*unlock);
         }
         toast.held = Some(at);
         let _ = toast.update(Instant::now(), true, false);
@@ -625,11 +850,10 @@ impl AchievementToast {
 }
 
 impl crate::GpuState {
-    /// Move the achievement pop-up on and lay it out over the frame unless
-    /// `covered` (the console over the frame, the medal pop-up); returns whether it
-    /// draws this frame.
-    pub(crate) fn append_achievement_toast(&mut self, viewport: [f32; 2], covered: bool) -> bool {
-        if self.achievement_toast.pending() == 0 {
+    /// Move the unlock pop-up on and lay it out over the frame unless `covered` (the
+    /// console over the frame, a large pop-up); returns whether it draws this frame.
+    pub(crate) fn append_unlock_toast(&mut self, viewport: [f32; 2], covered: bool) -> bool {
+        if self.unlock_toast.pending() == 0 {
             return false;
         }
         let console_open = self
@@ -643,13 +867,13 @@ impl crate::GpuState {
             .unwrap_or(true);
         let now = Instant::now();
         if !self
-            .achievement_toast
+            .unlock_toast
             .update(now, !covered && !console_open, sound)
         {
             return false;
         }
-        self.achievement_toast.build(viewport, now);
-        self.achievement_toast.append_text(
+        self.unlock_toast.build(viewport, now);
+        self.unlock_toast.append_text(
             self.game_fonts.sjk(),
             &mut self.text_vertices,
             &self.ui_font,
@@ -663,15 +887,56 @@ impl crate::GpuState {
 mod tests {
     use super::*;
     use crate::achievements::{self, ALL};
+    use crate::holocrons::TIERS;
 
-    fn kind(id: &str) -> &'static Kind {
-        achievements::find(id).expect("an achievement")
+    fn kind(id: &str) -> Unlock {
+        Unlock::Achievement(achievements::find(id).expect("an achievement"))
+    }
+
+    fn medal(medal: Medal, count: u32) -> Unlock {
+        Unlock::Medal { medal, count }
+    }
+
+    fn holocron(id: u64, tier: usize) -> Unlock {
+        Unlock::Holocron {
+            tier: &TIERS[tier],
+            id,
+            gift: false,
+        }
+    }
+
+    /// The name of the unlock showing.
+    fn shown(toast: &UnlockToast) -> Option<String> {
+        toast
+            .current
+            .map(|showing| showing.unlock.name().to_string())
+    }
+
+    /// Every unlock a card can show: each achievement, each medal once and given many
+    /// times, each tier dropped and given.
+    fn every_unlock() -> Vec<Unlock> {
+        let mut unlocks: Vec<Unlock> = ALL.iter().map(Unlock::Achievement).collect();
+        for each in Medal::ALL {
+            unlocks.push(medal(each, 1));
+            if each.repeatable() {
+                unlocks.push(medal(each, 128));
+            }
+        }
+        for (index, tier) in TIERS.iter().enumerate() {
+            unlocks.push(holocron(index as u64, index));
+            unlocks.push(Unlock::Holocron {
+                tier,
+                id: 100 + index as u64,
+                gift: true,
+            });
+        }
+        unlocks
     }
 
     #[test]
     fn unlocks_queue_and_show_one_after_another_each_with_its_sound() {
         ui_cues::take_posted();
-        let mut toast = AchievementToast::default();
+        let mut toast = UnlockToast::default();
         toast.push(kind("first_blood"));
         toast.push(kind("streak_5"));
         toast.push(kind("first_blood"));
@@ -681,20 +946,18 @@ mod tests {
         assert_eq!(ui_cues::take_posted(), [Cue::Achievement]);
         toast.push(kind("first_blood"));
         assert_eq!(toast.pending(), 2, "nor the one showing");
+        let first = shown(&toast);
         let after = |seconds: f32| start + Duration::from_secs_f32(seconds);
         for seconds in [0.1, 1.0, 3.0, LIFETIME - 0.01] {
             assert!(toast.update(after(seconds), true, true));
-            assert_eq!(
-                toast.current.map(|shown| shown.kind.id),
-                Some("first_blood")
-            );
+            assert_eq!(shown(&toast), first);
         }
         assert!(ui_cues::take_posted().is_empty(), "one sound per pop-up");
         // Gone, and the next waits out the pause.
         assert!(!toast.update(after(LIFETIME), true, true));
         assert!(!toast.update(after(LIFETIME + 0.1), true, true));
         assert!(toast.update(after(LIFETIME + 0.35), true, true));
-        assert_eq!(toast.current.map(|shown| shown.kind.id), Some("streak_5"));
+        assert_eq!(shown(&toast), Some(kind("streak_5").name().to_string()));
         assert_eq!(ui_cues::take_posted(), [Cue::Achievement]);
         let end = LIFETIME * 2.0 + 0.4;
         assert!(!toast.update(after(end), true, true));
@@ -704,7 +967,7 @@ mod tests {
     #[test]
     fn a_covered_screen_holds_the_queue_and_the_sound_can_be_off() {
         ui_cues::take_posted();
-        let mut toast = AchievementToast::default();
+        let mut toast = UnlockToast::default();
         toast.push(kind("maps_10"));
         let now = Instant::now();
         assert!(!toast.update(now, false, true));
@@ -714,9 +977,78 @@ mod tests {
         assert!(ui_cues::take_posted().is_empty(), "cg_achievementSound 0");
     }
 
+    /// Medals and holocrons queue with the achievements, each with the chime; a medal
+    /// given again is a new arrival, the same holocron is not.
+    #[test]
+    fn medals_and_holocrons_queue_with_the_achievements() {
+        ui_cues::take_posted();
+        let mut toast = UnlockToast::default();
+        toast.push(medal(Medal::BugHunter, 1));
+        toast.push(holocron(7, 2));
+        toast.push(kind("first_blood"));
+        toast.push(medal(Medal::BugHunter, 2));
+        toast.push(holocron(7, 2));
+        toast.push(medal(Medal::BugHunter, 1));
+        assert_eq!(toast.pending(), 4);
+        let start = Instant::now();
+        assert!(toast.update(start, true, true));
+        assert_eq!(shown(&toast).as_deref(), Some("Bug Hunter"));
+        assert_eq!(ui_cues::take_posted(), [Cue::Achievement]);
+        let next = start + Duration::from_secs_f32(LIFETIME);
+        assert!(!toast.update(next, true, true));
+        assert!(toast.update(next + GAP, true, true));
+        assert_eq!(shown(&toast).as_deref(), Some("Legendary Holocron"));
+        assert_eq!(ui_cues::take_posted(), [Cue::Achievement]);
+    }
+
+    /// The large pop-up opening takes back its own kind's cards, the one showing too,
+    /// and leaves the others.
+    #[test]
+    fn a_large_pop_up_takes_its_cards_back() {
+        let mut toast = UnlockToast::default();
+        toast.push(holocron(3, 0));
+        toast.push(medal(Medal::EarlyTester, 1));
+        toast.push(kind("first_blood"));
+        toast.push(holocron(4, 1));
+        let now = Instant::now();
+        assert!(toast.update(now, true, false));
+        toast.withdraw(now, |unlock| matches!(unlock, Unlock::Holocron { .. }));
+        assert!(toast.current.is_none(), "the holocron showing went");
+        assert_eq!(toast.pending(), 2);
+        toast.withdraw(now, |unlock| matches!(unlock, Unlock::Medal { .. }));
+        assert_eq!(toast.pending(), 1);
+        assert!(toast.update(now + GAP, true, false));
+        assert_eq!(shown(&toast), Some(kind("first_blood").name().to_string()));
+    }
+
+    #[test]
+    fn the_words_of_medals_and_holocrons() {
+        let bug_hunter = medal(Medal::BugHunter, 3);
+        assert_eq!(bug_hunter.kicker(), "NEW MEDAL");
+        assert_eq!(bug_hunter.name().to_string(), "Bug Hunter x3");
+        assert_eq!(bug_hunter.tag(), MENU_HINT);
+        assert_eq!(
+            medal(Medal::EarlyTester, 1).name().to_string(),
+            "Early Tester"
+        );
+        let mythical = holocron(9, 3);
+        assert_eq!(mythical.kicker(), "NEW HOLOCRON");
+        assert_eq!(
+            mythical.description().to_string(),
+            "Found while playing: 1.5% of drops are Mythical"
+        );
+        let gift = Unlock::Holocron {
+            tier: &TIERS[0],
+            id: 1,
+            gift: true,
+        };
+        assert_eq!(gift.description().to_string(), "A gift from the SJK team");
+        assert_eq!(kind("streak_5").tag(), "Combat");
+    }
+
     #[test]
     fn nothing_is_drawn_while_idle() {
-        let mut toast = AchievementToast::default();
+        let mut toast = UnlockToast::default();
         assert!(!toast.update(Instant::now(), true, true));
         toast.build([1920.0, 1080.0], Instant::now());
         assert!(toast.draw_list().is_empty());
@@ -742,10 +1074,10 @@ mod tests {
         assert!(Moment::at(LIFETIME).alpha.abs() < 1e-4);
     }
 
-    /// Every achievement, at every moment, fits the canvas and the screen at 1080
-    /// lines, 4K, 4:3 and 21:9, its words its column in the families and in Inter.
+    /// Every unlock, at every moment, fits the canvas and the screen at 1080 lines, 4K,
+    /// 4:3 and 21:9, its words its column in the families and in Inter.
     #[test]
-    fn every_achievement_fits_the_canvas() {
+    fn every_unlock_fits_the_canvas() {
         let load = |family| crate::text::load_family(family, 1.0, None).expect("a family");
         let display = load(&crate::text::DISPLAY);
         let body = load(&crate::text::BODY);
@@ -755,18 +1087,27 @@ mod tests {
         };
         let semibold = crate::text::TextFace::Semibold;
         let regular = crate::text::TextFace::Regular;
+        let unlocks = every_unlock();
         for (title, words) in [(&display.font, &body.font), (&inter.font, &inter.font)] {
-            let kicker = width(title, KICKER, 15.0, semibold, 2.6);
-            for kind in &ALL {
-                let category = width(title, kind.category.name(), 15.0, regular, 0.0);
-                assert!(kicker + 16.0 + category <= TEXT_WIDTH, "{}", kind.id);
-                let name = width(title, kind.name, NAME_SIZE, semibold, 0.0);
-                assert!(name <= TEXT_WIDTH, "{}: {name}", kind.name);
-                let description = width(words, kind.description, DESCRIPTION_SIZE, regular, 0.0);
+            for unlock in &unlocks {
+                let kicker = width(
+                    title,
+                    unlock.kicker(),
+                    KICKER_SIZE,
+                    semibold,
+                    KICKER_SPACING,
+                );
+                let tag = width(title, unlock.tag(), TAG_SIZE, regular, 0.0);
+                assert!(kicker + 16.0 + tag <= TEXT_WIDTH, "{unlock:?}");
+                let name = unlock.name().to_string();
+                let name_width = width(title, &name, NAME_SIZE, semibold, 0.0);
+                assert!(name_width <= TEXT_WIDTH, "{name}: {name_width}");
+                let description = unlock.description().to_string();
+                assert!(description.len() <= 96, "{description}: one text slot");
+                let description_width = width(words, &description, DESCRIPTION_SIZE, regular, 0.0);
                 assert!(
-                    description <= TEXT_WIDTH,
-                    "{}: {description}",
-                    kind.description
+                    description_width <= TEXT_WIDTH,
+                    "{description}: {description_width}"
                 );
             }
         }
@@ -777,11 +1118,11 @@ mod tests {
             [2560.0, 1080.0],
             [800.0, 600.0],
         ] {
-            for kind in &ALL {
+            for unlock in &unlocks {
                 for t in [0.05, 0.3, 0.6, 1.0, 3.0, ENTER + HOLD + 0.3] {
-                    let mut toast = AchievementToast::preview(&[kind], t);
+                    let mut toast = UnlockToast::preview(&[*unlock], t);
                     toast.build(viewport, Instant::now());
-                    assert!(!toast.canvas.overflowed(), "{} {t} {viewport:?}", kind.id);
+                    assert!(!toast.canvas.overflowed(), "{unlock:?} {t} {viewport:?}");
                     let card = card_rect(viewport, t);
                     assert!(
                         card.x >= 0.0 && card.right() <= viewport[0] && card.y >= 0.0,

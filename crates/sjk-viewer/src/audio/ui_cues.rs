@@ -1,6 +1,6 @@
 //! Interface sound cues: hover, click and back posted by every menu canvas as
 //! it routes input, the stage model's saber throw and catch posted by the
-//! menu stage, the quick wheel's page, move and run cues, the achievement
+//! menu stage, the quick wheel's page, move and run cues, the unlock
 //! pop-up's chime, the new medal's fanfare and the SJK chat's sound for a new
 //! message, all played once per frame by the audio owner.
 //!
@@ -31,7 +31,8 @@ pub(crate) enum Cue {
     WheelMove = 64,
     /// The quick wheel ran the chosen choice.
     WheelRun = 128,
-    /// An achievement's pop-up appeared (`achievement_toast.rs`).
+    /// An unlock pop-up appeared (`unlock_toast.rs`): an achievement, or a medal or
+    /// holocron in a match.
     Achievement = 256,
     /// A new medal began its entrance on the medal pop-up (`medal_popup.rs`).
     Medal = 512,
@@ -53,10 +54,10 @@ pub(crate) enum Cue {
 /// power screen also plays as powers are picked (`ui/ingameforceselect.menu`);
 /// a run is `button1`, the menus' button press.
 ///
-/// An achievement plays `secret_area`, the single-player game's sound for a
-/// secret area found: its game module (`jagamex86.dll`) plays it with the
-/// `@SP_INGAME_SECRET_AREA` centre print. Its file is in the shared
-/// `assets0.pk3`, so a multiplayer install has it.
+/// An unlock card (an achievement's, or a medal's or holocron's in a match) plays
+/// `secret_area`, the single-player game's sound for a secret area found: its game
+/// module (`jagamex86.dll`) plays it with the `@SP_INGAME_SECRET_AREA` centre print.
+/// Its file is in the shared `assets0.pk3`, so a multiplayer install has it.
 ///
 /// A medal, rarer and given by hand, plays the multiplayer game's own fanfare:
 /// `music/goodsmall.mp3`, which its cgame registers as `cgs.media.happyMusic`
