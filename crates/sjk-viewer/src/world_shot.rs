@@ -2767,12 +2767,43 @@ like this one.",
         });
     }
 
-    /// The SJK chat page over the live duel6 with its who-is-online window, on made-up
-    /// players: a hub that lists them (some playing, more than the window holds, a long
-    /// name, the recently seen), then the card of a player in the window under the
-    /// pointer, a chosen message under the window, and a hub that does not list them
-    /// (the count and the last senders). At 1080p with the plain text style and at 4K
-    /// with Sol's (`ui_textScale 1.2`).
+    /// A made-up profile picture for a world shot, [`sjk_identity::avatar::SIZE`]
+    /// square: a head and shoulders in a light tone over a gradient between `top` and
+    /// `bottom` (RGB).
+    fn shot_picture(top: [u8; 3], bottom: [u8; 3], figure: [u8; 3]) -> Vec<u8> {
+        let size = sjk_identity::avatar::SIZE;
+        let mut rgba = Vec::with_capacity((size * size * 4) as usize);
+        let edge = size as f32;
+        for y in 0..size {
+            for x in 0..size {
+                let t = y as f32 / edge;
+                let mut colour = [0u8; 3];
+                for channel in 0..3 {
+                    colour[channel] = (f32::from(top[channel]) * (1.0 - t)
+                        + f32::from(bottom[channel]) * t)
+                        as u8;
+                }
+                let (fx, fy) = (x as f32 / edge - 0.5, y as f32 / edge);
+                let head = fx * fx + (fy - 0.4) * (fy - 0.4) < 0.17 * 0.17;
+                let shoulders =
+                    fy > 0.68 && fx * fx / 0.16 + (fy - 1.02) * (fy - 1.02) / 0.12 < 1.0;
+                if head || shoulders {
+                    colour = figure;
+                }
+                rgba.extend_from_slice(&[colour[0], colour[1], colour[2], 255]);
+            }
+        }
+        rgba
+    }
+
+    /// The SJK chat page over the live duel6 with its who-is-online window of faces, on
+    /// made-up players, some with pictures (made up too, put in the picture cache) and
+    /// some with only their initial: a hub that lists them (some playing, a long name,
+    /// the recently seen), then the card of a player in the window under the pointer,
+    /// the card of a recent one, a chosen message under the window, a crowd too big for
+    /// the window (its last face "+N"), and a hub that does not list them (the count
+    /// and the last senders). At 1080p with the plain text style and at 4K with Sol's
+    /// (`ui_textScale 1.2`).
     #[test]
     #[ignore = "renders with the GPU and the installed game data named by JKA_GAME_DATA"]
     fn duel6_sjk_chat_page() {
@@ -2837,7 +2868,47 @@ like this one.",
                 playing,
                 ..sjk_identity::Person::default()
             };
-        let listed = sjk_identity::ChatState {
+        // Pictures for Sol, Creyon, Mara and Lumaya; the others show their initial.
+        let pictures = [
+            (
+                "44f3d0b36c9b2510",
+                [0x2a, 0x1c, 0x3c],
+                [0xb0, 0x4a, 0x2a],
+                [0xf2, 0xc9, 0x8a],
+            ),
+            (
+                "9a0c51e2b7d34f80",
+                [0x12, 0x3a, 0x52],
+                [0x1c, 0x8a, 0x9a],
+                [0xe6, 0xf2, 0xf6],
+            ),
+            (
+                "3e4f5a6b7c8d9e0f",
+                [0x3c, 0x24, 0x10],
+                [0x9a, 0x72, 0x2c],
+                [0x2a, 0x1a, 0x10],
+            ),
+            (
+                "1f2e3d4c5b6a7980",
+                [0x46, 0x3a, 0x08],
+                [0xe0, 0xb8, 0x3a],
+                [0x3a, 0x22, 0x40],
+            ),
+        ];
+        for (key, top, bottom, figure) in pictures {
+            crate::avatars::insert_for_shot(
+                key,
+                "0a1b2c3d4e5f6a7b",
+                &shot_picture(top, bottom, figure),
+            );
+        }
+        let pictured = |mut person: sjk_identity::Person| {
+            if pictures.iter().any(|(key, ..)| *key == person.key_id) {
+                person.avatar = "0a1b2c3d4e5f6a7b".to_owned();
+            }
+            person
+        };
+        let mut listed = sjk_identity::ChatState {
             messages,
             revision: 1,
             online: 7,
@@ -2868,15 +2939,60 @@ like this one.",
             outcome: None,
             loaded: Some(1),
         };
+        if let Some(people) = listed.people.as_mut() {
+            for person in people.online.iter_mut().chain(people.recent.iter_mut()) {
+                *person = pictured(std::mem::take(person));
+            }
+        }
         let unlisted = sjk_identity::ChatState {
             people: None,
             ..listed.clone()
         };
+        // More than the window holds: its last face counts the rest.
+        let mut crowd = listed.clone();
+        crowd.online = 31;
+        if let Some(people) = crowd.people.as_mut() {
+            let names = [
+                "Revan",
+                "^3Bastila",
+                "Carth",
+                "^1Malak",
+                "Mission",
+                "Zaalbar",
+                "Jolee",
+                "^5Juhani",
+                "HK-47",
+                "Canderous",
+                "T3",
+                "^2Atton",
+                "Kreia",
+                "Mira",
+                "^6Brianna",
+                "Mical",
+                "Bao-Dur",
+                "Visas",
+                "^4Mandalore",
+                "Kaah",
+                "Tavion",
+                "Desann",
+                "Galak",
+                "Reelo",
+            ];
+            for (index, name) in names.iter().enumerate() {
+                people.online.push(person(
+                    &format!("{:016x}", 0xc0de_0000 + index),
+                    name,
+                    10,
+                    index % 5 == 0,
+                    false,
+                ));
+            }
+        }
         for (size, scale, suffix) in [
             ([1920, 1080], None, "1080p"),
             ([3840, 2160], Some("1.2"), "4k-styled"),
         ] {
-            let (listed, unlisted) = (listed.clone(), unlisted.clone());
+            let (listed, unlisted, crowd) = (listed.clone(), unlisted.clone(), crowd.clone());
             on_big_stack(move || {
                 let menu = menu::ClientMenu::new(true, String::new());
                 let mut cvars = vec![
@@ -2896,17 +3012,29 @@ like this one.",
                 }
                 let name = format!("duel6-sjk-chat-online-{suffix}");
                 println!("{}", shoot(&mut gpu, 6, &name).display());
-                // Fox's card, from the window (playing first, then by name: the second row).
+                // Creyon's card, from the window (playing first, then by name: the first
+                // face), with a picture.
                 if let Some(console) = gpu.console.as_mut() {
-                    console.sjk_chat_hover_person(Some(1));
+                    console.sjk_chat_hover_person(Some(0));
                 }
                 let name = format!("duel6-sjk-chat-online-card-{suffix}");
+                println!("{}", shoot(&mut gpu, 6, &name).display());
+                // Lumaya's, the first recent face: when she was seen.
+                if let Some(console) = gpu.console.as_mut() {
+                    console.sjk_chat_hover_person(Some(7));
+                }
+                let name = format!("duel6-sjk-chat-online-card-recent-{suffix}");
                 println!("{}", shoot(&mut gpu, 6, &name).display());
                 if let Some(console) = gpu.console.as_mut() {
                     console.preview_sjk_chat(listed.clone(), Some(4));
                     console.sjk_chat_hover_person(None);
                 }
                 let name = format!("duel6-sjk-chat-online-chosen-{suffix}");
+                println!("{}", shoot(&mut gpu, 6, &name).display());
+                if let Some(console) = gpu.console.as_mut() {
+                    console.preview_sjk_chat(crowd.clone(), None);
+                }
+                let name = format!("duel6-sjk-chat-online-crowd-{suffix}");
                 println!("{}", shoot(&mut gpu, 6, &name).display());
                 if let Some(console) = gpu.console.as_mut() {
                     console.preview_sjk_chat(unlisted.clone(), None);

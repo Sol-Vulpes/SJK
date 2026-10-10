@@ -110,6 +110,7 @@ impl ChatOverlay {
                     avatar: mark.as_ref().map(|mark| mark.avatar.clone()),
                     medals: mark.map(|mark| mark.medals).unwrap_or_default(),
                     place,
+                    note: None,
                 }
             }
             Who::Player(target) => {
@@ -134,6 +135,7 @@ impl ChatOverlay {
                     },
                     avatar: mark.as_ref().map(|mark| mark.avatar.clone()),
                     medals: mark.map(|mark| mark.medals).unwrap_or_default(),
+                    note: None,
                 }
             }
         };

@@ -84,6 +84,30 @@ tests (catalogue, groups, help text) and the world shot `duel6_sjk_menu` (Interf
 shows the Console feed switch, off), re-rendered and looked at; not tried in a game:
 the top left staying empty with the switch off and filling with it on.
 
+## SJK chat page: faces in the who-is-online window
+
+Branch `personal/chat-faces` (10/10/2026, based on `a74f5cf4`, Windows 11), Sol's
+feedback on the window below: "we can show who's online with a little circle with their
+profile picture in it, maybe just that actually (and the letter if no picture), with
+mouse hover to see the profile card". The window's rows of names became faces: the hub
+picture from the picture cache or the name's first letter on the player's stand-in
+colour, a gold dot for a player in a match, online faces wrapping nine to a row (two rows,
+the last face "+N" beyond 18), recent ones smaller and dimmed in one row (up to eight, the
+fallback's last senders too), muted ones greyed; when they were seen moved to the sender
+card's new note line. The window shrinks to its faces and Chosen message follows it. The
+fallback's faces look up their picture versions after the frame, as the card does. The
+canvas knows the target under a resting pointer by its place in the frame's list, so when
+the faces change the page looks again for what the pointer rests on (without it, the
+field's place lit a face and showed its card). Verified by unit tests (the grid's columns,
+centres, heights and "+N" split; the letter; faces inside the window, not touching, no time
+written; the window shrinking and Chosen message moving up; fit at 1080p, 4K, 4:3, 21:9,
+1440p and 1024x768 with whole-pixel discs at 4K; hover at a face's centre, none in the gap,
+the card's note, the gold ring, the muted grey, click; picture lookups for senders; the
+resting pointer) and the world shot `duel6_sjk_chat_page` (listed, a face's card, a recent
+face's card, chosen, a crowd with "+14", unlisted; 1080p and 4K with `ui_textScale 1.2`; four
+made-up pictures put in the cache), looked at. Not tried in a game, with real pictures from
+the hub or against a hub that sends `people`.
+
 ## SJK chat page: who is online
 
 Branch `personal/chat-online` (10/10/2026, based on `c378cabb`, Windows 11), Sol's
