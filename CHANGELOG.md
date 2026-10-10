@@ -21,7 +21,7 @@ Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 ## Unreleased
 
 - Fixed a server map change that could leave SJK unable to join again or make it close: it kept reloading the menu map in a loop while reconnecting _(Sol)_
-- No more hitch when some players' models appear: their shaders are prepared in the background first _(Sol)_
+- No more hitch when some players' models appear: their shaders and textures are prepared in the background first _(Sol)_
 
 ## 2026.1010.3 (Alpha) | 10/10/2026
 

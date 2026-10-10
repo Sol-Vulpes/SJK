@@ -405,6 +405,14 @@ cost 30 to 85 ms in one frame in Sol's 10/10/2026 logs (3 to 6 ms a pipeline); t
 pipelines are now compiled on first use like the others. Hilts, NPCs and models a
 server names later still compile on the render thread.
 
+The same worker also builds the model's texture mip chains (`warm_entity_materials`
+with `mipmapped`), and the render thread uploads them under their material keys
+(`Runtime::upload_prepared_textures`) before appending the materials, as the map
+loader does (`world_texture_prepare.rs`). Built on the render thread, a chain cost
+6.5 ms for a 1024x1024 texture and 25 ms for a 2048x2048 one (release build): 56 and
+182 ms hitches for two player models in Sol's log, with their pipelines already off
+the thread.
+
 ## Graphics reload
 
 The settings read only when the graphics context is made (`r_sceneHdr`, `r_fxaa`,

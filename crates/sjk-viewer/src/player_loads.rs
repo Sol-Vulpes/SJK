@@ -24,6 +24,8 @@ pub(crate) struct Loaded {
     pub(crate) cache: GlaCache,
     /// Why the requested model could not be loaded; Kyle stands in.
     pub(crate) failed: Option<String>,
+    /// Its textures' mip chains, built here.
+    pub(crate) textures: Vec<crate::world_materials::PreparedTexture>,
 }
 
 type Prepared = Result<Loaded, String>;
@@ -67,6 +69,7 @@ pub(crate) struct Sources {
     pub(crate) shaders: Arc<ShaderCatalog>,
     pub(crate) lightmap: wgpu::TextureView,
     pub(crate) cache: GlaCache,
+    pub(crate) mipmapped: bool,
 }
 
 impl Loads {
@@ -181,6 +184,7 @@ fn prepare(request: Request, sources: Sources) -> Prepared {
         shaders,
         lightmap,
         mut cache,
+        mipmapped,
     } = sources;
     let mut load = |appearance: &Appearance| {
         load_player_appearance_with(
@@ -212,12 +216,19 @@ fn prepare(request: Request, sources: Sources) -> Prepared {
         request.saber_names,
     )
     .map_err(|error| error.to_string())?;
-    crate::world_materials::warm_entity_materials(&vfs, &shaders, &lightmap, &scene.materials);
+    let textures = crate::world_materials::warm_entity_materials(
+        &vfs,
+        &shaders,
+        &lightmap,
+        &scene.materials,
+        mipmapped,
+    );
     Ok(Loaded {
         mesh,
         scene,
         cache,
         failed,
+        textures,
     })
 }
 
@@ -229,6 +240,7 @@ impl GpuState {
             shaders: Arc::clone(&self.shaders),
             lightmap: self.world_materials.entity_lightmap(),
             cache: self.clientinfo_watch.gla_cache.clone(),
+            mipmapped: self.world_materials.mipmapped(),
         })
     }
 
@@ -270,6 +282,8 @@ impl GpuState {
             ));
             self.clientinfo_watch.failed.insert(appearance.clone());
         }
+        self.world_materials
+            .upload_prepared_textures(&self.device, &self.queue, loaded.textures);
         let (mesh, jobs) =
             match self.upload_built_actor_deferred(loaded.mesh, loaded.scene, &appearance) {
                 Ok(uploaded) => uploaded,

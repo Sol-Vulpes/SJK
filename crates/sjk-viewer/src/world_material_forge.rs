@@ -663,15 +663,21 @@ pub(super) fn compile_profile() -> [u64; 2] {
 /// nothing: their images land decoded in the process cache
 /// ([`crate::decoded_image_cache`]), so the append that follows on the render thread
 /// only uploads. Run on a worker; a failure is left for the append to report.
+///
+/// With `mipmapped`, the textures' mip chains are built too and returned, for
+/// [`Runtime::upload_prepared_textures`]: resizing a model's textures down to one texel
+/// on the render thread cost 50 to 180 ms for some player models.
 pub(crate) fn warm_entity_materials(
     vfs: &VirtualFileSystem,
     shaders: &ShaderCatalog,
     lightmap: &wgpu::TextureView,
     materials: &[ViewerMaterial],
-) {
+    mipmapped: bool,
+) -> Vec<PreparedTexture> {
     let mut image_cache = ImageCache::with_capacity(64);
+    let mut prepared: Vec<PreparedTexture> = Vec::new();
     for key in materials {
-        let _ = compile_material(
+        let Ok(material) = compile_material(
             vfs,
             shaders,
             key,
@@ -680,6 +686,77 @@ pub(crate) fn warm_entity_materials(
             Default::default(),
             &mut image_cache,
             false,
-        );
+        ) else {
+            continue;
+        };
+        if !mipmapped {
+            continue;
+        }
+        for stage in &material.stages {
+            let textures = std::iter::once((&stage.primary_key, &stage.primary_pixels)).chain(
+                stage
+                    .secondary_key
+                    .as_ref()
+                    .zip(stage.secondary_pixels.as_ref()),
+            );
+            for (key, pixels) in textures {
+                if key.starts_with(super::videos::KEY_PREFIX)
+                    || prepared.iter().any(|texture| texture.key == *key)
+                {
+                    continue;
+                }
+                let (width, height) = super::filtering::mips::extent(pixels);
+                prepared.push(PreparedTexture {
+                    key: key.clone(),
+                    width,
+                    height,
+                    chains: super::filtering::mips::cache::prepare(pixels, width, height),
+                });
+            }
+        }
+    }
+    prepared
+}
+
+/// One texture's mip chains built on a worker ([`warm_entity_materials`]).
+pub(crate) struct PreparedTexture {
+    key: String,
+    width: u32,
+    height: u32,
+    chains: Arc<Vec<Vec<RgbaImage>>>,
+}
+
+impl Runtime {
+    /// Upload textures a worker prepared, under their material keys, so the materials
+    /// appended next find them uploaded and only copy them to the GPU.
+    pub(crate) fn upload_prepared_textures(
+        &mut self,
+        device: &wgpu::Device,
+        queue: &crate::frame_queue::FrameQueue,
+        textures: Vec<PreparedTexture>,
+    ) {
+        if !self.forge.filtering.mipmapped() {
+            return;
+        }
+        for texture in textures {
+            if self.forge.texture_cache.contains_key(&texture.key) {
+                continue;
+            }
+            // A failure leaves the texture to the material's own upload.
+            if let Ok(view) = super::filtering::mips::upload_chains(
+                device,
+                queue,
+                texture.width,
+                texture.height,
+                &texture.chains,
+            ) {
+                self.forge.texture_cache.insert(texture.key, view);
+            }
+        }
+    }
+
+    /// Whether this runtime's textures carry mip chains (`r_textureMode`).
+    pub(crate) fn mipmapped(&self) -> bool {
+        self.forge.filtering.mipmapped()
     }
 }

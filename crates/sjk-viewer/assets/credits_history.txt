@@ -9,6 +9,8 @@
 #                               made it when that is not the piece's owner.
 
 = Sol
++ 10/10/2026 | - | Player model mip chains built on the load worker
+- bee832e |  | Build player models' mip chains on the load worker
 + 10/10/2026 | - | Player model pipelines compiled on a worker
 - 4349ea1 |  | Compile a player model's new pipelines on a worker
 + 10/10/2026 | - | Map change no longer loops reloading the menu map
