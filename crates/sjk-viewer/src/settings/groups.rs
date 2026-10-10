@@ -76,6 +76,7 @@ impl Group {
     fn cvars(self) -> &'static [&'static str] {
         match self {
             Self::GameOptions => &[
+                "assetbrowser",
                 "cg_simpleItems",
                 "cg_forceModel",
                 "cg_saberTrail",
@@ -157,6 +158,7 @@ impl Group {
     fn headings(self) -> &'static [(&'static str, &'static str)] {
         match self {
             Self::GameOptions => &[
+                ("assetbrowser", "Asset packs"),
                 ("cg_simpleItems", "Items and models"),
                 ("cg_saberTrail", "Effects"),
                 (crate::camera::STYLE_CVAR, "Camera and prediction"),

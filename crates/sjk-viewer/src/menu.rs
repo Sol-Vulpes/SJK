@@ -630,6 +630,10 @@ impl ClientMenu {
             }
             // First setup's "Import a config file" row: the Import page with
             // the file dialog, over the settings.
+            SettingsResult::OpenAssets => {
+                console.execute_console_line("assetbrowser", None);
+                MenuAction::None
+            }
             SettingsResult::OpenImport => {
                 console.browse_config_import();
                 MenuAction::None

@@ -184,6 +184,8 @@ impl SettingsMenu {
                         return SettingsResult::OpenWheelPages;
                     } else if matches!(setting.kind, ValueKind::IdentityPage) {
                         return SettingsResult::OpenIdentity;
+                    } else if matches!(setting.kind, ValueKind::AssetBrowser) {
+                        return SettingsResult::OpenAssets;
                     } else if matches!(setting.kind, ValueKind::ImportPage) {
                         return SettingsResult::OpenImport;
                     } else if self.classic.is_some() && self.open_dropdown(console, row) {

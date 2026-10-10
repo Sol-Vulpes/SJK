@@ -1,5 +1,21 @@
 # Status and priorities
 
+## Installed PK3 choices
+
+Branch `feat/asset-browser-disable`, based on `0c76ff03` (2026-10-10,
+Windows): `assetbrowser` lists installed packs with persistent enable/disable
+choices for the next client start. Required retail base archives cannot be
+disabled. The startup mount policy and supplemental EternalJK asset probes
+honor the saved choices. Tests cover portable case-insensitive names, spaces,
+required packs, VFS fallback to a lower-priority archive and re-enabling.
+Workspace formatting, build, tests and Clippy passed on Windows with Rust
+1.99.0 (warnings remain). A Release offscreen GPU check on an RTX 5070 Ti,
+duel6, 1280x960, HDR/material maps off rendered the browser; the captured
+card was inspected for fit and legibility. This does not establish input
+behavior in a live match.
+Server-selected downloads and hub unlockables are outside this policy.
+Interactive in-match use and pure-server compatibility remain unverified.
+
 Reviewed 2026-10-04 against GitHub baseline `b394022` and the owner-approved
 client, server, rendering and loading changes described below.
 

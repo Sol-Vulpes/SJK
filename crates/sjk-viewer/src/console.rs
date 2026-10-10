@@ -2,6 +2,8 @@
 
 use super::{TextVertex, UiFont};
 use crate::keybind_editor;
+#[path = "asset_pack_browser.rs"]
+pub(crate) mod asset_browser;
 #[path = "console_browser.rs"]
 pub(crate) mod browser;
 #[path = "changelog.rs"]
@@ -12,6 +14,8 @@ mod chat_log;
 mod client_options;
 #[path = "clipboard.rs"]
 pub(crate) mod clipboard;
+#[path = "console_asset_browser.rs"]
+mod console_asset_browser;
 #[path = "console_changelog.rs"]
 mod console_changelog;
 #[path = "console_connect.rs"]
@@ -154,6 +158,7 @@ pub(crate) struct ViewerConsole {
     presentation: ConsolePresentation,
     /// Command and cvar browser drawn in place of the console while open.
     browser: browser::Browser,
+    asset_browser: asset_browser::Browser,
     /// Personal test list of Sol's build, drawn in place of the console while open.
     debug_panel: debug_panel::Panel,
     changelog: changelog::Panel,
@@ -330,6 +335,7 @@ impl ViewerConsole {
     pub(crate) fn covers_frame(&self) -> bool {
         self.open
             && (self.browser.is_open()
+                || self.asset_browser.open
                 || self.debug_panel.is_open()
                 || self.changelog.is_open()
                 || self.credits.is_open()
@@ -724,6 +730,9 @@ impl ViewerConsole {
     }
 
     pub(crate) fn draw_list(&self) -> &sjk_ui::DrawList {
+        if self.open && self.asset_browser.open {
+            return self.asset_browser.draw_list();
+        }
         if let Some(draw_list) = self.config_import_draw_list() {
             return draw_list;
         }
@@ -808,6 +817,7 @@ impl ViewerConsole {
         self.open = open;
         self.history_index = None;
         if !open {
+            self.asset_browser.open = false;
             self.browser.close();
             self.debug_panel.close();
             self.changelog.close();

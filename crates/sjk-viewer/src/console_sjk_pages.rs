@@ -23,6 +23,9 @@ impl ViewerConsole {
         if !self.open {
             return false;
         }
+        if self.asset_browser.open {
+            return true;
+        }
         // The Import and Update pages have the SJK UI's look in every menu style.
         if self.config_import.is_open() {
             return true;
@@ -58,7 +61,9 @@ impl ViewerConsole {
 
     /// Draw the open page ([`Self::sjk_page_open`]) with its text to `target`.
     pub(crate) fn append_sjk_page(&mut self, target: TextTarget<'_>, viewport: [f32; 2]) {
-        if self.config_import.is_open() {
+        if self.asset_browser.open {
+            self.asset_browser.append(target, viewport);
+        } else if self.config_import.is_open() {
             self.sync_config_browse();
             self.config_import.append_sjk(target, viewport);
         } else if self.credits.is_open() {

@@ -5,6 +5,21 @@ Jedi Academy `GameData` directory with the retail `base/assets*.pk3` files.
 
 ## Launch
 
+Settings > Game > Asset browser or `assetbrowser` opens SJK's installed PK3 browser (also discoverable through F3
+in the console's command browser). Select a pack with the arrow keys or wheel;
+Enter, Space or a click toggles it. Choices save immediately and apply at the
+next client start. The page lists configured game directories and supplemental
+`EternalJK` packs, including disabled packs, and protects retail
+`base/assets0.pk3` through `assets3.pk3` from disabling.
+
+The archived `fs_disabledPaks` setting stores a JSON list of portable
+`directory/filename.pk3` names. Names are case-insensitive, and identical names
+in an optional content home follow the same choice. Disabling skips the entire
+installed archive, including supplemental crosshairs, emoji and cosmetics;
+enabled packs retain their original search priority. Loose files, built-in
+content, hub unlockable packs and server-selected download-cache archives are
+outside this installed-pack policy. Files are never renamed or removed.
+
 The client program is `sjk` and the dedicated server `sjk-server` (`.exe` on
 Windows). Developer and diagnostic environment variables are named `SJK_*`
 (`SJK_TRACE_*`, `SJK_LAMP_*`, `SJK_GPU_*` and the like). On Windows both programs

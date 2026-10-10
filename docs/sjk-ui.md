@@ -1,5 +1,11 @@
 # SJK UI
 
+The installed-pack browser (`assetbrowser`) uses the SJK UI's card and font
+families in every menu style. It lists ten pack rows at a time, with keyboard,
+wheel and click controls; each row describes the choice for the next start.
+The console owns input while it is open, and closing the browser restores the
+previous console state. See [installed PK3 choices](client.md#launch).
+
 The SJK UI (`ui_menuStyle sjk`) is SJK's own menu style: SJK's menus redesigned
 from the ground up, drawn over the live map in SJK's own type. It keeps the
 feeling of Jedi Academy's menus (gold for what you choose, holo blue line-work,
