@@ -91,6 +91,7 @@ impl Context {
             })
             .await?;
         let adapter_info = adapter.get_info();
+        crate::crash_report::set_gpu(&adapter_info);
         let hdr = crate::frame_target::aa::hdr::Settings::sample(console);
         let stage_table = adapter
             .features()

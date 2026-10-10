@@ -24,6 +24,17 @@
 
 # ---- Console & chat ----
 
+[crash-reports]
+area: Console & chat
+title: Crash reports: a crash is kept and sent to the SJK hub at the next start
+change: Panics, fatal errors and silent exits leave a report in crashes/ (last-crash.txt too).
+change: The next start sends it through the hub (Settings > Network > Send crash reports).
+test: Settings > Network shows "Send crash reports", on by default.
+test: End sjk.exe in Task Manager, start again: console says SJK closed unexpectedly.
+test: After that start, crashes/last-crash.txt reads like the session (map, last lines).
+test: With the hub deployed: the console says the report was sent; crash-groups lists it.
+note: Hub endpoint on SJK-hub feat/crash-reports, not deployed: reports wait until it is.
+
 [config-save-quiet]
 area: Console & chat
 title: config.cfg saved only on real changes, 2 s later, off the main thread

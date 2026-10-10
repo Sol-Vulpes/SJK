@@ -121,7 +121,8 @@ impl ViewerConsole {
     /// the console socket.
     pub(crate) fn push_chat_line(&mut self, display: String, raw: &str) {
         let number = self.shell.lines_written();
-        self.shell.push_log_quiet(display);
+        // Chat stays out of crash reports.
+        crate::crash_report::privately(|| self.shell.push_log_quiet(display));
         // A line `cl_noprint` suppressed has no number to name.
         if self.socket.socket.has_reader() && self.shell.lines_written() != number {
             if self.socket.raw_chat.len() == MAX_RAW_CHAT {

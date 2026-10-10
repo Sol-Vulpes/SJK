@@ -1096,6 +1096,8 @@ Found the fog bug, ask me about it!"
             look_outcome: None,
             packs_revision: 0,
             assets_note: None,
+            crashes_sent: 0,
+            crash_note: None,
             holocrons: None,
         };
         let standings = crate::achievements::ALL

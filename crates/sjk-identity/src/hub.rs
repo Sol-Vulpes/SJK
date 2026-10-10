@@ -1,6 +1,7 @@
 //! Talking to the hub: the [`Hub`] operations and their HTTPS implementation.
 
 use crate::assets::{PACK_MAX, Pack};
+use crate::crash::CrashReport;
 use crate::keys::{Identity, random_bytes};
 use crate::report::{BugReport, PlayerReport, WorldNote};
 use crate::staff::StaffRequest;
@@ -191,6 +192,13 @@ pub trait Hub: Send {
     fn report(&mut self, _identity: &Identity, _report: &BugReport) -> Result<i64, HubError> {
         Err(HubError::Protocol(
             "this hub client does not send reports".to_owned(),
+        ))
+    }
+    /// Send a crash report (already [`CrashReport::fitted`]) signed by the identity;
+    /// the hub answers with its number.
+    fn crash(&mut self, _identity: &Identity, _report: &CrashReport) -> Result<i64, HubError> {
+        Err(HubError::Protocol(
+            "this hub client does not send crash reports".to_owned(),
         ))
     }
     /// Send a report about another player, signed by the identity (a verified key);
@@ -640,6 +648,14 @@ impl Hub for HttpHub {
             .get("id")
             .and_then(serde_json::Value::as_i64)
             .ok_or_else(|| HubError::Protocol("the report answer has no id".to_owned()))
+    }
+
+    fn crash(&mut self, identity: &Identity, report: &CrashReport) -> Result<i64, HubError> {
+        let answer = self.send(Some(identity), "POST", "/v1/crash", Some(report.body()))?;
+        answer
+            .get("id")
+            .and_then(serde_json::Value::as_i64)
+            .ok_or_else(|| HubError::Protocol("the crash report answer has no id".to_owned()))
     }
 
     fn player_report(

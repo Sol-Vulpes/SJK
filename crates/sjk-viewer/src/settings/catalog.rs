@@ -664,6 +664,11 @@ pub(super) const NETWORK: &[Setting] = &[
         kind: ValueKind::Bool,
     },
     Setting {
+        label: "Send crash reports",
+        cvar: crate::crash_report::CVAR,
+        kind: ValueKind::Bool,
+    },
+    Setting {
         label: "SJK identity key",
         cvar: IDENTITY_ROW,
         kind: ValueKind::IdentityPage,

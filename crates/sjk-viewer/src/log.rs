@@ -136,6 +136,7 @@ pub(crate) fn init() {
 
 pub(crate) fn progress(arguments: fmt::Arguments<'_>) {
     let launch = LAUNCH.get_or_init(Instant::now);
+    crate::crash_report::trail(&arguments.to_string());
     if TIMESTAMPS.load(std::sync::atomic::Ordering::Relaxed) {
         eprintln!(
             "[+{:09.3} ms] {arguments}",

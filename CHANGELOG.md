@@ -20,6 +20,7 @@ Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 -->
 ## Unreleased
 
+- When SJK crashes, the next start sends the SJK team a crash report (build, system, graphics card, map, the error and the last console lines, no chat); Settings > Network > Send crash reports turns it off, and crashes/last-crash.txt keeps a copy _(Sol)_
 - Pasting with Ctrl+V no longer freezes the game for a quarter of a second on Windows _(Sol)_
 - Fixed a server map change that could leave SJK unable to join again or make it close: it kept reloading the menu map in a loop while reconnecting _(Sol)_
 - No more hitch when some players' models appear: their shaders and textures are prepared in the background first _(Sol)_

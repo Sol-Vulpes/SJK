@@ -1,5 +1,19 @@
 # Status and priorities
 
+## Crash reports
+
+Branch `personal/crash-reports` (11/10/2026, based on `ea95fcdd`, Windows 11). Sol asked
+for a crash handler that sends crash data to the hub: a friend crashes often and
+`qconsole.log` (off by default, emptied at each start) never holds the panic. A panic
+hook, the fatal error path and a per-session marker for silent exits write reports to
+`crashes/` with the last console and diagnostic lines (no chat); the identity service
+sends them at the next start (`cl_crashReports`, default 1). Hub side: SJK-hub branch
+`feat/crash-reports` (`POST /v1/crash`, operator `crash-groups`/`crashes`), not deployed
+yet; until it is, reports wait (404) and go once it is. See
+[identity.md](identity.md#crash-reports). Verified by unit tests (format, cutting, the
+folder, a sending round, unclean markers) and the workspace suite; no crash tried in a
+game.
+
 ## Ctrl+V without a PowerShell
 
 Branch `personal/fast-paste` (10/10/2026, based on `76068d21`, Windows 11). Sol's

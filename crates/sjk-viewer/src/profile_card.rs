@@ -529,6 +529,8 @@ mod tests {
             look_outcome: None,
             packs_revision: 0,
             assets_note: None,
+            crashes_sent: 0,
+            crash_note: None,
             holocrons: None,
         }
     }
