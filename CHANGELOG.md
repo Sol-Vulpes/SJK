@@ -13,6 +13,7 @@ Format, read by the client (crates/sjk-viewer/src/changelog_data.rs, whose
 tests check this file):
 - "## <version> | <dd/mm/yyyy>" starts a release ("## Unreleased" for main
   after the last release, without a date);
+- Players holding the multiplayer pistol show the blaster pistol model in third person instead of the old Bryar's, so a DL-44 replacement pack applies there too; the old Bryar keeps its own model _(Lumaya, after OpenJK)_
 - other lines up to the first item are the release's introduction;
 - "- <change> _(<credit>)_" is one change; every change ends with its credit;
 - ASCII only, as the menu font draws bytes.

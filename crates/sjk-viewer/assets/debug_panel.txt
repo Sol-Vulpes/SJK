@@ -3606,3 +3606,12 @@ test: debug_update: the update card, blue with the SJK emblem, no chime.
 test: debug_update 2026.1231.2 manual: "This folder cannot update itself: see its page".
 test: Open Main menu > Update while the card shows (debug_update, then Update): the card goes.
 note: Unit tests and world shots only; not tried in a game.
+
+[held-pistol-model]
+area: Rendering
+title: The held pistol uses the blaster pistol model (SJK PR #65)
+change: Weapon slot 4 (the multiplayer pistol) shows OpenJK's blaster pistol model in hand.
+change: The old Bryar (slot 16) keeps the Bryar model; first person and pickups are as before.
+test: Watch another player (or a bot) holding the pistol: the blaster pistol model, not the Bryar.
+test: With a DL-44 replacement pack in base, the pistol in hand uses it.
+note: Lumaya did not check a community DL-44 pack on screen.

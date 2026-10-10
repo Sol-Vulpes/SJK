@@ -136,7 +136,7 @@ pull requests merged into SJK, most of them bringing SJK in line with EternalJK
   and two apostrophes) and shown as typed, so SJK and EternalJK players see each
   other's percent signs and quotes.
 
-Lumaya ([lumayaa](https://github.com/lumayaa)), contributor, has 5 pull requests
+Lumaya ([lumayaa](https://github.com/lumayaa)), contributor, has 6 pull requests
 merged into SJK
 ([all of them](https://github.com/Sol-Vulpes/SJK/pulls?q=is%3Apr+author%3Alumayaa)):
 
@@ -151,6 +151,8 @@ merged into SJK
 - #25 U is the default key for a private message to the player under the
   crosshair (`messagemode3`, OpenJK's `Con_MessageMode3_f`); Y and T chat stay,
   and an existing profile gets U only when it is free.
+- #65 the held multiplayer pistol: weapon slot 4 uses OpenJK's `weapon_blaster_pistol`
+  world model and slot 16 keeps the Bryar one, so a DL-44 replacement shows in third person.
 
 ## Origins: JKR, by Bishop
 

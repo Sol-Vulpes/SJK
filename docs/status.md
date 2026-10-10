@@ -1,5 +1,13 @@
 # Status and priorities
 
+## Held blaster-pistol model
+
+Branch `fix/dl44-held-model`, based on `0c76ff03` (2026-10-10, Windows):
+weapon slot 4 no longer shares slot 16's old Bryar world model. It follows
+OpenJK `codemp/game/bg_misc.c`'s `weapon_blaster_pistol` model path; slot 16
+keeps the `weapon_bryar_pistol` path. A focused test pins both mappings.
+Visual verification with a community DL-44 replacement pack remains open.
+
 Reviewed 2026-10-04 against GitHub baseline `b394022` and the owner-approved
 client, server, rendering and loading changes described below.
 
