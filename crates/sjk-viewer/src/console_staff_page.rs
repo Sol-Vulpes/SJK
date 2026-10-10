@@ -96,7 +96,7 @@ impl ViewerConsole {
         if !self.staff_panel.is_open() {
             return false;
         }
-        let action = self.staff_panel.handle_key(event, self.shift);
+        let action = self.staff_panel.handle_key(event, self.shift, self.control);
         self.staff_panel_action(action);
         true
     }
