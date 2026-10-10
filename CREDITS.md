@@ -78,6 +78,7 @@ Sol develops SJK and sets its direction. Sol's work includes:
   glitches, hologram scan lines, a heartbeat, afterimages, falling embers, veins, a
   team or surroundings tint and glyphs spelling the wearer's name;
 - medals that bring a saber shader while held (Glitch, Hologram, Runic);
+- chroma saber shaders that take the wearer's saber colour, marked with a colour wheel;
 - the player card's saber shader, profile picture, SJK TEAM mark, holocron gem and, pinned,
   achievements, bio and join date;
 - the kill feed at the top right with weapon icons (`cg_killfeed`);

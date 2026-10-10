@@ -269,6 +269,8 @@ const LIST_CAPACITY: usize = 640;
 /// The saber shader's swatch on the card, in card units.
 const SWATCH_WIDTH: f32 = 74.0;
 const SWATCH_HEIGHT: f32 = 18.0;
+/// A chroma's colour wheel beside its swatch.
+const CHROMA_MARK: f32 = 14.0;
 /// The SJK TEAM mark's colour: a teal of its own, apart from the verified gold.
 const STAFF_COLOUR: [f32; 3] = [0.22, 0.86, 0.78];
 /// Characters a line of medal names holds on the card (Inter at 11).
@@ -1015,9 +1017,30 @@ impl State {
                 swatch,
                 look.skin,
                 look.seconds,
+                // A chroma in the first saber's colour, as the world draws it.
+                card.swatches[0].map_or(0.0, |rgb| {
+                    crate::console::collection_panel::swatch::chroma_turn(look.skin, rgb)
+                }),
             );
+            // A chroma's colour wheel between the swatch and its name.
+            let chroma = card.shader.is_some_and(crate::unlockables::is_chroma);
+            let mut text_x = left + swatch[2] + 8.0 * unit;
+            if chroma {
+                crate::console::collection_panel::swatch::chroma_mark(
+                    &mut self.list,
+                    &crate::menu::sjk::Frame {
+                        s: 1.0,
+                        origin: [0.0, 0.0],
+                    },
+                    text_x,
+                    y + row(3.0) + (SWATCH_HEIGHT - CHROMA_MARK) * 0.5 * unit,
+                    CHROMA_MARK * unit,
+                    // Inside the card's opacity group, which fades it with the card.
+                    1.0,
+                );
+                text_x += (CHROMA_MARK + 6.0) * unit;
+            }
             let _ = self.list.push(DrawCommand::PopOpacity);
-            let text_x = left + swatch[2] + 8.0 * unit;
             put_text(
                 &mut self.list,
                 T_SHADER,
@@ -1708,18 +1731,22 @@ mod tests {
             [2_560.0, 1_080.0],
             [1_280.0, 720.0],
         ] {
-            for pinned in [false, true] {
+            // The Sun, and the Storm (a chroma, its colour wheel by the swatch).
+            for (pinned, shader) in [false, true]
+                .into_iter()
+                .flat_map(|pinned| [(pinned, "saber_sun"), (pinned, "saber_storm")])
+            {
                 for anchor in [
                     [viewport[0] * 0.5, viewport[1] * 0.5],
                     [viewport[0] * 0.95, viewport[1] * 0.9],
                     [viewport[0] * 0.05, viewport[1] * 0.1],
                 ] {
                     let state = State::preview_with(
-                        full_card(Some("saber_sun")),
+                        full_card(Some(shader)),
                         anchor,
                         viewport,
                         pinned,
-                        loaded.get("saber_sun"),
+                        loaded.get(shader),
                     );
                     let card = match state.list.commands()[2] {
                         DrawCommand::RoundedRect { rect, .. } => rect,
@@ -1730,7 +1757,49 @@ mod tests {
                     assert!(card.y + card.height <= viewport[1] + 0.5, "{viewport:?}");
                     // Every shape and text of the card's own lies on the panel (the
                     // leader and its dot reach out to the hips).
+                    // The colour wheel: the run of arcs from its pure red segment.
+                    let commands = &state.list.commands()[2..];
+                    let red = commands.iter().position(|command| {
+                        matches!(command, DrawCommand::Arc { color, .. }
+                            if color.r > 0.99 && color.g < 0.01 && color.b < 0.01)
+                    });
+                    let mut wheel = None::<Rect>;
+                    for command in red.map_or(&[][..], |red| &commands[red..red + 12]) {
+                        if let DrawCommand::Arc {
+                            center,
+                            radius,
+                            width,
+                            ..
+                        } = *command
+                        {
+                            let reach = radius + width * 0.5;
+                            let arc = Rect::new(
+                                center[0] - reach,
+                                center[1] - reach,
+                                reach * 2.0,
+                                reach * 2.0,
+                            );
+                            wheel = Some(wheel.map_or(arc, |w| {
+                                let (x, y) = (w.x.min(arc.x), w.y.min(arc.y));
+                                Rect::new(
+                                    x,
+                                    y,
+                                    (w.x + w.width).max(arc.x + arc.width) - x,
+                                    (w.y + w.height).max(arc.y + arc.height) - y,
+                                )
+                            }));
+                        }
+                    }
+                    assert_eq!(wheel.is_some(), shader == "saber_storm", "{viewport:?}");
                     for command in &state.list.commands()[2..] {
+                        // The shader's name starts past the colour wheel.
+                        if let (Some(wheel), DrawCommand::Text { rect, .. }) = (wheel, command)
+                            && rect.y < wheel.y + wheel.height
+                            && wheel.y < rect.y + rect.height
+                            && rect.x < wheel.x + wheel.width
+                        {
+                            assert!(rect.x + rect.width <= wheel.x, "{command:?} over the wheel");
+                        }
                         let rect = match command {
                             DrawCommand::Text { rect, .. }
                             | DrawCommand::SolidRect { rect, .. }

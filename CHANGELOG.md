@@ -41,6 +41,7 @@ opened yet and give nothing.
 - A Melee action in Settings > Key bindings > Weapons (the `weapmelee` command, unbound until you pick a key) selects the fists directly, never the saber, and does nothing when they are already out; Saber / melee on key 1 is unchanged _(Sol)_
 - firstsetup import takes a quoted Windows path as Explorer's Copy as path gives it ("C:\Users\...\my.cfg"); its backslashes were read as escapes, so the file was not found _(Sol)_
 
+- Chroma saber shaders: the Storm, Unstable, Spectral, Glitch, Hologram, Runic and Heartbeat blades now take your saber's colour (each saber its own, color1 and color2; a white custom colour keeps the shader's own), and everyone sees them in your colour; a small colour wheel marks them in the Collection, on the Saber tab and on the player card. On the Collection's Shaders a double click wears an owned shader, and a long name no longer runs under its Worn / Yours / Locked label _(Sol)_
 ## 2026.1010.1 (Alpha) | 10/10/2026
 
 The Profile screen becomes one row of tabs, with Medals and a Collection of everything to unlock;

@@ -123,6 +123,9 @@ pub(crate) struct Instance {
     /// is (three bytes) and the afterimage's brightness (top byte, 255 for the blade);
     /// lanes 1 to 3 the name's letters and the team. Unused by the retail and RGB pairs.
     persona: [u32; 4],
+    /// A chroma skin's turn to its wearer's colour, in turns
+    /// ([`crate::saber_skins::Chroma`]); 0 for every other blade.
+    chroma: f32,
     contact: u32,
     no_light: u32,
     /// The blade's configured radius, for contacts; not a GPU attribute.
@@ -162,9 +165,9 @@ impl Flicker {
 }
 
 impl Instance {
-    const ATTRIBUTES: [wgpu::VertexAttribute; 8] = wgpu::vertex_attr_array![
+    const ATTRIBUTES: [wgpu::VertexAttribute; 9] = wgpu::vertex_attr_array![
         0 => Float32x3, 1 => Float32, 2 => Float32x3, 3 => Float32, 4 => Float32x4, 5 => Uint32,
-        6 => Float32x2, 7 => Uint32x4];
+        6 => Float32x2, 7 => Uint32x4, 8 => Float32];
 
     pub(crate) fn layout() -> wgpu::VertexBufferLayout<'static> {
         wgpu::VertexBufferLayout {
@@ -204,6 +207,10 @@ impl Instance {
             }
             _ => [0; 4],
         };
+        let chroma = match color {
+            BladeColor::Skin(skin) => skin.chroma.turn,
+            _ => 0.0,
+        };
         let make = |radius: f32, hilt| Self {
             base: blade.base,
             length: blade.length,
@@ -213,6 +220,7 @@ impl Instance {
             material: color.material(),
             animation: [0.0; 2],
             persona,
+            chroma,
             contact: 0,
             no_light: 0,
             nominal_radius: blade.radius,
@@ -692,6 +700,7 @@ mod cutoff_tests {
         let offset = |index: usize| Instance::ATTRIBUTES[index].offset as usize;
         assert_eq!(offset(5), std::mem::offset_of!(Instance, material));
         assert_eq!(offset(6), std::mem::offset_of!(Instance, animation));
+        assert_eq!(offset(8), std::mem::offset_of!(Instance, chroma));
         assert_eq!(
             Instance::ATTRIBUTES[6].format,
             wgpu::VertexFormat::Float32x2

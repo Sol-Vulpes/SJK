@@ -161,6 +161,8 @@ struct VertexOutput {
     @location(8) @interpolate(flat) persona: vec4<u32>,
     // The world's down in the projected blade's plane (across, along).
     @location(9) @interpolate(flat) down: vec2<f32>,
+    // A chroma skin's turn to its wearer's colour (saber_skins.rs `Chroma`); 0 otherwise.
+    @location(10) @interpolate(flat) chroma: f32,
 }
 
 // TaystJK's CG_DoSaber submits the core RT_LINE twice (taystjk cgame cg_players.c:6429 and 6465;
@@ -201,6 +203,7 @@ fn vertex_main(
     @location(5) blade_material: u32,
     @location(6) blade_animation: vec2<f32>,
     @location(7) blade_persona: vec4<u32>,
+    @location(8) blade_chroma: f32,
 ) -> VertexOutput {
     let direction = normalize(blade_direction);
     let view_direction = normalize(camera.position - (blade_base + direction * blade_length * 0.5));
@@ -226,6 +229,7 @@ fn vertex_main(
     }
     output.animation = blade_animation;
     output.persona = blade_persona;
+    output.chroma = blade_chroma;
     output.down = vec2(-side.z, -up.z);
     var world: vec3<f32>;
     if hilt > 0.0 {
@@ -899,6 +903,10 @@ fn skin_glow_at(input: VertexOutput, pixel: f32, x: f32) -> vec3<f32> {
     if any(hue.xyz != vec3(0.0)) {
         glow = skin_turn_hue(glow, time * hue.x + around * hue.y + radial / r * hue.z);
     }
+    // A chroma takes its wearer's colour: everything it drew, turned at once.
+    if input.chroma != 0.0 {
+        glow = skin_turn_hue(glow, input.chroma);
+    }
     return glow;
 }
 
@@ -940,6 +948,9 @@ fn skin_core(input: VertexOutput, texel: vec4<f32>, uv: vec2<f32>, footprint: f3
     let cut = skin_cut(skin, input.length, time, seed);
     if cut < input.length {
         core *= 1.0 - smoothstep(cut - 1.5, cut + 0.5, along);
+    }
+    if input.chroma != 0.0 {
+        core = skin_turn_hue(core, input.chroma);
     }
     return core;
 }

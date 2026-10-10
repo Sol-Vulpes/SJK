@@ -111,6 +111,8 @@ const DUAL_SEARCH_WIDTH: f32 = 170.0;
 const SKIN_HEIGHT: f32 = 44.0;
 const SKIN_WIDTH: f32 = SKIN_HEIGHT * 400.0 / 224.0;
 const SKIN_GAP: f32 = 6.0;
+/// A chroma's mark in its blade swatch's corner.
+const CHROMA_MARK: f32 = 14.0;
 const SKIN_SHOWN: usize = 6;
 const SKIN_X: f32 =
     CONTROL_RIGHT - SKIN_SHOWN as f32 * SKIN_WIDTH - (SKIN_SHOWN - 1) as f32 * SKIN_GAP;
@@ -1329,7 +1331,19 @@ impl PlayerMenu {
                         rect,
                         look,
                         seconds,
+                        swatch::chroma_turn(look, swatch::rgb_bytes(colour)),
                     );
+                    // A chroma's mark in the swatch's top right corner, over the glass.
+                    if skin.chroma {
+                        swatch::chroma_mark(
+                            self.canvas.draw_list_mut(),
+                            frame,
+                            x + SKIN_WIDTH - CHROMA_MARK - 3.0,
+                            y + 3.0,
+                            CHROMA_MARK,
+                            1.0,
+                        );
+                    }
                 }
             }
             if choice == chosen || hovered {

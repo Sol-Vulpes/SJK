@@ -88,6 +88,6 @@ pub(crate) fn rgb(color: BladeColor) -> [f32; 3] {
         BladeColor::Retail(Color::Blue) => [0.2, 0.4, 1.0],
         BladeColor::Retail(Color::Purple) => [0.9, 0.2, 1.0],
         BladeColor::Rgb(rgb) => rgb.map(|v| f32::from(v) / 255.0),
-        BladeColor::Skin(skin) => skin.light,
+        BladeColor::Skin(skin) => skin.light_color(),
     }
 }

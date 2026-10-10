@@ -128,7 +128,8 @@ pub(crate) enum Shown {
 }
 
 /// Draw a blade skin across the swatch `rect` (frame pixels) at `seconds`: `skin` its
-/// loaded file, if its pack is loaded; `owned` lights it. Says what it showed.
+/// loaded file, if its pack is loaded; `owned` lights it; `turn` turns a chroma's colours
+/// to its wearer's ([`chroma_turn`]). Says what it showed.
 pub(crate) fn blade(
     canvas: &mut DrawList,
     frame: &Frame,
@@ -136,6 +137,7 @@ pub(crate) fn blade(
     skin: Option<&LoadedSkin>,
     owned: bool,
     seconds: f32,
+    turn: f32,
 ) -> Shown {
     let [x, y, width, height] = rect;
     let s = frame.s;
@@ -154,7 +156,14 @@ pub(crate) fn blade(
     let length = width - (start - x) - 34.0;
     let shown = match (owned, skin) {
         (true, Some(skin)) => {
-            lit_blade(canvas, frame, &skin.def, start, centre, length, seconds);
+            lit_blade(
+                canvas,
+                frame,
+                &skin.def,
+                [start, centre, length],
+                seconds,
+                turn,
+            );
             Shown::Skin
         }
         (true, None) => {
@@ -206,9 +215,10 @@ pub(crate) fn small_blade(
     rect: [f32; 4],
     skin: Option<&LoadedSkin>,
     seconds: f32,
+    turn: f32,
 ) -> Shown {
     let (small, rect) = shrunk(frame, rect);
-    blade(canvas, &small, rect, skin, true, seconds)
+    blade(canvas, &small, rect, skin, true, seconds, turn)
 }
 
 /// A blade skin as [`blade`] draws it, owned (alive) or not (grey under a padlock),
@@ -220,9 +230,82 @@ pub(crate) fn small_swatch(
     skin: Option<&LoadedSkin>,
     owned: bool,
     seconds: f32,
+    turn: f32,
 ) -> Shown {
     let (small, rect) = shrunk(frame, rect);
-    blade(canvas, &small, rect, skin, owned, seconds)
+    blade(canvas, &small, rect, skin, owned, seconds, turn)
+}
+
+/// A UI colour (a saber colour as the menus show it) as the bytes a blade's colour is
+/// made of, for [`chroma_turn`].
+pub(crate) fn rgb_bytes(colour: Color) -> [u8; 3] {
+    [colour.r, colour.g, colour.b].map(|channel| (channel.clamp(0.0, 1.0) * 255.0).round() as u8)
+}
+
+/// Segments of the chroma mark's colour wheel.
+const WHEEL_SEGMENTS: usize = 12;
+
+/// The chroma mark: a small colour wheel (a ring running round the hues, a white dot in
+/// its middle) of `size` frame pixels across, its top left at (`x`, `y`), at `alpha`.
+/// Says the shader takes its wearer's saber colour; readable from about 12 pixels.
+pub(crate) fn chroma_mark(
+    canvas: &mut DrawList,
+    frame: &Frame,
+    x: f32,
+    y: f32,
+    size: f32,
+    alpha: f32,
+) {
+    let radius = size * 0.5;
+    let centre = frame.point(x + radius, y + radius);
+    let width = size * 0.3 * frame.s;
+    let ring = (radius * frame.s - width * 0.5).max(0.5);
+    let sweep = std::f32::consts::TAU / WHEEL_SEGMENTS as f32;
+    let cap = (width / ring).min(sweep * 0.7);
+    // A dark backing so the wheel reads over a bright blade or a light panel.
+    disc(
+        canvas,
+        frame,
+        x + radius,
+        y + radius,
+        radius + 1.2,
+        Color::new(0.02, 0.03, 0.06, 0.75 * alpha),
+    );
+    for segment in 0..WHEEL_SEGMENTS {
+        let hue = segment as f32 / WHEEL_SEGMENTS as f32;
+        // Red at the top, running clockwise through the colours.
+        let rgb = crate::saber_skins::turn_hue([1.0, 0.0, 0.0], hue);
+        let top = rgb.into_iter().fold(0.001, f32::max);
+        push(
+            canvas,
+            DrawCommand::Arc {
+                center: centre,
+                radius: ring,
+                width,
+                // Short of the segment by its round caps, which close the seams.
+                start: -std::f32::consts::FRAC_PI_2 + segment as f32 * sweep + cap * 0.5,
+                sweep: sweep - cap,
+                color: Color::new(rgb[0] / top, rgb[1] / top, rgb[2] / top, alpha),
+                knockout: None,
+            },
+        );
+    }
+    disc(
+        canvas,
+        frame,
+        x + radius,
+        y + radius,
+        radius * 0.28,
+        Color::new(1.0, 1.0, 1.0, 0.95 * alpha),
+    );
+}
+
+/// How far a swatch turns `skin`'s colours for a wearer whose saber is `rgb`: a chroma's
+/// turn to that colour, 0 for any other skin, no skin or a grey colour.
+pub(crate) fn chroma_turn(skin: Option<&LoadedSkin>, rgb: [u8; 3]) -> f32 {
+    skin.map_or(0.0, |skin| {
+        skin.chroma_turn(crate::saber_rgb::BladeColor::from_rgb(rgb))
+    })
 }
 
 /// The stock blade in `colour` from the same hilt, still, in a swatch shrunk into
@@ -305,19 +388,22 @@ fn ui(rgb: Rgb, alpha: f32) -> Color {
     )
 }
 
-/// The skin `def` from `start` along `length`, centred on `centre`, at `t` seconds.
+/// The skin `def` from `start` along `length`, centred on `centre`, at `t` seconds, a
+/// chroma's colours turned `turn`.
 fn lit_blade(
     canvas: &mut DrawList,
     frame: &Frame,
     def: &BladeSkinDef,
-    start: f32,
-    centre: f32,
-    length: f32,
+    [start, centre, length]: [f32; 3],
     t: f32,
+    turn: f32,
 ) {
     let s = frame.s;
     const WHITE: Rgb = [1.0; 3];
-    let shaping = effects::Shaping::of(def, t);
+    let shaping = effects::Shaping {
+        turn,
+        ..effects::Shaping::of(def, t)
+    };
     // A sputter cuts the blade short for a moment.
     let length = length * shaping.shown;
     // A skin whose hue turns: every colour turned as the blade is at `along` (0 at the
@@ -809,8 +895,84 @@ mod tests {
             skin,
             owned,
             seconds,
+            0.0,
         );
         (shown, canvas.commands().to_vec())
+    }
+
+    #[test]
+    fn the_chroma_mark_stays_in_its_square_and_runs_round_the_hues() {
+        let mut canvas = DrawList::new(64);
+        let frame = Frame::new([1920.0, 1080.0]);
+        chroma_mark(&mut canvas, &frame, 40.0, 60.0, 14.0, 1.0);
+        let [x, y] = frame.point(40.0, 60.0);
+        let side = 14.0 * frame.s;
+        let mut colours = Vec::new();
+        for command in canvas.commands() {
+            match *command {
+                DrawCommand::Arc {
+                    center,
+                    radius,
+                    width,
+                    color,
+                    ..
+                } => {
+                    let reach = radius + width * 0.5;
+                    assert!(center[0] - reach >= x - 0.01 && center[0] + reach <= x + side + 0.01);
+                    assert!(center[1] - reach >= y - 0.01 && center[1] + reach <= y + side + 0.01);
+                    colours.push(color);
+                }
+                DrawCommand::RoundedRect { rect, .. } => {
+                    // The backing reaches a little past it, by its 1.2 pixel rim.
+                    let rim = 1.3 * frame.s;
+                    assert!(rect.x >= x - rim && rect.x + rect.width <= x + side + rim);
+                }
+                _ => {}
+            }
+        }
+        assert_eq!(colours.len(), WHEEL_SEGMENTS);
+        // Every segment its own colour: red, green and blue each lead somewhere.
+        for channel in 0..3 {
+            assert!(colours.iter().any(|c| {
+                let c = [c.r, c.g, c.b];
+                (0..3).all(|other| other == channel || c[channel] > c[other] + 0.3)
+            }));
+        }
+    }
+
+    #[test]
+    fn a_turned_swatch_draws_the_same_shapes_in_other_colours() {
+        let def =
+            crate::blade_skin_file::parse("saber_storm", crate::blade_skin_file::tests::SAMPLE)
+                .unwrap();
+        let skin = LoadedSkin::new("saber_storm", def, &sjk_vfs::VirtualFileSystem::new()).unwrap();
+        let draw = |turn: f32| {
+            let mut canvas = DrawList::new(400);
+            let frame = Frame::new([1920.0, 1080.0]);
+            let _ = blade(
+                &mut canvas,
+                &frame,
+                [100.0, 100.0, 380.0, 200.0],
+                Some(&skin),
+                true,
+                1.0,
+                turn,
+            );
+            canvas.commands().to_vec()
+        };
+        let (plain, turned) = (draw(0.0), draw(0.4));
+        assert_eq!(plain.len(), turned.len());
+        assert_ne!(core_colour(&plain), core_colour(&turned));
+        // The red skin turned to blue reads as a blue blade.
+        let blue = crate::saber_rgb::BladeColor::Retail(crate::saber::Color::Blue);
+        let turn = skin.chroma_turn(blue);
+        assert!(turn != 0.0);
+        assert_eq!(
+            chroma_turn(Some(&skin), crate::saber::Color::Blue.blade_rgb()),
+            turn
+        );
+        assert_eq!(chroma_turn(None, [0, 0, 255]), 0.0);
+        assert_eq!(chroma_turn(Some(&skin), [255, 255, 255]), 0.0);
     }
 
     /// The colour of the first opaque shape, the core: it moves only with a turning hue.

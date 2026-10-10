@@ -72,6 +72,7 @@ impl BladeColor {
                 hue: [0.0; 2],
                 ghosts: None,
                 persona: Default::default(),
+                chroma: Default::default(),
             });
         }
         Self::Rgb(tint.map(|c| (c * 255.).round().clamp(0., 255.) as u8))
@@ -84,7 +85,7 @@ impl BladeColor {
         match self {
             Self::Retail(_) => [1.0; 3],
             Self::Rgb(rgb) => rgb.map(|channel| f32::from(channel) / 255.0),
-            Self::Skin(skin) => skin.light,
+            Self::Skin(skin) => skin.light_color(),
         }
     }
 
@@ -94,7 +95,7 @@ impl BladeColor {
         match self {
             Self::Retail(color) => color.trail_rgb(),
             Self::Rgb(rgb) => rgb.map(|channel| f32::from(channel) / 255.0),
-            Self::Skin(skin) => skin.trail,
+            Self::Skin(skin) => skin.trail_color(),
         }
     }
 }

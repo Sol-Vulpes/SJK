@@ -53,6 +53,9 @@ pub(crate) use view::{MODEL_AREA, row_labels};
 const MEDAL_BASE: u16 = 1_200;
 const ACHIEVEMENT_BASE: u16 = 1_240;
 const SHADER_BASE: u16 = 1_280;
+/// Two clicks on a shader row this close together wear it (as the main menu's server
+/// browser joins on one).
+const DOUBLE_CLICK: std::time::Duration = std::time::Duration::from_millis(400);
 const WEAR_TOKEN: u16 = 1_300;
 const TOY_TOKEN: u16 = 1_310;
 const TOY_SWITCH_TOKEN: u16 = 1_311;
@@ -134,6 +137,8 @@ struct ShaderRow {
     /// What Enter does on it: `None` for a locked one or one already worn by the stock
     /// row.
     wear: Option<&'static str>,
+    /// Worn now: a double click on it changes nothing.
+    worn: bool,
 }
 
 pub(crate) struct Panel {
@@ -151,6 +156,8 @@ pub(crate) struct Panel {
     shader: usize,
     /// The first shader row the rack shows (it scrolls, [`RACK_SHOWN`] at a time).
     shader_first: usize,
+    /// The shader row last clicked and when, for a double click's Equip.
+    last_click: Option<(u16, Instant)>,
     /// How many medals the last frame showed.
     medals_shown: usize,
     shader_rows: [ShaderRow; SHADER_ROWS],
@@ -190,6 +197,7 @@ impl Panel {
             achievement: usize::MAX,
             shader: 0,
             shader_first: 0,
+            last_click: None,
             medals_shown: 0,
             shader_rows: [ShaderRow::default(); SHADER_ROWS],
             backstage: Backstage::None,
@@ -398,6 +406,13 @@ impl Panel {
 
     /// A pointer event; `illuminate` is whether the holocron is lit.
     pub(crate) fn handle_pointer(&mut self, event: InputEvent, illuminate: bool) -> PanelAction {
+        self.pointer_at(event, illuminate, Instant::now())
+    }
+
+    /// A pointer event at `now`. A second click on a shader row within
+    /// [`DOUBLE_CLICK`] wears it, as Equip does (an owned one only; a locked one stays a
+    /// preview, the worn one stays worn).
+    fn pointer_at(&mut self, event: InputEvent, illuminate: bool, now: Instant) -> PanelAction {
         if let InputEvent::PointerWheel { delta, .. } = event
             && self.tab == Tab::Shaders
         {
@@ -421,6 +436,28 @@ impl Panel {
         let Some(token) = event.token else {
             return PanelAction::None;
         };
+        if event.kind == UiEventKind::Activate
+            && let Some(index) = token
+                .checked_sub(SHADER_BASE)
+                .map(usize::from)
+                .filter(|index| *index < SHADER_ROWS)
+        {
+            let double = self
+                .last_click
+                .is_some_and(|(last, at)| last == token && now.duration_since(at) <= DOUBLE_CLICK);
+            self.shader = index;
+            if double {
+                self.last_click = None;
+                return self
+                    .shader_rows
+                    .get(index)
+                    .filter(|row| !row.worn)
+                    .and_then(|row| row.wear)
+                    .map_or(PanelAction::None, PanelAction::Wear);
+            }
+            self.last_click = Some((token, now));
+            return PanelAction::None;
+        }
         let choose = matches!(
             event.kind,
             UiEventKind::HoverEnter | UiEventKind::Hover | UiEventKind::Activate
@@ -679,6 +716,99 @@ mod tests {
                 "{all}"
             );
         }
+    }
+
+    #[test]
+    fn a_double_click_wears_an_owned_shader_only() {
+        let owned = [sun()];
+        let click = |panel: &mut Panel, token: u16, now: Instant| {
+            let rect = panel.ui.rect_for(token).expect("a pointer area");
+            let at = sjk_ui::Vec2::new(rect.x + rect.width * 0.5, rect.y + rect.height * 0.5);
+            let mut action = PanelAction::None;
+            for event in [
+                InputEvent::PointerMove(at),
+                InputEvent::PointerPress {
+                    position: at,
+                    button: sjk_ui::PointerButton::Primary,
+                },
+                InputEvent::PointerRelease {
+                    position: at,
+                    button: sjk_ui::PointerButton::Primary,
+                },
+            ] {
+                let next = panel.pointer_at(event, true, now);
+                if next != PanelAction::None {
+                    action = next;
+                }
+            }
+            action
+        };
+        let row = |id: &str| {
+            SHADER_BASE
+                + 1
+                + unlockables::ALL
+                    .iter()
+                    .position(|skin| skin.id == id)
+                    .unwrap() as u16
+        };
+        let start = Instant::now();
+        let later = |millis: u64| start + std::time::Duration::from_millis(millis);
+        let mut panel = drawn(Tab::Shaders, &inputs(Holdings::Known(&owned), ""));
+        // One click chooses; a second soon after wears it.
+        assert_eq!(
+            click(&mut panel, row("saber_sun"), later(0)),
+            PanelAction::None
+        );
+        assert_eq!(
+            click(&mut panel, row("saber_sun"), later(250)),
+            PanelAction::Wear("saber_sun")
+        );
+        // Too slow, or on another row, is two single clicks.
+        assert_eq!(
+            click(&mut panel, row("saber_sun"), later(1_000)),
+            PanelAction::None
+        );
+        assert_eq!(
+            click(&mut panel, row("saber_sun"), later(1_600)),
+            PanelAction::None
+        );
+        assert_eq!(
+            click(&mut panel, SHADER_BASE, later(1_700)),
+            PanelAction::None
+        );
+        assert_eq!(
+            click(&mut panel, row("saber_sun"), later(1_800)),
+            PanelAction::None
+        );
+        // A locked one is only previewed.
+        assert_eq!(
+            click(&mut panel, row("saber_storm"), later(3_000)),
+            PanelAction::None
+        );
+        assert_eq!(
+            click(&mut panel, row("saber_storm"), later(3_200)),
+            PanelAction::None
+        );
+        assert_eq!(panel.shader, usize::from(row("saber_storm") - SHADER_BASE));
+        // The worn one stays worn.
+        let mut panel = drawn(Tab::Shaders, &inputs(Holdings::Known(&owned), "saber_sun"));
+        assert_eq!(
+            click(&mut panel, row("saber_sun"), later(0)),
+            PanelAction::None
+        );
+        assert_eq!(
+            click(&mut panel, row("saber_sun"), later(200)),
+            PanelAction::None
+        );
+        // The stock blade, worn by a double click while a shader is on.
+        assert_eq!(
+            click(&mut panel, SHADER_BASE, later(1_000)),
+            PanelAction::None
+        );
+        assert_eq!(
+            click(&mut panel, SHADER_BASE, later(1_200)),
+            PanelAction::Wear("")
+        );
     }
 
     #[test]

@@ -442,6 +442,18 @@ note: Alt+Tab while holding Tab leaves the board and the hidden HUD up until Tab
 
 # ---- Rendering & effects ----
 
+[chroma-shaders]
+area: Rendering & effects
+title: Chroma saber shaders take your saber colour, marked with a colour wheel
+change: Storm, Unstable, Spectral, Glitch, Hologram, Runic, Heartbeat follow color1 / color2.
+change: A colour wheel marks them: Collection rack and detail, Saber tab swatches, player card.
+change: Collection Shaders: double click wears an owned one; the name no longer runs under Worn.
+test: Wear Glitch (staff unlock if needed), set the saber red then green: the blade follows.
+test: Dual sabers in two colours: each chroma blade takes its own saber's colour.
+test: Custom RGB white: the chroma shows its own colours. Another player sees yours too.
+test: Collection > Shaders: colour wheels beside chroma names; double click an owned row.
+test: Detail beside the model: the long name ends before the Worn/Yours/Locked pill, at 4K.
+
 [renderer-settings]
 area: Rendering & effects
 title: RENDERER settings page for every renderer cvar

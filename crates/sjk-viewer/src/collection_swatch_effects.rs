@@ -20,6 +20,8 @@ pub(super) struct Shaping {
     pub(super) shown: f32,
     /// A colour every colour is drawn toward, and how much.
     pub(super) tint: Option<(Rgb, f32)>,
+    /// A chroma's turn to its wearer's colour (`saber_skins::Chroma`); 0 for none.
+    pub(super) turn: f32,
 }
 
 impl Shaping {
@@ -52,12 +54,23 @@ impl Shaping {
                 (light.map(|c| (c / top).max(ambient.floor)), ambient.amount)
             })
         });
-        Self { beat, shown, tint }
+        Self {
+            beat,
+            shown,
+            tint,
+            turn: 0.0,
+        }
     }
 
     /// `rgb` drawn toward the tint at its own strongest channel's level, as
     /// `saber.wgsl`'s `skin_apply_tint`.
+    /// A chroma's colours are turned to its wearer's first.
     pub(super) fn tinted(self, rgb: Rgb) -> Rgb {
+        let rgb = if self.turn == 0.0 {
+            rgb
+        } else {
+            crate::saber_skins::turn_hue(rgb, self.turn)
+        };
         match self.tint {
             Some((tint, amount)) => {
                 let level = rgb.into_iter().fold(0.0, f32::max);

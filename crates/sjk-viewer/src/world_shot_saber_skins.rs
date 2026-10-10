@@ -353,3 +353,63 @@ fn duel6_second_blades() {
         );
     });
 }
+
+/// The chromas ([`crate::unlockables::Unlockable::chroma`]) take their saber's colour:
+/// each in a row of the six retail colours and a custom white (which leaves the skin's
+/// own), standing on duel6 as the lineup does.
+#[test]
+#[ignore = "renders with the GPU and the installed game data named by JKA_GAME_DATA"]
+fn duel6_chroma_blades() {
+    use crate::saber::Color;
+    on_big_stack(|| {
+        mount_test_packs();
+        let Some((mut gpu, _profile)) = open("maps/mp/duel6.bsp", [1280, 720], None, &[]) else {
+            return;
+        };
+        let (spawn, yaw) = assets::initial_camera(&gpu.bsp).expect("a spawn point");
+        let turn = glam::Quat::from_rotation_z(yaw);
+        let eye = Vec3::from_array(spawn);
+        let ahead = |x: f32, y: f32, z: f32| eye + turn * Vec3::new(x, y, z);
+        gpu.saber_skins.shot_persona = crate::saber_persona::Persona::of(b"^1Sol^7Vulpes", 0);
+        let colours = [
+            BladeColor::Retail(Color::Red),
+            BladeColor::Retail(Color::Orange),
+            BladeColor::Retail(Color::Yellow),
+            BladeColor::Retail(Color::Green),
+            BladeColor::Retail(Color::Blue),
+            BladeColor::Retail(Color::Purple),
+            BladeColor::Rgb([255, 255, 255]),
+        ];
+        let (look_yaw, look_pitch) = look(eye.to_array(), ahead(70.0, 0.0, -6.0).to_array());
+        let chromas: Vec<_> = crate::unlockables::blade_skins()
+            .filter(|skin| skin.chroma)
+            .map(|skin| skin.id)
+            .collect();
+        let mut rows = Vec::new();
+        for id in &chromas {
+            gpu.saber_skins.shot_blades = colours
+                .iter()
+                .enumerate()
+                .map(|(index, stock)| {
+                    let offset = (index as f32 - 3.0) * 10.0;
+                    (
+                        Blade {
+                            base: ahead(70.0, -offset, -24.0).to_array(),
+                            direction: (turn * Vec3::new(0.0, -0.006 * offset, 1.0))
+                                .normalize()
+                                .to_array(),
+                            length: 40.0,
+                            radius: 3.0,
+                        },
+                        ShotColor::Worn(id, *stock),
+                        index as u32 + 1,
+                    )
+                })
+                .collect();
+            aim(&mut gpu, eye.to_array(), look_yaw, look_pitch);
+            gpu.saber_skins.shot_seconds = Some(2.6);
+            rows.push(frame(&mut gpu, if rows.is_empty() { 40 } else { 4 }));
+        }
+        println!("{}", sheet(&rows, 2, 1280, "duel6-chroma-blades").display());
+    });
+}

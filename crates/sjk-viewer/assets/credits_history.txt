@@ -9,6 +9,8 @@
 #                               made it when that is not the piece's owner.
 
 = Sol
++ 10/10/2026 | - | Chroma saber shaders take your saber colour, marked with a colour wheel
+- 8e745cf |  | Add chroma saber shaders, marked with a colour wheel
 + 10/10/2026 | - | Illuminate is a toy: toy_illuminate, no longer a Force power
 - f440faf |  | Make Illuminate a toy: toy_illuminate, off the Force wheel, a lit switch on the Toys tab
 - 508a8cf |  | Document Illuminate as a toy: toy_illuminate, the toy_ naming rule, changelog, test list

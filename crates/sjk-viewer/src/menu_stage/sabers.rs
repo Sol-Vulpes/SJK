@@ -310,7 +310,9 @@ impl GpuState {
                 self.queue
                     .write_buffer(&saber.instance_buffer, 0, bytemuck::bytes_of(&instance));
             }
-            let color = skin.map_or(saber.color, BladeColor::Skin);
+            let color = skin.map_or(saber.color, |skin| {
+                BladeColor::Skin(skin.worn_with(saber.color))
+            });
             for (index, blade) in saber
                 .blades
                 .iter()

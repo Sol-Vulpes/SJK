@@ -116,6 +116,81 @@ pub(crate) struct SkinColor {
     /// Who wears it (team, name), for the skins drawn from that; the default with no
     /// wearer known.
     pub(crate) persona: crate::saber_persona::Persona,
+    /// A chroma's base hue and the turn to its wearer's colour ([`Chroma`]); the default
+    /// for the other skins.
+    pub(crate) chroma: Chroma,
+}
+
+/// A chroma skin ([`crate::unlockables::Unlockable::chroma`]) takes its wearer's saber
+/// colour: every colour it draws is turned round the grey axis ([`turn_hue`]) from the
+/// skin's own hue to the colour's, keeping brightness and saturation. A grey or white
+/// colour (custom RGB) leaves the skin as its file draws it.
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub(crate) struct Chroma {
+    /// The skin's own hue, in turns ([`hue_of`] of its corona's rim); `None` for a skin
+    /// that is not a chroma.
+    pub(crate) base: Option<f32>,
+    /// Turns from the skin's hue to its wearer's colour; 0 draws the file's colours.
+    pub(crate) turn: f32,
+}
+
+/// Below this saturation (`(max − min) / max` of a colour) a colour has no hue to take.
+const CHROMA_GREY: f32 = 0.2;
+
+/// `rgb`'s hue in turns [0, 1): its angle round the grey axis from pure red, in the
+/// direction [`turn_hue`] turns; `None` for a colour too grey to have one.
+pub(crate) fn hue_of(rgb: [f32; 3]) -> Option<f32> {
+    let high = rgb[0].max(rgb[1]).max(rgb[2]);
+    let low = rgb[0].min(rgb[1]).min(rgb[2]);
+    if high <= 0.0 || (high - low) / high < CHROMA_GREY {
+        return None;
+    }
+    // Red's direction off the grey axis, and the axis crossed with it (turn_hue's sense).
+    let x = (2.0 * rgb[0] - rgb[1] - rgb[2]) / 6.0_f32.sqrt();
+    let y = (rgb[1] - rgb[2]) / 2.0_f32.sqrt();
+    Some((y.atan2(x) / std::f32::consts::TAU).rem_euclid(1.0))
+}
+
+impl SkinColor {
+    /// This skin on a blade whose stock colour is `stock`: a chroma turned to its hue,
+    /// its light and trail with it; any other skin, or a grey `stock`, as it is.
+    pub(crate) fn worn_with(self, stock: BladeColor) -> Self {
+        let Some(base) = self.chroma.base else {
+            return self;
+        };
+        let rgb = match stock {
+            BladeColor::Retail(color) => color.blade_rgb(),
+            BladeColor::Rgb(rgb) => rgb,
+            BladeColor::Skin(_) => return self,
+        };
+        let turn = hue_of(rgb.map(|channel| f32::from(channel) / 255.0))
+            .map_or(0.0, |hue| (hue - base).rem_euclid(1.0));
+        Self {
+            chroma: Chroma {
+                base: Some(base),
+                turn,
+            },
+            ..self
+        }
+    }
+
+    /// The dynamic light's colour, a chroma's turned to its wearer's.
+    pub(crate) fn light_color(&self) -> [f32; 3] {
+        self.chromatic(self.light)
+    }
+
+    /// The blur trail's colour, a chroma's turned to its wearer's.
+    pub(crate) fn trail_color(&self) -> [f32; 3] {
+        self.chromatic(self.trail)
+    }
+
+    fn chromatic(&self, rgb: [f32; 3]) -> [f32; 3] {
+        if self.chroma.turn == 0.0 {
+            rgb
+        } else {
+            turn_hue(rgb, self.chroma.turn)
+        }
+    }
 }
 
 impl SkinColor {
@@ -124,10 +199,10 @@ impl SkinColor {
     pub(crate) fn light_at(&self, time_millis: i64) -> [f32; 3] {
         let [rate, middle] = self.hue;
         if rate == 0.0 && middle == 0.0 {
-            return self.light;
+            return self.light_color();
         }
         let t = (time_millis.rem_euclid(1_024_000)) as f32 * 0.001;
-        turn_hue(self.light, t * rate + middle)
+        turn_hue(self.light, t * rate + middle + self.chroma.turn)
     }
 }
 
@@ -387,6 +462,12 @@ impl LoadedSkin {
         })
     }
 
+    /// How far a blade whose stock colour is `stock` turns its colours: a chroma's turn
+    /// to that colour ([`SkinColor::worn_with`]), 0 for any other skin.
+    pub(crate) fn chroma_turn(&self, stock: BladeColor) -> f32 {
+        self.color(0).worn_with(stock).chroma.turn
+    }
+
     /// What its blades are drawn with, as the loaded skin numbered `index`.
     fn color(&self, index: u8) -> SkinColor {
         let flicker = &self.def.light.flicker;
@@ -422,6 +503,14 @@ impl LoadedSkin {
                     fade: ghosts.fade,
                 }),
             persona: crate::saber_persona::Persona::default(),
+            chroma: Chroma {
+                base: crate::unlockables::is_chroma(self.id)
+                    .then(|| {
+                        hue_of(self.def.corona.rim_cool).or_else(|| hue_of(self.def.light.color))
+                    })
+                    .flatten(),
+                turn: 0.0,
+            },
         }
     }
 }
@@ -627,6 +716,8 @@ pub(crate) struct SaberSkins {
 pub(crate) enum ShotColor {
     Stock(BladeColor),
     Skin(&'static str),
+    /// A skin on a saber of that stock colour (a chroma takes it).
+    Worn(&'static str, BladeColor),
 }
 
 impl SaberSkins {
@@ -698,9 +789,11 @@ impl SaberSkins {
         self.local_persona
     }
 
-    /// The colour entity `entity_id`'s blades are drawn with: its skin over `color`.
+    /// The colour entity `entity_id`'s blades are drawn with: its skin over `color`, a
+    /// chroma in `color`'s hue.
     pub(crate) fn blade_color(&self, entity_id: u64, color: BladeColor) -> BladeColor {
-        self.get(entity_id).map_or(color, BladeColor::Skin)
+        self.get(entity_id)
+            .map_or(color, |skin| BladeColor::Skin(skin.worn_with(color)))
     }
 
     /// The local player's skin, worn with its own persona.
@@ -804,6 +897,9 @@ impl GpuState {
                     .map_or(BladeColor::Retail(crate::saber::Color::Blue), |skin| {
                         BladeColor::Skin(SkinColor { persona, ..skin })
                     }),
+                ShotColor::Worn(id, stock) => self.blade_skins.color_of(id).map_or(stock, |skin| {
+                    BladeColor::Skin(SkinColor { persona, ..skin }.worn_with(stock))
+                }),
             };
             self.saber_instances.extend(
                 crate::saber::Instance::pair(blade, color)
