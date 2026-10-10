@@ -9,6 +9,8 @@
 #                               made it when that is not the piece's owner.
 
 = Sol
++ 11/10/2026 | - | Release packaging: clipboard-win's BSL-1.0 text
+- dd841c3 |  | Package clipboard-win's license: canonical BSL-1.0 text
 + 11/10/2026 | - | Release 2026.1011.1 notes
 - 828c5d7 |  | Release 2026.1011.1 (Alpha)
 + 11/10/2026 | - | Balanced graphics without light shafts

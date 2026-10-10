@@ -40,6 +40,15 @@ def add_file(archive, source, name, executable=False):
     archive.writestr(info, source.read_bytes())
 
 
+# A crate that declares one of these licenses without shipping its text gets the
+# canonical text from scripts/licenses/<selected>.txt.
+CANONICAL_TEXTS = {
+    "Apache-2.0": "Apache-2.0",
+    "MIT OR Apache-2.0": "Apache-2.0",
+    "BSL-1.0": "BSL-1.0",
+}
+
+
 def dependency_notices(source, target, name="SJK"):
     """Yield original dependency license texts and their attribution inventory."""
     metadata = json.loads(command(source, "cargo", "metadata", "--locked",
@@ -59,15 +68,16 @@ def dependency_notices(source, target, name="SJK"):
             yield f"{prefix}/{path.relative_to(root).as_posix()}", path.read_bytes()
         selected_license = None
         if not files:
-            # Some crates declare Apache-2.0 but omit its text from their crate.
-            # Select that offered license and include the canonical text plus
-            # the original package manifest (authors and license declaration).
-            if package["license"] not in ("Apache-2.0", "MIT OR Apache-2.0"):
+            # Some crates declare Apache-2.0 (or BSL-1.0, clipboard-win) but omit its
+            # text from their crate. Select that offered license and include the
+            # canonical text plus the original package manifest (authors and license
+            # declaration).
+            selected_license = CANONICAL_TEXTS.get(package["license"])
+            if selected_license is None:
                 raise RuntimeError(f"No supplied license text for {prefix}: {package['license']}")
-            yield (f"{prefix}/LICENSE-APACHE-2.0.txt",
-                   (Path(__file__).parent / "licenses/Apache-2.0.txt").read_bytes())
+            yield (f"{prefix}/LICENSE-{selected_license.upper()}.txt",
+                   (Path(__file__).parent / f"licenses/{selected_license}.txt").read_bytes())
             yield f"{prefix}/Cargo.toml", Path(package["manifest_path"]).read_bytes()
-            selected_license = "Apache-2.0"
         notices.append({"name": package["name"], "version": package["version"],
                         "license": package["license"], "authors": package["authors"],
                         "repository": package["repository"],
