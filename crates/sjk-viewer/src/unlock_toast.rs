@@ -9,7 +9,10 @@
 //!   `holocron_popup.rs`), with the medallion's picture or the tier's icon (its gem
 //!   without one), "New medal" or "New holocron", its name, what it is for or where it
 //!   came from, and where to see it: the large pop-up still waits for the game menu, and
-//!   takes the cards of what it shows away as it opens ([`UnlockToast::withdraw`]).
+//!   takes the cards of what it shows away as it opens ([`UnlockToast::withdraw`]);
+//! - a newer SJK release the update check found (`update.rs`), once a session, with
+//!   SJK's emblem, "Update available", the version and where to install it, in the SJK
+//!   UI's holo blue and without the sound; the Update page opening takes it away.
 //!
 //! Unlike the large pop-ups it is not modal: it takes no input and pauses nothing, over
 //! play as over the menus. It enters in [`ENTER`] seconds, sliding down and growing to
@@ -21,8 +24,11 @@
 //! The top centre is free in play: the HUDs' gauges sit in the bottom corners,
 //! timers at the top right, notify lines at the top left, centre prints and the
 //! crosshair lower (`version_overlay.rs`), so the card covers neither the aim nor the
-//! chat. It waits while the console is open or a large pop-up shows, and draws
-//! nothing, nor allocates, while no unlock waits.
+//! chat. It waits while the console is open, a large pop-up shows or the window is away
+//! (alt-tabbed out or minimised), and its clock runs only while it is drawn, so a card
+//! is never spent unseen: a card hidden half way resumes where it was, and a long frame
+//! (a hitch, a map loading, a minimised window drawing nothing) moves it on by at most
+//! [`MAX_STEP`]. It draws nothing, nor allocates, while no unlock waits.
 
 use crate::achievements::Kind;
 use crate::achievements::medallion::{self, Medallion, tint};
@@ -32,6 +38,7 @@ use crate::medals::Medal;
 use crate::menu::sjk::{DISPLAY_CENTRE, color, text};
 use crate::menu_widgets::{MenuCanvas, TextFamily};
 use crate::text::{TextStyle, TextVertex, UiFont};
+use crate::update::Version;
 use sjk_ui::{Color, DrawCommand, FontWeight, Gradient, Rect, TextAlign};
 use std::collections::VecDeque;
 use std::f32::consts::{FRAC_PI_2, PI, TAU};
@@ -46,6 +53,15 @@ pub(crate) const SOUND_CVAR: &str = "cg_achievementSound";
 pub(crate) const AT_ONCE: usize = 3;
 /// Where a medal's or a holocron's card says it is shown.
 pub(crate) const MENU_HINT: &str = "Open the game menu to see it";
+/// Where the update card says the update is installed.
+pub(crate) const UPDATE_HINT: &str = "Main menu > Update";
+/// The console command that shows the update card for a made-up release.
+pub(crate) const UPDATE_COMMAND: &str = "debug_update";
+/// Its line in the command list and browser.
+pub(crate) const UPDATE_HELP: &str =
+    "Rehearse the update card, nothing checked or installed: debug_update [version] [manual]";
+/// The release `debug_update` names when it is given none.
+const REHEARSED_VERSION: &str = "2026.1231.1";
 
 /// Seconds the card takes to come in.
 pub(crate) const ENTER: f32 = 0.45;
@@ -57,6 +73,8 @@ pub(crate) const LEAVE: f32 = 0.65;
 pub(crate) const LIFETIME: f32 = ENTER + HOLD + LEAVE;
 /// Pause between two pop-ups.
 const GAP: Duration = Duration::from_millis(300);
+/// The most one frame moves a card's clock, in seconds.
+pub(crate) const MAX_STEP: f32 = 0.1;
 
 /// The card, in 1080-line pixels: its size, its top's distance from the screen's
 /// top and its corners' radius.
@@ -181,6 +199,9 @@ pub(crate) enum Unlock {
         id: u64,
         gift: bool,
     },
+    /// A newer SJK release is out; `manual` when this folder cannot install it itself
+    /// (the Update page then offers the release page).
+    Update { version: Version, manual: bool },
 }
 
 impl Unlock {
@@ -196,6 +217,7 @@ impl Unlock {
                 },
             ) => medal == other && count == other_count,
             (Self::Holocron { id, .. }, Self::Holocron { id: other, .. }) => id == other,
+            (Self::Update { version, .. }, Self::Update { version: other, .. }) => version == other,
             _ => false,
         }
     }
@@ -206,15 +228,23 @@ impl Unlock {
             Self::Achievement(_) => "ACHIEVEMENT UNLOCKED",
             Self::Medal { .. } => "NEW MEDAL",
             Self::Holocron { .. } => "NEW HOLOCRON",
+            Self::Update { .. } => "UPDATE AVAILABLE",
         }
     }
 
+    /// Whether the card plays the chime: everything but an update, which is news, not
+    /// a reward.
+    pub(crate) const fn chimes(self) -> bool {
+        !matches!(self, Self::Update { .. })
+    }
+
     /// The words at the kicker's line's end: an achievement's category, else where the
-    /// large pop-up shows it.
+    /// large pop-up or the Update page shows it.
     pub(crate) const fn tag(self) -> &'static str {
         match self {
             Self::Achievement(kind) => kind.category.name(),
             Self::Medal { .. } | Self::Holocron { .. } => MENU_HINT,
+            Self::Update { .. } => UPDATE_HINT,
         }
     }
 
@@ -224,6 +254,7 @@ impl Unlock {
             Self::Achievement(kind) => tint(kind.category),
             Self::Medal { .. } => color::GOLD,
             Self::Holocron { tier, .. } => tier.colour,
+            Self::Update { .. } => color::HOLO,
         }
     }
 
@@ -237,6 +268,7 @@ impl Unlock {
                 tier.colour.b * 0.5 + 0.5,
                 1.0,
             ),
+            Self::Update { .. } => color::HOLO,
             _ => color::GOLD_BRIGHT,
         }
     }
@@ -245,6 +277,7 @@ impl Unlock {
     fn edge(self) -> Color {
         match self {
             Self::Holocron { tier, .. } => tier.colour,
+            Self::Update { .. } => color::HOLO,
             _ => color::GOLD,
         }
     }
@@ -272,6 +305,7 @@ impl fmt::Display for Name {
             }
             Unlock::Medal { medal, .. } => formatter.write_str(medal.name()),
             Unlock::Holocron { tier, .. } => formatter.write_str(tier.name),
+            Unlock::Update { version, .. } => write!(formatter, "SJK {}", version.as_str()),
         }
     }
 }
@@ -291,15 +325,24 @@ impl fmt::Display for Description {
                 "Found while playing: {} of drops are {}",
                 tier.odds, tier.label
             ),
+            Unlock::Update { manual: false, .. } => {
+                formatter.write_str("Install it there; it starts when SJK restarts")
+            }
+            Unlock::Update { manual: true, .. } => {
+                formatter.write_str("This folder cannot update itself: see its page")
+            }
         }
     }
 }
 
-/// The unlock showing and since when.
+/// The unlock showing and how long it has been seen.
 #[derive(Clone, Copy)]
 struct Showing {
     unlock: Unlock,
-    started: Instant,
+    /// Seconds it has been drawn.
+    shown: f32,
+    /// The frame that last moved it on.
+    last: Instant,
 }
 
 /// The pop-up's state: the unlocks waiting, the one showing and its canvas.
@@ -309,6 +352,10 @@ pub(crate) struct UnlockToast {
     current: Option<Showing>,
     /// When the last pop-up ended, for the pause before the next.
     ended: Option<Instant>,
+    /// The update state's generation last read (`update::generation`), and the release
+    /// whose card was given this session.
+    update_seen: u32,
+    update_given: Option<Version>,
     /// A moment held still (seconds after the start), for the off-screen shots.
     #[cfg(test)]
     held: Option<f32>,
@@ -322,6 +369,8 @@ impl Default for UnlockToast {
             queue: VecDeque::with_capacity(4),
             current: None,
             ended: None,
+            update_seen: 0,
+            update_given: None,
             #[cfg(test)]
             held: None,
         }
@@ -349,26 +398,70 @@ impl UnlockToast {
         }
     }
 
+    /// The update state moved to `generation`: when `available` (read only then) names a
+    /// newer release, give its card, once a session for each release, unless the Update
+    /// page shows it (`page_open`), which also takes a card still waiting or showing back.
+    pub(crate) fn offer_update(
+        &mut self,
+        now: Instant,
+        generation: u32,
+        page_open: bool,
+        available: impl FnOnce() -> Option<(String, bool)>,
+    ) {
+        if page_open && self.pending() > 0 {
+            self.withdraw(now, |unlock| matches!(unlock, Unlock::Update { .. }));
+        }
+        if generation == self.update_seen {
+            return;
+        }
+        self.update_seen = generation;
+        let Some((text, manual)) = available() else {
+            return;
+        };
+        let Some(version) = Version::new(&text) else {
+            return;
+        };
+        if self.update_given == Some(version) {
+            return;
+        }
+        self.update_given = Some(version);
+        if !page_open {
+            self.push(Unlock::Update { version, manual });
+        }
+    }
+
     /// Unlocks waiting, the one showing included.
     pub(crate) fn pending(&self) -> usize {
         self.queue.len() + usize::from(self.current.is_some())
     }
 
-    /// Seconds since the pop-up showing began.
-    fn elapsed(&self, showing: Showing, now: Instant) -> f32 {
+    /// Seconds the pop-up showing has been seen.
+    fn elapsed(&self, showing: Showing) -> f32 {
         #[cfg(test)]
         if let Some(held) = self.held {
             return held;
         }
-        now.saturating_duration_since(showing.started).as_secs_f32()
+        showing.shown
     }
 
-    /// Move the pop-ups on to `now`: end the one whose time is up, and start the next
-    /// one waiting when it `may_show` (not under the console or a large pop-up),
-    /// with its `sound`. Returns whether a pop-up draws this frame.
+    /// Move the pop-ups on to `now`: the one showing by the frame's time while it
+    /// `may_show` (not under the console or a large pop-up, the window not away), at most
+    /// [`MAX_STEP`]; end it once its time is up, and start the next one waiting when it
+    /// may show, with its `sound` where it chimes. Returns whether a pop-up draws this
+    /// frame.
     pub(crate) fn update(&mut self, now: Instant, may_show: bool, sound: bool) -> bool {
+        if let Some(showing) = &mut self.current {
+            let step = now
+                .saturating_duration_since(showing.last)
+                .as_secs_f32()
+                .min(MAX_STEP);
+            showing.last = now;
+            if may_show {
+                showing.shown += step;
+            }
+        }
         if let Some(showing) = self.current
-            && Phase::at(self.elapsed(showing, now)) == Phase::Gone
+            && Phase::at(self.elapsed(showing)) == Phase::Gone
         {
             self.current = None;
             self.ended = Some(now);
@@ -380,9 +473,10 @@ impl UnlockToast {
             if rested && let Some(unlock) = self.queue.pop_front() {
                 self.current = Some(Showing {
                     unlock,
-                    started: now,
+                    shown: 0.0,
+                    last: now,
                 });
-                if sound {
+                if sound && unlock.chimes() {
                     ui_cues::post(Cue::Achievement);
                 }
             }
@@ -394,12 +488,12 @@ impl UnlockToast {
         self.canvas.draw_list()
     }
 
-    /// Lay the pop-up showing out for `viewport` as it stands at `now`.
-    pub(crate) fn build(&mut self, viewport: [f32; 2], now: Instant) {
+    /// Lay the pop-up showing out for `viewport` as it stands.
+    pub(crate) fn build(&mut self, viewport: [f32; 2]) {
         let Some(showing) = self.current else {
             return;
         };
-        let t = self.elapsed(showing, now);
+        let t = self.elapsed(showing);
         draw(&mut self.canvas, showing.unlock, t, viewport);
     }
 
@@ -713,7 +807,8 @@ fn draw(canvas: &mut MenuCanvas, unlock: Unlock, t: f32, viewport: [f32; 2]) {
 
 /// Draw what `unlock` brought in the circle of `radius` round `centre`, its ring `sweep`
 /// of the way round: an achievement's medallion, a medal's medallion picture, a holocron's
-/// icon (its gem where the icon is missing), each in a lit disc.
+/// icon (its gem where the icon is missing), SJK's emblem for an update, each in a lit
+/// disc.
 fn emblem(canvas: &mut MenuCanvas, unlock: Unlock, centre: [f32; 2], radius: f32, sweep: f32) {
     let (picture, gem_colour) = match unlock {
         Unlock::Achievement(kind) => {
@@ -737,6 +832,7 @@ fn emblem(canvas: &mut MenuCanvas, unlock: Unlock, centre: [f32; 2], radius: f32
                 (None, Some(tier.colour))
             }
         }
+        Unlock::Update { .. } => (Some((crate::ui_renderer::LOGO_TEXTURE, 0.86)), None),
     };
     // The medallion's line widths at this size.
     let k = radius / MEDAL_RADIUS;
@@ -834,6 +930,29 @@ fn spaced(
     canvas.set_family(TextFamily::Body);
 }
 
+impl crate::GpuState {
+    /// `debug_update [version] [manual]`: show the update card for a made-up release, as
+    /// the update check would on finding it (`manual`: a folder that cannot update itself),
+    /// without checking or installing anything. The console closes so it shows at once.
+    pub(crate) fn debug_update_command(&mut self, args: &[String]) -> Result<Vec<String>, String> {
+        let text = args.first().map_or(REHEARSED_VERSION, String::as_str);
+        let version = Version::new(text)
+            .ok_or_else(|| format!("{text} is not a release version, such as 2026.1011.1"))?;
+        let manual = args
+            .get(1)
+            .is_some_and(|word| word.eq_ignore_ascii_case("manual"));
+        self.unlock_toast.push(Unlock::Update { version, manual });
+        if let Some(console) = &mut self.console {
+            console.set_open(false);
+        }
+        self.sync_cursor_policy();
+        Ok(vec![format!(
+            "The update card for SJK {} is queued; nothing is checked or installed",
+            version.as_str()
+        )])
+    }
+}
+
 #[cfg(test)]
 impl UnlockToast {
     /// Show `unlocks` one after another, the first held `at` seconds after it began,
@@ -851,28 +970,36 @@ impl UnlockToast {
 
 impl crate::GpuState {
     /// Move the unlock pop-up on and lay it out over the frame unless `covered` (the
-    /// console over the frame, a large pop-up); returns whether it draws this frame.
+    /// console over the frame, a large pop-up) or the window is away; returns whether it
+    /// draws this frame. A newer release the update check found gets its card here.
     pub(crate) fn append_unlock_toast(&mut self, viewport: [f32; 2], covered: bool) -> bool {
+        let now = Instant::now();
+        let page_open = self
+            .console
+            .as_ref()
+            .is_some_and(crate::console::ViewerConsole::update_page_open);
+        self.unlock_toast.offer_update(
+            now,
+            crate::update::generation(),
+            page_open,
+            crate::update::available,
+        );
         if self.unlock_toast.pending() == 0 {
             return false;
         }
-        let console_open = self
-            .console
-            .as_ref()
-            .is_some_and(crate::console::ViewerConsole::is_open);
-        let sound = self
-            .console
-            .as_ref()
+        let console = self.console.as_ref();
+        let console_open = console.is_some_and(crate::console::ViewerConsole::is_open);
+        let away = console.is_some_and(crate::console::ViewerConsole::window_away);
+        let sound = console
             .and_then(|console| console.bool_cvar(SOUND_CVAR))
             .unwrap_or(true);
-        let now = Instant::now();
         if !self
             .unlock_toast
-            .update(now, !covered && !console_open, sound)
+            .update(now, !covered && !console_open && !away, sound)
         {
             return false;
         }
-        self.unlock_toast.build(viewport, now);
+        self.unlock_toast.build(viewport);
         self.unlock_toast.append_text(
             self.game_fonts.sjk(),
             &mut self.text_vertices,
@@ -905,6 +1032,24 @@ mod tests {
         }
     }
 
+    /// Frames 50 ms apart from `from` for `seconds`, each told whether the card
+    /// `may_show`; returns the last frame's time and whether it drew.
+    fn frames(
+        toast: &mut UnlockToast,
+        from: Instant,
+        seconds: f32,
+        may_show: bool,
+    ) -> (Instant, bool) {
+        let step = Duration::from_millis(50);
+        let mut now = from;
+        let mut drew = false;
+        for _ in 0..(seconds / 0.05).round() as usize {
+            now += step;
+            drew = toast.update(now, may_show, true);
+        }
+        (now, drew)
+    }
+
     /// The name of the unlock showing.
     fn shown(toast: &UnlockToast) -> Option<String> {
         toast
@@ -930,6 +1075,12 @@ mod tests {
                 gift: true,
             });
         }
+        for manual in [false, true] {
+            unlocks.push(Unlock::Update {
+                version: Version::new("2026.1231.12").unwrap(),
+                manual,
+            });
+        }
         unlocks
     }
 
@@ -947,21 +1098,53 @@ mod tests {
         toast.push(kind("first_blood"));
         assert_eq!(toast.pending(), 2, "nor the one showing");
         let first = shown(&toast);
-        let after = |seconds: f32| start + Duration::from_secs_f32(seconds);
-        for seconds in [0.1, 1.0, 3.0, LIFETIME - 0.01] {
-            assert!(toast.update(after(seconds), true, true));
-            assert_eq!(shown(&toast), first);
-        }
+        let (now, drew) = frames(&mut toast, start, LIFETIME - 0.1, true);
+        assert!(drew);
+        assert_eq!(shown(&toast), first);
         assert!(ui_cues::take_posted().is_empty(), "one sound per pop-up");
         // Gone, and the next waits out the pause.
-        assert!(!toast.update(after(LIFETIME), true, true));
-        assert!(!toast.update(after(LIFETIME + 0.1), true, true));
-        assert!(toast.update(after(LIFETIME + 0.35), true, true));
+        let (now, drew) = frames(&mut toast, now, 0.15, true);
+        assert!(!drew && toast.current.is_none());
+        let (now, drew) = frames(&mut toast, now, 0.1, true);
+        assert!(!drew);
+        let (now, drew) = frames(&mut toast, now, 0.25, true);
+        assert!(drew);
         assert_eq!(shown(&toast), Some(kind("streak_5").name().to_string()));
         assert_eq!(ui_cues::take_posted(), [Cue::Achievement]);
-        let end = LIFETIME * 2.0 + 0.4;
-        assert!(!toast.update(after(end), true, true));
+        let (_, drew) = frames(&mut toast, now, LIFETIME + 0.2, true);
+        assert!(!drew);
         assert_eq!(toast.pending(), 0);
+    }
+
+    /// The card's clock runs only while it is drawn: hidden (the window away, the
+    /// console) it waits where it was, and a long frame counts as one short step.
+    #[test]
+    fn a_hidden_card_waits_where_it_was() {
+        let mut toast = UnlockToast::default();
+        toast.push(kind("first_blood"));
+        let start = Instant::now();
+        assert!(toast.update(start, true, false));
+        let (now, _) = frames(&mut toast, start, 1.0, true);
+        let at = toast.current.map(|showing| showing.shown).unwrap();
+        assert!((at - 1.0).abs() < 1e-3, "{at}");
+        // Alt-tabbed out for a minute: not drawn, not moved on.
+        let (now, drew) = frames(&mut toast, now, 60.0, false);
+        assert!(!drew);
+        assert_eq!(toast.current.map(|showing| showing.shown), Some(at));
+        // Back: it goes on from there.
+        let (now, drew) = frames(&mut toast, now, 0.5, true);
+        assert!(drew);
+        let at = toast.current.map(|showing| showing.shown).unwrap();
+        assert!((at - 1.5).abs() < 1e-3, "{at}");
+        // A minimised window drew nothing for ten seconds: one step.
+        assert!(toast.update(now + Duration::from_secs(10), true, false));
+        let later = toast.current.map(|showing| showing.shown).unwrap();
+        assert!((later - at - MAX_STEP).abs() < 1e-4, "{later}");
+        // Nothing waiting starts while hidden.
+        let mut idle = UnlockToast::default();
+        idle.push(kind("maps_10"));
+        assert!(!idle.update(now, false, true));
+        assert!(idle.current.is_none());
     }
 
     #[test]
@@ -994,11 +1177,43 @@ mod tests {
         assert!(toast.update(start, true, true));
         assert_eq!(shown(&toast).as_deref(), Some("Bug Hunter"));
         assert_eq!(ui_cues::take_posted(), [Cue::Achievement]);
-        let next = start + Duration::from_secs_f32(LIFETIME);
-        assert!(!toast.update(next, true, true));
-        assert!(toast.update(next + GAP, true, true));
+        let (now, drew) = frames(&mut toast, start, LIFETIME + 0.05, true);
+        assert!(!drew);
+        let (_, drew) = frames(&mut toast, now, 0.3, true);
+        assert!(drew);
         assert_eq!(shown(&toast).as_deref(), Some("Legendary Holocron"));
         assert_eq!(ui_cues::take_posted(), [Cue::Achievement]);
+    }
+
+    /// An update's card comes once a session for each release the check finds, without
+    /// the chime, and never over the Update page, which takes it back.
+    #[test]
+    fn an_update_found_has_one_quiet_card() {
+        ui_cues::take_posted();
+        let mut toast = UnlockToast::default();
+        let now = Instant::now();
+        let found = || Some(("2026.1010.2".to_owned(), false));
+        // Nothing changed: the state is not even read.
+        toast.offer_update(now, 0, false, || panic!("read without a change"));
+        toast.offer_update(now, 1, false, || None);
+        assert_eq!(toast.pending(), 0, "checking");
+        toast.offer_update(now, 2, false, found);
+        assert_eq!(toast.pending(), 1);
+        assert!(toast.update(now, true, true));
+        assert_eq!(shown(&toast).as_deref(), Some("SJK 2026.1010.2"));
+        assert!(ui_cues::take_posted().is_empty(), "no chime for an update");
+        // Checked again: the same release gives no second card; a newer one does.
+        toast.offer_update(now, 3, false, found);
+        assert_eq!(toast.pending(), 1);
+        toast.offer_update(now, 4, false, || Some(("2026.1010.3".to_owned(), true)));
+        assert_eq!(toast.pending(), 2);
+        // The Update page opens: both go, and what it finds then gets no card.
+        toast.offer_update(now, 4, true, || None);
+        assert_eq!(toast.pending(), 0);
+        toast.offer_update(now, 5, true, || Some(("2026.1011.1".to_owned(), false)));
+        assert_eq!(toast.pending(), 0);
+        toast.offer_update(now, 6, false, || Some(("2026.1011.1".to_owned(), false)));
+        assert_eq!(toast.pending(), 0, "the page showed it");
     }
 
     /// The large pop-up opening takes back its own kind's cards, the one showing too,
@@ -1023,6 +1238,14 @@ mod tests {
 
     #[test]
     fn the_words_of_medals_and_holocrons() {
+        let update = Unlock::Update {
+            version: Version::new("2026.1010.2").unwrap(),
+            manual: false,
+        };
+        assert_eq!(update.kicker(), "UPDATE AVAILABLE");
+        assert_eq!(update.tag(), UPDATE_HINT);
+        assert_eq!(update.name().to_string(), "SJK 2026.1010.2");
+        assert!(!update.chimes() && kind("streak_5").chimes());
         let bug_hunter = medal(Medal::BugHunter, 3);
         assert_eq!(bug_hunter.kicker(), "NEW MEDAL");
         assert_eq!(bug_hunter.name().to_string(), "Bug Hunter x3");
@@ -1050,7 +1273,7 @@ mod tests {
     fn nothing_is_drawn_while_idle() {
         let mut toast = UnlockToast::default();
         assert!(!toast.update(Instant::now(), true, true));
-        toast.build([1920.0, 1080.0], Instant::now());
+        toast.build([1920.0, 1080.0]);
         assert!(toast.draw_list().is_empty());
     }
 
@@ -1121,7 +1344,7 @@ mod tests {
             for unlock in &unlocks {
                 for t in [0.05, 0.3, 0.6, 1.0, 3.0, ENTER + HOLD + 0.3] {
                     let mut toast = UnlockToast::preview(&[*unlock], t);
-                    toast.build(viewport, Instant::now());
+                    toast.build(viewport);
                     assert!(!toast.canvas.overflowed(), "{unlock:?} {t} {viewport:?}");
                     let card = card_rect(viewport, t);
                     assert!(

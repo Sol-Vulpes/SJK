@@ -3578,3 +3578,17 @@ test: debug_holocron rare, then unlock an achievement: the cards queue and never
 test: Settings > Sound > Unlock sound off: the cards still show, without the chime.
 test: On the main menu: debug_holocron rare - the big pop-up as before, no card.
 note: Unit tests and world shots only; not tried in a game.
+
+[away-cards]
+area: HUD
+title: Unlock cards wait while SJK is alt-tabbed; a card for a new update
+change: Achievement, medal and holocron cards wait while the window is unfocused or minimised.
+change: A card hidden half way resumes where it was; big medal/holocron pop-ups wait to start.
+change: An update found at start: "Update available", SJK <version>, Main menu > Update, no sound.
+test: In a match: debug_holocron rare, alt-tab out at once, wait 10 s, come back: the card shows.
+test: Alt-tab out half way through a card: back in game it goes on from where it was.
+test: Main menu: debug_medal early_tester, alt-tab at once: back in game the entrance plays then.
+test: debug_update: the update card, blue with the SJK emblem, no chime.
+test: debug_update 2026.1231.2 manual: "This folder cannot update itself: see its page".
+test: Open Main menu > Update while the card shows (debug_update, then Update): the card goes.
+note: Unit tests and world shots only; not tried in a game.

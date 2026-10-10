@@ -639,8 +639,12 @@ asked. It takes no input and pauses nothing, over play and over the menus alike.
 slides down and grows into place in under half a second while a gold ring sweeps
 round the medallion, light bursts from it (a glow, a ring of light, sparks), its edge
 flares and a glint crosses the card; it holds five seconds and fades out. Several
-unlocks queue and show one after another. It waits while the console is open or a
-large pop-up shows. Each pop-up plays `sound/interface/secret_area.mp3`, the
+unlocks queue and show one after another. It waits while the console is open, a
+large pop-up shows or the window is away (alt-tabbed out or minimised; since 10/10/2026,
+Sol's request), and its clock runs only while it is drawn: a card hidden half way
+resumes where it was when the player comes back, and a long frame (a hitch, a map
+loading, a minimised window drawing nothing) moves it on by a tenth of a second at
+most, so no card is spent unseen. Each pop-up plays `sound/interface/secret_area.mp3`, the
 single-player game's sound for a secret area found (its game module plays it with the
 `@SP_INGAME_SECRET_AREA` centre print), which multiplayer installs have in the shared
 `assets0.pk3`; `cg_achievementSound 0` (Settings > Sound > Unlock sound) leaves it
@@ -650,7 +654,9 @@ announces a new medal ([Medals](#medals)) or holocron
 the achievements: "New medal" or "New holocron", "Open the game menu to see it" where the
 category stands, the medallion's picture or the tier's icon, and a holocron's light in its
 tier's colour. One arrival brings at most three cards, and the large pop-up that opens with
-the game menu takes back the cards of what it shows. The board shows every
+the game menu takes back the cards of what it shows. The new medal and holocron pop-ups'
+entrances (and their fanfare) also wait for the window to come back. A newer SJK release
+the update check finds has a card too ([client.md](client.md#updates)). The board shows every
 achievement in three columns: a medallion with the goal that fills with the count,
 gold once unlocked, the name, the category (Combat, Duels and flags, Journeys,
 Community), what to do, a bar and the count or the date it was unlocked.

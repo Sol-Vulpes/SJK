@@ -435,8 +435,8 @@ impl crate::GpuState {
 
     /// Open the pop-up when a holocron waits and the main menu or the game menu is up (its
     /// cards go), or announce it once with a card during a match, and move its ceremony
-    /// on. A medal on show or waiting goes first. Returns whether the pop-up draws this
-    /// frame (not under the console).
+    /// on (it begins once the window is not away). A medal on show or waiting goes first.
+    /// Returns whether the pop-up draws this frame (not under the console).
     pub(crate) fn prepare_holocron_popup(&mut self, console_covers_frame: bool) -> bool {
         let now = Instant::now();
         let console_open = self
@@ -462,7 +462,12 @@ impl crate::GpuState {
             }
         }
         let visible = self.holocron_popup.is_open() && !console_open && !console_covers_frame;
-        self.holocron_popup.update(now, visible);
+        // The ceremony and its fanfare wait for the window to come back.
+        let away = self
+            .console
+            .as_ref()
+            .is_some_and(crate::console::ViewerConsole::window_away);
+        self.holocron_popup.update(now, visible && !away);
         visible && self.holocron_popup.is_open()
     }
 

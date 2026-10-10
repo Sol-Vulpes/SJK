@@ -1939,6 +1939,16 @@ The client looks for a newer SJK release when it starts and from the Update page
   a worker thread. A newer version shows on the main menus' version line
   ("update 2026.1010.1 available"). The check sends the request GitHub needs and
   nothing else; turn it off to send none.
+- When the check finds a newer release, a card says so once a session at the top of
+  the screen, over the menus or a match, the achievements' card
+  ([identity.md](identity.md#achievements); since 10/10/2026, Sol's request): "Update
+  available", "SJK 2026.1011.1", "Main menu > Update" and "Install it there; it starts
+  when SJK restarts" (or, for a folder that cannot update itself, "This folder cannot
+  update itself: see its page"), with SJK's emblem in the SJK UI's holo blue and no
+  sound. It waits while the window is away, and the Update page opening takes it back
+  (a release found while the page shows gets no card). `debug_update [version] [manual]`
+  shows the card for a made-up release (2026.1231.1 without one; `manual` for the
+  folder that cannot update itself) and checks and installs nothing.
 - Main menu > Update (classic: SJK > UPDATE) or the
   `update` command opens the page (with the SJK UI's menus, a pop-up card over
   the map: [sjk-ui.md](sjk-ui.md#sjks-pages)). It shows the state and offers Install (Enter),

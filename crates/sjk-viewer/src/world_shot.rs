@@ -1530,8 +1530,8 @@ like this one.",
     /// The unlock pop-up over play on the live duel6 (no menu), at 1920x1080 and
     /// 1440x1080: an achievement's card coming in (the ring sweeping, the burst, the
     /// glint), held and leaving, each moment held still, and a sheet of the top of the
-    /// screen at every moment; a medal's and each holocron tier's card, coming in and
-    /// held, on a sheet; then an achievement's over the SJK UI's main page.
+    /// screen at every moment; a medal's, each holocron tier's and an update's card,
+    /// coming in and held, on a sheet; then an achievement's over the SJK UI's main page.
     #[test]
     #[ignore = "renders with the GPU and the installed game data named by JKA_GAME_DATA"]
     fn duel6_unlock_toast() {
@@ -1553,6 +1553,10 @@ like this one.",
                     gift: index == 0,
                 });
             }
+            others.push(Unlock::Update {
+                version: crate::update::Version::new("2026.1011.1").expect("a version"),
+                manual: false,
+            });
             let moments = [
                 (0.1, "entering"),
                 (0.25, "landing"),
