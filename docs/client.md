@@ -5,6 +5,13 @@ Jedi Academy `GameData` directory with the retail `base/assets*.pk3` files.
 
 ## Launch
 
+Held multiplayer pistols use distinct world models: weapon slot 4 (the blaster
+pistol, commonly replaced by a DL-44 pack) uses
+`models/weapons2/blaster_pistol/blaster_pistol_w.glm`; slot 16 (the old Bryar)
+uses `models/weapons2/briar_pistol/briar_pistol_w.glm`. These match OpenJK
+`codemp/game/bg_misc.c` item definitions, independently of the first-person
+view models. Mounted replacement packs keep their normal priority.
+
 The client program is `sjk` and the dedicated server `sjk-server` (`.exe` on
 Windows). Developer and diagnostic environment variables are named `SJK_*`
 (`SJK_TRACE_*`, `SJK_LAMP_*`, `SJK_GPU_*` and the like). On Windows both programs

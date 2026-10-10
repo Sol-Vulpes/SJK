@@ -14,7 +14,8 @@ pub(crate) fn actor_world_rotation(rotation: [f32; 4]) -> Quat {
 pub(crate) fn held_model(weapon: u8) -> Option<&'static str> {
     match weapon {
         1 => Some("models/weapons2/stun_baton/baton_w.glm"),
-        4 | 16 => Some("models/weapons2/briar_pistol/briar_pistol_w.glm"),
+        4 => Some("models/weapons2/blaster_pistol/blaster_pistol_w.glm"),
+        16 => Some("models/weapons2/briar_pistol/briar_pistol_w.glm"),
         5 => Some("models/weapons2/blaster_r/blaster_w.glm"),
         6 => Some("models/weapons2/disruptor/disruptor_w.glm"),
         7 => Some("models/weapons2/bowcaster/bowcaster_w.glm"),
@@ -27,5 +28,23 @@ pub(crate) fn held_model(weapon: u8) -> Option<&'static str> {
         14 => Some("models/weapons2/detpack/det_pack_w.glm"),
         15 => Some("models/weapons2/concussion/c_rifle_w.glm"),
         _ => None,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::held_model;
+
+    #[test]
+    fn multiplayer_pistols_keep_their_distinct_item_models() {
+        // codemp/game/bg_misc.c: weapon_blaster_pistol and weapon_bryar_pistol.
+        assert_eq!(
+            held_model(4),
+            Some("models/weapons2/blaster_pistol/blaster_pistol_w.glm")
+        );
+        assert_eq!(
+            held_model(16),
+            Some("models/weapons2/briar_pistol/briar_pistol_w.glm")
+        );
     }
 }
