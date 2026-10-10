@@ -95,6 +95,15 @@ pub(super) fn load<'a>(
             }
         }
     }
+    // The jetpack's file is a `model.glm`, which the loop above takes for an NPC body.
+    let jetpack = Appearance {
+        model: crate::jetpack::MODEL.to_owned(),
+        variant: String::new(),
+    };
+    match load_one(vfs, &jetpack, flattened) {
+        Ok(mesh) => meshes.push(mesh),
+        Err(error) => eprintln!("could not load the jetpack {}: {error}", jetpack.model),
+    }
     meshes
 }
 

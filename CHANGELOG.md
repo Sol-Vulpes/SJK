@@ -20,6 +20,7 @@ Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 -->
 ## Unreleased
 
+- The green spawn-protection bubble is visible again, as are the Ysalamiri, Force Boon and Enlightenment spheres; jetpacks show on their wearers' backs with their jet flames, start and stop sounds and hover loop _(Sol, after JoF EJK)_
 - The body shield-hit flash is a little brighter by default: two passes (cg_shieldBrightness 2); a profile still on the old default 1 (or 4) moves to 2 once, other values stay _(Sol)_
 
 ## 2026.1011.1 (Alpha) | 11/10/2026

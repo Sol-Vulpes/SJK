@@ -4,7 +4,8 @@
 //! live in `world_materials`/`world_stage`. This module only ensures that the
 //! shaders selected directly by cgame are present in that shared material
 //! table. Item overrides follow `cg_ents.c:2162-2197`; player force shells
-//! follow `cg_players.c:9673-9723,10857-11119`.
+//! follow `cg_players.c:9673-9723,10857-11119`, and the shaders of
+//! `CG_DrawPlayerSphere` (`player_spheres.rs`) share the same table.
 
 use super::ViewerMaterial;
 
@@ -16,7 +17,7 @@ pub(crate) struct Overrides {
     pub(crate) dark_disabled: usize,
     /// `cgs.media.disruptorShader`, `CG_Disintegration`'s burning pass.
     pub(crate) disruptor_burn: usize,
-    force: [usize; 9],
+    force: [usize; 15],
 }
 
 /// Append or reuse the cgame entity-override materials before the shared Q3
@@ -27,7 +28,7 @@ pub(crate) fn append_overrides(materials: &mut Vec<ViewerMaterial>) -> Overrides
         light_disabled: ensure(materials, "gfx/misc/mp_light_enlight_disable"),
         dark_disabled: ensure(materials, "gfx/misc/mp_dark_enlight_disable"),
         disruptor_burn: ensure(materials, crate::disintegration::BURN_SHADER),
-        force: [0; 9],
+        force: [0; 15],
     };
     for (slot, shader) in result.force.iter_mut().zip(FORCE_SHADERS) {
         *slot = ensure(materials, shader);
@@ -35,7 +36,7 @@ pub(crate) fn append_overrides(materials: &mut Vec<ViewerMaterial>) -> Overrides
     result
 }
 
-const FORCE_SHADERS: [&str; 9] = [
+const FORCE_SHADERS: [&str; 15] = [
     "halfShieldShell",
     "gfx/misc/electric",
     "gfx/misc/fullbodyelectric2",
@@ -45,6 +46,12 @@ const FORCE_SHADERS: [&str; 9] = [
     "powerups/forceshell",
     "powerups/sightshell",
     "powerups/ysalimarishell",
+    "powerups/ysaliredshell",
+    "powerups/ysaliblueshell",
+    "powerups/boonshell",
+    "powerups/endarkenmentshell",
+    "powerups/enlightenmentshell",
+    "powerups/invulnerabilityshell",
 ];
 
 impl Overrides {

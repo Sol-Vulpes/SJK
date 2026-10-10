@@ -27,11 +27,23 @@ pub(crate) mod speed_trail;
 #[path = "grapple_rope.rs"]
 mod grapple_rope;
 
+#[path = "jetpack_submission.rs"]
+mod jetpack_submission;
+
+#[path = "player_sphere_submission.rs"]
+mod player_spheres;
+
 struct Sinks<'a> {
     flag_meshes: [Option<usize>; 2],
     shield_mesh: Option<usize>,
     shield_sphere: bool,
     shield_passes: u32,
+    /// `g_gametype` from the serverinfo.
+    gametype: i32,
+    /// The rendered view's origin, which player spheres face.
+    view_origin: Vec3,
+    jetpack: crate::jetpack::Catalog,
+    jetpack_sounds: &'a mut crate::jetpack::Sounds,
     world: &'a sjk_runtime::World,
     actor_meshes: &'a [ActorMesh],
     object_meshes: &'a [StaticModelMesh],
@@ -193,19 +205,22 @@ pub(crate) fn submit(
     );
     let saber_contact = gpu.effect_aux.saber_contacts.enabled;
     let detached_flight = gpu.free_camera_active();
+    let gametype = game_state
+        .and_then(|game| game.config_string(0))
+        .and_then(|info| sjk_client::LegacyClientInfo::new(info).integer("g_gametype"))
+        .unwrap_or(0);
     let mut sinks = Sinks {
-        flag_meshes: gpu.pickup_catalog.carrier_meshes[flags::model_set(
-            game_state
-                .and_then(|game| game.config_string(0))
-                .and_then(|info| sjk_client::LegacyClientInfo::new(info).integer("g_gametype"))
-                .unwrap_or(0),
-        )],
+        flag_meshes: gpu.pickup_catalog.carrier_meshes[flags::model_set(gametype)],
         shield_mesh: gpu
             .object_meshes
             .iter()
             .position(|mesh| mesh.appearance.model == "models/weaphits/testboom.md3"),
         shield_sphere,
         shield_passes,
+        gametype,
+        view_origin: gpu.view_origin,
+        jetpack: gpu.jetpack,
+        jetpack_sounds: &mut gpu.jetpack_sounds,
         world: active_world,
         actor_meshes: &gpu.actor_meshes,
         object_meshes: &gpu.object_meshes,
@@ -513,10 +528,62 @@ fn submit_actor(
         }
         _ => [None; 2],
     };
+    let number = u16::try_from(entity.id.get().saturating_sub(1)).unwrap_or(u16::MAX);
+    let e_flags = if local {
+        snapshot.map_or(0, |snapshot| snapshot.player.entity_flags())
+    } else {
+        state.map_or(0, sjk_protocol::EntityState::e_flags)
+    };
+    if entity.kind == EntityKind::Actor
+        && let (Some(mesh), Some(snapshot)) = (mesh, snapshot)
+    {
+        let tricked = !local
+            && state.is_some_and(|state| {
+                sjk_client::legacy_mind_tricked(
+                    sjk_client::legacy_entity_trick_targets(state),
+                    snapshot.player.client_num(),
+                    sinks.viewer_force_powers_active,
+                )
+            });
+        jetpack_submission::submit(
+            sinks,
+            jetpack_submission::Body {
+                mesh,
+                number,
+                transform: *transform,
+                e_flags,
+                tricked,
+                hidden: trick.hidden,
+                fade: trick.fading.then_some(trick.alpha),
+                draw_actor,
+                muted,
+            },
+            presentation_time as i32,
+            visual_now,
+        );
+    }
     // Everything after stock's mind-trick cut-off is skipped for a hidden trickster:
     // the body, its afterimages and its shells (`cg_players.c:11351-11356`).
     if trick.hidden {
         return 0;
+    }
+    // `CG_DrawPlayerSphere`, the local player's included in first person.
+    if entity.kind == EntityKind::Actor
+        && let Some(snapshot) = snapshot
+    {
+        let powerups = if local {
+            (0..16).fold(0, |bits, powerup| {
+                bits | u32::from(snapshot.player.powerups[powerup] != 0) << powerup
+            })
+        } else {
+            state.map_or(0, sjk_protocol::EntityState::powerups)
+        };
+        player_spheres::submit(
+            sinks,
+            Vec3::from_array(transform.translation),
+            e_flags,
+            powerups,
+        );
     }
     if let (Some(mesh), Some(snapshot)) = (mesh, snapshot) {
         force_powers::submit_confusion(

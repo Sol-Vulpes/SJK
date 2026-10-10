@@ -65,6 +65,7 @@ mod vehicle_missile_effects;
 pub use body_animation::{legacy_body_frame, legacy_body_queue_command};
 pub use client_info::LegacyClientInfo;
 mod player_profile;
+mod player_spheres;
 mod player_sprites;
 pub use sjk_game_jka::pmove;
 use sjk_game_jka::pmove_anim;
@@ -221,6 +222,10 @@ pub use player_identity::{
 pub use player_lookup::{PlayerLookup, lookup_player};
 pub use player_profile::{
     PlayerProfile, PlayerProfileError, SaberColor, pack_saber_rgb, unpack_saber_rgb,
+};
+pub use player_spheres::{
+    LEGACY_PLAYER_SPHERE_MODEL, LEGACY_PLAYER_SPHERE_SHADERS, LegacyJetpack, LegacyPlayerSphere,
+    legacy_player_spheres,
 };
 pub use player_sprites::{
     LEGACY_PLAYER_SPRITE_HEIGHT, LEGACY_PLAYER_SPRITE_RADIUS, LegacyPlayerSprite,

@@ -161,6 +161,7 @@ mod holocrons_frame;
 mod identity_command;
 mod identity_frame;
 mod illuminate;
+mod jetpack;
 mod live_session;
 mod looks;
 mod looks_frame;
@@ -394,6 +395,10 @@ struct GpuState {
     effect_aux: effect_aux::Runtime,
     muzzle_effects: sjk_client::LegacyMuzzleEffects,
     force_overlays: sjk_client::LegacyForceOverlayTracker,
+    /// The jetpack model and its jet bolts.
+    jetpack: jetpack::Catalog,
+    /// Which entities' jets have sounded their start.
+    jetpack_sounds: jetpack::Sounds,
     force_overlays_last: usize,
     actor_groups: Vec<Vec<ActorInstance>>,
     object_groups: Vec<Vec<ActorInstance>>,
@@ -475,6 +480,8 @@ struct GpuState {
     auto_opened_team_menu: bool,
     depth: DepthTarget,
     camera_position: Vec3,
+    /// The rendered view's origin (`cg.refdef.vieworg`), as last uploaded.
+    view_origin: Vec3,
     camera_yaw: f32,
     camera_pitch: f32,
     mouse_look: pointer_input::MouseLook,
@@ -786,6 +793,7 @@ impl GpuState {
         let emitter_model_catalog = effect_emitter::ModelCatalog::build(&object_meshes);
         let static_models = static_models::StaticModels::build(&bsp, &object_meshes);
         let model_material_overrides = model_materials::append_overrides(&mut flattened.materials);
+        let jetpack = jetpack::Catalog::build(&vfs, &object_meshes);
         if let Some(timeline) = &mut connect_timeline {
             timeline.mark(log::TimelinePhase::Models);
         }
@@ -1277,6 +1285,8 @@ impl GpuState {
             effect_aux: effect_aux::Runtime::default(),
             muzzle_effects: sjk_client::LegacyMuzzleEffects::new(),
             force_overlays: sjk_client::LegacyForceOverlayTracker::default(),
+            jetpack,
+            jetpack_sounds: Default::default(),
             force_overlays_last: 0,
             actor_groups,
             object_groups,
@@ -1347,6 +1357,7 @@ impl GpuState {
             auto_opened_team_menu: game_menu,
             depth,
             camera_position: Vec3::from_array(camera_origin),
+            view_origin: Vec3::from_array(camera_origin),
             camera_yaw,
             camera_pitch: 0.0,
             mouse_look: pointer_input::MouseLook::default(),
