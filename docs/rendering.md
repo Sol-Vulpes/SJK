@@ -1280,7 +1280,11 @@ the CPU (`SkinColor::light_color`, `trail_color`).
 - **Round end** (09/10/2026). For skins only, the core line narrows on a quarter circle
   over its last `core.tip` half-widths (`skin_tip_taper`) to a rounded point and is cut
   at that edge over a pixel (the sampler would otherwise smear the texture's border out
-  to the quad's square corners); past the tip the corona widens about the tip as about
+  to the quad's square corners). That pixel is the straight line's, stretched as the
+  line is (`core_stretch`), not the derivative of the stretched coordinate: on the tip's
+  last row the stretch runs to a hundred within one pixel, the derivative blew up with
+  it and the cut left half the width lit, a bar across every skin's tip (fixed
+  11/10/2026); past the tip the corona widens about the tip as about
   the shaft, and its distance out (for its grading, its tongues, motes and hue) is
   measured from the tip, its tongues running on round it. The stock line ends flat (as
   `RB_SurfaceLine` does), hidden in its glow; a skin's brighter, wider fringe showed
