@@ -53,6 +53,7 @@ migrated, except where the table says so. Where each is documented:
 | `cg_compactScoreboard` | on (SJK UI's scoreboard in one column, as wide as its names, centred) | [SJK UI scoreboard](sjk-ui.md#scoreboard) |
 | `cg_drawTimer`, `cg_drawTeamOverlay` | on | [status.md](status.md#gameplay-and-interface-defaults) |
 | `cg_killfeed` | on, saved 0 moved to 1 once | [Kill feed](client.md#kill-feed) |
+| `cg_shieldBrightness` | 1 pass, old value 4 moved to 1 once | [Client](client.md#launch) |
 | `cg_dismember` | 2 | [Dismemberment](client.md#dismemberment-and-disintegration) |
 | `snaps` | 120 (slider to 125) | [status.md](status.md#gameplay-and-interface-defaults) |
 | `com_maxfpsUnfocused` | 30 | [Configuration](client.md#configuration-and-content) |

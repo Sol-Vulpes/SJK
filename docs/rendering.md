@@ -937,7 +937,7 @@ re-drawn with `gfx/misc/personalshield`, like single player. `cg_shieldSphere 1`
 draws stock multiplayer's `halfShieldShell` sphere instead
 ([force_overlay_submission.rs](../crates/sjk-viewer/src/force_overlay_submission.rs)).
 The shader blends `GL_DST_COLOR GL_ONE`, a bare multiply of the pixels behind it, so the body
-shell is faint; it is drawn `cg_shieldBrightness` times (default 4) and fades over its own
+shell is faint; it is drawn `cg_shieldBrightness` times (default 1) and fades over its own
 hit's length (`LegacyShieldHit::body_brightness`), where the sphere keeps stock's fixed 2 s.
 The body shell's tint is weighted to green (`(0.3b, b, 0.3b)`), as the texture itself reads blue.
 

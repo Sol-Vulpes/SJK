@@ -1,5 +1,24 @@
 # Status and priorities
 
+## Quieter body damage flash
+
+Branch `fix/subtle-damage-shader`, based on `0c76ff03` (2026-10-10,
+Windows): the form-fitting shield-hit flash defaults to one shader pass instead
+of four. Old profiles with brightness `4` migrate once to `1`, while other
+strengths and subsequent choices remain saved. No shader, hit duration, damage
+calculation or shield-sphere behavior changed. A focused profile test covers
+fresh defaults, migration and preserving later choices. Real-match appearance
+remains unverified.
+Formatting, workspace build/tests and Clippy passed on Windows with Rust
+1.99.0 (warnings remain), after clearing the viewer's shared dev artifacts
+to ensure the tests used this worktree's source.
+The Release GPU comparison on an RTX 5070 Ti loaded retail duel6 at 640x480,
+HDR and scene HDR/material maps off, CPU model skinning for a fixed Kyle pose.
+The isolated personal-shield pass produced summed positive RGB gain above the
+body-only image of 48771 at one pass versus 288114 at four. The captured images
+were inspected: the one-pass shell was visibly fainter. This is shader-strength
+evidence, not a live-match check or frame-time measurement.
+
 Reviewed 2026-10-04 against GitHub baseline `b394022` and the owner-approved
 client, server, rendering and loading changes described below.
 

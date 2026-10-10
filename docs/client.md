@@ -5,6 +5,12 @@ Jedi Academy `GameData` directory with the retail `base/assets*.pk3` files.
 
 ## Launch
 
+The body shield flash uses one shader pass by default (`cg_shieldBrightness 1`,
+Settings > Game > Shield hit brightness), reduced from four. Profiles with the
+old value `4` move to `1` once (`cg_shieldBrightnessDefaultVersion`); other
+strengths are preserved, and any later choice, including `4`, stays saved.
+The shield sphere option and damage-event timing are unchanged.
+
 The client program is `sjk` and the dedicated server `sjk-server` (`.exe` on
 Windows). Developer and diagnostic environment variables are named `SJK_*`
 (`SJK_TRACE_*`, `SJK_LAMP_*`, `SJK_GPU_*` and the like). On Windows both programs
