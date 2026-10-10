@@ -712,10 +712,30 @@ mod tests {
             gpu.ui_epoch -= std::time::Duration::from_millis(2_000);
             let path = shoot(&mut gpu, 20, "duel6-first-setup-sjk");
             println!("{}", path.display());
+            // The row that imports another client's config.
+            if let Some(menu) = gpu.client_menu.as_mut() {
+                menu.select_setting_for_shot(crate::settings::IMPORT_ROW);
+            }
+            let path = shoot(&mut gpu, 6, "duel6-first-setup-import");
+            println!("{}", path.display());
             if let Some(console) = gpu.console.as_mut() {
                 console.set_cvar(crate::menu::style::CVAR, "classic");
             }
             let path = shoot(&mut gpu, 20, "duel6-first-setup-classic");
+            println!("{}", path.display());
+            // The Import page that row opens (without its file dialog, which a shot
+            // cannot show), empty and after a file that cannot be read.
+            if let Some(console) = gpu.console.as_mut() {
+                console.open_config_import(None);
+            }
+            let path = shoot(&mut gpu, 6, "duel6-import-page");
+            println!("{}", path.display());
+            if let Some(console) = gpu.console.as_mut() {
+                console.open_config_import(Some(std::path::Path::new(
+                    "C:/no/such/folder/jampconfig.cfg",
+                )));
+            }
+            let path = shoot(&mut gpu, 6, "duel6-import-page-failed");
             println!("{}", path.display());
         });
     }

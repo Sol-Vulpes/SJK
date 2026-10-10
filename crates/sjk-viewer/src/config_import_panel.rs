@@ -1,18 +1,32 @@
 //! The Import page: what a dropped `.cfg` holds (`config_import.rs`), one tick per
 //! part, and Enter to copy the ticked parts. Opened by dropping a file on the
-//! window or by `firstsetup import`; like the Update page it lives in the console
-//! and is drawn in place of it, so it opens over the menus and in a match.
+//! window, by `firstsetup import` or by First setup's "Import a config file"
+//! row; Browse (B) picks the file with the system's file dialog. Like the Update
+//! page it lives in the console and is drawn in place of it, so it opens over the
+//! menus and in a match.
 
 use crate::config_import::{Found, Item};
 use crate::menu_widgets::{BACK_TOKEN, FormLayout, MenuCanvas, Scrim};
 use crate::text::{TextVertex, UiFont};
 use sjk_ui::{FontWeight, InputEvent, Rect, UiEventKind};
+use std::path::PathBuf;
+use std::sync::mpsc::Receiver;
 use winit::event::{ElementState, KeyEvent};
 use winit::keyboard::{KeyCode, PhysicalKey};
 
 /// Pointer targets of the footer's actions; the rows use their index.
 const IMPORT_TOKEN: u16 = 930;
 const TICK_TOKEN: u16 = 931;
+const BROWSE_TOKEN: u16 = 932;
+
+/// Ask the player for a config with the system's file dialog; it blocks until the
+/// dialog closes, so it runs on a worker thread.
+fn pick_config() -> Option<PathBuf> {
+    rfd::FileDialog::new()
+        .set_title("Choose a config to import")
+        .add_filter("Configs (.cfg)", &["cfg"])
+        .pick_file()
+}
 
 /// What the console does after the page handled an event.
 #[derive(Debug, Eq, PartialEq)]
@@ -21,6 +35,14 @@ pub(crate) enum PanelAction {
     Close,
     /// Copy the ticked parts ([`Panel::chosen`]).
     Import,
+}
+
+/// What the file dialog gave once it closed ([`Panel::take_browsed`]).
+#[derive(Debug, Eq, PartialEq)]
+pub(crate) enum Browsed {
+    File(PathBuf),
+    /// Closed without a file (no reason), or broke off (the reason).
+    Nothing(Option<String>),
 }
 
 enum State {
@@ -43,6 +65,10 @@ pub(crate) struct Panel {
     rows: Vec<(Item, bool)>,
     selected: usize,
     ui: MenuCanvas,
+    /// The file dialog while it is open, answering on its worker.
+    browsing: Option<Receiver<Option<PathBuf>>>,
+    /// What opens the file dialog ([`pick_config`]; tests put their own).
+    picker: fn() -> Option<PathBuf>,
 }
 
 impl Panel {
@@ -55,7 +81,49 @@ impl Panel {
             rows: Vec::with_capacity(Item::ALL.len()),
             selected: 0,
             ui: MenuCanvas::with_text_capacity(64),
+            browsing: None,
+            picker: pick_config,
         }
+    }
+
+    /// Browse: open the system's file dialog on a worker thread; the file chosen is
+    /// read as a dropped one is ([`Self::take_browsed`]). Nothing happens while one
+    /// is open.
+    pub(crate) fn browse(&mut self) {
+        if self.browsing.is_some() {
+            return;
+        }
+        let picker = self.picker;
+        let (outbox, result) = std::sync::mpsc::channel();
+        let spawned = std::thread::Builder::new()
+            .name("sjk-file-dialog".to_owned())
+            .spawn(move || {
+                let _ = outbox.send(picker());
+            });
+        match spawned {
+            Ok(_) => self.browsing = Some(result),
+            Err(error) => self.fail(format!("Cannot open the file dialog: {error}.")),
+        }
+    }
+
+    /// What the file dialog gave, once it has closed.
+    pub(crate) fn take_browsed(&mut self) -> Option<Browsed> {
+        let browsed = match self.browsing.as_ref()?.try_recv() {
+            Ok(Some(path)) => Browsed::File(path),
+            Ok(None) => Browsed::Nothing(None),
+            Err(std::sync::mpsc::TryRecvError::Disconnected) => {
+                Browsed::Nothing(Some("The file dialog closed without a file.".to_owned()))
+            }
+            Err(std::sync::mpsc::TryRecvError::Empty) => return None,
+        };
+        self.browsing = None;
+        Some(browsed)
+    }
+
+    /// Say why nothing was imported.
+    pub(crate) fn fail(&mut self, reason: String) {
+        self.state = State::Failed(reason);
+        self.rows.clear();
     }
 
     pub(crate) fn is_open(&self) -> bool {
@@ -154,6 +222,7 @@ impl Panel {
         match key {
             KeyCode::Escape => return PanelAction::Close,
             KeyCode::Enter | KeyCode::NumpadEnter => return self.primary(),
+            KeyCode::KeyB if !matches!(self.state, State::Done(_)) => self.browse(),
             KeyCode::ArrowUp if count > 0 => self.selected = (self.selected + count - 1) % count,
             KeyCode::ArrowDown | KeyCode::Tab if count > 0 => {
                 self.selected = (self.selected + 1) % count;
@@ -176,6 +245,10 @@ impl Panel {
             Some(IMPORT_TOKEN) => self.primary(),
             Some(TICK_TOKEN) => {
                 self.toggle(self.selected);
+                PanelAction::None
+            }
+            Some(BROWSE_TOKEN) => {
+                self.browse();
                 PanelAction::None
             }
             Some(row) if usize::from(row) < self.rows.len() => {
@@ -280,18 +353,25 @@ impl Panel {
                     hints.push(("ENTER", "Import", IMPORT_TOKEN));
                 }
                 hints.push(("SPACE", "Tick", TICK_TOKEN));
+                hints.push(("B", "Other file", BROWSE_TOKEN));
                 hints.push(("ESC", "Cancel", BACK_TOKEN));
             }
             State::Waiting => {
+                let headline = if self.browsing.is_some() {
+                    "Choose your config in the file window"
+                } else {
+                    "Browse for a .cfg file, or drop one here"
+                };
                 self.card(
                     &layout,
-                    "Drop a .cfg file on this window",
+                    headline,
                     &[
-                        "Drag your config from the other client's folder onto SJK, for example",
-                        "GameData/base/jampconfig.cfg, or the one in your mod's folder.",
-                        "Or type: firstsetup import \"C:/path/to/jampconfig.cfg\"",
+                        "Press B to pick your config, for example GameData/base/jampconfig.cfg",
+                        "or the one in your mod's folder, or drag it from its folder onto SJK.",
+                        "Or type: firstsetup import \"C:\\path\\to\\jampconfig.cfg\"",
                     ],
                 );
+                hints.push(("B", "Browse", BROWSE_TOKEN));
                 hints.push(("ESC", "Close", BACK_TOKEN));
             }
             State::Failed(reason) => {
@@ -299,8 +379,9 @@ impl Panel {
                 self.card(
                     &layout,
                     "Nothing imported",
-                    &[&reason, "Drop another .cfg file to try again."],
+                    &[&reason, "Browse for another .cfg file, or drop one here."],
                 );
+                hints.push(("B", "Browse", BROWSE_TOKEN));
                 hints.push(("ESC", "Close", BACK_TOKEN));
             }
             State::Done(lines) => {
@@ -416,6 +497,31 @@ mod tests {
             Some(Ok(parse("seta cg_fov 100"))),
         );
         assert!(panel.close());
+    }
+
+    fn wait_for_dialog(panel: &mut Panel) -> Browsed {
+        loop {
+            if let Some(browsed) = panel.take_browsed() {
+                return browsed;
+            }
+            std::thread::yield_now();
+        }
+    }
+
+    #[test]
+    fn browse_gives_the_chosen_file_once() {
+        let mut panel = Panel::new();
+        panel.picker = || Some(PathBuf::from("C:/games/jampconfig.cfg"));
+        panel.open(true, String::new(), None);
+        panel.browse();
+        assert_eq!(
+            wait_for_dialog(&mut panel),
+            Browsed::File(PathBuf::from("C:/games/jampconfig.cfg"))
+        );
+        assert!(panel.take_browsed().is_none());
+        panel.picker = || None;
+        panel.browse();
+        assert_eq!(wait_for_dialog(&mut panel), Browsed::Nothing(None));
     }
 
     #[test]

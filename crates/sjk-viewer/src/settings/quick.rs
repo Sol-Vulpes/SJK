@@ -18,6 +18,13 @@ const HIDE_ROW: Setting = Setting {
     kind: ValueKind::Bool,
 };
 
+/// The tab's own row that imports a setup from another client's `.cfg`.
+const IMPORT_ROW: Setting = Setting {
+    label: "Import a config file",
+    cvar: super::catalog::IMPORT_ROW,
+    kind: ValueKind::ImportPage,
+};
+
 /// The tab's cvars, in order.
 const CVARS: &[&str] = &[
     crate::graphics_quality::ROW_NAME,
@@ -60,7 +67,7 @@ pub(super) fn rows() -> &'static [Setting] {
                     .find(|setting| setting.cvar.eq_ignore_ascii_case(cvar))
                     .copied()
             })
-            .chain(std::iter::once(HIDE_ROW))
+            .chain([IMPORT_ROW, HIDE_ROW])
             .collect()
     })
 }
@@ -71,7 +78,7 @@ mod tests {
 
     #[test]
     fn every_listed_cvar_is_a_setting() {
-        assert_eq!(rows().len(), CVARS.len() + 1);
+        assert_eq!(rows().len(), CVARS.len() + 2);
         assert_eq!(rows().last().map(|row| row.cvar), Some(HIDE_CVAR));
     }
 

@@ -61,11 +61,18 @@ pub(super) enum ValueKind {
     /// The SJK identity's key (not a cvar): Enter opens the Identity page, where the
     /// key's id and file stay hidden until shown.
     IdentityPage,
+    /// Import a config file (not a cvar): Enter opens the Import page with
+    /// the file dialog over it ([`crate::config_import`]).
+    ImportPage,
 }
 
 /// The "SJK identity key" row's name in place of a cvar: the command that opens the
 /// same page.
 pub(crate) const IDENTITY_ROW: &str = "identity";
+
+/// The "Import a config file" row's name in place of a cvar: the command that
+/// opens the same page.
+pub(crate) const IMPORT_ROW: &str = "firstsetup import";
 
 #[derive(Clone, Copy)]
 pub(super) struct Setting {

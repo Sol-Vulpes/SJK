@@ -631,6 +631,7 @@ impl SettingsMenu {
                 | ValueKind::HudPicker
                 | ValueKind::WheelPages
                 | ValueKind::IdentityPage
+                | ValueKind::ImportPage
                 | ValueKind::Quality => {
                     let open = self.dropdown.as_ref().is_some_and(|open| open.row == row);
                     place.choice_field(
@@ -791,10 +792,7 @@ impl SettingsMenu {
             part(facts, format_args!("In {group}"));
         }
         if self.section == Section::Group(Group::Quick) {
-            part(
-                facts,
-                format_args!("Drop another client's .cfg here to import it"),
-            );
+            part(facts, format_args!("Import a .cfg below, or drop one here"));
         }
     }
 
@@ -844,6 +842,7 @@ impl SettingsMenu {
             ValueKind::HudPicker => "LEFT or RIGHT to step, ENTER to pick from pictures",
             ValueKind::WheelPages => "ENTER to edit the pages and their choices",
             ValueKind::IdentityPage => "ENTER to open your key's page; the key stays hidden",
+            ValueKind::ImportPage => "ENTER to choose a .cfg from another client",
         });
         if self
             .defaults
@@ -974,6 +973,7 @@ pub(super) fn row_default(console: &ViewerConsole, setting: &Setting) -> RowDefa
             | ValueKind::HudPicker
             | ValueKind::WheelPages
             | ValueKind::IdentityPage
+            | ValueKind::ImportPage
     ) {
         return RowDefault::default();
     }
