@@ -50,7 +50,7 @@ impl Options {
             lifetime: integer("cg_chatbox", 10000).max(0) as u64,
             lines: integer("cg_chatboxlines", 5).clamp(1, MAX_VISIBLE as i64) as usize,
             font: scalar(console, "cg_chatboxfontsize", 1.0).clamp(0.25, 3.0),
-            spacing: scalar(console, "cg_chatboxletterspacing", 0.0).clamp(-2.0, 8.0),
+            spacing: scalar(console, "cg_chatboxletterspacing", -0.5).clamp(-2.0, 8.0),
             x: scalar(console, "cg_chatboxx", 30.0).clamp(0.0, 600.0),
             height: scalar(console, "cg_chatboxheight", 350.0).clamp(0.0, 480.0),
             width: scalar(console, "cg_chatboxcutofflength", 350.0).clamp(60.0, 640.0),

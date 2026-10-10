@@ -27,11 +27,12 @@
 [chat-letter-spacing]
 area: Console & chat
 title: Chat letter spacing (cg_chatBoxLetterSpacing, Settings > HUD)
-change: cg_chatBoxLetterSpacing (default 0, -2 to 8, 1080p pixels) spaces chat message letters.
+change: cg_chatBoxLetterSpacing (default -0.5, -2 to 8, 1080p pixels) spaces chat message letters.
 change: Settings > HUD > Chat letter spacing sets it; wrapping measures the same spacing.
 test: Settings > HUD > Chat letter spacing to 3: chat messages spread out, names unchanged.
 test: Say a long message: it wraps sooner and no row runs past the chat box.
-test: Set it to -1: letters pack closer. Back to 0: chat looks as before.
+test: Set it to -1: letters pack closer. At 0: the font's own spacing, as before.
+test: Fresh profile: the setting reads -0.5.
 test: A coloured message and an SJK chat line (gold) both follow the setting.
 note: Unit tests only; not tried in a game.
 

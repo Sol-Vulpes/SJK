@@ -3164,10 +3164,11 @@ pixels apart, `CG_ChatBox_DrawStrings`), and descenders clear the next row by
 messages are 8 px apart (were 10 after a named message, 14 otherwise); see
 [chat/layout.rs](../crates/sjk-viewer/src/chat/layout.rs).
 
-`cg_chatBoxLetterSpacing` (default 0, archived; also Settings > HUD > Chat letter
+`cg_chatBoxLetterSpacing` (default -0.5, archived; also Settings > HUD > Chat letter
 spacing, -2 to 8 in steps of 0.5) adds that many 1080p pixels after each character of
 a message body, scaled with the viewport and `cg_chatBoxFontSize`; below zero packs
-the letters closer. Wrapping measures the same spacing (an emoji picture keeps its
+the letters closer; the default -0.5 tightens the fixed-width game chat font a
+little, and 0 is each font's own spacing. Wrapping measures the same spacing (an emoji picture keeps its
 own width), so a wider setting wraps sooner. Sender names, tags and the composer
 keep their own spacing.
 

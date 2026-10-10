@@ -67,7 +67,7 @@ pub(crate) fn register(cvars: &mut CvarRegistry) -> Result<(), sjk_shell::CvarEr
         ("cg_chatBoxFontSize", 1.0, "Conversation font scale"),
         (
             "cg_chatBoxLetterSpacing",
-            0.0,
+            -0.5,
             "Extra space between chat message letters, in 1080p pixels (-2 to 8)",
         ),
         (
