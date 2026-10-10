@@ -102,7 +102,6 @@ impl ViewerConsole {
         target: crate::menu::sjk::TextTarget<'_>,
         viewport: [f32; 2],
     ) {
-        // Read before the chat's lock is taken: they lock the identity too.
         self.sjk_chat_panel.place_card(
             crate::player_mutes::place,
             crate::player_identity::avatar_version,
@@ -118,33 +117,20 @@ impl ViewerConsole {
         });
         let enabled = self.bool_cvar("cl_sjkChat") != Some(false);
         let now = crate::menu::sjk::recent::now();
-        let panel = &mut self.sjk_chat_panel;
-        let mut target = Some(target);
-        let _ = crate::player_identity::with_chat(|chat| {
-            let inputs = Inputs {
-                chat: Some(chat),
-                muted: &muted,
-                staff,
-                enabled,
-                now,
-                staff_state: staff_shown,
-            };
-            if let Some(target) = target.take() {
-                panel.append_sjk(&inputs, target, viewport);
-            }
-        });
-        // The identity is not running: the page says so.
-        if let Some(target) = target.take() {
-            let inputs = Inputs {
-                chat: None,
-                muted: &muted,
-                staff,
-                enabled,
-                now,
-                staff_state: staff_shown,
-            };
-            panel.append_sjk(&inputs, target, viewport);
-        }
+        // A copy, drawn once the lock is let go: drawing asks the identity for the
+        // player's own key (to keep it off the chosen message and the sender card),
+        // which takes that lock again and would wait on itself for ever.
+        // `None`: the identity is not running, and the page says so.
+        let chat = crate::player_identity::with_chat(Clone::clone);
+        let inputs = Inputs {
+            chat: chat.as_ref(),
+            muted: &muted,
+            staff,
+            enabled,
+            now,
+            staff_state: staff_shown,
+        };
+        self.sjk_chat_panel.append_sjk(&inputs, target, viewport);
     }
 
     /// The page's draw list while it is shown.
