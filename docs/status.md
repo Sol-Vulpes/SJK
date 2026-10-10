@@ -7,6 +7,26 @@ SJK currently contains a native client and standard dedicated server in a
 20-crate Rust workspace. This page records scope and verification, rather than
 claiming complete parity from the presence of an implementation.
 
+## Memory on servers
+
+Branch `personal/menu-world-drop` (10/10/2026, based on `0c76ff03`, Windows 11, RTX
+5080), Sol's report of SJK at 11 GB in Task Manager and FPS going from 200 to 30 on
+the same map: the running client was at 13.4 GB after six maps in 17 minutes. Off
+screen, duel6's menu world alone was 4.8 GB (2.7 GB of GPU memory, about 1 GB of CPU
+memory), kept parked during matches, and the GPU allocator's 128 to 256 MiB blocks
+stayed partly used after each map change. The menu world is now dropped on a server
+and built again after it, and the device uses 4 to 16 MiB blocks
+([rendering.md](rendering.md#gpu-memory)): 4K map changes went from 11.0 to 12.5 GB
+to 7.2 to 7.4 GB; at 1920x1080 on a local `devmap mp/ffa3`, from 8.0 to 6.0 GB.
+
+Verified by unit tests and off-screen in release builds: the graphics reload test on a
+local `sjk-server` (`graphics_reload_on_server`: join, Ultra low, `vid_restart`,
+`disconnect`) passes, the menu world coming back on the reloaded context in 3.0 to
+3.8 s and shot over duel6. Not measured: frame times with the smaller blocks (the GPU
+was busy with the game during the runs), the FPS swings, the 1 GB of CPU memory each
+world keeps, and the menu in the game window (the last server's map under the menus
+for a few seconds after leaving).
+
 ## Graphics reload
 
 Branch `personal/graphics-reload` (10/10/2026, based on `5faf4944`, Windows 11, RTX
@@ -26,7 +46,8 @@ with HDR, FXAA, sun and sky and normal maps off (`Lamps: none`), the card before
 during; on a local `sjk-server` (`devmap mp/ffa3`), Ultra low then `vid_restart` built
 ffa3 again on the new context in 5.6 to 7.2 s over four runs, the same session all along
 and still connected 2 s later, and after `disconnect` the parked menu world was rebuilt
-on that context in 4.2 s. Seen once and then reproduced with an 8 s stall: ffa3's blue
+on that context in 4.2 s (since `personal/menu-world-drop` it is dropped during the
+match and built again then). Seen once and then reproduced with an 8 s stall: ffa3's blue
 force-field door shown closed for about 12 frames after a long reload, because the
 server ignores a loading client's neutral commands and the player stops touching the
 door's trigger; not seen with Ultra low from the start. Not tested in the game window:

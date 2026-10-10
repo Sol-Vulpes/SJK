@@ -544,6 +544,17 @@ note: Alt+Tab while holding Tab leaves the board and the hidden HUD up until Tab
 
 # ---- Rendering & effects ----
 
+[menu-world-drop]
+area: Rendering & effects
+title: Less RAM on servers: menu map not kept during matches, tighter GPU memory
+change: The menu map (duel6) is freed when you join and loads again when you leave a server.
+change: GPU memory comes in smaller blocks, so map changes leave less of it unused.
+test: Join a server, play through a few map changes: Task Manager stays near 7 GB at 4K.
+test: Disconnect: the last map shows under the menu for 2-4 s, then duel6 and its routes.
+test: Disconnect during a join or a map load, and reconnect from the menu: no stall or crash.
+test: Classic menus: disconnect, then switch to the SJK UI: duel6 is there.
+note: Before: about 11-12 GB after a few maps. FPS with the smaller blocks not measured yet.
+
 [chroma-shaders]
 area: Rendering & effects
 title: Chroma saber shaders take your saber colour, marked with a colour wheel

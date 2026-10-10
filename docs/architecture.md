@@ -53,8 +53,10 @@ the start-only renderer settings read anew; see
 [rendering.md](rendering.md#graphics-reload)). A join from the menu hands over
 the destination world prepared while it connected
 ([portal.rs](../crates/sjk-viewer/src/portal.rs)) rather than constructing a
-duplicate at entry. The parked
-menu world remains separately owned for cancellation/disconnection.
+duplicate at entry. The menu world is dropped once a server world is installed
+and built again from its map after disconnection or cancellation
+([menu_world.rs](../crates/sjk-viewer/src/menu_world.rs),
+[rendering.md](rendering.md#gpu-memory)).
 
 PK3 checksum inventory uses the validated ZIP central directory, retaining archive
 entry order, CRCs and zero-length filtering. It does not visit/decompress every

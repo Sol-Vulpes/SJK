@@ -62,6 +62,7 @@ did: The kill feed with weapon icons
 did: The SJK profile card and profile pictures
 did: Muting players from their name in chat
 did: Graphics quality levels, Ultra low, and the graphics reload that applies them live
+did: Lighter memory on servers: the menu world dropped during matches
 link: https://github.com/Sol-Vulpes/SJK
 link: https://sol-vulpes.github.io/SJK/
 

@@ -37,6 +37,15 @@ impl WorldLoadTask {
         Self::spawn(map, Selection::default(), move || Ok(vfs))
     }
 
+    /// Mount the installed game data afresh, as at start, for the menu map.
+    pub(crate) fn start_installed(root: PathBuf, map: String) -> Self {
+        Self::spawn(map, Selection::default(), move || {
+            assets::mount_game_data(&root)
+                .map(Arc::new)
+                .map_err(|e| e.to_string())
+        })
+    }
+
     /// Rebuild session mounts from scratch, not from the previously displayed world.
     pub(crate) fn start_session(root: PathBuf, map: String, selection: Selection) -> Self {
         let request = selection.clone();
