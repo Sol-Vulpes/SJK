@@ -115,6 +115,7 @@ impl SoundPrefetch {
             }
         }
         paths.extend(crate::effect_aux::saber_contacts::SOUNDS.map(str::to_owned));
+        paths.extend(crate::jetpack::SOUNDS.map(str::to_owned));
         if let Some(music) = music {
             paths.push(default_music_extension(&music.intro));
             paths.push(default_music_extension(&music.repeating));

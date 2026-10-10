@@ -3815,3 +3815,14 @@ title: Body shield flash defaults to two passes
 change: cg_shieldBrightness defaults to 2 (was 1); a saved 1 (or old 4) moves to 2 once.
 test: Take armor damage from a bot: the body flash is a bit stronger than before.
 test: Set cg_shieldBrightness 1 and restart: it stays 1; it does not move back to 2.
+
+[jetpack-bubble]
+area: Rendering & effects
+title: Spawn bubble and jetpacks are visible
+change: The green spawn-protection bubble (and Ysalamiri, Boon, Enlightenment spheres) draws again.
+change: A jetpack shows on its wearer's back, with jet flames while flying.
+change: Jet start/stop sounds, the hover loop and the fire loop while the jets burn.
+test: Respawn in third person: a green bubble surrounds you until protection ends.
+test: On a JoF server, use the jetpack command and fly: pack, flames and sounds show.
+test: Watch another player fly with a jetpack: same pack, flames and sounds on them.
+note: Your own jetpack flight is not predicted with JA+ physics yet (server corrects it).

@@ -1023,6 +1023,29 @@ from their entity's own power bit, so both the combined and the plain shell show
 ([force_overlays.rs](../crates/sjk-client/src/force_overlays.rs)). JoF EJK's
 base-enhanced server check is not ported.
 
+`CG_DrawPlayerSphere`'s spheres surround a living player, in `CG_Player`'s order: the
+Ysalamiri shell (in Capture the Ysalamiri, the flag carrier's red or blue one), Force
+Boon, Enlightenment (dark over light) and the green spawn-protection shell of
+`EF_INVULNERABLE`. Each is `models/weaphits/testboom.md3` with its `powerups/*shell`
+shader, 9 units above the origin, turned to face the rendered view
+([player_spheres.rs](../crates/sjk-client/src/player_spheres.rs),
+[player_sphere_submission.rs](../crates/sjk-viewer/src/player_sphere_submission.rs)).
+Your own shows in first person too, as in stock. The refraction pass behind them
+(`effects/refract_2`, `cg_renderToTextureFX`) is not drawn, nor is JA+'s coloured
+spawn bubble style.
+
+A player with `EF_JETPACK` wears `models/weapons2/jetpack/model.glm` on the body's
+`*chestg` bolt, faded and hidden with a mind trick like a held gun. While
+`EF_JETPACK_ACTIVE` is set, `effects/boba/jet` plays at the pack's `torso_ljet` and
+`torso_rjet` bolts on the 8 ms effect cadence (twice each with `EF_JETPACK_FLAMING`),
+`bf_land` sounds when the jets start and `bf_blast-off` when they stop, and the
+`jethover` loop (plus `fire_lp` while flaming) joins the frame's loops
+([jetpack.rs](../crates/sjk-viewer/src/jetpack.rs),
+[jetpack_submission.rs](../crates/sjk-viewer/src/jetpack_submission.rs),
+`cg_players.c:11843-11935`). A player who mind-tricks you shows no flames and makes no
+jet sound. Prediction does not port JA+'s jetpack physics or its jetpack leg
+animations yet, so your own flight follows the server's corrections.
+
 `EV_PLAYER_TELEPORT_IN/OUT` play `mp/spawn`, and `EV_BECOME_JEDIMASTER` plays
 `mp/jedispawn`, where the player's box (mins z -16, maxs z 40) lands when dropped up to
 4096 units against `MASK_SOLID` (terrain included), as `cg_event.c` does

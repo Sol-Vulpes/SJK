@@ -83,6 +83,7 @@ pub(crate) fn build_actor_mesh(
         gpu_palette: None,
         retained_pose,
         cosmetics: Default::default(),
+        jetpack: Default::default(),
         disintegration: None,
         surfaces,
         limb: None,

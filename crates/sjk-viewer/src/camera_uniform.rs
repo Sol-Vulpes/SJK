@@ -47,6 +47,7 @@ impl crate::GpuState {
         self.refresh_shot_preview();
         self.queue
             .write_buffer(&self.camera_buffer, 0, bytemuck::bytes_of(&camera));
+        self.view_origin = glam::Vec3::from_array(camera.camera_position);
         self.world_notes.set_camera(camera);
         self.prepare_dust_motes();
         self.prepare_weather(&camera);
