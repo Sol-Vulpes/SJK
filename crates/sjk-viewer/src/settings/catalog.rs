@@ -626,6 +626,17 @@ pub(super) const GAME: &[Setting] = &[
         cvar: crate::quick_wheel::SOUNDS_CVAR,
         kind: ValueKind::Bool,
     },
+    // The client mods (`docs/mods.md`), off until the player wants them.
+    Setting {
+        label: "JA+ tools",
+        cvar: "mod_japlus",
+        kind: ValueKind::Bool,
+    },
+    Setting {
+        label: "JoF tools",
+        cvar: "mod_jof",
+        kind: ValueKind::Bool,
+    },
 ];
 pub(super) const NETWORK: &[Setting] = &[
     Setting {

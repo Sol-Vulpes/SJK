@@ -127,6 +127,7 @@ mod menu_widgets;
 mod menu_world;
 mod missile_trails;
 mod model_materials;
+mod mods;
 mod movement_collision;
 mod movers;
 mod muted_players;

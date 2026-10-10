@@ -55,6 +55,11 @@ impl CommandRegistry {
             .map(|command| (command.handler)(arguments))
     }
 
+    /// Remove a handler; returns whether `name` was registered.
+    pub fn unregister(&mut self, name: &str) -> bool {
+        self.commands.remove(&name.to_ascii_lowercase()).is_some()
+    }
+
     /// Return whether a handler is registered for `name`.
     pub fn contains(&self, name: &str) -> bool {
         self.commands.contains_key(&name.to_ascii_lowercase())

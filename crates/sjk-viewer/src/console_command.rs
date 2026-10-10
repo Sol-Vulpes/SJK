@@ -39,6 +39,10 @@ impl ViewerConsole {
         mut session: Option<&mut ClientSession>,
         mut application_command: impl FnMut(&str, &[String]) -> bool,
     ) {
+        // A switch flipped since the last frame adds or removes its mod's commands.
+        if self.mods.sync(&mut self.shell) {
+            self.refresh_server_help();
+        }
         if !self.shell.has_buffered_commands() {
             return;
         }
@@ -59,6 +63,7 @@ impl ViewerConsole {
         let pending_input = &mut self.pending_input;
         let pending_chat = &mut self.pending_chat;
         let client_commands = &mut self.client_commands;
+        let mods = &self.mods;
         let director = &mut self.director;
         let userinfo_names: Vec<_> = self
             .shell
@@ -150,6 +155,19 @@ impl ViewerConsole {
                     if application_command(command, tokens) {
                         return Some(Ok(Vec::new()));
                     }
+                    // A mod's command runs with the client's frame state, as the
+                    // client commands do; one whose mod is off answers here.
+                    match mods.accepts(&tokens[0]) {
+                        Some(Ok(())) if client_commands.pending.len() == 64 => {
+                            return Some(Err("Client command queue is full".into()));
+                        }
+                        Some(Ok(())) => {
+                            client_commands.pending.push_back(tokens.to_vec());
+                            return Some(Ok(Vec::new()));
+                        }
+                        Some(Err(error)) => return Some(Err(error)),
+                        None => {}
+                    }
                     if let Some(result) = client_commands.queue(command, tokens) {
                         return Some(result);
                     }
@@ -217,6 +235,23 @@ impl ViewerConsole {
         self.persist();
     }
 
+    /// `mods`: each client mod with its switch and whether it is on.
+    pub(crate) fn mods_listing(&self) -> Vec<String> {
+        let list = self.mods.listing();
+        if list.is_empty() {
+            return vec!["This build carries no client mods.".into()];
+        }
+        list.into_iter()
+            .map(|(id, title, about, on)| {
+                format!(
+                    "^5{title}^7 ({}, {id}.*) {}^7: {about}",
+                    crate::mods::switch(id),
+                    if on { "^2on" } else { "^1off" }
+                )
+            })
+            .collect()
+    }
+
     /// Consume one local connection action after console input releases its borrows.
     pub(crate) fn take_connection_action(&mut self) -> Option<ConnectionAction> {
         self.pending_connection.take()
@@ -277,6 +312,7 @@ impl ViewerConsole {
 
     pub(crate) fn clear_server_info(&mut self) {
         self.movement_policy_log = None;
+        self.mods.set_server(None);
         // Off a server the profile goes out as written, with nothing pending.
         self.force_profile.reset();
         if let Ok(mut status) = self.server_status.write() {
@@ -287,6 +323,28 @@ impl ViewerConsole {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn a_mod_command_waits_for_its_switch() {
+        let directory = tempfile::tempdir().unwrap();
+        let mut console =
+            crate::console::ViewerConsole::new(directory.path().join("config.cfg")).unwrap();
+        console.execute_console_line("japlus.guntele", None);
+        assert!(console.client_commands.pending.is_empty());
+        assert!(
+            console
+                .shell
+                .lines()
+                .any(|line| line.text.contains("mod_japlus 1"))
+        );
+        console.execute_console_line("mod_japlus 1", None);
+        console.execute_console_line("japlus.guntele 100", None);
+        assert_eq!(
+            console.client_commands.pending.back().map(Vec::as_slice),
+            Some(&["japlus.guntele".to_owned(), "100".to_owned()][..])
+        );
+        assert!(console.mods_listing()[0].contains("^2on"));
+    }
+
     #[test]
     fn perfmark_answers_in_the_console() {
         let directory = tempfile::tempdir().unwrap();

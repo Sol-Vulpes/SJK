@@ -236,6 +236,10 @@ pub(crate) struct ViewerConsole {
     pending_chat: std::collections::VecDeque<String>,
 
     client_commands: console_client::Commands,
+    /// The client mods and their switches (`docs/mods.md`).
+    pub(crate) mods: crate::mods::Mods,
+    /// The profile of the server the client is on, for its commands' completion.
+    server_profile: Option<sjk_client::CompatProfile>,
     script_vfs: Option<Arc<sjk_vfs::VirtualFileSystem>>,
     config_directory: PathBuf,
     force_profile: sjk_client::ForceProfileNegotiator,
@@ -456,6 +460,12 @@ impl ViewerConsole {
             Some(CvarValue::Float(value)) => Some(*value),
             _ => None,
         }
+    }
+
+    /// Set a cvar from text, handing a refusal to the caller instead of the log.
+    pub(crate) fn try_set_cvar(&mut self, name: &str, value: &str) -> Result<(), String> {
+        self.apply_cvar(name, value)
+            .map_err(|error| error.to_string())
     }
 
     pub(crate) fn set_cvar(&mut self, name: &str, value: &str) -> bool {

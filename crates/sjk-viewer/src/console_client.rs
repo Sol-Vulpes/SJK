@@ -16,8 +16,6 @@ mod hud_commands;
 mod identity;
 #[path = "console_info.rs"]
 mod info;
-#[path = "console_mod_commands.rs"]
-mod mod_commands;
 #[path = "console_queries.rs"]
 mod queries;
 #[path = "console_remaps.rs"]
@@ -155,14 +153,7 @@ pub(super) const COMMANDS: &[(&str, &str)] = &[
     ("forcepowers", "Set the player force profile"),
     ("configstrings", "Print non-empty indexed configstrings"),
     ("listEmojis", "List the chat emojis (cg_chatBoxEmojis)"),
-    (
-        "serverconfig",
-        "List the JA+ server's options (forwarded to jaPRO/TaystJK servers)",
-    ),
-    (
-        "pluginDisable",
-        "List or toggle JA+ plugin features (cp_pluginDisable)",
-    ),
+    ("mods", "List the client mods and whether each is on"),
     ("showip", "List local interface addresses"),
     ("fs_openedList", "Print mounted package names"),
     ("fs_referencedList", "Print pure-proof package references"),
@@ -225,7 +216,6 @@ pub(super) fn register(shell: &mut Shell, commands: &Commands) -> Result<(), Box
     queries::register(&mut shell.cvars)?;
     restarts::register(&mut shell.cvars)?;
     identity::register(&mut shell.cvars, &commands.name_clock)?;
-    mod_commands::register(&mut shell.cvars)?;
     for (name, value, flags, help) in [
         (
             "cg_chatBeep",
@@ -485,6 +475,9 @@ impl crate::GpuState {
         tokens: &[String],
         audio: &mut Option<crate::GameAudio>,
     ) -> Result<Vec<String>, String> {
+        if let Some(result) = self.run_mod_command(tokens) {
+            return result;
+        }
         let name = tokens[0].to_ascii_lowercase();
         let args = &tokens[1..];
         match name.as_str() {

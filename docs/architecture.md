@@ -89,6 +89,8 @@ All 21 workspace crates are listed in [Cargo.toml](../Cargo.toml).
 | [sjk-audio](../crates/sjk-audio/src/lib.rs) | Sound storage, spatialization and mixing |
 | [sjk-ui](../crates/sjk-ui/src/lib.rs) | Retained widgets, layout, input and draw commands |
 | [sjk-shell](../crates/sjk-shell/src/lib.rs) | Cvars, bindings and command processing |
+| [sjk-mod](../crates/sjk-mod/src/lib.rs) | The interface client mods are written against ([mods.md](mods.md)) |
+| [sjk-mod-japlus](../crates/sjk-mod-japlus/src/lib.rs), [sjk-mod-jof](../crates/sjk-mod-jof/src/lib.rs) | The JA+ and JoF tools mods |
 | [sjk-materialgen](../crates/sjk-materialgen/src/lib.rs) | Offline tool: local material maps from installed textures |
 
 ## Main flows

@@ -2443,6 +2443,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "sjk-mod"
+version = "0.1.0"
+
+[[package]]
+name = "sjk-mod-japlus"
+version = "0.1.0"
+dependencies = [
+ "sjk-mod",
+ "sjk-protocol",
+]
+
+[[package]]
+name = "sjk-mod-jof"
+version = "0.1.0"
+dependencies = [
+ "sjk-mod",
+]
+
+[[package]]
 name = "sjk-model"
 version = "0.1.0"
 
@@ -2537,6 +2556,9 @@ dependencies = [
  "sjk-entity",
  "sjk-game-jka",
  "sjk-identity",
+ "sjk-mod",
+ "sjk-mod-japlus",
+ "sjk-mod-jof",
  "sjk-model",
  "sjk-network",
  "sjk-protocol",

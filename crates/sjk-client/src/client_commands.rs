@@ -58,10 +58,9 @@ const TAYSTJK_EMOTES: &[CompatConsoleCommand] = &[
 
 // Read-only/status handlers in the same dispatch table. Commands which mutate
 // movement, combat, accounts, clans, or server state are intentionally absent.
-// `serverconfig` is a viewer client command: it lists JA+ options locally and
-// forwards to TaystJK, as EternalJK's `CG_ServerConfig_f` does.
 const TAYSTJK_INFO: &[CompatConsoleCommand] = &[
     command("aminfo", "Show TaystJK server command help"),
+    command("serverconfig", "List the server's options"),
     command("ammotd", "Show the server message of the day"),
     command("claninfo", "Show clan information"),
     command("clanlist", "List registered clans"),

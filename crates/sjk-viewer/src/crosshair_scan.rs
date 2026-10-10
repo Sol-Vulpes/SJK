@@ -60,6 +60,12 @@ impl State {
         self.client.filter(|_| self.acquired_at == now)
     }
 
+    /// Where the last trace ended, if a scan ran within a second of `now`
+    /// (`cg_crosshairPos`, which JoF EternalJK's `teleGun` reads).
+    pub(crate) fn endpoint_near(&self, now: i32) -> Option<Vec3> {
+        (self.scanned_at != 0 && now.abs_diff(self.scanned_at) <= 1_000).then_some(self.endpoint)
+    }
+
     /// Stock `CG_CrosshairPlayer` retains a target for at most one second.
     pub(crate) fn chat_client(&self, now: i32) -> Option<u16> {
         self.client

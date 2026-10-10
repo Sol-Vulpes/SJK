@@ -24,6 +24,10 @@ sjk-entity.workspace = true
 sjk-effect.workspace = true
 sjk-identity.workspace = true
 sjk-model.workspace = true
+sjk-mod.workspace = true
+# The client mods (docs/mods.md): built in by default, each can be left out.
+sjk-mod-japlus = { workspace = true, optional = true }
+sjk-mod-jof = { workspace = true, optional = true }
 sjk-network.workspace = true
 sjk-protocol.workspace = true
 sjk-runtime.workspace = true
@@ -48,6 +52,11 @@ wgpu = { version = "30.0.1", default-features = false, features = ["dx12", "gles
 winit = { version = "0.30.13", default-features = false, features = ["rwh_06", "wayland", "wayland-dlopen", "x11"] }
 ureq = { version = "3", default-features = false, features = ["rustls", "gzip"] }
 sha2 = "0.11.0"
+
+[features]
+default = ["mod-japlus", "mod-jof"]
+mod-japlus = ["dep:sjk-mod-japlus"]
+mod-jof = ["dep:sjk-mod-jof"]
 
 [target.'cfg(windows)'.dependencies]
 # Ctrl+V and copies read and set the clipboard directly: starting PowerShell for them

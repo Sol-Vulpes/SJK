@@ -382,6 +382,14 @@ const HELP: &[(&str, &str)] = &[
         "Smooths the view over this many milliseconds when the server corrects you; 0 snaps.",
     ),
     (
+        "mod_japlus",
+        "Adds the japlus. commands: admin teleports, auto login, JA+ plugin options and completion of JA+ server commands.",
+    ),
+    (
+        "mod_jof",
+        "Adds jof.commands and completion of the JoF servers' own commands: gun admin commands, jetpack, emotes.",
+    ),
+    (
         crate::rarity_fx::CVAR,
         "Animates rarity: Rare frames breathe, Legendary ones catch a sheen, Mythical ones a running spark. Off keeps the tier frames still.",
     ),

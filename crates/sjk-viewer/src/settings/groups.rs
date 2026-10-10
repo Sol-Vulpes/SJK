@@ -90,6 +90,8 @@ impl Group {
                 "cg_thirdPersonCameraDamp",
                 "cg_thirdPersonTargetDamp",
                 "cg_errorDecay",
+                "mod_japlus",
+                "mod_jof",
             ],
             Self::Interface => &[
                 crate::menu::style::CVAR,
