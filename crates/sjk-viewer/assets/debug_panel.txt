@@ -310,6 +310,15 @@ note: A roll on landing while crouched (PM_CrashLand) is not prevented, in EJK e
 
 # ---- Menus & settings ----
 
+[update-recheck]
+area: Menus & settings
+title: Update check every 30 minutes while SJK runs, not only at start
+change: With Check for updates on, a running client asks GitHub again every 30 minutes.
+change: A release found mid-match shows the Update card once, as at start.
+test: Leave SJK running across a release (or cl_updateAs to an older version): the card comes.
+test: Check for updates off: no request at start or later.
+note: Unit test only. The first release it helps is the one after 2026.1010.2.
+
 [settings-sjk-only]
 area: Menus & settings
 title: Settings without the old hero form: resolution card, SJK Settings everywhere

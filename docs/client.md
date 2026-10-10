@@ -2025,9 +2025,11 @@ The client looks for a newer SJK release when it starts and from the Update page
 ([update.rs](../crates/sjk-viewer/src/update.rs) does the work,
 [update_panel.rs](../crates/sjk-viewer/src/update_panel.rs) draws the page).
 
-- `cl_autoUpdate` (default 1; Settings > Network > Check for updates at start)
-  asks `api.github.com/repos/Sol-Vulpes/SJK/releases/latest` once at start-up on
-  a worker thread. A newer version shows on the main menus' version line
+- `cl_autoUpdate` (default 1; Settings > Network > Check for updates)
+  asks `api.github.com/repos/Sol-Vulpes/SJK/releases/latest` at start-up on
+  a worker thread, and again every 30 minutes while SJK runs as long as nothing new
+  was found (or the check failed), so a release made during a match reaches the
+  players in it as its card without a restart (since 10/10/2026). A newer version shows on the main menus' version line
   ("update 2026.1010.1 available"). The check sends the request GitHub needs and
   nothing else; turn it off to send none.
 - When the check finds a newer release, a card says so once a session at the top of

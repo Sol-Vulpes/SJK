@@ -75,6 +75,8 @@ impl GpuState {
         // Save settings changed this frame or earlier, once they hold still.
         if let Some(console) = self.console.as_mut() {
             console.persist();
+            // A release made while playing shows its update card within half an hour.
+            console.recheck_for_updates();
         }
     }
 }
