@@ -57,6 +57,8 @@ pub(crate) enum InputAction {
     SaberStyle,
     Weapon(u8),
     WeaponCycle(i8),
+    /// `weapmelee`: select the fists (SJK's), local like the other weapon binds.
+    WeaponMelee,
     /// Local force/inventory cycling; never a reliable server command.
     SelectionCycle(bool, i8),
     /// `forceselect <entry>`: select that Force wheel entry at once (the quick
@@ -243,6 +245,7 @@ impl GameplayInput {
                     | "saberstyle"
                     | "centerview"
                     | "weapnext"
+                    | "weapmelee"
                     | "weapprev"
                     | "forcenext"
                     | "forceprev"
@@ -397,6 +400,7 @@ impl GameplayInput {
             "saberstyle" => Some(InputAction::SaberStyle),
             "centerview" => Some(InputAction::CenterView),
             "weapnext" => Some(InputAction::WeaponCycle(1)),
+            "weapmelee" => Some(InputAction::WeaponMelee),
             "weapprev" => Some(InputAction::WeaponCycle(-1)),
             "forcenext" => Some(InputAction::SelectionCycle(false, 1)),
             "forceprev" => Some(InputAction::SelectionCycle(false, -1)),
@@ -547,6 +551,7 @@ impl super::GpuState {
             }
             Some(InputAction::Weapon(weapon)) => self.select_weapon(weapon),
             Some(InputAction::WeaponCycle(direction)) => self.cycle_weapon(direction),
+            Some(InputAction::WeaponMelee) => self.select_melee(),
             Some(InputAction::SelectionCycle(inventory, direction)) => {
                 let snapshot = self
                     .live_session
@@ -634,6 +639,22 @@ impl super::GpuState {
         }
     }
 
+    /// `weapmelee`: select the fists (`WP_MELEE`) by name, from the saber or
+    /// any weapon. Unlike `weapon 1` it never picks the saber nor switches it on
+    /// or off, and with the fists already selected, or none held, it does nothing
+    /// ([`sjk_client::legacy_melee_weapon`]).
+    fn select_melee(&mut self) {
+        let Some(session) = &self.live_session else {
+            return;
+        };
+        let player = &session.latest_snapshot().player;
+        let current = self.selected_weapon.unwrap_or_else(|| player.weapon());
+        let inventory = sjk_client::LegacyWeaponInventory::from_player_state(player);
+        if let Some(weapon) = sjk_client::legacy_melee_weapon(&inventory, current) {
+            self.select_weapon_exact(weapon);
+        }
+    }
+
     pub(super) fn select_weapon(&mut self, slot: u8) {
         let Some(session) = &self.live_session else {
             return;
@@ -690,6 +711,16 @@ mod tests {
             input.apply("messagemode5"),
             Some(InputAction::SjkMessageMode)
         );
+    }
+
+    #[test]
+    fn weapmelee_is_a_local_weapon_command() {
+        let mut input = GameplayInput::default();
+        assert!(GameplayInput::recognizes("weapmelee"));
+        assert!(GameplayInput::recognizes("WEAPMELEE"));
+        assert_eq!(input.apply("weapmelee"), Some(InputAction::WeaponMelee));
+        // The saber / melee bind is its own command and keeps its meaning.
+        assert_eq!(input.apply("weapon 1"), Some(InputAction::Weapon(1)));
     }
 
     #[test]

@@ -7,7 +7,7 @@ SJK currently contains a native client and standard dedicated server in a
 20-crate Rust workspace. This page records scope and verification, rather than
 claiming complete parity from the presence of an implementation.
 
-## Quick wheel: Force first, a Toys page
+## Quick wheel: Force first, a Toys page; a Melee bind
 
 Branch `personal/quick-wheel-toys` (10/10/2026, based on `aa95e8cb`, Windows 11), Sol's
 requests. The quick wheel's default order is now Force, General, Toys, Weather, so a new
@@ -20,10 +20,15 @@ the Force bar's own Illuminate entry and the command are unchanged. `wheel.json`
 version 3: a file whose pages are exactly the version 2 defaults is removed (the new
 defaults apply), any other keeps its pages and gains the Toys page once after its Force
 page (else last), a removed Toys page stays removed and a full wheel is left alone
-(unit-tested in `pages.rs`, as the Force page's migration was). Verified by unit tests, the world shots
+(unit-tested in `pages.rs`, as the Force page's migration was). The new bindable action
+Melee (fists), `weapmelee`, selects `WP_MELEE` by name (unbound by default; the rule is
+`legacy_melee_weapon`, unit-tested: from the saber, from a gun, already melee, no melee
+held, following, emplaced); `weapon 1` stays the saber. The wheel has no Melee choice: a
+disc for it would need a new picture, and every action has one. Also two unused imports
+and a test's `unused_mut` warning removed. Verified by unit tests, the world shots
 `duel6_quick_wheel*` (re-rendered and looked at: Force first, Toys with the holocron lit,
 Force 2, the editor on Force and Toys) and the workspace checks; not tried in a game: that
-the holocron toggles from the wheel.
+the holocron toggles from the wheel, and `weapmelee` against a real server.
 
 ## Medal shaders
 

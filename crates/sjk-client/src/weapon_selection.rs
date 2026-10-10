@@ -5,12 +5,14 @@
 //! 1382-1507,1514-1636`. In particular, cycling uses the non-numeric
 //! Flechette -> Concussion -> Rocket and Det Pack -> Bryar Old order, requires
 //! ownership and enough ammo for at least one firing mode, and preserves the
-//! planted-detpack exception.
+//! planted-detpack exception. [`legacy_melee_weapon`] is SJK's own `weapmelee`: the
+//! fists by name, which retail reaches only by cycling.
 
 use crate::{LEGACY_WEAPON_COUNT, legacy_weapon_data};
 use sjk_protocol::PlayerState;
 
 const WEAPON_COUNT: u8 = LEGACY_WEAPON_COUNT as u8;
+const WP_MELEE: u8 = 2;
 const WP_SABER: u8 = 3;
 const WP_FLECHETTE: u8 = 10;
 const WP_ROCKET: u8 = 11;
@@ -96,6 +98,18 @@ pub fn legacy_cycle_weapon(inventory: &LegacyWeaponInventory, current: u8, direc
     original
 }
 
+/// The weapon `weapmelee` selects, if it changes anything: the fists (`WP_MELEE`,
+/// the melee `weapon 1` falls back to when the player has no saber), never the
+/// saber and never a toggle. `current` is the weapon now selected. `None` while
+/// following, on an emplaced gun, when `current` already is the fists or when
+/// the player does not hold them.
+pub fn legacy_melee_weapon(inventory: &LegacyWeaponInventory, current: u8) -> Option<u8> {
+    if inventory.following || inventory.emplaced || current == WP_MELEE {
+        return None;
+    }
+    legacy_weapon_selectable(inventory, WP_MELEE).then_some(WP_MELEE)
+}
+
 /// Apply `weapon N`'s SP-compatible slot mapping and explosive sub-cycle.
 pub fn legacy_direct_weapon(
     inventory: &LegacyWeaponInventory,
@@ -135,4 +149,68 @@ pub fn legacy_direct_weapon(
         }
     }
     legacy_weapon_selectable(inventory, selected).then_some(selected)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const STUN_BATON: u8 = 1;
+    const BRYAR: u8 = 4;
+
+    fn inventory(weapons: &[u8]) -> LegacyWeaponInventory {
+        LegacyWeaponInventory {
+            owned: weapons.iter().fold(0, |owned, weapon| owned | 1 << weapon),
+            ammo: [0; 16],
+            detpack_planted: false,
+            following: false,
+            spectator: false,
+            emplaced: false,
+        }
+    }
+
+    #[test]
+    fn weapmelee_selects_the_fists_from_the_saber_and_from_any_weapon() {
+        let held = inventory(&[WP_MELEE, WP_SABER, BRYAR]);
+        assert_eq!(legacy_melee_weapon(&held, WP_SABER), Some(WP_MELEE));
+        assert_eq!(legacy_melee_weapon(&held, BRYAR), Some(WP_MELEE));
+        // `weapon 1` is the saber while one is held: that is why it needs this.
+        assert_eq!(legacy_direct_weapon(&held, BRYAR, 1), Some(WP_SABER));
+        // It is the weapon retail's previous-weapon key reaches from the saber.
+        assert_eq!(legacy_cycle_weapon(&held, WP_SABER, -1), WP_MELEE);
+        // Without a saber `weapon 1` is the fists too.
+        let no_saber = inventory(&[WP_MELEE, BRYAR]);
+        assert_eq!(legacy_direct_weapon(&no_saber, BRYAR, 1), Some(WP_MELEE));
+        assert_eq!(legacy_melee_weapon(&no_saber, BRYAR), Some(WP_MELEE));
+    }
+
+    #[test]
+    fn weapmelee_does_nothing_when_already_on_the_fists_or_without_them() {
+        let held = inventory(&[WP_MELEE, WP_SABER]);
+        // Already the fists: no toggle back, no change.
+        assert_eq!(legacy_melee_weapon(&held, WP_MELEE), None);
+        // No fists in the inventory, or only the stun baton, which is another
+        // weapon: nothing is selected and nothing breaks.
+        assert_eq!(legacy_melee_weapon(&inventory(&[WP_SABER]), WP_SABER), None);
+        assert_eq!(
+            legacy_melee_weapon(&inventory(&[STUN_BATON, WP_SABER]), WP_SABER),
+            None
+        );
+        assert_eq!(legacy_melee_weapon(&inventory(&[]), 0), None);
+    }
+
+    #[test]
+    fn weapmelee_stays_put_while_following_or_on_an_emplaced_gun() {
+        let held = inventory(&[WP_MELEE, WP_SABER]);
+        let following = LegacyWeaponInventory {
+            following: true,
+            ..held
+        };
+        assert_eq!(legacy_melee_weapon(&following, WP_SABER), None);
+        let emplaced = LegacyWeaponInventory {
+            emplaced: true,
+            ..held
+        };
+        assert_eq!(legacy_melee_weapon(&emplaced, WP_SABER), None);
+    }
 }

@@ -383,7 +383,9 @@ one group and regroups the settings screen's GAME, HUD, HUD+ and TEXT tabs by su
   Interaction, Weapons, Force powers (retail's two Force pages as one) and Other.
   The categories down the left jump to their heading, and the one holding the
   selected action is marked as the list scrolls. The weapon rows name their
-  weapon (Saber / melee, Blaster pistol, ... Explosives) rather than `weapon N`.
+  weapon (Saber / melee, Blaster pistol, ... Explosives) rather than `weapon N`;
+  Melee (fists), unbound until a key is picked, is `weapmelee`
+  ([Useful console commands](#useful-console-commands)).
 
 Every group down the left (both tabs, Graphics and Gameplay, main menu and in-game
 pop-up) has an icon at the left end of its row, opposite the label: SJK's own grey
@@ -2962,6 +2964,17 @@ one command and `cg_fkDuration` (default 50) lasts 0.4 s.
 forbids it with bit 7 (`RESTRICT_FLIPKICKBIND`) of serverinfo `restricts`. See
 [flip_kick.rs](../crates/sjk-viewer/src/input/flip_kick.rs).
 
+`weapmelee` (SJK's; Settings > Key bindings > Weapons > Melee (fists), unbound by
+default, Sol's request of 10/10/2026) selects the melee weapon, the fists
+(`WP_MELEE`), by name. The numbered binds cannot: `weapon 1` is the saber while the
+player holds one (`CG_Weapon_f`), and with the saber already selected it switches
+the saber on or off instead; the fists otherwise come only from cycling the weapon
+keys. `weapmelee` never selects the saber and never toggles: it does nothing when
+the fists are already selected, when the player does not hold them, while
+following someone or on an emplaced gun. The stun baton, `WP_STUN_BATON`, is another
+weapon and is not chosen. Like `weapnext` it only changes the client's selection
+(the user command sends it); the rule is
+[`legacy_melee_weapon`](../crates/sjk-client/src/weapon_selection.rs).
 
 `cl_idrive` is JoF EJK's "last key wins" input (archived, default 0): while both
 keys of a movement pair are held, the one pressed last moves the player instead of

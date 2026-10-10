@@ -15,6 +15,10 @@ pub(super) fn register(shell: &mut sjk_shell::Shell) -> Result<(), sjk_shell::Co
             "forceselect",
             "Select Force wheel entry N (forcePowers_t number; 18-20 JoF's, 21 Illuminate)",
         ),
+        (
+            "weapmelee",
+            "Select the melee weapon (fists), never the saber; does nothing if already selected",
+        ),
         ("invnext", "Select next inventory item"),
         ("invprev", "Select previous inventory item"),
         (

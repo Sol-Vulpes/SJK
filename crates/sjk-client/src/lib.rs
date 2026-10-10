@@ -281,7 +281,8 @@ pub use weapon_data::{
     LEGACY_WEAPON_COUNT, LEGACY_WEAPON_DATA, LegacyWeaponData, legacy_weapon_data,
 };
 pub use weapon_selection::{
-    LegacyWeaponInventory, legacy_cycle_weapon, legacy_direct_weapon, legacy_weapon_selectable,
+    LegacyWeaponInventory, legacy_cycle_weapon, legacy_direct_weapon, legacy_melee_weapon,
+    legacy_weapon_selectable,
 };
 
 pub use sjk_game_jka::{legacy_animation_count, legacy_animation_name};

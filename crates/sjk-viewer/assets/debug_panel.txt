@@ -3300,3 +3300,13 @@ test: Settings > Quick wheel > Toys: delete Illuminate, Add a choice, Toys group
 test: Old profile (wheel.json written by an earlier build, pages as shipped): Force first, Toys added.
 test: Old profile with a renamed page or a custom choice: its pages stay, Toys follows the Force page.
 note: With cg_illuminate 0 the choice does nothing, as force_illuminate. Not tried in a game.
+
+[weapmelee]
+area: Input
+title: Melee bind: weapmelee selects the fists, never the saber
+change: New unbound action Settings > Key bindings > Weapons > Melee (fists), command weapmelee.
+change: Saber / melee (weapon 1) is unchanged: the saber when you hold one (a second press switches it).
+test: Bind a key to Melee (fists), saber out in a match: you switch to the fists.
+test: Press it again with the fists out, or where you hold none: nothing happens.
+test: Type weapmelee in the console: same; Tab completes the name.
+note: Selects WP_MELEE only; the stun baton is another weapon. Not tried in a game.

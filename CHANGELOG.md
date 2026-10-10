@@ -35,6 +35,7 @@ opened yet and give nothing.
 - Players with the JoF clan's tag in their name ({JoF}, jof., [JOF] and so on, in any case, with no letter touching it) get the clan's J-o-F emblem on the left of their name in the game chat, the SJK chat, the scoreboard, the player card and the Players page; the JoF Clan medal is gone, replaced by this tag _(Sol)_
 - The quick wheel opens on its Force page by default: the pages are now Force, General, Toys and Weather, and Q opens on the page you used last, or on Force in a new run. A wheel you had set up keeps its pages and order; one still holding the pages as they came takes the new order _(Sol)_
 - A Toys page on the quick wheel (`+wheel toys`) holds Illuminate, which no longer sits on the Force page, so that page lists only Force powers. Toys are choices like any other: Settings > Quick wheel has a Toys group to put Illuminate back, and a wheel you had set up gets the Toys page once, after its Force page _(Sol)_
+- A Melee action in Settings > Key bindings > Weapons (the `weapmelee` command, unbound until you pick a key) selects the fists directly, never the saber, and does nothing when they are already out; Saber / melee on key 1 is unchanged _(Sol)_
 
 ## 2026.1010.1 (Alpha) | 10/10/2026
 
