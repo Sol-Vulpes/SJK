@@ -370,10 +370,6 @@ const HELP: &[(&str, &str)] = &[
         "Smooths the view over this many milliseconds when the server corrects you; 0 snaps.",
     ),
     (
-        "ui_menuContrast",
-        "Darkens the backdrop behind Create game and the settings screens drawn over the map, for easier reading.",
-    ),
-    (
         crate::rarity_fx::CVAR,
         "Animates rarity: Rare frames breathe, Legendary ones catch a sheen, Mythical ones a running spark. Off keeps the tier frames still.",
     ),

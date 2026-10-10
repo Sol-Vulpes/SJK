@@ -1780,7 +1780,7 @@ fn settings_panel_snapshot() {
         crate::console::ViewerConsole::new(directory.path().join("config.cfg")).expect("console");
     // Changed rows show their dot, and the focused one its reset arrow.
     console.set_cvar("r_hdrExposure", "1.5");
-    console.set_cvar("ui_menuContrast", "strong");
+    console.set_cvar("con_style", "classic");
     console.set_cvar("cg_drawTimer", "1");
     let fonts = [
         (
@@ -1798,7 +1798,7 @@ fn settings_panel_snapshot() {
             Page::Gameplay,
             Entry::Interface,
             Frame::Main,
-            "ui_menuContrast",
+            "con_style",
         ),
         (
             "panel-hud-ingame",

@@ -211,12 +211,6 @@ pub(super) fn register_daily_cvars(cvars: &mut CvarRegistry) -> Result<(), sjk_s
             "Synchronize presentation (0/1)",
         ),
         CvarDefinition::new(
-            crate::menu_widgets::MenuContrast::CVAR,
-            "standard",
-            archive,
-            "Menu text contrast over the map: off, standard or strong",
-        ),
-        CvarDefinition::new(
             crate::menu::style::CVAR,
             crate::menu::style::MenuStyle::DEFAULT_NAME,
             archive,

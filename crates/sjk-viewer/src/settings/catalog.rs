@@ -586,11 +586,6 @@ pub(super) const GAME: &[Setting] = &[
         },
     },
     Setting {
-        label: "Menu contrast",
-        cvar: "ui_menuContrast",
-        kind: ValueKind::Choice(&["off", "standard", "strong"]),
-    },
-    Setting {
         label: "Rarity effects",
         cvar: crate::rarity_fx::CVAR,
         kind: ValueKind::Bool,

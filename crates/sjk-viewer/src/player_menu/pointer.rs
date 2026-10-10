@@ -268,7 +268,7 @@ mod tests {
 
     /// The chip under the pointer is the one drawn there: each of the seven
     /// centred in its share of the control, as `kit::chips` lays them out.
-    /// The hero form's value zone (the right 48% of a row) picked a chip
+    /// The value zone of the old form rows (the right 48% of a row) picked a chip
     /// left of the one clicked, and the first for any click on the left half.
     #[test]
     fn a_click_on_a_chip_picks_that_chip() {

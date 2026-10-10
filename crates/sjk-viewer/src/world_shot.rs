@@ -727,8 +727,8 @@ mod tests {
             let path = shoot(&mut gpu, 20, "duel6-first-setup-classic");
             println!("{}", path.display());
             // The Import page that row opens (without its file dialog, which a shot
-            // cannot show), in the classic menus' hero look, then in the SJK UI's
-            // card: empty, with a file's parts, and after a file that cannot be read.
+            // cannot show), the SJK UI's card in both menu styles: empty, with a
+            // file's parts, and after a file that cannot be read.
             if let Some(console) = gpu.console.as_mut() {
                 console.open_config_import(None);
             }
@@ -788,7 +788,7 @@ mod tests {
         }
     }
 
-    /// The settings without the old hero form, at 1080p and 4K with Sol's
+    /// The settings in the SJK UI's look, at 1080p and 4K with Sol's
     /// larger menu text (`ui_textScale 1.2`): the resolution list as the SJK
     /// UI's card over its Settings and over a classic+ panel, then the
     /// classic Graphics page's renderer route, which opens the SJK UI's

@@ -9,10 +9,10 @@
 //! the Setup and Controls option panels ([`panel`]) on the main menu and as
 //! the in-game pop-ups, SJK's renderer page in the same layout (its groups
 //! open from Setup's RENDERER), the server browser ([`browser`]) and the
-//! in-game menu ([`crate::ingame_menu`]). Create game, the tabbed settings
-//! and the key-binding editor these pages open have no classic version yet:
-//! they keep SJK's hero look over the retail background; the follow-up plan
-//! is kept in `docs/client.md`.
+//! in-game menu ([`crate::ingame_menu`]). The screens these pages open that
+//! have no classic version (Create game, the SJK Settings and Key bindings when
+//! no classic+ panel fits) are the SJK UI's; the follow-up plan is kept in
+//! `docs/client.md`.
 
 pub(crate) mod browser;
 pub(crate) mod layout;

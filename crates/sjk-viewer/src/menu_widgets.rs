@@ -1,18 +1,14 @@
 //! Shared menu widgets built on renderer-neutral `sjk-ui` primitives.
 
-mod contrast;
-mod hero;
 mod input;
 mod text;
 mod vote;
-pub(crate) use contrast::MenuContrast;
-pub(crate) use hero::Scrim;
 pub(crate) use vote::VoteLayout;
 mod controls;
-mod form;
 pub(crate) mod numeric;
+mod targets;
 
-pub(crate) use form::{BACK_TOKEN, FormLayout, TAB_BASE, cycler_direction, palette_index};
+pub(crate) use targets::{BACK_TOKEN, TAB_BASE, cycler_direction, palette_index};
 pub(crate) use text::TextFamily;
 
 use sjk_ui::{Color, DrawCommand, DrawList, InputRouter, Rect, Theme, WidgetId, WidgetTree};
@@ -45,9 +41,6 @@ pub(crate) struct MenuCanvas {
     hovered_token: Option<MenuToken>,
     pressed_token: Option<MenuToken>,
     viewport: [f32; 2],
-    contrast: MenuContrast,
-    /// Luminance behind text once this frame has drawn a readability backing.
-    backing: Option<f32>,
     /// Pointer areas and text runs this frame had no room for.
     dropped: u32,
     /// Whether a release build has logged an overflow of this canvas yet.
@@ -91,17 +84,15 @@ impl MenuCanvas {
             hovered_token: None,
             pressed_token: None,
             viewport: [1.0, 1.0],
-            contrast: MenuContrast::Off,
-            backing: None,
             dropped: 0,
             overflow_logged: false,
         }
     }
 
-    /// Where along a slider row's rail the pointer at `x` is, at the form
+    /// Where along a slider row's rail the pointer at `x` is, at the UI
     /// scale of the viewport this canvas was last begun with.
     pub(crate) fn slider_ratio(&self, rect: Rect, x: f32) -> f32 {
-        form::slider_ratio(rect, x, FormLayout::new(self.viewport).scale)
+        targets::slider_ratio(rect, x, crate::ui_scale::height_scale(self.viewport[1]))
     }
 
     /// Reset retained scratch without drawing a full-screen background.
@@ -115,8 +106,6 @@ impl MenuCanvas {
             .pressed()
             .and_then(|id| self.tokens.get(id.0 as usize).copied());
         self.viewport = viewport;
-        self.contrast = MenuContrast::current();
-        self.backing = None;
         self.draw.clear();
         self.dropped = 0;
         self.tree.clear();
@@ -124,44 +113,6 @@ impl MenuCanvas {
         self.tokens.clear();
         self.text_len = 0;
         self.family = TextFamily::Body;
-    }
-
-    /// Draw a modern backplate with the same contrast treatment as the HUD,
-    /// darkened to the `ui_menuContrast` floor when that is higher.
-    pub(crate) fn panel(&mut self, rect: Rect) {
-        let alpha = self.readability_coverage().max(0.55);
-        let _ = self.draw.push(DrawCommand::RoundedRect {
-            rect,
-            radius: self.theme.radii.lg,
-            color: Color::new(0.0, 0.0, 0.0, alpha),
-        });
-        self.mark_backing(self.readability_coverage());
-        let _ = self.draw.push(DrawCommand::Border {
-            rect,
-            radius: self.theme.radii.lg,
-            width: 1.0,
-            color: Color::new(1.0, 1.0, 1.0, 0.10),
-        });
-    }
-
-    /// Draw a recessed text field with an optional active-focus outline.
-    pub(crate) fn text_field(&mut self, rect: Rect, active: bool) {
-        let _ = self.draw.push(DrawCommand::RoundedRect {
-            rect,
-            radius: self.theme.radii.md,
-            color: Color::new(0.015, 0.028, 0.043, 0.92),
-        });
-        let outline = if active {
-            self.theme.accent
-        } else {
-            Color::new(1.0, 1.0, 1.0, 0.12)
-        };
-        let _ = self.draw.push(DrawCommand::Border {
-            rect,
-            radius: self.theme.radii.md,
-            width: if active { 2.0 } else { 1.0 },
-            color: outline,
-        });
     }
 
     /// Draw a draggable scrollbar and register its entire track for pointer input.

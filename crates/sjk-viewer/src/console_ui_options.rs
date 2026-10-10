@@ -1,4 +1,4 @@
-//! Functional hero menu options, not legacy .menu widget mirrors.
+//! Functional menu options, not legacy .menu widget mirrors.
 use super::*;
 
 /// Register settings consumed by browser filtering or the Force allocation editor.
