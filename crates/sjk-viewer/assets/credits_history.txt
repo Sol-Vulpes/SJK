@@ -9,6 +9,8 @@
 #                               made it when that is not the piece's owner.
 
 = Sol
++ 11/10/2026 | - | Every player-facing addition needs its SJK UI
+- c925f8e |  | Require an SJK UI version for every player-facing addition
 + 11/10/2026 | - | Shield hit brightness defaults to 2
 - 75b0eb1 |  | Shield hit brightness defaults to 2
 + 11/10/2026 | - | Release packaging: clipboard-win's BSL-1.0 text

@@ -19,6 +19,10 @@ multiplayer. Read [docs/status.md](docs/status.md),
   Modern rendering and UI must preserve gameplay and content semantics.
 - Write small, named modules with rustdoc for public APIs. Keep new viewer work
   out of `crates/sjk-viewer/src/main.rs`; use focused modules instead.
+- Every player-facing addition (screen, page, pop-up, setting, browser) ships
+  with its SJK UI version in the same change; a classic+-only addition is not
+  accepted, while an SJK UI-only one is (it then shows its SJK look in every menu
+  style). See [the rule in sjk-ui.md](docs/sjk-ui.md#sjk-ui).
 - Avoid new allocation, locking and quadratic work in per-frame paths. Measure
   performance-sensitive changes in release builds; 500+ FPS is a target, not a
   blanket claim about current performance.
