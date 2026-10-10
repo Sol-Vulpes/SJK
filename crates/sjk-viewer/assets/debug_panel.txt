@@ -310,6 +310,16 @@ note: A roll on landing while crouched (PM_CrashLand) is not prevented, in EJK e
 
 # ---- Menus & settings ----
 
+[join-hitch]
+area: Rendering & effects
+title: No hitch when players join: saber definitions read once a map
+change: Player sounds and saber hums no longer re-read every .sab on each clientinfo change.
+change: Your own prediction no longer re-reads them when your sabers change.
+test: Busy server: players join; no "hitch: ... snapshot+reconcile 50" lines in the console.
+test: Change your saber (or /model) a few times: no config-refresh hitch.
+test: Saber hums and on/off sounds still right for custom hilts.
+note: Measured 30 ms per read on Sol's base (354 PK3s); now under 1 microsecond.
+
 [update-recheck]
 area: Menus & settings
 title: Update check every 30 minutes while SJK runs, not only at start

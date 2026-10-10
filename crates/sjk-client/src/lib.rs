@@ -244,6 +244,7 @@ pub use saber_command::{SaberChangeNotifier, profile_accepts_saber_command, sabe
 pub use saber_definitions::{
     LegacySaberColor, LegacySaberDefinition, LegacySaberType, legacy_saber_definitions,
     legacy_saber_hands, legacy_saber_movement, legacy_sabers_forbid_rolls,
+    shared_saber_definitions,
 };
 pub use saber_move::legacy_saber_trail_length;
 pub use server_address::{LegacyAddressError, LegacyServerAddress};

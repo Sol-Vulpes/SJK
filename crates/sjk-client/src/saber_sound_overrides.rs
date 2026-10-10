@@ -95,7 +95,7 @@ impl SaberSoundOverrides {
             })
             .collect();
         self.toggles.clear();
-        let definitions = crate::legacy_saber_definitions(vfs).unwrap_or_default();
+        let definitions = crate::shared_saber_definitions(vfs).unwrap_or_default();
         for definition in definitions.values() {
             for (path, toggle) in [
                 (definition.sound_on.as_deref(), Toggle::On),

@@ -246,7 +246,7 @@ impl LegacyLoopAdapter {
         if hashes == self.client_config_hash {
             return;
         }
-        let definitions = legacy_saber_definitions(vfs).unwrap_or_default();
+        let definitions = crate::shared_saber_definitions(vfs).unwrap_or_default();
         for client in 0..MAX_CLIENTS {
             let hash = hashes[client];
             if hash == self.client_config_hash[client] {
