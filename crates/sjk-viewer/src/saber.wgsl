@@ -18,8 +18,10 @@
 // from its blade-skin file (blade_skin_file.rs) in the uniform array `skins`: a hot core
 // with a fringe, a corona graded from its rim to the inside, granulation drifting along
 // the blade, flame tongues licking outward, shimmer, and flares running from the hilt to
-// the tip, swelling the glow; optionally lightning arcs, drifting motes and a turning hue.
-// A skin's blade ends round: past the tip the corona widens, grades from its inside to its
+// the tip, swelling the glow; optionally lightning arcs, drifting motes and a turning hue,
+// and since 10/10/2026 a sputtering edge and length, glitches, hologram scan lines, a
+// heartbeat, falling embers, veins, a team or surroundings tint and the wearer's name in
+// glyphs (afterimages are instances of their own). A skin's blade ends round: past the tip the corona widens, grades from its inside to its
 // rim and licks out about the tip, and the core line narrows to a rounded point over its
 // last `tip` half-widths (the stock line ends flat, hidden under its glow). Nothing here
 // knows any one skin. The dynamic glow pass shades the glow the same way, so its bloom
@@ -103,6 +105,38 @@ struct Skin {
     mote_band: vec4<f32>,
     // Hue turning: turns a second, per unit along, per capsule radius out. None: zeros.
     hue: vec4<f32>,
+    // The later sections (blade_skin_effects.rs); each zeros when absent.
+    // Sputter: ragged, scale, speed; cut, rate, threshold.
+    sputter_edge: vec4<f32>,
+    sputter_cut: vec4<f32>,
+    // Glitch: split, blocks, rate, threshold; shift, flash.
+    glitch_a: vec4<f32>,
+    glitch_b: vec4<f32>,
+    // Scan (hologram): wireframe colour and brightness; lines, speed, depth, rings; edge,
+    // width, hollow; jitter and its rate.
+    scan_color: vec4<f32>,
+    scan_lines: vec4<f32>,
+    scan_edge: vec4<f32>,
+    scan_jitter: vec4<f32>,
+    // Pulse (heartbeat): rate, amount, second, gap; width, swell.
+    pulse_a: vec4<f32>,
+    pulse_b: vec4<f32>,
+    // Embers: colour and brightness; density, cells, fall, life; size, spread.
+    ember_color: vec4<f32>,
+    ember_field: vec4<f32>,
+    ember_shape: vec4<f32>,
+    // Veins: colour and brightness; scale, speed, width, core.
+    vein_color: vec4<f32>,
+    vein_shape: vec4<f32>,
+    // Team colours, red (w the amount), blue and none.
+    team_red: vec4<f32>,
+    team_blue: vec4<f32>,
+    team_none: vec4<f32>,
+    // The light where it is: amount, saturate, floor.
+    ambient: vec4<f32>,
+    // Glyphs: colour and brightness; size, spacing, speed, width.
+    glyph_color: vec4<f32>,
+    glyph_shape: vec4<f32>,
 }
 
 @group(2) @binding(0)
@@ -122,6 +156,11 @@ struct VertexOutput {
     @location(6) @interpolate(flat) kind: u32,
     // Presentation seconds (wrapped) and the blade's seed in [0, 1).
     @location(7) @interpolate(flat) animation: vec2<f32>,
+    // Who wears it (saber_persona.rs): the light where it is and the afterimage's
+    // brightness; the team and the name's letters.
+    @location(8) @interpolate(flat) persona: vec4<u32>,
+    // The world's down in the projected blade's plane (across, along).
+    @location(9) @interpolate(flat) down: vec2<f32>,
 }
 
 // TaystJK's CG_DoSaber submits the core RT_LINE twice (taystjk cgame cg_players.c:6429 and 6465;
@@ -132,7 +171,7 @@ const CORE_DRAWS: f32 = 2.0;
 // loaded blade skin's (saber_rgb.rs `SKIN_MATERIAL`); skins loaded at once.
 const NEUTRAL_MATERIAL: u32 = 6u;
 const SKIN_MATERIAL: u32 = 7u;
-const MAX_SKINS: u32 = 8u;
+const MAX_SKINS: u32 = 16u;
 const KIND_RETAIL: u32 = 0u;
 const KIND_NEUTRAL: u32 = 1u;
 const KIND_SKIN: u32 = 2u;
@@ -161,6 +200,7 @@ fn vertex_main(
     @location(4) blade_color: vec4<f32>,
     @location(5) blade_material: u32,
     @location(6) blade_animation: vec2<f32>,
+    @location(7) blade_persona: vec4<u32>,
 ) -> VertexOutput {
     let direction = normalize(blade_direction);
     let view_direction = normalize(camera.position - (blade_base + direction * blade_length * 0.5));
@@ -185,6 +225,8 @@ fn vertex_main(
         reach = skins[blade_material - SKIN_MATERIAL].swell.x;
     }
     output.animation = blade_animation;
+    output.persona = blade_persona;
+    output.down = vec2(-side.z, -up.z);
     var world: vec3<f32>;
     if hilt > 0.0 {
         // Wide enough for the grown hilt-end sprites and the hilt sprite itself.
@@ -450,32 +492,347 @@ fn skin_turn_hue(color: vec3<f32>, turns: f32) -> vec3<f32> {
     return max(turned, vec3(0.0));
 }
 
-// The glow, `pixel` world units across a screen pixel.
+// --- Later effects (blade_skin_effects.rs): each draws nothing when its lanes are zeros ---
+
+// Where the first heartbeat peaks in a cycle, seconds (saber_skins.rs `Beat::FIRST`).
+const BEAT_FIRST: f32 = 0.1;
+
+// The afterimage's brightness from the instance (1 for a blade itself).
+fn persona_fade(input: VertexOutput) -> f32 {
+    return f32(input.persona.x >> 24u) / 255.0;
+}
+
+// The light where the blade is, at full brightness (saber_persona.rs `pack_light`).
+fn persona_light(input: VertexOutput) -> vec3<f32> {
+    let packed = input.persona.x;
+    return vec3(f32(packed & 255u), f32((packed >> 8u) & 255u), f32((packed >> 16u) & 255u))
+        / 255.0;
+}
+
+// The wearer's letter `index` (5 bits; 0 ends the name).
+fn persona_letter(input: VertexOutput, index: u32) -> u32 {
+    let lanes = vec3(input.persona.y & 0x3fffffffu, input.persona.z, input.persona.w);
+    return (lanes[index / 6u] >> (5u * (index % 6u))) & 31u;
+}
+
+// The heartbeat at `time`: two Gaussian beats a cycle, on the clock alone so the blade
+// and its light (saber_skins.rs `Beat::at`) beat together.
+fn skin_beat(skin: Skin, time: f32) -> f32 {
+    let p = skin.pulse_a;
+    if p.x <= 0.0 {
+        return 0.0;
+    }
+    let into = fract(time * p.x) / p.x;
+    let width = max(skin.pulse_b.x, 0.001);
+    let a = (into - BEAT_FIRST) / width;
+    let b = (into - BEAT_FIRST - p.w) / width;
+    return p.y * (exp(-a * a) + p.z * exp(-b * b));
+}
+
+// How long the blade shows this moment: all of it, or, on a sputtering draw, cut short.
+fn skin_cut(skin: Skin, length: f32, time: f32, seed: f32) -> f32 {
+    let c = skin.sputter_cut;
+    if c.x <= 0.0 || c.y <= 0.0 {
+        return length;
+    }
+    let cycle = i32(floor(time * c.y));
+    let seeded = i32(seed * 4096.0);
+    if skin_hash(vec2(cycle, 5151 + seeded)) < c.z {
+        return length;
+    }
+    return length * (1.0 - c.x * skin_hash(vec2(cycle, 6161 + seeded)));
+}
+
+// Glitch at `along` units: x the jump (capsule radii), y the colour split (radii), z the
+// flash. A block glitches on its own draws; now and then the whole blade does.
+fn skin_glitch(skin: Skin, along: f32, time: f32, seed: f32) -> vec3<f32> {
+    let g = skin.glitch_a;
+    if g.y <= 0.0 {
+        return vec3(0.0);
+    }
+    let frame = i32(floor(time * g.z));
+    let seeded = i32(seed * 4096.0);
+    let block = i32(floor(along / g.y));
+    let whole = skin_hash(vec2(frame, 919 + seeded)) >= 0.5 + 0.5 * g.w;
+    let draw = skin_hash(vec2(block * 31 + seeded, frame));
+    if !whole && draw < g.w {
+        return vec3(0.0, g.x, 0.0);
+    }
+    let jump = skin.glitch_b.x * (skin_hash(vec2(block + 77, frame * 3 + seeded)) * 2.0 - 1.0);
+    return vec3(select(jump, jump * 0.5, whole), 2.0 * g.x, skin.glitch_b.y);
+}
+
+// The hologram's jitter: the whole projection thrown sideways (capsule radii) on some draws.
+fn skin_jitter(skin: Skin, time: f32, seed: f32) -> f32 {
+    let j = skin.scan_jitter;
+    if j.x <= 0.0 || j.y <= 0.0 {
+        return 0.0;
+    }
+    let frame = i32(floor(time * j.y));
+    let seeded = i32(seed * 4096.0);
+    if skin_hash(vec2(frame, 4321 + seeded)) < 0.75 {
+        return 0.0;
+    }
+    return j.x * (skin_hash(vec2(frame, 8765 + seeded)) * 2.0 - 1.0);
+}
+
+// Veins: ridged noise along and across (`x` units from the axis), bright where it crosses
+// its middle, a network of cracks running along the blade.
+fn skin_veins(skin: Skin, along: f32, x: f32, time: f32, seed: f32) -> f32 {
+    let v = skin.vein_shape;
+    if v.x <= 0.0 {
+        return 0.0;
+    }
+    let p = vec2(along * v.x - time * v.y + seed * 31.0, x * v.x * 1.7 + seed * 17.0);
+    let n = 0.65 * skin_noise(p) + 0.35 * skin_noise(p * 2.3 + vec2(7.0, 3.0));
+    return 1.0 - smoothstep(0.5 * v.z, v.z, abs(n - 0.5));
+}
+
+// The colour a skin takes from its wearer's team or the light where it is: rgb (largest
+// channel 1) and how much; none, zero.
+fn skin_tint(skin: Skin, input: VertexOutput) -> vec4<f32> {
+    if skin.team_red.w > 0.0 {
+        let team = input.persona.y >> 30u;
+        var color = skin.team_none.rgb;
+        if team == 1u { color = skin.team_red.rgb; }
+        if team == 2u { color = skin.team_blue.rgb; }
+        return vec4(color, skin.team_red.w);
+    }
+    let a = skin.ambient;
+    if a.x > 0.0 {
+        let light = persona_light(input);
+        let grey = vec3(dot(light, vec3(0.299, 0.587, 0.114)));
+        let color = max(mix(grey, light, a.y), vec3(a.z));
+        return vec4(color / max(max(color.r, color.g), max(color.b, 0.0001)), a.x);
+    }
+    return vec4(0.0);
+}
+
+// `color` recoloured toward `tint` at its own strongest channel's level.
+fn skin_apply_tint(color: vec3<f32>, tint: vec4<f32>) -> vec3<f32> {
+    if tint.w <= 0.0 {
+        return color;
+    }
+    let level = max(color.r, max(color.g, color.b));
+    return mix(color, level * tint.rgb, tint.w);
+}
+
+// Embers dripping from the blade and falling, at `p` (across, along the projected blade,
+// units) with `down` the world's down in that plane and `scale` projected units a world
+// unit along. Each drip place `cells` a unit along drips (if its draw is under `density`)
+// one ember a `life`, accelerating `fall` units a second; where gravity runs along the
+// blade, they are pushed off to either side. A fragment reads three places a side.
+fn skin_embers(
+    skin: Skin, p: vec2<f32>, down: vec2<f32>, scale: f32, blade_length: f32, time: f32,
+    seed: f32, pixel: f32,
+) -> f32 {
+    let f = skin.ember_field;
+    let shape = skin.ember_shape;
+    let seeded = i32(seed * 4096.0);
+    var total = 0.0;
+    for (var s = 0; s < 2; s++) {
+        let side = select(-1.0, 1.0, s == 1);
+        var d = down;
+        if abs(d.x) < 0.35 {
+            d.x = side * 0.35;
+        } else if sign(d.x) != side {
+            continue;
+        }
+        d = normalize(d);
+        if p.x * side < 0.0 {
+            continue;
+        }
+        let travel_here = p.x / d.x;
+        let start = (p.y - travel_here * d.y) / max(scale, 0.0001);
+        let k = i32(floor(start * f.y));
+        for (var dk = -1; dk <= 1; dk++) {
+            let column = k + dk;
+            let row = column * 2 + s + seeded * 5;
+            if skin_hash(vec2(row, 1717)) >= f.x {
+                continue;
+            }
+            let origin = (f32(column) + skin_hash(vec2(row, 2727))) / f.y;
+            if origin < 0.5 || origin > blade_length {
+                continue;
+            }
+            let phase = fract(time / f.w + skin_hash(vec2(row, 3737)));
+            let travel = f.z * f.w * phase * phase;
+            let stray = shape.y * (skin_hash(vec2(row, 4747)) * 2.0 - 1.0);
+            let q = vec2(0.0, origin * scale) + d * travel + vec2(-d.y, d.x) * stray * travel * 0.3;
+            let size = shape.x * (1.0 - 0.5 * phase);
+            let width = max(size, pixel);
+            let e = length(p - q) / width;
+            total += exp(-e * e) * pow(1.0 - phase, 1.5) * size / width;
+        }
+    }
+    return total;
+}
+
+// SJK's stroke glyphs: sixteen strokes on a 3 × 3 grid (six across, six up, four
+// diagonals from the middle), each letter a fixed handful of them drawn from its code.
+const GLYPH_STROKES: array<vec4<f32>, 16> = array<vec4<f32>, 16>(
+    vec4(0.0, 0.0, 1.0, 0.0), vec4(1.0, 0.0, 2.0, 0.0),
+    vec4(0.0, 1.0, 1.0, 1.0), vec4(1.0, 1.0, 2.0, 1.0),
+    vec4(0.0, 2.0, 1.0, 2.0), vec4(1.0, 2.0, 2.0, 2.0),
+    vec4(0.0, 0.0, 0.0, 1.0), vec4(0.0, 1.0, 0.0, 2.0),
+    vec4(1.0, 0.0, 1.0, 1.0), vec4(1.0, 1.0, 1.0, 2.0),
+    vec4(2.0, 0.0, 2.0, 1.0), vec4(2.0, 1.0, 2.0, 2.0),
+    vec4(1.0, 1.0, 0.0, 0.0), vec4(1.0, 1.0, 2.0, 0.0),
+    vec4(1.0, 1.0, 0.0, 2.0), vec4(1.0, 1.0, 2.0, 2.0),
+);
+
+// The strokes letter `code` draws: three to seven of the sixteen, the same every time
+// (saber_persona.rs's tests pin that every letter differs).
+fn glyph_bits(code: u32) -> u32 {
+    var v = code * 747796405u + 2891336453u;
+    v = ((v >> ((v >> 28u) + 4u)) ^ v) * 277803737u;
+    let h = (v >> 22u) ^ v;
+    var w = (code + 101u) * 2654435761u;
+    w = w ^ (w >> 15u);
+    w = w * 2246822519u;
+    w = w ^ (w >> 13u);
+    var bits = (h & w) & 0xffffu;
+    bits = bits | (1u << (w % 16u)) | (1u << ((w >> 8u) % 16u)) | (1u << ((h >> 4u) % 16u));
+    // At most seven strokes: drop the lowest while there are more.
+    for (var i = 0; i < 16 && countOneBits(bits) > 7u; i++) {
+        bits = bits & (bits - 1u);
+    }
+    return bits;
+}
+
+// Letter `code`'s strokes at `uv` (0 to 1 across and along the glyph), `width` a stroke's
+// half-width and `soft` a pixel, both in glyph units.
+fn glyph(code: u32, uv: vec2<f32>, width: f32, soft: f32) -> f32 {
+    let bits = glyph_bits(code);
+    var nearest = 4.0;
+    for (var i = 0u; i < 16u; i++) {
+        if (bits & (1u << i)) == 0u {
+            continue;
+        }
+        let stroke = GLYPH_STROKES[i];
+        let a = vec2(0.12, 0.08) + stroke.xy * vec2(0.38, 0.42);
+        let b = vec2(0.12, 0.08) + stroke.zw * vec2(0.38, 0.42);
+        let ab = b - a;
+        let t = clamp(dot(uv - a, ab) / dot(ab, ab), 0.0, 1.0);
+        nearest = min(nearest, length(uv - a - ab * t));
+    }
+    let half = max(width, soft);
+    return (1.0 - smoothstep(half - soft, half + soft, nearest)) * width / half;
+}
+
+// Glyphs at `along` units from the hilt and `x` across: the wearer's name, a letter a cell
+// of `size` along plus `spacing`, scrolling toward the tip, a cell left empty between
+// repeats; only along the blade, not round its tip.
+fn skin_glyphs(
+    skin: Skin, input: VertexOutput, along: f32, x: f32, time: f32, pixel: f32,
+) -> f32 {
+    let g = skin.glyph_shape;
+    let half_width = g.x * 0.3;
+    if g.x <= 0.0 || abs(x) > half_width + pixel || along < 1.0 || along > input.length - 1.0 {
+        return 0.0;
+    }
+    var count = 0u;
+    for (var i = 0u; i < 18u; i++) {
+        if persona_letter(input, i) == 0u {
+            break;
+        }
+        count = i + 1u;
+    }
+    let cell = g.x + g.y;
+    let k = (along - time * g.z) / cell;
+    let v = fract(k) * cell / g.x;
+    if v > 1.0 || count == 0u {
+        return 0.0;
+    }
+    let index = i32(floor(k));
+    let slot = u32(((index % i32(count + 1u)) + i32(count + 1u)) % i32(count + 1u));
+    if slot == count {
+        return 0.0;
+    }
+    let uv = vec2(x / (2.0 * half_width) + 0.5, v);
+    let ends = smoothstep(1.0, 3.0, along) * (1.0 - smoothstep(input.length - 3.0, input.length - 1.0, along));
+    return glyph(persona_letter(input, slot), uv, g.w * 0.5, pixel / g.x) * ends;
+}
+
+// The glow, `pixel` world units across a screen pixel: the glow at `x` across (the glitch
+// and the hologram's jitter move it, and split its colours), then what stays where the
+// blade is: embers, glyphs, the sputtering cut and an afterimage's fading.
 fn skin_glow(input: VertexOutput, pixel: f32) -> vec3<f32> {
+    let skin = skins[skin_index(input)];
+    let time = input.animation.x;
+    let seed = input.animation.y;
+    let along = skin_along(input);
+    let r = chain_radius(input.radius, input.length, clamp(along / max(input.length, 0.0001), 0.0, 1.0));
+    let glitch = skin_glitch(skin, along, time, seed);
+    let x = input.blade.x - (glitch.x + skin_jitter(skin, time, seed)) * r;
+    var glow: vec3<f32>;
+    if glitch.y > 0.0 {
+        let split = glitch.y * r;
+        glow = vec3(
+            skin_glow_at(input, pixel, x + split).r,
+            skin_glow_at(input, pixel, x).g,
+            skin_glow_at(input, pixel, x - split).b,
+        ) * (1.0 + glitch.z);
+    } else {
+        glow = skin_glow_at(input, pixel, x);
+    }
+    let extent = max(chain_radius(input.radius, input.length, 0.0) * skin.swell.x, input.hilt);
+    let beyond = max(input.blade.y - input.shaft, 0.0);
+    let room = (1.0 - smoothstep(0.75, 1.0, abs(input.blade.x) / extent))
+        * (1.0 - smoothstep(0.75, 1.0, beyond / extent))
+        * (1.0 - smoothstep(0.75, 1.0, -min(input.blade.y, 0.0) / extent));
+    if skin.ember_field.x > 0.0 {
+        let scale = input.shaft / max(input.length, 0.0001);
+        let embers = skin_embers(skin, input.blade, input.down, scale, input.length, time, seed,
+            pixel);
+        glow += embers * room * skin.ember_color.rgb * skin.ember_color.w;
+    }
+    if skin.glyph_color.w > 0.0 {
+        glow += skin_glyphs(skin, input, along, x, time, pixel) * skin.glyph_color.rgb
+            * skin.glyph_color.w;
+    }
+    let cut = skin_cut(skin, input.length, time, seed);
+    if cut < input.length {
+        // Past the cut nothing shows, the embers already falling aside.
+        let reach = select(along, input.length + beyond, beyond > 0.0);
+        glow *= 1.0 - smoothstep(cut - 1.5, cut + 0.5, reach);
+    }
+    return glow * persona_fade(input);
+}
+
+// The glow at `x` across (the fragment's own, or moved by a glitch).
+fn skin_glow_at(input: VertexOutput, pixel: f32, x: f32) -> vec3<f32> {
     let skin = skins[skin_index(input)];
     let time = input.animation.x;
     let seed = input.animation.y;
     let along = skin_along(input);
     let grain = skin_granulation(skin, along, time, seed);
     let flare = skin_flares(skin, along, input.length, time, seed);
-    // Shimmer and swell: the corona breathes a little, a flare widens it.
+    let beat = skin_beat(skin, time);
+    // Shimmer and swell: the corona breathes a little, a flare widens it, a beat too.
     let shimmer = skin_wave(skin.shimmer_a, time, along, seed)
         + skin_wave(skin.shimmer_b, time, along, seed);
     let swell = skin.swell;
-    let widen = min(1.0 + shimmer + swell.y * (grain - 0.5) + swell.z * flare, swell.x);
+    var widen = min(1.0 + shimmer + swell.y * (grain - 0.5) + swell.z * flare
+        + skin.pulse_b.y * beat, swell.x);
     // Past the tip (`beyond`, projected units) the capsule ends round: it widens about the
     // tip as it widens about the shaft, and the distance out is taken from the tip, so the
     // corona's grading and its tongues go round the end instead of running on straight.
-    let x = input.blade.x;
     let beyond = max(input.blade.y - input.shaft, 0.0);
+    let r = chain_radius(input.radius, input.length, clamp(along / max(input.length, 0.0001), 0.0, 1.0));
+    let radial = select(abs(x), length(vec2(x, beyond)), beyond > 0.0);
+    let around = select(along, along + r * atan2(beyond, max(abs(x), 0.0001)), beyond > 0.0);
+    let ragged = skin.sputter_edge;
+    if ragged.x > 0.0 {
+        // A frayed edge: the width wanders by noise, each side its own.
+        let fray = skin_noise(vec2(around * ragged.y - time * ragged.z,
+            time * ragged.z * 0.37 + seed * 13.0 + select(0.0, 50.0, x < 0.0)));
+        widen = clamp(widen * (1.0 + ragged.x * (fray * 2.0 - 1.0)), 0.3, swell.x);
+    }
     var shaded = input;
     shaded.blade = vec2(x / widen, min(input.blade.y, input.shaft) + beyond / widen);
     let capsule = glow_capsule(shaded) / widen;
-    let r = chain_radius(input.radius, input.length, clamp(along / max(input.length, 0.0001), 0.0, 1.0));
-    let radial = select(abs(x), length(vec2(x, beyond)), beyond > 0.0);
     let out = radial / (r * widen);
-    // Along the blade and on round the tip's quarter circle.
-    let around = select(along, along + r * atan2(beyond, max(abs(x), 0.0001)), beyond > 0.0);
     // Flame tongues licking outward in the corona's edge.
     let ta = skin.tongue_a;
     let tb = skin.tongue_b;
@@ -490,8 +847,34 @@ fn skin_glow(input: VertexOutput, pixel: f32) -> vec3<f32> {
     let color = mix(rim, skin.inner.rgb,
         clamp(inner * inner * (share.x + share.y * grain) + flare * share.z, 0.0, 1.0));
     let light = skin.brightness;
-    let brightness = (light.x + light.y * grain + light.z * flare) * flicker;
+    let brightness = (light.x + light.y * grain + light.z * flare) * flicker * (1.0 + beat);
     var glow = capsule * color * brightness;
+    if skin.vein_color.w > 0.0 {
+        let veins = skin_veins(skin, along, x, time, seed);
+        glow += veins * (1.0 - smoothstep(0.15, 0.6, out)) * capsule.r * skin.vein_color.rgb
+            * skin.vein_color.w * (1.0 + beat);
+    }
+    let scan = skin.scan_lines;
+    if scan.x > 0.0 {
+        // A hologram: scan lines darken it as they run, its inside is hollow, and a
+        // wireframe (side lines and rings) is drawn over it.
+        let lines = 1.0 - scan.z * (0.5 + 0.5 * sin(TAU * (around * scan.x - time * scan.y)));
+        let e = skin.scan_edge;
+        glow *= lines * (1.0 - e.z * (1.0 - smoothstep(0.0, e.x, out)));
+        let soft = pixel / max(r * widen, 0.0001);
+        // Not behind the hilt, where the place along stops at the hilt.
+        let shown = smoothstep(-pixel, 0.0, input.blade.y);
+        let sides = (1.0 - smoothstep(e.y, e.y + soft, abs(out - e.x))) * shown;
+        var rings = 0.0;
+        if scan.w > 0.0 {
+            let f = fract(around * scan.w);
+            let units = min(f, 1.0 - f) / scan.w;
+            let half = e.y * r * 0.5;
+            rings = (1.0 - smoothstep(half, half + pixel, units))
+                * (1.0 - smoothstep(e.x, e.x + soft, out)) * shown;
+        }
+        glow += (sides + rings) * lines * skin.scan_color.rgb * skin.scan_color.w;
+    }
     if skin.arc_strike.x > 0.0 || skin.mote_field.x > 0.0 {
         // Both fade out before the quad's edge (vertex_main's `extent`) instead of being cut.
         let extent = max(chain_radius(input.radius, input.length, 0.0) * swell.x, input.hilt);
@@ -511,6 +894,7 @@ fn skin_glow(input: VertexOutput, pixel: f32) -> vec3<f32> {
             glow += motes * room * skin.mote_color.rgb * skin.mote_color.w;
         }
     }
+    glow = skin_apply_tint(glow, skin_tint(skin, input));
     let hue = skin.hue;
     if any(hue.xyz != vec3(0.0)) {
         glow = skin_turn_hue(glow, time * hue.x + around * hue.y + radial / r * hue.z);
@@ -527,26 +911,42 @@ fn skin_core(input: VertexOutput, texel: vec4<f32>, uv: vec2<f32>, footprint: f3
     let along = skin_along(input);
     let grain = skin_granulation(skin, along, time, seed);
     let flare = skin_flares(skin, along, input.length, time, seed);
+    let beat = skin_beat(skin, time);
     let bright = skin.core_fringe;
     var fringe = mix(skin.core_fringe_cool.rgb, skin.core_fringe_hot.rgb,
         skin.core_fringe_cool.w + skin.core_fringe_hot.w * grain)
         * (bright.x + bright.y * grain + bright.z * flare);
+    fringe = skin_apply_tint(fringe, skin_tint(skin, input));
     let hue = skin.hue;
     if any(hue.xyz != vec3(0.0)) {
         fringe = skin_turn_hue(fringe, time * hue.x + along * hue.y);
     }
     var core = CORE_DRAWS * (skin.core_white.rgb * texel.r * (1.0 + skin.core_white.w * flare)
-        + fringe * texel.g);
+        + fringe * texel.g) * (1.0 + beat);
+    if skin.vein_color.w > 0.0 {
+        let x = (uv.x - 0.5) * 2.0 * input.radius;
+        core += skin_veins(skin, along, x, time, seed) * (texel.r + texel.g) * skin.vein_color.rgb
+            * skin.vein_shape.w * (1.0 + beat);
+    }
+    let scan = skin.scan_lines;
+    if scan.x > 0.0 {
+        core *= 1.0 - scan.z * (0.5 + 0.5 * sin(TAU * (along * scan.x - time * scan.y)));
+    }
     // In the rounded tip the line is cut at the narrowing edge `core_coordinates` maps to the
     // texture's border (which the sampler would otherwise smear out to the quad's corners).
     if along > input.length - skin.core_fringe.w * input.radius {
         core *= clamp((0.5 - abs(uv.x - 0.5)) / max(footprint, 0.00001) + 0.5, 0.0, 1.0);
     }
+    let cut = skin_cut(skin, input.length, time, seed);
+    if cut < input.length {
+        core *= 1.0 - smoothstep(cut - 1.5, cut + 0.5, along);
+    }
     return core;
 }
 
-// The core line's texture coordinates; a skin's core breathes a little across and narrows to
-// its rounded tip.
+// The core line's texture coordinates; a skin's core breathes a little across, narrows to
+// its rounded tip and moves with a glitch or the hologram's jitter (in core half-widths,
+// the glow's radius about three of them).
 fn core_coordinates(input: VertexOutput) -> vec2<f32> {
     var across = input.blade.x / (2.0 * input.radius);
     if input.kind >= KIND_SKIN {
@@ -554,8 +954,21 @@ fn core_coordinates(input: VertexOutput) -> vec2<f32> {
         let skin = skins[skin_index(input)];
         across *= 1.0 + skin_wave(skin.core_breathe, input.animation.x, along, input.animation.y);
         across /= skin_tip_taper(along, input.length, skin.core_fringe.w * input.radius);
+        let moved = skin_glitch(skin, along, input.animation.x, input.animation.y).x
+            + skin_jitter(skin, input.animation.x, input.animation.y);
+        across -= 1.5 * moved;
     }
     return vec2(0.5 + across, 1.0 - input.blade.y);
+}
+
+// The colour split a glitch gives the core at this fragment, in texture units across.
+fn core_split(input: VertexOutput) -> f32 {
+    if input.kind < KIND_SKIN {
+        return 0.0;
+    }
+    let skin = skins[skin_index(input)];
+    let along = mix(-1.0, input.length, input.blade.y);
+    return 1.5 * skin_glitch(skin, along, input.animation.x, input.animation.y).y;
 }
 
 // Dynamic glow: the glow capsule only; the core line's shader has no `glow` stage.
@@ -582,6 +995,20 @@ fn fragment_main(input: VertexOutput) -> @location(0) vec4<f32> {
         return vec4(glow_capsule(input) * input.color, 1.0);
     }
     var texel = textureSampleGrad(core_texture, core_sampler, core_uv, core_dx, core_dy);
+    let split = core_split(input);
+    if split > 0.0 {
+        // A glitch parts the core's colours: red one way, blue the other.
+        let offset = vec2(split, 0.0);
+        let red = textureSampleGrad(core_texture, core_sampler, core_uv + offset, core_dx, core_dy);
+        let blue = textureSampleGrad(core_texture, core_sampler, core_uv - offset, core_dx, core_dy);
+        let skin = skin_core(input, texel, core_uv, abs(core_dx.x) + abs(core_dy.x));
+        return vec4(
+            skin_core(input, red, core_uv + offset, abs(core_dx.x) + abs(core_dy.x)).r,
+            skin.g,
+            skin_core(input, blue, core_uv - offset, abs(core_dx.x) + abs(core_dy.x)).b,
+            1.0,
+        );
+    }
     if input.kind >= KIND_SKIN {
         let footprint = abs(core_dx.x) + abs(core_dy.x);
         return vec4(skin_core(input, texel, core_uv, footprint), 1.0);

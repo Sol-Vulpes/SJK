@@ -99,6 +99,11 @@ impl Extension {
     }
 }
 
+/// An instance's afterimage byte for the blade itself (fully bright).
+const FULL_FADE: u32 = 0xff00_0000;
+/// The light an instance carries until the grid is sampled: grey.
+const GREY_LIGHT: u32 = 0x00ff_ffff;
+
 /// One glow/core GPU instance. A glow carries its hilt sprite radius in colour alpha; a
 /// core carries zero there.
 #[repr(C)]
@@ -114,6 +119,10 @@ pub(crate) struct Instance {
     /// Presentation seconds (wrapped, [`Self::with_animation`]) and a per-blade seed in
     /// [0, 1), for the skins' animation; unused by the retail and RGB pairs.
     animation: [f32; 2],
+    /// Who wears a skinned blade ([`crate::saber_persona`]): lane 0 the light where it
+    /// is (three bytes) and the afterimage's brightness (top byte, 255 for the blade);
+    /// lanes 1 to 3 the name's letters and the team. Unused by the retail and RGB pairs.
+    persona: [u32; 4],
     contact: u32,
     no_light: u32,
     /// The blade's configured radius, for contacts; not a GPU attribute.
@@ -153,9 +162,9 @@ impl Flicker {
 }
 
 impl Instance {
-    const ATTRIBUTES: [wgpu::VertexAttribute; 7] = wgpu::vertex_attr_array![
+    const ATTRIBUTES: [wgpu::VertexAttribute; 8] = wgpu::vertex_attr_array![
         0 => Float32x3, 1 => Float32, 2 => Float32x3, 3 => Float32, 4 => Float32x4, 5 => Uint32,
-        6 => Float32x2];
+        6 => Float32x2, 7 => Uint32x4];
 
     pub(crate) fn layout() -> wgpu::VertexBufferLayout<'static> {
         wgpu::VertexBufferLayout {
@@ -188,6 +197,13 @@ impl Instance {
         } else {
             1.0
         };
+        let persona = match color {
+            BladeColor::Skin(skin) => {
+                let [a, b, c] = skin.persona.lanes();
+                [FULL_FADE | GREY_LIGHT, a, b, c]
+            }
+            _ => [0; 4],
+        };
         let make = |radius: f32, hilt| Self {
             base: blade.base,
             length: blade.length,
@@ -196,6 +212,7 @@ impl Instance {
             color: [red, green, blue, hilt],
             material: color.material(),
             animation: [0.0; 2],
+            persona,
             contact: 0,
             no_light: 0,
             nominal_radius: blade.radius,
@@ -208,6 +225,52 @@ impl Instance {
             ),
             make(blade.radius / 3.0 + flicker.core * range, 0.0),
         ]
+    }
+
+    /// An afterimage of a skinned blade ([`crate::saber_ghosts`]): its glow alone at
+    /// `blade`'s pose, `fade` as bright.
+    pub(crate) fn ghost(blade: Blade, color: BladeColor, fade: f32) -> Self {
+        let [glow, _core] = Self::pair(blade, color);
+        let byte = (fade.clamp(0.0, 1.0) * 255.0).round() as u32;
+        Self {
+            persona: [
+                (glow.persona[0] & 0x00ff_ffff) | (byte << 24),
+                glow.persona[1],
+                glow.persona[2],
+                glow.persona[3],
+            ],
+            ..glow
+        }
+    }
+
+    /// The persona lanes, for the tests.
+    #[cfg(test)]
+    pub(crate) fn persona_lanes(&self) -> [u32; 4] {
+        self.persona
+    }
+
+    /// How bright an afterimage is (1 for a blade itself).
+    #[cfg(test)]
+    pub(crate) fn fade(&self) -> f32 {
+        (self.persona[0] >> 24) as f32 / 255.0
+    }
+
+    /// The loaded skin's number this instance wears, if it wears one.
+    pub(crate) fn skin_index(&self) -> Option<u8> {
+        self.material
+            .checked_sub(crate::saber_rgb::SKIN_MATERIAL)
+            .filter(|index| (*index as usize) < crate::saber_skins::MAX_SKINS)
+            .map(|index| index as u8)
+    }
+
+    /// Where the blade starts (its hilt end).
+    pub(crate) fn base(&self) -> [f32; 3] {
+        self.base
+    }
+
+    /// The light where the blade is (0 to 1 a channel), for a skin taking its colour.
+    pub(crate) fn set_surroundings(&mut self, rgb: [f32; 3]) {
+        self.persona[0] = (self.persona[0] & 0xff00_0000) | crate::saber_persona::pack_light(rgb);
     }
 
     /// Period the animation time wraps at, in seconds, keeping it precise in an `f32`
@@ -648,14 +711,14 @@ mod cutoff_tests {
             crate::saber_skins::MAX_SKINS
         )));
         assert!(shader.contains("var<uniform> skins: array<Skin, MAX_SKINS>;"));
-        // `Skin` is 31 vec4s, as `SkinUniform`.
+        // `Skin` is 52 vec4s, as `SkinUniform`.
         assert_eq!(
             std::mem::size_of::<crate::saber_skins::SkinUniform>(),
-            31 * 16
+            52 * 16
         );
         let skin = &shader[shader.find("struct Skin {").unwrap()..];
         let skin = &skin[..skin.find('}').unwrap()];
-        assert_eq!(skin.matches(": vec4<f32>,").count(), 31);
+        assert_eq!(skin.matches(": vec4<f32>,").count(), 52);
         // In `SkinUniform`'s order (its lanes are pinned by `saber_skins`' tests).
         let lanes: Vec<&str> = skin
             .lines()
@@ -695,6 +758,27 @@ mod cutoff_tests {
                 "mote_motion",
                 "mote_band",
                 "hue",
+                "sputter_edge",
+                "sputter_cut",
+                "glitch_a",
+                "glitch_b",
+                "scan_color",
+                "scan_lines",
+                "scan_edge",
+                "scan_jitter",
+                "pulse_a",
+                "pulse_b",
+                "ember_color",
+                "ember_field",
+                "ember_shape",
+                "vein_color",
+                "vein_shape",
+                "team_red",
+                "team_blue",
+                "team_none",
+                "ambient",
+                "glyph_color",
+                "glyph_shape",
             ]
         );
         assert!(shader.contains(&format!(
@@ -702,6 +786,10 @@ mod cutoff_tests {
             crate::blade_skin_file::MAX_ARCS
         )));
         assert!(shader.contains("@location(6) blade_animation: vec2<f32>"));
+        // The persona lanes (`saber_persona.rs`), after the animation.
+        assert_eq!(offset(7), std::mem::offset_of!(Instance, persona));
+        assert_eq!(Instance::ATTRIBUTES[7].format, wgpu::VertexFormat::Uint32x4);
+        assert!(shader.contains("@location(7) blade_persona: vec4<u32>"));
     }
 
     #[test]

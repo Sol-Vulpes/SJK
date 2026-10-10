@@ -1078,12 +1078,13 @@ decision; head descendants such as hair and helmets are masked too.
 ## Saber blade skins
 
 A blade skin replaces a saber blade's colour (not its hilt) with a look of its own: the
-Sun, Storm, Void, Frost and Prism blades, SJK unlockables
+Sun, Storm, Void, Frost and Prism blades and, since 10/10/2026, the Unstable, Molten,
+Spectral, Glitch, Hologram, Runic, Chameleon, Banner and Heartbeat blades, SJK unlockables
 ([unlockables.md](unlockables.md#blade-skins)).
 The renderer is generic and data-driven: a skin's look is a blade-skin file in a pack
 the SJK hub delivers ([unlockables.md](unlockables.md#blade-skin-files)), and no skin's
 values are in the code. [saber_skins.rs](../crates/sjk-viewer/src/saber_skins.rs) holds
-the loaded skins (`LoadedSkins`, at most 8, numbered in id order) and the per-client
+the loaded skins (`LoadedSkins`, at most 16, numbered in id order) and the per-client
 table of who wears which (filled from the hub's looks; ids and names are
 [unlockables.rs](../crates/sjk-viewer/src/unlockables.rs)'s); `BladeColor::Skin` carries
 the skin's number, trail and light wherever a blade colour is chosen (in the hand,
@@ -1091,14 +1092,14 @@ thrown, first person, the menu stage). A skin whose pack is not loaded is the pl
 stock blade.
 
 - **Material.** Each loaded skin is the saber material of its number after the six
-  retail pairs and the neutral RGB pair (`saber_rgb.rs` `SKIN_MATERIAL` = 7, eight
+  retail pairs and the neutral RGB pair (`saber_rgb.rs` `SKIN_MATERIAL` = 7, sixteen
   slots, which hold the neutral pair until a skin loads there). Its glow/core pair is
   the pack's images, or generated from the file's two profiles by the same code as the
   neutral pair (`generated_glow`/`generated_core`; the neutral pair's bytes are
   unchanged and pinned by a test). Retail and RGB blades keep their materials and
   shading unchanged.
-- **Parameters.** The skins' parameters are a uniform array of 8 `Skin` structs of 31
-  `vec4`s (`SkinUniform`, 3968 bytes in all, bind group 2 of the saber pipelines),
+- **Parameters.** The skins' parameters are a uniform array of 16 `Skin` structs of 52
+  `vec4`s (`SkinUniform`, 13312 bytes in all, bind group 2 of the saber pipelines),
   written only when skins load (`saber_gpu::Runtime::upload_skins`), never per frame.
   Each instance's material slot selects its skin. The lanes of a section a file leaves
   out (arcs, motes, hue) are zeros, which draw nothing, and the code skips them.
@@ -1139,6 +1140,39 @@ stock blade.
   measured from the tip, its tongues running on round it. The stock line ends flat (as
   `RB_SurfaceLine` does), hidden in its glow; a skin's brighter, wider fringe showed
   the flat end as a square. Along the shaft the skin's look is unchanged.
+- **Later sections** (10/10/2026, generic, optional; [unlockables.md](unlockables.md#blade-skin-files)).
+  Sputter: the glow's width wanders by noise per side (a frayed edge), and on random
+  draws the blade's length is cut short for a moment (glow and core fade past the cut).
+  Glitch: per block along the blade and per draw, a jump sideways (glow and core move)
+  and a flash; red and blue are shaded with the glow moved apart (three evaluations of
+  the glow, only for a skin with the section; the core samples its texture three times).
+  Scan: scan lines darkening glow and core, a hollow inside, a wireframe of two side
+  lines and rings round the blade (not behind the hilt), a jitter of the whole
+  projection. Pulse: a double Gaussian beat on the clock brightening glow and core and
+  widening the glow; the light beats with it (`saber_skins::Beat`, the CPU copy).
+  Embers: drip places along the blade each dropping an accelerating ember along the
+  world's down projected into the blade's plane (`down`, a flat varying from the vertex
+  stage); where gravity runs along the blade they are pushed off to a side; a fragment
+  inverts the path to read three places a side. Veins: ridged value noise along and
+  across, bright in the glow's inside and the core. Team and ambient tints: the glow and
+  the core's fringe drawn toward a colour at their own strongest channel's level, the
+  colour being the wearer's team's (from the instance) or the light where the blade is
+  (the hilt end sampled from the light grid once a frame after the entities are lit,
+  `saber_persona::light_instances`, raised in saturation in the shader). Glyphs: the
+  wearer's name (`CS_PLAYERS`, colour codes and signs left out, digits folded, at most
+  18 letters, "SJK" without one; the own `name` on the menu stage) as SJK's own stroke
+  glyphs, each letter a fixed three to seven of sixteen strokes on a 3 × 3 grid
+  (`glyph_bits`, its CPU copy in `saber_persona.rs` pinned to differ for every letter),
+  scrolling toward the tip.
+- **Persona and afterimages.** A skinned instance carries four more `u32`s
+  (`Instance::persona`, attribute 7): the surroundings' light (three bytes) and an
+  afterimage's brightness, the team and the name's letters
+  ([saber_persona.rs](../crates/sjk-viewer/src/saber_persona.rs)); who sits in each slot
+  is read twice a second with the looks (`GpuState::update_looks`). Afterimages
+  ([saber_ghosts.rs](../crates/sjk-viewer/src/saber_ghosts.rs)): each blade's state keeps
+  up to four poses, one every `spacing` ms; a skin with `ghosts` submits the last ones
+  as extra glow-only instances, dimmer each, skipping poses the blade has not moved
+  from. No allocation.
 - **Trail and light.** The skin's file gives its trail colour, its light colour (with
   the stock gain) and the light's flicker (an amount and up to two waves, phased per
   hilt).
@@ -1157,7 +1191,12 @@ files against shots of the earlier built-in Sun (same day), not on other GPUs or
 live match. The round end, arcs, motes and hue (09/10/2026) were checked by naga's
 validation, unit tests of CPU copies of the tip's and the hue's maths (which also check
 the shader holds the same expressions) and images rendered by a scratch CPU copy of the
-skin shading, side on, on a machine without a GPU; not yet by a world shot.
+skin shading, side on, on a machine without a GPU; not yet by a world shot. The later
+sections (10/10/2026) were checked by naga, unit tests and the world shot
+`duel6_second_blades` (the nine new skins standing side by side, each up close at eight
+moments, the Spectral's afterimages, the Runic spelling a name, the Banner outside a team
+and in red and blue, the Chameleon in three places' light), rendered on one GPU and
+reviewed by eye; their cost not measured, not seen in a live match.
 
 ## Saber trails
 

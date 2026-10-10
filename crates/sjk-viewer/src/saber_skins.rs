@@ -31,7 +31,7 @@ use std::sync::Arc;
 pub(crate) const MAX_CLIENTS: usize = sjk_client::SABER_SOUND_CLIENTS;
 /// Most blade skins loaded at once: material slots and the uniform array's length
 /// (`MAX_SKINS` in `saber.wgsl`).
-pub(crate) const MAX_SKINS: usize = 8;
+pub(crate) const MAX_SKINS: usize = 16;
 /// Widest a skin's glow may reach past the stock capsule (`corona.reach`); the
 /// instances' bounds allow for it ([`crate::saber::Instance::extent`]).
 pub(crate) const MAX_GLOW_REACH: f32 = 2.0;
@@ -45,13 +45,43 @@ pub(crate) struct LightFlicker {
     pub(crate) amount: f32,
     /// Rate, weight and phase of each wave; unused waves weigh nothing.
     pub(crate) waves: [[f32; 3]; 2],
+    /// The skin's heartbeat (`pulse`), which the light beats with; none when absent.
+    pub(crate) pulse: Option<Beat>,
+}
+
+/// A heartbeat ([`crate::blade_skin_file::effects::Pulse`]): the CPU's copy of
+/// `saber.wgsl`'s `skin_beat`, which beats on the presentation clock alone (no seed), so
+/// a blade and its light beat together.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub(crate) struct Beat {
+    pub(crate) rate: f32,
+    pub(crate) amount: f32,
+    pub(crate) second: f32,
+    pub(crate) gap: f32,
+    pub(crate) width: f32,
+}
+
+impl Beat {
+    /// Where the first beat peaks in a cycle, seconds (`BEAT_FIRST` in `saber.wgsl`).
+    pub(crate) const FIRST: f32 = 0.1;
+
+    /// How much the beat brightens at `seconds`: `amount × (first + second × next)`, each
+    /// a Gaussian `width` seconds wide.
+    pub(crate) fn at(self, seconds: f32) -> f32 {
+        let into = (seconds * self.rate).rem_euclid(1.0) / self.rate;
+        let bump = |at: f32| {
+            let d = (into - at) / self.width;
+            (-d * d).exp()
+        };
+        self.amount * (bump(Self::FIRST) + self.second * bump(Self::FIRST + self.gap))
+    }
 }
 
 impl LightFlicker {
     /// The light's brightness at `time_millis` for a hilt's `seed` (so blades of one
     /// hilt do not pulse together with another's): `1 − amount + amount × waves`.
     pub(crate) fn at(self, time_millis: i64, seed: u64) -> f32 {
-        if self.amount == 0.0 {
+        if self.amount == 0.0 && self.pulse.is_none() {
             return 1.0;
         }
         let t = (time_millis.rem_euclid(1_024_000)) as f32 * 0.001;
@@ -61,7 +91,8 @@ impl LightFlicker {
             .iter()
             .map(|[rate, weight, offset]| (t * rate + phase * offset).sin() * weight)
             .sum::<f32>();
-        (1.0 - self.amount) + self.amount * wave
+        let beat = self.pulse.map_or(0.0, |beat| beat.at(t));
+        ((1.0 - self.amount) + self.amount * wave) * (1.0 + beat)
     }
 }
 
@@ -80,6 +111,11 @@ pub(crate) struct SkinColor {
     /// The skin's hue turning (`hue` in its file), for the light: turns a second, and the
     /// turn at the middle of a stock 40-unit blade. Zeros hold the light's colour.
     pub(crate) hue: [f32; 2],
+    /// The skin's afterimages (`ghosts` in its file); none when absent.
+    pub(crate) ghosts: Option<crate::saber_ghosts::GhostSpec>,
+    /// Who wears it (team, name), for the skins drawn from that; the default with no
+    /// wearer known.
+    pub(crate) persona: crate::saber_persona::Persona,
 }
 
 impl SkinColor {
@@ -110,10 +146,11 @@ pub(crate) fn turn_hue(rgb: [f32; 3], turns: f32) -> [f32; 3] {
     std::array::from_fn(|i| (rgb[i] * c + cross[i] * s + along_axis).max(0.0))
 }
 
-/// One skin's parameters as `saber.wgsl`'s `Skin` holds them: 31 `vec4`s (496 bytes, so
-/// the [`MAX_SKINS`] array is 3968 bytes). The layout is the shader's; see there for what
-/// each lane is. A section the skin's file leaves out (arcs, motes, hue) is zeros, which
-/// the shader draws as nothing.
+/// One skin's parameters as `saber.wgsl`'s `Skin` holds them: 52 `vec4`s (832 bytes, so
+/// the [`MAX_SKINS`] array is 13312 bytes, inside the 16 KiB uniform binding WebGPU
+/// guarantees). The layout is the shader's; see there for what each lane is. A section
+/// the skin's file leaves out (arcs, motes, hue and the later ones) is zeros, which the
+/// shader draws as nothing.
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default, PartialEq, Pod, Zeroable)]
 pub(crate) struct SkinUniform {
@@ -148,6 +185,27 @@ pub(crate) struct SkinUniform {
     mote_motion: [f32; 4],
     mote_band: [f32; 4],
     hue: [f32; 4],
+    sputter_edge: [f32; 4],
+    sputter_cut: [f32; 4],
+    glitch_a: [f32; 4],
+    glitch_b: [f32; 4],
+    scan_color: [f32; 4],
+    scan_lines: [f32; 4],
+    scan_edge: [f32; 4],
+    scan_jitter: [f32; 4],
+    pulse_a: [f32; 4],
+    pulse_b: [f32; 4],
+    ember_color: [f32; 4],
+    ember_field: [f32; 4],
+    ember_shape: [f32; 4],
+    vein_color: [f32; 4],
+    vein_shape: [f32; 4],
+    team_red: [f32; 4],
+    team_blue: [f32; 4],
+    team_none: [f32; 4],
+    ambient: [f32; 4],
+    glyph_color: [f32; 4],
+    glyph_shape: [f32; 4],
 }
 
 impl SkinUniform {
@@ -212,6 +270,52 @@ impl SkinUniform {
         .with_arcs(def.arcs.as_ref())
         .with_motes(def.motes.as_ref())
         .with_hue(def.hue.as_ref())
+        .with_effects(def.effects())
+    }
+
+    /// The later sections' lanes ([`crate::blade_skin_file::effects`]).
+    fn with_effects(mut self, e: crate::blade_skin_file::effects::Effects<'_>) -> Self {
+        let rgb = |c: [f32; 3], w: f32| [c[0], c[1], c[2], w];
+        if let Some(s) = e.sputter {
+            self.sputter_edge = [s.ragged, s.scale, s.speed, 0.0];
+            self.sputter_cut = [s.cut, s.rate, s.threshold, 0.0];
+        }
+        if let Some(g) = e.glitch {
+            self.glitch_a = [g.split, g.blocks, g.rate, g.threshold];
+            self.glitch_b = [g.shift, g.flash, 0.0, 0.0];
+        }
+        if let Some(s) = e.scan {
+            self.scan_color = rgb(s.color, s.brightness);
+            self.scan_lines = [s.lines, s.speed, s.depth, s.rings];
+            self.scan_edge = [s.edge, s.width, s.hollow, 0.0];
+            self.scan_jitter = [s.jitter, s.jitter_rate, 0.0, 0.0];
+        }
+        if let Some(p) = e.pulse {
+            self.pulse_a = [p.rate, p.amount, p.second, p.gap];
+            self.pulse_b = [p.width, p.swell, 0.0, 0.0];
+        }
+        if let Some(m) = e.embers {
+            self.ember_color = rgb(m.color, m.brightness);
+            self.ember_field = [m.density, m.cells, m.fall, m.life];
+            self.ember_shape = [m.size, m.spread, 0.0, 0.0];
+        }
+        if let Some(v) = e.veins {
+            self.vein_color = rgb(v.color, v.brightness);
+            self.vein_shape = [v.scale, v.speed, v.width, v.core];
+        }
+        if let Some(t) = e.team {
+            self.team_red = rgb(t.red, t.amount);
+            self.team_blue = rgb(t.blue, 0.0);
+            self.team_none = rgb(t.none, 0.0);
+        }
+        if let Some(a) = e.ambient {
+            self.ambient = [a.amount, a.saturate, a.floor, 0.0];
+        }
+        if let Some(g) = e.glyphs {
+            self.glyph_color = rgb(g.color, g.brightness);
+            self.glyph_shape = [g.size, g.spacing, g.speed, g.width];
+        }
+        self
     }
 
     fn with_arcs(mut self, arcs: Option<&crate::blade_skin_file::Arcs>) -> Self {
@@ -297,11 +401,27 @@ impl LoadedSkin {
             flicker: LightFlicker {
                 amount: flicker.amount,
                 waves,
+                pulse: self.def.pulse.map(|pulse| Beat {
+                    rate: pulse.rate,
+                    amount: pulse.amount,
+                    second: pulse.second,
+                    gap: pulse.gap,
+                    width: pulse.width,
+                }),
             },
             hue: self
                 .def
                 .hue
                 .map_or([0.0; 2], |hue| [hue.rate, hue.along * 20.0]),
+            ghosts: self
+                .def
+                .ghosts
+                .map(|ghosts| crate::saber_ghosts::GhostSpec {
+                    count: ghosts.count as u8,
+                    spacing_millis: ghosts.spacing,
+                    fade: ghosts.fade,
+                }),
+            persona: crate::saber_persona::Persona::default(),
         }
     }
 }
@@ -435,6 +555,15 @@ impl LoadedSkins {
         uniforms
     }
 
+    /// Whether the skin numbered `index` takes the colour of the light where it is
+    /// (`ambient` in its file), so its instances want that light
+    /// ([`crate::saber_persona::light_instances`]).
+    pub(crate) fn takes_ambient(&self, index: u8) -> bool {
+        self.skins
+            .get(usize::from(index))
+            .is_some_and(|skin| skin.def.ambient.is_some())
+    }
+
     /// The skins' sound sets in their numbers' order, for the audio adapter.
     pub(crate) fn sound_sets(&self) -> Vec<sjk_client::SaberSoundSet<'_>> {
         self.skins
@@ -471,6 +600,10 @@ pub(crate) struct SaberSkins {
     local: Option<SkinColor>,
     /// The local player's client slot, in a session.
     local_client: Option<usize>,
+    /// Who sits in each slot (team, name), for the skins drawn from that.
+    personas: [crate::saber_persona::Persona; MAX_CLIENTS],
+    /// The local player's own, also with no session (its `name`).
+    local_persona: crate::saber_persona::Persona,
     /// The looks' revision and the loaded skins' generation `others` was last taken at.
     taken_at: Option<(u64, u64)>,
     /// Blades the world shots add every frame, without a session (blade, unlock id or
@@ -480,6 +613,12 @@ pub(crate) struct SaberSkins {
     /// The time the world shots' blades are drawn at, instead of the frame's.
     #[cfg(test)]
     pub(crate) shot_seconds: Option<f64>,
+    /// Afterimages the world shots add every frame (pose, unlock id, brightness).
+    #[cfg(test)]
+    pub(crate) shot_ghosts: Vec<(crate::saber::Blade, &'static str, f32)>,
+    /// Who the world shots' skinned blades are worn by (team, name).
+    #[cfg(test)]
+    pub(crate) shot_persona: crate::saber_persona::Persona,
 }
 
 /// A world shot's blade colour: stock, or the loaded skin of an unlock id.
@@ -534,7 +673,29 @@ impl SaberSkins {
     /// The skin worn by the player whose body is entity `entity_id` (client + 1).
     pub(crate) fn get(&self, entity_id: u64) -> Option<SkinColor> {
         let client = usize::try_from(entity_id.checked_sub(1)?).ok()?;
-        self.clients.get(client).copied().flatten()
+        let persona = if Some(client) == self.local_client {
+            self.local_persona.in_team(self.personas[client].team)
+        } else {
+            self.personas.get(client).copied()?
+        };
+        let skin = self.clients.get(client).copied().flatten()?;
+        Some(SkinColor { persona, ..skin })
+    }
+
+    /// Who sits in each client slot, and the local player's own name (`name`), for
+    /// the skins drawn from them; taken twice a second ([`GpuState::update_looks`]).
+    pub(crate) fn set_personas(
+        &mut self,
+        personas: [crate::saber_persona::Persona; MAX_CLIENTS],
+        local: crate::saber_persona::Persona,
+    ) {
+        self.personas = personas;
+        self.local_persona = local;
+    }
+
+    /// The local player's own persona, for the menus' preview.
+    pub(crate) fn local_persona(&self) -> crate::saber_persona::Persona {
+        self.local_persona
     }
 
     /// The colour entity `entity_id`'s blades are drawn with: its skin over `color`.
@@ -542,9 +703,12 @@ impl SaberSkins {
         self.get(entity_id).map_or(color, BladeColor::Skin)
     }
 
-    /// The local player's skin.
+    /// The local player's skin, worn with its own persona.
     pub(crate) fn local(&self) -> Option<SkinColor> {
-        self.local
+        self.local.map(|skin| SkinColor {
+            persona: self.local_persona,
+            ..skin
+        })
     }
 
     /// The local player wears `skin` and, in a session, sits in slot `client`.
@@ -631,12 +795,15 @@ impl GpuState {
             .shot_seconds
             .map_or(presentation_time, |seconds| (seconds * 1_000.0) as i64);
         for (blade, color, seed) in self.saber_skins.shot_blades.clone() {
+            let persona = self.saber_skins.shot_persona;
             let color = match color {
                 ShotColor::Stock(color) => color,
-                ShotColor::Skin(id) => self.blade_skins.color_of(id).map_or(
-                    BladeColor::Retail(crate::saber::Color::Blue),
-                    BladeColor::Skin,
-                ),
+                ShotColor::Skin(id) => self
+                    .blade_skins
+                    .color_of(id)
+                    .map_or(BladeColor::Retail(crate::saber::Color::Blue), |skin| {
+                        BladeColor::Skin(SkinColor { persona, ..skin })
+                    }),
             };
             self.saber_instances.extend(
                 crate::saber::Instance::pair(blade, color)
@@ -653,6 +820,16 @@ impl GpuState {
                 millis,
                 u64::from(seed),
             );
+        }
+        let persona = self.saber_skins.shot_persona;
+        for (blade, id, fade) in self.saber_skins.shot_ghosts.clone() {
+            if let Some(skin) = self.blade_skins.color_of(id) {
+                let color = BladeColor::Skin(SkinColor { persona, ..skin });
+                self.saber_instances.push(
+                    crate::saber::Instance::ghost(blade, color, fade)
+                        .with_animation(millis as f64 * 0.001, 2),
+                );
+            }
         }
     }
 }

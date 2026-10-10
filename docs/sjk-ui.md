@@ -264,7 +264,8 @@ on the 16:9 frame, dark behind the form on the left and clear over the model.
   skin the player's hub profile lists, each the Collection's swatch shrunk to 79
   by 44 (moving as there; [unlockables.md](unlockables.md#saber-tabs-blade-choice)),
   the one worn ringed gold, and under the row's name the name of the one under
-  the pointer or worn; with no skin owned, or the identity off, only the stock
+  the pointer or worn; six show at a time (10/10/2026), scrolled so the worn one
+  stands third where it can, with a gold chevron at a side that has more; with no skin owned, or the identity off, only the stock
   blade and a line saying why. Then the blade's colour as seven chips (the six
   stock colours and the custom one, ringed gold when chosen), its red, green
   and blue sliders (a digit types the number), and the second blade's for Dual.
@@ -418,9 +419,10 @@ overlay routes their text to the UI's families (`console_sjk_pages.rs`).
   right, and Take picture down at the right (dimmed without one); Medals: each medal's
   medallion (dim when not held), name and count, date given, Give (gold) and Take
   back, then the note's field (sent with the next medal or unlock); Unlockables under
-  it: each unlockable of the catalogue in rows of 42 (all five fit), its name at 19 (gold when held) and
-  its date or "Not held" with its id, Unlock (gold) and Relock, as the medals' Give
-  and Take back; Achievements: Clear all (Press again while it waits),
+  it: each unlockable of the catalogue, two to a row of 36 (all fourteen fit, since
+  10/10/2026), its name at 16 (gold when held), "Since" its date or "Not held", and one
+  button, Unlock (gold) when not held or Relock when held, as the medals' Give and
+  Take back; Achievements: Clear all (Press again while it waits),
   each achievement with a count, its date or count and Clear, and a line on what
   clearing does. The last request's answer bottom left (gold, ember when refused).
   World shot: `world_shot::tests::duel6_sjk_staff` (the player's own, then another
@@ -1098,7 +1100,11 @@ for the run.
   row of 106 to each: the stock blade first (its swatch in the player's `color1`), then
   every blade skin, each with its live swatch ([unlockables.md](unlockables.md)) alive
   when owned, grey and still under a padlock when not, its name at 28 and its state
-  (Worn, Yours, Locked, "In your colour"); the one chosen banded with a gold mark. The
+  (Worn, Yours, Locked, "In your colour"); the one chosen banded with a gold mark. Six
+  rows show at a time (10/10/2026, fifteen no longer fit): the rack scrolls just enough
+  to keep the chosen row in view (a pointer over the rows never scrolls it), the wheel
+  scrolls it a row a notch, the chosen row kept in view, and a thin bar at its right
+  shows where it is. The
   model holds the chosen blade, a locked one too ("Preview on your saber: not yours
   yet" over the stage): the preview is drawn by this screen only and never sent
   (`collection_panel::PreviewSkin`, `menu_stage`'s `skin_override`). Beside the model

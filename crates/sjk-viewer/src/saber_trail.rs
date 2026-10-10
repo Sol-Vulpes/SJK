@@ -104,6 +104,8 @@ impl Trail {
 pub(crate) struct BladeState {
     pub(crate) extension: Extension,
     pub(crate) trail: Trail,
+    /// Its afterimages' poses, for a skin leaving them (`saber_ghosts.rs`).
+    pub(crate) ghosts: crate::saber_ghosts::GhostTrail,
 }
 
 /// O(1) per-entity/per-saber/per-blade state with one load-time allocation,

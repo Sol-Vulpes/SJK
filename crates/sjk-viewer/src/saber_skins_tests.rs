@@ -220,14 +220,35 @@ fn the_uniform_holds_the_files_parameters_where_the_shader_reads_them() {
         (one.mote_motion, "mote_motion"),
         (one.mote_band, "mote_band"),
         (one.hue, "hue"),
+        (one.sputter_edge, "sputter_edge"),
+        (one.sputter_cut, "sputter_cut"),
+        (one.glitch_a, "glitch_a"),
+        (one.glitch_b, "glitch_b"),
+        (one.scan_color, "scan_color"),
+        (one.scan_lines, "scan_lines"),
+        (one.scan_edge, "scan_edge"),
+        (one.scan_jitter, "scan_jitter"),
+        (one.pulse_a, "pulse_a"),
+        (one.pulse_b, "pulse_b"),
+        (one.ember_color, "ember_color"),
+        (one.ember_field, "ember_field"),
+        (one.ember_shape, "ember_shape"),
+        (one.vein_color, "vein_color"),
+        (one.vein_shape, "vein_shape"),
+        (one.team_red, "team_red"),
+        (one.team_blue, "team_blue"),
+        (one.team_none, "team_none"),
+        (one.ambient, "ambient"),
+        (one.glyph_color, "glyph_color"),
+        (one.glyph_shape, "glyph_shape"),
     ] {
         assert_eq!(lane, [0.0; 4], "{name}");
     }
     // Past the loaded skins, zeros.
     assert!(uniforms[1..].iter().all(|u| *u == SkinUniform::default()));
     let bytes: &[u8] = bytemuck::cast_slice(&uniforms);
-    assert_eq!(bytes.len(), MAX_SKINS * 31 * 16);
-    // The eight skins' array stays well inside the smallest uniform binding WebGPU
+    assert_eq!(bytes.len(), MAX_SKINS * 52 * 16);
+    // The sixteen skins' array stays inside the smallest uniform binding WebGPU
     // guarantees (16 KiB).
     assert!(bytes.len() <= 16 * 1024);
 }

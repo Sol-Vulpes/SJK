@@ -30,8 +30,10 @@ const PLAYER_ROW: f32 = 46.0;
 /// The medals' rows and the achievements' rows.
 const SECTION_TOP: f32 = 330.0;
 const MEDAL_ROW: f32 = 76.0;
-/// An unlockable's row: compact, so the whole catalogue fits above the keys.
-const UNLOCK_ROW: f32 = 42.0;
+/// An unlockable's cell, two to a row: compact, so the whole catalogue (fourteen blade
+/// skins since 10/10/2026) fits above the keys.
+const UNLOCK_ROW: f32 = 36.0;
+const UNLOCK_GAP: f32 = 14.0;
 const ACHIEVEMENT_ROW: f32 = 34.0;
 const ACHIEVEMENTS_SHOWN: usize = 18;
 /// The holocrons' section under the players: its heading, the tier chips, and its rows.
@@ -453,18 +455,27 @@ impl Panel {
             MIDDLE_WIDTH,
             "Unlockables",
         );
+        let cell = (MIDDLE_WIDTH - UNLOCK_GAP) * 0.5;
         for (index, unlockable) in crate::unlockables::ALL.iter().enumerate() {
-            let y = top + 18.0 + index as f32 * UNLOCK_ROW;
+            let x = MIDDLE_X + (index % 2) as f32 * (cell + UNLOCK_GAP);
+            let y = top + 18.0 + (index / 2) as f32 * UNLOCK_ROW;
             if y + UNLOCK_ROW > KEYS_Y - 16.0 {
                 break;
             }
             let held = self.shown.unlocks[index];
+            // Held: gold, with the day it was given; not held: muted.
+            let granted = profile
+                .unlocks
+                .iter()
+                .find(|unlock| unlock.id == unlockable.id)
+                .map(|unlock| crate::medals::date_text(unlock.granted))
+                .filter(|date| !date.is_empty());
             text(
                 &mut self.ui,
                 TextFamily::Display,
                 format_args!("{}", unlockable.name),
-                frame.rect(MIDDLE_X, y + 1.0, 260.0, 24.0),
-                19.0 * s,
+                frame.rect(x, y + 1.0, cell - 96.0, 20.0),
+                16.0 * s,
                 if held {
                     color::GOLD_BRIGHT
                 } else {
@@ -473,55 +484,38 @@ impl Panel {
                 FontWeight::Semibold,
                 TextAlign::Start,
             );
-            let granted = profile
-                .unlocks
-                .iter()
-                .find(|unlock| unlock.id == unlockable.id)
-                .map(|unlock| crate::medals::date_text(unlock.granted))
-                .filter(|date| !date.is_empty());
             let line = match (held, granted) {
-                (false, _) => format!("Not held: {}", unlockable.id),
-                (true, Some(date)) => format!("Unlocked {date}"),
+                (false, _) => "Not held".to_owned(),
+                (true, Some(date)) => format!("Since {date}"),
                 (true, None) => "Held".to_owned(),
             };
             text(
                 &mut self.ui,
                 TextFamily::Body,
                 format_args!("{line}"),
-                frame.rect(MIDDLE_X, y + 24.0, 260.0, 18.0),
-                13.0 * s,
+                frame.rect(x, y + 20.0, cell - 96.0, 15.0),
+                12.0 * s,
                 color::QUIET,
                 FontWeight::Regular,
                 TextAlign::Start,
             );
-            let unlock = UNLOCK_BASE + index as u16;
-            let relock = RELOCK_BASE + index as u16;
-            let right = MIDDLE_X + MIDDLE_WIDTH;
-            kit::button(
-                &mut self.ui,
-                frame,
-                [right - 236.0, y + 3.0, 96.0, 36.0],
-                "Unlock",
-                true,
-                !held,
-                self.focus == unlock,
-                unlock,
-            );
-            kit::button(
-                &mut self.ui,
-                frame,
-                [right - 128.0, y + 3.0, 128.0, 36.0],
-                "Relock",
-                false,
-                held,
-                self.focus == relock,
-                relock,
-            );
-            if held {
-                self.order.push(relock);
+            // One button: Unlock when not held, Relock when held.
+            let token = if held {
+                RELOCK_BASE + index as u16
             } else {
-                self.order.push(unlock);
-            }
+                UNLOCK_BASE + index as u16
+            };
+            kit::button(
+                &mut self.ui,
+                frame,
+                [x + cell - 88.0, y + 3.0, 88.0, 30.0],
+                if held { "Relock" } else { "Unlock" },
+                !held,
+                true,
+                self.focus == token,
+                token,
+            );
+            self.order.push(token);
         }
     }
 
