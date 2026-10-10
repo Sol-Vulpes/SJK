@@ -1126,6 +1126,16 @@ in `logs\last-client.log`) and to the console scrollback without notify lines, s
 player can read them in the console or, with `logfile 1`, in `qconsole.log` in the
 client folder (`GameData/SJK/`) and send that file.
 
+The first lines from a busy server (10/10/2026) showed `snapshot+reconcile` near 52 ms
+each time a player joined, whatever their model: the player sounds and the saber hums,
+refreshed on every clientinfo change, each read the saber definitions again, listing
+the 73,494 files of 354 PK3s and parsing every `.sab` (30 ms a time in a release
+build). The local player's prediction did the same twice on its own changes
+(`config-refresh`). The definitions are now read once per set of mounts
+(`sjk_client::shared_saber_definitions`, keyed by
+`VirtualFileSystem::mount_identities`), at world load, as the game reads them once a
+map (`WP_SaberLoadParms`); a mid-match call takes under a microsecond.
+
 ### First-person view weapon
 
 The first-person gun hangs on its `_hand.md3` tag rig, as `CG_AddViewWeapon` places

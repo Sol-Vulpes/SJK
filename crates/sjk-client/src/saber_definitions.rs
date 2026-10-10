@@ -11,6 +11,7 @@ use sjk_protocol::GameState;
 use sjk_vfs::VirtualFileSystem;
 use std::collections::BTreeMap;
 use std::error::Error;
+use std::sync::{Arc, Mutex};
 
 /// Compatibility fields consumed by current presentation and audio adapters.
 #[derive(Clone, Debug, PartialEq)]
@@ -90,10 +91,44 @@ pub enum LegacySaberColor {
     Random,
 }
 
+type Definitions = BTreeMap<String, LegacySaberDefinition>;
+
 /// Load the visible VFS union so mod PK3 definitions override retail files.
-pub fn legacy_saber_definitions(
+pub fn legacy_saber_definitions(vfs: &VirtualFileSystem) -> Result<Definitions, Box<dyn Error>> {
+    let shared = shared_saber_definitions(vfs)?;
+    Ok(Definitions::clone(&shared))
+}
+
+/// [`legacy_saber_definitions`], read once per set of mounts. Reading them lists every
+/// file of every mount and parses every `.sab` (30 ms over a large `base`), and the
+/// sounds and prediction ask on each clientinfo change, so a player joining used to
+/// stall a frame; the game itself reads them once a map (`WP_SaberLoadParms`).
+pub fn shared_saber_definitions(
     vfs: &VirtualFileSystem,
-) -> Result<BTreeMap<String, LegacySaberDefinition>, Box<dyn Error>> {
+) -> Result<Arc<Definitions>, Box<dyn Error>> {
+    /// File systems remembered: the world's and the few views made from it.
+    const KEPT: usize = 4;
+    static RECENT: Mutex<Vec<(Vec<u64>, Arc<Definitions>)>> = Mutex::new(Vec::new());
+    let mounts = vfs.mount_identities();
+    if let Some((_, definitions)) = RECENT
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
+        .iter()
+        .find(|(known, _)| *known == mounts)
+    {
+        return Ok(Arc::clone(definitions));
+    }
+    // Read outside the lock; two readers of a new file system both read it.
+    let definitions = Arc::new(read_saber_definitions(vfs)?);
+    let mut recent = RECENT.lock().unwrap_or_else(|e| e.into_inner());
+    if recent.len() >= KEPT {
+        recent.remove(0);
+    }
+    recent.push((mounts, Arc::clone(&definitions)));
+    Ok(definitions)
+}
+
+fn read_saber_definitions(vfs: &VirtualFileSystem) -> Result<Definitions, Box<dyn Error>> {
     let mut definitions = BTreeMap::new();
     for path in vfs.paths().into_iter().filter(|path| {
         path.as_str().starts_with("ext_data/sabers/") && path.as_str().ends_with(".sab")
@@ -153,7 +188,7 @@ pub fn legacy_saber_movement(
     client_num: u16,
 ) -> (bool, [f32; 2], [f32; 2]) {
     let names = crate::player_identity::legacy_client_saber_names(game_state, client_num);
-    let Ok(definitions) = legacy_saber_definitions(vfs) else {
+    let Ok(definitions) = shared_saber_definitions(vfs) else {
         return (false, [1.0; 2], [1.0; 2]);
     };
     let mut no_rolls = false;
@@ -187,7 +222,7 @@ pub fn legacy_saber_hands(
         return SaberHands::default();
     }
     let names = crate::player_identity::legacy_client_saber_names(game_state, client_num);
-    let definitions = legacy_saber_definitions(vfs).unwrap_or_default();
+    let definitions = shared_saber_definitions(vfs).unwrap_or_default();
     saber_hands(&names, &definitions)
 }
 
@@ -423,6 +458,26 @@ mod load_order_tests {
             legacy_saber_load_order(&vfs).unwrap(),
             ["reborn", "kyle", "zroe", "akr", "single_2"]
         );
+    }
+
+    #[test]
+    fn definitions_are_read_once_per_set_of_mounts() {
+        let mut vfs = VirtualFileSystem::new();
+        vfs.mount_memory("base", [("ext_data/sabers/a.sab", sab(&["kyle"]))])
+            .unwrap();
+        let first = shared_saber_definitions(&vfs).unwrap();
+        // A clone shares the mounts, so the catalog too.
+        assert!(Arc::ptr_eq(
+            &first,
+            &shared_saber_definitions(&vfs.clone()).unwrap()
+        ));
+        // A new mount (a download, the next map) is read again.
+        vfs.mount_memory("{JoF}pack", [("ext_data/sabers/jof.sab", sab(&["zroe"]))])
+            .unwrap();
+        let second = shared_saber_definitions(&vfs).unwrap();
+        assert!(!Arc::ptr_eq(&first, &second));
+        assert!(second.contains_key("zroe") && second.contains_key("kyle"));
+        assert!(!first.contains_key("zroe"));
     }
 }
 

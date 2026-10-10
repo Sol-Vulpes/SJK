@@ -32,4 +32,13 @@ impl VirtualFileSystem {
             .filter(|m| m.source.cacheable())
             .map(|m| AssetCacheIdentity(m.cache_identity, self.max_asset_bytes)))
     }
+
+    /// The mounts' process-unique identities, lowest priority first. Equal lists mean
+    /// the same sources mounted in the same order (clones included), so a catalog read
+    /// from every file of a kind can be kept until the mounts change. Loose directories
+    /// are listed too: such a catalog does not see a file edited in place before the
+    /// next remount, as the game reads them once a map.
+    pub fn mount_identities(&self) -> Vec<u64> {
+        self.mounts.iter().map(|m| m.cache_identity).collect()
+    }
 }

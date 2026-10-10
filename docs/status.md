@@ -1,5 +1,19 @@
 # Status and priorities
 
+## Join hitch: saber definitions read once
+
+Branch `personal/join-hitch` (10/10/2026, based on `5b0bc8ef`, Windows 11). Sol's
+`hitch:` lines from a JoF server showed `snapshot+reconcile` 52 ms when a player joined.
+Cause: `SoundEvents::refresh_clients` and `LoopSounds::refresh_clients` each called
+`legacy_saber_definitions`, which lists every file of every mount (`vfs.paths()`) and
+parses every `.sab`: 30 ms each over Sol's `base` (354 PK3s, 73,494 files), measured in
+a release build. `LocalPrediction::refresh_sabers` made two more calls when the local
+player's clientinfo changed. `shared_saber_definitions` now keeps the catalog per set
+of mounts (`VirtualFileSystem::mount_identities`, the last four sets), filled at world
+load; later calls take under a microsecond. Verified by a unit test (a clone shares the
+catalog, a new mount reads again), the timing above, the sjk-client and sjk-vfs suites
+and Clippy. Not tried in a game. See [rendering](rendering.md#gameplay-hitch-lines).
+
 ## Update check while running
 
 Branch `personal/update-recheck` (10/10/2026, based on `726a346a`, Windows 11), Sol's

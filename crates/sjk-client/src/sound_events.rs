@@ -925,7 +925,7 @@ impl LegacySoundAdapter {
             self.custom[client] = custom_set(game_state, vfs, client as u16, &mut intern);
             self.client_teams[client] = client_team(game_state, client);
             let definitions = saber_definitions
-                .get_or_insert_with(|| crate::legacy_saber_definitions(vfs).unwrap_or_default());
+                .get_or_insert_with(|| crate::shared_saber_definitions(vfs).unwrap_or_default());
             self.saber_switch
                 .refresh_client(game_state, client, definitions, &mut intern);
         }
