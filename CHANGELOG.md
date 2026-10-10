@@ -18,6 +18,7 @@ tests check this file):
 - ASCII only, as the menu font draws bytes.
 Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 -->
+- Saber shaders have tiers, the same as holocrons: Mythical (Sun, Void, Molten, Spectral), Legendary (Storm, Unstable, Chameleon, Prism), Rare (Frost, Hologram, Runic, Heartbeat, Glitch, Banner), and Uncommon for plainer ones to come; the Collection and the Saber tab list the rarest first and show each tier in its colour, and the Collection's Shaders can show a grid of cards (V, or the two marks by Saber; ui_shaderView keeps it) _(Sol)_
 
 ## Unreleased
 

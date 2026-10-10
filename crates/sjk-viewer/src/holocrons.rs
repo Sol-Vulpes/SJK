@@ -57,6 +57,8 @@ pub(crate) struct Tier {
     pub(crate) id: &'static str,
     /// The name players read ("Rare Holocron").
     pub(crate) name: &'static str,
+    /// The tier alone ("Rare"), as a saber shader's tier reads (`unlockables::Rarity`).
+    pub(crate) label: &'static str,
     /// The tier's colour: its pop-up, chat lines, gem and counts. None of the game's
     /// `^n` colours, and four colours that stay apart for players who tell colours
     /// apart poorly.
@@ -79,6 +81,7 @@ pub(crate) const TIERS: [Tier; COUNT] = [
     Tier {
         id: "uncommon",
         name: "Uncommon Holocron",
+        label: "Uncommon",
         colour: rgb(0x2F_C77A),
         per_mille: 600,
         odds: "60%",
@@ -88,6 +91,7 @@ pub(crate) const TIERS: [Tier; COUNT] = [
     Tier {
         id: "rare",
         name: "Rare Holocron",
+        label: "Rare",
         colour: rgb(0x2E_7BFF),
         per_mille: 280,
         odds: "28%",
@@ -97,6 +101,7 @@ pub(crate) const TIERS: [Tier; COUNT] = [
     Tier {
         id: "legendary",
         name: "Legendary Holocron",
+        label: "Legendary",
         colour: rgb(0xA6_4DFF),
         per_mille: 105,
         odds: "10.5%",
@@ -106,6 +111,7 @@ pub(crate) const TIERS: [Tier; COUNT] = [
     Tier {
         id: "mythical",
         name: "Mythical Holocron",
+        label: "Mythical",
         colour: rgb(0xFF_C933),
         per_mille: 15,
         odds: "1.5%",
@@ -298,6 +304,7 @@ mod tests {
             assert_eq!(Tier::from_id(tier.id), Some(tier));
             assert_eq!(by_id(tier.id).map(|t| t.name), Some(tier.name));
             assert!(tier.name.ends_with(" Holocron"));
+            assert_eq!(tier.name, format!("{} Holocron", tier.label));
         }
         assert_eq!(by_id("from_the_future"), None);
         assert_eq!(name("rare"), Some("Rare Holocron"));

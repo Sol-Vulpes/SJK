@@ -1,6 +1,6 @@
 //! The SJK UI Saber page's blade choice (`docs/sjk-ui.md`, Character): the stock
-//! blade in its colour, then every blade skin the player's hub profile lists, in the
-//! catalogue's order. Locked skins are not offered: the Collection shows them. Picking
+//! blade in its colour, then every blade skin the player's hub profile lists, the
+//! rarest tier first (as the Collection lists them). Locked skins are not offered: the Collection shows them. Picking
 //! one sets `cg_saberSkin` as the Collection's Equip does ([`unlockables::wear`]),
 //! by the same rules ([`Holdings::can_wear`], [`Holdings::worn_blade_skin`]), and the
 //! stage model wears it once the looks read it again (twice a second).
@@ -17,7 +17,7 @@ const READ_EVERY: f64 = 0.5;
 
 /// What the blade choice offers and which it shows chosen.
 pub(super) struct BladeChoice {
-    /// The blade skins the player owns, in catalogue order.
+    /// The blade skins the player owns, the rarest tier first.
     owned: Vec<&'static Unlockable>,
     /// The one worn; `None` for the stock blade.
     worn: Option<&'static Unlockable>,
@@ -104,8 +104,9 @@ impl BladeChoice {
     ) {
         owned.clear();
         owned.extend(
-            unlockables::ALL
+            unlockables::blade_skins_by_tier()
                 .iter()
+                .copied()
                 .filter(|unlockable| holdings.can_wear(unlockable)),
         );
         *worn = holdings.worn_blade_skin(setting);
@@ -205,7 +206,7 @@ mod tests {
         (directory, console)
     }
 
-    /// The stock blade, then the owned skins in catalogue order; the locked ones and
+    /// The stock blade, then the owned skins, the rarest tier first; the locked ones and
     /// unknown ids are left out, and picking writes `cg_saberSkin` as Equip does.
     #[test]
     fn the_stock_blade_and_the_owned_skins_are_offered_and_picking_wears_one() {

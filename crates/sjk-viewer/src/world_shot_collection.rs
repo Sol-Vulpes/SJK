@@ -101,6 +101,21 @@ fn duel6_sjk_collection() {
                 assert!(!overflowed(&gpu), "{tab:?}{suffix}");
             }
             if size[0] != 1920 {
+                // The grid of cards in the 4:3 window.
+                gpu.profile_hub_show_for_shot(Tab::Shaders);
+                if let Some(console) = gpu.console.as_mut() {
+                    let _ =
+                        console.set_cvar(crate::console::collection_panel::SHADER_VIEW_CVAR, "1");
+                }
+                println!(
+                    "{}",
+                    shoot(&mut gpu, 30, "duel6-collection-shaders-grid-4x3").display()
+                );
+                assert!(!overflowed(&gpu), "the grid, 4:3");
+                if let Some(console) = gpu.console.as_mut() {
+                    let _ =
+                        console.set_cvar(crate::console::collection_panel::SHADER_VIEW_CVAR, "0");
+                }
                 continue;
             }
             // Toys with the holocron lit (`toy_illuminate`): the switch is on.
@@ -114,7 +129,7 @@ fn duel6_sjk_collection() {
             gpu.illuminate.set_on(false);
             // A locked one, previewed on the saber.
             gpu.profile_hub_show_for_shot(Tab::Shaders);
-            let storm = 1 + crate::unlockables::ALL
+            let storm = 1 + crate::unlockables::blade_skins_by_tier()
                 .iter()
                 .position(|skin| skin.id == "saber_storm")
                 .expect("the Storm blade");
@@ -125,6 +140,33 @@ fn duel6_sjk_collection() {
                 "{}",
                 shoot(&mut gpu, 30, "duel6-collection-shaders-preview").display()
             );
+            // The grid of cards (`ui_shaderView 1`), a few more owned, a Mythical chosen.
+            if let Some(console) = gpu.console.as_mut() {
+                let owned = [
+                    "saber_sun",
+                    "saber_void",
+                    "saber_storm",
+                    "saber_runic",
+                    "saber_glitch",
+                ]
+                .map(|id| sjk_identity::Unlock {
+                    id: id.to_owned(),
+                    ..sun()
+                })
+                .to_vec();
+                console.preview_collection(Some(owned), 0.8);
+                let _ = console.set_cvar(crate::console::collection_panel::SHADER_VIEW_CVAR, "1");
+                console.collection_shader_for_shot(2);
+            }
+            println!(
+                "{}",
+                shoot(&mut gpu, 30, "duel6-collection-shaders-grid").display()
+            );
+            assert!(!overflowed(&gpu), "the grid");
+            if let Some(console) = gpu.console.as_mut() {
+                let _ = console.set_cvar(crate::console::collection_panel::SHADER_VIEW_CVAR, "0");
+                console.preview_collection(Some(vec![sun()]), 0.8);
+            }
             // Ctrl+Tab goes on to Holocrons (the Holocrons page, under the same row) and
             // comes round to Medals, on the same screen.
             gpu.profile_hub_show_for_shot(Tab::Nameplates);

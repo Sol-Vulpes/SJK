@@ -454,6 +454,18 @@ test: Custom RGB white: the chroma shows its own colours. Another player sees yo
 test: Collection > Shaders: colour wheels beside chroma names; double click an owned row.
 test: Detail beside the model: the long name ends before the Worn/Yours/Locked pill, at 4K.
 
+[shader-tiers]
+area: Menus & settings
+title: Saber shaders get tiers (as holocrons) and a grid of cards in the Collection
+change: Mythical: Sun Void Molten Spectral. Legendary: Storm Unstable Chameleon Prism.
+change: Rare: Frost Hologram Runic Heartbeat Glitch Banner. Prism/Glitch/Banner provisional.
+change: Lists show the rarest first; tier colours on rack, cards, detail, Saber tab, card.
+test: Collection > Shaders: Sun first, tier name in colour at each row's right, tier pill.
+test: Press V (or the four squares): cards five to a line; arrows move in 2D; wheel scrolls.
+test: Double click an owned card: it is worn. Close and reopen: the grid is kept.
+test: Profile > Saber: owned blades rarest first, each with a thin tier-colour edge.
+test: Inspect a player wearing a shader: its swatch framed and named in its tier colour.
+
 [renderer-settings]
 area: Rendering & effects
 title: RENDERER settings page for every renderer cvar

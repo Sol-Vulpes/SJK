@@ -19,6 +19,35 @@ pub(crate) enum Kind {
     BladeSkin,
 }
 
+/// How rare an unlockable is: the holocrons' tiers ([`crate::holocrons::TIERS`]), their
+/// names and colours, the commonest first. Uncommon is for the plainer shaders to come
+/// (a colour, no effects); none is Uncommon yet.
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd)]
+pub(crate) enum Rarity {
+    #[allow(dead_code)] // for the plainer shaders to come
+    Uncommon,
+    Rare,
+    Legendary,
+    Mythical,
+}
+
+impl Rarity {
+    /// The holocron tier of the same rank: its colour, and its name in `label`.
+    pub(crate) fn tier(self) -> &'static crate::holocrons::Tier {
+        &crate::holocrons::TIERS[self as usize]
+    }
+
+    /// The tier's name ("Rare").
+    pub(crate) fn label(self) -> &'static str {
+        self.tier().label
+    }
+
+    /// The tier's colour.
+    pub(crate) fn colour(self) -> sjk_ui::Color {
+        self.tier().colour
+    }
+}
+
 /// One unlockable of the catalogue.
 #[derive(Debug, Eq, PartialEq)]
 pub(crate) struct Unlockable {
@@ -26,6 +55,8 @@ pub(crate) struct Unlockable {
     pub(crate) id: &'static str,
     pub(crate) name: &'static str,
     pub(crate) kind: Kind,
+    /// How rare it is: the holocrons' four tiers, their names and colours.
+    pub(crate) tier: Rarity,
     /// A chroma: a blade skin that takes the wearer's saber colour (`color1` for the
     /// first saber, `color2` for the second), its colours turned round to that hue
     /// ([`crate::saber_skins::Chroma`]). The others keep the colours their file gives.
@@ -49,6 +80,7 @@ pub(crate) const ALL: [Unlockable; 14] = [
         id: "saber_sun",
         name: "Sun blade",
         kind: Kind::BladeSkin,
+        tier: Rarity::Mythical,
         chroma: false,
         description: "A white-gold core in an orange corona, flares running along it, and its own sounds.",
         how_to_get: "Given by the SJK team.",
@@ -57,6 +89,7 @@ pub(crate) const ALL: [Unlockable; 14] = [
         id: "saber_storm",
         name: "Storm blade",
         kind: Kind::BladeSkin,
+        tier: Rarity::Legendary,
         chroma: true,
         description: "A white-blue core crackling with lightning that leaps off it, sparks at its tip.",
         how_to_get: "Given by the SJK team.",
@@ -65,6 +98,7 @@ pub(crate) const ALL: [Unlockable; 14] = [
         id: "saber_void",
         name: "Void blade",
         kind: Kind::BladeSkin,
+        tier: Rarity::Mythical,
         chroma: false,
         description: "A dark core in a violet rim, star specks drifting into it, and a deep hum.",
         how_to_get: "Given by the SJK team.",
@@ -73,6 +107,7 @@ pub(crate) const ALL: [Unlockable; 14] = [
         id: "saber_frost",
         name: "Frost blade",
         kind: Kind::BladeSkin,
+        tier: Rarity::Rare,
         chroma: false,
         description: "A pale ice core with a pointed tip, frost shards trailing it, and a chiming hum.",
         how_to_get: "Given by the SJK team.",
@@ -81,6 +116,7 @@ pub(crate) const ALL: [Unlockable; 14] = [
         id: "saber_prism",
         name: "Prism blade",
         kind: Kind::BladeSkin,
+        tier: Rarity::Legendary,
         chroma: false,
         description: "A white core in a corona whose colours run through the rainbow, slowly turning.",
         how_to_get: "Given by the SJK team.",
@@ -89,6 +125,7 @@ pub(crate) const ALL: [Unlockable; 14] = [
         id: "saber_unstable",
         name: "Unstable blade",
         kind: Kind::BladeSkin,
+        tier: Rarity::Legendary,
         chroma: true,
         description: "A raw red core that crackles and sputters, its edge ragged and its length faltering.",
         how_to_get: "Given by the SJK team.",
@@ -97,6 +134,7 @@ pub(crate) const ALL: [Unlockable; 14] = [
         id: "saber_molten",
         name: "Molten blade",
         kind: Kind::BladeSkin,
+        tier: Rarity::Mythical,
         chroma: false,
         description: "A dark rock core split by glowing lava cracks, embers dripping off it and falling.",
         how_to_get: "Given by the SJK team.",
@@ -105,6 +143,7 @@ pub(crate) const ALL: [Unlockable; 14] = [
         id: "saber_spectral",
         name: "Spectral blade",
         kind: Kind::BladeSkin,
+        tier: Rarity::Mythical,
         chroma: true,
         description: "A pale, see-through blade that leaves fading afterimages of itself when it swings.",
         how_to_get: "Given by the SJK team.",
@@ -113,6 +152,7 @@ pub(crate) const ALL: [Unlockable; 14] = [
         id: "saber_glitch",
         name: "Glitch blade",
         kind: Kind::BladeSkin,
+        tier: Rarity::Rare,
         chroma: true,
         description: "A blade whose colours split apart, blocks of it jumping sideways now and then.",
         how_to_get: "Comes with the Bug Hunter medal, for as long as you hold it.",
@@ -121,6 +161,7 @@ pub(crate) const ALL: [Unlockable; 14] = [
         id: "saber_hologram",
         name: "Hologram blade",
         kind: Kind::BladeSkin,
+        tier: Rarity::Rare,
         chroma: true,
         description: "A wireframe projection with scan lines running along it, jittering like a training hologram.",
         how_to_get: "Comes with the Early Tester medal, for as long as you hold it.",
@@ -129,6 +170,7 @@ pub(crate) const ALL: [Unlockable; 14] = [
         id: "saber_runic",
         name: "Runic blade",
         kind: Kind::BladeSkin,
+        tier: Rarity::Rare,
         chroma: true,
         description: "A gold core with glyphs scrolling along it that spell its wearer's name.",
         how_to_get: "Comes with the Early Contributor medal, for as long as you hold it.",
@@ -137,6 +179,7 @@ pub(crate) const ALL: [Unlockable; 14] = [
         id: "saber_chameleon",
         name: "Chameleon blade",
         kind: Kind::BladeSkin,
+        tier: Rarity::Legendary,
         chroma: false,
         description: "A blade that takes the colour of the light where it is, changing from map to map.",
         how_to_get: "Given by the SJK team.",
@@ -145,6 +188,7 @@ pub(crate) const ALL: [Unlockable; 14] = [
         id: "saber_banner",
         name: "Banner blade",
         kind: Kind::BladeSkin,
+        tier: Rarity::Rare,
         chroma: false,
         description: "Your team's colour in team games, rippling like a flag; silver outside them.",
         how_to_get: "Given by the SJK team.",
@@ -153,6 +197,7 @@ pub(crate) const ALL: [Unlockable; 14] = [
         id: "saber_heartbeat",
         name: "Heartbeat blade",
         kind: Kind::BladeSkin,
+        tier: Rarity::Rare,
         chroma: true,
         description: "A warm, deep blade that pulses with a slow double heartbeat, its light beating with it.",
         how_to_get: "Given by the SJK team.",
@@ -179,6 +224,18 @@ pub(crate) fn is_chroma(id: &str) -> bool {
 /// The blade skins, in catalogue order.
 pub(crate) fn blade_skins() -> impl Iterator<Item = &'static Unlockable> {
     ALL.iter().filter(|unlockable| unlockable.is_blade_skin())
+}
+
+/// The blade skins as players see them listed: the rarest tier first, then in
+/// catalogue order within a tier.
+pub(crate) fn blade_skins_by_tier() -> &'static [&'static Unlockable] {
+    static ORDER: std::sync::OnceLock<Vec<&'static Unlockable>> = std::sync::OnceLock::new();
+    ORDER.get_or_init(|| {
+        let mut skins: Vec<_> = blade_skins().collect();
+        // A stable sort keeps the catalogue's order within a tier.
+        skins.sort_by_key(|skin| std::cmp::Reverse(skin.tier));
+        skins
+    })
 }
 
 /// Wear blade skin `id`, `""` for the stock blade: what the Collection's Equip and
@@ -275,6 +332,51 @@ mod tests {
     }
 
     use super::*;
+
+    /// Sol's tiers (10/10/2026); Prism, Glitch and Banner are placed provisionally.
+    #[test]
+    fn every_shader_has_its_tier_and_the_rarest_list_first() {
+        let of = |rarity: Rarity| -> Vec<&str> {
+            blade_skins()
+                .filter(|skin| skin.tier == rarity)
+                .map(|skin| skin.id)
+                .collect()
+        };
+        assert_eq!(
+            of(Rarity::Mythical),
+            ["saber_sun", "saber_void", "saber_molten", "saber_spectral"]
+        );
+        assert_eq!(
+            of(Rarity::Legendary),
+            [
+                "saber_storm",
+                "saber_prism",
+                "saber_unstable",
+                "saber_chameleon"
+            ]
+        );
+        assert_eq!(
+            of(Rarity::Rare),
+            [
+                "saber_frost",
+                "saber_glitch",
+                "saber_hologram",
+                "saber_runic",
+                "saber_banner",
+                "saber_heartbeat",
+            ]
+        );
+        assert!(of(Rarity::Uncommon).is_empty());
+        let order = blade_skins_by_tier();
+        assert_eq!(order.len(), blade_skins().count());
+        assert!(order.windows(2).all(|pair| pair[0].tier >= pair[1].tier));
+        assert_eq!(order[0].id, "saber_sun");
+        assert_eq!(order[4].id, "saber_storm");
+        // The holocrons' names and colours.
+        assert_eq!(Rarity::Mythical.label(), "Mythical");
+        assert_eq!(Rarity::Uncommon.label(), "Uncommon");
+        assert_eq!(Rarity::Rare.colour(), crate::holocrons::TIERS[1].colour);
+    }
 
     #[test]
     fn ids_are_unique_and_every_blade_skin_has_one_entry() {
