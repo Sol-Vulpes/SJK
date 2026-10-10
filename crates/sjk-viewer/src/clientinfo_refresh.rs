@@ -9,7 +9,8 @@
 //! a saber nobody carried at load fell back to `single_1`. This module
 //! receives dirty client indices from the session and rebuilds that player's
 //! mesh and missing hilts on a change, appending
-//! the geometry and materials to the shared buffers.
+//! the geometry and materials to the shared buffers. The model itself is read on
+//! a worker ([`player_loads`]); the slot keeps its mesh until the new one is in.
 
 use super::*;
 use crate::actor_load::{build_actor_mesh, client_saber_names};
@@ -21,6 +22,8 @@ use sjk_client::legacy_client_appearance_forced;
 mod corpse_actors;
 #[path = "clientinfo_forcing.rs"]
 mod forcing;
+#[path = "player_loads.rs"]
+pub(crate) mod player_loads;
 
 /// Per-world appearance loading caches used by dirty clientinfo notifications.
 pub(crate) struct ClientInfoWatch {
@@ -33,6 +36,8 @@ pub(crate) struct ClientInfoWatch {
     /// Appearances whose load failed; players wearing one show Kyle, and the
     /// load is not retried in this world.
     pub(crate) failed: BTreeSet<Appearance>,
+    /// Players' models being read on workers.
+    loads: player_loads::Loads,
 }
 
 impl ClientInfoWatch {
@@ -45,6 +50,7 @@ impl ClientInfoWatch {
             overrides: std::array::from_fn(|_| String::new()),
             local_identity: (-1, -1),
             failed: BTreeSet::new(),
+            loads: player_loads::Loads::default(),
         }
     }
 }
@@ -164,6 +170,7 @@ impl GpuState {
             };
             let Some(appearance) = legacy_client_appearance_forced(game_state, client, model)
             else {
+                self.clientinfo_watch.loads.cancel(client);
                 return Ok(());
             };
             let mut names = client_saber_names(Some(game_state), client);
@@ -190,10 +197,33 @@ impl GpuState {
             // `c1`/`c2` may name another hat or cape (JoF EJK).
             self.actor_meshes[index].cosmetics.invalidate();
             if self.actor_meshes[index].appearance == appearance {
+                self.clientinfo_watch.loads.cancel(client);
                 return Ok(());
             }
         }
-        let mesh = self.build_live_actor_or_kyle(&appearance, entity_id, saber_names)?;
+        let known_failed = self.clientinfo_watch.failed.contains(&appearance);
+        self.clientinfo_watch.loads.request(player_loads::Request {
+            client,
+            appearance,
+            entity_id,
+            saber_names,
+            known_failed,
+        });
+        Ok(())
+    }
+
+    /// Put `mesh`, just uploaded, on `client`'s slot.
+    pub(crate) fn place_client_mesh(
+        &mut self,
+        client: u16,
+        mesh: ActorMesh,
+        appearance: &Appearance,
+    ) {
+        let entity_id = EntityId::new(u64::from(client) + 1);
+        let index = self
+            .actor_meshes
+            .iter()
+            .position(|mesh| !mesh.corpse_pool && mesh.entity_id == Some(entity_id));
         match index {
             Some(index) => self.actor_meshes[index] = mesh,
             None => {
@@ -201,7 +231,7 @@ impl GpuState {
                 self.actor_groups.push(Vec::with_capacity(4));
             }
         }
-        let wears = if self.clientinfo_watch.failed.contains(&appearance) {
+        let wears = if self.clientinfo_watch.failed.contains(appearance) {
             "Kyle in place of"
         } else {
             "now wears"
@@ -210,7 +240,6 @@ impl GpuState {
             "client {client} {wears} {}/{}",
             appearance.model, appearance.variant
         ));
-        Ok(())
     }
 
     /// [`Self::build_live_actor`], or Kyle standing in for an appearance that
@@ -280,9 +309,8 @@ impl GpuState {
         entity_id: EntityId,
         saber_names: [Option<String>; 2],
     ) -> Result<ActorMesh, Box<dyn Error>> {
-        let vfs = self.vfs.clone().ok_or("no VFS")?;
         let mut scene = FlattenedScene::default();
-        let mut mesh = build_actor_mesh(
+        let mesh = build_actor_mesh(
             &mut scene,
             preview,
             Some(entity_id),
@@ -290,6 +318,18 @@ impl GpuState {
             appearance.clone(),
             saber_names,
         )?;
+        self.upload_built_actor(mesh, scene, appearance)
+    }
+
+    /// Upload a mesh built from a preview ([`build_actor_mesh`]): its materials, its
+    /// geometry into the shared buffers and its GPU skin.
+    pub(crate) fn upload_built_actor(
+        &mut self,
+        mut mesh: ActorMesh,
+        scene: FlattenedScene,
+        appearance: &Appearance,
+    ) -> Result<ActorMesh, Box<dyn Error>> {
+        let vfs = self.vfs.clone().ok_or("no VFS")?;
         let material_base = self.world_materials.append_entity_materials(
             &self.device,
             &self.queue,

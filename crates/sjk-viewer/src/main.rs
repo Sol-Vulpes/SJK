@@ -424,7 +424,8 @@ struct GpuState {
     clientinfo_watch: clientinfo_refresh::ClientInfoWatch,
     config_string_refresh: config_string_refresh::ConfigStringRefresh,
     /// Parsed shader catalogue, kept for materials compiled after map load.
-    shaders: ShaderCatalog,
+    /// Shared with the workers that load players' models (`player_loads.rs`).
+    shaders: Arc<ShaderCatalog>,
     decal_surfaces: decal_marks::DecalSurfaces,
     player_shadows: player_shadows::State,
     camera_buffer: wgpu::Buffer,
@@ -1294,7 +1295,7 @@ impl GpuState {
             menu_stage: menu_stage::MenuStage::default(),
             clientinfo_watch: clientinfo_refresh::ClientInfoWatch::new(),
             config_string_refresh,
-            shaders,
+            shaders: Arc::new(shaders),
             decal_surfaces,
             player_shadows: player_shadows::State::default(),
             camera_buffer,

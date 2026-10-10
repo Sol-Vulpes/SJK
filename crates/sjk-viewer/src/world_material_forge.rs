@@ -406,6 +406,11 @@ impl Runtime {
         })
     }
 
+    /// The lightmap entity materials compile against, for [`warm_entity_materials`].
+    pub(crate) fn entity_lightmap(&self) -> wgpu::TextureView {
+        self.forge.fallback_lightmap.clone()
+    }
+
     /// Compile `materials` as entity materials of this runtime (no world
     /// surfaces of their own) and return the source index of the first one:
     /// draws that use them refer to `base + position in materials`. Existing
@@ -491,6 +496,9 @@ impl Runtime {
         for key in self.forge.pipeline_keys[known..].to_vec() {
             self.push_pipelines(device, key);
         }
+        // With the model, not on its first glowing frame.
+        let first_material = self.materials.len() - materials.len();
+        self.warm_glow(first_material..self.materials.len());
         // A loaded model's stages join the map's stage table.
         if let Some(table) = &mut self.stage_table {
             table.append(device, &self.forge, &self.materials);
@@ -611,4 +619,29 @@ pub(super) fn compile_profile() -> [u64; 2] {
     COMPILE_MS
         .each_ref()
         .map(|v| v.load(std::sync::atomic::Ordering::Relaxed))
+}
+
+/// Compile `materials` as [`Runtime::append_entity_materials`] does, CPU only, and keep
+/// nothing: their images land decoded in the process cache
+/// ([`crate::decoded_image_cache`]), so the append that follows on the render thread
+/// only uploads. Run on a worker; a failure is left for the append to report.
+pub(crate) fn warm_entity_materials(
+    vfs: &VirtualFileSystem,
+    shaders: &ShaderCatalog,
+    lightmap: &wgpu::TextureView,
+    materials: &[ViewerMaterial],
+) {
+    let mut image_cache = ImageCache::with_capacity(64);
+    for key in materials {
+        let _ = compile_material(
+            vfs,
+            shaders,
+            key,
+            lightmap,
+            true,
+            Default::default(),
+            &mut image_cache,
+            false,
+        );
+    }
 }

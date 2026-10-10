@@ -76,7 +76,7 @@ use crate::world_stage::{
     CompiledStage, GpuStage, MAX_SHADER_STAGES, PipelineKey, SORT_OPAQUE, collapse_multitexture,
     compile_hardware_stage, hardware_pipeline_key, material_stages,
 };
-pub(crate) use forge::{DetachedDraw, DetachedMaterials};
+pub(crate) use forge::{DetachedDraw, DetachedMaterials, warm_entity_materials};
 use forge::{Forge, build_passes, compile_material};
 use gpu::{
     create_entity_pipeline, create_pipeline, create_sampler, create_stage_layout, load_stage_images,
@@ -564,6 +564,7 @@ fn finish_runtime(
             runtime.entity_pipeline(index, false);
         }
     }
+    runtime.warm_glow(0..runtime.materials.len());
     let both = world_keys
         .iter()
         .zip(&model_keys)
@@ -572,7 +573,8 @@ fn finish_runtime(
     crate::log::progress(format_args!(
         "compiled {} pipeline keys in {:.0} ms \
         (cumulative per variant, depth-tested, no-depth: {:?} ms; keys used by \
-        world materials {}, by model materials {}, by both {}; the rest on first draw)",
+        world materials {}, by model materials {}, by both {}, with the glow \
+        variants; the rest on first draw)",
         keys.len(),
         pipelines_started.elapsed().as_secs_f64() * 1e3,
         forge::compile_profile(),

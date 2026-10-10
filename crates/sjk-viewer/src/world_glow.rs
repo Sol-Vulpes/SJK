@@ -80,6 +80,21 @@ impl Runtime {
         self.lighting_mode.get() & super::lighting_mode::NO_EMISSIVE_GLOW == 0
     }
 
+    /// Compile now the depth-tested glow variants the glowing stages of materials
+    /// `range` draw with, rather than on the first frame they glow: a driver compile
+    /// in the middle of play is a stutter.
+    pub(super) fn warm_glow(&self, range: std::ops::Range<usize>) {
+        for material in &self.materials[range] {
+            if !material.has_glow {
+                continue;
+            }
+            for stage in material.stages.iter().filter(|stage| stage.glow) {
+                self.glow_pipeline(stage.pipeline, true);
+                self.glow_pipeline(stage.live_pipeline, true);
+            }
+        }
+    }
+
     /// The glow pipeline of key `index`, compiled on first use.
     fn glow_pipeline(&self, index: usize, depth: bool) -> &wgpu::RenderPipeline {
         let slots = if depth {

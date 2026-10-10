@@ -173,6 +173,27 @@ line, muted and switched-off lines, the history while typing, a game line) and o
 world shots of the box with test GIFs, in play and typing, at 1080p and 4K
 (`duel6_sjk_chat_gifs_feed`). Not tried in a match.
 
+## Stutters on joins
+
+Branch `personal/player-async` (11/10/2026, based on `a4ea2316`, Windows 11, RTX 5080),
+players' reports of random stutters in game. Read from the code, the likeliest was a
+player joining or changing model: the model's files read and parsed, its textures
+decoded, materials and pipelines compiled and the shared geometry regrown by copying
+all of it, inside one frame on the render thread. Now a worker reads the model, builds
+its mesh and decodes its textures (`player_loads.rs`), and the render thread uploads it,
+one a frame; the shared buffers keep room for about a dozen models (no copy per model),
+and glow pipelines are compiled with their materials, at map load and when a model is
+installed, instead of on the first glowing frame
+([rendering.md](rendering.md#geometry-and-pipelines-added-during-a-match),
+[client.md](client.md)). Still on the render thread: a model's material and pipeline
+creation at install, hilts (`load_hilt`), NPCs (one a frame), corpses, cosmetics and
+models named by `CS_MODELS` (whose read is on a worker since PR #67).
+
+Verified by unit tests (the load queue: a newer request replaces an older one, a
+cancelled load never lands, a stopped worker is reported, nothing starts without a
+world). Not measured: the frame times of a join before and after, which the hitch log
+(`personal/hitch-log`) is for; not tested in the game window.
+
 ## Memory on servers
 
 Branch `personal/menu-world-drop` (10/10/2026, based on `0c76ff03`, Windows 11, RTX
