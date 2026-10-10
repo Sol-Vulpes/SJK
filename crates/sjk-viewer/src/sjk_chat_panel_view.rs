@@ -85,7 +85,22 @@ struct Laid {
     /// does, there is no colon, and the text is in the tier's colour.
     tier: Option<&'static crate::holocrons::Tier>,
     drop: bool,
+    /// The message's GIF ([`crate::chat_gifs`]) and what it shows this frame.
+    gif: Option<crate::chat_gifs::Shown>,
 }
+
+impl Laid {
+    /// The message's height on the page, its GIF under its text included.
+    fn height(&self) -> f32 {
+        height(self.rows.len())
+            + self
+                .gif
+                .map_or(0.0, |shown| crate::chat_gifs::draw::room(GIF, shown))
+    }
+}
+
+/// How the page shows a message's GIF.
+const GIF: crate::chat_gifs::draw::Look = crate::chat_gifs::draw::PAGE;
 
 /// Lay `message` out in the page's column, measured as `measure` draws at the frame
 /// scale `s`.
@@ -124,6 +139,7 @@ fn lay(message: &ChatMessage, inputs: &Inputs<'_>, measure: &Measure<'_>, s: f32
     let meta = format!("{staff}{when}");
     let meta_room = width(&meta, META_SIZE, TextFace::Regular) + 24.0;
     let muted = inputs.muted.contains(&message.key_id);
+    let mut gif = None;
     let text = if muted {
         "Muted on this PC".to_owned()
     } else if let Some(words) = &words {
@@ -131,7 +147,11 @@ fn lay(message: &ChatMessage, inputs: &Inputs<'_>, measure: &Measure<'_>, s: f32
     } else if drop {
         "found a holocron.".to_owned()
     } else {
-        sjk_chat_look::message_text(&message.text)
+        // A muted sender's GIF is never asked for: the text above says so instead.
+        let (text, id) =
+            crate::chat_gifs::for_message(&sjk_chat_look::message_text(&message.text), muted);
+        gif = id.as_ref().map(crate::chat_gifs::show);
+        text
     };
     let rows = sjk_chat_look::flow(
         &text,
@@ -152,6 +172,7 @@ fn lay(message: &ChatMessage, inputs: &Inputs<'_>, measure: &Measure<'_>, s: f32
         muted,
         tier: words.map(|words| words.tier),
         drop,
+        gif,
     }
 }
 
@@ -264,7 +285,7 @@ impl Panel {
         while first > 0 && end - first < MESSAGES_SHOWN {
             let message = &messages[first - 1];
             let layout = lay(message, inputs, measure, s);
-            let needed = height(layout.rows.len());
+            let needed = layout.height();
             if needed > room {
                 break;
             }
@@ -294,7 +315,7 @@ impl Panel {
         let mut hovered = None;
         for (index, (message, laid)) in messages.range(first..end).zip(&laid).enumerate() {
             let token = MESSAGE_BASE + index as u16;
-            let tall = height(laid.rows.len());
+            let tall = laid.height();
             let row = [LIST_X - 18.0, y - 4.0, LIST_WIDTH + 18.0, tall - 4.0];
             if self.focus == token || self.selected == Some(message.id) {
                 kit::band(&mut self.ui, frame, row);
@@ -462,6 +483,17 @@ impl Panel {
                 colour,
                 FontWeight::Regular,
                 TextAlign::Start,
+            );
+        }
+        if let Some(shown) = laid.gif {
+            let under = y + NAME_ROW + laid.rows.len().saturating_sub(1) as f32 * BODY_ROW;
+            crate::chat_gifs::draw::draw(
+                &mut self.ui,
+                frame,
+                GIF,
+                shown,
+                [LIST_X, under],
+                LIST_WIDTH,
             );
         }
     }
@@ -1213,6 +1245,72 @@ mod tests {
         assert_eq!(ticks(&panel), 0, "the gem stands for the tick");
         // A tier this client does not know is still a line, worded plainly.
         found(&texts, "found a holocron.");
+    }
+
+    /// A GIPHY link shows "GIF" in the line and the GIF's block under it, inside the
+    /// messages' column and over the next message, at 1080p and 4K; a muted sender's
+    /// GIF is never asked for; one that could not be had is a quiet line.
+    #[test]
+    fn a_gif_shows_under_its_line_and_fits_the_column() {
+        let fonts = crate::text::load_modern(1.0, None).expect("Inter");
+        let shown = "https://giphy.com/gifs/wave-PageGif01Loading";
+        let failed = "https://media.giphy.com/media/PageGif02Failed/giphy.gif";
+        let muted_link = "https://i.giphy.com/PageGif03Muted.gif";
+        crate::chat_gifs::fail_for_shot(&crate::chat_gifs::GifId::new("PageGif02Failed").unwrap());
+        for viewport in [[1920.0, 1080.0], [3840.0, 2160.0]] {
+            let s = Frame::new(viewport).s;
+            let mut state = chat(0);
+            state.messages.extend([
+                message(1, "cccccccccccccccc", muted_link),
+                message(2, "aaaaaaaaaaaaaaaa", &format!("hi {shown}")),
+                message(3, "bbbbbbbbbbbbbbbb", failed),
+                message(4, "aaaaaaaaaaaaaaaa", "gg"),
+            ]);
+            let muted = ["cccccccccccccccc".to_owned()];
+            let mut panel = Panel::new();
+            panel.open(true);
+            panel.build_with(&inputs(&state, &muted, false), &fonts.font, viewport);
+            assert!(!panel.ui.overflowed());
+            let texts = texts(&panel);
+            let (_, label, _) = found(&texts, "hi GIF");
+            let (_, loading, _) = found(&texts, "Loading GIF");
+            let (_, unavailable, _) = found(&texts, "GIF unavailable");
+            let (_, gg, _) = found(&texts, "gg");
+            // Under its line, in the column, above the next message.
+            assert!(loading.y > label.bottom(), "{loading:?} {label:?}");
+            assert!(loading.x >= LIST_X * s - 0.5);
+            assert!(loading.right() <= (LIST_X + LIST_WIDTH) * s + 0.5);
+            assert!(
+                loading.bottom() < unavailable.y,
+                "{loading:?} {unavailable:?}"
+            );
+            assert!(unavailable.bottom() < gg.y);
+            assert!(gg.bottom() <= LIST_BOTTOM * s + 0.5);
+            // The placeholder is the GIF's height.
+            let boxes: Vec<Rect> = panel
+                .ui
+                .draw_list()
+                .commands()
+                .iter()
+                .filter_map(|command| match command {
+                    DrawCommand::RoundedRect { rect, .. }
+                        if (rect.height - GIF.height * s).abs() < 0.5 =>
+                    {
+                        Some(*rect)
+                    }
+                    _ => None,
+                })
+                .collect();
+            assert_eq!(boxes.len(), 1, "{boxes:?}");
+            // The muted sender's line says so, and their GIF was never asked for.
+            found(&texts, "Muted on this PC");
+            assert!(!crate::chat_gifs::asked_for(
+                &crate::chat_gifs::GifId::new("PageGif03Muted").unwrap()
+            ));
+            assert!(crate::chat_gifs::asked_for(
+                &crate::chat_gifs::GifId::new("PageGif01Loading").unwrap()
+            ));
+        }
     }
 
     /// Every focus, long messages, a muted sender, a refusal and staff fit the canvas

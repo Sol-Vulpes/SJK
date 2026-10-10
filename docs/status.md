@@ -7,6 +7,21 @@ SJK currently contains a native client and standard dedicated server in a
 20-crate Rust workspace. This page records scope and verification, rather than
 claiming complete parity from the presence of an implementation.
 
+## SJK chat GIFs
+
+Branch `personal/chat-gifs` (10/10/2026, based on `a70d6ec0`, Windows 11), Sol's decision
+that GIPHY links display the GIF in chat, not through the hub: a GIPHY link in an SJK
+chat message reads `GIF` and its GIF plays under it on the SJK chat page and the docks,
+fetched by each reader's client from `media.giphy.com` (the `200.gif` rendition, the
+original only after a 404), from an address rebuilt from the id, with a 4 MiB cap, no
+redirect and a 10 s timeout, decoded off the frame thread and kept in memory by id
+([hub-chat.md](hub-chat.md#gifs-from-giphy)). `cl_sjkChatGifs` (default 1, Settings >
+Network > SJK chat GIFs) switches it; muted senders' GIFs are never fetched. Verified by
+unit tests, one real GIF fetched from GIPHY by an ignored test and off-screen world shots
+with test GIFs at 1080p and 4K. Not seen in the game window or end to end through the
+hub. GIPHY share links with their tracking query are often over the chat's 150
+characters and are refused by the hub's rules (unchanged).
+
 ## Memory on servers
 
 Branch `personal/menu-world-drop` (10/10/2026, based on `0c76ff03`, Windows 11, RTX

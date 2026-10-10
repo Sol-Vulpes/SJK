@@ -8,7 +8,8 @@
 //! (`sjk_chat_frame.rs`), starts and ends emotes (`emotes_frame.rs`), keeps the
 //! players' looks (`looks_frame.rs`), follows the players muted on this PC
 //! (`muted_players_frame.rs`), notes the Profile screen's tab on show
-//! (`profile_hub.rs`) and puts the pictures that finished loading into the UI's atlas.
+//! (`profile_hub.rs`), puts the pictures that finished loading into the UI's atlas and
+//! gives the UI the frames of the SJK chat's GIFs on screen (`chat_gifs.rs`).
 
 use super::*;
 use sjk_identity::Settings;
@@ -22,6 +23,10 @@ impl GpuState {
         self.update_emotes();
         self.update_muted_players();
         avatars::service(&self.ui_shapes, &self.queue);
+        if let Some(console) = self.console.as_ref() {
+            chat_gifs::set_enabled(console.bool_cvar(chat_gifs::CVAR) != Some(false));
+        }
+        chat_gifs::service(&mut self.ui_shapes, &self.device, &self.queue);
         let due = player_identity::due();
         self.update_looks(due);
         if !due {

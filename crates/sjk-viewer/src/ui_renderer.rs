@@ -6,12 +6,14 @@ use sjk_ui::{Color, DrawCommand, DrawList, FontWeight, Rect, TextAlign, TextId};
 
 pub(crate) mod art;
 mod emblem;
+mod gif_textures;
 mod icons;
 mod levelshot;
 mod medal_art;
 mod verified_badge;
 use art::{ArtTextures, Run, Source};
 use emblem::EmblemTextures;
+use gif_textures::GifTextures;
 use icons::IconAtlas;
 pub(crate) use icons::{
     ATLAS_CELLS, BIND_ICON_CELLS, BIND_ICON_FIRST, CROSSHAIR_ICON_CELLS, CROSSHAIR_ICON_FIRST,
@@ -169,6 +171,9 @@ pub(crate) fn texture_switches(lists: &[&DrawList]) -> usize {
             None if texture == LEVELSHOT_TEXTURE => Source::Levelshot,
             None if texture == HUD_PREVIEW_TEXTURE => Source::HudPreview,
             None if texture == PREVIEW_TEXTURE => Source::Preview,
+            None if crate::chat_gifs::slot_of(texture).is_some() => {
+                Source::Gif(crate::chat_gifs::slot_of(texture).unwrap_or_default() as u8)
+            }
             None => match crate::medals::Medal::from_art(texture) {
                 Some(medal) => Source::Medal(medal),
                 None => crate::menu::emblem::EmblemLayer::from_texture(texture)
@@ -207,6 +212,8 @@ pub(crate) struct ShapeRenderer {
     emblem: EmblemTextures,
     /// The medals' whole pictures, one texture each, once a screen drew one.
     medals: MedalTextures,
+    /// The SJK chat's GIFs on screen, one texture each.
+    gifs: GifTextures,
     /// The current map preview at its own resolution.
     levelshot: LevelshotTexture,
     /// The HUD picker's preview of the highlighted HUD.
@@ -355,6 +362,7 @@ impl ShapeRenderer {
             art: ArtTextures::new(),
             emblem: EmblemTextures::new(),
             medals: MedalTextures::new(),
+            gifs: GifTextures::new(),
             levelshot,
             hud_preview,
             preview: None,
@@ -553,6 +561,7 @@ impl ShapeRenderer {
                         Source::Art(_)
                         | Source::Emblem(_)
                         | Source::Medal(_)
+                        | Source::Gif(_)
                         | Source::Levelshot
                         | Source::HudPreview
                         | Source::Preview => ([0.0, 0.0], [1.0, 1.0]),
@@ -584,6 +593,7 @@ impl ShapeRenderer {
                         Source::Art(_)
                         | Source::Emblem(_)
                         | Source::Medal(_)
+                        | Source::Gif(_)
                         | Source::Levelshot
                         | Source::HudPreview
                         | Source::Preview => uv,
@@ -661,6 +671,7 @@ impl ShapeRenderer {
         texture: sjk_ui::TextureId,
         now: f64,
     ) -> Option<Source> {
+        let gif = crate::chat_gifs::slot_of(texture);
         let source = match crate::menu::art::ArtPiece::from_texture(texture) {
             Some(piece) if self.art.ready().has(piece) => {
                 self.art.animate(queue, piece, now);
@@ -673,6 +684,11 @@ impl ShapeRenderer {
                 Some(_) => Source::Preview,
                 None => return None,
             },
+            None if gif.is_some() => {
+                let slot = gif.unwrap_or_default();
+                self.gifs.group(slot)?;
+                Source::Gif(slot as u8)
+            }
             None => match crate::menu::emblem::EmblemLayer::from_texture(texture) {
                 Some(layer) if self.emblem.group(layer).is_some() => Source::Emblem(layer),
                 Some(_) => return None,
@@ -721,6 +737,7 @@ impl ShapeRenderer {
                 Source::Art(piece) => self.art.group(piece),
                 Source::Emblem(layer) => self.emblem.group(layer),
                 Source::Medal(medal) => self.medals.group(medal),
+                Source::Gif(slot) => self.gifs.group(usize::from(slot)),
                 Source::Levelshot => Some(self.levelshot.bind_group()),
                 Source::HudPreview => Some(self.hud_preview.bind_group()),
                 Source::Preview => self.preview.as_ref(),
@@ -886,6 +903,20 @@ impl ShapeRenderer {
         rgba: &[u8],
     ) {
         self.icons.upload(queue, texture, rgba);
+    }
+
+    /// Give GIF slot `slot` ([`crate::chat_gifs::slot_texture`]) the frame `rgba` of a
+    /// GIF of `size`.
+    pub(crate) fn upload_gif(
+        &mut self,
+        device: &wgpu::Device,
+        queue: &crate::frame_queue::FrameQueue,
+        slot: usize,
+        size: [u32; 2],
+        rgba: &[u8],
+    ) {
+        self.gifs
+            .upload(device, queue, &self.texture_layout, slot, size, rgba);
     }
 
     /// Sample `view` for `TexturedQuad` commands naming [`PREVIEW_TEXTURE`]

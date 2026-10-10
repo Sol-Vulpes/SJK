@@ -10,6 +10,7 @@
 //! senders' lines are left out. [`Dock`] is what a page keeps between frames: what is
 //! being typed, the sender card on show and which messages the last frame showed.
 
+use crate::chat_gifs::draw as gif_draw;
 use crate::menu::sjk::{Frame, color, text};
 use crate::menu_widgets::{MenuCanvas, TextFamily};
 use crate::sjk_chat_look::{self, Measure};
@@ -34,6 +35,13 @@ const WRAP: f32 = 20.0;
 const BOX: f32 = LINES as f32 * ROW;
 /// The messages' text size.
 const TEXT_SIZE: f32 = 15.0;
+/// How the dock shows a message's GIF: smaller than the page.
+const GIF: gif_draw::Look = gif_draw::DOCK;
+
+/// The room a message's GIF takes under it (none without one).
+fn gif_room(gif: Option<crate::chat_gifs::Shown>) -> f32 {
+    gif.map_or(0.0, |shown| gif_draw::room(GIF, shown))
+}
 
 /// The SJK chat as the dock shows it.
 #[derive(Clone, Copy, Debug)]
@@ -63,6 +71,8 @@ pub(crate) struct DockLine<'a> {
     pub(crate) key_id: &'a str,
     /// The message is a holocron drop of this tier: no name, the tier's gem and colour.
     pub(crate) tier: Option<&'static crate::holocrons::Tier>,
+    /// The GIF the message links to, shown under it ([`crate::chat_gifs`]).
+    pub(crate) gif: Option<&'a crate::chat_gifs::GifId>,
 }
 
 /// A blank line for the dock's array.
@@ -73,6 +83,7 @@ pub(crate) const BLANK: DockLine<'static> = DockLine {
     staff: false,
     key_id: "",
     tier: None,
+    gif: None,
 };
 
 /// Where a page docks the chat, in frame pixels: the left edge of its text, its top
@@ -313,6 +324,20 @@ struct Line {
     staff: bool,
     key_id: String,
     tier: Option<&'static crate::holocrons::Tier>,
+    gif: Option<crate::chat_gifs::GifId>,
+}
+
+impl Line {
+    /// The message with its text `text` (as a line shows it), which may link to a GIF:
+    /// the link worded "GIF" and the GIF kept, unless GIFs are off.
+    fn with_gif(mut self, text: &str) -> Self {
+        if self.tier.is_none() {
+            (self.text, self.gif) = crate::chat_gifs::for_message(text, false);
+        } else {
+            text.clone_into(&mut self.text);
+        }
+        self
+    }
 }
 
 /// The dock's copy of the chat.
@@ -321,6 +346,8 @@ pub(crate) struct DockCache {
     /// The chat's revision, outcome serial and mutes revision last read; `None` while
     /// the service is not running.
     mark: Option<Option<(u64, u64, u64)>>,
+    /// Whether GIFs were on when the lines were read (`cl_sjkChatGifs`).
+    gifs: bool,
     /// The last messages, oldest first.
     lines: Vec<Line>,
     online: u32,
@@ -349,10 +376,12 @@ impl DockCache {
                 mutes,
             )
         });
-        if self.mark == Some(mark) {
+        let gifs = crate::chat_gifs::enabled();
+        if self.mark == Some(mark) && self.gifs == gifs {
             return;
         }
         self.mark = Some(mark);
+        self.gifs = gifs;
         self.lines.clear();
         self.refused.clear();
         let muted = player_mutes::muted_keys();
@@ -363,15 +392,18 @@ impl DockCache {
                 .filter(|message| !muted.contains(&message.key_id))
                 .filter_map(|message| Some((message, sjk_chat_look::shown(message)?)));
             let skip = shown.clone().count().saturating_sub(LINES);
+            // Muted senders are left out above, so their GIFs are never asked for.
             for (message, shown) in shown.skip(skip) {
-                self.lines.push(Line {
+                let line = Line {
                     name: shown.name,
-                    text: shown.text,
+                    text: String::new(),
                     verified: message.verified && shown.tier.is_none(),
                     staff: message.staff,
                     key_id: message.key_id.clone(),
                     tier: shown.tier,
-                });
+                    gif: None,
+                };
+                self.lines.push(line.with_gif(&shown.text));
             }
             if let Some(outcome) = chat.outcome.as_ref().filter(|outcome| !outcome.sent) {
                 self.refused.clone_from(&outcome.message);
@@ -406,6 +438,7 @@ impl DockCache {
                 staff: line.staff,
                 key_id: &line.key_id,
                 tier: line.tier,
+                gif: line.gif.as_ref(),
             };
         }
         let notice = if !self.local.is_empty() {
@@ -433,13 +466,17 @@ impl DockCache {
         self.lines = lines
             .iter()
             .enumerate()
-            .map(|(index, (name, text, verified))| Line {
-                name: (*name).to_owned(),
-                text: (*text).to_owned(),
-                verified: *verified,
-                staff: false,
-                key_id: format!("{:016x}", index + 1),
-                tier: None,
+            .map(|(index, (name, text, verified))| {
+                Line {
+                    name: (*name).to_owned(),
+                    text: String::new(),
+                    verified: *verified,
+                    staff: false,
+                    key_id: format!("{:016x}", index + 1),
+                    tier: None,
+                    gif: None,
+                }
+                .with_gif(text)
             })
             .collect();
         self.online = online;
@@ -723,23 +760,29 @@ fn messages(
     };
     // A larger text style takes taller rows: the box keeps its height and holds fewer.
     let pitch = Pitch::new(view.measure.map_or(1.0, |measure| measure.scale()).max(1.0));
-    // Rows of the shown messages, newest first.
+    // Rows of the shown messages and what their GIFs show, newest first.
     let mut taken = [0_usize; LINES];
+    let mut gifs = [None; LINES];
     let mut count = 0;
     let mut used = 0.0;
     for line in view.lines.iter().rev().take(LINES) {
         let rows = lay.rows(line);
-        let height = pitch.height(rows);
+        let gif = line.gif.map(crate::chat_gifs::show);
+        let height = pitch.height(rows) + gif_room(gif);
         if used + height > BOX + 0.5 {
             if count == 0 {
-                // Taller than the box: its first rows.
-                taken[0] = pitch.most();
+                // Taller than the box: its first rows, and its GIF only when all its
+                // text fits with it.
+                let most = pitch.most();
+                taken[0] = rows.min(most);
+                gifs[0] = gif.filter(|_| rows <= most && height <= BOX + 0.5);
                 count = 1;
-                used = pitch.height(taken[0]);
+                used = pitch.height(taken[0]) + gif_room(gifs[0]);
             }
             break;
         }
         taken[count] = rows;
+        gifs[count] = gif;
         count += 1;
         used += height;
     }
@@ -766,6 +809,11 @@ fn messages(
         // Resting the pointer on the name shows the sender's sender card.
         canvas.hit_region(tokens.name(index), name);
         y += pitch.height(rows);
+        let gif = gifs[count - 1 - index];
+        if let Some(shown) = gif {
+            gif_draw::draw(canvas, frame, GIF, shown, [place.x, y], place.width);
+        }
+        y += gif_room(gif);
     }
 }
 
@@ -994,6 +1042,7 @@ mod tests {
             staff: false,
             key_id: "0123456789abcdef",
             tier: None,
+            gif: None,
         }
     }
 
@@ -1193,5 +1242,88 @@ mod tests {
             Some(Some(DockAction::Open))
         );
         assert!(!dock.is_typing(), "the page takes the typing");
+    }
+
+    /// A message linking to a GIF shows "GIF" and the GIF's block under it, inside the
+    /// box and the column, at 1080p and 4K; older messages make room for it.
+    #[test]
+    fn a_gif_shows_under_its_message_inside_the_box() {
+        let id = crate::chat_gifs::GifId::new("DockGif01Loading").unwrap();
+        let font = test_font();
+        for viewport in [[1920.0, 1080.0], [3840.0, 2160.0]] {
+            let frame = Frame::new(viewport);
+            let s = frame.s;
+            let place = Place {
+                x: 1500.0,
+                top: 700.0,
+                width: 324.0,
+                card_above: false,
+            };
+            let lines = [
+                line("Kyle", "first"),
+                line("Kyle", "second"),
+                line("Fox", "third"),
+                DockLine {
+                    gif: Some(&id),
+                    ..line("Sol", "look GIF")
+                },
+            ];
+            let view = ChatDock {
+                lines: &lines,
+                online: 3,
+                live: true,
+                notice: "",
+                measure: Some(Measure::new(&font, TextStyle::NEUTRAL)),
+            };
+            let mut canvas = MenuCanvas::new();
+            canvas.begin_transparent(viewport);
+            let mut dock = Dock::default();
+            draw(&mut canvas, &frame, place, &mut dock, &view, false, TOKENS);
+            assert!(!canvas.overflowed());
+            let texts: Vec<(String, Rect)> = canvas
+                .draw_list()
+                .commands()
+                .iter()
+                .filter_map(|command| match command {
+                    DrawCommand::Text { rect, text, .. } => {
+                        Some((canvas.stored_text(*text).to_owned(), *rect))
+                    }
+                    _ => None,
+                })
+                .collect();
+            let find = |wanted: &str| {
+                texts
+                    .iter()
+                    .find(|(text, _)| text == wanted)
+                    .map(|(_, rect)| *rect)
+            };
+            let label = find("look GIF").expect("the line");
+            let loading = find("Loading GIF").expect("the placeholder");
+            assert!(loading.y >= label.bottom() - 1.0, "{loading:?} {label:?}");
+            let box_top = (place.top + BOX_TOP) * s;
+            let box_bottom = (place.top + BOX_TOP + BOX) * s;
+            assert!(loading.bottom() <= box_bottom + 0.5, "{loading:?}");
+            assert!(loading.x >= place.x * s - 0.5);
+            assert!(loading.right() <= (place.x + place.width) * s + 0.5);
+            // Room was made: the oldest is gone, the rest are in the box.
+            assert!(find("first").is_none());
+            for wanted in ["second", "third", "look GIF"] {
+                let rect = find(wanted).expect(wanted);
+                assert!(rect.y >= box_top - 0.5 && rect.bottom() <= box_bottom + 0.5);
+            }
+            assert_eq!(dock.shown, (1, 3));
+        }
+    }
+
+    /// GIFs off: the link stays text and nothing is kept to show.
+    #[test]
+    fn a_line_keeps_its_link_without_a_gif_for_a_drop() {
+        let text = "https://giphy.com/gifs/DockGif02Drop";
+        let drop = Line {
+            tier: Some(&crate::holocrons::TIERS[0]),
+            ..Line::default()
+        }
+        .with_gif(text);
+        assert_eq!((drop.text.as_str(), drop.gif), (text, None));
     }
 }

@@ -573,6 +573,12 @@ pub(super) fn register_daily_cvars(cvars: &mut CvarRegistry) -> Result<(), sjk_s
             "Play a sound when another player's SJK chat message arrives (cg_chatSounds 0 silences it too)",
         ),
         CvarDefinition::new(
+            crate::chat_gifs::CVAR,
+            true,
+            archive,
+            "Show the GIF of a GIPHY link in SJK chat, fetched from GIPHY by this PC, which GIPHY sees (0 keeps links as text and fetches nothing)",
+        ),
+        CvarDefinition::new(
             "cl_updateAs",
             "",
             CvarFlags::NONE,

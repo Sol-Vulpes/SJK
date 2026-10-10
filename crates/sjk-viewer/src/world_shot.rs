@@ -273,6 +273,9 @@ mod create_game;
 #[path = "world_shot_graphics_reload.rs"]
 mod graphics_reload;
 
+#[path = "world_shot_chat_gifs.rs"]
+mod chat_gifs_shots;
+
 #[cfg(test)]
 mod tests {
     use super::*;

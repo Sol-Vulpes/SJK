@@ -43,6 +43,7 @@ The hub's side is described in Sol-Vulpes/SJK-hub (`PROTOCOL.md`, "Chat", "Emote
 | The dock (main page, in-game menu) | [chat_dock.rs](../crates/sjk-viewer/src/menu/sjk/chat_dock.rs), placed by [home.rs](../crates/sjk-viewer/src/menu/sjk/home.rs) and [ingame_menu/sjk_view.rs](../crates/sjk-viewer/src/ingame_menu/sjk_view.rs) |
 | SJK chat page | [sjk_chat_panel.rs](../crates/sjk-viewer/src/sjk_chat_panel.rs), [sjk_chat_panel_view.rs](../crates/sjk-viewer/src/sjk_chat_panel_view.rs), [console_sjk_chat_page.rs](../crates/sjk-viewer/src/console_sjk_chat_page.rs) |
 | Emotes | [emotes.rs](../crates/sjk-viewer/src/emotes.rs), [emotes_frame.rs](../crates/sjk-viewer/src/emotes_frame.rs) |
+| GIFs from GIPHY: links, fetching, decoding, the cache, drawing | [chat_gifs.rs](../crates/sjk-viewer/src/chat_gifs.rs) and its `link`, `fetch`, `decode`, `draw` modules; textures in [gif_textures.rs](../crates/sjk-viewer/src/ui_renderer/gif_textures.rs) |
 
 ## Hub protocol (additions to version 1)
 
@@ -197,6 +198,73 @@ played nothing.
   The page draws a copy of the chat taken under the identity's lock, never the chat
   itself: drawing asks for the player's own key (`printable_key_id`), which takes that
   lock again, and a lock held while drawing froze the game.
+
+## GIFs from GIPHY
+
+A GIPHY link in an SJK chat message shows its GIF (Sol's decision, 10/10/2026: "GIPHY
+links should just display the GIF in chat (not through the hub)"). The hub carries only
+the text, as for any message; each reader's client fetches the GIF from GIPHY itself.
+Only GIPHY: Tenor's API shut down on 30/06/2026.
+
+- **Links recognised** ([link.rs](../crates/sjk-viewer/src/chat_gifs/link.rs)): `https://`
+  (or `http://`) with the host compared whole and lower-cased, no user or port:
+  `giphy.com/gifs/<slug>-<id>` and `giphy.com/gifs/<id>` (also `stickers/`, and
+  `www.giphy.com`), `giphy.com/embed/<id>`, `media.giphy.com` and `media0` to
+  `media4.giphy.com` `/media/<id>/<file>`, with or without the `v1.<token>` segment of
+  GIPHY's share links (`/media/v1.Y2lk.../<id>/giphy.gif?cid=...`), and
+  `i.giphy.com/<id>.gif` (`.webp`) or `i.giphy.com/media/[v1.<token>/]<id>/<file>`. The
+  query and fragment are ignored; punctuation ending a sentence after the link is not
+  part of it; short links (`gph.is`) are not followed. The id must be 6 to 40 ASCII
+  letters and digits with a capital or a digit among them (a slug word such as
+  `birthday` is not an id). A message shows at most one GIF, its first link's; that link
+  reads `GIF` in the line, and other links stay text.
+- **What is fetched** ([fetch.rs](../crates/sjk-viewer/src/chat_gifs/fetch.rs)): never
+  the pasted address. SJK rebuilds `https://media.giphy.com/media/<id>/200.gif` (the
+  rendition 200 pixels high GIPHY makes for every GIF; a typical one is 0.2 to 0.6 MB)
+  and checks it again before the request; only when GIPHY answers 404 for it,
+  `https://media.giphy.com/media/<id>/giphy.gif`, the original. For an id it does not
+  know, GIPHY answers the original with 200 and a "not found" picture of its own, marked
+  with an `x-retry-not-found-metric` header (seen 10/10/2026), which SJK takes as a 404.
+  HTTPS only, no redirect followed, 10 seconds for the whole request, at most 4 MiB read
+  (more is refused), `Accept: image/gif`, the user agent `SJK/<version>`. No cookie, no
+  key, nothing about the player is sent.
+- **Decoding** ([decode.rs](../crates/sjk-viewer/src/chat_gifs/decode.rs)), on the
+  `sjk-chat-gifs` worker thread, never on the frame thread, with the `image` crate's GIF
+  decoder (its `gif` feature): a canvas over 2048 pixels a side is refused; each frame is
+  composed as the file says and scaled to fit 480 pixels a side; an animation over 240
+  frames or 32 MiB of RGBA keeps its first frame only, still. Delays under 20 ms are
+  shown as 100 ms, as browsers do.
+- **The cache** ([chat_gifs.rs](../crates/sjk-viewer/src/chat_gifs.rs)): decoded GIFs
+  stay in memory only, by id, so a GIF in several messages loads once: at most 24 GIFs
+  and 96 MiB of pixels, those used least recently dropped first (never one on screen).
+  Nothing is written to disk. A GIF that could not be had is asked for again after five
+  minutes. Eight GIFs can be drawn at once, each in a texture of its own made at its size
+  ([gif_textures.rs](../crates/sjk-viewer/src/ui_renderer/gif_textures.rs)); once a frame
+  each gets the frame of its animation, uploaded only when it changes, so a GIF on screen
+  costs one small texture write per frame change and none otherwise. Every copy of a GIF
+  plays in step.
+- **How it shows** ([draw.rs](../crates/sjk-viewer/src/chat_gifs/draw.rs)): under the
+  message's text, on the SJK chat page 160 pixels high (at 1080p) and on the docks 48, as
+  wide as its shape makes it (a column too narrow makes it narrower and lower). While it
+  loads, a quiet box of that height says "Loading GIF", so nothing moves when it comes;
+  when it could not be had, one quiet line says "GIF unavailable". The docks' box keeps
+  its height: a message with a GIF takes the room of three one-row messages, and older
+  ones make room; a message taller than the box with its GIF shows its text without it.
+  The in-game chat feed shows the link as text.
+- **Muted players**: their GIFs are never fetched. The docks leave their lines out and
+  the page shows "Muted on this PC" in place of the text, so their links are never read
+  for a GIF (`chat_gifs::for_message`).
+- **Switch**: `cl_sjkChatGifs` (archived, default 1; Settings > Network > SJK chat GIFs,
+  under SJK chat sound, so in every settings screen and settings search). 0 keeps links
+  as text and fetches nothing. With `cl_sjkChat 0` no message shows, so nothing is
+  fetched either.
+- **The chat's rules** let GIPHY links through: `:`, `/`, `.`, `-`, `_`, `?`, `=`, `&`
+  and `%` are in the bio's punctuation, so `chat::check` and `chat::for_display` keep
+  them unchanged (a test sends each shape through both). A message is at most 150
+  characters, though: GIPHY's share links with all their tracking words
+  (`/media/v1.<long token>/<id>/giphy.gif?cid=...&ep=...&rid=...&ct=g`) are often longer
+  and are refused (`chat_length`); the page's link (`giphy.com/gifs/<slug>-<id>`) or the
+  media link without its query fits.
 
 ## Who is online
 
@@ -395,6 +463,13 @@ player reading the chat would see which keys read the feed in the last minute,
 whether they are in a match (not which server), and when the others last read it, up
 to a week back; the list is not deployed yet.
 
+GIFs ([GIFs from GIPHY](#gifs-from-giphy)): with `cl_sjkChatGifs` on, a message linking
+to a GIPHY GIF makes this PC fetch it from GIPHY (Giphy, Inc., a third-party service
+with its own privacy policy), so GIPHY sees the player's IP address, the GIF's id and
+when, as for any picture a browser loads from it. The hub is not involved and learns
+nothing of it. Nothing else is sent: no cookie, key or name. GIFs stay in memory only.
+`cl_sjkChatGifs 0` stops every request to GIPHY.
+
 ## Verification
 
 08/10/2026, Ubuntu 24.04, Rust 1.99:
@@ -437,6 +512,21 @@ to a week back; the list is not deployed yet.
   the settings row. Made from the retail `talk.mp3` it matched the sound Sol chose,
   sample for sample: correlation 0.9993, RMS 0.03321 against 0.03319, the
   difference's RMS 0.0012, peak 0.527 against 0.527. Not heard in the client.
+
+- GIFs (10/10/2026, Windows 11): unit tests for the links (every shape, bad ids,
+  look-alike hosts such as `giphy.com.evil.example`, a user or port, `http` fetched over
+  `https`), the address rebuilt and checked, the small rendition first and the original
+  only after a 404, the 4 MiB cap, decoding (frames, delays, the 20 to 100 ms clamp,
+  scaling to 480, 240 frames and the byte budget falling back to the first frame), the
+  cache (asked once, uploaded once per frame change, a failure not asked again at once,
+  eviction by count and by bytes, slots for GIFs on screen), muted senders and the switch
+  fetching nothing, the settings row, and the page and the docks fitting their GIF at
+  1080p and 4K. One real GIF fetched from GIPHY by an ignored test
+  (`chat_gifs::fetch::tests::a_real_gif_from_giphy`): `200.gif` of `3o7TKSjRrfIPjeiVyM`,
+  582,333 bytes in about 0.26 s, 200 by 200, 43 frames, 3.5 s long; a made-up id gave
+  404. World shots over duel6 with test GIFs made in the test
+  (`world_shot::chat_gifs_shots`, the page and both docks at 1080p and 4K) were looked
+  at. Not seen in the game window or with a GIF sent through the hub.
 
 Not verified: no client was started, so nothing was seen in a game or over the map;
 nothing went through Cloudflare's tunnel or the deployed hub (which does not have the

@@ -22,6 +22,7 @@ mod camera_uniform;
 mod capture;
 mod cgame_options;
 mod chat;
+mod chat_gifs;
 mod chat_mutes;
 mod cinematic_roq;
 mod client_guid;
