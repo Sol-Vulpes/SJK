@@ -20,6 +20,7 @@ and changed together. Begin with the status page, then the architecture.
 | [Player identity](identity.md) | SJK's identity key, the hub, scoreboard badges, medals, the JoF clan tag: design, limits and privacy |
 | [SJK chat and emotes](hub-chat.md) | The chat every SJK player shares through the hub, and the emotes path |
 | [Holocron drops](holocrons.md) | Loot earned by playing: tiers, odds, caps, the active flag, the pop-up, chat lines, the staff tools and the list other screens read |
+| [Cards](cards.md) | Planned: what opening a holocron will give (collectible cards, finishes, editions, odds); not built |
 | [Unlockables and looks](unlockables.md) | Blade skins and other unlockables, and looks every SJK player sees through the hub |
 
 [AGENTS.md](../AGENTS.md) defines the documentation maintenance rules. Update the
