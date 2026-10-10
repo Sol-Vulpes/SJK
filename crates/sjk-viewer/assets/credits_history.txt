@@ -9,6 +9,8 @@
 #                               made it when that is not the piece's owner.
 
 = Sol
++ 10/10/2026 | - | The SJK chat page no longer freezes the game
+- 7ca782a |  | Fix the SJK chat page freezing the game
 + 10/10/2026 | - | Medals bring their saber shaders: Bug Hunter Glitch, Early Tester Hologram, Early Contributor Runic
 - 31aa6cd |  | Medals bring their saber shaders
 + 10/10/2026 | - | Nine more saber shaders: Unstable, Molten, Spectral, Glitch, Hologram, Runic, Chameleon, Banner, Heartbeat

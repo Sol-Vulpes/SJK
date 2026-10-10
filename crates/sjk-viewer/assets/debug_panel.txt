@@ -107,6 +107,13 @@ test: Normal chat (Y, T, U), the console and the in-game SJK menu behave as befo
 note: Needs the hub's chat routes deployed; until then the dock stays on Not connected.
 note: Tab from Team now goes to SJK: read the composer's channel before pressing Enter.
 
+[sjk-chat-page-freeze]
+area: Console & chat
+title: The SJK chat page no longer freezes the game
+change: Choosing a message or showing a sender card on the page waited on itself for ever.
+test: Main menu > the dock's Open chat: click a message, then the field, then rest on a name.
+test: The game keeps running; the chosen message shows its key id, but never your own.
+
 [chat-percent-quotes]
 area: Console & chat
 title: % and quotes in chat arrive as typed, as EternalJK sends them (SJK PR #44)

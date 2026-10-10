@@ -155,6 +155,9 @@ Old clients ignore all of it, so it stays `/v1/`.
   came to (sending, done, or the hub's refusal). It opens from the dock's
   Open chat, `sjkchat`, `messagemode5` outside a game, the classic in-game SJK menu's
   SJK chat and the SJK UI in-game menu's SJK chat icon.
+  The page draws a copy of the chat taken under the identity's lock, never the chat
+  itself: drawing asks for the player's own key (`printable_key_id`), which takes that
+  lock again, and a lock held while drawing froze the game.
 
 ## How a line looks
 
