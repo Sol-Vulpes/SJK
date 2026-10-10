@@ -2,8 +2,8 @@
 //! player can use right now, read from the playerstate as the wheel opens (the
 //! known bits the Force bar reads, [`sjk_client::force_wheel`], with JoF JA+'s
 //! Stasis, Repulse and Dash where granted). Jump and the saber powers are passive
-//! and left out, and so is SJK's Illuminate, which is not a Force power: it has
-//! a choice of its own on the Toys page ([`super::catalog`]'s Toys).
+//! and left out. SJK's Illuminate is a toy, not a Force power: it has a choice of
+//! its own on the Toys page ([`super::catalog`]'s Toys).
 //!
 //! A choice selects its power (`forceselect`, so the Use Force key uses it next)
 //! and, for an instant power, uses it at once with its own command (`force_throw`,
@@ -24,8 +24,7 @@ use crate::hud::force_wheel as bar;
 use sjk_client::force_wheel::{self, DASH, REPULSE, STASIS};
 use sjk_ui::TextureId;
 
-/// The page's order, by Force wheel entry (`forcePowers_t`, then the pseudo-slots;
-/// Illuminate, the wheel's last entry, is not a power and is left out).
+/// The page's order, by Force wheel entry (`forcePowers_t`, then the pseudo-slots).
 pub(crate) const ORDER: [u8; 17] = [
     // Neutral: Push, Pull, Speed, Sense.
     3, 4, 2, 14, //
@@ -167,27 +166,21 @@ mod tests {
         seen.sort_unstable();
         seen.dedup();
         assert_eq!(seen.len(), ORDER.len());
-        // Jump and the saber powers are never on it, nor Illuminate (a toy).
-        for passive in [1, 15, 16, 17, force_wheel::ILLUMINATE] {
+        // Jump and the saber powers are never on it.
+        for passive in [1, 15, 16, 17] {
             assert!(!ORDER.contains(&passive));
         }
-        // Every entry the Force bar can hold but Illuminate, and nothing else.
+        // Every entry the Force bar can hold, and nothing else.
         let (wheel, count) = force_wheel::build(u32::MAX >> (32 - force_wheel::MAX_SLOTS));
-        let mut bar: Vec<u8> = wheel[..count]
-            .iter()
-            .copied()
-            .filter(|&slot| slot != force_wheel::ILLUMINATE)
-            .collect();
+        let mut bar: Vec<u8> = wheel[..count].to_vec();
         bar.sort_unstable();
         assert_eq!(bar, seen);
     }
 
     #[test]
     fn a_light_build_is_nine_choices_on_one_ring_and_illuminate_is_not_one() {
-        // The client sets Illuminate's bit for the Force bar; the page ignores it.
-        let known = force_wheel::client_known(LIGHT, true);
-        assert!(force_wheel::valid(known, force_wheel::ILLUMINATE));
-        let pages = pages("force", "Force", Some(&powers(known, 9)));
+        // Illuminate is a toy: no bit of the known powers brings it to the page.
+        let pages = pages("force", "Force", Some(&powers(LIGHT | 1 << 21, 9)));
         assert_eq!(
             labels(&pages),
             [[

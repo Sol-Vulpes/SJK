@@ -14,7 +14,8 @@ pub(crate) enum State {
     On(&'static str),
     /// The cvar is within a hundredth of this number.
     Near(&'static str, f64),
-    /// Illuminate's holocron is lit (the client's own state, no cvar holds it).
+    /// Illuminate's holocron is lit (the client's own state, no cvar holds it:
+    /// `toy_illuminate` flips it).
     Illuminate,
 }
 
@@ -132,11 +133,11 @@ pub(crate) const ICONS: [(&str, &[u8]); 45] = [
         "reconnect",
         include_bytes!("../../assets/wheel/reconnect.png"),
     ),
-    // Illuminate's own picture, the holocron the Force bar shows for it (bundled
-    // with the client, not cut from a board).
+    // Illuminate's own picture, the holocron (bundled with the client, not cut
+    // from a board).
     (
         "illuminate",
-        include_bytes!("../../assets/holocron/force_illuminate.png"),
+        include_bytes!("../../assets/holocron/toy_illuminate.png"),
     ),
     ("custom", include_bytes!("../../assets/wheel/custom.png")),
     (
@@ -513,7 +514,7 @@ pub(crate) const ACTIONS: &[Action] = &[
     action(
         "illuminate",
         "Illuminate",
-        "force_illuminate",
+        "toy_illuminate",
         Toys,
         State::Illuminate,
         Some("illuminate"),

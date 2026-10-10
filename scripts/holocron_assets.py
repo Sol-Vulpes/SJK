@@ -1,13 +1,13 @@
 """Make the Illuminate holocron's game files from Sol's two generated pictures,
 and the four loot-box tiers' art from the shipped face.
 
-Illuminate is SJK's own Force-wheel entry: a holocron that floats by the player's
+Illuminate is SJK's own toy (`toy_illuminate`): a holocron that floats by the player's
 shoulder and lights the way. Sol generated its pictures (07/10/2026): a holocron
 icon in the style of Jedi Academy's Force icons (1024x1024, on a flat grey ground)
 and one face of the holocron (2048x2048). This script writes, into the output
 folder:
 
-- `force_illuminate.png`: the icon cut out of its ground with its amber glow, cube
+- `toy_illuminate.png`: the icon cut out of its ground with its amber glow, cube
   at the stock icons' size, 128x128 like `gfx/mp/f_icon_*`;
 - `holocron.jpg`: the face, 512x512;
 - `holocron_glow.jpg`: the face's emblem alone on black, for the additive stage that
@@ -83,7 +83,7 @@ def icon(source: Path, output: Path) -> None:
         for v in (centre_x - side / 2, centre_y - side / 2, centre_x + side / 2, centre_y + side / 2)
     )
     picture = picture.crop(box).convert("RGBa").resize((ICON_SIZE, ICON_SIZE), Image.LANCZOS)
-    picture.convert("RGBA").save(output / "force_illuminate.png", optimize=True)
+    picture.convert("RGBA").save(output / "toy_illuminate.png", optimize=True)
 
 
 def face(source: Path, output: Path) -> None:

@@ -82,7 +82,8 @@ pub(crate) enum InputAction {
     /// `worldnote`: select the surface or mover under the crosshair, then write a note on
     /// it ([`crate::world_notes`]).
     WorldNote,
-    /// `force_illuminate`: turn Illuminate's holocron on or off ([`crate::illuminate`]).
+    /// `toy_illuminate` (or its old name `force_illuminate`): turn Illuminate's holocron
+    /// on or off ([`crate::illuminate`]).
     Illuminate,
     /// `cameracontrol`: open Camera control, as F8 does
     /// ([`crate::ingame_menu::Page::Shot`]).
@@ -262,6 +263,7 @@ impl GameplayInput {
                     | "flipkick"
                     | "inspect"
                     | "worldnote"
+                    | "toy_illuminate"
                     | "force_illuminate"
                     | "cameracontrol"
             )
@@ -418,7 +420,8 @@ impl GameplayInput {
             "flipkick" => Some(InputAction::FlipKick),
             "inspect" => Some(InputAction::Inspect),
             "worldnote" => Some(InputAction::WorldNote),
-            "force_illuminate" => Some(InputAction::Illuminate),
+            // The old name still runs the toy, but is not listed (`selection_commands`).
+            "toy_illuminate" | "force_illuminate" => Some(InputAction::Illuminate),
             "cameracontrol" => Some(InputAction::CameraControl),
             "vote" => match words.next().map(str::to_ascii_lowercase).as_deref() {
                 Some("yes" | "y" | "1") => Some(InputAction::Vote(true)),
@@ -712,6 +715,22 @@ mod tests {
     }
 
     #[test]
+    fn toy_illuminate_toggles_the_holocron_and_the_old_name_still_does() {
+        let mut input = GameplayInput::default();
+        for command in ["toy_illuminate", "TOY_ILLUMINATE", "force_illuminate"] {
+            assert!(GameplayInput::recognizes(command), "{command}");
+            assert_eq!(input.apply(command), Some(InputAction::Illuminate));
+        }
+        // No other `toy_` or `force_` name is the toy.
+        assert!(!GameplayInput::recognizes("toy_unknown"));
+        assert_eq!(input.apply("toy_unknown"), None);
+        assert_eq!(input.apply("force_illuminated"), None);
+        // Window focus lost: a bind pressed then does nothing, as for every command.
+        input.focus(false);
+        assert_eq!(input.apply("toy_illuminate"), None);
+    }
+
+    #[test]
     fn weapmelee_is_a_local_weapon_command() {
         let mut input = GameplayInput::default();
         assert!(GameplayInput::recognizes("weapmelee"));
@@ -726,8 +745,8 @@ mod tests {
         let mut input = GameplayInput::default();
         assert!(GameplayInput::recognizes("forceselect 3"));
         assert_eq!(
-            input.apply("forceselect 21"),
-            Some(InputAction::ForceSelect(21))
+            input.apply("forceselect 19"),
+            Some(InputAction::ForceSelect(19))
         );
         assert_eq!(input.apply("forceselect"), None);
         assert_eq!(input.apply("forceselect push"), None);

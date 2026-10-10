@@ -1,7 +1,7 @@
 //! The Collection's Toys tab: things to use in a match. The first is SJK's Illuminate
 //! holocron, everyone's (`docs/client.md`, Illuminate): its picture on its plinth on
 //! the left, the holocron lit by the player's model beside the page, and the words
-//! beside the model with the switch that puts it on the Force wheel (`cg_illuminate`).
+//! beside the model with the switch that lights it or puts it out (`toy_illuminate`).
 
 use super::view::{LEFT_X, STAGE_TEXT_WIDTH, STAGE_TEXT_X, glow, left_lines};
 use super::*;
@@ -12,10 +12,11 @@ use sjk_ui::{Color, DrawCommand, FontWeight, TextAlign, TextureId};
 /// The toy's niche: its corner and size.
 const NICHE: [f32; 3] = [LEFT_X, 300.0, 260.0];
 
-/// The Force wheel's picture of Illuminate, uploaded with the installed world's icons.
+/// Illuminate's picture: the quick wheel's, uploaded into the atlas at start.
 fn icon() -> TextureId {
-    TextureId(
-        crate::ui_renderer::FORCE_WHEEL_ICON_FIRST + u32::from(sjk_client::force_wheel::ILLUMINATE),
+    crate::ui_renderer::wheel_icon(
+        crate::quick_wheel::catalog::icon_index("illuminate")
+            .expect("the quick wheel's icons hold Illuminate's"),
     )
 }
 
@@ -53,7 +54,7 @@ impl Panel {
         self.lead(
             frame,
             "1 toy",
-            "Things to use in a match, from the Force wheel or a key.",
+            "Things to use in a match, from the quick wheel or a key.",
         );
         let [x, y, size] = NICHE;
         glow(
@@ -168,7 +169,7 @@ impl Panel {
         y = left_lines(
             &mut self.ui,
             frame,
-            "Use it from the Force wheel's last entry, or bind a key to force_illuminate.",
+            "Bind a key to toy_illuminate, or use the quick wheel's Toys page.",
             [x, y, width],
             (60, 2),
             16.0,
@@ -179,7 +180,7 @@ impl Panel {
         text(
             &mut self.ui,
             TextFamily::Display,
-            format_args!("On the Force wheel"),
+            format_args!("Holocron lit"),
             frame.rect(x, y, 300.0, 30.0),
             22.0 * s,
             color::TEXT,

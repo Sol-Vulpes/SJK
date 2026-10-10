@@ -26,6 +26,8 @@ const ICONS: [(&str, &str); 39] = [
     ("use_sentry", "gfx/hud/i_icon_sentrygun.tga"),
     ("use_field", "gfx/hud/i_icon_shieldwall.tga"),
     ("use_electrobinoculars", "gfx/hud/i_icon_zoom.tga"),
+    // SJK's Illuminate holocron, which the client bundles (`crate::illuminate`).
+    ("toy_illuminate", "gfx/sjk/toy_illuminate.png"),
     // WEAPONS
     ("weapon 1", "gfx/hud/w_icon_lightsaber.tga"),
     ("weapmelee", "gfx/hud/w_icon_melee.tga"),
@@ -59,8 +61,6 @@ const ICONS: [(&str, &str); 39] = [
     ("force_dash", "gfx/jof/force_dash.tga"),
     ("+force_stasis", "gfx/mp/f_icon_levitation.tga"),
     ("force_repulse", "gfx/jof/force_repulse.tga"),
-    // SJK's Illuminate holocron, which the client bundles (`crate::illuminate`).
-    ("force_illuminate", "gfx/sjk/force_illuminate.png"),
     // OTHER
     ("teammenu", "gfx/hud/mpi_rflag.tga"),
 ];

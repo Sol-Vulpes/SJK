@@ -519,12 +519,6 @@ pub(super) fn register_daily_cvars(cvars: &mut CvarRegistry) -> Result<(), sjk_s
             "Protect and Absorb together show one cyan shell, as in single player",
         ),
         CvarDefinition::new(
-            crate::illuminate::CVAR,
-            1_i64,
-            archive,
-            "Illuminate on the Force wheel: a holocron by your shoulder that lights the way, which other SJK players on the server see too (0 removes it)",
-        ),
-        CvarDefinition::new(
             crate::unlockables::SABER_SKIN_CVAR,
             "",
             archive,

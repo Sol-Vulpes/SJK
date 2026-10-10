@@ -459,6 +459,7 @@ impl ViewerConsole {
             let _ = shell.cvars.set_text("cg_killfeedDefaultVersion", "1");
         }
         retire_modern_ui(&mut shell.cvars);
+        retire_force_illuminate(&mut shell);
         shell.push_log("^5SJK console ready. ^7Type cmdlist for commands.");
         Ok(Self {
             shell,
@@ -484,6 +485,8 @@ impl ViewerConsole {
             holocrons_panel: super::holocrons_panel::Panel::new(),
             profile_hub_return: crate::player_menu::ReturnTarget::MainMenu,
             holocrons_last: false,
+            illuminate_lit: false,
+            pending_illuminate: None,
             sjk_chat_panel: super::sjk_chat_panel::Panel::new(),
             config_import: super::config_import_panel::Panel::new(),
             userinfo_dirty,
@@ -871,6 +874,51 @@ fn retire_modern_ui(cvars: &mut CvarRegistry) {
     }
 }
 
+/// Illuminate was a Force wheel entry (`force_illuminate`, on the wheel while
+/// `cg_illuminate` was 1) and is a toy now (`toy_illuminate`, always available, lit
+/// for the client's run). A saved `cg_illuminate`, whichever way it was set, is
+/// dropped from the profile: neither value means anything now, so the holocron is
+/// never lit nor unusable because of it. Binds saved with the old command are
+/// rewritten to the new one, so the key-binding editor shows them (the old name
+/// would run it anyway). Done on every load; it changes nothing once it has run.
+fn retire_force_illuminate(shell: &mut sjk_shell::Shell) {
+    let _ = shell.cvars.unset(crate::illuminate::OLD_CVAR);
+    let renamed: Vec<(String, String)> = shell
+        .binds
+        .iter()
+        .filter_map(|(key, command)| Some((key.to_owned(), renamed_illuminate_command(command)?)))
+        .collect();
+    for (key, command) in renamed {
+        let _ = shell.binds.bind(&key, command);
+    }
+}
+
+/// `command` with its `force_illuminate` parts named `toy_illuminate`, or `None`
+/// when it has none.
+fn renamed_illuminate_command(command: &str) -> Option<String> {
+    let old = crate::illuminate::OLD_COMMAND;
+    let mut changed = false;
+    let parts: Vec<String> = command
+        .split(';')
+        .map(|part| {
+            let trimmed = part.trim_start();
+            let name = trimmed.split_ascii_whitespace().next().unwrap_or("");
+            if name.eq_ignore_ascii_case(old) {
+                changed = true;
+                let indent = &part[..part.len() - trimmed.len()];
+                format!(
+                    "{indent}{}{}",
+                    crate::illuminate::COMMAND,
+                    &trimmed[name.len()..]
+                )
+            } else {
+                part.to_owned()
+            }
+        })
+        .collect();
+    changed.then(|| parts.join(";"))
+}
+
 #[cfg(test)]
 mod tests {
     use crate::console::ViewerConsole;
@@ -1010,6 +1058,49 @@ mod tests {
         .unwrap();
         let console = ViewerConsole::new(chosen).unwrap();
         assert_eq!(console.shell.binds.get("q"), Some("+wheel general"));
+    }
+
+    /// Illuminate left the Force wheel: a saved `cg_illuminate` (the old on-the-wheel
+    /// switch, 0 or 1) is dropped whichever it was, binds with the old command are
+    /// renamed, and a bind to anything else stays.
+    #[test]
+    fn saved_force_illuminate_settings_and_binds_become_the_toy() {
+        let directory = tempfile::tempdir().unwrap();
+        for value in ["0", "1"] {
+            let path = directory.path().join(format!("old{value}.cfg"));
+            std::fs::write(
+                &path,
+                format!(
+                    "seta cg_illuminate \"{value}\"
+bind x \"force_illuminate\"
+                     bind y \"say hi; FORCE_ILLUMINATE\"
+bind z \"weapnext\"
+"
+                ),
+            )
+            .unwrap();
+            let console = ViewerConsole::new(path).unwrap();
+            assert!(
+                console.shell.cvars.get("cg_illuminate").is_none(),
+                "cg_illuminate {value} is dropped, not kept as a user cvar"
+            );
+            assert_eq!(console.shell.binds.get("x"), Some("toy_illuminate"));
+            assert_eq!(console.shell.binds.get("y"), Some("say hi; toy_illuminate"));
+            assert_eq!(console.shell.binds.get("z"), Some("weapnext"));
+        }
+        // A new profile has neither, and the toy's bind stays as bound.
+        let fresh = ViewerConsole::new(directory.path().join("fresh.cfg")).unwrap();
+        assert!(fresh.shell.cvars.get("cg_illuminate").is_none());
+        assert_eq!(
+            super::renamed_illuminate_command("toy_illuminate"),
+            None,
+            "nothing to rename"
+        );
+        assert_eq!(
+            super::renamed_illuminate_command("force_illuminate_x"),
+            None,
+            "only the whole command"
+        );
     }
 
     /// A profile saved with the retired modern styles starts on the defaults,

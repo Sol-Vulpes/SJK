@@ -173,6 +173,11 @@ pub(crate) struct ViewerConsole {
     /// The Collection's Holocrons (the Holocrons page) was shown last: the game menu's
     /// Collection opens on it again.
     holocrons_last: bool,
+    /// The Illuminate holocron is lit: the viewer's state, mirrored each frame for the
+    /// Collection's Toys tab (`console_collection_page.rs`).
+    illuminate_lit: bool,
+    /// The Toys tab asked to light the holocron (`true`) or put it out, not yet taken.
+    pending_illuminate: Option<bool>,
     sjk_chat_panel: sjk_chat_panel::Panel,
     /// The Import page (a dropped `.cfg`), drawn in place of the console while open.
     config_import: config_import_panel::Panel,

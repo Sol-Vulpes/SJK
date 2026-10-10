@@ -10,6 +10,10 @@ impl GpuState {
         let Some(console) = &mut self.console else {
             return;
         };
+        // The Collection's Toys tab lights or puts out the holocron through the console.
+        if let Some(on) = console.take_illuminate_request() {
+            self.illuminate.set_on(on);
+        }
         let mut actions = [None; MAX_ACTIONS_PER_FRAME];
         console.advance_command_frame();
         console.pump_console_socket();
@@ -41,6 +45,10 @@ impl GpuState {
         }
         for action in actions[..action_count].iter().copied().flatten() {
             self.apply_input_action(Some(action));
+        }
+        // `toy_illuminate` may have flipped it: tell the Toys tab.
+        if let Some(console) = self.console.as_mut() {
+            console.set_illuminate_lit(self.illuminate.lit());
         }
         let connection = self
             .console

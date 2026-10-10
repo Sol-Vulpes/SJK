@@ -390,9 +390,9 @@ impl Panel {
             Tab::Toys => keys.push((
                 &["Enter"],
                 if inputs.illuminate {
-                    "take off the wheel"
+                    "put out"
                 } else {
-                    "put on the wheel"
+                    "light"
                 },
             )),
             _ => {}
