@@ -24,7 +24,7 @@ This page is the design and the current limits. The player-facing summary is
 | Medals: catalogue, ribbons, pictures | [medals.rs](../crates/sjk-viewer/src/medals.rs), [medals/](../crates/sjk-viewer/src/medals/), [identity_panel_medals.rs](../crates/sjk-viewer/src/identity_panel_medals.rs) |
 | New medal pop-up, its ceremony and `debug_medal` | [medal_popup.rs](../crates/sjk-viewer/src/medal_popup.rs), [medal_popup/](../crates/sjk-viewer/src/medal_popup/) |
 | Bio rules (shared word for word with the hub) | [bio.rs](../crates/sjk-identity/src/bio.rs) |
-| Profile page, `profile` and `achievements` commands | [profile_panel.rs](../crates/sjk-viewer/src/profile_panel.rs), [profile_panel_view.rs](../crates/sjk-viewer/src/profile_panel_view.rs), [console_profile_page.rs](../crates/sjk-viewer/src/console_profile_page.rs) |
+| Profile page, `profile` command (the achievements and medals are the Collection's: `collection_panel.rs`, `collection` and `achievements` commands) | [profile_panel.rs](../crates/sjk-viewer/src/profile_panel.rs), [profile_panel_view.rs](../crates/sjk-viewer/src/profile_panel_view.rs), [console_profile_page.rs](../crates/sjk-viewer/src/console_profile_page.rs) |
 | Profile card (main page, in-game menu) | [profile_card.rs](../crates/sjk-viewer/src/profile_card.rs) |
 | Pictures: wire, cache, crop and scale, kept files, `sjkavatar` | [avatar.rs](../crates/sjk-identity/src/avatar.rs), [avatars.rs](../crates/sjk-viewer/src/avatars.rs), [avatars/picture.rs](../crates/sjk-viewer/src/avatars/picture.rs), [avatars/store.rs](../crates/sjk-viewer/src/avatars/store.rs), [avatar_command.rs](../crates/sjk-viewer/src/avatar_command.rs) |
 | Staff requests, Staff page, `staff` command | [staff.rs](../crates/sjk-identity/src/staff.rs), [staff_panel.rs](../crates/sjk-viewer/src/staff_panel.rs), [staff_panel_view.rs](../crates/sjk-viewer/src/staff_panel_view.rs), [console_staff_page.rs](../crates/sjk-viewer/src/console_staff_page.rs) |
@@ -398,9 +398,8 @@ only to registered keys; a client keeps them to draw looks and does not pass the
 ## Profile
 
 The Profile page (the SJK UI's [Profile screen](sjk-ui.md#profile-screen), its SJK
-Profile, Achievements and Medals tabs, opened by the main page's Profile and SJK >
-Profile and the in-game menu's Profile; the classic menu's SJK page and in-game SJK
-menu; or the `profile` command) is the player's SJK profile as other players read it
+Profile tab, opened by the main page's Profile and profile card and the in-game menu's
+Profile; the classic menu's SJK page and in-game SJK menu; or the `profile` command) is the player's SJK profile as other players read it
 on the hub, in the SJK UI's look in every menu style:
 
 - who they are: the hub name with its colours, Verified by the SJK team or not yet,
@@ -413,15 +412,13 @@ on the hub, in the SJK UI's look in every menu style:
 - the bio, written in a box of up to 6 lines (Enter saves, Shift+Enter starts a new
   line, Revert puts back the hub's copy), with its counts, the hub's answer and the
   rules in a line under it;
-- their medals (picture, name, date given; on the Profile screen a Medals tab of its
-  own instead: every medal the client knows, the ones given first with their whole
-  picture, when they were given, what they are for and the team's note, the others
-  dimmed as not given yet) and how many achievements are unlocked, with a way to the
-  board, and how many unlockables are owned, with a way to them (on the Profile
-  screen, its Achievements and Collection tabs).
-
-Its second tab is the achievements board (below; the `achievements` command opens
-it). With the identity off, or the hub out of reach, the page says so: the bio cannot
+- their medals (picture, name, date given; on its own only) and how many
+  achievements are unlocked, with See the board, and how many saber shaders are owned,
+  with See the collection: both open the [Collection](sjk-ui.md#collection), where the
+  medals hang on a rail (every medal the client knows, the ones given first with their
+  whole picture, when they were given, what they are for and the team's note, the
+  others dark as not given yet) and the achievements stand as a wall of medallions by
+  category (below; the `achievements` command opens it). With the identity off, or the hub out of reach, the page says so: the bio cannot
 be written and the record and board show this PC's counts.
 
 The player's picture stands at the top of the left column ([Pictures](#pictures)): a
@@ -662,9 +659,10 @@ sends its counts, which the page says.
 - `cl_hubUrl` (default `https://sjk.dfox.app`; Settings > Network > SJK hub) is the hub's address.
   It must be `https://host[:port]` with no path; plain `http://` is accepted for
   localhost only.
-- `profile` opens the Profile page and `achievements` its board (again: closes it); in
-  the SJK UI they are the Profile screen's SJK Profile and Achievements tabs, and
-  `unlockables` its Collection tab.
+- `profile` opens the Profile page (again: closes it), in the SJK UI the Profile
+  screen's SJK Profile tab; `collection` opens the Collection, `achievements` on its
+  Achievements tab and `unlockables` on its Shaders tab (in the SJK UI the Collection
+  screen, [sjk-ui.md](sjk-ui.md#collection)).
 - `staff` opens the Staff page, for a staff key only.
 - `sjkavatar <file>` reads a picture file and shows it on the Profile page, ready to
   send with Use this picture; `sjkavatar clear` takes the player's picture down;
@@ -672,8 +670,8 @@ sends its counts, which the page says.
 - `cg_saberSkin` (archived, default empty) is the blade-skin unlock id the player
   wears; it applies, and is sent, only while the own profile lists it
   ([unlockables.md](unlockables.md)). `saberskin` lists the blade skins (owned or
-  locked) and `saberskin <id>`/`none` sets it; `unlockables` opens the Unlockables
-  page, where owned ones are equipped.
+  locked) and `saberskin <id>`/`none` sets it; `unlockables` opens the Collection's
+  Shaders tab, where owned ones are equipped.
 - `cl_sjkChat` (default 1; Settings > Network > SJK chat) shows the SJK chat and reads
   it; `sjkchat` opens its page, `messagemode5` (I) its composer in a game, and
   `sjkemote <id>` sends an emote ([hub-chat.md](hub-chat.md)).

@@ -179,10 +179,10 @@ impl BladeChoice {
 /// Why `holdings` offer no blade skin, in a few words.
 fn hint(holdings: &Holdings<'_>) -> &'static str {
     match holdings {
-        Holdings::IdentityOff => "Blade skins need the SJK identity",
-        Holdings::NoHub => "Blade skins need the SJK hub",
+        Holdings::IdentityOff => "Shaders need the SJK identity",
+        Holdings::NoHub => "Shaders need the SJK hub",
         Holdings::Waiting => "Waiting for the SJK hub...",
-        Holdings::Known(_) => "No blade skins yet: see Collection",
+        Holdings::Known(_) => "No saber shaders yet: see Collection",
     }
 }
 
@@ -250,13 +250,13 @@ mod tests {
         choice.read(&console);
         assert_eq!(choice.count(), 1);
         assert_eq!(choice.worn(), None);
-        assert_eq!(choice.hint(), Some("No blade skins yet: see Collection"));
+        assert_eq!(choice.hint(), Some("No saber shaders yet: see Collection"));
         choice.pick(&mut console, 0);
         choice.step(&mut console, 1);
         assert_eq!(console.text_value(SABER_SKIN_CVAR), Some("saber_sun"));
         // The live identity: none in tests, so it is off.
         choice.preview = None;
         choice.read(&console);
-        assert_eq!(choice.hint(), Some("Blade skins need the SJK identity"));
+        assert_eq!(choice.hint(), Some("Shaders need the SJK identity"));
     }
 }

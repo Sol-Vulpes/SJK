@@ -21,6 +21,10 @@ mod console_credits;
 #[path = "console_cvars.rs"]
 mod console_cvars;
 pub(crate) use console_cvars::DEFAULT_MAX_PACKETS;
+#[path = "console_collection_page.rs"]
+mod collection_page;
+#[path = "collection_panel.rs"]
+pub(crate) mod collection_panel;
 #[path = "config_import_panel.rs"]
 pub(crate) mod config_import_panel;
 #[path = "console_debug_panel.rs"]
@@ -51,18 +55,15 @@ pub(crate) mod sjk_chat_panel;
 mod staff_page;
 #[path = "staff_panel.rs"]
 pub(crate) mod staff_panel;
-#[path = "console_unlockables_page.rs"]
-mod unlockables_page;
-#[path = "unlockables_panel.rs"]
-pub(crate) mod unlockables_panel;
+pub(crate) use collection_page::{
+    ACHIEVEMENTS_COMMAND, ACHIEVEMENTS_HELP, COLLECTION_COMMAND, COLLECTION_HELP,
+    UNLOCKABLES_COMMAND, UNLOCKABLES_HELP,
+};
 pub(crate) use sjk_chat_page::{SJK_CHAT_COMMAND, SJK_CHAT_HELP};
 pub(crate) use staff_page::{STAFF_COMMAND, STAFF_HELP};
-pub(crate) use unlockables_page::{UNLOCKABLES_COMMAND, UNLOCKABLES_HELP};
 #[path = "profile_panel.rs"]
 pub(crate) mod profile_panel;
-pub(crate) use profile_page::{
-    ACHIEVEMENTS_COMMAND, ACHIEVEMENTS_HELP, PROFILE_COMMAND, PROFILE_HELP,
-};
+pub(crate) use profile_page::{PROFILE_COMMAND, PROFILE_HELP};
 #[path = "console_qcommon.rs"]
 mod qcommon;
 #[path = "update_panel.rs"]
@@ -158,7 +159,7 @@ pub(crate) struct ViewerConsole {
     identity_panel: identity_panel::Panel,
     profile_panel: profile_panel::Panel,
     staff_panel: staff_panel::Panel,
-    unlockables_panel: unlockables_panel::Panel,
+    collection_panel: collection_panel::Panel,
     /// Where the Profile screen returns while one of its tabs shows here
     /// ([`crate::profile_hub`]).
     profile_hub_return: crate::player_menu::ReturnTarget,
@@ -321,7 +322,7 @@ impl ViewerConsole {
                 || self.identity_panel.is_open()
                 || self.profile_panel.is_open()
                 || self.staff_panel.is_open()
-                || self.unlockables_panel.is_open()
+                || self.collection_panel.is_open()
                 || self.sjk_chat_panel.is_open()
                 || self.config_import.is_open())
     }
@@ -731,7 +732,7 @@ impl ViewerConsole {
         if let Some(draw_list) = self.staff_panel_draw_list() {
             return draw_list;
         }
-        if let Some(draw_list) = self.unlockables_panel_draw_list() {
+        if let Some(draw_list) = self.collection_panel_draw_list() {
             return draw_list;
         }
         if let Some(draw_list) = self.sjk_chat_panel_draw_list() {
@@ -799,7 +800,7 @@ impl ViewerConsole {
             self.identity_panel.close();
             self.profile_panel.close();
             self.staff_panel.close();
-            self.unlockables_panel.close();
+            self.collection_panel.close();
             self.sjk_chat_panel.close();
             self.config_import.close();
         }

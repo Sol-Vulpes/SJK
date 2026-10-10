@@ -68,6 +68,13 @@ pub(crate) struct MenuStage {
     /// creation spun its hilt; the actor only lends them its light.
     showcase: bool,
     preview: preview::Preview,
+    /// The blade the Collection's Shaders tab has the model hold instead of the one
+    /// worn (only drawn here, never sent); `None` outside it.
+    skin_override: Option<crate::console::collection_panel::PreviewSkin>,
+    /// The Collection's Toys tab: the Illuminate holocron floats by the model.
+    holocron_wanted: bool,
+    /// That holocron, lit, fading in and out as the player's own does.
+    pub(crate) holocron: crate::illuminate::Holocron,
 }
 
 struct StageActor {
@@ -77,6 +84,8 @@ struct StageActor {
     preview: PlayerPreview,
     origin: Vec3,
     rotation: Quat,
+    /// The way it faces, radians round the vertical (the stage's yaw).
+    yaw: f32,
     light: EntityLight,
     /// Right and left hand bolts of `current_frame`.
     hands: [Option<Attachment>; 2],
@@ -108,6 +117,16 @@ impl GpuState {
         if let Some(menu) = &mut self.client_menu {
             menu.set_preview_ready(ready);
         }
+        // The Collection's Shaders, Toys and Nameplates want the player's model.
+        let wish = self
+            .console
+            .as_ref()
+            .and_then(crate::console::ViewerConsole::collection_stage_wish);
+        if let (Some(menu), Some(console)) = (&mut self.client_menu, &self.console) {
+            menu.set_collection_stage(wish.is_some(), console);
+        }
+        self.menu_stage.skin_override = wish.map(|wish| wish.skin);
+        self.menu_stage.holocron_wanted = wish.is_some_and(|wish| wish.holocron);
         let staged = menu_backdrop::standalone_menu_visible(self)
             .then(|| {
                 self.client_menu
@@ -116,16 +135,32 @@ impl GpuState {
             })
             .flatten()
             .map(|(stage, model)| (Some(stage), model, None));
-        // Otherwise the classic profile's preview may want the actor.
-        // In a match the menu world's stage is not in this world.
+        // Otherwise the classic profile's preview may want the actor, or the
+        // Collection's where it has no stage. In a match the menu world's stage is not
+        // in this world.
         let sessions = self.live_session.is_some() || self.demo_session.is_some();
+        let on_stage = staged.is_some();
         let wanted = staged.or_else(|| {
             let (stage, model, preview) = self
                 .client_menu
                 .as_ref()
-                .and_then(menu::ClientMenu::preview_model)?;
+                .and_then(|menu| menu.preview_model().or_else(|| menu.collection_preview()))?;
             Some((stage.filter(|_| !sessions), model, Some(preview)))
         });
+        let backstage = match (wish, on_stage, &wanted) {
+            (None, _, _) | (Some(_), false, None) => {
+                crate::console::collection_panel::Backstage::None
+            }
+            (Some(_), true, _) => crate::console::collection_panel::Backstage::World {
+                head: self.stage_head(),
+            },
+            (Some(_), false, Some(_)) => {
+                crate::console::collection_panel::Backstage::Preview { ready }
+            }
+        };
+        if let Some(console) = &mut self.console {
+            console.set_collection_backstage(backstage);
+        }
         let Some((stage, model, preview)) = wanted else {
             self.menu_stage.actor = None;
             self.menu_stage.preview.wanted = None;
@@ -211,6 +246,31 @@ impl GpuState {
             self.menu_stage.actor = None;
         }
         self.place_stage_cosmetics();
+    }
+
+    /// Where the top of the stage model's head is in the window this frame, from the
+    /// last frame's view: the Collection's Nameplates stand the plate there.
+    fn stage_head(&self) -> Option<[f32; 2]> {
+        let actor = self.menu_stage.actor.as_ref()?;
+        if self.menu_stage.preview_only {
+            return None;
+        }
+        // The top of the head in the stage's stance (a saber stance, knees bent): about
+        // 36 units over the origin, under the standing box's top (40), as measured on a
+        // world shot.
+        let head = actor.origin + Vec3::Z * 36.0;
+        self.frame_view?.project(head)
+    }
+
+    /// The eye and yaw (radians) of the model on the stage, while the Collection wants
+    /// the Illuminate holocron by it.
+    pub(crate) fn stage_holocron_anchor(&self) -> Option<(Vec3, f32)> {
+        if !self.menu_stage.holocron_wanted || self.menu_stage.preview_only {
+            return None;
+        }
+        let actor = self.menu_stage.actor.as_ref()?;
+        // A standing player's eye: `DEFAULT_VIEWHEIGHT` over the origin.
+        Some((actor.origin + Vec3::Z * 36.0, actor.yaw))
     }
 
     /// Restart the actor in `stance` when the menu's style changed it. A
@@ -322,6 +382,7 @@ impl GpuState {
             preview,
             origin: Vec3::from_array(origin),
             rotation,
+            yaw: yaw.to_radians(),
             light,
             vertex_ranges,
             draws,

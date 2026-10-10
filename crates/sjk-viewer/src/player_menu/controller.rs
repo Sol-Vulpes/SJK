@@ -17,6 +17,14 @@ impl PlayerMenu {
         self.icon_vfs = Some(vfs);
     }
 
+    /// Read the model, sabers and cosmetics from the cvars for the Collection's
+    /// stage, the screen staying closed.
+    pub(crate) fn read_for_stage(&mut self, console: &ViewerConsole) {
+        self.read_console(console);
+        self.saber.open(console);
+        self.cosmetics.open(console, self.icon_vfs.as_ref());
+    }
+
     pub(crate) fn open(&mut self, console: &ViewerConsole, target: ReturnTarget) {
         self.return_target = target;
         self.hub = false;

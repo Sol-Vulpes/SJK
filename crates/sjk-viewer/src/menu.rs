@@ -190,6 +190,10 @@ pub(crate) struct ClientMenu {
     /// The renderer ([`crate::ui_renderer::ShapeRenderer::id`]) the menu's
     /// images were uploaded into; another one (a world change) has none of them.
     uploaded_into: Option<u64>,
+    /// The Collection shows Shaders, Toys or Nameplates over this menu: the camera goes
+    /// to the player's shot and the model stands on the stage, or shows in a preview
+    /// over a match ([`Self::set_collection_stage`]).
+    collection_stage: bool,
 }
 
 /// Backdrop shot each client phase is presented over. A connect stays on
@@ -258,6 +262,7 @@ impl ClientMenu {
             address_error: String::with_capacity(96),
             backdrop: None,
             uploaded_into: None,
+            collection_stage: false,
         }
     }
 
@@ -280,7 +285,7 @@ impl ClientMenu {
     /// Advance the live-map backdrop toward the current screen's shot and
     /// return the camera for this frame, once a map is loaded.
     pub(crate) fn drive_backdrop(&mut self, millis: u64) -> Option<Sample> {
-        let shot = shot_for(self.state.phase(), &self.player);
+        let shot = self.shot();
         self.backdrop
             .as_mut()
             .map(|backdrop| backdrop.drive(shot, millis))
@@ -393,10 +398,57 @@ impl ClientMenu {
             .filter(|map| !map.is_empty())
     }
 
+    /// The backdrop shot behind this frame: the current screen's, or the player's
+    /// while the Collection's stage is wanted.
+    fn shot(&self) -> Shot {
+        if self.collection_stage {
+            Shot::Player
+        } else {
+            shot_for(self.state.phase(), &self.player)
+        }
+    }
+
+    /// Whether the Collection wants the player's model (on Shaders, Toys and
+    /// Nameplates). When it starts wanting it and the player screen is not open, the
+    /// model and sabers are read from the cvars, so the stage shows the player's own.
+    pub(crate) fn set_collection_stage(&mut self, wanted: bool, console: &ViewerConsole) {
+        if wanted && !self.collection_stage && !matches!(self.state.phase(), ClientPhase::Player) {
+            self.player.read_for_stage(console);
+        }
+        self.collection_stage = wanted;
+    }
+
+    /// The model the Collection shows in its own preview where it has no stage (over a
+    /// match, or in the classic menus), with the stage it may stand on.
+    pub(crate) fn collection_preview(
+        &self,
+    ) -> Option<(Option<Stage>, &str, crate::player_menu::ModelPreview)> {
+        if !self.collection_stage {
+            return None;
+        }
+        let preview = crate::player_menu::ModelPreview {
+            area: crate::player_menu::PreviewArea::Sjk(
+                crate::console::collection_panel::MODEL_AREA,
+            ),
+            stance: "BOTH_STAND2",
+            sabers: true,
+            showcase: false,
+            room: 1.35,
+            angle: Some(-28.0),
+        };
+        let stage = self.backdrop.as_ref().and_then(|backdrop| backdrop.stage());
+        Some((stage, self.player.stage_model(), preview))
+    }
+
     /// The player model that stands on the backdrop's stage: only while a
     /// route with a stage is active (flying to, parked on, or flying back
-    /// from the Player screen).
+    /// from the Player screen, or behind the Collection's Shaders, Toys and
+    /// Nameplates).
     pub(crate) fn stage_model(&self) -> Option<(Stage, &str)> {
+        if self.collection_stage && !self.player.is_classic() {
+            let stage = self.backdrop.as_ref()?.stage()?;
+            return Some((stage, self.player.stage_model()));
+        }
         // The classic profile pages draw the model's portrait over retail
         // art; nothing stands on the stage behind them. Opened from a game,
         // the screen shows the model in its own preview: the menu map's stage
@@ -445,7 +497,7 @@ impl ClientMenu {
             // Over a live match the backdrop camera is not flying anywhere.
             return 1.0;
         }
-        let shot = shot_for(self.state.phase(), &self.player);
+        let shot = self.shot();
         self.backdrop
             .as_ref()
             .map_or(1.0, |backdrop| backdrop.reveal(shot))

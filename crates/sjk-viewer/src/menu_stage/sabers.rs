@@ -232,8 +232,15 @@ impl GpuState {
     /// pose or the hilts changed.
     pub(crate) fn begin_saber_instances(&mut self) {
         self.saber_instances.clear();
-        // The stage model is the local player: its blades wear the player's skin.
-        let skin = self.saber_skins.local();
+        // The stage model is the local player: its blades wear the player's skin, or
+        // the one the Collection's Shaders tab shows.
+        let skin = match self.menu_stage.skin_override {
+            Some(crate::console::collection_panel::PreviewSkin::Stock) => None,
+            Some(crate::console::collection_panel::PreviewSkin::Skin(id)) => {
+                self.blade_skins.color_of(id)
+            }
+            _ => self.saber_skins.local(),
+        };
         let stage = &mut self.menu_stage;
         stage.preview.blades.clear();
         // The classic preview's blades are drawn into it, not into the world.

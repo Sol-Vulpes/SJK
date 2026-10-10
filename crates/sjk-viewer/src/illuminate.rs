@@ -144,6 +144,11 @@ impl Holocron {
         self.on = !self.on;
     }
 
+    /// Light it (`true`) or put it out.
+    pub(crate) fn set_on(&mut self, on: bool) {
+        self.on = on;
+    }
+
     /// Whether it is lit (it may still be fading in, or out of sight).
     pub(crate) fn lit(&self) -> bool {
         self.on
@@ -326,6 +331,22 @@ impl GpuState {
             .position(|mesh| mesh.appearance.model == MODEL);
         self.submit_own_holocron(mesh, presentation_time, now);
         self.submit_other_holocrons(mesh, presentation_time, now);
+        self.submit_stage_holocron(mesh, presentation_time, now);
+    }
+
+    /// The holocron by the model on the menu's stage while the Collection's Toys tab
+    /// shows it ([`crate::menu_stage`]): lit, fading in and out as the player's own.
+    fn submit_stage_holocron(&mut self, mesh: Option<usize>, presentation_time: i64, now: Instant) {
+        let anchor = self.stage_holocron_anchor();
+        let holocron = &mut self.menu_stage.holocron;
+        holocron.set_on(true);
+        let Some(pose) = holocron.advance(anchor, presentation_time as f32 * 0.001, now) else {
+            return;
+        };
+        self.dynamic_lights.push_radiant(light(pose));
+        if let Some(mesh) = mesh {
+            self.object_groups[mesh].push(cube(pose));
+        }
     }
 
     /// The local player's holocron.

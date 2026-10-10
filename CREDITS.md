@@ -67,6 +67,8 @@ Sol develops SJK and sets its direction. Sol's work includes:
 - unlockables kept at the SJK hub: the generic blade-skin renderer and the packs the
   hub delivers (the Sun blade's look and sounds), and looks (blade skins,
   Illuminate) every SJK player on a server sees;
+- the Collection: medals on a rail, achievements as a wall of medallions, saber
+  shaders previewed on the player's own model, toys and nameplates to come;
 - the kill feed at the top right with weapon icons (`cg_killfeed`);
 - the SJK profile card and the profile pictures kept at the SJK hub;
 - muting a player from their name in chat (chat, model, saber and sounds);

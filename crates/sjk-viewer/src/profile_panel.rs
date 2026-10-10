@@ -1,7 +1,7 @@
 //! The Profile page: the player's SJK profile as others see it on the hub (picture,
 //! name, verified flag, names worn, medals and bio), their own record from the
-//! achievement counts, the achievements board and their medals (`docs/identity.md`,
-//! "Profile", "Pictures", "Medals" and "Achievements"). The bio is written here, under
+//! achievement counts, and the way to their achievements and collection
+//! (`docs/identity.md`, "Profile", "Pictures", "Medals" and "Achievements"). The bio is written here, under
 //! the hub's rules (`sjk_identity::bio`): what cannot be in a bio cannot be typed, and
 //! what the hub sends back is shown only through those rules.
 //!
@@ -11,14 +11,14 @@
 //! `sjkavatar` command is read on a worker thread, checked, cropped and scaled
 //! (`avatars::picture`) and shown as a preview; Use this picture sends it to the hub.
 //!
-//! In the SJK UI it is three of the Profile screen's tabs ([`crate::profile_hub`]): SJK
-//! Profile, Achievements and Medals ([`Mode::Hub`]). In the classic menus the `profile`
-//! and `achievements` commands open it on its own, with Profile and Achievements as
-//! segments and the medals on the profile ([`Mode::Pages`]), and See unlockables opens
-//! the Unlockables page. Like the Identity page it lives in the console and is drawn in
-//! place of it, always in the SJK UI's look ([`view`]). Tab moves between the tabs, the
-//! picture, the bio and their buttons; Left and Right switch tabs from the tabs; Enter
-//! saves the bio from the field (Shift+Enter starts a new line); Escape goes back.
+//! In the SJK UI it is the Profile screen's SJK Profile tab ([`crate::profile_hub`],
+//! [`Mode::Hub`]); its See the board and See the collection open the Collection screen
+//! (`collection_panel`). In the classic menus the `profile` command opens it on its own,
+//! the medals on the profile ([`Mode::Pages`]), and its buttons open the Collection page
+//! on its own. Like the Identity page it lives in the console and is drawn in place of
+//! it, always in the SJK UI's look ([`view`]). Tab moves between the picture, the bio
+//! and their buttons; Enter saves the bio from the field (Shift+Enter starts a new
+//! line); Escape goes back.
 
 use crate::achievements::Standing;
 use crate::avatars::picture::{PictureError, Prepared};
@@ -33,12 +33,9 @@ use std::time::{Duration, Instant};
 use winit::event::{ElementState, KeyEvent};
 use winit::keyboard::{KeyCode, PhysicalKey};
 
-#[path = "profile_panel_medals.rs"]
-mod medals_view;
 #[path = "profile_panel_view.rs"]
 mod view;
 
-const TAB_TOKEN: u16 = 1_000;
 const BIO_TOKEN: u16 = 1_010;
 const SAVE_TOKEN: u16 = 1_011;
 const REVERT_TOKEN: u16 = 1_012;
@@ -53,40 +50,20 @@ const BROWSE_TOKEN: u16 = 1_021;
 /// How long Remove picture waits for its second press.
 const REMOVE_CONFIRM: Duration = Duration::from_secs(3);
 
-/// The page's tabs: the profile, the board and, on the Profile screen, the medals.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub(crate) enum Tab {
-    Profile,
-    Achievements,
-    /// Only on the Profile screen; on its own the page shows the medals on the profile.
-    Medals,
-}
-
-impl Tab {
-    /// The segments of the page on its own.
-    const PAGES: [Self; 2] = [Self::Profile, Self::Achievements];
-
-    fn index(self) -> usize {
-        self as usize
-    }
-}
-
 /// How the page was opened.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) enum Mode {
-    /// On its own (the `profile` and `achievements` commands in the classic menus):
-    /// Profile and Achievements as segments in the top bar, the medals on the profile.
+    /// On its own (the `profile` command in the classic menus): the medals on the
+    /// profile.
     Pages,
-    /// The Profile screen's SJK Profile, Achievements and Medals tabs
-    /// ([`crate::profile_hub`]): the screen's row of tabs under the title, the medals
-    /// on their own tab.
+    /// The Profile screen's SJK Profile tab ([`crate::profile_hub`]): the screen's row
+    /// of tabs under the title; the medals are the Collection's.
     Hub,
 }
 
 /// The control the keyboard is on.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum Focus {
-    Tabs,
     /// The player's picture, which opens the picture panel.
     Picture,
     Staff,
@@ -134,7 +111,7 @@ pub(crate) enum PanelAction {
     Save {
         bio: String,
     },
-    /// Show another of the Profile screen's tabs.
+    /// Show a tab of the Collection screen (on its own in the classic menus).
     Hub(HubTab),
     /// Open the Staff page.
     Staff,
@@ -144,8 +121,6 @@ pub(crate) enum PanelAction {
     },
     /// Take the player's picture down at the hub.
     RemoveAvatar,
-    /// Open the Unlockables page.
-    Unlockables,
 }
 
 /// A save on its way: the bio sent and the service's notice before it, to tell the
@@ -171,7 +146,6 @@ pub(crate) struct Panel {
     open: bool,
     owns_console: bool,
     ui: MenuCanvas,
-    tab: Tab,
     mode: Mode,
     focus: Focus,
     /// The bio being written.
@@ -268,9 +242,8 @@ impl Panel {
             open: false,
             owns_console: false,
             ui: MenuCanvas::with_capacities(240, 192, 1_000),
-            tab: Tab::Profile,
             mode: Mode::Pages,
-            focus: Focus::Tabs,
+            focus: Focus::Picture,
             bio: String::new(),
             edited: false,
             taken: None,
@@ -299,31 +272,22 @@ impl Panel {
         self.open
     }
 
-    /// Show the page on `tab` on its own; `owns_console` when the console was closed
-    /// before it.
+    /// Show the page on its own; `owns_console` when the console was closed before it.
     #[cfg(test)]
-    pub(crate) fn open(&mut self, tab: Tab, owns_console: bool) {
-        self.open_as(tab, owns_console, Mode::Pages);
+    pub(crate) fn open(&mut self, owns_console: bool) {
+        self.open_as(owns_console, Mode::Pages);
     }
 
-    /// Show the page on `tab` as `mode` says ([`Mode`]).
-    pub(crate) fn open_as(&mut self, tab: Tab, owns_console: bool, mode: Mode) {
+    /// Show the page as `mode` says ([`Mode`]).
+    pub(crate) fn open_as(&mut self, owns_console: bool, mode: Mode) {
         self.open = true;
         self.owns_console = owns_console;
         self.mode = mode;
-        self.tab = tab;
-        self.focus = self.first_focus();
+        self.focus = Focus::Picture;
         self.message.clear();
         if self.reading.is_none() && self.ready.is_none() && self.changing.is_none() {
             self.middle = Middle::Bio;
         }
-    }
-
-    /// Show the Profile screen's tab `tab`, the page staying open (and a picture read
-    /// and not sent with it).
-    pub(crate) fn show_hub_tab(&mut self, tab: Tab) {
-        self.mode = Mode::Hub;
-        self.show(tab);
     }
 
     /// What the Profile screen's tabs put at the top.
@@ -353,7 +317,6 @@ impl Panel {
 
     /// Show the picture panel in the bio's place.
     pub(crate) fn show_picture(&mut self) {
-        self.tab = Tab::Profile;
         self.middle = Middle::Picture;
         self.remove_armed = None;
     }
@@ -504,7 +467,7 @@ impl Panel {
 
     /// Escape: from the picture panel back to the bio first, else close the page.
     fn escape(&mut self) -> PanelAction {
-        if self.middle == Middle::Picture && self.tab == Tab::Profile {
+        if self.middle == Middle::Picture {
             self.back_to_bio();
             PanelAction::None
         } else {
@@ -515,16 +478,6 @@ impl Panel {
     /// How the page was opened.
     pub(crate) fn mode(&self) -> Mode {
         self.mode
-    }
-
-    /// The control the keyboard starts on: the tabs, or on the Profile screen's SJK
-    /// Profile tab (whose tabs are the screen's, not a stop) the picture.
-    fn first_focus(&self) -> Focus {
-        if self.mode == Mode::Hub && self.tab == Tab::Profile {
-            Focus::Picture
-        } else {
-            Focus::Tabs
-        }
     }
 
     /// Back from the picture panel to the bio, dropping a picture read but not sent.
@@ -602,10 +555,6 @@ impl Panel {
         }
     }
 
-    pub(crate) fn tab(&self) -> Tab {
-        self.tab
-    }
-
     pub(crate) fn draw_list(&self) -> &sjk_ui::DrawList {
         self.ui.draw_list()
     }
@@ -627,10 +576,10 @@ impl Panel {
         self.staff = self.writable && me.is_some_and(|me| me.staff);
         self.sync_picture(inputs);
         if !self.staff && self.focus == Focus::Staff {
-            self.focus = self.first_focus();
+            self.focus = Focus::Picture;
         }
         if !self.writable && matches!(self.focus, Focus::Bio | Focus::Save | Focus::Revert) {
-            self.focus = self.first_focus();
+            self.focus = Focus::Picture;
         }
         let Some(me) = me else {
             return;
@@ -689,15 +638,8 @@ impl Panel {
 
     /// The controls Tab visits on this tab, in order.
     fn order(&self) -> Vec<Focus> {
-        if self.tab != Tab::Profile {
-            return vec![Focus::Tabs];
-        }
         // On the Profile screen its tabs are the screen's (Ctrl+Tab), not a stop.
-        let mut order = if self.mode == Mode::Hub {
-            vec![Focus::Picture]
-        } else {
-            vec![Focus::Tabs, Focus::Picture]
-        };
+        let mut order = vec![Focus::Picture];
         if self.staff {
             order.push(Focus::Staff);
         }
@@ -730,22 +672,9 @@ impl Panel {
         self.focus = order[next];
     }
 
-    fn show(&mut self, tab: Tab) {
-        self.tab = tab;
-        self.focus = self.first_focus();
-    }
-
     /// What Enter (or a click) does on the focused control.
     fn activate(&mut self, notice: Option<String>) -> PanelAction {
         match self.focus {
-            Focus::Tabs => {
-                // On the Profile screen the screen's keys switch its tabs.
-                if self.mode == Mode::Pages {
-                    let pages = Tab::PAGES.len();
-                    self.show(Tab::PAGES[(self.tab.index() + 1) % pages]);
-                }
-                PanelAction::None
-            }
             Focus::Picture => {
                 self.show_picture();
                 PanelAction::None
@@ -771,22 +700,14 @@ impl Panel {
         }
     }
 
-    /// See the board: its tab on the Profile screen, else the page's own.
+    /// See the board: the Collection's Achievements.
     fn see_board(&mut self) -> PanelAction {
-        if self.mode == Mode::Hub {
-            return PanelAction::Hub(HubTab::Achievements);
-        }
-        self.show(Tab::Achievements);
-        PanelAction::None
+        PanelAction::Hub(HubTab::Achievements)
     }
 
-    /// See the unlockables: the Profile screen's Collection tab, else their page.
+    /// See the collection: the Collection's Medals.
     fn see_unlockables(&self) -> PanelAction {
-        if self.mode == Mode::Hub {
-            PanelAction::Hub(HubTab::Collection)
-        } else {
-            PanelAction::Unlockables
-        }
+        PanelAction::Hub(HubTab::Medals)
     }
 
     /// A key; `notice` is the service's last notice, for a save.
@@ -808,15 +729,6 @@ impl Panel {
             KeyCode::Tab => self.step(!shift),
             KeyCode::ArrowDown if !typing => self.step(true),
             KeyCode::ArrowUp if !typing => self.step(false),
-            KeyCode::ArrowLeft | KeyCode::ArrowRight
-                if self.focus == Focus::Tabs && self.mode == Mode::Pages =>
-            {
-                self.show(if key == KeyCode::ArrowLeft {
-                    Tab::Profile
-                } else {
-                    Tab::Achievements
-                });
-            }
             KeyCode::Enter | KeyCode::NumpadEnter if typing && shift => {
                 if type_into(&mut self.bio, "\n") {
                     self.edited = true;
@@ -862,35 +774,28 @@ impl Panel {
         }
         match event.token {
             Some(BACK_TOKEN) => PanelAction::Close,
-            Some(token)
-                if self.mode == Mode::Pages
-                    && (TAB_TOKEN..TAB_TOKEN + Tab::PAGES.len() as u16).contains(&token) =>
-            {
-                self.show(Tab::PAGES[usize::from(token - TAB_TOKEN)]);
-                PanelAction::None
-            }
-            Some(BIO_TOKEN) if self.writable && self.tab == Tab::Profile => {
+            Some(BIO_TOKEN) if self.writable => {
                 self.focus = Focus::Bio;
                 PanelAction::None
             }
-            Some(SAVE_TOKEN) if self.writable && self.tab == Tab::Profile => {
+            Some(SAVE_TOKEN) if self.writable => {
                 self.focus = Focus::Save;
                 self.save(notice)
             }
-            Some(REVERT_TOKEN) if self.writable && self.tab == Tab::Profile => {
+            Some(REVERT_TOKEN) if self.writable => {
                 self.focus = Focus::Revert;
                 self.revert();
                 PanelAction::None
             }
-            Some(STAFF_TOKEN) if self.staff && self.tab == Tab::Profile => {
+            Some(STAFF_TOKEN) if self.staff => {
                 self.focus = Focus::Staff;
                 PanelAction::Staff
             }
-            Some(BOARD_TOKEN) if self.tab == Tab::Profile => {
+            Some(BOARD_TOKEN) => {
                 self.focus = Focus::Board;
                 self.see_board()
             }
-            Some(PICTURE_TOKEN) if self.tab == Tab::Profile => {
+            Some(PICTURE_TOKEN) => {
                 self.focus = Focus::Picture;
                 self.show_picture();
                 PanelAction::None
@@ -911,7 +816,7 @@ impl Panel {
                 self.back_to_bio();
                 PanelAction::None
             }
-            Some(UNLOCKABLES_TOKEN) if self.tab == Tab::Profile => {
+            Some(UNLOCKABLES_TOKEN) => {
                 self.focus = Focus::Unlockables;
                 self.see_unlockables()
             }
@@ -931,7 +836,6 @@ impl Panel {
 
     fn focus_token(&self) -> u16 {
         match self.focus {
-            Focus::Tabs => TAB_TOKEN + self.tab.index() as u16,
             Focus::Picture => PICTURE_TOKEN,
             Focus::Browse => BROWSE_TOKEN,
             Focus::UsePicture => USE_TOKEN,
@@ -948,12 +852,12 @@ impl Panel {
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::*;
     use sjk_identity::Profile;
     use std::collections::HashMap;
 
-    pub(super) fn me(bio: &str) -> Profile {
+    pub(crate) fn me(bio: &str) -> Profile {
         Profile {
             key_id: "0123456789abcdef".to_owned(),
             key: String::new(),
@@ -970,7 +874,7 @@ mod tests {
         }
     }
 
-    pub(super) fn snapshot(me: Option<Profile>, notice: Option<&str>) -> Snapshot {
+    pub(crate) fn snapshot(me: Option<Profile>, notice: Option<&str>) -> Snapshot {
         Snapshot {
             status: Status::Online,
             key_id: "0123456789abcdef".to_owned(),
@@ -1001,7 +905,7 @@ mod tests {
 
     fn opened(snapshot: &Snapshot) -> Panel {
         let mut panel = Panel::new();
-        panel.open(Tab::Profile, true);
+        panel.open(true);
         panel.sync(&inputs(Some(snapshot)));
         panel
     }
@@ -1070,34 +974,24 @@ mod tests {
         assert_eq!(panel.message, bio::BioError::Noise.message());
     }
 
-    /// As the Profile screen's SJK Profile tab the page has no Tabs stop and starts on
-    /// the picture; See the board and See the collection show the screen's tabs, and
-    /// Escape closes every tab. Its tabs turn without closing the page.
+    /// As the Profile screen's SJK Profile tab the page starts on the picture; See the
+    /// board and See the collection show the Collection's tabs, and Escape closes it.
     #[test]
     fn on_the_profile_screen_the_buttons_show_its_tabs_and_escape_closes() {
         let shot = snapshot(Some(me("")), None);
         let mut panel = Panel::new();
-        panel.open_as(Tab::Profile, true, Mode::Hub);
+        panel.open_as(true, Mode::Hub);
         panel.sync(&inputs(Some(&shot)));
         assert_eq!(panel.focus, Focus::Picture);
-        assert!(!panel.order().contains(&Focus::Tabs));
         panel.focus = Focus::Board;
         assert_eq!(panel.activate(None), PanelAction::Hub(HubTab::Achievements));
         panel.focus = Focus::Unlockables;
-        assert_eq!(panel.activate(None), PanelAction::Hub(HubTab::Collection));
-        for tab in [Tab::Achievements, Tab::Medals] {
-            panel.show_hub_tab(tab);
-            assert!(panel.is_open());
-            assert_eq!((panel.tab(), panel.order()), (tab, vec![Focus::Tabs]));
-            assert_eq!(panel.activate(None), PanelAction::None, "{tab:?}");
-            assert_eq!(panel.tab(), tab);
-            assert_eq!(panel.escape(), PanelAction::Close, "{tab:?}");
-        }
-        // On its own the page keeps its board.
+        assert_eq!(panel.activate(None), PanelAction::Hub(HubTab::Medals));
+        assert_eq!(panel.escape(), PanelAction::Close);
+        // On its own the page shows the Collection too.
         let mut alone = opened(&shot);
         alone.focus = Focus::Board;
-        assert_eq!(alone.activate(None), PanelAction::None);
-        assert_eq!(alone.tab(), Tab::Achievements);
+        assert_eq!(alone.activate(None), PanelAction::Hub(HubTab::Achievements));
     }
 
     /// Browse... opens the file dialog on a worker thread, once while it is open; the
@@ -1157,7 +1051,7 @@ mod tests {
     #[test]
     fn without_the_hub_nothing_can_be_written() {
         let mut panel = Panel::new();
-        panel.open(Tab::Profile, false);
+        panel.open(false);
         panel.sync(&Inputs {
             enabled: false,
             ..inputs(None)
@@ -1165,22 +1059,17 @@ mod tests {
         assert!(!panel.writable);
         assert_eq!(
             panel.order(),
-            [
-                Focus::Tabs,
-                Focus::Picture,
-                Focus::Board,
-                Focus::Unlockables
-            ]
+            [Focus::Picture, Focus::Board, Focus::Unlockables]
         );
         panel.bio = "hello there".to_owned();
         assert_eq!(panel.save(None), PanelAction::None);
     }
 
     #[test]
-    fn tab_walks_the_controls_and_enter_switches_tabs() {
+    fn tab_walks_the_controls_and_enter_opens_the_collection() {
         let shot = snapshot(Some(me("")), None);
         let mut panel = opened(&shot);
-        let steps: Vec<Focus> = (0..7)
+        let steps: Vec<Focus> = (0..6)
             .map(|_| {
                 panel.step(true);
                 panel.focus
@@ -1189,27 +1078,18 @@ mod tests {
         assert_eq!(
             steps,
             [
-                Focus::Picture,
                 Focus::Bio,
                 Focus::Save,
                 Focus::Revert,
                 Focus::Board,
                 Focus::Unlockables,
-                Focus::Tabs
+                Focus::Picture
             ]
         );
         panel.focus = Focus::Unlockables;
-        assert_eq!(panel.activate(None), PanelAction::Unlockables);
-        panel.focus = Focus::Tabs;
-        assert_eq!(panel.activate(None), PanelAction::None);
-        assert_eq!(panel.tab(), Tab::Achievements);
-        assert_eq!(panel.order(), [Focus::Tabs]);
-        panel.focus = Focus::Tabs;
-        let _ = panel.activate(None);
-        assert_eq!(panel.tab(), Tab::Profile);
+        assert_eq!(panel.activate(None), PanelAction::Hub(HubTab::Medals));
         panel.focus = Focus::Board;
-        let _ = panel.activate(None);
-        assert_eq!(panel.tab(), Tab::Achievements);
+        assert_eq!(panel.activate(None), PanelAction::Hub(HubTab::Achievements));
     }
 
     /// A PNG file of `width` x `height` in `dir`.
@@ -1338,7 +1218,7 @@ mod tests {
     fn without_the_hub_a_picture_cannot_be_sent() {
         let dir = tempfile::tempdir().unwrap();
         let mut panel = Panel::new();
-        panel.open(Tab::Profile, true);
+        panel.open(true);
         let offline = Inputs {
             enabled: false,
             ..inputs(None)
@@ -1365,7 +1245,6 @@ mod tests {
         assert_eq!(
             panel.order(),
             [
-                Focus::Tabs,
                 Focus::Picture,
                 Focus::Browse,
                 Focus::BioBack,

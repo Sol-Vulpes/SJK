@@ -3087,6 +3087,7 @@ test: Medals: yours lit with date and note, the others dimmed "Not given yet".
 test: In a match, Esc > Profile; leave on Medals with Esc; Esc > Profile opens on Medals.
 test: Console: profile, achievements, unlockables open their tabs; again closes them.
 note: Classic menus keep the old pages. Collection is one constant if it gets another name.
+note: 10/10: Achievements, Medals and Collection moved to the new Collection screen.
 
 [identity-hidden]
 area: Menus & settings
@@ -3162,3 +3163,20 @@ test: Pointer on a name: the card shows above the dock, with Mute. Open chat ope
 note: cl_sjkChat 0 hides both docks; identity off: "Turn the SJK identity on to chat".
 note: Not tried in a game.
 
+# ---- Collection, 10/10/2026 ----
+
+[collection]
+area: Menus & settings
+title: Collection: Medals, Achievements, Shaders, Toys, Nameplates
+change: New Collection screen under Profile (main page and Esc menu); Profile keeps 4 tabs.
+change: Medals on a rail; Achievements by category; Toys: Illuminate; Nameplates: none yet.
+change: Shaders = blade skins: the model holds the chosen one, a locked one as a local preview.
+test: Main page > Collection: the camera goes to your model on Shaders, Toys and Nameplates.
+test: Shaders: Up/Down; the model's saber changes; a locked one says Preview, cannot equip.
+test: Equip / Unequip on an owned one; Esc; the main page card and Profile > Saber agree.
+test: Toys: Enter switches On the Force wheel (cg_illuminate); the holocron floats by you.
+test: Nameplates: your plate over your model's head, dashed marks; try a 4:3 window too.
+test: In a match, Esc > Collection: the model shows in a preview; Esc returns on Collection.
+test: Console: collection, achievements, unlockables open their tabs; Ctrl+Tab goes round.
+note: Classic menus: the same commands open the page on its own, the model in a preview.
+note: Not tried in a game.

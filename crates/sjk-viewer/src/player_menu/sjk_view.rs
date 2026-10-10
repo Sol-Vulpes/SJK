@@ -1267,7 +1267,7 @@ impl PlayerMenu {
     /// one worn ringed gold; under the row's name the name of the one under the
     /// pointer (or worn); with no skin to offer, a line saying why.
     fn sjk_blade_choice(&mut self, frame: &Frame, index: usize, top: f32) {
-        use crate::console::unlockables_panel::swatch;
+        use crate::console::collection_panel::swatch;
         let s = frame.s;
         let area = [COLUMN_X, top, COLUMN_WIDTH, ROW];
         let focused = index == self.selected;
@@ -2407,7 +2407,7 @@ mod tests {
                 .rect_for(crate::profile_hub::TOKEN)
                 .expect("the row");
             assert_eq!((first.x, first.y), (own.x, own.y), "{page:?}");
-            for tab in crate::profile_hub::Tab::ALL {
+            for tab in crate::profile_hub::Screen::Profile.tabs() {
                 let token = crate::profile_hub::TOKEN + tab.index() as u16;
                 assert!(menu.canvas.rect_for(token).is_some(), "{tab:?}");
             }

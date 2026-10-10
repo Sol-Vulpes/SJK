@@ -26,6 +26,7 @@ mod team_filter;
 
 use crate::console::ViewerConsole;
 use crate::menu_widgets::MenuCanvas;
+pub(crate) use rows::saber_color;
 pub(crate) use saber::StageSabers;
 use sjk_client::{LegacyAssetCatalog, LegacyAssetCatalogLoader};
 use sjk_ui::DrawList;

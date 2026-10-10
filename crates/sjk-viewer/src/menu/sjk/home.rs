@@ -77,8 +77,8 @@ impl Page {
     fn parent_entry(self) -> usize {
         match self {
             Self::Main | Self::Play => 0,
-            Self::Sjk => 3,
-            Self::Quit => 4,
+            Self::Sjk => 4,
+            Self::Quit => 5,
         }
     }
 
@@ -138,7 +138,7 @@ const fn open(destination: MainDestination) -> Step {
     Step::Act(Action::Open(destination))
 }
 
-const MAIN: [Entry; 5] = [
+const MAIN: [Entry; 6] = [
     entry(
         "Play",
         "Join a server, or start your own",
@@ -148,6 +148,11 @@ const MAIN: [Entry; 5] = [
         "Profile",
         "Character, Force and SJK profile",
         open(MainDestination::Player),
+    ),
+    entry(
+        "Collection",
+        "Your medals, achievements, shaders and toys",
+        open(MainDestination::Collection),
     ),
     entry(
         "Settings",
@@ -493,8 +498,10 @@ impl Home {
 const RING: [f32; 2] = [620.0, 540.0];
 const RING_RADIUS: f32 = 312.0;
 const ARC_RADIUS: f32 = 440.0;
-/// Degrees between entries along the arc.
+/// Degrees between entries along the arc; closer for six, so the ends keep clear of
+/// the ring ([`arc_step`]).
 const ARC_STEP: f32 = 16.0;
+const ARC_STEP_SIX: f32 = 12.5;
 /// The servers' column: its rule's x, its text's x and width, its top and the
 /// height of one server.
 const COLUMN_RULE: f32 = 1470.0;
@@ -510,9 +517,14 @@ const DOCK: chat_dock::Place = chat_dock::Place {
     card_above: false,
 };
 
+/// Degrees between entries along an arc of `count`.
+fn arc_step(count: usize) -> f32 {
+    if count > 5 { ARC_STEP_SIX } else { ARC_STEP }
+}
+
 /// Angle (radians) of entry `index` of `count` round the ring.
 fn entry_angle(index: usize, count: usize) -> f32 {
-    ((index as f32 - (count as f32 - 1.0) * 0.5) * ARC_STEP).to_radians()
+    ((index as f32 - (count as f32 - 1.0) * 0.5) * arc_step(count)).to_radians()
 }
 
 /// Where entry `index` of `count` starts, in frame pixels: on the arc, at its
@@ -660,7 +672,7 @@ pub(crate) fn build(
                 TextAlign::Start,
             );
         }
-        let pitch = ARC_RADIUS * ARC_STEP.to_radians();
+        let pitch = ARC_RADIUS * arc_step(entries.len()).to_radians();
         canvas.hit_region(
             ENTRY_TOKEN + index as u16,
             frame.rect(x - 16.0, y - pitch * 0.5, COLUMN_RULE - x - 40.0, pitch),
@@ -768,7 +780,7 @@ fn page_title(canvas: &mut MenuCanvas, frame: &Frame, home: &Home) {
         return;
     };
     let count = home.entries().len();
-    let angle = entry_angle(0, count) - (ARC_STEP * 1.1).to_radians();
+    let angle = entry_angle(0, count) - (arc_step(count) * 1.1).to_radians();
     let x = RING[0] + ARC_RADIUS * angle.cos();
     let y = RING[1] + ARC_RADIUS * angle.sin();
     text(
@@ -1056,13 +1068,21 @@ mod tests {
         home.key(KeyCode::Escape, 0);
         assert_eq!((home.page, home.entry), (Page::Quit, 1));
         home.key(KeyCode::Escape, 0);
-        assert_eq!((home.page, home.entry), (Page::Main, 4));
+        assert_eq!((home.page, home.entry), (Page::Main, 5));
         // Quit to desktop.
         home.key(KeyCode::Enter, 0);
         home.key(KeyCode::ArrowUp, 0);
         assert_eq!(home.key(KeyCode::Enter, 0), Some(Action::Quit));
-        // Settings opens its screen straight away.
+        // Collection opens its screen, Settings its own, straight away.
         home.reset();
+        home.key(KeyCode::ArrowDown, 0);
+        home.key(KeyCode::ArrowDown, 0);
+        assert_eq!(
+            home.key(KeyCode::Enter, 0),
+            Some(Action::Open(MainDestination::Collection))
+        );
+        home.reset();
+        home.key(KeyCode::ArrowDown, 0);
         home.key(KeyCode::ArrowDown, 0);
         home.key(KeyCode::ArrowDown, 0);
         assert_eq!(
@@ -1097,9 +1117,9 @@ mod tests {
         );
         assert_eq!(home.pointer(SERVER_TOKEN + 3, true, 3), None);
         // Hovering an entry chooses it; a click on SJK opens its page.
-        home.pointer(ENTRY_TOKEN + 3, false, 3);
-        assert_eq!((home.entry, home.focus), (3, Focus::Arc));
-        assert_eq!(home.pointer(ENTRY_TOKEN + 3, true, 3), None);
+        home.pointer(ENTRY_TOKEN + 4, false, 3);
+        assert_eq!((home.entry, home.focus), (4, Focus::Arc));
+        assert_eq!(home.pointer(ENTRY_TOKEN + 4, true, 3), None);
         assert_eq!(home.page, Page::Sjk);
         assert_eq!(
             home.pointer(ENTRY_TOKEN + 2, true, 3),
