@@ -139,8 +139,8 @@ mod tests {
         let awards = crate::medals::awards(&list);
         assert_eq!(awards[0].note, "Thanks for testing early");
         assert_eq!(awards[0].given(), "Given 08/10/2026");
-        let ids = parse(&words("JOF_CLAN"), NOW).unwrap();
-        assert_eq!(ids[0].id, "jof_clan");
+        let ids = parse(&words("EARLY_CONTRIBUTOR"), NOW).unwrap();
+        assert_eq!(ids[0].id, "early_contributor");
         assert!(ids[0].note.is_empty());
     }
 
@@ -161,24 +161,16 @@ mod tests {
     fn all_gives_every_medal_in_the_catalogues_order() {
         let list = parse(&words("all x2 Well done"), NOW).unwrap();
         let ids: Vec<&str> = list.iter().map(|medal| medal.id.as_str()).collect();
-        assert_eq!(
-            ids,
-            [
-                "early_tester",
-                "early_contributor",
-                "bug_hunter",
-                "jof_clan"
-            ]
-        );
+        assert_eq!(ids, ["early_tester", "early_contributor", "bug_hunter"]);
         assert!(list.iter().all(|medal| medal.note == "Well done"));
         let counts: Vec<u32> = list.iter().map(|medal| medal.count).collect();
-        assert_eq!(counts, [1, 1, 2, 1]);
+        assert_eq!(counts, [1, 1, 2]);
     }
 
     #[test]
     fn an_unknown_id_names_the_known_ones_and_alone_it_lists_them() {
         let error = parse(&words("gold_star"), NOW).unwrap_err();
-        assert!(error.contains("early_tester") && error.contains("jof_clan"));
+        assert!(error.contains("early_tester") && error.contains("bug_hunter"));
         assert!(error.contains(ALL));
         assert!(parse(&[], NOW).is_err());
         let listing = listing();

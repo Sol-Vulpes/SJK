@@ -29,7 +29,6 @@ pub(crate) enum Medal {
     EarlyTester,
     EarlyContributor,
     BugHunter,
-    JofClan,
 }
 
 /// One stripe across a ribbon: where it starts and how wide it is, as fractions of
@@ -79,21 +78,13 @@ const BUG_HUNTER: Ribbon = Ribbon {
     base: rgb(0x1E_9E6E),
     stripes: &[stripe(0.0, 0.13, BLACK), stripe(0.87, 0.13, BLACK)],
 };
-const JOF_CLAN: Ribbon = Ribbon {
-    base: rgb(0x9E_1B2A),
-    stripes: &[stripe(0.0, 0.13, BLACK), stripe(0.87, 0.13, BLACK)],
-};
 
 impl Medal {
     /// How many medals the client knows.
-    pub(crate) const COUNT: usize = 4;
+    pub(crate) const COUNT: usize = 3;
     /// Every medal, in the hub's catalogue order.
-    pub(crate) const ALL: [Self; Self::COUNT] = [
-        Self::EarlyTester,
-        Self::EarlyContributor,
-        Self::BugHunter,
-        Self::JofClan,
-    ];
+    pub(crate) const ALL: [Self; Self::COUNT] =
+        [Self::EarlyTester, Self::EarlyContributor, Self::BugHunter];
 
     /// The medal the hub's `id` names, if the client knows it.
     pub(crate) fn from_id(id: &str) -> Option<Self> {
@@ -111,7 +102,6 @@ impl Medal {
             Self::EarlyTester => "early_tester",
             Self::EarlyContributor => "early_contributor",
             Self::BugHunter => "bug_hunter",
-            Self::JofClan => "jof_clan",
         }
     }
 
@@ -121,7 +111,6 @@ impl Medal {
             Self::EarlyTester => "Early Tester",
             Self::EarlyContributor => "Early Contributor",
             Self::BugHunter => "Bug Hunter",
-            Self::JofClan => "JoF Clan",
         }
     }
 
@@ -131,7 +120,6 @@ impl Medal {
             Self::EarlyTester => "Helped test SJK in its early days.",
             Self::EarlyContributor => "Contributed to SJK's code in its early days.",
             Self::BugHunter => "Found bugs that got fixed.",
-            Self::JofClan => "A member of the JoF clan.",
         }
     }
 
@@ -146,7 +134,6 @@ impl Medal {
             Self::EarlyTester => EARLY_TESTER,
             Self::EarlyContributor => EARLY_CONTRIBUTOR,
             Self::BugHunter => BUG_HUNTER,
-            Self::JofClan => JOF_CLAN,
         }
     }
 
@@ -156,7 +143,6 @@ impl Medal {
             Self::EarlyTester => include_bytes!("../assets/medals/early_tester.png"),
             Self::EarlyContributor => include_bytes!("../assets/medals/early_contributor.png"),
             Self::BugHunter => include_bytes!("../assets/medals/bug_hunter.png"),
-            Self::JofClan => include_bytes!("../assets/medals/jof_clan.png"),
         }
     }
 
@@ -168,7 +154,6 @@ impl Medal {
                 include_bytes!("../assets/medals/early_contributor_small.png")
             }
             Self::BugHunter => include_bytes!("../assets/medals/bug_hunter_small.png"),
-            Self::JofClan => include_bytes!("../assets/medals/jof_clan_small.png"),
         }
     }
 
@@ -354,8 +339,14 @@ mod tests {
             assert_eq!(Medal::ALL[medal.index()], medal);
         }
         assert_eq!(Medal::from_id("from_the_future"), None);
-        let medals = Medals::from_wire(&[wire("from_the_future", 1), wire("jof_clan", 1)]);
-        assert_eq!(medals.iter().collect::<Vec<_>>(), [(Medal::JofClan, 1)]);
+        // The JoF Clan medal is gone (the clan's emblem now follows its tag,
+        // `jof_tag`): an old award is an unknown id.
+        let medals = Medals::from_wire(&[
+            wire("from_the_future", 1),
+            wire("jof_clan", 1),
+            wire("bug_hunter", 1),
+        ]);
+        assert_eq!(medals.iter().collect::<Vec<_>>(), [(Medal::BugHunter, 1)]);
         assert_eq!(medals.len(), 1);
         assert!(Medals::from_wire(&[wire("nope", 3)]).is_empty());
     }

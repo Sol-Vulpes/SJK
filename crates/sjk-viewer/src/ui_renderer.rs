@@ -32,6 +32,8 @@ pub(crate) const HUD_PREVIEW_TEXTURE: sjk_ui::TextureId = sjk_ui::TextureId(u32:
 pub(crate) const LOGO_TEXTURE: sjk_ui::TextureId = sjk_ui::TextureId(LOGO_ICON);
 /// `TexturedQuad` texture naming the gold verified badge, drawn once at start.
 pub(crate) const VERIFIED_TEXTURE: sjk_ui::TextureId = sjk_ui::TextureId(icons::VERIFIED_ICON);
+/// `TexturedQuad` texture naming the JoF clan's emblem (`jof_tag`): white, drawn tinted.
+pub(crate) const JOF_TEXTURE: sjk_ui::TextureId = sjk_ui::TextureId(icons::JOF_ICON);
 
 /// Atlas cells reserved for the quick wheels' icons.
 pub(crate) const WHEEL_ICON_CELLS: usize = icons::WHEEL_ICON_CELLS as usize;
@@ -316,6 +318,10 @@ impl ShapeRenderer {
             VERIFIED_TEXTURE,
             &verified_badge::pixels(icons::ICON_SIZE),
         );
+        match image::load_from_memory(crate::jof_tag::EMBLEM_PNG) {
+            Ok(emblem) => icons.upload(queue, JOF_TEXTURE, emblem.into_rgba8().as_raw()),
+            Err(error) => eprintln!("JoF emblem: {error}"),
+        }
         let wheel = crate::quick_wheel::ICONS.iter().enumerate();
         let wheel = wheel.map(|(index, icon)| ("quick wheel", wheel_icon(index), icon));
         let settings = crate::settings_icons::ICONS.iter().enumerate();

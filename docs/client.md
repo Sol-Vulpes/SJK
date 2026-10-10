@@ -2044,7 +2044,7 @@ are in [identity.md](identity.md).
   ([identity.md](identity.md#medals), [sjk-ui.md](sjk-ui.md#new-medal)).
 - `debug_medal <id> [x<count>] [note]` (`debug_medal all [note]` for every medal,
   alone it lists the ids: `early_tester`, `early_contributor`, `bug_hunter`, which
-  takes a count, and `jof_clan`) shows made-up medals as if the SJK team had just given
+  takes a count) shows made-up medals as if the SJK team had just given
   them, through the same queue, centre print, pop-up, ceremony and sound, to try them
   without the hub. It sends nothing and never writes `medals_seen.txt`; the console
   closes so the pop-up shows at once on the main menu (in a match, open the game

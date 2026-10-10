@@ -19,6 +19,10 @@ tests check this file):
 Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 -->
 
+## Unreleased
+
+- Players with the JoF clan's tag in their name ({JoF}, jof., [JOF] and so on, in any case, with no letter touching it) get the clan's J-o-F emblem on the left of their name in the game chat, the SJK chat, the scoreboard, the player card and the Players page; the JoF Clan medal is gone, replaced by this tag _(Sol)_
+
 ## 2026.1010.1 (Alpha) | 10/10/2026
 
 The Profile screen becomes one row of tabs, with Medals and a Collection of everything to unlock;
