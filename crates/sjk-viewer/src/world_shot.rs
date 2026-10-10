@@ -261,6 +261,9 @@ mod collection;
 #[path = "world_shot_holocrons.rs"]
 mod holocrons_tab;
 
+#[path = "world_shot_create_game.rs"]
+mod create_game;
+
 #[cfg(test)]
 mod tests {
     use super::*;

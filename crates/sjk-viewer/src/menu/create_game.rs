@@ -41,6 +41,10 @@ pub(crate) const ROWS: [Row; 9] = [
     Row::Start,
 ];
 
+/// The top bar's way back (its Esc key cap): to the main menu, or from the
+/// map list to the screen. The value other screens' way back has.
+pub(crate) const BACK_TOKEN: u16 = 900;
+
 /// Most bots one hosted match takes.
 pub(crate) const MAX_BOTS: u32 = 20;
 /// Longest server name.
@@ -319,11 +323,6 @@ impl CreateGameMenu {
         self.selected
     }
 
-    /// The map whose preview shows now.
-    pub(super) fn preview_map(&self) -> &str {
-        shown_map(&self.picker, &self.catalogue, &self.draft)
-    }
-
     /// Ask for the shown map's preview and hand a freshly decoded one to
     /// `upload` (the UI renderer's levelshot texture); once per frame.
     pub(crate) fn service_levelshots(
@@ -564,6 +563,40 @@ impl CreateGameMenu {
         if !same {
             self.stop_server();
         }
+    }
+}
+
+#[cfg(test)]
+impl CreateGameMenu {
+    /// Choose row `selected`, and open the map list with `filter` typed when
+    /// it is given (world shots and tests).
+    pub(crate) fn for_shot(&mut self, selected: usize, filter: Option<&str>) {
+        self.selected = selected.min(ROWS.len() - 1);
+        self.editing = None;
+        self.picker.close();
+        if let Some(filter) = filter {
+            self.open_map_picker();
+            for c in filter.chars() {
+                let mut typed = [0; 4];
+                let _ = self.picker.key(
+                    KeyCode::KeyA,
+                    Some(c.encode_utf8(&mut typed)),
+                    &self.catalogue,
+                );
+            }
+        }
+    }
+
+    /// Whether the shown map's levelshot has decoded (or is known missing).
+    pub(crate) fn picture_settled(&self) -> bool {
+        self.levelshots
+            .preview(shown_map(&self.picker, &self.catalogue, &self.draft))
+            != super::levelshot::Preview::Loading
+    }
+
+    /// Whether the last frame ran out of room on the screen's canvas.
+    pub(crate) fn overflowed(&self) -> bool {
+        self.ui.overflowed()
     }
 }
 

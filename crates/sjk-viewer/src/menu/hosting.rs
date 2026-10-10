@@ -13,6 +13,37 @@ impl ClientMenu {
         self.state.open_create_game();
     }
 
+    /// Open Create game on row `selected`, with its map list open and `filter`
+    /// typed when it is given (world shots).
+    #[cfg(test)]
+    pub(crate) fn create_game_for_shot(
+        &mut self,
+        console: &ViewerConsole,
+        selected: usize,
+        filter: Option<&str>,
+    ) {
+        if !matches!(self.state.phase(), ClientPhase::CreateGame) {
+            self.open_create_game(console);
+        }
+        self.create_game.for_shot(selected, filter);
+    }
+
+    /// Show Create game's server name being typed, `typed` so far (world shots).
+    #[cfg(test)]
+    pub(crate) fn create_game_name_for_shot(&mut self, typed: &str) {
+        self.create_game.editing = Some(typed.to_owned());
+    }
+
+    /// Whether Create game's levelshot has decoded and its canvas had room
+    /// (world shots): (settled, overflowed).
+    #[cfg(test)]
+    pub(crate) fn create_game_shot_state(&self) -> (bool, bool) {
+        (
+            self.create_game.picture_settled(),
+            self.create_game.overflowed(),
+        )
+    }
+
     /// Carry out what the Create game screen asked for.
     pub(super) fn create_game_result(&mut self, result: CreateGameResult) -> MenuAction {
         match result {

@@ -7,7 +7,8 @@
 //!
 //! The UI is built screen by screen and becomes the default once done. So far
 //! it has its main page ([`home`]), Settings ([`settings`]), Character
-//! (`player_menu::sjk_view`), Servers ([`browser`]) and the loading screen
+//! (`player_menu::sjk_view`), Servers ([`browser`]), Create game and its map
+//! list (`menu::create_game_view`, in every menu style) and the loading screen
 //! ([`loading`]), drawn with the controls of its [`kit`]; every other screen
 //! opens in its classic version.
 //!
@@ -107,7 +108,7 @@ impl<'a> TextTarget<'a> {
 impl ClientMenu {
     /// Draw the SJK UI's screen on show ([`ClientMenu::sjk_screen`]): its main
     /// page, with the player read from `console`, its Settings, Character,
-    /// Servers or loading screen.
+    /// Servers, Create game or loading screen.
     pub(crate) fn append_sjk_screen(
         &mut self,
         target: TextTarget<'_>,
@@ -120,6 +121,10 @@ impl ClientMenu {
             super::ClientPhase::Browser => self.append_sjk_browser(target, viewport),
             super::ClientPhase::Connecting(_) | super::ClientPhase::ConnectionError => {
                 self.append_sjk_loading(target, viewport);
+            }
+            super::ClientPhase::CreateGame => {
+                let reveal = self.screen_reveal();
+                self.create_game.append(target, viewport, reveal);
             }
             super::ClientPhase::Player => {
                 let reveal = self.screen_reveal();

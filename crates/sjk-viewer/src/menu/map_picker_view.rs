@@ -1,297 +1,257 @@
-//! Map list presentation: the hero form's header, a live filter line, a
-//! box-free list of long names with their `mp/…` names, and the highlighted
-//! map's levelshot large on the right; plus the preview frame the Create
-//! game form shows beside its Map row. Nothing sits behind the text.
+//! Create game's map list in the SJK UI's look: the top bar's way back to
+//! Create game with the typed filter in its search pill, a header line over
+//! fourteen rows of long names with their `mp/…` names (the chosen map marked
+//! with a gold dot), and the highlighted map's levelshot large on the right
+//! with its names under it. Every position is in frame pixels ([`Frame`]).
 
-use super::create_game::CreateGameMenu;
+use super::create_game::{BACK_TOKEN, CreateGameMenu};
 use super::create_game_catalog::MODES;
-use super::levelshot::Preview;
-use crate::menu_widgets::{FormLayout, MenuCanvas, Scrim};
-use crate::ui_renderer::LEVELSHOT_TEXTURE;
-use crate::{TextVertex, UiFont};
-use sjk_ui::{Color, DrawCommand, FontWeight, Rect, TextAlign};
+use super::create_game_view::{DETAIL_WIDTH, DETAIL_X, NAME_TOP, PICTURE, draw_keys, draw_picture};
+use super::sjk::{Frame, SearchPill, color, kit, text, top_bar, wrap};
+use crate::menu_widgets::TextFamily;
+use sjk_ui::{Color, DrawCommand, FontWeight, TextAlign};
 
-/// Footer caps; only the back cap, which doubles as the pointer's way out.
-const KEY_HINTS: [(&str, &str); 1] = [("ESC", "Back")];
-/// Height of one list row at scale 1.
-const ROW_HEIGHT: f32 = 44.0;
-/// Width of the large preview at scale 1 (4:3).
-const PREVIEW_WIDTH: f32 = 640.0;
+/// The list: its column, the header line, the rows and how many show.
+const LIST_X: f32 = 96.0;
+const LIST_WIDTH: f32 = 880.0;
+const HEADER_TOP: f32 = 176.0;
+const HEADER_HEIGHT: f32 = 34.0;
+const ROWS_TOP: f32 = 216.0;
+const ROW: f32 = 52.0;
+pub(super) const VISIBLE: usize = 14;
+/// The chosen map's gold dot, before its name, and where names start.
+const MARK_X: f32 = LIST_X + 18.0;
+const NAME_X: f32 = LIST_X + 34.0;
+/// The file names' column, right-aligned to `FILE_RIGHT`.
+const FILE_RIGHT: f32 = LIST_X + LIST_WIDTH - 22.0;
+const FILE_WIDTH: f32 = 220.0;
+/// The search pill's token (typing goes to the filter wherever the pointer
+/// is) and the scrollbar's; neither is a row (`0..VISIBLE`).
+pub(super) const SEARCH_TOKEN: u16 = 950;
+pub(super) const SCROLLBAR_TOKEN: u16 = 951;
+/// The highlighted map's game types, under its name.
+const MODES_TOP: f32 = NAME_TOP + 60.0;
 
 impl CreateGameMenu {
-    /// Build the open map list at `reveal` opacity and append its text.
-    pub(super) fn append_picker(
-        &mut self,
-        vertices: &mut Vec<TextVertex>,
-        font: &UiFont,
-        viewport: [f32; 2],
-        reveal: f32,
-    ) {
-        let layout = FormLayout::new(viewport);
-        let s = layout.scale;
-        self.ui.begin_hero(viewport, reveal, Scrim::Full);
-        self.ui.form_header(
-            &layout,
-            "SJK   /   HOST",
+    /// Lay the open map list out on `self.ui` at `reveal` opacity.
+    pub(super) fn build_picker(&mut self, viewport: [f32; 2], reveal: f32) {
+        let frame = Frame::new(viewport);
+        let s = frame.s;
+        self.picker.set_page(VISIBLE);
+        let ui = &mut self.ui;
+        ui.begin_transparent(viewport);
+        ui.push_opacity(reveal);
+        crate::settings::sjk_view::backdrop(ui, viewport);
+        let filter = self.picker.filter();
+        let shown = self.picker.match_count();
+        let total = self.picker.total(&self.catalogue);
+        top_bar(
+            ui,
+            &frame,
+            "Create game",
+            BACK_TOKEN,
             "Choose a map",
-            MODES[self.draft.mode].label,
+            Some(SearchPill {
+                query: filter,
+                active: true,
+                prompt: "",
+                found: (!filter.is_empty()).then_some(shown),
+                token: SEARCH_TOKEN,
+            }),
         );
-        let row_height = ROW_HEIGHT * s;
-        let list_bottom = viewport[1] - 110.0 * s;
-        self.picker.set_page(
-            ((list_bottom - layout.rows_y) / row_height)
-                .floor()
-                .max(1.0) as usize,
-        );
-        self.filter_line(&layout);
-        self.list_rows(&layout, row_height);
-        // The highlighted map, large, right of the list.
-        let x = layout.margin + layout.column_width + 56.0 * s;
-        let width = (PREVIEW_WIDTH * s).min(viewport[0] - x - layout.margin);
-        if width > 80.0 * s {
-            let rect = Rect::new(x, layout.rows_y, width, width * 0.75);
-            let preview = self.levelshots.preview(self.preview_map());
-            draw_preview(&mut self.ui, rect, preview, s);
-            if let Some(entry) = self.picker.highlighted(&self.catalogue) {
-                let theme = self.ui.theme();
-                let title_y = rect.bottom() + 18.0 * s;
-                // The caption sits right of the scrim's text column.
-                let pad = 12.0 * s;
-                self.ui.text_backing(Rect::new(
-                    x - pad,
-                    title_y - pad,
-                    width + pad * 2.0,
-                    56.0 * s + pad * 2.0,
-                ));
-                self.ui.text(
-                    &entry.title,
-                    Rect::new(x, title_y, width, 30.0 * s),
-                    26.0 * s,
-                    theme.foreground,
-                    FontWeight::Semibold,
-                    0.0,
-                );
-                self.ui.text(
-                    &entry.name,
-                    Rect::new(x, title_y + 36.0 * s, width, 20.0 * s),
-                    15.0 * s,
-                    theme.muted,
-                    FontWeight::Regular,
-                    0.6 * s,
-                );
-            }
-        }
-        self.ui.form_footer(&layout, &KEY_HINTS);
-        self.ui.end_hero();
-        let focus = self.picker.selected().saturating_sub(self.picker.first());
-        self.ui.finish(focus as u16);
-        self.ui.append_text(vertices, font, viewport);
-    }
-
-    /// What has been typed (or how to filter), and how many maps match.
-    fn filter_line(&mut self, layout: &FormLayout) {
-        let s = layout.scale;
-        let theme = self.ui.theme();
-        let field = Rect::new(
-            layout.margin,
-            layout.rows_y - 52.0 * s,
-            layout.column_width,
-            36.0 * s,
-        );
-        let text = Rect::new(field.x, field.y + 8.0 * s, field.width * 0.7, 22.0 * s);
-        if self.picker.filter().is_empty() {
-            self.ui.text(
-                "Type to filter",
-                text,
-                17.0 * s,
-                theme.muted,
-                FontWeight::Regular,
-                0.2 * s,
-            );
-            self.ui
-                .separator_line(Rect::new(field.x, field.bottom() - 1.0, field.width, 1.0));
+        // The header: how many maps the mode has, and the file names' column.
+        let mode = MODES[self.draft.mode].label;
+        let header = if shown == total {
+            format_args!("{total} maps for {mode}")
         } else {
-            self.ui.text(
-                self.picker.filter(),
-                text,
-                17.0 * s,
-                theme.foreground,
-                FontWeight::Semibold,
-                0.2 * s,
-            );
-            self.ui.edit_underline(field, theme.accent, s);
-        }
-        let (shown, total) = (
-            self.picker.match_count(),
-            self.picker.total(&self.catalogue),
+            format_args!("{shown} of {total} maps for {mode}")
+        };
+        text(
+            ui,
+            TextFamily::Display,
+            header,
+            frame.rect(NAME_X, HEADER_TOP, 560.0, HEADER_HEIGHT),
+            18.0 * s,
+            color::MUTED,
+            FontWeight::Regular,
+            TextAlign::Start,
         );
-        let count = Rect::new(field.x, field.y + 10.0 * s, field.width, 20.0 * s);
-        if shown == total {
-            self.ui.text_fmt_aligned(
-                format_args!("{total} maps"),
-                count,
-                14.0 * s,
-                theme.muted,
-                FontWeight::Regular,
-                0.4 * s,
-                TextAlign::End,
-            );
-        } else {
-            self.ui.text_fmt_aligned(
-                format_args!("{shown} of {total}"),
-                count,
-                14.0 * s,
-                theme.muted,
-                FontWeight::Regular,
-                0.4 * s,
-                TextAlign::End,
-            );
-        }
-    }
-
-    /// The visible rows; row token `i` is list position `first + i`.
-    fn list_rows(&mut self, layout: &FormLayout, row_height: f32) {
-        let s = layout.scale;
-        let theme = self.ui.theme();
-        let (first, page, count) = (
-            self.picker.first(),
-            self.picker.page(),
-            self.picker.match_count(),
+        text(
+            ui,
+            TextFamily::Display,
+            format_args!("File"),
+            frame.rect(
+                FILE_RIGHT - FILE_WIDTH,
+                HEADER_TOP,
+                FILE_WIDTH,
+                HEADER_HEIGHT,
+            ),
+            18.0 * s,
+            color::MUTED,
+            FontWeight::Regular,
+            TextAlign::End,
         );
-        let width = layout.column_width - 18.0 * s;
-        for slot in 0..page.min(count.saturating_sub(first)) {
+        let _ = ui.draw_list_mut().push(DrawCommand::SolidRect {
+            rect: frame.rect(LIST_X, HEADER_TOP + HEADER_HEIGHT, LIST_WIDTH, 1.0),
+            color: color::alpha(color::HOLO, 0.22),
+        });
+        let (first, selected) = (self.picker.first(), self.picker.selected());
+        for slot in 0..VISIBLE.min(shown.saturating_sub(first)) {
             let position = first + slot;
             let Some(entry) = self.picker.entry(&self.catalogue, position) else {
                 break;
             };
-            let selected = position == self.picker.selected();
-            let rect = Rect::new(
-                layout.margin,
-                layout.rows_y + slot as f32 * row_height,
-                width,
-                row_height,
-            );
-            self.ui.form_row_frame(rect, slot as u16, selected, s);
-            let text_y = rect.y + (row_height - 22.0 * s) * 0.5;
+            let top = ROWS_TOP + slot as f32 * ROW;
+            let token = slot as u16;
+            let chosen = position == selected;
+            if chosen {
+                kit::band(ui, &frame, [LIST_X, top, LIST_WIDTH, ROW]);
+            } else if ui.token_hovered(token) {
+                let _ = ui.draw_list_mut().push(DrawCommand::RoundedRect {
+                    rect: frame.rect(LIST_X, top, LIST_WIDTH, ROW),
+                    radius: 10.0 * s,
+                    color: color::alpha(color::HOLO, 0.05),
+                });
+            }
+            if entry.name == self.draft.map {
+                kit::changed_dot(ui, &frame, MARK_X, top + ROW * 0.5);
+            }
             let name_shown = entry.title != entry.name;
-            let title_width = if name_shown {
-                rect.width * 0.64
+            let title_right = if name_shown {
+                FILE_RIGHT - FILE_WIDTH - 16.0
             } else {
-                rect.width
+                FILE_RIGHT
             };
-            self.ui.text(
-                &entry.title,
-                Rect::new(rect.x, text_y, title_width, 22.0 * s),
-                17.0 * s,
-                if selected {
-                    theme.foreground
+            text(
+                ui,
+                TextFamily::Body,
+                format_args!("{}", entry.title),
+                frame.rect(NAME_X, top, title_right - NAME_X, ROW),
+                19.0 * s,
+                if chosen {
+                    Color::new(1.0, 1.0, 1.0, 1.0)
                 } else {
-                    Color::new(0.916, 0.945, 0.973, 0.896)
+                    color::alpha(color::TEXT, 0.88)
                 },
-                if selected {
-                    FontWeight::Semibold
-                } else {
-                    FontWeight::Regular
-                },
-                0.2 * s,
+                FontWeight::Regular,
+                TextAlign::Start,
             );
             if name_shown {
-                let x = rect.x + title_width + 12.0 * s;
-                self.ui.text_aligned(
-                    &entry.name,
-                    Rect::new(x, text_y + 2.0 * s, rect.right() - x, 20.0 * s),
-                    14.0 * s,
-                    if selected { theme.accent } else { theme.muted },
+                text(
+                    ui,
+                    TextFamily::Display,
+                    format_args!("{}", entry.name),
+                    frame.rect(FILE_RIGHT - FILE_WIDTH, top, FILE_WIDTH, ROW),
+                    18.0 * s,
+                    if chosen { color::TEXT } else { color::MUTED },
                     FontWeight::Regular,
-                    0.4 * s,
                     TextAlign::End,
                 );
             }
+            ui.hit_region(token, frame.rect(LIST_X, top, LIST_WIDTH, ROW));
         }
-        if count == 0 {
-            self.ui.text(
-                "No map matches.",
-                Rect::new(layout.margin, layout.rows_y + 12.0 * s, width, 22.0 * s),
-                17.0 * s,
-                theme.muted,
+        if shown == 0 {
+            text(
+                ui,
+                TextFamily::Body,
+                format_args!("No map matches \u{201c}{filter}\u{201d}."),
+                frame.rect(NAME_X, ROWS_TOP + 8.0, LIST_WIDTH - 56.0, 36.0),
+                19.0 * s,
+                color::MUTED,
                 FontWeight::Regular,
-                0.2 * s,
+                TextAlign::Start,
             );
         }
-        if count > page {
-            scroll_indicator(
-                &mut self.ui,
-                layout,
-                row_height * page as f32,
+        if shown > VISIBLE {
+            ui.scrollbar(
+                SCROLLBAR_TOKEN,
+                frame.rect(
+                    LIST_X + LIST_WIDTH + 14.0,
+                    ROWS_TOP,
+                    4.0,
+                    VISIBLE as f32 * ROW,
+                ),
                 first,
-                page,
-                count,
+                VISIBLE,
+                shown,
             );
         }
-    }
-}
-
-/// Thin, display-only position mark right of the list.
-fn scroll_indicator(
-    ui: &mut MenuCanvas,
-    layout: &FormLayout,
-    height: f32,
-    first: usize,
-    page: usize,
-    count: usize,
-) {
-    let s = layout.scale;
-    let track = Rect::new(
-        layout.margin + layout.column_width - 4.0 * s,
-        layout.rows_y,
-        3.0 * s,
-        height,
-    );
-    ui.list_scroll_mark(track, first, page, count, s);
-}
-
-/// A map preview in `rect`: the levelshot with a hairline edge, or — while
-/// it decodes or when the map ships none — the bare edge (with "No preview"
-/// for a map that has none).
-pub(super) fn draw_preview(ui: &mut MenuCanvas, rect: Rect, preview: Preview, s: f32) {
-    if preview == Preview::Image {
-        let _ = ui.draw_list_mut().push(DrawCommand::TexturedQuad {
-            rect,
-            texture: LEVELSHOT_TEXTURE,
-            color: Color::new(1.0, 1.0, 1.0, 1.0),
-        });
-    }
-    let _ = ui.draw_list_mut().push(DrawCommand::Border {
-        rect,
-        radius: 0.0,
-        width: 1.0,
-        color: Color::new(
-            1.0,
-            1.0,
-            1.0,
-            if preview == Preview::Image {
-                0.16
-            } else {
-                0.12
-            },
-        ),
-    });
-    if preview == Preview::Missing {
-        let muted = ui.theme().muted;
-        let size = (rect.height * 0.09).clamp(12.0 * s, 17.0 * s);
-        ui.text_aligned(
-            "No preview",
-            Rect::new(
-                rect.x,
-                rect.y + (rect.height - size * 1.3) * 0.5,
-                rect.width,
-                size * 1.3,
-            ),
-            size,
-            muted,
-            FontWeight::Regular,
-            0.4 * s,
-            TextAlign::Center,
+        // The highlighted map, large, right of the list.
+        // Nothing there while no map matches.
+        if let Some(entry) = self.picker.highlighted(&self.catalogue) {
+            let map = entry.name.as_str();
+            draw_picture(
+                &mut self.ui,
+                &frame,
+                PICTURE,
+                self.levelshots.preview(map),
+                self.levelshots.size(map),
+                map,
+            );
+            text(
+                &mut self.ui,
+                TextFamily::Display,
+                format_args!("{}", entry.title),
+                frame.rect(DETAIL_X, NAME_TOP, DETAIL_WIDTH, 40.0),
+                32.0 * s,
+                color::TEXT,
+                FontWeight::Semibold,
+                TextAlign::Start,
+            );
+            text(
+                &mut self.ui,
+                TextFamily::Body,
+                format_args!("Game types"),
+                frame.rect(DETAIL_X, MODES_TOP, DETAIL_WIDTH, 20.0),
+                14.0 * s,
+                color::MUTED,
+                FontWeight::Regular,
+                TextAlign::Start,
+            );
+            let mut modes = String::with_capacity(160);
+            for (index, mode) in MODES.iter().enumerate() {
+                if entry.supports(index) {
+                    if !modes.is_empty() {
+                        modes.push_str(", ");
+                    }
+                    modes.push_str(mode.label);
+                }
+            }
+            for (line, part) in wrap(&modes, 60).take(3).enumerate() {
+                text(
+                    &mut self.ui,
+                    TextFamily::Body,
+                    format_args!("{part}"),
+                    frame.rect(
+                        DETAIL_X,
+                        MODES_TOP + 24.0 + line as f32 * 28.0,
+                        DETAIL_WIDTH,
+                        26.0,
+                    ),
+                    18.0 * s,
+                    color::TEXT,
+                    FontWeight::Regular,
+                    TextAlign::Start,
+                );
+            }
+        }
+        draw_keys(
+            &mut self.ui,
+            &frame,
+            &[
+                (&["Enter"], "choose"),
+                (&["Up", "Down"], "move"),
+                (&["Backspace"], "erase"),
+                (&["Esc"], "create game"),
+            ],
         );
+        self.ui.pop_opacity();
+        let focus = self.picker.selected().saturating_sub(self.picker.first());
+        self.ui.finish(focus as u16);
     }
 }
+
+const _: () = assert!(NAME_X + 360.0 < FILE_RIGHT - FILE_WIDTH);
+const _: () = assert!(LIST_X + LIST_WIDTH + 40.0 < DETAIL_X);
+const _: () = assert!(ROWS_TOP + VISIBLE as f32 * ROW < super::create_game_view::KEYS_Y - 20.0);
+const _: () = assert!(HEADER_TOP + HEADER_HEIGHT < ROWS_TOP);

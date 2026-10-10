@@ -254,6 +254,18 @@ test: Arrows, PgUp/PgDn, Home/End and the wheel move; Enter or a click picks; Es
 test: Classic menus: Setup > Video > Resolution, Enter: the same card over the panel.
 test: Classic: every Setup and Graphics entry still opens its classic+ panel as before.
 
+[create-game-sjk]
+area: Menus & settings
+title: Create game and its map list in the SJK UI look (every menu style)
+change: Rows under Match and Server, gold Start, the map's picture with its figures on the right.
+change: The map list: search pill, 14 rows with file names, the map's picture and game types.
+test: Play > Create a game: Esc Main menu top left, keys bottom right, no hero form left.
+test: Up/Down, Left/Right on cyclers; click a cycler's left half (back) and right half (on).
+test: Server name: Enter, type, Enter keeps, Esc cancels. LAN switch flips with Enter or a click.
+test: Map row Enter (or click the picture): type to filter, Backspace, Enter picks, Esc returns.
+test: Start the game: Starting..., then the hosted game loads. Same screen with ui_menuStyle classic.
+note: World shots only (duel6-create-game*); not tried in a game.
+
 [sharp-levelshots]
 area: Menus & settings
 title: Sharp loading-screen and map-picker levelshots

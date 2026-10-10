@@ -118,6 +118,7 @@ impl MenuCanvas {
 
     /// Rounded backing at the `ui_menuContrast` floor behind text that sits
     /// outside the text column; nothing while the setting is off.
+    #[allow(dead_code)] // Unused since Create game's SJK UI look; goes with the hero look.
     pub(crate) fn text_backing(&mut self, rect: Rect) {
         let coverage = self.readability_coverage();
         if coverage > 0.0 {

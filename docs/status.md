@@ -22,6 +22,25 @@ and level; when it plays; the settings row) and against the sound Sol chose, mad
 retail file: correlation 0.9993, RMS 0.03321 against 0.03319, peak 0.527 against 0.527.
 Not heard in the client, in the menus or in a game.
 
+## Create game in the SJK UI's look
+
+Branch `personal/create-game-sjk` (10/10/2026, based on `c513abee`, Windows 11), Sol's
+request that the hero look disappear and the SJK UI be the look of every screen without
+a classic+ version. Create game and its map list are redrawn with the SJK UI's kit
+(`menu/create_game_view.rs`, `menu/map_picker_view.rs`) and shown in every menu style:
+`ClientMenu::sjk_screen` covers the Create game phase whatever `ui_menuStyle` says, so
+the map shows under it, its text goes to the UI's families and `game_font::prepare`
+loads them for it with the classic menus too. The screen's state, keys, rows, pointer
+tokens (rows `0..9`, the way back 900, the list's rows `0..14`) and the hosting flow
+are unchanged; the hero widgets are no longer used by it (`text_backing` and
+`form_cycler_fmt` lost their last user and carry a `dead_code` allowance until the
+hero look is removed). Verified by a unit test (both pages lay out within the canvas at
+1080p, 4K and 4:3, the cycler's first target is its control), `cargo test -p
+sjk-viewer --bins`, clippy and fmt, and the world shot
+`world_shot::create_game::duel6_sjk_create_game` (Start chosen, the Map row, the name
+being typed, the list, filtered and filtered to nothing; 4K and 4:3 at `ui_textScale
+1.2`; the classic menus), looked at. Not tried in a game.
+
 ## Staff: verify, merge players, linked keys
 
 Branch `personal/staff-merge` (10/10/2026, based on `6b13a8cd`, Windows 11), with the

@@ -9,6 +9,8 @@
 #                               made it when that is not the piece's owner.
 
 = Sol
++ 10/10/2026 | - | Create game and its map picker in the SJK look in every style
+- 94177d4 |  | Draw Create game and its map list in the SJK UI look, in every menu style
 + 10/10/2026 | - | Resolution list as an SJK card, hero settings screen and key editor removed
 - 3d23692 |  | Settings without the hero form: resolution card, SJK Settings everywhere
 + 10/10/2026 | - | SJK chat plays a variant of JKA's chat sound for new messages

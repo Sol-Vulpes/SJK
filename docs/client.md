@@ -101,12 +101,14 @@ drops the settings only it read (`ui_accent`, `con_lineSpacing`, `con_maxLines`,
 `con_datetime`) from the profile (`retire_modern_ui` in
 [console_session.rs](../crates/sjk-viewer/src/console_session.rs)). A few
 screens the classic pages and the SJK UI open have no version of their own yet
-and keep that style's hero look: Create game and its map picker, the Update
+and keep that style's hero look: the Update
 page and Camera control with the classic menus. The settings have no hero look
 left since 10/10/2026: the resolution list is the SJK UI's pop-up card in
 every style, and a way to settings without a classic+ panel (a main-menu
 destination, the classic renderer route, First setup's fallback) opens the SJK
 UI's Settings or Key bindings, drawn in the UI's own type whatever the style.
+Create game and its map picker are the SJK UI's in every menu style since
+10/10/2026 ([SJK UI](sjk-ui.md#create-game)).
 
 The SJK UI is SJK's own menus drawn over the live map in SJK's type
 ([SJK UI](sjk-ui.md)). It has its main page: the emblem in a
@@ -515,11 +517,12 @@ typed text, vote-list names and the about values keep their case.
 Outside a match the classic style draws no world. The main pages are opaque
 over the retail background (the main page's emblem fills the centre gap,
 the sub-pages' gap stays dark), and the screens they open (the tabbed settings,
-key bindings, Player, Create game) get the retail backdrop beneath them; the
+key bindings, Player) get the retail backdrop beneath them; the
 classic server browser draws its own. The frame
 then clears instead of rendering the map, its secondary views and flares; the
 boot map is still loaded, because the menu world is what joins build on, and
-switching to the SJK UI shows it again. Not loading it at all in the classic
+switching to the SJK UI shows it again. Create game is the SJK UI's screen in
+this style too, over the map. Not loading it at all in the classic
 style is a possible follow-up. Over a live match the in-game menu and the
 screens it opens leave the game visible, as retail's do.
 

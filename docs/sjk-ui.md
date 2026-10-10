@@ -13,7 +13,8 @@ Status (08/10/2026): the main page, Settings (with the key bindings),
 Character, What's new, Update, Identity, Credits, Servers (the server browser),
 the loading screen, the scoreboard, the in-game menu (reworked 09/10/2026), the
 Profile screen, the Collection (10/10/2026), Camera control, the report and note
-dialog (Report a bug) and the new medal pop-up are done. Every other
+dialog (Report a bug), the new medal pop-up and Create game with its map list
+(10/10/2026, in every menu style) are done. Every other
 screen opens in its classic+ version, which
 covers the map as the classic style does.
 The other style: First setup's Menu style row, Settings > Interface > Menu style, or
@@ -753,6 +754,43 @@ half and on on its right half.
 
 Joining shows the SJK UI's loading screen (Loading).
 
+## Create game
+
+[create_game_view.rs](../crates/sjk-viewer/src/menu/create_game_view.rs) and
+[map_picker_view.rs](../crates/sjk-viewer/src/menu/map_picker_view.rs): the screen
+that hosts a match on this machine with bots (Play's Create a game, the classic Solo
+Game and Create Server), since 10/10/2026 in the SJK UI's look in every menu style,
+as it has no classic+ version (the hero form it had is gone). It lies over the map
+darkened as Settings is, on the main page's 16:9 frame.
+
+- **Top:** the way back (Esc, "Main menu") and "Create game".
+- **Left:** under "Match", banded rows of 56 with a cycler each: Game type, Map, Bots,
+  Bot skill (Initiate to Jedi Master), the mode's limit (Frag limit, Capture limit, or
+  Objectives for Siege, which cannot be changed) and Time limit; under "Server", Server
+  name as a field (typing shows a cursor) and Allow LAN players as a switch with what it
+  means ("This PC only"); then Start the game, the gold button ("Starting..." and dimmed
+  while the server starts).
+- **Right:** the chosen map's levelshot (2:1, cropped, never stretched) with its file
+  name over its foot (a click opens the map list); its long name; four figures in two
+  columns (Game type, Bots with their skill, Limits in words, Who can join); a line
+  saying who the match is for.
+- **Bottom:** how the start stands at the left (starting, or why it failed); the
+  chosen row's keys at the right.
+- **Map list** (Enter on Map, or the picture): the way back is "Create game", the title
+  "Choose a map", and the search pill holds what is typed (every printable key filters,
+  Backspace erases), with how many were found. The header line says how many maps the
+  game type has ("5 of 61 maps for Free for all") over a File column; fourteen rows of 52
+  with the long name and the `mp/...` name (left out when they are the same), the chosen
+  map marked with a gold dot, the highlighted one on the band, a scrollbar past
+  fourteen; an empty list says nothing matches. On the right the highlighted map's
+  levelshot, its name and the game types it is played in.
+
+Keys and pointer are the screen's own as before: Up, Down (and Tab) choose, Left and
+Right change, Enter starts, edits the name, flips the switch or opens the list, Escape
+goes back; in the list Up, Down, Page Up and Down, Home and End move, Enter picks,
+Escape returns. Hovering chooses a row; a click on a cycler's left half steps back and
+on its right half on; the wheel moves the choice (or scrolls the list).
+
 ## Loading
 
 [loading.rs](../crates/sjk-viewer/src/menu/sjk/loading.rs): what a join shows
@@ -1376,7 +1414,7 @@ nine moments, 1080p, 4K, 4:3, 21:9 and 720 lines, in the families and in Inter).
   main page dispatches to `menu::sjk::home`.
   `ClientMenu::sjk_screen` says when one of the SJK UI's own screens is on show
   (the main page, Settings without a picker open, Character, Servers, the
-  loading screen): the map is drawn under it (the loading screen leaves it out
+  loading screen, and Create game in every menu style): the map is drawn under it (the loading screen leaves it out
   itself when it has to)
   (`classic_hides_world` leaves it out) and its text goes to the UI's families
   (`append_sjk_screen`).
@@ -1402,6 +1440,14 @@ nine moments, 1080p, 4K, 4:3, 21:9 and 720 lines, in the families and in Inter).
   `browser_key`; its pointer to `sjk_browser_pointer` before the shared one.
   The chosen server's levelshot comes through the create-game screen's cache
   (`CreateGame::service_levelshot_for`, which also gives its size).
+- Create game is `menu::create_game::CreateGameMenu`'s state with a new view
+  (`CreateGameMenu::append`, its text to a `TextTarget`, from `append_sjk_screen`
+  or, without the families, `append_overlay`); its pointer tokens are the rows'
+  indices, Start's, the way back's (`create_game::BACK_TOKEN`, 900) and the list's
+  slots, and a cycler row registers its control before the row so a click steps the
+  way the half under the pointer points. Because Create game has no classic+ version,
+  `sjk_screen` covers it in the classic style too, and `game_font::prepare` loads the
+  families whenever an `sjk_screen` is on show. `world_shot::create_game` renders it.
 - The loading screen is the classic loading screen's state with another view:
   `classic::loading::ClassicLoading` (fed by the join, `set_game` and
   `sync_classic_loading`) also keeps the session's world stage and whether the
@@ -1535,7 +1581,7 @@ classic version:
    (08/10/2026).
 2. Settings' search finding key bindings too (it finds settings; Key bindings'
    finds keys).
-3. Create a game.
+3. Create a game: done (10/10/2026, in every menu style).
 
 `sjk` became the default `ui_menuStyle` before these were done. mp/duel6 has
 its tour, player stage and saber shot.

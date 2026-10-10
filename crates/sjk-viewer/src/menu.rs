@@ -303,10 +303,11 @@ impl ClientMenu {
     }
 
     /// Whether a screen of the SJK UI's own is on show (its main page, its
-    /// Settings, Character, Servers or its loading screen), which sits over
-    /// the live map where the classic pages cover it and draws in the UI's
-    /// families. The loading screen covers the map itself when it has to
-    /// ([`Self::sjk_loading_hides_world`]).
+    /// Settings, Character, Servers, Create game or its loading screen), which
+    /// sits over the live map where the classic pages cover it and draws in
+    /// the UI's families. Create game has no classic+ version, so it is the
+    /// SJK UI's in every menu style. The loading screen covers the map itself
+    /// when it has to ([`Self::sjk_loading_hides_world`]).
     pub(crate) fn sjk_screen(&self) -> bool {
         // Its Settings and Key bindings, whatever the style: the screens a
         // classic page has no classic+ panel for open them too.
@@ -318,6 +319,7 @@ impl ClientMenu {
             _ => false,
         };
         settings
+            || matches!(self.state.phase(), ClientPhase::CreateGame)
             || self.menu_style == MenuStyle::Sjk
                 && match self.state.phase() {
                     ClientPhase::MainMenu => true,

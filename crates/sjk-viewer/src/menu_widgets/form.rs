@@ -233,6 +233,7 @@ impl MenuCanvas {
     }
 
     /// [`form_cycler`](Self::form_cycler) with a formatted value.
+    #[allow(dead_code)] // Unused since Create game's SJK UI look; goes with the hero look.
     pub(crate) fn form_cycler_fmt(
         &mut self,
         zone: Rect,
