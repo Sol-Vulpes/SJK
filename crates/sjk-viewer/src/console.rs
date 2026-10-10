@@ -629,7 +629,6 @@ impl ViewerConsole {
         if self.append_credits(vertices, font, viewport)
             || self.append_changelog(vertices, font, viewport)
             || self.append_identity_panel(vertices, font, viewport)
-            || self.append_debug_panel(vertices, font, viewport)
         {
             return;
         }

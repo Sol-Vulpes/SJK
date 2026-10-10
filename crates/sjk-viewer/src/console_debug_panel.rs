@@ -75,18 +75,23 @@ impl ViewerConsole {
         true
     }
 
-    /// Draw the panel in place of the console; false when it is not shown.
+    /// Draw the panel in place of the console, in the SJK UI's look, its text to
+    /// `target` (`console_sjk_pages.rs` routes it).
     pub(super) fn append_debug_panel(
         &mut self,
-        vertices: &mut Vec<TextVertex>,
-        font: &UiFont,
+        target: crate::menu::sjk::TextTarget<'_>,
         viewport: [f32; 2],
-    ) -> bool {
-        if !(self.open && self.debug_panel.is_open()) {
-            return false;
+    ) {
+        self.debug_panel.append_sjk(target, viewport);
+    }
+
+    /// Open the test list on its first entry with notes, for a world shot.
+    #[cfg(test)]
+    pub(crate) fn debug_panel_for_shot(&mut self) {
+        if !self.debug_panel.is_open() {
+            self.toggle_debug_panel();
         }
-        self.debug_panel.append(vertices, font, viewport);
-        true
+        self.debug_panel.select_noted_for_shot();
     }
 
     /// The panel's draw list while it is shown.

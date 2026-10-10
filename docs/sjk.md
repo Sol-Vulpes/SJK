@@ -241,3 +241,16 @@ without a card.
 The `debug_panel` console command lists SJK's changes and how to test them, from
 [debug_panel.txt](../crates/sjk-viewer/assets/debug_panel.txt). It is Sol's
 personal test list. Update it in the merge that brings a change into SJK's `main`.
+
+Since 10/10/2026 the panel is a full-frame SJK UI page in every menu style, as the
+Profile and SJK chat pages are ([sjk-ui.md](sjk-ui.md#sjks-pages)): the way back and
+"Test list" at the top left, the tabs To test, Tested and All under them, how many are
+tested at the top right; the entries down the left (tick box, title, area), the chosen
+one on a band; its details in a reading column on the right (area, title, its tick,
+What changed, To test numbered in gold, Note on a gold band), the last tick's outcome
+bottom left and the keys bottom right. Up and Down (Page Up, Page Down, Home, End)
+choose, Space or Enter (or a click on a tick box or the Space key hint) ticks, Tab and
+Shift+Tab change the tab, the wheel scrolls the list wherever the pointer is, Escape
+closes. Ticks stay saved by id in `debug_panel_tested.txt`. It still draws over the
+command browser when both are open. World shot:
+`world_shot::tests::duel6_debug_panel`.

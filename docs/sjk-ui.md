@@ -461,6 +461,20 @@ overlay routes their text to the UI's families (`console_sjk_pages.rs`).
   or "Not known to the SJK hub", the hub name when it differs, the key, where they are
   on the server being played, their medals' medallions, Mute or Unmute (gold edged) and
   what that does. It sits right of the name, or left of it at the screen's edge.
+- **Test list** ([debug_panel_view.rs](../crates/sjk-viewer/src/debug_panel_view.rs),
+  10/10/2026, Sol asked for every trace of the old hero look to go): the `debug_panel`
+  command's personal test list ([sjk.md](sjk.md#debug-panel)), drawn in this look in
+  every menu style and over the command browser when both are open. Top bar "Test
+  list", the row of tabs (To test, Tested, All) under it, "N of M tested" in gold at the
+  top right; the entries down the left in rows of 60 (x 96, 600 wide, from y 214 to
+  950: tick box, title cut with an ellipsis by measured width, area in Rajdhani), the
+  chosen one banded, its title and area gold; the reading column (x 790 to 1824): area
+  in gold, the title at 36 on up to two lines, its tick with Tested or Not tested, then
+  What changed, To test (numbered in gold) and Note (on a soft gold band with a gold
+  bar), wrapped by measured width and cut with an ellipsis at y 950. The last tick's
+  outcome (ember for a load or save error) bottom left; keys Space, Tab, Up Down, Esc
+  bottom right. World shot: `world_shot::tests::duel6_debug_panel` (1080p and 4K with
+  `ui_textScale 1.2`, `ui_menuStyle sjk` and `classic`).
 - **Credits** ([credits_sjk.rs](../crates/sjk-viewer/src/credits_sjk.rs), since
   08/10/2026, Sol's request: restyle Credits but keep its sun): on the left SJK's
   emblem (220 across, centred at (300, 330)) is the page's sun, the one memorable
