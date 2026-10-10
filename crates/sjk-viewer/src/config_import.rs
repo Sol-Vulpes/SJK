@@ -271,6 +271,25 @@ mod tests {
     }
 
     #[test]
+    fn a_latin1_bind_only_file_with_stock_backslash_and_tilde_keys() {
+        let directory = tempfile::tempdir().unwrap();
+        let config = directory.path().join("turin.cfg");
+        let mut bytes = b"bind \"F3\" \"set name ^5".to_vec();
+        bytes.push(0xB7);
+        bytes.extend_from_slice(
+            b"^7turin\"\nbind \"\\\" \"force_forcepowerother\"\nbind \"~\" \"toggleconsole\"\n\
+              bind \"G\" \"force_absorb; wait 2; force_protect\"\n",
+        );
+        std::fs::write(&config, bytes).unwrap();
+        let found = read(&config).unwrap();
+        assert_eq!(found.unknown_keys, 0);
+        assert_eq!(found.binds.len(), 4);
+        assert_eq!(found.binds[0].1, "set name ^5\u{b7}^7turin");
+        assert_eq!(found.binds[1].1, "force_forcepowerother");
+        assert_eq!(found.binds[3].1, "force_absorb; wait 2; force_protect");
+    }
+
+    #[test]
     fn a_config_with_none_of_the_parts_is_empty() {
         assert!(parse("seta snaps 40\nexec other.cfg\n").is_empty());
     }
