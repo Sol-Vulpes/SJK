@@ -1081,6 +1081,7 @@ mod tests {
 
     fn full_profile() -> Profile {
         Profile {
+            keys: Vec::new(),
             key_id: "0123456789abcdef".to_owned(),
             key: String::new(),
             name: "^1Ш^7Sol^3Vulpes^7 the Long Named".to_owned(),

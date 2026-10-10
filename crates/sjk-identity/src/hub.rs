@@ -601,6 +601,14 @@ fn staff_call(request: &StaffRequest) -> (&'static str, Value) {
             "/v1/staff/holocron-remove",
             json!({ "key_id": key_id, "id": id }),
         ),
+        StaffRequest::Verify { key_id, verified } => (
+            "/v1/staff/verify",
+            json!({ "key_id": key_id, "verified": verified }),
+        ),
+        StaffRequest::Merge { key_id, from } => {
+            ("/v1/staff/merge", json!({ "key_id": key_id, "from": from }))
+        }
+        StaffRequest::Unlink { key_id } => ("/v1/staff/unlink", json!({ "key_id": key_id })),
     }
 }
 
@@ -1022,6 +1030,36 @@ mod tests {
                 "/v1/staff/holocron-remove",
                 json!({"key_id": "0123456789abcdef", "id": 41})
             )
+        );
+    }
+
+    #[test]
+    fn staff_verify_merge_and_unlink_send_the_protocols_fields() {
+        assert_eq!(
+            staff_call(&StaffRequest::Verify {
+                key_id: "0123456789abcdef".into(),
+                verified: true,
+            }),
+            (
+                "/v1/staff/verify",
+                json!({"key_id": "0123456789abcdef", "verified": true})
+            )
+        );
+        assert_eq!(
+            staff_call(&StaffRequest::Merge {
+                key_id: "0123456789abcdef".into(),
+                from: "fedcba9876543210".into(),
+            }),
+            (
+                "/v1/staff/merge",
+                json!({"key_id": "0123456789abcdef", "from": "fedcba9876543210"})
+            )
+        );
+        assert_eq!(
+            staff_call(&StaffRequest::Unlink {
+                key_id: "fedcba9876543210".into(),
+            }),
+            ("/v1/staff/unlink", json!({"key_id": "fedcba9876543210"}))
         );
     }
 

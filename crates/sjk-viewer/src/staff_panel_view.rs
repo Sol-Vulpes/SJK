@@ -4,7 +4,8 @@
 //! Unlock and Relock in the middle, and their
 //! achievements with Clear on the right. Under the players, the holocrons: a tier to
 //! choose, Give holocron (with the note) and the chosen player's recent holocrons with
-//! Remove.
+//! Remove. Verify sits beside Take picture down; the right column's Keys and merge tab
+//! lists the player's keys with Unlink and merges another player into them.
 
 use super::*;
 use crate::achievements;
@@ -40,6 +41,9 @@ const ACHIEVEMENTS_SHOWN: usize = 18;
 const HOLOCRONS_TOP: f32 = 770.0;
 const TIER_CHIP: [f32; 2] = [104.0, 42.0];
 const HOLOCRON_ROW: f32 = 34.0;
+/// The Keys and merge view: the linked keys' rows, then the merge section.
+const LINKED_ROW: f32 = 36.0;
+const MERGE_TOP: f32 = 640.0;
 /// The keys' line.
 const KEYS_Y: f32 = 1_010.0;
 
@@ -105,6 +109,26 @@ impl Panel {
             .is_some_and(|profile| !profile.avatar.is_empty());
         self.shown.unlocks = [false; crate::unlockables::ALL.len()];
         self.shown.holocron_rows = 0;
+        self.shown.verified = target.as_ref().is_some_and(|profile| profile.verified);
+        self.shown.linked.clear();
+        if let Some(profile) = &target {
+            self.shown
+                .linked
+                .extend(profile.linked_keys().take(LINKED_SHOWN).map(str::to_owned));
+        }
+        self.shown.merge_problem = Self::merge_problem(
+            &merge_key(&self.merge_from),
+            target.as_ref(),
+            &inputs.staff.players,
+        );
+        // A merge confirmed for another player than the one now chosen is let go.
+        if self
+            .pending_merge
+            .as_ref()
+            .is_some_and(|merge| self.shown.target.as_ref() != Some(&merge.kept))
+        {
+            self.pending_merge = None;
+        }
         if let Some(profile) = &target {
             for medal in &profile.medals {
                 if let Some(known) = Medal::from_id(&medal.id) {
@@ -122,7 +146,11 @@ impl Panel {
             self.medals(&frame, profile);
             self.unlockables(&frame, profile);
             self.holocrons(&frame, profile);
-            self.achievements(&frame, profile, mine);
+            self.right_tabs(&frame);
+            match self.right {
+                RightView::Achievements => self.achievements(&frame, profile, mine),
+                RightView::Keys => self.keys_and_merge(&frame, profile, &inputs.staff.players),
+            }
         }
         self.status(&frame, inputs.staff);
         self.keys(&frame);
@@ -265,12 +293,28 @@ impl Panel {
             &mut self.ui,
             TextFamily::Display,
             format_args!("{name}"),
-            frame.rect(name_x, TOP - 6.0, 760.0, 48.0),
+            frame.rect(name_x, TOP - 6.0, 600.0, 48.0),
             38.0 * s,
             color::TEXT,
             FontWeight::Semibold,
             TextAlign::Start,
         );
+        // Verify shows what pressing it does: Unverify while the player is verified.
+        kit::button(
+            &mut self.ui,
+            frame,
+            [1_824.0 - 240.0 - 12.0 - 150.0, TOP, 150.0, 42.0],
+            if profile.verified {
+                "Unverify"
+            } else {
+                "Verify"
+            },
+            !profile.verified,
+            true,
+            self.focus == VERIFY_TOKEN,
+            VERIFY_TOKEN,
+        );
+        self.order.push(VERIFY_TOKEN);
         kit::button(
             &mut self.ui,
             frame,
@@ -288,6 +332,11 @@ impl Panel {
         }
         if profile.staff {
             facts.push("staff".to_owned());
+        }
+        match profile.linked_keys().count() {
+            0 => {}
+            1 => facts.push("1 linked key".to_owned()),
+            count => facts.push(format!("{count} linked keys")),
         }
         let since = crate::medals::date_text(profile.created);
         if !since.is_empty() {
@@ -695,15 +744,7 @@ impl Panel {
     /// The player's achievements with a count, each with Clear, and Clear all.
     fn achievements(&mut self, frame: &Frame, profile: &Profile, mine: bool) {
         let s = frame.s;
-        kit::heading(
-            &mut self.ui,
-            frame,
-            RIGHT_X,
-            SECTION_TOP - 20.0,
-            RIGHT_WIDTH - 150.0,
-            "Achievements",
-        );
-        let confirming = self.confirming();
+        let confirming = self.confirming(CLEAR_ALL_TOKEN);
         kit::button(
             &mut self.ui,
             frame,
@@ -833,6 +874,347 @@ impl Panel {
         }
     }
 
+    /// The right column's two tabs, the one shown filled gold.
+    fn right_tabs(&mut self, frame: &Frame) {
+        let mut x = RIGHT_X;
+        for (label, width, view, token) in [
+            (
+                "Achievements",
+                170.0,
+                RightView::Achievements,
+                ACHIEVEMENTS_TAB_TOKEN,
+            ),
+            ("Keys and merge", 190.0, RightView::Keys, KEYS_TAB_TOKEN),
+        ] {
+            kit::button(
+                &mut self.ui,
+                frame,
+                [x, SECTION_TOP - 40.0, width, 38.0],
+                label,
+                self.right == view,
+                true,
+                self.focus == token,
+                token,
+            );
+            self.order.push(token);
+            x += width + 10.0;
+        }
+    }
+
+    /// The chosen player's keys, each linked one with Unlink, then the merge: the key
+    /// of the player to merge away and Merge, or the confirmation saying who is kept
+    /// and who goes.
+    fn keys_and_merge(&mut self, frame: &Frame, profile: &Profile, players: &[Profile]) {
+        let s = frame.s;
+        let mut y = SECTION_TOP + 10.0;
+        text(
+            &mut self.ui,
+            TextFamily::Body,
+            format_args!("Main key {}", profile.key_id),
+            frame.rect(RIGHT_X, y, RIGHT_WIDTH, 24.0),
+            16.0 * s,
+            color::MUTED,
+            FontWeight::Regular,
+            TextAlign::Start,
+        );
+        y += 34.0;
+        let linked: Vec<&str> = profile.linked_keys().collect();
+        if linked.is_empty() {
+            for part in wrap(
+                "No linked keys. The keys of a player merged into this one are linked here.",
+                72,
+            ) {
+                text(
+                    &mut self.ui,
+                    TextFamily::Body,
+                    format_args!("{part}"),
+                    frame.rect(RIGHT_X, y, RIGHT_WIDTH, 22.0),
+                    14.0 * s,
+                    color::QUIET,
+                    FontWeight::Regular,
+                    TextAlign::Start,
+                );
+                y += 22.0;
+            }
+        }
+        for (row, key) in linked.iter().take(LINKED_SHOWN).enumerate() {
+            let token = UNLINK_BASE + row as u16;
+            let row_y = y + row as f32 * LINKED_ROW;
+            text(
+                &mut self.ui,
+                TextFamily::Display,
+                format_args!("Linked {key}"),
+                frame.rect(RIGHT_X, row_y + 2.0, RIGHT_WIDTH - 150.0, 26.0),
+                18.0 * s,
+                color::TEXT,
+                FontWeight::Regular,
+                TextAlign::Start,
+            );
+            let label = if self.confirming(token) {
+                "Press again"
+            } else {
+                "Unlink"
+            };
+            kit::button(
+                &mut self.ui,
+                frame,
+                [RIGHT_X + RIGHT_WIDTH - 140.0, row_y - 1.0, 140.0, 30.0],
+                label,
+                false,
+                true,
+                self.focus == token,
+                token,
+            );
+            self.order.push(token);
+        }
+        if linked.len() > LINKED_SHOWN {
+            text(
+                &mut self.ui,
+                TextFamily::Body,
+                format_args!("and {} more", linked.len() - LINKED_SHOWN),
+                frame.rect(
+                    RIGHT_X,
+                    y + LINKED_SHOWN as f32 * LINKED_ROW,
+                    RIGHT_WIDTH,
+                    20.0,
+                ),
+                13.0 * s,
+                color::QUIET,
+                FontWeight::Regular,
+                TextAlign::Start,
+            );
+        }
+        if !linked.is_empty() {
+            let rows = linked.len().min(LINKED_SHOWN) as f32 * LINKED_ROW;
+            let more = if linked.len() > LINKED_SHOWN {
+                22.0
+            } else {
+                0.0
+            };
+            text(
+                &mut self.ui,
+                TextFamily::Body,
+                format_args!("An unlinked key starts afresh; nothing moves back."),
+                frame.rect(RIGHT_X, y + rows + more + 4.0, RIGHT_WIDTH, 20.0),
+                13.0 * s,
+                color::QUIET,
+                FontWeight::Regular,
+                TextAlign::Start,
+            );
+        }
+        kit::heading(
+            &mut self.ui,
+            frame,
+            RIGHT_X,
+            MERGE_TOP,
+            RIGHT_WIDTH,
+            "Merge another key into this player",
+        );
+        match self.pending_merge.clone() {
+            Some(merge) => self.merge_confirmation(frame, profile, &merge, players),
+            None => self.merge_entry(frame),
+        }
+    }
+
+    /// The merge field with Pick in list, what is wrong with it, and Merge.
+    fn merge_entry(&mut self, frame: &Frame) {
+        let s = frame.s;
+        let mut y = MERGE_TOP + 30.0;
+        for part in wrap(
+            "For a player who reset their key: this player is kept, the other one's medals, unlocks, achievements, holocrons and names move here and their keys become linked keys.",
+            72,
+        ) {
+            text(
+                &mut self.ui,
+                TextFamily::Body,
+                format_args!("{part}"),
+                frame.rect(RIGHT_X, y, RIGHT_WIDTH, 22.0),
+                14.0 * s,
+                color::QUIET,
+                FontWeight::Regular,
+                TextAlign::Start,
+            );
+            y += 22.0;
+        }
+        let y = MERGE_TOP + 104.0;
+        let pick_width = 150.0;
+        let field = [RIGHT_X, y, RIGHT_WIDTH - pick_width - 10.0, 44.0];
+        let focused = self.focus == MERGE_FIELD_TOKEN;
+        let caret = focused && (self.epoch.elapsed().as_millis() / 500).is_multiple_of(2);
+        kit::field(
+            &mut self.ui,
+            frame,
+            field,
+            format_args!(
+                "{}{}",
+                cut(&self.merge_from, 28),
+                if caret { "|" } else { "" }
+            ),
+            focused,
+            false,
+        );
+        self.ui.hit_region(
+            MERGE_FIELD_TOKEN,
+            frame.rect(field[0], field[1], field[2], field[3]),
+        );
+        self.order.push(MERGE_FIELD_TOKEN);
+        kit::button(
+            &mut self.ui,
+            frame,
+            [
+                RIGHT_X + RIGHT_WIDTH - pick_width,
+                y + 1.0,
+                pick_width,
+                42.0,
+            ],
+            if self.picking {
+                "Picking..."
+            } else {
+                "Pick in list"
+            },
+            self.picking,
+            true,
+            self.focus == MERGE_PICK_TOKEN,
+            MERGE_PICK_TOKEN,
+        );
+        self.order.push(MERGE_PICK_TOKEN);
+        let (line, colour) = if self.picking {
+            (
+                "Choose the player to merge away in the list (Esc lets go)",
+                color::GOLD_BRIGHT,
+            )
+        } else {
+            match self.shown.merge_problem {
+                None => (
+                    "Ready: Merge asks once more before anything moves",
+                    color::MUTED,
+                ),
+                Some(MergeProblem::Empty) => (MergeProblem::Empty.words(), color::QUIET),
+                Some(problem) => (problem.words(), color::EMBER),
+            }
+        };
+        text(
+            &mut self.ui,
+            TextFamily::Body,
+            format_args!("{line}"),
+            frame.rect(RIGHT_X, y + 54.0, RIGHT_WIDTH, 22.0),
+            14.0 * s,
+            colour,
+            FontWeight::Regular,
+            TextAlign::Start,
+        );
+        let ready = self.shown.merge_problem.is_none();
+        kit::button(
+            &mut self.ui,
+            frame,
+            [RIGHT_X, y + 88.0, 180.0, 42.0],
+            "Merge...",
+            ready,
+            ready,
+            self.focus == MERGE_TOKEN,
+            MERGE_TOKEN,
+        );
+        if ready {
+            self.order.push(MERGE_TOKEN);
+        }
+    }
+
+    /// The merge's confirmation: who is kept, who goes, that it cannot be undone, and
+    /// Merge for good or Cancel.
+    fn merge_confirmation(
+        &mut self,
+        frame: &Frame,
+        kept: &Profile,
+        merge: &PendingMerge,
+        players: &[Profile],
+    ) {
+        let s = frame.s;
+        let card = [RIGHT_X - 12.0, MERGE_TOP + 26.0, RIGHT_WIDTH + 24.0, 316.0];
+        kit::card(&mut self.ui, frame, card);
+        let named = |name: &str| {
+            if name.is_empty() {
+                "(no name yet)".to_owned()
+            } else {
+                cut(name, 30)
+            }
+        };
+        let gone = players
+            .iter()
+            .find(|player| player.has_key(&merge.from))
+            .map_or_else(|| "a player not in the list".to_owned(), |p| named(&p.name));
+        let mut y = MERGE_TOP + 42.0;
+        for (label, who, key, colour) in [
+            (
+                "Kept",
+                named(&kept.name),
+                merge.kept.as_str(),
+                color::GOLD_BRIGHT,
+            ),
+            ("Merged away", gone, merge.from.as_str(), color::EMBER),
+        ] {
+            text(
+                &mut self.ui,
+                TextFamily::Display,
+                format_args!("{label}: {who}"),
+                frame.rect(RIGHT_X, y, RIGHT_WIDTH, 28.0),
+                20.0 * s,
+                colour,
+                FontWeight::Semibold,
+                TextAlign::Start,
+            );
+            text(
+                &mut self.ui,
+                TextFamily::Body,
+                format_args!("Key id {key}"),
+                frame.rect(RIGHT_X, y + 28.0, RIGHT_WIDTH, 20.0),
+                14.0 * s,
+                color::MUTED,
+                FontWeight::Regular,
+                TextAlign::Start,
+            );
+            y += 58.0;
+        }
+        for part in wrap(
+            "Everything of the merged-away player moves to the kept one, and their keys become its linked keys. This cannot be undone: Unlink only detaches a key, nothing moves back.",
+            68,
+        ) {
+            text(
+                &mut self.ui,
+                TextFamily::Body,
+                format_args!("{part}"),
+                frame.rect(RIGHT_X, y, RIGHT_WIDTH, 22.0),
+                14.0 * s,
+                color::TEXT,
+                FontWeight::Regular,
+                TextAlign::Start,
+            );
+            y += 22.0;
+        }
+        let buttons_y = MERGE_TOP + 26.0 + 316.0 - 58.0;
+        kit::button(
+            &mut self.ui,
+            frame,
+            [RIGHT_X, buttons_y, 200.0, 42.0],
+            "Merge for good",
+            true,
+            true,
+            self.focus == MERGE_CONFIRM_TOKEN,
+            MERGE_CONFIRM_TOKEN,
+        );
+        kit::button(
+            &mut self.ui,
+            frame,
+            [RIGHT_X + 212.0, buttons_y, 130.0, 42.0],
+            "Cancel",
+            false,
+            true,
+            self.focus == MERGE_CANCEL_TOKEN,
+            MERGE_CANCEL_TOKEN,
+        );
+        self.order.push(MERGE_CONFIRM_TOKEN);
+        self.order.push(MERGE_CANCEL_TOKEN);
+    }
+
     /// What the last request came to, bottom left.
     fn status(&mut self, frame: &Frame, staff: &StaffState) {
         let s = frame.s;
@@ -860,14 +1242,19 @@ impl Panel {
         let s = frame.s;
         let enter = match self.focus {
             SEARCH_TOKEN => "search",
-            NOTE_TOKEN => "",
+            NOTE_TOKEN | MERGE_FIELD_TOKEN => "",
             _ => "do",
         };
         let mut keys: Vec<(&[&str], &str)> = vec![(&["Tab"], "next")];
         if !enter.is_empty() {
             keys.push((&["Enter"], enter));
         }
-        keys.push((&["Esc"], "back"));
+        let escape = if self.pending_merge.is_some() || self.picking {
+            "cancel"
+        } else {
+            "back"
+        };
+        keys.push((&["Esc"], escape));
         let gap = 30.0 * s;
         let width: f32 = keys
             .iter()
@@ -937,6 +1324,7 @@ mod tests {
                     note: "n".repeat(200),
                 })
                 .collect(),
+            keys: (0..12).map(|index| format!("{index:016x}")).collect(),
             ..profile("aaaaaaaaaaaaaaaa", "x")
         }
     }
@@ -976,7 +1364,8 @@ mod tests {
     }
 
     /// Every focus, a full list and a crowded player fit the canvas at 1080p, 4K, 4:3
-    /// and 21:9, in the families and in Inter.
+    /// and 21:9, in the families and in Inter, in both right-hand views and with a
+    /// merge waiting for its confirmation.
     #[test]
     fn every_state_fits_the_canvas() {
         let load = |family| crate::text::load_family(family, 1.0, None).expect("a family");
@@ -1001,11 +1390,29 @@ mod tests {
                 ..StaffState::default()
             },
             StaffState::default(),
-        ] {
+        ]
+        .into_iter()
+        .flat_map(|staff| {
+            [
+                (staff.clone(), RightView::Achievements, false),
+                (staff.clone(), RightView::Keys, false),
+                (staff, RightView::Keys, true),
+            ]
+        }) {
+            let (staff, right, pending) = staff;
             let mut panel = Panel::new();
             panel.open(true);
             panel.note = "n".repeat(200);
             panel.query = "q".repeat(64);
+            panel.right = right;
+            panel.merge_from = "m".repeat(MERGE_FIELD_MAX);
+            if pending {
+                panel.merge_from = "0000000000000003".into();
+                panel.pending_merge = Some(PendingMerge {
+                    kept: me.key_id.clone(),
+                    from: "0000000000000003".into(),
+                });
+            }
             let inputs = Inputs {
                 me: Some(&me),
                 staff: &staff,

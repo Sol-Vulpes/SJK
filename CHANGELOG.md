@@ -42,6 +42,8 @@ opened yet and give nothing.
 - firstsetup import takes a quoted Windows path as Explorer's Copy as path gives it ("C:\Users\...\my.cfg"); its backslashes were read as escapes, so the file was not found _(Sol)_
 
 - Chroma saber shaders: the Storm, Unstable, Spectral, Glitch, Hologram, Runic and Heartbeat blades now take your saber's colour (each saber its own, color1 and color2; a white custom colour keeps the shader's own), and everyone sees them in your colour; a small colour wheel marks them in the Collection, on the Saber tab and on the player card. On the Collection's Shaders a double click wears an owned shader, and a long name no longer runs under its Worn / Yours / Locked label _(Sol)_
+- Staff tools: the SJK team can verify a player (Verify, or Unverify to take the mark away) and, for a player who reset their key, merge the new key's player into their old one: the Staff page's Keys and merge tab takes the other key id (typed, pasted or picked in the list) and a card says who is kept, who is merged away and that it cannot be undone. Everything moves to the kept player, and one player can now have several keys: each linked key plays as that player, with their name, medals, unlocks, achievements and holocrons, and staff can unlink a key again (it starts afresh, nothing moves back) _(Sol)_
+
 ## 2026.1010.1 (Alpha) | 10/10/2026
 
 The Profile screen becomes one row of tabs, with Medals and a Collection of everything to unlock;

@@ -250,7 +250,10 @@ fn view(inputs: &Inputs<'_>, revealed: bool) -> View {
         return plain("Starting...", &["Preparing the identity key."]);
     };
     let (key_id, key_file) = if revealed {
-        (snapshot.key_id.as_str(), fit_tail(inputs.key_file, 90))
+        (
+            snapshot.local_key_id.as_str(),
+            fit_tail(inputs.key_file, 90),
+        )
     } else {
         (HIDDEN, HIDDEN.to_owned())
     };
@@ -636,6 +639,7 @@ mod tests {
 
     fn snapshot(status: Status) -> Snapshot {
         Snapshot {
+            local_key_id: "0123456789abcdef".to_owned(),
             status,
             key_id: "0123456789abcdef".to_owned(),
             me: None,
@@ -668,6 +672,7 @@ mod tests {
 
     fn me(name: &str, bio: &str) -> Profile {
         Profile {
+            keys: Vec::new(),
             key_id: "0123456789abcdef".to_owned(),
             key: String::new(),
             name: name.to_owned(),

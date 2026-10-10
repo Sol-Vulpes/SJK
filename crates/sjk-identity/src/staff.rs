@@ -1,6 +1,7 @@
 //! Staff requests (`PROTOCOL.md`, "Staff"): what a key the hub's operator made staff
-//! may do from inside the game: find players, give and take back medals and
-//! unlockables, give and take back holocrons, clear achievements, moderate the SJK chat and players' pictures. The
+//! may do from inside the game: find players, verify them, give and take back medals and
+//! unlockables, give and take back holocrons, clear achievements, moderate the SJK chat
+//! and players' pictures, merge two players into one and unlink a key from a player. The
 //! hub refuses every one from a key that is not staff; the client only offers them to
 //! a player whose own profile says `staff`.
 
@@ -92,6 +93,28 @@ pub enum StaffRequest {
         /// The holocron's number ([`crate::Holocron::id`]).
         id: u64,
     },
+    /// Say whether the SJK team vouches for a player (the verified mark).
+    Verify {
+        /// The player's key.
+        key_id: String,
+        /// Vouch (true) or no longer.
+        verified: bool,
+    },
+    /// Merge one player into another, for good: everything `from` holds goes to the
+    /// player of `key_id`, and `from`'s keys become linked keys of that player. A staff
+    /// player cannot be merged away.
+    Merge {
+        /// The player who is kept.
+        key_id: String,
+        /// The player merged away.
+        from: String,
+    },
+    /// Detach a linked key from its player. The key starts afresh the next time it is
+    /// used; nothing it brought moves back.
+    Unlink {
+        /// The linked key (never a player's main key).
+        key_id: String,
+    },
 }
 
 impl StaffRequest {
@@ -108,7 +131,10 @@ impl StaffRequest {
             | Self::AvatarRemove { key_id }
             | Self::AvatarBlock { key_id, .. }
             | Self::HolocronGive { key_id, .. }
-            | Self::HolocronRemove { key_id, .. } => Some(key_id),
+            | Self::HolocronRemove { key_id, .. }
+            | Self::Verify { key_id, .. }
+            | Self::Merge { key_id, .. }
+            | Self::Unlink { key_id } => Some(key_id),
         }
     }
 }
@@ -140,6 +166,13 @@ impl StaffState {
         } else {
             self.players.insert(0, profile.clone());
         }
+    }
+
+    /// Take the player who owns `key_id` (their main key or a linked one) out of the
+    /// list, as a merge does with the player merged away; `kept` is never taken out.
+    pub fn remove(&mut self, key_id: &str, kept: &str) {
+        self.players
+            .retain(|entry| entry.key_id == kept || !entry.has_key(key_id));
     }
 }
 
@@ -174,5 +207,11 @@ pub(crate) fn done(request: &StaffRequest, count: usize) -> String {
         }
         StaffRequest::HolocronGive { tier, .. } => format!("Gave a {tier} holocron"),
         StaffRequest::HolocronRemove { id, .. } => format!("Took back holocron #{id}"),
+        StaffRequest::Verify { verified: true, .. } => "Verified".to_owned(),
+        StaffRequest::Verify {
+            verified: false, ..
+        } => "No longer verified".to_owned(),
+        StaffRequest::Merge { from, .. } => format!("Merged {from} into this player"),
+        StaffRequest::Unlink { key_id } => format!("Unlinked {key_id}"),
     }
 }

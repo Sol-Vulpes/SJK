@@ -752,6 +752,68 @@ fn a_staff_key_unlocks_and_relocks() {
 }
 
 #[test]
+#[ignore = "needs a running hub (SJK_HUB_TEST_URL) and its staff key (SJK_HUB_TEST_STAFF_SEED)"]
+fn a_staff_key_verifies_merges_and_unlinks() {
+    use sjk_identity::StaffRequest;
+    let mut hub = hub();
+    let hex = std::env::var("SJK_HUB_TEST_STAFF_SEED").expect("SJK_HUB_TEST_STAFF_SEED");
+    let mut seed = [0_u8; 32];
+    for (index, byte) in seed.iter_mut().enumerate() {
+        *byte = u8::from_str_radix(&hex[index * 2..index * 2 + 2], 16).unwrap();
+    }
+    let staff = Identity::from_seed(seed);
+    let kept = Identity::generate().unwrap();
+    let reset = Identity::generate().unwrap();
+    hub.register(&staff, Some("^1Staffer")).unwrap();
+    hub.register(&kept, Some("Padawan")).unwrap();
+    hub.register(&reset, Some("Padawan2")).unwrap();
+    let rejected = |error: HubError| match error {
+        HubError::Rejected { code, .. } => code,
+        other => panic!("{other:?}"),
+    };
+    let verify = StaffRequest::Verify {
+        key_id: kept.key_id(),
+        verified: true,
+    };
+    assert!(hub.staff(&staff, &verify).unwrap()[0].verified);
+    // The reset key merged into the kept player: its keys are the kept one's, linked.
+    let merge = StaffRequest::Merge {
+        key_id: kept.key_id(),
+        from: reset.key_id(),
+    };
+    let answered = hub.staff(&staff, &merge).unwrap();
+    assert_eq!(answered[0].key_id, kept.key_id());
+    assert_eq!(answered[0].keys, [kept.key_id(), reset.key_id()]);
+    // A linked key is its person everywhere.
+    assert_eq!(hub.profile(&reset.key_id()).unwrap().key_id, kept.key_id());
+    assert_eq!(
+        rejected(hub.staff(&staff, &merge).unwrap_err()),
+        "same_person"
+    );
+    let staff_away = StaffRequest::Merge {
+        key_id: kept.key_id(),
+        from: staff.key_id(),
+    };
+    assert_eq!(
+        rejected(hub.staff(&staff, &staff_away).unwrap_err()),
+        "from_staff"
+    );
+    let main = StaffRequest::Unlink {
+        key_id: kept.key_id(),
+    };
+    assert_eq!(rejected(hub.staff(&staff, &main).unwrap_err()), "main_key");
+    let unlink = StaffRequest::Unlink {
+        key_id: reset.key_id(),
+    };
+    assert_eq!(hub.staff(&staff, &unlink).unwrap()[0].keys, [kept.key_id()]);
+    let unverify = StaffRequest::Verify {
+        key_id: kept.key_id(),
+        verified: false,
+    };
+    assert!(!hub.staff(&staff, &unverify).unwrap()[0].verified);
+}
+
+#[test]
 #[ignore = "needs a running hub (SJK_HUB_TEST_URL)"]
 fn asset_packs_are_listed_and_download_as_listed() {
     use sjk_identity::assets::{PACK_MAX, check, sha256_hex};

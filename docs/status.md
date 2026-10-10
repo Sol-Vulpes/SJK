@@ -7,6 +7,30 @@ SJK currently contains a native client and standard dedicated server in a
 20-crate Rust workspace. This page records scope and verification, rather than
 claiming complete parity from the presence of an implementation.
 
+## Staff: verify, merge players, linked keys
+
+Branch `personal/staff-merge` (10/10/2026, based on `6b13a8cd`, Windows 11), with the
+hub's matching change built in parallel, Sol's request: "the staff tools page should be
+able to verify people and also merge two persons into one if someone resets their key
+(by accident for example); we should be able to have multiple keys per person". A
+player is now one main key and any linked keys (`Profile::keys`, empty from older
+hubs); the Staff page has Verify/Unverify, a Keys and merge tab with Unlink per linked
+key (second press) and the merge of another key into the chosen player behind a
+confirmation card ([identity.md](identity.md#players-with-several-keys)).
+`sjk-identity` gains `StaffRequest::Verify`, `Merge` and `Unlink` (`/v1/staff/verify`,
+`/merge`, `/unlink`); a merge's answer replaces the kept player and drops the merged-away
+one from the staff list. The client's own id follows the person (`Snapshot::key_id`
+takes the own profile's id; `Snapshot::local_key_id` keeps the key file's for the
+Identity page and the pop-ups' seen lists; the feed is told through `FeedShared`), and an
+unlinked own key registers again. The `staff` command has no subcommands, so none were
+added. Verified by unit tests (the wire fields, the requests' paths and bodies, the
+worker's list updates and own-id following, the page's verify, unlink, merge and pick
+logic, every state fitting the canvas), the workspace checks and the world shot
+`duel6_sjk_staff` (new `duel6-staff-keys` and `duel6-staff-merge`, looked at); an
+env-gated `hub_e2e` case covers verify, merge, the linked key's profile, unlink and the
+hub's refusals but was not run (no test hub with the change). Not tried in a game or
+against the deployed hub.
+
 ## Illuminate is a toy: `toy_illuminate`
 
 Branch `personal/toy-illuminate` (10/10/2026, based on `75c455c2`, Windows 11), Sol's

@@ -48,7 +48,7 @@ did: Weather: rain, snow, splashes, ground fog and volumetric clouds
 did: Eye adaptation, dynamic glow, metal materials and many renderer fixes
 did: SJK identity and its hub, player reports, the changelog and these credits
 did: The Profile page and achievements counted in matches, with their board
-did: Staff tools in the game: medals and achievements for the SJK team
+did: Staff tools in the game: medals, achievements, verifying and merging players
 did: SJK chat through the hub, seen in the menus and in games, and the path for emotes
 did: Unlockables: the Sun blade skin and looks every SJK player sees
 did: The Collection: medals, achievements, saber shaders, toys and nameplates
