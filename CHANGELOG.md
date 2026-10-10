@@ -20,6 +20,7 @@ Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 -->
 ## Unreleased
 
+- The Balanced graphics level no longer draws light shafts, the costliest effect it kept _(Sol)_
 - When SJK crashes, the next start sends the SJK team a crash report (build, system, graphics card, map, the error and the last console lines, no chat); Settings > Network > Send crash reports turns it off, and crashes/last-crash.txt keeps a copy _(Sol)_
 - Client mods that load by themselves on the servers they are for (switches in Settings > Game options): JA+ tools on JA+ servers (japlus.guntele, japlus.goto, japlus.bring and other admin teleports, japlus.autologin, completion of JA+ server commands) and JoF tools on JoF servers (completion of their own commands). serverconfig and pluginDisable are now japlus.serverconfig and japlus.plugin _(Sol, after JoF EJK)_
 - Pasting with Ctrl+V no longer freezes the game for a quarter of a second on Windows _(Sol)_

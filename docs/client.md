@@ -1191,13 +1191,13 @@ level, or sets it with `graphicsquality ejk|performance|balanced|high|ultra`
 | HDR scene, bloom, FXAA, soft particles, per-pixel model lighting | off | off | on | on | on |
 | Ambient occlusion (`r_ssao`) | off | on | on | on | on |
 | Dynamic glow (`r_DynamicGlow`) | off | off | on | on | on |
-| Sunbeam dust (`r_dustMotes`) | 0 | 0 | 0.5 | 1 | 1 |
+| Sunbeam dust (`r_dustMotes`) | 0 | 0 | 0 | 1 | 1 |
 | Reflection probes, floor mirrors | off | off | off | on | on |
 | Normal and specular maps | off | on | on | on | on |
 | Parallax mapping, emission maps and their halo | off | off | on | on | on |
 | Sun and sky (`r_dayNight`) | off | off | on | on | on |
 | Emission-map lights (`r_emissiveLights`) | 0 | 0 | 1 | 1 | 1 |
-| Light shafts (`r_volumetrics`) | 0 | 0 | 1 | 3 | 3 |
+| Light shafts (`r_volumetrics`) | 0 | 0 | 0 | 3 | 3 |
 | World and character sun shadows | off | off | on | on | on |
 | Shadow resolution | 1024 | 1024 | 1024 | 2048 | 4096 |
 | Shadow filter taps | 8 | 8 | 8 | 16 | 24 |
@@ -1206,7 +1206,10 @@ level, or sets it with `graphicsquality ejk|performance|balanced|high|ultra`
 | Volumetric clouds | off | off | on | on | on |
 
 Performance is close to the retail look: baked lightmaps without SJK's sun,
-shadows or light shafts, and no post-processing. EJK is the retail look
+shadows or light shafts, and no post-processing. Balanced keeps the sun, its shadows
+and the post-processing but, since 11/10/2026, neither of the two largest costs a
+setting removes in the 09/10/2026 frame test (JoFTemple, 4K, RTX 5080): light shafts
+(0.79 ms) and floor mirrors (0.64 ms). EJK is the retail look
 itself: Performance with a material pack's normal and specular maps and ambient
 occlusion off too, so surfaces show their lightmap and paint only. Under both, a
 map loads without building its lamps (see [rendering](rendering.md#default-visual-profile)),

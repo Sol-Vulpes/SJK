@@ -35,8 +35,9 @@ pub(crate) enum Level {
     /// The most frames short of that: the retail look with SJK's lighting,
     /// shadows, post-processing and weather extras off.
     Performance,
-    /// Most of SJK's look at a lower cost: no floor mirrors or reflection
-    /// probes, fewer light-shaft samples, smaller, softer-filtered shadows.
+    /// Most of SJK's look at a lower cost: no floor mirrors, reflection probes or
+    /// light shafts (the two largest costs a setting removes in the 09/10/2026 frame
+    /// test), smaller, softer-filtered shadows.
     Balanced,
     /// SJK's defaults.
     High,
@@ -54,7 +55,8 @@ const VALUES: &[(&str, [&str; 5])] = &[
     ("r_fxaa", ["0", "0", "1", "1", "1"]),
     ("r_softParticles", ["0", "0", "1", "1", "1"]),
     ("r_ssao", ["0", "1", "1", "1", "1"]),
-    (crate::dust_motes::CVAR, ["0", "0", "0.5", "1", "1"]),
+    // Dust shows only in light shafts.
+    (crate::dust_motes::CVAR, ["0", "0", "0", "1", "1"]),
     ("r_modelPixelLight", ["0", "0", "1", "1", "1"]),
     ("r_cubeMapping", ["0", "0", "0", "1", "1"]),
     ("r_floorReflections", ["0", "0", "0", "1", "1"]),
@@ -66,7 +68,7 @@ const VALUES: &[(&str, [&str; 5])] = &[
     // Lighting.
     ("r_dayNight", ["0", "0", "1", "1", "1"]),
     ("r_emissiveLights", ["0", "0", "1", "1", "1"]),
-    ("r_volumetrics", ["0", "0", "1", "3", "3"]),
+    ("r_volumetrics", ["0", "0", "0", "3", "3"]),
     // Shadows.
     ("r_worldSunShadows", ["0", "0", "1", "1", "1"]),
     ("r_actorSunShadows", ["0", "0", "1", "1", "1"]),

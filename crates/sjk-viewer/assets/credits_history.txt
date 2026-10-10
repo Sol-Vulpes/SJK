@@ -9,6 +9,8 @@
 #                               made it when that is not the piece's owner.
 
 = Sol
++ 11/10/2026 | - | Balanced graphics without light shafts
+- 1aed922 |  | Balanced graphics without light shafts
 + 11/10/2026 | - | Client mods load on their servers, on by default
 - d128421 |  | Load client mods on their servers, on by default
 + 11/10/2026 | - | Crash reports sent to the SJK hub

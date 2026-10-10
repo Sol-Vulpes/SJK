@@ -1,5 +1,17 @@
 # Status and priorities
 
+## Balanced without light shafts
+
+Branch `personal/balanced-shafts` (11/10/2026, based on `82c3fa31`). Sol asked to take
+the two settings that cost the most frames in the 09/10/2026 frame test out of the
+Performance and Balanced levels. Recomputed from `logs/perftest-20261009-2134-high.log`
+(JoFTemple, 4K, RTX 5080, step against the base, run-to-run noise about 0.4 ms): light
+shafts off saved 0.79 ms, floor mirrors off 0.64 ms, the next were bounce light and the
+near sun cascade (about 0.5 ms each, debug bits with no setting of their own).
+Performance already had both off and Balanced had mirrors off; Balanced now has
+`r_volumetrics 0` (was 1) and `r_dustMotes 0` (dust shows only in shafts). Verified by
+the graphics quality tests; not measured in game.
+
 ## Crash reports
 
 Branch `personal/crash-reports` (11/10/2026, based on `ea95fcdd`, Windows 11). Sol asked

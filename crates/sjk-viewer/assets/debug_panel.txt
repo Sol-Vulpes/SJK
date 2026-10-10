@@ -348,6 +348,14 @@ test: The log has no run of "menu world: loading maps/mp/duel6.bsp again" lines.
 test: Disconnect to the menu: duel6 comes back once, within a few seconds.
 note: Seen 10/10 on a JoF map change: 13,865 rebuild starts in the log.
 
+[balanced-shafts]
+area: Menus & settings
+title: Balanced graphics: no light shafts (and no sunbeam dust)
+change: Balanced sets r_volumetrics 0 and r_dustMotes 0; the other levels are unchanged.
+test: Settings > Graphics quality > Balanced: shafts gone, FPS up on sunny maps.
+test: A profile on the old Balanced now reads Custom until Balanced is picked again.
+note: Shafts were the costliest setting in the 09/10 frame test (0.79 ms at 4K).
+
 [fast-paste]
 area: Console & chat
 title: Ctrl+V no longer freezes the game for a quarter of a second (Windows)
