@@ -13,6 +13,7 @@ Format, read by the client (crates/sjk-viewer/src/changelog_data.rs, whose
 tests check this file):
 - "## <version> | <dd/mm/yyyy>" starts a release ("## Unreleased" for main
   after the last release, without a date);
+- SJK uses far less memory on servers: the menu map is no longer kept loaded during a match (it loads again in a few seconds when you leave), and graphics memory is packed tighter after map changes; at 4K about 7 GB instead of 11 to 12 GB _(Sol)_
 - other lines up to the first item are the release's introduction;
 - "- <change> _(<credit>)_" is one change; every change ends with its credit;
 - ASCII only, as the menu font draws bytes.

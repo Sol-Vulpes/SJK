@@ -13,8 +13,8 @@
 //!   the map loads, then the new world takes the shell over. The connection stays up.
 //! - On the menu world, the map is loaded again in the background while the menu keeps
 //!   running over the old world, and the new one takes over when it is ready
-//!   ([`Rebuild`]). A menu world parked during a match that was reloaded is rebuilt the
-//!   same way when the menus come back to it ([`crate::menu_world`]).
+//!   ([`Rebuild`]). The menu world, dropped during a match, is built again the same way
+//!   when the menus come back to it ([`crate::menu_world`]), on the context of the day.
 //!
 //! `vid_restart` reloads the graphics when one of those settings changed, as it reloads
 //! the renderer in the original game, and the reload card ([`card`]) offers it once the
@@ -158,6 +158,8 @@ pub(crate) struct Rebuild {
     map: String,
     load: Option<WorldLoadTask>,
     install: Option<WorldInstallTask>,
+    /// The menu world coming back after a match ([`crate::menu_world`]), not a reload.
+    menu: bool,
 }
 
 /// The reload's state, handed from world to world with the shell.
@@ -167,6 +169,8 @@ pub(crate) struct State {
     /// The map a world without a session shows, to load it again.
     pub(crate) map: String,
     rebuild: Option<Rebuild>,
+    /// The menu world could not be built again here: not tried again on this world.
+    pub(crate) menu_failed: bool,
 }
 
 impl State {
@@ -255,22 +259,44 @@ impl crate::GpuState {
             install: None,
             context,
             map,
+            menu: false,
         });
         if shown {
             self.graphics_reload.card.reloading(true);
         }
     }
 
+    /// Build the menu world on `map` again on this world's context, from the installed
+    /// game data as at start; this world stays on show under the menus until
+    /// [`Self::poll_rebuild`] hands the menu world over.
+    pub(crate) fn rebuild_menu_world(&mut self, map: String) {
+        crate::log::progress(format_args!("menu world: loading {map} again"));
+        self.graphics_reload.rebuild = Some(Rebuild {
+            load: Some(WorldLoadTask::start_installed(
+                self.game_data.clone(),
+                map.clone(),
+            )),
+            install: None,
+            context: Arc::clone(&self.context),
+            map,
+            menu: true,
+        });
+    }
+
     /// The rebuilt world once it is ready, the shell handed to it; the caller makes it the
     /// current world. A failed rebuild keeps the old world and says why.
     pub(crate) fn poll_rebuild(&mut self) -> Option<crate::GpuState> {
         let rebuild = self.graphics_reload.rebuild.as_mut()?;
-        // Not over a join: the menu world it leaves is the one parked.
+        // Not over a join: the menu world it leaves is the one parked, and a menu world
+        // coming back waits until the menus are back again.
         if self.join_task.is_some() || self.resident.session.is_some() {
+            let menu = rebuild.menu;
             self.graphics_reload.rebuild = None;
-            self.graphics_reload.card.reloading(false);
-            // The world it joins is built on this one's context: offer the reload again.
-            notice();
+            if !menu {
+                self.graphics_reload.card.reloading(false);
+                // The world it joins is built on this one's context: offer the reload again.
+                notice();
+            }
             return None;
         }
         if let Some(load) = &rebuild.load {
@@ -280,6 +306,15 @@ impl crate::GpuState {
                 WorldLoadPoll::Ready(loaded) => loaded,
             };
             let bounds = loaded.bsp.render().models()[0].clone();
+            // The menu world starts where it did at start; its camera routes take over.
+            let (camera_origin, camera_yaw) = if rebuild.menu {
+                match crate::assets::initial_camera(&loaded.bsp) {
+                    Ok(camera) => camera,
+                    Err(error) => return self.fail_rebuild(&error.to_string()),
+                }
+            } else {
+                (self.camera_position.to_array(), self.camera_yaw)
+            };
             let input = crate::GpuWorldInput {
                 scene: loaded.scene,
                 bsp: loaded.bsp,
@@ -287,8 +322,8 @@ impl crate::GpuState {
                 shaders: loaded.shaders,
                 world_minimums: bounds.minimums,
                 world_maximums: bounds.maximums,
-                camera_origin: self.camera_position.to_array(),
-                camera_yaw: self.camera_yaw,
+                camera_origin,
+                camera_yaw,
                 player_preview: None,
                 build_game_state: None,
                 build_snapshot: None,
@@ -317,18 +352,26 @@ impl crate::GpuState {
             WorldInstallPoll::Ready(world) => world,
         };
         let map = std::mem::take(&mut rebuild.map);
+        let menu = rebuild.menu;
         let elapsed = install.started.elapsed();
         self.graphics_reload.rebuild = None;
         self.hand_shell_to(&mut world);
-        world.is_menu_world = self.is_menu_world;
+        world.is_menu_world = self.is_menu_world || menu;
         world.graphics_reload.map = map;
-        world.graphics_reload.card.reloaded();
-        world.camera_position = self.camera_position;
-        world.camera_pitch = self.camera_pitch;
-        world.camera_yaw = self.camera_yaw;
+        if !menu {
+            world.graphics_reload.card.reloaded();
+            world.camera_position = self.camera_position;
+            world.camera_pitch = self.camera_pitch;
+            world.camera_yaw = self.camera_yaw;
+        }
         world.resize(self.size);
         crate::log::progress(format_args!(
-            "graphics reload: {} built again in {:.1} ms",
+            "{}: {} built again in {:.1} ms",
+            if menu {
+                "menu world"
+            } else {
+                "graphics reload"
+            },
             world.graphics_reload.map,
             elapsed.as_secs_f64() * 1_000.0
         ));
@@ -336,6 +379,17 @@ impl crate::GpuState {
     }
 
     fn fail_rebuild(&mut self, error: &str) -> Option<crate::GpuState> {
+        if self
+            .graphics_reload
+            .rebuild
+            .as_ref()
+            .is_some_and(|rebuild| rebuild.menu)
+        {
+            crate::log::progress(format_args!("menu world failed to load again: {error}"));
+            self.graphics_reload.rebuild = None;
+            self.graphics_reload.menu_failed = true;
+            return None;
+        }
         crate::log::progress(format_args!("graphics reload failed: {error}"));
         if let Some(console) = &mut self.console {
             console.push_log(format!("^1Graphics reload failed: {error}"));

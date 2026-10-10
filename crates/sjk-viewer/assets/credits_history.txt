@@ -9,6 +9,8 @@
 #                               made it when that is not the piece's owner.
 
 = Sol
++ 10/10/2026 | - | Menu world dropped during matches, small GPU memory blocks
+- 42debe8 |  | Drop the menu world during matches and use small GPU memory blocks
 + 10/10/2026 | - | SJK chat page: who is online as face circles with their card on hover
 - e35b949 |  | SJK chat page: faces in the who-is-online window
 + 10/10/2026 | - | start-only graphics settings apply with a graphics reload, offered by a card

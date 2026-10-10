@@ -1,65 +1,55 @@
-//! The boot map stays resident while the client is on a server, so the
-//! standalone menu always comes back to the same map — with its authored
-//! camera routes and stage — whatever map the server ran.
+//! The boot map comes back whenever the client is back in the menu off a server,
+//! so the standalone menu always shows the same map — with its authored camera
+//! routes and stage — whatever map the server ran.
 //!
 //! A server world replaces the menu world as the current [`GpuState`] when it
-//! is installed; the menu world is parked here instead of dropped and takes
-//! over again as soon as the shell is back in the menu with nothing in
-//! flight. Server worlds are dropped as before.
+//! is installed, and the menu world is dropped then: keeping it during the match
+//! held a whole second world (its textures, light caches and screen targets,
+//! about 4.8 GB of the process at 4K on duel6). Only its map is kept. Once the
+//! shell is back in the menu with nothing in flight, the menu world is built
+//! again in the background from the installed game data
+//! ([`GpuState::rebuild_menu_world`]), on the graphics context of the moment,
+//! while the last server's world stays on show under the menus; it takes the
+//! shell over when built (`poll_rebuild`). Server worlds are dropped as before.
 
 use crate::GpuState;
 
-/// The parked menu world, if the client is currently on a server world.
+/// The menu world's map while the client is on a server world.
 pub(crate) struct Parked {
-    world: Option<GpuState>,
+    map: Option<String>,
 }
 
 impl Parked {
     pub(crate) const fn new() -> Self {
-        Self { world: None }
+        Self { map: None }
     }
 
-    /// Make `installed` the current world. The menu world it replaces is
-    /// parked; a server world it replaces is dropped.
+    /// Make `installed` the current world. The world it replaces is dropped; a
+    /// menu world leaves its map to be built again later.
     pub(crate) fn install(&mut self, current: &mut GpuState, installed: GpuState) {
-        let mut previous = std::mem::replace(current, installed);
-        if previous.is_menu_world {
-            // The destination being prepared is the one just installed.
-            previous.portal.aim(None, None);
-            self.world = Some(previous);
+        let previous = std::mem::replace(current, installed);
+        if previous.is_menu_world && !previous.graphics_reload.map.is_empty() {
+            self.map = Some(previous.graphics_reload.map.clone());
         }
     }
 
-    /// Hand the shell back to the parked menu world once the client has left
-    /// the server and no map is loading. A join in flight comes along, so a
-    /// reconnect from a server plays out over the menu map.
-    /// Returns whether the current world changed (the caller re-attaches
-    /// audio).
-    pub(crate) fn restore_if_idle(&mut self, current: &mut GpuState) -> bool {
-        if current.is_menu_world || !current.shell_is_off_server() {
-            return false;
+    /// Start building the menu world again once the client has left the server
+    /// and no map is loading. A join started meanwhile cancels it, and it starts
+    /// again when the menus are back.
+    pub(crate) fn restore_if_idle(&mut self, current: &mut GpuState) {
+        if current.is_menu_world {
+            self.map = None;
+            return;
         }
-        let Some(mut menu) = self.world.take() else {
-            return false;
-        };
-        // A graphics reload on the server left the parked world on older graphics: it is
-        // built again on the server world's (`graphics_reload.rs`).
-        let reloaded = (menu.context.id != current.context.id)
-            .then(|| std::sync::Arc::clone(&current.context));
-        current.hand_shell_to(&mut menu);
-        menu.world_load_state = crate::session_transition::LoadStateMachine::new();
-        menu.world_load_started = None;
-        // The last server's map must not be prepared for the next join before
-        // the new server names its own.
-        menu.world_load_map.clear();
-        menu.live_map_installed = false;
-        menu.resize(current.size);
-        *current = menu;
-        crate::log::progress(format_args!("menu world restored"));
-        if let Some(context) = reloaded {
-            current.rebuild_world(context, false);
+        if !current.shell_is_off_server()
+            || current.graphics_reload.rebuilding()
+            || current.graphics_reload.menu_failed
+        {
+            return;
         }
-        true
+        if let Some(map) = &self.map {
+            current.rebuild_menu_world(map.clone());
+        }
     }
 }
 

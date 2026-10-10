@@ -397,9 +397,9 @@ pop-up card and run by `vid_restart` (see
   new context (`GpuState::next_context`), and the shell handed over; no prepared
   world stands in for it and it counts as no map change. A world without a session
   (the menu map) loads its map again in the background while the old world stays
-  on show, and takes the shell over when built (`poll_rebuild`); a menu world
-  parked during a match is rebuilt the same way when it is restored on a newer
-  context than its own.
+  on show, and takes the shell over when built (`poll_rebuild`); the menu world,
+  dropped during a match, is built again the same way when the menus come back
+  to it, on the context of the moment (`GpuState::rebuild_menu_world`).
 - Whether a reload would change anything is a comparison of what the running
   context holds with what a context made now would read, done when one of those
   cvars changes (their change callbacks call `graphics_reload::notice`); reading
@@ -409,6 +409,35 @@ pop-up card and run by `vid_restart` (see
 Measured off-screen on an RTX 5080 at 1920x1080 (release build, see
 [status](status.md)): duel6's menu world rebuilt in about 3 s; on a local server
 ffa3 took 5.6 to 7.2 s from `vid_restart` to play, with the connection kept.
+
+## GPU memory
+
+A world's GPU memory belongs to its `GpuState`: map textures (uncompressed
+RGBA8 arrays with mips, 0.6 GB on duel6 and 1.1 GB on mp/siege_desert), material
+maps, lamp light caches, probes, its screen-size targets (saber glow, FXAA, depth,
+glow, at 4K about 0.8 GB) and its own font and UI atlases (about 0.3 GB). On
+Windows that memory also shows in the process's RAM in Task Manager.
+
+- The menu world is dropped when a server world is installed and built again from
+  its map once the client is back in the menu off a server
+  ([menu_world.rs](../crates/sjk-viewer/src/menu_world.rs)); keeping it parked
+  during the match held a second world, about 4.8 GB of the process at 4K on
+  duel6. The last server's world stays under the menus for the few seconds it
+  takes (duel6: about 2 to 4 s).
+- A map change still builds the next world while the last one lives. With
+  `MemoryHints::Performance` (128 to 256 MiB blocks) the blocks the old world
+  shared with the new one stayed partly used once it was dropped, about 2 GB of
+  reserved but unused memory after a few map changes; the device asks for 4 to
+  16 MiB blocks instead ([gpu_context.rs](../crates/sjk-viewer/src/gpu_context.rs)).
+  Larger resources get blocks of their own and are freed whole.
+
+Measured off-screen at 4K on an RTX 5080 (release build): duel6's menu world,
+then mp/siege_desert, mp/ffa3, mp/siege_desert, mp/ffa3, as map changes on one
+device. Before: 11.0 to 12.5 GB private bytes once on a server (the GPU allocator
+reserving 5.2 to 5.9 GB). After: 7.2 to 7.4 GB (4.1 to 4.2 GB reserved for 3.3 to
+3.4 GB in use). Old worlds were freed in both (the resource counts went back down
+each time): it was not a leak. Each world also keeps about 1 GB of CPU memory
+after loading, not looked into yet.
 
 ## Eye adaptation
 

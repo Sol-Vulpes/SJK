@@ -1,5 +1,5 @@
 //! The winit application: owns the window's [`GpuState`], swaps in freshly
-//! installed server worlds and keeps the menu world parked meanwhile.
+//! installed server worlds and brings the menu world back after them.
 
 use super::*;
 
@@ -252,9 +252,7 @@ impl ApplicationHandler for ViewerApplication {
             }
             _ => {}
         }
-        if self.menu_world.restore_if_idle(gpu) {
-            gpu.configure_audio(&mut self.game_audio);
-        }
+        self.menu_world.restore_if_idle(gpu);
         gpu.sync_cursor_policy();
         if gpu.quit_requested {
             event_loop.exit();

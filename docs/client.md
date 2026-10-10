@@ -1200,8 +1200,8 @@ works](rendering.md#graphics-reload)):
   the player held open may close until the player is back).
 - On the main menu the menu map loads again behind the card ("Reloading the
   graphics...", about 3 s for duel6), and the menu carries on over the new world.
-  A menu map parked during a match whose graphics were reloaded is built again
-  quietly when the menus come back to it.
+  After a match the menu map is built again quietly, with the graphics of the
+  moment, when the menus come back to it.
 - Not during a demo, a map being loaded or joined, or a map explored without a
   server: there the graphics reload with the next map.
 
@@ -1419,7 +1419,9 @@ Chat visibility/lifetime settings still apply. Typing captures gameplay input as
 usual, and the ordinary chat layout returns after the scoreboard closes.
 
 Escape opens the normal menu during exploration. Disconnect/cancel abandons the
-pending connection and restores the retained main-menu world. Connection and asset
+pending connection and builds the main-menu world again (the last world stays under
+the menus for the few seconds that takes; see
+[rendering.md](rendering.md#gpu-memory)). Connection and asset
 errors still show an error message. Downloads retain their existing policy and
 limits; progress is available in the console. This does not eliminate disk,
 shader, network or download latency, and direct command-line startup is separate

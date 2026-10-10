@@ -145,7 +145,13 @@ impl Context {
                     ..wgpu::Limits::default()
                 },
                 experimental_features: wgpu::ExperimentalFeatures::disabled(),
-                memory_hints: wgpu::MemoryHints::Performance,
+                // Small blocks: a map change builds the next world while the last one
+                // still lives, and once it goes the 128-256 MiB blocks of `Performance`
+                // stayed partly used, holding about 3 GB of the process at 4K after a few
+                // map changes (`docs/rendering.md`, "GPU memory").
+                memory_hints: wgpu::MemoryHints::Manual {
+                    suballocated_device_memory_block_size: (4 << 20)..(16 << 20),
+                },
                 trace: wgpu::Trace::Off,
             })
             .await?;
