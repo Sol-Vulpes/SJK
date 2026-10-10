@@ -1,4 +1,4 @@
-//! SJK's pages (What's new, Update, Identity, Credits) in the SJK UI's look:
+//! SJK's pages (What's new, Update, Identity, Credits, Import) in the SJK UI's look:
 //! with `ui_menuStyle sjk` they are drawn by their SJK views, in the UI's
 //! families ([`crate::menu::sjk::TextTarget`]), over the map. Opening, closing
 //! and their keys and pointer stay the console's, as for the other looks.
@@ -13,14 +13,18 @@ impl ViewerConsole {
         self.update_panel.set_sjk(sjk);
         self.identity_panel.set_sjk(sjk);
         self.credits.set_sjk(sjk);
+        self.config_import.set_sjk(sjk);
     }
 
     /// Whether the page drawn in place of the console is one of them in the
     /// SJK UI's look (the import page comes first when open, then credits), or
     /// the command browser in it.
     pub(crate) fn sjk_page_open(&self) -> bool {
-        if !self.open || self.config_import.is_open() {
+        if !self.open {
             return false;
+        }
+        if self.config_import.is_open() {
+            return self.config_import.is_sjk();
         }
         if self.credits.is_open() {
             return self.credits.is_sjk();
@@ -52,7 +56,10 @@ impl ViewerConsole {
 
     /// Draw the open page ([`Self::sjk_page_open`]) with its text to `target`.
     pub(crate) fn append_sjk_page(&mut self, target: TextTarget<'_>, viewport: [f32; 2]) {
-        if self.credits.is_open() {
+        if self.config_import.is_open() {
+            self.sync_config_browse();
+            self.config_import.append_sjk(target, viewport);
+        } else if self.credits.is_open() {
             self.credits.append_sjk(target, viewport);
         } else if self.profile_panel.is_open() {
             self.append_profile_panel(target, viewport);

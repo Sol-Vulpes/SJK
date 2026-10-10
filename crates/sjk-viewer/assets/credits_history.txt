@@ -9,6 +9,8 @@
 #                               made it when that is not the piece's owner.
 
 = Sol
++ 10/10/2026 | - | The Import page as an SJK UI pop-up card
+- a77b70c |  | Draw the Import page as an SJK UI pop-up card
 + 10/10/2026 | - | SJK chat page: who is online and recently active
 - 4bafc3a |  | SJK chat page: a window of who is online and who was seen last
 + 10/10/2026 | - | Saber shader tiers and a grid of shader cards
