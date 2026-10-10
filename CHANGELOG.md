@@ -13,6 +13,7 @@ Format, read by the client (crates/sjk-viewer/src/changelog_data.rs, whose
 tests check this file):
 - "## <version> | <dd/mm/yyyy>" starts a release ("## Unreleased" for main
   after the last release, without a date);
+- Your own pistol shot no longer plays its sound twice when the server's snapshot arrives before the shot is predicted: your own snapshot entity adds no event sounds, as the original cgame builds it from the player state _(Lumaya, after OpenJK)_
 - Players holding the multiplayer pistol show the blaster pistol model in third person instead of the old Bryar's, so a DL-44 replacement pack applies there too; the old Bryar keeps its own model _(Lumaya, after OpenJK)_
 - other lines up to the first item are the release's introduction;
 - "- <change> _(<credit>)_" is one change; every change ends with its credit;

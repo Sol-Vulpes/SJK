@@ -3615,3 +3615,12 @@ change: The old Bryar (slot 16) keeps the Bryar model; first person and pickups 
 test: Watch another player (or a bot) holding the pistol: the blaster pistol model, not the Bryar.
 test: With a DL-44 replacement pack in base, the pistol in hand uses it.
 note: Lumaya did not check a community DL-44 pack on screen.
+
+[pistol-sound-once]
+area: Audio
+title: Your own pistol shot plays one sound (SJK PR #66)
+change: The view player's snapshot entity no longer plays event sounds; player-state events do.
+change: Other players' shots, and events riding on separate event entities, are unchanged.
+test: On a server, fire the pistol (primary) many times: each shot is one sound, never doubled.
+test: Watch another player fire the pistol: you still hear every shot.
+note: Lumaya fixed a duplicate path found in tests; the doubled sound was not heard live.

@@ -5,6 +5,12 @@ Jedi Academy `GameData` directory with the retail `base/assets*.pk3` files.
 
 ## Launch
 
+Local weapon and movement event sounds come from prediction or player-state
+events. The view client's ordinary snapshot entity is excluded from the
+entity-sound path, following OpenJK multiplayer, so a shot received before
+local prediction plays once. Remote and temporary entity events retain their
+independent latches, including during demo playback and spectating.
+
 Held multiplayer pistols use distinct world models: weapon slot 4 (the blaster
 pistol, commonly replaced by a DL-44 pack) uses
 `models/weapons2/blaster_pistol/blaster_pistol_w.glm`; slot 16 (the old Bryar)
