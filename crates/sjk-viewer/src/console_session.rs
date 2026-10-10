@@ -463,27 +463,31 @@ impl ViewerConsole {
             let _ = shell.cvars.set_text("cg_killfeedDefaultVersion", "1");
         }
         retire_modern_ui(&mut shell.cvars);
-        // Older profiles archived the four-pass default. Move that value once;
-        // other strengths, and choices made after migration, remain deliberate.
-        if matches!(
-            shell
-                .cvars
-                .get("cg_shieldBrightnessDefaultVersion")
-                .map(|cvar| &cvar.value),
-            Some(CvarValue::Integer(0))
-        ) {
+        // Older profiles archived an earlier default (four passes, then one).
+        // Move those values once to two; other strengths, and choices made
+        // after migration, remain deliberate.
+        let shield_version = match shell
+            .cvars
+            .get("cg_shieldBrightnessDefaultVersion")
+            .map(|cvar| &cvar.value)
+        {
+            Some(CvarValue::Integer(version)) => *version,
+            _ => 2,
+        };
+        if shield_version < 2 {
+            let old_defaults: &[i64] = if shield_version == 0 { &[1, 4] } else { &[1] };
             if matches!(
                 shell
                     .cvars
                     .get("cg_shieldBrightness")
                     .map(|cvar| &cvar.value),
-                Some(CvarValue::Integer(4))
+                Some(CvarValue::Integer(value)) if old_defaults.contains(value)
             ) {
                 let _ = shell.cvars.reset("cg_shieldBrightness");
             }
             let _ = shell
                 .cvars
-                .set_text("cg_shieldBrightnessDefaultVersion", "1");
+                .set_text("cg_shieldBrightnessDefaultVersion", "2");
         }
         retire_force_illuminate(&mut shell);
         shell.push_log("^5SJK console ready. ^7Type cmdlist for commands.");
@@ -996,22 +1000,35 @@ mod tests {
     }
 
     #[test]
-    fn shield_flash_defaults_to_one_pass_and_migrates_four_only_once() {
+    fn shield_flash_defaults_to_two_passes_and_migrates_old_defaults_only_once() {
         let directory = tempfile::tempdir().unwrap();
         let fresh = ViewerConsole::new(directory.path().join("new.cfg")).unwrap();
-        assert_eq!(fresh.integer_cvar("cg_shieldBrightness"), Some(1));
-        for saved in [1, 2, 4, 12] {
-            let path = directory.path().join(format!("old-{saved}.cfg"));
-            std::fs::write(&path, format!("seta cg_shieldBrightness {saved}\n")).unwrap();
+        assert_eq!(fresh.integer_cvar("cg_shieldBrightness"), Some(2));
+        for (version, saved, expected) in [
+            (0, 1, 2),
+            (0, 3, 3),
+            (0, 4, 2),
+            (0, 12, 12),
+            (1, 1, 2),
+            (1, 4, 4),
+            (1, 6, 6),
+        ] {
+            let path = directory.path().join(format!("old-{version}-{saved}.cfg"));
+            std::fs::write(
+                &path,
+                format!(
+                    "seta cg_shieldBrightness {saved}
+                     seta cg_shieldBrightnessDefaultVersion {version}
+"
+                ),
+            )
+            .unwrap();
             let mut console = ViewerConsole::new(path.clone()).unwrap();
-            assert_eq!(
-                console.integer_cvar("cg_shieldBrightness"),
-                Some(if saved == 4 { 1 } else { saved })
-            );
-            assert!(console.set_cvar("cg_shieldBrightness", "4"));
+            assert_eq!(console.integer_cvar("cg_shieldBrightness"), Some(expected));
+            assert!(console.set_cvar("cg_shieldBrightness", "1"));
             drop(console);
             let console = ViewerConsole::new(path).unwrap();
-            assert_eq!(console.integer_cvar("cg_shieldBrightness"), Some(4));
+            assert_eq!(console.integer_cvar("cg_shieldBrightness"), Some(1));
         }
     }
 

@@ -5,10 +5,10 @@ Jedi Academy `GameData` directory with the retail `base/assets*.pk3` files.
 
 ## Launch
 
-The body shield flash uses one shader pass by default (`cg_shieldBrightness 1`,
-Settings > Game > Shield hit brightness), reduced from four. Profiles with the
-old value `4` move to `1` once (`cg_shieldBrightnessDefaultVersion`); other
-strengths are preserved, and any later choice, including `4`, stays saved.
+The body shield flash uses two shader passes by default (`cg_shieldBrightness 2`,
+Settings > Game > Shield hit brightness); the default was four, then one. Profiles
+on an old default (`4` or `1`) move to `2` once (`cg_shieldBrightnessDefaultVersion`
+2); other strengths are preserved, and any later choice, including `1`, stays saved.
 The shield sphere option and damage-event timing are unchanged.
 
 `cg_hitMarker` (Settings > HUD > Damage hitmarker) controls the red

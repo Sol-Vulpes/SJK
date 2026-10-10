@@ -18,6 +18,10 @@ tests check this file):
 - ASCII only, as the menu font draws bytes.
 Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 -->
+## Unreleased
+
+- The body shield-hit flash is a little brighter by default: two passes (cg_shieldBrightness 2); a profile still on the old default 1 (or 4) moves to 2 once, other values stay _(Sol)_
+
 ## 2026.1011.1 (Alpha) | 11/10/2026
 
 Hotfix: when SJK crashes, it now sends the SJK team a crash report at the next start, so crashes can be found and fixed. Also client mods for JA+ and JoF servers and lighter Balanced graphics.

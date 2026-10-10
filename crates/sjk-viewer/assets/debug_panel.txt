@@ -3801,3 +3801,10 @@ change: Shader, colour, hit length and the sphere mode (cg_shieldSphere 1) are u
 test: Take armor damage from a bot: the body flash is faint, not the strong four-pass flash.
 test: Set cg_shieldBrightness 4 and restart: it stays 4; it does not move back to 1.
 note: Lumaya compared it on a GPU test (one pass fainter); not in a live match.
+
+[shield-flash-two]
+area: Rendering & effects
+title: Body shield flash defaults to two passes
+change: cg_shieldBrightness defaults to 2 (was 1); a saved 1 (or old 4) moves to 2 once.
+test: Take armor damage from a bot: the body flash is a bit stronger than before.
+test: Set cg_shieldBrightness 1 and restart: it stays 1; it does not move back to 2.

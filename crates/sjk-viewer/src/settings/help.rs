@@ -359,7 +359,7 @@ const HELP: &[(&str, &str)] = &[
     ),
     (
         "cg_shieldBrightness",
-        "How bright the shield flash on the body is: 1 is the stock look, 12 the strongest. Not used by the sphere.",
+        "How bright the shield flash on the body is: 1 is the stock look, 2 the default, 12 the strongest. Not used by the sphere.",
     ),
     (
         "cg_remaps",
