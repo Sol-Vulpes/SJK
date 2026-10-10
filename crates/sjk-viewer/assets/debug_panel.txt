@@ -44,6 +44,18 @@ change: guillemets, section sign, bullet... (they were dropped). Messages keep t
 test: Wear a name like {JoF}Sol, send an SJK chat message: feed, dock and page show {JoF}Sol.
 test: The chat page's online window shows the braces; a holocron drop line too.
 test: A message with {JoF} is still refused (messages keep their alphabet).
+[chat-paste]
+area: Console & chat
+title: Paste into the SJK chat (Ctrl+V, Shift+Insert): page and docks
+change: Ctrl+V or Shift+Insert pastes into the SJK chat page's field and the docked chat's
+change: (main page, in-game menu). Breaks/tabs become one space; what the hub refuses is dropped.
+test: Copy two lines of text, open the SJK chat page (sjkchat), Ctrl+V: one line, a space between.
+test: Paste text with an emoji and {braces}: they are left out; ^1 colour codes stay, a lone ^ goes.
+test: Paste 300 characters: the count stops at 150 of 150; Send goes through.
+test: Main page dock: Enter to type, Shift+Insert pastes; same in the in-game menu's dock (Tab).
+test: Ctrl+V in the say/team chat still pastes as before.
+note: Unit tests only; not tried in the game window.
+
 
 [sjk-chat-sound]
 area: Audio

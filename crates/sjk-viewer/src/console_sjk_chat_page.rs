@@ -81,7 +81,9 @@ impl ViewerConsole {
         if !self.sjk_chat_panel.is_open() {
             return false;
         }
-        let action = self.sjk_chat_panel.handle_key(event, self.shift);
+        let action = self
+            .sjk_chat_panel
+            .handle_key(event, self.shift, self.control);
         self.sjk_chat_panel_action(action);
         true
     }

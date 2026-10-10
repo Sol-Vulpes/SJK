@@ -20,8 +20,6 @@ use winit::keyboard::KeyCode;
 
 /// Messages the dock keeps: as many as its box shows, each taking a row at least.
 pub(crate) const LINES: usize = 5;
-/// The longest message typed in the dock, as the hub takes it.
-const DRAFT_MAX: usize = sjk_identity::chat::TEXT_MAX;
 
 /// The messages' box under the dock's name, in frame pixels: its offset from the
 /// dock's top, the height of a message on one row at the plain text style, the pitch
@@ -217,10 +215,17 @@ impl Dock {
         }
     }
 
-    /// A key while typing in the field: text goes into it, Backspace takes a character
-    /// back, Enter sends, Escape stops; every other key is swallowed, so no menu key or
-    /// game binding acts.
-    pub(crate) fn typing_key(&mut self, key: KeyCode, text: Option<&str>) -> Option<DockAction> {
+    /// A key while typing in the field, with Shift and Ctrl held or not: text goes into
+    /// it (Ctrl+V and Shift+Insert paste, [`crate::sjk_chat_field`]), Backspace takes a
+    /// character back, Enter sends, Escape stops; every other key is swallowed, so no
+    /// menu key or game binding acts.
+    pub(crate) fn typing_key(
+        &mut self,
+        key: KeyCode,
+        text: Option<&str>,
+        shift: bool,
+        control: bool,
+    ) -> Option<DockAction> {
         let draft = self.draft.as_mut()?;
         match key {
             KeyCode::Escape => self.draft = None,
@@ -238,14 +243,7 @@ impl Dock {
             KeyCode::Backspace => {
                 draft.pop();
             }
-            _ => {
-                for c in text.unwrap_or_default().chars().filter(|c| !c.is_control()) {
-                    if draft.chars().count() >= DRAFT_MAX {
-                        break;
-                    }
-                    draft.push(c);
-                }
-            }
+            _ => crate::sjk_chat_field::key_into(draft, key, text, shift, control),
         }
         None
     }
@@ -1175,11 +1173,14 @@ mod tests {
         assert!(!dock.is_typing());
         assert_eq!(dock.pointer(TOKENS, TOKENS.field, true), Some(None));
         assert!(dock.is_typing());
-        dock.typing_key(KeyCode::KeyH, Some("h"));
-        dock.typing_key(KeyCode::KeyI, Some("i"));
-        assert_eq!(dock.typing_key(KeyCode::Tab, Some("\t")), None);
+        dock.typing_key(KeyCode::KeyH, Some("h"), false, false);
+        dock.typing_key(KeyCode::KeyI, Some("i"), false, false);
         assert_eq!(
-            dock.typing_key(KeyCode::Enter, Some("\r")),
+            dock.typing_key(KeyCode::Tab, Some("\t"), false, false),
+            None
+        );
+        assert_eq!(
+            dock.typing_key(KeyCode::Enter, Some("\r"), false, false),
             Some(DockAction::Send)
         );
         assert_eq!(dock.take_draft(), "hi");

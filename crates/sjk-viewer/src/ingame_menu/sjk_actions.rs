@@ -237,7 +237,13 @@ impl GpuState {
         let PhysicalKey::Code(key) = event.physical_key else {
             return true;
         };
-        if let Some(action) = self.in_game_menu.chat_key(key, event.text.as_deref()) {
+        let (shift, control) = self.console.as_ref().map_or((false, false), |console| {
+            (console.shift_held(), console.control_held())
+        });
+        if let Some(action) = self
+            .in_game_menu
+            .chat_key(key, event.text.as_deref(), shift, control)
+        {
             self.act_on_sjk_chat(action);
         }
         true
