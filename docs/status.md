@@ -28,8 +28,27 @@ worker's list updates and own-id following, the page's verify, unlink, merge and
 logic, every state fitting the canvas), the workspace checks and the world shot
 `duel6_sjk_staff` (new `duel6-staff-keys` and `duel6-staff-merge`, looked at); an
 env-gated `hub_e2e` case covers verify, merge, the linked key's profile, unlink and the
-hub's refusals but was not run (no test hub with the change). Not tried in a game or
+hub's refusals and passed against a local build of the hub's change
+(10/10/2026). Not tried in a game or
 against the deployed hub.
+
+## Console feed off by default: `con_drawNotify`
+
+Branch `personal/console-feed` (10/10/2026, based on `c378cabb`, Windows 11), Sol's
+request: "an option to enable/disable the console feed on the top left while in game;
+the console feed would be off by default". The closed console's notify lines
+(`Con_DrawNotify`, the classic and SJK UI consoles alike) now draw only with
+`con_drawNotify 1`, archived, default 0, so every profile starts without them (none
+saved the new cvar). Settings > Interface > Console feed (the TEXT tab in the tabbed
+screen) is its row, so it is in settings search too. Chat was already kept out of the
+notify lines (the `*` echo, `push_chat_line`) and has its own box; what the feed hides
+is server prints, the one-line obituaries and the client's own console messages.
+Centre prints, the kill feed and the vote and team overlays are HUD elements and stay.
+`con_notifylines` and `con_notifytime` still shape the feed when it is on. Verified by
+a unit test (off in a new profile, on once set, kept across a restart), the settings
+tests (catalogue, groups, help text) and the world shot `duel6_sjk_menu` (Interface
+shows the Console feed switch, off), re-rendered and looked at; not tried in a game:
+the top left staying empty with the switch off and filling with it on.
 
 ## Illuminate is a toy: `toy_illuminate`
 

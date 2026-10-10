@@ -1039,9 +1039,10 @@ impl ViewerConsole {
         }
     }
 
-    /// The notify lines (`Con_DrawNotify`): of the last `con_notifylines` rows,
-    /// those written in the last `con_notifytime` seconds and not quiet, from
-    /// the top of the screen, one cell plus `cl_conXOffset` pixels from the left.
+    /// The notify lines (`Con_DrawNotify`), the console feed: with
+    /// `con_drawNotify` on, of the last `con_notifylines` rows, those written in
+    /// the last `con_notifytime` seconds and not quiet (chat is), from the top
+    /// of the screen, one cell plus `cl_conXOffset` pixels from the left.
     fn classic_notify(
         &mut self,
         frame: &mut ConsoleFrame,
@@ -1050,7 +1051,7 @@ impl ViewerConsole {
     ) {
         let grid = painter.grid;
         let wanted = options.notify_lines;
-        if wanted == 0 {
+        if !options.draw_notify || wanted == 0 {
             return;
         }
         let width = grid.text_columns(options.timestamps != 0);

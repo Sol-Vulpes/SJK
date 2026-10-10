@@ -24,6 +24,16 @@
 
 # ---- Console & chat ----
 
+[console-feed]
+area: Console & chat
+title: Console feed (top left notify lines) off by default, con_drawNotify
+change: The console lines at the top left during play show only with con_drawNotify 1.
+change: Settings > Interface > Console feed (TEXT tab in the tabbed screen). Chat is unaffected.
+test: Join a server: joins, kills and prints no longer appear at the top left.
+test: Chat and team chat still show in the chat box; centre prints and kill feed still show.
+test: Turn Console feed on: the lines return at the top left; open the console: all lines there.
+test: Restart the client: the switch keeps its value.
+
 [jof-tag]
 area: Console & chat
 title: JoF emblem beside names with the JoF tag; JoF Clan medal removed

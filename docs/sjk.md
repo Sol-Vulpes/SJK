@@ -60,6 +60,7 @@ migrated, except where the table says so. Where each is documented:
 | `cl_maxpackets` | 125 | [User commands and move packets](networking.md#user-commands-and-move-packets) |
 | rendering profile | noon, bloom, dust, material maps | [Default visual profile](rendering.md#default-visual-profile) |
 | `cl_consoleUseScanCode` | 1, saved 0 moved to 1 once | [Useful console commands](client.md#useful-console-commands) |
+| `con_drawNotify` | off (no console feed at the top left; chat keeps its box) | [Classic console](client.md#classic-console) |
 
 The HUD look (`cg_hudStyle game`) and the console (`con_style auto`: the SJK UI's
 console with its menus, else the classic one; a saved `classic` moved once to
