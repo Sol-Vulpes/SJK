@@ -19,6 +19,13 @@ tests check this file):
 Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 -->
 
+## Unreleased
+
+Holocrons: loot you earn by playing. For now they are collected and shown; they cannot be
+opened yet and give nothing.
+
+- Holocron drops: after every 30 minutes of active play on a server (moving, looking or pressing keys, in the match, out of the menus, not spectating) the SJK hub can drop a holocron of one of four tiers, Uncommon (60%), Rare (28%), Legendary (10.5%) or Mythical (1.5%), at most 8 a day and 1 Mythical a day for you; a new one shows once in a pop-up on the main menu or the game menu (a centre print says so in a match) in its tier's colour, and several show one after another. Legendary and Mythical drops are told to every SJK player in the SJK chat as a line in the tier's colour with a small gem; yours also show as "You found ...". The SJK team can give one with a note (Staff page). debug_holocron <tier|all> [x<count>] tries the pop-up without the hub _(Sol)_
+
 ## 2026.1010.1 (Alpha) | 10/10/2026
 
 The Profile screen becomes one row of tabs, with Medals and a Collection of everything to unlock;

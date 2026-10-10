@@ -2049,6 +2049,14 @@ are in [identity.md](identity.md).
   without the hub. It sends nothing and never writes `medals_seen.txt`; the console
   closes so the pop-up shows at once on the main menu (in a match, open the game
   menu).
+- `debug_holocron <tier|all> [x<count>]` (alone it lists the tiers `uncommon`, `rare`,
+  `legendary` and `mythical` with their odds) shows made-up holocron drops as if the hub
+  had just dropped them, through the same queue, centre print, pop-up, ceremony and sound,
+  and puts the first one's chat line in the game's feed, to try them without the hub. It
+  sends nothing and never writes `holocrons_seen.txt`
+  ([holocrons.md](holocrons.md#debug_holocron)). A holocron the hub drops while you play
+  shows the same way, once, and appears as a chat line in its tier's colour
+  ([holocrons.md](holocrons.md)).
 - SJK chat: one conversation for every SJK player, through the hub, in games and in
   the menus ([hub-chat.md](hub-chat.md)). In a game, I (`messagemode5`) opens the
   composer on the SJK channel (Tab cycles All, Team and SJK); hub messages show in the

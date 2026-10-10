@@ -33,6 +33,7 @@ This page is the design and the current limits. The player-facing summary is
 | SJK chat and emotes | [hub-chat.md](hub-chat.md) |
 | Unlocks and looks (blade skin, Illuminate) | [unlockables.md](unlockables.md), [looks.rs](../crates/sjk-viewer/src/looks.rs), [looks_frame.rs](../crates/sjk-viewer/src/looks_frame.rs) |
 | Asset packs: list, download, cache | [assets.rs](../crates/sjk-identity/src/assets.rs) |
+| Holocron drops: tiers, active flag, pop-up, chat lines, staff tools | [holocrons.md](holocrons.md), [holocrons.rs](../crates/sjk-viewer/src/holocrons.rs), [holocron_popup.rs](../crates/sjk-viewer/src/holocron_popup.rs) |
 | The hub itself and its protocol | repository Sol-Vulpes/SJK-hub (`PROTOCOL.md`) |
 
 The hub is a separate repository because it is deployed on its own schedule. The
@@ -52,7 +53,11 @@ vector that both test suites check, so a drift in either shows as a failing test
    two keys may wear one name: the name proves nothing, the key does.
 3. While the client is in a live, non-local session, the thread repeats a *claim*
    every 45 seconds: "this key is in slot N of server S, shown as NAME". Claims
-   live 90 seconds at the hub and are withdrawn when the player leaves or quits.
+   live 90 seconds at the hub and are withdrawn when the player leaves or quits. A claim
+   also says `"active": true` while the player is actively playing (in their own view,
+   mid-match, out of the menus, with input in the last two minutes), which is how the hub
+   counts play time toward the next holocron ([holocrons.md](holocrons.md#earning)); the
+   flag is left out otherwise.
 4. The thread reads the hub's list of claims for the server every 15 seconds. The
    scoreboard marks a row with SJK's emblem, in gold when verified, the player card
    shows the hub name, and a verified player's nameplate gets a gold badge after the
@@ -100,11 +105,17 @@ and in-game name at start and whenever the name changes, the game server address
 slot and in-game name for as long as they play, and sees their IP address. Claims
 are deleted 90 seconds after they stop being repeated; profiles and the worn-name
 history stay until the operator removes them. While a claim lives, it carries the
-player's look (blade skin and Illuminate), dropped with the claim. Once registered, the client also asks for the hub's list of
+player's look (blade skin and Illuminate), dropped with the claim, and whether the
+player is actively playing. Since holocrons (10/10/2026) the hub also keeps, until the
+operator removes the identity, the key's active play time carried toward the next
+holocron, when it last claimed and every holocron dropped for it (tier, time, source, a
+staff note and the address it dropped from, for a per-address limit); the profile lists
+the counts and recent holocrons publicly and legendary and mythical drops are told to
+every SJK client with the key's hub name ([holocrons.md](holocrons.md#what-the-hub-stores-and-privacy)). Once registered, the client also asks for the hub's list of
 asset packs at start and every 6 hours and downloads the packs it lacks, which tells the
 hub which packs the key fetched and when ([Asset packs](#asset-packs)). With either setting
 off the client sends nothing. Since 06/10/2026 `cl_hubUrl` defaults to `https://sjk.dfox.app` so players
-set nothing: a default install makes a key and tells that hub where it plays. The
+set nothing: a default install makes a key and tells that hub where it plays and whether it is active. The
 Identity page, the setting's help and the changelog say what is sent and that
 `cl_identity 0` stops it.
 
@@ -639,7 +650,10 @@ themself until another is chosen, or with Me), and offers:
 - the player's achievements at the hub, each with Clear, and Clear all, which waits
   for a second press within 3 seconds;
 - the player's picture beside their name, with Take picture down
-  ([Pictures](#pictures)).
+  ([Pictures](#pictures));
+- the player's holocrons: the four tiers to choose and Give (`StaffRequest::HolocronGive`,
+  with the note field's text as the team's note), and their four newest with Remove
+  (`StaffRequest::HolocronRemove`) ([holocrons.md](holocrons.md#staff)).
 
 Each action is a request signed by the staff member's own key (`PROTOCOL.md`,
 "Staff"); the hub refuses it from a key that is not staff, keeps a log of every staff
@@ -681,6 +695,8 @@ sends its counts, which the page says.
   secret-area sound with each achievement's pop-up.
 - `debug_medal <id|all> [x<count>] [note]` shows made-up medals in the new medal
   pop-up, sending nothing ([Medals](#medals)).
+- `debug_holocron <tier|all> [x<count>]` shows made-up holocrons in the drop pop-up,
+  sending nothing ([holocrons.md](holocrons.md#debug_holocron)).
 - The Identity page (Settings > Network > SJK identity key, main menu > SJK > IDENTITY
   in the classic menus, the in-game SJK menu, or the `identity` command) shows what the
   hub knows: the name worn now and up to three earlier ones, whether the key is

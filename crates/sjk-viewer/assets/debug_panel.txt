@@ -3162,3 +3162,45 @@ test: Pointer on a name: the card shows above the dock, with Mute. Open chat ope
 note: cl_sjkChat 0 hides both docks; identity off: "Turn the SJK identity on to chat".
 note: Not tried in a game.
 
+[holocron-popup]
+area: Menus & settings
+title: Holocron drop pop-up and debug_holocron
+change: A new holocron shows once, large, in its tier's colour, on the main menu or the game menu.
+change: Several show one after another (1 of 3); a centre print says so in a match. Fanfare as medals.
+change: holocrons_seen.txt keeps the highest number shown; a fresh PC shows the newest 20 once.
+test: Console: debug_holocron all - the four tiers show one after another; Next, Next, Next, Close.
+test: debug_holocron mythical x3: "1 of 3"; Enter, Space, Right, Esc or a click finish the entrance.
+test: In a match: debug_holocron rare: a centre print, no pop-up over play; the game menu shows it.
+test: Each tier's colour: green, blue, purple, gold. With the art in: the picture, else a drawn gem.
+test: Then quit and start: nothing shows again (debug_holocron never writes holocrons_seen.txt).
+note: Medals go first. Same look with the classic menus. Not tried in a game.
+
+[holocron-chat]
+area: Console & chat
+title: Holocron drops as SJK chat lines in the tier colour
+change: A drop is one line, "Sol found a Legendary Holocron!", with a small gem; yours: "You found ...".
+change: Same in the game feed, the docked chat and the chat page; legendary and mythical reach everyone.
+test: debug_holocron legendary in a match: a purple line with a gem shows in the game chat feed.
+test: Hub with --holocron-every 20, playing: your drop shows in the game feed, the dock and the page.
+test: Mute a player on this PC: their drops no longer show in any of the three places.
+note: Only the game feed line is rehearsed offline. Not tried against the hub.
+
+[holocron-earning]
+area: Gameplay
+title: Claims say whether you are actively playing (holocron progress)
+change: Every claim to the hub says active only in a live game of someone else's, in your own view.
+change: Not spectating or following, not at the intermission, not in a menu, input in the last 2 min.
+test: Play on a local server (not your own hosted game) with the hub at --holocron-every 60.
+test: Keep moving: a pop-up comes after about a minute of play; stand still 2 min: no progress.
+test: Spectate, sit in the game menu or the scoreboard freeze: the progress does not move.
+note: Needs the hub with holocrons. The hub stores your active time and drops (docs/identity.md).
+
+[holocron-staff]
+area: Menus & settings
+title: Staff page: Give holocron and Remove
+change: Under the players: a tier to choose, Give (with the note) and the player's recent holocrons.
+change: Remove takes one back by its number. The Staff page lists 10 players now, not 14.
+test: As staff: Staff page, choose a player, type a note, pick Rare, Give: "Gave a rare holocron".
+test: Their holocron list shows it with the gem and date; Remove: status "Took back holocron #n".
+test: Give to yourself: the pop-up shows on the main menu or the game menu (a gift, with the note).
+note: Not tried against the hub.

@@ -19,6 +19,7 @@ and changed together. Begin with the status page, then the architecture.
 | [SJK UI](sjk-ui.md) | SJK's own menus (`ui_menuStyle sjk`): design, tokens, screens and plan |
 | [Player identity](identity.md) | SJK's identity key, the hub, scoreboard badges: design, limits and privacy |
 | [SJK chat and emotes](hub-chat.md) | The chat every SJK player shares through the hub, and the emotes path |
+| [Holocron drops](holocrons.md) | Loot earned by playing: tiers, odds, caps, the active flag, the pop-up, chat lines, the staff tools and the list other screens read |
 | [Unlockables and looks](unlockables.md) | Blade skins and other unlockables, and looks every SJK player sees through the hub |
 
 [AGENTS.md](../AGENTS.md) defines the documentation maintenance rules. Update the
