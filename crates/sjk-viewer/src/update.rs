@@ -15,7 +15,7 @@
 use sha2::{Digest, Sha256};
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use std::sync::{Mutex, MutexGuard};
 use std::time::Duration;
 
@@ -80,6 +80,8 @@ pub(crate) enum State {
 
 static STATE: Mutex<State> = Mutex::new(State::Idle);
 static RESTART: AtomicBool = AtomicBool::new(false);
+/// Rises with every change of [`STATE`], so a frame can see one without locking it.
+static GENERATION: AtomicU32 = AtomicU32::new(0);
 
 fn lock() -> MutexGuard<'static, State> {
     STATE
@@ -89,6 +91,17 @@ fn lock() -> MutexGuard<'static, State> {
 
 fn set(state: State) {
     *lock() = state;
+    changed();
+}
+
+fn changed() {
+    GENERATION.fetch_add(1, Ordering::AcqRel);
+}
+
+/// A number that changes whenever the state does: read it every frame, and the state
+/// only when it moved.
+pub(crate) fn generation() -> u32 {
+    GENERATION.load(Ordering::Acquire)
 }
 
 /// Pretend release `version` is out (world shots of the Update page); nothing
@@ -113,11 +126,53 @@ pub(crate) fn state() -> State {
     lock().clone()
 }
 
+/// The newer version waiting, and whether this folder must take it from the release
+/// page ([`State::Manual`]).
+pub(crate) fn available() -> Option<(String, bool)> {
+    match &*lock() {
+        State::Available(release) => Some((release.version.clone(), false)),
+        State::Manual(release, _) => Some((release.version.clone(), true)),
+        _ => None,
+    }
+}
+
 /// The newer version waiting to be installed, if any.
 pub(crate) fn available_version() -> Option<String> {
     match &*lock() {
         State::Available(release) | State::Manual(release, _) => Some(release.version.clone()),
         _ => None,
+    }
+}
+
+/// A release's version as its text (`2026.1010.2`), kept inline so it is `Copy` and a
+/// frame can carry it without allocating.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) struct Version {
+    bytes: [u8; Version::CAPACITY],
+    len: u8,
+}
+
+impl Version {
+    /// The longest version kept, in bytes.
+    pub(crate) const CAPACITY: usize = 24;
+
+    /// `text` when it is a release version ([`parse_version`] reads it) that fits.
+    pub(crate) fn new(text: &str) -> Option<Self> {
+        let text = text.trim();
+        parse_version(text)?;
+        if !text.is_ascii() || text.len() > Self::CAPACITY {
+            return None;
+        }
+        let mut bytes = [0; Self::CAPACITY];
+        bytes[..text.len()].copy_from_slice(text.as_bytes());
+        Some(Self {
+            bytes,
+            len: text.len() as u8,
+        })
+    }
+
+    pub(crate) fn as_str(&self) -> &str {
+        std::str::from_utf8(&self.bytes[..usize::from(self.len)]).unwrap_or_default()
     }
 }
 
@@ -221,6 +276,7 @@ pub(crate) fn check(installed: &str) {
         }
         *state = State::Checking;
     }
+    changed();
     std::thread::spawn(move || set(check_now(&installed)));
 }
 
@@ -284,6 +340,7 @@ pub(crate) fn install() {
         };
         release
     };
+    changed();
     std::thread::spawn(move || {
         set(match install_now(&release) {
             Ok(()) => {
@@ -508,6 +565,21 @@ mod tests {
         assert!(parse_version("2026.1010.1") > parse_version("2026.1005.9"));
         assert!(parse_version("2026.1005.10") > parse_version("2026.1005.9"));
         assert!(parse_version("2027.0101.1") > parse_version("2026.1231.3"));
+    }
+
+    #[test]
+    fn a_version_is_kept_as_its_text() {
+        let version = Version::new(" 2026.1010.2 ").expect("a version");
+        assert_eq!(version.as_str(), "2026.1010.2");
+        assert_eq!(Version::new("2026.1010.2"), Some(version));
+        assert_ne!(Version::new("2026.1010.3"), Some(version));
+        assert_eq!(Version::new("dev"), None);
+        assert!(parse_version("2026.1010.00000000000000000002").is_some());
+        assert_eq!(
+            Version::new("2026.1010.00000000000000000002"),
+            None,
+            "too long"
+        );
     }
 
     const ANSWER: &str = r#"{

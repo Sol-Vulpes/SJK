@@ -7,6 +7,27 @@ SJK currently contains a native client and standard dedicated server in a
 20-crate Rust workspace. This page records scope and verification, rather than
 claiming complete parity from the presence of an implementation.
 
+## Unlock cards wait for the window; an update card
+
+Branch `personal/away-cards` (10/10/2026, based on `78f0510f`, Windows 11), Sol's
+request: the unlock cards show only while the player is in the game, not alt-tabbed out,
+and a newer release gets a card like them. The cards wait while the window is unfocused
+or minimised (`ViewerConsole::window_away`, from the window's focus and minimise events),
+as under the console, and a card's clock now runs only while it is drawn (at most 0.1 s a
+frame), so a card hidden half way resumes and a minimised window or a map load no longer
+spends it. The new medal and holocron pop-ups' entrances and fanfare wait the same way.
+The update check's result gives one card a session per release ("Update available",
+"SJK <version>", "Main menu > Update", SJK's emblem in holo blue, no sound); the Update
+page takes it back, and the frame sees a change through a counter (`update::generation`)
+without locking the state. `debug_update [version] [manual]` shows the card for a made-up
+release without checking anything. Verified: unit tests for the hidden clock (a minute away
+leaves the card where it was, ten seconds without frames count as one step, nothing
+starts hidden), the update card (read only on a change, once per release, none over the
+Update page, which takes it back, no chime), the version kept inline, and every card's
+words and canvas, including the update's; the update card's world shot over duel6
+(`duel6_unlock_toast`) was reviewed. Not tried in the game window: focus changes and the
+update card over a real check.
+
 ## Medal and holocron cards in a match
 
 Branch `personal/unlock-toasts` (10/10/2026, based on `fd3ebc38`, Windows 11), Sol's

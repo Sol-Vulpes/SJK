@@ -175,6 +175,12 @@ impl ViewerConsole {
         options.mute_away.enabled() && (options.unfocused || options.minimized)
     }
 
+    /// Whether the window is away: unfocused (alt-tabbed out) or minimised. The unlock
+    /// cards and the large pop-ups' entrances wait for the player to come back.
+    pub(crate) fn window_away(&self) -> bool {
+        self.window_options.unfocused || self.window_options.minimized
+    }
+
     /// Update modifier state from the same native event used by console shortcuts.
     pub(crate) fn window_alt(&mut self, alt: bool) {
         self.window_options.alt = alt;

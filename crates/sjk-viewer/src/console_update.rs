@@ -56,6 +56,11 @@ impl ViewerConsole {
         }
     }
 
+    /// Whether the Update page shows (in front of the console).
+    pub(crate) fn update_page_open(&self) -> bool {
+        self.open && self.update_panel.is_open()
+    }
+
     fn close_update_panel(&mut self) {
         if self.update_panel.close() {
             self.set_open(false);
