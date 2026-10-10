@@ -9,6 +9,8 @@
 #                               made it when that is not the piece's owner.
 
 = Sol
++ 10/10/2026 | - | Ctrl+V without a PowerShell on Windows
+- bc39241 |  | Read and set the Windows clipboard directly
 + 10/10/2026 | - | Player model mip chains built on the load worker
 - bee832e |  | Build player models' mip chains on the load worker
 + 10/10/2026 | - | Player model pipelines compiled on a worker

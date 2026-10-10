@@ -1,5 +1,15 @@
 # Status and priorities
 
+## Ctrl+V without a PowerShell
+
+Branch `personal/fast-paste` (10/10/2026, based on `76068d21`, Windows 11). Sol's
+`hitch: 248.5 ms ... between-frames 242.2` came with a Ctrl+V: on Windows `clipboard::paste`
+started PowerShell (`Get-Clipboard`) and waited for it. Windows now reads and sets the
+clipboard directly through the `clipboard-win` crate (Windows-only dependency, safe API;
+the workspace forbids `unsafe`); copies fall back to the tools if the direct call fails,
+and other systems keep their tools. Verified by the clipboard unit tests and Clippy; the
+real-clipboard round trip (ignored test) and a game not tried.
+
 ## Player model mip chains built off the render thread
 
 Branch `personal/model-mips` (10/10/2026, based on `96786a69`, Windows 11). With the
