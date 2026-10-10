@@ -1611,7 +1611,9 @@ impl GpuState {
             shader_time: presentation_time as f32 * 0.001,
         });
         timing.mark(Phase::Hud);
-        let damage = self.damage_feedback.sample(presentation_time as i32);
+        let damage = self
+            .damage_feedback
+            .marker(presentation_time as i32, self.console.as_ref());
         self.update_auto_switch();
         let mut hud_visibility =
             ground_hud::frame(self, intermission_view.is_some(), presentation_time as i32);

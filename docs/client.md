@@ -5,6 +5,11 @@ Jedi Academy `GameData` directory with the retail `base/assets*.pk3` files.
 
 ## Launch
 
+`cg_hitMarker` (Settings > HUD > Damage hitmarker) controls the red
+damage-direction indicator near the crosshair when you take damage. It defaults
+to `0` (off); `cg_hitMarker 1` enables it immediately and saves the choice.
+It does not change damage camera kick, hit sounds or damage-event timing.
+
 The client program is `sjk` and the dedicated server `sjk-server` (`.exe` on
 Windows). Developer and diagnostic environment variables are named `SJK_*`
 (`SJK_TRACE_*`, `SJK_LAMP_*`, `SJK_GPU_*` and the like). On Windows both programs

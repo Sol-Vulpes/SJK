@@ -531,6 +531,12 @@ pub(super) fn register_daily_cvars(cvars: &mut CvarRegistry) -> Result<(), sjk_s
             "Show a shield hit as multiplayer's sphere (1) instead of a shell on the body (0)",
         ),
         CvarDefinition::new(
+            "cg_hitMarker",
+            false,
+            archive,
+            "Show the red damage-direction indicator near the crosshair (0 off, 1 on)",
+        ),
+        CvarDefinition::new(
             "cg_shieldBrightness",
             4_i64,
             archive,

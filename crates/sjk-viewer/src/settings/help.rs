@@ -354,6 +354,10 @@ const HELP: &[(&str, &str)] = &[
         "Off: a shield hit flashes on the body, like single player. On: multiplayer's sphere around the player.",
     ),
     (
+        "cg_hitMarker",
+        "Red direction indicator when you take damage. Off by default; camera kick and sounds stay the same.",
+    ),
+    (
         "cg_shieldBrightness",
         "How bright the shield flash on the body is: 1 is the stock look, 12 the strongest. Not used by the sphere.",
     ),

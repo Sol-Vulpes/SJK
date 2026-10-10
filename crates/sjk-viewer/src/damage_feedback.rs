@@ -46,6 +46,19 @@ pub(crate) struct Feedback {
 }
 
 impl Feedback {
+    /// Sample only the damage marker; disabling it preserves event tracking and view kick.
+    pub(crate) fn marker(
+        &self,
+        at_time: i32,
+        console: Option<&crate::console::ViewerConsole>,
+    ) -> Option<Sample> {
+        console
+            .and_then(|console| console.bool_cvar("cg_hitmarker"))
+            .unwrap_or(false)
+            .then(|| self.sample(at_time))
+            .flatten()
+    }
+
     /// Whether damage feedback has established stock's `cg.attackerTime` gate.
     pub(crate) fn has_attacker(&self) -> bool {
         self.active.is_some_and(|event| event.server_time != 0)
@@ -185,4 +198,137 @@ fn view_axis(angles: [f32; 3]) -> [[f32; 3]; 3] {
 
 fn dot(left: [f32; 3], right: [f32; 3]) -> f32 {
     left.into_iter().zip(right).map(|(a, b)| a * b).sum()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn marker_defaults_off_can_toggle_live_and_persists_without_changing_kick() {
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("config.cfg");
+        let mut console = crate::console::ViewerConsole::new(path.clone()).unwrap();
+        let feedback = Feedback {
+            active: Some(calculate(255, 255, 20, 100, [0.0; 3], 1000)),
+            ..Default::default()
+        };
+        let kick = feedback.view_kick(1050);
+        assert!(kick.is_some());
+        assert_eq!(console.bool_cvar("cg_hitMarker"), Some(false));
+        assert_eq!(feedback.marker(1050, Some(&console)), None);
+        assert_eq!(feedback.marker(1050, None), None);
+        assert!(console.set_cvar("cg_hitMarker", "1"));
+        assert_eq!(feedback.marker(1050, Some(&console)), feedback.sample(1050));
+        assert_eq!(feedback.view_kick(1050), kick);
+        assert_eq!(feedback.marker(1500, Some(&console)), None);
+        drop(console);
+        let mut console = crate::console::ViewerConsole::new(path).unwrap();
+        assert_eq!(console.bool_cvar("cg_hitMarker"), Some(true));
+        assert!(console.set_cvar("cg_hitMarker", "0"));
+        assert_eq!(feedback.marker(1050, Some(&console)), None);
+        assert_eq!(feedback.view_kick(1050), kick);
+    }
+
+    #[test]
+    #[ignore = "needs a GPU and external JKA_GAME_DATA"]
+    fn damage_marker_gpu_comparison() {
+        use bytemuck::Zeroable;
+        crate::world_shot::on_big_stack(|| {
+            let (mut gpu, _profile) = crate::world_shot::open(
+                "maps/mp/duel6.bsp",
+                [640, 480],
+                None,
+                &[("r_hdr", "0"), ("cg_materialMaps", "0")],
+            )
+            .expect("a GPU adapter");
+            assert!(matches!(
+                gpu.render(&mut None),
+                crate::gpu_context::FrameStatus::Rendered
+            ));
+            let feedback = Feedback {
+                active: Some(calculate(255, 255, 20, 100, [0.0; 3], 1000)),
+                ..Default::default()
+            };
+            let mut shots = Vec::new();
+            for enabled in ["0", "1"] {
+                let console = gpu.console.as_mut().unwrap();
+                assert!(console.set_cvar("cg_hitMarker", enabled));
+                let sample = feedback.marker(1050, Some(console));
+                let uniform = crate::hud_runtime::HudUniform {
+                    hud_visible: 1.0,
+                    inverse_width: 1.0 / 640.0,
+                    inverse_height: 1.0 / 480.0,
+                    damage_alpha: sample.map_or(0.0, |s| s.alpha),
+                    damage_strength: sample.map_or(0.0, |s| s.strength),
+                    ..crate::hud_runtime::HudUniform::zeroed()
+                };
+                gpu.queue
+                    .write_buffer(&gpu.hud_buffer, 0, bytemuck::bytes_of(&uniform));
+                let texture = gpu.device.create_texture(&wgpu::TextureDescriptor {
+                    label: Some("damage marker comparison"),
+                    size: wgpu::Extent3d {
+                        width: 640,
+                        height: 480,
+                        depth_or_array_layers: 1,
+                    },
+                    mip_level_count: 1,
+                    sample_count: 1,
+                    dimension: wgpu::TextureDimension::D2,
+                    format: crate::ui_target::format(gpu.context.format),
+                    usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::COPY_SRC,
+                    view_formats: &[],
+                });
+                let view = texture.create_view(&Default::default());
+                let mut encoder = gpu.device.create_command_encoder(&Default::default());
+                {
+                    let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                        color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                            view: &view,
+                            resolve_target: None,
+                            depth_slice: None,
+                            ops: wgpu::Operations {
+                                load: wgpu::LoadOp::Clear(wgpu::Color::BLACK),
+                                store: wgpu::StoreOp::Store,
+                            },
+                        })],
+                        depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
+                            view: &gpu.depth.view,
+                            depth_ops: Some(wgpu::Operations {
+                                load: wgpu::LoadOp::Clear(1.0),
+                                store: wgpu::StoreOp::Store,
+                            }),
+                            stencil_ops: None,
+                        }),
+                        ..Default::default()
+                    });
+                    pass.set_pipeline(&gpu.hud_pipeline);
+                    pass.set_bind_group(0, &gpu.hud_bind_group, &[]);
+                    pass.draw(0..3, 0..1);
+                }
+                gpu.queue.submit([encoder.finish()]);
+                shots.push(crate::world_shot::read_back(
+                    &gpu.device,
+                    &gpu.queue,
+                    &texture,
+                ));
+            }
+            let red = |image: &image::RgbaImage| {
+                image
+                    .pixels()
+                    .filter(|p| p[0] > 64 && p[0] > p[1].saturating_add(32))
+                    .count()
+            };
+            assert_eq!(red(&shots[0]), 0);
+            assert!(red(&shots[1]) > 50);
+            println!(
+                "damage marker red pixels: off={}, on={}",
+                red(&shots[0]),
+                red(&shots[1])
+            );
+            if let Some(path) = std::env::var_os("SJK_DAMAGE_MARKER_SHOT") {
+                shots[1].save(path).unwrap();
+            }
+        });
+    }
 }

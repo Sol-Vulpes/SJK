@@ -291,6 +291,11 @@ pub(super) const HUD: &[Setting] = &[
         kind: ValueKind::Bool,
     },
     Setting {
+        label: "Damage hitmarker",
+        cvar: "cg_hitMarker",
+        kind: ValueKind::Bool,
+    },
+    Setting {
         label: "Overhead names",
         cvar: "cg_drawPlayerNames",
         kind: ValueKind::Integer {
