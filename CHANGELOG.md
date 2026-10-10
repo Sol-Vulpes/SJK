@@ -18,14 +18,14 @@ tests check this file):
 - ASCII only, as the menu font draws bytes.
 Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 -->
-- Saber shaders have tiers, the same as holocrons: Mythical (Sun, Void, Molten, Spectral), Legendary (Storm, Unstable, Chameleon, Prism), Rare (Frost, Hologram, Runic, Heartbeat, Glitch, Banner), and Uncommon for plainer ones to come; the Collection and the Saber tab list the rarest first and show each tier in its colour, and the Collection's Shaders can show a grid of cards (V, or the two marks by Saber; ui_shaderView keeps it) _(Sol)_
-
 ## Unreleased
 
 A Collection of everything you gather in SJK, with your own character showing what you pick,
 and holocrons: loot you earn by playing. For now they are collected and shown; they cannot be
 opened yet and give nothing.
 
+- SJK chat names keep the marks players put around clan tags: {JoF}, \o/ and Latin-1 symbols such as guillemets now show in the feed, the dock, the chat page and its online window instead of being dropped; messages keep their own characters _(Sol)_
+- Saber shaders have tiers, the same as holocrons: Mythical (Sun, Void, Molten, Spectral), Legendary (Storm, Unstable, Chameleon, Prism), Rare (Frost, Hologram, Runic, Heartbeat, Glitch, Banner), and Uncommon for plainer ones to come; the Collection and the Saber tab list the rarest first and show each tier in its colour, and the Collection's Shaders can show a grid of cards (V, or the two marks by Saber; ui_shaderView keeps it) _(Sol)_
 - The console feed, the console lines that showed for a few seconds at the top left while playing, is off by default; turn it back on with Settings > Interface > Console feed (con_drawNotify 1). Chat, centre prints and the kill feed still show, and the console keeps every line _(Sol)_
 - A new Collection, under Profile on the main page and in the game menu, holds what you collect: Medals hanging from a rail, Achievements as a wall of medallions by category with the ones nearest to unlock, Shaders (the blade skins, now called saber shaders), Toys (Illuminate) and Nameplates (ornaments to come); the Profile screen keeps Character, Saber, Force and SJK Profile, and the collection, achievements and unlockables commands open its tabs _(Sol)_
 - On the Collection's Shaders, Toys and Nameplates your own character stands beside the page (on the menu map, or in a live preview in a match): it holds the saber shader you choose, a locked one too as a preview only you see, the Illuminate holocron floats by it, and your nameplate stands over its head _(Sol)_

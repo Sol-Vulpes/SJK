@@ -28,7 +28,7 @@ impl ChatOverlay {
         let name = if drop.is_some() {
             String::new()
         } else {
-            sjk_identity::chat::for_display(&message.name)
+            sjk_identity::chat::name_for_display(&message.name)
         };
         let body = match &drop {
             Some(words) => words.text.clone(),

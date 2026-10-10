@@ -30,7 +30,8 @@ pub(crate) fn words(message: &ChatMessage) -> Option<Words> {
     let text = if mark.own {
         format!("You {rest}")
     } else {
-        let who = crate::text::Plain(&sjk_identity::chat::for_display(&message.name)).to_string();
+        let who =
+            crate::text::Plain(&sjk_identity::chat::name_for_display(&message.name)).to_string();
         let who = who.trim();
         let who = if who.is_empty() { "Someone" } else { who };
         format!("{who} {rest}")

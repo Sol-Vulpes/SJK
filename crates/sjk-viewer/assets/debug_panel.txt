@@ -24,6 +24,15 @@
 
 # ---- Console & chat ----
 
+[chat-clan-names]
+area: Console & chat
+title: SJK chat names keep the marks around clan tags ({JoF}, \o/, Latin-1 symbols)
+change: Sender names in the SJK chat keep every printable Windows-1252 character: { } \ `,
+change: guillemets, section sign, bullet... (they were dropped). Messages keep their characters.
+test: Wear a name like {JoF}Sol, send an SJK chat message: feed, dock and page show {JoF}Sol.
+test: The chat page's online window shows the braces; a holocron drop line too.
+test: A message with {JoF} is still refused (messages keep their alphabet).
+
 [console-feed]
 area: Console & chat
 title: Console feed (top left notify lines) off by default, con_drawNotify
