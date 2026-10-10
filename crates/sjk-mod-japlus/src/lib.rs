@@ -142,6 +142,15 @@ impl ClientMod for JaPlus {
         "Admin teleports, auto login, plugin options and command completion for JA+ servers"
     }
 
+    fn servers(&self) -> &'static str {
+        "JA+"
+    }
+
+    /// Every JA+ server, JoF's included.
+    fn loads_on(&self, server: &sjk_mod::Server) -> bool {
+        server.kind == ServerKind::JaPlus
+    }
+
     fn commands(&self) -> &'static [Command] {
         COMMANDS
     }

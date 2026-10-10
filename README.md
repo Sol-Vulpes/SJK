@@ -26,7 +26,7 @@ HUD, audio, screenshots and demo playback.
   files, so the retail HUD and custom HUD packs work;
 - JA+ support: the client identifies as the JA+ plugin, predicts JA+ movement,
   saber rules, `g_debugMelee`, the grapple and duel pass-through;
-- client mods, off until switched on: JA+ tools (`japlus.*` admin teleports,
+- client mods loaded on the servers they are for: JA+ tools (`japlus.*` admin teleports,
   auto login and plugin options) and JoF tools (`jof.*`);
 - vector versions of the retail game fonts on every retail text surface, tighter
   console and chat rows, and text that scales at high resolutions;

@@ -1,6 +1,6 @@
 //! The client mods built into this client (`docs/mods.md`): their switches
-//! (`mod_<id>`), their saved settings, and their commands, which exist only while
-//! a mod is on. A mod's commands run on the main thread through [`host::ViewerHost`],
+//! (`mod_<id>`, on by default), their saved settings, and their commands, which
+//! exist only while a mod is on and the client is on a server it loads on. A mod's commands run on the main thread through [`host::ViewerHost`],
 //! after the console has queued them like the other client commands.
 
 use sjk_mod::{ClientMod, Server};
@@ -30,11 +30,18 @@ pub(crate) fn switch(id: &str) -> String {
     format!("mod_{id}")
 }
 
+/// Bumped when the switches' default changes: a profile saved before then gets
+/// the new default once. 1: on by default (11/10/2026; they were off).
+const DEFAULT_VERSION: &str = "mod_defaultVersion";
+const CURRENT_DEFAULTS: i64 = 1;
+
 struct Entry {
     id: &'static str,
     /// Lent out while one of its commands runs.
     module: Option<Box<dyn ClientMod>>,
-    /// Whether its commands are registered.
+    /// Whether the player leaves it on (`mod_<id>`).
+    allowed: bool,
+    /// Whether its commands are registered: allowed and on a server it loads on.
     on: bool,
 }
 
@@ -53,6 +60,7 @@ impl Mods {
                 .map(|module| Entry {
                     id: module.id(),
                     module: Some(module),
+                    allowed: false,
                     on: false,
                 })
                 .collect(),
@@ -70,9 +78,14 @@ impl Mods {
         {
             shell.cvars.register(CvarDefinition::new(
                 switch(module.id()),
-                false,
+                true,
                 CvarFlags::ARCHIVE,
-                format!("Turn on {}: {}", module.title(), module.about()),
+                format!(
+                    "{} on {} servers: {}",
+                    module.title(),
+                    module.servers(),
+                    module.about()
+                ),
             ))?;
             for setting in module.settings() {
                 shell.cvars.register(CvarDefinition::new(
@@ -83,21 +96,54 @@ impl Mods {
                 ))?;
             }
         }
+        if shell.cvars.get(DEFAULT_VERSION).is_none() {
+            shell.cvars.register(CvarDefinition::new(
+                DEFAULT_VERSION,
+                0_i64,
+                CvarFlags::ARCHIVE,
+                "Version of the mod switches' defaults this profile has",
+            ))?;
+        }
         Ok(())
     }
 
-    /// Follow the switches: register the commands of mods turned on and remove
-    /// those of mods turned off. Returns whether one changed.
+    /// Once per default change, after the profile loads: put every switch back
+    /// to its default (mods were off by default before version 1).
+    pub(crate) fn migrate_defaults(&self, shell: &mut Shell) {
+        let saved = shell
+            .cvars
+            .get(DEFAULT_VERSION)
+            .and_then(|cvar| cvar.value.as_text().trim().parse::<i64>().ok())
+            .unwrap_or(0);
+        if saved >= CURRENT_DEFAULTS {
+            return;
+        }
+        for entry in &self.entries {
+            let _ = shell.cvars.reset(&switch(entry.id));
+        }
+        let _ = shell
+            .cvars
+            .set_text(DEFAULT_VERSION, &CURRENT_DEFAULTS.to_string());
+    }
+
+    /// Follow the switches and the server: register the commands of mods that
+    /// are on and load on this server, and remove the others'. Returns whether
+    /// one changed.
     pub(crate) fn sync(&mut self, shell: &mut Shell) -> bool {
         let mut changed = false;
         for entry in &mut self.entries {
             let Some(module) = entry.module.as_ref() else {
                 continue;
             };
-            let on = shell
+            entry.allowed = shell
                 .cvars
                 .get(&switch(entry.id))
                 .is_some_and(|cvar| matches!(cvar.value, CvarValue::Bool(true)));
+            let on = entry.allowed
+                && self
+                    .server
+                    .as_ref()
+                    .is_some_and(|server| module.loads_on(server));
             if on == entry.on {
                 continue;
             }
@@ -138,10 +184,18 @@ impl Mods {
         });
         Some(if !known {
             Err(format!("Unknown command \"{name}\""))
-        } else if !entry.on {
+        } else if !entry.allowed {
             Err(format!(
                 "{name}: this mod is off; turn it on in Settings or with {} 1",
                 switch(entry.id)
+            ))
+        } else if !entry.on {
+            Err(format!(
+                "{name}: works on {} servers only",
+                entry
+                    .module
+                    .as_ref()
+                    .map_or("its", |module| module.servers())
             ))
         } else {
             Ok(())
@@ -167,13 +221,20 @@ impl Mods {
             .collect()
     }
 
-    /// Each mod's id, title and description, with whether it is on.
-    pub(crate) fn listing(&self) -> Vec<(&'static str, &'static str, &'static str, bool)> {
+    /// Each mod's id, title and description, with its state in words.
+    pub(crate) fn listing(&self) -> Vec<(&'static str, &'static str, &'static str, String)> {
         self.entries
             .iter()
             .filter_map(|entry| {
                 let module = entry.module.as_ref()?;
-                Some((entry.id, module.title(), module.about(), entry.on))
+                let state = if entry.on {
+                    "^2loaded".to_owned()
+                } else if entry.allowed {
+                    format!("^3on, loads on {} servers", module.servers())
+                } else {
+                    "^1off".to_owned()
+                };
+                Some((entry.id, module.title(), module.about(), state))
             })
             .collect()
     }
@@ -229,23 +290,63 @@ mod tests {
         (shell, mods)
     }
 
+    fn server(kind: sjk_mod::ServerKind, info: &str) -> Option<Server> {
+        Some(Server {
+            kind,
+            address: "127.0.0.1:29070".into(),
+            info: info.into(),
+        })
+    }
+
     #[test]
-    fn commands_follow_the_switch() {
+    fn mods_load_on_their_servers_only() {
         let (mut shell, mut mods) = shell();
+        // On by default, but off a server nothing loads.
         assert!(!mods.sync(&mut shell));
         assert!(!shell.commands.contains("japlus.guntele"));
-        assert!(matches!(mods.accepts("japlus.guntele"), Some(Err(_))));
+        assert!(
+            matches!(mods.accepts("japlus.guntele"), Some(Err(error)) if error.contains("JA+ servers"))
+        );
         assert_eq!(mods.accepts("connect"), None);
-        shell.cvars.set_text("mod_japlus", "1").unwrap();
+        // A base server loads neither.
+        mods.set_server(server(sjk_mod::ServerKind::BaseJka, ""));
+        assert!(!mods.sync(&mut shell));
+        // A JA+ server loads JA+ tools, not JoF tools.
+        mods.set_server(server(sjk_mod::ServerKind::JaPlus, r"\V\2.4B7"));
         assert!(mods.sync(&mut shell));
         assert!(shell.commands.contains("japlus.guntele"));
         assert_eq!(mods.accepts("JAPLUS.GunTele"), Some(Ok(())));
         assert!(matches!(mods.accepts("japlus.nothing"), Some(Err(_))));
-        // The other mod stays off.
         assert!(!shell.commands.contains("jof.commands"));
+        // A JoF server is a JA+ one too: both load.
+        mods.set_server(server(sjk_mod::ServerKind::JaPlus, r"\V\2.5B0"));
+        assert!(mods.sync(&mut shell));
+        assert!(shell.commands.contains("japlus.guntele"));
+        assert!(shell.commands.contains("jof.commands"));
+        // The switch still turns a mod off.
         shell.cvars.set_text("mod_japlus", "0").unwrap();
         assert!(mods.sync(&mut shell));
         assert!(!shell.commands.contains("japlus.guntele"));
+        assert!(
+            matches!(mods.accepts("japlus.guntele"), Some(Err(error)) if error.contains("mod_japlus 1"))
+        );
+        // Leaving the server unloads the rest.
+        mods.set_server(None);
+        assert!(mods.sync(&mut shell));
+        assert!(!shell.commands.contains("jof.commands"));
+    }
+
+    #[test]
+    fn an_old_profile_gets_the_mods_on_once() {
+        let (mut shell, mods) = shell();
+        // Saved while the mods were off by default.
+        shell.cvars.set_text("mod_japlus", "0").unwrap();
+        mods.migrate_defaults(&mut shell);
+        assert_eq!(shell.cvars.get("mod_japlus").unwrap().value.as_text(), "1");
+        // A choice made after that stays.
+        shell.cvars.set_text("mod_japlus", "0").unwrap();
+        mods.migrate_defaults(&mut shell);
+        assert_eq!(shell.cvars.get("mod_japlus").unwrap().value.as_text(), "0");
     }
 
     #[test]
@@ -256,15 +357,11 @@ mod tests {
     }
 
     #[test]
-    fn server_commands_complete_only_while_on() {
+    fn server_commands_complete_only_while_loaded() {
         let (mut shell, mut mods) = shell();
-        mods.set_server(Some(Server {
-            kind: sjk_mod::ServerKind::JaPlus,
-            address: "127.0.0.1:29070".into(),
-            info: r"\V\2.5B0".into(),
-        }));
+        mods.set_server(server(sjk_mod::ServerKind::JaPlus, r"\V\2.5B0"));
+        shell.cvars.set_text("mod_jof", "0").unwrap();
         assert!(mods.server_help().is_empty());
-        shell.cvars.set_text("mod_japlus", "1").unwrap();
         mods.sync(&mut shell);
         let help = mods.server_help();
         assert!(help.iter().any(|(name, _)| name == "amtele"));

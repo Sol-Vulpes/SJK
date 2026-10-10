@@ -2,8 +2,9 @@
 //!
 //! A mod is a set of console commands and settings that live outside the core
 //! client. Every name a mod owns starts with its id and a dot (`japlus.guntele`,
-//! `japlus.loginServer1`), and its commands exist only while the player has it on
-//! (`mod_<id> 1`). A mod reaches the game through [`Host`] alone: it sends server
+//! `japlus.loginServer1`), and its commands exist only on the servers it is made
+//! for ([`ClientMod::loads_on`]) and while the player leaves it on (`mod_<id>`, on
+//! by default). A mod reaches the game through [`Host`] alone: it sends server
 //! commands and reads what the client already knows (the crosshair point, the
 //! predicted player, the drawn players), and never touches the renderer, the
 //! prediction or the wire directly.
@@ -112,13 +113,17 @@ pub trait ClientMod: Send {
     fn title(&self) -> &'static str;
     /// One line on what it adds.
     fn about(&self) -> &'static str;
-    /// The commands it adds while on.
+    /// The servers it loads on, for messages: "JA+" in "JA+ servers".
+    fn servers(&self) -> &'static str;
+    /// Whether it loads on `server`: its commands exist only there.
+    fn loads_on(&self, server: &Server) -> bool;
+    /// The commands it adds while loaded.
     fn commands(&self) -> &'static [Command];
     /// Its saved settings, kept whether it is on or not.
     fn settings(&self) -> &'static [Setting] {
         &[]
     }
-    /// Server commands it completes on `server` while on (none by default).
+    /// Server commands it completes on `server` while loaded (none by default).
     fn server_commands(&self, _server: &Server) -> &'static [Command] {
         &[]
     }

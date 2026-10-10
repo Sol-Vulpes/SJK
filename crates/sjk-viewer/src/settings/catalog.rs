@@ -626,7 +626,7 @@ pub(super) const GAME: &[Setting] = &[
         cvar: crate::quick_wheel::SOUNDS_CVAR,
         kind: ValueKind::Bool,
     },
-    // The client mods (`docs/mods.md`), off until the player wants them.
+    // The client mods (`docs/mods.md`): on, each loading on its servers only.
     Setting {
         label: "JA+ tools",
         cvar: "mod_japlus",

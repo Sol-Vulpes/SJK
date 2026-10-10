@@ -173,15 +173,17 @@ note: Others see a stray A-circumflex before it when this client sends it (UTF-8
 
 [client-mods]
 area: Console & chat
-title: Client mods: JA+ tools and JoF tools, off until switched on
-change: Settings > Game options has JA+ tools (mod_japlus) and JoF tools (mod_jof), both off.
-change: Their commands start with japlus. and jof.; mods lists them with their switches.
+title: Client mods: JA+ tools and JoF tools, loaded on their servers
+change: JA+ tools (japlus.*) load on JA+ servers, JoF tools (jof.*) on JoF ones; both on by default.
+change: Settings > Game options switches them off (mod_japlus, mod_jof); mods lists their state.
 change: serverconfig and pluginDisable are now japlus.serverconfig and japlus.plugin.
-test: Type japlus.guntele with JA+ tools off: it says how to switch the mod on.
-test: Switch JA+ tools on in Settings, type japlus. then Tab: the commands are listed.
+test: In the menu, type japlus.guntele: it says it works on JA+ servers only.
+test: Join a JA+ server, type japlus. then Tab: the commands are listed; on a base server, none.
+test: On a JoF server: jof.commands says it is a JoF server; leave and it is gone again.
+test: Switch JA+ tools off in Settings on a JA+ server: japlus. commands are gone.
 test: On a JA+ server: japlus.serverconfig, then japlus.plugin and japlus.plugin 9 (and back).
 test: On a JA+ server with JA+ tools on, type am then Tab: amtele, amlogin and emotes complete.
-test: Type mods: both mods are listed with on/off.
+test: Type mods: each mod says loaded, on (waiting for its servers) or off.
 
 [japlus-teleports]
 area: Gameplay
