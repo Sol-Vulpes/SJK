@@ -256,7 +256,7 @@ use render_helpers::{angle_to_short, append_instance_group, mesh_center, texture
 use sjk_bsp::{Aabb, Bsp, TraceScratch};
 use sjk_client::{
     ClientSession, LegacyMapEffects, LegacyMissileEffects, LegacySaberClashFlare,
-    LegacyWorldAdapter, ServerClock, legacy_model_appearance,
+    LegacyWorldAdapter, ServerClock,
 };
 use sjk_effect::ComponentKind;
 use sjk_model::{AnimationConfig, AnimationSequence, Gla, Glm, Md3, Md3Tag, Skin, SkinnedVertex};

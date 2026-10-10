@@ -1,5 +1,21 @@
 # Status and priorities
 
+## First-use server models
+
+Branch `perf/on-demand-models`, based on `0c76ff03` (2026-10-10, Windows):
+unused `CS_MODELS` entries are deferred instead of building all 511 usable
+slots at map load. Newly referenced rigid entity appearances are parsed on a
+worker and uploaded into the owning world. Map props, stock weapons/items,
+effect models and current player bodies retain their existing preload policy.
+Workspace fmt, build, test and clippy passed with warnings. The release
+external-data GPU test passed on an RTX 5070 Ti (Rust 1.99.0, driver
+32.0.16.1714): duel6 at 640x480 started with 87 rigid models; a late antenna
+model was installed once across 100 repeated requests, then the map rendered.
+Startup took 16.5 s, and first demand through the first rendered frame took
+1.23 s (including font/first-frame work). There is no before/after startup
+comparison. Pop-in, texture-upload stalls and populated-match performance remain
+unverified; this is not a complete asset streaming system or file hot reload.
+
 Reviewed 2026-10-04 against GitHub baseline `b394022` and the owner-approved
 client, server, rendering and loading changes described below.
 

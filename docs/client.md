@@ -5,6 +5,15 @@ Jedi Academy `GameData` directory with the retail `base/assets*.pk3` files.
 
 ## Launch
 
+Server `CS_MODELS` entries that no entity currently uses are not parsed or
+uploaded when the map starts. A newly referenced rigid model is prepared on
+one background worker and installed into that world's GPU buffers when ready;
+until then its draw is absent. Failed models are tried once per world, and a
+map change discards outstanding results. Map props, stock weapons/items and
+effect dependencies still preload. Player models already load for the current
+roster rather than the entire installed model catalogue; this change does not
+defer player bodies or reload files edited on disk.
+
 The client program is `sjk` and the dedicated server `sjk-server` (`.exe` on
 Windows). Developer and diagnostic environment variables are named `SJK_*`
 (`SJK_TRACE_*`, `SJK_LAMP_*`, `SJK_GPU_*` and the like). On Windows both programs

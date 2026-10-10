@@ -6,6 +6,13 @@ BSP geometry, PVS visibility, lightmaps, shader stages and legacy models.
 
 ## Where to work
 
+Unused server-advertised rigid models load on first reference through
+`config_string_refresh::model_demand`. CPU model parsing runs on a single worker
+per world; geometry/material installation stays with the GPU owner. Idle scans
+borrow existing entity appearances and use a sorted set of attempted models,
+without per-frame name allocation. Texture preparation during GPU installation
+can still hitch, and models remain resident until the world is replaced.
+
 | Area | Entry point |
 | --- | --- |
 | GPU/device setup | [gpu_context.rs](../crates/sjk-viewer/src/gpu_context.rs) |
