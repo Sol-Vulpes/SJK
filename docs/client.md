@@ -734,7 +734,7 @@ read on a worker, at most three at once: its files, its mesh and its textures
 decoded there, then uploaded by the render thread, one model a frame
 ([player_loads.rs](../crates/sjk-viewer/src/player_loads.rs)); until then the player
 keeps the model they had, and a new player shows the stand-in actor. Loaded inside
-one frame before 11/10/2026, it was a stutter players felt on every join. Files are read as
+one frame before 10/10/2026, it was a stutter players felt on every join. Files are read as
 rd-vanilla and the retail cgame read them, so a model EternalJK draws and
 animates is not swapped for Kyle:
 
@@ -1176,7 +1176,7 @@ The first row of VIDEO, and of [First setup](#first-setup), is Graphics quality
 ([graphics_quality.rs](../crates/sjk-viewer/src/graphics_quality.rs)): one choice
 of five levels that sets the costly rendering settings together, from EJK
 (the most frames per second, the original game's look, named after EternalJK, the
-client closest to it that players know; it was Ultra low until 11/10/2026) to Ultra
+client closest to it that players know; it was Ultra low until 10/10/2026) to Ultra
 (the best look). The level is not saved
 on its own: the row shows whichever level the settings match, and Custom once
 one of them has been changed on its own; stepping from Custom starts at the

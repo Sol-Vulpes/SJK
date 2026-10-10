@@ -210,7 +210,7 @@ world shots of the box with test GIFs, in play and typing, at 1080p and 4K
 
 ## Stutters on joins
 
-Branch `personal/player-async` (11/10/2026, based on `a4ea2316`, Windows 11, RTX 5080),
+Branch `personal/player-async` (10/10/2026, based on `a4ea2316`, Windows 11, RTX 5080),
 players' reports of random stutters in game. Read from the code, the likeliest was a
 player joining or changing model: the model's files read and parsed, its textures
 decoded, materials and pipelines compiled and the shared geometry regrown by copying
@@ -231,7 +231,7 @@ world). Not measured: the frame times of a join before and after, which the hitc
 
 ## Low FPS help
 
-Branch `personal/help-fps` (11/10/2026, based on `a10730dc`, Windows 11, RTX 5080),
+Branch `personal/help-fps` (10/10/2026, based on `a10730dc`, Windows 11, RTX 5080),
 Sol's request: detect a map whose lighting is heavy at load and suggest turning it off,
 with a "don't ask again" tick, a `help_fps` command to tell players, and Ultra low
 renamed EJK. A few seconds after a server's map is in, the GPU times of eight sampled

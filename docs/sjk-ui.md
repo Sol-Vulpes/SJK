@@ -1440,7 +1440,7 @@ not drawn and take no input. The same look in every menu style, on the 16:9 fram
 ## Low FPS help
 
 [fps_help_card.rs](../crates/sjk-viewer/src/fps_help_card.rs): the pop-up of the
-[low-FPS help](client.md#low-fps-help) (Sol asked on 11/10/2026 for a suggestion when
+[low-FPS help](client.md#low-fps-help) (Sol asked on 10/10/2026 for a suggestion when
 a map's lighting is heavy, and a `help_fps` command to tell players). It shows on the
 menus or over the game menu, which it opens when it comes by itself in a match and
 closes again with it, after the medal, holocron and reload cards; the menus under it

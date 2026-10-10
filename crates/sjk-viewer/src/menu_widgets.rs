@@ -223,6 +223,7 @@ impl MenuCanvas {
 #[cfg(test)]
 mod storage_tests {
     use super::*;
+    #[cfg(debug_assertions)]
     use sjk_ui::FontWeight;
 
     /// A frame past the canvas's fixed storage stops a debug build instead of
