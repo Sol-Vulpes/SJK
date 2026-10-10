@@ -1407,6 +1407,29 @@ and its 32 text runs, with the button above the keys inside the window (a test
 sweeps every medal with no note and the longest ones, alone and first of several,
 nine moments, 1080p, 4K, 4:3, 21:9 and 720 lines, in the families and in Inter).
 
+## Graphics reload
+
+[graphics_reload_card.rs](../crates/sjk-viewer/src/graphics_reload_card.rs): the pop-up
+that offers the [graphics reload](client.md#graphics-reload) once a setting the
+graphics read only at their start changed (Sol asked on 10/10/2026 for a warning and a
+reload instead of a restart, after turning Ultra low on mid-game changed nothing). It
+shows on the main page or over the game menu, never inside Settings, so several rows
+can be changed first, and after the medal and holocron pop-ups; the menus under it are
+not drawn and take no input. The same look in every menu style, on the 16:9 frame:
+
+- **Card:** the kit's card over its scrim, 760 wide from x 580, y 372, as tall as
+  its words.
+- **Words:** "Graphics" in gold (Rajdhani 22), "Reload the graphics?" (Rajdhani 36),
+  then up to three lines of Exo 2 18 (muted): what changed ("Ultra low", "Balanced
+  graphics quality", or up to three settings by name, then "and N more") "applies
+  after a graphics reload", and that the map (or the menu map) loads again in a few
+  seconds, on a server without leaving it.
+- **Buttons:** Later (outlined, 150) and Reload now (gold, 200), right-aligned along
+  the foot; keys bottom right: Enter reload now, Esc later.
+- **Reloading:** on the main page the card stays while the menu map is built again,
+  without its buttons: "Reloading the graphics..." and that it takes a few seconds.
+  On a server the loading screen shows instead.
+
 ## Implementation
 
 - `ui_menuStyle sjk` (`menu::style::MenuStyle::Sjk`) is the default beside

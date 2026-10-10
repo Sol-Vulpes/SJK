@@ -1158,7 +1158,7 @@ impl PanelPlace {
     }
 
     /// [`Self::label`], with classic+'s gold `*` closing the label column
-    /// when `later` (the setting applies after a restart or on the next map).
+    /// when `later` (the setting applies after a restart, a graphics reload or on the next map).
     pub(crate) fn label_marked(
         &self,
         canvas: &mut MenuCanvas,

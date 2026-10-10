@@ -27,19 +27,19 @@ pub(crate) fn register(cvars: &mut CvarRegistry) -> Result<(), CvarError> {
             "r_ext_texture_filter_anisotropic",
             1_i64,
             CvarFlags::ARCHIVE,
-            "Enable world/model anisotropy; restart viewer after changing",
+            "Enable world/model anisotropy; vid_restart applies it",
         ),
         CvarDefinition::new(
             "r_ext_max_anisotropy",
             16_i64,
             CvarFlags::ARCHIVE,
-            "Anisotropy level (1..16); restart viewer after changing",
+            "Anisotropy level (1..16); vid_restart applies it",
         ),
         CvarDefinition::new(
             "r_textureMode",
             "GL_LINEAR_MIPMAP_LINEAR",
             CvarFlags::ARCHIVE,
-            "GL texture filter; restart viewer after changing",
+            "GL texture filter; vid_restart applies it",
         ),
     ] {
         cvars.register(definition)?;
@@ -51,8 +51,10 @@ pub(crate) fn register(cvars: &mut CvarRegistry) -> Result<(), CvarError> {
     ] {
         cvars.on_change(name, move |_| {
             crate::log::progress(format_args!(
-                "{name} changed: restart the viewer to apply filtering"
+                "{name} changed: {}",
+                crate::graphics_reload::APPLY
             ));
+            crate::graphics_reload::notice();
         })?;
     }
     Ok(())
@@ -74,6 +76,25 @@ impl Policy {
             mode,
             anisotropy: if anisotropy == 1 { 0 } else { anisotropy },
         })
+    }
+
+    /// What [`Self::sample`] would read now, without its report.
+    pub(crate) fn read(console: Option<&crate::console::ViewerConsole>, maximum: u16) -> Self {
+        let Some(console) = console else {
+            return Self::resolve("GL_LINEAR_MIPMAP_LINEAR", true, 16, maximum).unwrap();
+        };
+        Self::resolve(
+            console
+                .text_value("r_texturemode")
+                .unwrap_or("GL_LINEAR_MIPMAP_LINEAR"),
+            console
+                .integer_cvar("r_ext_texture_filter_anisotropic")
+                .unwrap_or(1)
+                != 0,
+            console.integer_cvar("r_ext_max_anisotropy").unwrap_or(16),
+            maximum,
+        )
+        .unwrap_or_default()
     }
 
     /// Read once at context construction. Invalid mode names are reported before falling back.
@@ -106,11 +127,11 @@ impl Policy {
                 != 0
         {
             crate::log::progress(format_args!(
-                "anisotropy requires r_textureMode GL_LINEAR_MIPMAP_LINEAR; restart after setting"
+                "anisotropy requires r_textureMode GL_LINEAR_MIPMAP_LINEAR; vid_restart after setting"
             ));
         }
         crate::log::progress(format_args!(
-            "world/model filtering: mode={} anisotropy={}x portable-cap={}x; restart to change",
+            "world/model filtering: mode={} anisotropy={}x portable-cap={}x; vid_restart to change",
             MODES[usize::from(policy.mode)],
             policy.anisotropy.max(1),
             maximum

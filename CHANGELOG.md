@@ -24,6 +24,7 @@ A Collection of everything you gather in SJK, with your own character showing wh
 and holocrons: loot you earn by playing. For now they are collected and shown; they cannot be
 opened yet and give nothing.
 
+- Graphics settings that needed a restart (Ultra low, the graphics quality levels, HDR, FXAA, sun and sky, shadows, light shafts, material maps, reflection probes, texture filtering) now apply with a graphics reload: a pop-up offers it once you leave Settings, and vid_restart does it; on a server the map loads again in a few seconds and you stay connected _(Sol)_
 - Chat letter spacing: Settings > HUD > Chat letter spacing (cg_chatBoxLetterSpacing, -2 to 8, default -0.5: a little tighter than before) spreads or packs the letters of chat messages; long messages wrap to match _(Sol)_
 - The resolution list opens as a card in the SJK UI's look, in both menu styles, and the last screens that still used the old settings form (the tabbed settings, the renderer page and the key bindings on their own) now open the SJK UI's Settings or Key bindings _(Sol)_
 - SJK chat names keep the marks players put around clan tags: {JoF}, \o/ and Latin-1 symbols such as guillemets now show in the feed, the dock, the chat page and its online window instead of being dropped; messages keep their own characters _(Sol)_

@@ -104,9 +104,15 @@ impl crate::GpuState {
                 self.applied_resolution = [0; 2];
                 self.applied_display = None;
                 self.sync_runtime_cvars();
-                Ok(vec![
-                    "Video settings reapplied; GPU device/resources retained.".into(),
-                ])
+                let mut lines =
+                    vec!["Video settings reapplied; GPU device/resources retained.".into()];
+                // The settings read only when the graphics start: build the world again
+                // on them (`graphics_reload.rs`), as the original game's vid_restart
+                // restarted its renderer.
+                if !self.graphics_changes().is_empty() {
+                    lines.push(self.reload_graphics(audio)?);
+                }
+                Ok(lines)
             }
             "snd_restart" => {
                 drop(audio.take());

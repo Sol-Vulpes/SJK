@@ -88,6 +88,13 @@ pub(crate) fn open(
         }
     };
     gpu.is_menu_world = true;
+    attach_target(&mut gpu, size);
+    Some((gpu, directory))
+}
+
+/// Give `gpu` the image its frames render into at `size` (a world built after
+/// [`open`], as a graphics reload builds one, has none).
+pub(crate) fn attach_target(gpu: &mut GpuState, size: [u32; 2]) {
     let format = gpu.context.format;
     gpu.headless_frame = Some(gpu.device.create_texture(&wgpu::TextureDescriptor {
         label: Some("world shot"),
@@ -103,7 +110,6 @@ pub(crate) fn open(
         usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::COPY_SRC,
         view_formats: &ui_target::surface_view_formats(format, gpu.context.ui_direct),
     }));
-    Some((gpu, directory))
 }
 
 /// Render `frames` frames (letting what loads on workers arrive) and save the
@@ -263,6 +269,9 @@ mod holocrons_tab;
 
 #[path = "world_shot_create_game.rs"]
 mod create_game;
+
+#[path = "world_shot_graphics_reload.rs"]
+mod graphics_reload;
 
 #[cfg(test)]
 mod tests {

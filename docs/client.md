@@ -321,10 +321,11 @@ item. For a setting
 it shows the full name and value, what the setting does
 ([help.rs](../crates/sjk-viewer/src/settings/help.rs), one or two lines for
 every setting), its default, its range (or how many choices it has), "applies
-after a restart" or "applies on the next map", and its console name. For a key
+after a restart", "applies after a graphics reload" or "applies on the next map",
+and its console name. For a key
 binding it shows the keys, the console command, which other actions those keys
 also do, and the default key. Row labels drop their bracketed notes and their
-"(restart)" or "(next map)", which the detail box says instead; a setting that
+"(restart)", "(reload)" or "(next map)", which the detail box says instead; a setting that
 applies later has a gold `*` after its label, and a row changed from its default
 (a binding off its default key) has a gold dot after its label. Backspace, the
 right button or the focused row's gold reset arrow (at the row's right end)
@@ -1100,8 +1101,9 @@ of VIDEO is gone (10/10/2026). The groups are:
 | SHADOWS | World and character sun shadows, shadow resolution, sharp and close cascade distances, filter taps, slit closing, contact shadows |
 | WEATHER | Weather (`r_weather`), its density (`r_weatherDensity`), quality (`r_weatherQuality`), forced weather (`r_weatherForce`), ground fog (`r_weatherFog`) and volumetric clouds (`r_clouds`); see [Weather](rendering.md#weather) |
 
-Rows marked "(restart)" are read when the client starts and apply after a
-restart; "(next map)" applies when a map loads; the rest apply immediately.
+Rows marked "(reload)" are read only when the graphics start and apply after a
+[graphics reload](#graphics-reload); "(next map)" applies when a map loads; the
+rest apply immediately.
 Changing a value saves it like any other setting. Switches over numeric cvars
 show ON/OFF and write 1/0. Defaults are unchanged (see
 [Default visual profile](rendering.md#default-visual-profile)). Diagnostics such
@@ -1158,18 +1160,53 @@ same level as a switch: on while every setting matches Ultra low. Turning it on
 keeps the player's values of every setting in the table (`r_ultraLowRestore`,
 archived) before applying Ultra low; turning it off puts them back, custom
 values included, or High when Ultra low was picked as a level and nothing was
-kept. Like the level, it needs a restart for the lighting to change. Everything else is left as the
+kept. Like the level, it needs a [graphics reload](#graphics-reload) for the lighting to change. Everything else is left as the
 player set it: the FPS cap, vertical sync, resolution and supersampling (which
 multiplies the pixels drawn, so even Ultra leaves it to the player), the taste
 settings (exposure, time of day, tone curve, glow style, parallax depth,
 emission strength), contact shadows (still being worked out) and whether
-weather and fog show at all. Rows marked "(restart)" still apply after a restart,
-so a new level's shadows, light shafts, HDR, FXAA, sun and sky, reflection probes
-and material maps show at the next start, and emission-map lights at the next map;
-the rest change at once. A level is saved with one write
+weather and fog show at all. Rows marked "(reload)" apply after a graphics
+reload, so a new level's shadows, light shafts, HDR, FXAA, sun and sky, reflection
+probes and material maps show once the graphics reload, and emission-map lights on
+the next map (or the reload, which loads the map again); the rest change at once.
+A level is saved with one write
 of the profile. The levels were chosen from what each setting draws, not from
 measured frame times; how many frames each level gains on a given GPU is not
 yet measured.
+
+### Graphics reload
+
+Some renderer settings are read only when the graphics start: HDR scene, FXAA,
+supersampling, sun and sky, sun shadows and their quality, light shafts, normal,
+specular, parallax and emission maps, reflection probes and texture filtering,
+so the graphics quality levels and the Ultra low switch too. They apply with a
+graphics reload rather than a restart of SJK
+([graphics_reload.rs](../crates/sjk-viewer/src/graphics_reload.rs), [how it
+works](rendering.md#graphics-reload)):
+
+- `vid_restart` reloads the graphics when one of them changed, as it restarted
+  the renderer in the original game (it still reapplies the display settings
+  first).
+- When one of them changed and the player is back on the main menu or the game
+  menu (not in Settings, so changing several rows is not interrupted), a pop-up
+  card in the SJK UI's look, in every menu style, says what changed ("Ultra low
+  applies after a graphics reload", or the settings by name) with **Reload now**
+  (Enter) and **Later** (Escape). Later puts it away until another such setting
+  changes; it waits for the medal and holocron pop-ups and the console.
+- On a server (or in a local game) the map loads again under the loading screen,
+  as on a map change to the same map, in a few seconds (ffa3 took 5.6 to 7.2 s
+  off-screen, see [status](status.md)); the connection stays and the player stands still meanwhile,
+  so the server does what it does when a client goes quiet for that long (a door
+  the player held open may close until the player is back).
+- On the main menu the menu map loads again behind the card ("Reloading the
+  graphics...", about 3 s for duel6), and the menu carries on over the new world.
+  A menu map parked during a match whose graphics were reloaded is built again
+  quietly when the menus come back to it.
+- Not during a demo, a map being loaded or joined, or a map explored without a
+  server: there the graphics reload with the next map.
+
+The console notices say so: `HDR setting changed: reload the graphics to apply
+(vid_restart)`.
 
 ## First setup
 

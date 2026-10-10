@@ -126,6 +126,7 @@ pub(super) fn run() -> Result<(), Box<dyn Error>> {
         initial_connect: connect_address,
         gpu: None,
         menu_world: crate::menu_world::Parked::new(),
+        boot_map: map_path,
     };
     event_loop.run_app(&mut application)?;
     Ok(())

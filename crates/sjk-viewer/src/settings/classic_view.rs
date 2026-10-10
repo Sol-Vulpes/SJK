@@ -10,7 +10,8 @@
 //! focused setting does ([`super::help`]), its value, default and range, when
 //! a change applies and its console name, under its group's icon. A row
 //! changed from its default carries a gold dot, and the focused one a reset
-//! arrow; a setting that applies after a restart or on the next map a `*`.
+//! arrow; a setting that applies after a restart, a graphics reload or on the
+//! next map a `*`.
 //! Backspace, the arrow or the right button returns the focused setting to
 //! its default, and the description line names the keys of the focused row.
 //! The renderer settings show this way too, as the groups of the classic
@@ -1108,7 +1109,8 @@ mod tests {
         assert_eq!(detail.name, "r_sceneHdr");
         assert!(detail.lines[0].starts_with("Renders the scene"));
         assert!(
-            menu.detail_facts.contains("applies after a restart"),
+            menu.detail_facts
+                .contains("applies after a graphics reload"),
             "{}",
             menu.detail_facts
         );

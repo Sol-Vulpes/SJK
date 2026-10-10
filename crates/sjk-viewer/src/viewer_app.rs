@@ -26,6 +26,8 @@ pub(super) struct ViewerApplication {
     pub(super) initial_connect: Option<String>,
     pub(super) gpu: Option<GpuState>,
     pub(super) menu_world: menu_world::Parked,
+    /// The map the first world shows, which a graphics reload loads again.
+    pub(super) boot_map: String,
 }
 
 impl ApplicationHandler for ViewerApplication {
@@ -92,6 +94,7 @@ impl ApplicationHandler for ViewerApplication {
             Ok(gpu) => {
                 let mut gpu = gpu;
                 gpu.is_menu_world = true;
+                gpu.graphics_reload.map = std::mem::take(&mut self.boot_map);
                 if self.game_audio.is_none()
                     && gpu
                         .console
@@ -240,6 +243,11 @@ impl ApplicationHandler for ViewerApplication {
                         log::progress(format_args!("sjk: map transition failed: {error}"));
                         gpu.fail_world_install(error.to_string());
                     }
+                }
+                // A world without a session built again by a graphics reload.
+                if let Some(rebuilt) = gpu.poll_rebuild() {
+                    *gpu = rebuilt;
+                    gpu.configure_audio(&mut self.game_audio);
                 }
             }
             _ => {}

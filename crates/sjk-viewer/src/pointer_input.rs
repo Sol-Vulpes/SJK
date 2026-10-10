@@ -300,6 +300,11 @@ impl GpuState {
             self.holocron_popup.handle_pointer(event);
             return true;
         }
+        if self.graphics_reload.card.is_open() {
+            let choice = self.graphics_reload.card.handle_pointer(event);
+            self.reload_card_choice(choice);
+            return true;
+        }
         if self
             .client_menu
             .as_ref()

@@ -93,6 +93,7 @@ mod gpu_context;
 mod gpu_phases;
 mod gpu_texture;
 mod graphics_quality;
+mod graphics_reload;
 mod ground_hud;
 mod holocron_popup;
 mod holocrons;
@@ -305,6 +306,11 @@ use hud_runtime::HudUniform;
 
 struct GpuState {
     context: Arc<gpu_context::Context>,
+    /// The context the world loading now is built on, when it is newer than this
+    /// world's: a graphics reload on a server ([`graphics_reload`]).
+    next_context: Option<Arc<gpu_context::Context>>,
+    /// The graphics reload's card and rebuild ([`graphics_reload`]).
+    graphics_reload: graphics_reload::State,
     window: Option<Arc<Window>>,
     post_aa: Option<frame_target::aa::Runtime>,
     render_scale: Option<frame_target::scale::Runtime>,
@@ -1199,6 +1205,8 @@ impl GpuState {
             adapter_name: context.adapter_name.clone(),
             adapter_backend: context.adapter_backend.clone(),
             context,
+            next_context: None,
+            graphics_reload: graphics_reload::State::default(),
 
             screenshots: screenshot_setup.manager,
             headless_frame: None,
@@ -1722,7 +1730,15 @@ impl GpuState {
         // drawn under it.
         let medal_shown = self.prepare_medal_popup(console_covers_frame);
         let holocron_shown = self.prepare_holocron_popup(console_covers_frame || medal_shown);
-        let medal_popup = medal_shown || holocron_shown;
+        // The graphics reload card waits for the others.
+        let reload_shown = self.prepare_reload_card(
+            console_covers_frame
+                || medal_shown
+                || holocron_shown
+                || self.medal_popup.pending()
+                || self.holocron_popup.pending(),
+        );
+        let medal_popup = medal_shown || holocron_shown || reload_shown;
         // Nor under the SJK UI's report card, as under its other cards.
         let report_card = self.text_dialog.is_open() && self.text_dialog.is_sjk();
         self.text_vertices.clear();
@@ -1887,6 +1903,8 @@ impl GpuState {
             self.append_medal_popup(viewport);
         } else if holocron_shown {
             self.append_holocron_popup(viewport);
+        } else if reload_shown {
+            self.append_reload_card(viewport);
         }
         // An achievement unlocked: its pop-up over play or the menus, never input-taking.
         let achievement_toast =
@@ -1931,6 +1949,7 @@ impl GpuState {
                 .then(|| self.text_dialog.draw_list()),
             medal_shown.then(|| self.medal_popup.draw_list()),
             holocron_shown.then(|| self.holocron_popup.draw_list()),
+            reload_shown.then(|| self.graphics_reload.card.draw_list()),
             achievement_toast.then(|| self.achievement_toast.draw_list()),
         ];
         self.ui_shapes

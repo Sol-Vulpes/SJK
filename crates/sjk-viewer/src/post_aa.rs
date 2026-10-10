@@ -35,12 +35,14 @@ pub(crate) fn register(cvars: &mut CvarRegistry) -> Result<(), CvarError> {
         "r_fxaa",
         1_i64,
         CvarFlags::ARCHIVE,
-        "Scene FXAA (not MSAA); restart viewer to apply",
+        "Scene FXAA (not MSAA); applies after a graphics reload (vid_restart)",
     ))?;
     cvars.on_change("r_fxaa", |_| {
         crate::log::progress(format_args!(
-            "r_fxaa changed: restart viewer to apply scene AA"
+            "r_fxaa changed: {}",
+            crate::graphics_reload::APPLY
         ));
+        crate::graphics_reload::notice();
     })
 }
 

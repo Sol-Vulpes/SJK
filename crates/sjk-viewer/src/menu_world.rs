@@ -42,6 +42,10 @@ impl Parked {
         let Some(mut menu) = self.world.take() else {
             return false;
         };
+        // A graphics reload on the server left the parked world on older graphics: it is
+        // built again on the server world's (`graphics_reload.rs`).
+        let reloaded = (menu.context.id != current.context.id)
+            .then(|| std::sync::Arc::clone(&current.context));
         current.hand_shell_to(&mut menu);
         menu.world_load_state = crate::session_transition::LoadStateMachine::new();
         menu.world_load_started = None;
@@ -52,6 +56,9 @@ impl Parked {
         menu.resize(current.size);
         *current = menu;
         crate::log::progress(format_args!("menu world restored"));
+        if let Some(context) = reloaded {
+            current.rebuild_world(context, false);
+        }
         true
     }
 }

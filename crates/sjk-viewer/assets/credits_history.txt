@@ -9,6 +9,8 @@
 #                               made it when that is not the piece's owner.
 
 = Sol
++ 10/10/2026 | - | start-only graphics settings apply with a graphics reload, offered by a card
+- 2d60eec |  | Apply start-only graphics settings with a graphics reload, offered by a card
 + 10/10/2026 | - | cg_chatBoxLetterSpacing defaults to -0.5
 - f04c87c |  | Chat letter spacing defaults to -0.5
 + 10/10/2026 | - | Resolution groups by closeness of shape

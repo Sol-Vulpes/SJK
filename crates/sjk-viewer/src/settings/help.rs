@@ -2,7 +2,7 @@
 //! panels' detail box (see `docs/classic-plus.md`), as retail's `descText`
 //! said what each `setup.menu` item did. Keyed by cvar; every row of the
 //! catalogue has one. When a setting takes effect comes from its label's
-//! "(restart)" or "(next map)", which the classic+ rows show as a mark.
+//! "(restart)", "(reload)" or "(next map)", which the classic+ rows show as a mark.
 
 /// Lines the detail box gives a description, and characters per line.
 pub(super) const HELP_LINES: usize = 2;
@@ -13,6 +13,8 @@ pub(super) const HELP_LINE_CHARS: usize = 68;
 pub(super) enum Timing {
     Now,
     Restart,
+    /// After a graphics reload (`graphics_reload.rs`), which the reload card offers.
+    Reload,
     NextMap,
 }
 
@@ -22,6 +24,7 @@ impl Timing {
         match self {
             Self::Now => None,
             Self::Restart => Some("applies after a restart"),
+            Self::Reload => Some("applies after a graphics reload"),
             Self::NextMap => Some("applies on the next map"),
         }
     }
@@ -31,6 +34,7 @@ impl Timing {
 pub(super) fn timing(label: &str) -> (&str, Timing) {
     for (suffix, timing) in [
         (" (restart)", Timing::Restart),
+        (" (reload)", Timing::Reload),
         (" (next map)", Timing::NextMap),
     ] {
         if let Some(stem) = label.strip_suffix(suffix) {
@@ -113,7 +117,7 @@ const HELP: &[(&str, &str)] = &[
     // VIDEO
     (
         crate::graphics_quality::ROW_NAME,
-        "Sets the costly graphics together: Ultra low for the most FPS, Ultra for the best look. Shadows and light shafts need a restart.",
+        "Sets the costly graphics together: Ultra low for the most FPS, Ultra for the best look, after a graphics reload.",
     ),
     (
         crate::graphics_quality::ULTRA_LOW_ROW,
@@ -760,10 +764,7 @@ mod tests {
 
     #[test]
     fn labels_lose_their_timing_note() {
-        assert_eq!(
-            timing("HDR scene (restart)"),
-            ("HDR scene", Timing::Restart)
-        );
+        assert_eq!(timing("HDR scene (reload)"), ("HDR scene", Timing::Reload));
         assert_eq!(
             timing("Live lighting 0-2 (next map)"),
             ("Live lighting 0-2", Timing::NextMap)
@@ -779,8 +780,8 @@ mod tests {
             ("Dynamic glow", Timing::Now)
         );
         assert_eq!(
-            row_label("Light shafts 0-3 (restart)"),
-            ("Light shafts 0-3", Timing::Restart)
+            row_label("Light shafts 0-3 (reload)"),
+            ("Light shafts 0-3", Timing::Reload)
         );
         assert_eq!(
             row_label("Adaptation: max darken, EV (HDR)"),
@@ -788,7 +789,7 @@ mod tests {
         );
         assert_eq!(row_label("FPS cap (AUTO, 0 = off)").0, "FPS cap");
         assert_eq!(
-            row_label("Supersampling, 1 off (restart)").0,
+            row_label("Supersampling, 1 off (reload)").0,
             "Supersampling, 1 off"
         );
     }
