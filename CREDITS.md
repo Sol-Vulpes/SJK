@@ -136,7 +136,7 @@ pull requests merged into SJK, most of them bringing SJK in line with EternalJK
   and two apostrophes) and shown as typed, so SJK and EternalJK players see each
   other's percent signs and quotes.
 
-Lumaya ([lumayaa](https://github.com/lumayaa)), contributor, has 9 pull requests
+Lumaya ([lumayaa](https://github.com/lumayaa)), contributor, has 10 pull requests
 merged into SJK
 ([all of them](https://github.com/Sol-Vulpes/SJK/pulls?q=is%3Apr+author%3Alumayaa)):
 
@@ -159,6 +159,8 @@ merged into SJK
   parsed and uploaded at map load; the first entity that shows one loads it on a worker thread.
 - #68 the asset browser: Settings > Game and `assetbrowser` list the installed PK3 packs and
   turn each on or off for the next start (`fs_disabledPaks`), with the retail packs kept on.
+- #69 the damage indicator toggle: `cg_hitMarker` (Settings > HUD) shows the red
+  damage-direction indicator near the crosshair; it is off by default, camera kick and sounds stay.
 
 ## Origins: JKR, by Bishop
 

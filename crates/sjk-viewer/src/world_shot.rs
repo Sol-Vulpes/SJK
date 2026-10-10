@@ -202,7 +202,7 @@ pub(crate) fn sweep(gpu: &mut GpuState, views: &[(&str, [f32; 3], [f32; 3])], na
 }
 
 /// The texture's pixels.
-fn read_back(
+pub(crate) fn read_back(
     device: &wgpu::Device,
     queue: &frame_queue::FrameQueue,
     texture: &wgpu::Texture,

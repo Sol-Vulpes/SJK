@@ -3643,3 +3643,12 @@ change: Files stay in place; EternalJK extras, crosshairs and emoji packs follow
 test: Open it, disable a HD pack from base, restart: its look is gone; enable it again, restart.
 test: Select assets0.pk3 and press Enter: it says the retail pack is required.
 note: Lumaya did not check pure servers or a real match; the card was checked on a GPU test.
+
+[damage-hitmarker]
+area: HUD
+title: Damage indicator is off by default (SJK PR #69)
+change: cg_hitMarker (default 0, saved) gates the red damage-direction indicator by the crosshair.
+change: Settings > HUD > Damage hitmarker toggles it live; kick and hit sounds stay as before.
+test: Take damage with the default: no red indicator; the view still kicks and the sound plays.
+test: Set cg_hitMarker 1 and take damage: the red indicator shows toward the attacker.
+note: Lumaya checked it with a synthetic frame (no red off, red on); not in a live match.

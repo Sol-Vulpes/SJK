@@ -113,6 +113,7 @@ impl Group {
                 "cg_drawWeapon",
                 "cg_crosshair",
                 "cg_crosshairSize",
+                "cg_hitMarker",
                 "cg_drawCrosshairNames",
                 "cg_drawPlayerNames",
                 "cg_drawPlayerNamesScale",

@@ -1,5 +1,19 @@
 # Status and priorities
 
+## Damage hitmarker toggle
+
+Branch `feat/hitmarker-toggle`, based on `0c76ff03` (2026-10-10, Windows):
+the red damage-direction indicator is controlled by archived `cg_hitMarker`,
+off by default, also exposed in HUD settings. Only the marker's frame sample
+is gated; damage tracking and camera kick retain their existing behavior.
+A synthetic test covers default-off, live toggling, profile persistence,
+expiry and unchanged view kick. In-match mouse/keyboard use remains unverified.
+Formatting, workspace build/tests and Clippy passed with Rust 1.99.0 (warnings
+remain). The Release GPU comparison on an RTX 5070 Ti loaded duel6 at 640x480,
+HDR/material maps off, then drew the HUD shader with synthetic damage feedback:
+0 red pixels off versus 2288 on. The enabled ring image was inspected. This
+isolated pass does not verify a live server's damage events.
+
 ## Installed PK3 choices
 
 Branch `feat/asset-browser-disable`, based on `0c76ff03` (2026-10-10,

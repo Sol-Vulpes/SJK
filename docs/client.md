@@ -5,6 +5,11 @@ Jedi Academy `GameData` directory with the retail `base/assets*.pk3` files.
 
 ## Launch
 
+`cg_hitMarker` (Settings > HUD > Damage hitmarker) controls the red
+damage-direction indicator near the crosshair when you take damage. It defaults
+to `0` (off); `cg_hitMarker 1` enables it immediately and saves the choice.
+It does not change damage camera kick, hit sounds or damage-event timing.
+
 Settings > Game > Asset browser or `assetbrowser` opens SJK's installed PK3 browser (also discoverable through F3
 in the console's command browser). Select a pack with the arrow keys or wheel;
 Enter, Space or a click toggles it. Choices save immediately and apply at the
