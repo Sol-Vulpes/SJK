@@ -897,6 +897,7 @@ pub(crate) mod tests {
             server: None,
             players: Vec::new(),
             profiles: HashMap::new(),
+            profiles_revision: 0,
             notice: notice.map(str::to_owned),
             revision: 0,
             report: None,

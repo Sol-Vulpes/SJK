@@ -240,6 +240,8 @@ pub(crate) fn update(
             None
         };
         let head_icons = &gpu.scoreboard;
+        let (looks, skins) = (&gpu.looks, &*gpu.blade_skins);
+        let own_slot = crate::looks::ViewSlots::of(session.game_state(), &snapshot.player).own;
         gpu.hud.card.update(hud::player_card::Input {
             seen: gpu.crosshair_scan.hit_now(presentation_time),
             game: session.game_state(),
@@ -251,6 +253,10 @@ pub(crate) fn update(
             hub_revision: player_identity::revision(),
             entities: &snapshot.entities,
             icon: &|slot| head_icons.head_icon(slot),
+            shader: &|slot| card_shader(looks, skins, own_slot, slot),
+            skins,
+            looks_revision: looks.revision() ^ skins.generation().rotate_left(32),
+            profiles_revision: player_identity::profiles_revision(),
         });
         if let (Some(client), Some(vfs)) = (
             gpu.hud
@@ -371,6 +377,8 @@ pub(crate) fn update(
             None
         };
         let head_icons = &gpu.scoreboard;
+        let (looks, skins) = (&gpu.looks, &*gpu.blade_skins);
+        let own_slot = crate::looks::ViewSlots::of(session.game_state(), &snapshot.player).own;
         gpu.hud.card.update(hud::player_card::Input {
             seen: gpu.crosshair_scan.hit_now(presentation_time),
             game: session.game_state(),
@@ -382,6 +390,10 @@ pub(crate) fn update(
             hub_revision: player_identity::revision(),
             entities: &snapshot.entities,
             icon: &|slot| head_icons.head_icon(slot),
+            shader: &|slot| card_shader(looks, skins, own_slot, slot),
+            skins,
+            looks_revision: looks.revision() ^ skins.generation().rotate_left(32),
+            profiles_revision: player_identity::profiles_revision(),
         });
         if let (Some(client), Some(vfs)) = (
             gpu.hud
@@ -562,5 +574,57 @@ impl HudUniform {
             damage = None;
         }
         Some([crosshair, damage])
+    }
+}
+
+/// The saber shader the player in `slot` wears, as their blade draws it here: the local
+/// player's own (`own_slot`, gated by their unlocks) or the looks' for another, only
+/// when its pack is loaded. For the player card.
+fn card_shader(
+    looks: &crate::looks::Looks,
+    skins: &crate::saber_skins::LoadedSkins,
+    own_slot: Option<usize>,
+    slot: u8,
+) -> Option<&'static str> {
+    let slot = usize::from(slot);
+    let id = if own_slot == Some(slot) {
+        looks.own_saber_skin()
+    } else {
+        looks.saber_skin_id(slot)
+    }?;
+    skins.get(id).map(|skin| skin.id)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::card_shader;
+    use crate::looks::{Looks, Worn};
+    use crate::saber_skins::{LoadedSkins, tests::loaded_sample};
+
+    #[test]
+    fn the_card_names_a_shader_only_when_it_draws_on_the_blade() {
+        let loaded = loaded_sample(1);
+        let sun = sjk_identity::Look {
+            saber: "saber_sun".to_owned(),
+            illuminate: false,
+        };
+        let mut looks = Looks::default();
+        looks.replace_roster([(3, "Fox", Some(&sun))]);
+        looks.rebuild(|slot| (slot == 3).then(|| "Fox".to_owned()));
+        // Another player, worn by the looks (which the hub relays only when owned).
+        assert_eq!(card_shader(&looks, &loaded, None, 3), Some("saber_sun"));
+        // Nobody's look, or one whose pack is not loaded here.
+        assert_eq!(card_shader(&looks, &loaded, None, 4), None);
+        assert_eq!(
+            card_shader(&looks, &LoadedSkins::of(Vec::new(), 1), None, 3),
+            None
+        );
+        // The local player: their own look, gated by their unlocks.
+        looks.set_own(Some(1), Worn::own("saber_sun", |_| true, false));
+        assert_eq!(card_shader(&looks, &loaded, Some(1), 1), Some("saber_sun"));
+        looks.set_own(Some(1), Worn::own("saber_sun", |_| false, false));
+        assert_eq!(card_shader(&looks, &loaded, Some(1), 1), None);
+        looks.set_own(Some(1), Worn::own("", |_| true, false));
+        assert_eq!(card_shader(&looks, &loaded, Some(1), 1), None);
     }
 }

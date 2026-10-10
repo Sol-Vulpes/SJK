@@ -257,10 +257,10 @@ impl Panel {
             SWATCH[1],
         ];
         match row.skin {
-            None => swatch::small_stock(&mut self.ui, frame, rect, inputs.stock),
+            None => swatch::small_stock(self.ui.draw_list_mut(), frame, rect, inputs.stock),
             Some(skin) => {
                 let _ = swatch::small_swatch(
-                    &mut self.ui,
+                    self.ui.draw_list_mut(),
                     frame,
                     rect,
                     self.skins.get(skin.id),
@@ -312,10 +312,10 @@ impl Panel {
         if self.backstage == Backstage::None {
             let rect = [x, 300.0, width, 118.0];
             match row.skin {
-                None => swatch::small_stock(&mut self.ui, frame, rect, inputs.stock),
+                None => swatch::small_stock(self.ui.draw_list_mut(), frame, rect, inputs.stock),
                 Some(skin) => {
                     let _ = swatch::small_swatch(
-                        &mut self.ui,
+                        self.ui.draw_list_mut(),
                         frame,
                         rect,
                         self.skins.get(skin.id),

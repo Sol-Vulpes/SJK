@@ -517,6 +517,7 @@ mod tests {
             server: None,
             players: Vec::new(),
             profiles: std::collections::HashMap::new(),
+            profiles_revision: 0,
             notice: None,
             revision: 0,
             report: None,

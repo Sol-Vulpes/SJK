@@ -59,6 +59,9 @@ struct Runtime {
     /// Keys whose profile was asked for their picture's version ([`avatar_version`]),
     /// newest last, so each is asked once.
     picture_lookups: Vec<String>,
+    /// Keys whose profile the player card asked for ([`hub_info`]) and when, newest
+    /// last, so each is asked at most every [`CARD_LOOKUP_EVERY`].
+    card_lookups: Vec<(String, Instant)>,
 }
 
 static RUNTIME: Mutex<Runtime> = Mutex::new(Runtime {
@@ -72,6 +75,7 @@ static RUNTIME: Mutex<Runtime> = Mutex::new(Runtime {
     sent_active: None,
     next_sync: None,
     picture_lookups: Vec::new(),
+    card_lookups: Vec::new(),
 });
 
 fn lock() -> MutexGuard<'static, Runtime> {
@@ -334,14 +338,54 @@ pub(crate) fn tag(slot: u8, shown: &str) -> Option<Tag> {
 
 /// What the hub knows about the player in `slot` whom the game shows as `shown`.
 pub(crate) fn hub_info(slot: u8, shown: &str) -> Option<crate::hud::player_card::HubInfo> {
-    lock().service.as_ref()?.with_snapshot(|snapshot| {
-        snapshot
-            .badge(slot, shown)
-            .map(|player| crate::hud::player_card::HubInfo {
-                name: player.name.clone(),
-                verified: player.verified,
-                medals: crate::medals::Medals::from_wire(&player.medals),
-            })
+    let mut runtime = lock();
+    let runtime = &mut *runtime;
+    let service = runtime.service.as_ref()?;
+    let (info, wanted) = service.with_snapshot(|snapshot| {
+        let player = snapshot.badge(slot, shown)?;
+        // The player's own profile is the service's; another's is fetched for the card.
+        let profile = if player.key_id == snapshot.key_id {
+            snapshot.me.as_ref()
+        } else {
+            snapshot.profiles.get(&player.key_id)
+        };
+        let info = crate::hud::player_card::HubInfo {
+            name: player.name.clone(),
+            verified: player.verified,
+            medals: crate::medals::Medals::from_wire(&player.medals),
+            key_id: player.key_id.clone(),
+            avatar: player.avatar.clone(),
+            profile: profile.map(crate::hud::player_card::ProfileFacts::of),
+        };
+        let wanted = (player.key_id != snapshot.key_id).then(|| player.key_id.clone());
+        Some((info, wanted))
+    })?;
+    if let Some(key_id) = wanted {
+        let now = Instant::now();
+        let due = runtime
+            .card_lookups
+            .iter()
+            .find(|(key, _)| *key == key_id)
+            .is_none_or(|(_, asked)| now.duration_since(*asked) >= CARD_LOOKUP_EVERY);
+        if due {
+            runtime.card_lookups.retain(|(key, _)| *key != key_id);
+            if runtime.card_lookups.len() == PICTURE_LOOKUPS {
+                runtime.card_lookups.remove(0);
+            }
+            runtime.card_lookups.push((key_id.clone(), now));
+            service.look_up(key_id);
+        }
+    }
+    Some(info)
+}
+
+/// How often the player card asks the hub again for a player's profile.
+const CARD_LOOKUP_EVERY: Duration = Duration::from_secs(600);
+
+/// Counts profiles fetched for other players, so the player card reads them again.
+pub(crate) fn profiles_revision() -> u64 {
+    lock().service.as_ref().map_or(0, |service| {
+        service.with_snapshot(|snapshot| snapshot.profiles_revision)
     })
 }
 

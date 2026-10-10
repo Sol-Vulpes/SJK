@@ -1174,6 +1174,7 @@ fn identity_page(shots: &Snapshot, art: ArtSet) {
             },
         ],
         profiles: std::collections::HashMap::new(),
+        profiles_revision: 0,
         notice: Some("saved".to_owned()),
         revision: 0,
         report: None,
@@ -1325,7 +1326,9 @@ fn player_card(shots: &mut Snapshot) {
                     name: "Sol".to_owned(),
                     verified: true,
                     medals: crate::medals::Medals::default(),
+                    ..HubInfo::default()
                 }),
+                None,
             ),
             [760.0, 470.0],
         ),
@@ -1337,23 +1340,121 @@ fn player_card(shots: &mut Snapshot) {
                     name: String::new(),
                     verified: false,
                     medals: crate::medals::Medals::default(),
+                    ..HubInfo::default()
                 }),
+                None,
             ),
             [760.0, 470.0],
         ),
         (
             "player-card-plain",
-            card_from(&info("n|Padawan|t|0|model|kyle|st|single_2|c1|2|"), None),
+            card_from(
+                &info("n|Padawan|t|0|model|kyle|st|single_2|c1|2|"),
+                None,
+                None,
+            ),
             [760.0, 470.0],
         ),
         (
             "player-card-edge",
-            card_from(&info("n|Edge|t|0|model|kyle|st|single_1|c1|1|"), None),
+            card_from(&info("n|Edge|t|0|model|kyle|st|single_1|c1|1|"), None, None),
             [1_380.0, 300.0],
         ),
     ];
     for (name, card, head) in cards {
         let state = State::preview(card, head, VIEWPORT, false);
+        let mut vertices = Vec::new();
+        crate::ui_renderer::append_text_commands(
+            &state.list,
+            |id| state.resolve_text(id),
+            &mut vertices,
+            &shots.font.font,
+            VIEWPORT,
+            crate::text::TextStyle::NEUTRAL,
+        );
+        shots.save(name, &state.list, &vertices, true);
+    }
+    player_card_profile(shots);
+}
+
+/// The player card of an SJK player with everything the card reads: the Glitch shader
+/// worn (from the hub's packs `SJK_TEST_PACKS` names, else the test sample as the Sun),
+/// the SJK TEAM mark, a Legendary holocron, a medal, and pinned, the achievements, bio
+/// and since when.
+fn player_card_profile(shots: &mut Snapshot) {
+    use crate::hud::player_card::{HubInfo, ProfileFacts, State, card_from};
+    let info = |text: &str| text.replace('|', "\\").into_bytes();
+    let skins = match std::env::var_os("SJK_TEST_PACKS") {
+        Some(directory) => {
+            let _ = crate::sjk_packs::mount(std::path::Path::new(&directory));
+            crate::sjk_packs::skins()
+        }
+        None => std::sync::Arc::new(crate::saber_skins::tests::loaded_sample(1)),
+    };
+    let shader = ["saber_glitch", "saber_sun"]
+        .into_iter()
+        .find(|id| skins.get(id).is_some());
+    let achievement = |id: &str, unlocked| sjk_identity::Achievement {
+        id: id.to_owned(),
+        progress: 1,
+        goal: 1,
+        unlocked,
+    };
+    let profile = sjk_identity::Profile {
+        key_id: "0123456789abcdef".to_owned(),
+        key: String::new(),
+        name: "Sol".to_owned(),
+        bio: "Fox of the JoF and maker of SJK, the fast clean JKA client.".to_owned(),
+        verified: true,
+        staff: true,
+        created: 1_790_812_800,
+        names: Vec::new(),
+        medals: Vec::new(),
+        achievements: [
+            "first_blood",
+            "kills_100",
+            "kills_1000",
+            "duel_wins_10",
+            "maps_10",
+        ]
+        .iter()
+        .enumerate()
+        .map(|(index, id)| achievement(id, 1_791_000_000 + index as i64))
+        .collect(),
+        unlocks: Vec::new(),
+        avatar: String::new(),
+        holocron_counts: sjk_identity::HolocronCounts {
+            uncommon: 3,
+            rare: 1,
+            legendary: 1,
+            mythical: 0,
+        },
+        holocrons: Vec::new(),
+    };
+    let medal = sjk_identity::Medal {
+        id: "bug_hunter".to_owned(),
+        count: 2,
+        awarded: 0,
+        note: String::new(),
+    };
+    for (name, pinned) in [
+        ("player-card-profile", false),
+        ("player-card-profile-pinned", true),
+    ] {
+        let card = card_from(
+            &info("n|^1Sol^7 the Fox|t|1|model|kyle/default|st|single_1|st2|none|c1|4|c2|0|"),
+            Some(HubInfo {
+                name: "Sol".to_owned(),
+                verified: true,
+                medals: crate::medals::Medals::from_wire(std::slice::from_ref(&medal)),
+                key_id: profile.key_id.clone(),
+                avatar: String::new(),
+                profile: Some(ProfileFacts::of(&profile)),
+            }),
+            shader,
+        );
+        let skin = shader.and_then(|id| skins.get(id));
+        let state = State::preview_with(card, [760.0, 470.0], VIEWPORT, pinned, skin);
         let mut vertices = Vec::new();
         crate::ui_renderer::append_text_commands(
             &state.list,
@@ -2147,7 +2248,9 @@ fn medals_snapshot() {
                 name: "Sol".to_owned(),
                 verified: true,
                 medals,
+                ..HubInfo::default()
             }),
+            None,
         );
         let state = State::preview(card, [760.0, 470.0], VIEWPORT, pinned);
         let mut vertices = Vec::new();
@@ -2184,6 +2287,7 @@ fn medals_snapshot() {
         server: None,
         players: Vec::new(),
         profiles: HashMap::new(),
+        profiles_revision: 0,
         notice: None,
         revision: 0,
         report: None,

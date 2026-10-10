@@ -285,6 +285,11 @@ What the renderer reads, on `GpuState::looks`:
 - `own_saber_skin() -> Option<&'static str>`: the local player's gated skin, in a game
   or not (first person, the Character page's preview).
 
+The player card ([client.md](client.md#player-card)) names the shader a player wears,
+with its live swatch, by the same rule: the looks' skin for another slot, the own gated
+skin for the local player's, and only when its pack is loaded, so the card never names
+a shader their blade does not show here (10/10/2026).
+
 ### Blade skins
 
 Built (renderer and sounds); who wears which is the viewer's per-client table, filled

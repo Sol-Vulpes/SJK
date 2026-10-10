@@ -1,14 +1,23 @@
 //! The player card: look at a player for a moment without moving, or press the
 //! `inspect` key while aiming at them, and a small card appears beside their hips with
 //! what the game publishes about them (name, model and its icon, saber, hat and cape,
-//! bot skill) and, when the SJK hub knows them, SJK's emblem, their hub name,
-//! whether they are verified and the medals the SJK team gave them (their medallions;
-//! a pinned card names them too, in small print). `inspect` pins the card: it shows at
-//! once, follows the player wherever they go and stays until `inspect` is pressed again
-//! or Escape is.
+//! bot skill), the saber shader they wear (a live swatch and its name, only when it
+//! draws on their blade here) and, when the SJK hub knows them, their profile picture
+//! (the model's icon then sits on its corner), SJK's emblem, their hub name, whether
+//! they are verified, an SJK TEAM mark for staff, a gem of the rarest holocron tier
+//! they hold and the medals the SJK team gave them (their medallions). `inspect` pins
+//! the card: it shows at once, follows the player wherever they go and stays until
+//! `inspect` is pressed again or Escape is. A pinned card adds what takes reading:
+//! the medals' names in small print, the achievements unlocked out of the catalogue
+//! with the three rarest as medallions, the first line of their bio and since when
+//! they are in SJK.
 //!
 //! Everything shown is already public to every client (the player's `CS_PLAYERS`
-//! string), so the card gives no advantage a scoreboard glance would not. The
+//! string, the hub's public profile and the looks every SJK player sees), so the card
+//! gives no advantage a scoreboard glance would not. The profile is asked of the hub
+//! when the card is built for a player, at most every ten minutes a player
+//! (`player_identity::hub_info`), never per frame; a hub that does not send a field
+//! leaves its line out. The
 //! target comes from the crosshair scan (`crosshair_scan.rs`), the hip position
 //! from the same presented world and camera as the overhead names
 //! ([`super::identification`]).
@@ -159,13 +168,81 @@ fn angle_degrees(a: Vec3, b: Vec3) -> f32 {
 }
 
 /// What the hub knows about the player.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub(crate) struct HubInfo {
     /// Hub display name, empty if they have none yet.
     pub(crate) name: String,
     pub(crate) verified: bool,
     /// The medals the SJK team gave them.
     pub(crate) medals: crate::medals::Medals,
+    /// Their key id, and the version of their picture (empty for none).
+    pub(crate) key_id: String,
+    pub(crate) avatar: String,
+    /// What their public profile says, once the hub has sent it.
+    pub(crate) profile: Option<ProfileFacts>,
+}
+
+/// Achievements shown as medallions on a pinned card.
+const RAREST: usize = 3;
+
+/// What the card takes from a player's public profile.
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub(crate) struct ProfileFacts {
+    /// The SJK team's own (`staff`).
+    pub(crate) staff: bool,
+    /// The bio's first line, empty for none.
+    pub(crate) bio: String,
+    /// Achievements unlocked, of those the client knows.
+    pub(crate) unlocked: usize,
+    /// The rarest unlocked ones: the highest step of their ladder first (Legend of the
+    /// Arena before Centurion), the latest first among equals.
+    pub(crate) rarest: Vec<&'static crate::achievements::Kind>,
+    /// The index of the rarest holocron tier they hold (`holocrons::TIERS`).
+    pub(crate) holocron: Option<usize>,
+    /// Registration, unix seconds; 0 when the hub did not say.
+    pub(crate) created: i64,
+}
+
+impl ProfileFacts {
+    pub(crate) fn of(profile: &sjk_identity::Profile) -> Self {
+        use crate::achievements::{ALL, Kind, find};
+        // A kind's step: how many kinds of the same counter have a lower goal.
+        let step = |kind: &Kind| {
+            ALL.iter()
+                .filter(|other| other.source == kind.source && other.goal < kind.goal)
+                .count()
+        };
+        let mut done: Vec<(&'static Kind, i64)> = profile
+            .achievements
+            .iter()
+            .filter(|got| got.unlocked > 0 || (got.goal > 0 && got.progress >= got.goal))
+            .filter_map(|got| find(&got.id).map(|kind| (kind, got.unlocked)))
+            .collect();
+        done.sort_by(|a, b| step(b.0).cmp(&step(a.0)).then(b.1.cmp(&a.1)));
+        let counts = &profile.holocron_counts;
+        let holocron = [
+            counts.uncommon,
+            counts.rare,
+            counts.legendary,
+            counts.mythical,
+        ]
+        .iter()
+        .rposition(|count| *count > 0);
+        Self {
+            staff: profile.staff,
+            bio: profile
+                .bio
+                .lines()
+                .map(str::trim)
+                .find(|line| !line.is_empty())
+                .unwrap_or_default()
+                .to_owned(),
+            unlocked: done.len(),
+            rarest: done.iter().take(RAREST).map(|(kind, _)| *kind).collect(),
+            holocron,
+            created: profile.created,
+        }
+    }
 }
 
 /// Text slots of a card: ids are indices into [`Card::texts`].
@@ -178,6 +255,22 @@ const T_VERIFIED: usize = 5;
 const T_WORN: usize = 6;
 const T_MEDALS: usize = 7;
 const T_MEDALS_MORE: usize = 8;
+const T_SHADER: usize = 9;
+const T_STAFF: usize = 10;
+const T_HOLOCRON: usize = 11;
+const T_ACHIEVEMENTS: usize = 12;
+const T_BIO: usize = 13;
+const T_SINCE: usize = 14;
+/// The rarest achievements' goals, one slot each.
+const T_GOAL: usize = 15;
+const TEXTS: usize = T_GOAL + RAREST;
+/// Draw commands a card holds: its own shapes and a shader's swatch.
+const LIST_CAPACITY: usize = 640;
+/// The saber shader's swatch on the card, in card units.
+const SWATCH_WIDTH: f32 = 74.0;
+const SWATCH_HEIGHT: f32 = 18.0;
+/// The SJK TEAM mark's colour: a teal of its own, apart from the verified gold.
+const STAFF_COLOUR: [f32; 3] = [0.22, 0.86, 0.78];
 /// Characters a line of medal names holds on the card (Inter at 11).
 const MEDAL_LINE_CHARS: usize = 52;
 /// Height of a line of medal names: small print under the medallions.
@@ -187,7 +280,9 @@ const MEDAL_LINE: f32 = 15.0;
 /// hub's roster changes and drawn every frame without allocating.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub(crate) struct Card {
-    pub(crate) texts: [String; 9],
+    pub(crate) texts: [String; TEXTS],
+    /// The saber shader they wear, a catalogue id, when it draws on their blade.
+    shader: Option<&'static str>,
     /// 0 free, 1 red, 2 blue, 3 spectator.
     team: u8,
     /// Blade colours of the one or two sabers, if retail colours.
@@ -195,6 +290,15 @@ pub(crate) struct Card {
     hub: Option<HubInfo>,
     /// The model's icon, once resolved.
     icon: Option<TextureId>,
+    /// Their profile picture, once in the atlas.
+    avatar: Option<TextureId>,
+}
+
+/// The saber shader's loaded look and the time it moves at, for one frame's card.
+#[derive(Clone, Copy, Default)]
+pub(crate) struct Look<'a> {
+    pub(crate) skin: Option<&'a crate::saber_skins::LoadedSkin>,
+    pub(crate) seconds: f32,
 }
 
 impl Card {
@@ -204,6 +308,23 @@ impl Card {
 
     fn has_worn(&self) -> bool {
         !self.texts[T_WORN].is_empty()
+    }
+
+    /// The SJK TEAM mark or a holocron gem: their row under the hub name.
+    fn has_marks(&self) -> bool {
+        !self.texts[T_STAFF].is_empty() || !self.texts[T_HOLOCRON].is_empty()
+    }
+
+    fn facts(&self) -> Option<&ProfileFacts> {
+        self.hub.as_ref()?.profile.as_ref()
+    }
+
+    /// The pinned card's profile lines (achievements, bio, since when).
+    fn profile_lines(&self) -> usize {
+        [T_ACHIEVEMENTS, T_BIO, T_SINCE]
+            .iter()
+            .filter(|id| !self.texts[**id].is_empty())
+            .count()
     }
 
     /// Lines of medal names a pinned card shows.
@@ -247,8 +368,9 @@ fn worn_line(info: LegacyClientInfo<'_>) -> String {
     }
 }
 
-/// The card for the player whose configstring is `info`.
-pub(crate) fn card_from(info: &[u8], hub: Option<HubInfo>) -> Card {
+/// The card for the player whose configstring is `info`, wearing saber shader `shader`
+/// (a catalogue id, `None` for the stock blade).
+pub(crate) fn card_from(info: &[u8], hub: Option<HubInfo>, shader: Option<&'static str>) -> Card {
     let info = LegacyClientInfo::new(info);
     let text = |key: &str| {
         info.bytes(key)
@@ -276,6 +398,10 @@ pub(crate) fn card_from(info: &[u8], hub: Option<HubInfo>) -> Card {
         if dual { blade(info, "c2") } else { None },
     ];
     card.texts[T_WORN] = worn_line(info);
+    if let Some(skin) = shader.and_then(crate::unlockables::blade_skin) {
+        card.shader = Some(skin.id);
+        card.texts[T_SHADER] = skin.name.to_owned();
+    }
     card.texts[T_EXTRA] = info
         .text("skill")
         .filter(|skill| !skill.is_empty())
@@ -304,6 +430,33 @@ pub(crate) fn card_from(info: &[u8], hub: Option<HubInfo>) -> Card {
                 card.texts[line].push_str(", ");
             }
             card.texts[line].push_str(&label);
+        }
+        if let Some(facts) = &hub.profile {
+            if facts.staff {
+                card.texts[T_STAFF] = "SJK TEAM".to_owned();
+            }
+            if let Some(tier) = facts
+                .holocron
+                .and_then(|index| crate::holocrons::TIERS.get(index))
+            {
+                card.texts[T_HOLOCRON] = tier.name.to_owned();
+            }
+            if facts.unlocked > 0 {
+                card.texts[T_ACHIEVEMENTS] = format!(
+                    "Achievements  {} / {}",
+                    facts.unlocked,
+                    crate::achievements::ALL.len()
+                );
+            }
+            card.texts[T_BIO] = facts.bio.clone();
+            let date = crate::medals::date_text(facts.created);
+            if !date.is_empty() {
+                card.texts[T_SINCE] = format!("In SJK since {date}");
+            }
+            for (index, kind) in facts.rarest.iter().enumerate() {
+                card.texts[T_GOAL + index] =
+                    crate::achievements::medallion::goal_label(kind).to_string();
+            }
         }
     }
     card.hub = hub;
@@ -393,6 +546,15 @@ pub(crate) struct Input<'a> {
     pub(crate) entities: &'a [sjk_protocol::EntityState],
     /// The resolved model icon of a client slot.
     pub(crate) icon: &'a dyn Fn(u8) -> Option<TextureId>,
+    /// The saber shader the player in a client slot wears, a catalogue id, only when it
+    /// draws on their blade here (theirs by the looks, its pack loaded).
+    pub(crate) shader: &'a dyn Fn(u8) -> Option<&'static str>,
+    /// The loaded saber shaders, for the swatch.
+    pub(crate) skins: &'a crate::saber_skins::LoadedSkins,
+    /// Counts changes to the looks and the loaded shaders, so the card is rebuilt.
+    pub(crate) looks_revision: u64,
+    /// Counts the profiles the hub sent, so the card is rebuilt.
+    pub(crate) profiles_revision: u64,
 }
 
 /// The card's state: settings, dwell, fade and the draw list.
@@ -405,7 +567,8 @@ pub(crate) struct State {
     /// the crosshair leaves them, so the card does not come straight back.
     suppressed: Option<u16>,
     shown: Option<u16>,
-    key: (u16, u64),
+    /// The slot and the revisions the card was built at.
+    key: (u16, u64, u64, u64),
     card: Card,
     alpha: f32,
     last_frame: i32,
@@ -422,11 +585,11 @@ impl Default for State {
             pin: Pin::default(),
             suppressed: None,
             shown: None,
-            key: (0, 0),
+            key: (0, 0, 0, 0),
             card: Card::default(),
             alpha: 0.0,
             last_frame: 0,
-            list: DrawList::new(64),
+            list: DrawList::new(LIST_CAPACITY),
         }
     }
 }
@@ -439,11 +602,6 @@ impl State {
             .unwrap_or(true);
         let seconds = crate::cgame_options::scalar(console, "cg_playercarddelay", 1.5);
         self.delay_ms = (seconds.clamp(0.3, 10.0) * 1_000.0) as i32;
-    }
-
-    /// A card is pinned: the next `inspect` unpins it.
-    pub(crate) fn pinned(&self) -> bool {
-        self.pin.target().is_some()
     }
 
     /// Escape: unpin a pinned card, as `inspect` would. False when no card is pinned
@@ -536,7 +694,7 @@ impl State {
         if self.alpha <= 0.0 {
             return;
         }
-        if self.key != (client, input.hub_revision) || self.card == Card::default() {
+        if self.key != Self::key_of(client, &input) || self.card == Card::default() {
             self.rebuild(client, &input);
         }
         let Some(presented) = input
@@ -562,11 +720,30 @@ impl State {
         self.card.icon = u8::try_from(client)
             .ok()
             .and_then(|slot| (input.icon)(slot));
-        self.emit(hips, side, input.camera.viewport, pinned.is_some());
+        self.card.avatar = self
+            .card
+            .hub
+            .as_ref()
+            .filter(|hub| !hub.avatar.is_empty())
+            .and_then(|hub| crate::avatars::texture(&hub.key_id, &hub.avatar));
+        let look = Look {
+            skin: self.card.shader.and_then(|id| input.skins.get(id)),
+            seconds: now as f32 / 1_000.0,
+        };
+        self.emit(hips, side, input.camera.viewport, pinned.is_some(), look);
+    }
+
+    fn key_of(client: u16, input: &Input<'_>) -> (u16, u64, u64, u64) {
+        (
+            client,
+            input.hub_revision,
+            input.profiles_revision,
+            input.looks_revision,
+        )
     }
 
     fn rebuild(&mut self, client: u16, input: &Input<'_>) {
-        self.key = (client, input.hub_revision);
+        self.key = Self::key_of(client, input);
         let info = input
             .game
             .config_string(CS_PLAYERS + usize::from(client))
@@ -578,37 +755,76 @@ impl State {
         let hub = u8::try_from(client)
             .ok()
             .and_then(|slot| (input.hub)(slot, &name));
-        self.card = card_from(info, hub);
+        let shader = u8::try_from(client)
+            .ok()
+            .and_then(|slot| (input.shader)(slot));
+        self.card = card_from(info, hub, shader);
     }
 
-    /// Draw the card beside `anchor` (the hips); a `pinned` card names the player's medals.
-    fn emit(&mut self, anchor: [f32; 2], side: f32, viewport: [f32; 2], pinned: bool) {
+    /// The card's height in pixels at `unit`; a `pinned` card adds the medals' names
+    /// and the profile's lines.
+    fn height(card: &Card, unit: f32, pinned: bool) -> f32 {
+        let row = |height: f32| height * unit;
+        let mut height = 14.0 * unit * 2.0 + row(30.0) + row(22.0);
+        for (shown, rows) in [
+            (!card.texts[T_SABER].is_empty(), 22.0),
+            (card.shader.is_some(), 24.0),
+            (card.has_worn(), 22.0),
+            (card.has_extra(), 22.0),
+        ] {
+            if shown {
+                height += row(rows);
+            }
+        }
+        // The icon (or the picture) fills the top right: the rows beside it never end
+        // above it.
+        height = height.max(14.0 * unit * 2.0 + row(56.0));
+        let Some(hub) = &card.hub else {
+            return height;
+        };
+        height += row(10.0) + row(26.0);
+        if card.has_marks() {
+            height += row(26.0);
+        }
+        if !hub.medals.is_empty() {
+            height += row(30.0);
+            if pinned {
+                height += row(MEDAL_LINE) * card.medal_lines() as f32;
+            }
+        }
+        if pinned && card.profile_lines() > 0 {
+            height += row(6.0);
+            if !card.texts[T_ACHIEVEMENTS].is_empty() {
+                height += row(30.0);
+            }
+            if !card.texts[T_BIO].is_empty() {
+                height += row(20.0);
+            }
+            if !card.texts[T_SINCE].is_empty() {
+                height += row(18.0);
+            }
+        }
+        height
+    }
+
+    /// Draw the card beside `anchor` (the hips); a `pinned` card names the player's
+    /// medals and adds the profile's lines. `look` is the worn shader's, for its swatch.
+    fn emit(
+        &mut self,
+        anchor: [f32; 2],
+        side: f32,
+        viewport: [f32; 2],
+        pinned: bool,
+        look: Look<'_>,
+    ) {
         let unit = crate::ui_scale::height_scale(viewport[1]);
         let a = self.alpha;
         let card = &self.card;
         let pad = 14.0 * unit;
         let width = 290.0 * unit;
         let row = |height: f32| height * unit;
-        let mut height = pad * 2.0 + row(30.0) + row(22.0);
-        if !card.texts[T_SABER].is_empty() {
-            height += row(22.0);
-        }
-        if card.has_worn() {
-            height += row(22.0);
-        }
-        if card.has_extra() {
-            height += row(22.0);
-        }
+        let height = Self::height(card, unit, pinned);
         let medals = card.hub.as_ref().map(|hub| hub.medals).unwrap_or_default();
-        if card.hub.is_some() {
-            height += row(10.0) + row(26.0);
-            if !medals.is_empty() {
-                height += row(30.0);
-                if pinned {
-                    height += row(MEDAL_LINE) * card.medal_lines() as f32;
-                }
-            }
-        }
         // Keep clear of the body: the world gap projected, never less than a fixed one.
         let offset = side.max(14.0 * unit) + 12.0 * unit;
         let placed = place(anchor, [width, height], offset, viewport);
@@ -670,22 +886,48 @@ impl State {
         let inner = rect.width - pad * 2.0;
         let mut y = rect.y + pad;
         let left = rect.x + pad;
-        // The model's icon fills the top right, beside the name and model.
+        // The profile picture fills the top right, beside the name and model, with the
+        // model's icon on its lower left corner; without a picture the model's icon
+        // fills it.
         let icon_side = row(50.0);
-        let head_width = if let Some(texture) = card.icon {
-            let _ = self.list.push(DrawCommand::TexturedQuad {
-                rect: Rect::new(
-                    rect.x + rect.width - pad - icon_side,
-                    y,
-                    icon_side,
-                    icon_side,
-                ),
-                texture,
-                color: Color::new(1.0, 1.0, 1.0, a),
-            });
-            inner - icon_side - 8.0 * unit
-        } else {
-            inner
+        let icon_x = rect.x + rect.width - pad - icon_side;
+        let head_width = match (card.avatar, card.icon) {
+            (Some(picture), icon) => {
+                let _ = self.list.push(DrawCommand::TexturedQuad {
+                    rect: Rect::new(icon_x, y, icon_side, icon_side),
+                    texture: picture,
+                    color: Color::new(1.0, 1.0, 1.0, a),
+                });
+                if let Some(texture) = icon {
+                    let small = row(22.0);
+                    let corner = Rect::new(
+                        icon_x - row(4.0),
+                        y + icon_side - small + row(4.0),
+                        small,
+                        small,
+                    );
+                    let _ = self.list.push(DrawCommand::RoundedRect {
+                        rect: corner,
+                        radius: row(4.0),
+                        color: Color::new(0.03, 0.04, 0.07, 0.9 * a),
+                    });
+                    let _ = self.list.push(DrawCommand::TexturedQuad {
+                        rect: corner,
+                        texture,
+                        color: Color::new(1.0, 1.0, 1.0, a),
+                    });
+                }
+                inner - icon_side - 12.0 * unit
+            }
+            (None, Some(texture)) => {
+                let _ = self.list.push(DrawCommand::TexturedQuad {
+                    rect: Rect::new(icon_x, y, icon_side, icon_side),
+                    texture,
+                    color: Color::new(1.0, 1.0, 1.0, a),
+                });
+                inner - icon_side - 8.0 * unit
+            }
+            (None, None) => inner,
         };
         // The JoF emblem on the name's left ([`crate::jof_tag`]).
         let jof = if crate::jof_tag::tagged(&card.texts[T_NAME]) {
@@ -717,18 +959,27 @@ impl State {
             TextAlign::Start,
         );
         y += row(22.0);
+        // Rows under the icon run the card's width once past it.
+        let beside = |y: f32| {
+            if y < rect.y + pad + icon_side + row(4.0) {
+                head_width
+            } else {
+                inner
+            }
+        };
         if !card.texts[T_SABER].is_empty() {
             let swatches = card.swatches.iter().flatten().count() as f32;
+            let room = beside(y);
             put_text(
                 &mut self.list,
                 T_SABER,
-                Rect::new(left, y, inner - swatches * 18.0 * unit, row(22.0)),
+                Rect::new(left, y, room - swatches * 18.0 * unit, row(22.0)),
                 15.0 * unit,
                 muted,
                 FontWeight::Regular,
                 TextAlign::Start,
             );
-            let mut x = rect.x + rect.width - pad - 14.0 * unit;
+            let mut x = left + room - 14.0 * unit;
             for rgb in card.swatches.iter().flatten().rev() {
                 let _ = self.list.push(DrawCommand::RoundedRect {
                     // Centred on the hilt name's letters, which sit above the row's middle.
@@ -745,11 +996,44 @@ impl State {
             }
             y += row(22.0);
         }
+        // The saber shader they wear: its live swatch, as the Collection draws it, and
+        // its name.
+        if card.shader.is_some() {
+            let swatch = [
+                left,
+                y + row(3.0),
+                SWATCH_WIDTH * unit,
+                SWATCH_HEIGHT * unit,
+            ];
+            let _ = self.list.push(DrawCommand::PushOpacity(a));
+            let _ = crate::console::collection_panel::swatch::small_blade(
+                &mut self.list,
+                &crate::menu::sjk::Frame {
+                    s: 1.0,
+                    origin: [0.0, 0.0],
+                },
+                swatch,
+                look.skin,
+                look.seconds,
+            );
+            let _ = self.list.push(DrawCommand::PopOpacity);
+            let text_x = left + swatch[2] + 8.0 * unit;
+            put_text(
+                &mut self.list,
+                T_SHADER,
+                Rect::new(text_x, y + row(1.0), left + beside(y) - text_x, row(22.0)),
+                15.0 * unit,
+                white(0.92),
+                FontWeight::Semibold,
+                TextAlign::Start,
+            );
+            y += row(24.0);
+        }
         if card.has_worn() {
             put_text(
                 &mut self.list,
                 T_WORN,
-                Rect::new(left, y, inner, row(22.0)),
+                Rect::new(left, y, beside(y), row(22.0)),
                 15.0 * unit,
                 muted,
                 FontWeight::Regular,
@@ -761,7 +1045,7 @@ impl State {
             put_text(
                 &mut self.list,
                 T_EXTRA,
-                Rect::new(left, y, inner, row(22.0)),
+                Rect::new(left, y, beside(y), row(22.0)),
                 15.0 * unit,
                 muted,
                 FontWeight::Regular,
@@ -769,6 +1053,7 @@ impl State {
             );
             y += row(22.0);
         }
+        y = y.max(rect.y + pad + row(56.0));
         if let Some(hub) = &card.hub {
             y += row(10.0);
             let _ = self.list.push(DrawCommand::SolidRect {
@@ -815,6 +1100,62 @@ impl State {
                 );
             }
             y += row(26.0);
+            // The SJK TEAM mark, a teal pill drawn as VERIFIED is written, and a gem of
+            // the rarest holocron tier they hold, with its name.
+            if card.has_marks() {
+                let mut x = left;
+                if !card.texts[T_STAFF].is_empty() {
+                    let [r, g, b] = STAFF_COLOUR;
+                    let pill = Rect::new(x, y + row(3.0), 78.0 * unit, row(18.0));
+                    let _ = self.list.push(DrawCommand::RoundedRect {
+                        rect: pill,
+                        radius: pill.height * 0.5,
+                        color: Color::new(r, g, b, 0.18 * a),
+                    });
+                    let _ = self.list.push(DrawCommand::Border {
+                        rect: pill,
+                        radius: pill.height * 0.5,
+                        width: unit.max(1.0),
+                        color: Color::new(r, g, b, 0.85 * a),
+                    });
+                    put_text(
+                        &mut self.list,
+                        T_STAFF,
+                        Rect::new(pill.x, pill.y + row(1.0), pill.width, pill.height),
+                        11.0 * unit,
+                        Color::new(r, g, b, a),
+                        FontWeight::Semibold,
+                        TextAlign::Center,
+                    );
+                    x += pill.width + 10.0 * unit;
+                }
+                if let Some(tier) = card
+                    .facts()
+                    .and_then(|facts| facts.holocron)
+                    .and_then(|index| crate::holocrons::TIERS.get(index))
+                {
+                    let half = row(8.0);
+                    crate::holocrons::gem::draw(
+                        &mut self.list,
+                        [x + half, y + row(12.0)],
+                        half,
+                        tier.colour,
+                        a,
+                        crate::holocrons::gem::MARK_ROWS,
+                    );
+                    let text_x = x + half * 2.0 + 6.0 * unit;
+                    put_text(
+                        &mut self.list,
+                        T_HOLOCRON,
+                        Rect::new(text_x, y + row(2.0), left + inner - text_x, row(22.0)),
+                        13.0 * unit,
+                        tier.colour_alpha(a),
+                        FontWeight::Regular,
+                        TextAlign::Start,
+                    );
+                }
+                y += row(26.0);
+            }
             // The medals the SJK team gave them, small medallions in a row; a pinned
             // card names them under it in small print, with how often a repeatable one
             // was given.
@@ -854,6 +1195,94 @@ impl State {
                             TextAlign::Start,
                         );
                     }
+                    y += row(MEDAL_LINE) * card.medal_lines() as f32;
+                }
+            }
+            if pinned && card.profile_lines() > 0 {
+                y += row(6.0);
+                if !card.texts[T_ACHIEVEMENTS].is_empty() {
+                    put_text(
+                        &mut self.list,
+                        T_ACHIEVEMENTS,
+                        Rect::new(left, y + row(3.0), inner, row(24.0)),
+                        14.0 * unit,
+                        white(0.9),
+                        FontWeight::Semibold,
+                        TextAlign::Start,
+                    );
+                    // The rarest ones as small medallions, right-aligned: the disc in
+                    // the category's colour, a gold ring and the goal.
+                    let radius = row(12.0);
+                    let rarest = card.facts().map_or(&[][..], |facts| &facts.rarest[..]);
+                    let mut x = left + inner - radius;
+                    for (index, kind) in rarest.iter().enumerate().rev() {
+                        let centre = [x, y + row(15.0)];
+                        let hue = crate::achievements::medallion::tint(kind.category);
+                        let _ = self.list.push(DrawCommand::RoundedRect {
+                            rect: Rect::new(
+                                centre[0] - radius,
+                                centre[1] - radius,
+                                radius * 2.0,
+                                radius * 2.0,
+                            ),
+                            radius,
+                            color: Color { a: 0.3 * a, ..hue },
+                        });
+                        let _ = self.list.push(DrawCommand::Arc {
+                            center: centre,
+                            radius,
+                            width: 1.8 * unit,
+                            start: 0.0,
+                            sweep: std::f32::consts::TAU,
+                            color: Color::new(1.0, 0.82, 0.25, a),
+                            knockout: None,
+                        });
+                        put_text(
+                            &mut self.list,
+                            T_GOAL + index,
+                            Rect::new(
+                                centre[0] - radius,
+                                centre[1] - row(7.0),
+                                radius * 2.0,
+                                row(14.0),
+                            ),
+                            9.0 * unit,
+                            Color::new(1.0, 0.86, 0.4, a),
+                            FontWeight::Semibold,
+                            TextAlign::Center,
+                        );
+                        x -= radius * 2.0 + 5.0 * unit;
+                    }
+                    y += row(30.0);
+                }
+                if !card.texts[T_BIO].is_empty() {
+                    put_text(
+                        &mut self.list,
+                        T_BIO,
+                        Rect::new(left, y, inner, row(20.0)),
+                        13.0 * unit,
+                        Color {
+                            a: 0.85 * a,
+                            ..muted
+                        },
+                        FontWeight::Regular,
+                        TextAlign::Start,
+                    );
+                    y += row(20.0);
+                }
+                if !card.texts[T_SINCE].is_empty() {
+                    put_text(
+                        &mut self.list,
+                        T_SINCE,
+                        Rect::new(left, y, inner, row(18.0)),
+                        11.0 * unit,
+                        Color {
+                            a: 0.7 * a,
+                            ..muted
+                        },
+                        FontWeight::Regular,
+                        TextAlign::Start,
+                    );
                 }
             }
         }
@@ -887,7 +1316,24 @@ impl State {
             alpha: 1.0,
             ..Self::default()
         };
-        state.emit(anchor, 24.0, viewport, pinned);
+        state.emit(anchor, 24.0, viewport, pinned, Look::default());
+        state
+    }
+
+    /// As [`Self::preview`], the worn shader drawn from `skin`.
+    pub(crate) fn preview_with(
+        card: Card,
+        anchor: [f32; 2],
+        viewport: [f32; 2],
+        pinned: bool,
+        skin: Option<&crate::saber_skins::LoadedSkin>,
+    ) -> Self {
+        let mut state = Self {
+            card,
+            alpha: 1.0,
+            ..Self::default()
+        };
+        state.emit(anchor, 24.0, viewport, pinned, Look { skin, seconds: 1.3 });
         state
     }
 
@@ -974,6 +1420,7 @@ mod tests {
         let card = card_from(
             &info("n|^1Sol|t|1|model|kyle/default|ds|m|st|single_1|st2|none|c1|4|c2|0|hc|100|"),
             None,
+            None,
         );
         assert_eq!(card.texts[T_NAME], "^1Sol");
         assert_eq!(card.texts[T_MODEL], "kyle / default");
@@ -988,19 +1435,20 @@ mod tests {
         let dual = card_from(
             &info("n|Fox|t|3|model|jedi_hf/blue|st|dual_1|st2|dual_2|c1|0|c2|3|w|5|l|2|"),
             None,
+            None,
         );
         assert_eq!(dual.texts[T_SABER], "dual_1 + dual_2");
         assert_eq!(dual.swatches, [Some([255, 51, 51]), Some([51, 255, 51])]);
         assert!(!dual.has_extra(), "no wins and losses on the card");
-        let bot = card_from(&info("n|Kyle|t|0|model|kyle|skill|3|"), None);
+        let bot = card_from(&info("n|Kyle|t|0|model|kyle|skill|3|"), None, None);
         assert_eq!(bot.texts[T_EXTRA], "Bot, skill 3");
     }
 
     #[test]
     fn a_cosmetic_after_the_colour_digit_is_still_a_colour() {
-        let card = card_from(&info("n|Sol|st|single_1|c1|4santahat|"), None);
+        let card = card_from(&info("n|Sol|st|single_1|c1|4santahat|"), None, None);
         assert_eq!(card.swatches[0], Some([51, 102, 255]));
-        let custom = card_from(&info("n|Sol|st|single_1|c1|9|"), None);
+        let custom = card_from(&info("n|Sol|st|single_1|c1|9|"), None, None);
         assert_eq!(
             custom.swatches[0], None,
             "only retail colours have a swatch"
@@ -1015,7 +1463,9 @@ mod tests {
                 name: "Sol the Fox".to_owned(),
                 verified: true,
                 medals: crate::medals::Medals::default(),
+                ..HubInfo::default()
             }),
+            None,
         );
         assert_eq!(known.texts[T_HUB], "Sol the Fox");
         assert_eq!(known.texts[T_VERIFIED], "VERIFIED");
@@ -1026,7 +1476,9 @@ mod tests {
                 name: String::new(),
                 verified: false,
                 medals: crate::medals::Medals::default(),
+                ..HubInfo::default()
             }),
+            None,
         );
         assert_eq!(unnamed.texts[T_HUB], "SJK player");
         assert!(unnamed.texts[T_VERIFIED].is_empty());
@@ -1051,7 +1503,9 @@ mod tests {
                     medal("early_contributor"),
                     medal("bug_hunter"),
                 ]),
+                ..HubInfo::default()
             }),
+            None,
         );
         assert_eq!(
             card.texts[T_MEDALS],
@@ -1079,7 +1533,9 @@ mod tests {
                     medal("early_tester", 1),
                     medal("unknown", 1),
                 ]),
+                ..HubInfo::default()
             }),
+            None,
         );
         assert_eq!(card.texts[T_MEDALS], "Early Tester, Bug Hunter x2");
         assert!(card.texts[T_MEDALS_MORE].is_empty());
@@ -1107,6 +1563,191 @@ mod tests {
         let pinned = State::preview(card, [900.0, 500.0], viewport, true);
         assert_eq!(icons(&pinned), 2);
         assert!(named(&pinned));
+    }
+
+    /// A profile with every field the card reads.
+    fn full_profile() -> sjk_identity::Profile {
+        let achievement = |id: &str, progress, goal, unlocked| sjk_identity::Achievement {
+            id: id.to_owned(),
+            progress,
+            goal,
+            unlocked,
+        };
+        sjk_identity::Profile {
+            key_id: "0123456789abcdef".to_owned(),
+            key: String::new(),
+            name: "Sol".to_owned(),
+            bio: "\n  Fox of the JoF, maker of SJK.  \nSecond line".to_owned(),
+            verified: true,
+            staff: true,
+            created: 1_791_000_000,
+            names: Vec::new(),
+            medals: Vec::new(),
+            achievements: vec![
+                achievement("first_blood", 1, 1, 1_791_100_000),
+                achievement("kills_100", 100, 100, 1_791_200_000),
+                achievement("kills_1000", 1000, 1000, 1_791_300_000),
+                achievement("duel_wins_10", 10, 10, 1_791_400_000),
+                achievement("maps_10", 4, 10, 0),
+                achievement("unknown_one", 5, 5, 1_791_500_000),
+            ],
+            unlocks: Vec::new(),
+            avatar: "v1".to_owned(),
+            holocron_counts: sjk_identity::HolocronCounts {
+                uncommon: 4,
+                rare: 1,
+                legendary: 2,
+                mythical: 0,
+            },
+            holocrons: Vec::new(),
+        }
+    }
+
+    fn full_card(shader: Option<&'static str>) -> Card {
+        card_from(
+            &info("n|^1Sol^7 the Fox|t|1|model|kyle/default|st|single_1|c1|4|c2|0|"),
+            Some(HubInfo {
+                name: "Sol".to_owned(),
+                verified: true,
+                medals: crate::medals::Medals::from_wire(&[sjk_identity::Medal {
+                    id: "bug_hunter".to_owned(),
+                    count: 2,
+                    awarded: 0,
+                    note: String::new(),
+                }]),
+                key_id: "0123456789abcdef".to_owned(),
+                avatar: "v1".to_owned(),
+                profile: Some(ProfileFacts::of(&full_profile())),
+            }),
+            shader,
+        )
+    }
+
+    #[test]
+    fn the_profile_gives_the_marks_and_the_pinned_lines() {
+        let facts = ProfileFacts::of(&full_profile());
+        assert!(facts.staff);
+        assert_eq!(facts.bio, "Fox of the JoF, maker of SJK.");
+        // Four unlocked the client knows; the unknown one and the unfinished are out.
+        assert_eq!(facts.unlocked, 4);
+        let rarest: Vec<_> = facts.rarest.iter().map(|kind| kind.id).collect();
+        assert_eq!(rarest, ["kills_1000", "kills_100", "duel_wins_10"]);
+        assert_eq!(facts.holocron, Some(2), "legendary is the rarest held");
+        let card = full_card(None);
+        assert_eq!(card.texts[T_STAFF], "SJK TEAM");
+        assert_eq!(card.texts[T_HOLOCRON], "Legendary Holocron");
+        assert_eq!(card.texts[T_ACHIEVEMENTS], "Achievements  4 / 21");
+        assert_eq!(card.texts[T_BIO], "Fox of the JoF, maker of SJK.");
+        assert!(card.texts[T_SINCE].starts_with("In SJK since "));
+        assert_eq!(card.texts[T_GOAL], "1K");
+        // An older hub's profile, or none yet: no marks, no lines.
+        let bare = ProfileFacts::of(&sjk_identity::Profile {
+            staff: false,
+            bio: String::new(),
+            created: 0,
+            achievements: Vec::new(),
+            holocron_counts: sjk_identity::HolocronCounts::default(),
+            ..full_profile()
+        });
+        assert_eq!(bare, ProfileFacts::default());
+        let plain = card_from(
+            &info("n|Sol|"),
+            Some(HubInfo {
+                profile: Some(bare),
+                ..HubInfo::default()
+            }),
+            None,
+        );
+        assert!(!plain.has_marks() && plain.profile_lines() == 0);
+    }
+
+    #[test]
+    fn the_card_names_the_worn_shader_with_a_swatch() {
+        let card = card_from(&info("n|Sol|st|single_1|c1|4|"), None, Some("saber_glitch"));
+        assert_eq!(card.texts[T_SHADER], "Glitch blade");
+        assert!(
+            card_from(&info("n|Sol|"), None, Some("saber_nothing"))
+                .shader
+                .is_none()
+        );
+        assert!(card_from(&info("n|Sol|"), None, None).texts[T_SHADER].is_empty());
+        let loaded = crate::saber_skins::tests::loaded_sample(1);
+        let sun = card_from(&info("n|Sol|st|single_1|c1|4|"), None, Some("saber_sun"));
+        let state = State::preview_with(
+            sun,
+            [900.0, 500.0],
+            [1_920.0, 1_080.0],
+            false,
+            loaded.get("saber_sun"),
+        );
+        let commands = state.list.commands();
+        let named = commands.iter().any(
+            |command| matches!(command, DrawCommand::Text { text, .. } if text.0 as usize == T_SHADER),
+        );
+        assert!(named);
+        // The swatch draws inside an opacity group, many shapes of the skin's look.
+        let opened = commands
+            .iter()
+            .position(|command| matches!(command, DrawCommand::PushOpacity(_)))
+            .unwrap();
+        let closed = commands
+            .iter()
+            .position(|command| matches!(command, DrawCommand::PopOpacity))
+            .unwrap();
+        assert!(closed > opened + 10);
+        assert!(commands.len() < LIST_CAPACITY, "the list never fills");
+    }
+
+    #[test]
+    fn a_full_card_stays_inside_the_screen_at_every_size() {
+        let loaded = crate::saber_skins::tests::loaded_sample(1);
+        for viewport in [
+            [1_920.0, 1_080.0],
+            [3_840.0, 2_160.0],
+            [1_024.0, 768.0],
+            [2_560.0, 1_080.0],
+            [1_280.0, 720.0],
+        ] {
+            for pinned in [false, true] {
+                for anchor in [
+                    [viewport[0] * 0.5, viewport[1] * 0.5],
+                    [viewport[0] * 0.95, viewport[1] * 0.9],
+                    [viewport[0] * 0.05, viewport[1] * 0.1],
+                ] {
+                    let state = State::preview_with(
+                        full_card(Some("saber_sun")),
+                        anchor,
+                        viewport,
+                        pinned,
+                        loaded.get("saber_sun"),
+                    );
+                    let card = match state.list.commands()[2] {
+                        DrawCommand::RoundedRect { rect, .. } => rect,
+                        _ => unreachable!("the card's panel is the third shape"),
+                    };
+                    assert!(card.x >= 0.0 && card.y >= 0.0, "{viewport:?} {pinned}");
+                    assert!(card.x + card.width <= viewport[0] + 0.5, "{viewport:?}");
+                    assert!(card.y + card.height <= viewport[1] + 0.5, "{viewport:?}");
+                    // Every shape and text of the card's own lies on the panel (the
+                    // leader and its dot reach out to the hips).
+                    for command in &state.list.commands()[2..] {
+                        let rect = match command {
+                            DrawCommand::Text { rect, .. }
+                            | DrawCommand::SolidRect { rect, .. }
+                            | DrawCommand::TexturedQuad { rect, .. } => *rect,
+                            _ => continue,
+                        };
+                        assert!(
+                            rect.x >= card.x - 6.0 * viewport[1] / 1_080.0
+                                && rect.y >= card.y - 0.5
+                                && rect.x + rect.width <= card.x + card.width + 0.5
+                                && rect.y + rect.height <= card.y + card.height + 0.5,
+                            "{command:?} outside {card:?} at {viewport:?}, pinned {pinned}"
+                        );
+                    }
+                }
+            }
+        }
     }
 
     #[test]
@@ -1172,13 +1813,13 @@ mod tests {
 
     #[test]
     fn the_card_reads_the_hat_and_cape_after_the_colour_digits() {
-        let both = card_from(&info("n|Sol|c1|4santa_hat|c2|0red-cape|"), None);
+        let both = card_from(&info("n|Sol|c1|4santa_hat|c2|0red-cape|"), None, None);
         assert_eq!(both.texts[T_WORN], "Hat Santa hat  /  Cape Red cape");
-        let hat = card_from(&info("n|Sol|c1|4santa_hat|c2|3|"), None);
+        let hat = card_from(&info("n|Sol|c1|4santa_hat|c2|3|"), None, None);
         assert_eq!(hat.texts[T_WORN], "Hat Santa hat");
-        let cape = card_from(&info("n|Sol|c1|4|c2|2jedi|"), None);
+        let cape = card_from(&info("n|Sol|c1|4|c2|2jedi|"), None, None);
         assert_eq!(cape.texts[T_WORN], "Cape Jedi");
-        let none = card_from(&info("n|Sol|c1|4|c2|0|"), None);
+        let none = card_from(&info("n|Sol|c1|4|c2|0|"), None, None);
         assert!(none.texts[T_WORN].is_empty() && !none.has_worn());
     }
 

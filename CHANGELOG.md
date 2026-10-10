@@ -34,6 +34,7 @@ opened yet and give nothing.
 - The SJK chat page no longer freezes the game when you choose a message or rest the pointer on a name _(Sol)_
 - Players with the JoF clan's tag in their name ({JoF}, jof., [JOF] and so on, in any case, with no letter touching it) get the clan's J-o-F emblem on the left of their name in the game chat, the SJK chat, the scoreboard, the player card and the Players page; the JoF Clan medal is gone, replaced by this tag _(Sol)_
 - Inspect (X) is for players only now; world notes get their own key, World note (Key bindings > Interaction, or bind <key> worldnote), O by default: press it on a wall, floor or object to name it, again to write the note _(Sol)_
+- The player card shows the saber shader a player wears (a live swatch and its name) and, for SJK players, their profile picture, a teal SJK TEAM mark for the SJK team and a gem of the rarest holocron they hold; pinned with Inspect it also shows their achievements (unlocked out of 21, the three rarest as medallions), the first line of their bio and since when they are in SJK _(Sol)_
 
 ## 2026.1010.1 (Alpha) | 10/10/2026
 

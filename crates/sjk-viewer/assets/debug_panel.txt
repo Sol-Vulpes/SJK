@@ -370,6 +370,16 @@ test: High, JoFTemple great hall: FPS about doubles; the floor's light looks the
 
 # ---- HUD ----
 
+[card-profile]
+area: HUD
+title: Player card: saber shader, picture, SJK TEAM, holocron gem; pinned: achievements, bio
+change: The card shows the worn saber shader (live swatch + name) and the hub picture.
+change: SJK TEAM pill for staff, gem of the rarest holocron held; pinned adds achievements,
+change: the three rarest as medallions, the bio's first line and "In SJK since".
+test: Inspect a friend wearing a saber shader: its swatch and name show; a stock blade shows none.
+test: Inspect (X/F) an SJK player: picture top right, shader row under the saber.
+test: Pin the card: achievements N / 21, bio line, since date; all inside the screen at 4:3.
+
 [menu-huds]
 area: HUD
 title: Game-data HUD: retail HUD and custom HUD packs (Radial HUD)

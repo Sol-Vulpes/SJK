@@ -8,8 +8,8 @@
 use super::{BLADE_UNITS, capsule, disc, draw, fract, mix, stroke};
 use crate::blade_skin_file::{BladeSkinDef, Rgb};
 use crate::menu::sjk::Frame;
-use crate::menu_widgets::MenuCanvas;
 use sjk_ui::Color;
+use sjk_ui::DrawList;
 
 /// How the later sections change the swatch's blade at a moment.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -71,7 +71,7 @@ impl Shaping {
 /// The blade's afterimages, behind it: the corona drawn again above it, fainter each
 /// time, as if it had just swung down.
 pub(super) fn ghosts(
-    canvas: &mut MenuCanvas,
+    canvas: &mut DrawList,
     frame: &Frame,
     def: &BladeSkinDef,
     at: [f32; 2],
@@ -98,7 +98,7 @@ pub(super) fn ghosts(
 
 /// Embers dripping off the blade and falling, accelerating, fading as they go.
 pub(super) fn embers(
-    canvas: &mut MenuCanvas,
+    canvas: &mut DrawList,
     frame: &Frame,
     def: &BladeSkinDef,
     at: [f32; 2],
@@ -134,7 +134,7 @@ pub(super) fn embers(
 
 /// Glowing veins along the core: short bright strokes wandering about it, running along.
 pub(super) fn veins(
-    canvas: &mut MenuCanvas,
+    canvas: &mut DrawList,
     frame: &Frame,
     def: &BladeSkinDef,
     at: [f32; 2],
@@ -167,7 +167,7 @@ pub(super) fn veins(
 /// A hologram's scan lines running along the blade, its wireframe sides and rings.
 #[allow(clippy::too_many_arguments)]
 pub(super) fn scan(
-    canvas: &mut MenuCanvas,
+    canvas: &mut DrawList,
     frame: &Frame,
     def: &BladeSkinDef,
     at: [f32; 2],
@@ -210,7 +210,7 @@ pub(super) fn scan(
 
 /// The glyphs of "SJK" running along the core toward the tip.
 pub(super) fn glyphs(
-    canvas: &mut MenuCanvas,
+    canvas: &mut DrawList,
     frame: &Frame,
     def: &BladeSkinDef,
     at: [f32; 2],
@@ -245,7 +245,7 @@ pub(super) fn glyphs(
 /// Glitched blocks over the blade: on a draw, a block shown again aside, red one way and
 /// blue the other.
 pub(super) fn glitch(
-    canvas: &mut MenuCanvas,
+    canvas: &mut DrawList,
     frame: &Frame,
     def: &BladeSkinDef,
     at: [f32; 2],
