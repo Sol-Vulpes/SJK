@@ -18,8 +18,6 @@ tests check this file):
 - ASCII only, as the menu font draws bytes.
 Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 -->
-## Unreleased
-
 ## 2026.1010.3 (Alpha) | 10/10/2026
 
 Hotfix: no more hitch when players join a server. SJK also checks for updates while it runs.
