@@ -716,7 +716,7 @@ impl SettingsMenu {
         let category = editor.mode == WheelMode::Category;
         let moving = console.modifier_held();
         match key {
-            KeyCode::Escape if category => return self.back(console),
+            KeyCode::Escape if category => return self.back(),
             KeyCode::Escape => editor.close(),
             KeyCode::Tab | KeyCode::BracketRight if category => {
                 return SettingsResult::ClassicCycle(1);
@@ -768,7 +768,7 @@ impl SettingsMenu {
             editor.typing = None;
             editor.picker = None;
             if category {
-                return self.back(console);
+                return self.back();
             }
             editor.close();
             return SettingsResult::None;

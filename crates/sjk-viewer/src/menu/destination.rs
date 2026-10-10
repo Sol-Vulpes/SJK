@@ -72,22 +72,20 @@ impl ClientMenu {
                 self.open_player_hub(console, ReturnTarget::MainMenu);
                 MenuAction::None
             }
+            // The SJK UI's Settings, on the category holding the tab's rows.
             MainDestination::Settings { tab } => {
-                self.open_settings_from(console, ReturnTarget::MainMenu, tab);
+                self.open_sjk_settings_on_tab(console, tab, ReturnTarget::MainMenu);
                 MenuAction::None
             }
+            // The SJK UI's Settings on Graphics, which gathers the renderer
+            // rows.
             MainDestination::Renderer => {
-                self.renderer_panel = None;
-                self.settings_return = ReturnTarget::MainMenu;
-                self.settings.open_renderer(console);
-                self.state.open_settings();
+                self.open_sjk_renderer(console, ReturnTarget::MainMenu);
                 MenuAction::None
             }
-            MainDestination::Keybinds { category } => {
-                self.settings_return = ReturnTarget::MainMenu;
-                self.keybinds.open_category(console, category);
-                self.keybinds_direct = true;
-                self.state.open_keybinds();
+            // The SJK UI's Key bindings: every binding in one list.
+            MainDestination::Keybinds { .. } => {
+                self.open_sjk_keys(console, ReturnTarget::MainMenu);
                 MenuAction::None
             }
             MainDestination::Changelog => {
@@ -132,15 +130,8 @@ impl ClientMenu {
         }
     }
 
-    /// Leave the key-binding editor: back to the settings screen that hosts
-    /// it, or straight to wherever settings return when the editor was
-    /// opened directly.
-    pub(super) fn close_keybinds(&mut self, console: &ViewerConsole) -> MenuAction {
-        if std::mem::take(&mut self.keybinds_direct) {
-            return self.close_settings();
-        }
-        self.settings.open(console);
-        self.state.open_settings();
-        MenuAction::None
+    /// Leave the key bindings, straight to wherever settings return.
+    pub(super) fn close_keybinds(&mut self) -> MenuAction {
+        self.close_settings()
     }
 }

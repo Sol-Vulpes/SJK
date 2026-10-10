@@ -21,7 +21,7 @@ impl ClientMenu {
     /// Open the First setup screen, returning to `target` when it closes: the
     /// SJK UI's pop-up over its main page, the classic Setup panel's FIRST
     /// SETUP group under the classic style (and the SJK UI in a game), the
-    /// settings screen's FIRST SETUP tab if that panel cannot open.
+    /// SJK UI's Settings on First setup if that panel cannot open.
     pub(crate) fn open_first_setup(&mut self, console: &ViewerConsole, target: ReturnTarget) {
         if self.menu_style == MenuStyle::Sjk && target == ReturnTarget::MainMenu {
             self.open_sjk_first_setup(console, target);
@@ -34,7 +34,7 @@ impl ClientMenu {
         if self.open_classic_panel(console, Page::Setup, Entry::FirstSetup, frame, target) {
             return;
         }
-        self.open_settings_from(console, target, SettingsMenu::quick_tab());
+        self.open_sjk_settings(console, super::sjk::settings::FIRST_SETUP, target);
     }
 
     /// The first time the main menu is up in a run, once the menu style is known,

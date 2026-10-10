@@ -9,6 +9,8 @@
 #                               made it when that is not the piece's owner.
 
 = Sol
++ 10/10/2026 | - | Resolution list as an SJK card, hero settings screen and key editor removed
+- 3d23692 |  | Settings without the hero form: resolution card, SJK Settings everywhere
 + 10/10/2026 | - | SJK chat plays a variant of JKA's chat sound for new messages
 - 41295d8 |  | SJK chat sound: a variant of the talk sound for another player's message
 + 10/10/2026 | - | The test list in the SJK look in every style

@@ -496,6 +496,12 @@ impl SettingsMenu {
             self.append_hud_picker(vertices, font, viewport, reveal, Some(frame.art));
             return;
         }
+        // The resolution list is the SJK UI's card in every style.
+        if self.picker.is_open() {
+            let target = crate::menu::sjk::TextTarget::Inter(vertices, font);
+            self.append_resolutions(target, viewport, reveal);
+            return;
+        }
         let place = frame.begin(&mut self.ui, viewport, reveal);
         let found = (!self.search.is_empty()).then(|| {
             self.classic

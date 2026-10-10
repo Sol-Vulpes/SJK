@@ -177,25 +177,21 @@ impl ClientMenu {
                 };
                 self.keybinds.leave_classic();
                 self.settings.open_classic(console, tab, span, frame);
-                self.keybinds_direct = false;
                 self.state.open_settings();
             }
             Some(Panel::Keybinds { category, span }) => {
                 self.settings.leave_classic();
                 self.keybinds.open_classic(console, category as usize, span);
-                self.keybinds_direct = true;
                 self.state.open_keybinds();
             }
             Some(Panel::Renderer { tab }) => {
                 self.keybinds.leave_classic();
                 self.settings.open_classic_renderer(console, tab, frame);
-                self.keybinds_direct = false;
                 self.state.open_settings();
             }
             Some(Panel::Group(group)) => {
                 self.keybinds.leave_classic();
                 self.settings.open_classic_group(console, group, frame);
-                self.keybinds_direct = false;
                 self.state.open_settings();
             }
             None => return false,
@@ -342,13 +338,10 @@ impl ClientMenu {
                 }
                 MenuAction::None
             }
-            // The renderer settings return to this panel, in game too.
+            // The SJK UI's Settings on Graphics (the renderer rows), which
+            // return to this panel, in game too.
             Outcome::Open(MainDestination::Renderer) => {
-                self.leave_classic_panel();
-                self.settings.open_renderer(console);
-                self.settings_return = target;
-                self.renderer_panel = Some(panel);
-                self.state.open_settings();
+                self.open_renderer_from_panel(console, panel);
                 MenuAction::None
             }
             Outcome::Open(destination) => {
@@ -357,6 +350,20 @@ impl ClientMenu {
             }
             _ => MenuAction::None,
         }
+    }
+
+    /// The renderer settings from classic panel `panel`: the SJK UI's
+    /// Settings on Graphics, which gathers the renderer rows; backing out
+    /// shows `panel` again, in game too.
+    pub(super) fn open_renderer_from_panel(
+        &mut self,
+        console: &ViewerConsole,
+        panel: ClassicPanel,
+    ) {
+        let target = self.settings_return;
+        self.leave_classic_panel();
+        self.open_sjk_renderer(console, target);
+        self.renderer_panel = Some(panel);
     }
 
     /// Tab on a panel: the next (1) or previous (-1) group of its list. On

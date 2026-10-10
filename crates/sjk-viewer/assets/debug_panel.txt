@@ -244,6 +244,16 @@ note: A roll on landing while crouched (PM_CrashLand) is not prevented, in EJK e
 
 # ---- Menus & settings ----
 
+[settings-sjk-only]
+area: Menus & settings
+title: Settings without the old hero form: resolution card, SJK Settings everywhere
+change: The resolution list is a pop-up card in the SJK UI's look, in both menu styles.
+change: Ways to settings without a classic+ panel open the SJK UI's Settings or Key bindings.
+test: SJK UI: Settings > Display > Resolution, Enter: a card of sizes, the one in use in gold.
+test: Arrows, PgUp/PgDn, Home/End and the wheel move; Enter or a click picks; Esc closes.
+test: Classic menus: Setup > Video > Resolution, Enter: the same card over the panel.
+test: Classic: every Setup and Graphics entry still opens its classic+ panel as before.
+
 [sharp-levelshots]
 area: Menus & settings
 title: Sharp loading-screen and map-picker levelshots

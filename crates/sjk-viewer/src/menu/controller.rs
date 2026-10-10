@@ -12,7 +12,6 @@ impl ClientMenu {
         vertices: &mut Vec<TextVertex>,
         font: &UiFont,
         viewport: [f32; 2],
-        scale: f32,
     ) {
         if self.backdrop_draw_list_wanted() {
             classic::view::opaque_backdrop(&mut self.classic_backdrop, viewport, self.art);
@@ -58,31 +57,34 @@ impl ClientMenu {
                     self.settings
                         .append_classic(vertices, font, viewport, reveal, &frame);
                 }
-                // Drawn in the UI's families by `append_sjk_screen`; here, from
-                // a caller without them, in Inter.
-                None if self.sjk_settings_on_show() && !self.settings.picker_open() => {
+                None if self.settings.hud_picker_open() => {
+                    let reveal = self.screen_reveal();
+                    self.settings
+                        .append_hud_overlay(vertices, font, viewport, reveal);
+                }
+                // The SJK UI's Settings (with the resolution list's card),
+                // drawn in the UI's families by `append_sjk_screen`; here, from
+                // a caller without them or under the classic style, in Inter.
+                None => {
                     let target = sjk::TextTarget::Inter(vertices, font);
                     self.append_sjk_settings(target, viewport);
                 }
-                None => self.append_settings(vertices, font, viewport, scale),
             },
-            // Drawn in the UI's families by `append_sjk_screen`; here, from a
-            // caller without them, in Inter.
-            ClientPhase::Keybinds if self.sjk_settings_on_show() => {
-                let target = sjk::TextTarget::Inter(vertices, font);
-                self.append_sjk_keys(target, viewport);
-            }
-            ClientPhase::Keybinds => {
-                let reveal = self.screen_reveal();
-                match self.classic_panel_frame() {
-                    Some(frame) => {
-                        self.sync_cross_search();
-                        self.keybinds
-                            .append_classic(vertices, font, viewport, reveal, &frame)
-                    }
-                    None => self.keybinds.append(vertices, font, viewport, reveal),
+            ClientPhase::Keybinds => match self.classic_panel_frame() {
+                Some(frame) => {
+                    let reveal = self.screen_reveal();
+                    self.sync_cross_search();
+                    self.keybinds
+                        .append_classic(vertices, font, viewport, reveal, &frame)
                 }
-            }
+                // The SJK UI's Key bindings, drawn in the UI's families by
+                // `append_sjk_screen`; here, from a caller without them or
+                // under the classic style, in Inter.
+                None => {
+                    let target = sjk::TextTarget::Inter(vertices, font);
+                    self.append_sjk_keys(target, viewport);
+                }
+            },
             // Drawn in the UI's families by `append_sjk_screen`; here, from a
             // caller without them, in Inter.
             ClientPhase::Player if self.player.is_sjk() => {
@@ -172,17 +174,5 @@ impl ClientMenu {
     pub(crate) fn set_last_address(&mut self, address: &str) {
         self.address_input.clear();
         self.address_input.push_str(address);
-    }
-
-    pub(super) fn append_settings(
-        &mut self,
-        vertices: &mut Vec<TextVertex>,
-        font: &UiFont,
-        viewport: [f32; 2],
-        scale: f32,
-    ) {
-        let reveal = self.screen_reveal();
-        self.settings
-            .append(vertices, font, viewport, scale, reveal);
     }
 }

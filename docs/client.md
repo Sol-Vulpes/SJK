@@ -101,10 +101,12 @@ drops the settings only it read (`ui_accent`, `con_lineSpacing`, `con_maxLines`,
 `con_datetime`) from the profile (`retire_modern_ui` in
 [console_session.rs](../crates/sjk-viewer/src/console_session.rs)). A few
 screens the classic pages and the SJK UI open have no version of their own yet
-and keep that style's hero look: Create game and its map picker, the tabbed
-settings screen (the renderer settings, the HUD picker, the resolution list),
-the key-binding editor opened on its own, the Update page and Camera control
-with the classic menus.
+and keep that style's hero look: Create game and its map picker, the Update
+page and Camera control with the classic menus. The settings have no hero look
+left since 10/10/2026: the resolution list is the SJK UI's pop-up card in
+every style, and a way to settings without a classic+ panel (a main-menu
+destination, the classic renderer route, First setup's fallback) opens the SJK
+UI's Settings or Key bindings, drawn in the UI's own type whatever the style.
 
 The SJK UI is SJK's own menus drawn over the live map in SJK's type
 ([SJK UI](sjk-ui.md)). It has its main page: the emblem in a
@@ -1080,11 +1082,13 @@ SJK's own cvars have engine names: rendering ones are `r_*` (`r_sceneHdr`,
 `cg_groundHud` and the dedicated server's are `g_npcNav` and `g_stockRules`.
 Names rend2 or EternalJK use with another meaning are avoided.
 
-These rendering cvars have their own settings page. The last row
-of Settings > VIDEO, "Renderer", opens it, as JoF EJK's advanced renderer page
-opens from its Video setup; Escape or Back returns to that row. With the
-classic menu style its tabs are groups of the Setup page's GRAPHICS page (in the
-main menu and the in-game pop-up), after Video. The page has four tabs:
+These rendering cvars have their own four groups. The SJK UI's Settings
+gathers them in its Graphics category; with the classic menu style they are
+panels of the Setup page's GRAPHICS page (in the main menu and the in-game
+pop-up), after Video. A renderer entry without a panel of its own opens the SJK
+UI's Settings on Graphics, and backing out shows the classic panel again (in
+game too); the old tabbed renderer page reached from a "Renderer" row at the end
+of VIDEO is gone (10/10/2026). The groups are:
 
 | Tab | Settings |
 | --- | --- |

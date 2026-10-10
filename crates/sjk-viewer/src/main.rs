@@ -1863,7 +1863,7 @@ impl GpuState {
                 menu.append_sjk_screen(target, self.console.as_ref(), viewport);
             } else {
                 let (vertices, font) = self.game_fonts.menu(&mut self.text_vertices, &self.ui_font);
-                menu.append_overlay(vertices, font, viewport, text_scale);
+                menu.append_overlay(vertices, font, viewport);
             }
         }
         self.append_console_overlay(viewport, text_scale);
