@@ -77,6 +77,9 @@ pub(crate) enum InputAction {
     FlipKick,
     /// `inspect`: pin the player card to the player under the crosshair, or unpin it.
     Inspect,
+    /// `worldnote`: select the surface or mover under the crosshair, then write a note on
+    /// it ([`crate::world_notes`]).
+    WorldNote,
     /// `force_illuminate`: turn Illuminate's holocron on or off ([`crate::illuminate`]).
     Illuminate,
     /// `cameracontrol`: open Camera control, as F8 does
@@ -255,6 +258,7 @@ impl GameplayInput {
                     | "weapon"
                     | "flipkick"
                     | "inspect"
+                    | "worldnote"
                     | "force_illuminate"
                     | "cameracontrol"
             )
@@ -409,6 +413,7 @@ impl GameplayInput {
             "teammenu" | "joinmenu" => Some(InputAction::TeamMenu),
             "flipkick" => Some(InputAction::FlipKick),
             "inspect" => Some(InputAction::Inspect),
+            "worldnote" => Some(InputAction::WorldNote),
             "force_illuminate" => Some(InputAction::Illuminate),
             "cameracontrol" => Some(InputAction::CameraControl),
             "vote" => match words.next().map(str::to_ascii_lowercase).as_deref() {
@@ -521,15 +526,8 @@ impl super::GpuState {
                     self.gameplay_input.tap(GameButton::Button(5));
                 }
             }
-            // A pinned card or a player under the crosshair keeps the card; otherwise the
-            // press selects the world under the crosshair for a note (`world_notes`).
-            Some(InputAction::Inspect) => {
-                if self.hud.card.pinned() || self.crosshair_scan.aimed_player().is_some() {
-                    self.hud.card.inspect();
-                } else {
-                    self.world_note_press();
-                }
-            }
+            Some(InputAction::Inspect) => self.hud.card.inspect(),
+            Some(InputAction::WorldNote) => self.world_note_press(),
             Some(InputAction::Illuminate) => self.toggle_illuminate(),
             Some(InputAction::FlipKick) => {
                 let restricted = self.live_session.as_ref().is_some_and(|session| {

@@ -130,7 +130,7 @@ presence list shows in that slot (if any), the server's address and name, the ma
 build, the match clock and the in-game name the reporter wears, signed with the reporter's
 key. The hub keeps it until the operator removes it.
 
-A world note (`inspect` twice on the world, [client.md](client.md#player-card)) is sent
+A world note (`worldnote` twice, [client.md](client.md#player-card)) is sent
 only when the player sends it, with `cl_identity` on: its text, the map, the build, the
 game server's address, the in-game name the player wears, where the player stood (`setviewpos`), the aimed point, shader,
 surface and entity, and a smaller copy of its screenshot (at most 1280 x 720), signed

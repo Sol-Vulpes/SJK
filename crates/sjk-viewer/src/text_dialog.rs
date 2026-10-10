@@ -1,5 +1,5 @@
 //! The text dialog: a panel in the middle of the screen with a text box, Send and Cancel,
-//! for a world note (`world_notes`, the second `inspect` press), a bug report
+//! for a world note (`world_notes`, the second `worldnote` press), a bug report
 //! (`bug_report`, the Report a bug button under the game menu) or a player report
 //! (`player_report`, a reason on the game menu's Report page). Escape or Cancel drops
 //! it; Enter or Send sends it.

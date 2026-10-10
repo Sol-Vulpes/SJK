@@ -33,6 +33,7 @@ opened yet and give nothing.
 - Medals bring saber shaders: the Bug Hunter medal the Glitch blade, Early Tester the Hologram, Early Contributor the Runic, for as long as you hold the medal (the SJK hub takes the shader back with the medal). The Collection says which medal a shader came with, and each medal says which shader it brings _(Sol)_
 - The SJK chat page no longer freezes the game when you choose a message or rest the pointer on a name _(Sol)_
 - Players with the JoF clan's tag in their name ({JoF}, jof., [JOF] and so on, in any case, with no letter touching it) get the clan's J-o-F emblem on the left of their name in the game chat, the SJK chat, the scoreboard, the player card and the Players page; the JoF Clan medal is gone, replaced by this tag _(Sol)_
+- Inspect (X) is for players only now; world notes get their own key, World note (Key bindings > Interaction, or bind <key> worldnote), O by default: press it on a wall, floor or object to name it, again to write the note _(Sol)_
 
 ## 2026.1010.1 (Alpha) | 10/10/2026
 

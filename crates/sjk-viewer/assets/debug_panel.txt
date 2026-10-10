@@ -127,6 +127,15 @@ note: The console copy of a chat line keeps the escapes, as in EternalJK.
 
 # ---- Input ----
 
+[worldnote-key]
+area: Input
+title: World notes get their own key; Inspect is for players only
+change: New key "World note" (Key bindings > Interaction, or bind <key> worldnote), default O.
+change: X (inspect) now only pins the player card; it no longer selects surfaces.
+test: Press X on a wall with nobody aimed at: nothing happens.
+test: Press O on a wall: it is named; O again opens the note line; Escape drops it.
+test: Press X on a player: the card pins as before.
+
 [locked-binds]
 area: Input
 title: MOUSE1, MOUSE2 and ESC locked in the controls editor; key names in capitals

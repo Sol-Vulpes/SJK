@@ -82,6 +82,8 @@ pub(crate) const ACTIONS: &[BindableAction] = &[
     action(Interaction, "Binoculars", "zoom", ""),
     // SJK: pin the player card to the player under the crosshair; press again to hide.
     action(Interaction, "Inspect player", "inspect", "x"),
+    // SJK: select the surface under the crosshair; press again to write a world note.
+    action(Interaction, "World note", "worldnote", "o"),
     action(Interaction, "Item: Bacta", "use_bacta", ""),
     action(Interaction, "Item: Seeker drone", "use_seeker", ""),
     action(Interaction, "Item: Sentry gun", "use_sentry", ""),

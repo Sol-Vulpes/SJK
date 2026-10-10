@@ -156,7 +156,7 @@ impl GpuState {
             }
             return;
         }
-        // Escape unpins a pinned player card, or drops a waiting `inspect` selection,
+        // Escape unpins a pinned player card, or drops a waiting `worldnote` selection,
         // before it opens the game menu.
         if key == KeyCode::Escape
             && event.state == ElementState::Pressed

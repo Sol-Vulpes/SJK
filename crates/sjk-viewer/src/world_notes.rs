@@ -1,8 +1,7 @@
 //! World notes: in-game annotations of surfaces and objects for whoever fixes them.
 //!
-//! With no player card pinned and no player under the crosshair, `inspect` selects the
-//! world surface under the crosshair, or the mover whose bounds the view ray meets
-//! first, and names it in a centre print. A second `inspect` within
+//! `worldnote` selects the world surface under the crosshair, or the mover whose bounds
+//! the view ray meets first, and names it in a centre print. A second `worldnote` within
 //! [`CONFIRM_MS`] confirms the selection and opens a note line in the chat composer.
 //! Enter appends the note with the selection to `notes.jsonl` (one JSON object per
 //! line) and a readable line to `notes.txt` in the config directory, and takes a
@@ -53,7 +52,7 @@ pub(crate) const FILL_STRIPS: usize = 800;
 /// Clip-space `w` a shaded triangle is cut at: what lies nearer the eye is not drawn.
 const NEAR_W: f32 = 1.0;
 
-/// What `inspect` on the world selected.
+/// What `worldnote` selected.
 #[derive(Clone, Debug)]
 pub(crate) struct Selection {
     map: String,
@@ -574,7 +573,7 @@ impl Default for Notes {
     }
 }
 
-/// What an `inspect` press on the world did.
+/// What a `worldnote` press did.
 pub(crate) enum Press {
     /// Selected (or reselected) something: show its summary.
     Selected(String),
@@ -590,7 +589,7 @@ impl Notes {
         self.camera = Some(camera);
     }
 
-    /// An `inspect` press with no player involved.
+    /// A `worldnote` press.
     pub(crate) fn press(
         &mut self,
         bsp: &Bsp,
@@ -825,8 +824,8 @@ impl Notes {
 }
 
 impl crate::GpuState {
-    /// `inspect` with no card pinned and no player aimed at: select the world under the
-    /// crosshair, or confirm the selection and open the note composer.
+    /// `worldnote`: select the world under the crosshair, or confirm the selection and
+    /// open the note composer.
     pub(crate) fn world_note_press(&mut self) {
         let map = if self.resident.exploring() {
             self.resident.map.clone()
@@ -859,7 +858,7 @@ impl crate::GpuState {
             Press::Selected(summary) => {
                 crate::log::progress(format_args!("note selection: {summary}"));
                 centre(format!(
-                    "{summary}\nPress inspect again to write a note, Escape to drop it"
+                    "{summary}\nPress World note again to write a note, Escape to drop it"
                 ))
             }
             Press::Confirmed(subject) => {

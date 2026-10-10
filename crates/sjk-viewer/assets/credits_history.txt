@@ -9,6 +9,8 @@
 #                               made it when that is not the piece's owner.
 
 = Sol
++ 10/10/2026 | - | World notes get their own key; Inspect is for players only
+- caaa80f |  | Give world notes their own key; Inspect is for players only
 + 10/10/2026 | - | The SJK chat page no longer freezes the game
 - 7ca782a |  | Fix the SJK chat page freezing the game
 + 10/10/2026 | - | Medals bring their saber shaders: Bug Hunter Glitch, Early Tester Hologram, Early Contributor Runic
