@@ -659,7 +659,7 @@ pub(super) const NETWORK: &[Setting] = &[
         },
     },
 ];
-/// Text size and spacing, and the console's style. Menu rows keep their layout.
+/// Text size and spacing, and the console's style and feed. Menu rows keep their layout.
 pub(super) const TEXT: &[Setting] = &[
     Setting {
         label: "Console style",
@@ -692,6 +692,11 @@ pub(super) const TEXT: &[Setting] = &[
             max: 2.0,
             step: 0.05,
         },
+    },
+    Setting {
+        label: "Console feed (top left)",
+        cvar: crate::console::console_options::DRAW_NOTIFY_CVAR,
+        kind: ValueKind::Bool,
     },
 ];
 

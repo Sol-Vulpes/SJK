@@ -2817,10 +2817,18 @@ EternalJK prints `asctime` on a 12-hour clock (`Sun Oct  4 10:52:10 PM`), SJK wr
 the date day first on the 24-hour clock (`Sun 04/10/2026 22:52:10`; see
 [SJK conventions](sjk.md#dates-and-times)).
 
-Closed, the console draws notify lines while a game, a demo or a map walk runs
-and no menu has focus: of the last `con_notifylines` rows, those written within
-`con_notifytime` seconds and not quiet (chat), from the top edge of the screen,
-one cell plus `cl_conXOffset` pixels from the left. Dragging the mouse selects
+Closed, the console can draw notify lines, the console feed, while a game, a demo
+or a map walk runs and no menu has focus: of the last `con_notifylines` rows, those
+written within `con_notifytime` seconds and not quiet (chat), from the top edge of
+the screen, one cell plus `cl_conXOffset` pixels from the left. The feed is off by
+default and `con_drawNotify 1` (archived; Settings > Interface > Console feed, the
+TEXT tab in the tabbed screen) turns it on (Sol's request, 10/10/2026). What it
+shows: server `print`s (joins, team changes, votes, command replies, server
+announcements), the one-line obituary of each kill, the client's own messages
+(errors, demo and download notices, cvar replies). Chat never goes through it: it
+keeps its chat box (`cg_drawChat`), and centre prints, the kill feed
+(`cg_killfeed`), the vote and team overlays are drawn by the HUD, so all of them
+stay with the feed off. The open console still shows every line. Dragging the mouse selects
 scrollback text and Ctrl+C copies it; the selection does not include the time
 column.
 
@@ -3119,7 +3127,8 @@ For graphics controls and diagnostics, see [rendering.md](rendering.md).
 ## Text size and spacing
 
 The Settings screen's TEXT tab holds three archived cvars, beside the console
-style. Menu text draws as before at the defaults.
+style and the console feed (`con_drawNotify`, [above](#classic-console)). Menu text
+draws as before at the defaults.
 
 | Cvar | Default | Range | Effect |
 | --- | --- | --- | --- |

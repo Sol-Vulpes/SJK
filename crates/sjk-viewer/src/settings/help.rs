@@ -464,6 +464,10 @@ const HELP: &[(&str, &str)] = &[
         "Extra space between letters in the menus and the console.",
     ),
     ("con_scale", "Size of the console text."),
+    (
+        crate::console::console_options::DRAW_NOTIFY_CVAR,
+        "Shows the newest console lines at the top left while playing. Chat keeps its own box.",
+    ),
     // IMAGE
     (
         "r_sceneHdr",

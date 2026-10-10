@@ -6,6 +6,9 @@ use super::*;
 pub(crate) const STYLE_CVAR: &str = "con_style";
 /// Internal marker of the one-time move of a saved `classic` to `auto`.
 pub(crate) const STYLE_VERSION_CVAR: &str = "con_styleDefaultVersion";
+/// Archived switch for the console feed, the notify lines at the top left
+/// while the console is closed; off by default. Chat never goes through them.
+pub(crate) const DRAW_NOTIFY_CVAR: &str = "con_drawNotify";
 
 /// How the console looks and behaves (`con_style`).
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
@@ -63,6 +66,8 @@ pub(super) struct Options {
     pub opacity: f32,
     pub speed: f32,
     pub timestamps: i64,
+    /// `con_drawNotify`: whether the closed console draws its notify lines.
+    pub draw_notify: bool,
     pub notify_millis: u64,
     pub notify_lines: usize,
     /// Notify-only horizontal displacement, in virtual 640-wide coordinates.
@@ -79,6 +84,7 @@ impl Default for Options {
             opacity: 1.0,
             speed: 3.0,
             timestamps: 0,
+            draw_notify: false,
             notify_millis: 3000,
             notify_lines: 3,
             notify_x: 0.0,
@@ -117,6 +123,12 @@ pub(super) fn register(cvars: &mut CvarRegistry) -> Result<(), sjk_shell::CvarEr
         0_i64,
         CvarFlags::ARCHIVE,
         "Internal migration marker for the auto console style default",
+    ))?;
+    cvars.register(CvarDefinition::new(
+        DRAW_NOTIFY_CVAR,
+        false,
+        CvarFlags::ARCHIVE,
+        "Console feed: show the newest console lines at the top left while playing (chat          keeps its own box)",
     ))?;
     for (name, value, help) in [
         ("con_notifylines", 3_i64, "Maximum visible notify lines"),
@@ -177,6 +189,7 @@ impl ViewerConsole {
                 .unwrap_or(3.0)
                 .clamp(1.0, 100.0) as f32,
             timestamps: self.integer_cvar("con_timestamps").unwrap_or(0),
+            draw_notify: self.bool_cvar(DRAW_NOTIFY_CVAR).unwrap_or(false),
             notify_millis: (self.float_cvar("con_notifytime").unwrap_or(3.0).max(0.0) * 1000.0)
                 as u64,
             notify_lines: self
@@ -232,6 +245,21 @@ mod tests {
         for (index, look) in looks.iter().enumerate() {
             assert!(!looks[..index].contains(look), "{look:?} twice");
         }
+    }
+
+    /// The console feed is off in a new profile, and a saved choice is kept.
+    #[test]
+    fn the_console_feed_is_off_by_default_and_saved() {
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("config.cfg");
+        let mut console = ViewerConsole::new(path.clone()).unwrap();
+        assert!(!console.options().draw_notify);
+        assert!(!Options::default().draw_notify);
+        assert!(console.set_cvar(DRAW_NOTIFY_CVAR, "1"));
+        assert!(console.options().draw_notify);
+        drop(console);
+        let console = ViewerConsole::new(path).unwrap();
+        assert!(console.options().draw_notify);
     }
 
     /// The registered default, a saved `classic` from before `auto` existed and
