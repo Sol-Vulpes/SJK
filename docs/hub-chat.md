@@ -258,16 +258,29 @@ Only GIPHY: Tenor's API shut down on 30/06/2026.
   costs one small texture write per frame change and none otherwise. Every copy of a GIF
   plays in step.
 - **How it shows** ([draw.rs](../crates/sjk-viewer/src/chat_gifs/draw.rs)): under the
-  message's text, on the SJK chat page 160 pixels high (at 1080p) and on the docks 48, as
+  message's text, on the SJK chat page 160 pixels high (at 1080p), on the docks 48 and in
+  the in-play chat box 54, as
   wide as its shape makes it (a column too narrow makes it narrower and lower). While it
   loads, a quiet box of that height says "Loading GIF", so nothing moves when it comes;
   when it could not be had, one quiet line says "GIF unavailable". The docks' box keeps
   its height: a message with a GIF takes the room of three one-row messages, and older
   ones make room; a message taller than the box with its GIF shows its text without it.
-  The in-game chat feed shows the link as text.
+- **In the chat box during play** ([chat/feed_gif.rs](../crates/sjk-viewer/src/chat/feed_gif.rs),
+  drawn by `chat/view.rs`, the one path that draws the chat box: in play, beside the
+  scoreboard and over the history while the composer is open): an SJK line's link reads
+  `GIF` and the GIF shows under its text, three of the box's rows high (54 pixels at 1080p
+  and chat font size 1, 108 at 4K; it grows with `cg_chatBoxFontSize` as the rows do) and
+  within its column. It takes the room of its rows, so later lines start under it, and it
+  is drawn at its line's place and alpha: it slides in, scrolls and fades out with the
+  line (`cg_chatBox`), and shows again with the history when the composer opens. The
+  newest line, when too tall for the box with its GIF, shows its text without it. Only
+  SJK lines: a game server's chat line keeps its GIPHY link as text and nothing is
+  fetched for it. A line keeps its text both ways, so switching `cl_sjkChatGifs` changes
+  the lines already in the box.
 - **Muted players**: their GIFs are never fetched. The docks leave their lines out and
   the page shows "Muted on this PC" in place of the text, so their links are never read
-  for a GIF (`chat_gifs::for_message`).
+  for a GIF (`chat_gifs::for_message`); the chat box shows "Messages hidden on this
+  client" and never asks for a muted line's GIF.
 - **Switch**: `cl_sjkChatGifs` (archived, default 1; Settings > Network > SJK chat GIFs,
   under SJK chat sound, so in every settings screen and settings search). 0 keeps links
   as text and fetches nothing. With `cl_sjkChat 0` no message shows, so nothing is

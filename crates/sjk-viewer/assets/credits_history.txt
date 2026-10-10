@@ -9,6 +9,8 @@
 #                               made it when that is not the piece's owner.
 
 = Sol
++ 10/10/2026 | - | SJK chat GIFs in the in-play chat box
+- 5ec93cf |  | SJK chat GIFs in the in-play chat box
 + 10/10/2026 | - | Ctrl+V pastes in the SJK chat and Staff fields on Windows
 - ec108ca |  | Ctrl+V pastes in the SJK chat and Staff fields on Windows
 + 10/10/2026 | - | Unlock cards wait while SJK is alt-tabbed or minimised; a card for a new update, debug_update

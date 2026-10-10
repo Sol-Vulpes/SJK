@@ -23,10 +23,11 @@ impl GpuState {
             || self.console.as_ref().is_some_and(|c| c.is_open())
             || !self.console_layer.is_empty()
             || self.client_menu.as_ref().is_some_and(|m| m.is_visible());
-        // A world shot's made-up scoreboard, quick wheel and unlock pop-up draw
-        // without a session.
+        // A world shot's made-up scoreboard, quick wheel, unlock pop-up and chat box
+        // draw without a session.
         #[cfg(test)]
         let hud = hud
+            || self.chat.for_shot
             || self.scoreboard.showing_shot()
             || self.quick_wheel.shown_without_a_game()
             || self.unlock_toast.pending() > 0;

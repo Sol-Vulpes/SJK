@@ -31,6 +31,8 @@ pub(super) struct Options {
     pub(super) center_height: f32,
     /// Arriving messages show emoji pictures ([`super::emoji::CVAR`]).
     pub(super) emojis: bool,
+    /// An SJK chat line's GIPHY link shows its GIF under it ([`crate::chat_gifs::CVAR`]).
+    pub(super) gifs: bool,
 }
 
 impl Default for Options {
@@ -61,6 +63,7 @@ impl Options {
             center_size: scalar(console, "cg_centersize", 1.0).clamp(0.0, 4.0),
             center_height: scalar(console, "cg_centerheight", 0.0).clamp(0.0, 480.0),
             emojis: integer("cg_chatboxemojis", 0) != 0,
+            gifs: console.is_none_or(|c| c.bool_cvar(crate::chat_gifs::CVAR) != Some(false)),
         }
     }
 
@@ -110,9 +113,10 @@ pub(super) fn clean_body(body: &str, mode: i64) -> String {
 impl ChatOverlay {
     /// Console history can draw while the rest of the gameplay HUD is suppressed.
     pub(crate) fn wants_history(&self, console: Option<&ViewerConsole>) -> bool {
-        console.is_some_and(|c| {
-            c.is_open() && c.integer_cvar("cg_chatboxshowhistory").unwrap_or(0) != 0
-        })
+        self.shown_for_shot()
+            || console.is_some_and(|c| {
+                c.is_open() && c.integer_cvar("cg_chatboxshowhistory").unwrap_or(0) != 0
+            })
     }
     /// Apply cvars without allocating; wrapping invalidates through width/font keys.
     pub(crate) fn configure(&mut self, console: Option<&ViewerConsole>) {

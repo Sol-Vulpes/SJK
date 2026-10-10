@@ -34,10 +34,11 @@ impl ChatOverlay {
             Some(words) => words.text.clone(),
             None => crate::sjk_chat_look::message_text(&message.text),
         };
-        let (body, emojis) = if self.options.emojis && drop.is_none() {
-            self.emojis.markup(&body)
+        // A message's GIPHY link reads "GIF", its GIF under it (`chat/feed_gif.rs`).
+        let (body, emojis, gif) = if drop.is_none() {
+            self.with_gif(body)
         } else {
-            (body, Vec::new())
+            (body, Vec::new(), None)
         };
         if self.lines.len() == HISTORY_LIMIT {
             self.lines.pop_front();
@@ -59,6 +60,7 @@ impl ChatOverlay {
                 key_id: message.key_id.clone(),
                 tier: drop.map(|words| words.tier),
             }),
+            gif,
         });
         if self.is_typing() && self.scroll > 0 {
             self.scroll = (self.scroll + 1).min(self.lines.len().saturating_sub(1));

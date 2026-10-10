@@ -82,6 +82,20 @@ test: Turn SJK chat GIFs off: the link shows as text, nothing is loaded (log has
 test: A media.giphy.com/media/<id>/giphy.gif link and an i.giphy.com/<id>.gif link work too.
 note: Unit tests and off-screen shots only; one real GIF fetched from GIPHY by a test.
 
+[sjk-chat-gifs-ingame]
+area: Console & chat
+title: SJK chat GIFs in the chat box during play (cl_sjkChatGifs)
+change: An SJK chat line with a GIPHY link in the in-play chat box reads GIF and shows the GIF
+change: under it, three chat rows high, fading and scrolling with its line; later lines make room.
+change: Game server chat lines keep their GIPHY links as text: no GIF is loaded for them.
+test: In a match, send an SJK message with a GIPHY link: GIF in the line, the GIF moving under it.
+test: Wait for the line to fade (cg_chatBox): the GIF fades out with it, nothing stays behind.
+test: Open the chat (T or the SJK channel): the history shows the GIF under its line again.
+test: At 4K, and with Chat font size and Chat letter spacing changed: it stays in the chat column.
+test: Mute the sender, then turn SJK chat GIFs off: no GIF, and off shows the link as text.
+test: A server say with a GIPHY link: stays text.
+note: Unit tests and off-screen shots (duel6_sjk_chat_gifs_feed) only; not tried in a match.
+
 [console-feed]
 area: Console & chat
 title: Console feed (top left notify lines) off by default, con_drawNotify
