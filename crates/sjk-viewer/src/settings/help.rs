@@ -415,6 +415,10 @@ const HELP: &[(&str, &str)] = &[
         "Your SJK key: switch it on, back it up, copy its id. Enter opens it; the key stays hidden until Show.",
     ),
     (
+        super::catalog::IMPORT_ROW,
+        "Bring your name, model, field of view and keys from another client's .cfg, such as jampconfig.cfg. Enter picks the file.",
+    ),
+    (
         "rate",
         "Most data per second the server may send you; raise it on a fast connection.",
     ),

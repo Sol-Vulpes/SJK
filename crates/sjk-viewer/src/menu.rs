@@ -644,6 +644,12 @@ impl ClientMenu {
                 console.open_identity_panel();
                 MenuAction::None
             }
+            // First setup's "Import a config file" row: the Import page with
+            // the file dialog, over the settings.
+            SettingsResult::OpenImport => {
+                console.browse_config_import();
+                MenuAction::None
+            }
             SettingsResult::Classic(index) => self.classic_panel_button(index, console),
             SettingsResult::ClassicCycle(direction) => {
                 self.classic_panel_cycle(direction, console);
@@ -1180,6 +1186,12 @@ impl ClientMenu {
     #[cfg(test)]
     pub(crate) fn player_overflowed(&self) -> bool {
         self.player.overflowed()
+    }
+
+    /// Select the settings row of `cvar`, scrolled into view (world shots).
+    #[cfg(test)]
+    pub(crate) fn select_setting_for_shot(&mut self, cvar: &str) {
+        self.settings.select_cvar(cvar);
     }
 
     /// Show the player screen's page `index` with row `row` selected (world

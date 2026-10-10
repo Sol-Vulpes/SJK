@@ -27,6 +27,8 @@ mod view;
 mod wheel_editor;
 mod wheel_editor_view;
 
+#[cfg(test)]
+pub(crate) use catalog::IMPORT_ROW;
 use catalog::*;
 pub(crate) use catalog::{FIRST_SETUP_CAPTION, RESOLUTIONS};
 pub(crate) use display::{
@@ -46,6 +48,9 @@ pub(crate) enum SettingsResult {
     OpenWheelPages,
     /// The "SJK identity key" row: the Identity page, over the settings.
     OpenIdentity,
+    /// First setup's "Import a config file" row: the Import page and the
+    /// file dialog, over the settings.
+    OpenImport,
     /// A button of the classic panel screen around the options: index into
     /// its page's slots.
     Classic(usize),
@@ -698,6 +703,8 @@ impl SettingsMenu {
                         return SettingsResult::OpenWheelPages;
                     } else if matches!(setting.kind, ValueKind::IdentityPage) {
                         return SettingsResult::OpenIdentity;
+                    } else if matches!(setting.kind, ValueKind::ImportPage) {
+                        return SettingsResult::OpenImport;
                     } else if classic && self.open_dropdown(console, self.selected) {
                         // Classic+: a choice opens its list; nothing changes yet.
                     } else if !self.begin_numeric(console, self.selected) {
@@ -857,6 +864,7 @@ impl SettingsMenu {
                 ValueKind::HudPicker => hud.clone(),
                 ValueKind::WheelPages => wheel_pages_text(console),
                 ValueKind::IdentityPage => IDENTITY_TEXT.to_owned(),
+                ValueKind::ImportPage => IMPORT_TEXT.to_owned(),
                 ValueKind::Quality => crate::graphics_quality::shown(console).to_owned(),
                 ValueKind::Bool if setting.cvar == crate::graphics_quality::ULTRA_LOW_ROW => {
                     if crate::graphics_quality::ultra_low(console) {
@@ -980,6 +988,7 @@ fn float_text(value: f64) -> String {
 
 /// What the "SJK identity key" row shows: never the key itself.
 const IDENTITY_TEXT: &str = "Hidden: open to see";
+const IMPORT_TEXT: &str = "Choose a .cfg";
 
 /// What the "Quick wheel pages" row shows: how many pages, and whether they
 /// are the defaults.
@@ -1085,6 +1094,7 @@ mod tests {
                     | ValueKind::HudPicker
                     | ValueKind::WheelPages
                     | ValueKind::IdentityPage
+                    | ValueKind::ImportPage
                     | ValueKind::Quality
             ) {
                 continue;

@@ -1212,12 +1212,16 @@ Import page over whatever is on show (a picture file, PNG, JPEG or TGA, opens th
 Profile page's picture panel instead, as does any other file dropped while that page
 shows: [Identity](#identity))
 ([config_import.rs](../crates/sjk-viewer/src/config_import.rs),
-[config_import_panel.rs](../crates/sjk-viewer/src/config_import_panel.rs)); the
-First setup screen says so. `firstsetup import <path>` does the same from the
-console (a path's words may be left unquoted, or quoted as Explorer's Copy as path
-gives them: the path is taken as typed, without the console's backslash escapes,
-and one pair of surrounding quotes is dropped), and `firstsetup import` alone
-explains how. The file is read, never run: only `seta`/`set`/`sets`/`setu`, a
+[config_import_panel.rs](../crates/sjk-viewer/src/config_import_panel.rs)). First
+setup's "Import a config file" row (its `firstsetup import` row, near the end, in
+every menu style) opens the page with the system's file dialog over it, listing
+`.cfg` files (`rfd`, on a worker thread, as the profile picture's Browse); the
+page's Browse (B, or its footer button) opens the dialog again, and the file chosen
+is read as a dropped one. The screen's text says so. `firstsetup import <path>` does
+the same from the console (a path's words may be left unquoted, or quoted as
+Explorer's Copy as path gives them: the path is taken as typed, without the
+console's backslash escapes, and one pair of surrounding quotes is dropped), and
+`firstsetup import` alone opens the page without a file. The file is read, never run: only `seta`/`set`/`sets`/`setu`, a
 bare `name`, `model` or `cg_fov`, `bind`, `unbind` and `unbindall` count, `//`
 comments are skipped, and a file that is not UTF-8 is read as Latin-1, as the
 legacy game wrote names. Files over 1 MB, other extensions, and configs holding

@@ -99,7 +99,7 @@ impl SettingsMenu {
             &mut self.ui,
             TextFamily::Body,
             format_args!(
-                "Coming from another client? Drop its .cfg file on the window to bring your name, model, FOV and keys."
+                "Coming from another client? Import a config file, near the end, or drop its .cfg on the window."
             ),
             frame.rect(TEXT_X, CARD[1] + 116.0, TEXT_WIDTH, 24.0),
             15.0 * s,

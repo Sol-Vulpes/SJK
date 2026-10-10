@@ -375,7 +375,7 @@ impl SettingsMenu {
                 );
             }
             // It opens a page: no list drops from it.
-            ValueKind::IdentityPage => kit::field(
+            ValueKind::IdentityPage | ValueKind::ImportPage => kit::field(
                 &mut self.ui,
                 frame,
                 field,
@@ -780,6 +780,7 @@ impl SettingsMenu {
                     ValueKind::HudPicker => (&["Enter"][..], "pictures"),
                     ValueKind::WheelPages => (&["Enter"][..], "edit"),
                     ValueKind::IdentityPage => (&["Enter"][..], "open"),
+                    ValueKind::ImportPage => (&["Enter"][..], "choose"),
                     ValueKind::Text => (&["Enter"][..], "type"),
                     _ => (&["Left", "Right"][..], "change"),
                 });

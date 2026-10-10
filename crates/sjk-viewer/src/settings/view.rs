@@ -35,7 +35,7 @@ impl SettingsMenu {
         let (title, note) = match self.section {
             Section::General if self.tab == QUICK_TAB => (
                 "SJK   /   FIRST SETUP",
-                "The settings worth a look first. Drop another client's .cfg here to import it.",
+                "The settings worth a look first. Import another client's .cfg below, or drop it here.",
             ),
             Section::General => (
                 "SJK   /   SETTINGS",
@@ -152,6 +152,7 @@ fn row_view(
         | ValueKind::HudPicker
         | ValueKind::WheelPages
         | ValueKind::IdentityPage
+        | ValueKind::ImportPage
         | ValueKind::Quality => ui.form_cycler(value_zone, value, None, value_color, s),
         ValueKind::Text => {
             ui.form_value(value, value_zone, value_color, s);

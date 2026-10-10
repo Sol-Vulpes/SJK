@@ -1,8 +1,8 @@
 //! Console side of the Import page (see `config_import_panel.rs`): opening it on a
-//! dropped file, copying the ticked parts into the profile, and routing keys and
+//! dropped or browsed file, copying the ticked parts into the profile, and routing keys and
 //! pointer events to it while it is open, as for the Update page.
 
-use super::config_import_panel::PanelAction;
+use super::config_import_panel::{Browsed, PanelAction};
 use super::*;
 use crate::config_import::{self, COLOR_CVARS, Found, Item};
 use sjk_ui::InputEvent;
@@ -37,6 +37,23 @@ impl ViewerConsole {
         }
         self.config_import
             .open(owns_console, file, path.map(config_import::read));
+    }
+
+    /// Show the Import page and the file dialog over it at once: First setup's
+    /// "Import a config file" row.
+    pub(crate) fn browse_config_import(&mut self) {
+        self.open_config_import(None);
+        self.config_import.browse();
+    }
+
+    /// Read the file the dialog gave, as a dropped one; called every frame the page
+    /// shows.
+    fn sync_config_browse(&mut self) {
+        match self.config_import.take_browsed() {
+            Some(Browsed::File(path)) => self.open_config_import(Some(&path)),
+            Some(Browsed::Nothing(Some(reason))) => self.config_import.fail(reason),
+            Some(Browsed::Nothing(None)) | None => {}
+        }
     }
 
     fn close_config_import(&mut self) {
@@ -176,6 +193,7 @@ impl ViewerConsole {
         if !(self.open && self.config_import.is_open()) {
             return false;
         }
+        self.sync_config_browse();
         self.config_import.append(vertices, font, viewport);
         true
     }
