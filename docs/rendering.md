@@ -1089,7 +1089,11 @@ table of who wears which (filled from the hub's looks; ids and names are
 [unlockables.rs](../crates/sjk-viewer/src/unlockables.rs)'s); `BladeColor::Skin` carries
 the skin's number, trail and light wherever a blade colour is chosen (in the hand,
 thrown, first person, the menu stage). A skin whose pack is not loaded is the player's
-stock blade.
+stock blade. A chroma ([unlockables.md](unlockables.md#chromas)) takes its saber's
+colour: `SkinColor::worn_with` sets the turn from the skin's hue to the colour's, the
+instance carries it (`chroma`, location 8), and `saber.wgsl` turns the skin's finished
+glow and core round the grey axis by it (`skin_turn_hue`); the light and trail turn on
+the CPU (`SkinColor::light_color`, `trail_color`).
 
 - **Material.** Each loaded skin is the saber material of its number after the six
   retail pairs and the neutral RGB pair (`saber_rgb.rs` `SKIN_MATERIAL` = 7, sixteen

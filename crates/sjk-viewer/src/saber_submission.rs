@@ -62,16 +62,13 @@ pub(crate) fn submit(
             weapon_rotation.to_array(),
             [1.0; 3],
         ));
-        let color = skin.map_or_else(
-            || {
-                BladeColor::from_rgb(if saber_index == 0 {
-                    equipment.color
-                } else {
-                    equipment.secondary_color
-                })
-            },
-            BladeColor::Skin,
-        );
+        let stock = BladeColor::from_rgb(if saber_index == 0 {
+            equipment.color
+        } else {
+            equipment.secondary_color
+        });
+        // A chroma skin takes this saber's colour.
+        let color = skin.map_or(stock, |skin| BladeColor::Skin(skin.worn_with(stock)));
         let mut light_blades = [None; 8];
         for blade_index in 0..usize::from(hilt.num_blades) {
             let Some(hilt_blade) = hilt.blade(blade_index) else {

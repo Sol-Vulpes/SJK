@@ -26,6 +26,10 @@ pub(crate) struct Unlockable {
     pub(crate) id: &'static str,
     pub(crate) name: &'static str,
     pub(crate) kind: Kind,
+    /// A chroma: a blade skin that takes the wearer's saber colour (`color1` for the
+    /// first saber, `color2` for the second), its colours turned round to that hue
+    /// ([`crate::saber_skins::Chroma`]). The others keep the colours their file gives.
+    pub(crate) chroma: bool,
     /// What it is, in a line.
     pub(crate) description: &'static str,
     /// How a player gets it, in a line.
@@ -45,6 +49,7 @@ pub(crate) const ALL: [Unlockable; 14] = [
         id: "saber_sun",
         name: "Sun blade",
         kind: Kind::BladeSkin,
+        chroma: false,
         description: "A white-gold core in an orange corona, flares running along it, and its own sounds.",
         how_to_get: "Given by the SJK team.",
     },
@@ -52,6 +57,7 @@ pub(crate) const ALL: [Unlockable; 14] = [
         id: "saber_storm",
         name: "Storm blade",
         kind: Kind::BladeSkin,
+        chroma: true,
         description: "A white-blue core crackling with lightning that leaps off it, sparks at its tip.",
         how_to_get: "Given by the SJK team.",
     },
@@ -59,6 +65,7 @@ pub(crate) const ALL: [Unlockable; 14] = [
         id: "saber_void",
         name: "Void blade",
         kind: Kind::BladeSkin,
+        chroma: false,
         description: "A dark core in a violet rim, star specks drifting into it, and a deep hum.",
         how_to_get: "Given by the SJK team.",
     },
@@ -66,6 +73,7 @@ pub(crate) const ALL: [Unlockable; 14] = [
         id: "saber_frost",
         name: "Frost blade",
         kind: Kind::BladeSkin,
+        chroma: false,
         description: "A pale ice core with a pointed tip, frost shards trailing it, and a chiming hum.",
         how_to_get: "Given by the SJK team.",
     },
@@ -73,6 +81,7 @@ pub(crate) const ALL: [Unlockable; 14] = [
         id: "saber_prism",
         name: "Prism blade",
         kind: Kind::BladeSkin,
+        chroma: false,
         description: "A white core in a corona whose colours run through the rainbow, slowly turning.",
         how_to_get: "Given by the SJK team.",
     },
@@ -80,6 +89,7 @@ pub(crate) const ALL: [Unlockable; 14] = [
         id: "saber_unstable",
         name: "Unstable blade",
         kind: Kind::BladeSkin,
+        chroma: true,
         description: "A raw red core that crackles and sputters, its edge ragged and its length faltering.",
         how_to_get: "Given by the SJK team.",
     },
@@ -87,6 +97,7 @@ pub(crate) const ALL: [Unlockable; 14] = [
         id: "saber_molten",
         name: "Molten blade",
         kind: Kind::BladeSkin,
+        chroma: false,
         description: "A dark rock core split by glowing lava cracks, embers dripping off it and falling.",
         how_to_get: "Given by the SJK team.",
     },
@@ -94,6 +105,7 @@ pub(crate) const ALL: [Unlockable; 14] = [
         id: "saber_spectral",
         name: "Spectral blade",
         kind: Kind::BladeSkin,
+        chroma: true,
         description: "A pale, see-through blade that leaves fading afterimages of itself when it swings.",
         how_to_get: "Given by the SJK team.",
     },
@@ -101,6 +113,7 @@ pub(crate) const ALL: [Unlockable; 14] = [
         id: "saber_glitch",
         name: "Glitch blade",
         kind: Kind::BladeSkin,
+        chroma: true,
         description: "A blade whose colours split apart, blocks of it jumping sideways now and then.",
         how_to_get: "Comes with the Bug Hunter medal, for as long as you hold it.",
     },
@@ -108,6 +121,7 @@ pub(crate) const ALL: [Unlockable; 14] = [
         id: "saber_hologram",
         name: "Hologram blade",
         kind: Kind::BladeSkin,
+        chroma: true,
         description: "A wireframe projection with scan lines running along it, jittering like a training hologram.",
         how_to_get: "Comes with the Early Tester medal, for as long as you hold it.",
     },
@@ -115,6 +129,7 @@ pub(crate) const ALL: [Unlockable; 14] = [
         id: "saber_runic",
         name: "Runic blade",
         kind: Kind::BladeSkin,
+        chroma: true,
         description: "A gold core with glyphs scrolling along it that spell its wearer's name.",
         how_to_get: "Comes with the Early Contributor medal, for as long as you hold it.",
     },
@@ -122,6 +137,7 @@ pub(crate) const ALL: [Unlockable; 14] = [
         id: "saber_chameleon",
         name: "Chameleon blade",
         kind: Kind::BladeSkin,
+        chroma: false,
         description: "A blade that takes the colour of the light where it is, changing from map to map.",
         how_to_get: "Given by the SJK team.",
     },
@@ -129,6 +145,7 @@ pub(crate) const ALL: [Unlockable; 14] = [
         id: "saber_banner",
         name: "Banner blade",
         kind: Kind::BladeSkin,
+        chroma: false,
         description: "Your team's colour in team games, rippling like a flag; silver outside them.",
         how_to_get: "Given by the SJK team.",
     },
@@ -136,6 +153,7 @@ pub(crate) const ALL: [Unlockable; 14] = [
         id: "saber_heartbeat",
         name: "Heartbeat blade",
         kind: Kind::BladeSkin,
+        chroma: true,
         description: "A warm, deep blade that pulses with a slow double heartbeat, its light beating with it.",
         how_to_get: "Given by the SJK team.",
     },
@@ -151,6 +169,11 @@ pub(crate) fn find(id: &str) -> Option<&'static Unlockable> {
 /// The blade skin `id` names, if this client knows one by it.
 pub(crate) fn blade_skin(id: &str) -> Option<&'static Unlockable> {
     find(id).filter(|unlockable| unlockable.is_blade_skin())
+}
+
+/// Whether the blade skin `id` names is a chroma ([`Unlockable::chroma`]).
+pub(crate) fn is_chroma(id: &str) -> bool {
+    blade_skin(id).is_some_and(|unlockable| unlockable.chroma)
 }
 
 /// The blade skins, in catalogue order.
@@ -228,6 +251,29 @@ impl<'a> Holdings<'a> {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn the_chromas_are_the_skins_drawn_in_any_colour() {
+        let chromas: Vec<_> = super::blade_skins()
+            .filter(|unlockable| unlockable.chroma)
+            .map(|unlockable| unlockable.id)
+            .collect();
+        assert_eq!(
+            chromas,
+            [
+                "saber_storm",
+                "saber_unstable",
+                "saber_spectral",
+                "saber_glitch",
+                "saber_hologram",
+                "saber_runic",
+                "saber_heartbeat",
+            ]
+        );
+        assert!(super::is_chroma("SABER_GLITCH"));
+        assert!(!super::is_chroma("saber_sun"));
+        assert!(!super::is_chroma("saber_nothing"));
+    }
+
     use super::*;
 
     #[test]

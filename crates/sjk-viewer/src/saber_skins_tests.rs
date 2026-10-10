@@ -646,3 +646,92 @@ fn following_another_player_draws_their_look_not_the_own_skin() {
         "the local player's slot"
     );
 }
+
+/// The test blade skin loaded as a chroma (the Storm's id, [`SAMPLE`]'s values).
+fn chroma_sample() -> SkinColor {
+    let def = crate::blade_skin_file::parse("saber_storm", SAMPLE).unwrap();
+    let skin = LoadedSkin::new("saber_storm", def, &VirtualFileSystem::new()).unwrap();
+    LoadedSkins::of(vec![skin], 1)
+        .color_of("saber_storm")
+        .unwrap()
+}
+
+fn close(a: f32, b: f32) -> bool {
+    let d = (a - b).rem_euclid(1.0);
+    // Turning clips channels that would go negative, which moves a hue a little.
+    d.min(1.0 - d) < 0.02
+}
+
+#[test]
+fn hues_run_round_the_grey_axis_as_turn_hue_turns() {
+    assert!(close(hue_of([1.0, 0.0, 0.0]).unwrap(), 0.0));
+    assert!(close(hue_of([0.0, 1.0, 0.0]).unwrap(), 1.0 / 3.0));
+    assert!(close(hue_of([0.0, 0.0, 1.0]).unwrap(), 2.0 / 3.0));
+    // Grey, white, black and nearly grey colours have none.
+    assert_eq!(hue_of([0.5, 0.5, 0.5]), None);
+    assert_eq!(hue_of([1.0, 1.0, 1.0]), None);
+    assert_eq!(hue_of([0.0, 0.0, 0.0]), None);
+    assert_eq!(hue_of([1.0, 0.95, 0.9]), None);
+    // Turning a colour by the gap between two hues lands on the second.
+    let from = [0.9, 0.3, 0.1];
+    for target in [[0.1, 0.4, 1.0], [0.2, 1.0, 0.3], [1.0, 0.0, 0.8]] {
+        let turn = hue_of(target).unwrap() - hue_of(from).unwrap();
+        let turned = turn_hue(from, turn);
+        assert!(close(hue_of(turned).unwrap(), hue_of(target).unwrap()));
+        // Brightness (the grey axis component) is kept.
+        let sum = |c: [f32; 3]| c[0] + c[1] + c[2];
+        assert!((sum(turned) - sum(from)).abs() < 0.05);
+    }
+}
+
+#[test]
+fn only_chromas_take_the_wearers_colour() {
+    let sun = sample_color();
+    assert_eq!(sun.chroma, Chroma::default());
+    assert_eq!(sun.worn_with(BladeColor::Retail(Color::Green)), sun);
+    let storm = chroma_sample();
+    let base = storm.chroma.base.expect("the Storm is a chroma");
+    assert_eq!(storm.chroma.turn, 0.0);
+    for color in Color::ALL {
+        let worn = storm.worn_with(BladeColor::Retail(color));
+        let rgb = color.blade_rgb().map(|c| f32::from(c) / 255.0);
+        assert!(
+            close(base + worn.chroma.turn, hue_of(rgb).unwrap()),
+            "{color:?}"
+        );
+        // Its light and trail turn with it.
+        if let Some(light) = hue_of(storm.light) {
+            let turned = hue_of(worn.light_color()).unwrap();
+            assert!(close(turned, light + worn.chroma.turn), "{color:?}");
+        }
+        assert_eq!(worn.trail_color(), turn_hue(storm.trail, worn.chroma.turn));
+        assert_eq!(BladeColor::Skin(worn).trail_rgb(), worn.trail_color());
+        // Wearing it again changes nothing.
+        assert_eq!(worn.worn_with(BladeColor::Retail(color)), worn);
+    }
+    // A custom colour too; white or grey leaves the file's colours.
+    let custom = storm.worn_with(BladeColor::Rgb([255, 0, 200]));
+    assert!(close(
+        base + custom.chroma.turn,
+        hue_of([1.0, 0.0, 200.0 / 255.0]).unwrap()
+    ));
+    let white = storm.worn_with(BladeColor::Rgb([255, 255, 255]));
+    assert_eq!(white.chroma.turn, 0.0);
+    assert_eq!(white.light_color(), storm.light);
+}
+
+#[test]
+fn each_saber_of_a_pair_takes_its_own_colour() {
+    let storm = chroma_sample();
+    let first = storm.worn_with(BladeColor::Retail(Color::Red));
+    let second = storm.worn_with(BladeColor::Retail(Color::Blue));
+    assert!(!close(first.chroma.turn, second.chroma.turn));
+    // The instances carry the turn the shader applies.
+    let [glow, core] = Instance::pair(blade(), BladeColor::Skin(second));
+    for instance in [glow, core] {
+        assert_eq!(
+            bytemuck::bytes_of(&instance)[76..80],
+            second.chroma.turn.to_ne_bytes()
+        );
+    }
+}

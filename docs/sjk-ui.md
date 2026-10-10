@@ -262,7 +262,9 @@ on the 16:9 frame, dark behind the form on the left and clear over the model.
   Escape, and the next Escape leaves. Under the lists the Blade row (10/10/2026,
   Sol's request): the stock blade in the first blade's colour, then every blade
   skin the player's hub profile lists, each the Collection's swatch shrunk to 79
-  by 44 (moving as there; [unlockables.md](unlockables.md#saber-tabs-blade-choice)),
+  by 44 (moving as there; [unlockables.md](unlockables.md#saber-tabs-blade-choice);
+  a chroma in the first blade's colour, with its colour wheel in the swatch's top
+  right corner, [unlockables.md](unlockables.md#chromas)),
   the one worn ringed gold, and under the row's name the name of the one under
   the pointer or worn; six show at a time (10/10/2026), scrolled so the worn one
   stands third where it can, with a gold chevron at a side that has more; with no skin owned, or the identity off, only the stock

@@ -20,6 +20,37 @@ const ROW_HEIGHT: f32 = 96.0;
 const SWATCH: [f32; 2] = [380.0, 84.0];
 const RACK_WIDTH: f32 = 860.0;
 
+/// The chroma mark's side beside a rack row's name and the detail's kind line, and the
+/// room it keeps from the words after it (frame pixels).
+const MARK: f32 = 24.0;
+const MARK_GAP: f32 = 10.0;
+/// The detail's state pill: its height, its least width and its gap from the name.
+const TAG_HEIGHT: f32 = 26.0;
+const TAG_MIN_WIDTH: f32 = 80.0;
+const TAG_GAP: f32 = 18.0;
+
+/// Where a rack row's words go (frame pixels, `[x, y, width, height]`), the row's top
+/// at `y`: the chroma mark (a chroma only) and the name on the first line, the name
+/// ending short of the row's right edge, and the state under them.
+fn rack_words(y: f32, chroma: bool) -> ([f32; 4], [f32; 4], [f32; 4]) {
+    let x = LEFT_X + SWATCH[0] + 34.0;
+    let right = LEFT_X - 12.0 + RACK_WIDTH - 16.0;
+    let mark = [x, y + 23.0, MARK, MARK];
+    let name_x = if chroma { x + MARK + MARK_GAP } else { x };
+    let name = [name_x, y + 18.0, right - name_x, 34.0];
+    let status = [x, y + 56.0, right - x, 22.0];
+    (mark, name, status)
+}
+
+/// The detail's name and state pill on the line at `y` of the column from `x`, `width`
+/// wide: the pill at the column's right end, the name ellipsised short of it.
+fn title_rects(x: f32, y: f32, width: f32, tag_width: f32) -> ([f32; 4], [f32; 4]) {
+    let tag_width = tag_width.max(TAG_MIN_WIDTH);
+    let tag = [x + width - tag_width, y + 18.0, tag_width, TAG_HEIGHT];
+    let name = [x, y, (tag[0] - TAG_GAP - x).max(0.0), 62.0];
+    (name, tag)
+}
+
 /// The first row the rack shows, from the one it showed first: moved just enough that
 /// the chosen row is in view, never past either end.
 fn rack_window(first: usize, chosen: usize, rows: usize) -> usize {
@@ -137,6 +168,7 @@ impl Panel {
                     Some(skin) if row.owned && unlocks => Some(if row.worn { "" } else { skin.id }),
                     Some(_) => None,
                 },
+                worn: row.worn,
             };
             if (first..first + RACK_SHOWN).contains(&index) {
                 self.rack_row(frame, *row, index, y, inputs, seconds);
@@ -259,22 +291,35 @@ impl Panel {
         match row.skin {
             None => swatch::small_stock(self.ui.draw_list_mut(), frame, rect, inputs.stock),
             Some(skin) => {
+                let look = self.skins.get(skin.id);
                 let _ = swatch::small_swatch(
                     self.ui.draw_list_mut(),
                     frame,
                     rect,
-                    self.skins.get(skin.id),
+                    look,
                     row.owned,
                     seconds,
+                    swatch::chroma_turn(look, swatch::rgb_bytes(inputs.stock)),
                 );
             }
         }
-        let tx = LEFT_X + SWATCH[0] + 34.0;
+        let chroma = row.skin.is_some_and(|skin| skin.chroma);
+        let (mark, name, status) = rack_words(y, chroma);
+        if chroma {
+            swatch::chroma_mark(
+                self.ui.draw_list_mut(),
+                frame,
+                mark[0],
+                mark[1],
+                mark[2],
+                if row.owned { 1.0 } else { 0.55 },
+            );
+        }
         text(
             &mut self.ui,
             TextFamily::Display,
             format_args!("{}", row.name()),
-            frame.rect(tx, y + 18.0, 420.0, 34.0),
+            frame.rect(name[0], name[1], name[2], name[3]),
             28.0 * s,
             match (chosen, row.owned) {
                 (true, _) => color::GOLD_BRIGHT,
@@ -288,7 +333,7 @@ impl Panel {
             &mut self.ui,
             TextFamily::Body,
             format_args!("{}", row.status()),
-            frame.rect(tx, y + 56.0, 420.0, 22.0),
+            frame.rect(status[0], status[1], status[2], status[3]),
             15.0 * s,
             if row.worn || (row.owned && row.skin.is_some()) {
                 color::GOLD
@@ -314,13 +359,15 @@ impl Panel {
             match row.skin {
                 None => swatch::small_stock(self.ui.draw_list_mut(), frame, rect, inputs.stock),
                 Some(skin) => {
+                    let look = self.skins.get(skin.id);
                     let _ = swatch::small_swatch(
                         self.ui.draw_list_mut(),
                         frame,
                         rect,
-                        self.skins.get(skin.id),
+                        look,
                         row.owned,
                         seconds,
+                        swatch::chroma_turn(look, swatch::rgb_bytes(inputs.stock)),
                     );
                 }
             }
@@ -349,18 +396,26 @@ impl Panel {
             );
         }
         let mut y = 618.0;
+        // A chroma says so first, with its mark: it takes the player's saber colour.
+        let chroma = row.skin.is_some_and(|skin| skin.chroma);
+        let kind_x = if chroma {
+            swatch::chroma_mark(self.ui.draw_list_mut(), frame, x, y - 1.0, 22.0, 1.0);
+            x + 22.0 + MARK_GAP
+        } else {
+            x
+        };
         text(
             &mut self.ui,
             TextFamily::Body,
             format_args!(
                 "{}",
-                if row.skin.is_some() {
-                    "Saber shader"
-                } else {
-                    "Your saber"
+                match (row.skin.is_some(), chroma) {
+                    (true, true) => "Chroma saber shader: takes your saber colour",
+                    (true, false) => "Saber shader",
+                    (false, _) => "Your saber",
                 }
             ),
-            frame.rect(x, y, width, 22.0),
+            frame.rect(kind_x, y, x + width - kind_x, 22.0),
             16.0 * s,
             color::HOLO,
             FontWeight::Semibold,
@@ -369,44 +424,50 @@ impl Panel {
         y += 26.0;
         let name = row.name();
         let lit = row.owned && row.skin.is_some();
-        text(
-            &mut self.ui,
-            TextFamily::Display,
-            format_args!("{name}"),
-            frame.rect(x, y, width, 62.0),
-            56.0 * s,
-            if lit { color::GOLD_BRIGHT } else { color::TEXT },
-            FontWeight::Semibold,
-            TextAlign::Start,
-        );
         let tag = match (row.skin, row.worn, row.owned) {
             (None, _, _) => None,
             (Some(_), true, _) => Some("Worn"),
             (Some(_), false, true) => Some("Yours"),
             (Some(_), false, false) => Some("Locked"),
         };
-        if let Some(tag) = tag {
-            let tag_x = x + crate::text::display_width(name, 56.0) + 18.0;
-            let tag_width = crate::text::display_width(tag, 15.0) + 26.0;
-            if tag_x + tag_width <= x + width {
-                let rect = frame.rect(tag_x, y + 18.0, tag_width, 26.0);
-                let _ = self.ui.draw_list_mut().push(DrawCommand::Border {
-                    rect,
-                    radius: 13.0 * s,
-                    width: 1.2 * s,
-                    color: if lit { color::GOLD } else { color::QUIET },
-                });
-                text(
-                    &mut self.ui,
-                    TextFamily::Display,
-                    format_args!("{tag}"),
-                    frame.rect(tag_x, y + 20.0, tag_width, 22.0),
-                    15.0 * s,
-                    if lit { color::GOLD } else { color::QUIET },
-                    FontWeight::Semibold,
-                    TextAlign::Center,
-                );
+        // The name never runs under the state: it ends short of the pill, ellipsised,
+        // whatever face and size the text is drawn in.
+        let (name_rect, tag_rect) = match tag {
+            Some(tag) => {
+                let (name, pill) =
+                    title_rects(x, y, width, crate::text::display_width(tag, 15.0) + 26.0);
+                (name, Some((tag, pill)))
             }
+            None => ([x, y, width, 62.0], None),
+        };
+        text(
+            &mut self.ui,
+            TextFamily::Display,
+            format_args!("{name}"),
+            frame.rect(name_rect[0], name_rect[1], name_rect[2], name_rect[3]),
+            56.0 * s,
+            if lit { color::GOLD_BRIGHT } else { color::TEXT },
+            FontWeight::Semibold,
+            TextAlign::Start,
+        );
+        if let Some((tag, [tag_x, tag_y, tag_width, tag_height])) = tag_rect {
+            let rect = frame.rect(tag_x, tag_y, tag_width, tag_height);
+            let _ = self.ui.draw_list_mut().push(DrawCommand::Border {
+                rect,
+                radius: 13.0 * s,
+                width: 1.2 * s,
+                color: if lit { color::GOLD } else { color::QUIET },
+            });
+            text(
+                &mut self.ui,
+                TextFamily::Display,
+                format_args!("{tag}"),
+                frame.rect(tag_x, tag_y + 2.0, tag_width, 22.0),
+                15.0 * s,
+                if lit { color::GOLD } else { color::QUIET },
+                FontWeight::Semibold,
+                TextAlign::Center,
+            );
         }
         y += 72.0;
         let description = row.skin.map_or(
@@ -510,6 +571,63 @@ mod tests {
         };
         assert!(owned_line(&dated).starts_with("Yours since "));
         assert!(owned_line(&dated).ends_with(", with your Early Tester medal"));
+    }
+
+    /// Whether two window rectangles share any area.
+    fn overlap(a: sjk_ui::Rect, b: sjk_ui::Rect) -> bool {
+        a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height
+    }
+
+    #[test]
+    fn names_never_run_under_the_state_or_the_chroma_mark() {
+        let longest = unlockables::blade_skins()
+            .map(|skin| skin.name)
+            .max_by(|a, b| {
+                crate::text::display_width(a, 56.0).total_cmp(&crate::text::display_width(b, 56.0))
+            })
+            .unwrap();
+        for viewport in [
+            [1920.0, 1080.0],
+            [3840.0, 2160.0],
+            [1440.0, 1080.0],
+            [2560.0, 1080.0],
+        ] {
+            let frame = Frame::new(viewport);
+            let window = |r: [f32; 4]| frame.rect(r[0], r[1], r[2], r[3]);
+            for chroma in [false, true] {
+                let (mark, name, status) = rack_words(RACK_TOP, chroma);
+                let (mark, name, status) = (window(mark), window(name), window(status));
+                assert!(!overlap(name, status), "{viewport:?}");
+                if chroma {
+                    assert!(
+                        !overlap(mark, name) && !overlap(mark, status),
+                        "{viewport:?}"
+                    );
+                }
+                // Inside the rack, with room for the longest name at its size.
+                let rack_right = frame.rect(LEFT_X - 12.0 + RACK_WIDTH, 0.0, 0.0, 0.0).x;
+                assert!(name.x + name.width <= rack_right);
+                assert!(name.width >= crate::text::display_width(longest, 28.0) * frame.s);
+            }
+            for tag in ["Worn", "Yours", "Locked"] {
+                let (name, pill) = title_rects(
+                    STAGE_TEXT_X,
+                    644.0,
+                    STAGE_TEXT_WIDTH,
+                    crate::text::display_width(tag, 15.0) + 26.0,
+                );
+                let (name, pill) = (window(name), window(pill));
+                assert!(!overlap(name, pill), "{viewport:?} {tag}");
+                assert!(
+                    pill.x + pill.width
+                        <= window([STAGE_TEXT_X + STAGE_TEXT_WIDTH, 0.0, 0.0, 0.0]).x + 0.01
+                );
+                assert!(
+                    name.width > 200.0 * frame.s,
+                    "{viewport:?}: room for a name"
+                );
+            }
+        }
     }
 
     #[test]

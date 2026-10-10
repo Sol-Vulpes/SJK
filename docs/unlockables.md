@@ -347,6 +347,42 @@ from the looks.
   built-in Sun. Not verified: the sounds by ear, a live match, another player's skin
   from a real hub, a pack downloaded from the deployed hub.
 
+### Chromas
+
+Built 10/10/2026 (Sol's request: mark the shaders that can be coloured). A **chroma**
+is a blade skin that takes its wearer's saber colour: `color1` for the first saber,
+`color2` for the second, a retail colour or a custom RGB, as the stock blade would be
+drawn. The flag is the client catalogue's (`Unlockable::chroma` in
+[unlockables.rs](../crates/sjk-viewer/src/unlockables.rs)); the hub and the packs are
+unchanged. Chromas: Storm, Unstable, Spectral, Glitch, Hologram, Runic and Heartbeat
+(my proposal to Sol). Sun, Frost, Void and Molten keep their themed colours; Prism,
+Chameleon and Banner are about their colour.
+
+- **How it is drawn** ([saber_skins.rs](../crates/sjk-viewer/src/saber_skins.rs)
+  `Chroma`, `SkinColor::worn_with`): the skin's own hue is its corona rim's
+  (`hue_of`: the angle round the grey axis from red, in the sense `turn_hue` turns;
+  the light's colour if the rim is grey). Worn on a saber, every colour the skin draws
+  (glow, core, arcs, motes, veins, scan lines, glyphs, embers) is turned round the grey
+  axis by the gap from that hue to the saber colour's, keeping brightness and
+  saturation; the dynamic light and the blur trail turn with it. A grey or white
+  colour (under 20 % saturation) has no hue to take: the skin is drawn as its file
+  says. The turn rides on every blade instance (`Instance::chroma`, attribute 8), so
+  `saber.wgsl` turns the finished glow and core once; other players' blades take their
+  colours from their `CS_PLAYERS` string, so everyone sees a chroma in its wearer's
+  colour. A pale skin (the Storm, the Hologram) stays pale, only tinted.
+- **The mark**: a small colour wheel (twelve hue segments round a white dot,
+  `swatch::chroma_mark`) beside a chroma's name on the Collection's rack and before
+  "Chroma saber shader: takes your saber colour" beside the model, in the corner of its
+  swatch on the Saber tab's Blade row, and between its swatch and name on the player
+  card. The swatches draw a chroma in the player's own colour (the card: in the
+  player's first saber colour when it is a retail one).
+- Verified: unit tests (hues and turns, grey and white kept, every retail colour and a
+  custom one, each saber of a pair its own turn, the instance carrying it, the chroma
+  list pinned, the mark inside its square, a turned swatch, the card with the wheel
+  inside the screen at five sizes) and the world shot `duel6_chroma_blades` (every
+  chroma in the six retail colours and white) with the hub's pack; not tried in the
+  game.
+
 ### Packs
 
 Built ([sjk_packs.rs](../crates/sjk-viewer/src/sjk_packs.rs); the download is the
@@ -481,11 +517,17 @@ Profile page's See the collection) open it on its own:
   colours, flicker and flares, moving: a breathing corona, flame loops and granules, a
   flare running hilt to tip, and the file's lightning arcs, motes and turning hue when
   it has them; grey and still under a padlock when locked; owned but with its pack not
-  loaded yet, a neutral still blade), its name and its state (Worn, Yours, Locked);
+  loaded yet, a neutral still blade; a chroma in the player's colour, with its colour
+  wheel before its name), its name and its state (Worn, Yours, Locked) under it; a
+  click chooses a row, a double click (within 0.4 s) wears an owned one as Equip does
+  (a locked one stays a preview, the worn one stays on);
 - the player's model holding the chosen blade, on the menu map's stage or in the
   page's live preview over a match: a locked one too, as a preview this screen alone
   draws (`PreviewSkin`; nothing is set or sent);
-- beside the model what the chosen one is, owned (`Yours since dd/mm/yyyy, from the
+- beside the model what the chosen one is: its kind, its name and, at the column's
+  right end, its state pill (10/10/2026: the name ends short of the pill, ellipsised,
+  instead of the pill following a measured name, which overlapped it when the drawn
+  face was wider than the measure), owned (`Yours since dd/mm/yyyy, from the
   SJK team` and the team's note, or `..., with your Bug Hunter medal` when a medal
   brings it) or how to get it, and Equip, Unequip or Wear the
   stock blade, which set `cg_saberSkin`;
