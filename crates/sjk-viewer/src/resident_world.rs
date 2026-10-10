@@ -123,6 +123,22 @@ impl GpuState {
         }
     }
 
+    /// Park the session as for a map change to the same map, for a graphics reload
+    /// ([`crate::graphics_reload`]): the map loads again from the session's gamestate
+    /// after the next snapshot, no prepared world stands in for it, and it counts as no
+    /// map change.
+    pub(crate) fn retain_world_for_reload(&mut self) {
+        let sequence = self
+            .live_session
+            .as_ref()
+            .map(|session| session.latest_snapshot().message_sequence);
+        self.retain_world_for_connection();
+        self.resident.reuse_pending = false;
+        self.resident.map_change_pending = false;
+        self.resident.after_sequence = sequence;
+        self.pending_map_reload = true;
+    }
+
     pub(crate) fn start_exploring(&mut self) {
         if self.resident.exploring() {
             return;

@@ -285,14 +285,14 @@ first drawn) and keys only a later remap uses. Not measured on a GPU; compare th
 
 | Cvar | Behavior |
 | --- | --- |
-| `r_dayNight` | Map-relative sun/sky atmosphere; default 1, restart required |
+| `r_dayNight` | Map-relative sun/sky atmosphere; default 1, applies after a [graphics reload](#graphics-reload) |
 | `r_liveLighting` | Lighting tier; default 0. Tier 1 retains world shadow casters between frames; tier 0 also uses available baked indirect light. Applies at map load |
 | `r_dayHour` | Solar hour; default 12 (noon, SJK); updated live when day/night resources are installed |
 | `r_dayMinutes` | Minutes per simulated day; 0 holds the hour |
 | `r_indirectBoost` | Live sky/bounce illumination multiplier, 0–4; default 1. Does not amplify direct lights or add bounce iterations |
 | `r_ambientFill` | Live material-lighting floor in dark areas, 0–0.2; default 0.025. Fades as existing illumination increases |
 | `r_ambientFillOcclusion` | Fraction of ambient occlusion applied to the readability fill, 0–1; default 1 preserves the previous response. Real indirect lighting keeps full occlusion |
-| `r_sceneHdr` | Scene precision: 0 display format, 1 RGBA16F (default); restart required |
+| `r_sceneHdr` | Scene precision: 0 display format, 1 RGBA16F (default); applies after a graphics reload |
 | `r_hdrExposure` | Base exposure multiplier, 0.25–4; live. Eye adaptation adjusts around it; `r_sceneHdr 0` ignores it |
 | `r_autoExposure` | Eye adaptation, default 1 (on); 0 holds `r_hdrExposure`. Live; see [eye adaptation](#eye-adaptation) |
 | `r_autoExposureMin`, `r_autoExposureMax` | Adaptation range in EV around the base: -2–0 (default -0.5) and 0–2 (default 1). Live |
@@ -305,19 +305,19 @@ first drawn) and keys only a later remap uses. Not measured on a GPU; compare th
 | `r_weatherForce` | Weather on every map with sky instead of the map's: 0 (default) the map's, 1 drizzle, 2 rain, 3 storm, 4 snow; live |
 | `r_weatherFog` | Ground fog: 0 none, 1 the map's (default), 2 on every map with sky; live |
 | `r_clouds` | Volumetric clouds over open sky, 1 (default) or 0; live |
-| `r_normalMapping` | Normal maps on lightmapped world surfaces (rend2 convention); default 1 (rend2: 0), restart required |
-| `r_specularMapping` | Specular, roughness and metalness maps on the same surfaces; default 1 (rend2: 0), restart required |
-| `r_parallaxMapping` | Parallax from the height in `_nh`/`normalHeightMap` images; needs `r_normalMapping`; default 1 (at `r_parallaxStrength` 0.1; rend2: 0), restart required |
+| `r_normalMapping` | Normal maps on lightmapped world surfaces (rend2 convention); default 1 (rend2: 0), applies after a graphics reload |
+| `r_specularMapping` | Specular, roughness and metalness maps on the same surfaces; default 1 (rend2: 0), applies after a graphics reload |
+| `r_parallaxMapping` | Parallax from the height in `_nh`/`normalHeightMap` images; needs `r_normalMapping`; default 1 (at `r_parallaxStrength` 0.1; rend2: 0), applies after a graphics reload |
 | `r_parallaxStrength` | Depth of parallax, a multiplier on the stage's `parallaxDepth` (rend2's 0.05 without one), 0 (flat) to 1.575 in steps of 1/40; default 0.1 (Sol's choice: generated height is a guess from paint, and the full depth swam), live, archived; Settings slider 0–1 |
 | `r_parallaxNearDistance` | Units from a surface's plane inside which its parallax stops growing on screen as the camera closes in (see [Parallax](#parallax)), 0 (off) to 60 in steps of 4; default 24, live, archived, console only |
 | `r_materialMapsDebug` | Material-mapped surfaces only: 1 mapped normal as colour, 2 tint by maps found, 3 normal-map relief, 4 reflection probes alone, 5 without reflection probes, 6 emission maps alone, 7 parallax reach; default 0, live, not archived |
-| `r_emissiveMaps` | Emission maps (`<texture>_e`, SJK's) on lightmapped world surfaces; default 1, restart required. See [Emission maps](#emission-maps) |
+| `r_emissiveMaps` | Emission maps (`<texture>_e`, SJK's) on lightmapped world surfaces; default 1, applies after a graphics reload. See [Emission maps](#emission-maps) |
 | `r_emissionStrength` | Brightness of emission maps, 0 (off) to 7.97 in steps of 1/32; default 1, live, archived |
 | `r_emissiveGlow` | Dynamic-glow halo around emitting texels (with `r_DynamicGlow 1`); default 1, live, archived |
 | `r_emissiveLights` | Emission-mapped surfaces as lamps of real-time lighting, a power multiplier 0 (off) to 4; default 1, applies when a map loads, archived |
 | `r_normalMapStrength` | Multiplier on the normal maps' relief (their x/y slope, after rend2's `normalScale`), 0–3.98 in steps of 1/64; default 1, live, archived. Material-mapped surfaces only; the floor mirrors' lookup keeps the authored relief |
-| `r_cubeMapping` | Reflection probes on specular-mapped surfaces (rend2's name and meaning); default 1, needs `r_specularMapping`, restart required |
-| `r_cubeMapSize` | Reflection probe face size, a power of two 32–512; default 128, restart required |
+| `r_cubeMapping` | Reflection probes on specular-mapped surfaces (rend2's name and meaning); default 1, needs `r_specularMapping`, applies after a graphics reload |
+| `r_cubeMapSize` | Reflection probe face size, a power of two 32–512; default 128, applies after a graphics reload |
 | `r_floorReflections` | Polished floors mirror the scene (see [Floor reflections](#floor-reflections)); default 1, live |
 | `r_DynamicGlow` | Halo around `glow` shader stages: 0 off, 1 on (default), 2 saber blades only, 3 the glow alone (debug); live. See [Dynamic glow](#dynamic-glow) |
 | `r_dynamicGlowStyle` | Glow blur: 1 EternalJK rd-vulkan's (default), 0 retail rd-vanilla's; live |
@@ -372,7 +372,43 @@ indicative GPU cost only. No verification hooks or fixtures are shipped.
 
 These and the other SJK rendering cvars can also be changed in the client's
 renderer settings page (Settings > VIDEO > Renderer; see
-[client.md](client.md#renderer-settings)), with the same ranges and restart rules.
+[client.md](client.md#renderer-settings)), with the same ranges and timing.
+
+## Graphics reload
+
+The settings read only when the graphics context is made (`r_sceneHdr`, `r_fxaa`,
+`r_superSample`, `r_dayNight`, the sun-shadow cvars and `r_volumetrics`, the
+material-map controls with `r_cubeMapping`/`r_cubeMapSize`, and texture filtering)
+used to need a restart. They now apply with a graphics reload
+([graphics_reload.rs](../crates/sjk-viewer/src/graphics_reload.rs)), offered by a
+pop-up card and run by `vid_restart` (see
+[client.md](client.md#graphics-reload) for the player's side):
+
+- The device, queue, window and surface live for the process. A reload makes a new
+  `gpu_context::Context` on them with those settings read again
+  (`Context::resampled`, a new context id); the live settings' shared handles
+  (colour, dynamic lights, soft particles, dust, weather, exposure, SSAO) carry over.
+- The world on show is then built again on the new context, which is what a map
+  change already does on the old one: every pipeline, scene target, shadow map,
+  lamp set and material is the new world's own, so nothing built for the old
+  settings survives. On a server it is a map change to the same map
+  (`retain_world_for_reload`): the session waits in the resident world, the map is
+  parsed from the session's gamestate after the next snapshot, installed on the
+  new context (`GpuState::next_context`), and the shell handed over; no prepared
+  world stands in for it and it counts as no map change. A world without a session
+  (the menu map) loads its map again in the background while the old world stays
+  on show, and takes the shell over when built (`poll_rebuild`); a menu world
+  parked during a match is rebuilt the same way when it is restored on a newer
+  context than its own.
+- Whether a reload would change anything is a comparison of what the running
+  context holds with what a context made now would read, done when one of those
+  cvars changes (their change callbacks call `graphics_reload::notice`); reading
+  for that comparison latches nothing (`material_maps::Settings::read`), so the
+  material-map and probe notices keep comparing with the running values.
+
+Measured off-screen on an RTX 5080 at 1920x1080 (release build, see
+[status](status.md)): duel6's menu world rebuilt in about 3 s; on a local server
+ffa3 took 5.6 to 7.2 s from `vid_restart` to play, with the connection kept.
 
 ## Eye adaptation
 
@@ -1692,8 +1728,9 @@ rotation misaligns them) and an `animMap` stage uses its first frame's maps.
 Material-mapped stages stay off the stage table (which only real-time mode
 uses): the CPU colour pass draws them with per-stage bind groups and pipelines.
 
-The controls are sampled once, when the GPU context is created. A change after
-that logs `<cvar> changed: restart the viewer to apply material maps`; the
+The controls are sampled when the GPU context is created (at start or by a
+[graphics reload](#graphics-reload)). A change after that logs `<cvar> changed:
+reload the graphics to apply (vid_restart)`; the
 configuration file setting them at startup does not. Each map load logs what
 it found, for example `material maps (normal+specular+parallax): 429 stages,
 429 normal, 57 parallax, 429 specular; frames for 77283 vertices in 18 ms`, or

@@ -92,7 +92,7 @@ pub(super) const VIDEO: &[Setting] = &[
         kind: ValueKind::Quality,
     },
     Setting {
-        label: "Ultra low (restart)",
+        label: "Ultra low (reload)",
         cvar: crate::graphics_quality::ULTRA_LOW_ROW,
         kind: ValueKind::Bool,
     },
@@ -711,13 +711,14 @@ pub(super) const TEXT: &[Setting] = &[
     },
 ];
 
-// Renderer settings. "(restart)" marks cvars the renderer reads only at startup
-// (their registrations print a restart notice on change); "(next map)" those read
+// Renderer settings. "(reload)" marks cvars the renderer reads only when its graphics
+// start (their registrations print a notice on change and the graphics reload card
+// offers to apply them, `graphics_reload.rs`); "(next map)" those read
 // when a map loads. The rest apply immediately. Ranges follow each consumer's clamp.
 
 pub(super) const RENDER_IMAGE: &[Setting] = &[
     Setting {
-        label: "HDR scene (restart)",
+        label: "HDR scene (reload)",
         cvar: "r_sceneHdr",
         kind: ValueKind::Bool,
     },
@@ -782,12 +783,12 @@ pub(super) const RENDER_IMAGE: &[Setting] = &[
         },
     },
     Setting {
-        label: "FXAA (restart)",
+        label: "FXAA (reload)",
         cvar: "r_fxaa",
         kind: ValueKind::Bool,
     },
     Setting {
-        label: "Supersampling, 1 off (restart)",
+        label: "Supersampling, 1 off (reload)",
         cvar: "r_superSample",
         kind: ValueKind::Integer {
             min: 1,
@@ -820,7 +821,7 @@ pub(super) const RENDER_IMAGE: &[Setting] = &[
         kind: ValueKind::Bool,
     },
     Setting {
-        label: "Reflection probes (restart)",
+        label: "Reflection probes (reload)",
         cvar: "r_cubeMapping",
         kind: ValueKind::Bool,
     },
@@ -830,17 +831,17 @@ pub(super) const RENDER_IMAGE: &[Setting] = &[
         kind: ValueKind::Bool,
     },
     Setting {
-        label: "Normal maps (restart)",
+        label: "Normal maps (reload)",
         cvar: "r_normalMapping",
         kind: ValueKind::Bool,
     },
     Setting {
-        label: "Specular maps (restart)",
+        label: "Specular maps (reload)",
         cvar: "r_specularMapping",
         kind: ValueKind::Bool,
     },
     Setting {
-        label: "Parallax mapping (restart)",
+        label: "Parallax mapping (reload)",
         cvar: "r_parallaxMapping",
         kind: ValueKind::Bool,
     },
@@ -854,7 +855,7 @@ pub(super) const RENDER_IMAGE: &[Setting] = &[
         },
     },
     Setting {
-        label: "Emission maps (restart)",
+        label: "Emission maps (reload)",
         cvar: "r_emissiveMaps",
         kind: ValueKind::Bool,
     },
@@ -876,7 +877,7 @@ pub(super) const RENDER_IMAGE: &[Setting] = &[
 
 pub(super) const RENDER_LIGHTING: &[Setting] = &[
     Setting {
-        label: "Sun and sky (restart)",
+        label: "Sun and sky (reload)",
         cvar: "r_dayNight",
         kind: ValueKind::Bool,
     },
@@ -953,7 +954,7 @@ pub(super) const RENDER_LIGHTING: &[Setting] = &[
         },
     },
     Setting {
-        label: "Light shafts 0-3 (restart)",
+        label: "Light shafts 0-3 (reload)",
         cvar: "r_volumetrics",
         kind: ValueKind::Integer {
             min: 0,
@@ -974,17 +975,17 @@ pub(super) const RENDER_LIGHTING: &[Setting] = &[
 
 pub(super) const RENDER_SHADOWS: &[Setting] = &[
     Setting {
-        label: "World sun shadows (restart)",
+        label: "World sun shadows (reload)",
         cvar: "r_worldSunShadows",
         kind: ValueKind::Bool,
     },
     Setting {
-        label: "Character sun shadows (restart)",
+        label: "Character sun shadows (reload)",
         cvar: "r_actorSunShadows",
         kind: ValueKind::Bool,
     },
     Setting {
-        label: "Shadow resolution (restart)",
+        label: "Shadow resolution (reload)",
         cvar: "r_sunShadowResolution",
         kind: ValueKind::Integer {
             min: 512,
@@ -993,7 +994,7 @@ pub(super) const RENDER_SHADOWS: &[Setting] = &[
         },
     },
     Setting {
-        label: "Sharp shadow distance (restart)",
+        label: "Sharp shadow distance (reload)",
         cvar: "r_sunShadowDistance",
         kind: ValueKind::Integer {
             min: 128,
@@ -1002,7 +1003,7 @@ pub(super) const RENDER_SHADOWS: &[Setting] = &[
         },
     },
     Setting {
-        label: "Close shadow distance (restart)",
+        label: "Close shadow distance (reload)",
         cvar: "r_sunShadowNear",
         kind: ValueKind::Integer {
             min: 64,
@@ -1011,7 +1012,7 @@ pub(super) const RENDER_SHADOWS: &[Setting] = &[
         },
     },
     Setting {
-        label: "Shadow filter taps (restart)",
+        label: "Shadow filter taps (reload)",
         cvar: "r_sunShadowTaps",
         kind: ValueKind::Integer {
             min: 4,

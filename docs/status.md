@@ -7,6 +7,32 @@ SJK currently contains a native client and standard dedicated server in a
 20-crate Rust workspace. This page records scope and verification, rather than
 claiming complete parity from the presence of an implementation.
 
+## Graphics reload
+
+Branch `personal/graphics-reload` (10/10/2026, based on `5faf4944`, Windows 11, RTX
+5080), Sol's report that Ultra low left the sun and SJK's lighting on: the log of that
+session shows it turned on in a match and play going on without a restart, while HDR,
+FXAA, sun and sky, sun shadows and material maps were read only when the graphics
+context was made. Those settings now apply with a graphics reload: the world on show is
+built again on a new context with them read anew
+([rendering.md](rendering.md#graphics-reload)), offered by an SJK pop-up card on the
+main page or the game menu and run by `vid_restart`
+([client.md](client.md#graphics-reload)).
+
+Verified by unit tests (what a reload would change, a comparison that latches nothing,
+the card's offer, Later and words, the timing marks) and off-screen in release builds:
+on duel6's menu world, Ultra low then Reload rebuilt the map in about 3 s on a context
+with HDR, FXAA, sun and sky and normal maps off (`Lamps: none`), the card before and
+during; on a local `sjk-server` (`devmap mp/ffa3`), Ultra low then `vid_restart` built
+ffa3 again on the new context in 5.6 to 7.2 s over four runs, the same session all along
+and still connected 2 s later, and after `disconnect` the parked menu world was rebuilt
+on that context in 4.2 s. Seen once and then reproduced with an 8 s stall: ffa3's blue
+force-field door shown closed for about 12 frames after a long reload, because the
+server ignores a loading client's neutral commands and the player stops touching the
+door's trigger; not seen with Ultra low from the start. Not tested in the game window:
+the card's mouse and keys, its place over the game menu and the classic menus,
+JoFTemple's reload time and a remote server.
+
 ## SJK chat sound
 
 Branch `personal/chat-sound` (10/10/2026, based on `c513abee`, Windows 11), Sol's

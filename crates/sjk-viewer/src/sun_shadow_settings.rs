@@ -75,37 +75,37 @@ pub(crate) fn register(cvars: &mut CvarRegistry) -> Result<(), CvarError> {
         (
             "r_actorSunShadows",
             1,
-            "Opaque actor sun shadows on diffuse world; restart required",
+            "Opaque actor sun shadows on diffuse world; vid_restart applies it",
         ),
         (
             "r_worldSunShadows",
             1,
-            "World and actor sun shadows; restart required",
+            "World and actor sun shadows; vid_restart applies it",
         ),
         (
             "r_sunShadowDistance",
             1024,
-            "Sharp sun-shadow cascade depth 128..4096, map-wide beyond; restart required",
+            "Sharp sun-shadow cascade depth 128..4096, map-wide beyond; vid_restart applies it",
         ),
         (
             "r_sunShadowNear",
             256,
-            "Close sun-shadow cascade depth 64..1024, finest texels; restart required",
+            "Close sun-shadow cascade depth 64..1024, finest texels; vid_restart applies it",
         ),
         (
             "r_sunShadowResolution",
             2048,
-            "Sun shadow map width 512..4096; restart required",
+            "Sun shadow map width 512..4096; vid_restart applies it",
         ),
         (
             "r_sunShadowTaps",
             16,
-            "Sun shadow base PCF taps 4..32 (up to 4x on soft edges); restart required",
+            "Sun shadow base PCF taps 4..32 (up to 4x on soft edges); vid_restart applies it",
         ),
         (
             "r_volumetrics",
             3,
-            "Froxel sun media 0..3; implies world shadows; restart required",
+            "Froxel sun media 0..3; implies world shadows; vid_restart applies it",
         ),
     ] {
         cvars.register(CvarDefinition::new(
@@ -116,8 +116,10 @@ pub(crate) fn register(cvars: &mut CvarRegistry) -> Result<(), CvarError> {
         ))?;
         cvars.on_change(name, |_| {
             crate::log::progress(format_args!(
-                "Sun-shadow setting changed; restart viewer to apply"
+                "Sun-shadow setting changed: {}",
+                crate::graphics_reload::APPLY
             ));
+            crate::graphics_reload::notice();
         })?;
     }
     Ok(())

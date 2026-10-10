@@ -57,8 +57,17 @@ pub(crate) fn face_size(requested: i64) -> u32 {
 }
 
 /// The startup value (face size, 0 off), remembered so a later change can ask for a
-/// restart like the other material-map controls.
+/// graphics reload like the other material-map controls.
 pub(super) fn sample(console: Option<&crate::console::ViewerConsole>) -> u32 {
+    let value = read(console);
+    if console.is_some() {
+        LATCH.store(LATCHED | value, Ordering::Relaxed);
+    }
+    value
+}
+
+/// What [`sample`] would read now, without remembering it.
+pub(super) fn read(console: Option<&crate::console::ViewerConsole>) -> u32 {
     let on = console
         .and_then(|c| c.integer_cvar("r_cubeMapping"))
         .unwrap_or(1)
@@ -68,11 +77,7 @@ pub(super) fn sample(console: Option<&crate::console::ViewerConsole>) -> u32 {
             .and_then(|c| c.integer_cvar("r_cubeMapSize"))
             .unwrap_or(i64::from(DEFAULT_SIZE)),
     );
-    let value = if on { size } else { 0 };
-    if console.is_some() {
-        LATCH.store(LATCHED | value, Ordering::Relaxed);
-    }
-    value
+    if on { size } else { 0 }
 }
 
 /// Whether the viewer runs with something other than `value` (face size, 0 off).
@@ -87,13 +92,13 @@ pub(super) fn register(cvars: &mut CvarRegistry) -> Result<(), CvarError> {
         1_i64,
         CvarFlags::ARCHIVE,
         "Reflection probes on specular-mapped surfaces (needs r_specularMapping); \
-         restart required",
+         vid_restart applies it",
     ))?;
     cvars.register(CvarDefinition::new(
         "r_cubeMapSize",
         i64::from(DEFAULT_SIZE),
         CvarFlags::ARCHIVE,
-        "Reflection probe face size, a power of two 32..512; restart required",
+        "Reflection probe face size, a power of two 32..512; vid_restart applies it",
     ))?;
     let report = |name: &'static str| {
         move |change: &sjk_shell::CvarChange| {
@@ -109,9 +114,11 @@ pub(super) fn register(cvars: &mut CvarRegistry) -> Result<(), CvarError> {
             };
             if restart_needed(latch, value) {
                 crate::log::progress(format_args!(
-                    "{name} changed: restart the viewer to apply reflection probes"
+                    "{name} changed: {}",
+                    crate::graphics_reload::APPLY
                 ));
             }
+            crate::graphics_reload::notice();
         }
     };
     cvars.on_change("r_cubeMapping", report("r_cubeMapping"))?;

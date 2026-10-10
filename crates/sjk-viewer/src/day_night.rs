@@ -158,7 +158,7 @@ pub(crate) fn register(cvars: &mut CvarRegistry) -> Result<(), CvarError> {
         "r_dayNight",
         1_i64,
         CvarFlags::ARCHIVE,
-        "Map-relative sun and sky atmosphere; implies world shadows; restart required",
+        "Map-relative sun and sky atmosphere; implies world shadows; vid_restart applies it",
     ))?;
     cvars.register(CvarDefinition::new(
         "r_liveLighting",
@@ -230,8 +230,10 @@ pub(crate) fn register(cvars: &mut CvarRegistry) -> Result<(), CvarError> {
     for name in ["r_dayNight"] {
         cvars.on_change(name, |_| {
             crate::log::progress(format_args!(
-                "Day/night setting changed; restart viewer to apply"
-            ))
+                "Day/night setting changed: {}",
+                crate::graphics_reload::APPLY
+            ));
+            crate::graphics_reload::notice();
         })?;
     }
     Ok(())

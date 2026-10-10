@@ -101,15 +101,10 @@ pub(crate) struct Settings {
 }
 
 impl Settings {
-    /// Read the registered values once, at context creation, and remember them so a
-    /// later change can tell whether it needs a restart.
+    /// Read the registered values once, at context creation (or a graphics reload), and
+    /// remember them so a later change can tell whether it needs a reload.
     pub(crate) fn sample(console: Option<&crate::console::ViewerConsole>) -> Self {
-        let on = |name| {
-            console
-                .and_then(|c| c.integer_cvar(name))
-                .map_or(DEFAULT_ON, |value| value != 0)
-        };
-        let [normal, specular, parallax, emission] = CONTROLS.map(on);
+        let [normal, specular, parallax, emission] = controls(console);
         if console.is_some() {
             let bits = [normal, specular, parallax, emission]
                 .iter()
@@ -117,7 +112,34 @@ impl Settings {
                 .fold(LATCHED, |bits, (index, on)| bits | (u8::from(*on) << index));
             LATCH.store(bits, Ordering::Relaxed);
         }
-        let reflections = reflections::sample(console);
+        Self::from(
+            normal,
+            specular,
+            parallax,
+            emission,
+            reflections::sample(console),
+        )
+    }
+
+    /// What [`Self::sample`] would read now, without remembering it.
+    pub(crate) fn read(console: Option<&crate::console::ViewerConsole>) -> Self {
+        let [normal, specular, parallax, emission] = controls(console);
+        Self::from(
+            normal,
+            specular,
+            parallax,
+            emission,
+            reflections::read(console),
+        )
+    }
+
+    fn from(
+        normal: bool,
+        specular: bool,
+        parallax: bool,
+        emission: bool,
+        reflections: u32,
+    ) -> Self {
         Self {
             normal,
             specular,
@@ -139,6 +161,15 @@ impl Settings {
     pub(crate) fn shading(self) -> bool {
         self.normal || self.specular
     }
+}
+
+/// The [`CONTROLS`] as the console holds them.
+fn controls(console: Option<&crate::console::ViewerConsole>) -> [bool; 4] {
+    CONTROLS.map(|name| {
+        console
+            .and_then(|c| c.integer_cvar(name))
+            .map_or(DEFAULT_ON, |value| value != 0)
+    })
 }
 
 /// Whether setting control `index` to `on` differs from what the viewer runs with
@@ -179,13 +210,13 @@ pub(crate) fn register(cvars: &mut CvarRegistry) -> Result<(), CvarError> {
             "r_normalMapping",
             i64::from(DEFAULT_ON),
             "Normal maps on world surfaces (rend2 _n/_nh images and normalMap keywords); \
-             restart required",
+             vid_restart applies it",
         ),
         (
             "r_specularMapping",
             i64::from(DEFAULT_ON),
             "Specular/roughness maps on world surfaces (rend2 _specGloss/_rmo/_orm images and \
-             keywords); restart required",
+             keywords); vid_restart applies it",
         ),
         (
             // Off in SJK for a while on 07/10/2026: the full depth of generated height (a
@@ -193,13 +224,13 @@ pub(crate) fn register(cvars: &mut CvarRegistry) -> Result<(), CvarError> {
             "r_parallaxMapping",
             i64::from(DEFAULT_ON),
             "Parallax from the height in a normal map's alpha (_nh images, normalHeightMap); \
-             needs r_normalMapping; depth is r_parallaxStrength; restart required",
+             needs r_normalMapping; depth is r_parallaxStrength; vid_restart applies it",
         ),
         (
             "r_emissiveMaps",
             i64::from(DEFAULT_ON),
             "Emission maps on world surfaces (<texture>_e images): light-emitting texels glow \
-             unlit; restart required",
+             unlit; vid_restart applies it",
         ),
     ]
     .into_iter()
@@ -211,9 +242,11 @@ pub(crate) fn register(cvars: &mut CvarRegistry) -> Result<(), CvarError> {
             let on = matches!(change.current, CvarValue::Integer(value) if value != 0);
             if restart_needed(LATCH.load(Ordering::Relaxed), index, on) {
                 crate::log::progress(format_args!(
-                    "{name} changed: restart the viewer to apply material maps"
+                    "{name} changed: {}",
+                    crate::graphics_reload::APPLY
                 ))
             }
+            crate::graphics_reload::notice();
         })?;
     }
     lights::register(cvars)?;

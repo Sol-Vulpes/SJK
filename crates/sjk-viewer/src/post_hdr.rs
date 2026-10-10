@@ -60,7 +60,7 @@ pub(crate) fn register(cvars: &mut CvarRegistry) -> Result<(), CvarError> {
         "r_sceneHdr",
         1_i64,
         CvarFlags::ARCHIVE,
-        "Scene HDR: 0 off, 1 RGBA16F; restart required",
+        "Scene HDR: 0 off, 1 RGBA16F; applies after a graphics reload (vid_restart)",
     ))?;
     cvars.register(CvarDefinition::new(
         "r_hdrExposure",
@@ -70,7 +70,9 @@ pub(crate) fn register(cvars: &mut CvarRegistry) -> Result<(), CvarError> {
     ))?;
     cvars.on_change("r_sceneHdr", |_| {
         crate::log::progress(format_args!(
-            "HDR setting changed: restart viewer to rebuild scene targets"
-        ))
+            "HDR setting changed: {}",
+            crate::graphics_reload::APPLY
+        ));
+        crate::graphics_reload::notice();
     })
 }

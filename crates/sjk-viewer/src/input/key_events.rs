@@ -62,6 +62,12 @@ impl GpuState {
             self.holocron_popup.handle_key(&event);
             return;
         }
+        // So does the graphics reload card.
+        if !console_open && self.graphics_reload.card.is_open() {
+            let choice = self.graphics_reload.card.handle_key(&event);
+            self.reload_card_choice(choice);
+            return;
+        }
         // Ctrl+Tab changes the Profile screen's tab, whichever screen shows it.
         if self.profile_hub_key(&event) {
             return;

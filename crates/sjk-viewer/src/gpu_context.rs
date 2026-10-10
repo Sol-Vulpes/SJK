@@ -47,7 +47,8 @@ pub(crate) struct Context {
     pub(crate) material_maps: crate::world_materials::material_maps::Settings,
     pub(crate) id: u64,
     pub(crate) window: Option<Arc<Window>>,
-    pub(crate) surface: Option<wgpu::Surface<'static>>,
+    /// Shared with the context a graphics reload makes ([`Self::resampled`]).
+    pub(crate) surface: Option<Arc<wgpu::Surface<'static>>>,
     pub(crate) device: wgpu::Device,
     pub(crate) queue: crate::frame_queue::FrameQueue,
     pub(crate) format: wgpu::TextureFormat,
@@ -59,6 +60,8 @@ pub(crate) struct Context {
     pub(crate) surface_usages: wgpu::TextureUsages,
     pub(crate) adapter_name: String,
     pub(crate) adapter_backend: String,
+    /// The anisotropy the adapter offers, which [`Self::filtering`] is clamped to.
+    pub(crate) anisotropy_limit: u16,
 }
 
 impl Context {
@@ -77,12 +80,12 @@ impl Context {
         );
         let surface = window
             .as_ref()
-            .map(|window| instance.create_surface(window.clone()))
+            .map(|window| instance.create_surface(window.clone()).map(Arc::new))
             .transpose()?;
         let adapter = instance
             .request_adapter(&wgpu::RequestAdapterOptions {
                 power_preference: wgpu::PowerPreference::HighPerformance,
-                compatible_surface: surface.as_ref(),
+                compatible_surface: surface.as_deref(),
                 force_fallback_adapter: false,
                 apply_limit_buckets: false,
             })
@@ -211,7 +214,46 @@ impl Context {
             ),
             adapter_name: adapter_info.name,
             adapter_backend: format!("{:?}", adapter_info.backend),
+            anisotropy_limit: maximum,
         }))
+    }
+
+    /// A context on this one's device, window and surface with the settings read only
+    /// at creation (scene precision, FXAA, supersampling, sun and sky, sun shadows, light
+    /// shafts, material maps and filtering) read again: the graphics reload
+    /// ([`crate::graphics_reload`]) builds the current world on it.
+    pub(crate) fn resampled(&self, console: Option<&crate::console::ViewerConsole>) -> Arc<Self> {
+        Arc::new(Self {
+            hdr: crate::frame_target::aa::hdr::Settings::sample(console),
+            sun_shadows: crate::world_materials::shadows::settings::Settings::sample(console),
+            render_scale: crate::frame_target::scale::requested(console),
+            fxaa: crate::frame_target::aa::enabled(console),
+            post_color: self.post_color.clone(),
+            dynamic_light_settings: self.dynamic_light_settings.clone(),
+            soft_particles: self.soft_particles.clone(),
+            dust_motes: self.dust_motes.clone(),
+            weather: self.weather.clone(),
+            exposure: self.exposure.clone(),
+            ssao: self.ssao.clone(),
+            filtering: crate::world_materials::filtering::Policy::sample(
+                console,
+                self.anisotropy_limit,
+            ),
+            material_maps: crate::world_materials::material_maps::Settings::sample(console),
+            id: NEXT_CONTEXT_ID.fetch_add(1, Ordering::Relaxed),
+            window: self.window.clone(),
+            surface: self.surface.clone(),
+            device: self.device.clone(),
+            queue: self.queue.clone(),
+            format: self.format,
+            ui_direct: self.ui_direct,
+            alpha_mode: self.alpha_mode,
+            present_modes: self.present_modes.clone(),
+            surface_usages: self.surface_usages,
+            adapter_name: self.adapter_name.clone(),
+            adapter_backend: self.adapter_backend.clone(),
+            anisotropy_limit: self.anisotropy_limit,
+        })
     }
 
     /// Scene pipelines and their offscreen targets share this format, never the HUD's.

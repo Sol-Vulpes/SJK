@@ -91,7 +91,9 @@ Sol develops SJK and sets its direction. Sol's work includes:
 - muting a player from their name in chat (chat, model, saber and sounds);
 - the console socket for external apps (after JoF EJK), muting in the
   background (after EternalJK) and the JA+ `flipkick` command (after JoF EJK);
-- the camera style setting, its locked camera after JoF EJK (`cg_cameraStyle`).
+- the camera style setting, its locked camera after JoF EJK (`cg_cameraStyle`);
+- graphics quality levels with Ultra low, and the graphics reload that applies the
+  renderer's start-only settings without restarting SJK or leaving the server.
 
 ## Contributors to SJK
 

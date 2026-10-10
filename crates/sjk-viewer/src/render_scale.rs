@@ -1,18 +1,20 @@
 //! Optional single-sample supersampling. Target ownership stays in the viewer.
 use sjk_shell::{CvarDefinition, CvarError, CvarFlags, CvarRegistry};
 
-/// Register startup policy; changing attachment dimensions requires a viewer restart.
+/// Register startup policy; changing attachment dimensions takes a graphics reload.
 pub(crate) fn register(cvars: &mut CvarRegistry) -> Result<(), CvarError> {
     cvars.register(CvarDefinition::new(
         "r_superSample",
         1_i64,
         CvarFlags::ARCHIVE,
-        "Scene supersampling: 1 off, 2 or 3 per axis; restart viewer to apply",
+        "Scene supersampling: 1 off, 2 or 3 per axis; applies after a graphics reload (vid_restart)",
     ))?;
     cvars.on_change("r_superSample", |_| {
         crate::log::progress(format_args!(
-            "r_superSample changed: restart viewer to rebuild scene attachments"
-        ))
+            "r_superSample changed: {}",
+            crate::graphics_reload::APPLY
+        ));
+        crate::graphics_reload::notice();
     })
 }
 

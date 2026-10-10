@@ -47,7 +47,10 @@ CPU preparation and GPU installation own immutable destination inputs. Supersedi
 transitions discard their channels; GPU construction checks cancellation between
 build stages. Only a completed world is adopted. A prepared gamestate's content
 selection must match before attaching a session without rebuilding, and a restart
-must receive a fresh snapshot before attachment. A join from the menu hands over
+must receive a fresh snapshot before attachment. A graphics reload takes the same path
+to build the world on show again on a new graphics context (same device and surface,
+the start-only renderer settings read anew; see
+[rendering.md](rendering.md#graphics-reload)). A join from the menu hands over
 the destination world prepared while it connected
 ([portal.rs](../crates/sjk-viewer/src/portal.rs)) rather than constructing a
 duplicate at entry. The parked

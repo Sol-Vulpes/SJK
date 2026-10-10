@@ -223,8 +223,8 @@ pub(crate) fn command(console: &mut ViewerConsole, args: &[String]) -> Result<Ve
             level.apply(console);
             Ok(vec![format!(
                 "Graphics quality: {}; shadows, light shafts, HDR, FXAA, sun and sky, \
-                 reflection probes and material maps apply after a restart, emission-map \
-                 lights on the next map",
+                 reflection probes and material maps apply after a graphics reload \
+                 (vid_restart), emission-map lights on the next map",
                 level.label()
             )])
         }

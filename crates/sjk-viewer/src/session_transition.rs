@@ -385,7 +385,7 @@ impl GpuState {
             completed_map_changes: self.completed_map_changes,
         };
         self.world_install_task = Some(WorldInstallTask::start(
-            Arc::clone(&self.context),
+            Arc::clone(self.graphics_context()),
             [self.size.width, self.size.height],
             input,
             loaded.map_path,
@@ -395,8 +395,10 @@ impl GpuState {
 
     /// Move everything that belongs to the player's session with the client
     /// — sessions, console, menu, pointer state — from this world into `to`.
+    /// `to` is built on this world's context, or on a newer one after a graphics
+    /// reload ([`crate::graphics_reload`]).
     pub(crate) fn hand_shell_to(&mut self, to: &mut GpuState) {
-        debug_assert_eq!(self.context.id, to.context.id);
+        debug_assert!(to.context.id >= self.context.id || to.is_menu_world || self.is_menu_world);
         let now = Instant::now();
         let was_local = self
             .live_session
@@ -434,6 +436,7 @@ impl GpuState {
         if to.resident.bound {
             to.server_clock.activate();
         }
+        to.graphics_reload.card = std::mem::take(&mut self.graphics_reload.card);
         to.load_event_gap = self.load_event_gap.clone();
         to.completed_map_changes = self.completed_map_changes;
         to.gameplay_input.clear();
