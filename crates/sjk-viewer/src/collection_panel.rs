@@ -493,6 +493,7 @@ mod tests {
             id: "saber_sun".into(),
             granted: 1_791_336_225,
             note: "Thanks for testing the blade".into(),
+            medal: None,
         }
     }
 

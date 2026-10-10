@@ -102,21 +102,21 @@ pub(crate) const ALL: [Unlockable; 14] = [
         name: "Glitch blade",
         kind: Kind::BladeSkin,
         description: "A blade whose colours split apart, blocks of it jumping sideways now and then.",
-        how_to_get: "Given by the SJK team.",
+        how_to_get: "Comes with the Bug Hunter medal, for as long as you hold it.",
     },
     Unlockable {
         id: "saber_hologram",
         name: "Hologram blade",
         kind: Kind::BladeSkin,
         description: "A wireframe projection with scan lines running along it, jittering like a training hologram.",
-        how_to_get: "Given by the SJK team.",
+        how_to_get: "Comes with the Early Tester medal, for as long as you hold it.",
     },
     Unlockable {
         id: "saber_runic",
         name: "Runic blade",
         kind: Kind::BladeSkin,
         description: "A gold core with glyphs scrolling along it that spell its wearer's name.",
-        how_to_get: "Given by the SJK team.",
+        how_to_get: "Comes with the Early Contributor medal, for as long as you hold it.",
     },
     Unlockable {
         id: "saber_chameleon",
@@ -264,6 +264,7 @@ mod tests {
             id: "saber_sun".into(),
             granted: 1_791_336_225,
             note: "Thanks".into(),
+            medal: None,
         };
         let me = Profile {
             key_id: "0123456789abcdef".into(),

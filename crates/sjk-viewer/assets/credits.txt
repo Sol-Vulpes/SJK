@@ -53,6 +53,7 @@ did: SJK chat through the hub, seen in the menus and in games, and the path for 
 did: Unlockables: the Sun blade skin and looks every SJK player sees
 did: The Collection: medals, achievements, saber shaders, toys and nameplates
 did: Nine more saber shaders, from Molten's lava to Runic's glyphs of your name
+did: Medals that bring a saber shader while you hold them
 did: The kill feed with weapon icons
 did: The SJK profile card and profile pictures
 did: Muting players from their name in chat

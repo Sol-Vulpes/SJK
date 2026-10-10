@@ -195,6 +195,7 @@ mod tests {
             id: id.to_owned(),
             granted: 1_791_336_225,
             note: String::new(),
+            medal: None,
         }
     }
 

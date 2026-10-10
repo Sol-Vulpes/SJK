@@ -917,6 +917,7 @@ mod tests {
                     id: unlockable.id.into(),
                     granted: 1_791_336_225,
                     note: "n".repeat(200),
+                    medal: None,
                 })
                 .collect(),
             holocron_counts: sjk_identity::HolocronCounts {

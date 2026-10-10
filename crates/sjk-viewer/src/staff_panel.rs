@@ -613,6 +613,7 @@ mod tests {
                 id: "saber_sun".into(),
                 granted: 1,
                 note: String::new(),
+                medal: None,
             }],
             ..me.clone()
         };

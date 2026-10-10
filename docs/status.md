@@ -7,6 +7,15 @@ SJK currently contains a native client and standard dedicated server in a
 20-crate Rust workspace. This page records scope and verification, rather than
 claiming complete parity from the presence of an implementation.
 
+## Medal shaders
+
+Branch `personal/medal-blades` (10/10/2026, based on `8018e58e`, Windows 11), with the
+hub's `feat/medal-blades`: Sol decided that medals bring saber shaders while held (Bug
+Hunter the Glitch, Early Tester the Hologram, Early Contributor the Runic blade), taken
+back with the medal; achievements grant none yet and holocron drops of blades are
+parked. Details in [unlockables.md](unlockables.md#medal-shaders). Verified by unit
+tests in both repositories; the hub not deployed when built, not tried in the game.
+
 ## Nine more saber shaders
 
 Branch `personal/saber-shaders` (10/10/2026, based on `fa97d354`, Windows 11), with the

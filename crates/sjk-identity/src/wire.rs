@@ -161,7 +161,7 @@ pub struct DropEvent {
 }
 
 /// One unlockable a key holds (`PROTOCOL.md`, "Unlocks"): granted by the hub's
-/// operator or staff. A client shows and wears only the ids it knows.
+/// operator or staff, or brought by a medal the key holds. A client shows and wears only the ids it knows.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
 pub struct Unlock {
     /// The unlockable's id (`saber_sun`).
@@ -172,6 +172,11 @@ pub struct Unlock {
     /// Public plain text from the team, often empty. Never markup.
     #[serde(default)]
     pub note: String,
+    /// The medal that brings it (`bug_hunter`), when the key holds it only through that
+    /// medal: it goes with the medal. `None` for a grant by hand, and from hubs before
+    /// 10/10/2026.
+    #[serde(default)]
+    pub medal: Option<String>,
 }
 
 /// What a player wears that others draw (`PROTOCOL.md`, "Looks"). The default is
@@ -249,7 +254,8 @@ pub struct Achievements {
     pub achievements: Vec<Achievement>,
 }
 
-/// One medal the SJK team gave a key: recognition only, it grants nothing.
+/// One medal the SJK team gave a key: recognition, and some bring a saber blade (an
+/// [`Unlock`] with `medal`) while held.
 ///
 /// A profile carries every field; a presence entry only `id` and `count`, the rest
 /// keeping their defaults. A client shows only the ids it knows.
@@ -500,7 +506,8 @@ mod tests {
         let profile: Profile = serde_json::from_str(
             r#"{"key_id":"aa","key":"bb","name":"Sol","bio":"","verified":true,"created":5,
                 "unlocks":[{"id":"saber_sun","granted":1791000000,"note":"Thanks"},
-                           {"id":"from_the_future","granted":7}]}"#,
+                           {"id":"from_the_future","granted":7},
+                           {"id":"saber_glitch","granted":8,"note":"","medal":"bug_hunter"}]}"#,
         )
         .unwrap();
         assert_eq!(
@@ -510,11 +517,19 @@ mod tests {
                     id: "saber_sun".to_owned(),
                     granted: 1_791_000_000,
                     note: "Thanks".to_owned(),
+                    medal: None,
                 },
                 Unlock {
                     id: "from_the_future".to_owned(),
                     granted: 7,
                     note: String::new(),
+                    medal: None,
+                },
+                Unlock {
+                    id: "saber_glitch".to_owned(),
+                    granted: 8,
+                    note: String::new(),
+                    medal: Some("bug_hunter".to_owned()),
                 },
             ]
         );

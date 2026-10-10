@@ -1657,6 +1657,7 @@ mod tests {
                     id: id.clone(),
                     granted: 1,
                     note: String::new(),
+                    medal: None,
                 })
                 .collect()
         }

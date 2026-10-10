@@ -882,6 +882,7 @@ Found the fog bug, ask me about it!"
                 id: "saber_sun".to_owned(),
                 granted: 1_791_336_225,
                 note: String::new(),
+                medal: None,
             }],
             holocron_counts: Default::default(),
             holocrons: Vec::new(),
@@ -1055,6 +1056,7 @@ like this one.",
                     id: "saber_sun".to_owned(),
                     granted: 1_791_336_225,
                     note: String::new(),
+                    medal: None,
                 }],
                 ..profile("9a0c51e2b7d34f80", "^5Creyon")
             },
@@ -1627,6 +1629,7 @@ like this one.",
                 id: "saber_sun".to_owned(),
                 granted: 1_791_336_225,
                 note: "Thanks for testing the blades with us".to_owned(),
+                medal: None,
             };
             let overflowed = |gpu: &GpuState| {
                 gpu.console
