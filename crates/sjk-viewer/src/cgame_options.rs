@@ -66,6 +66,11 @@ pub(crate) fn register(cvars: &mut CvarRegistry) -> Result<(), sjk_shell::CvarEr
         ),
         ("cg_chatBoxFontSize", 1.0, "Conversation font scale"),
         (
+            "cg_chatBoxLetterSpacing",
+            0.0,
+            "Extra space between chat message letters, in 1080p pixels (-2 to 8)",
+        ),
+        (
             "cg_fovViewmodel",
             80.0,
             "First-person weapon field of view (EternalJK default 80); zero is the retail look, drawn with cg_fov",

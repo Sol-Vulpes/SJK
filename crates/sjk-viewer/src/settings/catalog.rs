@@ -434,6 +434,15 @@ pub(super) const HUD: &[Setting] = &[
         kind: ValueKind::Bool,
     },
     Setting {
+        label: "Chat letter spacing",
+        cvar: "cg_chatBoxLetterSpacing",
+        kind: ValueKind::Float {
+            min: -2.0,
+            max: 8.0,
+            step: 0.5,
+        },
+    },
+    Setting {
         label: "HUD look (Enter: pick)",
         cvar: crate::menu_hud::STYLE_CVAR,
         kind: ValueKind::HudPicker,

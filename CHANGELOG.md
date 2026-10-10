@@ -13,7 +13,6 @@ Format, read by the client (crates/sjk-viewer/src/changelog_data.rs, whose
 tests check this file):
 - "## <version> | <dd/mm/yyyy>" starts a release ("## Unreleased" for main
   after the last release, without a date);
-- The resolution list opens as a card in the SJK UI's look, in both menu styles, and the last screens that still used the old settings form (the tabbed settings, the renderer page and the key bindings on their own) now open the SJK UI's Settings or Key bindings _(Sol)_
 - other lines up to the first item are the release's introduction;
 - "- <change> _(<credit>)_" is one change; every change ends with its credit;
 - ASCII only, as the menu font draws bytes.
@@ -25,6 +24,8 @@ A Collection of everything you gather in SJK, with your own character showing wh
 and holocrons: loot you earn by playing. For now they are collected and shown; they cannot be
 opened yet and give nothing.
 
+- Chat letter spacing: Settings > HUD > Chat letter spacing (cg_chatBoxLetterSpacing, -2 to 8) spreads or packs the letters of chat messages; long messages wrap to match _(Sol)_
+- The resolution list opens as a card in the SJK UI's look, in both menu styles, and the last screens that still used the old settings form (the tabbed settings, the renderer page and the key bindings on their own) now open the SJK UI's Settings or Key bindings _(Sol)_
 - SJK chat names keep the marks players put around clan tags: {JoF}, \o/ and Latin-1 symbols such as guillemets now show in the feed, the dock, the chat page and its online window instead of being dropped; messages keep their own characters _(Sol)_
 - Saber shaders have tiers, the same as holocrons: Mythical (Sun, Void, Molten, Spectral), Legendary (Storm, Unstable, Chameleon, Prism), Rare (Frost, Hologram, Runic, Heartbeat, Glitch, Banner), and Uncommon for plainer ones to come; the Collection and the Saber tab list the rarest first and show each tier in its colour, and the Collection's Shaders can show a grid of cards (V, or the two marks by Saber; ui_shaderView keeps it) _(Sol)_
 - Rarity shows itself: Rare frames breathe, Legendary ones catch a sweeping sheen and Mythical ones a spark running round the border with motes rising, on the Collection's shader cards and swatches, the Holocrons tab, the Saber tab and the player card (Uncommon stays plain; locked ones only breathe faintly); the chosen card of the grid lifts with a white outline; Settings > Interface > Rarity effects (ui_rarityEffects) turns them off _(Sol)_
