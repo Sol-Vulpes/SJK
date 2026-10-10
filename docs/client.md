@@ -2208,7 +2208,10 @@ weapons and sabers.
 
 The cube, its two pictures (lit metal, and the emblem alone for the glowing
 stage), its shader and the wheel icon are bundled and mounted below all game
-data, so a PK3 with the same paths replaces them. Sol generated the art; see
+data, so a PK3 with the same paths replaces them. The same cube also has four
+loot-box tiers (uncommon green, rare blue, legendary purple, mythical gold and
+shiny): other pictures and shaders on the one model, with their icons and point-light
+colours, bundled the same way. Sol generated the art; see
 [assets/holocron](../crates/sjk-viewer/assets/holocron/README.md) and
 [illuminate.rs](../crates/sjk-viewer/src/illuminate.rs).
 
