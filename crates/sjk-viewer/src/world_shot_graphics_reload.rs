@@ -1,6 +1,6 @@
 //! World shots of the graphics reload ([`crate::graphics_reload`]) on the menu world:
-//! duel6 under the SJK UI at High, the reload card once Ultra low is picked, the card
-//! while the map is built again, and the menu over the world rebuilt on Ultra low's
+//! duel6 under the SJK UI at High, the reload card once EJK is picked, the card
+//! while the map is built again, and the menu over the world rebuilt on EJK's
 //! settings, whose context is checked to run with them. Off-screen renders (no game
 //! window), ignored like the other world shots: they need a GPU adapter and the installed
 //! game data named by `JKA_GAME_DATA`.
@@ -31,9 +31,9 @@ fn graphics_reload_menu() {
         assert!(gpu.graphics_changes().is_empty());
         assert_eq!(gpu.context.hdr.mode, 1);
 
-        // Ultra low, as the switch sets it: the card offers the reload on the main menu.
+        // EJK, as the switch sets it: the card offers the reload on the main menu.
         if let Some(console) = gpu.console.as_mut() {
-            crate::graphics_quality::Level::UltraLow.apply(console);
+            crate::graphics_quality::Level::Ejk.apply(console);
         }
         shoot(&mut gpu, 4, "graphics-reload-card");
         assert!(gpu.graphics_reload.card.is_open(), "the card shows");
@@ -131,7 +131,7 @@ fn until(
 }
 
 /// The reload on a server: a local `devmap mp/ffa3` (its server named by
-/// `JKA_DEDICATED`), Ultra low and `vid_restart`, which builds ffa3 again on the new
+/// `JKA_DEDICATED`), EJK and `vid_restart`, which builds ffa3 again on the new
 /// context with the connection kept; then `disconnect`, after which the parked menu
 /// world is built again on that context too.
 #[test]
@@ -166,7 +166,7 @@ fn graphics_reload_on_server() {
         let server = gpu.live_session.as_ref().map(|s| s.server().to_string());
 
         if let Some(console) = gpu.console.as_mut() {
-            crate::graphics_quality::Level::UltraLow.apply(console);
+            crate::graphics_quality::Level::Ejk.apply(console);
         }
         queue(&mut gpu, "vid_restart");
         until(&mut gpu, &mut parked, size, 120, "ffa3 reloaded", |gpu| {

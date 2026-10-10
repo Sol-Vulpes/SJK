@@ -117,10 +117,10 @@ const HELP: &[(&str, &str)] = &[
     // VIDEO
     (
         crate::graphics_quality::ROW_NAME,
-        "Sets the costly graphics together: Ultra low for the most FPS, Ultra for the best look, after a graphics reload.",
+        "Sets the costly graphics together: EJK for the most FPS (the original look), Ultra for the best look, after a graphics reload.",
     ),
     (
-        crate::graphics_quality::ULTRA_LOW_ROW,
+        crate::graphics_quality::EJK_ROW,
         "The original game's look: baked map lighting, no sun, shadows, reflections or material maps. Off restores your settings.",
     ),
     (

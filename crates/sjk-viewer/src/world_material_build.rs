@@ -318,7 +318,7 @@ fn build(
         .map(emitter)
         .collect();
     // Without sun shadows, light shafts or real-time lighting (Performance and
-    // Ultra low) no pass reads the lamps and the map shows its lightmaps; finding
+    // EJK) no pass reads the lamps and the map shows its lightmaps; finding
     // them is seconds of a large map's load, so it is skipped.
     let lamps = if lamps_wanted {
         let mut extra = Vec::new();

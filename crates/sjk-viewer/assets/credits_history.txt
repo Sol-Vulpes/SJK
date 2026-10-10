@@ -9,6 +9,9 @@
 #                               made it when that is not the piece's owner.
 
 = Sol
++ 10/10/2026 | - | EJK graphics offered when a map's lighting keeps the FPS low, help_fps; Ultra low renamed EJK
+- cfeb1e0 |  | Offer EJK graphics when a map's lighting keeps the FPS low; help_fps
+- a98a3a6 |  | Store cg_fpsHelp as a switch; the card's shot test reloads as the game does
 + 10/10/2026 | - | Players' models loaded off the render thread, spare geometry room, glow warmed
 - 5ddfd07 |  | Load players' models off the render thread; spare geometry room; warm glow
 + 10/10/2026 | - | Always-on gameplay hitch lines in the client log
