@@ -1,13 +1,13 @@
-//! How a GIF shows under its chat line, on the SJK chat page and the docks: the GIF at
-//! a fixed height ([`Look::height`], smaller on the docks), as wide as its shape makes
-//! it within the column (narrower and lower when the column is too narrow); while it
-//! loads, a quiet box of that height saying so; when it could not be had, one quiet
-//! line, "GIF unavailable".
+//! How a GIF shows under its chat line, on the SJK chat page, the docks and the in-play
+//! chat box: the GIF at a fixed height ([`Look::height`], smaller on the docks and in
+//! the chat box), as wide as its shape makes it within the column (narrower and lower
+//! when the column is too narrow); while it loads, a quiet box of that height saying
+//! so; when it could not be had, one quiet line, "GIF unavailable".
 
 use super::Shown;
 use crate::menu::sjk::{Frame, color, text};
 use crate::menu_widgets::{MenuCanvas, TextFamily};
-use sjk_ui::{Color, DrawCommand, FontWeight, TextAlign};
+use sjk_ui::{Color, DrawCommand, FontWeight, Rect, TextAlign};
 
 /// The GIF block's measures, in frame pixels.
 #[derive(Clone, Copy, Debug)]
@@ -35,6 +35,16 @@ pub(crate) const DOCK: Look = Look {
     gap: 4.0,
     height: 48.0,
     note: 20.0,
+    text_size: 13.0,
+};
+
+/// The in-play chat box's GIFs (`chat/view.rs`), in 1080p pixels at chat font size 1,
+/// grown with the chat box's scale: three of its 18-pixel rows high, so a GIF takes
+/// the room of three lines and stays out of the way of play.
+pub(crate) const FEED: Look = Look {
+    gap: 4.0,
+    height: 54.0,
+    note: 18.0,
     text_size: 13.0,
 };
 
@@ -74,23 +84,48 @@ pub(crate) fn draw(
     [x, y]: [f32; 2],
     width: f32,
 ) {
-    let s = frame.s;
+    paint(
+        canvas,
+        look,
+        shown,
+        frame.point(x, y),
+        width * frame.s,
+        frame.s,
+        1.0,
+    );
+}
+
+/// Draw the block for `shown` with its top-left at `origin` (window pixels) in a column
+/// `width` window pixels wide, the look's measures grown by `s`, at `alpha` (the in-play
+/// chat box fades a GIF with its line).
+pub(crate) fn paint(
+    canvas: &mut MenuCanvas,
+    look: Look,
+    shown: Shown,
+    [x, y]: [f32; 2],
+    width: f32,
+    s: f32,
+    alpha: f32,
+) {
+    let s = s.max(f32::EPSILON);
+    let faded = |colour: Color, a: f32| color::alpha(colour, a * alpha);
+    let top = y + look.gap * s;
     match shown {
         Shown::Ready { texture, size } => {
-            let [w, h] = fitted(look, Some(size), width);
+            let [w, h] = fitted(look, Some(size), width / s);
             let _ = canvas.draw_list_mut().push(DrawCommand::TexturedQuad {
-                rect: frame.rect(x, y + look.gap, w, h),
+                rect: Rect::new(x, top, w * s, h * s),
                 texture,
-                color: Color::new(1.0, 1.0, 1.0, 1.0),
+                color: Color::new(1.0, 1.0, 1.0, alpha),
             });
         }
         Shown::Loading => {
-            let [w, h] = fitted(look, None, width);
-            let rect = frame.rect(x, y + look.gap, w, h);
+            let [w, h] = fitted(look, None, width / s);
+            let rect = Rect::new(x, top, w * s, h * s);
             let _ = canvas.draw_list_mut().push(DrawCommand::RoundedRect {
                 rect,
                 radius: 6.0 * s,
-                color: color::alpha(color::HOLO, 0.07),
+                color: faded(color::HOLO, 0.07),
             });
             text(
                 canvas,
@@ -98,7 +133,7 @@ pub(crate) fn draw(
                 format_args!("Loading GIF"),
                 rect,
                 look.text_size * s,
-                color::QUIET,
+                faded(color::QUIET, 1.0),
                 FontWeight::Regular,
                 TextAlign::Center,
             );
@@ -107,9 +142,9 @@ pub(crate) fn draw(
             canvas,
             TextFamily::Body,
             format_args!("GIF unavailable"),
-            frame.rect(x, y, width, look.note - 2.0),
+            Rect::new(x, y, width, (look.note - 2.0) * s),
             look.text_size * s,
-            color::QUIET,
+            faded(color::QUIET, 1.0),
             FontWeight::Regular,
             TextAlign::Start,
         ),

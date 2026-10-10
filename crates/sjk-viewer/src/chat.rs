@@ -5,6 +5,7 @@ mod card;
 mod editing;
 mod editor;
 pub(crate) mod emoji;
+mod feed_gif;
 
 mod interaction;
 mod layout;
@@ -56,6 +57,8 @@ struct ChatLine {
     y: Option<Tween>,
     /// What the hub said of an SJK chat line.
     hub: Option<HubLine>,
+    /// The GIF an SJK chat line links to, shown under it (`chat/feed_gif.rs`).
+    gif: Option<Box<feed_gif::LineGif>>,
 }
 
 /// An SJK chat line's id at the hub and its sender.
@@ -120,6 +123,12 @@ pub(crate) struct ChatOverlay {
     sjk_mark: Option<(u64, u64, u64)>,
     /// When the SJK chat's sound last played (`chat/sjk.rs`, [`sjk::SOUND_GAP`]).
     sjk_sound_at: Option<Instant>,
+    /// Whether the lines with a GIF read "GIF" and show it (`cl_sjkChatGifs`), or keep
+    /// their links as text (`chat/feed_gif.rs`).
+    gifs_shown: bool,
+    /// The feed draws during a world shot, which has no session.
+    #[cfg(test)]
+    pub(crate) for_shot: bool,
 }
 
 impl ChatOverlay {
@@ -163,6 +172,9 @@ impl ChatOverlay {
             sjk_outcome: 0,
             sjk_mark: None,
             sjk_sound_at: None,
+            gifs_shown: true,
+            #[cfg(test)]
+            for_shot: false,
         }
     }
 
@@ -301,6 +313,7 @@ impl ChatOverlay {
             wrap: layout::Wrapped::default(),
             y: None,
             hub: None,
+            gif: None,
         };
         if self.lines.len() == HISTORY_LIMIT {
             self.lines.pop_front();
@@ -344,6 +357,14 @@ impl ChatOverlay {
         input.channel = Channel::Whisper;
         input.recipient = Some(target);
         true
+    }
+
+    /// Whether a world shot asked for the feed (never outside the tests).
+    fn shown_for_shot(&self) -> bool {
+        #[cfg(test)]
+        return self.for_shot;
+        #[cfg(not(test))]
+        false
     }
 
     pub(crate) fn draw_list(&self) -> &DrawList {

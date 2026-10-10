@@ -1,6 +1,7 @@
 //! World shots of GIFs in SJK chat ([`crate::chat_gifs`]) over duel6: the SJK chat page
 //! with a GIF shown, one loading and one that could not be had; the main page's dock and
-//! the in-game menu's dock with a GIF. The GIFs are small test animations made here and
+//! the in-game menu's dock with a GIF; the in-play chat box with GIF lines, in play and
+//! with the composer open over its history. The GIFs are small test animations made here and
 //! put in the cache as if fetched: nothing is downloaded. Off-screen renders (no game
 //! window), ignored like the other world shots: they need a GPU adapter and the installed
 //! game data named by `JKA_GAME_DATA`.
@@ -189,6 +190,81 @@ fn duel6_sjk_chat_gifs_dock() {
             let name = format!("duel6-ingame-chat-gif-{suffix}");
             println!("{}", shoot(&mut gpu, 16, &name).display());
             assert!(!gpu.in_game_menu.overflowed(), "{name}");
+        });
+    }
+}
+
+/// The in-play chat box (`chat/feed_gif.rs`) over duel6, without a session: SJK lines
+/// with a wide GIF and a square one among game lines, then the same with the SJK
+/// composer open, at 1080p and 4K.
+#[test]
+#[ignore = "renders with the GPU and the installed game data named by JKA_GAME_DATA"]
+fn duel6_sjk_chat_gifs_feed() {
+    for (size, suffix) in [([1920, 1080], "1080p"), ([3840, 2160], "4k")] {
+        on_big_stack(move || {
+            let _ = gifs();
+            let Some((mut gpu, _profile)) = open("maps/mp/duel6.bsp", size, None, &[]) else {
+                return;
+            };
+            let shots = menu_backdrop::tour_for("Yavin Training Grounds").expect("duel6's tour");
+            let shot = &shots[0];
+            let (yaw, pitch) = look(shot.from, shot.at);
+            aim(&mut gpu, shot.from, yaw, pitch);
+            if let Some(console) = gpu.console.as_mut() {
+                console.set_open(false);
+            }
+            let message =
+                |id: u64, name: &str, text: &str, verified: bool| sjk_identity::ChatMessage {
+                    id,
+                    at: 0,
+                    key_id: format!("{id:016x}"),
+                    name: name.to_owned(),
+                    verified,
+                    staff: false,
+                    text: text.to_owned(),
+                    holocron: None,
+                };
+            let state = |messages: Vec<sjk_identity::ChatMessage>| sjk_identity::ChatState {
+                messages: messages.into_iter().collect(),
+                loaded: Some(1),
+                ..sjk_identity::ChatState::default()
+            };
+            let now = std::time::Instant::now();
+            let chat = &mut gpu.chat;
+            chat.for_shot = true;
+            chat.sync_sjk(&state(Vec::new()), |_| false, now);
+            chat.receive(
+                sjk_client::ServerEventKind::Chat,
+                "^7Kyle^7: ^2anyone up for a duel?".to_owned(),
+                None,
+                now,
+            );
+            let first = vec![message(
+                1,
+                "^1Sol^7Vulpes",
+                "hello https://giphy.com/gifs/hello-wave-ShotGifWide01",
+                true,
+            )];
+            chat.sync_sjk(&state(first.clone()), |_| false, now);
+            chat.receive(
+                sjk_client::ServerEventKind::Chat,
+                "^7Fox^7: ^2gg".to_owned(),
+                None,
+                now,
+            );
+            let mut all = first;
+            all.push(message(
+                2,
+                "^3Lumaya",
+                "https://i.giphy.com/ShotGifSquare02.gif nice",
+                false,
+            ));
+            chat.sync_sjk(&state(all), |_| false, now);
+            let name = format!("duel6-chat-box-gifs-{suffix}");
+            println!("{}", shoot(&mut gpu, 12, &name).display());
+            gpu.chat.open_sjk();
+            let name = format!("duel6-chat-box-gifs-typing-{suffix}");
+            println!("{}", shoot(&mut gpu, 12, &name).display());
         });
     }
 }

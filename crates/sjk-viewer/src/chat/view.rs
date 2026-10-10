@@ -117,10 +117,12 @@ impl ChatOverlay {
     fn build_feed(&mut self, font: &UiFont, g: &Geometry, ms: u64) {
         let active = self.is_typing() || self.options.history;
         let limit = self.options.lines;
-        let mut visible = [(0_usize, 0.0_f32, 0.0_f32); MAX_VISIBLE];
+        self.follow_gif_switch();
+        let mut visible = [(0_usize, 0.0_f32, 0.0_f32, None); MAX_VISIBLE];
         let mut count = 0;
         let mut bottom = g.bottom;
-        for (index, line) in self.lines.iter_mut().enumerate().rev().skip(self.scroll) {
+        for index in (0..self.lines.len()).rev().skip(self.scroll) {
+            let line = &self.lines[index];
             let age = ms.saturating_sub(line.received_ms);
             let alpha = if active {
                 visibility(age, true)
@@ -138,6 +140,9 @@ impl ChatOverlay {
                 .as_ref()
                 .map(|hub| sjk_line::Prefix::new(&line.name, hub.verified, hub.tier, font, g));
             let wrap_width = g.width - 12.0 * g.scale;
+            // An SJK line's GIF under its text takes room of its own (`feed_gif.rs`).
+            let gif = self.gif_shown(index);
+            let line = &mut self.lines[index];
             match &sjk {
                 Some(prefix) => line.wrap.update_spaced(
                     &line.body,
@@ -157,16 +162,23 @@ impl ChatOverlay {
             } else {
                 layout::NAME_ADVANCE
             };
-            let height = rows as f32 * g.row + (header + layout::MESSAGE_GAP) * g.scale;
-            let top = bottom - height;
+            let text_height = rows as f32 * g.row + (header + layout::MESSAGE_GAP) * g.scale;
+            let mut gif = gif;
+            let mut top = bottom - text_height - feed_gif::room(g, gif);
+            if top < g.top && count == 0 && gif.is_some() {
+                // Too tall for the box with its GIF: its text alone.
+                gif = None;
+                top = bottom - text_height;
+            }
             if top < g.top || count == limit {
                 break;
             }
-            visible[count] = (index, top, alpha);
+            visible[count] = (index, top, alpha, gif);
             count += 1;
             bottom = top;
         }
-        for (token, (index, top, alpha)) in visible[..count].iter().copied().enumerate().rev() {
+        for (token, (index, top, alpha, gif)) in visible[..count].iter().copied().enumerate().rev()
+        {
             let line = &mut self.lines[index];
             let age = ms.saturating_sub(line.received_ms);
             let y = line.y.get_or_insert_with(|| Tween::settled(top));
@@ -198,6 +210,18 @@ impl ChatOverlay {
                     [x, y],
                     alpha,
                 );
+                if let Some(shown) = gif {
+                    let rows = if line.muted { 1 } else { line.wrap.len };
+                    crate::chat_gifs::draw::paint(
+                        &mut self.ui,
+                        feed_gif::LOOK,
+                        shown,
+                        [x, y + rows as f32 * g.row],
+                        g.width - 12.0 * g.scale,
+                        g.scale,
+                        alpha,
+                    );
+                }
                 // Resting the pointer on the sender's name shows their profile card.
                 if active {
                     self.visible_people[token] = Some(card::Who::Hub(hub.id));

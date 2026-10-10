@@ -77,6 +77,17 @@ with test GIFs at 1080p and 4K. Not seen in the game window or end to end throug
 hub. GIPHY share links with their tracking query are often over the chat's 150
 characters and are refused by the hub's rules (unchanged).
 
+Branch `personal/ingame-gifs` (10/10/2026, based on `a10730dc`, Windows 11), after Sol
+saw only the link in the chat box during play: the in-play chat box (`chat/view.rs`, the
+only path drawing it, in play, beside the scoreboard and over the composer's history) now
+shows an SJK line's GIF under it, three rows high (54 pixels at 1080p), at its line's
+place and alpha, with the same cache, caps, mute rule and switch
+([hub-chat.md](hub-chat.md#gifs-from-giphy)); game server chat keeps links as text.
+Verified by unit tests (room under the line at 1080p and 4K, fading and moving with the
+line, muted and switched-off lines, the history while typing, a game line) and off-screen
+world shots of the box with test GIFs, in play and typing, at 1080p and 4K
+(`duel6_sjk_chat_gifs_feed`). Not tried in a match.
+
 ## Memory on servers
 
 Branch `personal/menu-world-drop` (10/10/2026, based on `0c76ff03`, Windows 11, RTX
