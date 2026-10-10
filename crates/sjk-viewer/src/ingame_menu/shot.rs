@@ -1,14 +1,12 @@
 //! Camera control (called Shot controls until 08/10/2026): the camera and
 //! sunlight panel for framing shots and recordings, sharing the console's
 //! presentation director (`demo_camera`, `demo_sun`). The game menu's Camera
-//! control entry or F8 (while unbound) opens it. It has two looks over the same
-//! state, tokens, keys and pointer: the panel the classic style shows ([`view`])
-//! and the SJK UI's ([`sjk_view`]).
+//! control entry or F8 (while unbound) opens it. It is drawn in the SJK UI's look
+//! ([`sjk_view`]) in every menu style.
 mod numeric;
 mod runtime;
 
 mod sjk_view;
-mod view;
 use crate::menu_widgets::MenuCanvas;
 use sjk_ui::{AbstractAction, InputEvent, UiEventKind};
 
@@ -86,10 +84,6 @@ impl Panel {
         director.reset_sun();
         self.dirty[1] = false;
         self.sun_mode = director.sun_mode();
-    }
-
-    pub(crate) fn build(&self, canvas: &mut MenuCanvas, viewport: [f32; 2]) {
-        view::build(self, canvas, viewport);
     }
 
     /// Lay the panel out in the SJK UI's look.

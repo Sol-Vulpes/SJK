@@ -9,6 +9,8 @@
 #                               made it when that is not the piece's owner.
 
 = Sol
++ 10/10/2026 | - | Update, Import, Camera control in the SJK look in every style; SJK fonts always loaded
+- 8547cfa |  | SJK look for Update, Import and Camera control in every style
 + 10/10/2026 | - | Rarity effects: Rare breathes, Legendary shines, Mythical sparks
 - 9e2b753 |  | Animate rarity: Rare breathes, Legendary shines, Mythical sparks
 + 10/10/2026 | - | SJK chat names keep the marks around clan tags

@@ -91,20 +91,6 @@ impl ViewerConsole {
         true
     }
 
-    /// Draw the page in place of the console; false when it is not shown.
-    pub(super) fn append_update_panel(
-        &mut self,
-        vertices: &mut Vec<TextVertex>,
-        font: &UiFont,
-        viewport: [f32; 2],
-    ) -> bool {
-        if !(self.open && self.update_panel.is_open()) {
-            return false;
-        }
-        self.update_panel.append(vertices, font, viewport);
-        true
-    }
-
     /// The page's draw list while it is shown.
     pub(super) fn update_panel_draw_list(&self) -> Option<&sjk_ui::DrawList> {
         (self.open && self.update_panel.is_open()).then(|| self.update_panel.draw_list())

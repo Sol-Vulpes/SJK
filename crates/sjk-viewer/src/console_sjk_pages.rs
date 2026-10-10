@@ -10,21 +10,20 @@ impl ViewerConsole {
     /// Draw the pages in the SJK UI's look (`sjk`), or in the others.
     pub(crate) fn set_sjk_pages(&mut self, sjk: bool) {
         self.changelog.set_sjk(sjk);
-        self.update_panel.set_sjk(sjk);
         self.identity_panel.set_sjk(sjk);
         self.credits.set_sjk(sjk);
-        self.config_import.set_sjk(sjk);
     }
 
     /// Whether the page drawn in place of the console is one of them in the
-    /// SJK UI's look (the import page comes first when open, then credits), or
-    /// the command browser in it.
+    /// SJK UI's look (the import page, which has only that look, comes first when
+    /// open, then credits), or the command browser in it.
     pub(crate) fn sjk_page_open(&self) -> bool {
         if !self.open {
             return false;
         }
+        // The Import and Update pages have the SJK UI's look in every menu style.
         if self.config_import.is_open() {
-            return self.config_import.is_sjk();
+            return true;
         }
         if self.credits.is_open() {
             return self.credits.is_sjk();
@@ -49,7 +48,7 @@ impl ViewerConsole {
             return self.changelog.is_sjk();
         }
         if self.update_panel.is_open() {
-            return self.update_panel.is_sjk();
+            return true;
         }
         self.identity_panel.is_open() && self.identity_panel.is_sjk()
     }

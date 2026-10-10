@@ -183,21 +183,6 @@ impl ViewerConsole {
         true
     }
 
-    /// Draw the page in place of the console; false when it is not shown.
-    pub(super) fn append_config_import(
-        &mut self,
-        vertices: &mut Vec<TextVertex>,
-        font: &UiFont,
-        viewport: [f32; 2],
-    ) -> bool {
-        if !(self.open && self.config_import.is_open()) {
-            return false;
-        }
-        self.sync_config_browse();
-        self.config_import.append(vertices, font, viewport);
-        true
-    }
-
     /// The page's draw list while it is shown.
     pub(super) fn config_import_draw_list(&self) -> Option<&sjk_ui::DrawList> {
         (self.open && self.config_import.is_open()).then(|| self.config_import.draw_list())

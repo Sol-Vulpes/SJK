@@ -2069,6 +2069,15 @@ test: In game, the Settings pop-up shows the same pages.
 test: firstsetup in the console opens First setup (quicksetup is gone).
 test: Modern style: Video > Renderer has a WEATHER tab with the weather rows.
 
+[pages-sjk-only]
+area: Menus & settings
+title: Update, Import and Camera control in the SJK look with classic menus; SJK fonts always
+change: The classic menus' hero Update/Import pages and right-edge Camera control panel are gone.
+change: The SJK UI's fonts load in every menu style, so SJK pages never fall back to Inter.
+test: ui_menuStyle classic: update, then firstsetup import: both are SJK pop-up cards.
+test: Classic, in a match: Camera control (F8) is the SJK column, in Rajdhani/Exo 2.
+test: Classic: Profile and Collection text is in the SJK fonts, not Inter.
+
 [first-setup-import]
 area: Menus & settings
 title: First setup at every start; import name, model, FOV and keys from a .cfg
