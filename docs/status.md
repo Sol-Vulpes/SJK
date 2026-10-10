@@ -1,5 +1,16 @@
 # Status and priorities
 
+## Player model mip chains built off the render thread
+
+Branch `personal/model-mips` (10/10/2026, based on `96786a69`, Windows 11). With the
+pipelines on a worker, Sol still had `config-refresh` 56 ms (shinzo) and 182 ms
+(kushina/default_sum) the frame a model was uploaded: `Forge::texture` built each
+texture's mip chain on the CPU there (`mips::chain`: 6.5 ms per 1024x1024, 25 ms per
+2048x2048, timed in a release build). The player-load worker now builds the chains
+(`warm_entity_materials`, `PreparedTexture`) and `Runtime::upload_prepared_textures`
+uploads them under their keys before the materials are appended. Verified by the
+viewer suite (release) and Clippy; not tried in a game.
+
 ## Menu world rebuild loop on a map change
 
 Branch `personal/menu-rebuild-loop` (10/10/2026, based on `10d953ed`, Windows 11). Sol
