@@ -375,6 +375,15 @@ overlay routes their text to the UI's families (`console_sjk_pages.rs`).
   then the actions along its foot: Release notes and Check again on the left
   when offered, Close and the one Enter takes (gold: Install, Restart now,
   Check, Open release page) on the right.
+- **Import** ([config_import_panel_sjk.rs](../crates/sjk-viewer/src/config_import_panel_sjk.rs)):
+  the same pop-up card since 10/10/2026 (Sol saw the hero page left over).
+  Import (gold) and the file's name along its top, a headline, then the parts the
+  file holds (Name, Model, Field of view, Key bindings), one banded row each with
+  what the file gives and its switch, and the note on keys SJK does not know; or
+  what to do, why nothing was imported, or what changed. The actions along its
+  foot: Other file... on the left, Cancel and Import (gold) on the right; without a
+  file Close and Browse... (gold), which Enter takes
+  ([client.md](client.md#importing-from-another-client)).
 - **Identity** ([identity_panel_sjk.rs](../crates/sjk-viewer/src/identity_panel_sjk.rs)):
   the identity's state as a headline (the name the hub knows, or "Identity is
   off") over its lines, the switch sharing it with the hub, then while it is on

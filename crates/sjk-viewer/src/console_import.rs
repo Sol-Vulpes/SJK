@@ -48,7 +48,7 @@ impl ViewerConsole {
 
     /// Read the file the dialog gave, as a dropped one; called every frame the page
     /// shows.
-    fn sync_config_browse(&mut self) {
+    pub(super) fn sync_config_browse(&mut self) {
         match self.config_import.take_browsed() {
             Some(Browsed::File(path)) => self.open_config_import(Some(&path)),
             Some(Browsed::Nothing(Some(reason))) => self.config_import.fail(reason),

@@ -724,11 +724,30 @@ mod tests {
             let path = shoot(&mut gpu, 20, "duel6-first-setup-classic");
             println!("{}", path.display());
             // The Import page that row opens (without its file dialog, which a shot
-            // cannot show), empty and after a file that cannot be read.
+            // cannot show), in the classic menus' hero look, then in the SJK UI's
+            // card: empty, with a file's parts, and after a file that cannot be read.
             if let Some(console) = gpu.console.as_mut() {
                 console.open_config_import(None);
             }
+            let path = shoot(&mut gpu, 6, "duel6-import-page-classic");
+            println!("{}", path.display());
+            if let Some(console) = gpu.console.as_mut() {
+                console.set_cvar(crate::menu::style::CVAR, "sjk");
+            }
             let path = shoot(&mut gpu, 6, "duel6-import-page");
+            println!("{}", path.display());
+            let directory = tempfile::tempdir().expect("a temporary folder");
+            let config = directory.path().join("jampconfig.cfg");
+            std::fs::write(
+                &config,
+                "unbindall\nbind w \"+forward\"\nbind NOSUCHKEY \"+use\"\n\
+                 seta name \"^1Sol^7Fox\"\nseta model \"kyle/default\"\nseta cg_fov \"100\"\n",
+            )
+            .expect("write the config");
+            if let Some(console) = gpu.console.as_mut() {
+                console.open_config_import(Some(&config));
+            }
+            let path = shoot(&mut gpu, 6, "duel6-import-page-loaded");
             println!("{}", path.display());
             if let Some(console) = gpu.console.as_mut() {
                 console.open_config_import(Some(std::path::Path::new(

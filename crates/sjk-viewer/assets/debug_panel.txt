@@ -2063,6 +2063,7 @@ test: Drop a .txt or an empty .cfg: the page says why nothing is imported.
 test: Shift+right-click a .cfg > Copy as path; firstsetup import <paste>: the page lists it.
 test: First setup > Import a config file (near the end): the file window opens; pick a .cfg.
 test: On the Import page press B (or click Browse): the window opens again; Cancel keeps the page.
+test: SJK UI: the Import page is a pop-up card like Update's; click a row to tick it, then Import.
 note: Never started in a game yet; the drop itself is untested (winit drag and drop).
 note: 10/10: quoted paths with backslashes failed (a tester's binds-only cfg); now kept as typed.
 

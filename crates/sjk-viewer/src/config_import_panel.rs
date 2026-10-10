@@ -3,7 +3,8 @@
 //! window, by `firstsetup import` or by First setup's "Import a config file"
 //! row; Browse (B) picks the file with the system's file dialog. Like the Update
 //! page it lives in the console and is drawn in place of it, so it opens over the
-//! menus and in a match.
+//! menus and in a match. The SJK UI draws it as its own pop-up card
+//! (`config_import_panel_sjk.rs`); the classic menus in SJK's hero look.
 
 use crate::config_import::{Found, Item};
 use crate::menu_widgets::{BACK_TOKEN, FormLayout, MenuCanvas, Scrim};
@@ -11,6 +12,9 @@ use crate::text::{TextVertex, UiFont};
 use sjk_ui::{FontWeight, InputEvent, Rect, UiEventKind};
 use std::path::PathBuf;
 use std::sync::mpsc::Receiver;
+
+#[path = "config_import_panel_sjk.rs"]
+mod sjk;
 use winit::event::{ElementState, KeyEvent};
 use winit::keyboard::{KeyCode, PhysicalKey};
 
@@ -69,6 +73,8 @@ pub(crate) struct Panel {
     browsing: Option<Receiver<Option<PathBuf>>>,
     /// What opens the file dialog ([`pick_config`]; tests put their own).
     picker: fn() -> Option<PathBuf>,
+    /// The SJK UI's look (`config_import_panel_sjk.rs`).
+    sjk: bool,
 }
 
 impl Panel {
@@ -83,7 +89,17 @@ impl Panel {
             ui: MenuCanvas::with_text_capacity(64),
             browsing: None,
             picker: pick_config,
+            sjk: false,
         }
+    }
+
+    /// Draw the SJK UI's look (`sjk`), in its families, or the hero one.
+    pub(crate) fn set_sjk(&mut self, sjk: bool) {
+        self.sjk = sjk;
+    }
+
+    pub(crate) fn is_sjk(&self) -> bool {
+        self.sjk
     }
 
     /// Browse: open the system's file dialog on a worker thread; the file chosen is
@@ -221,6 +237,12 @@ impl Panel {
         let count = self.rows.len();
         match key {
             KeyCode::Escape => return PanelAction::Close,
+            // Without a file to import, Enter browses for one.
+            KeyCode::Enter | KeyCode::NumpadEnter
+                if matches!(self.state, State::Waiting | State::Failed(_)) =>
+            {
+                self.browse();
+            }
             KeyCode::Enter | KeyCode::NumpadEnter => return self.primary(),
             KeyCode::KeyB if !matches!(self.state, State::Done(_)) => self.browse(),
             KeyCode::ArrowUp if count > 0 => self.selected = (self.selected + count - 1) % count,
@@ -335,11 +357,7 @@ impl Panel {
                 }
                 if found.unknown_keys > 0 {
                     let rect = layout.row_rect(self.rows.len());
-                    let note = format!(
-                        "{} binding{} use keys SJK does not know and are left out.",
-                        found.unknown_keys,
-                        if found.unknown_keys == 1 { "" } else { "s" }
-                    );
+                    let note = unknown_note(found.unknown_keys);
                     self.ui.text(
                         &note,
                         Rect::new(rect.x, rect.y + 16.0 * s, rect.width, 20.0 * s),
@@ -436,6 +454,15 @@ impl Panel {
                 0.2 * s,
             );
         }
+    }
+}
+
+/// The note under the parts when `count` bindings name keys SJK does not know.
+fn unknown_note(count: usize) -> String {
+    if count == 1 {
+        "1 binding uses a key SJK does not know and is left out.".to_owned()
+    } else {
+        format!("{count} bindings use keys SJK does not know and are left out.")
     }
 }
 

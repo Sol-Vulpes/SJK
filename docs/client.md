@@ -1236,7 +1236,10 @@ to the console). A file that clears every binding first (`unbindall`, as a saved
 locks keep their binding, and SJK's own actions get their default key back when
 the file left both the action and its key free. A file without `unbindall` only
 adds its keys. Bindings on keys SJK does not know are left out and counted. The
-page is drawn like the Update page in both menu styles.
+SJK UI draws the page as its own pop-up card, as Update's
+([config_import_panel_sjk.rs](../crates/sjk-viewer/src/config_import_panel_sjk.rs),
+[SJK UI](sjk-ui.md)); the classic menus in SJK's hero look. With no file yet or after
+a refused one, Enter browses.
 
 ## Slider values
 
