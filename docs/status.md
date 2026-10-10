@@ -28,9 +28,12 @@ applies, the console mirrors the state each frame); the key-binding row is
 Interaction > Toy: Illuminate; the icon is `gfx/sjk/toy_illuminate.png`. Verified by
 unit tests (the Force bar and selector never offer Illuminate with any bits, the
 command and its alias, the hidden registration, the profile migration, the Toys tab's
-click and keys, the quick wheel choice), the workspace checks, and the off-screen world
-shots named in the final report of the change; not tried in a game: the holocron on a
-key, in the wheel and on the tab, and others seeing it through the hub.
+click and keys, the quick wheel choice), the workspace checks, and the world shots
+`duel6_sjk_collection` (with a new Toys-lit shot: the switch, "put out" in the keys
+line, the icon from the quick wheel's atlas cells) and `duel6_quick_wheel*` (the Force
+page with 9 powers and Force 2 with JoF's icons, Toys, the Settings editor), re-rendered
+and looked at; not tried in a game: the holocron on a key, in the wheel and on the
+tab, and others seeing it through the hub.
 
 ## Quick wheel: Force first, a Toys page; a Melee bind
 
