@@ -40,6 +40,7 @@ Per tier `<tier>` (one of the ids above), all mounted in memory like the files a
 
 | File | Game path | What |
 | --- | --- | --- |
+| `holocron_<tier>.md3` | `models/sjk/holocron_<tier>.md3` | The cube with the surface shader `models/sjk/holocron_<tier>` |
 | `holocron_<tier>.jpg` | `models/sjk/holocron_<tier>.jpg` | The face in the tier's colour, 512x512 |
 | `holocron_<tier>_glow.jpg` | `models/sjk/holocron_<tier>_glow.jpg` | Its emblem and lit ring alone, for the additive and glow stage |
 | `holocron_<tier>.png` | `gfx/sjk/holocron_<tier>.png` | UI icon, 256x256 with alpha: the face in a chamfered octagon with a rim and halo in the tier's colour, for a dark UI |
@@ -47,13 +48,25 @@ Per tier `<tier>` (one of the ids above), all mounted in memory like the files a
 | `holocron_tiers.shader` | `shaders/sjk_holocron_tiers.shader` | `models/sjk/holocron_<tier>` for the four tiers: the base shader's stages with the tier's pictures and breathing |
 | `holocron_mythical_sheen.jpg` | `models/sjk/holocron_mythical_sheen.jpg` | A soft diagonal stripe (128x128, tiles along s + t) that the mythical shader scrolls over the face (`tcMod scroll`) |
 
-The model's own shader is still `models/sjk/holocron` (the base, Illuminate's);
-a tier is drawn by giving the same cube the shader `models/sjk/holocron_<tier>`.
+The model's own shader is still `models/sjk/holocron` (the base, Illuminate's). A surface's
+shader is named by its model file, so the shared cube cannot draw a tier: each tier has a
+model of its own, `holocron_<tier>.md3` (the same cube, its surface shader
+`models/sjk/holocron_<tier>`), which the Profile screen's Holocrons tab draws.
 The shaders use only stock Quake 3 / Jedi Academy keywords (`rgbGen lightingDiffuse`,
 `rgbGen wave`, `blendFunc GL_ONE GL_ONE`, `tcMod scale` and `scroll`, `glow`); the
 test in [illuminate.rs](../../src/illuminate.rs) parses them with the client's shader
 parser and checks every picture they name is mounted. The pictures come out of
 `holocron.jpg`, so nothing of the originals is needed to remake the tiers.
+
+### The locked look
+
+A tier the player holds none of is drawn dimmed, not hidden, by the one shared locked look:
+
+| File | Game path | What |
+| --- | --- | --- |
+| `holocron_locked.jpg` | `models/sjk/holocron_locked.jpg` | The face with its colour drained and darkened, 512x512 |
+| `holocron_locked.md3` | `models/sjk/holocron_locked.md3` | The cube with the surface shader `models/sjk/holocron_locked` |
+| `holocron_locked.shader` | `shaders/sjk_holocron_locked.shader` | A lit face and a faint light of its own, no glow |
 
 ### Light colours
 

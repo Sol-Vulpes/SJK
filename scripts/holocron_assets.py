@@ -26,7 +26,8 @@ the one holocron: the plate stays steel, the emblem, the ring's runes and a fain
 tint take the tier's colour. Per tier it writes `holocron_<tier>.jpg` (the face),
 `holocron_<tier>_glow.jpg`, `holocron_<tier>.png` (the icon, 256x256) and
 `holocron_<tier>_small.png` (64x64), the one shared sheen stripe of the mythical
-tier, and `holocron_tiers.shader`. The whole table (colours, glow ladder, shader
+tier, and `holocron_tiers.shader`. The locked look (a tier the player holds none of) is
+`holocron_locked.md3`, `.jpg` and `.shader`: the face drained and dark, without glow. The whole table (colours, glow ladder, shader
 waves, point lights) is TIERS below; the output is deterministic.
 
 Needs Pillow, numpy and scipy (pip install pillow numpy scipy).
@@ -111,7 +112,13 @@ def encode_normal(n) -> int:
     return (around << 8) | from_up
 
 
-def cube_md3(output: Path) -> None:
+def cube_md3(output: Path, file: str = "holocron", shader: str = SHADER) -> None:
+    """Write the cube as `<file>.md3` with the surface shader `shader`.
+
+    The renderer takes a surface's shader from the model file, so a look that is not
+    the base one needs its own model: `holocron_<tier>.md3` names `models/sjk/holocron_<tier>`
+    and `holocron_locked.md3` the locked look (see `tier_models`).
+    """
     h = HOLOCRON_EDGE / 2
     # Each face: outward normal and the picture's up; right = up x normal, so the
     # picture reads upright seen from outside.
@@ -138,7 +145,7 @@ def cube_md3(output: Path) -> None:
     def name(text: str, size: int) -> bytes:
         return text.encode("ascii").ljust(size, b"\0")
 
-    shaders = name(SHADER, 64) + struct.pack("<i", 0)
+    shaders = name(shader, 64) + struct.pack("<i", 0)
     tris = b"".join(struct.pack("<3i", *t) for t in triangles)
     sts = b"".join(struct.pack("<2f", *uv) for uv in uvs)
     verts = b"".join(
@@ -168,10 +175,10 @@ def cube_md3(output: Path) -> None:
     header = (
         b"IDP3"
         + struct.pack("<i", 15)
-        + name("models/sjk/holocron.md3", 64)
+        + name(f"models/sjk/{file}.md3", 64)
         + struct.pack("<9i", 0, 1, 0, 1, 0, ofs_frames, ofs_surfaces, ofs_surfaces, end)
     )
-    (output / "holocron.md3").write_bytes(header + frame + surface)
+    (output / f"{file}.md3").write_bytes(header + frame + surface)
 
 
 # ---------------------------------------------------------------------------
@@ -188,6 +195,12 @@ ICON_CUT = 1.5
 ICON_HALF = 108.0
 SHEEN_SIZE = 128
 SHEEN_NAME = "holocron_mythical_sheen"
+# The look of a tier the player holds none of: the face with its colour drained and its
+# light put out, one model and one shader for all four (the tier shows in the dim point
+# light the Profile screen gives it).
+LOCKED = "holocron_locked"
+LOCKED_KEEP = 0.14
+LOCKED_DIM = 0.42
 
 
 @dataclass(frozen=True)
@@ -439,9 +452,47 @@ def tier_shader() -> str:
     return "\n".join(lines) + "\n"
 
 
+def locked_face(face_rgb: np.ndarray) -> np.ndarray:
+    """The base face with its colour drained to a share and darkened (float RGB)."""
+    grey = (0.3 * face_rgb[..., 0:1] + 0.59 * face_rgb[..., 1:2] + 0.11 * face_rgb[..., 2:3])
+    drained = grey + LOCKED_KEEP * (face_rgb - grey)
+    return (drained * LOCKED_DIM * np.array((0.96, 1.0, 1.08))).clip(0, 255)
+
+
+def locked_shader() -> str:
+    name = f"models/sjk/{LOCKED}"
+    lines = [
+        "// The holocron of a tier the player holds none of (SJK; see README.md): the face",
+        "// drained and dark, lit by the world and a faint light of its own, no glow.",
+        "// Made by scripts/holocron_assets.py: edit that, not this.",
+        name,
+        "{",
+        "\tq3map_nolightmap",
+        "\t{",
+        f"\t\tmap {name}",
+        "\t\trgbGen lightingDiffuse",
+        "\t}",
+        "\t{",
+        f"\t\tmap {name}",
+        "\t\tblendFunc GL_ONE GL_ONE",
+        "\t\trgbGen wave sin 0.16 0 0 0",
+        "\t}",
+        "}",
+    ]
+    return "\n".join(lines) + "\n"
+
+
 def tiers(output: Path) -> None:
-    """The tiers' pictures and shaders, from the folder's holocron.jpg."""
+    """The tiers' pictures, models and shaders, from the folder's holocron.jpg."""
     base = np.asarray(Image.open(output / "holocron.jpg").convert("RGB")).astype(float)
+    Image.fromarray(locked_face(base).round().astype(np.uint8)).save(
+        output / f"{LOCKED}.jpg", quality=JPEG_QUALITY
+    )
+    (output / f"{LOCKED}.shader").write_text(locked_shader(), encoding="ascii", newline="\n")
+    # One model per look: the surface's shader is read from the model file.
+    cube_md3(output, LOCKED, f"models/sjk/{LOCKED}")
+    for tier in TIERS:
+        cube_md3(output, f"holocron_{tier.id}", f"models/sjk/holocron_{tier.id}")
     for tier in TIERS:
         face_picture, glow_picture = tier_layers(base, tier)
         Image.fromarray(face_picture.round().astype(np.uint8)).save(

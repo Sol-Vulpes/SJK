@@ -38,9 +38,13 @@ macro_rules! bundled {
 #[cfg(test)]
 const TIERS: [&str; 4] = ["uncommon", "rare", "legendary", "mythical"];
 
-/// The bundled files at their game paths: the holocron, then the four tiers' faces,
-/// glows and icons (large and small), the mythical sheen and the tiers' shader.
-const FILES: [(&str, &[u8]); 23] = [
+/// The bundled files at their game paths: the holocron, then the four tiers' models,
+/// faces, glows and icons (large and small), the mythical sheen and the tiers' shader,
+/// then the locked look (the Profile screen's tier the player holds none of).
+///
+/// A tier has a model of its own because a surface's shader is named by its model file:
+/// the shared `holocron.md3` always draws `models/sjk/holocron`.
+const FILES: [(&str, &[u8]); 30] = [
     (MODEL, bundled!("holocron.md3")),
     ("models/sjk/holocron.jpg", bundled!("holocron.jpg")),
     (
@@ -52,6 +56,10 @@ const FILES: [(&str, &[u8]); 23] = [
         bundled!("force_illuminate.png"),
     ),
     ("shaders/sjk_holocron.shader", bundled!("holocron.shader")),
+    (
+        "models/sjk/holocron_uncommon.md3",
+        bundled!("holocron_uncommon.md3"),
+    ),
     (
         "models/sjk/holocron_uncommon.jpg",
         bundled!("holocron_uncommon.jpg"),
@@ -69,6 +77,10 @@ const FILES: [(&str, &[u8]); 23] = [
         bundled!("holocron_uncommon_small.png"),
     ),
     (
+        "models/sjk/holocron_rare.md3",
+        bundled!("holocron_rare.md3"),
+    ),
+    (
         "models/sjk/holocron_rare.jpg",
         bundled!("holocron_rare.jpg"),
     ),
@@ -80,6 +92,10 @@ const FILES: [(&str, &[u8]); 23] = [
     (
         "gfx/sjk/holocron_rare_small.png",
         bundled!("holocron_rare_small.png"),
+    ),
+    (
+        "models/sjk/holocron_legendary.md3",
+        bundled!("holocron_legendary.md3"),
     ),
     (
         "models/sjk/holocron_legendary.jpg",
@@ -96,6 +112,10 @@ const FILES: [(&str, &[u8]); 23] = [
     (
         "gfx/sjk/holocron_legendary_small.png",
         bundled!("holocron_legendary_small.png"),
+    ),
+    (
+        "models/sjk/holocron_mythical.md3",
+        bundled!("holocron_mythical.md3"),
     ),
     (
         "models/sjk/holocron_mythical.jpg",
@@ -120,6 +140,18 @@ const FILES: [(&str, &[u8]); 23] = [
     (
         "shaders/sjk_holocron_tiers.shader",
         bundled!("holocron_tiers.shader"),
+    ),
+    (
+        "models/sjk/holocron_locked.md3",
+        bundled!("holocron_locked.md3"),
+    ),
+    (
+        "models/sjk/holocron_locked.jpg",
+        bundled!("holocron_locked.jpg"),
+    ),
+    (
+        "shaders/sjk_holocron_locked.shader",
+        bundled!("holocron_locked.shader"),
     ),
 ];
 
@@ -269,19 +301,29 @@ impl Holocron {
         if self.level <= 0.0 {
             return None;
         }
-        let bob = (seconds * std::f32::consts::TAU / BOB_PERIOD).sin() * BOB;
         Some(Pose {
-            position: self.position? + Vec3::Z * bob,
-            rotation: Quat::from_rotation_z(seconds * SPIN)
-                * Quat::from_rotation_x(TILT[0])
-                * Quat::from_rotation_y(TILT[1]),
+            position: self.position? + Vec3::Z * idle_bob(seconds),
+            rotation: idle_rotation(seconds),
             level: smooth(self.level),
         })
     }
 }
 
+/// How far up (or down) its bob has taken it at `seconds`, in units for the
+/// player-sized holocron: the Profile screen's holocron bobs by this, scaled up with it.
+pub(crate) fn idle_bob(seconds: f32) -> f32 {
+    (seconds * std::f32::consts::TAU / BOB_PERIOD).sin() * BOB
+}
+
+/// Its turn about the vertical and its tilt at `seconds`, as it floats by the shoulder.
+pub(crate) fn idle_rotation(seconds: f32) -> Quat {
+    Quat::from_rotation_z(seconds * SPIN)
+        * Quat::from_rotation_x(TILT[0])
+        * Quat::from_rotation_y(TILT[1])
+}
+
 /// Ease in and out.
-fn smooth(t: f32) -> f32 {
+pub(crate) fn smooth(t: f32) -> f32 {
     t * t * (3.0 - 2.0 * t)
 }
 
@@ -700,6 +742,82 @@ mod tests {
         .unwrap();
         assert_eq!(base[0].name, "models/sjk/holocron");
         assert!(definitions.iter().all(|d| d.name != base[0].name));
+    }
+
+    /// A surface's shader comes from its model file, so every tier's cube names the
+    /// tier's own shader (the shared cube would draw the base look for all four), and
+    /// is the base cube otherwise: the same corners, normals, texture coordinates and
+    /// triangles. The locked look has its own cube and shader the same way.
+    #[test]
+    fn every_tier_has_a_cube_naming_its_own_shader() {
+        let mut vfs = VirtualFileSystem::new();
+        mount(&mut vfs).unwrap();
+        let model = |path: &str| {
+            sjk_model::Md3::parse(
+                &vfs.read(path)
+                    .unwrap()
+                    .unwrap_or_else(|| panic!("{path} is not mounted"))
+                    .bytes,
+            )
+            .unwrap_or_else(|error| panic!("{path}: {error}"))
+        };
+        let base = model(MODEL);
+        let shader_names = |path: &str| -> Vec<String> {
+            sjk_shader::parse_shader_script(&vfs.read(path).unwrap().unwrap().bytes, path)
+                .unwrap()
+                .into_iter()
+                .map(|definition| definition.name)
+                .collect()
+        };
+        let defined = shader_names("shaders/sjk_holocron_tiers.shader");
+        let locked_defined = shader_names("shaders/sjk_holocron_locked.shader");
+        assert_eq!(locked_defined, ["models/sjk/holocron_locked"]);
+        let mut named = Vec::new();
+        for (look, shader) in TIERS
+            .iter()
+            .map(|tier| {
+                (
+                    format!("holocron_{tier}"),
+                    format!("models/sjk/holocron_{tier}"),
+                )
+            })
+            .chain([(
+                "holocron_locked".to_owned(),
+                "models/sjk/holocron_locked".to_owned(),
+            )])
+        {
+            let cube = model(&format!("models/sjk/{look}.md3"));
+            assert_eq!(
+                (cube.surfaces.len(), cube.surfaces[0].shaders.len()),
+                (1, 1)
+            );
+            let surface = &cube.surfaces[0];
+            assert_eq!(surface.shaders, [shader.as_str()], "{look}");
+            assert!(
+                defined.contains(&shader) || locked_defined.contains(&shader),
+                "{look}: {shader} is defined by no mounted shader file"
+            );
+            let first = &base.surfaces[0];
+            assert_eq!(surface.triangles, first.triangles, "{look}");
+            assert_eq!(surface.texture_coordinates, first.texture_coordinates);
+            assert_eq!(surface.frames[0].len(), first.frames[0].len());
+            for (a, b) in surface.frames[0].iter().zip(&first.frames[0]) {
+                assert_eq!((a.position, a.normal), (b.position, b.normal), "{look}");
+            }
+            named.push(shader);
+        }
+        named.sort();
+        named.dedup();
+        assert_eq!(named.len(), TIERS.len() + 1, "no two looks share a shader");
+        // The locked face is mounted at its size.
+        let face = image::load_from_memory(
+            &vfs.read("models/sjk/holocron_locked.jpg")
+                .unwrap()
+                .unwrap()
+                .bytes,
+        )
+        .unwrap();
+        assert_eq!((face.width(), face.height()), (512, 512));
     }
 
     /// Step at 60 frames a second from `from` to `to` seconds; the last pose.
