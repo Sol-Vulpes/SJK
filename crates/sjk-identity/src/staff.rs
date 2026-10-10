@@ -1,6 +1,6 @@
 //! Staff requests (`PROTOCOL.md`, "Staff"): what a key the hub's operator made staff
 //! may do from inside the game: find players, give and take back medals and
-//! unlockables, clear achievements, moderate the SJK chat and players' pictures. The
+//! unlockables, give and take back holocrons, clear achievements, moderate the SJK chat and players' pictures. The
 //! hub refuses every one from a key that is not staff; the client only offers them to
 //! a player whose own profile says `staff`.
 
@@ -75,6 +75,23 @@ pub enum StaffRequest {
         /// Stop (true) or let again.
         blocked: bool,
     },
+    /// Give a holocron of a tier (`PROTOCOL.md`, "Holocrons"). A gift counts toward no
+    /// cap and is not announced.
+    HolocronGive {
+        /// The key that gets it.
+        key_id: String,
+        /// The tier's wire id (`uncommon`, `rare`, `legendary`, `mythical`).
+        tier: String,
+        /// Shown with it; may be empty.
+        note: String,
+    },
+    /// Take one holocron back, by its number at the hub.
+    HolocronRemove {
+        /// The key that holds it.
+        key_id: String,
+        /// The holocron's number ([`crate::Holocron::id`]).
+        id: u64,
+    },
 }
 
 impl StaffRequest {
@@ -89,7 +106,9 @@ impl StaffRequest {
             | Self::ClearAchievements { key_id, .. }
             | Self::ChatMute { key_id, .. }
             | Self::AvatarRemove { key_id }
-            | Self::AvatarBlock { key_id, .. } => Some(key_id),
+            | Self::AvatarBlock { key_id, .. }
+            | Self::HolocronGive { key_id, .. }
+            | Self::HolocronRemove { key_id, .. } => Some(key_id),
         }
     }
 }
@@ -153,5 +172,7 @@ pub(crate) fn done(request: &StaffRequest, count: usize) -> String {
         StaffRequest::AvatarBlock { blocked: false, .. } => {
             "They may upload pictures again".to_owned()
         }
+        StaffRequest::HolocronGive { tier, .. } => format!("Gave a {tier} holocron"),
+        StaffRequest::HolocronRemove { id, .. } => format!("Took back holocron #{id}"),
     }
 }

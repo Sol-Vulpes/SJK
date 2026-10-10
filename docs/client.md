@@ -2007,7 +2007,9 @@ are in [identity.md](identity.md).
   (`achievements`) and, on the Profile screen, the medals on a tab of their own. It
   has the SJK UI's look in every menu style; See unlockables opens the Unlockables
   page (`unlockables`, [unlockables.md](unlockables.md#unlockables-page)), the Profile
-  screen's Collection tab in the SJK UI ([identity.md](identity.md#profile)).
+  screen's Collection tab in the SJK UI ([identity.md](identity.md#profile)); See holocrons
+  opens the Holocrons page (`holocrons`, [holocrons.md](holocrons.md#the-holocrons-tab)), the
+  Profile screen's Holocrons tab in the SJK UI.
   The SJK UI's main page and in-game menu show a profile card bottom left (picture,
   name, verified, medals and achievements unlocked) that opens it with a click
   ([sjk-ui.md](sjk-ui.md#profile-card)).
@@ -2049,6 +2051,14 @@ are in [identity.md](identity.md).
   without the hub. It sends nothing and never writes `medals_seen.txt`; the console
   closes so the pop-up shows at once on the main menu (in a match, open the game
   menu).
+- `debug_holocron <tier|all> [x<count>]` (alone it lists the tiers `uncommon`, `rare`,
+  `legendary` and `mythical` with their odds) shows made-up holocron drops as if the hub
+  had just dropped them, through the same queue, centre print, pop-up, ceremony and sound,
+  and puts the first one's chat line in the game's feed, to try them without the hub. It
+  sends nothing and never writes `holocrons_seen.txt`
+  ([holocrons.md](holocrons.md#debug_holocron)). A holocron the hub drops while you play
+  shows the same way, once, and appears as a chat line in its tier's colour
+  ([holocrons.md](holocrons.md)).
 - SJK chat: one conversation for every SJK player, through the hub, in games and in
   the menus ([hub-chat.md](hub-chat.md)). In a game, I (`messagemode5`) opens the
   composer on the SJK channel (Tab cycles All, Team and SJK); hub messages show in the
@@ -2200,7 +2210,10 @@ weapons and sabers.
 
 The cube, its two pictures (lit metal, and the emblem alone for the glowing
 stage), its shader and the wheel icon are bundled and mounted below all game
-data, so a PK3 with the same paths replaces them. Sol generated the art; see
+data, so a PK3 with the same paths replaces them. The same cube also has four
+loot-box tiers (uncommon green, rare blue, legendary purple, mythical gold and
+shiny): other pictures and shaders on the one model, with their icons and point-light
+colours, bundled the same way. Sol generated the art; see
 [assets/holocron](../crates/sjk-viewer/assets/holocron/README.md) and
 [illuminate.rs](../crates/sjk-viewer/src/illuminate.rs).
 

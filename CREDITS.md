@@ -52,6 +52,8 @@ Sol develops SJK and sets its direction. Sol's work includes:
   Sol;
 - the JoF clan tag: the clan's emblem beside the names that carry its tag, in
   the chats, on the scoreboard and on player cards;
+- holocron drops, loot boxes earned by playing: four tiers, drops announced in
+  the SJK chat and a Holocrons tab on the Profile screen with a 3D holocron;
 - the radial HUD (`cg_hudStyle radial`, after TheRisqe's Radial HUD) and the
   HUD meters' overheal bands;
 - nameplates with estimated health, shield and Force, held-weapon and Force

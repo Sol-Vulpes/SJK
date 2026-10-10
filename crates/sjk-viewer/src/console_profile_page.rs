@@ -49,6 +49,7 @@ impl ViewerConsole {
         self.staff_panel.close();
         self.sjk_chat_panel.close();
         self.unlockables_panel.close();
+        self.holocrons_panel.close();
         self.dead_key.settle();
         self.profile_panel.open_as(tab, owns_console, mode);
     }
@@ -66,6 +67,8 @@ impl ViewerConsole {
             })
         } else if self.unlockables_panel.is_open() && self.unlockables_panel.is_hub() {
             Some(HubTab::Collection)
+        } else if self.holocrons_panel.is_open() && self.holocrons_panel.is_hub() {
+            Some(HubTab::Holocrons)
         } else {
             None
         }
@@ -90,7 +93,7 @@ impl ViewerConsole {
             HubTab::Profile => Some(Tab::Profile),
             HubTab::Achievements => Some(Tab::Achievements),
             HubTab::Medals => Some(Tab::Medals),
-            HubTab::Collection => None,
+            HubTab::Collection | HubTab::Holocrons => None,
             // The player screen's pages are not the console's.
             HubTab::Character | HubTab::Saber | HubTab::Force => return,
         };
@@ -104,13 +107,18 @@ impl ViewerConsole {
         let owns_console = if current.is_some() {
             let profile = self.profile_panel.close();
             let unlockables = self.unlockables_panel.close();
-            profile || unlockables
+            let holocrons = self.holocrons_panel.close();
+            profile || unlockables || holocrons
         } else {
             !self.open
         };
-        match page_tab {
-            Some(page_tab) => self.show_profile_panel(page_tab, owns_console, Mode::Hub),
-            None => {
+        match (page_tab, tab) {
+            (Some(page_tab), _) => self.show_profile_panel(page_tab, owns_console, Mode::Hub),
+            (None, HubTab::Holocrons) => {
+                self.show_holocrons_panel(owns_console);
+                self.holocrons_panel.set_hub(true);
+            }
+            (None, _) => {
                 self.show_unlockables_panel(owns_console);
                 self.unlockables_panel.set_hub(true);
             }
@@ -125,7 +133,8 @@ impl ViewerConsole {
         }
         let profile = self.profile_panel.close();
         let unlockables = self.unlockables_panel.close();
-        if profile || unlockables {
+        let holocrons = self.holocrons_panel.close();
+        if profile || unlockables || holocrons {
             self.set_open(false);
         }
     }
@@ -152,6 +161,13 @@ impl ViewerConsole {
                 self.open_unlockables_panel();
                 if owns_console {
                     self.unlockables_panel_owns_console();
+                }
+            }
+            PanelAction::Holocrons => {
+                let owns_console = self.profile_panel.close();
+                self.open_holocrons_panel();
+                if owns_console {
+                    self.holocrons_panel_owns_console();
                 }
             }
             PanelAction::Hub(tab) => {

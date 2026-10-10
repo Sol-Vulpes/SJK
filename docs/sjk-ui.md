@@ -1049,12 +1049,13 @@ control there.
 
 [profile_hub.rs](../crates/sjk-viewer/src/profile_hub.rs) (09/10/2026, Sol's requests:
 one Profile in the menu for the character and the SJK profile, then one row of tabs
-for all of it). Existing screens shown as one, under one row of seven tabs: Character,
+for all of it). Existing screens shown as one, under one row of eight tabs: Character,
 Saber and Force (the player screen's pages), SJK Profile (the console's Profile page:
-picture, bio, record, the achievements and collection in brief), Achievements (its
-board), Medals (its [Medals](#sjks-pages) tab) and Collection (the Unlockables page:
-every unlockable, owned and locked, with how to get it). Each keeps its state, layout,
-keys and pointer; the row is the player screen's own tabs grown to seven.
+picture, bio, record, the achievements, collection and holocrons in brief), Achievements (its
+board), Medals (its [Medals](#sjks-pages) tab), Collection (the Unlockables page:
+every unlockable, owned and locked, with how to get it) and Holocrons (10/10/2026, see
+below). Each keeps its state, layout,
+keys and pointer; the row is the player screen's own tabs grown to eight.
 
 - **Row:** under the title (the player's name, with the way back before it: "Game
   menu" or "Main menu"), from x 96 at y 146, the names in Rajdhani at 26, 48 apart,
@@ -1065,9 +1066,36 @@ keys and pointer; the row is the player screen's own tabs grown to seven.
   pages move what they show down 44 pixels under it. "Collection" is one constant
   (`profile_hub::COLLECTION`): Sol had no name for the page of everything one can
   unlock, so it is a one-line rename.
+- **Holocrons tab** ([holocrons_panel.rs](../crates/sjk-viewer/src/holocrons_panel.rs),
+  [holocrons_panel_view.rs](../crates/sjk-viewer/src/holocrons_panel_view.rs),
+  [holocrons.md](holocrons.md#the-holocrons-tab), 10/10/2026, Sol's holocron drops): a
+  console page like Collection, with the world left clear on the left: a 3D holocron turns
+  and bobs there in the look of the tier chosen, with that tier's colour of point light
+  (the backdrop camera parks on its own shot: duel6's garden, a cut through dark on the
+  tour; the classic style does not hide the world under it); under it the tier's name at 46
+  in its colour, a padlock and "None held yet: shown dimmed" for a tier held none of, whose
+  holocron shows dark and drained. On the right (x 1000 to 1824, over a dark panel): how
+  many holocrons the player holds at 38 (or "Identity is off", "No hub is set",
+  "Contacting the hub..." with the reason under it), the four tiers as rows of 60 (the
+  tier's picture, its name at 27 in its colour, "60% of drops", the count held at 32 with
+  "held" under it, or a dash before the hub answers, a padlock by a zero; the chosen row
+  tinted in its colour with a white ring), the chosen tier's description, that holocrons
+  cannot be opened yet, "Next holocron in about 20 minutes of play" with "3 of 8 today" and
+  a gold bar, and "Recent holocrons" (times in UTC): the newest ten in two columns, each a
+  small picture, the tier's name, `dd/mm/yyyy HH:MM` and, for a gift, "Gift from the SJK
+  team" with the note. Keys: Up and Down (Left and Right, Tab, the wheel, 1 to 4, Home, End)
+  choose the tier, which swaps the 3D holocron at once (it shrinks away and the new look
+  grows in); a click on a row chooses it; Ctrl+Tab goes on to Character; Escape leaves.
+  There is no Open: opening does not exist yet. The `holocrons` command opens it on the
+  Profile screen (again to close); the SJK Profile tab's Holocrons block has See holocrons
+  (the classic menus' Profile page too, opening the page on its own). The classic Profile
+  page lists three medals, not four, to make room for that block. World shots:
+  `world_shot::holocrons_tab` (`duel6_sjk_holocrons`: each tier, one held none of, the
+  identity off, waiting; `duel6_sjk_holocrons_windows`: 4:3, 21:9, 4K, `ui_textScale 1.2`,
+  the classic style). Not tried in a game.
 - **Keys:** Ctrl+Tab shows the next tab, Ctrl+Shift+Tab the one before, wrapping,
   from any tab and even while a field is typed in. On Character, Saber and Force, Tab
-  (Shift+Tab back), `]` and `[` walk all seven, as they walked the three pages
+  (Shift+Tab back), `]` and `[` walk all eight, as they walked the three pages
   (unless a field there is typed in); on the console's tabs Tab moves within the page,
   as everywhere in the UI. Each tab's keys line names the next tab. A click on a tab
   shows it; the click never reaches the screen under the row (the switch hit-tests the
@@ -1082,8 +1110,8 @@ keys and pointer; the row is the player screen's own tabs grown to seven.
   the first time; the tab a console page turned to itself counts too) and its profile
   card (SJK Profile); the main page's Profile (Character, on the menu map's stage) and
   its profile card (SJK Profile). In the SJK UI the `profile`,
-  `achievements` and `unlockables` commands open it on SJK Profile, Achievements and
-  Collection (again to close it), returning to the main page from the menus, else to
+  `achievements`, `unlockables` and `holocrons` commands open it on SJK Profile,
+  Achievements, Collection and Holocrons (again to close it), returning to the main page from the menus, else to
   the game menu; with the classic menus they open the pages on their own, as before.
 
 ## Camera control

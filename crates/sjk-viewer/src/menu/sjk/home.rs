@@ -1123,6 +1123,7 @@ mod tests {
             verified: true,
             staff: true,
             key_id: "0123456789abcdef",
+            tier: None,
         },
         DockLine {
             name: "Fox",
@@ -1130,6 +1131,7 @@ mod tests {
             verified: false,
             staff: false,
             key_id: "fedcba9876543210",
+            tier: None,
         },
     ];
 

@@ -9,8 +9,20 @@
 #                               made it when that is not the piece's owner.
 
 = Sol
++ 10/10/2026 | - | Holocron drops: loot boxes earned by playing, announced in chat, with a Holocrons tab
+- b39488c |  | Identity: holocron wire types, the active claim flag and drop events
+- 56463c4 |  | Viewer: holocron catalogue, drop pop-up, chat lines, active flag, debug_holocron and staff tools
+- fa92a7f |  | Docs, changelog and test list for holocron drops
+- 2751975 |  | Give each holocron tier a model of its own, and a locked look
+- 70cbea3 |  | Add the Profile screen's Holocrons tab and the holocrons command
+- 35fc5b9 |  | Document the Holocrons tab
+- 4dad3c0 |  | Credit Sol for holocron drops
 + 10/10/2026 | - | JoF emblem beside JoF-tagged names, JoF Clan medal removed
 - 7d7b5fe |  | Show the JoF emblem beside names with the JoF tag, drop the JoF Clan medal
++ 10/10/2026 | - | Add the holocron loot-box tiers' art and its generator
+- a315c0e |  | Add the holocron loot-box tiers' art and its generator
++ 10/10/2026 | - | Mount the holocron tiers' files and test their shaders
+- c6ae2c9 |  | Mount the holocron tiers' files and test their shaders
 + 10/10/2026 | - | Release 2026.1010.1 (Alpha)
 - bca3ac2 |  | Release 2026.1010.1 (Alpha)
 + 10/10/2026 | - | Wrapped SJK chat dock, also in the game menu

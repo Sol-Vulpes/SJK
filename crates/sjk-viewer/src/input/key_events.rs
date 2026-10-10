@@ -57,6 +57,11 @@ impl GpuState {
             self.medal_popup.handle_key(&event);
             return;
         }
+        // So does a holocron drop.
+        if !console_open && self.holocron_popup.is_open() {
+            self.holocron_popup.handle_key(&event);
+            return;
+        }
         // Ctrl+Tab changes the Profile screen's tab, whichever screen shows it.
         if self.profile_hub_key(&event) {
             return;

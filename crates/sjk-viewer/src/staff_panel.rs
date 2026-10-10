@@ -1,6 +1,7 @@
 //! The Staff page: for a player the hub's operator made staff, the SJK team's tools
 //! in the game (`docs/identity.md`, "Staff"): find a player, give or take back their
-//! medals, unlock or relock their unlockables, clear their achievements. Every action is a request signed by the
+//! medals, unlock or relock their unlockables, give or take back their holocrons, clear
+//! their achievements. Every action is a request signed by the
 //! player's own key (`sjk_identity::StaffRequest`); the hub refuses it from any other
 //! key, and the page only opens for a key whose profile says staff.
 //!
@@ -28,7 +29,7 @@ const CLEAR_ALL_TOKEN: u16 = 1_104;
 const PICTURE_DOWN_TOKEN: u16 = 1_105;
 /// Players found, one token each.
 const PLAYER_BASE: u16 = 1_110;
-const PLAYERS_SHOWN: usize = 14;
+const PLAYERS_SHOWN: usize = 10;
 /// Give and Take back, one token per medal of the catalogue.
 const GIVE_BASE: u16 = 1_150;
 const TAKE_BASE: u16 = 1_160;
@@ -37,6 +38,13 @@ const CLEAR_BASE: u16 = 1_170;
 /// Unlock and Relock, one token per unlockable of the catalogue.
 const UNLOCK_BASE: u16 = 1_250;
 const RELOCK_BASE: u16 = 1_270;
+/// The holocron tier chips (one token per tier), Give holocron, and Remove (one token
+/// per holocron row).
+const HOLOCRON_TIER_BASE: u16 = 1_300;
+const HOLOCRON_GIVE_TOKEN: u16 = 1_310;
+const HOLOCRON_REMOVE_BASE: u16 = 1_320;
+/// The chosen player's recent holocrons listed with Remove.
+const HOLOCRONS_SHOWN: usize = 4;
 /// Longest search, as the hub takes it.
 const QUERY_MAX: usize = 64;
 /// Longest note with a medal or an unlock, as the hub takes it.
@@ -73,6 +81,9 @@ struct Shown {
     /// The chosen player has a picture.
     picture: bool,
     unlocks: [bool; crate::unlockables::ALL.len()],
+    /// The numbers of the holocrons listed with Remove, newest first, and how many.
+    holocrons: [u64; HOLOCRONS_SHOWN],
+    holocron_rows: usize,
 }
 
 pub(crate) struct Panel {
@@ -83,6 +94,8 @@ pub(crate) struct Panel {
     note: String,
     /// The chosen player's key; the player's own until another is chosen.
     selected: Option<String>,
+    /// The holocron tier Give holocron gives (its index in the catalogue).
+    holocron_tier: usize,
     /// The control the keyboard is on, by its token.
     focus: u16,
     /// The controls in the order Tab visits them, laid out by the last frame.
@@ -125,6 +138,7 @@ impl Panel {
             query: String::new(),
             note: String::new(),
             selected: None,
+            holocron_tier: 0,
             focus: SEARCH_TOKEN,
             order: Vec::with_capacity(64),
             confirm_all: None,
@@ -294,6 +308,36 @@ impl Panel {
                 }
             }
             token
+                if (HOLOCRON_TIER_BASE..HOLOCRON_TIER_BASE + crate::holocrons::COUNT as u16)
+                    .contains(&token) =>
+            {
+                self.holocron_tier = usize::from(token - HOLOCRON_TIER_BASE);
+                PanelAction::None
+            }
+            HOLOCRON_GIVE_TOKEN => match target {
+                Some(key_id) => PanelAction::Request(StaffRequest::HolocronGive {
+                    key_id,
+                    tier: crate::holocrons::TIERS[self.holocron_tier].id.to_owned(),
+                    note: self.note.trim().to_owned(),
+                }),
+                None => PanelAction::None,
+            },
+            token
+                if (HOLOCRON_REMOVE_BASE..HOLOCRON_REMOVE_BASE + HOLOCRONS_SHOWN as u16)
+                    .contains(&token) =>
+            {
+                let row = usize::from(token - HOLOCRON_REMOVE_BASE);
+                match target {
+                    Some(key_id) if row < self.shown.holocron_rows => {
+                        PanelAction::Request(StaffRequest::HolocronRemove {
+                            key_id,
+                            id: self.shown.holocrons[row],
+                        })
+                    }
+                    _ => PanelAction::None,
+                }
+            }
+            token
                 if (CLEAR_BASE..CLEAR_BASE + crate::achievements::ALL.len() as u16)
                     .contains(&token) =>
             {
@@ -428,6 +472,8 @@ mod tests {
             achievements: Vec::new(),
             avatar: String::new(),
             unlocks: Vec::new(),
+            holocron_counts: sjk_identity::HolocronCounts::default(),
+            holocrons: Vec::new(),
         }
     }
 
@@ -590,6 +636,92 @@ mod tests {
                 unlock: "saber_sun".into()
             })
         );
+    }
+
+    fn wire_holocron(id: u64, tier: &str) -> sjk_identity::Holocron {
+        sjk_identity::Holocron {
+            id,
+            tier: tier.to_owned(),
+            dropped: 1_791_641_100,
+            source: "play".to_owned(),
+            note: String::new(),
+        }
+    }
+
+    #[test]
+    fn a_holocron_is_given_in_the_chosen_tier_with_the_note() {
+        let (mut panel, me, _) = drawn(Vec::new());
+        panel.note = "  for the fog bug ".into();
+        // Uncommon is chosen to begin with.
+        assert_eq!(
+            panel.activate(HOLOCRON_GIVE_TOKEN),
+            PanelAction::Request(StaffRequest::HolocronGive {
+                key_id: me.key_id.clone(),
+                tier: "uncommon".into(),
+                note: "for the fog bug".into(),
+            })
+        );
+        assert_eq!(
+            panel.activate(HOLOCRON_TIER_BASE + 3),
+            PanelAction::None,
+            "choosing a tier sends nothing"
+        );
+        assert_eq!(
+            panel.activate(HOLOCRON_GIVE_TOKEN),
+            PanelAction::Request(StaffRequest::HolocronGive {
+                key_id: me.key_id,
+                tier: "mythical".into(),
+                note: "for the fog bug".into(),
+            })
+        );
+        assert!(panel.order.contains(&HOLOCRON_GIVE_TOKEN));
+        for tier in 0..crate::holocrons::COUNT as u16 {
+            assert!(panel.order.contains(&(HOLOCRON_TIER_BASE + tier)));
+        }
+    }
+
+    #[test]
+    fn a_holocron_the_player_holds_is_taken_back_by_its_number() {
+        let (mut panel, _, staff) = drawn(Vec::new());
+        // Nothing listed yet: nothing to remove.
+        assert_eq!(panel.activate(HOLOCRON_REMOVE_BASE), PanelAction::None);
+        assert!(!panel.order.contains(&HOLOCRON_REMOVE_BASE));
+        let held = Profile {
+            staff: true,
+            holocrons: vec![
+                wire_holocron(41, "legendary"),
+                wire_holocron(40, "from_the_future"),
+                wire_holocron(39, "rare"),
+            ],
+            ..profile("aaaaaaaaaaaaaaaa", "^1Sol")
+        };
+        let fonts = crate::text::load_modern(1.0, None).expect("Inter");
+        panel.build(
+            &Inputs {
+                me: Some(&held),
+                staff: &staff,
+            },
+            &fonts.font,
+            [1920.0, 1080.0],
+        );
+        // Rows are the known tiers, newest first.
+        assert_eq!(
+            panel.activate(HOLOCRON_REMOVE_BASE),
+            PanelAction::Request(StaffRequest::HolocronRemove {
+                key_id: "aaaaaaaaaaaaaaaa".into(),
+                id: 41
+            })
+        );
+        assert_eq!(
+            panel.activate(HOLOCRON_REMOVE_BASE + 1),
+            PanelAction::Request(StaffRequest::HolocronRemove {
+                key_id: "aaaaaaaaaaaaaaaa".into(),
+                id: 39
+            })
+        );
+        assert_eq!(panel.activate(HOLOCRON_REMOVE_BASE + 2), PanelAction::None);
+        assert!(panel.order.contains(&(HOLOCRON_REMOVE_BASE + 1)));
+        assert!(!panel.order.contains(&(HOLOCRON_REMOVE_BASE + 2)));
     }
 
     #[test]

@@ -7,6 +7,42 @@ SJK currently contains a native client and standard dedicated server in a
 20-crate Rust workspace. This page records scope and verification, rather than
 claiming complete parity from the presence of an implementation.
 
+## Holocron drops: the client
+
+Branch `personal/holocrons` (10/10/2026, based on `bca3ac2e`, Windows 11), Sol's feature,
+decided with the hub's protocol the same day ([holocrons.md](holocrons.md)). The hub rolls
+and stores holocrons earned by 30 minutes of active play (four tiers, daily caps, staff
+gifts); the client sends `active` with every claim (a live, non-local game, the player's
+own view, mid-match, out of the menus, input in the last two minutes: `holocrons/activity.rs`),
+reads the progress, shows each new holocron once in a modal pop-up on the main menu or the
+game menu (a centre print in a match, `holocrons_seen.txt`, the newest 20 on a first read),
+words a drop as an SJK chat line in the tier's colour with a gem in the game feed, the dock
+and the page, and gives the Staff page Give holocron and Remove. `debug_holocron` rehearses
+a drop offline. [holocrons.rs](../crates/sjk-viewer/src/holocrons.rs) is the list the
+Profile screen's Holocrons tab reads.
+
+The Holocrons tab is built (10/10/2026, [holocrons.md](holocrons.md#the-holocrons-tab)): the
+Profile screen's eighth tab and the `holocrons` command, with a 3D holocron floating in the
+world behind it (not on the Character tab's stage: a normal object of the world pass before a
+backdrop shot of its own) in the chosen tier's look and light, dimmed for a tier held none
+of; the four tiers with their counts and odds, the progress, the newest ten, and the states
+when the identity is off. A tier needed a model of its own (`holocron_<tier>.md3`), since a
+surface's shader is named by its model file; `scripts/holocron_assets.py` writes them and
+the locked look. The classic Profile page has See holocrons. Verified: unit tests and every
+state's fit in four window shapes, and world shots rendered with the GPU here and looked at
+(tiers, locked, identity off, 4:3, 21:9, 4K, text scale 1.2, classic style). Not verified:
+in a game (the holocron over a match), other maps than duel6, real hub data, motion.
+
+Verified: `cargo test --locked --workspace` with unit tests for each piece (the wire, the
+worker against a scripted hub, the feed, the catalogue and its colours, the pop-up, the
+chat views, the staff page, the activity rules); `cargo fmt --all --check`,
+`cargo build --locked --workspace` and workspace clippy (no warning from the new code).
+Not verified: anything against a running hub (an ignored end-to-end test in
+`crates/sjk-identity/tests/hub_e2e.rs` needs one), in a game, or with the tiers' art (the
+pop-up draws a gem until `gfx/sjk/holocron_<tier>.png` is mounted); the Staff page now lists
+10 players, not 14, to make room for the holocrons; the Holocrons tab's world shots
+are above; the pop-up and the Staff page were not shot.
+
 ## The SJK chat dock wraps, and docks in the in-game menu
 
 Branch `personal/chat-dock` (10/10/2026, Windows 11), Sol's request. The SJK UI main

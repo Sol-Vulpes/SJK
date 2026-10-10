@@ -217,6 +217,7 @@ mod tests {
             verified: true,
             staff: true,
             text: "gg all".to_owned(),
+            holocron: None,
         };
         chat.sync_sjk(&state([message].into_iter().collect()), |_| false, now);
         chat.open(false);

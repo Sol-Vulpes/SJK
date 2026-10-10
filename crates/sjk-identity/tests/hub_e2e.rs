@@ -46,7 +46,7 @@ fn a_player_registers_with_the_name_they_wear_claims_and_leaves() {
     hub.register(&other, Some(&name)).unwrap();
 
     let server = format!("10.99.{}.{}:29070", suffix[..2].len(), 7);
-    hub.claim(&me, &server, 3, "^1Test").unwrap();
+    hub.claim(&me, &server, 3, "^1Test", false).unwrap();
     let players = hub.presence(&server).unwrap();
     assert_eq!(players.len(), 1);
     assert_eq!(
@@ -55,7 +55,7 @@ fn a_player_registers_with_the_name_they_wear_claims_and_leaves() {
     );
     assert_eq!(players[0].claimed_name, "^1Test");
 
-    let taken = hub.claim(&other, &server, 3, "^1Test").unwrap_err();
+    let taken = hub.claim(&other, &server, 3, "^1Test", false).unwrap_err();
     assert!(
         matches!(taken, HubError::Rejected { ref code, .. } if code == "slot_taken"),
         "{taken:?}"
@@ -71,7 +71,8 @@ fn an_ipv6_server_address_round_trips() {
     let mut hub = hub();
     let me = Identity::generate().unwrap();
     hub.register(&me, None).unwrap();
-    hub.claim(&me, "[2001:db8::7]:29070", 1, "v6").unwrap();
+    hub.claim(&me, "[2001:db8::7]:29070", 1, "v6", false)
+        .unwrap();
     assert_eq!(hub.presence("[2001:db8::7]:29070").unwrap().len(), 1);
     hub.release(&me, "[2001:db8::7]:29070").unwrap();
 }
@@ -188,9 +189,9 @@ fn only_a_verified_player_on_the_server_reports_another() {
     let server = "10.98.0.5:29070";
     hub.register(&me, Some("^2Reporter")).unwrap();
     hub.register(&troll, None).unwrap();
-    hub.claim(&me, server, 2, "^2Reporter").unwrap();
+    hub.claim(&me, server, 2, "^2Reporter", false).unwrap();
     let shown = format!("^1Troll{suffix}");
-    hub.claim(&troll, server, 5, &shown).unwrap();
+    hub.claim(&troll, server, 5, &shown, false).unwrap();
     let report = PlayerReport {
         category: Category::Cheating,
         text: "Speed hacking all round the map".to_owned(),
@@ -490,7 +491,7 @@ fn chat_and_emotes_reach_other_players_through_the_long_poll() {
         matches!(nowhere, HubError::Rejected { ref code, .. } if code == "not_on_server"),
         "{nowhere:?}"
     );
-    hub.claim(&me, &server, 4, "^2Chatty").unwrap();
+    hub.claim(&me, &server, 4, "^2Chatty", false).unwrap();
     hub.emote(&me, &server, "wave").unwrap();
     let here = reader.feed(&other, feed.next, Some(&server), 0).unwrap();
     assert_eq!(here.emotes.len(), 1);
@@ -579,7 +580,7 @@ fn looks_travel_with_the_claim_and_the_feed() {
         matches!(nowhere, HubError::Rejected { ref code, .. } if code == "not_on_server"),
         "{nowhere:?}"
     );
-    hub.claim(&me, &server, 3, "^2Looky").unwrap();
+    hub.claim(&me, &server, 3, "^2Looky", false).unwrap();
     // A fresh claim has no look.
     let bare = hub.presence(&server).unwrap();
     assert_eq!(bare[0].look, None);
@@ -608,7 +609,7 @@ fn looks_travel_with_the_claim_and_the_feed() {
         "{refused:?}"
     );
     // Renewing the claim keeps the look.
-    hub.claim(&me, &server, 3, "^2Looky").unwrap();
+    hub.claim(&me, &server, 3, "^2Looky", false).unwrap();
     assert_eq!(hub.presence(&server).unwrap()[0].look, Some(lit.clone()));
     let Some(admin) = operator_key() else {
         eprintln!("no SJK_HUB_TEST_ADMIN_KEY: the unlocked half is skipped");
@@ -631,7 +632,7 @@ fn looks_travel_with_the_claim_and_the_feed() {
     hub.look(&me, &server, &sun).unwrap();
     assert_eq!(hub.presence(&server).unwrap()[0].look, Some(sun));
     // Another slot is another claim: it starts with no look.
-    hub.claim(&me, &server, 5, "^2Looky").unwrap();
+    hub.claim(&me, &server, 5, "^2Looky", false).unwrap();
     assert_eq!(hub.presence(&server).unwrap()[0].look, None);
     hub.release(&me, &server).unwrap();
 }
@@ -912,4 +913,28 @@ fn a_picture_is_sent_read_back_by_version_and_taken_down() {
         matches!(missing, HubError::Rejected { status: 404, .. }),
         "{missing:?}"
     );
+}
+
+#[test]
+#[ignore = "needs a running hub with holocrons (SJK_HUB_TEST_URL)"]
+fn a_new_key_has_no_holocrons_and_active_claims_start_its_progress() {
+    let mut hub = hub();
+    let me = Identity::generate().unwrap();
+    let profile = hub.register(&me, Some("^5Collector")).unwrap();
+    assert_eq!(profile.holocron_counts.total(), 0);
+    assert!(profile.holocrons.is_empty());
+    let server = format!(
+        "10.94.0.{}:29070",
+        u8::from_str_radix(&me.key_id()[..2], 16).unwrap()
+    );
+    hub.claim(&me, &server, 2, "^5Collector", true).unwrap();
+    let state = hub.holocrons(&me).unwrap();
+    assert_eq!(
+        state.every_secs, 1_800,
+        "unless the hub runs --holocron-every"
+    );
+    assert!(state.progress_secs < state.every_secs);
+    assert_eq!(state.today, 0);
+    assert!(state.daily_cap >= 1);
+    hub.release(&me, &server).unwrap();
 }

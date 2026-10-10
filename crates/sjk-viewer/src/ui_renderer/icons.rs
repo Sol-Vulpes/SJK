@@ -79,8 +79,12 @@ pub(crate) const VEHICLE_CROSSHAIR_ICON: u32 = AVATAR_ICON_FIRST + AVATAR_ICON_C
 /// The cell holding the JoF clan's emblem (`ui_renderer::JOF_TEXTURE`), after the
 /// vehicle crosshair's.
 pub(crate) const JOF_ICON: u32 = VEHICLE_CROSSHAIR_ICON + 1;
+/// First of the holocron tiers' cells (`holocrons::icons`), after the JoF emblem's.
+pub(crate) const HOLOCRON_ICON_FIRST: u32 = JOF_ICON + 1;
+/// Holocron cells: one per tier, with room for the same again.
+pub(crate) const HOLOCRON_ICON_CELLS: u32 = 8;
 /// Every icon cell.
-pub(crate) const ATLAS_CELLS: u32 = JOF_ICON + 1;
+pub(crate) const ATLAS_CELLS: u32 = HOLOCRON_ICON_FIRST + HOLOCRON_ICON_CELLS;
 const TOTAL_CELLS: u32 = ATLAS_CELLS;
 const ATLAS_HEIGHT: u32 = TOTAL_CELLS.div_ceil(COLUMNS) * ICON_SIZE;
 

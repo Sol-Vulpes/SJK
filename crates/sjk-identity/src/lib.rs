@@ -25,9 +25,12 @@ pub use feed::{ChatState, ReceivedLooks};
 pub use hub::{HttpHub, Hub, HubError, valid_base_url};
 pub use keys::{Identity, KeyError};
 pub use report::{BugReport, Category, PlayerReport, WorldNote};
-pub use service::{HubFactory, Location, ReportOutcome, Service, Settings, Snapshot, Status};
+pub use service::{
+    HolocronProgress, HubFactory, Location, ReportOutcome, Service, Settings, Snapshot, Status,
+};
 pub use staff::{StaffRequest, StaffState};
 pub use wire::{
-    Achievement, ChatMessage, Emote, Feed, Look, LookEvent, Medal, Presence, Profile, Unlock,
-    WornName, names_match, normal_form,
+    Achievement, ChatMessage, DropEvent, DropMark, Emote, Feed, HOLOCRONS_LISTED, Holocron,
+    HolocronCounts, HolocronState, Look, LookEvent, Medal, Presence, Profile, Unlock, WornName,
+    names_match, normal_form,
 };

@@ -136,7 +136,7 @@ impl ChatOverlay {
             let sjk = line
                 .hub
                 .as_ref()
-                .map(|hub| sjk_line::Prefix::new(&line.name, hub.verified, font, g));
+                .map(|hub| sjk_line::Prefix::new(&line.name, hub.verified, hub.tier, font, g));
             let wrap_width = g.width - 12.0 * g.scale;
             match &sjk {
                 Some(prefix) => {
@@ -172,7 +172,7 @@ impl ChatOverlay {
                 Tween::new(14.0 * g.scale, 0.0, 0, ENTER_MS, Easing::EaseOutCubic).sample(age);
             let x = g.left + slide;
             if let Some(hub) = &line.hub {
-                let prefix = sjk_line::Prefix::new(&line.name, hub.verified, font, g);
+                let prefix = sjk_line::Prefix::new(&line.name, hub.verified, hub.tier, font, g);
                 let hovered = active && self.ui.token_hovered(token as u16);
                 let name = sjk_line::draw(
                     &mut self.ui,
@@ -184,6 +184,7 @@ impl ChatOverlay {
                         marks: &line.emojis,
                         emojis: self.options.emojis.then_some(&self.emojis),
                         hovered,
+                        tier: hub.tier,
                     },
                     &prefix,
                     font,

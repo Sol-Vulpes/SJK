@@ -3,7 +3,8 @@
 //! medal pop-up the medals of the player's own profile (`medal_popup.rs`), the
 //! achievements their counts (`achievements_frame.rs`), the picture cache where
 //! pictures come from (`avatars.rs`) and the profile card what it shows
-//! (`profile_card.rs`). Each frame it also lets the chat feed follow the SJK chat
+//! (`profile_card.rs`), and the hub whether the player is actively playing
+//! (`holocrons_frame.rs`). Each frame it also lets the chat feed follow the SJK chat
 //! (`sjk_chat_frame.rs`), starts and ends emotes (`emotes_frame.rs`), keeps the
 //! players' looks (`looks_frame.rs`), follows the players muted on this PC
 //! (`muted_players_frame.rs`), notes the Profile screen's tab on show
@@ -58,6 +59,8 @@ impl GpuState {
         crate::sjk_packs::follow_identity(packs_revision, assets_note);
         profile_card::refresh(console);
         self.offer_medals();
+        self.offer_holocrons();
         self.update_achievements();
+        self.update_holocron_activity();
     }
 }

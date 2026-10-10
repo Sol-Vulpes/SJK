@@ -2,7 +2,9 @@
 //! the players found down the left, the chosen player's picture and name (with Take
 //! picture down) over their medals with Give and Take back and their unlockables with
 //! Unlock and Relock in the middle, and their
-//! achievements with Clear on the right.
+//! achievements with Clear on the right. Under the players, the holocrons: a tier to
+//! choose, Give holocron (with the note) and the chosen player's recent holocrons with
+//! Remove.
 
 use super::*;
 use crate::achievements;
@@ -24,7 +26,7 @@ const RIGHT_WIDTH: f32 = 524.0;
 const TOP: f32 = 170.0;
 /// The players' rows.
 const PLAYERS_TOP: f32 = 236.0;
-const PLAYER_ROW: f32 = 50.0;
+const PLAYER_ROW: f32 = 46.0;
 /// The medals' rows and the achievements' rows.
 const SECTION_TOP: f32 = 330.0;
 const MEDAL_ROW: f32 = 76.0;
@@ -32,6 +34,10 @@ const MEDAL_ROW: f32 = 76.0;
 const UNLOCK_ROW: f32 = 42.0;
 const ACHIEVEMENT_ROW: f32 = 34.0;
 const ACHIEVEMENTS_SHOWN: usize = 18;
+/// The holocrons' section under the players: its heading, the tier chips, and its rows.
+const HOLOCRONS_TOP: f32 = 770.0;
+const TIER_CHIP: [f32; 2] = [104.0, 42.0];
+const HOLOCRON_ROW: f32 = 34.0;
 /// The keys' line.
 const KEYS_Y: f32 = 1_010.0;
 
@@ -96,6 +102,7 @@ impl Panel {
             .as_ref()
             .is_some_and(|profile| !profile.avatar.is_empty());
         self.shown.unlocks = [false; crate::unlockables::ALL.len()];
+        self.shown.holocron_rows = 0;
         if let Some(profile) = &target {
             for medal in &profile.medals {
                 if let Some(known) = Medal::from_id(&medal.id) {
@@ -112,6 +119,7 @@ impl Panel {
             self.header(&frame, profile, mine);
             self.medals(&frame, profile);
             self.unlockables(&frame, profile);
+            self.holocrons(&frame, profile);
             self.achievements(&frame, profile, mine);
         }
         self.status(&frame, inputs.staff);
@@ -395,7 +403,9 @@ impl Panel {
         text(
             &mut self.ui,
             TextFamily::Body,
-            format_args!("Note with the next medal or unlock (optional, everyone reads it)"),
+            format_args!(
+                "Note with the next medal, unlock or holocron (optional, everyone reads it)"
+            ),
             frame.rect(MIDDLE_X, y, MIDDLE_WIDTH, 22.0),
             15.0 * s,
             color::MUTED,
@@ -512,6 +522,179 @@ impl Panel {
             } else {
                 self.order.push(unlock);
             }
+        }
+    }
+
+    /// What the chosen player holds of holocrons, the tier Give holocron gives and the
+    /// recent ones with Remove, under the players.
+    fn holocrons(&mut self, frame: &Frame, profile: &Profile) {
+        use crate::holocrons::{self, TIERS};
+        let s = frame.s;
+        kit::heading(
+            &mut self.ui,
+            frame,
+            LEFT_X,
+            HOLOCRONS_TOP - 36.0,
+            LEFT_WIDTH,
+            "Holocrons",
+        );
+        let counts = holocrons::counts_of(&profile.holocron_counts);
+        text(
+            &mut self.ui,
+            TextFamily::Body,
+            format_args!(
+                "Holds {} uncommon, {} rare, {} legendary, {} mythical",
+                counts[0], counts[1], counts[2], counts[3]
+            ),
+            frame.rect(LEFT_X, HOLOCRONS_TOP - 30.0 + 22.0, LEFT_WIDTH, 20.0),
+            14.0 * s,
+            color::MUTED,
+            FontWeight::Regular,
+            TextAlign::Start,
+        );
+        // The tier chips: its gem and name, the chosen tier ringed in its colour.
+        let chips_y = HOLOCRONS_TOP + 16.0;
+        for (index, tier) in TIERS.iter().enumerate() {
+            let token = HOLOCRON_TIER_BASE + index as u16;
+            let x = LEFT_X + index as f32 * (TIER_CHIP[0] + 8.0);
+            kit::button(
+                &mut self.ui,
+                frame,
+                [x, chips_y, TIER_CHIP[0], TIER_CHIP[1]],
+                "",
+                false,
+                true,
+                self.focus == token,
+                token,
+            );
+            let chosen = self.holocron_tier == index;
+            if chosen {
+                let _ = self.ui.draw_list_mut().push(DrawCommand::Border {
+                    rect: frame.rect(x, chips_y, TIER_CHIP[0], TIER_CHIP[1]),
+                    radius: TIER_CHIP[1] * 0.5 * s,
+                    width: 2.0 * s,
+                    color: tier.colour,
+                });
+            }
+            let [gem_x, gem_y] = frame.point(x + 24.0, chips_y + TIER_CHIP[1] * 0.5);
+            holocrons::gem::draw(
+                self.ui.draw_list_mut(),
+                [gem_x, gem_y],
+                9.0 * s,
+                tier.colour,
+                if chosen { 1.0 } else { 0.7 },
+                holocrons::gem::MARK_ROWS,
+            );
+            text(
+                &mut self.ui,
+                TextFamily::Display,
+                format_args!("{}", tier.name.trim_end_matches(" Holocron")),
+                frame.rect(x + 38.0, chips_y + 6.0, TIER_CHIP[0] - 42.0, 30.0),
+                16.0 * s,
+                if chosen { color::TEXT } else { color::MUTED },
+                FontWeight::Semibold,
+                TextAlign::Start,
+            );
+            self.order.push(token);
+        }
+        kit::button(
+            &mut self.ui,
+            frame,
+            [
+                LEFT_X + 4.0 * (TIER_CHIP[0] + 8.0) + 4.0,
+                chips_y,
+                LEFT_WIDTH - 4.0 * (TIER_CHIP[0] + 8.0) - 4.0,
+                TIER_CHIP[1],
+            ],
+            "Give",
+            true,
+            true,
+            self.focus == HOLOCRON_GIVE_TOKEN,
+            HOLOCRON_GIVE_TOKEN,
+        );
+        self.order.push(HOLOCRON_GIVE_TOKEN);
+        // The recent ones, newest first.
+        let entries = holocrons::entries(&profile.holocrons);
+        let rows_y = chips_y + TIER_CHIP[1] + 14.0;
+        if entries.is_empty() {
+            text(
+                &mut self.ui,
+                TextFamily::Body,
+                format_args!("No holocrons yet."),
+                frame.rect(LEFT_X, rows_y, LEFT_WIDTH, 24.0),
+                16.0 * s,
+                color::MUTED,
+                FontWeight::Regular,
+                TextAlign::Start,
+            );
+        }
+        for (row, entry) in entries.iter().take(HOLOCRONS_SHOWN).enumerate() {
+            let y = rows_y + row as f32 * HOLOCRON_ROW;
+            let token = HOLOCRON_REMOVE_BASE + row as u16;
+            let [gem_x, gem_y] = frame.point(LEFT_X + 14.0, y + HOLOCRON_ROW * 0.5 - 2.0);
+            holocrons::gem::draw(
+                self.ui.draw_list_mut(),
+                [gem_x, gem_y],
+                10.0 * s,
+                entry.tier.colour,
+                1.0,
+                holocrons::gem::MARK_ROWS,
+            );
+            text(
+                &mut self.ui,
+                TextFamily::Display,
+                format_args!("{}", entry.tier.name),
+                frame.rect(LEFT_X + 34.0, y, 200.0, 28.0),
+                18.0 * s,
+                entry.tier.colour,
+                FontWeight::Semibold,
+                TextAlign::Start,
+            );
+            let kind = if entry.gift { "gift" } else { "play" };
+            text(
+                &mut self.ui,
+                TextFamily::Body,
+                format_args!(
+                    "#{} {} {kind}",
+                    entry.id,
+                    holocrons::when_text(entry.dropped)
+                ),
+                frame.rect(LEFT_X + 236.0, y + 2.0, 210.0, 24.0),
+                13.0 * s,
+                color::QUIET,
+                FontWeight::Regular,
+                TextAlign::End,
+            );
+            kit::button(
+                &mut self.ui,
+                frame,
+                [LEFT_X + LEFT_WIDTH - 100.0, y - 1.0, 100.0, 30.0],
+                "Remove",
+                false,
+                true,
+                self.focus == token,
+                token,
+            );
+            self.order.push(token);
+            self.shown.holocrons[row] = entry.id;
+            self.shown.holocron_rows = row + 1;
+        }
+        if entries.len() > HOLOCRONS_SHOWN {
+            text(
+                &mut self.ui,
+                TextFamily::Body,
+                format_args!("and {} more", entries.len() - HOLOCRONS_SHOWN),
+                frame.rect(
+                    LEFT_X,
+                    rows_y + HOLOCRONS_SHOWN as f32 * HOLOCRON_ROW,
+                    LEFT_WIDTH,
+                    20.0,
+                ),
+                13.0 * s,
+                color::QUIET,
+                FontWeight::Regular,
+                TextAlign::Start,
+            );
         }
     }
 
@@ -739,6 +922,23 @@ mod tests {
                 .map(|unlockable| sjk_identity::Unlock {
                     id: unlockable.id.into(),
                     granted: 1_791_336_225,
+                    note: "n".repeat(200),
+                })
+                .collect(),
+            holocron_counts: sjk_identity::HolocronCounts {
+                uncommon: 999,
+                rare: 999,
+                legendary: 999,
+                mythical: 999,
+            },
+            holocrons: (0..30)
+                .map(|id| sjk_identity::Holocron {
+                    id: 1_000 - id,
+                    tier: crate::holocrons::TIERS[id as usize % crate::holocrons::COUNT]
+                        .id
+                        .into(),
+                    dropped: 1_791_641_100,
+                    source: if id % 2 == 0 { "staff" } else { "play" }.into(),
                     note: "n".repeat(200),
                 })
                 .collect(),

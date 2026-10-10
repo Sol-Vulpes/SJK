@@ -94,6 +94,8 @@ mod gpu_phases;
 mod gpu_texture;
 mod graphics_quality;
 mod ground_hud;
+mod holocron_popup;
+mod holocrons;
 mod hud;
 mod hud_runtime;
 mod impact_spawn;
@@ -150,6 +152,7 @@ mod bug_report;
 mod emotes;
 mod emotes_frame;
 mod gi_voxels;
+mod holocrons_frame;
 mod identity_command;
 mod identity_frame;
 mod illuminate;
@@ -355,6 +358,11 @@ struct GpuState {
     illuminate: illuminate::Holocron,
     /// The other players' holocrons, lit by their looks.
     illuminate_others: illuminate::Others,
+    /// The Holocrons tab's 3D holocron ([`holocrons::stage`]).
+    holocron_stage: holocrons::stage::Stage,
+    /// The time its turn and bob are drawn at, instead of the clock's, for a world shot.
+    #[cfg(test)]
+    holocron_stage_seconds: Option<f32>,
     /// What each player wears that SJK draws (blade skin, Illuminate).
     looks: looks::Looks,
     trick_fades: sjk_client::LegacyTrickFades,
@@ -390,6 +398,8 @@ struct GpuState {
     text_dialog: text_dialog::TextDialog,
     /// The new medal pop-up (`medal_popup`).
     medal_popup: medal_popup::MedalPopup,
+    /// The holocron drop pop-up (`holocron_popup`).
+    holocron_popup: holocron_popup::HolocronPopup,
     /// The achievement pop-up over play and the menus (`achievement_toast`).
     achievement_toast: achievement_toast::AchievementToast,
     /// A bug report is on its way to the hub (`bug_report`).
@@ -1223,6 +1233,9 @@ impl GpuState {
             speed_trails: Default::default(),
             illuminate: Default::default(),
             illuminate_others: Default::default(),
+            holocron_stage: Default::default(),
+            #[cfg(test)]
+            holocron_stage_seconds: None,
             looks: Default::default(),
             trick_fades: Default::default(),
             projectiles: Vec::with_capacity(sjk_protocol::MAX_LEGACY_ENTITIES),
@@ -1256,6 +1269,7 @@ impl GpuState {
             world_notes: world_notes::Notes::default(),
             text_dialog: text_dialog::TextDialog::default(),
             medal_popup: medal_popup::MedalPopup::default(),
+            holocron_popup: holocron_popup::HolocronPopup::default(),
             achievement_toast: achievement_toast::AchievementToast::default(),
             bug_report_waiting: false,
             bug_report_serial: 0,
@@ -1690,8 +1704,11 @@ impl GpuState {
         self.hud_scissors =
             hud_uniform.scissors(self.configuration.width, self.configuration.height);
         let console_covers_frame = self.console_covers_frame();
-        // A new medal shows over the menus, which are not drawn under it.
-        let medal_popup = self.prepare_medal_popup(console_covers_frame);
+        // A new medal, or a holocron drop after it, shows over the menus, which are not
+        // drawn under it.
+        let medal_shown = self.prepare_medal_popup(console_covers_frame);
+        let holocron_shown = self.prepare_holocron_popup(console_covers_frame || medal_shown);
+        let medal_popup = medal_shown || holocron_shown;
         // Nor under the SJK UI's report card, as under its other cards.
         let report_card = self.text_dialog.is_open() && self.text_dialog.is_sjk();
         self.text_vertices.clear();
@@ -1844,8 +1861,10 @@ impl GpuState {
         } else {
             self.world_notes.composer_closed();
         }
-        if medal_popup {
+        if medal_shown {
             self.append_medal_popup(viewport);
+        } else if holocron_shown {
+            self.append_holocron_popup(viewport);
         }
         // An achievement unlocked: its pop-up over play or the menus, never input-taking.
         let achievement_toast =
@@ -1888,7 +1907,8 @@ impl GpuState {
             self.text_dialog
                 .is_open()
                 .then(|| self.text_dialog.draw_list()),
-            medal_popup.then(|| self.medal_popup.draw_list()),
+            medal_shown.then(|| self.medal_popup.draw_list()),
+            holocron_shown.then(|| self.holocron_popup.draw_list()),
             achievement_toast.then(|| self.achievement_toast.draw_list()),
         ];
         self.ui_shapes
@@ -1957,6 +1977,7 @@ impl GpuState {
         self.particle_groups.iter_mut().for_each(Vec::clear);
         self.dynamic_lights.clear();
         self.submit_illuminate(presentation_time, visual_now);
+        self.submit_holocron_stage(visual_now);
         self.sync_saber_skins(game_audio, presentation_time);
         let debug_missiles = effect_debug::sync(self.console.as_ref());
         let active_snapshot = first_person_view::presented_snapshot(

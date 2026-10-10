@@ -64,6 +64,9 @@ struct HubLine {
     verified: bool,
     staff: bool,
     key_id: String,
+    /// The line is a holocron drop of this tier (`holocrons/line.rs`): in the tier's
+    /// colour, a gem before it instead of the verified tick.
+    tier: Option<&'static crate::holocrons::Tier>,
 }
 
 #[derive(Clone, Copy)]

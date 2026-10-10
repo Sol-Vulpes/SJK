@@ -62,6 +62,11 @@ struct Laid {
     text: String,
     rows: Vec<Range<usize>>,
     muted: bool,
+    /// The message is a holocron drop of this tier (or of one this client does not
+    /// know, `None` with a text that says so): the tier's gem stands where the tick
+    /// does, there is no colon, and the text is in the tier's colour.
+    tier: Option<&'static crate::holocrons::Tier>,
+    drop: bool,
 }
 
 /// Lay `message` out in the page's column, measured as `measure` draws at the frame
@@ -81,12 +86,21 @@ fn lay(message: &ChatMessage, inputs: &Inputs<'_>, measure: &Measure<'_>, s: f32
         0.0
     };
     let name_width = width(&name, NAME_SIZE, TextFace::Semibold).min(LIST_WIDTH * 0.4);
-    let tick = if message.verified {
+    // A holocron drop reads `Sol <gem> found a Rare Holocron.` on the page: the name, the
+    // tier's gem for the tick, no colon.
+    let drop = message.holocron.is_some();
+    let words = crate::holocrons::line::words(message);
+    let tick = if message.verified || drop {
         sjk_chat_look::tick_room(NAME_SIZE)
     } else {
         0.0
     };
-    let indent = jof + name_width + tick + width(": ", TEXT_SIZE, TextFace::Regular);
+    let colon = if drop {
+        0.0
+    } else {
+        width(": ", TEXT_SIZE, TextFace::Regular)
+    };
+    let indent = jof + name_width + tick + colon;
     let staff = if message.staff { "Staff  ·  " } else { "" };
     let when = ago(u64::try_from(message.at).unwrap_or(0), inputs.now);
     let meta = format!("{staff}{when}");
@@ -94,6 +108,10 @@ fn lay(message: &ChatMessage, inputs: &Inputs<'_>, measure: &Measure<'_>, s: f32
     let muted = inputs.muted.contains(&message.key_id);
     let text = if muted {
         "Muted on this PC".to_owned()
+    } else if let Some(words) = &words {
+        words.rest.clone()
+    } else if drop {
+        "found a holocron.".to_owned()
     } else {
         sjk_chat_look::message_text(&message.text)
     };
@@ -107,13 +125,15 @@ fn lay(message: &ChatMessage, inputs: &Inputs<'_>, measure: &Measure<'_>, s: f32
         name,
         jof,
         name_width,
-        verified: message.verified,
+        verified: message.verified && !drop,
         indent,
         meta,
         staff: message.staff,
         text,
         rows,
         muted,
+        tier: words.map(|words| words.tier),
+        drop,
     }
 }
 
@@ -316,7 +336,18 @@ impl Panel {
             TextAlign::Start,
         );
         let mut x = LIST_X + laid.jof + laid.name_width;
-        if laid.verified {
+        if let Some(tier) = laid.tier {
+            let [left, _] = frame.point(x, y);
+            sjk_chat_look::gem_mark(
+                self.ui.draw_list_mut(),
+                left,
+                first.y + first.height * 0.5,
+                NAME_SIZE * s,
+                tier,
+                1.0,
+            );
+            x += sjk_chat_look::tick_room(NAME_SIZE);
+        } else if laid.verified {
             let [left, _] = frame.point(x, y);
             sjk_chat_look::tick(
                 self.ui.draw_list_mut(),
@@ -327,16 +358,18 @@ impl Panel {
             );
             x += sjk_chat_look::tick_room(NAME_SIZE);
         }
-        text(
-            &mut self.ui,
-            TextFamily::Body,
-            format_args!(":"),
-            frame.rect(x, y, 12.0, NAME_ROW - 2.0),
-            TEXT_SIZE * s,
-            color::TEXT,
-            FontWeight::Regular,
-            TextAlign::Start,
-        );
+        if !laid.drop {
+            text(
+                &mut self.ui,
+                TextFamily::Body,
+                format_args!(":"),
+                frame.rect(x, y, 12.0, NAME_ROW - 2.0),
+                TEXT_SIZE * s,
+                color::TEXT,
+                FontWeight::Regular,
+                TextAlign::Start,
+            );
+        }
         text(
             &mut self.ui,
             TextFamily::Body,
@@ -354,7 +387,7 @@ impl Panel {
         let colour = if laid.muted {
             color::QUIET
         } else {
-            sjk_chat_look::GOLD
+            sjk_chat_look::text_colour(laid.tier)
         };
         for (row, range) in laid.rows.iter().enumerate() {
             if range.is_empty() {
@@ -810,6 +843,39 @@ mod tests {
         assert!((rows[0].1.y - long_name.y).abs() < 4.0);
         assert!(rows[1].1.y > rows[0].1.y + 10.0);
         assert!(rows[1].1.x <= long_name.x + 0.5);
+    }
+
+    /// A holocron drop reads `name gem sentence` in its tier's colour: no colon, no tick.
+    #[test]
+    fn a_holocron_drop_is_the_name_a_gem_and_the_sentence_in_the_tiers_colour() {
+        use crate::holocrons::TIERS;
+        let fonts = crate::text::load_modern(1.0, None).expect("Inter");
+        let mut state = chat(0);
+        let mut drop = message(1, "aaaaaaaaaaaaaaaa", "");
+        drop.name = "^2Sol".to_owned();
+        drop.verified = true;
+        drop.holocron = Some(sjk_identity::DropMark {
+            tier: "legendary".to_owned(),
+            own: false,
+        });
+        let mut future = message(2, "bbbbbbbbbbbbbbbb", "");
+        future.holocron = Some(sjk_identity::DropMark {
+            tier: "from_the_future".to_owned(),
+            own: false,
+        });
+        state.messages.extend([drop, future]);
+        let mut panel = Panel::new();
+        panel.open(true);
+        panel.build_with(&inputs(&state, &[], false), &fonts.font, [1920.0, 1080.0]);
+        let texts = texts(&panel);
+        let (_, name, _) = found(&texts, "^2Sol");
+        let (_, body, colour) = found(&texts, "found a Legendary Holocron!");
+        assert_eq!(*colour, TIERS[2].colour);
+        assert!((name.y - body.y).abs() < 4.0 && body.x > name.right());
+        assert!(!texts.iter().any(|(text, ..)| text == ":"), "{texts:?}");
+        assert_eq!(ticks(&panel), 0, "the gem stands for the tick");
+        // A tier this client does not know is still a line, worded plainly.
+        found(&texts, "found a holocron.");
     }
 
     /// Every focus, long messages, a muted sender, a refusal and staff fit the canvas

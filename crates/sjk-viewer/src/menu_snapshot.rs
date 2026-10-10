@@ -1147,6 +1147,8 @@ fn identity_page(shots: &Snapshot, art: ArtSet) {
             achievements: Vec::new(),
             avatar: String::new(),
             unlocks: Vec::new(),
+            holocron_counts: Default::default(),
+            holocrons: Vec::new(),
         }),
         server: None,
         players: vec![
@@ -1181,6 +1183,7 @@ fn identity_page(shots: &Snapshot, art: ArtSet) {
         look_outcome: None,
         packs_revision: 0,
         assets_note: None,
+        holocrons: None,
     };
     let online = hub(Status::Online, "^1Sol", &["^4Vulpes", "Padawan"]);
     let fresh = hub(Status::Online, "Padawan", &[]);
@@ -1413,6 +1416,7 @@ fn sjk_home_snapshot() {
             verified: true,
             staff: false,
             key_id: "0123456789abcdef",
+            tier: None,
         },
         DockLine {
             name: "^1Fox",
@@ -1420,6 +1424,7 @@ fn sjk_home_snapshot() {
             verified: false,
             staff: false,
             key_id: "fedcba9876543210",
+            tier: None,
         },
         DockLine {
             name: "Kyle",
@@ -1427,6 +1432,7 @@ fn sjk_home_snapshot() {
             verified: false,
             staff: false,
             key_id: "00000000000000ff",
+            tier: None,
         },
     ];
     // Name, window, page, chosen entry, focused server, servers.
@@ -2172,6 +2178,8 @@ fn medals_snapshot() {
             achievements: Vec::new(),
             avatar: String::new(),
             unlocks: Vec::new(),
+            holocron_counts: Default::default(),
+            holocrons: Vec::new(),
         }),
         server: None,
         players: Vec::new(),
@@ -2185,6 +2193,7 @@ fn medals_snapshot() {
         look_outcome: None,
         packs_revision: 0,
         assets_note: None,
+        holocrons: None,
     };
     let with = hub(shot_medals());
     let without = hub(Vec::new());

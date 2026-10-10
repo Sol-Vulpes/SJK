@@ -404,7 +404,7 @@ const HELP: &[(&str, &str)] = &[
     ),
     (
         "cl_identity",
-        "Makes an identity key and tells the SJK hub where you play, so SJK players see your badge. Off sends nothing.",
+        "Makes an identity key and tells the SJK hub where you play and if you are active (badge, holocrons). Off sends nothing.",
     ),
     (
         "cl_hubUrl",

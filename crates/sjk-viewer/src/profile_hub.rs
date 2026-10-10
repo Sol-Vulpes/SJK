@@ -2,13 +2,14 @@
 //! shown as one, under one row of tabs. Character, Saber and Force are the player
 //! screen's pages (`player_menu`); SJK Profile, Achievements and Medals the console's
 //! Profile page (`profile_panel`: bio, picture and record; the board; the medals) and
-//! Collection the console's Unlockables page (`unlockables_panel`). Each screen keeps
-//! its state, keys and pointer; the row is the player screen's own tabs grown to seven
+//! Collection the console's Unlockables page (`unlockables_panel`) and Holocrons the
+//! console's Holocrons page (`holocrons_panel`). Each screen keeps
+//! its state, keys and pointer; the row is the player screen's own tabs grown to eight
 //! ([`tabs`]), drawn at the same place by whichever screen shows, with the tab on show
 //! lit, and the switch between them is here.
 //!
 //! The tabs change with Ctrl+Tab (Ctrl+Shift+Tab back) from any of them, even while a
-//! field is typed in; on the player screen's pages Tab, `]` and `[` walk all seven as
+//! field is typed in; on the player screen's pages Tab, `]` and `[` walk all eight as
 //! they walked its three (Tab alone moves within the console's pages, as everywhere in
 //! the UI). A click on a tab shows it; it never reaches the screen under the row.
 //! Escape leaves the screen as each tab's own way back does: to the game menu on its
@@ -38,13 +39,18 @@ pub(crate) enum Tab {
     Medals,
     /// Every unlockable, owned and locked ([`COLLECTION`]).
     Collection,
+    /// The player's holocrons, a 3D holocron cycled by tier ([`HOLOCRONS`]).
+    Holocrons,
 }
 
 /// The name of the tab listing every unlockable, owned or not: one place to rename it.
 pub(crate) const COLLECTION: &str = "Collection";
 
+/// The name of the tab of the player's holocrons, the loot-box drops.
+pub(crate) const HOLOCRONS: &str = "Holocrons";
+
 /// The tabs' names, in [`Tab`] order.
-const LABELS: [&str; 7] = [
+const LABELS: [&str; 8] = [
     "Character",
     "Saber",
     "Force",
@@ -52,10 +58,11 @@ const LABELS: [&str; 7] = [
     "Achievements",
     "Medals",
     COLLECTION,
+    HOLOCRONS,
 ];
 
 impl Tab {
-    pub(crate) const ALL: [Self; 7] = [
+    pub(crate) const ALL: [Self; 8] = [
         Self::Character,
         Self::Saber,
         Self::Force,
@@ -63,6 +70,7 @@ impl Tab {
         Self::Achievements,
         Self::Medals,
         Self::Collection,
+        Self::Holocrons,
     ];
 
     pub(crate) const fn index(self) -> usize {
@@ -153,7 +161,7 @@ fn hit_area(labels: &[&str], index: usize) -> [f32; 4] {
 /// A row of tabs under a screen's title: `labels` from the left edge of the form, the
 /// one at `current` gold and underlined, one hovered brighter; tab `i` answers to
 /// `token_base + i`. The player screen draws its own three this way, and the Profile
-/// screen's seven ([`row`]).
+/// screen's eight ([`row`]).
 pub(crate) fn tabs(
     canvas: &mut MenuCanvas,
     frame: &Frame,
@@ -498,8 +506,9 @@ mod tests {
     fn the_tabs_wrap_both_ways_and_the_player_screens_pages_come_first() {
         assert_eq!(Tab::Character.next(true), Tab::Saber);
         assert_eq!(Tab::Force.next(true), Tab::Profile);
-        assert_eq!(Tab::Collection.next(true), Tab::Character);
-        assert_eq!(Tab::Character.next(false), Tab::Collection);
+        assert_eq!(Tab::Collection.next(true), Tab::Holocrons);
+        assert_eq!(Tab::Holocrons.next(true), Tab::Character);
+        assert_eq!(Tab::Character.next(false), Tab::Holocrons);
         assert_eq!(Tab::Profile.next(false), Tab::Force);
         for (index, tab) in Tab::ALL.into_iter().enumerate() {
             assert_eq!(tab.index(), index);
@@ -507,12 +516,13 @@ mod tests {
         }
         assert_eq!(Tab::of_player_page(2), Tab::Force);
         assert_eq!(Tab::Collection.label(), COLLECTION);
+        assert_eq!(Tab::Holocrons.label(), HOLOCRONS);
         assert_eq!(Tab::Profile.label(), "SJK Profile");
     }
 
     /// A larger text style widens every tab's name by as much as it is drawn wider, so
     /// none is cut ("Achievements" was at `ui_textScale 1.2`), and even the largest
-    /// style keeps the seven within the frame.
+    /// style keeps the eight within the frame.
     #[test]
     fn the_tabs_make_room_for_the_players_text_style() {
         let neutral = crate::text::TextStyle::NEUTRAL;

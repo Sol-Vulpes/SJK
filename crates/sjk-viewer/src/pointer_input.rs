@@ -296,6 +296,10 @@ impl GpuState {
             self.medal_popup.handle_pointer(event);
             return true;
         }
+        if self.holocron_popup.is_open() {
+            self.holocron_popup.handle_pointer(event);
+            return true;
+        }
         if self
             .client_menu
             .as_ref()

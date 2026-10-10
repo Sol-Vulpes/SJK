@@ -184,6 +184,15 @@ request, 08/10/2026):
   rows need no colour carried over; the name, which keeps its codes, stays on the
   first row.
 
+A holocron drop (`docs/holocrons.md`) is a line of its own kind in the same three
+places: one sentence with no sender column, no colon and no tick, in its tier's colour
+(`holocrons::TIERS`, none of the game's codes either), with a small gem where the tick
+goes (`sjk_chat_look::gem_mark`): `Sol found a Legendary Holocron!`, and for the player's
+own `You found an Uncommon Holocron.` The identity service's feed relays a drop as a
+`ChatMessage` with an empty text and `holocron` set, in the feed's order; the game's chat,
+the dock and the page word it from the tier (`holocrons::line`) and leave out a tier they
+do not know. A muted player's drops are not shown.
+
 ## Muting a player
 
 A player can be muted on this PC (Sol's request, 08/10/2026). It is local: nothing goes
