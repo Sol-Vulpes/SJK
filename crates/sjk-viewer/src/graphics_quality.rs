@@ -269,6 +269,7 @@ mod tests {
             assert_eq!(shown(&console), level.label());
         }
         // The profile was saved: a new start reads the last level.
+        drop(console);
         let console = ViewerConsole::new(directory.path().join("config.cfg")).unwrap();
         assert_eq!(Level::current(&console), Some(Level::UltraLow));
     }
@@ -368,6 +369,7 @@ mod tests {
         toggle_ultra_low(&mut console);
         assert!(ultra_low(&console));
         // Kept across a restart.
+        drop(console);
         let mut console = ViewerConsole::new(directory.path().join("config.cfg")).unwrap();
         assert!(ultra_low(&console));
         toggle_ultra_low(&mut console);

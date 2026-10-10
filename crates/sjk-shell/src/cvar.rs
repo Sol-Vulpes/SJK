@@ -216,6 +216,8 @@ struct CvarEntry {
 pub struct CvarRegistry {
     entries: BTreeMap<String, CvarEntry>,
     aliases: BTreeMap<String, String>,
+    /// Stamp of the archived state ([`Self::archive_revision`]).
+    revision: u64,
 }
 
 impl CvarRegistry {
@@ -227,13 +229,20 @@ impl CvarRegistry {
             }
         }
         let key = self.canonical_key(&name.to_ascii_lowercase()).to_owned();
-        self.entries.remove(&key);
+        if self
+            .entries
+            .remove(&key)
+            .is_some_and(|entry| entry.cvar.flags.contains(CvarFlags::ARCHIVE))
+        {
+            self.archive_changed();
+        }
         self.aliases.retain(|_, target| target != &key);
         Ok(())
     }
 
     /// OpenJK cvar.cpp:1390-1411: discard user variables, reset writable defaults.
     pub fn restart(&mut self, only_user_created: bool) -> Result<(), CvarError> {
+        self.archive_changed();
         self.entries
             .retain(|_, entry| !entry.cvar.flags.contains(CvarFlags::USER_CREATED));
         self.aliases
@@ -252,11 +261,42 @@ impl CvarRegistry {
         Self::default()
     }
 
+    /// A stamp of what the config file holds of this registry: it changes whenever
+    /// an archived cvar is added, removed or changes value or flags, and never for
+    /// the other cvars. Stamps are unique across registries, so an equal stamp
+    /// means the same archived state.
+    pub fn archive_revision(&self) -> u64 {
+        self.revision
+    }
+
+    fn archive_changed(&mut self) {
+        self.revision = crate::revision::next();
+    }
+
+    /// Set an entry and restamp the registry when an archived value changed.
+    fn set_tracked(
+        &mut self,
+        name: &str,
+        value: impl FnOnce(&Cvar) -> Result<CvarValue, CvarError>,
+        restoring: bool,
+    ) -> Result<bool, CvarError> {
+        let entry = self.entry_mut(name)?;
+        let value = value(&entry.cvar)?;
+        let changed = set_entry(entry, value, restoring)?;
+        if changed && entry.cvar.flags.contains(CvarFlags::ARCHIVE) {
+            self.archive_changed();
+        }
+        Ok(changed)
+    }
+
     /// Register a cvar, rejecting duplicate or invalid names.
     pub fn register(&mut self, definition: CvarDefinition) -> Result<(), CvarError> {
         let key = normalize_name(&definition.name)?;
         if self.entries.contains_key(&key) || self.aliases.contains_key(&key) {
             return Err(CvarError::AlreadyRegistered(definition.name));
+        }
+        if definition.flags.contains(CvarFlags::ARCHIVE) {
+            self.archive_changed();
         }
         self.entries.insert(
             key,
@@ -295,34 +335,34 @@ impl CvarRegistry {
 
     /// Parse and set a cvar according to its registered type.
     pub fn set_text(&mut self, name: &str, value: &str) -> Result<bool, CvarError> {
-        let entry = self.entry_mut(name)?;
-        let value = entry.cvar.default.parse_like(value)?;
-        set_entry(entry, value, false)
+        self.set_tracked(name, |cvar| cvar.default.parse_like(value), false)
     }
 
     /// Set an already-typed value, rejecting a different value kind.
     pub fn set_value(&mut self, name: &str, value: CvarValue) -> Result<bool, CvarError> {
-        let entry = self.entry_mut(name)?;
-        set_entry(entry, value, false)
+        self.set_tracked(name, |_| Ok(value), false)
     }
 
     /// Add behavioral flags to an existing cvar.
     pub fn add_flags(&mut self, name: &str, flags: CvarFlags) -> Result<(), CvarError> {
-        self.entry_mut(name)?.cvar.flags |= flags;
+        let cvar = &mut self.entry_mut(name)?.cvar;
+        let before = cvar.flags;
+        cvar.flags |= flags;
+        // Archiving or omitting a default changes what the config file holds.
+        if cvar.flags != before {
+            self.archive_changed();
+        }
         Ok(())
     }
 
     /// Apply persisted state, including read-only startup values.
     pub fn restore_text(&mut self, name: &str, value: &str) -> Result<bool, CvarError> {
-        let entry = self.entry_mut(name)?;
-        let value = entry.cvar.default.parse_like(value)?;
-        set_entry(entry, value, true)
+        self.set_tracked(name, |cvar| cvar.default.parse_like(value), true)
     }
 
     /// Restore the registered default value.
     pub fn reset(&mut self, name: &str) -> Result<bool, CvarError> {
-        let entry = self.entry_mut(name)?;
-        set_entry(entry, entry.cvar.default.clone(), false)
+        self.set_tracked(name, |cvar| Ok(cvar.default.clone()), false)
     }
 
     /// Register a callback invoked synchronously after each effective change.

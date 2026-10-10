@@ -119,6 +119,15 @@ impl Shell {
             return Err(ShellError::Usage("exec <filename>"));
         };
         let filename = default_cfg_extension(requested);
+        // `exec config.cfg` reads what is saved so far, as when every frame saved.
+        if self
+            .config_path
+            .as_deref()
+            .and_then(Path::file_name)
+            .is_some_and(|name| name.eq_ignore_ascii_case(Path::new(&filename).as_os_str()))
+        {
+            let _ = self.save_if_dirty();
+        }
         let Some(text) = resolver
             .read_command_file(&filename)
             .map_err(ShellError::ScriptResolver)?

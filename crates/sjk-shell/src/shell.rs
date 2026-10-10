@@ -2,10 +2,11 @@
 
 use crate::{
     BindTable, CommandBuffer, CommandFileResolver, CommandRegistry, CvarRegistry, NoCommandFiles,
-    ShellError, load_config, save_config, tokenize,
+    ShellError, load_config, tokenize,
 };
 use std::collections::{BTreeMap, VecDeque};
 use std::path::{Path, PathBuf};
+use std::time::Instant;
 
 #[path = "shell_builtins.rs"]
 mod builtins;
@@ -90,6 +91,7 @@ pub struct Shell {
     pub binds: BindTable,
     config_path: Option<PathBuf>,
     config_load_failed: bool,
+    config_saver: crate::config_saver::ConfigSaver,
     file_log: file_log::FileLog,
     lines: VecDeque<ConsoleLine>,
     log_capacity: usize,
@@ -109,6 +111,7 @@ impl Shell {
             binds,
             config_path: None,
             config_load_failed: false,
+            config_saver: Default::default(),
             file_log: file_log::FileLog::default(),
             lines: VecDeque::with_capacity(DEFAULT_LOG_CAPACITY),
             log_capacity: DEFAULT_LOG_CAPACITY,
@@ -137,11 +140,26 @@ impl Shell {
         let result = load_config(path, &mut self.cvars, &mut self.binds);
         self.config_load_failed = result.is_err();
         result?;
+        // The file now holds exactly this state: nothing to save yet.
+        self.config_saver.mark_saved(self.config_revision());
         Ok(())
     }
 
-    /// Persist archived cvars and the complete bind table.
-    pub fn save(&self) -> Result<(), ShellError> {
+    fn config_revision(&self) -> crate::config_saver::Revision {
+        (self.cvars.archive_revision(), self.binds.revision())
+    }
+
+    /// Whether archived cvars or binds changed since the config was loaded or saved.
+    pub fn config_dirty(&self) -> bool {
+        self.config_saver.is_dirty(self.config_revision())
+    }
+
+    /// Persist archived cvars and the complete bind table now, on this thread,
+    /// after any background save still running. For exits and for code about to
+    /// read the file back.
+    pub fn save(&mut self) -> Result<(), ShellError> {
+        // A failed earlier write is moot once this one lands.
+        let _ = self.config_saver.wait_idle();
         if self.config_load_failed {
             return Err(ShellError::ConfigLoadFailed);
         }
@@ -149,7 +167,49 @@ impl Shell {
             .config_path
             .as_deref()
             .ok_or(ShellError::NoConfigPath)?;
-        save_config(path, &self.cvars, &self.binds)?;
+        let current = self.config_revision();
+        crate::config::write_config_text(
+            path,
+            &crate::config::config_text(&self.cvars, &self.binds)?,
+        )?;
+        self.config_saver.mark_saved(current);
+        Ok(())
+    }
+
+    /// Save only if something saved changed, now, on this thread: [`Self::save`]
+    /// when [`Self::config_dirty`].
+    pub fn save_if_dirty(&mut self) -> Result<(), ShellError> {
+        if self.config_dirty() {
+            self.save()
+        } else {
+            self.config_saver.wait_idle()?;
+            Ok(())
+        }
+    }
+
+    /// Once per frame: save archived cvars and binds once they changed and then
+    /// held still for [`crate::CONFIG_SAVE_DELAY`]. The text is built here and
+    /// written on a background thread; an unchanged frame costs two comparisons.
+    /// Returns an error an earlier background write met, or why this one could not
+    /// be queued (each reported once).
+    pub fn autosave(&mut self, now: Instant) -> Result<(), ShellError> {
+        if let Some(error) = self.config_saver.take_error() {
+            return Err(error.into());
+        }
+        let current = self.config_revision();
+        if !self.config_saver.due(current, now) {
+            return Ok(());
+        }
+        let Some(path) = self.config_path.clone() else {
+            return Ok(());
+        };
+        if self.config_load_failed {
+            // Once per change, as each save used to report it.
+            self.config_saver.mark_saved(current);
+            return Err(ShellError::ConfigLoadFailed);
+        }
+        let contents = crate::config::config_text(&self.cvars, &self.binds)?;
+        self.config_saver.queue(current, path, contents)?;
         Ok(())
     }
 

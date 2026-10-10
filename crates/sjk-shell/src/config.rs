@@ -130,6 +130,11 @@ pub fn save_config(
     cvars: &CvarRegistry,
     binds: &BindTable,
 ) -> Result<(), ConfigError> {
+    write_config_text(path, &config_text(cvars, binds)?)
+}
+
+/// The text [`save_config`] writes: archived cvars and binds in name order.
+pub(crate) fn config_text(cvars: &CvarRegistry, binds: &BindTable) -> Result<String, ConfigError> {
     let mut contents = String::from("// SJK generated configuration. Edit while SJK is closed.\n");
     for cvar in cvars
         .iter()
@@ -146,6 +151,12 @@ pub fn save_config(
     for (key, command) in binds.iter() {
         writeln!(contents, "bind \"{}\" \"{}\"", escape(key), escape(command))?;
     }
+    Ok(contents)
+}
+
+/// Replace `path` with `contents` through a temporary file, so a reader never
+/// sees half a config. One writer at a time: the temporary name is per process.
+pub(crate) fn write_config_text(path: &Path, contents: &str) -> Result<(), ConfigError> {
     let parent = path
         .parent()
         .ok_or_else(|| ConfigError::NoParent(path.to_owned()))?;

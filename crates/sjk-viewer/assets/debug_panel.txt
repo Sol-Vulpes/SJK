@@ -24,6 +24,18 @@
 
 # ---- Console & chat ----
 
+[config-save-quiet]
+area: Console & chat
+title: config.cfg saved only on real changes, 2 s later, off the main thread
+change: Key presses and unarchived cvars no longer rewrite config.cfg every frame.
+change: An archived cvar or bind change is written once, 2 s after it, on a background thread.
+change: Closing SJK, writeconfig and exec config.cfg write pending changes at once.
+test: Play a minute holding and tapping keys: config.cfg's modified time does not change.
+test: Change a setting (FOV): about 2 s later config.cfg's time changes, once.
+test: Change a setting and quit at once: on restart the new value is kept.
+test: bind k "echo hi", then quit at once: on restart k still echoes hi.
+note: Unit tests only; not tried in a game.
+
 [chat-letter-spacing]
 area: Console & chat
 title: Chat letter spacing (cg_chatBoxLetterSpacing, Settings > HUD)

@@ -323,7 +323,8 @@ mod tests {
         assert_eq!(Style::from_console(None), Style::Ejk);
         assert!(console.set_cvar("cg_camerastyle", "sjk"));
         assert_eq!(Style::from_console(Some(&console)), Style::Sjk);
-        // Archived: the change is saved to config.cfg.
+        // Archived: the change is saved to config.cfg (written on exit at the latest).
+        console.flush_config();
         let saved = std::fs::read_to_string(directory.path().join("config.cfg")).unwrap();
         assert!(saved.contains("seta cg_cameraStyle \"sjk\""), "{saved}");
     }
