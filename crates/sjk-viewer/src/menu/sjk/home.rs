@@ -344,8 +344,16 @@ impl Home {
     /// A key while typing in the chat's field: text goes into it, Backspace takes a
     /// character back, Enter sends, Escape stops; every other key is swallowed, so no
     /// menu key acts.
-    pub(crate) fn typing_key(&mut self, key: KeyCode, text: Option<&str>) -> Option<Action> {
-        self.chat.typing_key(key, text).map(|_| Action::SendChat)
+    pub(crate) fn typing_key(
+        &mut self,
+        key: KeyCode,
+        text: Option<&str>,
+        shift: bool,
+        control: bool,
+    ) -> Option<Action> {
+        self.chat
+            .typing_key(key, text, shift, control)
+            .map(|_| Action::SendChat)
     }
 
     fn entries(&self) -> &'static [Entry] {
@@ -1544,16 +1552,19 @@ mod tests {
             (KeyCode::KeyS, "s"),
             (KeyCode::Space, " "),
         ] {
-            assert_eq!(home.typing_key(key, Some(text)), None);
+            assert_eq!(home.typing_key(key, Some(text), false, false), None);
         }
-        assert_eq!(home.typing_key(KeyCode::ArrowUp, None), None);
-        assert_eq!(home.typing_key(KeyCode::Tab, Some("\t")), None);
+        assert_eq!(home.typing_key(KeyCode::ArrowUp, None, false, false), None);
+        assert_eq!(
+            home.typing_key(KeyCode::Tab, Some("\t"), false, false),
+            None
+        );
         assert_eq!(home.focus, Focus::Chat);
         assert_eq!(home.chat.draft.as_deref(), Some("ws "));
-        home.typing_key(KeyCode::Backspace, Some("\u{8}"));
+        home.typing_key(KeyCode::Backspace, Some("\u{8}"), false, false);
         assert_eq!(home.chat.draft.as_deref(), Some("ws"));
         for _ in 0..200 {
-            home.typing_key(KeyCode::KeyA, Some("a"));
+            home.typing_key(KeyCode::KeyA, Some("a"), false, false);
         }
         assert_eq!(home.chat.draft.as_ref().unwrap().chars().count(), 150);
     }
@@ -1566,22 +1577,25 @@ mod tests {
         };
         home.focus = Focus::Chat;
         home.key(KeyCode::Enter, 1);
-        home.typing_key(KeyCode::KeyG, Some("g"));
-        home.typing_key(KeyCode::KeyG, Some("g"));
+        home.typing_key(KeyCode::KeyG, Some("g"), false, false);
+        home.typing_key(KeyCode::KeyG, Some("g"), false, false);
         assert_eq!(
-            home.typing_key(KeyCode::Enter, Some("\r")),
+            home.typing_key(KeyCode::Enter, Some("\r"), false, false),
             Some(Action::SendChat)
         );
         assert_eq!(home.take_draft(), "gg");
         assert!(!home.is_typing());
         home.key(KeyCode::Enter, 1);
-        home.typing_key(KeyCode::KeyX, Some("x"));
-        assert_eq!(home.typing_key(KeyCode::Escape, None), None);
+        home.typing_key(KeyCode::KeyX, Some("x"), false, false);
+        assert_eq!(home.typing_key(KeyCode::Escape, None, false, false), None);
         assert!(!home.is_typing());
         assert_eq!(home.focus, Focus::Chat);
         // Enter on nothing typed only stops typing.
         home.key(KeyCode::Enter, 1);
-        assert_eq!(home.typing_key(KeyCode::Enter, Some("\r")), None);
+        assert_eq!(
+            home.typing_key(KeyCode::Enter, Some("\r"), false, false),
+            None
+        );
         assert!(!home.is_typing());
     }
 

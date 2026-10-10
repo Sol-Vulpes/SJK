@@ -41,6 +41,7 @@ The hub's side is described in Sol-Vulpes/SJK-hub (`PROTOCOL.md`, "Chat", "Emote
 | In-game SJK channel | [chat/sjk.rs](../crates/sjk-viewer/src/chat/sjk.rs), [chat/view/sjk_line.rs](../crates/sjk-viewer/src/chat/view/sjk_line.rs), [sjk_chat_frame.rs](../crates/sjk-viewer/src/sjk_chat_frame.rs) |
 | How a line looks everywhere (gold, tick, flow) | [sjk_chat_look.rs](../crates/sjk-viewer/src/sjk_chat_look.rs) |
 | The dock (main page, in-game menu) | [chat_dock.rs](../crates/sjk-viewer/src/menu/sjk/chat_dock.rs), placed by [home.rs](../crates/sjk-viewer/src/menu/sjk/home.rs) and [ingame_menu/sjk_view.rs](../crates/sjk-viewer/src/ingame_menu/sjk_view.rs) |
+| Typing and pasting in the page's and docks' field | [sjk_chat_field.rs](../crates/sjk-viewer/src/sjk_chat_field.rs) |
 | SJK chat page | [sjk_chat_panel.rs](../crates/sjk-viewer/src/sjk_chat_panel.rs), [sjk_chat_panel_view.rs](../crates/sjk-viewer/src/sjk_chat_panel_view.rs), [console_sjk_chat_page.rs](../crates/sjk-viewer/src/console_sjk_chat_page.rs) |
 | Emotes | [emotes.rs](../crates/sjk-viewer/src/emotes.rs), [emotes_frame.rs](../crates/sjk-viewer/src/emotes_frame.rs) |
 
@@ -197,6 +198,19 @@ played nothing.
   The page draws a copy of the chat taken under the identity's lock, never the chat
   itself: drawing asks for the player's own key (`printable_key_id`), which takes that
   lock again, and a lock held while drawing froze the game.
+- Pasting (Sol's request, 10/10/2026): Ctrl+V, or Shift+Insert as in the console and
+  the game's chat, pastes the clipboard's text into the page's field and the docks'
+  (main page and in-game menu), through the console's clipboard tools. The fields have
+  no caret to move, so the text goes at the end, where typing goes. It is kept as the
+  hub would take it ([sjk_chat_field.rs](../crates/sjk-viewer/src/sjk_chat_field.rs)):
+  line breaks, tabs and other spaces become one space and a run of them one, characters
+  outside the message alphabet (`chat_characters`: emoji, `{ }`, `\`, what prints
+  nothing) are dropped, a `^` stays only before a digit, and the paste stops at 150
+  characters (a colour code counts as its two and is never cut in half). Typed keys
+  are not filtered, as before; the rules still refuse what was typed before sending.
+  Ctrl+A, Ctrl+C and Ctrl+X do nothing there (the fields have no selection). The game's
+  own chat composer (`messagemode`, SJK channel included) already had all four, with a
+  caret and a selection ([chat/editing.rs](../crates/sjk-viewer/src/chat/editing.rs)).
 
 ## Who is online
 

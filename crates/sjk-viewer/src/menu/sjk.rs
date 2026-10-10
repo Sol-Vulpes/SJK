@@ -313,7 +313,11 @@ impl ClientMenu {
         let winit::keyboard::PhysicalKey::Code(key) = event.physical_key else {
             return MenuAction::None;
         };
-        match self.home.typing_key(key, event.text.as_deref()) {
+        let (shift, control) = (console.shift_held(), console.control_held());
+        match self
+            .home
+            .typing_key(key, event.text.as_deref(), shift, control)
+        {
             Some(action) => self.sjk_home_act(action, console),
             None => MenuAction::None,
         }

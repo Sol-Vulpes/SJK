@@ -7,6 +7,17 @@ SJK currently contains a native client and standard dedicated server in a
 20-crate Rust workspace. This page records scope and verification, rather than
 claiming complete parity from the presence of an implementation.
 
+## SJK chat paste
+
+Branch `personal/chat-paste` (10/10/2026, based on `a70d6ec0`, Windows 11), Sol's
+request: Ctrl+V in the SJK chat page's field and the docks' (main page, in-game menu),
+which had none (the page passed Ctrl+V's text on unfiltered, the docks dropped it).
+Ctrl+V and Shift+Insert now paste through the console's clipboard tools, kept as the
+hub takes a message: line breaks and tabs made spaces, characters outside the chat's
+alphabet dropped, colour codes kept, cut at 150 characters
+([hub-chat.md](hub-chat.md#in-the-menus)). Verified by unit tests of the filter and the
+key detection only; not tried in the game window or with a real clipboard.
+
 ## Memory on servers
 
 Branch `personal/menu-world-drop` (10/10/2026, based on `0c76ff03`, Windows 11, RTX

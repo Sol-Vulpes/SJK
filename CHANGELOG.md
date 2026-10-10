@@ -13,7 +13,6 @@ Format, read by the client (crates/sjk-viewer/src/changelog_data.rs, whose
 tests check this file):
 - "## <version> | <dd/mm/yyyy>" starts a release ("## Unreleased" for main
   after the last release, without a date);
-- SJK uses far less memory on servers: the menu map is no longer kept loaded during a match (it loads again in a few seconds when you leave), and graphics memory is packed tighter after map changes; at 4K about 7 GB instead of 11 to 12 GB _(Sol)_
 - other lines up to the first item are the release's introduction;
 - "- <change> _(<credit>)_" is one change; every change ends with its credit;
 - ASCII only, as the menu font draws bytes.
@@ -25,6 +24,7 @@ A Collection of everything you gather in SJK, with your own character showing wh
 and holocrons: loot you earn by playing. For now they are collected and shown; they cannot be
 opened yet and give nothing.
 
+- SJK uses far less memory on servers: the menu map is no longer kept loaded during a match (it loads again in a few seconds when you leave), and graphics memory is packed tighter after map changes; at 4K about 7 GB instead of 11 to 12 GB _(Sol)_
 - Graphics settings that needed a restart (Ultra low, the graphics quality levels, HDR, FXAA, sun and sky, shadows, light shafts, material maps, reflection probes, texture filtering) now apply with a graphics reload: a pop-up offers it once you leave Settings, and vid_restart does it; on a server the map loads again in a few seconds and you stay connected _(Sol)_
 - Chat letter spacing: Settings > HUD > Chat letter spacing (cg_chatBoxLetterSpacing, -2 to 8, default -0.5: a little tighter than before) spreads or packs the letters of chat messages; long messages wrap to match _(Sol)_
 - The resolution list opens as a card in the SJK UI's look, in both menu styles, and the last screens that still used the old settings form (the tabbed settings, the renderer page and the key bindings on their own) now open the SJK UI's Settings or Key bindings _(Sol)_
@@ -58,6 +58,7 @@ opened yet and give nothing.
 - Chroma saber shaders: the Storm, Unstable, Spectral, Glitch, Hologram, Runic and Heartbeat blades now take your saber's colour (each saber its own, color1 and color2; a white custom colour keeps the shader's own), and everyone sees them in your colour; a small colour wheel marks them in the Collection, on the Saber tab and on the player card. On the Collection's Shaders a double click wears an owned shader, and a long name no longer runs under its Worn / Yours / Locked label _(Sol)_
 - Staff tools: the SJK team can verify a player (Verify, or Unverify to take the mark away) and, for a player who reset their key, merge the new key's player into their old one: the Staff page's Keys and merge tab takes the other key id (typed, pasted or picked in the list) and a card says who is kept, who is merged away and that it cannot be undone. Everything moves to the kept player, and one player can now have several keys: each linked key plays as that player, with their name, medals, unlocks, achievements and holocrons, and staff can unlink a key again (it starts afresh, nothing moves back) _(Sol)_
 - The SJK chat page has a small window of who is online, as round faces: each SJK player reading the chat now shows their profile picture (or the first letter of their name), a gold dot for those playing a match, and below them smaller faces for the ones seen most recently; rest the pointer on a face for their card, which says when they were seen. Until the SJK hub lists them it shows how many are reading and the faces of the last players who spoke _(Sol)_
+- Ctrl+V (or Shift+Insert) pastes into the SJK chat's field, on the SJK chat page and in the chat docked on the main page and the game menu: line breaks become spaces, characters the SJK chat cannot send are left out, colour codes are kept and the paste stops at the 150-character limit _(Sol)_
 - The debug panel's test list (debug_panel) is a full SJK UI page in every menu style, like What's new: tabs under its title, the entries with their ticks on the left, the chosen one's changes, steps and notes on the right, keys at the bottom _(Sol)_
 
 ## 2026.1010.1 (Alpha) | 10/10/2026

@@ -44,7 +44,7 @@ const PEOPLE_SHOWN: usize = people::ONLINE_FACES + people::RECENT_FACES;
 /// Pictures' versions the page keeps for faces whose row does not carry one.
 const PICTURES_KEPT: usize = 32;
 /// Longest message, as the hub takes it.
-const DRAFT_MAX: usize = sjk_identity::chat::TEXT_MAX;
+const DRAFT_MAX: usize = crate::sjk_chat_field::MAX;
 /// Messages Page Up and Page Down scroll by.
 const PAGE: usize = 5;
 
@@ -414,7 +414,12 @@ impl Panel {
     }
 
     /// A key.
-    pub(crate) fn handle_key(&mut self, event: &KeyEvent, shift: bool) -> PanelAction {
+    pub(crate) fn handle_key(
+        &mut self,
+        event: &KeyEvent,
+        shift: bool,
+        control: bool,
+    ) -> PanelAction {
         if event.state != ElementState::Pressed {
             return PanelAction::None;
         }
@@ -425,11 +430,18 @@ impl Panel {
         if event.repeat && self.focus != FIELD_TOKEN {
             return PanelAction::None;
         }
-        self.edit(key, event.text.as_deref(), shift)
+        self.edit(key, event.text.as_deref(), shift, control)
     }
 
-    /// A pressed `key` that typed `text`, Shift held or not.
-    fn edit(&mut self, key: KeyCode, text: Option<&str>, shift: bool) -> PanelAction {
+    /// A pressed `key` that typed `text`, with Shift and Ctrl held or not; in the field,
+    /// Ctrl+V and Shift+Insert paste ([`crate::sjk_chat_field`]).
+    fn edit(
+        &mut self,
+        key: KeyCode,
+        text: Option<&str>,
+        shift: bool,
+        control: bool,
+    ) -> PanelAction {
         let typing = self.focus == FIELD_TOKEN;
         let in_list = (MESSAGE_BASE..MESSAGE_BASE + MESSAGES_SHOWN as u16).contains(&self.focus);
         match key {
@@ -463,21 +475,7 @@ impl Panel {
                 self.draft.pop();
             }
             _ if typing => {
-                let pasted;
-                let text = match text {
-                    Some("\u{16}") => {
-                        pasted = crate::console::clipboard::paste().unwrap_or_default();
-                        pasted.as_str()
-                    }
-                    Some(text) => text,
-                    None => return PanelAction::None,
-                };
-                for c in text.chars().filter(|c| !c.is_control()) {
-                    if self.draft.chars().count() >= DRAFT_MAX {
-                        break;
-                    }
-                    self.draft.push(c);
-                }
+                crate::sjk_chat_field::key_into(&mut self.draft, key, text, shift, control);
             }
             _ => {}
         }
@@ -562,7 +560,7 @@ mod tests {
     }
 
     fn press(panel: &mut Panel, key: KeyCode, text: Option<&str>) -> PanelAction {
-        panel.edit(key, text, false)
+        panel.edit(key, text, false, false)
     }
 
     #[test]
@@ -795,10 +793,10 @@ mod tests {
         }
         let start = panel.focus;
         for _ in 0..panel.order.len() {
-            panel.edit(KeyCode::Tab, Some("\t"), false);
+            panel.edit(KeyCode::Tab, Some("\t"), false, false);
         }
         assert_eq!(panel.focus, start, "Tab comes round");
-        panel.edit(KeyCode::Tab, Some("\t"), true);
+        panel.edit(KeyCode::Tab, Some("\t"), true, false);
         assert_ne!(panel.focus, start);
     }
 }

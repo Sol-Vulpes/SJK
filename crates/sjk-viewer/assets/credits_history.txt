@@ -9,6 +9,8 @@
 #                               made it when that is not the piece's owner.
 
 = Sol
++ 10/10/2026 | - | Ctrl+V and Shift+Insert paste in the SJK chat page and docks, filtered to what the chat sends
+- b8b7c36 |  | Paste into the SJK chat page and docks (Ctrl+V, Shift+Insert)
 + 10/10/2026 | - | Menu world dropped during matches, small GPU memory blocks
 - 42debe8 |  | Drop the menu world during matches and use small GPU memory blocks
 + 10/10/2026 | - | SJK chat page: who is online as face circles with their card on hover

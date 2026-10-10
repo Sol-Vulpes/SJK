@@ -255,8 +255,10 @@ impl InGameMenu {
         &mut self,
         key: winit::keyboard::KeyCode,
         text: Option<&str>,
+        shift: bool,
+        control: bool,
     ) -> Option<DockAction> {
-        self.chat.typing_key(key, text)
+        self.chat.typing_key(key, text, shift, control)
     }
 
     /// The pointer over (or clicking) `token`: `None` when it is not the docked chat's,
@@ -946,11 +948,11 @@ mod sjk_tests {
         );
         assert!(menu.chat_typing());
         for (key, text) in [(KeyCode::KeyW, "w"), (KeyCode::KeyS, "s")] {
-            assert_eq!(menu.chat_key(key, Some(text)), None);
+            assert_eq!(menu.chat_key(key, Some(text), false, false), None);
         }
-        assert_eq!(menu.chat_key(KeyCode::Tab, Some("\t")), None);
+        assert_eq!(menu.chat_key(KeyCode::Tab, Some("\t"), false, false), None);
         assert_eq!(
-            menu.chat_key(KeyCode::Enter, Some("\r")),
+            menu.chat_key(KeyCode::Enter, Some("\r"), false, false),
             Some(DockAction::Send)
         );
         menu.send_chat();
@@ -959,7 +961,7 @@ mod sjk_tests {
         // Escape stops typing first, the keyboard staying on the field.
         menu.focus = sjk_focus::Focus::Chat;
         menu.start_chat_typing();
-        assert_eq!(menu.chat_key(KeyCode::Escape, None), None);
+        assert_eq!(menu.chat_key(KeyCode::Escape, None, false, false), None);
         assert!(!menu.chat_typing());
         menu.build_sjk(view(Page::Main, 0, false, 0), [1_920.0, 1_080.0]);
         assert_eq!(menu.focus, sjk_focus::Focus::Chat);
