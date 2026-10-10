@@ -95,6 +95,7 @@ mod gpu_texture;
 mod graphics_quality;
 mod graphics_reload;
 mod ground_hud;
+mod hitch_log;
 mod holocron_popup;
 mod holocrons;
 mod hud;
@@ -488,6 +489,8 @@ struct GpuState {
     /// Monitor refresh rate behind `com_maxfps -1`, re-read at most once a second.
     refresh_cap: std::cell::Cell<Option<(Instant, u32)>>,
     frame_pacer: frame_pacing::FramePacer,
+    /// Always-on gameplay hitch lines (`hitch_log.rs`).
+    hitches: hitch_log::Recorder,
     /// Optional per-pass GPU timing printed with the frame-budget report.
     gpu_phases: Option<gpu_phases::Profiler>,
     third_person_camera: camera::State,
@@ -1347,6 +1350,7 @@ impl GpuState {
             applied_resolution: [size.width, size.height],
             refresh_cap: std::cell::Cell::new(None),
             frame_pacer: frame_pacing::FramePacer::new(),
+            hitches: hitch_log::Recorder::default(),
             gpu_phases,
             third_person_camera: camera::State::default(),
             far_plane,

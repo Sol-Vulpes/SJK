@@ -129,6 +129,11 @@ impl Default for GameplayInput {
 }
 
 impl GameplayInput {
+    /// Whether the window has keyboard focus.
+    pub(crate) fn is_focused(&self) -> bool {
+        self.focused
+    }
+
     /// Window focus belongs to the shell, so carry it across GPU world installs.
     pub(crate) fn inherit_focus(&mut self, previous: &Self) {
         self.focused = previous.focused;

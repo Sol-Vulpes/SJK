@@ -30,6 +30,7 @@ A Collection of everything you gather in SJK, with your own character showing wh
 and holocrons: loot you earn by playing. For now they are collected and shown; they cannot be
 opened yet and give nothing.
 
+- Stutters during play are written to the log: a frame over 33 ms and three times the recent median adds a "hitch:" line with the work that took the time (at most one a second), and a "hitches:" count each minute that had any. They also show in the console, and in qconsole.log with logfile 1, to send with a stutter report _(Sol)_
 - The cards for achievements, medals and holocrons wait while SJK is alt-tabbed out or minimised and show when you come back, going on from where they were; the big medal and holocron pop-ups also wait to start. A new SJK version found at start now shows a card too: Update available, with the version and Main menu > Update _(Sol)_
 - A new medal or holocron that comes during a match now shows as a card at the top of the screen, the same as an achievement (its picture, its name, what it is for or how rare it is, and the achievement chime) instead of a line in the middle of the screen; Esc still opens the big pop-up, which takes the card away. Settings > Sound > Achievement sound is now Unlock sound and covers these cards too _(Sol)_
 - SJK uses far less memory on servers: the menu map is no longer kept loaded during a match (it loads again in a few seconds when you leave), and graphics memory is packed tighter after map changes; at 4K about 7 GB instead of 11 to 12 GB _(Sol)_
