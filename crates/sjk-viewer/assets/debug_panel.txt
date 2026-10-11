@@ -46,7 +46,7 @@ test: Settings > Network shows "Send crash reports", on by default.
 test: End sjk.exe in Task Manager, start again: console says SJK closed unexpectedly.
 test: After that start, crashes/last-crash.txt reads like the session (map, last lines).
 test: With the hub deployed: the console says the report was sent; crash-groups lists it.
-note: Hub endpoint on SJK-hub feat/crash-reports, not deployed: reports wait until it is.
+note: The hub has taken reports since 11/10/2026; the operator reads them with crash-groups.
 
 [config-save-quiet]
 area: Console & chat
@@ -702,6 +702,15 @@ note: Not tried in a running client: the HUD hiding and the compact board over a
 note: Alt+Tab while holding Tab leaves the board and the hidden HUD up until Tab is pressed again.
 
 # ---- Rendering & effects ----
+
+[map-change-resize]
+area: Rendering & effects
+title: No crash when the window is resized while a map loads
+change: A map loads at the window's size when it starts; a resize meanwhile left it the old size.
+change: Its first frame then crashed (a player's report: 1280x720 depth, 1920x1080 frame).
+test: Windowed, join a server, and while the next map loads maximise the window: no crash.
+test: Or drag the window bigger during the load: the map comes up at the new size, sharp.
+note: Seen in the first crash report sent to the hub (2026.1011.1, JoF server, T1_Danger).
 
 [effect-transparency]
 area: Rendering & effects

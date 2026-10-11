@@ -447,6 +447,12 @@ impl GpuState {
 
     pub(crate) fn adopt_world(&mut self, mut loaded: GpuState) -> GpuState {
         self.hand_shell_to(&mut loaded);
+        // The world was built at the window's size when its install began; the window
+        // may have been resized in the seconds since. Its depth and scene targets would
+        // then no longer match the swapchain, and wgpu refuses that frame.
+        if loaded.size != self.size {
+            loaded.resize(self.size);
+        }
         loaded.transition_report_pending = loaded.connect_timeline.is_none();
         loaded.completed_map_changes = self.completed_map_changes.saturating_add(u32::from(
             self.live_map_installed || std::mem::take(&mut loaded.resident.map_change_pending),

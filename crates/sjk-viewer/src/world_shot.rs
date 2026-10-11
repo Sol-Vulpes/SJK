@@ -36,6 +36,26 @@ pub(crate) fn open(
     menu: Option<menu::ClientMenu>,
     cvars: &[(&str, &str)],
 ) -> Option<(GpuState, tempfile::TempDir)> {
+    let (input, directory) = world_input(map, menu, cvars);
+    let mut gpu = match pollster::block_on(GpuState::new_for_target(None, size, input)) {
+        Ok(gpu) => gpu,
+        Err(error) => {
+            eprintln!("no windowless GPU state ({error}); skipped");
+            return None;
+        }
+    };
+    gpu.is_menu_world = true;
+    attach_target(&mut gpu, size);
+    Some((gpu, directory))
+}
+
+/// What [`open`] builds a client from: `map` loaded from `JKA_GAME_DATA`, a throwaway
+/// profile (kept alive by the returned directory) with `cvars` set, and `menu`.
+pub(crate) fn world_input(
+    map: &str,
+    menu: Option<menu::ClientMenu>,
+    cvars: &[(&str, &str)],
+) -> (GpuWorldInput, tempfile::TempDir) {
     let game_data = PathBuf::from(
         std::env::var_os("JKA_GAME_DATA").expect("JKA_GAME_DATA names the GameData directory"),
     );
@@ -80,16 +100,7 @@ pub(crate) fn open(
         game_fonts: false,
         completed_map_changes: 0,
     };
-    let mut gpu = match pollster::block_on(GpuState::new_for_target(None, size, input)) {
-        Ok(gpu) => gpu,
-        Err(error) => {
-            eprintln!("no windowless GPU state ({error}); skipped");
-            return None;
-        }
-    };
-    gpu.is_menu_world = true;
-    attach_target(&mut gpu, size);
-    Some((gpu, directory))
+    (input, directory)
 }
 
 /// Give `gpu` the image its frames render into at `size` (a world built after
@@ -278,6 +289,9 @@ mod fps_help_shots;
 
 #[path = "world_shot_chat_gifs.rs"]
 mod chat_gifs_shots;
+
+#[path = "world_shot_map_change.rs"]
+mod map_change;
 
 #[cfg(test)]
 mod tests {
