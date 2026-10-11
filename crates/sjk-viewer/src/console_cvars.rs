@@ -732,6 +732,12 @@ pub(super) fn register_daily_cvars(cvars: &mut CvarRegistry) -> Result<(), sjk_s
             "SJK scoreboard: thin rows, so every player fits in one column, as wide as the names and centred",
         ),
         CvarDefinition::new(
+            crate::scoreboard::style::ANIMATION_CVAR,
+            true,
+            archive,
+            "Animate scoreboard opening, closing and row reordering in both styles",
+        ),
+        CvarDefinition::new(
             "cg_smallScoreboard",
             false,
             archive,

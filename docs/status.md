@@ -410,6 +410,22 @@ was busy with the game during the runs), the FPS swings, the 1 GB of CPU memory 
 world keeps, and the menu in the game window (the last server's map under the menus
 for a few seconds after leaving).
 
+## Scoreboard animation preference
+
+Branch `feat/scoreboard-animation-toggle` (2026-10-11, based on `3654f5b2`,
+Windows, Rust 1.99): Settings > Scoreboard > "Animate scoreboard" controls
+opening, closing and row reordering in both scoreboard styles. The archived
+`cg_scoreboardAnimation` defaults to 1; at 0 the board shows, hides and
+reorders instantly, including when switched during a transition. The shared
+settings catalogue provides the switch in the SJK UI and classic settings.
+See [scoreboard styles](client.md#scoreboard-styles).
+
+Focused tests cover instant visibility and row placement, changing the switch
+during transitions, resuming motion, the default and saving across restarts.
+Workspace fmt, locked build, locked tests and all-targets clippy passed with
+existing warnings. The option has not been tried in the game window or during
+a live match.
+
 ## Graphics reload
 
 Branch `personal/graphics-reload` (10/10/2026, based on `5faf4944`, Windows 11, RTX

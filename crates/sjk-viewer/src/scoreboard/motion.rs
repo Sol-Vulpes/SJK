@@ -1,4 +1,4 @@
-//! Opening, closing and re-sorting motion for the classic scoreboard.
+//! Optional opening, closing and re-sorting motion shared by both scoreboard looks.
 //!
 //! The retail scoreboard fades out over 200 ms once released (`FADE_TIME`,
 //! `CG_FadeColor` in `CG_DrawOldScoreboard`). The classic style keeps that
@@ -17,6 +17,7 @@ const ROW_SECONDS: f32 = 0.07;
 
 /// Presence and per-client row positions.
 pub(super) struct Motion {
+    animated: bool,
     /// 0 hidden, 1 fully shown.
     shown: f32,
     last: Option<Instant>,
@@ -29,6 +30,7 @@ pub(super) struct Motion {
 impl Default for Motion {
     fn default() -> Self {
         Self {
+            animated: true,
             shown: 0.0,
             last: None,
             step: 0.0,
@@ -39,6 +41,11 @@ impl Default for Motion {
 }
 
 impl Motion {
+    /// Apply the player's animation preference on the next presentation frame.
+    pub(super) fn set_animated(&mut self, animated: bool) {
+        self.animated = animated;
+    }
+
     /// Step presence to `now`: rising while `requested`, falling otherwise.
     /// Returns whether the scoreboard draws this frame. When it may not draw
     /// at all (`allowed` false: console, menus, `cg_drawScores 0`) it hides
@@ -55,7 +62,9 @@ impl Motion {
             return false;
         }
         let was_hidden = self.shown <= 0.0;
-        self.shown = if requested {
+        self.shown = if !self.animated {
+            if requested { 1.0 } else { 0.0 }
+        } else if requested {
             (self.shown + step / OPEN_SECONDS)
                 .min(1.0)
                 .max(if was_hidden {
@@ -88,7 +97,7 @@ impl Motion {
     /// Where `client`'s row is drawn this frame, moving towards `target`.
     pub(super) fn row(&mut self, client: u8, target: f32) -> f32 {
         let slot = usize::from(client).min(31);
-        if !self.placed[slot] {
+        if !self.animated || !self.placed[slot] {
             self.placed[slot] = true;
             self.rows[slot] = target;
             return target;
@@ -109,6 +118,40 @@ impl Motion {
 mod tests {
     use super::*;
     use std::time::Duration;
+
+    #[test]
+    fn disabled_motion_opens_closes_and_reorders_instantly() {
+        let mut motion = Motion::default();
+        motion.set_animated(false);
+        let now = Instant::now();
+        assert!(motion.present(true, true, now));
+        assert_eq!(motion.opacity(), 1.0);
+        assert_eq!(motion.row(3, 100.0), 100.0);
+        assert_eq!(motion.row(3, 200.0), 200.0);
+        assert!(!motion.present(false, true, now));
+        assert_eq!(motion.opacity(), 0.0);
+        assert!(!motion.present(true, false, now));
+    }
+
+    #[test]
+    fn changing_the_preference_settles_a_transition_and_can_resume_motion() {
+        let mut motion = Motion::default();
+        let start = Instant::now();
+        motion.present(true, true, start);
+        motion.row(3, 100.0);
+        motion.set_animated(false);
+        motion.present(true, true, start + Duration::from_millis(16));
+        assert_eq!(motion.opacity(), 1.0);
+        assert_eq!(motion.row(3, 200.0), 200.0);
+        motion.set_animated(true);
+        motion.present(true, true, start + Duration::from_millis(32));
+        let row = motion.row(3, 300.0);
+        assert!(row > 200.0 && row < 300.0);
+        motion.present(false, true, start + Duration::from_millis(48));
+        assert!(motion.opacity() > 0.0 && motion.opacity() < 1.0);
+        motion.set_animated(false);
+        assert!(!motion.present(false, true, start + Duration::from_millis(64)));
+    }
 
     #[test]
     fn opens_quickly_and_fades_out_like_retail() {

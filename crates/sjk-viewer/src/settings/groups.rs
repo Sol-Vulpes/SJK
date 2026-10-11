@@ -148,6 +148,7 @@ impl Group {
             ],
             Self::Scoreboard => &[
                 crate::scoreboard::style::CVAR,
+                crate::scoreboard::style::ANIMATION_CVAR,
                 crate::scoreboard::style::COMPACT_CVAR,
                 "cg_showClientIDs",
                 "cg_drawScoreboardIcons",

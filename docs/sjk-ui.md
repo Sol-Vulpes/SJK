@@ -883,7 +883,10 @@ scoreboard otherwise; a profile's saved old default (`classic`) moves to it
 once, a style chosen after that stays ([client.md](client.md#scoreboard-styles)). No panel: the columns float over
 the game, which is darkened by the UI's navy (a third everywhere, deeper behind
 the header and, from the chat column's edge, behind the columns). It fades in
-and out as the classic board does, settling into place as it opens.
+and out as the classic board does, settling into place as it opens. Settings >
+Scoreboard > "Animate scoreboard" (`cg_scoreboardAnimation`, on by default)
+switches these fades and row motion off for both styles: opening, closing and
+reordering become instant. The setting is saved and applies on the next frame.
 
 - **Header line:** across the top, as the other screens' top bar: the map
   without `mp/` (Rajdhani 48), then the mode and its limits in words ("Free for

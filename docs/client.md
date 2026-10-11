@@ -1693,6 +1693,13 @@ The classic board also fades in over 120 ms and out over 200 ms after release
 are coloured from green to red, and rows alternate a faint stripe. Nothing is
 allocated per frame; the text and draw storage is reserved for 32 clients.
 
+Settings > Scoreboard > "Animate scoreboard" (`cg_scoreboardAnimation`,
+archived, default 1) controls animation in both the classic and SJK styles.
+Set `cg_scoreboardAnimation 0` to show and hide the board instantly and place
+reordered rows at their new positions immediately, without fades or slides.
+The option applies on the next frame, including during an opening or closing
+transition, and is saved across restarts.
+
 ## HUD style
 
 `cg_hudStyle` chooses `game`, the status HUD of the game's own menu files (the

@@ -20,6 +20,15 @@ use crate::menu::style::MenuStyle;
 pub(crate) const CVAR: &str = "cg_scoreboardStyle";
 /// Archived cvar: the SJK look's thin rows, every player in one column.
 pub(crate) const COMPACT_CVAR: &str = "cg_compactScoreboard";
+/// Archived cvar controlling opening, closing and row motion in both looks.
+pub(crate) const ANIMATION_CVAR: &str = "cg_scoreboardAnimation";
+
+/// Keep scoreboard motion unless the player switches it off.
+pub(crate) fn animated(console: Option<&ViewerConsole>) -> bool {
+    console
+        .and_then(|console| console.bool_cvar(ANIMATION_CVAR))
+        .unwrap_or(true)
+}
 
 /// Whether the SJK look packs its rows (`cg_compactScoreboard`, on unless
 /// switched off).
@@ -130,6 +139,20 @@ mod tests {
     use super::*;
 
     const EVERY_MENU: [MenuStyle; 2] = [MenuStyle::Classic, MenuStyle::Sjk];
+
+    #[test]
+    fn animation_is_on_by_default_and_the_saved_preference_survives_restart() {
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("config.cfg");
+        let mut console = ViewerConsole::new(path.clone()).unwrap();
+        assert!(animated(None));
+        assert!(animated(Some(&console)));
+        assert!(console.set_cvar(ANIMATION_CVAR, "0"));
+        assert!(!animated(Some(&console)));
+        drop(console);
+        let console = ViewerConsole::new(path).unwrap();
+        assert!(!animated(Some(&console)));
+    }
 
     #[test]
     fn a_mistyped_value_keeps_the_classic_board() {

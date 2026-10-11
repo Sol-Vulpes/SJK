@@ -118,8 +118,9 @@ impl Scoreboard {
         }
     }
 
-    /// Whether the scoreboard draws this frame: it fades in while `requested`
-    /// and, once released, out. Nothing draws while it is not `allowed`.
+    /// Whether the scoreboard draws this frame: fades while opening and closing
+    /// when animation is enabled, otherwise changes instantly. Nothing draws
+    /// while it is not `allowed`.
     pub(crate) fn present(
         &mut self,
         console: Option<&crate::console::ViewerConsole>,
@@ -127,6 +128,7 @@ impl Scoreboard {
         allowed: bool,
     ) -> bool {
         self.style = style::ScoreboardStyle::from_console(console);
+        self.motion.set_animated(style::animated(console));
         #[cfg(test)]
         if self.shot.is_some() {
             return self.motion.present(true, true, std::time::Instant::now());

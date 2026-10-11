@@ -478,6 +478,10 @@ const HELP: &[(&str, &str)] = &[
         "Auto matches the menus: SJK's own with the SJK UI, else the classic one after the original game's.",
     ),
     (
+        crate::scoreboard::style::ANIMATION_CVAR,
+        "Fade and slide the scoreboard and glide rows when scores reorder. Off shows, hides and reorders it instantly in either style.",
+    ),
+    (
         crate::scoreboard::style::COMPACT_CVAR,
         "Thinner rows on SJK's scoreboard, so every player fits in one column, in a board as wide as its names, centred.",
     ),

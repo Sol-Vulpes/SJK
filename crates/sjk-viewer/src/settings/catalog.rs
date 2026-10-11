@@ -232,6 +232,11 @@ pub(super) const HUD_OPTIONS: &[Setting] = &[
         kind: ValueKind::Choice(&crate::scoreboard::style::ScoreboardStyle::NAMES),
     },
     Setting {
+        label: "Animate scoreboard",
+        cvar: crate::scoreboard::style::ANIMATION_CVAR,
+        kind: ValueKind::Bool,
+    },
+    Setting {
         label: "Compact SJK scoreboard",
         cvar: crate::scoreboard::style::COMPACT_CVAR,
         kind: ValueKind::Bool,
