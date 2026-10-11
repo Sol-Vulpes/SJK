@@ -2522,6 +2522,9 @@ struct ParticleAtlasAnimation {
     tc_scroll: [f32; 2],
     /// The stage is drawn into the dynamic glow image too.
     glow: bool,
+    /// The stage asks for the effect's colour (`rgbGen vertex`, `exactVertex` or
+    /// `entity`); see [`ParticleLayerSample::tint`].
+    tinted: bool,
     /// Remap destination clock, subtracted from the sampled shader time.
     time_offset: f32,
 }
@@ -2534,6 +2537,7 @@ struct ParticleLayerSample {
     alpha: f32,
     uv_transform: [f32; 4],
     glow: bool,
+    tinted: bool,
 }
 
 mod effect_remaps;

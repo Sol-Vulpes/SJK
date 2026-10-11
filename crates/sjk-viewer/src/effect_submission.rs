@@ -132,6 +132,7 @@ pub(crate) fn prepare(timing: &mut frame_pacing::budget::Timer, inputs: Inputs<'
             } else {
                 3
             };
+            let tint = layer.tint(color.map(|channel| channel * color_fade));
             let instance = EntityInstance {
                 position: motion.origin.to_array(),
                 kind: if layer.glow { kind | GLOW_MARK } else { kind },
@@ -139,9 +140,9 @@ pub(crate) fn prepare(timing: &mut frame_pacing::budget::Timer, inputs: Inputs<'
                 alpha: vertex_alpha * layer.alpha,
                 uv_rect: layer.uv_rect,
                 color: [
-                    color[0] * color_fade * layer.rgb,
-                    color[1] * color_fade * layer.rgb,
-                    color[2] * color_fade * layer.rgb,
+                    tint[0] * layer.rgb,
+                    tint[1] * layer.rgb,
+                    tint[2] * layer.rgb,
                     1.0,
                 ],
                 direction,

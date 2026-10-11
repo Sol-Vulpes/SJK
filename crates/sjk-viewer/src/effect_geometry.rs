@@ -268,10 +268,11 @@ impl Mesh {
             crate::effect_blend::slot(layer.blend) == blend_index
                 && glow.is_none_or(|glow| layer.glow == glow)
         }) {
+            let tint = layer.tint([color[0], color[1], color[2]]);
             let layer_color = [
-                color[0] * layer.rgb,
-                color[1] * layer.rgb,
-                color[2] * layer.rgb,
+                tint[0] * layer.rgb,
+                tint[1] * layer.rgb,
+                tint[2] * layer.rgb,
                 color[3] * layer.alpha,
             ];
             match &mut particle.shape {
@@ -358,10 +359,11 @@ impl Mesh {
             .iter()
             .filter(|layer| crate::effect_blend::slot(layer.blend) == blend_index)
         {
+            let tint = layer.tint([draw.color[0], draw.color[1], draw.color[2]]);
             let color = [
-                draw.color[0] * layer.rgb,
-                draw.color[1] * layer.rgb,
-                draw.color[2] * layer.rgb,
+                tint[0] * layer.rgb,
+                tint[1] * layer.rgb,
+                tint[2] * layer.rgb,
                 draw.color[3] * layer.alpha,
             ];
             self.polygon(draw.vertices, layer.uv_rect, layer.uv_transform, color);
