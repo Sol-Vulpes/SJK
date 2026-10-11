@@ -8,6 +8,27 @@ fn is_white_image(name: &str) -> bool {
     name.eq_ignore_ascii_case("$whiteimage") || name.eq_ignore_ascii_case("*white")
 }
 
+/// Whether a stage's blend leaves the frame as it is (`GL_ZERO GL_ONE`, the `clear`
+/// shader in `gfx2.shader`). Servers remap effects to `clear` to hide them; drawn with
+/// the alpha fallback, its white image put an opaque white square where the effect was.
+fn draws_nothing(blend: &StageBlend) -> bool {
+    matches!(
+        blend,
+        StageBlend::Custom { source, destination }
+            if source == "gl_zero" && destination == "gl_one"
+    )
+}
+
+/// Whether a stage takes the effect's own colour, as rd-vanilla's `CGEN_VERTEX`,
+/// `CGEN_EXACT_VERTEX` and `CGEN_ENTITY` do (`RB_CalcColors`); without an `rgbGen`, a
+/// stage is `identity`.
+fn takes_effect_colour(stage: &sjk_shader::ShaderStage) -> bool {
+    matches!(
+        stage.rgb_generator.as_deref(),
+        Some("vertex" | "exactvertex" | "entity")
+    )
+}
+
 /// The shared bind-group layout used by effect rendering and atlas expansion.
 pub(crate) fn layout(device: &wgpu::Device) -> wgpu::BindGroupLayout {
     device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
@@ -77,6 +98,7 @@ pub(crate) fn create(
         tc_scale: [f32; 2],
         tc_scroll: [f32; 2],
         glow: bool,
+        tinted: bool,
     }
     let requested_shaders = EFFECT_SHADERS
         .iter()
@@ -84,14 +106,22 @@ pub(crate) fn create(
         .chain(required_effect_shaders.iter().cloned())
         .collect::<BTreeSet<_>>();
     let mut pending = Vec::new();
+    // Shaders whose every stage draws nothing: an entry without stages, so effects (and
+    // remaps onto them) draw nothing instead of the shader's image.
+    let mut hidden = BTreeSet::new();
     for shader in &requested_shaders {
         let before = pending.len();
+        let mut skipped = false;
         if let Some(definition) = shaders.get(shader) {
             for stage in definition
                 .stages
                 .iter()
                 .filter(|stage| !stage.images.is_empty())
             {
+                if draws_nothing(&stage.blend) {
+                    skipped = true;
+                    continue;
+                }
                 let mut paths = Vec::new();
                 let white = stage.images.iter().any(|name| is_white_image(name));
                 for name in &stage.images {
@@ -132,9 +162,14 @@ pub(crate) fn create(
                         tc_scale,
                         tc_scroll,
                         glow: stage.glow,
+                        tinted: takes_effect_colour(stage),
                     });
                 }
             }
+        }
+        if skipped && pending.len() == before {
+            hidden.insert(shader.to_ascii_lowercase());
+            continue;
         }
         if effect_debug::enabled()
             && pending.len() == before
@@ -164,6 +199,7 @@ pub(crate) fn create(
                 tc_scale: [1.0; 2],
                 tc_scroll: [0.0; 2],
                 glow: false,
+                tinted: true,
             });
         }
     }
@@ -231,9 +267,13 @@ pub(crate) fn create(
                     tc_scale: animation.tc_scale,
                     tc_scroll: animation.tc_scroll,
                     glow: animation.glow,
+                    tinted: animation.tinted,
                     time_offset: 0.,
                 });
         }
+    }
+    for shader in hidden {
+        animations.entry(shader).or_default();
     }
     let fallback = animations
         .get("gfx/misc/spark")
@@ -448,5 +488,84 @@ mod shader_tests {
     fn atlas_sampling_programs_validate() {
         crate::wgsl_source::validate(include_str!("effect_geometry.wgsl"));
         crate::wgsl_source::validate(include_str!("entity.wgsl"));
+    }
+}
+
+#[cfg(test)]
+mod stage_tests {
+    use super::*;
+
+    fn stage(text: &str) -> sjk_shader::ShaderStage {
+        sjk_shader::parse_shader_script(text.as_bytes(), "shaders/test.shader")
+            .unwrap()
+            .remove(0)
+            .stages
+            .remove(0)
+    }
+
+    #[test]
+    fn the_clear_shader_draws_nothing() {
+        // gfx2.shader's `clear`, which servers remap effects onto to hide them.
+        let clear = stage(
+            "clear
+{
+ {
+ map $whiteimage
+ blendFunc GL_ZERO GL_ONE
+ }
+}
+",
+        );
+        assert!(draws_nothing(&clear.blend));
+        let flash = stage(
+            "gfx/effects/whiteflash
+{
+ {
+ map $whiteimage
+ blendFunc GL_ONE GL_ONE
+ }
+}
+",
+        );
+        assert!(!draws_nothing(&flash.blend));
+    }
+
+    #[test]
+    fn only_vertex_colour_stages_take_the_effect_colour() {
+        let shock_ball = stage(
+            "gfx/effects/shock_ball
+{
+ {
+ map gfx/effects/shock_ball
+              blendFunc GL_DST_COLOR GL_SRC_COLOR
+ rgbGen identity
+ }
+}
+",
+        );
+        assert!(!takes_effect_colour(&shock_ball));
+        let unspecified = stage(
+            "gfx/effects/scorch
+{
+ {
+ map gfx/effects/scorch
+ }
+}
+",
+        );
+        assert!(!takes_effect_colour(&unspecified));
+        for generator in ["vertex", "exactVertex", "entity"] {
+            let tinted = stage(&format!(
+                "gfx/misc/steam
+{{
+ {{
+ map gfx/misc/steam
+ rgbGen {generator}
+ }}
+}}
+"
+            ));
+            assert!(takes_effect_colour(&tinted), "{generator}");
+        }
     }
 }

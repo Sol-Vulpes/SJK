@@ -148,6 +148,18 @@ offset is disabled, and an unbiased `Equal` fog draw fights with the surface und
 decal pixel by pixel inside fog. Flicker of decals outside fog is not explained by
 this; it is open in [status](status.md).
 
+An effect atlas stage takes the effect's own colour (its EFX `rgb` and the fade of an
+effect without `useAlpha`) except where it multiplies the scene (`GL_DST_COLOR` with
+`GL_ZERO` or `GL_SRC_COLOR`) without `rgbGen vertex`, `exactVertex` or `entity`
+(`ParticleLayerSample::tint`). Such a stage's white or mid-grey texels leave the scene
+unchanged only at full colour: the repeater's alt-fire burst (`concussion.efx`) fades
+its `rgbGen identity` shock balls, and until 11/10/2026 SJK drew them as dark squares.
+rd-vanilla gives the effect's colour to no stage without one of those `rgbGen`s; SJK
+still lets additive and blended stages take it. A stage that draws nothing
+(`GL_ZERO GL_ONE`, the `clear` shader that servers remap effects onto to hide them)
+gives its shader an entry without stages: it used to fall back to alpha blending and
+draw its white image as an opaque square.
+
 Effects drawn from the effect atlas (EFX particles, missile trails, muzzle
 flashes, beams, impact marks and blob shadows) follow the same remaps and local
 overrides, as rd-vanilla `RB_BeginSurface` swaps the shader for every surface.
@@ -2171,7 +2183,12 @@ anchored in the world and carried by the flow the CPU integrates per cloud and
 mass. Their speed is the original's terminal one, 7/3 of force over mass (the
 original keeps 0.7 of its velocity each frame), so `t1_rail`'s rain flies at about
 60° in its 5000-unit wind. They are drawn into the display-space effect layer after
-the effects, where `RB_RenderWorldEffects` draws them. Snow, dust and sand keep the
+the impact marks and before the other effects, sabers included; `RB_RenderWorldEffects`
+draws them after every surface, but SJK's effects write no depth, so the weather drawn
+after them lay over every blade and smoke puff in front of the world behind: the haze,
+measured to that wall, greyed sabers and smoke as if they stood at it, and rain streaked
+across them (Sol, 11/10/2026). Drawn before, a drop nearer than a blade is hidden by it
+instead. Snow, dust and sand keep the
 original's blending; rain and splashes do not: the original adds grey, which a dense
 storm piles up into white, so SJK blends each streak over the scene as a faint
 blue-grey of the light at the camera, some drops catching more of it than others.
@@ -2193,7 +2210,7 @@ SJK adds:
   meets geometry.
 
 **Volumetric fog** (`fragment_volume` in weather.wgsl). One full-screen pass before
-the particles marches each pixel's ray to the surface it shows (at most 6000 units)
+the particles (and so before the effects, which it no longer covers) marches each pixel's ray to the surface it shows (at most 6000 units)
 and counts only open-sky air: the cover keeps fog out from under roofs as it keeps
 rain out. Falling weather leaves a haze in that air (half the light lost over about
 8000 units in drizzle, 4300 in rain, 2500 in a storm, 3500 in snow; values in

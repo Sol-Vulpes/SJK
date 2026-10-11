@@ -703,6 +703,18 @@ note: Alt+Tab while holding Tab leaves the board and the hidden HUD up until Tab
 
 # ---- Rendering & effects ----
 
+[effect-transparency]
+area: Rendering & effects
+title: Weather under sabers and effects; no squares on repeater bursts or hidden effects
+change: Rain, snow and fog haze are drawn before the effects, so they no longer cover them.
+change: Multiplying effect stages ignore the effect's fading colour (no dark squares).
+change: Effects a server remaps to clear draw nothing instead of a white square.
+test: r_weatherForce 3 on a map with sky: blades and blaster smoke stay clear of rain and haze.
+test: In ground fog (r_weatherFog 2): a saber in front of a far wall is not greyed by the fog.
+test: Repeater alt-fire on a wall: the burst ripples the view, no dark squares as it fades.
+test: On a JoF server: no white squares where effects used to be.
+note: Rain nearer than a blade or smoke puff is now hidden by it.
+
 [hitch-log]
 area: Rendering & effects
 title: Gameplay hitch lines in the log and console (always on)

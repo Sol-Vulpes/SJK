@@ -148,6 +148,7 @@ mod tests {
             tc_scale: [1.; 2],
             tc_scroll: [0.; 2],
             glow: false,
+            tinted: true,
             time_offset: 0.,
         }]
     }

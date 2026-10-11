@@ -133,7 +133,8 @@ impl GpuState {
         self.context.soft_particles.enabled() && ranges.blended().any(|range| !range.is_empty())
     }
 
-    /// Preserve billboard, geometry, decal and saber ordering in either pass.
+    /// Preserve billboard, geometry and saber ordering in either pass; the decals are
+    /// drawn before, under the weather.
     fn draw_particle_tail<'a>(
         &'a self,
         pass: &mut wgpu::RenderPass<'a>,
@@ -141,8 +142,6 @@ impl GpuState {
         ranges: &effect_submission::Ranges,
         depth: Option<&'a wgpu::BindGroup>,
     ) {
-        self.effect_geometry
-            .draw_decals(pass, camera, &self.particle_atlas.bind_group);
         pass.set_bind_group(0, camera, &[]);
         pass.set_bind_group(1, &self.particle_atlas.bind_group, &[]);
         if let Some(depth) = depth {
@@ -214,15 +213,23 @@ impl GpuState {
         if let Some([x, y, w, h]) = region {
             pass.set_scissor_rect(x, y, w, h);
         }
-        let soft = self
-            .soften_particles(ranges)
-            .then_some(&depth.sample_bind_group);
-        self.draw_particle_tail(&mut pass, camera, ranges, soft);
-        // Last, as `RB_RenderWorldEffects` runs after every surface.
+        // Impact marks lie on the world, so the haze covers them as it covers the wall.
+        self.effect_geometry
+            .draw_decals(&mut pass, camera, &self.particle_atlas.bind_group);
+        // Weather before the other effects, though `RB_RenderWorldEffects` runs after
+        // every surface. Effects write no depth, so weather drawn after them lay over every
+        // blade and puff in front of it: the haze, measured to the wall behind, greyed
+        // sabers and smoke as if they stood at the wall, and rain streaked across them
+        // (Sol, 11/10/2026). Drawn first, it is covered by the effects even where a drop
+        // is nearer: rain is faint, a blade is not.
         if weather {
             self.weather
                 .draw(&mut pass, camera, &depth.sample_bind_group);
         }
+        let soft = self
+            .soften_particles(ranges)
+            .then_some(&depth.sample_bind_group);
+        self.draw_particle_tail(&mut pass, camera, ranges, soft);
         drop(pass);
         if resolve == EffectResolve::WriteBack {
             layer.write_back(encoder, color, region);

@@ -157,6 +157,7 @@ impl<'a> ParticleLayerSamples<'a> {
                     alpha: 1.0,
                     uv_transform: [1.0, 1.0, 0.0, 0.0],
                     glow: false,
+                    tinted: true,
                 })
         })
     }

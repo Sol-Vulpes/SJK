@@ -1,5 +1,27 @@
 # Status and priorities
 
+## Effects and sabers under the weather, no squares
+
+Branch `personal/effect-transparency` (11/10/2026, based on `58c3f20d`, Windows 11). Sol
+saw the weather over weapon effects and some saber shaders and the square of gun smoke
+textures. Three causes, found in the code and the installed game data:
+
+- The weather (rain, snow, the volumetric haze and ground fog) was drawn into the effect
+  layer after every effect. Effects write no depth, so the haze, measured to the wall
+  behind, greyed blades and smoke as if they stood there, and rain lay across them. The
+  weather is now drawn after the impact marks and before the other effects.
+- Effect stages that multiply the scene took the effect's fading colour although their
+  shader says `rgbGen identity`: the repeater's alt-fire burst (`concussion.efx`, ten
+  fading `gfx/effects/shock_ball` puffs, `GL_DST_COLOR GL_SRC_COLOR`) turned dark squares.
+- `clear` (`GL_ZERO GL_ONE`), which servers remap effects onto (Sol's log: "unsupported
+  effect blend falls back to alpha: clear"), drew its white image as an opaque square.
+
+Verified by unit tests (the `clear` stage, which stages take the colour, the tint) and
+the viewer suite; no world shot (Sol's game was running) and not tried in a game. Not
+changed: rd-vanilla also ignores the colour of additive and blended stages without
+`rgbGen vertex` (`fire_radial`, `wookie1` keep fading in SJK); effects far away in fog
+are no longer hazed.
+
 ## Balanced without light shafts
 
 Branch `personal/balanced-shafts` (11/10/2026, based on `82c3fa31`). Sol asked to take
