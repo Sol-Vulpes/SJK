@@ -126,12 +126,22 @@ pub(crate) struct Instance {
     /// A chroma skin's turn to its wearer's colour, in turns
     /// ([`crate::saber_skins::Chroma`]); 0 for every other blade.
     chroma: f32,
+    /// The sections of a skin its wearer switched off
+    /// ([`crate::saber_skins::SkinColor::off`]); 0 for every other blade.
+    off: u32,
     contact: u32,
     no_light: u32,
     /// The blade's configured radius, for contacts; not a GPU attribute.
     nominal_radius: f32,
     maximum_length: f32,
+    /// How far (units) a skin's glow quad reaches past its glow, or a glint's rays' length;
+    /// for the bounds, not a GPU attribute.
+    room: f32,
 }
+
+/// Colour alpha marking a skin's glint at the tip ([`Instance::star`]): neither a glow
+/// (a hilt sprite's radius) nor a core (zero).
+const STAR: f32 = -1.0;
 
 /// `CG_DoSaber`'s per-frame random draws (`cg_players.c:5359-5469`): `crandom()` for the
 /// glow and core radii and `Q_flrand(0, 1)` for the hilt sprite (tr_surface.cpp:489).
@@ -165,9 +175,9 @@ impl Flicker {
 }
 
 impl Instance {
-    const ATTRIBUTES: [wgpu::VertexAttribute; 9] = wgpu::vertex_attr_array![
+    const ATTRIBUTES: [wgpu::VertexAttribute; 10] = wgpu::vertex_attr_array![
         0 => Float32x3, 1 => Float32, 2 => Float32x3, 3 => Float32, 4 => Float32x4, 5 => Uint32,
-        6 => Float32x2, 7 => Uint32x4, 8 => Float32];
+        6 => Float32x2, 7 => Uint32x4, 8 => Float32, 9 => Uint32];
 
     pub(crate) fn layout() -> wgpu::VertexBufferLayout<'static> {
         wgpu::VertexBufferLayout {
@@ -207,9 +217,9 @@ impl Instance {
             }
             _ => [0; 4],
         };
-        let chroma = match color {
-            BladeColor::Skin(skin) => skin.chroma.turn,
-            _ => 0.0,
+        let (chroma, off, room) = match color {
+            BladeColor::Skin(skin) => (skin.chroma.turn, skin.off, skin.room),
+            _ => (0.0, 0, 0.0),
         };
         let make = |radius: f32, hilt| Self {
             base: blade.base,
@@ -221,10 +231,12 @@ impl Instance {
             animation: [0.0; 2],
             persona,
             chroma,
+            off,
             contact: 0,
             no_light: 0,
             nominal_radius: blade.radius,
             maximum_length: max_length,
+            room,
         };
         [
             make(
@@ -249,6 +261,61 @@ impl Instance {
             ],
             ..glow
         }
+    }
+
+    /// A skin's glint at `blade`'s tip, when its skin has one switched on: a quad facing
+    /// the camera, as wide as the rays are long, drawn by the glow pipelines.
+    pub(crate) fn star(blade: Blade, color: BladeColor) -> Option<Self> {
+        let BladeColor::Skin(skin) = color else {
+            return None;
+        };
+        let length = skin.star?;
+        let [glow, _core] = Self::pair(blade, color);
+        Some(Self {
+            color: [glow.color[0], glow.color[1], glow.color[2], STAR],
+            room: length,
+            ..glow
+        })
+    }
+
+    /// A skin's echo of `blade` at `seconds`, when its skin has one switched on: the glow
+    /// alone, swaying beside the blade on two slow waves (the tip more than the hilt) and
+    /// leaning a little, `seed` putting each blade's sway at its own place.
+    pub(crate) fn echo(blade: Blade, color: BladeColor, seconds: f64, seed: u32) -> Option<Self> {
+        let BladeColor::Skin(skin) = color else {
+            return None;
+        };
+        let echo = skin.echo?;
+        let direction = Vec3::from_array(blade.direction).normalize_or(Vec3::Z);
+        let across = direction.cross(Vec3::Z);
+        let across = if across.length_squared() > 1e-4 {
+            across.normalize()
+        } else {
+            direction.cross(Vec3::X).normalize()
+        };
+        let other = direction.cross(across);
+        let phase = (seconds * f64::from(echo.rate)).rem_euclid(1_024.0) as f32
+            * std::f32::consts::TAU
+            + (seed % 1_000) as f32 * 0.618;
+        let sway = across * phase.sin() + other * (0.6 * (phase * 0.73 + 1.3).sin());
+        let tip = Vec3::from_array(blade.base) + direction * blade.length;
+        let base = Vec3::from_array(blade.base) + sway * (0.25 * echo.sway);
+        let tip = tip
+            + sway * echo.sway
+            + across * (echo.lean * blade.length * (phase * 0.5 + 0.4).sin());
+        let swayed = Blade {
+            base: base.to_array(),
+            direction: (tip - base).normalize_or(direction).to_array(),
+            length: (tip - base).length(),
+            radius: blade.radius,
+        };
+        Some(Self::ghost(swayed, color, echo.fade))
+    }
+
+    /// Whether this is a glint ([`Self::star`]).
+    #[cfg(test)]
+    pub(crate) fn is_star(&self) -> bool {
+        self.color[3] == STAR
     }
 
     /// The persona lanes, for the tests.
@@ -377,9 +444,17 @@ impl Instance {
         } else {
             1.0
         };
+        if self.color[3] == STAR {
+            // A quad round the tip, as wide as the rays are long.
+            let tip = base + direction * self.length;
+            let reach = self.room * std::f32::consts::SQRT_2;
+            return (tip.to_array(), tip.to_array(), reach);
+        }
         let reach = if self.color[3] > 0.0 {
-            // saber.wgsl `chain_radius` at the hilt, or the hilt sprite; quad corners reach √2.
-            ((radius + 0.017 * self.length / (0.65 * radius)) * widen).max(self.color[3])
+            // saber.wgsl `chain_radius` at the hilt, or the hilt sprite, and a skin's room
+            // for its wisps and haze; quad corners reach √2.
+            (((radius + 0.017 * self.length / (0.65 * radius)) * widen).max(self.color[3])
+                + self.room)
                 * std::f32::consts::SQRT_2
         } else {
             radius
@@ -390,6 +465,21 @@ impl Instance {
             reach,
         )
     }
+}
+
+/// A skinned blade's instances beyond its glow and core: its glint at the tip and its
+/// echo, each when its skin has it switched on, at `seconds` with the blade's `seed`
+/// (their animation stamped as the blade's). Never contact sources.
+pub(crate) fn skin_extras(
+    blade: Blade,
+    color: BladeColor,
+    seconds: f64,
+    seed: u32,
+) -> impl Iterator<Item = Instance> {
+    Instance::star(blade, color)
+        .into_iter()
+        .chain(Instance::echo(blade, color, seconds, seed))
+        .map(move |instance| instance.with_animation(seconds, seed))
 }
 
 /// Group instances by shader pair and return their draw ranges.
@@ -720,14 +810,15 @@ mod cutoff_tests {
             crate::saber_skins::MAX_SKINS
         )));
         assert!(shader.contains("var<uniform> skins: array<Skin, MAX_SKINS>;"));
-        // `Skin` is 52 vec4s, as `SkinUniform`.
+        // `Skin` is 59 vec4s, as `SkinUniform`, and the array fits WebGPU's 16 KiB.
         assert_eq!(
             std::mem::size_of::<crate::saber_skins::SkinUniform>(),
-            52 * 16
+            59 * 16
         );
+        const { assert!(59 * 16 * crate::saber_skins::MAX_SKINS <= 16 * 1024) };
         let skin = &shader[shader.find("struct Skin {").unwrap()..];
         let skin = &skin[..skin.find('}').unwrap()];
-        assert_eq!(skin.matches(": vec4<f32>,").count(), 52);
+        assert_eq!(skin.matches(": vec4<f32>,").count(), 59);
         // In `SkinUniform`'s order (its lanes are pinned by `saber_skins`' tests).
         let lanes: Vec<&str> = skin
             .lines()
@@ -788,17 +879,28 @@ mod cutoff_tests {
                 "ambient",
                 "glyph_color",
                 "glyph_shape",
+                "star_color",
+                "star_shape",
+                "star_motion",
+                "wisp_color",
+                "wisp_shape",
+                "wisp_field",
+                "haze",
             ]
         );
         assert!(shader.contains(&format!(
             "const MAX_ARCS: i32 = {};",
             crate::blade_skin_file::MAX_ARCS
         )));
-        assert!(shader.contains("@location(6) blade_animation: vec2<f32>"));
+        assert!(shader.contains("@location(6) animation: vec2<f32>"));
         // The persona lanes (`saber_persona.rs`), after the animation.
         assert_eq!(offset(7), std::mem::offset_of!(Instance, persona));
         assert_eq!(Instance::ATTRIBUTES[7].format, wgpu::VertexFormat::Uint32x4);
-        assert!(shader.contains("@location(7) blade_persona: vec4<u32>"));
+        assert!(shader.contains("@location(7) persona: vec4<u32>"));
+        // The sections a wearer switched off, after the chroma.
+        assert_eq!(offset(9), std::mem::offset_of!(Instance, off));
+        assert_eq!(Instance::ATTRIBUTES[9].format, wgpu::VertexFormat::Uint32);
+        assert!(shader.contains("@location(9) off: u32"));
     }
 
     #[test]
@@ -916,5 +1018,83 @@ mod cutoff_tests {
                 assert_eq!(actual.visible(), hit >= 0.5);
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod skin_extras_tests {
+    use super::*;
+    use crate::saber_skins::SkinColor;
+
+    fn skin(star: Option<f32>, echo: Option<crate::blade_skin_file::extras::Echo>) -> BladeColor {
+        let BladeColor::Skin(base) =
+            BladeColor::from_material(crate::saber_rgb::SKIN_MATERIAL, [1.0; 3])
+        else {
+            unreachable!()
+        };
+        BladeColor::Skin(SkinColor {
+            star,
+            echo,
+            room: 4.0,
+            off: 0b101,
+            ..base
+        })
+    }
+
+    fn blade() -> Blade {
+        Blade {
+            base: [10.0, 20.0, 30.0],
+            direction: [0.0, 0.0, 1.0],
+            length: 40.0,
+            radius: 3.0,
+        }
+    }
+
+    #[test]
+    fn the_glint_is_a_quad_round_the_tip_and_never_a_contact() {
+        let star = Instance::star(blade(), skin(Some(9.0), None)).unwrap();
+        assert!(star.is_star());
+        assert_eq!(star.off, 0b101, "the wearer's mask rides along");
+        let (start, end, reach) = star.extent();
+        assert_eq!(start, [10.0, 20.0, 70.0]);
+        assert_eq!(end, start);
+        assert!((reach - 9.0 * std::f32::consts::SQRT_2).abs() < 1e-4);
+        assert!(star.with_contact(1, 0, 0, true, false).contact().is_none());
+        assert!(Instance::star(blade(), skin(None, None)).is_none());
+        assert!(Instance::star(blade(), BladeColor::from_rgb([0, 0, 255])).is_none());
+    }
+
+    #[test]
+    fn a_skins_room_widens_its_glow_bounds() {
+        let [glow, core] = Instance::pair(blade(), skin(None, None));
+        let [plain, _] = Instance::pair(blade(), BladeColor::from_rgb([0, 0, 255]));
+        assert!(glow.extent().2 > plain.extent().2 + 4.0);
+        assert_eq!(core.extent().2, core.radius, "the core is the core");
+    }
+
+    #[test]
+    fn the_echo_sways_beside_the_blade_as_a_dim_glow() {
+        let echo = crate::blade_skin_file::extras::Echo {
+            fade: 0.4,
+            sway: 2.0,
+            rate: 0.5,
+            lean: 0.05,
+        };
+        let color = skin(None, Some(echo));
+        let at = |seconds: f64| Instance::echo(blade(), color, seconds, 7).unwrap();
+        let first = at(1.0);
+        assert!((first.fade() - 0.4).abs() < 1.0 / 255.0);
+        assert!(first.color[3] > 0.0, "a glow, not a core");
+        // It moves with time, stays near the blade and the same at the same moment.
+        let tip =
+            |i: &Instance| Vec3::from_array(i.base) + Vec3::from_array(i.direction) * i.length;
+        let blade_tip = Vec3::new(10.0, 20.0, 70.0);
+        assert_ne!(tip(&first), tip(&at(1.6)));
+        assert_eq!(tip(&first), tip(&at(1.0)));
+        for step in 0..20 {
+            let away = tip(&at(f64::from(step) * 0.3)).distance(blade_tip);
+            assert!(away <= 2.0 * 1.2 + 0.05 * 40.0 + 0.01, "{away}");
+        }
+        assert!(Instance::echo(blade(), skin(None, None), 1.0, 7).is_none());
     }
 }

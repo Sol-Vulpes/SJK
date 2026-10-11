@@ -1278,8 +1278,9 @@ the CPU (`SkinColor::light_color`, `trail_color`).
   neutral pair (`generated_glow`/`generated_core`; the neutral pair's bytes are
   unchanged and pinned by a test). Retail and RGB blades keep their materials and
   shading unchanged.
-- **Parameters.** The skins' parameters are a uniform array of 16 `Skin` structs of 52
-  `vec4`s (`SkinUniform`, 13312 bytes in all, bind group 2 of the saber pipelines),
+- **Parameters.** The skins' parameters are a uniform array of 16 `Skin` structs of 59
+  `vec4`s (`SkinUniform`, 15104 bytes in all since the third set, bind group 2 of the
+  saber pipelines),
   written only when skins load (`saber_gpu::Runtime::upload_skins`), never per frame.
   Each instance's material slot selects its skin. The lanes of a section a file leaves
   out (arcs, motes, hue) are zeros, which draw nothing, and the code skips them.
@@ -1348,6 +1349,33 @@ the CPU (`SkinColor::light_color`, `trail_color`).
   glyphs, each letter a fixed three to seven of sixteen strokes on a 3 × 3 grid
   (`glyph_bits`, its CPU copy in `saber_persona.rs` pinned to differ for every letter),
   scrolling toward the tip.
+- **Third set** (11/10/2026, generic, optional; [unlockables.md](unlockables.md#blade-skin-files)).
+  The glint is an instance of its own (`Instance::star`, colour alpha `STAR` = -1, made
+  by `saber::skin_extras` wherever skinned blades are submitted: hand, thrown, menu
+  stage, world shots): a camera-facing square round the tip as wide as the rays are
+  long, drawn by the main and the dynamic glow pipelines; its rays (every other one
+  shorter) taper and soften to a pixel, turn with time and the seed and twinkle on two
+  sines. Wisps are drawn in the glow (`skin_wisps`): the world's up in the blade's plane
+  (`down`, as the embers), a point's height above the nearest point of the blade and
+  its distance aside give a column that widens as it rises and fades by the top, filled
+  by rising, warped two-octave noise (`skin_rising`). The glow's quad reaches further by
+  the skin's room (the wisps' rise, the haze's reach, when on; `skin_room`, and
+  `Instance::room` for the bounds), while the glow's own parts (embers, arcs, motes)
+  keep fading at the glow's edge, so switching wisps or haze off changes nothing else.
+  The echo is an afterimage instance (`Instance::echo`) swaying on two slow waves
+  beside the blade, the tip more than the hilt, leaning a little. Heat haze is a
+  pipeline of its own (`vertex_haze`, `fragment_haze`, no blending, depth-tested): first
+  in the effect pass (`GpuState::draw_particle_tail`), while the effect layer still
+  holds the scene, each skinned glow quad with haze on (the vertex stage folds every
+  other instance away) writes the scene image (`effect_layer.rs` `original`, bound with
+  a linear sampler in group 3) read at an offset: rising noise times the haze's
+  strength in world units, strongest by the glow and above it and nothing at its reach,
+  turned into pixels by the inverse of the quad's own derivatives and held under 2 % of
+  the screen. Its edge is the scene unchanged, so the merge sees no seam; effects drawn
+  after add over it.
+- **Options.** An instance carries its wearer's mask of sections switched off
+  (`Instance::off`, attribute 9; [unlockables.md](unlockables.md#options)); `skin_at`
+  reads the skin with those sections' lanes zeroed, so they draw as a file without them.
 - **Persona and afterimages.** A skinned instance carries four more `u32`s
   (`Instance::persona`, attribute 7): the surroundings' light (three bytes) and an
   afterimage's brightness, the team and the name's letters

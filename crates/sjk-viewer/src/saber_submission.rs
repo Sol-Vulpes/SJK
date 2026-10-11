@@ -105,6 +105,12 @@ pub(crate) fn submit(
                     .with_animation(presentation_time as f64 * 0.001, key as u32)
                 }),
             );
+            saber_instances.extend(saber::skin_extras(
+                blade,
+                color,
+                presentation_time as f64 * 0.001,
+                key as u32,
+            ));
             if let BladeColor::Skin(skin) = color
                 && let Some(spec) = skin.ghosts
             {

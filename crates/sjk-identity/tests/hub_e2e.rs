@@ -574,6 +574,7 @@ fn looks_travel_with_the_claim_and_the_feed() {
     let lit = Look {
         saber: String::new(),
         illuminate: true,
+        ..Default::default()
     };
     let nowhere = hub.look(&me, &server, &lit).unwrap_err();
     assert!(
@@ -602,6 +603,7 @@ fn looks_travel_with_the_claim_and_the_feed() {
     let sun = Look {
         saber: "saber_sun".to_owned(),
         illuminate: true,
+        ..Default::default()
     };
     let refused = hub.look(&me, &server, &sun).unwrap_err();
     assert!(
@@ -663,6 +665,7 @@ fn the_service_wears_its_look_on_its_claim_and_reads_looks_with_the_chat_off() {
     service.set_look(Look {
         saber: "saber_sun".to_owned(),
         illuminate: true,
+        ..Default::default()
     });
     service.configure(Settings {
         enabled: true,
@@ -677,6 +680,7 @@ fn the_service_wears_its_look_on_its_claim_and_reads_looks_with_the_chat_off() {
     let lit = Look {
         saber: String::new(),
         illuminate: true,
+        ..Default::default()
     };
     let until = Instant::now() + Duration::from_secs(15);
     let worn = loop {

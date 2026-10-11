@@ -1161,6 +1161,7 @@ impl Worker {
         let mut look = self.look.clone();
         if self.look_refused.contains(&look.saber) {
             look.saber.clear();
+            look.saber_off.clear();
         }
         look
     }
@@ -2505,6 +2506,7 @@ mod tests {
         Look {
             saber: saber.to_owned(),
             illuminate: true,
+            saber_off: Vec::new(),
         }
     }
 

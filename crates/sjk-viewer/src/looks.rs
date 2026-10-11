@@ -66,31 +66,53 @@ pub(crate) struct Worn {
     pub(crate) saber_skin: Option<&'static str>,
     /// The Illuminate holocron is lit.
     pub(crate) illuminate: bool,
+    /// The blade skin's options its wearer switched off (`crate::saber_skin_options`).
+    pub(crate) options_off: crate::saber_skin_options::OptionsOff,
 }
 
 impl Worn {
     /// What `look` draws as here: an unknown skin is the stock blade.
     pub(crate) fn of(look: &Look) -> Self {
+        let saber_skin = blade_skin(&look.saber);
         Self {
-            saber_skin: blade_skin(&look.saber),
+            saber_skin,
             illuminate: look.illuminate,
+            options_off: saber_skin.map_or(0, |_| {
+                crate::saber_skin_options::bits(look.saber_off.iter().map(String::as_str))
+            }),
         }
     }
 
     /// The look the hub is told the local player wears: the skin only when the own
-    /// profile lists it (`owned`), and the local holocron's lit state.
-    pub(crate) fn own(skin_setting: &str, owned: impl Fn(&str) -> bool, lit: bool) -> Self {
+    /// profile lists it (`owned`), with the options `options` (`cg_saberSkinOptions`)
+    /// switches off for it, and the local holocron's lit state.
+    pub(crate) fn own(
+        skin_setting: &str,
+        options: &str,
+        owned: impl Fn(&str) -> bool,
+        lit: bool,
+    ) -> Self {
+        let saber_skin = blade_skin(skin_setting).filter(|skin| owned(skin));
         Self {
-            saber_skin: blade_skin(skin_setting).filter(|skin| owned(skin)),
+            saber_skin,
             illuminate: lit,
+            options_off: saber_skin
+                .map_or(0, |skin| crate::saber_skin_options::off_bits(options, skin)),
         }
     }
 
-    /// The wire form, for `Service::set_look`.
-    pub(crate) fn to_look(self) -> Look {
+    /// The wire form, for `Service::set_look`, with the options `options` switches off
+    /// for its skin.
+    pub(crate) fn to_look(self, options: &str) -> Look {
+        let saber = self.saber_skin.unwrap_or_default();
         Look {
-            saber: self.saber_skin.unwrap_or_default().to_owned(),
+            saber: saber.to_owned(),
             illuminate: self.illuminate,
+            saber_off: if saber.is_empty() {
+                Vec::new()
+            } else {
+                crate::saber_skin_options::off_list(options, saber)
+            },
         }
     }
 }
@@ -125,6 +147,9 @@ pub(crate) struct Looks {
     /// Client slots muted on this PC (bits, `muted_players.rs`): their looks are not
     /// drawn.
     muted: u32,
+    /// `cg_saberSkinOptions` as last read (twice a second), for the skins the
+    /// Collection shows on the model.
+    own_options: String,
     /// World shots own every unlock, having no hub.
     #[cfg(test)]
     pub(crate) shot_owns_unlocks: bool,
@@ -142,6 +167,7 @@ impl Default for Looks {
             feed_generation: None,
             revision: 0,
             muted: 0,
+            own_options: String::new(),
             #[cfg(test)]
             shot_owns_unlocks: false,
         }
@@ -153,6 +179,11 @@ impl Looks {
     /// stock blade (and for a slot out of range or muted on this PC).
     pub(crate) fn saber_skin_id(&self, client: usize) -> Option<&'static str> {
         self.shown(client)?.saber_skin
+    }
+
+    /// The options the player in `client` switched off on their blade skin.
+    pub(crate) fn options_off(&self, client: usize) -> crate::saber_skin_options::OptionsOff {
+        self.shown(client).map_or(0, |worn| worn.options_off)
     }
 
     /// Whether the player in `client` has their Illuminate holocron lit (and is not
@@ -188,6 +219,21 @@ impl Looks {
     /// The local player's own look.
     pub(crate) fn own(&self) -> Worn {
         self.own
+    }
+
+    /// Keep `cg_saberSkinOptions` as read; a change counts as one to what is worn, so
+    /// the skins are taken again.
+    pub(crate) fn set_own_options(&mut self, options: String) {
+        if options != self.own_options {
+            self.own_options = options;
+            self.revision += 1;
+        }
+    }
+
+    /// The options the local player switched off on blade skin `skin`, worn or only
+    /// shown (the Collection's preview on the model).
+    pub(crate) fn own_options_off(&self, skin: &str) -> crate::saber_skin_options::OptionsOff {
+        crate::saber_skin_options::off_bits(&self.own_options, skin)
     }
 
     /// Changes whenever what a slot is drawn wearing (or the own look) changes.
@@ -303,6 +349,7 @@ mod tests {
         Look {
             saber: saber.to_owned(),
             illuminate,
+            saber_off: Vec::new(),
         }
     }
 
@@ -392,6 +439,7 @@ mod tests {
         let own = Worn {
             saber_skin: Some("saber_sun"),
             illuminate: true,
+            options_off: 0,
         };
         looks.set_own(Some(1), own);
         looks.rebuild(shown);
@@ -432,7 +480,7 @@ mod tests {
         assert_eq!(looks.saber_skin_id(3), None);
         assert!(!looks.illuminated(3));
         // Out of a game the own look still holds, for the Character page.
-        let own = Worn::own("saber_sun", |_| true, false);
+        let own = Worn::own("saber_sun", "", |_| true, false);
         looks.set_own(None, own);
         assert_eq!(looks.own_saber_skin(), Some("saber_sun"));
     }
@@ -444,7 +492,7 @@ mod tests {
             (3, "Sol", Some(&look("saber_sun", true))),
             (5, "Fox", Some(&look("saber_sun", true))),
         ]);
-        looks.set_own(Some(1), Worn::own("saber_sun", |_| true, true));
+        looks.set_own(Some(1), Worn::own("saber_sun", "", |_| true, true));
         looks.rebuild(shown);
         let before = looks.revision();
         // Slot 3 muted on this PC: the stock blade (so no skin sounds) and no holocron.
@@ -478,10 +526,10 @@ mod tests {
         assert!(worn > start);
         looks.rebuild(shown);
         assert_eq!(looks.revision(), worn);
-        looks.set_own(Some(1), Worn::own("saber_sun", |_| true, false));
+        looks.set_own(Some(1), Worn::own("saber_sun", "", |_| true, false));
         assert!(looks.revision() > worn);
         let own = looks.revision();
-        looks.set_own(Some(1), Worn::own("saber_sun", |_| true, false));
+        looks.set_own(Some(1), Worn::own("saber_sun", "", |_| true, false));
         assert_eq!(looks.revision(), own);
     }
 
@@ -489,18 +537,54 @@ mod tests {
     fn the_own_blade_skin_needs_the_unlock_and_a_known_id() {
         let owned = |id: &str| id == "saber_sun";
         assert_eq!(
-            Worn::own(" saber_sun ", owned, true),
+            Worn::own(" saber_sun ", "", owned, true),
             Worn {
                 saber_skin: Some("saber_sun"),
                 illuminate: true,
+                options_off: 0,
             }
         );
-        assert_eq!(Worn::own("saber_sun", |_| false, false).saber_skin, None);
-        assert_eq!(Worn::own("saber_moon", |_| true, false).saber_skin, None);
-        assert_eq!(Worn::own("", owned, true).to_look(), look("", true));
         assert_eq!(
-            Worn::own("saber_sun", owned, false).to_look(),
+            Worn::own("saber_sun", "", |_| false, false).saber_skin,
+            None
+        );
+        assert_eq!(
+            Worn::own("saber_moon", "", |_| true, false).saber_skin,
+            None
+        );
+        assert_eq!(Worn::own("", "", owned, true).to_look(""), look("", true));
+        assert_eq!(
+            Worn::own("saber_sun", "", owned, false).to_look(""),
             look("saber_sun", false)
         );
+    }
+
+    #[test]
+    fn the_own_look_carries_the_worn_skins_options_switched_off() {
+        let options = "saber_sun.haze saber_spectral.wisps saber_sun.glint";
+        let own = Worn::own("saber_sun", options, |_| true, false);
+        assert_eq!(
+            own.options_off,
+            crate::saber_skin_options::bits(["glint", "haze"])
+        );
+        let sent = own.to_look(options);
+        assert_eq!(
+            sent.saber_off,
+            ["glint", "haze"],
+            "sorted, the worn skin's only"
+        );
+        // Read back from the hub, the same choice.
+        assert_eq!(Worn::of(&sent), own);
+        // The stock blade sends none, and an unowned skin is the stock blade.
+        let stock = Worn::own("saber_sun", options, |_| false, false);
+        assert_eq!(stock.options_off, 0);
+        assert!(stock.to_look(options).saber_off.is_empty());
+        // A slot shows its wearer's choice; a muted one none.
+        let mut looks = Looks::default();
+        looks.apply_event(3, "Sol", &sent);
+        looks.rebuild(shown);
+        assert_eq!(looks.options_off(3), own.options_off);
+        looks.set_muted(1 << 3);
+        assert_eq!(looks.options_off(3), 0);
     }
 }

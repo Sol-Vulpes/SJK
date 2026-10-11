@@ -9,6 +9,8 @@
 #                               made it when that is not the piece's owner.
 
 = Sol
++ 11/10/2026 | - | Mythical shader parts: Sun and Spectral effects, switchable
+- 32a312a |  | Mythical shader parts: more effects on the Sun and Spectral, switchable
 + 11/10/2026 | - | Weather under sabers and effects, no effect squares
 - 0b33029 |  | Weather under sabers and effects, no effect squares
 + 11/10/2026 | - | Reply, chat opens on the last channel, SJK emblem on SJK lines

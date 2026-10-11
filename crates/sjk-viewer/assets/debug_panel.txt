@@ -769,6 +769,20 @@ change: The rounded tip of a shader blade's core no longer leaves a one-pixel ba
 test: Wear Banner, Heartbeat or Hologram, hold the blade up: the tip ends in a round point.
 test: Look closely from a few distances and angles: no line just above the tip.
 
+[shader-parts]
+area: Rendering & effects
+title: Mythical shader parts: Sun and Spectral effects you can switch off
+change: Sun: prominences, rising sparks, a glint at the tip, heat haze bending what is behind.
+change: Spectral: rising wisps, souls, smoky edge, violet rim, a swaying echo, dimmer light.
+change: Collection > Shaders: Parts ticks under an owned shader (keys 1-6); others see it too.
+test: Wear the Sun, hold the blade level: loops arch off it, a star turns at the tip.
+test: Look at a wall through the Sun's glow: the wall shimmers (heat haze) near the blade.
+test: Wear the Spectral, hold it level: smoke rises off it; held still, a faint echo sways.
+test: Collection > Shaders, Sun: untick Heat haze, then Tip glint: the model's blade follows.
+test: Console: saberskin saber_sun parts lists them; saberskin saber_sun haze on ticks it.
+test: With a second SJK client on the server: it sees your blade with the parts you chose.
+note: Needs the hub deployed with the new pack and look field (SJK-hub branches, not deployed).
+
 [chroma-shaders]
 area: Rendering & effects
 title: Chroma saber shaders take your saber colour, marked with a colour wheel

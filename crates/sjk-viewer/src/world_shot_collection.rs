@@ -163,8 +163,31 @@ fn duel6_sjk_collection() {
                 shoot(&mut gpu, 30, "duel6-collection-shaders-grid").display()
             );
             assert!(!overflowed(&gpu), "the grid");
+            // The Spectral owned and chosen: its six parts in three columns, its smoky
+            // edge switched off (`cg_saberSkinOptions`), on the model too.
+            let spectral = 1 + crate::unlockables::blade_skins_by_tier()
+                .iter()
+                .position(|skin| skin.id == "saber_spectral")
+                .expect("the Spectral blade");
             if let Some(console) = gpu.console.as_mut() {
                 let _ = console.set_cvar(crate::console::collection_panel::SHADER_VIEW_CVAR, "0");
+                let owned = ["saber_sun", "saber_spectral"]
+                    .map(|id| sjk_identity::Unlock {
+                        id: id.to_owned(),
+                        ..sun()
+                    })
+                    .to_vec();
+                console.preview_collection(Some(owned), 0.8);
+                let _ = console.set_cvar(crate::saber_skin_options::CVAR, "saber_spectral.smoke");
+                console.collection_shader_for_shot(spectral);
+            }
+            println!(
+                "{}",
+                shoot(&mut gpu, 60, "duel6-collection-shaders-parts").display()
+            );
+            assert!(!overflowed(&gpu), "the parts");
+            if let Some(console) = gpu.console.as_mut() {
+                let _ = console.set_cvar(crate::saber_skin_options::CVAR, "");
                 console.preview_collection(Some(vec![sun()]), 0.8);
             }
             // Ctrl+Tab goes on to Holocrons (the Holocrons page, under the same row) and

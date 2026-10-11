@@ -124,6 +124,7 @@ pub(crate) fn row_labels(
         name: "",
         stock: color::HOLO,
         grid: false,
+        options: "",
     };
     counts(&inputs).iter().map(|count| count.label()).collect()
 }

@@ -446,7 +446,10 @@ blade-skin unlock id or `""`, and whether the Illuminate holocron is lit.
   again), counted only while the game shows the claimed name in that slot, and cleared
   on another server. The local player's own look comes from its settings.
 - Others' Illuminate shows by their left shoulder ([client.md](client.md#illuminate));
-  blade skins are drawn by the saber renderer from `Looks::saber_skin_id`.
+  blade skins are drawn by the saber renderer from `Looks::saber_skin_id`, with the
+  parts their wearer switched off (`Look::saber_off`, sent only when it names one, as
+  an older hub refuses the field; `Looks::options_off`,
+  [unlockables.md](unlockables.md#options)).
 
 Looks are public to every SJK player on the server, as badges are.
 

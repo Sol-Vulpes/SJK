@@ -202,6 +202,7 @@ mod saber_hilts;
 mod saber_persona;
 mod saber_rgb;
 mod saber_skin_command;
+mod saber_skin_options;
 mod saber_skins;
 mod saber_submission;
 mod saber_trail;

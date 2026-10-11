@@ -1216,7 +1216,12 @@ for the run.
   when owned) with its state as a tag, what it is, "Yours since dd/mm/yyyy, from the
   SJK team" with the note (", with your Bug Hunter medal" when a medal brings it), or "How to get it: ...", and Equip (gold), Unequip or "Wear
   the stock blade". It opens on what is worn. Up and Down choose, Enter equips or
-  unequips (`cg_saberSkin`).
+  unequips (`cg_saberSkin`). Under an owned skin whose file offers parts (11/10/2026,
+  the Sun and the Spectral): "Parts" and a tick for each in two columns (three past
+  four), its name after it, closing up its rows so it never runs under the keys' line;
+  a click or the number keys 1 to 6 switch one (`cg_saberSkinOptions`), the model's
+  blade following at once and, worn, every SJK player's view of it
+  ([unlockables.md](unlockables.md#options)).
 - **Toys:** "1 toy", things to use in a match. Illuminate's holocron (its icon)
   in its niche, ringed gold on a glow, "Everyone's"; a dotted line for
   the toys to come. The holocron floats lit by the model on the stage

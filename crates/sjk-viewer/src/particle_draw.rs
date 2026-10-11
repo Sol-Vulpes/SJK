@@ -213,6 +213,10 @@ impl GpuState {
         if let Some([x, y, w, h]) = region {
             pass.set_scissor_rect(x, y, w, h);
         }
+        // First of all: a blade skin's heat haze replaces the pixels it bends with the
+        // scene's, which the layer still holds there only before anything else draws.
+        self.saber_gpu
+            .draw_haze(&self.device, &mut pass, camera, layer.original());
         // Impact marks lie on the world, so the haze covers them as it covers the wall.
         self.effect_geometry
             .draw_decals(&mut pass, camera, &self.particle_atlas.bind_group);

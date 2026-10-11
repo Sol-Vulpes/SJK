@@ -302,3 +302,167 @@ fn the_folder_loads_by_id_and_names_the_bad_file() {
     assert_eq!(skins.len(), 1);
     assert_eq!(skins[0].0, "saber_test");
 }
+
+/// A made-up additions file (no real skin's values): a glint, wisps, haze, an echo and
+/// options switching them and the sample's arcs and motes.
+pub(crate) const ADDITIONS: &str = r#"{
+  "star": {"color": [1.0, 0.9, 0.7], "brightness": 1.5, "rays": 6, "length": 8.0,
+    "width": 0.05, "spin": 0.1, "twinkle": 2.0, "depth": 0.3, "halo": 0.6},
+  "wisps": {"color": [0.6, 0.8, 0.9], "brightness": 0.7, "rise": 9.0, "speed": 5.0,
+    "scale": 0.2, "curl": 0.8, "density": 0.5},
+  "haze": {"strength": 0.3, "scale": 0.4, "speed": 8.0, "reach": 3.0},
+  "echo": {"fade": 0.4, "sway": 2.0, "rate": 0.3, "lean": 0.05},
+  "options": [
+    {"id": "glint", "name": "Tip glint", "sections": ["star"]},
+    {"id": "haze", "name": "Heat haze", "sections": ["haze"]},
+    {"id": "smoke", "name": "Wisps and echo", "sections": ["wisps", "echo"]},
+    {"id": "storm", "name": "Arcs", "sections": ["arcs", "motes"]}
+  ]
+}"#;
+
+/// [`sample_with_effects`] with [`ADDITIONS`] laid over it.
+pub(crate) fn sample_with_additions() -> String {
+    extras::merged(&sample_with_effects(), ADDITIONS).unwrap()
+}
+
+#[test]
+fn the_additions_file_lays_the_third_set_and_the_options_over_the_skin() {
+    let def = parse("saber_test", &sample_with_additions()).unwrap();
+    let star = def.star.unwrap();
+    assert_eq!((star.rays, star.length, star.halo), (6, 8.0, 0.6));
+    assert_eq!(def.wisps.unwrap().rise, 9.0);
+    assert_eq!(def.haze.unwrap().reach, 3.0);
+    assert_eq!(def.echo.unwrap().sway, 2.0);
+    let ids: Vec<&str> = def.options.iter().map(|o| o.id.as_str()).collect();
+    assert_eq!(ids, ["glint", "haze", "smoke", "storm"]);
+    // The skin file's own fields stay; one in both is the addition's.
+    assert_eq!(def.trail, [0.2, 0.8, 0.9]);
+    let over = extras::merged(&sample_with_effects(), r#"{"trail": [1.0, 0.0, 0.0]}"#).unwrap();
+    assert_eq!(parse("saber_test", &over).unwrap().trail, [1.0, 0.0, 0.0]);
+    // Either file not an object is refused.
+    assert!(extras::merged(&sample_with_effects(), "[1]").is_err());
+    assert!(extras::merged("[1]", ADDITIONS).is_err());
+    // Without it, none of the third set and no options.
+    let plain = parse("saber_test", SAMPLE).unwrap();
+    assert!(plain.star.is_none() && plain.wisps.is_none() && plain.haze.is_none());
+    assert!(plain.echo.is_none() && plain.options.is_empty());
+}
+
+#[test]
+fn options_switch_their_sections_and_the_room_follows() {
+    use extras::{Section, option_bit};
+    let def = parse("saber_test", &sample_with_additions()).unwrap();
+    assert_eq!(def.off_mask(0), 0);
+    assert_eq!(def.off_mask(option_bit("glint")), Section::Star.bit());
+    assert_eq!(
+        def.off_mask(option_bit("smoke") | option_bit("storm")),
+        Section::Wisps.bit() | Section::Echo.bit() | Section::Arcs.bit() | Section::Motes.bit()
+    );
+    // An id the file does not offer switches nothing.
+    assert_eq!(def.off_mask(option_bit("wings")), 0);
+    // The quad's room: the wisps' rise, the haze's reach, whichever is on and further.
+    assert_eq!(def.room(0), 9.0);
+    assert_eq!(def.room(Section::Wisps.bit()), 3.0);
+    assert_eq!(def.room(Section::Wisps.bit() | Section::Haze.bit()), 0.0);
+    // Every section's bit is its place in the list (saber.wgsl's OFF_* constants).
+    let shader = include_str!("saber.wgsl");
+    for (index, section) in Section::ALL.into_iter().enumerate() {
+        assert_eq!(section.bit(), 1 << index);
+        assert_eq!(Section::named(section.name()), Some(section));
+        let constant = format!(
+            "const OFF_{}: u32 = {}u;",
+            section.name().to_ascii_uppercase(),
+            section.bit()
+        );
+        // Afterimages and the echo are the CPU's (no instance is made for them).
+        if !matches!(section, Section::Ghosts | Section::Echo) {
+            assert!(shader.contains(&constant), "saber.wgsl lost {constant}");
+        }
+    }
+}
+
+#[test]
+fn the_third_set_and_the_options_are_checked_strictly_by_name() {
+    let refused = |old: &str, new: &str, why: &str| {
+        assert!(ADDITIONS.contains(old), "{old}");
+        let text =
+            extras::merged(&sample_with_effects(), &ADDITIONS.replacen(old, new, 1)).unwrap();
+        let error = parse("saber_test", &text).unwrap_err();
+        assert!(error.contains(why), "{new}: {error}");
+    };
+    refused(r#""rays": 6"#, r#""rays": 1"#, "star.rays must be 2 to 8");
+    refused(r#""length": 8.0"#, r#""length": 40.0"#, "star.length");
+    refused(r#""rise": 9.0"#, r#""rise": 30.0"#, "wisps.rise");
+    refused(r#""reach": 3.0"#, r#""reach": 0.1"#, "haze.reach");
+    refused(r#""lean": 0.05"#, r#""lean": 1.0"#, "echo.lean");
+    refused(r#""strength": 0.3, "#, "", "missing field `strength`");
+    refused(r#""id": "glint""#, r#""id": "Glint""#, "options[0].id");
+    refused(r#""id": "haze""#, r#""id": "glint""#, "given twice");
+    refused(r#""name": "Tip glint""#, r#""name": """#, "options[0].name");
+    refused(
+        r#"["star"]"#,
+        r#"["wings"]"#,
+        r#"options[0].sections: "wings" is not a section"#,
+    );
+    refused(r#"["star"]"#, r#"["glyphs"]"#, "the file has no glyphs");
+    refused(
+        r#"["haze"]"#,
+        r#"["star"]"#,
+        "star is already another option's",
+    );
+    refused(r#"["star"]"#, "[]", "must name 1 to 4 sections");
+    // Two ids on one bit (souls and wisps) cannot be told apart in a look.
+    let text = ADDITIONS
+        .replacen(r#""id": "glint""#, r#""id": "souls""#, 1)
+        .replacen(r#""id": "haze""#, r#""id": "wisps""#, 1);
+    let text = extras::merged(&sample_with_effects(), &text).unwrap();
+    assert!(
+        parse("saber_test", &text)
+            .unwrap_err()
+            .contains("shares its bit")
+    );
+    // At most six options.
+    let many: Vec<String> = (0..7)
+        .map(|n| format!(r#"{{"id": "o{n}", "name": "O", "sections": ["arcs"]}}"#))
+        .collect();
+    let text = format!(r#"{{"options": [{}]}}"#, many.join(","));
+    let text = extras::merged(&sample_with_effects(), &text).unwrap();
+    assert!(
+        parse("saber_test", &text)
+            .unwrap_err()
+            .contains("at most 6")
+    );
+}
+
+#[test]
+fn the_loader_lays_an_additions_file_over_its_skin_and_older_names_are_left() {
+    let mut vfs = sjk_vfs::VirtualFileSystem::new();
+    vfs.mount_memory(
+        "pack",
+        [
+            (
+                "skins/blades/saber_test.bladeskin",
+                sample_with_effects().into_bytes(),
+            ),
+            (
+                "skins/blades/saber_test.bladeextra",
+                ADDITIONS.as_bytes().to_vec(),
+            ),
+            (
+                "skins/blades/saber_plain.bladeskin",
+                SAMPLE.as_bytes().to_vec(),
+            ),
+            // An additions file alone is no skin.
+            (
+                "skins/blades/saber_lone.bladeextra",
+                ADDITIONS.as_bytes().to_vec(),
+            ),
+        ],
+    )
+    .unwrap();
+    let skins = load(&vfs);
+    let ids: Vec<&str> = skins.iter().map(|(id, _)| id.as_str()).collect();
+    assert_eq!(ids, ["saber_plain", "saber_test"]);
+    assert!(skins[1].1.star.is_some() && skins[1].1.options.len() == 4);
+    assert!(skins[0].1.star.is_none());
+}

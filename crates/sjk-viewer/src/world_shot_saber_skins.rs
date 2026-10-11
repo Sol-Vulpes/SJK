@@ -354,6 +354,140 @@ fn duel6_second_blades() {
     });
 }
 
+/// Every option the Sun and the Spectral offer, switched off.
+fn all_parts_off(id: &str) -> crate::saber_skin_options::OptionsOff {
+    let options = match id {
+        "saber_sun" => &["prominences", "sparks", "glint", "haze"][..],
+        _ => &["wisps", "spirits", "smoke", "rim", "echo", "afterimages"][..],
+    };
+    crate::saber_skin_options::bits(options.iter().copied())
+}
+
+/// The Mythical blades' parts (11/10/2026): the Sun and the Spectral standing with every
+/// part on beside every part off, at two times (`duel6-mythical-lineup`); then each up
+/// close, lying across the view over the floor at eight moments, so the Sun's glint,
+/// prominences, sparks and the haze bending the floor behind it show, and the Spectral's
+/// wisps rise off it (`duel6-mythical-<name>`); then each held upright, its wisps a plume
+/// over the tip (`duel6-mythical-<name>-upright`).
+#[test]
+#[ignore = "renders with the GPU and the installed game data named by JKA_GAME_DATA"]
+fn duel6_mythical_parts() {
+    on_big_stack(|| {
+        mount_test_packs();
+        let Some((mut gpu, _profile)) = open("maps/mp/duel6.bsp", [1280, 720], None, &[]) else {
+            return;
+        };
+        let (spawn, yaw) = assets::initial_camera(&gpu.bsp).expect("a spawn point");
+        let turn = glam::Quat::from_rotation_z(yaw);
+        let eye = Vec3::from_array(spawn);
+        let ahead = |x: f32, y: f32, z: f32| eye + turn * Vec3::new(x, y, z);
+        gpu.saber_skins.shot_persona = crate::saber_persona::Persona::of(b"^1Sol^7Vulpes", 0);
+        let ids = ["saber_sun", "saber_spectral"];
+        let standing = [
+            ShotColor::Skin(ids[0]),
+            ShotColor::Parts(ids[0], all_parts_off(ids[0])),
+            ShotColor::Skin(ids[1]),
+            ShotColor::Parts(ids[1], all_parts_off(ids[1])),
+        ];
+        gpu.saber_skins.shot_blades = standing
+            .iter()
+            .enumerate()
+            .map(|(index, color)| {
+                let offset = (index as f32 - 1.5) * 16.0;
+                (
+                    Blade {
+                        base: ahead(70.0, -offset, -24.0).to_array(),
+                        direction: (turn * Vec3::new(0.0, -0.004 * offset, 1.0))
+                            .normalize()
+                            .to_array(),
+                        length: 40.0,
+                        radius: 3.0,
+                    },
+                    *color,
+                    index as u32 + 1,
+                )
+            })
+            .collect();
+        let (look_yaw, look_pitch) = look(eye.to_array(), ahead(70.0, 0.0, -6.0).to_array());
+        aim(&mut gpu, eye.to_array(), look_yaw, look_pitch);
+        let mut lineup = Vec::new();
+        for (index, seconds) in [2.6, 5.15].into_iter().enumerate() {
+            gpu.saber_skins.shot_seconds = Some(seconds);
+            lineup.push(frame(&mut gpu, if index == 0 { 40 } else { 4 }));
+        }
+        println!(
+            "{}",
+            sheet(&lineup, 1, 1280, "duel6-mythical-lineup").display()
+        );
+        let lying = |at: Vec3, down: f32| Blade {
+            base: at.to_array(),
+            direction: (turn * Vec3::new(0.0, -1.0, down)).normalize().to_array(),
+            length: 40.0,
+            radius: 3.0,
+        };
+        let camera = ahead(27.0, 0.0, -15.0);
+        let (look_yaw, look_pitch) = look(camera.to_array(), ahead(44.0, 0.0, -24.0).to_array());
+        for id in ids {
+            let blade = lying(ahead(44.0, 20.0, -22.0), 0.08);
+            gpu.saber_skins.shot_blades = vec![(blade, ShotColor::Skin(id), 2)];
+            aim(&mut gpu, camera.to_array(), look_yaw, look_pitch);
+            let mut close = Vec::new();
+            for step in 0..8 {
+                gpu.saber_skins.shot_seconds = Some(3.0 + f64::from(step) * 0.37);
+                close.push(frame(&mut gpu, 4));
+            }
+            let name = format!("duel6-mythical-{}", id.trim_start_matches("saber_"));
+            println!("{}", sheet(&close, 2, 960, &name).display());
+            if id == "saber_sun" {
+                // The haze bends the floor behind the blade: the same moment with it off
+                // differs there, and only there (a diff sheet shows where).
+                let haze_off = crate::saber_skin_options::bits(["haze"]);
+                gpu.saber_skins.shot_seconds = Some(3.0);
+                let on = frame(&mut gpu, 4);
+                gpu.saber_skins.shot_blades = vec![(blade, ShotColor::Parts(id, haze_off), 2)];
+                let off = frame(&mut gpu, 4);
+                let mut diff = image::RgbaImage::new(on.width(), on.height());
+                let mut changed = 0;
+                for (x, y, pixel) in diff.enumerate_pixels_mut() {
+                    let (a, b) = (on.get_pixel(x, y), off.get_pixel(x, y));
+                    let d = (0..3).map(|c| a[c].abs_diff(b[c])).max().unwrap_or(0);
+                    if d > 6 {
+                        changed += 1;
+                    }
+                    let v = d.saturating_mul(8);
+                    *pixel = image::Rgba([v, v, v, 255]);
+                }
+                println!("haze changes {changed} pixels");
+                println!(
+                    "{}",
+                    sheet(&[on, off, diff], 3, 640, "duel6-mythical-sun-haze").display()
+                );
+                assert!(
+                    changed > 2_000,
+                    "the haze bends the scene: {changed} pixels"
+                );
+            }
+            // Held upright, a little away.
+            let upright = Blade {
+                base: ahead(38.0, 16.0, -30.0).to_array(),
+                direction: (turn * Vec3::new(0.0, 0.15, 1.0)).normalize().to_array(),
+                length: 40.0,
+                radius: 3.0,
+            };
+            gpu.saber_skins.shot_blades = vec![(upright, ShotColor::Skin(id), 3)];
+            let (yaw_up, pitch_up) = look(eye.to_array(), ahead(38.0, 16.0, -4.0).to_array());
+            aim(&mut gpu, eye.to_array(), yaw_up, pitch_up);
+            let mut tall = Vec::new();
+            for step in 0..4 {
+                gpu.saber_skins.shot_seconds = Some(4.0 + f64::from(step) * 0.5);
+                tall.push(frame(&mut gpu, 4));
+            }
+            let name = format!("duel6-mythical-{}-upright", id.trim_start_matches("saber_"));
+            println!("{}", sheet(&tall, 2, 960, &name).display());
+        }
+    });
+}
+
 /// The chromas ([`crate::unlockables::Unlockable::chroma`]) take their saber's colour:
 /// each in a row of the six retail colours and a custom white (which leaves the skin's
 /// own), standing on duel6 as the lineup does.

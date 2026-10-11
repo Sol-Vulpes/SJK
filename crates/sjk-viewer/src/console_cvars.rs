@@ -525,6 +525,12 @@ pub(super) fn register_daily_cvars(cvars: &mut CvarRegistry) -> Result<(), sjk_s
             "The blade skin your sabers wear, by unlock id (saber_sun: the Sun blade), shown once your SJK profile holds it; empty for the stock blade",
         ),
         CvarDefinition::new(
+            crate::saber_skin_options::CVAR,
+            "",
+            archive,
+            "The blade skins' parts you switched off, skin.option words (saber_sun.haze: the Sun blade without its heat haze); every SJK player sees your blade so",
+        ),
+        CvarDefinition::new(
             crate::quick_wheel::SOUNDS_CVAR,
             true,
             archive,

@@ -182,6 +182,12 @@ pub(super) fn submit_hilt(
             i.with_contact(owner_entity, 2, index, !hilt.no_wall_marks, hilt.no_dlight)
                 .with_animation(presentation_time as f64 * 0.001, key as u32)
         }));
+        blades.extend(saber::skin_extras(
+            blade,
+            color,
+            presentation_time as f64 * 0.001,
+            key as u32,
+        ));
         light_blades[index] = Some(blade);
     }
     Some((hilt, light_blades))
