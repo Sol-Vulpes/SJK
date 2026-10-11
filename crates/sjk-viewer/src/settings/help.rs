@@ -440,7 +440,7 @@ const HELP: &[(&str, &str)] = &[
     ),
     (
         crate::sjk_chat_frame::SOUND_CVAR,
-        "A sound when another player's SJK chat message arrives, in menus and games. Chat sounds off (cg_chatSounds 0) silences it too.",
+        "A sound for each new SJK chat message, yours included, in menus and games. Chat sounds off (cg_chatSounds 0) silences it too.",
     ),
     (
         crate::chat_gifs::CVAR,

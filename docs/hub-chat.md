@@ -135,9 +135,10 @@ Old clients ignore all of it, so it stays `/v1/`.
 
 ## A sound for a new message
 
-A new SJK chat message from another player plays a sound (Sol's request, 10/10/2026),
-in the menus and in a game, wherever the chat is on. Before this, SJK chat messages
-played nothing.
+A new SJK chat message plays a sound (Sol's request, 10/10/2026), in the menus and in a
+game, wherever the chat is on. Before this, SJK chat messages played nothing. The
+player's own messages play it too since 11/10/2026 (Sol's request), when they join the
+feed: the hub took them, so the sound says the message went out.
 
 - **The sound** is a variant of JKA's chat sound, made from the game's own file when
   SJK starts: the player's `sound/player/talk` (`.wav`, else `.mp3`) is read through the
@@ -153,9 +154,10 @@ played nothing.
 - **When:** a message newer than what the feed had already seen joins it
   (`ChatOverlay::sync_sjk`, [chat/sjk.rs](../crates/sjk-viewer/src/chat/sjk.rs)), so the
   backlog the hub sends at start, on a reconnection or from a new hub plays nothing, as
-  it is not replayed in the game's feed either. Not for the player's own messages (any
-  of their keys: their id at the hub, this PC's key, the keys linked to them), not for a
-  player muted on this PC, not for holocron drops. At most once a second
+  it is not replayed in the game's feed either. The player's own messages play it when
+  they join the feed, sent from the composer, a dock or the page (a refused message never
+  joins, so it plays nothing); not for a player muted on this PC, not for holocron drops
+  or emotes. At most once a second
   (`chat::sjk::SOUND_GAP`), so a burst plays it once.
 - **How it plays:** as the game's chat beep does, beside the listener at full volume
   under `s_volume`, through the interface cues' mailbox (`ui_cues::Cue::SjkChat`) on a
