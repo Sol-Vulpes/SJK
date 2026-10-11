@@ -9,6 +9,8 @@
 #                               made it when that is not the piece's owner.
 
 = Sol
++ 11/10/2026 | - | No crash when the window is resized while a map loads
+- 3649656 |  | Resize a world adopted after a map change to the window's size
 + 11/10/2026 | - | Own SJK chat messages play the chat sound
 - 0efca2b |  | SJK chat: the player's own messages play the chat sound
 + 11/10/2026 | - | Mythical shader parts: Sun and Spectral effects, switchable

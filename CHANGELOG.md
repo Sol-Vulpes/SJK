@@ -21,6 +21,7 @@ Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 ## Unreleased
 
 - Your own SJK chat messages play the SJK chat sound when they go out, as other players' do _(Sol)_
+- Resizing or maximising the window while a map loads no longer crashes the game when the map starts _(Sol)_
 - Rain, snow and fog no longer cover sabers and weapon effects in front of them, the repeater's alt-fire burst no longer shows dark squares, and effects a server hides no longer show as white squares _(Sol)_
 - reply <message> whispers to the last player who whispered to you; bare, or on its key (Settings > Key bindings > Other), it opens the chat on that whisper, which Tab also reaches after SJK _(Sol, after JoF EJK)_
 - The chat key opens on the channel of your last message (All, Team, SJK or a whisper); Settings > HUD > Remember chat channel turns it off (cg_chatRememberChannel) _(Sol)_
