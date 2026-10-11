@@ -33,6 +33,8 @@ pub(super) struct Options {
     pub(super) emojis: bool,
     /// An SJK chat line's GIPHY link shows its GIF under it ([`crate::chat_gifs::CVAR`]).
     pub(super) gifs: bool,
+    /// The chat key opens on the last channel sent on ([`super::reply::REMEMBER_CVAR`]).
+    pub(super) remember: bool,
 }
 
 impl Default for Options {
@@ -64,6 +66,8 @@ impl Options {
             center_height: scalar(console, "cg_centerheight", 0.0).clamp(0.0, 480.0),
             emojis: integer("cg_chatboxemojis", 0) != 0,
             gifs: console.is_none_or(|c| c.bool_cvar(crate::chat_gifs::CVAR) != Some(false)),
+            remember: console
+                .is_none_or(|c| c.bool_cvar(super::reply::REMEMBER_CVAR) != Some(false)),
         }
     }
 

@@ -341,8 +341,22 @@ mod tests {
         let font = crate::text::test_font();
         chat.build(true, &font, [1920.0, 1080.0], 1_000);
         let runs: Vec<&str> = chat.ui.text_runs().collect();
-        assert!(runs.contains(&"SJK"), "{runs:?}");
+        assert!(
+            !runs.contains(&"SJK"),
+            "the emblem, not the letters: {runs:?}"
+        );
         assert!(!runs.contains(&"SJK VERIFIED"), "the tick alone: {runs:?}");
+        let logos = chat
+            .ui
+            .draw_list()
+            .commands()
+            .iter()
+            .filter(|command| {
+                matches!(command, sjk_ui::DrawCommand::TexturedQuad { texture, .. }
+                    if *texture == crate::ui_renderer::LOGO_TEXTURE)
+            })
+            .count();
+        assert_eq!(logos, 2, "each line has the SJK emblem");
     }
 
     #[test]

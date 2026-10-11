@@ -20,6 +20,9 @@ Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 -->
 ## Unreleased
 
+- reply <message> whispers to the last player who whispered to you; bare, or on its key (Settings > Key bindings > Other), it opens the chat on that whisper, which Tab also reaches after SJK _(Sol, after JoF EJK)_
+- The chat key opens on the channel of your last message (All, Team, SJK or a whisper); Settings > HUD > Remember chat channel turns it off (cg_chatRememberChannel) _(Sol)_
+- SJK chat lines in the game start with SJK's logo instead of the letters SJK _(Sol)_
 - The green spawn-protection bubble is visible again, as are the Ysalamiri, Force Boon and Enlightenment spheres; jetpacks show on their wearers' backs with their jet flames, start and stop sounds and hover loop _(Sol, after JoF EJK)_
 - Saber shaders no longer draw a thin bar across the blade's tip _(Sol)_
 - The body shield-hit flash is a little brighter by default: two passes (cg_shieldBrightness 2); a profile still on the old default 1 (or 4) moves to 2 once, other values stay _(Sol)_

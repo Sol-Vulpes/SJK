@@ -109,10 +109,12 @@ Old clients ignore all of it, so it stays `/v1/`.
 - The chat overlay has a fourth channel, SJK. `messagemode5` (I by default in a new
   profile or a whole imported config, when I is free and nothing is bound to
   `messagemode5`; an existing profile binds it in Settings > Key bindings > Other)
-  opens the composer on it; Tab cycles All, Team and SJK. Enter on SJK hands the text to the hub,
+  opens the composer on it; Tab cycles All, Team and SJK (then the last whisperer,
+  [client.md](client.md#chat-player-actions)); the chat key opens on SJK too when the
+  last message went there (`cg_chatRememberChannel`). Enter on SJK hands the text to the hub,
   never to the game server.
 - Hub messages join the chat feed as one flowing line ([How a line
-  looks](#how-a-line-looks)): a small SJK tag, the name, the verified tick for a
+  looks](#how-a-line-looks)): SJK's emblem, small, the name, the verified tick for a
   verified sender, then the message in the SJK chat's gold. Texts go through
   `chat::for_display`, names through `chat::name_for_display`: a name keeps every
   character a Jedi Academy name can draw, all of Windows-1252 that prints (`{ }`,
@@ -378,6 +380,10 @@ request, 08/10/2026):
   every game chat line. The message's own colour codes are dropped
   (`sjk_chat_look::message_text`), so all of it is gold; the sender's name keeps its
   codes over the game's white.
+- In the game's chat a line starts with SJK's emblem, small (1.35 times the text's
+  height, in its own colours, `ui_renderer::LOGO_TEXTURE`; Sol's request, 11/10/2026),
+  where it used to read the letters SJK. The dock and the page, which show only SJK
+  chat, have no mark.
 - A verified sender has the verified tick after the name (the nameplates' gold seal
   with its white tick, `ui_renderer::VERIFIED_TEXTURE`) and no word: no "SJK VERIFIED"
   or "Verified" tag. Staff stays written on the page.
@@ -385,7 +391,7 @@ request, 08/10/2026):
   does. In the game it used to break straight away: the feed drew a sender's name and
   its tag on a row of their own and the message under it (`NAME_ADVANCE` in
   `chat/view.rs`), while the servers' chat lines, which carry the name in their text,
-  flowed. Now the first row holds the SJK tag, the name, the tick and a colon, and the
+  flowed. Now the first row holds SJK's emblem, the name, the tick and a colon, and the
   message goes on after them (`Wrapped::update_indented` in `chat/layout.rs`, drawn by
   `chat/view/sjk_line.rs`); a first word too wide for what is left of that row starts
   the next. The page and the docks lay their lines out the same way, measured in their

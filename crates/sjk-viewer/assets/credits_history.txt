@@ -9,6 +9,8 @@
 #                               made it when that is not the piece's owner.
 
 = Sol
++ 11/10/2026 | - | Reply, chat opens on the last channel, SJK emblem on SJK lines
+- 3f23d49 |  | Chat: reply, open on the last channel, SJK emblem on SJK lines
 + 11/10/2026 | - | Spawn bubble, player spheres and jetpacks drawn
 - 3ec6986 |  | Draw player spheres and jetpacks
 + 11/10/2026 | - | Saber shaders: no bar across the tip

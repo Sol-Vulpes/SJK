@@ -105,11 +105,19 @@ impl ChatOverlay {
             KeyCode::PageDown | KeyCode::ArrowDown => self.scroll_by(-3),
             KeyCode::Tab => {
                 let channel = self.input.as_ref().expect("active input").channel;
-                self.activate(match channel {
-                    Channel::Global => TEAM,
-                    Channel::Team => SJK,
-                    Channel::Sjk | Channel::Whisper => GLOBAL,
-                });
+                match channel {
+                    Channel::Global => self.activate(TEAM),
+                    Channel::Team => self.activate(SJK),
+                    // The last whisperer comes after SJK (`chat/reply.rs`).
+                    Channel::Sjk if self.reply_target().is_ok() => {
+                        let target = self.reply_target().ok();
+                        let input = self.input.as_mut().expect("active input");
+                        input.channel = Channel::Whisper;
+                        input.recipient = target;
+                        self.notice = "";
+                    }
+                    Channel::Sjk | Channel::Whisper => self.activate(GLOBAL),
+                }
             }
             _ => {
                 let input = self.input.as_mut().expect("active input");
@@ -136,6 +144,7 @@ impl ChatOverlay {
             return if text.is_empty() {
                 ChatInputResult::None
             } else {
+                self.sent_on(Channel::Sjk, None);
                 ChatInputResult::Sjk(text)
             };
         }
@@ -155,6 +164,10 @@ impl ChatOverlay {
             }
         };
         let result = chat_command(destination, &input.text);
+        if result.is_some() {
+            let (channel, recipient) = (input.channel, input.recipient);
+            self.sent_on(channel, recipient);
+        }
         self.input = None;
         self.scroll = 0;
         self.unread = 0;

@@ -142,6 +142,7 @@ impl Group {
                 "cg_killfeed",
                 "cg_drawChat",
                 crate::chat::emoji::CVAR,
+                crate::chat::reply::REMEMBER_CVAR,
                 "cg_chatBoxLetterSpacing",
                 crate::ground_hud::CVAR,
             ],

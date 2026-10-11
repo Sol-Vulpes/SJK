@@ -1,6 +1,7 @@
 //! An SJK chat line in the feed (`docs/hub-chat.md`): one flowing line, as a game
 //! chat line is, never a name row with the message under it. Its first row starts
-//! with a small SJK tag, the JoF emblem for a sender with the clan's tag
+//! with SJK's emblem, small (the logo, in its own colours, Sol's request 11/10/2026;
+//! it was the letters SJK before), the JoF emblem for a sender with the clan's tag
 //! ([`crate::jof_tag`]), the sender's name in its own colour codes and, for a
 //! verified sender, the verified tick alone; the message follows on the same row in
 //! the SJK chat's gold ([`crate::sjk_chat_look::GOLD`]) and wraps only when it is too
@@ -9,18 +10,18 @@
 use super::*;
 use crate::holocrons::Tier;
 use crate::sjk_chat_look;
-use crate::text::visible_text_width_style;
 
-/// The tag before an SJK line's name.
-pub(in crate::chat) const TAG: &str = "SJK";
+/// The SJK emblem's side before an SJK line's name, against the text size: the
+/// starburst's spikes reach the box's edges, its medallion is about half of it.
+const LOGO_SIDE: f32 = 1.35;
 
 /// What an SJK line's first row holds before its message, measured in the feed's
 /// font. Nothing is stored: it is measured where it is drawn.
 pub(in crate::chat) struct Prefix {
     /// The body's text size, which the name and the colon share.
     size: f32,
-    tag_size: f32,
-    tag_width: f32,
+    /// The SJK emblem's side.
+    logo: f32,
     /// Where the shown name ends in the line's name (cut to half the feed).
     pub(in crate::chat) name_end: usize,
     name_width: f32,
@@ -41,19 +42,11 @@ impl Prefix {
         g: &Geometry,
     ) -> Self {
         let size = g.font;
-        let tag_size = size * 0.62;
         let scale = size / font.height.max(1.0);
         let name_end = layout::fitting_end(name, font, g.width * 0.5, size);
         Self {
             size,
-            tag_size,
-            tag_width: visible_text_width_style(
-                font,
-                TAG,
-                tag_size / font.height.max(1.0),
-                TextFace::Semibold,
-                tag_size * 0.08,
-            ),
+            logo: size * LOGO_SIDE,
             name_end,
             name_width: visible_text_width_face(font, &name[..name_end], scale, TextFace::Semibold),
             verified: verified || tier.is_some(),
@@ -67,12 +60,12 @@ impl Prefix {
         }
     }
 
-    /// Where the JoF emblem's ink starts after the tag.
+    /// Where the JoF emblem's ink starts after the SJK emblem.
     fn jof_x(&self) -> f32 {
-        self.tag_width + self.size * 0.35
+        self.logo + self.size * 0.2
     }
 
-    /// Where the name starts after the tag and the JoF emblem.
+    /// Where the name starts after the SJK and JoF emblems.
     fn name_x(&self) -> f32 {
         self.jof_x()
             + if self.jof {
@@ -128,15 +121,11 @@ pub(in crate::chat) fn draw(
     let [x, y] = origin;
     let size = prefix.size;
     let middle = y + font.capital_middle(size / font.height.max(1.0));
-    let tag_top = middle - font.capital_middle(prefix.tag_size / font.height.max(1.0));
-    ui.text(
-        TAG,
-        Rect::new(x, tag_top, prefix.tag_width + 2.0, prefix.tag_size * 1.3),
-        prefix.tag_size,
-        sjk_chat_look::gold(alpha * 0.8),
-        FontWeight::Semibold,
-        prefix.tag_size * 0.08,
-    );
+    let _ = ui.draw_list_mut().push(DrawCommand::TexturedQuad {
+        rect: Rect::new(x, middle - prefix.logo * 0.5, prefix.logo, prefix.logo),
+        texture: crate::ui_renderer::LOGO_TEXTURE,
+        color: Color::new(1.0, 1.0, 1.0, alpha),
+    });
     if prefix.jof {
         crate::jof_tag::draw(
             x + prefix.jof_x(),
@@ -305,14 +294,21 @@ mod tests {
     }
 
     fn ticks(chat: &ChatOverlay) -> Vec<Rect> {
+        quads(chat, crate::ui_renderer::VERIFIED_TEXTURE)
+    }
+
+    /// The SJK emblems before the lines.
+    fn logos(chat: &ChatOverlay) -> Vec<Rect> {
+        quads(chat, crate::ui_renderer::LOGO_TEXTURE)
+    }
+
+    fn quads(chat: &ChatOverlay, wanted: sjk_ui::TextureId) -> Vec<Rect> {
         chat.ui
             .draw_list()
             .commands()
             .iter()
             .filter_map(|command| match command {
-                DrawCommand::TexturedQuad { rect, texture, .. }
-                    if *texture == crate::ui_renderer::VERIFIED_TEXTURE =>
-                {
+                DrawCommand::TexturedQuad { rect, texture, .. } if *texture == wanted => {
                     Some(*rect)
                 }
                 _ => None,
@@ -347,13 +343,14 @@ mod tests {
         let chat = feed(&[], vec![message(1, "^2Sol", "gg all", true)]);
         assert_eq!(chat.lines[0].wrap.len, 1);
         let texts = texts(&chat);
-        let (_, tag, _) = drawn(&texts, "SJK");
+        let tag = logos(&chat)[0];
         let (_, name, _) = drawn(&texts, "^2Sol");
         let (_, colon, _) = drawn(&texts, ":");
         let (_, body, _) = drawn(&texts, "gg all");
-        // Tag, name, tick, colon and message, left to right on the name's row.
+        // Emblem, name, tick, colon and message, left to right on the name's row.
         assert_eq!(name.y, body.y, "the message stays on the name's row");
-        assert!(tag.x < name.x && name.right() <= colon.x && colon.x < body.x);
+        assert!(tag.right() < name.x && name.right() <= colon.x && colon.x < body.x);
+        assert!(!texts.iter().any(|(text, ..)| text == "SJK"), "no letters");
         let tick = ticks(&chat);
         assert_eq!(tick.len(), 1);
         assert!(tick[0].x >= name.x && tick[0].right() <= colon.x);
@@ -446,11 +443,10 @@ mod tests {
             .filter(|command| matches!(command, DrawCommand::SolidRect { .. }))
             .count();
         assert!(bars >= 2 * crate::holocrons::gem::MARK_ROWS, "{bars}");
-        let tags = texts.iter().filter(|(text, ..)| text == "SJK").count();
-        assert_eq!(tags, 3);
-        // The sentence follows the tag on its row.
-        let (_, tag, _) = drawn(&texts, "SJK");
-        assert!(grand.x > tag.right());
+        let tags = logos(&chat);
+        assert_eq!(tags.len(), 3);
+        // The sentence follows the emblem on its row.
+        assert!(grand.x > tags[0].right());
     }
 
     /// A muted player's drops are not shown at all, not hidden behind a note.
@@ -493,7 +489,6 @@ mod tests {
                 .all(|(text, ..)| !text.to_ascii_lowercase().contains("verified")),
             "{texts:?}"
         );
-        let tags = texts.iter().filter(|(text, ..)| text == "SJK").count();
-        assert_eq!(tags, 2, "each line has its tag");
+        assert_eq!(logos(&chat).len(), 2, "each line has its emblem");
     }
 }

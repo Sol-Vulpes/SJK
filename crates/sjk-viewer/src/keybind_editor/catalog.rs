@@ -158,6 +158,8 @@ pub(crate) const ACTIONS: &[BindableAction] = &[
     action(Other, "Whisper to crosshair player", "messagemode3", "u"),
     action(Other, "Whisper to last attacker", "messagemode4", ""),
     action(Other, "SJK chat", "messagemode5", "i"),
+    // SJK: JoF EternalJK's `reply`; bare, it opens the chat on the whisper.
+    action(Other, "Reply to last whisper", "reply", ""),
     action(Other, "Join / team menu", "teammenu", "j"),
     action(Other, "Vote yes", "vote yes", ""),
     action(Other, "Vote no", "vote no", ""),
