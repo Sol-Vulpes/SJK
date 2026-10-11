@@ -799,7 +799,7 @@ test: Wear the Spectral, hold it level: smoke rises off it; held still, a faint 
 test: Collection > Shaders, Sun: untick Heat haze, then Tip glint: the model's blade follows.
 test: Console: saberskin saber_sun parts lists them; saberskin saber_sun haze on ticks it.
 test: With a second SJK client on the server: it sees your blade with the parts you chose.
-note: Needs the hub deployed with the new pack and look field (SJK-hub branches, not deployed).
+note: Hub deployed 11/10/2026 with the new pack and the look field.
 
 [chroma-shaders]
 area: Rendering & effects

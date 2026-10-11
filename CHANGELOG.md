@@ -18,8 +18,11 @@ tests check this file):
 - ASCII only, as the menu font draws bytes.
 Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 -->
-## Unreleased
+## 2026.1011.2 (Alpha) | 11/10/2026
 
+The Mythical saber shaders grow: the Sun and the Spectral get new effects, and you choose which parts your blade shows, for every SJK player. Also reply and remembered chat channels, jetpacks and the spawn bubble back, weather that no longer covers sabers, sounds on the right side again, and fuller credits.
+
+- The credits page lists much more of what SJK is: Sol's card gains the work of the last days, and the SJK UI's fonts (Rajdhani, Exo 2), GIPHY (the chat's GIFs) and TheRisqe (the Radial HUD SJK's radial HUD follows) are credited _(Sol)_
 - Sounds play on the side they come from again: left and right were swapped _(Sol)_
 - Your own SJK chat messages play the SJK chat sound when they go out, as other players' do _(Sol)_
 - Resizing or maximising the window while a map loads no longer crashes the game when the map starts _(Sol)_

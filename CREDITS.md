@@ -99,7 +99,26 @@ Sol develops SJK and sets its direction. Sol's work includes:
   memory blocks);
 - client mods kept out of the core client, loaded only on their servers: JA+ tools
   (`japlus.*`: admin teleports, auto login and plugin options, after JoF EJK) and
-  JoF tools (`jof.*`, completion of the JoF servers' commands).
+  JoF tools (`jof.*`, completion of the JoF servers' commands);
+- Mythical shader parts: the Sun's prominences, rising sparks, tip glint and heat
+  haze, the Spectral's wisps, souls, smoky edge, cold rim and swaying echo, each a part
+  its wearer can switch off, seen so by every SJK player;
+- the SJK chat's GIFs (GIPHY links show their GIF), who is online on the chat page,
+  its chat sounds, `reply` (after JoF EJK), the last channel remembered and SJK's
+  emblem on SJK lines;
+- crash reports sent to the SJK team at the next start, and world notes sent to the
+  SJK hub from the inspect key;
+- the quick wheel's live Force page and Toys page, with Illuminate as a toy;
+- the pilot's vehicle HUD and crosshair, and jetpacks, the spawn bubble and the Force
+  spheres drawn again (after JoF EJK);
+- Create game and its map picker, the Import page and the test list in the SJK look in
+  every style;
+- smoother play: players' models and their pipelines prepared off the render thread,
+  saber definitions read once a map, settings saved off the main thread and a hitch log;
+- lighting that stops at walls (per-light shadow tiles), doors and lifts that block
+  lamps, and a faster JoFTemple;
+- weather drawn under sabers and effects, the shield-hit flash's brightness, `cl_idrive`
+  and `+duck` (after JoF EJK), the update check every 30 minutes and its Update card.
 
 ## Contributors to SJK
 
@@ -209,7 +228,9 @@ Gama), keep theirs ([Rajdhani](crates/sjk-viewer/assets/fonts/Rajdhani-OFL.txt),
 of its variable font, unchanged otherwise), the game fonts
 SJK Menu and SJK HUD are traced from the JoF HD Fonts & Icons pack (author unknown)
 and SJK Chat is OCR-A by John Sauter (public domain), as
-[SJK-fonts.txt](crates/sjk-viewer/assets/fonts/SJK-fonts.txt) describes, the website's effects use
+[SJK-fonts.txt](crates/sjk-viewer/assets/fonts/SJK-fonts.txt) describes, GIFs in the SJK chat come from [GIPHY](https://giphy.com), fetched by
+each player's client, the radial HUD is SJK's own take on TheRisqe's Radial HUD (none
+of its pictures included), the website's effects use
 the [Shaders](https://github.com/shader-effects-inc/shaders) library by Shader
 Effects Inc. under its [MIT license](site/assets/vendor/shaders/LICENSE), and
 other dependencies keep their respective licenses.
