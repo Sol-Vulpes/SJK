@@ -303,7 +303,7 @@ impl ChatOverlay {
                     match line.channel {
                         Channel::Team => "TEAM",
                         Channel::Whisper => "WHISPER",
-                        Channel::Sjk => sjk_line::TAG,
+                        Channel::Sjk => "SJK",
                         Channel::Global => "",
                     }
                 };

@@ -70,6 +70,10 @@ pub(super) const COMMANDS: &[(&str, &str)] = &[
         "messagemode5",
         "Compose SJK chat, which every SJK player shares through the SJK hub",
     ),
+    (
+        "reply",
+        "Whisper to the last player who whispered to you: reply <message>, or bare to open the chat on it",
+    ),
     ("toggleconsole", "Toggle the console"),
     (super::asset_browser::COMMAND, super::asset_browser::HELP),
     (
@@ -389,6 +393,48 @@ impl crate::GpuState {
             }
         }
     }
+    /// `reply [message]` (JoF EternalJK's): whisper `message` to the last player who
+    /// whispered to us, or open the composer on that whisper (`chat/reply.rs`).
+    fn reply_command(&mut self, args: &[String]) -> Result<Vec<String>, String> {
+        let Some(session) = &self.live_session else {
+            return Err("reply: not in a game".into());
+        };
+        self.chat.update_roster(
+            self.resident
+                .session
+                .as_ref()
+                .unwrap_or(session)
+                .game_state(),
+        );
+        if args.is_empty() {
+            self.chat
+                .open_reply()
+                .map_err(|why| why.line().to_owned())?;
+            self.gameplay_input.release_keys();
+            if let Some(console) = &mut self.console {
+                console.set_open(false);
+            }
+            self.sync_cursor_policy();
+            return Ok(Vec::new());
+        }
+        let target = self
+            .chat
+            .reply_target()
+            .map_err(|why| why.line().to_owned())?;
+        let Some(command) = sjk_client::chat_command(
+            sjk_client::ChatDestination::Player(target.slot()),
+            &args.join(" "),
+        ) else {
+            return Ok(Vec::new());
+        };
+        let command = self.console.as_ref().map_or_else(
+            || command.clone(),
+            |console| console.color_chat_command(&command),
+        );
+        self.send_chat_command(&command);
+        Ok(Vec::new())
+    }
+
     /// Consume explicit service requests and nonblocking query replies each frame.
     pub(crate) fn run_client_commands(&mut self, audio: &mut Option<crate::GameAudio>) {
         while let Some(command) = self
@@ -516,6 +562,7 @@ impl crate::GpuState {
             "messagemode5" => {
                 self.apply_input_action(Some(crate::input::InputAction::SjkMessageMode));
             }
+            "reply" => return self.reply_command(args),
             "toggleconsole" => {
                 if let Some(console) = &mut self.console {
                     console.set_open(!console.is_open());

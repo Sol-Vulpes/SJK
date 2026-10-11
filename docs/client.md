@@ -1564,6 +1564,21 @@ restore Y global chat if needed and free; other occupied keys stay unchanged.
 This migration advances `cl_bindDefaultsVersion` to 3. Use
 `bind u messagemode3` to select U explicitly. No message is sent until Enter.
 
+`reply <message>` (JoF EternalJK's) whispers to the last player who whispered to
+you; a bare `reply`, bindable as "Reply to last whisper" in Settings > Key bindings >
+Other (unbound by default), opens the composer on that whisper instead. Tab in the
+composer reaches the same whisper after SJK (All, Team, SJK, the last whisperer).
+Your own whispers, which the server echoes back, do not count; when nobody has
+whispered, or the player left or renamed, `reply` says so and sends nothing
+([chat/reply.rs](../crates/sjk-viewer/src/chat/reply.rs)).
+
+`cg_chatRememberChannel` (default 1, Settings > HUD > Remember chat channel)
+makes the chat key (`messagemode`) open the composer on the channel of the last
+message sent from it: All, Team, SJK, or a whisper to a player still in the game
+(All once they leave). It lasts while SJK runs. The team, crosshair, last-attacker
+and SJK keys always open on their own channel; with 0 the chat key always opens on
+All.
+
 Open the chat composer with your chat binding, then click a
 sender's name. The cursor is free while composing. The player menu offers:
 
@@ -1608,7 +1623,9 @@ the console (see below): `^` then a digit is a colour code, `^` then `e` is `ê`
 Actions use server-provided sender slots and current roster generations. Old
 messages cannot address a replacement after an observed departure/name change;
 an invalid whisper recipient leaves the draft open. Unattributed server messages
-remain unclickable rather than guessing a destination from displayed text.
+remain unclickable rather than guessing a destination from displayed text; only
+`reply` reads one, an unattributed `[name]: ` whisper whose name (colour codes
+aside) is exactly a connected player's, as JoF EternalJK does.
 Legacy servers provide no authenticated account identity; unobserved same-name
 slot reuse cannot be distinguished. No transport or protocol encoding changed.
 
@@ -2228,7 +2245,7 @@ are in [identity.md](identity.md).
 - SJK chat: one conversation for every SJK player, through the hub, in games and in
   the menus ([hub-chat.md](hub-chat.md)). In a game, I (`messagemode5`) opens the
   composer on the SJK channel (Tab cycles All, Team and SJK); hub messages show in the
-  chat feed tagged SJK, each one flowing line with its text in the SJK chat's own gold
+  chat feed after SJK's emblem, each one flowing line with its text in the SJK chat's own gold
   and the verified tick after a verified sender's name
   ([hub-chat.md](hub-chat.md#how-a-line-looks)). The SJK UI's main page docks it under Recent servers;
   `sjkchat`, the dock's Open chat and the in-game SJK menu open its page. Resting the

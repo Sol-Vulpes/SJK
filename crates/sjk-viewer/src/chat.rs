@@ -11,6 +11,7 @@ mod interaction;
 mod layout;
 mod options;
 mod player_actions;
+pub(crate) mod reply;
 pub(crate) mod sjk;
 mod social;
 
@@ -126,6 +127,14 @@ pub(crate) struct ChatOverlay {
     /// Whether the lines with a GIF read "GIF" and show it (`cl_sjkChatGifs`), or keep
     /// their links as text (`chat/feed_gif.rs`).
     gifs_shown: bool,
+    /// Our own client slot, from the gamestate: our whispers echoed back are not
+    /// whispers to reply to (`chat/reply.rs`).
+    own_slot: Option<u16>,
+    /// The last player who whispered to us, for `reply`.
+    last_whisperer: Option<ChatTarget>,
+    /// The channel (and whisper recipient) the composer last sent on, which the chat
+    /// key opens on while `cg_chatRememberChannel` is on.
+    last_channel: (Channel, Option<ChatTarget>),
     /// The feed draws during a world shot, which has no session.
     #[cfg(test)]
     pub(crate) for_shot: bool,
@@ -173,6 +182,9 @@ impl ChatOverlay {
             sjk_mark: None,
             sjk_sound_at: None,
             gifs_shown: true,
+            own_slot: None,
+            last_whisperer: None,
+            last_channel: (Channel::Global, None),
             #[cfg(test)]
             for_shot: false,
         }
@@ -194,6 +206,7 @@ impl ChatOverlay {
 
     pub(crate) fn update_roster(&mut self, game: &sjk_protocol::GameState) {
         self.roster.update(game);
+        self.own_slot = u16::try_from(game.client_num).ok();
         self.muted
             .retain(|target| self.roster.name(*target).is_some());
     }
@@ -264,6 +277,9 @@ impl ChatOverlay {
                 return;
             }
         }
+        // EternalJK's escapes for `%` and `"` show as what was typed, in the
+        // chat box only, as in EternalJK.
+        let display = chat_display_text(&chat_unescape(&text));
         let target = self.roster.target(sender);
         // Display keeps `^n`; identity, whisper destinations and muting keep
         // using the plain roster name.
@@ -271,14 +287,20 @@ impl ChatOverlay {
             .and_then(|target| self.roster.display_name(target))
             .unwrap_or("")
             .to_owned();
-        // EternalJK's escapes for `%` and `"` show as what was typed, in the
-        // chat box only, as in EternalJK.
-        let display = chat_display_text(&chat_unescape(&text));
         let (body, private) = if name.is_empty() {
             (display.as_str(), false)
         } else {
             chat_body(&display, &name)
         };
+        match target {
+            Some(_) => self.note_whisper(private, target),
+            // The line stays unattributed; only `reply` reads its sender from it.
+            None if kind == ServerEventKind::Chat => {
+                let sender = self.whisper_sender(&display);
+                self.note_whisper(sender.is_some(), sender);
+            }
+            None => {}
+        }
         let body = options::clean_body(body, self.options.clean);
         let (body, emojis) = if self.options.emojis {
             self.emojis.markup(&body)
