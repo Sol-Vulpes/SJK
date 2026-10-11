@@ -211,6 +211,10 @@ pub struct Look {
     /// Whether the Illuminate holocron is lit.
     #[serde(default)]
     pub illuminate: bool,
+    /// The blade skin's options its wearer switched off (since 11/10/2026; absent, and
+    /// empty, from older hubs and from wearers with every part on).
+    #[serde(default)]
+    pub saber_off: Vec<String>,
 }
 
 /// A look worn on a game server, as the feed relays it when it changes: the slot and
@@ -233,6 +237,9 @@ pub struct LookEvent {
     /// Whether the Illuminate holocron is lit.
     #[serde(default)]
     pub illuminate: bool,
+    /// The blade skin's options its wearer switched off; empty when absent.
+    #[serde(default)]
+    pub saber_off: Vec<String>,
 }
 
 impl LookEvent {
@@ -241,6 +248,7 @@ impl LookEvent {
         Look {
             saber: self.saber.clone(),
             illuminate: self.illuminate,
+            saber_off: self.saber_off.clone(),
         }
     }
 }
@@ -633,7 +641,18 @@ mod tests {
             Some(Look {
                 saber: "saber_sun".to_owned(),
                 illuminate: true,
+                saber_off: Vec::new(),
             })
+        );
+        let options: Presence = serde_json::from_str(
+            r#"{"slot":3,"claimed_name":"x","key_id":"aa","name":"Sol","verified":false,
+                "look":{"saber":"saber_sun","illuminate":false,"saber_off":["glint","haze"]}}"#,
+        )
+        .unwrap();
+        assert_eq!(
+            options.look.unwrap().saber_off,
+            ["glint", "haze"],
+            "the options switched off, since 11/10/2026"
         );
         let bare: Presence = serde_json::from_str(
             r#"{"slot":3,"claimed_name":"x","key_id":"aa","name":"Sol","verified":false}"#,
@@ -653,8 +672,15 @@ mod tests {
             Look {
                 saber: String::new(),
                 illuminate: true,
+                saber_off: Vec::new(),
             }
         );
+        let options: Feed = serde_json::from_str(
+            r#"{"next":16,"looks":[{"id":16,"at":9,"slot":3,"claimed_name":"^2Sol",
+                "key_id":"aa","saber":"saber_sun","illuminate":false,"saber_off":["wisps"]}]}"#,
+        )
+        .unwrap();
+        assert_eq!(options.looks[0].look().saber_off, ["wisps"]);
         let quiet: Feed = serde_json::from_str(r#"{"next":3,"emotes":[]}"#).unwrap();
         assert!(quiet.looks.is_empty(), "an older hub sends no looks");
     }

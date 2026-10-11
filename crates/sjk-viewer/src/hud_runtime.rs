@@ -607,6 +607,7 @@ mod tests {
         let sun = sjk_identity::Look {
             saber: "saber_sun".to_owned(),
             illuminate: false,
+            saber_off: Vec::new(),
         };
         let mut looks = Looks::default();
         looks.replace_roster([(3, "Fox", Some(&sun))]);
@@ -620,11 +621,11 @@ mod tests {
             None
         );
         // The local player: their own look, gated by their unlocks.
-        looks.set_own(Some(1), Worn::own("saber_sun", |_| true, false));
+        looks.set_own(Some(1), Worn::own("saber_sun", "", |_| true, false));
         assert_eq!(card_shader(&looks, &loaded, Some(1), 1), Some("saber_sun"));
-        looks.set_own(Some(1), Worn::own("saber_sun", |_| false, false));
+        looks.set_own(Some(1), Worn::own("saber_sun", "", |_| false, false));
         assert_eq!(card_shader(&looks, &loaded, Some(1), 1), None);
-        looks.set_own(Some(1), Worn::own("", |_| true, false));
+        looks.set_own(Some(1), Worn::own("", "", |_| true, false));
         assert_eq!(card_shader(&looks, &loaded, Some(1), 1), None);
     }
 }

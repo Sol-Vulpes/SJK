@@ -542,9 +542,15 @@ fn feed_path(after: u64, server: Option<&str>, wait: u64) -> String {
     path
 }
 
-/// `POST /v1/look`'s body: exactly the server and the look's two fields.
+/// `POST /v1/look`'s body: exactly the server and the look's fields. `saber_off` goes only
+/// when it names an option (and with a blade skin): a hub from before 11/10/2026 refuses
+/// the field, so a look with every part on stays as it was.
 fn look_body(server: &str, look: &Look) -> Value {
-    json!({ "server": server, "saber": look.saber, "illuminate": look.illuminate })
+    let mut body = json!({ "server": server, "saber": look.saber, "illuminate": look.illuminate });
+    if !look.saber.is_empty() && !look.saber_off.is_empty() {
+        body["saber_off"] = json!(look.saber_off);
+    }
+    body
 }
 
 /// `POST /v1/claim`'s body. `active` is sent only when true: the field is optional and
@@ -974,10 +980,30 @@ mod tests {
         let look = Look {
             saber: "saber_sun".to_owned(),
             illuminate: true,
+            saber_off: Vec::new(),
         };
         assert_eq!(
             look_body("1.2.3.4:29070", &look),
             json!({"server": "1.2.3.4:29070", "saber": "saber_sun", "illuminate": true})
+        );
+        // The options switched off go only when there are some, with a blade skin.
+        let off = Look {
+            saber_off: vec!["glint".to_owned(), "haze".to_owned()],
+            ..look.clone()
+        };
+        assert_eq!(
+            look_body("1.2.3.4:29070", &off),
+            json!({"server": "1.2.3.4:29070", "saber": "saber_sun", "illuminate": true,
+                "saber_off": ["glint", "haze"]})
+        );
+        let stock = Look {
+            saber: String::new(),
+            ..off
+        };
+        assert!(
+            look_body("1.2.3.4:29070", &stock)
+                .get("saber_off")
+                .is_none()
         );
         assert_eq!(
             look_body("[::1]:29070", &Look::default()).to_string(),

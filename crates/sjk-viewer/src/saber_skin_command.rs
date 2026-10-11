@@ -2,7 +2,9 @@
 //! alone it lists the catalogue's blade skins ([`crate::unlockables`]), each owned or
 //! locked, and which one is worn; `saberskin <id>` or `saberskin none` sets
 //! `cg_saberSkin`. A locked skin is set all the same and shows once the player's own hub
-//! profile lists it (the gate is `GpuState::local_saber_skin`'s).
+//! profile lists it (the gate is `GpuState::local_saber_skin`'s). `saberskin <id> parts`
+//! lists the parts a skin's file lets its wearer switch off, and `saberskin <id> <part>
+//! on|off` switches one (`cg_saberSkinOptions`, [`crate::saber_skin_options`]).
 
 use crate::console::ViewerConsole;
 use crate::unlockables::{self, Holdings, SABER_SKIN_CVAR, Unlockable};
@@ -10,9 +12,67 @@ use crate::unlockables::{self, Holdings, SABER_SKIN_CVAR, Unlockable};
 /// Console command name.
 pub(crate) const COMMAND: &str = "saberskin";
 /// Help text for completion and `cmdlist`.
-pub(crate) const HELP: &str = "List your blade skins, or wear one: saberskin <id> | none";
+pub(crate) const HELP: &str = "List your blade skins, wear one or switch its parts: saberskin <id> | none | <id> parts | <id> <part> on|off";
 
-const USAGE: &str = "saberskin [<id> | none]";
+const USAGE: &str = "saberskin [<id> | none | <id> parts | <id> <part> on|off]";
+
+/// The parts skin `skin` offers (option id and name), and the lines `saberskin <id> parts`
+/// prints from them with `setting` (`cg_saberSkinOptions`).
+pub(crate) fn parts_listing(
+    skin: &Unlockable,
+    parts: &[(String, String)],
+    setting: &str,
+) -> Vec<String> {
+    if parts.is_empty() {
+        return vec![format!(
+            "The {} has no parts to switch (or its pack is not loaded).",
+            skin.name
+        )];
+    }
+    let mut lines = vec![format!(
+        "{} parts (saberskin {} <part> on|off):",
+        skin.name, skin.id
+    )];
+    for (id, name) in parts {
+        let on = crate::saber_skin_options::is_on(setting, skin.id, id);
+        lines.push(format!(
+            "  {id}  {name}  {}",
+            if on { "^2on^7" } else { "^3off^7" }
+        ));
+    }
+    lines
+}
+
+/// `saberskin <id> <part> on|off`: the new `cg_saberSkinOptions` and the answer, or why
+/// not.
+pub(crate) fn switch_part(
+    skin: &Unlockable,
+    parts: &[(String, String)],
+    setting: &str,
+    part: &str,
+    state: &str,
+) -> Result<(String, String), String> {
+    let on = match state.to_ascii_lowercase().as_str() {
+        "on" | "1" => true,
+        "off" | "0" => false,
+        _ => return Err(format!("usage: {USAGE}")),
+    };
+    let part = part.to_ascii_lowercase();
+    let Some((id, name)) = parts.iter().find(|(id, _)| *id == part) else {
+        return Err(format!(
+            "The {} has no part \"{part}\": saberskin {} parts lists them",
+            skin.name, skin.id
+        ));
+    };
+    let setting = crate::saber_skin_options::with(setting, skin.id, id, on);
+    let answer = format!(
+        "{} of the {} {}.",
+        name,
+        skin.name,
+        if on { "on" } else { "off" }
+    );
+    Ok((setting, answer))
+}
 
 /// What `saberskin <word>` asks to wear.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -107,11 +167,13 @@ pub(crate) fn answer(choice: Choice, holdings: Holdings<'_>) -> String {
     }
 }
 
-/// Run `saberskin` with `args` on `console`, `snapshot` being the identity's.
+/// Run `saberskin` with `args` on `console`, `snapshot` being the identity's; `parts_of`
+/// gives a skin's parts (option id and name) as its loaded file offers them.
 pub(crate) fn run(
     console: &mut ViewerConsole,
     args: &[String],
     snapshot: Option<&sjk_identity::Snapshot>,
+    parts_of: impl Fn(&str) -> Vec<(String, String)>,
 ) -> Result<Vec<String>, String> {
     let enabled = console.bool_cvar("cl_identity") == Some(true);
     let holdings = Holdings::of(enabled, snapshot);
@@ -127,6 +189,29 @@ pub(crate) fn run(
             }
             Ok(vec![answer(choice, holdings)])
         }
+        [word, parts] if parts.eq_ignore_ascii_case("parts") => {
+            let Choice::Skin(skin) = parse(word)? else {
+                return Err(format!("usage: {USAGE}"));
+            };
+            let setting = console
+                .text_cvar(crate::saber_skin_options::CVAR)
+                .unwrap_or_default();
+            Ok(parts_listing(skin, &parts_of(skin.id), setting))
+        }
+        [word, part, state] => {
+            let Choice::Skin(skin) = parse(word)? else {
+                return Err(format!("usage: {USAGE}"));
+            };
+            let setting = console
+                .text_cvar(crate::saber_skin_options::CVAR)
+                .unwrap_or_default()
+                .to_owned();
+            let (setting, answer) = switch_part(skin, &parts_of(skin.id), &setting, part, state)?;
+            if !console.set_cvar(crate::saber_skin_options::CVAR, &setting) {
+                return Err("cg_saberSkinOptions could not be set".to_owned());
+            }
+            Ok(vec![answer])
+        }
         _ => Err(format!("usage: {USAGE}")),
     }
 }
@@ -135,10 +220,19 @@ impl crate::GpuState {
     /// `saberskin [<id> | none]`.
     pub(crate) fn saber_skin_command(&mut self, args: &[String]) -> Result<Vec<String>, String> {
         let snapshot = crate::player_identity::snapshot();
+        let skins = &self.blade_skins;
+        let parts_of = |id: &str| {
+            skins.get(id).map_or_else(Vec::new, |skin| {
+                skin.options()
+                    .iter()
+                    .map(|option| (option.id.clone(), option.name.clone()))
+                    .collect()
+            })
+        };
         let Some(console) = self.console.as_mut() else {
             return Err("The console is not ready".to_owned());
         };
-        run(console, args, snapshot.as_ref())
+        run(console, args, snapshot.as_ref(), parts_of)
     }
 }
 
@@ -230,15 +324,66 @@ mod tests {
         let directory = tempfile::tempdir().unwrap();
         let mut console =
             ViewerConsole::new(directory.path().join("config.cfg")).expect("a console");
-        let lines = run(&mut console, &words("saber_SUN"), None).unwrap();
+        let lines = run(&mut console, &words("saber_SUN"), None, no_parts).unwrap();
         assert_eq!(console.text_cvar(SABER_SKIN_CVAR).unwrap(), "saber_sun");
         assert!(lines[0].contains("only once your SJK profile holds it"));
-        let lines = run(&mut console, &[], None).unwrap();
+        let lines = run(&mut console, &[], None, no_parts).unwrap();
         assert!(lines[1].contains("chosen"));
-        run(&mut console, &words("none"), None).unwrap();
+        run(&mut console, &words("none"), None, no_parts).unwrap();
         assert_eq!(console.text_cvar(SABER_SKIN_CVAR).unwrap(), "");
-        assert!(run(&mut console, &words("saber_moon"), None).is_err());
+        assert!(run(&mut console, &words("saber_moon"), None, no_parts).is_err());
         assert_eq!(console.text_cvar(SABER_SKIN_CVAR).unwrap(), "");
-        assert!(run(&mut console, &words("a b"), None).is_err());
+        assert!(run(&mut console, &words("a b"), None, no_parts).is_err());
+    }
+
+    fn no_parts(_: &str) -> Vec<(String, String)> {
+        Vec::new()
+    }
+
+    fn sun_parts(id: &str) -> Vec<(String, String)> {
+        if id != "saber_sun" {
+            return Vec::new();
+        }
+        [("haze", "Heat haze"), ("glint", "Tip glint")]
+            .map(|(id, name)| (id.to_owned(), name.to_owned()))
+            .to_vec()
+    }
+
+    #[test]
+    fn the_command_lists_and_switches_a_skins_parts() {
+        let directory = tempfile::tempdir().unwrap();
+        let mut console =
+            ViewerConsole::new(directory.path().join("config.cfg")).expect("a console");
+        let lines = run(&mut console, &words("saber_sun parts"), None, sun_parts).unwrap();
+        assert_eq!(lines.len(), 3);
+        assert!(
+            lines[1].contains("haze  Heat haze") && lines[1].contains("on"),
+            "{}",
+            lines[1]
+        );
+        let lines = run(&mut console, &words("saber_sun HAZE off"), None, sun_parts).unwrap();
+        assert_eq!(lines, ["Heat haze of the Sun blade off."]);
+        let options = crate::saber_skin_options::CVAR;
+        assert_eq!(console.text_cvar(options).unwrap(), "saber_sun.haze");
+        let lines = run(&mut console, &words("saber_sun parts"), None, sun_parts).unwrap();
+        assert!(lines[1].contains("off"), "{}", lines[1]);
+        run(&mut console, &words("saber_sun haze on"), None, sun_parts).unwrap();
+        assert_eq!(console.text_cvar(options).unwrap(), "");
+        // An unknown part, a bad state, the stock blade: refused, nothing set.
+        assert!(run(&mut console, &words("saber_sun wings off"), None, sun_parts).is_err());
+        assert!(
+            run(
+                &mut console,
+                &words("saber_sun haze maybe"),
+                None,
+                sun_parts
+            )
+            .is_err()
+        );
+        assert!(run(&mut console, &words("none haze off"), None, sun_parts).is_err());
+        assert_eq!(console.text_cvar(options).unwrap(), "");
+        // A skin without parts says so.
+        let lines = run(&mut console, &words("saber_void parts"), None, sun_parts).unwrap();
+        assert!(lines[0].contains("no parts"), "{}", lines[0]);
     }
 }

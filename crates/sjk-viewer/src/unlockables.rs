@@ -82,7 +82,7 @@ pub(crate) const ALL: [Unlockable; 14] = [
         kind: Kind::BladeSkin,
         tier: Rarity::Mythical,
         chroma: false,
-        description: "A white-gold core in an orange corona, flares running along it, and its own sounds.",
+        description: "A white-gold core in an orange corona: flares, prominences arching off it, sparks, a glint at its tip and heat haze.",
         how_to_get: "Given by the SJK team.",
     },
     Unlockable {
@@ -145,7 +145,7 @@ pub(crate) const ALL: [Unlockable; 14] = [
         kind: Kind::BladeSkin,
         tier: Rarity::Mythical,
         chroma: true,
-        description: "A pale, see-through blade that leaves fading afterimages of itself when it swings.",
+        description: "A pale, see-through blade: wisps rise off it, souls drift round it, an echo sways beside it and afterimages trail its swings.",
         how_to_get: "Given by the SJK team.",
     },
     Unlockable {

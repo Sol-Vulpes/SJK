@@ -119,6 +119,16 @@ pub(crate) struct SkinColor {
     /// A chroma's base hue and the turn to its wearer's colour ([`Chroma`]); the default
     /// for the other skins.
     pub(crate) chroma: Chroma,
+    /// The sections its wearer switched off ([`crate::blade_skin_file::extras::Section`]
+    /// bits; `saber.wgsl` draws them as absent). The CPU's parts (afterimages, echo,
+    /// glint, the light's beat and hue) are already left out of this colour.
+    pub(crate) off: u32,
+    /// How far (units) the glow's quad reaches past the glow, for wisps and haze.
+    pub(crate) room: f32,
+    /// The tip's glint, its rays' length (units); none when absent or off.
+    pub(crate) star: Option<f32>,
+    /// The echo beside the blade; none when absent or off.
+    pub(crate) echo: Option<crate::blade_skin_file::extras::Echo>,
 }
 
 /// A chroma skin ([`crate::unlockables::Unlockable::chroma`]) takes its wearer's saber
@@ -221,9 +231,9 @@ pub(crate) fn turn_hue(rgb: [f32; 3], turns: f32) -> [f32; 3] {
     std::array::from_fn(|i| (rgb[i] * c + cross[i] * s + along_axis).max(0.0))
 }
 
-/// One skin's parameters as `saber.wgsl`'s `Skin` holds them: 52 `vec4`s (832 bytes, so
-/// the [`MAX_SKINS`] array is 13312 bytes, inside the 16 KiB uniform binding WebGPU
-/// guarantees). The layout is the shader's; see there for what each lane is. A section
+/// One skin's parameters as `saber.wgsl`'s `Skin` holds them: 59 `vec4`s (944 bytes, so
+/// the [`MAX_SKINS`] array is 15104 bytes, inside the 16 KiB uniform binding WebGPU
+/// guarantees: four more lanes a skin would not fit). The layout is the shader's; see there for what each lane is. A section
 /// the skin's file leaves out (arcs, motes, hue and the later ones) is zeros, which the
 /// shader draws as nothing.
 #[repr(C)]
@@ -281,6 +291,13 @@ pub(crate) struct SkinUniform {
     ambient: [f32; 4],
     glyph_color: [f32; 4],
     glyph_shape: [f32; 4],
+    star_color: [f32; 4],
+    star_shape: [f32; 4],
+    star_motion: [f32; 4],
+    wisp_color: [f32; 4],
+    wisp_shape: [f32; 4],
+    wisp_field: [f32; 4],
+    haze: [f32; 4],
 }
 
 impl SkinUniform {
@@ -346,6 +363,27 @@ impl SkinUniform {
         .with_motes(def.motes.as_ref())
         .with_hue(def.hue.as_ref())
         .with_effects(def.effects())
+        .with_extras(def)
+    }
+
+    /// The third set's lanes ([`crate::blade_skin_file::extras`]), and the room the glow's
+    /// quad keeps past the glow for them (`swell.w`, units, before any option is off).
+    fn with_extras(mut self, def: &BladeSkinDef) -> Self {
+        let rgb = |c: [f32; 3], w: f32| [c[0], c[1], c[2], w];
+        if let Some(s) = &def.star {
+            self.star_color = rgb(s.color, s.brightness);
+            self.star_shape = [s.rays as f32, s.length, s.width, s.halo];
+            self.star_motion = [s.spin, s.twinkle, s.depth, 0.0];
+        }
+        if let Some(w) = &def.wisps {
+            self.wisp_color = rgb(w.color, w.brightness);
+            self.wisp_shape = [w.rise, w.speed, w.scale, w.curl];
+            self.wisp_field = [w.density, 0.0, 0.0, 0.0];
+        }
+        if let Some(h) = &def.haze {
+            self.haze = [h.strength, h.scale, h.speed, h.reach];
+        }
+        self
     }
 
     /// The later sections' lanes ([`crate::blade_skin_file::effects`]).
@@ -465,11 +503,15 @@ impl LoadedSkin {
     /// How far a blade whose stock colour is `stock` turns its colours: a chroma's turn
     /// to that colour ([`SkinColor::worn_with`]), 0 for any other skin.
     pub(crate) fn chroma_turn(&self, stock: BladeColor) -> f32 {
-        self.color(0).worn_with(stock).chroma.turn
+        self.color(0, 0).worn_with(stock).chroma.turn
     }
 
-    /// What its blades are drawn with, as the loaded skin numbered `index`.
-    fn color(&self, index: u8) -> SkinColor {
+    /// What its blades are drawn with, as the loaded skin numbered `index`, worn with
+    /// the options in `off` switched off.
+    fn color(&self, index: u8, off: crate::saber_skin_options::OptionsOff) -> SkinColor {
+        use crate::blade_skin_file::extras::Section;
+        let off = self.def.off_mask(off);
+        let on = |section: Section| off & section.bit() == 0;
         let flicker = &self.def.light.flicker;
         let mut waves = [[0.0; 3]; 2];
         for (slot, wave) in waves.iter_mut().zip(&flicker.waves) {
@@ -482,21 +524,27 @@ impl LoadedSkin {
             flicker: LightFlicker {
                 amount: flicker.amount,
                 waves,
-                pulse: self.def.pulse.map(|pulse| Beat {
-                    rate: pulse.rate,
-                    amount: pulse.amount,
-                    second: pulse.second,
-                    gap: pulse.gap,
-                    width: pulse.width,
-                }),
+                pulse: self
+                    .def
+                    .pulse
+                    .filter(|_| on(Section::Pulse))
+                    .map(|pulse| Beat {
+                        rate: pulse.rate,
+                        amount: pulse.amount,
+                        second: pulse.second,
+                        gap: pulse.gap,
+                        width: pulse.width,
+                    }),
             },
             hue: self
                 .def
                 .hue
+                .filter(|_| on(Section::Hue))
                 .map_or([0.0; 2], |hue| [hue.rate, hue.along * 20.0]),
             ghosts: self
                 .def
                 .ghosts
+                .filter(|_| on(Section::Ghosts))
                 .map(|ghosts| crate::saber_ghosts::GhostSpec {
                     count: ghosts.count as u8,
                     spacing_millis: ghosts.spacing,
@@ -511,7 +559,20 @@ impl LoadedSkin {
                     .flatten(),
                 turn: 0.0,
             },
+            off,
+            room: self.def.room(off),
+            star: self
+                .def
+                .star
+                .filter(|_| on(Section::Star))
+                .map(|star| star.length),
+            echo: self.def.echo.filter(|_| on(Section::Echo)),
         }
+    }
+
+    /// The options its file offers.
+    pub(crate) fn options(&self) -> &[crate::blade_skin_file::extras::SkinOption] {
+        &self.def.options
     }
 }
 
@@ -618,13 +679,23 @@ impl LoadedSkins {
         self.skins.iter().find(|skin| skin.id == id)
     }
 
-    /// What the blades of a player wearing unlock `id` are drawn with; `None` (the
-    /// stock blade) when no loaded skin is that unlock.
+    /// What the blades of a player wearing unlock `id` with every option on are drawn
+    /// with; `None` (the stock blade) when no loaded skin is that unlock.
+    #[cfg(test)]
     pub(crate) fn color_of(&self, id: &str) -> Option<SkinColor> {
+        self.color_with(id, 0)
+    }
+
+    /// [`Self::color_of`], worn with the options in `off` switched off.
+    pub(crate) fn color_with(
+        &self,
+        id: &str,
+        off: crate::saber_skin_options::OptionsOff,
+    ) -> Option<SkinColor> {
         self.skins
             .iter()
             .position(|skin| skin.id == id)
-            .map(|index| self.skins[index].color(index as u8))
+            .map(|index| self.skins[index].color(index as u8, off))
     }
 
     /// The loaded skins with their numbers.
@@ -718,6 +789,8 @@ pub(crate) enum ShotColor {
     Skin(&'static str),
     /// A skin on a saber of that stock colour (a chroma takes it).
     Worn(&'static str, BladeColor),
+    /// A skin with these options switched off (`crate::saber_skin_options`).
+    Parts(&'static str, crate::saber_skin_options::OptionsOff),
 }
 
 impl SaberSkins {
@@ -825,9 +898,9 @@ impl GpuState {
     /// lists that unlock (`Looks::own_saber_skin`, read twice a second) and its pack is
     /// loaded; with no identity, no hub, the unlock missing or no pack, the stock blade.
     pub(crate) fn local_saber_skin(&self) -> Option<SkinColor> {
-        self.looks
-            .own_saber_skin()
-            .and_then(|id| self.blade_skins.color_of(id))
+        let own = self.looks.own();
+        own.saber_skin
+            .and_then(|id| self.blade_skins.color_with(id, own.options_off))
     }
 
     /// Once a frame, before the session's sabers are submitted: the loaded skins when a
@@ -865,7 +938,7 @@ impl GpuState {
             .follow_looks(looks.revision(), skins.generation(), |client| {
                 looks
                     .saber_skin_id(client)
-                    .and_then(|id| skins.color_of(id))
+                    .and_then(|id| skins.color_with(id, looks.options_off(client)))
             });
         let skin = self.local_saber_skin();
         self.saber_skins.set_local(client, skin);
@@ -900,11 +973,23 @@ impl GpuState {
                 ShotColor::Worn(id, stock) => self.blade_skins.color_of(id).map_or(stock, |skin| {
                     BladeColor::Skin(SkinColor { persona, ..skin }.worn_with(stock))
                 }),
+                ShotColor::Parts(id, off) => self
+                    .blade_skins
+                    .color_with(id, off)
+                    .map_or(BladeColor::Retail(crate::saber::Color::Blue), |skin| {
+                        BladeColor::Skin(SkinColor { persona, ..skin })
+                    }),
             };
             self.saber_instances.extend(
                 crate::saber::Instance::pair(blade, color)
                     .map(|i| i.with_animation(millis as f64 * 0.001, seed)),
             );
+            self.saber_instances.extend(crate::saber::skin_extras(
+                blade,
+                color,
+                millis as f64 * 0.001,
+                seed,
+            ));
             let mut lit = [None; 8];
             lit[0] = Some(blade);
             crate::saber_submission::lights::append(

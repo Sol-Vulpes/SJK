@@ -238,7 +238,7 @@ impl GpuState {
             Some(crate::console::collection_panel::PreviewSkin::Stock) => None,
             Some(crate::console::collection_panel::PreviewSkin::Skin(id)) => self
                 .blade_skins
-                .color_of(id)
+                .color_with(id, self.looks.own_options_off(id))
                 .map(|skin| crate::saber_skins::SkinColor {
                     persona: self.saber_skins.local_persona(),
                     ..skin
@@ -322,8 +322,11 @@ impl GpuState {
             {
                 let blade =
                     saber::world_blade(grip, rotation, blade.socket, blade.length, blade.radius);
+                let seed = (hand * 8 + index) as u32;
                 let pair = saber::Instance::pair(blade, color)
-                    .map(|i| i.with_animation(seconds, (hand * 8 + index) as u32));
+                    .map(|i| i.with_animation(seconds, seed))
+                    .into_iter()
+                    .chain(saber::skin_extras(blade, color, seconds, seed));
                 if preview {
                     stage.preview.blades.extend(pair);
                 } else {

@@ -241,13 +241,20 @@ fn the_uniform_holds_the_files_parameters_where_the_shader_reads_them() {
         (one.ambient, "ambient"),
         (one.glyph_color, "glyph_color"),
         (one.glyph_shape, "glyph_shape"),
+        (one.star_color, "star_color"),
+        (one.star_shape, "star_shape"),
+        (one.star_motion, "star_motion"),
+        (one.wisp_color, "wisp_color"),
+        (one.wisp_shape, "wisp_shape"),
+        (one.wisp_field, "wisp_field"),
+        (one.haze, "haze"),
     ] {
         assert_eq!(lane, [0.0; 4], "{name}");
     }
     // Past the loaded skins, zeros.
     assert!(uniforms[1..].iter().all(|u| *u == SkinUniform::default()));
     let bytes: &[u8] = bytemuck::cast_slice(&uniforms);
-    assert_eq!(bytes.len(), MAX_SKINS * 52 * 16);
+    assert_eq!(bytes.len(), MAX_SKINS * 59 * 16);
     // The sixteen skins' array stays inside the smallest uniform binding WebGPU
     // guarantees (16 KiB).
     assert!(bytes.len() <= 16 * 1024);
@@ -271,7 +278,7 @@ fn arcs_motes_and_hue_reach_the_uniform_where_the_shader_reads_them() {
     assert_eq!(one.hue, [0.1, 0.02, 0.2, 0.0]);
     // The light turns with the blade's middle; without a hue it holds.
     let skin = LoadedSkin::new("saber_sun", def, &VirtualFileSystem::new()).unwrap();
-    let color = skin.color(0);
+    let color = skin.color(0, 0);
     assert_eq!(
         color.hue,
         [0.1, 0.02 * 20.0],
@@ -580,13 +587,13 @@ fn the_local_skin_is_gated_by_the_own_profile_and_its_pack() {
     let loaded = loaded_sample(1);
     let mut looks = crate::looks::Looks::default();
     // `cg_saberSkin saber_sun` without the unlock: the stock blade.
-    let unowned = crate::looks::Worn::own("saber_sun", |_| false, false);
+    let unowned = crate::looks::Worn::own("saber_sun", "", |_| false, false);
     looks.set_own(None, unowned);
     assert_eq!(
         looks.own_saber_skin().and_then(|id| loaded.color_of(id)),
         None
     );
-    let owned = crate::looks::Worn::own("saber_sun", |id| id == "saber_sun", false);
+    let owned = crate::looks::Worn::own("saber_sun", "", |id| id == "saber_sun", false);
     looks.set_own(Some(4), owned);
     assert_eq!(
         looks.own_saber_skin().and_then(|id| loaded.color_of(id)),
@@ -633,12 +640,13 @@ fn following_another_player_draws_their_look_not_the_own_skin() {
     let stock = sjk_identity::Look {
         saber: String::new(),
         illuminate: true,
+        saber_off: Vec::new(),
     };
     looks.apply_event(5, "Fox", &stock);
     let slots = ViewSlots::of(&game_state, &followed);
     looks.set_own(
         slots.own.and_then(|slot| u8::try_from(slot).ok()),
-        Worn::own("saber_sun", |_| true, false),
+        Worn::own("saber_sun", "", |_| true, false),
     );
     looks.rebuild(|slot| (slot == 5).then(|| "Fox".to_owned()));
     let mut skins = SaberSkins::default();
@@ -747,4 +755,50 @@ fn each_saber_of_a_pair_takes_its_own_colour() {
             second.chroma.turn.to_ne_bytes()
         );
     }
+}
+
+#[test]
+fn a_wearers_options_leave_out_their_parts_on_the_cpu_and_the_gpu() {
+    use crate::blade_skin_file::extras::{Section, option_bit};
+    let text = crate::blade_skin_file::tests::sample_with_additions().replacen(
+        r#""trail""#,
+        r#""ghosts": {"count": 2, "spacing": 40.0, "fade": 0.5}, "trail""#,
+        1,
+    );
+    let def = crate::blade_skin_file::parse("saber_sun", &text).unwrap();
+    let skin = LoadedSkin::new("saber_sun", def, &VirtualFileSystem::new()).unwrap();
+    let all = skin.color(0, 0);
+    assert_eq!(all.off, 0);
+    assert_eq!(all.star, Some(8.0));
+    assert!(all.echo.is_some() && all.ghosts.is_some());
+    assert_eq!(all.room, 9.0);
+    assert_ne!(all.hue, [0.0; 2]);
+    let none = skin.color(
+        0,
+        option_bit("glint") | option_bit("haze") | option_bit("smoke") | option_bit("storm"),
+    );
+    assert_eq!(
+        none.off,
+        Section::Star.bit()
+            | Section::Haze.bit()
+            | Section::Wisps.bit()
+            | Section::Echo.bit()
+            | Section::Arcs.bit()
+            | Section::Motes.bit()
+    );
+    assert_eq!((none.star, none.echo, none.room), (None, None, 0.0));
+    // The parts no option names stay.
+    assert!(none.ghosts.is_some());
+    assert_ne!(none.hue, [0.0; 2]);
+    // The instances carry the mask; the glint and the echo are made only when on.
+    let blade = blade();
+    let pair = crate::saber::Instance::pair(blade, BladeColor::Skin(none));
+    assert_eq!(
+        crate::saber::skin_extras(blade, BladeColor::Skin(none), 1.0, 3).count(),
+        0
+    );
+    let extras: Vec<_> = crate::saber::skin_extras(blade, BladeColor::Skin(all), 1.0, 3).collect();
+    assert_eq!(extras.len(), 2);
+    assert!(extras[0].is_star() && !extras[1].is_star());
+    assert!(pair.iter().all(|instance| instance.contact().is_none()));
 }

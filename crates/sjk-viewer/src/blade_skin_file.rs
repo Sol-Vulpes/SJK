@@ -12,13 +12,17 @@
 //! the file and why. A section a skin leaves out is drawn as nothing (no arcs, no motes,
 //! no hue turning), so files written before a section existed draw as they did. The
 //! sections added after those ([`effects`]: sputter, glitch, scan, pulse, ghosts, embers,
-//! veins, team, ambient, glyphs) follow the same rule.
+//! veins, team, ambient, glyphs) follow the same rule, and so does the third set
+//! ([`extras`]: a tip glint, wisps, heat haze, an echo, and the options a wearer may
+//! switch off), read from an additions file older clients never open.
 
 use crate::saber_rgb::{CoreProfile, GlowProfile};
 use serde::Deserialize;
 
 #[path = "blade_skin_effects.rs"]
 pub(crate) mod effects;
+#[path = "blade_skin_extras.rs"]
+pub(crate) mod extras;
 
 /// Where blade-skin files are.
 pub(crate) const FOLDER: &str = "skins/blades";
@@ -98,6 +102,18 @@ pub(crate) struct BladeSkinDef {
     pub(crate) ambient: Option<effects::Ambient>,
     #[serde(default)]
     pub(crate) glyphs: Option<effects::Glyphs>,
+    /// The third set ([`extras`]), from the additions file; each none when absent.
+    #[serde(default)]
+    pub(crate) star: Option<extras::Star>,
+    #[serde(default)]
+    pub(crate) wisps: Option<extras::Wisps>,
+    #[serde(default)]
+    pub(crate) haze: Option<extras::Haze>,
+    #[serde(default)]
+    pub(crate) echo: Option<extras::Echo>,
+    /// The parts its wearer may switch off; none when absent.
+    #[serde(default)]
+    pub(crate) options: Vec<extras::SkinOption>,
     /// The blur trail's vertex colour.
     pub(crate) trail: Rgb,
     pub(crate) light: Light,
@@ -573,6 +589,7 @@ impl BladeSkinDef {
             within("hue.out", hue.out, -4.0, 4.0)?;
         }
         self.effects().check()?;
+        self.check_extras()?;
         colour("trail", self.trail, 1.0)?;
         colour("light.color", self.light.color, 4.0)?;
         within("light.flicker.amount", self.light.flicker.amount, 0.0, 1.0)?;
@@ -673,18 +690,27 @@ impl Motes {
     }
 }
 
-/// Every `skins/blades/<id>.bladeskin` in `vfs` that reads, by id; the ones that do not
-/// are reported to the log by name.
+/// Every `skins/blades/<id>.bladeskin` in `vfs` that reads, by id, with its additions
+/// file (`<id>.bladeextra`, [`extras::ADDITIONS`]) laid over it when there is one; the
+/// ones that do not read are reported to the log by name.
 pub(crate) fn load(vfs: &sjk_vfs::VirtualFileSystem) -> Vec<(String, BladeSkinDef)> {
     let mut skins = Vec::new();
-    for listed in vfs.list_files(FOLDER, EXTENSION) {
-        let path = format!("{FOLDER}/{listed}");
-        let id = listed.trim_end_matches(EXTENSION);
-        let read = vfs
-            .read(&path)
+    let text_of = |path: &str| {
+        vfs.read(path)
             .map_err(|error| error.to_string())
             .and_then(|asset| asset.ok_or_else(|| "missing".to_owned()))
             .and_then(|asset| String::from_utf8(asset.bytes).map_err(|_| "not UTF-8".to_owned()))
+    };
+    for listed in vfs.list_files(FOLDER, EXTENSION) {
+        let path = format!("{FOLDER}/{listed}");
+        let id = listed.trim_end_matches(EXTENSION);
+        // The additions file, laid over the skin file when there is one.
+        let additions = format!("{FOLDER}/{id}{}", extras::ADDITIONS);
+        let read = text_of(&path)
+            .and_then(|text| match vfs.read(&additions) {
+                Ok(Some(_)) => extras::merged(&text, &text_of(&additions)?),
+                _ => Ok(text),
+            })
             .and_then(|text| parse(id, &text));
         match read {
             Ok(def) => skins.push((id.to_owned(), def)),

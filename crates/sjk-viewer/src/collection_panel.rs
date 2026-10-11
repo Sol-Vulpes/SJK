@@ -62,6 +62,9 @@ const TOY_SWITCH_TOKEN: u16 = 1_311;
 /// The Shaders tab's view switches: the rack (a list) and the grid of cards.
 const LIST_VIEW_TOKEN: u16 = 1_312;
 const GRID_VIEW_TOKEN: u16 = 1_313;
+/// The chosen shader's options (its parts the wearer may switch off), one each.
+const OPTION_BASE: u16 = 1_320;
+const OPTION_TOKENS: usize = crate::blade_skin_file::extras::MAX_OPTIONS;
 /// The Shaders tab's rows: the stock blade, then every blade skin, the rarest first
 /// ([`unlockables::blade_skins_by_tier`]).
 const SHADER_ROWS: usize = 1 + unlockables::ALL.len();
@@ -93,6 +96,12 @@ pub(crate) enum PanelAction {
     Illuminate(bool),
     /// Show a tab another page draws: the Holocrons page.
     Hub(Tab),
+    /// Switch blade skin `skin`'s option `option` on or off (`cg_saberSkinOptions`).
+    SkinOption {
+        skin: &'static str,
+        option: String,
+        on: bool,
+    },
     /// Set [`SHADER_VIEW_CVAR`]: the grid of cards (`true`) or the rack.
     ShaderView(bool),
 }
@@ -150,6 +159,8 @@ pub(crate) struct Inputs<'a> {
     pub(crate) stock: sjk_ui::Color,
     /// [`SHADER_VIEW_CVAR`]: the Shaders tab shows the grid of cards.
     pub(crate) grid: bool,
+    /// `cg_saberSkinOptions`: the skins' parts switched off.
+    pub(crate) options: &'a str,
 }
 
 /// What the last frame showed of a shader's row, for keys and clicks.
@@ -188,6 +199,9 @@ pub(crate) struct Panel {
     /// How many medals the last frame showed.
     medals_shown: usize,
     shader_rows: [ShaderRow; SHADER_ROWS],
+    /// The chosen shader's options the last frame showed (its skin, the option's id and
+    /// whether it is on), for clicks and the number keys.
+    shader_options: Vec<(&'static str, String, bool)>,
     /// Where the model stands this frame.
     backstage: Backstage,
     /// How much wider than the display family the page's text face is drawn.
@@ -229,6 +243,7 @@ impl Panel {
             last_click: None,
             medals_shown: 0,
             shader_rows: [ShaderRow::default(); SHADER_ROWS],
+            shader_options: Vec::new(),
             backstage: Backstage::None,
             widen: 1.0,
             epoch: Instant::now(),
@@ -456,9 +471,42 @@ impl Panel {
             KeyCode::Enter | KeyCode::NumpadEnter | KeyCode::Space => {
                 return self.activate(illuminate);
             }
+            // 1 to 6 switch the chosen shader's options.
+            KeyCode::Digit1
+            | KeyCode::Digit2
+            | KeyCode::Digit3
+            | KeyCode::Digit4
+            | KeyCode::Digit5
+            | KeyCode::Digit6
+                if self.tab == Tab::Shaders =>
+            {
+                let index = match key {
+                    KeyCode::Digit1 => 0,
+                    KeyCode::Digit2 => 1,
+                    KeyCode::Digit3 => 2,
+                    KeyCode::Digit4 => 3,
+                    KeyCode::Digit5 => 4,
+                    _ => 5,
+                };
+                return self.switch_option(index);
+            }
             _ => {}
         }
         PanelAction::None
+    }
+
+    /// Switch the chosen shader's option `index` (as the last frame showed them) the
+    /// other way.
+    fn switch_option(&self, index: usize) -> PanelAction {
+        self.shader_options
+            .get(index)
+            .map_or(PanelAction::None, |(skin, option, on)| {
+                PanelAction::SkinOption {
+                    skin,
+                    option: option.clone(),
+                    on: !on,
+                }
+            })
     }
 
     /// A pointer event; `illuminate` is whether the holocron is lit.
@@ -543,6 +591,13 @@ impl Panel {
         if event.kind != UiEventKind::Activate {
             return PanelAction::None;
         }
+        if let Some(index) = token
+            .checked_sub(OPTION_BASE)
+            .map(usize::from)
+            .filter(|index| *index < OPTION_TOKENS)
+        {
+            return self.switch_option(index);
+        }
         match token {
             BACK_TOKEN => PanelAction::Close,
             LIST_VIEW_TOKEN => self.set_grid(false),
@@ -624,6 +679,7 @@ mod tests {
             name: "^1Sol^7Vulpes",
             stock: sjk_ui::Color::new(0.16, 0.48, 1.0, 1.0),
             grid: false,
+            options: "",
         }
     }
 

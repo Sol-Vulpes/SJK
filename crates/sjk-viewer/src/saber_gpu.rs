@@ -31,11 +31,21 @@ pub(crate) struct Runtime {
     /// The classic model preview's blades, kept apart from the world's.
     preview_buffer: wgpu::Buffer,
     preview_ranges: [Range<u32>; crate::saber_rgb::MATERIAL_COUNT],
+    /// Skins' heat haze (`saber.wgsl` `fragment_haze`): drawn first into the effect layer,
+    /// replacing its pixels with the scene before effects, bent.
+    haze_pipeline: wgpu::RenderPipeline,
+    haze_layout: wgpu::BindGroupLayout,
+    haze_sampler: wgpu::Sampler,
+    /// The effect layer's scene image bound for the haze, made again only when the layer
+    /// is rebuilt (a resize).
+    haze_source: std::cell::RefCell<Option<(wgpu::TextureView, wgpu::BindGroup)>>,
+    /// Whether a loaded skin has haze at all.
+    any_haze: bool,
 }
 
-/// Blade instances the model preview can draw: two sabers of eight blades,
-/// two instances each.
-pub(crate) const PREVIEW_BLADES: usize = 2 * 8 * 2;
+/// Blade instances the model preview can draw: two sabers of eight blades, four
+/// instances each (glow, core, a skin's glint and echo).
+pub(crate) const PREVIEW_BLADES: usize = 2 * 8 * 4;
 
 impl Runtime {
     pub(crate) fn new(
@@ -107,6 +117,20 @@ impl Runtime {
             ],
             immediate_size: 0,
         });
+        let haze_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            label: Some("SJK saber haze scene layout"),
+            entries: &[texture_layout_entry(0), sampler_entry(1)],
+        });
+        let haze_pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+            label: Some("SJK saber haze pipeline layout"),
+            bind_group_layouts: &[
+                Some(camera_layout),
+                Some(&texture_layout),
+                Some(&skins_layout),
+                Some(&haze_layout),
+            ],
+            immediate_size: 0,
+        });
         let create = |fragment| {
             device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
                 label: Some("SJK saber pipeline"),
@@ -145,6 +169,50 @@ impl Runtime {
         };
         let pipeline = create("fragment_main");
         let glow_pipeline = create("fragment_glow");
+        // The haze replaces what it covers (the layer still holds the scene there, as no
+        // effect has drawn yet), depth-tested so a wall before the blade stays sharp.
+        let haze_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+            label: Some("SJK saber haze pipeline"),
+            layout: Some(&haze_pipeline_layout),
+            vertex: wgpu::VertexState {
+                module: &shader,
+                entry_point: Some("vertex_haze"),
+                compilation_options: wgpu::PipelineCompilationOptions::default(),
+                buffers: &[Some(Instance::layout())],
+            },
+            fragment: Some(wgpu::FragmentState {
+                module: &shader,
+                entry_point: Some("fragment_haze"),
+                compilation_options: wgpu::PipelineCompilationOptions::default(),
+                targets: &[Some(wgpu::ColorTargetState {
+                    format,
+                    blend: None,
+                    write_mask: wgpu::ColorWrites::ALL,
+                })],
+            }),
+            primitive: wgpu::PrimitiveState {
+                cull_mode: None,
+                ..Default::default()
+            },
+            depth_stencil: Some(wgpu::DepthStencilState {
+                format: DepthTarget::FORMAT,
+                depth_write_enabled: Some(false),
+                depth_compare: Some(wgpu::CompareFunction::LessEqual),
+                stencil: Default::default(),
+                bias: Default::default(),
+            }),
+            multisample: wgpu::MultisampleState::default(),
+            multiview_mask: None,
+            cache: None,
+        });
+        let haze_sampler = device.create_sampler(&wgpu::SamplerDescriptor {
+            label: Some("SJK saber haze sampler"),
+            address_mode_u: wgpu::AddressMode::ClampToEdge,
+            address_mode_v: wgpu::AddressMode::ClampToEdge,
+            mag_filter: wgpu::FilterMode::Linear,
+            min_filter: wgpu::FilterMode::Linear,
+            ..Default::default()
+        });
         let instance_buffer = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("SJK saber instances"),
             size: (saber::MAX_BLADE_INSTANCES * std::mem::size_of::<Instance>()) as u64,
@@ -169,6 +237,11 @@ impl Runtime {
             preview_buffer,
             preview_ranges: std::array::from_fn(|_| 0..0),
             ranges: std::array::from_fn(|_| 0..0),
+            haze_pipeline,
+            haze_layout,
+            haze_sampler,
+            haze_source: std::cell::RefCell::new(None),
+            any_haze: false,
             trails: crate::saber_trail_gpu::Runtime::new(
                 device,
                 queue,
@@ -193,6 +266,7 @@ impl Runtime {
             0,
             bytemuck::cast_slice(&skins.uniforms()),
         );
+        self.any_haze = skins.iter().any(|(_, skin)| skin.def.haze.is_some());
         for (index, skin) in skins.iter() {
             self.materials[crate::saber_rgb::SKIN_MATERIAL as usize + usize::from(index)] =
                 saber::material(
@@ -227,6 +301,72 @@ impl Runtime {
     ) {
         self.trails.draw(pass, camera);
         self.draw_blades(pass, camera, &self.pipeline);
+    }
+
+    /// Whether this frame's blades may bend the scene with heat haze: a loaded skin has
+    /// it and a skinned blade is drawn (the vertex stage folds away every other one).
+    pub(crate) fn has_haze(&self) -> bool {
+        self.any_haze
+            && self.ranges[crate::saber_rgb::SKIN_MATERIAL as usize..]
+                .iter()
+                .any(|range| !range.is_empty())
+    }
+
+    /// Draw the skins' heat haze into the effect layer whose scene image is `scene`
+    /// (`effect_layer.rs` `original`), before any other effect: each pixel it covers is
+    /// the scene there, bent.
+    pub(crate) fn draw_haze(
+        &self,
+        device: &wgpu::Device,
+        pass: &mut wgpu::RenderPass<'_>,
+        camera: &wgpu::BindGroup,
+        scene: &wgpu::TextureView,
+    ) {
+        if !self.has_haze() {
+            return;
+        }
+        let bind = {
+            let mut source = self.haze_source.borrow_mut();
+            match source.as_ref() {
+                Some((view, bind)) if view == scene => bind.clone(),
+                _ => {
+                    let bind = device.create_bind_group(&wgpu::BindGroupDescriptor {
+                        label: Some("SJK saber haze scene"),
+                        layout: &self.haze_layout,
+                        entries: &[
+                            wgpu::BindGroupEntry {
+                                binding: 0,
+                                resource: wgpu::BindingResource::TextureView(scene),
+                            },
+                            wgpu::BindGroupEntry {
+                                binding: 1,
+                                resource: wgpu::BindingResource::Sampler(&self.haze_sampler),
+                            },
+                        ],
+                    });
+                    *source = Some((scene.clone(), bind.clone()));
+                    bind
+                }
+            }
+        };
+        pass.set_pipeline(&self.haze_pipeline);
+        pass.set_bind_group(0, camera, &[]);
+        pass.set_bind_group(2, &self.skins, &[]);
+        pass.set_bind_group(3, &bind, &[]);
+        pass.set_vertex_buffer(0, self.instance_buffer.slice(..));
+        let skins = crate::saber_rgb::SKIN_MATERIAL as usize;
+        for (material, instances) in self
+            .materials
+            .iter()
+            .zip(self.ranges.iter().cloned())
+            .skip(skins)
+        {
+            if instances.is_empty() {
+                continue;
+            }
+            pass.set_bind_group(1, material, &[]);
+            pass.draw(0..6, instances);
+        }
     }
 
     /// Upload the model preview's blades (at most [`PREVIEW_BLADES`]).

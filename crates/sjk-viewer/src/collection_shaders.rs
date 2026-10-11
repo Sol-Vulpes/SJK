@@ -903,17 +903,91 @@ impl Panel {
                 "Equip"
             };
             let button_width = if row.skin.is_none() { 250.0 } else { 160.0 };
+            let button_y = (y + 10.0).min(946.0);
             kit::button(
                 &mut self.ui,
                 frame,
-                [x, (y + 10.0).min(946.0), button_width, 44.0],
+                [x, button_y, button_width, 44.0],
                 label,
                 !(wear.is_empty() && row.skin.is_some()),
                 true,
                 false,
                 WEAR_TOKEN,
             );
+            y = button_y + 44.0;
         }
+        self.shader_options.clear();
+        if let Some(skin) = row.skin.filter(|_| row.owned) {
+            self.shader_parts(frame, skin.id, y + 16.0, inputs);
+        }
+    }
+
+    /// The chosen shader's parts its wearer may switch off, under its words from `y`:
+    /// a tick each in two columns (three past four), named as its file names them,
+    /// ticked while on; a click or its number key switches it, on the model at once and,
+    /// worn, for every SJK player.
+    fn shader_parts(&mut self, frame: &Frame, skin: &'static str, y: f32, inputs: &Inputs<'_>) {
+        let Some(look) = self.skins.get(skin) else {
+            return;
+        };
+        let options = look.options();
+        if options.is_empty() {
+            return;
+        }
+        let s = frame.s;
+        let x = STAGE_TEXT_X;
+        let columns = if options.len() > 4 { 3 } else { 2 };
+        let column = STAGE_TEXT_WIDTH / columns as f32;
+        // Never under the keys' line: the rows close up when room is short.
+        let rows = options.len().div_ceil(columns);
+        let step = ((view::KEYS_Y - 22.0 - (y + 28.0)) / rows as f32).clamp(28.0, 38.0);
+        text(
+            &mut self.ui,
+            TextFamily::Body,
+            format_args!("Parts"),
+            frame.rect(x, y, STAGE_TEXT_WIDTH, 22.0),
+            16.0 * s,
+            color::HOLO,
+            FontWeight::Semibold,
+            TextAlign::Start,
+        );
+        let shown: Vec<(&'static str, String, bool, String)> = options
+            .iter()
+            .map(|option| {
+                let on = crate::saber_skin_options::is_on(inputs.options, skin, &option.id);
+                (skin, option.id.clone(), on, option.name.clone())
+            })
+            .collect();
+        for (index, (_, _, on, name)) in shown.iter().enumerate() {
+            let token = OPTION_BASE + index as u16;
+            let left = x + (index % columns) as f32 * column;
+            let middle = y + 28.0 + (index / columns) as f32 * step + step * 0.5;
+            let hovered = self.ui.token_hovered(token);
+            let after = kit::tick(&mut self.ui, frame, left, middle, *on, hovered);
+            text(
+                &mut self.ui,
+                TextFamily::Body,
+                format_args!("{name}"),
+                frame.rect(
+                    after + 10.0,
+                    middle - 11.0,
+                    column - kit::TICK_BOX - 18.0,
+                    22.0,
+                ),
+                16.0 * s,
+                if *on { color::TEXT } else { color::MUTED },
+                FontWeight::Semibold,
+                TextAlign::Start,
+            );
+            self.ui.hit_region(
+                token,
+                frame.rect(left - 4.0, middle - step * 0.5, column - 8.0, step),
+            );
+        }
+        self.shader_options = shown
+            .into_iter()
+            .map(|(skin, option, on, _)| (skin, option, on))
+            .collect();
     }
 }
 

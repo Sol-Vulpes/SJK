@@ -1,5 +1,29 @@
 # Status and priorities
 
+## Mythical shader parts
+
+Branch `personal/shader-options` (11/10/2026, based on `5dadea06`, Windows 11), with the
+hub's `feat/look-options` (the look's `saber_off`) and `feat/mythical-parts` (the Sun and
+Spectral files), Sol's request: more effects on the Mythical shaders, some of them
+switchable. The blade-skin format gains a third set read from an additions file older
+clients never open (a tip glint, wisps, heat haze as a pass of its own, an echo) and
+`options`, the parts a wearer may switch off, sent with the look so every SJK player
+draws them the same ([unlockables.md](unlockables.md#options),
+[rendering.md](rendering.md#saber-blade-skins)); the Collection's Shaders tab ticks
+them, `saberskin <id> <part> on|off` too.
+
+Verified: `cargo fmt --all`, `cargo test --workspace --release` (all pass) and `cargo
+clippy --workspace --all-targets` with no new warning in the files changed;
+`saber.wgsl` validated by naga; unit tests of the file's third set and options (ranges,
+sections, bit collisions, the additions file laid over the skin), the option mask and
+room, the CPU's parts left out, the glint's and echo's instances, the cvar, the look's
+`saber_off` both ways and the command. World shots on one GPU with the hub branch's
+built pack: `duel6_mythical_parts` (each skin all parts on beside all off, close up and
+upright; the haze measured to bend about 87,000 pixels behind the Sun and nothing of the
+glow) and `duel6_sjk_collection` (the Parts grid of both skins). Not verified: a live
+match, another player's view through a deployed hub (neither hub branch deployed), the
+haze and wisps' cost on a GPU, the wisps against a bright sky (additive, they fade there).
+
 ## Balanced without light shafts
 
 Branch `personal/balanced-shafts` (11/10/2026, based on `82c3fa31`). Sol asked to take

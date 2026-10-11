@@ -140,7 +140,11 @@ impl GpuState {
         camera: &'a wgpu::BindGroup,
         ranges: &effect_submission::Ranges,
         depth: Option<&'a wgpu::BindGroup>,
+        scene: &wgpu::TextureView,
     ) {
+        // First: a skin's heat haze replaces the pixels it bends with the scene's, which
+        // the layer still holds there only before any effect draws.
+        self.saber_gpu.draw_haze(&self.device, pass, camera, scene);
         self.effect_geometry
             .draw_decals(pass, camera, &self.particle_atlas.bind_group);
         pass.set_bind_group(0, camera, &[]);
@@ -217,7 +221,7 @@ impl GpuState {
         let soft = self
             .soften_particles(ranges)
             .then_some(&depth.sample_bind_group);
-        self.draw_particle_tail(&mut pass, camera, ranges, soft);
+        self.draw_particle_tail(&mut pass, camera, ranges, soft, layer.original());
         // Last, as `RB_RenderWorldEffects` runs after every surface.
         if weather {
             self.weather

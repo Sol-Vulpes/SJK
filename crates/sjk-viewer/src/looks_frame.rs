@@ -51,26 +51,42 @@ impl GpuState {
         let own_slot =
             session.and_then(|session| u8::try_from(session.game_state().client_num).ok());
         let lit = self.illuminate.lit();
-        let saber_skin = if due {
-            let setting = self
-                .console
+        let text = |name: &str| {
+            self.console
                 .as_ref()
-                .and_then(|console| console.text_cvar(crate::unlockables::SABER_SKIN_CVAR).ok())
-                .unwrap_or_default();
+                .and_then(|console| console.text_cvar(name).ok())
+                .unwrap_or_default()
+                .to_owned()
+        };
+        let options = if due {
+            text(crate::saber_skin_options::CVAR)
+        } else {
+            String::new()
+        };
+        let (saber_skin, options_off) = if due {
+            let setting = text(crate::unlockables::SABER_SKIN_CVAR);
             #[cfg(test)]
             let shot = self.looks.shot_owns_unlocks;
             #[cfg(not(test))]
             let shot = false;
-            Worn::own(setting, |id| shot || player_identity::owns_unlock(id), lit).saber_skin
+            let own = Worn::own(
+                &setting,
+                &options,
+                |id| shot || player_identity::owns_unlock(id),
+                lit,
+            );
+            (own.saber_skin, own.options_off)
         } else {
-            self.looks.own().saber_skin
+            (self.looks.own().saber_skin, self.looks.own().options_off)
         };
         let own = Worn {
             saber_skin,
             illuminate: lit,
+            options_off,
         };
         if due {
-            player_identity::set_look(&own.to_look());
+            player_identity::set_look(&own.to_look(&options));
+            self.looks.set_own_options(options);
             // Who sits where, and the own name, for the saber shaders drawn from them.
             let slots = session.map_or_else(
                 || [crate::saber_persona::Persona::default(); crate::saber_skins::MAX_CLIENTS],

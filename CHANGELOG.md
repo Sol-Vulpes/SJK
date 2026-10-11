@@ -20,6 +20,7 @@ Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 -->
 ## Unreleased
 
+- Mythical saber shaders get more effects and parts you can switch off. The Sun: prominences arching off the blade, rising sparks, a glint at the tip and heat haze bending what is behind it. The Spectral: wisps of smoke rising off it, souls drifting round it, a smoky edge, a cold violet rim, an echo swaying beside it and a dimmer light. Collection, Shaders: tick the parts you want under an owned shader (or keys 1 to 6, or saberskin <id> <part> on|off); every SJK player sees your blade that way _(Sol)_
 - The green spawn-protection bubble is visible again, as are the Ysalamiri, Force Boon and Enlightenment spheres; jetpacks show on their wearers' backs with their jet flames, start and stop sounds and hover loop _(Sol, after JoF EJK)_
 - Saber shaders no longer draw a thin bar across the blade's tip _(Sol)_
 - The body shield-hit flash is a little brighter by default: two passes (cg_shieldBrightness 2); a profile still on the old default 1 (or 4) moves to 2 once, other values stay _(Sol)_

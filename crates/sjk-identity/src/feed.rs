@@ -846,6 +846,7 @@ mod tests {
             key_id: "aa".to_owned(),
             saber: "saber_sun".to_owned(),
             illuminate,
+            saber_off: Vec::new(),
         }
     }
 

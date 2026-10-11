@@ -828,6 +828,7 @@ mod tests {
         let lit = sjk_identity::Look {
             saber: String::new(),
             illuminate: true,
+            saber_off: Vec::new(),
         };
         let mut sent = None;
         assert!(newly(&mut sent, &lit));

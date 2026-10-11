@@ -91,6 +91,16 @@ impl ViewerConsole {
             PanelAction::None => {}
             PanelAction::Close => self.close_collection_panel(),
             PanelAction::Wear(id) => crate::unlockables::wear(self, id),
+            PanelAction::SkinOption { skin, option, on } => {
+                let setting = self
+                    .text_cvar(crate::saber_skin_options::CVAR)
+                    .unwrap_or_default()
+                    .to_owned();
+                let _ = self.set_cvar(
+                    crate::saber_skin_options::CVAR,
+                    &crate::saber_skin_options::with(&setting, skin, &option, on),
+                );
+            }
             PanelAction::ShaderView(grid) => {
                 self.set_cvar(
                     super::collection_panel::SHADER_VIEW_CVAR,
@@ -194,6 +204,10 @@ impl ViewerConsole {
         let illuminate = self.illuminate_lit();
         let stock = self.stock_blade();
         let grid = self.integer_cvar(super::collection_panel::SHADER_VIEW_CVAR) == Some(1);
+        let options = self
+            .text_cvar(crate::saber_skin_options::CVAR)
+            .unwrap_or_default()
+            .to_owned();
         let enabled = self.bool_cvar("cl_identity") == Some(true);
         let snapshot = crate::player_identity::snapshot();
         let held = snapshot
@@ -216,6 +230,7 @@ impl ViewerConsole {
                 name: &name,
                 stock,
                 grid,
+                options: &options,
             };
             self.collection_panel.append_sjk(&inputs, target, viewport);
             self.collection_panel.preview = Some(unlocks);
@@ -231,6 +246,7 @@ impl ViewerConsole {
             name: &name,
             stock,
             grid,
+            options: &options,
         };
         self.collection_panel.append_sjk(&inputs, target, viewport);
     }

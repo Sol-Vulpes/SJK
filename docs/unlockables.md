@@ -80,9 +80,12 @@ What each looks and sounds like, in words (the values and the sounds themselves 
 the hub's, described in its `scripts/blade_skin_sounds.py` and `saber_skin_sounds.py`):
 
 - **Sun**: a white-gold core in an orange corona graded from red at its rim to gold
-  inside, granules drifting along it, flame tongues licking out of its edge and, now
-  and then, a bright flare running from the hilt to the tip; a warm flickering light;
-  a solar roar.
+  inside, granules drifting along it, tall flame tongues licking out of its edge and
+  bright flares running from the hilt to the tip; since 11/10/2026 prominences (thick,
+  smooth gold loops slowly leaving the blade and falling back), rising sparks, and, for
+  the clients that read the additions file, a four-ray glint turning at the tip and heat
+  haze bending what is behind the blade ([Options](#options): each can be switched
+  off); a warm flickering light; a solar roar.
 - **Storm**: a white-blue core in a violet-to-electric-blue corona that crackles; a few
   thin, jagged white-blue lightning arcs at a time, struck again and again at random
   places, leaving the blade, bulging out to one side and coming back further along,
@@ -111,7 +114,12 @@ the hub's, described in its `scripts/blade_skin_sounds.py` and `saber_skin_sound
   gravity pulls them, whichever way the blade is held; a bubbling, sizzling rumble.
 - **Spectral**: a pale, see-through blue-white blade with a wide soft glow and faint
   wisps; swinging, it leaves up to four fading afterimages of its glow where it was;
-  an airy pad under a whisper, with echoes.
+  since 11/10/2026 its outline wavers like smoke, souls (soft lights) drift slowly round
+  it, its rim turns pale violet, its light is dimmer and colder and, for the clients
+  that read the additions file, wisps of smoke rise off it (a sheet over a blade held
+  level, a plume over the tip of one held upright) and an echo of it sways beside it,
+  even held still ([Options](#options): each can be switched off); an airy pad under a
+  whisper, with echoes.
 - **Glitch**: a teal blade whose red and blue part from its green; on random draws
   blocks of it jump sideways and flash, now and then the whole blade; a gated buzz with
   digital blips.
@@ -158,6 +166,12 @@ Old clients ignore all of it, so it stays `/v1/`. The hub's `PROTOCOL.md` gains 
 A look is what a player wears that others draw:
 
     {"saber":"saber_sun","illuminate":true}
+
+Since 11/10/2026 a look may also carry `"saber_off":["glint","haze"]`, the blade skin's
+options its wearer switched off ([Options](#options)): optional in a request (at most 8
+distinct ids of 1 to 24 of `a`-`z`, `0`-`9`, `_`, else 400 `bad_look`; an older hub
+refuses it with `bad_body`, so a client sends it only when it names one), stored with
+the look and given back in presence and look events only when not empty.
 
 `saber` is a blade-skin unlock id or `""` for the stock blade; `illuminate` is
 whether the Illuminate holocron is lit. Both are required in a request.
@@ -487,6 +501,15 @@ file without one draws none of it (its lanes of the uniform are zeros), so files
 before them draw as they did; when present, every field of the section is required.
 `team` and `ambient` may not both be given.
 
+The third set (11/10/2026, [blade_skin_extras.rs](../crates/sjk-viewer/src/blade_skin_extras.rs)):
+`star`, `wisps`, `haze`, `echo` and `options`. A client refuses a whole file holding a
+field it does not know, so these live in an **additions file** beside the skin's,
+`skins/blades/<id>.bladeextra`, a JSON object whose fields are laid over the skin file's
+before it is read (a field in both is the addition's). A client from before never opens
+it and draws the skin file alone, so a pack can grow without blanking a skin for older
+clients; an additions file without its skin file is no skin. The same rules hold: each
+section optional, every field of it required.
+
 | Field | Meaning | Range |
 | --- | --- | --- |
 | `version` | Format version | 1 |
@@ -543,12 +566,64 @@ before them draw as they did; when present, every field of the section is requir
 | `ambient.amount`, `saturate`, `floor` | The share of its colour taken from the light where the blade is (the grid's ambient and half its directed light at its hilt end, at full brightness), how much its saturation is raised and each channel's least | 0-1, 0-4, 0-1 |
 | `glyphs.color`, `brightness` | The glyphs' colour and brightness | 0-4, 0-10 |
 | `glyphs.size`, `spacing`, `speed`, `width` | A glyph's height along the blade and the gap after it (units), how fast they scroll toward the tip and a stroke's width (a share of a glyph): the wearer's name, a letter each, a cell left empty between repeats | 1-20, 0-10, -100-100, 0.02-0.3 |
+| `star.color`, `brightness` | The tip's glint: its colour and brightness | 0-4, 0-10 |
+| `star.rays`, `length`, `width` | Its rays, how far they reach from the tip (units, every other one 0.55 of that from four rays up) and how thick (a share of their length, tapering) | 2-8, 1-24, 0.01-0.3 |
+| `star.spin`, `twinkle`, `depth`, `halo` | Turns a second; about how many times a second it twinkles and how deep; the round glow at its heart (a share of the rays' brightness) | -4-4, 0-20, 0-1, 0-2 |
+| `wisps.color`, `brightness` | Smoke rising off the blade, whichever way it is held: its colour and brightness | 0-4, 0-10 |
+| `wisps.rise`, `speed` | How high it rises before it is gone (units; the glow's quad reaches that much further) and how fast (units a second) | 1-16, 0-60 |
+| `wisps.scale`, `curl`, `density` | Noise cells a unit, how much the smoke curls (the noise warped) and how much of it there is | 0.02-2, 0-2, 0-1 |
+| `haze.strength`, `scale`, `speed`, `reach` | Heat haze bending the scene behind the blade: the most it bends (units), noise cells a unit, how fast it rises (units a second), how far past the glow it reaches (units) | 0-2, 0.05-4, 0-60, 0.5-16 |
+| `echo.fade`, `sway`, `rate`, `lean` | One faint copy of the glow beside the blade, there even held still: its brightness, how far it sways (units, the tip more than the hilt), sways a second, how far it leans (radians) | 0-1, 0-6, 0.02-4, 0-0.3 |
+| `options` | Up to 6 parts the wearer may switch off ([Options](#options)), each `{"id", "name", "sections"}`: `id` 1 to 24 of `a`-`z`, `0`-`9`, `_`; `name` 1 to 24 printable ASCII characters (the Collection shows it); `sections` 1 to 4 of the file's optional sections (`arcs`, `motes`, `hue`, `sputter`, `glitch`, `scan`, `pulse`, `ghosts`, `embers`, `veins`, `team`, `ambient`, `glyphs`, `star`, `wisps`, `haze`, `echo`), each in the file and in one option only. Two ids of a skin may not share a bit of the look's 64 (FNV-1a of the id; the log names the pair to rename) | |
 | `trail` | Blur trail colour | 0-1 |
 | `light.color` | Dynamic light colour (stock gain) | 0-4 |
 | `light.flicker` | `amount` and up to 2 `waves` (`rate`, `weight`, `phase` per hilt): brightness `1 − amount + amount × Σ weight × sin(t × rate + phase × hilt phase)` | amount 0-1 |
 | `sounds` | `on`, `off`, `hum`, `swings` (three): game paths in the pack | 1-63 characters, relative, no `..` |
 
 Other coefficients are any number from -1000 to 1000.
+
+### Options
+
+Built 11/10/2026 (Sol's request: some Mythical shaders get parts their wearer can
+switch off; first the Sun and the Spectral). A skin's file names its parts (`options`,
+[Blade-skin files](#blade-skin-files)); every part is on until its wearer switches it
+off, and every other SJK player then draws the blade the same way.
+
+| Skin | Parts (id: what it switches) |
+| --- | --- |
+| Sun | `prominences` Prominences (arcs), `sparks` Rising sparks (motes), `glint` Tip glint (star), `haze` Heat haze (haze) |
+| Spectral | `wisps` Wisps (wisps), `spirits` Souls (motes), `smoke` Smoky edge (sputter), `rim` Cold rim (hue), `echo` Echo (echo), `afterimages` Afterimages (ghosts) |
+
+- Kept in `cg_saberSkinOptions` (archived, default empty;
+  [saber_skin_options.rs](../crates/sjk-viewer/src/saber_skin_options.rs)): one
+  `<skin>.<option>` word for each part switched off, sorted, so every skin keeps its
+  choice while another is worn (`saber_sun.haze saber_spectral.wisps`).
+- Chosen on the Collection's Shaders tab ([sjk-ui.md](sjk-ui.md#collection)): under an
+  owned skin's words, "Parts" and a tick for each, in two columns (three past four);
+  a click or the number keys 1 to 6 switch one, on the model at once. In the console,
+  `saberskin <id> parts` lists them with their state and `saberskin <id> <part> on|off`
+  switches one, so every menu style has it.
+- Sent with the look: the worn skin's parts switched off go as `saber_off` (at most 8
+  ids, sorted), only when there are some (a hub from before refuses the field), and come
+  back in presence and feed looks. In a frame a choice is 64 bits, an option id's bit
+  its FNV-1a hash modulo 64 (`blade_skin_extras::option_bit`, distinct within a skin by
+  the file check), so the looks stay `Copy` and nothing is allocated; a viewer whose
+  pack lacks an option ignores it.
+- Drawn: the wearer's choice and the skin's options give a mask of sections switched off
+  (`SkinColor::off`, `BladeSkinDef::off_mask`), carried by each instance (attribute 9);
+  `saber.wgsl` zeroes those sections' lanes as a file without them has
+  ([rendering.md](rendering.md#saber-blade-skins)), and the CPU leaves out the parts it
+  makes itself: afterimages, the echo, the glint, the light's beat and hue turning, and
+  the quad's room for wisps and haze.
+
+Verified by unit tests (the cvar's words, the look carrying the worn skin's choice and
+reading it back, a muted slot showing none, the option mask and room, the CPU's parts
+left out, the instances' mask, the command, the file checks) and the world shots
+`duel6_mythical_parts` (each skin with every part on beside every part off, close up
+and upright, and the haze checked to bend the scene behind the Sun: about 87,000 pixels
+change with it on, none of the glow's) and `duel6_sjk_collection` (the Parts grid of
+the Sun and of the Spectral, one part off); not yet against the deployed hub or in a
+live match.
 
 ### Illuminate for others
 
@@ -683,5 +758,6 @@ Achievements granting unlockables (with harder goals), holocrons dropping blade 
 be the hub's too, to roll a shader of a holocron's tier), Uncommon shaders (colours
 only), other kinds of unlockable (holocron
 skins, trails, emotes). Up to 16 blade skins load at once (the renderer's slots; the
-uniform array is 13312 bytes of the 16 KiB WebGPU guarantees, so a seventeenth needs
-fewer lanes per skin or a storage buffer first).
+uniform array is 15104 bytes of the 16 KiB WebGPU guarantees since the third set, so
+a seventeenth skin, or four more lanes a skin, needs fewer lanes or a storage buffer
+first).
