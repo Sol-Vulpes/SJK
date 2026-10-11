@@ -202,7 +202,8 @@ impl GameAudio {
         self.listener(
             glam::Vec3::from_array(snapshot.player.origin()),
             glam::Vec3::new(cp * cy, cp * sy, -sp),
-            glam::Vec3::new(-sy, cy, 0.0),
+            // Quake's `AngleVectors` right axis (+Y is the listener's left).
+            glam::Vec3::new(sy, -cy, 0.0),
             glam::Vec3::Z,
             glam::Vec3::ZERO,
         );

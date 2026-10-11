@@ -1552,7 +1552,8 @@ impl GpuState {
             self.camera_yaw.sin() * self.camera_pitch.cos(),
             self.camera_pitch.sin(),
         );
-        let right = Vec3::new(-self.camera_yaw.sin(), self.camera_yaw.cos(), 0.0);
+        // Quake's `AngleVectors` right axis (+Y is the listener's left).
+        let right = Vec3::new(self.camera_yaw.sin(), -self.camera_yaw.cos(), 0.0);
         self.finish_audio_frame(game_audio, forward, right);
         self.advance_resident_movement(delta_seconds);
         net_timing::frame(self, presentation_time);
