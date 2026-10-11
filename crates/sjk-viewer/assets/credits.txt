@@ -65,6 +65,15 @@ did: Graphics quality levels, EJK graphics, and the graphics reload that applies
 did: Low FPS help (help_fps): EJK graphics offered on heavy maps
 did: Lighter memory on servers: the menu world dropped during matches
 did: Client mods: JA+ tools (admin teleports after JoF EJK) and JoF tools, loaded on their servers
+did: Mythical shader parts: the Sun's and the Spectral's effects, each switched on or off
+did: SJK chat GIFs, who is online, chat sounds, reply and the last channel remembered
+did: Crash reports to the SJK team, and world notes: tell the team what is wrong on a map
+did: The quick wheel's live Force page and Toys page, Illuminate as a toy
+did: The pilot's vehicle HUD and crosshair, jetpacks, the spawn bubble and Force spheres
+did: Create game and its map picker, Import and the test list in the SJK look
+did: Faster play: players' models loaded off the render thread, no hitch when players join
+did: Lighting that stops at walls, doors that block lamps, a faster JoFTemple
+did: Weather under sabers and effects, shield hits, idrive and +duck after JoF EJK
 link: https://github.com/Sol-Vulpes/SJK
 link: https://sol-vulpes.github.io/SJK/
 
@@ -128,11 +137,23 @@ link: https://github.com/Bishop-R/JKR
 role: Coding assistant, by Anthropic
 did: Wrote many of Sol's changes together with Sol
 
-[Inter and JetBrains Mono]
-role: The fonts of the menus and the console, under the SIL Open Font License
+[Inter, JetBrains Mono, Rajdhani and Exo 2]
+role: The fonts of the menus, the SJK UI and the console, under the SIL Open Font License
 did: Inter by The Inter Project Authors, JetBrains Mono by The JetBrains Mono Project Authors
+did: Rajdhani by the Indian Type Foundry, Exo 2 by the Exo 2 Project Authors (Natanael Gama)
 link: https://rsms.me/inter/
 link: https://www.jetbrains.com/lp/mono/
+link: https://fonts.google.com/specimen/Rajdhani
+link: https://fonts.google.com/specimen/Exo+2
+
+[GIPHY]
+role: Where the GIFs in SJK chat come from
+did: A GIPHY link in an SJK chat message shows its GIF, fetched from GIPHY by each player
+link: https://giphy.com
+
+[TheRisqe]
+role: Author of the Radial HUD that SJK's radial HUD is modelled on
+did: SJK draws its own take on the Radial HUD's layout and colours (cg_hudStyle radial)
 
 [JoF HD Fonts & Icons and OCR-A]
 role: The game fonts SJK Menu, SJK Chat and SJK HUD
