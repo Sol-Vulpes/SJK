@@ -9,6 +9,8 @@
 #                               made it when that is not the piece's owner.
 
 = Sol
++ 11/10/2026 | - | Own SJK chat messages play the chat sound
+- 0efca2b |  | SJK chat: the player's own messages play the chat sound
 + 11/10/2026 | - | Mythical shader parts: Sun and Spectral effects, switchable
 - 32a312a |  | Mythical shader parts: more effects on the Sun and Spectral, switchable
 + 11/10/2026 | - | Weather under sabers and effects, no effect squares

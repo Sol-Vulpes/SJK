@@ -122,7 +122,7 @@ impl ChatOverlay {
     ///
     /// Returns the id the feed had seen when messages newer than it joined the feed now
     /// (those with a higher id in `state`), `None` when nothing new joined: a marked
-    /// backlog is not news ([`new_from_others`] picks the ones worth a sound).
+    /// backlog is not news ([`worth_a_sound`] picks the ones worth a sound).
     pub(crate) fn sync_sjk(
         &mut self,
         state: &ChatState,
@@ -199,20 +199,17 @@ impl ChatOverlay {
 pub(crate) const SOUND_GAP: std::time::Duration = std::time::Duration::from_secs(1);
 
 /// Whether `messages` hold one newer than `after` worth the SJK chat's sound: a message
-/// (not a holocron drop) from another player (`own` says whether a key is the player's)
-/// not muted on this PC (`muted`).
-pub(crate) fn new_from_others<'a>(
+/// (not a holocron drop) not muted on this PC (`muted`). The player's own messages
+/// count (Sol's request, 11/10/2026): one joins the feed once the hub took it, so its
+/// sound says it went out; a refused one never joins and plays nothing.
+pub(crate) fn worth_a_sound<'a>(
     messages: impl IntoIterator<Item = &'a ChatMessage>,
     after: u64,
-    own: impl Fn(&str) -> bool,
     muted: impl Fn(&str) -> bool,
 ) -> bool {
-    messages.into_iter().any(|message| {
-        message.id > after
-            && message.holocron.is_none()
-            && !own(&message.key_id)
-            && !muted(&message.key_id)
-    })
+    messages
+        .into_iter()
+        .any(|message| message.id > after && message.holocron.is_none() && !muted(&message.key_id))
 }
 
 #[cfg(test)]
@@ -421,22 +418,18 @@ mod tests {
     }
 
     #[test]
-    fn a_sound_is_for_others_messages_not_own_muted_or_drops() {
-        let mut messages: Vec<ChatMessage> = (1..=4).map(|id| message(id, "hi")).collect();
-        messages[3].holocron = Some(sjk_identity::DropMark {
+    fn a_sound_is_for_messages_own_included_not_muted_or_drops() {
+        let mut messages: Vec<ChatMessage> = (1..=3).map(|id| message(id, "hi")).collect();
+        messages[2].holocron = Some(sjk_identity::DropMark {
             tier: "legendary".to_owned(),
             own: false,
         });
-        let own = message(2, "").key_id;
-        let troll = message(3, "").key_id;
-        let news = |after| new_from_others(&messages, after, |key| key == own, |key| key == troll);
-        assert!(news(0), "message 1 is another player's");
-        assert!(
-            !news(1),
-            "2 is the player's own, 3 muted, 4 a holocron drop"
-        );
-        assert!(!news(4), "nothing newer");
-        assert!(new_from_others(&messages, 1, |_| false, |_| false));
+        let troll = message(2, "").key_id;
+        let news = |after| worth_a_sound(&messages, after, |key| key == troll);
+        assert!(news(0), "message 1, the player's own or another's");
+        assert!(!news(1), "2 is muted, 3 a holocron drop");
+        assert!(!news(3), "nothing newer");
+        assert!(worth_a_sound(&messages, 1, |_| false));
     }
 
     #[test]

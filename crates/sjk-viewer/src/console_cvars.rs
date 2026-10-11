@@ -600,7 +600,7 @@ pub(super) fn register_daily_cvars(cvars: &mut CvarRegistry) -> Result<(), sjk_s
             crate::sjk_chat_frame::SOUND_CVAR,
             true,
             archive,
-            "Play a sound when another player's SJK chat message arrives (cg_chatSounds 0 silences it too)",
+            "Play a sound when an SJK chat message arrives, yours included (cg_chatSounds 0 silences it too)",
         ),
         CvarDefinition::new(
             crate::chat_gifs::CVAR,

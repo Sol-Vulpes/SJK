@@ -24,6 +24,15 @@
 
 # ---- Console & chat ----
 
+[own-chat-sound]
+area: Console & chat
+title: Your own SJK chat message plays the SJK chat sound when it goes out
+change: The sound played only for other players' messages; now your own play it too.
+change: It plays when your line joins the feed (the hub took it); a refused one is silent.
+test: Send an SJK chat message in a game: the sound plays as your line appears.
+test: Same from the SJK UI dock and the chat page in the menus.
+test: Send a message the hub refuses (same text twice in 30 s): no sound, just the refusal.
+
 [chat-reply]
 area: Console & chat
 title: reply, chat opens on the last channel, SJK logo on SJK chat lines
