@@ -410,7 +410,7 @@ impl Mixer {
             listener: Listener {
                 origin: [0.0; 3],
                 forward: [1.0, 0.0, 0.0],
-                right: [0.0, 1.0, 0.0],
+                right: [0.0, -1.0, 0.0],
                 up: [0.0, 0.0, 1.0],
                 velocity: [0.0; 3],
             },
@@ -997,3 +997,5 @@ fn length(value: [f32; 3]) -> f32 {
 
 #[cfg(test)]
 mod loop_frame_tests;
+#[cfg(test)]
+mod spatial_tests;

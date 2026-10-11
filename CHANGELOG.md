@@ -20,6 +20,7 @@ Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 -->
 ## Unreleased
 
+- Sounds play on the side they come from again: left and right were swapped _(Sol)_
 - Your own SJK chat messages play the SJK chat sound when they go out, as other players' do _(Sol)_
 - Resizing or maximising the window while a map loads no longer crashes the game when the map starts _(Sol)_
 - Rain, snow and fog no longer cover sabers and weapon effects in front of them, the repeater's alt-fire burst no longer shows dark squares, and effects a server hides no longer show as white squares _(Sol)_

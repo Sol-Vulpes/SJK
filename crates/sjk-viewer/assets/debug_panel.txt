@@ -1031,6 +1031,14 @@ note: Not run in a game against the deployed hub; the sounds have not been heard
 
 # ---- Audio ----
 
+[stereo-sides]
+area: Audio
+title: Sounds on your right play in your right ear again
+change: The listener's right axis pointed left, so every positioned sound came from the wrong side.
+test: In a game, stand with a wall or player on one side: their sounds (steps, sabers) come from it.
+test: Turn round with a sound running: it moves to the other ear.
+test: Fire at a wall on your left: the impact plays mostly in the left ear.
+
 # ---- Gameplay ----
 
 [join-retries]
