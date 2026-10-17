@@ -23,6 +23,10 @@ tests check this file):
 - ASCII only, as the menu font draws bytes.
 Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 -->
+## Unreleased
+
+- Rage, healing and Grip-victim effects follow animation and plugin settings; Mindtrick hides Force effects, and Empower glow follows the server's body/arms/hands choice with a local override. _(Lumaya, after JoF EJK)_
+
 ## 2026.1017.2 (Alpha) | 17/10/2026
 
 > Force: JoF's 22 community presets in the Force menu.
