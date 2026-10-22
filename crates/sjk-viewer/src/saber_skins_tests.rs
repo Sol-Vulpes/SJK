@@ -696,6 +696,8 @@ fn following_another_player_draws_their_look_not_the_own_skin() {
         illuminate: true,
         saber_off: Vec::new(),
         toys: Vec::new(),
+        saber2: None,
+        saber2_off: Vec::new(),
     };
     looks.apply_event(5, "Fox", &stock);
     let slots = ViewSlots::of(&game_state, &followed);
@@ -963,6 +965,76 @@ fn a_skins_blur_trail_is_drawn_in_its_own_colour() {
 }
 
 #[test]
+fn each_saber_wears_its_own_skin() {
+    let worn = sample_color();
+    let other = SkinColor { index: 5, ..worn };
+    let mut skins = SaberSkins::default();
+    skins.follow_looks_both(1, 1, |client| match client {
+        2 => (Some(worn), Second::Own(Some(other))),
+        3 => (Some(worn), Second::Own(None)),
+        4 => (Some(worn), Second::Same),
+        _ => (None, Second::Same),
+    });
+    let indices = |skins: &SaberSkins, entity| {
+        skins
+            .get_both(entity)
+            .map(|skin| skin.map(|skin| skin.index))
+    };
+    assert_eq!(indices(&skins, 3), [Some(worn.index), Some(5)]);
+    assert_eq!(indices(&skins, 4), [Some(worn.index), None]);
+    assert_eq!(indices(&skins, 5), [Some(worn.index), Some(worn.index)]);
+    assert_eq!(indices(&skins, 6), [None, None]);
+    // The local player's own slot takes its own second saber.
+    skins.set_local_both(Some(2), None, Second::Own(Some(other)));
+    assert_eq!(indices(&skins, 3), [None, Some(5)]);
+}
+
+#[test]
+fn a_staffs_other_half_wears_the_second_skin() {
+    let first = sample_color();
+    let second = SkinColor { index: 5, ..first };
+    let skins = [Some(first), Some(second)];
+    let index = |two, saber, other_half| {
+        skin_of_blade(skins, two, saber, other_half).map(|skin| skin.index)
+    };
+    // One staff: its first half the first skin, the other half the second.
+    assert_eq!(index(false, 0, false), Some(first.index));
+    assert_eq!(index(false, 0, true), Some(5));
+    // Two sabers: every blade of the second saber, none of the first.
+    assert_eq!(index(true, 0, true), Some(first.index));
+    assert_eq!(index(true, 1, false), Some(5));
+    set_local_pair([Some(true), None]);
+    assert_eq!(local_pair(), Pair::Staff);
+    set_local_pair([Some(false), Some(false)]);
+    assert_eq!(local_pair(), Pair::TwoSabers);
+    // One saber of one blade, or a crossguard's three blades in one direction's half.
+    set_local_pair([Some(false), None]);
+    assert_eq!(local_pair(), Pair::None);
+}
+
+#[test]
+fn the_preview_dresses_one_side_and_leaves_the_other_as_worn() {
+    let worn_first = sample_color();
+    let shown = SkinColor {
+        index: 7,
+        ..worn_first
+    };
+    let index = |pair: [Option<SkinColor>; 2]| pair.map(|skin| skin.map(|skin| skin.index));
+    // The second wears the first's skin (none of its own): previewing on the first leaves
+    // it so, as Equip will.
+    let worn = [Some(worn_first), Some(worn_first)];
+    assert_eq!(
+        index(previewed(worn, Some(Some(shown)), [true, false])),
+        [Some(7), Some(worn_first.index)]
+    );
+    assert_eq!(
+        index(previewed(worn, Some(None), [false, true])),
+        [Some(worn_first.index), None]
+    );
+    assert_eq!(index(previewed(worn, None, [true, true])), index(worn));
+}
+
+#[test]
 fn the_varykino_blossom_sheds_petals_until_its_wearer_switches_them_off() {
     let skins = LoadedSkins::load(VirtualFileSystem::new(), 1);
     let color = skins.color_of("saber_varykino_blossom").unwrap();
@@ -1003,4 +1075,34 @@ fn a_duel_draws_every_blade_stock() {
     assert_eq!(skins.sound_sets()[2], None);
     skins.set_plain(false);
     assert_eq!(skins.get(3).map(|skin| skin.index), Some(worn.index));
+}
+
+#[test]
+fn a_duel_draws_the_second_saber_stock_too() {
+    let worn = sample_color();
+    let other = SkinColor { index: 5, ..worn };
+    let mut skins = SaberSkins::default();
+    skins.follow_looks_both(1, 1, |client| {
+        if client == 2 {
+            (Some(worn), Second::Own(Some(other)))
+        } else {
+            (None, Second::Same)
+        }
+    });
+    skins.set_plain(true);
+    assert_eq!(skins.get_both(3), [None, None]);
+    skins.set_plain(false);
+    assert_eq!(
+        skins.get_both(3).map(|skin| skin.map(|skin| skin.index)),
+        [Some(worn.index), Some(5)]
+    );
+}
+
+#[test]
+fn a_click_on_a_staff_goes_to_the_half_it_lands_on() {
+    set_staff_halves(Some([[100.0, 300.0], [500.0, 300.0]]));
+    assert_eq!(staff_half_at([140.0, 290.0]), Some(false));
+    assert_eq!(staff_half_at([460.0, 320.0]), Some(true));
+    set_staff_halves(None);
+    assert_eq!(staff_half_at([460.0, 320.0]), None);
 }
