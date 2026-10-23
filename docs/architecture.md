@@ -112,5 +112,7 @@ application resources. BSP geometry remains the collision input for JKA maps.
 The menu moves with the application shell between resident worlds, but its asset
 catalogues belong to one immutable VFS generation. Attaching a new world invalidates
 the model-icon workers and the cosmetics and Force-template catalogues before retaining
-the new VFS; otherwise those caches keep every PK3 of an old world open across map and
-server changes.
+the new VFS. A PK3 mount keeps its parsed central-directory index, but opens the archive
+file only for the duration of an asset read. Multiple legitimate VFS generations can
+therefore overlap during a world transition without multiplying persistent host file
+descriptors by the number of installed PK3s.
