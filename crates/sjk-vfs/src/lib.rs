@@ -13,7 +13,7 @@ use std::collections::{BTreeSet, HashMap};
 use std::error::Error;
 use std::fmt;
 use std::fs::{self, File};
-use std::io::{self, Read};
+use std::io::{self, Read, Seek, SeekFrom};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 
@@ -587,7 +587,87 @@ struct Pk3Source {
     name: Arc<str>,
     archive_path: PathBuf,
     entries: HashMap<VirtualPath, usize>,
-    archive: Mutex<zip::ZipArchive<File>>,
+    archive: Mutex<zip::ZipArchive<ReopenableFile>>,
+    archive_file: ReopenableFile,
+}
+
+/// A ZIP reader that keeps its logical position but releases the host descriptor
+/// between asset reads. `ZipArchive` keeps the parsed central directory in memory,
+/// so reopening the underlying PK3 does not have to rescan it.
+#[derive(Clone)]
+struct ReopenableFile {
+    path: Arc<PathBuf>,
+    state: Arc<Mutex<ReopenableFileState>>,
+}
+
+struct ReopenableFileState {
+    file: Option<File>,
+    position: u64,
+}
+
+impl ReopenableFile {
+    fn open(path: &Path) -> io::Result<Self> {
+        Ok(Self {
+            path: Arc::new(path.to_owned()),
+            state: Arc::new(Mutex::new(ReopenableFileState {
+                file: Some(File::open(path)?),
+                position: 0,
+            })),
+        })
+    }
+
+    fn close(&self) {
+        if let Ok(mut state) = self.state.lock() {
+            state.file = None;
+        }
+    }
+
+    fn lock(&self) -> io::Result<std::sync::MutexGuard<'_, ReopenableFileState>> {
+        self.state
+            .lock()
+            .map_err(|_| io::Error::other("PK3 file lock was poisoned"))
+    }
+
+    #[cfg(test)]
+    fn is_open(&self) -> bool {
+        self.state.lock().unwrap().file.is_some()
+    }
+}
+
+impl Read for ReopenableFile {
+    fn read(&mut self, buffer: &mut [u8]) -> io::Result<usize> {
+        let mut state = self.lock()?;
+        if state.file.is_none() {
+            let mut file = File::open(self.path.as_ref())?;
+            file.seek(SeekFrom::Start(state.position))?;
+            state.file = Some(file);
+        }
+        let read = state.file.as_mut().unwrap().read(buffer)?;
+        state.position = state.position.saturating_add(read as u64);
+        Ok(read)
+    }
+}
+
+impl Seek for ReopenableFile {
+    fn seek(&mut self, position: SeekFrom) -> io::Result<u64> {
+        let mut state = self.lock()?;
+        if state.file.is_none() {
+            let mut file = File::open(self.path.as_ref())?;
+            file.seek(SeekFrom::Start(state.position))?;
+            state.file = Some(file);
+        }
+        let position = state.file.as_mut().unwrap().seek(position)?;
+        state.position = position;
+        Ok(position)
+    }
+}
+
+struct CloseFile<'a>(&'a ReopenableFile);
+
+impl Drop for CloseFile<'_> {
+    fn drop(&mut self) {
+        self.0.close();
+    }
 }
 
 impl Pk3Source {
@@ -600,11 +680,12 @@ impl Pk3Source {
             path: archive_path.to_owned(),
             source,
         })?;
-        let file = File::open(&archive_path).map_err(|source| VfsError::Io {
+        let file = ReopenableFile::open(&archive_path).map_err(|source| VfsError::Io {
             operation: "open PK3",
             path: archive_path.clone(),
             source,
         })?;
+        let archive_file = file.clone();
         let archive = zip::ZipArchive::new(file).map_err(|source| VfsError::Zip {
             path: archive_path.clone(),
             source,
@@ -634,11 +715,13 @@ impl Pk3Source {
         }
 
         let name: Arc<str> = archive_path.to_string_lossy().into_owned().into();
+        archive_file.close();
         Ok(Self {
             name,
             archive_path,
             entries,
             archive: Mutex::new(archive),
+            archive_file,
         })
     }
 }
@@ -651,29 +734,33 @@ impl AssetSourceBackend for Pk3Source {
         let Some(index) = self.entries.get(path).copied() else {
             return Ok(None);
         };
+        let _close_file = CloseFile(&self.archive_file);
         let mut archive = self.archive.lock().map_err(|_| VfsError::Io {
             operation: "lock PK3",
             path: self.archive_path.clone(),
             source: io::Error::other("PK3 reader lock was poisoned"),
         })?;
-        let mut entry = archive.by_index(index).map_err(|source| VfsError::Zip {
-            path: self.archive_path.clone(),
-            source,
-        })?;
-        ensure_size(path, entry.size(), max_bytes)?;
-
-        let mut bytes = Vec::with_capacity(entry.size().min(usize::MAX as u64) as usize);
-        entry
-            .by_ref()
-            .take(max_bytes.saturating_add(1))
-            .read_to_end(&mut bytes)
-            .map_err(|source| VfsError::Io {
-                operation: "decompress PK3 asset",
+        let result = (|| {
+            let mut entry = archive.by_index(index).map_err(|source| VfsError::Zip {
                 path: self.archive_path.clone(),
                 source,
             })?;
-        ensure_size(path, bytes.len() as u64, max_bytes)?;
-        Ok(Some(bytes))
+            ensure_size(path, entry.size(), max_bytes)?;
+
+            let mut bytes = Vec::with_capacity(entry.size().min(usize::MAX as u64) as usize);
+            entry
+                .by_ref()
+                .take(max_bytes.saturating_add(1))
+                .read_to_end(&mut bytes)
+                .map_err(|source| VfsError::Io {
+                    operation: "decompress PK3 asset",
+                    path: self.archive_path.clone(),
+                    source,
+                })?;
+            ensure_size(path, bytes.len() as u64, max_bytes)?;
+            Ok(Some(bytes))
+        })();
+        result
     }
 
     fn contains(&self, path: &VirtualPath) -> bool {
@@ -989,13 +1076,44 @@ mod filtered_pk3_tests {
             entry.as_str().starts_with("maps/")
         })
         .unwrap();
-        std::fs::remove_file(&path).unwrap();
         assert_eq!(asked, ["maps/new.bsp", "autoexec.cfg", "cgamex86.dll"]);
         assert_eq!(vfs.read("maps/new.bsp").unwrap().unwrap().bytes, b"bsp");
         assert!(vfs.read("autoexec.cfg").unwrap().is_none());
         assert!(!vfs.contains("cgamex86.dll").unwrap());
         assert_eq!(vfs.paths().len(), 1);
         assert_eq!(vfs.mounts().next().unwrap().entries, 1);
+        std::fs::remove_file(&path).unwrap();
+    }
+
+    #[test]
+    fn a_pk3_descriptor_is_closed_between_asset_reads() {
+        let path = std::env::temp_dir().join(format!(
+            "sjk-vfs-reopenable-{}-{:?}.pk3",
+            std::process::id(),
+            std::thread::current().id()
+        ));
+        {
+            let mut zip = zip::ZipWriter::new(File::create(&path).unwrap());
+            zip.start_file(
+                "textures/test.txt",
+                zip::write::SimpleFileOptions::default(),
+            )
+            .unwrap();
+            zip.write_all(b"asset").unwrap();
+            zip.finish().unwrap();
+        }
+
+        let source = Pk3Source::open(&path, |_| true).unwrap();
+        assert!(!source.archive_file.is_open());
+        let virtual_path = VirtualPath::new("textures/test.txt").unwrap();
+        assert!(source.read(&virtual_path, 1).is_err());
+        assert!(!source.archive_file.is_open());
+        let asset = source.read(&virtual_path, 1024).unwrap().unwrap();
+        assert_eq!(asset, b"asset");
+        assert!(!source.archive_file.is_open());
+        assert_eq!(source.read(&virtual_path, 1024).unwrap().unwrap(), b"asset");
+        assert!(!source.archive_file.is_open());
+        std::fs::remove_file(path).unwrap();
     }
 }
 

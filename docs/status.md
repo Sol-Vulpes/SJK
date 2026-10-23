@@ -1,3 +1,18 @@
+## PK3 descriptors exhausted during reconnect
+
+23/10/2026, `dev/pr-stack` (Sol's report after a long session and reconnect): the
+client failed to mount `base` with `Too many open files`. The first fix invalidated
+Profile's model-icon worker, cosmetics catalogue and Force-template catalogue when a
+new world attached, but a run of that revision reproduced the failure: with 297 PK3s,
+even the legitimate VFS generations overlapping during disconnect, portal loading and
+reconnect could exceed a 1024-descriptor process limit. PK3 mounts now retain their
+parsed ZIP index but close the archive after mounting and after every asset read; an
+archive is reopened only for the duration of the next read. Profile invalidation remains
+to release obsolete world data promptly. Unit tests pin both cache release and the
+closed-between-reads invariant. Verified on Linux with the locked workspace format,
+build, test and Clippy checks. Not yet verified: another multi-map live session with the
+reported installation.
+
 ## Heimdall's time nudge kicks after a hitch
 
 23/10/2026, `personal/heimdall-nudge`, based on `main` `8e4cce32`, Slash's report
