@@ -1573,3 +1573,14 @@ routes yet); Windows; how the feed behaves with many players at once.
   unanswered lines, a copy for a match that ended, and a JoF EJK message's icon. End
   to end with JoF EJK clients on a local server and a local hub, before it moved into
   JoF tools ([status.md](status.md#sjk-chat-on-jof-servers-said-in-all-chat-too)).
+
+## Emoji reactions (in development)
+
+The planned SJK chat reaction extension pairs this client change with
+[the matching hub PR](https://github.com/Sol-Vulpes/SJK-hub-shared/pull/5).
+Players select a message on the SJK chat page and add or remove a reaction;
+counts are shared through the authenticated hub feed, never posted as chat text
+or sent to the game server. The six initial reactions are thumbs up, heart,
+laughter, surprise, sadness and fire. Older hubs continue to show chat normally
+and report that reactions require updated hub support. This section will record
+the implemented contract and verification before the feature is handed off.
