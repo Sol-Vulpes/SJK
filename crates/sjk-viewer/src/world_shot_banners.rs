@@ -54,13 +54,21 @@ fn duel6_profile_banners() {
             shoot(&mut gpu, 6, "profile-banners-collection").display()
         );
         assert!(!gpu.console.as_ref().unwrap().profile_pages_overflowed());
-        gpu.profile_hub_show_for_shot(Tab::Profile);
+        gpu.console
+            .as_mut()
+            .unwrap()
+            .open_profile_hub_page(Tab::Profile, ReturnTarget::MainMenu);
+        assert_eq!(gpu.profile_hub_tab(), Some(Tab::Profile));
         println!(
             "{}",
             shoot(&mut gpu, 6, "profile-banners-profile").display()
         );
         assert!(!gpu.console.as_ref().unwrap().profile_pages_overflowed());
-        gpu.profile_hub_show_for_shot(Tab::Holocrons);
+        gpu.console
+            .as_mut()
+            .unwrap()
+            .open_profile_hub_page(Tab::Holocrons, ReturnTarget::MainMenu);
+        assert_eq!(gpu.profile_hub_tab(), Some(Tab::Holocrons));
         let console = gpu.console.as_mut().unwrap();
         console.preview_holocrons(super::holocrons_tab::holdings(), 2);
         console.preview_opening(

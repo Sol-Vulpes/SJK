@@ -19,6 +19,9 @@
 //! as on screen. The in-game menus are drawn over a retail levelshot standing for
 //! the match.
 
+#[path = "menu_snapshot_banners.rs"]
+mod profile_banners;
+
 use crate::keybind_editor::{Category, KeybindEditor};
 use crate::menu::art::{ArtPiece, ArtSet};
 use crate::menu::classic::layout::{Entry, Page, Panel, Span};

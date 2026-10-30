@@ -123,7 +123,19 @@ pub(crate) fn draw(canvas: &mut MenuCanvas, target: Rect, id: &str) {
         });
     };
     match banner.art {
-        Art::Archives | Art::Neutral => {
+        Art::Neutral => {
+            shape(
+                rect(0.0, 146.0, 720.0, 1.0),
+                0.0,
+                Color::new(0.55, 0.67, 0.8, 0.2),
+            );
+            shape(
+                rect(490.0, 38.0, 100.0, 2.0),
+                0.0,
+                Color::new(0.65, 0.75, 0.9, 0.15),
+            );
+        }
+        Art::Archives => {
             for i in 0..12 {
                 let a = 30.0 + i as f32 * 62.0;
                 shape(
