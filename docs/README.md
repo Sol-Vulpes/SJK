@@ -1,5 +1,7 @@
 # SJK project wiki
 
+Profile cosmetics under discussion: [Profile banners (proposal)](profile-banners.md).
+
 This directory is the canonical project wiki for contributors and AI assistants.
 It lives beside the source so implementation and documentation can be reviewed
 and changed together. Begin with the status page, then the architecture.
