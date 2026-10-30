@@ -170,9 +170,9 @@ pub use character_catalog::{
     legacy_character_catalog, legacy_character_catalog_with_policy,
 };
 pub use chat::{
-    CHAT_INPUT_BYTES, ChatDestination, ChatRoster, ChatTarget, SJK_COPY_TAG, chat_body,
-    chat_command, chat_display_text, chat_input_fits, chat_name_key, chat_plain_text,
-    chat_unescape, sjk_copy_id, sjk_copy_marker,
+    CHAT_DRAFT_CHARS, CHAT_INPUT_BYTES, ChatDestination, ChatRoster, ChatTarget, SJK_COPY_TAG,
+    chat_body, chat_command, chat_command_full, chat_commands, chat_display_text, chat_input_fits,
+    chat_name_key, chat_plain_text, chat_unescape, sjk_copy_id, sjk_copy_marker,
 };
 pub use client_commands::{CompatConsoleCommand, console_commands as compat_console_commands};
 pub use compat_profile::{CompatProfile, PLUGIN_DISABLE_DEFAULT, PLUGIN_IDENTITY_KEY};
@@ -797,9 +797,9 @@ impl ClientSession {
     }
 
     /// [`Self::send_reliable_command`] for a command whose origin changes how
-    /// it waits: a player's bind, console command or chat is not queued again
-    /// while an identical one waits, and a bind or console command that cannot
-    /// leave within [`INPUT_COMMAND_TTL`] is dropped rather
+    /// it waits: a player's bind, console command or standalone chat is not queued
+    /// again while an identical one waits, every part of a divided chat message is
+    /// kept, and a bind or console command that cannot leave within [`INPUT_COMMAND_TTL`] is dropped rather
     /// than sent late ([`ReliableCommandOrigin`]).
     pub fn send_reliable_command_from(
         &mut self,

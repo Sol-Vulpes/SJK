@@ -59,6 +59,9 @@ pub enum ReliableCommandOrigin {
     /// Chat the player typed: not queued twice while identical chat waits,
     /// never dropped.
     Chat,
+    /// One part of a divided chat message: every occurrence is kept, including
+    /// identical adjacent parts, and it never expires.
+    ChatPart,
 }
 
 #[derive(Debug)]
@@ -107,11 +110,13 @@ impl ReliableCommandPacer {
     ) -> bool {
         self.drop_expired(now);
         let expires = (origin == ReliableCommandOrigin::Input).then(|| now + INPUT_COMMAND_TTL);
-        if origin != ReliableCommandOrigin::System
-            && let Some(waiting) = self
-                .outbox
-                .iter_mut()
-                .find(|queued| queued.origin == origin && queued.command == command)
+        if matches!(
+            origin,
+            ReliableCommandOrigin::Input | ReliableCommandOrigin::Chat
+        ) && let Some(waiting) = self
+            .outbox
+            .iter_mut()
+            .find(|queued| queued.origin == origin && queued.command == command)
         {
             waiting.expires = expires;
             return true;
@@ -291,6 +296,28 @@ mod tests {
             pacer.pop_due(late + DEFAULT_COMMAND_INTERVAL).as_deref(),
             Some(&b"say wp"[..])
         );
+    }
+
+    #[test]
+    fn identical_parts_of_one_chat_message_are_all_kept() {
+        let start = Instant::now();
+        let mut pacer = pacer();
+        for _ in 0..3 {
+            assert!(pacer.push(
+                b"say repeated".to_vec(),
+                ReliableCommandOrigin::ChatPart,
+                start,
+            ));
+        }
+        assert_eq!(pacer.queued(), 3);
+        for step in 0..3 {
+            assert_eq!(
+                pacer
+                    .pop_due(start + DEFAULT_COMMAND_INTERVAL * step)
+                    .as_deref(),
+                Some(&b"say repeated"[..])
+            );
+        }
     }
 
     #[test]
