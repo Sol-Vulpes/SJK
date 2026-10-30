@@ -299,12 +299,13 @@ pub(crate) fn draw(canvas: &mut MenuCanvas, frame: &Frame, card: &Card<'_>, toke
     let s = frame.s;
     let [x, y, width, height] = AREA;
     let area = frame.rect(x, y, width, height);
+    let _ = canvas.draw_list_mut().push(DrawCommand::PushRoundedClip {
+        rect: area,
+        radius: 18.0 * s,
+    });
+    banner::draw(canvas, area, card.summary.banner);
+    let _ = canvas.draw_list_mut().push(DrawCommand::PopClip);
     if card.lit {
-        let _ = canvas.draw_list_mut().push(DrawCommand::RoundedRect {
-            rect: area,
-            radius: 18.0 * s,
-            color: color::alpha(color::SPACE, 0.6),
-        });
         let _ = canvas.draw_list_mut().push(DrawCommand::Border {
             rect: area,
             radius: 18.0 * s,
@@ -312,7 +313,6 @@ pub(crate) fn draw(canvas: &mut MenuCanvas, frame: &Frame, card: &Card<'_>, toke
             color: color::alpha(color::GOLD, 0.6),
         });
     }
-    banner::draw(canvas, area, card.summary.banner);
     let radius = PICTURE_SIZE * 0.5;
     avatar(
         canvas,

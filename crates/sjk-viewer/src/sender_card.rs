@@ -235,6 +235,22 @@ pub(crate) fn draw(
         radius: 9.0 * u,
         color: color::alpha(color::SPACE, 0.97),
     });
+    let _ = list.push(DrawCommand::PushRoundedClip {
+        rect: card,
+        radius: 9.0 * u,
+    });
+    crate::profile_card::banner::draw(
+        canvas,
+        Rect::new(
+            card.x + 1.0 * u,
+            card.y + 1.0 * u,
+            width - 2.0 * u,
+            (HEAD + 2.0 * PAD) * u,
+        ),
+        person.banner,
+    );
+    let list = canvas.draw_list_mut();
+    let _ = list.push(DrawCommand::PopClip);
     let _ = list.push(DrawCommand::Border {
         rect: card,
         radius: 9.0 * u,
@@ -253,16 +269,6 @@ pub(crate) fn draw(
             0.7,
         ),
     });
-    crate::profile_card::banner::draw(
-        canvas,
-        Rect::new(
-            card.x + 1.0 * u,
-            card.y + 1.0 * u,
-            width - 2.0 * u,
-            (HEAD + 2.0 * PAD) * u,
-        ),
-        person.banner,
-    );
     let x = card.x + PAD * u;
     let inner = width - 2.0 * PAD * u;
     let mut y = card.y + PAD * u;
