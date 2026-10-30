@@ -191,7 +191,7 @@ pub(crate) fn pity_line(pity: Option<Pity>) -> String {
 
 /// The crystal each achievement brings, by its id: this client's copy of the hub's
 /// catalogue (`reward` there), a position in [`TIERS`].
-pub(crate) const REWARDS: [(&str, usize); 42] = [
+pub(crate) const REWARDS: [(&str, usize); 47] = [
     ("first_blood", 0),
     ("kills_100", 1),
     ("kills_1000", 3),
@@ -232,6 +232,11 @@ pub(crate) const REWARDS: [(&str, usize); 42] = [
     ("style_red_50", 1),
     ("style_dual_50", 1),
     ("style_staff_50", 1),
+    ("fish_first", 0),
+    ("fish_50", 1),
+    ("fish_kinds", 1),
+    ("echo_angler", 1),
+    ("old_whiskers", 1),
     ("monitor_payback", 0),
     ("monitor_surge", 1),
 ];
@@ -457,7 +462,7 @@ mod tests {
             assert!(crate::achievements::find(id).is_some(), "{id}");
             per_tier[index] += 1;
         }
-        assert_eq!(per_tier, [17, 20, 4, 1]);
+        assert_eq!(per_tier, [18, 24, 4, 1]);
         assert_eq!(reward("kills_1000").map(|t| t.id), Some("kyber_mythical"));
         assert_eq!(reward("hours_100").map(|t| t.id), Some("kyber_legendary"));
         assert_eq!(reward("nope"), None);

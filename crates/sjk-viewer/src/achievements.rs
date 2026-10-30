@@ -80,6 +80,14 @@ pub(crate) enum Counter {
     DuelStyleRed,
     DuelStyleDual,
     DuelStyleStaff,
+    /// Fish landed with the Fishing toy ([`crate::fishing`]).
+    FishCaught,
+    /// Kinds of fish landed (bits of [`fish_kind`]).
+    FishKinds,
+    /// Echoes landed on the line.
+    EchoesLanded,
+    /// Old Whiskers, the great catfish, landed.
+    GreatCatfish,
     /// Players struck with a monitor during the player's Screen Saver who raised it
     /// (`monitor/saver.rs`).
     MonitorPayback,
@@ -88,7 +96,7 @@ pub(crate) enum Counter {
 }
 
 impl Counter {
-    const COUNT: usize = 24;
+    const COUNT: usize = 28;
     const ALL: [Self; Self::COUNT] = [
         Self::Kills,
         Self::SaberKills,
@@ -112,6 +120,10 @@ impl Counter {
         Self::DuelStyleRed,
         Self::DuelStyleDual,
         Self::DuelStyleStaff,
+        Self::FishCaught,
+        Self::FishKinds,
+        Self::EchoesLanded,
+        Self::GreatCatfish,
         Self::MonitorPayback,
         Self::MonitorSurge,
     ];
@@ -141,17 +153,21 @@ impl Counter {
             Self::DuelStyleRed => "duel_style_red",
             Self::DuelStyleDual => "duel_style_dual",
             Self::DuelStyleStaff => "duel_style_staff",
+            Self::FishCaught => "fish_caught",
+            Self::FishKinds => "fish_kinds",
+            Self::EchoesLanded => "echoes_landed",
+            Self::GreatCatfish => "great_catfish",
             Self::MonitorPayback => "monitor_paybacks",
             Self::MonitorSurge => "monitor_surges",
         }
     }
 
     /// Whether the count is the size of a set the record keeps (maps, servers, weapons,
-    /// duel partners) rather than a number.
+    /// duel partners, kinds of fish) rather than a number.
     const fn is_set(self) -> bool {
         matches!(
             self,
-            Self::Maps | Self::Servers | Self::Weapons | Self::DuelPartners
+            Self::Maps | Self::Servers | Self::Weapons | Self::DuelPartners | Self::FishKinds
         )
     }
 }
@@ -274,7 +290,7 @@ use Counter as C;
 use Source::{Client, Hub};
 
 /// Every achievement, in the hub's catalogue order.
-pub(crate) const ALL: [Kind; 42] = [
+pub(crate) const ALL: [Kind; 47] = [
     kind(
         "first_blood",
         "First Blood",
@@ -600,6 +616,48 @@ pub(crate) const ALL: [Kind; 42] = [
         Duels,
         Client(C::DuelStyleStaff),
     ),
+    // 29/10/2026 (Slash): the Fishing toy's, counted on servers as the rest.
+    kind(
+        "fish_first",
+        "First Bite",
+        "Land a fish with the Fishing toy.",
+        1,
+        Toys,
+        Client(C::FishCaught),
+    ),
+    kind(
+        "fish_50",
+        "Angler",
+        "Land 50 fish.",
+        50,
+        Toys,
+        Client(C::FishCaught),
+    ),
+    kind(
+        "fish_kinds",
+        "Every Fish in the Pond",
+        "Land every kind of fish.",
+        crate::fishing::FISH_KINDS as u64,
+        Toys,
+        Client(C::FishKinds),
+    ),
+    kind(
+        "echo_angler",
+        "Echo Angler",
+        "Land 10 Echoes on the line.",
+        10,
+        Toys,
+        Client(C::EchoesLanded),
+    ),
+    kind(
+        "old_whiskers",
+        "Old Whiskers",
+        "Land Old Whiskers, the great catfish.",
+        1,
+        Toys,
+        Client(C::GreatCatfish),
+    )
+    .secret(),
     // Since 29/10/2026 (Sol's Screen Saver, `monitor/saver.rs`).
     kind(
         "monitor_payback",
@@ -619,6 +677,16 @@ pub(crate) const ALL: [Kind; 42] = [
     )
     .secret(),
 ];
+
+/// The bit of the fish `id` in [`Record`]'s kinds of fish: its place among the fish of
+/// [`crate::fishing::CATCHES`] (junk has none).
+pub(crate) fn fish_kind(id: &str) -> Option<u32> {
+    crate::fishing::CATCHES
+        .iter()
+        .filter(|catch| catch.kind == crate::fishing::Kind::Fish)
+        .position(|catch| catch.id == id)
+        .map(|index| 1 << index)
+}
 
 /// How many achievements can still be earned (every one but the retired).
 pub(crate) const OBTAINABLE: usize = {
@@ -742,6 +810,8 @@ pub(crate) struct Record {
     partners: BTreeSet<String>,
     /// Kinds of weapon (bits of [`tracker::weapon_kind`]).
     weapons: u32,
+    /// Kinds of fish landed (bits of [`fish_kind`]).
+    fish: u32,
     /// What the hub held for the counts kept as sets (maps, servers, weapons), when
     /// that was more: after a reinstall the hub's count stands until the set passes it.
     floors: [u64; Counter::COUNT],
@@ -760,6 +830,7 @@ impl Record {
             Counter::Servers => self.servers.len() as u64,
             Counter::DuelPartners => self.partners.len() as u64,
             Counter::Weapons => u64::from(self.weapons.count_ones()),
+            Counter::FishKinds => u64::from(self.fish.count_ones()),
             _ => self.counts[counter as usize],
         };
         raw.max(self.floors[counter as usize])
@@ -787,6 +858,29 @@ impl Record {
         let total = self.box_ms + ms;
         self.add(Counter::BoxMinutes, total / 60_000);
         self.box_ms = total % 60_000;
+    }
+
+    /// A catch the Fishing toy landed: `catch` (none when the hook came up empty) or an
+    /// Echo (`echo`). Whether a count changed.
+    pub(crate) fn fished(&mut self, catch: Option<&crate::fishing::Catch>, echo: bool) -> bool {
+        if echo {
+            self.add(Counter::EchoesLanded, 1);
+            return true;
+        }
+        let Some(catch) = catch else {
+            return false;
+        };
+        match catch.kind {
+            crate::fishing::Kind::Junk => false,
+            crate::fishing::Kind::Fish => {
+                self.add(Counter::FishCaught, 1);
+                self.fish |= fish_kind(catch.id).unwrap_or(0);
+                if catch.id == crate::fishing::GREAT_CATFISH {
+                    self.add(Counter::GreatCatfish, 1);
+                }
+                true
+            }
+        }
     }
 
     /// Remember `name` in `set` (lower case, bounded); whether it was new.
@@ -825,6 +919,11 @@ impl Record {
             Counter::Weapons => {
                 while u64::from(self.weapons.count_ones()) > below {
                     self.weapons &= self.weapons - 1;
+                }
+            }
+            Counter::FishKinds => {
+                while u64::from(self.fish.count_ones()) > below {
+                    self.fish &= self.fish - 1;
                 }
             }
             _ => {
@@ -978,6 +1077,7 @@ impl Record {
             "servers": self.servers,
             "partners": self.partners,
             "weapons": self.weapons,
+            "fish": self.fish,
             "floors": floors,
             "unlocked": self.unlocked,
             "awaiting": self.awaiting,
@@ -1006,6 +1106,7 @@ impl Record {
             }
         }
         record.weapons = u32::try_from(number(json.get("weapons"))).unwrap_or(0);
+        record.fish = u32::try_from(number(json.get("fish"))).unwrap_or(0);
         if let Some(unlocked) = json["unlocked"].as_object() {
             for (id, at) in unlocked {
                 if let (Some(kind), Some(at)) = (find(id), at.as_i64()) {
@@ -1096,6 +1197,7 @@ static SHARED: Mutex<Shared> = Mutex::new(Shared {
         servers: BTreeSet::new(),
         partners: BTreeSet::new(),
         weapons: 0,
+        fish: 0,
         floors: [0; Counter::COUNT],
         unlocked: BTreeMap::new(),
         awaiting: BTreeSet::new(),
@@ -1254,6 +1356,33 @@ pub(crate) fn count(counter: Counter) -> u64 {
 mod tests {
     use super::*;
 
+    /// A fish counts towards Angler and its kind, Old Whiskers towards its own, an Echo
+    /// on the line towards Echo Angler; junk and an empty hook count nothing, and the
+    /// kinds of fish are kept in the file.
+    #[test]
+    fn fishing_counts_fish_their_kinds_echoes_and_the_catfish() {
+        let catch = |id: &str| {
+            crate::fishing::CATCHES
+                .iter()
+                .find(|catch| catch.id == id)
+                .unwrap()
+        };
+        let mut record = Record::default();
+        assert!(!record.fished(None, false));
+        assert!(!record.fished(Some(catch("boot")), false));
+        assert!(record.fished(Some(catch("silver_darter")), false));
+        assert!(record.fished(Some(catch("silver_darter")), false));
+        assert!(record.fished(Some(catch(crate::fishing::GREAT_CATFISH)), false));
+        assert!(record.fished(None, true));
+        assert_eq!(record.count(Counter::FishCaught), 3);
+        assert_eq!(record.count(Counter::FishKinds), 2);
+        assert_eq!(record.count(Counter::GreatCatfish), 1);
+        assert_eq!(record.count(Counter::EchoesLanded), 1);
+        assert_eq!(crate::fishing::FISH_KINDS, 12);
+        assert_eq!(find("fish_kinds").unwrap().goal, 12);
+        assert_eq!(Record::from_json(&record.to_json()), record);
+    }
+
     fn held(id: &str, progress: u64, unlocked: i64) -> sjk_identity::Achievement {
         sjk_identity::Achievement {
             id: id.to_owned(),
@@ -1286,7 +1415,7 @@ mod tests {
 
     /// The fourteen of 26/10/2026 follow Decorated in the hub's order, the eight the hub
     /// counts are its own, Master Craftsman asks for every card finish, and only Touched
-    /// by the Force is hidden, only Surveyor retired.
+    /// by the Force and Old Whiskers are hidden, only Surveyor retired.
     #[test]
     fn the_new_achievements_follow_the_hubs_catalogue() {
         let ids: Vec<&str> = ALL[21..].iter().map(|kind| kind.id).collect();
@@ -1312,6 +1441,11 @@ mod tests {
                 "style_red_50",
                 "style_dual_50",
                 "style_staff_50",
+                "fish_first",
+                "fish_50",
+                "fish_kinds",
+                "echo_angler",
+                "old_whiskers",
                 "monitor_payback",
                 "monitor_surge",
             ]
@@ -1325,7 +1459,7 @@ mod tests {
             crate::cards::FINISHES.len() as u64
         );
         let hidden: Vec<&str> = ALL.iter().filter(|k| k.hidden).map(|k| k.id).collect();
-        assert_eq!(hidden, ["mythical_find", "monitor_surge"]);
+        assert_eq!(hidden, ["mythical_find", "old_whiskers", "monitor_surge"]);
         let retired: Vec<&str> = ALL.iter().filter(|k| k.retired).map(|k| k.id).collect();
         assert_eq!(retired, ["surveyor"]);
         assert_eq!(OBTAINABLE, ALL.len() - 1);
