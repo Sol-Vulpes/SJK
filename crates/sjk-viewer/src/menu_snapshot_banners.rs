@@ -1,7 +1,7 @@
 //! Existing CPU snapshot renderer applied to real profile and sender-card components.
 use super::*;
 use crate::game_font::SjkFonts;
-use crate::menu::sjk::{Frame, TextTarget, color, text};
+use crate::menu::sjk::{Frame, color, text};
 use crate::menu_widgets::{MenuCanvas, TextFamily};
 use sjk_ui::{FontWeight, TextAlign};
 

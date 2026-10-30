@@ -323,11 +323,10 @@ impl Panel {
         }
         if card.person.avatar.is_none()
             && let Some(key_id) = &card.person.key_id
+            && let Some((avatar, banner)) = picture(key_id)
         {
-            if let Some((avatar, banner)) = picture(key_id) {
-                card.person.avatar = Some(avatar);
-                card.person.banner = banner;
-            }
+            card.person.avatar = Some(avatar);
+            card.person.banner = banner;
         }
     }
 
