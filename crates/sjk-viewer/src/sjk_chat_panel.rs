@@ -31,6 +31,8 @@ mod gif_picker;
 mod gif_sources;
 #[path = "sjk_chat_people.rs"]
 mod people;
+#[path = "sjk_chat_reactions.rs"]
+mod reactions;
 #[path = "sjk_chat_panel_view.rs"]
 mod view;
 
@@ -80,6 +82,12 @@ pub(crate) enum PanelAction {
     Close,
     /// Send this message to the SJK chat.
     Send(String),
+    /// Set a reaction, without sending chat text.
+    React {
+        message: u64,
+        emoji: String,
+        active: bool,
+    },
     /// Send it to the SJK chat only, never said in the server's All chat.
     SendSjkOnly(String),
     /// Mute or unmute, on this PC, the player with this key, last seen with this name.
@@ -145,6 +153,7 @@ struct Shown {
     /// The chosen message's id, its sender's key and name, and whether they are
     /// muted here.
     chosen: Option<(u64, String, String, bool)>,
+    reaction_mine: [bool; 6],
     /// The chosen message's GIF, when it has one on show.
     chosen_gif: Option<crate::chat_gifs::GifId>,
     chosen_source: Option<crate::chat_gifs::GifId>,
@@ -641,6 +650,9 @@ impl Panel {
 
     /// What Enter (or a click) on `token` does.
     fn activate(&mut self, token: u16) -> PanelAction {
+        if let Some(action) = reactions::activate(self, token) {
+            return action;
+        }
         if token == CARD_TOKEN {
             return PanelAction::None;
         }
@@ -1031,6 +1043,7 @@ mod tests {
 
     pub(super) fn message(id: u64, key: &str, text: &str) -> ChatMessage {
         ChatMessage {
+            reactions: Default::default(),
             id,
             at: 1_791_300_000 + id as i64 * 60,
             key_id: key.to_owned(),
@@ -1050,6 +1063,8 @@ mod tests {
 
     pub(super) fn chat(count: u64) -> ChatState {
         ChatState {
+            reaction: None,
+            own_key: None,
             messages: (1..=count)
                 .map(|id| message(id, &format!("{id:016x}"), &format!("message {id}")))
                 .collect(),

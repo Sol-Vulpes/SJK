@@ -169,9 +169,21 @@ fn lay(message: &ChatMessage, inputs: &Inputs<'_>, measure: &Measure<'_>, s: f32
         ""
     };
     let when = ago(u64::try_from(message.at).unwrap_or(0), inputs.now);
-    let meta = format!("{staff}{when}");
-    let meta_room = width(&meta, META_SIZE, TextFace::Regular) + 24.0;
     let muted = inputs.muted.contains(&message.key_id) && official.is_none();
+    let counts = if muted {
+        [0; 6]
+    } else {
+        sjk_identity::reactions::counts(&message.reactions, None).0
+    };
+    // One allocation, as before: reserve for the bounded reaction suffix too.
+    let mut meta = String::with_capacity(128);
+    use std::fmt::Write as _;
+    let _ = write!(
+        meta,
+        "{staff}{when}{}",
+        sjk_identity::reactions::Summary(counts)
+    );
+    let meta_room = width(&meta, META_SIZE, TextFace::Regular) + 24.0;
     let mut gif = None;
     let text = if let Some(official) = &official {
         official.text.clone()
@@ -337,6 +349,10 @@ impl Panel {
             ),
             None => (
                 "The SJK identity is off: turn it on to chat (Settings > Network)".to_owned(),
+                color::EMBER,
+            ),
+            Some(chat) if chat.reaction.as_ref().is_some_and(|outcome| !outcome.sent) => (
+                chat.reaction.as_ref().unwrap().message.clone(),
                 color::EMBER,
             ),
             Some(chat) if !chat.live => ("Connecting to the SJK hub...".to_owned(), color::MUTED),
@@ -1311,6 +1327,17 @@ impl Panel {
             );
         }
         // No key id here: key ids never show in the game.
+        super::reactions::draw(
+            self,
+            frame,
+            message,
+            [SIDE_X, top + 68.0, SIDE_WIDTH, 36.0],
+            !muted && inputs.enabled,
+            inputs
+                .chat
+                .and_then(|chat| chat.own_key.as_ref())
+                .and_then(|key| std::str::from_utf8(key).ok()),
+        );
         let mut y = top + 110.0;
         kit::button(
             &mut self.ui,

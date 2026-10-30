@@ -1,3 +1,16 @@
+## Shared SJK chat reactions
+
+30/10/2026, `feat/sjk-chat-reactions`, based on `main` `82c8c185`: the SJK chat page
+shows shared emoji counts and lets a registered player add/remove their own
+reaction with the pointer or keyboard. The matching hub PR #5 owns authorization,
+quota and capacity; its Windows x64 complete suite and focused API tests passed.
+Client feed tests cover updates without duplicate messages, deletion, reconnect
+refresh and old JSON; snapshots share validated reaction lists. No protocol-26
+or game-server chat changes. Windows x64 formatting, locked workspace build/tests
+and all-target clippy passed. An offline GPU fixture verified six controls, shared
+counts and the selected own reaction. Hub rollout and released-client live behavior
+remain unverified.
+
 ## Prediction regression audit
 
 30/10/2026, Windows x64: audit #305 reviewed the 25 prediction PRs from
