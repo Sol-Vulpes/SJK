@@ -99,9 +99,10 @@ impl Tick {
 /// A player's public profile as the hub serves it.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
 pub struct Profile {
-    /// Equipped profile banner unlock id. Empty on older hubs or when unequipped.
-    #[serde(default)]
-    pub banner: String,
+    /// Equipped cover id, shared across UI snapshots instead of allocating on clone.
+    /// Empty on older hubs or when unequipped; JSON remains an ordinary string.
+    #[serde(default, deserialize_with = "shared_banner")]
+    pub banner: std::sync::Arc<str>,
     /// First 16 hex digits of the SHA-256 of the public key.
     pub key_id: String,
     /// The public key, unpadded base64url.
@@ -184,6 +185,13 @@ pub struct Profile {
     /// answers the person's [`Profile::key_id`] for it everywhere.
     #[serde(default)]
     pub keys: Vec<String>,
+}
+
+/// Decode once on the worker; cloning profiles shares immutable banner storage.
+fn shared_banner<'de, D: serde::Deserializer<'de>>(
+    input: D,
+) -> Result<std::sync::Arc<str>, D::Error> {
+    String::deserialize(input).map(std::sync::Arc::from)
 }
 
 impl Profile {

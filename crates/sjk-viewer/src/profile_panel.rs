@@ -1154,7 +1154,7 @@ pub(crate) mod tests {
             key_id: "0123456789abcdef".to_owned(),
             key: String::new(),
             name: "^1Sol".to_owned(),
-            banner: String::new(),
+            banner: "".into(),
             bio: bio.to_owned(),
             verified: true,
             tick: sjk_identity::Tick::None,

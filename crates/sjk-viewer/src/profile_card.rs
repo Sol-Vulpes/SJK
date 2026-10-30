@@ -530,7 +530,7 @@ mod tests {
             key_id: "0123456789abcdef".to_owned(),
             key: String::new(),
             name: "Sol".to_owned(),
-            banner: String::new(),
+            banner: "".into(),
             bio: String::new(),
             verified: true,
             tick: sjk_identity::Tick::None,

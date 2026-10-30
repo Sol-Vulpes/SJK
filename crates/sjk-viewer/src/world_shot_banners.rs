@@ -42,7 +42,7 @@ fn duel6_profile_banners() {
             .collect();
         let me = preview.snapshot.me.as_mut().unwrap();
         me.name = "^3Banner Explorer".to_owned();
-        me.banner = "banner_hyperspace".to_owned();
+        me.banner = "banner_hyperspace".into();
         me.unlocks = owned.clone();
         let console = gpu.console.as_mut().unwrap();
         console.preview_profile(preview);

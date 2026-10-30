@@ -4215,7 +4215,7 @@ mod tests {
             key_id: "0123456789abcdef".to_owned(),
             key: String::new(),
             name: name.to_owned(),
-            banner: String::new(),
+            banner: "".into(),
             bio: String::new(),
             verified: false,
             tick: crate::Tick::None,
@@ -4259,7 +4259,7 @@ mod tests {
         fn set_banner(&mut self, _: &Identity, id: &str) -> Result<Profile, HubError> {
             self.record(format!("banner {id}"))?;
             let mut profile = profile("");
-            profile.banner = id.to_owned();
+            profile.banner = id.into();
             Ok(profile)
         }
         fn set_emoji(&mut self, _: &Identity, emoji: &str) -> Result<Profile, HubError> {
@@ -7010,11 +7010,11 @@ mod tests {
         worker.handle(Command::SetBanner("banner_jedi_archives".into()), t0);
         assert_eq!(fake.log().last().unwrap(), "banner banner_jedi_archives");
         assert_eq!(
-            lock(&snapshot).me.as_ref().unwrap().banner,
+            lock(&snapshot).me.as_ref().unwrap().banner.as_ref(),
             "banner_jedi_archives"
         );
         worker.handle(Command::SetBanner(String::new()), t0);
-        assert_eq!(lock(&snapshot).me.as_ref().unwrap().banner, "");
+        assert_eq!(lock(&snapshot).me.as_ref().unwrap().banner.as_ref(), "");
     }
 
     #[test]

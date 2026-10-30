@@ -1344,7 +1344,7 @@ mod tests {
             key_id: "0123456789abcdef".to_owned(),
             key: String::new(),
             name: "^1Ш^7Sol^3Vulpes^7 the Long Named".to_owned(),
-            banner: String::new(),
+            banner: "".into(),
             bio: format!(
                 "{}\n\nline three\n{}",
                 "Äöüß word ".repeat(30),

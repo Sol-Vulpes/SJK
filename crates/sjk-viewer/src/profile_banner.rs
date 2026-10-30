@@ -250,7 +250,7 @@ mod tests {
     fn only_supported_owned_equipment_survives_and_old_json_is_neutral() {
         let mut profile:sjk_identity::Profile=serde_json::from_str(r#"{"key_id":"0123456789abcdef","key":"","name":"Player","bio":"","verified":false,"created":1}"#).unwrap();
         assert_eq!(equipped(Some(&profile)), "");
-        profile.banner = ALL[1].id.to_owned();
+        profile.banner = ALL[1].id.into();
         assert_eq!(equipped(Some(&profile)), "");
         profile.unlocks.push(sjk_identity::Unlock {
             id: ALL[1].id.to_owned(),
@@ -261,6 +261,10 @@ mod tests {
             card: None,
         });
         assert_eq!(equipped(Some(&profile)), ALL[1].id);
+        assert!(std::sync::Arc::ptr_eq(
+            &profile.banner,
+            &profile.clone().banner
+        ));
         profile.banner = "future_cover".into();
         assert_eq!(equipped(Some(&profile)), "");
         assert_eq!(equipped(None), "");
