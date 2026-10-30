@@ -5,9 +5,13 @@ covers and a neutral fallback, with Collection equip/unequip, profile headers,
 profile cards and chat sender cards. Matching hub PR #6 uses counted unlocks and
 atomic Echo openings, proposing a 10% banner share from cards. Other prize shares
 stay unchanged; banners cannot use blade-only trade/craft/shatter operations.
-Focused hub tests pass for ownership, duplicate/atomic openings, replay refusal and
-last-copy removal. Client workspace checks and offline GPU screenshots are in
-progress. Hub deployment and live interoperability remain unverified. See
+Windows x64 client `4d4f9a42` passed formatting, locked workspace build/tests and
+all-target clippy. Hub `b3b472e` passed its complete suite and clippy (489 library,
+173 signed API tests plus CLI/panel suites), including atomic/duplicate openings,
+replay refusal and last-copy removal. GPU fixtures checked Collection, profile and
+reward reveal; a CPU component snapshot checked card crops/focus outlines. No
+public servers were used. Hub deployment and live interoperability remain unverified.
+Remote cards use cached profiles rather than live equipment broadcasts. See
 [profile-banners.md](profile-banners.md).
 
 ## Toys say ON and OFF, and toy_help

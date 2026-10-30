@@ -68,6 +68,25 @@ reuse the existing named cosmetic find envelope, as tags do.
 
 Focused tests cover ownership, unsupported ids, duplicate and atomic openings,
 replay refusal, removing the last copy, old profile JSON, neutral fallbacks,
-worker commands and UI equip/unequip/locked behavior. Full workspace checks and
-windowless GPU screenshots are in progress. Deployment and live interoperability
-remain unverified; there is no gameplay or performance certification.
+worker commands and UI equip/unequip/locked behavior. Windows x64 source revision
+`4d4f9a42` passed formatting, locked workspace build/tests and all-target clippy.
+Windowless GPU fixtures verified Collection, the profile header and Echo reveal
+without canvas overflow; a CPU component snapshot checked both player-card sizes
+and their focus borders. Profile tests cover narrow windows and maximum text size.
+Deployment and live interoperability remain unverified; there is no gameplay or
+performance certification. Other players' cards use the existing cached profile
+lookup; this version does not add live banner-change broadcasts.
+
+## Screenshots
+
+Offline GPU fixtures with a synthetic profile:
+
+![Banner collection and profile preview](images/profile-banners-collection.png)
+
+![Equipped cover on the profile](images/profile-banners-profile.png)
+
+![Banner reward reveal](images/profile-banners-opening.png)
+
+CPU component preview (the snapshot renderer approximates atlas badges):
+
+![Own and sender cards](images/profile-banner-cards.png)
