@@ -815,7 +815,8 @@ mod tests {
         assert_eq!(collection_tab_of(TOKEN + 6), Some(Tab::Holocrons));
         assert_eq!(collection_tab_of(TOKEN + 7), Some(Tab::Forge));
         assert_eq!(collection_tab_of(TOKEN + 8), Some(Tab::Cards));
-        assert_eq!(collection_tab_of(TOKEN + 9), None);
+        assert_eq!(collection_tab_of(TOKEN + 9), Some(Tab::Banners));
+        assert_eq!(collection_tab_of(TOKEN + 10), None);
         assert_eq!(collection_tab_of(TOKEN - 1), None);
     }
 
