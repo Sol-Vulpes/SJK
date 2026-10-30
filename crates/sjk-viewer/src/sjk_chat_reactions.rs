@@ -92,8 +92,8 @@ impl std::fmt::Write for Label {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::super::tests::{chat, drawn, inputs};
+    use super::*;
     #[test]
     fn the_selected_message_can_remove_its_own_reaction_without_sending_chat() {
         let mut state = chat(1);
