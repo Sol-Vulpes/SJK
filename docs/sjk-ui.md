@@ -2746,6 +2746,17 @@ separate approval; removing a source stops cached playback. See
 The field uses the shared text-entry handler, including selection, clipboard and
 held-key editing.
 
+## Chat reactions
+
+The SJK chat page shows emoji reaction counts beside a message's time. Selecting
+a public message exposes six reaction buttons under its sender in Chosen message.
+The player's own reactions are highlighted; a second activation removes one. These
+SJK controls are used in every menu style.
+
+Shared chat reactions (offline fixture; heart selected by the reader):
+
+![SJK chat reactions](images/sjk-chat-reactions.png)
+
 ## Plan
 
 The next screens, in order; each gets snapshot tests before it replaces its
@@ -2760,12 +2771,3 @@ classic version:
 
 `sjk` became the default `ui_menuStyle` before these were done. mp/duel6 has
 its tour, player stage and saber shot.
-
-The SJK chat page shows emoji reaction counts beside a message's time. Selecting
-a public message exposes six reaction buttons under its sender in Chosen message.
-The player's own reactions are highlighted; a second activation removes one. These
-SJK controls are used in every menu style.
-
-Shared chat reactions (offline fixture; heart selected by the reader):
-
-![SJK chat reactions](images/sjk-chat-reactions.png)
