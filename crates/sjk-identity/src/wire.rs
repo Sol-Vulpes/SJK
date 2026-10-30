@@ -99,6 +99,9 @@ impl Tick {
 /// A player's public profile as the hub serves it.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
 pub struct Profile {
+    /// Equipped profile banner unlock id. Empty on older hubs or when unequipped.
+    #[serde(default)]
+    pub banner: String,
     /// First 16 hex digits of the SHA-256 of the public key.
     pub key_id: String,
     /// The public key, unpadded base64url.
@@ -804,6 +807,9 @@ pub struct HolocronBuyAnswer {
 /// share per mille.
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq)]
 pub struct LootTier {
+    /// Banner prize share per mille, absent on older hubs.
+    #[serde(default)]
+    pub banner: u32,
     /// The tier's wire id.
     pub tier: String,
     /// How often a drop is this tier.

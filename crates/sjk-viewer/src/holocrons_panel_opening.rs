@@ -218,6 +218,9 @@ impl Found {
     /// The colour it is shown in: its tier's, or the holocron's for one this client
     /// does not know.
     pub(super) fn colour(&self) -> Color {
+        if let Some(banner) = crate::profile_card::banner::get(&self.id) {
+            return banner.tier.colour();
+        }
         match (self.skin, self.tag) {
             (Some(skin), _) => skin.tier.colour(),
             (None, Some(tag)) => tag.tier.colour(),
@@ -227,7 +230,9 @@ impl Found {
 
     /// What it is, in two words ("saber shader", "tag").
     pub(super) fn kind(&self) -> &'static str {
-        if self.tag.is_some() {
+        if crate::profile_card::banner::get(&self.id).is_some() {
+            "profile banner"
+        } else if self.tag.is_some() {
             "tag"
         } else {
             "saber shader"
@@ -315,6 +320,9 @@ impl Prize {
                 tier: shown.tier,
                 credits: shown.credits,
             },
+            Self::Shader(found) if crate::profile_card::banner::get(&found.id).is_some() => {
+                strip::Item::Banner(crate::profile_card::banner::get(&found.id).unwrap())
+            }
             Self::Shader(found) => match (found.skin, found.tag) {
                 (Some(skin), _) => strip::Item::Shader(skin),
                 (None, Some(tag)) => strip::Item::Tag(tag),
@@ -405,6 +413,7 @@ fn cue(prize: &Prize) -> Cue {
                 .skin
                 .map(|skin| skin.tier)
                 .or(found.tag.map(|tag| tag.tier))
+                .or(crate::profile_card::banner::get(&found.id).map(|banner| banner.tier))
                 .is_some_and(|tier| tier >= crate::unlockables::Rarity::Legendary) =>
         {
             Cue::Medal
@@ -1485,6 +1494,9 @@ impl Panel {
                     TextAlign::Center,
                 );
             }
+            strip::Item::Banner(banner) => {
+                crate::profile_card::banner::draw(&mut self.ui, rect, banner.id);
+            }
             strip::Item::New => {
                 let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
                     rect,
@@ -1549,6 +1561,10 @@ impl Panel {
             radius: 22.0 * s,
             color: color::alpha(color::SPACE, 0.95 * eased),
         });
+        if let Some(banner) = crate::profile_card::banner::get(&found.id) {
+            crate::profile_card::banner::draw(&mut self.ui, area, banner.id);
+            return;
+        }
         // A tag stands as its picture.
         if let Some(tag) = found.tag {
             let side = (height - 60.0).min(width - 60.0);
@@ -1775,10 +1791,16 @@ impl Panel {
             FontWeight::Semibold,
             TextAlign::Center,
         );
-        let kind = match (found.skin, found.tag) {
-            (Some(skin), _) => format!("{} {} saber shader", skin.tier.symbol(), skin.tier.label()),
-            (None, Some(tag)) => format!("{} {} tag", tag.tier.symbol(), tag.tier.label()),
-            (None, None) => "A saber shader new to this version of SJK".to_owned(),
+        let kind = if let Some(banner) = crate::profile_card::banner::get(&found.id) {
+            format!("{} profile banner", banner.tier.label())
+        } else {
+            match (found.skin, found.tag) {
+                (Some(skin), _) => {
+                    format!("{} {} saber shader", skin.tier.symbol(), skin.tier.label())
+                }
+                (None, Some(tag)) => format!("{} {} tag", tag.tier.symbol(), tag.tier.label()),
+                (None, None) => "A saber shader new to this version of SJK".to_owned(),
+            }
         };
         text(
             &mut self.ui,
@@ -1795,12 +1817,17 @@ impl Panel {
             TextFamily::Body,
             format_args!(
                 "{}",
-                match (found.skin, found.tag) {
-                    (Some(skin), _) => skin.description,
-                    (None, Some(_)) =>
-                        "Stick it on walls and floors with toy_tag; everyone on the map sees it.",
-                    (None, None) => {
-                        "It is yours: update SJK to see it in your Collection and wear it."
+                if crate::profile_card::banner::get(&found.id).is_some() {
+                    "Equip it in Collection, Banners. It appears on your profile and player cards."
+                } else {
+                    match (found.skin, found.tag) {
+                        (Some(skin), _) => skin.description,
+                        (None, Some(_)) => {
+                            "Stick it on walls and floors with toy_tag; everyone on the map sees it."
+                        }
+                        (None, None) => {
+                            "It is yours: update SJK to see it in your Collection and wear it."
+                        }
                     }
                 }
             ),
@@ -1810,12 +1837,21 @@ impl Panel {
             FontWeight::Regular,
             TextAlign::Center,
         );
-        let held = match (found.count, found.skin, found.tag) {
-            (count, _, _) if count > 1 => format!("You hold {count} of it now."),
-            (_, Some(_), _) => "Yours now: wear it in the Collection.".to_owned(),
-            (_, None, Some(_)) => "Yours now: choose it on the Collection's Tags tab.".to_owned(),
-            // Its line above says where it will show.
-            (_, None, None) => String::new(),
+        let held = if crate::profile_card::banner::get(&found.id).is_some() {
+            format!(
+                "Yours, {} copies. Equip one in Collection, Banners.",
+                found.count
+            )
+        } else {
+            match (found.count, found.skin, found.tag) {
+                (count, _, _) if count > 1 => format!("You hold {count} of it now."),
+                (_, Some(_), _) => "Yours now: wear it in the Collection.".to_owned(),
+                (_, None, Some(_)) => {
+                    "Yours now: choose it on the Collection's Tags tab.".to_owned()
+                }
+                // Its line above says where it will show.
+                (_, None, None) => String::new(),
+            }
         };
         text(
             &mut self.ui,
@@ -2041,6 +2077,9 @@ impl Panel {
                     ],
                     1.0,
                 );
+            }
+            strip::Item::Banner(banner) => {
+                crate::profile_card::banner::draw(&mut self.ui, rect, banner.id);
             }
             strip::Item::New => {
                 let _ = list.push(DrawCommand::Border {

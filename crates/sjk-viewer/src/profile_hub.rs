@@ -80,10 +80,12 @@ pub(crate) enum Tab {
     Forge,
     /// The cards opening holocrons brought, and the credits.
     Cards,
+    /// Collectible profile covers from Echo openings.
+    Banners,
 }
 
 const PROFILE_TABS: [Tab; 4] = [Tab::Character, Tab::Saber, Tab::Force, Tab::Profile];
-const COLLECTION_TABS: [Tab; 9] = [
+const COLLECTION_TABS: [Tab; 10] = [
     Tab::Medals,
     Tab::Achievements,
     Tab::Shaders,
@@ -93,9 +95,10 @@ const COLLECTION_TABS: [Tab; 9] = [
     Tab::Holocrons,
     Tab::Forge,
     Tab::Cards,
+    Tab::Banners,
 ];
 const PROFILE_LABELS: [&str; 4] = ["Character", "Saber", "Force", "SJK Profile"];
-const COLLECTION_LABELS: [&str; 9] = [
+const COLLECTION_LABELS: [&str; 10] = [
     "Medals",
     "Achievements",
     "Shaders",
@@ -105,6 +108,7 @@ const COLLECTION_LABELS: [&str; 9] = [
     HOLOCRONS,
     FORGE,
     "Cards",
+    "Banners",
 ];
 
 /// The Collection screen's title: one place to rename it.
@@ -118,7 +122,7 @@ pub(crate) const FORGE: &str = "Forge";
 
 impl Tab {
     #[cfg(test)]
-    pub(crate) const ALL: [Self; 13] = [
+    pub(crate) const ALL: [Self; 14] = [
         Self::Character,
         Self::Saber,
         Self::Force,
@@ -132,6 +136,7 @@ impl Tab {
         Self::Holocrons,
         Self::Forge,
         Self::Cards,
+        Self::Banners,
     ];
 
     /// The screen the tab is on.
@@ -154,6 +159,7 @@ impl Tab {
             Self::Holocrons => 6,
             Self::Forge => 7,
             Self::Cards => 8,
+            Self::Banners => 9,
         }
     }
 

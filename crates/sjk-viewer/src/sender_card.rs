@@ -58,6 +58,8 @@ pub(crate) struct Person {
     /// Their picture's version, empty for none; `None` while not known (the place that
     /// shows the card asks, outside any lock: `player_identity::avatar_version`).
     pub(crate) avatar: Option<String>,
+    /// Validated banner id from the same profile lookup as the avatar.
+    pub(crate) banner: &'static str,
     /// A line on when they were about, from the place that shows the card ("Online
     /// now, in a match", "Seen 3 minutes ago"), or none.
     pub(crate) note: Option<String>,
@@ -251,6 +253,16 @@ pub(crate) fn draw(
             0.7,
         ),
     });
+    crate::profile_card::banner::draw(
+        canvas,
+        Rect::new(
+            card.x + 1.0 * u,
+            card.y + 1.0 * u,
+            width - 2.0 * u,
+            (HEAD + 2.0 * PAD) * u,
+        ),
+        person.banner,
+    );
     let x = card.x + PAD * u;
     let inner = width - 2.0 * PAD * u;
     let mut y = card.y + PAD * u;
@@ -745,6 +757,7 @@ mod tests {
             emoji: String::new(),
             medals: crate::medals::Medals::default(),
             place: Place::SlotByName(5),
+            banner: "",
             avatar: Some(String::new()),
             note: None,
             safety: false,

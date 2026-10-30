@@ -1,3 +1,15 @@
+## Static profile banners
+
+30/10/2026, `feat/profile-banners`, based on `main` `3b2e5ce1`: five collectible
+covers and a neutral fallback, with Collection equip/unequip, profile headers,
+profile cards and chat sender cards. Matching hub PR #6 uses counted unlocks and
+atomic Echo openings, proposing a 10% banner share from cards. Other prize shares
+stay unchanged; banners cannot use blade-only trade/craft/shatter operations.
+Focused hub tests pass for ownership, duplicate/atomic openings, replay refusal and
+last-copy removal. Client workspace checks and offline GPU screenshots are in
+progress. Hub deployment and live interoperability remain unverified. See
+[profile-banners.md](profile-banners.md).
+
 ## Toys say ON and OFF, and toy_help
 
 29/10/2026, `feat/toy-announce` (Creyon), based on `main` `9f40fded` (Blep's idea, Sol's

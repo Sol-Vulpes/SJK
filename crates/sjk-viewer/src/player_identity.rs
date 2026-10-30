@@ -1571,6 +1571,35 @@ pub(crate) fn avatar_version(key_id: &str) -> Option<String> {
     known
 }
 
+/// Avatar and static banner from one profile read, outside the caller's UI lock.
+/// Unknown profiles are requested once, as for the existing picture lookup.
+pub(crate) fn card_appearance(key_id: &str) -> Option<(String, &'static str)> {
+    let mut runtime = lock();
+    let runtime = &mut *runtime;
+    let service = runtime.service.as_ref()?;
+    let known = service.with_snapshot(|snapshot| {
+        snapshot
+            .me
+            .as_ref()
+            .filter(|profile| profile.key_id == key_id)
+            .or_else(|| snapshot.profiles.get(key_id))
+            .map(|profile| {
+                (
+                    profile.avatar.clone(),
+                    crate::profile_card::banner::equipped(Some(profile)),
+                )
+            })
+    });
+    if known.is_none() && !runtime.picture_lookups.iter().any(|key| key == key_id) {
+        if runtime.picture_lookups.len() == PICTURE_LOOKUPS {
+            runtime.picture_lookups.remove(0);
+        }
+        runtime.picture_lookups.push(key_id.to_owned());
+        service.look_up(key_id.to_owned());
+    }
+    known
+}
+
 /// Ask the hub for another player's profile (their bio).
 pub(crate) fn look_up(key_id: &str) {
     if let Some(service) = lock().service.as_ref() {
