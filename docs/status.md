@@ -4,6 +4,11 @@
 shows shared emoji counts and lets a registered player add/remove their own
 reaction with the pointer or keyboard. The matching hub PR #5 owns authorization,
 quota and capacity; its Windows x64 complete suite and focused API tests passed.
+Review follow-up (31/10/2026, head `0351f55e` plus the reaction-notice change):
+failed reaction notices expire after five seconds, restoring the reader count or
+connection status. A focused monotonic-clock test covers expiry, a later failure
+and success. Windows x64 formatting, locked workspace build/tests and all-target
+clippy passed; live hub rollout remains unverified.
 Client feed tests cover updates without duplicate messages, deletion, reconnect
 refresh and old JSON; snapshots share validated reaction lists. No protocol-26
 or game-server chat changes. Windows x64 formatting, locked workspace build/tests

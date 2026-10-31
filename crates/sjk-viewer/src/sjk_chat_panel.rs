@@ -204,6 +204,7 @@ pub(crate) struct Panel {
     pointer: Option<sjk_ui::Vec2>,
     previous_people: Vec<String>,
     epoch: Instant,
+    reaction_notice: reactions::Notice,
     /// The GIF picker.
     gifs: gif_picker::Picker,
     /// `cl_giphyKey` as the last frame had it, for the key card's Change GIPHY key.
@@ -279,6 +280,7 @@ impl Panel {
             pointer: None,
             previous_people: Vec::with_capacity(PEOPLE_SHOWN),
             epoch: Instant::now(),
+            reaction_notice: reactions::Notice::default(),
             gifs: gif_picker::Picker::new(),
             giphy_key: String::new(),
             hover: Default::default(),

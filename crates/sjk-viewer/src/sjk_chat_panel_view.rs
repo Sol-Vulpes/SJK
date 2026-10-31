@@ -342,6 +342,10 @@ impl Panel {
     /// Who reads the chat, or why it cannot be read, and what it is.
     fn status(&mut self, frame: &Frame, inputs: &Inputs<'_>) {
         let s = frame.s;
+        let reaction_error = self.reaction_notice.message(
+            inputs.chat.and_then(|chat| chat.reaction.as_ref()),
+            Instant::now(),
+        );
         let (line, colour) = match inputs.chat {
             _ if !inputs.enabled => (
                 "SJK chat is off (Settings > Network > SJK chat)".to_owned(),
@@ -351,10 +355,9 @@ impl Panel {
                 "The SJK identity is off: turn it on to chat (Settings > Network)".to_owned(),
                 color::EMBER,
             ),
-            Some(chat) if chat.reaction.as_ref().is_some_and(|outcome| !outcome.sent) => (
-                chat.reaction.as_ref().unwrap().message.clone(),
-                color::EMBER,
-            ),
+            Some(_) if reaction_error.is_some() => {
+                (reaction_error.unwrap().to_owned(), color::EMBER)
+            }
             Some(chat) if !chat.live => ("Connecting to the SJK hub...".to_owned(), color::MUTED),
             Some(chat) if chat.online == 1 => {
                 ("1 SJK player reading".to_owned(), color::GOLD_BRIGHT)

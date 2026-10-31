@@ -1583,6 +1583,8 @@ shows a compact count summary. Pointer and keyboard/Tab use the same controls.
 Blocked senders, official notices and reward notifications offer no reaction
 controls. Messages can still be read on older hubs; an unavailable endpoint
 reports that reaction support needs an updated hub instead of posting chat text.
+Reaction errors show for five seconds, then the status line returns to the reader
+count (or the current connection status); a later failure starts a new timeout.
 
 The catalogue is `like` (thumbs up), `heart`, `laugh`, `wow`, `sad`, `fire`.
 `POST /v1/chat/reaction` is signed and takes

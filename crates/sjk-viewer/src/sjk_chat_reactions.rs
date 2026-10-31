@@ -4,6 +4,34 @@ use crate::menu::sjk::{Frame, kit};
 
 pub(super) const BASE: u16 = 1_600;
 
+/// A failed reaction briefly replaces the reader count, once per result.
+#[derive(Default)]
+pub(super) struct Notice {
+    seen: Option<(u64, Instant)>,
+}
+impl Notice {
+    pub(super) fn message<'a>(
+        &mut self,
+        outcome: Option<&'a sjk_identity::ReportOutcome>,
+        now: Instant,
+    ) -> Option<&'a str> {
+        let Some(outcome) = outcome else {
+            self.seen = None;
+            return None;
+        };
+        let (_, since) = *self.seen.get_or_insert((outcome.serial, now));
+        if self
+            .seen
+            .is_some_and(|(serial, _)| serial != outcome.serial)
+        {
+            self.seen = Some((outcome.serial, now));
+            return (!outcome.sent).then_some(outcome.message.as_str());
+        }
+        (!outcome.sent && now.saturating_duration_since(since) < std::time::Duration::from_secs(5))
+            .then_some(outcome.message.as_str())
+    }
+}
+
 pub(super) fn draw(
     panel: &mut Panel,
     frame: &Frame,
@@ -94,6 +122,29 @@ impl std::fmt::Write for Label {
 mod tests {
     use super::super::tests::{chat, drawn, inputs};
     use super::*;
+    #[test]
+    fn failed_reactions_expire_and_a_new_failure_gets_its_own_timeout() {
+        let now = Instant::now();
+        let mut notice = Notice::default();
+        let mut outcome = sjk_identity::ReportOutcome {
+            serial: 1,
+            sent: false,
+            message: "Reaction support needs an updated hub".into(),
+        };
+        assert_eq!(
+            notice.message(Some(&outcome), now),
+            Some(outcome.message.as_str())
+        );
+        let later = now + std::time::Duration::from_secs(5);
+        assert_eq!(notice.message(Some(&outcome), later), None);
+        assert_eq!(notice.message(Some(&outcome), later), None);
+        outcome.serial += 1;
+        assert!(notice.message(Some(&outcome), later).is_some());
+        outcome.serial += 1;
+        outcome.sent = true;
+        assert_eq!(notice.message(Some(&outcome), later), None);
+        assert_eq!(notice.message(None, later), None);
+    }
     #[test]
     fn the_selected_message_can_remove_its_own_reaction_without_sending_chat() {
         let mut state = chat(1);
