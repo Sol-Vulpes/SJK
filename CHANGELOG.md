@@ -30,6 +30,10 @@ The site (site/assets/site.js, parseChangelog) reads the release headings,
 introductions and recap lines too.
 Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 -->
+## Unreleased
+
+- JA+ tools: `japlus.guntele` with a distance (`japlus.guntele 300`, from the console or a quick wheel choice) takes you that far straight ahead, level, and stops just before a wall or step in the way, so it no longer drops you under the floor when you look down or into a wall _(Slash, after hub report #218, Nib)_
+
 ## 2026.1031.2 (Alpha) | 31/10/2026
 
 One News panel, cloud content that updates itself, faster blades and a fairer box hunt.
