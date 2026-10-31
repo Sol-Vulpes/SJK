@@ -21,7 +21,7 @@ pub(crate) const SHADER_TIERS: usize = 5;
 /// Every odds table, one entry per holocron tier in [`TIERS`] order; shares per mille.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) struct Table {
-    /// Authoritative banner share (zero until a supporting hub supplies it).
+    /// Independent banner bonus odds (zero until a supporting hub supplies it).
     pub(crate) banner: [u32; COUNT],
     /// How often a drop is each tier.
     pub(crate) drop: [u16; COUNT],
@@ -117,11 +117,8 @@ fn of_hub(tiers: &[sjk_identity::LootTier]) -> Option<Table> {
             && whole(&tier.rarity)
             && whole(&tier.finish)
             && whole(&tier.shader_tier)
-            && u64::from(tier.shader)
-                + u64::from(tier.tag)
-                + u64::from(tier.shard_pile)
-                + u64::from(tier.banner)
-                <= 1_000
+            && u64::from(tier.shader) + u64::from(tier.tag) + u64::from(tier.shard_pile) <= 1_000
+            && tier.banner <= 1_000
             && tier.credits[0] <= tier.credits[1]
             && tier.shards[0] <= tier.shards[1]
             && tier.card_shards[0] <= tier.card_shards[1];
@@ -195,6 +192,21 @@ mod tests {
                 ],
             })
             .collect()
+    }
+
+    #[test]
+    fn bonus_banner_odds_are_independent_of_the_ordinary_prize_shares() {
+        let mut tiers = wire(&BUILT_IN);
+        for tier in &mut tiers {
+            tier.banner = 1_000;
+        }
+        let table = of_hub(&tiers).expect("a guaranteed bonus is still compatible");
+        assert_eq!(table.shader, BUILT_IN.shader);
+        assert_eq!(table.tag, BUILT_IN.tag);
+        assert_eq!(table.shard_pile, BUILT_IN.shard_pile);
+        assert_eq!(table.card, BUILT_IN.card);
+        tiers[0].banner = 1_001;
+        assert_eq!(of_hub(&tiers), None);
     }
 
     #[test]

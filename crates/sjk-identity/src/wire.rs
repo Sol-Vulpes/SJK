@@ -349,6 +349,9 @@ pub struct OpenedCard {
 /// What opening one holocron brought.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
 pub struct Opened {
+    /// Independent profile-banner bonus, beside the ordinary prize; absent on old hubs.
+    #[serde(default)]
+    pub banner: Option<OpenedUnlock>,
     /// The holocron opened.
     pub holocron: u64,
     /// Its tier's wire id.
@@ -815,7 +818,7 @@ pub struct HolocronBuyAnswer {
 /// share per mille.
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq)]
 pub struct LootTier {
-    /// Banner prize share per mille, absent on older hubs.
+    /// Independent banner bonus chance per mille, absent on older hubs.
     #[serde(default)]
     pub banner: u32,
     /// The tier's wire id.

@@ -71,16 +71,24 @@ const BACK_Y: f32 = 988.0;
 const BACK_WIDTH: f32 = 150.0;
 
 /// The notes on how the rolls are made, and the rarest card.
-fn notes() -> [String; 5] {
+fn notes() -> [String; 6] {
     let (rarity, finish, chance) = loot::rarest();
     let table = crate::loot_odds::current();
     [
-        "A card's rarity and finish are rolled apart; the hub picks a card evenly within that rarity. A missing card stays sealed.".to_owned(),
-        "Non-card prizes give no card or credits. Credits and shard piles use even ranges; the averages include every prize kind.".to_owned(),
-        format!("The rarest card is a {} {}: about {} holocrons.",RARITIES[rarity].name,FINISHES[finish].name,loot::one_in(chance)),
-        format!("Banner chances per opening (Uncommon to Mythical): {} / {} / {} / {}.",loot::percent(f64::from(table.banner[0])/1000.0),loot::percent(f64::from(table.banner[1])/1000.0),loot::percent(f64::from(table.banner[2])/1000.0),loot::percent(f64::from(table.banner[3])/1000.0)),
-        "Banners use shader-tier odds and the same empty-tier fallback as tags. Missing covers in that tier come first; otherwise copies stack. Gifts open the same way.".to_owned(),
-    ].map(crate::terms::say_owned)
+        "A card's rarity and its finish are rolled apart, so a kind of card is the two chances multiplied, weighed by how often each holocron drops."
+            .to_owned(),
+        "Credits and a pile of kyber shards are rolled evenly between the least and the most. A holocron that brings a saber shader or kyber shards brings no card and no credits; the averages count it.".to_owned(),
+        format!(
+            "The rarest card is a {} {}: about {} holocrons.",
+            RARITIES[rarity].name,
+            FINISHES[finish].name,
+            loot::one_in(chance)
+        ),
+        "The card is picked evenly among the cards of its rarity; a rarity with no card yet stays sealed.".to_owned(),
+        "Gifts from the SJK team are given, not found; they open the same way.".to_owned(),
+        format!("Bonus banner, on top: {} / {} / {} / {} (Uncommon to Mythical).", loot::percent(f64::from(table.banner[0])/1000.0), loot::percent(f64::from(table.banner[1])/1000.0), loot::percent(f64::from(table.banner[2])/1000.0), loot::percent(f64::from(table.banner[3])/1000.0)),
+    ]
+    .map(crate::terms::say_owned)
 }
 
 /// The notes on how a kyber crystal's shader is picked, and its pity.

@@ -4308,6 +4308,7 @@ mod tests {
             let opened: Vec<crate::wire::Opened> = ids
                 .iter()
                 .map(|&id| crate::wire::Opened {
+                    banner: None,
                     holocron: id,
                     // 77 is a kyber crystal.
                     tier: if id == 77 { "kyber_rare" } else { "rare" }.to_owned(),

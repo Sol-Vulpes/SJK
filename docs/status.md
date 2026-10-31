@@ -3,8 +3,11 @@
 30/10/2026, `feat/profile-banners`, based on `main` `3b2e5ce1`: five collectible
 covers and a neutral fallback, with Collection equip/unequip, profile headers,
 profile cards and chat sender cards. Matching hub PR #6 uses counted unlocks and
-atomic Echo openings, proposing a 10% banner share from cards. Other prize shares
-stay unchanged; banners cannot use blade-only trade/craft/shatter operations.
+atomic Echo openings with an independent 10% bonus banner roll. Ordinary prizes,
+card frequency and credits stay unchanged; banners cannot use blade-only
+trade/craft/shatter operations. Bonus drops are disabled until the hub enables
+them for a supporting client release. The client reveals the ordinary rewards
+first, then bonus covers in a second group, each within the existing batch limit.
 Windows x64 client `4d4f9a42` passed formatting, locked workspace build/tests and
 all-target clippy. Hub `b3b472e` passed its complete suite and clippy (489 library,
 173 signed API tests plus CLI/panel suites), including atomic/duplicate openings,

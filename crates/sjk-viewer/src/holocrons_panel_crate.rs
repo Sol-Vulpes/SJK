@@ -193,7 +193,6 @@ pub(crate) fn pool(tier: usize) -> Vec<(Item, u64)> {
     let pile = u64::from(table.shard_pile[tier]);
     // A tag (27/10/2026) stands only as the prize: its share leaves the cards'.
     let tag = u64::from(table.tag[tier]);
-    let banner = u64::from(table.banner[tier]);
     let odds = &table.card[tier];
     let mut pool = Vec::new();
     if pile > 0 {
@@ -201,7 +200,7 @@ pub(crate) fn pool(tier: usize) -> Vec<(Item, u64)> {
     }
     for rarity in 0..RARITIES.len() {
         for finish in 0..FINISHES.len() {
-            let weight = (1_000 - shader - pile - tag - banner)
+            let weight = (1_000 - shader - pile - tag)
                 * u64::from(odds.rarity[rarity])
                 * u64::from(odds.finish[finish]);
             if weight > 0 {

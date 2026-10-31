@@ -38,11 +38,12 @@ for covers of every size. No downloaded assets, arbitrary URLs or commercial-gam
 ## Echo rewards and ownership
 
 Banners use the existing holocron/Echo opening transaction and counted unlock inventory.
-The proposed banner share is **100 per mille (10%)** in every holocron tier, taken from
-the card share. Shader, tag and shard-pile shares stay unchanged. This is a reviewable
-balance choice, not a deployment: the hub sends its actual odds and the loot table
-shows them. Before a supporting hub supplies odds, the client's banner share is zero.
-A banner prize replaces the card and credits; it creates no new currency or reroll.
+The banner bonus chance is **100 per mille (10%)** in every holocron tier,
+rolled independently on top of the ordinary prize. Card frequency, credits, Solar
+blade bonuses, shaders, tags and shard piles retain their existing rules. The hub
+sends its actual odds and the loot table shows them; before a supporting hub
+supplies odds, the client's bonus chance is zero. The ordinary prize is revealed
+first, followed by any bonus cover.
 Kyber crystals keep their existing shader-only behavior.
 
 The hub rolls the banner tier using the opening's `shader_tier` odds, with the same
@@ -62,9 +63,11 @@ reads also validate supported ownership, so an invalid id never becomes a worn c
 Public profiles add optional `banner`; old JSON reads as neutral. Signed
 `PUT /v1/profile/banner` accepts `{"id":"banner_jedi_archives"}` (empty to unequip)
 and returns the authoritative profile, under the ordinary profile-edit request quota.
-Openings reuse `Opened.unlock`; loot tables add optional `banner` per mille. The
-client ignores unknown covers and displays the neutral cover. Grand banner finds
-reuse the existing named cosmetic find envelope, as tags do.
+Openings add optional `Opened.banner` beside the ordinary prize; loot tables add
+optional `banner` bonus odds per mille. The
+client ignores unknown covers and displays the neutral cover. Bonus banners add no public grand-find announcements. The hub enables drops only
+for a configured minimum supporting client release; older clients keep opening
+normally without bonuses. Deployment remains Sol's responsibility.
 
 Focused tests cover ownership, unsupported ids, duplicate and atomic openings,
 replay refusal, removing the last copy, old profile JSON, neutral fallbacks,

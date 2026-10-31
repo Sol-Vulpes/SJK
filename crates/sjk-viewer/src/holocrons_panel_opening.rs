@@ -231,7 +231,7 @@ impl Found {
     /// What it is, in two words ("saber shader", "tag").
     pub(super) fn kind(&self) -> &'static str {
         if crate::profile_card::banner::get(&self.id).is_some() {
-            "profile banner"
+            "bonus profile banner"
         } else if self.tag.is_some() {
             "tag"
         } else {
@@ -260,6 +260,14 @@ pub(crate) enum Prize {
 }
 
 impl Prize {
+    /// A second reveal, without replacing any part of the ordinary prize.
+    fn bonus(opened: &sjk_identity::Opened) -> Option<Self> {
+        opened
+            .banner
+            .as_ref()
+            .and_then(|banner| Found::of(opened, banner))
+            .map(Self::Shader)
+    }
     /// What the hub said one holocron brought; `None` for a tier, rarity or finish the
     /// client does not know. A shader it does not know still shows, by the hub's name.
     pub(crate) fn of(opened: &sjk_identity::Opened) -> Option<Self> {
@@ -494,7 +502,10 @@ impl Panel {
                 // The page reads the hub's counts again at once.
                 self.refreshed = None;
                 let shown: Vec<Prize> = outcome.opened.iter().filter_map(Prize::of).collect();
-                if shown.is_empty() {
+                let bonuses: Vec<Prize> = outcome.opened.iter().filter_map(Prize::bonus).collect();
+                if shown.is_empty() && !bonuses.is_empty() {
+                    self.show(bonuses, now);
+                } else if shown.is_empty() {
                     let message = if outcome.message.is_empty() {
                         "Nothing this client knows came out.".to_owned()
                     } else {
@@ -503,6 +514,7 @@ impl Panel {
                     self.refused(&message, now);
                 } else {
                     self.show(shown, now);
+                    self.bonus_prizes = bonuses;
                 }
             }
             None if now.saturating_duration_since(since) >= ANSWER_WAIT => {
@@ -515,6 +527,7 @@ impl Panel {
 
     /// Play the ceremony of `shown` from the first.
     pub(crate) fn show(&mut self, shown: Vec<Prize>, now: Instant) {
+        self.bonus_prizes.clear();
         self.played = Played::default();
         // The glide and the hum carry on from the wait (none for a rehearsal).
         self.waited = self.glide_from.map_or(0.0, |from| {
@@ -561,7 +574,7 @@ impl Panel {
                     self.played = Played::default();
                     ui_cues::post(Cue::Click);
                 } else {
-                    self.end_ceremony();
+                    self.finish_prizes(now);
                 }
             }
             Some(Ceremony::Batch { shown, since }) => {
@@ -572,7 +585,7 @@ impl Panel {
                         self.played.charged = true;
                         self.played.cracked = true;
                     }
-                    None => self.end_ceremony(),
+                    None => self.finish_prizes(now),
                 }
             }
             Some(Ceremony::Failed { .. }) => self.end_ceremony(),
@@ -580,8 +593,26 @@ impl Panel {
         }
     }
 
+    fn finish_prizes(&mut self, now: Instant) {
+        if self.bonus_prizes.is_empty() {
+            self.end_ceremony();
+        } else {
+            let bonuses = std::mem::take(&mut self.bonus_prizes);
+            self.show(bonuses, now);
+        }
+    }
+
+    pub(super) fn done_label(&self) -> &'static str {
+        if self.bonus_prizes.is_empty() {
+            "Done"
+        } else {
+            "Bonus banners"
+        }
+    }
+
     /// End the ceremony (Escape, or Done): the page shows again, read afresh.
     pub(crate) fn end_ceremony(&mut self) {
+        self.bonus_prizes.clear();
         self.glide_from = None;
         if self.ceremony.take().is_some() {
             ui_cues::post(Cue::Back);
@@ -1082,7 +1113,15 @@ impl Panel {
             &mut self.ui,
             frame,
             [CARD_X - 110.0, BUTTON_Y, 220.0, 48.0],
-            if last { "Done" } else { "Next" },
+            if last {
+                if self.bonus_prizes.is_empty() {
+                    "Done"
+                } else {
+                    "Bonus banners"
+                }
+            } else {
+                "Next"
+            },
             true,
             true,
             true,
@@ -1760,7 +1799,15 @@ impl Panel {
             &mut self.ui,
             frame,
             [CARD_X - 110.0, BUTTON_Y, 220.0, 48.0],
-            if index + 1 == count { "Done" } else { "Next" },
+            if index + 1 == count {
+                if self.bonus_prizes.is_empty() {
+                    "Done"
+                } else {
+                    "Bonus banners"
+                }
+            } else {
+                "Next"
+            },
             true,
             true,
             true,
@@ -1792,7 +1839,7 @@ impl Panel {
             TextAlign::Center,
         );
         let kind = if let Some(banner) = crate::profile_card::banner::get(&found.id) {
-            format!("{} profile banner", banner.tier.label())
+            format!("{} bonus profile banner", banner.tier.label())
         } else {
             match (found.skin, found.tag) {
                 (Some(skin), _) => {
@@ -1879,7 +1926,15 @@ impl Panel {
             &mut self.ui,
             frame,
             [CARD_X - 110.0, BUTTON_Y, 220.0, 48.0],
-            if index + 1 == count { "Done" } else { "Next" },
+            if index + 1 == count {
+                if self.bonus_prizes.is_empty() {
+                    "Done"
+                } else {
+                    "Bonus banners"
+                }
+            } else {
+                "Next"
+            },
             true,
             true,
             true,
@@ -1905,13 +1960,19 @@ impl Panel {
                     "skip"
                 } else if index + 1 < shown.len() {
                     "next"
+                } else if !self.bonus_prizes.is_empty() {
+                    "bonus banners"
                 } else {
                     "done"
                 })
             }
             Ceremony::Batch { shown, .. } => {
                 Some(if super::batch::summing_up(elapsed, shown.len()) {
-                    "done"
+                    if self.bonus_prizes.is_empty() {
+                        "done"
+                    } else {
+                        "bonus banners"
+                    }
                 } else {
                     "skip"
                 })
@@ -2727,5 +2788,117 @@ fn flourish(
             width: 4.0 * s,
             color: color::alpha(hue, 0.6 * fade),
         });
+    }
+}
+
+#[cfg(test)]
+mod bonus_tests {
+    use super::*;
+    fn prizes(opened: &sjk_identity::Opened) -> Vec<Prize> {
+        Prize::of(opened)
+            .into_iter()
+            .chain(Prize::bonus(opened))
+            .collect()
+    }
+
+    #[test]
+    fn twenty_openings_and_twenty_bonuses_reveal_in_complete_bounded_groups() {
+        let now = Instant::now();
+        let mut panel = Panel::new();
+        panel.ceremony = Some(Ceremony::Waiting {
+            tier: 0,
+            since: now,
+        });
+        let opened = (1..=sjk_identity::OPEN_MAX)
+            .map(|id| {
+                serde_json::from_value(serde_json::json!({
+                    "holocron":id,"tier":"rare","credits":42,
+                    "card":{"id":id,"rarity":"rare","finish":"normal","edition":"alpha"},
+                    "banner":{"id":"banner_jedi_archives","name":"Jedi Archives","count":id}
+                }))
+                .unwrap()
+            })
+            .collect();
+        panel.follow_opening(
+            now,
+            Some(&sjk_identity::OpenOutcome {
+                serial: 1,
+                opened,
+                message: String::new(),
+            }),
+        );
+        let Some(Ceremony::Batch { shown, .. }) = &panel.ceremony else {
+            panic!("ordinary group")
+        };
+        assert_eq!(shown.len(), sjk_identity::OPEN_MAX);
+        assert!(shown.iter().all(|prize| matches!(prize, Prize::Card(_))));
+        assert_eq!(panel.bonus_prizes.len(), sjk_identity::OPEN_MAX);
+        assert_eq!(panel.done_label(), "Bonus banners");
+        for _ in 0..20 {
+            panel.advance(now);
+            if panel.bonus_prizes.is_empty() {
+                break;
+            }
+        }
+        let Some(Ceremony::Batch { shown, .. }) = &panel.ceremony else {
+            panic!("bonus group")
+        };
+        assert_eq!(shown.len(), sjk_identity::OPEN_MAX);
+        assert!(
+            shown
+                .iter()
+                .all(|prize| matches!(prize.item(), strip::Item::Banner(_)))
+        );
+        assert_eq!(panel.done_label(), "Done");
+        panel.end_ceremony();
+        assert!(panel.bonus_prizes.is_empty());
+        assert!(panel.ceremony.is_none());
+    }
+
+    #[test]
+    fn the_bonus_reveal_keeps_the_card_credits_shards_and_solar_unlock() {
+        let opened: sjk_identity::Opened = serde_json::from_value(serde_json::json!({
+            "holocron":1,"tier":"rare","credits":42,"shards":4,
+            "card":{"id":1,"rarity":"rare","finish":"solar","edition":"alpha"},
+            "unlock":{"id":"saber_sun","name":"Sun","count":1},
+            "banner":{"id":"banner_jedi_archives","name":"Jedi Archives","count":2}
+        }))
+        .unwrap();
+        let prizes = prizes(&opened);
+        assert_eq!(prizes.len(), 2);
+        let Prize::Card(card) = &prizes[0] else {
+            panic!("ordinary card first")
+        };
+        assert_eq!(card.credits, 42);
+        assert_eq!(card.shards, 4);
+        assert_eq!(card.bonus.as_ref().unwrap().id, "saber_sun");
+        let Prize::Shader(banner) = &prizes[1] else {
+            panic!("banner bonus second")
+        };
+        assert_eq!(banner.id, "banner_jedi_archives");
+        assert_eq!(banner.count, 2);
+        assert_eq!(banner.kind(), "bonus profile banner");
+    }
+
+    #[test]
+    fn old_hub_and_non_card_prizes_still_reveal_with_optional_bonus() {
+        for ordinary in [
+            serde_json::json!({"shards":12}),
+            serde_json::json!({"unlock":{"id":"saber_sun","name":"Sun","count":1}}),
+        ] {
+            let mut json = serde_json::json!({"holocron":1,"tier":"rare"});
+            json.as_object_mut()
+                .unwrap()
+                .extend(ordinary.as_object().unwrap().clone());
+            let old: sjk_identity::Opened = serde_json::from_value(json.clone()).unwrap();
+            assert!(old.banner.is_none());
+            assert_eq!(prizes(&old).len(), 1);
+            json["banner"] =
+                serde_json::json!({"id":"banner_hyperspace","name":"Hyperspace","count":1});
+            let new: sjk_identity::Opened = serde_json::from_value(json).unwrap();
+            let prizes = prizes(&new);
+            assert_eq!(prizes.len(), 2);
+            assert_eq!(prizes[0], Prize::of(&old).unwrap());
+        }
     }
 }
