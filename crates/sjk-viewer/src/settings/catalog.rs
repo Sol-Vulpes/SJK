@@ -821,6 +821,11 @@ pub(super) const HUD: &[Setting] = &[
         },
     },
     Setting {
+        label: "Chat font",
+        cvar: crate::text::system_font::CHAT_CVAR,
+        kind: ValueKind::Live(crate::text::system_font::choices),
+    },
+    Setting {
         label: "Chat emojis",
         cvar: crate::chat::emoji::CVAR,
         kind: ValueKind::Bool,
@@ -1714,6 +1719,11 @@ pub(super) const TEXT: &[Setting] = &[
             max: 0.15,
             step: 0.01,
         },
+    },
+    Setting {
+        label: "Console font",
+        cvar: crate::text::system_font::CONSOLE_CVAR,
+        kind: ValueKind::Live(crate::text::system_font::choices),
     },
     Setting {
         label: "Console text size",
