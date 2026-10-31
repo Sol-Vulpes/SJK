@@ -33,10 +33,23 @@ Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 ## Unreleased
 
 - Loading graphics with Sun follows PC clock (`r_dayClock`) or Sun and sky on can no longer close the game: if the sky's day and night tint cannot be built, the map keeps its own sky, and if the game closed while building it, the next start leaves it out once and says so in the console. On DX12 without `dxcompiler.dll` maps load again: the HUD's program, and with Sun and sky the light probes' update, no longer fail to compile _(Slash, after hub report #219)_
+
+## 2026.1031.2 (Alpha) | 31/10/2026
+
+One News panel, cloud content that updates itself, faster blades and a fairer box hunt.
+
+> News: Release notes and announcements share one News panel.
+> Content: JoF content and the Sith cloud can update themselves.
+> Sabers: Legendary and Mythical blades draw faster.
+> Box hunt: Marks only among players in play, with an arrow.
+
 - What's new and the SJK team's announcements are now one News panel (`news`): the releases' recaps and the announcements in one list, with their settings to review, links that take you straight to a setting or a page, pictures and switches you can flip on the spot. It opens after an update and when there is news you have not read, never in the middle of play _(Sol)_
 - The switches on the what's-new card's Settings to review work for every setting: some (the dynamic glow's saber setting) did nothing and always showed Off _(Sol)_
 - JoF content and the Sith cloud can update themselves: turn on Update automatically on their card (or Settings > JoF content auto-update, Sith cloud auto-update) and tick Auto on the groups you want; SJK checks at start and every hour, also during a match, downloads what changed and says so in a small card, the new files loading from the next map. Off by default (`jof.contentAuto`, `sith.cloudAuto`) _(Sol)_
 - Legendary and Mythical saber shaders draw faster, looking the same: about a quarter less GPU time over the 48 of them, and half or more on Bleeding Kyber, Abyssal Eye, Sith Holocron, Reactor and Felucia Spores _(Sol)_
+- Box hunt: a mark is picked only among players in play (not typing in the chat, in a menu, spectating or idle), only when at least 3 are, and a mark away for a minute hands it to another; hunters see an arrow to the mark through walls, or round the crosshair pointing their way _(Sol)_
+- Box hunt: the mark is no longer shown for up to 20 seconds after their time is up, when killing them won nothing; the mark's game tells a kill made in the first seconds and tries again if the hub missed it; a hunter who wins no free roll reads why in the centre _(Sol)_
+- Mystery boxes are open inside under their lid (the top was closed with planks and the iron bands crossed it) and a faint halo of light rises over them, to find them from afar _(Sol)_
 
 ## 2026.1031.1 (Alpha) | 31/10/2026
 
