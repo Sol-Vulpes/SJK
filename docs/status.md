@@ -1,3 +1,17 @@
+## Shaders chosen by a click only, New ones outlined in gold
+
+31/10/2026, `fix/collection-click-to-preview` (Creyon), based on `main` `e4447394`: on
+the Collection's Shaders tab, resting the pointer on a blade chose and previewed it (from
+21/10 only over its blade strip), so moving to Equip across other blades changed the
+choice and the preview, and resting a second on a New one saw it. Now only a click (or
+the keys) chooses a shader there and on the Forge's tiles; the pointer shows the hover card
+alone (`Panel::hover_chooses`, `forge::Panel::token`). A New shader not chosen is
+outlined in gold on the wall and has a gold edge down its row in the list, besides its
+sticker ([sjk-ui.md](sjk-ui.md), [unlockables.md](unlockables.md)). Verified: the unit
+tests `resting_on_a_shader_never_chooses_it`, `resting_on_a_tile_never_chooses_it` and
+`a_new_shader_is_outlined_in_gold`, fmt, the workspace's build, tests and Clippy. Not
+verified: in game.
+
 ## Cloud content updates itself (opt in)
 
 31/10/2026, `personal/cloud-auto-update`, based on `main` `7ce876c0` (Sol's request: JoF
