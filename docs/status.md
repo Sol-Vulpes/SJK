@@ -1,20 +1,19 @@
 ## Shared SJK chat reactions
 
-30/10/2026, `feat/sjk-chat-reactions`, based on `main` `82c8c185`: the SJK chat page
-shows shared emoji counts and lets a registered player add/remove their own
-reaction with the pointer or keyboard. The matching hub PR #5 owns authorization,
-quota and capacity; its Windows x64 complete suite and focused API tests passed.
-Review follow-up (31/10/2026, head `0351f55e` plus the reaction-notice change):
-failed reaction notices expire after five seconds, restoring the reader count or
-connection status. A focused monotonic-clock test covers expiry, a later failure
-and success. Windows x64 formatting, locked workspace build/tests and all-target
-clippy passed; live hub rollout remains unverified.
-Client feed tests cover updates without duplicate messages, deletion, reconnect
-refresh and old JSON; snapshots share validated reaction lists. No protocol-26
-or game-server chat changes. Windows x64 formatting, locked workspace build/tests
-and all-target clippy passed. An offline GPU fixture verified six controls, shared
-counts and the selected own reaction. Hub rollout and released-client live behavior
-remain unverified.
+31/10/2026, `feat/sjk-chat-reactions`, code `4f081b30` (including `main`
+`677a6073`): the SJK chat page shows shared emoji counts and registered players
+can toggle their own reactions with pointer or keyboard. Failed reaction notices
+expire after five seconds, returning to the reader count or connection status;
+a later failure starts a fresh timeout. A monotonic-clock test covers expiry,
+success and repeated failures. Feed tests cover validation, replacement updates,
+deletion, reconnect and old JSON; immutable reaction lists share storage across
+snapshots. No protocol-26 or game-server chat changes.
+
+Windows x64 formatting, locked workspace build/tests and all-target clippy passed.
+The offline GPU fixture was refreshed after the main merge and inspected: all six
+controls, shared counts and the reader's selected heart are visible. Live hub
+rollout, released-client interoperability and other operating systems remain
+unverified. The matching hub PR #5 still needs Sol's deployment before release.
 
 ## Local incoming chat colour
 
