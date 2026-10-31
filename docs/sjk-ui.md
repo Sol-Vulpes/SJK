@@ -2752,6 +2752,14 @@ separate approval; removing a source stops cached playback. See
 The field uses the shared text-entry handler, including selection, clipboard and
 held-key editing.
 
+## Profile banners
+
+Collection > Banners shows six static covers (the neutral cover and five collectible
+ones), copy counts and a profile preview, with keyboard/pointer equip and unequip.
+The Profile header, own profile card and chat sender cards share the same native art,
+with central cropping and a readability veil. These SJK controls work in every menu
+style. See [profile banners](profile-banners.md) for rewards and compatibility.
+
 ## Incoming chat colour
 
 Settings > Chat includes **Incoming chat colour**, a named choice shared with
