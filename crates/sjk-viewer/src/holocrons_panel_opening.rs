@@ -2834,12 +2834,20 @@ mod bonus_tests {
         assert!(shown.iter().all(|prize| matches!(prize, Prize::Card(_))));
         assert_eq!(panel.bonus_prizes.len(), sjk_identity::OPEN_MAX);
         assert_eq!(panel.done_label(), "Bonus banners");
+        panel.shot_elapsed = Some(100.0);
+        for viewport in [[1920.0, 1080.0], [1024.0, 768.0]] {
+            panel.build(viewport);
+            assert!(!panel.overflowed(), "ordinary rewards at {viewport:?}");
+        }
+        let mut advance_at = now;
         for _ in 0..20 {
-            panel.advance(now);
+            panel.advance(advance_at);
+            advance_at += Duration::from_millis(1);
             if panel.bonus_prizes.is_empty() {
                 break;
             }
         }
+        assert!(panel.bonus_prizes.is_empty(), "the bonus group starts");
         let Some(Ceremony::Batch { shown, .. }) = &panel.ceremony else {
             panic!("bonus group")
         };
@@ -2850,6 +2858,10 @@ mod bonus_tests {
                 .all(|prize| matches!(prize.item(), strip::Item::Banner(_)))
         );
         assert_eq!(panel.done_label(), "Done");
+        for viewport in [[1920.0, 1080.0], [1024.0, 768.0]] {
+            panel.build(viewport);
+            assert!(!panel.overflowed(), "bonus covers at {viewport:?}");
+        }
         panel.end_ceremony();
         assert!(panel.bonus_prizes.is_empty());
         assert!(panel.ceremony.is_none());
