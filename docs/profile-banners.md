@@ -69,16 +69,23 @@ client ignores unknown covers and displays the neutral cover. Bonus banners add 
 for a configured minimum supporting client release; older clients keep opening
 normally without bonuses. Deployment remains Sol's responsibility.
 
-Focused tests cover ownership, unsupported ids, duplicate and atomic openings,
-replay refusal, removing the last copy, old profile JSON, neutral fallbacks,
-worker commands and UI equip/unequip/locked behavior. Windows x64 source revision
-`4d4f9a42` passed formatting, locked workspace build/tests and all-target clippy.
-Windowless GPU fixtures verified Collection, the profile header and Echo reveal
-without canvas overflow; a CPU component snapshot checked both player-card sizes
-and their focus borders. Profile tests cover narrow windows and maximum text size.
-Deployment and live interoperability remain unverified; there is no gameplay or
-performance certification. Other players' cards use the existing cached profile
-lookup; this version does not add live banner-change broadcasts.
+Client revision `56a9b774` and hub `3c77a2f` passed formatting, locked builds,
+complete tests and all-target clippy on Windows x64 (existing warnings). Focused
+checks cover ownership, unsupported ids, duplicates, atomic bonus failure,
+replay refusal, removing the last copy, old JSON, presence avatars without a
+fetched profile, worker commands and UI equip/unequip/locked behavior. Reward
+checks retain card credits, shards and Solar blade bonuses, validate independent
+odds and reveal twenty ordinary prizes followed by twenty bonus covers without
+exceeding either group's canvas capacity at two window sizes.
+
+Windowless GPU fixtures were refreshed and inspected after the main merge:
+Collection, profile header and the bonus reveal fit the canvas. Existing CPU
+component checks cover both player-card sizes and focus borders; profile tests
+cover narrow windows and maximum text size. Deployment and live interoperability
+remain unverified; there is no gameplay or performance certification. Other
+players' cards use the existing cached profile lookup; this version does not
+add live banner-change broadcasts. Sol's remaining cover-design decisions and
+the first supporting release are still pending.
 
 ## Screenshots
 
