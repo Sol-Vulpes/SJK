@@ -97,6 +97,7 @@ const CHAT_ROWS: &[&str] = &[
     "cg_chatBoxLetterSpacing",
     crate::chat::options::BACKDROP_CVAR,
     crate::chat::options::OUTLINE_CVAR,
+    crate::chat::incoming_color::CVAR,
     crate::chat::options::CARD_SCALE_CVAR,
     crate::text::charset::CVAR,
     "cl_sjkChat",
@@ -364,6 +365,7 @@ impl Group {
                 crate::effect_flash::REDUCE_CVAR,
                 crate::saber_clash_flare::CVAR,
                 crate::saber_clash_flare::SIZE_CVAR,
+                crate::saber_core::CVAR,
                 crate::impacts::FLESH_SPARKS_CVAR,
                 crate::team_sabers::TEAM_COLORS_CVAR,
                 crate::team_sabers::CVAR,
@@ -553,6 +555,7 @@ impl Group {
                 "cg_chatBoxLetterSpacing",
                 crate::chat::options::BACKDROP_CVAR,
                 crate::chat::options::OUTLINE_CVAR,
+                crate::chat::incoming_color::CVAR,
                 crate::chat::options::CARD_SCALE_CVAR,
             ],
             Self::Scoreboard => &[

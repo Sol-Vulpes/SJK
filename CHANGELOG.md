@@ -32,6 +32,27 @@ Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 -->
 ## Unreleased
 
+= r_dynamicGlowNoSabers: New: the dynamic glow leaves saber blades and trails out, so each saber's details show while the rest still glows; off, sabers glow as before.
+= r_dayClock: New: day and night follow your PC's clock in every preset: with Sun and sky the sun moves, without it the sky turns to night and the world darkens.
+
+- Profile > SJK Profile has a Change name button: it opens the Character tab with its Name field ready to type, the name the hub and other SJK players see being the one you wear in game _(Slash, PR #299, after hub report #202, Nib)_
+- Chat GIFs: Hide this GIF on the chosen message in SJK chat hides one GIF on your PC: its line reads GIF hidden and it never loads. The GIF picker's new Hidden tab lists the GIFs you hid, and a click on one shows it again; `gif_unhideall` shows them all (Kushina's idea) _(Creyon)_
+- Toys: switching a toy says its name and ON in green or OFF in red, short, for every toy (Illuminate, the cardboard box, Order 66 and the Hax said nothing, Box hunt, the Drone, the Monitor and the Banana peel said a long line), and `toy_help` lists every toy with what it does and how _(Creyon)_
+- All chat colour: Settings > Chat > All chat colour (`cg_chatColor`) shows the text of public All chat in one colour of your choice on your PC; team, admin, whispers and SJK chat keep theirs, as do names. Off (original colours) until you pick one _(Lumaya, PR #315)_
+- Vehicles: each predicted rider and vehicle leaves out its own pilot or chassis when it moves, as the original game does, instead of sharing one list for both _(Lumaya, PR #274)_
+- Melee kicks: holding the kick no longer leaves your kick frozen on its last frame while the server keeps kicking; each kick plays from the start _(Slash)_
+- Duels: `fakenoclip` and `freecam` are refused in a duel, and a duel starting ends them: the server saw a still player with the chat balloon up, and JoF's servers then spared them all damage _(Slash, after hub report #209)_
+- Away emote: alt-tabbing out or going idle while riding a vehicle no longer starts your away emote, which broke the vehicle's animations and attacks until you got off and on again _(Slash, after hub report #205)_
+- Force templates: on saber-only servers, templates such as JoF's Fullforce FFA no longer lose Force Speed (leaving only Sense) when the server's info does not show its free saber skills: SJK now takes them from the server's own word, as the original game does _(Slash, after hub report #206)_
+- Settings search: every result takes a typed number. Results from the later groups (part of Sound, Gameplay, Interface, HUD, Chat, Network) only took the slider; a click on their value did nothing (#203) _(Slash)_
+- Collection > Shaders: the mouse wheel scrolls on through the list and the wall. It stopped at a tier's heading, most of all with Owned on, while the arrow keys still went on (#201) _(Slash)_
+- Settings no longer go back to old values after `config.cfg` is edited or deleted while the game runs: an edited file is loaded at once, and a deleted one stays deleted so the next start is on the defaults, instead of the game writing its old name, field of view and camera back over it at exit (#199, after Kushina's workaround) _(Slash)_
+- Lighting: day and night can follow your PC's clock (Settings > Lighting > Sun follows PC clock, `r_dayClock`); with Sun and sky off, as in the SJK and Vanilla presets, the sky turns to dusk and night and the world gets darker _(Creyon)_
+- Spectating: aim at a player to see their name, then left-click to follow their view; a click with nobody under the crosshair keeps its normal bind _(Lukas)_
+- Quick wheel commands you name are remembered: a custom command saved in Settings > Quick wheel is offered again under Your own in the catalogue when you add or change a choice on any page, so it goes on another page or wheel without typing it again. Delete (or its cross) forgets one; choices already on pages keep it _(Slash, after Dante's idea)_
+- Blade core thickness: a slider in Settings > Game options (`cg_saberCoreSize`, 0.5 to 2) draws the white core of every lit blade thinner or thicker, its glow unchanged _(Creyon)_
+- No glow on sabers (Settings > Graphics > Image, `r_dynamicGlowNoSabers`): the dynamic glow leaves saber blades, their glow and their trails out, so they keep their own look and the details of each saber show, while everything else still glows. Off until you turn it on _(Slash, after g0dchris' idea)_
+- Server browser: Copy IP copies the chosen server's address and port (also Ctrl+C), and `copyServerIP` copies the server you are on, never a password _(Lumaya, PR #312)_
 - SJK chat: react to public messages with six shared emoji buttons; reaction errors clear after five seconds (requires hub support) _(Lumaya)_
 - Prediction with custom sabers: when two saber files define the same saber name, the first one counts, in the original game's file order, so a mod's saber no longer predicts the wrong flips, wall runs or jump attacks _(Lumaya, PR #314, after the original game)_
 - Mac and Linux: SJK raises its open-file limit at start as far as the system allows, so many PK3s no longer run out of files, and the log tracks how many game-file sets are still held at each map change _(Lukas, PR #198)_
