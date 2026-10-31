@@ -5,7 +5,8 @@ the Collection's Shaders tab, resting the pointer on a blade chose and previewed
 21/10 only over its blade strip), so moving to Equip across other blades changed the
 choice and the preview, and resting a second on a New one saw it. Now only a click (or
 the keys) chooses a shader there and on the Forge's tiles; the pointer shows the hover card
-alone (`Panel::hover_chooses`, `forge::Panel::token`). A New shader not chosen is
+alone (`Panel::hover_chooses`, `forge::Panel::token`). A New shader clicked is seen at
+once, its sticker gone (with the keys, after its second as before). A New shader not chosen is
 outlined in gold on the wall and has a gold edge down its row in the list, besides its
 sticker ([sjk-ui.md](sjk-ui.md), [unlockables.md](unlockables.md)). Verified: the unit
 tests `resting_on_a_shader_never_chooses_it`, `resting_on_a_tile_never_chooses_it` and

@@ -738,6 +738,9 @@ pub(crate) struct Panel {
     /// The shader chosen on Shaders or in the Forge while it was New: seen once it has
     /// stayed chosen a second (`shader_marks::Look`), not when a sweep passes over it.
     viewing: crate::shader_marks::Look,
+    /// A click just chose a shader (on Shaders or a Forge tile): a New one is seen at once,
+    /// its sticker gone, without waiting its second (Creyon, 31/10/2026).
+    clicked_shader: bool,
     /// The count of the last refused change of a mark the console was told of.
     mark_refusal_seen: u64,
     /// The marks a world shot or a test shows in place of the live ones.
@@ -855,6 +858,7 @@ impl Panel {
             marks: Default::default(),
             marks_from: None,
             viewing: crate::shader_marks::Look::default(),
+            clicked_shader: false,
             mark_refusal_seen: 0,
             #[cfg(test)]
             preview_marks: None,
@@ -1450,6 +1454,12 @@ impl Panel {
     /// is seen once it has stayed chosen a second.
     fn view(&mut self, chosen: Option<&'static str>) {
         let new = chosen.is_some_and(|id| self.marks.is_new(id));
+        if std::mem::take(&mut self.clicked_shader)
+            && let Some(id) = chosen.filter(|_| new)
+        {
+            crate::shader_marks::see(id);
+            return;
+        }
         if let Some(id) = self.viewing.observe(chosen, new, self.look_clock()) {
             crate::shader_marks::see(id);
         }
@@ -1825,6 +1835,9 @@ impl Panel {
         if self.tab == Tab::Forge && (forge::forge_token(token) || self.forge.ask.is_some()) {
             let activate = event.kind == UiEventKind::Activate;
             let resting = matches!(event.kind, UiEventKind::HoverEnter | UiEventKind::Hover);
+            // A click on a shader tile sees a New one at once, as on Shaders.
+            self.clicked_shader |= activate
+                && (forge::TILE_BASE..forge::TILE_BASE + forge::TILES_MAX as u16).contains(&token);
             if !(activate || resting) {
                 return PanelAction::None;
             }
@@ -1854,7 +1867,9 @@ impl Panel {
         {
             // A click chooses (and previews) a shader; Equip, Unequip or Enter wear it
             // (Creyon, 21/10/2026: a click that wore it was too easy to do by mistake).
+            // A New one is seen by the click (its sticker goes).
             self.shader = index;
+            self.clicked_shader = true;
             return PanelAction::None;
         }
         if event.kind == UiEventKind::Activate {
@@ -2996,6 +3011,10 @@ mod tests {
             let _ = panel.pointer_at(event, true, now);
         }
         assert_eq!(panel.shader, index, "a click chooses it");
+        assert!(panel.clicked_shader, "a New one is seen at the click");
+        // The next frame takes the click: a New one chosen is seen then, not a second later.
+        panel.view(Some("saber_sun"));
+        assert!(!panel.clicked_shader);
     }
 
     #[test]

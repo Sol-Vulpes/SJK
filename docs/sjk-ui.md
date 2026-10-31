@@ -1921,9 +1921,9 @@ saber shader the Shaders tab, the Forge and the trade window list carries its ma
   id a line (`shader_marks::FILE`), read at start and written at each change. With no file
   yet, everything held the first time the hub says what the player holds is seen, so a
   player never finds every shader New; a shader no longer held leaves the list (New again
-  when it comes back). A New one chosen on Shaders or in the Forge, by a click or the
-  keys, is seen once it has stayed chosen a second (`shader_marks::Look`, `LOOK_MS`;
-  Sol's decision, 29/10/2026). Resting the pointer never chooses a shader (31/10/2026;
+  when it comes back). A New one clicked on Shaders or in the Forge is seen at once, its
+  sticker gone (Creyon, 31/10/2026); one reached with the keys is seen once it has stayed
+  chosen a second (`shader_marks::Look`, `LOOK_MS`; Sol's decision, 29/10/2026). Resting the pointer never chooses a shader (31/10/2026;
   hovering chose one before), so it never sees one either. Turning to another tab or closing the page
   sees the shader chosen only if it had already stayed its second; Mark all seen (N) sees
   them all. Nothing is New
