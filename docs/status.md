@@ -1,3 +1,18 @@
+## Shaders chosen by a click only, New ones outlined in gold
+
+31/10/2026, `fix/collection-click-to-preview` (Creyon), based on `main` `e4447394`: on
+the Collection's Shaders tab, resting the pointer on a blade chose and previewed it (from
+21/10 only over its blade strip), so moving to Equip across other blades changed the
+choice and the preview, and resting a second on a New one saw it. Now only a click (or
+the keys) chooses a shader there and on the Forge's tiles; the pointer shows the hover card
+alone (`Panel::hover_chooses`, `forge::Panel::token`). A New shader clicked is seen at
+once, its sticker gone (with the keys, after its second as before). A New shader not chosen is
+outlined in gold on the wall and has a gold edge down its row in the list, besides its
+sticker ([sjk-ui.md](sjk-ui.md), [unlockables.md](unlockables.md)). Verified: the unit
+tests `resting_on_a_shader_never_chooses_it`, `resting_on_a_tile_never_chooses_it` and
+`a_new_shader_is_outlined_in_gold`, fmt, the workspace's build, tests and Clippy. Not
+verified: in game.
+
 ## Map editor made easier
 
 28/10/2026, `personal/map-editor-ux`, based on `main` `db63b4f5` (Sol's request: the
@@ -93,6 +108,7 @@ workspace recheck is left to CI.
 An offline GPU screenshot with cyan selected confirms body colours and preserved
 identified sender names. Live-server chat and other operating systems remain unverified. Formatting strips only display escapes without new
 per-frame strings, retaining wrapping offsets and emoji markers.
+
 ## Hidden GIFs
 
 30/10/2026, `feat/hide-gifs`, based on `main` `487f296f` (Sol's #ideas recap of 29/10): the
