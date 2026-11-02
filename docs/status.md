@@ -1,6 +1,6 @@
 ## Credit rain staff pilot
 
-2026-11-02, review update based on `7d352334` after 2026.1102.1 shipped:
+2026-11-02, review update based on `3d9e8fe2` after 2026.1102.1 shipped:
 [Credit rain](toy-beso.md) is the player-facing name, with `toy_creditrain` as a
 friendly command and `toy_beso` retained for existing binds. The hub defaults to
 staff-only for reads, funding and pickup, and requires an explicit supporting
@@ -19,6 +19,31 @@ PR #335 and paired hub PR #8. Native multi-client play and deployment remain
 unverified. Earlier focused release marker-generation measurement: 2.681 us/frame
 for forty visible packets at 1920x1080 on Ryzen 7 5800X3D, zero allocations; excludes
 GPU rendering, networking and the rest of the frame.
+
+## Static profile banners
+
+31/10/2026, `feat/profile-banners`, client code `56a9b774` (including `main`
+`677a6073`) and matching hub PR #6 `3c77a2f`: five collectible covers and a
+neutral fallback, with Collection equip/unequip, profile headers and player cards.
+An independent 10% banner roll adds a cover to the ordinary Echo prize; card
+frequency, credits, Solar blade bonuses and other prizes retain their rules.
+The hub defaults banner drops to disabled until a supporting minimum release is
+configured; older clients keep ordinary rewards and see zero bonus odds.
+Ordinary rewards reveal first, then bonus covers, each group within the existing
+batch limit. Banners cannot use blade-only trade/craft/shatter operations.
+
+Windows x64 formatting, locked workspace build/tests and all-target clippy passed.
+Focused checks cover old JSON, a presence avatar without a fetched profile,
+retained ordinary rewards/Solar bonuses, independent odds and twenty openings
+with twenty bonus covers, including both summaries' canvas capacity at two
+window sizes. The hub's complete suite passed (491 library, 174 signed API,
+19 CLI, 3 donation and 41 panel tests), including client gates, duplicates,
+replay refusal, atomic bonus failure and last-copy removal. Offline GPU fixtures
+for Collection, profile and the bonus reveal were refreshed and inspected after
+the main merge. Remote cards use cached profiles rather than live equipment
+broadcasts. Deployment, live interoperability, other platforms and performance
+remain unverified; Sol's remaining design decisions and rollout are still pending.
+See [profile-banners.md](profile-banners.md).
 
 ## Ghost editor
 
@@ -772,6 +797,21 @@ the EJK order, listings and switching), `sjk_mod::plugin_options`'s (the command
 the workspace build, tests and Clippy (no new warning), and the Mods page in
 `menu_snapshot::sjk_settings_snapshot` (`sjk-settings-plugin-options.png`).
 Not verified: switching them in a match on a JA+ or jaPRO server.
+
+## Lugormod-v3 movement prediction
+
+29/10/2026, `feat/prediction-lugormod`, based on `main` `1c1036b2`: native
+movement policy for LugorDev/Lugormod-v3 `50f42520`'s default multiplayer build.
+The [movement adapter](networking.md#lugormod-v3-movement) uses the advertised
+v3 name and existing scale/admin fields for scaled player posture, lower-box
+stand clearance, enhanced FFA jetpacks, public baton rolls and velocity snapping.
+It refreshes with the current dialect; foreign/reused metadata stays inert.
+Windows x64 tests match 248 MSVC-emitted bounds/stand/jetpack branch outputs;
+command, reseed and preview checks cover 8/7/4/3 ms and server switches. Rope
+fields missing from ordinary snapshots, extended Force curves and scaled active
+Force rises use authoritative position interpolation with immediate look.
+Private skills/restrictions, custom build switches, scaled riders/NPCs, full
+Pmove/live gameplay, animation playback and rendered performance remain unverified.
 
 ## Prediction: incomplete command history
 
@@ -3374,6 +3414,18 @@ the alignment, JoF's table, and its application to only the game-data HUD. On
 Linux x86_64 with Rust 1.99.1, formatting, the locked workspace build and test
 suite, workspace all-target Clippy, and the locked release viewer build pass;
 existing warnings remain. The result has not yet been inspected in game.
+
+## Vehicle HUD per HUD style
+
+30/10/2026, `feat/vehicle-hud-styles`, based on `Sol-Vulpes/SJK` `d7c1f21b`: the
+vector vehicle strip (hull, speed, shield, ammunition) drew the same under every HUD
+but the retail one. Now each style shows only the vehicle's health in its own way:
+Text only a yellow hull number centred at the bottom (`menu_hud::Frame::simple_hud`,
+also when the vehicle hides its rider), SJK radial a yellow arc under the crosshair
+with the number inside, SJK classic a yellow bar with an `HP` line (layout widgets
+`vehicle_arc`, `vehicle_value`, `vehicle_label`, `vehicle_meter`). The strip stays only
+for game-data HUDs without `swoopvehiclehud`; the retail vehicle HUD is unchanged.
+Unit tests pin the text HUD run and which look draws the arc, the bar or the strip.
 
 ## Stock vehicle HUD in the game HUD
 
