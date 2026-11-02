@@ -27,14 +27,16 @@ hubs refuse the request without changing credits. No game-server messages are se
   Hit and stand are supported; split, double and insurance are not implemented.
 
 All returns include the stake. House-game wagers are 1..500 whole credits; the
-page starts at ten and adjusts in twos. Poker raises are bounded by the stack.
+page starts at ten, with whole-credit steps (twos for blackjack), +10 and +100
+shortcuts. Poker also has an All in button; raises are bounded by the stack.
 These are initial rules and limits.
 
 ## Authority and recovery
 
 The hub shuffles, rolls, validates turns and owns escrow. It persists blackjack
 rounds, poker tables and the credit ledger in the same transaction. A client
-receives only its own hole cards during a hand and non-folded hands at showdown;
+receives only its own hole cards during a hand and non-folded hands at a contested
+showdown; winning by folds does not expose the winner's cards;
 the dealer's hole card stays hidden until blackjack ends. A signed mutation has
 a random 128-bit request token, a player revision and, for poker, a table revision.
 Retries reuse the token and cannot charge or pay again. A changed table requires

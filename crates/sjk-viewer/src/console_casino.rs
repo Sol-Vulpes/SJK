@@ -123,8 +123,29 @@ impl Casino {
         match token {
             0 => self.open = false,
             1..=4 => self.game = usize::from(token - 1),
-            5 => self.bet = (self.bet - 2).max(2),
-            6 => self.bet = (self.bet + 2).min(if self.game == 0 { 100_000 } else { 500 }),
+            5 => {
+                self.bet = (self.bet - if self.game == 3 { 2 } else { 1 }).max(if self.game == 3 {
+                    2
+                } else {
+                    1
+                })
+            }
+            6 | 22 | 23 => {
+                self.bet = self
+                    .bet
+                    .saturating_add(match token {
+                        22 => 10,
+                        23 => 100,
+                        _ => {
+                            if self.game == 3 {
+                                2
+                            } else {
+                                1
+                            }
+                        }
+                    })
+                    .min(if self.game == 0 { 100_000 } else { 500 })
+            }
             7 => self.table = (self.table + 15) % 16,
             8 => self.table = (self.table + 1) % 16,
             9 => {
@@ -152,6 +173,22 @@ impl Casino {
                     self.request("read");
                 }
             }
+            21 => {
+                let table = self.data["tables"].as_array().and_then(|t| {
+                    t.iter()
+                        .find(|t| t["id"].as_u64() == Some(u64::from(self.table)))
+                });
+                if let Some(table) = table
+                    && let Some(seat) = table["seats"]
+                        .as_array()
+                        .and_then(|seats| seats.iter().find(|s| s["person"] == self.data["person"]))
+                {
+                    self.bet =
+                        seat["round"].as_i64().unwrap_or(0) + seat["stack"].as_i64().unwrap_or(0);
+                    let call = self.bet <= table["current"].as_i64().unwrap_or(0);
+                    self.request(if call { "call" } else { "raise" });
+                }
+            }
             20 => {
                 // Explicit refresh after a definite rejection; no new wager.
                 self.pending = None;
@@ -162,6 +199,9 @@ impl Casino {
         }
         if self.game != 0 {
             self.bet = self.bet.min(500);
+        }
+        if self.game == 3 {
+            self.bet = ((self.bet + 1) / 2 * 2).min(500);
         }
         self.dirty = true;
     }
@@ -242,8 +282,26 @@ impl Casino {
             30.0,
             color::GOLD,
         );
-        self.button(&f, 5, "-2", 1210.0, 230.0, 100.0, true);
-        self.button(&f, 6, "+2", 1320.0, 230.0, 100.0, true);
+        self.button(
+            &f,
+            5,
+            if self.game == 3 { "-2" } else { "-1" },
+            1210.0,
+            230.0,
+            100.0,
+            true,
+        );
+        self.button(
+            &f,
+            6,
+            if self.game == 3 { "+2" } else { "+1" },
+            1320.0,
+            230.0,
+            100.0,
+            true,
+        );
+        self.button(&f, 22, "+10", 1430.0, 230.0, 100.0, true);
+        self.button(&f, 23, "+100", 1540.0, 230.0, 100.0, true);
         match self.game {
             0 => {
                 self.words(
@@ -337,6 +395,7 @@ impl Casino {
                     (14, "Fold"),
                     (15, "Check / call"),
                     (16, "Raise to wager"),
+                    (21, "All in"),
                 ]
                 .iter()
                 .enumerate()
@@ -345,9 +404,9 @@ impl Casino {
                         &f,
                         *token,
                         name,
-                        100.0 + i as f32 * 280.0,
+                        100.0 + i as f32 * 245.0,
                         835.0,
-                        260.0,
+                        230.0,
                         ready,
                     );
                 }
@@ -494,12 +553,12 @@ impl Casino {
         }
         if self.game == 1 || self.game == 2 {
             let result = &self.data["result"];
-            let words = if result["game"] == "roulette" {
+            let words = if self.game == 1 && result["game"] == "roulette" {
                 format!(
                     "Last spin: {}. Wager {} / returned {} credits",
                     result["number"], result["bet"], result["returned"]
                 )
-            } else if result["game"] == "slots" {
+            } else if self.game == 2 && result["game"] == "slots" {
                 format!(
                     "Reels: {}. Wager {} / returned {} credits",
                     result["reels"], result["bet"], result["returned"]
@@ -619,6 +678,9 @@ impl ViewerConsole {
         if let Some(token) = action.and_then(|a| self.casino.ui.action(a)) {
             self.casino.activate(token);
         }
+        if !self.casino.open {
+            self.set_open(false);
+        }
         self.casino.dirty = true;
         true
     }
@@ -666,6 +728,24 @@ mod tests {
                 assert!(console.covers_frame());
             }
         }
+    }
+    #[test]
+    fn whole_credit_wagers_and_blackjack_even_bets_are_selectable() {
+        let mut page = Casino::new();
+        page.bet = 2;
+        page.activate(5);
+        assert_eq!(page.bet, 1);
+        page.activate(6);
+        assert_eq!(page.bet, 2);
+        page.activate(22);
+        assert_eq!(page.bet, 12);
+        page.bet = 499;
+        page.activate(4);
+        assert_eq!(page.bet, 500);
+        page.activate(5);
+        assert_eq!(page.bet, 498);
+        page.activate(23);
+        assert_eq!(page.bet, 500);
     }
     #[test]
     fn closing_preserves_an_uncertain_wager_token() {

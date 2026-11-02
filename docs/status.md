@@ -10,11 +10,12 @@ turns and between-hand cash-outs. Roulette, slots and blackjack use the explicit
 
 Verified on Windows/MSVC: workspace fmt check, locked build, tests and all-targets
 clippy; the page's controls and canvas budgets at 1080p, 4:3 and 4K. The hub's fmt,
-locked build/tests/clippy pass (545 library, 178 API, 19 CLI, 3 donation and 41 panel
+locked build/tests/clippy pass (547 library, 178 API, 19 CLI, 3 donation and 41 panel
 tests). Casino cases pin every five-card hand category over all 2,598,960 hands,
 seven-card selection, blackjack settlement, roulette zero, exact slot returns,
 side pots, full/cumulative short raises, credit conservation, hidden cards,
-signed HTTP retries, stale requests, escrow cash-outs and persisted receipts.
+signed HTTP retries, stale requests, escrow cash-outs, bounded persisted receipts
+and profile-merge replay safety. Uncontested winners keep their cards private.
 Offline GPU images use synthetic balances/hands, with identity disabled.
 
 Unverified: native clients playing together against a running local hub,
