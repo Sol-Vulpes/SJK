@@ -221,12 +221,12 @@ const TOYS: [Toy; TOY_COUNT] = [
     },
     Toy {
         icon: "credits",
-        name: "Beso",
-        tag: "Rain 100 of your credits for nearby players.",
-        title: "Beso credit rain",
-        what: "Spend 100 of your credits on ten packets nearby SJK players collect by walking over them. Uncollected credits return when the rain ends. You cannot collect your own rain.",
+        name: "Credit rain",
+        tag: "Staff pilot: rain 100 of your credits.",
+        title: "Credit rain",
+        what: "Staff pilot on supporting hubs. Spend 100 of your credits on ten packets nearby SJK players collect by walking over them. One packet per person per rain. Uncollected credits return when the rain ends. You cannot collect your own rain.",
         more: Some(
-            "Each press spends once. toy_beso <amount> chooses 100 to 100000 credits; retry repeats a failed request safely.",
+            "Each press spends once. toy_creditrain <amount> chooses 100 to 100000 credits; retry repeats a failed request safely.",
         ),
         commands: &[("toy_beso", "Rain key")],
         switch: "Rain 100 credits",
@@ -776,7 +776,7 @@ impl Panel {
             format_args!(
                 "{}",
                 if chosen == 10 {
-                    "Add toy_beso in the wheel editor"
+                    "Add credit rain in the wheel editor"
                 } else {
                     "On its Toys page"
                 }

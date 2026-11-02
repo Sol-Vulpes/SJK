@@ -58,6 +58,12 @@ pub(crate) struct Beso {
 }
 
 impl Beso {
+    fn wants_poll(&self) -> bool {
+        self.show_others
+            || self.pending.is_some()
+            || self.funding.is_some()
+            || self.bursts.iter().any(|b| b.owned)
+    }
     fn paid_pending(&self) -> bool {
         self.pending.as_ref().is_some_and(|p| p["action"] != "read")
     }
@@ -180,6 +186,10 @@ impl GpuState {
             .console
             .as_ref()
             .is_some_and(|c| c.bool_cvar(SHOW_CVAR) == Some(true));
+        if !self.beso.wants_poll() {
+            self.beso.due = Some(now + Duration::from_millis(500));
+            return;
+        }
         let Some(session) = self.live_session.as_ref().filter(|s| !s.is_local()) else {
             self.beso.bursts.clear();
             self.beso.place = None;
@@ -201,6 +211,7 @@ impl GpuState {
                 return;
             };
             let was_funding = pending["action"] == "rain";
+            let read_failed = pending["action"] == "read" && result.is_err();
             let same_place = pending["server"] == server && pending["map"] == map;
             match result {
                 Ok(answer) => {
@@ -252,7 +263,7 @@ impl GpuState {
                         let words = if was_funding {
                             "Credit rain funded! Uncollected credits return after it ends.".into()
                         } else {
-                            format!("You collected {won} credits from Beso's rain!")
+                            format!("You collected {won} credits. One packet per person per rain.")
                         };
                         self.chat.receive(
                             sjk_client::ServerEventKind::CenterPrint,
@@ -283,8 +294,15 @@ impl GpuState {
             }
             let _ = token;
             self.beso.pending = None;
-            self.beso.due =
-                Some(now + Duration::from_secs(if self.beso.bursts.is_empty() { 10 } else { 1 }));
+            self.beso.due = Some(
+                now + Duration::from_secs(if read_failed {
+                    60
+                } else if self.beso.bursts.is_empty() {
+                    10
+                } else {
+                    1
+                }),
+            );
             return;
         }
         let Ok(token) = sjk_identity::beso_request_token() else {
@@ -378,6 +396,19 @@ impl GpuState {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn an_opted_out_idle_client_does_not_poll_a_staff_only_feature() {
+        let mut state = Beso::default();
+        assert!(!state.wants_poll());
+        state.show_others = true;
+        assert!(state.wants_poll());
+        state.show_others = false;
+        state.funding = Some(json!({"action":"rain"}));
+        assert!(state.wants_poll());
+        state.funding = None;
+        state.pending = Some(json!({"action":"read"}));
+        assert!(state.wants_poll());
+    }
     #[test]
     fn credit_rain_collection_requires_an_explicit_opt_in() {
         let directory = tempfile::tempdir().unwrap();
