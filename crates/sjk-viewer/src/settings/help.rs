@@ -928,6 +928,10 @@ const HELP: &[(&str, &str)] = &[
         "Off: other players' boomboxes are not drawn or heard on this PC.",
     ),
     (
+        crate::beso::SHOW_CVAR,
+        "Opt in to see and collect others' credit rain. Your paid rain stays visible. Default off.",
+    ),
+    (
         crate::boombox::RANGE_CVAR,
         "How far your boombox carries, in units (a player is 64 tall). It fades out toward the edge.",
     ),

@@ -1,5 +1,37 @@
 ## Ghost editor
 
+## Beso: owner-funded credit rain
+
+2026-11-02, change based on `d081db72`: `toy_beso` explicitly spends 100 owned
+credits (or an amount chosen in the command) on ten packets for nearby SJK
+players. Collection > Toys includes Rain 100, a bindable key, and **See and collect
+credit rain** (`cg_toyBesoShow`, off by default). Own paid rain always shows.
+The paired hub PR #8 funds the burst, transfers each packet once, and refunds
+expired uncollected credits on the next successful rain request. It is not deployed.
+The [Beso page](toy-beso.md) documents costs, expiry, retries and claim limitations.
+
+Verified on Windows/MSVC: the paired hub's fmt, locked build/tests and all-targets
+clippy pass (533 library, 178 API, 19 CLI, 3 donation and 41 panel tests).
+Beso tests cover signed requests, one-time funding, two eligible collectors
+competing for one packet, refunds, insufficient funds and wrong-map/server/distance
+refusals, plus funding-token safety across profile merges. Client fmt check, locked
+workspace build/tests and all-targets clippy pass; packet offsets, opt-in default,
+paid-request scheduling and Toys layout checks cover the addition. Offline GPU
+images of the Toys card and drawn credit packets are recorded in the PR.
+
+A focused release CPU check on Ryzen 7 5800X3D, 1920x1080, four bursts / forty
+visible packets, 200000 frames: retained projection and credit-mark generation
+averaged 2.681 microseconds/frame, zero allocations. It used the production marker
+loop, camera projection and credit mark source in a scratch executable; excludes
+GPU rendering, network/JSON work and the rest of the frame. No full-game FPS claim.
+
+Unverified: native clients donating/collecting together against a running local
+hub, non-Windows runtime, sustained hub load or production deployment. Legacy
+servers do not attest positions: eligibility is donor-selected, and the hub
+checks claims and reported distance; modified clients can misreport proximity.
+No movement, saber timing or protocol-26 codec changed.
+
+
 01/11/2026, `personal/ghost-editor`, based on `main` `1f2c6c2f` (Sol's request: duplicate a
 ghost from a list, cut part of its start, and take out the commands where the chat bubble
 shows; Sol's choices: clear the bubble rather than delete commands, a timeline plus the

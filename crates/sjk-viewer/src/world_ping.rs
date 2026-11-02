@@ -220,7 +220,7 @@ impl Default for WorldPings {
             sent: VecDeque::with_capacity(SEND_PER_WINDOW + 1),
             received: std::array::from_fn(|_| VecDeque::new()),
             sounded: None,
-            list: DrawList::new(MAX_MARKS * 8),
+            list: DrawList::new(MAX_MARKS * 8 + 40 * 8),
             outcome_seen: 0,
             refusal_said: None,
             server: None,

@@ -101,6 +101,7 @@ impl GpuState {
         self.update_boombox(&relay_events);
         self.update_mystery_boxes(&toy_events, &relay_events);
         self.update_toy_master(&toy_events);
+        self.update_beso(&toy_events);
         self.update_e2e_whispers();
         self.update_player_trades();
         #[cfg(feature = "mod-jof")]

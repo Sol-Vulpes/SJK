@@ -584,6 +584,7 @@ impl Panel {
                     (8, _, _) => "turn on",
                     (9, _, _) if inputs.banana => "turn off",
                     (9, _, _) => "turn on",
+                    (10, _, _) => "rain 100 credits",
                     (_, true, _) => "put out",
                     _ => "light",
                 },

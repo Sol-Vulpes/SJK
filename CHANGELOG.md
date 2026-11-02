@@ -12,6 +12,10 @@ assistant.
 Format, read by the client (crates/sjk-viewer/src/changelog_data.rs, whose
 tests check this file):
 - "## <version> | <dd/mm/yyyy>" starts a release ("## Unreleased" for main
+
+= cg_toyBesoShow: See and collect other players' credit rain. Default off; your own paid rain stays visible.
+
+- Add toy_beso: spend 100 of your credits on rain nearby SJK players can collect; requires the matching hub update.
   after the last release, without a date);
 - other lines up to the first item are the release's introduction;
 - "> <Heading>: <sentence>" lines before the first item are the release's short

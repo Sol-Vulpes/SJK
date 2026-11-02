@@ -71,6 +71,7 @@ migrated, except where the table says so. Where each is documented:
 | `cg_teamOutline` | on (red rings on enemies, green on teammates, in team games) | [Team outlines and logos](client.md#team-outlines-and-logos) |
 | `cg_killfeed` | on, saved 0 moved to 1 once | [Kill feed](client.md#kill-feed) |
 | `cg_mapEdits` | on (SJK's own map fixes from the hub) | [Map edits](map-edits.md) |
+| `cg_toyBesoShow` | off: opt in to seeing and collecting others' credit rain; paid own rain still shows | [Beso](toy-beso.md) |
 | `cg_serverRemaps` | off (servers' shader remaps; the map's own apply), asked on the 18/10 what's-new card | [Shader remap controls](client.md#shader-remap-controls) |
 | `cg_hitMarker` | off (red damage-direction indicator) | [Client](client.md#launch) |
 | `cg_shieldBrightness` | 2 passes, old defaults 1 and 4 moved to 2 once | [Client](client.md#launch) |

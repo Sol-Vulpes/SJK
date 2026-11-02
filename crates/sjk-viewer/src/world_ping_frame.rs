@@ -214,6 +214,7 @@ impl GpuState {
         let shown = shown || forced(&self.world_pings);
         self.world_pings
             .build(self.frame_view, Instant::now(), shown);
+        self.append_beso_marks(shown);
         if self.world_pings.list.commands().is_empty() {
             return;
         }

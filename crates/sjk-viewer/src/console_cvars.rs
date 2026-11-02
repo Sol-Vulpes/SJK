@@ -995,6 +995,12 @@ pub(super) fn register_daily_cvars(cvars: &mut CvarRegistry) -> Result<(), sjk_s
             crate::toy_sight::CVARS[4].1,
         ),
         CvarDefinition::new(
+            crate::beso::SHOW_CVAR,
+            false,
+            archive,
+            "See and collect other players' Beso credit rain (SJK; default off)",
+        ),
+        CvarDefinition::new(
             crate::monitor::SHOW_CVAR,
             true,
             archive,

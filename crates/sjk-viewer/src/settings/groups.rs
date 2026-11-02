@@ -407,6 +407,7 @@ impl Group {
                 crate::toy_sight::RAGDOLL,
                 crate::toy_sight::DRONE,
                 crate::toy_sight::BOOMBOX,
+                crate::beso::SHOW_CVAR,
                 crate::boombox::RANGE_CVAR,
                 crate::camera::STYLE_CVAR,
                 "cg_drawGun",

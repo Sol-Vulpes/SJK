@@ -2882,3 +2882,9 @@ its tour, player stage and saber shot.
 The Servers detail panel offers **Copy IP** beside Join and Favourites. It copies
 the selected endpoint, including its port, and reports clipboard success or failure
 in the status line. Ctrl+C does the same outside text fields and dialogs.
+
+## Beso credit rain
+
+The Collection Toys tab includes [Beso](toy-beso.md), with a Rain 100 button
+and bindable key. This one-shot purchase is labelled with its credit cost.
+It uses the SJK look in every menu style.

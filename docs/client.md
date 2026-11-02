@@ -4678,6 +4678,11 @@ entry not on the player's wheel, or spectating, selects nothing
 ([`Selection::select`](../crates/sjk-client/src/selection.rs)). The quick wheel's
 [Force page](#force-page) runs it.
 
+## Beso credit rain
+
+[`toy_beso`](toy-beso.md) spends 100 owned credits on ten packets for nearby SJK
+players. The Collection Toys tab offers Rain 100 and a bindable key.
+
 ## Illuminate
 
 Illuminate is a toy, SJK's own and free for every player (Sol's request, 10/10/2026:
