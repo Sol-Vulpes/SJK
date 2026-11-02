@@ -12,8 +12,6 @@ assistant.
 Format, read by the client (crates/sjk-viewer/src/changelog_data.rs, whose
 tests check this file):
 - "## <version> | <dd/mm/yyyy>" starts a release ("## Unreleased" for main
-
-- Add a casino page: multiplayer Texas Hold'em, roulette, slots and blackjack with SJK credits; requires the matching hub update.
   after the last release, without a date);
 - other lines up to the first item are the release's introduction;
 - "> <Heading>: <sentence>" lines before the first item are the release's short
@@ -34,6 +32,30 @@ Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 -->
 ## Unreleased
 
+= cg_soundSonar: Sound sonar, for deaf and hard-of-hearing players: arcs round the crosshair point toward the sounds you hear.
+= cg_scoreboardIDs: New: each player's client number, small before the name on SJK's scoreboard, as the classic one's Id column shows it.
+
+- Casino: multiplayer Texas Hold'em, roulette, slots and blackjack with SJK credits, staff-only while tested; requires a supporting hub and client release _(Lumaya)_
+- Move the HUD with the mouse: Settings > HUD "Move HUD elements" (or `hud_edit`) outlines the health, Force, weapon, timer, lagometer, chat, kill feed, movement keys and the rest over the game; drag one to move it, right-click it to put it back _(Slash, PR #295, after Lex's idea)_
+- Sound sonar (Settings > Sound, `cg_soundSonar`, off by default): short arcs round the crosshair point toward the sounds you hear, footsteps, shots and swings, voices, explosions and the rest, each kind its own colour, fading over a second _(Slash, PR #301, after Dawson's idea)_
+- Quiet mode: `quiet` (or Settings > Chat > Quiet mode, `cg_quietMode`) hides public, team, SJK and admin chat and their sounds until you turn it off or the map changes, but for your private duel partner and whispers; your SJK scoreboard row says Quiet _(Slash, PR #302, after Lex Deifaber's idea)_
+- Fonts from your PC: Settings > Chat font (`cg_chatFont`) and Console font (`con_font`) list the font families installed on this PC; pick one to draw the chat or the console in it. Characters it lacks, Cyrillic, Chinese, Japanese, Korean and emoji still come from SJK's fonts, and SJK default keeps SJK's own _(Slash, PR #303, after Saturn's idea)_
+- Scoreboard: each player's client number on SJK's scoreboard too (`cg_scoreboardIDs`, off by default), and Rank by score - deaths (`cg_scoreboardDeathsRank`, off by default), with the # column numbering players in that order (Foshin's idea) _(Creyon, PR #317)_
+- Trading: a finished trade says your new items are in your collection only when the other player gave you something; otherwise it says you gave your offer and received nothing, with the other player's name shown in full (clan marks included); the message over play grows to show the whole line instead of cutting it off (hub report #208) _(Creyon, PR #321)_
+- JoF hats look as in JoF EJK: the pumpkin, cap, cringe, fedora, Santa hat, sombrero and top hat show their own pictures instead of plain grey, in game and in the profile preview, and McFox and McSnowFox are solid instead of see-through _(Creyon, PR #236)_
+- SJK chat: react to public messages with six shared emoji buttons; reaction errors clear after five seconds _(Lumaya, PR #316)_
+- Long game-chat messages are sent completely as up to four messages, split at a word where possible, in All, Team, whispers (including Send unencrypted), admin and mod chat such as clan chat; their colour carries on, and a command pressed while the pieces wait is not lost _(Lukas, PR #306)_
+
+## 2026.1102.1 (Alpha) | 02/11/2026
+
+Toon shading, livelier Toy Master shows, grand finds told in colour and a round of crash fixes.
+
+> Toon models: Cartoon shading for players, off by default.
+> Toy Master: Shows now dance, float and throw out prizes to grab.
+> Grand finds: The chat shows the prize in its colour, with its blade.
+> Fixes: Empty hilts, the day clock and DX12 no longer close the game.
+> Trading: Chat while a trade is open.
+
 = cl_unfocusedChatbox: One switch now controls the automatic chat bubble while unfocused or minimized; the separate minimized switch has been removed.
 = cl_logChat: Game-server chat logs can now be switched on in Settings. Choose whether to save received public, team and private messages in your profile's chatlogs/chat.log.
 
@@ -41,7 +63,6 @@ Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 - Grand finds in the game's chat look the part: the line starts with the holocron's or kyber crystal's picture, the prize is written in its own rarity colour, and a blade shows small and live; with the chat open, rest the pointer on it to see it large (`debug_find` rehearses one) _(Sol)_
 - The Toy Master's toys: facing one shows the Use prompt by the crosshair, as at a mystery box, saying only "???"; while a toy's show spins, the players around it spin and squish with it (on your screen only, where they really stand and face is unchanged), and a show whose sound you lack says so in the log, its sound heard once a pack bringing it loads _(Sol)_
 - On JA+ servers the dual sabers' forward jump attack no longer sinks you into the floor when nobody is in front: as on the server, your feet only lift to sail over a player ahead _(Blackwolf1337, after JA+)_
-
 - The Toy Master's toys can put on longer shows in steps: the players around one dance at its beat with a glowing ring on the ground showing how far it reaches, then float weightless (in looks only, your view stays your own), and at the end it throws out credits, kyber shards and holocrons that bounce and land: Use takes one, first come first served _(Sol)_
 - Hilts: choosing an empty hilt from the community list (such as Empty Hilt (Stance)) no longer closes the game, and no longer closes it at every start after: it shows the blade with no hilt, and a hilt the menu cannot show falls back to the stock one and says so in the log _(Slash, after hub report #214)_
 - Loading graphics with Sun follows PC clock (`r_dayClock`) or Sun and sky on can no longer close the game: if the sky's day and night tint cannot be built, the map keeps its own sky, and if the game closed while building it, the next start leaves it out once and says so in the console. On DX12 without `dxcompiler.dll` maps load again: the HUD's program, and with Sun and sky the light probes' update, no longer fail to compile _(Slash, after hub report #219)_
@@ -52,6 +73,9 @@ Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 - Collection > Shaders and the Forge: only a click chooses and previews a shader, so moving the mouse to Equip or Break down across other blades no longer changes the one you picked; New shaders you have not looked at yet are outlined in gold besides their New sticker, which goes as soon as you click the shader _(Creyon)_
 - Chat bubble: one switch for unfocused and minimized windows, Chat bubble while away in Settings > Chat (`cl_unfocusedChatbox`); the separate `cl_minimizedChatbox` setting is removed _(Lumaya)_
 - Chat logs: Save game chat logs in Settings > Chat (classic: HUD) saves received game-server chat in your profile's chatlogs/chat.log; off by default _(Lumaya)_
+- Cards: a card held in more than one finish shows each one, Normal, Holo, Solar and V, as chips to look at in turn, not only the best _(Sol)_
+- Cards can be of kind Clan, the clan being the card's set (the card reads Clan, JoF) _(Sol)_
+- Effects: the spawn and teleport beam throws as much lightning as retail again, about a sixth of before, as effect runners now roll their count _(Sol)_
 
 ## 2026.1101.1 (Alpha) | 01/11/2026
 

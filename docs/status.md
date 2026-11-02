@@ -1,28 +1,20 @@
+## Casino staff pilot
+
+2026-11-02, review update based on `7d352334` after 2026.1102.1 shipped: the
+casino remains a staff-only pilot on supporting hubs. Reads, wagers, poker and
+cached retries require the canonical person's staff flag and an explicitly
+configured minimum client release; an unset floor keeps it closed. Public access
+requires a separate deliberate rollout decision. The [casino rules](casino.md)
+and SJK page remain implemented; production deployment and native multi-client
+play are unverified.
+
+Before public access: agree a daily loss budget that cannot be reset by switching
+linked keys, and a policy for deliberate poker losses transferring credits.
+Neither the 500-credit house wager limit nor the request quota solves those issues.
+Windows verification of the rollout gate, version checks, command-line defaults
+and current workspace is recorded in PR #334 and its paired hub PR #7.
+
 ## Ghost editor
-
-## Credit casino: poker, roulette, slots and blackjack
-
-2026-11-02, change based on `d081db72`: `casino` opens one SJK page in every menu
-style, wagering the identity hub's existing credits. Six-seat multiplayer Hold'em
-has per-hand readiness, 1/2 blinds, side pots, short-all-in reopening, 30-second
-turns and between-hand cash-outs. Roulette, slots and blackjack use the explicit
-[rules and returns](casino.md). Matching hub PR #7 is required; this is not deployed.
-
-Verified on Windows/MSVC: workspace fmt check, locked build, tests and all-targets
-clippy; the page's controls and canvas budgets at 1080p, 4:3 and 4K. The hub's fmt,
-locked build/tests/clippy pass (547 library, 178 API, 19 CLI, 3 donation and 41 panel
-tests). Casino cases pin every five-card hand category over all 2,598,960 hands,
-seven-card selection, blackjack settlement, roulette zero, exact slot returns,
-side pots, full/cumulative short raises, credit conservation, hidden cards,
-signed HTTP retries, stale requests, escrow cash-outs, bounded persisted receipts
-and profile-merge replay safety. Uncontested winners keep their cards private.
-Offline GPU images use synthetic balances/hands, with identity disabled.
-
-Unverified: native clients playing together against a running local hub,
-non-Windows runtime, long-running table load and production deployment. These
-checks do not certify gameplay parity or performance; no protocol-26 codec,
-movement, saber timing or game-server rules changed.
-
 
 01/11/2026, `personal/ghost-editor`, based on `main` `1f2c6c2f` (Sol's request: duplicate a
 ghost from a list, cut part of its start, and take out the commands where the chat bubble
@@ -267,6 +259,109 @@ showing and Load older), fmt, the touched crates' tests and Clippy (no new warni
 one offline world shot of the tab on made-up lines. Not verified: against the hub's real
 answers (its `history` branch was written alongside), in game, the hover and wheel by
 hand, and in the classic menus' style.
+
+## Scoreboard: client numbers on the SJK board, rank by score minus deaths
+
+30/10/2026, `feat/scoreboard-ids`, based on `main` `7be59908` (Sol's #ideas recap of
+29/10): new `cg_scoreboardIDs` (archived, off: stock JKA's scoreboard shows no numbers,
+Sol's review of 30/10/2026) puts each client number before the name on the SJK board, as
+a small tag on a faint plate under an "ID" label, full and compact (`sjk::Columns::id`,
+`ID_COLUMN`) ([sjk-ui.md](sjk-ui.md)), with a `=` line for the what's-new card;
+`cg_showClientIDs` keeps the classic board's Id column alone, on as before. The place
+column is labelled "#"; its places stay the server's, ties sharing one (1, 2, 2, 4). New
+`cg_scoreboardDeathsRank` (off) sorts both boards by score minus deaths where deaths are
+counted, fewer deaths first on a tie, joining rows last ([client.md](client.md),
+`style::rank_value`); with it the SJK board numbers the rows in that order, one number
+each, as JoF EJK lists its rows, and its header gives your place in that order. `cg_scoreDeaths` keeps EJK's default 1 (Sol's defaults
+rule of 30/10/2026); with 2 the local count stands in where the server sends no deaths.
+Neither EJK nor JoF EJK has the numbers on this look or the ranking. A compact
+capture-the-flag board of 6 a side with the numbers, 1142 of the full 1144 pixels without,
+fills it (the width test allows equal). Verified: unit tests (the ranking, both switches
+off by default and the classic Id column's own, the numbers before every name in full and
+compact, free-for-all and teams, the ID and # labels, shared places off and places in the
+listed order with the ranking, a joining row last and unnumbered, the frame rate left of
+the clock), fmt, the workspace's build, tests and Clippy; in game on Windows (a local
+server with bots, before the review's changes): the labels and ID tags, the # column 1 to
+20, and with `cg_scoreDeaths 2` the ranking by score minus deaths; (31/10/2026, after the
+review) the SJK board with `cg_scoreboardIDs 1` and `cg_scoreboardDeathsRank 1`, compact,
+20 bots: an ID before every name, rows by score minus deaths with fewer deaths first on a
+tie, numbered 1 to 20, the joining row last and unnumbered; the classic board's Id column
+and its rows in the same order. Not verified: the header's place with the ranking in game
+(it gave the server's before this change), team games, the what's-new card's switch.
+
+## Finished trade: what was received
+
+30/10/2026, `fix/trade-done-message`, based on `main` `487f296f` (hub report #208): a
+finished trade always said "Trade complete. Your new items are in your collection.",
+even when the other side gave nothing. `PlayerTrade::ending` now words it from what the
+reader received: "Your new items are in your collection" (or "item is" for one), "You
+gave your offer to <name> and received nothing", or "Nothing changed hands". The ended
+trade's card and the toast over play both read it ([sjk-ui.md](sjk-ui.md#trading)).
+The endings took the name through the message alphabet, which dropped clan marks such as
+`»` and `«`; they now take it through `name_for_display`, as the window's headline does.
+The toast's 660-wide card cut the longer endings off ("...and rec..."); it now measures
+its words and grows wider, centred, so they stay whole on one line (up to 1800); over
+play its key hint stays at the card's right edge, however wide. Every ending that names
+the other player stops the name's colours after it ("<name>^7 declined the trade.",
+"... is trading with someone else."). Verified: unit tests (the four cases, a marked name,
+a declined trade's name, the toast fitting its words on one line, the key hint at the
+right edge of a usual and a wide card), the toast's picture, fmt, the workspace's build,
+tests and Clippy; in game on Windows, the words and the names with their marks. Not
+verified in game: the key hint and the declined trade's colours after Sol's review.
+
+## JoF hats as in JoF EJK
+
+28/10/2026, `fix/pumpkin-hat` (Creyon), based on `main` `8f73ab73`: JoF's pumpkin hat drew
+grey on the JoF public server (oldsGhoul's hub report #192, 2026.1028.1); Creyon found six
+more grey in game and in the profile preview (cap, cringe, fedora, santahat, sombrero,
+tophat) and McFox and McSnowFox see-through, all fine in JoF EJK. The seven moved to
+`models/cosmetics/hats/` but their models still name `models/players/hats/<name>`, where
+SJK had nothing: JoF EJK finds jaPRO's own copies of their pictures and
+`japro_hats.shader` in `japro-assets.pk3`. SJK now takes those files alone from the
+EternalJK folder (`asset_search_paths::Options::eternaljk_old_hats`), and without that pack copies
+the same picture from the new folder under the old name
+(`cosmetics::old_folder_pictures`), so they draw with their pictures as in JoF EJK (not
+with JoF's unused `jof_hats.shader`, whose pumpkin glows: the first take of this branch
+did that, and Creyon's video showed a yellow pumpkin). McFox's and McSnowFox's models are
+wound inside out (82 of 120 triangles), so culling drew their insides: hats built so get
+a two-sided shader of their picture (`cosmetics::inside_out_shaders`), unless a script
+defines them ([client.md](client.md#hats-and-capes)). Verified on Linux x86_64: the new
+tests `a_hat_naming_the_old_folder_gets_its_picture_there`,
+`only_a_shader_file_of_old_piece_folders_is_taken` and
+`an_inside_out_hat_is_drawn_two_sided`; Creyon's `JoF_AssetsExtra.pk3` and
+`japro-assets.pk3` mounted as SJK mounts them, with and without the EternalJK folder,
+where the seven names resolve as in JoF EJK (jaPRO's scripts for cap and cringe, the
+pictures for the rest) and only McFox and McSnowFox are drawn two-sided; fmt, workspace
+build, tests and Clippy. Seen in game by Creyon on Windows (28/10/2026): every hat as in
+JoF EJK, in game and in the profile preview, McFox and McSnowFox solid.
+Startup cost (Sol's review, 29/10/2026; Windows 11, release, Creyon's install with five PK3s
+in `EternalJK`, 34 MB): with `main` `9e48ff6d` merged in, the first version took 64 ms
+between reading jaPRO's files and the two-sided shaders in SJK's timestamped log, and
+reached the main menu about 73 ms later than `main` (median of 7 starts, 1,488 against
+1,561 ms). Reading jaPRO's files took about 5 ms; the rest was listing and parsing the hats'
+models twice and reading every shader script at each mount. The models are now listed and
+parsed once (`cosmetics::piece_models`) and no script is read: the two-sided file is named
+to sort before every other (`shaders/!sjk_cosmetics_two_sided.shader`), and the catalogue
+keeps the last definition of a name in path order, so a script defining the same name still
+wins. That step now takes 22 ms. The whole start is too noisy to show it (medians of 7
+starts: `main` 1,507 ms, first version 1,624, now 1,566).
+
+## Shared SJK chat reactions
+
+31/10/2026, `feat/sjk-chat-reactions`, code `4f081b30` (including `main`
+`677a6073`): the SJK chat page shows shared emoji counts and registered players
+can toggle their own reactions with pointer or keyboard. Failed reaction notices
+expire after five seconds, returning to the reader count or connection status;
+a later failure starts a fresh timeout. A monotonic-clock test covers expiry,
+success and repeated failures. Feed tests cover validation, replacement updates,
+deletion, reconnect and old JSON; immutable reaction lists share storage across
+snapshots. No protocol-26 or game-server chat changes.
+
+Windows x64 formatting, locked workspace build/tests and all-target clippy passed.
+The offline GPU fixture was refreshed after the main merge and inspected: all six
+controls, shared counts and the reader's selected heart are visible. Live hub
+rollout, released-client interoperability and other operating systems remain
+unverified. The matching hub PR #5 still needs Sol's deployment before release.
 
 ## Local incoming chat colour
 

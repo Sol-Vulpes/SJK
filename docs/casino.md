@@ -2,7 +2,9 @@
 
 The `casino` command opens one SJK page in every menu style: multiplayer Texas
 Hold'em, European roulette, slots and blackjack. It wagers the player's existing
-SJK credits. It requires identity and a hub with the matching casino API; older
+SJK credits. Initial release access is staff-only on supporting hubs, with an
+explicitly configured minimum SJK client release. Missing version configuration
+keeps the feature closed. It requires identity and the matching casino API; older
 hubs refuse the request without changing credits. No game-server messages are sent.
 
 ## Rules
@@ -52,3 +54,13 @@ in [status.md](status.md); implementation is not evidence of deployment.
 
 Bet reopening and odd-chip order follow the [Poker TDA rules](https://www.pokertda.com/view-poker-tda-rules/),
 with the explicit credit-game limits above. This is not a claim of tournament certification.
+
+## Before public access
+
+The staff pilot has no daily loss budget yet. A public rollout needs an agreed
+budget across all linked keys of a person, counting unsettled wager exposure as
+well as settled losses. The 500-credit per-bet limit is not a daily protection.
+Poker also permits intentional losses as a credit transfer; no-rake play does
+not enforce the economy's trading limits. These decisions remain open before
+public access. Version headers are compatibility information, not proof of an
+unmodified client; staff authorization comes from the hub's own identity records.
