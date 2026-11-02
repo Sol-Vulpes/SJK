@@ -23,6 +23,9 @@ impl ViewerConsole {
         if !self.open {
             return false;
         }
+        if self.casino.open {
+            return true;
+        }
         if self.server_dialogue_active() {
             return true;
         }
@@ -64,6 +67,10 @@ impl ViewerConsole {
 
     /// Draw the open page ([`Self::sjk_page_open`]) with its text to `target`.
     pub(crate) fn append_sjk_page(&mut self, target: TextTarget<'_>, viewport: [f32; 2]) {
+        if self.casino.open {
+            self.append_casino(target, viewport);
+            return;
+        }
         if self.server_dialogue_active() {
             self.append_dialogue(target, viewport);
             return;

@@ -1,6 +1,8 @@
 //! Viewer presentation and input adapter for the portable client shell.
 
 use super::{TextVertex, UiFont};
+#[path = "console_casino.rs"]
+mod casino;
 use crate::keybind_editor;
 #[path = "asset_pack_browser.rs"]
 pub(crate) mod asset_browser;
@@ -231,6 +233,7 @@ pub(crate) struct ViewerConsole {
     collection_panel: collection_panel::Panel,
     /// The Holocrons page, the Profile screen's Holocrons tab in the SJK UI.
     holocrons_panel: holocrons_panel::Panel,
+    casino: casino::Casino,
     /// Where the Profile screen returns while one of its tabs shows here
     /// ([`crate::profile_hub`]).
     profile_hub_return: crate::player_menu::ReturnTarget,
@@ -591,6 +594,7 @@ impl ViewerConsole {
                 || self.server_dialogue_active()
                 || self.staff_panel.is_open()
                 || self.collection_panel.is_open()
+                || self.casino.open
                 || self.holocrons_panel.is_open()
                 || self.sjk_chat_panel.is_open()
                 || self.config_import.is_open())
@@ -1091,6 +1095,9 @@ impl ViewerConsole {
         if let Some(draw_list) = self.collection_panel_draw_list() {
             return draw_list;
         }
+        if self.open && self.casino.open {
+            return self.casino.ui.draw_list();
+        }
         if let Some(draw_list) = self.holocrons_panel_draw_list() {
             return draw_list;
         }
@@ -1166,6 +1173,7 @@ impl ViewerConsole {
             self.staff_panel.close();
             self.collection_panel.close();
             self.holocrons_panel.close();
+            self.casino.open = false;
             self.sjk_chat_panel.close();
             self.config_import.close();
         }

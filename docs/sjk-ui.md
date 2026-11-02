@@ -2882,3 +2882,9 @@ its tour, player stage and saber shot.
 The Servers detail panel offers **Copy IP** beside Join and Favourites. It copies
 the selected endpoint, including its port, and reports clipboard success or failure
 in the status line. Ctrl+C does the same outside text fields and dialogs.
+
+## Casino
+
+`casino` opens the [casino page](casino.md) in the SJK look in every menu style.
+Its four game tabs share the credits balance, wager controls and explicit actions.
+Tab/arrows navigate, Enter/Space activates and Escape closes without cashing out.

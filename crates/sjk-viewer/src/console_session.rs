@@ -626,6 +626,7 @@ impl ViewerConsole {
             dialogue: super::dialogue_panel::Panel::new(),
             collection_panel: super::collection_panel::Panel::new(),
             holocrons_panel: super::holocrons_panel::Panel::new(),
+            casino: super::casino::Casino::new(),
             profile_hub_return: crate::player_menu::ReturnTarget::MainMenu,
             holocrons_last: false,
             illuminate_lit: false,

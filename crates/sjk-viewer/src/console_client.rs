@@ -187,6 +187,10 @@ pub(super) const COMMANDS: &[(&str, &str)] = &[
         crate::console::UNLOCKABLES_HELP,
     ),
     (
+        "casino",
+        "Open SJK poker, roulette, slots and blackjack; wager your SJK credits",
+    ),
+    (
         crate::console::HOLOCRONS_COMMAND,
         crate::console::HOLOCRONS_HELP,
     ),
@@ -1177,6 +1181,12 @@ impl crate::GpuState {
             crate::console::UNLOCKABLES_COMMAND => {
                 if let Some(console) = &mut self.console {
                     console.toggle_collection_panel(Some(crate::profile_hub::Tab::Shaders));
+                }
+                self.sync_cursor_policy();
+            }
+            "casino" => {
+                if let Some(console) = &mut self.console {
+                    console.toggle_casino();
                 }
                 self.sync_cursor_policy();
             }

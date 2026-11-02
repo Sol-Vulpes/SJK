@@ -228,6 +228,8 @@ pub struct ModelCheck {
 /// What the viewer may read.
 #[derive(Clone, Debug)]
 pub struct Snapshot {
+    /// Last casino answer, including its request token; refreshed only on demand.
+    pub casino: Option<(String, Result<serde_json::Value, String>)>,
     /// The service's status.
     pub status: Status,
     /// The player's own id at the hub: this PC's key id until the hub answered the
@@ -666,6 +668,7 @@ impl Snapshot {
             map_edits_revision: 0,
             map_edits_note: None,
             map_edits_published: None,
+            casino: None,
             mystery_boxes: None,
             mystery_boxes_revision: 0,
             mystery_box: None,
@@ -864,6 +867,7 @@ enum Command {
     Mark(String, crate::wire::Mark, bool),
     /// Read the shop's day.
     ReadShop,
+    Casino(serde_json::Value),
     /// Buy this offer of the day.
     Buy(String),
     /// Buy a holocron of this tier with credits.
@@ -1795,6 +1799,23 @@ impl Worker {
             Command::ShatterDuplicates => self.trade(Trade::ShatterAll, ""),
             Command::Craft(id) => self.trade(Trade::Craft, &id),
             Command::Mark(id, mark, on) => self.set_mark(&id, mark, on, now),
+            Command::Casino(request) => {
+                let token = request["token"].as_str().unwrap_or_default().to_owned();
+                let outcome = match (self.hub.as_mut(), self.registered) {
+                    (Some(hub), true) => hub.casino(&self.identity, &request),
+                    _ => Err(self.not_connected()),
+                }
+                .map_err(|e| e.to_string());
+                self.update(|snapshot| {
+                    if let Ok(answer) = &outcome
+                        && let Some(credits) = answer["credits"].as_u64()
+                        && let Some(me) = &mut snapshot.me
+                    {
+                        me.credits = credits;
+                    }
+                    snapshot.casino = Some((token, outcome));
+                });
+            }
             Command::ReadShop => self.read_shop(now),
             Command::Buy(id) => self.trade(Trade::Buy, &id),
             Command::BuyHolocron(tier) => self.trade(Trade::Holocron, &tier),
@@ -4114,6 +4135,11 @@ impl Service {
     }
 
     /// Read the shop's offers of the day into [`Snapshot::shop`].
+    /// Queue a signed casino operation on the worker, never the frame thread.
+    pub fn casino(&self, request: serde_json::Value) {
+        let _ = self.commands.send(Command::Casino(request));
+    }
+
     pub fn read_shop(&self) {
         let _ = self.commands.send(Command::ReadShop);
     }

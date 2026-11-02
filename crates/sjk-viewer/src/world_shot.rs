@@ -417,6 +417,8 @@ mod whats_new;
 mod away_chat_shots;
 #[path = "world_shot_card_scenes.rs"]
 mod card_scenes_shots;
+#[path = "world_shot_casino.rs"]
+mod casino;
 #[path = "world_shot_chat_logs.rs"]
 mod chat_logs_shots;
 
@@ -1329,6 +1331,7 @@ Found the fog bug, ask me about it!"
             map_edits_revision: 0,
             map_edits_note: None,
             map_edits_published: None,
+            casino: None,
             mystery_boxes: None,
             mystery_boxes_revision: 0,
             mystery_box: None,

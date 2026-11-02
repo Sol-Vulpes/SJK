@@ -1,5 +1,28 @@
 ## Ghost editor
 
+## Credit casino: poker, roulette, slots and blackjack
+
+2026-11-02, change based on `d081db72`: `casino` opens one SJK page in every menu
+style, wagering the identity hub's existing credits. Six-seat multiplayer Hold'em
+has per-hand readiness, 1/2 blinds, side pots, short-all-in reopening, 30-second
+turns and between-hand cash-outs. Roulette, slots and blackjack use the explicit
+[rules and returns](casino.md). Matching hub PR #7 is required; this is not deployed.
+
+Verified on Windows/MSVC: workspace fmt check, locked build, tests and all-targets
+clippy; the page's controls and canvas budgets at 1080p, 4:3 and 4K. The hub's fmt,
+locked build/tests/clippy pass (545 library, 178 API, 19 CLI, 3 donation and 41 panel
+tests). Casino cases pin every five-card hand category over all 2,598,960 hands,
+seven-card selection, blackjack settlement, roulette zero, exact slot returns,
+side pots, full/cumulative short raises, credit conservation, hidden cards,
+signed HTTP retries, stale requests, escrow cash-outs and persisted receipts.
+Offline GPU images use synthetic balances/hands, with identity disabled.
+
+Unverified: native clients playing together against a running local hub,
+non-Windows runtime, long-running table load and production deployment. These
+checks do not certify gameplay parity or performance; no protocol-26 codec,
+movement, saber timing or game-server rules changed.
+
+
 01/11/2026, `personal/ghost-editor`, based on `main` `1f2c6c2f` (Sol's request: duplicate a
 ghost from a list, cut part of its start, and take out the commands where the chat bubble
 shows; Sol's choices: clear the bubble rather than delete commands, a timeline plus the

@@ -75,3 +75,14 @@ pub use wire::{
     ShopDay, Tick, ToyEvent, Trust, Unlock, UnlockMarks, Vitals, WornName, names_match,
     normal_form,
 };
+
+/// A random 128-bit idempotency key for a signed economy operation.
+pub fn economy_request_token() -> Result<String, KeyError> {
+    use std::fmt::Write;
+    let bytes = keys::random_bytes::<16>()?;
+    let mut token = String::with_capacity(32);
+    for byte in bytes {
+        let _ = write!(token, "{byte:02x}");
+    }
+    Ok(token)
+}

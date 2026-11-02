@@ -295,7 +295,8 @@ impl ViewerConsole {
         if self.jof_content_key(event) {
             return true;
         }
-        if self.asset_browser_key(event)
+        if self.casino_key(event)
+            || self.asset_browser_key(event)
             || self.model_viewer_key(event)
             || self.config_import_key(event)
             || self.credits_key(event)
