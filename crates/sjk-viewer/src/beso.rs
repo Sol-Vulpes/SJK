@@ -21,6 +21,8 @@ const OFFSETS: [[i32; 2]; 10] = [
     [-72, 48],
     [-88, 0],
 ];
+const REQUEST_TIMEOUT: Duration = Duration::from_secs(30);
+const AMOUNTS: [i64; 4] = [100, 250, 500, 1000];
 const NEARBY: f32 = 256.0;
 const COLLECT: f32 = 56.0;
 
@@ -54,10 +56,36 @@ pub(crate) struct Beso {
     place: Option<(String, String)>,
     due: Option<Instant>,
     pending: Option<Value>,
+    sent: Option<Instant>,
     funding: Option<Value>,
 }
 
 impl Beso {
+    fn funding_failed(&mut self, error: &sjk_identity::HubError) -> bool {
+        let uncertain = matches!(
+            error,
+            sjk_identity::HubError::Network(_) | sjk_identity::HubError::Protocol(_)
+        );
+        if !uncertain {
+            self.funding = None;
+        }
+        uncertain
+    }
+
+    fn expire_request(&mut self, now: Instant) -> bool {
+        if self.pending.is_some()
+            && self
+                .sent
+                .is_some_and(|at| now.saturating_duration_since(at) >= REQUEST_TIMEOUT)
+        {
+            self.pending = None;
+            self.sent = None;
+            self.due = Some(now + Duration::from_secs(10));
+            return true;
+        }
+        false
+    }
+
     fn wants_poll(&self) -> bool {
         self.show_others
             || self.pending.is_some()
@@ -101,6 +129,7 @@ impl GpuState {
             if !send(request.clone()) {
                 return Err("Enable SJK identity first".into());
             }
+            self.beso.sent = Some(Instant::now());
             self.beso.pending = Some(request);
             self.beso.due = None;
             return Ok(vec![
@@ -108,14 +137,14 @@ impl GpuState {
             ]);
         }
         if args.len() > 1 {
-            return Err("toy_beso [100..100000 credits, multiple of 10] | retry".into());
+            return Err("toy_beso [100|250|500|1000] | retry".into());
         }
         let amount = args
             .first()
             .map_or(Ok(100), |s| s.parse::<i64>())
             .map_err(|_| "Choose a whole credit amount")?;
-        if !(100..=100_000).contains(&amount) || amount % 10 != 0 {
-            return Err("Rain 100..100000 credits, in multiples of ten".into());
+        if !AMOUNTS.contains(&amount) {
+            return Err("Choose 100, 250, 500 or 1000 credits".into());
         }
         if self.beso.paid_pending() || self.beso.funding.is_some() {
             return Err("Wait for the hub, or use toy_beso retry after a failed request".into());
@@ -165,6 +194,7 @@ impl GpuState {
             return Err("Enable SJK identity first".into());
         }
         self.beso.funding = Some(request.clone());
+        self.beso.sent = Some(Instant::now());
         self.beso.pending = Some(request);
         self.beso.due = None;
         Ok(vec![format!(
@@ -175,6 +205,15 @@ impl GpuState {
     /// Read the hub at one-second intervals; collect only a packet actually in reach.
     pub(crate) fn update_beso(&mut self, events: &[sjk_identity::ToyEvent]) {
         let now = Instant::now();
+        if self.beso.expire_request(now) {
+            self.chat.receive(
+                sjk_client::ServerEventKind::CenterPrint,
+                "Credit rain request timed out. If funding was uncertain, use toy_beso retry."
+                    .into(),
+                None,
+                now,
+            );
+        }
         if events.iter().any(|e| e.toy == "beso" && e.event == "rain") {
             self.beso.due = None;
         }
@@ -211,6 +250,7 @@ impl GpuState {
                 return;
             };
             let was_funding = pending["action"] == "rain";
+            let was_read = pending["action"] == "read";
             let read_failed = pending["action"] == "read" && result.is_err();
             let same_place = pending["server"] == server && pending["map"] == map;
             match result {
@@ -274,13 +314,14 @@ impl GpuState {
                     }
                 }
                 Err(error) => {
+                    let uncertain = was_funding && self.beso.funding_failed(&error);
                     // Read errors are quiet; paid operations are reported exactly once.
-                    if pending["action"] != "read" {
+                    if !was_read {
                         self.chat.receive(
                             sjk_client::ServerEventKind::CenterPrint,
                             format!(
                                 "Credit rain: {error}{}",
-                                if was_funding {
+                                if was_funding && uncertain {
                                     " Use toy_beso retry."
                                 } else {
                                     ""
@@ -294,6 +335,7 @@ impl GpuState {
             }
             let _ = token;
             self.beso.pending = None;
+            self.beso.sent = None;
             self.beso.due = Some(
                 now + Duration::from_secs(if read_failed {
                     60
@@ -330,6 +372,7 @@ impl GpuState {
             request["origin"] = json!(origin.to_array());
         }
         if send(request.clone()) {
+            self.beso.sent = Some(Instant::now());
             self.beso.pending = Some(request);
         }
     }
@@ -427,6 +470,39 @@ mod tests {
         assert!(beso.paid_pending());
         beso.pending = Some(json!({"action":"collect"}));
         assert!(beso.paid_pending());
+    }
+    #[test]
+    fn abandoned_requests_time_out_without_losing_uncertain_payment() {
+        let now = Instant::now();
+        let request = json!({"action":"rain","token":"saved"});
+        let mut b = Beso::default();
+        b.pending = Some(request.clone());
+        b.funding = Some(request);
+        b.sent = Some(now);
+        assert!(!b.expire_request(now + REQUEST_TIMEOUT - Duration::from_millis(1)));
+        assert!(b.expire_request(now + REQUEST_TIMEOUT));
+        assert!(b.pending.is_none());
+        assert_eq!(b.funding.as_ref().unwrap()["token"], "saved");
+        assert!(!b.expire_request(now + REQUEST_TIMEOUT));
+    }
+    #[test]
+    fn definite_refusals_release_the_old_roster_but_lost_answers_keep_the_token() {
+        let mut b = Beso::default();
+        b.funding = Some(json!({"token":"saved","eligible":["old"]}));
+        assert!(b.funding_failed(&sjk_identity::HubError::Network("timeout".into())));
+        assert!(b.funding.is_some());
+        assert!(b.funding_failed(&sjk_identity::HubError::Protocol(
+            "incomplete answer".into()
+        )));
+        assert!(!b.funding_failed(&sjk_identity::HubError::Rejected {
+            status: 400,
+            code: "beso".into(),
+            message: "still falling".into()
+        }));
+        assert!(b.funding.is_none());
+        b.funding = Some(json!({"token":"new"}));
+        assert!(!b.funding_failed(&sjk_identity::HubError::NotConnected("disabled".into())));
+        assert!(b.funding.is_none());
     }
     #[test]
     fn packet_positions_match_the_hubs_integer_offsets() {

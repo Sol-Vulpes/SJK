@@ -7,10 +7,9 @@ credit rain** in Collection > Toys > Credit rain (also in Settings). This is off
 own paid rain. The Collection's Toys tab has a
 **Rain 100** button and a bindable rain key, in the SJK UI in every menu style.
 There is no recurring spend or automatic rain. The console command accepts a
-different whole amount: `toy_creditrain 1000`. Amounts are 100..100000, in multiples of
-ten; every packet holds one tenth of the amount. The owner cannot collect it.
+different whole amount: `toy_creditrain 1000`. Choices are 100, 250, 500 and 1000 credits; every packet holds one tenth of the amount. The owner cannot collect it.
 
-Initial release access is staff-only on supporting hubs, including reads, funding
+Initial pilot access is staff-only on supporting hubs, including reads, funding
 and collection, and needs a configured minimum SJK release. Missing configuration
 keeps it closed. The old command and `cg_toyBesoShow` keep working; the visible name
 says what the toy does rather than using the request's original internal name.
@@ -52,17 +51,32 @@ while menus, console, scoreboard or intermission cover the game.
 This requires its matching hub update. Implementation, verification and remaining
 limits are recorded in [status.md](status.md); it has not been deployed by this change.
 
-## Before public access
 
-This intentionally transfers the donor's owned credits. The staff pilot
-keeps the original variable amounts while the public rules are decided. A small
-fixed burst and a daily giving budget remain public-release decisions, not
-implemented limits.
+## Pilot economy limits and recovery
 
-A collector's signed position is still self-reported. The donor-selected list
-limits who can receive money but cannot prove walking distance. The enforced
-one-packet-per-person limit stops one eligible client vacuuming
-the whole burst; it does not prove movement or prevent several accounts
-coordinating. Reliable spatial proof needs a game server or another trusted observer, not a second unchecked coordinate.
-Public access should wait for the transfer policy and stronger pickup validation
-decision.
+PROVISIONAL hub limits: ten minutes between successful new rains, at most 1000
+funded credits per rolling 24 hours per person, and at most 500 collected credits
+per rolling 24 hours per person. Linked keys share these limits, and profile
+merges preserve their history. Refunds do not replenish the giving allowance;
+it counts the funded amount, not just packets picked up. A retry of an already
+funded token does not consume another allowance or restart the cooldown.
+
+Collectors cannot share the donor's hub-observed connection (IPv6 by /64), checked
+against the stored funding address and the feed's known addresses. A historical
+rain with an unknown funding address cannot be collected; it refunds normally.
+One packet per canonical recipient still applies. The hub refuses a packet that
+would cross the collection cap without marking it taken. Donors still select the
+eligible roster and collectors report their positions: this does not prove a walk
+or stop intentional transfers between different connections.
+
+A pending client request times out after thirty seconds even if identity is
+disabled or restarted, or the player leaves the server. A lost or unreadable
+answer keeps an uncertain payment token for explicit retry, avoiding another
+charge. A definite hub refusal or a request known not to have been sent clears
+it; the next rain captures a new position and nearby roster. No timeout starts a
+new payment automatically.
+
+Sol's 03/11 decision is verified donors and collectors (staff also allowed). The
+shared audience/filtering change is reserved for the maintainer at merge; the
+current implementation still defaults to staff. Native multi-client play,
+deployment and proof of physical proximity remain unverified.

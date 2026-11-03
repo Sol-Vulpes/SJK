@@ -136,6 +136,8 @@ pub enum SecretDone {
     Placed(i64),
     /// SJK's creator took toy `id` away.
     Removed(i64),
+    /// SJK's creator set toy `id` to show only where they are (`true`) or everywhere.
+    Escorted(i64, bool),
 }
 
 /// What a mystery box request did ([`Snapshot::mystery_box`]).
@@ -229,7 +231,7 @@ pub struct ModelCheck {
 #[derive(Clone, Debug)]
 pub struct Snapshot {
     /// Last funded rain response and its request token.
-    pub beso: Option<(String, Result<serde_json::Value, String>)>,
+    pub beso: Option<(String, Result<serde_json::Value, crate::hub::HubError>)>,
     /// The service's status.
     pub status: Status,
     /// The player's own id at the hub: this PC's key id until the hub answered the
@@ -309,6 +311,11 @@ pub struct Snapshot {
     pub secrets: Option<crate::toy_master::Secrets>,
     /// Counts the times [`Snapshot::secrets`] changed.
     pub secrets_revision: u64,
+    /// The Toy Master's shows under way on the player's server, as the hub's last
+    /// presence answer told them, and when it arrived (their `ago` is as of then).
+    pub secret_shows: Option<(Instant, Vec<crate::toy_master::ShowUnderWay>)>,
+    /// Counts the times [`Snapshot::secret_shows`] changed.
+    pub secret_shows_revision: u64,
     /// The answer to the last request about the Toy Master's toys, by serial, or why it
     /// was refused (in the player's words).
     pub secret: Option<(u64, Result<SecretDone, String>)>,
@@ -675,6 +682,8 @@ impl Snapshot {
             box_hunt: None,
             secrets: None,
             secrets_revision: 0,
+            secret_shows: None,
+            secret_shows_revision: 0,
             secret: None,
             crashes_sent: 0,
             crash_note: None,
@@ -735,6 +744,15 @@ impl Snapshot {
             .iter()
             .find(|player| player.slot == slot && names_match(&player.claimed_name, shown))
     }
+}
+
+/// What a box hunt read first tells the hub.
+#[derive(Clone, Copy)]
+enum HuntReport {
+    /// The player, the mark, was killed by this slot.
+    Killed(u8),
+    /// The player is out of the chase.
+    Out(crate::mystery_box::HuntOut),
 }
 
 /// A request to the worker.
@@ -835,10 +853,18 @@ enum Command {
     PlaceSecret(crate::toy_master::Placing),
     /// SJK's creator: take toy `id` away.
     RemoveSecret(i64),
+    /// SJK's creator: show toy `id` only where they are, or everywhere.
+    EscortSecret(i64, bool),
     /// The player, the box hunt's mark on `server`, was killed by slot `by`.
     BoxHuntKilled {
         server: String,
         by: u8,
+        away: bool,
+    },
+    /// The player is out of the box hunt's chase on `server`.
+    BoxHuntOut {
+        server: String,
+        out: crate::mystery_box::HuntOut,
         away: bool,
     },
     /// Staff: publish a map's edits.
@@ -1005,6 +1031,10 @@ struct Worker {
     /// The folder map edits are kept in, and when the hub's list is next read.
     map_edits_dir: Option<PathBuf>,
     due_map_edits: Instant,
+    /// The hub's map edits stamp the last presence answer carried.
+    map_edits_stamp: Option<i64>,
+    /// The hub's Toy Master stamp the last presence answer carried, with its server.
+    secrets_stamp: Option<(String, i64)>,
     /// Serial of the last map edits publication.
     map_edits_serial: u64,
     /// When the hub's mystery boxes are next read, and the last request's serial.
@@ -1308,6 +1338,8 @@ impl Worker {
             assets_dir: None,
             map_edits_dir: None,
             due_map_edits: now,
+            map_edits_stamp: None,
+            secrets_stamp: None,
             map_edits_serial: 0,
             due_mystery_boxes: now,
             mystery_box_serial: 0,
@@ -1761,7 +1793,10 @@ impl Worker {
             }),
             Command::BoxHunt { server, away } => self.box_hunt(&server, None, away),
             Command::BoxHuntKilled { server, by, away } => {
-                self.box_hunt(&server, Some(by), away);
+                self.box_hunt(&server, Some(HuntReport::Killed(by)), away);
+            }
+            Command::BoxHuntOut { server, out, away } => {
+                self.box_hunt(&server, Some(HuntReport::Out(out)), away);
             }
             Command::RemoveMysteryBox(id) => self.mystery_box(now, |hub, identity| {
                 hub.remove_mystery_box(identity, id)
@@ -1810,6 +1845,10 @@ impl Worker {
                 hub.remove_secret(identity, id)
                     .map(|_| (SecretDone::Removed(id), None))
             }),
+            Command::EscortSecret(id, escorted) => self.secret(now, |hub, identity| {
+                hub.escort_secret(identity, id, escorted)
+                    .map(|_| (SecretDone::Escorted(id, escorted), None))
+            }),
             Command::Crashes(dir) => {
                 if self.crash_dir != dir {
                     self.crash_dir = dir;
@@ -1832,8 +1871,7 @@ impl Worker {
                 let outcome = match (self.hub.as_mut(), self.registered) {
                     (Some(hub), true) => hub.beso(&self.identity, &request),
                     _ => Err(self.not_connected()),
-                }
-                .map_err(|e| e.to_string());
+                };
                 self.update(|snapshot| {
                     if let Ok(answer) = &outcome
                         && let Some(credits) = answer["credits"].as_u64()
@@ -3072,7 +3110,11 @@ impl Worker {
             return;
         };
         self.due_secrets = now + SECRETS_EVERY;
-        if let Ok(secrets) = hub.secrets(&self.identity) {
+        let server = self
+            .location
+            .as_ref()
+            .map(|location| location.server.to_string());
+        if let Ok(secrets) = hub.secrets(&self.identity, server.as_deref()) {
             self.update(|snapshot| {
                 if snapshot.secrets.as_ref() != Some(&secrets) {
                     snapshot.secrets = Some(secrets);
@@ -3097,7 +3139,9 @@ impl Worker {
             _ => Err(self.not_connected()),
         };
         let reread = match &outcome {
-            Ok((SecretDone::Placed(_) | SecretDone::Removed(_), _)) => true,
+            Ok((SecretDone::Placed(_) | SecretDone::Removed(_) | SecretDone::Escorted(..), _)) => {
+                true
+            }
             Err(HubError::Rejected { code, .. }) => code == "no_such_secret",
             _ => false,
         };
@@ -3118,18 +3162,23 @@ impl Worker {
         });
     }
 
-    /// Read the box hunt on `server` into [`Snapshot::box_hunt`], first saying the
-    /// player (the mark) was killed by slot `killed_by` when given (tried twice: a kill
-    /// lost is a hunter's free roll lost), and whether the player is `away`. A failed
-    /// read leaves the last one.
-    fn box_hunt(&mut self, server: &str, killed_by: Option<u8>, away: bool) {
+    /// Read the box hunt on `server` into [`Snapshot::box_hunt`], first telling the hub
+    /// `report` when given (the player, the mark, killed by a slot; or out of the chase),
+    /// tried twice (a kill lost is a hunter's free roll lost), and whether the player is
+    /// `away`. A failed read leaves the last one.
+    fn box_hunt(&mut self, server: &str, report: Option<HuntReport>, away: bool) {
         let (Some(hub), true) = (self.hub.as_mut(), self.registered) else {
             return;
         };
-        if let Some(by) = killed_by
-            && hub.box_hunt_killed(&self.identity, server, by).is_err()
-        {
-            let _ = hub.box_hunt_killed(&self.identity, server, by);
+        for _ in 0..2 {
+            let told = match report {
+                Some(HuntReport::Killed(by)) => hub.box_hunt_killed(&self.identity, server, by),
+                Some(HuntReport::Out(out)) => hub.box_hunt_out(&self.identity, server, out),
+                None => Ok(true),
+            };
+            if told.is_ok() {
+                break;
+            }
         }
         let Ok(state) = hub.box_hunt(&self.identity, server, away) else {
             return;
@@ -3605,9 +3654,33 @@ impl Worker {
             }
             if now >= self.due_poll {
                 match hub.presence_with_blocks(&server) {
-                    Ok((players, blocks)) => {
+                    Ok(crate::hub::PresenceRead {
+                        players,
+                        blocks,
+                        map_edits,
+                        secrets,
+                        shows,
+                    }) => {
                         self.due_poll = now + POLL_EVERY;
+                        // Staff published (or this is the first look on this run): read
+                        // the map edits' list now, not at the next 10 minute look.
+                        if map_edits.is_some() && map_edits != self.map_edits_stamp {
+                            self.map_edits_stamp = map_edits;
+                            self.due_map_edits = now;
+                        }
+                        // The toys listed for this server changed (one placed or taken
+                        // away, SJK's creator came or went), or this is a new server:
+                        // read them now, not at the next 10 minute look.
+                        let stamp = secrets.map(|stamp| (server.clone(), stamp));
+                        if stamp.is_some() && stamp != self.secrets_stamp {
+                            self.secrets_stamp = stamp;
+                            self.due_secrets = now;
+                        }
                         let mut snapshot = lock(&self.snapshot);
+                        if snapshot.secret_shows.as_ref().map(|(_, shows)| shows) != Some(&shows) {
+                            snapshot.secret_shows = Some((now, shows));
+                            snapshot.secret_shows_revision += 1;
+                        }
                         if snapshot.players != players || snapshot.map_blocks != blocks {
                             snapshot.players = players;
                             snapshot.map_blocks = blocks;
@@ -4038,6 +4111,12 @@ impl Service {
         let _ = self.commands.send(Command::RemoveSecret(id));
     }
 
+    /// SJK's creator: show the Toy Master's toy `id` only on the server they are on
+    /// (`escorted`), or on every server again.
+    pub fn escort_secret(&self, id: i64, escorted: bool) {
+        let _ = self.commands.send(Command::EscortSecret(id, escorted));
+    }
+
     /// Read the box hunt on `server`, saying whether the player is `away` (in the chat,
     /// a menu, idle: the hub picks no mark among them): it arrives in
     /// [`Snapshot::box_hunt`].
@@ -4051,6 +4130,14 @@ impl Service {
         let _ = self
             .commands
             .send(Command::BoxHuntKilled { server, by, away });
+    }
+
+    /// The player is out of the box hunt's chase on `server` (killed by the mark, or
+    /// caught cheating); the hunt is read again after, the player `away` or not.
+    pub fn box_hunt_out(&self, server: String, out: crate::mystery_box::HuntOut, away: bool) {
+        let _ = self
+            .commands
+            .send(Command::BoxHuntOut { server, out, away });
     }
 
     /// Staff: publish `edits` for `map` and `checksum`; the answer lands in
@@ -4627,6 +4714,10 @@ mod tests {
         /// The collection marks the fake hub keeps; none is a hub from before them, which
         /// sends none with the progress and answers a change with 404.
         marks: Arc<Mutex<Option<crate::wire::UnlockMarks>>>,
+        /// The map edits stamp presence answers carry; none is a hub from before it.
+        edits_stamp: Arc<Mutex<Option<i64>>>,
+        /// The Toy Master stamp its presence answers carry.
+        secrets_stamp: Arc<Mutex<Option<i64>>>,
     }
 
     impl Fake {
@@ -5186,6 +5277,35 @@ mod tests {
         fn presence(&mut self, server: &str) -> Result<Vec<Presence>, HubError> {
             self.record(format!("presence {server}"))
                 .map(|()| self.roster.lock().unwrap().clone())
+        }
+        fn presence_with_blocks(
+            &mut self,
+            server: &str,
+        ) -> Result<crate::hub::PresenceRead, HubError> {
+            self.presence(server)
+                .map(|players| crate::hub::PresenceRead {
+                    players,
+                    blocks: Vec::new(),
+                    map_edits: *self.edits_stamp.lock().unwrap(),
+                    secrets: *self.secrets_stamp.lock().unwrap(),
+                    shows: Vec::new(),
+                })
+        }
+        fn map_edits(&mut self, _: &Identity) -> Result<Vec<crate::map_edits::Entry>, HubError> {
+            self.record("map edits".to_owned()).map(|()| Vec::new())
+        }
+        fn secrets(
+            &mut self,
+            _: &Identity,
+            server: Option<&str>,
+        ) -> Result<crate::toy_master::Secrets, HubError> {
+            // Logged only where a test follows the Toy Master's stamp: the others
+            // match the log line by line.
+            if self.secrets_stamp.lock().unwrap().is_none() {
+                return Ok(crate::toy_master::Secrets::default());
+            }
+            self.record(format!("secrets {}", server.unwrap_or("-")))
+                .map(|()| crate::toy_master::Secrets::default())
         }
         fn report(&mut self, _: &Identity, report: &BugReport) -> Result<i64, HubError> {
             self.record(format!("report {}", report.text))?;
@@ -8109,6 +8229,79 @@ mod tests {
                 .count()
                 == 2
         );
+    }
+
+    #[test]
+    fn a_new_map_edits_stamp_in_presence_reads_the_list_at_once() {
+        let fake = Fake::default();
+        *fake.edits_stamp.lock().unwrap() = Some(4);
+        let dir = std::env::temp_dir().join(format!(
+            "sjk-identity-edits-stamp-{}-{:?}",
+            std::process::id(),
+            std::thread::current().id()
+        ));
+        let t0 = Instant::now();
+        let (mut worker, _snapshot) = worker(&fake, t0);
+        worker.handle(Command::Configure(on("https://hub")), t0);
+        worker.handle(Command::MapEditsDir(dir.clone()), t0);
+        worker.handle(Command::Enter(here(3, "Sol")), t0);
+        let reads = |fake: &Fake| fake.log().iter().filter(|l| *l == "map edits").count();
+        worker.tick(t0);
+        worker.tick(t0 + Duration::from_millis(10));
+        // The look at start, and one for the first stamp seen on this run.
+        let start = reads(&fake);
+        assert!((1..=2).contains(&start), "{:?}", fake.log());
+        // The same stamp: nothing more until the 10 minute look.
+        worker.tick(t0 + POLL_EVERY);
+        worker.tick(t0 + POLL_EVERY + Duration::from_millis(10));
+        assert_eq!(reads(&fake), start);
+        // Staff published: the next presence answer brings the list at once.
+        *fake.edits_stamp.lock().unwrap() = Some(5);
+        worker.tick(t0 + POLL_EVERY * 2);
+        worker.tick(t0 + POLL_EVERY * 2 + Duration::from_millis(10));
+        assert_eq!(reads(&fake), start + 1, "{:?}", fake.log());
+        // A hub from before the stamp changes nothing.
+        *fake.edits_stamp.lock().unwrap() = None;
+        worker.tick(t0 + POLL_EVERY * 3);
+        worker.tick(t0 + POLL_EVERY * 3 + Duration::from_millis(10));
+        assert_eq!(reads(&fake), start + 1);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    /// A new Toy Master stamp in a presence answer (a toy placed or taken away, SJK's
+    /// creator came or went) reads the toys at once, for the server the player is on.
+    #[test]
+    fn a_new_secrets_stamp_in_presence_reads_the_toys_at_once() {
+        let fake = Fake::default();
+        *fake.secrets_stamp.lock().unwrap() = Some(1);
+        let t0 = Instant::now();
+        let (mut worker, _snapshot) = worker(&fake, t0);
+        worker.handle(Command::Configure(on("https://hub")), t0);
+        worker.handle(Command::Enter(here(3, "Sol")), t0);
+        let reads = |fake: &Fake| {
+            fake.log()
+                .iter()
+                .filter(|line| line.starts_with("secrets "))
+                .cloned()
+                .collect::<Vec<_>>()
+        };
+        worker.tick(t0);
+        worker.tick(t0 + Duration::from_millis(10));
+        let start = reads(&fake);
+        assert!(!start.is_empty(), "{:?}", fake.log());
+        assert!(
+            start.last().is_some_and(|line| line != "secrets -"),
+            "{start:?}"
+        );
+        // The same stamp: nothing more until the 10 minute look.
+        worker.tick(t0 + POLL_EVERY);
+        worker.tick(t0 + POLL_EVERY + Duration::from_millis(10));
+        assert_eq!(reads(&fake).len(), start.len());
+        // The creator came: the next presence answer brings the toys at once.
+        *fake.secrets_stamp.lock().unwrap() = Some(2);
+        worker.tick(t0 + POLL_EVERY * 2);
+        worker.tick(t0 + POLL_EVERY * 2 + Duration::from_millis(10));
+        assert_eq!(reads(&fake).len(), start.len() + 1, "{:?}", fake.log());
     }
 
     #[test]

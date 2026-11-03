@@ -420,6 +420,13 @@ includes:
   look (the blade's hiding worked out once per pixel, far lightning bolts skipped);
 - toon models (02/11/2026): `r_toonModels` draws lit models with banded light, a rim
   and livelier colour, live and off by default;
+- 3D sound (03/11/2026, after VisionJK's `v_spatial`, Blackwolf's idea): `s_spatial`
+  hears from the player's head, muffles sounds behind walls and shut doors and rings
+  the room round the player with a small reverb sized by rays, in SJK's own mixer,
+  off by default;
+- white edge on dark text (03/11/2026): `cg_darkTextOutline` rings black and other dark
+  letters of nameplates and chat in a crisp white outline instead of the soft halo,
+  off by default;
 - SJK Alpha (19/10/2026), the first collection of cards: the Mythical rarity, the
   Credits and Meme kinds, and card 1, "Bishop", honouring the author of JKR (art by
   Sol, AI-assisted: a rusted helmet portrait).
@@ -741,7 +748,7 @@ merged into SJK
 - #306 long game-chat messages sent whole, as up to four messages split at a word; at the
   merge a draft refused past four pieces stays in the composer.
 
-Slash ([JoFSlash](https://github.com/JoFSlash)), contributor, has 90 pull requests merged
+Slash ([JoFSlash](https://github.com/JoFSlash)), contributor, has 94 pull requests merged
 into SJK ([all of them](https://github.com/Sol-Vulpes/SJK/pulls?q=is%3Apr+author%3AJoFSlash)):
 
 - #114 Tab completes the cfg file argument of `exec`, `execq`, `writeconfig` and `write`
@@ -907,6 +914,14 @@ into SJK ([all of them](https://github.com/Sol-Vulpes/SJK/pulls?q=is%3Apr+author
 - #303 chat and console fonts installed on the PC (`cg_chatFont`, `con_font`), after Saturn's
   idea.
 - #318 each HUD style shows the piloted vehicle's HP in its own look.
+- #336 NPCs whose appended skin names only `head|torso|` (JoF Shuttle's alien younglings)
+  wear it instead of drawing grey, as `CG_HandleAppendedSkin` reads it.
+- #338 `cg_empowerEffect 3` hides the Empower body glow locally; ordinary Push keeps its blur.
+- #339 light styles: switchable and flickering lights' baked light drawn and following
+  `CS_LIGHT_STYLES` (the JoF Shuttle ship was black).
+- #278 the Fishing toy (after Sanjisan's idea): a rod, a bucket with the last catch,
+  12 fish, junk and a pond where there is no water; a holocron play drops while fishing
+  comes up on the line as an Echo; five achievements.
 
 His Peek work in #199 (closed 24/10/2026, not merged) shaped the Drone toy: a player is
 asked before being peeked, told who watches, and can end it. His #206 (closed 25/10/2026,
@@ -934,6 +949,13 @@ request merged into SJK
 - #333 on JA+ servers the dual sabers' forward jump attack raises the feet only when another
   player stands within 70 units ahead (every time with `dmflags` 256), as the JA+ 2.4 B7
   server does, so the attacker no longer sinks into the floor with nobody in front.
+
+Blackwolf's VisionJK client inspired the boombox on the floor (03/11/2026, with his
+agreement): `boombox_place` stands SJK's boombox on the floor, its music quieter behind it,
+as VisionJK's does; SJK's code is its own.
+
+Blackwolf's VisionJK client and its 3D sound (`v_spatial`, Steam Audio) gave SJK the
+idea of its own 3D sound (`s_spatial`), built in SJK's mixer with his agreement.
 
 ## Art
 

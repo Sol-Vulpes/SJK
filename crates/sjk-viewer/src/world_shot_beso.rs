@@ -23,7 +23,7 @@ fn duel6_beso_toy() {
             Some(vec![]),
             4.0,
         );
-        gpu.console.as_mut().unwrap().collection_toy_for_shot(10);
+        gpu.console.as_mut().unwrap().collection_toy_for_shot(11);
         println!("{}", shoot(&mut gpu, 4, "beso-toys-card").display());
         gpu.console.as_mut().unwrap().set_open(false);
         gpu.client_menu = None;

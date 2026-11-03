@@ -33,10 +33,32 @@ Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 ## Unreleased
 
 = cg_toyBesoShow: See and collect other players' credit rain. Default off; your own paid rain stays visible.
+
+- Credit rain (`toy_beso`, also `toy_creditrain`): spend owned credits on packets nearby SJK players can collect (one per person per rain), staff-only while tested; requires a supporting hub and client release _(Lumaya)_
+
+- Hide the Empower glow: Settings "Empower glow" (`cg_empowerEffect`) 3 turns off the body glow of empowered players; ordinary Push still shows _(Slash, PR #338, after Dante's idea)_
+- Maps lit by switchable or flickering lights, such as the JoF Shuttle trial mission ship, the JoF missions and Memorial Grounds, show that light instead of drawing it dark, and follow the server as a light is switched off or on (SJK and Vanilla graphics presets) _(Slash, PR #339, after Kushina's report)_
+- NPCs whose skin names only a head and a torso, such as the alien younglings of the JoF Shuttle trial mission, wear their skin instead of drawing grey (Kushina's report) _(Slash, PR #336)_
+- Fishing toy: `toy_fishing` (the quick wheel's Toys page, Collection > Toys) gets a rod out. Stand still and press Use when the float dips to land fish and junk for your fish log; each of the 12 fish looks different, and your last catch waits in the bucket; where there is no water, a small pond appears. An Echo dropped to you while you fish comes up on the line. Five new achievements: First Bite, Angler, Every Fish in the Pond, Echo Angler and a hidden one _(Slash, PR #278, after Sanji's idea)_
+
+## 2026.1103.1 (Alpha) | 03/11/2026
+
+3D sound and a sound sonar, a HUD you move with the mouse, quieter and fuller chat, profile banners, one life per box hunter and a cat that dances to its song.
+
+> Sound: Muffled sound behind walls and a sonar for hard-of-hearing players, both off by default.
+> Your HUD: Drag its pieces where you want them with `hud_edit`.
+> Chat: Quiet mode, your PC's fonts, emoji reactions and long messages sent whole.
+> Profile banners: Collect covers for your Profile and player card.
+> Box hunt: One life per hunter, and a cheating mark blows up.
+> Toy Master: The cat spins while its song sings, and late arrivals join the show.
+
+= s_spatial: 3D sound: sounds behind walls and shut doors are muffled and rooms ring, heard from your head even in third person.
 = cg_soundSonar: Sound sonar, for deaf and hard-of-hearing players: arcs round the crosshair point toward the sounds you hear.
 = cg_scoreboardIDs: New: each player's client number, small before the name on SJK's scoreboard, as the classic one's Id column shows it.
 
-- Credit rain (`toy_beso`, also `toy_creditrain`): spend owned credits on packets nearby SJK players can collect (one per person per rain), staff-only while tested; requires a supporting hub and client release _(Lumaya)_
+- White outline on dark text: black and other dark letters in names and chat can get a crisp white outline instead of the soft glow, Settings > Chat "White edge on dark text" (`cg_darkTextOutline`) _(Sol)_
+- SJK map edits arrive within seconds on a server once the SJK team publishes them, instead of up to 10 minutes later; Settings > Game "Sync map edits" (or `mapedits_sync`) asks the hub at once _(Sol)_
+- 3D sound (Settings > Sound, `s_spatial`, off by default): sounds are heard from your head, also in third person; a sound behind a wall or a shut door becomes quieter and duller, and the room round you rings, a hall longer than a corridor _(Sol, after VisionJK's idea by Blackwolf)_
 - Move the HUD with the mouse: Settings > HUD "Move HUD elements" (or `hud_edit`) outlines the health, Force, weapon, timer, lagometer, chat, kill feed, movement keys and the rest over the game; drag one to move it, right-click it to put it back _(Slash, PR #295, after Lex's idea)_
 - Sound sonar (Settings > Sound, `cg_soundSonar`, off by default): short arcs round the crosshair point toward the sounds you hear, footsteps, shots and swings, voices, explosions and the rest, each kind its own colour, fading over a second _(Slash, PR #301, after Dawson's idea)_
 - Quiet mode: `quiet` (or Settings > Chat > Quiet mode, `cg_quietMode`) hides public, team, SJK and admin chat and their sounds until you turn it off or the map changes, but for your private duel partner and whispers; your SJK scoreboard row says Quiet _(Slash, PR #302, after Lex Deifaber's idea)_
@@ -49,6 +71,12 @@ Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 - Long game-chat messages are sent completely as up to four messages, split at a word where possible, in All, Team, whispers (including Send unencrypted), admin and mod chat such as clan chat; their colour carries on, and a command pressed while the pieces wait is not lost _(Lukas, PR #306)_
 - Vehicle HUD: each HUD style shows the health of the vehicle you pilot its own way: Text only just the number, SJK radial a yellow arc under the crosshair, SJK classic a yellow bar, instead of the same speed, shield and ammo strip for all _(Slash, PR #318)_
 - Lugormod v3 servers: your own movement is predicted as the server moves you: scaled players' size and eye height, standing up under low ceilings, the admin jetpack in FFA, rolls with the stun baton; other servers are unchanged (`cg_noPredict 1` still turns prediction off) _(Lumaya, PR #287)_
+- Boombox on the floor: `boombox_place` (Place key in Collection > Toys, the quick wheel or Key bindings) stands your boombox on the floor in front of you, facing the way you look, and the music plays from there, a little quieter behind it; press again to pick it back up. It goes when you turn the toy off, change map or leave, and See and hear others' boomboxes hides others' boxes and their music _(Sol, after VisionJK's boombox by Blackwolf)_
+- Box hunt: every hunter has one life. A hunter the mark kills is out of that hunt (the mark no longer shows for them, and killing it later wins nothing), and a player teleported other than by the map or a spawn (`amtele`, an admin's teleport) or flying in noclip is out at once for cheating; a mark caught cheating ends the hunt. When every hunter is out, the mark wins 100 credits per hunter, up to 3 times a day. The card at the top says how many hunters are left, or that you're out _(Sol)_
+- Box hunt: a mark caught teleporting or in noclip, or typing in the chat for 30 seconds (warned at 20), blows up: everyone in the hunt sees the explosion, the mark dies, and a hunter still in the chase, picked at random, wins the free mystery box roll a kill would have. The mark now sees the hunters still after them ringed in red, as hunters see the mark _(Sol)_
+- The Toy Master's toys can dance to their song: a toy spins only while its song sings and stands still in the silences, starting and stopping in a blink _(Sol)_
+- The Toy Master's shows can be joined late: arrive on a server or load the map while a show is under way and you see it where it is, hear its song from the same moment and find its drops as they lie; a show's song is no longer cut by a busy fight, so walking up from afar you hear it _(Sol)_
+- JoF: your moves leave as JoF EJK sends them, one a frame stamped with the moment it is made, instead of filling the frame's missed 8 ms with moves stamped in the past; below 125 FPS those made Heimdall, JoF's anti-cheat, kick for `cl_timeNudge` though it was 0 _(Sol, after JoF EJK; Krieger's and Slash's reports)_
 
 ## 2026.1102.1 (Alpha) | 02/11/2026
 

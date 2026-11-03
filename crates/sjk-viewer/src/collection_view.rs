@@ -175,6 +175,7 @@ pub(crate) fn row_labels(
         monitor: false,
         box_hunt: false,
         banana: false,
+        fishing: false,
         name: "",
         stock: color::HOLO,
         grid: false,
@@ -305,6 +306,7 @@ impl Panel {
         self.monitor_on = inputs.monitor;
         self.box_hunt_on = inputs.box_hunt;
         self.banana_on = inputs.banana;
+        self.fishing_on = inputs.fishing;
         self.share_on = inputs.share;
         self.toys_unseen = inputs.toys_unseen;
         let seconds = self.epoch.elapsed().as_secs_f32();
@@ -604,7 +606,11 @@ impl Panel {
                     (8, _, _) => "turn on",
                     (9, _, _) if inputs.banana => "turn off",
                     (9, _, _) => "turn on",
-                    (10, _, _) => "rain 100 credits",
+                    (index, _, _) if TOY_TOKENS.get(index) == Some(&BESO_TOKEN) => {
+                        "rain 100 credits"
+                    }
+                    (10, _, _) if inputs.fishing => "put away rod",
+                    (10, _, _) => "cast a line",
                     (_, true, _) => "put out",
                     _ => "light",
                 },

@@ -101,6 +101,7 @@ pub(crate) const ACTIONS: &[BindableAction] = &[
         crate::cardboard_box::COMMAND,
         "",
     ),
+    action(Interaction, "Toy: Fishing", crate::fishing::COMMAND, ""),
     // Order 66: the toy's switch, then the order every player with it on obeys.
     action(Interaction, "Toy: Order 66", crate::order66::COMMAND, ""),
     action(
@@ -118,6 +119,12 @@ pub(crate) const ACTIONS: &[BindableAction] = &[
     // The Boombox: the stereo on the shoulder, and its next track.
     action(Interaction, "Toy: Boombox", crate::boombox::COMMAND, ""),
     action(Interaction, "Boombox: next track", "boombox next", ""),
+    action(
+        Interaction,
+        "Boombox: place or pick up",
+        crate::boombox::PLACE_COMMAND,
+        "",
+    ),
     // The Monitor: the switch (throw, and be hit), and the throw (held, it charges).
     action(Interaction, "Toy: Monitor", crate::monitor::COMMAND, ""),
     action(

@@ -19,6 +19,8 @@ pub(crate) enum State {
     Illuminate,
     /// The player is in the cardboard box (`toy_box` flips it).
     CardboardBox,
+    /// The fishing rod is out (`toy_fishing` flips it).
+    Fishing,
     /// The Order 66 toy is on (`toy_order66` flips it).
     Order66,
     /// The Hax toy is on (`toy_hax` flips it).
@@ -29,6 +31,8 @@ pub(crate) enum State {
     Drone,
     /// The Boombox is carried (`toy_boombox` flips it).
     Boombox,
+    /// The Boombox stands on the floor (`boombox_place` flips it).
+    BoomboxDown,
     /// The Monitor toy is on (`toy_monitor` flips it).
     Monitor,
     /// Box hunt is on (`toy_boxhunt` flips it).
@@ -41,7 +45,7 @@ pub(crate) enum State {
 /// icons and cut by `scripts/wheel_icons.py` from two boards (the first sixteen
 /// from the first, the rest, named by the actions they are for, from the
 /// second); uploaded into the UI atlas at start (`ui_renderer::wheel_icon`).
-pub(crate) const ICONS: [(&str, &[u8]); 56] = [
+pub(crate) const ICONS: [(&str, &[u8]); 57] = [
     ("drizzle", include_bytes!("../../assets/wheel/drizzle.png")),
     ("rain", include_bytes!("../../assets/wheel/rain.png")),
     ("storm", include_bytes!("../../assets/wheel/storm.png")),
@@ -161,6 +165,11 @@ pub(crate) const ICONS: [(&str, &[u8]); 56] = [
     (
         "cardboard_box",
         include_bytes!("../../assets/cardboard_box/toy_box.png"),
+    ),
+    // Fishing's picture, the rod over a bucket (bundled with the client).
+    (
+        "fishing",
+        include_bytes!("../../assets/fishing/toy_fishing.png"),
     ),
     // Order 66's pictures, the badge and the blast (bundled with the client).
     (
@@ -609,6 +618,14 @@ pub(crate) const ACTIONS: &[Action] = &[
         Some("cardboard_box"),
     ),
     action(
+        "fishing",
+        "Fishing",
+        crate::fishing::COMMAND,
+        Toys,
+        State::Fishing,
+        Some("fishing"),
+    ),
+    action(
         "order66",
         "Order 66",
         crate::order66::COMMAND,
@@ -659,6 +676,15 @@ pub(crate) const ACTIONS: &[Action] = &[
         crate::boombox::COMMAND,
         Toys,
         State::Boombox,
+        Some("boombox"),
+    ),
+    // Stands the stereo on the floor ahead; again picks it back up.
+    action(
+        "boombox_place",
+        "Place boombox",
+        crate::boombox::PLACE_COMMAND,
+        Toys,
+        State::BoomboxDown,
         Some("boombox"),
     ),
     // Lets the player throw monitors, and be hit by them.

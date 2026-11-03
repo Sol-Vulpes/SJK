@@ -472,7 +472,7 @@ const HELP: &[(&str, &str)] = &[
     ),
     (
         crate::actor_world_submission::force_powers::policy::EMPOWER_CVAR,
-        "Empower glow: -1 follows the server; 0 full body, 1 arms, 2 hands. Ordinary Push stays full body.",
+        "Empower glow: -1 follows the server; 0 full body, 1 arms, 2 hands, 3 off. Ordinary Push stays full body.",
     ),
     (
         "cg_tauntAntiSpam",
@@ -498,6 +498,10 @@ const HELP: &[(&str, &str)] = &[
     (
         crate::sound_sonar::CVAR,
         "For deaf and hard-of-hearing players: arcs round the crosshair point to the sounds played. Needs sound output (not s_initsound 0).",
+    ),
+    (
+        crate::audio::spatial::CVAR,
+        "Sounds heard from your head, quieter and duller behind walls and shut doors, and rooms ring, a hall longer than a corridor.",
     ),
     (
         crate::footprints::PRINTS_CVAR,
@@ -560,6 +564,10 @@ const HELP: &[(&str, &str)] = &[
         "Off: Banana peel sounds are not played on this PC, yours or other players'. The toy still works and is still seen.",
     ),
     (
+        crate::toy_sounds::Toy::Tag.cvar(),
+        "Off: tags go up without the spray can's sound on this PC, yours and other players'.",
+    ),
+    (
         crate::toy_sounds::Toy::Master.cvar(),
         "Off: the toys the Toy Master hides on maps play their shows in silence on this PC.",
     ),
@@ -570,6 +578,10 @@ const HELP: &[(&str, &str)] = &[
     (
         crate::text::system_font::CONSOLE_CVAR,
         "A font from this PC for the console, kept to its even grid. What it lacks comes from SJK's fonts.",
+    ),
+    (
+        crate::toy_sounds::Toy::Fishing.cvar(),
+        "Off: your casts, bites and catches are silent. The toy still works.",
     ),
     (
         crate::away_emote::SJK_CVAR,
@@ -814,6 +826,10 @@ const HELP: &[(&str, &str)] = &[
         "Edges chat letters and what you type in a dark outline instead of a shadow, so they read over bright maps.",
     ),
     (
+        crate::text::DARK_OUTLINE_CVAR,
+        "Black and other dark letters in names and chat get a white outline instead of a soft glow.",
+    ),
+    (
         crate::chat::options::CARD_SCALE_CVAR,
         "Size of the player card a chat name shows, over the chat's own size: 0.5 half, 2 double.",
     ),
@@ -1036,6 +1052,10 @@ const HELP: &[(&str, &str)] = &[
     (
         crate::map_edits::CVAR,
         "Shows the SJK team's fixes to maps: props removed, models added and textures swapped. Only what you see changes. On by default.",
+    ),
+    (
+        crate::map_edits::SYNC_COMMAND,
+        "Asks the SJK hub for its latest map fixes now. They also come by themselves within seconds on a server.",
     ),
     (
         crate::remap_blocked_maps::SERVER_CVAR,

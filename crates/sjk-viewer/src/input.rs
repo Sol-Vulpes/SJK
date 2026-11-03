@@ -94,6 +94,8 @@ pub(crate) enum InputAction {
     Illuminate,
     /// `toy_box`: put the cardboard box on or take it off ([`crate::cardboard_box`]).
     CardboardBox,
+    /// `toy_fishing`: get the fishing rod out or put it away ([`crate::fishing`]).
+    Fishing,
     /// `toy_order66`: turn the Order 66 toy on or off ([`crate::order66`]).
     Order66,
     /// `order66`: execute Order 66 for every player who has the toy on.
@@ -106,6 +108,8 @@ pub(crate) enum InputAction {
     Drone,
     /// `toy_boombox`: carry the stereo and play music, or not ([`crate::boombox`]).
     Boombox,
+    /// `boombox_place`: stand the boombox on the floor, or pick it up ([`crate::boombox`]).
+    PlaceBoombox,
     /// `toy_monitor`: throw monitors and be hit by them, or not ([`crate::monitor`]).
     Monitor,
     /// `monitor_throw`: throw a monitor ([`crate::monitor`]).
@@ -324,12 +328,14 @@ impl GameplayInput {
                     | "toy_illuminate"
                     | "force_illuminate"
                     | crate::cardboard_box::COMMAND
+                    | crate::fishing::COMMAND
                     | crate::order66::COMMAND
                     | crate::order66::EXECUTE_COMMAND
                     | crate::hax::COMMAND
                     | crate::ragdoll::COMMAND
                     | crate::drone::COMMAND
                     | crate::boombox::COMMAND
+                    | crate::boombox::PLACE_COMMAND
                     | crate::monitor::COMMAND
                     | crate::monitor::THROW_COMMAND
                     | crate::monitor::CHARGE_COMMAND
@@ -501,12 +507,14 @@ impl GameplayInput {
             // The old name still runs the toy, but is not listed (`selection_commands`).
             "toy_illuminate" | "force_illuminate" => Some(InputAction::Illuminate),
             crate::cardboard_box::COMMAND => Some(InputAction::CardboardBox),
+            crate::fishing::COMMAND => Some(InputAction::Fishing),
             crate::order66::COMMAND => Some(InputAction::Order66),
             crate::order66::EXECUTE_COMMAND => Some(InputAction::ExecuteOrder66),
             crate::hax::COMMAND => Some(InputAction::Hax),
             crate::ragdoll::COMMAND => Some(InputAction::Ragdoll),
             crate::drone::COMMAND => Some(InputAction::Drone),
             crate::boombox::COMMAND => Some(InputAction::Boombox),
+            crate::boombox::PLACE_COMMAND => Some(InputAction::PlaceBoombox),
             crate::monitor::COMMAND => Some(InputAction::Monitor),
             crate::monitor::THROW_COMMAND => Some(InputAction::ThrowMonitor),
             crate::monitor::CHARGE_COMMAND => Some(InputAction::ChargeMonitor(true)),
@@ -665,12 +673,14 @@ impl super::GpuState {
             Some(InputAction::WorldPing) => self.world_ping_press(),
             Some(InputAction::Illuminate) => self.toggle_illuminate(),
             Some(InputAction::CardboardBox) => self.toggle_cardboard_box(),
+            Some(InputAction::Fishing) => self.toggle_fishing(),
             Some(InputAction::Order66) => self.toggle_order66(),
             Some(InputAction::ExecuteOrder66) => self.execute_order66(),
             Some(InputAction::Hax) => self.toggle_hax(),
             Some(InputAction::Ragdoll) => self.toggle_ragdoll(),
             Some(InputAction::Drone) => self.toggle_drone(),
             Some(InputAction::Boombox) => self.toggle_boombox(),
+            Some(InputAction::PlaceBoombox) => self.place_boombox(),
             Some(InputAction::Monitor) => self.toggle_monitor(),
             Some(InputAction::StickTag) => self.stick_tag(),
             Some(InputAction::ClearTag) => self.clear_tag(),
@@ -920,6 +930,7 @@ mod tests {
             ("toy_banana", InputAction::Banana),
             ("banana_drop", InputAction::DropBanana),
             ("toy_propgun", InputAction::PropGun),
+            ("boombox_place", InputAction::PlaceBoombox),
         ] {
             assert!(GameplayInput::recognizes(command), "{command}");
             assert_eq!(input.apply(command), Some(action), "{command}");

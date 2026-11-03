@@ -3,12 +3,13 @@
 //! Cardboard box), Order 66 (`docs/client.md`, Order 66), the Hax (`docs/client.md`,
 //! Hax), the Ragdoll (`docs/client.md`, Ragdoll), the Drone (`docs/client.md`, Drone),
 //! the Boombox (`docs/client.md`, Boombox), the Monitor (`docs/client.md`, Monitor), Box
-//! hunt (`docs/client.md`, Box hunt) and the Banana peel (`docs/client.md`, Banana peel),
+//! hunt (`docs/client.md`, Box hunt) the Banana peel (`docs/client.md`, Banana peel) and
+//! Fishing (`docs/client.md`, Fishing),
 //! a row to each on the left (Sol's pick of 25/10/2026, the Collection revamp's canvas):
 //! its picture, its name and a line of what it does, the key bound to it and its own
 //! switch, which runs it in place (`toy_illuminate`, `toy_box`, `toy_order66`, `toy_hax`,
 //! `toy_ragdoll`, `toy_drone`, `toy_boombox`, `toy_monitor`, `toy_boxhunt`,
-//! `toy_banana`). The chosen one is described on a dark card beside the
+//! `toy_banana`, `toy_fishing`). The chosen one is described on a dark card beside the
 //! model, where its key is bound without the console (a click or K, then the key). The
 //! holocron floats lit by the model while it is chosen.
 
@@ -25,9 +26,9 @@ const ROWS_X: f32 = LEFT_X - 12.0;
 const ROWS_WIDTH: f32 = 860.0;
 const HEADS_Y: f32 = 300.0;
 const ROWS_Y: f32 = 336.0;
-const ROW_HEIGHT: f32 = 58.0;
+const ROW_HEIGHT: f32 = 53.0;
 const ROW_GAP: f32 = 3.0;
-const ROW_ART: f32 = 48.0;
+const ROW_ART: f32 = 46.0;
 /// A row's key column: its width, and the room the switch keeps at the row's right.
 const KEY_WIDTH: f32 = 150.0;
 const SWITCH_ROOM: f32 = 130.0;
@@ -49,7 +50,7 @@ const SIGHT_ROW: f32 = 48.0;
 /// ([`Inputs::toy_keys`]): each toy's switch, Order 66's order after its own, the
 /// Monitor's throw (held, it charges) after its own, and the Banana peel's drop after its
 /// own.
-pub(crate) const COMMANDS: [&str; 14] = [
+pub(crate) const COMMANDS: [&str; 15] = [
     "toy_illuminate",
     "toy_box",
     "toy_order66",
@@ -63,6 +64,7 @@ pub(crate) const COMMANDS: [&str; 14] = [
     "toy_boxhunt",
     "toy_banana",
     "banana_drop",
+    crate::fishing::COMMAND,
     "toy_beso",
 ];
 
@@ -170,8 +172,13 @@ const TOYS: [Toy; TOY_COUNT] = [
         tag: "Play your tracks to the players close by.",
         title: "Boombox",
         what: "Carry an 80s stereo on your shoulder, playing your tracks to the SJK players standing close by. Tracks are sound/boombox/<name>.mp3 files in your pk3s; others hear one when they have it too. For verified players.",
-        more: Some("boombox in the console lists your tracks; boombox next skips one."),
-        commands: &[("toy_boombox", "Your key")],
+        more: Some(
+            "boombox in the console lists your tracks; boombox next skips one. The place key stands it on the floor in front of you, playing from there (quieter behind it); again picks it up.",
+        ),
+        commands: &[
+            ("toy_boombox", "Your key"),
+            (crate::boombox::PLACE_COMMAND, "Place key"),
+        ],
         switch: "Play",
         sight: Some((crate::toy_sight::BOOMBOX, "See and hear others' boomboxes")),
         token: BOOMBOX_TOKEN,
@@ -220,13 +227,27 @@ const TOYS: [Toy; TOY_COUNT] = [
         token: BANANA_TOKEN,
     },
     Toy {
+        icon: "fishing",
+        name: "Fishing",
+        tag: "Cast a line, wait for the bite, reel it in.",
+        title: "Fishing",
+        what: "Stand still and cast: into the water ahead, or a pond where there is none. When the float dips, press Use in time to land a fish or some junk for your fish log. An Echo the hub drops you while you fish comes as a bite of its own. Other SJK players see your rod.",
+        more: Some(
+            "Moving or getting hurt puts the rod away. Your catches are in fishing_log.txt.",
+        ),
+        commands: &[(crate::fishing::COMMAND, "Your key")],
+        switch: "Rod out",
+        sight: None,
+        token: FISHING_TOKEN,
+    },
+    Toy {
         icon: "credits",
         name: "Credit rain",
         tag: "Staff pilot: rain 100 of your credits.",
         title: "Credit rain",
-        what: "Staff pilot on supporting hubs. Spend 100 of your credits on ten packets nearby SJK players collect by walking over them. One packet per person per rain. Uncollected credits return when the rain ends. You cannot collect your own rain.",
+        what: "Staff pilot on supporting hubs. Spend 100 of your credits on ten packets nearby SJK players collect by walking over them. One packet per person per rain, up to 500 collected daily. Uncollected credits return when the rain ends. You cannot collect your own rain.",
         more: Some(
-            "Each press spends once. toy_creditrain <amount> chooses 100 to 100000 credits; retry repeats a failed request safely.",
+            "Each press spends once. toy_creditrain <amount> chooses 100, 250, 500 or 1000 credits; 10 minutes between rains, 1000 funded per day.",
         ),
         commands: &[("toy_beso", "Rain key")],
         switch: "Rain 100 credits",
@@ -328,6 +349,7 @@ fn states(inputs: &Inputs<'_>) -> [bool; TOY_COUNT] {
         inputs.monitor,
         inputs.box_hunt,
         inputs.banana,
+        inputs.fishing,
         false,
     ]
 }
@@ -341,7 +363,7 @@ impl Panel {
             0 => "Switch them here or in a match; other SJK players on your server see what you turn on.".to_owned(),
             lit => format!("{lit} on now. Switch them here or in a match; other SJK players on your server see what you turn on."),
         };
-        self.lead(frame, "11 toys", &line);
+        self.lead(frame, &format!("{TOY_COUNT} toys"), &line);
         self.toy_heads(frame);
         let chosen = self.toy.min(TOY_COUNT - 1);
         for (index, toy) in TOYS.iter().enumerate() {
@@ -486,7 +508,7 @@ impl Panel {
             &mut self.ui,
             TextFamily::Display,
             format_args!("{}", toy.name),
-            frame.rect(words_x, y + 6.0, words_width, 30.0 * k),
+            frame.rect(words_x, y + 4.0, words_width, 28.0 * k),
             23.0 * s,
             if chosen {
                 color::GOLD_BRIGHT
@@ -500,7 +522,7 @@ impl Panel {
             &mut self.ui,
             TextFamily::Body,
             format_args!("{}", toy.tag),
-            frame.rect(words_x, y + 8.0 + 30.0 * k, words_width, 22.0 * k),
+            frame.rect(words_x, y + 32.0 * k, words_width, 20.0 * k),
             15.0 * s,
             color::MUTED,
             FontWeight::Regular,
@@ -540,7 +562,7 @@ impl Panel {
         }
         // The switch answers before the row, so a click on it is the switch's.
         let switch_right = right - 18.0;
-        let left = if index == 10 {
+        let left = if toy.token == BESO_TOKEN {
             let left = switch_right - 116.0;
             kit::button(
                 &mut self.ui,
@@ -557,7 +579,7 @@ impl Panel {
             kit::switch(&mut self.ui, frame, switch_right, middle, on, false)
         };
         let switch_token = TOY_SWITCH_BASE + index as u16;
-        if index != 10 {
+        if toy.token != BESO_TOKEN {
             self.ui.hit_region(
                 switch_token,
                 frame.rect(left - 6.0, middle - 20.0, switch_right - left + 12.0, 40.0),
@@ -775,7 +797,7 @@ impl Panel {
             TextFamily::Body,
             format_args!(
                 "{}",
-                if chosen == 10 {
+                if toy.token == BESO_TOKEN {
                     "Add credit rain in the wheel editor"
                 } else {
                     "On its Toys page"
@@ -817,7 +839,7 @@ impl Panel {
             TextAlign::Start,
         );
         let right = x + width;
-        let left = if chosen == 10 {
+        let left = if toy.token == BESO_TOKEN {
             let left = right - 116.0;
             kit::button(
                 &mut self.ui,
@@ -833,7 +855,7 @@ impl Panel {
         } else {
             kit::switch(&mut self.ui, frame, right, middle, on, true)
         };
-        if chosen != 10 {
+        if toy.token != BESO_TOKEN {
             self.ui.hit_region(
                 TOY_SWITCH_TOKEN,
                 frame.rect(left - 4.0, middle - 19.0, right - left + 8.0, 38.0),
@@ -899,6 +921,23 @@ mod tests {
     /// Each toy's row, its switch and its card's keys and switch fit over the keys and
     /// answer the pointer, the rows left of the model's column and the card right of it,
     /// with and without a model, at 1080 lines, 4K, 4:3 and 21:9.
+    #[test]
+    fn fishing_and_rain_keep_their_own_controls_after_catalogue_growth() {
+        let fonts = crate::text::load_modern(1.0, None).unwrap();
+        let inputs = super::super::tests::inputs(unlockables::Holdings::Known(&[]), "");
+        for (token, rain_buttons, action) in [
+            (FISHING_TOKEN, 1, PanelAction::Fishing(true)),
+            (BESO_TOKEN, 2, PanelAction::Beso),
+        ] {
+            let mut panel = Panel::new();
+            panel.open(Tab::Toys, true, true, ReturnTarget::InGame);
+            panel.toy = TOY_TOKENS.iter().position(|t| *t == token).unwrap();
+            panel.build(&inputs, &fonts.font, [1920., 1080.]);
+            assert_eq!(panel.activate(false), action);
+            let buttons=panel.ui.draw_list().commands().iter().filter(|c|matches!(c,DrawCommand::Text{text,..} if panel.ui.stored_text(*text)=="Rain 100")).count();
+            assert_eq!(buttons, rain_buttons);
+        }
+    }
     #[test]
     fn the_toys_fit_over_the_keys() {
         let font = crate::text::load_modern(1.0, None).expect("Inter").font;

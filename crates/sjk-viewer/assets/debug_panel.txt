@@ -24,6 +24,49 @@
 
 # ---- Console & chat ----
 
+[tag-spray-surfaces]
+area: Gameplay
+title: Tags: spray can sound, no glitches on glass, grates, flags or curved walls
+change: A tag going up plays a spray can (shake, then two hisses), yours and others' near you.
+change: Tags keep off moving, see-through, cut-out and decal surfaces; curves no longer cut them.
+test: toy_tag on a wall: the spray plays; another SJK player tagging near you: you hear theirs.
+test: Aim at glass or a grate alone: "A tag does not hold on that surface"; nothing goes up.
+test: Tag a curved arch or pillar and a wall with a poster: the whole picture shows, no flicker.
+test: Settings > Sound > Toys, Tag spray sound off: tags go up silently.
+test: Tag across a seam of one flat wall (brush next to a model panel): the whole tag shows.
+
+[boombox-place]
+area: Gameplay
+title: Boombox on the floor (boombox_place, after VisionJK)
+change: boombox_place stands the boombox on the floor ahead (toy on first); again picks it up.
+change: Its music plays from the box, same range, about 45% as loud right behind it.
+change: Relay put_<x>_<y>_<z>_<yaw> / take; goes with toy off, new map, leaving or hub drop.
+test: Bind boombox_place (Key bindings > Interaction); press it: box on the floor, music plays.
+test: Walk round the box: quieter behind it, as loud in front and beside; fades with range.
+test: Press again: back on the shoulder, music in both ears; toy_boombox off takes it too.
+test: Second SJK client: sees the box where it stands, hears it from there, and it goes on take.
+test: Second client with See and hear others' boomboxes off: no box and no music.
+note: Not verified in game. Placing needs a floor ahead or under you (not mid-air).
+
+[spatial-sound]
+area: Audio
+title: 3D sound (s_spatial): muffled behind walls and doors, rooms ring
+change: Off by default. Heard from your head (third person too); traces ~15 times a second.
+change: A sound behind a wall or shut door glides quieter and duller; the room sizes a reverb.
+change: Idea from VisionJK's v_spatial (Blackwolf); SJK's own, no Steam Audio.
+test: Settings > Sound > 3D sound on. A player shooting behind a wall: duller, then clear in view.
+test: Close a door between you and a sound: muffled. Walk outside: little reverb; a hall rings.
+test: Third person: turning the camera does not change what is muffled. Off: sounds as before.
+note: Not heard in game yet. soundinfo / s_spatial 0 to compare.
+
+[join-stack-overflow]
+area: Gameplay
+title: Joining JoF public no longer crashes (main thread stack overflow)
+change: The built world is boxed from the install worker to the main thread instead of copied.
+test: Join JoF's public server (T1_Danger, Vjun3 or any map) from the menus.
+note: Tested by Sol 02/11/2026: the join works.
+
+
 [cloud-auto-update]
 area: Menus & settings
 title: JoF content and Sith cloud update automatically (opt in, per group)
@@ -79,6 +122,27 @@ test: Collection > Banners: the free cover wears; held covers show copies; Profi
 test: Player card and SJK chat sender cards show the worn cover; unknown ids fall back.
 test: Holocron odds: Banner bonus row only on a hub with banners on, 0 otherwise.
 note: Hub banner drops stay off until SJK_HUB_BANNER_MIN_CLIENT is set (hub shared #6).
+
+[fishing-278]
+area: Gameplay
+title: Slash #278: Fishing toy (rod, bucket, 12 fish, Echoes on the line)
+change: toy_fishing: rod in hand, float on water or a small pond, bites every 20-60 s.
+change: Only holocrons play drops come up as Echoes (not bought, gifted, traded, earned).
+test: toy_fishing on duel6: pond, float dips, +use within 1 s lands a fish in the bucket.
+test: Move or take damage: the rod goes away. Another SJK player sees rod and bucket.
+test: debug_holocron while fishing: card at once, no Echo on the line, no Echo Angler count.
+note: Achievements need hub-shared #9 imported and deployed before they record online.
+
+[pr-batch-1103]
+area: Rendering & effects
+title: PRs 03/11: light styles, NPC split skins, Empower glow off
+change: Slash #339: switchable/flickering lights' baked light drawn and following the server.
+change: Slash #336: NPC skins like head_a3|torso_a3| worn instead of grey.
+change: Slash #338: cg_empowerEffect 3 hides the Empower body glow.
+test: devmap jofshuttle, SJK preset: ship cabin lit, younglings in their skins, not grey.
+test: A map with flickering lights: they flicker; a switched light goes off and on.
+test: cg_empowerEffect 3 vs an empowered player: no body glow; plain Push still blurs.
+note: r_dayNight 1 ignores light styles; misc_bsp keeps them full.
 
 [pr-batch-1102c]
 area: Gameplay
@@ -7682,6 +7746,26 @@ test: After the hub's map-edits branch is deployed: Publish says Published, with
 test: Log: "map edits: N maps on the hub, ..." (or "not in step with the hub: ...") at start.
 test: Esc while aiming shows the Map editor strip at the top; Editor off removes it.
 
+[caulk-faces]
+area: Rendering & effects
+title: Map editor: draw caulk faces with a texture (staff)
+change: Aim at a caulk or nodraw face (a hole in the map): it selects as Hidden face.
+change: Pick a shader and Draw: that one face is drawn with it, Radiant's default scale.
+test: mapedit, aim at a see-through hole in a wall, O: the panel says Hidden face, caulk.
+test: Search a wall texture, Draw: the hole shows that texture, lit like the wall near it.
+test: O on it again: Draw nothing removes it; mapedit_undo brings it back.
+test: Other caulk faces of the map stay unseen; collision there is as before.
+
+[map-edits-sync]
+area: Rendering & effects
+title: Map edits reach players within seconds; Sync map edits
+change: The hub's presence answer carries a map edits stamp; a change reads the list at once.
+change: Settings > Game "Sync map edits" (mapedits_sync) asks the hub now, for any player.
+note: Needs the hub branch map-edits-sync deployed; an older hub keeps the 10 minute look.
+test: Two clients on one server; staff publish an edit: the other sees it within ~5 seconds.
+test: Settings > Game, Sync map edits, Enter: the console says it asks the hub; log line follows.
+test: cg_mapEdits 0, then mapedits_sync: it says map edits are off.
+
 # ---- Bug reports, 19/10/2026 ----
 
 [bool-settings]
@@ -8060,6 +8144,32 @@ test: Over the box: MYSTERY BOX + price, Rolling..., then e.g. JACKPOT! +500; no
 test: The lid swings open on Use and closes once the prize is taken.
 test: #185: a 2nd player far from the opener hears the tune from the box, not from the opener.
 
+[box-hunt-lives]
+area: Gameplay
+title: Box hunt: one life per hunter, teleport/noclip cheats out, the mark wins 100 x hunters
+change: A hunter the mark kills is out (no mark shown, a later kill wins nothing; card YOU'RE OUT).
+change: amtele, admin teleports or noclip in a hunt: out for cheating; the mark cheating ends it.
+change: All hunters out (1+ killed by the mark): the mark wins 100 credits each, 3 times a day.
+test: Needs the hub's box-hunt-lives branch; 4 SJK players with Box hunt on, one the mark.
+test: The mark kills a hunter: they read The mark got you, lose the MARK label/ring/arrow.
+test: That hunter respawns and kills the mark: nothing won. The card counts 2 OF 3 HUNTERS LEFT.
+test: A hunter uses a map teleporter: still in. amtele / noclip: out for cheating, chat says so.
+test: The mark kills the last hunters: You outlasted every hunter, credits + History line.
+note: Out of a hunt, teleports are free.
+
+[box-hunt-blown]
+area: Gameplay
+title: Box hunt: a cheating or chatting mark blows up; the mark sees hunters red
+change: Mark amtele/noclip or 30 s typing in chat: explosion, kill, free roll to a hunter.
+change: The roll goes to a random hunter still in the chase (3 unspent / 5 a day limits).
+change: The mark sees the hunters still in the chase ringed red.
+test: Needs the hub's box-hunt-lives branch; 4 SJK players with Box hunt on, one the mark.
+test: As the mark: the hunters are ringed red; one killed loses the ring.
+test: The mark opens the chat: Leave the chat! at 20 s, BOOM at 30 s, the mark dies.
+test: The others see the explosion; one hunter reads Free mystery box roll and can use it.
+test: The mark uses amtele or noclip: same blow-up, cheating words.
+note: The mark keeps its credits. A hunter holding 3 free rolls is told No free roll.
+
 [box-hunt]
 area: Gameplay
 title: Box hunt toy: kill the mark for a free mystery box roll
@@ -8173,6 +8283,26 @@ test: 108 s: drops fly and land in the same spots on both clients; Use takes one
 test: the other client sees it vanish; History says Taken from a Toy Master's toy.
 note: Needs the hub's toy-show-steps (PR #10) and the SJK Extras' unofficial_sjk_toys.pk3.
 
+[toy-master-voice]
+area: Gameplay
+title: Toy Master: spin only while the song sings
+change: A show with a voice (the hub's sung spans) spins the toy only within them.
+change: Between them it stands still; it starts and stops over 90 ms, not 0.7 s.
+test: play the show: the toy spins on the sung parts and stops in the silences.
+test: the dance, ring, float and drops still come at the same times.
+note: Needs the hub's cat-voice-spin branch deployed; older clients spin steadily.
+
+[toy-master-sync]
+area: Gameplay
+title: Toy Master: join a show late, escorted toys
+change: Arriving mid-show joins it where it is: spin, song from the same moment, drops.
+change: The show's song has a protected channel: a fight never cuts it.
+change: toymaster_place ... escort / toymaster_escort: shown only where the creator is.
+test: start a show, connect a second client 30 s later: it sees and hears it there.
+test: walk far from a playing toy, fight, walk back: the song is still playing.
+test: escort a toy, leave: a second client loses it; come back: it shows again.
+note: Needs the hub's toy-sync branch deployed (presence shows + secrets stamp).
+
 [chat-find-blades]
 area: Console & chat
 title: Grand finds in chat: crystal picture, coloured prize, blade
@@ -8237,3 +8367,22 @@ test: the bolt leaves the barrel tip; muzzle, trail and impact effects show.
 test: a second SJK client sees the gun, the bolts, and hears the shots.
 test: an opted-in player hit by a bolt is knocked down; others are not.
 note: SJK ships no gun; test only with a local private pack.
+
+[heimdall-catchup]
+area: Gameplay
+title: JoF: one command a frame, stamped now (Heimdall kicks)
+change: On JoF, commands go out as JoF EJK's cl_cmdratecap: at most one a frame, never
+change: stamped in the past; other servers keep the 8 ms grid with catch-up.
+test: on JoF with gameplay_fps 0, play 30 min with com_maxfps 60: no Heimdall kick.
+test: movement and jumps feel as before at 125+ FPS; at 60 FPS like JoF EJK.
+test: on a non-JoF server at 60 FPS, gameplay_fps 333 still moves like 333.
+
+[white-text-outline]
+area: HUD
+title: White edge on dark text: dark letters of names and chat in a white outline
+change: cg_darkTextOutline (Settings > Chat, off by default) swaps the soft halo round
+change: black, dark blue and red letters for a crisp white ring, nameplates and chat.
+test: turn it on; black ^0 names on nameplates show a white outline, not a glow.
+test: Name outline Faint, Strong and Off: Off keeps the shadow only.
+test: chat with and without Chat text outline: dark letters white, the rest as before.
+note: if the line is too thick or strong, say so (ring copies are 85% opaque).
