@@ -430,7 +430,7 @@ impl Panel {
     }
 
     /// A tab's headline at the top left and the line under it.
-    pub(super) fn lead(&mut self, frame: &Frame, headline: &str, line: &str) {
+    pub(super) fn lead(&mut self, frame: &Frame, headline: impl std::fmt::Display, line: &str) {
         let s = frame.s;
         text(
             &mut self.ui,
@@ -606,6 +606,11 @@ impl Panel {
                     (8, _, _) => "turn on",
                     (9, _, _) if inputs.banana => "turn off",
                     (9, _, _) => "turn on",
+                    (index, _, _) if TOY_TOKENS.get(index) == Some(&BESO_TOKEN) => {
+                        "rain 100 credits"
+                    }
+                    (10, _, _) if inputs.fishing => "put away rod",
+                    (10, _, _) => "cast a line",
                     (_, true, _) => "put out",
                     _ => "light",
                 },

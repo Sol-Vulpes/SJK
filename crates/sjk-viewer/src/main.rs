@@ -244,6 +244,7 @@ mod video_memory;
 mod viewer_app;
 use object_meshes::StaticModelMesh;
 mod achievements_frame;
+mod beso;
 mod blade_extras;
 mod blade_lab_designs;
 mod blade_pictures;
@@ -655,6 +656,7 @@ struct GpuState {
     entity_view: entity_view::EntityView,
     /// `+ping`: the pings on show and their limits (`world_ping`).
     world_pings: world_ping::WorldPings,
+    beso: beso::Beso,
     /// The note and bug report panel, and the Report a bug button (`text_dialog`).
     text_dialog: text_dialog::TextDialog,
     /// The new medal pop-up (`medal_popup`).
@@ -1648,6 +1650,7 @@ impl GpuState {
             world_notes: world_notes::Notes::default(),
             entity_view: Default::default(),
             world_pings: world_ping::WorldPings::default(),
+            beso: beso::Beso::default(),
             text_dialog: text_dialog::TextDialog::default(),
             medal_popup: medal_popup::MedalPopup::default(),
             holocron_popup: holocron_popup::HolocronPopup::default(),

@@ -142,8 +142,9 @@ const BOTH_TOKEN: u16 = 1_306;
 const CLICK_SLOP: f32 = 6.0;
 /// The toys the Toys tab shows: Illuminate, the cardboard box, Order 66, the Hax, the
 /// Ragdoll, the Drone, the Boombox, the Monitor, Box hunt, the Banana peel, then
-/// Fishing.
-const TOY_COUNT: usize = 11;
+/// Fishing, then Credit rain.
+const TOY_COUNT: usize = 12;
+const BESO_TOKEN: u16 = 1_395;
 /// Each toy's row, in the order of [`Panel::toy`].
 const TOY_TOKENS: [u16; TOY_COUNT] = [
     TOY_TOKEN,
@@ -157,6 +158,7 @@ const TOY_TOKENS: [u16; TOY_COUNT] = [
     BOX_HUNT_TOKEN,
     BANANA_TOKEN,
     FISHING_TOKEN,
+    BESO_TOKEN,
 ];
 /// Each toy row's own switch (25/10/2026): it turns that toy on or off in place, a token
 /// a toy from here on, below [`FAVOURITE_TOKEN`].
@@ -362,6 +364,8 @@ fn shader_skin(row: usize) -> Option<&'static unlockables::Unlockable> {
 /// What the console does after the page handled an event.
 #[derive(Debug, Eq, PartialEq)]
 pub(crate) enum PanelAction {
+    /// Spend 100 owned credits on one Beso rain.
+    Beso,
     None,
     Close,
     /// Set `cg_saberSkin` to this id (`""` for the stock blade).
@@ -1115,6 +1119,7 @@ impl Panel {
             Tab::Toys if self.toy == 8 => PanelAction::BoxHunt(!self.box_hunt_on),
             Tab::Toys if self.toy == 9 => PanelAction::Banana(!self.banana_on),
             Tab::Toys if self.toy == 10 => PanelAction::Fishing(!self.fishing_on),
+            Tab::Toys if self.toy == 11 => PanelAction::Beso,
             Tab::Toys => PanelAction::Illuminate(!illuminate),
             Tab::Nameplates => PanelAction::SeeAndShare(!self.share_on),
             Tab::Tags => self.choose_tag(),
@@ -2154,7 +2159,8 @@ impl Panel {
             SEEN_ALL_TOKEN => self.see_all(),
             // A toy's row chooses it; its own switch runs it.
             TOY_TOKEN | BOX_TOKEN | ORDER_TOKEN | HAX_TOKEN | RAGDOLL_TOKEN | DRONE_TOKEN
-            | BOOMBOX_TOKEN | MONITOR_TOKEN | BOX_HUNT_TOKEN | BANANA_TOKEN | FISHING_TOKEN => {
+            | BOOMBOX_TOKEN | MONITOR_TOKEN | BOX_HUNT_TOKEN | BANANA_TOKEN | FISHING_TOKEN
+            | BESO_TOKEN => {
                 self.toy = TOY_TOKENS.iter().position(|&row| row == token).unwrap_or(0);
                 PanelAction::None
             }

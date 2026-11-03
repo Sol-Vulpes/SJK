@@ -1181,6 +1181,11 @@ pub(super) const GAME: &[Setting] = &[
         kind: ValueKind::Bool,
     },
     Setting {
+        label: "Collect credit rain",
+        cvar: crate::beso::SHOW_CVAR,
+        kind: ValueKind::Bool,
+    },
+    Setting {
         label: "Boombox range",
         cvar: crate::boombox::RANGE_CVAR,
         kind: ValueKind::Integer {

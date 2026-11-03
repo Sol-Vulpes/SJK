@@ -26,9 +26,9 @@ const ROWS_X: f32 = LEFT_X - 12.0;
 const ROWS_WIDTH: f32 = 860.0;
 const HEADS_Y: f32 = 300.0;
 const ROWS_Y: f32 = 336.0;
-const ROW_HEIGHT: f32 = 58.0;
+const ROW_HEIGHT: f32 = 53.0;
 const ROW_GAP: f32 = 3.0;
-const ROW_ART: f32 = 50.0;
+const ROW_ART: f32 = 46.0;
 /// A row's key column: its width, and the room the switch keeps at the row's right.
 const KEY_WIDTH: f32 = 150.0;
 const SWITCH_ROOM: f32 = 130.0;
@@ -50,7 +50,7 @@ const SIGHT_ROW: f32 = 48.0;
 /// ([`Inputs::toy_keys`]): each toy's switch, Order 66's order after its own, the
 /// Monitor's throw (held, it charges) after its own, and the Banana peel's drop after its
 /// own.
-pub(crate) const COMMANDS: [&str; 14] = [
+pub(crate) const COMMANDS: [&str; 15] = [
     "toy_illuminate",
     "toy_box",
     "toy_order66",
@@ -65,6 +65,7 @@ pub(crate) const COMMANDS: [&str; 14] = [
     "toy_banana",
     "banana_drop",
     crate::fishing::COMMAND,
+    "toy_beso",
 ];
 
 /// One toy as the tab shows it.
@@ -239,6 +240,20 @@ const TOYS: [Toy; TOY_COUNT] = [
         sight: None,
         token: FISHING_TOKEN,
     },
+    Toy {
+        icon: "credits",
+        name: "Credit rain",
+        tag: "Staff pilot: rain 100 of your credits.",
+        title: "Credit rain",
+        what: "Staff pilot on supporting hubs. Spend 100 of your credits on ten packets nearby SJK players collect by walking over them. One packet per person per rain, up to 500 collected daily. Uncollected credits return when the rain ends. You cannot collect your own rain.",
+        more: Some(
+            "Each press spends once. toy_creditrain <amount> chooses 100, 250, 500 or 1000 credits; 10 minutes between rains, 1000 funded per day.",
+        ),
+        commands: &[("toy_beso", "Rain key")],
+        switch: "Rain 100 credits",
+        sight: Some((crate::beso::SHOW_CVAR, "See and collect credit rain")),
+        token: BESO_TOKEN,
+    },
 ];
 
 /// The Toy Master's achievements the player holds: the toys they found.
@@ -335,6 +350,7 @@ fn states(inputs: &Inputs<'_>) -> [bool; TOY_COUNT] {
         inputs.box_hunt,
         inputs.banana,
         inputs.fishing,
+        false,
     ]
 }
 
@@ -347,7 +363,7 @@ impl Panel {
             0 => "Switch them here or in a match; other SJK players on your server see what you turn on.".to_owned(),
             lit => format!("{lit} on now. Switch them here or in a match; other SJK players on your server see what you turn on."),
         };
-        self.lead(frame, "10 toys", &line);
+        self.lead(frame, format_args!("{TOY_COUNT} toys"), &line);
         self.toy_heads(frame);
         let chosen = self.toy.min(TOY_COUNT - 1);
         for (index, toy) in TOYS.iter().enumerate() {
@@ -475,11 +491,16 @@ impl Panel {
             },
         });
         let art = ROW_ART;
-        let _ = self.ui.draw_list_mut().push(DrawCommand::TexturedQuad {
-            rect: frame.rect(x + 14.0, y + (ROW_HEIGHT - art) * 0.5, art, art),
-            texture: icon(toy.icon),
-            color: Color::new(1.0, 1.0, 1.0, if chosen || on { 1.0 } else { 0.78 }),
-        });
+        if toy.icon == "credits" {
+            let at = frame.point(x + 24.0, y + (ROW_HEIGHT - art) * 0.5);
+            crate::cards::mark::draw(self.ui.draw_list_mut(), at, art * s, color::GOLD);
+        } else {
+            let _ = self.ui.draw_list_mut().push(DrawCommand::TexturedQuad {
+                rect: frame.rect(x + 14.0, y + (ROW_HEIGHT - art) * 0.5, art, art),
+                texture: icon(toy.icon),
+                color: Color::new(1.0, 1.0, 1.0, if chosen || on { 1.0 } else { 0.78 }),
+            });
+        }
         let key_x = right - SWITCH_ROOM - KEY_WIDTH;
         let words_x = x + 14.0 + art + 16.0;
         let words_width = key_x - 16.0 - words_x;
@@ -487,7 +508,7 @@ impl Panel {
             &mut self.ui,
             TextFamily::Display,
             format_args!("{}", toy.name),
-            frame.rect(words_x, y + 6.0, words_width, 30.0 * k),
+            frame.rect(words_x, y + 4.0, words_width, 28.0 * k),
             23.0 * s,
             if chosen {
                 color::GOLD_BRIGHT
@@ -501,7 +522,7 @@ impl Panel {
             &mut self.ui,
             TextFamily::Body,
             format_args!("{}", toy.tag),
-            frame.rect(words_x, y + 8.0 + 30.0 * k, words_width, 22.0 * k),
+            frame.rect(words_x, y + 32.0 * k, words_width, 20.0 * k),
             15.0 * s,
             color::MUTED,
             FontWeight::Regular,
@@ -541,12 +562,29 @@ impl Panel {
         }
         // The switch answers before the row, so a click on it is the switch's.
         let switch_right = right - 18.0;
-        let left = kit::switch(&mut self.ui, frame, switch_right, middle, on, false);
+        let left = if toy.token == BESO_TOKEN {
+            let left = switch_right - 116.0;
+            kit::button(
+                &mut self.ui,
+                frame,
+                [left, middle - 20.0, 116.0, 40.0],
+                "Rain 100",
+                false,
+                true,
+                false,
+                TOY_SWITCH_BASE + index as u16,
+            );
+            left
+        } else {
+            kit::switch(&mut self.ui, frame, switch_right, middle, on, false)
+        };
         let switch_token = TOY_SWITCH_BASE + index as u16;
-        self.ui.hit_region(
-            switch_token,
-            frame.rect(left - 6.0, middle - 20.0, switch_right - left + 12.0, 40.0),
-        );
+        if toy.token != BESO_TOKEN {
+            self.ui.hit_region(
+                switch_token,
+                frame.rect(left - 6.0, middle - 20.0, switch_right - left + 12.0, 40.0),
+            );
+        }
         self.ui
             .hit_region(toy.token, frame.rect(x, y, left - 12.0 - x, ROW_HEIGHT));
     }
@@ -592,11 +630,20 @@ impl Panel {
                 color::GOLD,
                 0.3,
             );
-            let _ = self.ui.draw_list_mut().push(DrawCommand::TexturedQuad {
-                rect: frame.rect(1_060.0, 460.0, 200.0, 200.0),
-                texture: icon(toy.icon),
-                color: Color::new(1.0, 1.0, 1.0, 1.0),
-            });
+            if toy.icon == "credits" {
+                crate::cards::mark::draw(
+                    self.ui.draw_list_mut(),
+                    frame.point(1_110.0, 460.0),
+                    200.0 * s,
+                    color::GOLD,
+                );
+            } else {
+                let _ = self.ui.draw_list_mut().push(DrawCommand::TexturedQuad {
+                    rect: frame.rect(1_060.0, 460.0, 200.0, 200.0),
+                    texture: icon(toy.icon),
+                    color: Color::new(1.0, 1.0, 1.0, 1.0),
+                });
+            }
         }
         let height = self.toy_card_height(toy).min(CARD_BOTTOM - CARD_TOP_MIN);
         let top = CARD_BOTTOM - height;
@@ -748,7 +795,14 @@ impl Panel {
         text(
             &mut self.ui,
             TextFamily::Body,
-            format_args!("On its Toys page"),
+            format_args!(
+                "{}",
+                if toy.token == BESO_TOKEN {
+                    "Add credit rain in the wheel editor"
+                } else {
+                    "On its Toys page"
+                }
+            ),
             frame.rect(x + 104.0, y + 4.0, width - 104.0, 22.0),
             15.0 * s,
             color::TEXT,
@@ -785,11 +839,28 @@ impl Panel {
             TextAlign::Start,
         );
         let right = x + width;
-        let left = kit::switch(&mut self.ui, frame, right, middle, on, true);
-        self.ui.hit_region(
-            TOY_SWITCH_TOKEN,
-            frame.rect(left - 4.0, middle - 19.0, right - left + 8.0, 38.0),
-        );
+        let left = if toy.token == BESO_TOKEN {
+            let left = right - 116.0;
+            kit::button(
+                &mut self.ui,
+                frame,
+                [left, middle - 20.0, 116.0, 40.0],
+                "Rain 100",
+                true,
+                true,
+                false,
+                TOY_SWITCH_TOKEN,
+            );
+            left
+        } else {
+            kit::switch(&mut self.ui, frame, right, middle, on, true)
+        };
+        if toy.token != BESO_TOKEN {
+            self.ui.hit_region(
+                TOY_SWITCH_TOKEN,
+                frame.rect(left - 4.0, middle - 19.0, right - left + 8.0, 38.0),
+            );
+        }
         // Other players' toy, seen or hidden on this PC.
         if let Some((_, words)) = toy.sight {
             let middle = middle + SIGHT_ROW;
@@ -850,6 +921,23 @@ mod tests {
     /// Each toy's row, its switch and its card's keys and switch fit over the keys and
     /// answer the pointer, the rows left of the model's column and the card right of it,
     /// with and without a model, at 1080 lines, 4K, 4:3 and 21:9.
+    #[test]
+    fn fishing_and_rain_keep_their_own_controls_after_catalogue_growth() {
+        let fonts = crate::text::load_modern(1.0, None).unwrap();
+        let inputs = super::super::tests::inputs(unlockables::Holdings::Known(&[]), "");
+        for (token, rain_buttons, action) in [
+            (FISHING_TOKEN, 1, PanelAction::Fishing(true)),
+            (BESO_TOKEN, 2, PanelAction::Beso),
+        ] {
+            let mut panel = Panel::new();
+            panel.open(Tab::Toys, true, true, ReturnTarget::InGame);
+            panel.toy = TOY_TOKENS.iter().position(|t| *t == token).unwrap();
+            panel.build(&inputs, &fonts.font, [1920., 1080.]);
+            assert_eq!(panel.activate(false), action);
+            let buttons=panel.ui.draw_list().commands().iter().filter(|c|matches!(c,DrawCommand::Text{text,..} if panel.ui.stored_text(*text)=="Rain 100")).count();
+            assert_eq!(buttons, rain_buttons);
+        }
+    }
     #[test]
     fn the_toys_fit_over_the_keys() {
         let font = crate::text::load_modern(1.0, None).expect("Inter").font;

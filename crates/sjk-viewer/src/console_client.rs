@@ -191,6 +191,14 @@ pub(super) const COMMANDS: &[(&str, &str)] = &[
         crate::console::UNLOCKABLES_HELP,
     ),
     (
+        "toy_creditrain",
+        "Credit rain: spend 100 of your credits for nearby SJK players; amount or retry optional",
+    ),
+    (
+        "toy_beso",
+        "Alias for toy_creditrain; existing credit-rain binds keep working",
+    ),
+    (
         crate::console::HOLOCRONS_COMMAND,
         crate::console::HOLOCRONS_HELP,
     ),
@@ -989,6 +997,7 @@ impl crate::GpuState {
             name if crate::mystery_box::is_command(name) => {
                 return self.mystery_box_command(name, args);
             }
+            "toy_beso" | "toy_creditrain" => return self.beso_command(args),
             name if crate::toy_master::is_command(name) => {
                 return self.toy_master_command(name, args);
             }

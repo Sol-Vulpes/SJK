@@ -540,6 +540,12 @@ pub trait Hub: Send {
     }
 
     /// The shop's offers of the day (`GET /v1/shop`, 17/10/2026).
+    /// Signed owner-funded credit rain operation.
+    fn beso(&mut self, _identity: &Identity, _request: &Value) -> Result<Value, HubError> {
+        Err(HubError::Protocol(
+            "This hub has no credit rain support.".into(),
+        ))
+    }
     fn shop(&mut self, _identity: &Identity) -> Result<crate::wire::ShopDay, HubError> {
         Err(HubError::Protocol(
             "this hub client does not read the shop".to_owned(),
@@ -1790,6 +1796,10 @@ impl Hub for HttpHub {
             Some(json!({ "id": id, "mark": mark.id(), "on": on })),
         )?)?;
         Ok(answer.marks)
+    }
+
+    fn beso(&mut self, identity: &Identity, request: &Value) -> Result<Value, HubError> {
+        self.send(Some(identity), "POST", "/v1/beso", Some(request.clone()))
     }
 
     fn shop(&mut self, identity: &Identity) -> Result<crate::wire::ShopDay, HubError> {

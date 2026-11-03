@@ -196,6 +196,9 @@ impl ViewerConsole {
                 self.pending_box_hunt = Some(on);
                 self.box_hunt_on = on;
             }
+            PanelAction::Beso => {
+                let _ = self.shell.execute_line("toy_beso");
+            }
             PanelAction::Banana(on) => {
                 self.pending_banana = Some(on);
                 self.banana_on = on;

@@ -1,3 +1,10 @@
+## Credit rain staff pilot
+
+03/11/2026, review update on main `d3881f31`. Fixed amounts, donor cooldown, daily funding/collection caps and same-address refusal are implemented. Client requests time out; final refusals discard the old funding roster while uncertain transport/answer failures retain the token. Verified donors and collectors are reserved for Sol at merge.
+Windows validation is recorded in the matching client and hub PRs, with focused
+boundary, merge, retry and UI checks. Native multi-client play, other platforms,
+physical proximity attestation and deployment remain unverified.
+
 ## Tags: spray sound, odd surfaces
 
 03/11/2026, `personal/tag-spray`, based on `main` `3a209013` (Sol: tag decals sometimes

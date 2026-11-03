@@ -420,6 +420,8 @@ mod whats_new;
 
 #[path = "world_shot_away_chat.rs"]
 mod away_chat_shots;
+#[path = "world_shot_beso.rs"]
+mod beso;
 #[path = "world_shot_card_scenes.rs"]
 mod card_scenes_shots;
 #[path = "world_shot_chat_logs.rs"]
@@ -1335,6 +1337,7 @@ Found the fog bug, ask me about it!"
             map_edits_revision: 0,
             map_edits_note: None,
             map_edits_published: None,
+            beso: None,
             mystery_boxes: None,
             mystery_boxes_revision: 0,
             mystery_box: None,

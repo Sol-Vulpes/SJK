@@ -24,7 +24,12 @@ pub(crate) fn switched(name: &str, on: bool) -> String {
 }
 
 /// Every toy: its name, its switch and what it does and how, in `toy_help`'s order.
-pub(crate) const TOYS: [(&str, &str, &str); 12] = [
+pub(crate) const TOYS: [(&str, &str, &str); 13] = [
+    (
+        "Credit rain",
+        "toy_creditrain",
+        "spend 100 of your credits on rain for nearby SJK players; toy_creditrain <amount> changes the cost; retry repeats an uncertain funding request",
+    ),
     (
         "Illuminate",
         "toy_illuminate",

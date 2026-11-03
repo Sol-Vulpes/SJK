@@ -3154,6 +3154,7 @@ mod tests {
             map_edits_revision: 0,
             map_edits_note: None,
             map_edits_published: None,
+            beso: None,
             mystery_boxes: None,
             mystery_boxes_revision: 0,
             mystery_box: None,
