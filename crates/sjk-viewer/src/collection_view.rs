@@ -430,7 +430,7 @@ impl Panel {
     }
 
     /// A tab's headline at the top left and the line under it.
-    pub(super) fn lead(&mut self, frame: &Frame, headline: &str, line: &str) {
+    pub(super) fn lead(&mut self, frame: &Frame, headline: impl std::fmt::Display, line: &str) {
         let s = frame.s;
         text(
             &mut self.ui,
