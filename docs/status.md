@@ -1,3 +1,10 @@
+## Casino staff pilot
+
+03/11/2026, review update on main `d3881f31`. Rolling win/loss limits, pending-game reservations, long-odds wager limits and same-address poker seating are implemented. Background polling keeps the last snapshot usable; actions replace reads. Verified-or-staff audience rollout is reserved for Sol at merge.
+Windows validation is recorded in the matching client and hub PRs, with focused
+boundary, merge, retry and UI checks. Native multi-client play, other platforms,
+physical proximity attestation and deployment remain unverified.
+
 ## Tags: spray sound, odd surfaces
 
 03/11/2026, `personal/tag-spray`, based on `main` `3a209013` (Sol: tag decals sometimes

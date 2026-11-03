@@ -161,6 +161,9 @@ the hub decides. Rolls use the operating system's entropy, as drops do.
 
 ## Credits
 
+The [casino](casino.md) wagers existing credits through the hub; poker uses escrow,
+and house games settle atomically. This requires the paired hub update.
+
 Credits are a ledger at the hub (`credit_ledger`: each change with its reason,
 `holocron`, `holocron_buy`, `staff`, and `shop` from before the shop sold for shards, and
 what it refers to); the balance is its sum and never

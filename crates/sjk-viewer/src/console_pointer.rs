@@ -13,7 +13,8 @@ impl ViewerConsole {
         if self.jof_content_pointer(event) {
             return;
         }
-        if self.asset_browser_pointer(event)
+        if self.casino_pointer(event)
+            || self.asset_browser_pointer(event)
             || self.model_viewer_pointer(event)
             || self.config_import_pointer(event)
             || self.credits_pointer(event)
