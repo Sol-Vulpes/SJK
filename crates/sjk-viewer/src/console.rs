@@ -271,6 +271,10 @@ pub(crate) struct ViewerConsole {
     boombox_on: bool,
     /// The Toys tab asked to carry the Boombox (`true`) or put it away, not yet taken.
     pending_boombox: Option<bool>,
+    /// The fishing rod is out, mirrored as [`Self::order66_on`] is.
+    fishing_on: bool,
+    /// The Toys tab asked to get the rod out (`true`) or put it away, not yet taken.
+    pending_fishing: Option<bool>,
     /// The Monitor toy is on, mirrored as [`Self::order66_on`] is.
     monitor_on: bool,
     /// The Toys tab asked to turn the Monitor on (`true`) or off, not yet taken.
@@ -483,6 +487,15 @@ impl ViewerConsole {
             self.frame_cap,
             self.server_step_floor(),
         )
+    }
+
+    /// How a frame slower than the command step spreads its commands: the known
+    /// server's own client's way ([`crate::server_caps`]), unless the player lifted the
+    /// caps, else one per slot of the grid.
+    pub(crate) fn command_pacing(&self) -> sjk_client::command_rate::Pacing {
+        self.server_cap
+            .filter(|_| !self.server_caps_lifted() && self.pmove_fixed_msec().is_none())
+            .map_or_else(Default::default, |cap| cap.pacing)
     }
 
     /// The server's known command cap ([`crate::server_caps`]), lifted or not.

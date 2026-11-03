@@ -68,6 +68,19 @@ impl std::fmt::Display for HubError {
 
 impl std::error::Error for HubError {}
 
+/// What `GET /v1/presence` answered ([`Hub::presence_with_blocks`]).
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct PresenceRead {
+    pub players: Vec<Presence>,
+    pub blocks: Vec<crate::MapBlock>,
+    /// The hub's map edits stamp, which grows with every change to any map's edits.
+    pub map_edits: Option<i64>,
+    /// The hub's Toy Master stamp for this server (since 03/11/2026): when it changes,
+    /// the toys listed for it changed (one placed or removed, SJK's creator came or went).
+    pub secrets: Option<i64>,
+    /// The Toy Master's shows under way on this server.
+    pub shows: Vec<crate::toy_master::ShowUnderWay>,
+}
 /// What the client asks of a hub (`PROTOCOL.md`, "Endpoints").
 pub trait Hub: Send {
     /// Register the identity's key, or fetch its profile if it is known, telling
@@ -598,6 +611,20 @@ pub trait Hub: Send {
         ))
     }
 
+    /// The player is out of the box hunt's chase on `server` (`POST /v1/box-hunt/out`):
+    /// killed by the mark, caught cheating (a teleport, noclip), or as the mark typing in
+    /// the chat too long; whether the hub counted it.
+    fn box_hunt_out(
+        &mut self,
+        _identity: &Identity,
+        _server: &str,
+        _out: crate::mystery_box::HuntOut,
+    ) -> Result<bool, HubError> {
+        Err(HubError::Protocol(
+            "this hub client does not report the box hunt's chase".to_owned(),
+        ))
+    }
+
     /// SJK's creator: place a mystery box (`POST /v1/creator/mystery-box`); answers its id.
     fn place_mystery_box(
         &mut self,
@@ -616,8 +643,13 @@ pub trait Hub: Send {
         ))
     }
 
-    /// Every toy the Toy Master hid (`GET /v1/secrets`, 30/10/2026).
-    fn secrets(&mut self, _identity: &Identity) -> Result<crate::toy_master::Secrets, HubError> {
+    /// Every toy the Toy Master hid (`GET /v1/secrets`, 30/10/2026), with the ones shown
+    /// only where SJK's creator is when the player is on `server` with them (03/11/2026).
+    fn secrets(
+        &mut self,
+        _identity: &Identity,
+        _server: Option<&str>,
+    ) -> Result<crate::toy_master::Secrets, HubError> {
         Err(HubError::Protocol(
             "this hub client does not read the Toy Master's toys".to_owned(),
         ))
@@ -668,6 +700,19 @@ pub trait Hub: Send {
     fn remove_secret(&mut self, _identity: &Identity, _id: i64) -> Result<(), HubError> {
         Err(HubError::Protocol(
             "this hub client does not remove toys".to_owned(),
+        ))
+    }
+
+    /// SJK's creator: show toy `id` only where the creator is, or everywhere again
+    /// (`POST /v1/creator/secret/escort`, 03/11/2026).
+    fn escort_secret(
+        &mut self,
+        _identity: &Identity,
+        _id: i64,
+        _escorted: bool,
+    ) -> Result<(), HubError> {
+        Err(HubError::Protocol(
+            "this hub client does not escort toys".to_owned(),
         ))
     }
 
@@ -728,13 +773,14 @@ pub trait Hub: Send {
     fn release(&mut self, identity: &Identity, server: &str) -> Result<(), HubError>;
     /// The live claims on `server`.
     fn presence(&mut self, server: &str) -> Result<Vec<Presence>, HubError>;
-    /// The live claims on `server` and the players staff blocked there for everyone
-    /// (`PROTOCOL.md`, "Map blocks"); hubs before map blocks give none.
-    fn presence_with_blocks(
-        &mut self,
-        server: &str,
-    ) -> Result<(Vec<Presence>, Vec<crate::MapBlock>), HubError> {
-        self.presence(server).map(|players| (players, Vec::new()))
+    /// The live claims on `server`, the players staff blocked there for everyone
+    /// (`PROTOCOL.md`, "Map blocks"; hubs before map blocks give none) and the hub's map
+    /// edits stamp (`PROTOCOL.md`, "Map edits"; `None` from hubs before it).
+    fn presence_with_blocks(&mut self, server: &str) -> Result<PresenceRead, HubError> {
+        self.presence(server).map(|players| PresenceRead {
+            players,
+            ..PresenceRead::default()
+        })
     }
     /// Send a world note signed by the identity; the hub answers with its number.
     fn note(&mut self, _identity: &Identity, _note: &WorldNote) -> Result<i64, HubError> {
@@ -1893,6 +1939,26 @@ impl Hub for HttpHub {
             .unwrap_or(false))
     }
 
+    fn box_hunt_out(
+        &mut self,
+        identity: &Identity,
+        server: &str,
+        out: crate::mystery_box::HuntOut,
+    ) -> Result<bool, HubError> {
+        let body = match out {
+            crate::mystery_box::HuntOut::Dead { by } => {
+                json!({ "server": server, "why": "dead", "by": by })
+            }
+            crate::mystery_box::HuntOut::Cheat => json!({ "server": server, "why": "cheat" }),
+            crate::mystery_box::HuntOut::Chat => json!({ "server": server, "why": "chat" }),
+        };
+        let answer = self.send(Some(identity), "POST", "/v1/box-hunt/out", Some(body))?;
+        Ok(answer
+            .get("counted")
+            .and_then(Value::as_bool)
+            .unwrap_or(false))
+    }
+
     fn place_mystery_box(
         &mut self,
         identity: &Identity,
@@ -1925,8 +1991,16 @@ impl Hub for HttpHub {
         .map(|_| ())
     }
 
-    fn secrets(&mut self, identity: &Identity) -> Result<crate::toy_master::Secrets, HubError> {
-        parse(self.send(Some(identity), "GET", "/v1/secrets", None)?)
+    fn secrets(
+        &mut self,
+        identity: &Identity,
+        server: Option<&str>,
+    ) -> Result<crate::toy_master::Secrets, HubError> {
+        let path = match server {
+            Some(server) => format!("/v1/secrets?server={}", encode_server(server)),
+            None => "/v1/secrets".to_owned(),
+        };
+        parse(self.send(Some(identity), "GET", &path, None)?)
     }
 
     fn use_secret(
@@ -1977,6 +2051,7 @@ impl Hub for HttpHub {
                 "server": placing.server,
                 "origin": placing.origin,
                 "yaw": placing.yaw,
+                "escorted": placing.escorted,
             })),
         )?;
         answer["id"]
@@ -1990,6 +2065,21 @@ impl Hub for HttpHub {
             "POST",
             "/v1/creator/secret/remove",
             Some(json!({ "id": id })),
+        )
+        .map(|_| ())
+    }
+
+    fn escort_secret(
+        &mut self,
+        identity: &Identity,
+        id: i64,
+        escorted: bool,
+    ) -> Result<(), HubError> {
+        self.send(
+            Some(identity),
+            "POST",
+            "/v1/creator/secret/escort",
+            Some(json!({ "id": id, "escorted": escorted })),
         )
         .map(|_| ())
     }
@@ -2060,16 +2150,21 @@ impl Hub for HttpHub {
         parse(answer["players"].clone())
     }
 
-    fn presence_with_blocks(
-        &mut self,
-        server: &str,
-    ) -> Result<(Vec<Presence>, Vec<crate::MapBlock>), HubError> {
+    fn presence_with_blocks(&mut self, server: &str) -> Result<PresenceRead, HubError> {
         let query = encode_server(server);
         let answer = self.send(None, "GET", &format!("/v1/presence?server={query}"), None)?;
         let players = parse(answer["players"].clone())?;
         // A hub from before map blocks leaves them out; a malformed list is none.
         let blocks = serde_json::from_value(answer["blocks"].clone()).unwrap_or_default();
-        Ok((players, blocks))
+        // Shows under way: a malformed list is none (the shows are cosmetic).
+        let shows = serde_json::from_value(answer["shows"].clone()).unwrap_or_default();
+        Ok(PresenceRead {
+            players,
+            blocks,
+            map_edits: answer["map_edits"].as_i64(),
+            secrets: answer["secrets"].as_i64(),
+            shows,
+        })
     }
 
     fn set_models(&mut self, identity: &Identity, models: &[String]) -> Result<u64, HubError> {

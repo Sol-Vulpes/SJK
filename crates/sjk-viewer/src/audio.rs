@@ -38,7 +38,7 @@ mod controls;
 mod dialogue;
 pub(crate) use controls::{
     BOOMBOX_CHANNEL, EMOTE_CHANNEL, PROTECTED_CHANNELS, SKIN_SOUNDS_CVAR, TOY_CHANNEL,
-    VOICE_CHANNEL, VOICE_VOLUME_CVAR, interface_channel,
+    TOY_SHOW_CHANNEL, VOICE_CHANNEL, VOICE_VOLUME_CVAR, interface_channel,
 };
 #[path = "audio_dynamic.rs"]
 mod dynamic;
@@ -51,6 +51,8 @@ mod holstered_staff;
 mod jof_force;
 #[path = "audio_music.rs"]
 pub(crate) mod music;
+#[path = "audio_spatial.rs"]
+pub(crate) mod spatial;
 #[path = "audio_transitions.rs"]
 mod transitions;
 #[path = "audio_voice_throttle.rs"]

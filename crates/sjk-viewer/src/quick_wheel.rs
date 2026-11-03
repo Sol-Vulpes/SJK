@@ -491,6 +491,8 @@ pub(crate) struct Toys {
     pub(crate) illuminate: bool,
     /// The player is in the cardboard box.
     pub(crate) cardboard_box: bool,
+    /// The fishing rod is out.
+    pub(crate) fishing: bool,
     /// The Order 66 toy is on.
     pub(crate) order66: bool,
     /// The Hax toy is on.
@@ -501,6 +503,8 @@ pub(crate) struct Toys {
     pub(crate) drone: bool,
     /// The Boombox is carried.
     pub(crate) boombox: bool,
+    /// The Boombox stands on the floor.
+    pub(crate) boombox_down: bool,
     /// The Monitor toy is on.
     pub(crate) monitor: bool,
     /// Box hunt is on.
@@ -521,11 +525,13 @@ fn in_effect(console: &crate::console::ViewerConsole, state: State, toys: Toys) 
         State::None => false,
         State::Illuminate => toys.illuminate,
         State::CardboardBox => toys.cardboard_box,
+        State::Fishing => toys.fishing,
         State::Order66 => toys.order66,
         State::Hax => toys.hax,
         State::Ragdoll => toys.ragdoll,
         State::Drone => toys.drone,
         State::Boombox => toys.boombox,
+        State::BoomboxDown => toys.boombox_down,
         State::Monitor => toys.monitor,
         State::BoxHunt => toys.box_hunt,
         State::Banana => toys.banana,
@@ -688,11 +694,13 @@ impl crate::GpuState {
         let toys = Toys {
             illuminate: self.illuminate.lit(),
             cardboard_box: self.cardboard_box.on(),
+            fishing: self.fishing.on(),
             order66: self.order66.on(),
             hax: self.hax.on(),
             ragdoll: self.ragdoll.on(),
             drone: self.drone.on(),
             boombox: self.boombox.on(),
+            boombox_down: self.boombox.down(),
             monitor: self.monitor.on(),
             box_hunt: self.box_hunt.on(),
             banana: self.banana.on(),

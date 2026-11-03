@@ -874,6 +874,13 @@ animates is not swapped for Kyle:
   shaders. A name is a three-part skin only when it has `|` and says `head`,
   `torso` and `lower`; the console notes each fallback
   ([player_skin.rs](../crates/sjk-viewer/src/player_skin.rs)).
+- An NPC's skin, the one appended to its model string, follows
+  `CG_HandleAppendedSkin` (`cg_players.c:8519-8566`) instead: any `|` makes it three
+  parts, and a part no file holds keeps the parts read before it, as the renderer's
+  skin cache gives every NPC after the first (`RE_RegisterSkin`, `tr_skin.cpp`). JoF
+  Shuttle's alien younglings name `head_a3|torso_a3|` (no lower part) and have no
+  `model_default.skin`, so they drew grey with their GLM's `[nomaterial]` shaders
+  until 02/11/2026 (Kushina's report).
 - A surface is drawn only while all its GLM flags are clear (`RenderSurfaces`,
   rd-vanilla `tr_ghoul2.cpp`): a tag (`*r_hand`, `*hip_l`, `*head_front`: the bolt
   flag) is never drawn, whatever the skin names for it. Community models often give
@@ -1680,7 +1687,55 @@ that frame, to the snapshot's player origin and view angles (`GameAudio::observe
 the audio thread mixes while the frame is built, so the blocks mixed in between panned
 sounds near the player differently from the others whenever they moved, and the saber's
 hum, a loop on the view, crackled (Toad's report). Unit test:
-`a_snapshot_leaves_the_listener_where_the_frame_put_it`; not yet heard in a game.
+`a_snapshot_leaves_the_listener_where_the_frame_put_it`; not yet heard in a game. With
+[3D sound](#3d-sound) on, the listener stands at the player's head instead, still with
+the camera's axes.
+
+## 3D sound
+
+`s_spatial` (Settings > Sound, 3D sound; off by default, archived; Sol's, 03/11/2026,
+after the idea of VisionJK's `v_spatial` by Blackwolf) gives the sounds of the level
+three things the 2003 mixer lacks, in SJK's own mixer (no Steam Audio, no library):
+
+- **Hearing from the head.** The listener is the player's predicted origin raised to
+  the camera's height, kept between crouching and standing eye height (12 to 36 units),
+  so in first person the eyes and in third person the head, not the camera circling it;
+  left and right stay the camera's. A camera more than 160 units from that point (a
+  spectator, the drone, the free camera) or no predicted player puts it back at the
+  camera, as VisionJK's `S_SpatialHearing` does.
+- **Occlusion.** About 15 times a second the render thread traces from that point to the
+  world sounds heard in the last 8 seconds (48 at most, 16 a tick, three point rays each:
+  straight, 24 units higher, 24 units to the side), against the map's solid brushes and
+  the doors and lifts where they are shown (`LocalPrediction::presented_solids`, each
+  tried only when the ray crosses its box). The share of rays blocked is the source's
+  occlusion, 0 to 1; a wall within 16 units of the sound is the one it is on (an impact)
+  and does not count, and sources past 2000 units are not traced. The mixer glides each
+  voice and loop toward it over about 50 ms and blends the sound with itself through a
+  one-pole lowpass at 700 Hz and 0.45 of the gain, so a fully occluded sound is quieter
+  and dull. The player's own, listener-relative and global sounds are never occluded.
+- **Reverb.** 32 rays round the hearing point (a Fibonacci sphere, 8 a tick, so a new
+  room every quarter second) measure the room: the share that meets a wall within 2048
+  units (not the sky) and their mean distance give a size (64 units a cupboard, 1024 a
+  hall) and a wet level (at most 0.6, less the more open), which a small Schroeder
+  reverb in the mixer (four combs and two allpasses an ear, Freeverb's lengths) glides
+  to over 0.4 s. Its input is a send (a fixed buffer of 4096 frames in the mixer)
+  that only voices and loops placed in the world and fading with distance feed, the
+  player's own placed sounds included; menu cues, the announcer, listener-relative and
+  global sounds and the music stay dry. Out of a map the room is dry.
+
+Only numbers cross to the audio thread, on the usual command queue
+(`AudioCommand::SpatialEffects`, `SourceOcclusion`, `Reverb`;
+[audio_spatial.rs](../crates/sjk-viewer/src/audio_spatial.rs), the mixer's side in
+[spatial_fx.rs](../crates/sjk-audio/src/spatial_fx.rs)). No behaviour is keyed to a
+sound's file name and no material is read. Every table is fixed: the tick, the mixer
+and the reverb allocate nothing (checked with `assert_no_alloc`). Off, nothing is
+traced or sent and the mixer takes its plain path, its output bit for bit what it was
+(`switched_off_the_mix_is_bit_identical_whatever_was_measured`). Measured on Windows
+11 in release (`spatial_mix_cost`, ignored test), a 128-frame block with 128 voices and
+32 loops busy took about 23 us off and 53 us on, against its 2.9 ms of playback. Unit
+tests: the hearing point, occlusion from rays and its glide, muffling, loops, the room
+from its rays, the reverb bounded and dying away, a larger room ringing longer. Not yet
+heard in a game.
 
 ## Sound sonar
 
@@ -1900,7 +1955,8 @@ separate green/blue shells remain. The local animation switch leaves the
 Protect/Absorb colour preference and ordinary Push/Grip-caster effects alone.
 
 **Empower glow** (`cg_empowerEffect`) defaults to -1, following the server's
-`jp_empowerEffect`: 0 full body, 1 arms, 2 hands. Set 0/1/2 to override that shape.
+`jp_empowerEffect`: 0 full body, 1 arms, 2 hands. Set 0/1/2 to override that shape,
+or 3 to hide the Empower glow (SJK only; a server cannot ask for it).
 Only Empower-marked body blur is trimmed; ordinary Push stays full body.
 Mindtrick hides Force effects and flamethrower audio from the affected viewer;
 active Sight reveals them. These presentation rules apply independently of menu
@@ -2802,6 +2858,13 @@ Implementation: [resident worlds](../crates/sjk-viewer/src/resident_world.rs),
 [world handoff](../crates/sjk-viewer/src/session_transition.rs) and
 [destination preparation](../crates/sjk-viewer/src/portal.rs).
 
+A built world (`GpuState`, about 600 KiB) crosses from the install worker to the
+main thread boxed: through the worker's channel, `WorldInstallPoll::Ready`,
+`take_world`, `poll_world_install` and `adopt_world`. Moved by value, each step
+was a stack copy, and the main thread's nested frames (`window_event` 3.1 MB,
+`Destination::poll`, `WorldInstallTask::poll` and the channel's `try_recv` about
+1.9 MB each) overflowed its 8 MiB while joining JoF's public server (02/11/2026).
+
 Losing window focus releases held gameplay controls and discards gameplay actions
 already queued for that frame. Synthetic key events on refocus cannot re-press a
 held modifier such as Alt. This allows a saber throw already sent to the server
@@ -3689,6 +3752,13 @@ to read on busy backgrounds) chooses the edge: 0 Off, the drop shadow only
 (`CodePalette::Game`); 1 Faint, the default, the halo above (`Haloed`); 2 Strong, the
 halo at 38% and every other letter ringed by eight dark copies (0.45 opaque each)
 instead of its shadow (`Outlined`, `text::Edge`).
+`cg_darkTextOutline` (default 0; Settings > Chat "White edge on dark text", which
+applies to the nameplates too; Sol's request, 03/11/2026: the halo reads as a glow) swaps
+the halo for a crisp white outline, the same eight copies in white at 85% each
+(`CodePalette::white_outlined`): with Faint, dark letters in white and the rest in
+their shadow (`WhiteEdged`); with Strong, dark letters in white and the rest in the
+dark outline (`TwoTone`). Off keeps the shadow only. It applies to the chat too (see
+`cg_chatBoxOutline`).
 
 **Styles** (31/10/2026, Sol's decision to let players choose among the designs SJK has
 had): `cg_nameplateStyle` (Settings "Nameplate style", and the Style row on the
@@ -4821,7 +4891,7 @@ The player's own toy still shows, and nothing changes for the toys' rules.
 | Cardboard box | See others' boxes | `cg_toyBoxShow` | their box (not lifted either) |
 | Ragdoll | See others fall limp | `cg_toyRagdollShow` | their falls: their bodies as the game shows them |
 | Drone | See others' drones | `cg_toyDroneShow` | their drones, names and sounds (who peeks at you is still told) |
-| Boombox | See and hear others' boomboxes | `cg_toyBoomboxShow` | their stereo and its music |
+| Boombox | See and hear others' boomboxes | `cg_toyBoomboxShow` | their stereo (on the shoulder or the floor) and its music |
 | Monitor | See monitors | `cg_toyMonitorShow` | every monitor and its sounds, yours too ([Monitor](#monitor)) |
 | Banana peel | See banana peels | `cg_toyBananaShow` | every peel and its sounds, yours too ([Banana peel](#banana-peel)) |
 | Prop gun | (console only) | `cg_toyPropGunShow` | their guns, bolts and sounds ([Prop gun](#prop-gun)) |
@@ -5354,6 +5424,22 @@ close by. It works like emotes: the music is in pk3s, and SJK passes only its na
 - **Others hear it** only when they have the same file: the same id and size. A listener
   without it reads once in the console which track it is
   (`Name's boombox plays <id>, which you do not have`).
+- **On the floor** (03/11/2026, after VisionJK's boombox by Blackwolf, who agreed):
+  `boombox_place` (Collection > Toys "Place key", the quick wheel's "Place boombox",
+  Settings > Key bindings > Interaction "Boombox: place or pick up") stands the stereo
+  on the floor 40 units ahead of the player, short of a wall, facing the way they look
+  (on the floor under them when there is none ahead; "Nowhere to put the boombox down
+  here" when neither is near), putting the toy on first if it was off; pressed again it
+  goes back on the shoulder ("Boombox back on your shoulder"). Not while dead,
+  spectating or following. One box a player. The music then plays from the box (its
+  owner hears it there too, no longer in both ears), with the same range and fade, and
+  quieter behind it: right behind, 45% as loud as in front, beside it as loud (the
+  audio fades a track by distance only, so behind the box it plays from further away
+  along the same line, [heard_from](../crates/sjk-viewer/src/boombox.rs)). The box goes
+  when picked up, with the toy turned off, on a new map or server, and for the others
+  when its owner leaves the server, drops off the hub or is blocked here.
+  `cg_toyBoomboxShow` 0 hides others' boxes and their music, as their shoulder stereo.
+  Staff cannot remove another player's box yet (that needs the hub).
 
 No game server knows of it, and the hub never carries sound. The stereo is a toy in the
 player's look (`toys: ["boombox"]`), so every SJK player on the server draws it over the
@@ -5363,7 +5449,12 @@ on the dead; one's own in first person only in mirrors). What plays travels thro
 its file's size, the game server's time it began at and how far it carries; `stop` ends
 it. The carrier's client tells each SJK player within the range and 128 units more, one
 event every 50 ms, again whenever one comes back within reach and every 15 seconds; a
-track not told again for 40 seconds stops. A listener starts the track as far in as the
+track not told again for 40 seconds stops. A box on the floor is told to every SJK
+player on the server, before its music (the players within the music's reach first) and
+again every 15 seconds: `put_<x>_<y>_<z>_<yaw>`, its floor point in whole units (each
+client finds the floor under it itself) and the way it faces in degrees; `take` picks it
+up, and a box not told again for 40 seconds goes. Clients from before 03/11/2026 ignore
+both and keep the stereo on its carrier's shoulder. A listener starts the track as far in as the
 server's time says, so everyone hears the same part of it whenever they arrive: the file
 is read and decoded when first needed (not before), the start waits for the decoder and
 then skips the time it waited (`AudioCommand::PlayTrack`), and a track nothing plays any
@@ -5709,7 +5800,14 @@ sees it there.
   quick wheel's Toys page) traces the crosshair 128 units into the world and sticks the
   chosen tag where it lands: upright on a wall, its top away from the player on a floor,
   56 units wide. One tag a player: a new one replaces the last, at most one every 10
-  seconds. `toy_tag clear` takes it off. A tag the player does not hold is refused.
+  seconds. `toy_tag clear` takes it off. A tag the player does not hold is refused, and
+  so is a spot no tag holds on (below): "A tag does not hold on that surface".
+- **The spray** (Sol's request, 03/11/2026): a tag going up plays a spray can, the ball
+  rattled three times then two hisses (`sound/sjk/tags/spray.wav`, synthesized by
+  [tag_sounds.py](../scripts/tag_sounds.py), bundled), heard where the tag lands. Another
+  player's is heard when their look changes to a new tag on this map, not when their look
+  arrives already carrying one (joining, coming back) nor while `cg_toyTags 0` hides them.
+  `s_toyTagSound 0` silences it.
 - **Others see it** through the player's look: the tag rides in it (`tag`, the tag's id,
   map, point, surface normal and turn, and its finish when not Normal), so players who come
   later see it too, and the hub refuses a tag the key does not hold, or not in that finish
@@ -5722,7 +5820,18 @@ sees it there.
 A tag is a lasting decal with a slot of its own per player
 ([decal_store.rs](../crates/sjk-viewer/src/decal_store.rs)): projected once when it
 changes (as impact marks are, over corners and patches), kept until it goes, never pushed
-out by impact marks, and kept with `cg_marks 0`. Since 31/10/2026 (Sol: tags were blurry in
+out by impact marks, and kept with `cg_marks 0`. Since 03/11/2026 (Sol: tags glitched on
+odd surfaces) a tag keeps off surfaces it cannot sit on as a flat picture
+([`tag_unfit`](../crates/sjk-viewer/src/decal_marks.rs)): moving ones (`deformVertexes`,
+flags, water waves), see-through ones (a first stage blended or `alphaFunc` cut: glass,
+force fields, grates, leaves, or sorted after the opaque), decals laid over a wall
+(`polygonOffset`: the wall under takes the tag once instead of twice) and sky or fog. It
+also projects with buffers of its own, 512 fragments over at most 128 surfaces (an impact
+mark keeps the reference's 128 over 64), so a curved patch or a face cut in many triangles
+no longer cuts the picture short (it was 48). Two seams on one flat wall no longer cut a
+tag in half either: tags (not marks) go on models the compiler merged into the world, with
+the curves' facing test, and a flat face stored without a normal (no lightmap) is judged by
+its vertices' normal instead of being skipped (`sjk-bsp` `mark_surfaces`, marks too). Since 31/10/2026 (Sol: tags were blurry in
 the game) tags are drawn by a pass of their own
 ([tag_render.rs](../crates/sjk-viewer/src/tag_render.rs), [rendering.md](rendering.md#tags)),
 each picture at its full size (a tag enlarged to 512 pixels, a card's sticker 1024), not as
@@ -5739,6 +5848,58 @@ from the card faces' textures. See [tags.rs](../crates/sjk-viewer/src/tags.rs),
 [tags_frame.rs](../crates/sjk-viewer/src/tags_frame.rs) and
 [collection_tags.rs](../crates/sjk-viewer/src/collection_tags.rs).
 
+## Fishing
+
+Fishing (Sanji's idea in #ideas, 29/10/2026; Slash's rules) is a toy for every SJK player: a rod in the hand, a
+bucket at the feet and a float on the water, and a bite to hook now and then. It gives
+nothing the economy counts: catches go to the player's own fish log, and the Echoes it
+brings up are the ones the hub drops anyway.
+
+- **`toy_fishing`** (a bind, the quick wheel's Toys page, Collection > Toys, "Rod out")
+  gets the rod out or puts it away. The player must stand still: moving, getting hurt,
+  dying or leaving the game puts it away. The hands go empty (`weapmelee`), and the upper
+  body holds the rod in the rifles' ready pose (`TORSO_WEAPONREADY3`) while the legs stand.
+  In first person the own rod is held in view, low on the right, and the one in the hand
+  shows only in mirrors.
+- **Where it casts:** into water ahead (72, 56 or 40 units in front, the first that has
+  it), else onto ground ahead no more than 48 below the feet, where a small pond is drawn
+  for the cast: the toy fishes anywhere, since few maps have water. The pond is drawn
+  with the installed game's own swamp textures (Hidden Evil's lake layers over the stock
+  water, Yavin's mud, mossy rock and ground plants), so the game must be installed.
+- **Bites** come every 20 to 60 seconds: the float dips, a splash plays, and `+use` within
+  0.8 to 1.2 seconds hooks it. Too soon scares the fish (the next bite waits 10 to 20
+  seconds more); too late lets it go. A hooked bite comes up empty 15% of the time, with
+  junk 30% (six kinds) and a fish 55% (twelve kinds, from the Silver darter to Old
+  Whiskers, the great catfish, one fish in about 106), reeled in to the tip hanging by
+  its mouth, and said in the centre of the screen. Each catch is counted in
+  `fishing_log.txt` in the settings folder (`<id> <count>` a line, and `last <id>`).
+- **The fish** each have their own model and painted skin (`fishing_fish_<id>.md3`, one
+  fish atlas): the slim Silver darter, the deep spiny Mud snapper, the spotted
+  big-mouthed Swamp gulper, the barred Striped bonefish, the Glow perch with its glowing
+  spots, the long Spiny pike with spines down its back, the scaled golden Sun carp, the
+  Moon eel, the Kyber minnow with crystals on its back, the flat Ghost ray, the red and
+  white Temple koi and Old Whiskers with its long whiskers. The **bucket** holds the last
+  fish caught (kept in the log, so it is there the next time the rod comes out): a short
+  one floats on its side on the water, a longer one stands head down with its tail out
+  over the rim. Other players' buckets are empty, since their catches are not sent.
+- **Echoes:** when the hub drops the player an Echo while they fish, its card waits, and
+  a golden bite comes 5 to 15 seconds later (1.5 seconds to hook it, two tries); hooked,
+  the holocron comes up on the line and its card shows. Missed twice, or with the rod put
+  away, the card shows all the same. Fishing never brings an Echo the hub did not drop:
+  the caps stay as they are ([holocrons.md](holocrons.md)).
+- **Achievements:** First Bite (a fish), Angler (50 fish), Every Fish in the Pond (every kind), Echo Angler (10
+  Echoes on the line) and Old Whiskers (hidden), counted on servers only, as the others
+  ([identity.md](identity.md#achievements)).
+- **Sounds:** Settings > Sound > Toys, "Fishing" (`s_toyFishingSound`).
+
+No game server knows of it. The rod is a toy in the player's look (`toys: ["fishing"]`),
+so other SJK players draw it in the fisher's hand, with the line to a float where their
+own client finds water or ground ahead of that player; players on stock clients see a
+player standing still. The models, picture, shader and icon are bundled, made by
+[fishing_assets.py](../scripts/fishing_assets.py) from shapes (nothing taken from another
+game), and mounted below all game data. See
+[fishing.rs](../crates/sjk-viewer/src/fishing.rs).
+
 ## Toy sounds
 
 Settings > Sound > Toys (Sol's request, 25/10/2026) sets how the toys sound on this PC:
@@ -5747,8 +5908,10 @@ toy's sounds, and a switch per toy silences that toy's sounds alone, the player'
 and everyone else's (`s_toyBoxSound`, `s_toyOrder66Sound`, `s_toyHaxSound`,
 `s_toyRagdollSound`, `s_toyDroneSound`, `s_toyBoomboxSound`, `s_toyMonitorSound`,
 `s_toyMysteryBoxSound` (the [mystery boxes](mystery-boxes.md)), `s_toyBananaSound` (the
-[Banana peel](#banana-peel), 29/10/2026), `s_toyMasterSound` (the toys [the Toy
-Master](toy-master.md) hides, 30/10/2026), all
+[Banana peel](#banana-peel), 29/10/2026), `s_toyTagSound` (the [Tag](#tag)'s spray,
+03/11/2026), `s_toyMasterSound` (the toys [the Toy
+Master](toy-master.md) hides, 30/10/2026), `s_toyFishingSound`
+(the [Fishing](#fishing) toy), all
 on by default,
 archived). The toy still
 runs and is still seen; nothing is sent to anyone. The Illuminate holocron makes no
@@ -5974,7 +6137,8 @@ its Toys page as it was, and gains them from Add a choice, Toys. The page holds 
 later toys are in the catalogue's Toys group only, to add from there: Box hunt
 (`toy_boxhunt`), the Tag (`toy_tag`) and since 29/10/2026 the
 [Banana peel](#banana-peel) (Banana peel, `toy_banana`, marked while it is on, and Drop
-banana peel, `banana_drop`).
+banana peel, `banana_drop`) and [Fishing](#fishing) (`toy_fishing`, marked while the rod
+is out).
 
 ### GIF wheel
 
@@ -7210,6 +7374,12 @@ nameplates' Strong outline draws (`text::CodePalette::DarkOutlined`, per text ru
 nameplates give dark names instead, as an outline as dark as it would hide it. It costs
 nine glyph quads a letter instead of two. Centre prints, the sender card and the
 combat numbers keep their shadow.
+
+`cg_darkTextOutline` (default 0, archived; Settings > Chat > **White edge on dark
+text**, shared with the nameplates) edges the dark letters of the feed and the field
+(luminance under 0.3: black, dark blue, red) in a crisp white outline: alone, the rest
+keep their shadow (`CodePalette::WhiteEdged`); with `cg_chatBoxOutline`, the rest keep
+the dark outline (`TwoTone`), so black letters get white instead of the faint halo.
 
 A message too long for one row wraps onto up to four, each drawn as its own text,
 and every row after the first starts in the colour code in force where the row

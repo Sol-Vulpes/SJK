@@ -28,7 +28,8 @@ hubs refuse the request without changing credits. No game-server messages are se
   the wager, a push returns it, and a loss returns zero. Bets must be even.
   Hit and stand are supported; split, double and insurance are not implemented.
 
-All returns include the stake. House-game wagers are 1..500 whole credits; the
+All returns include the stake. House-game wagers are 1..500 whole credits, except straight-up roulette (maximum 27)
+and slots (maximum 11); the
 page starts at ten, with whole-credit steps (twos for blackjack), +10 and +100
 shortcuts. Poker also has an All in button; raises are bounded by the stack.
 These are initial rules and limits.
@@ -55,12 +56,34 @@ in [status.md](status.md); implementation is not evidence of deployment.
 Bet reopening and odd-chip order follow the [Poker TDA rules](https://www.pokertda.com/view-poker-tda-rules/),
 with the explicit credit-game limits above. This is not a claim of tournament certification.
 
-## Before public access
+## Pilot economy limits
 
-The staff pilot has no daily loss budget yet. A public rollout needs an agreed
-budget across all linked keys of a person, counting unsettled wager exposure as
-well as settled losses. The 500-credit per-bet limit is not a daily protection.
-Poker also permits intentional losses as a credit transfer; no-rake play does
-not enforce the economy's trading limits. These decisions remain open before
-public access. Version headers are compatibility information, not proof of an
-unmodified client; staff authorization comes from the hub's own identity records.
+PROVISIONAL hub limits are 1000 credits net win and 1000 net loss per person over
+rolling 24 hours. Linked keys share the limit; merging profiles combines their
+history. House results and every settled poker hand count, even before cashing
+out. Poker buy-ins and cash-outs are escrow movements, not extra wins or losses.
+
+Before a new wager or poker hand, the hub reserves its maximum possible loss and
+profit. An unfinished blackjack round or poker hand keeps that reservation across
+restarts until settlement. Reservations also account for old results leaving the
+24-hour window: a previous loss cannot finance a future payout after that loss
+expires. This can refuse a wager before the displayed net total reaches a cap;
+the hub explains which limit needs more room. Finishing a funded round, folding,
+reading and cashing out remain possible. Payouts are never clipped to a cap.
+
+A straight-up roulette win returns at most 972 credits and a slots win at most
+990. Two poker seats at one table may not share the hub-observed address (IPv6 by
+/64), including addresses known from feed reads. Stored casino address tags survive
+restarts. Preexisting seats with an unknown address must leave and rejoin. This
+limits one connection; it cannot prove that people on different connections are
+independent or prevent all intentional poker losses.
+
+Background reads keep the last snapshot usable and do not disable buttons or
+show a waiting message over it. A player action replaces a pending read; a pending
+wager still blocks another wager and retains its retry token.
+
+The planned next audience is verified players or staff, per Sol's 03/11 decision.
+The shared audience change is reserved for the maintainer at merge; the current
+implementation still defaults to staff. Version headers remain compatibility
+information, not proof of an unmodified client. Live multi-client play and
+deployment remain unverified.

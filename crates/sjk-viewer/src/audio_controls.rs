@@ -4,20 +4,17 @@ use super::*;
 impl crate::GpuState {
     /// Update the process-lifetime listener and gains before completing this render frame.
     pub(crate) fn finish_audio_frame(
-        &self,
+        &mut self,
         audio: &mut Option<GameAudio>,
         forward: glam::Vec3,
         right: glam::Vec3,
     ) {
         if let Some(audio) = audio {
-            audio.listener(
-                self.camera_position,
-                forward,
-                right,
-                glam::Vec3::Z,
-                glam::Vec3::ZERO,
-            );
+            // `s_spatial`: heard from the player's head, panned by the camera's axes.
+            let hearing = self.audio_hearing_point(audio.spatial_enabled());
+            audio.listener(hearing, forward, right, glam::Vec3::Z, glam::Vec3::ZERO);
             audio.sync_gains(self.console.as_ref());
+            self.spatial_audio_frame(audio, hearing, right);
             #[cfg(feature = "mod-jof")]
             {
                 let dialogue = self
@@ -56,7 +53,12 @@ pub(crate) const TOY_CHANNEL: ChannelId = ChannelId(14);
 pub(crate) const BOOMBOX_CHANNEL: ChannelId = ChannelId(15);
 
 /// The channels of long music the mixer cuts last ([`sjk_audio::MixerConfig`]).
-pub(crate) const PROTECTED_CHANNELS: &[ChannelId] = &[EMOTE_CHANNEL, BOOMBOX_CHANNEL];
+pub(crate) const PROTECTED_CHANNELS: &[ChannelId] =
+    &[EMOTE_CHANNEL, BOOMBOX_CHANNEL, TOY_SHOW_CHANNEL];
+
+/// The channel a Toy Master toy's show sound plays on: a song of minutes, kept like the
+/// boombox's so a busy fight never steals it from a player who walks up later.
+pub(crate) const TOY_SHOW_CHANNEL: ChannelId = ChannelId(16);
 
 /// The channel every voice sound plays on: `CHAN_VOICE`, which `CHAN_VOICE_ATTEN` and
 /// `CHAN_VOICE_GLOBAL` join (`sjk_client` `normalize_voice_channel`, as the game's
@@ -201,6 +203,9 @@ impl GameAudio {
             self.output.sonar.clear();
         }
         self.output.sonar.enabled = sonar;
+        self.output.spatial.enabled = console
+            .and_then(|console| console.bool_cvar(spatial::CVAR))
+            .unwrap_or(false);
         let mode = console
             .and_then(|console| console.integer_cvar(SKIN_SOUNDS_CVAR))
             .unwrap_or(1);
@@ -211,6 +216,11 @@ impl GameAudio {
                 .and_then(|console| console.bool_cvar("s_doppler"))
                 .unwrap_or(true),
         ));
+    }
+
+    /// Whether 3D sound (`s_spatial`) is on, as of the last [`Self::sync_gains`].
+    pub(crate) fn spatial_enabled(&self) -> bool {
+        self.output.spatial.enabled
     }
 
     /// The world sounds sent lately, for the sound sonar (`sound_sonar.rs`).
@@ -404,6 +414,7 @@ impl GameAudio {
         source: SourceId,
         channel: ChannelId,
         attenuation: sjk_audio::Attenuation,
+        elapsed_ms: u64,
     ) {
         let Some(volume) = self.toy_sounds.gain(toy, volume) else {
             return;
@@ -411,16 +422,19 @@ impl GameAudio {
         let Some(handle) = self.find_handle(path) else {
             return;
         };
-        self.output.send(AudioCommand::Play(
-            handle,
-            PlayRequest {
-                origin: Some(origin),
-                source,
-                channel,
-                volume,
-                attenuation,
-            },
-        ));
+        let request = PlayRequest {
+            origin: Some(origin),
+            source,
+            channel,
+            volume,
+            attenuation,
+        };
+        // A sound joined after it started plays from as far in (the boombox's way).
+        self.output.send(if elapsed_ms == 0 {
+            AudioCommand::Play(handle, request)
+        } else {
+            AudioCommand::PlayTrack(handle, request, elapsed_ms, std::time::Instant::now())
+        });
     }
 
     /// Stop the toy sound playing on `source`'s `channel`.

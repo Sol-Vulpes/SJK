@@ -288,6 +288,9 @@ mod holocron;
 #[path = "world_shot_cardboard_box.rs"]
 mod cardboard_box;
 
+#[path = "world_shot_fishing.rs"]
+mod fishing_shots;
+
 #[path = "world_shot_map_edits.rs"]
 mod map_edit_shots;
 
@@ -1341,6 +1344,8 @@ Found the fog bug, ask me about it!"
             box_hunt: None,
             secrets: None,
             secrets_revision: 0,
+            secret_shows: None,
+            secret_shows_revision: 0,
             secret: None,
             assets_note: None,
             crashes_sent: 0,

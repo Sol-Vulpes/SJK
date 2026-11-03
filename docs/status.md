@@ -1,18 +1,80 @@
 ## Casino staff pilot
 
-2026-11-02, review update based on `3d9e8fe2` after 2026.1102.1 shipped: the
-casino remains a staff-only pilot on supporting hubs. Reads, wagers, poker and
-cached retries require the canonical person's staff flag and an explicitly
-configured minimum client release; an unset floor keeps it closed. Public access
-requires a separate deliberate rollout decision. The [casino rules](casino.md)
-and SJK page remain implemented; production deployment and native multi-client
-play are unverified.
+03/11/2026, review update on main `d3881f31`. Rolling win/loss limits, pending-game reservations, long-odds wager limits and same-address poker seating are implemented. Background polling keeps the last snapshot usable; actions replace reads. Verified-or-staff audience rollout is reserved for Sol at merge.
+Windows validation is recorded in the matching client and hub PRs, with focused
+boundary, merge, retry and UI checks. Native multi-client play, other platforms,
+physical proximity attestation and deployment remain unverified.
 
-Before public access: agree a daily loss budget that cannot be reset by switching
-linked keys, and a policy for deliberate poker losses transferring credits.
-Neither the 500-credit house wager limit nor the request quota solves those issues.
-Windows verification of the rollout gate, version checks, command-line defaults
-and current workspace is recorded in PR #334 and its paired hub PR #7.
+## Tags: spray sound, odd surfaces
+
+03/11/2026, `personal/tag-spray`, based on `main` `3a209013` (Sol: tag decals sometimes
+glitch on special surfaces; a spray can sound when a tag goes up). Read from the code, no
+in-game report to go by, two causes fixed
+([client.md](client.md#tag)): a tag was projected onto every surface in its box but the
+sky's, so it hung on glass, water and force fields, showed over a grate's holes, stayed
+still on waving flags and water while they moved (fighting their depth), and went twice on
+a wall with a `polygonOffset` poster; and a tag kept at most 48 fragments, so a curved
+patch or a face cut in many triangles lost part of the picture. Then (Sol: a surface "half
+cut" on the same plane) a tag across a seam lost the half on a model merged into the world
+or on a face stored without a normal; both now take it. Tags now keep off such
+surfaces (`decal_marks::tag_unfit`, impact marks unchanged) and project with buffers of
+their own (512 fragments, 128 surfaces); `toy_tag` aimed at such a surface alone refuses
+("A tag does not hold on that surface"). The spray (`sound/sjk/tags/spray.wav`,
+synthesized by `scripts/tag_sounds.py`) plays where a tag goes up, the own one and other
+players' when their look changes to a new tag on this map; `s_toyTagSound` (Settings >
+Sound > Toys) silences it. Verified: unit test of the surface filter, the tag and decal
+tests, clippy. Not verified: in a game (the sound's level and what Sol saw glitch).
+
+## 3D sound (`s_spatial`)
+
+03/11/2026, `personal/spatial-sound`, based on `main` `3a209013`: an opt-in switch
+(off by default) for hearing from the player's head, occlusion behind walls and doors
+and a small room reverb, in SJK's own mixer after the idea of VisionJK's `v_spatial`
+(Blackwolf); see [3D sound](client.md#3d-sound). Verified on Windows 11: fmt, workspace
+build, tests and Clippy; with it off the mixer's output is bit-identical to before (unit
+test), mixing and the render thread's tick allocate nothing, and the mixer took about
+53 us a block on against 23 us off with every voice and loop busy (release, 2.9 ms
+budget). Not verified: heard in a game; the strengths (muffling, reverb level) are
+first guesses to tune by ear.
+
+## Heimdall's time nudge kicks at low frame rates
+
+02/11/2026, `personal/heimdall-catchup`, based on `main` `3d9e8fe2`, Krieger's and
+Slash's reports (Discord #bugs; Krieger on 2026.1101.1 Linux, Slash on 2026.1102.1,
+neither through the launcher): Heimdall, JoF's anti-cheat, kicked them with "Set
+/cl_timeNudge 0" at random moments of ordinary play, a few times in 15 minutes. The
+23/10 clock fix (below) is in both builds, and nothing that stamps commands changed
+since. What remained different from JoF EJK: its `cl_cmdratecap` makes at most one
+command a frame stamped with the frame's server time, while SJK's grid
+([command_rate.rs](../crates/sjk-client/src/command_rate.rs)) filled every 8 ms slot a
+slow frame passed, stamped in the past (one 8 ms old at 60 FPS, three up to 24 ms old
+at 30 FPS) and rounded every stamp down. On a server known to cap commands
+([server_caps.rs](../crates/sjk-viewer/src/server_caps.rs), only JoF) commands are now
+paced as `cl_cmdratecap` does (`Pacing::OnePerFrame`): one a frame at most, stamped now,
+on an accumulator that keeps 125 a second on average; `pmove_fixed` servers and every
+other server keep the grid, which the gameplay FPS needs to move like 333 at any frame
+rate. `gameplay_fps_nocap 1` also brings the grid back on JoF. Below 125 FPS a JoF
+player now moves in frame-sized steps, as with JoF EJK. Krieger saw no kicks after
+choosing a gameplay FPS of 125 instead of Auto, which on JoF sends the same 8 ms step
+with the default `com_maxfps`, so that is likely chance unless their `com_maxfps` was
+below 125 (asked). Verified on Windows 11: unit tests (59 FPS against 40 snapshots a
+second with 17 to 1346 ms hitches: commands at most 31 ms behind the server, the
+clock's own lag, against 47 to 54 ms with the grid; 125 a second at 333 FPS; no stamp
+twice). Not verified: in a game, on JoF, or that Heimdall judges this (it is closed
+source).
+
+## Joining no longer overflows the main thread's stack
+
+02/11/2026, `personal/t1-danger-overflow`: joining JoF's public server (T1_Danger,
+then Vjun3) closed the client with `thread 'main' has overflowed its stack` just
+after `camera starts at`. The built world (`GpuState`, about 600 KiB) went to the
+main thread by value, and each move was a stack copy: `window_event`'s frame was
+3.1 MB and `Destination::poll`, `WorldInstallTask::poll` and the channel's
+`try_recv` about 1.9 MB each, nested past the 8 MiB stack. It is boxed from the
+worker to adoption now; by `dumpbin /disasm` of the release client, `window_event`
+is 0.62 MB and the others under 200 KB. Viewer tests and the map change world shots
+pass; offline joins of a local server did not reproduce the crash (their frames are
+not called from `window_event`). Not yet confirmed on the JoF server in the client.
 
 ## Static profile banners
 
@@ -1764,6 +1826,31 @@ wall's bands and navigation, the totals), world shots of the board at 1080 lines
 and its hover cards (`duel6_sjk_more_achievements`). Not verified: anything in game, the
 counters against real servers (JA+ duel start health, a thermal batted back by a saber,
 throws at Saber Throw 1), the hub accepting the new ids.
+
+## Fishing toy
+
+29/10/2026, `feat/fishing` (PR #278), based on `main` `9f40fded` (Sanji's idea in #ideas):
+`toy_fishing` puts a rod in the right hand (the rifles' ready pose on the torso; in first
+person held in view), a bucket at the feet and a float on the water ahead, or on a small
+pond drawn where there is none, in the installed game's swamp textures
+([client.md](client.md#fishing)). A bite every 20 to 60 seconds, `+use` within about a
+second: nothing 15%, junk 30%, one of 12 fish 55% (each its own model and painted skin),
+counted in `fishing_log.txt`; the bucket holds the last fish caught (`last <id>` in the
+log). An Echo
+the hub drops while fishing waits for a golden bite of its own and comes up on the line;
+fishing brings no Echo the hub did not drop. Collection > Toys has its eleventh row,
+after the Banana peel's (rows 58 high so eleven fit), the quick wheel's catalogue its icon. Five achievements in a Fishing category of
+its own on the board's Fun page (after Box hunt, beside it on the fourth band; merged with
+main's one-category-per-toy board on 02/11/2026), client-counted on servers only
+(`fish_first`, `fish_50`, `fish_kinds`, `echo_angler`, `old_whiskers` hidden), appended at
+the end of `achievements::ALL` and `kyber::REWARDS`. The
+look has the toy `fishing` (main's u32 toy bits, after the Banana peel). No hub change: the hub needs the five ids in its
+catalogue before they unlock online; selling junk (capped credits) is proposed to Sol, not
+built. Verified: fmt, build, the fishing, achievements, kyber and collection tests,
+earlier release builds in game (Slash: the rod in third person, the pond, bites; not yet
+the first-person rod or the Fishing band on the Fun page), world shots of the pond on duel6
+(`rods_at_the_first_spawn`). Not verified: the five ids at the hub, other players seeing a
+rod, an Echo bite online, the rod on custom models.
 
 ## Boombox toy
 
@@ -3880,7 +3967,7 @@ FX (#130); that bit also selects the separate green/blue Protect/Absorb shells
 instead of cyan (#168). Mindtrick hides Force emissions/flamethrower audio,
 with the existing Sight exception (#93); jetpacks already follow this rule.
 Empower uses the advertised full-body/arms/hands set (#132), with the shared
-`cg_empowerEffect` override, while ordinary Push keeps every cached joint.
+`cg_empowerEffect` override (3 hides it), while ordinary Push keeps every cached joint.
 Both settings interfaces include the new controls. Scope contracts are named,
 documented tables, sampled without allocation and reused across actor submission.
 The original six animation regressions are retained and policy/visibility cases

@@ -50,8 +50,12 @@ impl Casino {
         }
     }
 
+    fn mutation_pending(&self) -> bool {
+        self.pending.as_ref().is_some_and(|p| p["action"] != "read")
+    }
+
     fn request(&mut self, action: &str) {
-        if self.pending.is_some() {
+        if self.mutation_pending() {
             return;
         }
         let Ok(token) = sjk_identity::economy_request_token() else {
@@ -74,7 +78,9 @@ impl Casino {
         if crate::player_identity::with_service(|s| s.casino(request.clone())).is_some() {
             self.pending = Some(request);
             self.failed = false;
-            self.message = "Waiting for the hub...".into();
+            if action != "read" || self.data.is_null() {
+                self.message = "Waiting for the hub...".into();
+            }
         } else {
             self.message = "Enable SJK identity in Settings to use your credits.".into();
         }
@@ -198,7 +204,11 @@ impl Casino {
             _ => {}
         }
         if self.game != 0 {
-            self.bet = self.bet.min(500);
+            self.bet = self.bet.min(match self.game {
+                1 if self.straight => 27,
+                2 => 11,
+                _ => 500,
+            });
         }
         if self.game == 3 {
             self.bet = ((self.bet + 1) / 2 * 2).min(500);
@@ -270,7 +280,7 @@ impl Casino {
                 true,
             );
         }
-        let ready = self.pending.is_none() && !self.data.is_null();
+        let ready = !self.mutation_pending() && !self.data.is_null();
         self.words(
             &f,
             &format!(
@@ -568,6 +578,7 @@ impl Casino {
             };
             self.words(&f, &words, 100.0, 770.0, 28.0, color::GOLD);
         }
+        self.words(&f, "Pilot: net win/loss limited to 1000 per 24h, including poker. Straight-up roulette max 27; slots max 11.",100.0,892.0,19.0,color::MUTED);
         self.words(&f, &self.message.clone(), 100.0, 930.0, 20.0, color::QUIET);
         self.button(
             &f,
@@ -624,7 +635,7 @@ impl ViewerConsole {
         }
         self.casino.open = true;
         self.casino.game = game;
-        self.casino.pending = None;
+        self.casino.pending = Some(json!({"action":"read","token":"offline-poll"}));
         self.casino.due = Instant::now() + Duration::from_secs(3600);
         self.casino.data = json!({"revision":1,"credits":12500,"person":"you",
             "tables":[{"id":0,"revision":4,"street":2,"current":10,"min_raise":8,"turn":0,
@@ -746,6 +757,26 @@ mod tests {
         assert_eq!(page.bet, 498);
         page.activate(23);
         assert_eq!(page.bet, 500);
+    }
+    #[test]
+    fn background_read_does_not_disable_snapshot_controls_or_block_an_action() {
+        let mut page = Casino::new();
+        page.data = json!({"credits":1000,"revision":7});
+        page.pending = Some(json!({"action":"read","token":"old"}));
+        assert!(!page.mutation_pending());
+        page.game = 2;
+        page.build([1920., 1080.]);
+        assert!(page.ui.draw_list().commands().iter().any(|c|matches!(c,DrawCommand::Text{text,color,..} if page.ui.stored_text(*text)=="Place wager & spin" && *color==color::TEXT)));
+        // With no service, the action reaches the identity-disabled path instead
+        // of silently returning because a read was pending.
+        page.request("slots");
+        assert!(page.message.contains("Enable SJK identity"));
+        page.pending = Some(json!({"action":"slots","token":"wager"}));
+        page.request("read");
+        assert_eq!(page.pending.as_ref().unwrap()["token"], "wager");
+        assert!(page.mutation_pending());
+        page.build([1920., 1080.]);
+        assert!(page.ui.draw_list().commands().iter().any(|c|matches!(c,DrawCommand::Text{text,color,..} if page.ui.stored_text(*text)=="Place wager & spin" && *color==color::QUIET)));
     }
     #[test]
     fn closing_preserves_an_uncertain_wager_token() {
