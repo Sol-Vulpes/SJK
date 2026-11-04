@@ -52,6 +52,7 @@ Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 - Whispers show whom you write to: the recipient has a line of its own under the chat buttons, the whole name in its colours; with several players who whispered you, `<` and `>` (or Alt+Left and Alt+Right) step between them, and a click on the name lists them all to pick one _(Slash, after Creo's idea)_
 - Vehicle HUD: the speed, ammo and turbo of the vehicle you pilot show beside its health: Text only as numbers around it, SJK radial as cyan, orange and turbo arcs under the crosshair with their numbers; the turbo is red while it recharges, green when ready and bright while it boosts _(Slash, after Kushina's report)_
 - New SJK classic HUD with no background behind it: health and armour bottom left, Force bottom right, and bottom centre your weapon and its ammo on foot, or the vehicle's HP, speed, turbo and each gun's ammo while you pilot one _(Slash)_
+- Fishing: bites come every 15 to 40 seconds (were 20 to 60), and Old Whiskers bites more often the longer you go without it. Echo Angler needs 5 Echoes (was 10). Two new achievements: Beachcomber (every kind of junk) and Steady Hand (10 bites hooked in a row) _(Slash, PR #361)_
 
 ## 2026.1103.2 (Alpha) | 03/11/2026
 
