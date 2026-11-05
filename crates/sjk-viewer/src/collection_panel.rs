@@ -135,6 +135,8 @@ const BOX_HUNT_TOKEN: u16 = 1_304;
 const BANANA_TOKEN: u16 = 1_375;
 /// Fishing's niche on Toys.
 const FISHING_TOKEN: u16 = 1_378;
+/// Mining's niche on Toys (after the toy cards' own switches, [`TOY_OPTION_TOKEN`]).
+const MINING_TOKEN: u16 = 1_394;
 /// The Fishing card's Sell junk button: past the nameplate styles' and the toy
 /// options' tokens, which a click reads by range.
 const SELL_JUNK_TOKEN: u16 = 1_395;
@@ -161,9 +163,9 @@ const BOTH_TOKEN: u16 = 1_306;
 /// How far (frame pixels) a press on the lone saber may move and still be a click.
 const CLICK_SLOP: f32 = 6.0;
 /// The toys the Toys tab shows: Illuminate, the cardboard box, Order 66, the Hax, the
-/// Ragdoll, the Drone, the Boombox, the Monitor, Box hunt, the Banana peel, then
-/// Fishing.
-const TOY_COUNT: usize = 11;
+/// Ragdoll, the Drone, the Boombox, the Monitor, Box hunt, the Banana peel, Fishing,
+/// then Mining.
+const TOY_COUNT: usize = 12;
 /// Each toy's row, in the order of [`Panel::toy`].
 const TOY_TOKENS: [u16; TOY_COUNT] = [
     TOY_TOKEN,
@@ -177,6 +179,7 @@ const TOY_TOKENS: [u16; TOY_COUNT] = [
     BOX_HUNT_TOKEN,
     BANANA_TOKEN,
     FISHING_TOKEN,
+    MINING_TOKEN,
 ];
 /// Each toy row's own switch (25/10/2026): it turns that toy on or off in place, a token
 /// a toy from here on, below [`FAVOURITE_TOKEN`].
@@ -436,6 +439,9 @@ pub(crate) enum PanelAction {
     /// Get the fishing rod out (`true`) or put it away: the same as `toy_fishing`, set
     /// rather than toggled.
     Fishing(bool),
+    /// Take the pickaxe in hand (`true`) or put it away: the same as `toy_mining`, set
+    /// rather than toggled.
+    Mining(bool),
     /// Sell the fished junk to the hub: the same as `fishing_sell`.
     SellJunk,
     /// Set `cg_tag` to this tag's id: the one `toy_tag` sticks.
@@ -621,6 +627,8 @@ pub(crate) struct Inputs<'a> {
     pub(crate) banana: bool,
     /// The fishing rod is out now (kept as [`Self::illuminate`] is).
     pub(crate) fishing: bool,
+    /// The pickaxe is in hand now (kept as [`Self::illuminate`] is).
+    pub(crate) mining: bool,
     /// The Fishing card's catches and junk sale, as the viewer last gave them; none
     /// lists nothing.
     pub(crate) fishing_card: Option<&'a crate::fishing_sell::Card>,
@@ -697,7 +705,7 @@ pub(crate) struct Panel {
     shader: usize,
     /// The toy chosen on Toys: 0 Illuminate, 1 the cardboard box, 2 Order 66, 3 the Hax,
     /// 4 the Ragdoll, 5 the Drone, 6 the Boombox, 7 the Monitor, 8 Box hunt, 9 the Banana
-    /// peel.
+    /// peel, 10 Fishing, 11 Mining.
     toy: usize,
     /// The banner chosen on Banners, which banners the profile holds and the one worn.
     banner: usize,
@@ -743,6 +751,8 @@ pub(crate) struct Panel {
     banana_on: bool,
     /// The fishing rod was out, as the last frame's inputs said.
     fishing_on: bool,
+    /// The pickaxe was in hand, as the last frame's inputs said.
+    mining_on: bool,
     /// See and share nameplates was on, as the last frame's inputs said.
     share_on: bool,
     /// The toys (bits by the Toys tab's order) whose other players' are hidden here, as
@@ -963,6 +973,7 @@ impl Panel {
             box_hunt_on: false,
             banana_on: false,
             fishing_on: false,
+            mining_on: false,
             share_on: false,
             toys_unseen: 0,
             toy_options: 0,
@@ -1283,6 +1294,7 @@ impl Panel {
             Tab::Toys if self.toy == 8 => PanelAction::BoxHunt(!self.box_hunt_on),
             Tab::Toys if self.toy == 9 => PanelAction::Banana(!self.banana_on),
             Tab::Toys if self.toy == FISHING_TOY => PanelAction::Fishing(!self.fishing_on),
+            Tab::Toys if self.toy == 11 => PanelAction::Mining(!self.mining_on),
             Tab::Toys => PanelAction::Illuminate(!illuminate),
             Tab::Nameplates => PanelAction::SeeAndShare(!self.share_on),
             Tab::Tags => self.choose_tag(),
@@ -1939,14 +1951,9 @@ impl Panel {
         match key {
             KeyCode::Escape => return PanelAction::Close,
             KeyCode::KeyV if self.tab == Tab::Shaders => return self.set_grid(!self.grid),
-            // F turns the achievements board's page: General, Fun.
+            // F turns the achievements board's page: General, Fun, Hobbies.
             KeyCode::KeyF if self.tab == Tab::Achievements => {
-                let fun = self.achievement_page == crate::achievements::Page::General;
-                self.set_achievement_page(if fun {
-                    crate::achievements::Page::Fun
-                } else {
-                    crate::achievements::Page::General
-                });
+                self.set_achievement_page(self.achievement_page.next());
             }
             // K waits for a key to bind to the chosen toy.
             KeyCode::KeyK if self.tab == Tab::Toys => self.bind_wait = Some(0),
@@ -2655,6 +2662,7 @@ mod tests {
             box_hunt: false,
             banana: false,
             fishing: false,
+            mining: false,
             fishing_card: None,
             name: "^1Sol^7Vulpes",
             stock: sjk_ui::Color::new(0.16, 0.48, 1.0, 1.0),
