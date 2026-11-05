@@ -40,6 +40,7 @@ Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 - Rain and fog are lighter on the GPU: the fog is worked out at half size and blended back along the edges of what stands in it, about three times less time at the default quality and six times less at Ultra; the fog and the rain now glow towards the sun, and puddles mirror distant buildings and the sky, hazed by the rain _(Sol)_
 - Rain and wind sounds (Settings > Sound, `s_weatherSounds`, off by default): the game's own outdoor rain and wind loops play with the weather, as loud as it falls and blows, a fifth as loud under a roof or indoors _(Sol)_
 - Your log says how old your commands are when they reach the server, a line a minute and the last 10 seconds when a server drops you, so a JoF anti-cheat kick (Heimdall's "Set /cl_timeNudge 0") shows what the server measured _(Sol)_
+- Console: a chat-only view that lists just the chat, to follow a conversation: Settings > Interface "Console: chat only" (`con_chatOnly`, off by default); every line is still kept, switch it off to see them all _(Slash, after Hormorn's idea)_
 
 ## 2026.1105.2 (Alpha) | 05/11/2026
 
