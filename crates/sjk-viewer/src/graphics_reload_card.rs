@@ -7,6 +7,14 @@
 //! stays, without its buttons, until the new world takes over; on a server the loading
 //! screen shows instead. It is drawn in the SJK UI's look in every menu style, and the
 //! menus under it are not drawn and take no input, as under the other cards.
+//!
+//! The same card asks "Restart SJK?" for a setting read only when the client starts
+//! (Settings' No command limits, [`offer_restart`]): at once, over Settings too, with
+//! Restart now (gold, Enter), which quits cleanly and starts the program again
+//! (`crate::update::request_restart`), or Later (Escape), which leaves the setting for
+//! the next start. It comes before a graphics reload, which a restart makes anyway.
+
+use std::sync::atomic::{AtomicBool, Ordering};
 
 use crate::menu::sjk::{Frame, TextTarget, color, key_hint, key_hint_width, kit, text, wrap};
 use crate::menu_widgets::{MenuCanvas, TextFamily};
@@ -44,7 +52,24 @@ const KEYS_RIGHT: f32 = 1824.0;
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) enum Choice {
     Reload,
+    /// Restart SJK now (the restart offer).
+    Restart,
     Later,
+}
+
+/// A setting read only at start was switched in Settings: the next frame asks
+/// "Restart SJK?" ([`offer_restart`]).
+static RESTART_OFFER: AtomicBool = AtomicBool::new(false);
+
+/// Ask "Restart SJK?" on the next frame: a setting read only when the client starts
+/// changed (Settings' No command limits).
+pub(crate) fn offer_restart() {
+    RESTART_OFFER.store(true, Ordering::Relaxed);
+}
+
+/// Whether a restart was offered since the last call.
+pub(crate) fn take_restart_offer() -> bool {
+    RESTART_OFFER.swap(false, Ordering::Relaxed)
 }
 
 pub(crate) struct Card {
@@ -56,6 +81,8 @@ pub(crate) struct Card {
     later: bool,
     /// The world on show is being built again.
     reloading: bool,
+    /// "Restart SJK?" is asked, before any graphics reload.
+    restart: bool,
     /// Shown this frame.
     open: bool,
     ui: MenuCanvas,
@@ -68,6 +95,7 @@ impl Default for Card {
             level: None,
             later: false,
             reloading: false,
+            restart: false,
             open: false,
             ui: MenuCanvas::with_capacities(16, 160, 64),
         }
@@ -103,9 +131,19 @@ impl Card {
         self.later = false;
     }
 
+    /// Ask "Restart SJK?" ([`offer_restart`]).
+    pub(crate) fn offer_restart(&mut self) {
+        self.restart = true;
+    }
+
+    /// Whether "Restart SJK?" is asked: the card shows it at once, over Settings too.
+    pub(crate) fn asks_restart(&self) -> bool {
+        self.restart && !self.reloading
+    }
+
     /// Whether the card has something to show.
     pub(crate) fn wants(&self) -> bool {
-        self.reloading || (!self.changes.is_empty() && !self.later)
+        self.reloading || self.restart || (!self.changes.is_empty() && !self.later)
     }
 
     pub(crate) fn set_open(&mut self, open: bool) {
@@ -116,8 +154,8 @@ impl Card {
         self.open
     }
 
-    /// Enter or Space take Reload now, Escape or Backspace Later; every other key is
-    /// swallowed while the card shows.
+    /// Enter or Space take Reload now (Restart now), Escape or Backspace Later; every
+    /// other key is swallowed while the card shows.
     pub(crate) fn handle_key(&mut self, event: &KeyEvent) -> Option<Choice> {
         if event.state != ElementState::Pressed || event.repeat {
             return None;
@@ -130,7 +168,7 @@ impl Card {
 
     fn key(&mut self, code: KeyCode) -> Option<Choice> {
         let choice = match code {
-            KeyCode::Enter | KeyCode::NumpadEnter | KeyCode::Space => Choice::Reload,
+            KeyCode::Enter | KeyCode::NumpadEnter | KeyCode::Space => self.primary(),
             KeyCode::Escape | KeyCode::Backspace => Choice::Later,
             _ => return None,
         };
@@ -143,18 +181,32 @@ impl Card {
             return None;
         }
         match event.token {
-            Some(RELOAD_TOKEN) => self.choose(Choice::Reload),
+            Some(RELOAD_TOKEN) => self.choose(self.primary()),
             Some(LATER_TOKEN) => self.choose(Choice::Later),
             _ => None,
         }
     }
 
-    /// Nothing is chosen while the world is being built again.
+    /// The gold button's choice: Restart now while a restart is asked, else Reload now.
+    fn primary(&self) -> Choice {
+        if self.asks_restart() {
+            Choice::Restart
+        } else {
+            Choice::Reload
+        }
+    }
+
+    /// Nothing is chosen while the world is being built again. An answer to "Restart
+    /// SJK?" leaves a pending graphics reload to be asked after it.
     fn choose(&mut self, choice: Choice) -> Option<Choice> {
         if self.reloading {
             return None;
         }
-        self.later = true;
+        if self.restart {
+            self.restart = false;
+        } else {
+            self.later = true;
+        }
         Some(choice)
     }
 
@@ -165,6 +217,19 @@ impl Card {
     /// What the card says: its headline and explanation. `on_server` tells the player the
     /// connection stays.
     fn words(&self, on_server: bool) -> (&'static str, String) {
+        if self.asks_restart() {
+            let leave = if on_server {
+                " You leave the server."
+            } else {
+                ""
+            };
+            return (
+                "Restart SJK?",
+                format!(
+                    "No command limits applies after a restart. Restart now saves your                      settings, closes SJK and starts it again.{leave} Later keeps it for                      the next start."
+                ),
+            );
+        }
         if self.reloading {
             return (
                 "Reloading the graphics...",
@@ -205,6 +270,7 @@ impl Card {
         } else {
             buttons_y + BUTTON_HEIGHT + MARGIN - CARD_TOP
         };
+        let restart = self.asks_restart();
         let ui = &mut self.ui;
         ui.begin_transparent(viewport);
         kit::scrim(ui, viewport);
@@ -212,7 +278,7 @@ impl Card {
         text(
             ui,
             TextFamily::Display,
-            format_args!("Graphics"),
+            format_args!("{}", if restart { "SJK" } else { "Graphics" }),
             frame.rect(TEXT_X, CARD_TOP + 30.0, TEXT_WIDTH, 30.0),
             22.0 * s,
             color::GOLD_BRIGHT,
@@ -247,7 +313,7 @@ impl Card {
                 ui,
                 &frame,
                 [right - RELOAD_WIDTH, buttons_y, RELOAD_WIDTH, BUTTON_HEIGHT],
-                "Reload now",
+                if restart { "Restart now" } else { "Reload now" },
                 true,
                 true,
                 false,
@@ -269,10 +335,11 @@ impl Card {
                 LATER_TOKEN,
             );
             let [right, keys_y] = frame.point(KEYS_RIGHT, KEYS_Y);
+            let now = if restart { "restart now" } else { "reload now" };
             let later = key_hint_width(&["Esc"], "later", s);
-            let reload = key_hint_width(&["Enter"], "reload now", s);
+            let reload = key_hint_width(&["Enter"], now, s);
             let x = right - later - reload - 18.0 * s;
-            let x = key_hint(ui, &["Enter"], "reload now", x, keys_y, s);
+            let x = key_hint(ui, &["Enter"], now, x, keys_y, s);
             key_hint(ui, &["Esc"], "later", x + 18.0 * s, keys_y, s);
         }
         ui.finish(RELOAD_TOKEN);
@@ -287,6 +354,9 @@ impl crate::GpuState {
     pub(crate) fn prepare_reload_card(&mut self, covered: bool) -> bool {
         self.sync_graphics_reload();
         self.report_day_sky_guard();
+        if take_restart_offer() {
+            self.graphics_reload.card.offer_restart();
+        }
         let menu_visible = self
             .client_menu
             .as_ref()
@@ -295,7 +365,10 @@ impl crate::GpuState {
             .client_menu
             .as_ref()
             .is_some_and(|menu| menu.is_visible() && menu.on_main_menu());
-        let place = main_menu || (self.game_menu && !menu_visible);
+        // "Restart SJK?" is asked where it was switched, over Settings too.
+        let place = main_menu
+            || (self.game_menu && !menu_visible)
+            || self.graphics_reload.card.asks_restart();
         let console_open = self
             .console
             .as_ref()
@@ -331,11 +404,19 @@ impl crate::GpuState {
 
     /// Act on the player's choice on the card.
     pub(crate) fn reload_card_choice(&mut self, choice: Option<Choice>) {
-        if choice != Some(Choice::Reload) {
-            return;
-        }
-        if let Some(console) = &mut self.console {
-            let _ = console.queue_command("vid_restart");
+        match choice {
+            Some(Choice::Reload) => {
+                if let Some(console) = &mut self.console {
+                    let _ = console.queue_command("vid_restart");
+                }
+            }
+            // Quit as the menus' Quit does (the config is saved on the way out), then
+            // start the program again.
+            Some(Choice::Restart) => {
+                crate::update::request_restart();
+                self.quit_requested = true;
+            }
+            Some(Choice::Later) | None => {}
         }
     }
 }
@@ -378,6 +459,42 @@ mod tests {
         card.offer(&["FXAA"], None);
         assert_eq!(card.key(KeyCode::KeyA), None);
         assert!(card.wants());
+    }
+
+    #[test]
+    fn a_restart_is_asked_first_and_a_reload_after_it() {
+        let mut card = Card::default();
+        card.offer(&["HDR"], None);
+        card.offer_restart();
+        assert!(card.asks_restart() && card.wants());
+        let (headline, words) = card.words(true);
+        assert_eq!(headline, "Restart SJK?");
+        assert!(
+            words.starts_with("No command limits applies after a restart."),
+            "{words}"
+        );
+        assert!(words.contains("You leave the server."), "{words}");
+        assert!(!card.words(false).1.contains("server"));
+        assert_eq!(card.key(KeyCode::KeyA), None, "other keys do nothing");
+        assert_eq!(card.key(KeyCode::Enter), Some(Choice::Restart));
+        // The reload is asked after it.
+        assert!(!card.asks_restart());
+        assert!(card.wants());
+        assert_eq!(card.key(KeyCode::Enter), Some(Choice::Reload));
+
+        // Later puts the restart away and changes nothing else.
+        let mut card = Card::default();
+        card.offer_restart();
+        assert_eq!(card.key(KeyCode::Escape), Some(Choice::Later));
+        assert!(!card.wants());
+        // While the world is being built again, the restart waits.
+        card.offer_restart();
+        card.reloading(true);
+        assert!(!card.asks_restart());
+        assert_eq!(card.key(KeyCode::Enter), None);
+        card.reloaded();
+        assert!(card.asks_restart());
+        assert_eq!(card.key(KeyCode::Space), Some(Choice::Restart));
     }
 
     #[test]

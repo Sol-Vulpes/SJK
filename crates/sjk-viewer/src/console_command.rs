@@ -19,10 +19,6 @@ impl ViewerConsole {
     pub(crate) fn take_quit(&mut self) -> bool {
         std::mem::take(&mut self.pending_quit)
     }
-    /// Quit as the `quit` command does (Settings' restart for No command limits).
-    pub(crate) fn request_quit(&mut self) {
-        self.pending_quit = true;
-    }
     /// Whether the Profile page's Change name was pressed since the last call.
     pub(crate) fn take_name_edit(&mut self) -> bool {
         std::mem::take(&mut self.pending_name_edit)

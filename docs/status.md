@@ -56,16 +56,21 @@ there), the grid's pacing instead of the one-a-frame pacing of 02/11, and the fr
 own stamp instead of the previous frame's of 07/11. That is the command timing of
 2026.1028.1 with `gameplay_fps_nocap 1`: `cl_packetdup`, `cl_maxpackets`, the packet
 pacer and the gameplay FPS step are unchanged since that release. Turning it on asks
-twice (Heimdall may kick for time nudge), then offers a restart, which quits cleanly
-and starts the program again (`update::request_restart`). Verified on Windows 10: unit
-tests (the warnings, the restart offer and what cancels them, through the menu; a new
+twice (Heimdall may kick for time nudge), then asks "Restart SJK?" on the reload card,
+at once and over Settings, so a press on the row never restarts by itself: Restart now
+quits cleanly and starts the program again (`update::request_restart`), Later leaves it
+for the next start. Verified on Windows 10: unit
+tests (the warnings and what cancels them, through the menu, and that turning it on
+asks the card and never quits by itself; the card asks the restart before a reload,
+Later puts it away, and it waits while the world is built again; a new
 start with it on gives 7 ms steps, the grid and fresh stamps on JoF, with it off 8 ms,
 one a frame and previous-frame stamps; a `pmove_fixed` server keeps its step), fmt,
 build, clippy, workspace tests, the startup check. Played at 142 FPS by Kushina, with
 `gameplay_fps_nocap 0`: turned on from Settings, it stayed on after the client was
-quit and started again, the log named it at start, and it played well. Not verified:
-the fourth press's restart in a game (the client was quit by hand), other machines, or
-whether Heimdall kicks players with it on.
+quit and started again, the log named it at start, and it played well. The Restart SJK?
+card in a game, turned on from Settings with the switch off at start: Later kept it on,
+and Restart now quit and started the client again, whose log named it. Not verified:
+other machines, or whether Heimdall kicks players with it on.
 
 ## Commands carry the previous frame's server time, as stock
 

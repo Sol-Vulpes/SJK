@@ -2305,6 +2305,14 @@ not drawn and take no input. The same look in every menu style, on the 16:9 fram
 - **Reloading:** on the main page the card stays while the menu map is built again,
   without its buttons: "Reloading the graphics..." and that it takes a few seconds.
   On a server the loading screen shows instead.
+- **Restart:** a setting read only when the client starts (No command limits,
+  [networking](networking.md)) asks on the same card at once, over Settings too, so a
+  press on its row never restarts by itself (Kushina, 07/11/2026): "SJK" in gold,
+  "Restart SJK?", that No command limits applies after a restart, that Restart now saves
+  the settings, closes SJK and starts it again (on a server, that the player leaves
+  it) and that Later keeps it for the next start. Buttons Later and Restart now (gold);
+  keys Enter restart now, Esc later. It comes before a pending graphics reload, which
+  is asked after it.
 
 ## Small graphics cards
 

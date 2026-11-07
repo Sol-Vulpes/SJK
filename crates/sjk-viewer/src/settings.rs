@@ -884,8 +884,8 @@ impl SettingsMenu {
             self.refresh(console);
             return;
         }
-        // Turning off every client-side command limit asks twice first, then offers
-        // the restart it needs ([`limits_off_confirm`]); turning it off asks nothing.
+        // Turning off every client-side command limit asks twice first, then "Restart
+        // SJK?" on a card ([`limits_off_confirm`]); turning it off asks nothing.
         if setting.cvar == crate::server_caps::LIMITS_OFF_CVAR {
             let on = console.cvar(setting.cvar).is_some_and(|value| match value {
                 CvarValue::Bool(on) => *on,
@@ -896,13 +896,9 @@ impl SettingsMenu {
                     self.refresh(console);
                     return;
                 }
-                limits_off_confirm::Press::Restart => {
-                    // A clean exit saves the config; the client then starts again.
-                    crate::update::request_restart();
-                    console.request_quit();
-                    return;
-                }
-                limits_off_confirm::Press::TurnOn | limits_off_confirm::Press::TurnOff => {}
+                // It applies at the next start: the card asks to restart now.
+                limits_off_confirm::Press::TurnOn => crate::graphics_reload::card::offer_restart(),
+                limits_off_confirm::Press::TurnOff => {}
             }
         } else {
             limits_off_confirm::cancel();
@@ -1646,8 +1642,8 @@ mod tests {
     }
 
     /// `cl_noCommandLimits` from Settings: two warnings, the third press turns it on
-    /// and offers the restart, the fourth restarts (quits and asks to start again);
-    /// one press turns it off; another row starts again or declines the restart.
+    /// and asks "Restart SJK?" on the card (nothing quits from Settings itself); one
+    /// press turns it off, asking nothing; another row starts the warnings again.
     #[test]
     fn no_command_limits_asks_twice_then_turns_on() {
         let cvar = crate::server_caps::LIMITS_OFF_CVAR;
@@ -1668,7 +1664,9 @@ mod tests {
         menu.open_tab(&console, tab);
         menu.selected = row(&menu, cvar);
         let on = |console: &ViewerConsole| switch_on(console.cvar(cvar).unwrap());
+        let restart_asked = crate::graphics_reload::card::take_restart_offer;
         limits_off_confirm::cancel();
+        restart_asked();
 
         menu.adjust(&mut console, 1);
         assert!(!on(&console));
@@ -1676,47 +1674,17 @@ mod tests {
         menu.adjust(&mut console, 1);
         assert!(!on(&console));
         assert_eq!(help::help(cvar), Some(limits_off_confirm::SECOND));
-        assert!(!console.take_quit());
+        assert!(!restart_asked(), "no restart is asked before it is on");
         menu.adjust(&mut console, 1);
         assert!(on(&console), "the third press turns it on");
-        assert_eq!(help::help(cvar), Some(limits_off_confirm::RESTART));
-        assert!(
-            !console.take_quit(),
-            "turning it on does not quit by itself"
-        );
-        assert!(!crate::update::take_restart_request());
-
-        menu.adjust(&mut console, 1);
-        assert!(on(&console), "the restart keeps it on");
-        assert!(console.take_quit(), "the fourth press quits");
-        assert!(
-            crate::update::take_restart_request(),
-            "and starts SJK again"
-        );
+        assert!(restart_asked(), "and asks to restart");
         assert!(!limits_off_confirm::pending());
+        assert!(!console.take_quit(), "Settings itself never quits");
 
         menu.adjust(&mut console, 1);
         assert!(!on(&console), "one press turns it off");
+        assert!(!restart_asked(), "turning it off asks nothing");
         assert!(!limits_off_confirm::pending());
-        assert!(!console.take_quit());
-
-        // Another row declines the restart: it stays on, and nothing quits.
-        for _ in 0..3 {
-            menu.adjust(&mut console, 1);
-        }
-        assert!(on(&console));
-        menu.selected = row(&menu, crate::server_caps::OVERRIDE_CVAR);
-        menu.adjust(&mut console, 1);
-        menu.adjust(&mut console, 1);
-        menu.selected = row(&menu, cvar);
-        assert!(!limits_off_confirm::pending());
-        menu.adjust(&mut console, 1);
-        assert!(
-            !on(&console),
-            "after a declined restart one press turns it off"
-        );
-        assert!(!console.take_quit());
-        assert!(!crate::update::take_restart_request());
 
         // Another row's change starts the warnings again.
         menu.adjust(&mut console, 1);
@@ -1729,6 +1697,8 @@ mod tests {
         menu.adjust(&mut console, 1);
         menu.adjust(&mut console, 1);
         assert!(!on(&console), "two presses after a cancel only warn");
+        assert!(!restart_asked());
+        assert!(!console.take_quit());
         limits_off_confirm::cancel();
     }
 

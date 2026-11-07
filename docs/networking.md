@@ -658,10 +658,11 @@ unlimited commands (Kushina, 07/11/2026: lifted mid-session with `gameplay_fps_n
 the commands went back to 7 ms steps at once but the hitches stayed until a reconnect).
 Settings asks twice before turning it on, since Heimdall may kick for time nudge with
 it ([limits_off_confirm.rs](../crates/sjk-viewer/src/settings/limits_off_confirm.rs)),
-then offers the restart: one more press quits cleanly (the config is saved) and starts
-the program again with the same arguments, as after an update
-(`update::request_restart`); anything else leaves it for the next start. The
-console sets it without asking. What the stock game bounds stays: `cl_packetdup` 0 to 5
+then asks "Restart SJK?" on the reload card, at once and over Settings
+([sjk-ui.md](sjk-ui.md#graphics-reload)), so a press on the row never restarts by
+itself: Restart now quits cleanly (the config is saved) and starts the program again
+with the same arguments, as after an update (`update::request_restart`); Later leaves
+it for the next start. The console sets it without asking. What the stock game bounds stays: `cl_packetdup` 0 to 5
 and `cl_maxpackets` 15 to 1000.
 A `pmove_fixed` server's step is not lifted by either: the server
 itself moves everyone in it. On any other server, inputs
