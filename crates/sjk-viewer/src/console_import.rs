@@ -382,6 +382,63 @@ mod tests {
         assert_eq!(console.server_step_floor(), None);
     }
 
+    /// `cl_noCommandLimits` is read once when the client starts: on, no client-side
+    /// limit runs on a known server (no step floor, the grid's pacing, the frame's own
+    /// stamp); switched later, it waits for the next start.
+    #[test]
+    fn no_command_limits_applies_from_the_start_and_skips_every_limit() {
+        let jof = sjk_mod::Server {
+            kind: sjk_mod::ServerKind::JaPlus,
+            address: "127.0.0.1:29070".into(),
+            info: "\\V\\2.5B0".into(),
+        };
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("config.cfg");
+
+        // Off at start: JoF's limits hold, and switching it on now changes nothing yet.
+        let mut console = ViewerConsole::new(path.clone()).unwrap();
+        console.set_frame_cap(142);
+        console.set_gameplay_fps(142).unwrap();
+        console.server_cap = crate::server_caps::find(&jof);
+        console.server_family = jof.family();
+        assert!(!console.command_limits_off());
+        assert_eq!(console.command_step(), 8, "JoF takes 125 a second");
+        assert_eq!(
+            console.command_pacing(),
+            sjk_client::command_rate::Pacing::OnePerFrame
+        );
+        assert!(console.command_stamps_previous_frame());
+        assert!(console.set_cvar(crate::server_caps::LIMITS_OFF_CVAR, "1"));
+        assert!(!console.command_limits_off(), "applies after a restart");
+        assert_eq!(console.command_step(), 8);
+        console.shell.save().unwrap();
+        drop(console);
+
+        // On at the next start: none of them runs.
+        let mut console = ViewerConsole::new(path).unwrap();
+        console.set_frame_cap(142);
+        console.server_cap = crate::server_caps::find(&jof);
+        console.server_family = jof.family();
+        assert!(console.command_limits_off());
+        assert_eq!(console.server_step_floor(), None);
+        assert_eq!(console.command_step(), 7, "142 FPS: 7 ms steps");
+        assert_eq!(
+            console.command_pacing(),
+            sjk_client::command_rate::Pacing::Grid
+        );
+        assert!(!console.command_stamps_previous_frame());
+        // Switching it off mid-session waits for the next start too.
+        assert!(console.set_cvar(crate::server_caps::LIMITS_OFF_CVAR, "0"));
+        assert!(console.command_limits_off());
+        // What the stock game bounds still holds: a pmove_fixed server's step.
+        console
+            .shell
+            .cvars
+            .restore_text("pmove_fixed", "1")
+            .unwrap();
+        assert_eq!(console.command_step(), 8);
+    }
+
     #[test]
     fn a_partial_file_only_adds_its_keys() {
         let (_directory, mut console) = console();

@@ -647,7 +647,23 @@ serverinfo `V` 2.5B0) at 8 ms: they are not `pmove_fixed` (they report 0),
 yet faster commands made the game unplayable there (Sol, 11/10/2026), and JoF EJK
 sends them 125 a second. The player lifts every listed cap with `gameplay_fps_nocap 1`
 (archived, 0; Settings > Display > Ignore server caps), and the log names the cap when
-a listed server is joined. A `pmove_fixed` server's step is not lifted: the server
+a listed server is joined.
+`cl_noCommandLimits 1` (archived, 0; Settings > Display > No command limits,
+`LIMITS_OFF_CVAR` in [server_caps.rs](../crates/sjk-viewer/src/server_caps.rs)) runs no
+client-side command limit at all: no listed step floor, the grid's pacing instead of
+`Pacing::OnePerFrame`, and every command stamped with the frame's own clock reading, as
+before 07/11/2026, instead of the previous frame's. The client reads it once, after the
+config loads, and keeps it until it restarts, so a session never mixes limited and
+unlimited commands (Kushina, 07/11/2026: lifted mid-session with `gameplay_fps_nocap`,
+the commands went back to 7 ms steps at once but the hitches stayed until a reconnect).
+Settings asks twice before turning it on, since Heimdall may kick for time nudge with
+it ([limits_off_confirm.rs](../crates/sjk-viewer/src/settings/limits_off_confirm.rs)),
+then offers the restart: one more press quits cleanly (the config is saved) and starts
+the program again with the same arguments, as after an update
+(`update::request_restart`); anything else leaves it for the next start. The
+console sets it without asking. What the stock game bounds stays: `cl_packetdup` 0 to 5
+and `cl_maxpackets` 15 to 1000.
+A `pmove_fixed` server's step is not lifted by either: the server
 itself moves everyone in it. On any other server, inputs
 that do not go through at a step shorter than 8 ms open the gameplay FPS card by
 themselves with 125 suggested

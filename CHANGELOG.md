@@ -34,6 +34,7 @@ Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 
 - Rig models' hair and capes can trail behind a running player and keep out of the arms (`drag`, `arms`) _(Kushina, PR #377)_
 - Rig models' chains can take `limit`, `clearance` and `layer` lines, and a bone's middle now collides with the body _(Kushina, PR #374)_
+- Settings > Display > No command limits (`cl_noCommandLimits 1`, applies after a restart, asks twice, then offers to restart SJK at once): no client-side command limit runs, no server caps, one-a-frame pacing or previous-frame stamps, so 142 FPS moves in 7 ms steps on JoF too; Heimdall may kick for time nudge with it on _(Kushina)_
 
 ## 2026.1107.1 (Alpha) | 07/11/2026
 

@@ -313,6 +313,12 @@ const SJK_TERMS: &[&str] = &[
 /// The plugin options' rows are described by their mods' tables
 /// ([`super::plugin_rows`]).
 pub(super) fn help(cvar: &str) -> Option<&'static str> {
+    // Turning `cl_noCommandLimits` on asks twice ([`super::limits_off_confirm`]).
+    if cvar.eq_ignore_ascii_case(crate::server_caps::LIMITS_OFF_CVAR)
+        && let Some(warning) = super::limits_off_confirm::warning()
+    {
+        return Some(warning);
+    }
     HELP.iter()
         .find(|(name, _)| name.eq_ignore_ascii_case(cvar))
         .map(|&(name, text)| {
@@ -421,6 +427,10 @@ const HELP: &[(&str, &str)] = &[
     (
         crate::server_caps::OVERRIDE_CVAR,
         "On, Gameplay FPS applies on servers SJK knows to cap commands (JoF's: 125) too. Inputs may stop going through.",
+    ),
+    (
+        crate::server_caps::LIMITS_OFF_CVAR,
+        "On, no client-side command limit runs: no server caps, one-a-frame pacing or previous-frame stamps.",
     ),
     (
         crate::gameplay_fps::CVAR,

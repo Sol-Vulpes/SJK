@@ -682,8 +682,21 @@ pub(crate) fn clean_up_old_files() {
     }
 }
 
-/// Start the updated program when the client exits after an install, with the
-/// arguments this one had. Call it once the event loop has ended.
+/// Start the program again when the client exits, as after an install: for a
+/// setting read only at start (Settings' No command limits). The caller quits.
+pub(crate) fn request_restart() {
+    RESTART.store(true, Ordering::SeqCst);
+}
+
+/// Whether a restart was asked for since the last call, which clears it (tests).
+#[cfg(test)]
+pub(crate) fn take_restart_request() -> bool {
+    RESTART.swap(false, Ordering::SeqCst)
+}
+
+/// Start the updated program when the client exits after an install, or after
+/// [`request_restart`], with the arguments this one had. Call it once the event loop
+/// has ended.
 pub(crate) fn restart_if_requested() {
     if !RESTART.swap(false, Ordering::SeqCst) {
         return;
