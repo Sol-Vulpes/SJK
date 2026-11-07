@@ -177,6 +177,11 @@ pub(super) const VIDEO: &[Setting] = &[
         kind: ValueKind::Bool,
     },
     Setting {
+        label: "No command limits (restart)",
+        cvar: crate::server_caps::LIMITS_OFF_CVAR,
+        kind: ValueKind::Bool,
+    },
+    Setting {
         label: "Detect refresh rate",
         cvar: crate::runtime_settings::MONITOR_CAP_CVAR,
         kind: ValueKind::Bool,

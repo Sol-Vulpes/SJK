@@ -170,6 +170,16 @@ impl SettingsMenu {
         if event.kind != UiEventKind::Activate {
             return SettingsResult::None;
         }
+        // A click anywhere but the `cl_noCommandLimits` row (a tab, Back, another
+        // row) starts its warnings again ([`super::limits_off_confirm`]).
+        if super::limits_off_confirm::pending()
+            && self
+                .setting_row(token)
+                .and_then(|row| self.rows().get(row))
+                .is_none_or(|setting| setting.cvar != crate::server_caps::LIMITS_OFF_CVAR)
+        {
+            super::limits_off_confirm::cancel();
+        }
         // Classic+: a segment or a reset button acts at once.
         if let Some(control) = super::classic_view::RowControl::of(token) {
             self.activate_control(console, control);

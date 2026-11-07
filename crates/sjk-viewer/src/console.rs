@@ -346,6 +346,10 @@ pub(crate) struct ViewerConsole {
     server_family: Option<&'static sjk_mod::KnownServer>,
     /// `gameplay_fps_nocap`: 1 lifts the known caps.
     caps_lifted: console_cvars::IntegerSetting,
+    /// `cl_noCommandLimits` as the config set it when the client started
+    /// ([`crate::server_caps::LIMITS_OFF_CVAR`]): kept until the client restarts,
+    /// so a session never mixes limited and unlimited commands.
+    command_limits_off: bool,
     /// Whether the server takes the inputs at that step ([`crate::input_health`]).
     input_health: crate::input_health::InputHealth,
     pmove_fixed: console_cvars::IntegerSetting,
@@ -511,15 +515,25 @@ impl ViewerConsole {
     /// server's own client's way ([`crate::server_caps`]), unless the player lifted the
     /// caps, else one per slot of the grid.
     pub(crate) fn command_pacing(&self) -> sjk_client::command_rate::Pacing {
+        if self.command_limits_off {
+            return Default::default();
+        }
         self.server_cap
             .filter(|_| !self.server_caps_lifted() && self.pmove_fixed_msec().is_none())
             .map_or_else(Default::default, |cap| cap.pacing)
     }
 
     /// Whether commands carry the clock as the previous frame read it, as stock's
-    /// do: on every server but SJK's own ([`crate::server_caps::FRESH_STAMPS`]).
+    /// do: on every server but SJK's own ([`crate::server_caps::FRESH_STAMPS`]), and
+    /// never with `cl_noCommandLimits` on.
     pub(crate) fn command_stamps_previous_frame(&self) -> bool {
-        crate::server_caps::stamps_previous_frame(self.server_family)
+        !self.command_limits_off && crate::server_caps::stamps_previous_frame(self.server_family)
+    }
+
+    /// Whether `cl_noCommandLimits` was on when the client started: no client-side
+    /// command limit runs ([`crate::server_caps::LIMITS_OFF_CVAR`]).
+    pub(crate) fn command_limits_off(&self) -> bool {
+        self.command_limits_off
     }
 
     /// The server's known command cap ([`crate::server_caps`]), lifted or not.
@@ -540,6 +554,9 @@ impl ViewerConsole {
     /// The shortest step this server takes, when it is known to cap commands and
     /// the player has not lifted the caps.
     pub(crate) fn server_step_floor(&self) -> Option<i32> {
+        if self.command_limits_off {
+            return None;
+        }
         self.server_cap
             .filter(|_| !self.server_caps_lifted())
             .map(|cap| cap.step)

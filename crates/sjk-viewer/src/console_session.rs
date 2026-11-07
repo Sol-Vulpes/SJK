@@ -228,6 +228,11 @@ impl ViewerConsole {
         )?;
         let caps_lifted =
             console_cvars::IntegerSetting::bind(&mut cvars, crate::server_caps::OVERRIDE_CVAR, 0)?;
+        let limits_off = console_cvars::IntegerSetting::bind(
+            &mut cvars,
+            crate::server_caps::LIMITS_OFF_CVAR,
+            0,
+        )?;
         let pmove_fixed = console_cvars::IntegerSetting::bind(&mut cvars, "pmove_fixed", 0)?;
         let pmove_msec = console_cvars::IntegerSetting::bind(&mut cvars, "pmove_msec", 8)?;
         let socket = super::socket::State::bind(&mut cvars)?;
@@ -344,6 +349,16 @@ impl ViewerConsole {
             // rather than opening the console.
             crate::log::progress(format_args!(
                 "could not load config: {error}; settings will NOT be saved until it loads cleanly"
+            ));
+        }
+        // Read once, as the saved config set it: switching it later applies at the
+        // next start (`server_caps::LIMITS_OFF_CVAR`).
+        let command_limits_off = limits_off.enabled();
+        if command_limits_off {
+            crate::log::progress(format_args!(
+                "{} 1: no client-side command limit runs this session (no server caps, \
+                 one-a-frame pacing or previous-frame stamps)",
+                crate::server_caps::LIMITS_OFF_CVAR
             ));
         }
         window_options::discard_retired(&mut shell.cvars);
@@ -694,6 +709,7 @@ impl ViewerConsole {
             server_cap: None,
             server_family: None,
             caps_lifted,
+            command_limits_off,
             input_health: Default::default(),
             pmove_fixed,
             pmove_msec,
@@ -1036,7 +1052,9 @@ impl ViewerConsole {
                 "gameplay FPS: {} servers take {} commands a second at most{}",
                 cap.name,
                 cap.per_second(),
-                if self.server_caps_lifted() {
+                if self.command_limits_off() {
+                    ", but cl_noCommandLimits 1 turns every client-side limit off"
+                } else if self.server_caps_lifted() {
                     ", but gameplay_fps_nocap 1 lifts the cap"
                 } else {
                     " (gameplay_fps_nocap 1 lifts it)"

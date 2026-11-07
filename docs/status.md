@@ -46,6 +46,27 @@ Not verified: in a game on Linux and macOS, other machines or other rigs; arms
 and head are not capsules and the mesh itself is not checked, so a sharp pose can show
 cloth through, and a fast leg can get about a unit further into a loose flap for a moment.
 
+## No command limits: a switch that runs none of the client's command limits
+
+07/11/2026, `feat/unlocked-command-timing` from `main` `f70925b5` (Kushina). Settings >
+Display > No command limits (`cl_noCommandLimits`, off by default) is read once after the
+config loads and kept until the client restarts. On, none of the client-side command
+limits runs: no known server's step floor (JoF's 8 ms, so 142 FPS moves in 7 ms steps
+there), the grid's pacing instead of the one-a-frame pacing of 02/11, and the frame's
+own stamp instead of the previous frame's of 07/11. That is the command timing of
+2026.1028.1 with `gameplay_fps_nocap 1`: `cl_packetdup`, `cl_maxpackets`, the packet
+pacer and the gameplay FPS step are unchanged since that release. Turning it on asks
+twice (Heimdall may kick for time nudge), then offers a restart, which quits cleanly
+and starts the program again (`update::request_restart`). Verified on Windows 10: unit
+tests (the warnings, the restart offer and what cancels them, through the menu; a new
+start with it on gives 7 ms steps, the grid and fresh stamps on JoF, with it off 8 ms,
+one a frame and previous-frame stamps; a `pmove_fixed` server keeps its step), fmt,
+build, clippy, workspace tests, the startup check. Played at 142 FPS by Kushina, with
+`gameplay_fps_nocap 0`: turned on from Settings, it stayed on after the client was
+quit and started again, the log named it at start, and it played well. Not verified:
+the fourth press's restart in a game (the client was quit by hand), other machines, or
+whether Heimdall kicks players with it on.
+
 ## Commands carry the previous frame's server time, as stock
 
 07/11/2026, `fix/command-stamp-previous-frame` from `main` `92623e3b`. A frame's commands

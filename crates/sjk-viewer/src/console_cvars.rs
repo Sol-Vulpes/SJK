@@ -1518,6 +1518,14 @@ pub(super) fn register_daily_cvars(cvars: &mut CvarRegistry) -> Result<(), sjk_s
             archive,
             "1 ignores the servers SJK knows to cap commands (JoF's at 125 a second): gameplay_fps applies as set there too",
         ),
+        // SJK's: read once at start; 1 runs no client-side command limit at all
+        // (`server_caps::LIMITS_OFF_CVAR`).
+        CvarDefinition::new(
+            crate::server_caps::LIMITS_OFF_CVAR,
+            0_i64,
+            archive,
+            "1 (applies after a restart) runs no client-side command limit: no server caps, one-a-frame pacing or previous-frame stamps. Heimdall (JoF's anti-cheat) may kick for time nudge with it on",
+        ),
         // SJK's: the frame rate whose movement the player wants, apart from the
         // frames drawn, or 0 to follow the FPS cap (`command_rate`, `gameplay_fps.rs`).
         CvarDefinition::new(

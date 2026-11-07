@@ -10,6 +10,14 @@
 /// 1 lifts every cap in [`KNOWN`]: the gameplay FPS applies as set.
 pub(crate) const OVERRIDE_CVAR: &str = "gameplay_fps_nocap";
 
+/// 1, read once when the client starts: no client-side command limit runs at all.
+/// No known server's step floor or pacing ([`KNOWN`]), and every command carries
+/// the frame's own clock reading instead of the previous frame's (as on
+/// [`FRESH_STAMPS`]' servers). What the stock game itself bounds stays:
+/// `cl_packetdup` 0 to 5, `cl_maxpackets` 15 to 1000, a `pmove_fixed` server's step.
+/// Heimdall (JoF's anti-cheat) may kick for time nudge with it on.
+pub(crate) const LIMITS_OFF_CVAR: &str = "cl_noCommandLimits";
+
 /// A server family's shortest command step.
 #[derive(Debug, Eq, PartialEq)]
 pub(crate) struct ServerCap {

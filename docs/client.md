@@ -2625,7 +2625,9 @@ FPS cap, so the movement is what the other clients give at that cap, and a serve
 fixes the step (`pmove_fixed`) uses its own, and the servers known to cap commands
 (JoF's, at 125 a second; the list in
 [server_caps.rs](../crates/sjk-viewer/src/server_caps.rs)) keep their cap unless
-Settings > Display > Ignore server caps (`gameplay_fps_nocap 1`) lifts it; a number from
+Settings > Display > Ignore server caps (`gameplay_fps_nocap 1`) lifts it, and No command
+limits (`cl_noCommandLimits 1`, after a restart) runs no client-side limit at all
+([networking](networking.md)); a number from
 20 to 1000 keeps that
 movement whatever the FPS cap. Players kept asking Sol how the frame rate and the
 movement relate (11/10/2026), so it is asked where they arrive: First setup's second

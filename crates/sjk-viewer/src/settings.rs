@@ -14,6 +14,7 @@ mod display;
 mod groups;
 mod help;
 mod hud_picker;
+mod limits_off_confirm;
 pub(crate) mod mode;
 mod numeric;
 mod plugin_rows;
@@ -676,6 +677,26 @@ impl SettingsMenu {
         let PhysicalKey::Code(key) = event.physical_key else {
             return SettingsResult::None;
         };
+        // A pending `cl_noCommandLimits` warning takes only a fresh press of a key that
+        // switches the row; a held key's repeats or any other key start again
+        // ([`limits_off_confirm`]).
+        if limits_off_confirm::pending()
+            && (event.repeat
+                || !matches!(
+                    key,
+                    KeyCode::Enter
+                        | KeyCode::NumpadEnter
+                        | KeyCode::ArrowLeft
+                        | KeyCode::ArrowRight
+                        | KeyCode::KeyA
+                        | KeyCode::KeyD
+                ))
+        {
+            limits_off_confirm::cancel();
+            if event.repeat {
+                return SettingsResult::None;
+            }
+        }
         if self.wheel.is_open() {
             return self.wheel_key(key, event.text.as_deref(), console);
         }
@@ -862,6 +883,29 @@ impl SettingsMenu {
             set_choice(console, cvar, next);
             self.refresh(console);
             return;
+        }
+        // Turning off every client-side command limit asks twice first, then offers
+        // the restart it needs ([`limits_off_confirm`]); turning it off asks nothing.
+        if setting.cvar == crate::server_caps::LIMITS_OFF_CVAR {
+            let on = console.cvar(setting.cvar).is_some_and(|value| match value {
+                CvarValue::Bool(on) => *on,
+                value => switch_on(value),
+            });
+            match limits_off_confirm::press(on) {
+                limits_off_confirm::Press::Warn => {
+                    self.refresh(console);
+                    return;
+                }
+                limits_off_confirm::Press::Restart => {
+                    // A clean exit saves the config; the client then starts again.
+                    crate::update::request_restart();
+                    console.request_quit();
+                    return;
+                }
+                limits_off_confirm::Press::TurnOn | limits_off_confirm::Press::TurnOff => {}
+            }
+        } else {
+            limits_off_confirm::cancel();
         }
         let next = match (setting.kind(), console.cvar(setting.cvar)) {
             (ValueKind::Bool, Some(CvarValue::Bool(value))) => (!value).to_string(),
@@ -1599,6 +1643,93 @@ mod tests {
             menu.adjust(&mut console, 1);
             assert_eq!(switch_on(console.cvar(cvar).unwrap()), before, "{cvar}");
         }
+    }
+
+    /// `cl_noCommandLimits` from Settings: two warnings, the third press turns it on
+    /// and offers the restart, the fourth restarts (quits and asks to start again);
+    /// one press turns it off; another row starts again or declines the restart.
+    #[test]
+    fn no_command_limits_asks_twice_then_turns_on() {
+        let cvar = crate::server_caps::LIMITS_OFF_CVAR;
+        let (_directory, mut console) = console();
+        let mut menu = SettingsMenu::new();
+        let tab = (0..menu.tabs().len())
+            .find(|&tab| {
+                menu.open_tab(&console, tab);
+                menu.rows().iter().any(|setting| setting.cvar == cvar)
+            })
+            .expect("a Settings row");
+        let row = |menu: &SettingsMenu, cvar: &str| {
+            menu.rows()
+                .iter()
+                .position(|setting| setting.cvar == cvar)
+                .unwrap()
+        };
+        menu.open_tab(&console, tab);
+        menu.selected = row(&menu, cvar);
+        let on = |console: &ViewerConsole| switch_on(console.cvar(cvar).unwrap());
+        limits_off_confirm::cancel();
+
+        menu.adjust(&mut console, 1);
+        assert!(!on(&console));
+        assert_eq!(help::help(cvar), Some(limits_off_confirm::FIRST));
+        menu.adjust(&mut console, 1);
+        assert!(!on(&console));
+        assert_eq!(help::help(cvar), Some(limits_off_confirm::SECOND));
+        assert!(!console.take_quit());
+        menu.adjust(&mut console, 1);
+        assert!(on(&console), "the third press turns it on");
+        assert_eq!(help::help(cvar), Some(limits_off_confirm::RESTART));
+        assert!(
+            !console.take_quit(),
+            "turning it on does not quit by itself"
+        );
+        assert!(!crate::update::take_restart_request());
+
+        menu.adjust(&mut console, 1);
+        assert!(on(&console), "the restart keeps it on");
+        assert!(console.take_quit(), "the fourth press quits");
+        assert!(
+            crate::update::take_restart_request(),
+            "and starts SJK again"
+        );
+        assert!(!limits_off_confirm::pending());
+
+        menu.adjust(&mut console, 1);
+        assert!(!on(&console), "one press turns it off");
+        assert!(!limits_off_confirm::pending());
+        assert!(!console.take_quit());
+
+        // Another row declines the restart: it stays on, and nothing quits.
+        for _ in 0..3 {
+            menu.adjust(&mut console, 1);
+        }
+        assert!(on(&console));
+        menu.selected = row(&menu, crate::server_caps::OVERRIDE_CVAR);
+        menu.adjust(&mut console, 1);
+        menu.adjust(&mut console, 1);
+        menu.selected = row(&menu, cvar);
+        assert!(!limits_off_confirm::pending());
+        menu.adjust(&mut console, 1);
+        assert!(
+            !on(&console),
+            "after a declined restart one press turns it off"
+        );
+        assert!(!console.take_quit());
+        assert!(!crate::update::take_restart_request());
+
+        // Another row's change starts the warnings again.
+        menu.adjust(&mut console, 1);
+        assert!(limits_off_confirm::pending());
+        menu.selected = row(&menu, crate::server_caps::OVERRIDE_CVAR);
+        menu.adjust(&mut console, 1);
+        assert!(!limits_off_confirm::pending());
+        menu.adjust(&mut console, 1);
+        menu.selected = row(&menu, cvar);
+        menu.adjust(&mut console, 1);
+        menu.adjust(&mut console, 1);
+        assert!(!on(&console), "two presses after a cancel only warn");
+        limits_off_confirm::cancel();
     }
 
     #[test]
