@@ -285,6 +285,10 @@ pub(crate) struct ViewerConsole {
     fishing_card: crate::fishing_sell::Card,
     /// The Fishing card's Sell junk button was pressed.
     pending_fishing_sell: bool,
+    /// A WHEEL OF DOOM of the player's runs, mirrored as [`Self::order66_on`] is.
+    wheel_of_doom_on: bool,
+    /// The Toys tab pressed the WHEEL OF DOOM's switch, not yet taken.
+    pending_wheel_of_doom: bool,
     /// The Monitor toy is on, mirrored as [`Self::order66_on`] is.
     monitor_on: bool,
     /// The Toys tab asked to turn the Monitor on (`true`) or off, not yet taken.
@@ -350,6 +354,8 @@ pub(crate) struct ViewerConsole {
     /// ([`crate::server_caps::LIMITS_OFF_CVAR`]): kept until the client restarts,
     /// so a session never mixes limited and unlimited commands.
     command_limits_off: bool,
+    /// `cl_freshStamps`: 1 keeps the frame's own stamp on every server.
+    fresh_stamps: console_cvars::IntegerSetting,
     /// Whether the server takes the inputs at that step ([`crate::input_health`]).
     input_health: crate::input_health::InputHealth,
     pmove_fixed: console_cvars::IntegerSetting,
@@ -524,10 +530,13 @@ impl ViewerConsole {
     }
 
     /// Whether commands carry the clock as the previous frame read it, as stock's
-    /// do: on every server but SJK's own ([`crate::server_caps::FRESH_STAMPS`]), and
-    /// never with `cl_noCommandLimits` on.
+    /// do: on every server but SJK's own ([`crate::server_caps::FRESH_STAMPS`]),
+    /// unless `cl_freshStamps` 1 keeps the fresh stamp everywhere, and never with
+    /// `cl_noCommandLimits` on.
     pub(crate) fn command_stamps_previous_frame(&self) -> bool {
-        !self.command_limits_off && crate::server_caps::stamps_previous_frame(self.server_family)
+        !self.command_limits_off
+            && !self.fresh_stamps.enabled()
+            && crate::server_caps::stamps_previous_frame(self.server_family)
     }
 
     /// Whether `cl_noCommandLimits` was on when the client started: no client-side
