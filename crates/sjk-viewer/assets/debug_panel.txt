@@ -24,6 +24,15 @@
 
 # ---- Console & chat ----
 
+[staff-merge-keys]
+area: Menus & settings
+title: Every staff member merges keys (Staff page, Keys and merge)
+change: Merging keys was the creator's alone; now any staff member merges from the Staff page.
+change: Unlinking a key stays the creator's. A staff player is still never merged away.
+test: As non-creator staff, Staff page > a player > Keys and merge: field, Pick, Merge... work.
+test: The Unlink buttons stay dimmed for them; the status line says only the owner unlinks.
+note: Needs the hub's staff-merge branch deployed, or the hub still answers creator_only.
+
 [model-sync]
 area: Menus & settings
 title: Model sync: share your models through the Sith cloud, and its page

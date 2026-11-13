@@ -1,3 +1,13 @@
+## Staff merge keys (13/11/2026)
+
+13/11/2026, `personal/staff-merge-keys` based on `main` `dd2d6a408` (Sol: "Allow staff to do
+it", about merging keys). The Staff page's Keys and merge tab (field, Pick in list, Merge...)
+is no longer creator-only; Unlink stays the creator's, and a staff player is still never
+merged away ([identity.md](identity.md#players-with-several-keys)). The hub's `staff-merge`
+branch drops its `creator_only` check on `POST /v1/staff/merge`. Verified: `cargo test -p
+sjk-viewer staff_panel` and the hub's full `cargo test`. Not tried in a game; needs the hub
+branch deployed.
+
 ## Mystery box rework, Ray Gun, placed WHEELS OF DOOM (12/11/2026)
 
 Sol's asks of 11/11/2026. Boxes never empty, no refund, no free roll; a holocron 45.5%,
