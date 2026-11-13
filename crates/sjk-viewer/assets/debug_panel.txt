@@ -4313,6 +4313,18 @@ test: Swing hard: grey and glowing ash flakes drift down and settle; a still bla
 test: Collection > Shaders > its parts: each of the five switches off on its own.
 note: Hub deployed 25/10 (pack, sounds); the growth by days held was dropped the same day.
 
+[doom-blade]
+area: Rendering & effects
+title: DOOM, a Unique blade: red with a black heart, death aura, red lightning, skulls
+change: Blade 301: blood-red blade beating like a heart, black cracked core, black smoke aura.
+change: Red lightning crackles off it, thunder bolts leap far out; red-eyed skulls rise round it.
+change: Swings shed black cinders burning red; its name is DOOM in red in the Collection.
+test: Staff grant saber_doom to yourself: Collection > Shaders shows "DOOM blade" in red.
+test: Wear it: a thunderclap as it lights; the doom gathers; every beat throbs up the blade.
+test: Swing hard: more lightning and black cinders climbing away; clash: a burst of bolts.
+test: Collection > Shaders > its parts: each of the five switches off on its own.
+note: Needs the hub branch doom-blade deployed (pack, sounds, catalogue); sounds unheard.
+
 [lazy-blade-skins]
 area: Rendering & effects
 title: Blade skins and signature shaders load only when a blade draws them
