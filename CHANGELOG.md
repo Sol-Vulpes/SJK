@@ -30,6 +30,10 @@ The site (site/assets/site.js, parseChangelog) reads the release headings,
 introductions and recap lines too.
 Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 -->
+## Unreleased
+
+- In the game's chat, a JoF EternalJK player's lines start with the EJK icon instead of SJK's emblem, with their verified tick once their EJK claims its slot (1.6.3 beta 2 and later); an EJK player who reads SJK chat without claiming gets the icon alone _(Sol)_
+
 ## 2026.1112.1 (Alpha) | 12/11/2026
 
 Mystery boxes reworked, the Ray Gun, Wheels of Doom on the maps, and easier fishing.

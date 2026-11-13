@@ -24,6 +24,15 @@
 
 # ---- Console & chat ----
 
+[chat-client-icons]
+area: Console & chat
+title: Game chat: EJK icon (and tick) before JoF EternalJK players' lines
+change: A claim from JoF EJK (1.6.3 beta 2+) shows the EJK icon and the player's tick in chat.
+change: An EJK player in SJK chat who claims nothing gets the EJK icon alone, by name.
+test: With a JoF EJK player on the server, their All chat lines start with the EJK icon.
+test: A verified EJK beta player shows their tick after the name; cl_sjkChatClientIcons 0 = SJK.
+note: World shot: game_lines_with_marks (Figo = claim, dart_mario = name match).
+
 [staff-merge-keys]
 area: Menus & settings
 title: Every staff member merges keys (Staff page, Keys and merge)
