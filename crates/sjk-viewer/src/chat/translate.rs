@@ -173,7 +173,7 @@ pub(crate) fn line(translation: &sjk_identity::Translation) -> String {
 pub(crate) const FEED_GREY: [f32; 3] = [0.78, 0.79, 0.81];
 
 /// Whether a feed line is a translation, drawn in [`FEED_GREY`].
-pub(crate) fn is_translation(line: &ChatLine) -> bool {
+pub(super) fn is_translation(line: &ChatLine) -> bool {
     line.local && line.body.starts_with('\u{bb}')
 }
 
