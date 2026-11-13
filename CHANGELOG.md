@@ -30,6 +30,10 @@ The site (site/assets/site.js, parseChangelog) reads the release headings,
 introductions and recap lines too.
 Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 -->
+## Unreleased
+
+- Chat translation in the console too: click another player's chat line in the console (game or SJK chat) to put it into English; the translation shows right under that line, however fast the chat goes _(Slash)_
+
 ## 2026.1113.1 (Alpha) | 13/11/2026
 
 JoF EternalJK players get their icon and their verified tick in the game's chat.
