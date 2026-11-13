@@ -4,9 +4,10 @@
 it", about merging keys). The Staff page's Keys and merge tab (field, Pick in list, Merge...)
 is no longer creator-only; Unlink stays the creator's, and a staff player is still never
 merged away ([identity.md](identity.md#players-with-several-keys)). The hub's `staff-merge`
-branch drops its `creator_only` check on `POST /v1/staff/merge`. Verified: `cargo test -p
-sjk-viewer staff_panel` and the hub's full `cargo test`. Not tried in a game; needs the hub
-branch deployed.
+branch drops its `creator_only` check on `POST /v1/staff/merge`, and the admin panel lets
+staff merge too (passkey asked, no button for a staff player); deployed 13/11/2026 (hub
+`c6affb7`). Verified: `cargo test -p sjk-viewer staff_panel` and the hub's full `cargo
+test`. Not tried in a game; released clients up to 2026.1112.1 still dim Merge for staff.
 
 ## Mystery box rework, Ray Gun, placed WHEELS OF DOOM (12/11/2026)
 
