@@ -1,3 +1,14 @@
+## Game chat: client icons and ticks (13/11/2026)
+
+13/11/2026, `personal/chat-client-icons` based on `main` `cdd73b774` (Sol: "I would like to
+see the EJK icons in chat properly when someone speaks in all chat and their verified status
+too"). Game chat lines took SJK's emblem for every claim and nothing for an unclaimed EJK
+player; now a claim's client picks the icon (JoF EternalJK claims since its 1.6.3 beta 2),
+with the claim's tick, and an unclaimed EJK chat reader matched by name (the scoreboard's
+rule) gets the icon alone ([hub-chat.md](hub-chat.md#game-chat-lines-look-the-same)).
+Verified: `cargo test -p sjk-viewer chat` and the `game_lines_with_marks` world shot (EJK icon
+with a JoF tick, EJK icon alone). Not tried in a game.
+
 ## Staff merge keys (13/11/2026)
 
 13/11/2026, `personal/staff-merge-keys` based on `main` `dd2d6a408` (Sol: "Allow staff to do
