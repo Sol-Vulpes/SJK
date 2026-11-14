@@ -2863,6 +2863,16 @@ test: Hold +attack: it fires as before. Hold a chord bound to weapnext: it cycle
 
 
 # ---- Menus & settings ----
+[collection-no-nameplates]
+area: Menus & settings
+title: Collection: the Nameplates tab is gone
+change: The Collection's row goes Medals ... Tags, Holocrons, Forge, Cards, History: no Nameplates.
+change: In-game nameplates and their settings are unchanged (Settings > HUD > Nameplates).
+test: Main page > Collection: no Nameplates tab; Ctrl+Tab from Tags goes to Holocrons.
+test: Click every tab and check its counts in the row; the tally at the top right still adds up.
+test: Settings > HUD: See & share nameplates and Nameplate style still switch the plates in a match.
+test: Shaders and Tags still show Loadouts (P); Discord presence still names each tab.
+
 [staff-chat-translation-stats]
 area: Menus & settings
 title: Staff page Chat tab: chat translation use (Slash, PR #416, needs hub #24)

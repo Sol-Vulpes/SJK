@@ -18,14 +18,6 @@ impl Panel {
             // The card asking covers the page: nothing under it answers the pointer.
             return;
         }
-        // The showcase card a click opened stands over the page in place of a hover card.
-        if self.tab != Tab::Nameplates {
-            self.showcase_open = false;
-        }
-        if self.showcase_open {
-            self.nameplate_showcase(frame, inputs);
-            return;
-        }
         // So does the Extra features note, while its chip shows (the same shader): what
         // the extras are and what unlocks them, or, unlocked, a tick each.
         if self.extras_note
