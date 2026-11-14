@@ -1187,6 +1187,11 @@ Since 08/11/2026 Solfox is Sol's: a rig model (`sjk_rig.cfg`, a glTF with its ow
 skeleton) whose body, head and clothes Sol generated with Tripo (AI), then fitted and
 sculpted, with a default look and a `cloth` one (hood, cape and long skirt that move).
 
+Since 14/11/2026 Creyon (`models/players/creyon`, the `sjk_creyon` pack) is a werewolf
+rig model made for Creyon: its body and wolf head were generated with Tripo (AI), fitted
+and sculpted by Sol and rigged on Solfox's skeleton, with a default look and a `cloth`
+one (Solfox's hood, cape and loincloth placed on him by Sol, moving on their own).
+
 Blep, a player, drew the Gonk, EZ and Geyon tags (Geyon for Creyon) and proposed them
 in the Discord's #tag-proposals; Sol picked them (30/10/2026), and the SJK hub serves
 them to every SJK player in the `sjk_tags` pack. Blep keeps the rights to them; they

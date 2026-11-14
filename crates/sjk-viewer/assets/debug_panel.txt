@@ -31,8 +31,8 @@ change: SJK's emblem is a little smaller; the EJK icon is smaller still so both 
 change: The verified tick (or trust mark) sits on the icon's bottom right, as on the scoreboard.
 test: An SJK player's and an EJK player's lines: the icons look the same size, ticks on the corners.
 test: The name now starts right after the icon, with no tick between name and colon.
-change: Nameplates (holo, capsule, classic): an EJK player's icon takes the tick's place, the tick on its corner.
-test: cg_nameplate 1 near an EJK player: their icon after the name, the tick small at its bottom right.
+change: Nameplates (holo, capsule, classic): an EJK icon in the tick's place, tick on its corner.
+test: cg_nameplate 1 near an EJK player: their icon after the name, tick small at its bottom right.
 
 [chat-client-icons]
 area: Console & chat
@@ -8422,6 +8422,16 @@ title: Sync emote plays the follower's music too, in step with the leader's
 change: Joining an emote starts your music where the leader's is.
 test: A starts an emote with music; B uses Sync emote: B's music plays, in step.
 test: A stops: B's music keeps playing without a jump.
+
+[creyon-hub]
+area: Rendering & effects
+title: Creyon on the hub: werewolf rig model, default and cloth looks
+change: New hub pack sjk_creyon (models/players/creyon, glTF rig, 2 looks, 8.5 MB).
+change: Rigged on Solfox's skeleton; tail chain; hood, cape and loincloth chains.
+test: Start: log says sjk_creyon downloaded; character list shows Creyon and Creyon cloth.
+test: /model creyon then /model creyon/cloth: run, crouch, jump, turn the head.
+test: Cloth look: cape and loincloth swing; crouch may push the long loincloth into floor.
+test: A second SJK client on the same server sees you as Creyon.
 
 [solfox-rig-hub]
 area: Rendering & effects

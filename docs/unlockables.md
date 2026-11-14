@@ -1405,8 +1405,9 @@ identity service's, [identity.md](identity.md#asset-packs)). A pack is a PK3 of 
 paths the hub serves (`GET /v1/assets`, `GET /v1/assets/<name>`): `sjk_skins` (the blade
 skins' files and sounds), `sjk_cards` (the cards) and, since 16/10/2026, `sjk_solfox`
 (the Solfox player model, which any player may wear: Reyced's GLM until 08/11/2026, since
-then Sol's rig model with a default and a `cloth` look; mounted below the game data like
-the others, so it shows in the model list and on other SJK players with no code of its
+then Sol's rig model with a default and a `cloth` look) and, since 14/11/2026, `sjk_creyon`
+(Creyon, a werewolf rig model with a default and a `cloth` look made the same way; both
+mounted below the game data like the others, so it shows in the model list and on other SJK players with no code of its
 own).
 
 - The identity service keeps them in `assets/<name>.pk3` beside `identity.key`,
