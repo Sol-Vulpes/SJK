@@ -30,6 +30,10 @@ The site (site/assets/site.js, parseChangelog) reads the release headings,
 introductions and recap lines too.
 Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 -->
+## Unreleased
+
+- In the game's chat, SJK's emblem and the EJK icon are smaller and the same size, and a player's verified tick sits on the icon's bottom right corner, as on the scoreboard, instead of after their name; their nameplate shows the EJK icon the same way, with the tick on its corner _(Sol)_
+
 ## 2026.1113.1 (Alpha) | 13/11/2026
 
 JoF EternalJK players get their icon and their verified tick in the game's chat.

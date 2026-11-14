@@ -763,13 +763,16 @@ request, 08/10/2026):
   stands right after the name, before the tick, on every line, the dock and the page
   (`sjk_chat_look::emoji_room`); a game line's sender the hub knows in that slot shows
   theirs too.
-- In the game's chat a line starts with SJK's emblem, small (1.35 times the text's
-  height, in its own colours, `ui_renderer::LOGO_TEXTURE`; Sol's request, 11/10/2026),
+- In the game's chat a line starts with SJK's emblem, small (1.2 times the text's
+  height since 14/11/2026, 1.35 before, in its own colours, `ui_renderer::LOGO_TEXTURE`; Sol's request, 11/10/2026),
   where it used to read the letters SJK. A holocron drop or grand find starts with the
   holocron's or crystal's picture instead (01/11/2026,
   [holocrons.md](holocrons.md#chat-lines)). The dock and the page, which show only SJK
   chat, have no mark. A message sent from another client that takes part in SJK chat
-  starts with that client's icon instead, at the same size: the clients are the
+  starts with that client's icon instead, centred in the emblem's place: those icons
+  are full discs, drawn 0.9 times the text's height so they read as big as SJK's
+  starburst (`ICON_SIDE` in `chat/view/sjk_line.rs`; until 14/11/2026 they had the
+  emblem's own side and looked much bigger, Sol's request): the clients are the
   entries of [chat/client_icons.rs](../crates/sjk-viewer/src/chat/client_icons.rs)
   (`KNOWN`, each with why and its evidence; today JoF EternalJK, `client` `ejk`,
   `ui_renderer::EJK_TEXTURE`, `assets/branding/jof-ejk-icon.png`, 21/10/2026, and the
@@ -788,10 +791,14 @@ request, 08/10/2026):
   have none and Team chat reads TEAM: SJK for a message only in SJK chat, ALL/SJK for
   one also said in the server's All chat ([Said on the game server too](#said-on-the-game-server-too);
   Sol's request, 22/10/2026). A holocron drop has no label.
-- A verified sender has their tick after the name (the nameplates' seal, gold or their
+- A verified sender has their tick (the nameplates' seal, gold or their
   group's, staff's or a creator's: [Ticks](identity.md#ticks),
   `ui_renderer::mark_texture`) and no word: no "SJK VERIFIED" or "Verified" tag. Staff
-  stays written on the page.
+  stays written on the page. In the game's chat the tick (or trust mark) sits small on
+  the foot of the line's emblem or client icon, at its bottom right, as on the
+  scoreboard (`CORNER_TICK` in `chat/view/sjk_line.rs`; after the name until
+  14/11/2026, Sol's request to save room); a line without an emblem keeps it after the
+  name.
 - The line flows as one line and wraps only when it is too long, as a game chat line
   does. In the game it used to break straight away: the feed drew a sender's name and
   its tag on a row of their own and the message under it (`NAME_ADVANCE` in
