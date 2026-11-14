@@ -77,6 +77,12 @@ const QUACK: &str = "sound/sjk/wheel_of_doom/quack.wav";
 /// extras pack (`unofficial_sjk_extras.pk3`, the Sith cloud's `extras`); without the pack
 /// the wheel spins to its ticks alone.
 const MUSIC: &str = "sound/sjk/wheel_of_doom/music.mp3";
+/// The music's gain (Sol, 15/11/2026: louder; 1.0 and the game's attenuation before),
+/// heard at it whole within [`MUSIC_FULL`] units, fading out by [`MUSIC_RANGE`], as the
+/// Toy master's show.
+const MUSIC_VOLUME: f32 = 2.0;
+const MUSIC_FULL: f32 = 300.0;
+const MUSIC_RANGE: f32 = 1_400.0;
 /// The laugh on a bad outcome, the mystery box's: Sol's laugh in the optional SJK extras
 /// pack, else the retail gloat.
 const LAUGH: &str = "sound/sjk/mystery_box/laugh.mp3";
@@ -500,8 +506,53 @@ fn wheel_prompt(check: Check, now_busy_mine: bool) -> Option<crate::use_prompt::
         action: action.to_owned(),
         line: Some(line),
         ready,
+        drops: Vec::new(),
     })
 }
+
+/// What a spin may give, as a player reads it, by the hub's `outcomes`: each holocron
+/// tier in its colour, the coin back, nothing, the blast, the curse, and the other bad
+/// effects together as one row; likeliest first, the never rolled left out.
+pub(crate) fn wheel_drops(outcomes: &[wire::Outcome]) -> Vec<crate::use_prompt::Drop> {
+    use crate::use_prompt::Drop;
+    let mut drops: Vec<Drop> = Vec::with_capacity(10);
+    let (mut effects, mut kinds) = (0, 0);
+    for outcome in outcomes.iter().filter(|outcome| outcome.per_mille > 0) {
+        let kind = known(&outcome.id).map(|(_, known)| known.kind);
+        let (name, colour) = match kind {
+            Some(Kind::Effect(_)) => {
+                effects += outcome.per_mille;
+                kinds += 1;
+                continue;
+            }
+            Some(Kind::Holocron(tier)) => match crate::holocrons::any(tier) {
+                Some(found) => (found.name.to_owned(), Some(found.colour)),
+                None => (format!("{tier} holocron"), None),
+            },
+            Some(Kind::CoinBack) => ("Your DOOM coin back".to_owned(), None),
+            Some(Kind::Nothing) => ("Nothing".to_owned(), None),
+            Some(Kind::Explode) => ("BOOM: you blow up".to_owned(), Some(RED)),
+            Some(Kind::Curse) => ("A curse, within a minute".to_owned(), Some(RED)),
+            None => (outcome.id.replace('_', " ").to_uppercase(), None),
+        };
+        drops.push(Drop {
+            name,
+            per_mille: outcome.per_mille,
+            colour,
+        });
+    }
+    if effects > 0 {
+        drops.push(Drop {
+            name: format!("A bad effect ({kinds} kinds)"),
+            per_mille: effects,
+            colour: Some(RED),
+        });
+    }
+    crate::use_prompt::likeliest_first(drops)
+}
+
+/// The wheel's red, for the bad rows of its drops panel.
+const RED: sjk_ui::Color = sjk_ui::Color::new(1.0, 0.42, 0.38, 1.0);
 
 /// The wheel among `wheels` the player at `from` facing `yaw` (radians) may spin: within
 /// [`REACH`] across the floor and [`REACH_UP`] up or down, within [`FACING`] of their
@@ -1038,7 +1089,15 @@ impl GpuState {
             busy: placed.is_some_and(|placed| placed.busy(now)),
             coins: self.doom_coins(),
         };
-        if let Some(prompt) = wheel_prompt(check, mine_running) {
+        if let Some(mut prompt) = wheel_prompt(check, mine_running) {
+            prompt.drops = crate::player_identity::with_snapshot(|snapshot| {
+                snapshot
+                    .wheel_of_doom
+                    .as_ref()
+                    .map(|wheel| wheel_drops(&wheel.outcomes))
+            })
+            .flatten()
+            .unwrap_or_default();
             self.want_use_prompt(prompt);
         }
         if !pressed || mine_running {
@@ -1383,6 +1442,22 @@ impl GpuState {
                 MUSIC if !audio.has_sound(MUSIC) => continue,
                 path => path,
             };
+            if let (MUSIC, Some(origin)) = (path, cue.origin) {
+                audio.play_toy_reaching(
+                    crate::toy_sounds::Toy::WheelOfDoom,
+                    path,
+                    MUSIC_VOLUME,
+                    origin,
+                    cue.source,
+                    sjk_audio::ChannelId(0),
+                    sjk_audio::Attenuation::Linear {
+                        full_volume_distance: MUSIC_FULL,
+                        falloff_per_unit: 1.0 / (MUSIC_RANGE - MUSIC_FULL),
+                    },
+                    0,
+                );
+                continue;
+            }
             audio.play_toy(
                 crate::toy_sounds::Toy::WheelOfDoom,
                 path,
@@ -1472,6 +1547,40 @@ mod tests {
                 .collect(),
             ..WheelOfDoom::default()
         }
+    }
+
+    #[test]
+    fn the_drops_panel_lists_the_holocrons_and_groups_the_bad_effects() {
+        let outcome = |id: &str, per_mille| wire::Outcome {
+            id: id.to_owned(),
+            per_mille,
+        };
+        let drops = wheel_drops(&[
+            outcome("mythical", 10),
+            outcome("reverse_keys", 40),
+            outcome("holo_uncommon", 170),
+            outcome("mirror", 40),
+            outcome("explode", 80),
+            outcome("doom_coin", 50),
+            outcome("big_party", 5),
+            outcome("never", 0),
+        ]);
+        let rows: Vec<_> = drops
+            .iter()
+            .map(|drop| (drop.name.as_str(), drop.per_mille))
+            .collect();
+        assert_eq!(
+            rows,
+            [
+                ("Uncommon Holocron", 170),
+                ("BOOM: you blow up", 80),
+                ("A bad effect (2 kinds)", 80),
+                ("Your DOOM coin back", 50),
+                ("Mythical Holocron", 10),
+                ("BIG PARTY", 5),
+            ]
+        );
+        assert!(drops[0].colour.is_some(), "a holocron in its tier's colour");
     }
 
     #[test]

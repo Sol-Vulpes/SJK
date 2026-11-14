@@ -277,6 +277,15 @@ test: Ray Gun: it jumps in hand at the stop; fire at a friend: they fall, glow g
 test: Hit a box hunter: "RAY GUN: name down, +25 credits"; a second hit passes through.
 note: Needs the hub's box-rework branch deployed.
 
+[drop-odds]
+area: Gameplay
+title: Possible drops panel at boxes and wheels; louder WHEEL OF DOOM music
+change: Facing a box or wheel, a panel under the Use prompt lists drops with their %.
+change: WHEEL OF DOOM music at twice the gain, heard to 1400 units.
+test: Face a mystery box: after a moment the panel fades in, holocron 45.5 % first.
+test: Face a wheel: holocron tiers in colour, "A bad effect (12 kinds)" in red.
+test: A spin: the music is clearly louder, still heard across the room.
+
 [wheel-placed]
 area: Gameplay
 title: WHEEL OF DOOM placed on maps, spun for a DOOM coin
