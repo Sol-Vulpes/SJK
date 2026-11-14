@@ -4554,10 +4554,11 @@ command new for them (`DrawCommand::Polygon`, [rendering.md](rendering.md#submis
   Which slots are verified is read from the identity service once a second.
 - **Client icon** (08/11/2026, Sol's request: "the logos on the nameplates too with
   the tick then in small next to them for ejk people"): a player on another client
-  that takes part in SJK chat (today JoF EternalJK) has that client's icon after the
-  tick, smaller (9 design pixels to the seal's 11, about 0.8 of the name in the classic
-  style) and in its own colours, level with it; without a tick it takes the tick's
-  place. It comes from the claim's `client`, or, for a player of a client that claims
+  that takes part in SJK chat (today JoF EternalJK) has that client's icon in the
+  tick's place, in its own colours, and the tick (or trust mark) small on its bottom
+  right corner, as on the scoreboard and in the game's chat (`nameplate_math::corner_mark`,
+  0.55 of the icon's side; since 14/11/2026, Sol's request: until then the icon stood
+  after the tick, smaller). It comes from the claim's `client`, or, for a player of a client that claims
   nothing, from their name matching one online SJK chat reader's, which gives the icon
   alone, never a tick ([identity.md](identity.md), item 4). It is read with the marks
   (`player_identity::slot_clients`); SJK's players get none, and

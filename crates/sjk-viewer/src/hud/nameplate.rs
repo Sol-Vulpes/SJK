@@ -603,8 +603,8 @@ struct Entry {
     /// The mark after the name: the gold badge of a player the SJK hub's operator vouches
     /// for, or their trust mark (`ui_renderer::mark_texture`).
     mark: Option<sjk_ui::TextureId>,
-    /// The icon of another client they play on, small after the mark
-    /// (`player_identity::slot_clients`): none for SJK.
+    /// The icon of another client they play on, in the mark's place with the mark on
+    /// its foot (`player_identity::slot_clients`): none for SJK.
     client: Option<sjk_ui::TextureId>,
     /// They share their bars, of their own will or because they see everyone's: a
     /// gold contour.
@@ -1850,9 +1850,10 @@ impl State {
         });
     }
 
-    /// The mark after the name and the client icon after it in `[mark, client]`, and
-    /// the duel badge in `badge`, at the name's `opacity` (the badge never under
-    /// [`DUEL_BADGE_OPACITY`]). The client icon keeps its own colours.
+    /// The mark after the name, or another client's icon in its place with the mark
+    /// small on its foot, in `[mark, client]`, and the duel badge in `badge`, at the
+    /// name's `opacity` (the badge never under [`DUEL_BADGE_OPACITY`]). The client icon
+    /// keeps its own colours and goes first, under the mark.
     fn badges(
         &mut self,
         entry: &Entry,
@@ -1860,7 +1861,7 @@ impl State {
         badge: Option<Rect>,
         opacity: f32,
     ) {
-        for (rect, texture) in [(mark, entry.mark), (client, entry.client)] {
+        for (rect, texture) in [(client, entry.client), (mark, entry.mark)] {
             if let (Some(rect), Some(texture)) = (rect, texture) {
                 let _ = self.list.push(DrawCommand::TexturedQuad {
                     rect,
@@ -2698,7 +2699,7 @@ pub(crate) struct PreviewPlate {
     /// The Force powers on (`forcePowersActive` bits), shown over the plate.
     pub(crate) powers: u32,
     pub(crate) verified: bool,
-    /// Another client's icon, small after the mark.
+    /// Another client's icon, in the mark's place with the mark on its foot.
     pub(crate) client: Option<TextureId>,
     /// In a private duel: the duel badge before the name.
     pub(crate) duelling: bool,

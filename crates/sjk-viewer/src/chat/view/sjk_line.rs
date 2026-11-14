@@ -4,7 +4,8 @@
 //! colours, Sol's request 11/10/2026: every SJK chat sender, and since 16/10/2026 a
 //! game line's sender the hub knows in that slot), the clan emblem for a sender with a
 //! known clan's tag ([`crate::jof_tag`]), the sender's name in its own colour codes,
-//! the verified tick alone for a verified sender and, on a game line, its channel
+//! the verified tick alone for a verified sender (small on the emblem's foot since
+//! 14/11/2026, as on the scoreboard) and, on a game line, its channel
 //! (TEAM, WHISPER); the message follows on the same row and wraps only when it is too
 //! long ([`layout::Wrapped::update_indented`]). The two kinds differ only in the
 //! message's colour (Sol's request, 16/10/2026): the SJK chat's gold
@@ -21,7 +22,18 @@ use crate::sjk_chat_look;
 
 /// The SJK emblem's side before an SJK line's name, against the text size: the
 /// starburst's spikes reach the box's edges, its medallion is about half of it.
-const LOGO_SIDE: f32 = 1.35;
+/// 1.35 until 14/11/2026, when the emblems were made smaller (Sol's request).
+const LOGO_SIDE: f32 = 1.2;
+/// Another client's icon's side (`chat/client_icons.rs`) against the text size, centred
+/// in the emblem's box: those icons are full discs, which at the starburst's side looked
+/// much bigger than SJK's emblem (Sol, 14/11/2026: the same size, the EJK one smaller).
+const ICON_SIDE: f32 = 0.9;
+/// The tick's or trust mark's side on the emblem's foot, against the emblem's box, and
+/// how far it sits in from the box's right and bottom edges (shares of its own side): as
+/// the scoreboard draws it (`scoreboard/identity_mark.rs`), so the name keeps the room
+/// a tick after it took (Sol, 14/11/2026).
+const CORNER_TICK: f32 = 0.55;
+const CORNER_TICK_INSET: (f32, f32) = (0.8, 0.9);
 /// The channel label's size against the text size (10 pixels beside 16, as the name
 /// rows' labels were).
 const LABEL_SIZE: f32 = 0.625;
@@ -70,6 +82,9 @@ pub(in crate::chat) struct Prefix<'a> {
     size: f32,
     /// The SJK emblem's side, 0 without one.
     logo: f32,
+    /// The side the emblem is drawn at in its box: the box's for SJK's, smaller for
+    /// another client's icon ([`ICON_SIDE`]).
+    logo_ink: f32,
     /// The emblem drawn: SJK's, or JoF EternalJK's icon for a message sent from it.
     logo_texture: sjk_ui::TextureId,
     /// Where the shown name ends in the line's name (cut to half the feed).
@@ -103,6 +118,13 @@ impl<'a> Prefix<'a> {
         Self {
             size,
             logo: if marks.sjk { size * LOGO_SIDE } else { 0.0 },
+            logo_ink: if crate::chat::client_icons::texture(marks.icon)
+                == crate::ui_renderer::LOGO_TEXTURE
+            {
+                size * LOGO_SIDE
+            } else {
+                size * ICON_SIDE
+            },
             logo_texture: crate::chat::client_icons::texture(marks.icon),
             name_end,
             name_width: visible_text_width_face(font, &name[..name_end], scale, TextFace::Semibold),
@@ -163,10 +185,16 @@ impl<'a> Prefix<'a> {
         self.name_x() + self.name_width + self.emoji_width
     }
 
+    /// The tick sits on the emblem's foot, not after the name ([`CORNER_TICK`]); a line
+    /// with no emblem keeps it after the name.
+    fn tick_on_logo(&self) -> bool {
+        self.logo > 0.0 && self.tier.is_none()
+    }
+
     /// Where a find's blade starts after the name, its emoji and its tick.
     fn blade_x(&self) -> f32 {
         self.tick_x()
-            + if self.mark.is_some() || self.tier.is_some() {
+            + if (self.mark.is_some() && !self.tick_on_logo()) || self.tier.is_some() {
                 sjk_chat_look::tick_room(self.size)
             } else {
                 0.0
@@ -239,11 +267,26 @@ pub(in crate::chat) fn draw(
     let size = prefix.size;
     let middle = y + font.capital_middle(size / font.height.max(1.0));
     if prefix.logo > 0.0 {
+        let ink = prefix.logo_ink;
         let _ = ui.draw_list_mut().push(DrawCommand::TexturedQuad {
-            rect: Rect::new(x, middle - prefix.logo * 0.5, prefix.logo, prefix.logo),
+            rect: Rect::new(x + (prefix.logo - ink) * 0.5, middle - ink * 0.5, ink, ink),
             texture: prefix.logo_texture,
             color: Color::new(1.0, 1.0, 1.0, alpha),
         });
+        if let Some(mark) = prefix.mark.filter(|_| prefix.tick_on_logo()) {
+            let side = prefix.logo;
+            let small = side * CORNER_TICK;
+            let _ = ui.draw_list_mut().push(DrawCommand::TexturedQuad {
+                rect: Rect::new(
+                    x + side - small * CORNER_TICK_INSET.0,
+                    middle + side * 0.5 - small * CORNER_TICK_INSET.1,
+                    small,
+                    small,
+                ),
+                texture: mark,
+                color: Color::new(1.0, 1.0, 1.0, alpha),
+            });
+        }
     }
     if let Some(clan) = prefix.jof {
         crate::jof_tag::draw(
@@ -294,7 +337,7 @@ pub(in crate::chat) fn draw(
     let tick_x = x + prefix.tick_x();
     if let Some(tier) = prefix.tier {
         sjk_chat_look::gem_mark(ui.draw_list_mut(), tick_x, middle, size, tier, alpha);
-    } else if let Some(mark) = prefix.mark {
+    } else if let Some(mark) = prefix.mark.filter(|_| !prefix.tick_on_logo()) {
         sjk_chat_look::tick(ui.draw_list_mut(), mark, tick_x, middle, size, alpha);
     }
     if let (Some(skin), Some(rect)) = (prefix.blade, prefix.blade_rect(font, origin)) {
@@ -674,9 +717,10 @@ mod tests {
             name.right() < label.x && label.x < colon.x,
             "the label after the name"
         );
+        // The tick on the emblem's foot, before the name.
         let tick = ticks(&chat);
         assert_eq!(tick.len(), 1);
-        assert!(tick[0].x >= name.x && tick[0].right() <= colon.x);
+        assert!(tick[0].x > tag.x && tick[0].right() <= name.x && tick[0].y > tag.y);
     }
 
     #[test]
@@ -753,7 +797,7 @@ mod tests {
         assert_eq!(logo.len(), 1, "SJK's emblem");
         let tick = ticks(&chat);
         assert_eq!(tick.len(), 1, "the verified tick");
-        assert!(logo[0].right() < name.x && tick[0].x >= name.x && tick[0].right() <= colon.x);
+        assert!(logo[0].right() < name.x && tick[0].right() <= name.x && name.x < colon.x);
         // A player the hub does not know: no emblem, no tick.
         chat.slot_marks[3] = crate::chat::marks::SlotMark::default();
         chat.build(true, &crate::text::test_font(), VIEWPORT, 1_000);
@@ -774,10 +818,11 @@ mod tests {
         let icons = quads(&chat, crate::ui_renderer::EJK_TEXTURE);
         assert_eq!(logos.len(), 1, "SJK's emblem before SJK's message only");
         assert_eq!(icons.len(), 1, "JoF EternalJK's icon before its message");
-        assert_eq!(
-            (icons[0].width, icons[0].height),
-            (logos[0].width, logos[0].height),
-            "the same size"
+        // A full disc: smaller than the starburst, centred where the emblem sits.
+        assert!(icons[0].width < logos[0].width && icons[0].width == icons[0].height);
+        assert!(
+            (icons[0].x + icons[0].width * 0.5 - (logos[0].x + logos[0].width * 0.5)).abs() < 0.01,
+            "the same column"
         );
         assert!(icons[0].y > logos[0].y, "on the second line");
     }
