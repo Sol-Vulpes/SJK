@@ -26,11 +26,9 @@
 
 [chat-icon-sizes]
 area: Console & chat
-title: Game chat: smaller SJK/EJK icons, the tick on the icon's corner
+title: Game chat: smaller SJK/EJK icons; nameplates: EJK icon with the tick on its corner
 change: SJK's emblem is a little smaller; the EJK icon is smaller still so both read the same size.
-change: The verified tick (or trust mark) sits on the icon's bottom right, as on the scoreboard.
-test: An SJK player's and an EJK player's lines: the icons look the same size, ticks on the corners.
-test: The name now starts right after the icon, with no tick between name and colon.
+test: An SJK player's and an EJK player's lines: the icons look the same size, the tick after the name.
 change: Nameplates (holo, capsule, classic): an EJK icon in the tick's place, tick on its corner.
 test: cg_nameplate 1 near an EJK player: their icon after the name, tick small at its bottom right.
 
