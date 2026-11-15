@@ -4267,6 +4267,16 @@ A feature sets the prompt each frame it applies (`GpuState::want_use_prompt`); t
 draws the last one set and forgets it. The [mystery boxes](mystery-boxes.md#opening-one)
 are its first user, in place of their centre prints.
 
+**Possible drops** (Sol, 15/11/2026): a prompt may carry what the thing faced can give
+(`Prompt::drops`): once the prompt has stood 0.35 s, a dark panel edged in gold fades in
+under it (0.25 s), titled "Possible drops", one row a thing with its chance on the right
+("45.5 %"), likeliest first, at most 12 rows, kept on the screen. It goes with the
+prompt. The chances are the hub's, read with the boxes and wheels, so they change when
+the hub's odds do. A [mystery box](mystery-boxes.md#opening-one) shows them while nobody
+opens it; a [WHEEL OF DOOM](wheel-of-doom.md#spinning-one) whenever its prompt shows,
+the holocrons in their tier's colour and its bad effects in one red row ("A bad effect
+(12 kinds)").
+
 ## Capture the flag HUD
 
 In Capture the Flag and Capture the Ysalamiri every HUD style shows the flags' state

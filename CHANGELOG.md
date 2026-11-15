@@ -32,8 +32,10 @@ Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 -->
 ## Unreleased
 
+- Facing a mystery box or a WHEEL OF DOOM, a Possible drops panel fades in under the Use prompt: everything it can give and the chance of each, by the hub's odds _(Sol)_
+- The WHEEL OF DOOM's music is louder and carries farther _(Sol)_
 - Creyon is a new player model: a werewolf with a second look, Creyon cloth, whose hood, cape and loincloth move as you run. SJK players get it from the hub like Solfox _(Sol)_
-- In the game's chat, SJK's emblem and the EJK icon are smaller and the same size, and a player's verified tick sits on the icon's bottom right corner, as on the scoreboard, instead of after their name; their nameplate shows the EJK icon the same way, with the tick on its corner _(Sol)_
+- In the game's chat, SJK's emblem and the EJK icon are smaller and the same size; an EJK player's nameplate shows the EJK icon in the tick's place, with the tick on its bottom right corner as on the scoreboard _(Sol)_
 - The Collection's Nameplates tab is gone: it had no ornaments to collect. Nameplates over players are unchanged, and See & share nameplates and the nameplate style stay in Settings > HUD _(Sol)_
 
 ## 2026.1113.1 (Alpha) | 13/11/2026

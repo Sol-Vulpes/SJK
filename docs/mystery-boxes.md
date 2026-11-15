@@ -41,7 +41,10 @@ and the refusal shows in the centre of the screen. What the client knows already
 prompt says instead, its cap greyed: "Your turn again in N s", "100 credits: not
 enough", "Opening..." while the hub answers, "Someone is opening it" at another player's
 roll; it says "Take it" over the player's own prize, and nothing while their own roll
-runs or at a box that blows up.
+runs or at a box that blows up. While nobody opens it, a "Possible drops" panel fades in
+under the prompt (since 15/11/2026): each thing the hub's table holds with its chance
+("A holocron, Uncommon or better 45.5 %", "50 credits 15 %", "The teddy bear: a DOOM coin
+12 %"...), likeliest first ([client.md](client.md#use-prompt)).
 
 **The cooldown** (Sol, 30/10/2026): a player opens one box every 15 seconds (3 before,
 the hub's `cooldown`), so a roll and its taking, about 8 seconds, leave the box free a
