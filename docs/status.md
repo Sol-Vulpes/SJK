@@ -1,3 +1,15 @@
+## Status bar (15/11/2026)
+
+15/11/2026, `personal/status-bar` based on `main` `aacf7c07e` (Sol: an in-game status bar at
+the top or bottom with per-element toggles). `cg_statusBar` 0 off (default), 1 top, 2 bottom,
+and a switch per part (`cg_statusBarCredits`, `Shards`, `Crystals`, `Coins`, `Saber`,
+`Effects`, `Toys`, all on), in Settings > HUD under "Status bar"
+([client.md](client.md#status-bar)). Verified: `cargo test -p sjk-viewer status_bar` (place,
+switches, pieces left out, fitting, digit groups, toy pictures) and the `status_bar_shots`
+world shots (top, bottom, 4K at `ui_textScale 1.4`, made-up numbers). Not tried in a game:
+the hub's numbers, the toys' switches and the hiding under menus and the scoreboard are
+unseen live.
+
 ## Collection without its Nameplates tab (15/11/2026)
 
 15/11/2026, `personal/collection-no-nameplates` based on `main` `aacf7c07e` (Sol's request).

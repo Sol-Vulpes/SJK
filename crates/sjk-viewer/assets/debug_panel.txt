@@ -38,7 +38,7 @@ note: DOOM coins show only once the hub said them (toy_wheelofdoom asks).
 area: Console & chat
 title: Game chat: smaller SJK/EJK icons; nameplates: EJK icon with the tick on its corner
 change: SJK's emblem is a little smaller; the EJK icon is smaller still so both read the same size.
-test: An SJK player's and an EJK player's lines: the icons look the same size, the tick after the name.
+test: An SJK and an EJK player's lines: the icons look the same size, the tick after the name.
 change: Nameplates (holo, capsule, classic): an EJK icon in the tick's place, tick on its corner.
 test: cg_nameplate 1 near an EJK player: their icon after the name, tick small at its bottom right.
 
@@ -3856,6 +3856,19 @@ test: Type or paste a 300-character message in the SJK chat: it sends whole and 
 test: 301 characters: the box stops at 300; sjksay with more sends the first 300.
 
 # ---- HUD ----
+
+[status-bar]
+area: HUD
+title: Status bar: credits, blade, effects and toys at the top or bottom
+change: Settings > HUD > Status bar (cg_statusBar 0 off, 1 top, 2 bottom); a switch per part.
+change: Credits, shards, crystals, DOOM coins, blade skin, effects pills, every toy lit while on.
+test: cg_statusBar 1: a navy pill under the build label; 2: at the bottom edge.
+test: Numbers match the Collection's (credits, shards, crystals); DOOM coins after toy_wheelofdoom.
+test: Wear a Legendary blade: its name in gold-orange; stock: "Stock blade" in grey.
+test: toy_box, toy_hax, toy_illuminate: their pictures light up with a gold dot; off: faint.
+test: tactical medium, dnd, the Sun's extras on: a pill each; away (alt-tab): "Away".
+test: Tab (scoreboard), Escape (menu), console, Collection, cg_drawHud 0: the bar hides.
+test: ui_textScale 1.4 and a 4K window: bigger text, nothing cut; switch parts off one by one.
 
 [nameplate-height]
 area: HUD

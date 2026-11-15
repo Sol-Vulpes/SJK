@@ -104,6 +104,9 @@ const CHOICE_NAMES: &[(&str, &str, &str)] = &[
     (crate::hud::clock::CVAR, "1", "Time"),
     (crate::hud::clock::CVAR, "2", "Time and date"),
     (crate::hud::clock::CVAR, "3", "Date"),
+    (crate::status_bar::CVAR, "0", "Off"),
+    (crate::status_bar::CVAR, "1", "Top"),
+    (crate::status_bar::CVAR, "2", "Bottom"),
     (
         crate::chat::incoming_color::CVAR,
         "0",
@@ -1660,6 +1663,38 @@ const HELP: &[(&str, &str)] = &[
     (
         crate::hud::clock::HOURS_CVAR,
         "Counts the HUD clock's hours from 1 to 12 with am and pm, instead of 0 to 23.",
+    ),
+    (
+        crate::status_bar::CVAR,
+        "A compact bar at the top or bottom of the screen with your credits, blade skin, effects and toys. Choose what it shows below.",
+    ),
+    (
+        crate::status_bar::CREDITS_CVAR,
+        "Shows your credits on the status bar.",
+    ),
+    (
+        crate::status_bar::SHARDS_CVAR,
+        "Shows your kyber shards on the status bar.",
+    ),
+    (
+        crate::status_bar::CRYSTALS_CVAR,
+        "Shows how many kyber crystals you have left to open on the status bar.",
+    ),
+    (
+        crate::status_bar::COINS_CVAR,
+        "Shows your DOOM coins on the status bar, once the hub has said how many.",
+    ),
+    (
+        crate::status_bar::SABER_CVAR,
+        "Shows the blade skin on your saber, in its tier's colour, on the status bar.",
+    ),
+    (
+        crate::status_bar::EFFECTS_CVAR,
+        "Shows what is on about you on the status bar: blade extras, finisher, Tactical, Do not disturb, away.",
+    ),
+    (
+        crate::status_bar::TOYS_CVAR,
+        "Shows every toy on the status bar, its picture lit while it is on.",
     ),
     (
         crate::hud::movement_keys::CVAR,

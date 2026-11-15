@@ -34,6 +34,7 @@ Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 
 - Facing a mystery box or a WHEEL OF DOOM, a Possible drops panel fades in under the Use prompt: everything it can give and the chance of each, by the hub's odds _(Sol)_
 - The WHEEL OF DOOM's music is louder and carries farther _(Sol)_
+- A status bar at the top or bottom of the screen with your credits, kyber shards and crystals, DOOM coins, the blade skin you wear in its tier's colour, what is on about you (blade extras, finisher, Tactical, Do not disturb, away) and every toy's switch: Settings > HUD "Status bar" (`cg_statusBar`, off by default), a switch for each part _(Sol)_
 - The Collection has an Inventory tab: one list of everything you own (credits, kyber shards, DOOM coins once read, sealed holocrons and kyber crystals, saber shaders, finishers, tags and cards), grouped by kind with each thing's tier in its colour and how many, sorted by tier, name or quantity (S), with a search (/) _(Sol)_
 - Creyon is a new player model: a werewolf with a second look, Creyon cloth, whose hood, cape and loincloth move as you run. SJK players get it from the hub like Solfox _(Sol)_
 - In the game's chat, SJK's emblem and the EJK icon are smaller and the same size; an EJK player's nameplate shows the EJK icon in the tick's place, with the tick on its bottom right corner as on the scoreboard _(Sol)_

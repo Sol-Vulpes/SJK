@@ -37,6 +37,7 @@ impl GpuState {
             || self.quick_wheel.shown_without_a_game()
             || self.unlock_toast.pending() > 0
             || self.world_pings.forced
+            || self.status_bar.drawn()
             || self.scope.binoculars_for_shot.is_some();
         let hyperspace = self.local_prediction.hyperspace_shade();
         let flares = hyperspace.is_none()
