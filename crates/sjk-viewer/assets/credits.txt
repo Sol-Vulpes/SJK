@@ -92,6 +92,7 @@ did: Blade cards craft their saber shader for less, and lead to it from the Card
 did: Perk marks on cards: a badge for each thing a card brings
 did: The Forge: shop, crafting and breaking any saber shader down, in one tab
 did: The History tab: every drop, opening, credit and shard spent, box and trade
+did: The Inventory tab: everything owned in one list, by kind, with counts and a search
 did: Blade cost ranking: every Legendary and Mythical blade timed on the GPU
 did: Top-tier saber shaders made faster with the same look
 did: Blade shaders kept in a cache on disk and built ahead for the blades worn

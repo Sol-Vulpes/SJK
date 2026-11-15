@@ -804,6 +804,12 @@ impl ViewerConsole {
         self.collection_panel.history_activate_for_shot(index);
     }
 
+    /// Search the Inventory tab for `query` and sort it the `sort`th way, for a world shot.
+    #[cfg(test)]
+    pub(crate) fn inventory_for_shot(&mut self, query: &str, sort: usize) {
+        self.collection_panel.inventory_for_shot(query, sort);
+    }
+
     /// Show the Forge's `section`, for a world shot.
     #[cfg(test)]
     pub(crate) fn forge_section_for_shot(

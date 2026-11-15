@@ -24,6 +24,16 @@
 
 # ---- Console & chat ----
 
+[collection-inventory]
+area: Menus & settings
+title: Collection > Inventory: one list of everything you own, with counts
+change: A tab after History: currencies, sealed holocrons and crystals, shaders, finishers,
+change: tags and cards, each with its tier in colour and how many, under a heading per kind.
+test: collection, Ctrl+Tab to Inventory: credits and shards match the Forge; holocrons the tab's.
+test: S cycles Tier / Name / Quantity; the sort segments click too; Up/Down skip the headings.
+test: / opens the search: type, held Backspace, Ctrl+A/C/V work; Esc clears; wheel scrolls.
+note: DOOM coins show only once the hub said them (toy_wheelofdoom asks).
+
 [chat-icon-sizes]
 area: Console & chat
 title: Game chat: smaller SJK/EJK icons; nameplates: EJK icon with the tick on its corner
