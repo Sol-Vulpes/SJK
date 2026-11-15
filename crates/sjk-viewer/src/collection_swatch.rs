@@ -302,7 +302,14 @@ fn still_picture(
     let Some(shown) = crate::blade_stills::still(skin.id, !owned) else {
         return false;
     };
-    upright_picture(canvas, frame, shown, owned, rect, [start, centre, unit]);
+    upright_picture(
+        canvas,
+        frame,
+        shown,
+        owned,
+        rect,
+        [start, centre, unit, STRIP_SPILL],
+    );
     true
 }
 
@@ -319,7 +326,7 @@ const STRIP_SPILL: f32 = 1.8;
 /// A loop's pictures (`shown`, crossfaded) laid upright on `rect`, its blade from `start`
 /// at `centre`, `unit` frame pixels a world unit, from
 /// [`crate::blade_pictures::BLADE_START`] units before the blade to short of `rect`'s right
-/// edge; whole, at most [`STRIP_SPILL`] times `rect`'s height (pressed flatter in a thin
+/// edge; whole, at most `spill` times `rect`'s height (pressed flatter in a thin
 /// strip, so its glow fades out instead of being cut).
 fn upright_picture(
     canvas: &mut DrawList,
@@ -327,11 +334,11 @@ fn upright_picture(
     shown: crate::blade_stills::Shown,
     owned: bool,
     rect: [f32; 4],
-    [start, centre, unit]: [f32; 3],
+    [start, centre, unit, spill]: [f32; 4],
 ) {
     let [x, _, width, height] = rect;
     let [across, high] = crate::blade_stills::UNITS;
-    let tall = (height * STRIP_SPILL).min(high * unit);
+    let tall = (height * spill).min(high * unit);
     let left = start - crate::blade_pictures::BLADE_START * unit;
     let full = across * unit;
     let wide = full.min(x + width - 6.0 - left);
@@ -557,7 +564,14 @@ pub(crate) fn strip(
     let unit = length / crate::blade_pictures::BLADE_LENGTH;
     let shown = match (owned, skin) {
         (_, Some(_)) if let Some(texture) = picture => {
-            upright_picture(canvas, frame, texture, owned, rect, [start, centre, unit]);
+            upright_picture(
+                canvas,
+                frame,
+                texture,
+                owned,
+                rect,
+                [start, centre, unit, STRIP_SPILL],
+            );
             if owned { Shown::Skin } else { Shown::Locked }
         }
         (_, Some(skin)) => {
@@ -689,7 +703,7 @@ pub(crate) fn tile_blade(
         (Some(shown), Some(_)) => {
             let [x, y] = axis.start;
             let [_, top, _, height] = rect;
-            // The loop's middle on the blade, as tall as the room lets it spill.
+            // The loop's middle on the blade, kept inside the room (the name is under it).
             upright_picture(
                 canvas,
                 frame,
@@ -701,7 +715,7 @@ pub(crate) fn tile_blade(
                     rect[2] - (x - rect[0]) + TILE_HILT * axis.unit,
                     height,
                 ],
-                [x, y, axis.unit],
+                [x, y, axis.unit, 1.0],
             );
             if owned { Shown::Skin } else { Shown::Locked }
         }

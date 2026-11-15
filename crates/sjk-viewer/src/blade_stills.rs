@@ -90,7 +90,7 @@ const STILL_SECONDS: f64 = 2.4;
 const IDLE: Duration = Duration::from_secs(10);
 const BAKER_IDLE: Duration = Duration::from_secs(5);
 /// The baker's version: raise it when a loop's look changes in a way the key does not see.
-pub(crate) const VERSION: u32 = 2;
+pub(crate) const VERSION: u32 = 3;
 /// The folder in the cache folder the loops go in.
 pub(crate) const FOLDER: &str = "blades";
 /// The texture ids: cell `n` is `TEXTURE_BASE + n`, its dimmed look (not held) `+ DIM`.

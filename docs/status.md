@@ -26,6 +26,16 @@ and a changed blade's replacement), `duel6_collection_perf` and `duel6_collectio
 the shots looked at, workspace build and tests, the startup stack check. Not verified: in
 a game, on a small card, DX12 and Metal; the low-memory shot ran with `ui_menuPictures=1`
 but the shot does not prove the first-picture mode was in effect.
+Review round (same day): many loops washed out to flat white (Thousand Cranes, Eclipse,
+Varykino Blossom, Exogorth, World Shift, Event Horizon, Sun on the hall). The bake averaged
+the blade's values over 1 before clamping, spreading white cores, and screen-blended a 1.7x
+glow over the blade itself; now each baking pixel is clamped first (as the live picture's
+8-bit target does) and the glow only lights the dark round the blade, at 0.6 (`VERSION` 3,
+caches baked again). `duel6_collection_compare` chooses each of those kybers with every one
+held, the wall's loop beside the stage's live blade: colours and shapes match. A wall tile's
+blade sits in the middle of the room over its name (sized to a one- or two-line name, kept
+inside it). Still different: a chroma kyber's loop (Eclipse) is baked in the skin's own
+colour, not the wearer's, as the stills were.
 
 ## Collection polish: wording, hall tier marks, first look, motion (15/11/2026)
 

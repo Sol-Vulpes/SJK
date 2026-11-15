@@ -15,7 +15,7 @@ const EDGE: f32 = 2.6 / 13.0;
 // much the light's own colour leads it over the white core.
 const TAPS: u32 = 48u;
 const RADIUS: f32 = 34.0;
-const GLOW: f32 = 1.7;
+const GLOW: f32 = 0.6;
 @group(0) @binding(0) var bake: texture_2d<f32>;
 
 struct Out {
@@ -34,9 +34,12 @@ struct Out {
     return out;
 }
 
+// A baking pixel as the live picture shows it: clamped to the display's range first (the
+// live picture's 8-bit target does), so a core far over 1 does not spread white into its
+// neighbours when four are averaged.
 fn texel(p: vec2<i32>, row: i32) -> vec3<f32> {
     let q = clamp(p, vec2<i32>(0), ROW - vec2<i32>(1));
-    return textureLoad(bake, q + vec2<i32>(0, row * ROW.y), 0).rgb;
+    return clamp(textureLoad(bake, q + vec2<i32>(0, row * ROW.y), 0).rgb, vec3<f32>(0.0), vec3<f32>(1.0));
 }
 
 @fragment fn fs_main(in: Out) -> @location(0) vec4<f32> {
@@ -61,8 +64,11 @@ fn texel(p: vec2<i32>, row: i32) -> vec3<f32> {
         weight += w;
     }
     glow = glow / weight;
-    // Screen blend: bright stays bright, the dark round the blade takes the glow.
-    let lit = vec3<f32>(1.0) - (vec3<f32>(1.0) - base) * (vec3<f32>(1.0) - min(glow * GLOW, vec3<f32>(1.0)));
+    // The glow only where the blade is dark (a halo round it): the blade keeps its own
+    // colours and shape, as the live picture shows them (15/11/2026: added over the blade
+    // too, it washed many kybers out to white).
+    let dark = 1.0 - max(base.r, max(base.g, base.b));
+    let lit = base + min(glow * GLOW, vec3<f32>(1.0)) * dark * dark;
     let cell = local / STILL;
     let fade = smoothstep(LEFT.x, LEFT.y, cell.x)
         * (1.0 - smoothstep(1.0 - RIGHT, 1.0, cell.x))

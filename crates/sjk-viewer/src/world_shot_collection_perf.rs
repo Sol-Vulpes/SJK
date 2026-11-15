@@ -369,3 +369,89 @@ fn duel6_collection_cold() {
         crate::blade_stills::set_folder(None);
     });
 }
+
+/// The kybers whose loops washed out to white (the coordinator's review, 15/11/2026), each
+/// chosen in turn with every kyber held: the wall shows its loop on its tile and the stage
+/// its live blade, side by side, as `duel6-collection-compare-<id>`.
+#[test]
+#[ignore = "renders with the GPU and the installed game data named by JKA_GAME_DATA"]
+fn duel6_collection_compare() {
+    const IDS: [&str; 7] = [
+        "saber_thousand_cranes",
+        "saber_eclipse",
+        "saber_varykino_blossom",
+        "saber_exogorth",
+        "saber_world_shift",
+        "saber_event_horizon",
+        "saber_sun",
+    ];
+    on_big_stack(|| {
+        super::saber_skins::mount_test_packs();
+        let cache = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../../target/parity-reports/collection-compare-cache");
+        crate::blade_stills::set_folder(Some(cache));
+        let cvars = [
+            ("ui_menuStyle", "sjk"),
+            (crate::settings::quick::HIDE_CVAR, "1"),
+            (crate::unlockables::SABER_SKIN_CVAR, "saber_sun"),
+            ("name", "^1Sol^7Vulpes"),
+            (crate::discord_presence::CVAR, "0"),
+        ];
+        let Some((mut gpu, _profile)) = open(
+            "maps/mp/duel6.bsp",
+            [1920, 1080],
+            Some(menu::ClientMenu::new(true, String::new())),
+            &cvars,
+        ) else {
+            return;
+        };
+        gpu.looks.shot_owns_unlocks = true;
+        let _ = frame(&mut gpu, 10);
+        let owned: Vec<sjk_identity::Unlock> = crate::unlockables::ALL
+            .iter()
+            .map(|skin| sjk_identity::Unlock {
+                id: skin.id.to_owned(),
+                ..super::collection::sun()
+            })
+            .collect();
+        if let Some(console) = gpu.console.as_mut() {
+            console.preview_profile(super::collection::preview());
+            console.preview_collection(Some(owned), 0.0);
+            let _ = console.set_cvar(crate::console::collection_panel::SHADER_VIEW_CVAR, "0");
+            console.open_profile_hub_page(Tab::Shaders, ReturnTarget::MainMenu);
+        }
+        gpu.profile_hub_show_for_shot(Tab::Shaders);
+        gpu.saber_gpu.build_every_signature();
+        let started = std::time::Instant::now();
+        loop {
+            let (built, loaded) = gpu.saber_gpu.signatures_built();
+            if loaded > 0 && built == loaded {
+                break;
+            }
+            assert!(started.elapsed().as_secs() < 3_000, "signatures building");
+            let _ = frame(&mut gpu, 10);
+        }
+        for id in IDS {
+            if let Some(console) = gpu.console.as_mut() {
+                console.collection_kyber_for_shot(id);
+            }
+            let started = std::time::Instant::now();
+            let mut quiet = 0;
+            while quiet < 20 && started.elapsed().as_secs() < 120 {
+                let _ = gpu.render(&mut None);
+                let _ = gpu.device.poll(wgpu::PollType::wait_indefinitely());
+                quiet = if crate::blade_stills::waiting(&gpu.blade_stills) == 0 {
+                    quiet + 1
+                } else {
+                    0
+                };
+            }
+            gpu.ui_epoch -= std::time::Duration::from_millis(3_000);
+            println!(
+                "{}",
+                shoot(&mut gpu, 60, &format!("duel6-collection-compare-{id}")).display()
+            );
+        }
+        crate::blade_stills::set_folder(None);
+    });
+}
