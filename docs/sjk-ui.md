@@ -1671,24 +1671,43 @@ Holocrons tab's Shop, a blade card's Forge link) open that kind directly.
   one to each kind: Shaders across two cells, Finishers (the Shaders tab's Finishers
   pill), Tags, Toys, Medals, Achievements, Cards, Holocrons, Forge, Inventory, History,
   and the Saber Lab while the lab is on. A tile is a dark glass card (the chosen one
-  framed gold): the kind's name and the tab's count after it, lines of what the client
-  already holds, and a gold bar of the share held for a kind with a set total. Shaders:
-  "14/166 · 2 new", the blade worn in its tier's colour and up to two New ones;
-  Finishers: held of all and the one worn; Tags: the tag chosen and its finish; Toys:
-  the toys on now; Medals: the ones given; Achievements: the open one nearest to
-  unlocking with "19 / 25"; Cards: the copies held; Holocrons: "3 to open" and each
-  tier's count in its colour; Forge: the kyber shards, the deal of the day once the shop
-  was read (in its tier's colour), the duplicates to break down and the Forge's gold dot;
-  Inventory: credits and kyber shards, then shaders, tags and kyber crystals; History:
-  the newest line read (its date and sentence) once the History tab has read the hub,
-  else what the tab holds. A summary the client does not know is left out, never
+  framed gold): the kind's name and the tab's count after it, a picture of what the
+  client already holds filling the room under the name (since 15/11/2026, Sol's review:
+  words alone left the tiles two thirds empty;
+  [collection_hall_art.rs](../crates/sjk-viewer/src/collection_hall_art.rs)), and a gold
+  bar of the share held for a kind with a set total. Shaders: "14/166 · 2 new", down the
+  left the blade worn, the New ones and then the others held (rarest first) as live
+  strips (`swatch::strip`) with their names in their tiers' colours, as many as fit; down
+  the right each tier (Mythical to Common, Unique too while its chip shows) with held of
+  its total and a bar in its colour. Finishers: held of all, the one worn named large in
+  its tier's colour over what it does, its tier's mark glowing at the right. Tags: the
+  tag chosen in its picture (over its words in a tall tile), its name, tier and finish's
+  badge. Toys: every toy's quick wheel picture in the Toys tab's order, lit in a gold
+  frame while on, faint while off, under "1 on: Illuminate" while that costs the pictures
+  little. Medals: the names given, then every medal's picture, the
+  ones given first in their rank's light, the others dim. Achievements: the open one
+  nearest to unlocking, its progress a large gold figure ("38 / 50") over its bar. Cards:
+  the cards held as small faces (a sealed copy in its rarity's colour), else three blank
+  cards fanned out and "No cards yet". Holocrons: "3 to open", each tier's picture (its
+  gem without one) with its count in its colour, the tiers with none dim. Forge: the
+  kyber shards, the deal of the day once the shop was read (its blade's strip, name and
+  price with the currency's mark) and under it the day's other offers as long as they
+  fit ("owned" or "bought" in place of a price), else "Open the Forge to see the deal of
+  the day", the duplicates to break down at the foot and the Forge's gold dot. Inventory: the credits and kyber shards as large figures with their marks, then
+  shaders, tags and kyber crystals. History: the newest three lines read (date in gold,
+  sentence) once the History tab has read the hub, else what the tab holds. Pictures
+  grow with a taller tile (a 21:9 window's) up to a size and rows that do not fit are
+  left out rather than squeezed (the Shaders tile's tiers then put each bar beside its
+  name). A row stands at most 330 tall times `ui_textScale` (`hall::ROW_MOST`; a 21:9
+  window's two rows were 389), the grid then centred down its room. A summary the client does not know is left out, never
   guessed, and nothing new is asked of the hub; the summaries are made again four times
   a second. On the right, the model's column (300 wide, up to 480 in wider windows, 60 from the
   window's right edge; the model never past 88 % of the window across):
-  "Wearing now" over it, the model in the whole look worn (on the menu map's stage the
-  backdrop camera turns until it stands there, `menu_stage::hall_turn`,
-  `menu_backdrop::window_yaw`; over a match the live preview drawn there), and under it
-  the blade in its tier's colour, the finisher and the tag, and Loadouts (P). The grid
+  at its top "Wearing now", the blade in its tier's colour, the finisher and the tag, and
+  Loadouts (P), all over the model's head (until 15/11/2026 the words and the button
+  stood under it, over its feet), and the model in the whole look worn (on the menu
+  map's stage the backdrop camera turns until it stands there, `menu_stage::hall_turn`,
+  `menu_backdrop::window_yaw`; over a match the live preview drawn there). The grid
   reflows rather than scales: the hall's frame is 1080 lines tall and as wide as the
   window (`hall::hall_frame`), three columns under 1700 of its pixels (4:3, a 3 by 4
   grid), four to 2200 (16:9, 4 by 3), six past (21:9, 6 by 2); a tile is at least 156

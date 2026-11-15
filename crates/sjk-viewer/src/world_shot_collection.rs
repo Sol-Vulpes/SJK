@@ -1752,7 +1752,7 @@ fn duel6_saber_lab_sounds() {
 /// The Collection's hall (15/11/2026, Sol's pick of "The hall"): the menus' Collection
 /// lands on it, a tile to each kind with what it holds (two shaders New, the Sun worn,
 /// Disintegrate and a tag chosen, holocrons to open, the deal of the day, the newest
-/// History line, the Illuminate holocron lit), the model turned into the column on the
+/// three History lines, the Illuminate toy lit), the model turned into the column on the
 /// right; at 16:9, 4:3, 21:9 (the Forge's tile chosen) and 4K at `ui_textScale 1.4`, then
 /// the Shaders page it opens under its breadcrumb.
 #[test]
@@ -1806,12 +1806,14 @@ fn duel6_sjk_collection_hall() {
             preview.snapshot.shop = Some(shop);
             preview.snapshot.history = Some(std::sync::Arc::new(sjk_identity::HistoryState {
                 serial: 1,
-                lines: vec![crate::console::collection_panel::history::tests::opened(
-                    1_793_440_000,
-                    "rare",
-                    120,
-                    0,
-                )],
+                lines: {
+                    use crate::console::collection_panel::history::tests::{came, opened};
+                    vec![
+                        opened(1_793_440_000, "rare", 120, 0),
+                        came(1_793_400_000, "rare", "play"),
+                        opened(1_793_300_000, "uncommon", 60, 4),
+                    ]
+                },
                 more: false,
                 before: 0,
                 message: String::new(),

@@ -3004,7 +3004,11 @@ enum Fact {
 
 /// How many shaders of `tier` (`None`: all of them) and of `edition` (`None`: every
 /// one, the filter's, 06/11/2026) the player holds and sees.
-fn tier_count(inputs: &Inputs<'_>, tier: Option<Rarity>, edition: Option<&str>) -> (usize, usize) {
+pub(super) fn tier_count(
+    inputs: &Inputs<'_>,
+    tier: Option<Rarity>,
+    edition: Option<&str>,
+) -> (usize, usize) {
     let mut held = 0;
     let mut total = 0;
     for skin in inputs.holdings.listed() {

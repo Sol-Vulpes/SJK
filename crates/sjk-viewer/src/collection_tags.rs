@@ -1339,7 +1339,7 @@ impl Panel {
 }
 
 /// A small badge naming a finish at `[x, y]` (a tile's Holo or Solar copies).
-fn finish_badge(
+pub(super) fn finish_badge(
     canvas: &mut crate::menu_widgets::MenuCanvas,
     frame: &Frame,
     [x, y]: [f32; 2],

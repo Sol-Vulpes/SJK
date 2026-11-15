@@ -22,6 +22,11 @@
 
 use super::view::{Count, counts};
 use super::*;
+use crate::unlockables::Unlockable;
+use art::Art;
+
+#[path = "collection_hall_art.rs"]
+mod art;
 use crate::menu::sjk::{Frame, color, fade, fade_across, key_hint, key_hint_width, kit, text};
 use crate::menu_widgets::TextFamily;
 use sjk_ui::{Color, DrawCommand, FontWeight, Rect, TextAlign};
@@ -59,12 +64,21 @@ const STAGE_RIGHT: f32 = 60.0;
 const STAGE_GAP: f32 = 80.0;
 /// The shortest a tile stands at the ordinary text size: its name, two lines and its bar.
 pub(super) const TILE_MIN_HEIGHT: f32 = 156.0;
+/// The tallest a row stands at the ordinary text size: a 21:9 window's two rows would
+/// otherwise stand 389 tall, more than their pictures fill; the grid is then centred down
+/// its room.
+pub(super) const ROW_MOST: f32 = 330.0;
 /// Under this width (hall frame pixels) the grid has three columns, past [`WIDE`] six,
 /// four between.
 const NARROW: f32 = 1_700.0;
 const WIDE: f32 = 2_200.0;
 /// The keys' line.
 const KEYS_Y: f32 = 1_010.0;
+/// The most blades the Shaders tile lists, cards the Cards tile shows and History lines
+/// its tile shows; a tile draws the ones that fit.
+const BLADES_MOST: usize = 8;
+const CARDS_MOST: usize = 12;
+const HISTORY_MOST: usize = 3;
 
 /// A tile of the hall: a kind of the Collection.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -201,6 +215,8 @@ pub(crate) struct Layout {
     pub(crate) stage: [f32; 2],
     /// The grid's right edge.
     pub(crate) right: f32,
+    /// The first row's top: [`GRID_Y`], lower when the rows are shorter than their room.
+    pub(crate) top: f32,
 }
 
 /// The columns a hall frame `width` pixels across gets.
@@ -249,8 +265,11 @@ pub(crate) fn layout(width: f32, spans: &[usize], text_scale: f32) -> Layout {
     } else {
         (((room + GAP) / (least + GAP)).floor() as usize).clamp(1, rows)
     };
-    let height = (room - GAP * (shown_rows - 1) as f32) / shown_rows as f32;
+    let height = ((room - GAP * (shown_rows - 1) as f32) / shown_rows as f32)
+        .min(ROW_MOST * text_scale.max(0.1));
+    let used = height * shown_rows as f32 + GAP * (shown_rows - 1) as f32;
     Layout {
+        top: GRID_Y + ((room - used) * 0.5).max(0.0),
         columns,
         rows,
         shown_rows,
@@ -271,7 +290,7 @@ impl Layout {
             let [width, height] = self.cell;
             [
                 GRID_X + place.column as f32 * (width + GAP),
-                GRID_Y + shown as f32 * (height + GAP),
+                self.top + shown as f32 * (height + GAP),
                 width * place.span as f32 + GAP * (place.span - 1) as f32,
                 height,
             ]
@@ -337,6 +356,8 @@ pub(crate) struct Summary {
     pub(crate) lines: Vec<(String, Color)>,
     pub(crate) share: Option<f32>,
     pub(crate) alert: bool,
+    /// Its picture under the name ([`Art::Lines`]: its lines alone).
+    pub(crate) art: Art,
 }
 
 /// The hall's state: the tile chosen, the first row shown, and what the last frame laid
@@ -550,6 +571,11 @@ impl Panel {
             .filter(|_| inputs.enabled)
             .and_then(|snapshot| snapshot.me.as_ref());
         let known = inputs.holdings.reason().is_none();
+        let owned = match inputs.holdings {
+            Holdings::Known(owned) => owned,
+            _ => &[],
+        };
+        let held = |id: &str| inputs.holdings.debug() || inputs.holdings.unlock(id).is_some();
         tiles()
             .iter()
             .map(|tile| {
@@ -564,35 +590,53 @@ impl Panel {
                         if new > 0 {
                             summary.count = format!("{} \u{b7} {new} new", summary.count);
                         }
-                        let owned = match inputs.holdings {
-                            Holdings::Known(owned) => owned,
-                            _ => &[],
-                        };
                         let worn =
                             crate::shader_marks::worn_of(inputs.setting, inputs.second, owned);
-                        match worn[0].and_then(unlockables::blade_skin) {
-                            Some(skin) => summary
-                                .lines
-                                .push((format!("{} \u{b7} worn", skin.name), skin.tier.colour())),
-                            None => summary
-                                .lines
-                                .push(("Stock blade \u{b7} worn".to_owned(), inputs.stock)),
+                        let blade = |skin: &'static Unlockable, note| art::Blade {
+                            id: Some(skin.id),
+                            name: skin.name.to_owned(),
+                            colour: skin.tier.colour(),
+                            note,
+                        };
+                        let mut blades = vec![match worn[0].and_then(unlockables::blade_skin) {
+                            Some(skin) => blade(skin, "worn"),
+                            None => art::Blade {
+                                id: None,
+                                name: "Stock blade".to_owned(),
+                                colour: inputs.stock,
+                                note: "worn",
+                            },
+                        }];
+                        let mut add = |skin: &'static Unlockable, note| {
+                            if blades.len() < BLADES_MOST
+                                && !blades.iter().any(|shown| shown.id == Some(skin.id))
+                            {
+                                blades.push(blade(skin, note));
+                            }
+                        };
+                        for skin in self.marks.new_ids().filter_map(unlockables::blade_skin) {
+                            add(skin, "new");
                         }
-                        for skin in self
-                            .marks
-                            .new_ids()
-                            .filter_map(unlockables::blade_skin)
-                            .take(2)
-                        {
-                            summary
-                                .lines
-                                .push((format!("{} \u{b7} new", skin.name), skin.tier.colour()));
+                        let mut others: Vec<&'static Unlockable> = owned
+                            .iter()
+                            .filter_map(|unlock| unlockables::blade_skin(&unlock.id))
+                            .collect();
+                        others.sort_by(|a, b| b.tier.cmp(&a.tier));
+                        for skin in others {
+                            add(skin, "");
                         }
+                        let tiers = self
+                            .tier_chips()
+                            .iter()
+                            .map(|&tier| {
+                                let (held, total) =
+                                    super::shaders::tier_count(inputs, Some(tier), None);
+                                (tier, known.then_some(held), total)
+                            })
+                            .collect();
+                        summary.art = Art::Shaders { blades, tiers };
                     }
                     Tile::Finishers => {
-                        let held = |id: &str| {
-                            inputs.holdings.debug() || inputs.holdings.unlock(id).is_some()
-                        };
                         let total = crate::finishers::CATALOGUE.len();
                         if known {
                             let owned = crate::finishers::CATALOGUE
@@ -602,83 +646,43 @@ impl Panel {
                             summary.count = format!("{owned}/{total}");
                             summary.share = Some(owned as f32 / total.max(1) as f32);
                         }
-                        match crate::finishers::own(inputs.finisher, held)
+                        let worn = crate::finishers::own(inputs.finisher, held)
                             .and_then(crate::finishers::get)
-                        {
-                            Some(finisher) => summary.lines.push((
-                                format!("Wearing {}", finisher.name),
-                                finisher.tier.colour(),
-                            )),
-                            None => summary.lines.push(("None worn".to_owned(), color::MUTED)),
-                        }
-                        summary.lines.push((
-                            "What a saber kill does to the body".to_owned(),
-                            color::QUIET,
-                        ));
+                            .map(|finisher| (finisher.name, finisher.tier, finisher.description));
+                        summary.art = Art::Finisher { worn };
                     }
                     Tile::Tags => {
                         let tags = count(Tab::Tags);
                         summary.count = tags.label();
                         summary.share = share(tags);
-                        if let Some(tag) = crate::tags::get(inputs.tag.trim()) {
-                            summary
-                                .lines
-                                .push((format!("Chosen: {}", tag.name), tag.tier.colour()));
-                            if let Some(finish) = crate::cards::FINISHES
+                        let chosen = crate::tags::get(inputs.tag.trim()).map(|tag| {
+                            let finish = crate::cards::FINISHES
                                 .iter()
                                 .find(|finish| finish.id == inputs.tag_finish && finish.index > 0)
-                            {
-                                summary
-                                    .lines
-                                    .push((format!("{} finish", finish.name), color::MUTED));
-                            }
-                        }
+                                .map(|finish| finish.name);
+                            (tag.id, tag.name, tag.tier, finish)
+                        });
+                        summary.art = Art::Tag { chosen };
                     }
                     Tile::Toys => {
                         summary.count = count(Tab::Toys).label();
-                        let on = [
-                            inputs.illuminate,
-                            inputs.cardboard_box,
-                            inputs.order66,
-                            inputs.hax,
-                            inputs.ragdoll,
-                            inputs.drone,
-                            inputs.boombox,
-                            inputs.monitor,
-                            inputs.box_hunt,
-                            inputs.banana,
-                            inputs.fishing,
-                            inputs.wheel_of_doom,
-                            inputs.mining,
-                            inputs.quests,
-                        ];
-                        let names: Vec<String> = on
-                            .iter()
-                            .enumerate()
-                            .filter(|(_, on)| **on)
-                            .map(|(toy, _)| toys::name(toy).to_owned())
-                            .collect();
-                        summary.lines.push(if names.is_empty() {
-                            ("None on now".to_owned(), color::MUTED)
-                        } else {
-                            (
-                                format!("{} on now: {}", names.len(), listed(&names, 3)),
-                                color::GOLD,
-                            )
-                        });
+                        let on = toys::states(inputs);
+                        summary.art = Art::Toys {
+                            on: toys::ORDER.iter().map(|&toy| (toy, on[toy])).collect(),
+                        };
                     }
                     Tile::Medals => {
                         let medals = count(Tab::Medals);
                         summary.count = medals.label();
                         summary.share = share(medals);
-                        if let Some(me) = me {
-                            let names: Vec<String> = crate::medals::awards(&me.medals)
-                                .iter()
-                                .map(crate::medals::Award::label)
-                                .collect();
-                            if !names.is_empty() {
-                                summary.lines.push((listed(&names, 2), color::GOLD));
-                            }
+                        if me.is_some() {
+                            summary.art = Art::Medals {
+                                shown: medals::showing(inputs)
+                                    .1
+                                    .into_iter()
+                                    .map(|showing| (showing.medal, showing.award))
+                                    .collect(),
+                            };
                         }
                     }
                     Tile::Achievements => {
@@ -694,33 +698,36 @@ impl Panel {
                                     && !standing.secret()
                             })
                             .max_by(|a, b| a.fraction().total_cmp(&b.fraction()));
-                        if let Some(next) = next {
-                            summary
-                                .lines
-                                .push((format!("Next up: {}", next.name()), color::TEXT));
-                            summary.lines.push((
-                                format!(
-                                    "{} / {}",
-                                    crate::cards::grouped(next.progress.min(next.kind.goal)),
-                                    crate::cards::grouped(next.kind.goal)
-                                ),
-                                color::MUTED,
-                            ));
+                        let all_done =
+                            achievements.total > 0 && achievements.held == Some(achievements.total);
+                        if next.is_some() || all_done {
+                            summary.art = Art::Achievement {
+                                next: next.map(|next| {
+                                    (next.name().to_string(), next.progress, next.kind.goal)
+                                }),
+                            };
                         }
                     }
                     Tile::Cards => {
                         let cards = count(Tab::Cards);
-                        if let Some(held) = cards.held {
-                            summary.count = cards.label();
-                            summary.lines.push((
-                                if held == 0 {
-                                    "No cards yet: holocrons bring them".to_owned()
-                                } else {
-                                    counted(held as u64, "card held", "cards held")
-                                },
-                                color::MUTED,
-                            ));
-                        }
+                        summary.count = cards.label();
+                        let faces = crate::cards::faces::current();
+                        let shown = me
+                            .map(|me| {
+                                crate::cards::stacks(&me.cards)
+                                    .iter()
+                                    .filter_map(|stack| match &stack.card {
+                                        Some(id) => faces.find(id).map(|(index, _)| Ok(index)),
+                                        None => Some(Err(stack.rarity.colour)),
+                                    })
+                                    .take(CARDS_MOST)
+                                    .collect()
+                            })
+                            .unwrap_or_default();
+                        summary.art = Art::Cards {
+                            shown,
+                            held: cards.held,
+                        };
                     }
                     Tile::Holocrons => {
                         if let Some(me) = me {
@@ -731,14 +738,7 @@ impl Panel {
                             } else {
                                 "None to open".to_owned()
                             };
-                            for (tier, held) in crate::holocrons::TIERS.iter().zip(held).rev() {
-                                if held > 0 && summary.lines.len() < 3 {
-                                    summary.lines.push((
-                                        format!("{held} {}", crate::terms::say(tier.name)),
-                                        tier.colour,
-                                    ));
-                                }
-                            }
+                            summary.art = Art::Holocrons { counts: Some(held) };
                         }
                     }
                     Tile::Forge => {
@@ -746,54 +746,55 @@ impl Panel {
                         if let Some(shards) = me.map(|me| me.shards) {
                             summary.count = counted(shards, "kyber shard", "kyber shards");
                         }
-                        if let Some(deal) = inputs
+                        let shop = inputs
                             .snapshot
                             .filter(|_| inputs.enabled)
                             .and_then(|snapshot| snapshot.shop.as_ref())
-                            .filter(|shop| shop.message.is_empty())
+                            .filter(|shop| shop.message.is_empty());
+                        let offer = |offer: &sjk_identity::Offer| {
+                            let skin = unlockables::blade_skin(&offer.id)?;
+                            Some(art::Deal {
+                                blade: art::Blade {
+                                    id: Some(skin.id),
+                                    name: skin.name.to_owned(),
+                                    colour: skin.tier.colour(),
+                                    note: if offer.bought {
+                                        "bought"
+                                    } else if offer.owned {
+                                        "owned"
+                                    } else {
+                                        ""
+                                    },
+                                },
+                                price: offer.price,
+                                shards: crate::economy::shop_in_shards(),
+                            })
+                        };
+                        let deal = shop
                             .and_then(|shop| shop.day.offers.iter().find(|offer| offer.deal))
-                        {
-                            let skin = unlockables::blade_skin(&deal.id);
-                            summary.lines.push((
-                                format!(
-                                    "Deal of the day: {}",
-                                    skin.map_or(deal.name.as_str(), |skin| skin.name)
-                                ),
-                                skin.map_or(color::GOLD, |skin| skin.tier.colour()),
-                            ));
-                        }
-                        if known {
-                            let (copies, _, _) = forge::duplicates(&forge::owned(
-                                &inputs.holdings,
-                                false,
-                                &self.marks,
-                            ));
-                            if copies > 0 {
-                                summary.lines.push((
-                                    counted(
-                                        u64::from(copies),
-                                        "duplicate to break down",
-                                        "duplicates to break down",
-                                    ),
-                                    color::MUTED,
-                                ));
-                            }
-                        }
+                            .and_then(offer);
+                        let offers = shop
+                            .filter(|_| deal.is_some())
+                            .map(|shop| {
+                                shop.day
+                                    .offers
+                                    .iter()
+                                    .filter(|each| !each.deal)
+                                    .filter_map(offer)
+                                    .collect()
+                            })
+                            .unwrap_or_default();
+                        let duplicates = known.then(|| {
+                            forge::duplicates(&forge::owned(&inputs.holdings, false, &self.marks)).0
+                        });
+                        summary.art = Art::Forge {
+                            deal,
+                            offers,
+                            duplicates,
+                        };
                     }
                     Tile::Inventory => {
                         if let (Some(me), true) = (me, known) {
-                            summary.lines.push((
-                                format!(
-                                    "{} credits, {}",
-                                    crate::cards::grouped(me.credits),
-                                    counted(me.shards, "kyber shard", "kyber shards")
-                                ),
-                                color::TEXT,
-                            ));
-                            let owned = match inputs.holdings {
-                                Holdings::Known(owned) => owned,
-                                _ => &[],
-                            };
                             let shaders = owned
                                 .iter()
                                 .filter(|unlock| unlockables::blade_skin(&unlock.id).is_some())
@@ -817,32 +818,30 @@ impl Panel {
                             if crystals > 0 {
                                 parts.push(counted(crystals, "kyber crystal", "kyber crystals"));
                             }
-                            summary.lines.push((parts.join(", "), color::MUTED));
+                            summary.art = Art::Inventory {
+                                money: Some((me.credits, me.shards)),
+                                rest: parts.join(", "),
+                            };
                         }
                     }
                     Tile::History => {
-                        if let Some(line) = inputs
+                        let rows = inputs
                             .snapshot
                             .filter(|_| inputs.enabled)
                             .and_then(|snapshot| snapshot.history.as_ref())
-                            .and_then(|history| history.lines.first())
-                        {
-                            let row = history::row(line);
-                            let day: String = row.when.chars().take(5).collect();
-                            summary.lines.push((
-                                if day.is_empty() {
-                                    row.text
-                                } else {
-                                    format!("{day} \u{b7} {}", row.text)
-                                },
-                                color::MUTED,
-                            ));
-                        } else {
-                            summary.lines.push((
-                                "What came, was opened, spent and traded".to_owned(),
-                                color::QUIET,
-                            ));
-                        }
+                            .map(|history| {
+                                history
+                                    .lines
+                                    .iter()
+                                    .take(HISTORY_MOST)
+                                    .map(|line| {
+                                        let row = history::row(line);
+                                        (row.when.chars().take(5).collect(), row.text)
+                                    })
+                                    .collect()
+                            })
+                            .unwrap_or_default();
+                        summary.art = Art::History { rows };
                     }
                     Tile::SaberLab => summary.lines.push((
                         "On while the lab runs: hold, swing and build a blade".to_owned(),
@@ -890,18 +889,18 @@ impl Panel {
         // The tally, at the window's right as the page's is at its frame's.
         self.tally(&frame.shifted(width - 1_920.0, 0.0), &counts);
         let first = self.hall_state.first;
+        // Taken while the tiles draw, so none is copied a frame.
+        let summaries = std::mem::take(&mut self.hall_state.summaries);
+        let blank = Summary::default();
         for (index, tile) in tiles().iter().enumerate() {
             let Some(rect) = layout.rect(index, first) else {
                 continue;
             };
-            let summary = self
-                .hall_state
-                .summaries
-                .get(index)
-                .cloned()
-                .unwrap_or_default();
-            self.tile(&frame, *tile, index, rect, &summary, style.scale);
+            let summary = summaries.get(index).unwrap_or(&blank);
+            let looks = (style.scale, seconds, inputs.stock);
+            self.tile(&frame, *tile, index, rect, summary, looks);
         }
+        self.hall_state.summaries = summaries;
         if layout.shown_rows < layout.rows {
             self.hall_scroll_bar(&frame, &layout);
         }
@@ -957,7 +956,7 @@ impl Panel {
         index: usize,
         [x, y, width, height]: [f32; 4],
         summary: &Summary,
-        text_scale: f32,
+        (text_scale, seconds, stock): (f32, f32, Color),
     ) {
         let s = frame.s;
         let token = TILE_BASE + index as u16;
@@ -1019,11 +1018,18 @@ impl Panel {
                 TextAlign::Start,
             );
         }
+        // The picture under the name, in the room over its bar.
+        let top = y + 18.0 + 34.0 * ts.max(1.0) + 12.0;
+        if summary.art != Art::Lines {
+            let foot = y + height - pad - if summary.share.is_some() { 20.0 } else { 0.0 };
+            let room = [x + pad, top, width - pad * 2.0, (foot - top).max(0.0)];
+            self.tile_art(frame, &summary.art, room, ts, seconds, stock);
+        }
         // The lines under the name, as many as the tile holds over its bar, wrapped to its
         // width at the player's text size.
         let line_size = 17.0;
         let step = line_size * 1.45 * ts;
-        let mut top = y + 18.0 + 34.0 * ts.max(1.0) + 10.0;
+        let mut top = top;
         let foot = y + height - pad - 8.0;
         let chars = (((width - pad * 2.0) / (line_size * 0.5 * ts)) as usize).max(8);
         'lines: for (words, colour) in &summary.lines {
@@ -1081,9 +1087,9 @@ impl Panel {
         });
     }
 
-    /// The model's column: "Wearing now" over it, the model in the live preview over a
-    /// match (on the menu map's stage it stands there itself), and under it the blade,
-    /// finisher and tag worn and Loadouts (P).
+    /// The model's column: "Wearing now" over it with the blade, finisher and tag worn and
+    /// Loadouts (P) under those words, all over the model's head; the model in the live
+    /// preview over a match (on the menu map's stage it stands there itself).
     fn hall_stage(
         &mut self,
         frame: &Frame,
@@ -1137,8 +1143,9 @@ impl Panel {
             .map(|finisher| finisher.name);
         let tag = crate::tags::get(inputs.tag.trim()).map(|tag| tag.name);
         let rest: Vec<&str> = [finisher, tag].into_iter().flatten().collect();
+        // Under "Wearing now", over the model's head: below it they stood over its feet.
         let ts = crate::text::style::current().scale.max(1.0);
-        let lines_top = 952.0 - 12.0 - 26.0 * ts * if rest.is_empty() { 1.0 } else { 2.0 };
+        let lines_top = GRID_Y + 26.0 * ts;
         text(
             &mut self.ui,
             TextFamily::Body,
@@ -1161,10 +1168,11 @@ impl Panel {
                 TextAlign::Center,
             );
         }
+        let button_top = lines_top + 26.0 * ts * if rest.is_empty() { 1.0 } else { 2.0 } + 10.0;
         kit::button(
             &mut self.ui,
             frame,
-            [middle - 110.0, 952.0, 220.0, kit::CONTROL_HEIGHT],
+            [middle - 100.0, button_top, 200.0, kit::CONTROL_HEIGHT],
             "Loadouts  (P)",
             false,
             true,
