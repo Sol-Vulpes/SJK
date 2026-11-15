@@ -36,6 +36,7 @@ Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 - The WHEEL OF DOOM's music is louder and carries farther _(Sol)_
 - Creyon is a new player model: a werewolf with a second look, Creyon cloth, whose hood, cape and loincloth move as you run. SJK players get it from the hub like Solfox _(Sol)_
 - In the game's chat, SJK's emblem and the EJK icon are smaller and the same size; an EJK player's nameplate shows the EJK icon in the tick's place, with the tick on its bottom right corner as on the scoreboard _(Sol)_
+- The Collection's Nameplates tab is gone: it had no ornaments to collect. Nameplates over players are unchanged, and See & share nameplates and the nameplate style stay in Settings > HUD _(Sol)_
 
 ## 2026.1113.1 (Alpha) | 13/11/2026
 

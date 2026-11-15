@@ -4453,8 +4453,8 @@ dark outline (`TwoTone`). Off keeps the shadow only. It applies to the chat too 
 `cg_chatBoxOutline`).
 
 **Styles** (31/10/2026, Sol's decision to let players choose among the designs SJK has
-had): `cg_nameplateStyle` (Settings "Nameplate style", and the Style row on the
-Collection's Nameplates tab, [sjk-ui.md](sjk-ui.md#collection)) picks the plates' look,
+had): `cg_nameplateStyle` (Settings > HUD "Nameplate style"; the Collection's
+Nameplates tab offered it too until 15/11/2026) picks the plates' look,
 `hud::nameplate::Style`: 0 Holo, the holo frame below (the default, the look since
 28/10/2026); 1 Capsule; 2 Classic. What a plate says is the same in all three (the
 name and its mark, the power icons, the duel badge, the bars and the sharing and duel
@@ -4761,12 +4761,12 @@ them (decided 15/10/2026; since 17/10/2026 with no estimates on anyone else), an
 seeing any of them means sharing your own, through the hub (Sol's rule, 15/10/2026):
 
 - **See & share nameplates** is one setting, `cg_nameplate` (17/10/2026, off by default;
-  Settings > Interface, First setup, and the switch on the Collection's Nameplates tab,
-  [sjk-ui.md](sjk-ui.md#collection)): with nameplates on, whatever bars they show
+  Settings > HUD under Nameplates; the Collection's Nameplates tab had a switch for it
+  until 15/11/2026): with nameplates on, whatever bars they show
   (names only too), your client sends your real health, shield and Force (from the
   snapshot the server sends you, with its server time) to the SJK hub, which passes
   them to the other SJK players of your server ([hub-chat.md](hub-chat.md#vitals));
-  off, you see no nameplates and nothing is sent (`hud::nameplate::see_and_share`). It
+  off, you see no nameplates and nothing is sent (`hud::nameplate::State::sharing`). It
   needs `cl_identity` and a live claim, so it starts a few seconds after joining. It
   replaces `cg_nameplateShare` ("Share my bars"), which the client held on while
   nameplates showed bars: two settings for one value, and in Settings the row looked

@@ -157,6 +157,7 @@ pub(crate) enum Style {
 
 impl Style {
     /// Every style, in `cg_nameplateStyle`'s order.
+    #[cfg(test)]
     pub(crate) const ALL: [Self; 3] = [Self::Holo, Self::Capsule, Self::Classic];
 
     /// The style `cg_nameplateStyle` names.
@@ -165,24 +166,6 @@ impl Style {
             1 => Self::Capsule,
             2 => Self::Classic,
             _ => Self::Holo,
-        }
-    }
-
-    /// Its `cg_nameplateStyle` value.
-    pub(crate) fn value(self) -> i64 {
-        match self {
-            Self::Holo => 0,
-            Self::Capsule => 1,
-            Self::Classic => 2,
-        }
-    }
-
-    /// Its name in Settings and the Collection.
-    pub(crate) fn label(self) -> &'static str {
-        match self {
-            Self::Holo => "Holo",
-            Self::Capsule => "Capsule",
-            Self::Classic => "Classic",
         }
     }
 }
@@ -501,15 +484,6 @@ pub(super) fn register(cvars: &mut CvarRegistry) -> Result<(), sjk_shell::CvarEr
         "Log what the server sends about other players every two seconds",
     ))?;
     Ok(())
-}
-
-/// See and share nameplates is one setting, `cg_nameplate` (17/10/2026): seeing other
-/// players' nameplates shares the player's own health, shield and Force, and turning
-/// the nameplates off stops both. It replaces `cg_nameplateShare` and the hold that kept
-/// it on while the plates showed bars (Sol's rule, 15/10/2026: seeing bars means
-/// sharing).
-pub(crate) fn see_and_share(console: &ViewerConsole) -> bool {
-    console.bool_cvar("cg_nameplate") == Some(true)
 }
 
 /// Settings, sampled once per frame.
@@ -871,7 +845,13 @@ impl State {
     }
 
     /// What the player shares this frame: their own health, shield and Force while
-    /// alive in a match, whenever their nameplates are on ([`see_and_share`]).
+    /// alive in a match, whenever their nameplates are on (`cg_nameplate`).
+    ///
+    /// See and share nameplates is one setting, `cg_nameplate` (17/10/2026): seeing
+    /// other players' nameplates shares the player's own health, shield and Force, and
+    /// turning the nameplates off stops both. It replaces `cg_nameplateShare` and the
+    /// hold that kept it on while the plates showed bars (Sol's rule, 15/10/2026:
+    /// seeing bars means sharing).
     pub(crate) fn sharing(&self, snapshot: Option<&Snapshot>) -> sjk_identity::Sharing {
         let settings = &self.settings;
         let share = settings.enabled;
@@ -2853,7 +2833,6 @@ mod tests {
         let mut console = ViewerConsole::new(directory.path().join("config.cfg")).unwrap();
         let mut state = State::default();
         // Off by default: a new player sees no nameplates and shares nothing.
-        assert!(!see_and_share(&console));
         state.sample(Some(&console));
         assert!(!state.sharing(None).share);
         for (enabled, bars, shares) in [("1", "2", true), ("1", "0", true), ("0", "2", false)] {
@@ -2861,7 +2840,6 @@ mod tests {
             console.set_cvar("cg_nameplateBars", bars);
             state.sample(Some(&console));
             assert_eq!(state.sharing(None).share, shares, "{enabled} {bars}");
-            assert_eq!(see_and_share(&console), shares, "{enabled} {bars}");
         }
     }
 
@@ -3023,8 +3001,8 @@ mod tests {
     /// `cg_nameplateStyle` names the three looks, and any other value is the holo frame.
     #[test]
     fn the_style_setting_names_the_three_looks() {
-        for style in Style::ALL {
-            assert_eq!(Style::of(style.value()), style);
+        for (value, style) in Style::ALL.into_iter().enumerate() {
+            assert_eq!(Style::of(value as i64), style);
         }
         assert_eq!(Style::of(7), Style::Holo);
         assert_eq!(Style::of(-1), Style::Holo);

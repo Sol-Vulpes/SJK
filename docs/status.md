@@ -1,3 +1,16 @@
+## Collection without its Nameplates tab (15/11/2026)
+
+15/11/2026, `personal/collection-no-nameplates` based on `main` `aacf7c07e` (Sol's request).
+The Collection's Nameplates tab (`collection_nameplates.rs`: empty ornament places, the
+plate showcase, a Style row and a See & share nameplates switch) is removed with its
+tokens, actions, hover-card hook, tests and world shots; the row is now Medals,
+Achievements, Shaders, Toys, Tags, Holocrons, Forge, Cards, History (Saber Lab after it
+while the lab is on), indices and tokens renumbered, and `Backstage::World` no longer
+carries the model's head (only the plate used it). The nameplates over players and their
+settings are untouched: `cg_nameplate` and `cg_nameplateStyle` stay in Settings > HUD
+under Nameplates ([sjk-ui.md](sjk-ui.md#collection)). Verified: build, clippy (no new
+warning) and `cargo test -p sjk-viewer`. Not tried in a game; the world shots were not run.
+
 ## Game chat: client icons and ticks (13/11/2026)
 
 13/11/2026, `personal/chat-client-icons` based on `main` `cdd73b774` (Sol: "I would like to
