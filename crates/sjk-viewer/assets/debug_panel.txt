@@ -37,6 +37,20 @@ test: Forge, shop, trade window, Inventory, status bar, Settings rows: kyber wor
 test: With jof.honorNames on: holocrons still read Echoes, kybers keep their name.
 note: Ids, cvars, commands and saved data are unchanged; the hub branch kyber-names matches.
 
+[blade-stills]
+area: Menus & settings
+title: Kyber tiles show each blade's real look, large, tilted and glowing
+change: Each kyber is drawn once by the game with a soft glow and kept in cache/blades.
+change: Wall tiles: the blade across the tile, tilted, name and state at the foot.
+change: Not held: the real look greyed and dimmed with a small padlock (was a grey drawing).
+test: Collection > Kybers, wall: blades fill the tiles; held ones lit, others grey under a lock.
+test: Point at or choose a held tile: its blade moves live; leave it: the still comes back.
+test: List (V), hall, Forge strips: the same stills, readable in the list's rows.
+test: Close and start again: GameData/SJK/cache/blades has the PNGs; tiles show at once.
+test: Change a blade's options (or a pack): its still is drawn again, the old file goes.
+test: ui_menuPictures 1: stills still show (one baked a frame), no live pictures.
+note: First open with an empty cache: a few frames of drawings while the stills bake.
+
 [collection-hall]
 area: Menus & settings
 title: Collection opens on its hall: a tile per kind, Enter in, Esc back out

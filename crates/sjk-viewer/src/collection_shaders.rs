@@ -1462,9 +1462,10 @@ impl Panel {
     }
 
     /// Tile `index` of the wall in `rect` (frame pixels): its tier's frame and a band of
-    /// its colour along the top, its blade as a strip (alive when owned, a ghost of its
-    /// colours when not), its name on two lines, its state and the chroma's mark; the
-    /// chosen one lifted over a shadow in a white outline.
+    /// its colour along the top, its blade large across the tile and tilted, its glow round
+    /// it (its still, greyed and dimmed when not held: 15/11/2026, `swatch::tile_blade`),
+    /// its name on two lines and its state at the foot, and the chroma's mark; the chosen
+    /// one lifted over a shadow in a white outline.
     fn wall_tile(
         &mut self,
         frame: &Frame,
@@ -1489,24 +1490,37 @@ impl Panel {
                 color: color::alpha(color::SPACE, 0.55),
             });
         }
-        let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
-            rect: area,
-            radius: 10.0 * s,
-            color: color::alpha(color::SPACE, if chosen || hovered { 0.82 } else { 0.64 }),
-        });
-        if let Some(tier) = row.tier() {
-            let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
-                rect: frame.rect(x + 10.0, y, width - 20.0, 3.0),
-                radius: 1.5 * s,
-                color: color::alpha(tier.colour(), if row.owned { 1.0 } else { 0.45 }),
-            });
+        match row.tier() {
+            // The tier's frame, one look everywhere (15/11/2026); its effects stay
+            // `rarity_fx`'s, drawn over it.
+            Some(tier) => kit::tier_frame(
+                &mut self.ui,
+                frame,
+                [x, y, width, height],
+                tier,
+                kit::TierSize::Tile,
+                kit::TierLook {
+                    chosen,
+                    hovered: chosen || hovered,
+                    dim: !row.owned,
+                    still: true,
+                    ..kit::TierLook::at(seconds)
+                },
+            ),
+            None => {
+                let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
+                    rect: area,
+                    radius: 10.0 * s,
+                    color: color::alpha(color::SPACE, if chosen || hovered { 0.82 } else { 0.64 }),
+                });
+                let _ = self.ui.draw_list_mut().push(DrawCommand::Border {
+                    rect: area,
+                    radius: 10.0 * s,
+                    width: if chosen { 1.6 } else { 1.2 } * s,
+                    color: row.frame_colour(),
+                });
+            }
         }
-        let _ = self.ui.draw_list_mut().push(DrawCommand::Border {
-            rect: area,
-            radius: 10.0 * s,
-            width: if chosen { 1.6 } else { 1.2 } * s,
-            color: row.frame_colour(),
-        });
         if chosen {
             let _ = self.ui.draw_list_mut().push(DrawCommand::Border {
                 rect: frame.rect(x - 3.0, y - 3.0, width + 6.0, height + 6.0),
@@ -1524,27 +1538,36 @@ impl Panel {
                 color: color::alpha(color::GOLD_BRIGHT, 0.85),
             });
         }
-        let strip = [x + 10.0, y + 10.0, width - 20.0, 22.0];
+        // The name's lines and the state stand at the foot; the blade has the room above.
+        let name_size = 16.0;
+        let line = 18.0 * k;
+        let state_y = y + height - 6.0 - 16.0 * k;
+        let blade = [
+            x + 5.0,
+            y + 5.0,
+            width - 10.0,
+            state_y - 2.0 * line + 3.0 - (y + 5.0),
+        ];
         match row.skin {
-            None => swatch::stock_strip(self.ui.draw_list_mut(), frame, strip, inputs.stock),
+            None => swatch::tile_stock(self.ui.draw_list_mut(), frame, blade, inputs.stock),
             Some(skin) => {
                 if chosen || hovered {
                     crate::blade_pictures::focus(skin.id);
                 }
                 let look = self.skins.get(skin.id);
-                let _ = swatch::strip(
+                let _ = swatch::tile_blade(
                     self.ui.draw_list_mut(),
                     frame,
-                    strip,
+                    blade,
                     look,
                     row.owned,
                     swatch::chroma_turn(look, swatch::rgb_bytes(inputs.stock)),
                 );
             }
         }
-        let name_size = 16.0;
-        let line = 18.0 * k;
         let (first, second) = name_lines(card_name(row.name()), width - 20.0, name_size);
+        let lines = if second.is_empty() { 1.0 } else { 2.0 };
+        let name_y = state_y - lines * line;
         let name_colour = match (chosen, row.owned, row.name_colour()) {
             (_, true, Some(own)) => own,
             (true, _, _) => CHOSEN_OUTLINE,
@@ -1559,14 +1582,13 @@ impl Panel {
                 &mut self.ui,
                 TextFamily::Display,
                 format_args!("{words}"),
-                frame.rect(x + 10.0, y + 38.0 + at as f32 * line, width - 20.0, line),
+                frame.rect(x + 10.0, name_y + at as f32 * line, width - 20.0, line),
                 name_size * s,
                 name_colour,
                 FontWeight::Semibold,
                 TextAlign::Start,
             );
         }
-        let state_y = y + 38.0 + 2.0 * line + 2.0;
         let chroma = row.skin.is_some_and(|skin| skin.chroma);
         let state_width = width - 20.0 - if chroma { MARK + 4.0 } else { 0.0 };
         text(

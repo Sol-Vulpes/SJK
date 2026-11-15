@@ -343,7 +343,11 @@ fn fragment_main(input: VertexOutput) -> @location(0) vec4<f32> {
         return vec4(input.start_color.rgb, input.start_color.a * coverage);
     }
     if input.parameters.y > 1.5 {
-        return textureSample(icon_texture, icon_sampler, input.uv) * input.start_color;
+        // parameters.x greys the picture (a blade still's dimmed look, `blade_stills.rs`).
+        let sampled = textureSample(icon_texture, icon_sampler, input.uv);
+        let grey = dot(sampled.rgb, vec3(0.299, 0.587, 0.114));
+        let rgb = mix(sampled.rgb, vec3(grey), input.parameters.x);
+        return vec4(rgb, sampled.a) * input.start_color;
     }
     let radius = input.parameters.x;
     // A negative parameters.y is a rounded border: its magnitude is the ring width.

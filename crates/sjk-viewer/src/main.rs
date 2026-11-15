@@ -280,6 +280,7 @@ mod blade_pictures;
 mod blade_signatures;
 mod blade_skin_file;
 mod blade_skin_shape;
+mod blade_stills;
 mod bug_report;
 mod electrify;
 mod emote_icons;
@@ -598,6 +599,8 @@ struct GpuState {
     saber_gpu: saber_gpu::Runtime,
     /// The Collection's live blade pictures, once a swatch asked for one.
     blade_pictures: Option<blade_pictures::Target>,
+    /// The Collection's blade stills: their atlas, disk cache and bakes.
+    blade_stills: blade_stills::Stills,
     dust_motes: dust_motes::Runtime,
     /// The quick wheel open while its key is held (`quick_wheel.rs`).
     quick_wheel: quick_wheel::QuickWheel,
@@ -1705,6 +1708,7 @@ impl GpuState {
             sdf_text_pipeline,
             saber_gpu,
             blade_pictures: None,
+            blade_stills: Default::default(),
             dust_motes,
             quick_wheel: quick_wheel::QuickWheel::default(),
             weather,

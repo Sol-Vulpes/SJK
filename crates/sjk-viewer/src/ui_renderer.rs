@@ -322,7 +322,12 @@ pub(crate) fn texture_switches(lists: &[&DrawList]) -> usize {
                 Source::News(news_slot_of(texture).unwrap_or_default())
             }
             None if texture == PREVIEW_TEXTURE => Source::Preview,
-            None if texture == BLADE_PICTURES_TEXTURE => Source::BladePictures,
+            None if texture == BLADE_PICTURES_TEXTURE
+                || crate::blade_pictures::crop_of(texture).is_some() =>
+            {
+                Source::BladePictures
+            }
+            None if crate::blade_stills::cell_of(texture).is_some() => Source::BladeStills,
             None if map_edit_pictures::cell_of(texture).is_some() => Source::MapEditCells,
             None if texture == map_edit_pictures::PREVIEW => Source::MapEditPreview,
             None if crate::chat_gifs::slot_of(texture).is_some() => {
@@ -348,6 +353,32 @@ pub(crate) fn texture_switches(lists: &[&DrawList]) -> usize {
         vertices += 6;
     }
     runs.len()
+}
+
+/// The texture coordinates a live blade picture's texture names: the whole picture, or a
+/// cell's crop ([`crate::blade_pictures::crop_of`]).
+fn blade_picture_range(texture: sjk_ui::TextureId) -> ([f32; 2], [f32; 2]) {
+    crate::blade_pictures::crop_of(texture)
+        .map_or(([0.0; 2], [1.0; 2]), crate::blade_pictures::crop_range)
+}
+
+/// The texture coordinates of the blade still's cell `texture` names.
+fn blade_still_range(texture: sjk_ui::TextureId) -> ([f32; 2], [f32; 2]) {
+    crate::blade_stills::uv_range(crate::blade_stills::cell_of(texture).map_or(0, |(cell, _)| cell))
+}
+
+/// How grey a dimmed still is drawn (a kyber not held): most of its colour gone, so it
+/// reads as one to get, its shape and light still there.
+const STILL_GREY: f32 = 0.6;
+
+/// Desaturate `vertices` (a textured quad just pushed) when `texture` is a blade still's
+/// dimmed look: the shader's textured mode greys by `parameters[0]`.
+fn dim_still(vertices: &mut [ShapeVertex], texture: sjk_ui::TextureId) {
+    if crate::blade_stills::cell_of(texture).is_some_and(|(_, dim)| dim) {
+        for vertex in vertices {
+            vertex.parameters[0] = STILL_GREY;
+        }
+    }
 }
 
 /// Fixed-capacity WGPU shape renderer. GPU ownership never leaks into `sjk-ui`.
@@ -382,6 +413,8 @@ pub(crate) struct ShapeRenderer {
     /// The model preview's display texture, once one exists.
     preview: Option<wgpu::BindGroup>,
     blade_pictures: Option<wgpu::BindGroup>,
+    /// The Collection's blade stills' atlas, once made.
+    blade_stills: Option<wgpu::BindGroup>,
     /// The map editor's shader pictures, while its panel shows them.
     map_edit: MapEditPictures,
     preview_sampler: wgpu::Sampler,
@@ -593,6 +626,7 @@ impl ShapeRenderer {
             news,
             preview: None,
             blade_pictures: None,
+            blade_stills: None,
             map_edit: MapEditPictures::default(),
             preview_sampler: device.create_sampler(&wgpu::SamplerDescriptor {
                 label: Some("SJK model preview sampler"),
@@ -850,14 +884,16 @@ impl ShapeRenderer {
                         | Source::Levelshot
                         | Source::HudPreview
                         | Source::News(_)
-                        | Source::BladePictures
                         | Source::MapEditPreview
                         | Source::Preview => ([0.0, 0.0], [1.0, 1.0]),
+                        Source::BladePictures => blade_picture_range(texture),
+                        Source::BladeStills => blade_still_range(texture),
                         Source::MapEditCells => map_edit_pictures::uv_range(
                             map_edit_pictures::cell_of(texture).unwrap_or_default(),
                         ),
                         Source::Atlas => icons::uv_range(animated(texture, now)),
                     };
+                    let before = self.vertices.len();
                     icons::push_quad(
                         &mut self.vertices,
                         clipped(rect, clips[clip_depth]),
@@ -867,6 +903,7 @@ impl ShapeRenderer {
                         viewport,
                         MAX_SHAPE_VERTICES,
                     );
+                    dim_still(&mut self.vertices[before..], texture);
                 }
                 DrawCommand::TexturedQuadTurned {
                     rect,
@@ -883,9 +920,12 @@ impl ShapeRenderer {
                         Source::MapEditCells => map_edit_pictures::uv_range(
                             map_edit_pictures::cell_of(texture).unwrap_or_default(),
                         ),
+                        Source::BladePictures => blade_picture_range(texture),
+                        Source::BladeStills => blade_still_range(texture),
                         _ => ([0.0, 0.0], [1.0, 1.0]),
                     };
                     // Like explicit coordinates, a turned quad is not clipped.
+                    let before = self.vertices.len();
                     icons::push_quad_at(
                         &mut self.vertices,
                         icons::turned_corners(rect, pivot, degrees),
@@ -895,6 +935,7 @@ impl ShapeRenderer {
                         viewport,
                         MAX_SHAPE_VERTICES,
                     );
+                    dim_still(&mut self.vertices[before..], texture);
                 }
                 DrawCommand::TexturedQuadUv {
                     rect,
@@ -932,8 +973,20 @@ impl ShapeRenderer {
                         }
                         // A blade picture is clipped as other shapes are (it scrolls in
                         // the Collection's list): its coordinates are an upright
-                        // rectangle, cut with it.
-                        Source::BladePictures => {
+                        // rectangle, cut with it. A still's (and a live picture's crop)
+                        // are in its cell, mapped into the texture first.
+                        Source::BladePictures | Source::BladeStills => {
+                            let (low, high) = match source {
+                                Source::BladeStills => blade_still_range(texture),
+                                _ if texture == BLADE_PICTURES_TEXTURE => ([0.0; 2], [1.0; 2]),
+                                _ => blade_picture_range(texture),
+                            };
+                            let uv = uv.map(|[s, t]| {
+                                [
+                                    low[0] + s * (high[0] - low[0]),
+                                    low[1] + t * (high[1] - low[1]),
+                                ]
+                            });
                             let clip = clipped(rect, clips[clip_depth]);
                             if clip.width <= 0.0 || clip.height <= 0.0 {
                                 continue;
@@ -952,6 +1005,7 @@ impl ShapeRenderer {
                                 at(clip.right(), clip.bottom()),
                                 at(clip.x, clip.bottom()),
                             ];
+                            let before = self.vertices.len();
                             icons::push_quad_corners(
                                 &mut self.vertices,
                                 clip,
@@ -961,6 +1015,7 @@ impl ShapeRenderer {
                                 viewport,
                                 MAX_SHAPE_VERTICES,
                             );
+                            dim_still(&mut self.vertices[before..], texture);
                             continue;
                         }
                         Source::Atlas => {
@@ -1126,8 +1181,16 @@ impl ShapeRenderer {
                 Some(_) => Source::Preview,
                 None => return None,
             },
-            None if texture == BLADE_PICTURES_TEXTURE => match self.blade_pictures {
-                Some(_) => Source::BladePictures,
+            None if texture == BLADE_PICTURES_TEXTURE
+                || crate::blade_pictures::crop_of(texture).is_some() =>
+            {
+                match self.blade_pictures {
+                    Some(_) => Source::BladePictures,
+                    None => return None,
+                }
+            }
+            None if crate::blade_stills::cell_of(texture).is_some() => match self.blade_stills {
+                Some(_) => Source::BladeStills,
                 None => return None,
             },
             None if map_edit_pictures::cell_of(texture).is_some() => {
@@ -1209,6 +1272,7 @@ impl ShapeRenderer {
                     .map(LevelshotTexture::bind_group),
                 Source::Preview => self.preview.as_ref(),
                 Source::BladePictures => self.blade_pictures.as_ref(),
+                Source::BladeStills => self.blade_stills.as_ref(),
                 Source::MapEditCells => self.map_edit.grid_group(),
                 Source::MapEditPreview => self.map_edit.preview_group(),
                 Source::Atlas => None,
@@ -1644,8 +1708,28 @@ impl ShapeRenderer {
     }
 
     pub(crate) fn set_blade_pictures(&mut self, device: &wgpu::Device, view: &wgpu::TextureView) {
-        self.blade_pictures = Some(device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("SJK blade pictures UI binding"),
+        self.blade_pictures = Some(self.picture_binding(device, view, "SJK blade pictures UI"));
+    }
+
+    /// Let go of the blade stills' atlas, so it can be freed.
+    pub(crate) fn clear_blade_stills(&mut self) {
+        self.blade_stills = None;
+    }
+
+    /// Sample `view` for textures naming a blade still's cell ([`crate::blade_stills`]).
+    pub(crate) fn set_blade_stills(&mut self, device: &wgpu::Device, view: &wgpu::TextureView) {
+        self.blade_stills = Some(self.picture_binding(device, view, "SJK blade stills UI"));
+    }
+
+    /// `view` bound with the preview's sampler.
+    fn picture_binding(
+        &self,
+        device: &wgpu::Device,
+        view: &wgpu::TextureView,
+        label: &str,
+    ) -> wgpu::BindGroup {
+        device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some(label),
             layout: &self.texture_layout,
             entries: &[
                 wgpu::BindGroupEntry {
@@ -1657,7 +1741,7 @@ impl ShapeRenderer {
                     resource: wgpu::BindingResource::Sampler(&self.preview_sampler),
                 },
             ],
-        }));
+        })
     }
 
     /// Replace the map preview sampled by `TexturedQuad` commands naming

@@ -32,7 +32,7 @@ const WISPS: &str = r#"{
 }"#;
 
 /// The made-up grant.
-fn sun() -> sjk_identity::Unlock {
+pub(super) fn sun() -> sjk_identity::Unlock {
     sjk_identity::Unlock {
         holo: 0,
         solar: 0,
@@ -46,7 +46,7 @@ fn sun() -> sjk_identity::Unlock {
 }
 
 /// A made-up profile with the achievements half done.
-fn preview() -> crate::console::profile_panel::Preview {
+pub(super) fn preview() -> crate::console::profile_panel::Preview {
     let mut preview = super::tests::profile_preview();
     let held: Vec<sjk_identity::Achievement> = crate::achievements::ALL
         .iter()
@@ -71,7 +71,7 @@ fn preview() -> crate::console::profile_panel::Preview {
 }
 
 /// The Collection's page ran out of room.
-fn overflowed(gpu: &GpuState) -> bool {
+pub(super) fn overflowed(gpu: &GpuState) -> bool {
     gpu.console
         .as_ref()
         .is_some_and(crate::console::ViewerConsole::profile_pages_overflowed)

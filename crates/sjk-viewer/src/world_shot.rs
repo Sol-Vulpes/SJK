@@ -355,6 +355,9 @@ mod toon_shots;
 #[path = "world_shot_collection.rs"]
 mod collection;
 
+#[path = "world_shot_blade_stills.rs"]
+mod blade_stills_shots;
+
 #[path = "world_shot_holocrons.rs"]
 mod holocrons_tab;
 
