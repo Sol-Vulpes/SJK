@@ -1005,10 +1005,8 @@ fn reveal_words(outcome: &sjk_identity::RevealOutcome) -> String {
         .iter()
         .filter_map(|revealed| revealed.unlock.as_ref())
         .map(|unlock| match unlock.name.trim() {
-            "" => crate::unlockables::find(&unlock.id).map_or_else(
-                || "new saber shader".to_owned(),
-                |known| known.name.to_owned(),
-            ),
+            "" => crate::unlockables::find(&unlock.id)
+                .map_or_else(|| "new kyber".to_owned(), |known| known.name.to_owned()),
             name => name.to_owned(),
         })
         .collect();

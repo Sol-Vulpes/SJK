@@ -1167,7 +1167,7 @@ or a JA+ black blade included, and the player card's swatches. At 0 a blade keep
 own colour unless it is the other team's (blue on red, red on blue) or past purple
 (RGB, black and the other extended colours), as in EJK. Free players, spectators and
 other game types keep each player's own colours. Fixes hub report 70 (random saber
-colours in team FFA). An SJK blade shader stays worn and takes the team colour as its
+colours in team FFA). An SJK kyber stays worn and takes the team colour as its
 base, as it takes the player's own colour elsewhere (a chroma turns to red or blue,
 [unlockables.md](unlockables.md#chromas); integrator's choice, 17/10/2026, Sol may
 revisit). See [team_sabers.rs](../crates/sjk-viewer/src/team_sabers.rs) and
@@ -1175,7 +1175,7 @@ revisit). See [team_sabers.rs](../crates/sjk-viewer/src/team_sabers.rs) and
 
 `cg_ctfTeamSabers` (archived, default 0; same pages, **CTF team saber colours**) goes
 further in capture the flag and capture the ysalamiri: every red or blue player's blades
-in their team's stock colour with no blade shader over them, muted players' default
+in their team's stock colour with no kyber over them, muted players' default
 saber included, whatever `cg_saberTeamColors` says. From SJK pull request #113 (Slash),
 made an option at the merge (Sol's choice, 17/10/2026).
 
@@ -1195,7 +1195,7 @@ class without one leaves the player's own. SJK does the same client-side
 it reads the installed class files once per Siege map (in the order SJK's server reads them) and
 works each player's colours out again only when the serverinfo or a player's
 configstring changes. The colours apply to held and thrown blades and the player
-card's swatches, replace a JA+ black blade, and keep an SJK blade shader worn over
+card's swatches, replace a JA+ black blade, and keep an SJK kyber worn over
 them, as the team colours do. Blocking a player still leaves their class colour (the
 game sets it, not the player), as it leaves a team colour. Only cgame forces the
 colour: the server, stock and SJK's own, sends `c1`/`c2` as the player set them.
@@ -3808,9 +3808,9 @@ heading:
 | --- | --- | --- |
 | Credits | `cg_statusBarCredits` | The hub's credits, digits grouped by three ("12 340") |
 | Kyber shards | `cg_statusBarShards` | The hub's kyber shards |
-| Kyber crystals | `cg_statusBarCrystals` | The unopened kyber crystals the profile lists (among its last 100 holocrons) |
+| To attune (dormant kybers) | `cg_statusBarCrystals` | The dormant kybers still to attune the profile lists (among its last 100 holocrons) |
 | DOOM coins | `cg_statusBarCoins` | The DOOM coins, once the hub's WHEEL OF DOOM answer has come (`toy_wheelofdoom`, a wheel on the map) |
-| Blade skin | `cg_statusBarSaber` | The first saber's blade skin, its name and dot in its tier's colour ("Stock blade" when none), and the second saber's when it wears another |
+| Kyber | `cg_statusBarSaber` | The first saber's kyber, its name and dot in its tier's colour ("Stock blade" when none), and the second saber's when it wears another |
 | Effects | `cg_statusBarEffects` | A pill for each thing on: the blade's extras switched on, the finisher worn, Tactical mode's level, Do not disturb, away, toon shading |
 | Toys | `cg_statusBarToys` | Every toy with a switch, its quick wheel picture lit with a gold dot while on, faint while off (the Prop gun, which has no picture, by its letters) |
 
@@ -4659,7 +4659,7 @@ command new for them (`DrawCommand::Polygon`, [rendering.md](rendering.md#submis
   playback hides by the same setting.
 - `cg_duelStockBlades` (off; Settings > Gameplay > Normal blades in duels, and Game
   options), when on, draws every player's blade as the stock one, in the colour they set
-  (a stock colour or RGB) and with the stock sounds, instead of their blade skin, while you, or the
+  (a stock colour or RGB) and with the stock sounds, instead of their kyber, while you, or the
   player you follow, are in a private duel, or on a Duel or Power Duel server
   (`g_gametype` 3 or 4), Sol's request of 21/10/2026: nothing round a blade hides where it
   is or how it swings ([duel_blades.rs](../crates/sjk-viewer/src/duel_blades.rs),
@@ -4669,7 +4669,7 @@ command new for them (`DrawCommand::Polygon`, [rendering.md](rendering.md#submis
 - `cg_stockBlades` (0, Off; Settings > Advanced > Gameplay > Effects > Stock blades, and
   the classic Game options: Off, Others, All), Sol's request of 25/10/2026 for weak PCs
   (GTX 1050/1060 class, integrated GPUs): `1` draws other players' blades as stock blades in the colour they set (a stock
-  colour or RGB), without their blade skin; `2` every blade, yours included. A blade skin
+  colour or RGB), without their kyber; `2` every blade, yours included. A kyber
   costs about 0.4 to 0.6 ms of GPU time on an RTX 5080 once one is in view (a heavy
   signature up to 6 ms), so several milliseconds on a weak GPU on a full saber server.
   Everything the skin draws goes with it (its shading, afterimages, glints, petals, heat
@@ -5296,11 +5296,11 @@ are in [identity.md](identity.md).
   profile as others read it on the hub: name, verified, member since, other names,
   medals (on its own only), the bio (written there, up to 6 lines under the hub's
   rules), their record from the achievement counts and how many achievements and
-  shaders they hold. It
+  kybers they hold. It
   has the SJK UI's look in every menu style; See the board and See the collection
   open the Collection (`collection`, `achievements`, `unlockables`;
-  [sjk-ui.md](sjk-ui.md#collection)): medals, achievements, saber shaders
-  ([unlockables.md](unlockables.md#shaders-tab)), toys, nameplates and holocrons
+  [sjk-ui.md](sjk-ui.md#collection)): medals, achievements, kybers
+  ([unlockables.md](unlockables.md#kybers-tab)), toys, nameplates and holocrons
   (`holocrons`, [holocrons.md](holocrons.md#the-holocrons-tab)), a screen of its own in
   the SJK UI ([identity.md](identity.md#profile)); See holocrons opens its Holocrons.
   The SJK UI's main page and in-game menu show a profile card bottom left (picture,
@@ -5397,9 +5397,9 @@ plays the demo `SJK_TEST_DEMO` names off screen, pins the card on another player
 renders the ring from an orbit around them and from behind the recorder. It shows what
 the server already publishes to every client (name with its colour codes, model and its
 head icon, saber hilts with their blade colours, the hat and cape worn, bot skill; not
-the duel wins and losses), the saber shader they wear (a live swatch, as the Collection
+the duel wins and losses), the kyber they wear (a live swatch, as the Collection
 draws it, and its name; only when it draws on their blade on this PC: worn by their
-look, its pack loaded; a second saber's or a staff's other half's own shader, when it
+look, its pack loaded; a second saber's or a staff's other half's own kyber, when it
 is not the first's, on a row of its own named "(2nd blade)" or "(other half)") and, when the hub knows the player, their profile picture in
 place of the head icon (the icon then sits small on its lower left corner), SJK's
 emblem, their hub name, a gold VERIFIED, a teal SJK TEAM pill for staff, a gem of the
@@ -6553,7 +6553,7 @@ sees it there.
 
 - **The tags** are unlocks of the hub (its `PROTOCOL.md`,
   "Unlocks"; the client's list is [tags.rs](../crates/sjk-viewer/src/tags.rs)), each with a
-  tier as shaders have. Three are everyone's from the start (SJK, GG, Fox); the others drop
+  tier as kybers have. Three are everyone's from the start (SJK, GG, Fox); the others drop
   from holocrons ([holocrons.md](holocrons.md)), duplicates stacking. There are no uploads
   (Sol's decision, 27/10/2026): Sol picks every tag, new ones from rounds on Discord, and
   each needs a new id in both catalogues and its picture in the hub's `sjk_tags` pack.
@@ -6585,7 +6585,7 @@ sees it there.
   is held in that finish or two spare copies are lacking. The hub's answer reads under the
   buttons ("Holo Gonk tag broken down: +25 kyber shards.", "Crafted: Kyber tag. It is
   yours."). Spare copies trade too: the trade window lists them with their finish beside
-  the duplicate shaders, counted as duplicates in the day's limits
+  the duplicate kybers, counted as duplicates in the day's limits
   ([tag_copies.rs](../crates/sjk-viewer/src/tag_copies.rs)).
 - **Choosing:** Collection > Tags shows every tag under its collection's heading, then
   the credits cards under their own, the ones the player lacks dimmed and the Holo and Solar copies held as badges;
@@ -6939,17 +6939,17 @@ loaded skins change.
 
 `saberskin` lists the blade skins, owned (since when) or locked (how to get it), and
 which is worn; `saberskin <id>` or `saberskin none` sets `cg_saberSkin` (a locked one
-is kept and shows once unlocked). `unlockables` opens the Collection on its Shaders
+is kept and shows once unlocked). `unlockables` opens the Collection on its Kybers
 tab (also the Profile page's See the collection), where owned skins are equipped and
 unequipped and any is previewed on the player's own saber
 ([sjk-ui.md](sjk-ui.md#collection)).
 
 A player may choose other saber sounds than their skin's (`cg_saberSounds`, Profile >
-Saber > Sounds: follow the shader, the stock sounds, or any owned shader's; every SJK
+Saber > Sounds: follow the kyber, the stock sounds, or any owned kyber's; every SJK
 player hears the choice, [unlockables.md](unlockables.md#saber-sounds)); what follows
 holds for the set they are heard with. A skin brings its own sounds, heard for each player wearing it, over the stock ones,
 which keep playing (the skin's sound goes on a channel of its own, so that it does not
-cut the stock one), or, with `s_saberSkinSounds 2` (Settings > Sound > Blade skin
+cut the stock one), or, with `s_saberSkinSounds 2` (Settings > Sound > Kyber
 sounds: Only skin; 1, With normal, is the default), in their place, or, with
 `s_saberSkinSounds 0` (Off), not at all, every player heard with the stock sounds
 (the table of who wears which set is passed empty), so a skin's own sounds are heard clearly
@@ -6996,10 +6996,10 @@ launch, for a shortcut.
   pack. A reload takes about 20 ms. A file saved with a UTF-8 byte-order mark (Notepad,
   PowerShell) reads as one without.
 - **Mistakes:** a file that does not read, or whose images or sounds do not load, keeps its
-  skin's last good look (`LoadedSkins::keep`), and the Shaders tab's lead says which file
+  skin's last good look (`LoadedSkins::keep`), and the Kybers tab's lead says which file
   and why (`corona.reach must be 1 to 2, not 9`), as does the console. The lead otherwise
   names the folder and how long ago it was read.
-- **The preview:** starting the lab opens the Collection's Shaders tab (the SJK UI's
+- **The preview:** starting the lab opens the Collection's Kybers tab (the SJK UI's
   Collection screen, or the classic menus' page) with the lab blade chosen, the row after
   the stock blade whatever the filter, on the lone saber the tab turns
   ([sjk-ui.md](sjk-ui.md#collection)). Any skin of the folder can be chosen there.
@@ -7012,13 +7012,13 @@ launch, for a shortcut.
   the game chains them, the start from the stance, the attack and the return
   (`force_pose::STYLE_ATTACKS`, `BOTH_S1_S1_T_` / `BOTH_A1_T__B_` / `BOTH_R1_B__S1` and so
   on). A copy of the same saber floats on the right (`LAB_SABER_AREA`, four fifths of
-  its width long at most), turned by a drag as on Shaders, its hilt in a buffer of its
+  its width long at most), turned by a drag as on Kybers, its hilt in a buffer of its
   own (`StageSaber::float_instance_buffer`). Under it: Style and Moves as segments, the
   blade with arrows among the folder's skins, Equip, and the lab's status in the lead.
   Keys: 1 to 3 the style, Space stand or swing, Left and Right the blade, Enter equip.
   Over a match the tab shows no stage and says so; the stage is the main menu's only.
 - **Hilts, speed, ignition, sound and camera** (18/10/2026): the model holds the player's
-  own hilts (`saber1`, `saber2`, read as the Collection opens), as the Shaders tab's lone
+  own hilts (`saber1`, `saber2`, read as the Collection opens), as the Kybers tab's lone
   saber does; a staff or two sabers swing in their own style (`force_pose::lab_swings`,
   the `BOTH_A7_*` and `BOTH_A6_*` attacks) and the Style row says so. A Speed slider
   (10% to 200%, `-` and `=`) plays the animations and the moves' script at that pace
@@ -7059,10 +7059,10 @@ launch, for a shortcut.
   evenly leaves it, eight slices over 0.45 rad about the camera's forward through its
   grip, each as old as its place (`saber_trail::still_trail`, drawn that frame only,
   `SegmentPool::add_still`). The blade on the model and the floating one is the one worn
-  (`cg_saberSkin`, whatever Shaders equipped), so the lab's own shows once the tab's
+  (`cg_saberSkin`, whatever Kybers equipped), so the lab's own shows once the tab's
   Equip wears it. The Blade row (Left and Right) starts there, then previews the stock
   blade, the lab folder's skins and every other blade skin of the catalogue, the rarest
-  first, owned or not (`LabBlade`, `lab_blades`; drawn on this PC only, as Shaders
+  first, owned or not (`LabBlade`, `lab_blades`; drawn on this PC only, as Kybers
   previews a locked one). Equip wears what may be worn (a lab skin, or one the profile
   lists) and takes off what is worn; a blade not owned is only previewed, and the line
   under the row says which.
@@ -7153,7 +7153,7 @@ launch, for a shortcut.
   does. In the middle the blade's groups (`blade_builder::Shape`): The blade itself (the
   sections every skin has; never grouped, never taken off), Always on (the effects in
   no option), each group (an option of the file: its name, a click renames it, Enter
-  keeps the name; its switch, the wearer's own choice as on Shaders; `×` ungroups it,
+  keeps the name; its switch, the wearer's own choice as on Kybers; `×` ungroups it,
   its effects always on) and room for a new one while there are fewer than six. An
   effect is dragged (6 frame pixels from where it was pressed) from the library onto the
   blade, between Always on and the groups (at most four in one), onto New group (named

@@ -376,7 +376,25 @@ impl Panel {
             "Back"
         };
         // A card asking on the Forge covers the page: the header is left out under it.
-        if !asking {
+        if !asking && self.tab == Tab::Shaders && self.finishers_shown {
+            // The Finishers pill's page is not kybers: the breadcrumb says Finishers.
+            let held = crate::finishers::CATALOGUE
+                .iter()
+                .filter(|f| inputs.holdings.debug() || inputs.holdings.unlock(f.id).is_some())
+                .count();
+            let count = Count {
+                held: Some(held),
+                total: crate::finishers::CATALOGUE.len(),
+            };
+            crate::profile_hub::collection_header_as(
+                &mut self.ui,
+                &frame,
+                (back, BACK_TOKEN),
+                "Finishers",
+                (&count.label(), self.widen),
+            );
+            self.tally(&frame, &counts);
+        } else if !asking {
             crate::profile_hub::collection_header(
                 &mut self.ui,
                 &frame,

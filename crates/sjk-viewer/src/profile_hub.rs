@@ -129,7 +129,7 @@ const PROFILE_LABELS: [&str; 4] = ["Character", "Saber", "Force", "SJK Profile"]
 const COLLECTION_LABELS: [&str; 10] = [
     "Medals",
     "Achievements",
-    "Shaders",
+    "Kybers",
     "Toys",
     "Tags",
     HOLOCRONS,
@@ -141,7 +141,7 @@ const COLLECTION_LABELS: [&str; 10] = [
 const COLLECTION_LABELS_LAB: [&str; 11] = [
     "Medals",
     "Achievements",
-    "Shaders",
+    "Kybers",
     "Toys",
     "Tags",
     HOLOCRONS,
@@ -577,18 +577,31 @@ pub(crate) fn collection_header(
     current: Tab,
     (counts, widen): (&[String], f32),
 ) {
-    top_bar(canvas, frame, back, back_token, COLLECTION, None);
     if current == Tab::Hall {
+        top_bar(canvas, frame, back, back_token, COLLECTION, None);
         return;
     }
     let count = counts.get(current.index()).map_or("", String::as_str);
-    breadcrumb(
+    collection_header_as(
         canvas,
         frame,
+        (back, back_token),
         &crate::terms::say(current.label()),
-        count,
-        widen,
+        (count, widen),
     );
+}
+
+/// [`collection_header`] inside a kind that names itself `kind` with `count` (the
+/// Kybers tab's Finishers pill says "Finishers", not "Kybers": Sol, 15/11/2026).
+pub(crate) fn collection_header_as(
+    canvas: &mut MenuCanvas,
+    frame: &Frame,
+    (back, back_token): (&str, u16),
+    kind: &str,
+    (count, widen): (&str, f32),
+) {
+    top_bar(canvas, frame, back, back_token, COLLECTION, None);
+    breadcrumb(canvas, frame, kind, count, widen);
 }
 
 /// Where the breadcrumb's parts stand (frame pixels): how wide the hall's link from

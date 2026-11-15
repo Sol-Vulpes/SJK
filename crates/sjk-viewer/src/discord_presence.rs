@@ -193,7 +193,7 @@ fn tab_words(tab: Tab) -> &'static str {
         Tab::Medals => "Looking at medals",
         Tab::Achievements => "Looking at achievements",
         // The Saber Lab is a development tab: told as the shaders are.
-        Tab::Shaders | Tab::SaberLab => "Looking at saber shaders",
+        Tab::Shaders | Tab::SaberLab => "Looking at kybers",
         Tab::Toys => "Looking at toys",
         Tab::Tags => "Looking at tags",
         Tab::Banners => "Choosing a profile banner",

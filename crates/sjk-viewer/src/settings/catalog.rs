@@ -259,7 +259,7 @@ pub(super) const AUDIO: &[Setting] = &[
         kind: ValueKind::Bool,
     },
     Setting {
-        label: "Blade skin sounds",
+        label: "Kyber sounds",
         cvar: crate::audio::SKIN_SOUNDS_CVAR,
         kind: ValueKind::Choice(&["0", "1", "2"]),
     },
@@ -596,7 +596,7 @@ pub(super) const HUD_OPTIONS: &[Setting] = &[
         kind: ValueKind::Bool,
     },
     Setting {
-        label: "Status bar: crystals",
+        label: "Status bar: to attune",
         cvar: crate::status_bar::CRYSTALS_CVAR,
         kind: ValueKind::Bool,
     },
@@ -606,7 +606,7 @@ pub(super) const HUD_OPTIONS: &[Setting] = &[
         kind: ValueKind::Bool,
     },
     Setting {
-        label: "Status bar: blade skin",
+        label: "Status bar: kyber",
         cvar: crate::status_bar::SABER_CVAR,
         kind: ValueKind::Bool,
     },

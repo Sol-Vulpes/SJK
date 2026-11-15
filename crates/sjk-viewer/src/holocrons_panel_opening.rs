@@ -204,7 +204,7 @@ pub(crate) struct Found {
     pub(crate) name: String,
     /// How many of it the player holds now, this one included.
     pub(crate) count: u32,
-    /// What it is when this client does not know it ([`unknown_kind`]): "saber shader",
+    /// What it is when this client does not know it ([`unknown_kind`]): "kyber",
     /// "tag", "card"...; the words a fallback card shows (Kushina, 30/10/2026: loot newer
     /// than the client showed as a dark, empty shader card).
     pub(crate) unknown: &'static str,
@@ -214,7 +214,7 @@ pub(crate) struct Found {
 /// with their kind (`saber_`, `tag_`, `banner_`, `toy_`); "prize" for anything else.
 pub(crate) fn unknown_kind(id: &str) -> &'static str {
     const KINDS: [(&str, &str); 4] = [
-        ("saber_", "saber shader"),
+        ("saber_", "kyber"),
         ("tag_", "tag"),
         ("banner_", "profile banner"),
         ("toy_", "toy"),
@@ -293,14 +293,14 @@ impl Found {
         }
     }
 
-    /// What it is, in two words ("saber shader", "tag").
+    /// What it is, in two words ("kyber", "tag").
     pub(super) fn kind(&self) -> &'static str {
         if crate::profile_card::banner::get(&self.id).is_some() {
             "bonus profile banner"
         } else if self.tag.is_some() {
             "tag"
         } else if self.skin.is_some() {
-            "saber shader"
+            "kyber"
         } else {
             self.unknown
         }
@@ -1941,7 +1941,7 @@ impl Panel {
             format_args!(
                 "{}",
                 crate::terms::say(
-                    "Kyber shards craft the saber shader you choose, among those holocrons drop."
+                    "Kyber shards craft the kyber you choose, among those holocrons drop."
                 )
             ),
             frame.rect(CARD_X - 600.0, ABOUT_Y, 1_200.0, 26.0),
@@ -2025,7 +2025,7 @@ impl Panel {
         } else {
             match (found.skin, found.tag) {
                 (Some(skin), _) => {
-                    format!("{} {} saber shader", skin.tier.symbol(), skin.tier.label())
+                    format!("{} {} kyber", skin.tier.symbol(), skin.tier.label())
                 }
                 (None, Some(tag)) => format!("{} {} tag", tag.tier.symbol(), tag.tier.label()),
                 (None, None) => {

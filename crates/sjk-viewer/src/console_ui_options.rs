@@ -18,7 +18,7 @@ pub(super) fn register(cvars: &mut CvarRegistry) -> Result<(), sjk_shell::CvarEr
         (
             "ui_shaderList",
             0,
-            "Collection, Shaders and the Forge: 0 shows the shaders as tiles, 1 as a list",
+            "Collection, Kybers and the Forge: 0 shows the kybers as tiles, 1 as a list",
         ),
         (
             crate::console::collection_panel::hall::CVAR,

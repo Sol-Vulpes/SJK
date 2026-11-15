@@ -1346,15 +1346,15 @@ fn trade_refusal(error: &HubError) -> String {
     let words = match error {
         HubError::Rejected { code, message, .. } => match code.as_str() {
             "not_a_duplicate" => "That is your last one: only duplicates can be shattered.",
-            "comes_with_card" => "That shader comes with your card: it stays with the card.",
-            "not_held" => "You hold no copy of that shader any more.",
+            "comes_with_card" => "That kyber comes with your card: it stays with the card.",
+            "not_held" => "You hold no copy of that kyber any more.",
             "no_duplicates" => "You hold no duplicates to break down.",
-            "locked" => "That shader is locked: unlock it first.",
-            "not_shatterable" => "That shader cannot be shattered.",
-            "not_craftable" => "That shader cannot be crafted.",
+            "locked" => "That kyber is locked: unlock it first.",
+            "not_shatterable" => "That kyber cannot be shattered.",
+            "not_craftable" => "That kyber cannot be crafted.",
             "not_enough_shards" => "Not enough kyber shards.",
-            "already_owned" => "You have that shader already.",
-            "not_on_offer" => "That shader is not in the shop any more: the offers changed.",
+            "already_owned" => "You have that kyber already.",
+            "not_on_offer" => "That kyber is not in the shop any more: the offers changed.",
             "not_enough_credits" => "Not enough credits.",
             "already_bought" => "You bought that one today already.",
             "not_for_sale" => "That holocron is not for sale.",
@@ -1443,8 +1443,8 @@ fn wishlist_at_once(snapshot: &mut Snapshot, ids: &[String]) -> bool {
 fn mark_refusal(error: &HubError) -> String {
     let words = match error {
         HubError::Rejected { code, message, .. } => match code.as_str() {
-            "not_held" => "Only a shader you hold can be locked.",
-            "bad_unlock" => "The hub does not know that shader yet.",
+            "not_held" => "Only a kyber you hold can be locked.",
+            "bad_unlock" => "The hub does not know that kyber yet.",
             "not_registered" => "Your identity is not registered at the hub yet.",
             _ => return message.clone(),
         },
@@ -7449,7 +7449,7 @@ mod tests {
         let refusal = lock(&snapshot).mark_refusal.clone().unwrap();
         assert_eq!(
             refusal,
-            (1, "Only a shader you hold can be locked.".to_owned())
+            (1, "Only a kyber you hold can be locked.".to_owned())
         );
         worker.tick(t1 + HOLOCRONS_SOON);
         assert!(holocron_reads(&fake) > reads, "read again");
@@ -7696,7 +7696,7 @@ mod tests {
         worker.handle(Command::Buy("saber_gone".to_owned()), t0);
         assert_eq!(
             lock(&snapshot).trade.clone().unwrap().message,
-            "That shader is not in the shop any more: the offers changed."
+            "That kyber is not in the shop any more: the offers changed."
         );
         assert_eq!(
             lock(&snapshot).shop.clone().unwrap().serial,

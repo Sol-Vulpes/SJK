@@ -625,7 +625,7 @@ const HELP: &[(&str, &str)] = &[
     ),
     (
         crate::audio::SKIN_SOUNDS_CVAR,
-        "A blade skin's own ignition, swings and hum: off (normal saber sounds), over the normal ones, or instead of them.",
+        "A kyber's own ignition, swings and hum: off (normal saber sounds), over the normal ones, or instead of them.",
     ),
     ("cg_footsteps", "Footstep sounds, yours and other players'."),
     (
@@ -1159,11 +1159,11 @@ const HELP: &[(&str, &str)] = &[
     ),
     (
         crate::team_sabers::TEAM_COLORS_CVAR,
-        "Team games: sabers in the team's colour, shaders worn over it. Off changes only the other team's colour and RGB or black.",
+        "Team games: sabers in the team's colour, kybers worn over it. Off changes only the other team's colour and RGB or black.",
     ),
     (
         crate::team_sabers::CVAR,
-        "In capture the flag, every red or blue player's sabers in their team's colour, with no blade shader. Off by default.",
+        "In capture the flag, every red or blue player's sabers in their team's colour, with no kyber. Off by default.",
     ),
     (
         crate::saber_rgb::black::CVAR,
@@ -1227,7 +1227,7 @@ const HELP: &[(&str, &str)] = &[
     ),
     (
         crate::tactical::CVAR,
-        "Minimal: no emotes, toys, pop-ups. Medium: low graphics, no weather, fog, blade skins. Max: flat world, one model.",
+        "Minimal: no emotes, toys, pop-ups. Medium: low graphics, no weather, fog, kybers. Max: flat world, one model.",
     ),
     (
         crate::tactical::DUEL_CVAR,
@@ -1247,7 +1247,7 @@ const HELP: &[(&str, &str)] = &[
     ),
     (
         crate::stock_blades::CVAR,
-        "For weak PCs: blades drawn stock in their colour, no shaders or effects. Others: not yours. All: yours too.",
+        "For weak PCs: blades drawn stock in their colour, no kybers or effects. Others: not yours. All: yours too.",
     ),
     (
         crate::effect_aux::saber_rain_steam::CVAR,
@@ -1477,7 +1477,7 @@ const HELP: &[(&str, &str)] = &[
     ),
     (
         crate::menu_pictures::CVAR,
-        "Map pictures behind the menus and drawn saber shaders, not live ones: saves video memory. On by itself on small cards.",
+        "Map pictures behind the menus and drawn kybers, not live ones: saves video memory. On by itself on small cards.",
     ),
     (
         crate::quick_wheel::pages::FILE,
@@ -1670,7 +1670,7 @@ const HELP: &[(&str, &str)] = &[
     ),
     (
         crate::status_bar::CVAR,
-        "A compact bar at the top or bottom of the screen with your credits, blade skin, effects and toys. Choose what it shows below.",
+        "A compact bar at the top or bottom of the screen with your credits, kyber, effects and toys. Choose what it shows below.",
     ),
     (
         crate::status_bar::CREDITS_CVAR,
@@ -1682,7 +1682,7 @@ const HELP: &[(&str, &str)] = &[
     ),
     (
         crate::status_bar::CRYSTALS_CVAR,
-        "Shows how many kyber crystals you have left to open on the status bar.",
+        "Shows how many dormant kybers you have left to attune on the status bar.",
     ),
     (
         crate::status_bar::COINS_CVAR,
@@ -1690,7 +1690,7 @@ const HELP: &[(&str, &str)] = &[
     ),
     (
         crate::status_bar::SABER_CVAR,
-        "Shows the blade skin on your saber, in its tier's colour, on the status bar.",
+        "Shows the kyber on your saber, in its tier's colour, on the status bar.",
     ),
     (
         crate::status_bar::EFFECTS_CVAR,

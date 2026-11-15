@@ -522,7 +522,7 @@ impl Panel {
                         [x, words_y],
                         item.colour(),
                     );
-                    // Its kind, capitalized ("Tag", "Saber shader", "Card").
+                    // Its kind, capitalized ("Tag", "Kyber", "Card").
                     let kind = found.kind();
                     let (first, rest) = kind.split_at(1);
                     let kind = format!("{}{rest}", first.to_ascii_uppercase());
@@ -554,7 +554,7 @@ impl Panel {
                 if bonus_batch(shown) {
                     "Bonus covers are on the Collection's Banners tab."
                 } else {
-                    "Cards are on the Collection's Cards tab, shaders on its Shaders tab; kyber shards craft shaders."
+                    "Cards are on the Collection's Cards tab, kybers on its Kybers tab; kyber shards craft kybers."
                 }
             ),
             frame.rect(MIDDLE_X - 600.0, 836.0, 1_200.0, 26.0),

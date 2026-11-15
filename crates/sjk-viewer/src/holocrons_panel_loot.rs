@@ -86,7 +86,7 @@ fn notes() -> [String; 7] {
     [
         "A card's rarity and its finish are rolled apart, so a kind of card is the two chances multiplied, weighed by how often each holocron drops."
             .to_owned(),
-        "Credits and a pile of kyber shards are rolled evenly between the least and the most. A holocron that brings a saber shader or kyber shards brings no card and no credits; the averages count it.".to_owned(),
+        "Credits and a pile of kyber shards are rolled evenly between the least and the most. A holocron that brings a kyber or kyber shards brings no card and no credits; the averages count it.".to_owned(),
         format!(
             "The rarest card is a {} {}: about {} holocrons.",
             RARITIES[rarity].name,
@@ -106,19 +106,19 @@ fn notes() -> [String; 7] {
     .map(crate::terms::say_owned)
 }
 
-/// The notes on how a kyber crystal's shader is picked, and its pity.
+/// The notes on how a dormant kyber's kyber is picked, and its pity.
 fn kyber_notes(pity: Option<crate::kyber::Pity>) -> [String; 6] {
     let every = crate::kyber::current().pity_every;
     [
-        "The shader's tier is rolled with the crystal's odds, then the shader is picked among the droppable shaders of that tier, the ones you do not hold yet first. Holding them all, any of them comes and the copy stacks.".to_owned(),
-        "A tier with no droppable shader gives the nearest commoner tier's, else the commonest above it. Medal shaders never come out of a crystal.".to_owned(),
+        "The kyber's tier is rolled with the dormant kyber's odds, then the kyber is picked among the droppable kybers of that tier, the ones you do not hold yet first. Holding them all, any of them comes and the copy stacks.".to_owned(),
+        "A tier with no droppable kyber gives the nearest commoner tier's, else the commonest above it. Medal kybers never come out of a dormant kyber.".to_owned(),
         format!(
-            "Pity: the {every}th crystal in a row without a Legendary or Mythical shader gives one of them. {}.",
+            "Pity: the {every}th dormant kyber in a row without a Legendary or Mythical kyber gives one of them. {}.",
             crate::kyber::pity_line(pity)
         ),
-        "Each achievement brings its crystal once, when it unlocks: its reward shows on the Achievements tab.".to_owned(),
-        "Crystals are never dropped by play, bought, sold, traded or broken down.".to_owned(),
-        "A crystal brings only shaders of its own edition or an older one: an Alpha crystal Alpha ones only, a Beta one Beta or Alpha.".to_owned(),
+        "Each achievement brings its dormant kyber once, when it unlocks: its reward shows on the Achievements tab.".to_owned(),
+        "Dormant kybers are never dropped by play, bought, sold, traded or broken down.".to_owned(),
+        "A dormant kyber brings only kybers of its own edition or an older one: an Alpha one Alpha kybers only, a Beta one Beta or Alpha.".to_owned(),
     ]
     .map(crate::terms::say_owned)
 }
@@ -262,7 +262,7 @@ impl Panel {
             &mut self.ui,
             TextFamily::Display,
             format_args!(
-                "Loot table: kyber crystals{}",
+                "Loot table: dormant kybers{}",
                 if self.loot_beta { ", Beta season" } else { "" }
             ),
             frame.rect(LEFT, TITLE_Y, WIDTH, 54.0),
@@ -275,7 +275,7 @@ impl Panel {
             &mut self.ui,
             TextFamily::Body,
             format_args!(
-                "What opening a kyber crystal gives. The SJK hub rolls each one with these odds."
+                "What attuning a dormant kyber gives. The SJK hub rolls each one with these odds."
             ),
             frame.rect(LEFT, LINE_Y, WIDTH, 26.0),
             17.0 * s,
@@ -299,13 +299,13 @@ impl Panel {
             LEFT,
             TABLE_Y,
             WIDTH,
-            "Per kyber crystal",
+            "Per dormant kyber",
         );
         let odds = crate::kyber::current();
         centred(
             &mut self.ui,
             frame,
-            "Saber shader tier",
+            "Kyber tier",
             [
                 DROP_X,
                 GROUP_Y,
@@ -329,7 +329,7 @@ impl Panel {
         text(
             &mut self.ui,
             TextFamily::Body,
-            format_args!("Kyber crystal"),
+            format_args!("Dormant kyber"),
             frame.rect(LEFT + 16.0, COLUMNS_Y, TIER_WIDTH, 24.0),
             16.0 * s,
             color::MUTED,
@@ -393,7 +393,7 @@ impl Panel {
         text(
             &mut self.ui,
             TextFamily::Display,
-            format_args!("Shaders to find"),
+            format_args!("Kybers to find"),
             frame.rect(LEFT + 20.0, y + 12.0, TIER_WIDTH - 20.0, 28.0),
             22.0 * s,
             color::GOLD_BRIGHT,
@@ -419,7 +419,7 @@ impl Panel {
             centred(
                 &mut self.ui,
                 frame,
-                if count == 1 { "shader" } else { "shaders" },
+                if count == 1 { "kyber" } else { "kybers" },
                 [DROP_X + at as f32 * KYBER_CELL, y + 30.0, KYBER_CELL, 18.0],
                 13.0,
                 color::QUIET,
@@ -1011,7 +1011,7 @@ impl Panel {
             LOOT_BACK_TOKEN,
         );
         let back = crate::terms::say(if self.selected().is_kyber() {
-            "crystals"
+            "dormant kybers"
         } else {
             "holocrons"
         });
@@ -1211,7 +1211,11 @@ mod tests {
             assert!(!panel.overflowed(), "kyber {viewport:?}");
         }
         let notes = kyber_notes(None);
-        assert!(notes[2].contains("10th crystal in a row"), "{}", notes[2]);
+        assert!(
+            notes[2].contains("10th dormant kyber in a row"),
+            "{}",
+            notes[2]
+        );
         let lines: usize = notes
             .iter()
             .map(|note| wrap(note, KYBER_NOTES_CHARS).count())

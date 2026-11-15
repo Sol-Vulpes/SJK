@@ -340,10 +340,9 @@ impl Panel {
         y += 36.0;
         let about = match showing.medal.blade() {
             Some(id) => {
-                let blade =
-                    crate::unlockables::find(id).map_or("a saber shader", |blade| blade.name);
+                let blade = crate::unlockables::find(id).map_or("a kyber", |blade| blade.name);
                 format!(
-                    "{} Comes with the {blade}, a saber shader.",
+                    "{} Comes with the {blade}, a kyber.",
                     showing.medal.description()
                 )
             }

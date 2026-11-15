@@ -329,7 +329,7 @@ fn words(
     // A kyber crystal: "Earned: First Blood", or from an achievement the hub did not name.
     let earned = &crate::kyber::Earned::of(&view.entry.note);
     let kicker = crate::terms::say(if tier.is_kyber() {
-        "New kyber crystal"
+        "New dormant kyber"
     } else {
         "New holocron"
     });

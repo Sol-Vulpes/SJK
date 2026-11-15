@@ -55,7 +55,7 @@ pub(crate) fn listing() -> Vec<String> {
         ));
     }
     lines.push(format!("  {ALL:<12} one of every holocron tier"));
-    lines.push(format!("  {KYBER:<12} one kyber crystal of every tier"));
+    lines.push(format!("  {KYBER:<12} one dormant kyber of every tier"));
     lines
 }
 

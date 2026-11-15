@@ -811,11 +811,11 @@ impl Panel {
                                 })
                                 .count() as u64;
                             let mut parts = vec![
-                                counted(shaders, "shader", "shaders"),
+                                counted(shaders, "kyber", "kybers"),
                                 counted(tags, "tag", "tags"),
                             ];
                             if crystals > 0 {
-                                parts.push(counted(crystals, "kyber crystal", "kyber crystals"));
+                                parts.push(counted(crystals, "dormant kyber", "dormant kybers"));
                             }
                             summary.lines.push((parts.join(", "), color::MUTED));
                         }
@@ -1305,10 +1305,10 @@ mod tests {
         assert_eq!(grid.across(0, -1), 0);
         assert_eq!(grid.across(0, 1), 1);
         assert_eq!(grid.across(10, 1), 10);
-        assert_eq!(grid.vertical(0, true), 3, "under Shaders' left half: Toys");
+        assert_eq!(grid.vertical(0, true), 3, "under Kybers' left half: Toys");
         assert_eq!(grid.vertical(2, true), 6, "under Tags: Cards");
         assert_eq!(grid.vertical(5, false), 1, "over Achievements: Finishers");
-        assert_eq!(grid.vertical(4, false), 0, "over Medals: Shaders");
+        assert_eq!(grid.vertical(4, false), 0, "over Medals: Kybers");
         assert_eq!(grid.vertical(0, false), 0);
         assert_eq!(grid.vertical(9, true), 9);
         assert_eq!(grid.vertical(4, true), 8);

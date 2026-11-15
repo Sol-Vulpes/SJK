@@ -130,7 +130,7 @@ held over a match fades the screen round it away (0.15 s, after a 0.3 s hold); o
 screen a gold arc turns once every three seconds and the destination's
 levelshot fades in (0.45 s); on Credits the sun (its sunburst, god rays and
 sparks) keeps turning and rising, and the page's rows rise into place as it
-opens or a fold unfolds; on the Collection's Shaders an owned blade skin's swatch
+opens or a fold unfolds; on the Collection's Kybers an owned blade skin's swatch
 lives (its corona breathes, flame loops rise and a flare runs along it, as its file
 says) and the model on the stage holds the chosen blade;
 a new medal arrives in its ceremony and, the screen's one memorable thing, breathes
@@ -404,7 +404,7 @@ on the 16:9 frame, dark behind the form on the left and clear over the model.
   stands third where it can, with a gold chevron at a side that has more; with no skin owned, or the identity off, only the stock
   blade and a line saying why. Under it the Sounds row (23/10/2026, after Nib's idea): a
   Preview button, then a ‹ › control with the saber sounds chosen apart from the blade,
-  "Follow shader (<the blade worn>)", "Stock sounds" or an owned shader's name
+  "Follow kyber (<the blade worn>)", "Stock sounds" or an owned kyber's name
   (`cg_saberSounds`, [unlockables.md](unlockables.md#saber-sounds)); Preview, or Enter on
   the row (the keys line then says "Enter preview"), plays the choice's ignition and hum.
   Then the blade's colour as eight chips (the six
@@ -679,7 +679,7 @@ overlay routes their text to the UI's families (`console_sjk_pages.rs`).
   you", the bio's box (620 by 300, Exo 2 at 18, wrapped by measured width, the end
   being written kept in view) with its counts, Revert and Save (gold) and the rules;
   Medals (pictures at 84, on its own only), Achievements (how many unlocked, a gold
-  bar, See the board) and Collection (how many shaders owned at 30, or a line saying
+  bar, See the board) and Collection (how many kybers owned at 30, or a line saying
   they are kept on the hub, and See the collection; Tab reaches it after See the
   board). See the board opens the [Collection](#collection) on Achievements, See the
   collection on Medals (as the Collection screen in the SJK UI, on its own in the
@@ -1435,7 +1435,7 @@ edge (deep there, clear by the middle), on the main page's 16:9 frame. Sol asked
 fewer buttons on 09/10/2026: the list has six entries, Team and Vote moved onto the
 match card, and Camera control and SJK's pages into a row of small icons (the SJK page
 is gone); the same day Achievements became a tab of Profile, leaving six. On
-10/10/2026 the Collection (medals, achievements, shaders, toys, nameplates) got an
+10/10/2026 the Collection (medals, achievements, kybers, toys, nameplates) got an
 entry of its own under Profile, making seven.
 
 - **Arc:** a compact version of the main page's: the page's entries on an arc
@@ -1635,7 +1635,7 @@ future", with tabs Medals, Achievements, Shaders (the blade skins, renamed: sabe
 body later), Toys and Nameplates (ornaments for the nameplate, gone since 15/11/2026),
 then Holocrons (the
 loot-box drops, built the same day as a Profile tab and moved here), since 21/10/2026
-the Forge (the shop, crafting and breaking shaders down) and, since 12/10/2026, Cards
+the Forge (the shop, crafting and breaking kybers down) and, since 12/10/2026, Cards
 (what opening holocrons brings, [cards.md](cards.md)), and since 27/10/2026 Tags after Toys
 (the tags `toy_tag` sticks, [client.md](client.md#tag): a wall of tiles, the ones not held
 dimmed, the chosen one on a card with Choose, which sets `cg_tag`; with nine tabs the row
@@ -1668,18 +1668,18 @@ Holocrons tab's Shop, a blade card's Forge link) open that kind directly.
 - **The hall** (15/11/2026, Sol's pick of "The hall" from the Collection's design
   proposals, [collection_hall.rs](../crates/sjk-viewer/src/collection_hall.rs)): the
   Collection's landing page, `Tab::Hall`, off the kinds' order. A grid of large tiles,
-  one to each kind: Shaders across two cells, Finishers (the Shaders tab's Finishers
+  one to each kind: Kybers across two cells, Finishers (the Kybers tab's Finishers
   pill), Tags, Toys, Medals, Achievements, Cards, Holocrons, Forge, Inventory, History,
   and the Saber Lab while the lab is on. A tile is a dark glass card (the chosen one
   framed gold): the kind's name and the tab's count after it, lines of what the client
-  already holds, and a gold bar of the share held for a kind with a set total. Shaders:
+  already holds, and a gold bar of the share held for a kind with a set total. Kybers:
   "14/166 · 2 new", the blade worn in its tier's colour and up to two New ones;
   Finishers: held of all and the one worn; Tags: the tag chosen and its finish; Toys:
   the toys on now; Medals: the ones given; Achievements: the open one nearest to
   unlocking with "19 / 25"; Cards: the copies held; Holocrons: "3 to open" and each
   tier's count in its colour; Forge: the kyber shards, the deal of the day once the shop
   was read (in its tier's colour), the duplicates to break down and the Forge's gold dot;
-  Inventory: credits and kyber shards, then shaders, tags and kyber crystals; History:
+  Inventory: credits and kyber shards, then kybers, tags and dormant kybers; History:
   the newest line read (its date and sentence) once the History tab has read the hub,
   else what the tab holds. A summary the client does not know is left out, never
   guessed, and nothing new is asked of the hub; the summaries are made again four times
@@ -1702,7 +1702,7 @@ Holocrons tab's Shop, a blade card's Forge link) open that kind directly.
   hall", on by default) opens the Collection on the hall; off, on the kind used last.
   Discord says "Looking at their collection" there. World shot:
   `world_shot_collection::duel6_sjk_collection_hall` (16:9, 4:3, 21:9 with the Forge's
-  tile chosen, 4K at `ui_textScale 1.4`, then the Shaders page under its breadcrumb).
+  tile chosen, 4K at `ui_textScale 1.4`, then the Kybers page under its breadcrumb).
 - **Top:** the way back and "Collection" as the title; at the top right how many of
   all things the player holds ("15 of 30 collected") over a thin bar as wide as
   those words, a stretch to each tab in the tabs' order, filled gold as far as that
@@ -1713,14 +1713,14 @@ Holocrons tab's Shop, a blade card's Forge link) open that kind directly.
   Rajdhani ("2/3", "11/34", how many holocrons for Holocrons; nothing while unknown or
   empty). Until 15/11/2026 it was the row of tabs, each name with its count, the one on
   show gold and underlined. Drawn in Inter (the families not loaded, the classic menus), the
-  breadcrumb makes room for the wider face. Over the map (Shaders, Toys) a band of
+  breadcrumb makes room for the wider face. Over the map (Kybers, Toys) a band of
   the page's dark stands behind the title, the tally and the tabs, solid to y 200 and
   fading out by 290, as on the Holocrons page (25/10/2026, Sol: the tabs must read over
   any map, the bright pillar of duel6 included).
 - **Fit (25/10/2026, Sol's pick from the Collection revamp's design canvas):** every tab
   keeps to one frame: its things at x 96 to 960 (they grow down and scroll, never
   sideways into the stage), the stage's column x 1000 to 1320 (the model, the lone
-  saber or the 3D holocron), the one chosen at x 1360 to 1824 (from 1000 on Shaders,
+  saber or the 3D holocron), the one chosen at x 1360 to 1824 (from 1000 on Kybers,
   with no model) on a dark card, and the keys' line kept clear. A card's words are never
   cut: it grows upward to hold them, wrapped for the menu text size. Behind the stage
   the backdrop camera widens its field in a window narrower than 16:9
@@ -1734,8 +1734,8 @@ Holocrons tab's Shop, a blade card's Forge link) open that kind directly.
   "Given dd/mm/yyyy", "Given 2 times" or "Not given yet". The one chosen has a gold
   mark on the rail at its clasp and a brighter glow; up close on the right (x 1120 to
   1824) the whole medal at 400 on its glow, its name at 54 (gold when given), when it
-  was given, what it is for with the saber shader it brings ("Comes with the Glitch
-  blade, a saber shader."; nothing for a medal that brings none, Supporter), the team's note in quotes under "From the SJK team", and
+  was given, what it is for with the kyber it brings ("Comes with the Glitch
+  blade, a kyber."; nothing for a medal that brings none, Supporter), the team's note in quotes under "From the SJK team", and
   who sees it. A dotted rail and "More medals will hang here as the SJK team adds
   them." stand under the rail. Left and Right choose; hovering chooses.
 - **Achievements:** "11 of 21 unlocked" with a gold bar; then a wall, a row to each
@@ -1749,11 +1749,11 @@ Holocrons tab's Shop, a blade card's Forge link) open that kind directly.
   unlocking with their medallion, bar and count; and how the counts are kept. It opens
   on the locked one nearest to unlocking. The arrows choose (Up and Down to the next
   category's, near the column).
-- **Shaders** (the wall and the list since 25/10/2026,
+- **Kybers** (the wall and the list since 25/10/2026,
   [collection_shaders.rs](../crates/sjk-viewer/src/collection_shaders.rs)): "14 of 166
   owned" (or why that is not known) over a line, beside the view switches (three bars:
   the list; four squares: the wall) and the kinds as pills: Saber with its count, and
-  Body ("soon", not offered yet). Under the line Owned (O), Chroma (C, the shaders that
+  Body ("soon", not offered yet). Under the line Owned (O), Chroma (C, the kybers that
   take the wearer's colour) and the search field (`/`, Ctrl+F) to the list's right
   edge; under them the tiers' strip: All, then each tier the player may see, the rarest
   first (Unique's first of all, only for a player who holds one), each its mark and name
@@ -1761,14 +1761,14 @@ Holocrons tab's Shop, a blade card's Forge link) open that kind directly.
   that tier alone, the one shown lit gold. The stock blade is always the first thing
   (its strip in the player's `color1`), then every blade skin, the rarest tier first
   (Mythical, Legendary, Rare, Uncommon, Common, the holocrons' tiers and colours; a
-  Unique shader is never listed, found by the search, counted in "N of M owned", the
+  Unique kyber is never listed, found by the search, counted in "N of M owned", the
   Saber pill, the tab's count or the tally for a player who does not hold one,
-  [unlockables.md](unlockables.md#unique-shaders)). Since 29/10/2026 the player's
+  [unlockables.md](unlockables.md#unique-kybers)). Since 29/10/2026 the player's
   favourites stand first after the stock blade, under a gold "Favourites" heading of their
   own on the wall and in the list by tier (simply first in the list's other orders), a
   Favourites chip (Shift+F, after Chroma, only on a hub that keeps marks) shows them alone,
   and the headline is followed by the New count ("2 new" after a New sticker) and Mark all
-  seen (N) while a shader is New ([Marks](#marks)). Two views, V or the switches, kept
+  seen (N) while a kyber is New ([Marks](#marks)). Two views, V or the switches, kept
   in `ui_shaderList` (0 the wall, everyone's start; 1 the list; it replaced
   `ui_shaderView`, whose 0 was the old rack, dropped from saved profiles):
   - **The wall** (from y 400): a heading to each tier ("Mythical" in its colour, "2 of
@@ -1783,7 +1783,7 @@ Holocrons tab's Shop, a blade card's Forge link) open that kind directly.
     the star and the padlock on a dark pill over the blade's right end, a New one outlined
     in gold; the chosen tile lifted over a shadow in a white outline. Left and Right step a tile (on into the next tier's), Up
     and Down a line of tiles, to the same column or the nearest, past the headings.
-  - **The list** (from y 400): column heads (Shader, Tier and Yours sort it; "#", the
+  - **The list** (from y 400): column heads (Kyber, Tier and Yours sort it; "#", the
     blade's number, only while `debug_collectibles` shows numbers; Look, Smith and,
     while the hub's economy is known, Forge), then a row of 40 to each: the strip, the
     chroma's wheel and the name, the tier's mark and name in its colour, the smith, what
@@ -1792,7 +1792,7 @@ Holocrons tab's Shop, a blade card's Forge link) open that kind directly.
     sticker and the star and padlock at the name column's end. By tier a heading leads
     each tier's rows (and the favourites'); by name or by what is held, none. S steps the order
     (Tier, Name, Yours, then Number while numbers show), a click on a head sets it, the
-    order on show gold with three bars; the shader chosen stays chosen whatever the
+    order on show gold with three bars; the kyber chosen stays chosen whatever the
     order or the view.
   Both scroll a line at a time just enough to keep the chosen one in view (a pointer
   over them never scrolls them), the wheel a line a notch, the chosen one kept in view
@@ -1810,7 +1810,7 @@ Holocrons tab's Shop, a blade card's Forge link) open that kind directly.
   medal" when a medal brings it) or "How to get it: ...", and Equip (gold), Unequip or
   "Wear the stock blade"; at the foot's right end, on a hub that keeps marks, the star and
   the padlock as two square toggles (44 wide, lit gold while set; the padlock dimmed for a
-  shader not held, which cannot be locked). F stars or unstars the shader chosen, L locks
+  kyber not held, which cannot be locked). F stars or unstars the kyber chosen, L locks
   or unlocks it. It opens on what is worn; Enter equips or unequips (`cg_saberSkin`). Under an owned skin whose file
   offers parts (11/10/2026): "Parts" and a tick for each in two columns (three past
   four); a click or the number keys 1 to 6 switch one (`cg_saberSkinOptions`), the
@@ -1876,14 +1876,14 @@ Holocrons tab's Shop, a blade card's Forge link) open that kind directly.
   Simple and Advanced, `cg_nameplateStyle` in Advanced,
   [client.md](client.md#nameplates)). The nameplates over players are unchanged.
 - **Loadouts** (03/11/2026, Lex's idea,
-  [collection_loadouts.rs](../crates/sjk-viewer/src/collection_loadouts.rs)): on Shaders,
+  [collection_loadouts.rs](../crates/sjk-viewer/src/collection_loadouts.rs)): on Kybers,
   and Tags an outlined "Loadouts (P)" button under the tally (x 1624 to 1824,
-  y 206; on Shaders it lies in the stage saber's drag room, `SABER_AREA`, which leaves
+  y 206; on Kybers it lies in the stage saber's drag room, `SABER_AREA`, which leaves
   it out, hub report #245) opens a pop-up card (`kit::card`, x 440 to 1480, y 170 to 910, over the scrim;
   the page is left out under it): "Loadouts" in gold, "Kept on this PC", the headline
   "Save your look, wear it again in one click" and what a loadout keeps, then five slots,
   a row of 86 each: the number, the name in gold while chosen (or "Empty slot") and a line
-  of what it keeps (hilts, shaders, tag), and Wear (gold), Save here, Rename and Empty.
+  of what it keeps (hilts, kybers, tag), and Wear (gold), Save here, Rename and Empty.
   Save here over a kept loadout and Empty ask for a second press (the ember line under the
   rows says so); the line otherwise says what the last press did ("Wearing Duels").
   Rename turns the name into a field (Enter keeps it, Escape cancels, Ctrl+A, Ctrl+C,
@@ -1893,7 +1893,7 @@ Holocrons tab's Shop, a blade card's Forge link) open that kind directly.
   loadout keeps `saber1`, `saber2`, `cp_sbRGB1`, `cp_sbRGB2`, `color1`, `color2` (the hat
   and cape ride on them), `cg_saberSkin`, `cg_saberSkin2`, `cg_saberSkinOptions`,
   `cg_nameplateStyle`, `cg_tag` and `cg_tagFinish`; Wear sets back those that differ, a
-  shader no longer held showing stock until held, as `saberskin` sets one. The slots are
+  kyber no longer held showing stock until held, as `saberskin` sets one. The slots are
   `loadouts.json` in the profile folder, never sent to the hub. Unit tests (file round
   trip, wear sets only what differs, second presses, rename field, the card's fit) and
   world shot `world_shot::collection::duel6_sjk_loadouts`.
@@ -1947,7 +1947,7 @@ Holocrons tab's Shop, a blade card's Forge link) open that kind directly.
   the one on show gold, each as wide as
   its label with the player's text size and letter spacing (10/11/2026: with
   `ui_letterSpacing` the labels were cut to "Sh...", "Cr..."); after them a round "i"
-  chip whose hover card says what the section is ("84 saber shaders you lack, made with
+  chip whose hover card says what the section is ("84 kybers you lack, made with
   kyber shards: 50 within reach."), once a line under the chips that ran into the
   search field; Craft's and Break down's search field stands on the same line, at the
   list's right edge (narrower should the chips reach it, 10/11/2026); at the top right
@@ -1965,24 +1965,24 @@ Holocrons tab's Shop, a blade card's Forge link) open that kind directly.
     holocron's picture on its tier's glow, its name in its colour, what it holds (or how
     many credits are missing), its price and Buy. Showing the Shop reads the hub's day
     ("Reading the shop..." until it answers).
-  - **Craft:** every saber shader of the trade the player does not hold at all (a card's
+  - **Craft:** every kyber of the trade the player does not hold at all (a card's
     or a medal's copy counts as held), its favourites first (a wish list, since
     29/10/2026: F stars the one chosen), then the commonest first so what the shards reach
     leads,
     as a grid of cards (five by three) or a list (six rows), switched by V or the two marks
-    at the chips' right (`ui_shaderList`, as on Shaders: the grid first); chips for All and each tier (T
-    steps them), Affordable (A) and a search field ("Search shaders", `/` or Ctrl+F; Ctrl+A,
+    at the chips' right (`ui_shaderList`, as on Kybers: the grid first); chips for All and each tier (T
+    steps them), Affordable (A) and a search field ("Search kybers", `/` or Ctrl+F; Ctrl+A,
     Ctrl+C, Ctrl+V and a held Backspace, `text_entry.rs`). Each card: the live blade, the
     name, the tier and the cost beside the shard's mark (quiet when out of reach). On the
     right the one chosen big: its tier and edition, its live blade 150 high, its name at
     46, its facts (takes your colour, its smith), what it is, its parts, then "Crafting
     costs" and "You hold" side by side, the shards left after or how many more are needed,
-    and Craft. A copy of the shader's blade card lowers the cost everywhere it shows, and
+    and Craft. A copy of the kyber's blade card lowers the cost everywhere it shows, and
     "Crafting costs (Holo card -50 %)" and the button ("Craft  (shard)  150  Holo card
     -50 %") name the card ([cards.md](cards.md#sjk-blades)). The swatches here and on Shop
     and Break down are the Collection's (`collection_swatch.rs`): with the menu pictures on
-    they show each shader's drawing instead of the live blade.
-  - **Break down:** the player's own copies of shaders of the trade (by grant, drops,
+    they show each kyber's drawing instead of the live blade.
+  - **Break down:** the player's own copies of kybers of the trade (by grant, drops,
     crafts or purchases; a medal's or a card's copy is never listed), its favourites first,
     then duplicates with an "x3" badge, last copies after with a "Last" one; chips,
     Duplicates (D), Favourites (Shift+F, on a hub that keeps marks) and the search as on
@@ -1991,18 +1991,18 @@ Holocrons tab's Shop, a blade card's Forge link) open that kind directly.
     the one chosen: its name with the star and the padlock beside it (F, L), its copies
     ("3 copies", "Your only copy", Worn, New), "A copy gives" and "You will hold", and
     **Break down a copy +10**; beside it **Break down all duplicates (7) +100** (B), keeping
-    one of each. A locked shader (29/10/2026) is listed with its padlock, its button reads
+    one of each. A locked kyber (29/10/2026) is listed with its padlock, its button reads
     "Locked", dimmed, with "Locked: you keep it until you unlock it (L)." over it, and all
     duplicates leave its copies out (the chip's count too). A hub that says `shatter_last`
     (21/10/2026) lists last copies too: their button reads "Break down your last copy" and
     opens a card in ember, "This is your only copy", the blade, what it gives, that it
     leaves the collection, and what crafting it back would cost, Keep it (focused) and
     Break it down. When the player wears it, on either saber, the card says so first, in
-    ember ("You wear this shader now: breaking it down puts your saber back to the stock
+    ember ("You wear this kyber now: breaking it down puts your saber back to the stock
     blade."), with a "You wear it" pill by the title; once the hub answers, the client sets
     `cg_saberSkin` back to the stock blade, and `cg_saberSkin2` to `stock` when the second
     saber wore it by its own choice. All duplicates ask with a card too, "Break down all
-    duplicates?", the shaders that give copies up with how many (a locked one left out, and
+    duplicates?", the kybers that give copies up with how many (a locked one left out, and
     a line saying how many are kept), the total, Cancel and Break them down (focused). A
     hub without the abilities lists duplicates only and offers no Break down all.
   - **Asking twice:** Buy, Craft and Break down a copy turn into "Confirm: ..." on the
@@ -2017,32 +2017,32 @@ Holocrons tab's Shop, a blade card's Forge link) open that kind directly.
     shop more relevant, people barely use it"; [cards.md](cards.md#fusion-deal-of-the-day-wishlist)).
     On a hub whose economy says `fuse` a fourth chip, **Fuse** (4), shows: a chip a tier the
     hub fuses ("Common to Uncommon", T steps them), the tier's duplicates as cards or rows
-    (the most duplicated first, a locked shader left out, "2 spare" under each), the copies
+    (the most duplicated first, a locked kyber left out, "2 spare" under each), the copies
     the Forge proposes marked on them (one at a time from the biggest pile, never a last
     copy, `forge_fuse.rs`); a click or Space picks a copy or lets it go, + and - (or the
     stepper) change the chosen one's, P (or Propose) proposes again. The card on the right
     reads "Common to Uncommon", "Fuse duplicates", "3 duplicates of Common -> 1 Uncommon
-    shader you do not own yet" and the copies picked; over the buttons why it cannot go
+    kyber you do not own yet" and the copies picked; over the buttons why it cannot go
     yet ("1 of 3 Common duplicates: 2 more needed.", "Pick 3 duplicates: 2 picked.", "You
-    hold every Uncommon shader already") or "Ready"; **Fuse 3 / 3** asks twice like Craft.
-    The hub's answer reveals the shader gained on the card: its tier, its blade, its name
+    hold every Uncommon kyber already") or "Ready"; **Fuse 3 / 3** asks twice like Craft.
+    The hub's answer reveals the kyber gained on the card: its tier, its blade, its name
     in gold, "Fused: it is yours". The Shop marks the deal of the day with a gold "Deal of
     the day -50 %" ribbon over its blade and its table price struck ("Was 600 kyber
     shards") over the halved one, a wished offer "On your wishlist", and a Beta offer the
     edition stamp ("Beta Edition") over its blade's other corner. On a hub that keeps a
     wishlist the line under the chips lists it ("Your wishlist (2 of 3): ...", the Shop's
     own line staying behind the "i" chip) and every
-    offer, Craft's chosen shader (W) and the Shaders tab's card carry a wishlist toggle
+    offer, Craft's chosen kyber (W) and the Kybers tab's card carry a wishlist toggle
     (the gift mark), a hover card saying what it does or that the list is full. Shop and
     Fuse carry a gold dot when an offer is wished, the deal is within reach or a fusion is
     possible, as do the Collection's Forge tab and the Holocrons tab's Shop button
     (`forge_alert.rs`), and once a shop day a card says "ON YOUR WISHLIST" with the
-    shader's name when one is on offer (`wishlist.rs`). A hub without these sends none of
+    kyber's name when one is on offer (`wishlist.rs`). A hub without these sends none of
     them, and nothing of them shows.
-  - The Holocrons tab's Shop (or S) shows the Forge on its Shop, and the Shaders tab's card
-    leads to it: "Craft in the Forge" for a shader of the trade not held, "Break down in the
-    Forge" for one of the player's own copies, the shader chosen there. A held blade card's
-    "Craft the ... in the Forge" on the Cards tab does the same for its shader. World shots:
+  - The Holocrons tab's Shop (or S) shows the Forge on its Shop, and the Kybers tab's card
+    leads to it: "Craft in the Forge" for a kyber of the trade not held, "Break down in the
+    Forge" for one of the player's own copies, the kyber chosen there. A held blade card's
+    "Craft the ... in the Forge" on the Cards tab does the same for its kyber. World shots:
     `world_shot::forge_shots` (`duel6_sjk_forge_shots`: every section and state, the cards
     asking; `duel6_sjk_forge_windows`: 4:3 and 4K).
 - **Cards** ([collection_cards.rs](../crates/sjk-viewer/src/collection_cards.rs),
@@ -2089,8 +2089,8 @@ Holocrons tab's Shop, a blade card's Forge link) open that kind directly.
   finishes, a card's edition or "Sealed", "Starter" for the free tags) and how many. The
   kinds, in this order: Currencies (credits and kyber shards always, DOOM coins once the
   hub said them: `Snapshot::wheel_of_doom`, read when the toy asks), the holocrons and
-  kyber crystals still sealed by tier (`holocron_counts`; the crystals counted from
-  `holocrons`, as on the Holocrons tab), saber shaders and finishers (the profile's
+  dormant kybers still sealed by tier (`holocron_counts`; the dormant kybers counted from
+  `holocrons`, as on the Holocrons tab), kybers and finishers (the profile's
   unlocks, with their copies), tags (the starter set, the ones held with their Holo and
   Solar copies, and the GIF tags made) and cards (a row to each kind of copy, named from the
   packs' faces). It reads only the own hub profile the other tabs read, and asks the hub
@@ -2102,7 +2102,7 @@ Holocrons tab's Shop, a blade card's Forge link) open that kind directly.
   wheel scrolls three places, hovering chooses; in the search, Escape clears it and Enter
   leaves it. Ctrl+Tab goes on to Medals. World shot:
   `world_shot_collection::duel6_sjk_collection_inventory`.
-- **The model:** behind Shaders and Toys the page darkens only the left
+- **The model:** behind Kybers and Toys the page darkens only the left
   and the bottom. From the main page the backdrop camera goes to the player's shot
   (`ClientMenu::set_collection_stage`, which first reads the model, sabers and
   cosmetics from the cvars when the player screen is closed) and the model stands on
@@ -2123,51 +2123,51 @@ Holocrons tab's Shop, a blade card's Forge link) open that kind directly.
 
 [shader_marks.rs](../crates/sjk-viewer/src/shader_marks.rs) and
 [collection_marks_view.rs](../crates/sjk-viewer/src/collection_marks_view.rs),
-29/10/2026: the ideas of the players Atrosex (mark the shader worn in Break down, and say
+29/10/2026: the ideas of the players Atrosex (mark the kyber worn in Break down, and say
 so on the last copy's card) and Kushina (favourites and a lock), extended by Sol. Every
-saber shader the Shaders tab, the Forge and the trade window list carries its marks:
+kyber the Kybers tab, the Forge and the trade window list carries its marks:
 
 - **Worn:** a blade the player wears: the first saber's (`cg_saberSkin`) or the second
-  saber's (or the staff's other half's) own choice (`cg_saberSkin2`). The Shaders tab
+  saber's (or the staff's other half's) own choice (`cg_saberSkin2`). The Kybers tab
   keeps its Worn and "2nd blade" states; the Forge and the trade window say Worn.
 - **Favourite** (the star, U+E029) and **Locked** (the padlock, U+E022): the player's,
   kept at the SJK hub (its `PROTOCOL.md`, "Collection marks": `GET /v1/holocrons`' `marks`,
   `POST /v1/unlocks/marks`), so they follow the player to any PC and every key of theirs.
-  F and L (or the chosen shader's two toggles) set and clear them on Shaders and in the
-  Forge; a favourite may be any shader (a wish list), a lock only one the player holds.
+  F and L (or the chosen kyber's two toggles) set and clear them on Kybers and in the
+  Forge; a favourite may be any kyber (a wish list), a lock only one the player holds.
   Favourites are listed first everywhere and a Favourites chip (Shift+F) shows them alone.
-  The hub holds the lock: it refuses to break a locked shader down (one copy, the last
+  The hub holds the lock: it refuses to break a locked kyber down (one copy, the last
   one) and to let it go in a trade, and skips it when every duplicate goes; the client
   shows those buttons dimmed with "Locked" rather than failing. A change shows at once
   (`Service::set_mark`) and the hub's answer replaces it; a refusal is said in the console
   and the hub's marks come back with its next answer. The star and the padlock show only on a hub
   whose economy says `marks` (`sjk_identity::MARKS_ABILITY`), detected as `shatter_last`
   is, so against an older hub nothing of them shows and nothing is asked.
-- **New:** a shader the player holds and has not looked at since they got it
+- **New:** a kyber the player holds and has not looked at since they got it
   (holocrons, gifts, trades, crafts): a gold "New" sticker, outlined in gold on the wall
   (a gold edge down its row in the list) while it is not the one chosen (Creyon,
-  31/10/2026), and the Shaders tab's "2 new"
-  after the headline. Local, on this PC: `shader-seen.txt` beside `config.cfg`, one shader
+  31/10/2026), and the Kybers tab's "2 new"
+  after the headline. Local, on this PC: `shader-seen.txt` beside `config.cfg`, one kyber
   id a line (`shader_marks::FILE`), read at start and written at each change. With no file
   yet, everything held the first time the hub says what the player holds is seen, so a
-  player never finds every shader New; a shader no longer held leaves the list (New again
-  when it comes back). A New one clicked on Shaders or in the Forge is seen at once, its
+  player never finds every kyber New; a kyber no longer held leaves the list (New again
+  when it comes back). A New one clicked on Kybers or in the Forge is seen at once, its
   sticker gone (Creyon, 31/10/2026); one reached with the keys is seen once it has stayed
-  chosen a second (`shader_marks::Look`, `LOOK_MS`; Sol's decision, 29/10/2026). Resting the pointer never chooses a shader (31/10/2026;
+  chosen a second (`shader_marks::Look`, `LOOK_MS`; Sol's decision, 29/10/2026). Resting the pointer never chooses a kyber (31/10/2026;
   hovering chose one before), so it never sees one either. Turning to another tab or closing the page
-  sees the shader chosen only if it had already stayed its second; Mark all seen (N) sees
-  them all. After the Shaders tab's headline (10/11/2026; "21 new" was cut and the
+  sees the kyber chosen only if it had already stayed its second; Mark all seen (N) sees
+  them all. After the Kybers tab's headline (10/11/2026; "21 new" was cut and the
   sticker ran into "owned", measured without the letter spacing): the New sticker and a
-  round "?", gold while a shader is New and quiet once none is, then Mark all seen ("All
+  round "?", gold while a kyber is New and quiet once none is, then Mark all seen ("All
   seen" when the full label would reach the view switches). A click on "?" opens the New
-  note over the page, on a darker fill than a hover card: how many shaders are New and
+  note over the page, on a darker fill than a hover card: how many kybers are New and
   what New means; another click anywhere, Escape or another tab closes it. Nothing is New
   while the debug collectibles show.
 
 The marks are read again only when what they come from changes (the hub's marks, the
 own profile, the seen-list, the blades worn), never every frame. World shots:
 `world_shot_forge::duel6_sjk_collection_marks` (Break down as a grid and a list, a locked
-shader chosen, the Favourites chip, the last copy of the worn blade asking, the Shaders
+kyber chosen, the Favourites chip, the last copy of the worn blade asking, the Kybers
 tab's wall, hover card and list). Not tried in a game.
 
 ### Hover cards
@@ -2185,8 +2185,8 @@ takes no input.
 | --- | --- | --- |
 | Medal | `Medal::how_to_get` (given by the SJK team, and for what) | the blade it brings while held; "Yours: given dd/mm/yyyy" or "Not given to you yet" |
 | Achievement | its goal | who counts it (SJK in matches, or the hub); "Unlocked dd/mm/yyyy" or "n of goal so far" |
-| Shader | the stock blade is everyone's; a blade skin's `how_to_get` | its tier; "Yours since dd/mm/yyyy", or "Not yours yet" (try it on here), or why holdings are not known (never a Unique one the player lacks); then a line for each of its marks, what it means ([Marks](#marks)) |
-| Star, padlock, Favourites chip, Mark all seen | what a favourite, a lock, the chip and New are, kept where | whether the shader chosen is starred or locked and the key that changes it; a padlock on a shader not held says it cannot be locked |
+| Kyber | the stock blade is everyone's; a blade skin's `how_to_get` | its tier; "Yours since dd/mm/yyyy", or "Not yours yet" (try it on here), or why holdings are not known (never a Unique one the player lacks); then a line for each of its marks, what it means ([Marks](#marks)) |
+| Star, padlock, Favourites chip, Mark all seen | what a favourite, a lock, the chip and New are, kept where | whether the kyber chosen is starred or locked and the key that changes it; a padlock on a kyber not held says it cannot be locked |
 | Toy | everyone's, and where to light it | "Yours" |
 | Card (a binder tile) | from opening holocrons: how many holocrons found hold a card of its rarity ([loot table](holocrons.md#loot-table)), one of how many of that rarity | its rarity, kind and set, no number (a sealed tile: picked when revealed); the copies by finish and edition and when the first was found, or "Not found yet" |
 | Holocron tier (Holocrons tab) | found by playing, the pace and the daily cap | the tier's share of drops and staff gifts; how many held |
@@ -2711,14 +2711,14 @@ player has left is dropped. The same look in every menu style, on the 16:9 frame
 [trade_window.rs](../crates/sjk-viewer/src/trade_window.rs) and
 [player_trades.rs](../crates/sjk-viewer/src/player_trades.rs) (prepared 22/10/2026, off
 until the hub turns trading on): two SJK players swap unopened holocrons and duplicate
-saber shaders through the SJK hub, which checks both sides twice and holds every limit
+kybers through the SJK hub, which checks both sides twice and holds every limit
 (the hub's PROTOCOL.md, "Trades between players"). Every number the window shows comes
 from the hub: its rules, today's counts and what each item is worth. The same look in
 every menu style, on the 16:9 frame:
 
 - **Starting:** a gold Trade button (140 wide) on the game menu's Players page, on the
   player card of the player chosen in the table, with what it does beside it on one line
-  ("Swap holocrons and duplicate shaders", or "Swap duplicate shaders" while holocrons do
+  ("Swap holocrons and duplicate kybers", or "Swap duplicate kybers" while holocrons do
   not trade; a test measures every such line in the UI's fonts), dimmed with why when it
   cannot be (trading closed, an offline server), Trade on a player's card in the game's chat and the SJK chat page (beside
   Block, the two even halves; Ban 24 h then takes a row of its own; only while the hub
@@ -2792,13 +2792,13 @@ every menu style, on the 16:9 frame:
   name, ringed in that colour) and its state (Choosing..., Ready, Confirmed), a gold swap
   badge between them. Under a hairline, "Your holocrons and duplicates" ("Your duplicates"
   while the hub trades no holocrons yet, `rules.holocrons` false: duplicates come first, and
-  the toast then says "Duplicate shaders."): up to 18 tiles,
+  the toast then says "Duplicate kybers."): up to 18 tiles,
   those that may go in first, the favourites first among them, most worth first (a click
-  puts one in; a click on an offered one takes it out). Since 29/10/2026 a shader's tile
+  puts one in; a click on an offered one takes it out). Since 29/10/2026 a kyber's tile
   carries its marks ([Marks](#marks)), drawn from shapes and plain words as the window's
   font draws bytes: a star and a padlock at its top left, "Worn" at its top right, a New
-  sticker over its top edge; a locked shader is dimmed with the ones that wait and takes
-  no click, a gold line under the items saying "Locked shaders stay out of trades: unlock
+  sticker over its top edge; a locked kyber is dimmed with the ones that wait and takes
+  no click, a gold line under the items saying "Locked kybers stay out of trades: unlock
   them in the Collection.", and a Favourites chip at the heading's right (on a hub that
   keeps marks) shows the favourites alone. A holocron received in a trade within the hub's resale lock is shown
   dimmed with a gold timer pill in place of its name, counting down ("6d 23h", "5h 12m"),
@@ -2943,7 +2943,7 @@ group in the script (`SYMBOLS`) and gets its name in `symbols.rs`.
 | U+E012 | a card with a sun at its heart | Solar finish |
 | U+E020 | a cube seen from above a corner | a holocron: found in one |
 | U+E021 | a medallion on a ribbon's V | a medal: comes with one |
-| U+E022 | a padlock | locked: since 29/10/2026 the player's own lock on a saber shader ([Marks](#marks)); a part an extra card unlocks |
+| U+E022 | a padlock | locked: since 29/10/2026 the player's own lock on a kyber ([Marks](#marks)); a part an extra card unlocks |
 | U+E023 | a tick | yours |
 | U+E024 | a card with a second behind it | held more than once |
 | U+E025 | a smith's hammer | its saber smith |
@@ -2962,7 +2962,7 @@ group in the script (`SYMBOLS`) and gets its name in `symbols.rs`.
   about two pixels thick in 16 to 20 pixel text.
 - **Where they show:** a card's corner and its footer's rarity (the face), the sealed
   back's rarity, the loot table's rarity and finish headings, its kyber shards' heading and its cards' rows, the
-  Shaders tab's tier on each row. The rarity's word and colour stay beside the symbol:
+  Kybers tab's tier on each row. The rarity's word and colour stay beside the symbol:
   it is never the only sign.
 - **Not in it:** the credits' sign, Lucasfilm's, stays drawn from shapes
   ([cards.md](cards.md#in-the-client)).

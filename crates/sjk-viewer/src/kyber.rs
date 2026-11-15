@@ -1,6 +1,8 @@
-//! Kyber crystals (`docs/holocrons.md`, "Kyber crystals", 21/10/2026, Sol's decisions): a
-//! loot of their own beside the holocrons. A person earns one per achievement, once
-//! ([`REWARDS`]); opening one always gives a saber shader, its tier rolled by the crystal's
+//! Dormant kybers (`docs/holocrons.md`, "Dormant kybers", 21/10/2026, Sol's decisions;
+//! called kyber crystals until 15/11/2026, when Sol renamed them, and opening one
+//! attuning it): a loot of their own beside the holocrons. A person earns one per
+//! achievement, once ([`REWARDS`]); attuning one always gives a kyber (a saber shader in
+//! the code), its tier rolled by the crystal's
 //! odds ([`Odds`]), with a pity counter that makes the tenth crystal in a row without a
 //! Legendary or Mythical shader one of them ([`Pity`]).
 //!
@@ -44,10 +46,10 @@ const fn tier(index: usize, id: &'static str, name: &'static str) -> Tier {
 
 /// Every crystal tier, the commonest first, in the hub's order.
 pub(crate) const TIERS: [Tier; COUNT] = [
-    tier(0, "kyber_uncommon", "Uncommon Kyber Crystal"),
-    tier(1, "kyber_rare", "Rare Kyber Crystal"),
-    tier(2, "kyber_legendary", "Legendary Kyber Crystal"),
-    tier(3, "kyber_mythical", "Mythical Kyber Crystal"),
+    tier(0, "kyber_uncommon", "Uncommon Dormant Kyber"),
+    tier(1, "kyber_rare", "Rare Dormant Kyber"),
+    tier(2, "kyber_legendary", "Legendary Dormant Kyber"),
+    tier(3, "kyber_mythical", "Mythical Dormant Kyber"),
 ];
 
 /// The crystal tier the hub's `id` names, if the client knows it.
@@ -56,7 +58,7 @@ pub(crate) fn from_id(id: &str) -> Option<&'static Tier> {
 }
 
 /// What the Holocrons tab and hover cards say of every crystal.
-pub(crate) const ABOUT: &str = "Earned from achievements. Always a saber shader.";
+pub(crate) const ABOUT: &str = "Earned from achievements. Attuning it always gives a kyber.";
 
 /// The odds a crystal rolls its shader's tier with, and its pity.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -140,8 +142,8 @@ pub(crate) const SHADER_RARITIES: [crate::unlockables::Rarity; SHADER_TIERS] = [
     crate::unlockables::Rarity::Mythical,
 ];
 
-/// What the Holocrons tab says opening a crystal of tier `index` gives: "Opening it gives
-/// a saber shader: Common 45%, Uncommon 40%, ..." (the tiers it cannot give left out).
+/// What the Holocrons tab says attuning a crystal of tier `index` gives: "Attuning it
+/// gives a kyber: Common 45%, Uncommon 40%, ..." (the tiers it cannot give left out).
 pub(crate) fn inside(index: usize) -> String {
     let shares = current().shader_tier[index.min(COUNT - 1)];
     let odds: Vec<String> = SHADER_RARITIES
@@ -156,7 +158,7 @@ pub(crate) fn inside(index: usize) -> String {
             )
         })
         .collect();
-    format!("Opening it gives a saber shader: {}.", odds.join(", "))
+    format!("Attuning it gives a kyber: {}.", odds.join(", "))
 }
 
 /// The person's pity counter as the hub last said: crystals opened since the last one
@@ -189,14 +191,14 @@ impl Pity {
 pub(crate) fn pity_line(pity: Option<Pity>) -> String {
     match pity {
         Some(pity) if pity.within() == 1 => {
-            "Your next crystal is Legendary or better, guaranteed".to_owned()
+            "Your next dormant kyber is Legendary or better, guaranteed".to_owned()
         }
         Some(pity) => format!(
-            "Legendary or better guaranteed within {} crystals",
+            "Legendary or better guaranteed within {} dormant kybers",
             pity.within()
         ),
         None => format!(
-            "Legendary or better guaranteed at least every {} crystals",
+            "Legendary or better guaranteed at least every {} dormant kybers",
             current().pity_every
         ),
     }
@@ -333,13 +335,13 @@ fn reward_with(id: &str, said: impl Fn(usize) -> u8) -> Option<&'static Tier> {
     }
 }
 
-/// "Reward: Rare Kyber Crystal", for a board, a hover card and the unlock toast.
+/// "Reward: Rare Dormant Kyber", for a board, a hover card and the unlock toast.
 pub(crate) const fn reward_line(tier: &Tier) -> &'static str {
     match tier.index {
-        0 => "Reward: Uncommon Kyber Crystal",
-        1 => "Reward: Rare Kyber Crystal",
-        2 => "Reward: Legendary Kyber Crystal",
-        _ => "Reward: Mythical Kyber Crystal",
+        0 => "Reward: Uncommon Dormant Kyber",
+        1 => "Reward: Rare Dormant Kyber",
+        2 => "Reward: Legendary Dormant Kyber",
+        _ => "Reward: Mythical Dormant Kyber",
     }
 }
 
@@ -373,7 +375,7 @@ impl std::fmt::Display for Earned {
 mod tests {
     use super::*;
 
-    /// The tiers are the holocrons' names and colours with "Kyber Crystal", their slots
+    /// The tiers are the holocrons' names and colours with "Dormant Kyber", their slots
     /// after the holocrons'; the hub's `src/kyber.rs` carries the same ids.
     #[test]
     fn the_crystal_tiers_are_the_holocron_tiers_as_crystals() {
@@ -389,7 +391,7 @@ mod tests {
         );
         for (index, tier) in TIERS.iter().enumerate() {
             let holocron = &holocrons::TIERS[index];
-            assert_eq!(tier.name, format!("{} Kyber Crystal", holocron.label));
+            assert_eq!(tier.name, format!("{} Dormant Kyber", holocron.label));
             assert_eq!((tier.colour, tier.light), (holocron.colour, holocron.light));
             assert_eq!((tier.index, tier.slot), (index, holocrons::COUNT + index));
             assert!(tier.is_kyber() && !holocron.is_kyber());
@@ -460,11 +462,11 @@ mod tests {
     fn what_a_crystal_gives_is_said_from_its_odds() {
         assert_eq!(
             inside(0),
-            "Opening it gives a saber shader: Common 45%, Uncommon 40%, Rare 12%, Legendary 2.5%, Mythical 0.5%."
+            "Attuning it gives a kyber: Common 45%, Uncommon 40%, Rare 12%, Legendary 2.5%, Mythical 0.5%."
         );
         assert_eq!(
             inside(3),
-            "Opening it gives a saber shader: Rare 30%, Legendary 50%, Mythical 20%."
+            "Attuning it gives a kyber: Rare 30%, Legendary 50%, Mythical 20%."
         );
         for index in 0..COUNT {
             assert!(inside(index).len() <= 100, "one line of the tab");
@@ -481,22 +483,22 @@ mod tests {
         };
         assert_eq!(
             pity_line(pity(10, 3)),
-            "Legendary or better guaranteed within 7 crystals"
+            "Legendary or better guaranteed within 7 dormant kybers"
         );
         assert_eq!(
             pity_line(pity(10, 0)),
-            "Legendary or better guaranteed within 10 crystals"
+            "Legendary or better guaranteed within 10 dormant kybers"
         );
         assert_eq!(
             pity_line(pity(10, 9)),
-            "Your next crystal is Legendary or better, guaranteed"
+            "Your next dormant kyber is Legendary or better, guaranteed"
         );
         assert_eq!(pity(10, 40).map(Pity::within), Some(1), "kept in range");
         assert_eq!(pity(0, 0), None, "no pity at that hub");
         assert_eq!(Pity::of(None), None);
         assert_eq!(
             pity_line(None),
-            "Legendary or better guaranteed at least every 10 crystals"
+            "Legendary or better guaranteed at least every 10 dormant kybers"
         );
     }
 

@@ -534,7 +534,7 @@ impl Card {
             ui,
             TextFamily::Body,
             format_args!(
-                "A loadout keeps your hilts, each blade's shader and its parts, your colours with your hat and cape, your nameplate style and your tag."
+                "A loadout keeps your hilts, each blade's kyber and its parts, your colours with your hat and cape, your nameplate style and your tag."
             ),
             frame.rect(left, y + 118.0, inner_width, 24.0),
             16.0 * s,

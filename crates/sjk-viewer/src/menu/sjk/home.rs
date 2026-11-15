@@ -168,7 +168,7 @@ const MAIN: [Entry; 6] = [
     ),
     entry(
         "Collection",
-        "Your medals, achievements, shaders and toys",
+        "Your medals, achievements, kybers and toys",
         open(MainDestination::Collection),
     ),
     entry(

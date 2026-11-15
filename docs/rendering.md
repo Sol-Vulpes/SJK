@@ -1125,12 +1125,12 @@ process's RAM in Task Manager.
   occlusion, HDR and glow at full resolution) and the skins' GPU work.
   The size also sets the lamp light cache's budget
   ([below](#experimentals-lamp-memory)).
-- With menu pictures on, the menus' saber shader swatches show their drawings
+- With menu pictures on, the menus' kyber swatches show their drawings
   (`collection_swatch.rs`) instead of the live blade pictures (`blade_pictures.rs`, a
   832x1664 target of three textures, about 17 MB, and each signature blade's
   pipeline), and that target is freed. Live, a frame draws only the pictures that need
   it: the hovered or chosen ones every frame, the others 30 times a second and six a
-  frame at most ([unlockables.md](unlockables.md#shaders-tab)).
+  frame at most ([unlockables.md](unlockables.md#kybers-tab)).
 - The secondary views make their targets the first frame each is drawn, not with the
   world (`Lazy` in [scene_view_gpu.rs](../crates/sjk-viewer/src/scene_view_gpu.rs),
   `Runtime::provide_targets` in [scene_views.rs](../crates/sjk-viewer/src/scene_views.rs)).

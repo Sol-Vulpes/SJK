@@ -141,7 +141,10 @@ const HEADING_ICONS: &[(&[&str], &str)] = &[
     ),
     (&["scoreboard"], "scoreboard"),
     (&["hud", "frame rate", "clock", "kill feed"], "hud"),
-    (&["saber", "shader", "blade", "mythical"], "saber_style"),
+    (
+        &["saber", "shader", "kyber", "blade", "mythical"],
+        "saber_style",
+    ),
     (&["clan", "nameplate", "name"], "nameplates"),
     (
         &["holocron", "collection", "cosmetic", "hat", "cape", "toy"],

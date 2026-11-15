@@ -44,7 +44,7 @@ shrunk away in its show. The client sends the presses on the toy twice a second 
 (the game's `sv_serverid`, which every player of a server reads alike).
 
 - The player's first press on a kind of toy finds it: the hub unlocks that toy's hidden
-  achievement and its kyber crystal, and the client announces it as any achievement
+  achievement and its dormant kyber, and the client announces it as any achievement
   (the unlock card and a console line).
 - The presses of every player on the server add up, towards a number of presses the hub
   rolls for each map load and never tells. The presses that reach it start the toy's
