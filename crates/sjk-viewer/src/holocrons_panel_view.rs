@@ -426,33 +426,30 @@ impl Panel {
             let count = self.data.count(index);
             let held = count.is_some_and(|count| count > 0);
             let rect = frame.rect(RIGHT_X, y, RIGHT_WIDTH, ROW_HEIGHT);
-            let list = self.ui.draw_list_mut();
-            let _ = list.push(DrawCommand::RoundedRect {
-                rect,
-                radius: 14.0 * s,
-                color: if chosen {
-                    tier.colour_alpha(0.16)
-                } else {
-                    color::alpha(color::SPACE, 0.55)
+            // The tier's frame, one look everywhere (15/11/2026); its effects stay
+            // `rarity_fx`'s, over it.
+            kit::tier_frame(
+                &mut self.ui,
+                frame,
+                [RIGHT_X, y, RIGHT_WIDTH, ROW_HEIGHT],
+                kit::holocron_tier(tier.index),
+                kit::TierSize::Row,
+                kit::TierLook {
+                    chosen,
+                    hovered: hovered || chosen,
+                    dim: !held,
+                    still: true,
+                    ..kit::TierLook::at(0.0)
                 },
-            });
-            let _ = list.push(DrawCommand::Border {
-                rect,
-                radius: 14.0 * s,
-                width: if chosen { 2.0 * s } else { 1.2 * s },
-                color: if chosen {
-                    Color::new(1.0, 1.0, 1.0, 0.7)
-                } else if hovered {
-                    tier.colour_alpha(0.55)
-                } else {
-                    color::alpha(color::HOLO, 0.16)
-                },
-            });
-            let _ = list.push(DrawCommand::RoundedRect {
-                rect: frame.rect(RIGHT_X + 10.0, y + 12.0, 5.0, ROW_HEIGHT - 24.0),
-                radius: 2.5 * s,
-                color: tier.colour_alpha(if held { 1.0 } else { 0.4 }),
-            });
+            );
+            if chosen {
+                let _ = self.ui.draw_list_mut().push(DrawCommand::Border {
+                    rect,
+                    radius: 8.0 * s,
+                    width: 2.0 * s,
+                    color: Color::new(1.0, 1.0, 1.0, 0.7),
+                });
+            }
             // The tier's effects over its row, faint for a tier not held yet.
             crate::rarity_fx::draw(
                 self.ui.draw_list_mut(),
@@ -461,7 +458,7 @@ impl Panel {
                     ..crate::rarity_fx::Item::holocron(tier, crate::rarity_fx::Size::Full)
                 },
                 rect,
-                14.0 * s,
+                kit::TierSize::Row.radius() * s,
                 s,
                 crate::menu::art::motion::seconds() as f32,
             );
@@ -575,28 +572,29 @@ impl Panel {
             let count = self.data.count(tier.slot);
             let held = count.is_some_and(|count| count > 0);
             let rect = frame.rect(x, y, CRYSTAL_WIDTH, CRYSTAL_HEIGHT);
-            let list = self.ui.draw_list_mut();
-            let _ = list.push(DrawCommand::RoundedRect {
-                rect,
-                radius: 12.0 * s,
-                color: if chosen {
-                    tier.colour_alpha(0.16)
-                } else {
-                    color::alpha(color::SPACE, 0.55)
+            // The tier's frame, one look everywhere (15/11/2026).
+            kit::tier_frame(
+                &mut self.ui,
+                frame,
+                [x, y, CRYSTAL_WIDTH, CRYSTAL_HEIGHT],
+                kit::holocron_tier(tier.index),
+                kit::TierSize::Tile,
+                kit::TierLook {
+                    chosen,
+                    hovered: hovered || chosen,
+                    dim: !held,
+                    still: true,
+                    ..kit::TierLook::at(0.0)
                 },
-            });
-            let _ = list.push(DrawCommand::Border {
-                rect,
-                radius: 12.0 * s,
-                width: if chosen { 2.0 * s } else { 1.2 * s },
-                color: if chosen {
-                    Color::new(1.0, 1.0, 1.0, 0.7)
-                } else if hovered {
-                    tier.colour_alpha(0.55)
-                } else {
-                    color::alpha(color::HOLO, 0.16)
-                },
-            });
+            );
+            if chosen {
+                let _ = self.ui.draw_list_mut().push(DrawCommand::Border {
+                    rect,
+                    radius: 12.0 * s,
+                    width: 2.0 * s,
+                    color: Color::new(1.0, 1.0, 1.0, 0.7),
+                });
+            }
             crate::rarity_fx::draw(
                 self.ui.draw_list_mut(),
                 crate::rarity_fx::Item {

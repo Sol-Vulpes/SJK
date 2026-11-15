@@ -269,6 +269,10 @@ impl ViewerConsole {
             PanelAction::MakeGifTag(giphy) => crate::player_identity::make_gif_tag(giphy),
             PanelAction::ShatterTag(copy) => crate::player_identity::shatter_tag(copy),
             PanelAction::CraftTags(copies) => crate::player_identity::craft_tags(copies),
+            PanelAction::OpenHolocron(slot) => {
+                self.collection_panel_action(PanelAction::Hub(Tab::Holocrons));
+                self.holocrons_panel.open_on(slot);
+            }
             PanelAction::Hub(tab) => {
                 // A tab of another page: the Holocrons page, from the hall's tile.
                 let back = self.collection_panel.back();
@@ -748,7 +752,8 @@ impl ViewerConsole {
     fn follow_forge(&mut self, enabled: bool, snapshot: Option<&sjk_identity::Snapshot>) {
         let known = snapshot.is_some_and(|snapshot| snapshot.economy.is_some());
         self.collection_panel.set_trade_known(known);
-        let data = if self.collection_panel.tab() == Tab::Forge {
+        // The Inventory's Break down presses the Forge's own button (15/11/2026).
+        let data = if matches!(self.collection_panel.tab(), Tab::Forge | Tab::Inventory) {
             super::collection_panel::forge::ForgeData::read(enabled)
         } else {
             Default::default()
@@ -823,6 +828,12 @@ impl ViewerConsole {
     #[cfg(test)]
     pub(crate) fn history_activate_for_shot(&mut self, index: usize) {
         self.collection_panel.history_activate_for_shot(index);
+    }
+
+    /// Show the Inventory tab's chip `filter` and choose its `nth` thing, for a world shot.
+    #[cfg(test)]
+    pub(crate) fn inventory_choose_for_shot(&mut self, filter: usize, nth: usize) {
+        self.collection_panel.inventory_choose_for_shot(filter, nth);
     }
 
     /// Search the Inventory tab for `query` and sort it the `sort`th way, for a world shot.

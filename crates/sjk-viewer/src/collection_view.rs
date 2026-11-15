@@ -414,7 +414,7 @@ impl Panel {
             Tab::Banners => self.banners(&frame, inputs),
             Tab::Cards => self.cards(&frame, inputs, seconds),
             Tab::History => self.history_tab(&frame, inputs),
-            Tab::Inventory => self.inventory_tab(&frame, inputs),
+            Tab::Inventory => self.inventory_tab(&frame, inputs, seconds),
             Tab::Forge => {
                 self.grid = inputs.grid;
                 self.forge(&frame, inputs, seconds, viewport);
@@ -533,8 +533,17 @@ impl Panel {
             }
             Tab::Inventory => {
                 keys.push((&["Up", "Down"], "choose"));
+                keys.push((&["1-7"], "kind"));
                 keys.push((&["S"], "sort"));
                 keys.push((&["/"], "search"));
+                for offer in self.inventory.offers.iter().filter(|offer| offer.enabled) {
+                    let key: &[&str] = match offer.key {
+                        "B" => &["B"],
+                        "G" => &["G"],
+                        _ => &["Enter"],
+                    };
+                    keys.push((key, super::inventory::verb(offer.act)));
+                }
             }
             Tab::History => {
                 keys.push((&["Left", "Right"], "filter"));

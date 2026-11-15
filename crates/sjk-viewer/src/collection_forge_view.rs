@@ -1515,27 +1515,21 @@ impl Panel {
                 color: color::alpha(color::SPACE, 0.55),
             });
         }
-        let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
-            rect: area,
-            radius: 12.0 * s,
-            color: color::alpha(color::SPACE, if chosen || hovered { 0.9 } else { 0.82 }),
-        });
-        let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
-            rect: frame.rect(x + 12.0, y, width - 24.0, 4.0),
-            radius: 2.0 * s,
-            color: tier.colour(),
-        });
-        let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
-            rect: frame.rect(x + 4.0, y + 4.0, width - 8.0, 30.0),
-            radius: 10.0 * s,
-            color: color::alpha(tier.colour(), 0.1),
-        });
-        let _ = self.ui.draw_list_mut().push(DrawCommand::Border {
-            rect: area,
-            radius: 12.0 * s,
-            width: if chosen { 1.8 } else { 1.2 } * s,
-            color: color::alpha(tier.colour(), 0.85),
-        });
+        // The tier's frame, one look everywhere (15/11/2026); its effects stay
+        // `rarity_fx`'s, drawn over it.
+        kit::tier_frame(
+            &mut self.ui,
+            frame,
+            [x, y, width, height],
+            tier,
+            kit::TierSize::Tile,
+            kit::TierLook {
+                chosen,
+                hovered: chosen || hovered,
+                still: true,
+                ..kit::TierLook::at(seconds)
+            },
+        );
         if chosen {
             let _ = self.ui.draw_list_mut().push(DrawCommand::Border {
                 rect: frame.rect(x - 3.0, y - 3.0, width + 6.0, height + 6.0),
@@ -1624,11 +1618,20 @@ impl Panel {
             FontWeight::Semibold,
             TextAlign::Start,
         );
+        let mark = kit::tier_mark(
+            &mut self.ui,
+            frame,
+            [x + 10.0, y + 128.0],
+            tier,
+            10.0,
+            false,
+        );
+        let mark = if mark > 0.0 { mark + 7.0 } else { 0.0 };
         text(
             &mut self.ui,
             TextFamily::Body,
-            format_args!("{}  {}", tier.symbol(), tier.label()),
-            frame.rect(x + 10.0, y + 118.0, width - 20.0, 20.0),
+            format_args!("{}", tier.label()),
+            frame.rect(x + 10.0 + mark, y + 118.0, width - 20.0 - mark, 20.0),
             14.0 * s,
             tier.colour(),
             FontWeight::Semibold,
@@ -1675,13 +1678,19 @@ impl Panel {
         let tier = item.skin.tier;
         let width = LIST_RIGHT - LIST_LEFT;
         let area = frame.rect(LIST_LEFT, y, width, ROW_HEIGHT);
-        if chosen || hovered {
-            let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
-                rect: area,
-                radius: 12.0 * s,
-                color: color::alpha(color::HOLO, if chosen { 0.1 } else { 0.05 }),
-            });
-        }
+        // The tier's frame, one look everywhere (15/11/2026).
+        kit::tier_frame(
+            &mut self.ui,
+            frame,
+            [LIST_LEFT, y + 3.0, width, ROW_HEIGHT - 6.0],
+            tier,
+            kit::TierSize::Row,
+            kit::TierLook {
+                chosen,
+                hovered: chosen || hovered,
+                ..kit::TierLook::at(seconds)
+            },
+        );
         if chosen {
             let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
                 rect: frame.rect(LIST_LEFT - 12.0, y + 14.0, 4.0, ROW_HEIGHT - 28.0),
@@ -1724,11 +1733,13 @@ impl Panel {
             FontWeight::Semibold,
             TextAlign::Start,
         );
+        let mark = kit::tier_mark(&mut self.ui, frame, [x, y + 64.0], tier, 11.0, false);
+        let mark = if mark > 0.0 { mark + 8.0 } else { 0.0 };
         text(
             &mut self.ui,
             TextFamily::Body,
-            format_args!("{}  {}", tier.symbol(), tier.label()),
-            frame.rect(x, y + 54.0, 300.0, 20.0),
+            format_args!("{}", tier.label()),
+            frame.rect(x + mark, y + 54.0, 300.0 - mark, 20.0),
             15.0 * s,
             tier.colour(),
             FontWeight::Semibold,
