@@ -27,7 +27,7 @@ Words stand in the world over every box, in the headline font (Fira Sans Condens
 centre prints), for every SJK player who sees it (hidden behind
 walls, fading out past 1000 units, gone past 1400): "MYSTERY BOX" and its price (or "Free
 roll: press Use" for a player holding one), "Rolling..." while it rolls, then what came
-out (the credits, a holocron's or crystal's tier, the Ray Gun...; the opener's also says
+out (the credits, a holocron's or dormant kyber's tier, the Ray Gun...; the opener's also says
 to press Use to take it).
 
 ## Opening one
@@ -54,7 +54,7 @@ prompt without asking the hub.
 An opened box plays its opening sound and its roll while it rattles and things rise out of
 it and roll over it, changing fast, then slower, like a wound-down spring. At 5.2 seconds
 (5.5 before 30/10/2026), on the roll's last note, it stops on what came out and plays a
-chime, or a fanfare (the jackpot, the Mystery blade, a kyber crystal). As its lid closes
+chime, or a fanfare (the jackpot, the Mystery blade, a dormant kyber). As its lid closes
 (taken, or after 10 seconds) it plays its closing sound.
 
 The opening, the roll and the closing are Sol's sounds of 30/10/2026, in the optional SJK
@@ -72,7 +72,7 @@ no closing sound. Both rolls end together, so every client stops at the same tim
 | `jackpot` | a big pile of gold coins |
 | `explode` | a teddy bear (a thermal detonator before 30/10/2026) |
 | `holocron` | the tier's own holocron, every part of it, for everyone (since 11/11/2026 the hub's event names the tier; SJK's placeholder holocron for others before) |
-| `kyber` | the tier's own kyber crystal, for everyone |
+| `kyber` | the tier's own dormant kyber, for everyone |
 | `shards` | three cyan kyber crystals; seven, bigger, for the opener's pile of more than 15 shards |
 | `raygun` | the Ray Gun |
 | `blade` | a saber hilt; for an opener who holds the blade already, the shards it pays instead |
@@ -86,11 +86,11 @@ and `again` still do. The coins, the Ray Gun and its bolt are SJK's own, bundled
 What rolls before it stops is only these prizes (Sol, 29/10/2026: the game's weapons
 rolled with them before, which no box gave), but the teddy bear, which only comes at the
 end (30/10/2026): the three piles of coins, both piles of shards, the hilt, the Ray Gun,
-the four tiers' holocrons, Uncommon to Mythical, and the Rare and Mythical kyber crystals,
+the four tiers' holocrons, Uncommon to Mythical, and the Rare and Mythical dormant kybers,
 each drawn as the Holocrons tab draws it, its parts posed and turning
 (`mystery_box::HOLOCRONS`, `KYBERS`; Sol, 11/11/2026: "we should see the kyber models and
 holos too", no placeholder). `world_shot::mystery_box_shots::duel6_mystery_box_holocrons`
-shows the four holocrons, `duel6_mystery_box_kybers` the four crystals,
+shows the four holocrons, `duel6_mystery_box_kybers` the four dormant kybers,
 `duel6_mystery_box_rework` the coins and the Ray Gun, and `duel6_mystery_box_loot` the
 shards, the little box and the hilt.
 
@@ -115,7 +115,7 @@ Settings > Sound > Toys, "Mystery box sounds" (`s_toyMysteryBoxSound`), silences
 The price and the odds are the hub's (`GET /v1/mystery-boxes`), PROVISIONAL, Sol's to
 tune. Since 11/11/2026 (Sol: never empty loot, never the 100 credits back, no free
 rerolls, much more likely at least a green holocron since a box costs about one, a very
-rare kyber crystal):
+rare dormant kyber):
 
 | Outcome | Chance | Pays |
 | --- | --- | --- |
@@ -127,7 +127,7 @@ rare kyber crystal):
 | `shards` | 12 % | 10 to 25 kyber shards |
 | `raygun` | 7 % | the Ray Gun for 30 seconds |
 | `blade` | 1 % | the Mystery blade (60 shards if you hold it) |
-| `kyber` | 0.5 % | a kyber crystal: 60 % Uncommon, 30 % Rare, 9 % Legendary, 1 % Mythical |
+| `kyber` | 0.5 % | a dormant kyber: 60 % Uncommon, 30 % Rare, 9 % Legendary, 1 % Mythical |
 
 On average a box pays back about 25 of its 100 credits in coins, beside a holocron nearly
 one time in two. Before 11/11/2026: `empty` 36 %, `refund` (the price back) 24 %,
@@ -170,9 +170,9 @@ it counts against no daily cap and cannot be traded (source `box`). The opener r
 tier over the box and in the centre, and finds it in the Collection; since 11/11/2026 the
 other players see the tier's own holocron too (the hub's event `open_<box>_holocron_<tier>`).
 
-**A kyber crystal** (`kyber`, 11/11/2026, very rare): the hub gives a crystal of a tier
-rolled on the box's own odds (source `box`), opened in the Collection as any crystal
-([holocrons.md](holocrons.md#kyber-crystals)); everyone sees the tier's crystal over the
+**A dormant kyber** (`kyber`, 11/11/2026, very rare): the hub gives a dormant kyber of a tier
+rolled on the box's own odds (source `box`), attuned in the Collection as any dormant kyber
+([holocrons.md](holocrons.md#dormant-kybers)); everyone sees the tier's dormant kyber over the
 box (`open_<box>_kyber_<tier>`), with the jackpot's fanfare.
 
 **The Ray Gun** (`raygun`, Sol's idea of 11/11/2026, after Call of Duty zombies' box): the
@@ -195,10 +195,10 @@ credits". Players out of the box hunt fall but pay nothing.
 pile of 10 to 25 kyber shards to spend in the shop; a free roll, spent on the next box
 the player opens like one won in the box hunt (the hub's answer says the free rolls left,
 `free`, and the client keeps that count; no box gives one since 11/11/2026, Sol: "it's
-just waste of time", but the box hunt still does); or the boxes' own saber shader, the Mystery
+just waste of time", but the box hunt still does); or the boxes' own kyber, the Mystery
 blade (`saber_mystery`, blade 169, Legendary), which no holocron drops, the shop never
 sells and nobody trades. A player who holds it already gets 60 shards instead, what
-shattering a Legendary shader gives. The blade fanfares like the jackpot.
+shattering a Legendary kyber gives. The blade fanfares like the jackpot.
 
 ## Placing one (SJK's creator)
 

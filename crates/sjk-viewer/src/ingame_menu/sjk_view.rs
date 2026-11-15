@@ -95,7 +95,7 @@ impl Entry {
         match self {
             Self::Resume => "Back to the match",
             Self::Profile => "Character, saber and Force; your SJK profile",
-            Self::Collection => "Your medals, achievements, shaders and toys",
+            Self::Collection => "Your medals, achievements, kybers and toys",
             Self::Players => "Everyone here; report a cheater or a troll",
             Self::Settings => "Every option and key, with search",
             Self::Servers => "Find another server; joining leaves this one",
@@ -2776,7 +2776,7 @@ mod tests {
         assert!(
             texts
                 .iter()
-                .any(|t| t == "Swap holocrons and duplicate shaders"),
+                .any(|t| t == "Swap holocrons and duplicate kybers"),
             "{texts:?}"
         );
         // Not for the player themselves.

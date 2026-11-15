@@ -11,7 +11,7 @@ shards, and holocrons bought with credits (Sol's decisions of 17/10/2026). [Holo
 
 Collecting cards grants nothing: no power, setting or right, as with medals
 ([identity.md](identity.md#medals)). Cards never trade (Sol, 23/10/2026: collections
-will bring rewards); players may swap duplicate shaders, and later unopened holocrons, with
+will bring rewards); players may swap duplicate kybers, and later unopened holocrons, with
 each other ([sjk-ui.md](sjk-ui.md#trading)), and there is never any real money in the
 system. Hats and capes stay free for everyone and are never sold or dropped
 ([client.md](client.md#hats-and-capes)).
@@ -25,14 +25,14 @@ system. Hats and capes stay free for everyone and are never sold or dropped
 | Where a sealed card is revealed | Into the first set only, so Alpha cards stay launch-set cards (my pick, Sol's go-ahead). |
 | What the holocron's tier does | A higher tier raises the odds of rarer cards, better finishes and more credits ([Odds](#odds)). |
 | Finishes | Normal, Holo, Solar (the rarest: an animated sunlit shimmer). |
-| Editions | A stamp apart from the finish: **Alpha Edition** while the alpha lasts. Every other collectible carries one too ([Editions](unlockables.md#editions)). Since 06/11/2026 holocrons and kyber crystals carry one as well, stamped by the hub when given: an Alpha one brings Alpha things only, a Beta one Beta or Alpha ([Alpha and Beta](unlockables.md#alpha-and-beta-the-collections)). Cards are not gated by it yet (every face is the SJK Alpha set) and a copy keeps the Alpha Edition stamp. The rest of the holocron seasons design (Beta tables with guaranteed prizes, pity, no duplicate faces; branch `personal/beta-season`) is not built. |
+| Editions | A stamp apart from the finish: **Alpha Edition** while the alpha lasts. Every other collectible carries one too ([Editions](unlockables.md#editions)). Since 06/11/2026 holocrons and dormant kybers carry one as well, stamped by the hub when given: an Alpha one brings Alpha things only, a Beta one Beta or Alpha ([Alpha and Beta](unlockables.md#alpha-and-beta-the-collections)). Cards are not gated by it yet (every face is the SJK Alpha set) and a copy keeps the Alpha Edition stamp. The rest of the holocron seasons design (Beta tables with guaranteed prizes, pity, no duplicate faces; branch `personal/beta-season`) is not built. |
 | Credits' sign | The galactic credit's, the slanted seven crossed by two bars (Sol's pick, from Wikipedia); drawn from shapes. |
 | What credits will buy | An Uncommon (150) or a Rare (400) holocron, outside the daily caps; Legendary and Mythical ones are only ever earned (Sol, 17/10/2026, [Holocrons for credits](#holocrons-for-credits)); prepared, not deployed. Until then the shop sold for credits. |
-| Duplicates | Cards keep a count ("x3"). A droppable shader held twice or more can be shattered into kyber shards, one copy at a time, never the last (Sol, 17/10/2026; it replaced selling duplicates for credits). |
-| Kyber shards | A second currency (Sol, 17/10/2026): from shattering duplicates, a holocron's pile of shards and a card's pack; spent to craft the droppable shader the player chooses and in the shop's four daily offers ([Shards and the shop](#shards-and-the-shop)). |
+| Duplicates | Cards keep a count ("x3"). A droppable kyber held twice or more can be shattered into kyber shards, one copy at a time, never the last (Sol, 17/10/2026; it replaced selling duplicates for credits). |
+| Kyber shards | A second currency (Sol, 17/10/2026): from shattering duplicates, a holocron's pile of shards and a card's pack; spent to craft the droppable kyber the player chooses and in the shop's four daily offers ([Shards and the shop](#shards-and-the-shop)). |
 | Drop rates | Start stingy; buffing later is easy on the hub and nerfing is not. |
 | Seasons | A holocron keeps the season it dropped in, and opens with its tables and edition; Beta starts with a release, per player (Sol, 05/11/2026, [Seasons](#seasons)). |
-| Money, trading | No money: free and non-commercial. Cards never trade; duplicate shaders, and later unopened holocrons, trade between players for each other only ([Trading](sjk-ui.md#trading)). |
+| Money, trading | No money: free and non-commercial. Cards never trade; duplicate kybers, and later unopened holocrons, trade between players for each other only ([Trading](sjk-ui.md#trading)). |
 
 ## Opening
 
@@ -124,12 +124,12 @@ actual odds. [Profile banners](profile-banners.md#echo-rewards-and-ownership) us
 proposed 10% share taken from cards, with no card or credits on a banner opening.
 This reduces card frequency and average credits; shader/tag/shard-pile shares stay.
 
-Under those fallback tables, about 35 credits a card opening on average; counting the openings that bring a shader or a
+Under those fallback tables, about 35 credits a card opening on average; counting the openings that bring a kyber or a
 pile of kyber shards instead (no credits), about 17.5 credits a holocron found, so about 140
 a day under the holocrons' daily cap of 8.
 
 Since 17/10/2026 (prepared, not deployed) one opening in ten, in every tier, brings a pile of
-kyber shards instead of the card and its credits, taken from the card's share (the shader's
+kyber shards instead of the card and its credits, taken from the card's share (the kyber's
 odds stay): any whole number in the range, equally likely.
 
 | Holocron | Shard pile | Shards | On average a holocron |
@@ -141,7 +141,7 @@ odds stay): any whole number in the range, equally likely.
 
 The piles are a consolation: about once a day of capped play, a pile is about one
 duplicate of the holocron's own level shattered, a Mythical holocron's as much as a
-Mythical shader's shattering.
+Mythical kyber's shattering.
 
 **The card pack** (Sol's request, 17/10/2026, prepared on hub branch `feat/card-pack`, not
 deployed): a card is the most common and least wanted prize, so it comes as a pack, a few
@@ -195,10 +195,10 @@ pile of kyber shards, banner) become **bonus rolls** on top.
 
 | Holocron | Guaranteed | Bonus rolls |
 | --- | --- | --- |
-| Uncommon | As in Alpha: one prize (a shader, or a card and credits) | As in Alpha |
-| Rare | A card, **Uncommon or better**, and credits; a shader, **Uncommon or better** | One: tag 25 %, shard pile 25 %, nothing 50 % |
-| Legendary | A card, **Rare or better**, and credits; a shader, **Rare or better** | One: tag, shard pile or banner |
-| Mythical | A card, **Holo or better**, and credits; a shader, **Legendary or better** | Two: tag, shard pile, banner or a second card |
+| Uncommon | As in Alpha: one prize (a kyber, or a card and credits) | As in Alpha |
+| Rare | A card, **Uncommon or better**, and credits; a kyber, **Uncommon or better** | One: tag 25 %, shard pile 25 %, nothing 50 % |
+| Legendary | A card, **Rare or better**, and credits; a kyber, **Rare or better** | One: tag, shard pile or banner |
+| Mythical | A card, **Holo or better**, and credits; a kyber, **Legendary or better** | Two: tag, shard pile, banner or a second card |
 
 Card rarity and finish (Beta; Uncommon as Alpha):
 
@@ -208,7 +208,7 @@ Card rarity and finish (Beta; Uncommon as Alpha):
 | Legendary | 0 % | 0 % | 70 % | 25 % | 5 % | 65 % | 33 % | 2 % |
 | Mythical | 0 % | 0 % | 50 % | 38 % | 12 % | 0 % | 85 % | 15 % |
 
-Credits and the card pack's shards stay as in Alpha. The guaranteed shader's tier has
+Credits and the card pack's shards stay as in Alpha. The guaranteed kyber's tier has
 Beta's own odds (Sol, 10/11/2026: "I feel like I should have dropped more"; Mythical
 holocrons are rare enough to give a good chance of the best):
 
@@ -218,9 +218,9 @@ holocrons are rare enough to give a good chance of the best):
 | Legendary | | 55 % | 35 % | 10 % |
 | Mythical | | | 60 % | 40 % |
 
-Beta kyber crystals get their own odds too, at least as good as the Beta holocron of
+Beta dormant kybers get their own odds too, at least as good as the Beta holocron of
 their tier (Common to Mythical): Uncommon 30/45/20/4/1 %, Rare 0/55/33/9.5/2.5 %,
-Legendary 0/0/45/40/15 %, Mythical 0/0/0/50/50 %. Alpha holocrons and crystals keep their
+Legendary 0/0/45/40/15 %, Mythical 0/0/0/50/50 %. Alpha holocrons and dormant kybers keep their
 odds. Provisional: tuned after a week of real Beta openings.
 
 ### Pity
@@ -229,27 +229,27 @@ Per person, counted over **Beta** holocrons opened (as built: an Alpha opening l
 alone, so nobody starts Beta with a run already owed; a choice for Sol to confirm), shown on
 a Beta holocron's hover card and on the loot table's Beta page:
 
-- a prize of **Legendary or better** (shader or card) at the latest every **15**
+- a prize of **Legendary or better** (kyber or card) at the latest every **15**
   holocrons opened (about two days at the daily cap);
-- a **Mythical** prize (shader or card) at the latest every **80** (about ten days).
+- a **Mythical** prize (kyber or card) at the latest every **80** (about ten days).
 
 A natural one resets its counter. The last opening of a run rolls its prize's tier from
-the floor up: the guaranteed shader's (every Beta tier from Rare has one since 10/11). A Beta Uncommon holocron counts but is never raised, so a run it would end
+the floor up: the guaranteed kyber's (every Beta tier from Rare has one since 10/11). A Beta Uncommon holocron counts but is never raised, so a run it would end
 waits for the next Rare or better one. Tags, banners and shards do not count.
 
 ### No duplicate faces
 
 Legendary and Mythical holocrons pick a card face the player does not hold yet; a
-duplicate only once they hold every face of that rarity. Shaders already prefer the ones
+duplicate only once they hold every face of that rarity. Kybers already prefer the ones
 not held; one held in every tier of the floor gives the next tier up, or a pile of shards
-as large as a Mythical shader's shattering when none is left.
+as large as a Mythical kyber's shattering when none is left.
 
 ### What it costs the economy
 
 A Mythical holocron drops about once in 67 (1.5 %), so at the daily cap one every eight
-days or so, each with a Legendary or better shader: a Legendary shader in the shop costs
+days or so, each with a Legendary or better kyber: a Legendary kyber in the shop costs
 about 29 days of capped play. Accepted (my recommendation, 05/11/2026): Mythical drops
-are capped at one a day, and shaders avoid duplicates, so it fills a collection rather than
+are capped at one a day, and kybers avoid duplicates, so it fills a collection rather than
 the shard bank. Watch the shop's Legendary sales after a week.
 
 ### As built (10/11/2026)
@@ -258,7 +258,7 @@ the shard bank. Watch the shop's Legendary sales after a week.
   opening), table `holocron_pity`; Beta openings need the economy on. Bonus shares: a
   Legendary holocron's tag, shard pile or banner a third each, a Mythical one's tag, pile,
   banner or second card a quarter each (the second card without credits); while banners
-  do not drop their share is shared out among the others. A guaranteed shader is one the
+  do not drop their share is shared out among the others. A guaranteed kyber is one the
   person lacks first (the rolled tier, then above, then below to the floor). A Beta card
   copy is stamped `beta`. Wire: the hub's `PROTOCOL.md`, "Seasons".
 - Client: `Prize::all` shows each prize of a Beta holocron as its own reveal, its best
@@ -295,18 +295,18 @@ shop that fixes bad luck). Every number here is provisional, in one table each a
 loot tables' `shard_pile`, `shards` and `card_shards`), the client keeping a copy for before
 (`economy::BUILT_IN`, `loot_odds::BUILT_IN`, pinned by tests).
 
-- **The trade.** Only saber shaders holocrons drop take part, less any a medal brings
+- **The trade.** Only kybers holocrons drop take part, less any a medal brings
   (Glitch, Hologram and Runic today). Both sides read it from their catalogues (the
-  droppable flag, the medals' blades), never from a list, so a shader made droppable
-  joins by itself. Achievements grant nothing today; one that brings a shader must be
+  droppable flag, the medals' blades), never from a list, so a kyber made droppable
+  joins by itself. Achievements grant nothing today; one that brings a kyber must be
   left out the same way. Cards are luck only: never sold, crafted or shattered. Hats and
   capes are free for everyone and never take part.
-- **Kyber shards** are one currency for every shader (my choice for simplicity; Sol's
+- **Kyber shards** are one currency for every kyber (my choice for simplicity; Sol's
   question had offered "shards of one shader", see the open points), a ledger at the hub
   like credits (`shard_ledger`, reasons `shatter`, `holocron`, `craft`, `shop`, `staff`),
   never below 0, on the profile as `shards`.
 - **Shattering** ("breaking down" in the Forge) turns one copy into shards, one copy a
-  request: a duplicate (a shader held twice or more by drops or grants; a medal's or a
+  request: a duplicate (a kyber held twice or more by drops or grants; a medal's or a
   card's copy does not count), and since 21/10/2026 the last copy too when the client asks
   (`"last":true`, a hub whose `economy.abilities` says `shatter_last`; Sol's promise in the
   2026.1021.1 notes of "breaking down any saber shader you own, not just duplicates
@@ -317,12 +317,12 @@ loot tables' `shard_pile`, `shards` and `card_shards`), the client keeping a cop
   duplicate at once (`POST /v1/unlocks/shatter-duplicates`, `shatter_duplicates`) keeps one
   of each. The client offers both only where the hub says so, so against an older hub the
   Forge breaks down duplicates only.
-- **Crafting** makes a shader of the trade the player does not hold, for its cost; a copy
+- **Crafting** makes a kyber of the trade the player does not hold, for its cost; a copy
   of its blade card lowers the cost ([SJK Blades](#sjk-blades), since 21/10/2026).
 - **Who may:** like opening, everything follows the hub's opening setting: while opening
   is for staff, others get `opening_staff_only` and the Shop button is not shown.
 
-| Shader tier | Shattering gives | Crafting costs | Shop price |
+| Kyber tier | Shattering gives | Crafting costs | Shop price |
 | --- | --- | --- | --- |
 | Common | 5 shards | 40 shards | 30 shards |
 | Uncommon | 10 | 100 | 75 |
@@ -333,13 +333,13 @@ loot tables' `shard_pile`, `shards` and `card_shards`), the client keeping a cop
 Why these numbers:
 
 - **Crafting against shattering:** eight to thirteen duplicates of a tier craft one of it,
-  so shattering never mills one shader into another of the same tier. Shards come in at
-  about 1.7 a holocron from the piles, and up to about 3.9 more once every shader dropped is
+  so shattering never mills one kyber into another of the same tier. Shards come in at
+  about 1.7 a holocron from the piles, and up to about 3.9 more once every kyber dropped is
   a duplicate: a Common craft is then about 7 holocrons, a Mythical one about 360 (some 45
-  days of capped play), against about 3 800 holocrons to drop one given Mythical shader.
+  days of capped play), against about 3 800 holocrons to drop one given Mythical kyber.
 - **The shop's prices** (Sol, 17/10/2026: the shop sells for shards): three quarters of the
   craft cost, so the day's offers are the cheaper road and crafting the dearer one to the
-  shader the player chooses, and buying one to shatter never gains. Before, in credits
+  kyber the player chooses, and buying one to shatter never gains. Before, in credits
   (250, 600, 1 500, 4 000 and 10 000), for the reason that follows.
 - **The credit prices before:** the rule of 12/10/2026 (the credits earned by the time 80 % of
   players would have dropped the item: 35 credits times `1.6 / p` holocrons) does not give
@@ -354,23 +354,23 @@ Why these numbers:
 ### The shop
 
 - **Four offers a day**, each player's own (21/10/2026, the same for every player before):
-  the hub skips the shaders they hold, but one bought from the shop that day stays listed
-  as bought, and a shader gained during the day redraws only its own offer. One Common, one Uncommon, one Rare and
+  the hub skips the kybers they hold, but one bought from the shop that day stays listed
+  as bought, and a kyber gained during the day redraws only its own offer. One Common, one Uncommon, one Rare and
   a Legendary three days in four, a Mythical the fourth (Sol, 17/10/2026: with four
-  Mythical shaders an even share brought each back about every eight days), each a
-  different shader of the trade; a tier with none left takes the nearest that has one.
+  Mythical kybers an even share brought each back about every eight days), each a
+  different kyber of the trade; a tier with none left takes the nearest that has one.
 - **The day** runs from midnight to midnight in Paris (Europe/Paris, the EU's summer-time
   rule). The hub deals it from the day, the person and a secret it made once in its database
   (SHA-256, one stream an offer),
   so nothing is stored per day, a restart keeps the offers, and nobody, even with the hub's
   code, can tell a later day's.
 - **Once a day, never a duplicate** (my decision): a player buys each offer at most once a
-  day (`already_bought`), and the hub refuses a shader they hold (`already_owned`): shards
-  never buy a duplicate, the shop being a fix for missing shaders. Crafting refuses one held
+  day (`already_bought`), and the hub refuses a kyber they hold (`already_owned`): shards
+  never buy a duplicate, the shop being a fix for missing kybers. Crafting refuses one held
   the same way, so the only road to a duplicate is luck, and shattering is there for it
-  (Sol asked whether bought shaders should be unbreakable instead; with prices above the
+  (Sol asked whether bought kybers should be unbreakable instead; with prices above the
   shatter yield there is nothing to block, so no).
-- A purchase is a line of the shard ledger (reason `shop`, the shader's id as its note),
+- A purchase is a line of the shard ledger (reason `shop`, the kyber's id as its note),
   which is also how the hub tells what was bought today.
 
 ### Holocrons for credits
@@ -389,9 +389,9 @@ Why these numbers:
 ### The Forge
 
 Since 21/10/2026 (Sol's request: a better interface for the shop, crafting and breaking
-shaders down, in a tab of its own) everything kyber shards and credits trade is the
+kybers down, in a tab of its own) everything kyber shards and credits trade is the
 Collection's Forge tab, between Holocrons and Cards: Shop (the day's four offers and the
-holocrons for credits), Craft (every shader of the trade the player lacks; a search that names only held ones
+holocrons for credits), Craft (every kyber of the trade the player lacks; a search that names only held ones
 says they are held, hub report #305) and Break down
 (the player's own copies, the last one too on a hub that takes it, and every duplicate at
 once). The look, keys and states are in [sjk-ui.md](sjk-ui.md#collection); the requests
@@ -400,9 +400,9 @@ world shots (`world_shot::forge_shots`); not tried in a game.
 
 Since 29/10/2026 (collection marks, the ideas of the players Atrosex and Kushina extended
 by Sol; [sjk-ui.md](sjk-ui.md#marks), the hub's `PROTOCOL.md` "Collection marks"): Break
-down marks the shader the player wears (on either saber or staff half) and its last
+down marks the kyber the player wears (on either saber or staff half) and its last
 copy's card says so first; the player's favourites are listed first in Craft and Break
-down, with a Favourites chip on Break down; and a shader the player locked is never broken
+down, with a Favourites chip on Break down; and a kyber the player locked is never broken
 down, one copy or the last, nor counted among all duplicates, nor offered in a trade, until
 they unlock it. The hub holds the lock (409 `locked`), so a client cannot get round it; the
 Forge shows the button dimmed with "Locked". Against a hub without marks, nothing of the
@@ -431,37 +431,37 @@ against a hub without it:
 - **Fusion** (the trade-up of the open points): the economy says `fuse` in `abilities` and
   `fuse` (`[3,3,3,5,0]`: the duplicates a fusion takes by the input tier, Common to
   Mythical, 0 for a tier that cannot). `POST /v1/unlocks/fuse`, signed like craft, body
-  `{"ids":[...]}`: each shader id once per copy given, all of one tier, as many as `fuse`
-  says, every copy a duplicate (the player keeps one of each). The hub gives one shader of
+  `{"ids":[...]}`: each kyber id once per copy given, all of one tier, as many as `fuse`
+  says, every copy a duplicate (the player keeps one of each). The hub gives one kyber of
   the next tier the player does not hold, its choice, and answers as craft does (`crafted`,
   `profile`) with `used` (`[{"id","copies"}]`). The client's Forge proposes the copies (the
-  biggest piles first, never a last copy, never a locked shader's) and the player may
+  biggest piles first, never a last copy, never a locked kyber's) and the player may
   change them ([sjk-ui.md](sjk-ui.md#collection)). Refusals read as craft's; an unknown code
   shows the hub's words.
 - **Deal of the day:** each offer carries `deal` (one offer a day at half price), `price`
   (what it costs, the deal's already halved; the client always read it), `wished` and
   `edition` (`alpha`, `beta`; absent is Alpha). The Shop strikes the table price over the
   deal's.
-- **Wishlist:** the economy carries `wishlist` (up to three shader ids); `PUT
+- **Wishlist:** the economy carries `wishlist` (up to three kyber ids); `PUT
   /v1/shop/wishlist`, signed, `{"ids":[...]}` (0 to 3 distinct ids) replaces it. The client
   changes it at once and the hub's answer (its `wishlist` when it sends one) replaces it; a
   refusal is said in the console and the economy read again. With a wishlist the client
   reads the shop once a shop day by itself (at most once a minute, half an hour after a
   refusal), for the card that tells, once a shop day per key (`wishlist_notice.txt` in the
-  settings folder), that a wished shader is on offer, and for the Forge's dot (a wished
+  settings folder), that a wished kyber is on offer, and for the Forge's dot (a wished
   offer, the deal within reach, a possible fusion).
 
-What decides which shader a fusion gives, whether a wish weighs on the offers, and the
+What decides which kyber a fusion gives, whether a wish weighs on the offers, and the
 deal's choice are the hub's (its `PROTOCOL.md`); the client promises none of them. Checked
 by unit tests only (wire parsing with and without the fields, the proposal, the checks,
-the wishlist's limit, the dot, the card once a day, the Forge's and the Shaders tab's
+the wishlist's limit, the dot, the card once a day, the Forge's and the Kybers tab's
 layouts at 1920x1080, 3840x2160, 1440x1080 and 2560x1080); not tried in a running client
 nor against a deployed hub.
 
 ### Open points for Sol
 
 Answered by Sol on 17/10/2026: one generic currency; the piles, shatter and craft tables
-kept for the launch; the shop in shards; buying or crafting a held shader refused; the
+kept for the launch; the shop in shards; buying or crafting a held kyber refused; the
 Mythical offer one day in four; credits buy Uncommon and Rare holocrons. Left: tuning
 after a week of real openings. The trade-up became fusion on 10/11/2026 (above).
 
@@ -504,7 +504,7 @@ less keeps it: sticking spends nothing.
 A card's kind says what it is about and reads on its strip: `community` (Community),
 `place` (Place), `personality` (Personality), `game` (Jedi Academy), since
 19/10/2026 `credits` (Credits: the people the project owes) and `meme` (Meme), and since
-20/10/2026 `blade` (Blade: a saber shader, [SJK Blades](#sjk-blades)), and since
+20/10/2026 `blade` (Blade: a kyber, [SJK Blades](#sjk-blades)), and since
 01/11/2026 `clan` (Clan, Sol's decision: a clan's cards, the clan being the card's
 collection, so JoF's cards read "Clan · JoF" and each further clan gets a set of its own;
 the JoF cards were `community` before). Its
@@ -519,7 +519,7 @@ holds that unlockable for as long as it holds a copy of the card and loses it wi
 last one, as a medal's blade goes with the medal: the hub lists it in the profile's
 `unlocks` with `"card": "sjk_alpha_000"` (`Unlock::card` in
 [wire.rs](../crates/sjk-identity/src/wire.rs), absent from older hubs). Unlike a medal's,
-such a blade may also drop from holocrons ([unlockables.md](unlockables.md#holocron-shader-drops)):
+such a blade may also drop from holocrons ([unlockables.md](unlockables.md#holocron-kyber-drops)):
 the card is a second way to get it, and a dropped copy wins over the card in the profile
 (it reads as the player's own and trades; the card's never does). The
 client reads `grants` into the face (`Face::grants`, [faces.rs](../crates/sjk-viewer/src/cards/faces.rs)):
@@ -527,7 +527,7 @@ the card's hover card and its close-up on the Cards tab add "Brings the Sun blad
 you hold it.", for an unlockable the client knows. The catalogue keeps the same pairs in
 `unlockables::CARD_BLADES` ([unlockables.rs](../crates/sjk-viewer/src/unlockables.rs)),
 so it names a blade's card without the packs; a new card that
-brings a blade adds an entry there and to its file. The Shaders tab's owned line then
+brings a blade adds an entry there and to its file. The Kybers tab's owned line then
 reads "Yours since dd/mm/yyyy, with your Sol card" (the face's name, or the card's id
 without one), and its source facts "Holocron drop" and "Sol card".
 
@@ -540,44 +540,44 @@ table (`cards::EXTRAS_GATES`); a new pair goes in both.
 ### SJK Blades
 
 **Since 20/10/2026 (Sol's decision)** a second collection, **SJK Blades** (set
-`sjk_blades`), holds one card for each saber shader holocrons drop (the droppable ones,
+`sjk_blades`), holds one card for each kyber holocrons drop (the droppable ones,
 less the medals' blades), of kind `blade`. Its number is the blade's own (Sun is 001),
-in its id only: no card shows its number (see the credits cards above). A blade card's file names its shader,
+in its id only: no card shows its number (see the credits cards above). A blade card's file names its kyber,
 `"blade": "saber_sun"` (optional, read like `grants`: blank is none, an id the client does
 not know is kept but named nowhere; `Face::blade` in
 [faces.rs](../crates/sjk-viewer/src/cards/faces.rs)).
 
-- **The Solar bonus:** a Solar copy of a blade card also drops its shader to the player, a
+- **The Solar bonus:** a Solar copy of a blade card also drops its kyber to the player, a
   real drop like a holocron's. The hub does it when the copy is opened (the opening's entry then carries both
-  `card` and `unlock`, the shader in a holocron drop's shape `{"id","name","count"}`) and
+  `card` and `unlock`, the kyber in a holocron drop's shape `{"id","name","count"}`) and
   when a sealed Solar copy is revealed into a blade card (the reveal's entry carries an
   optional `unlock` of the same shape). Older hubs send neither and older answers still
   read (`Opened::unlock`, `Revealed::unlock` in
   [wire.rs](../crates/sjk-identity/src/wire.rs)).
-- **The hub picks the set first:** with a set as large as the droppable shaders, picking
+- **The hub picks the set first:** with a set as large as the droppable kybers, picking
   evenly among every card of a rarity would almost always land on a blade card, so the
   hub first picks one of the sets that have a card of the rarity rolled, then a card in
   it (the hub's rule; the client shows whatever card it is given).
 - **Crafting for less** (Sol, 21/10/2026): while the player holds a revealed copy of a
-  blade card and not its shader, crafting the shader costs less by the best copy's
+  blade card and not its kyber, crafting the kyber costs less by the best copy's
   finish, and the card is kept (cards stay luck only, never spent):
 
   | Best copy | Crafting costs | Mythical (2 000) | Rare (300) |
   | --- | --- | --- | --- |
   | Normal | 75 %, the shop's price | 1 500 | 225 |
   | Holo | 50 % | 1 000 | 150 |
-  | Solar | 50 % (it dropped the shader once already) | 1 000 | 150 |
+  | Solar | 50 % (it dropped the kyber once already) | 1 000 | 150 |
 
   The hub decides (`economy::BLADE_CARD_CRAFT`, sent as `economy.blade_card_craft`, and
   the craft answer's `blade_card`); a hub before takes the full cost and sends no table,
   read as no discount ([economy.rs](../crates/sjk-viewer/src/economy.rs) `blade_cards`,
   `craft_price`). The Forge's Craft lists the lowered cost, its "Crafting costs" reads
   "Crafting costs (Holo card -50 %)" and its button "Craft  (shard)  150  Holo card -50 %";
-  the Shaders tab's line beside "Craft in the Forge" says the same, and the blade card's
+  the Kybers tab's line beside "Craft in the Forge" says the same, and the blade card's
   hover card adds "Any copy crafts the Sun blade for less." Up close on the Cards tab, a
   held blade card has a button under its words (which then keep to one line): "Craft the
-  Sun blade in the Forge" while the shader is of the trade and the player lacks it, which
-  shows the Forge's Craft on it, else "Go to the Sun blade", which turns to the Shaders tab
+  Sun blade in the Forge" while the kyber is of the trade and the player lacks it, which
+  shows the Forge's Craft on it, else "Go to the Sun blade", which turns to the Kybers tab
   on it; either clears a filter that would hide it. The shop's prices do not change.
 - **Perk marks** (21/10/2026, Sol's request): each perk a card's copies bring has a mark
   from SJK Symbols, in `cards::faces::PERKS` (`Face::perks`; a new perk is one row there):
@@ -587,7 +587,7 @@ not know is kept but named nowhere; `Face::blade` in
   found yet), the close-up's line under the copies held ends with the marks, and the
   hover card starts each perk's line with its mark.
 - **In the client:** a blade card's hover card and its close-up on the Cards tab add "Its
-  Solar copies also drop the Sun blade." (`Face::solar_drop`, for a shader the client
+  Solar copies also drop the Sun blade." (`Face::solar_drop`, for a kyber the client
   knows); the binder's kind filter offers "Kind: Blade" once the packs have one. The
   opening and the reveal show the blade a Solar copy brought ([The ceremony](#in-the-client)).
 
@@ -747,7 +747,7 @@ contact sheets of twelve).
   holds the finishes for any rounded tile, not only cards: `tile_shine::push(list, rect,
   radius, kind, hover, seconds)` lays Holo or Solar (or nothing) and the glare over
   `rect`, and a page keeps one `HoverEase` and asks it each frame for each tile's
-  `Hover` (`update(key, rect, pointer, seconds)`). A saber shader's or a medal's tile
+  `Hover` (`update(key, rect, pointer, seconds)`). A kyber's or a medal's tile
   gets the same look with those two calls (and `look::tilt_matrix` for the lean).
 - **A revealed card** shows its face as a trading card: its name and its rarity's
   symbol ([sjk-ui.md](sjk-ui.md#symbols)) on top, its picture in a gold-edged 6:5 window (dark until the
@@ -795,7 +795,7 @@ contact sheets of twelve).
   foot. Eight commands, sharp at every size.
 - **The Holocrons tab:** the player's kyber shards and credits stand at the panel's top
   right, each mark and sum with its word under it, the chosen tier says what opening one
-  gives ("Opening it gives a sealed card and 30 to 50 credits, or a saber shader (40%) or
+  gives ("Opening it gives a sealed card and 30 to 50 credits, or a kyber (40%) or
   kyber shards (10%)."), and under the holocron's caption **Open** (the oldest of the tier
   chosen, Enter), **Open all (n)** (up to twenty of all tiers, the oldest first, A) and,
   while the hub lets the player open, **Shop** (S), which shows the Collection's Forge on
@@ -841,7 +841,7 @@ contact sheets of twelve).
     the ceremony's clock alone and read by the world each frame; gone, the holocron
     grows back from nothing in its place when the ceremony ends.
   - **The crate spin** (6 seconds; since 14/10/2026): a strip of what its tier can drop,
-    cards and droppable shaders, runs past a gold marker with a soft tick a tile
+    cards and droppable kybers, runs past a gold marker with a soft tick a tile
     (`menuroam`) and slows over 88 % of it to a stop on what the hub rolled, the last
     tile taking about two seconds; the strip is made up round the real prize and the
     stop lands anywhere up to 45 % of a tile from its middle, a close call near its
@@ -849,7 +849,7 @@ contact sheets of twelve).
     tile stands over a band of its colour, as a loot crate's, and at speed its colour
     streaks across it and trails it. At rest (`sub_select`) the prize lifts and lights
     up in its colour, breathing, the others dim to a third, and a grand prize (a
-    Legendary, Mythical or Solar card, a Legendary or Mythical shader) turns slow rays
+    Legendary, Mythical or Solar card, a Legendary or Mythical kyber) turns slow rays
     behind it.
   - **A card shows as its credits** on the strip (Sol's request, 18/10/2026): a card is
     the commonest and least wanted prize, so its tile is a stack of three credit coins
@@ -883,11 +883,11 @@ contact sheets of twelve).
     Legendary or Mythical);
     then the kyber shards' tile slides out on the right and counts up (none while the
     hub's economy is off). Then its words: "Rare card, Holo", "Alpha Edition. From a Rare
-    Holocron", what the finish is, that it is sealed, "1 of 3", Next or Done. A shader instead of a card shows its
-    blade framed in its tier's colour, its name, "Common saber shader. From a Rare
+    Holocron", what the finish is, that it is sealed, "1 of 3", Next or Done. A kyber instead of a card shows its
+    blade framed in its tier's colour, its name, "Common kyber. From a Rare
     Holocron", what it looks like and how many the player holds. A Solar blade card's
     blade (20/10/2026) comes with its card: its tile (the blade framed in its tier's
-    colour, "+Sun blade", "saber shader, new" or "x2") slides out on the right just after
+    colour, "+Sun blade", "kyber, new" or "x2") slides out on the right just after
     the shards' (under it when both came), and in the card's words "...and the Sun blade
     drops with it! Yours now: wear it in the Collection." (or "You hold 2 of it now.") in
     the blade's colour takes the place of what the finish is. A Solar finish or a
@@ -900,14 +900,14 @@ contact sheets of twelve).
     the next five follow on their own ("Holocrons 6 to 10 of 12"). The stacked tiles are
     light: a plate washed from below in the prize's colour, a card's credits (two coins,
     the amount and the card tucked in its corner, its plate alone, in the holocron's
-    colour, with three rainbow bands for Holo; 18/10/2026) or a shader's blade. A grand
+    colour, with three rainbow bands for Holo; 18/10/2026) or a kyber's blade. A grand
     prize plays the fanfare as its strip stops. Then everything found is laid out, the
     finest first, ten to a row, each coming in on its beat, with its name and its
     credits or how many the player holds (a Solar blade card adds "+Sun blade" under its
     credits, in the blade's colour), the credits they brought together, and Done.
   - **Grand finds** are told to everyone: a hub that sends the feed's `finds` (hub branch
     `feat/grand-finds`, not deployed yet) relays a Legendary, Mythical or Solar card, or a
-    Legendary or Mythical shader, to every SJK player as a chat line, "Sol opened a
+    Legendary or Mythical kyber, to every SJK player as a chat line, "Sol opened a
     Mythical Holocron: Phoenix blade!" ([holocrons.md](holocrons.md#chat-lines)).
   - Enter, Space, Right or a click skip to the burst (to the strips' stops, then the
     next five, then the finds, for many), finish the entrance, then go on; Escape ends
@@ -993,7 +993,7 @@ contact sheets of twelve).
 - **The player card's** rarest holocron gem counts opened holocrons too, as the
   counts now hold only the unopened ones.
 - `debug_open <tier|all> [x<count>] [normal|holo|solar|shader|shards]` plays the ceremony
-  with made-up cards (or shaders, or piles of kyber shards) on the Holocrons tab; nothing is
+  with made-up cards (or kybers, or piles of kyber shards) on the Holocrons tab; nothing is
   sent or kept. A card comes as a pack, with made-up shards from the tier's card shards. A rarity the packs have
   faces of shows one of them, as the hub would pick.
 
@@ -1011,10 +1011,10 @@ and `kind`:
 
 | Kind | What it is | Its fields |
 | --- | --- | --- |
-| `came` | a holocron or kyber crystal came (not through a trade: the trade's line says it; one found then traded away stays) | `holocron`, `tier`, `source` (`play`, `staff`, `achievement`, `bought`, `box`, `reward`), `note`, `price` (what a bought one cost, its row's amount), `traded` |
+| `came` | a holocron or dormant kyber came (not through a trade: the trade's line says it; one found then traded away stays) | `holocron`, `tier`, `source` (`play`, `staff`, `achievement`, `bought`, `box`, `reward`), `note`, `price` (what a bought one cost, its row's amount), `traded` |
 | `opened` | the player opened one | `holocron`, `tier`, `credits`, `shards`, `card` (`card`, null while sealed; `rarity`, `finish`; or null), `unlock` ("" for none) |
 | `credits` | a credits ledger line no other kind covers | `delta` (signed), `reason` (`staff`, `reward`, `mystery_box` with `note` `explode_gift`), `note` |
-| `shards` | a kyber shard ledger line no other kind covers | `delta`, `reason` (`shatter`, `craft`, `shop` with the shader's id as `note`, `staff`, `reward`), `note` |
+| `shards` | a kyber shard ledger line no other kind covers | `delta`, `reason` (`shatter`, `craft`, `shop` with the kyber's id as `note`, `staff`, `reward`), `note` |
 | `box` | a mystery box opened | `outcome` ([mystery-boxes.md](mystery-boxes.md)), `price` (0 a free roll), `won`, `shards` |
 | `trade` | a finished trade | `trade`, `with` (`name` with colour codes, `verified`), `gave` and `got` (the trade items of `GET /v1/trades`, `value` included) |
 
@@ -1027,7 +1027,7 @@ The tab reads the newest page each time it is shown (and on R), and Load older, 
 list's last row while the hub has more, the next page (`HistoryState::take` adds a page
 only when it follows what was read, so a second press adds nothing twice). A row is one
 line: a chip of its kind (Drop, Opened, Credits, Shards, Box, Trade) in the tier's colour
-(holocrons, crystals) or the kind's, a sentence ("Opened a Rare Holocron: card Sol
+(holocrons, dormant kybers) or the kind's, a sentence ("Opened a Rare Holocron: card Sol
 (Holo), Sun blade", "Bought a holocron", "Shattered Sun blade", "Mystery box: double,
 paid 100, won 200", "Traded with Nib: gave a Rare Holocron, got Sun blade"), what it moved
 ("+120 credits", "-400 credits", "+15 shards", gains green and spends red) and when, in
@@ -1044,7 +1044,7 @@ opened, not each frame. World shot: `world_shot::collection::duel6_sjk_collectio
 1. The rest of SJK Alpha: Common, Uncommon and Rare cards (only Mythical and Legendary
    ones exist; drafts for the others wait for art), so every sealed copy can be revealed; a reveal ceremony (the copies turn
    over one by one, as an opening's cards turn in).
-2. Deploying the economy ([Shards and the shop](#shards-and-the-shop)) and the Shaders
+2. Deploying the economy ([Shards and the shop](#shards-and-the-shop)) and the Kybers
    tab's Shatter and Craft. The Staff page's credits and shards control is built
    (18/10/2026); shards wait for the hub's `/v1/staff/shards`.
 3. Set completion feeding achievements the hub counts.
@@ -1123,9 +1123,9 @@ the strip's stop always inside the prize's tile in both strip sizes and its spee
 the finds' order and grand ones, the batch's moments and skips, Open all's flow, and every
 moment of a single opening (every tenth of a second) and of twenty at once (every
 quarter) fitting the canvas in three windows. World shot `duel6_sjk_crate_open`
-(off-screen, duel6, made-up prizes, no blade-skin packs so shader tiles show plain
+(off-screen, duel6, made-up prizes, no blade-skin packs so kyber tiles show plain
 blades) was looked at: the wait, the unseal early, charged and flashing, the strip out
-of the flash, fast, crawling and at rest, a Solar Legendary card and a Mythical shader at
+of the flash, fast, crawling and at rest, a Solar Legendary card and a Mythical kyber at
 rest, and a batch of twelve cracking open, running, stopping, at rest, its last round and
 its finds coming in and laid out. Not tried: in a running client (no motion seen, no
 sounds heard: the cue files are checked to exist in the retail `assets0.pk3` only), with
@@ -1157,7 +1157,7 @@ two made-up, reusing its pictures) scrolled to a tile in the middle, in 1080p an
 shine is one quad, about 470 by 660 pixels up close, a few noise lookups a pixel).
 
 The blade cards (20/10/2026, Windows 11, `personal/blade-cards`): unit tests for the card
-file's `blade` and kind, the wire's opening with a card and a shader together and a reveal
+file's `blade` and kind, the wire's opening with a card and a kyber together and a reveal
 with and without one, the prize a Solar blade card makes and its line, the reveal's words,
 and every moment of a single opening with a blade card's pack (its shards and blade tiles)
 and of twenty with such cards fitting the canvas in three windows. World shot

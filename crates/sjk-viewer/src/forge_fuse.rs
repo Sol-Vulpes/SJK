@@ -168,9 +168,9 @@ pub(crate) fn check(
 pub(crate) fn block_words(tier: Rarity, block: Block) -> String {
     let next = next_tier(tier).map_or("next", Rarity::label);
     match block {
-        Block::NoFusion => format!("The SJK hub does not fuse {} shaders.", tier.label()),
+        Block::NoFusion => format!("The SJK hub does not fuse {} kybers.", tier.label()),
         Block::NothingNew => {
-            format!("You hold every {next} shader already: nothing new to fuse into.")
+            format!("You hold every {next} kyber already: nothing new to fuse into.")
         }
         Block::Short { have, need } => format!(
             "{have} of {need} {} duplicates: {} more needed.",
@@ -183,11 +183,11 @@ pub(crate) fn block_words(tier: Rarity, block: Block) -> String {
     }
 }
 
-/// The fusion in a line: "3 duplicates of Common -> 1 Uncommon shader you do not own yet".
+/// The fusion in a line: "3 duplicates of Common -> 1 Uncommon kyber you do not own yet".
 pub(crate) fn summary(tier: Rarity, need: u32) -> String {
     let next = next_tier(tier).map_or("new", Rarity::label);
     format!(
-        "{need} duplicates of {} -> 1 {next} shader you do not own yet",
+        "{need} duplicates of {} -> 1 {next} kyber you do not own yet",
         tier.label()
     )
 }
@@ -340,7 +340,7 @@ mod tests {
         assert!(check(Rarity::Common, &last, &list, Some(3), 4).is_err());
         assert_eq!(
             summary(Rarity::Common, 3),
-            "3 duplicates of Common -> 1 Uncommon shader you do not own yet"
+            "3 duplicates of Common -> 1 Uncommon kyber you do not own yet"
         );
         assert_eq!(
             block_words(Rarity::Rare, Block::Short { have: 1, need: 3 }),

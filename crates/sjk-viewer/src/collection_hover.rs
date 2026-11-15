@@ -454,14 +454,14 @@ pub(super) fn shader_card(
             // The blade number only while `debug_collectibles` is on (Sol, 21/10/2026).
             Line::status(if holdings.debug() {
                 format!(
-                    "Blade {}. {} blade skin. {}.",
+                    "Blade {}. {} kyber. {}.",
                     skin.number_text(),
                     skin.tier.label(),
                     crate::editions::name(skin.edition)
                 )
             } else {
                 format!(
-                    "{} blade skin. {}.",
+                    "{} kyber. {}.",
                     skin.tier.label(),
                     crate::editions::name(skin.edition)
                 )
@@ -484,7 +484,7 @@ pub(super) fn wish_card(on: bool, full: bool, may: bool) -> Card {
         colour: color::GOLD_BRIGHT,
         lines: vec![
             Line::how(format!(
-                "Up to {} saber shaders you lack, kept on the SJK hub. A wished shader in your \
+                "Up to {} kybers you lack, kept on the SJK hub. A wished kyber in your \
                  shop's offers is marked, and a card tells you once a day.",
                 crate::wishlist::MAX
             )),
@@ -495,7 +495,7 @@ pub(super) fn wish_card(on: bool, full: bool, may: bool) -> Card {
             } else if may {
                 Line::held("A click adds it.")
             } else {
-                Line::status("Only a shader of the trade you lack can be wished for.")
+                Line::status("Only a kyber of the trade you lack can be wished for.")
             },
         ],
     }
@@ -553,7 +553,7 @@ pub(super) fn mark_card(
                 colour: color::GOLD_BRIGHT,
                 lines: vec![
                     Line::how(
-                        "A padlock: a locked shader is never broken down in the Forge (not \
+                        "A padlock: a locked kyber is never broken down in the Forge (not \
                          one copy, not with all duplicates) nor offered in a trade until you \
                          unlock it. The SJK hub holds the lock.",
                     ),
@@ -562,7 +562,7 @@ pub(super) fn mark_card(
                     } else if owned {
                         Line::held("L or a click locks it.")
                     } else {
-                        Line::status("Only a shader you hold can be locked.")
+                        Line::status("Only a kyber you hold can be locked.")
                     },
                 ],
             }
@@ -571,8 +571,8 @@ pub(super) fn mark_card(
             title: "Favourites".to_owned(),
             colour: color::GOLD_BRIGHT,
             lines: vec![
-                Line::how("Shows your starred shaders alone (Shift+F); again shows them all."),
-                Line::status("Star a shader with F, or its star beside the chosen one."),
+                Line::how("Shows your starred kybers alone (Shift+F); again shows them all."),
+                Line::status("Star a kyber with F, or its star beside the chosen one."),
             ],
         },
         MarkToken::SeenAll => Card {
@@ -580,7 +580,7 @@ pub(super) fn mark_card(
             colour: color::GOLD_BRIGHT,
             lines: vec![
                 Line::how(
-                    "Shaders you got since you last looked (holocrons, gifts, trades, \
+                    "Kybers you got since you last looked (holocrons, gifts, trades, \
                      crafts) carry a New sticker until you choose one, here or in the Forge.",
                 ),
                 Line::status("Kept on this PC only. Mark all seen (N) clears them all."),
@@ -767,7 +767,7 @@ mod tests {
             &none,
         );
         assert!(card.lines[3].words.starts_with("Yours since "), "{card:?}");
-        assert_eq!(card.lines[1].words, "Mythical blade skin. Alpha Edition.");
+        assert_eq!(card.lines[1].words, "Mythical kyber. Alpha Edition.");
         // Its marks follow, each saying what it means.
         let marks = crate::shader_marks::Marks::shown(
             &["saber_sun"],
@@ -799,7 +799,7 @@ mod tests {
         );
         assert_eq!(
             card.lines[1].words,
-            "Blade 001. Mythical blade skin. Alpha Edition."
+            "Blade 001. Mythical kyber. Alpha Edition."
         );
     }
 
@@ -812,7 +812,7 @@ mod tests {
         assert!(star.lines[1].words.contains("unstars"));
         let lock = mark_card(MarkToken::Lock, &marks, Some(("saber_storm", false))).unwrap();
         assert!(lock.lines[0].words.contains("never broken down"));
-        assert_eq!(lock.lines[1].words, "Only a shader you hold can be locked.");
+        assert_eq!(lock.lines[1].words, "Only a kyber you hold can be locked.");
         let none = crate::shader_marks::Marks::default();
         assert!(mark_card(MarkToken::Favourite, &none, None).is_none());
         assert!(mark_card(MarkToken::Favourites, &none, None).is_none());

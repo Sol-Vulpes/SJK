@@ -722,7 +722,7 @@ fn draw_small(ui: &mut MenuCanvas, frame: &Frame, view: &View) {
             format!("{shown} wants to trade"),
             format!(
                 "{} {name}. Nothing changes hands until you both press Ready and then Confirm.",
-                crate::terms::say("Swap unopened holocrons and duplicate saber shaders with")
+                crate::terms::say("Swap unopened holocrons and duplicate kybers with")
             ),
         )
     } else {
@@ -1023,7 +1023,7 @@ fn own_items(ui: &mut MenuCanvas, frame: &Frame, view: &View, own_y: f32) {
     let tiles_y = own_y + 36.0;
     if view.own.is_empty() {
         let words = "Nothing to offer yet: unopened holocrons you found by playing, and \
-                     second copies of saber shaders, can be traded.";
+                     second copies of kybers, can be traded.";
         for (index, part) in wrap(&crate::terms::say(words), 52).enumerate() {
             line(
                 ui,
@@ -1067,7 +1067,7 @@ fn own_items(ui: &mut MenuCanvas, frame: &Frame, view: &View, own_y: f32) {
             LEFT_X,
             tiles_y,
             COLUMN_W,
-            "No favourite to offer: star shaders in the Collection.",
+            "No favourite to offer: star kybers in the Collection.",
             color::QUIET,
         );
     }
@@ -1095,7 +1095,7 @@ fn own_items(ui: &mut MenuCanvas, frame: &Frame, view: &View, own_y: f32) {
             LEFT_X,
             under,
             COLUMN_W,
-            "Locked shaders stay out of trades: unlock them in the Collection.",
+            "Locked kybers stay out of trades: unlock them in the Collection.",
             color::GOLD_BRIGHT,
         );
         under += 24.0;
@@ -1946,10 +1946,10 @@ impl Said {
             (
                 format!("{name} wants to trade"),
                 if view.holocrons {
-                    crate::terms::say("Holocrons and duplicate shaders. You keep playing.")
+                    crate::terms::say("Holocrons and duplicate kybers. You keep playing.")
                         .into_owned()
                 } else {
-                    "Duplicate shaders. You keep playing.".to_owned()
+                    "Duplicate kybers. You keep playing.".to_owned()
                 },
                 Some((view.seconds_left, view.ask_secs)),
             )
@@ -2346,7 +2346,7 @@ pub(crate) mod tests {
         assert!(
             texts
                 .iter()
-                .any(|text| text.contains("Locked shaders stay out")),
+                .any(|text| text.contains("Locked kybers stay out")),
             "{texts:?}"
         );
         assert!(texts.iter().any(|text| text == "New"));
@@ -2367,7 +2367,7 @@ pub(crate) mod tests {
         assert!(
             !texts
                 .iter()
-                .any(|text| text.contains("Locked shaders stay out"))
+                .any(|text| text.contains("Locked kybers stay out"))
         );
         // It stays on for the next view, as long as the hub keeps marks.
         window.set_view(Some(view.clone()));

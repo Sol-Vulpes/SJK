@@ -104,7 +104,7 @@ impl Panel {
         let reason = match (self.forge.data.closed.clone(), inputs.holdings.reason()) {
             (Closed::IdentityOff, _) => Some((
                 "The Forge needs the SJK identity",
-                "Switch it on in Settings, Network: your shaders and kyber shards are kept on \
+                "Switch it on in Settings, Network: your kybers and kyber shards are kept on \
                  the SJK hub.",
             )),
             (_, Some(_)) | (Closed::Waiting, _) => Some((
@@ -541,9 +541,9 @@ impl Panel {
         let s = frame.s;
         let now = Instant::now();
         self.forge_intro(if crate::economy::shop_in_shards() {
-            "Four saber shaders a day, picked for you from those you lack, for kyber shards."
+            "Four kybers a day, picked for you from those you lack, for kyber shards."
         } else {
-            "Four saber shaders a day, the same for every player, for credits."
+            "Four kybers a day, the same for every player, for credits."
         });
         // The wishlist under the chips, on a hub that keeps one (10/11/2026); the Shop's
         // line stays behind the "i" chip.
@@ -695,7 +695,7 @@ impl Panel {
             0.0,
         );
         let name = if offer.name.trim().is_empty() {
-            unlockables::find(&offer.id).map_or("A saber shader", |skin| skin.name)
+            unlockables::find(&offer.id).map_or("A kyber", |skin| skin.name)
         } else {
             offer.name.trim()
         };
@@ -720,7 +720,7 @@ impl Panel {
         });
         let subtitle = was
             .as_ref()
-            .map_or_else(|| "Saber shader".to_owned(), |was| format!("Was {was}"));
+            .map_or_else(|| "Kyber".to_owned(), |was| format!("Was {was}"));
         text(
             &mut self.ui,
             TextFamily::Body,
@@ -1022,7 +1022,7 @@ impl Panel {
                 )
             } else {
                 (
-                    "A sealed card and credits, a saber shader or kyber shards".to_owned(),
+                    "A sealed card and credits, a kyber or kyber shards".to_owned(),
                     color::MUTED,
                 )
             };
@@ -1108,32 +1108,30 @@ impl Panel {
             )
         };
         let line = if total == 0 {
-            crate::terms::say("Every shader holocrons drop is yours already.").into_owned()
+            crate::terms::say("Every kyber holocrons drop is yours already.").into_owned()
         } else if !held.is_empty() && !self.forge.craft_list.is_empty() {
             // Hub report #305: the search also names held shaders Craft leaves out.
             held_note(&held)
         } else {
-            format!(
-                "{total} saber shaders you lack, made with kyber shards: {affordable} within reach."
-            )
+            format!("{total} kybers you lack, made with kyber shards: {affordable} within reach.")
         };
         self.forge_intro(&line);
         self.forge_filter(frame, "Affordable", false);
         let list = self.forge.craft_list.clone();
         if list.is_empty() {
             let words: std::borrow::Cow<'_, str> = if total == 0 {
-                "You hold every saber shader holocrons drop. New ones join the Forge as they                  come."
+                "You hold every kyber holocrons drop. New ones join the Forge as they                  come."
                     .into()
             } else if let [skin] = held.as_slice() {
                 // Hub report #305: crafting refuses a held shader, so say why it is missing.
                 format!(
-                    "You hold the {} already. The Forge crafts only shaders you lack; another                      copy comes from holocrons.",
+                    "You hold the {} already. The Forge crafts only kybers you lack; another                      copy comes from holocrons.",
                     skin.name
                 )
                 .into()
             } else if !held.is_empty() {
                 format!(
-                    "You hold the {} shaders that match already. The Forge crafts only shaders                      you lack; other copies come from holocrons.",
+                    "You hold the {} kybers that match already. The Forge crafts only kybers                      you lack; other copies come from holocrons.",
                     held.len()
                 )
                 .into()
@@ -1143,7 +1141,7 @@ impl Panel {
             let title = if total == 0 {
                 "Nothing left to craft"
             } else if held.is_empty() {
-                "No shader matches"
+                "No kyber matches"
             } else {
                 "Yours already"
             };
@@ -1183,11 +1181,11 @@ impl Panel {
     fn forge_break(&mut self, frame: &Frame, inputs: &Inputs<'_>, seconds: f32) {
         let (copies, shaders, gives) = self.forge.spare;
         let line = if self.forge.selecting {
-            "Picking: click shaders to pick them, + and - for copies.".to_owned()
+            "Picking: click kybers to pick them, + and - for copies.".to_owned()
         } else if self.forge.data.last {
-            "Turn saber shaders you hold into kyber shards: duplicates first.".to_owned()
+            "Turn kybers you hold into kyber shards: duplicates first.".to_owned()
         } else {
-            "Turn duplicate saber shaders into kyber shards: you keep your last copy.".to_owned()
+            "Turn duplicate kybers into kyber shards: you keep your last copy.".to_owned()
         };
         self.forge_intro(&line);
         self.forge_filter(frame, "Duplicates", self.marks.kept);
@@ -1197,19 +1195,19 @@ impl Panel {
             let (title, words) = if any && !self.forge.data.last && copies == 0 {
                 (
                     "No duplicates yet",
-                    "A shader holocrons bring you again lands here, to break down into kyber \
+                    "A kyber holocrons bring you again lands here, to break down into kyber \
                      shards. This SJK hub breaks down duplicates only.",
                 )
             } else if any || self.forge.break_filter.only {
                 (
-                    "No shader matches",
+                    "No kyber matches",
                     "T steps the tier, D shows only duplicates, Shift+F only favourites, / \
                      searches.",
                 )
             } else {
                 (
                     "Nothing to break down yet",
-                    "Saber shaders holocrons bring you, craft or buy can be broken down into \
+                    "Kybers holocrons bring you, craft or buy can be broken down into \
                      kyber shards here. A medal's or a card's stays with it.",
                 )
             };
@@ -1385,7 +1383,7 @@ impl Panel {
             ],
             &filter.shaders.query,
             self.forge.search_focus,
-            "Search shaders",
+            "Search kybers",
             found,
             forge::SEARCH_TOKEN,
         );
@@ -2369,7 +2367,7 @@ impl Panel {
             let label = if waiting && self.forge.sent_many.is_some() {
                 "Breaking down...".to_owned()
             } else if picked == 0 {
-                "Pick shaders to break down".to_owned()
+                "Pick kybers to break down".to_owned()
             } else {
                 format!(
                     "Break down selected ({copies})  +{}",
@@ -2492,7 +2490,7 @@ impl Panel {
         let need = self.forge.data.fuse_need(tier);
         let line = match need {
             Some(need) => crate::forge_fuse::summary(tier, need),
-            None => "Duplicates of one tier make a shader of the next you lack.".to_owned(),
+            None => "Duplicates of one tier make a kyber of the next you lack.".to_owned(),
         };
         self.forge_intro(&format!("{line}. You always keep a copy of each."));
         // A chip a tier the hub fuses, in its colour: "Common to Uncommon".
@@ -2544,8 +2542,8 @@ impl Panel {
                 [LIST_LEFT, LIST_TOP, LIST_RIGHT - LIST_LEFT, 560.0],
                 &format!("No {} duplicates yet", tier.label()),
                 &crate::terms::say_owned(format!(
-                    "A {} shader holocrons bring you again lands here: {} of them fuse into \
-                     a {next} shader you lack. T steps the tier.",
+                    "A {} kyber holocrons bring you again lands here: {} of them fuse into \
+                     a {next} kyber you lack. T steps the tier.",
                     tier.label(),
                     need.unwrap_or(0)
                 )),
@@ -2748,7 +2746,7 @@ impl Panel {
         let (note, note_colour) = match check {
             Ok(()) => (
                 format!(
-                    "Ready: the SJK hub gives you a {} shader you lack.",
+                    "Ready: the SJK hub gives you a {} kyber you lack.",
                     next.label()
                 ),
                 color::GOLD_BRIGHT,
@@ -2924,7 +2922,7 @@ impl Panel {
                 // 29/10/2026).
                 if self.marks.worn(skin.id) {
                     lines.push(format!(
-                        "You wear this shader now: breaking it down puts your saber back to \
+                        "You wear this kyber now: breaking it down puts your saber back to \
                          the stock blade{}.",
                         if inputs.pair == crate::saber_skins::Pair::None {
                             ""
@@ -2966,10 +2964,10 @@ impl Panel {
                 let (copies, shaders, gives) = self.forge.spare;
                 let lines = vec![
                     format!(
-                        "{copies} {} of {shaders} saber {} become kyber shards. You keep one \
-                         of each: no shader leaves your collection.",
+                        "{copies} {} of {shaders} {} become kyber shards. You keep one \
+                         of each: no kyber leaves your collection.",
                         if copies == 1 { "copy" } else { "copies" },
-                        if shaders == 1 { "shader" } else { "shaders" }
+                        if shaders == 1 { "kyber" } else { "kybers" }
                     ),
                     crate::terms::say("Copies a medal or a card brings are never touched.")
                         .into_owned(),
@@ -2979,7 +2977,7 @@ impl Panel {
                 let mut lines = lines;
                 if kept > 0 {
                     lines.push(format!(
-                        "{}  Locked shaders are kept whole: {kept} {} skipped.",
+                        "{}  Locked kybers are kept whole: {kept} {} skipped.",
                         symbols::LOCK,
                         if kept == 1 { "is" } else { "are" }
                     ));
@@ -3015,9 +3013,9 @@ impl Panel {
                     );
                 }
                 lines.push(format!(
-                    "{copies} {} of the {picked} saber {} you picked {} kyber shards.",
+                    "{copies} {} of the {picked} {} you picked {} kyber shards.",
                     if copies == 1 { "copy" } else { "copies" },
-                    if picked == 1 { "shader" } else { "shaders" },
+                    if picked == 1 { "kyber" } else { "kybers" },
                     if copies == 1 { "becomes" } else { "become" }
                 ));
                 if lasts > 0 {
@@ -3036,7 +3034,7 @@ impl Panel {
                     .collect();
                 (
                     if lasts > 0 {
-                        "Break down the picked shaders?"
+                        "Break down the picked kybers?"
                     } else {
                         "Break down the picked copies?"
                     },
@@ -3263,9 +3261,9 @@ impl Panel {
                 lines: vec![
                     Line::how(crate::terms::say(
                         "Found in holocrons as a pile, a few with every card, and from \
-                         breaking saber shaders down here.",
+                         breaking kybers down here.",
                     )),
-                    Line::status("They craft any shader of the trade and buy the shop's offers."),
+                    Line::status("They craft any kyber of the trade and buy the shop's offers."),
                     Line::held(format!(
                         "You hold {}.",
                         crate::economy::shards_text(self.forge.data.shards.unwrap_or(0))
@@ -3345,8 +3343,8 @@ impl Panel {
 pub(super) fn wishlist_words(list: &[String]) -> String {
     if list.is_empty() {
         return format!(
-            "Your wishlist is empty: wish for up to {} shaders you lack (the toggle on an \
-             offer, on Craft or on the Shaders tab). A wished offer is marked here.",
+            "Your wishlist is empty: wish for up to {} kybers you lack (the toggle on an \
+             offer, on Craft or on the Kybers tab). A wished offer is marked here.",
             crate::wishlist::MAX
         );
     }

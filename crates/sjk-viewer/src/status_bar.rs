@@ -109,9 +109,9 @@ impl Part {
         match self {
             Self::Credits => "Status bar shows your credits",
             Self::Shards => "Status bar shows your kyber shards",
-            Self::Crystals => "Status bar shows your unopened kyber crystals",
+            Self::Crystals => "Status bar shows your dormant kybers still to attune",
             Self::Coins => "Status bar shows your DOOM coins",
-            Self::Saber => "Status bar shows the blade skin on your saber",
+            Self::Saber => "Status bar shows the kyber on your saber",
             Self::Effects => {
                 "Status bar shows what is on about you: blade extras, finisher, Tactical, Do not disturb, away"
             }
@@ -350,7 +350,7 @@ fn pieces(inputs: &Inputs, parts: Parts, out: &mut [(Part, Piece); MAX_PIECES]) 
         (
             Part::Crystals,
             inputs.crystals.map(u64::from),
-            ("crystal", "crystals"),
+            ("dormant kyber", "dormant kybers"),
         ),
         (Part::Coins, inputs.coins, ("DOOM coin", "DOOM coins")),
     ];

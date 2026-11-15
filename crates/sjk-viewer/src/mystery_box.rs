@@ -969,7 +969,7 @@ fn drop_name(id: &str, credits: u64) -> String {
         wire::SHARD_PILE => "Kyber shards".to_owned(),
         wire::RAYGUN => "The Ray Gun".to_owned(),
         wire::BLADE => "The Mystery blade".to_owned(),
-        wire::KYBER => "A kyber crystal".to_owned(),
+        wire::KYBER => "A dormant kyber".to_owned(),
         wire::AGAIN => "Another roll".to_owned(),
         "refund" => "Your credits back".to_owned(),
         "empty" => "Nothing".to_owned(),
@@ -1019,7 +1019,7 @@ fn prize_text(outcome: &str, prize: &Prize) -> String {
                 .kyber
                 .as_deref()
                 .and_then(crate::kyber::from_id)
-                .map_or("A kyber crystal", |tier| tier.name);
+                .map_or("A dormant kyber", |tier| tier.name);
             format!("{name}! In your Collection")
         }
         (wire::RAYGUN, ..) => format!(
@@ -1881,7 +1881,7 @@ mod tests {
                 ("A holocron, Uncommon or better", 455),
                 ("50 credits", 150),
                 ("The teddy bear: a DOOM coin", 120),
-                ("A kyber crystal", 5),
+                ("A dormant kyber", 5),
             ]
         );
     }
@@ -2222,7 +2222,7 @@ mod tests {
         };
         assert_eq!(
             prize_text(wire::KYBER, &crystal),
-            "Rare Kyber Crystal! In your Collection"
+            "Rare Dormant Kyber! In your Collection"
         );
         let gun = Prize {
             raygun: Some(30),

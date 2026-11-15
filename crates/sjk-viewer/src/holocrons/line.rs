@@ -48,7 +48,7 @@ impl Prize {
     }
 }
 
-/// The longest shader name a find's line shows, in characters.
+/// The longest kyber name a find's line shows, in characters.
 const PRIZE_NAME_MAX: usize = 40;
 
 /// The words of `message` if it is a drop (or a grand find) of a tier the client knows.
@@ -59,7 +59,9 @@ pub(crate) fn words(message: &ChatMessage) -> Option<Words> {
     let (rest, prize) = match &mark.find {
         Some(find) => {
             let words = prize(find);
-            let rest = format!("opened {} {}: {words}!", tier.article(), tier.title());
+            // A dormant kyber is attuned, not opened (Sol, 15/11/2026).
+            let verb = if tier.is_kyber() { "attuned" } else { "opened" };
+            let rest = format!("{verb} {} {}: {words}!", tier.article(), tier.title());
             (rest, Some(prize_look(find, words.len(), tier)))
         }
         None => (
@@ -114,7 +116,7 @@ fn prize(find: &sjk_identity::FindMark) -> String {
         let name = crate::text::Plain(&find.name).to_string();
         let name: String = name.trim().chars().take(PRIZE_NAME_MAX).collect();
         if name.is_empty() {
-            return "a saber shader".to_owned();
+            return "a kyber".to_owned();
         }
         // A tag that came Holo or Solar (31/10/2026) says so: "Solar Gonk tag".
         return match crate::cards::Finish::from_id(&find.finish) {
@@ -244,21 +246,21 @@ mod tests {
         assert_eq!(words.rest, "opened a Legendary Holocron: Red blade!");
         assert_eq!(
             said(&find("Fox", "rare", false, shader("  "))),
-            "Fox opened a Rare Holocron: a saber shader!"
+            "Fox opened a Rare Holocron: a kyber!"
         );
         let long = "x".repeat(90);
         assert!(said(&find("Fox", "rare", false, shader(&long))).len() < 90);
-        // A kyber crystal's grand find says Kyber Crystal, in the crystal's colour.
+        // A dormant kyber's grand find says Dormant Kyber, in the crystal's colour.
         let crystal =
             super::words(&find("^2Sol", "kyber_rare", false, shader("Phoenix blade"))).unwrap();
         assert_eq!(
             crystal.text,
-            "Sol opened a Rare Kyber Crystal: Phoenix blade!"
+            "Sol attuned a Rare Dormant Kyber: Phoenix blade!"
         );
         assert_eq!(crystal.tier.colour, crate::holocrons::TIERS[1].colour);
         assert_eq!(
             said(&find("Fox", "kyber_uncommon", true, shader("Tidal blade"))),
-            "You opened an Uncommon Kyber Crystal: Tidal blade!"
+            "You attuned an Uncommon Dormant Kyber: Tidal blade!"
         );
         // A tier the client does not know is left out, as a drop's.
         assert!(unknown(&find("Fox", "from_the_future", false, shader("A"))));

@@ -37,15 +37,15 @@ fifteen choices no longer fit. Seen in off-screen GPU renders on duel6 (world sh
 | --- | --- |
 | Who sees a look | Every SJK player on the same game server, through the hub. |
 | Who may wear an unlockable | Only a key the hub lists it for. The hub refuses to relay a look whose blade skin the key does not own (`not_unlocked`). |
-| How one is unlocked | The hub operator or staff grant it by hand (Staff page, operator command), and since 10/10/2026 a medal brings one while held: Bug Hunter the Glitch, Tester the Hologram, Contributor the Runic blade ([Medal shaders](#medal-shaders)). Achievements granting them are an idea for later, with harder goals than today's. Since 17/10/2026 holocrons drop every shader but the medals' ([Holocron shader drops](#holocron-shader-drops)). Since 25/10/2026 the Unique ones come only by hand, Sol's thank-you gifts ([Unique shaders](#unique-shaders)). |
+| How one is unlocked | The hub operator or staff grant it by hand (Staff page, operator command), and since 10/10/2026 a medal brings one while held: Bug Hunter the Glitch, Tester the Hologram, Contributor the Runic blade ([Medal shaders](#medal-kybers)). Achievements granting them are an idea for later, with harder goals than today's. Since 17/10/2026 holocrons drop every shader but the medals' ([Holocron shader drops](#holocron-kyber-drops)). Since 25/10/2026 the Unique ones come only by hand, Sol's thank-you gifts ([Unique shaders](#unique-kybers)). |
 | How a look travels | Stored on the key's live claim, listed in presence for players who arrive later, and sent through the feed as a live event when it changes. |
 | Illuminate | Free for everyone, a toy (`toy_illuminate`); its lit state is part of the look so others see the holocron. |
 | Toys in the look | Since 16/10/2026 a look lists the toys out that others draw (`toys`, ids; the [cardboard box](client.md#cardboard-box)'s is `cardboard_box`, [Order 66](client.md#order-66)'s `order66`, the [Hax](client.md#hax)'s `hax`, `hax_away` when its trap holds while away, since 26/10/2026 the [Monitor](client.md#monitor)'s `monitor` while its switch is on, so other clients foresee its hits, and since 30/10/2026 the [Banana peel](client.md#banana-peel)'s `banana` while it is on), sent only when one is out, so older hubs see the look they know. The hub takes up to 32 toy ids since 30/10/2026 (8 before, and a hub from before refuses a look listing more, as `bad_look`). A client draws the toys it knows (`looks::TOYS`) and ignores the rest. Free for everyone, like Illuminate. |
 | Feed with chat off | The feed reads while the player is on a game server whatever `cl_sjkChat` says (chat stays hidden); in the menus it reads only with chat on. |
-| Choosing | The Collection's Shaders tab (SJK UI look; the Unlockables page until 10/10/2026) lists every blade skin, owned or locked (a Unique one only to its holders), previews the chosen one on the player's own saber and equips owned ones; the Profile screen's Saber tab offers the owned blade skins too (10/10/2026); `cg_saberSkin` holds the choice. Since 23/10/2026 the Saber tab's Sounds row chooses the saber sounds apart from the blade (`cg_saberSounds`: follow it, stock, or an owned shader's; [Saber sounds](#saber-sounds)). |
+| Choosing | The Collection's Kybers tab (SJK UI look; the Unlockables page until 10/10/2026) lists every blade skin, owned or locked (a Unique one only to its holders), previews the chosen one on the player's own saber and equips owned ones; the Profile screen's Saber tab offers the owned blade skins too (10/10/2026); `cg_saberSkin` holds the choice. Since 23/10/2026 the Saber tab's Sounds row chooses the saber sounds apart from the blade (`cg_saberSounds`: follow it, stock, or an owned shader's; [Saber sounds](#saber-sounds)). |
 | Art (looks, sounds) | SJK's own, all rights reserved, not under the code's GPLv2: kept in the hub's private repository and served by the hub to registered SJK keys as packs. The code that draws it stays open and generic: no skin's values, sounds or pictures are in this repository or its history to come. |
 | Delivery | The identity service downloads the hub's packs into `assets/` beside `identity.key` (at start once registered, then every 6 hours, only when a pack's SHA-256 changed); the viewer mounts every cached pack at start and a new one at once, below the game data, so a PK3 with the same paths replaces their files. A cached pack mounts with the identity off too. |
-| Tiers | Every saber shader has a tier: Common (white, 14/10/2026: filler that holocrons of any tier may drop; there is no Common holocron), the holocrons' four (Uncommon, Rare, Legendary, Mythical), their names and colours (10/10/2026, Sol's tiers; [Tiers](#tiers)), and Unique (rose, 25/10/2026: hand-given, seen only by its holders; [Unique shaders](#unique-shaders)). |
+| Tiers | Every kyber has a tier: Common (white, 14/10/2026: filler that holocrons of any tier may drop; there is no Common holocron), the holocrons' four (Uncommon, Rare, Legendary, Mythical), their names and colours (10/10/2026, Sol's tiers; [Tiers](#tiers)), and Unique (rose, 25/10/2026: hand-given, seen only by its holders; [Unique shaders](#unique-kybers)). |
 | Format | A blade skin is a JSON file, `skins/blades/<unlock id>.bladeskin`, holding every parameter of the generic shading, its trail, light and sound paths. The format is documented here; the files are art. |
 
 ## Catalogue
@@ -669,7 +669,7 @@ the hub's, described in its `scripts/blade_skin_sounds.py` and `saber_skin_sound
   a part its wearer may switch off. It borrows Royal Naboo's sounds
   (the skins pack is near its 16 MiB cap). Not built from her idea: the wooden hilt, which
   waits for custom hilts.
-- **Thousand Cranes** (25/10/2026, blade 167, Sol's, the first [Unique](#unique-shaders) blade; a
+- **Thousand Cranes** (25/10/2026, blade 167, Sol's, the first [Unique](#unique-kybers) blade; a
   signature, `blade_signatures/thousand_cranes.glsl`): a thousand paper cranes (senbazuru), the old
   Japanese gift of thanks and good wishes, for a blade Sol gives by hand. A warm silk-white
   blade with the fine fibres of washi paper in its light (not a chroma), a red silk thread
@@ -688,7 +688,7 @@ the hub's, described in its `scripts/blade_skin_sounds.py` and `saber_skin_sound
   airy: a warm hum, paper-wing swings), are in the hub's skins pack. Kintsugi was the
   first idea, but the Healed Kyber (106) already is Creyon's Kintsugi; nothing in the
   catalogue had cranes.
-- **Hearth** (25/10/2026, blade 168, Sol's, the second [Unique](#unique-shaders) blade; a
+- **Hearth** (25/10/2026, blade 168, Sol's, the second [Unique](#unique-kybers) blade; a
   signature, `blade_signatures/hearth.glsl`): a home fire. A warm amber blade of glowing
   coals, their hearts bright and the cracks between them dark red, each breathing on its
   own, with embers rising off it (its file's `embers`); it kindles up from the hilt as it
@@ -704,7 +704,7 @@ the hub's, described in its `scripts/blade_skin_sounds.py` and `saber_skin_sound
   month, the blaze at six, the stones at a year); Sol dropped that the same day, the stages
   too alike to tell apart, so every holder has it whole (the growth code is on the branch
   `personal/hearth`, commit `c8e8bf26`).
-- **DOOM** (13/11/2026, blade 301, Sol's, the third [Unique](#unique-shaders) blade; a
+- **DOOM** (13/11/2026, blade 301, Sol's, the third [Unique](#unique-kybers) blade; a
   signature, `blade_signatures/doom.glsl`). Sol: "a special shader, unique tier, kinda
   crazy, the DOOM shader (always written caps and in red), a red saber with death aura
   effect, in red and black maybe, thunder, particles". Its name is "DOOM blade", in
@@ -1040,10 +1040,10 @@ Built.
   staff (review of 22/10/2026: counting blades took it for one); a thrown staff keeps the
   first skin, and the sounds stay the first skin's. `saberskin second <id>`,
   `saberskin second none` (the stock blade) and `saberskin second same` set it, and so does
-  the Collection's Shaders tab through its target switch ([Shaders tab](#shaders-tab)).
+  the Collection's Kybers tab through its target switch ([Kybers tab](#kybers-tab)).
 - `saberskin` ([saber_skin_command.rs](../crates/sjk-viewer/src/saber_skin_command.rs))
   alone lists the blade skins the player may see (an unheld Unique one is neither listed
-  nor taken by id or number, [Unique shaders](#unique-shaders)): id, name, owned (since
+  nor taken by id or number, [Unique kybers](#unique-kybers)): id, name, owned (since
   when) or locked (how to get it), which one is worn or chosen, and why ownership is not
   known when it is not (identity off, no hub, waiting). `saberskin <id>` (case ignored, stored as the
   catalogue's id) or `saberskin none` sets `cg_saberSkin`; a locked skin is set all
@@ -1058,18 +1058,18 @@ Built.
   again it says how far the builds are ("Blade shaders: 120 of 262 built (48 s so far).",
   then "All 262 blade shaders are built (in 1 min 40 s)."). This PC and this run only;
   `debug_collectibles 1` shows every blade as held to go with it.
-- `unlockables` opens (or closes) the Collection on its Shaders tab: in the SJK UI
+- `unlockables` opens (or closes) the Collection on its Kybers tab: in the SJK UI
   the Collection screen ([sjk-ui.md](sjk-ui.md#collection)).
 - `debug_collectibles` (archived, default 0; 15/10/2026,
   [debug_collectibles.rs](../crates/sjk-viewer/src/debug_collectibles.rs)): for the SJK
   team, to try every collectible without granting it and taking it back at the hub.
   While it is 1 and the hub says the player's key is staff, the screens of what the
-  player holds read a copy of their profile dressed with every shader, medal,
+  player holds read a copy of their profile dressed with every kyber, medal,
   achievement and card the client knows (each card in every finish): the Collection,
   the Profile and its card, the Saber tab's blade choice and `saberskin`; the blade they
-  wear is drawn with any shader. What they really hold keeps its dates and counts; the
-  added shaders and medals say "Debug collectibles: shown as yours on this PC only" on
-  their cards, and the Shaders tab's lead line says the mode is on. Nothing reaches the
+  wear is drawn with any kyber. What they really hold keeps its dates and counts; the
+  added kybers and medals say "Debug collectibles: shown as yours on this PC only" on
+  their cards, and the Kybers tab's lead line says the mode is on. Nothing reaches the
   hub: the look sent stays what the player holds (the hub refuses a skin they lack), so
   other players see their real blade; the new medal, achievement and holocron pop-ups
   and the Staff page read the real profile, so no pop-up fires and staff actions see
@@ -1148,11 +1148,11 @@ What the renderer reads, on `GpuState::looks`:
 - `own_saber_skin() -> Option<&'static str>`: the local player's gated skin, in a game
   or not (first person, the Character page's preview).
 
-The player card ([client.md](client.md#player-card)) names the shader a player wears,
+The player card ([client.md](client.md#player-card)) names the kyber a player wears,
 with its live swatch, by the same rule: the looks' skin for another slot, the own gated
 skin for the local player's, and only when its pack is loaded, so the card never names
-a shader their blade does not show here (10/10/2026). It names the second saber's (or a
-staff's other half's) shader too, on a row of its own, when the player holds one and it
+a kyber their blade does not show here (10/10/2026). It names the second saber's (or a
+staff's other half's) kyber too, on a row of its own, when the player holds one and it
 is not the first's (`second_skin(client)`, the local player's `own().second`; #224).
 
 ### Blade skins
@@ -1243,7 +1243,7 @@ from the looks.
   swings play over the stock ones, which keep playing below (each on a channel of its
   own, so the skin's does not cut them), at the paths the file names in its pack, unless
   the wearer chose other saber sounds ([Saber sounds](#saber-sounds)). With
-  `s_saberSkinSounds 2` (Settings > Sound > Blade skin sounds: Only skin) they play in
+  `s_saberSkinSounds 2` (Settings > Sound > Kyber sounds: Only skin) they play in
   the stock ones' place, and with `0` (Off) they are not played: the stock ones alone. A sound
   the file names that is not in the game data (no pack carries it yet) is left out: the
   stock one plays there as for a player without a skin, in either mode, never silence
@@ -1264,16 +1264,16 @@ from the looks.
 
 ### Tiers
 
-Built 10/10/2026 (Sol's request: give shaders qualities, as more come, plainer ones
+Built 10/10/2026 (Sol's request: give kybers qualities, as more come, plainer ones
 too). Every blade skin has a tier (`Unlockable::tier`, `unlockables::Rarity` in
 [unlockables.rs](../crates/sjk-viewer/src/unlockables.rs)), one of the holocrons' four,
 with the holocron tier's name (`Tier::label`) and colour
-([holocrons.rs](../crates/sjk-viewer/src/holocrons.rs)) so a Rare shader and a Rare
+([holocrons.rs](../crates/sjk-viewer/src/holocrons.rs)) so a Rare kyber and a Rare
 holocron look alike, or Common (14/10/2026) or Unique (25/10/2026, rarer than Mythical
-and no holocron's, [Unique shaders](#unique-shaders)). The table below is the first
+and no holocron's, [Unique kybers](#unique-kybers)). The table below is the first
 placing; the catalogue's table above has today's:
 
-| Tier | Shaders |
+| Tier | Kybers |
 | --- | --- |
 | Mythical | Sun, Void, Molten, Spectral, Reactor, Bleeding Kyber, Serpent, Monarch, Phoenix, Quantum, Obsidian Edge |
 | Legendary | Storm, Unstable, Chameleon, Prism (provisional), Hourglass, Fiber Optic, Comic, Quicksilver |
@@ -1283,9 +1283,9 @@ placing; the catalogue's table above has today's:
 
 Sol placed eleven; Prism, Glitch and Banner are placed provisionally until Sol says
 otherwise. The hub keeps the same tiers (`UnlockKind::tier`) for its loot table
-([Holocron shader drops](#holocron-shader-drops)).
+([Holocron kyber drops](#holocron-kyber-drops)).
 
-- Lists: the Collection's Shaders tab and the Saber tab's Blade row list the rarest
+- Lists: the Collection's Kybers tab and the Saber tab's Blade row list the rarest
   first, then in catalogue order within a tier (`unlockables::blade_skins_by_tier`,
   kept to what the player may see by `Holdings::listed`), the stock blade first.
   Profiles, the hub and the Staff page keep the catalogue's order.
@@ -1293,7 +1293,7 @@ otherwise. The hub keeps the same tiers (`UnlockKind::tier`) for its loot table
   locked) and names the tier at the right of its state line; its cards carry a band of
   the tier's colour along the top, a frame and the tier's name; beside the model a pill
   in the tier's colour stands over the kind line; the Saber tab's swatches have a thin
-  edge in it; the player card frames the worn shader's swatch in it and writes its name
+  edge in it; the player card frames the worn kyber's swatch in it and writes its name
   in the colour lifted toward white.
 - Animated: every tier from Rare up has its rarity effects there
   ([Rarity effects](#rarity-effects)).
@@ -1301,7 +1301,7 @@ otherwise. The hub keeps the same tiers (`UnlockKind::tier`) for its loot table
 ### Rarity effects
 
 Built 10/10/2026 (Sol's request: small light animated touches that show off how rare a
-thing is, for shaders, holocrons and what comes later).
+thing is, for kybers, holocrons and what comes later).
 [rarity_fx.rs](../crates/sjk-viewer/src/rarity_fx.rs) draws them for any tier, with the
 UI's own shapes into the frame's draw list (no texture, no pipeline of its own), at most
 30 commands an item, every one inside the item's frame, the same picture at the same
@@ -1317,9 +1317,9 @@ moment (no state, no randomness). Each tier up adds to the one under it:
 
 - Sizes: `Full` (the Collection's cards, the Holocrons tab's tier rows) has all of it;
   `Small` (the rack's swatch frames, the detail's tier pill, the Saber tab's swatches)
-  leaves out the motes and has a shorter sheen; `Tiny` (the player card's shader row)
+  leaves out the motes and has a shorter sheen; `Tiny` (the player card's kyber row)
   only breathes, quietly.
-- Locked: a shader not held (or a holocron tier not held) only breathes, at about a
+- Locked: a kyber not held (or a holocron tier not held) only breathes, at about a
   third of the strength, so what the player holds stands out.
 - `ui_rarityEffects` (archived, default 1; Settings > Interface > Rarity effects) turns
   them off: the tier frames stay, still.
@@ -1329,13 +1329,13 @@ moment (no state, no randomness). Each tier up adds to the one under it:
 - Not used: the holocron pop-up, which has its own ceremony in the tier's colour (rings,
   light, ticks), and the SJK chat's gem marks, too small at text size for a frame to
   show.
-- Verified: unit tests (every shader's tier, the order, the holocrons' names and
+- Verified: unit tests (every kyber's tier, the order, the holocrons' names and
   colours) and the world shots of the Collection (`duel6_sjk_collection`); not tried
   in the game.
 
 ### Chromas
 
-Built 10/10/2026 (Sol's request: mark the shaders that can be coloured). A **chroma**
+Built 10/10/2026 (Sol's request: mark the kybers that can be coloured). A **chroma**
 is a blade skin that takes its wearer's saber colour: `color1` for the first saber,
 `color2` for the second, a retail colour or a custom RGB, as the stock blade would be
 drawn. The flag is the client catalogue's (`Unlockable::chroma` in
@@ -1387,7 +1387,7 @@ fireworks keep their colours) chromas. Creyon's Star Wars round (1/11/2026) made
   `cg_ctfTeamSabers` in CTF and CTY draws the plain team blade without the skin.
 - **The mark**: a small colour wheel (twelve hue segments round a white dot,
   `swatch::chroma_mark`) beside a chroma's name on the Collection's rack and before
-  "Chroma saber shader: takes your saber colour" beside the model, in the corner of its
+  "Chroma kyber: takes your saber colour" beside the model, in the corner of its
   swatch on the Saber tab's Blade row, and between its swatch and name on the player
   card. The swatches draw a chroma in the player's own colour (the card: in the
   player's first saber colour when it is a retail one).
@@ -1901,7 +1901,7 @@ off, and every other SJK player then draws the blade the same way.
   [saber_skin_options.rs](../crates/sjk-viewer/src/saber_skin_options.rs)): one
   `<skin>.<option>` word for each part switched off, sorted, so every skin keeps its
   choice while another is worn (`saber_sun.haze saber_spectral.wisps`).
-- Chosen on the Collection's Shaders tab ([sjk-ui.md](sjk-ui.md#collection)): under an
+- Chosen on the Collection's Kybers tab ([sjk-ui.md](sjk-ui.md#collection)): under an
   owned skin's words, "Parts" and a tick for each, in two columns (three past four);
   a click or the number keys 1 to 6 switch one, on the model at once. In the console,
   `saberskin <id> parts` lists them with their state and `saberskin <id> <part> on|off`
@@ -1995,14 +1995,20 @@ entity is not in the snapshot), showing only its light in first person.
 Unit tests and an off-screen shot on duel6 (two holocrons placed for remote players
 without a session); not yet seen with real players, nor in follow mode.
 
-### Shaders tab
+<a id="shaders-tab"></a>
 
-Players read blade skins as saber **shaders** (10/10/2026, Sol's name, so body
-shaders can follow): the player-facing words say "saber shader", the code and the hub
-keep "blade skin" and the ids.
+### Kybers tab
+
+Players read blade skins as **kybers** (Sol's decision, 15/11/2026; lore: the kyber
+gives the blade its look). They were saber **shaders** from 10/10/2026 (Sol's name then,
+so body shaders could follow) until that rename, and the code, the hub, the commands,
+the settings and the saved data keep "shader", "blade skin" and the ids
+(`ui_shaderList`, `saberskin`, `cg_saberSkin`). Every player-visible word says kyber:
+the Collection's Kybers tab and hall tile, "4 of 298 kybers", "Follow kyber". Each
+kyber keeps its own name (the Sun blade).
 
 Built 08/10/2026 as the Unlockables page, the Profile screen's Collection tab in the
-SJK UI; since 10/10/2026 the [Collection](sjk-ui.md#collection)'s Shaders tab
+SJK UI; since 10/10/2026 the [Collection](sjk-ui.md#collection)'s Kybers tab
 ([collection_shaders.rs](../crates/sjk-viewer/src/collection_shaders.rs), its swatches
 in [collection_swatch.rs](../crates/sjk-viewer/src/collection_swatch.rs)). An SJK page
 in the SJK UI's look in every menu style; in the SJK UI the main page's and the
@@ -2013,7 +2019,7 @@ Profile page's See the collection) open it on its own:
   (25/10/2026, the Collection revamp: [Collection](sjk-ui.md#collection) has the layout,
   keys and `ui_shaderList`): the stock blade (in the player's
   `color1`), then every blade skin the player may see (a Unique one only while they
-  hold it, [Unique shaders](#unique-shaders)), the rarest [tier](#tiers) first, with a
+  hold it, [Unique kybers](#unique-kybers)), the rarest [tier](#tiers) first, with a
   live swatch framed in its tier's colour. An owned skin's swatch shows the blade as the game draws
   it (Creyon's round 13, 19/10/2026: the drawings did not look like the blades): every
   skin a swatch shows is drawn live by the blade renderer, its own pipelines for a
@@ -2021,16 +2027,16 @@ Profile page's See the collection) open it on its own:
   [blade_pictures.rs](../crates/sjk-viewer/src/blade_pictures.rs)), which the UI adds over
   the swatch's glass (`BLADE_PICTURES_TEXTURE`, clipped with the list). Since 25/10/2026
   (for weak PCs) a frame draws only the cells that need it: the hovered or chosen row or
-  card's and a large swatch's every frame (`blade_pictures::focus`, from the Shaders tab,
-  the Forge, the Saber tab and a holocron's shader), every cell while two or fewer are in
+  card's and a large swatch's every frame (`blade_pictures::focus`, from the Kybers tab,
+  the Forge, the Saber tab and a holocron's kyber), every cell while two or fewer are in
   use, a new one at once, and the others 30 times a second, each at its own moment so
   the frames share them, six of them a frame at most, the longest waiting first (a GPU
   too slow for 30 a second draws a few a frame in turn rather than all of them). The UI
   over them is still drawn every frame, so only those blades' animation steps: 30 times
   a second, about 26 for the grid's fourteen at 60 FPS, fewer on a slower frame. A cell
   drawn alone is cleared in its rectangle and the kept cells shielded by depth, so no
-  glow adds into a kept picture. Every shader owned, `duel6_blade_pictures_cost` at
-  1920x1080: on an RTX 5080 the Shaders grid's frame (fifteen pictures) went from 2.16,
+  glow adds into a kept picture. Every kyber owned, `duel6_blade_pictures_cost` at
+  1920x1080: on an RTX 5080 the Kybers grid's frame (fifteen pictures) went from 2.16,
   2.97 and 3.41 ms to 1.69, 2.11 and 2.18 (three alternating runs; the list, six, 1.76 to
   2.14 against 1.65 to 2.08); on the PC's integrated Radeon from 251 to 196 ms, where
   each picture costs about 7 to 10 ms and the Medals tab's frame is 69 (such cards
@@ -2045,7 +2051,7 @@ Profile page's See the collection) open it on its own:
   tier's name at the right of that line in its colour. The wall's tiles and the list's
   rows draw a blade as a thin strip (`swatch::strip`, a handful of shapes, so thirty
   tiles stay cheap): the live picture when owned, else a still blade in the skin's own
-  colours, dimmed when not held (25/10/2026: a wall of locked shaders all grey told
+  colours, dimmed when not held (25/10/2026: a wall of locked kybers all grey told
   nothing apart), grey while its pack has not come. A click chooses a tile or a row and
   previews it (a double click wore it until 21/10/2026: Creyon found wearing on a click
   too easy to do by mistake, and the double click unclear), and Equip, Unequip or Enter
@@ -2068,7 +2074,7 @@ Profile page's See the collection) open it on its own:
   single saber fill the same room. A locked one shows too, as a preview this screen
   alone draws (`PreviewSkin`; nothing is set or sent), with a "Preview: not yours yet"
   pill; "Drag to turn" sits just over the card;
-- under it, the shader's card (17/10/2026), framed and banded in its tier's colour and
+- under it, the kyber's card (17/10/2026), framed and banded in its tier's colour and
   alive as its tier is (the rarity effects): the tier's mark and name, its edition
   with a star, its name and its state pill (a lightsaber Worn, a tick Yours, a padlock
   Locked; the name ends short of the pill, ellipsised), its facts as chips with
@@ -2077,10 +2083,10 @@ Profile page's See the collection) open it on its own:
   drop or an SJK team gift, and its saber smith), what it is in full (the card grows
   upward to hold its words, 25/10/2026), owned (a tick and `Yours
   since dd/mm/yyyy, from the SJK team` with the team's note, or `..., with your Bug
-  Hunter medal`) or how to get it (a padlock), and for a locked shader a holocron may
+  Hunter medal`) or how to get it (a padlock), and for a locked kyber a holocron may
   drop, where it drops: a chip for each holocron tier that may bring it, in that tier's
   colour, with the chance an opening of one does (the hub's odds split evenly among
-  the droppable shaders of its tier, `cards::loot::shader_in`); then its parts and, at
+  the droppable kybers of its tier, `cards::loot::shader_in`); then its parts and, at
   the card's foot, Equip, Unequip or Wear the stock blade, which set `cg_saberSkin`.
   While the player holds two sabers or a staff (`saber_skins::local_pair`, from the model
   the stage draws, or `saber2` naming a hilt), a target switch tops the saber's room: two
@@ -2091,7 +2097,7 @@ Profile page's See the collection) open it on its own:
   on a staff the half nearer the click: the stage keeps where it drew each half's middle on
   screen as the staff turns, `saber_skins::staff_half_at`, review of 22/10/2026), chooses it and moves the choice to the row that side wears, so the card and the sabers
   show what it has on; the pills are hit before the sabers' drag area under them. Each
-  side is dressed on its own (Creyon, 21/10/2026): Equip puts the chosen shader on that side
+  side is dressed on its own (Creyon, 21/10/2026): Equip puts the chosen kyber on that side
   only and the second's Unequip leaves it the stock blade. While the second has no skin of
   its own (`cg_saberSkin2` empty) it follows the first, so dressing the first dresses both,
   as `saberskin` does; once the second was dressed, it keeps its own (review, 22/10/2026:
@@ -2100,30 +2106,30 @@ Profile page's See the collection) open it on its own:
   no `saber2`, so `saber2` goes only when the two differ. The own look
   is read again as soon as `cg_saberSkin` or `cg_saberSkin2` changes
   (`Looks::own_settings_changed`), so the sabers show the new skin at once. The sabers show
-  the shader on
+  the kyber on
   the target, the other keeping what it wears, the second laid below the first (a staff
   shows both halves on its one hilt), and the card's Equip and Unequip work on that side,
-  for the second setting `cg_saberSkin2` (to the shader, or `stock` from the stock row and
+  for the second setting `cg_saberSkin2` (to the kyber, or `stock` from the stock row and
   from Unequip); Enter does the same. A row the second wears
   says "2nd blade". Holding one saber of one blade, the room shows no switch and no row says
   "2nd blade"; a second skin chosen before waits, and a line says it shows with two sabers or
   a staff (chosen in the Profile's Saber tab, `saber1` and `saber2`).
   Beside the pills a "Both sabers" box ("Both halves" for a staff; Creyon, 21/10/2026)
-  makes Equip dress both sides at once: both pills light, the sabers show the chosen shader
+  makes Equip dress both sides at once: both pills light, the sabers show the chosen kyber
   on both, and Equip sets `cg_saberSkin` to it and `cg_saberSkin2` to empty (the second
   follows the first; `PanelAction::WearBoth`); with both wearing it, Unequip leaves both the
   stock blade ("Unequip both"), and the stock row reads "Stock on both". The box is kept
   for the session; choosing a side (a pill or a click on a saber) unticks it, a click on a lone saber does not (review of 22/10/2026). Its label is
   drawn in the face it is measured in, so it is never cut short ("Both sab...").
-  Only a click chooses and previews a shader, on the wall, the list and the Forge's tiles;
+  Only a click chooses and previews a kyber, on the wall, the list and the Forge's tiles;
   resting the pointer shows its hover card and nothing else (Creyon, 31/10/2026: going to
   Equip, the pointer crossed other blades and changed the choice; from 21/10 resting on a
   row's blade chose it).
   Once the hub's economy is known, the foot also leads to the Collection's Forge
   ([cards.md](cards.md#the-forge), 21/10/2026; Shatter and Craft stood here before):
-  "Craft in the Forge" for a shader of the trade not held, with its cost, or "Break down
+  "Craft in the Forge" for a kyber of the trade not held, with its cost, or "Break down
   in the Forge" for one of the player's own copies, with what a copy gives; a click shows
-  the Forge on that section with the shader chosen.
+  the Forge on that section with the kyber chosen.
   The rack's and the grid's state lines carry the same icons, and the grid's tier line
   its rarity mark. The classic menus have no stage: the area shows the swatch, larger;
 - with the identity off, no hub or no answer yet, the tab says so and no skin is
@@ -2180,27 +2186,27 @@ tried in the game.
 
 Built 23/10/2026, branch `personal/saber-sound-pick` (Nib's idea of 18/10/2026 and hub
 report #109, approved by Sol on 23/10/2026): a player chooses the saber sounds they are
-heard with apart from the shader they wear, and every SJK player hears that choice.
+heard with apart from the kyber they wear, and every SJK player hears that choice.
 
 - `cg_saberSounds` (archived, default empty;
   [saber_sound_choice.rs](../crates/sjk-viewer/src/saber_sound_choice.rs)): empty follows
-  the shader (the sounds come with the blade, as before), `stock` the stock saber sounds
-  whatever the blade, or a blade skin's unlock id (`saber_void`) for that shader's ignition,
-  switching off, hum and swings whatever the blade, the stock one included. A shader's
+  the kyber (the sounds come with the blade, as before), `stock` the stock saber sounds
+  whatever the blade, or a blade skin's unlock id (`saber_void`) for that kyber's ignition,
+  switching off, hum and swings whatever the blade, the stock one included. A kyber's
   sounds hold only while the own hub profile lists it, as for wearing it
   (`SoundChoice::own`); one not owned (or taken back) follows the blade, the setting kept.
 - Chosen on the Profile screen's Saber tab, the Sounds row under the Blade row
   ([player_menu/saber_sounds.rs](../crates/sjk-viewer/src/player_menu/saber_sounds.rs),
-  [sjk-ui.md](sjk-ui.md#character)): "Follow shader (<the blade worn>)", "Stock sounds",
-  then the owned shaders, the rarest tier first as the Blade row lists them (the same
+  [sjk-ui.md](sjk-ui.md#character)): "Follow kyber (<the blade worn>)", "Stock sounds",
+  then the owned kybers, the rarest tier first as the Blade row lists them (the same
   holdings). Left and Right (or a click on the control's halves) write the setting;
   Preview, or Enter on the row, plays the choice's ignition and hum once, as the worn
-  blade would be heard with it (a shader whose pack is not loaded plays the stock
+  blade would be heard with it (a kyber whose pack is not loaded plays the stock
   ones). An SJK UI page, drawn in its look in every menu style; the classic menus set the
   cvar from the console.
 - Sent with the look as `saber_sounds`, only when not following (`Worn::to_look`), and
   read back from presence and feed looks (`Worn::of`; an unknown id, a newer client's
-  shader, follows the blade). A look without the field, from an older client or hub,
+  kyber, follows the blade). A look without the field, from an older client or hub,
   follows the blade: those players are heard as before.
 - Heard: each slot's sound set is the blade skin `SoundChoice::sound_skin` gives for
   their blade and choice (`Looks::sound_skin_id`; the local player's own from its gated
@@ -2223,7 +2229,7 @@ heard with apart from the shader they wear, and every SJK player hears that choi
   from the live look, with an event, when the skin it names is taken back from the key.
   Older clients never send it.
 
-Verified by unit tests: the resolution (follow, stock, another shader on a skinned or
+Verified by unit tests: the resolution (follow, stock, another kyber on a skinned or
 the stock blade, an unknown id and a look without the field following the blade, a
 muted slot stock), the own choice gated by ownership and sent and read back, the
 per-slot table and the swings' set apart from the blade and stock in a duel, the Sounds
@@ -2251,7 +2257,7 @@ catalogue is `crate::finishers` (`finishers.rs`), the hub's the unlocks of kind 
   server and other clients keep the corpse. Only a killing blow does it. A reconnect or a
   new timeline forgets the burns pending (`reset_live_presentation`).
 - **Wearing:** one at a time, `cg_saberFinisher` (archived, empty for none), worn and sent
-  only while the own profile lists it. Collection > Shaders has a Finishers pill beside
+  only while the own profile lists it. Collection > Kybers has a Finishers pill beside
   Saber (and Body, to come): its page lists each finisher as a card, Equip or Unequip
   while held, how to get it otherwise.
 - **The look:** the finisher goes to the hub as the look's `finisher` (hub PROTOCOL.md,
@@ -2262,7 +2268,9 @@ catalogue is `crate::finishers` (`finishers.rs`), the hub's the unlocks of kind 
 - **Getting one:** not droppable yet. The hub grants it by hand (`unlock KEY
   finisher_disintegrate`, the panel or staff); Sol decides when finishers enter holocrons.
 
-## Medal shaders
+<a id="medal-shaders"></a>
+
+## Medal kybers
 
 Built 10/10/2026, branch `personal/medal-blades` (with the hub's `feat/medal-blades`),
 Sol's decision: Bug Hunter brings the Glitch blade, Tester the Hologram, Early
@@ -2272,15 +2280,17 @@ medal's id while no grant by hand covers it, and takes it back with the medal's 
 award, clearing it off a live look with a look event. A grant by hand of the same blade
 is separate and outlives the medal. The client ([wire.rs](../crates/sjk-identity/src/wire.rs)
 `Unlock::medal`, absent from older hubs) wears it like any unlock (`Holdings::can_wear`
-is unchanged); the Collection's Shaders tab says "Yours since dd/mm/yyyy, with your Bug
-Hunter medal", its Medals tab adds "Comes with the Glitch blade, a saber shader." under
+is unchanged); the Collection's Kybers tab says "Yours since dd/mm/yyyy, with your Bug
+Hunter medal", its Medals tab adds "Comes with the Glitch blade, a kyber." under
 what the medal is for, and the three blades' "How to get it" names the medal
 (`Medal::blade` in [medals.rs](../crates/sjk-viewer/src/medals.rs) pins the pairs, a
 test checks the texts). Verified: unit tests (client and hub, the hub's covering award,
 counted awards, revoke, a grant by hand surviving, relock and the look); the hub not
 deployed when built, nothing tried in the game.
 
-## Unique shaders
+<a id="unique-shaders"></a>
+
+## Unique kybers
 
 Built 25/10/2026 (Sol's decision), branch `personal/unique-tier`: a tier above Mythical,
 **Unique** (rose, `#FF6B9A`; `Rarity::Unique` in
@@ -2289,15 +2299,15 @@ gifts Sol gives by hand to people who helped SJK. The first is the **Thousand Cr
 blade (167), the second the **Hearth** (168), the third **DOOM** (301, 13/11/2026). The
 hub names the tier `unique` (its side is built apart).
 
-- **A name in its own colour:** a shader may have its name always drawn in a colour of its
-  own, from the table `unlockables::NAME_COLOURS` (one row a shader; `name_colour` reads
+- **A name in its own colour:** a kyber may have its name always drawn in a colour of its
+  own, from the table `unlockables::NAME_COLOURS` (one row a kyber; `name_colour` reads
   it): DOOM's red (`#E51A1A`, Sol: "always written caps and in red"). The Collection's
   tiles, rows and page title draw a held one's name in it (in place of the chosen gold;
   the chosen outline still marks it), and its hover card's title.
 
 - **Given by hand only:** granted at the hub like any grant by hand (the Staff page, the
   operator's command), with the note Sol writes. Never found, dropped, sold, traded or
-  crafted: no holocron, kyber crystal, card or medal brings one (`droppable` is false,
+  crafted: no holocron, dormant kyber, card or medal brings one (`droppable` is false,
   so `economy::in_trade` is too), the economy's tables have no Unique column
   (`shatter_yield` and `craft_cost` give 0) and no shop offers one. Its "How to get it"
   reads "A personal thank-you from Sol." (`unlockables::PERSONAL_THANKS`).
@@ -2305,10 +2315,10 @@ hub names the tier `unique` (its side is built apart).
   one, and `Holdings::shows` lets it through only while the player's own profile lists
   it. Everything a player reads of the catalogue goes through it (`Holdings::listed`,
   `Holdings::listed_count`), so to anyone else it is never listed or counted: the
-  Collection's Shaders tab (the rack and the grid, the search by name, tier word or
+  Collection's Kybers tab (the rack and the grid, the search by name, tier word or
   number, the tier chips, "N of M owned", the Saber pill and the lead's "n of M
-  shaders shown"), the Collection's Shaders count and tally, the hover cards, the
-  Profile's "N of M shaders owned", the Saber tab's Blade and Sounds rows, and
+  kybers shown"), the Collection's Kybers count and tally, the hover cards, the
+  Profile's "N of M kybers owned", the Saber tab's Blade and Sounds rows, and
   `saberskin` (not listed; its id or number answers "No blade skin"). These read each
   frame's holdings, so a gift shows at once and goes when taken back, with its chip and
   a filter on it. Its holder sees it first (the rarest), counted, with a Unique chip
@@ -2322,95 +2332,97 @@ hub names the tier `unique` (its side is built apart).
   in its rose ([Rarity effects](#rarity-effects)).
 
 Verified by unit tests: the tier's name, colour, mark and effects; an unheld Unique blade
-neither listed, counted, searched nor chipped on the Shaders tab, held one listed first,
+neither listed, counted, searched nor chipped on the Kybers tab, held one listed first,
 counted and chipped, and its chip gone once taken back; the Saber tab, `saberskin` and
 the economy. Not tried in the game; the hub's side is not part of this change.
 
-## Holocron shader drops
+<a id="holocron-shader-drops"></a>
+
+## Holocron kyber drops
 
 Built 14/10/2026 (hub branch `loot-kinds`, merged into the hub's `main`, not deployed).
-An unlock is held in a **count** now: a holocron may drop a shader the key already
+An unlock is held in a **count** now: a holocron may drop a kyber the key already
 holds, and the duplicate is another one (since 17/10/2026, prepared: shattered into kyber
 shards, see below). A
 profile's unlocks carry `count` ([wire.rs](../crates/sjk-identity/src/wire.rs)
 `Unlock::count`, 1 from older hubs). Opening a holocron rolls its kind first: a card with
-credits as before, or a shader with no credits and no card (`Opened::unlock`,
-`Opened::card` is then `None`); the shader's tier is rolled next and a droppable shader of
-it picked (the hub's `src/loot.rs` and `PROTOCOL.md` have the provisional odds). The client takes the new answer but has no ceremony for a shader yet:
-an opening that held only shaders says "You found Tidal blade (2 held)." in the pop-up's
-refusal line, and the Collection lists the shader; the crate-style opening comes next.
+credits as before, or a kyber with no credits and no card (`Opened::unlock`,
+`Opened::card` is then `None`); the kyber's tier is rolled next and a droppable kyber of
+it picked (the hub's `src/loot.rs` and `PROTOCOL.md` have the provisional odds). The client takes the new answer but has no ceremony for a kyber yet:
+an opening that held only kybers says "You found Tidal blade (2 held)." in the pop-up's
+refusal line, and the Collection lists the kyber; the crate-style opening comes next.
 Opening is still staff-only. Checked by unit tests on both sides; not in the game.
 
 **What drops** (Sol's rule, 17/10/2026; branch `personal/more-droppable` and hub
-`feat/more-droppable`): every saber shader but those a medal or an achievement brings, so
+`feat/more-droppable`): every kyber but those a medal or an achievement brings, so
 today all but Glitch, Hologram and Runic. That makes 48 of the 51 droppable: Common 10,
 Uncommon 13, Rare 6 (3 before), Legendary 8 (4 before) and Mythical 11 (7 before: Sun,
 Void, Molten and Spectral join). Each catalogue entry keeps its `droppable` flag (the
-client's `Unlockable::droppable`, the hub's `UnlockKind::droppable`), so another shader
+client's `Unlockable::droppable`, the hub's `UnlockKind::droppable`), so another kyber
 could still be kept out; a test on each side pins the rule today (`droppable` exactly when
-no medal brings it), and the droppable shaders' "How to get it" reads "Found in holocrons."
+no medal brings it), and the droppable kybers' "How to get it" reads "Found in holocrons."
 
 Every Blade Lab blade drops too since 20/10/2026 (Sol: no loot is handed out by the team
 instead of found). The same day Sol's card, SJK Alpha 000, began to bring the Sun blade
 for as long as the player holds a copy ([cards.md](cards.md#faces-and-the-first-set),
 `grants`, `unlockables::CARD_BLADES`): for a few hours it was the only way, then Sol made
-it a second way besides holocrons. So 293 of the 299 shaders drop (the Varykino Blossom, 166, since 21/10/2026; Creyon's anime round from 170, since 29/10/2026), all but Glitch, Hologram
+it a second way besides holocrons. So 293 of the 299 kybers drop (the Varykino Blossom, 166, since 21/10/2026; Creyon's anime round from 170, since 29/10/2026), all but Glitch, Hologram
 and Runic (their medals), the Thousand Cranes, the Hearth and DOOM (Unique, given by hand,
 25/10/2026 and 13/11/2026) and the Mystery blade (169, only from mystery boxes); the test pins `droppable` exactly when no medal brings it and it is not Unique.
 
-Duplicates show in the Collection's Shaders tab (14/10/2026): the rack's state line, the
+Duplicates show in the Collection's Kybers tab (14/10/2026): the rack's state line, the
 grid card's state and the big card's pill read "Yours x2" (or "Worn x2"), the card's
-owned line and the hover card say ", 2 held". The tab's headline still counts shaders
-owned out of the catalogue the player sees ("5 of 23 owned"; an unheld Unique shader is
+owned line and the hover card say ", 2 held". The tab's headline still counts kybers
+owned out of the catalogue the player sees ("5 of 23 owned"; an unheld Unique kyber is
 not counted), a duplicate counting once. The tab has a filter
 since 14/10/2026 for a catalogue near 200: chips for All and each tier (Unique's only for
 a player who holds one; T and Shift+T step through them), Owned (O), the edition (E,
 since 06/11/2026, [Alpha and Beta](#alpha-and-beta-the-collections)) and a search field
 (/ or Ctrl+F; Enter or Esc leave it, Esc first clears it) that matches a name or a tier's word; the stock blade stays first,
-the rack and the grid scroll as before and the lead line says "n of 23 shaders shown"
+the rack and the grid scroll as before and the lead line says "n of 23 kybers shown"
 while anything is filtered. Row numbers are of the list shown, so the choice goes back
 to the top when the filter changes.
 
-**Kyber crystals** (21/10/2026, [holocrons.md](holocrons.md#kyber-crystals)): a crystal,
-earned once per achievement, always opens to a droppable saber shader of a tier rolled by
-the crystal's own odds (every tier with a small Mythical chance), the ones the person does
-not hold first, with a pity that makes the tenth crystal in a row without a Legendary or
-Mythical shader one of them. Its opening's strip shows only shaders.
+**Dormant kybers** (21/10/2026, [holocrons.md](holocrons.md#dormant-kybers)): a dormant kyber,
+earned once per achievement, is always attuned to a droppable kyber of a tier rolled by
+the dormant kyber's own odds (every tier with a small Mythical chance), the ones the person does
+not hold first, with a pity that makes the tenth dormant kyber in a row without a Legendary or
+Mythical kyber one of them. Its attuning strip shows only kybers.
 
 ## Shattering, crafting and the shop
 
 Live since 21/10/2026 ([cards.md](cards.md#shards-and-the-shop) has the numbers and the
-rules): a shader of the trade the player holds can be broken down into kyber shards, one
+rules): a kyber of the trade the player holds can be broken down into kyber shards, one
 copy a request (the last copy too on a hub that says `shatter_last`, never a medal's or a
-card's), or every duplicate at once; shards craft any shader of the trade the player does
-not hold and buy the day's four offers. Only shaders of the *trade* take part: droppable
+card's), or every duplicate at once; shards craft any kyber of the trade the player does
+not hold and buy the day's four offers. Only kybers of the *trade* take part: droppable
 and brought by no medal (`economy::in_trade`, read from the catalogue's `droppable` and
 `Medal::blade`, as the hub reads its own), so Glitch, Hologram, Runic and the Unique ones
-([Unique shaders](#unique-shaders)) never do, and a shader made droppable joins by itself.
+([Unique kybers](#unique-kybers)) never do, and a kyber made droppable joins by itself.
 All of it is the Collection's Forge tab ([cards.md](cards.md#the-forge)); its requests are in
 [economy.rs](../crates/sjk-viewer/src/economy.rs):
 
 | Hook | What it gives |
 | --- | --- |
-| `in_trade(&Unlockable) -> bool` | Whether a shader can be broken down, crafted or sold at all |
+| `in_trade(&Unlockable) -> bool` | Whether a kyber can be broken down, crafted or sold at all |
 | `shatter_yield(Rarity) -> u64`, `craft_cost(Rarity) -> u64` | The hub's tables (its copy until the hub sent them) |
 | `may_act(&Snapshot) -> bool` | Whether the hub lets the player trade (as opening) |
 | `shatter(id)`, `shatter_last(id)`, `shatter_all()`, `craft(id)`, `buy_holocron(tier)` | Ask the hub; false before the identity started |
 | `outcome_words(&TradeOutcome, name: &str) -> String` | "Kamino blade broken down: +5 kyber shards.", or why not |
 
 What the Forge lists counts the profile's `Unlock::count` when it has no `medal` and no
-`card`; a shader not listed is not held. The kyber shard's mark to draw beside a count is
+`card`; a kyber not listed is not held. The kyber shard's mark to draw beside a count is
 `cards::shard::draw` (or the symbol `symbols::SHARD` in text).
 
 **Collection marks** (29/10/2026, [sjk-ui.md](sjk-ui.md#marks)): a player stars their
-favourite shaders and locks the ones they want to keep; both are kept at the hub, which
+favourite kybers and locks the ones they want to keep; both are kept at the hub, which
 refuses to break down or trade a locked one. `shader_marks::Marks` is what a page shows
 (worn, favourite, locked, New), `sjk_identity::Service::set_mark` asks the hub, and the
 New marks are kept on the PC (`shader-seen.txt`).
 
 ## Planned, not built
 
-Achievements granting unlockables (with harder goals), holocron drops beyond shaders
+Achievements granting unlockables (with harder goals), holocron drops beyond kybers
 (toys, body shaders, nameplates, medals), trading duplicates, other kinds of unlockable (holocron
 skins, trails, emotes). Up to 256 blade skins load at once (the renderer's slots; the
 skin array is a storage buffer of 253952 bytes since 14/10/2026, no longer a 16 KiB uniform,
@@ -2426,13 +2438,13 @@ holds the table (`id`, full name, short tag); a new edition is one line there.
 - Holocron cards carry theirs per copy: the hub stamps the current edition
   (`cards::EDITION`, "alpha") at opening and the copy keeps it for good
   ([cards.md](cards.md)).
-- Shaders (`Unlockable::edition`), medals (`Medal::edition`), achievements
+- Kybers (`Unlockable::edition`), medals (`Medal::edition`), achievements
   (`Kind::edition`) and the Illuminate toy take theirs from the client's catalogue
   entries, "alpha" for every one now. An item belongs to one edition; a duplicate keeps
   it with the item.
-- Where it reads: the shader's big card (top right of its details), the medal's line
-  under its name, and the hover card of each shader, medal, achievement and toy; the
-  Shaders search matches an edition's name ("alpha", "beta").
+- Where it reads: the kyber's big card (top right of its details), the medal's line
+  under its name, and the hover card of each kyber, medal, achievement and toy; the
+  Kybers search matches an edition's name ("alpha", "beta").
 
 ### Alpha and Beta: the collections
 
@@ -2444,15 +2456,15 @@ one is the Beta collection"). The editions are the Collection's collections:
 - **Beta Edition**: Creyon's round, PR #370, blades 170 to 299 (`edition:
   crate::editions::BETA` on each; `unlockables.rs` tests that exactly those 130 are
   Beta), and what comes after it.
-- The Shaders tab filters by one: the toolbar's **Edition** chip, or E (Shift+E back),
+- The Kybers tab filters by one: the toolbar's **Edition** chip, or E (Shift+E back),
   goes All, Alpha, Beta, All; the lit chip reads the edition shown ("Beta Edition"),
   and the tiers' counts (the strip and each heading's "N of M") follow it.
 
-**Holocrons and kyber crystals carry an edition too**, stamped by the hub when one is
+**Holocrons and dormant kybers carry an edition too**, stamped by the hub when one is
 given (a play drop, a staff or operator gift, a purchase, a mystery box, a toy, an
-achievement's crystal) and kept for good, through trades too. Opening one brings only
-things of its edition or an older one: an Alpha holocron or crystal only Alpha things, a
-Beta one Beta or Alpha: the hub picks its shaders, tags, banners and crystal shaders
+achievement's dormant kyber) and kept for good, through trades too. Opening (or attuning) one brings only
+things of its edition or an older one: an Alpha holocron or dormant kyber only Alpha things, a
+Beta one Beta or Alpha: the hub picks its kybers, tags, banners and a dormant kyber's kyber
 among those `editions::within(item, holocron)` allows. Cards are not gated yet: every
 card face is the SJK Alpha set. The Holocrons tab says each one's: the recent list puts it
 before the date
@@ -2465,7 +2477,7 @@ none, which reads as Alpha. The shop and crafting are not gated by edition.
 (`SJK_HUB_BETA_MIN_CLIENT`) names a release, off by default, and only for a person whose
 newest client meets that release (SJK development builds pass, as for the other
 minimum-client switches): an older client keeps getting Alpha ones, so nobody gets a blade their game
-cannot show. Until it is set, every holocron and crystal is Alpha.
+cannot show. Until it is set, every holocron and dormant kyber is Alpha.
 
 **Opening Beta** (when Sol's tests are done):
 
@@ -2478,31 +2490,31 @@ cannot show. Until it is set, every holocron and crystal is Alpha.
 
 ## Saber smiths
 
-14/10/2026 (Sol's request): every shader names its **saber smith**, the person who gave
+14/10/2026 (Sol's request): every kyber names its **saber smith**, the person who gave
 its idea, even when it was made together (`Unlockable::smith`, the names `SOL` and
 `CREYON` in [unlockables.rs](../crates/sjk-viewer/src/unlockables.rs)). Creyon's "Saber
 ideas" page gave the 21 plain ones (Tidal to Firefly, Slate to Moonlight) and his
 "Blade Lab" page the sixteen after them (Neon to Obsidian Edge, 15/10/2026); Sol gave the
-fourteen before them. It reads "Saber smith: Creyon" at the right of the shader's big
-card, beside its description, and on its hover card; the Shaders search matches it. A
-new shader names its smith in its catalogue entry (a test lists Creyon's).
+fourteen before them. It reads "Saber smith: Creyon" at the right of the kyber's big
+card, beside its description, and on its hover card; the Kybers search matches it. A
+new kyber names its smith in its catalogue entry (a test lists Creyon's).
 
 Card art for an "SJK Blades" card set (20/10/2026): the ignored world shot `blade_card_art`
 ([world_shot_blade_cards.rs](../crates/sjk-viewer/src/world_shot_blade_cards.rs)) draws
-every droppable shader with the game's own saber renderer, lit across a 1020 x 850 frame
+every droppable kyber with the game's own saber renderer, lit across a 1020 x 850 frame
 on a dark backdrop (the void beyond duel6, every signature shader built first), and writes
 `cards/blade<NNN>.png` with its `import_cards.py` text file (number, tier, name, smith,
 description) into the folder `SJK_BLADE_CARDS` names; `SJK_BLADE_CARD_SKINS` picks some.
 The tier is the client's: check it against the hub's `src/unlocks.rs`, which decides drops.
 
-A shader newer than the client (14/10/2026): when an opening brings a shader this client's
+A kyber newer than the client (14/10/2026): when an opening brings a kyber this client's
 catalogue does not list, the ceremony still shows it, by the name the hub sent, in the
 holocron's colour, with its blade if the hub's pack brought one, the crate spin ending on a
 "?" tile; it reads "update SJK to see it in your Collection". The Collection lists it once
 the client knows it. Since 03/11/2026 any prize the client does not know is shown the same
-way, by its kind (Kushina, 30/10/2026: such a shader came out as a dark, empty blade card):
+way, by its kind (Kushina, 30/10/2026: such a kyber came out as a dark, empty blade card):
 the kind is read from the hub's id (`saber_`, `tag_`, `banner_`, `toy_`; "prize" for
-anything else, `opening::unknown_kind`), the strip's tile says "New tag", "New shader"...,
+anything else, `opening::unknown_kind`), the strip's tile says "New tag", "New kyber"...,
 and without a blade from the pack the card shows a "?" in a ring and "Update SJK to see
 it" instead of an empty swatch. A card of a rarity or finish the client does not know is
 no longer left out: it shows as "A new card".

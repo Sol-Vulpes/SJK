@@ -32,7 +32,7 @@ impl Panel {
         self.lead(
             frame,
             "Inventory",
-            "Everything you own, as the SJK hub keeps it: currencies, sealed holocrons and crystals, shaders, tags and cards.",
+            "Everything you own, as the SJK hub keeps it: currencies, sealed holocrons and dormant kybers, kybers, tags and cards.",
         );
         let labels: Vec<&str> = Sort::ALL.iter().map(|sort| sort.label()).collect();
         let right = LEFT_X + kit::segments_width(&labels);

@@ -740,26 +740,26 @@ impl Panel {
         let headline = if inputs.holdings.reason().is_none() {
             format!("{owned} of {total} owned")
         } else {
-            "Saber shaders".to_owned()
+            "Kybers".to_owned()
         };
         let shown_words;
         let line = match inputs.holdings {
             unlockables::Holdings::Known(_) if self.shader_filter.active() => {
                 shown_words = format!(
-                    "{} of {total} shaders shown: T tier, O owned, C chroma, / search.",
+                    "{} of {total} kybers shown: T tier, O owned, C chroma, / search.",
                     rows.len() - 1,
                 );
                 shown_words.as_str()
             }
             unlockables::Holdings::IdentityOff => {
-                "Shaders are kept on the SJK hub: switch the identity on in Settings, Network."
+                "Kybers are kept on the SJK hub: switch the identity on in Settings, Network."
             }
             unlockables::Holdings::NoHub => {
-                "Shaders are kept on the SJK hub: no hub is set (cl_hubUrl)."
+                "Kybers are kept on the SJK hub: no hub is set (cl_hubUrl)."
             }
             unlockables::Holdings::Waiting => "Waiting for the SJK hub to say which are yours.",
             holdings @ unlockables::Holdings::Known(_) if holdings.debug() => {
-                "Debug collectibles is on: every shader is shown as yours, on this PC only."
+                "Debug collectibles is on: every kyber is shown as yours, on this PC only."
             }
             unlockables::Holdings::Known(_) => {
                 "How your blade looks and sounds, for every SJK player on your server."
@@ -973,9 +973,9 @@ impl Panel {
         let mut card = hover::mark_card(hover::MarkToken::SeenAll, &self.marks, None)
             .expect("Mark all seen has a card");
         card.title = match count {
-            0 => "No new shaders".to_owned(),
-            1 => "1 new shader".to_owned(),
-            count => format!("{count} new shaders"),
+            0 => "No new kybers".to_owned(),
+            1 => "1 new kyber".to_owned(),
+            count => format!("{count} new kybers"),
         };
         if count == 0 {
             card.colour = color::MUTED;
@@ -1189,7 +1189,7 @@ impl Panel {
                 if caret { "|" } else { "" }
             )
         } else if self.shader_filter.query.is_empty() {
-            "Search shaders, smiths, numbers  /".to_owned()
+            "Search kybers, smiths, numbers  /".to_owned()
         } else {
             self.shader_filter.query.clone()
         };
@@ -1315,7 +1315,7 @@ impl Panel {
             heads.push((number, "#", Some(ShaderSort::Number)));
         }
         heads.push((columns.look, "Look", None));
-        heads.push((columns.name, "Shader", Some(ShaderSort::Name)));
+        heads.push((columns.name, "Kyber", Some(ShaderSort::Name)));
         heads.push((columns.tier, "Tier", Some(ShaderSort::Tier)));
         heads.push((columns.smith, "Smith", None));
         heads.push((columns.yours, "Yours", Some(ShaderSort::Yours)));
@@ -1894,10 +1894,10 @@ impl Panel {
         let grant = row.skin.and_then(|skin| inputs.holdings.unlock(skin.id));
         match (row.skin, grant) {
             (None, _) if row.worn => (
-                format!("{}  What you hold now: no shader on.", symbols::SABER),
+                format!("{}  What you hold now: no kyber on.", symbols::SABER),
                 color::MUTED,
             ),
-            (None, _) => ("Wearing it takes your shader off.".to_owned(), color::MUTED),
+            (None, _) => ("Wearing it takes your kyber off.".to_owned(), color::MUTED),
             (Some(_), Some(grant)) => (
                 format!("{}  {}", symbols::TICK, owned_line(grant)),
                 color::GOLD,
@@ -2399,10 +2399,10 @@ impl Panel {
                 symbols::TURN,
                 match self.pair {
                     crate::saber_skins::Pair::TwoSabers => {
-                        ",  pick a saber above (or click it), choose a shader, Equip"
+                        ",  pick a saber above (or click it), choose a kyber, Equip"
                     }
                     crate::saber_skins::Pair::Staff => {
-                        ",  pick a half above (or click the staff), choose a shader, Equip"
+                        ",  pick a half above (or click the staff), choose a kyber, Equip"
                     }
                     crate::saber_skins::Pair::None => "",
                 }
@@ -2857,7 +2857,7 @@ impl Panel {
             return;
         }
         let mut lines = vec![Line::status(
-            "This shader's extras, locked. Once unlocked this chip turns gold and its note switches them on and off.",
+            "This kyber's extras, locked. Once unlocked this chip turns gold and its note switches them on and off.",
         )];
         lines.extend(
             extras

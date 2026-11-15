@@ -41,8 +41,8 @@ impl Section {
         match self {
             Self::Currencies => "Currencies".into(),
             Self::Holocrons => crate::terms::say("Holocrons"),
-            Self::Crystals => "Kyber crystals".into(),
-            Self::Shaders => "Saber shaders".into(),
+            Self::Crystals => "Dormant kybers".into(),
+            Self::Shaders => "Kybers".into(),
             Self::Finishers => "Finishers".into(),
             Self::Tags => "Tags".into(),
             Self::Cards => "Cards".into(),
@@ -773,7 +773,7 @@ mod tests {
             [
                 "# Currencies",
                 "Credits",
-                "# Saber shaders",
+                "# Kybers",
                 "alpha",
                 "Gamma",
                 "Beta",
@@ -808,7 +808,7 @@ mod tests {
         ];
         assert_eq!(
             names(&items, &places(&items, "sun", Sort::Tier)),
-            ["# Saber shaders", "Sun"]
+            ["# Kybers", "Sun"]
         );
         assert_eq!(
             names(&items, &places(&items, "  HOLO  fox", Sort::Tier)),

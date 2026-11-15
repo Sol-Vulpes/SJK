@@ -3514,7 +3514,7 @@ each a signature blade program) every frame: now a frame draws a new picture, th
 hovered or chosen ones (`blade_pictures::focus`, Shaders tab, Forge, Saber tab, a
 holocron's shader) and, with more than two in use, the others 30 times a second, six a
 frame at most, longest waiting first; a cell drawn alone is cleared in its rectangle and
-the kept ones shielded by depth ([unlockables.md](unlockables.md#shaders-tab)). Visible
+the kept ones shielded by depth ([unlockables.md](unlockables.md#kybers-tab)). Visible
 change: those other pictures' animation steps at up to 30 a second (about 26 on the grid
 at 60 FPS, fewer on slower frames), the UI over them still every frame.
 `CvarRegistry::get` lowers a camel-case name (`cg_drawScores`, `cg_hudScale`, read many
@@ -4200,7 +4200,7 @@ running clients through a deployed hub, the sound by ear.
 
 21/10/2026, `personal/kyber-crystals`, based on `main` `775c4e8b` (Sol's decisions; the
 hub side is built in parallel from the same spec, not deployed). A kyber crystal, one per
-achievement, always opens to a saber shader ([holocrons.md](holocrons.md#kyber-crystals)):
+achievement, always opens to a saber shader ([holocrons.md](holocrons.md#dormant-kybers)):
 `kyber.rs` (tiers `kyber_uncommon` to `kyber_mythical`, the built-in odds, pity and
 achievement rewards, pinned by tests), the wire's `kyber` object and `reward`, the
 Holocrons tab's crystal tiles, pity line, hover card and crystal loot table, the opening's
@@ -6924,7 +6924,7 @@ were not loaded). Not tried in the game.
 `main`, not deployed) holds unlocks as counts and rolls an opening as a card or a shader by the
 holocron's tier; the client reads the new answer (`Unlock::count`, `Opened::unlock`, `card` now
 optional). No ceremony for a shader yet (a line in the pop-up says what was found); the crate
-animation is next. Checked by unit tests only. See [unlockables.md](unlockables.md#holocron-shader-drops).
+animation is next. Checked by unit tests only. See [unlockables.md](unlockables.md#holocron-kyber-drops).
 
 ## Shaders: the Common tier and nine plain blades
 
@@ -8705,7 +8705,7 @@ Branch `personal/medal-blades` (10/10/2026, based on `8018e58e`, Windows 11), wi
 hub's `feat/medal-blades`: Sol decided that medals bring saber shaders while held (Bug
 Hunter the Glitch, Early Tester the Hologram, Early Contributor the Runic blade), taken
 back with the medal; achievements grant none yet and holocron drops of blades are
-parked. Details in [unlockables.md](unlockables.md#medal-shaders). Verified by unit
+parked. Details in [unlockables.md](unlockables.md#medal-kybers). Verified by unit
 tests in both repositories; the hub not deployed when built, not tried in the game.
 
 ## Nine more saber shaders
@@ -8748,7 +8748,7 @@ shader, a locked one too as a local preview, the holocron floats by it on Toys a
 nameplate stands over its head on Nameplates. Commands: `collection` (new),
 `achievements` and `unlockables` open its tabs; the Profile page's See the board and
 See the collection open it. Docs: [sjk-ui.md](sjk-ui.md#collection),
-[unlockables.md](unlockables.md#shaders-tab).
+[unlockables.md](unlockables.md#kybers-tab).
 
 Verified: `cargo test -p sjk-viewer` with unit tests of the two screens' rows (each
 screen's tabs wrapping within it, the Collection's counts, rows within the frame at the

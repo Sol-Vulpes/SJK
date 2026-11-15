@@ -797,7 +797,7 @@ mod tests {
         assert_eq!(
             panel.selected().id,
             "kyber_uncommon",
-            "the kyber crystals come after the holocrons"
+            "the dormant kybers come after the holocrons"
         );
         let _ = panel.key(KeyCode::End, false);
         assert_eq!(panel.selected().id, "kyber_mythical");
@@ -1336,7 +1336,7 @@ mod tests {
         else {
             panic!("a shader prize");
         };
-        assert_eq!(nameless.name, "A new saber shader");
+        assert_eq!(nameless.name, "A new kyber");
         let Some(opening::Prize::Shader(tidal)) =
             opening::Prize::of(&shader("saber_tidal", "Tidal blade"))
         else {
@@ -1367,7 +1367,7 @@ mod tests {
             ("tag_from_the_future", "tag"),
             ("toy_from_the_future", "toy"),
             ("banner_from_the_future", "profile banner"),
-            ("saber_from_the_future", "saber shader"),
+            ("saber_from_the_future", "kyber"),
             ("something_else", "prize"),
         ] {
             let Some(opening::Prize::Shader(found)) = opening::Prize::of(&unlock(id)) else {
@@ -1871,8 +1871,8 @@ mod tests {
         assert_eq!(title, "Open 20 of your 34 holocrons?");
         assert!(lines.join(" ").contains("the other 14 wait"));
         let (title, lines) = ask_all::words(7, 7, true);
-        assert_eq!(title, "Open all 7 kyber crystals?");
-        assert!(lines.join(" ").contains("every shader found"));
+        assert_eq!(title, "Attune all 7 dormant kybers?");
+        assert!(lines.join(" ").contains("every kyber found"));
         for (opening, held) in [(2, 2), (7, 7), (20, 34), (20, 999)] {
             let (title, lines) = ask_all::words(opening, held, false);
             assert!(lines.len() <= 4);

@@ -66,7 +66,7 @@ blade bonuses, shaders, tags and shard piles retain their existing rules. The hu
 sends its actual odds and the loot table shows them; before a supporting hub
 supplies odds, the client's bonus chance is zero. The ordinary prize is revealed
 first, followed by any bonus cover.
-Kyber crystals keep their existing shader-only behavior.
+Dormant kybers keep their existing kyber-only behavior.
 
 The hub rolls the banner tier using the opening's `shader_tier` odds, with the same
 fallback as tags (nearest available commoner tier, otherwise the commonest above).

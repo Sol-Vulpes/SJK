@@ -15,14 +15,14 @@ use sjk_ui::InputEvent;
 /// The `collection` command.
 pub(crate) const COLLECTION_COMMAND: &str = "collection";
 pub(crate) const COLLECTION_HELP: &str =
-    "Open your SJK collection: medals, achievements, shaders, toys, tags and cards";
+    "Open your SJK collection: medals, achievements, kybers, toys, tags and cards";
 /// The `achievements` command.
 pub(crate) const ACHIEVEMENTS_COMMAND: &str = "achievements";
 pub(crate) const ACHIEVEMENTS_HELP: &str = "Open the Collection on your achievements";
 /// The `unlockables` command.
 pub(crate) const UNLOCKABLES_COMMAND: &str = "unlockables";
 pub(crate) const UNLOCKABLES_HELP: &str =
-    "Open the Collection on its shaders: saber looks you own or can unlock";
+    "Open the Collection on its kybers: saber looks you own or can unlock";
 
 impl ViewerConsole {
     /// `collection`, `achievements` or `unlockables` in the classic menus: show the page

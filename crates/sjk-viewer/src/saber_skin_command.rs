@@ -19,7 +19,7 @@ use crate::unlockables::{self, Holdings, SABER_SKIN_CVAR, Unlockable};
 /// Console command name.
 pub(crate) const COMMAND: &str = "saberskin";
 /// Help text for completion and `cmdlist`.
-pub(crate) const HELP: &str = "List your blade skins, wear one or switch its parts: saberskin <id> | none | <id> parts | <id> <part> on|off | second <id>|none|same";
+pub(crate) const HELP: &str = "List your kybers, wear one or switch its parts: saberskin <id> | none | <id> parts | <id> <part> on|off | second <id>|none|same";
 
 const USAGE: &str =
     "saberskin [<id> | none | <id> parts | <id> <part> on|off | second <id> | none | same]";
@@ -135,9 +135,7 @@ pub(crate) fn parse(word: &str, holdings: Holdings<'_>) -> Result<Choice, String
     unlockables::blade_skin_named(word)
         .filter(|skin| holdings.shows(skin))
         .map(Choice::Skin)
-        .ok_or_else(|| {
-            format!("No blade skin \"{word}\": saberskin alone lists them (usage: {USAGE})")
-        })
+        .ok_or_else(|| format!("No kyber \"{word}\": saberskin alone lists them (usage: {USAGE})"))
 }
 
 /// The lines `saberskin` alone prints: every blade skin the player may see
@@ -146,8 +144,7 @@ pub(crate) fn parse(word: &str, holdings: Holdings<'_>) -> Result<Choice, String
 pub(crate) fn listing(setting: &str, holdings: Holdings<'_>) -> Vec<String> {
     let chosen = unlockables::blade_skin(setting).filter(|skin| holdings.shows(skin));
     let mut lines = vec![
-        "Blade skins (saberskin <id> or <number> wears one, saberskin none the stock blade):"
-            .to_owned(),
+        "Kybers (saberskin <id> or <number> wears one, saberskin none the stock blade):".to_owned(),
     ];
     for unlockable in unlockables::blade_skins().filter(|skin| holdings.shows(skin)) {
         let picked = chosen.is_some_and(|chosen| chosen.id == unlockable.id);

@@ -132,10 +132,16 @@ impl Panel {
         vignette(&mut self.ui, frame, viewport, 0.97);
         let colour = holocrons::slot(tier).colour;
         halo(&mut self.ui, frame, colour, 0.2);
+        // A dormant kyber is attuned, not opened (Sol, 15/11/2026).
+        let words = if holocrons::slot(tier).is_kyber() {
+            "Attuning..."
+        } else {
+            "Opening..."
+        };
         text(
             &mut self.ui,
             TextFamily::Display,
-            format_args!("Opening..."),
+            format_args!("{words}"),
             frame.rect(MIDDLE[0] - 400.0, 690.0, 800.0, 44.0),
             34.0 * s,
             color::TEXT,

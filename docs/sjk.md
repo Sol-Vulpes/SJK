@@ -445,7 +445,7 @@ GitHub login) along with their card; the tests reject a person in the history
 without a card. The script's `QUIET` names the topics it leaves out, with every
 commit their merge brought: since 25/10/2026, Sol's hand-given Unique blades
 (`personal/thousand-cranes`, `personal/hearth`, `personal/hearth-full`), which show
-only to their holders ([unlockables.md](unlockables.md#unique-shaders)).
+only to their holders ([unlockables.md](unlockables.md#unique-kybers)).
 
 ## Debug panel
 

@@ -554,7 +554,7 @@ impl Panel {
             RIGHT_X,
             KYBER_Y,
             RIGHT_WIDTH - 440.0,
-            "Kyber crystals",
+            "Dormant kybers",
         );
         text(
             &mut self.ui,
@@ -631,7 +631,7 @@ impl Panel {
             text(
                 &mut self.ui,
                 TextFamily::Body,
-                format_args!("crystal"),
+                format_args!("dormant kyber"),
                 frame.rect(x + 52.0, y + 29.0, CRYSTAL_WIDTH - 100.0, 18.0),
                 13.0 * s,
                 color::QUIET,
@@ -833,7 +833,7 @@ impl Panel {
             if let Some(trade) = recent.trade.as_ref().filter(|_| !recent.gift) {
                 // Came in a trade: from whom, and how long it waits before it trades again.
                 let shown = if recent.opened {
-                    format!("Opened - {trade}")
+                    format!("{} - {trade}", opened_word(tier))
                 } else {
                     trade.clone()
                 };
@@ -851,7 +851,7 @@ impl Panel {
                 text(
                     &mut self.ui,
                     TextFamily::Body,
-                    format_args!("Opened"),
+                    format_args!("{}", opened_word(tier)),
                     frame.rect(x + 38.0, y + 22.0, RECENT_WIDTH - 50.0, 16.0),
                     13.0 * s,
                     color::QUIET,
@@ -994,6 +994,12 @@ impl Panel {
         }
         let one = self.open_one().is_some();
         let all = self.data.openable(self.selected);
+        // A dormant kyber is attuned, not opened (Sol, 15/11/2026).
+        let verb = if self.selected().is_kyber() {
+            "Attune"
+        } else {
+            "Open"
+        };
         // The shop opens with opening.
         let shop = self.data.can_open;
         let total = OPEN_WIDTH
@@ -1026,16 +1032,16 @@ impl Panel {
             &mut self.ui,
             frame,
             [left, BUTTONS_Y, OPEN_WIDTH, BUTTON_HEIGHT],
-            "Open",
+            verb,
             true,
             one,
             false,
             OPEN_TOKEN,
         );
         let label = if all > 1 {
-            format!("Open all ({})", all.min(sjk_identity::OPEN_MAX))
+            format!("{verb} all ({})", all.min(sjk_identity::OPEN_MAX))
         } else {
-            "Open all".to_owned()
+            format!("{verb} all")
         };
         kit::button(
             &mut self.ui,
@@ -1065,11 +1071,12 @@ impl Panel {
         };
         add(&["Up", "Down"], "choose");
         add(&["Tab"], "next");
+        let kyber = self.selected().is_kyber();
         if self.open_one().is_some() {
-            add(&["Enter"], "open");
+            add(&["Enter"], if kyber { "attune" } else { "open" });
         }
         if self.data.openable(self.selected) > 1 {
-            add(&["A"], "open all");
+            add(&["A"], if kyber { "attune all" } else { "open all" });
         }
         add(&["L"], "loot table");
         if self.data.can_open {
@@ -1104,6 +1111,11 @@ impl Panel {
             x = key_hint(&mut self.ui, caps, action, x, y, s) + gap;
         }
     }
+}
+
+/// How one opened is said: a dormant kyber is attuned (Sol, 15/11/2026).
+fn opened_word(tier: &Tier) -> &'static str {
+    if tier.is_kyber() { "Attuned" } else { "Opened" }
 }
 
 /// What the hover card of tier `index` says: how holocrons are found, how often one is
@@ -1164,7 +1176,7 @@ fn edition_lines(slot: usize, data: &Data) -> Vec<crate::menu::sjk::hover::Line>
     ]
 }
 
-/// What the hover card of a kyber crystal's tile says: where crystals come from, what one
+/// What the hover card of a dormant kyber's tile says: where they come from, what one
 /// gives, the pity, and how many the player holds.
 fn crystal_card(tier: &'static Tier, data: &Data) -> crate::menu::sjk::hover::Card {
     use crate::menu::sjk::hover::{Card, Line};

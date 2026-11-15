@@ -24,16 +24,29 @@
 
 # ---- Console & chat ----
 
+[kyber-names]
+area: Menus & settings
+title: Saber shaders are called kybers; kyber crystals are dormant kybers you attune
+change: Every player-facing "shader" of a blade look says kyber (tab, Forge, shop, trades).
+change: Kyber crystals are "Dormant kyber"; Open on them reads Attune, opened reads attuned.
+test: Collection hall: the double tile says Kybers; inside, the breadcrumb Collection > Kybers.
+test: Kybers page, Finishers pill: the breadcrumb says Finishers with its count.
+test: Holocrons tab: Dormant kybers heading; on one, Attune / Attune all and Enter attune.
+test: Attune one: "Attuning..." then the strip; History says Attuned a Rare Dormant Kyber.
+test: Forge, shop, trade window, Inventory, status bar, Settings rows: kyber wording.
+test: With jof.honorNames on: holocrons still read Echoes, kybers keep their name.
+note: Ids, cvars, commands and saved data are unchanged; the hub branch kyber-names matches.
+
 [collection-hall]
 area: Menus & settings
 title: Collection opens on its hall: a tile per kind, Enter in, Esc back out
-change: A grid of tiles (Shaders double), each with its count and news; the model on the right.
+change: A grid of tiles (Kybers double), each with its count and news; the model on the right.
 change: A kind opens under "Collection > <kind>" in place of the tab row; Esc comes back.
 test: Main page > Collection: the hall; arrows move, Enter opens, hover + click work too.
 test: In a kind: Ctrl+Tab steps to the next kind; Esc or the breadcrumb returns to the hall.
 test: Esc on the hall leaves; unlockables / achievements / holocrons skip the hall.
-test: Holocrons tile, then Esc: back on the hall; Finishers tile opens Shaders on Finishers.
-test: Tile news: 2 new shaders, holocrons to open, deal of the day, toys on, last History line.
+test: Holocrons tile, then Esc: back on the hall; Finishers tile opens Kybers on Finishers.
+test: Tile news: 2 new kybers, holocrons to open, deal of the day, toys on, last History line.
 test: The model turns into the right column, wearing your blade; the line names blade/tag.
 test: 4:3, 21:9 and ui_textScale 1.4: the grid reflows (3, 4 or 6 across) and scrolls.
 test: Settings > Interface "Collection hall" off: Collection opens on the kind used last.
@@ -44,7 +57,7 @@ area: Menus & settings
 title: Collection hall: tiles drawn full, worn line and Loadouts over the model's head
 change: Each tile draws what it holds: blades, tier bars, toys, medals, holocrons, prices.
 change: "Wearing now", the blade / finisher / tag line and Loadouts (P) sit over the head.
-test: Shaders: worn + new blades as live strips, each tier's held/total and bar on the right.
+test: Kybers: worn + new blades as live strips, each tier's held/total and bar on the right.
 test: Toys tile: Illuminate on = lit with a gold dot; the others faint. Medals: given ones lit.
 test: Achievements: big "38 / 50" figure; Holocrons: tier pictures with counts.
 test: Forge: deal of the day blade + price (after the Forge was opened once); Inventory figures.
@@ -55,7 +68,7 @@ note: No cards held shows three blank cards and "No cards yet"; with cards, thei
 [collection-inventory]
 area: Menus & settings
 title: Collection > Inventory: one list of everything you own, with counts
-change: A tab after History: currencies, sealed holocrons and crystals, shaders, finishers,
+change: A tab after History: currencies, sealed holocrons and dormant kybers, kybers, finishers,
 change: tags and cards, each with its tier in colour and how many, under a heading per kind.
 test: collection, Ctrl+Tab to Inventory: credits and shards match the Forge; holocrons the tab's.
 test: S cycles Tier / Name / Quantity; the sort segments click too; Up/Down skip the headings.

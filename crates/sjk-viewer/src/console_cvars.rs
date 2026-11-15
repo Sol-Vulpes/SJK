@@ -543,7 +543,7 @@ pub(super) fn register_daily_cvars(cvars: &mut CvarRegistry) -> Result<(), sjk_s
             crate::audio::SKIN_SOUNDS_CVAR,
             1_i64,
             archive,
-            "Blade skin sounds: 0 stock saber sounds only, 1 over the stock ones, 2 in their place",
+            "Kyber sounds: 0 stock saber sounds only, 1 over the stock ones, 2 in their place",
         ),
         CvarDefinition::new(
             "cg_jetpackOnSound",
@@ -1073,7 +1073,7 @@ pub(super) fn register_daily_cvars(cvars: &mut CvarRegistry) -> Result<(), sjk_s
             crate::blade_lab_designs::CVAR,
             true,
             archive,
-            "Draw the blade skins from Creyon's Blade Lab as the lab drew them",
+            "Draw the kybers from Creyon's Blade Lab as the lab drew them",
         ),
         CvarDefinition::new(
             crate::toy_saved::ORDER66_CVAR,
@@ -1224,7 +1224,7 @@ pub(super) fn register_daily_cvars(cvars: &mut CvarRegistry) -> Result<(), sjk_s
             crate::duel_blades::CVAR,
             false,
             archive,
-            "Draw every blade stock, in its own colour, in a duel you play or follow and on Duel or Power Duel servers; 0 keeps blade skins",
+            "Draw every blade stock, in its own colour, in a duel you play or follow and on Duel or Power Duel servers; 0 keeps kybers",
         ),
         CvarDefinition::new(
             crate::stock_blades::CVAR,
@@ -1328,13 +1328,13 @@ pub(super) fn register_daily_cvars(cvars: &mut CvarRegistry) -> Result<(), sjk_s
             crate::unlockables::SABER_SKIN_CVAR,
             "",
             archive,
-            "The blade skin your sabers wear, by unlock id (saber_sun: the Sun blade), shown once your SJK profile holds it; empty for the stock blade",
+            "The kyber your sabers wear, by unlock id (saber_sun: the Sun blade), shown once your SJK profile holds it; empty for the stock blade",
         ),
         CvarDefinition::new(
             crate::looks::SECOND_CVAR,
             "",
             archive,
-            "The blade skin your second saber wears, by unlock id; empty for the same as the first (cg_saberSkin), stock for the stock blade",
+            "The kyber your second saber wears, by unlock id; empty for the same as the first (cg_saberSkin), stock for the stock blade",
         ),
         CvarDefinition::new(
             crate::finishers::CVAR,
@@ -1346,13 +1346,13 @@ pub(super) fn register_daily_cvars(cvars: &mut CvarRegistry) -> Result<(), sjk_s
             crate::saber_sound_choice::CVAR,
             "",
             archive,
-            "The saber sounds you hear and other SJK players hear for your sabers: empty follows your saber shader, stock the stock sounds, or a shader you own by unlock id (saber_sun: the Sun blade's)",
+            "The saber sounds you hear and other SJK players hear for your sabers: empty follows your kyber, stock the stock sounds, or a kyber you own by unlock id (saber_sun: the Sun blade's)",
         ),
         CvarDefinition::new(
             crate::saber_skin_options::CVAR,
             "",
             archive,
-            "The blade skins' parts you switched off, skin.option words (saber_sun.haze: the Sun blade without its heat haze); every SJK player sees your blade so",
+            "The kybers' parts you switched off, skin.option words (saber_sun.haze: the Sun blade without its heat haze); every SJK player sees your blade so",
         ),
         CvarDefinition::new(
             crate::quick_wheel::SOUNDS_CVAR,
@@ -1738,7 +1738,7 @@ pub(super) fn register_daily_cvars(cvars: &mut CvarRegistry) -> Result<(), sjk_s
             crate::tactical::CVAR,
             0_i64,
             archive,
-            "Tactical mode: 0 off, 1 minimal (no emotes, toys or pop-ups from others), 2              medium (also Vanilla graphics, no weather, fog or blade skins), 3 max (also a              flat world, others plain in cg_tacticalModel with a blue stock saber); your              settings come back when it drops",
+            "Tactical mode: 0 off, 1 minimal (no emotes, toys or pop-ups from others), 2              medium (also Vanilla graphics, no weather, fog or kybers), 3 max (also a              flat world, others plain in cg_tacticalModel with a blue stock saber); your              settings come back when it drops",
         ),
         CvarDefinition::new(
             crate::tactical::DUEL_CVAR,

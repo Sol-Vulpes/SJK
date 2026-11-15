@@ -178,10 +178,10 @@ fn gift_words(gift: &sjk_identity::GiftRow) -> (String, Color) {
         }
         "unlock" => match crate::unlockables::find(&gift.what) {
             Some(unlockable) => (
-                format!("Shader {} {}", unlockable.number_text(), unlockable.name),
+                format!("Kyber {} {}", unlockable.number_text(), unlockable.name),
                 unlockable.tier.colour(),
             ),
-            None => (format!("Shader {}", gift.what), color::GOLD_BRIGHT),
+            None => (format!("Kyber {}", gift.what), color::GOLD_BRIGHT),
         },
         _ => match crate::holocrons::any(&gift.what) {
             Some(tier) => (tier.title().into_owned(), tier.colour),
@@ -798,14 +798,7 @@ impl Panel {
     fn unlockables(&mut self, frame: &Frame, profile: &Profile) {
         let s = frame.s;
         let top = SECTION_TOP - 20.0;
-        kit::heading(
-            &mut self.ui,
-            frame,
-            RIGHT_X,
-            top,
-            RIGHT_WIDTH,
-            "Saber shaders",
-        );
+        kit::heading(&mut self.ui, frame, RIGHT_X, top, RIGHT_WIDTH, "Kybers");
         // The filter and Held only.
         let field = [RIGHT_X, top + 18.0, RIGHT_WIDTH - 140.0, 36.0];
         let focused = self.focus == UNLOCK_FILTER_TOKEN;
@@ -883,9 +876,9 @@ impl Panel {
                 RIGHT_X,
                 list_top + 4.0,
                 if self.unlock_held {
-                    "No held shader matches."
+                    "No held kyber matches."
                 } else {
-                    "No shader matches."
+                    "No kyber matches."
                 },
             );
         }
@@ -1024,12 +1017,12 @@ impl Panel {
             MIDDLE_X,
             HOLOCRONS_TOP - 36.0,
             MIDDLE_WIDTH,
-            &crate::terms::say("Holocrons and kyber crystals"),
+            &crate::terms::say("Holocrons and dormant kybers"),
         );
         let counts = holocrons::counts_of(&profile.holocron_counts);
         let crystals = crystal_counts(profile);
         let holocrons_word = crate::terms::say("Holocrons");
-        for (line, (what, held)) in [(&*holocrons_word, counts), ("Crystals", crystals)]
+        for (line, (what, held)) in [(&*holocrons_word, counts), ("Dormant kybers", crystals)]
             .into_iter()
             .enumerate()
         {
@@ -1128,7 +1121,7 @@ impl Panel {
         ) {
             (_, Some(why), _) => why.to_owned(),
             (true, None, _) => format!(
-                "Give: {} {}, opened to a saber shader",
+                "Give: {} {}, attuned to a kyber",
                 chosen.article(),
                 chosen.name
             ),
@@ -1163,7 +1156,10 @@ impl Panel {
             text(
                 &mut self.ui,
                 TextFamily::Body,
-                format_args!("{}", crate::terms::say("No holocrons or crystals yet.")),
+                format_args!(
+                    "{}",
+                    crate::terms::say("No holocrons or dormant kybers yet.")
+                ),
                 frame.rect(MIDDLE_X, rows_y, MIDDLE_WIDTH, 24.0),
                 16.0 * s,
                 color::MUTED,
@@ -1476,7 +1472,7 @@ impl Panel {
                 ),
             ),
             (
-                "Kyber crystals",
+                "Dormant kybers",
                 format!(
                     "{} uncommon, {} rare, {} legendary, {} mythical unopened",
                     crystals[0], crystals[1], crystals[2], crystals[3]
@@ -2082,7 +2078,7 @@ impl Panel {
         let mut x = MIDDLE_X;
         for (label, width, view, token) in [
             ("Overview", 104.0, View::Overview, OVERVIEW_TAB_TOKEN),
-            ("Medals, shaders", 158.0, View::Rewards, REWARDS_TAB_TOKEN),
+            ("Medals, kybers", 158.0, View::Rewards, REWARDS_TAB_TOKEN),
             (
                 "Holocrons, credits",
                 176.0,

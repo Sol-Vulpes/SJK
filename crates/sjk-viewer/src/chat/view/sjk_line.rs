@@ -839,7 +839,7 @@ mod tests {
             .collect();
         let starts: Vec<_> = runs
             .iter()
-            .filter(|(text, ..)| text.starts_with("Fox opened"))
+            .filter(|(text, ..)| text.starts_with("Fox attuned"))
             .map(|(_, rect, colour)| (rect.x, rgb(*colour)))
             .collect();
         assert_eq!(starts.len(), 2, "{runs:?}");

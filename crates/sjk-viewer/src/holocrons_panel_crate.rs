@@ -401,7 +401,7 @@ mod tests {
                     crystal.id
                 );
             }
-            let strip = strip(crystal.slot, 4_000_000_001, Item::New("saber shader"));
+            let strip = strip(crystal.slot, 4_000_000_001, Item::New("kyber"));
             assert_eq!(strip.len(), TILES);
             assert!(
                 strip

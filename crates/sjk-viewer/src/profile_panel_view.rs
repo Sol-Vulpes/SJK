@@ -1283,13 +1283,13 @@ impl Panel {
                 .count();
             // Out of the shaders the player sees: an unheld Unique one is not counted.
             (
-                format!("{owned} of {} shaders owned", holdings.listed_count()),
+                format!("{owned} of {} kybers owned", holdings.listed_count()),
                 30.0,
                 color::TEXT,
             )
         } else {
             (
-                crate::terms::say("Medals, shaders, toys and more, kept on the SJK hub")
+                crate::terms::say("Medals, kybers, toys and more, kept on the SJK hub")
                     .into_owned(),
                 17.0,
                 color::MUTED,

@@ -285,7 +285,7 @@ impl Unlock {
                 promoted: Some(_), ..
             } => "MEDAL PROMOTED",
             Self::Medal { .. } => "NEW MEDAL",
-            Self::Holocron { tier, .. } if tier.is_kyber() => "NEW KYBER CRYSTAL",
+            Self::Holocron { tier, .. } if tier.is_kyber() => "NEW DORMANT KYBER",
             Self::Holocron { .. } => "NEW HOLOCRON",
             Self::Update { .. } => "UPDATE AVAILABLE",
             Self::Reward { .. } => "CONTRIBUTOR REWARD",
@@ -426,7 +426,7 @@ impl fmt::Display for Description {
             }
             Unlock::Reward { .. } => formatter.write_str("Open the game menu to claim it"),
             Unlock::Wished { .. } => {
-                formatter.write_str("A shader on your wishlist is in the shop today")
+                formatter.write_str("A kyber on your wishlist is in the shop today")
             }
             Unlock::Content {
                 files,
@@ -1661,8 +1661,8 @@ mod tests {
         };
         assert_eq!(gift.description().to_string(), "A gift from the SJK team");
         // An achievement's tag is the kyber crystal it brings (21/10/2026).
-        assert_eq!(kind("streak_5").tag(), "Reward: Uncommon Kyber Crystal");
-        assert_eq!(kind("kills_1000").tag(), "Reward: Mythical Kyber Crystal");
+        assert_eq!(kind("streak_5").tag(), "Reward: Uncommon Dormant Kyber");
+        assert_eq!(kind("kills_1000").tag(), "Reward: Mythical Dormant Kyber");
         // Unlocked without a hub (identity off), it brings no crystal: its category.
         let local = Unlock::Achievement {
             kind: achievements::find("streak_5").expect("Rampage"),
@@ -1675,8 +1675,8 @@ mod tests {
             gift: false,
             earned: Some(crate::kyber::Earned::of("")),
         };
-        assert_eq!(crystal.kicker(), "NEW KYBER CRYSTAL");
-        assert_eq!(crystal.name().to_string(), "Rare Kyber Crystal");
+        assert_eq!(crystal.kicker(), "NEW DORMANT KYBER");
+        assert_eq!(crystal.name().to_string(), "Rare Dormant Kyber");
         assert_eq!(
             crystal.description().to_string(),
             "Earned from an achievement"

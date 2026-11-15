@@ -166,7 +166,7 @@ seconds, when its unlocks look out of date: the hub refused a blade skin
 last one sent, with another blade skin (staff took it back).
 
 Opening the game menu (Escape on a server, since 27/10/2026) reads what its pages show
-of the hub at once: the profile (achievements, medals, unlocks, kyber crystals), the
+of the hub at once: the profile (achievements, medals, unlocks, dormant kybers), the
 holocron progress and the trades, at most once every 15 seconds (`Service::menu_opened`,
 `player_identity::follow_game_menu`), and sends achievement counts that changed since the
 last sending, at most once every 30 seconds (the hub takes 40 in 10 minutes from an
@@ -505,7 +505,7 @@ With the JoF tools on, medals are called "Honors" by default
 
 A medal is recognition the SJK team gives a player by hand: for testing SJK,
 contributing to its code, finding bugs or donating to SJK. Since 10/10/2026 (Sol's decision)
-a medal may bring one saber shader for as long as the player holds it: Tester the
+a medal may bring one kyber for as long as the player holds it: Tester the
 Hologram blade, Contributor the Runic blade, Bug Hunter the Glitch blade; Supporter
 brings none. The hub derives
 it from the medal and takes it back with the medal's last award, off the player's look
@@ -884,7 +884,7 @@ on the hub, in the SJK UI's look in every menu style:
   selection or the whole bio. Its lines wrap and the caret measures in the player's
   menu text style;
 - their medals (picture, name, date given; on its own only) and how many
-  achievements are unlocked, with See the board, and how many saber shaders are owned,
+  achievements are unlocked, with See the board, and how many kybers are owned,
   with See the collection: both open the [Collection](sjk-ui.md#collection), where the
   medals hang on a rail (every medal the client knows, the ones given first with their
   whole picture, when they were given, what they are for and the team's note, the
@@ -1045,13 +1045,13 @@ clients show the stand-in.
 ## Achievements
 
 An achievement is a milestone of the player's own play. Since 21/10/2026 each brings a
-kyber crystal once, when it unlocks ([holocrons.md](holocrons.md#kyber-crystals)): Uncommon
+dormant kyber once, when it unlocks ([holocrons.md](holocrons.md#dormant-kybers)): Uncommon
 for most, Rare for the harder ones, Legendary for Duel Master, Veteran, Keeper of the
 Holocrons and Full Set, Mythical for Legend of the Arena. The Collection's Achievements tab says it under the achievement up
-close ("Reward: Rare Kyber Crystal" after the crystal's gem, in its colour), its hover card
+close ("Reward: Rare Dormant Kyber" after the dormant kyber's gem, in its colour), its hover card
 ends with it, and the unlock card says it at the right of "ACHIEVEMENT UNLOCKED" in place
 of the category when the hub unlocked it (not with the identity off, which brings no
-crystal; see below). The hub's `reward` on each achievement wins over the client's own table
+dormant kyber; see below). The hub's `reward` on each achievement wins over the client's own table
 (`kyber::REWARDS`) once it sends one. The catalogue, in [achievements.rs](../crates/sjk-viewer/src/achievements.rs)
 and in the hub (same ids):
 
@@ -1072,8 +1072,8 @@ and in the hub (same ids):
 | Bug Reporter | `bug_reporter` | a bug report the hub took | hub |
 | Surveyor (retired 26/10/2026) | `surveyor` | 5 world notes the hub took | hub |
 | Decorated | `decorated` | a medal | hub |
-| Collector, Archivist, Keeper of the Holocrons | `holocrons_10`, `holocrons_50`, `holocrons_200` | 10, 50, 200 holocrons opened (kyber crystals not counted) | hub |
-| Touched by the Force (hidden) | `mythical_find` | a Mythical shader or card from a holocron | hub |
+| Collector, Archivist, Keeper of the Holocrons | `holocrons_10`, `holocrons_50`, `holocrons_200` | 10, 50, 200 holocrons opened (dormant kybers not counted) | hub |
+| Touched by the Force (hidden) | `mythical_find` | a Mythical kyber or card from a holocron | hub |
 | Craftsman | `craft_blade` | a blade crafted from a card | hub |
 | Master Craftsman | `craft_finishes` | a blade crafted from a card of every finish (3: Normal, Holo, Solar, `cards::FINISHES`); three crafts from cards of one finish count 1 | hub |
 | Full Set | `full_set` | every Common and Uncommon card of any one set, in any finish, revealed copies only (sealed ones do not count) | hub |
@@ -1240,7 +1240,7 @@ signed request, at most once a minute while they change, and unchanged again an 
 later when the hub held part back; changed counts go at the minute even after a hold,
 so an achievement unlocked then reaches the hub within a minute). When the hub's answer
 unlocks an achievement, the profile is read again within 30 seconds, so its kyber
-crystal is listed at once rather than at the next ten-minute reading (reports 149 and
+dormant kyber is listed at once rather than at the next ten-minute reading (reports 149 and
 150, 26/10/2026). The hub keeps each key's best count, up to the goal, and when it was
 reached. Because the hub cannot see a match, it takes the counts as the player's own
 record and bounds how fast each may rise (an hourly allowance per achievement: what
@@ -1252,16 +1252,16 @@ Since 26/10/2026 the hub has the last word on the achievements the client counts
 the identity on and a hub address (`player_identity::hub_on`, whether the hub answers
 or not), one whose count reaches its goal here is not unlocked yet: it waits for the hub
 (`Record::awaiting`, kept in `achievements.json`), which takes the count at its hourly
-pace, unlocks it and grants its crystal minutes to hours later. Until then the board
+pace, unlocks it and grants its dormant kyber minutes to hours later. Until then the board
 and the hover card show it reached but "Waiting for the SJK hub" (`Standing::waiting`),
 and nothing is announced. Once the hub's profile holds it unlocked (`unlocked` above 0),
-the client announces it, with its crystal, once, at the next reading after it, also
+the client announces it, with its dormant kyber, once, at the next reading after it, also
 when the hub unlocked it while the game was closed. An achievement the hub unlocked that
 did not wait here (reached on another PC) is not announced. Before, the client unlocked
-and announced it with "Reward: ... Kyber Crystal" at once, and players read that a
-crystal had come while the hub had not unlocked it yet. With the identity off, or no hub
+and announced it with "Reward: ... Dormant Kyber" at once, and players read that a
+dormant kyber had come while the hub had not unlocked it yet. With the identity off, or no hub
 address, there is no hub to wait for: the client unlocks it and announces it at once,
-with its category where the reward would stand, as no crystal comes; what was waiting
+with its category where the reward would stand, as no dormant kyber comes; what was waiting
 for the hub when the identity is turned off unlocks the same way. Achievements the hub
 counts are unchanged.
 
@@ -1334,7 +1334,7 @@ call): on the Staff page's Overview, beside Verify, their own **Make staff** or
 own player, and admin panel access stays the operator's.
 
 Since 23/10/2026 (Sol's call) what takes back, clears or merges is the creator's alone
-too: taking back medals, saber shaders and holocrons, credits and shards (given or taken),
+too: taking back medals, kybers and holocrons, credits and shards (given or taken),
 clearing achievements, taking a picture down and unlinking keys. The hub refuses those
 requests from other staff (an error `creator_only`); on their Staff page those buttons show
 dimmed, Tab skips them and a press does nothing (`owner_only` in `staff_panel.rs`), the
@@ -1343,14 +1343,14 @@ owner unlinks. Merging keys was the creator's too until 13/11/2026, when Sol ope
 every staff member (still never a staff player merged away, nor the creator).
 
 Since 08/11/2026 (Sol's call) every staff member gives, from the Staff page: medals (and
-their rank), saber shaders, holocrons and kyber crystals (`gift` in `staff_panel.rs`; the
+their rank), kybers, holocrons and dormant kybers (`gift` in `staff_panel.rs`; the
 hub's `PROTOCOL.md`, "Staff"). Three limits keep it from becoming a source of loot, and the
 creator has none of them:
 
 - never to themselves (their own person, by any of their keys): the hub refuses it
   (`own_gift`), and on their own player the page dims every Give, Rank and Unlock with
   "Staff cannot give to themselves";
-- only the saber shaders holocrons can bring (`droppable`): a Unique one, a medal's blade
+- only the kybers holocrons can bring (`droppable`): a Unique one, a medal's blade
   or a blade not opened to drops yet stays the creator's to give (`creator_only`); its row
   says "owner only" and its Unlock is dimmed;
 - a number a day (the hub's `GIFTS_PER_DAY`, 20 to begin with, gifts undone not counted):
@@ -1402,7 +1402,7 @@ key ("Merged the other player into this one", "Unlinked the key: it starts afres
 
 - **Overview**, where the page opens: the account (flags, trust, member since, last seen,
   keys counted, medals and unlockables held, achievements, unopened holocrons and kyber
-  crystals, credits, shards and cards), Verify (`StaffRequest::Verify`; Unverify while the player is
+  dormant kybers, credits, shards and cards), Verify (`StaffRequest::Verify`; Unverify while the player is
   verified), the last six names the hub kept, and moderation: their picture (Take down,
   `StaffRequest::AvatarRemove`; Block pictures and Allow pictures,
   `StaffRequest::AvatarBlock`, [Pictures](#pictures)) and the SJK chat (Mute at the hub
@@ -1419,14 +1419,14 @@ key ("Merged the other player into this one", "Unlinked the key: it starts afres
   28/10/2026, each press picks the rank Give gives it at, shown as "gives at IV", sent as
   `rank` in `POST /v1/staff/award` only above I, back to I once given), Give
   (Give +1 for a repeatable one already held) and Take back (one award; a repeatable one
-  counts down); beside them the saber shaders (every unlockable), with a filter over them
+  counts down); beside them the kybers (every unlockable), with a filter over them
   (since 08/11/2026: a name or part of one, a number such as `42`, `042` or `#42`, a tier
   such as `mythical`, or the id; the list follows the typing) and **Held only**, each with
   its number, its tier or since when the player holds it: Unlock (`StaffRequest::Unlock`)
   and Relock (`StaffRequest::Relock`), in pages with `<` and `>`;
-- **Holocrons and credits**: the player's holocrons and kyber crystals, the four holocron
-  tiers and under them the four crystal tiers to choose, Give (`StaffRequest::HolocronGive`)
-  and their twelve newest holocrons and crystals with Remove
+- **Holocrons and credits**: the player's holocrons and dormant kybers, the four holocron
+  tiers and under them the four dormant kyber tiers to choose, Give (`StaffRequest::HolocronGive`)
+  and their twelve newest holocrons and dormant kybers with Remove
   (`StaffRequest::HolocronRemove`, on a second press within 3 seconds)
   ([holocrons.md](holocrons.md#staff)); beside them their credits and kyber shards, an
   amount (digits only) and Give credits, Take credits, Give shards and Take shards
@@ -1456,8 +1456,8 @@ key ("Merged the other player into this one", "Unlinked the key: it starts afres
   hub" without a translator) and the languages translated from over 30 days. Counts
   only: the hub names no one; and, since
   08/11/2026, **My gifts**, the staff member's own gifts of the last day, newest first
-  (`StaffQuery::Gifts`, `POST /v1/staff/gifts`): what (a medal and its rank, a shader by
-  number and name, a holocron or crystal tier), to whom, when and the note, and how many
+  (`StaffQuery::Gifts`, `POST /v1/staff/gifts`): what (a medal and its rank, a kyber by
+  number and name, a holocron or dormant kyber tier), to whom, when and the note, and how many
   gifts are left today ("no daily limit" for the creator), each with Undo on a second
   press (`StaffRequest::GiftUndo`, `POST /v1/staff/gift-undo` with the gift's number; the
   answer is the player's profile, which replaces theirs on the page, and the gift is marked
@@ -1547,7 +1547,7 @@ leaves the game.
   localhost only.
 - `profile` opens the Profile page (again: closes it), in the SJK UI the Profile
   screen's SJK Profile tab; `collection` opens the Collection, `achievements` on its
-  Achievements tab and `unlockables` on its Shaders tab (in the SJK UI the Collection
+  Achievements tab and `unlockables` on its Kybers tab (in the SJK UI the Collection
   screen, [sjk-ui.md](sjk-ui.md#collection)).
 - `staff` opens the Staff page, for a staff key only (again: closes it); `staff <name or
   key id>` opens it searching for that player, and chooses them when the search finds
@@ -1559,7 +1559,7 @@ leaves the game.
   wears; it applies, and is sent, only while the own profile lists it
   ([unlockables.md](unlockables.md)). `saberskin` lists the blade skins (owned or
   locked) and `saberskin <id>`/`none` sets it; `unlockables` opens the Collection's
-  Shaders tab, where owned ones are equipped.
+  Kybers tab, where owned ones are equipped.
 - `cl_shareModels` (default 1; Settings > Network > Share my model list) sends the
   player model folders the game has, so other SJK players' cards say whether they see
   the model you wear ([Installed models](#installed-models)); 0 makes the hub forget
