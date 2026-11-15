@@ -1659,16 +1659,61 @@ SJK CHAT, opening the SJK chat page),
 the in-game SJK pop-up's Collection, the Profile page's See the collection and the
 `collection`, `achievements` and `unlockables` commands open it on its own ("Back"); the `holocrons` command opens its Holocrons tab
 (the Holocrons page). It remembers its tab and what is chosen on each
-for the run.
+for the run. Since 15/11/2026 the entries that name no kind (the main page's and the
+game menu's Collection, SJK > COLLECTION, the SJK pop-up's, See the collection and the
+`collection` command, which closes it again from any of its pages) open it on its hall;
+`unlockables`, `achievements`, `holocrons`, the Saber Lab and every way to a kind (the
+Holocrons tab's Shop, a blade card's Forge link) open that kind directly.
 
+- **The hall** (15/11/2026, Sol's pick of "The hall" from the Collection's design
+  proposals, [collection_hall.rs](../crates/sjk-viewer/src/collection_hall.rs)): the
+  Collection's landing page, `Tab::Hall`, off the kinds' order. A grid of large tiles,
+  one to each kind: Shaders across two cells, Finishers (the Shaders tab's Finishers
+  pill), Tags, Toys, Medals, Achievements, Cards, Holocrons, Forge, Inventory, History,
+  and the Saber Lab while the lab is on. A tile is a dark glass card (the chosen one
+  framed gold): the kind's name and the tab's count after it, lines of what the client
+  already holds, and a gold bar of the share held for a kind with a set total. Shaders:
+  "14/166 · 2 new", the blade worn in its tier's colour and up to two New ones;
+  Finishers: held of all and the one worn; Tags: the tag chosen and its finish; Toys:
+  the toys on now; Medals: the ones given; Achievements: the open one nearest to
+  unlocking with "19 / 25"; Cards: the copies held; Holocrons: "3 to open" and each
+  tier's count in its colour; Forge: the kyber shards, the deal of the day once the shop
+  was read (in its tier's colour), the duplicates to break down and the Forge's gold dot;
+  Inventory: credits and kyber shards, then shaders, tags and kyber crystals; History:
+  the newest line read (its date and sentence) once the History tab has read the hub,
+  else what the tab holds. A summary the client does not know is left out, never
+  guessed, and nothing new is asked of the hub; the summaries are made again four times
+  a second. On the right, the model's column (300 wide, up to 480 in wider windows, 60 from the
+  window's right edge; the model never past 88 % of the window across):
+  "Wearing now" over it, the model in the whole look worn (on the menu map's stage the
+  backdrop camera turns until it stands there, `menu_stage::hall_turn`,
+  `menu_backdrop::window_yaw`; over a match the live preview drawn there), and under it
+  the blade in its tier's colour, the finisher and the tag, and Loadouts (P). The grid
+  reflows rather than scales: the hall's frame is 1080 lines tall and as wide as the
+  window (`hall::hall_frame`), three columns under 1700 of its pixels (4:3, a 3 by 4
+  grid), four to 2200 (16:9, 4 by 3), six past (21:9, 6 by 2); a tile is at least 156
+  tall times `ui_textScale`, and rows that do not fit scroll (a row a wheel notch, the
+  arrows keeping the chosen one in view, a thin bar at the grid's right). Keys: the
+  arrows move across the tiles (Up and Down to the nearest tile straight above or
+  below), Tab and Shift+Tab, Page Up, Page Down, Home and End choose, Enter or Space
+  opens, P shows the Loadouts card, Escape leaves the Collection; resting the pointer
+  chooses a tile, a click opens it. Ctrl+Tab from the hall opens the first kind
+  (Ctrl+Shift+Tab the last). `ui_collectionHall` (Settings > Interface "Collection
+  hall", on by default) opens the Collection on the hall; off, on the kind used last.
+  Discord says "Looking at their collection" there. World shot:
+  `world_shot_collection::duel6_sjk_collection_hall` (16:9, 4:3, 21:9 with the Forge's
+  tile chosen, 4K at `ui_textScale 1.4`, then the Shaders page under its breadcrumb).
 - **Top:** the way back and "Collection" as the title; at the top right how many of
   all things the player holds ("15 of 30 collected") over a thin bar as wide as
   those words, a stretch to each tab in the tabs' order, filled gold as far as that
-  tab's share held (one tick a thing until 21/10/2026, a barcode at two hundred things). Under the title the row of tabs
-  (`profile_hub::collection_header`), each name with its count after it in small
-  Rajdhani ("2/3", "11/34", how many holocrons for Holocrons; nothing while unknown or empty), the one on show gold and
-  underlined. Drawn in Inter (the families not loaded, the classic menus), the row
-  makes room for the wider face. Over the map (Shaders, Toys) a band of
+  tab's share held (one tick a thing until 21/10/2026, a barcode at two hundred things). Under the title, inside a
+  kind, the breadcrumb (`profile_hub::collection_header`, since 15/11/2026 in place of
+  the row of tabs): "Collection", which goes back to the hall (`profile_hub::HALL_TOKEN`),
+  a quiet "›", and the kind's name in gold, underlined, with its count after it in small
+  Rajdhani ("2/3", "11/34", how many holocrons for Holocrons; nothing while unknown or
+  empty). Until 15/11/2026 it was the row of tabs, each name with its count, the one on
+  show gold and underlined. Drawn in Inter (the families not loaded, the classic menus), the
+  breadcrumb makes room for the wider face. Over the map (Shaders, Toys) a band of
   the page's dark stands behind the title, the tally and the tabs, solid to y 200 and
   fading out by 290, as on the Holocrons page (25/10/2026, Sol: the tabs must read over
   any map, the bright pillar of duel6 included).
@@ -1855,8 +1900,8 @@ for the run.
 - **Holocrons** ([holocrons_panel.rs](../crates/sjk-viewer/src/holocrons_panel.rs),
   [holocrons_panel_view.rs](../crates/sjk-viewer/src/holocrons_panel_view.rs),
   [holocrons.md](holocrons.md#the-holocrons-tab), 10/10/2026, Sol's holocron drops): a
-  console page of its own (the Collection's sixth tab; the Collection's row is drawn on it,
-  its counts read from the identity, `collection_panel::row_labels`), with the world left clear on the left: a 3D holocron turns
+  console page of its own (the Collection's sixth tab; the Collection's breadcrumb is drawn
+  on it, its count read from the identity, `collection_panel::row_labels`), with the world left clear on the left: a 3D holocron turns
   and bobs there in the look of the tier chosen, with that tier's colour of point light
   (the backdrop camera parks on its own shot: duel6's garden, a cut through dark on the
   tour; the classic style does not hide the world under it); under it the tier's name at 46
@@ -1881,7 +1926,9 @@ for the run.
   1 to 4, Home, End) choose the tier, which swaps the 3D holocron at once (it shrinks away
   and the new look grows in); Enter opens one, A opens all (a card asks "Open all 7 holocrons?" first, Open all or
   Cancel, [cards.md](cards.md#in-the-client)), L shows the loot table; a click on a row chooses it;
-  Ctrl+Tab goes on to the Forge; Escape leaves. Shop (or S) shows the Forge on its Shop
+  Ctrl+Tab goes on to the Forge; Escape (or the breadcrumb's Collection) comes back to the
+  hall, on the Collection screen and when the hall opened the page on its own (classic
+  menus), else it leaves. Shop (or S) shows the Forge on its Shop
   (the shop was an overlay of this tab until 21/10/2026). The `holocrons` command opens it as the
   Collection's tab (again to close); the SJK Profile tab's Holocrons block has See holocrons
   (the classic menus' Profile page too, opening the page on its own). Until the
@@ -2065,9 +2112,12 @@ for the run.
   itself. The words beside the model stand on cards of their own at every window shape,
   and the backdrop camera keeps the model in the stage's column (Fit, above).
 - **Keys and pointer:** the keys line names what the arrows and Enter do on the tab,
-  Ctrl+Tab and the next tab, Esc back. Ctrl+Tab (Ctrl+Shift+Tab back) changes tab, as
-  on the Profile screen; a click on a tab shows it; hovering a thing chooses it; a
-  click on Equip, Unequip, the toy or its switch acts.
+  Ctrl+Tab and the next kind, "Esc Collection". Ctrl+Tab (Ctrl+Shift+Tab back) steps to
+  the next kind directly, as on the Profile screen; Escape, once the kind's own uses of it
+  are done (a field, a note, a card up close), comes back to the hall on that kind's
+  tile, as a click on the breadcrumb's Collection does; the way back at the top still
+  leaves the Collection; hovering a thing chooses it; a click on Equip, Unequip, the toy
+  or its switch acts.
 
 ### Marks
 

@@ -32,6 +32,8 @@ Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 -->
 ## Unreleased
 
+= ui_collectionHall: The Collection opens on its hall, a tile to each kind with what is new in it. Off opens it on the kind you used last.
+- The Collection opens on a hall of large tiles, one to each kind (Shaders, Finishers, Tags, Toys, Medals, Achievements, Cards, Holocrons, Forge, Inventory, History), each with what is new in it: shaders New, holocrons to open, the deal of the day, the toys on, the newest History line; your whole look stands beside it with Loadouts (P). Enter opens a kind under a "Collection > Shaders" breadcrumb, Ctrl+Tab steps to the next kind and Esc comes back to the hall; `unlockables`, `achievements` and `holocrons` still open their kind directly. Settings > Interface "Collection hall" (`ui_collectionHall`) opens it on the kind used last instead _(Sol)_
 - Facing a mystery box or a WHEEL OF DOOM, a Possible drops panel fades in under the Use prompt: everything it can give and the chance of each, by the hub's odds _(Sol)_
 - The WHEEL OF DOOM's music is louder and carries farther _(Sol)_
 - A status bar at the top or bottom of the screen with your credits, kyber shards and crystals, DOOM coins, the blade skin you wear in its tier's colour, what is on about you (blade extras, finisher, Tactical, Do not disturb, away) and every toy's switch: Settings > HUD "Status bar" (`cg_statusBar`, off by default), a switch for each part _(Sol)_

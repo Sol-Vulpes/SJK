@@ -1,3 +1,21 @@
+## Collection hall (15/11/2026)
+
+15/11/2026, `personal/collection-hall` based on `main` `af3a7c2c6` (Sol's pick of "The hall"
+from the Collection's design proposals). The Collection opens on a hall of tiles, one to each
+kind with what the client already knows of it (counts, New shaders, holocrons to open, the
+deal of the day, toys on, the newest History line), the model turned into a column on the
+right; a kind opens under a "Collection › Shaders" breadcrumb in place of the row of tabs,
+Ctrl+Tab steps kinds, Escape comes back to the hall; `ui_collectionHall` (on) or off opens on
+the kind used last, and the commands naming a kind skip the hall
+([sjk-ui.md](sjk-ui.md#collection)). Verified: `cargo test -p sjk-viewer` (grid reflow at
+4:3, 16:9, 21:9 and large text, arrows, Enter, Escape, Ctrl+Tab from the hall, the
+breadcrumb, deep links, the setting, the Holocrons page's way back), the startup stack check,
+and the `duel6_sjk_collection_hall` world shots (16:9, 4:3, 21:9, 4K at `ui_textScale 1.4`,
+Shaders under the breadcrumb). `duel6_sjk_collection` (now with an in-game hall shot) was not
+rerun. Not tried in a game: the camera's turn while easing, the live preview's place over a
+match and the History line after a real read are
+unseen live.
+
 ## Status bar (15/11/2026)
 
 15/11/2026, `personal/status-bar` based on `main` `aacf7c07e` (Sol: an in-game status bar at

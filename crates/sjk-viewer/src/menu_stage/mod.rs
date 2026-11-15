@@ -12,6 +12,7 @@
 mod cosmetics;
 mod force_fx;
 mod force_motion;
+mod hall_turn;
 mod hilt_guard;
 mod lab;
 mod load;
@@ -109,6 +110,8 @@ pub(crate) struct MenuStage {
     flourish: lab::Flourish,
     /// The Collection's Toys tab: the Illuminate holocron floats by the model.
     holocron_wanted: bool,
+    /// The Collection's hall: the camera turned to put the model in its column.
+    hall_turn: hall_turn::HallTurn,
     /// The Force shell the preview's model wears (the Force page's power).
     shell: Option<shell::StageShell>,
     /// The beam, puffs, spray or trail the preview's model gives off (the same power).
@@ -242,6 +245,8 @@ impl GpuState {
         self.menu_stage.lone = lone;
         self.menu_stage.lab = wish.and_then(|wish| wish.lab);
         self.menu_stage.ease_lab_view(now);
+        self.menu_stage
+            .ease_hall_turn(wish.is_some_and(|wish| wish.hall), now);
         if let Some(menu) = &mut self.client_menu {
             menu.set_collection_saber(self.menu_stage.lone.is_some());
         }

@@ -92,6 +92,10 @@ pub(crate) enum Tab {
     /// The Saber Lab's blade held, swung and floating, while the lab is on
     /// ([`crate::saber_lab`]).
     SaberLab,
+    /// The Collection's landing page, the hall (15/11/2026, Sol's pick): a tile to each
+    /// kind with what it holds, entered with Enter; off the row, its kinds' tabs are the
+    /// screen's ([`Screen::tabs`]).
+    Hall,
 }
 
 const PROFILE_TABS: [Tab; 4] = [Tab::Character, Tab::Saber, Tab::Force, Tab::Profile];
@@ -162,7 +166,7 @@ pub(crate) const FORGE: &str = "Forge";
 
 impl Tab {
     #[cfg(test)]
-    pub(crate) const ALL: [Self; 16] = [
+    pub(crate) const ALL: [Self; 17] = [
         Self::Character,
         Self::Saber,
         Self::Force,
@@ -179,6 +183,7 @@ impl Tab {
         Self::History,
         Self::Inventory,
         Self::SaberLab,
+        Self::Hall,
     ];
 
     /// The screen the tab is on.
@@ -205,6 +210,7 @@ impl Tab {
             Self::SaberLab => 10,
             // Off the row: after its end.
             Self::Banners => 11,
+            Self::Hall => 12,
         }
     }
 
@@ -214,14 +220,19 @@ impl Tab {
             // Named whether the lab is on or not: a page may still show it as it stops.
             Self::SaberLab => SABER_LAB,
             Self::Banners => "Banners",
+            Self::Hall => COLLECTION,
             _ => self.screen().labels()[self.index()],
         }
     }
 
-    /// The tab after this one on its screen (`forward`) or before it, wrapping.
+    /// The tab after this one on its screen (`forward`) or before it, wrapping; from the
+    /// Collection's hall, its first kind (`forward`) or its last.
     pub(crate) fn next(self, forward: bool) -> Self {
         let tabs = self.screen().tabs();
         let count = tabs.len();
+        if self == Self::Hall {
+            return if forward { tabs[0] } else { tabs[count - 1] };
+        }
         // A tab the row no longer holds (the lab stopped) steps from the row's end.
         let at = self.index().min(count - 1);
         let index = if forward {
@@ -545,10 +556,19 @@ pub(crate) fn header(
     row(canvas, frame, current);
 }
 
+/// The breadcrumb's "Collection", which goes back to the hall: clear of the Profile
+/// row's tokens (`TOKEN + i`).
+pub(crate) const HALL_TOKEN: u16 = TOKEN + 40;
+/// The room on each side of the breadcrumb's separator.
+const CRUMB_GAP: f32 = 14.0;
+/// The breadcrumb's separator.
+const CRUMB_SEPARATOR: &str = "\u{203a}";
+
 /// The top of the Collection screen on tab `current`: the way back (`back`, its words,
-/// answering to `back_token`), its title and the row of tabs with how many of each
-/// tab's things the player holds (`counts`, in the row's order); `widen` as for
-/// [`places`].
+/// answering to `back_token`) and its title; inside a kind, the breadcrumb under them
+/// ("Collection › Shaders", in place of the row of tabs it had until 15/11/2026), its
+/// "Collection" going to the hall ([`HALL_TOKEN`]) and the kind's count after its name
+/// (`counts`, in the row's order); `widen` as for [`places`].
 pub(crate) fn collection_header(
     canvas: &mut MenuCanvas,
     frame: &Frame,
@@ -558,31 +578,101 @@ pub(crate) fn collection_header(
     (counts, widen): (&[String], f32),
 ) {
     top_bar(canvas, frame, back, back_token, COLLECTION, None);
-    // The row the screen holds now: the lab's tab last while the lab is on.
-    let labels: Vec<_> = Screen::Collection
-        .labels()
-        .iter()
-        .map(|label| crate::terms::say(label))
-        .collect();
-    // The Forge's dot while something waits there (10/11/2026).
-    let alert = crate::forge_alert::shown().then(|| Tab::Forge.index());
-    counted_tabs(
+    if current == Tab::Hall {
+        return;
+    }
+    let count = counts.get(current.index()).map_or("", String::as_str);
+    breadcrumb(
         canvas,
         frame,
-        &labels.iter().map(|label| &**label).collect::<Vec<_>>(),
-        counts,
-        current.index(),
-        TOKEN,
+        &crate::terms::say(current.label()),
+        count,
         widen,
-        alert,
     );
 }
 
-/// The Collection screen's tab whose row token is `token`, if it is one.
-pub(crate) fn collection_tab_of(token: u16) -> Option<Tab> {
-    token
-        .checked_sub(TOKEN)
-        .and_then(|index| Screen::Collection.tabs().get(usize::from(index)).copied())
+/// Where the breadcrumb's parts stand (frame pixels): how wide the hall's link from
+/// [`ROW_X`] is, where the separator stands, where the kind's name starts, how wide it is
+/// and how wide its count (with the room before it).
+fn crumb_places(kind: &str, count: &str, widen: f32) -> [f32; 5] {
+    let home = label_width(COLLECTION) * widen;
+    let separator = label_width(CRUMB_SEPARATOR) * widen;
+    [
+        home,
+        ROW_X + home + CRUMB_GAP,
+        ROW_X + home + CRUMB_GAP * 2.0 + separator,
+        label_width(kind) * widen,
+        count_width(count) * widen,
+    ]
+}
+
+/// "Collection › Shaders 14/166" under the title: the way to the hall, hovered brighter,
+/// then the kind in gold with its count, underlined as the tab on show was.
+fn breadcrumb(canvas: &mut MenuCanvas, frame: &Frame, kind: &str, count: &str, widen: f32) {
+    let s = frame.s;
+    let [home, separator_x, kind_x, kind_width, count_width] = crumb_places(kind, count, widen);
+    let hovered = canvas.token_hovered(HALL_TOKEN);
+    text(
+        canvas,
+        TextFamily::Display,
+        format_args!("{COLLECTION}"),
+        frame.rect(ROW_X, ROW_Y, home + 20.0, 34.0),
+        LABEL_SIZE * s,
+        if hovered { color::TEXT } else { color::MUTED },
+        FontWeight::Regular,
+        TextAlign::Start,
+    );
+    canvas.hit_region(
+        HALL_TOKEN,
+        frame.rect(
+            ROW_X - 8.0,
+            ROW_Y - 4.0,
+            home + 16.0,
+            ROW_BOTTOM - (ROW_Y - 4.0),
+        ),
+    );
+    text(
+        canvas,
+        TextFamily::Display,
+        format_args!("{CRUMB_SEPARATOR}"),
+        frame.rect(separator_x, ROW_Y, 30.0, 34.0),
+        LABEL_SIZE * s,
+        color::QUIET,
+        FontWeight::Regular,
+        TextAlign::Start,
+    );
+    text(
+        canvas,
+        TextFamily::Display,
+        format_args!("{kind}"),
+        frame.rect(kind_x, ROW_Y, kind_width + 20.0, 34.0),
+        LABEL_SIZE * s,
+        color::GOLD_BRIGHT,
+        FontWeight::Regular,
+        TextAlign::Start,
+    );
+    if !count.is_empty() {
+        text(
+            canvas,
+            TextFamily::Display,
+            format_args!("{count}"),
+            frame.rect(
+                kind_x + kind_width + COUNT_GAP,
+                ROW_Y - 6.0,
+                count_width + 12.0,
+                24.0,
+            ),
+            COUNT_SIZE * s,
+            color::GOLD,
+            FontWeight::Regular,
+            TextAlign::Start,
+        );
+    }
+    let _ = canvas.draw_list_mut().push(DrawCommand::RoundedRect {
+        rect: frame.rect(kind_x, ROW_Y + 38.0, kind_width, 3.0),
+        radius: 1.5 * s,
+        color: color::GOLD_BRIGHT,
+    });
 }
 
 /// The Profile screen's tab of the row under `point` (window pixels) in a window of
@@ -636,14 +726,35 @@ impl GpuState {
         self.show_profile_hub(tab, ReturnTarget::InGame);
     }
 
-    /// Open the Collection screen from the game menu on the tab it showed last
-    /// (Medals the first time); it returns to the menu's Collection entry.
+    /// Open the Collection screen from the game menu where it opens (its hall, or the
+    /// kind shown last: `ui_collectionHall`); it returns to the menu's Collection entry.
     pub(crate) fn open_collection_from_game(&mut self) {
         let tab = self
             .console
             .as_ref()
-            .map_or(Tab::Medals, crate::console::ViewerConsole::collection_tab);
+            .map_or(Tab::Hall, crate::console::ViewerConsole::collection_landing);
         self.show_profile_hub(tab, ReturnTarget::InGame);
+    }
+
+    /// The `collection` command in the SJK UI: show the Collection screen where it opens,
+    /// or close it when it shows (any of its pages). It returns to the main page from the
+    /// menus, else to the game menu.
+    pub(crate) fn toggle_collection_hub(&mut self) {
+        if self
+            .profile_hub_tab()
+            .is_some_and(|tab| tab.screen() == Screen::Collection)
+        {
+            if let Some(console) = &mut self.console {
+                console.close_profile_hub_page();
+            }
+            self.sync_cursor_policy();
+            return;
+        }
+        let tab = self
+            .console
+            .as_ref()
+            .map_or(Tab::Hall, crate::console::ViewerConsole::collection_landing);
+        self.open_profile_hub(tab);
     }
 
     /// The `profile`, `collection`, `achievements` and `unlockables` commands in the SJK
@@ -877,15 +988,14 @@ mod tests {
         }
         assert_eq!(Tab::of_player_page(2), Tab::Force);
         assert_eq!(Tab::Profile.label(), "SJK Profile");
-        assert_eq!(collection_tab_of(TOKEN + 2), Some(Tab::Shaders));
-        assert_eq!(collection_tab_of(TOKEN + 4), Some(Tab::Tags));
-        assert_eq!(collection_tab_of(TOKEN + 5), Some(Tab::Holocrons));
-        assert_eq!(collection_tab_of(TOKEN + 6), Some(Tab::Forge));
-        assert_eq!(collection_tab_of(TOKEN + 7), Some(Tab::Cards));
-        assert_eq!(collection_tab_of(TOKEN + 8), Some(Tab::History));
-        assert_eq!(collection_tab_of(TOKEN + 9), Some(Tab::Inventory));
-        assert_eq!(collection_tab_of(TOKEN + 10), None);
-        assert_eq!(collection_tab_of(TOKEN - 1), None);
+        // The hall is the Collection's, off its row: Ctrl+Tab from it goes to the first
+        // kind, Ctrl+Shift+Tab to the last.
+        assert_eq!(Tab::Hall.screen(), Screen::Collection);
+        assert!(!Screen::Collection.tabs().contains(&Tab::Hall));
+        assert_eq!(Tab::Hall.next(true), Tab::Medals);
+        assert_eq!(Tab::Hall.next(false), Tab::Inventory);
+        assert_eq!(Tab::Hall.label(), COLLECTION);
+        assert!(HALL_TOKEN >= TOKEN + Screen::Collection.tabs().len() as u16);
     }
 
     /// A larger text style widens every tab's name by as much as it is drawn wider, so
@@ -931,8 +1041,8 @@ mod tests {
     }
 
     /// The row the screens draw and the areas the switch hit-tests are the same, in
-    /// every window, the tabs side by side within the frame, under the title; the
-    /// Collection's row, with its counts, answers its page's pointer.
+    /// every window, the tabs side by side within the frame, under the title; a
+    /// Collection kind's page puts its breadcrumb there instead.
     #[test]
     fn the_rows_answer_where_they_are_drawn() {
         let counts: Vec<String> = ["2/4", "11/21", "1/5", "1/1", "", "12", "1 250"]
@@ -967,27 +1077,29 @@ mod tests {
                     ),
                 }
                 assert!(!canvas.overflowed());
+                let back = canvas
+                    .rect_for(crate::menu_widgets::BACK_TOKEN)
+                    .expect("the way back");
+                if screen == Screen::Collection {
+                    // A kind's page: the breadcrumb under the title, no row of tabs.
+                    let home = canvas.rect_for(HALL_TOKEN).expect("the breadcrumb's link");
+                    assert!(back.bottom() <= home.y, "the breadcrumb is under the title");
+                    assert!(home.right() <= viewport[0] && home.y >= 0.0);
+                    assert!(canvas.rect_for(TOKEN).is_none(), "no row of tabs");
+                    continue;
+                }
                 let mut previous: Option<sjk_ui::Rect> = None;
                 for tab in screen.tabs() {
                     let token = TOKEN + tab.index() as u16;
                     let area = canvas.rect_for(token).expect("a tab's area");
                     let centre = Vec2::new(area.x + area.width * 0.5, area.y + area.height * 0.5);
-                    match screen {
-                        Screen::Profile => {
-                            assert_eq!(tab_at(viewport, centre), Some(*tab), "{viewport:?}");
-                        }
-                        // The Collection's page answers its own row.
-                        Screen::Collection => assert_eq!(collection_tab_of(token), Some(*tab)),
-                    }
+                    assert_eq!(tab_at(viewport, centre), Some(*tab), "{viewport:?}");
                     assert!(area.right() <= viewport[0] && area.y >= 0.0);
                     if let Some(previous) = previous {
                         assert!(previous.right() <= area.x, "{tab:?} overlaps");
                     }
                     previous = Some(area);
                 }
-                let back = canvas
-                    .rect_for(crate::menu_widgets::BACK_TOKEN)
-                    .expect("the way back");
                 let first = canvas.rect_for(TOKEN).expect("the first tab");
                 assert!(back.bottom() <= first.y, "the row is under the title");
             }

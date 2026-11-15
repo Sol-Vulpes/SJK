@@ -47,7 +47,7 @@ pub(super) struct Count {
 impl Count {
     /// What the tab's name says after it: "2/4", how many for a tab with no set total
     /// (the holocrons held), empty when unknown or none.
-    fn label(self) -> String {
+    pub(super) fn label(self) -> String {
         match self.held {
             Some(held) if self.total > 0 => format!("{held}/{}", self.total),
             Some(held) if held > 0 => crate::cards::grouped(held as u64),
@@ -310,6 +310,22 @@ impl Panel {
         if self.tab == Tab::SaberLab && !crate::saber_lab::active() {
             self.tab = Tab::Shaders;
         }
+        // The hall, or the Loadouts card over it (the hall left out under it).
+        if self.hall {
+            // Not on show: shown again, the History tab reads the newest lines.
+            self.history.shown = false;
+            if self.loadouts.is_open() {
+                crate::settings::sjk_view::backdrop(&mut self.ui, viewport);
+                self.loadouts
+                    .draw(&mut self.ui, &frame, viewport, &self.loadout_slots);
+                self.ui.finish(u16::MAX);
+                return;
+            }
+            self.hall_view(inputs, viewport, seconds);
+            self.ui
+                .finish(hall::TILE_BASE + self.hall_state.chosen as u16);
+            return;
+        }
         let kit = matches!(self.tab, Tab::Shaders | Tab::Toys);
         if self.lab_building() {
             lab_build_scrims(&mut self.ui, viewport, &frame);
@@ -415,7 +431,7 @@ impl Panel {
     /// How many of all the things the player holds, at the top right: the words, and a
     /// bar under them, a stretch to a tab in the tabs' order, each filled as far as its
     /// share held (one tick a thing no longer fits two hundred things, 21/10/2026).
-    fn tally(&mut self, frame: &Frame, counts: &[Count]) {
+    pub(super) fn tally(&mut self, frame: &Frame, counts: &[Count]) {
         let s = frame.s;
         // Only the things with a set total: the holocrons are opened, not collected.
         let total: usize = counts.iter().map(|count| count.total).sum();
@@ -680,7 +696,7 @@ impl Panel {
             || (self.tab == Tab::Inventory && self.inventory.search_focus);
         if !covered {
             keys.push((&["Ctrl", "Tab"], &*next_tab));
-            keys.push((&["Esc"], "back"));
+            keys.push((&["Esc"], crate::profile_hub::COLLECTION));
         }
         let gap = 30.0 * s;
         let width: f32 = keys

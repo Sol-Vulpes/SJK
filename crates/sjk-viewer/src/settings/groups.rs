@@ -531,6 +531,7 @@ impl Group {
                 crate::menu_pictures::CVAR,
                 super::slider_peek::CVAR,
                 crate::rarity_fx::CVAR,
+                crate::console::collection_panel::hall::CVAR,
                 crate::game_font::CVAR,
                 crate::text::style::SCALE_CVAR,
                 crate::text::style::TRACKING_CVAR,

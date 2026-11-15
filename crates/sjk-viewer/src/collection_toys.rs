@@ -75,6 +75,11 @@ fn head_tops() -> [f32; SECTIONS.len()] {
     heads
 }
 
+/// Toy `toy`'s name (its place in the order of [`TOYS`]), for the hall's Toys tile.
+pub(super) fn name(toy: usize) -> &'static str {
+    TOYS.get(toy).map_or("", |toy| toy.name)
+}
+
 /// The toy `by` rows on from `toy` in the list's order: wrapping round, or stopping at
 /// the ends.
 pub(super) fn step(toy: usize, by: isize, wrap: bool) -> usize {

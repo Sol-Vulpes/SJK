@@ -212,6 +212,7 @@ impl Panel {
                 build: self.lab_building(),
                 ..self.lab
             }),
+            hall: false,
         })
     }
 

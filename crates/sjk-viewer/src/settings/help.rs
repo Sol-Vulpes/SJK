@@ -1460,6 +1460,10 @@ const HELP: &[(&str, &str)] = &[
         "Animates rarity: Rare frames breathe, Legendary ones catch a sheen, Mythical ones a running spark. Off keeps the tier frames still.",
     ),
     (
+        crate::console::collection_panel::hall::CVAR,
+        "The Collection opens on its hall, a tile to each kind with what is new in it. Off opens it on the kind you used last.",
+    ),
+    (
         crate::menu::style::CVAR,
         "The SJK UI, SJK's own menus over the live map; or classic menus after the original game's.",
     ),

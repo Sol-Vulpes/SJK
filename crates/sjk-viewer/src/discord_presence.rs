@@ -203,6 +203,7 @@ fn tab_words(tab: Tab) -> &'static str {
         Tab::Cards => "Looking at cards",
         Tab::History => "Looking at their history",
         Tab::Inventory => "Looking at their inventory",
+        Tab::Hall => "Looking at their collection",
     }
 }
 

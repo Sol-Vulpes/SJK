@@ -26,13 +26,15 @@ pub(crate) const UNLOCKABLES_HELP: &str =
 
 impl ViewerConsole {
     /// `collection`, `achievements` or `unlockables` in the classic menus: show the page
-    /// on its own on `tab` (`None`: the tab shown last), or close it when it shows it.
+    /// on its own on `tab` (`None`: where the Collection opens, [`Self::collection_landing`]),
+    /// or close it when it shows it (any of its pages for `None`).
     pub(crate) fn toggle_collection_panel(&mut self, tab: Option<Tab>) {
-        let tab = tab.unwrap_or(self.collection_panel.tab());
-        if self.open && self.collection_panel.is_open() && self.collection_panel.tab() == tab {
+        let shown = self.open && self.collection_panel.is_open();
+        if shown && tab.is_none_or(|tab| self.collection_panel.tab() == tab) {
             self.close_collection_panel();
             return;
         }
+        let tab = tab.unwrap_or_else(|| self.collection_landing());
         let owns_console = !self.open;
         self.show_collection_panel(tab, owns_console, false, ReturnTarget::MainMenu);
     }
@@ -49,19 +51,36 @@ impl ViewerConsole {
         self.collection_panel.choose_saber_lab();
     }
 
-    /// Show the page on its own on the tab shown last (the classic menus).
+    /// Show the page on its own where the Collection opens (the classic menus).
     pub(crate) fn open_collection_panel(&mut self) {
-        let tab = self.collection_panel.tab();
+        let tab = self.collection_landing();
         let owns_console = !self.open;
+        // The Holocrons page is a page of its own: the classic menus open it alone.
+        if tab == Tab::Holocrons {
+            self.show_holocrons_panel(owns_console);
+            return;
+        }
         self.show_collection_panel(tab, owns_console, false, ReturnTarget::MainMenu);
     }
 
-    /// The Collection's tab on show, or shown last (Medals the first time).
+    /// The Collection's kind on show, or shown last (Medals the first time).
     pub(crate) fn collection_tab(&self) -> Tab {
         if self.holocrons_last {
             Tab::Holocrons
         } else {
-            self.collection_panel.tab()
+            self.collection_panel.kind()
+        }
+    }
+
+    /// Where the Collection opens when nothing names a kind (its own command, the menus'
+    /// Collection, the Profile page's See the collection): the hall while
+    /// `ui_collectionHall` is on (the default), else the kind shown last
+    /// ([`Self::collection_tab`]).
+    pub(crate) fn collection_landing(&self) -> Tab {
+        if self.integer_cvar(super::collection_panel::hall::CVAR) == Some(0) {
+            self.collection_tab()
+        } else {
+            Tab::Hall
         }
     }
 
@@ -251,13 +270,15 @@ impl ViewerConsole {
             PanelAction::ShatterTag(copy) => crate::player_identity::shatter_tag(copy),
             PanelAction::CraftTags(copies) => crate::player_identity::craft_tags(copies),
             PanelAction::Hub(tab) => {
-                // A tab of another page: the Holocrons page.
+                // A tab of another page: the Holocrons page, from the hall's tile.
                 let back = self.collection_panel.back();
                 if self.collection_panel.is_hub() {
                     self.open_profile_hub_page(tab, back);
                 } else if tab == Tab::Holocrons {
                     let owns_console = self.collection_panel.close();
                     self.show_holocrons_panel(owns_console);
+                    // Escape on it comes back to the hall.
+                    self.holocrons_panel.set_from_hall(true);
                     self.holocrons_last = true;
                 }
             }
@@ -946,6 +967,17 @@ impl ViewerConsole {
         self.collection_panel.choose_toy_for_shot(index);
     }
 
+    /// Choose the hall's tile `index` (`open`: and open it, as Enter does), for a world
+    /// shot.
+    #[cfg(test)]
+    pub(crate) fn collection_hall_for_shot(&mut self, index: usize, open: bool) {
+        self.collection_panel.hall_choose_for_shot(index);
+        if open {
+            let action = self.collection_panel.hall_open_for_shot(index);
+            self.collection_panel_action(action);
+        }
+    }
+
     /// Show the hover card of the Collection tab's thing `index`, for a world shot.
     #[cfg(test)]
     pub(crate) fn collection_hover_for_shot(&mut self, index: Option<usize>) {
@@ -1130,13 +1162,74 @@ mod tests {
         assert!(!console.collection_panel.is_open());
         assert!(console.is_open());
         assert_eq!(console.collection_stage_wish(), None);
-        // From a closed console: again on the tab shown last; then it closes the
-        // console it took over.
+        // From a closed console: on its hall, the kind shown last remembered; then it
+        // closes the console it took over.
         console.set_open(false);
         console.toggle_collection_panel(None);
+        assert_eq!(console.collection_panel.tab(), Tab::Hall);
         assert_eq!(console.collection_tab(), Tab::Shaders);
         assert!(console.is_open());
-        console.toggle_collection_panel(Some(Tab::Shaders));
+        console.toggle_collection_panel(None);
         assert!(!console.is_open(), "it closes the console it took over");
+    }
+
+    /// `ui_collectionHall`: the Collection opens on its hall (the default), or off on the
+    /// kind used last; a command naming a kind opens it directly either way, and the
+    /// Holocrons page's Escape comes back to the hall.
+    #[test]
+    fn the_collection_opens_on_its_hall_or_the_last_kind() {
+        let directory = tempfile::tempdir().unwrap();
+        let mut console = ViewerConsole::new(directory.path().join("config.cfg")).unwrap();
+        assert_eq!(
+            console.integer_cvar(super::super::collection_panel::hall::CVAR),
+            Some(1)
+        );
+        assert_eq!(console.collection_landing(), Tab::Hall);
+        // The SJK UI's screen: the menus' Collection lands on the hall.
+        console.open_profile_hub_page(console.collection_landing(), ReturnTarget::MainMenu);
+        assert_eq!(console.profile_hub_tab(), Some(Tab::Hall));
+        assert!(
+            console
+                .collection_stage_wish()
+                .is_some_and(|wish| wish.hall)
+        );
+        // A kind named (`unlockables`, `achievements`) skips the hall.
+        console.open_profile_hub_page(Tab::Achievements, ReturnTarget::MainMenu);
+        assert_eq!(console.profile_hub_tab(), Some(Tab::Achievements));
+        console.close_profile_hub_page();
+        console.open_profile_hub_page(Tab::Shaders, ReturnTarget::MainMenu);
+        assert_eq!(console.profile_hub_tab(), Some(Tab::Shaders));
+        // `holocrons` opens its page directly; its Escape comes back to the hall, on the
+        // Holocrons tile.
+        console.close_profile_hub_page();
+        console.open_profile_hub_page(Tab::Holocrons, ReturnTarget::MainMenu);
+        assert_eq!(console.profile_hub_tab(), Some(Tab::Holocrons));
+        console.holocrons_panel_action(super::super::holocrons_panel::PanelAction::Hall);
+        assert_eq!(console.profile_hub_tab(), Some(Tab::Hall));
+        assert_eq!(
+            console.collection_panel.hall_tile(),
+            super::super::collection_panel::hall::Tile::Holocrons
+        );
+        console.close_profile_hub_page();
+        // Off: the Collection opens on the kind used last.
+        let _ = console.set_cvar(super::super::collection_panel::hall::CVAR, "0");
+        console.open_profile_hub_page(Tab::Toys, ReturnTarget::MainMenu);
+        console.close_profile_hub_page();
+        assert_eq!(console.collection_landing(), Tab::Toys);
+        console.open_profile_hub_page(console.collection_landing(), ReturnTarget::MainMenu);
+        assert_eq!(console.profile_hub_tab(), Some(Tab::Toys));
+        console.close_profile_hub_page();
+        // The classic menus' page on its own follows the setting too.
+        let _ = console.set_cvar(super::super::collection_panel::hall::CVAR, "1");
+        console.open_collection_panel();
+        assert_eq!(console.collection_panel.tab(), Tab::Hall);
+        // From its hall the Holocrons tile opens the page alone, and Escape there comes
+        // back to the hall.
+        console.collection_panel_action(PanelAction::Hub(Tab::Holocrons));
+        assert!(console.holocrons_panel.is_open());
+        assert!(!console.collection_panel.is_open());
+        console.holocrons_panel_action(super::super::holocrons_panel::PanelAction::Hall);
+        assert!(console.collection_panel.is_open() && !console.holocrons_panel.is_open());
+        assert_eq!(console.collection_panel.tab(), Tab::Hall);
     }
 }

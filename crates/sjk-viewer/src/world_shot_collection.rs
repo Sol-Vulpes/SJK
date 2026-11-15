@@ -332,7 +332,13 @@ fn duel6_sjk_collection() {
         gpu.field_of_view = 64.3;
         let _ = frame(&mut gpu, 20);
         gpu.open_collection_from_game();
-        assert_eq!(gpu.profile_hub_tab(), Some(Tab::Medals));
+        // The game menu's Collection lands on the hall, the model in its live preview.
+        assert_eq!(gpu.profile_hub_tab(), Some(Tab::Hall));
+        println!(
+            "{}",
+            shoot(&mut gpu, 40, "duel6-collection-in-game-hall").display()
+        );
+        assert!(!overflowed(&gpu), "in game, the hall");
         for tab in [Tab::Achievements, Tab::Shaders, Tab::Toys, Tab::Holocrons] {
             gpu.profile_hub_show_for_shot(tab);
             let name = format!("duel6-collection-in-game-{}", part(tab));
@@ -1740,5 +1746,145 @@ fn duel6_saber_lab_sounds() {
         crate::saber_lab::stop();
         assert!(swings > 0.01, "no swing heard");
         assert!(off > 0.01, "no retraction heard");
+    });
+}
+
+/// The Collection's hall (15/11/2026, Sol's pick of "The hall"): the menus' Collection
+/// lands on it, a tile to each kind with what it holds (two shaders New, the Sun worn,
+/// Disintegrate and a tag chosen, holocrons to open, the deal of the day, the newest
+/// History line, the Illuminate holocron lit), the model turned into the column on the
+/// right; at 16:9, 4:3, 21:9 (the Forge's tile chosen) and 4K at `ui_textScale 1.4`, then
+/// the Shaders page it opens under its breadcrumb.
+#[test]
+#[ignore = "renders with the GPU and the installed game data named by JKA_GAME_DATA"]
+fn duel6_sjk_collection_hall() {
+    use crate::console::collection_panel::hall;
+    on_big_stack(|| {
+        super::saber_skins::mount_test_packs();
+        let tag = crate::tags::CATALOGUE
+            .iter()
+            .find(|tag| tag.free)
+            .expect("a starter tag");
+        let cvars = [
+            ("ui_menuStyle", "sjk"),
+            (crate::settings::quick::HIDE_CVAR, "1"),
+            (crate::unlockables::SABER_SKIN_CVAR, "saber_sun"),
+            (crate::finishers::CVAR, "finisher_disintegrate"),
+            (crate::tags::CVAR, tag.id),
+            ("name", "^1Sol^7Vulpes"),
+            (crate::discord_presence::CVAR, "0"),
+        ];
+        for (size, text_scale, name) in [
+            ([1920, 1080], "1", "duel6-collection-hall"),
+            ([1440, 1080], "1", "duel6-collection-hall-4x3"),
+            ([2560, 1080], "1", "duel6-collection-hall-21x9"),
+            ([3840, 2160], "1.4", "duel6-collection-hall-4k-text14"),
+        ] {
+            let Some((mut gpu, _profile)) = open(
+                "maps/mp/duel6.bsp",
+                size,
+                Some(menu::ClientMenu::new(true, String::new())),
+                &cvars,
+            ) else {
+                return;
+            };
+            gpu.looks.shot_owns_unlocks = true;
+            let _ = frame(&mut gpu, 10);
+            let mut preview = preview();
+            if let Some(me) = preview.snapshot.me.as_mut() {
+                me.credits = 12_340;
+                me.shards = 865;
+                me.holocron_counts = sjk_identity::HolocronCounts {
+                    uncommon: 2,
+                    rare: 1,
+                    legendary: 1,
+                    mythical: 0,
+                };
+            }
+            let mut shop = crate::console::collection_panel::forge::sample_day(3_600);
+            shop.day.offers[2].deal = true;
+            preview.snapshot.shop = Some(shop);
+            preview.snapshot.history = Some(std::sync::Arc::new(sjk_identity::HistoryState {
+                serial: 1,
+                lines: vec![crate::console::collection_panel::history::tests::opened(
+                    1_793_440_000,
+                    "rare",
+                    120,
+                    0,
+                )],
+                more: false,
+                before: 0,
+                message: String::new(),
+            }));
+            let unlocks: Vec<sjk_identity::Unlock> = [
+                "saber_sun",
+                "saber_void",
+                "saber_storm",
+                "saber_glitch",
+                "finisher_disintegrate",
+            ]
+            .iter()
+            .map(|id| sjk_identity::Unlock {
+                id: (*id).to_owned(),
+                count: if *id == "saber_glitch" { 3 } else { 1 },
+                ..sun()
+            })
+            .collect();
+            gpu.illuminate.set_on(true);
+            if let Some(console) = gpu.console.as_mut() {
+                let _ = console.set_cvar("ui_textScale", text_scale);
+                console.preview_profile(preview);
+                console.preview_collection(Some(unlocks), 0.8);
+                console.collection_marks_for_shot(Some(crate::shader_marks::Marks::shown(
+                    &[],
+                    &[],
+                    &["saber_void", "saber_storm"],
+                    Some("saber_sun"),
+                )));
+                let landing = console.collection_landing();
+                console.open_profile_hub_page(landing, ReturnTarget::MainMenu);
+            }
+            assert_eq!(gpu.profile_hub_tab(), Some(Tab::Hall));
+            for _ in 0..240 {
+                let _ = frame(&mut gpu, 1);
+                if crate::medals::art::decoded().is_some() {
+                    break;
+                }
+            }
+            if size[0] == 2560
+                && let Some(console) = gpu.console.as_mut()
+            {
+                let forge = hall::tiles()
+                    .iter()
+                    .position(|tile| *tile == hall::Tile::Forge)
+                    .expect("the Forge's tile");
+                console.collection_hall_for_shot(forge, false);
+            }
+            // The camera turns to put the model in the column on the right.
+            gpu.ui_epoch -= std::time::Duration::from_millis(3_000);
+            println!("{}", shoot(&mut gpu, 150, name).display());
+            assert!(!overflowed(&gpu), "{name}");
+            if size[0] != 1920 {
+                continue;
+            }
+            // Enter on Shaders: its page under the breadcrumb "Collection > Shaders".
+            if let Some(console) = gpu.console.as_mut() {
+                console.collection_hall_for_shot(0, true);
+            }
+            assert_eq!(gpu.profile_hub_tab(), Some(Tab::Shaders));
+            gpu.ui_epoch -= std::time::Duration::from_millis(3_000);
+            println!(
+                "{}",
+                shoot(&mut gpu, 150, "duel6-collection-hall-shaders").display()
+            );
+            assert!(!overflowed(&gpu), "Shaders under the breadcrumb");
+            // Ctrl+Tab steps to the next kind; Escape comes back to the hall.
+            gpu.profile_hub_next_for_shot();
+            assert_eq!(gpu.profile_hub_tab(), Some(Tab::Toys));
+            if let Some(console) = gpu.console.as_mut() {
+                console.open_profile_hub_page(Tab::Hall, ReturnTarget::MainMenu);
+            }
+            assert_eq!(gpu.profile_hub_tab(), Some(Tab::Hall));
+        }
     });
 }

@@ -1243,13 +1243,7 @@ impl crate::GpuState {
                 self.sync_cursor_policy();
             }
             crate::console::COLLECTION_COMMAND if self.in_game_menu.is_sjk() => {
-                let tab = self
-                    .console
-                    .as_ref()
-                    .map_or(crate::profile_hub::Tab::Medals, |console| {
-                        console.collection_tab()
-                    });
-                self.toggle_profile_hub(tab);
+                self.toggle_collection_hub();
             }
             crate::console::COLLECTION_COMMAND => {
                 if let Some(console) = &mut self.console {

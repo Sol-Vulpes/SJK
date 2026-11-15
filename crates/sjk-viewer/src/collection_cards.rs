@@ -1314,9 +1314,11 @@ mod tests {
             let frame = Frame::new(viewport);
             let row = frame.rect(0.0, 0.0, 1_920.0, crate::profile_hub::ROW_BOTTOM);
             assert!(!card.overlaps(row), "{viewport:?}: {card:?} under {row:?}");
-            let forge = crate::profile_hub::TOKEN + Tab::Forge.index() as u16;
-            let forge = panel.ui.rect_for(forge).expect("the Forge tab");
-            assert!(forge.bottom() <= row.bottom() + 0.01, "{viewport:?}");
+            let home = panel
+                .ui
+                .rect_for(crate::profile_hub::HALL_TOKEN)
+                .expect("the breadcrumb");
+            assert!(home.bottom() <= row.bottom() + 0.01, "{viewport:?}");
         }
     }
 

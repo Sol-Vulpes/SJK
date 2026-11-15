@@ -192,6 +192,10 @@ includes:
   duplicate at once;
 - the Inventory (15/11/2026, Sol's request): everything a player owns in one
   Collection tab, by kind, with tiers, counts, a sort and a search;
+- the Collection's hall (15/11/2026, Sol's pick of "The hall" from the Collection's
+  design proposals): the Collection opens on a grid of large tiles, one to each kind with
+  what is new in it (shaders New, holocrons to open, the deal of the day, the newest
+  History line), the player's whole look beside it, each kind behind a breadcrumb;
 - the four holocrons, each tier an object of its own with moving parts (17/10/2026,
   Sol's pick of the proposed shapes: the Jedi cube, the Great Holocron, the Sith
   pyramid, the kyber prism), with Sol's generated faces for the last three;
