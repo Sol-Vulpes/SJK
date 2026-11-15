@@ -178,20 +178,38 @@ impl Panel {
             when,
             group,
             inner,
+            tier,
         } = row;
         let x = if *inner { LEFT_X + INDENT } else { LEFT_X };
         let band = [x, y + 2.0, RIGHT_X - x, ROW_HEIGHT - 4.0];
-        let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
-            rect: frame.rect(band[0], band[1], band[2], band[3]),
-            radius: 8.0 * s,
-            color: if chosen {
-                color::alpha(color::GOLD, 0.12)
-            } else if hovered {
-                color::alpha(color::HOLO, 0.08)
-            } else {
-                color::alpha(color::SPACE, if *inner { 0.4 } else { 0.62 })
-            },
-        });
+        // The tier's frame, one look everywhere (15/11/2026): a line of no tier is plain
+        // glass; a group's lines carry their bar instead.
+        if *inner {
+            let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
+                rect: frame.rect(band[0], band[1], band[2], band[3]),
+                radius: 8.0 * s,
+                color: if chosen {
+                    color::alpha(color::GOLD, 0.12)
+                } else if hovered {
+                    color::alpha(color::HOLO, 0.08)
+                } else {
+                    color::alpha(color::SPACE, 0.4)
+                },
+            });
+        } else {
+            kit::tier_frame(
+                &mut self.ui,
+                frame,
+                band,
+                tier.unwrap_or(crate::unlockables::Rarity::Common),
+                kit::TierSize::Row,
+                kit::TierLook {
+                    chosen,
+                    hovered: hovered || chosen,
+                    ..kit::TierLook::at(crate::menu::art::motion::seconds() as f32)
+                },
+            );
+        }
         if chosen {
             let _ = self.ui.draw_list_mut().push(DrawCommand::Border {
                 rect: frame.rect(band[0], band[1], band[2], band[3]),
@@ -210,12 +228,12 @@ impl Panel {
             });
         } else {
             let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
-                rect: frame.rect(x + 10.0, middle - 12.0, CHIP_WIDTH, 24.0),
+                rect: frame.rect(x + 18.0, middle - 12.0, CHIP_WIDTH, 24.0),
                 radius: 12.0 * s,
                 color: color::alpha(*colour, 0.18),
             });
             let _ = self.ui.draw_list_mut().push(DrawCommand::Border {
-                rect: frame.rect(x + 10.0, middle - 12.0, CHIP_WIDTH, 24.0),
+                rect: frame.rect(x + 18.0, middle - 12.0, CHIP_WIDTH, 24.0),
                 radius: 12.0 * s,
                 width: s,
                 color: color::alpha(*colour, 0.7),
@@ -224,7 +242,7 @@ impl Panel {
                 &mut self.ui,
                 TextFamily::Display,
                 format_args!("{chip}"),
-                frame.rect(x + 10.0, middle - 12.0, CHIP_WIDTH, 24.0),
+                frame.rect(x + 18.0, middle - 12.0, CHIP_WIDTH, 24.0),
                 16.0 * s,
                 *colour,
                 FontWeight::Semibold,
@@ -234,7 +252,7 @@ impl Panel {
         let mut text_x = if *inner {
             x + 30.0
         } else {
-            x + CHIP_WIDTH + 24.0
+            x + CHIP_WIDTH + 32.0
         };
         // A group opens and closes on its sign.
         if let Some((_, open, _)) = group {

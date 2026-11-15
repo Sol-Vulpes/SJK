@@ -451,10 +451,24 @@ impl Panel {
         let chosen = index == self.card;
         let token = CARD_BASE + index as u16;
         let height = CARD_WIDTH * look::ASPECT;
+        // The tier's frame round the card, one look everywhere (15/11/2026), gold round the
+        // one chosen.
+        crate::menu::sjk::kit::tier_frame(
+            &mut self.ui,
+            frame,
+            [x - 4.0, y - 4.0, CARD_WIDTH + 8.0, height + 8.0],
+            crate::menu::sjk::kit::card_tier(tile.rarity.index),
+            crate::menu::sjk::kit::TierSize::Tile,
+            crate::menu::sjk::kit::TierLook {
+                chosen,
+                dim: !tile.owned(),
+                ..crate::menu::sjk::kit::TierLook::at(seconds)
+            },
+        );
         if chosen {
             let _ = self.ui.draw_list_mut().push(DrawCommand::Border {
-                rect: frame.rect(x - 5.0, y - 5.0, CARD_WIDTH + 10.0, height + 10.0),
-                radius: (CARD_WIDTH * 0.07 + 5.0) * s,
+                rect: frame.rect(x - 8.0, y - 8.0, CARD_WIDTH + 16.0, height + 16.0),
+                radius: (CARD_WIDTH * 0.07 + 8.0) * s,
                 width: 2.0 * s,
                 color: color::GOLD_BRIGHT,
             });

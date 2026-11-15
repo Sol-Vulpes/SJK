@@ -26,6 +26,7 @@ pub(crate) mod kit;
 pub(crate) mod loading;
 pub(crate) mod recent;
 pub(crate) mod settings;
+pub(crate) mod tier_frame;
 
 use super::{ClientMenu, MenuAction};
 use crate::console::ViewerConsole;
