@@ -39,6 +39,19 @@ test: 4:3, 21:9 and ui_textScale 1.4: the grid reflows (3, 4 or 6 across) and sc
 test: Settings > Interface "Collection hall" off: Collection opens on the kind used last.
 note: In a match the model shows in the live preview; the History line needs one visit first.
 
+[hall-polish]
+area: Menus & settings
+title: Collection hall: tiles drawn full, worn line and Loadouts over the model's head
+change: Each tile draws what it holds: blades, tier bars, toys, medals, holocrons, prices.
+change: "Wearing now", the blade / finisher / tag line and Loadouts (P) sit over the head.
+test: Shaders: worn + new blades as live strips, each tier's held/total and bar on the right.
+test: Toys tile: Illuminate on = lit with a gold dot; the others faint. Medals: given ones lit.
+test: Achievements: big "38 / 50" figure; Holocrons: tier pictures with counts.
+test: Forge: deal of the day blade + price (after the Forge was opened once); Inventory figures.
+test: History tile: the newest three lines once the History tab was read.
+test: The worn line and Loadouts never cover the model: 16:9, 4:3, 21:9 and ui_textScale 1.4.
+note: No cards held shows three blank cards and "No cards yet"; with cards, their small faces.
+
 [collection-inventory]
 area: Menus & settings
 title: Collection > Inventory: one list of everything you own, with counts

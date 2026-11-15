@@ -480,13 +480,18 @@ fn icon(name: &str) -> TextureId {
     )
 }
 
+/// Toy `toy`'s picture (its place in the order of [`TOYS`]), for the hall's Toys tile.
+pub(super) fn picture(toy: usize) -> TextureId {
+    icon(TOYS[toy.min(TOY_COUNT - 1)].icon)
+}
+
 /// The player's text size (`ui_textScale`).
 fn text_scale() -> f32 {
     crate::text::style::current().scale.max(0.5)
 }
 
 /// Whether each toy is on now, as `inputs` says, in the order of [`TOYS`].
-fn states(inputs: &Inputs<'_>) -> [bool; TOY_COUNT] {
+pub(super) fn states(inputs: &Inputs<'_>) -> [bool; TOY_COUNT] {
     [
         inputs.illuminate,
         inputs.cardboard_box,
