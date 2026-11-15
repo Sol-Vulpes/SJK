@@ -62,6 +62,8 @@ pub(crate) mod loadouts;
 mod marks_view;
 #[path = "collection_medals.rs"]
 mod medals;
+#[path = "collection_news.rs"]
+mod news;
 #[path = "collection_saber_lab_builder.rs"]
 mod saber_lab_builder;
 #[path = "collection_saber_lab_editor.rs"]
@@ -84,7 +86,7 @@ mod view;
 pub(crate) use saber_lab_tab::{LAB_SABER_AREA, LabStage, LabView};
 pub(crate) use spin::SaberTurn;
 pub(crate) use toys::{COMMANDS as TOY_COMMANDS, options_on as toy_options, unseen as toys_unseen};
-pub(crate) use view::{MODEL_AREA, SABER_AREA, row_labels};
+pub(crate) use view::{EmptyButton, Ghosts, MODEL_AREA, SABER_AREA, empty_state, row_labels};
 
 /// The things' tokens: the medals, the achievements, the shaders' rows, the shader's
 /// Equip or Unequip, the toy and its switch.
@@ -565,6 +567,8 @@ pub(crate) enum PanelAction {
         mark: sjk_identity::Mark,
         on: bool,
     },
+    /// Show the server list (an empty page's way to fill it, 15/11/2026).
+    Servers,
 }
 
 /// What the marks a frame shows were read from ([`Panel::follow_marks`]).
@@ -985,6 +989,10 @@ pub(crate) struct Panel {
     /// The marks a world shot or a test shows in place of the live ones.
     #[cfg(test)]
     pub(crate) preview_marks: Option<crate::shader_marks::Marks>,
+    /// New on the other kinds: cards, tags, finishers ([`news`], 15/11/2026).
+    news: news::NewsState,
+    /// What the empty state on show offers, as the last frame drew it.
+    empty_action: Option<view::EmptyAction>,
     /// How much wider than the display family the page's text face is drawn.
     widen: f32,
     epoch: Instant,
@@ -1148,6 +1156,8 @@ impl Panel {
             shader_wish: None,
             #[cfg(test)]
             preview_marks: None,
+            news: news::NewsState::default(),
+            empty_action: None,
             widen: 1.0,
             epoch: Instant::now(),
             skins: Default::default(),
@@ -1900,6 +1910,9 @@ impl Panel {
 
     /// Mark every New shader seen (N, or Mark all seen).
     fn see_all(&mut self) -> PanelAction {
+        if self.finishers_shown {
+            return self.see_kind_all();
+        }
         if self.marks.new_count() > 0 {
             crate::shader_marks::see_all(self.marks.new_ids());
             ui_cues_click();
@@ -2016,6 +2029,7 @@ impl Panel {
         if let Some(id) = self.viewing.leave(self.look_clock()) {
             crate::shader_marks::see(id);
         }
+        self.leave_news();
     }
 
     /// A key while the search field has the typing: Escape or Enter leave it (Escape
@@ -2181,6 +2195,9 @@ impl Panel {
             // K waits for a key to bind to the chosen toy.
             KeyCode::KeyK if self.tab == Tab::Toys => self.bind_wait = Some(0),
             KeyCode::KeyR if self.tab == Tab::Cards => return self.reveal(),
+            KeyCode::KeyN if matches!(self.tab, Tab::Cards | Tab::Tags) => {
+                return self.see_kind_all();
+            }
             KeyCode::Tab => self.step(if shift { -1 } else { 1 }, true),
             KeyCode::ArrowLeft if !vertical => self.step(-1, false),
             KeyCode::ArrowRight if !vertical => self.step(1, false),
@@ -2193,6 +2210,9 @@ impl Panel {
             }
             KeyCode::ArrowUp | KeyCode::ArrowLeft => self.step(-1, false),
             KeyCode::ArrowDown | KeyCode::ArrowRight => self.step(1, false),
+            KeyCode::Enter | KeyCode::NumpadEnter if self.empty_action.is_some() => {
+                return self.press_empty_action();
+            }
             KeyCode::Enter | KeyCode::NumpadEnter | KeyCode::Space => {
                 return self.activate(illuminate);
             }
@@ -2708,6 +2728,8 @@ impl Panel {
             LOCK_TOKEN => self.toggle_mark(sjk_identity::Mark::Locked),
             SHADER_WISH_TOKEN => self.toggle_wish(),
             SEEN_ALL_TOKEN => self.see_all(),
+            news::KIND_SEEN_ALL_TOKEN => self.see_kind_all(),
+            view::EMPTY_ACTION_TOKEN => self.press_empty_action(),
             NEW_NOTE_TOKEN => {
                 self.new_note = !self.new_note;
                 PanelAction::None

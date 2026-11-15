@@ -101,10 +101,10 @@ impl Panel {
                     "Nothing of this kind yet",
                     "What you find, earn and craft shows here.",
                 ),
-                None => (
-                    "Nothing matches",
-                    "No thing you own holds every word of the search.",
-                ),
+                None => {
+                    self.inventory_no_match(frame);
+                    return;
+                }
             };
             self.inventory_empty(frame, headline, line);
             return;
@@ -250,6 +250,32 @@ impl Panel {
         );
     }
 
+    /// A search nothing owned matches (15/11/2026, "Empty states"): dim rows, the words
+    /// searched, and how to clear them.
+    fn inventory_no_match(&mut self, frame: &Frame) {
+        let title = format!(
+            "Nothing you own matches \"{}\"",
+            self.inventory.query.trim()
+        );
+        super::view::empty_state(
+            &mut self.ui,
+            frame,
+            [
+                LEFT_X + 100.0,
+                LIST_Y + 40.0,
+                LIST_RIGHT - LEFT_X - 200.0,
+                420.0,
+            ],
+            super::view::Ghosts::Rows,
+            (
+                &title,
+                "The search looks for every word in what you hold: names, tiers, kinds and \
+                 notes. Escape clears it.",
+            ),
+            None,
+        );
+    }
+
     /// The words over an empty list.
     fn inventory_empty(&mut self, frame: &Frame, headline: &str, line: &str) {
         let s = frame.s;
@@ -378,6 +404,9 @@ impl Panel {
             FontWeight::Semibold,
             TextAlign::Start,
         );
+        // New (`crate::collection_seen`): a sticker after the name.
+        let at = [LEFT_X + NAME_X, middle];
+        super::news::row_sticker(&mut self.ui, &self.news, frame, &item, at);
         if let Some(rarity) = item.rarity {
             let mark = kit::tier_mark(
                 &mut self.ui,

@@ -76,6 +76,7 @@ mod shared_textures;
 
 mod body_fade;
 mod clock_trace;
+mod collection_seen;
 mod combat_effects;
 mod config_import;
 mod config_string_refresh;

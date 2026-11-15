@@ -625,6 +625,7 @@ impl Group {
                 crate::status_bar::SHARDS_CVAR,
                 crate::status_bar::CRYSTALS_CVAR,
                 crate::status_bar::COINS_CVAR,
+                crate::status_bar::NEW_CVAR,
                 crate::status_bar::SABER_CVAR,
                 crate::status_bar::EFFECTS_CVAR,
                 crate::status_bar::TOYS_CVAR,

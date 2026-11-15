@@ -97,16 +97,6 @@ fn headline(
     if progress.len() > 4 {
         line.push_str(&format!("   ·   {} more sets", progress.len() - 4));
     }
-    if stacks.is_empty() {
-        let open = crate::terms::say(
-            "Open a holocron on the Holocrons tab: each holds a card and credits.",
-        );
-        line = if line.is_empty() {
-            open.into_owned()
-        } else {
-            format!("{line}.   {open}")
-        };
-    }
     let total = cards::total(stacks);
     let of: usize = progress.iter().map(|set| set.of).sum();
     let found: usize = progress.iter().map(|set| set.found).sum();
@@ -133,6 +123,13 @@ impl Panel {
         let progress = binder::progress(&all, &faces);
         let (headline, line) = headline(inputs, stacks.as_deref(), &progress);
         self.lead(frame, &headline, &line);
+        if stacks.as_deref().is_some_and(<[Stack]>::is_empty) {
+            // Nothing held yet: how cards come, and the way to the first.
+            self.watch_new(None);
+            self.cards_empty(frame, inputs);
+            return;
+        }
+        self.kind_new_count(frame, &headline, crate::collection_seen::Kind::Card);
         let stacks = stacks.unwrap_or_default();
         let can_reveal = inputs.snapshot.is_some_and(crate::economy::may_act);
         self.revealable = if can_reveal {
@@ -150,6 +147,16 @@ impl Panel {
         );
         self.cards_shown = self.card_tiles.len();
         self.card = self.card.min(self.cards_shown.saturating_sub(1));
+        let chosen = self
+            .card_tiles
+            .get(self.card)
+            .and_then(|tile| tile.best())
+            .and_then(|stack| stack.card.clone());
+        self.watch_new(
+            chosen
+                .as_deref()
+                .map(|id| (crate::collection_seen::Kind::Card, id)),
+        );
         if all.is_empty() {
             // A dark outline where the first card will lie.
             let _ = self.ui.draw_list_mut().push(DrawCommand::Border {
@@ -204,6 +211,48 @@ impl Panel {
             self.card_up_close(frame, chosen, &faces, &inputs.holdings, seconds);
         }
         self.card_tiles = tiles;
+    }
+
+    /// The Cards tab while the player holds no card (15/11/2026, the ideas page's
+    /// "Empty states"): three card outlines, how cards come, and Open holocrons while some
+    /// wait, else Find a server.
+    fn cards_empty(&mut self, frame: &Frame, inputs: &Inputs<'_>) {
+        let waiting: u32 = me(inputs).map_or(0, |me| {
+            crate::holocrons::counts_of(&me.holocron_counts)
+                .iter()
+                .sum()
+        });
+        let (line, label, action) = if waiting > 0 {
+            (
+                "Cards come out of holocrons. Every holocron you open may hold one, in Normal, \
+                 Holo or Solar. The SJK Alpha set has a card for every player who helped build \
+                 SJK.",
+                format!(
+                    "Open Holocrons  \u{b7}  {} waiting  (Enter)",
+                    crate::cards::grouped(u64::from(waiting))
+                ),
+                super::view::EmptyAction::Holocrons,
+            )
+        } else {
+            (
+                "Cards come out of holocrons, and holocrons drop while you play on SJK servers.",
+                "Find a server  (Enter)".to_owned(),
+                super::view::EmptyAction::Servers,
+            )
+        };
+        self.empty_action = Some(action);
+        let label = crate::terms::say_owned(label);
+        super::view::empty_state(
+            &mut self.ui,
+            frame,
+            [LEFT_X, GRID_TOP, super::view::RIGHT_X - LEFT_X, 560.0],
+            super::view::Ghosts::Cards,
+            (&crate::terms::say("No cards yet"), &crate::terms::say(line)),
+            Some(super::view::EmptyButton {
+                label: &label,
+                token: super::view::EMPTY_ACTION_TOKEN,
+            }),
+        );
     }
 
     /// The wheel over the Cards tab: a line a notch, the chosen tile kept in view.
@@ -520,6 +569,12 @@ impl Panel {
                     TextAlign::Center,
                 );
             }
+        }
+        // New: a sticker over the picture's foot (`crate::collection_seen`).
+        if let Some(id) = tile.best().and_then(|stack| stack.card.as_deref())
+            && self.is_new(crate::collection_seen::Kind::Card, id)
+        {
+            let _ = super::marks_view::new_sticker(&mut self.ui, frame, [x + 6.0, y + 100.0], 20.0);
         }
         let count = tile.count();
         if count > 1 {

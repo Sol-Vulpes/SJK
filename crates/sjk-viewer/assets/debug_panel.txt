@@ -65,6 +65,31 @@ test: History tile: the newest three lines once the History tab was read.
 test: The worn line and Loadouts never cover the model: 16:9, 4:3, 21:9 and ui_textScale 1.4.
 note: No cards held shows three blank cards and "No cards yet"; with cards, their small faces.
 
+[collection-new]
+area: Menus & settings
+title: New on every kind: cards, tags and finishers marked New, counted on the hall
+change: One seen-list collection-seen.txt (kyber:, card:id:finish, tag:id:finish, finisher:).
+change: shader-seen.txt is moved over once; New stickers, "N new" + Mark all seen (N) per page.
+test: First start on this build: no card, tag or finisher New; your New kybers stay New.
+test: Get a card / tag / finisher: its hall tile shows a gold "1 new" pill at the top right.
+test: Its page: "1 new" + Mark all seen (N) after the headline, a New sticker on the thing.
+test: Choose it 1 s: sticker gone; sweep across tiles: nothing seen. N or the chip: all seen.
+test: Finishers page: open 1 s sees the new finisher. Inventory: a New sticker on the row.
+test: cg_statusBar 1: "1 new in your Collection" for that map; next map a gold dot; then gone.
+note: Settings > HUD "Status bar: new things" (cg_statusBarNew) hides that part.
+
+[empty-states]
+area: Menus & settings
+title: Empty Collection pages point the way: ghosts, how it fills, one action
+change: Cards with none: card outlines, Open holocrons (N waiting) or Find a server, Enter too.
+change: Holocrons: none / no dormant kyber; Medals none; an Inventory search that finds nothing.
+test: A profile with no card: Cards tab shows "No cards yet"; Enter opens the Holocrons page.
+test: Same with no holocron to open: the button says Find a server and shows the server list.
+test: Holocrons tab with no dormant kyber: a row "No dormant kybers yet", next achievement.
+test: See Achievements opens the Achievements tab; in a match Find a server opens the list.
+test: Inventory: search "cranes": Nothing you own matches "cranes"; Esc clears the search.
+test: jof.honorNames on: the words say Echoes / Honors.
+
 [collection-inventory]
 area: Menus & settings
 title: Collection > Inventory: one list of everything you own, with counts

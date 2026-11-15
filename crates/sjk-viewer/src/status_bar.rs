@@ -3,7 +3,10 @@
 //! credits, kyber shards, unopened kyber crystals and DOOM coins (the hub's numbers), the
 //! blade skin on their saber in its tier's colour, what is on about them (the blade's
 //! extras, the finisher, Tactical mode, Do not disturb, away, toon shading) and every
-//! toy's switch, its picture lit while on.
+//! toy's switch, its picture lit while on. Since 15/11/2026 it also says when the
+//! Collection holds New things (`crate::collection_seen`): "3 new in your Collection"
+//! for the rest of the map they arrived on, then a gold dot until they are seen
+//! ([`Nudge`]).
 //!
 //! [`CVAR`] (`cg_statusBar`, off by default) puts it at the top (1) or the bottom (2);
 //! each part has its own switch ([`Part::cvar`], all on), so a player keeps only what
@@ -37,6 +40,8 @@ pub(crate) const SHARDS_CVAR: &str = "cg_statusBarShards";
 pub(crate) const CRYSTALS_CVAR: &str = "cg_statusBarCrystals";
 /// [`Part::Coins`]'s switch.
 pub(crate) const COINS_CVAR: &str = "cg_statusBarCoins";
+/// [`Part::New`]'s switch.
+pub(crate) const NEW_CVAR: &str = "cg_statusBarNew";
 /// [`Part::Saber`]'s switch.
 pub(crate) const SABER_CVAR: &str = "cg_statusBarSaber";
 /// [`Part::Effects`]'s switch.
@@ -74,6 +79,8 @@ pub(crate) enum Part {
     Shards,
     Crystals,
     Coins,
+    /// New things in the Collection ([`Nudge`]).
+    New,
     Saber,
     Effects,
     Toys,
@@ -81,11 +88,12 @@ pub(crate) enum Part {
 
 impl Part {
     /// Every part, in the bar's order (and the Settings rows').
-    pub(crate) const ALL: [Self; 7] = [
+    pub(crate) const ALL: [Self; 8] = [
         Self::Credits,
         Self::Shards,
         Self::Crystals,
         Self::Coins,
+        Self::New,
         Self::Saber,
         Self::Effects,
         Self::Toys,
@@ -98,6 +106,7 @@ impl Part {
             Self::Shards => SHARDS_CVAR,
             Self::Crystals => CRYSTALS_CVAR,
             Self::Coins => COINS_CVAR,
+            Self::New => NEW_CVAR,
             Self::Saber => SABER_CVAR,
             Self::Effects => EFFECTS_CVAR,
             Self::Toys => TOYS_CVAR,
@@ -111,6 +120,7 @@ impl Part {
             Self::Shards => "Status bar shows your kyber shards",
             Self::Crystals => "Status bar shows your dormant kybers still to attune",
             Self::Coins => "Status bar shows your DOOM coins",
+            Self::New => "Status bar says when your Collection holds new things",
             Self::Saber => "Status bar shows the kyber on your saber",
             Self::Effects => {
                 "Status bar shows what is on about you: blade extras, finisher, Tactical, Do not disturb, away"
@@ -131,7 +141,7 @@ pub(crate) struct Parts(u8);
 impl Parts {
     /// Every part.
     #[cfg(test)]
-    pub(crate) const ALL: Self = Self(0x7f);
+    pub(crate) const ALL: Self = Self(0xff);
 
     /// The parts whose switch is on in `console` (on when a switch is unread).
     pub(crate) fn read(console: Option<&ViewerConsole>) -> Self {
@@ -246,6 +256,67 @@ pub(crate) struct Effect {
 /// Most effects the bar lists.
 pub(crate) const MAX_EFFECTS: usize = 10;
 
+/// What the bar says of the Collection's New things (`crate::collection_seen`): "N new
+/// in your Collection" for the rest of the map they arrived on (or the first map played
+/// after they came between maps), then a gold dot alone until they are seen. More
+/// arriving says it again.
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub(crate) struct Nudge {
+    /// How many were New at the last read.
+    count: usize,
+    say: Say,
+}
+
+/// Where the words stand ([`Nudge`]).
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+enum Say {
+    /// The dot alone (or nothing New).
+    #[default]
+    Quiet,
+    /// New things came outside a map: the words wait for the next.
+    Pending,
+    /// The words show on this map (its [`map_key`]).
+    During(u64),
+}
+
+impl Nudge {
+    /// `count` things New now, on the map of key `map` (`None` outside one): how many to
+    /// show and whether in words; `None` when nothing is New.
+    pub(crate) fn follow(&mut self, count: usize, map: Option<u64>) -> Option<(u32, bool)> {
+        if count == 0 {
+            *self = Self::default();
+            return None;
+        }
+        if count > self.count {
+            self.say = map.map_or(Say::Pending, Say::During);
+        }
+        self.count = count;
+        if let (Say::Pending, Some(map)) = (self.say, map) {
+            self.say = Say::During(map);
+        }
+        let words = match self.say {
+            Say::During(on) => map == Some(on),
+            Say::Pending => true,
+            Say::Quiet => false,
+        };
+        if !words {
+            self.say = Say::Quiet;
+        }
+        Some((u32::try_from(count).unwrap_or(u32::MAX), words))
+    }
+}
+
+/// A steady number for the map `path` played (`maps/<name>.bsp`), `None` for none.
+pub(crate) fn map_key(path: &str) -> Option<u64> {
+    use std::hash::{Hash, Hasher};
+    if path.is_empty() {
+        return None;
+    }
+    let mut hasher = std::collections::hash_map::DefaultHasher::new();
+    path.hash(&mut hasher);
+    Some(hasher.finish())
+}
+
 /// What Tactical mode's pill says at `level`, none while it is off.
 pub(crate) fn tactical_words(level: crate::tactical::Level) -> Option<&'static str> {
     use crate::tactical::Level;
@@ -265,6 +336,9 @@ pub(crate) struct Inputs {
     pub(crate) shards: Option<u64>,
     pub(crate) crystals: Option<u32>,
     pub(crate) coins: Option<u64>,
+    /// How many things are New in the Collection and whether the words show ([`Nudge`]);
+    /// `None` for none.
+    pub(crate) new: Option<(u32, bool)>,
     /// The first saber's blade skin, a catalogue id; `None` for the stock blade.
     pub(crate) saber: Option<&'static str>,
     /// The second saber's own skin when it wears another than the first's (`Some(None)`:
@@ -283,6 +357,7 @@ impl Default for Inputs {
             shards: None,
             crystals: None,
             coins: None,
+            new: None,
             saber: None,
             second: None,
             effects: [None; MAX_EFFECTS],
@@ -305,6 +380,8 @@ impl Inputs {
 enum Piece {
     /// A number and what it counts.
     Amount { value: u64, unit: &'static str },
+    /// New things in the Collection: "3 new in your Collection" (`words`), else a gold dot.
+    New { count: u32, words: bool },
     /// A blade skin's name in its tier's colour, or the stock blade.
     Saber { name: &'static str, colour: Color },
     /// A pill of something on.
@@ -314,7 +391,7 @@ enum Piece {
 }
 
 /// Most pieces a bar holds.
-const MAX_PIECES: usize = 4 + 2 + MAX_EFFECTS + TOY_COUNT;
+const MAX_PIECES: usize = 4 + 1 + 2 + MAX_EFFECTS + TOY_COUNT;
 
 /// What `unit` reads for `value`: one or many.
 fn unit(value: u64, one: &'static str, many: &'static str) -> &'static str {
@@ -364,6 +441,9 @@ fn pieces(inputs: &Inputs, parts: Parts, out: &mut [(Part, Piece); MAX_PIECES]) 
                 },
             );
         }
+    }
+    if let Some((count, words)) = inputs.new.filter(|_| parts.has(Part::New)) {
+        push(Part::New, Piece::New { count, words });
     }
     if parts.has(Part::Saber) {
         push(Part::Saber, saber_piece(inputs.saber));
@@ -479,6 +559,8 @@ pub(crate) struct State {
     drawn: bool,
     /// Text formatted to be measured.
     scratch: String,
+    /// What the New part says ([`Nudge`]).
+    nudge: Nudge,
     /// What a world shot shows, kept as set.
     #[cfg(test)]
     pub(crate) preview: Option<Inputs>,
@@ -492,6 +574,7 @@ impl Default for State {
             read: None,
             drawn: false,
             scratch: String::with_capacity(32),
+            nudge: Nudge::default(),
             #[cfg(test)]
             preview: None,
         }
@@ -533,6 +616,22 @@ impl State {
             }
             Piece::Saber { name, .. } => {
                 (DOT + 6.0) * k + measures.body.width(name, PILL_SIZE * s, TextFace::Semibold) / s
+            }
+            Piece::New { count, words } => {
+                if !words {
+                    return DOT * k;
+                }
+                self.scratch.clear();
+                let _ = write!(
+                    self.scratch,
+                    "{} new in your Collection",
+                    Grouped(count.into())
+                );
+                (DOT + 6.0) * k
+                    + measures
+                        .body
+                        .width(&self.scratch, PILL_SIZE * s, TextFace::Semibold)
+                        / s
             }
             Piece::Effect(effect) => {
                 measures
@@ -679,6 +778,32 @@ impl State {
                     FontWeight::Semibold,
                     TextAlign::Start,
                 );
+            }
+            Piece::New { count, words } => {
+                let dot = DOT * k * s;
+                let _ = self.canvas.draw_list_mut().push(DrawCommand::RoundedRect {
+                    rect: Rect::new(x, middle - dot * 0.5, dot, dot),
+                    radius: dot * 0.5,
+                    color: color::GOLD_BRIGHT,
+                });
+                if words {
+                    let room = (DOT + 6.0) * k * s;
+                    text(
+                        &mut self.canvas,
+                        TextFamily::Body,
+                        format_args!("{} new in your Collection", Grouped(count.into())),
+                        Rect::new(
+                            x + room,
+                            middle - PILL_SIZE * s,
+                            width - room,
+                            PILL_SIZE * 2.0 * s,
+                        ),
+                        PILL_SIZE * s,
+                        color::GOLD_BRIGHT,
+                        FontWeight::Semibold,
+                        TextAlign::Start,
+                    );
+                }
             }
             Piece::Effect(effect) => {
                 let height = (PILL_SIZE + 9.0) * k * s;
@@ -875,6 +1000,10 @@ impl crate::GpuState {
         let now = Instant::now();
         if self.status_bar.due(now) {
             self.status_bar.inputs = self.status_bar_inputs();
+            self.status_bar.inputs.new = self.status_bar.nudge.follow(
+                crate::collection_seen::total(),
+                map_key(&self.world_load_map),
+            );
             self.status_bar.read = Some(now);
         }
         #[cfg(test)]
@@ -930,7 +1059,7 @@ mod tests {
         assert!(cvars.iter().all(|cvar| cvar.starts_with("cg_statusBar")));
         let only_toys = Parts::from_switches(|part| part == Part::Toys);
         assert!(only_toys.has(Part::Toys));
-        assert!(Part::ALL[..6].iter().all(|part| !only_toys.has(*part)));
+        assert!(Part::ALL[..7].iter().all(|part| !only_toys.has(*part)));
         assert!(Part::ALL.iter().all(|part| Parts::ALL.has(*part)));
         assert_eq!(Parts::from_switches(|_| true), Parts::ALL);
     }
@@ -1105,6 +1234,57 @@ mod tests {
         }
     }
 
+    /// New things say so in words for the rest of the map they came on, then as a dot
+    /// until seen; more coming says it again; ones that came between maps are said on the
+    /// next; none, nothing.
+    #[test]
+    fn new_things_are_said_for_a_map_then_dotted() {
+        let mut nudge = Nudge::default();
+        let (first, second) = (map_key("maps/mp/ffa3.bsp"), map_key("maps/mp/duel1.bsp"));
+        assert_eq!(map_key(""), None);
+        assert_ne!(first, second);
+        assert_eq!(nudge.follow(0, first), None);
+        assert_eq!(nudge.follow(2, first), Some((2, true)));
+        assert_eq!(nudge.follow(2, first), Some((2, true)), "the whole map");
+        assert_eq!(
+            nudge.follow(2, second),
+            Some((2, false)),
+            "the next map: the dot"
+        );
+        assert_eq!(
+            nudge.follow(2, first),
+            Some((2, false)),
+            "and it stays a dot"
+        );
+        assert_eq!(nudge.follow(1, first), Some((1, false)), "one seen");
+        assert_eq!(nudge.follow(3, first), Some((3, true)), "more came");
+        assert_eq!(nudge.follow(0, first), None, "all seen");
+        // Between maps: said on the next one.
+        assert_eq!(nudge.follow(1, None), Some((1, true)));
+        assert_eq!(nudge.follow(1, second), Some((1, true)));
+        assert_eq!(nudge.follow(1, first), Some((1, false)));
+        let mut out = [(Part::Credits, amount(0)); MAX_PIECES];
+        let inputs = Inputs {
+            new: Some((1, false)),
+            ..Inputs::default()
+        };
+        let parts = Parts::from_switches(|part| part == Part::New);
+        assert_eq!(pieces(&inputs, parts, &mut out), 1);
+        assert_eq!(
+            out[0],
+            (
+                Part::New,
+                Piece::New {
+                    count: 1,
+                    words: false
+                }
+            )
+        );
+        let off = Parts::from_switches(|part| part != Part::New);
+        let count = pieces(&inputs, off, &mut out);
+        assert!(out[..count].iter().all(|(part, _)| *part != Part::New));
+    }
+
     #[test]
     fn tactical_says_its_level_only_while_on() {
         use crate::tactical::Level;
@@ -1122,6 +1302,7 @@ mod tests {
             shards: Some(1),
             crystals: Some(3),
             coins: Some(4),
+            new: Some((3, true)),
             saber: None,
             second: Some(None),
             ..Inputs::default()

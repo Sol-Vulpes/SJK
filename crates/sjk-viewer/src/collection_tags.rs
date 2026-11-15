@@ -313,6 +313,15 @@ impl Panel {
         ))
     }
 
+    /// Whether something of `entry` is New: a dropped tag in a finish, or a card.
+    fn tag_new(&self, entry: &Entry) -> bool {
+        match entry {
+            Entry::Tag(tag) => self.is_new(crate::collection_seen::Kind::Tag, tag.id),
+            Entry::Card(id) => self.is_new(crate::collection_seen::Kind::Card, id),
+            Entry::Gif(_) => false,
+        }
+    }
+
     /// The finish the card shows for the chosen entry: the one chosen on it, when held.
     fn tag_finish_shown(&self, held: Held) -> &'static crate::cards::Finish {
         crate::cards::FINISHES
@@ -556,7 +565,14 @@ impl Panel {
             format!("{tags} tags")
         };
         self.lead(frame, &heading, &line);
+        self.kind_new_count(frame, &heading, crate::collection_seen::Kind::Tag);
         self.tag = self.tag.min(total - 1);
+        let watched = match &self.tag_entries[self.tag] {
+            Entry::Tag(tag) => Some((crate::collection_seen::Kind::Tag, tag.id.to_owned())),
+            Entry::Card(id) => Some((crate::collection_seen::Kind::Card, id.clone())),
+            Entry::Gif(_) => None,
+        };
+        self.watch_new(watched.as_ref().map(|(kind, id)| (*kind, id.as_str())));
         let in_use = picked(inputs).to_owned();
         let in_use_finish = self
             .tag_entries
@@ -905,6 +921,10 @@ impl Panel {
         let art_rect = [x + (TILE_WIDTH - art) * 0.5, y + 16.0, art, art];
         let alpha = if count > 0 { 1.0 } else { 0.32 };
         self.tag_picture(frame, entry, art_rect, alpha, 15.0);
+        // New: a sticker at the top left (`crate::collection_seen`).
+        if self.tag_new(entry) {
+            let _ = super::marks_view::new_sticker(&mut self.ui, frame, [x + 8.0, y + 10.0], 18.0);
+        }
         // The finished copies held: a badge for each finish, top right.
         let mut badge_y = y + 10.0;
         for (copies, finish) in [(held.holo, 1), (held.solar, 2)] {

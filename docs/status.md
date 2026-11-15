@@ -1,3 +1,19 @@
+## New on every kind, empty states (15/11/2026)
+
+15/11/2026, `personal/collection-new` based on `main` `1eae244cc` (Sol's approval of ideas 3
+and 4 of the Collection ideas page). The seen-list became kind-keyed
+(`collection-seen.txt`: kybers, cards and tags by finish, finishers), migrated once from
+`shader-seen.txt`; cards, tags and finishers show New stickers, "N new" and Mark all seen
+(N), the hall's tiles "N new" pills, the Inventory a sticker on New rows, and the status bar
+a New part (`cg_statusBarNew`, on). Empty Cards, Holocrons (none, no dormant kyber), Medals
+and Inventory-search pages show `empty_state`'s ghosts, how they fill and one action
+([sjk-ui.md](sjk-ui.md#empty-states)). Verified: `cargo test --workspace` (the list's
+format, the migration from `shader-seen.txt`, first holdings seen, per-kind counts, Mark
+all seen, the watch's second, the empty Cards tab's two actions, the pages' and tiles'
+counts, the status bar's words then dot), the startup stack check and the
+`duel6_sjk_collection_new` world shots. Not tried in a game: the seen-list against a live
+hub's holdings, Find a server from a match, and the Holocrons tab's empty states (no world
+shot of that page).
 ## Inventory card and tier frame (15/11/2026)
 
 15/11/2026, `personal/inventory-card` from `main` `1eae244cc` (Sol's picks of ideas 1 and 2

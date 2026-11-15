@@ -43,7 +43,7 @@ impl GpuState {
             chat_gifs::set_video(console.bool_cvar(chat_gifs::VIDEO_CVAR) == Some(true));
             chat_gifs::favourites::load(console.config_directory());
             chat_gifs::hidden::load(console.config_directory());
-            crate::shader_marks::load(console.config_directory());
+            crate::collection_seen::load(console.config_directory());
             chat_gifs::sources::load(console.config_directory());
             crate::jof_tag::set_shown(console.bool_cvar(crate::jof_tag::CVAR) != Some(false));
             crate::chat::client_icons::set_shown(
@@ -67,10 +67,10 @@ impl GpuState {
         });
         // A tag just stuck or taken off goes at once too.
         let due = player_identity::due() || skins_changed | self.tags.take_changed();
-        // The shaders seen on this PC follow what the player holds (New marks), on the
-        // identity's turns only.
+        // What was seen in the Collection on this PC follows what the player holds (New
+        // marks), on the identity's turns only.
         if due {
-            let _ = player_identity::with_snapshot(crate::shader_marks::follow);
+            let _ = player_identity::with_snapshot(crate::collection_seen::follow);
         }
         self.update_looks(due);
         self.update_tags();

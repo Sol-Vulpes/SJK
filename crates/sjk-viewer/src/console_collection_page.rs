@@ -269,6 +269,11 @@ impl ViewerConsole {
             PanelAction::MakeGifTag(giphy) => crate::player_identity::make_gif_tag(giphy),
             PanelAction::ShatterTag(copy) => crate::player_identity::shatter_tag(copy),
             PanelAction::CraftTags(copies) => crate::player_identity::craft_tags(copies),
+            PanelAction::Servers => {
+                // The viewer shows the server list once the page is closed.
+                self.close_collection_panel();
+                self.pending_servers = true;
+            }
             PanelAction::OpenHolocron(slot) => {
                 self.collection_panel_action(PanelAction::Hub(Tab::Holocrons));
                 self.holocrons_panel.open_on(slot);
@@ -427,6 +432,11 @@ impl ViewerConsole {
     /// The viewer gives the Mining card its finds and sale.
     pub(crate) fn set_mining_card(&mut self, card: crate::fishing_sell::Card) {
         self.mining_card = card;
+    }
+
+    /// An empty Collection or Holocrons page asked for the server list, once.
+    pub(crate) fn take_servers_request(&mut self) -> bool {
+        std::mem::take(&mut self.pending_servers)
     }
 
     /// The Mining card's Sell rubble button was pressed, once.
@@ -1019,6 +1029,13 @@ impl ViewerConsole {
     #[cfg(test)]
     pub(crate) fn collection_marks_for_shot(&mut self, marks: Option<crate::shader_marks::Marks>) {
         self.collection_panel.marks_for_shot(marks);
+    }
+
+    /// Show `news` (New cards, tags, finishers) in place of the live ones (`None` lets
+    /// go), for a world shot.
+    #[cfg(test)]
+    pub(crate) fn collection_news_for_shot(&mut self, news: Option<crate::collection_seen::News>) {
+        self.collection_panel.news_for_shot(news);
     }
 
     /// Hold the Shaders tab's lone saber turned so (`None` lets go), for a world shot.

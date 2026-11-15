@@ -154,19 +154,40 @@ impl Panel {
             });
             x += 16.0;
         }
-        text(
-            &mut self.ui,
-            TextFamily::Body,
-            format_args!(
-                "{}",
-                crate::terms::say("More medals will hang here as the SJK team adds them.")
-            ),
-            frame.rect(LEFT_X, 736.0, RAIL_WIDTH, 24.0),
-            15.0 * s,
-            color::QUIET,
-            FontWeight::Regular,
-            TextAlign::Start,
-        );
+        let known = inputs
+            .snapshot
+            .filter(|_| inputs.enabled)
+            .is_some_and(|snapshot| snapshot.me.is_some());
+        if known && shown.iter().all(|showing| showing.award.is_none()) {
+            // None given yet (15/11/2026, "Empty states"): what they are, nothing to press.
+            super::view::empty_state(
+                &mut self.ui,
+                frame,
+                [LEFT_X, 744.0, RAIL_WIDTH, 96.0],
+                super::view::Ghosts::Medals,
+                (
+                    &crate::terms::say("No medals yet"),
+                    &crate::terms::say(
+                        "Given by the SJK team by hand, for help and events. They hang on the rail above.",
+                    ),
+                ),
+                None,
+            );
+        } else {
+            text(
+                &mut self.ui,
+                TextFamily::Body,
+                format_args!(
+                    "{}",
+                    crate::terms::say("More medals will hang here as the SJK team adds them.")
+                ),
+                frame.rect(LEFT_X, 736.0, RAIL_WIDTH, 24.0),
+                15.0 * s,
+                color::QUIET,
+                FontWeight::Regular,
+                TextAlign::Start,
+            );
+        }
         if let Some(chosen) = shown.get(self.medal) {
             self.medal_up_close(frame, chosen, seconds);
         }

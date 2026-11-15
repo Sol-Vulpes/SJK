@@ -1706,7 +1706,8 @@ Holocrons tab's Shop, a blade card's Forge link) open that kind directly.
   client already holds filling the room under the name (since 15/11/2026, Sol's review:
   words alone left the tiles two thirds empty;
   [collection_hall_art.rs](../crates/sjk-viewer/src/collection_hall_art.rs)), and a gold
-  bar of the share held for a kind with a set total. Kybers: "14/166 · 2 new", down the
+  bar of the share held for a kind with a set total; a gold "2 new" pill at the top right of
+  the Kybers, Finishers, Tags and Cards tiles while some are New. Kybers: "14/166", down the
   left the blade worn, the New ones and then the others held (rarest first) as live
   strips (`swatch::strip`) with their names in their tiers' colours, as many as fit; down
   the right each tier (Mythical to Common, Unique too while its chip shows) with held of
@@ -2226,8 +2227,8 @@ kyber the Kybers tab, the Forge and the trade window list carries its marks:
   (holocrons, gifts, trades, crafts): a gold "New" sticker, outlined in gold on the wall
   (a gold edge down its row in the list) while it is not the one chosen (Creyon,
   31/10/2026), and the Kybers tab's "2 new"
-  after the headline. Local, on this PC: `shader-seen.txt` beside `config.cfg`, one kyber
-  id a line (`shader_marks::FILE`), read at start and written at each change. With no file
+  after the headline. Local, on this PC: the Collection's seen-list (below, "New on every
+  kind"), its `kyber:` lines, read at start and written at each change. With no list
   yet, everything held the first time the hub says what the player holds is seen, so a
   player never finds every kyber New; a kyber no longer held leaves the list (New again
   when it comes back). A New one clicked on Kybers or in the Forge is seen at once, its
@@ -2243,11 +2244,64 @@ kyber the Kybers tab, the Forge and the trade window list carries its marks:
   what New means; another click anywhere, Escape or another tab closes it. Nothing is New
   while the debug collectibles show.
 
+#### New on every kind
+
+[collection_seen.rs](../crates/sjk-viewer/src/collection_seen.rs) and
+[collection_news.rs](../crates/sjk-viewer/src/collection_news.rs), 15/11/2026 (the
+Collection ideas page's "New on every kind", Sol's approval): cards, tags and finishers
+carry New as kybers do. Holocrons and dormant kybers carry none: "to open" already says it.
+
+- **The seen-list** is `collection-seen.txt` beside `config.cfg`: a line per thing seen,
+  `kind:id` or, for cards and tags, `kind:id:finish` (`kyber:saber_sun`,
+  `card:sjk_alpha_002:holo`, `tag:<id>:solar`, `finisher:finisher_disintegrate`), and a
+  `known <kind>` line once that kind's first holdings were taken as seen. A kind not known
+  yet takes everything of it the hub first says the player holds as seen, so an update
+  never shows every card or tag New. Odd lines are left out; the file is written through a
+  temporary one.
+- **From `shader-seen.txt`:** with no list yet, the old kybers-only file is read once: its
+  kybers stay seen and the kyber kind known, the other kinds start fresh, and the new list
+  is written at once. The old file is left as it was.
+- **What counts:** kybers, finishers, dropped tags in each finish held (Normal, Holo,
+  Solar) and revealed cards in each finish, from the own hub profile; sealed cards, the
+  starter tags and GIF tags never are. A thing given away leaves the list, New when it
+  comes back. Nothing is New while the debug collectibles show or the identity is off.
+- **Seeing:** the card or tag chosen on its page (a tile of the Cards tab, of the Tags
+  wall, a credits card there too) is seen once it has stayed chosen a second
+  (`collection_seen::Watch`, as `shader_marks::Look`); the finishers, all shown at once, once
+  the Finishers page has stayed open a second. A sweep across the page sees nothing, and
+  leaving the page sees the choice only if it had stayed its second.
+- **Where it shows:** a gold New sticker on each New card tile (at its foot), tag tile (top
+  left), finisher card (after its name) and Inventory row (after its name; a card row in its
+  finish); after the Cards, Tags and Finishers headlines, "N new" on a gold pill and Mark
+  all seen (N), which sees every New thing of that kind; the hall's Kybers, Finishers,
+  Tags and Cards tiles a gold "N new" pill at their top right (the Kybers tile's count lost
+  its "· 2 new" words for it); and the status bar's New part ([client.md](client.md#status-bar)).
+
 The marks are read again only when what they come from changes (the hub's marks, the
 own profile, the seen-list, the blades worn), never every frame. World shots:
 `world_shot_forge::duel6_sjk_collection_marks` (Break down as a grid and a list, a locked
 kyber chosen, the Favourites chip, the last copy of the worn blade asking, the Kybers
 tab's wall, hover card and list). Not tried in a game.
+
+### Empty states
+
+[collection_view.rs](../crates/sjk-viewer/src/collection_view.rs) `empty_state`, 15/11/2026
+(the ideas page's "Empty states that point the way"): an empty page shows the outlines of
+what fills it, says how it fills and offers one action, its words through `terms::say` (JoF
+naming says Echoes and Honors). Under 160 pixels tall it lays out as a row (the ghost left,
+the button right), taller as a centred column.
+
+| Page | Ghosts | Title, line | Action |
+| --- | --- | --- | --- |
+| Cards, no card held | three card outlines with "?" | No cards yet; cards come out of holocrons (each may hold one, in Normal, Holo or Solar) | Open holocrons · N waiting (Enter), else Find a server (Enter) |
+| Holocrons tab, none ever | a dim holocron | No holocrons yet; they drop while you play on SJK servers | Find a server |
+| Holocrons tab, no dormant kyber | a grey crystal, in place of the four tiles | No dormant kybers yet; one per achievement, once, and the nearest achievement ("Next: Angler 38/50") | See Achievements |
+| Medals, none given | three medal outlines, under the rail | No medals yet; given by the SJK team by hand, for help and events | none |
+| Inventory, a search nothing owned matches | dim rows | Nothing you own matches "..."; what the search reads, Escape clears it | none |
+
+Find a server closes the page and shows the server list (the game menu's over a match,
+else the main menu's, as Play does; `GpuState::open_servers_from_collection`). World shots:
+`world_shot_collection::new_shots::duel6_sjk_collection_new`.
 
 ### Hover cards
 

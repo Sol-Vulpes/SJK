@@ -3810,6 +3810,7 @@ heading:
 | Kyber shards | `cg_statusBarShards` | The hub's kyber shards |
 | To attune (dormant kybers) | `cg_statusBarCrystals` | The dormant kybers still to attune the profile lists (among its last 100 holocrons) |
 | DOOM coins | `cg_statusBarCoins` | The DOOM coins, once the hub's WHEEL OF DOOM answer has come (`toy_wheelofdoom`, a wheel on the map) |
+| New things | `cg_statusBarNew` | While the Collection holds New things ([sjk-ui.md](sjk-ui.md#new-on-every-kind)): "3 new in your Collection" in gold for the rest of the map they arrived on (or the next map, when they came between maps), then a gold dot alone until they are seen; more arriving says it again (15/11/2026) |
 | Kyber | `cg_statusBarSaber` | The first saber's kyber, its name and dot in its tier's colour ("Stock blade" when none), and the second saber's when it wears another |
 | Effects | `cg_statusBarEffects` | A pill for each thing on: the blade's extras switched on, the finisher worn, Tactical mode's level, Do not disturb, away, toon shading |
 | Toys | `cg_statusBarToys` | Every toy with a switch, its quick wheel picture lit with a gold dot while on, faint while off (the Prop gun, which has no picture, by its letters) |
