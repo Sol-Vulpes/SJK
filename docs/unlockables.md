@@ -2041,25 +2041,33 @@ Profile page's See the collection) open it on its own:
   2.14 against 1.65 to 2.08); on the PC's integrated Radeon from 251 to 196 ms, where
   each picture costs about 7 to 10 ms and the Medals tab's frame is 69 (such cards
   usually have the menu pictures on, and the drawings). Since 15/11/2026 (Sol: "make
-  blades look great on Collection tiles") only the swatch the player looks at is live:
-  every other one shows the kyber's **still** ([blade_stills.rs](../crates/sjk-viewer/src/blade_stills.rs)),
-  the blade drawn once by the same renderer at a fixed moment of its animation, at twice
-  the still's 256 x 96 pixels, brought down with a soft glow round its light (a cheap
-  bloom done once, `blade_stills.wgsl`), and kept on disk as
-  `GameData/SJK/cache/blades/<id>-<key>.png`. Its key hashes the skin's file as loaded,
+  blades look great on Collection tiles", then "the sabers on the UI should be straight,
+  maybe we should pre render a gif or video") only the chosen kyber's large swatch is
+  live: every other swatch, tile, row and strip plays the kyber's **loop**
+  ([blade_stills.rs](../crates/sjk-viewer/src/blade_stills.rs)), the blade drawn once by
+  the same renderer at eight moments of its animation a tenth of a second apart, each at
+  twice the picture's 384 x 96 pixels, brought down with a soft glow round its light (a
+  cheap bloom done once, `blade_stills.wgsl`), played ten pictures a second, each fading
+  into the next, every kyber at its own place in its loop, and kept on disk as
+  `GameData/SJK/cache/blades/<id>-<key>.png` (the eight pictures one under the other, RGB,
+  about 200 KB; about 60 MB for every kyber). Its key hashes the skin's file as loaded,
   its colour as worn (the player's own options, a chroma), its glow and core images, its
   signature's shader and file, `saber.wgsl` and the baker's own version and shader, so a
-  changed blade is drawn again and its old file removed. The stills on screen sit in one
-  atlas texture of 48 cells (1536 x 768, 4.5 MiB, freed 10 s after the Collection
-  closes); a still not in it is read from disk on a thread (eight uploads a frame at
-  most) or baked: four a frame at most, in the live pictures' pass (one with the menu
-  pictures on), a signature waiting for its own pipelines (asked for at once, so no still
-  keeps the shared look a build stands in with); with nothing on screen waiting, the
-  other loaded kybers are baked one a frame while the Collection is open (not with the
-  menu pictures on), so a scroll finds them on disk. A hovered or chosen swatch shows
-  its still until its live picture is drawn with its own pipelines. A kyber not held
-  shows its still greyed and dimmed under a small padlock on the hilt, so a player sees
-  what they would get. Until a still comes (its first bake) the swatch is the drawing:
+  changed blade is drawn again and its old file removed. The loops on screen sit in one
+  atlas texture of 24 loops (3072 x 2304 RGBA8, 27 MiB, a fixed budget for 3 GB cards,
+  freed 10 s after the Collection closes); a loop not in it is read from disk on a thread
+  (three a frame at most) or baked: four pictures a frame at most (a loop in two frames),
+  in the live pictures' pass, a signature waiting for its own pipelines (asked for at
+  once, so no loop keeps the shared look a build stands in with); with nothing on screen
+  waiting, the other loaded kybers are baked one loop at a time while the Collection is
+  open, so a scroll finds them on disk. With the menu pictures on (a card short of video
+  memory) a kyber shows its first picture only, still, from an atlas of 48 of them
+  (3072 x 576, 6.75 MiB), one baked a frame and not kept, and nothing is live. The chosen
+  swatch shows its loop until its live picture is drawn with its own pipelines; the live
+  pictures' target (832 x 1664, about 17 MB) is freed 5 s after the last one is asked
+  for. A kyber not held shows its loop greyed and dimmed under a small padlock on the
+  hilt, so a player sees what they would get. Until a loop comes (its first bake) the
+  swatch is the drawing:
   (drawn with the UI's shapes from its loaded file's
   colours, flicker and flares, moving: a breathing corona, flame loops and granules, a
   flare running hilt to tip, and the file's lightning arcs, motes and turning hue when
@@ -2068,7 +2076,8 @@ Profile page's See the collection) open it on its own:
   wheel before its name), its name and its state (Worn, Yours, Locked) under it, its
   tier's name at the right of that line in its colour. The list's rows draw a blade as
   a thin strip (`swatch::strip`, a handful of shapes, so thirty stay cheap), the wall's
-  tiles large and tilted across the tile (`swatch::tile_blade`, 15/11/2026): its still,
+  tiles large and straight across the tile (`swatch::tile_blade`, 15/11/2026; tilted 8
+  degrees for a day): its loop,
   greyed and dimmed under a small padlock when not held; until it comes a still blade in
   the skin's own colours, dimmed when not held (25/10/2026: a wall of locked kybers all
   grey told nothing apart), grey while its pack has not come. A click chooses a tile or a row and

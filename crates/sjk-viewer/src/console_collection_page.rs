@@ -1108,6 +1108,12 @@ impl ViewerConsole {
         self.collection_panel.lab_chase_for_shot(chase);
     }
 
+    /// Choose kyber `id` on the Kybers page, for a world shot.
+    #[cfg(test)]
+    pub(crate) fn collection_kyber_for_shot(&mut self, id: &'static str) {
+        self.collection_panel.focus_shader_for_shot(id);
+    }
+
     /// Choose the Collection's shader row `row` (0 the stock blade), for a world shot.
     #[cfg(test)]
     pub(crate) fn collection_shader_for_shot(&mut self, row: usize) {

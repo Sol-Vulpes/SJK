@@ -1,3 +1,42 @@
+## Collection speed and straight kyber loops (15/11/2026)
+
+15/11/2026, `personal/collection-perf` from `main` `63da62e28` (Sol: "quite laggy atm even for
+me with a big PC, optimize it, think that we have people with small GPUs and 3GO VRAM too, the
+sabers on the UI should be straight, maybe we should pre render a gif or video"). Measured
+first (`world_shot_collection_perf.rs`, release, RTX 5080, Vulkan, `SJK_TEST_PACKS`): a
+settled Collection frame costs under 1 ms on the host at 1080p and 4K, so the lag was the
+transient work. Walking the Kybers wall cold (no picture on disk, no signature built, a row
+every six frames for 25 s): before, 30 frames over 33 ms (worst 86 ms, median 3.7 ms); the
+tiles' live pictures (the hovered and chosen tile, and every owned tile whose still was not
+baked) drew new blades through the live target. Now tiles, rows and strips never draw live:
+each kyber is baked once into an eight-picture loop (`blade_stills.rs`, 384 x 96 a picture,
+a tenth of a second of its animation apart, four pictures a frame), played crossfaded ten
+pictures a second and kept as one PNG (RGB, about 200 KB; 61 MB for 301 kybers); only the
+chosen kyber's large swatch is live. After: 1 frame over 33 ms (opening the page; worst
+60 ms, median 3.9 ms), a second visit read from disk with none. Settled frames (whole frame,
+GPU waited for): 1080p wall 3.96 -> 3.35 ms, 4K wall 7.36 -> 5.97 ms, 4K list 7.25 -> 6.02
+ms, 4K hall 6.79 -> 5.61 ms. The wall's tiles draw the blade straight (no tilt). Video
+memory, fixed: the loops' atlas 3072 x 2304 RGBA8 (27 MiB, 24 loops) while shown, a 6.75
+MiB baking target while baking; with the menu pictures on, 48 first pictures, still, in
+6.75 MiB, nothing live; the live pictures' target (about 17 MB) is now freed 5 s after the
+last live picture instead of being kept for the session. The 4K wall shot before this
+showed the tiles' blades missing (hilts only); they show now. Verified: unit tests (texture
+ids, the atlas budgets, the loop's playing, slots' reuse, the bake order, the disk format
+and a changed blade's replacement), `duel6_collection_perf` and `duel6_collection_cold`,
+the shots looked at, workspace build and tests, the startup stack check. Not verified: in
+a game, on a small card, DX12 and Metal; the low-memory shot ran with `ui_menuPictures=1`
+but the shot does not prove the first-picture mode was in effect.
+Review round (same day): many loops washed out to flat white (Thousand Cranes, Eclipse,
+Varykino Blossom, Exogorth, World Shift, Event Horizon, Sun on the hall). The bake averaged
+the blade's values over 1 before clamping, spreading white cores, and screen-blended a 1.7x
+glow over the blade itself; now each baking pixel is clamped first (as the live picture's
+8-bit target does) and the glow only lights the dark round the blade, at 0.6 (`VERSION` 3,
+caches baked again). `duel6_collection_compare` chooses each of those kybers with every one
+held, the wall's loop beside the stage's live blade: colours and shapes match. A wall tile's
+blade sits in the middle of the room over its name (sized to a one- or two-line name, kept
+inside it). Still different: a chroma kyber's loop (Eclipse) is baked in the skin's own
+colour, not the wearer's, as the stills were.
+
 ## Collection polish: wording, hall tier marks, first look, motion (15/11/2026)
 
 15/11/2026, `personal/collection-polish` based on `main` `646083619` (Sol's approval of the

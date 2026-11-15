@@ -549,7 +549,7 @@ run is handed back to it in the next, so a pipeline built once does not start fr
   (`GameData/SJK/cache/`, or the per-user SJK folder's), named by
   `wgpu::util::pipeline_cache_key`: `wgpu_pipeline_cache_vulkan_<vendor>_<device>.bin`. Off-screen
   renders (tests, world shots) open no file.
-  The Collection's kyber stills (15/11/2026) are kept beside it in `cache/blades/`, one PNG
+  The Collection's kyber loops (15/11/2026) are kept beside it in `cache/blades/`, one PNG
   each named by the kyber and the key of what it is drawn from, on every backend
   ([unlockables.md](unlockables.md#kybers-tab)); deleting them is safe too (they are baked
   again).
@@ -1131,13 +1131,14 @@ process's RAM in Task Manager.
   ([below](#experimentals-lamp-memory)).
 - With menu pictures on, the menus' kyber swatches show no live blade pictures
   (`blade_pictures.rs`, a 832x1664 target of three textures, about 17 MB, and each
-  signature blade's pipeline), and that target is freed. Since 15/11/2026 the swatches
-  show the kybers' stills instead (`blade_stills.rs`: a 1536x768 RGBA8 atlas, 4.5 MiB,
-  while a swatch shows, and a 512x768 baking target with its depth, 3 MiB, only while
-  baking), kept on disk in `cache/blades`; with menu pictures on a missing one is baked
-  one a frame, only those on screen, and their drawings stand in until then. Live, a
-  frame draws only the pictures that need it: the hovered or chosen ones, the others
-  showing their stills ([unlockables.md](unlockables.md#kybers-tab)).
+  signature blade's pipeline), and that target is freed (live, 5 s after the last
+  picture is asked for). Since 15/11/2026 the swatches play the kybers' loops instead
+  (`blade_stills.rs`: eight pictures a kyber, a 3072x2304 RGBA8 atlas of 24 loops,
+  27 MiB, while a swatch shows, and a 768x768 baking target with its depth, 6.75 MiB,
+  only while baking), kept on disk in `cache/blades`; with menu pictures on the atlas
+  holds 48 first pictures (3072x576, 6.75 MiB), a missing one baked one a frame, only
+  those on screen, and their drawings stand in until then. Live, only the chosen kyber's
+  large swatch is drawn ([unlockables.md](unlockables.md#kybers-tab)).
 - The secondary views make their targets the first frame each is drawn, not with the
   world (`Lazy` in [scene_view_gpu.rs](../crates/sjk-viewer/src/scene_view_gpu.rs),
   `Runtime::provide_targets` in [scene_views.rs](../crates/sjk-viewer/src/scene_views.rs)).

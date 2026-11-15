@@ -1546,12 +1546,11 @@ impl Panel {
         let name_size = 16.0;
         let line = 18.0 * k;
         let state_y = y + height - 6.0 - 16.0 * k;
-        let blade = [
-            x + 5.0,
-            y + 5.0,
-            width - 10.0,
-            state_y - 2.0 * line + 3.0 - (y + 5.0),
-        ];
+        let (first, second) = name_lines(card_name(row.name()), width - 20.0, name_size);
+        let lines = if second.is_empty() { 1.0 } else { 2.0 };
+        let name_y = state_y - lines * line;
+        // The blade in the middle of the room over the name, a margin all round it.
+        let blade = [x + 6.0, y + 8.0, width - 12.0, name_y - 4.0 - (y + 8.0)];
         match row.skin {
             None => swatch::tile_stock(self.ui.draw_list_mut(), frame, blade, inputs.stock),
             Some(skin) => {
@@ -1569,9 +1568,6 @@ impl Panel {
                 );
             }
         }
-        let (first, second) = name_lines(card_name(row.name()), width - 20.0, name_size);
-        let lines = if second.is_empty() { 1.0 } else { 2.0 };
-        let name_y = state_y - lines * line;
         let name_colour = match (chosen, row.owned, row.name_colour()) {
             (_, true, Some(own)) => own,
             (true, _, _) => CHOSEN_OUTLINE,

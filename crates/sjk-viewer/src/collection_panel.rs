@@ -3003,6 +3003,12 @@ impl Panel {
         self.shader = row.min(SHADER_ROWS - 1);
     }
 
+    /// Choose kyber `id` on the Kybers page (its view scrolls to it), for a world shot.
+    #[cfg(test)]
+    pub(crate) fn focus_shader_for_shot(&mut self, id: &'static str) {
+        self.shader_focus = Some(id);
+    }
+
     /// The token of the thing chosen on the tab on show, for the canvas's focus.
     fn focus_token(&self) -> u16 {
         match self.tab {

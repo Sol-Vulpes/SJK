@@ -39,17 +39,17 @@ note: Ids, cvars, commands and saved data are unchanged; the hub branch kyber-na
 
 [blade-stills]
 area: Menus & settings
-title: Kyber tiles show each blade's real look, large, tilted and glowing
-change: Each kyber is drawn once by the game with a soft glow and kept in cache/blades.
-change: Wall tiles: the blade across the tile, tilted, name and state at the foot.
-change: Not held: the real look greyed and dimmed with a small padlock (was a grey drawing).
-test: Collection > Kybers, wall: blades fill the tiles; held ones lit, others grey under a lock.
-test: Point at or choose a held tile: its blade moves live; leave it: the still comes back.
-test: List (V), hall, Forge strips: the same stills, readable in the list's rows.
+title: Kyber tiles play each blade's real look: straight, glowing, a short loop
+change: Each kyber is baked once as an 8-picture loop (cache/blades), played straight on tiles.
+change: Only the chosen card's blade is live; not held: the real look greyed under a padlock.
+change: Fixed video memory: 27 MiB atlas while shown; the live blade's target freed after 5 s.
+test: Collection > Kybers, wall: blades fill the tiles, straight, flickering as they do in hand.
+test: Walk the wall with the arrows on an empty cache: no stutter while the loops bake.
+test: List (V), hall, Forge strips: the same loops, readable in the list's rows.
 test: Close and start again: GameData/SJK/cache/blades has the PNGs; tiles show at once.
-test: Change a blade's options (or a pack): its still is drawn again, the old file goes.
-test: ui_menuPictures 1: stills still show (one baked a frame), no live pictures.
-note: First open with an empty cache: a few frames of drawings while the stills bake.
+test: Change a blade's options (or a pack): its loop is drawn again, the old file goes.
+test: ui_menuPictures 1: first pictures only, still (one baked a frame), no live blade.
+note: First open with an empty cache: a few frames of drawings while the loops bake.
 
 [collection-hall]
 area: Menus & settings
