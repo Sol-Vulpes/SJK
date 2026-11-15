@@ -82,6 +82,8 @@ pub(crate) mod swatch;
 mod tags;
 #[path = "collection_toys.rs"]
 mod toys;
+#[path = "collection_transition.rs"]
+pub(crate) mod transition;
 #[path = "collection_view.rs"]
 mod view;
 
@@ -969,6 +971,8 @@ pub(crate) struct Panel {
     viewing: crate::shader_marks::Look,
     /// The first looks at New things: a flash, a card's turn, a kyber's ignition, a cue.
     reveals: reveal::Reveals,
+    /// The motion between the hall and a kind, and between kinds.
+    transition: transition::Transition,
     /// A click just chose a shader (on Shaders or a Forge tile): a New one is seen at once,
     /// its sticker gone, without waiting its second (Creyon, 31/10/2026).
     clicked_shader: bool,
@@ -1154,6 +1158,7 @@ impl Panel {
             marks_from: None,
             viewing: crate::shader_marks::Look::default(),
             reveals: reveal::Reveals::default(),
+            transition: transition::Transition::default(),
             clicked_shader: false,
             new_note: false,
             #[cfg(test)]
@@ -1236,6 +1241,8 @@ impl Panel {
         if !self.open {
             // Shaders opens on what the player wears.
             self.shader = usize::MAX;
+            // Opening the Collection plays no motion.
+            self.transition.reset();
         }
         self.open = true;
         self.loadouts.close();

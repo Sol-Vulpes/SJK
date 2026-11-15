@@ -1900,9 +1900,18 @@ fn duel6_sjk_collection_hall() {
             if size[0] != 1920 {
                 continue;
             }
-            // Enter on Shaders: its page under the breadcrumb "Collection > Shaders".
+            // Enter on Shaders, held half way: the tile growing into the page.
             if let Some(console) = gpu.console.as_mut() {
+                console.collection_transition_for_shot(Some(90));
                 console.collection_hall_for_shot(0, true);
+            }
+            println!(
+                "{}",
+                shoot(&mut gpu, 3, "duel6-collection-hall-opening").display()
+            );
+            // Then its page under the breadcrumb "Collection > Shaders".
+            if let Some(console) = gpu.console.as_mut() {
+                console.collection_transition_for_shot(None);
             }
             assert_eq!(gpu.profile_hub_tab(), Some(Tab::Shaders));
             gpu.ui_epoch -= std::time::Duration::from_millis(3_000);

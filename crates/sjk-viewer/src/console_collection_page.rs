@@ -999,6 +999,12 @@ impl ViewerConsole {
         }
     }
 
+    /// Hold the Collection's motions `at` milliseconds in, for a world shot.
+    #[cfg(test)]
+    pub(crate) fn collection_transition_for_shot(&mut self, at: Option<u64>) {
+        self.collection_panel.transition_for_shot(at);
+    }
+
     /// Show the hover card of the Collection tab's thing `index`, for a world shot.
     #[cfg(test)]
     pub(crate) fn collection_hover_for_shot(&mut self, index: Option<usize>) {

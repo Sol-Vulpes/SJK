@@ -157,6 +157,16 @@ test: Cards / Tags / Finishers: a New one chosen 1 s: frame flash, card turns, s
 test: A Legendary or Mythical New thing: the longer chime. A seen thing: no sound at all.
 test: Mark all seen (N), or leaving the page early: no reveal. ui_rarityEffects 0: no flash.
 
+[collection-motion]
+area: Menus & settings
+title: Collection motion: tile grows into its page, Esc shrinks it back, Ctrl+Tab slides
+change: Enter: the tile's card grows into the page (180 ms), the page fades in behind it.
+change: Esc / breadcrumb: the page shrinks onto the same tile; Ctrl+Tab slides (100 ms).
+test: Hall, Enter on Cards: a gold card grows from the tile; Esc: it lands on Cards, chosen.
+test: Ctrl+Tab and Ctrl+Shift+Tab in a kind: the page slides in from right / left.
+test: Press Enter then Esc quickly: both act at once, nothing waits for the motion.
+test: ui_rarityEffects 0: a short crossfade instead of the growth and the slide.
+
 [hall-tier-marks]
 area: Menus & settings
 title: Collection hall: tier diamonds on its blades, deals, finisher, tag and holocrons

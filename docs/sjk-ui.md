@@ -1757,9 +1757,20 @@ Holocrons tab's Shop, a blade card's Forge link) open that kind directly.
   chooses a tile, a click opens it. Ctrl+Tab from the hall opens the first kind
   (Ctrl+Shift+Tab the last). `ui_collectionHall` (Settings > Interface "Collection
   hall", on by default) opens the Collection on the hall; off, on the kind used last.
-  Discord says "Looking at their collection" there. World shot:
+  Discord says "Looking at their collection" there. The way in and out moves
+  ([collection_transition.rs](../crates/sjk-viewer/src/collection_transition.rs), 15/11/2026,
+  idea 9 of the ideas round): Enter on a tile grows its card into the page over 180 ms,
+  eased out, the page fading in over the last half; Escape or the breadcrumb plays it
+  backward, the page's card shrinking onto the same tile, chosen, while the hall's tiles
+  fade in; Ctrl+Tab between kinds slides the next page in from the side (100 ms, from the
+  right going on, the left going back). With `ui_rarityEffects 0` each is a 120 ms
+  crossfade (there is no other reduced-motion setting). It only draws: the page has
+  changed before it starts, so keys and clicks act at once, and it follows what the page
+  shows each frame, so every way in and out moves alike; opening the Collection plays
+  nothing. World shot:
   `world_shot_collection::duel6_sjk_collection_hall` (16:9, 4:3, 21:9 with the Forge's
-  tile chosen, 4K at `ui_textScale 1.4`, then the Kybers page under its breadcrumb).
+  tile chosen, 4K at `ui_textScale 1.4`, the Kybers tile half way into its page, then the
+  Kybers page under its breadcrumb).
 - **Top:** the way back and "Collection" as the title; at the top right how many of
   all things the player holds ("15 of 30 collected") over a thin bar as wide as
   those words, a stretch to each tab in the tabs' order, filled gold as far as that

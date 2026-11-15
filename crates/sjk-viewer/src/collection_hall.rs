@@ -895,6 +895,18 @@ impl Panel {
         // The tally, at the window's right as the page's is at its frame's.
         self.tally(&frame.shifted(width - 1_920.0, 0.0), &counts);
         let first = self.hall_state.first;
+        // Coming back from a kind (or crossfading), the tiles fade in round the page
+        // shrinking onto its own.
+        let fading = self
+            .transition
+            .now
+            .map(|(motion, t)| super::transition::arriving(motion, t).max(0.15));
+        if let Some(alpha) = fading {
+            let _ = self
+                .ui
+                .draw_list_mut()
+                .push(DrawCommand::PushOpacity(alpha));
+        }
         // Taken while the tiles draw, so none is copied a frame.
         let summaries = std::mem::take(&mut self.hall_state.summaries);
         let blank = Summary::default();
@@ -902,11 +914,18 @@ impl Panel {
             let Some(rect) = layout.rect(index, first) else {
                 continue;
             };
+            if index == self.hall_state.chosen {
+                // Where an opening grows from and a closing lands.
+                self.transition.tile = Some(frame.rect(rect[0], rect[1], rect[2], rect[3]));
+            }
             let summary = summaries.get(index).unwrap_or(&blank);
             let looks = (style.scale, seconds, inputs.stock);
             self.tile(&frame, *tile, index, rect, summary, looks);
         }
         self.hall_state.summaries = summaries;
+        if fading.is_some() {
+            let _ = self.ui.draw_list_mut().push(DrawCommand::PopOpacity);
+        }
         if layout.shown_rows < layout.rows {
             self.hall_scroll_bar(&frame, &layout);
         }
@@ -1265,6 +1284,13 @@ impl Panel {
         self.hall_state.chosen = index;
     }
 
+    /// Hold the Collection's motions `at` milliseconds in (`None`: let them run), for a
+    /// world shot.
+    #[cfg(test)]
+    pub(crate) fn transition_for_shot(&mut self, at: Option<u64>) {
+        self.transition.hold = at;
+    }
+
     /// Open tile `index` as Enter would, for a world shot.
     #[cfg(test)]
     pub(crate) fn hall_open_for_shot(&mut self, index: usize) -> PanelAction {
@@ -1415,6 +1441,56 @@ mod tests {
         // P shows the Loadouts card over the hall.
         assert_eq!(press(&mut panel, KeyCode::KeyP), PanelAction::None);
         assert!(panel.loadouts.is_open());
+    }
+
+    /// Enter grows the chosen tile into its page and Escape shrinks the page back onto
+    /// the same tile; neither waits for its motion: the next key acts at once.
+    #[test]
+    fn the_tile_grows_into_its_page_and_back_without_holding_keys() {
+        use super::super::transition::{Motion, between};
+        let inputs = super::super::tests::inputs(Holdings::Known(&[]), "");
+        let fonts = crate::text::load_modern(1.0, None).expect("Inter");
+        let draw = |panel: &mut Panel| panel.build(&inputs, &fonts.font, [1_920.0, 1_080.0]);
+        let mut panel = super::super::tests::drawn(Tab::Hall, &inputs);
+        draw(&mut panel);
+        assert_eq!(
+            panel.transition.now, None,
+            "opening the Collection plays nothing"
+        );
+        let cards = TILES.iter().position(|t| *t == Tile::Cards).unwrap();
+        panel.hall_state.chosen = cards;
+        draw(&mut panel);
+        let tile = panel
+            .ui
+            .rect_for(TILE_BASE + cards as u16)
+            .expect("the tile");
+        assert_eq!(panel.transition.tile, Some(tile));
+        assert_eq!(press(&mut panel, KeyCode::Enter), PanelAction::None);
+        assert_eq!(panel.tab(), Tab::Cards, "the page is there at once");
+        draw(&mut panel);
+        let effects = crate::rarity_fx::enabled();
+        if effects {
+            assert_eq!(
+                panel.transition.now.map(|(motion, _)| motion),
+                Some(Motion::Open { from: tile })
+            );
+        }
+        // Escape during the motion: back on the hall at once, the same tile chosen.
+        let action = panel.key(KeyCode::Escape, false, false);
+        assert_eq!(
+            panel.escape_to_hall(KeyCode::Escape, action),
+            PanelAction::None
+        );
+        assert!(panel.on_hall());
+        assert_eq!(panel.hall_tile(), Tile::Cards);
+        draw(&mut panel);
+        if effects {
+            assert_eq!(panel.transition.now.map(|(m, _)| m), Some(Motion::Close));
+        }
+        // It lands on that tile.
+        assert_eq!(panel.transition.tile, Some(tile));
+        let page = sjk_ui::Rect::new(0.0, 0.0, 1.0, 1.0);
+        assert_eq!(between(page, tile, 1.0), tile);
     }
 
     /// Opened on a kind (a command naming it), the page skips the hall; a kind shown
