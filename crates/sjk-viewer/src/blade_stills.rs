@@ -1144,10 +1144,21 @@ impl crate::GpuState {
         });
     }
 
-    /// Map the bakes copied out last frame (submitted since), and keep the ones mapped.
+    /// Map the bakes copied out last frame, and keep the ones mapped.
     fn poll_still_readbacks(&mut self) {
         if self.blade_stills.readbacks.is_empty() {
             return;
+        }
+        // Last frame may still be on its way to `Queue::submit` on the submit thread: a
+        // buffer mapped before its copy is submitted fails that submit. Rare (a frame
+        // that baked), and nothing is waited for when no frame is in flight.
+        if self
+            .blade_stills
+            .readbacks
+            .iter()
+            .any(|readback| readback.receiver.is_none())
+        {
+            self.frame_pacer.split.wait_previous();
         }
         for readback in &mut self.blade_stills.readbacks {
             if readback.receiver.is_none() {
