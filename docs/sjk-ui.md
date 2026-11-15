@@ -113,8 +113,13 @@ ladder (`kit::holocron_tier`, `kit::card_tier`). It frames the Inventory's rows 
 card, the Cards and Tags tiles, the Forge's tiles and list rows, the History's rows and the
 Holocrons tab's tiers and dormant kybers, and (since `personal/blade-stills`) the Kybers
 wall's tiles; where `rarity_fx` already animates a frame (the Forge, the Holocrons tab, the
-Kybers wall) the frame stays still under it. Not yet: the hall's lines and tiles take it in
-a later pass.
+Kybers wall) the frame stays still under it. On the hall (since `personal/collection-polish`)
+the tiles stay the kinds' glass cards, framed by kind and not by tier, and what they draw
+tells its tier the same way: the Kybers tile's blades and its tiers' lines, the deal of the
+day and the day's other offers, the finisher worn, the tag chosen (its picture in its tier's
+frame), the Holocrons tile's tiers when every tier's mark and name fit its column (all or none) and the blade worn over the model's
+head each carry the tier's mark before their words (`kit::tier_mark_width` lays a centred
+one out).
 
 ### Type
 
@@ -1752,9 +1757,20 @@ Holocrons tab's Shop, a blade card's Forge link) open that kind directly.
   chooses a tile, a click opens it. Ctrl+Tab from the hall opens the first kind
   (Ctrl+Shift+Tab the last). `ui_collectionHall` (Settings > Interface "Collection
   hall", on by default) opens the Collection on the hall; off, on the kind used last.
-  Discord says "Looking at their collection" there. World shot:
+  Discord says "Looking at their collection" there. The way in and out moves
+  ([collection_transition.rs](../crates/sjk-viewer/src/collection_transition.rs), 15/11/2026,
+  idea 9 of the ideas round): Enter on a tile grows its card into the page over 180 ms,
+  eased out, the page fading in over the last half; Escape or the breadcrumb plays it
+  backward, the page's card shrinking onto the same tile, chosen, while the hall's tiles
+  fade in; Ctrl+Tab between kinds slides the next page in from the side (100 ms, from the
+  right going on, the left going back). With `ui_rarityEffects 0` each is a 120 ms
+  crossfade (there is no other reduced-motion setting). It only draws: the page has
+  changed before it starts, so keys and clicks act at once, and it follows what the page
+  shows each frame, so every way in and out moves alike; opening the Collection plays
+  nothing. World shot:
   `world_shot_collection::duel6_sjk_collection_hall` (16:9, 4:3, 21:9 with the Forge's
-  tile chosen, 4K at `ui_textScale 1.4`, then the Kybers page under its breadcrumb).
+  tile chosen, 4K at `ui_textScale 1.4`, the Kybers tile half way into its page, then the
+  Kybers page under its breadcrumb).
 - **Top:** the way back and "Collection" as the title; at the top right how many of
   all things the player holds ("15 of 30 collected") over a thin bar as wide as
   those words, a stretch to each tab in the tabs' order, filled gold as far as that
@@ -2139,7 +2155,8 @@ Holocrons tab's Shop, a blade card's Forge link) open that kind directly.
   pictured rows and the item card the same day, idea 1 of the Collection's ideas round):
   "Inventory", then the wallet strip (y 268): the credits, kyber shards and, once the hub
   said them, DOOM coins (`Snapshot::wheel_of_doom`, read when the toy asks), each with its
-  mark, its figure and how it is earned, and at the right "N spare copies worth M kyber
+  mark, its figure and how it is earned ("credits, from opening Holocrons", "kyber shards,
+  from Holocrons and kybers broken down", "DOOM coins, from the WHEEL OF DOOM"), and at the right "N spare copies worth M kyber
   shards", what Break down all duplicates would give (one copy of each kept, never a locked
   one, a medal's or a card's: the Forge's own sum). At y 354 the kind chips (All, Holocrons,
   Dormant, Kybers, Finishers, Tags, Cards, each with how many are held in all; keys 1 to 7
@@ -2174,7 +2191,9 @@ Holocrons tab's Shop, a blade card's Forge link) open that kind directly.
   `cg_tag`); a finisher Wear or Take off (Enter, `cg_saberFinisher`); a card Show in Cards
   (G, the Cards tab on its tile, the filter cleared); the GIF tags Show in Tags (G). A
   greyed button says why under it, as the Forge does (its only copy, locked, outside the
-  trade, the hub not trading or opening now, the tag in use). Offering a thing in a trade
+  trade, the hub not trading, opening Holocrons or attuning dormant kybers now, the tag in
+  use). The card's "You hold" line counts copies, or a tier's holocrons "to open" and
+  dormant kybers "to attune". Offering a thing in a trade
   is not there: the trade window is a card over the menus that takes their input while
   open. It reads only the own hub profile the other tabs read, and asks the hub nothing
   new; while that is not known, it says why ("Inventory unavailable"), and a kind with
@@ -2287,19 +2306,42 @@ own profile, the seen-list, the blades worn), never every frame. World shots:
 kyber chosen, the Favourites chip, the last copy of the worn blade asking, the Kybers
 tab's wall, hover card and list). Not tried in a game.
 
+#### First look
+
+[collection_reveal.rs](../crates/sjk-viewer/src/collection_reveal.rs) and
+[menu_stage/reveal.rs](../crates/sjk-viewer/src/menu_stage/reveal.rs), 15/11/2026 (idea 10
+of the Collection's ideas round, Sol's approval): the second a New thing turns seen is
+marked, once, and only for a thing New then (browsing things already seen, Mark all seen and
+leaving a page stay quiet).
+
+- **Kybers:** while the Kybers tab's saber on its own holds a New kyber not looked at yet,
+  its blade stays out, the hilt alone (`StageWish::held_off`); the first look lights it,
+  hilt to tip as a match's does, with the kyber's own ignition (the hilt's, else the stock
+  `saberon`), as the Saber Lab plays it.
+- **Cards:** the card up close turns over to face the player (450 ms, the card look's
+  `turn`).
+- **Every kind:** the thing's tier frame (a Kybers wall tile, the Forge's tile or row, a
+  Cards or Tags tile, a finisher's card) flashes once in its tier's colour (holo for
+  Common), 600 ms (`TierLook::flash`). `ui_rarityEffects 0` leaves out the flash and the
+  card's turn.
+- **Sound:** an interface cue under the cues' volume, `Cue::Reveal` (the ping's blip, at
+  0.35) or, for a Legendary, Mythical or Unique thing, `Cue::RevealRare` (the holocron's
+  shimmer, at 0.5). Not tried in a game.
+
 ### Empty states
 
 [collection_view.rs](../crates/sjk-viewer/src/collection_view.rs) `empty_state`, 15/11/2026
 (the ideas page's "Empty states that point the way"): an empty page shows the outlines of
 what fills it, says how it fills and offers one action, its words through `terms::say` (JoF
-naming says Echoes and Honors). Under 160 pixels tall it lays out as a row (the ghost left,
+naming says Echoes and Honors; a holocron is written "Holocron" in their sentences, so
+the JoF word reads "Echo" too, as on the Holocrons tab's name). Under 160 pixels tall it lays out as a row (the ghost left,
 the button right), taller as a centred column.
 
 | Page | Ghosts | Title, line | Action |
 | --- | --- | --- | --- |
-| Cards, no card held | three card outlines with "?" | No cards yet; cards come out of holocrons (each may hold one, in Normal, Holo or Solar) | Open holocrons · N waiting (Enter), else Find a server (Enter) |
+| Cards, no card held | three card outlines with "?" | No cards yet; cards come out of Holocrons (each may hold one, in Normal, Holo or Solar) | Open Holocrons · N waiting (Enter), else Find a server (Enter) |
 | Holocrons tab, none ever | a dim holocron | No holocrons yet; they drop while you play on SJK servers | Find a server |
-| Holocrons tab, no dormant kyber | a grey crystal, in place of the four tiles | No dormant kybers yet; one per achievement, once, and the nearest achievement ("Next: Angler 38/50") | See Achievements |
+| Holocrons tab, no dormant kyber | a grey crystal, in place of the four tiles | No dormant kybers yet; each achievement gives one, once, and the nearest achievement ("Next: Angler 38/50") | See Achievements |
 | Medals, none given | three medal outlines, under the rail | No medals yet; given by the SJK team by hand, for help and events | none |
 | Inventory, a search nothing owned matches | dim rows | Nothing you own matches "..."; what the search reads, Escape clears it | none |
 

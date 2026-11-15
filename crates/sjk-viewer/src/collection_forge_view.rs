@@ -1507,6 +1507,7 @@ impl Panel {
         let token = TILE_BASE + item.index as u16;
         let hovered = self.ui.token_hovered(token);
         let tier = item.skin.tier;
+        let flash = self.first_look(crate::collection_seen::Kind::Kyber, item.skin.id);
         let area = frame.rect(x, y, width, height);
         if chosen {
             let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
@@ -1527,6 +1528,7 @@ impl Panel {
                 chosen,
                 hovered: chosen || hovered,
                 still: true,
+                flash,
                 ..kit::TierLook::at(seconds)
             },
         );
@@ -1676,6 +1678,7 @@ impl Panel {
         let token = TILE_BASE + item.index as u16;
         let hovered = self.ui.token_hovered(token);
         let tier = item.skin.tier;
+        let flash = self.first_look(crate::collection_seen::Kind::Kyber, item.skin.id);
         let width = LIST_RIGHT - LIST_LEFT;
         let area = frame.rect(LIST_LEFT, y, width, ROW_HEIGHT);
         // The tier's frame, one look everywhere (15/11/2026).
@@ -1688,6 +1691,7 @@ impl Panel {
             kit::TierLook {
                 chosen,
                 hovered: chosen || hovered,
+                flash,
                 ..kit::TierLook::at(seconds)
             },
         );

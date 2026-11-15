@@ -672,10 +672,16 @@ pub(super) fn offers(item: &Item, standing: &Standing) -> Vec<Offer> {
             offers.push(if standing.can_open {
                 open
             } else {
-                let why = standing
-                    .open_why
-                    .clone()
-                    .unwrap_or_else(|| "The SJK hub does not open them now.".to_owned());
+                let why = standing.open_why.clone().unwrap_or_else(|| {
+                    crate::terms::say_owned(format!(
+                        "The SJK hub does not let you {} now.",
+                        if verb == "Attune" {
+                            "attune dormant kybers"
+                        } else {
+                            "open Holocrons"
+                        }
+                    ))
+                });
                 open.refused(why)
             });
         }
@@ -1034,16 +1040,23 @@ impl Panel {
     pub(super) fn inventory_standing(&self, item: &Item, inputs: &Inputs<'_>) -> Standing {
         let now = Instant::now();
         let snapshot = inputs.snapshot.filter(|_| inputs.enabled);
+        // A dormant kyber is attuned, a holocron opened: the refusal names which.
+        let what = if matches!(item.thing, Thing::Crystal(_)) {
+            "attune dormant kybers"
+        } else {
+            "open Holocrons"
+        };
         let (can_open, open_why) = match snapshot {
             Some(snapshot) if crate::economy::may_act(snapshot) => (true, None),
             Some(snapshot) => (
                 false,
-                Some(crate::economy::update_to(snapshot).map_or_else(
-                    || {
-                        crate::terms::say("The SJK hub does not let you open holocrons now.")
-                            .into_owned()
+                Some(crate::terms::say_owned(
+                    match crate::economy::update_to(snapshot) {
+                        Some(min) => {
+                            format!("Update SJK to {what}: this needs SJK {min} or newer.")
+                        }
+                        None => format!("The SJK hub does not let you {what} now."),
                     },
-                    crate::economy::update_line,
                 )),
             ),
             None => (false, Some("Not connected to the SJK hub.".to_owned())),
@@ -1630,6 +1643,19 @@ mod tests {
             },
         );
         assert!(!closed[0].enabled && closed[0].why.as_deref() == Some("Update SJK"));
+        // Without the hub's reason, the refusal names attuning for a dormant kyber.
+        let unsaid = Standing {
+            can_open: false,
+            open_why: None,
+            ..free.clone()
+        };
+        let why = |item: &Item| offers(item, &unsaid)[0].why.clone().unwrap_or_default();
+        assert!(
+            why(&crystal).contains("attune dormant kybers"),
+            "{}",
+            why(&crystal)
+        );
+        assert!(!why(&echo).contains("attune"), "{}", why(&echo));
         // A tag is chosen unless in use.
         let tag = crate::tags::CATALOGUE
             .iter()

@@ -68,6 +68,9 @@ pub(crate) struct TierLook {
     pub(crate) still: bool,
     /// The UI's clock, for the sheen.
     pub(crate) seconds: f32,
+    /// A first look's flash over the frame, 0 (none) to 1, in the tier's colour
+    /// (`collection_reveal.rs`; the caller passes 0 with `ui_rarityEffects 0`).
+    pub(crate) flash: f32,
 }
 
 impl TierLook {
@@ -81,6 +84,7 @@ impl TierLook {
             glass: true,
             still: false,
             seconds,
+            flash: 0.0,
         }
     }
 }
@@ -314,6 +318,43 @@ pub(crate) fn tier_frame(
             },
         );
     }
+    // A first look's flash: the edge lit in the tier's colour (holo for Common) and a
+    // halo round it, fading out.
+    if look.flash > 0.0 {
+        let flash = look.flash.min(1.0);
+        let lit = if step == 0 {
+            super::color::HOLO
+        } else {
+            colour
+        };
+        push(
+            canvas,
+            DrawCommand::RoundedRect {
+                rect: area,
+                radius: radius * s,
+                color: faded(lit, 0.16 * flash),
+            },
+        );
+        push(
+            canvas,
+            DrawCommand::Border {
+                rect: area,
+                radius: radius * s,
+                width: 2.4 * s,
+                color: faded(lit, flash),
+            },
+        );
+        let out = 4.0 + 6.0 * (1.0 - flash);
+        push(
+            canvas,
+            DrawCommand::Border {
+                rect: frame.rect(x - out, y - out, width + out * 2.0, height + out * 2.0),
+                radius: (radius + out) * s,
+                width: 3.0 * s,
+                color: faded(lit, 0.45 * flash),
+            },
+        );
+    }
     // Mythical's sheen, on the thing chosen alone, now and then.
     if step == 4
         && (look.chosen || look.shine)
@@ -358,6 +399,20 @@ pub(crate) fn tier_frame(
 pub(crate) fn sheen_at(seconds: f32) -> Option<f32> {
     let phase = (seconds / SHEEN_SECONDS).rem_euclid(1.0);
     (phase < SHEEN_CROSS).then(|| phase / SHEEN_CROSS)
+}
+
+/// How wide [`tier_mark`] draws tier `tier`'s mark at `size` (frame pixels), 0 for none:
+/// for laying a mark out before it is drawn (a centred line).
+pub(crate) fn tier_mark_width(tier: Rarity, size: f32) -> f32 {
+    if tier == Rarity::Unique {
+        return size * 1.3;
+    }
+    let steps = tier_step(tier);
+    if steps == 0 {
+        0.0
+    } else {
+        f32::from(steps) * size + f32::from(steps - 1) * size * 0.28
+    }
 }
 
 /// Tier `tier`'s mark from `x` (its left edge), centred on `y`, `size` frame pixels high:
@@ -410,11 +465,7 @@ pub(crate) fn tier_mark(
             },
         );
     }
-    if steps == 0 {
-        0.0
-    } else {
-        f32::from(steps) * size + f32::from(steps - 1) * gap
-    }
+    tier_mark_width(tier, size)
 }
 
 #[cfg(test)]
@@ -561,6 +612,8 @@ mod tests {
             });
             assert_eq!(diamonds, usize::from(tier_step(tier)), "{tier:?}");
             assert_eq!(width > 0.0, tier != Rarity::Common, "{tier:?}");
+            // Its width is known before it is drawn, for a centred line.
+            assert_eq!(width, tier_mark_width(tier, 12.0), "{tier:?}");
             if tier == Rarity::Unique {
                 let words: Vec<String> = canvas.text_runs().map(str::to_owned).collect();
                 assert_eq!(words, [crate::symbols::RARITY[5].to_string()]);

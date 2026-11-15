@@ -110,6 +110,8 @@ impl ViewerConsole {
             holocron: false,
             lab: None,
             hall: false,
+            held_off: false,
+            ignite: 0,
         })
     }
 

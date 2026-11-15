@@ -420,11 +420,11 @@ impl Panel {
     fn no_crystals(&mut self, frame: &Frame) {
         let line = match &self.data.next_achievement {
             Some((name, progress, goal)) => format!(
-                "One per achievement, once. Next: {name} {}/{}",
+                "Each achievement gives one, once. Next: {name} {}/{}",
                 crate::cards::grouped(*progress),
                 crate::cards::grouped(*goal)
             ),
-            None => "One per achievement, once.".to_owned(),
+            None => "Each achievement gives one, once.".to_owned(),
         };
         crate::console::collection_panel::empty_state(
             &mut self.ui,

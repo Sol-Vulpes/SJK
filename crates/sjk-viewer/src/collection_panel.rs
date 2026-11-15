@@ -64,6 +64,8 @@ mod marks_view;
 mod medals;
 #[path = "collection_news.rs"]
 mod news;
+#[path = "collection_reveal.rs"]
+pub(crate) mod reveal;
 #[path = "collection_saber_lab_builder.rs"]
 mod saber_lab_builder;
 #[path = "collection_saber_lab_editor.rs"]
@@ -80,6 +82,8 @@ pub(crate) mod swatch;
 mod tags;
 #[path = "collection_toys.rs"]
 mod toys;
+#[path = "collection_transition.rs"]
+pub(crate) mod transition;
 #[path = "collection_view.rs"]
 mod view;
 
@@ -650,6 +654,12 @@ pub(crate) struct StageWish {
     /// The hall ([`hall`]): the model stands in the column on the window's right, the
     /// backdrop camera turned to put it there.
     pub(crate) hall: bool,
+    /// The saber on its own holds a New kyber not looked at yet: its blade stays out
+    /// until the first look lights it (`collection_reveal.rs`).
+    pub(crate) held_off: bool,
+    /// How many first looks lit the saber on its own: a new one ignites it with the
+    /// kyber's own sound.
+    pub(crate) ignite: u32,
 }
 
 /// What the page knows this frame.
@@ -959,6 +969,10 @@ pub(crate) struct Panel {
     /// The shader chosen on Shaders or in the Forge while it was New: seen once it has
     /// stayed chosen a second (`shader_marks::Look`), not when a sweep passes over it.
     viewing: crate::shader_marks::Look,
+    /// The first looks at New things: a flash, a card's turn, a kyber's ignition, a cue.
+    reveals: reveal::Reveals,
+    /// The motion between the hall and a kind, and between kinds.
+    transition: transition::Transition,
     /// A click just chose a shader (on Shaders or a Forge tile): a New one is seen at once,
     /// its sticker gone, without waiting its second (Creyon, 31/10/2026).
     clicked_shader: bool,
@@ -1143,6 +1157,8 @@ impl Panel {
             marks: Default::default(),
             marks_from: None,
             viewing: crate::shader_marks::Look::default(),
+            reveals: reveal::Reveals::default(),
+            transition: transition::Transition::default(),
             clicked_shader: false,
             new_note: false,
             #[cfg(test)]
@@ -1225,6 +1241,8 @@ impl Panel {
         if !self.open {
             // Shaders opens on what the player wears.
             self.shader = usize::MAX;
+            // Opening the Collection plays no motion.
+            self.transition.reset();
         }
         self.open = true;
         self.loadouts.close();
@@ -1353,6 +1371,8 @@ impl Panel {
                 holocron: false,
                 lab: None,
                 hall: true,
+                held_off: false,
+                ignite: 0,
             });
         }
         match self.tab {
@@ -1369,6 +1389,8 @@ impl Panel {
                 holocron: false,
                 lab: None,
                 hall: false,
+                held_off: self.held_off(),
+                ignite: self.reveals.ignitions(),
             }),
             Tab::Toys => Some(StageWish {
                 skin: PreviewSkin::Worn,
@@ -1378,6 +1400,8 @@ impl Panel {
                 holocron: self.toy == 0,
                 lab: None,
                 hall: false,
+                held_off: false,
+                ignite: 0,
             }),
             Tab::SaberLab => self.lab_wish(),
             _ => None,
@@ -1971,11 +1995,73 @@ impl Panel {
             && let Some(id) = chosen.filter(|_| new)
         {
             crate::shader_marks::see(id);
+            self.reveal_kyber(id);
             return;
         }
         if let Some(id) = self.viewing.observe(chosen, new, self.look_clock()) {
             crate::shader_marks::see(id);
+            self.reveal_kyber(id);
         }
+    }
+
+    /// Kyber `id`, New, was just seen: its first look, lighting the saber on its own when
+    /// it holds it.
+    fn reveal_kyber(&mut self, id: &'static str) {
+        use crate::collection_seen::Kind;
+        let staged = self
+            .stage_wish()
+            .is_some_and(|wish| wish.saber.is_some() && wish.skin == PreviewSkin::Skin(id));
+        let now = self.look_clock();
+        let cue = self.reveals.start(
+            Kind::Kyber,
+            &[id],
+            reveal::tier_of(Kind::Kyber, id),
+            now,
+            staged,
+        );
+        crate::audio::ui_cues::post(cue);
+    }
+
+    /// Things `things`, New, were just seen together on a page: their first look.
+    pub(super) fn reveal_things(&mut self, things: &[crate::collection_seen::Thing]) {
+        let Some(kind) = things.first().map(|thing| thing.kind) else {
+            return;
+        };
+        let mut ids: Vec<&str> = things.iter().map(|thing| thing.id.as_str()).collect();
+        ids.dedup();
+        let tier = ids
+            .iter()
+            .map(|id| reveal::tier_of(kind, id))
+            .max()
+            .unwrap_or(crate::unlockables::Rarity::Common);
+        let now = self.look_clock();
+        let cue = self.reveals.start(kind, &ids, tier, now, false);
+        crate::audio::ui_cues::post(cue);
+    }
+
+    /// How bright the first-look flash over thing `id` of `kind` is now (0: none, and
+    /// always with `ui_rarityEffects 0`).
+    pub(super) fn first_look(&self, kind: crate::collection_seen::Kind, id: &str) -> f32 {
+        self.reveals
+            .flash(kind, id, self.look_clock(), crate::rarity_fx::enabled())
+    }
+
+    /// How far card `id` faces the player now: a first look turns it over.
+    pub(super) fn first_turn(&self, id: &str) -> f32 {
+        self.reveals
+            .turn(id, self.look_clock(), crate::rarity_fx::enabled())
+    }
+
+    /// The saber on its own holds a New kyber the first look has not lit yet: its blade
+    /// stays out until then.
+    fn held_off(&self) -> bool {
+        use crate::collection_seen::Kind;
+        if self.finishers_shown || self.shader == 0 {
+            return false;
+        }
+        self.skin_at(self.shader).is_some_and(|skin| {
+            self.marks.is_new(skin.id) && !self.reveals.revealed(Kind::Kyber, skin.id)
+        })
     }
 
     /// The milliseconds the New marks' second is counted on ([`Self::view`]).

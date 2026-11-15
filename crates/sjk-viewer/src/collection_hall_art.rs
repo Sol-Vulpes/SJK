@@ -15,6 +15,7 @@
 
 use super::super::view::label_width;
 use super::*;
+use crate::menu::sjk::kit;
 use crate::unlockables::Rarity;
 
 /// The most a toy's or medal's picture grows to, and a holocron's (hall frame pixels).
@@ -36,6 +37,8 @@ pub(crate) struct Blade {
     pub(crate) id: Option<&'static str>,
     pub(crate) name: String,
     pub(crate) colour: Color,
+    /// Its tier, for its mark (`None`: the stock blade).
+    pub(crate) tier: Option<Rarity>,
     pub(crate) note: &'static str,
 }
 
@@ -96,6 +99,11 @@ pub(crate) enum Art {
     },
     /// The newest lines read: each its day and sentence.
     History { rows: Vec<(String, String)> },
+}
+
+/// How large a tier's mark is beside words `size` high (`art_mark`).
+fn mark_size(size: f32) -> f32 {
+    (size * 0.6).max(8.0)
 }
 
 /// `words` cut to `width` frame pixels at `size` (the body family when `body`), ending in
@@ -183,7 +191,9 @@ impl Panel {
         display: bool,
         ts: f32,
     ) {
-        let words = clipped(words, width, size, !display);
+        // Through `terms::say`, so JoF naming reads Echoes and Honors here too.
+        let words = crate::terms::say(words);
+        let words = clipped(&words, width, size, !display);
         text(
             &mut self.ui,
             if display {
@@ -202,6 +212,27 @@ impl Panel {
             },
             TextAlign::Start,
         );
+    }
+
+    /// Tier `tier`'s mark at the start of the line from `[x, y]`, `width` across (`size`
+    /// its words'), as every page tells a tier ([`kit::tier_mark`], `docs/sjk-ui.md`
+    /// "Tier frame"): the room left after it for the words. Nothing for Common.
+    fn art_mark(
+        &mut self,
+        frame: &Frame,
+        tier: Rarity,
+        [x, y, width]: [f32; 3],
+        size: f32,
+        ts: f32,
+    ) -> [f32; 3] {
+        let mark = mark_size(size);
+        let middle = y + size * 1.4 * ts * 0.5;
+        let drawn = kit::tier_mark(&mut self.ui, frame, [x, middle], tier, mark, false);
+        if drawn <= 0.0 {
+            return [x, y, width];
+        }
+        let used = drawn + size * 0.45;
+        [x + used, y, (width - used).max(0.0)]
     }
 
     /// A thin bar at `[x, y, width]`, `share` of it filled in `colour`.
@@ -267,9 +298,16 @@ impl Panel {
                 blade.id,
                 stock,
             );
-            let words_x = x + strip + 14.0;
             let size = 16.0;
             let line = size * 1.4 * ts;
+            // The blade's tier told by its mark after the strip, as on every page.
+            let words_x = match blade.tier {
+                Some(tier) => {
+                    let start = [x + strip + 12.0, middle - line * 0.5, left];
+                    self.art_mark(frame, tier, start, 13.0, ts)[0].max(x + strip + 14.0)
+                }
+                None => x + strip + 14.0,
+            };
             let note = if blade.note.is_empty() {
                 String::new()
             } else {
@@ -333,30 +371,28 @@ impl Panel {
             line
         };
         let fit = (((height + 2.0) / step).floor().max(0.0) as usize).min(tiers.len());
+        let mark_room = |tier: Rarity| {
+            let width = kit::tier_mark_width(tier, mark_size(size));
+            if width > 0.0 {
+                width + size * 0.45
+            } else {
+                0.0
+            }
+        };
         let label_room = if roomy {
             right * 0.62
         } else {
             tiers
                 .iter()
-                .map(|(tier, _, _)| {
-                    label_width(&format!("{}  {}", tier.symbol(), tier.label()), size, 1.0)
-                })
+                .map(|(tier, _, _)| mark_room(*tier) + label_width(tier.label(), size, 1.0))
                 .fold(0.0, f32::max)
                 + 10.0
         };
         let count_room = label_width("000/000", size, 1.0) + 10.0;
         for (index, (tier, held, total)) in tiers.iter().take(fit).enumerate() {
             let top = y + index as f32 * step;
-            let label = format!("{}  {}", tier.symbol(), tier.label());
-            self.art_line(
-                frame,
-                &label,
-                [right_x, top, label_room],
-                size,
-                tier.colour(),
-                true,
-                ts,
-            );
+            let words = self.art_mark(frame, *tier, [right_x, top, label_room], size, ts);
+            self.art_line(frame, tier.label(), words, size, tier.colour(), true, ts);
             let words = match held {
                 Some(held) => format!("{held}/{total}"),
                 None => total.to_string(),
@@ -456,10 +492,11 @@ impl Panel {
             ts,
         );
         let below = y + 22.0 * 1.4 * ts;
+        let words = self.art_mark(frame, tier, [x, below, words_width], 14.0, ts);
         self.art_line(
             frame,
             &format!("{} \u{b7} worn", tier.label()),
-            [x, below, words_width],
+            words,
             14.0,
             color::MUTED,
             false,
@@ -480,7 +517,8 @@ impl Panel {
         let size = 14.0;
         let step = size * 1.4 * ts;
         let chars = ((width / (size * 0.52 * ts)) as usize).max(8);
-        let lines: Vec<&str> = crate::menu::sjk::wrap(words, chars).collect();
+        let words = crate::terms::say(words);
+        let lines: Vec<&str> = crate::menu::sjk::wrap(&words, chars).collect();
         let fit = ((height / step).floor().max(0.0) as usize).min(lines.len());
         for (index, line) in lines.iter().take(fit).enumerate() {
             let line = if index + 1 == fit && fit < lines.len() {
@@ -536,27 +574,24 @@ impl Panel {
             height.min(width * 0.42)
         }
         .max(0.0);
-        let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
-            rect: frame.rect(x, y, side, side),
-            radius: 10.0 * frame.s,
-            color: color::alpha(color::SPACE, 0.55),
-        });
-        match crate::tag_icons::texture(id) {
-            Some(texture) => {
-                let _ = self.ui.draw_list_mut().push(DrawCommand::TexturedQuad {
-                    rect: frame.rect(x + 4.0, y + 4.0, side - 8.0, side - 8.0),
-                    texture,
-                    color: Color::new(1.0, 1.0, 1.0, 1.0),
-                });
-            }
-            None => {
-                let _ = self.ui.draw_list_mut().push(DrawCommand::Border {
-                    rect: frame.rect(x, y, side, side),
-                    radius: 10.0 * frame.s,
-                    width: 1.2 * frame.s,
-                    color: color::alpha(tier.colour(), 0.5),
-                });
-            }
+        // The picture in its tier's frame, as the Tags wall frames it.
+        kit::tier_frame(
+            &mut self.ui,
+            frame,
+            [x, y, side, side],
+            tier,
+            kit::TierSize::Tile,
+            kit::TierLook {
+                still: true,
+                ..kit::TierLook::at(0.0)
+            },
+        );
+        if let Some(texture) = crate::tag_icons::texture(id) {
+            let _ = self.ui.draw_list_mut().push(DrawCommand::TexturedQuad {
+                rect: frame.rect(x + 4.0, y + 4.0, side - 8.0, side - 8.0),
+                texture,
+                color: Color::new(1.0, 1.0, 1.0, 1.0),
+            });
         }
         let (words_x, y) = if stacked {
             (x, y + side + 12.0)
@@ -575,10 +610,11 @@ impl Panel {
             ts,
         );
         let below = y + 22.0 * 1.4 * ts;
+        let words = self.art_mark(frame, tier, [words_x, below, words_width], 14.0, ts);
         self.art_line(
             frame,
             &format!("{} \u{b7} chosen", tier.label()),
-            [words_x, below, words_width],
+            words,
             14.0,
             color::MUTED,
             false,
@@ -842,7 +878,7 @@ impl Panel {
             let words_width = (x + width - words_x).max(0.0);
             let middle = y + height * 0.5;
             let (first, second) = if held.is_some() {
-                ("No cards yet", "Holocrons bring them")
+                ("No cards yet", "Found in Holocrons")
             } else {
                 ("Cards", "Show once the hub answers")
             };
@@ -931,6 +967,12 @@ impl Panel {
         let named = tiers
             .iter()
             .all(|tier| label_width(tier.label, 12.0, 1.15) <= column - 4.0);
+        let marked = tiers.iter().enumerate().all(|(index, tier)| {
+            kit::tier_mark_width(kit::holocron_tier(index), 8.0)
+                + 5.0
+                + label_width(tier.label, 12.0, 1.15)
+                <= column - 4.0
+        });
         let words = 20.0 * 1.3 * ts + if named { 13.0 * 1.3 * ts } else { 0.0 };
         let side = (height - words - 6.0).min(column - 10.0).min(HOLOCRON_MOST);
         // Centred down a tall tile.
@@ -963,14 +1005,27 @@ impl Panel {
             if !named {
                 continue;
             }
+            // The tier's mark before its name, centred together, when every tier's fits.
+            let rank = kit::holocron_tier(index);
+            let label_top = top + 20.0 * 1.3 * ts;
+            let mark = kit::tier_mark_width(rank, 8.0);
+            let label = label_width(tier.label, 12.0, 1.15);
+            let offset = if marked {
+                let start = middle - (mark + 5.0 + label) * 0.5;
+                let line = label_top + 13.0 * 1.3 * ts * 0.5;
+                kit::tier_mark(&mut self.ui, frame, [start, line], rank, 8.0, count == 0);
+                (mark + 5.0) * 0.5
+            } else {
+                0.0
+            };
             text(
                 &mut self.ui,
                 TextFamily::Body,
                 format_args!("{}", tier.label),
                 frame.rect(
-                    middle - column * 0.5,
-                    top + 20.0 * 1.3 * ts,
-                    column,
+                    middle - column * 0.5 + offset * 2.0,
+                    label_top,
+                    column - offset * 2.0,
                     13.0 * 1.3 * ts,
                 ),
                 12.0 * frame.s,
@@ -1084,10 +1139,15 @@ impl Panel {
                 top += strip + 6.0;
                 let line = 17.0 * 1.4 * ts;
                 let price = self.art_price(frame, [x + width, top], deal, 17.0, ts);
+                let name = [x, top, width - price - 12.0];
+                let name = match deal.blade.tier {
+                    Some(tier) => self.art_mark(frame, tier, name, 17.0, ts),
+                    None => name,
+                };
                 self.art_line(
                     frame,
                     &deal.blade.name,
-                    [x, top, width - price - 12.0],
+                    name,
                     17.0,
                     deal.blade.colour,
                     true,
@@ -1120,14 +1180,19 @@ impl Panel {
                     let line_top = middle - 15.0 * 0.7 * ts;
                     let price = self.art_price(frame, [x + width, line_top], offer, 15.0, ts);
                     let name_x = x + strip_width + 10.0;
+                    let name = [
+                        name_x,
+                        line_top,
+                        (x + width - price - 10.0 - name_x).max(0.0),
+                    ];
+                    let name = match offer.blade.tier {
+                        Some(tier) => self.art_mark(frame, tier, name, 15.0, ts),
+                        None => name,
+                    };
                     self.art_line(
                         frame,
                         &offer.blade.name,
-                        [
-                            name_x,
-                            line_top,
-                            (x + width - price - 10.0 - name_x).max(0.0),
-                        ],
+                        name,
                         15.0,
                         offer.blade.colour,
                         false,

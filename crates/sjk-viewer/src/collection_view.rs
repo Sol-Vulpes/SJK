@@ -576,6 +576,18 @@ impl Panel {
         if self.tab == Tab::SaberLab && !crate::saber_lab::active() {
             self.tab = Tab::Shaders;
         }
+        // The motion from the page shown last frame to this one (it only draws).
+        let now = self.look_clock();
+        self.transition.follow(
+            super::transition::Place {
+                hall: self.hall,
+                tab: self.tab,
+                finishers: self.finishers_shown,
+            },
+            now,
+            crate::rarity_fx::enabled(),
+        );
+        self.transition.now = self.transition.at(now);
         // The hall, or the Loadouts card over it (the hall left out under it).
         if self.hall {
             // Not on show: shown again, the History tab reads the newest lines.
@@ -588,6 +600,7 @@ impl Panel {
                 return;
             }
             self.hall_view(inputs, viewport, seconds);
+            self.closing_card(&frame);
             self.ui
                 .finish(hall::TILE_BASE + self.hall_state.chosen as u16);
             return;
@@ -635,6 +648,8 @@ impl Panel {
             self.ui.finish(u16::MAX);
             return;
         }
+        // The page arriving: faint, or sliding in from the side, for its motion.
+        let arriving = self.arriving_page(&frame);
         let asking = self.tab == Tab::Forge && self.forge.ask.is_some();
         let back = if self.hub {
             crate::profile_hub::back_words(self.back)
@@ -709,7 +724,89 @@ impl Panel {
         self.keys(&frame, inputs);
         self.lab_build_overlay(&frame);
         self.hover_card(&frame, inputs);
+        self.arrived_page(&frame, arriving);
         self.ui.finish(self.focus_token());
+    }
+
+    /// The window rectangle a kind's page fills, where an opening tile grows to.
+    fn page_area(frame: &Frame) -> sjk_ui::Rect {
+        frame.rect(LEFT_X, 150.0, RIGHT_X - LEFT_X, 870.0)
+    }
+
+    /// Begin the page under this frame's motion: its opacity, and a slide's offset. What
+    /// was begun, for [`Self::arrived_page`] to end.
+    fn arriving_page(&mut self, frame: &Frame) -> (bool, bool) {
+        use super::transition::{Motion, SLIDE_FROM, arriving};
+        let Some((motion, t)) = self
+            .transition
+            .now
+            .filter(|(motion, _)| *motion != Motion::Close)
+        else {
+            return (false, false);
+        };
+        let list = self.ui.draw_list_mut();
+        let _ = list.push(DrawCommand::PushOpacity(arriving(motion, t)));
+        let slid = if let Motion::Slide { by } = motion {
+            let dx = by * SLIDE_FROM * frame.s * (1.0 - t);
+            let _ = list.push(DrawCommand::PushTransform([
+                1.0, 0.0, dx, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0,
+            ]));
+            true
+        } else {
+            false
+        };
+        (true, slid)
+    }
+
+    /// End what [`Self::arriving_page`] began, then draw an opening's tile on its way
+    /// from the hall into the page.
+    fn arrived_page(&mut self, frame: &Frame, (faded, slid): (bool, bool)) {
+        use super::transition::{Motion, between};
+        let list = self.ui.draw_list_mut();
+        if slid {
+            let _ = list.push(DrawCommand::PopTransform);
+        }
+        if faded {
+            let _ = list.push(DrawCommand::PopOpacity);
+        }
+        if let Some((Motion::Open { from }, t)) = self.transition.now {
+            let rect = between(from, Self::page_area(frame), t);
+            Self::moving_card(&mut self.ui, frame, rect, 1.0 - t * t);
+        }
+    }
+
+    /// Over the hall, a closing page on its way back onto its tile.
+    fn closing_card(&mut self, frame: &Frame) {
+        use super::transition::{Motion, between};
+        let (Some((Motion::Close, t)), Some(tile)) = (self.transition.now, self.transition.tile)
+        else {
+            return;
+        };
+        let page = Self::page_area(frame);
+        Self::moving_card(&mut self.ui, frame, between(page, tile, t), 1.0 - t * t);
+    }
+
+    /// A card on its way between a hall tile and its page (window pixels), `alpha`
+    /// opaque: the tile's dark glass and the gold of the one chosen.
+    fn moving_card(
+        canvas: &mut crate::menu_widgets::MenuCanvas,
+        frame: &Frame,
+        rect: sjk_ui::Rect,
+        alpha: f32,
+    ) {
+        let alpha = alpha.clamp(0.0, 1.0);
+        let list = canvas.draw_list_mut();
+        let _ = list.push(DrawCommand::RoundedRect {
+            rect,
+            radius: 12.0 * frame.s,
+            color: color::alpha(color::SPACE, 0.85 * alpha),
+        });
+        let _ = list.push(DrawCommand::Border {
+            rect,
+            radius: 12.0 * frame.s,
+            width: 2.0 * frame.s,
+            color: color::alpha(color::GOLD, alpha),
+        });
     }
 
     /// How many of all the things the player holds, at the top right: the words, and a

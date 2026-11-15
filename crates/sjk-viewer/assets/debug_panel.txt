@@ -137,6 +137,45 @@ test: Tag Choose, finisher Wear / Take off, card Show in Cards (G) lands on its 
 test: The strip's "spare copies worth N" matches the Forge's Break down all duplicates.
 note: Offer in trade is not there: the trade window takes the menus' input while open.
 
+[collection-wording]
+area: Menus & settings
+title: Collection wording: dormant kybers attune, wallet lines, Holocrons capitalised
+change: A dormant kyber's greyed Attune says the hub does not let you attune dormant kybers.
+change: Wallet: "credits, from opening Holocrons"; "kyber shards, from Holocrons and kybers..."
+change: Empty Cards, hall Cards tile, Inventory card: Holocrons capitalised, Echoes under JoF.
+test: Inventory, a dormant kyber chosen with the hub refusing: the reason names attuning.
+test: Inventory card of a holocron tier: "You hold 3 to open"; dormant kybers "3 to attune".
+test: jof.honorNames on: empty Cards and the hall's Cards tile say Echoes, capitalised.
+
+[first-look]
+area: Menus & settings
+title: First look at a New thing: blade ignites, card turns, frame flashes, soft sound
+change: Kybers: a New kyber's blade stays off on the stage until its 1 s look, then ignites.
+change: Cards turn over; every kind's tier frame flashes once; a cue, longer for Legendary+.
+test: Kybers: choose a New kyber: hilt alone, then after 1 s the blade lights with its sound.
+test: Cards / Tags / Finishers: a New one chosen 1 s: frame flash, card turns, soft blip.
+test: A Legendary or Mythical New thing: the longer chime. A seen thing: no sound at all.
+test: Mark all seen (N), or leaving the page early: no reveal. ui_rarityEffects 0: no flash.
+
+[collection-motion]
+area: Menus & settings
+title: Collection motion: tile grows into its page, Esc shrinks it back, Ctrl+Tab slides
+change: Enter: the tile's card grows into the page (180 ms), the page fades in behind it.
+change: Esc / breadcrumb: the page shrinks onto the same tile; Ctrl+Tab slides (100 ms).
+test: Hall, Enter on Cards: a gold card grows from the tile; Esc: it lands on Cards, chosen.
+test: Ctrl+Tab and Ctrl+Shift+Tab in a kind: the page slides in from right / left.
+test: Press Enter then Esc quickly: both act at once, nothing waits for the motion.
+test: ui_rarityEffects 0: a short crossfade instead of the growth and the slide.
+
+[hall-tier-marks]
+area: Menus & settings
+title: Collection hall: tier diamonds on its blades, deals, finisher, tag and holocrons
+change: The hall's tier-coloured lines carry the tier's diamonds, as the pages' rows do.
+change: The tag chosen sits in its tier's frame; the tiles stay plain kind tiles.
+test: Kybers tile: diamonds after each strip and before each tier's name on the right.
+test: Forge tile: the deal and the day's offers with their diamonds; Finishers, Tags too.
+test: Holocrons tile, where every tier's fits (4:3): diamonds before names; the worn blade's.
+
 [chat-icon-sizes]
 area: Console & chat
 title: Game chat: smaller SJK/EJK icons; nameplates: EJK icon with the tick on its corner

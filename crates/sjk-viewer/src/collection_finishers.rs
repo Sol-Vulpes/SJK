@@ -162,6 +162,28 @@ impl Panel {
             width: 1.4 * s,
             color: color::alpha(tier, if held { 0.9 } else { 0.4 }),
         });
+        // A first look: the card's edge flashes once in its tier's colour.
+        let flash = self.first_look(crate::collection_seen::Kind::Finisher, finisher.id);
+        if flash > 0.0 {
+            let out = 4.0 + 6.0 * (1.0 - flash);
+            let _ = self.ui.draw_list_mut().push(DrawCommand::Border {
+                rect: frame.rect(CARD_X, y, CARD_WIDTH, CARD_HEIGHT),
+                radius: 14.0 * s,
+                width: 2.6 * s,
+                color: color::alpha(tier, flash),
+            });
+            let _ = self.ui.draw_list_mut().push(DrawCommand::Border {
+                rect: frame.rect(
+                    CARD_X - out,
+                    y - out,
+                    CARD_WIDTH + out * 2.0,
+                    CARD_HEIGHT + out * 2.0,
+                ),
+                radius: (14.0 + out) * s,
+                width: 3.0 * s,
+                color: color::alpha(tier, 0.45 * flash),
+            });
+        }
         let left = CARD_X + 24.0;
         text(
             &mut self.ui,

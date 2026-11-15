@@ -224,7 +224,7 @@ impl Panel {
         });
         let (line, label, action) = if waiting > 0 {
             (
-                "Cards come out of holocrons. Every holocron you open may hold one, in Normal, \
+                "Cards come out of Holocrons. Every Holocron you open may hold one, in Normal, \
                  Holo or Solar. The SJK Alpha set has a card for every player who helped build \
                  SJK.",
                 format!(
@@ -235,7 +235,7 @@ impl Panel {
             )
         } else {
             (
-                "Cards come out of holocrons, and holocrons drop while you play on SJK servers.",
+                "Cards come out of Holocrons, and Holocrons drop while you play on SJK servers.",
                 "Find a server  (Enter)".to_owned(),
                 super::view::EmptyAction::Servers,
             )
@@ -500,6 +500,12 @@ impl Panel {
         let chosen = index == self.card;
         let token = CARD_BASE + index as u16;
         let height = CARD_WIDTH * look::ASPECT;
+        let flash = tile
+            .best()
+            .and_then(|stack| stack.card.as_deref())
+            .map_or(0.0, |id| {
+                self.first_look(crate::collection_seen::Kind::Card, id)
+            });
         // The tier's frame round the card, one look everywhere (15/11/2026), gold round the
         // one chosen.
         crate::menu::sjk::kit::tier_frame(
@@ -511,6 +517,7 @@ impl Panel {
             crate::menu::sjk::kit::TierLook {
                 chosen,
                 dim: !tile.owned(),
+                flash,
                 ..crate::menu::sjk::kit::TierLook::at(seconds)
             },
         );
@@ -639,6 +646,11 @@ impl Panel {
             0,
             seconds,
         );
+        // A first look turns the card over to face the player.
+        let turn = tile
+            .best()
+            .and_then(|stack| stack.card.as_deref())
+            .map_or(1.0, |id| self.first_turn(id));
         let shown = tile.in_finish(self.card_look_for());
         let finish = shown.map_or(&FINISHES[0], |stack| stack.finish);
         let edition = shown.map_or("", |stack| stack.edition.as_str());
@@ -657,7 +669,7 @@ impl Panel {
             },
             seconds,
             1.0,
-            1.0,
+            turn,
         );
         // A click on it looks at it closely.
         self.ui.hit_region(

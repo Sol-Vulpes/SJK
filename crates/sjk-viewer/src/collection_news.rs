@@ -81,6 +81,8 @@ impl Panel {
             })
         });
         if !seen.is_empty() {
+            // The moment they are met: their first look (only New things are watched).
+            self.reveal_things(&seen);
             crate::collection_seen::see_all(seen);
         }
     }
@@ -356,5 +358,32 @@ mod tests {
         panel.show(Tab::Cards);
         built(&mut panel, &shown);
         assert!(panel.ui.rect_for(KIND_SEEN_ALL_TOKEN).is_none());
+    }
+
+    /// The first look plays when a New thing has stayed chosen its second, once; a thing
+    /// already seen stays quiet however long it is chosen.
+    #[test]
+    fn a_new_thing_reveals_itself_once_when_first_seen() {
+        use crate::audio::ui_cues::{Cue, take_posted};
+        use std::time::Duration;
+        const NEW: &str = "reveal_test_card";
+        let mut panel = Panel::new();
+        panel.news.news = News::shown(&[(Kind::Card, NEW, 1)]);
+        let _ = take_posted();
+        panel.watch_new(Some((Kind::Card, "reveal_test_seen")));
+        panel.epoch -= Duration::from_millis(1_500);
+        panel.watch_new(Some((Kind::Card, "reveal_test_seen")));
+        assert!(take_posted().is_empty(), "nothing New, nothing revealed");
+        panel.watch_new(Some((Kind::Card, NEW)));
+        assert!(take_posted().is_empty(), "not before its second");
+        assert!(!panel.reveals.revealed(Kind::Card, NEW));
+        panel.epoch -= Duration::from_millis(1_000);
+        panel.watch_new(Some((Kind::Card, NEW)));
+        assert_eq!(take_posted(), [Cue::Reveal]);
+        assert!(panel.reveals.revealed(Kind::Card, NEW));
+        panel.epoch -= Duration::from_millis(1_000);
+        panel.watch_new(Some((Kind::Card, NEW)));
+        panel.leave_news();
+        assert!(take_posted().is_empty(), "once");
     }
 }

@@ -213,6 +213,8 @@ impl Panel {
                 ..self.lab
             }),
             hall: false,
+            held_off: false,
+            ignite: 0,
         })
     }
 

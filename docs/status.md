@@ -1,3 +1,21 @@
+## Collection polish: wording, hall tier marks, first look, motion (15/11/2026)
+
+15/11/2026, `personal/collection-polish` based on `main` `646083619` (Sol's approval of the
+Collection ideas round's polish, ideas 9 and 10 among them). Wording: a dormant kyber's
+refusal names attuning, the wallet strip says how each currency is earned, Holocron is
+capitalised in the new strings (Echo/Echoes under JoF naming) and every hall art line goes
+through `terms::say`. The hall's tier-coloured lines carry `kit::tier_mark` (tiles stay kind
+tiles). First look (`collection_reveal.rs`, `menu_stage/reveal.rs`): a New kyber's stage
+blade waits on the hilt and ignites with its own sound, a card turns over, the tier frame
+flashes, `Cue::Reveal`/`Cue::RevealRare` play. Motion (`collection_transition.rs`): tile into
+page and back (180 ms), Ctrl+Tab slide (100 ms), a crossfade with `ui_rarityEffects 0`;
+it only draws, keys act at once ([sjk-ui.md](sjk-ui.md#collection)). Verified: `cargo
+build`/`test --workspace` with no warning (unit tests for the reveal's trigger, once and only
+for New, the transition's timing, keys during it and the reverse landing on its tile), the
+startup stack check, and the `duel6_sjk_collection_hall` (with a frame 90 ms into an
+opening), `duel6_sjk_collection_inventory` and `duel6_sjk_collection_new` world shots. Not
+tried in a game: the ignition on the stage, its sound and the cues were not heard.
+
 ## Kyber stills on the Collection's tiles (15/11/2026)
 
 15/11/2026, `personal/blade-stills` from `main` `1eae244cc`, `main` `f1557c4a2` merged in
