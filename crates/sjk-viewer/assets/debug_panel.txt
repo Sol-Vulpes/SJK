@@ -28,7 +28,7 @@
 area: Console & chat
 title: Game chat: smaller SJK/EJK icons; nameplates: EJK icon with the tick on its corner
 change: SJK's emblem is a little smaller; the EJK icon is smaller still so both read the same size.
-test: An SJK player's and an EJK player's lines: the icons look the same size, the tick after the name.
+test: An SJK and an EJK player's lines: the icons look the same size, the tick after the name.
 change: Nameplates (holo, capsule, classic): an EJK icon in the tick's place, tick on its corner.
 test: cg_nameplate 1 near an EJK player: their icon after the name, tick small at its bottom right.
 
