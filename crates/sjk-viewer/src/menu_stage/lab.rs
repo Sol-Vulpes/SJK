@@ -12,14 +12,14 @@ use sjk_audio::{ChannelId, SourceId};
 use sjk_client::animation_events::{Cue, Cursor, Random};
 
 /// The source the lab's sounds play from, their own (the interface cues' is the last).
-const SOURCE: SourceId = SourceId(u32::MAX - 1);
+pub(super) const SOURCE: SourceId = SourceId(u32::MAX - 1);
 /// The channel ignition and retraction share, so that one cuts the other short; swings
 /// play on the free one.
-const SWITCH_CHANNEL: ChannelId = ChannelId(1);
+pub(super) const SWITCH_CHANNEL: ChannelId = ChannelId(1);
 const FREE_CHANNEL: ChannelId = ChannelId(0);
 /// The ignition SJK plays for a hilt without `soundOn`, and `WP_SaberSetDefaults`'
 /// retraction (`bg_saberLoad.c:418`).
-const STOCK_ON: &str = "sound/weapons/saber/saberon.mp3";
+pub(super) const STOCK_ON: &str = "sound/weapons/saber/saberon.mp3";
 const STOCK_OFF: &str = "sound/weapons/saber/enemy_saber_off.wav";
 /// The hum when the skin names none the packs hold (a hilt's own is not in its
 /// definition here).
@@ -192,6 +192,8 @@ impl MenuStage {
 impl GpuState {
     /// Play this frame's Saber Lab sounds at `now`, the stage's clock.
     pub(crate) fn play_saber_lab_sounds(&mut self, audio: &mut Option<GameAudio>, now: Instant) {
+        // The Collection's first look at a New kyber lights its blade with this sound.
+        self.play_stage_reveal(audio);
         let lab = self.menu_stage.lab;
         let (Some(lab), Some(actor)) = (lab, &mut self.menu_stage.actor) else {
             self.menu_stage.lab_sounds = Sounds::default();

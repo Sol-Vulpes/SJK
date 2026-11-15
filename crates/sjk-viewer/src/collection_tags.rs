@@ -895,6 +895,11 @@ impl Panel {
         let chosen = index == self.tag;
         let count = held.copies;
         let (name, tone_name, tone) = entry_words(entry);
+        let flash = match entry {
+            Entry::Tag(tag) => self.first_look(crate::collection_seen::Kind::Tag, tag.id),
+            Entry::Card(id) => self.first_look(crate::collection_seen::Kind::Card, id),
+            Entry::Gif(_) => 0.0,
+        };
         // The tier's frame, one look everywhere (15/11/2026), gold round the one chosen.
         crate::menu::sjk::kit::tier_frame(
             &mut self.ui,
@@ -906,6 +911,7 @@ impl Panel {
                 chosen,
                 hovered: hovered || chosen,
                 dim: count == 0,
+                flash,
                 ..crate::menu::sjk::kit::TierLook::at(crate::menu::art::motion::seconds() as f32)
             },
         );

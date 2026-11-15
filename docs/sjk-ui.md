@@ -2295,6 +2295,28 @@ own profile, the seen-list, the blades worn), never every frame. World shots:
 kyber chosen, the Favourites chip, the last copy of the worn blade asking, the Kybers
 tab's wall, hover card and list). Not tried in a game.
 
+#### First look
+
+[collection_reveal.rs](../crates/sjk-viewer/src/collection_reveal.rs) and
+[menu_stage/reveal.rs](../crates/sjk-viewer/src/menu_stage/reveal.rs), 15/11/2026 (idea 10
+of the Collection's ideas round, Sol's approval): the second a New thing turns seen is
+marked, once, and only for a thing New then (browsing things already seen, Mark all seen and
+leaving a page stay quiet).
+
+- **Kybers:** while the Kybers tab's saber on its own holds a New kyber not looked at yet,
+  its blade stays out, the hilt alone (`StageWish::held_off`); the first look lights it,
+  hilt to tip as a match's does, with the kyber's own ignition (the hilt's, else the stock
+  `saberon`), as the Saber Lab plays it.
+- **Cards:** the card up close turns over to face the player (450 ms, the card look's
+  `turn`).
+- **Every kind:** the thing's tier frame (a Kybers wall tile, the Forge's tile or row, a
+  Cards or Tags tile, a finisher's card) flashes once in its tier's colour (holo for
+  Common), 600 ms (`TierLook::flash`). `ui_rarityEffects 0` leaves out the flash and the
+  card's turn.
+- **Sound:** an interface cue under the cues' volume, `Cue::Reveal` (the ping's blip, at
+  0.35) or, for a Legendary, Mythical or Unique thing, `Cue::RevealRare` (the holocron's
+  shimmer, at 0.5). Not tried in a game.
+
 ### Empty states
 
 [collection_view.rs](../crates/sjk-viewer/src/collection_view.rs) `empty_state`, 15/11/2026

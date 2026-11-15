@@ -147,6 +147,16 @@ test: Inventory, a dormant kyber chosen with the hub refusing: the reason names 
 test: Inventory card of a holocron tier: "You hold 3 to open"; dormant kybers "3 to attune".
 test: jof.honorNames on: empty Cards and the hall's Cards tile say Echoes, capitalised.
 
+[first-look]
+area: Menus & settings
+title: First look at a New thing: blade ignites, card turns, frame flashes, soft sound
+change: Kybers: a New kyber's blade stays off on the stage until its 1 s look, then ignites.
+change: Cards turn over; every kind's tier frame flashes once; a cue, longer for Legendary+.
+test: Kybers: choose a New kyber: hilt alone, then after 1 s the blade lights with its sound.
+test: Cards / Tags / Finishers: a New one chosen 1 s: frame flash, card turns, soft blip.
+test: A Legendary or Mythical New thing: the longer chime. A seen thing: no sound at all.
+test: Mark all seen (N), or leaving the page early: no reveal. ui_rarityEffects 0: no flash.
+
 [hall-tier-marks]
 area: Menus & settings
 title: Collection hall: tier diamonds on its blades, deals, finisher, tag and holocrons

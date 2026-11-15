@@ -68,6 +68,9 @@ pub(crate) struct TierLook {
     pub(crate) still: bool,
     /// The UI's clock, for the sheen.
     pub(crate) seconds: f32,
+    /// A first look's flash over the frame, 0 (none) to 1, in the tier's colour
+    /// (`collection_reveal.rs`; the caller passes 0 with `ui_rarityEffects 0`).
+    pub(crate) flash: f32,
 }
 
 impl TierLook {
@@ -81,6 +84,7 @@ impl TierLook {
             glass: true,
             still: false,
             seconds,
+            flash: 0.0,
         }
     }
 }
@@ -311,6 +315,43 @@ pub(crate) fn tier_frame(
                 radius: (radius - inset).max(2.0) * s,
                 width: s,
                 color: faded(colour, 0.5 * ink),
+            },
+        );
+    }
+    // A first look's flash: the edge lit in the tier's colour (holo for Common) and a
+    // halo round it, fading out.
+    if look.flash > 0.0 {
+        let flash = look.flash.min(1.0);
+        let lit = if step == 0 {
+            super::color::HOLO
+        } else {
+            colour
+        };
+        push(
+            canvas,
+            DrawCommand::RoundedRect {
+                rect: area,
+                radius: radius * s,
+                color: faded(lit, 0.16 * flash),
+            },
+        );
+        push(
+            canvas,
+            DrawCommand::Border {
+                rect: area,
+                radius: radius * s,
+                width: 2.4 * s,
+                color: faded(lit, flash),
+            },
+        );
+        let out = 4.0 + 6.0 * (1.0 - flash);
+        push(
+            canvas,
+            DrawCommand::Border {
+                rect: frame.rect(x - out, y - out, width + out * 2.0, height + out * 2.0),
+                radius: (radius + out) * s,
+                width: 3.0 * s,
+                color: faded(lit, 0.45 * flash),
             },
         );
     }

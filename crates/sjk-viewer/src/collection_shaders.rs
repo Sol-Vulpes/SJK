@@ -1490,6 +1490,9 @@ impl Panel {
                 color: color::alpha(color::SPACE, 0.55),
             });
         }
+        let flash = row.skin.map_or(0.0, |skin| {
+            self.first_look(crate::collection_seen::Kind::Kyber, skin.id)
+        });
         match row.tier() {
             // The tier's frame, one look everywhere (15/11/2026); its effects stay
             // `rarity_fx`'s, drawn over it.
@@ -1504,6 +1507,7 @@ impl Panel {
                     hovered: chosen || hovered,
                     dim: !row.owned,
                     still: true,
+                    flash,
                     ..kit::TierLook::at(seconds)
                 },
             ),

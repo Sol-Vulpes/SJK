@@ -19,6 +19,7 @@ mod load;
 mod lone;
 pub(crate) mod preview;
 mod prop;
+mod reveal;
 mod sabers;
 mod shell;
 mod showcase;
@@ -108,6 +109,8 @@ pub(crate) struct MenuStage {
     lab_ease: lab::Ease,
     /// The game's draw or put-away as the Saber Lab lights or puts out the blade.
     flourish: lab::Flourish,
+    /// The Collection's first look at a New kyber: its blade held out, then lit.
+    reveal: reveal::Reveal,
     /// The Collection's Toys tab: the Illuminate holocron floats by the model.
     holocron_wanted: bool,
     /// The Collection's hall: the camera turned to put the model in its column.
@@ -244,6 +247,7 @@ impl GpuState {
         }
         self.menu_stage.lone = lone;
         self.menu_stage.lab = wish.and_then(|wish| wish.lab);
+        self.menu_stage.reveal.follow(wish.as_ref());
         self.menu_stage.ease_lab_view(now);
         self.menu_stage
             .ease_hall_turn(wish.is_some_and(|wish| wish.hall), now);
