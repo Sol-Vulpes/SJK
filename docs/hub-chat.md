@@ -794,11 +794,9 @@ request, 08/10/2026):
 - A verified sender has their tick (the nameplates' seal, gold or their
   group's, staff's or a creator's: [Ticks](identity.md#ticks),
   `ui_renderer::mark_texture`) and no word: no "SJK VERIFIED" or "Verified" tag. Staff
-  stays written on the page. In the game's chat the tick (or trust mark) sits small on
-  the foot of the line's emblem or client icon, at its bottom right, as on the
-  scoreboard (`CORNER_TICK` in `chat/view/sjk_line.rs`; after the name until
-  14/11/2026, Sol's request to save room); a line without an emblem keeps it after the
-  name.
+  stays written on the page. In the game's chat it stays after the name (on the
+  emblem's foot for a day, 14/11/2026, then back after the name at Sol's request; the
+  nameplates keep it on a client icon's corner).
 - The line flows as one line and wraps only when it is too long, as a game chat line
   does. In the game it used to break straight away: the feed drew a sender's name and
   its tag on a row of their own and the message under it (`NAME_ADVANCE` in

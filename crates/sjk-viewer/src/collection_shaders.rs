@@ -3482,7 +3482,7 @@ mod tests {
                 let inputs = super::super::tests::inputs(holdings, "");
                 let mut panel = Panel::new();
                 panel.open(Tab::Shaders, true, true, ReturnTarget::MainMenu);
-                panel.set_backstage(Backstage::World { head: None });
+                panel.set_backstage(Backstage::World);
                 panel.build(&inputs, &font, [1_920.0, 1_080.0]);
                 let Some(row) = panel
                     .shader_list
@@ -3538,7 +3538,7 @@ mod tests {
                 };
                 let mut panel = Panel::new();
                 panel.open(Tab::Shaders, true, true, ReturnTarget::MainMenu);
-                panel.set_backstage(Backstage::World { head: None });
+                panel.set_backstage(Backstage::World);
                 panel.build(&inputs, &font, viewport);
                 // A shader of the trade the player lacks.
                 panel.shader = (0..SHADER_ROWS)
@@ -3600,7 +3600,7 @@ mod tests {
                     };
                     let mut panel = Panel::new();
                     panel.open(Tab::Shaders, true, true, ReturnTarget::MainMenu);
-                    panel.set_backstage(Backstage::World { head: None });
+                    panel.set_backstage(Backstage::World);
                     panel.shader = chosen;
                     panel.build(&inputs, &font, viewport);
                     assert!(!panel.ui.overflowed(), "{viewport:?} {grid}");

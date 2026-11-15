@@ -871,7 +871,7 @@ struct GpuState {
     /// The SJK UI's Profile screen: which tab shows, switched here.
     profile_hub: profile_hub::Hub,
     /// The last frame's view, for placing 2D over the world outside the HUD pass (the
-    /// Collection's nameplate over the stage model).
+    /// drone's and the fishing line's marks, the holocron stage).
     frame_view: Option<hud::identification::Camera>,
     pointer_captured: bool,
     /// A primary press consumed by spectator aim-to-follow; consume its release too.

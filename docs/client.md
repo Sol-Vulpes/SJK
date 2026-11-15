@@ -4296,6 +4296,16 @@ A feature sets the prompt each frame it applies (`GpuState::want_use_prompt`); t
 draws the last one set and forgets it. The [mystery boxes](mystery-boxes.md#opening-one)
 are its first user, in place of their centre prints.
 
+**Possible drops** (Sol, 15/11/2026): a prompt may carry what the thing faced can give
+(`Prompt::drops`): once the prompt has stood 0.35 s, a dark panel edged in gold fades in
+under it (0.25 s), titled "Possible drops", one row a thing with its chance on the right
+("45.5 %"), likeliest first, at most 12 rows, kept on the screen. It goes with the
+prompt. The chances are the hub's, read with the boxes and wheels, so they change when
+the hub's odds do. A [mystery box](mystery-boxes.md#opening-one) shows them while nobody
+opens it; a [WHEEL OF DOOM](wheel-of-doom.md#spinning-one) whenever its prompt shows,
+the holocrons in their tier's colour and its bad effects in one red row ("A bad effect
+(12 kinds)").
+
 ## Capture the flag HUD
 
 In Capture the Flag and Capture the Ysalamiri every HUD style shows the flags' state
@@ -4472,8 +4482,8 @@ dark outline (`TwoTone`). Off keeps the shadow only. It applies to the chat too 
 `cg_chatBoxOutline`).
 
 **Styles** (31/10/2026, Sol's decision to let players choose among the designs SJK has
-had): `cg_nameplateStyle` (Settings "Nameplate style", and the Style row on the
-Collection's Nameplates tab, [sjk-ui.md](sjk-ui.md#collection)) picks the plates' look,
+had): `cg_nameplateStyle` (Settings > HUD "Nameplate style"; the Collection's
+Nameplates tab offered it too until 15/11/2026) picks the plates' look,
 `hud::nameplate::Style`: 0 Holo, the holo frame below (the default, the look since
 28/10/2026); 1 Capsule; 2 Classic. What a plate says is the same in all three (the
 name and its mark, the power icons, the duel badge, the bars and the sharing and duel
@@ -4780,12 +4790,12 @@ them (decided 15/10/2026; since 17/10/2026 with no estimates on anyone else), an
 seeing any of them means sharing your own, through the hub (Sol's rule, 15/10/2026):
 
 - **See & share nameplates** is one setting, `cg_nameplate` (17/10/2026, off by default;
-  Settings > Interface, First setup, and the switch on the Collection's Nameplates tab,
-  [sjk-ui.md](sjk-ui.md#collection)): with nameplates on, whatever bars they show
+  Settings > HUD under Nameplates; the Collection's Nameplates tab had a switch for it
+  until 15/11/2026): with nameplates on, whatever bars they show
   (names only too), your client sends your real health, shield and Force (from the
   snapshot the server sends you, with its server time) to the SJK hub, which passes
   them to the other SJK players of your server ([hub-chat.md](hub-chat.md#vitals));
-  off, you see no nameplates and nothing is sent (`hud::nameplate::see_and_share`). It
+  off, you see no nameplates and nothing is sent (`hud::nameplate::State::sharing`). It
   needs `cl_identity` and a live claim, so it starts a few seconds after joining. It
   replaces `cg_nameplateShare` ("Share my bars"), which the client held on while
   nameplates showed bars: two settings for one value, and in Settings the row looked

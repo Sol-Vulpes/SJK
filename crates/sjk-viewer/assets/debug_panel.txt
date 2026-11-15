@@ -26,11 +26,9 @@
 
 [chat-icon-sizes]
 area: Console & chat
-title: Game chat: smaller SJK/EJK icons, the tick on the icon's corner
+title: Game chat: smaller SJK/EJK icons; nameplates: EJK icon with the tick on its corner
 change: SJK's emblem is a little smaller; the EJK icon is smaller still so both read the same size.
-change: The verified tick (or trust mark) sits on the icon's bottom right, as on the scoreboard.
-test: An SJK player's and an EJK player's lines: the icons look the same size, ticks on the corners.
-test: The name now starts right after the icon, with no tick between name and colon.
+test: An SJK player's and an EJK player's lines: the icons look the same size, the tick after the name.
 change: Nameplates (holo, capsule, classic): an EJK icon in the tick's place, tick on its corner.
 test: cg_nameplate 1 near an EJK player: their icon after the name, tick small at its bottom right.
 
@@ -276,6 +274,15 @@ test: Open boxes: coins piles, holocrons and crystals roll by; no bolts or littl
 test: Ray Gun: it jumps in hand at the stop; fire at a friend: they fall, glow green.
 test: Hit a box hunter: "RAY GUN: name down, +25 credits"; a second hit passes through.
 note: Needs the hub's box-rework branch deployed.
+
+[drop-odds]
+area: Gameplay
+title: Possible drops panel at boxes and wheels; louder WHEEL OF DOOM music
+change: Facing a box or wheel, a panel under the Use prompt lists drops with their %.
+change: WHEEL OF DOOM music at twice the gain, heard to 1400 units.
+test: Face a mystery box: after a moment the panel fades in, holocron 45.5 % first.
+test: Face a wheel: holocron tiers in colour, "A bad effect (12 kinds)" in red.
+test: A spin: the music is clearly louder, still heard across the room.
 
 [wheel-placed]
 area: Gameplay
@@ -2863,6 +2870,16 @@ test: Hold +attack: it fires as before. Hold a chord bound to weapnext: it cycle
 
 
 # ---- Menus & settings ----
+[collection-no-nameplates]
+area: Menus & settings
+title: Collection: the Nameplates tab is gone
+change: The Collection's row goes Medals ... Tags, Holocrons, Forge, Cards, History: no Nameplates.
+change: In-game nameplates and their settings are unchanged (Settings > HUD > Nameplates).
+test: Main page > Collection: no Nameplates tab; Ctrl+Tab from Tags goes to Holocrons.
+test: Click every tab and check its counts in the row; the tally at the top right still adds up.
+test: Settings > HUD: See & share nameplates and Nameplate style still switch the plates in a match.
+test: Shaders and Tags still show Loadouts (P); Discord presence still names each tab.
+
 [staff-chat-translation-stats]
 area: Menus & settings
 title: Staff page Chat tab: chat translation use (Slash, PR #416, needs hub #24)

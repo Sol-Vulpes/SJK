@@ -480,33 +480,6 @@ fn text_scale() -> f32 {
     crate::text::style::current().scale.max(0.5)
 }
 
-/// A row of dots across the left side at `y`: the room for more.
-pub(super) fn room_for_more(
-    canvas: &mut crate::menu_widgets::MenuCanvas,
-    frame: &Frame,
-    y: f32,
-    words: &str,
-) {
-    let mut x = LEFT_X;
-    while x < LEFT_X + 820.0 {
-        let _ = canvas.draw_list_mut().push(DrawCommand::SolidRect {
-            rect: frame.rect(x, y, 8.0, 1.0),
-            color: color::alpha(color::HOLO, 0.22),
-        });
-        x += 16.0;
-    }
-    text(
-        canvas,
-        TextFamily::Body,
-        format_args!("{words}"),
-        frame.rect(LEFT_X, y + 16.0, 820.0, 24.0),
-        15.0 * frame.s,
-        color::QUIET,
-        FontWeight::Regular,
-        TextAlign::Start,
-    );
-}
-
 /// Whether each toy is on now, as `inputs` says, in the order of [`TOYS`].
 fn states(inputs: &Inputs<'_>) -> [bool; TOY_COUNT] {
     [
@@ -1218,7 +1191,7 @@ fn fish_log_height() -> f32 {
 
 /// `body` from (`x`, `y`) in a column `width` wide, wrapped at `chars` to a line at the
 /// ordinary text size (fewer at a larger one), every line of it; returns where the next
-/// line would stand. The Nameplates tab's card writes its words so too.
+/// line would stand.
 pub(super) fn words(
     canvas: &mut crate::menu_widgets::MenuCanvas,
     frame: &Frame,

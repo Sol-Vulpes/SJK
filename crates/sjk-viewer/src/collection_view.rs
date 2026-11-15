@@ -1,6 +1,6 @@
 //! The Collection page's frame, in the SJK UI's look: the map darkened behind Medals
 //! and Achievements, or dark on the left and clear over the player's model behind
-//! Shaders, Toys and Nameplates; the way back, the title and the row of tabs, each
+//! Shaders and Toys; the way back, the title and the row of tabs, each
 //! with how many of its things the player holds; at the top right how many of all of
 //! them, as a tick per thing, lit for the ones held; the tab; the keys.
 
@@ -57,7 +57,7 @@ impl Count {
 }
 
 /// Each tab's count, in the row's order.
-pub(super) fn counts(inputs: &Inputs<'_>) -> [Count; 10] {
+pub(super) fn counts(inputs: &Inputs<'_>) -> [Count; 9] {
     let medals = medals::held(inputs);
     // Out of the ones the player sees: a retired one not held is not counted.
     let (achievements, achievements_total) = crate::achievements::tally(inputs.standings);
@@ -96,10 +96,6 @@ pub(super) fn counts(inputs: &Inputs<'_>) -> [Count; 10] {
                     .count()
             }),
             total: crate::tags::CATALOGUE.len(),
-        },
-        Count {
-            held: Some(0),
-            total: 0,
         },
         // The holocrons are opened, not kept: how many, and no total.
         Count {
@@ -166,14 +162,11 @@ pub(crate) fn row_labels(
         fishing_card: None,
         wheel_of_doom: false,
         mining_card: None,
-        name: "",
         stock: color::HOLO,
         grid: false,
         options: "",
         second: "",
         pair: crate::saber_skins::Pair::None,
-        share: false,
-        nameplate_style: crate::hud::nameplate::Style::Holo,
         toy_keys: &[],
         toys_unseen: 0,
         toy_options: 0,
@@ -302,7 +295,6 @@ impl Panel {
         self.fishing_on = inputs.fishing;
         self.mining_on = inputs.mining;
         self.quests_on = inputs.quests;
-        self.share_on = inputs.share;
         self.toys_unseen = inputs.toys_unseen;
         self.toy_options = inputs.toy_options;
         let seconds = self.epoch.elapsed().as_secs_f32();
@@ -313,7 +305,7 @@ impl Panel {
         if self.tab == Tab::SaberLab && !crate::saber_lab::active() {
             self.tab = Tab::Shaders;
         }
-        let kit = matches!(self.tab, Tab::Shaders | Tab::Toys | Tab::Nameplates);
+        let kit = matches!(self.tab, Tab::Shaders | Tab::Toys);
         if self.lab_building() {
             lab_build_scrims(&mut self.ui, viewport, &frame);
         } else if self.tab == Tab::SaberLab && self.backstage != Backstage::None {
@@ -388,7 +380,7 @@ impl Panel {
                 self.forge(&frame, inputs, seconds, viewport);
             }
             Tab::SaberLab => self.saber_lab(&frame, inputs),
-            _ => self.nameplates(&frame, inputs),
+            _ => {}
         }
         if self.offers_loadouts() {
             // Under the tally, clear of each tab's lead line and card.
@@ -417,7 +409,7 @@ impl Panel {
     /// How many of all the things the player holds, at the top right: the words, and a
     /// bar under them, a stretch to a tab in the tabs' order, each filled as far as its
     /// share held (one tick a thing no longer fits two hundred things, 21/10/2026).
-    fn tally(&mut self, frame: &Frame, counts: &[Count; 10]) {
+    fn tally(&mut self, frame: &Frame, counts: &[Count]) {
         let s = frame.s;
         // Only the things with a set total: the holocrons are opened, not collected.
         let total: usize = counts.iter().map(|count| count.total).sum();

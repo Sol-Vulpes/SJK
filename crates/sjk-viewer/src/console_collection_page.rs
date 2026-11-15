@@ -15,7 +15,7 @@ use sjk_ui::InputEvent;
 /// The `collection` command.
 pub(crate) const COLLECTION_COMMAND: &str = "collection";
 pub(crate) const COLLECTION_HELP: &str =
-    "Open your SJK collection: medals, achievements, shaders, toys and nameplates";
+    "Open your SJK collection: medals, achievements, shaders, toys, tags and cards";
 /// The `achievements` command.
 pub(crate) const ACHIEVEMENTS_COMMAND: &str = "achievements";
 pub(crate) const ACHIEVEMENTS_HELP: &str = "Open the Collection on your achievements";
@@ -157,15 +157,6 @@ impl ViewerConsole {
             }
             PanelAction::RevealCards => {
                 let _ = crate::player_identity::reveal_cards();
-            }
-            PanelAction::SeeAndShare(on) => {
-                self.set_cvar("cg_nameplate", if on { "1" } else { "0" });
-            }
-            PanelAction::NameplateStyle(style) => {
-                self.set_cvar(
-                    crate::hud::nameplate::STYLE_CVAR,
-                    &style.value().to_string(),
-                );
             }
             PanelAction::ToySight { cvar, seen } => {
                 self.set_cvar(cvar, if seen { "1" } else { "0" });
@@ -558,7 +549,6 @@ impl ViewerConsole {
             .text_cvar(SABER_SKIN_CVAR)
             .unwrap_or_default()
             .to_owned();
-        let name = self.text_value("name").unwrap_or_default().to_owned();
         let tag = self
             .text_cvar(crate::tags::CVAR)
             .unwrap_or_default()
@@ -621,11 +611,6 @@ impl ViewerConsole {
             pair => pair,
         };
         let enabled = self.bool_cvar("cl_identity") == Some(true);
-        let share = crate::hud::nameplate::see_and_share(self);
-        let nameplate_style = crate::hud::nameplate::Style::of(
-            self.integer_cvar(crate::hud::nameplate::STYLE_CVAR)
-                .unwrap_or(0),
-        );
         let snapshot =
             crate::player_identity::collection_snapshot(crate::debug_collectibles::wanted(self));
         let held = snapshot
@@ -661,14 +646,11 @@ impl ViewerConsole {
                 fishing_card: Some(&fishing_card),
                 wheel_of_doom,
                 mining_card: Some(&mining_card),
-                name: &name,
                 stock,
                 grid,
                 options: &options,
                 second: &second,
                 pair,
-                share,
-                nameplate_style,
                 toy_keys: &toy_keys,
                 toys_unseen,
                 toy_options,
@@ -704,14 +686,11 @@ impl ViewerConsole {
             fishing_card: Some(&fishing_card),
             wheel_of_doom,
             mining_card: Some(&mining_card),
-            name: &name,
             stock,
             grid,
             options: &options,
             second: &second,
             pair,
-            share,
-            nameplate_style,
             toy_keys: &toy_keys,
             toys_unseen,
             toy_options,
@@ -967,11 +946,11 @@ impl ViewerConsole {
         self.collection_panel.hover_for_shot(index);
     }
 
-    /// Open (or close) the Collection's New note, Extra features note and showcase
-    /// card, for a world shot.
+    /// Open (or close) the Collection's New note and Extra features note, for a world
+    /// shot.
     #[cfg(test)]
-    pub(crate) fn collection_notes_for_shot(&mut self, new: bool, extras: bool, showcase: bool) {
-        self.collection_panel.notes_for_shot(new, extras, showcase);
+    pub(crate) fn collection_notes_for_shot(&mut self, new: bool, extras: bool) {
+        self.collection_panel.notes_for_shot(new, extras);
     }
 
     /// Let every shader's extras count as unlocked on the Collection, for a world shot.
