@@ -29,7 +29,7 @@ pub(crate) enum MainDestination {
     Identity,
     /// The Profile page, drawn by the console over the menu.
     Profile,
-    /// The Collection (medals, achievements, shaders, toys, nameplates), drawn by the
+    /// The Collection (medals, achievements, shaders, toys and the rest), drawn by the
     /// console over the menu, on the tab it showed last.
     Collection,
     /// The SJK chat page, drawn by the console over the menu.

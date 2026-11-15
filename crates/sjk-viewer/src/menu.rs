@@ -203,7 +203,7 @@ pub(crate) struct ClientMenu {
     /// The renderer ([`crate::ui_renderer::ShapeRenderer::id`]) the menu's
     /// images were uploaded into; another one (a world change) has none of them.
     uploaded_into: Option<u64>,
-    /// The Collection shows Shaders, Toys or Nameplates over this menu: the camera goes
+    /// The Collection shows Shaders or Toys over this menu: the camera goes
     /// to the player's shot and the model stands on the stage, or shows in a preview
     /// over a match ([`Self::set_collection_stage`]).
     collection_stage: bool,
@@ -473,9 +473,9 @@ impl ClientMenu {
         }
     }
 
-    /// Whether the Collection wants the player's model (on Shaders, Toys and
-    /// Nameplates). When it starts wanting it and the player screen is not open, the
-    /// model and sabers are read from the cvars, so the stage shows the player's own.
+    /// Whether the Collection wants the player's model (on Shaders and Toys). When it
+    /// starts wanting it and the player screen is not open, the model and sabers are
+    /// read from the cvars, so the stage shows the player's own.
     pub(crate) fn set_collection_stage(
         &mut self,
         wanted: bool,
@@ -493,8 +493,8 @@ impl ClientMenu {
         self.collection_stage = wanted;
     }
 
-    /// Whether the Collection wants the player's model this frame (Shaders, Toys,
-    /// Nameplates): the backdrop camera then frames the page's 16:9 frame at every window
+    /// Whether the Collection wants the player's model this frame (Shaders, Toys): the
+    /// backdrop camera then frames the page's 16:9 frame at every window
     /// shape ([`crate::menu_stage::frame_fit_fov`]).
     pub(crate) fn collection_stage(&self) -> bool {
         self.collection_stage
@@ -562,8 +562,7 @@ impl ClientMenu {
 
     /// The player model that stands on the backdrop's stage: only while a
     /// route with a stage is active (flying to, parked on, or flying back
-    /// from the Player screen, or behind the Collection's Shaders, Toys and
-    /// Nameplates).
+    /// from the Player screen, or behind the Collection's Shaders and Toys).
     pub(crate) fn stage_model(&self) -> Option<(Stage, &str)> {
         if self.collection_stage && !self.player.is_classic() {
             let stage = self.backdrop.as_ref()?.stage()?;

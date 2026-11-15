@@ -203,7 +203,7 @@ impl GpuState {
         if let Some(menu) = &mut self.client_menu {
             menu.set_preview_ready(ready);
         }
-        // The Collection's Shaders, Toys and Nameplates want the player's model.
+        // The Collection's Shaders and Toys want the player's model.
         let wish = self
             .console
             .as_ref()
@@ -270,9 +270,7 @@ impl GpuState {
             (None, _, _) | (Some(_), false, None) => {
                 crate::console::collection_panel::Backstage::None
             }
-            (Some(_), true, _) => crate::console::collection_panel::Backstage::World {
-                head: self.stage_head(),
-            },
+            (Some(_), true, _) => crate::console::collection_panel::Backstage::World,
             (Some(_), false, Some(_)) => {
                 crate::console::collection_panel::Backstage::Preview { ready }
             }
@@ -568,20 +566,6 @@ impl GpuState {
             self.menu_stage.actor = None;
         }
         self.place_stage_cosmetics();
-    }
-
-    /// Where the top of the stage model's head is in the window this frame, from the
-    /// last frame's view: the Collection's Nameplates stand the plate there.
-    fn stage_head(&self) -> Option<[f32; 2]> {
-        let actor = self.menu_stage.actor.as_ref()?;
-        if self.menu_stage.preview_only {
-            return None;
-        }
-        // The top of the head in the stage's stance (a saber stance, knees bent): about
-        // 36 units over the origin, under the standing box's top (40), as measured on a
-        // world shot.
-        let head = actor.origin + Vec3::Z * 36.0;
-        self.frame_view?.project(head)
     }
 
     /// The eye and yaw (radians) of the model on the stage, while the Collection wants

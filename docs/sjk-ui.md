@@ -1627,12 +1627,13 @@ grown to four. The same module serves the Collection screen's row
 
 [collection_panel.rs](../crates/sjk-viewer/src/collection_panel.rs) and its views
 (`collection_view.rs`, `collection_medals.rs`, `collection_achievements.rs`,
-`collection_shaders.rs`, `collection_toys.rs`, `collection_nameplates.rs`,
+`collection_shaders.rs`, `collection_toys.rs`,
 `collection_cards.rs`, `collection_forge.rs`, `collection_inventory.rs`), 10/10/2026,
 Sol's request: take the achievements, medals and unlockables out of the Profile screen
 into a screen of their own, "a real collection, things players can collect in the
 future", with tabs Medals, Achievements, Shaders (the blade skins, renamed: saber now,
-body later), Toys and Nameplates (ornaments for the nameplate), then Holocrons (the
+body later), Toys and Nameplates (ornaments for the nameplate, gone since 15/11/2026),
+then Holocrons (the
 loot-box drops, built the same day as a Profile tab and moved here), since 21/10/2026
 the Forge (the shop, crafting and breaking shaders down) and, since 12/10/2026, Cards
 (what opening holocrons brings, [cards.md](cards.md)), and since 27/10/2026 Tags after Toys
@@ -1667,7 +1668,7 @@ for the run.
   (`profile_hub::collection_header`), each name with its count after it in small
   Rajdhani ("2/3", "11/34", how many holocrons for Holocrons; nothing while unknown or empty), the one on show gold and
   underlined. Drawn in Inter (the families not loaded, the classic menus), the row
-  makes room for the wider face. Over the map (Shaders, Toys, Nameplates) a band of
+  makes room for the wider face. Over the map (Shaders, Toys) a band of
   the page's dark stands behind the title, the tally and the tabs, solid to y 200 and
   fading out by 290, as on the Holocrons page (25/10/2026, Sol: the tabs must read over
   any map, the bright pillar of duel6 included).
@@ -1823,34 +1824,15 @@ for the run.
   on" or "Enter: turn off", "Enter: play" or "Enter: put away", and "K: bind a key" (while a key waits: "Esc: cancel", "Backspace: clear the
   key"). Hovering Order 66's row shows how to turn it on and that `order66` executes it;
   the Hax's, how to turn it on and that `+use` held on a holder hacks them.
-- **Nameplates:** none exist yet. "No nameplates yet"; three empty places, dashed, each
-  with a drawing of where its kind will go on the plate: Crest (before the name),
-  Frame (round the plate), Trail (under the plate). In the words' card, over Style, a
-  gold **Showcase current set** button (10/11/2026; the plate stood over the model's
-  head before, projected from the stage, which moves and put it into the row of tabs):
-  its click opens a card over the empty places (dark fill, gold edge, "Your nameplate ·
-  Capsule") with the player's nameplate as a match draws it near; a click on Style or
-  See & share nameplates leaves it open and it follows at once, another click, Escape or
-  another tab closes it. The plate there is drawn in the style chosen
-  (`cg_nameplateStyle`, [client.md](client.md#nameplates)) with the match's layout at
-  twice its size. The holo frame: their picture (or their
-  initial on their colour) in the hexagon, the name in its colours and, while See &
-  share nameplates is on, the gold corner and the shield, health and Force bars (else the
-  dotted line). The capsule: the picture and the name in the pill, gold-edged with the
-  tray of bars under it while sharing. The classic plate: the name over the framed plate
-  of bars while sharing, alone otherwise. Dashed marks stand at the three places (the
-  crest's before the name).
-  Its words stand on a dark card beside the model (x 1360 to 1824, its foot at y 990,
-  as tall as they need, since 25/10/2026). Under them, **Style** (31/10/2026: Holo,
-  Capsule, Classic, segments whose click sets `cg_nameplateStyle`) and **See & share nameplates** (a switch; a click or Enter flips
-  it, its row pulsing gold every 1.2 s, a ring round it and a glow behind the switch)
-  puts `cg_nameplate` in plain view: the one setting for seeing other players'
-  nameplates and sharing your health, shield and Force
-  ([client.md](client.md#sharing-and-estimates)). A quiet line under it says what on or
-  off means (or, with the identity off, that sharing needs it).
+- **Nameplates** (10/10/2026 to 15/11/2026): a tab between Tags and Holocrons with
+  empty places for nameplate ornaments, a showcase of the player's plate, a Style row and
+  a See & share nameplates switch. It is gone (Sol, 15/11/2026): no ornaments were made,
+  and both settings it held stay in Settings > HUD under Nameplates (`cg_nameplate` in
+  Simple and Advanced, `cg_nameplateStyle` in Advanced,
+  [client.md](client.md#nameplates)). The nameplates over players are unchanged.
 - **Loadouts** (03/11/2026, Lex's idea,
   [collection_loadouts.rs](../crates/sjk-viewer/src/collection_loadouts.rs)): on Shaders,
-  Tags and Nameplates an outlined "Loadouts (P)" button under the tally (x 1624 to 1824,
+  and Tags an outlined "Loadouts (P)" button under the tally (x 1624 to 1824,
   y 206; on Shaders it lies in the stage saber's drag room, `SABER_AREA`, which leaves
   it out, hub report #245) opens a pop-up card (`kit::card`, x 440 to 1480, y 170 to 910, over the scrim;
   the page is left out under it): "Loadouts" in gold, "Kept on this PC", the headline
@@ -2073,7 +2055,7 @@ for the run.
   wheel scrolls three places, hovering chooses; in the search, Escape clears it and Enter
   leaves it. Ctrl+Tab goes on to Medals. World shot:
   `world_shot_collection::duel6_sjk_collection_inventory`.
-- **The model:** behind Shaders, Toys and Nameplates the page darkens only the left
+- **The model:** behind Shaders and Toys the page darkens only the left
   and the bottom. From the main page the backdrop camera goes to the player's shot
   (`ClientMenu::set_collection_stage`, which first reads the model, sabers and
   cosmetics from the cvars when the player screen is closed) and the model stands on
@@ -2159,7 +2141,7 @@ takes no input.
 | Card (a binder tile) | from opening holocrons: how many holocrons found hold a card of its rarity ([loot table](holocrons.md#loot-table)), one of how many of that rarity | its rarity, kind and set, no number (a sealed tile: picked when revealed); the copies by finish and edition and when the first was found, or "Not found yet" |
 | Holocron tier (Holocrons tab) | found by playing, the pace and the daily cap | the tier's share of drops and staff gifts; how many held |
 
-Nameplates have no things yet, so no cards. Text draws over every shape, so the card
+Text draws over every shape, so the card
 asks its canvas to leave out the page's glyphs under it (`MenuCanvas::cover`, dropping
 those glyph quads in the text pass); its own text draws in full. Any SJK UI screen can
 use it: follow the hovered token, then `hover::draw` as the page's last drawing.

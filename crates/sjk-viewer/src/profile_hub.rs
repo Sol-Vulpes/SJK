@@ -2,9 +2,10 @@
 //! Collection): existing screens shown as one, under one row of tabs each. The Profile
 //! screen's Character, Saber and Force are the player screen's pages (`player_menu`),
 //! its SJK Profile the console's Profile page (`profile_panel`: bio, picture and
-//! record). The Collection screen's Medals, Achievements, Shaders, Toys and Nameplates
-//! are the console's Collection page (`collection_panel`), one page turning between its
-//! tabs, and its Holocrons the console's Holocrons page (`holocrons_panel`).
+//! record). The Collection screen's Medals, Achievements, Shaders, Toys, Tags, Forge,
+//! Cards and History are the console's Collection page (`collection_panel`), one page
+//! turning between its tabs, and its Holocrons the console's Holocrons page
+//! (`holocrons_panel`).
 //! Each screen keeps its state, keys and pointer; the Profile row is the player screen's
 //! own tabs grown to four ([`tabs`]), drawn at the same place by whichever screen shows,
 //! with the tab on show lit, and the switch between them is here.
@@ -29,8 +30,8 @@ use winit::keyboard::{KeyCode, PhysicalKey};
 pub(crate) enum Screen {
     /// The character and the SJK profile.
     Profile,
-    /// What the player collects: medals, achievements, shaders, toys, nameplates and
-    /// holocrons.
+    /// What the player collects: medals, achievements, shaders, toys, tags, holocrons and
+    /// cards.
     Collection,
 }
 
@@ -75,8 +76,6 @@ pub(crate) enum Tab {
     Toys,
     /// The tags a player sticks on walls (`tags.rs`): the starter set and holocron drops.
     Tags,
-    /// Ornaments for the nameplate over the player's head.
-    Nameplates,
     /// The player's holocrons, the loot-box drops, a 3D holocron cycled by tier.
     Holocrons,
     /// The shop, crafting and breaking saber shaders down (21/10/2026).
@@ -96,13 +95,12 @@ pub(crate) enum Tab {
 }
 
 const PROFILE_TABS: [Tab; 4] = [Tab::Character, Tab::Saber, Tab::Force, Tab::Profile];
-const COLLECTION_TABS: [Tab; 11] = [
+const COLLECTION_TABS: [Tab; 10] = [
     Tab::Medals,
     Tab::Achievements,
     Tab::Shaders,
     Tab::Toys,
     Tab::Tags,
-    Tab::Nameplates,
     Tab::Holocrons,
     Tab::Forge,
     Tab::Cards,
@@ -110,13 +108,12 @@ const COLLECTION_TABS: [Tab; 11] = [
     Tab::Inventory,
 ];
 /// The Collection's tabs while the Saber Lab is on: its own last.
-const COLLECTION_TABS_LAB: [Tab; 12] = [
+const COLLECTION_TABS_LAB: [Tab; 11] = [
     Tab::Medals,
     Tab::Achievements,
     Tab::Shaders,
     Tab::Toys,
     Tab::Tags,
-    Tab::Nameplates,
     Tab::Holocrons,
     Tab::Forge,
     Tab::Cards,
@@ -125,26 +122,24 @@ const COLLECTION_TABS_LAB: [Tab; 12] = [
     Tab::SaberLab,
 ];
 const PROFILE_LABELS: [&str; 4] = ["Character", "Saber", "Force", "SJK Profile"];
-const COLLECTION_LABELS: [&str; 11] = [
+const COLLECTION_LABELS: [&str; 10] = [
     "Medals",
     "Achievements",
     "Shaders",
     "Toys",
     "Tags",
-    "Nameplates",
     HOLOCRONS,
     FORGE,
     "Cards",
     "History",
     "Inventory",
 ];
-const COLLECTION_LABELS_LAB: [&str; 12] = [
+const COLLECTION_LABELS_LAB: [&str; 11] = [
     "Medals",
     "Achievements",
     "Shaders",
     "Toys",
     "Tags",
-    "Nameplates",
     HOLOCRONS,
     FORGE,
     "Cards",
@@ -167,7 +162,7 @@ pub(crate) const FORGE: &str = "Forge";
 
 impl Tab {
     #[cfg(test)]
-    pub(crate) const ALL: [Self; 17] = [
+    pub(crate) const ALL: [Self; 16] = [
         Self::Character,
         Self::Saber,
         Self::Force,
@@ -177,7 +172,6 @@ impl Tab {
         Self::Shaders,
         Self::Toys,
         Self::Tags,
-        Self::Nameplates,
         Self::Holocrons,
         Self::Forge,
         Self::Cards,
@@ -203,15 +197,14 @@ impl Tab {
             Self::Force | Self::Shaders => 2,
             Self::Profile | Self::Toys => 3,
             Self::Tags => 4,
-            Self::Nameplates => 5,
-            Self::Holocrons => 6,
-            Self::Forge => 7,
-            Self::Cards => 8,
-            Self::History => 9,
-            Self::Inventory => 10,
-            Self::SaberLab => 11,
+            Self::Holocrons => 5,
+            Self::Forge => 6,
+            Self::Cards => 7,
+            Self::History => 8,
+            Self::Inventory => 9,
+            Self::SaberLab => 10,
             // Off the row: after its end.
-            Self::Banners => 12,
+            Self::Banners => 11,
         }
     }
 
@@ -864,7 +857,7 @@ mod tests {
         assert_eq!(Tab::Profile.next(true), Tab::Character);
         assert_eq!(Tab::Character.next(false), Tab::Profile);
         assert_eq!(Tab::Medals.next(false), Tab::Inventory);
-        assert_eq!(Tab::Nameplates.next(true), Tab::Holocrons);
+        assert_eq!(Tab::Tags.next(true), Tab::Holocrons);
         assert_eq!(Tab::Holocrons.next(true), Tab::Forge);
         assert_eq!(Tab::Forge.next(true), Tab::Cards);
         assert_eq!(Tab::Cards.next(true), Tab::History);
@@ -884,15 +877,14 @@ mod tests {
         }
         assert_eq!(Tab::of_player_page(2), Tab::Force);
         assert_eq!(Tab::Profile.label(), "SJK Profile");
-        assert_eq!(Tab::Nameplates.label(), "Nameplates");
         assert_eq!(collection_tab_of(TOKEN + 2), Some(Tab::Shaders));
         assert_eq!(collection_tab_of(TOKEN + 4), Some(Tab::Tags));
-        assert_eq!(collection_tab_of(TOKEN + 6), Some(Tab::Holocrons));
-        assert_eq!(collection_tab_of(TOKEN + 7), Some(Tab::Forge));
-        assert_eq!(collection_tab_of(TOKEN + 8), Some(Tab::Cards));
-        assert_eq!(collection_tab_of(TOKEN + 9), Some(Tab::History));
-        assert_eq!(collection_tab_of(TOKEN + 10), Some(Tab::Inventory));
-        assert_eq!(collection_tab_of(TOKEN + 11), None);
+        assert_eq!(collection_tab_of(TOKEN + 5), Some(Tab::Holocrons));
+        assert_eq!(collection_tab_of(TOKEN + 6), Some(Tab::Forge));
+        assert_eq!(collection_tab_of(TOKEN + 7), Some(Tab::Cards));
+        assert_eq!(collection_tab_of(TOKEN + 8), Some(Tab::History));
+        assert_eq!(collection_tab_of(TOKEN + 9), Some(Tab::Inventory));
+        assert_eq!(collection_tab_of(TOKEN + 10), None);
         assert_eq!(collection_tab_of(TOKEN - 1), None);
     }
 

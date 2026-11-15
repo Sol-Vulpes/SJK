@@ -48,7 +48,7 @@ pub(crate) enum Entry {
     /// The Profile screen: the character and the SJK profile as tabs
     /// ([`crate::profile_hub`]).
     Profile,
-    /// The Collection screen: medals, achievements, shaders, toys and nameplates.
+    /// The Collection screen: medals, achievements, shaders, toys and the rest.
     Collection,
     Players,
     Settings,

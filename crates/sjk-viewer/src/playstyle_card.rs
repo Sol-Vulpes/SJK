@@ -22,7 +22,7 @@ use winit::keyboard::{KeyCode, PhysicalKey};
 
 /// 1: the player ticked "Don't show this again".
 pub(crate) const CVAR: &str = "ui_playstyleCard";
-/// The nameplates' switch (see and share, `hud::nameplate::see_and_share`).
+/// The nameplates' switch (see and share, `hud::nameplate::State::sharing`).
 const NAMEPLATES_CVAR: &str = "cg_nameplate";
 
 const SAVE_TOKEN: u16 = 1;

@@ -813,6 +813,7 @@ impl GpuState {
                 action: drop_words(kind).to_owned(),
                 line: None,
                 ready: !waiting,
+                drops: Vec::new(),
             });
             if pressed && !waiting {
                 if let Some(drop) = self
@@ -844,6 +845,7 @@ impl GpuState {
                 action: PROMPT.to_owned(),
                 line: None,
                 ready: counts,
+                drops: Vec::new(),
             });
             if pressed && counts {
                 self.toy_master.press(id);
