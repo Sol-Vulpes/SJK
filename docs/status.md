@@ -14,6 +14,22 @@ counts, the status bar's words then dot), the startup stack check and the
 `duel6_sjk_collection_new` world shots. Not tried in a game: the seen-list against a live
 hub's holdings, Find a server from a match, and the Holocrons tab's empty states (no world
 shot of that page).
+## Inventory card and tier frame (15/11/2026)
+
+15/11/2026, `personal/inventory-card` from `main` `1eae244cc` (Sol's picks of ideas 1 and 2
+of the Collection's ideas round). One tier frame (`kit::tier_frame`, `kit::tier_mark`;
+[sjk-ui.md](sjk-ui.md#tier-frame)) on the Inventory, Cards, Tags, Forge (tiles and list
+rows), History and Holocrons pages; the Kybers wall and the hall keep their own look until a
+later pass. The Inventory's rows carry pictures, kind chips (1 to 7) filter it, a wallet
+strip replaces the Currencies group, and the chosen thing's card shows its worth from the
+hub's tables and buttons that reuse the existing paths (Kybers' Equip, the Forge's Break down
+press, the Holocrons page's opening, Tags' Choose, the Finishers' Wear, Cards' tile)
+([sjk-ui.md](sjk-ui.md#collection)). Verified: `cargo test --workspace` (unit tests for each
+tier's frame and mark, the card's buttons by kind, a kyber's worth and the spares' sum, the
+chips), the startup stack check, and the `duel6_sjk_collection_inventory`,
+`duel6_sjk_collection_tags`, `duel6_sjk_collection_history` and `duel6_sjk_forge_shots`
+world shots. Not tried in a game: Break down, Open and Attune against a live hub, the sheen's
+motion (shots are stills).
 
 ## Collection hall (15/11/2026)
 

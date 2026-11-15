@@ -191,7 +191,12 @@ includes:
   one Collection tab, the last copy too (never a card's or a medal's), and every
   duplicate at once;
 - the Inventory (15/11/2026, Sol's request): everything a player owns in one
-  Collection tab, by kind, with tiers, counts, a sort and a search;
+  Collection tab, by kind, with tiers, counts, a sort and a search; the same day each row
+  got its picture, a wallet strip and kind chips, and the chosen thing a card with what it
+  is worth in kyber shards and what to do with it (wear, break down, open, choose);
+- one tier frame (15/11/2026, Sol's pick of the Collection's ideas): a thing's tier told
+  the same way on the Inventory, Cards, Tags, Forge, History and Holocrons pages, each tier
+  up adding one touch and diamonds counting the step for colour-blind players;
 - the Collection's hall (15/11/2026, Sol's pick of "The hall" from the Collection's
   design proposals): the Collection opens on a grid of large tiles, one to each kind with
   what is new in it (shaders New, holocrons to open, the deal of the day, the newest

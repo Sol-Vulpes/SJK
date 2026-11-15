@@ -895,31 +895,28 @@ impl Panel {
         let chosen = index == self.tag;
         let count = held.copies;
         let (name, tone_name, tone) = entry_words(entry);
-        let area = frame.rect(x, y, TILE_WIDTH, TILE_HEIGHT);
-        let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
-            rect: area,
-            radius: 12.0 * s,
-            color: if chosen {
-                color::alpha(color::GOLD, 0.09)
-            } else {
-                color::alpha(color::SPACE, if hovered { 0.78 } else { 0.6 })
+        // The tier's frame, one look everywhere (15/11/2026), gold round the one chosen.
+        crate::menu::sjk::kit::tier_frame(
+            &mut self.ui,
+            frame,
+            [x, y, TILE_WIDTH, TILE_HEIGHT],
+            entry_tier(entry),
+            crate::menu::sjk::kit::TierSize::Tile,
+            crate::menu::sjk::kit::TierLook {
+                chosen,
+                hovered: hovered || chosen,
+                dim: count == 0,
+                ..crate::menu::sjk::kit::TierLook::at(crate::menu::art::motion::seconds() as f32)
             },
-        });
-        let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
-            rect: frame.rect(x + 16.0, y, TILE_WIDTH - 32.0, 3.0),
-            radius: 1.5 * s,
-            color: Color::new(tone.r, tone.g, tone.b, if count > 0 { 1.0 } else { 0.4 }),
-        });
-        let _ = self.ui.draw_list_mut().push(DrawCommand::Border {
-            rect: area,
-            radius: 12.0 * s,
-            width: if chosen { 1.6 } else { 1.0 } * s,
-            color: if chosen {
-                color::GOLD_BRIGHT
-            } else {
-                color::alpha(color::HOLO, if hovered { 0.35 } else { 0.16 })
-            },
-        });
+        );
+        if chosen {
+            let _ = self.ui.draw_list_mut().push(DrawCommand::Border {
+                rect: frame.rect(x - 3.0, y - 3.0, TILE_WIDTH + 6.0, TILE_HEIGHT + 6.0),
+                radius: 15.0 * s,
+                width: 1.8 * s,
+                color: color::GOLD_BRIGHT,
+            });
+        }
         let art = 120.0;
         let art_rect = [x + (TILE_WIDTH - art) * 0.5, y + 16.0, art, art];
         let alpha = if count > 0 { 1.0 } else { 0.32 };
@@ -1410,6 +1407,20 @@ fn wall_parts(cards: usize, gifs: usize) -> Vec<(&'static str, usize)> {
         })
         .chain([(CARDS_HEAD, cards), (GIFS_HEAD, gifs)])
         .collect()
+}
+
+/// The tier an entry's frame shows: a tag's, a card's rarity, a GIF tag's none (Common's
+/// plain glass).
+fn entry_tier(entry: &Entry) -> crate::unlockables::Rarity {
+    match entry {
+        Entry::Tag(tag) => tag.tier,
+        Entry::Card(id) => crate::cards::faces::current()
+            .find(id)
+            .map_or(crate::unlockables::Rarity::Common, |(_, face)| {
+                crate::menu::sjk::kit::card_tier(face.rarity.index)
+            }),
+        Entry::Gif(_) => crate::unlockables::Rarity::Common,
+    }
 }
 
 /// What an entry reads as: its name ("Gonk", a card's title), its tier's or kind's name

@@ -1253,13 +1253,16 @@ fn duel6_sjk_collection_history() {
     });
 }
 
-/// The Inventory tab (15/11/2026) on a made-up profile: every kind it lists, then sorted by
-/// quantity, then searched for "rare".
+/// The Inventory tab (15/11/2026) on a made-up profile: every kind it lists, then the card
+/// of a thing of each kind chosen (a kyber worn, a kyber with spares, a dormant kyber, a
+/// finisher, a tag, a card), then sorted by quantity, then searched for "rare".
 #[test]
 #[ignore = "renders with the GPU and the installed game data named by JKA_GAME_DATA"]
 fn duel6_sjk_collection_inventory() {
     on_big_stack(|| {
+        super::saber_skins::mount_test_packs();
         let cvars = [
+            (crate::unlockables::SABER_SKIN_CVAR, "saber_sun"),
             ("ui_menuStyle", "sjk"),
             (crate::settings::quick::HIDE_CVAR, "1"),
             (crate::discord_presence::CVAR, "0"),
@@ -1308,6 +1311,10 @@ fn duel6_sjk_collection_inventory() {
             })
             .collect();
         unlocks.push(sun());
+        unlocks.push(sjk_identity::Unlock {
+            id: "finisher_disintegrate".to_owned(),
+            ..sun()
+        });
         if let Some(tag) = crate::tags::CATALOGUE.iter().find(|tag| !tag.free) {
             unlocks.push(sjk_identity::Unlock {
                 id: tag.id.to_owned(),
@@ -1330,7 +1337,28 @@ fn duel6_sjk_collection_inventory() {
             shoot(&mut gpu, 20, "duel6-collection-inventory").display()
         );
         assert!(!overflowed(&gpu));
+        // A thing of each kind chosen, its card on the right (chips: 0 All, 1 holocrons,
+        // 2 dormant kybers, 3 kybers, 4 finishers, 5 tags, 6 cards).
+        for (chip, nth, name) in [
+            (3, 0, "kyber-worn"),
+            (3, 2, "kyber-spares"),
+            (2, 0, "dormant"),
+            (4, 0, "finisher"),
+            (5, 0, "tag"),
+            (6, 0, "card"),
+            (6, 2, "card-sealed"),
+        ] {
+            if let Some(console) = gpu.console.as_mut() {
+                console.inventory_choose_for_shot(chip, nth);
+            }
+            println!(
+                "{}",
+                shoot(&mut gpu, 20, &format!("duel6-collection-inventory-{name}")).display()
+            );
+            assert!(!overflowed(&gpu));
+        }
         if let Some(console) = gpu.console.as_mut() {
+            console.inventory_choose_for_shot(0, 0);
             console.inventory_for_shot("", 2);
         }
         println!(

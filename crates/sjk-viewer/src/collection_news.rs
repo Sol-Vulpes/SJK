@@ -169,33 +169,37 @@ impl Panel {
     }
 }
 
-/// The New sticker after an Inventory row's name (`middle` its middle line), when what it
-/// stands for is New: a card in its finish, the rest in any.
+/// The New sticker after an Inventory row's name (its left at `x`, `middle` its middle
+/// line), when what it stands for is New: a card in its finish, the rest in any.
+/// Holocrons, dormant kybers and GIF tags carry none.
 pub(super) fn row_sticker(
     canvas: &mut MenuCanvas,
     news: &NewsState,
     frame: &Frame,
     item: &super::inventory::Item,
-    middle: f32,
+    [x, middle]: [f32; 2],
 ) {
-    let Some(thing) = &item.seen else {
-        return;
-    };
-    let new = match thing.kind {
-        Kind::Card => news
-            .news
-            .is_new_in(thing.kind, &thing.id, usize::from(thing.finish)),
-        kind => news.news.is_new(kind, &thing.id),
+    use super::inventory::Thing as Row;
+    let news = &news.news;
+    let new = match &item.thing {
+        Row::Kyber(id) => news.is_new(Kind::Kyber, id),
+        Row::Finisher(id) => news.is_new(Kind::Finisher, id),
+        Row::Tag(id) => news.is_new(Kind::Tag, id),
+        Row::Card {
+            face: Some(face),
+            finish,
+            ..
+        } => crate::cards::faces::current()
+            .list
+            .get(*face)
+            .is_some_and(|face| news.is_new_in(Kind::Card, &face.id, *finish)),
+        _ => false,
     };
     if new {
         let name =
             crate::text::display_width(&item.name, 18.0) * crate::text::style::current().scale;
-        let _ = super::marks_view::new_sticker(
-            canvas,
-            frame,
-            [LEFT_X + 40.0 + name + 12.0, middle - 10.0],
-            20.0,
-        );
+        let _ =
+            super::marks_view::new_sticker(canvas, frame, [x + name + 12.0, middle - 10.0], 20.0);
     }
 }
 

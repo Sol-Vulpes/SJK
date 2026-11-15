@@ -85,6 +85,36 @@ Display values, like all 2D colours ([rendering.md](rendering.md)), in
 | Quiet | `#8792AC` | An item that ends the session |
 | Ember | `#FF7A3D` | Leaving: Quit |
 
+### Tier frame
+
+One frame tells a thing's tier on every page that lists things (15/11/2026, idea 2 of the
+Collection's ideas round, Sol's pick): `kit::tier_frame(rect, tier, size)`
+([tier_frame.rs](../crates/sjk-viewer/src/menu/sjk/tier_frame.rs)) at three sizes, a tile
+(the bar along its top), a list's row (the bar down its start) and a short line, each step
+up the tiers adding one touch to the one under it so the tier reads at a glance, for a
+colour-blind player too:
+
+| Tier | Frame |
+| --- | --- |
+| Common | Plain dark glass, a holo hairline |
+| Uncommon | + the tier's bar |
+| Rare | + the edge tinted the tier's colour and a soft glow from the bar |
+| Legendary | + corner brackets and a faint halo round the frame |
+| Mythical | + the full edge, lit inside too, the bar along the whole top, and a slow sheen crossing it now and then on the thing chosen alone (off with `ui_rarityEffects 0`) |
+| Unique | Outside the ladder (hand-given): its rose edge, an inner line of its own and its own mark |
+
+The thing chosen takes a gold wash over the glass (its page rings it gold), so a Mythical
+frame, gold itself, never passes for the choice. `kit::tier_mark` draws the tier's step
+beside its name as diamonds, one for Uncommon to four
+for Mythical (the holocron tiers' order) and none for Common, and Unique's SJK Symbols mark
+(U+E005), so the tier survives a colour-blind player, a dimmed thing not held and a picture in
+black and white. A holocron's or dormant kyber's tier and a card's rarity land on the same
+ladder (`kit::holocron_tier`, `kit::card_tier`). It frames the Inventory's rows and item
+card, the Cards and Tags tiles, the Forge's tiles and list rows, the History's rows and the
+Holocrons tab's tiers and dormant kybers; where `rarity_fx` already animates a frame (the
+Forge, the Holocrons tab) the frame stays still under it. Not yet: the Kybers wall's tiles
+and the hall's lines and tiles, changed by other work at the time, take it in a later pass.
+
 ### Type
 
 Two bundled vector families, as on SJK's site, both under the SIL Open Font
@@ -132,7 +162,8 @@ levelshot fades in (0.45 s); on Credits the sun (its sunburst, god rays and
 sparks) keeps turning and rising, and the page's rows rise into place as it
 opens or a fold unfolds; on the Collection's Kybers an owned blade skin's swatch
 lives (its corona breathes, flame loops rise and a flare runs along it, as its file
-says) and the model on the stage holds the chosen blade;
+says) and the model on the stage holds the chosen blade; the chosen Mythical thing's
+[tier frame](#tier-frame) catches a slow sheen every six seconds;
 a new medal arrives in its ceremony and, the screen's one memorable thing, breathes
 gently while it waits ([New medal](#new-medal)). Nothing else moves on its own.
 
@@ -2100,28 +2131,57 @@ Holocrons tab's Shop, a blade card's Forge link) open that kind directly.
   reads the newest page each time it is shown. Ctrl+Tab goes on to Inventory.
 - **Inventory** ([collection_inventory.rs](../crates/sjk-viewer/src/collection_inventory.rs),
   [collection_inventory_view.rs](../crates/sjk-viewer/src/collection_inventory_view.rs),
-  15/11/2026, Sol's request: "plain and simple, one list of everything the player owns"):
-  "Inventory" and its line, the sort's segments (Tier, Name, Quantity) at y 320 with the
-  search field (`/`, Ctrl+F; [text_entry.rs](../crates/sjk-viewer/src/text_entry.rs)) at the
-  list's right, then 16 places 38 high from y 352 with a bar at the right when it scrolls: a
-  gold heading to each kind with "3 kinds, 12 in all", and a row to each thing held, a bar
-  and its name in its tier's colour, the tier, a note (a blade's number, a tag's or card's
-  finishes, a card's edition or "Sealed", "Starter" for the free tags) and how many. The
-  kinds, in this order: Currencies (credits and kyber shards always, DOOM coins once the
-  hub said them: `Snapshot::wheel_of_doom`, read when the toy asks), the holocrons and
-  dormant kybers still sealed by tier (`holocron_counts`; the dormant kybers counted from
-  `holocrons`, as on the Holocrons tab), kybers and finishers (the profile's
-  unlocks, with their copies), tags (the starter set, the ones held with their Holo and
-  Solar copies, and the GIF tags made) and cards (a row to each kind of copy, named from the
-  packs' faces). It reads only the own hub profile the other tabs read, and asks the hub
-  nothing; while that is not known, it says why ("Inventory unavailable"). Each kind keeps
-  its place whatever the sort: Tier puts the rarest first, Name goes A to Z, Quantity the
-  most held first. The search keeps the things holding every word typed in their name,
-  tier, kind or note, and drops the headings of kinds left empty. Up, Down, Page Up, Page
-  Down, Home and End choose (past the headings), S (Shift+S back) or a segment sorts, the
-  wheel scrolls three places, hovering chooses; in the search, Escape clears it and Enter
-  leaves it. Ctrl+Tab goes on to Medals. World shot:
-  `world_shot_collection::duel6_sjk_collection_inventory`.
+  15/11/2026, Sol's request: "plain and simple, one list of everything the player owns";
+  pictured rows and the item card the same day, idea 1 of the Collection's ideas round):
+  "Inventory", then the wallet strip (y 268): the credits, kyber shards and, once the hub
+  said them, DOOM coins (`Snapshot::wheel_of_doom`, read when the toy asks), each with its
+  mark, its figure and how it is earned, and at the right "N spare copies worth M kyber
+  shards", what Break down all duplicates would give (one copy of each kept, never a locked
+  one, a medal's or a card's: the Forge's own sum). At y 354 the kind chips (All, Holocrons,
+  Dormant, Kybers, Finishers, Tags, Cards, each with how many are held in all; keys 1 to 7
+  or a click show one kind alone) and the sort's segments (Tier, Name, Quantity) over the
+  list, and the search field (`/`, Ctrl+F; [text_entry.rs](../crates/sjk-viewer/src/text_entry.rs))
+  over the card. The list fills the left two thirds (to x 1188): 14 places 43 high from
+  y 390 with a bar at the right when it scrolls, a gold heading to each kind with "3 kinds,
+  12 in all", and a row to each thing held in its [tier frame](#tier-frame): its picture (a
+  kyber's blade strip, `swatch::strip`; a holocron's or dormant kyber's tier icon, its gem
+  without one; a tag's picture, `tag_icons`; a card's face, a sealed one its rarity's card;
+  a finisher's tier mark), its name in its tier's colour, the tier's mark and name, a note
+  (a blade's number, a tag's or card's finishes, a card's edition or "Sealed", "Starter" for
+  the free tags) and how many. The kinds, in this order: the holocrons and dormant kybers
+  still sealed by tier (`holocron_counts`; the dormant kybers counted from `holocrons`, as
+  on the Holocrons tab), kybers and finishers (the profile's unlocks, with their copies),
+  tags (the starter set, the ones held with their Holo and Solar copies, and the GIF tags
+  made) and cards (a row to each kind of copy, named from the packs' faces). The right
+  third holds the chosen thing's card in its tier's frame (the chosen Mythical one's sheen):
+  its picture (a live blade, `swatch::small_swatch`; the card itself, `cards::look`), the
+  tier's mark and name with the kind and the edition, its name, what the client knows of it
+  (a blade's number and smith, the medal or card it came with or the team's note, the date
+  it came; what a holocron tier or a finisher is; a card's first find), what is held ("You
+  hold 3 copies · 2 spare · worn") and, for a kyber, what it is worth from the hub's tables
+  (`economy::shatter_yield`, `craft_cost`, `fuse_need`; nothing for one outside the trade),
+  then its buttons, the main one across and the others under it, each with its key: a kyber
+  Wear (Enter, `cg_saberSkin` as Kybers' Equip), Break down (B: the Forge's own press,
+  asked twice within five seconds, its answer shown under the buttons; never a locked one,
+  a medal's or card's copy or the last copy, which the Forge breaks down after its card asks)
+  and Show in Kybers (G, the Kybers tab on it, its filter cleared); a holocron Open and a
+  dormant kyber Attune (Enter: the Holocrons page on its tier, which opens the oldest in its
+  ceremony once its list is read, `holocrons_panel::Panel::open_on`); a tag Choose (Enter,
+  `cg_tag`); a finisher Wear or Take off (Enter, `cg_saberFinisher`); a card Show in Cards
+  (G, the Cards tab on its tile, the filter cleared); the GIF tags Show in Tags (G). A
+  greyed button says why under it, as the Forge does (its only copy, locked, outside the
+  trade, the hub not trading or opening now, the tag in use). Offering a thing in a trade
+  is not there: the trade window is a card over the menus that takes their input while
+  open. It reads only the own hub profile the other tabs read, and asks the hub nothing
+  new; while that is not known, it says why ("Inventory unavailable"), and a kind with
+  nothing says "Nothing of this kind yet". Each kind keeps its place whatever the sort:
+  Tier puts the rarest first, Name goes A to Z, Quantity the most held first. The search
+  keeps the things holding every word typed in their name, tier, kind or note, and drops
+  the headings of kinds left empty. Up, Down, Page Up, Page Down, Home and End choose (past
+  the headings), S (Shift+S back) or a segment sorts, the wheel scrolls three places,
+  hovering chooses; in the search, Escape clears it and Enter leaves it. Ctrl+Tab goes on
+  to Medals. World shot: `world_shot_collection::duel6_sjk_collection_inventory` (a thing
+  of each kind chosen).
 - **The model:** behind Kybers and Toys the page darkens only the left
   and the bottom. From the main page the backdrop camera goes to the player's shot
   (`ClientMenu::set_collection_stage`, which first reads the model, sabers and

@@ -439,6 +439,9 @@ pub(crate) struct Panel {
     ui: MenuCanvas,
     /// The tier chosen, an index into [`holocrons::TIERS`].
     selected: usize,
+    /// Open (or attune) the oldest of the tier chosen once the hub's list is read: the
+    /// Collection's Inventory asked (15/11/2026).
+    open_soon: bool,
     /// What the hub last said, and when it was read.
     data: Data,
     refreshed: Option<Instant>,
@@ -497,6 +500,7 @@ impl Panel {
             // An opening of twenty: five strips of tiles at once, then all twenty found.
             ui: MenuCanvas::with_capacities(224, 160, 2_400),
             selected: 0,
+            open_soon: false,
             data: Data::nothing(State::Waiting),
             refreshed: None,
             ceremony: None,
@@ -531,6 +535,7 @@ impl Panel {
         self.hub = false;
         self.from_hall = false;
         self.selected = 0;
+        self.open_soon = false;
         self.refreshed = None;
         self.ceremony = None;
         self.loot = false;
@@ -634,6 +639,25 @@ impl Panel {
     /// the kyber crystals'), for a world shot and the keys.
     pub(crate) fn select(&mut self, index: usize) {
         self.selected = index.min(SLOTS - 1);
+    }
+
+    /// Choose the tier at slot `index` and open (or attune) its oldest as soon as the
+    /// hub's list is read ([`Self::take_open_soon`]): the Collection's Inventory's Open.
+    pub(crate) fn open_on(&mut self, index: usize) {
+        self.select(index);
+        self.open_soon = true;
+    }
+
+    /// The opening [`Self::open_on`] asked, once the page knows what it holds: its
+    /// ceremony starts as Open's would. `None` while it waits, or when there is nothing to
+    /// open (the wish then lapses).
+    pub(crate) fn take_open_soon(&mut self, now: Instant) -> Option<PanelAction> {
+        if !self.open_soon || self.data.state == State::Waiting {
+            return None;
+        }
+        self.open_soon = false;
+        let ids = self.open_one()?;
+        Some(self.ask(ids, now))
     }
 
     /// What the 3D holocron shows: the chosen tier, in its own look while the player
@@ -1559,6 +1583,42 @@ mod tests {
         assert_eq!(panel.key(KeyCode::KeyA, false), PanelAction::None);
         assert_eq!(panel.ask(vec![3], Instant::now()), PanelAction::None);
         assert!(!panel.opening());
+    }
+
+    /// The Collection's Inventory's Open: the tier is chosen at once, and its oldest
+    /// opens once the page knows what it holds, once; a tier held none of asks nothing.
+    #[test]
+    fn open_on_opens_the_oldest_once_the_list_is_read() {
+        let mut panel = Panel::new();
+        panel.open(true);
+        panel.open_on(2);
+        assert_eq!(panel.selected, 2);
+        panel.data.state = State::Waiting;
+        assert_eq!(
+            panel.take_open_soon(Instant::now()),
+            None,
+            "waits for the list"
+        );
+        panel.data = openable();
+        assert_eq!(
+            panel.take_open_soon(Instant::now()),
+            None,
+            "none held of it"
+        );
+        assert_eq!(
+            panel.take_open_soon(Instant::now()),
+            None,
+            "the wish lapsed"
+        );
+        panel.open(true);
+        panel.data = openable();
+        panel.open_on(0);
+        assert_eq!(
+            panel.take_open_soon(Instant::now()),
+            Some(PanelAction::Open(vec![3]))
+        );
+        assert!(panel.opening());
+        assert_eq!(panel.take_open_soon(Instant::now()), None, "once");
     }
 
     /// Enter opens the oldest of the tier chosen and A every one, the oldest first; the

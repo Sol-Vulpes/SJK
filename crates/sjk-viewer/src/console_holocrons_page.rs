@@ -189,6 +189,10 @@ impl ViewerConsole {
         }
         let now = std::time::Instant::now();
         self.holocrons_panel.refresh(now, || Data::read(enabled));
+        // The Collection's Inventory asked to open one of the tier chosen.
+        if let Some(action) = self.holocrons_panel.take_open_soon(now) {
+            self.holocrons_panel_action(action);
+        }
         // The opening's answer is looked for every frame only while the page waits.
         if self.holocrons_panel.opening() {
             let outcome = crate::player_identity::opening_outcome();

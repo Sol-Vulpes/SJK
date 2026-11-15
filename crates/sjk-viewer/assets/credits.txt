@@ -93,6 +93,8 @@ did: Perk marks on cards: a badge for each thing a card brings
 did: The Forge: shop, crafting and breaking any saber shader down, in one tab
 did: The History tab: every drop, opening, credit and shard spent, box and trade
 did: The Inventory tab: everything owned in one list, by kind, with counts and a search
+did: Inventory pictures and item card: worth in shards, wear, break down, open from the list
+did: One tier frame on every Collection page: each tier adds a touch, diamonds count the step
 did: The Collection's hall: a tile to each kind with what is new in it, the whole look beside
 did: New on every kind: cards, tags and finishers marked New, and empty pages that point the way
 did: Blade cost ranking: every Legendary and Mythical blade timed on the GPU

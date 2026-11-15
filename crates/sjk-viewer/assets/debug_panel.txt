@@ -100,6 +100,29 @@ test: S cycles Tier / Name / Quantity; the sort segments click too; Up/Down skip
 test: / opens the search: type, held Backspace, Ctrl+A/C/V work; Esc clears; wheel scrolls.
 note: DOOM coins show only once the hub said them (toy_wheelofdoom asks).
 
+[tier-frame]
+area: Menus & settings
+title: One tier frame: Inventory, Cards, Tags, Forge, History and Holocrons tell tiers alike
+change: Common glass; Uncommon a bar; Rare tinted edge + glow; Legendary brackets + halo.
+change: Mythical a full edge and, chosen, a slow sheen; Unique a rose inner line + its mark.
+change: Diamonds before the tier name count its step (1 Uncommon to 4 Mythical).
+test: Inventory, Cards, Tags, Forge (grid and list), History, Holocrons: each tier's frame.
+test: Choose a Mythical thing: a sheen crosses its frame every 6 s; ui_rarityEffects 0 stops it.
+test: Not held (Cards, Tags, Holocrons): the frame dims but the tier still reads.
+note: Kybers wall tiles and the hall keep their own look for now (a later pass).
+
+[inventory-card]
+area: Menus & settings
+title: Inventory: pictured rows, kind chips, wallet strip and the chosen thing's card
+change: Each row starts with its picture; 1-7 or a chip shows one kind; balances on top.
+change: The card on the right: tier, edition, how it came, copies, worth in shards, buttons.
+test: Kyber: Wear (Enter) sets the blade; B twice breaks a spare (+shards); G opens Kybers.
+test: Last copy, locked or Unique kyber: Break down greyed, the reason under the buttons.
+test: Holocron Open / dormant kyber Attune (Enter): the Holocrons tab runs its ceremony.
+test: Tag Choose, finisher Wear / Take off, card Show in Cards (G) lands on its tile.
+test: The strip's "spare copies worth N" matches the Forge's Break down all duplicates.
+note: Offer in trade is not there: the trade window takes the menus' input while open.
+
 [chat-icon-sizes]
 area: Console & chat
 title: Game chat: smaller SJK/EJK icons; nameplates: EJK icon with the tick on its corner

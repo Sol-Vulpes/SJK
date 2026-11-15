@@ -5,6 +5,9 @@
 //! scrim. Every position is in frame pixels ([`Frame`]); text
 //! goes through [`text`] in the UI's families.
 
+pub(crate) use super::tier_frame::{
+    TierLook, TierSize, card_tier, holocron_tier, tier_frame, tier_mark, tier_step,
+};
 use super::{Frame, color, text};
 use crate::menu_widgets::{MenuCanvas, TextFamily};
 use sjk_ui::{Color, DrawCommand, FontWeight, Rect, TextAlign};

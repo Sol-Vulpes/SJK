@@ -503,6 +503,10 @@ pub(crate) enum PanelAction {
     Banner(&'static str),
     /// Show a tab another page draws: the Holocrons page.
     Hub(Tab),
+    /// Show the Holocrons page on the tier at this slot ([`crate::holocrons::slot`]) and
+    /// open (or attune) its oldest there, in the page's ceremony: the Inventory's Open and
+    /// Attune (15/11/2026).
+    OpenHolocron(usize),
     /// Switch blade skin `skin`'s option `option` on or off (`cg_saberSkinOptions`).
     SkinOption {
         skin: &'static str,
@@ -1641,9 +1645,7 @@ impl Panel {
             return action;
         }
         if self.tab == Tab::Inventory
-            && let Some(action) = self
-                .inventory
-                .key(event.text.as_deref(), key, shift, control)
+            && let Some(action) = self.inventory_key(event.text.as_deref(), key, shift, control)
         {
             return action;
         }
@@ -2456,6 +2458,11 @@ impl Panel {
                 self.enter_hall();
             }
             return PanelAction::None;
+        }
+        if self.tab == Tab::Inventory
+            && let Some(action) = self.inventory_button(token, event.kind == UiEventKind::Activate)
+        {
+            return action;
         }
         if self.tab == Tab::Inventory
             && let Some(action) = self.inventory.token(
