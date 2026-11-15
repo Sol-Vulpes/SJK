@@ -549,6 +549,10 @@ run is handed back to it in the next, so a pipeline built once does not start fr
   (`GameData/SJK/cache/`, or the per-user SJK folder's), named by
   `wgpu::util::pipeline_cache_key`: `wgpu_pipeline_cache_vulkan_<vendor>_<device>.bin`. Off-screen
   renders (tests, world shots) open no file.
+  The Collection's kyber stills (15/11/2026) are kept beside it in `cache/blades/`, one PNG
+  each named by the kyber and the key of what it is drawn from, on every backend
+  ([unlockables.md](unlockables.md#kybers-tab)); deleting them is safe too (they are baked
+  again).
 - **Loading and invalidation.** It is loaded once at start with `fallback`: wgpu checks the
   header it wrote (header version and ABI, backend, vendor and device, the driver's pipeline
   cache UUID, the body's length) and starts an empty cache when anything differs, so a driver
@@ -1125,12 +1129,15 @@ process's RAM in Task Manager.
   occlusion, HDR and glow at full resolution) and the skins' GPU work.
   The size also sets the lamp light cache's budget
   ([below](#experimentals-lamp-memory)).
-- With menu pictures on, the menus' kyber swatches show their drawings
-  (`collection_swatch.rs`) instead of the live blade pictures (`blade_pictures.rs`, a
-  832x1664 target of three textures, about 17 MB, and each signature blade's
-  pipeline), and that target is freed. Live, a frame draws only the pictures that need
-  it: the hovered or chosen ones every frame, the others 30 times a second and six a
-  frame at most ([unlockables.md](unlockables.md#kybers-tab)).
+- With menu pictures on, the menus' kyber swatches show no live blade pictures
+  (`blade_pictures.rs`, a 832x1664 target of three textures, about 17 MB, and each
+  signature blade's pipeline), and that target is freed. Since 15/11/2026 the swatches
+  show the kybers' stills instead (`blade_stills.rs`: a 1536x768 RGBA8 atlas, 4.5 MiB,
+  while a swatch shows, and a 512x768 baking target with its depth, 3 MiB, only while
+  baking), kept on disk in `cache/blades`; with menu pictures on a missing one is baked
+  one a frame, only those on screen, and their drawings stand in until then. Live, a
+  frame draws only the pictures that need it: the hovered or chosen ones, the others
+  showing their stills ([unlockables.md](unlockables.md#kybers-tab)).
 - The secondary views make their targets the first frame each is drawn, not with the
   world (`Lazy` in [scene_view_gpu.rs](../crates/sjk-viewer/src/scene_view_gpu.rs),
   `Runtime::provide_targets` in [scene_views.rs](../crates/sjk-viewer/src/scene_views.rs)).

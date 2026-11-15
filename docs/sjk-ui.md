@@ -111,9 +111,10 @@ for Mythical (the holocron tiers' order) and none for Common, and Unique's SJK S
 black and white. A holocron's or dormant kyber's tier and a card's rarity land on the same
 ladder (`kit::holocron_tier`, `kit::card_tier`). It frames the Inventory's rows and item
 card, the Cards and Tags tiles, the Forge's tiles and list rows, the History's rows and the
-Holocrons tab's tiers and dormant kybers; where `rarity_fx` already animates a frame (the
-Forge, the Holocrons tab) the frame stays still under it. Not yet: the Kybers wall's tiles
-and the hall's lines and tiles, changed by other work at the time, take it in a later pass.
+Holocrons tab's tiers and dormant kybers, and (since `personal/blade-stills`) the Kybers
+wall's tiles; where `rarity_fx` already animates a frame (the Forge, the Holocrons tab, the
+Kybers wall) the frame stays still under it. Not yet: the hall's lines and tiles take it in
+a later pass.
 
 ### Type
 
@@ -1825,10 +1826,13 @@ Holocrons tab's Shop, a blade card's Forge link) open that kind directly.
   - **The wall** (from y 400): a heading to each tier ("Mythical" in its colour, "2 of
     12", a line in its colour; the stock blade's "Stock") and its tiles six to a line
     (135 wide, 100 tall at the ordinary text size, taller at a larger one), up to thirty
-    shown. A tile: its tier's band along the top and frame, the blade as a strip
-    (`swatch::strip`: the live picture when owned, else a still blade in the skin's own
-    colours, dimmed when not held, so the ones not held are told apart; grey while its
-    pack has not come), the name without "blade" on two lines at most, its state (Worn,
+    shown. A tile: its [tier frame](#tier-frame) (since 15/11/2026; faint when not held),
+    the blade large across the
+    tile, tilted 8 degrees, its glow round it (`swatch::tile_blade`, 15/11/2026: the
+    kyber's still, [unlockables.md](unlockables.md#kybers-tab), greyed and dimmed under a
+    small padlock on the hilt when not held; live while hovered or chosen; until its
+    still comes a drawing in the skin's own colours, grey while its pack has not come),
+    at the foot the name without "blade" on two lines at most over its state (Worn,
     Yours, "Yours x3", Not owned: "Locked" until 29/10/2026, when the padlock became the
     player's own lock) and the chroma's wheel; its marks: the New sticker on its top edge,
     the star and the padlock on a dark pill over the blade's right end, a New one outlined

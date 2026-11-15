@@ -687,6 +687,11 @@ impl Signature {
         }
     }
 
+    /// Its own shader and blade-skin file, as written (the Collection's stills' key).
+    pub(crate) fn sources(&self) -> [&'static str; 2] {
+        [self.wgsl, self.file]
+    }
+
     /// The shader its pipelines are built from: `saber.wgsl` with its own signature.
     pub(crate) fn module_source(&self) -> String {
         let mut full = module_source(include_str!("saber.wgsl"), self.wgsl);

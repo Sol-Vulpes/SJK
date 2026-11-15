@@ -48,8 +48,9 @@ const ROWS: usize = 8;
 pub(crate) const SLOTS: usize = COLUMNS * ROWS;
 /// Blade instances one cell draws at most (glow and core, glints, an echo).
 const PER_SLOT: usize = 12;
-/// Blade instances the pictures draw at most (`saber_gpu.rs`).
-pub(crate) const BLADES: usize = SLOTS * PER_SLOT;
+/// Blade instances the pictures and a frame's still bakes ([`crate::blade_stills`]) draw at
+/// most (`saber_gpu.rs`).
+pub(crate) const BLADES: usize = (SLOTS + crate::blade_stills::BAKE_BATCH) * PER_SLOT;
 /// A cell in world units: the blade's 40 and room for its tip and effects, and above and
 /// below it room for what a signature draws round it.
 const CELL: [f32; 2] = [52.0, 26.0];
@@ -71,6 +72,9 @@ struct Slot {
     skin: &'static str,
     /// Its picture has been drawn: swatches show it.
     drawn: bool,
+    /// It was drawn with its own pipelines (a signature's built, or none needed), not the
+    /// shared ones standing in for a build.
+    own: bool,
     /// The calm moment ([`calm_tick`]) it was last drawn in.
     tick: u64,
 }
@@ -100,6 +104,17 @@ pub(crate) fn set_live(live: bool) {
     LIVE.store(live, Ordering::Relaxed);
 }
 
+/// Whether swatches may show live pictures (the menu pictures off).
+pub(crate) fn live() -> bool {
+    LIVE.load(Ordering::Relaxed)
+}
+
+/// Whether a swatch the player looks at asked for skin `id` while this UI was built
+/// ([`focus`]): it shows the live picture, the others their still.
+pub(crate) fn focused(id: &str) -> bool {
+    live() && lock().focused.contains(&id)
+}
+
 fn lock() -> std::sync::MutexGuard<'static, State> {
     STATE
         .lock()
@@ -108,8 +123,9 @@ fn lock() -> std::sync::MutexGuard<'static, State> {
 
 /// The picture of skin `id` for a swatch: the texture coordinates `[u0, v0, u1, v1]` of
 /// its cell, from its left edge ([`BLADE_START`] units before the blade) to its end, the cell's middle `shown` units
-/// high (`shown` at most the cell's height), once drawn. Asking keeps (or gets) it a cell.
-pub(crate) fn picture(id: &'static str, shown: f32) -> Option<[f32; 4]> {
+/// high (`shown` at most the cell's height), once drawn, and whether it was drawn with its
+/// own pipelines. Asking keeps (or gets) it a cell.
+pub(crate) fn picture(id: &'static str, shown: f32) -> Option<([f32; 4], bool)> {
     if !LIVE.load(Ordering::Relaxed) {
         return None;
     }
@@ -121,17 +137,62 @@ pub(crate) fn picture(id: &'static str, shown: f32) -> Option<[f32; 4]> {
         .slots
         .iter()
         .position(|slot| slot.is_some_and(|slot| slot.drawn && slot.skin == id))?;
+    let own = state.slots[slot].is_some_and(|slot| slot.own);
     let (column, row) = (slot % COLUMNS, slot / COLUMNS);
     let width = CELL[0] * COLUMNS as f32;
     let height = CELL[1] * ROWS as f32;
     let shown = shown.clamp(1.0, CELL[1]);
     let top = row as f32 * CELL[1] + (CELL[1] - shown) * 0.5;
-    Some([
-        column as f32 * CELL[0] / width,
-        top / height,
-        (column as f32 + 1.0) * CELL[0] / width,
-        (top + shown) / height,
-    ])
+    Some((
+        [
+            column as f32 * CELL[0] / width,
+            top / height,
+            (column as f32 + 1.0) * CELL[0] / width,
+            (top + shown) / height,
+        ],
+        own,
+    ))
+}
+
+/// The texture ids of the cells' crops ([`crop`]): cell `n` is `CROP_BASE + n`.
+const CROP_BASE: u32 = 0x6300_0400;
+
+/// Skin `id`'s live picture as a texture of its own: its cell cropped to what a still
+/// shows ([`crate::blade_stills::UNITS`]: the whole cell across, its middle that high),
+/// so a swatch can turn it as it turns a still; once drawn, and whether with its own
+/// pipelines. Asking keeps (or gets) it a cell, as [`picture`].
+pub(crate) fn crop(id: &'static str) -> Option<(sjk_ui::TextureId, bool)> {
+    picture(id, crate::blade_stills::UNITS[1])?;
+    let state = lock();
+    let slot = state
+        .slots
+        .iter()
+        .position(|slot| slot.is_some_and(|slot| slot.drawn && slot.skin == id))?;
+    let own = state.slots[slot].is_some_and(|slot| slot.own);
+    Some((sjk_ui::TextureId(CROP_BASE + slot as u32), own))
+}
+
+/// The cell a crop's texture names ([`crop`]).
+pub(crate) fn crop_of(texture: sjk_ui::TextureId) -> Option<usize> {
+    let slot = texture.0.checked_sub(CROP_BASE)? as usize;
+    (slot < SLOTS).then_some(slot)
+}
+
+/// The texture coordinates of cell `slot`'s crop (top left, bottom right).
+pub(crate) fn crop_range(slot: usize) -> ([f32; 2], [f32; 2]) {
+    let slot = slot.min(SLOTS - 1);
+    let (column, row) = (slot % COLUMNS, slot / COLUMNS);
+    let width = CELL[0] * COLUMNS as f32;
+    let height = CELL[1] * ROWS as f32;
+    let shown = crate::blade_stills::UNITS[1];
+    let top = row as f32 * CELL[1] + (CELL[1] - shown) * 0.5;
+    (
+        [column as f32 * CELL[0] / width, top / height],
+        [
+            (column as f32 + 1.0) * CELL[0] / width,
+            (top + shown) / height,
+        ],
+    )
 }
 
 /// Draw skin `id`'s picture every frame: a swatch the player looks at (a hovered or
@@ -187,6 +248,7 @@ fn assign(state: &mut State, seconds: f64, fresh: bool) -> Option<Plan> {
             *free = Some(Slot {
                 skin: id,
                 drawn: false,
+                own: false,
                 tick: 0,
             });
         }
@@ -241,6 +303,31 @@ fn offer(chosen: &mut [Option<(u64, usize)>], mut candidate: (u64, usize)) {
     }
 }
 
+/// The blade instances of a blade from `base` along x in `color` at `seconds` (`seed` its
+/// animation's), at most `per_blade`: its glow and core, its extras, their effects' frame as
+/// on a wearer seen from behind (`saber_submission.rs`), so what spreads to the blade's
+/// sides spreads up and down the picture.
+pub(crate) fn blade_instances(
+    base: Vec3,
+    color: crate::saber_rgb::BladeColor,
+    seconds: f64,
+    seed: u32,
+    per_blade: usize,
+) -> impl Iterator<Item = crate::saber::Instance> {
+    let blade = crate::saber::Blade {
+        base: base.to_array(),
+        direction: [1.0, 0.0, 0.0],
+        length: BLADE_LENGTH,
+        radius: BLADE_RADIUS,
+    };
+    crate::saber::Instance::pair(blade, color)
+        .map(|instance| instance.with_animation(seconds, seed))
+        .into_iter()
+        .chain(crate::saber::skin_extras(blade, color, seconds, seed))
+        .map(|instance| instance.with_frame([0.0, 1.0, 0.0], BLADE_LENGTH))
+        .take(per_blade)
+}
+
 /// Cell `slot`'s rectangle in the picture, in pixels: `[x, y, width, height]`.
 fn cell_pixels(slot: usize) -> [u32; 4] {
     let (width, height) = (SIZE[0] / COLUMNS as u32, SIZE[1] / ROWS as u32);
@@ -283,8 +370,6 @@ pub(crate) struct Target {
     soften_bind: wgpu::BindGroup,
     /// Clears a cell drawn alone, its depth to the far plane (`blade_pictures.wgsl`).
     clear: wgpu::RenderPipeline,
-    /// The frame's blade instances, kept with their room from frame to frame.
-    instances: Vec<crate::saber::Instance>,
 }
 
 impl Target {
@@ -434,68 +519,85 @@ impl Target {
             soften,
             soften_bind,
             clear,
-            instances: Vec::with_capacity(BLADES),
         }
     }
 }
 
 impl crate::GpuState {
     /// Draw this frame's blade pictures: of the skins a swatch asked for while the last UI
-    /// was built, each in its cell, live, the ones [`assign`] plans.
+    /// was built, each in its cell, live, the ones [`assign`] plans; and the blade stills
+    /// baked this frame ([`crate::blade_stills`]), whose blades go up with theirs.
     pub(crate) fn encode_blade_pictures(&mut self, encoder: &mut wgpu::CommandEncoder) {
         let seconds = crate::menu::art::motion::seconds();
-        let Some(plan) = assign(&mut lock(), seconds, self.blade_pictures.is_none()) else {
-            if !LIVE.load(Ordering::Relaxed) && self.blade_pictures.take().is_some() {
-                self.ui_shapes.clear_blade_pictures();
-            }
-            return;
-        };
-        if plan.draw.iter().all(Option::is_none) {
+        let bakes = self.step_blade_stills();
+        let baking = bakes.iter().any(Option::is_some);
+        let plan = assign(&mut lock(), seconds, self.blade_pictures.is_none());
+        if plan.is_none() && !LIVE.load(Ordering::Relaxed) && self.blade_pictures.take().is_some() {
+            self.ui_shapes.clear_blade_pictures();
+        }
+        let plan = plan.filter(|plan| plan.draw.iter().any(Option::is_some));
+        if plan.is_none() && !baking {
             return;
         }
-        if self.blade_pictures.is_none() {
+        if plan.is_some() && self.blade_pictures.is_none() {
             let target = Target::new(&self.device, &self.camera_layout);
             self.ui_shapes
                 .set_blade_pictures(&self.device, &target.display);
             self.blade_pictures = Some(target);
         }
-        let Some(target) = self.blade_pictures.as_mut() else {
-            return;
-        };
-        let mut blades = std::mem::take(&mut target.instances);
+        let mut blades = std::mem::take(&mut self.blade_stills.instances);
         blades.clear();
         let mut drawn = [false; SLOTS];
-        for (slot, id) in plan.draw.iter().enumerate() {
-            let Some(id) = id else {
-                continue;
-            };
-            let Some(skin) = self
-                .blade_skins
-                .color_with(id, self.looks.own_options_off(id))
-            else {
-                continue;
-            };
-            let color = crate::saber_rgb::BladeColor::Skin(skin);
-            let blade = crate::saber::Blade {
-                base: blade_base(slot).to_array(),
-                direction: [1.0, 0.0, 0.0],
-                length: BLADE_LENGTH,
-                radius: BLADE_RADIUS,
-            };
-            let seed = slot as u32;
-            let start = blades.len();
-            blades.extend(
-                crate::saber::Instance::pair(blade, color)
-                    .map(|instance| instance.with_animation(seconds, seed))
-                    .into_iter()
-                    .chain(crate::saber::skin_extras(blade, color, seconds, seed))
-                    // Its effects' frame as on a wearer seen from behind (`saber_submission.rs`):
-                    // what spreads to the blade's sides spreads up and down the picture.
-                    .map(|instance| instance.with_frame([0.0, 1.0, 0.0], BLADE_LENGTH))
-                    .take(PER_SLOT),
-            );
-            drawn[slot] = blades.len() > start;
+        let mut own = [false; SLOTS];
+        if let Some(plan) = &plan {
+            for (slot, id) in plan.draw.iter().enumerate() {
+                let Some(id) = id else {
+                    continue;
+                };
+                let Some(skin) = self
+                    .blade_skins
+                    .color_with(id, self.looks.own_options_off(id))
+                else {
+                    continue;
+                };
+                let color = crate::saber_rgb::BladeColor::Skin(skin);
+                let start = blades.len();
+                blades.extend(blade_instances(
+                    blade_base(slot),
+                    color,
+                    seconds,
+                    slot as u32,
+                    PER_SLOT,
+                ));
+                drawn[slot] = blades.len() > start;
+                own[slot] = self.saber_gpu.skin_ready(skin.index);
+            }
         }
+        let baked = Self::push_still_blades(&bakes, &mut blades, PER_SLOT);
+        self.saber_gpu.prepare_pictures(&self.queue, &mut blades);
+        let any_blade = !blades.is_empty();
+        self.blade_stills.instances = blades;
+        if let Some(plan) = &plan {
+            self.encode_live_pictures(encoder, plan, seconds, any_blade, drawn, own);
+        }
+        self.encode_blade_stills(encoder, &bakes, baked);
+    }
+
+    /// The live pictures' passes for `plan`: the cells planned cleared and drawn, then
+    /// softened into the picture the UI shows; which cells got a blade (`drawn`), and with
+    /// its own pipelines (`own`).
+    fn encode_live_pictures(
+        &mut self,
+        encoder: &mut wgpu::CommandEncoder,
+        plan: &Plan,
+        seconds: f64,
+        any_blade: bool,
+        drawn: [bool; SLOTS],
+        own: [bool; SLOTS],
+    ) {
+        let Some(target) = self.blade_pictures.as_ref() else {
+            return;
+        };
         // The blades' shaders aim their view rays from the camera's position: far off in
         // front of the picture's middle, so every cell is seen straight on (Creyon's round 14:
         // from one near corner, the lower cells were seen at a slant and Abyssal Eye's cut sat
@@ -518,10 +620,6 @@ impl crate::GpuState {
         };
         self.queue
             .write_buffer(&target.camera, 0, bytemuck::bytes_of(&uniform));
-        self.saber_gpu.prepare_pictures(&self.queue, &mut blades);
-        let any_blade = !blades.is_empty();
-        target.instances = blades;
-        let target = &*target;
         // The whole picture again, or only the planned cells over the ones kept.
         let (load, depth) = if plan.whole {
             (wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT), 1.0)
@@ -604,11 +702,12 @@ impl crate::GpuState {
             }
         }
         let mut state = lock();
-        for (slot, (planned, drawn)) in state.slots.iter_mut().zip(plan.draw.iter().zip(drawn)) {
+        for (index, (slot, planned)) in state.slots.iter_mut().zip(plan.draw.iter()).enumerate() {
             if let (Some(slot), Some(id)) = (slot, planned)
                 && slot.skin == *id
             {
-                slot.drawn = drawn;
+                slot.drawn = drawn[index];
+                slot.own = own[index];
             }
         }
     }

@@ -1,3 +1,27 @@
+## Kyber stills on the Collection's tiles (15/11/2026)
+
+15/11/2026, `personal/blade-stills` from `main` `1eae244cc`, `main` `f1557c4a2` merged in
+(Sol: "make blades look great on Collection tiles"). Each kyber is drawn once by the blade
+renderer into a 256 x 96 still at a fixed moment of its animation, at twice that size and
+brought down with a soft glow (`blade_stills.wgsl`), kept on disk in `cache/blades/` under a
+key of what it is drawn from; the swatches show stills (the hovered or chosen one live, once
+drawn with its own pipelines), a kyber not held its still greyed and dimmed under a small
+padlock; the Kybers wall's tiles draw the blade large across the tile, tilted, in their
+[tier frame](sjk-ui.md#tier-frame), name and state at the foot
+([unlockables.md](unlockables.md#kybers-tab), [sjk-ui.md](sjk-ui.md#collection)). Video
+memory: a 1536 x 768 RGBA8 atlas (4.5 MiB, 48 stills) while a swatch shows, a 3 MiB baking
+target only while baking. Verified on Windows 11 (RTX 5080, Vulkan): unit tests of the
+texture ids, the cells' reuse, the bake queue's bound (four a frame, one with the menu
+pictures on, the ones not ready waiting), the keys and the disk's replacement of a changed
+blade's still; `duel6_blade_stills` (every other kyber owned, `SJK_TEST_PACKS`): 301 stills
+baked and written, a frame with one bake +0.32 ms over one with none (median of 287 frames,
+1.86 ms), the first frames of four bakes with the baking target made about 7 ms; forgotten in
+memory, the wall's stills read back from disk in 4 frames without a bake; the wall, hovered
+wall, list and hall shots looked at. The startup stack check, `cargo fmt` on the files
+changed, build, workspace tests and Clippy. Not verified: in a game (scrolling a full wall,
+an option change re-baking its still, the menu pictures on a small card), DX12 and Metal,
+a weak GPU's bake time.
+
 ## New on every kind, empty states (15/11/2026)
 
 15/11/2026, `personal/collection-new` based on `main` `1eae244cc` (Sol's approval of ideas 3

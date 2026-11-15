@@ -300,6 +300,8 @@ pub(super) enum Source {
     News(u8),
     /// The Collection's live blade pictures, added over what is below.
     BladePictures,
+    /// The Collection's blade stills (`blade_stills.rs`), added the same way.
+    BladeStills,
     /// The map editor's shader thumbnails.
     MapEditCells,
     /// The map editor's large shader preview.
@@ -311,7 +313,7 @@ impl Source {
     /// and ray layers. Everything else is alpha blended.
     pub(super) fn additive(self) -> bool {
         matches!(self, Self::Emblem(layer) if layer.additive())
-            || matches!(self, Self::BladePictures)
+            || matches!(self, Self::BladePictures | Self::BladeStills)
     }
 }
 

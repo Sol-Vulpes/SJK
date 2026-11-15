@@ -2040,19 +2040,38 @@ Profile page's See the collection) open it on its own:
   2.97 and 3.41 ms to 1.69, 2.11 and 2.18 (three alternating runs; the list, six, 1.76 to
   2.14 against 1.65 to 2.08); on the PC's integrated Radeon from 251 to 196 ms, where
   each picture costs about 7 to 10 ms and the Medals tab's frame is 69 (such cards
-  usually have the menu pictures on, and the drawings). Until a skin has a cell (the
-  first frame, more than 16 swatches at once) the swatch is the drawing:
+  usually have the menu pictures on, and the drawings). Since 15/11/2026 (Sol: "make
+  blades look great on Collection tiles") only the swatch the player looks at is live:
+  every other one shows the kyber's **still** ([blade_stills.rs](../crates/sjk-viewer/src/blade_stills.rs)),
+  the blade drawn once by the same renderer at a fixed moment of its animation, at twice
+  the still's 256 x 96 pixels, brought down with a soft glow round its light (a cheap
+  bloom done once, `blade_stills.wgsl`), and kept on disk as
+  `GameData/SJK/cache/blades/<id>-<key>.png`. Its key hashes the skin's file as loaded,
+  its colour as worn (the player's own options, a chroma), its glow and core images, its
+  signature's shader and file, `saber.wgsl` and the baker's own version and shader, so a
+  changed blade is drawn again and its old file removed. The stills on screen sit in one
+  atlas texture of 48 cells (1536 x 768, 4.5 MiB, freed 10 s after the Collection
+  closes); a still not in it is read from disk on a thread (eight uploads a frame at
+  most) or baked: four a frame at most, in the live pictures' pass (one with the menu
+  pictures on), a signature waiting for its own pipelines (asked for at once, so no still
+  keeps the shared look a build stands in with); with nothing on screen waiting, the
+  other loaded kybers are baked one a frame while the Collection is open (not with the
+  menu pictures on), so a scroll finds them on disk. A hovered or chosen swatch shows
+  its still until its live picture is drawn with its own pipelines. A kyber not held
+  shows its still greyed and dimmed under a small padlock on the hilt, so a player sees
+  what they would get. Until a still comes (its first bake) the swatch is the drawing:
   (drawn with the UI's shapes from its loaded file's
   colours, flicker and flares, moving: a breathing corona, flame loops and granules, a
   flare running hilt to tip, and the file's lightning arcs, motes and turning hue when
   it has them; grey and still under a padlock when locked; owned but with its pack not
   loaded yet, a neutral still blade; a chroma in the player's colour, with its colour
   wheel before its name), its name and its state (Worn, Yours, Locked) under it, its
-  tier's name at the right of that line in its colour. The wall's tiles and the list's
-  rows draw a blade as a thin strip (`swatch::strip`, a handful of shapes, so thirty
-  tiles stay cheap): the live picture when owned, else a still blade in the skin's own
-  colours, dimmed when not held (25/10/2026: a wall of locked kybers all grey told
-  nothing apart), grey while its pack has not come. A click chooses a tile or a row and
+  tier's name at the right of that line in its colour. The list's rows draw a blade as
+  a thin strip (`swatch::strip`, a handful of shapes, so thirty stay cheap), the wall's
+  tiles large and tilted across the tile (`swatch::tile_blade`, 15/11/2026): its still,
+  greyed and dimmed under a small padlock when not held; until it comes a still blade in
+  the skin's own colours, dimmed when not held (25/10/2026: a wall of locked kybers all
+  grey told nothing apart), grey while its pack has not come. A click chooses a tile or a row and
   previews it (a double click wore it until 21/10/2026: Creyon found wearing on a click
   too easy to do by mistake, and the double click unclear), and Equip, Unequip or Enter
   wear it; resting the pointer never chooses one (31/10/2026; from 21/10 it chose one
