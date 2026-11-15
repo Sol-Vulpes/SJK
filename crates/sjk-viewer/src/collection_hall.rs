@@ -596,6 +596,7 @@ impl Panel {
                             id: Some(skin.id),
                             name: skin.name.to_owned(),
                             colour: skin.tier.colour(),
+                            tier: Some(skin.tier),
                             note,
                         };
                         let mut blades = vec![match worn[0].and_then(unlockables::blade_skin) {
@@ -604,6 +605,7 @@ impl Panel {
                                 id: None,
                                 name: "Stock blade".to_owned(),
                                 colour: inputs.stock,
+                                tier: None,
                                 note: "worn",
                             },
                         }];
@@ -761,6 +763,7 @@ impl Panel {
                                     id: Some(skin.id),
                                     name: skin.name.to_owned(),
                                     colour: skin.tier.colour(),
+                                    tier: Some(skin.tier),
                                     note: if offer.bought {
                                         "bought"
                                     } else if offer.owned {
@@ -1146,9 +1149,9 @@ impl Panel {
             _ => &[],
         };
         let worn = crate::shader_marks::worn_of(inputs.setting, inputs.second, owned);
-        let (blade, blade_colour) = match worn[0].and_then(unlockables::blade_skin) {
-            Some(skin) => (skin.name, skin.tier.colour()),
-            None => ("Stock blade", inputs.stock),
+        let (blade, blade_colour, blade_tier) = match worn[0].and_then(unlockables::blade_skin) {
+            Some(skin) => (skin.name, skin.tier.colour(), Some(skin.tier)),
+            None => ("Stock blade", inputs.stock, None),
         };
         let held = |id: &str| inputs.holdings.debug() || inputs.holdings.unlock(id).is_some();
         let finisher = crate::finishers::own(inputs.finisher, held)
@@ -1159,11 +1162,37 @@ impl Panel {
         // Under "Wearing now", over the model's head: below it they stood over its feet.
         let ts = crate::text::style::current().scale.max(1.0);
         let lines_top = GRID_Y + 26.0 * ts;
+        // The blade's tier told by its mark before its name, the two centred together.
+        let mark_size = 11.0;
+        let mark = blade_tier.map_or(0.0, |tier| kit::tier_mark_width(tier, mark_size));
+        let offset = if mark > 0.0 {
+            let gap = 8.0;
+            let name = super::view::label_width(blade, 18.0, 1.15).min(width + 40.0);
+            let start = middle - (mark + gap + name) * 0.5;
+            if let Some(tier) = blade_tier {
+                kit::tier_mark(
+                    &mut self.ui,
+                    frame,
+                    [start, lines_top + 13.0],
+                    tier,
+                    mark_size,
+                    false,
+                );
+            }
+            (mark + gap) * 0.5
+        } else {
+            0.0
+        };
         text(
             &mut self.ui,
             TextFamily::Body,
             format_args!("{blade}"),
-            frame.rect(x - 20.0, lines_top, width + 40.0, 26.0),
+            frame.rect(
+                x - 20.0 + offset * 2.0,
+                lines_top,
+                width + 40.0 - offset * 2.0,
+                26.0,
+            ),
             18.0 * s,
             blade_colour,
             FontWeight::Semibold,

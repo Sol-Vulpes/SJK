@@ -113,8 +113,13 @@ ladder (`kit::holocron_tier`, `kit::card_tier`). It frames the Inventory's rows 
 card, the Cards and Tags tiles, the Forge's tiles and list rows, the History's rows and the
 Holocrons tab's tiers and dormant kybers, and (since `personal/blade-stills`) the Kybers
 wall's tiles; where `rarity_fx` already animates a frame (the Forge, the Holocrons tab, the
-Kybers wall) the frame stays still under it. Not yet: the hall's lines and tiles take it in
-a later pass.
+Kybers wall) the frame stays still under it. On the hall (since `personal/collection-polish`)
+the tiles stay the kinds' glass cards, framed by kind and not by tier, and what they draw
+tells its tier the same way: the Kybers tile's blades and its tiers' lines, the deal of the
+day and the day's other offers, the finisher worn, the tag chosen (its picture in its tier's
+frame), the Holocrons tile's tiers when every tier's mark and name fit its column (all or none) and the blade worn over the model's
+head each carry the tier's mark before their words (`kit::tier_mark_width` lays a centred
+one out).
 
 ### Type
 

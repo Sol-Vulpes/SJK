@@ -6,7 +6,7 @@
 //! goes through [`text`] in the UI's families.
 
 pub(crate) use super::tier_frame::{
-    TierLook, TierSize, card_tier, holocron_tier, tier_frame, tier_mark, tier_step,
+    TierLook, TierSize, card_tier, holocron_tier, tier_frame, tier_mark, tier_mark_width, tier_step,
 };
 use super::{Frame, color, text};
 use crate::menu_widgets::{MenuCanvas, TextFamily};

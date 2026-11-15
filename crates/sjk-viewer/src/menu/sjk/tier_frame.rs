@@ -360,6 +360,20 @@ pub(crate) fn sheen_at(seconds: f32) -> Option<f32> {
     (phase < SHEEN_CROSS).then(|| phase / SHEEN_CROSS)
 }
 
+/// How wide [`tier_mark`] draws tier `tier`'s mark at `size` (frame pixels), 0 for none:
+/// for laying a mark out before it is drawn (a centred line).
+pub(crate) fn tier_mark_width(tier: Rarity, size: f32) -> f32 {
+    if tier == Rarity::Unique {
+        return size * 1.3;
+    }
+    let steps = tier_step(tier);
+    if steps == 0 {
+        0.0
+    } else {
+        f32::from(steps) * size + f32::from(steps - 1) * size * 0.28
+    }
+}
+
 /// Tier `tier`'s mark from `x` (its left edge), centred on `y`, `size` frame pixels high:
 /// a diamond for each step ([`tier_step`]: none for Common), or Unique's SJK Symbols mark,
 /// in the tier's colour (faint when `dim`). Returns how wide it is, 0 for none.
@@ -410,11 +424,7 @@ pub(crate) fn tier_mark(
             },
         );
     }
-    if steps == 0 {
-        0.0
-    } else {
-        f32::from(steps) * size + f32::from(steps - 1) * gap
-    }
+    tier_mark_width(tier, size)
 }
 
 #[cfg(test)]
@@ -561,6 +571,8 @@ mod tests {
             });
             assert_eq!(diamonds, usize::from(tier_step(tier)), "{tier:?}");
             assert_eq!(width > 0.0, tier != Rarity::Common, "{tier:?}");
+            // Its width is known before it is drawn, for a centred line.
+            assert_eq!(width, tier_mark_width(tier, 12.0), "{tier:?}");
             if tier == Rarity::Unique {
                 let words: Vec<String> = canvas.text_runs().map(str::to_owned).collect();
                 assert_eq!(words, [crate::symbols::RARITY[5].to_string()]);
