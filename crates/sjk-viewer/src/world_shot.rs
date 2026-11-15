@@ -390,6 +390,8 @@ mod model_sync_shots;
 mod playstyle_card_shots;
 #[path = "world_shot_small_card.rs"]
 mod small_card;
+#[path = "world_shot_status_bar.rs"]
+mod status_bar_shots;
 
 #[path = "world_shot_emote_help.rs"]
 mod emote_help_shots;

@@ -3847,6 +3847,19 @@ test: 301 characters: the box stops at 300; sjksay with more sends the first 300
 
 # ---- HUD ----
 
+[status-bar]
+area: HUD
+title: Status bar: credits, blade, effects and toys at the top or bottom
+change: Settings > HUD > Status bar (cg_statusBar 0 off, 1 top, 2 bottom); a switch per part.
+change: Credits, shards, crystals, DOOM coins, blade skin, effects pills, every toy lit while on.
+test: cg_statusBar 1: a navy pill under the build label; 2: at the bottom edge.
+test: Numbers match the Collection's (credits, shards, crystals); DOOM coins after toy_wheelofdoom.
+test: Wear a Legendary blade: its name in gold-orange; stock: "Stock blade" in grey.
+test: toy_box, toy_hax, toy_illuminate: their pictures light up with a gold dot; off: faint.
+test: tactical medium, dnd, the Sun's extras on: a pill each; away (alt-tab): "Away".
+test: Tab (scoreboard), Escape (menu), console, Collection, cg_drawHud 0: the bar hides.
+test: ui_textScale 1.4 and a 4K window: bigger text, nothing cut; switch parts off one by one.
+
 [nameplate-height]
 area: HUD
 title: Nameplate height slider (Hormorn, PR #401)
