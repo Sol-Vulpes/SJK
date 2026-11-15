@@ -581,6 +581,46 @@ pub(super) const HUD_OPTIONS: &[Setting] = &[
         kind: ValueKind::Bool,
     },
     Setting {
+        label: "Status bar",
+        cvar: crate::status_bar::CVAR,
+        kind: ValueKind::Choice(&["0", "1", "2"]),
+    },
+    Setting {
+        label: "Status bar: credits",
+        cvar: crate::status_bar::CREDITS_CVAR,
+        kind: ValueKind::Bool,
+    },
+    Setting {
+        label: "Status bar: shards",
+        cvar: crate::status_bar::SHARDS_CVAR,
+        kind: ValueKind::Bool,
+    },
+    Setting {
+        label: "Status bar: crystals",
+        cvar: crate::status_bar::CRYSTALS_CVAR,
+        kind: ValueKind::Bool,
+    },
+    Setting {
+        label: "Status bar: DOOM coins",
+        cvar: crate::status_bar::COINS_CVAR,
+        kind: ValueKind::Bool,
+    },
+    Setting {
+        label: "Status bar: blade skin",
+        cvar: crate::status_bar::SABER_CVAR,
+        kind: ValueKind::Bool,
+    },
+    Setting {
+        label: "Status bar: effects",
+        cvar: crate::status_bar::EFFECTS_CVAR,
+        kind: ValueKind::Bool,
+    },
+    Setting {
+        label: "Status bar: toys",
+        cvar: crate::status_bar::TOYS_CVAR,
+        kind: ValueKind::Bool,
+    },
+    Setting {
         label: "Movement keys",
         cvar: crate::hud::movement_keys::CVAR,
         kind: ValueKind::Bool,

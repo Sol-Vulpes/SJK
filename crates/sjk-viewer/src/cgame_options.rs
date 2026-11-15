@@ -10,6 +10,7 @@ pub(crate) fn register(cvars: &mut CvarRegistry) -> Result<(), sjk_shell::CvarEr
     crate::hud::movement::register(cvars)?;
     crate::hud::movement_keys::register(cvars)?;
     crate::hud::clock::register(cvars)?;
+    crate::status_bar::register(cvars)?;
     cvars.register(CvarDefinition::new(
         crate::actor_world_submission::force_powers::victim::CVAR,
         true,

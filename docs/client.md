@@ -3796,6 +3796,35 @@ on the HUD: 1 the time, 2 the time and the date (`dd/mm/yyyy`) after it, 3 the d
 PC's clock is read at most once a second into retained text
 ([clock.rs](../crates/sjk-viewer/src/hud/clock.rs)).
 
+## Status bar
+
+`cg_statusBar` (off by default; Settings > HUD, "Status bar") puts a compact line at the
+top (1) or the bottom (2) of the screen, in the SJK UI's look (navy glass, holo edge, the
+UI's families) in every menu style, with what the player carries and wears (Sol's
+request, 15/11/2026). Each part has its own switch, all on, under the row's "Status bar"
+heading:
+
+| Part | Switch | Shows |
+| --- | --- | --- |
+| Credits | `cg_statusBarCredits` | The hub's credits, digits grouped by three ("12 340") |
+| Kyber shards | `cg_statusBarShards` | The hub's kyber shards |
+| Kyber crystals | `cg_statusBarCrystals` | The unopened kyber crystals the profile lists (among its last 100 holocrons) |
+| DOOM coins | `cg_statusBarCoins` | The DOOM coins, once the hub's WHEEL OF DOOM answer has come (`toy_wheelofdoom`, a wheel on the map) |
+| Blade skin | `cg_statusBarSaber` | The first saber's blade skin, its name and dot in its tier's colour ("Stock blade" when none), and the second saber's when it wears another |
+| Effects | `cg_statusBarEffects` | A pill for each thing on: the blade's extras switched on, the finisher worn, Tactical mode's level, Do not disturb, away, toon shading |
+| Toys | `cg_statusBarToys` | Every toy with a switch, its quick wheel picture lit with a gold dot while on, faint while off (the Prop gun, which has no picture, by its letters) |
+
+A number the client does not know (no hub, the coins not read yet) is left out rather
+than shown empty, and what does not fit the screen's width is dropped from the end. The
+bar shows over play only, as the HUD's elements do: never under the menus, the console,
+the scoreboard or an intermission, nor while `cg_drawHud 0` hides the elements. At the
+top it stands under the build label while that shows; at the bottom it may cover the
+local time clock's default place (move the clock in `hud_edit`). Its text follows
+`ui_textScale`; it is laid out from the window's height, so it reads the same at 1080p
+and at 4K. What it shows is read four times a second into fixed storage, and a frame
+draws it without allocating ([status_bar.rs](../crates/sjk-viewer/src/status_bar.rs)).
+World shot: `world_shot::status_bar_shots`.
+
 ## Speedometer placement
 
 `cg_speedometerX` is the speed label's right-edge anchor in the 640-wide virtual

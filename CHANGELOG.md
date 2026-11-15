@@ -32,6 +32,7 @@ Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 -->
 ## Unreleased
 
+- A status bar at the top or bottom of the screen with your credits, kyber shards and crystals, DOOM coins, the blade skin you wear in its tier's colour, what is on about you (blade extras, finisher, Tactical, Do not disturb, away) and every toy's switch: Settings > HUD "Status bar" (`cg_statusBar`, off by default), a switch for each part _(Sol)_
 - Creyon is a new player model: a werewolf with a second look, Creyon cloth, whose hood, cape and loincloth move as you run. SJK players get it from the hub like Solfox _(Sol)_
 - In the game's chat, SJK's emblem and the EJK icon are smaller and the same size, and a player's verified tick sits on the icon's bottom right corner, as on the scoreboard, instead of after their name; their nameplate shows the EJK icon the same way, with the tick on its corner _(Sol)_
 
