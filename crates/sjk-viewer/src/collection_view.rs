@@ -263,6 +263,270 @@ pub(super) fn left_lines(
     y
 }
 
+/// The shape an empty page shows of what will fill it ([`empty_state`], 15/11/2026).
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum Ghosts {
+    /// Three card outlines, each with a "?".
+    Cards,
+    /// A dim holocron.
+    Cube,
+    /// A grey crystal (a dormant kyber).
+    Crystal,
+    /// Three medal outlines.
+    Medals,
+    /// A few dim rows, as a list's.
+    Rows,
+}
+
+/// The one thing an empty page offers ([`empty_state`]): its button's label and token.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) struct EmptyButton<'a> {
+    pub(crate) label: &'a str,
+    pub(crate) token: u16,
+}
+
+/// An empty page that points the way (the ideas page's "Empty states", 15/11/2026): in
+/// `rect` (frame pixels), the outlines of what fills the page (`ghosts`), its title and
+/// line (how it fills) and at most one `action`. A rect under 160 pixels tall lays it out
+/// as a row, the ghost at the left and the button at the right; a taller one as a column,
+/// centred. The words are the caller's, already through [`crate::terms::say`].
+pub(crate) fn empty_state(
+    canvas: &mut crate::menu_widgets::MenuCanvas,
+    frame: &Frame,
+    [x, y, width, height]: [f32; 4],
+    ghosts: Ghosts,
+    (title, line): (&str, &str),
+    action: Option<EmptyButton<'_>>,
+) {
+    let s = frame.s;
+    let control = crate::menu::sjk::kit::CONTROL_HEIGHT;
+    let button_width = |label: &str, pad: f32| label_width(label, 17.0, 1.0) + pad;
+    if height < 160.0 {
+        let side = (height - 8.0).max(24.0);
+        ghost(canvas, frame, [x + 4.0, y + 4.0, side, side], ghosts, true);
+        let button = action.map_or(0.0, |action| button_width(action.label, 48.0));
+        let left = x + side + 22.0;
+        let room = (width - side - 22.0 - button - 16.0).max(40.0);
+        let middle = y + height * 0.5;
+        text(
+            canvas,
+            TextFamily::Display,
+            format_args!("{title}"),
+            frame.rect(left, middle - 26.0, room, 26.0),
+            20.0 * s,
+            color::TEXT,
+            FontWeight::Semibold,
+            TextAlign::Start,
+        );
+        text(
+            canvas,
+            TextFamily::Body,
+            format_args!("{line}"),
+            frame.rect(left, middle + 1.0, room, 22.0),
+            14.0 * s,
+            color::MUTED,
+            FontWeight::Regular,
+            TextAlign::Start,
+        );
+        if let Some(action) = action {
+            crate::menu::sjk::kit::button(
+                canvas,
+                frame,
+                [x + width - button, middle - control * 0.5, button, control],
+                action.label,
+                true,
+                true,
+                false,
+                action.token,
+            );
+        }
+        return;
+    }
+    let ghost_height = (height * 0.42).clamp(90.0, 300.0);
+    let ghost_width = match ghosts {
+        Ghosts::Cards | Ghosts::Medals => ghost_height * 2.2,
+        Ghosts::Rows => width.min(640.0),
+        Ghosts::Cube | Ghosts::Crystal => ghost_height,
+    };
+    let top = y + 8.0;
+    ghost(
+        canvas,
+        frame,
+        [
+            x + (width - ghost_width) * 0.5,
+            top,
+            ghost_width,
+            ghost_height,
+        ],
+        ghosts,
+        false,
+    );
+    let mut at = top + ghost_height + 28.0;
+    text(
+        canvas,
+        TextFamily::Display,
+        format_args!("{title}"),
+        frame.rect(x, at, width, 40.0),
+        30.0 * s,
+        color::TEXT,
+        FontWeight::Semibold,
+        TextAlign::Center,
+    );
+    at += 46.0;
+    let column = width.min(760.0);
+    at = centred_lines(
+        canvas,
+        frame,
+        line,
+        [x + (width - column) * 0.5, at, column],
+        ((column / 8.6) as usize).max(20),
+        3,
+        17.0,
+        color::MUTED,
+    );
+    if let Some(action) = action {
+        let button = button_width(action.label, 64.0);
+        crate::menu::sjk::kit::button(
+            canvas,
+            frame,
+            [x + (width - button) * 0.5, at + 18.0, button, control],
+            action.label,
+            true,
+            true,
+            false,
+            action.token,
+        );
+    }
+}
+
+/// An empty state's button on a Collection page ([`empty_state`]).
+pub(super) const EMPTY_ACTION_TOKEN: u16 = 8_601;
+
+/// What an empty Collection page's button (or Enter) does.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(super) enum EmptyAction {
+    /// Show the Holocrons page, where the waiting ones open.
+    Holocrons,
+    /// Show the server list: holocrons drop while playing.
+    Servers,
+}
+
+impl Panel {
+    /// The empty state's button was pressed (or Enter on its page).
+    pub(super) fn press_empty_action(&mut self) -> PanelAction {
+        match self.empty_action {
+            Some(EmptyAction::Holocrons) => {
+                ui_cues_click();
+                PanelAction::Hub(Tab::Holocrons)
+            }
+            Some(EmptyAction::Servers) => {
+                ui_cues_click();
+                PanelAction::Servers
+            }
+            None => PanelAction::None,
+        }
+    }
+}
+
+/// `ghosts` drawn dim over `[x, y, width, height]` (`small`: a row's, one of them).
+fn ghost(
+    canvas: &mut crate::menu_widgets::MenuCanvas,
+    frame: &Frame,
+    [x, y, width, height]: [f32; 4],
+    ghosts: Ghosts,
+    small: bool,
+) {
+    let s = frame.s;
+    let outline = |canvas: &mut crate::menu_widgets::MenuCanvas, rect: [f32; 4], radius: f32| {
+        let area = frame.rect(rect[0], rect[1], rect[2], rect[3]);
+        let _ = canvas.draw_list_mut().push(DrawCommand::RoundedRect {
+            rect: area,
+            radius: radius * s,
+            color: color::alpha(color::HOLO, 0.04),
+        });
+        let _ = canvas.draw_list_mut().push(DrawCommand::Border {
+            rect: area,
+            radius: radius * s,
+            width: 1.5 * s,
+            color: color::alpha(color::HOLO, 0.26),
+        });
+    };
+    let mark = |canvas: &mut crate::menu_widgets::MenuCanvas, rect: [f32; 4], mark: char| {
+        let size = rect[2].min(rect[3]) * 0.42;
+        text(
+            canvas,
+            TextFamily::Body,
+            format_args!("{mark}"),
+            frame.rect(
+                rect[0],
+                rect[1] + (rect[3] - size * 1.3) * 0.5,
+                rect[2],
+                size * 1.3,
+            ),
+            size * s,
+            color::alpha(color::HOLO, 0.32),
+            FontWeight::Semibold,
+            TextAlign::Center,
+        );
+    };
+    let count = if small { 1 } else { 3 };
+    match ghosts {
+        Ghosts::Cards | Ghosts::Medals => {
+            let medal = ghosts == Ghosts::Medals;
+            let item_width = if medal {
+                height
+            } else {
+                height / crate::cards::look::ASPECT
+            };
+            let gap = item_width * 0.18;
+            let all = item_width * count as f32 + gap * (count - 1) as f32;
+            let left = x + (width - all) * 0.5;
+            for index in 0..count {
+                let rect = [
+                    left + index as f32 * (item_width + gap),
+                    y,
+                    item_width,
+                    height,
+                ];
+                if medal {
+                    outline(canvas, rect, item_width * 0.5);
+                    mark(canvas, rect, crate::symbols::MEDAL);
+                } else {
+                    outline(canvas, rect, item_width * 0.07);
+                    mark(canvas, rect, '?');
+                }
+            }
+        }
+        Ghosts::Cube | Ghosts::Crystal => {
+            let side = width.min(height);
+            let rect = [
+                x + (width - side) * 0.5,
+                y + (height - side) * 0.5,
+                side,
+                side,
+            ];
+            outline(canvas, rect, side * 0.2);
+            mark(
+                canvas,
+                rect,
+                if ghosts == Ghosts::Cube {
+                    crate::symbols::HOLOCRON
+                } else {
+                    crate::symbols::SHARD
+                },
+            );
+        }
+        Ghosts::Rows => {
+            let rows = if small { 1 } else { 4 };
+            let step = height / rows as f32;
+            for index in 0..rows {
+                let top = y + index as f32 * step;
+                outline(canvas, [x, top + 3.0, width, step - 6.0], 8.0);
+            }
+        }
+    }
+}
+
 impl Panel {
     /// Draw the page with what `inputs` says.
     pub(crate) fn append_sjk(
@@ -288,6 +552,8 @@ impl Panel {
     /// Lay the page out; `_body` is the body family, kept for measured layouts.
     pub(super) fn build(&mut self, inputs: &Inputs<'_>, _body: &UiFont, viewport: [f32; 2]) {
         let frame = Frame::new(viewport);
+        self.follow_news(inputs);
+        self.empty_action = None;
         self.box_on = inputs.cardboard_box;
         self.order66_on = inputs.order66;
         self.hax_on = inputs.hax;
@@ -551,6 +817,9 @@ impl Panel {
                     keys.push((&["Enter"], "open, close"));
                 }
                 keys.push((&["R"], "refresh"));
+            }
+            Tab::Cards if self.empty_action.is_some() => {
+                keys.push((&["Enter"], "the way to your first card"))
             }
             Tab::Cards if self.card_inspect => {
                 if self.cards_shown > 1 {

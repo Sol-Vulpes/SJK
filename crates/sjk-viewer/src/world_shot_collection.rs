@@ -11,6 +11,9 @@ use super::*;
 use crate::player_menu::ReturnTarget;
 use crate::profile_hub::{Screen, Tab};
 
+#[path = "world_shot_collection_new.rs"]
+mod new_shots;
+
 /// White wisps from the emitter: a smoke ribbon, the stream swaying and curling, torn
 /// along by its noise.
 const WISPS: &str = r#"{

@@ -102,6 +102,9 @@ pub(super) struct Item {
     pub(super) count: u64,
     /// A word more: the finishes held, the edition, a blade's number.
     pub(super) note: String,
+    /// What it is to the New marks (`crate::collection_seen`): none for currencies,
+    /// holocrons and dormant kybers, which carry no New.
+    pub(super) seen: Option<crate::collection_seen::Thing>,
 }
 
 /// A place of the list: a group's heading, with its kinds and how many in all, or an item
@@ -160,6 +163,7 @@ pub(super) fn items(sources: &Sources<'_>) -> Vec<Item> {
         colour,
         count,
         note: String::new(),
+        seen: None,
     };
     items.push(currency("Credits", color_credits(), sources.credits));
     items.push(currency(
@@ -180,6 +184,7 @@ pub(super) fn items(sources: &Sources<'_>) -> Vec<Item> {
                 colour: tier.colour,
                 count: count.into(),
                 note: String::new(),
+                seen: None,
             });
         }
     }
@@ -193,6 +198,7 @@ pub(super) fn items(sources: &Sources<'_>) -> Vec<Item> {
                 colour: tier.colour,
                 count: count.into(),
                 note: String::new(),
+                seen: None,
             });
         }
     }
@@ -206,6 +212,7 @@ pub(super) fn items(sources: &Sources<'_>) -> Vec<Item> {
                 colour: unlockables::name_colour(skin.id).unwrap_or(skin.tier.colour()),
                 count: unlock.count.into(),
                 note: format!("Blade {}", skin.number_text()),
+                seen: Some(seen(Kind::Kyber, skin.id, 0)),
             });
         } else if let Some(finisher) = crate::finishers::get(&unlock.id) {
             items.push(Item {
@@ -216,6 +223,7 @@ pub(super) fn items(sources: &Sources<'_>) -> Vec<Item> {
                 colour: finisher.tier.colour(),
                 count: unlock.count.into(),
                 note: String::new(),
+                seen: Some(seen(Kind::Finisher, finisher.id, 0)),
             });
         }
     }
@@ -235,6 +243,7 @@ pub(super) fn items(sources: &Sources<'_>) -> Vec<Item> {
             colour: tag.tier.colour(),
             count,
             note,
+            seen: Some(seen(Kind::Tag, tag.id, 0)),
         });
     }
     if sources.gif_tags > 0 {
@@ -246,6 +255,7 @@ pub(super) fn items(sources: &Sources<'_>) -> Vec<Item> {
             colour: crate::menu::sjk::color::TEXT,
             count: sources.gif_tags as u64,
             note: "Made from blank tags".to_owned(),
+            seen: None,
         });
     }
     items.extend(sources.cards.iter().cloned());
@@ -279,9 +289,19 @@ pub(super) fn card_items(
                 colour: stack.rarity.colour,
                 count: stack.count.into(),
                 note: note.join(", "),
+                seen: stack
+                    .card
+                    .as_deref()
+                    .map(|id| seen(Kind::Card, id, stack.finish.index as u8)),
             }
         })
         .collect()
+}
+
+use crate::collection_seen::{Kind, Thing as Seen};
+
+fn seen(kind: Kind, id: &str, finish: u8) -> Seen {
+    Seen::new(kind, id, finish)
 }
 
 /// The credits' colour: the gold they are drawn in on the Forge and the Cards tab.
@@ -673,6 +693,7 @@ mod tests {
             colour: Color::new(1.0, 1.0, 1.0, 1.0),
             count,
             note: String::new(),
+            seen: None,
         }
     }
 

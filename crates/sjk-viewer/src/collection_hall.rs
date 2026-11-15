@@ -356,6 +356,9 @@ pub(crate) struct Summary {
     pub(crate) lines: Vec<(String, Color)>,
     pub(crate) share: Option<f32>,
     pub(crate) alert: bool,
+    /// How many of its things are New (`crate::collection_seen`): a gold "N new" pill at
+    /// its top right.
+    pub(crate) new: usize,
     /// Its picture under the name ([`Art::Lines`]: its lines alone).
     pub(crate) art: Art,
 }
@@ -564,7 +567,7 @@ impl Panel {
     }
 
     /// What each tile says this frame, from `inputs` (`counts`, the tabs' counts).
-    fn summaries(&mut self, inputs: &Inputs<'_>, counts: &[Count]) -> Vec<Summary> {
+    pub(super) fn summaries(&mut self, inputs: &Inputs<'_>, counts: &[Count]) -> Vec<Summary> {
         self.follow_marks(inputs);
         let me = inputs
             .snapshot
@@ -586,10 +589,7 @@ impl Panel {
                         let shaders = count(Tab::Shaders);
                         summary.count = shaders.label();
                         summary.share = share(shaders);
-                        let new = self.marks.new_count();
-                        if new > 0 {
-                            summary.count = format!("{} \u{b7} {new} new", summary.count);
-                        }
+                        summary.new = self.marks.new_count();
                         let worn =
                             crate::shader_marks::worn_of(inputs.setting, inputs.second, owned);
                         let blade = |skin: &'static Unlockable, note| art::Blade {
@@ -650,6 +650,7 @@ impl Panel {
                             .and_then(crate::finishers::get)
                             .map(|finisher| (finisher.name, finisher.tier, finisher.description));
                         summary.art = Art::Finisher { worn };
+                        summary.new = self.kind_new(crate::collection_seen::Kind::Finisher);
                     }
                     Tile::Tags => {
                         let tags = count(Tab::Tags);
@@ -663,6 +664,7 @@ impl Panel {
                             (tag.id, tag.name, tag.tier, finish)
                         });
                         summary.art = Art::Tag { chosen };
+                        summary.new = self.kind_new(crate::collection_seen::Kind::Tag);
                     }
                     Tile::Toys => {
                         summary.count = count(Tab::Toys).label();
@@ -728,6 +730,7 @@ impl Panel {
                             shown,
                             held: cards.held,
                         };
+                        summary.new = self.kind_new(crate::collection_seen::Kind::Card);
                     }
                     Tile::Holocrons => {
                         if let Some(me) = me {
@@ -1004,6 +1007,16 @@ impl Panel {
         );
         if summary.alert {
             kit::attention_dot(&mut self.ui, frame, [x + pad - 11.0, y + 35.0]);
+        }
+        if summary.new > 0 {
+            let pill = super::news::count_pill_width(24.0, summary.new);
+            let _ = super::news::count_pill(
+                &mut self.ui,
+                frame,
+                [x + width - pad - pill, y + 23.0],
+                24.0,
+                summary.new,
+            );
         }
         if !summary.count.is_empty() {
             let left = x + pad + name_width + 12.0;

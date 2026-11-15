@@ -87,6 +87,25 @@ impl ViewerConsole {
                     );
                 }
             }
+            PanelAction::Servers => {
+                // The viewer shows the server list once the page is closed.
+                self.close_holocrons_panel();
+                self.pending_servers = true;
+            }
+            PanelAction::Achievements => {
+                if self.holocrons_panel.is_hub() {
+                    let target = self.profile_hub_return;
+                    self.open_profile_hub_page(Tab::Achievements, target);
+                } else {
+                    let owns_console = self.holocrons_panel.close();
+                    self.show_collection_panel(
+                        Tab::Achievements,
+                        owns_console,
+                        false,
+                        crate::player_menu::ReturnTarget::MainMenu,
+                    );
+                }
+            }
             // The shop is the Collection's Forge (21/10/2026).
             PanelAction::Shop => {
                 let target = self.profile_hub_return;

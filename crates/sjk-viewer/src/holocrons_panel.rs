@@ -63,6 +63,10 @@ pub(crate) const LOOT_TOKEN: u16 = 1_323;
 pub(crate) const LOOT_BACK_TOKEN: u16 = 1_324;
 /// Shop, beside Open all: the Collection's Forge on its Shop.
 pub(crate) const SHOP_TOKEN: u16 = 1_325;
+/// The empty states' buttons (15/11/2026): See Achievements while no dormant kyber is
+/// held, Find a server while no holocron is.
+pub(crate) const ACHIEVEMENTS_TOKEN: u16 = 1_326;
+pub(crate) const SERVERS_TOKEN: u16 = 1_329;
 
 /// What the page knows of the player's holocrons: whether the hub could say, and what.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -144,6 +148,9 @@ pub(crate) struct Data {
     /// The SJK release the hub wants for opening and trading when this build is older
     /// (the hub's minimum client): `can_open` is false then and the page says to update.
     pub(crate) update: Option<String>,
+    /// The achievement nearest its goal, not reached yet (its name, count and goal):
+    /// what the dormant kybers' empty state points at, each achievement bringing one.
+    pub(crate) next_achievement: Option<(String, u64, u64)>,
 }
 
 impl Data {
@@ -168,6 +175,7 @@ impl Data {
             every: None,
             can_open: false,
             update: None,
+            next_achievement: None,
         }
     }
 
@@ -269,6 +277,7 @@ impl Data {
                 .filter(|&every| every > 0),
             can_open: crate::economy::may_act(snapshot),
             update: crate::economy::update_to(snapshot).map(str::to_owned),
+            next_achievement: next_achievement(&me.achievements),
         }
     }
 
@@ -407,6 +416,10 @@ pub(crate) enum PanelAction {
     Open(Vec<u64>),
     /// Show the Collection's Forge on its Shop (Shop, or S).
     Shop,
+    /// Show the Collection's Achievements (no dormant kyber yet: each comes from one).
+    Achievements,
+    /// Show the server list (no holocron yet: they drop while playing).
+    Servers,
 }
 
 pub(crate) struct Panel {
@@ -758,10 +771,22 @@ impl Panel {
                 PanelAction::None
             }
             Some(SHOP_TOKEN) => PanelAction::Shop,
+            Some(ACHIEVEMENTS_TOKEN) => PanelAction::Achievements,
+            Some(SERVERS_TOKEN) => PanelAction::Servers,
             Some(crate::profile_hub::HALL_TOKEN) if self.hub => PanelAction::Hall,
             _ => PanelAction::None,
         }
     }
+}
+
+/// The achievement of `held` nearest its goal and not reached, not a secret one: its
+/// name, count and goal.
+fn next_achievement(held: &[sjk_identity::Achievement]) -> Option<(String, u64, u64)> {
+    crate::achievements::standings(held)
+        .iter()
+        .filter(|standing| standing.listed() && standing.unlocked.is_none() && !standing.secret())
+        .max_by(|a, b| a.fraction().total_cmp(&b.fraction()))
+        .map(|next| (next.name().into_owned(), next.progress, next.kind.goal))
 }
 
 #[cfg(test)]

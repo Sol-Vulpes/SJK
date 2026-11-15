@@ -683,6 +683,16 @@ impl ClientMenu {
         self.reset_sjk_browser();
     }
 
+    /// Show the server list from the main menu as Play does, its rows fetched unless fresh
+    /// ones show (an empty Collection page's "Find a server", 15/11/2026).
+    pub(crate) fn open_servers(&mut self, console: &ViewerConsole) {
+        if let Ok(master) = console.master_server() {
+            self.browser.set_master(master);
+        }
+        self.open_browser();
+        self.refresh_servers_if_stale();
+    }
+
     /// Start a master-server fetch unless fresh rows are already on show.
     pub(crate) fn refresh_servers_if_stale(&mut self) {
         if self.browser.is_stale() {

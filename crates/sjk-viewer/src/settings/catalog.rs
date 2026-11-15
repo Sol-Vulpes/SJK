@@ -606,6 +606,11 @@ pub(super) const HUD_OPTIONS: &[Setting] = &[
         kind: ValueKind::Bool,
     },
     Setting {
+        label: "Status bar: new things",
+        cvar: crate::status_bar::NEW_CVAR,
+        kind: ValueKind::Bool,
+    },
+    Setting {
         label: "Status bar: kyber",
         cvar: crate::status_bar::SABER_CVAR,
         kind: ValueKind::Bool,

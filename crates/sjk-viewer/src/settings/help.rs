@@ -1689,6 +1689,10 @@ const HELP: &[(&str, &str)] = &[
         "Shows your DOOM coins on the status bar, once the hub has said how many.",
     ),
     (
+        crate::status_bar::NEW_CVAR,
+        "Says when your Collection holds new things: in words for that map, then a gold dot.",
+    ),
+    (
         crate::status_bar::SABER_CVAR,
         "Shows the kyber on your saber, in its tier's colour, on the status bar.",
     ),

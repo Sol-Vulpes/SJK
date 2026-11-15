@@ -132,6 +132,9 @@ impl Panel {
             "What your saber kills do to the body, for every SJK player on your server. One at a time, with any blade.",
         );
         self.kind_pills(frame, saber, (owned, CATALOGUE.len()));
+        self.kind_new_count(frame, &headline, crate::collection_seen::Kind::Finisher);
+        // All shown at once: the New ones are seen once the page has stayed a second.
+        self.watch_finishers();
         let worn = worn(inputs);
         for (index, finisher) in CATALOGUE.iter().enumerate() {
             let y = CARD_TOP + index as f32 * (CARD_HEIGHT + CARD_GAP);
@@ -170,6 +173,15 @@ impl Panel {
             FontWeight::Semibold,
             TextAlign::Start,
         );
+        if self.is_new(crate::collection_seen::Kind::Finisher, finisher.id) {
+            let name = super::view::label_width(finisher.name, 26.0, self.widen);
+            let _ = super::marks_view::new_sticker(
+                &mut self.ui,
+                frame,
+                [left + name + 14.0, y + 21.0],
+                22.0,
+            );
+        }
         let state = if is_worn {
             format!("{}  Worn", symbols::SABER)
         } else if held {
@@ -239,6 +251,7 @@ impl Panel {
         match token {
             SABER_KIND_TOKEN => {
                 self.finishers_shown = false;
+                self.leave_news();
                 Some(PanelAction::None)
             }
             FINISHERS_KIND_TOKEN => {

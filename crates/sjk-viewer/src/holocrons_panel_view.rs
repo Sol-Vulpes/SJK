@@ -415,6 +415,35 @@ impl Panel {
         self.balances(frame, RIGHT_X + RIGHT_WIDTH, HEAD_Y + 4.0);
     }
 
+    /// No dormant kyber held (15/11/2026, "Empty states") in place of the four tiles:
+    /// one comes from each achievement, once; the nearest to its goal, and the way there.
+    fn no_crystals(&mut self, frame: &Frame) {
+        let line = match &self.data.next_achievement {
+            Some((name, progress, goal)) => format!(
+                "One per achievement, once. Next: {name} {}/{}",
+                crate::cards::grouped(*progress),
+                crate::cards::grouped(*goal)
+            ),
+            None => "One per achievement, once.".to_owned(),
+        };
+        crate::console::collection_panel::empty_state(
+            &mut self.ui,
+            frame,
+            [
+                RIGHT_X,
+                CRYSTALS_TOP - 4.0,
+                RIGHT_WIDTH,
+                CRYSTAL_HEIGHT + 8.0,
+            ],
+            crate::console::collection_panel::Ghosts::Crystal,
+            ("No dormant kybers yet", &line),
+            Some(crate::console::collection_panel::EmptyButton {
+                label: "See Achievements",
+                token: super::ACHIEVEMENTS_TOKEN,
+            }),
+        );
+    }
+
     /// The four tiers, one row each.
     fn tiers(&mut self, frame: &Frame) {
         let s = frame.s;
@@ -566,6 +595,14 @@ impl Panel {
             FontWeight::Regular,
             TextAlign::End,
         );
+        if self
+            .data
+            .crystals
+            .is_some_and(|crystals| crystals.iter().all(|count| *count == 0))
+        {
+            self.no_crystals(frame);
+            return;
+        }
         for (index, tier) in crate::kyber::TIERS.iter().enumerate() {
             let x = RIGHT_X + index as f32 * (CRYSTAL_WIDTH + CRYSTAL_GAP);
             let y = CRYSTALS_TOP;
@@ -794,6 +831,24 @@ impl Panel {
             FontWeight::Regular,
             TextAlign::End,
         );
+        if self.data.recent.is_empty() && self.data.total() == Some(0) {
+            // None ever (15/11/2026, "Empty states"): how they come, and where.
+            crate::console::collection_panel::empty_state(
+                &mut self.ui,
+                frame,
+                [RIGHT_X, RECENT_TOP + 4.0, RIGHT_WIDTH, 100.0],
+                crate::console::collection_panel::Ghosts::Cube,
+                (
+                    &crate::terms::say("No holocrons yet"),
+                    &crate::terms::say("Holocrons drop while you play on SJK servers."),
+                ),
+                Some(crate::console::collection_panel::EmptyButton {
+                    label: "Find a server",
+                    token: super::SERVERS_TOKEN,
+                }),
+            );
+            return;
+        }
         if self.data.recent.is_empty() {
             text(
                 &mut self.ui,

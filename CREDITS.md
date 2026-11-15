@@ -196,6 +196,10 @@ includes:
   design proposals): the Collection opens on a grid of large tiles, one to each kind with
   what is new in it (shaders New, holocrons to open, the deal of the day, the newest
   History line), the player's whole look beside it, each kind behind a breadcrumb;
+- New on every kind and empty states (15/11/2026, Sol's approval of the Collection ideas
+  page): cards, tags and finishers carry New as kybers do, counted on the hall's tiles, the
+  pages and the status bar, from one seen-list that took over the kybers' own; and empty
+  pages show what will fill them, how, and the one action that starts it;
 - the four holocrons, each tier an object of its own with moving parts (17/10/2026,
   Sol's pick of the proposed shapes: the Jedi cube, the Great Holocron, the Sith
   pyramid, the kyber prism), with Sol's generated faces for the last three;

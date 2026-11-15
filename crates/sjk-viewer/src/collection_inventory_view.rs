@@ -69,14 +69,10 @@ impl Panel {
             SEARCH_TOKEN,
         );
         if self.inventory.places.is_empty() {
-            let (headline, line) = match inputs.holdings.reason() {
-                Some(reason) => ("Inventory unavailable", reason),
-                None => (
-                    "Nothing matches",
-                    "No thing you own holds every word of the search.",
-                ),
-            };
-            self.inventory_empty(frame, headline, line);
+            match inputs.holdings.reason() {
+                Some(reason) => self.inventory_empty(frame, "Inventory unavailable", reason),
+                None => self.inventory_no_match(frame),
+            }
             return;
         }
         let first = self.inventory.first;
@@ -112,6 +108,32 @@ impl Panel {
                 color: color::alpha(color::HOLO, 0.35),
             });
         }
+    }
+
+    /// A search nothing owned matches (15/11/2026, "Empty states"): dim rows, the words
+    /// searched, and how to clear them.
+    fn inventory_no_match(&mut self, frame: &Frame) {
+        let title = format!(
+            "Nothing you own matches \"{}\"",
+            self.inventory.query.trim()
+        );
+        super::view::empty_state(
+            &mut self.ui,
+            frame,
+            [
+                LEFT_X + 200.0,
+                LIST_Y + 40.0,
+                RIGHT_X - LEFT_X - 400.0,
+                420.0,
+            ],
+            super::view::Ghosts::Rows,
+            (
+                &title,
+                "The search looks for every word in what you hold: names, tiers, kinds and \
+                 notes. Escape clears it.",
+            ),
+            None,
+        );
     }
 
     /// The words over an empty list.
@@ -232,6 +254,8 @@ impl Panel {
             FontWeight::Semibold,
             TextAlign::Start,
         );
+        // New (`crate::collection_seen`): a sticker after the name.
+        super::news::row_sticker(&mut self.ui, &self.news, frame, item, middle);
         if !item.tier.is_empty() {
             text(
                 &mut self.ui,
