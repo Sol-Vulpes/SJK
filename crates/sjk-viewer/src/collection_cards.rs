@@ -224,7 +224,7 @@ impl Panel {
         });
         let (line, label, action) = if waiting > 0 {
             (
-                "Cards come out of holocrons. Every holocron you open may hold one, in Normal, \
+                "Cards come out of Holocrons. Every Holocron you open may hold one, in Normal, \
                  Holo or Solar. The SJK Alpha set has a card for every player who helped build \
                  SJK.",
                 format!(
@@ -235,7 +235,7 @@ impl Panel {
             )
         } else {
             (
-                "Cards come out of holocrons, and holocrons drop while you play on SJK servers.",
+                "Cards come out of Holocrons, and Holocrons drop while you play on SJK servers.",
                 "Find a server  (Enter)".to_owned(),
                 super::view::EmptyAction::Servers,
             )

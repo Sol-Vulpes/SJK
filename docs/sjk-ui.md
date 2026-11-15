@@ -2139,7 +2139,8 @@ Holocrons tab's Shop, a blade card's Forge link) open that kind directly.
   pictured rows and the item card the same day, idea 1 of the Collection's ideas round):
   "Inventory", then the wallet strip (y 268): the credits, kyber shards and, once the hub
   said them, DOOM coins (`Snapshot::wheel_of_doom`, read when the toy asks), each with its
-  mark, its figure and how it is earned, and at the right "N spare copies worth M kyber
+  mark, its figure and how it is earned ("credits, from opening Holocrons", "kyber shards,
+  from Holocrons and kybers broken down", "DOOM coins, from the WHEEL OF DOOM"), and at the right "N spare copies worth M kyber
   shards", what Break down all duplicates would give (one copy of each kept, never a locked
   one, a medal's or a card's: the Forge's own sum). At y 354 the kind chips (All, Holocrons,
   Dormant, Kybers, Finishers, Tags, Cards, each with how many are held in all; keys 1 to 7
@@ -2174,7 +2175,9 @@ Holocrons tab's Shop, a blade card's Forge link) open that kind directly.
   `cg_tag`); a finisher Wear or Take off (Enter, `cg_saberFinisher`); a card Show in Cards
   (G, the Cards tab on its tile, the filter cleared); the GIF tags Show in Tags (G). A
   greyed button says why under it, as the Forge does (its only copy, locked, outside the
-  trade, the hub not trading or opening now, the tag in use). Offering a thing in a trade
+  trade, the hub not trading, opening Holocrons or attuning dormant kybers now, the tag in
+  use). The card's "You hold" line counts copies, or a tier's holocrons "to open" and
+  dormant kybers "to attune". Offering a thing in a trade
   is not there: the trade window is a card over the menus that takes their input while
   open. It reads only the own hub profile the other tabs read, and asks the hub nothing
   new; while that is not known, it says why ("Inventory unavailable"), and a kind with
@@ -2292,14 +2295,15 @@ tab's wall, hover card and list). Not tried in a game.
 [collection_view.rs](../crates/sjk-viewer/src/collection_view.rs) `empty_state`, 15/11/2026
 (the ideas page's "Empty states that point the way"): an empty page shows the outlines of
 what fills it, says how it fills and offers one action, its words through `terms::say` (JoF
-naming says Echoes and Honors). Under 160 pixels tall it lays out as a row (the ghost left,
+naming says Echoes and Honors; a holocron is written "Holocron" in their sentences, so
+the JoF word reads "Echo" too, as on the Holocrons tab's name). Under 160 pixels tall it lays out as a row (the ghost left,
 the button right), taller as a centred column.
 
 | Page | Ghosts | Title, line | Action |
 | --- | --- | --- | --- |
-| Cards, no card held | three card outlines with "?" | No cards yet; cards come out of holocrons (each may hold one, in Normal, Holo or Solar) | Open holocrons · N waiting (Enter), else Find a server (Enter) |
+| Cards, no card held | three card outlines with "?" | No cards yet; cards come out of Holocrons (each may hold one, in Normal, Holo or Solar) | Open Holocrons · N waiting (Enter), else Find a server (Enter) |
 | Holocrons tab, none ever | a dim holocron | No holocrons yet; they drop while you play on SJK servers | Find a server |
-| Holocrons tab, no dormant kyber | a grey crystal, in place of the four tiles | No dormant kybers yet; one per achievement, once, and the nearest achievement ("Next: Angler 38/50") | See Achievements |
+| Holocrons tab, no dormant kyber | a grey crystal, in place of the four tiles | No dormant kybers yet; each achievement gives one, once, and the nearest achievement ("Next: Angler 38/50") | See Achievements |
 | Medals, none given | three medal outlines, under the rail | No medals yet; given by the SJK team by hand, for help and events | none |
 | Inventory, a search nothing owned matches | dim rows | Nothing you own matches "..."; what the search reads, Escape clears it | none |
 

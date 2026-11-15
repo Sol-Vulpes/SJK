@@ -164,13 +164,14 @@ impl Panel {
                 Mark::Credits,
                 crate::cards::credits_text(wallet.credits),
                 color::GOLD_BRIGHT,
-                crate::terms::say("credits, with every card a holocron brings").into_owned(),
+                crate::terms::say("credits, from opening Holocrons").into_owned(),
             ),
             (
                 Mark::Shards,
                 crate::economy::shards_text(wallet.shards),
                 crate::cards::shard::KYBER,
-                "kyber shards, from holocrons and kybers broken down".to_owned(),
+                crate::terms::say("kyber shards, from Holocrons and kybers broken down")
+                    .into_owned(),
             ),
         ];
         if let Some(coins) = wallet.coins {
@@ -974,7 +975,7 @@ fn facts(item: &Item, inputs: &Inputs<'_>) -> Vec<String> {
                 lines.push(crate::kyber::inside(tier.index));
             } else if let Some((least, most)) = crate::cards::CREDITS.get(tier.index) {
                 lines.push(crate::terms::say_owned(format!(
-                    "Opening one brings a card and {least} to {most} credits."
+                    "Opening one usually brings a card and {least} to {most} credits."
                 )));
             }
             lines.push(crate::terms::say(tier.about()).into_owned());
@@ -1019,7 +1020,8 @@ fn held_words(item: &Item, standing: &Standing) -> String {
                     "GIF tags"
                 }
             }
-            Thing::Holocron(_) | Thing::Crystal(_) => "sealed",
+            Thing::Holocron(_) => "to open",
+            Thing::Crystal(_) => "to attune",
         };
     let mut words = format!("You hold {} {things}", crate::cards::grouped(count));
     if matches!(item.thing, Thing::Kyber(_)) {

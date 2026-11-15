@@ -137,6 +137,16 @@ test: Tag Choose, finisher Wear / Take off, card Show in Cards (G) lands on its 
 test: The strip's "spare copies worth N" matches the Forge's Break down all duplicates.
 note: Offer in trade is not there: the trade window takes the menus' input while open.
 
+[collection-wording]
+area: Menus & settings
+title: Collection wording: dormant kybers attune, wallet lines, Holocrons capitalised
+change: A dormant kyber's greyed Attune says the hub does not let you attune dormant kybers.
+change: Wallet: "credits, from opening Holocrons"; "kyber shards, from Holocrons and kybers..."
+change: Empty Cards, hall Cards tile, Inventory card: Holocrons capitalised, Echoes under JoF.
+test: Inventory, a dormant kyber chosen with the hub refusing: the reason names attuning.
+test: Inventory card of a holocron tier: "You hold 3 to open"; dormant kybers "3 to attune".
+test: jof.honorNames on: empty Cards and the hall's Cards tile say Echoes, capitalised.
+
 [chat-icon-sizes]
 area: Console & chat
 title: Game chat: smaller SJK/EJK icons; nameplates: EJK icon with the tick on its corner

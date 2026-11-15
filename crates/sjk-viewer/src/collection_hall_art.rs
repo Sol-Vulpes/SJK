@@ -183,7 +183,9 @@ impl Panel {
         display: bool,
         ts: f32,
     ) {
-        let words = clipped(words, width, size, !display);
+        // Through `terms::say`, so JoF naming reads Echoes and Honors here too.
+        let words = crate::terms::say(words);
+        let words = clipped(&words, width, size, !display);
         text(
             &mut self.ui,
             if display {
@@ -842,7 +844,7 @@ impl Panel {
             let words_width = (x + width - words_x).max(0.0);
             let middle = y + height * 0.5;
             let (first, second) = if held.is_some() {
-                ("No cards yet", "Holocrons bring them")
+                ("No cards yet", "Opening Holocrons brings them")
             } else {
                 ("Cards", "Show once the hub answers")
             };
