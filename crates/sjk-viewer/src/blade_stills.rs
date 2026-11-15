@@ -1,86 +1,141 @@
-//! The Collection's blade stills (Sol, 15/11/2026: "make blades look great on Collection
-//! tiles"): every kyber drawn once by the game's own blade renderer into a small still
-//! picture, its glow added, kept on disk, and shown by the wall's tiles, the list's rows,
-//! the hall's and the Forge's strips; only the swatch the player looks at (the hovered or
-//! chosen one, [`crate::blade_pictures::focus`]) stays live ([`crate::blade_pictures`]).
+//! The Collection's blade loops (Sol, 15/11/2026: "make blades look great on Collection
+//! tiles", then "the sabers on the UI should be straight, maybe we should pre render a
+//! gif or video"): every kyber drawn by the game's own blade renderer into a short
+//! looping flipbook ([`FRAMES`] pictures of [`STILL`] pixels, [`FRAME_STEP`] seconds of
+//! its animation apart), its glow added, kept on disk, and played on the wall's tiles,
+//! the list's rows, the hall's and the Forge's strips and the cards' swatches, straight
+//! across them; a swatch crossfades from one picture to the next, [`PLAY_FPS`] a second,
+//! each kyber at its own place in its loop. Only the large swatch of the chosen blade
+//! stays live ([`crate::blade_pictures::focus`]), once its own pipelines are built.
 //!
-//! A swatch asks for its skin's still ([`still`]) while the UI is built. The frame then
-//! ([`crate::GpuState::step_blade_stills`]) finds each still asked for: in a cell of the
-//! atlas already ([`CELLS`] cells of [`STILL`] pixels, one texture, [`ATLAS`]); on disk,
-//! read and decoded by a thread of its own and uploaded, [`UPLOADS_PER_FRAME`] a frame at
-//! most; or missing, then baked: [`BAKE_BATCH`] a frame at most (one with the menu
-//! pictures on, `ui_menuPictures`), drawn by the blade renderer in the same pass as the live
-//! pictures at a fixed moment of their animation ([`STILL_SECONDS`]) at twice the still's
-//! size, then brought down to it with a soft glow round the light (`blade_stills.wgsl`),
-//! into its atlas cell, and read back and written to disk by that thread. A signature
-//! blade waits for its own pipelines (asked for at once, the Collection's urgency) so no
-//! still keeps the shared look a build stands in with. While the Collection is open and
-//! nothing visible is waiting, the other loaded kybers are baked too, one a frame, so a
-//! scroll finds its stills on disk (not with the menu pictures on).
+//! A swatch asks for its skin's loop ([`still`]) while the UI is built. The frame then
+//! ([`crate::GpuState::step_blade_stills`]) finds each loop asked for: in a slot of the
+//! atlas already (a slot is [`FRAMES`] cells, one atlas row); on disk, read and decoded by
+//! a thread of its own and uploaded, [`UPLOADS_PER_FRAME`] loops a frame at most; or
+//! missing, then baked, [`BAKE_BATCH`] pictures a frame at most (half a loop; one picture
+//! with the menu pictures on, `ui_menuPictures`): drawn by the blade renderer in the same
+//! pass as the live pictures, each at its moment of the loop ([`STILL_SECONDS`] on), at
+//! twice the picture's size, then brought down to it with a soft glow round the light
+//! (`blade_stills.wgsl`) into its atlas cell; a loop whole is read back and written to
+//! disk by that thread. A signature blade waits for its own pipelines (asked for at once,
+//! the Collection's urgency) so no loop keeps the shared look a build stands in with.
+//! While the Collection is open and nothing visible is waiting, the other loaded kybers
+//! are baked too, one loop at a time, so a scroll finds its loop on disk (not with the
+//! menu pictures on).
 //!
-//! A still is kept as `<id>-<key>.png` in `blades/` of the cache folder beside the settings
+//! A loop is kept as `<id>-<key>.png` in `blades/` of the cache folder beside the settings
 //! (`GameData/SJK/cache/blades`, [`set_folder`]; the off-screen renders keep none unless a
-//! test names one). Its key ([`skin_key`]) hashes what the picture is drawn from: the
-//! skin's file as loaded, its colour as worn (the player's own options, a chroma's turn),
-//! its glow and core images, its signature's shader and file, the blade shader
-//! (`saber.wgsl`) and this baker ([`VERSION`], `blade_stills.wgsl`): any change gives a
-//! new key, and a new still replaces the old file. The cells go to the stills asked for,
-//! the one asked least lately making room ([`take_cell`]); a still asked for this frame
-//! is never moved. With nothing asked for [`IDLE`], the atlas is freed, as the baking
-//! target is [`BAKER_IDLE`] after its last bake.
+//! test names one): its pictures one under the other, RGB (the alpha is the brightest
+//! channel, worked out again when read). Its key ([`skin_key`]) hashes what the picture is
+//! drawn from: the skin's file as loaded, its colour as worn (the player's own options, a
+//! chroma's turn), its glow and core images, its signature's shader and file, the blade
+//! shader (`saber.wgsl`) and this baker ([`VERSION`], `blade_stills.wgsl`): any change
+//! gives a new key, and a new loop replaces the old file. The slots go to the loops asked
+//! for, the one asked least lately making room ([`take_slot`]); a loop asked for this
+//! frame is never moved. With nothing asked for [`IDLE`], the atlas is freed, as the
+//! baking target is [`BAKER_IDLE`] after its last bake.
 //!
-//! Video memory: the atlas is 1536 x 768 RGBA8 (4.5 MiB) while the Collection or a strip
-//! shows; the baking target 512 x 768 RGBA8 with its depth (3 MiB) only while baking. With
-//! the menu pictures on (a card short of memory) the stills still show, the live pictures
-//! do not, and baking goes one a frame, visible stills only.
+//! Video memory, a fixed budget for 3 GB cards (15/11/2026): the atlas is 3072 x 2304
+//! RGBA8, 27 MiB ([`LOOPS`] loops of [`FRAMES`] pictures), only while the Collection or a
+//! strip shows; the baking target 768 x 768 (RGBA16F) with its depth, 6.75 MiB, only while
+//! baking. With the menu pictures on (a card short of memory) a kyber shows its first
+//! picture only, still: the atlas holds [`LOW_SLOTS`] of them in 3072 x 576, 6.75 MiB, and
+//! no live blade is drawn; a picture baked then is not kept (a loop read from disk gives
+//! its first picture).
 
 use crate::camera_uniform::CameraUniform;
 use glam::Vec3;
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
+use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::mpsc;
 use std::time::{Duration, Instant};
 
-/// A still's size in pixels.
-pub(crate) const STILL: [u32; 2] = [256, 96];
-/// The atlas's cells: six columns of eight.
-const COLUMNS: u32 = 6;
-const ROWS: u32 = 8;
-pub(crate) const CELLS: usize = (COLUMNS * ROWS) as usize;
-/// The atlas's size in pixels.
-pub(crate) const ATLAS: [u32; 2] = [STILL[0] * COLUMNS, STILL[1] * ROWS];
-/// What a still shows, in world units: a live picture's cell across
+/// One picture of a loop, in pixels.
+pub(crate) const STILL: [u32; 2] = [384, 96];
+/// Pictures in a loop, and the seconds of the blade's animation between two of them.
+pub(crate) const FRAMES: usize = 8;
+const FRAME_STEP: f64 = 0.1;
+/// Pictures a second a swatch plays its loop at (crossfaded from one to the next).
+const PLAY_FPS: f32 = 10.0;
+/// The atlas's cells: eight columns (one slot a row with the loops).
+const COLUMNS: u32 = 8;
+/// Loops the atlas holds; with the menu pictures on, first pictures.
+pub(crate) const LOOPS: usize = 24;
+pub(crate) const LOW_SLOTS: usize = 48;
+/// The most slots, and cells, either holds.
+const SLOTS: usize = if LOOPS > LOW_SLOTS { LOOPS } else { LOW_SLOTS };
+pub(crate) const CELLS: usize = LOOPS * FRAMES;
+/// The atlas's width in pixels (its height is its layout's, [`Layout::atlas`]).
+const ATLAS_WIDTH: u32 = STILL[0] * COLUMNS;
+/// What a picture shows, in world units: a live picture's cell across
 /// ([`crate::blade_pictures::BLADE_START`] before the blade, room after its tip) and its
 /// middle this high.
-pub(crate) const UNITS: [f32; 2] = [52.0, 19.5];
-/// The baking target draws each still this many times its size.
+pub(crate) const UNITS: [f32; 2] = [52.0, 13.0];
+/// The baking target draws each picture this many times its size.
 const SUPERSAMPLE: u32 = 2;
 const BAKE: [u32; 2] = [STILL[0] * SUPERSAMPLE, STILL[1] * SUPERSAMPLE];
-/// Stills baked a frame at most; with the menu pictures on, [`BAKES_LOW`].
+/// Pictures baked a frame at most; with the menu pictures on, [`BAKES_LOW`].
 pub(crate) const BAKE_BATCH: usize = 4;
 const BAKES_LOW: usize = 1;
-/// Stills not on screen baked a frame while the Collection is open.
-const BACKGROUND_BAKES: usize = 1;
 /// Skins' keys worked out a frame at most (each hashes its file and images).
 const KEYS_PER_FRAME: usize = 24;
-/// Stills read from disk uploaded a frame at most.
-const UPLOADS_PER_FRAME: usize = 8;
-/// The moment of the blades' animation a still shows (seconds).
+/// Loops read from disk uploaded a frame at most.
+const UPLOADS_PER_FRAME: usize = 3;
+/// The moment of the blades' animation a loop starts at (seconds).
 const STILL_SECONDS: f64 = 2.4;
-/// How long the atlas is kept with no still asked for, and the baking target after its
+/// How long the atlas is kept with no loop asked for, and the baking target after its
 /// last bake.
 const IDLE: Duration = Duration::from_secs(10);
 const BAKER_IDLE: Duration = Duration::from_secs(5);
-/// The baker's version: raise it when a still's look changes in a way the key does not see.
-pub(crate) const VERSION: u32 = 1;
-/// The folder in the cache folder the stills go in.
+/// The baker's version: raise it when a loop's look changes in a way the key does not see.
+pub(crate) const VERSION: u32 = 2;
+/// The folder in the cache folder the loops go in.
 pub(crate) const FOLDER: &str = "blades";
 /// The texture ids: cell `n` is `TEXTURE_BASE + n`, its dimmed look (not held) `+ DIM`.
 const TEXTURE_BASE: u32 = 0x6300_0000;
-const DIM: u32 = 0x100;
+const DIM: u32 = 0x200;
 /// Where the baked blades lie in the world, far from the live pictures' cells.
 const BAKE_X: f32 = 10_000.0;
+
+/// How the atlas is laid out: pictures a slot and slots.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct Layout {
+    frames: usize,
+    slots: usize,
+}
+
+impl Layout {
+    /// Loops; with the menu pictures on (not `live`), first pictures only.
+    fn of(live: bool) -> Self {
+        if live {
+            Self {
+                frames: FRAMES,
+                slots: LOOPS,
+            }
+        } else {
+            Self {
+                frames: 1,
+                slots: LOW_SLOTS,
+            }
+        }
+    }
+
+    /// The atlas's size in pixels.
+    fn atlas(self) -> [u32; 2] {
+        let cells = (self.frames * self.slots) as u32;
+        [ATLAS_WIDTH, cells.div_ceil(COLUMNS) * STILL[1]]
+    }
+
+    /// The cell of picture `frame` of slot `slot`.
+    fn cell(self, slot: usize, frame: usize) -> usize {
+        slot * self.frames + frame
+    }
+}
+
+/// The atlas's height in pixels, for the UI's texture coordinates.
+static ATLAS_HEIGHT: AtomicU32 = AtomicU32::new(STILL[1] * (CELLS as u32 / COLUMNS));
 
 /// `TexturedQuad` texture naming cell `cell`, desaturated and dimmed when `dim`.
 pub(crate) fn texture(cell: usize, dim: bool) -> sjk_ui::TextureId {
@@ -102,7 +157,8 @@ pub(crate) fn cell_of(texture: sjk_ui::TextureId) -> Option<(usize, bool)> {
 /// Cell `cell`'s texture coordinates in the atlas (top left, bottom right).
 pub(crate) fn uv_range(cell: usize) -> ([f32; 2], [f32; 2]) {
     let [x, y, width, height] = cell_pixels(cell.min(CELLS - 1));
-    let uv = |x: u32, y: u32| [x as f32 / ATLAS[0] as f32, y as f32 / ATLAS[1] as f32];
+    let atlas_height = ATLAS_HEIGHT.load(Ordering::Relaxed).max(1) as f32;
+    let uv = |x: u32, y: u32| [x as f32 / ATLAS_WIDTH as f32, y as f32 / atlas_height];
     (uv(x, y), uv(x + width, y + height))
 }
 
@@ -117,28 +173,38 @@ fn cell_pixels(cell: usize) -> [u32; 4] {
     ]
 }
 
-/// A cell of the atlas: whose still it holds and when it was last asked for.
+/// A slot of the atlas: whose loop it holds and when it was last asked for.
 #[derive(Clone, Copy, Debug, PartialEq)]
-struct Cell {
+struct Slot {
     id: &'static str,
     key: u64,
-    /// Its picture is in the atlas: swatches show it.
+    /// Pictures of it in the atlas; swatches show it once all are.
+    baked: usize,
+    /// Every picture is in the atlas: swatches show it.
     ready: bool,
     /// The frame it was last asked for in.
     used: u64,
 }
 
-/// What the UI asks for and the cells, shared by the UI and the frame.
+/// What the UI asks for and the slots, shared by the UI and the frame.
 struct Shared {
     wanted: Vec<&'static str>,
-    cells: [Option<Cell>; CELLS],
+    slots: [Option<Slot>; SLOTS],
+    layout: Layout,
     frame: u64,
+    /// The menu clock the swatches play their loops by (seconds).
+    seconds: f32,
 }
 
 static SHARED: Mutex<Shared> = Mutex::new(Shared {
     wanted: Vec::new(),
-    cells: [None; CELLS],
+    slots: [None; SLOTS],
+    layout: Layout {
+        frames: FRAMES,
+        slots: LOOPS,
+    },
     frame: 0,
+    seconds: 0.0,
 });
 
 fn lock() -> std::sync::MutexGuard<'static, Shared> {
@@ -147,10 +213,10 @@ fn lock() -> std::sync::MutexGuard<'static, Shared> {
         .unwrap_or_else(std::sync::PoisonError::into_inner)
 }
 
-/// The folder the stills are kept in: none, until the windowed client names one.
+/// The folder the loops are kept in: none, until the windowed client names one.
 static FOLDER_PATH: Mutex<Option<PathBuf>> = Mutex::new(None);
 
-/// Keep stills in `folder` (the client's `cache/blades`), or none.
+/// Keep loops in `folder` (the client's `cache/blades`), or none.
 pub(crate) fn set_folder(folder: Option<PathBuf>) {
     *FOLDER_PATH
         .lock()
@@ -164,30 +230,64 @@ fn folder() -> Option<PathBuf> {
         .clone()
 }
 
-/// The still of skin `id` for a swatch, once it is in the atlas: its texture, dimmed
-/// (desaturated, for a kyber not held) when `dim`. Asking keeps it there, or reads or
-/// bakes it.
-pub(crate) fn still(id: &'static str, dim: bool) -> Option<sjk_ui::TextureId> {
+/// What a swatch draws of a loop now: picture `from` fading into picture `to` by `mix`
+/// (0 shows `from` alone).
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub(crate) struct Shown {
+    pub(crate) from: sjk_ui::TextureId,
+    pub(crate) to: sjk_ui::TextureId,
+    pub(crate) mix: f32,
+}
+
+/// Where skin `id` starts its loop, in pictures: each kyber at its own place, so a wall
+/// does not breathe as one.
+fn offset_of(id: &str) -> f32 {
+    let hash = id.bytes().fold(0_u32, |hash, byte| {
+        hash.wrapping_mul(31).wrapping_add(u32::from(byte))
+    });
+    (hash % 997) as f32 * 0.618_034
+}
+
+/// The pictures of a loop of `frames` shown at `seconds`, starting `offset` pictures in.
+fn playing(frames: usize, seconds: f32, offset: f32) -> (usize, usize, f32) {
+    if frames <= 1 {
+        return (0, 0, 0.0);
+    }
+    let at = (seconds.max(0.0) * PLAY_FPS + offset).rem_euclid(frames as f32);
+    let from = (at.floor() as usize).min(frames - 1);
+    (from, (from + 1) % frames, at - at.floor())
+}
+
+/// The loop of skin `id` for a swatch, once it is in the atlas: what to draw of it now,
+/// dimmed (desaturated, for a kyber not held) when `dim`. Asking keeps it there, or reads
+/// or bakes it.
+pub(crate) fn still(id: &'static str, dim: bool) -> Option<Shown> {
     let mut shared = lock();
     if !shared.wanted.contains(&id) {
         shared.wanted.push(id);
     }
-    let cell = shared
-        .cells
+    let slot = shared
+        .slots
         .iter()
-        .position(|cell| cell.is_some_and(|cell| cell.ready && cell.id == id))?;
-    Some(texture(cell, dim))
+        .position(|slot| slot.is_some_and(|slot| slot.ready && slot.id == id))?;
+    let layout = shared.layout;
+    let (from, to, mix) = playing(layout.frames, shared.seconds, offset_of(id));
+    Some(Shown {
+        from: texture(layout.cell(slot, from), dim),
+        to: texture(layout.cell(slot, to), dim),
+        mix,
+    })
 }
 
-/// Forget every still in memory, as a client starting again (the world shots read them
+/// Forget every loop in memory, as a client starting again (the world shots read them
 /// back from disk).
 #[cfg(test)]
 pub(crate) fn forget_for_shot(stills: &mut Stills) {
-    lock().cells = [None; CELLS];
+    lock().slots = [None; SLOTS];
     *stills = Stills::default();
 }
 
-/// Stills the last frame asked for that are not shown yet (being read, waiting for their
+/// Loops the last frame asked for that are not shown yet (being read, waiting for their
 /// blade's pipelines or baked): for the world shots, which wait for none.
 #[cfg(test)]
 pub(crate) fn waiting(stills: &Stills) -> usize {
@@ -198,51 +298,41 @@ pub(crate) fn waiting(stills: &Stills) -> usize {
         .filter(|id| stills.keys.contains_key(*id))
         .filter(|id| {
             !shared
-                .cells
+                .slots
                 .iter()
                 .flatten()
-                .any(|cell| cell.ready && cell.id == **id)
+                .any(|slot| slot.ready && slot.id == **id)
         })
         .count()
 }
 
-/// A cell for a new still at `frame`: a free one, else the one asked for least lately,
-/// never one asked for this frame.
-fn take_cell(cells: &[Option<Cell>; CELLS], frame: u64) -> Option<usize> {
-    if let Some(free) = cells.iter().position(Option::is_none) {
+/// A slot for a new loop at `frame`, among the first `count`: a free one, else the one
+/// asked for least lately, never one asked for this frame.
+fn take_slot(slots: &[Option<Slot>], count: usize, frame: u64) -> Option<usize> {
+    let slots = &slots[..count.min(slots.len())];
+    if let Some(free) = slots.iter().position(Option::is_none) {
         return Some(free);
     }
-    cells
+    slots
         .iter()
         .enumerate()
-        .filter_map(|(index, cell)| cell.map(|cell| (index, cell.used)))
+        .filter_map(|(index, slot)| slot.map(|slot| (index, slot.used)))
         .filter(|&(_, used)| used < frame)
         .min_by_key(|&(_, used)| used)
         .map(|(index, _)| index)
 }
 
-/// From the stills waiting to be baked (`queue`, in the order asked), the ones baked this
-/// frame: at most `max`, of those still `wanted`, whose blade is `ready` to draw as it
-/// looks. The ones no longer wanted leave the queue; the ones not ready stay in it.
-fn choose_bakes(
+/// From the loops waiting to be baked (`queue`, in the order asked), the next to bake: the
+/// first still `wanted` whose blade is `ready` to draw as it looks. The ones no longer
+/// wanted leave the queue; the ones not ready stay in it.
+fn next_bake(
     queue: &mut Vec<&'static str>,
     wanted: &[&'static str],
     ready: impl Fn(&'static str) -> bool,
-    max: usize,
-) -> [Option<&'static str>; BAKE_BATCH] {
+) -> Option<&'static str> {
     queue.retain(|id| wanted.contains(id));
-    let mut chosen = [None; BAKE_BATCH];
-    let mut taken = 0;
-    queue.retain(|&id| {
-        if taken < max.min(BAKE_BATCH) && ready(id) {
-            chosen[taken] = Some(id);
-            taken += 1;
-            false
-        } else {
-            true
-        }
-    });
-    chosen
+    let index = queue.iter().position(|&id| ready(id))?;
+    Some(queue.remove(index))
 }
 
 /// A 64-bit hash of `parts`, the same on every machine and in every build (FNV-1a over
@@ -296,7 +386,7 @@ pub(crate) fn skin_key(
     ])
 }
 
-/// A still's file name.
+/// A loop's file name.
 fn file_name(id: &str, key: u64) -> String {
     format!("{id}-{key:016x}.png")
 }
@@ -311,7 +401,7 @@ fn parse_file_name(name: &str) -> Option<(&str, u64)> {
         .map(|key| (id, key))
 }
 
-/// The stills kept on disk: each skin's key, as the folder's files name them.
+/// The loops kept on disk: each skin's key, as the folder's files name them.
 #[derive(Debug, Default)]
 struct Disk {
     folder: PathBuf,
@@ -356,13 +446,14 @@ impl Disk {
 
 /// What the stills' thread is asked to do.
 enum Job {
-    /// Read and decode a still.
+    /// Read and decode a loop.
     Load {
         id: &'static str,
         key: u64,
         path: PathBuf,
     },
-    /// Write a still (RGBA, [`STILL`] pixels) to `path`, and remove the one it replaces.
+    /// Write a loop (RGBA, its [`FRAMES`] pictures one under the other) to `path`, and
+    /// remove the file it replaces.
     Save {
         path: PathBuf,
         pixels: Vec<u8>,
@@ -370,7 +461,8 @@ enum Job {
     },
 }
 
-/// A still read: its pixels, none when the file was damaged or gone.
+/// A loop read: its pixels (RGBA, its pictures one under the other), none when the file
+/// was damaged or gone.
 struct Loaded {
     id: &'static str,
     key: u64,
@@ -417,21 +509,38 @@ impl Worker {
     }
 }
 
-/// A still's pixels from `path`, if it is a still.
+/// A loop file's size in pixels: its pictures one under the other.
+const LOOP_PIXELS: [u32; 2] = [STILL[0], STILL[1] * FRAMES as u32];
+
+/// A loop's pixels from `path` (RGBA, the alpha its brightest channel as baked), if it is
+/// a loop.
 fn read_still(path: &Path) -> Option<Vec<u8>> {
     let bytes = std::fs::read(path).ok()?;
     let image = image::load_from_memory_with_format(&bytes, image::ImageFormat::Png)
         .ok()?
-        .into_rgba8();
-    (image.dimensions() == (STILL[0], STILL[1])).then(|| image.into_raw())
+        .into_rgb8();
+    if image.dimensions() != (LOOP_PIXELS[0], LOOP_PIXELS[1]) {
+        return None;
+    }
+    let mut pixels = Vec::with_capacity(image.as_raw().len() / 3 * 4);
+    for rgb in image.as_raw().chunks_exact(3) {
+        pixels.extend_from_slice(rgb);
+        pixels.push(rgb[0].max(rgb[1]).max(rgb[2]));
+    }
+    Some(pixels)
 }
 
-/// Write a still to `path`, through a temporary file renamed over it.
+/// Write a loop to `path` (RGB: its alpha is its brightest channel), through a temporary
+/// file renamed over it.
 fn write_still(path: &Path, pixels: Vec<u8>) -> std::io::Result<()> {
     if let Some(parent) = path.parent() {
         std::fs::create_dir_all(parent)?;
     }
-    let image = image::RgbaImage::from_raw(STILL[0], STILL[1], pixels)
+    let rgb: Vec<u8> = pixels
+        .chunks_exact(4)
+        .flat_map(|pixel| [pixel[0], pixel[1], pixel[2]])
+        .collect();
+    let image = image::RgbImage::from_raw(LOOP_PIXELS[0], LOOP_PIXELS[1], rgb)
         .ok_or_else(|| std::io::Error::other("wrong size"))?;
     let temporary = path.with_extension("png.part");
     image
@@ -440,10 +549,13 @@ fn write_still(path: &Path, pixels: Vec<u8>) -> std::io::Result<()> {
     std::fs::rename(&temporary, path)
 }
 
-/// A still baked this frame: into atlas cell `cell`, skin `id` worn as `color`.
+/// A picture baked this frame: picture `frame` of skin `id`'s loop worn as `color`, into
+/// slot `slot`'s cell `cell`.
 #[derive(Clone, Copy, Debug)]
 pub(crate) struct Bake {
     cell: usize,
+    slot: usize,
+    frame: usize,
     id: &'static str,
     key: u64,
     color: crate::saber_skins::SkinColor,
@@ -481,12 +593,14 @@ struct Atlas {
 }
 
 impl Atlas {
-    fn new(device: &wgpu::Device) -> Self {
+    fn new(device: &wgpu::Device, layout: Layout) -> Self {
+        let [width, height] = layout.atlas();
+        ATLAS_HEIGHT.store(height, Ordering::Relaxed);
         let texture = device.create_texture(&wgpu::TextureDescriptor {
             label: Some("SJK blade stills"),
             size: wgpu::Extent3d {
-                width: ATLAS[0],
-                height: ATLAS[1],
+                width,
+                height,
                 depth_or_array_layers: 1,
             },
             mip_level_count: 1,
@@ -623,13 +737,14 @@ impl Baker {
     }
 }
 
-/// Bytes of one still read back.
+/// Bytes of one picture read back, and of a loop.
 const STILL_BYTES: u64 = STILL[0] as u64 * 4 * STILL[1] as u64;
+const LOOP_BYTES: u64 = STILL_BYTES * FRAMES as u64;
 
-/// A frame's bakes being read back to be kept on disk.
+/// A frame's whole loops being read back to be kept on disk.
 struct Readback {
     buffer: wgpu::Buffer,
-    /// Each still in the buffer, in order: its cell, skin and key.
+    /// Each loop in the buffer, in order: its slot, skin and key.
     stills: [Option<(usize, &'static str, u64)>; BAKE_BATCH],
     /// Set once the frame that copied them has been submitted (the next one).
     receiver: Option<mpsc::Receiver<Result<(), wgpu::BufferAsyncError>>>,
@@ -649,8 +764,10 @@ pub(crate) struct Stills {
     /// The loaded skins' generation the keys are of.
     generation: Option<u64>,
     disk: Option<Disk>,
-    /// Stills to bake, in the order asked; stills being read.
+    /// Loops to bake, in the order asked; loops being read; the pictures of the loops
+    /// begun, still to bake.
     queue: Vec<&'static str>,
+    pending: Vec<Bake>,
     loading: Vec<&'static str>,
     /// Skins whose signature pipelines have been asked for.
     asked: HashSet<&'static str>,
@@ -658,6 +775,10 @@ pub(crate) struct Stills {
     atlas: Option<Atlas>,
     baker: Option<Baker>,
     readbacks: Vec<Readback>,
+    /// The atlas's layout (loops, or first pictures with the menu pictures on).
+    layout: Option<Layout>,
+    /// When the stills began, for the swatches' clock.
+    epoch: Option<Instant>,
     last_wanted: Option<Instant>,
     last_bake: Option<Instant>,
     /// The next loaded skin the background baking looks at, and whether a round left one
@@ -670,14 +791,28 @@ pub(crate) struct Stills {
 }
 
 impl crate::GpuState {
-    /// This frame's stills: take the swatches' wishes, keep the cells they hold, read the
-    /// stills on disk and plan the bakes (drawn by [`Self::encode_blade_pictures`]).
+    /// This frame's pictures: take the swatches' wishes, keep the slots they hold, read the
+    /// loops on disk and plan the bakes (drawn by [`Self::encode_blade_pictures`]).
     pub(crate) fn step_blade_stills(&mut self) -> Bakes {
         let now = Instant::now();
         self.poll_still_readbacks();
+        let layout = Layout::of(crate::blade_pictures::live());
+        if self.blade_stills.layout != Some(layout) {
+            // The menu pictures switched: the atlas is laid out again.
+            self.blade_stills.layout = Some(layout);
+            self.blade_stills.atlas = None;
+            self.ui_shapes.clear_blade_stills();
+            self.blade_stills.pending.clear();
+            self.blade_stills.queue.clear();
+            let mut shared = lock();
+            shared.slots = [None; SLOTS];
+            shared.layout = layout;
+        }
+        let epoch = *self.blade_stills.epoch.get_or_insert(now);
         let frame = {
             let mut shared = lock();
             shared.frame += 1;
+            shared.seconds = (now - epoch).as_secs_f32();
             std::mem::swap(&mut shared.wanted, &mut self.blade_stills.wanted);
             shared.wanted.clear();
             shared.frame
@@ -707,7 +842,7 @@ impl crate::GpuState {
                 continue;
             };
             // A signature's pipelines asked for once it shows, so the live one is ready
-            // when the player looks at it (the Collection's urgency while its still waits).
+            // when the player looks at it (the Collection's urgency while its loop waits).
             let missing = !self
                 .blade_stills
                 .disk
@@ -717,18 +852,18 @@ impl crate::GpuState {
             {
                 let mut shared = lock();
                 let held = shared
-                    .cells
+                    .slots
                     .iter()
-                    .position(|cell| cell.is_some_and(|cell| cell.id == id));
+                    .position(|slot| slot.is_some_and(|slot| slot.id == id));
                 if let Some(index) = held {
-                    if let Some(cell) = &mut shared.cells[index]
-                        && cell.key == key
+                    if let Some(slot) = &mut shared.slots[index]
+                        && slot.key == key
                     {
-                        cell.used = frame;
+                        slot.used = frame;
                         continue;
                     }
-                    // Its look changed: the cell is free again.
-                    shared.cells[index] = None;
+                    // Its look changed: the slot is free again.
+                    shared.slots[index] = None;
                 }
             }
             if self.blade_stills.loading.contains(&id) || self.blade_stills.queue.contains(&id) {
@@ -751,30 +886,37 @@ impl crate::GpuState {
                 _ => self.blade_stills.queue.push(id),
             }
         }
-        self.upload_loaded_stills(frame);
+        self.upload_loaded_stills(frame, layout);
         let live = crate::blade_pictures::live();
         let max = if live { BAKE_BATCH } else { BAKES_LOW };
+        // The pictures of a loop begun whose slot still holds it, then new loops.
+        {
+            let shared = lock();
+            self.blade_stills.pending.retain(|bake| {
+                shared.slots[bake.slot]
+                    .is_some_and(|slot| slot.id == bake.id && slot.key == bake.key)
+            });
+        }
         let skins = std::sync::Arc::clone(&self.blade_skins);
-        let chosen = choose_bakes(
-            &mut self.blade_stills.queue,
-            &wanted,
-            |id| {
+        while self.blade_stills.pending.len() < max {
+            let Some(id) = next_bake(&mut self.blade_stills.queue, &wanted, |id| {
                 skins
                     .index_of(id)
                     .is_some_and(|index| self.saber_gpu.skin_ready(index))
-            },
-            max,
-        );
-        let mut row = 0;
-        for id in chosen.into_iter().flatten() {
-            if let Some(bake) = self.plan_bake(id, frame) {
-                bakes[row] = Some(bake);
-                row += 1;
+            }) else {
+                break;
+            };
+            if !self.plan_bake(id, frame, layout) {
+                break;
             }
         }
         // Nothing on screen waiting: the next kyber not on disk, while there is a disk.
-        if row == 0 && live && self.blade_stills.queue.is_empty() {
-            self.plan_background_bake(frame, &mut bakes, &mut keys_left);
+        if self.blade_stills.pending.is_empty() && live && self.blade_stills.queue.is_empty() {
+            self.plan_background_bake(frame, layout, &mut keys_left);
+        }
+        let take = self.blade_stills.pending.len().min(max);
+        for (row, bake) in self.blade_stills.pending.drain(..take).enumerate() {
+            bakes[row] = Some(bake);
         }
         self.blade_stills.wanted = wanted;
         if bakes.iter().any(Option::is_some) {
@@ -783,8 +925,8 @@ impl crate::GpuState {
         bakes
     }
 
-    /// Skin `id`'s still key, worked out once per loaded generation, `budget` a frame;
-    /// none while its pack is not loaded or the budget is spent.
+    /// Skin `id`'s loop key, worked out once per loaded generation, `budget` a frame; none
+    /// while its pack is not loaded or the budget is spent.
     fn still_key(&mut self, id: &'static str, budget: &mut usize) -> Option<u64> {
         let off = self.looks.own_options_off(id);
         if let Some(&(kept, key)) = self.blade_stills.keys.get(id)
@@ -803,8 +945,8 @@ impl crate::GpuState {
         Some(key)
     }
 
-    /// Ask, once, for skin `id`'s signature pipelines: soon when its still is to be
-    /// baked, else with the lowest urgency.
+    /// Ask, once, for skin `id`'s signature pipelines: soon when its loop is to be baked,
+    /// else with the lowest urgency.
     fn ask_still_build(&mut self, id: &'static str, soon: bool) {
         if !self.blade_stills.asked.insert(id) {
             return;
@@ -814,7 +956,7 @@ impl crate::GpuState {
         }
     }
 
-    /// The stills' thread, started the first time it is needed.
+    /// The loops' thread, started the first time it is needed.
     fn still_worker(&mut self) -> Option<&Worker> {
         if self.blade_stills.worker.is_none() {
             self.blade_stills.worker = Worker::start();
@@ -822,10 +964,10 @@ impl crate::GpuState {
         self.blade_stills.worker.as_ref()
     }
 
-    /// The atlas, made the first time a still needs it and bound for the UI.
-    fn still_atlas(&mut self) -> &Atlas {
+    /// The atlas, made the first time a loop needs it and bound for the UI.
+    fn still_atlas(&mut self, layout: Layout) -> &Atlas {
         if self.blade_stills.atlas.is_none() {
-            let atlas = Atlas::new(&self.device);
+            let atlas = Atlas::new(&self.device, layout);
             self.ui_shapes.set_blade_stills(&self.device, &atlas.view);
             self.blade_stills.atlas = Some(atlas);
         }
@@ -835,8 +977,9 @@ impl crate::GpuState {
             .unwrap_or_else(|| unreachable!("made above"))
     }
 
-    /// Upload the stills the thread has read, a few a frame; a damaged one is baked.
-    fn upload_loaded_stills(&mut self, frame: u64) {
+    /// Upload the loops the thread has read, a few a frame (their first picture only in
+    /// `layout` of first pictures); a damaged one is baked.
+    fn upload_loaded_stills(&mut self, frame: u64, layout: Layout) {
         for _ in 0..UPLOADS_PER_FRAME {
             let Some(loaded) = self
                 .blade_stills
@@ -854,77 +997,98 @@ impl crate::GpuState {
                 self.blade_stills.queue.push(loaded.id);
                 continue;
             };
-            let Some(cell) = take_cell(&lock().cells, frame) else {
+            let Some(slot) = take_slot(&lock().slots, layout.slots, frame) else {
                 continue;
             };
-            let [x, y, width, height] = cell_pixels(cell);
-            let _ = self.still_atlas();
+            let _ = self.still_atlas(layout);
             let Some(atlas) = &self.blade_stills.atlas else {
                 return;
             };
-            let texture = &atlas.texture;
-            self.queue.write_texture(
-                wgpu::TexelCopyTextureInfo {
-                    texture,
-                    mip_level: 0,
-                    origin: wgpu::Origin3d { x, y, z: 0 },
-                    aspect: wgpu::TextureAspect::All,
-                },
-                &pixels,
-                wgpu::TexelCopyBufferLayout {
-                    offset: 0,
-                    bytes_per_row: Some(width * 4),
-                    rows_per_image: Some(height),
-                },
-                wgpu::Extent3d {
-                    width,
-                    height,
-                    depth_or_array_layers: 1,
-                },
-            );
-            lock().cells[cell] = Some(Cell {
+            for (picture, bytes) in pixels
+                .chunks_exact(STILL_BYTES as usize)
+                .take(layout.frames)
+                .enumerate()
+            {
+                let [x, y, width, height] = cell_pixels(layout.cell(slot, picture));
+                self.queue.write_texture(
+                    wgpu::TexelCopyTextureInfo {
+                        texture: &atlas.texture,
+                        mip_level: 0,
+                        origin: wgpu::Origin3d { x, y, z: 0 },
+                        aspect: wgpu::TextureAspect::All,
+                    },
+                    bytes,
+                    wgpu::TexelCopyBufferLayout {
+                        offset: 0,
+                        bytes_per_row: Some(width * 4),
+                        rows_per_image: Some(height),
+                    },
+                    wgpu::Extent3d {
+                        width,
+                        height,
+                        depth_or_array_layers: 1,
+                    },
+                );
+            }
+            lock().slots[slot] = Some(Slot {
                 id: loaded.id,
                 key: loaded.key,
+                baked: layout.frames,
                 ready: true,
                 used: frame,
             });
         }
     }
 
-    /// A bake of skin `id` into a cell taken for it, if its pack is loaded and a cell free.
-    fn plan_bake(&mut self, id: &'static str, frame: u64) -> Option<Bake> {
-        let key = self.blade_stills.keys.get(id)?.1;
-        let color = self
+    /// Begin skin `id`'s loop in a slot taken for it: its pictures go to the pending bakes.
+    /// False when its pack is not loaded or no slot is free.
+    fn plan_bake(&mut self, id: &'static str, frame: u64, layout: Layout) -> bool {
+        let Some(key) = self.blade_stills.keys.get(id).map(|kept| kept.1) else {
+            return false;
+        };
+        let Some(color) = self
             .blade_skins
-            .color_with(id, self.looks.own_options_off(id))?;
+            .color_with(id, self.looks.own_options_off(id))
+        else {
+            return false;
+        };
         let mut shared = lock();
-        let cell = take_cell(&shared.cells, frame)?;
-        shared.cells[cell] = Some(Cell {
+        let Some(slot) = take_slot(&shared.slots, layout.slots, frame) else {
+            return false;
+        };
+        shared.slots[slot] = Some(Slot {
             id,
             key,
+            baked: 0,
             ready: false,
             used: frame,
         });
-        Some(Bake {
-            cell,
-            id,
-            key,
-            color,
-        })
+        drop(shared);
+        self.blade_stills.pending.retain(|bake| bake.slot != slot);
+        self.blade_stills
+            .pending
+            .extend((0..layout.frames).map(|picture| Bake {
+                cell: layout.cell(slot, picture),
+                slot,
+                frame: picture,
+                id,
+                key,
+                color,
+            }));
+        true
     }
 
-    /// While the Collection is open and nothing on screen waits: bake the next loaded
-    /// kyber that has no still on disk ([`BACKGROUND_BAKES`] a frame), so a scroll finds
-    /// its still kept. Only where stills are kept. A signature whose pipelines are not
-    /// built is asked for with the lowest urgency and looked at again on the next round.
-    fn plan_background_bake(&mut self, frame: u64, bakes: &mut Bakes, budget: &mut usize) {
+    /// While the Collection is open and nothing on screen waits: begin the loop of the next
+    /// loaded kyber that has none on disk, so a scroll finds it kept. Only where loops are
+    /// kept. A signature whose pipelines are not built is asked for with the lowest urgency
+    /// and looked at again on the next round.
+    fn plan_background_bake(&mut self, frame: u64, layout: Layout, budget: &mut usize) {
         if self.blade_stills.disk.is_none() {
             return;
         }
         let skins = std::sync::Arc::clone(&self.blade_skins);
         let count = skins.iter().count();
-        let mut planned = 0;
-        while planned < BACKGROUND_BAKES && *budget > 0 {
+        while *budget > 0 {
             if self.blade_stills.cursor >= count {
                 if !std::mem::take(&mut self.blade_stills.skipped) {
                     return;
@@ -944,7 +1108,7 @@ impl crate::GpuState {
                 .disk
                 .as_ref()
                 .is_some_and(|disk| disk.has(id, key));
-            let held = lock().cells.iter().flatten().any(|cell| cell.id == id);
+            let held = lock().slots.iter().flatten().any(|slot| slot.id == id);
             if kept || held {
                 continue;
             }
@@ -953,17 +1117,13 @@ impl crate::GpuState {
                 self.blade_stills.skipped = true;
                 continue;
             }
-            if let Some(bake) = self.plan_bake(id, frame) {
-                bakes[planned] = Some(bake);
-                planned += 1;
-            } else {
-                return;
-            }
+            let _ = self.plan_bake(id, frame, layout);
+            return;
         }
     }
 
-    /// The blade instances of this frame's `bakes`, each in its baking row, appended to
-    /// `blades`; which rows got any.
+    /// The blade instances of this frame's `bakes`, each in its baking row at its moment of
+    /// the loop, appended to `blades`; which rows got any.
     pub(crate) fn push_still_blades(
         bakes: &Bakes,
         blades: &mut Vec<crate::saber::Instance>,
@@ -979,7 +1139,7 @@ impl crate::GpuState {
             blades.extend(crate::blade_pictures::blade_instances(
                 bake_base(row),
                 color,
-                STILL_SECONDS,
+                STILL_SECONDS + bake.frame as f64 * FRAME_STEP,
                 0,
                 per_blade,
             ));
@@ -989,7 +1149,8 @@ impl crate::GpuState {
     }
 
     /// Draw this frame's `bakes` (their blades already uploaded with the live pictures')
-    /// into the baking target, make their stills in the atlas, and copy them out to be kept.
+    /// into the baking target, make their pictures in the atlas, and copy the loops they
+    /// finish out to be kept.
     pub(crate) fn encode_blade_stills(
         &mut self,
         encoder: &mut wgpu::CommandEncoder,
@@ -999,7 +1160,11 @@ impl crate::GpuState {
         if bakes.iter().all(Option::is_none) {
             return;
         }
-        let _ = self.still_atlas();
+        let layout = self
+            .blade_stills
+            .layout
+            .unwrap_or(Layout::of(crate::blade_pictures::live()));
+        let _ = self.still_atlas(layout);
         if self.blade_stills.baker.is_none() {
             self.blade_stills.baker = Some(Baker::new(&self.device, &self.camera_layout));
         }
@@ -1079,8 +1244,9 @@ impl crate::GpuState {
         {
             self.blade_stills.baked += drawn.iter().filter(|drawn| **drawn).count() as u64;
         }
-        let keeping = self.blade_stills.disk.is_some();
-        let mut stills = [None; BAKE_BATCH];
+        // Whole loops are kept (not the first pictures alone).
+        let keeping = self.blade_stills.disk.is_some() && layout.frames == FRAMES;
+        let mut finished = [None; BAKE_BATCH];
         let mut count = 0;
         {
             let mut shared = lock();
@@ -1088,19 +1254,24 @@ impl crate::GpuState {
                 let Some(bake) = bake else {
                     continue;
                 };
-                if shared.cells[bake.cell].is_some_and(|cell| cell.id == bake.id) {
-                    if drawn {
-                        if let Some(cell) = &mut shared.cells[bake.cell] {
-                            cell.ready = true;
-                        }
-                    } else {
-                        // Nothing drawn (its pack went): asked again, baked again.
-                        shared.cells[bake.cell] = None;
-                    }
+                let Some(slot) = &mut shared.slots[bake.slot] else {
+                    continue;
+                };
+                if slot.id != bake.id || slot.key != bake.key {
+                    continue;
                 }
-                if drawn && keeping {
-                    stills[count] = Some((bake.cell, bake.id, bake.key));
-                    count += 1;
+                if !drawn {
+                    // Nothing drawn (its pack went): asked again, baked again.
+                    shared.slots[bake.slot] = None;
+                    continue;
+                }
+                slot.baked += 1;
+                if slot.baked >= layout.frames && !slot.ready {
+                    slot.ready = true;
+                    if keeping {
+                        finished[count] = Some((bake.slot, bake.id, bake.key));
+                        count += 1;
+                    }
                 }
             }
         }
@@ -1109,49 +1280,51 @@ impl crate::GpuState {
         }
         let buffer = self.device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("SJK blade stills readback"),
-            size: STILL_BYTES * count as u64,
+            size: LOOP_BYTES * count as u64,
             usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::MAP_READ,
             mapped_at_creation: false,
         });
-        for (order, (cell, ..)) in stills.iter().flatten().enumerate() {
-            let [x, y, width, height] = cell_pixels(*cell);
-            encoder.copy_texture_to_buffer(
-                wgpu::TexelCopyTextureInfo {
-                    texture: &atlas.texture,
-                    mip_level: 0,
-                    origin: wgpu::Origin3d { x, y, z: 0 },
-                    aspect: wgpu::TextureAspect::All,
-                },
-                wgpu::TexelCopyBufferInfo {
-                    buffer: &buffer,
-                    layout: wgpu::TexelCopyBufferLayout {
-                        offset: STILL_BYTES * order as u64,
-                        bytes_per_row: Some(width * 4),
-                        rows_per_image: Some(height),
+        for (order, (slot, ..)) in finished.iter().flatten().enumerate() {
+            for picture in 0..FRAMES {
+                let [x, y, width, height] = cell_pixels(layout.cell(*slot, picture));
+                encoder.copy_texture_to_buffer(
+                    wgpu::TexelCopyTextureInfo {
+                        texture: &atlas.texture,
+                        mip_level: 0,
+                        origin: wgpu::Origin3d { x, y, z: 0 },
+                        aspect: wgpu::TextureAspect::All,
                     },
-                },
-                wgpu::Extent3d {
-                    width,
-                    height,
-                    depth_or_array_layers: 1,
-                },
-            );
+                    wgpu::TexelCopyBufferInfo {
+                        buffer: &buffer,
+                        layout: wgpu::TexelCopyBufferLayout {
+                            offset: LOOP_BYTES * order as u64 + STILL_BYTES * picture as u64,
+                            bytes_per_row: Some(width * 4),
+                            rows_per_image: Some(height),
+                        },
+                    },
+                    wgpu::Extent3d {
+                        width,
+                        height,
+                        depth_or_array_layers: 1,
+                    },
+                );
+            }
         }
         self.blade_stills.readbacks.push(Readback {
             buffer,
-            stills,
+            stills: finished,
             receiver: None,
         });
     }
 
-    /// Map the bakes copied out last frame, and keep the ones mapped.
+    /// Map the loops copied out last frame, and keep the ones mapped.
     fn poll_still_readbacks(&mut self) {
         if self.blade_stills.readbacks.is_empty() {
             return;
         }
         // Last frame may still be on its way to `Queue::submit` on the submit thread: a
         // buffer mapped before its copy is submitted fails that submit. Rare (a frame
-        // that baked), and nothing is waited for when no frame is in flight.
+        // that finished a loop), and nothing is waited for when no frame is in flight.
         if self
             .blade_stills
             .readbacks
@@ -1188,23 +1361,26 @@ impl crate::GpuState {
         }
     }
 
-    /// Send the stills of a mapped readback to the thread to be written; a picture left
-    /// black (a frame that was never submitted) is baked again.
+    /// Send the loops of a mapped readback to the thread to be written; a loop left black
+    /// (frames that were never submitted) is baked again. One black picture is kept: a
+    /// blade that flickers out may be dark at one of its moments, and baking it again
+    /// would never end.
     fn keep_stills(&mut self, readback: &Readback) {
-        let pixels: Vec<Vec<u8>> = {
+        let loops: Vec<Vec<u8>> = {
             let Ok(view) = readback.buffer.slice(..).get_mapped_range() else {
                 return;
             };
-            view.chunks_exact(STILL_BYTES as usize)
+            view.chunks_exact(LOOP_BYTES as usize)
                 .map(<[u8]>::to_vec)
                 .collect()
         };
         readback.buffer.unmap();
-        for ((cell, id, key), pixels) in readback.stills.iter().flatten().zip(pixels) {
-            if pixels.iter().all(|byte| *byte == 0) {
+        for ((slot, id, key), pixels) in readback.stills.iter().flatten().zip(loops) {
+            let black = pixels.iter().all(|byte| *byte == 0);
+            if black {
                 let mut shared = lock();
-                if shared.cells[*cell].is_some_and(|kept| kept.id == *id) {
-                    shared.cells[*cell] = None;
+                if shared.slots[*slot].is_some_and(|kept| kept.id == *id) {
+                    shared.slots[*slot] = None;
                 }
                 continue;
             }
@@ -1227,8 +1403,9 @@ impl crate::GpuState {
         if self.blade_stills.atlas.is_some() && idle(self.blade_stills.last_wanted, IDLE) {
             self.blade_stills.atlas = None;
             self.ui_shapes.clear_blade_stills();
-            lock().cells = [None; CELLS];
+            lock().slots = [None; SLOTS];
             self.blade_stills.queue.clear();
+            self.blade_stills.pending.clear();
         }
     }
 }
@@ -1237,10 +1414,11 @@ impl crate::GpuState {
 mod tests {
     use super::*;
 
-    fn cell(id: &'static str, used: u64) -> Option<Cell> {
-        Some(Cell {
+    fn slot(id: &'static str, used: u64) -> Option<Slot> {
+        Some(Slot {
             id,
             key: 1,
+            baked: FRAMES,
             ready: true,
             used,
         })
@@ -1258,8 +1436,10 @@ mod tests {
             None
         );
         assert_eq!(cell_of(sjk_ui::TextureId(TEXTURE_BASE + DIM * 2)), None);
-        // Not another picture's range (the map editor's at 0x6200_0000, GIFs' 0x7000_0000).
+        // Not another picture's range (the map editor's at 0x6200_0000, the live
+        // pictures' crops at 0x6300_0400, GIFs' 0x7000_0000).
         assert_eq!(cell_of(sjk_ui::TextureId(0x6200_0000)), None);
+        assert_eq!(cell_of(sjk_ui::TextureId(0x6300_0400)), None);
         assert_eq!(cell_of(sjk_ui::TextureId(0x7000_0000)), None);
         let (low, high) = uv_range(CELLS - 1);
         assert!(high[0] <= 1.0 && high[1] <= 1.0 && low[0] < high[0] && low[1] < high[1]);
@@ -1269,50 +1449,88 @@ mod tests {
         );
     }
 
+    /// The budget for a 3 GB card: the loops' atlas 27 MiB, the first pictures' 6.75 MiB,
+    /// within the widest texture any card takes (wgpu's 8192 default limit).
     #[test]
-    fn a_new_still_takes_a_free_cell_then_the_one_asked_least_lately() {
-        let mut cells = [None; CELLS];
-        assert_eq!(take_cell(&cells, 5), Some(0));
-        for (index, slot) in cells.iter_mut().enumerate() {
-            *slot = cell("saber_x", 5 + index as u64 % 3);
-        }
-        cells[9] = cell("saber_old", 2);
-        assert_eq!(take_cell(&cells, 7), Some(9), "the one asked least lately");
-        // Every cell asked for this frame: none is moved.
-        for slot in &mut cells {
-            *slot = cell("saber_x", 7);
-        }
-        assert_eq!(take_cell(&cells, 7), None);
+    fn the_atlases_keep_their_video_memory_budget() {
+        let bytes = |layout: Layout| {
+            let [width, height] = layout.atlas();
+            assert!(width <= 8192 && height <= 8192, "{width}x{height}");
+            u64::from(width) * u64::from(height) * 4
+        };
+        let loops = Layout::of(true);
+        let firsts = Layout::of(false);
+        assert_eq!(bytes(loops), 27 << 20);
+        assert_eq!(bytes(firsts), 27 << 18);
+        // A loop's pictures fill one atlas row: its cells lie side by side.
+        assert_eq!(loops.cell(3, 0) as u32 % COLUMNS, 0);
+        assert_eq!(loops.cell(3, FRAMES - 1), loops.cell(3, 0) + FRAMES - 1);
+        assert!(loops.cell(LOOPS - 1, FRAMES - 1) < CELLS);
+        assert!(firsts.cell(LOW_SLOTS - 1, 0) < CELLS);
+        // Every row the bakes need fits the baking target, every slot the shared table.
+        assert!(LOOPS <= SLOTS && LOW_SLOTS <= SLOTS);
     }
 
-    /// At most the batch a frame, the ready ones in the order asked; the ones not ready
+    /// A loop plays through its pictures, fading from one to the next, and comes round;
+    /// a first picture alone stands still.
+    #[test]
+    fn a_loop_plays_its_pictures_round() {
+        assert_eq!(playing(FRAMES, 0.0, 0.0), (0, 1, 0.0));
+        let (from, to, mix) = playing(FRAMES, 0.25 / PLAY_FPS, 0.0);
+        assert_eq!((from, to), (0, 1));
+        assert!((mix - 0.25).abs() < 1e-4);
+        let (from, to, _) = playing(FRAMES, (FRAMES as f32 - 0.5) / PLAY_FPS, 0.0);
+        assert_eq!((from, to), (FRAMES - 1, 0), "the last fades into the first");
+        let (from, ..) = playing(FRAMES, FRAMES as f32 / PLAY_FPS, 0.0);
+        assert_eq!(from, 0, "round again");
+        assert_eq!(playing(1, 12.3, 4.0), (0, 0, 0.0));
+        assert_ne!(offset_of("saber_sun"), offset_of("saber_moon"));
+    }
+
+    #[test]
+    fn a_new_loop_takes_a_free_slot_then_the_one_asked_least_lately() {
+        let mut slots = [None; SLOTS];
+        assert_eq!(take_slot(&slots, LOOPS, 5), Some(0));
+        for (index, kept) in slots.iter_mut().enumerate() {
+            *kept = slot("saber_x", 5 + index as u64 % 3);
+        }
+        slots[9] = slot("saber_old", 2);
+        assert_eq!(
+            take_slot(&slots, LOOPS, 7),
+            Some(9),
+            "the one asked least lately"
+        );
+        // Only the layout's slots are taken.
+        slots[9] = slot("saber_x", 7);
+        slots[LOOPS] = slot("saber_older", 1);
+        assert_ne!(take_slot(&slots, LOOPS, 7), Some(LOOPS));
+        // Every slot asked for this frame: none is moved.
+        for kept in &mut slots {
+            *kept = slot("saber_x", 7);
+        }
+        assert_eq!(take_slot(&slots, LOOPS, 7), None);
+    }
+
+    /// The next loop baked is the first asked whose blade is ready; the ones not ready
     /// wait in the queue, the ones no longer shown leave it.
     #[test]
-    fn bakes_are_bounded_a_frame_and_wait_for_their_pipelines() {
+    fn bakes_wait_for_their_pipelines_in_the_order_asked() {
         let ids: Vec<&'static str> = (0..10)
             .map(|n| &*Box::leak(format!("saber_{n}").into_boxed_str()))
             .collect();
         let mut queue = ids.clone();
         let wanted = &ids[..8];
-        let chosen = choose_bakes(&mut queue, wanted, |id| id != "saber_1", BAKE_BATCH);
+        let ready = |id: &'static str| id != "saber_0";
+        assert_eq!(next_bake(&mut queue, wanted, ready), Some("saber_1"));
         assert_eq!(
-            chosen,
+            queue,
             [
-                Some("saber_0"),
-                Some("saber_2"),
-                Some("saber_3"),
-                Some("saber_4")
+                "saber_0", "saber_2", "saber_3", "saber_4", "saber_5", "saber_6", "saber_7"
             ]
         );
-        assert_eq!(queue, ["saber_1", "saber_5", "saber_6", "saber_7"]);
-        let chosen = choose_bakes(&mut queue, wanted, |_| true, BAKES_LOW);
-        assert_eq!(chosen.iter().flatten().count(), 1);
-        assert_eq!(chosen[0], Some("saber_1"));
-        // Asking for more than the batch still bakes the batch at most.
-        let mut queue = ids.clone();
-        let chosen = choose_bakes(&mut queue, &ids, |_| true, 100);
-        assert_eq!(chosen.iter().flatten().count(), BAKE_BATCH);
-        assert_eq!(queue.len(), ids.len() - BAKE_BATCH);
+        assert_eq!(next_bake(&mut queue, wanted, |_| true), Some("saber_0"));
+        let mut empty = Vec::new();
+        assert_eq!(next_bake(&mut empty, wanted, |_| true), None);
     }
 
     #[test]
@@ -1351,11 +1569,19 @@ mod tests {
         let folder = std::env::temp_dir().join(format!("sjk-blade-stills-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&folder);
         std::fs::create_dir_all(&folder).expect("folder");
-        let pixels = vec![200; STILL_BYTES as usize];
+        // Alpha is the brightest channel, as baked: kept RGB, read back the same.
+        let pixels: Vec<u8> = (0..LOOP_BYTES / 4)
+            .flat_map(|n| {
+                let rgb = [(n % 251) as u8, 40, (n % 7) as u8 * 30];
+                [rgb[0], rgb[1], rgb[2], rgb[0].max(rgb[1]).max(rgb[2])]
+            })
+            .collect();
         let mut disk = Disk::read(folder.clone());
         let (path, old) = disk.replace("saber_sun", 1);
         assert_eq!(old, None);
         write_still(&path, pixels.clone()).expect("kept");
+        // A single picture (a version 1 still) is no loop.
+        assert!(write_still(&disk.path("saber_old", 9), vec![0; STILL_BYTES as usize]).is_err());
         let disk = Disk::read(folder.clone());
         assert!(disk.has("saber_sun", 1));
         assert!(!disk.has("saber_sun", 2), "the blade changed");

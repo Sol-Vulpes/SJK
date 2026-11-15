@@ -1844,10 +1844,11 @@ Holocrons tab's Shop, a blade card's Forge link) open that kind directly.
     (135 wide, 100 tall at the ordinary text size, taller at a larger one), up to thirty
     shown. A tile: its [tier frame](#tier-frame) (since 15/11/2026; faint when not held),
     the blade large across the
-    tile, tilted 8 degrees, its glow round it (`swatch::tile_blade`, 15/11/2026: the
-    kyber's still, [unlockables.md](unlockables.md#kybers-tab), greyed and dimmed under a
-    small padlock on the hilt when not held; live while hovered or chosen; until its
-    still comes a drawing in the skin's own colours, grey while its pack has not come),
+    tile, straight, its glow round it (`swatch::tile_blade`, 15/11/2026: the kyber's
+    loop, [unlockables.md](unlockables.md#kybers-tab), greyed and dimmed under a small
+    padlock on the hilt when not held; never live, only the chosen one's large swatch is;
+    until its loop comes a drawing in the skin's own colours, grey while its pack has not
+    come),
     at the foot the name without "blade" on two lines at most over its state (Worn,
     Yours, "Yours x3", Not owned: "Locked" until 29/10/2026, when the padlock became the
     player's own lock) and the chroma's wheel; its marks: the New sticker on its top edge,

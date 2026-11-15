@@ -1,20 +1,20 @@
-// The Collection's blade stills (`blade_stills.rs`): each baked blade, drawn by the blade
-// renderer at twice the still's size in one row of the baking target, brought down to its
+// The Collection's blade loops (`blade_stills.rs`): each baked picture, drawn by the blade
+// renderer at twice the picture's size in one row of the baking target, brought down to its
 // atlas cell with a soft glow round its light (a cheap bloom, done once when it is baked),
 // then faded out toward the cell's edges as the live pictures are (`blade_pictures.wgsl`).
 // Display values, alpha the brightest channel, as the live pictures', so the UI adds them
 // the same way.
-const STILL: vec2<f32> = vec2<f32>(256.0, 96.0);
+const STILL: vec2<f32> = vec2<f32>(384.0, 96.0);
 // One row of the baking target, in pixels.
-const ROW: vec2<i32> = vec2<i32>(512, 192);
-// In shares of the still (52 by 19.5 units): the blade starts 3 units in.
+const ROW: vec2<i32> = vec2<i32>(768, 192);
+// In shares of the picture (52 by 13 units): the blade starts 3 units in.
 const LEFT: vec2<f32> = vec2<f32>(0.5 / 52.0, 4.5 / 52.0);
 const RIGHT: f32 = 4.0 / 52.0;
-const EDGE: f32 = 4.0 / 19.5;
+const EDGE: f32 = 2.6 / 13.0;
 // The glow: taps on a disc this wide (baking pixels), how much of it is added, and how
 // much the light's own colour leads it over the white core.
 const TAPS: u32 = 48u;
-const RADIUS: f32 = 26.0;
+const RADIUS: f32 = 34.0;
 const GLOW: f32 = 1.7;
 @group(0) @binding(0) var bake: texture_2d<f32>;
 

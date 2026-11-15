@@ -322,11 +322,7 @@ pub(crate) fn texture_switches(lists: &[&DrawList]) -> usize {
                 Source::News(news_slot_of(texture).unwrap_or_default())
             }
             None if texture == PREVIEW_TEXTURE => Source::Preview,
-            None if texture == BLADE_PICTURES_TEXTURE
-                || crate::blade_pictures::crop_of(texture).is_some() =>
-            {
-                Source::BladePictures
-            }
+            None if texture == BLADE_PICTURES_TEXTURE => Source::BladePictures,
             None if crate::blade_stills::cell_of(texture).is_some() => Source::BladeStills,
             None if map_edit_pictures::cell_of(texture).is_some() => Source::MapEditCells,
             None if texture == map_edit_pictures::PREVIEW => Source::MapEditPreview,
@@ -353,13 +349,6 @@ pub(crate) fn texture_switches(lists: &[&DrawList]) -> usize {
         vertices += 6;
     }
     runs.len()
-}
-
-/// The texture coordinates a live blade picture's texture names: the whole picture, or a
-/// cell's crop ([`crate::blade_pictures::crop_of`]).
-fn blade_picture_range(texture: sjk_ui::TextureId) -> ([f32; 2], [f32; 2]) {
-    crate::blade_pictures::crop_of(texture)
-        .map_or(([0.0; 2], [1.0; 2]), crate::blade_pictures::crop_range)
 }
 
 /// The texture coordinates of the blade still's cell `texture` names.
@@ -885,8 +874,8 @@ impl ShapeRenderer {
                         | Source::HudPreview
                         | Source::News(_)
                         | Source::MapEditPreview
-                        | Source::Preview => ([0.0, 0.0], [1.0, 1.0]),
-                        Source::BladePictures => blade_picture_range(texture),
+                        | Source::Preview
+                        | Source::BladePictures => ([0.0, 0.0], [1.0, 1.0]),
                         Source::BladeStills => blade_still_range(texture),
                         Source::MapEditCells => map_edit_pictures::uv_range(
                             map_edit_pictures::cell_of(texture).unwrap_or_default(),
@@ -920,7 +909,6 @@ impl ShapeRenderer {
                         Source::MapEditCells => map_edit_pictures::uv_range(
                             map_edit_pictures::cell_of(texture).unwrap_or_default(),
                         ),
-                        Source::BladePictures => blade_picture_range(texture),
                         Source::BladeStills => blade_still_range(texture),
                         _ => ([0.0, 0.0], [1.0, 1.0]),
                     };
@@ -973,13 +961,12 @@ impl ShapeRenderer {
                         }
                         // A blade picture is clipped as other shapes are (it scrolls in
                         // the Collection's list): its coordinates are an upright
-                        // rectangle, cut with it. A still's (and a live picture's crop)
-                        // are in its cell, mapped into the texture first.
+                        // rectangle, cut with it. A loop picture's are in its cell,
+                        // mapped into the texture first.
                         Source::BladePictures | Source::BladeStills => {
                             let (low, high) = match source {
                                 Source::BladeStills => blade_still_range(texture),
-                                _ if texture == BLADE_PICTURES_TEXTURE => ([0.0; 2], [1.0; 2]),
-                                _ => blade_picture_range(texture),
+                                _ => ([0.0; 2], [1.0; 2]),
                             };
                             let uv = uv.map(|[s, t]| {
                                 [
@@ -1181,14 +1168,10 @@ impl ShapeRenderer {
                 Some(_) => Source::Preview,
                 None => return None,
             },
-            None if texture == BLADE_PICTURES_TEXTURE
-                || crate::blade_pictures::crop_of(texture).is_some() =>
-            {
-                match self.blade_pictures {
-                    Some(_) => Source::BladePictures,
-                    None => return None,
-                }
-            }
+            None if texture == BLADE_PICTURES_TEXTURE => match self.blade_pictures {
+                Some(_) => Source::BladePictures,
+                None => return None,
+            },
             None if crate::blade_stills::cell_of(texture).is_some() => match self.blade_stills {
                 Some(_) => Source::BladeStills,
                 None => return None,

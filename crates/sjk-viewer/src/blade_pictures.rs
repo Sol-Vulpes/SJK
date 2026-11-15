@@ -41,6 +41,8 @@ const CALM_HZ: f64 = 30.0;
 const FULL_RATE_CELLS: usize = 2;
 /// Calm cells (neither new nor focused) drawn a frame at most.
 const CALM_PER_FRAME: usize = 6;
+/// How long the picture's target is kept with no picture asked for.
+const TARGET_IDLE: std::time::Duration = std::time::Duration::from_secs(5);
 
 /// Cells of the picture: two columns of eight.
 const COLUMNS: usize = 2;
@@ -152,47 +154,6 @@ pub(crate) fn picture(id: &'static str, shown: f32) -> Option<([f32; 4], bool)> 
         ],
         own,
     ))
-}
-
-/// The texture ids of the cells' crops ([`crop`]): cell `n` is `CROP_BASE + n`.
-const CROP_BASE: u32 = 0x6300_0400;
-
-/// Skin `id`'s live picture as a texture of its own: its cell cropped to what a still
-/// shows ([`crate::blade_stills::UNITS`]: the whole cell across, its middle that high),
-/// so a swatch can turn it as it turns a still; once drawn, and whether with its own
-/// pipelines. Asking keeps (or gets) it a cell, as [`picture`].
-pub(crate) fn crop(id: &'static str) -> Option<(sjk_ui::TextureId, bool)> {
-    picture(id, crate::blade_stills::UNITS[1])?;
-    let state = lock();
-    let slot = state
-        .slots
-        .iter()
-        .position(|slot| slot.is_some_and(|slot| slot.drawn && slot.skin == id))?;
-    let own = state.slots[slot].is_some_and(|slot| slot.own);
-    Some((sjk_ui::TextureId(CROP_BASE + slot as u32), own))
-}
-
-/// The cell a crop's texture names ([`crop`]).
-pub(crate) fn crop_of(texture: sjk_ui::TextureId) -> Option<usize> {
-    let slot = texture.0.checked_sub(CROP_BASE)? as usize;
-    (slot < SLOTS).then_some(slot)
-}
-
-/// The texture coordinates of cell `slot`'s crop (top left, bottom right).
-pub(crate) fn crop_range(slot: usize) -> ([f32; 2], [f32; 2]) {
-    let slot = slot.min(SLOTS - 1);
-    let (column, row) = (slot % COLUMNS, slot / COLUMNS);
-    let width = CELL[0] * COLUMNS as f32;
-    let height = CELL[1] * ROWS as f32;
-    let shown = crate::blade_stills::UNITS[1];
-    let top = row as f32 * CELL[1] + (CELL[1] - shown) * 0.5;
-    (
-        [column as f32 * CELL[0] / width, top / height],
-        [
-            (column as f32 + 1.0) * CELL[0] / width,
-            (top + shown) / height,
-        ],
-    )
 }
 
 /// Draw skin `id`'s picture every frame: a swatch the player looks at (a hovered or
@@ -532,7 +493,19 @@ impl crate::GpuState {
         let bakes = self.step_blade_stills();
         let baking = bakes.iter().any(Option::is_some);
         let plan = assign(&mut lock(), seconds, self.blade_pictures.is_none());
-        if plan.is_none() && !LIVE.load(Ordering::Relaxed) && self.blade_pictures.take().is_some() {
+        // No picture asked for a while (the Collection closed), or the menu pictures on:
+        // the target's video memory is given back.
+        let now = std::time::Instant::now();
+        if plan.is_some() {
+            self.blade_pictures_used = Some(now);
+        }
+        let idle = self
+            .blade_pictures_used
+            .is_none_or(|used| now - used > TARGET_IDLE);
+        if plan.is_none()
+            && (idle || !LIVE.load(Ordering::Relaxed))
+            && self.blade_pictures.take().is_some()
+        {
             self.ui_shapes.clear_blade_pictures();
         }
         let plan = plan.filter(|plan| plan.draw.iter().any(Option::is_some));

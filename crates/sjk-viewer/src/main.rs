@@ -599,6 +599,8 @@ struct GpuState {
     saber_gpu: saber_gpu::Runtime,
     /// The Collection's live blade pictures, once a swatch asked for one.
     blade_pictures: Option<blade_pictures::Target>,
+    /// When a live blade picture was last asked for (its target freed a while after).
+    blade_pictures_used: Option<std::time::Instant>,
     /// The Collection's blade stills: their atlas, disk cache and bakes.
     blade_stills: blade_stills::Stills,
     dust_motes: dust_motes::Runtime,
@@ -1708,6 +1710,7 @@ impl GpuState {
             sdf_text_pipeline,
             saber_gpu,
             blade_pictures: None,
+            blade_pictures_used: None,
             blade_stills: Default::default(),
             dust_motes,
             quick_wheel: quick_wheel::QuickWheel::default(),
@@ -3533,8 +3536,17 @@ impl GpuState {
                 has_entity_instances,
             );
         }
+        if let Some(phases) = &self.gpu_phases {
+            phases.mark(&mut encoder, "scene");
+        }
         self.encode_stage_preview(&mut encoder);
+        if let Some(phases) = &self.gpu_phases {
+            phases.mark(&mut encoder, "menu-model");
+        }
         self.encode_blade_pictures(&mut encoder);
+        if let Some(phases) = &self.gpu_phases {
+            phases.mark(&mut encoder, "blade-pictures");
+        }
         self.draw_card_scenes();
         let (output, mut encoder) = match target.finish(self, encoder, timing) {
             Ok(output) => output,
