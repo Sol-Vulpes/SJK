@@ -1081,7 +1081,16 @@ impl Panel {
                 crate::terms::say_static(crate::profile_hub::Tab::Holocrons.next(true).label()),
             );
         }
-        add(&["Esc"], "back");
+        // Escape comes back to the Collection's hall from its screen or when the hall
+        // opened the page.
+        add(
+            &["Esc"],
+            if self.hub || self.from_hall {
+                crate::profile_hub::COLLECTION
+            } else {
+                "back"
+            },
+        );
         let keys = &keys[..count];
         let gap = 30.0 * s;
         let width: f32 = keys
@@ -1333,25 +1342,43 @@ mod tests {
         }
     }
 
-    /// The Collection screen's tabs are drawn by the page and answer where they are drawn.
+    /// On the Collection screen the page draws the breadcrumb ("Collection › Holocrons"),
+    /// whose Collection, like Escape, goes back to the hall; on its own, neither.
     #[test]
-    fn the_hub_page_draws_the_screens_tabs_with_holocrons_lit() {
+    fn the_hub_page_draws_the_breadcrumb_back_to_the_hall() {
         let mut panel = Panel::new();
         panel.open(true);
         panel.set_hub(true);
         panel.build([1920.0, 1080.0]);
-        for tab in crate::profile_hub::Screen::Collection.tabs() {
-            assert!(
-                panel
-                    .ui
-                    .rect_for(crate::profile_hub::TOKEN + tab.index() as u16)
-                    .is_some(),
-                "{tab:?}"
-            );
+        let home = panel
+            .ui
+            .rect_for(crate::profile_hub::HALL_TOKEN)
+            .expect("the breadcrumb");
+        assert!(panel.ui.rect_for(crate::profile_hub::TOKEN).is_none());
+        let at = sjk_ui::Vec2::new(home.x + home.width * 0.5, home.y + home.height * 0.5);
+        let mut action = PanelAction::None;
+        for event in [
+            InputEvent::PointerMove(at),
+            InputEvent::PointerPress {
+                position: at,
+                button: sjk_ui::PointerButton::Primary,
+            },
+            InputEvent::PointerRelease {
+                position: at,
+                button: sjk_ui::PointerButton::Primary,
+            },
+        ] {
+            action = panel.handle_pointer(event);
         }
+        assert_eq!(action, PanelAction::Hall);
+        assert_eq!(panel.key(KeyCode::Escape, false), PanelAction::Hall);
         panel.set_hub(false);
         panel.build([1920.0, 1080.0]);
-        assert!(panel.ui.rect_for(crate::profile_hub::TOKEN).is_none());
+        assert!(panel.ui.rect_for(crate::profile_hub::HALL_TOKEN).is_none());
+        assert_eq!(panel.key(KeyCode::Escape, false), PanelAction::Close);
+        // Opened on its own by the hall, Escape goes back to it.
+        panel.set_from_hall(true);
+        assert_eq!(panel.key(KeyCode::Escape, false), PanelAction::Hall);
     }
 
     #[test]

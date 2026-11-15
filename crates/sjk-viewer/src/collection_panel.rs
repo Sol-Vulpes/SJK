@@ -44,6 +44,8 @@ mod finishers;
 pub(crate) mod forge;
 #[path = "collection_forge_view.rs"]
 mod forge_view;
+#[path = "collection_hall.rs"]
+pub(crate) mod hall;
 #[path = "collection_history.rs"]
 pub(crate) mod history;
 #[path = "collection_history_view.rs"]
@@ -637,6 +639,9 @@ pub(crate) struct StageWish {
     /// The Saber Lab tab: the model holds the saber and swings it, the saber floats
     /// beside it too ([`crate::saber_lab`]).
     pub(crate) lab: Option<LabStage>,
+    /// The hall ([`hall`]): the model stands in the column on the window's right, the
+    /// backdrop camera turned to put it there.
+    pub(crate) hall: bool,
 }
 
 /// What the page knows this frame.
@@ -737,7 +742,13 @@ pub(crate) struct Panel {
     /// Shown as the SJK UI's Collection screen: its way back names where it returns.
     hub: bool,
     back: ReturnTarget,
+    /// The kind on show, or shown last while the hall shows.
     tab: Tab,
+    /// The hall shows ([`hall`]), in place of [`Self::tab`], and its state; whether a
+    /// kind has shown yet (the hall chooses its tile on coming back).
+    hall: bool,
+    kind_shown: bool,
+    hall_state: hall::Hall,
     ui: MenuCanvas,
     /// The thing chosen on each tab: a medal in the order shown, an achievement in the
     /// catalogue's order, a shader's row.
@@ -1011,6 +1022,9 @@ impl Panel {
             hub: false,
             back: ReturnTarget::MainMenu,
             tab: Tab::Medals,
+            hall: false,
+            kind_shown: false,
+            hall_state: hall::Hall::default(),
             // #117 (Nib): the Forge's Craft grid on its Legendary and Mythical lines, its
             // fifteen swatches drawn (the menu pictures on, or before their live pictures are
             // ready), took up to about 2 100 commands; 2 048 dropped the last ones on some
@@ -1182,7 +1196,7 @@ impl Panel {
 
     /// Whether the tab on show offers the Loadouts card: those where a look is chosen.
     fn offers_loadouts(&self) -> bool {
-        matches!(self.tab, Tab::Shaders | Tab::Tags)
+        self.hall || matches!(self.tab, Tab::Shaders | Tab::Tags)
     }
 
     /// What the Loadouts card answered, as the page's action.
@@ -1207,9 +1221,15 @@ impl Panel {
     }
 
     /// Turn to `tab`, if it is one of the Collection's this page draws (Holocrons is
-    /// the Holocrons page).
+    /// the Holocrons page): a kind, or the hall ([`Tab::Hall`]).
     pub(crate) fn show(&mut self, tab: Tab) {
+        if tab == Tab::Hall {
+            self.enter_hall();
+            return;
+        }
         if tab.screen() == crate::profile_hub::Screen::Collection && tab != Tab::Holocrons {
+            self.hall = false;
+            self.kind_shown = true;
             if tab != self.tab {
                 self.leave_viewing();
                 self.leave_search();
@@ -1223,8 +1243,14 @@ impl Panel {
         }
     }
 
-    /// The tab on show (or shown last).
+    /// The tab on show (or shown last): [`Tab::Hall`] while the hall shows.
     pub(crate) fn tab(&self) -> Tab {
+        if self.hall { Tab::Hall } else { self.tab }
+    }
+
+    /// The kind on show, or shown last while the hall shows: what the Collection opens on
+    /// when [`hall::CVAR`] is off.
+    pub(crate) fn kind(&self) -> Tab {
         self.tab
     }
 
@@ -1304,6 +1330,17 @@ impl Panel {
         if !self.open {
             return None;
         }
+        if self.hall {
+            return Some(StageWish {
+                skin: PreviewSkin::Worn,
+                saber: None,
+                on_second: false,
+                on_both: false,
+                holocron: false,
+                lab: None,
+                hall: true,
+            });
+        }
         match self.tab {
             Tab::Shaders => Some(StageWish {
                 skin: match self.shader {
@@ -1317,6 +1354,7 @@ impl Panel {
                 on_both: self.both_sides(),
                 holocron: false,
                 lab: None,
+                hall: false,
             }),
             Tab::Toys => Some(StageWish {
                 skin: PreviewSkin::Worn,
@@ -1325,6 +1363,7 @@ impl Panel {
                 on_both: false,
                 holocron: self.toy == 0,
                 lab: None,
+                hall: false,
             }),
             Tab::SaberLab => self.lab_wish(),
             _ => None,
@@ -1508,7 +1547,8 @@ impl Panel {
         *chosen = next as usize;
     }
 
-    /// A key; `illuminate` is whether the holocron is lit.
+    /// A key; `illuminate` is whether the holocron is lit. On the hall its own keys;
+    /// in a kind, an Escape the kind leaves to the page comes back to the hall.
     pub(crate) fn handle_key(
         &mut self,
         event: &KeyEvent,
@@ -1523,6 +1563,32 @@ impl Panel {
             return PanelAction::None;
         };
         self.hover.keyed();
+        if self.hall && !self.loadouts.is_open() {
+            return self.hall_key(key, shift, control);
+        }
+        let action = self.kind_key(event, key, shift, control, illuminate);
+        self.escape_to_hall(key, action)
+    }
+
+    /// What a kind's `key` answered (`action`): an Escape that would close the page shows
+    /// the hall instead (the Loadouts card, a field or a note took theirs already).
+    fn escape_to_hall(&mut self, key: KeyCode, action: PanelAction) -> PanelAction {
+        if key == KeyCode::Escape && action == PanelAction::Close && !self.hall {
+            self.enter_hall();
+            return PanelAction::None;
+        }
+        action
+    }
+
+    /// A pressed key on a kind's page (or the Loadouts card over the hall).
+    fn kind_key(
+        &mut self,
+        event: &KeyEvent,
+        key: KeyCode,
+        shift: bool,
+        control: bool,
+        illuminate: bool,
+    ) -> PanelAction {
         if self.loadouts.is_open() {
             let reply = self.loadouts.key(
                 key,
@@ -2198,6 +2264,9 @@ impl Panel {
             );
             return Self::loadout_reply(reply);
         }
+        if self.hall {
+            return self.hall_pointer(event);
+        }
         // The lone saber turns with a drag that starts on it, wherever it goes after.
         if matches!(self.tab, Tab::Shaders | Tab::SaberLab) {
             match event {
@@ -2361,6 +2430,13 @@ impl Panel {
         let Some(token) = event.token else {
             return PanelAction::None;
         };
+        // The breadcrumb's Collection: back to the hall.
+        if token == crate::profile_hub::HALL_TOKEN {
+            if event.kind == UiEventKind::Activate {
+                self.enter_hall();
+            }
+            return PanelAction::None;
+        }
         if self.tab == Tab::Inventory
             && let Some(action) = self.inventory.token(
                 token,
@@ -2642,14 +2718,7 @@ impl Panel {
                 PanelAction::None
             }
             REVEAL_TOKEN => self.reveal(),
-            token => match crate::profile_hub::collection_tab_of(token) {
-                Some(Tab::Holocrons) => PanelAction::Hub(Tab::Holocrons),
-                Some(tab) => {
-                    self.tab = tab;
-                    PanelAction::None
-                }
-                None => PanelAction::None,
-            },
+            _ => PanelAction::None,
         }
     }
 
@@ -3947,11 +4016,13 @@ fossil 1
             [1920.0, 1080.0],
         );
         assert!(!panel.stage_wish().unwrap().on_second);
+        // The breadcrumb's Collection goes to the hall, on the Shaders tile.
         assert_eq!(
-            click(&mut panel, crate::profile_hub::TOKEN + 1),
+            click(&mut panel, crate::profile_hub::HALL_TOKEN),
             PanelAction::None
         );
-        assert_eq!(panel.tab(), Tab::Achievements);
+        assert_eq!(panel.tab(), Tab::Hall);
+        assert_eq!(panel.hall_tile(), hall::Tile::Shaders);
         panel.build(
             &inputs(Holdings::Known(&owned), ""),
             &fonts.font,

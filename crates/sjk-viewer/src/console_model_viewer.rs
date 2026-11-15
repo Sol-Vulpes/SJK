@@ -109,6 +109,7 @@ impl ViewerConsole {
             saber: None,
             holocron: false,
             lab: None,
+            hall: false,
         })
     }
 

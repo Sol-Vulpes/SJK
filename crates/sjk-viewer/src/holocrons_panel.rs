@@ -400,8 +400,9 @@ impl Data {
 pub(crate) enum PanelAction {
     None,
     Close,
-    /// Show another of the Collection screen's tabs (a click on the row).
-    Hub(crate::profile_hub::Tab),
+    /// Back to the Collection's hall: Escape, or the breadcrumb's Collection, on the
+    /// Collection screen or when the hall opened the page.
+    Hall,
     /// Ask the hub to open these holocrons ([`opening`]).
     Open(Vec<u64>),
     /// Show the Collection's Forge on its Shop (Shop, or S).
@@ -416,6 +417,8 @@ pub(crate) struct Panel {
     /// Shown as the Profile screen's Holocrons tab: its title and row of tabs at the top,
     /// the page moved down under them.
     hub: bool,
+    /// Opened on its own by the Collection's hall: Escape goes back to it.
+    from_hall: bool,
     /// What the Profile screen's tabs put at the top.
     hub_header: crate::profile_hub::Header,
     /// The Collection row's counts after each tab's name, in the row's order.
@@ -475,6 +478,7 @@ impl Panel {
             open: false,
             owns_console: false,
             hub: false,
+            from_hall: false,
             hub_header: crate::profile_hub::Header::default(),
             row: Vec::new(),
             // An opening of twenty: five strips of tiles at once, then all twenty found.
@@ -512,6 +516,7 @@ impl Panel {
         self.open = true;
         self.owns_console = owns_console;
         self.hub = false;
+        self.from_hall = false;
         self.selected = 0;
         self.refreshed = None;
         self.ceremony = None;
@@ -523,6 +528,12 @@ impl Panel {
     /// [`Self::open`] puts it back on its own.
     pub(crate) fn set_hub(&mut self, hub: bool) {
         self.hub = hub;
+    }
+
+    /// The Collection's hall opened the page on its own (the classic menus): Escape goes
+    /// back to it. [`Self::open`] forgets it.
+    pub(crate) fn set_from_hall(&mut self, from_hall: bool) {
+        self.from_hall = from_hall;
     }
 
     /// Whether the page is the Profile screen's Holocrons tab.
@@ -668,6 +679,7 @@ impl Panel {
             return self.ask_all_key(key, now);
         }
         match key {
+            KeyCode::Escape if self.hub || self.from_hall => return PanelAction::Hall,
             KeyCode::Escape => return PanelAction::Close,
             KeyCode::Tab => self.step(if shift { -1 } else { 1 }, true),
             KeyCode::ArrowUp | KeyCode::ArrowLeft => self.step(-1, false),
@@ -746,10 +758,7 @@ impl Panel {
                 PanelAction::None
             }
             Some(SHOP_TOKEN) => PanelAction::Shop,
-            Some(token) if self.hub => match crate::profile_hub::collection_tab_of(token) {
-                Some(tab) if tab != crate::profile_hub::Tab::Holocrons => PanelAction::Hub(tab),
-                _ => PanelAction::None,
-            },
+            Some(crate::profile_hub::HALL_TOKEN) if self.hub => PanelAction::Hall,
             _ => PanelAction::None,
         }
     }

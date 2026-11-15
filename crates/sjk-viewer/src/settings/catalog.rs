@@ -1753,6 +1753,11 @@ pub(super) const GAME: &[Setting] = &[
         kind: ValueKind::Bool,
     },
     Setting {
+        label: "Collection hall",
+        cvar: crate::console::collection_panel::hall::CVAR,
+        kind: ValueKind::Bool,
+    },
+    Setting {
         label: "Menu style",
         cvar: crate::menu::style::CVAR,
         kind: ValueKind::Choice(&crate::menu::style::MenuStyle::NAMES),

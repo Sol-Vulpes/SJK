@@ -24,6 +24,21 @@
 
 # ---- Console & chat ----
 
+[collection-hall]
+area: Menus & settings
+title: Collection opens on its hall: a tile per kind, Enter in, Esc back out
+change: A grid of tiles (Shaders double), each with its count and news; the model on the right.
+change: A kind opens under "Collection > <kind>" in place of the tab row; Esc comes back.
+test: Main page > Collection: the hall; arrows move, Enter opens, hover + click work too.
+test: In a kind: Ctrl+Tab steps to the next kind; Esc or the breadcrumb returns to the hall.
+test: Esc on the hall leaves; unlockables / achievements / holocrons skip the hall.
+test: Holocrons tile, then Esc: back on the hall; Finishers tile opens Shaders on Finishers.
+test: Tile news: 2 new shaders, holocrons to open, deal of the day, toys on, last History line.
+test: The model turns into the right column, wearing your blade; the line names blade/tag.
+test: 4:3, 21:9 and ui_textScale 1.4: the grid reflows (3, 4 or 6 across) and scrolls.
+test: Settings > Interface "Collection hall" off: Collection opens on the kind used last.
+note: In a match the model shows in the live preview; the History line needs one visit first.
+
 [collection-inventory]
 area: Menus & settings
 title: Collection > Inventory: one list of everything you own, with counts

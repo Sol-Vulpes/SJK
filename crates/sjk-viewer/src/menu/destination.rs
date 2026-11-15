@@ -119,8 +119,8 @@ impl ClientMenu {
                 MenuAction::None
             }
             MainDestination::Collection if self.menu_style == MenuStyle::Sjk => {
-                // The SJK UI's Collection screen.
-                let tab = console.collection_tab();
+                // The SJK UI's Collection screen, where it opens (its hall by default).
+                let tab = console.collection_landing();
                 console.open_profile_hub_page(tab, ReturnTarget::MainMenu);
                 MenuAction::None
             }
