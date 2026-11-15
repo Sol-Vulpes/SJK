@@ -57,7 +57,7 @@ impl Count {
 }
 
 /// Each tab's count, in the row's order.
-pub(super) fn counts(inputs: &Inputs<'_>) -> [Count; 10] {
+pub(super) fn counts(inputs: &Inputs<'_>) -> [Count; 11] {
     let medals = medals::held(inputs);
     // Out of the ones the player sees: a retired one not held is not counted.
     let (achievements, achievements_total) = crate::achievements::tally(inputs.standings);
@@ -130,6 +130,11 @@ pub(super) fn counts(inputs: &Inputs<'_>) -> [Count; 10] {
             total: 0,
         },
         // The history counts nothing.
+        Count {
+            held: None,
+            total: 0,
+        },
+        // The inventory lists what the others count.
         Count {
             held: None,
             total: 0,
@@ -383,6 +388,7 @@ impl Panel {
             Tab::Banners => self.banners(&frame, inputs),
             Tab::Cards => self.cards(&frame, inputs, seconds),
             Tab::History => self.history_tab(&frame, inputs),
+            Tab::Inventory => self.inventory_tab(&frame, inputs),
             Tab::Forge => {
                 self.grid = inputs.grid;
                 self.forge(&frame, inputs, seconds, viewport);
@@ -417,7 +423,7 @@ impl Panel {
     /// How many of all the things the player holds, at the top right: the words, and a
     /// bar under them, a stretch to a tab in the tabs' order, each filled as far as its
     /// share held (one tick a thing no longer fits two hundred things, 21/10/2026).
-    fn tally(&mut self, frame: &Frame, counts: &[Count; 10]) {
+    fn tally(&mut self, frame: &Frame, counts: &[Count]) {
         let s = frame.s;
         // Only the things with a set total: the holocrons are opened, not collected.
         let total: usize = counts.iter().map(|count| count.total).sum();
@@ -495,6 +501,15 @@ impl Panel {
         let mut keys: Vec<(&[&str], &str)> = Vec::with_capacity(10);
         match self.tab {
             Tab::Medals => keys.push((&["Left", "Right"], "choose")),
+            Tab::Inventory if self.inventory.search_focus => {
+                keys.push((&["Esc"], "clear the search"));
+                keys.push((&["Enter"], "done"));
+            }
+            Tab::Inventory => {
+                keys.push((&["Up", "Down"], "choose"));
+                keys.push((&["S"], "sort"));
+                keys.push((&["/"], "search"));
+            }
             Tab::History => {
                 keys.push((&["Left", "Right"], "filter"));
                 keys.push((&["Up", "Down"], "choose"));
@@ -669,7 +684,8 @@ impl Panel {
         }
         let covered = (self.tab == Tab::Cards && self.card_inspect)
             || (self.tab == Tab::Forge && self.forge.ask.is_some())
-            || (self.tab == Tab::Toys && self.bind_wait.is_some());
+            || (self.tab == Tab::Toys && self.bind_wait.is_some())
+            || (self.tab == Tab::Inventory && self.inventory.search_focus);
         if !covered {
             keys.push((&["Ctrl", "Tab"], &*next_tab));
             keys.push((&["Esc"], "back"));

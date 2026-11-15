@@ -1276,6 +1276,101 @@ fn duel6_sjk_collection_history() {
     });
 }
 
+/// The Inventory tab (15/11/2026) on a made-up profile: every kind it lists, then sorted by
+/// quantity, then searched for "rare".
+#[test]
+#[ignore = "renders with the GPU and the installed game data named by JKA_GAME_DATA"]
+fn duel6_sjk_collection_inventory() {
+    on_big_stack(|| {
+        let cvars = [
+            ("ui_menuStyle", "sjk"),
+            (crate::settings::quick::HIDE_CVAR, "1"),
+            (crate::discord_presence::CVAR, "0"),
+        ];
+        let Some((mut gpu, _profile)) = open(
+            "maps/mp/duel6.bsp",
+            [1920, 1080],
+            Some(menu::ClientMenu::new(true, String::new())),
+            &cvars,
+        ) else {
+            return;
+        };
+        let _ = frame(&mut gpu, 10);
+        let mut preview = preview();
+        if let Some(me) = preview.snapshot.me.as_mut() {
+            me.credits = 12_340;
+            me.shards = 865;
+            me.holocron_counts = sjk_identity::HolocronCounts {
+                uncommon: 4,
+                rare: 2,
+                legendary: 1,
+                mythical: 0,
+            };
+            me.holocrons = serde_json::from_str(
+                r#"[{"id": 91, "tier": "kyber_rare"}, {"id": 90, "tier": "kyber_uncommon"},
+                    {"id": 89, "tier": "kyber_uncommon"}]"#,
+            )
+            .expect("made-up crystals");
+            me.gif_tags = Some(Vec::new());
+        }
+        let cards: Vec<sjk_identity::CardStack> = serde_json::from_str(
+            r#"[{"card": "sjk_alpha_000", "rarity": "legendary", "finish": "holo", "edition": "alpha", "count": 1},
+                {"card": "sjk_alpha_003", "rarity": "rare", "finish": "normal", "edition": "alpha", "count": 3},
+                {"rarity": "uncommon", "finish": "normal", "edition": "alpha", "count": 2}]"#,
+        )
+        .expect("made-up cards");
+        let mut unlocks: Vec<sjk_identity::Unlock> = crate::unlockables::blade_skins()
+            .filter(|skin| skin.id != "saber_sun")
+            .step_by(23)
+            .take(7)
+            .enumerate()
+            .map(|(index, skin)| sjk_identity::Unlock {
+                id: skin.id.to_owned(),
+                count: 1 + index as u32 % 3,
+                ..sun()
+            })
+            .collect();
+        unlocks.push(sun());
+        if let Some(tag) = crate::tags::CATALOGUE.iter().find(|tag| !tag.free) {
+            unlocks.push(sjk_identity::Unlock {
+                id: tag.id.to_owned(),
+                count: 3,
+                holo: 1,
+                solar: 1,
+                ..sun()
+            });
+        }
+        if let Some(console) = gpu.console.as_mut() {
+            console.preview_profile(preview);
+            console.preview_collection(Some(unlocks), 0.8);
+            console.preview_cards(cards, 12_340, 865);
+            console.open_profile_hub_page(Tab::Inventory, ReturnTarget::MainMenu);
+        }
+        assert_eq!(gpu.profile_hub_tab(), Some(Tab::Inventory));
+        let _ = frame(&mut gpu, 2);
+        println!(
+            "{}",
+            shoot(&mut gpu, 20, "duel6-collection-inventory").display()
+        );
+        assert!(!overflowed(&gpu));
+        if let Some(console) = gpu.console.as_mut() {
+            console.inventory_for_shot("", 2);
+        }
+        println!(
+            "{}",
+            shoot(&mut gpu, 20, "duel6-collection-inventory-quantity").display()
+        );
+        if let Some(console) = gpu.console.as_mut() {
+            console.inventory_for_shot("rare", 0);
+        }
+        println!(
+            "{}",
+            shoot(&mut gpu, 20, "duel6-collection-inventory-search").display()
+        );
+        assert!(!overflowed(&gpu));
+    });
+}
+
 /// The Toy Master's "?" on the Toys tab (30/10/2026): plain, then with a toy found, its
 /// hover card naming it, and the found toy's medallion on the Achievements wall, in a
 /// category of its own after the catalogue's.

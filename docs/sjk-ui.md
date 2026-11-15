@@ -1628,7 +1628,7 @@ grown to four. The same module serves the Collection screen's row
 [collection_panel.rs](../crates/sjk-viewer/src/collection_panel.rs) and its views
 (`collection_view.rs`, `collection_medals.rs`, `collection_achievements.rs`,
 `collection_shaders.rs`, `collection_toys.rs`, `collection_nameplates.rs`,
-`collection_cards.rs`, `collection_forge.rs`), 10/10/2026,
+`collection_cards.rs`, `collection_forge.rs`, `collection_inventory.rs`), 10/10/2026,
 Sol's request: take the achievements, medals and unlockables out of the Profile screen
 into a screen of their own, "a real collection, things players can collect in the
 future", with tabs Medals, Achievements, Shaders (the blade skins, renamed: saber now,
@@ -1644,8 +1644,9 @@ the choice in view with its heading, a bar at its side; the credits cards a hub 
 follow the tags under "Credits cards"; a tile badges its Holo and Solar copies, and the card
 offers Normal, Holo and Solar chips, the finishes held, shown over the picture, Choose then
 setting `cg_tagFinish` too), and since 31/10/2026
-History last (what came, was opened, spent and traded, [cards.md](cards.md#history)); while
-the Saber Lab is on, a tab after History, Saber Lab ([client.md](client.md#saber-lab)). Sol picked the
+History (what came, was opened, spent and traded, [cards.md](cards.md#history)) and, since
+15/11/2026, Inventory last (everything owned in one list); while
+the Saber Lab is on, a tab after Inventory, Saber Lab ([client.md](client.md#saber-lab)). Sol picked the
 direction from a design canvas (`the vault`): every thing has its place from the
 start, the ones the player lacks dimmed; each tab shows its things on the left and
 the one chosen up close on the right.
@@ -2047,7 +2048,31 @@ for the run.
   "Reading your history...", a failure "History unavailable" and why. Left and Right
   filter, Up, Down, Page Up, Page Down, Home and End choose, Enter (or a click) opens a
   row or loads older, R reads again, the wheel scrolls three rows; hovering chooses. It
-  reads the newest page each time it is shown. Ctrl+Tab goes on to Medals.
+  reads the newest page each time it is shown. Ctrl+Tab goes on to Inventory.
+- **Inventory** ([collection_inventory.rs](../crates/sjk-viewer/src/collection_inventory.rs),
+  [collection_inventory_view.rs](../crates/sjk-viewer/src/collection_inventory_view.rs),
+  15/11/2026, Sol's request: "plain and simple, one list of everything the player owns"):
+  "Inventory" and its line, the sort's segments (Tier, Name, Quantity) at y 320 with the
+  search field (`/`, Ctrl+F; [text_entry.rs](../crates/sjk-viewer/src/text_entry.rs)) at the
+  list's right, then 16 places 38 high from y 352 with a bar at the right when it scrolls: a
+  gold heading to each kind with "3 kinds, 12 in all", and a row to each thing held, a bar
+  and its name in its tier's colour, the tier, a note (a blade's number, a tag's or card's
+  finishes, a card's edition or "Sealed", "Starter" for the free tags) and how many. The
+  kinds, in this order: Currencies (credits and kyber shards always, DOOM coins once the
+  hub said them: `Snapshot::wheel_of_doom`, read when the toy asks), the holocrons and
+  kyber crystals still sealed by tier (`holocron_counts`; the crystals counted from
+  `holocrons`, as on the Holocrons tab), saber shaders and finishers (the profile's
+  unlocks, with their copies), tags (the starter set, the ones held with their Holo and
+  Solar copies, and the GIF tags made) and cards (a row to each kind of copy, named from the
+  packs' faces). It reads only the own hub profile the other tabs read, and asks the hub
+  nothing; while that is not known, it says why ("Inventory unavailable"). Each kind keeps
+  its place whatever the sort: Tier puts the rarest first, Name goes A to Z, Quantity the
+  most held first. The search keeps the things holding every word typed in their name,
+  tier, kind or note, and drops the headings of kinds left empty. Up, Down, Page Up, Page
+  Down, Home and End choose (past the headings), S (Shift+S back) or a segment sorts, the
+  wheel scrolls three places, hovering chooses; in the search, Escape clears it and Enter
+  leaves it. Ctrl+Tab goes on to Medals. World shot:
+  `world_shot_collection::duel6_sjk_collection_inventory`.
 - **The model:** behind Shaders, Toys and Nameplates the page darkens only the left
   and the bottom. From the main page the backdrop camera goes to the player's shot
   (`ClientMenu::set_collection_stage`, which first reads the model, sabers and

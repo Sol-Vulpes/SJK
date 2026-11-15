@@ -32,6 +32,7 @@ Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 -->
 ## Unreleased
 
+- The Collection has an Inventory tab: one list of everything you own (credits, kyber shards, DOOM coins once read, sealed holocrons and kyber crystals, saber shaders, finishers, tags and cards), grouped by kind with each thing's tier in its colour and how many, sorted by tier, name or quantity (S), with a search (/) _(Sol)_
 - Creyon is a new player model: a werewolf with a second look, Creyon cloth, whose hood, cape and loincloth move as you run. SJK players get it from the hub like Solfox _(Sol)_
 - In the game's chat, SJK's emblem and the EJK icon are smaller and the same size, and a player's verified tick sits on the icon's bottom right corner, as on the scoreboard, instead of after their name; their nameplate shows the EJK icon the same way, with the tick on its corner _(Sol)_
 

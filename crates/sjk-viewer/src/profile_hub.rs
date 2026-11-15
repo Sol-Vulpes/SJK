@@ -88,13 +88,15 @@ pub(crate) enum Tab {
     Banners,
     /// What came, was opened, spent and traded, newest first (31/10/2026).
     History,
+    /// One list of everything the player owns, with counts (15/11/2026).
+    Inventory,
     /// The Saber Lab's blade held, swung and floating, while the lab is on
     /// ([`crate::saber_lab`]).
     SaberLab,
 }
 
 const PROFILE_TABS: [Tab; 4] = [Tab::Character, Tab::Saber, Tab::Force, Tab::Profile];
-const COLLECTION_TABS: [Tab; 10] = [
+const COLLECTION_TABS: [Tab; 11] = [
     Tab::Medals,
     Tab::Achievements,
     Tab::Shaders,
@@ -105,9 +107,10 @@ const COLLECTION_TABS: [Tab; 10] = [
     Tab::Forge,
     Tab::Cards,
     Tab::History,
+    Tab::Inventory,
 ];
 /// The Collection's tabs while the Saber Lab is on: its own last.
-const COLLECTION_TABS_LAB: [Tab; 11] = [
+const COLLECTION_TABS_LAB: [Tab; 12] = [
     Tab::Medals,
     Tab::Achievements,
     Tab::Shaders,
@@ -118,10 +121,11 @@ const COLLECTION_TABS_LAB: [Tab; 11] = [
     Tab::Forge,
     Tab::Cards,
     Tab::History,
+    Tab::Inventory,
     Tab::SaberLab,
 ];
 const PROFILE_LABELS: [&str; 4] = ["Character", "Saber", "Force", "SJK Profile"];
-const COLLECTION_LABELS: [&str; 10] = [
+const COLLECTION_LABELS: [&str; 11] = [
     "Medals",
     "Achievements",
     "Shaders",
@@ -132,8 +136,9 @@ const COLLECTION_LABELS: [&str; 10] = [
     FORGE,
     "Cards",
     "History",
+    "Inventory",
 ];
-const COLLECTION_LABELS_LAB: [&str; 11] = [
+const COLLECTION_LABELS_LAB: [&str; 12] = [
     "Medals",
     "Achievements",
     "Shaders",
@@ -144,6 +149,7 @@ const COLLECTION_LABELS_LAB: [&str; 11] = [
     FORGE,
     "Cards",
     "History",
+    "Inventory",
     SABER_LAB,
 ];
 
@@ -161,7 +167,7 @@ pub(crate) const FORGE: &str = "Forge";
 
 impl Tab {
     #[cfg(test)]
-    pub(crate) const ALL: [Self; 16] = [
+    pub(crate) const ALL: [Self; 17] = [
         Self::Character,
         Self::Saber,
         Self::Force,
@@ -177,6 +183,7 @@ impl Tab {
         Self::Cards,
         Self::Banners,
         Self::History,
+        Self::Inventory,
         Self::SaberLab,
     ];
 
@@ -201,9 +208,10 @@ impl Tab {
             Self::Forge => 7,
             Self::Cards => 8,
             Self::History => 9,
-            Self::SaberLab => 10,
+            Self::Inventory => 10,
+            Self::SaberLab => 11,
             // Off the row: after its end.
-            Self::Banners => 11,
+            Self::Banners => 12,
         }
     }
 
@@ -855,12 +863,13 @@ mod tests {
         assert_eq!(Tab::Force.next(true), Tab::Profile);
         assert_eq!(Tab::Profile.next(true), Tab::Character);
         assert_eq!(Tab::Character.next(false), Tab::Profile);
-        assert_eq!(Tab::Medals.next(false), Tab::History);
+        assert_eq!(Tab::Medals.next(false), Tab::Inventory);
         assert_eq!(Tab::Nameplates.next(true), Tab::Holocrons);
         assert_eq!(Tab::Holocrons.next(true), Tab::Forge);
         assert_eq!(Tab::Forge.next(true), Tab::Cards);
         assert_eq!(Tab::Cards.next(true), Tab::History);
-        assert_eq!(Tab::History.next(true), Tab::Medals);
+        assert_eq!(Tab::History.next(true), Tab::Inventory);
+        assert_eq!(Tab::Inventory.next(true), Tab::Medals);
         assert_eq!(Tab::Achievements.next(true), Tab::Shaders);
         for screen in [Screen::Profile, Screen::Collection] {
             for (index, tab) in screen.tabs().iter().enumerate() {
@@ -882,7 +891,8 @@ mod tests {
         assert_eq!(collection_tab_of(TOKEN + 7), Some(Tab::Forge));
         assert_eq!(collection_tab_of(TOKEN + 8), Some(Tab::Cards));
         assert_eq!(collection_tab_of(TOKEN + 9), Some(Tab::History));
-        assert_eq!(collection_tab_of(TOKEN + 10), None);
+        assert_eq!(collection_tab_of(TOKEN + 10), Some(Tab::Inventory));
+        assert_eq!(collection_tab_of(TOKEN + 11), None);
         assert_eq!(collection_tab_of(TOKEN - 1), None);
     }
 

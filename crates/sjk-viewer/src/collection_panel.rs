@@ -51,6 +51,10 @@ pub(crate) mod history;
 mod history_view;
 #[path = "collection_hover.rs"]
 mod hover;
+#[path = "collection_inventory.rs"]
+pub(crate) mod inventory;
+#[path = "collection_inventory_view.rs"]
+mod inventory_view;
 #[path = "collection_loadouts.rs"]
 pub(crate) mod loadouts;
 #[path = "collection_marks_view.rs"]
@@ -1005,6 +1009,8 @@ pub(crate) struct Panel {
     pub(super) skins: std::sync::Arc<crate::saber_skins::LoadedSkins>,
     /// The History tab: its filter, rows and reads ([`history`]).
     history: history::History,
+    /// The Inventory tab: its search, order and list ([`inventory`]).
+    inventory: inventory::Inventory,
     /// What a world shot shows in place of the own profile's unlocks.
     #[cfg(test)]
     pub(crate) preview: Option<Vec<sjk_identity::Unlock>>,
@@ -1161,6 +1167,7 @@ impl Panel {
             epoch: Instant::now(),
             skins: Default::default(),
             history: Default::default(),
+            inventory: Default::default(),
             #[cfg(test)]
             preview: None,
             #[cfg(test)]
@@ -1240,6 +1247,7 @@ impl Panel {
                 self.leave_viewing();
                 self.leave_search();
                 self.forge.leave_search();
+                self.inventory.leave_search();
                 self.forge.ask = None;
                 self.card_inspect = false;
                 self.bind_wait = None;
@@ -1596,6 +1604,13 @@ impl Panel {
         if self.tab == Tab::History
             && !control
             && let Some(action) = self.history_key(key, shift)
+        {
+            return action;
+        }
+        if self.tab == Tab::Inventory
+            && let Some(action) = self
+                .inventory
+                .key(event.text.as_deref(), key, shift, control)
         {
             return action;
         }
@@ -2324,6 +2339,14 @@ impl Panel {
             return PanelAction::None;
         }
         if let InputEvent::PointerWheel { delta, .. } = event
+            && self.tab == Tab::Inventory
+        {
+            if delta.y != 0.0 {
+                self.inventory.scroll(if delta.y > 0.0 { -3 } else { 3 });
+            }
+            return PanelAction::None;
+        }
+        if let InputEvent::PointerWheel { delta, .. } = event
             && self.tab == Tab::Cards
         {
             if self.card_inspect {
@@ -2361,6 +2384,9 @@ impl Panel {
         if event.kind == UiEventKind::Activate && event.token != Some(SEARCH_TOKEN) {
             self.leave_search();
         }
+        if event.kind == UiEventKind::Activate && event.token != Some(inventory::SEARCH_TOKEN) {
+            self.inventory.leave_search();
+        }
         // A click anywhere but on its "?" closes the New note.
         if event.kind == UiEventKind::Activate && event.token != Some(NEW_NOTE_TOKEN) {
             self.new_note = false;
@@ -2392,6 +2418,15 @@ impl Panel {
         let Some(token) = event.token else {
             return PanelAction::None;
         };
+        if self.tab == Tab::Inventory
+            && let Some(action) = self.inventory.token(
+                token,
+                event.kind == UiEventKind::Activate,
+                matches!(event.kind, UiEventKind::HoverEnter | UiEventKind::Hover),
+            )
+        {
+            return action;
+        }
         if self.tab == Tab::History
             && let Some(action) = self.history_token(
                 token,
@@ -2865,6 +2900,7 @@ impl Panel {
             Tab::Cards if self.cards_shown > 0 => CARD_BASE + self.card as u16,
             Tab::Nameplates => SHARE_TOKEN,
             Tab::History => self.history_focus(),
+            Tab::Inventory => self.inventory.focus(),
             Tab::Forge => match self.forge.ask {
                 Some(ask) => {
                     if matches!(
