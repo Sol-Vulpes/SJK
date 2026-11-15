@@ -16,6 +16,18 @@ rerun. Not tried in a game: the camera's turn while easing, the live preview's p
 match and the History line after a real read are
 unseen live.
 
+Polish the same day (`personal/hall-polish`, Sol's review of the world shots): the tiles draw
+what they hold rather than two or three lines (blade strips and each tier's share, finisher,
+tag picture, toy pictures lit while on, medal pictures, the next achievement as a large
+figure, cards or an empty binder, holocron pictures with counts, the deal of the day's blade
+and price with the day's other offers, credits and shards as figures, three History lines;
+rows at most 330 tall, the grid centred at 21:9;
+`collection_hall_art.rs`), and the worn line and Loadouts (P) moved from over the model's
+feet to the column's top under "Wearing now". Verified: `cargo test -p sjk-viewer`, the
+startup stack check and the re-rendered `duel6_sjk_collection_hall` shots at 16:9, 4:3, 21:9
+and 4K at `ui_textScale 1.4` with the hub's packs (`SJK_TEST_PACKS`). Not seen: the Cards
+tile with cards held, and the Forge tile before the shop is read, outside unit tests.
+
 ## Status bar (15/11/2026)
 
 15/11/2026, `personal/status-bar` based on `main` `aacf7c07e` (Sol: an in-game status bar at
