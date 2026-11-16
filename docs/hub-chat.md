@@ -1595,9 +1595,9 @@ never in a game server's chat.
   box and ends it with ": /rewards". A click (or `rewards`) opens the round list.
 - A reward waiting for the player opens the claim window as the medal pop-up opens: on
   the main menu, or when the game menu opens in a match, never over play; in a match an
-  unlock card says "Contributor reward waiting" / "Open the game menu to claim it" once
-  per reward. Claim calls `POST /v1/rewards/claim`; the hub's answer brings the profile
-  (its new gift holocrons then arrive through the holocron pop-up) and the rewards, and
+  notification banner says "Contributor reward waiting" / "Open the game menu to claim
+  it" once per reward. Claim calls `POST /v1/rewards/claim`; the hub's answer brings the
+  profile (its new gift holocrons then arrive with their banner) and the rewards, and
   the window shows the next reward or closes. A refusal says why in the window
   ("This reward was claimed already.", "This reward is not waiting for you any more.",
   else the hub's words). Later puts the window away until the menus close and open again.

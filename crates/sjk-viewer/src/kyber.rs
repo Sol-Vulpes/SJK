@@ -335,7 +335,7 @@ fn reward_with(id: &str, said: impl Fn(usize) -> u8) -> Option<&'static Tier> {
     }
 }
 
-/// "Reward: Rare Dormant Kyber", for a board, a hover card and the unlock toast.
+/// "Reward: Rare Dormant Kyber", for a board, a hover card and the notification banner.
 pub(crate) const fn reward_line(tier: &Tier) -> &'static str {
     match tier.index {
         0 => "Reward: Uncommon Dormant Kyber",

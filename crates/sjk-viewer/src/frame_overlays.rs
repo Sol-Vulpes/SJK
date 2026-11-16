@@ -28,7 +28,7 @@ impl GpuState {
             || !self.console_layer.is_empty()
             || self.client_menu.as_ref().is_some_and(|m| m.is_visible())
             || self.frame_timings.drawn();
-        // A world shot's made-up scoreboard, quick wheel, unlock pop-up, chat box and pings
+        // A world shot's made-up scoreboard, quick wheel, banners, chat box and pings
         // draw without a session.
         #[cfg(test)]
         let hud = hud

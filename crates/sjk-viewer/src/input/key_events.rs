@@ -127,11 +127,6 @@ impl GpuState {
             self.medal_popup.handle_key(&event);
             return;
         }
-        // So does a holocron drop.
-        if !console_open && self.holocron_popup.is_open() {
-            self.holocron_popup.handle_key(&event);
-            return;
-        }
         // So does the graphics reload card.
         if !console_open && self.graphics_reload.card.is_open() {
             let choice = self.graphics_reload.card.handle_key(&event);

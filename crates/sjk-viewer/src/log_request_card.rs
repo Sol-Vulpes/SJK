@@ -3,7 +3,9 @@
 //! over the darkened screen says who asks, why, and what the logs hold, and offers
 //! Send logs (gold, Enter) or Don't send (Escape). Nothing leaves the PC without Send
 //! logs. The card shows on the main menu or over the game menu, never in the middle
-//! of play: the console says when a request comes in, and it waits for the menu. It is
+//! of play: the console and a notification banner (`unlock_toast.rs`, 16/11/2026) say
+//! when a request comes in, and it waits for the menu, taking the banner back as it
+//! opens. It is
 //! drawn in the SJK UI's look in every menu style, and the menus under it are not
 //! drawn and take no input, as under the other cards.
 
@@ -281,8 +283,8 @@ fn from(request: &LogRequest) -> String {
 impl crate::GpuState {
     /// Whether the card shows this frame: a request open, and the player on the main
     /// menu or the game menu with nothing else over it. `covered` is another card or
-    /// the console over the frame. Also tells the console of new requests and of what
-    /// became of an answer.
+    /// the console over the frame. Also tells the console (and a banner) of new requests
+    /// and the console of what became of an answer.
     pub(crate) fn prepare_log_request_card(&mut self, covered: bool) -> bool {
         #[cfg(test)]
         let preview = self.log_request_card.preview.clone();
@@ -296,6 +298,12 @@ impl crate::GpuState {
             .unwrap_or_default(),
         };
         let mut lines = self.log_request_card.offer(&requests);
+        if !lines.is_empty()
+            && let Some(request) = requests.first()
+        {
+            self.unlock_toast
+                .push(crate::unlock_toast::Unlock::LogRequest { id: request.id });
+        }
         if let Some(outcome) = outcome
             && let Some(line) = self.log_request_card.outcome_line(&outcome)
         {
@@ -333,6 +341,12 @@ impl crate::GpuState {
             && self.world_install_task.is_none()
             && !self.pending_map_reload;
         self.log_request_card.set_open(open);
+        if open {
+            self.unlock_toast
+                .withdraw(std::time::Instant::now(), |unlock| {
+                    matches!(unlock, crate::unlock_toast::Unlock::LogRequest { .. })
+                });
+        }
         open
     }
 

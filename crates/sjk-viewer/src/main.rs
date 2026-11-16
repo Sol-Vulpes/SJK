@@ -177,7 +177,7 @@ mod ground_hud;
 mod hax;
 mod held_view;
 mod hitch_log;
-mod holocron_popup;
+mod holocron_banners;
 mod holocrons;
 mod hud;
 mod hud_edit;
@@ -742,10 +742,10 @@ struct GpuState {
     text_dialog: text_dialog::TextDialog,
     /// The new medal pop-up (`medal_popup`).
     medal_popup: medal_popup::MedalPopup,
-    /// The holocron drop pop-up (`holocron_popup`).
-    holocron_popup: holocron_popup::HolocronPopup,
-    /// The unlock pop-up over play and the menus (`unlock_toast`): achievements, and
-    /// medals and holocrons that arrive in a match.
+    /// The holocron drops' banners (`holocron_banners`).
+    holocron_banners: holocron_banners::HolocronBanners,
+    /// The notification banners over play and the menus (`unlock_toast`): achievements,
+    /// medals that arrive in a match, holocrons, updates and the rest.
     unlock_toast: unlock_toast::UnlockToast,
     /// A bug report is on its way to the hub (`bug_report`).
     bug_report_waiting: bool,
@@ -1811,7 +1811,7 @@ impl GpuState {
             world_pings: world_ping::WorldPings::default(),
             text_dialog: text_dialog::TextDialog::default(),
             medal_popup: medal_popup::MedalPopup::default(),
-            holocron_popup: holocron_popup::HolocronPopup::default(),
+            holocron_banners: holocron_banners::HolocronBanners::default(),
             unlock_toast: unlock_toast::UnlockToast::default(),
             bug_report_waiting: false,
             bug_report_from_menu: false,
@@ -2381,47 +2381,25 @@ impl GpuState {
         // The alpha notice comes before everything, and every other card waits for it.
         let alpha_shown = self.prepare_alpha_card();
         let covered = console_covers_frame || alpha_shown || self.alpha_card.wants();
-        // A new medal, or a holocron drop after it, shows over the menus, which are not
-        // drawn under it.
+        // A new medal shows over the menus, which are not drawn under it; a holocron drop
+        // is a banner (`holocron_banners.rs`), given here and drawn with the others.
         let medal_shown = self.prepare_medal_popup(covered);
-        let holocron_shown = self.prepare_holocron_popup(covered || medal_shown);
+        self.prepare_holocron_banners();
         // The graphics reload card waits for the others.
-        let reload_card_shown = self.prepare_reload_card(
-            covered
-                || medal_shown
-                || holocron_shown
-                || self.medal_popup.pending()
-                || self.holocron_popup.pending(),
-        );
+        let reload_card_shown =
+            self.prepare_reload_card(covered || medal_shown || self.medal_popup.pending());
         // Then the small-card notice, once a start; the cards after wait for both.
         let small_card_shown = self.prepare_small_card_notice(
-            covered
-                || medal_shown
-                || holocron_shown
-                || reload_card_shown
-                || self.medal_popup.pending()
-                || self.holocron_popup.pending(),
+            covered || medal_shown || reload_card_shown || self.medal_popup.pending(),
         );
         let reload_shown = reload_card_shown || small_card_shown;
         // The low-FPS card too.
         self.update_fps_help();
-        let fps_shown = self.prepare_fps_card(
-            covered
-                || medal_shown
-                || holocron_shown
-                || reload_shown
-                || self.medal_popup.pending()
-                || self.holocron_popup.pending(),
-        );
+        let fps_shown = self
+            .prepare_fps_card(covered || medal_shown || reload_shown || self.medal_popup.pending());
         // And the SJK team's request for the player's logs.
         let logs_shown = self.prepare_log_request_card(
-            covered
-                || medal_shown
-                || holocron_shown
-                || reload_shown
-                || fps_shown
-                || self.medal_popup.pending()
-                || self.holocron_popup.pending(),
+            covered || medal_shown || reload_shown || fps_shown || self.medal_popup.pending(),
         );
         // The SJK team's windows: an announcement or the rounds asked for (over the
         // console too), or a reward waiting.
@@ -2429,57 +2407,48 @@ impl GpuState {
             alpha_shown
                 || self.alpha_card.wants()
                 || medal_shown
-                || holocron_shown
                 || reload_shown
                 || fps_shown
                 || logs_shown
-                || self.medal_popup.pending()
-                || self.holocron_popup.pending(),
+                || self.medal_popup.pending(),
         );
         // And what the update brought, last.
         let news_shown = self.prepare_news_panel(
             covered
                 || medal_shown
-                || holocron_shown
                 || reload_shown
                 || fps_shown
                 || logs_shown
                 || official_shown
-                || self.medal_popup.pending()
-                || self.holocron_popup.pending(),
+                || self.medal_popup.pending(),
         );
         // The playstyle card, once a start until turned off, after what the update brought.
         let playstyle_shown = self.prepare_playstyle_card(
             covered
                 || medal_shown
-                || holocron_shown
                 || reload_shown
                 || fps_shown
                 || logs_shown
                 || official_shown
                 || news_shown
-                || self.medal_popup.pending()
-                || self.holocron_popup.pending(),
+                || self.medal_popup.pending(),
         );
         // The emote help card, asked for, after them all.
         let emote_help_shown = self.prepare_emote_help_card(
             covered
                 || medal_shown
-                || holocron_shown
                 || reload_shown
                 || fps_shown
                 || logs_shown
                 || official_shown
                 || news_shown
                 || playstyle_shown
-                || self.medal_popup.pending()
-                || self.holocron_popup.pending(),
+                || self.medal_popup.pending(),
         );
         // The emote picker, likewise, under the help card.
         let emote_picker_shown = self.prepare_emote_picker(
             covered
                 || medal_shown
-                || holocron_shown
                 || reload_shown
                 || fps_shown
                 || logs_shown
@@ -2487,14 +2456,12 @@ impl GpuState {
                 || news_shown
                 || playstyle_shown
                 || emote_help_shown
-                || self.medal_popup.pending()
-                || self.holocron_popup.pending(),
+                || self.medal_popup.pending(),
         );
         // The encrypted whisper card, under the emote cards.
         let whisper_shown = self.prepare_e2e_whisper_card(
             covered
                 || medal_shown
-                || holocron_shown
                 || reload_shown
                 || fps_shown
                 || logs_shown
@@ -2503,14 +2470,12 @@ impl GpuState {
                 || playstyle_shown
                 || emote_help_shown
                 || emote_picker_shown
-                || self.medal_popup.pending()
-                || self.holocron_popup.pending(),
+                || self.medal_popup.pending(),
         );
         // A mod's notice on its servers.
         let mod_notice_shown = self.prepare_mod_notice_card(
             covered
                 || medal_shown
-                || holocron_shown
                 || reload_shown
                 || fps_shown
                 || logs_shown
@@ -2520,14 +2485,12 @@ impl GpuState {
                 || emote_help_shown
                 || emote_picker_shown
                 || whisper_shown
-                || self.medal_popup.pending()
-                || self.holocron_popup.pending(),
+                || self.medal_popup.pending(),
         );
         // The trade window, last: it waits under every other card.
         let trade_shown = self.prepare_trade_window(
             covered
                 || medal_shown
-                || holocron_shown
                 || reload_shown
                 || fps_shown
                 || logs_shown
@@ -2537,14 +2500,12 @@ impl GpuState {
                 || emote_picker_shown
                 || whisper_shown
                 || mod_notice_shown
-                || self.medal_popup.pending()
-                || self.holocron_popup.pending(),
+                || self.medal_popup.pending(),
         );
         let medal_popup = alpha_shown
             || official_shown
             || mod_notice_shown
             || medal_shown
-            || holocron_shown
             || reload_shown
             || fps_shown
             || logs_shown
@@ -2854,8 +2815,6 @@ impl GpuState {
             self.append_alpha_card(viewport);
         } else if medal_shown {
             self.append_medal_popup(viewport);
-        } else if holocron_shown {
-            self.append_holocron_popup(viewport);
         } else if reload_card_shown {
             self.append_reload_card(viewport);
         } else if small_card_shown {
@@ -2896,8 +2855,8 @@ impl GpuState {
             self.append_hud_edit(viewport);
         }
         let trade_toast = self.append_trade_toast(viewport, console_covers_frame || medal_popup);
-        // An achievement unlocked, or a medal or holocron in a match: its card over play or
-        // the menus, never input-taking.
+        // An achievement unlocked, a holocron, a medal in a match, an update: its banner
+        // over play or the menus, never input-taking.
         let unlock_toast = self.append_unlock_toast(viewport, console_covers_frame || medal_popup);
         self.world_notes.draw_highlight(viewport);
         self.map_edit_gizmo_draw();
@@ -2956,7 +2915,6 @@ impl GpuState {
                 .is_open()
                 .then(|| self.text_dialog.draw_list()),
             medal_shown.then(|| self.medal_popup.draw_list()),
-            holocron_shown.then(|| self.holocron_popup.draw_list()),
             reload_card_shown.then(|| self.graphics_reload.card.draw_list()),
             small_card_shown.then(|| self.small_card_notice.draw_list()),
             fps_shown.then(|| self.fps_card.draw_list()),

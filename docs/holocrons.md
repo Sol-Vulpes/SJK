@@ -4,7 +4,7 @@ A holocron is loot a player earns by playing SJK. The SJK hub rolls and stores t
 the client shows them. Since 12/10/2026 a holocron can be opened: it gives a sealed card
 and credits ([cards.md](cards.md)), and nothing else (no power or setting). This page is the design, the decisions and what
 is checked; the wire is the hub's `PROTOCOL.md` ("Holocrons") in Sol-Vulpes/SJK-hub,
-decided together with the client and built in parallel. Players read the pop-up, the chat
+decided together with the client and built in parallel. Players read the banner, the chat
 lines and the Collection's Holocrons tab.
 
 With the JoF tools on, holocrons are called "Echoes" and medals "Honors" by default
@@ -19,7 +19,7 @@ With the JoF tools on, holocrons are called "Echoes" and medals "Honors" by defa
 | Drops joined to the chat's messages, told to the worker when they are the player's own | [feed.rs](../crates/sjk-identity/src/feed.rs) |
 | The one client list of tiers, the player's counts, recent holocrons, progress | [holocrons.rs](../crates/sjk-viewer/src/holocrons.rs) |
 | What counts as actively playing, the input clock | [holocrons/activity.rs](../crates/sjk-viewer/src/holocrons/activity.rs), [holocrons_frame.rs](../crates/sjk-viewer/src/holocrons_frame.rs), input hooks in [viewer_app.rs](../crates/sjk-viewer/src/viewer_app.rs) |
-| The drop pop-up, its ceremony and look | [holocron_popup.rs](../crates/sjk-viewer/src/holocron_popup.rs), [holocron_popup/view.rs](../crates/sjk-viewer/src/holocron_popup/view.rs) |
+| The drops' banners, their queue and `holocrons_seen.txt` updates; the banner's look | [holocron_banners.rs](../crates/sjk-viewer/src/holocron_banners.rs), [unlock_toast.rs](../crates/sjk-viewer/src/unlock_toast.rs), [unlock_toast/banner.rs](../crates/sjk-viewer/src/unlock_toast/banner.rs) |
 | `holocrons_seen.txt` | [holocrons/seen.rs](../crates/sjk-viewer/src/holocrons/seen.rs) |
 | The chat lines' words and the tier gem | [holocrons/line.rs](../crates/sjk-viewer/src/holocrons/line.rs), [holocrons/gem.rs](../crates/sjk-viewer/src/holocrons/gem.rs), [sjk_chat_look.rs](../crates/sjk-viewer/src/sjk_chat_look.rs) |
 | The tiers' pictures in the UI atlas | [holocrons/icons.rs](../crates/sjk-viewer/src/holocrons/icons.rs), [ui_renderer/icons.rs](../crates/sjk-viewer/src/ui_renderer/icons.rs), [hud/icons.rs](../crates/sjk-viewer/src/hud/icons.rs) |
@@ -192,8 +192,8 @@ The client's list is [kyber.rs](../crates/sjk-viewer/src/kyber.rs) (`kyber::TIER
   bought or broken down; grants are not announced, grand finds from opening one are.
 - **In the client**: the Holocrons tab's row of dormant kyber tiles, their hover card and loot
   table ([below](#the-holocrons-tab)); the arrival of a granted dormant kyber as a gift's
-  ([the pop-up](#the-pop-up)); the chat's grand find line ([chat lines](#chat-lines)); the
-  achievement's reward on the Achievements tab, its hover card and its unlock card
+  ([the banner](#the-banner)); the chat's grand find line ([chat lines](#chat-lines)); the
+  achievement's reward on the Achievements tab, its hover card and its banner
   ([identity.md](identity.md#achievements)); `debug_holocron` and `debug_open` take the
   dormant kyber tiers.
 - **The 3D dormant kyber**: the tab draws a dormant kyber by its slot (`Tier::slot`, 4 to 7 after the
@@ -365,65 +365,62 @@ sends.
 
 ## In the client
 
-### The pop-up
+### The banner
 
-A holocron new to the client shows once, large, on a darkened screen in its tier's colour:
-"New holocron" (and "1 of 3"), where it came from (dropped while playing, or a gift from
-the SJK team), its name, when it was found (`dd/mm/yyyy HH:MM`, UTC), how rare it is and,
-for a gift, the team's note. It follows the medal pop-up
-([identity.md](identity.md#medals), [medal_popup.rs](../crates/sjk-viewer/src/medal_popup.rs)):
+A holocron new to the client is told of once by a notification banner that comes down
+from the top of the screen, rests a few seconds and goes back up, as a phone's
+notifications do ([identity.md](identity.md#achievements),
+[unlock_toast.rs](../crates/sjk-viewer/src/unlock_toast.rs),
+[holocron_banners.rs](../crates/sjk-viewer/src/holocron_banners.rs)): "NEW HOLOCRON" and
+"now", its name ("Legendary Holocron"), where it came from ("Found while playing: 10.5%
+of drops are Legendary", or "A gift from the SJK team") and where it waits ("See it in
+Collection > Holocrons"), with the tier's picture (its gem without one) on a tile of the
+tier's colour, and the achievements' chime (`cg_achievementSound`). With JoF's names on
+it says "NEW ECHO", "Legendary Echo" and "Collection > Echoes" ([terms](mods.md#honors-and-echoes)).
 
-- It opens on the main menu, or when the game menu opens in a match, never over play. A
-  holocron that arrives during a match is announced once by a card at the top of the
-  screen, the achievements' ([identity.md](identity.md#achievements),
-  [unlock_toast.rs](../crates/sjk-viewer/src/unlock_toast.rs); since 10/10/2026, Sol's
-  request, in place of a centre print): "New holocron", "Open the game menu to see it", the
-  name in the tier's light, "Found while playing: 28% of drops are Rare" (or "A gift from
-  the SJK team"; for a dormant kyber "NEW DORMANT KYBER" and "Earned from an achievement",
-  or "Earned: Centurion" when the row's note names the achievement), the tier's icon (its gem without one) in a ring that sweeps round, and the
-  burst, sparks and edge in the tier's colour, with the achievements' chime
-  (`cg_achievementSound`). It takes no input and leaves after about six seconds; one
-  arrival brings at most three cards (a reinstalled PC finding twenty shows three), and the
-  pop-up shows them all. When the pop-up opens it takes back the holocron cards still
-  showing or waiting. While it shows, the menu under it is neither drawn nor given input. A
-  medal on show or waiting goes first.
+- Until 16/11/2026 a holocron also showed once more, large, on a darkened screen, when the
+  main menu or the game menu opened (Esc), with a ceremony, "1 of 3" and Next or Close, and
+  the card in a match only said "Open the game menu to see it". Sol: "remove the big
+  notification of the holocron drops (when you press ESC), we just remove it. And
+  holocrons and other notifications should come up like an iOS notification". The
+  banner is now all there is: it shows over play and over the menus alike (the main menu
+  too), takes no input and blocks nothing.
+- Several waiting together share one banner (three or more of one kind,
+  `unlock_toast::GROUP_AT`): "NEW HOLOCRONS", "5 new holocrons", "The rarest: a Legendary
+  Holocron" (or "Every one a Rare Holocron"), "See them in Collection > Holocrons", in the
+  rarest one's colour with the count on a badge. A reinstalled PC finding twenty
+  holocrons is one banner, and holocrons that come while one waits (in a private duel,
+  say) join it. Dormant kybers fold apart from holocrons ("3 new dormant kybers").
 - `cl_holocronNotifications` (archived, default 1; Settings > General > Holocron
-  notifications, Network > SJK online in the classic views; Lukas, SJK #179) controls
-  only the live card during play. 1 (After
-  duels) gives it as above; during a private duel it waits, as every achievement, medal
-  and holocron card does (hub report #81, `unlock_toast::held_in_duel`), and plays once
-  the duel ends. 2 (Always) lets the holocron cards show during a duel too, ahead of the
-  other cards held there. 0 (Off) gives none: cards showing or waiting are taken back,
-  and those not given yet never are, so turning it back on replays nothing. In every
-  mode the holocron itself still waits and its large pop-up opens normally when the
-  player opens the game menu.
-- A dormant kyber the hub grants arrives the same way, as a gift does: "New dormant kyber",
-  "Earned from an achievement" (or "Earned: <achievement>" when the hub names it in the
-  row's note, which is then not quoted), its name, when, and "Earned from achievements.
-  Always a kyber." in place of the drop odds; its own picture
-  (`gfx/sjk/holocron_kyber_<tier>`, the atlas cells 4 to 7) since 27/10/2026, its gem only
-  when that picture is missing (until then the pop-up always drew the gem, which read as a
-  plain holocron: report 150).
-- Each arrives in a ceremony of the medal's timing and light in the tier's colour (it comes
-  down into place, rings and sparks run out, a ring of ticks turns, a glow breathes while it
-  waits, the words fade up one group after another) with the multiplayer game's fanfare
-  (`music/goodsmall.mp3`, the medals' cue; silent without game data). Enter, Space, Right,
-  Escape or a click finish the entrance, then take Next (Close on the last). The look is the
-  SJK UI's in its families, Inter until they load, and the same under the classic menus.
-- Everything is draw-list shapes of a fixed number: no allocation a frame, and a canvas of
-  320 commands holds the busiest moment.
+  notifications, Network > SJK online in the classic views; Lukas, SJK #179): 1 (After
+  duels) shows the banners; during a private duel they wait, as every reward's banner
+  does (hub report #81, `unlock_toast::held_in_duel`), and show once the duel ends. 2
+  (Always) lets the holocron banners show during a duel too, ahead of the others held
+  there. 0 (Off) shows none: banners showing or waiting are taken back, and what comes is
+  counted as shown without a banner, so turning it back on replays nothing. Tactical
+  holds the banners in a game until it is off, as every banner's
+  ([client.md](client.md#tactical-mode)); it no longer turns this setting off.
+- A dormant kyber the hub grants arrives the same way, as a gift does: "NEW DORMANT KYBER",
+  "Earned from an achievement" (or "Earned: Centurion" when the hub names the achievement
+  in the row's note, which is then not quoted), "Attune it in Collection > Holocrons", with
+  its own picture (`gfx/sjk/holocron_kyber_<tier>`, the atlas cells 4 to 7) since
+  27/10/2026, its gem only when that picture is missing (until then it always drew the gem,
+  which read as a plain holocron: report 150).
 - `holocrons_seen.txt` in the settings folder, beside `identity.key`, holds the key id and
-  the highest holocron number shown, written when a holocron's button is taken. A number
-  above it is new. With no file for the key (a reinstall, a new PC) everything the profile
-  holds is new, and the newest 20 show once, oldest first. A holocron of a tier the client
-  does not know is left out and never counted as shown. Holocron numbers only rise at the
-  hub, so a staff removal never brings an old one back.
+  the highest holocron number shown, written as a holocron's banner begins (for several,
+  the highest of them). A number above it is new. A banner held back and never shown (the
+  game closed during a duel) leaves its holocrons new for the next start. With no file
+  for the key (a reinstall, a new PC) everything the profile holds is new, and the newest
+  20 show once, on one banner. A holocron of a tier the client does not know is left out
+  and never counted as shown. Holocron numbers only rise at the hub, so a staff removal
+  never brings an old one back. A new identity takes back the banners of the one before.
 - The identity worker reads the own profile again soon (at most once every 30 seconds) when
-  a drop for the player's own key arrives in the feed, and the pop-up sees the new holocron
-  within half a second of the profile arriving.
+  a drop for the player's own key arrives in the feed, and the banner is given within half
+  a second of the profile arriving. While the Fishing toy is out, a holocron play dropped
+  waits for its bite instead ([client.md](client.md#fishing)).
 - A contributor reward's holocrons (25/10/2026, [hub-chat.md](hub-chat.md#announcements-and-reward-rounds))
   are gifts: claiming the reward brings the profile that holds them, and they arrive
-  through this pop-up as any gift does.
+  with their banner as any gift does.
 
 ### Chat lines
 
@@ -495,12 +492,12 @@ creator's ([identity.md](identity.md#staff)).
 
 `debug_holocron <tier|all> [x<count>]` (alone it lists the tiers and the odds) rehearses
 drops offline: `all` queues one of each tier, `rare x3` three of one (1 to 20). They go
-through the same queue, card (in a match), pop-up, ceremony and sound, and the first one's
+through the same queue, banner (three or more on one) and sound, and the first one's
 chat line goes into the game's feed as the player's own. A dormant kyber tier (`kyber_rare`, or
 `kyber` for one of each) rehearses a dormant kyber's arrival, earned from an achievement, with no
 chat line. `debug_open kyber_rare x3` (or `kyber`) plays a dormant kyber's attuning, each a
-droppable kyber its odds can give. The console closes so the pop-up
-shows at once on a menu, or the cards over play in a match. Nothing is sent to the hub, and rehearsed holocrons (numbered from
+droppable kyber its odds can give. The console closes so the banner shows at once, over
+a menu or over play. Nothing is sent to the hub, and rehearsed holocrons (numbered from
 4,000,000,000) are never written to `holocrons_seen.txt`.
 
 ### The Holocrons tab
@@ -630,8 +627,17 @@ rehearsal, ceremony and layout (every tier, with and without a picture, a note, 
 window shapes, in the families and in Inter); the three chat views' lines; the staff page's
 requests; the activity rules against player states. Not tried: any of it against a running
 hub (`crates/sjk-identity/tests/hub_e2e.rs` has an ignored test that needs one), in a game,
-or with the art of the tiers (the pop-up draws the gem until the pictures are mounted); the
+or with the art of the tiers (the pop-up drew the gem until the pictures were mounted); the
 input hooks and the 500 ms comparison are not covered by a test of their own.
+
+The banner in place of the pop-up (16/11/2026): `holocron_banners::tests` (one banner each,
+oldest first, once; counted as seen as its banner begins, not before; the newest twenty of a
+first read on one banner; Off counting them without one; rehearsals never written; the
+Fishing toy's Echoes) and `unlock_toast::tests` (the folding, its words, the duel's wait,
+every banner's words in its column in the families and in Inter at five window shapes,
+slid and faded); the world shots `world_shot::notify_banner_shots` (siege_hoth's bright
+sky and the main menu, at 1080p and 4K) were rendered and looked at. Not tried in a running
+client (no game window was started) or against a hub.
 
 The Holocrons tab (10/10/2026): unit tests for its keys, wheel and clicks, the stage request
 for the chosen tier (and the locked look), the data from every identity state, the twice a second
@@ -663,7 +669,7 @@ the world shot `duel6_sjk_collection` renders it from the game menu at a match's
 Dormant kybers (21/10/2026): `kyber::tests` (tiers, built-in odds and the hub's, pity line,
 rewards against the achievements, the arrival's words), the tab's data and opening
 (`crystals_are_counted_apart_and_open_on_their_own`), the shader-only strip, the
-rehearsals, the chat line and the unlock card; the world shots
+rehearsals, the chat line and the banner; the world shots
 `world_shot::holocrons_tab::duel6_sjk_kyber_crystals` (the tiles, a dormant kyber chosen and one
 held none of, its hover card, its loot table, the strip and the kyber's entrance) and
 `world_shot::collection::duel6_sjk_kyber_achievements` were rendered and looked at. Not

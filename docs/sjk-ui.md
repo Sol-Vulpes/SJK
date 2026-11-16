@@ -2700,7 +2700,7 @@ graphics read only at their start changed (Sol asked on 10/10/2026 for a warning
 reload instead of a restart, after turning Ultra low, now Vanilla graphics, on
 mid-game changed nothing). It
 shows on the main page or over the game menu, never inside Settings, so several rows
-can be changed first, and after the medal and holocron pop-ups; the menus under it are
+can be changed first, and after the medal pop-up; the menus under it are
 not drawn and take no input. The same look in every menu style, on the 16:9 frame:
 
 - **Card:** the kit's card over its scrim, 760 wide from x 580, y 372, as tall as

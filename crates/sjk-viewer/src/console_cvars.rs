@@ -840,7 +840,7 @@ pub(super) fn register_daily_cvars(cvars: &mut CvarRegistry) -> Result<(), sjk_s
             crate::unlock_toast::SOUND_CVAR,
             true,
             archive,
-            "Play the secret-area sound with the unlock cards",
+            "Play the secret-area sound with the reward banners (achievements, medals, holocrons)",
         ),
         CvarDefinition::new(
             crate::player_trades::SIZE_CVAR,
@@ -849,10 +849,10 @@ pub(super) fn register_daily_cvars(cvars: &mut CvarRegistry) -> Result<(), sjk_s
             "Size of the trade window: 0 small, 1 normal (default), 2 large",
         ),
         CvarDefinition::new(
-            crate::holocron_popup::NOTIFICATIONS_CVAR,
-            crate::holocron_popup::NOTIFICATIONS_DEFAULT,
+            crate::holocron_banners::NOTIFICATIONS_CVAR,
+            crate::holocron_banners::NOTIFICATIONS_DEFAULT,
             archive,
-            "Holocron unlock cards during play: 0 off, 1 on, held during a private duel until it ends (default), 2 always, duels included (the game menu still shows the holocron)",
+            "Holocron banners at the top of the screen: 0 off (new holocrons counted as seen without one), 1 on, held during a private duel until it ends (default), 2 always, duels included",
         ),
         // Stock defaults and units: `sensitivity` 5 scaling `m_yaw`/`m_pitch`
         // degrees per mouse count (`cl_main.cpp:2774,2802-2803`, applied in

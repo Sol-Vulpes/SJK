@@ -1,8 +1,8 @@
 //! `debug_holocron`: rehearse receiving holocrons without the hub (`docs/holocrons.md`).
-//! It makes holocrons as a hub profile would list them, which the drop pop-up queues like
-//! a real arrival, so the centre print in a match, the pop-up on a menu, its ceremony,
-//! the fanfare, "1 of 3" and Next can all be tried offline; one chat line of the first
-//! tier also goes into the game's chat feed.
+//! It makes holocrons as a hub profile would list them, which the drops' banners queue like
+//! a real arrival, so the banner (one, or several folded into one), its colour and its
+//! sound can be tried offline, over play or a menu; one chat line of the first tier also
+//! goes into the game's chat feed.
 //!
 //! Nothing is sent: the command never reaches the identity service. Rehearsed holocrons
 //! are not written to `holocrons_seen.txt`, so a holocron the hub drops later still shows.
@@ -10,7 +10,7 @@
 //! ```text
 //! debug_holocron                 the tiers and how to use it
 //! debug_holocron rare            one Rare Holocron
-//! debug_holocron mythical x3     three Mythical Holocrons, one after another
+//! debug_holocron mythical x3     three Mythical Holocrons, on one banner
 //! debug_holocron all             one of every tier
 //! debug_holocron kyber_rare      one Rare Kyber Crystal, earned from an achievement
 //! debug_holocron kyber           one kyber crystal of every tier
@@ -38,7 +38,7 @@ pub(crate) const FIRST_ID: u64 = 4_000_000_000;
 pub(crate) fn listing() -> Vec<String> {
     let mut lines = vec![
         format!("usage: {COMMAND} <tier|all> [x<count>]"),
-        "Shows holocrons as if the hub had just dropped them: the pop-up on the main menu or the game menu (a centre print during a match), with its ceremony and sound. Nothing is sent to the SJK hub and holocrons_seen.txt is not changed.".to_owned(),
+        "Shows holocrons as if the hub had just dropped them: their banner at the top of the screen, over play or a menu, with its sound (three or more share one banner). Nothing is sent to the SJK hub and holocrons_seen.txt is not changed.".to_owned(),
     ];
     for tier in &TIERS {
         lines.push(format!(
@@ -128,7 +128,8 @@ pub(crate) fn queued(entries: &[Entry]) -> Vec<String> {
     let names: Vec<&str> = entries.iter().map(|entry| entry.tier.name).collect();
     vec![
         format!("Rehearsing: {}.", names.join(", ")),
-        "It shows on the main menu or when the game menu opens (a centre print says so during a match). Nothing is sent to the SJK hub.".to_owned(),
+        "Its banner comes down from the top of the screen. Nothing is sent to the SJK hub."
+            .to_owned(),
     ]
 }
 
@@ -186,7 +187,7 @@ mod tests {
         let one = parse(&words("kyber_rare x2"), NOW, 1).unwrap();
         assert_eq!(tiers_of(&one), ["kyber_rare"; 2]);
         assert!(one.iter().all(|entry| entry.earned && !entry.gift));
-        assert_eq!(one[0].when(), "Earned 10/10/2026 14:05");
+        assert_eq!(one[0].dropped, NOW);
         let all = parse(&words("KYBER"), NOW, 1).unwrap();
         assert_eq!(
             tiers_of(&all),

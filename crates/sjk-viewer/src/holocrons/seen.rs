@@ -1,9 +1,9 @@
-//! Which of the player's own holocrons the drop pop-up has shown
-//! (`holocron_popup.rs`): `holocrons_seen.txt` in the settings folder, beside
+//! Which of the player's own holocrons the drops' banners have shown
+//! (`holocron_banners.rs`): `holocrons_seen.txt` in the settings folder, beside
 //! `identity.key`. Holocron numbers at the hub only rise, so the file keeps the highest
 //! one shown; a holocron with a higher number is new. The file names the key it belongs
 //! to, so a new identity sees its own. With no file for the key (a reinstall, a new PC),
-//! everything the profile holds is new, as medals are: the pop-up shows the newest
+//! everything the profile holds is new, as medals are: one banner tells of the newest
 //! [`super::FIRST_READ_MAX`] of them once.
 //!
 //! ```text
@@ -24,7 +24,7 @@ pub(crate) struct Seen {
     key_id: String,
     /// The highest holocron number shown; 0 when none.
     highest: u64,
-    /// A file for this key was read, or a holocron was marked since: the pop-up has
+    /// A file for this key was read, or a holocron was marked since: the banners have
     /// been through this identity's holocrons before.
     known: bool,
 }
@@ -67,7 +67,7 @@ impl Seen {
         &self.key_id
     }
 
-    /// Whether this identity's holocrons have been through the pop-up before.
+    /// Whether this identity's holocrons have been through the banners before.
     #[cfg(test)]
     pub(crate) fn known(&self) -> bool {
         self.known

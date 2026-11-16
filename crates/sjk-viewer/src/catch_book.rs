@@ -9,7 +9,7 @@
 //!   <yyyymmdd>` line (three words, which logs before it and older clients skip, as
 //!   they do `sold`); catches from before it have no day.
 //! - **Rare catches.** A rare fish ([`crate::fishing::is_rare`]) or ore
-//!   ([`crate::mining::is_rare`]) brings the unlock pop-up's card ("RARE CATCH", "RARE
+//!   ([`crate::mining::is_rare`]) brings a notification banner ("RARE CATCH", "RARE
 //!   FIND", [`crate::unlock_toast::Unlock::RareCatch`]) besides its centre line, with
 //!   the single-player game's secret-area sound in the toy's own sounds.
 //! - **Sharing.** `fishing_brag` and `mining_brag` (and the log book's Share button) say
