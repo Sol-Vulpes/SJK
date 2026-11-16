@@ -375,7 +375,9 @@ includes:
 - Create game and its map picker, the Import page and the test list in the SJK look in
   every style;
 - smoother play: players' models and their pipelines prepared off the render thread,
-  saber definitions read once a map, settings saved off the main thread and a hitch log;
+  saber definitions read once a map, settings saved off the main thread and a hitch log,
+  and a model's glow light worked out once on its loader (no freeze for big glowing
+  models);
 - lighting that stops at walls (per-light shadow tiles), doors and lifts that block
   lamps, and a faster JoFTemple;
 - the invisible-brush view (`r_showBrushes`): clip, trigger, ladder, nodrop and the

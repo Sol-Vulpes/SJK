@@ -759,6 +759,14 @@ loader does (`world_texture_prepare.rs`). Built on the render thread, a chain co
 182 ms hitches for two player models in Sol's log, with their pipelines already off
 the thread.
 
+The materials are still compiled twice, by the worker and on the render thread, and a
+glowing stage's emission (`world_emission.rs`: its additive mean and its area reduction)
+used to read every pixel both times. The old Creyon wolf's 4096x4096 eye glow
+(`sjk_creyonwolf`) cost 140 to 200 ms on the render thread after its warm-up, and a 719 ms
+`config-refresh` hitch in Sol's 16/11/2026 log. An image of 1024x1024 pixels or more now
+keeps those scans (`emission_memo.rs`, keyed by the decoded image and a weak reference to
+it, 64 images at most), so the render thread takes the worker's.
+
 Players' models now go up as models a server names do: one prepared texture a frame,
 then the materials and geometry ([player_loads.rs](../crates/sjk-viewer/src/player_loads.rs)).
 All of a model's textures in one frame were the `config-refresh` hitches of Slash's
