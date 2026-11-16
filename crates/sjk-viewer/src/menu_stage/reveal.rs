@@ -2,6 +2,9 @@
 //! the saber on its own holds a New kyber not looked at yet its blade stays out, the hilt
 //! alone; the first look lights it, the blade running hilt to tip as a match's does, with
 //! the kyber's own ignition sound (the hilt's, else the stock one, as the Saber Lab's).
+//! Only until the blade has been lit on the page: a lit blade is not put out for a New kyber
+//! the choice comes to (16/11/2026: walking the wall across New and seen kybers put it out
+//! and lit it again at every step, a flicker); that kyber's first look lights it again.
 
 use super::*;
 use crate::GameAudio;
@@ -12,6 +15,8 @@ use crate::console::collection_panel::{StageWish, reveal::IGNITE_MS};
 pub(super) struct Reveal {
     /// The blade stays out: a New kyber waits for its first look.
     held_off: bool,
+    /// The blade has been lit since the page showed: no New kyber puts it out again.
+    lit_once: bool,
     /// The ignitions the page asked for, as last seen (`None` before the page was seen,
     /// so opening it lights nothing).
     seen: Option<u32>,
@@ -27,9 +32,11 @@ impl Reveal {
         let Some(wish) = wish.filter(|wish| wish.saber.is_some() && wish.lab.is_none()) else {
             self.held_off = false;
             self.lighting_until = None;
+            self.lit_once = false;
             return;
         };
-        self.held_off = wish.held_off;
+        self.held_off = wish.held_off && !self.lit_once;
+        self.lit_once |= !wish.held_off;
         if self.seen.is_some_and(|seen| seen != wish.ignite) {
             // Lit from the next frame the sabers are drawn ([`Self::lit`]).
             self.lighting_until = Some(i64::MIN);
@@ -139,5 +146,32 @@ mod tests {
         reveal.follow(Some(&wish(true, 4)));
         reveal.follow(None);
         assert_eq!(reveal.lit(6_000), None);
+    }
+
+    /// Walking the wall across New and seen kybers: once the blade is lit, a New kyber the
+    /// choice comes to leaves it lit (its first look lights it again); New kybers before
+    /// the blade was ever lit on the page keep it out.
+    #[test]
+    fn a_lit_blade_stays_lit_across_new_kybers() {
+        let mut reveal = Reveal::default();
+        reveal.follow(Some(&wish(true, 0)));
+        assert_eq!(reveal.lit(0), Some(false), "opened on a New kyber");
+        reveal.follow(Some(&wish(true, 0)));
+        assert_eq!(reveal.lit(16), Some(false), "another New one: still out");
+        reveal.follow(Some(&wish(false, 0)));
+        assert_eq!(reveal.lit(32), None, "a seen one: lit");
+        for step in 0..6 {
+            reveal.follow(Some(&wish(step % 2 == 0, 0)));
+            assert_eq!(reveal.lit(48 + step * 16), None, "step {step}: stays lit");
+        }
+        reveal.follow(Some(&wish(false, 1)));
+        assert_eq!(
+            reveal.lit(200),
+            Some(true),
+            "its first look lights it again"
+        );
+        reveal.follow(None);
+        reveal.follow(Some(&wish(true, 1)));
+        assert_eq!(reveal.lit(9_000), Some(false), "the page again: held");
     }
 }

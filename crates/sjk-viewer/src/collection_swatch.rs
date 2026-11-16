@@ -351,11 +351,17 @@ fn upright_picture(
     } else {
         DIMMED
     };
-    // The picture fading out, then the next fading in over it.
-    let crossfade = shown.mix > 0.004 && shown.to != shown.from;
-    for (texture, share) in [(shown.from, 1.0), (shown.to, shown.mix)] {
-        if share < 1.0 && !crossfade {
-            break;
+    // The picture fading out as the next fades in. The UI adds loops as light, so their
+    // shares sum to one (16/11/2026: the first drawn whole under the next made every blade
+    // swell to twice its light and drop back ten times a second, a flicker).
+    let mix = if shown.to == shown.from {
+        0.0
+    } else {
+        shown.mix.clamp(0.0, 1.0)
+    };
+    for (texture, share) in [(shown.from, 1.0 - mix), (shown.to, mix)] {
+        if share <= 0.004 {
+            continue;
         }
         push(
             canvas,
@@ -1536,6 +1542,36 @@ mod tests {
             0.0,
         );
         (shown, canvas.commands().to_vec())
+    }
+
+    /// The UI adds a loop's pictures as light: crossfading, their shares sum to one at every
+    /// moment, so a blade never swells as one picture fades into the next (16/11/2026).
+    #[test]
+    fn a_loop_crossfades_with_its_light_kept_whole() {
+        let from = crate::blade_stills::texture(3, false);
+        let to = crate::blade_stills::texture(4, false);
+        for mix in [0.0, 0.001, 0.25, 0.5, 0.75, 0.999] {
+            let mut canvas = DrawList::new(8);
+            let frame = Frame::new([1920.0, 1080.0]);
+            let shown = crate::blade_stills::Shown { from, to, mix };
+            upright_picture(
+                &mut canvas,
+                &frame,
+                shown,
+                true,
+                [100.0, 100.0, 380.0, 40.0],
+                [180.0, 120.0, 4.0, 1.8],
+            );
+            let light: f32 = canvas
+                .commands()
+                .iter()
+                .map(|command| match command {
+                    DrawCommand::TexturedQuadUv { color, .. } => color.a,
+                    _ => 0.0,
+                })
+                .sum();
+            assert!((light - 1.0).abs() < 0.005, "{mix}: {light}");
+        }
     }
 
     #[test]

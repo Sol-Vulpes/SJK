@@ -518,6 +518,9 @@ impl crate::GpuState {
                 .set_blade_pictures(&self.device, &target.display);
             self.blade_pictures = Some(target);
         }
+        // The pictures and loops are drawn at their own moments: the clock the world's and
+        // the stage's blades stamped stays for what follows it (a surging trail's colour).
+        let stamped = crate::saber::animation_seconds();
         let mut blades = std::mem::take(&mut self.blade_stills.instances);
         blades.clear();
         let mut drawn = [false; SLOTS];
@@ -547,6 +550,7 @@ impl crate::GpuState {
             }
         }
         let baked = Self::push_still_blades(&bakes, &mut blades, PER_SLOT);
+        crate::saber::restore_animation_seconds(stamped);
         self.saber_gpu.prepare_pictures(&self.queue, &mut blades);
         let any_blade = !blades.is_empty();
         self.blade_stills.instances = blades;

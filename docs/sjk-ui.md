@@ -2318,7 +2318,10 @@ leaving a page stay quiet).
 - **Kybers:** while the Kybers tab's saber on its own holds a New kyber not looked at yet,
   its blade stays out, the hilt alone (`StageWish::held_off`); the first look lights it,
   hilt to tip as a match's does, with the kyber's own ignition (the hilt's, else the stock
-  `saberon`), as the Saber Lab plays it.
+  `saberon`), as the Saber Lab plays it. Only until the blade has been lit on the page
+  (`menu_stage/reveal.rs`, 16/11/2026: walking the wall across New and seen kybers put it
+  out and lit it again at every step, a flicker): a lit blade stays lit when the choice
+  comes to a New kyber, and that kyber's first look lights it again from the hilt.
 - **Cards:** the card up close turns over to face the player (450 ms, the card look's
   `turn`).
 - **Every kind:** the thing's tier frame (a Kybers wall tile, the Forge's tile or row, a
