@@ -1770,7 +1770,13 @@ Holocrons tab's Shop, a blade card's Forge link) open that kind directly.
   nothing. World shot:
   `world_shot_collection::duel6_sjk_collection_hall` (16:9, 4:3, 21:9 with the Forge's
   tile chosen, 4K at `ui_textScale 1.4`, the Kybers tile half way into its page, then the
-  Kybers page under its breadcrumb).
+  Kybers page under its breadcrumb). Before a release,
+  `world_shot_collection::qa_shots::duel6_collection_qa` renders every page (the hall,
+  Honors, Achievements, the Kybers wall and list, Toys, Tags, Echoes, the Forge, Cards,
+  History, the Inventory and its card) on one rich profile at 1024 x 768, 1600 x 1200,
+  1080p, 21:9 and 4K once their loops are in, then at 1080p in the low-memory mode and on
+  a profile holding nothing, and times each page at 1080p and 4K (host median and worst,
+  the menus' phase); `SJK_QA_SIZES` picks widths, files `qa-<size>-<page>`.
 - **Top:** the way back and "Collection" as the title; at the top right how many of
   all things the player holds ("15 of 30 collected") over a thin bar as wide as
   those words, a stretch to each tab in the tabs' order, filled gold as far as that

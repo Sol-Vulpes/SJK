@@ -1,3 +1,25 @@
+## Collection release check (16/11/2026)
+
+16/11/2026, `personal/collection-qa` from `main` `d306a0f2e` (Sol: "make sure all is
+optimized, looks good, all the new stuffs we will activate work"). A new world shot,
+`duel6_collection_qa` (`world_shot_collection_qa.rs`), renders every Collection page on one
+rich profile at 1024 x 768, 1600 x 1200, 1080p, 21:9 and 4K, once its kyber loops are in,
+then at 1080p in the low-memory mode and on a profile holding nothing, and times each page.
+Looked at: no text cut or overlapping, no tile without its blades (the blank strips of the
+earlier 4:3 and 21:9 hall shots were stills not baked yet), the empty states and the
+identity-off states (Forge, Echoes) clean. Fixed: the hall's Cards tile read the profile's
+cards apart from the Cards tab and the Inventory, so a shot's cards showed "No cards yet"
+there; it now reads the same stacks and counts its copies from them (in a game both came
+from the hub, so nothing changed there). A unit test opens every hall tile and comes back
+on it with Escape. Timings (release, RTX 5080, host time a frame, the GPU left to run; the
+menus' own phase in brackets): 1080p 0.5 to 1.7 ms (0.01 to 0.4), 4K 0.9 to 1.5 ms (0.01 to
+0.3), the hall's tile growing into the Kybers page 0.9 ms; worst frames 2.3 ms once loops
+and pipelines were built (a first run, building every signature pipeline, had single frames
+of 22 to 50 ms). Left: at 1024 x 768 the pages keep the 16:9 frame fitted to the width
+(empty bands above and below, small text); the hall alone reflows. At that size thin glyphs
+of the body text (an "i", the middle dot) drop out: the game fonts are drawn from a coverage
+atlas, a renderer matter beyond the Collection.
+
 ## Collection speed and straight kyber loops (15/11/2026)
 
 15/11/2026, `personal/collection-perf` from `main` `63da62e28` (Sol: "quite laggy atm even for
