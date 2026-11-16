@@ -2636,12 +2636,20 @@ impl GpuState {
             ]
             .map(|element| hud_offsets.get(element)),
         );
+        let hud_text_font = self
+            .classic_hud_font
+            .as_ref()
+            .filter(|_| classic_hud)
+            .unwrap_or(&self.ui_font);
+        let blocks = self
+            .menu_hud
+            .block_bounds(viewport, hud_scale, hud_text_font);
         for (element, bounds) in [
             hud::placement::Element::Vitals,
             hud::placement::Element::Force,
         ]
         .into_iter()
-        .zip(self.menu_hud.block_bounds(viewport, hud_scale))
+        .zip(blocks)
         {
             self.hud.element_bounds.add(element, bounds);
         }

@@ -239,7 +239,7 @@ did: JA+ server mode: SJK's server runs as a JA+ 2.4 B7 server with g_mod japlus
 did: JA+ server mode: its emotes, grappling hook and admins, who log in with their SJK key (after VisionJK)
 did: Lights in map edits: lights added, moved and recoloured for every player, map lamps turned off or moved
 did: Door and lift shadows on lamp light within a fixed budget a frame: no more stutter when they move
-did: A status bar with your credits, blade, effects and toys, at the top or bottom of the screen
+did: A status bar with your credits, kyber, effects and toys, on by default at the bottom of the screen
 link: https://github.com/Sol-Vulpes/SJK
 link: https://sol-vulpes.github.io/SJK/
 

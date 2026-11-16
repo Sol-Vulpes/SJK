@@ -574,6 +574,12 @@ impl HudOverlay {
     /// the player's `cg_hudScale` on top of the resolution-derived scale.
     /// The match clock to show in the upper right under the frame rate, as JoF EJK's
     /// `CG_DrawTimer` does, when it shows ([`Self::layout`] decides each frame).
+    /// Whether the warmup line ("WAITING FOR PLAYERS", "STARTS IN") has words this frame:
+    /// the status bar steps aside from the top's middle while it does (`status_bar.rs`).
+    pub(crate) fn warmup_shown(&self) -> bool {
+        !self.warmup_text.is_empty()
+    }
+
     pub(crate) fn upper_right_timer(&self) -> Option<&str> {
         self.upper_right_timer.then_some(self.match_timer.as_str())
     }

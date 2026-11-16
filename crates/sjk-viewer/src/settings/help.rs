@@ -104,9 +104,8 @@ const CHOICE_NAMES: &[(&str, &str, &str)] = &[
     (crate::hud::clock::CVAR, "1", "Time"),
     (crate::hud::clock::CVAR, "2", "Time and date"),
     (crate::hud::clock::CVAR, "3", "Date"),
-    (crate::status_bar::CVAR, "0", "Off"),
-    (crate::status_bar::CVAR, "1", "Top"),
-    (crate::status_bar::CVAR, "2", "Bottom"),
+    (crate::status_bar::POSITION_CVAR, "0", "Bottom"),
+    (crate::status_bar::POSITION_CVAR, "1", "Top"),
     (
         crate::chat::incoming_color::CVAR,
         "0",
@@ -1670,7 +1669,11 @@ const HELP: &[(&str, &str)] = &[
     ),
     (
         crate::status_bar::CVAR,
-        "A compact bar at the top or bottom of the screen with your credits, kyber, effects and toys. Choose what it shows below.",
+        "A compact bar over play with your money, your kyber, what is on and your toys. Choose what it shows below.",
+    ),
+    (
+        crate::status_bar::POSITION_CVAR,
+        "Where the status bar stands: at the bottom between the HUD's corners, or at the top under the match timer.",
     ),
     (
         crate::status_bar::CREDITS_CVAR,

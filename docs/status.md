@@ -154,6 +154,30 @@ world shots (top, bottom, 4K at `ui_textScale 1.4`, made-up numbers). Not tried 
 the hub's numbers, the toys' switches and the hiding under menus and the scoreboard are
 unseen live.
 
+## Status bar on by default (16/11/2026)
+
+16/11/2026, `personal/status-bar-2` based on `main` `d306a0f2e` (Sol: "do a default on and
+when we publish they have toggle to turn it off in the news. make icons rather than text
+for the coins, credits etc."). `cg_statusBar` is now the switch (on), `cg_statusBarPosition`
+the place (0 bottom, the default; 1 top), and the release offers the switch again in the
+News panel (`= cg_statusBar reset` under Unreleased: a profile saved by a main build holds
+the old `0`, which would keep it off unchosen). The money is an icon and its number (the
+credits' sign, the kyber shard, the best held tier's dormant kyber picture, a red DOOM coin
+drawn from shapes), the kyber has its tier's diamonds. The bottom is the default because the
+top's middle holds the match timer (`cg_drawTimer` on, `default.json` `match_timer`). The bar
+keeps clear of the HUD from `hud::placement::Bounds` (the menu HUD's blocks now count their
+text runs, the score line among them, which also widens their `hud_edit` boxes), steps aside
+while the weapon, Force or item selector shows (bottom) or a vote or the warmup line (top),
+drops the toys under Tactical mode and hides over demos. It is laid out again only when
+what it shows, its switches, place or the screen change. Release timings
+(`status_bar_cost`, every part showing, 2 000 frames): 6.5 us a frame kept and 8.7 us laid
+out at 1080p, 5.8 and 7.4 us at 4K. Verified: `cargo test -p sjk-viewer status_bar`
+(defaults, position, placement beside and past HUD boxes, stacked boxes, coin, best dormant
+tier), the changelog and settings tests, and the `status_bar_shots`, `status_bar_on_a_demo`
+(game, classic and radial HUDs at 4:3, 16:9, 21:9 and 4K) and `status_bar_in_the_news`
+world shots. Not tried in a game: the hub's numbers live, the selectors' give-way, a vote,
+the warmup line, JoF and JA+ HUD packs.
+
 ## Collection without its Nameplates tab (15/11/2026)
 
 15/11/2026, `personal/collection-no-nameplates` based on `main` `aacf7c07e` (Sol's request).

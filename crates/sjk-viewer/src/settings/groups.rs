@@ -621,6 +621,7 @@ impl Group {
                 "cg_killfeed",
                 crate::ground_hud::CVAR,
                 crate::status_bar::CVAR,
+                crate::status_bar::POSITION_CVAR,
                 crate::status_bar::CREDITS_CVAR,
                 crate::status_bar::SHARDS_CVAR,
                 crate::status_bar::CRYSTALS_CVAR,

@@ -36,7 +36,7 @@ mod parse;
 pub(crate) mod preview;
 
 use crate::GpuState;
-use frame::{Frame, Readout, Timers, VehicleReadout};
+use frame::{Block, Frame, Readout, Timers, VehicleReadout};
 use layout::{Layout, Side};
 use sjk_shell::{CvarDefinition, CvarFlags, CvarRegistry};
 use sjk_vfs::{MountId, MountSummary, VirtualFileSystem};
@@ -424,30 +424,48 @@ impl MenuHud {
             .prepare(queue, self.drawn.then_some(&self.frame), viewport, scale);
     }
 
-    /// The boxes, in pixels, round the pictures the menu HUD's left and right blocks
-    /// drew this frame, for the HUD edit mode.
-    pub(crate) fn block_bounds(&self, viewport: [f32; 2], scale: f32) -> [Option<sjk_ui::Rect>; 2] {
+    /// The boxes, in pixels, round what the menu HUD's left and right blocks drew this
+    /// frame: their pictures and their text runs (the score line, the text HUD's strings)
+    /// in `font`, the one [`Self::append_text`] draws them in. For the HUD edit mode, and
+    /// for the status bar, which keeps clear of them (`status_bar.rs`).
+    pub(crate) fn block_bounds(
+        &self,
+        viewport: [f32; 2],
+        scale: f32,
+        font: &crate::text::UiFont,
+    ) -> [Option<sjk_ui::Rect>; 2] {
         std::array::from_fn(|block| {
             if !self.drawn {
                 return None;
             }
-            let range = self.frame.blocks[block].pictures.clone();
-            self.frame
-                .pictures
-                .get(range)?
-                .iter()
-                .map(|picture| {
-                    let [x, y, width, height] =
-                        gpu::to_pixels(picture.rect, picture.side, viewport, scale);
-                    // A right menu's rectangles run leftwards (negative widths).
-                    sjk_ui::Rect::new(
-                        x.min(x + width),
-                        y.min(y + height),
-                        width.abs(),
-                        height.abs(),
-                    )
-                })
-                .reduce(sjk_ui::Rect::union)
+            let Block { pictures, texts } = self.frame.blocks[block].clone();
+            let pictures = self.frame.pictures.get(pictures).unwrap_or(&[]);
+            let texts = self.frame.texts[..self.frame.text_count]
+                .get(texts)
+                .unwrap_or(&[]);
+            let pictures = pictures.iter().map(|picture| {
+                let [x, y, width, height] =
+                    gpu::to_pixels(picture.rect, picture.side, viewport, scale);
+                // A right menu's rectangles run leftwards (negative widths).
+                sjk_ui::Rect::new(
+                    x.min(x + width),
+                    y.min(y + height),
+                    width.abs(),
+                    height.abs(),
+                )
+            });
+            let texts = texts.iter().map(|run| {
+                let ([x, y], glyph_scale) = run_origin(run, font, viewport, scale);
+                let width = crate::text::visible_text_width_style(
+                    font,
+                    &run.text,
+                    glyph_scale,
+                    crate::text::TextFace::Regular,
+                    0.0,
+                );
+                sjk_ui::Rect::new(x, y, width, font.height * glyph_scale)
+            });
+            pictures.chain(texts).reduce(sjk_ui::Rect::union)
         })
     }
 

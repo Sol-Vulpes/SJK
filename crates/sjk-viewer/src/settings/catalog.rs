@@ -583,7 +583,12 @@ pub(super) const HUD_OPTIONS: &[Setting] = &[
     Setting {
         label: "Status bar",
         cvar: crate::status_bar::CVAR,
-        kind: ValueKind::Choice(&["0", "1", "2"]),
+        kind: ValueKind::Bool,
+    },
+    Setting {
+        label: "Status bar: position",
+        cvar: crate::status_bar::POSITION_CVAR,
+        kind: ValueKind::Choice(&["0", "1"]),
     },
     Setting {
         label: "Status bar: credits",
