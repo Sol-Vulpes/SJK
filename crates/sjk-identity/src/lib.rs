@@ -12,6 +12,7 @@ pub mod assets;
 pub mod avatar;
 pub mod ban;
 pub mod bio;
+pub mod catch;
 pub mod channels;
 pub mod chat;
 pub mod crash;
@@ -69,8 +70,8 @@ pub use service::{
 };
 pub use staff::{
     ChatBanRow, Found, GiftLog, GiftRow, OpenedText, Playing, SearchScope, StaffAnswer, StaffQuery,
-    StaffRequest, StaffState, TranslationAsks, TranslationLanguage, TranslationPeople,
-    TranslationStats,
+    StaffRequest, StaffState, ToyPlayer, ToyStats, ToyUse, ToyWindows, TranslationAsks,
+    TranslationLanguage, TranslationPeople, TranslationStats,
 };
 pub use trades::{
     PlayerTrade, TradeAnswer, TradeEvent, TradeItem, TradePartner, TradeRules, TradeSide,

@@ -555,7 +555,9 @@ pub trait Hub: Send {
     ) -> Result<(), HubError>;
     /// [`Hub::claim`] with what the player did since the last accepted claim (`play`,
     /// 03/11/2026: the hub counts the time by real play), sent only with `active`. A hub
-    /// client that does not send signals claims without them.
+    /// client that does not send signals claims without them. Answers what the claim's
+    /// answer brought beside its `ttl` (since 15/11/2026: a kyber find, the day's catch
+    /// quests; [`crate::catch`]).
     fn claim_with(
         &mut self,
         identity: &Identity,
@@ -564,8 +566,9 @@ pub trait Hub: Send {
         name: &str,
         active: bool,
         _play: Option<&crate::wire::PlaySignals>,
-    ) -> Result<(), HubError> {
+    ) -> Result<crate::catch::ClaimExtras, HubError> {
         self.claim(identity, server, slot, name, active)
+            .map(|()| crate::catch::ClaimExtras::default())
     }
     /// How far the identity's key is from its next holocron (`GET /v1/holocrons`).
     fn holocrons(&mut self, _identity: &Identity) -> Result<HolocronState, HubError> {
@@ -1806,6 +1809,7 @@ fn staff_query_call(query: &StaffQuery) -> (&'static str, Value) {
         StaffQuery::ChatBans => ("/v1/staff/chat-bans", json!({})),
         StaffQuery::Gifts => ("/v1/staff/gifts", json!({})),
         StaffQuery::Translation => ("/v1/staff/translation", json!({})),
+        StaffQuery::Toys => ("/v1/staff/toys", json!({})),
     }
 }
 
@@ -2002,6 +2006,7 @@ impl Hub for HttpHub {
             StaffQuery::Translation => {
                 StaffAnswer::Translation(parse::<crate::staff::TranslationStats>(answer)?)
             }
+            StaffQuery::Toys => StaffAnswer::Toys(parse::<crate::staff::ToyStats>(answer)?),
         })
     }
 
@@ -2103,6 +2108,7 @@ impl Hub for HttpHub {
         active: bool,
     ) -> Result<(), HubError> {
         self.claim_with(identity, server, slot, name, active, None)
+            .map(|_| ())
     }
 
     fn claim_with(
@@ -2113,10 +2119,10 @@ impl Hub for HttpHub {
         name: &str,
         active: bool,
         play: Option<&crate::wire::PlaySignals>,
-    ) -> Result<(), HubError> {
+    ) -> Result<crate::catch::ClaimExtras, HubError> {
         let body = claim_body_with(server, slot, name, active, play);
         self.send(Some(identity), "POST", "/v1/claim", Some(body))
-            .map(|_| ())
+            .map(|answer| crate::catch::ClaimExtras::of(&answer))
     }
 
     fn holocrons(&mut self, identity: &Identity) -> Result<HolocronState, HubError> {
@@ -3369,6 +3375,35 @@ mod tests {
         let off: crate::staff::TranslationStats =
             parse(json!({"budget": null, "languages": []})).unwrap();
         assert_eq!(off.budget, None, "translation off");
+        // The toy counts, as the hub's PROTOCOL.md "Toys" sends them.
+        assert_eq!(
+            staff_query_call(&StaffQuery::Toys),
+            ("/v1/staff/toys", json!({}))
+        );
+        let toys: crate::staff::ToyStats = parse(json!({
+            "people": 12,
+            "toys": [{"toy": "fishing", "people": {"day": 3, "week": 8, "month": 11},
+                      "secs": {"day": 5_400, "week": 36_000, "month": 90_000}, "uses": 41,
+                      "top": [{"key_id": "0123456789abcdef", "name": "^1Fox",
+                               "secs": 12_000, "uses": 9},
+                              {"key_id": "fedcba9876543210", "name": "",
+                               "secs": 600, "uses": 1}]}]
+        }))
+        .unwrap();
+        assert_eq!(toys.people, 12);
+        assert_eq!(toys.toys[0].toy, "fishing");
+        assert_eq!(
+            (toys.toys[0].people.week, toys.toys[0].secs.month),
+            (8, 90_000)
+        );
+        assert_eq!(toys.toys[0].uses, 41);
+        assert_eq!(
+            (toys.toys[0].top[0].secs, toys.toys[0].top[0].uses),
+            (12_000, 9)
+        );
+        assert_eq!(toys.toys[0].top[1].name, "", "a removed player");
+        let none: crate::staff::ToyStats = parse(json!({"people": 0, "toys": []})).unwrap();
+        assert!(none.toys.is_empty());
     }
 
     #[test]
@@ -3669,7 +3704,7 @@ mod tests {
             claim_body_with("1.2.3.4:29070", 3, "Sol", true, Some(&play)),
             json!({"server": "1.2.3.4:29070", "slot": 3, "name": "Sol", "active": true,
                 "play": {"moved": 900, "attacks": 3, "hits": 2, "hurt": 0, "kills": 0,
-                    "deaths": 0, "bites": 0}})
+                    "deaths": 0, "bites": 0, "rocks": 0}})
         );
         assert_eq!(
             claim_body_with("1.2.3.4:29070", 3, "Sol", false, Some(&play)),

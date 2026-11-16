@@ -201,6 +201,14 @@ pub(super) const COMMANDS: &[(&str, &str)] = &[
         crate::quick_wheel::GIF_RUN_COMMAND,
         crate::quick_wheel::GIF_RUN_HELP,
     ),
+    (
+        crate::devmap_bar::HOLD_COMMAND,
+        crate::devmap_bar::HOLD_HELP,
+    ),
+    (
+        crate::devmap_bar::RELEASE_COMMAND,
+        crate::devmap_bar::RELEASE_HELP,
+    ),
     (crate::weather::COMMAND, crate::weather::HELP),
     (super::changelog::COMMAND, super::changelog::HELP),
     (crate::saber_lab::COMMAND, crate::saber_lab::HELP),
@@ -328,6 +336,10 @@ pub(super) const COMMANDS: &[(&str, &str)] = &[
     (
         crate::hud::VOTE_PREVIEW_COMMAND,
         crate::hud::VOTE_PREVIEW_HELP,
+    ),
+    (
+        crate::hud::POLL_PREVIEW_COMMAND,
+        crate::hud::POLL_PREVIEW_HELP,
     ),
     (crate::map_edits::SYNC_COMMAND, crate::map_edits::SYNC_HELP),
     (crate::emote_help::COMMAND, crate::emote_help::HELP),
@@ -1325,6 +1337,8 @@ impl crate::GpuState {
                 return self.release_quick_wheel();
             }
             crate::quick_wheel::GIF_OPEN_COMMAND => return self.open_gif_wheel(),
+            crate::devmap_bar::HOLD_COMMAND => return self.hold_devmap_bar(),
+            crate::devmap_bar::RELEASE_COMMAND => return self.release_devmap_bar(),
             crate::console::SJK_SAY_COMMAND => {
                 let console = self.console.as_mut().ok_or("Console unavailable")?;
                 return console.sjk_say_command(args);
@@ -1409,6 +1423,9 @@ impl crate::GpuState {
             crate::hud_edit::COMMAND => return self.hud_edit_command(args),
             crate::hud::VOTE_PREVIEW_COMMAND => {
                 return self.hud.preview_vote_command(args).map(|line| vec![line]);
+            }
+            crate::hud::POLL_PREVIEW_COMMAND => {
+                return self.hud.preview_poll_command(args).map(|line| vec![line]);
             }
             crate::map_edits::SYNC_COMMAND => return self.map_edits_sync_command(),
             crate::emote_help::COMMAND => return self.emote_help_command(),

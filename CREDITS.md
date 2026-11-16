@@ -854,7 +854,7 @@ merged into SJK
 - #306 long game-chat messages sent whole, as up to four messages split at a word; at the
   merge a draft refused past four pieces stays in the composer.
 
-Slash ([JoFSlash](https://github.com/JoFSlash)), contributor, has 152 pull requests merged
+Slash ([JoFSlash](https://github.com/JoFSlash)), contributor, has 159 pull requests merged
 into SJK ([all of them](https://github.com/Sol-Vulpes/SJK/pulls?q=is%3Apr+author%3AJoFSlash)):
 
 - #114 Tab completes the cfg file argument of `exec`, `execq`, `writeconfig` and `write`
@@ -1121,6 +1121,19 @@ medal pictures carry their own labels in `vram` and crash reports.
 - #419 easier fishing: bites every 12 to 25 seconds with 1.5 to 2 seconds to hook them,
   5% empty (was 15%), and an Echo bite holds 3 seconds with three tries; Echoes drop as
   before.
+- #423 `devmap` and Create game start maps from the JoF content folder: the owned server
+  mounts each extra content root (`--extra-base`), so a JoF map no longer stops it.
+- #426 F1 and F2 vote YES and NO while a vote waits, the voted card folds to one row,
+  JA+ admins' `ampoll` (anyone on a devmap) and `testpoll`.
+- #427 the devmap bar: cheat buttons over play in a game with cheats, held on Ctrl
+  (`+devbar`), `cg_devBar` 0 by default.
+- #422 a click on another player's chat line in the console translates it, the
+  translation shown right under that line.
+- #424 Fishing and Mining (after adwe's idea): kyber finds, daily catch goals that win
+  an Echo and the catch market, all rolled and capped by the hub behind its switches
+  (hub-shared #26).
+- #425 Fishing and Mining: a log book of every catch with the day of the first, a
+  RARE CATCH card and sharing a rare catch in the SJK chat.
 
 Milamber ([Milamber0](https://github.com/Milamber0)), contributor, has 4 pull requests merged
 into SJK ([all of them](https://github.com/Sol-Vulpes/SJK/pulls?q=is%3Apr+author%3AMilamber0)):
@@ -1196,12 +1209,15 @@ ideas are under [Ideas](#ideas):
   Shaders tab's New count went behind "i" and "?" notes, the Nameplates preview behind
   Showcase current set, and a shader's extras behind an Extra features chip.
 
-Hormorn ([Hormorn](https://github.com/Hormorn)), contributor, has 1 pull request merged
+Hormorn ([Hormorn](https://github.com/Hormorn)), contributor, has 2 pull requests merged
 into SJK ([all of them](https://github.com/Sol-Vulpes/SJK/pulls?q=is%3Apr+author%3AHormorn)):
 
 - #401 Nameplate height (Settings > HUD, `cg_nameplateOffset`, -100 to 40 game units,
   default 0) moves every nameplate up or down from its point above the head; a plate that
   would overlap an ally's team logo jumps above the logo instead.
+- #421 status balloon modes (`cg_statusBalloons`, Settings > Chat, default 1 as before):
+  0 stock, 1 SJK's reason animations, 2 static clan pictures, 3 animated clan pictures;
+  Hormorn drew the JoF and {{S}} clan artwork, every other player wears the standard one.
 
 ## Art
 

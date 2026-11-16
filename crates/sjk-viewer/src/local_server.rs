@@ -157,6 +157,15 @@ impl HostSettings {
         arguments
     }
 
+    /// `--extra-base` for each of `folders`: the client's content folders standing in
+    /// for `base` (SJK's JoF content), so the server finds the maps the client lists.
+    pub(crate) fn extra_base_arguments(folders: &[PathBuf]) -> Vec<OsString> {
+        folders
+            .iter()
+            .flat_map(|folder| ["--extra-base".into(), folder.as_os_str().to_owned()])
+            .collect()
+    }
+
     /// Console lines typed into the server once it answers: one `addbot`
     /// per bot, at the chosen skill.
     pub(crate) fn console_lines(&self) -> Vec<String> {
@@ -306,6 +315,8 @@ pub(crate) struct LocalServer {
     ready: bool,
     console: Vec<String>,
     log_path: PathBuf,
+    /// Started with `--cheats` (`devmap`, or Create game with cheats on).
+    cheats: bool,
 }
 
 impl LocalServer {
@@ -348,7 +359,20 @@ impl LocalServer {
             ready: false,
             console,
             log_path: log_path.to_owned(),
+            cheats: false,
         })
+    }
+
+    /// Note that the server was started with cheats on. SJK's server does not put
+    /// `sv_cheats` in its system info, so the client tells its own game this way
+    /// (the devmap bar, [`crate::devmap_bar`]).
+    pub(crate) fn set_cheats(&mut self, cheats: bool) {
+        self.cheats = cheats;
+    }
+
+    /// Whether the server was started with cheats on.
+    pub(crate) fn cheats(&self) -> bool {
+        self.cheats
     }
 
     /// Where the server's output is written.
@@ -548,6 +572,18 @@ mod tests {
             .filter(|(left, right)| left != right)
             .count();
         assert_eq!((japlus.len(), differing), (base.len(), 1));
+    }
+
+    #[test]
+    fn content_folders_reach_the_command_line_as_extra_bases() {
+        let folders = [PathBuf::from("SJK/jof/base"), PathBuf::from("other/base")];
+        let arguments = HostSettings::extra_base_arguments(&folders);
+        let expected: Vec<OsString> =
+            ["--extra-base", "SJK/jof/base", "--extra-base", "other/base"]
+                .map(OsString::from)
+                .into();
+        assert_eq!(arguments, expected);
+        assert!(HostSettings::extra_base_arguments(&[]).is_empty());
     }
 
     #[test]

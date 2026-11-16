@@ -5344,6 +5344,18 @@ test: s_language english, snd_restart: they are English again.
 
 # ---- Gameplay ----
 
+[catch-log-book]
+area: Gameplay
+title: Fishing/Mining: log book, rare catch card, share in SJK chat (Slash, after adwe)
+change: Toys > Fishing/Mining: Log book button lists every kind, ??? until caught, with x and day.
+change: A rare fish (Kyber minnow or rarer) or ore (star quartz or rarer) brings a RARE card.
+change: fishing_brag / mining_brag (and the book's Share) say it in SJK chat, once a minute.
+test: Collection > Toys > Fishing > Log book: ??? cells, caught ones with count; Back returns.
+test: Land a new fish: its cell shows today's date; fishing_log.txt has a first <id> line.
+test: debug: give a Kyber minnow (or play): RARE CATCH card at the top, secret area sound.
+test: fishing_brag: one line in SJK chat as you, not in the game's chat; again: a moment ago.
+note: Nothing goes to the hub but the chat line; an old client keeps the log, drops first lines.
+
 [mining-rarer-of-two]
 area: Gameplay
 title: Mining: a clean strike gives the rarer of two ores (Slash, PR #414, hub #286)
@@ -10027,6 +10039,17 @@ test: Status bubbles off on A: the stock bubble again. B with cl_consoleMove 1: 
 test: A third client joins while B is alt-tabbed: it sees the moon within a second or so.
 note: Untested in game. Others' reason shows about half a second after the stock bubble.
 
+[status-balloon-modes]
+area: Rendering & effects
+title: Status balloon mode: stock, SJK, clan static, clan animated (cg_statusBalloons 0-3)
+change: Settings > Chat > Status balloon mode. 1 (default) is SJK's reason animations as before.
+change: 2 and 3 draw JoF and {{S}} clan art by name tag (others: standard art), non-SJK players too.
+test: 0: every talking player shows the stock balloon. 1: SJK players show dots, pause, moon.
+test: 3: a JoF-tagged SJK player typing shows the JoF dots; a {{S}} player the {{S}} ones.
+test: 2: the same players show their clan's static picture; a non-SJK JoF player too.
+test: cg_clanEmblems 0 with mode 2 or 3: everyone wears the standard art. Tactical 1: stock.
+note: Hormorn's PR #421, tested in game by Hormorn (screenshots on the PR).
+
 [model-texture-pin]
 area: Rendering & effects
 title: No hitch when a player puts on a model with big textures (creyonwolf: 743 ms)
@@ -10193,6 +10216,61 @@ change: Pulling too soon waits 5 to 10 s more; an Echo bite holds 3 s, three tri
 test: toy_fishing online: bites come often, Use about a second late still hooks them.
 test: Press Use with no bite: the next bite comes 5 to 10 s later than usual.
 test: debug_holocron is no Echo; wait for a real drop: the golden bite holds 3 s.
+
+[devmap-jof-maps]
+area: Gameplay
+title: devmap and Create game start JoF content maps (Slash, #423)
+change: The owned server mounts the JoF content folder too (--extra-base) while jof.content is 1.
+test: jof.content 1, then devmap jofs-gwingv2classic: the map loads, no "none of the mounted".
+test: Create game with a jofs-gwing map: the server starts and you join.
+test: jof.content 0: devmap mp/ffa3 starts as before.
+
+[vote-f1-fold]
+area: HUD
+title: F1/F2 vote, the voted card folds to one row, ampoll, testpoll (Slash, #426)
+change: While a vote waits for you F1 votes YES and F2 NO; after voting they push and pull again.
+change: Once voted the card folds to one row: question over the YES / NO bar with its counts.
+change: Server: ampoll <question> asks everyone for 30 s and runs nothing (anyone on a devmap).
+test: testpoll do you like pie?: the card shows the question; F1 votes and the card folds.
+test: Online callvote: your own call counts as YES, the card is one row at once.
+test: devmap mp/ffa3, ampoll do you like pie?: Poll: card for everyone; when it passes, nothing runs.
+
+[devmap-bar]
+area: Gameplay
+title: Devmap bar: cheat buttons over play, hold Ctrl to click (Slash, #427)
+change: In a game with cheats, hold Ctrl (+devbar) for a bar of cheat buttons to click.
+change: cg_devBar 0 (default) shows it only while held; 1 always at the bottom, 2 at the top.
+test: devmap mp/ffa3, hold Ctrl: the bar and a pointer; click Noclip, God, Give all, Spawn list.
+test: Let go of Ctrl or press Escape: the view turns again; mouse buttons never attack meanwhile.
+test: On a server without cheats nothing shows, whatever cg_devBar says.
+
+[console-translate]
+area: Console & chat
+title: Console: click a chat line to translate it, right under it (Slash, #422)
+change: In the console a click on another player's chat line (game or SJK chat) translates it.
+change: The translation shows right under that line, however fast the chat goes.
+test: Console open, someone writes in another language: click the line, English shows under it.
+test: Click your own line or a non-chat line: nothing is translated.
+note: Uses the hub's /v1/translate (hub shared #22, live).
+
+[staff-toys-tab]
+area: Menus & settings
+title: Staff page Toys tab: which toys players use (Slash, PR #420, needs hub #25)
+change: Staff page > Toys: per look toy, players today, in 7 and 30 days, time out and uses.
+change: Click a toy: its 10 players who had it out longest.
+test: As staff, Staff page > Toys: the list fills, longest out first; a toy opens its top 10.
+note: Needs hub shared #25 deployed; until then the tab says "Toy counts need a newer SJK hub."
+
+[catch-rewards]
+area: Gameplay
+title: Kyber finds, daily catch goals, catch market (Slash, after adwe's idea)
+change: Hub rolls a few kyber shards on claims with bites or broken boulders (3 a day).
+change: Daily goals: 25 bites, 40 boulders win an Echo each. Market buys fish and ore.
+test: Local hub with --kyber-finds, --catch-market, --junk-selling, --catch-quests staff.
+test: Fish or mine a while: "A kyber glint ... +N kyber shards", shards rise in Profile.
+test: Collection > Toys > Fishing: goal line counts bites; at 25 the Echo comes once.
+test: Sell fish: Wanted today line, the wanted one pays double, the 15 a day cap holds.
+note: Needs hub shared #26 deployed and its switches on; without it nothing new shows.
 
 [forge-shatter-many]
 area: Menus & settings

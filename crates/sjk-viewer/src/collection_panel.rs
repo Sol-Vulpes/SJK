@@ -81,7 +81,7 @@ pub(crate) mod swatch;
 #[path = "collection_tags.rs"]
 mod tags;
 #[path = "collection_toys.rs"]
-mod toys;
+pub(crate) mod toys;
 #[path = "collection_transition.rs"]
 pub(crate) mod transition;
 #[path = "collection_view.rs"]
@@ -151,6 +151,9 @@ const QUESTS_TOKEN: u16 = 1_397;
 /// The Fishing card's Sell junk button: past the toy options' tokens, which a click
 /// reads by range.
 const SELL_JUNK_TOKEN: u16 = 1_395;
+/// The Fishing card's Sell fish button and the Mining card's Sell ore (the catch market,
+/// 15/11/2026), in the free run above the panel's other tokens.
+const SELL_CATCH_TOKEN: u16 = 1_420;
 /// Fishing's place among the toys (`collection_toys::TOYS`).
 const FISHING_TOY: usize = 10;
 /// The WHEEL OF DOOM's niche on Toys, and its place among the toys.
@@ -200,8 +203,13 @@ const TOY_TOKENS: [u16; TOY_COUNT] = [
 /// Each toy row's own switch (25/10/2026): it turns that toy on or off in place, a token
 /// a toy from here on, below [`TOY_SWITCH_END`]. From 1_360 they ran into
 /// [`FAVOURITE_TOKEN`] at the thirteenth toy (08/11/2026); no other token of the panel lies
-/// between 1_400 and 3_000.
+/// between 1_400 and 3_000 but the Fishing and Mining cards' log book buttons
+/// ([`LOG_BOOK_TOKEN`], [`BRAG_TOKEN`]).
 const TOY_SWITCH_BASE: u16 = 1_460;
+/// The Fishing and Mining cards' Log book button, which shows the log book in place of
+/// the toy's words or goes back, and the book's Share button ([`crate::catch_book`]).
+const LOG_BOOK_TOKEN: u16 = 1_440;
+const BRAG_TOKEN: u16 = 1_441;
 const TOY_SWITCH_END: u16 = 1_500;
 const _: () = assert!(TOY_SWITCH_BASE + TOY_COUNT as u16 <= TOY_SWITCH_END);
 const _: () = assert!(SELL_JUNK_TOKEN >= TOY_OPTION_TOKEN + TOY_OPTION_TOKENS as u16);
@@ -492,6 +500,15 @@ pub(crate) enum PanelAction {
     WheelOfDoom,
     /// Sell the dug rubble to the hub: the same as `mining_sell`.
     SellRubble,
+    /// Sell the fish held at the catch market: the same as `fishing_sellfish`.
+    SellFish,
+    /// Sell the ore held at the catch market: the same as `mining_sellore`.
+    SellOre,
+    /// Share the last rare catch in the SJK chat: the same as `fishing_brag`, or
+    /// `mining_brag` (`mining`).
+    Brag {
+        mining: bool,
+    },
     /// Set `cg_tag` to this tag's id: the one `toy_tag` sticks.
     /// Pick a tag (or a card) for `toy_tag`, in a finish (`cg_tag`, `cg_tagFinish`).
     ChooseTag(String, &'static str),
@@ -921,6 +938,8 @@ pub(crate) struct Panel {
     /// The chosen toy's key waiting to be bound: its command's place in the toy's
     /// commands (0 the switch's, 1 Order 66's order), until a key, Escape or a click.
     bind_wait: Option<usize>,
+    /// The Fishing or Mining card shows its log book in place of the toy's words.
+    toy_book: bool,
     /// How many medals the last frame showed.
     medals_shown: usize,
     shader_rows: [ShaderRow; SHADER_SLOTS],
@@ -1133,6 +1152,7 @@ impl Panel {
             saber_press: None,
             jump_to_worn: false,
             bind_wait: None,
+            toy_book: false,
             medals_shown: 0,
             shader_rows: [ShaderRow::default(); SHADER_SLOTS],
             // Until the first frame reads the holdings: what a player who holds nothing sees.
@@ -2796,6 +2816,15 @@ impl Panel {
             // One card shows at a time: the button sells what that toy's log holds.
             SELL_JUNK_TOKEN if self.toy == MINING_TOY => PanelAction::SellRubble,
             SELL_JUNK_TOKEN => PanelAction::SellJunk,
+            SELL_CATCH_TOKEN if self.toy == MINING_TOY => PanelAction::SellOre,
+            SELL_CATCH_TOKEN => PanelAction::SellFish,
+            LOG_BOOK_TOKEN => {
+                self.toy_book = !self.toy_book;
+                PanelAction::None
+            }
+            BRAG_TOKEN => PanelAction::Brag {
+                mining: self.toy == MINING_TOY,
+            },
             loadouts::OPEN_TOKEN => {
                 self.loadouts.open();
                 PanelAction::None

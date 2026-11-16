@@ -17,8 +17,13 @@ use std::time::Instant;
 
 /// The console command that sells the rubble held.
 pub(crate) const COMMAND: &str = "mining_sell";
+/// The console command that sells the ore held at the catch market (15/11/2026).
+pub(crate) const ORE_COMMAND: &str = "mining_sellore";
 /// The console command that prints the mining log in full.
 pub(crate) const LOG_COMMAND: &str = "mining_log";
+/// The console command that shares the last rare find in the SJK chat
+/// ([`crate::catch_book`]).
+pub(crate) const BRAG_COMMAND: &str = "mining_brag";
 
 /// A find's name for the card: without its article ("a chunk of iron ore" is chunk of
 /// iron ore, "the Heart of the Mountain" Heart of the Mountain).
@@ -78,9 +83,25 @@ pub(crate) fn card(
         }
         None => format!("Rubble: {pieces} {piece}"),
     };
+    let entry = |f: &Find| {
+        crate::catch_book::Entry::of(
+            f.name,
+            log.count(f.id),
+            log.first(f.id),
+            crate::mining::is_rare(f),
+        )
+    };
+    let mut book: Vec<_> = FINDS
+        .iter()
+        .filter(|f| f.kind == Kind::Ore)
+        .map(entry)
+        .collect();
+    let book_kinds = book.len();
+    book.extend(FINDS.iter().filter(|f| f.kind == Kind::Rubble).map(entry));
     Card {
         title: "Mining log",
         goods: "rubble",
+        catch_goods: "ore",
         summary,
         fish: listed(log, Kind::Ore, Log::count),
         junk: listed(log, Kind::Rubble, Log::held),
@@ -89,7 +110,31 @@ pub(crate) fn card(
         sell: payable.map(|(pays, _)| pays),
         selling,
         line,
+        book,
+        book_kinds,
+        brag: brag_line(log, None),
+        ..Card::default()
     }
+}
+
+/// The name of the ore `id` for the market's line ("void crystal").
+pub(crate) fn ore_name(id: &str) -> Option<&'static str> {
+    FINDS
+        .iter()
+        .find(|f| f.kind == Kind::Ore && f.id == id)
+        .map(short_name)
+}
+
+/// What `mining_brag` says for `log`: the session's last rare find (`last_rare`, with
+/// the count the log then held), else the log's rarest ore; `None` with no ore.
+pub(crate) fn brag_line(log: &Log, last_rare: Option<(&'static Find, u32)>) -> Option<String> {
+    let (find, count) = last_rare.or_else(|| log.rarest())?;
+    Some(crate::catch_book::brag_line(
+        "Dug out",
+        find.name,
+        count,
+        log.kinds(),
+    ))
 }
 
 /// The result line of a sale that took `pieces` for `credits`.
@@ -103,6 +148,32 @@ impl GpuState {
         self.console
             .as_ref()
             .map(|c| c.config_directory().to_owned())
+    }
+
+    /// `mining_brag`, or the log book's Share button: say the session's last rare find
+    /// (else the rarest ore of the log) in the SJK chat as the player's own message, once
+    /// in [`crate::catch_book::BRAG_EVERY`].
+    pub(crate) fn brag_mining(&mut self) {
+        let Some(directory) = self.config_directory() else {
+            return;
+        };
+        let last_rare = self.mining.last_rare;
+        let line = brag_line(self.mining.log_in(&directory), last_rare);
+        let said = match line {
+            None => Some("Nothing to share yet: dig out some ore first."),
+            Some(_) if !self.mining.brag.take(Instant::now()) => {
+                Some("You shared a find a moment ago.")
+            }
+            Some(line) => crate::catch_book::share(line),
+        };
+        if let Some(said) = said {
+            self.chat.receive(
+                sjk_client::ServerEventKind::CenterPrint,
+                said.to_owned(),
+                None,
+                Instant::now(),
+            );
+        }
     }
 
     /// `mining_log`: print the mining log in full to the console, every kind with its
@@ -136,6 +207,17 @@ impl GpuState {
     /// `mining_sell`, or the card's Sell button: sell the rubble the log holds, once no
     /// sale (this toy's or Fishing's) waits already.
     pub(crate) fn sell_mining_rubble(&mut self) {
+        self.sell_mining(false);
+    }
+
+    /// `mining_sell ore`, or the card's Sell ore button (the catch market, 15/11/2026):
+    /// sell the ore the log holds unsold, while the hub buys it.
+    pub(crate) fn sell_mining_ore(&mut self) {
+        self.sell_mining(true);
+    }
+
+    /// Sell the rubble held, or the ore (`ore`).
+    fn sell_mining(&mut self, ore: bool) {
         let now = Instant::now();
         if self.mining.sale.waiting(now) || self.fishing.sale.waiting(now) {
             return;
@@ -143,16 +225,24 @@ impl GpuState {
         let Some(directory) = self.config_directory() else {
             return;
         };
-        let held = self.mining.log_in(&directory).rubble_held();
+        let log = self.mining.log_in(&directory);
+        let held = if ore {
+            log.ore_held()
+        } else {
+            log.rubble_held()
+        };
+        let goods = if ore { "ore" } else { "rubble" };
         let said = if held.is_empty() {
-            "No rubble to sell: break some boulders first.".to_owned()
+            format!("No {goods} to sell: break some boulders first.")
         } else {
             let open = crate::player_identity::with_snapshot(|snapshot| {
                 snapshot.junk.as_ref().map(|junk| {
-                    (
-                        junk.open && hub_buys_rubble(&junk.prices),
-                        junk.payable(&held),
-                    )
+                    let buys = if ore {
+                        junk.market.is_some()
+                    } else {
+                        hub_buys_rubble(&junk.prices)
+                    };
+                    (junk.open && buys, junk.payable(&held))
                 })
             })
             .flatten();
@@ -162,19 +252,20 @@ impl GpuState {
                         .is_some()
                     {
                         self.mining.sale.asked = Some(now);
+                        self.mining.sale.goods = goods;
                         self.mining.sale.line = Some("Selling...".to_owned());
                         return;
                     }
-                    "SJK online is off: the hub buys the rubble.".to_owned()
+                    format!("SJK online is off: the hub buys the {goods}.")
                 }
                 Some((true, _)) => {
-                    "The hub buys no more today (junk and rubble share it): come back tomorrow."
+                    "The hub buys no more today (one sum for all it buys): come back tomorrow."
                         .to_owned()
                 }
                 _ => {
                     // Not known yet, or closed: ask again for the next try.
                     let _ = crate::player_identity::with_service(|service| service.read_junk());
-                    "The hub does not buy rubble from you now.".to_owned()
+                    format!("The hub does not buy {goods} from you now.")
                 }
             }
         };
@@ -212,6 +303,7 @@ impl GpuState {
         };
         let selling = self.mining.sale.waiting(now);
         let line = self.mining.sale.line.clone();
+        let last_rare = self.mining.last_rare;
         let log = self.mining.log_in(&directory);
         let held = log.rubble_held();
         let payable = crate::player_identity::with_snapshot(|snapshot| {
@@ -222,7 +314,19 @@ impl GpuState {
                 .map(|junk| (junk.payable(&held), junk.left))
         })
         .flatten();
-        let card = card(log, payable, selling, line);
+        let ore = log.ore_held();
+        let mut card = card(log, payable, selling, line);
+        crate::player_identity::with_snapshot(|snapshot| {
+            let goal = snapshot.catch_quests.as_ref().map(|day| day.mining_line());
+            crate::fishing_sell::add_market(
+                &mut card,
+                goal,
+                &ore,
+                snapshot.junk.as_ref(),
+                ore_name,
+            );
+        });
+        card.brag = brag_line(log, last_rare);
         if let Some(console) = self.console.as_mut() {
             console.set_mining_card(card);
         }
@@ -253,7 +357,10 @@ impl GpuState {
                 };
                 let pieces = self.mining.log_in(&directory).sell(&sold.sold);
                 self.mining.save_log(&directory);
-                sold_line(pieces, sold.credits)
+                match std::mem::take(&mut self.mining.sale.goods) {
+                    "ore" => crate::fishing_sell::sold_catch_line("ores", pieces, sold.credits),
+                    _ => sold_line(pieces, sold.credits),
+                }
             }
             Err(why) => why,
         };

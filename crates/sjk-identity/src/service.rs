@@ -318,6 +318,12 @@ pub struct Snapshot {
     /// The answer to the last junk sale ([`Service::sell_junk`]), by serial, or why it
     /// was refused (in the player's words).
     pub junk_sale: Option<(u64, Result<crate::junk::JunkSold, String>)>,
+    /// The last kyber find a claim's answer brought (`crate::catch`, since 15/11/2026),
+    /// by a count that rises with each: the toys show it once.
+    pub kyber_find: Option<(u64, crate::catch::KyberFind)>,
+    /// The day's catch quests as the last claim's answer said them (`None` from a hub
+    /// without them, or before the player fished or mined that day).
+    pub catch_quests: Option<crate::catch::CatchQuests>,
     /// The WHEEL OF DOOM's price, cooldown and segments as the hub last said
     /// ([`Service::read_wheel_of_doom`]): `None` until read, or with a hub that has none.
     pub wheel_of_doom: Option<crate::wheel_of_doom::Wheel>,
@@ -791,6 +797,8 @@ impl Snapshot {
             mystery_box: None,
             junk: None,
             junk_sale: None,
+            kyber_find: None,
+            catch_quests: None,
             wheel_of_doom: None,
             wheel_of_doom_revision: 0,
             wheel_of_doom_spin: None,
@@ -1286,6 +1294,16 @@ impl Held {
     }
 }
 
+/// Whether `error` is a hub's answer for a route it does not have (404 or 405, with its
+/// router's bare status or a JSON refusal), as a hub from before a request answers.
+fn no_route(error: &HubError) -> bool {
+    match error {
+        HubError::Rejected { status, .. } => matches!(status, 404 | 405),
+        HubError::Protocol(why) => why.starts_with("status 404") || why.starts_with("status 405"),
+        _ => false,
+    }
+}
+
 /// What the player is told of a report or a note: what the hub stored it as, or why
 /// it did not.
 /// A hub from before pictures has no `/v1/avatar`: say so in words rather than as the
@@ -1511,6 +1529,23 @@ fn outcome_of(serial: u64, outcome: Result<String, HubError>) -> ReportOutcome {
             sent: false,
             message: error.to_string(),
         },
+    }
+}
+
+/// Keep what a claim's answer brought beside its `ttl` (`crate::catch`): a kyber find
+/// for the toys to show once, with the shards it left; the day's catch quests.
+fn note_claim_extras(snapshot: &Mutex<Snapshot>, extras: crate::catch::ClaimExtras) {
+    let mut snapshot = lock(snapshot);
+    if let Some(find) = extras.kyber_find {
+        if let Some(me) = snapshot.me.as_mut() {
+            me.shards = u64::try_from(find.balance).unwrap_or(me.shards);
+            snapshot.me_revision += 1;
+        }
+        let count = snapshot.kyber_find.as_ref().map_or(0, |(count, _)| *count) + 1;
+        snapshot.kyber_find = Some((count, find));
+    }
+    if extras.catch_quests.is_some() {
+        snapshot.catch_quests = extras.catch_quests;
     }
 }
 
@@ -2996,6 +3031,14 @@ impl Worker {
                 staff.failed = false;
                 staff.answered(query, answer);
             }
+            // A hub from before the toy counts (12/11/2026) has no route for them: the
+            // Toys tab says it needs a newer hub, and nothing failed.
+            Err(error) if *query == StaffQuery::Toys && no_route(&error) => {
+                staff.failed = false;
+                staff.toys = None;
+                staff.toys_missing = true;
+                staff.message = "Toy counts need a newer SJK hub".to_owned();
+            }
             Err(HubError::Rejected {
                 status: 404, code, ..
             }) if code == "not_found" => {
@@ -4390,7 +4433,8 @@ impl Worker {
                     self.active,
                     Some(&self.play),
                 ) {
-                    Ok(()) => {
+                    Ok(extras) => {
+                        note_claim_extras(&self.snapshot, extras);
                         // What was sent is counted: the next claim starts afresh. An
                         // inactive claim sent nothing, so what it held waits.
                         if self.active {
@@ -6322,6 +6366,8 @@ mod tests {
                     ..LogRequestRow::default()
                 })),
                 StaffQuery::Crash(_) => return Err(refused(404, "not_found")),
+                // A hub from before the toy counts: its router's bare 404.
+                StaffQuery::Toys => return Err(HubError::Protocol("status 404".to_owned())),
                 StaffQuery::Gifts => StaffAnswer::Gifts(crate::staff::GiftLog {
                     gifts: vec![crate::staff::GiftRow {
                         id: 77,
@@ -7149,6 +7195,14 @@ mod tests {
         worker.handle(Command::StaffQuery(StaffQuery::Crash(1)), t0);
         assert!(staff.lock().unwrap().failed);
         assert_eq!(staff.lock().unwrap().message, "The hub no longer has it");
+        // A hub without toy counts: the Toys tab says so, and nothing failed.
+        worker.handle(Command::StaffQuery(StaffQuery::Toys), t0);
+        assert!(!staff.lock().unwrap().failed);
+        assert!(staff.lock().unwrap().toys_missing);
+        assert_eq!(
+            staff.lock().unwrap().message,
+            "Toy counts need a newer SJK hub"
+        );
         // A plain key is refused here, before the hub hears it.
         lock(&snapshot).me.as_mut().unwrap().staff = false;
         let before = fake.log().len();

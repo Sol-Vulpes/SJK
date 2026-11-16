@@ -1031,7 +1031,7 @@ or off from it) set it. Each level holds the ones below it:
 
 | Level | What goes |
 | --- | --- |
-| Minimal (1) | Other players' emotes (playing ones end) and toys, as for a muted player but seen and heard otherwise; the toys' own "See ..." switches, tags, GIF tags, status balloons and holocron cards off; every unlock card in a game waits until Tactical is off |
+| Minimal (1) | Other players' emotes (playing ones end) and toys, as for a muted player but seen and heard otherwise; the toys' own "See ..." switches, tags and GIF tags off; status balloon pictures return to stock; holocron cards off and every unlock card in a game waits until Tactical is off |
 | Medium (2) | Also the Vanilla graphics preset, no weather, clouds, lightning, weather sounds or map fog (`r_drawfog 0`), every blade stock (`cg_stockBlades 2`), no finishers, Force Speed afterimages or toon shading |
 | Max (3) | Also the flat world (`r_flatWorld`), no server or shared remaps, and every other player drawn plain: in `cg_tacticalModel` (`kyle` by default, `model` or `model/skin`; a team game's red or blue kept), the default saber (the stock staff for a staff) in the default blue, without hat, cape or blade skin, as a [blocked player](hub-chat.md#blocking-a-player) is drawn, their names, chat and sounds untouched |
 
@@ -3065,6 +3065,30 @@ Like the `debug_panel` list it is drawn in the SJK UI's look in every menu style
 [spawn_panel_view.rs](../crates/sjk-viewer/src/spawn_panel_view.rs)). World shot:
 `duel6_spawn_panel`.
 
+### Devmap bar
+
+In a game whose server has cheats on (`sv_cheats 1` in its system info, or a server
+this client hosts with cheats, as `devmap` starts: SJK's server leaves `sv_cheats` out
+of its system info), a bar of cheat buttons shows along the bottom of the screen, like a toolbar:
+Noclip, God, No target, Jetpack (gold, run again to turn off); Give all, Health,
+Armor, Ammo, Weapons, Force (`give`, holo); Spawn list (`spawn_panel`), Clear NPCs
+(`npc kill all`), NPC bounds (`npc showbounds`) (ember); 3rd person
+(`toggle cg_thirdPerson`) and Respawn (`kill`).
+
+While play has the mouse the bar cannot take clicks, so holding the key bound to
+`+devbar` (Ctrl by default, Key bindings > Other > "Devmap bar (hold)") lends it the
+mouse, as the quick wheel does: the view stops turning, a pointer shows over the bar,
+the line under the pointer's button says what it does, and a left click runs it as if
+typed in the console (it lights a moment). Mouse buttons never attack meanwhile;
+movement keys keep working. Letting go of the key, or Escape, gives the mouse back.
+
+`cg_devBar` (Settings, "Devmap bar") chooses where it shows: 0 (default) only while the
+key is held, at the bottom, since stock shows nothing; 1 always at the bottom; 2 always
+at the top. It never shows over a menu, the console, the quick wheel or the
+intermission, nor without cheats; a `devmap` start says so in the console. The table of
+buttons is `ENTRIES` in [devmap_bar.rs](../crates/sjk-viewer/src/devmap_bar.rs), drawn
+in the SJK UI's look in every menu style.
+
 ## Invisible brushes
 
 `r_showBrushes` draws the brushes a map is built with but never shows (clip,
@@ -3198,17 +3222,30 @@ icons remain unimplemented. See
 
 ### Status balloons
 
-**Status bubbles** (`cg_statusBalloons`, Settings > Chat, on by default since 2026.1109.2, Sol's call,
-saved values reset once by its what's-new card;
-Sol's idea, 08/11/2026) draws the balloon over an SJK player as why it is up, in the
-stock balloon's shape and glow: the three dots lit one after the other while they type
-in the chat, a pause sign while a menu or the console is open (one picture for both:
-to the others each means "not playing for a moment"), and a blue moon with a z rising
-beside it while their window is alt-tabbed or minimised. Your own balloon in third
-person shows yours. Other players, and any SJK player whose reason has not arrived,
-keep the stock balloon ([status_balloons.rs](../crates/sjk-viewer/src/status_balloons.rs),
-[status_balloons_frame.rs](../crates/sjk-viewer/src/status_balloons_frame.rs); pictures
-by [status_balloon_assets.py](../scripts/status_balloon_assets.py)):
+**Status balloon mode** (`cg_statusBalloons`, Settings > Chat, defaults to `1` to preserve
+the original SJK behavior; Sol's idea, 08/11/2026; extended by Hormorn with clan-specific
+chat status bubbles) has four choices:
+
+- `0` **Default**: use the normal game balloon, with no custom image or animation.
+- `1` **SJK**: Sol's original SJK behavior, with standard typing, busy and away animations.
+- `2` **SJK Clan Default**: show each player's static clan picture.
+- `3` **SJK Clan Animated**: show clan-specific typing, busy and away animations, with a
+  static clan picture when no SJK reason is known.
+
+In **SJK**, an unknown reason uses the game's normal balloon. In either clan mode,
+players with a known clan tag use that clan's artwork, while all other players use the
+standard artwork.
+
+Clan themes use the existing clan-tag recognition: `{{S}}`, JoF, or standard for everyone
+else. The typing animation lights three dots in turn; busy shows a pause sign for a menu
+or console; away shows a blue moon with a rising z for an alt-tabbed or minimised window.
+For players without SJK, the published name selects the theme and `EF_TALK` determines
+whether the balloon is active; their picture is the theme's static `default.png`.
+This covers non-SJK players when their published name matches a recognised clan tag.
+The asset folders are
+`assets/status_balloons/Default`, `S` and `Jof` ([status_balloons.rs](../crates/sjk-viewer/src/status_balloons.rs),
+[status_balloons_frame.rs](../crates/sjk-viewer/src/status_balloons_frame.rs); standard
+placeholder images by [status_balloon_assets.py](../scripts/status_balloon_assets.py)):
 
 - **The server still decides the balloon.** It shows only while the player's entity
   carries `EF_TALK`, exactly where stock's would (and where a JA+ blade spares them);
@@ -3221,9 +3258,9 @@ by [status_balloon_assets.py](../scripts/status_balloon_assets.py)):
   (toy `status_balloon`, event `typing`, `menu`, `console` or `away`) through the
   [toy relay](hub-chat.md#toy-relay) to each other SJK player on the server, those
   in its snapshot first, one every 50 ms, and to each one who joins while it holds. A
-  new reason is told again; one that ends sends nothing. Others see the stock balloon
-  for the half second the relay takes. Every client sends whatever its setting,
-  so the players who switch it on see everyone's.
+  new reason is told again; one that ends sends nothing. Until the relay arrives, clan
+  animated mode shows its static fallback. Every client sends whatever its setting, and
+  each client applies its own selected mode to all talking players.
 - **How it is kept:** a reason heard (from a player whose shown name matches the
   claim, not muted here) holds until its player is seen in a snapshot without the
   balloon, after a 1.5 second grace for a relay quicker than the snapshots; out of
@@ -3470,7 +3507,7 @@ translated on its own and nothing goes to the game server:
   (a short line the guess cannot tell is offered all the same). The translation shows
   under the message in the list.
 
-The translation shows under its line in the feed, dim, as `» (fr) Hi, are you coming
+The translation shows under its line in the feed, in a light grey, as `» (fr) Hi, are you coming
 to the duel?`, and in the console. Why there is none shows as a short local notice:
 the hub needs an update (a hub before translations), the hub has no translator, the
 day's 50 translations are used (until the time the hub gives), the hub's monthly
@@ -3489,8 +3526,22 @@ and `tr` say "encrypted whispers are not translated" rather than take an older l
 Their words never leave this PC, so they never reach the hub, its translator nor its
 cache (Sol's review of PR #410).
 
-The sender card has no Translate of its own, and the console has no click: its path is
-`tr` (or `tr <text>` with the line copied).
+The sender card has no Translate of its own.
+
+In the console ([console_translate.rs](../crates/sjk-viewer/src/console_translate.rs)),
+a click on a chat line another player sent (game chat of every kind, SJK and clan chat)
+translates it as a click in the feed does; a faint band shows under the pointer resting
+on such a line. The console keeps the plain words of its last 256 chat lines for this;
+the player's own lines, end-to-end encrypted whispers, holocron drops and the SJK team's
+lines are never offered. A drag still selects text and a double click a word: the click
+waits out the double-click time (500 ms) before it asks. The translation, `» (fr) ...`
+in white (the feed's dim grey was hard to read on the console's backdrop)
+(or why there is none, a `Translate:` line), shows right under the line clicked however
+much chat came since, and under the same line in the feed while the feed still holds
+it. The scrollback only grows at its end, so the translation is no scrollback line of
+its own: the console keeps its last 64 beside their lines' numbers and draws each as
+its line's next rows, which a selection or a copy leaves out. `tr` and `tr <text>`
+work as before, their translation at the end of the scrollback.
 
 - `cl_chatTranslate` (archived, default 1; Settings > Chat > Translate chat): 0 turns
   the click, `/tr`, `tr` and Translate off; a typed `/tr` then says so and is still not said.
@@ -4403,18 +4454,26 @@ so it shows in third person
 
 While a vote runs (`cg_drawVote`, on by default) the HUD shows it at the top centre, in every HUD
 style ([vote.rs](../crates/sjk-viewer/src/hud/vote.rs), geometry in
-[menu_widgets/vote.rs](../crates/sjk-viewer/src/menu_widgets/vote.rs)): a 560-pixel (1080-line)
-card, centred on the panel's anchor, with a thin bar of the 30 seconds left
+[menu_widgets/vote.rs](../crates/sjk-viewer/src/menu_widgets/vote.rs)): a 560 by 186-pixel
+(1080-line) card, centred on the panel's anchor, with a thin bar of the 30 seconds left
 along its top, VOTE (or TEAM VOTE) and the seconds left, the proposal in large centred text,
 a bar of the YES / NO share of the votes cast, the YES count in green at the left and the NO
-count in red at the right, and under each the keys bound to `vote yes` / `vote no` (the console
-command when nothing is bound). A team vote's card stands under the global one. It is drawn as SJK's
+count in red at the right, and under each its key: F1 for YES and F2 for NO, then any other keys
+bound to `vote yes` / `vote no`. Until the player has voted, F1 and F2 vote in the card
+(the global vote first, then the team vote with `teamvote`) instead of running their binds,
+which stock sets to push and pull ([key_events.rs](../crates/sjk-viewer/src/input/key_events.rs)).
+Once they have voted, with F1 / F2, another key, the console or a menu (the client's sent
+commands, [`SentCommands`](../crates/sjk-client/src/sent_commands.rs)), or called the vote
+(the server counts its caller's YES), the card folds to one 64-pixel row (`VoteRow`): the
+time bar along its top, the YES count, the proposal (a JA+ `ampoll` question) over the
+YES / NO bar and the NO count, so it only shows what is asked and how the vote goes, and F1 / F2 are push and pull again. A team vote's card stands under the global one. It is drawn as SJK's
 menu cards are (navy plate, holo edge, gold mark and time bar), in the HUD's font even under
 `ui_gameFont`, and stands under the match timer. The HUD edit mode drags it during a vote.
 
 `testvote` shows a made-up vote on the panel for 30 seconds, its counts growing, for
 seeing and moving the panel where no vote can run (alone on a devmap a vote passes at
 once, as bots do not vote); `testvote team` adds a team vote's card, `testvote off` ends it.
+`testpoll <question>` shows the same card asking `Poll: <question>`, as a JA+ `ampoll` does.
 Only the HUD draws it: nothing is sent to the server, and a real vote keeps its card.
 
 ## Kill feed
@@ -6809,7 +6868,41 @@ brings up are the ones the hub drops anyway.
   pays (`GET /v1/fishing/junk`) when shown and every 30 seconds after; the button shows
   only while the hub says this player may sell (the operator's switch, off until Sol
   turns it on) and is greyed with nothing payable or no junk. One sale at a time
-  (`fishing_sell.rs`). Fish never sell: they stay in the log for the achievements.
+  (`fishing_sell.rs`). Fish never sold before the catch market (below); the log keeps
+  every count for the achievements either way.
+- **Kyber finds, daily goals and the catch market** (15/11/2026, adwè's idea in #ideas;
+  hub `PROTOCOL.md` "Holocrons" Kyber finds, "Quests" Daily catch quests, "Fishing junk"
+  Catch market; `sjk_identity::catch`; each behind its own hub switch, off by default):
+  - A claim's answer may carry `kyber_find`: the hub rolled a few kyber shards for a
+    claim whose play signals had a hooked bite or a broken boulder (at most 3 a day).
+    The client says it on the centre of the screen and in the console ("A kyber glint
+    in the water! +3 kyber shards") and takes the new shard balance
+    (`GpuState::catch_news_frame` in `fishing_sell.rs`).
+  - It may carry `catch_quests`: the hub's own count of the day's bites and boulders
+    against two goals (25 bites, 40 boulders), each winning an Echo once a day within
+    the holocrons' daily cap. The Fishing and Mining cards show the goal in one line
+    under the junk's ("Goal: 12/25 bites for an Echo"), and the claim that wins it says
+    so once.
+  - `GET /v1/fishing/junk` may carry `market`: fish and ore sell too, under the junk's
+    one cap, one of them wanted each day at double its price. The cards then add
+    "Wanted: Moon eel x2 (6 credits)" to that line and a **Sell fish** / **Sell ore** button beside Sell junk /
+    Sell rubble (`fishing_sellfish`, `mining_sellore` in the console). Only what the
+    hub's `sold` names is counted sold; the catch counts never change.
+  - Mining sends a new play signal, `rocks` (boulders broken,
+    `holocrons::signals::rock`), which sets no pace.
+- **Log book, rare catches and sharing** (15/11/2026, Slash, after adwè's #ideas post;
+  `catch_book.rs`, the same for [Mining](#mining)): the card's "Log book" button shows,
+  in place of the toy's words, every fish and junk two to a row, the ones never caught as
+  "???", the others with their count and the day the first came up ("Back" returns). The
+  day is a `first <id> <yyyymmdd>` line of the log, which older clients skip (and drop
+  when they write the log); catches from before have none. A rare fish (weight 3 or less:
+  the Kyber minnow, Ghost ray, Temple koi and Old Whiskers) also brings the unlock
+  pop-up's "RARE CATCH" card and the single-player game's secret-area sound among the
+  toy's sounds. `fishing_brag` (and the book's "Share in SJK chat") says the session's
+  last rare catch, else the log's rarest fish, as the player's own SJK chat message
+  ("Caught Old Whiskers, the great catfish (my first!) - 9 of 12 kinds in my log"),
+  never in the game server's chat, at most once a minute and only when asked. The hub
+  neither reads nor pays for any of it.
 - **Bite cue** (03/11/2026, for players with the sound off): Settings > Sound > Toys,
   "Fishing bite cue" (`cg_fishingBiteCue`: 0 off, 1 when the sound is off, the default,
   2 always). While shown, a bite puts a pulsing "!" over the float (gold for an Echo's
@@ -6852,6 +6945,12 @@ ore, the Heart among them) and the hidden Heart of the Mountain.
   lines in `mining_log.txt`, the counts of what was dug unchanged (`mining_sell.rs`; the
   card and the sale state are `fishing_sell`'s). Ore never sells: it stays in the log for
   the achievements.
+- **Log book, rare finds and sharing** (15/11/2026, as Fishing's,
+  [Fishing](#fishing)): the Mining card's "Log book" lists every ore and rubble with its
+  count and first day, "???" until dug; a rare ore (weight 11 or less: star quartz, void
+  crystal and the Heart of the Mountain, about one ore in seventeen) brings the "RARE
+  FIND" card and the secret-area sound (the Heart's alone before); `mining_brag` and the
+  book's Share button say the last rare find, else the rarest ore, in the SJK chat.
 
 - **`toy_mining`** (a bind, the quick wheel's Toys catalogue, Collection > Toys, "Pickaxe
   out") takes the pickaxe in hand or puts it away. The player may walk with it;

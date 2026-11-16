@@ -35,6 +35,11 @@ impl crate::GpuState {
         );
         let port = local_server::choose_port(&settings);
         let mut arguments = settings.arguments(&self.game_data, port);
+        // The content folders the client mounts (JoF content), so a map only they hold
+        // (one `devmap` lists) starts on the server too.
+        arguments.extend(local_server::HostSettings::extra_base_arguments(
+            &crate::assets::search_paths::extra_base_folders(),
+        ));
         // A listen server shares the console's `g_dismember`, as in EternalJK; the
         // owned server is a separate process, so it is handed over at launch.
         if let Some(chance) = self
@@ -71,7 +76,8 @@ impl crate::GpuState {
                 .join(" ")
         ));
         match LocalServer::start(&program, &arguments, settings.console_lines(), &log) {
-            Ok(server) => {
+            Ok(mut server) => {
+                server.set_cheats(settings.cheats);
                 // Detach before replacing the old owned child, so its disconnect
                 // cannot be mistaken for a failure of the new local game.
                 self.leave_session();

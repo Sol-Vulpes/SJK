@@ -9,6 +9,10 @@
 #                               made it when that is not the piece's owner.
 
 = Sol
++ 13/11/2026 | - | Release 2026.1113.1 (Alpha)
+- 4b468cd |  | Release 2026.1113.1 (Alpha)
++ 13/11/2026 | - | Game chat: a claim's client icon with its tick, the EJK icon alone for unclaimed chat readers
+- bf70f0e |  | Game chat: a claim's client icon with its tick, the EJK icon alone for unclaimed chat readers
 + 13/11/2026 | - | Status: staff merge keys deployed, panel too
 - 0caa59e |  | Status: staff merge keys deployed, panel too
 + 13/11/2026 | - | Staff page: every staff member merges keys; unlinking stays the creator's
@@ -3295,6 +3299,15 @@
 - 0874042 |  | Decode print and cp text as legacy bytes
 
 = Hormorn
++ 15/11/2026 | - | Update CHANGELOG.md
+- f141a5d |  | Update CHANGELOG.md
++ 15/11/2026 | - | Cargo fmt --all (fix)
+- 2262415 |  | cargo fmt --all (fix)
++ 15/11/2026 | - | Fix changelog review check for choice settings
+- df6af5d |  | Fix changelog review check for choice settings
++ 15/11/2026 | SJK #421 | Expand cg_statusBalloons into four display modes.
+- c749c5d |  | Expand cg_statusBalloons into four display modes: stock game behavior, original SJK animations, static clan artwork, and animated clan artwork.
+- 98d75ae |  | Fix status balloon CI checks
 + 11/11/2026 | SJK #401 | Add a height slider for nameplates
 - b75be13 |  | Add a height slider for nameplates
 - 41ae5df |  | Update CHANGELOG.md
@@ -3669,6 +3682,28 @@
 - fed9acd |  | Hide duel opponents' bars and send nothing while duelling
 
 = Slash
++ 16/11/2026 | - | Collection: log book rows 23 px, so the Fishing card fits with the catch line
+- bf3487e |  | Collection: log book rows 23 px, so the Fishing card fits with the catch line
++ 16/11/2026 | SJK #425 | Fishing and Mining: log book, rare catch card, share in SJK chat
+- a15625b |  | Fishing and Mining: log book, rare catch card, share in SJK chat
++ 16/11/2026 | SJK #424 | Fishing and Mining: kyber finds, daily goals, catch market (adwe's idea)
+- b8dc56e |  | Fishing and Mining: kyber finds, daily goals and the catch market
+- 4543d52 |  | Debug panel: catch goals test names the hub's own --catch-quests switch
++ 16/11/2026 | SJK #422 | Console: click a chat line to translate it, the translation right under it
+- cea0352 |  | Console: click a chat line to translate it, the translation right under it
+- e0d4ddc |  | Translate: is_translation stays inside chat (private_interfaces)
+- 03f5328 |  | cargo fmt: saber_petals.rs and world_shot_saber_skins.rs (main fails the Formatting check)
++ 16/11/2026 | SJK #420 | Staff page: a Toys tab with the hub's toy-use counts
+- cbade36 |  | Staff page: a Toys tab with the hub's toy-use counts
+- 256295f |  | Staff Toys tab: no changelog line (staff tools stay quiet)
++ 16/11/2026 | SJK #427 | Devmap bar: cheat buttons over play, hold Ctrl to click
+- f124da7 |  | Devmap bar: cheat buttons over play, held key lends it the mouse
+- ba23951 |  | Changelog: PR number for the devmap bar
++ 16/11/2026 | SJK #426 | Vote panel: F1/F2 vote, voted card folds to one row; ampoll and testpoll
+- d5f3f69 |  | Vote panel: F1/F2 vote, the voted card folds to one row; ampoll and testpoll
++ 16/11/2026 | SJK #423 | Devmap and Create game start maps from JoF content
+- a24eb81 |  | devmap and Create game start maps from JoF content
+- c012070 |  | cargo fmt: saber_petals and world_shot_saber_skins
 + 13/11/2026 | - | Credits and debug panel for PR #419
 - ee23bce |  | Credits and debug panel for PR #419
 - 63ce78d |  | Release 2026.1112.1 (Alpha)

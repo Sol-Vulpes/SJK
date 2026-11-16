@@ -499,6 +499,21 @@ impl ViewerConsole {
             }
             let _ = shell.cvars.set_text("cl_wheelBindVersion", "1");
         }
+        // The devmap bar's key came after every saved profile had its defaults
+        // (`cl_bindDefaultsVersion`): give it its key once, when that key is free and
+        // no key holds the bar yet.
+        if matches!(
+            shell
+                .cvars
+                .get(crate::devmap_bar::BIND_VERSION_CVAR)
+                .map(|cvar| &cvar.value),
+            Some(CvarValue::Integer(0))
+        ) {
+            crate::devmap_bar::migrate_bind(&mut shell.binds);
+            let _ = shell
+                .cvars
+                .set_text(crate::devmap_bar::BIND_VERSION_CVAR, "1");
+        }
         // ui_menuStyle defaulted to classic and every profile saved it, so the
         // SJK UI, the new default, would reach none. Move a saved classic once
         // to the default; a classic chosen after this stays.
@@ -672,11 +687,13 @@ impl ViewerConsole {
             pending_mining: None,
             fishing_card: Default::default(),
             pending_fishing_sell: false,
+            pending_catch_sell: None,
             wheel_of_doom_on: false,
             pending_wheel_of_doom: false,
             mining_card: Default::default(),
             pending_mining_sell: false,
             pending_servers: false,
+            pending_brag: None,
             monitor_on: false,
             pending_monitor: None,
             box_hunt_on: false,
@@ -736,6 +753,7 @@ impl ViewerConsole {
             pending_input: Vec::with_capacity(64),
             pending_chat: std::collections::VecDeque::with_capacity(16),
             whisper_hover: Default::default(),
+            chat_translate: Default::default(),
             chat_lines: std::collections::VecDeque::new(),
 
             client_commands,
@@ -1719,6 +1737,48 @@ mod tests {
         .unwrap();
         let console = ViewerConsole::new(chosen).unwrap();
         assert_eq!(console.shell.binds.get("q"), Some("+wheel general"));
+    }
+
+    /// A profile saved before the devmap bar gets Ctrl for it once, unless Ctrl is
+    /// taken or another key already holds the bar.
+    #[test]
+    fn a_saved_profile_gets_the_devmap_bars_key_once() {
+        let directory = tempfile::tempdir().unwrap();
+        let fresh = ViewerConsole::new(directory.path().join("config.cfg")).unwrap();
+        assert_eq!(fresh.shell.binds.get("CTRL"), Some("+devbar"));
+        let saved = directory.path().join("saved.cfg");
+        std::fs::write(
+            &saved,
+            "seta cl_bindDefaultsVersion \"1\"
+unbindall
+bind w \"+forward\"
+",
+        )
+        .unwrap();
+        let console = ViewerConsole::new(saved).unwrap();
+        assert_eq!(console.shell.binds.get("CTRL"), Some("+devbar"));
+        let taken = directory.path().join("taken.cfg");
+        std::fs::write(
+            &taken,
+            "seta cl_bindDefaultsVersion \"1\"
+bind CTRL \"+wheel\"
+",
+        )
+        .unwrap();
+        let console = ViewerConsole::new(taken).unwrap();
+        assert_eq!(console.shell.binds.get("CTRL"), Some("+wheel"));
+        let elsewhere = directory.path().join("elsewhere.cfg");
+        std::fs::write(
+            &elsewhere,
+            "seta cl_bindDefaultsVersion \"1\"
+unbindall
+bind MOUSE4 \"+devbar\"
+",
+        )
+        .unwrap();
+        let console = ViewerConsole::new(elsewhere).unwrap();
+        assert_eq!(console.shell.binds.get("CTRL"), None);
+        assert_eq!(console.shell.binds.get("MOUSE4"), Some("+devbar"));
     }
 
     #[test]

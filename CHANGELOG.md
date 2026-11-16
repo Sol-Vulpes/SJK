@@ -32,12 +32,6 @@ Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 -->
 ## Unreleased
 
-= cg_feats: Feats: double kills, sprees, first blood, revenge and HOOKED! for a JA+ grapple kill, called out by an announcer with a medal.
-
-- Feats, as arena shooters have them: kills each within 4 seconds of the last make a Double, Triple, Quad and Penta Kill, then Massacre; kills without dying make a Killing Spree (5), Rampage (10), Dominating (15), Unstoppable (20) and Godlike (25); the level's first kill is First Blood, killing your last killer Revenge, ending someone's spree Spree Ended, and a kill with JA+'s grapple hook HOOKED!. Each is a medal under the top centre and an announcer line. Off by default: Settings > HUD "Feats" (`cg_feats`), with "Feat medals", "Feat announcer" and "Announcer voice" (`cg_announcer`), as a PK3 can add its own voice in `sound/sjk/announcer/<name>/`. Worked out by the client from the kill messages, so it works on every server and in demos _(Sol)_
-
-## 2026.1116.1 (Alpha) | 16/11/2026
-
 A new Collection: a hall of tiles, kybers on every tile, an Inventory of all you own, a status bar, and the Creyon werewolf.
 
 > Collection hall: The Collection opens on a hall of tiles, one to each kind, with what is new in each; Enter opens a kind and Esc comes back.
@@ -49,7 +43,9 @@ A new Collection: a hall of tiles, kybers on every tile, an Inventory of all you
 
 = cg_statusBar reset: A status bar at the bottom shows your credits, shards, dormant kybers and DOOM coins, your kyber and toys. Turn it off here or in Settings > HUD.
 = ui_collectionHall: The Collection opens on its hall, a tile to each kind with what is new in it. Off opens it on the kind you used last.
+= cg_feats: Feats: double kills, sprees, first blood, revenge and HOOKED! for a JA+ grapple kill, called out by an announcer with a medal.
 
+- Feats, as arena shooters have them: kills each within 4 seconds of the last make a Double, Triple, Quad and Penta Kill, then Massacre; kills without dying make a Killing Spree (5), Rampage (10), Dominating (15), Unstoppable (20) and Godlike (25); the level's first kill is First Blood, killing your last killer Revenge, ending someone's spree Spree Ended, and a kill with JA+'s grapple hook HOOKED!. Each is a medal under the top centre and an announcer line. Off by default: Settings > HUD "Feats" (`cg_feats`), with "Feat medals", "Feat announcer" and "Announcer voice" (`cg_announcer`), as a PK3 can add its own voice in `sound/sjk/announcer/<name>/`. Worked out by the client from the kill messages, so it works on every server and in demos _(Sol)_
 - Saber shaders are now called kybers everywhere you read them (the Kybers tab, the Forge, trades, the shop), as the kyber gives the blade its look; the kyber crystals achievements bring are now dormant kybers, which you attune rather than open. Each blade keeps its name, and kyber shards, finishers, holocrons and your saved settings are unchanged _(Sol)_
 - Kybers look like themselves on the Collection's tiles: each blade is drawn once by the game as a short loop with its glow and kept on disk, played straight across its Kybers wall tile (name and state at the foot), and in the list, the hall and the Forge; a kyber you do not hold shows its real look greyed and dimmed under a small padlock, and the one you choose moves live on its large card. Walking the wall no longer stutters while blades load, and the Collection keeps to a fixed share of video memory, less on small cards _(Sol)_
 - The Collection opens on a hall of large tiles, one to each kind (Kybers, Finishers, Tags, Toys, Medals, Achievements, Cards, Holocrons, Forge, Inventory, History), each drawing what it holds: your blades and each tier's share, the toys lit while on, your medals, the next achievement's progress, holocrons to open, the deal of the day with its price, your credits and kyber shards, the last History lines; your whole look stands beside it, with what you wear and Loadouts (P) over its head. Enter opens a kind under a "Collection > Kybers" breadcrumb, Ctrl+Tab steps to the next kind and Esc comes back to the hall; `unlockables`, `achievements` and `holocrons` still open their kind directly. Settings > Interface "Collection hall" (`ui_collectionHall`) opens it on the kind used last instead _(Sol)_
@@ -66,6 +62,14 @@ A new Collection: a hall of tiles, kybers on every tile, an Inventory of all you
 - A player joining in a model with very large glowing textures (the old Creyon wolf) no longer freezes the game for up to 700 ms: the glow's light is worked out once, while the model loads in the background, instead of again on the frame it appears _(Sol)_
 - In the game's chat, SJK's emblem and the EJK icon are smaller and the same size; an EJK player's nameplate shows the EJK icon in the tick's place, with the tick on its bottom right corner as on the scoreboard _(Sol)_
 - The Collection's Nameplates tab is gone: it had no ornaments to collect. Nameplates over players are unchanged, and See & share nameplates and the nameplate style stay in Settings > HUD _(Sol)_
+- Status balloons: `cg_statusBalloons` offers stock, SJK animations, static clan pictures or clan animations; name tags select clan art, with static pictures for non-SJK players _(Hormorn, PR #421)_
+- JoF maps: `devmap` and Create game start the maps in the JoF content folder too, instead of the local server stopping at once _(Slash, PR #423)_
+- Vote panel: F1 votes YES and F2 votes NO while a vote waits for you (then they are push and pull again), and once you have voted the card folds to one row, the question over the YES / NO bar with its counts, so it covers less of the game _(Slash, PR #426)_
+- Server: JA+ admins' `ampoll <question>` works: everyone votes YES or NO on the question for 30 seconds, and nothing runs when it passes; on a devmap anyone may use it, to try it, and `testpoll <question>` shows one only to you _(Slash, PR #426)_
+- Devmap bar: in a game with cheats on, hold Ctrl (`+devbar`) for a bar of cheat buttons (noclip, god, jetpack, give, spawn list, NPCs, third person, respawn) to click; `cg_devBar` keeps it on screen at the bottom or the top _(Slash, PR #427)_
+- Chat translation in the console too: click another player's chat line in the console (game or SJK chat) to put it into English; the translation shows right under that line, however fast the chat goes _(Slash, PR #422)_
+- Fishing and Mining: now and then a kyber glint brings a few kyber shards, a daily goal (25 bites hooked, 40 boulders broken) wins an Echo, and the catch market buys fish and ore with one wanted each day at double price (`fishing_sellfish`, `mining_sellore`); each once the hub turns it on _(Slash, PR #424, after adwe's idea)_
+- Fishing and Mining: a Log book on their Collection card lists every fish, junk, ore and rubble, ??? until you catch it, with how many and the day of your first; a rare catch brings its own card, and `fishing_brag` or `mining_brag` (or the book's Share button) says it in the SJK chat _(Slash, PR #425, after adwe's idea)_
 
 ## 2026.1113.1 (Alpha) | 13/11/2026
 
@@ -300,7 +304,6 @@ The WHEEL OF DOOM, a new Solfox, toon shading by choice, sculpted holocrons and 
 
 = r_toonModels reset: Toon models now shows the toon shading players chose for their own model; off, every model keeps stock shading.
 = cg_toonModel: Toon on my model: your model in toon shading for every SJK player; some models suit it, some don't. Also on the Character tab.
-= cg_statusBalloons: Status bubbles: the chat bubble over SJK players shows why it is up: dots while typing, a pause sign in a menu, a moon while alt-tabbed.
 - Toon shading is now each player's choice for their own model, since some models look better with it and some without: Toon shading on the Profile's Character tab (or Settings, `cg_toonModel`) shows your model toon to every SJK player. Toon models in Settings (`r_toonModels`), now on by default, shows those choices; off, everyone keeps stock shading _(Sol)_
 - JoF EJK players now wear the JoF EJK icon on their nameplate too, small after the name (after the tick for a player whose claim says EJK; alone for one found by their name) _(Sol)_
 - `help_tickrate` explains what players call the tick rate: the frames you draw, the commands you send and the snapshots the server sends back; how SJK sends commands on JoF and why, and how to keep even 8 ms steps there; then what your game uses right now _(Sol)_

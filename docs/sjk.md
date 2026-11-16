@@ -74,7 +74,7 @@ migrated, except where the table says so. Where each is documented:
 | `cg_serverRemaps` | off (servers' shader remaps; the map's own apply), asked on the 18/10 what's-new card | [Shader remap controls](client.md#shader-remap-controls) |
 | `cg_remapsShared` | on (Sol, 05/11/2026): server remaps ignored on the maps of the creator's shared list, unless the player chose the map | [Shader remap controls](client.md#shader-remap-controls) |
 | `r_toonModels` | on (Sol, 08/11/2026): players' own toon shading choices (`cg_toonModel`, off) show; saved values reset once by the what's-new card | [Toon models](rendering.md#toon-models) |
-| `cg_statusBalloons` | on (Sol, 09/11/2026, release 2026.1109.2): the chat bubble over SJK players shows why it is up; saved values reset once by the what's-new card | [Status balloons](client.md#status-balloons) |
+| `cg_statusBalloons` | 1, SJK animations (Sol, 09/11/2026, release 2026.1109.2); choices: stock, SJK, clan static or clan animated | [Status balloons](client.md#status-balloons) |
 | `cg_hitMarker` | off (red damage-direction indicator) | [Client](client.md#launch) |
 | `cg_shieldBrightness` | 2 passes, old defaults 1 and 4 moved to 2 once | [Client](client.md#launch) |
 | `cg_duelGhost` | on: duellists as JoF EJK's blue figures (off: dark under the bubble) | [Rendering](rendering.md#entity-render-effects) |
@@ -97,7 +97,7 @@ migrated, except where the table says so. Where each is documented:
 | `cg_drawClock` | off (no local time clock on the HUD) | [Local time clock](client.md#local-time-clock) |
 | `cg_statusBar` | on (Sol, 16/11/2026), at the bottom (`cg_statusBarPosition 0`); its parts' switches on; offered again in the News panel | [Status bar](client.md#status-bar) |
 | `con_chatOnly` | off (the open console shows every line) | [Classic console](client.md#classic-console) |
-| `cl_chatTranslate` | on: `/tr`, `tr` and the SJK chat page's Translate put a chosen line into English through the hub; nothing is translated unasked | [Chat translation](client.md#chat-translation) |
+| `cl_chatTranslate` | on: a click on a chat line (feed or console), `/tr`, `tr` and the SJK chat page's Translate put a chosen line into English through the hub; nothing is translated unasked | [Chat translation](client.md#chat-translation) |
 | `cl_experimentalShowcase` | off (the experimental `ghost` and `mimic` commands, staff keys only) | [Ghost replay](client.md#ghost-replay) |
 | `ui_sliderPeek` | on: over a match, a Settings slider held a moment fades the rest of the screen away | [Settings](sjk-ui.md#settings) |
 | `cl_sjkChatJof`, `cl_sjkChatS` | -1, Auto: a verified JoF or S player reads their own clan's chat, staff both (Sol's spec, 03/11/2026); the other only when chosen | [Clan chats](hub-chat.md#clan-chats) |

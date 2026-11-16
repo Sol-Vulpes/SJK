@@ -1089,9 +1089,9 @@ pub(super) const HUD: &[Setting] = &[
         kind: ValueKind::Bool,
     },
     Setting {
-        label: "Status bubbles",
+        label: "Status balloon mode",
         cvar: crate::status_balloons::CVAR,
-        kind: ValueKind::Bool,
+        kind: ValueKind::Choice(crate::status_balloons::Mode::CHOICES),
     },
     Setting {
         label: "Save game chat logs",
@@ -1816,6 +1816,11 @@ pub(super) const GAME: &[Setting] = &[
         label: "Quick wheel sounds",
         cvar: crate::quick_wheel::SOUNDS_CVAR,
         kind: ValueKind::Bool,
+    },
+    Setting {
+        label: "Devmap bar",
+        cvar: crate::devmap_bar::CVAR,
+        kind: ValueKind::Choice(&["0", "1", "2"]),
     },
     Setting {
         label: "Trade window size",
