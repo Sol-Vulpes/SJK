@@ -97,6 +97,10 @@ impl ChatOverlay {
             // font, width, expiry and line-count choices.
             [g.left, g.bottom] = crate::scoreboard::behavior::ChatLayout::classic_origin(viewport);
         }
+        // Inside the status bars (`status_bar.rs`): a feed set at the screen's foot
+        // stands on the bottom bar.
+        g.bottom = g.bottom.min(viewport[1] - self.edges.bottom);
+        g.top = g.top.max(self.edges.top);
         let hide_feed = matches!(
             self.scoreboard_layout,
             crate::scoreboard::behavior::ChatLayout::Classic { hide_feed: true }

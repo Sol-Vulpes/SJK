@@ -3847,54 +3847,114 @@ on the HUD: 1 the time, 2 the time and the date (`dd/mm/yyyy`) after it, 3 the d
 PC's clock is read at most once a second into retained text
 ([clock.rs](../crates/sjk-viewer/src/hud/clock.rs)).
 
-## Status bar
+## Status bars
 
-`cg_statusBar` (on by default since 16/11/2026, Sol's choice; Settings > HUD, "Status
-bar") puts a compact line at the bottom of the screen, or at the top with
-`cg_statusBarPosition 1` ("Status bar: position"), in the SJK UI's look (navy glass,
-holo edge, the UI's families) in every menu style, with what the player carries and wears
-(Sol's request, 15/11/2026). The release that turned it on asks again in the News
-panel's settings to review (`= cg_statusBar reset`), so a value saved by an earlier build
-does not keep it off unchosen. Each part has its own switch, all on, under the row's
-"Status bar" heading:
+Two thin bars docked to the screen's edges over play (Sol's requests, 15/11/2026 for the
+first bar, 16/11/2026: "stick it to the top or bottom of the screen, not a bubble ... both
+enabled same time"): full width, flush with the edge, about 28 pixels tall at 1080 lines
+(more with a larger `ui_textScale`), in the SJK UI's look in every menu style (navy
+glass, a holo hairline along the inner edge, the UI's families), each with a left, a
+centre and a right group. Both are on by default (Sol's choice, 16/11/2026); the release
+that brought them asks again in the News panel's settings to review (`= cg_statusBar
+reset`, `= cg_statusBarTop reset`), so a value saved by an earlier build does not keep
+them off unchosen. Settings > HUD, under "Status bars": "Bottom bar" (`cg_statusBar`),
+"Top bar" (`cg_statusBarTop`) and a switch for each part, all on. `cg_statusBarPosition`,
+which put the one bar at the top, is gone (16/11/2026): both edges are used.
 
-| Part | Switch | Shows |
-| --- | --- | --- |
-| Credits | `cg_statusBarCredits` | The credits' sign in gold and the hub's credits, digits grouped by three ("12 340") |
-| Kyber shards | `cg_statusBarShards` | The kyber shard in cyan and the hub's kyber shards |
-| To attune (dormant kybers) | `cg_statusBarCrystals` | The best held tier's dormant kyber picture and how many are still to attune, as the profile lists them (among its last 100 holocrons) |
-| DOOM coins | `cg_statusBarCoins` | A red coin with the wheel's spokes and the DOOM coins, once the hub's WHEEL OF DOOM answer has come (`toy_wheelofdoom`, a wheel on the map) |
-| New things | `cg_statusBarNew` | While the Collection holds New things ([sjk-ui.md](sjk-ui.md#new-on-every-kind)): "3 new in your Collection" in gold for the rest of the map they arrived on (or the next map, when they came between maps), then a gold dot alone until they are seen; more arriving says it again (15/11/2026) |
-| Kyber | `cg_statusBarSaber` | The first saber's kyber: its tier's diamonds (as the Collection marks tiers) and its name in the tier's colour ("Stock blade" when none), and the second saber's when it wears another |
-| Effects | `cg_statusBarEffects` | A pill for each thing on: the blade's extras switched on, the finisher worn, Tactical mode's level, Do not disturb, away, toon shading |
-| Toys | `cg_statusBarToys` | Every toy with a switch, its quick wheel picture lit with a gold dot while on, faint while off (the Prop gun, which has no picture, by its letters); left out while Tactical mode, which switches the toys off, is on |
+The bottom bar carries what the player has and wears:
 
-The money's icons are shapes or the Collection's own pictures, so they are sharp at every
-size and tell one from another without their colours; a number the client does not know
-(no hub, the coins not read yet) is left out rather than shown empty, and what does not
-fit is dropped from the end. The bar shows over play only, as the HUD's elements do:
-never under the menus, the console, the scoreboard or an intermission, nor while
-`cg_drawHud 0` hides the elements, nor over a demo, where it would tell the viewer's own
-things rather than the recording's.
+| Part | Switch | Where | Shows |
+| --- | --- | --- | --- |
+| Credits | `cg_statusBarCredits` | left | The credits' sign in gold and the hub's credits, digits grouped by three ("12 340") |
+| Kyber shards | `cg_statusBarShards` | left | The kyber shard in cyan and the hub's kyber shards |
+| To attune (dormant kybers) | `cg_statusBarCrystals` | left | The best held tier's dormant kyber picture and how many are still to attune, as the profile lists them (among its last 100 holocrons) |
+| DOOM coins | `cg_statusBarCoins` | left | A red coin with the wheel's spokes and the DOOM coins, once the hub's WHEEL OF DOOM answer has come (`toy_wheelofdoom`, a wheel on the map) |
+| New things | `cg_statusBarNew` | left | While the Collection holds New things ([sjk-ui.md](sjk-ui.md#new-on-every-kind)): "3 new in your Collection" in gold for the rest of the map they arrived on (or the next map, when they came between maps), then a gold dot alone until they are seen; more arriving says it again (15/11/2026) |
+| Kyber | `cg_statusBarSaber` | left | The first saber's kyber: its tier's diamonds (as the Collection marks tiers) and its name in the tier's colour ("Stock blade" when none), and the second saber's when it wears another |
+| Effects | `cg_statusBarEffects` | left | A pill for each thing on: the blade's extras switched on, the finisher worn, Tactical mode's level, Do not disturb, away, toon shading |
+| Weapons | `cg_statusBarWeapons` | centre | The weapons held by their selection icons, in the selection wheel's order (empty ones by their `_na` icon, the saber by its style's), the one in hand lit on a holo ground and underlined in gold, then its ammunition (ember at five or fewer; the room stays while a weapon held takes ammunition, so the row does not shift); the followed player's while following, none while spectating freely |
+| Toys | `cg_statusBarToys` | right | Every toy with a switch, its quick wheel picture lit with a gold dot while on, faint while off (the Prop gun, which has no picture, by its letters) |
+| Time | `cg_statusBarTime` | right | The PC's local time on the 24-hour clock (`21:07`), read once a second |
+| Date | `cg_statusBarDate` | right | The date day first (`16/11/2026`) |
 
-It keeps clear of the HUD from the boxes of what the HUD drew that frame (the ones
-`hud_edit` shows): a box beside its band narrows it (the health and Force blocks in the
-bottom corners, the speedometer, the lagometer), a box reaching within 180 pixels (at
-1080 lines) of the screen's middle moves it past (above the classic layout's weapon box,
-a vehicle's meters; below the match timer at the top). It steps aside, rather than jump,
-while something passing stands where it is: the weapon, Force or item selector at the
-bottom, a vote or the warmup line at the top. At the top it stands under the build label
-while that shows, and takes at most 56% of the width, leaving the corners to the
-followed player's name, the readouts and the kill feed. The bottom is the default because
-the top's middle holds the match timer (`cg_drawTimer`, on by default).
+The top bar carries the match:
+
+| Part | Switch | Where | Shows |
+| --- | --- | --- | --- |
+| Force powers | `cg_statusBarTopForce` | left | The Force powers known, by their Force bar pictures in the wheel's order (JoF's Stasis, Repulse and Dash too), the selected one lit and underlined, one in use marked with a holo dot; none while spectating or following. Levels are not shown: protocol 26 sends only Jump's and Sense's |
+| Score | `cg_statusBarTopScore` | left | The player's place ("2nd", "Tied 3rd", gold when first) and score; in a team game the red and blue scores, the player's own brighter; none while watching |
+| Time left | `cg_statusBarTopTimeLeft` | centre | A clock face and the match's time left from the server's `timelimit` and the level's start (`12:04`, `1:02:09` past an hour), ember under a minute; nothing without a time limit |
+| Joins and leaves | `cg_statusBarTopFeed` | right | The last three players to join or leave, each a green (joined) or ember (left) dot, the name in its colours and "joined" or "left", shown 6 seconds then fading over 1.2; the newest stands nearest the server's name |
+| Server name | `cg_statusBarTopServer` | right | `sv_hostname` in its colours, cut to an ellipsis past 250 pixels |
+| Map | `cg_statusBarTopMap` | right | The map's name without `mp/` |
+| Game type | `cg_statusBarTopMode` | right | A pill: FFA, Duel, Power Duel, Team FFA, Siege, CTF, CTY... |
+| Players | `cg_statusBarTopPlayers` | right | A person's mark, the players on the server (the filled player slots, bots and spectators included) and its slots (`sv_maxclients`) |
+| Ping | `cg_statusBarTopPing` | right | The ping in milliseconds, green under 80, gold under 150, ember beyond |
+| Frame rate | `cg_statusBarTopFps` | right | The frames per second the client measures (the `cg_drawFps` rate) |
+
+The joins and leaves come from the players' config strings, not the servers' print lines
+(whose words differ from mod to mod): a slot that fills is a join, one that empties a
+leave, a rename nothing. They are followed four times a second while a game is on, shown
+or not, and a new game state (a map change, another server) is read afresh without
+telling anyone joined. A part without a value (no hub, no time limit, no server name) is
+left out rather than shown empty. When a bar runs out of room (4:3, a large text size),
+the parts that matter least go first, one piece at a time: on the bottom the toys, the
+effects, the coins, the dormant kybers, the shards, the nudge, the date, the kyber, the
+credits, then the weapons, the time last; on the top the server's name, the game type,
+the score, the ping, the feed (its oldest entry first), the players, the Force, the map,
+the frame rate, the time left last. Numbers that tick (the frame rate, the ping, the time
+left, the clock, the ammunition) keep the width of their widest digits, so their
+neighbours do not shuffle.
+
+The bars show over play only, as the HUD's elements do: never under the menus, the
+console or an intermission, nor while `cg_drawHud 0` hides the elements, nor over a demo,
+where they would tell the viewer's own things rather than the recording's. Unlike the
+single bar before them, they stay under the scoreboard: the HUD then does not jump each
+time the scoreboard is held, and the top bar's players and time left stay readable round
+it.
+Tactical mode, there to fight, leaves the toys (switched off anyway) and the Collection's
+nudge out.
+
+**The HUD moves inside them.** Rather than the bars dodging the HUD, the bars keep their
+room and everything 2D drawn against an edge stands inside it; the 3D view is untouched.
+Each frame, before the HUD is laid out, `GpuState::reserve_status_bars` decides which bars
+show and how tall they are, and `status_bar.reserved()` gives every part of the client the
+room kept at the top and the bottom in window pixels (0 for a bar off or hidden):
+
+- The HUD's elements (the radial, classic and game looks' widgets, the selectors, the
+  kill feed, the feats' medals, the vote card, the lagometer, the speedometer, the
+  movement keys, the clock, the jetpack and vehicle meters, the flags, the followed
+  player's name, the upper right's portrait, inventory and powerups, the score line, the
+  warmup line) each move by the bar of the edge they stand nearer: down by the top bar's
+  height when their box's middle is above the screen's, up by the bottom bar's otherwise
+  (`Reserved::shift`), so each half keeps its own arrangement. What stands with the
+  crosshair (its name, the interruption notice, the strafe guides, the hack bar, the
+  Monitor's marks, the sound sonar) stays with it. The HUD editor's outlines follow.
+- The game HUD (`hud.menu`, anchored to the bottom) stands higher by the bottom bar's
+  height, its pictures and its text alike.
+- The chat's feed ends above the bottom bar when it is set at the screen's foot (the
+  default, 350 of 480, is clear of it); the console's notify lines start under the top
+  bar; the `cg_drawFps` readouts and the upper right match clock stand under it; the
+  devmap bar (`cg_devBar`) stands inside the bar of its own edge; the build label in a
+  development build sits under the top bar; the weapon row's name, the Possible drops
+  panel, the player card and the world pings' off-screen markers keep clear of both.
+- While a bar shows the same thing, the HUD's own readout is not drawn: the match timer
+  (the layouts' and the upper right one) while the top bar shows the time left,
+  `cg_drawFps`'s rate while it shows the frame rate (its frame times stay, under the bar),
+  and `cg_drawClock` while the bottom bar shows all it would (the time, the date, or
+  both).
 
 Its text follows `ui_textScale`; it is laid out from the window's height, so it reads the
-same at 1080p and at 4K. What it shows is read four times a second into fixed storage, and
-it is laid out again only when that, its switches, its place or the screen change; other
-frames hand on the shapes kept, allocating nothing
+same at 1080p and at 4K. What the bars show is read four times a second into fixed
+storage (the clock once a second); each bar is laid out again only when what it shows, its
+switches or the screen change, and other frames hand on the shapes kept, allocating
+nothing. The feed fades in sixteen steps, so a fading entry lays the top bar out sixteen
+times rather than every frame
 ([status_bar.rs](../crates/sjk-viewer/src/status_bar.rs)). World shots:
-`world_shot::status_bar_shots` (made-up numbers) and `status_bar_on_a_demo` (over a
-recorded match's HUD, `SJK_TEST_DEMO`).
+`world_shot::status_bar_shots` (made-up contents at 1080p, 4K, 21:9 and 4:3),
+`status_bar_on_a_demo` (over a recorded match's HUD in the three looks, with a vote and
+the devmap bar, checking every HUD element stands inside the bars; `SJK_TEST_DEMO`) and
+`status_bar_cost`.
 
 ## Speedometer placement
 

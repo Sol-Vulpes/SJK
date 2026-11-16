@@ -153,13 +153,13 @@ fn drops_shade(since: Duration) -> f32 {
 }
 
 /// The drops panel's rectangle for `rows` rows, its top left wanted at `at`, kept on the
-/// screen.
-fn drops_panel(at: [f32; 2], rows: usize, unit: f32, viewport: [f32; 2]) -> Rect {
+/// screen above the `bottom` pixels the bottom status bar keeps (`status_bar.rs`).
+fn drops_panel(at: [f32; 2], rows: usize, unit: f32, viewport: [f32; 2], bottom: f32) -> Rect {
     let width = PANEL_WIDTH * unit;
     let height = (PANEL_PAD * 2.0 + ROW * (rows as f32 + 1.0)) * unit;
     Rect::new(
         at[0].min(viewport[0] - width).max(0.0),
-        at[1].min(viewport[1] - height).max(0.0),
+        at[1].min(viewport[1] - bottom - height).max(0.0),
         width,
         height,
     )
@@ -375,6 +375,7 @@ impl GpuState {
                 drops.len().min(MOST_DROPS),
                 unit,
                 viewport,
+                self.status_bar.reserved().bottom,
             );
             push_drops(state, panel, &drops, unit, shade);
         }
@@ -467,9 +468,15 @@ mod tests {
     #[test]
     fn the_drops_panel_stays_on_the_screen() {
         let viewport = [1920.0, 1080.0];
-        let panel = drops_panel([1900.0, 1000.0], 12, 1.0, viewport);
+        let panel = drops_panel([1900.0, 1000.0], 12, 1.0, viewport, 0.0);
         assert!(panel.x + panel.width <= viewport[0]);
         assert!(panel.y + panel.height <= viewport[1]);
-        assert_eq!(drops_panel([1000.0, 600.0], 3, 1.0, viewport).x, 1000.0);
+        assert_eq!(
+            drops_panel([1000.0, 600.0], 3, 1.0, viewport, 0.0).x,
+            1000.0
+        );
+        // Above the bottom status bar while it shows.
+        let lifted = drops_panel([1900.0, 1000.0], 12, 1.0, viewport, 28.0);
+        assert_eq!(lifted.bottom(), panel.bottom() - 28.0);
     }
 }

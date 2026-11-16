@@ -165,6 +165,17 @@ impl Clock {
         }
     }
 
+    /// Whether a status bar showing the time (`time`) and the date (`date`) says all
+    /// this clock says, so it is left out (`status_bar.rs`).
+    pub(super) fn covered_by(&self, time: bool, date: bool) -> bool {
+        match self.show {
+            Show::Off => true,
+            Show::Time => time,
+            Show::TimeAndDate => time && date,
+            Show::Date => date,
+        }
+    }
+
     /// Show `text` as the clock, for snapshots.
     #[cfg(test)]
     pub(super) fn preview(&mut self, time: LocalTime, show: Show, twelve: bool) {

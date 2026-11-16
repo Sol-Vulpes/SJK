@@ -469,6 +469,7 @@ impl crate::GpuState {
             Some(crate::chat::options::box_rect(
                 self.console.as_ref(),
                 viewport,
+                self.status_bar.reserved(),
             )),
         );
         let target = crate::ingame_menu::sjk_view::text_target(

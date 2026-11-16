@@ -226,6 +226,9 @@ pub(crate) struct MenuHud {
     active: bool,
     /// Whether this frame's pictures and text are drawn.
     drawn: bool,
+    /// How far up the whole HUD stands this frame, in pixels: the bottom status bar's
+    /// height while it shows (`status_bar.rs`), as every piece is anchored to the bottom.
+    lift: f32,
 }
 
 impl MenuHud {
@@ -239,7 +242,13 @@ impl MenuHud {
             score_label: String::from("Score"),
             active: false,
             drawn: false,
+            lift: 0.0,
         }
+    }
+
+    /// Stand the HUD `lift` pixels higher this frame: above the bottom status bar.
+    pub(crate) fn set_lift(&mut self, lift: f32) {
+        self.lift = lift;
     }
 
     /// Whether the built-in status widgets should hide this frame.
@@ -420,14 +429,19 @@ impl MenuHud {
                 }
             }
         }
-        self.gpu
-            .prepare(queue, self.drawn.then_some(&self.frame), viewport, scale);
+        self.gpu.prepare(
+            queue,
+            self.drawn.then_some(&self.frame),
+            viewport,
+            scale,
+            self.lift,
+        );
     }
 
     /// The boxes, in pixels, round what the menu HUD's left and right blocks drew this
     /// frame: their pictures and their text runs (the score line, the text HUD's strings)
-    /// in `font`, the one [`Self::append_text`] draws them in. For the HUD edit mode, and
-    /// for the status bar, which keeps clear of them (`status_bar.rs`).
+    /// in `font`, the one [`Self::append_text`] draws them in, above the bottom status bar
+    /// as they are drawn ([`Self::set_lift`]). For the HUD edit mode.
     pub(crate) fn block_bounds(
         &self,
         viewport: [f32; 2],
@@ -446,6 +460,7 @@ impl MenuHud {
             let pictures = pictures.iter().map(|picture| {
                 let [x, y, width, height] =
                     gpu::to_pixels(picture.rect, picture.side, viewport, scale);
+                let y = y - self.lift;
                 // A right menu's rectangles run leftwards (negative widths).
                 sjk_ui::Rect::new(
                     x.min(x + width),
@@ -455,7 +470,7 @@ impl MenuHud {
                 )
             });
             let texts = texts.iter().map(|run| {
-                let ([x, y], glyph_scale) = run_origin(run, font, viewport, scale);
+                let ([x, y], glyph_scale) = run_origin(run, font, viewport, scale, self.lift);
                 let width = crate::text::visible_text_width_style(
                     font,
                     &run.text,
@@ -482,7 +497,7 @@ impl MenuHud {
             return;
         }
         for run in &self.frame.texts[..self.frame.text_count] {
-            let (origin, glyph_scale) = run_origin(run, font, viewport, scale);
+            let (origin, glyph_scale) = run_origin(run, font, viewport, scale, self.lift);
             // Placed runs never wrap at the screen's edge (hub reports 75/76).
             crate::text::append_text_unwrapped(
                 vertices,
@@ -507,12 +522,13 @@ impl MenuHud {
 }
 
 /// Where `run` starts in pixels and its glyph scale: centred on its x, or
-/// starting there, moved left when it would pass its `end_limit`.
+/// starting there, moved left when it would pass its `end_limit`, and `lift` pixels up.
 fn run_origin(
     run: &frame::TextRun,
     font: &crate::text::UiFont,
     viewport: [f32; 2],
     scale: f32,
+    lift: f32,
 ) -> ([f32; 2], f32) {
     let side = run.side.unwrap_or(Side::Left);
     let [x, y, _, size] = gpu::to_pixels([run.x, run.y, 0.0, run.size], side, viewport, scale);
@@ -524,7 +540,7 @@ fn run_origin(
         let [edge, ..] = gpu::to_pixels([limit, 0.0, 0.0, 0.0], side, viewport, scale);
         x = x.min(edge - width());
     }
-    ([x, y], glyph_scale)
+    ([x, y - lift], glyph_scale)
 }
 
 /// The values the HUD shows, or `None` when retail would not draw it.
@@ -688,7 +704,7 @@ mod tests {
                     side: Some(Side::Right),
                     end_limit: Some(640.0 - frame::SIMPLE_MARGIN),
                 };
-                let (origin, glyph_scale) = run_origin(&run, &font, viewport, scale);
+                let (origin, glyph_scale) = run_origin(&run, &font, viewport, scale, 0.0);
                 let width = crate::text::visible_text_width_style(
                     &font,
                     name,
@@ -732,7 +748,7 @@ mod tests {
             side: Some(Side::Right),
             end_limit: Some(640.0 - frame::SIMPLE_MARGIN),
         };
-        let (origin, _) = run_origin(&run, &font, [640.0, 480.0], 1.0);
+        let (origin, _) = run_origin(&run, &font, [640.0, 480.0], 1.0, 0.0);
         assert_eq!(origin, [576.0, 454.0]);
     }
 

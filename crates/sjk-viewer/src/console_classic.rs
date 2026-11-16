@@ -445,6 +445,9 @@ pub(crate) struct ClassicEnv {
     /// Disconnected with the client's menu closed: the console fills the
     /// screen (`Con_DrawConsole`).
     pub(crate) full_screen: bool,
+    /// Where the notify lines start: under the top status bar while it shows
+    /// (`status_bar.rs`), else the screen's top, in pixels.
+    pub(crate) notify_top: f32,
 }
 
 /// The colours a console's rows are drawn in.
@@ -684,7 +687,7 @@ impl ViewerConsole {
                     ink: Ink::CLASSIC,
                     ..painter
                 };
-                self.classic_notify(frame, &painter, options);
+                self.classic_notify(frame, &painter, options, env.notify_top);
             }
             return;
         }
@@ -1226,13 +1229,15 @@ impl ViewerConsole {
 
     /// The notify lines (`Con_DrawNotify`), the console feed: with
     /// `con_drawNotify` on, of the last `con_notifylines` rows, those written in
-    /// the last `con_notifytime` seconds and not quiet (chat is), from the top
-    /// of the screen, one cell plus `cl_conXOffset` pixels from the left.
+    /// the last `con_notifytime` seconds and not quiet (chat is), from `top` (the
+    /// screen's top, or under the top status bar), one cell plus `cl_conXOffset`
+    /// pixels from the left.
     fn classic_notify(
         &mut self,
         frame: &mut ConsoleFrame,
         painter: &Painter<'_>,
         options: super::console_options::Options,
+        top: f32,
     ) {
         let grid = painter.grid;
         let wanted = options.notify_lines;
@@ -1261,7 +1266,7 @@ impl ViewerConsole {
         rows.truncate(wanted);
         let now = self.shell.command_clock_millis();
         let left = options.notify_x.trunc() + grid.width;
-        let mut y = 0.0;
+        let mut y = top;
         for Row { line, span, .. } in rows.iter().rev().copied() {
             let Some(entry) = self.shell.line(line) else {
                 continue;

@@ -108,9 +108,7 @@ const CHOICE_NAMES: &[(&str, &str, &str)] = &[
     (crate::hud::clock::CVAR, "1", "Time"),
     (crate::hud::clock::CVAR, "2", "Time and date"),
     (crate::hud::clock::CVAR, "3", "Date"),
-    (crate::status_bar::POSITION_CVAR, "0", "Bottom"),
     (crate::feats::announcer::CVAR, "sjk", "SJK"),
-    (crate::status_bar::POSITION_CVAR, "1", "Top"),
     (
         crate::chat::incoming_color::CVAR,
         "0",
@@ -1697,43 +1695,95 @@ const HELP: &[(&str, &str)] = &[
     ),
     (
         crate::status_bar::CVAR,
-        "A compact bar over play with your money, your kyber, what is on and your toys. Choose what it shows below.",
+        "A thin bar on the screen's bottom edge: your money, kyber, effects, weapons, toys, time and date. The HUD moves above it.",
     ),
     (
-        crate::status_bar::POSITION_CVAR,
-        "Where the status bar stands: at the bottom between the HUD's corners, or at the top under the match timer.",
+        crate::status_bar::Part::Credits.cvar(),
+        "Shows your credits on the bottom bar.",
     ),
     (
-        crate::status_bar::CREDITS_CVAR,
-        "Shows your credits on the status bar.",
+        crate::status_bar::Part::Shards.cvar(),
+        "Shows your kyber shards on the bottom bar.",
     ),
     (
-        crate::status_bar::SHARDS_CVAR,
-        "Shows your kyber shards on the status bar.",
+        crate::status_bar::Part::Crystals.cvar(),
+        "Shows how many dormant kybers you have left to attune on the bottom bar.",
     ),
     (
-        crate::status_bar::CRYSTALS_CVAR,
-        "Shows how many dormant kybers you have left to attune on the status bar.",
+        crate::status_bar::Part::Coins.cvar(),
+        "Shows your DOOM coins on the bottom bar, once the hub has said how many.",
     ),
     (
-        crate::status_bar::COINS_CVAR,
-        "Shows your DOOM coins on the status bar, once the hub has said how many.",
+        crate::status_bar::Part::New.cvar(),
+        "Says on the bottom bar when your Collection holds new things: in words for that map, then a gold dot.",
     ),
     (
-        crate::status_bar::NEW_CVAR,
-        "Says when your Collection holds new things: in words for that map, then a gold dot.",
+        crate::status_bar::Part::Saber.cvar(),
+        "Shows the kyber on your saber, in its tier's colour, on the bottom bar.",
     ),
     (
-        crate::status_bar::SABER_CVAR,
-        "Shows the kyber on your saber, in its tier's colour, on the status bar.",
+        crate::status_bar::Part::Effects.cvar(),
+        "Shows what is on about you on the bottom bar: blade extras, finisher, Tactical, Do not disturb, away.",
     ),
     (
-        crate::status_bar::EFFECTS_CVAR,
-        "Shows what is on about you on the status bar: blade extras, finisher, Tactical, Do not disturb, away.",
+        crate::status_bar::Part::Weapons.cvar(),
+        "Shows the weapons you hold in the bottom bar's middle, the one in your hand lit, with its ammunition.",
     ),
     (
-        crate::status_bar::TOYS_CVAR,
-        "Shows every toy on the status bar, its picture lit while it is on.",
+        crate::status_bar::Part::Toys.cvar(),
+        "Shows every toy on the bottom bar, its picture lit while it is on.",
+    ),
+    (
+        crate::status_bar::Part::Time.cvar(),
+        "Shows your PC's local time at the bottom bar's right, on the 24-hour clock.",
+    ),
+    (
+        crate::status_bar::Part::Date.cvar(),
+        "Shows the date at the bottom bar's right, day first.",
+    ),
+    (
+        crate::status_bar::TOP_CVAR,
+        "A thin bar on the screen's top edge: your Force, score, time left, joins and leaves, server, map, players, ping and FPS.",
+    ),
+    (
+        crate::status_bar::Part::Force.cvar(),
+        "Shows the Force powers you know on the top bar, the selected one lit and one in use marked.",
+    ),
+    (
+        crate::status_bar::Part::Score.cvar(),
+        "Shows your place and score on the top bar, or the teams' scores in a team game.",
+    ),
+    (
+        crate::status_bar::Part::TimeLeft.cvar(),
+        "Shows the match's time left in the top bar's middle when the server sets a time limit. The HUD's match timer steps aside.",
+    ),
+    (
+        crate::status_bar::Part::Feed.cvar(),
+        "Tells on the top bar who joins and leaves the server, for a few seconds each.",
+    ),
+    (
+        crate::status_bar::Part::Server.cvar(),
+        "Shows the server's name on the top bar.",
+    ),
+    (
+        crate::status_bar::Part::Map.cvar(),
+        "Shows the map on the top bar.",
+    ),
+    (
+        crate::status_bar::Part::Mode.cvar(),
+        "Shows the game type on the top bar: FFA, Duel, CTF...",
+    ),
+    (
+        crate::status_bar::Part::Players.cvar(),
+        "Shows how many players are on the server and how many it holds on the top bar.",
+    ),
+    (
+        crate::status_bar::Part::Ping.cvar(),
+        "Shows your ping on the top bar, green when low, ember when high.",
+    ),
+    (
+        crate::status_bar::Part::Fps.cvar(),
+        "Shows your frame rate on the top bar. The FPS readout keeps its frame times under it.",
     ),
     (
         crate::hud::movement_keys::CVAR,

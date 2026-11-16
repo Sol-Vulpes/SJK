@@ -282,6 +282,12 @@ pub(crate) struct DevBar {
     shown: bool,
     /// The keys bound to `+devbar`, as players read them (kept between frames).
     keys: String,
+    /// The room the status bars keep at the screen's edges this frame: the bar stands
+    /// inside it (`status_bar.rs`).
+    edges: crate::status_bar::Reserved,
+    /// A world shot shows the bar without a server with cheats on.
+    #[cfg(test)]
+    pub(crate) forced: bool,
 }
 
 impl Default for DevBar {
@@ -297,6 +303,9 @@ impl Default for DevBar {
             flash: None,
             shown: false,
             keys: String::new(),
+            edges: crate::status_bar::Reserved::NONE,
+            #[cfg(test)]
+            forced: false,
         }
     }
 }
@@ -310,6 +319,11 @@ impl DevBar {
     /// Whether the bar was drawn this frame.
     pub(crate) fn shown(&self) -> bool {
         self.shown
+    }
+
+    /// Stand inside the room the status bars keep this frame (`status_bar.rs`).
+    pub(crate) fn set_edges(&mut self, edges: crate::status_bar::Reserved) {
+        self.edges = edges;
     }
 
     pub(crate) fn draw_list(&self) -> &sjk_ui::DrawList {
@@ -379,7 +393,16 @@ impl DevBar {
         }
         let frame = Frame::new(viewport);
         let s = frame.s;
-        let (bar, buttons) = layout(place);
+        let (mut bar, mut buttons) = layout(place);
+        // Inside the status bar at the same edge, while it shows.
+        let lift = match place {
+            Place::Bottom => -self.edges.bottom,
+            Place::Top => self.edges.top,
+        } / s.max(1e-3);
+        bar[1] += lift;
+        for button in &mut buttons {
+            button[1] += lift;
+        }
         self.bar = frame.rect(bar[0], bar[1], bar[2], bar[3]);
         for (rect, button) in self.buttons.iter_mut().zip(&buttons) {
             *rect = frame.rect(button[0], button[1], button[2], button[3]);
@@ -587,6 +610,8 @@ impl DevBar {
 /// menu, no console, no intermission).
 pub(crate) fn append(gpu: &mut crate::GpuState, viewport: [f32; 2], visible: bool) {
     let cheats = gpu.devmap_bar_cheats();
+    #[cfg(test)]
+    let cheats = cheats || gpu.devmap_bar.forced;
     if gpu.devmap_bar.held && (!cheats || gpu.text_has_keyboard()) {
         gpu.devmap_bar.release();
     }
@@ -603,6 +628,7 @@ pub(crate) fn append(gpu: &mut crate::GpuState, viewport: [f32; 2], visible: boo
     {
         console.write_keys_for_command(HOLD_COMMAND, &mut gpu.devmap_bar.keys);
     }
+    gpu.devmap_bar.set_edges(gpu.status_bar.reserved());
     gpu.devmap_bar.build(viewport, place, shown, Instant::now());
     if shown {
         gpu.devmap_bar.append_text(

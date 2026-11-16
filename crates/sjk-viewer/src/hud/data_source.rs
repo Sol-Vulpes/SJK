@@ -264,7 +264,7 @@ pub(super) fn load_override(path: &Path) -> Option<HudLayoutDocument> {
     (document.version == 1 && document.widgets.len() <= WIDGET_LIMIT).then_some(document)
 }
 
-pub(super) fn client_name_and_team(
+pub(crate) fn client_name_and_team(
     game_state: &GameState,
     client_num: u16,
 ) -> (std::borrow::Cow<'_, str>, u8) {

@@ -102,8 +102,8 @@ test: Get a card / tag / finisher: its hall tile shows a gold "1 new" pill at th
 test: Its page: "1 new" + Mark all seen (N) after the headline, a New sticker on the thing.
 test: Choose it 1 s: sticker gone; sweep across tiles: nothing seen. N or the chip: all seen.
 test: Finishers page: open 1 s sees the new finisher. Inventory: a New sticker on the row.
-test: cg_statusBar 1: "1 new in your Collection" for that map; next map a gold dot; then gone.
-note: Settings > HUD "Status bar: new things" (cg_statusBarNew) hides that part.
+test: Bottom bar: "1 new in your Collection" for that map; next map a gold dot; then gone.
+note: Settings > HUD "Bottom bar: new things" (cg_statusBarNew) hides that part.
 
 [empty-states]
 area: Menus & settings
@@ -4012,23 +4012,26 @@ test: 301 characters: the box stops at 300; sjksay with more sends the first 300
 
 # ---- HUD ----
 
-[status-bar]
+[status-bars-docked]
 area: HUD
-title: Status bar: on by default at the bottom, icons for the money, clear of the HUD
-change: On by default (cg_statusBar); cg_statusBarPosition 0 bottom, 1 top; a switch per part.
-change: Credits, shards, dormant kybers, DOOM coins as icon + number; kyber with tier diamonds.
-change: Keeps clear of HUD corners/timer; hides while the weapon or Force row shows.
-test: New profile, a match: the bar sits at the bottom between the health and Force blocks.
-test: Icons: gold credits sign, cyan shard, dormant kyber picture, red DOOM coin; no words.
-test: Numbers match the Collection's (credits, shards, to attune); DOOM coins after toy_wheelofdoom.
-test: Switch weapon or Force power: the bar hides while the row shows, then comes back.
-test: cg_statusBarPosition 1: under the build label, below the match timer; a vote hides it.
-test: Wear a Legendary blade: 3 diamonds + its name in gold-orange; stock: "Stock blade" grey.
-test: News panel after the update: "Status bar" in Settings to review, its switch works.
-test: toy_box, toy_hax, toy_illuminate: their pictures light up with a gold dot; off: faint.
-test: tactical medium, dnd, the Sun's extras on: a pill each; away (alt-tab): "Away".
-test: Tab (scoreboard), Escape (menu), console, Collection, cg_drawHud 0: the bar hides.
-test: ui_textScale 1.4 and a 4K window: bigger text, nothing cut; switch parts off one by one.
+title: Status bars docked to the bottom and the top, both on, the HUD inside them
+change: Bottom (cg_statusBar): wallet, kyber, effects, weapons + ammo, toys, 24h time, date.
+change: Top (cg_statusBarTop): Force, place/score, time left, joins/leaves, server, map, players.
+change: The HUD, game HUD, chat, notify lines, vote, devmap bar move inside; dupes step aside.
+test: New profile, a match: a thin strip flush on each edge; health/Force blocks sit above it.
+test: Bottom: icons for credits/shards/dormant/coins; weapons centred, the one in hand lit.
+test: Switch weapons: the lit icon follows, ammo after the row; the selector row sits above.
+test: Bottom right: toys, then the time (24h, ticks each minute) and the date dd/mm/yyyy.
+test: Top: Force icons, the selected one lit, Speed on: a cyan dot; 2nd + score; ping, fps.
+test: Server with timelimit: "12:34 left" in the middle, the HUD timer gone; no limit: none.
+test: Bot or friend joins/leaves: green/ember dot + name "joined"/"left" at top right, fades.
+test: cg_drawFps 1: rate only on the bar, frame times under it; cg_drawClock 2: HUD clock gone.
+test: Classic, radial and game HUD; 4:3 and 21:9: nothing under a bar; toys go first on 4:3.
+test: Vote (testvote), chat at the foot, devmap bar (cg_devBar 1 and 2), notify lines: inside.
+test: Tab: bars stay, nothing jumps; Escape, console, cg_drawHud 0, a demo: both bars hide.
+test: News panel: "Bottom bar" and "Top bar" in Settings to review; each switch works.
+test: Settings > HUD > Status bars: each part's switch hides just that part.
+note: cg_statusBarPosition is gone. Insets for other overlays: status_bar.reserved().
 
 [nameplate-height]
 area: HUD
