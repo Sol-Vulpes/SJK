@@ -51,7 +51,7 @@ pub(crate) struct Drop {
 
 /// `per_mille` as a player reads it: "45.5 %", "1 %".
 pub(crate) fn percent(per_mille: u32) -> String {
-    if per_mille % 10 == 0 {
+    if per_mille.is_multiple_of(10) {
         format!("{} %", per_mille / 10)
     } else {
         format!("{}.{} %", per_mille / 10, per_mille % 10)
@@ -60,7 +60,7 @@ pub(crate) fn percent(per_mille: u32) -> String {
 
 /// `drops` likeliest first, the equally likely in the order given.
 pub(crate) fn likeliest_first(mut drops: Vec<Drop>) -> Vec<Drop> {
-    drops.sort_by(|a, b| b.per_mille.cmp(&a.per_mille));
+    drops.sort_by_key(|drop| std::cmp::Reverse(drop.per_mille));
     drops
 }
 

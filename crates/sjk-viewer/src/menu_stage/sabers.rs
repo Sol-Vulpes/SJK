@@ -508,7 +508,7 @@ impl GpuState {
         let millis = (seconds * 1_000.0) as i64;
         // The Saber Lab lights the blades and puts them out as a match does, a frame's
         // growth at a time; elsewhere they are out in full, but for a first look in the
-        // Collection, which lights a New kyber held out till then. in the Collection lights a New kyber held out till then.
+        // Collection, which lights a New kyber held out till then.
         let lit = stage
             .lab
             .map(|lab| lab.lit)

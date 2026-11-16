@@ -1,5 +1,5 @@
 //! The Forge's dot (10/11/2026; `docs/cards.md`, "Fusion, deal of the day, wishlist"): a
-//! gold dot on the Collection's Forge tab and the Holocrons tab's Shop button while
+//! gold dot on the Collection hall's Forge tile and the Holocrons tab's Shop button while
 //! something in the Forge waits for the player: an offer of today's shop is on their
 //! wishlist, they can afford the deal of the day, or a fusion is possible. Read from the
 //! identity's snapshot twice a second (`wishlist::follow`), kept here for the pages to

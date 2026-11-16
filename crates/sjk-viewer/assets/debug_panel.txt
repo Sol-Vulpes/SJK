@@ -4289,6 +4289,14 @@ test: Menu and Force icons look as before, edges not cut.
 
 # ---- Rendering & effects ----
 
+[big-glow-model-hitch]
+area: Rendering & effects
+title: No freeze when a player in a model with big glowing textures joins
+change: A model's glow light is worked out once on its loader, not again on the frame it shows.
+test: On a server, have someone join or switch to creyonwolf: no stutter as the wolf appears.
+test: GameData/SJK/logs/session.log: no "hitch" line with config-refresh near that moment.
+note: Sol's 16/11 log: model install creyonwolf 719 ms (materials 709 ms).
+
 [rig-chain-motion]
 area: Rendering & effects
 title: Rig chains trail the player (drag) and keep out of the arms (Kushina, #377)
