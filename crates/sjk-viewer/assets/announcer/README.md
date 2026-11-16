@@ -26,7 +26,8 @@ To make a pack, put any of these files in `sound/sjk/announcer/<your pack>/` in 
 | `spree_ended` | "Spree ended!" (you ended someone's spree) |
 | `revenge` | "Revenge!" (you killed your last killer) |
 
-Keep each line short (under about 1.3 s: lines are spaced that far apart) and mono.
+Keep each line short (under about 1.7 s: lines are spaced that far apart) and mono.
 
-SJK's own lines are not recorded yet: until they are, the `sjk` pack is empty and only
-packs from PK3s speak.
+SJK's own lines (`sjk/`, 22050 Hz mono 16-bit) were generated on 16/11/2026 with Higgsfield's
+Seed Audio 1.0 (ByteDance), preset voice Barrett, as one take of all fourteen lines, then cut
+at its silences, given short fades and normalised to -1 dBFS.

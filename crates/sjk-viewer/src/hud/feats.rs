@@ -34,7 +34,7 @@ pub(crate) const FADE_MS: i32 = 700;
 const POP_MS: i32 = 160;
 const POP_SCALE: f32 = 1.35;
 /// Least time between two announcer lines (server milliseconds).
-pub(crate) const LINE_GAP_MS: i32 = 1_300;
+pub(crate) const LINE_GAP_MS: i32 = 1_700;
 /// Lines waiting at most; a new one pushes the oldest out.
 const QUEUE: usize = 3;
 /// A kill stamped this far ahead of the HUD's clock belongs to an earlier timeline.

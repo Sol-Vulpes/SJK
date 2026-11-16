@@ -11,8 +11,10 @@ spree steps and resets, first blood only for a level seen starting, revenge once
 against a real baton, one kill's order), the line queue, the pack list and fallback; fmt,
 build, Clippy and the workspace tests. Not verified: nothing was run in game (no client
 launched); the medals' place under the top centre against every HUD style and the vote panel
-wants a look. Left: SJK's own announcer lines are not recorded (the `sjk` pack is empty, so
-only PK3 packs speak); a later step may count feats in the achievements.
+wants a look. SJK's own voice: the fourteen lines generated in one take with Higgsfield's Seed
+Audio 1.0 (preset voice Barrett), cut at its silences (14 segments found, one per line, in
+order) into `assets/announcer/sjk/`; not listened to by me, Sol judges the voice. Left: a later
+step may count feats in the achievements.
 
 ## Collection release check (16/11/2026)
 

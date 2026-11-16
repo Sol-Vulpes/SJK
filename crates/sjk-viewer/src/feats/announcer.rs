@@ -23,14 +23,38 @@ const CHANNEL: sjk_audio::ChannelId = sjk_audio::ChannelId(7);
 /// The announcer's own source, apart from every entity's.
 const SOURCE: sjk_audio::SourceId = sjk_audio::SourceId(0x5300_0001);
 
-/// The bundled pack's files at their game paths (`assets/announcer/README.md`).
-const FILES: [(&str, &[u8]); 0] = [];
+/// A bundled line at its game path, by its feat id.
+macro_rules! line {
+    ($id:literal) => {
+        (
+            concat!("sound/sjk/announcer/sjk/", $id, ".wav"),
+            include_bytes!(concat!("../../assets/announcer/sjk/", $id, ".wav")).as_slice(),
+        )
+    };
+}
+
+/// The bundled pack's lines, one per [`Feat`] in its order
+/// (`assets/announcer/README.md`).
+const FILES: [(&str, &[u8]); 14] = [
+    line!("hooked"),
+    line!("first_blood"),
+    line!("double_kill"),
+    line!("triple_kill"),
+    line!("quad_kill"),
+    line!("penta_kill"),
+    line!("massacre"),
+    line!("killing_spree"),
+    line!("rampage"),
+    line!("dominating"),
+    line!("unstoppable"),
+    line!("godlike"),
+    line!("spree_ended"),
+    line!("revenge"),
+];
 
 /// Mount the bundled pack.
 pub(crate) fn mount(vfs: &mut VirtualFileSystem) -> Result<(), sjk_vfs::VfsError> {
-    if !FILES.is_empty() {
-        vfs.mount_memory("SJK announcer", FILES.iter().copied())?;
-    }
+    vfs.mount_memory("SJK announcer", FILES.iter().copied())?;
     Ok(())
 }
 
@@ -112,6 +136,14 @@ mod tests {
         ];
         assert_eq!(packs(files.into_iter()), ["sjk", "arena", "zz"]);
         assert_eq!(packs(std::iter::empty()), ["sjk"]);
+    }
+
+    #[test]
+    fn sjk_has_a_line_for_every_feat() {
+        for (feat, (path, bytes)) in Feat::ALL.iter().zip(FILES) {
+            assert_eq!(path, format!("{}.wav", line(DEFAULT_PACK, *feat)));
+            assert!(bytes.starts_with(b"RIFF"), "{path}");
+        }
     }
 
     #[test]

@@ -4509,7 +4509,7 @@ the HUD edit mode moves it (a sample medal shows while it is open). The pictures
 below all game data, so a PK3 replaces them; they live in their own 4 x 4 texture (the
 icon atlas is full), made on the first upload.
 
-The announcer says each feat on `CHAN_ANNOUNCER`, one line every 1.3 s, at most three
+The announcer says each feat on `CHAN_ANNOUNCER`, one line every 1.7 s, at most three
 waiting (the oldest gives way). Its voices are packs: a folder
 `sound/sjk/announcer/<pack>/` with one sound per feat (`<id>.wav`, `.mp3` or `.ogg`; the
 ids and lines are in [assets/announcer](../crates/sjk-viewer/assets/announcer/README.md)).

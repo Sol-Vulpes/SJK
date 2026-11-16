@@ -28,7 +28,7 @@
 area: HUD
 title: Feats: multi-kills, sprees, first blood, revenge and HOOKED! with medals and announcer
 change: Settings > HUD "Feats" (cg_feats, off by default) shows a medal for each feat.
-change: The announcer says it from a voice pack (cg_announcer); SJK's own lines are not in yet.
+change: The announcer says it from a voice pack (cg_announcer, SJK's own voice by default).
 test: Turn Feats on, kill two bots within 4 s: DOUBLE KILL medal under the top centre.
 test: Kill 5 without dying: KILLING SPREE; die, then kill your killer: REVENGE.
 test: On a JA+ server, finish someone with the grapple hook: HOOKED!

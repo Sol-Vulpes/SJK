@@ -300,7 +300,8 @@ includes:
 - the kill feed at the top right with weapon icons (`cg_killfeed`);
 - feats (`cg_feats`, 16/11/2026): multi-kills, sprees, first blood, revenge and HOOKED! for a
   JA+ grapple kill, with medals drawn from shapes and an announcer whose voice packs come in
-  PK3s; the hook's kills were told apart thanks to Blackwolf's VisionJK rebuild of JA+;
+  PK3s (SJK's own voice generated with Higgsfield's Seed Audio); the hook's kills were told
+  apart thanks to Blackwolf's VisionJK rebuild of JA+;
 - the SJK profile card and the profile pictures kept at the SJK hub;
 - muting a player from their name in chat (chat, model, saber and sounds), made
   blocking on 18/10/2026 at Sol's request (emotes, toys and player cards too, the `block`
