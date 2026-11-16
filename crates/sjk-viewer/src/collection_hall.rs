@@ -623,7 +623,7 @@ impl Panel {
                             .iter()
                             .filter_map(|unlock| unlockables::blade_skin(&unlock.id))
                             .collect();
-                        others.sort_by(|a, b| b.tier.cmp(&a.tier));
+                        others.sort_by_key(|skin| std::cmp::Reverse(skin.tier));
                         for skin in others {
                             add(skin, "");
                         }
@@ -716,9 +716,16 @@ impl Panel {
                         let cards = count(Tab::Cards);
                         summary.count = cards.label();
                         let faces = crate::cards::faces::current();
-                        let shown = me
-                            .map(|me| {
-                                crate::cards::stacks(&me.cards)
+                        // The same stacks as the Cards tab and the Inventory read, and
+                        // the copies counted from them.
+                        let stacks = self.holdings(inputs);
+                        let held = stacks
+                            .as_ref()
+                            .map(|stacks| crate::cards::total(stacks) as usize)
+                            .or(cards.held);
+                        let shown = stacks
+                            .map(|stacks| {
+                                stacks
                                     .iter()
                                     .filter_map(|stack| match &stack.card {
                                         Some(id) => faces.find(id).map(|(index, _)| Ok(index)),
@@ -728,10 +735,7 @@ impl Panel {
                                     .collect()
                             })
                             .unwrap_or_default();
-                        summary.art = Art::Cards {
-                            shown,
-                            held: cards.held,
-                        };
+                        summary.art = Art::Cards { shown, held };
                         summary.new = self.kind_new(crate::collection_seen::Kind::Card);
                     }
                     Tile::Holocrons => {
@@ -1441,6 +1445,34 @@ mod tests {
         // P shows the Loadouts card over the hall.
         assert_eq!(press(&mut panel, KeyCode::KeyP), PanelAction::None);
         assert!(panel.loadouts.is_open());
+    }
+
+    /// Every tile opens its own kind (Holocrons asks for its page) and Escape there comes
+    /// back to the hall on the same tile.
+    #[test]
+    fn every_tile_opens_its_kind_and_escape_comes_back_to_it() {
+        let mut panel = Panel::new();
+        panel.open(Tab::Hall, false, true, ReturnTarget::MainMenu);
+        for (index, tile) in tiles().iter().enumerate() {
+            panel.show(Tab::Hall);
+            panel.hall_state.chosen = index;
+            let action = press(&mut panel, KeyCode::Enter);
+            if *tile == Tile::Holocrons {
+                assert_eq!(action, PanelAction::Hub(Tab::Holocrons));
+                continue;
+            }
+            assert_eq!(action, PanelAction::None, "{tile:?}");
+            assert_eq!(panel.tab(), tile.tab(), "{tile:?}");
+            assert!(!panel.on_hall(), "{tile:?}");
+            let action = panel.key(KeyCode::Escape, false, false);
+            assert_eq!(
+                panel.escape_to_hall(KeyCode::Escape, action),
+                PanelAction::None,
+                "{tile:?}"
+            );
+            assert!(panel.on_hall() && panel.is_open(), "{tile:?}");
+            assert_eq!(panel.hall_tile(), *tile);
+        }
     }
 
     /// Enter grows the chosen tile into its page and Escape shrinks the page back onto
