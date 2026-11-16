@@ -30,10 +30,20 @@ The site (site/assets/site.js, parseChangelog) reads the release headings,
 introductions and recap lines too.
 Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 -->
-## Unreleased
+## 2026.1116.1 (Alpha) | 16/11/2026
+
+A new Collection: a hall of tiles, kybers on every tile, an Inventory of all you own, a status bar, and the Creyon werewolf.
+
+> Collection hall: The Collection opens on a hall of tiles, one to each kind, with what is new in each; Enter opens a kind and Esc comes back.
+> Kybers: Saber shaders are now kybers, each one a straight looping blade on its tile; the crystals achievements bring are dormant kybers you attune.
+> Inventory: One list of everything you own, with pictures, what each thing is worth and buttons to wear, break down, open or attune it.
+> Status bar: Your credits, shards, coins, kyber and toys at the bottom of the screen; turn it off in Settings > HUD (`cg_statusBar`).
+> New things: Cards, tags and finishers get New stickers like kybers, and the first look at something new lights it up.
+> Smoother: Walking the Collection no longer stutters, and a player in a model with huge glowing textures no longer freezes your game.
 
 = cg_statusBar reset: A status bar at the bottom shows your credits, shards, dormant kybers and DOOM coins, your kyber and toys. Turn it off here or in Settings > HUD.
 = ui_collectionHall: The Collection opens on its hall, a tile to each kind with what is new in it. Off opens it on the kind you used last.
+
 - Saber shaders are now called kybers everywhere you read them (the Kybers tab, the Forge, trades, the shop), as the kyber gives the blade its look; the kyber crystals achievements bring are now dormant kybers, which you attune rather than open. Each blade keeps its name, and kyber shards, finishers, holocrons and your saved settings are unchanged _(Sol)_
 - Kybers look like themselves on the Collection's tiles: each blade is drawn once by the game as a short loop with its glow and kept on disk, played straight across its Kybers wall tile (name and state at the foot), and in the list, the hall and the Forge; a kyber you do not hold shows its real look greyed and dimmed under a small padlock, and the one you choose moves live on its large card. Walking the wall no longer stutters while blades load, and the Collection keeps to a fixed share of video memory, less on small cards _(Sol)_
 - The Collection opens on a hall of large tiles, one to each kind (Kybers, Finishers, Tags, Toys, Medals, Achievements, Cards, Holocrons, Forge, Inventory, History), each drawing what it holds: your blades and each tier's share, the toys lit while on, your medals, the next achievement's progress, holocrons to open, the deal of the day with its price, your credits and kyber shards, the last History lines; your whole look stands beside it, with what you wear and Loadouts (P) over its head. Enter opens a kind under a "Collection > Kybers" breadcrumb, Ctrl+Tab steps to the next kind and Esc comes back to the hall; `unlockables`, `achievements` and `holocrons` still open their kind directly. Settings > Interface "Collection hall" (`ui_collectionHall`) opens it on the kind used last instead _(Sol)_
