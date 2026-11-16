@@ -213,8 +213,9 @@ pub(crate) fn verified_badge_pixels() -> Vec<u8> {
 }
 use levelshot::LevelshotTexture;
 
-/// SJK's emblem, scaled into one icon cell at start.
-const SJK_EMBLEM: &[u8] = include_bytes!("../../../assets/branding/sjk-logo-512.png");
+/// SJK's emblem, scaled into one icon cell at start: the small icons' drawing
+/// (`scripts/sjk_emblem.py`), which still reads at a chat line's height.
+const SJK_EMBLEM: &[u8] = include_bytes!("../../../assets/branding/emblem-chat.png");
 /// JoF EternalJK's icon, scaled into one icon cell at start.
 const EJK_ICON: &[u8] = include_bytes!("../../../assets/branding/jof-ejk-icon.png");
 /// The SJK Launcher's icon, scaled into one icon cell at start.

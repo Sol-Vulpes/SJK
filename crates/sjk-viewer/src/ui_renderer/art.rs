@@ -388,7 +388,7 @@ mod tests {
             start: 0,
             source: Source::Atlas,
         }];
-        assert!(switch(&mut runs, 6, Source::Emblem(EmblemLayer::Lights)));
+        assert!(switch(&mut runs, 6, Source::Emblem(EmblemLayer::FlamesA)));
         begin_layer(&mut runs, 12);
         assert_eq!(
             runs.last().map(|run| (run.start, run.source)),
@@ -407,7 +407,7 @@ mod tests {
             start: 0,
             source: Source::Atlas,
         }];
-        assert!(switch(&mut runs, 6, Source::Emblem(EmblemLayer::Lights)));
+        assert!(switch(&mut runs, 6, Source::Emblem(EmblemLayer::FlamesA)));
         untextured(&mut runs, 12);
         assert_eq!(
             runs.last().map(|run| (run.start, run.source)),
@@ -460,8 +460,8 @@ mod tests {
         assert!(!Source::Levelshot.additive());
         assert!(!Source::Art(ArtPiece::ButtonBack).additive());
         assert!(!Source::Emblem(EmblemLayer::Base).additive());
-        assert!(Source::Emblem(EmblemLayer::Core).additive());
-        assert!(Source::Emblem(EmblemLayer::Lights).additive());
+        assert!(Source::Emblem(EmblemLayer::Disc).additive());
+        assert!(Source::Emblem(EmblemLayer::FlamesA).additive());
         // Each layer is its own run, so the pipeline can change between them.
         let mut runs = Vec::with_capacity(MAX_RUNS);
         runs.push(Run {

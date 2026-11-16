@@ -13881,6 +13881,11 @@ a live server is unverified.
 
 ## SJK emblem
 
+Since 16/11/2026 (branch `personal/new-emblem`) the emblem is Sol's steel monogram
+before a burning sun, rebuilt from its geometry by `scripts/sjk_emblem.py`, which
+writes every icon, the menu's moving sun layers, the chat mark and the site's images
+([assets/branding](../assets/branding/README.md)); the gold starburst below is retired.
+
 Branch `personal/sjk-logo` (2026-10-05, based on `bcb0b76`) puts Sol's
 emblem in the classic main menu's ring, where the `ja01` logo video played (the
 video is no longer read), and above the modern main menu's title, with a pulsing

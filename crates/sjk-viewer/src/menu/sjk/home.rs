@@ -621,13 +621,14 @@ pub(crate) fn build(
         turn,
         color::alpha(color::HOLO, 0.9),
     );
+    // The steel fills three quarters of the emblem's square, its sun the rest.
     emblem::draw(
         canvas,
         Rect::new(
-            centre[0] - 190.0 * s,
-            centre[1] - 190.0 * s,
-            380.0 * s,
-            380.0 * s,
+            centre[0] - 215.0 * s,
+            centre[1] - 215.0 * s,
+            430.0 * s,
+            430.0 * s,
         ),
         seconds,
     );

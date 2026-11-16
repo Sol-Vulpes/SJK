@@ -24,6 +24,17 @@
 
 # ---- Console & chat ----
 
+[new-emblem]
+area: Menus & settings
+title: New emblem: the steel SJK monogram before a burning sun, in menus, icons and chat
+change: The game's icon, window icon, menu emblem, chat mark and site use Sol's new emblem.
+change: The menu's sun moves: the disc turns, two flame layers lick, rays shimmer, sparks fly.
+change: Icons of 32 px and under draw a simpler emblem: plain steel on a hot disc.
+test: Main menu (SJK UI): the emblem in its ring; watch the flames and sparks for a minute.
+test: ui_menuStyle classic: the emblem stays inside the centre window's opening.
+test: Title bar, taskbar, Alt+Tab and sjk.exe in Explorer show the new icon.
+test: SJK chat: the emblem before SJK lines is as big as the EJK icon.
+
 [feats]
 area: HUD
 title: Feats: multi-kills, sprees, first blood, revenge and HOOKED! with medals and announcer

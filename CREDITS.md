@@ -18,7 +18,9 @@ includes:
   video bounties and the Videographer medal (provisional art from Supporter's);
 - the SJK emblem, provided by Sol: in the classic menu's ring (in place of the
   retail logo video) and the SJK UI's holo ring, as the programs' and window's
-  icons, and on the README, release notes and site;
+  icons, and on the README, release notes and site; since 16/11/2026 Sol's steel
+  monogram before a burning sun, rebuilt from its geometry with a procedural sun
+  that moves in the menus (`scripts/sjk_emblem.py`);
 - SJK's slider entry habits (type to open, Space steps, clicking away applies);
 - the classic menu style as the default, and classic+ (the classic style
   modernised: the guide, the option panels' detail box and default marks, the
