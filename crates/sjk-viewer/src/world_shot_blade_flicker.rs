@@ -332,6 +332,16 @@ fn duel6_stage_sweep() {
             let _ = frame(&mut gpu, 5);
         }
         let _ = frame(&mut gpu, 100);
+        // The six New, Sun seen.
+        if let Some(console) = gpu.console.as_mut() {
+            console.collection_marks_for_shot(Some(crate::shader_marks::Marks::shown(
+                &[],
+                &[],
+                &NEW,
+                Some("saber_sun"),
+            )));
+        }
+        let _ = frame(&mut gpu, 10);
         let stage: [Region; 1] = [("stage blade", [1090, 270, 830, 190])];
         let mut lights = Vec::new();
         for step in 0..12 {
