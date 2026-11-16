@@ -870,7 +870,8 @@ struct GpuState {
     gpu_phases: Option<gpu_phases::Profiler>,
     /// The frame timings readout and log (`r_drawTimings`, `r_logTimings`).
     frame_timings: frame_timings::State,
-    /// The status bar (`cg_statusBar`, [`status_bar`]).
+    /// The status bars docked to the screen's edges (`cg_statusBar`, `cg_statusBarTop`,
+    /// [`status_bar`]).
     status_bar: status_bar::State,
     third_person_camera: camera::State,
     /// Where a fall to death began, while it lasts ([`fall_camera`]).
@@ -2292,6 +2293,12 @@ impl GpuState {
             hud_visibility.vehicle = false;
         }
         self.update_sound_sonar(game_audio.as_ref());
+        // The status bars keep their room at the screen's edges: the HUD and the
+        // overlays drawn against an edge stay inside it (`status_bar.rs`).
+        let play = self.status_bar_play(intermission_view.is_some());
+        self.reserve_status_bars(viewport, play);
+        self.hud
+            .set_status_bars(self.status_bar.reserved(), self.status_bar_readouts());
         let hud_style = menu_hud::HudStyle::read(self.console.as_ref());
         // The radial look is laid out for the bundled font (Inter), whatever
         // `cg_classicHudFont` says: its numbers are aligned to that font's metrics.
@@ -2602,6 +2609,7 @@ impl GpuState {
         let vehicle_readout = (stock_vehicle && information_visible && intermission_view.is_none())
             .then(|| self.hud.vehicle.readout())
             .flatten();
+        self.menu_hud.set_lift(self.status_bar.reserved().bottom);
         self.menu_hud.prepare(
             &self.queue,
             menu_readout.as_ref(),
@@ -2669,14 +2677,8 @@ impl GpuState {
             self.append_configured_chat(viewport, text_scale, scoreboard_visible);
         }
         self.append_weapon_select_name(viewport);
-        // The status bar over play, as the HUD's elements show (`status_bar.rs`).
-        let status_bar_shown = self.append_status_bar(
-            viewport,
-            information_visible
-                && intermission_view.is_none()
-                && !scoreboard_visible
-                && !hud::toggle::hides(self.console.as_ref(), hud::toggle::Part::Elements),
-        );
+        // The status bars over play, as the HUD's elements show (`status_bar.rs`).
+        let [bottom_bar, top_bar] = self.append_status_bars(viewport);
         // The ghost editor's path, under its column (or over play while looking about).
         let ghost_overlay =
             !self.console_covers_frame() && !medal_popup && self.append_ghost_overlay(viewport);
@@ -2857,6 +2859,12 @@ impl GpuState {
         let trade_toast = self.append_trade_toast(viewport, console_covers_frame || medal_popup);
         // An achievement unlocked, a holocron, a medal in a match, an update: its banner
         // over play or the menus, never input-taking.
+        // Under the top status bar while it shows.
+        unlock_toast::banner::set_top_inset(if top_bar {
+            self.status_bar.reserved().top
+        } else {
+            0.0
+        });
         let unlock_toast = self.append_unlock_toast(viewport, console_covers_frame || medal_popup);
         self.world_notes.draw_highlight(viewport);
         self.map_edit_gizmo_draw();
@@ -2889,7 +2897,10 @@ impl GpuState {
                 .is_open()
                 .then(|| self.quick_wheel.draw_list()),
             information_visible.then(|| self.hud.draw_list()),
-            status_bar_shown.then(|| self.status_bar.draw_list()),
+            bottom_bar
+                .then(|| self.status_bar.draw_lists()[0])
+                .flatten(),
+            top_bar.then(|| self.status_bar.draw_lists()[1]).flatten(),
             (chat_visible && !chat_over_trade).then(|| self.chat.draw_list()),
             self.ghost
                 .editor

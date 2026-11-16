@@ -402,6 +402,32 @@ impl DrawList {
         }
     }
 
+    /// Move each command from index `start` on down by the pixels `shift` gives for its
+    /// own box ([`DrawCommand::bounds`]); a command without one (a clip, an opacity)
+    /// moves with the next command that has one. For a part of a screen that draws
+    /// pieces near different edges in one go, each to be moved by its own edge.
+    pub fn translate_each_from(&mut self, start: usize, mut shift: impl FnMut(Rect) -> f32) {
+        let len = self.commands.len();
+        let mut index = start;
+        while index < len {
+            let mut end = index;
+            while end < len && self.commands[end].bounds().is_none() {
+                end += 1;
+            }
+            let dy = self
+                .commands
+                .get(end)
+                .and_then(DrawCommand::bounds)
+                .map_or(0.0, &mut shift);
+            if dy != 0.0 {
+                for command in &mut self.commands[index..=end.min(len - 1)] {
+                    command.translate(0.0, dy);
+                }
+            }
+            index = end + 1;
+        }
+    }
+
     /// The box round what the commands from index `start` on draw
     /// ([`DrawCommand::bounds`]), `None` when they draw nothing.
     pub fn bounds_from(&self, start: usize) -> Option<Rect> {
@@ -505,6 +531,35 @@ mod tests {
         assert_eq!(
             map(moved, [8.0, 10.0]),
             [original[0] + 3.0, original[1] + 4.0]
+        );
+    }
+
+    /// Each command moves by its own box's shift; one without a box (a clip) moves with
+    /// the command after it.
+    #[test]
+    fn translating_each_command_follows_its_own_box() {
+        let mut list = DrawList::new(8);
+        let top = Rect::new(0.0, 10.0, 10.0, 10.0);
+        let bottom = Rect::new(0.0, 900.0, 10.0, 10.0);
+        list.push(DrawCommand::SolidRect {
+            rect: top,
+            color: WHITE,
+        });
+        list.push(DrawCommand::PushClip(bottom));
+        list.push(DrawCommand::SolidRect {
+            rect: bottom,
+            color: WHITE,
+        });
+        list.push(DrawCommand::PopClip);
+        list.translate_each_from(0, |rect| if rect.y < 500.0 { 20.0 } else { -30.0 });
+        assert_eq!(list.bounds_between(0, 1), Some(top.translated(0.0, 20.0)));
+        assert_eq!(
+            list.commands()[1],
+            DrawCommand::PushClip(bottom.translated(0.0, -30.0))
+        );
+        assert_eq!(
+            list.bounds_between(2, 3),
+            Some(bottom.translated(0.0, -30.0))
         );
     }
 }

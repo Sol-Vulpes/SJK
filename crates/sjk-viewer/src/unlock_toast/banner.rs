@@ -86,11 +86,22 @@ const NOTE_ROW: [f32; 2] = [82.0, 18.0];
 /// What the header ends with: banners show as things happen.
 const NOW: &str = "now";
 
+thread_local! {
+    /// The top status bar's height this frame ([`set_top_inset`]).
+    static TOP_INSET: std::cell::Cell<f32> = const { std::cell::Cell::new(0.0) };
+}
+
+/// Note where the top status bar ends this frame, in window pixels (0 without it): the
+/// frame sets it before the banner is laid out (`main.rs`, from
+/// `status_bar::State::reserved` while the top bar is drawn).
+pub(crate) fn set_top_inset(pixels: f32) {
+    TOP_INSET.with(|top| top.set(pixels.max(0.0)));
+}
+
 /// Where the top status bar ends, in window pixels: the banner rests [`MARGIN`] under it.
 /// 0 while the bar is not there (the screen's top edge).
 pub(crate) fn top_inset(_viewport: [f32; 2]) -> f32 {
-    // wired to the status bar's top inset at merge
-    0.0
+    TOP_INSET.with(std::cell::Cell::get)
 }
 
 /// How long a banner lasts, coming in, resting and going.

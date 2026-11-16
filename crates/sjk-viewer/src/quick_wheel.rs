@@ -661,7 +661,7 @@ impl crate::GpuState {
     /// The player's Force for the Force page: from the live game's latest
     /// snapshot, as the Force bar reads it; none out of a game (a demo too: its
     /// choices could not act) or while spectating or following.
-    fn force_powers(&self) -> Option<force_page::Powers> {
+    pub(crate) fn force_powers(&self) -> Option<force_page::Powers> {
         let Some(session) = &self.live_session else {
             #[cfg(test)]
             if let Some((known, selected)) = self.quick_wheel.force_for_shot {

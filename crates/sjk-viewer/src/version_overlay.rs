@@ -36,7 +36,8 @@ impl GpuState {
         let label = crate::build_info::label();
         let scale = ui_scale::glyph_scale(&self.ui_font, LINE_AT_1080, text_scale);
         let width = visible_text_width(&self.ui_font, label, scale);
-        let top = TOP_AT_1080 * text_scale;
+        // Under the top status bar while it shows (`status_bar.rs`).
+        let top = TOP_AT_1080 * text_scale + self.status_bar.reserved().top;
         append_text_style(
             &mut self.text_vertices,
             &self.ui_font,

@@ -911,6 +911,9 @@ pub(crate) struct State {
     area: [f32; 4],
     /// Shapes and text ids; texts resolve through [`Card::texts`].
     pub(crate) list: DrawList,
+    /// The room the status bars keep at the screen's edges: the card stays inside it
+    /// (`status_bar.rs`; the room of the frame before, as the card is laid out first).
+    pub(crate) edges: crate::status_bar::Reserved,
 }
 
 impl Default for State {
@@ -930,6 +933,7 @@ impl Default for State {
             last_frame: 0,
             area: [0.0; 4],
             list: DrawList::new(LIST_CAPACITY),
+            edges: crate::status_bar::Reserved::NONE,
         }
     }
 }
@@ -1250,7 +1254,14 @@ impl State {
         let medals = card.hub.as_ref().map(|hub| hub.medals).unwrap_or_default();
         // Keep clear of the body: the world gap projected, never less than a fixed one.
         let offset = side.max(14.0 * unit) + 12.0 * unit;
-        let placed = place(anchor, [width, height], offset, viewport);
+        let mut placed = place(anchor, [width, height], offset, viewport);
+        // Inside the status bars.
+        let margin = offset * 0.25;
+        placed.card.y = placed
+            .card
+            .y
+            .min(viewport[1] - self.edges.bottom - height - margin)
+            .max(self.edges.top + margin);
         let rect = placed.card;
         let white = |alpha: f32| Color::new(1.0, 1.0, 1.0, alpha * a);
         let muted = Color::new(0.74, 0.78, 0.86, a);

@@ -19,6 +19,46 @@ run in a game window (no client launched), so the motion was seen only as stills
 The banner's top is `unlock_toast::banner::top_inset`, 0 until the top status bar gives its
 height.
 
+## Status bars docked to both edges (16/11/2026)
+
+16/11/2026, `personal/edge-bars` from `main` `1745f6ca8` (Sol: "stick it to the TOP or bottom
+of the screen, not a bubble ... both enabled same time"; bottom: what the bar had, the time,
+the date and the weapons held; top: Force powers, time left, joins and leaves, FPS, map,
+player count). Implemented: `status_bar.rs` rewritten as two full-width strips flush with
+the edges (`cg_statusBar`, new `cg_statusBarTop`, both on, both `= ... reset` in the News
+panel), 21 part switches (new: weapons, time, date; top: Force, score, time left, feed,
+server, map, game type, players, ping, frame rate), `cg_statusBarPosition` removed. Parts
+in `status_bar/pieces.rs`, readers in `status_bar/read.rs`, the join and leave feed from the
+`CS_PLAYERS` slots in `status_bar/feed.rs`, times in `status_bar/times.rs`. The bars keep
+their room (`State::reserved`, set before the HUD's layout): the HUD's elements move by
+their nearer edge (`Reserved::shift`; the family's and icons' pieces each by their own,
+`DrawList::translate_each_from`), the game HUD is lifted (`MenuHud::set_lift`), and the
+chat feed, the notify lines, the upper right readouts, the devmap bar, the build label, the
+weapon row's name, the Possible drops panel, the player card and the off-screen world pings
+stay inside; the HUD's match timer, `cg_drawFps`'s rate and `cg_drawClock` step aside while
+a bar shows the same. The bars now stay under the scoreboard. Release timings
+(`status_bar_cost`, both bars with every part, 2 000 frames, reserve step included):
+10.5 us a frame kept and 14.5 us laid out at 1080p, 10.8 and 14.6 us at 4K (the single
+floating bar it replaces: 6.5 and 8.7 us); the frame's text runs, added again each frame as
+every SJK UI page does, are most of it. Verified: unit tests (the parts' switches,
+bars and defaults, the groups' places and what goes first when room runs out, the nearer-edge
+shift, the inline text, the feed's joins, leaves, renames, new matches and fade, the times,
+`translate_each_from`, the upper right without its rate, the drops panel and the world pings
+inside the bars; the keybind editor's search test now counts the new "Bottom bar: weapons"
+toggle); fmt, build without warnings, Clippy (nothing new in the files touched), the
+workspace tests, the startup stack check; the world shots `status_bar_shots` (1080p, 4K at
+`ui_textScale 1.4`, 21:9, 4:3), `status_bar_on_a_demo` (game, classic and radial HUDs, 4K,
+21:9, 4:3, a vote and the devmap bar at the bottom and the top, each asserting every HUD
+element's box stands between the bars) and `status_bar_in_the_news`. Seen in the shots and
+not changed (they overlapped before, and both moved by the same room): the classic layout's
+weapon box under the devmap bar at the bottom, and the devmap bar at the top over the build
+label and the vote card. Not verified: nothing was run in a game (no client launched): the
+feed against a live server's joins, the Force icons and the weapons from a live player
+state, the time left from a live server's `timelimit`, JoF and JA+ HUD packs (`hud.menu`
+variants with pieces at the top would be lifted too, as the whole game HUD is anchored to
+the bottom), and the unlock banners, which another branch will place with
+`State::reserved`.
+
 ## Feats (16/11/2026)
 
 16/11/2026, `personal/feats` from `main` `4049e547f` (Sol: Unreal Tournament and Halo style
@@ -210,7 +250,7 @@ tile with cards held, and the Forge tile before the shop is read, outside unit t
 the top or bottom with per-element toggles). `cg_statusBar` 0 off (default), 1 top, 2 bottom,
 and a switch per part (`cg_statusBarCredits`, `Shards`, `Crystals`, `Coins`, `Saber`,
 `Effects`, `Toys`, all on), in Settings > HUD under "Status bar"
-([client.md](client.md#status-bar)). Verified: `cargo test -p sjk-viewer status_bar` (place,
+([client.md](client.md#status-bars)). Verified: `cargo test -p sjk-viewer status_bar` (place,
 switches, pieces left out, fitting, digit groups, toy pictures) and the `status_bar_shots`
 world shots (top, bottom, 4K at `ui_textScale 1.4`, made-up numbers). Not tried in a game:
 the hub's numbers, the toys' switches and the hiding under menus and the scoreboard are

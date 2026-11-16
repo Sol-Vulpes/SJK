@@ -218,6 +218,8 @@ pub(crate) struct ChatOverlay {
     marks_key: Option<marks::MarksKey>,
     layout_viewport: [f32; 2],
     scoreboard_layout: crate::scoreboard::behavior::ChatLayout,
+    /// The room the status bars keep at the screen's edges: the feed stays inside it.
+    edges: crate::status_bar::Reserved,
     options: options::Options,
     emojis: emoji::Emojis,
     /// The newest SJK chat id the feed has seen; `None` before the first sync.
@@ -404,6 +406,7 @@ impl ChatOverlay {
             marks_key: None,
             layout_viewport: [0.0; 2],
             scoreboard_layout: crate::scoreboard::behavior::ChatLayout::Normal,
+            edges: crate::status_bar::Reserved::NONE,
             options: options::Options::default(),
             emojis: emoji::Emojis::default(),
             sjk_seen: None,
@@ -858,6 +861,17 @@ impl ChatOverlay {
 
     pub(crate) fn draw_list(&self) -> &DrawList {
         self.ui.draw_list()
+    }
+
+    /// Keep the feed inside the room the status bars keep this frame (`status_bar.rs`).
+    pub(crate) fn set_edges(&mut self, edges: crate::status_bar::Reserved) {
+        if self.edges != edges {
+            self.edges = edges;
+            for line in &mut self.lines {
+                line.y = None;
+            }
+            self.pressed_action = None;
+        }
     }
 
     pub(crate) fn set_scoreboard_layout(

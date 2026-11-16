@@ -2313,7 +2313,7 @@ carry New as kybers do. Holocrons and dormant kybers carry none: "to open" alrea
   finish); after the Cards, Tags and Finishers headlines, "N new" on a gold pill and Mark
   all seen (N), which sees every New thing of that kind; the hall's Kybers, Finishers,
   Tags and Cards tiles a gold "N new" pill at their top right (the Kybers tile's count lost
-  its "· 2 new" words for it); and the status bar's New part ([client.md](client.md#status-bar)).
+  its "· 2 new" words for it); and the bottom status bar's New part ([client.md](client.md#status-bars)).
 
 The marks are read again only when what they come from changes (the hub's marks, the
 own profile, the seen-list, the blades worn), never every frame. World shots:
