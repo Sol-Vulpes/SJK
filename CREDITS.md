@@ -522,9 +522,10 @@ includes:
 - door and lift shadows on lamp light within a budget (09/11/2026, Sol's request): the
   lamp cache is baked again 16 chunks of 64×64 texels a frame at most, only where a
   mover's shadow changed, so `T2_Rancor` no longer spends 14 ms a frame on it;
-- the status bar (15/11/2026): a compact line at the top or bottom of the screen with
-  the player's credits, kyber shards and crystals, DOOM coins, blade skin, effects and
-  toys' switches, each part switched on or off (`cg_statusBar`);
+- the status bar (15/11/2026, on by default 16/11/2026): a compact line at the bottom
+  (or top) of the screen with the player's credits, kyber shards, dormant kybers and DOOM
+  coins by their icons, kyber, effects and toys' switches, clear of the HUD, each part
+  switched on or off (`cg_statusBar`, `cg_statusBarPosition`);
 - SJK Alpha (19/10/2026), the first collection of cards: the Mythical rarity, the
   Credits and Meme kinds, and card 1, "Bishop", honouring the author of JKR (art by
   Sol, AI-assisted: a rusted helmet portrait).

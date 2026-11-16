@@ -95,7 +95,7 @@ migrated, except where the table says so. Where each is documented:
 | `mod_japlus`, `mod_jof` | on (each mod loads on its servers only), saved 0 moved to 1 once | [Client mods](mods.md) |
 | `con_drawNotify` | off (no console feed at the top left; chat keeps its box) | [Classic console](client.md#classic-console) |
 | `cg_drawClock` | off (no local time clock on the HUD) | [Local time clock](client.md#local-time-clock) |
-| `cg_statusBar` | off (no status bar; its parts' switches on) | [Status bar](client.md#status-bar) |
+| `cg_statusBar` | on (Sol, 16/11/2026), at the bottom (`cg_statusBarPosition 0`); its parts' switches on; offered again in the News panel | [Status bar](client.md#status-bar) |
 | `con_chatOnly` | off (the open console shows every line) | [Classic console](client.md#classic-console) |
 | `cl_chatTranslate` | on: `/tr`, `tr` and the SJK chat page's Translate put a chosen line into English through the hub; nothing is translated unasked | [Chat translation](client.md#chat-translation) |
 | `cl_experimentalShowcase` | off (the experimental `ghost` and `mimic` commands, staff keys only) | [Ghost replay](client.md#ghost-replay) |

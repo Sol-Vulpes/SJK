@@ -4001,12 +4001,17 @@ test: 301 characters: the box stops at 300; sjksay with more sends the first 300
 
 [status-bar]
 area: HUD
-title: Status bar: credits, blade, effects and toys at the top or bottom
-change: Settings > HUD > Status bar (cg_statusBar 0 off, 1 top, 2 bottom); a switch per part.
-change: Credits, shards, crystals, DOOM coins, blade skin, effects pills, every toy lit while on.
-test: cg_statusBar 1: a navy pill under the build label; 2: at the bottom edge.
-test: Numbers match the Collection's (credits, shards, crystals); DOOM coins after toy_wheelofdoom.
-test: Wear a Legendary blade: its name in gold-orange; stock: "Stock blade" in grey.
+title: Status bar: on by default at the bottom, icons for the money, clear of the HUD
+change: On by default (cg_statusBar); cg_statusBarPosition 0 bottom, 1 top; a switch per part.
+change: Credits, shards, dormant kybers, DOOM coins as icon + number; kyber with tier diamonds.
+change: Keeps clear of HUD corners/timer; hides while the weapon or Force row shows.
+test: New profile, a match: the bar sits at the bottom between the health and Force blocks.
+test: Icons: gold credits sign, cyan shard, dormant kyber picture, red DOOM coin; no words.
+test: Numbers match the Collection's (credits, shards, to attune); DOOM coins after toy_wheelofdoom.
+test: Switch weapon or Force power: the bar hides while the row shows, then comes back.
+test: cg_statusBarPosition 1: under the build label, below the match timer; a vote hides it.
+test: Wear a Legendary blade: 3 diamonds + its name in gold-orange; stock: "Stock blade" grey.
+test: News panel after the update: "Status bar" in Settings to review, its switch works.
 test: toy_box, toy_hax, toy_illuminate: their pictures light up with a gold dot; off: faint.
 test: tactical medium, dnd, the Sun's extras on: a pill each; away (alt-tab): "Away".
 test: Tab (scoreboard), Escape (menu), console, Collection, cg_drawHud 0: the bar hides.

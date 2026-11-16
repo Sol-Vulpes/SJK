@@ -1,26 +1,38 @@
-//! The status bar (Sol's request, 15/11/2026): one compact line at the top or the bottom
+//! The status bar (Sol's request, 15/11/2026): one compact line at the bottom or the top
 //! of the screen, in the SJK UI's look, with what the player carries and wears: their
-//! credits, kyber shards, unopened kyber crystals and DOOM coins (the hub's numbers), the
-//! blade skin on their saber in its tier's colour, what is on about them (the blade's
-//! extras, the finisher, Tactical mode, Do not disturb, away, toon shading) and every
-//! toy's switch, its picture lit while on. Since 15/11/2026 it also says when the
-//! Collection holds New things (`crate::collection_seen`): "3 new in your Collection"
-//! for the rest of the map they arrived on, then a gold dot until they are seen
-//! ([`Nudge`]).
+//! credits, kyber shards, dormant kybers and DOOM coins (the hub's numbers), each an icon
+//! and its number, the kyber on their saber with its tier's diamonds and colour, what is
+//! on about them (the blade's extras, the finisher, Tactical mode, Do not disturb, away,
+//! toon shading) and every toy's switch, its picture lit while on. Since 15/11/2026 it
+//! also says when the Collection holds New things (`crate::collection_seen`): "3 new in
+//! your Collection" for the rest of the map they arrived on, then a gold dot until they
+//! are seen ([`Nudge`]).
 //!
-//! [`CVAR`] (`cg_statusBar`, off by default) puts it at the top (1) or the bottom (2);
-//! each part has its own switch ([`Part::cvar`], all on), so a player keeps only what
-//! they want. It shows over play only, as the HUD's elements do: not under the menus,
-//! the console, the scoreboard or an intermission, nor while the HUD switch hides the
-//! elements (`cg_drawHud 0`). A part without a value (no hub, the DOOM coins not read
-//! yet) is left out rather than shown empty, and what does not fit the screen's width
-//! is dropped from the end ([`fit`]).
+//! [`CVAR`] (`cg_statusBar`) switches it on, the default since 16/11/2026 (Sol: "do a
+//! default on", with the switch offered again in the News panel's settings to review);
+//! [`POSITION_CVAR`] puts it at the bottom (the default) or the top. Each part has its own
+//! switch ([`Part::cvar`], all on), so a player keeps only what they want. It shows over
+//! play only, as the HUD's elements do: not under the menus, the console, the scoreboard
+//! or an intermission, not over a demo (it tells the player's own things, not the
+//! recording's), nor while the HUD switch hides the elements (`cg_drawHud 0`). A part
+//! without a value (no hub, the DOOM coins not read yet) is left out rather than shown
+//! empty, and what does not fit is dropped from the end ([`fit`]); Tactical mode, which
+//! switches the toys off, leaves their row out.
 //!
-//! What it shows is read four times a second into fixed storage ([`Inputs`]); a frame
-//! lays out and draws from it without allocating.
+//! It keeps clear of the HUD ([`place`]): the boxes of what the HUD drew this frame
+//! (`hud::placement::Bounds`: the health and Force blocks in the corners, a centred
+//! weapon box, the match timer at the top, the lagometer, the speedometer...) narrow it
+//! when they stand at its sides and push it past them when they stand in its middle; it
+//! steps aside while something passing stands where it is (the weapon, Force and item
+//! selectors at the bottom; a vote or the warmup line at the top). The bottom is the
+//! default because the top's middle holds the match timer (`cg_drawTimer`, on).
+//!
+//! What it shows is read four times a second into fixed storage ([`Inputs`]); it is laid
+//! out again only when that, its switches, its place or the screen change ([`Laid`]),
+//! and a frame otherwise hands the kept shapes on, allocating nothing.
 
 use crate::console::ViewerConsole;
-use crate::menu::sjk::{color, text};
+use crate::menu::sjk::{color, kit, text};
 use crate::menu_widgets::{MenuCanvas, TextFamily};
 use crate::sjk_chat_look::Measure;
 use crate::text::TextFace;
@@ -29,8 +41,10 @@ use sjk_ui::{Color, DrawCommand, FontWeight, Rect, TextAlign};
 use std::fmt::{self, Write as _};
 use std::time::{Duration, Instant};
 
-/// Where the bar stands: 0 off (the default), 1 the top, 2 the bottom.
+/// The bar's switch: on by default (Sol, 16/11/2026).
 pub(crate) const CVAR: &str = "cg_statusBar";
+/// Where the bar stands: 0 the bottom (the default), 1 the top.
+pub(crate) const POSITION_CVAR: &str = "cg_statusBarPosition";
 
 /// [`Part::Credits`]'s switch.
 pub(crate) const CREDITS_CVAR: &str = "cg_statusBarCredits";
@@ -56,19 +70,14 @@ const EVERY: Duration = Duration::from_millis(250);
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub(crate) enum Place {
     #[default]
-    Off,
-    Top,
     Bottom,
+    Top,
 }
 
 impl Place {
-    /// From [`CVAR`]'s value: anything but 1 and 2 is off.
+    /// From [`POSITION_CVAR`]'s value: 1 the top, anything else the bottom.
     pub(crate) fn of(value: i64) -> Self {
-        match value {
-            1 => Self::Top,
-            2 => Self::Bottom,
-            _ => Self::Off,
-        }
+        if value == 1 { Self::Top } else { Self::Bottom }
     }
 }
 
@@ -165,15 +174,26 @@ impl Parts {
     pub(crate) fn has(self, part: Part) -> bool {
         self.0 & part.bit() != 0
     }
+
+    /// These parts but `part`.
+    pub(crate) fn without(self, part: Part) -> Self {
+        Self(self.0 & !part.bit())
+    }
 }
 
 /// Register the bar's options.
 pub(crate) fn register(cvars: &mut CvarRegistry) -> Result<(), sjk_shell::CvarError> {
     cvars.register(CvarDefinition::new(
         CVAR,
+        true,
+        CvarFlags::ARCHIVE,
+        "Status bar with your credits, kyber, effects and toys",
+    ))?;
+    cvars.register(CvarDefinition::new(
+        POSITION_CVAR,
         0_i64,
         CvarFlags::ARCHIVE,
-        "Status bar with your credits, blade, effects and toys: 0 off, 1 top, 2 bottom",
+        "Where the status bar stands: 0 bottom, 1 top",
     ))?;
     for part in Part::ALL {
         cvars.register(CvarDefinition::new(
@@ -335,6 +355,9 @@ pub(crate) struct Inputs {
     pub(crate) credits: Option<u64>,
     pub(crate) shards: Option<u64>,
     pub(crate) crystals: Option<u32>,
+    /// The best tier among the dormant kybers held (`crate::kyber::TIERS`' index), whose
+    /// picture stands for them all.
+    pub(crate) crystal_tier: usize,
     pub(crate) coins: Option<u64>,
     /// How many things are New in the Collection and whether the words show ([`Nudge`]);
     /// `None` for none.
@@ -356,6 +379,7 @@ impl Default for Inputs {
             credits: None,
             shards: None,
             crystals: None,
+            crystal_tier: 0,
             coins: None,
             new: None,
             saber: None,
@@ -375,15 +399,32 @@ impl Inputs {
     }
 }
 
+/// What an amount counts, told by its icon.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum Money {
+    /// The credits' sign (`crate::cards::mark`), in gold.
+    Credits,
+    /// The kyber shard (`crate::cards::shard`), in kyber cyan.
+    Shards,
+    /// The dormant kyber of `crate::kyber::TIERS`' tier at this index: its picture.
+    Dormant(usize),
+    /// A DOOM coin: a red coin with the wheel's spokes struck on it ([`coin`]).
+    Doom,
+}
+
 /// One thing on the bar.
 #[derive(Clone, Copy, Debug, PartialEq)]
 enum Piece {
-    /// A number and what it counts.
-    Amount { value: u64, unit: &'static str },
+    /// A number after the icon of what it counts.
+    Amount { value: u64, money: Money },
     /// New things in the Collection: "3 new in your Collection" (`words`), else a gold dot.
     New { count: u32, words: bool },
-    /// A blade skin's name in its tier's colour, or the stock blade.
-    Saber { name: &'static str, colour: Color },
+    /// A kyber's name in its tier's colour after its diamonds (`tier`), or the stock blade.
+    Saber {
+        name: &'static str,
+        colour: Color,
+        tier: Option<crate::unlockables::Rarity>,
+    },
     /// A pill of something on.
     Effect(Effect),
     /// A toy's picture, lit while on.
@@ -393,21 +434,18 @@ enum Piece {
 /// Most pieces a bar holds.
 const MAX_PIECES: usize = 4 + 1 + 2 + MAX_EFFECTS + TOY_COUNT;
 
-/// What `unit` reads for `value`: one or many.
-fn unit(value: u64, one: &'static str, many: &'static str) -> &'static str {
-    if value == 1 { one } else { many }
-}
-
-/// A blade skin's piece: its name and tier colour, or the stock blade's.
+/// A blade skin's piece: its name, tier and tier colour, or the stock blade's.
 fn saber_piece(skin: Option<&'static str>) -> Piece {
     match skin.and_then(crate::unlockables::blade_skin) {
         Some(unlockable) => Piece::Saber {
             name: unlockable.name,
             colour: unlockable.tier.colour(),
+            tier: Some(unlockable.tier),
         },
         None => Piece::Saber {
             name: "Stock blade",
             colour: color::MUTED,
+            tier: None,
         },
     }
 }
@@ -422,24 +460,18 @@ fn pieces(inputs: &Inputs, parts: Parts, out: &mut [(Part, Piece); MAX_PIECES]) 
         }
     };
     let amounts = [
-        (Part::Credits, inputs.credits, ("credit", "credits")),
-        (Part::Shards, inputs.shards, ("shard", "shards")),
+        (Part::Credits, inputs.credits, Money::Credits),
+        (Part::Shards, inputs.shards, Money::Shards),
         (
             Part::Crystals,
             inputs.crystals.map(u64::from),
-            ("dormant kyber", "dormant kybers"),
+            Money::Dormant(inputs.crystal_tier.min(crate::kyber::COUNT - 1)),
         ),
-        (Part::Coins, inputs.coins, ("DOOM coin", "DOOM coins")),
+        (Part::Coins, inputs.coins, Money::Doom),
     ];
-    for (part, value, (one, many)) in amounts {
+    for (part, value, money) in amounts {
         if let Some(value) = value.filter(|_| parts.has(part)) {
-            push(
-                part,
-                Piece::Amount {
-                    value,
-                    unit: unit(value, one, many),
-                },
-            );
+            push(part, Piece::Amount { value, money });
         }
     }
     if let Some((count, words)) = inputs.new.filter(|_| parts.has(Part::New)) {
@@ -475,15 +507,146 @@ const HEIGHT: f32 = 34.0;
 const MARGIN: f32 = 6.0;
 /// Below the build label at the top (`version_overlay.rs`), while it shows.
 const UNDER_LABEL: f32 = 22.0;
-/// The text sizes: numbers, words beside them, and pills.
+/// The text sizes: numbers, and pills.
 const VALUE_SIZE: f32 = 18.0;
-const UNIT_SIZE: f32 = 13.0;
 const PILL_SIZE: f32 = 13.0;
+/// An amount's icon's height, and the room between it and its number.
+const ICON: f32 = 20.0;
+const ICON_GAP: f32 = 6.0;
 /// A toy's picture, and a pill's room round its words.
 const TOY: f32 = 22.0;
 const PILL_PAD: f32 = 9.0;
-/// The saber's tier dot.
+/// The New part's dot.
 const DOT: f32 = 8.0;
+/// The kyber's tier diamonds' height ([`crate::menu::sjk::kit::tier_mark`]).
+const DIAMOND: f32 = 10.0;
+/// Room kept between the bar and what the HUD drew.
+const CLEARANCE: f32 = 12.0;
+/// Room past a measured word's end: a box exactly as wide as its text can round below
+/// it and cut it to an ellipsis.
+const SLACK: f32 = 8.0;
+/// A HUD box reaching nearer the screen's middle than this, on either side, stands in
+/// the bar's way: the bar passes it ([`place`]) rather than narrowing to nothing.
+const MIDDLE: f32 = 180.0;
+/// At the top the corners are left to the followed player's name, the readouts and the
+/// kill feed, whose lines come and go: the bar takes at most this share of the width.
+const TOP_SHARE: f32 = 0.56;
+/// The DOOM coin's red, the WHEEL OF DOOM's (as the Inventory writes its coins).
+const DOOM_RED: Color = crate::holocrons::rgb(0xE5_1A1A);
+
+/// Where the bar goes along `edge`, `height` window pixels tall, clear of `boxes` (what
+/// the HUD drew this frame, window pixels): its top and how far it may reach each side of
+/// the screen's middle. `start` is the top's own first line (under the build label). A
+/// box beside the bar's band narrows it; one within [`MIDDLE`] of the middle moves it past
+/// (up from the bottom, down from the top), which can bring other boxes beside it.
+pub(crate) fn place(
+    edge: Place,
+    viewport: [f32; 2],
+    s: f32,
+    height: f32,
+    start: f32,
+    boxes: &[Rect],
+) -> (f32, f32) {
+    let middle_x = viewport[0] * 0.5;
+    let gap = CLEARANCE * s;
+    let middle = MIDDLE * s;
+    let widest = match edge {
+        Place::Bottom => middle_x - MARGIN * s,
+        Place::Top => viewport[0] * TOP_SHARE * 0.5,
+    };
+    let lowest = (viewport[1] - height).max(0.0);
+    let mut y = match edge {
+        Place::Bottom => viewport[1] - MARGIN * s - height,
+        Place::Top => start,
+    }
+    .clamp(0.0, lowest);
+    let mut half = widest;
+    // Each pass either settles or moves the bar past one more box, always the same way.
+    for _ in 0..=boxes.len() {
+        half = widest;
+        let mut moved = false;
+        for rect in boxes {
+            if rect.bottom() + gap <= y || rect.y >= y + height + gap {
+                continue;
+            }
+            if rect.x < middle_x + middle && rect.right() > middle_x - middle {
+                y = match edge {
+                    Place::Bottom => rect.y - gap - height,
+                    Place::Top => rect.bottom() + gap,
+                }
+                .clamp(0.0, lowest);
+                moved = true;
+                break;
+            }
+            let reach = if rect.right() <= middle_x {
+                middle_x - rect.right()
+            } else {
+                rect.x - middle_x
+            };
+            half = half.min(reach - gap);
+        }
+        if !moved {
+            break;
+        }
+    }
+    (y, half.max(0.0))
+}
+
+/// How wide `money`'s icon is, in pixels at 1080 lines, `k` the text size.
+fn icon_width(money: Money, k: f32) -> f32 {
+    let height = ICON * k;
+    match money {
+        Money::Credits => crate::cards::mark::width(height),
+        Money::Shards => crate::cards::shard::width(height),
+        Money::Dormant(_) => height * 1.15,
+        Money::Doom => height,
+    }
+}
+
+/// A DOOM coin `side` window pixels across, its top left at `at`: a red disc with a
+/// darker rim, the WHEEL OF DOOM's spokes struck across it and a glint. Shapes only, so
+/// it is sharp at every size and reads as a coin without its colour.
+fn coin(list: &mut sjk_ui::DrawList, [x, y]: [f32; 2], side: f32) {
+    let deep = Color::new(DOOM_RED.r * 0.4, DOOM_RED.g * 0.4, DOOM_RED.b * 0.4, 1.0);
+    let line = (side * 0.08).max(1.0);
+    let disc = Rect::new(x, y, side, side);
+    let _ = list.push(DrawCommand::RoundedRect {
+        rect: disc,
+        radius: side * 0.5,
+        color: DOOM_RED,
+    });
+    let rim = side * 0.14;
+    let _ = list.push(DrawCommand::Border {
+        rect: Rect::new(x + rim, y + rim, side - 2.0 * rim, side - 2.0 * rim),
+        radius: (side - 2.0 * rim) * 0.5,
+        width: line,
+        color: deep,
+    });
+    let centre = [x + side * 0.5, y + side * 0.5];
+    let reach = side * 0.3;
+    for step in 0..4 {
+        let angle = step as f32 * std::f32::consts::FRAC_PI_4;
+        let (sin, cos) = angle.sin_cos();
+        let _ = list.push(DrawCommand::Line {
+            from: [centre[0] - cos * reach, centre[1] - sin * reach],
+            to: [centre[0] + cos * reach, centre[1] + sin * reach],
+            width: line,
+            color: deep,
+        });
+    }
+    let hub = side * 0.16;
+    let _ = list.push(DrawCommand::RoundedRect {
+        rect: Rect::new(centre[0] - hub * 0.5, centre[1] - hub * 0.5, hub, hub),
+        radius: hub * 0.5,
+        color: deep,
+    });
+    let _ = list.push(DrawCommand::Line {
+        from: [x + side * 0.24, y + side * 0.36],
+        to: [x + side * 0.36, y + side * 0.22],
+        width: line,
+        color: Color::new(1.0, 1.0, 1.0, 0.55),
+    });
+}
 
 /// Where each piece of `parts` (the part of each, `widths` their widths) goes along the bar, as offsets from the
 /// content's left edge into `xs`, with [`GAP`] between pieces of a part and
@@ -549,12 +712,33 @@ pub(crate) struct Measures<'a> {
     pub(crate) body: Measure<'a>,
 }
 
+/// What the bar was last laid out from: the same again keeps its shapes.
+#[derive(Clone, Copy, Debug, PartialEq)]
+struct Laid {
+    inputs: Inputs,
+    parts: Parts,
+    viewport: [f32; 2],
+    /// The text size, and the bar's top and reach from [`place`].
+    k: f32,
+    top: f32,
+    half: f32,
+    /// Whether the dormant kybers' pictures were in the atlas.
+    pictures: bool,
+}
+
+/// The bar's height in pixels at 1080 lines at text size `k`.
+fn bar_height(k: f32) -> f32 {
+    HEIGHT * k.max(1.0)
+}
+
 /// The bar's laid-out storage, kept for the game's run.
 pub(crate) struct State {
     canvas: MenuCanvas,
     /// What the bar shows, as last read, and when.
     inputs: Inputs,
     read: Option<Instant>,
+    /// What [`Self::canvas`] holds was laid out from, and whether it drew anything.
+    laid: Option<(Laid, bool)>,
     /// The bar was laid out this frame.
     drawn: bool,
     /// Text formatted to be measured.
@@ -572,6 +756,7 @@ impl Default for State {
             canvas: MenuCanvas::with_capacities(40, 32, 160),
             inputs: Inputs::default(),
             read: None,
+            laid: None,
             drawn: false,
             scratch: String::with_capacity(32),
             nudge: Nudge::default(),
@@ -594,6 +779,13 @@ impl State {
         self.drawn
     }
 
+    /// Forget the kept layout, so the next frame lays the bar out again (the timing
+    /// shot measures both ways).
+    #[cfg(test)]
+    pub(crate) fn forget_layout(&mut self) {
+        self.laid = None;
+    }
+
     /// Whether what the bar shows is due to be read again at `now`.
     fn due(&self, now: Instant) -> bool {
         self.read
@@ -604,18 +796,19 @@ impl State {
     fn width(&mut self, piece: &Piece, measures: Measures<'_>, s: f32) -> f32 {
         let k = measures.body.scale().max(0.5);
         match *piece {
-            Piece::Amount { value, unit } => {
+            Piece::Amount { value, money } => {
                 self.scratch.clear();
                 let _ = write!(self.scratch, "{}", Grouped(value));
                 let number =
                     measures
                         .display
                         .width(&self.scratch, VALUE_SIZE * s, TextFace::Semibold);
-                let words = measures.body.width(unit, UNIT_SIZE * s, TextFace::Regular);
-                (number + words) / s + 5.0 * k
+                icon_width(money, k) + ICON_GAP * k + number / s
             }
-            Piece::Saber { name, .. } => {
-                (DOT + 6.0) * k + measures.body.width(name, PILL_SIZE * s, TextFace::Semibold) / s
+            Piece::Saber { name, tier, .. } => {
+                let mark = tier.map_or(0.0, |tier| kit::tier_mark_width(tier, DIAMOND * k));
+                let lead = if mark > 0.0 { mark + 6.0 * k } else { 0.0 };
+                lead + measures.body.width(name, PILL_SIZE * s, TextFace::Semibold) / s
             }
             Piece::New { count, words } => {
                 if !words {
@@ -644,18 +837,13 @@ impl State {
         }
     }
 
-    /// Lay the bar out at `place` with `parts` of [`Self::inputs`]; `label` says whether
-    /// the build label shows at the top. Whether anything was drawn.
-    fn build(
-        &mut self,
-        place: Place,
-        parts: Parts,
-        label: bool,
-        viewport: [f32; 2],
-        measures: Measures<'_>,
-    ) -> bool {
+    /// Lay the bar out from `laid` (its top and reach found by [`place`]) with the parts
+    /// it names of [`Self::inputs`]. Whether anything was drawn.
+    fn build(&mut self, laid: &Laid, measures: Measures<'_>) -> bool {
+        let viewport = laid.viewport;
         let s = crate::menu::sjk::scale(viewport);
-        let k = measures.body.scale().max(0.5);
+        let k = laid.k;
+        let parts = laid.parts;
         let mut list = [(
             Part::Credits,
             Piece::Toy {
@@ -665,7 +853,7 @@ impl State {
         ); MAX_PIECES];
         let count = pieces(&self.inputs, parts, &mut list);
         self.canvas.begin_transparent(viewport);
-        if count == 0 || place == Place::Off {
+        if count == 0 {
             self.canvas.finish(0);
             return false;
         }
@@ -675,20 +863,17 @@ impl State {
             widths[index] = self.width(piece, measures, s);
             owners[index] = *part;
         }
-        let room = viewport[0] / s - 2.0 * (PAD + MARGIN);
+        let room = 2.0 * laid.half / s - 2.0 * PAD;
         let mut xs = [0.0_f32; MAX_PIECES];
         let (fitted, content) = fit(&owners[..count], &widths[..count], room, &mut xs);
         if fitted == 0 {
             self.canvas.finish(0);
             return false;
         }
-        let height = HEIGHT * k.max(1.0);
+        let height = bar_height(k);
         let width = content + PAD * 2.0;
         let left = (viewport[0] - width * s) * 0.5;
-        let top = match place {
-            Place::Bottom => viewport[1] - (MARGIN + height) * s,
-            _ => (MARGIN + if label { UNDER_LABEL } else { 0.0 }) * s,
-        };
+        let top = laid.top;
         let bar = Rect::new(left, top, width * s, height * s);
         self.glass(bar, s);
         let middle = top + bar.height * 0.5;
@@ -730,39 +915,73 @@ impl State {
     /// Draw `piece` from `x` on the bar's middle line `middle`, `width` wide (window
     /// pixels).
     fn piece(&mut self, piece: Piece, x: f32, middle: f32, width: f32, s: f32, k: f32) {
-        let line = |size: f32| Rect::new(x, middle - size * 0.75, width, size * 1.5);
         match piece {
-            Piece::Amount { value, unit } => {
-                let rect = line(VALUE_SIZE * s);
+            Piece::Amount { value, money } => {
+                let icon = ICON * k * s;
+                let at = [x, middle - icon * 0.5];
+                let list = self.canvas.draw_list_mut();
+                match money {
+                    Money::Credits => {
+                        let _ = crate::cards::mark::draw(list, at, icon, color::GOLD_BRIGHT);
+                    }
+                    Money::Shards => {
+                        let _ =
+                            crate::cards::shard::draw(list, at, icon, crate::cards::shard::KYBER);
+                    }
+                    Money::Dormant(index) => {
+                        let tier = &crate::kyber::TIERS[index];
+                        let side = icon * 1.15;
+                        if crate::holocrons::icons::is_loaded(tier.slot) {
+                            let _ = list.push(DrawCommand::TexturedQuad {
+                                rect: Rect::new(x, middle - side * 0.5, side, side),
+                                texture: crate::holocrons::icons::texture(tier.slot),
+                                color: Color::new(1.0, 1.0, 1.0, 1.0),
+                            });
+                        } else {
+                            crate::holocrons::gem::draw(
+                                list,
+                                [x + side * 0.5, middle],
+                                side * 0.45,
+                                tier.colour,
+                                1.0,
+                                crate::holocrons::gem::ROWS,
+                            );
+                        }
+                    }
+                    Money::Doom => coin(list, at, icon),
+                }
+                let lead = (icon_width(money, k) + ICON_GAP * k) * s;
                 text(
                     &mut self.canvas,
                     TextFamily::Display,
                     format_args!("{}", Grouped(value)),
-                    rect,
+                    Rect::new(
+                        x + lead,
+                        middle - VALUE_SIZE * s * 0.75,
+                        width - lead + SLACK * s,
+                        VALUE_SIZE * s * 1.5,
+                    ),
                     VALUE_SIZE * s,
                     color::TEXT,
                     FontWeight::Semibold,
                     TextAlign::Start,
                 );
-                text(
-                    &mut self.canvas,
-                    TextFamily::Body,
-                    format_args!("{unit}"),
-                    rect,
-                    UNIT_SIZE * s,
-                    color::MUTED,
-                    FontWeight::Regular,
-                    TextAlign::End,
-                );
             }
-            Piece::Saber { name, colour } => {
-                let dot = DOT * k * s;
-                let _ = self.canvas.draw_list_mut().push(DrawCommand::RoundedRect {
-                    rect: Rect::new(x, middle - dot * 0.5, dot, dot),
-                    radius: dot * 0.5,
-                    color: colour,
+            Piece::Saber { name, colour, tier } => {
+                let mark = tier.map_or(0.0, |tier| {
+                    kit::tier_mark(
+                        &mut self.canvas,
+                        &crate::menu::sjk::Frame {
+                            s: 1.0,
+                            origin: [0.0; 2],
+                        },
+                        [x, middle],
+                        tier,
+                        DIAMOND * k * s,
+                        false,
+                    )
                 });
-                let room = (DOT + 6.0) * k * s;
+                let room = if mark > 0.0 { mark + 6.0 * k * s } else { 0.0 };
                 text(
                     &mut self.canvas,
                     TextFamily::Body,
@@ -770,7 +989,7 @@ impl State {
                     Rect::new(
                         x + room,
                         middle - PILL_SIZE * s,
-                        width - room,
+                        width - room + SLACK * s,
                         PILL_SIZE * 2.0 * s,
                     ),
                     PILL_SIZE * s,
@@ -795,7 +1014,7 @@ impl State {
                         Rect::new(
                             x + room,
                             middle - PILL_SIZE * s,
-                            width - room,
+                            width - room + SLACK * s,
                             PILL_SIZE * 2.0 * s,
                         ),
                         PILL_SIZE * s,
@@ -882,14 +1101,15 @@ impl crate::GpuState {
         if let Some((credits, shards, crystals, coins)) =
             crate::player_identity::with_snapshot(|snapshot| {
                 let me = snapshot.me.as_ref();
+                // How many dormant kybers wait, and the best tier among them.
                 let crystals = me.map(|me| {
                     me.holocrons
                         .iter()
-                        .filter(|holocron| {
-                            holocron.opened.is_none()
-                                && crate::kyber::from_id(&holocron.tier).is_some()
+                        .filter(|holocron| holocron.opened.is_none())
+                        .filter_map(|holocron| crate::kyber::from_id(&holocron.tier))
+                        .fold((0_u32, 0_usize), |(count, best), tier| {
+                            (count + 1, best.max(tier.index))
                         })
-                        .count() as u32
                 });
                 (
                     me.map(|me| me.credits),
@@ -901,7 +1121,10 @@ impl crate::GpuState {
         {
             inputs.credits = credits;
             inputs.shards = shards;
-            inputs.crystals = crystals;
+            if let Some((count, best)) = crystals {
+                inputs.crystals = Some(count);
+                inputs.crystal_tier = best;
+            }
             inputs.coins = coins;
         }
         let own = self.looks.own();
@@ -979,19 +1202,36 @@ impl crate::GpuState {
         inputs
     }
 
-    /// Lay the status bar out when `cg_statusBar` puts it somewhere and play shows
-    /// (`shown`: no menu, console, scoreboard or intermission over it, the HUD's elements
-    /// not hidden); whether it was drawn, so its shapes go into the frame's layers.
+    /// Lay the status bar out when `cg_statusBar` is on and play shows (`shown`: no
+    /// menu, console, scoreboard or intermission over it, the HUD's elements not hidden),
+    /// clear of what the HUD drew this frame (`self.hud.element_bounds`, filled before);
+    /// whether it was drawn, so its shapes go into the frame's layers.
     pub(crate) fn append_status_bar(&mut self, viewport: [f32; 2], shown: bool) -> bool {
         let console = self.console.as_ref();
-        let place = Place::of(console.and_then(|c| c.integer_cvar(CVAR)).unwrap_or(0));
+        let on = console
+            .and_then(|console| console.bool_cvar(CVAR))
+            .unwrap_or(true);
+        // Over a demo it would tell the viewer's own things, not the recording's.
+        let demo = self.demo_session.is_some() && self.live_session.is_none();
         #[cfg(test)]
-        let shown = shown || self.status_bar.preview.is_some();
-        if place == Place::Off || !shown {
+        let (on, demo, shown) = match self.status_bar.preview {
+            Some(_) => (true, false, true),
+            None => (on, demo, shown),
+        };
+        if !on || demo || !shown {
             self.status_bar.drawn = false;
             return false;
         }
-        let parts = Parts::read(console);
+        let edge = Place::of(
+            console
+                .and_then(|console| console.integer_cvar(POSITION_CVAR))
+                .unwrap_or(0),
+        );
+        let mut parts = Parts::read(console);
+        // Tactical mode switches the toys off: their faint row would say nothing.
+        if crate::tactical::level() != crate::tactical::Level::Off {
+            parts = parts.without(Part::Toys);
+        }
         let label = console.is_none_or(|console| {
             console
                 .bool_cvar(crate::version_overlay::CVAR)
@@ -1019,9 +1259,61 @@ impl crate::GpuState {
             display: target.display_measure(),
             body: target.body_measure(),
         };
-        let drawn = self
-            .status_bar
-            .build(place, parts, label, viewport, measures);
+        let s = crate::menu::sjk::scale(viewport);
+        let k = measures.body.scale().max(0.5);
+        let height = bar_height(k) * s;
+        // What the HUD drew this frame: the bar keeps clear of what stays, and steps
+        // aside while something passing stands where it is.
+        use crate::hud::placement::Element;
+        let mut boxes = [Rect::new(0.0, 0.0, 0.0, 0.0); crate::hud::placement::COUNT];
+        let mut held = 0;
+        let mut passing = [None; 2];
+        for (element, rect) in self.hud.element_bounds.iter() {
+            match element {
+                Element::Selection => passing[0] = Some(rect),
+                Element::Vote => passing[1] = Some(rect),
+                // Its lines come and go at the top right: [`TOP_SHARE`] keeps clear.
+                Element::KillFeed | Element::Chat => {}
+                _ => {
+                    boxes[held] = rect;
+                    held += 1;
+                }
+            }
+        }
+        let start = (MARGIN + if label { UNDER_LABEL } else { 0.0 }) * s;
+        let (top, half) = place(edge, viewport, s, height, start, &boxes[..held]);
+        let band = Rect::new(viewport[0] * 0.5 - half, top, half * 2.0, height);
+        let gives_way = passing.iter().flatten().any(|rect| rect.overlaps(band))
+            || match edge {
+                // The weapon row's icons and name stand at the bottom's middle.
+                Place::Bottom => self.hud.weapon_select.shown.is_some(),
+                // The warmup line stands under the top's middle.
+                Place::Top => self.hud.warmup_shown(),
+            };
+        if gives_way {
+            self.status_bar.drawn = false;
+            return false;
+        }
+        let best = self.status_bar.inputs.crystal_tier;
+        let tier = best.min(crate::kyber::COUNT - 1);
+        let pictures = crate::holocrons::icons::is_loaded(crate::kyber::TIERS[tier].slot);
+        let laid = Laid {
+            inputs: self.status_bar.inputs,
+            parts,
+            viewport,
+            k,
+            top,
+            half,
+            pictures,
+        };
+        let drawn = match self.status_bar.laid {
+            Some((kept, drawn)) if kept == laid => drawn,
+            _ => {
+                let drawn = self.status_bar.build(&laid, measures);
+                self.status_bar.laid = Some((laid, drawn));
+                drawn
+            }
+        };
         self.status_bar.drawn = drawn;
         if drawn {
             target.append(&self.status_bar.canvas, viewport);
@@ -1037,17 +1329,115 @@ mod tests {
     fn amount(value: u64) -> Piece {
         Piece::Amount {
             value,
-            unit: "credits",
+            money: Money::Credits,
         }
     }
 
     #[test]
-    fn the_place_reads_off_top_and_bottom() {
-        assert_eq!(Place::of(0), Place::Off);
+    fn the_position_reads_bottom_unless_top() {
+        assert_eq!(Place::of(0), Place::Bottom);
         assert_eq!(Place::of(1), Place::Top);
         assert_eq!(Place::of(2), Place::Bottom);
-        assert_eq!(Place::of(3), Place::Off);
-        assert_eq!(Place::of(-1), Place::Off);
+        assert_eq!(Place::of(-1), Place::Bottom);
+        assert_eq!(Place::default(), Place::Bottom);
+    }
+
+    /// The bar is on, at the bottom, with every part, for a profile that never chose.
+    #[test]
+    fn the_bar_is_on_at_the_bottom_by_default() {
+        let mut cvars = CvarRegistry::default();
+        register(&mut cvars).unwrap();
+        assert_eq!(
+            cvars.get(CVAR).unwrap().value,
+            sjk_shell::CvarValue::Bool(true)
+        );
+        assert_eq!(
+            cvars.get(POSITION_CVAR).unwrap().value,
+            sjk_shell::CvarValue::Integer(0)
+        );
+        for part in Part::ALL {
+            assert_eq!(
+                cvars.get(part.cvar()).unwrap().value,
+                sjk_shell::CvarValue::Bool(true)
+            );
+        }
+        assert!(!Parts::ALL.without(Part::Toys).has(Part::Toys));
+        assert!(Parts::ALL.without(Part::Toys).has(Part::Credits));
+    }
+
+    const SCREEN: [f32; 2] = [1920.0, 1080.0];
+    const BAR: f32 = 34.0;
+
+    /// Nothing drawn: the bar sits on its edge with the screen's width, less the margins
+    /// (at the top, its share of it).
+    #[test]
+    fn an_empty_screen_puts_the_bar_on_its_edge() {
+        let (top, half) = place(Place::Bottom, SCREEN, 1.0, BAR, 28.0, &[]);
+        assert_eq!(top, 1080.0 - MARGIN - BAR);
+        assert_eq!(half, 960.0 - MARGIN);
+        let (top, half) = place(Place::Top, SCREEN, 1.0, BAR, 28.0, &[]);
+        assert_eq!(top, 28.0);
+        assert_eq!(half, 1920.0 * TOP_SHARE * 0.5);
+    }
+
+    /// The health and Force blocks in the bottom corners narrow the bar; a weapon box in
+    /// the bottom's middle lifts it above; the match timer at the top's middle drops it
+    /// below.
+    #[test]
+    fn the_bar_keeps_clear_of_the_hud() {
+        let health = Rect::new(0.0, 940.0, 300.0, 140.0);
+        let force = Rect::new(1640.0, 940.0, 280.0, 140.0);
+        let (top, half) = place(Place::Bottom, SCREEN, 1.0, BAR, 28.0, &[health, force]);
+        assert_eq!(top, 1080.0 - MARGIN - BAR);
+        assert_eq!(half, 960.0 - 300.0 - CLEARANCE);
+        let weapon = Rect::new(800.0, 1000.0, 320.0, 70.0);
+        let (top, half) = place(
+            Place::Bottom,
+            SCREEN,
+            1.0,
+            BAR,
+            28.0,
+            &[health, force, weapon],
+        );
+        assert_eq!(top, 1000.0 - CLEARANCE - BAR);
+        // Still beside the corner blocks, which reach above it.
+        assert_eq!(half, 960.0 - 300.0 - CLEARANCE);
+        let timer = Rect::new(870.0, 28.0, 180.0, 42.0);
+        let (top, _) = place(Place::Top, SCREEN, 1.0, BAR, 28.0, &[timer]);
+        assert_eq!(top, 70.0 + CLEARANCE);
+        // A box well above the bar's band leaves it alone.
+        let high = Rect::new(800.0, 300.0, 320.0, 40.0);
+        let (top, _) = place(Place::Bottom, SCREEN, 1.0, BAR, 28.0, &[high]);
+        assert_eq!(top, 1080.0 - MARGIN - BAR);
+    }
+
+    /// Boxes stacked up the middle lift the bar past each in turn, and it never leaves
+    /// the screen.
+    #[test]
+    fn stacked_boxes_lift_the_bar_past_each() {
+        let low = Rect::new(900.0, 1040.0, 120.0, 40.0);
+        let higher = Rect::new(880.0, 990.0, 160.0, 30.0);
+        let (top, _) = place(Place::Bottom, SCREEN, 1.0, BAR, 28.0, &[higher, low]);
+        assert_eq!(top, 990.0 - CLEARANCE - BAR);
+        let wall = Rect::new(0.0, 0.0, 1920.0, 1080.0);
+        let (top, _) = place(Place::Bottom, SCREEN, 1.0, BAR, 28.0, &[wall]);
+        assert_eq!(top, 0.0);
+    }
+
+    #[test]
+    fn a_doom_coin_and_the_icons_have_their_sizes() {
+        let mut list = sjk_ui::DrawList::new(16);
+        coin(&mut list, [10.0, 10.0], 20.0);
+        assert_eq!(list.len(), 8);
+        for money in [
+            Money::Credits,
+            Money::Shards,
+            Money::Dormant(3),
+            Money::Doom,
+        ] {
+            let width = icon_width(money, 1.0);
+            assert!(width > 5.0 && width <= ICON * 1.15, "{money:?}: {width}");
+        }
     }
 
     #[test]
@@ -1082,7 +1472,7 @@ mod tests {
                 Part::Coins,
                 Piece::Amount {
                     value: 1,
-                    unit: "DOOM coin"
+                    money: Money::Doom
                 }
             )
         );
@@ -1092,7 +1482,8 @@ mod tests {
                 Part::Saber,
                 Piece::Saber {
                     name: "Stock blade",
-                    colour: color::MUTED
+                    colour: color::MUTED,
+                    tier: None
                 }
             )
         );
@@ -1131,7 +1522,8 @@ mod tests {
             out[0].1,
             Piece::Saber {
                 name: skin.name,
-                colour: skin.tier.colour()
+                colour: skin.tier.colour(),
+                tier: Some(skin.tier)
             }
         );
         assert!(matches!(
@@ -1295,12 +1687,35 @@ mod tests {
         }
     }
 
+    /// Dormant kybers show the best tier's picture, kept within the tiers.
+    #[test]
+    fn dormant_kybers_show_their_best_tier() {
+        let mut out = [(Part::Credits, amount(0)); MAX_PIECES];
+        let parts = Parts::from_switches(|part| part == Part::Crystals);
+        for (tier, shown) in [(0, 0), (2, 2), (99, crate::kyber::COUNT - 1)] {
+            let inputs = Inputs {
+                crystals: Some(2),
+                crystal_tier: tier,
+                ..Inputs::default()
+            };
+            assert_eq!(pieces(&inputs, parts, &mut out), 1);
+            assert_eq!(
+                out[0].1,
+                Piece::Amount {
+                    value: 2,
+                    money: Money::Dormant(shown)
+                }
+            );
+        }
+    }
+
     #[test]
     fn a_full_bar_fits_its_storage() {
         let mut inputs = Inputs {
             credits: Some(u64::MAX),
             shards: Some(1),
             crystals: Some(3),
+            crystal_tier: 3,
             coins: Some(4),
             new: Some((3, true)),
             saber: None,
