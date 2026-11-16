@@ -333,9 +333,76 @@ impl Rules {
     }
 }
 
+/// `debug_feat`: show feats and hear their lines as if just earned, to try the
+/// medals, the announcer and a voice pack without a kill.
+pub(crate) const COMMAND: &str = "debug_feat";
+/// Its line in the command list and browser.
+pub(crate) const HELP: &str =
+    "Rehearse feats, medal and announcer line, without a kill: debug_feat <id|all>";
+
+/// The feats `debug_feat` names in `args` (`all` for every one, in order), or the
+/// usage and the ids when it names none or one it does not know.
+pub(crate) fn rehearsal(args: &[String]) -> Result<Vec<Feat>, String> {
+    let usage = || {
+        let ids: Vec<&str> = Feat::ALL.iter().map(|feat| feat.id()).collect();
+        format!("usage: {COMMAND} <id|all>, ids: {}", ids.join(" "))
+    };
+    if args.is_empty() {
+        return Err(usage());
+    }
+    let mut feats = Vec::new();
+    for word in args {
+        let word = word.to_ascii_lowercase();
+        if word == "all" {
+            feats.extend(Feat::ALL);
+        } else if let Some(feat) = Feat::ALL.into_iter().find(|feat| feat.id() == word) {
+            feats.push(feat);
+        } else {
+            return Err(format!("{COMMAND}: no feat {word}; {}", usage()));
+        }
+    }
+    Ok(feats)
+}
+
+impl crate::GpuState {
+    /// `debug_feat <id|all>`: the feats shown one after another, each with its line.
+    pub(crate) fn debug_feat_command(&mut self, args: &[String]) -> Result<Vec<String>, String> {
+        let feats = rehearsal(args)?;
+        self.hud.feats.rehearse(&feats);
+        if let Some(console) = &mut self.console {
+            console.set_open(false);
+        }
+        self.sync_cursor_policy();
+        let names: Vec<&str> = feats.iter().map(|feat| feat.label()).collect();
+        Ok(vec![format!(
+            "Rehearsing {} (announcer pack {}): {}",
+            if feats.len() == 1 {
+                "1 feat"
+            } else {
+                "the feats"
+            },
+            self.hud.feats.pack(),
+            names.join(", ")
+        )])
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn debug_feat_names_feats_by_id_or_all() {
+        let words = |text: &str| -> Vec<String> { text.split(' ').map(String::from).collect() };
+        assert_eq!(rehearsal(&words("HOOKED")), Ok(vec![Feat::Hooked]));
+        assert_eq!(
+            rehearsal(&words("all")).map(|feats| feats.len()),
+            Ok(Feat::ALL.len())
+        );
+        assert!(rehearsal(&[]).unwrap_err().contains("double_kill"));
+        assert!(rehearsal(&words("nope")).is_err());
+        assert!(COMMAND.starts_with("debug_") && COMMAND == COMMAND.to_ascii_lowercase());
+    }
 
     const SABER: u8 = 3;
     const WORLD: u16 = 1022;

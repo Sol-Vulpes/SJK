@@ -4576,6 +4576,10 @@ ids and lines are in [assets/announcer](../crates/sjk-viewer/assets/announcer/RE
 found at startup); a line the pack lacks comes from `sjk`, and a line neither has is
 silent.
 
+`debug_feat <id|all>` rehearses feats without a kill, in a match: each medal shows with
+its line, one every 1.7 s, whatever `cg_feats` and its options say (`debug_feat` alone
+lists the ids). It tries the medals' place, the announcer and a voice pack.
+
 | Cvar | Default | Effect |
 | --- | --- | --- |
 | `cg_feats` | 0 | Feats on |
