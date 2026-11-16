@@ -66,6 +66,8 @@ pub(crate) const LOOPS: usize = 24;
 pub(crate) const LOW_SLOTS: usize = 48;
 /// The most slots, and cells, either holds.
 const SLOTS: usize = if LOOPS > LOW_SLOTS { LOOPS } else { LOW_SLOTS };
+// Every slot either layout uses fits the shared table (checked as the crate builds).
+const _: () = assert!(LOOPS <= SLOTS && LOW_SLOTS <= SLOTS);
 pub(crate) const CELLS: usize = LOOPS * FRAMES;
 /// The atlas's width in pixels (its height is its layout's, [`Layout::atlas`]).
 const ATLAS_WIDTH: u32 = STILL[0] * COLUMNS;
@@ -76,9 +78,15 @@ pub(crate) const UNITS: [f32; 2] = [52.0, 13.0];
 /// The baking target draws each picture this many times its size.
 const SUPERSAMPLE: u32 = 2;
 const BAKE: [u32; 2] = [STILL[0] * SUPERSAMPLE, STILL[1] * SUPERSAMPLE];
-/// Pictures baked a frame at most; with the menu pictures on, [`BAKES_LOW`].
+/// Rows of the baking target, blades drawn a frame at most: two a picture, its moment of
+/// the loop and the one a whole loop later ([`LOOP_SECONDS`]), blended so that the loop
+/// runs on from its last picture into its first without a jump (`blade_stills.wgsl`).
 pub(crate) const BAKE_BATCH: usize = 4;
+/// Pictures baked a frame at most; with the menu pictures on, [`BAKES_LOW`].
+const PICTURES_A_FRAME: usize = BAKE_BATCH / 2;
 const BAKES_LOW: usize = 1;
+/// A loop's length in the blade's animation (seconds).
+const LOOP_SECONDS: f64 = FRAMES as f64 * FRAME_STEP;
 /// Skins' keys worked out a frame at most (each hashes its file and images).
 const KEYS_PER_FRAME: usize = 24;
 /// Loops read from disk uploaded a frame at most.
@@ -90,7 +98,7 @@ const STILL_SECONDS: f64 = 2.4;
 const IDLE: Duration = Duration::from_secs(10);
 const BAKER_IDLE: Duration = Duration::from_secs(5);
 /// The baker's version: raise it when a loop's look changes in a way the key does not see.
-pub(crate) const VERSION: u32 = 3;
+pub(crate) const VERSION: u32 = 4;
 /// The folder in the cache folder the loops go in.
 pub(crate) const FOLDER: &str = "blades";
 /// The texture ids: cell `n` is `TEXTURE_BASE + n`, its dimmed look (not held) `+ DIM`.
@@ -278,6 +286,11 @@ pub(crate) fn still(id: &'static str, dim: bool) -> Option<Shown> {
         mix,
     })
 }
+
+/// The loops' clock for the world shots: `Some` plays every loop at those seconds instead of
+/// the real time, so a run of frames steps it exactly.
+#[cfg(test)]
+pub(crate) static SHOT_CLOCK: Mutex<Option<f32>> = Mutex::new(None);
 
 /// Forget every loop in memory, as a client starting again (the world shots read them
 /// back from disk).
@@ -561,8 +574,8 @@ pub(crate) struct Bake {
     color: crate::saber_skins::SkinColor,
 }
 
-/// This frame's bakes, in the baking target's rows.
-pub(crate) type Bakes = [Option<Bake>; BAKE_BATCH];
+/// This frame's bakes, each in two of the baking target's rows.
+pub(crate) type Bakes = [Option<Bake>; PICTURES_A_FRAME];
 
 /// Where row `row`'s blade starts, in world units (y = 0 the plane, x across, z up).
 fn bake_base(row: usize) -> Vec3 {
@@ -571,6 +584,13 @@ fn bake_base(row: usize) -> Vec3 {
         0.0,
         -(row as f32 + 0.5) * UNITS[1],
     )
+}
+
+/// What the still shader blends for picture `frame` of a loop of `frames` from rows pair
+/// `pair` (`blade_stills.wgsl` reads it back from the instance index): `frame / frames` of
+/// the first row, its moment, and the rest of the second, a loop later.
+fn still_pick(pair: usize, frame: usize, frames: usize) -> u32 {
+    ((pair * 32 + frame.min(31)) * 32 + frames.clamp(1, 31)) as u32
 }
 
 /// The camera seeing the baking rows side on.
@@ -746,7 +766,10 @@ struct Readback {
     buffer: wgpu::Buffer,
     /// Each loop in the buffer, in order: its slot, skin and key.
     stills: [Option<(usize, &'static str, u64)>; BAKE_BATCH],
-    /// Set once the frame that copied them has been submitted (the next one).
+    /// The frame that copies them ([`crate::frame_split::Splitter::recording`]): mapped
+    /// once it has been submitted.
+    frame: u64,
+    /// Set once mapping was asked for.
     receiver: Option<mpsc::Receiver<Result<(), wgpu::BufferAsyncError>>>,
 }
 
@@ -813,11 +836,15 @@ impl crate::GpuState {
             let mut shared = lock();
             shared.frame += 1;
             shared.seconds = (now - epoch).as_secs_f32();
+            #[cfg(test)]
+            if let Some(seconds) = *SHOT_CLOCK.lock().unwrap_or_else(|e| e.into_inner()) {
+                shared.seconds = seconds;
+            }
             std::mem::swap(&mut shared.wanted, &mut self.blade_stills.wanted);
             shared.wanted.clear();
             shared.frame
         };
-        let mut bakes: Bakes = [None; BAKE_BATCH];
+        let mut bakes: Bakes = [None; PICTURES_A_FRAME];
         if self.blade_stills.wanted.is_empty() {
             self.release_idle_stills(now);
             return bakes;
@@ -888,7 +915,7 @@ impl crate::GpuState {
         }
         self.upload_loaded_stills(frame, layout);
         let live = crate::blade_pictures::live();
-        let max = if live { BAKE_BATCH } else { BAKES_LOW };
+        let max = if live { PICTURES_A_FRAME } else { BAKES_LOW };
         // The pictures of a loop begun whose slot still holds it, then new loops.
         {
             let shared = lock();
@@ -1122,28 +1149,36 @@ impl crate::GpuState {
         }
     }
 
-    /// The blade instances of this frame's `bakes`, each in its baking row at its moment of
-    /// the loop, appended to `blades`; which rows got any.
+    /// The blade instances of this frame's `bakes`, appended to `blades`: each picture's
+    /// blade twice, in its two baking rows, at its moment of the loop and a whole loop
+    /// later; which pictures got both.
     pub(crate) fn push_still_blades(
         bakes: &Bakes,
         blades: &mut Vec<crate::saber::Instance>,
         per_blade: usize,
-    ) -> [bool; BAKE_BATCH] {
-        let mut drawn = [false; BAKE_BATCH];
-        for (row, bake) in bakes.iter().enumerate() {
+    ) -> [bool; PICTURES_A_FRAME] {
+        let mut drawn = [false; PICTURES_A_FRAME];
+        for (pair, bake) in bakes.iter().enumerate() {
             let Some(bake) = bake else {
                 continue;
             };
             let color = crate::saber_rgb::BladeColor::Skin(bake.color);
-            let start = blades.len();
-            blades.extend(crate::blade_pictures::blade_instances(
-                bake_base(row),
-                color,
-                STILL_SECONDS + bake.frame as f64 * FRAME_STEP,
-                0,
-                per_blade,
-            ));
-            drawn[row] = blades.len() > start;
+            let moment = STILL_SECONDS + bake.frame as f64 * FRAME_STEP;
+            drawn[pair] =
+                [moment, moment + LOOP_SECONDS]
+                    .into_iter()
+                    .enumerate()
+                    .all(|(later, seconds)| {
+                        let start = blades.len();
+                        blades.extend(crate::blade_pictures::blade_instances(
+                            bake_base(pair * 2 + later),
+                            color,
+                            seconds,
+                            0,
+                            per_blade,
+                        ));
+                        blades.len() > start
+                    });
         }
         drawn
     }
@@ -1155,7 +1190,7 @@ impl crate::GpuState {
         &mut self,
         encoder: &mut wgpu::CommandEncoder,
         bakes: &Bakes,
-        drawn: [bool; BAKE_BATCH],
+        drawn: [bool; PICTURES_A_FRAME],
     ) {
         if bakes.iter().all(Option::is_none) {
             return;
@@ -1230,14 +1265,15 @@ impl crate::GpuState {
             });
             pass.set_pipeline(&baker.still);
             pass.set_bind_group(0, &baker.still_bind, &[]);
-            for (row, bake) in bakes.iter().enumerate() {
+            for (pair, bake) in bakes.iter().enumerate() {
                 let Some(bake) = bake else {
                     continue;
                 };
                 let [x, y, width, height] = cell_pixels(bake.cell);
                 pass.set_viewport(x as f32, y as f32, width as f32, height as f32, 0.0, 1.0);
                 pass.set_scissor_rect(x, y, width, height);
-                pass.draw(0..3, row as u32..row as u32 + 1);
+                let pick = still_pick(pair, bake.frame, layout.frames);
+                pass.draw(0..3, pick..pick + 1);
             }
         }
         #[cfg(test)]
@@ -1313,28 +1349,23 @@ impl crate::GpuState {
         self.blade_stills.readbacks.push(Readback {
             buffer,
             stills: finished,
+            frame: self.frame_pacer.split.recording(),
             receiver: None,
         });
     }
 
-    /// Map the loops copied out last frame, and keep the ones mapped.
+    /// Map the loops copied out by frames now submitted, and keep the ones mapped.
     fn poll_still_readbacks(&mut self) {
         if self.blade_stills.readbacks.is_empty() {
             return;
         }
-        // Last frame may still be on its way to `Queue::submit` on the submit thread: a
-        // buffer mapped before its copy is submitted fails that submit. Rare (a frame
-        // that finished a loop), and nothing is waited for when no frame is in flight.
-        if self
-            .blade_stills
-            .readbacks
-            .iter()
-            .any(|readback| readback.receiver.is_none())
-        {
-            self.frame_pacer.split.wait_previous();
-        }
+        // A buffer mapped before the frame copying into it reaches `Queue::submit` (on the
+        // submit thread) fails that submit: each waits for its frame, a frame or two, without
+        // holding this one (waiting here, every other frame while baking, made the menus
+        // judder with vsync).
+        let split = &self.frame_pacer.split;
         for readback in &mut self.blade_stills.readbacks {
-            if readback.receiver.is_none() {
+            if readback.receiver.is_none() && split.submitted(readback.frame) {
                 let (sender, receiver) = mpsc::sync_channel(1);
                 readback
                     .buffer
@@ -1467,8 +1498,6 @@ mod tests {
         assert_eq!(loops.cell(3, FRAMES - 1), loops.cell(3, 0) + FRAMES - 1);
         assert!(loops.cell(LOOPS - 1, FRAMES - 1) < CELLS);
         assert!(firsts.cell(LOW_SLOTS - 1, 0) < CELLS);
-        // Every row the bakes need fits the baking target, every slot the shared table.
-        assert!(LOOPS <= SLOTS && LOW_SLOTS <= SLOTS);
     }
 
     /// A loop plays through its pictures, fading from one to the next, and comes round;
@@ -1623,6 +1652,48 @@ mod tests {
             // Far from every live picture's cell.
             assert!(base.x > 1_000.0);
         }
+    }
+
+    /// Each picture's two rows and blend reach the still shader through the instance index
+    /// (`still_pick`, read back as `blade_stills.wgsl` reads it).
+    #[test]
+    fn a_picture_names_its_rows_and_blend_to_the_shader() {
+        for pair in 0..PICTURES_A_FRAME {
+            for frame in 0..FRAMES {
+                let pick = still_pick(pair, frame, FRAMES);
+                assert_eq!(pick / 1024, pair as u32);
+                assert_eq!((pick / 32) % 32, frame as u32);
+                assert_eq!(pick % 32, FRAMES as u32);
+            }
+        }
+        assert_eq!(still_pick(0, 0, 1) % 32, 1);
+    }
+
+    /// The blend `blade_stills.wgsl` makes (picture i of N: i/N of its moment, the rest of the
+    /// moment a loop later), on a light that drifts and never repeats: the pictures alone jump
+    /// back the whole loop going round, while the blend's picture N (one past the last) is its
+    /// picture 0, so going round is one more step of the same blend.
+    #[test]
+    fn a_blended_loop_has_no_seam() {
+        let light = |seconds: f64| (seconds * 4.1).sin() + 0.6 * (seconds * 2.3 + 1.0).sin();
+        let moment = |frame: usize| STILL_SECONDS + frame as f64 * FRAME_STEP;
+        let step = |picture: &dyn Fn(usize) -> f64, frame: usize| {
+            (picture((frame + 1) % FRAMES) - picture(frame)).abs()
+        };
+        let alone = |frame: usize| light(moment(frame));
+        let inside = (0..FRAMES - 1)
+            .map(|frame| step(&alone, frame))
+            .fold(0.0, f64::max);
+        assert!(
+            step(&alone, FRAMES - 1) > inside * 2.0,
+            "the pictures alone jump"
+        );
+        let blended = |frame: usize| {
+            let now = frame as f64 / FRAMES as f64;
+            now * light(moment(frame)) + (1.0 - now) * light(moment(frame) + LOOP_SECONDS)
+        };
+        assert!((blended(FRAMES) - blended(0)).abs() < 1e-12);
+        assert!(step(&blended, FRAMES - 1) < step(&alone, FRAMES - 1) * 0.6);
     }
 
     #[test]

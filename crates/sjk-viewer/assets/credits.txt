@@ -96,7 +96,7 @@ did: The Inventory tab: everything owned in one list, by kind, with counts and a
 did: Inventory pictures and item card: worth in shards, wear, break down, open from the list
 did: One tier frame on every Collection page: each tier adds a touch, diamonds count the step
 did: The Collection's hall: a tile to each kind with what is new in it, the whole look beside
-did: Kyber loops: every blade drawn once as a short straight loop, kept on disk for the tiles
+did: Kyber loops: every blade drawn once as a short straight seamless loop, kept for the tiles
 did: New on every kind: cards, tags and finishers marked New, and empty pages that point the way
 did: Blade cost ranking: every Legendary and Mythical blade timed on the GPU
 did: Top-tier saber shaders made faster with the same look

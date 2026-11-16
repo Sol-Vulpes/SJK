@@ -14,6 +14,12 @@
 //! than one frame ahead and a frame's swapchain image is presented before the next one
 //! is acquired.
 //!
+//! Each frame handed to [`Splitter::submit`] gets a number ([`Splitter::recording`] while it
+//! is recorded), and [`Splitter::submitted`] tells, without waiting, whether that frame has
+//! reached `Queue::submit`: a buffer the frame copies into may be mapped only after, so a
+//! readback is mapped once its frame is in rather than by waiting for it mid-frame (16/11/2026:
+//! the blade loops' readbacks waited every other frame while baking, a judder with vsync).
+//!
 //! `SJK_FRAME_SPLIT=0` keeps the single encoder; any other number sets the worker count.
 //! `SJK_SUBMIT_THREAD=0` submits on the render thread instead. Hand-off uses bounded
 //! channels allocated once: a cut neither allocates nor takes a lock on the render
@@ -21,6 +27,7 @@
 //! instead of waiting behind a long one.
 use crate::frame_queue::{FrameQueue, Writes};
 use std::cell::{Cell, OnceCell, RefCell};
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::mpsc::{Receiver, SyncSender, sync_channel};
 use std::sync::{Arc, Mutex, OnceLock};
 
@@ -203,18 +210,23 @@ impl<J> Drop for Fed<J> {
 }
 
 impl Submitter {
-    /// `None` when `SJK_SUBMIT_THREAD=0` or the thread cannot start: submit inline.
-    fn start(queue: &FrameQueue) -> Option<Self> {
+    /// `None` when `SJK_SUBMIT_THREAD=0` or the thread cannot start: submit inline. Each
+    /// frame it submits adds one to `landed`.
+    fn start(queue: &FrameQueue, landed: &Arc<AtomicU64>) -> Option<Self> {
         if std::env::var("SJK_SUBMIT_THREAD").is_ok_and(|value| value == "0") {
             return None;
         }
         let (give, returned) = sync_channel(2);
         let queue = queue.clone();
+        let landed = Arc::clone(landed);
         let frames = Fed::spawn("sjk-submit", 1, move |mut batch: Batch| {
             let submitted = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
                 batch.submit(queue.raw())
             }))
             .is_ok();
+            if submitted {
+                landed.fetch_add(1, Ordering::Release);
+            }
             queue.end_flight();
             give.send(submitted.then_some(batch)).is_ok()
         })
@@ -235,6 +247,10 @@ pub(crate) struct Splitter {
     /// A batch back from the submit thread, ready for the next frame.
     spare: RefCell<Option<Batch>>,
     submitter: OnceCell<Option<Submitter>>,
+    /// Frames handed to [`Self::submit`], and those submitted (by the submit thread once
+    /// it has).
+    handed: Cell<u64>,
+    landed: Arc<AtomicU64>,
 }
 
 impl Splitter {
@@ -245,7 +261,20 @@ impl Splitter {
             current: RefCell::new(Some(Batch::new())),
             spare: RefCell::new(Some(Batch::new())),
             submitter: OnceCell::new(),
+            handed: Cell::new(0),
+            landed: Arc::new(AtomicU64::new(0)),
         }
+    }
+
+    /// The number the frame being recorded gets when it is handed to [`Self::submit`].
+    pub(crate) fn recording(&self) -> u64 {
+        self.handed.get() + 1
+    }
+
+    /// Whether frame `number` ([`Self::recording`] while it was recorded) has reached
+    /// `Queue::submit`, so what it copies into a buffer may be mapped. Never waits.
+    pub(crate) fn submitted(&self, number: u64) -> bool {
+        self.landed.load(Ordering::Acquire) >= number
     }
 
     /// End the current encoder here, between passes, and keep recording into a fresh one.
@@ -280,7 +309,9 @@ impl Splitter {
         present: Option<wgpu::SurfaceTexture>,
         timing: &mut crate::frame_pacing::budget::Timer,
     ) {
-        let submitter = self.submitter.get_or_init(|| Submitter::start(queue));
+        let submitter = self
+            .submitter
+            .get_or_init(|| Submitter::start(queue, &self.landed));
         // At most one frame in flight: the previous one must be back first.
         self.wait_previous();
         timing.mark(crate::frame_pacing::budget::Phase::QueueSubmit);
@@ -288,8 +319,10 @@ impl Splitter {
         batch.last = Some(encoder);
         batch.present = present;
         queue.take_writes(&mut batch.writes);
+        self.handed.set(self.handed.get() + 1);
         let Some(submitter) = submitter else {
             batch.submit(queue.raw());
+            self.landed.fetch_add(1, Ordering::Release);
             *self.current.borrow_mut() = Some(batch);
             return;
         };

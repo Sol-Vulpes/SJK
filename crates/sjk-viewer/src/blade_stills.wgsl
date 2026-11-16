@@ -4,6 +4,10 @@
 // then faded out toward the cell's edges as the live pictures are (`blade_pictures.wgsl`).
 // Display values, alpha the brightest channel, as the live pictures', so the UI adds them
 // the same way.
+// A picture is drawn twice, in two rows: at its moment of the loop and a whole loop later.
+// Picture i of N is i/N of the first and the rest of the second, so the loop's last picture
+// (nearly its moment) runs on into its first (a loop on from the start) as one step of the
+// animation, where it jumped back the whole loop (16/11/2026: a pop every 0.8 s).
 const STILL: vec2<f32> = vec2<f32>(384.0, 96.0);
 // One row of the baking target, in pixels.
 const ROW: vec2<i32> = vec2<i32>(768, 192);
@@ -20,35 +24,42 @@ const GLOW: f32 = 0.6;
 
 struct Out {
     @builtin(position) at: vec4<f32>,
-    @location(0) @interpolate(flat) row: u32,
+    // `still_pick` (`blade_stills.rs`): ((pair * 32 + picture) * 32 + pictures).
+    @location(0) @interpolate(flat) pick: u32,
 }
 
 @vertex fn vs_main(
     @builtin(vertex_index) index: u32,
-    @builtin(instance_index) row: u32,
+    @builtin(instance_index) pick: u32,
 ) -> Out {
     let p = vec2<f32>(f32((index << 1u) & 2u), f32(index & 2u));
     var out: Out;
     out.at = vec4<f32>(p * 2.0 - 1.0, 0.0, 1.0);
-    out.row = row;
+    out.pick = pick;
     return out;
 }
 
-// A baking pixel as the live picture shows it: clamped to the display's range first (the
-// live picture's 8-bit target does), so a core far over 1 does not spread white into its
+// One row's baking pixel as the live picture shows it: clamped to the display's range first
+// (the live picture's 8-bit target does), so a core far over 1 does not spread white into its
 // neighbours when four are averaged.
-fn texel(p: vec2<i32>, row: i32) -> vec3<f32> {
+fn row_texel(p: vec2<i32>, row: i32) -> vec3<f32> {
     let q = clamp(p, vec2<i32>(0), ROW - vec2<i32>(1));
     return clamp(textureLoad(bake, q + vec2<i32>(0, row * ROW.y), 0).rgb, vec3<f32>(0.0), vec3<f32>(1.0));
+}
+
+// The picture's pixel: its pair of rows blended, `now` the share of the first.
+fn texel(p: vec2<i32>, pair: i32, now: f32) -> vec3<f32> {
+    return mix(row_texel(p, pair * 2 + 1), row_texel(p, pair * 2), now);
 }
 
 @fragment fn fs_main(in: Out) -> @location(0) vec4<f32> {
     // The pixel's place in its cell (the cells tile the atlas).
     let local = in.at.xy - floor(in.at.xy / STILL) * STILL;
-    let row = i32(in.row);
+    let pair = i32(in.pick / 1024u);
+    let now = f32((in.pick / 32u) % 32u) / f32(max(in.pick % 32u, 1u));
     let p = vec2<i32>(floor(local * 2.0));
-    let base = (texel(p, row) + texel(p + vec2<i32>(1, 0), row) + texel(p + vec2<i32>(0, 1), row)
-        + texel(p + vec2<i32>(1, 1), row)) * 0.25;
+    let base = (texel(p, pair, now) + texel(p + vec2<i32>(1, 0), pair, now)
+        + texel(p + vec2<i32>(0, 1), pair, now) + texel(p + vec2<i32>(1, 1), pair, now)) * 0.25;
     // A disc of taps (a golden-angle spiral), Gaussian weighted: the blade's light spread.
     var glow = vec3<f32>(0.0);
     var weight = 0.0;
@@ -57,7 +68,7 @@ fn texel(p: vec2<i32>, row: i32) -> vec3<f32> {
         let a = f32(k) * 2.3999632;
         let offset = vec2<f32>(cos(a), sin(a)) * r;
         let w = exp(-r * r / (RADIUS * RADIUS * 0.22));
-        let c = texel(vec2<i32>(floor(local * 2.0 + offset)), row);
+        let c = texel(vec2<i32>(floor(local * 2.0 + offset)), pair, now);
         // The core's white spreads as the light's colour: the glow of a saber, not of a lamp.
         let hue = c - vec3<f32>(min(c.r, min(c.g, c.b)) * 0.6);
         glow += (hue * 1.4 + c * 0.25) * w;

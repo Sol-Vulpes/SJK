@@ -731,6 +731,13 @@ pub(crate) fn animation_seconds() -> f32 {
     f32::from_bits(ANIMATION_SECONDS.load(std::sync::atomic::Ordering::Relaxed))
 }
 
+/// Put back the animation time `seconds` ([`animation_seconds`] before): the Collection's
+/// blade pictures and loops stamp their own clocks, which the blades in the world and on
+/// the stage do not follow.
+pub(crate) fn restore_animation_seconds(seconds: f32) {
+    ANIMATION_SECONDS.store(seconds.to_bits(), std::sync::atomic::Ordering::Relaxed);
+}
+
 /// Group instances by shader pair and return their draw ranges.
 pub(crate) fn material_ranges(instances: &mut [Instance]) -> [Range<u32>; MATERIAL_COUNT] {
     instances.sort_unstable_by_key(|instance| instance.material());

@@ -32,7 +32,8 @@ every six frames for 25 s): before, 30 frames over 33 ms (worst 86 ms, median 3.
 tiles' live pictures (the hovered and chosen tile, and every owned tile whose still was not
 baked) drew new blades through the live target. Now tiles, rows and strips never draw live:
 each kyber is baked once into an eight-picture loop (`blade_stills.rs`, 384 x 96 a picture,
-a tenth of a second of its animation apart, four pictures a frame), played crossfaded ten
+a tenth of a second of its animation apart, two a frame, each blended with the moment a loop
+later so it loops without a seam), played crossfaded ten
 pictures a second and kept as one PNG (RGB, about 200 KB; 61 MB for 301 kybers); only the
 chosen kyber's large swatch is live. After: 1 frame over 33 ms (opening the page; worst
 60 ms, median 3.9 ms), a second visit read from disk with none. Settled frames (whole frame,

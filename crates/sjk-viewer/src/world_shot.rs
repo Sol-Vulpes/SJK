@@ -361,6 +361,9 @@ mod blade_stills_shots;
 #[path = "world_shot_collection_perf.rs"]
 mod collection_perf_shots;
 
+#[path = "world_shot_blade_flicker.rs"]
+mod blade_flicker_shots;
+
 #[path = "world_shot_holocrons.rs"]
 mod holocrons_tab;
 

@@ -2046,9 +2046,14 @@ Profile page's See the collection) open it on its own:
   live: every other swatch, tile, row and strip plays the kyber's **loop**
   ([blade_stills.rs](../crates/sjk-viewer/src/blade_stills.rs)), the blade drawn once by
   the same renderer at eight moments of its animation a tenth of a second apart, each at
-  twice the picture's 384 x 96 pixels, brought down with a soft glow round its light (a
+  twice the picture's 384 x 96 pixels and blended with the moment a whole loop later
+  (picture i of 8 is i/8 of its moment and the rest of the later one, so going round from
+  the last picture to the first is one more step of the animation, where it jumped back
+  0.8 s, 16/11/2026), brought down with a soft glow round its light (a
   cheap bloom done once, `blade_stills.wgsl`), played ten pictures a second, each fading
-  into the next, every kyber at its own place in its loop, and kept on disk as
+  into the next (their shares summing to one, as the UI adds them as light: 16/11/2026,
+  the first drawn whole under the next made every blade swell and drop back ten times a
+  second, Sol's flicker), every kyber at its own place in its loop, and kept on disk as
   `GameData/SJK/cache/blades/<id>-<key>.png` (the eight pictures one under the other, RGB,
   about 200 KB; about 60 MB for every kyber). Its key hashes the skin's file as loaded,
   its colour as worn (the player's own options, a chroma), its glow and core images, its
@@ -2056,7 +2061,8 @@ Profile page's See the collection) open it on its own:
   changed blade is drawn again and its old file removed. The loops on screen sit in one
   atlas texture of 24 loops (3072 x 2304 RGBA8, 27 MiB, a fixed budget for 3 GB cards,
   freed 10 s after the Collection closes); a loop not in it is read from disk on a thread
-  (three a frame at most) or baked: four pictures a frame at most (a loop in two frames),
+  (three a frame at most) or baked: two pictures a frame at most, each drawn twice (a loop
+  in four frames),
   in the live pictures' pass, a signature waiting for its own pipelines (asked for at
   once, so no loop keeps the shared look a build stands in with); with nothing on screen
   waiting, the other loaded kybers are baked one loop at a time while the Collection is
