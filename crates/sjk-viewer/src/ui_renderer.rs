@@ -8,6 +8,7 @@ pub(crate) mod art;
 mod card_art;
 pub(crate) mod duel_badge;
 mod emblem;
+pub(crate) mod feat_pictures;
 mod gif_textures;
 mod icons;
 mod levelshot;
@@ -18,6 +19,7 @@ mod trust_badge;
 mod verified_badge;
 use art::{ArtTextures, Run, Source};
 use emblem::EmblemTextures;
+use feat_pictures::FeatPictures;
 use gif_textures::GifTextures;
 use icons::IconAtlas;
 pub(crate) use icons::{
@@ -325,6 +327,7 @@ pub(crate) fn texture_switches(lists: &[&DrawList]) -> usize {
             None if texture == BLADE_PICTURES_TEXTURE => Source::BladePictures,
             None if crate::blade_stills::cell_of(texture).is_some() => Source::BladeStills,
             None if map_edit_pictures::cell_of(texture).is_some() => Source::MapEditCells,
+            None if feat_pictures::cell_of(texture).is_some() => Source::FeatCells,
             None if texture == map_edit_pictures::PREVIEW => Source::MapEditPreview,
             None if crate::chat_gifs::slot_of(texture).is_some() => {
                 Source::Gif(crate::chat_gifs::slot_of(texture).unwrap_or_default() as u8)
@@ -406,6 +409,8 @@ pub(crate) struct ShapeRenderer {
     blade_stills: Option<wgpu::BindGroup>,
     /// The map editor's shader pictures, while its panel shows them.
     map_edit: MapEditPictures,
+    /// The feats' medal pictures, once one is uploaded.
+    feats: FeatPictures,
     preview_sampler: wgpu::Sampler,
     /// Whether a frame past the vertex or run storage has been logged: shapes
     /// past it are dropped, so the log names the cause of a missing picture.
@@ -617,6 +622,7 @@ impl ShapeRenderer {
             blade_pictures: None,
             blade_stills: None,
             map_edit: MapEditPictures::default(),
+            feats: FeatPictures::default(),
             preview_sampler: device.create_sampler(&wgpu::SamplerDescriptor {
                 label: Some("SJK model preview sampler"),
                 mag_filter: wgpu::FilterMode::Linear,
@@ -880,6 +886,9 @@ impl ShapeRenderer {
                         Source::MapEditCells => map_edit_pictures::uv_range(
                             map_edit_pictures::cell_of(texture).unwrap_or_default(),
                         ),
+                        Source::FeatCells => feat_pictures::uv_range(
+                            feat_pictures::cell_of(texture).unwrap_or_default(),
+                        ),
                         Source::Atlas => icons::uv_range(animated(texture, now)),
                     };
                     let before = self.vertices.len();
@@ -908,6 +917,9 @@ impl ShapeRenderer {
                         Source::Atlas => icons::uv_range(animated(texture, now)),
                         Source::MapEditCells => map_edit_pictures::uv_range(
                             map_edit_pictures::cell_of(texture).unwrap_or_default(),
+                        ),
+                        Source::FeatCells => feat_pictures::uv_range(
+                            feat_pictures::cell_of(texture).unwrap_or_default(),
                         ),
                         Source::BladeStills => blade_still_range(texture),
                         _ => ([0.0, 0.0], [1.0, 1.0]),
@@ -948,10 +960,15 @@ impl ShapeRenderer {
                         | Source::News(_)
                         | Source::MapEditPreview
                         | Source::Preview => uv,
-                        Source::MapEditCells => {
-                            let (low, high) = map_edit_pictures::uv_range(
-                                map_edit_pictures::cell_of(texture).unwrap_or_default(),
-                            );
+                        Source::MapEditCells | Source::FeatCells => {
+                            let (low, high) = match source {
+                                Source::FeatCells => feat_pictures::uv_range(
+                                    feat_pictures::cell_of(texture).unwrap_or_default(),
+                                ),
+                                _ => map_edit_pictures::uv_range(
+                                    map_edit_pictures::cell_of(texture).unwrap_or_default(),
+                                ),
+                            };
                             uv.map(|[s, t]| {
                                 [
                                     low[0] + s * (high[0] - low[0]),
@@ -1180,6 +1197,10 @@ impl ShapeRenderer {
                 self.map_edit.grid_group()?;
                 Source::MapEditCells
             }
+            None if feat_pictures::cell_of(texture).is_some() => {
+                self.feats.group()?;
+                Source::FeatCells
+            }
             None if texture == map_edit_pictures::PREVIEW => {
                 self.map_edit.preview_group()?;
                 Source::MapEditPreview
@@ -1257,6 +1278,7 @@ impl ShapeRenderer {
                 Source::BladePictures => self.blade_pictures.as_ref(),
                 Source::BladeStills => self.blade_stills.as_ref(),
                 Source::MapEditCells => self.map_edit.grid_group(),
+                Source::FeatCells => self.feats.group(),
                 Source::MapEditPreview => self.map_edit.preview_group(),
                 Source::Atlas => None,
             };
@@ -1773,6 +1795,18 @@ impl ShapeRenderer {
     ) {
         self.map_edit
             .upload_preview(device, queue, &self.texture_layout, image);
+    }
+
+    /// Put the feats' medal picture `cell` ([`feat_pictures::cell_texture`]).
+    pub(crate) fn upload_feat_picture(
+        &mut self,
+        device: &wgpu::Device,
+        queue: &crate::frame_queue::FrameQueue,
+        cell: u32,
+        rgba: &[u8],
+    ) {
+        self.feats
+            .upload(device, queue, &self.texture_layout, cell, rgba);
     }
 
     /// Drop the map editor's pictures (its panel closed); whether any were held.

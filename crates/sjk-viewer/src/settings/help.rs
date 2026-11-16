@@ -105,6 +105,7 @@ const CHOICE_NAMES: &[(&str, &str, &str)] = &[
     (crate::hud::clock::CVAR, "2", "Time and date"),
     (crate::hud::clock::CVAR, "3", "Date"),
     (crate::status_bar::POSITION_CVAR, "0", "Bottom"),
+    (crate::feats::announcer::CVAR, "sjk", "SJK"),
     (crate::status_bar::POSITION_CVAR, "1", "Top"),
     (
         crate::chat::incoming_color::CVAR,
@@ -983,6 +984,22 @@ const HELP: &[(&str, &str)] = &[
     (
         "cg_killfeed",
         "The last kills, killer, weapon icon, victim, at the top right or wherever Move HUD elements put it.",
+    ),
+    (
+        crate::hud::feats::CVAR,
+        "Double kills, sprees, first blood, revenge and HOOKED! (a JA+ grapple kill) are called out by an announcer and shown as medals.",
+    ),
+    (
+        crate::hud::feats::MEDALS_CVAR,
+        "With Feats on, each feat shows as a medal under the top centre.",
+    ),
+    (
+        crate::hud::feats::VOICE_CVAR,
+        "With Feats on, the announcer says each feat.",
+    ),
+    (
+        crate::feats::announcer::CVAR,
+        "The announcer's voice. A PK3 adds one with a folder in sound/sjk/announcer; lines it lacks use SJK's.",
     ),
     ("cg_drawChat", "Shows chat messages over the game."),
     (

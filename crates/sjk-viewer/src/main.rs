@@ -152,6 +152,7 @@ mod emote_picker;
 mod emplaced_swivel;
 mod eweb_view;
 mod fake_noclip;
+mod feats;
 mod file_dialog;
 mod finishers;
 mod fps_help;
@@ -2258,6 +2259,12 @@ impl GpuState {
             presentation_time as i32,
             intermission_view.is_some(),
         );
+        // The feats' announcer, one line at a time (`hud::feats`).
+        if let Some(feat) = self.hud.feats.take_line()
+            && let (Some(audio), Some(vfs)) = (game_audio.as_mut(), self.vfs.as_deref())
+        {
+            feats::announcer::say(audio, vfs, self.hud.feats.pack(), feat);
+        }
         // `CG_DrawRocketLocking`'s tick and lock, at the target (`CHAN_AUTO`).
         if let Some((sound, origin)) = self.hud.rocket_lock.take_sound()
             && let Some(audio) = game_audio.as_mut()

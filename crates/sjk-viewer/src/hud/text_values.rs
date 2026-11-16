@@ -48,6 +48,7 @@ impl HudOverlay {
             }
             value @ 400..=415 => self.icons.text((value - 400) as usize),
             value @ kill_feed::TEXT_FIRST..=kill_feed::TEXT_LAST => self.kill_feed.text(value),
+            value @ super::feats::TEXT_FIRST..=super::feats::TEXT_LAST => self.feats.text(value),
             _ => selection::text(id),
         }
     }
@@ -96,6 +97,8 @@ mod retail_font_tests {
             vote::TEXT_LAST,
             kill_feed::TEXT_FIRST,
             kill_feed::TEXT_LAST,
+            super::feats::TEXT_FIRST,
+            super::feats::TEXT_LAST,
         ] {
             assert_eq!(retail_font(TextId(id)), None);
         }

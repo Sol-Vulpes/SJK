@@ -156,6 +156,7 @@ impl HudOverlay {
     ) {
         self.family = Policy::read(console);
         self.kill_feed.sample(console);
+        self.feats.sample(console);
         self.icons.update(snapshot, game, console);
         self.flag_status.update(snapshot, game, console);
         self.targeting.update(console, &snapshot.player);

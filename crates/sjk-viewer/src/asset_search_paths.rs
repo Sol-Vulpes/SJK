@@ -542,6 +542,7 @@ impl Options {
         crate::wheel_of_doom::mount(&mut vfs)?;
         crate::saber_petals::mount(&mut vfs)?;
         crate::status_balloons::mount(&mut vfs)?;
+        crate::feats::mount(&mut vfs)?;
         super::force_presets::mount(&mut vfs)?;
         crate::card_outline::mount(&mut vfs)?;
         crate::duel_ghost::mount(&mut vfs)?;
