@@ -76,6 +76,10 @@ pub struct ObituaryEvent {
     /// snapshot does not hold the attacker), which tell Force Grip from Force
     /// Lightning, as `MOD_FORCE_DARK` covers both.
     pub attacker_force: u32,
+    /// The attacker's held weapon (`weapon_t`) in that snapshot, 0 (`WP_NONE`) when
+    /// the snapshot does not hold the attacker. Tells JA+'s grapple hook, which kills as
+    /// `MOD_STUN_BATON` whatever weapon is held, from the stun baton itself.
+    pub attacker_weapon: u8,
 }
 
 /// Eight-entry retained kill-feed ring. Oldest entries are overwritten.
@@ -211,6 +215,7 @@ impl ObituaryTracker {
                 snapshot.server_time,
             );
             event.attacker_force = attacker_force(snapshot, event.attacker);
+            event.attacker_weapon = attacker_weapon(snapshot, event.attacker);
             self.feed.push(event);
             self.decoded += 1;
         }
@@ -306,7 +311,23 @@ pub fn legacy_obituary(
         local_was_killed: target == local_client && attacker != target,
         server_time,
         attacker_force: 0,
+        attacker_weapon: 0,
     }
+}
+
+/// The weapon client `attacker` holds in `snapshot`, 0 when it holds no such client.
+fn attacker_weapon(snapshot: &Snapshot, attacker: u16) -> u8 {
+    if attacker >= MAX_CLIENTS {
+        return 0;
+    }
+    if attacker == snapshot.player.client_num() {
+        return snapshot.player.weapon();
+    }
+    snapshot
+        .entities
+        .iter()
+        .find(|entity| entity.number() == attacker)
+        .map_or(0, EntityState::weapon)
 }
 
 /// The `forcePowersActive` bits of client `attacker` in `snapshot`, 0 when it

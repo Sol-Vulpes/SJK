@@ -30,6 +30,12 @@ The site (site/assets/site.js, parseChangelog) reads the release headings,
 introductions and recap lines too.
 Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 -->
+## Unreleased
+
+= cg_feats: Feats: double kills, sprees, first blood, revenge and HOOKED! for a JA+ grapple kill, called out by an announcer with a medal.
+
+- Feats, as arena shooters have them: kills each within 4 seconds of the last make a Double, Triple, Quad and Penta Kill, then Massacre; kills without dying make a Killing Spree (5), Rampage (10), Dominating (15), Unstoppable (20) and Godlike (25); the level's first kill is First Blood, killing your last killer Revenge, ending someone's spree Spree Ended, and a kill with JA+'s grapple hook HOOKED!. Each is a medal under the top centre and an announcer line. Off by default: Settings > HUD "Feats" (`cg_feats`), with "Feat medals", "Feat announcer" and "Announcer voice" (`cg_announcer`), as a PK3 can add its own voice in `sound/sjk/announcer/<name>/`. Worked out by the client from the kill messages, so it works on every server and in demos _(Sol)_
+
 ## 2026.1116.1 (Alpha) | 16/11/2026
 
 A new Collection: a hall of tiles, kybers on every tile, an Inventory of all you own, a status bar, and the Creyon werewolf.

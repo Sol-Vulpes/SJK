@@ -4472,6 +4472,58 @@ default; a profile that saved that 0 has it moved once to 1
 (`cg_killfeedDefaultVersion`), and that feed's `cg_killfeedAlignment` and
 `cg_killfeedReverse` are gone.
 
+## Feats
+
+`cg_feats` (off by default, Settings > HUD > "Feats") calls out multi-kills, sprees
+and a few special kills with a medal under the top centre and an announcer line, as
+arena shooters do ([feats.rs](../crates/sjk-viewer/src/feats.rs) for the rules,
+[hud/feats.rs](../crates/sjk-viewer/src/hud/feats.rs) for the medals and the
+announcer's queue). They are worked out by the client from the kill messages it already
+decodes (`EV_OBITUARY`, the shared obituary tracker the kill feed reads), so they need
+nothing from the server and work on every server and in demos. Every player's sprees
+and chains are followed; the viewed player's feats are shown and heard, so a spectator
+hears the player followed.
+
+| Feat | When |
+| --- | --- |
+| Double Kill, Triple Kill, Quad Kill, Penta Kill, Massacre | 2, 3, 4, 5, 6 or more kills, each at most 4 s (server time) after the one before |
+| Killing Spree, Rampage, Dominating, Unstoppable, Godlike | 5, 10, 15, 20, 25 kills without dying; any death (killed, suicide, the world) starts the count again |
+| First Blood | the level's first kill, only when the client saw the level start: `CS_LEVEL_START_TIME` changed while connected, or it was less than 10 s old at the first look, so joining a match never claims it |
+| Revenge | killing the player who last killed you |
+| Spree Ended | killing a player on a spree of 5 or more |
+| HOOKED! | a kill by JA+'s grapple hook: a `MOD_STUN_BATON` kill whose killer did not hold the stun baton |
+
+HOOKED!'s evidence: JA+ fires the hook as a stun baton missile with `damage = 1` and
+`methodOfDeath = MOD_STUN_BATON` (Blackwolf's VisionJK rebuild of JA+ 2.4 B7,
+`codemp/game/japlus/g_japlus_hook.c:146-147`), whatever weapon its owner holds. The
+obituary carries the killer's held weapon from the snapshot of the kill
+(`ObituaryEvent::attacker_weapon`), so a real stun baton kill is not taken for the hook.
+No server is checked by name.
+
+All of one kill's feats show at once, in the order of the table's families (HOOKED!,
+First Blood, the chain, the spree, Spree Ended, Revenge). A medal pops in, holds 2.5 s of
+server time and fades over 0.7 s; up to four stack, the newest on top, under the vote,
+timer and warmup line. It is part of the HUD's draw list, so it hides with the HUD, and
+the HUD edit mode moves it (a sample medal shows while it is open). The pictures are
+`gfx/sjk/feats/<id>.png`, drawn by [feat_assets.py](../scripts/feat_assets.py) and bundled
+below all game data, so a PK3 replaces them; they live in their own 4 x 4 texture (the
+icon atlas is full), made on the first upload.
+
+The announcer says each feat on `CHAN_ANNOUNCER`, one line every 1.3 s, at most three
+waiting (the oldest gives way). Its voices are packs: a folder
+`sound/sjk/announcer/<pack>/` with one sound per feat (`<id>.wav`, `.mp3` or `.ogg`; the
+ids and lines are in [assets/announcer](../crates/sjk-viewer/assets/announcer/README.md)).
+`cg_announcer` names the pack (`sjk`, SJK's own, by default; Settings lists the packs
+found at startup); a line the pack lacks comes from `sjk`, and a line neither has is
+silent.
+
+| Cvar | Default | Effect |
+| --- | --- | --- |
+| `cg_feats` | 0 | Feats on |
+| `cg_featsMedals` | 1 | Show each feat as a medal |
+| `cg_featsVoice` | 1 | The announcer says each feat |
+| `cg_announcer` | `sjk` | The announcer's voice pack |
+
 ## Nameplates
 
 `cg_nameplate` (off by default since 17/10/2026; Settings "See & share nameplates") draws MMO-style

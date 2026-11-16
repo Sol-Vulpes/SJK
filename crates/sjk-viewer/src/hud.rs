@@ -18,6 +18,7 @@ mod jetpack_fuel;
 pub(crate) mod lagometer;
 mod monitor_marks;
 pub(crate) use monitor_marks::MonitorMarks;
+pub(crate) mod feats;
 pub(crate) mod icons;
 pub(crate) mod identification;
 mod info;
@@ -70,7 +71,8 @@ const DRAW_LIMIT: usize = 384
     + kill_feed::CAPACITY * kill_feed::ENTRY_COMMANDS
     + movement::AURA_COMMANDS
     + movement_keys::COMMANDS
-    + sound_sonar::COMMANDS;
+    + sound_sonar::COMMANDS
+    + feats::CAPACITY * feats::ENTRY_COMMANDS;
 const DEFAULT_LAYOUT: &str = include_str!("../assets/hud/default.json");
 /// The weapon name fades over this long at the end of its life.
 const WEAPON_FADE_MS: u64 = 600;
@@ -257,6 +259,8 @@ pub(crate) struct HudOverlay {
     no_keys: String,
     /// The kill feed at the top right.
     pub(crate) kill_feed: kill_feed::Feed,
+    /// The feats' medals and announcer queue (`cg_feats`).
+    pub(crate) feats: feats::Feats,
     crosshair_name: String,
     speed: options::Speed,
     /// The local time (`cg_drawClock`, [`clock`]).
@@ -493,6 +497,7 @@ impl HudOverlay {
             yes_keys: String::with_capacity(48),
             no_keys: String::with_capacity(48),
             kill_feed: kill_feed::Feed::default(),
+            feats: feats::Feats::default(),
             crosshair_name: String::with_capacity(64),
             speed: options::Speed::default(),
             clock: clock::Clock::default(),
@@ -890,6 +895,10 @@ impl HudOverlay {
                 self.theme,
             );
             self.place_from(Element::KillFeed, start, viewport);
+            let start = self.draw_list.len();
+            self.feats
+                .emit(&mut self.draw_list, viewport, hero_scale, font, self.theme);
+            self.place_from(Element::Feats, start, viewport);
             let start = self.draw_list.len();
             self.flag_status
                 .emit(&mut self.draw_list, viewport, &self.icons, visibility);

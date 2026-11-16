@@ -306,6 +306,8 @@ pub(super) enum Source {
     MapEditCells,
     /// The map editor's large shader preview.
     MapEditPreview,
+    /// The feats' medal pictures (`feat_pictures.rs`).
+    FeatCells,
 }
 
 impl Source {

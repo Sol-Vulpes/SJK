@@ -1059,6 +1059,26 @@ pub(super) const HUD: &[Setting] = &[
         kind: ValueKind::Bool,
     },
     Setting {
+        label: "Feats",
+        cvar: crate::hud::feats::CVAR,
+        kind: ValueKind::Bool,
+    },
+    Setting {
+        label: "Feat medals",
+        cvar: crate::hud::feats::MEDALS_CVAR,
+        kind: ValueKind::Bool,
+    },
+    Setting {
+        label: "Feat announcer",
+        cvar: crate::hud::feats::VOICE_CVAR,
+        kind: ValueKind::Bool,
+    },
+    Setting {
+        label: "Announcer voice",
+        cvar: crate::feats::announcer::CVAR,
+        kind: ValueKind::Live(crate::feats::announcer::choices),
+    },
+    Setting {
         label: "Chat",
         cvar: "cg_drawChat",
         kind: ValueKind::Bool,

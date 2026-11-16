@@ -1,3 +1,19 @@
+## Feats (16/11/2026)
+
+16/11/2026, `personal/feats` from `main` `4049e547f` (Sol: Unreal Tournament and Halo style
+DOUBLE KILL, DOMINATING with medals and an announcer, voice packs in PK3s, and a special one
+for a JA+ grapple kill). Implemented: `cg_feats` (off by default), the rules in
+`feats.rs` from the shared obituaries, the medals in `hud/feats.rs` with their own picture
+texture (`ui_renderer/feat_pictures.rs`), the announcer packs in `feats/announcer.rs`,
+four Settings rows, HOOKED! from `MOD_STUN_BATON` with the killer's held weapon (new
+`ObituaryEvent::attacker_weapon`). Verified: unit tests of every rule (chain window edges,
+spree steps and resets, first blood only for a level seen starting, revenge once, the hook
+against a real baton, one kill's order), the line queue, the pack list and fallback; fmt,
+build, Clippy and the workspace tests. Not verified: nothing was run in game (no client
+launched); the medals' place under the top centre against every HUD style and the vote panel
+wants a look. Left: SJK's own announcer lines are not recorded (the `sjk` pack is empty, so
+only PK3 packs speak); a later step may count feats in the achievements.
+
 ## Collection release check (16/11/2026)
 
 16/11/2026, `personal/collection-qa` from `main` `d306a0f2e` (Sol: "make sure all is

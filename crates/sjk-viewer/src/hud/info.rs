@@ -23,6 +23,8 @@ impl HudOverlay {
     ) {
         self.kill_feed
             .observe(obituaries, game, server_time, local_client);
+        self.feats
+            .observe(obituaries, game, server_time, local_client);
         self.crosshair_name.clear();
         self.crosshair_alpha = 0.0;
         self.crosshair_teammate = false;

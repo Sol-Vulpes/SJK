@@ -781,6 +781,7 @@ mod tests {
             local_was_killed: false,
             server_time: 0,
             attacker_force: 0,
+            attacker_weapon: 0,
         }
     }
 
