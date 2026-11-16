@@ -32,14 +32,14 @@ Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 -->
 ## Unreleased
 
-A new Collection: a hall of tiles, kybers on every tile, an Inventory of all you own, two status bars, and the Creyon werewolf.
+A new emblem, a new Collection with kybers and an Inventory, status bars at both edges of the screen, banner notifications, feats and the Creyon werewolf.
 
-> Collection hall: The Collection opens on a hall of tiles, one to each kind, with what is new in each; Enter opens a kind and Esc comes back.
+> New emblem: SJK wears Sol's new emblem, a steel monogram before a burning sun, as its icon and in the menus, where the sun is alive.
+> Collection hall: The Collection opens on a hall of tiles, one to each kind, with an Inventory of all you own; Enter opens a kind and Esc comes back.
 > Kybers: Saber shaders are now kybers, each one a straight looping blade on its tile; the crystals achievements bring are dormant kybers you attune.
-> Inventory: One list of everything you own, with pictures, what each thing is worth and buttons to wear, break down, open or attune it.
 > Status bars: Two thin bars hug the screen: your wallet, kyber, weapons, toys, time and date below; Force, time left, joins, map, players, ping and FPS above.
-> New things: Cards, tags and finishers get New stickers like kybers, and the first look at something new lights it up.
-> Smoother: Walking the Collection no longer stutters, and a player in a model with huge glowing textures no longer freezes your game.
+> Notifications: Achievements, holocrons and updates slide down from the top as a glass banner and back up; the large holocron pop-up is gone.
+> Feats: Double kills, sprees, first blood and HOOKED!, called out with a medal and an announcer; turn them on in Settings > HUD (`cg_feats`).
 
 = cg_statusBar reset: A bar along the screen's bottom shows your credits, kyber, effects, weapons, toys, the time and the date; the HUD moves above it.
 = cg_statusBarTop reset: A bar along the screen's top shows your Force, score, time left, who joins and leaves, the map, players, ping and frame rate.
