@@ -148,6 +148,10 @@ pub(crate) struct Feats {
     pictures: [Option<TextureId>; Feat::ALL.len()],
     /// The HUD edit mode is open: a sample medal shows to drag.
     preview: bool,
+    /// Feats `debug_feat` still has to show, the next one last, each with its line.
+    rehearsal: Vec<Feat>,
+    /// Until when a rehearsed medal shows, even with `cg_feats` off.
+    rehearsal_end: i32,
 }
 
 impl Default for Feats {
@@ -164,6 +168,8 @@ impl Default for Feats {
             pack: String::from(crate::feats::announcer::DEFAULT_PACK),
             pictures: [None; Feat::ALL.len()],
             preview: false,
+            rehearsal: Vec::new(),
+            rehearsal_end: i32::MIN,
         }
     }
 }
@@ -234,7 +240,7 @@ impl Feats {
                 self.push(feat, event.server_time);
             }
         }
-        if !self.options.enabled {
+        if !self.options.enabled && self.rehearsal.is_empty() && now > self.rehearsal_end {
             self.clear();
         }
         if self.preview && self.shown().next().is_none() {
@@ -268,11 +274,28 @@ impl Feats {
         self.medals[self.newest] = Some(Medal { feat, start });
     }
 
+    /// `debug_feat`: show `feats` one after another, each medal with its line, as if
+    /// just earned, whatever `cg_feats` and its options say.
+    pub(crate) fn rehearse(&mut self, feats: &[Feat]) {
+        self.rehearsal = feats.iter().rev().copied().collect();
+        self.lines = [None; QUEUE];
+        self.next_line = i32::MIN;
+    }
+
     /// The next line to say now, if one waits and the last has had its time.
     pub(crate) fn take_line(&mut self) -> Option<Feat> {
-        if self.lines[0].is_none() || self.now < self.next_line {
+        if self.now < self.next_line {
             return None;
         }
+        if self.lines[0].is_none()
+            && let Some(feat) = self.rehearsal.pop()
+        {
+            self.push_medal(feat, self.now);
+            self.rehearsal_end = self.now.saturating_add(HOLD_MS + FADE_MS);
+            self.next_line = self.now.saturating_add(LINE_GAP_MS);
+            return Some(feat);
+        }
+        self.lines[0]?;
         let feat = self.lines[0].take();
         self.lines.rotate_left(1);
         self.next_line = self.now.saturating_add(LINE_GAP_MS);
@@ -395,6 +418,23 @@ pub(crate) fn load(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_rehearsal_shows_each_feat_with_its_line_in_turn() {
+        let mut feats = Feats {
+            now: 5_000,
+            ..Feats::default()
+        };
+        feats.rehearse(&[Feat::Hooked, Feat::DoubleKill]);
+        assert_eq!(feats.take_line(), Some(Feat::Hooked));
+        assert_eq!(feats.text(feats.newest as u32 + TEXT_FIRST), "HOOKED!");
+        assert_eq!(feats.take_line(), None);
+        feats.now += LINE_GAP_MS;
+        assert_eq!(feats.take_line(), Some(Feat::DoubleKill));
+        assert_eq!(feats.shown().count(), 2);
+        feats.now += LINE_GAP_MS;
+        assert_eq!(feats.take_line(), None);
+    }
 
     #[test]
     fn medals_hold_then_fade() {

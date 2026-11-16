@@ -31,6 +31,7 @@ change: Settings > HUD "Feats" (cg_feats, off by default) shows a medal for each
 change: The announcer says it from a voice pack (cg_announcer, SJK's own voice by default).
 test: Turn Feats on, kill two bots within 4 s: DOUBLE KILL medal under the top centre.
 test: Kill 5 without dying: KILLING SPREE; die, then kill your killer: REVENGE.
+test: In a match, debug_feat all: every medal in turn with its announcer line.
 test: On a JA+ server, finish someone with the grapple hook: HOOKED!
 test: Open Move HUD elements: a sample medal shows and can be dragged.
 note: Voice: put a test pack in sound/sjk/announcer/<name>/ in a PK3 to hear it.

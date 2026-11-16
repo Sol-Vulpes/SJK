@@ -157,6 +157,7 @@ pub(super) const COMMANDS: &[(&str, &str)] = &[
         crate::cards::rehearsal::COMMAND,
         crate::cards::rehearsal::HELP,
     ),
+    (crate::feats::COMMAND, crate::feats::HELP),
     (
         crate::chat::find_blade::COMMAND,
         crate::chat::find_blade::HELP,
@@ -1274,6 +1275,7 @@ impl crate::GpuState {
             crate::medal_popup::rehearsal::COMMAND => return self.debug_medal_command(args),
             crate::holocrons::rehearsal::COMMAND => return self.debug_holocron_command(args),
             crate::cards::rehearsal::COMMAND => return self.debug_open_command(args),
+            crate::feats::COMMAND => return self.debug_feat_command(args),
             crate::chat::find_blade::COMMAND => return self.debug_find_command(args),
             crate::unlock_toast::UPDATE_COMMAND => return self.debug_update_command(args),
             crate::official::ANNOUNCEMENT_COMMAND => return self.announcement_command(args),
