@@ -1071,8 +1071,8 @@ Built.
   added kybers and medals say "Debug collectibles: shown as yours on this PC only" on
   their cards, and the Kybers tab's lead line says the mode is on. Nothing reaches the
   hub: the look sent stays what the player holds (the hub refuses a skin they lack), so
-  other players see their real blade; the new medal, achievement and holocron pop-ups
-  and the Staff page read the real profile, so no pop-up fires and staff actions see
+  other players see their real blade; the new medal pop-up, the achievement and holocron
+  banners and the Staff page read the real profile, so none fires and staff actions see
   the real grants. Holocrons and credits are not dressed (`debug_open` rehearses an
   opening). Checked by unit tests and the world shot `duel6_sjk_collection_debug`.
 
@@ -1326,9 +1326,9 @@ moment (no state, no randomness). Each tier up adds to the one under it:
 - The chosen card of the grid is marked apart from any tier: it lifts 5 pixels over a
   shadow and a white outline goes round it (until 10/10/2026 a gold border, which read
   like Mythical's gold frame).
-- Not used: the holocron pop-up, which has its own ceremony in the tier's colour (rings,
-  light, ticks), and the SJK chat's gem marks, too small at text size for a frame to
-  show.
+- Not used: the holocron pop-up (removed 16/11/2026), which had its own ceremony in the
+  tier's colour (rings, light, ticks), and the SJK chat's gem marks, too small at text
+  size for a frame to show.
 - Verified: unit tests (every kyber's tier, the order, the holocrons' names and
   colours) and the world shots of the Collection (`duel6_sjk_collection`); not tried
   in the game.

@@ -159,9 +159,9 @@ date, and choose which groups. Off by default.
   restricted to those groups). It never removes a file the player left out (their own
   Download does that), never touches the other groups, and leaves files downloaded
   before 31/10/2026 (whose group the record does not know) for Download to clean.
-- **Telling the player.** A run that downloaded or removed something gives one small
-  card at the top of the screen (the unlock pop-up's, in holo blue and without the
-  sound): "JoF content updated", "3 files, 120 MB · from the next map". Nothing shows
+- **Telling the player.** A run that downloaded or removed something gives one
+  notification banner at the top of the screen (the achievements', in holo blue and
+  without the sound): "JoF content updated", "3 files, 120 MB · from the next map". Nothing shows
   when nothing changed. A hub that says the collection is off, a host that cannot be
   reached, or a file that fails (a PK3 the running retail game holds) costs a log line
   ("automatic update ...") and is tried again the next hour; no error pop-up.
@@ -210,7 +210,7 @@ in [jof_content.rs](../crates/sjk-viewer/src/jof_content.rs) and
   `a_quiet_automatic_check_says_what_is_here`), nothing started without both
   switches and a group
   (`jof_content::tests::an_automatic_update_waits_for_both_switches_and_a_group`), and
-  the small card's words (`unlock_toast::tests::the_words_of_medals_and_holocrons`).
+  the banner's words (`unlock_toast::tests::the_words_of_medals_and_holocrons`).
   The off-screen render test checks the switch and every row's Auto tick, at 1080p
   with Sol's `GameData` (`SJK_JOF_CONTENT_AUTO=1`, and a group's files with automatic
   updates off). Not verified in game: an hourly run in a real session, during a

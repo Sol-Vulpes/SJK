@@ -24,6 +24,20 @@
 
 # ---- Console & chat ----
 
+[notification-banners]
+area: HUD
+title: Notifications slide down from the top like a phone's; the holocron pop-up is gone
+change: Achievements, holocrons, medals, updates and the rest: one glass banner at the top centre.
+change: It slides down, rests 5 s and slides back up; 3 or more of one kind share one banner.
+change: No large holocron card on the main menu or on Esc any more; the banner says where it is.
+test: debug_holocron rare: a banner slides down at the top centre, rests, then slides back up.
+test: debug_holocron rare x5: one banner, "5 new holocrons" (or echoes) with a 5 on a badge.
+test: debug_update: the update banner; click it over the menus: the Update page opens.
+test: With a holocron waiting, open the main menu, then Esc in a match: no large pop-up.
+test: ui_rarityEffects 0, then debug_holocron all: the banner fades in place, no slide.
+test: Fish or mine until a kyber glint or the daily goal: a banner, no centre print.
+note: cl_holocronNotifications 0 shows no holocron banners and counts new ones as seen.
+
 [feats]
 area: HUD
 title: Feats: multi-kills, sprees, first blood, revenge and HOOKED! with medals and announcer

@@ -1,3 +1,24 @@
+## Notification banners; the holocron pop-up removed (16/11/2026)
+
+16/11/2026, `personal/banners` from `main` `1745f6ca8` (Sol: "remove the big notification of
+the holocron drops (when you press ESC) ... holocrons and other notifications should come up
+like an iOS notification, from the top of the screen then go back, maybe with transparent
+background"). Implemented: the holocron pop-up (`holocron_popup.rs`, its view, its keys and
+clicks, the menus left undrawn under it) is gone; `holocron_banners.rs` gives each new
+holocron a banner, counting it as seen as the banner begins. The unlock card is now a banner
+(`unlock_toast.rs`, look and motion in `unlock_toast/banner.rs`): dark translucent glass at
+the top centre, sliding down on a spring (0.6 s), resting 5 s, sliding back up (0.4 s), a fade
+with `ui_rarityEffects 0`; three or more of one kind fold into one banner. The kyber glint and
+daily goal centre prints of Fishing and Mining, and a request for logs (the console only
+before), are banners too. The build label at the top centre is left out while a banner rests
+over it. Verified: unit tests of the queue, folding, words, spring and slide, seen file and
+Off; every banner's words in its column at five window shapes; fmt, build, Clippy and the
+workspace tests; the world shots `world_shot::notify_banner_shots` (siege_hoth's bright sky
+and the main menu, 1080p and 4K, the slide and the fade) looked at. Not verified: nothing was
+run in a game window (no client launched), so the motion was seen only as stills; no hub.
+The banner's top is `unlock_toast::banner::top_inset`, 0 until the top status bar gives its
+height.
+
 ## Feats (16/11/2026)
 
 16/11/2026, `personal/feats` from `main` `4049e547f` (Sol: Unreal Tournament and Halo style

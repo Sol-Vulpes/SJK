@@ -90,7 +90,7 @@ odds are the hub's, PROVISIONAL: a holocron of some tier 29% of the time.
 
 | Segment | Outcome | Chance | What happens to the spinner |
 | --- | --- | --- | --- |
-| 0 | `mythical` | 1 % | The gold jackpot: a Mythical holocron (source `wheel`, uncapped, untradeable, as box ones), Sol's exception of 07/11/2026. Fanfare, "MYTHICAL HOLOCRON! In your Collection". The holocrons are read again at once, and it arrives as any new holocron does ([holocrons.md](holocrons.md#the-pop-up)); the hub's feed announces it to everyone as a Mythical drop |
+| 0 | `mythical` | 1 % | The gold jackpot: a Mythical holocron (source `wheel`, uncapped, untradeable, as box ones), Sol's exception of 07/11/2026. Fanfare, "MYTHICAL HOLOCRON! In your Collection". The holocrons are read again at once, and it arrives as any new holocron does ([holocrons.md](holocrons.md#the-banner)); the hub's feed announces it to everyone as a Mythical drop |
 | 1 | `reverse_keys` | 4 % | 30 s: forward and back, left and right swapped in the user command |
 | 2 | `holo_uncommon` | 17 % | An Uncommon (green) holocron, as the Mythical one: source `wheel`, uncapped, untradeable |
 | 3 | `invert_mouse` | 4 % | 30 s: the mouse's pitch and yaw both turned the wrong way |

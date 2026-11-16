@@ -3,9 +3,11 @@
 //!
 //! - **Minimal** (1): nothing social over the game. Other players' emotes and toys are
 //!   not seen nor heard ([`hides_fun`], read where their relayed events are taken), the
-//!   unlock cards wait until Tactical is off again (`unlock_toast.rs`), and the toys'
-//!   own switches, custom status balloon pictures, tags and holocron cards go off; the
-//!   talk balloon returns to the stock game picture.
+//!   notification banners wait until Tactical is off again (`unlock_toast.rs`), and the toys'
+//!   own switches, custom status balloon pictures and tags go off; the talk balloon returns
+//!   to the stock game picture. (Holocron banners went off too until 16/11/2026, when the
+//!   holocron still waited for the game menu's pop-up; with the pop-up gone, they wait with
+//!   the other banners, so a holocron found under Tactical is still told once it is off.)
 //! - **Medium** (2): the Vanilla graphics preset (`graphics_quality.rs`), no weather,
 //!   clouds, weather sounds or map fog, every blade stock (`cg_stockBlades 2`), no
 //!   finishers, Force Speed afterimages or toon shading.
@@ -104,7 +106,7 @@ impl Level {
     fn words(self) -> &'static str {
         match self {
             Self::Off => "everything as you set it",
-            Self::Minimal => "no emotes, toys, tags, custom status pictures or unlock cards",
+            Self::Minimal => "no emotes, toys, tags, custom status pictures or reward banners",
             Self::Medium => {
                 "minimal, plus Vanilla graphics, no weather or fog, stock blades, no finishers"
             }
@@ -126,7 +128,7 @@ pub(crate) fn level() -> Level {
     Level::of(Some(i64::from(LEVEL.load(Ordering::Relaxed))))
 }
 
-/// Whether other players' emotes, toys and the unlock cards are hidden (Minimal and up).
+/// Whether other players' emotes, toys and the banners are hidden (Minimal and up).
 pub(crate) fn hides_fun() -> bool {
     level() >= Level::Minimal
 }
@@ -149,7 +151,6 @@ const MINIMAL: &[(&str, &str)] = &[
     (crate::tags::SHOW_CVAR, "0"),
     (crate::tags::GIF_SHOW_CVAR, "0"),
     (crate::status_balloons::CVAR, "0"),
-    (crate::holocron_popup::NOTIFICATIONS_CVAR, "0"),
 ];
 
 /// The settings Medium adds to the Vanilla preset's.

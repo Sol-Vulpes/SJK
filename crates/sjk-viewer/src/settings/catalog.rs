@@ -2040,7 +2040,7 @@ pub(super) const NETWORK: &[Setting] = &[
     },
     Setting {
         label: "Holocron notifications",
-        cvar: crate::holocron_popup::NOTIFICATIONS_CVAR,
+        cvar: crate::holocron_banners::NOTIFICATIONS_CVAR,
         kind: ValueKind::Choice(&["0", "1", "2"]),
     },
     Setting {

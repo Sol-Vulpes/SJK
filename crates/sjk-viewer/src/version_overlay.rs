@@ -6,7 +6,8 @@
 //! the bottom corners, the FPS counter and timers at the top right, notify and
 //! vote lines at the top left, and warmup and centre prints lower down. While
 //! the console is open it already shows the version in its own corner, so the
-//! label is left out. `cg_drawVersion 0` hides it.
+//! label is left out, and while a notification banner rests over it
+//! (`unlock_toast.rs`), as text draws above every shape. `cg_drawVersion 0` hides it.
 
 use crate::GpuState;
 use crate::text::{TextFace, append_text_style, visible_text_width};
@@ -29,7 +30,7 @@ impl GpuState {
             .console
             .as_ref()
             .is_none_or(|console| console.bool_cvar(CVAR).unwrap_or(true) && !console.is_open());
-        if !shown {
+        if !shown || self.unlock_toast.on_screen() {
             return;
         }
         let label = crate::build_info::label();

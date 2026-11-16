@@ -180,13 +180,13 @@ const CHOICE_NAMES: &[(&str, &str, &str)] = &[
     (crate::devmap_bar::CVAR, "0", "While held"),
     (crate::devmap_bar::CVAR, "1", "Bottom"),
     (crate::devmap_bar::CVAR, "2", "Top"),
-    (crate::holocron_popup::NOTIFICATIONS_CVAR, "0", "Off"),
+    (crate::holocron_banners::NOTIFICATIONS_CVAR, "0", "Off"),
     (
-        crate::holocron_popup::NOTIFICATIONS_CVAR,
+        crate::holocron_banners::NOTIFICATIONS_CVAR,
         "1",
         "After duels",
     ),
-    (crate::holocron_popup::NOTIFICATIONS_CVAR, "2", "Always"),
+    (crate::holocron_banners::NOTIFICATIONS_CVAR, "2", "Always"),
     (crate::discord_presence::CVAR, "0", "Off"),
     (crate::discord_presence::CVAR, "1", "On"),
     (crate::discord_presence::CVAR, "2", "Server hidden"),
@@ -415,7 +415,7 @@ pub(super) const ALPHA_WARNING: &str = "The Solar Renderer is in alpha: some map
 const SJK_TERMS: &[&str] = &[
     crate::unlock_toast::SOUND_CVAR,
     "cl_identity",
-    crate::holocron_popup::NOTIFICATIONS_CVAR,
+    crate::holocron_banners::NOTIFICATIONS_CVAR,
 ];
 
 /// The description of setting `cvar`.
@@ -789,7 +789,7 @@ const HELP: &[(&str, &str)] = &[
     ),
     (
         crate::unlock_toast::SOUND_CVAR,
-        "Plays the secret-area chime with each unlock card: an achievement, or a new medal or holocron in a match.",
+        "Plays the secret-area chime with each reward's banner: an achievement, a new holocron, or a new medal in a match.",
     ),
     // HUD
     (
@@ -1625,8 +1625,8 @@ const HELP: &[(&str, &str)] = &[
         "Cheat buttons in games with cheats on (devmap): bottom, top, or only while +devbar (Ctrl) is held. Hold it to click them.",
     ),
     (
-        crate::holocron_popup::NOTIFICATIONS_CVAR,
-        "A card for each holocron found in play; After duels holds it in a private duel until the end. The holocron waits in ESC.",
+        crate::holocron_banners::NOTIFICATIONS_CVAR,
+        "A banner at the top of the screen for each holocron found; After duels holds it in a private duel until the end.",
     ),
     (
         crate::chat::client_icons::CVAR,

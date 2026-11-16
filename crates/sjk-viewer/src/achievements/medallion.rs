@@ -1,7 +1,7 @@
 //! How an achievement looks wherever it is drawn: its category's colour, its goal as
 //! the medallion reads it (`1`, `100`, `1K`, `10h`) and the medallion itself, a ring
 //! filling with the count round the goal, gold and lit once unlocked. The Profile
-//! page's board (`profile_panel_view.rs`) and the unlock pop-up
+//! page's board (`profile_panel_view.rs`) and the notification banner
 //! (`unlock_toast.rs`) share them, so the two look alike. A hidden achievement not
 //! unlocked yet reads `?` and shows no count.
 

@@ -1031,7 +1031,7 @@ or off from it) set it. Each level holds the ones below it:
 
 | Level | What goes |
 | --- | --- |
-| Minimal (1) | Other players' emotes (playing ones end) and toys, as for a muted player but seen and heard otherwise; the toys' own "See ..." switches, tags and GIF tags off; status balloon pictures return to stock; holocron cards off and every unlock card in a game waits until Tactical is off |
+| Minimal (1) | Other players' emotes (playing ones end) and toys, as for a muted player but seen and heard otherwise; the toys' own "See ..." switches, tags and GIF tags off; status balloon pictures return to stock; every notification banner in a game, holocrons' included, waits until Tactical is off (holocron notifications went off until 16/11/2026, when the game menu's pop-up still showed the holocron) |
 | Medium (2) | Also the Vanilla graphics preset, no weather, clouds, lightning, weather sounds or map fog (`r_drawfog 0`), every blade stock (`cg_stockBlades 2`), no finishers, Force Speed afterimages or toon shading |
 | Max (3) | Also the flat world (`r_flatWorld`), no server or shared remaps, and every other player drawn plain: in `cg_tacticalModel` (`kyle` by default, `model` or `model/skin`; a team game's red or blue kept), the default saber (the stock staff for a staff) in the default blue, without hat, cape or blade skin, as a [blocked player](hub-chat.md#blocking-a-player) is drawn, their names, chat and sounds untouched |
 
@@ -2722,7 +2722,7 @@ works](rendering.md#graphics-reload)):
   card in the SJK UI's look, in every menu style, says what changed ("Vanilla
   graphics apply after a graphics reload", or the settings by name) with **Reload now**
   (Enter) and **Later** (Escape). Later puts it away until another such setting
-  changes; it waits for the medal and holocron pop-ups and the console.
+  changes; it waits for the medal pop-up and the console.
 - On a server (or in a local game) the map loads again under the loading screen,
   as on a map change to the same map, in a few seconds (ffa3 took 5.6 to 7.2 s
   off-screen, see [status](status.md)); the connection stays and the player stands still meanwhile,
@@ -5223,18 +5223,19 @@ The client looks for a newer SJK release when it starts and from the Update page
   new version starts. A folder that cannot update itself offers Download, which opens
   the release page; an install that fails says so with Details, which opens the
   Update page with the reason. A failed check (GitHub unreachable) shows nothing.
-- When the check finds a newer release, a card says so once a session at the top of
-  the screen, over the menus or a match, the achievements' card
-  ([identity.md](identity.md#achievements); since 10/10/2026, Sol's request): "Update
+- When the check finds a newer release, a banner says so once a session at the top of
+  the screen, over the menus or a match, the achievements' notification banner
+  ([identity.md](identity.md#achievements); since 10/10/2026, Sol's request; a banner that
+  comes down from the top edge since 16/11/2026): "Update
   available", "SJK 2026.1011.1", "Click to install" and "Downloads now; it starts
   when SJK restarts" (or, for a folder that cannot update itself, "Click for its page"
   and "This folder cannot update itself: see its page"), with SJK's emblem in the SJK
   UI's holo blue and no sound. While the pointer is free (over the menus, not in a
-  match) a click on the card starts the download, as Install does, and opens the Update
+  match) a click on the banner starts the download, as Install does, and opens the Update
   page with its progress; for that folder it opens the release page (since 19/10/2026,
   Slash's request; `GpuState::update_card_pointer`). It waits while the window is away, and the Update page opening takes it back
-  (a release found while the page shows gets no card). `debug_update [version] [manual]`
-  shows the card for a made-up release (2026.1231.1 without one; `manual` for the
+  (a release found while the page shows gets no banner). `debug_update [version] [manual]`
+  shows the banner for a made-up release (2026.1231.1 without one; `manual` for the
   folder that cannot update itself) and checks and installs nothing.
 - Main menu > Update (classic: SJK > UPDATE) or the
   `update` command opens the page (with the SJK UI's menus, a pop-up card over
@@ -6879,14 +6880,15 @@ brings up are the ones the hub drops anyway.
   Catch market; `sjk_identity::catch`; each behind its own hub switch, off by default):
   - A claim's answer may carry `kyber_find`: the hub rolled a few kyber shards for a
     claim whose play signals had a hooked bite or a broken boulder (at most 3 a day).
-    The client says it on the centre of the screen and in the console ("A kyber glint
-    in the water! +3 kyber shards") and takes the new shard balance
+    The client says it in the console ("A kyber glint in the water! +3 kyber shards")
+    and with a notification banner ("KYBER GLINT", "+3 kyber shards"; a centre print
+    until 16/11/2026, [identity.md](identity.md#achievements)) and takes the new shard balance
     (`GpuState::catch_news_frame` in `fishing_sell.rs`).
   - It may carry `catch_quests`: the hub's own count of the day's bites and boulders
     against two goals (25 bites, 40 boulders), each winning an Echo once a day within
     the holocrons' daily cap. The Fishing and Mining cards show the goal in one line
     under the junk's ("Goal: 12/25 bites for an Echo"), and the claim that wins it says
-    so once.
+    so once, in the console and with a "DAILY GOAL" banner.
   - `GET /v1/fishing/junk` may carry `market`: fish and ore sell too, under the junk's
     one cap, one of them wanted each day at double its price. The cards then add
     "Wanted: Moon eel x2 (6 credits)" to that line and a **Sell fish** / **Sell ore** button beside Sell junk /
@@ -6900,8 +6902,8 @@ brings up are the ones the hub drops anyway.
   "???", the others with their count and the day the first came up ("Back" returns). The
   day is a `first <id> <yyyymmdd>` line of the log, which older clients skip (and drop
   when they write the log); catches from before have none. A rare fish (weight 3 or less:
-  the Kyber minnow, Ghost ray, Temple koi and Old Whiskers) also brings the unlock
-  pop-up's "RARE CATCH" card and the single-player game's secret-area sound among the
+  the Kyber minnow, Ghost ray, Temple koi and Old Whiskers) also brings a "RARE CATCH"
+  notification banner and the single-player game's secret-area sound among the
   toy's sounds. `fishing_brag` (and the book's "Share in SJK chat") says the session's
   last rare catch, else the log's rarest fish, as the player's own SJK chat message
   ("Caught Old Whiskers, the great catfish (my first!) - 9 of 12 kinds in my log"),
@@ -6953,7 +6955,7 @@ ore, the Heart among them) and the hidden Heart of the Mountain.
   [Fishing](#fishing)): the Mining card's "Log book" lists every ore and rubble with its
   count and first day, "???" until dug; a rare ore (weight 11 or less: star quartz, void
   crystal and the Heart of the Mountain, about one ore in seventeen) brings the "RARE
-  FIND" card and the secret-area sound (the Heart's alone before); `mining_brag` and the
+  FIND" banner and the secret-area sound (the Heart's alone before); `mining_brag` and the
   book's Share button say the last rare find, else the rarest ore, in the SJK chat.
 
 - **`toy_mining`** (a bind, the quick wheel's Toys catalogue, Collection > Toys, "Pickaxe

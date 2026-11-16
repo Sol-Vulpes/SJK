@@ -5,9 +5,9 @@
 //! player's fish log (`fishing_log.txt`). Moving, jumping, attacking, taking damage or
 //! dying puts the rod away.
 //!
-//! An Echo (holocron) the hub drops while the player fishes does not pop up at once: it
+//! An Echo (holocron) the hub drops while the player fishes is not announced at once: it
 //! bites as an Echo bite ([`Bite::echo`], its own sound, a longer window) and hooking it
-//! brings its card. Missed three times, or the rod put away, the card comes as it always does.
+//! brings its banner. Missed three times, or the rod put away, the banner comes as it always does.
 //! Phase 1 changes nothing at the hub: the Echo is the player's from the moment the hub
 //! drops it, by the usual clock and caps, and the fish are a local log, no credits, no
 //! shards. So fishing earns nothing that playing does not. Since 04/11/2026 a bite
@@ -426,11 +426,11 @@ enum Phase {
 /// An Echo that dropped while fishing.
 #[derive(Clone, Copy, Debug, PartialEq)]
 enum Echo {
-    /// None waits for its card.
+    /// None waits for its banner.
     None,
     /// One waits: it bites then, missed so many times.
     Hooked { bite: Instant, misses: u8 },
-    /// Its card may come (caught, missed too often, or the rod put away) until no Echo
+    /// Its banner may come (caught, missed too often, or the rod put away) until no Echo
     /// waits any more.
     Free,
 }
@@ -442,7 +442,7 @@ pub(crate) struct Frame {
     pub(crate) playing: Option<bool>,
     /// Their health.
     pub(crate) health: i32,
-    /// An Echo waits for its card ([`crate::holocron_popup::HolocronPopup::unannounced`]).
+    /// An Echo waits for its banner ([`crate::holocron_banners::HolocronBanners::unannounced`]).
     pub(crate) echo_waiting: bool,
     /// Its tier's slot, for the holocron that comes up on the line.
     pub(crate) echo_tier: Option<usize>,
@@ -856,7 +856,7 @@ impl Fishing {
         }
     }
 
-    /// Whether an Echo's card waits for its bite: the pop-up holds it back.
+    /// Whether an Echo's banner waits for its bite: the banners hold it back.
     pub(crate) fn holds_echo(&self) -> bool {
         self.on && matches!(self.echo, Echo::Hooked { .. })
     }
@@ -918,7 +918,7 @@ impl Fishing {
     ) {
         let used = std::mem::take(&mut self.use_pressed);
         let stirred = std::mem::take(&mut self.stirred);
-        // The Echo's card: free once none waits.
+        // The Echo's banner: free once none waits.
         if !frame.echo_waiting {
             self.echo = Echo::None;
         }
@@ -1387,8 +1387,8 @@ impl GpuState {
         let frame = Frame {
             playing: Some(alive && !spectating),
             health: player.health(),
-            echo_waiting: self.holocron_popup.unannounced(),
-            echo_tier: self.holocron_popup.unannounced_tier(),
+            echo_waiting: self.holocron_banners.unannounced(),
+            echo_tier: self.holocron_banners.unannounced_tier(),
         };
         // The achievements count catches on servers, as the rest: never a demo, a game this
         // client hosts or a server on this machine (`achievements::tracker`).

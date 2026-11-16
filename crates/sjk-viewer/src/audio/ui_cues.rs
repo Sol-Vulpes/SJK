@@ -32,7 +32,7 @@ pub(crate) enum Cue {
     WheelMove = 64,
     /// The quick wheel ran the chosen choice.
     WheelRun = 128,
-    /// An unlock pop-up appeared (`unlock_toast.rs`): an achievement, or a medal or
+    /// A reward's notification banner appeared (`unlock_toast.rs`): an achievement, or a medal or
     /// holocron in a match.
     Achievement = 256,
     /// A new medal began its entrance on the medal pop-up (`medal_popup.rs`).
@@ -73,7 +73,7 @@ pub(crate) enum Cue {
 /// power screen also plays as powers are picked (`ui/ingameforceselect.menu`);
 /// a run is `button1`, the menus' button press.
 ///
-/// An unlock card (an achievement's, or a medal's or holocron's in a match) plays
+/// A reward's banner (an achievement's, a holocron's, or a medal's in a match) plays
 /// `secret_area`, the single-player game's sound for a secret area found: its game
 /// module (`jagamex86.dll`) plays it with the `@SP_INGAME_SECRET_AREA` centre print.
 /// Its file is in the shared `assets0.pk3`, so a multiplayer install has it.
