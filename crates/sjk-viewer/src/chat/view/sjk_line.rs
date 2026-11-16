@@ -19,10 +19,12 @@ use super::*;
 use crate::holocrons::Tier;
 use crate::sjk_chat_look;
 
-/// The SJK emblem's side before an SJK line's name, against the text size: the
-/// starburst's spikes reach the box's edges, its medallion is about half of it.
-/// 1.35 until 14/11/2026, when the emblems were made smaller (Sol's request).
-const LOGO_SIDE: f32 = 1.2;
+/// The SJK emblem's side before an SJK line's name, against the text size: its sun
+/// disc is about 0.8 of the box and the stem's ends reach its edges, so the disc
+/// matches another client's icon ([`ICON_SIDE`]). 1.35 until 14/11/2026, when the
+/// emblems were made smaller (Sol's request); 1.2 for the gold starburst until the
+/// steel-and-sun emblem of 16/11/2026.
+const LOGO_SIDE: f32 = 1.12;
 /// Another client's icon's side (`chat/client_icons.rs`) against the text size, centred
 /// in the emblem's box: those icons are full discs, which at the starburst's side looked
 /// much bigger than SJK's emblem (Sol, 14/11/2026: the same size, the EJK one smaller).
@@ -790,7 +792,7 @@ mod tests {
         let icons = quads(&chat, crate::ui_renderer::EJK_TEXTURE);
         assert_eq!(logos.len(), 1, "SJK's emblem before SJK's message only");
         assert_eq!(icons.len(), 1, "JoF EternalJK's icon before its message");
-        // A full disc: smaller than the starburst, centred where the emblem sits.
+        // A full disc, the size of the emblem's sun, centred where the emblem sits.
         assert!(icons[0].width < logos[0].width && icons[0].width == icons[0].height);
         assert!(
             (icons[0].x + icons[0].width * 0.5 - (logos[0].x + logos[0].width * 0.5)).abs() < 0.01,

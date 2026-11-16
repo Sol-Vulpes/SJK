@@ -681,13 +681,14 @@ the client's own shapes. Retail assets are never bundled.
 The art moves as retail's shaders move it (`shaders/ui.shader`); the `.menu`
 scripts themselves only swap pages at once and show or hide the glows. Retail's
 main page plays `video/ja01` (`gfx/menus/videologo`) in its ring; SJK shows its
-own emblem there instead and does not read the video: the gold
-starburst with the JK blade, centred in the centre window's opening and drawn
-over the frames, 176 of the 640x480 canvas's units across (about 400 pixels at
-1080 lines, 790 at 2160), with or without the retail art. Its orange core and
-ring breathe (glow strength 0.08 to 0.45 every 4.2 seconds) and the blade's cyan
-lights shimmer (0.30 ± 0.15 from two sines of 0.9 and 0.37 seconds), drawn as
-additive glow layers over the still emblem. The emblem is bundled
+own emblem there instead and does not read the video: the steel monogram before
+a burning sun (since 16/11/2026; the gold starburst before), centred in the
+centre window's opening and drawn over the frames, 176 of the 640x480 canvas's
+units across (about 400 pixels at 1080 lines, 790 at 2160), with or without the
+retail art. Its sun is additive layers behind the still steel, kept inside that
+square here: the plasma disc turns once in four minutes and breathes, two flame
+layers turn against each other and cross-fade on an uneven beat, the rays
+shimmer and the embers drift out (`menu/art/motion.rs`). The emblem is bundled
 ([assets/branding](../assets/branding/README.md), drawn by
 [menu/emblem.rs](../crates/sjk-viewer/src/menu/emblem.rs)) and decoded with its
 mip chain on a worker thread when the first menu shows. The SJK UI's main page

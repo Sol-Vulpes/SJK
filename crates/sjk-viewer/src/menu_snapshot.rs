@@ -722,7 +722,7 @@ impl Snapshot {
 /// SJK's emblem in one atlas cell, as the renderer uploads it.
 fn logo_icon() -> RgbaImage {
     let emblem =
-        image::load_from_memory(include_bytes!("../../../assets/branding/sjk-logo-512.png"))
+        image::load_from_memory(include_bytes!("../../../assets/branding/emblem-chat.png"))
             .expect("the emblem decodes")
             .into_rgba8();
     image::imageops::resize(&emblem, 128, 128, image::imageops::FilterType::Lanczos3)

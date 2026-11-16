@@ -17,10 +17,12 @@
 //!   (`Item_TextColor`, `PULSE_DIVISOR` 75), see [`pulse`].
 //!
 //! SJK adds its own: the menu emblem ([`crate::menu::emblem`]) that stands
-//! where retail played its logo video. Its orange core and ring breathe on a
-//! slow sine ([`emblem_core_glow`]) and the blade's cyan lights shimmer
-//! faster and less ([`emblem_lights_glow`]); both are the strengths of
-//! additive glow layers over the still emblem.
+//! where retail played its logo video, steel before a burning sun (16/11/2026).
+//! The sun's layers move: its disc turns slowly and breathes ([`SUN_DISC_TURN`],
+//! [`sun_breath`]), its two flame layers turn against each other and cross-fade
+//! on an uneven beat so the tongues seem to lick ([`SUN_FLAMES_TURN`],
+//! [`sun_flicker`]), its rays shimmer ([`sun_shimmer`]) and its embers drift out
+//! ([`ember_drift`]).
 
 use super::ArtPiece;
 use image::RgbaImage;
@@ -37,17 +39,15 @@ pub(crate) const LOGO_REFLECTION_SCROLL: [f32; 2] = [0.03, 0.05];
 pub(crate) const LOGO_REFLECTION_ALPHA: f32 = 0.25;
 /// `PULSE_DIVISOR` (`q_shared.h`): milliseconds per radian of the focus pulse.
 const PULSE_DIVISOR: f64 = 75.0;
-/// Seconds per breath of the emblem's core glow.
-pub(crate) const EMBLEM_CORE_PERIOD: f64 = 4.2;
-/// Weakest and strongest core glow; the cycle starts at the weakest, so the
-/// glow swells as the menu appears.
-pub(crate) const EMBLEM_CORE_RANGE: [f32; 2] = [0.08, 0.45];
-/// Mean strength of the blade lights' glow and how far it strays from it.
-pub(crate) const EMBLEM_LIGHTS_BASE: f32 = 0.30;
-pub(crate) const EMBLEM_LIGHTS_DEPTH: f32 = 0.15;
-/// Periods, in seconds, of the two sines the shimmer sums; their ratio is
-/// not a simple fraction, so the pattern does not visibly repeat.
-const EMBLEM_LIGHTS_PERIODS: [f64; 2] = [0.9, 0.37];
+/// Seconds the sun's disc takes to turn once.
+pub(crate) const SUN_DISC_TURN: f64 = 240.0;
+/// Seconds each flame layer takes to turn once; opposite ways, at rates whose
+/// ratio is no simple fraction, so the pattern does not visibly repeat.
+pub(crate) const SUN_FLAMES_TURN: [f64; 2] = [170.0, -113.0];
+/// Periods, in seconds, of the three sines the flames' cross-fade sums.
+const SUN_FLICKER_PERIODS: [f64; 3] = [2.3, 0.97, 0.53];
+/// Seconds one ember layer takes to drift from its start to its end.
+pub(crate) const EMBER_DRIFT: f64 = 7.5;
 
 /// Seconds on the menu clock, which starts the first time it is read.
 pub(crate) fn seconds() -> f64 {
@@ -69,21 +69,41 @@ pub(crate) fn pulse(color: Color, seconds: f64) -> Color {
     )
 }
 
-/// Strength of the emblem's orange core glow at `seconds`: a raised cosine
-/// between [`EMBLEM_CORE_RANGE`] with period [`EMBLEM_CORE_PERIOD`].
-pub(crate) fn emblem_core_glow(seconds: f64) -> f32 {
-    let [low, high] = EMBLEM_CORE_RANGE;
-    let swell = 0.5 - 0.5 * (std::f64::consts::TAU * seconds / EMBLEM_CORE_PERIOD).cos();
-    low + (high - low) * swell as f32
+/// The second flame layer's share of the flames at `seconds`, 0..=1 (the first
+/// has the rest, so the light stays even while the tongues change): three sines
+/// of no common period, eased so it lingers near either layer.
+pub(crate) fn sun_flicker(seconds: f64) -> f32 {
+    let wave: f64 = SUN_FLICKER_PERIODS
+        .iter()
+        .zip([0.55, 0.3, 0.15])
+        .enumerate()
+        .map(|(index, (period, weight))| {
+            weight * (std::f64::consts::TAU * seconds / period + index as f64 * 1.7).sin()
+        })
+        .sum();
+    (0.5 + 0.5 * wave).clamp(0.0, 1.0) as f32
 }
 
-/// Strength of the emblem's cyan blade-light glow at `seconds`: a quick,
-/// shallow shimmer of [`EMBLEM_LIGHTS_DEPTH`] about [`EMBLEM_LIGHTS_BASE`].
-pub(crate) fn emblem_lights_glow(seconds: f64) -> f32 {
-    let [fast, faster] =
-        EMBLEM_LIGHTS_PERIODS.map(|period| std::f64::consts::TAU * seconds / period);
-    let wave = 0.6 * fast.sin() + 0.4 * (faster + 1.3).sin();
-    EMBLEM_LIGHTS_BASE + EMBLEM_LIGHTS_DEPTH * wave as f32
+/// The disc's strength at `seconds`: a slow, shallow breath, 0.9..=1.
+pub(crate) fn sun_breath(seconds: f64) -> f32 {
+    (0.95 + 0.05 * (std::f64::consts::TAU * seconds / 5.3).sin()) as f32
+}
+
+/// The rays' strength at `seconds`: a quick, shallow shimmer, 0.82..=1.
+pub(crate) fn sun_shimmer(seconds: f64) -> f32 {
+    let tau = std::f64::consts::TAU;
+    let wave = 0.6 * (tau * seconds / 1.3).sin() + 0.4 * (tau * seconds / 0.47 + 1.1).sin();
+    (0.91 + 0.09 * wave) as f32
+}
+
+/// Ember layer `index` of two at `seconds`: its scale (it grows, so its sparks
+/// fly out) and its strength (it fades in and out, so the restart never shows).
+/// The two run half a drift apart.
+pub(crate) fn ember_drift(seconds: f64, index: usize) -> (f32, f32) {
+    let phase = (seconds / EMBER_DRIFT + index as f64 * 0.5).rem_euclid(1.0);
+    let scale = 0.82 + 0.5 * phase;
+    let strength = (std::f64::consts::PI * phase).sin().powi(2);
+    (scale as f32, strength as f32)
 }
 
 /// Corner texture coordinates (top-left, top-right, bottom-right,
@@ -231,55 +251,33 @@ mod tests {
     }
 
     #[test]
-    fn emblem_core_breathes_slowly_within_its_range() {
-        let [low, high] = EMBLEM_CORE_RANGE;
-        assert!((emblem_core_glow(0.0) - low).abs() < 1e-6);
-        assert!((emblem_core_glow(EMBLEM_CORE_PERIOD * 0.5) - high).abs() < 1e-5);
+    fn the_sun_moves_gently_within_its_ranges() {
         let (mut least, mut most) = (f32::MAX, f32::MIN);
-        for step in 0..10_000 {
-            let glow = emblem_core_glow(f64::from(step) * 0.001);
-            least = least.min(glow);
-            most = most.max(glow);
+        for step in 0..20_000 {
+            let at = f64::from(step) * 0.003;
+            let share = sun_flicker(at);
+            least = least.min(share);
+            most = most.max(share);
+            assert!((0.9..=1.0).contains(&sun_breath(at)));
+            assert!((0.81..=1.0).contains(&sun_shimmer(at)));
+            // No jump between two 60 Hz frames.
+            assert!((sun_flicker(at + 1.0 / 60.0) - share).abs() < 0.08);
+            let (scale, strength) = ember_drift(at, step as usize % 2);
+            assert!((0.82..=1.32).contains(&scale) && (0.0..=1.0).contains(&strength));
         }
-        assert!(least >= low - 1e-6 && most <= high + 1e-6);
-        // One breath per period, even after an hour on the menu.
-        let late = 3_600.0 + 1.234;
-        assert!(
-            (emblem_core_glow(late) - emblem_core_glow(late + EMBLEM_CORE_PERIOD)).abs() < 1e-4
-        );
-        // Gentle: no more than a 0.05 change in a 60 Hz frame's worth of time.
-        for step in 0..1_000 {
-            let at = f64::from(step) * 0.01;
-            assert!((emblem_core_glow(at + 1.0 / 60.0) - emblem_core_glow(at)).abs() < 0.05);
-        }
+        // The flames use most of their cross-fade.
+        assert!(least < 0.15 && most > 0.85, "{least}..{most}");
     }
 
     #[test]
-    fn emblem_lights_shimmer_faster_and_shallower_than_the_core() {
-        let (mut least, mut most) = (f32::MAX, f32::MIN);
-        let (mut lights_travel, mut core_travel) = (0.0_f32, 0.0_f32);
-        let mut previous = (emblem_lights_glow(0.0), emblem_core_glow(0.0));
-        for step in 1..20_000 {
-            let at = f64::from(step) * 0.001;
-            let now = (emblem_lights_glow(at), emblem_core_glow(at));
-            least = least.min(now.0);
-            most = most.max(now.0);
-            lights_travel += (now.0 - previous.0).abs();
-            core_travel += (now.1 - previous.1).abs();
-            previous = now;
-        }
-        let bound = EMBLEM_LIGHTS_DEPTH + 1e-6;
-        assert!(least >= EMBLEM_LIGHTS_BASE - bound && most <= EMBLEM_LIGHTS_BASE + bound);
-        assert!(least > 0.0 && most < 1.0);
-        // It moves: most of its depth is used.
-        assert!(most - least > EMBLEM_LIGHTS_DEPTH);
-        // Shallower swing than the core, but more motion over the same time.
-        let [low, high] = EMBLEM_CORE_RANGE;
-        assert!(most - least < high - low);
-        assert!(
-            lights_travel > core_travel * 2.0,
-            "{lights_travel} vs {core_travel}"
-        );
+    fn embers_restart_unseen_and_half_a_drift_apart() {
+        let (_, at_start) = ember_drift(0.0, 0);
+        let (_, at_end) = ember_drift(EMBER_DRIFT - 1e-6, 0);
+        assert!(at_start < 1e-6 && at_end < 1e-6);
+        let (_, other) = ember_drift(0.0, 1);
+        assert!((other - 1.0).abs() < 1e-6);
+        // They grow as they go.
+        assert!(ember_drift(1.0, 0).0 < ember_drift(5.0, 0).0);
     }
 
     #[test]

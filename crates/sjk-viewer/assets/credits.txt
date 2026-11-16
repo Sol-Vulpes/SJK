@@ -32,6 +32,7 @@
 github: Sol-Vulpes
 role: Creator and developer of Sol JK
 did: Sol JK itself: its name, emblem, website, releases and self-updates
+did: The steel-and-sun emblem, drawn from its geometry, its sun alive in the menus
 did: Your SJK page: sign-in from the game, joining keys, video bounties
 did: The assets folder: PK3s tidied into subfolders of your own, outside base
 did: Feats: double kills, sprees and HOOKED! with medals and an announcer

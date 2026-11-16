@@ -770,8 +770,8 @@ request, 08/10/2026):
   [holocrons.md](holocrons.md#chat-lines)). The dock and the page, which show only SJK
   chat, have no mark. A message sent from another client that takes part in SJK chat
   starts with that client's icon instead, centred in the emblem's place: those icons
-  are full discs, drawn 0.9 times the text's height so they read as big as SJK's
-  starburst (`ICON_SIDE` in `chat/view/sjk_line.rs`; until 14/11/2026 they had the
+  are full discs, drawn 0.9 times the text's height, as big as the sun disc of SJK's
+  emblem (`ICON_SIDE` in `chat/view/sjk_line.rs`; until 14/11/2026 they had the
   emblem's own side and looked much bigger, Sol's request): the clients are the
   entries of [chat/client_icons.rs](../crates/sjk-viewer/src/chat/client_icons.rs)
   (`KNOWN`, each with why and its evidence; today JoF EternalJK, `client` `ejk`,
