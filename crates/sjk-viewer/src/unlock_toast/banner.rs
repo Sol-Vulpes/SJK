@@ -9,11 +9,11 @@
 //!   screen, gathering speed ([`LEAVE`]); it never fades out in place. With
 //!   `ui_rarityEffects 0` it fades in and out over a short drift instead ([`FADE_IN`],
 //!   [`FADE_OUT`]), with no spring and its icon's ring already full.
-//! - Look: dark glass, translucent over the game (a navy tint, lighter at its top), with
-//!   rounded corners, a soft shadow and a hairline edge, so its words read over a bright
-//!   sky as over a dark corridor; the icon on the left on a tile tinted in the
-//!   notification's colour (an achievement's category, a holocron's tier, the SJK UI's
-//!   gold or holo blue), with a soft glow of that colour behind it that brightens once as
+//! - Look: acrylic glass (17/11/2026), the game blurred behind it under the ground's ember
+//!   tint (`color::acrylic::BANNER`), lit along its top, with rounded corners, a soft
+//!   shadow and a hairline edge, so its words read over a bright sky as over a dark
+//!   corridor; the icon on the left on a tile tinted in the notification's colour (an
+//!   achievement's category, a holocron's tier, the SJK UI's gold or amber), with a soft glow of that colour behind it that brightens once as
 //!   it lands, and a count on a badge for several of one kind; the header (the kind in
 //!   small spaced capitals and "now"), the title in bold and two lines under it.
 //! - Size: [`WIDTH`] by [`HEIGHT`] in 1080-line pixels, scaled with the window's height as
@@ -259,16 +259,12 @@ pub(crate) fn draw(
             color: Color::new(0.0, 0.0, 0.0, SHADOW_ALPHA),
         });
     }
-    // The glass: deep navy, lighter towards its top, and the notification's colour washed
-    // in from the left.
-    let _ = list.push(DrawCommand::GradientRect {
+    // The glass: acrylic, lit along its top, and the notification's colour washed in from
+    // the left.
+    let _ = list.push(DrawCommand::Backdrop {
         rect: card,
         radius: RADIUS * k,
-        gradient: Gradient {
-            start: Color::new(0.11, 0.13, 0.19, 0.68),
-            end: Color::new(0.05, 0.065, 0.11, 0.76),
-            vertical: true,
-        },
+        tint: color::tint(color::acrylic::BANNER),
     });
     let _ = list.push(DrawCommand::GradientRect {
         rect: Rect::new(card.x, card.y, card.width * 0.55, card.height),
@@ -284,7 +280,7 @@ pub(crate) fn draw(
         rect: card,
         radius: RADIUS * k,
         width: k.max(1.0),
-        color: Color::new(1.0, 1.0, 1.0, 0.14),
+        color: color::alpha(color::GOLD_BRIGHT, 0.16),
     });
     let top = Rect::new(
         card.x + RADIUS * k,
@@ -295,13 +291,13 @@ pub(crate) fn draw(
     for (half, start, end) in [
         (
             Rect::new(top.x, top.y, top.width * 0.5, top.height),
-            Color::new(1.0, 1.0, 1.0, 0.0),
-            Color::new(1.0, 1.0, 1.0, 0.16),
+            color::alpha(color::GOLD_BRIGHT, 0.0),
+            color::alpha(color::GOLD_BRIGHT, 0.22),
         ),
         (
             Rect::new(top.x + top.width * 0.5, top.y, top.width * 0.5, top.height),
-            Color::new(1.0, 1.0, 1.0, 0.16),
-            Color::new(1.0, 1.0, 1.0, 0.0),
+            color::alpha(color::GOLD_BRIGHT, 0.22),
+            color::alpha(color::GOLD_BRIGHT, 0.0),
         ),
     ] {
         let _ = list.push(DrawCommand::GradientRect {
@@ -333,8 +329,8 @@ pub(crate) fn draw(
         rect: tile,
         radius: ICON_RADIUS * k,
         gradient: Gradient {
-            start: mix(Color::new(0.06, 0.08, 0.14, 0.96), hue, 0.34),
-            end: mix(Color::new(0.03, 0.04, 0.08, 0.96), hue, 0.16),
+            start: mix(color::alpha(color::GLASS, 0.96), hue, 0.34),
+            end: mix(color::alpha(color::SPACE, 0.96), hue, 0.16),
             vertical: true,
         },
     });
@@ -388,7 +384,7 @@ pub(crate) fn draw(
         let _ = list.push(DrawCommand::RoundedRect {
             rect: grown(badge, 2.0 * k, 0.0),
             radius: height * 0.5 + 2.0 * k,
-            color: Color::new(0.04, 0.05, 0.09, 0.95),
+            color: color::alpha(color::SPACE, 0.95),
         });
         let _ = list.push(DrawCommand::RoundedRect {
             rect: badge,

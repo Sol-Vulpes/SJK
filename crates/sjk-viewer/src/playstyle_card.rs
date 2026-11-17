@@ -289,7 +289,7 @@ impl Card {
             let _ = list.push(DrawCommand::RoundedRect {
                 rect: badge,
                 radius: badge.height * 0.5,
-                color: Color::new(0.04, 0.05, 0.07, 0.85),
+                color: color::alpha(color::SPACE, 0.85),
             });
             let _ = list.push(DrawCommand::Border {
                 rect: badge,

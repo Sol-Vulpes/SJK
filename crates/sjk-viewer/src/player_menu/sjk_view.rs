@@ -259,7 +259,7 @@ pub(super) fn level_of(token: u16) -> Option<(usize, u8)> {
 }
 
 /// The colour of power `index`'s group: Neutral silver, the light side's
-/// blue, the dark side's red (classic+'s row colours, lifted for the navy),
+/// blue, the dark side's red (classic+'s row colours, lifted for the dark ground),
 /// Lightsaber green (its holocrons').
 fn power_tint(index: usize) -> Color {
     match ForcePower::ALL.get(index).and_then(|power| power.side()) {
@@ -2210,7 +2210,7 @@ impl PlayerMenu {
         let _ = self.canvas.draw_list_mut().push(DrawCommand::RoundedRect {
             rect,
             radius: 18.0 * s,
-            color: Color::new(0.04, 0.06, 0.12, 0.92),
+            color: color::alpha(color::GLASS, 0.92),
         });
         let tint = power_tint(index);
         let _ = self.canvas.draw_list_mut().push(DrawCommand::Border {

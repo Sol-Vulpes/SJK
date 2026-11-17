@@ -324,3 +324,57 @@ fn status_bar_in_the_news() {
         assert!(gpu.news.is_open(), "the panel shows");
     });
 }
+
+/// What the bars' acrylic costs the GPU (`ui_renderer/backdrop.rs`): the blur's own
+/// section (`ui-backdrop`, its passes round the two bars) and the whole frame's median,
+/// with both bars over duel6, at 1080p and 4K (`SJK_COST_SIZE` adds a size), against the
+/// same frames with the bars' glass drawn as its plain tint (no blur). Prints the medians
+/// over 240 sampled frames after a warm-up, the plain tint's before and after the blur's.
+#[test]
+#[ignore = "renders with the GPU and the installed game data named by JKA_GAME_DATA"]
+fn status_bar_acrylic_cost() {
+    on_big_stack(|| {
+        let extra = std::env::var("SJK_COST_SIZE").ok().and_then(|size| {
+            let (w, h) = size.split_once('x')?;
+            Some([w.parse::<u32>().ok()?, h.parse::<u32>().ok()?])
+        });
+        for size in [[1920, 1080], [3840, 2160]].into_iter().chain(extra) {
+            let Some((mut gpu, _profile)) = open("maps/mp/duel6.bsp", size, None, &[]) else {
+                return;
+            };
+            preview(&mut gpu);
+            let _ = frame(&mut gpu, 300);
+            // The plain tint before and after, so a drift of the scene shows.
+            crate::world_shot::BACKDROP_OFF.with(|off| off.set(true));
+            let _ = frame(&mut gpu, 30);
+            let before = super::dynamic_light_cost::section_medians(&mut gpu, 240);
+            crate::world_shot::BACKDROP_OFF.with(|off| off.set(false));
+            let _ = frame(&mut gpu, 30);
+            let blurred = super::dynamic_light_cost::section_medians(&mut gpu, 240);
+            assert!(gpu.ui_shapes.backdrop_used(), "the bars blur the frame");
+            let backdrop = blurred
+                .iter()
+                .filter(|(name, _)| *name == "ui-backdrop")
+                .map(|(_, ms)| *ms)
+                .sum::<f32>();
+            let total = |medians: &[(&'static str, f32)]| {
+                medians
+                    .iter()
+                    .find(|(name, _)| *name == "total")
+                    .map_or(f32::NAN, |(_, ms)| *ms)
+            };
+            crate::world_shot::BACKDROP_OFF.with(|off| off.set(true));
+            let _ = frame(&mut gpu, 30);
+            let after = super::dynamic_light_cost::section_medians(&mut gpu, 240);
+            crate::world_shot::BACKDROP_OFF.with(|off| off.set(false));
+            println!(
+                "acrylic bars {}x{}: blur {backdrop:.3} ms, frame {:.3} ms (plain {:.3}, {:.3} ms)",
+                size[0],
+                size[1],
+                total(&blurred),
+                total(&before),
+                total(&after),
+            );
+        }
+    });
+}

@@ -453,7 +453,7 @@ impl GpuState {
         };
         let colour = |rgb: [f32; 3], alpha: f32| sjk_ui::Color::new(rgb[0], rgb[1], rgb[2], alpha);
         let gold = sjk_ui::Color::new(1.0, 0.82, 0.3, 1.0);
-        let dark = sjk_ui::Color::new(0.02, 0.03, 0.06, 0.85);
+        let dark = crate::menu::sjk::color::alpha(crate::menu::sjk::color::SPACE, 0.85);
         let chosen_lamp = (panel.light_choice == LightChoice::Lamp).then_some(panel.lamp_row);
         for (index, row) in panel.facts.lamps.iter().take(LAMP_MARKERS).enumerate() {
             let Some(at) = view.project(row.at()) else {

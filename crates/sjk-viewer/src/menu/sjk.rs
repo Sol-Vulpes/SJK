@@ -1,6 +1,6 @@
 //! The SJK UI (`ui_menuStyle sjk`): SJK's own menus, drawn over the live map in
 //! SJK's own type, as SJK's site looks (`site/assets/style.css`). It keeps the
-//! feeling of retail's menus (gold for what you choose, holo blue line-work, the
+//! feeling of retail's menus (gold for what you choose, thin line-work, the
 //! turning ring round the emblem) and drops their window frames and boxes:
 //! screens are laid out on alignment, thin lines and dark fades at the screen's
 //! edges. Design: `docs/sjk-ui.md`.
@@ -429,29 +429,43 @@ impl ClientMenu {
     }
 }
 
-/// The SJK UI's colours, as on SJK's site. They are display values, like all
-/// 2D colours (`crate::ui_target`).
+/// The SJK UI's colours: the sun of SJK's emblem (Sol's request, 17/11/2026: "switch to a
+/// warm colour ... orange, yellow, things that come from the sun"), in place of the deep
+/// navy and holo blue of before. They are display values, like all 2D colours
+/// (`crate::ui_target`). The names are the tokens' roles; `SPACE` and `HOLO` kept theirs
+/// from the navy palette (the ground, the line-work), so every screen took the new colours
+/// without being touched.
+///
+/// The text colours keep their contrast on the ground and over acrylic glass in front of
+/// the brightest scene (`tests::the_palette_keeps_its_contrast`).
 pub(crate) mod color {
     use sjk_ui::Color;
 
-    /// The ground: deep space navy, never pure black.
-    pub(crate) const SPACE: Color = Color::new(0.024, 0.039, 0.078, 1.0);
-    /// Line-work: rules, ticks, outlines.
-    pub(crate) const HOLO: Color = Color::new(0.659, 0.812, 1.0, 1.0);
-    /// What you choose: the selection, the one main action of a screen.
-    pub(crate) const GOLD: Color = Color::new(0.91, 0.722, 0.29, 1.0);
+    /// The ground: a deep ember brown, never pure black. Fades, scrims and the tint of
+    /// acrylic glass ([`acrylic`]).
+    pub(crate) const SPACE: Color = Color::new(0.078, 0.043, 0.024, 1.0);
+    /// Dark glass: a card's, a tile's or a panel's fill, a step lighter than the ground.
+    pub(crate) const GLASS: Color = Color::new(0.122, 0.071, 0.039, 1.0);
+    /// Dark glass lit: the chosen or hovered tile's fill.
+    pub(crate) const GLASS_LIT: Color = Color::new(0.18, 0.106, 0.059, 1.0);
+    /// Line-work: rules, ticks, outlines, the ring, in the sun's amber. Never text that
+    /// matters.
+    pub(crate) const HOLO: Color = Color::new(1.0, 0.663, 0.471, 1.0);
+    /// What you choose: the selection, the one main action of a screen, in the sun's gold.
+    pub(crate) const GOLD: Color = Color::new(1.0, 0.784, 0.239, 1.0);
     /// Gold lit: the chosen item's text and marks.
-    pub(crate) const GOLD_BRIGHT: Color = Color::new(1.0, 0.851, 0.478, 1.0);
+    pub(crate) const GOLD_BRIGHT: Color = Color::new(1.0, 0.89, 0.561, 1.0);
     /// A trusted player's green (the trust mark's, `ui_renderer::trust_texture`).
     pub(crate) const TRUSTED: Color = Color::new(0.42, 0.86, 0.45, 1.0);
-    /// Text.
-    pub(crate) const TEXT: Color = Color::new(0.886, 0.914, 0.965, 1.0);
+    /// Text: a warm white.
+    pub(crate) const TEXT: Color = Color::new(0.988, 0.937, 0.886, 1.0);
     /// Secondary text.
-    pub(crate) const MUTED: Color = Color::new(0.663, 0.71, 0.796, 1.0);
+    pub(crate) const MUTED: Color = Color::new(0.839, 0.749, 0.667, 1.0);
     /// Quieter still: an item that ends the session.
-    pub(crate) const QUIET: Color = Color::new(0.53, 0.573, 0.675, 1.0);
-    /// Only for leaving: Quit.
-    pub(crate) const EMBER: Color = Color::new(1.0, 0.478, 0.239, 1.0);
+    pub(crate) const QUIET: Color = Color::new(0.678, 0.584, 0.514, 1.0);
+    /// Only for leaving (Quit) and for what went wrong: the sun's red rim, apart from the
+    /// amber line-work.
+    pub(crate) const EMBER: Color = Color::new(1.0, 0.361, 0.239, 1.0);
     /// The red team, muted: the SJK scoreboard's team rules and names, the CTF HUD's
     /// team boxes.
     pub(crate) const RED_TEAM: Color = Color::new(0.88, 0.38, 0.38, 1.0);
@@ -461,6 +475,113 @@ pub(crate) mod color {
     /// `color` at `alpha`.
     pub(crate) const fn alpha(color: Color, alpha: f32) -> Color {
         Color::new(color.r, color.g, color.b, alpha)
+    }
+
+    /// How much of the ground each kind of acrylic glass lays over the blurred scene
+    /// behind it ([`sjk_ui::DrawCommand::Backdrop`], [`tint`]): the status bars the
+    /// clearest (Sol: "really much more transparency"), a pop-up card the most covered,
+    /// so it still reads as the one thing on screen.
+    pub(crate) mod acrylic {
+        /// The status bars docked to the screen's edges.
+        pub(crate) const BAR: f32 = 0.34;
+        /// The notification banners.
+        pub(crate) const BANNER: f32 = 0.46;
+        /// Panels over play: the scoreboard's band.
+        pub(crate) const PANEL: f32 = 0.6;
+        /// A pop-up card, a menu or a hover card over a screen.
+        pub(crate) const CARD: f32 = 0.66;
+    }
+
+    /// The tint of acrylic glass laying `amount` of the ground over the scene ([`acrylic`]).
+    pub(crate) const fn tint(amount: f32) -> Color {
+        alpha(SPACE, amount)
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use super::*;
+
+        /// WCAG's relative luminance of a display colour.
+        fn luminance(color: Color) -> f32 {
+            let linear = |c: f32| crate::ui_target::srgb_to_linear(c.clamp(0.0, 1.0));
+            0.2126 * linear(color.r) + 0.7152 * linear(color.g) + 0.0722 * linear(color.b)
+        }
+
+        /// WCAG's contrast ratio of two display colours.
+        fn contrast(a: Color, b: Color) -> f32 {
+            let (a, b) = (luminance(a), luminance(b));
+            (a.max(b) + 0.05) / (a.min(b) + 0.05)
+        }
+
+        fn rgb([r, g, b]: [f32; 3]) -> Color {
+            Color::new(r, g, b, 1.0)
+        }
+
+        /// `top` at its alpha over `under`.
+        fn over(top: Color, under: Color) -> Color {
+            let a = top.a;
+            Color::new(
+                top.r * a + under.r * (1.0 - a),
+                top.g * a + under.g * (1.0 - a),
+                top.b * a + under.b * (1.0 - a),
+                1.0,
+            )
+        }
+
+        /// Hue in degrees of a display colour.
+        fn hue(c: Color) -> f32 {
+            let max = c.r.max(c.g).max(c.b);
+            let min = c.r.min(c.g).min(c.b);
+            let d = (max - min).max(1e-6);
+            let h = if max == c.r {
+                (c.g - c.b) / d
+            } else if max == c.g {
+                2.0 + (c.b - c.r) / d
+            } else {
+                4.0 + (c.r - c.g) / d
+            };
+            (h * 60.0).rem_euclid(360.0)
+        }
+
+        #[test]
+        fn the_palette_keeps_its_contrast() {
+            let white = [1.0, 1.0, 1.0];
+            let body = [("text", TEXT), ("muted", MUTED)];
+            let accents = [("gold", GOLD), ("gold bright", GOLD_BRIGHT), ("holo", HOLO)];
+            // On the ground itself, as the menus draw it.
+            for (name, colour) in body.into_iter().chain(accents) {
+                let ratio = contrast(colour, SPACE);
+                assert!(ratio >= 7.0, "{name} on the ground: {ratio:.2}");
+            }
+            for (name, colour) in [("quiet", QUIET), ("ember", EMBER)] {
+                let ratio = contrast(colour, SPACE);
+                assert!(ratio >= 4.5, "{name} on the ground: {ratio:.2}");
+            }
+            // Over each kind of acrylic glass in front of the brightest scene (snow, a
+            // white sky), blurred and tinted, and over its plain fallback.
+            for amount in [acrylic::BAR, acrylic::BANNER, acrylic::PANEL, acrylic::CARD] {
+                let glass = rgb(sjk_ui::acrylic::shade(white, tint(amount)));
+                let plain = over(sjk_ui::acrylic::fallback(tint(amount)), rgb(white));
+                for (name, colour) in body.into_iter().chain(accents) {
+                    let ratio = contrast(colour, glass);
+                    assert!(ratio >= 4.5, "{name} on acrylic {amount}: {ratio:.2}");
+                }
+                for (name, colour) in body {
+                    let ratio = contrast(colour, plain);
+                    assert!(ratio >= 4.5, "{name} on the fallback {amount}: {ratio:.2}");
+                }
+            }
+        }
+
+        #[test]
+        fn gold_stands_apart_from_the_line_work_and_ember() {
+            assert!(hue(GOLD) - hue(HOLO) >= 15.0, "gold against the line-work");
+            assert!(hue(HOLO) - hue(EMBER) >= 8.0, "the line-work against ember");
+            // The ground and the glass are warm: red over green over blue.
+            for ground in [SPACE, GLASS, GLASS_LIT] {
+                assert!(ground.r > ground.g && ground.g > ground.b);
+            }
+        }
     }
 }
 

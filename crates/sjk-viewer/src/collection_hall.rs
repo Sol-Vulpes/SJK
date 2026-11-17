@@ -995,9 +995,9 @@ impl Panel {
             rect: frame.rect(x, y, width, height),
             radius: 16.0 * s,
             color: if chosen {
-                Color::new(0.07, 0.1, 0.17, 0.94)
+                color::alpha(color::GLASS_LIT, 0.94)
             } else {
-                Color::new(0.04, 0.06, 0.12, 0.86)
+                color::alpha(color::GLASS, 0.86)
             },
         });
         let _ = self.ui.draw_list_mut().push(DrawCommand::Border {

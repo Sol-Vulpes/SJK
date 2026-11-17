@@ -758,7 +758,7 @@ mod tests {
             DrawCommand::RoundedRect { rect, color, .. }
                 if *rect == hide && *color == color::GOLD
         )));
-        // The column's ground is the UI's navy fading in from clear.
+        // The column's ground is the UI's dark ground fading in from clear.
         let fades: Vec<_> = canvas
             .draw_list()
             .commands()

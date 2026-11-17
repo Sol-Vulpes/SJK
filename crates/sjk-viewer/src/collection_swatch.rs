@@ -155,7 +155,7 @@ pub(crate) fn blade(
         DrawCommand::RoundedRect {
             rect: frame.rect(x, y, width, height),
             radius: 14.0 * s,
-            color: Color::new(0.016, 0.024, 0.05, 0.94),
+            color: color::alpha(color::SPACE, 0.94),
         },
     );
     let centre = y + height * 0.5;
@@ -453,7 +453,7 @@ pub(crate) fn chroma_mark(
         x + radius,
         y + radius,
         radius + 1.2,
-        Color::new(0.02, 0.03, 0.06, 0.75 * alpha),
+        color::alpha(color::SPACE, 0.75 * alpha),
     );
     for segment in 0..WHEEL_SEGMENTS {
         let hue = segment as f32 / WHEEL_SEGMENTS as f32;
@@ -503,7 +503,7 @@ pub(crate) fn small_stock(canvas: &mut DrawList, frame: &Frame, rect: [f32; 4], 
         DrawCommand::RoundedRect {
             rect: frame.rect(x, y, width, height),
             radius: 14.0 * s,
-            color: Color::new(0.016, 0.024, 0.05, 0.94),
+            color: color::alpha(color::SPACE, 0.94),
         },
     );
     let centre = y + height * 0.5;

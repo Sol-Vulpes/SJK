@@ -21,10 +21,10 @@
 //!   the game's logs (`log_request_card.rs`, whose consent card still waits for a menu
 //!   and takes the banner back as it opens);
 //! - a newer SJK release the update check found (`update.rs`), once a session, with SJK's
-//!   emblem, the version and "Click to install", in the SJK UI's holo blue and without the
-//!   sound; the Update page opening takes it away;
+//!   emblem, the version and "Click to install", in the SJK UI's amber line-work colour
+//!   and without the sound; the Update page opening takes it away;
 //! - a content collection's automatic update that changed files
-//!   (`console_jof_content.rs`), with SJK's emblem and what came, in holo blue and without
+//!   (`console_jof_content.rs`), with SJK's emblem and what came, in amber and without
 //!   the sound.
 //!
 //! One banner shows at a time, the others queue. Several of one kind waiting together

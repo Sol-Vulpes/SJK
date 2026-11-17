@@ -735,7 +735,7 @@ fn build_panel(
     let _ = ui.draw_list_mut().push(DrawCommand::RoundedRect {
         rect: glass,
         radius: 12.0 * s,
-        color: Color::new(0.024, 0.039, 0.078, 0.82),
+        color: color::alpha(color::SPACE, 0.82),
     });
     let _ = ui.draw_list_mut().push(DrawCommand::Border {
         rect: glass,

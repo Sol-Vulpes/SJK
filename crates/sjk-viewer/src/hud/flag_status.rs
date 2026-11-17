@@ -709,7 +709,7 @@ impl State {
     }
 
     /// The two team boxes under the clock, red left and blue right, in a `w` by `h`
-    /// viewport: the UI's navy under the team's colour, a rule of it along the bottom;
+    /// viewport: the UI's ground under the team's colour, a rule of it along the bottom;
     /// the score at the inner
     /// edge and, in capture games with `cg_drawFlagStatus`, the flag at the outer edge
     /// (its taken picture while away, a gold arc round it counting down a drop) and

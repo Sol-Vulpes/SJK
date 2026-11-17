@@ -300,7 +300,7 @@ fn chip(
     let [x, y, width, height] = rect;
     let (fill, edge, words) = match tone {
         Tone::Plain => (
-            Color::new(0.05, 0.08, 0.15, 0.95),
+            color::alpha(color::GLASS, 0.95),
             color::alpha(color::HOLO, 0.32),
             color::TEXT,
         ),
@@ -310,7 +310,7 @@ fn chip(
             color::TEXT,
         ),
         Tone::Core => (
-            Color::new(0.05, 0.07, 0.12, 0.9),
+            color::alpha(color::GLASS, 0.9),
             color::alpha(color::HOLO, 0.2),
             color::MUTED,
         ),

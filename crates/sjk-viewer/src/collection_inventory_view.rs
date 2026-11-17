@@ -576,7 +576,7 @@ impl Panel {
                         let _ = list.push(DrawCommand::RoundedRect {
                             rect,
                             radius: 3.0 * s,
-                            color: Color::new(0.05, 0.08, 0.15, 0.95),
+                            color: color::alpha(color::GLASS, 0.95),
                         });
                         let art = card_width / crate::cards::faces::ART_ASPECT;
                         let _ = list.push(DrawCommand::TexturedQuad {

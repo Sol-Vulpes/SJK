@@ -29,7 +29,7 @@ pub(super) const TEXT_LAST: u32 = NO_KEYS_TEXT;
 // SJK's own palette ([`crate::menu::sjk::color`]), as its menus' cards draw it.
 const YES: Color = color::TRUSTED;
 const NO: Color = color::RED_TEAM;
-const PLATE: Color = Color::new(0.04, 0.06, 0.12, 0.9);
+const PLATE: Color = color::alpha(color::GLASS, 0.9);
 const SHADOW: Color = color::alpha(color::SPACE, 0.5);
 const EDGE: Color = color::alpha(color::HOLO, 0.45);
 const TRACK: Color = color::alpha(color::HOLO, 0.16);
@@ -417,9 +417,9 @@ pub(super) fn emit(
     }
 }
 
-/// The SJK menu card's plate: a soft shadow, the navy plate and a holo edge.
+/// The SJK menu card's plate: a soft shadow, the dark glass plate and an amber edge.
 fn emit_plate(draw: &mut DrawList, plate: Rect, radius: f32, scale: f32) {
-    // The SJK menu card: a soft shadow, the navy plate and a holo edge.
+    // The SJK menu card: a soft shadow, the dark glass plate and an amber edge.
     let _ = draw.push(DrawCommand::RoundedRect {
         rect: Rect::new(
             plate.x + 4.0 * scale,

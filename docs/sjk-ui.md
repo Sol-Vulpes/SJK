@@ -2,8 +2,9 @@
 
 The SJK UI (`ui_menuStyle sjk`) is SJK's own menu style: SJK's menus redesigned
 from the ground up, drawn over the live map in SJK's own type. It keeps the
-feeling of Jedi Academy's menus (gold for what you choose, holo blue line-work,
-the turning ring round the emblem) and drops their window frames and boxes. It
+feeling of Jedi Academy's menus (gold for what you choose, line-work drawn
+thin, the turning ring round the emblem), in the warm colours of the sun behind SJK's
+emblem since 17/11/2026 and drops their window frames and boxes. It
 is SJK's default menu style since 08/10/2026 (Sol's call, before every screen
 had its version); [classic+](classic-plus.md) stays a choice and keeps getting
 fixes. A profile saved with the old default `classic` moves to `sjk` once
@@ -54,7 +55,7 @@ Principles:
 2. **One memorable thing per screen.** On the main page, the ring and its gold
    arc, which turns to point at the chosen entry. Everything else stays quiet.
 3. **Gold is the choice.** Gold marks what is chosen and the one main action of a
-   screen; ember is only for leaving. Holo blue draws lines, never text that
+   screen; ember is only for leaving. The amber line-work draws lines, never text that
    matters.
 4. **Words, not capitals.** Navigation and labels are in sentence case.
 5. **Keyboard first, pointer equal.** A scrollbar drawn with `MenuCanvas::scrollbar` (or
@@ -71,19 +72,58 @@ Principles:
 
 ### Colours
 
-Display values, like all 2D colours ([rendering.md](rendering.md)), in
-`menu::sjk::color`:
+The sun's colours (Sol's request, 17/11/2026: "switch to a warm colour ... orange,
+yellow, things that come from the sun"), drawn from the burning sun behind SJK's
+emblem: an ember-brown ground, amber line-work, sun gold for the choice, a warm white
+for text. They replaced the deep navy and holo blue of before; the tokens kept their
+names (`SPACE`, `HOLO`), so every screen took them unchanged. Display values, like all
+2D colours ([rendering.md](rendering.md)), in `menu::sjk::color`:
 
 | Token | Value | Use |
 | --- | --- | --- |
-| Space | `#060A14` | The ground and the fades; never pure black |
-| Holo | `#A8CFFF` | Line-work: rules, ticks, outlines, the ring |
-| Gold | `#E8B84A` | What is chosen; the screen's one main action |
-| Gold bright | `#FFD97A` | Chosen text and marks |
-| Text | `#E2E9F6` | Text |
-| Muted | `#A9B5CB` | Secondary text |
-| Quiet | `#8792AC` | An item that ends the session |
-| Ember | `#FF7A3D` | Leaving: Quit |
+| Space | `#140B06` | The ground, the fades and the tint of acrylic glass; never pure black |
+| Glass | `#1F120A` | A card's, a tile's or a panel's fill |
+| Glass lit | `#2E1B0F` | The chosen or hovered tile's fill |
+| Holo | `#FFA978` | Line-work, in amber: rules, ticks, outlines, the ring |
+| Gold | `#FFC83D` | What is chosen; the screen's one main action |
+| Gold bright | `#FFE38F` | Chosen text and marks |
+| Text | `#FCEFE2` | Text |
+| Muted | `#D6BFAA` | Secondary text |
+| Quiet | `#AD9583` | An item that ends the session |
+| Ember | `#FF5C3D` | Leaving (Quit) and what went wrong |
+
+The team colours (`RED_TEAM`, `BLUE_TEAM`), the trusted green, the tiers' colours and
+whatever a player chooses keep their own: they carry meaning. A test keeps the text
+colours' contrast: text, muted, the golds and the line-work at 7:1 or more on the
+ground, quiet and ember at 4.5:1, and text, muted, the golds and the line-work at 4.5:1
+or more over every kind of acrylic glass in front of a white scene, and over its plain
+fallback (`color::tests::the_palette_keeps_its_contrast`).
+
+### Acrylic glass
+
+Since 17/11/2026 the surfaces that float over the game are acrylic glass, as Windows'
+acrylic and iOS's materials are, so the game shows through them, blurred: the status
+bars, the notification banners, the pop-up cards (`kit::card`) and lists, the hover
+cards and the scoreboard's band. `DrawCommand::Backdrop { rect, radius, tint }`
+([rendering.md](rendering.md#acrylic-backdrops)) draws one: what the frame holds
+behind it (the world, its effects and post-processing; not the 2D drawn under it, which
+it covers), blurred at a quarter of the screen's size and below, its brightness held
+under a ceiling (`sjk_ui::acrylic::LUMA_CEILING`, 0.42) so text over it reads over snow
+as over a dark corridor, the tint over it, a faint grain and a light top edge.
+
+How much of the ground's tint each kind lays over the scene (`color::acrylic`):
+
+| Kind | Tint | Where |
+| --- | --- | --- |
+| `BAR` | 34 % | The status bars (Sol: "really much more transparency") |
+| `BANNER` | 46 % | The notification banners |
+| `PANEL` | 60 % | The scoreboard's band |
+| `CARD` | 66 % | Pop-up cards, the kit's lists, hover cards (of the glass colour) |
+
+The full-screen grounds (the menus' fades and scrims) stay plain, so a menu stays easy
+to read. Where the frame cannot be blurred (a DirectX 12 swapchain, the CPU menu
+snapshots, the HUD picker's picture), a backdrop draws its tint alone, opaquer
+(`sjk_ui::acrylic::fallback`).
 
 ### Tier frame
 
@@ -142,7 +182,7 @@ its facts 17. `ui_textScale` multiplies them from 0.8 to 1.4; Settings > General
 in Simple or Interface in Advanced exposes it as **Menu text size**.
 
 Names keep their colour codes (`^1`...), drawn in a palette lifted to read on
-the navy ground (`text::CodePalette::Legible`, which every text in the UI's
+the ember-brown ground (`text::CodePalette::Legible`, which every text in the UI's
 families uses): black shows as grey, and red, green, blue and magenta are
 lighter with the same hue; the other colours are the game's.
 
@@ -190,7 +230,7 @@ Behind the SJK UI the camera tours mp/duel6: ten authored shots
 [routes.rs](../crates/sjk-viewer/src/menu_backdrop/routes.rs), keyed by the map's
 worldspawn message "Yavin Training Grounds"), each a 15-second glide from one
 point to another while looking at a third, with a 0.9-second fade through the
-UI's navy between them ([tour.rs](../crates/sjk-viewer/src/menu_backdrop/tour.rs)).
+UI's ground between them ([tour.rs](../crates/sjk-viewer/src/menu_backdrop/tour.rs)).
 The tour opens on the map's own intermission view (the west wing's room looking
 down the corridor at the tower), then plays the rest in a shuffled order that
 changes every start and every round, never showing the same shot twice in a
@@ -769,7 +809,7 @@ overlay routes their text to the UI's families (`console_sjk_pages.rs`).
   column lists the players blocked on this PC, each with Unblock.
 - **Sender card** ([sender_card.rs](../crates/sjk-viewer/src/sender_card.rs),
   08/10/2026, Sol's request): a name under the pointer in the game's chat (composer
-  open), on the main page's dock and on the SJK chat page. A 340-wide navy card with a
+  open), on the main page's dock and on the SJK chat page. A 340-wide dark glass card with a
   holo edge: their picture in a 48-wide disc (the [profile card](#profile-card)'s, their
   initial on their colour until it loads or when they have none), the name and the
   verified tick alone, "SJK player" (gold, with "SJK staff")
@@ -779,7 +819,7 @@ overlay routes their text to the UI's families (`console_sjk_pages.rs`).
   game's chat a click on the name pins it (23/10/2026, after Bishop's and Sanjisan's
   ideas): it stays until the name is clicked again, a click lands off it, Escape or the
   composer closes; for a player on the server other than the player themselves it then
-  heads its buttons with Whisper, the whole row in holo blue, above Block
+  heads its buttons with Whisper, the whole row in amber, above Block
   ([client.md](client.md), [chat/card.rs](../crates/sjk-viewer/src/chat/card.rs)). World
   shot: `chat::card::shots::chat_name_actions_shot` (1080p and 4K).
 - **Test list** ([debug_panel_view.rs](../crates/sjk-viewer/src/debug_panel_view.rs),
@@ -821,7 +861,7 @@ overlay routes their text to the UI's families (`console_sjk_pages.rs`).
   thing: the classic page's two sunbursts turn opposite ways behind it, its
   golden god rays (`EmblemLayer::Godrays`, two sets against each other) reach out
   from it across the page and sparks rise through their light on the left; the
-  reading column has a navy shade of its own (half), so the rays cross it softly.
+  reading column has a dark shade of its own (half), so the rays cross it softly.
   Under the emblem "The people who make SJK", then the sections down a lit
   rail, the one in view gold (a click scrolls to it), and Expand all (Collapse
   all once a fold is open) under them; the sections draw closer, their rows
@@ -871,7 +911,7 @@ this style with it, laid out as Settings (filters down a lit rail, entries, the
 chosen entry's detail column), and its detail's text can be selected with the
 mouse and copied
 ([client.md](client.md#useful-console-commands)). Two other designs, a
-horizon (no panel edge, the navy fading out under a gold line) and a dock (an
+horizon (no panel edge, the ground fading out under a gold line) and a dock (an
 outlined card with tabs), were offered beside it; Sol chose the deck
 (08/10/2026), which reads best over a bright map and keeps the classic
 console's full-width rows, and the other two were removed.
@@ -1170,7 +1210,7 @@ detail's columns:
 - **Keys:** bottom right, what has the keyboard's, and Tab for the next group.
 
 Outside the SJK UI the editor draws the same columns on its own over the
-classic+ or tabbed settings (the navy ground, "Esc Settings" and "Quick wheel"
+classic+ or tabbed settings (the ember-brown ground, "Esc Settings" and "Quick wheel"
 as its title), moved 190 left where the rail would be. The editor has its own
 canvas (1024 draw commands); every state of a full wheel fits it (a test).
 
@@ -1311,7 +1351,7 @@ so a stray click does not end a join.
   stretched (`levelshot::screen_fit`): one as wide as the window or narrower
   covers it, cut at its top and bottom (a square retail levelshot is a 4:3
   picture); a wider one (the HD packs' 2:1 shots, their title against the left
-  edge) keeps its whole width with navy bands above and below. It is darkened a
+  edge) keeps its whole width with dark bands above and below. It is darkened a
   little all over, more towards the bottom and its left and a touch at the
   top. At the bottom left, from the top: "Joining", the map's own name from its
   worldspawn large (Rajdhani 124, 96 past 18 letters; the file name when it has
@@ -1348,7 +1388,7 @@ the destination's levelshot has faded in, then it is left out
 (`ClientMenu::sjk_loading_hides_world`, read by
 `menu_backdrop::classic_hides_world`). On a server's world (a change of map, or
 the joined world installed before the game takes over) the world is always
-left out and the screen draws on the UI's navy ground; the levelshot fades in
+left out and the screen draws on the UI's ground ground; the levelshot fades in
 over it.
 
 ## Scoreboard
@@ -1358,7 +1398,7 @@ held with Tab in a match (and shown at intermission), `cg_scoreboardStyle sjk`.
 Its default, `auto`, shows it while `ui_menuStyle` is `sjk` and the classic
 scoreboard otherwise; a profile's saved old default (`classic`) moves to it
 once, a style chosen after that stays ([client.md](client.md#scoreboard-styles)). No panel: the columns float over
-the game, which is darkened by the UI's navy (a third everywhere, deeper behind
+the game, which is darkened by the UI's ground (a third everywhere, deeper behind
 the header and, from the chat column's edge, behind the columns). It fades in
 and out as the classic board does, settling into place as it opens.
 
@@ -2410,7 +2450,7 @@ right edge:
 
 - **Frame:** a 1080-line frame whose right edge is the window's, not the main
   page's centred one, so the column hugs the edge on any window (x 1440, 416
-  wide) and a wider window shows more scene. Under it a navy fade, clear at x
+  wide) and a wider window shows more scene. Under it a dark fade, clear at x
   1200, 72 % at 1400, 86 % at the edge, the full height; nothing else darkens the
   scene.
 - **Viewfinder:** the screen's one memorable thing. Thin holo corner marks at
@@ -2451,7 +2491,7 @@ panel ([map-edits.md](map-edits.md#the-panel) has what it does), shown whenever 
 is on (the in-game menu's Map editor icon turns it on too), in every menu style
 (19/10/2026, Sol's request; made easier 28/10/2026 and 04/11/2026, Sol's requests). It is Camera
 control's column: the 1080-line frame on the window's right edge, the column at x 1440,
-416 wide, over the same navy fade, the scene left of x 1400 undimmed, where a click
+416 wide, over the same dark fade, the scene left of x 1400 undimmed, where a click
 selects and the right button held flies (the selection's green outline is the screen's
 one memorable thing; a multiple selection outlines every member). While the editor flies
 the column stays drawn, its keys lines turned to the flight's.
@@ -2476,7 +2516,7 @@ the column stays drawn, its keys lines turned to the flight's.
   dark band at its foot ("62 %", "family", "140x"), a Recent one a holo dot at its
   corner; then Remap, Remove remap and Same shader (Draw, Draw nothing and Same shader on
   a face; three across). Left of the column, over the scene's edge from the heading down
-  (x 1164, 224 wide, 372 high), the preview card: the navy glass of the lists, "Under the pointer" or
+  (x 1164, 224 wide, 372 high), the preview card: the dark glass of the lists, "Under the pointer" or
   "Chosen" (Exo 2 13, quiet), the picture 200 square at its own shape on a darker ground,
   its name (two lines) and size, and "Drawn there now" with the selection's own shader at
   40 square and its name. With
@@ -2530,10 +2570,10 @@ the column stays drawn, its keys lines turned to the flight's.
   on 04/11/2026: the panel no longer hides while the editor is on.
 - **Over the scene** (10/11/2026): the hover, what is under the pointer outlined in faint
   white dots (1.5 to 3 pixels, 55 %), with its tip 18 right and 22 under the pointer (kept
-  left of the column): one line of Exo 2 14 on navy glass (86 %) with a holo hairline,
+  left of the column): one line of Exo 2 14 on dark glass (86 %) with a holo hairline,
   8 round; a box being drawn as a holo frame (80 %) over a faint holo fill (8 %), the tip
   gone meanwhile; the measure (10/11/2026) as a gold line 2 pixels wide over a dark one
-  of 4, its ends gold dots, its label over its middle in gold Exo 2 15 semibold on navy
+  of 4, its ends gold dots, its label over its middle in gold Exo 2 15 semibold on dark glass
   glass (90 %) with a gold hairline (60 %), 8 round.
 
 It is a page of the in-game menu (`Page::MapEdit`), drawn by `InGameMenu::append_own_page`
@@ -2549,8 +2589,8 @@ menu's (`GpuState::map_edit_key`), its pointer through `map_edit_pointer`. World
 editor's column ([client.md](client.md#ghost-editor) has what it does), opened by
 `ghost edit` (01/11/2026, Sol's request), in every menu style. It is the map editor's
 column: the 1080-line frame on the window's right edge, the column at x 1440, 416 wide,
-over the same navy fade, the scene left of x 1400 undimmed, where the run's path is the
-screen's one memorable thing (holo blue, the new start a gold ring with its facing line).
+over the same dark fade, the scene left of x 1400 undimmed, where the run's path is the
+screen's one memorable thing (amber, the new start a gold ring with its facing line).
 
 - **Top:** "Ghost editor" (Rajdhani 42) and how many ghosts, how many on this map.
 - **Ghosts** (heading at 166): a list of six rows from 182 (34 each), the name left and its
@@ -2558,7 +2598,7 @@ screen's one memorable thing (holo blue, the new start a gold ring with its faci
   gold tick. Under it at 412 the copy's name (the kit's field, 260 wide) and Duplicate.
 - **Cut** (heading at 494, "keeps N s of M s" right of it): the timeline at 510 (36 high)
   on the list's ground, the slices standing (holo 14 %), moving (50 %), in the air (85 %),
-  the bubble (ember, faint while it is to be cleared), the cut parts under navy at 70 %,
+  the bubble (ember, faint while it is to be cleared), the cut parts under the ground at 70 %,
   the handles as gold bars (the start ember when it is not clean); the clean starts as a
   green line at 550. Start and End rows of 56 at 566 and 626 as Camera control's sliders
   (name Exo 2 19, value Rajdhani 21), then First move, Last move and Reset at 694, and
@@ -2567,7 +2607,7 @@ screen's one memorable thing (holo blue, the new start a gold ring with its faci
   last answer (ember when refused) or "Not saved" at 840, Save (gold), Play, Look and Close
   at 898, two lines of keys from 964 (Left Right snap, Shift free, Page Up Page Down on a
   handle; Enter, Ctrl+S, Up Down elsewhere; Esc look).
-- **Strip:** while looking about, a navy card at the top centre (the map editor had one
+- **Strip:** while looking about, a dark glass card at the top centre (the map editor had one
   until 04/11/2026): "Ghost editor" in gold, which
   path is drawn, and Esc "back to the editor".
 
@@ -2659,7 +2699,7 @@ a medal from the SJK team arrives in ([identity.md](identity.md#medals)), on the
 page or over the game menu. Sol asked on 08/10/2026 for its Next button in the SJK
 UI's style (it was the retired modern style's) and for the medal to arrive animated,
 with a sound. No card: the medal floats in the middle of the scene darkened by the
-UI's navy (80 %, coming in over 0.3 s with the sitting's first medal), as the
+UI's ground (80 %, coming in over 0.3 s with the sitting's first medal), as the
 screen's one memorable thing, on the main page's 16:9 frame.
 
 - **Top:** "New medal" in gold (Rajdhani 24; "New medal · 1 of 3" when several
@@ -3261,7 +3301,7 @@ group in the script (`SYMBOLS`) and gets its name in `symbols.rs`.
   `duel6_sjk_browser` the browser on made-up servers (one answered status),
   a search and the password prompt; `duel6_sjk_loading` the loading screen on
   a made-up join of the JoF server (before the map is known, loading mp/ffa3,
-  failed with and without the map known, a server's change of map on the navy
+  failed with and without the map known, a server's change of map on the ground
   ground);
   `duel6_sjk_scoreboard` the scoreboard on
   made-up matches (`scoreboard::shot`: free for all with 14 and with 30

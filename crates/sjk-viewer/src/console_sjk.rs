@@ -2,7 +2,7 @@
 //! SJK UI's menus; see `docs/client.md`, Console styles): the classic console's
 //! grid, rows, keys, selection and notify lines ([`super`]) drawn in the SJK
 //! UI's colours (`menu::sjk::color`) and type, without the `console` shader. A
-//! full-width navy panel; a header with the console's name lit gold, the
+//! full-width dark panel; a header with the console's name lit gold, the
 //! version, the date and the time; a band for the input with the kit's gold
 //! bar; key hints; a lit rail (gold fading into a holo line) along the bottom
 //! edge.
@@ -591,14 +591,14 @@ fn copied(chalk: &mut Chalk<'_, '_>, chrome: &mut Chrome, facts: &Facts<'_>, x: 
 /// faintly through, as under the SJK UI's menus.
 const PANEL: f32 = 0.97;
 
-/// The navy of the panel at `alpha`.
+/// The ground of the panel at `alpha`.
 const fn space(alpha: f32) -> [f32; 4] {
     rgba(color::SPACE, alpha)
 }
 
-/// A lighter navy for a panel's top.
+/// The lighter glass of a panel's top.
 const fn space_lit(alpha: f32) -> [f32; 4] {
-    [0.047, 0.078, 0.145, alpha]
+    rgba(color::GLASS, alpha)
 }
 
 /// Deck: the full-width panel.

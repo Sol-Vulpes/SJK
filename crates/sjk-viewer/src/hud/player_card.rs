@@ -1297,7 +1297,7 @@ impl State {
         let _ = self.list.push(DrawCommand::RoundedRect {
             rect,
             radius: 8.0 * unit,
-            color: Color::new(0.03, 0.04, 0.07, 0.82 * a),
+            color: crate::menu::sjk::color::alpha(crate::menu::sjk::color::SPACE, 0.82 * a),
         });
         let _ = self.list.push(DrawCommand::Border {
             rect,
@@ -1340,7 +1340,10 @@ impl State {
                     let _ = self.list.push(DrawCommand::RoundedRect {
                         rect: corner,
                         radius: row(4.0),
-                        color: Color::new(0.03, 0.04, 0.07, 0.9 * a),
+                        color: crate::menu::sjk::color::alpha(
+                            crate::menu::sjk::color::SPACE,
+                            0.9 * a,
+                        ),
                     });
                     let _ = self.list.push(DrawCommand::TexturedQuad {
                         rect: corner,

@@ -2,7 +2,7 @@
 //! 29/10/2026: the chat is hard to read over a bright map, even with vanilla graphics).
 //! Each drawn row gets its own band, as long as what the row shows (the sender's
 //! emblems and name on a line's first row, its text and emoji pictures) and a little
-//! more, with round ends, in the SJK UI's navy ([`crate::menu::sjk::color::SPACE`]) at
+//! more, with round ends, in the SJK UI's ground ([`crate::menu::sjk::color::SPACE`]) at
 //! the setting's opacity times the line's own: it slides in, moves and fades out with
 //! its line. Nothing else gets one: no empty space, no GIF under a line, nothing while
 //! the feed shows no line. Bands are pushed before any line's content, so a picture
@@ -118,7 +118,7 @@ mod tests {
             if [color.r, color.g, color.b] == [SPACE.r, SPACE.g, SPACE.b])
     }
 
-    /// The bands drawn: the rounded boxes in the SJK UI's navy, and their colours.
+    /// The bands drawn: the rounded boxes in the SJK UI's ground, and their colours.
     fn bands(chat: &ChatOverlay) -> Vec<(Rect, Color)> {
         chat.ui
             .draw_list()

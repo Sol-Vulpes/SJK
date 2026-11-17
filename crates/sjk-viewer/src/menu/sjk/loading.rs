@@ -356,7 +356,7 @@ struct View<'a> {
     back: &'static str,
     /// The levelshot's opacity and texture coordinates, once it is in.
     picture: Option<(f32, Rect, [[f32; 2]; 4])>,
-    /// The world is left out: the navy ground instead.
+    /// The world is left out: the UI's dark ground instead.
     ground: bool,
     /// The menu clock, for the activity mark.
     seconds: f64,
@@ -546,7 +546,7 @@ fn draw(ui: &mut MenuCanvas, viewport: [f32; 2], view: &View<'_>) {
     }
     if let Some((opacity, rect, uv)) = view.picture.filter(|(opacity, ..)| *opacity > 0.0) {
         ui.push_opacity(opacity);
-        // A picture wider than the window leaves bands: navy, not the map.
+        // A picture wider than the window leaves bands: the ground, not the map.
         if rect != window {
             push(
                 ui,

@@ -160,7 +160,7 @@ date, and choose which groups. Off by default.
   Download does that), never touches the other groups, and leaves files downloaded
   before 31/10/2026 (whose group the record does not know) for Download to clean.
 - **Telling the player.** A run that downloaded or removed something gives one
-  notification banner at the top of the screen (the achievements', in holo blue and
+  notification banner at the top of the screen (the achievements', in amber and
   without the sound): "JoF content updated", "3 files, 120 MB · from the next map". Nothing shows
   when nothing changed. A hub that says the collection is off, a host that cannot be
   reached, or a file that fails (a PK3 the running retail game holds) costs a log line
