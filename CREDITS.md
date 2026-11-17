@@ -534,7 +534,8 @@ includes:
   one along the top with their Force powers, score, the time left, who joins and leaves,
   the server, map, game type, players, ping and frame rate; the HUD and every overlay at
   an edge move inside them, and each part has a switch (`cg_statusBar`,
-  `cg_statusBarTop`);
+  `cg_statusBarTop`); since 17/11/2026 the top bar's ping is the scoreboard's measure
+  and the lagometer graphs stock's snapshot ping;
 - SJK Alpha (19/10/2026), the first collection of cards: the Mythical rarity, the
   Credits and Meme kinds, and card 1, "Bishop", honouring the author of JKR (art by
   Sol, AI-assisted: a rusted helmet portrait).

@@ -18,8 +18,9 @@
 //!   place and score (the teams' scores in a team game); in the centre the time left when
 //!   the server sets a time limit; on the right who joins and leaves ([`feed`]), the
 //!   server's name, the map, the game type, the players on the server over its slots, the
-//!   ping and the frame rate. The Force powers' levels are not shown: protocol 26 sends
-//!   only Jump's and Sense's, and the rest would be guesses.
+//!   ping (the server's measure, as the scoreboard shows it, [`ping`]) and the frame rate.
+//!   The Force powers' levels are not shown: protocol 26 sends only Jump's and Sense's,
+//!   and the rest would be guesses.
 //!
 //! Both are on by default (Sol, 16/11/2026), each offered again in the News panel's
 //! settings to review, and each part has its own switch ([`Part::cvar`], all on), so a
@@ -55,6 +56,7 @@
 
 mod feed;
 mod pieces;
+mod ping;
 mod read;
 mod times;
 
@@ -939,6 +941,8 @@ pub(crate) struct State {
     /// Who joins and leaves, and when the slots were last read.
     feed: feed::Feed,
     feed_read: Option<Instant>,
+    /// The ping the top bar shows, followed snapshot by snapshot ([`ping`]).
+    ping: ping::Ping,
     /// The bars' switches and their parts', as read at an archive revision of the
     /// console's cvars ([`ViewerConsole::archive_revision`]).
     switches: Option<(u64, [bool; 2], Parts)>,
@@ -969,6 +973,7 @@ impl Default for State {
             nudge: Nudge::default(),
             feed: feed::Feed::default(),
             feed_read: None,
+            ping: ping::Ping::default(),
             switches: None,
             parts: Parts(0),
             reserved: Reserved::NONE,
@@ -1025,6 +1030,36 @@ impl State {
     pub(crate) fn forget_layout(&mut self) {
         self.bottom.laid = None;
         self.top.laid = None;
+    }
+
+    /// A snapshot that shows our own commands run (not a followed player's, not the
+    /// intermission's) came at `now` with the stock ping `ping`
+    /// ([`sjk_client::ClientSession::snapshot_ping`]), for the top bar's ping ([`ping`]).
+    pub(crate) fn observe_snapshot_ping(&mut self, ping: i32, now: Instant) {
+        self.ping.snapshot(ping, now);
+    }
+
+    /// Note a `scores` reply newer than the last seen, with our own row's ping, for the top
+    /// bar's ping ([`ping`]): a revision compared each frame, the rows read only when it
+    /// changes.
+    pub(crate) fn observe_scores(&mut self, session: &sjk_client::ClientSession, now: Instant) {
+        let own = session.game_state().client_num;
+        self.ping.scores(
+            session.scores_revision(),
+            || {
+                session
+                    .scores()
+                    .iter()
+                    .find(|row| i32::from(row.client_num) == own)
+                    .map(|row| row.ping)
+            },
+            now,
+        );
+    }
+
+    /// Forget the ping followed: another session or time line.
+    pub(crate) fn forget_ping(&mut self) {
+        self.ping.clear();
     }
 
     /// Whether what the bars show is due to be read again at `now`.

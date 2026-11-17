@@ -123,6 +123,7 @@ pub mod selection;
 mod server_address;
 mod server_clock;
 mod session_transition;
+pub mod snapshot_ping;
 mod sound_events;
 mod taystjk_cosmetics;
 mod team_commands;
@@ -301,6 +302,7 @@ pub use server_address::{LegacyAddressError, LegacyServerAddress};
 pub use server_clock::ServerClock;
 pub use session_transition::{SessionTransition, SessionTransitionKind};
 pub use siege_result::siege_round_winner;
+pub use snapshot_ping::NO_MATCH_PING;
 pub use sound_events::{
     LegacyMusicAction, LegacySaberView, LegacySoundAdapter, LegacySoundDecision, LegacySoundEvent,
     LegacySoundLedger, RegisteredLegacySound, SABER_SOUND_CLIENTS, SaberSoundSet, TOGGLE_REACH,
@@ -442,6 +444,10 @@ pub struct ClientSession {
     command_pacer: reliable_pacing::ReliableCommandPacer,
     sent_commands: sent_commands::SentCommands,
     demo_recorder: DemoRecorder,
+    /// The move packets sent, for each snapshot's stock ping ([`snapshot_ping`]).
+    sent_packets: snapshot_ping::SentPackets,
+    /// The latest snapshot's ping ([`ClientSession::snapshot_ping`]).
+    snapshot_ping: Option<i32>,
 }
 
 /// Observable milestones and diagnostic replies during protocol-26 bootstrap.
@@ -676,6 +682,15 @@ impl ClientSession {
         &self.scores
     }
 
+    /// The latest snapshot's ping as stock gives it (`cl.snap.ping`, see
+    /// [`snapshot_ping`]): from the newest move packet whose commands the snapshot shows
+    /// the server ran to the snapshot's reading, in milliseconds; [`NO_MATCH_PING`] when
+    /// it shows none of the packets kept run. `None` in a local game (no network) and
+    /// until a stamped command has been sent on this map.
+    pub fn snapshot_ping(&self) -> Option<i32> {
+        self.snapshot_ping
+    }
+
     /// Grows (wrapping) with every `scores` command applied, so a reader can tell
     /// rows that arrived after a moment it noted from older ones.
     pub fn scores_revision(&self) -> u32 {
@@ -752,13 +767,14 @@ impl ClientSession {
             .map(|(sequence, command)| (*sequence, command.as_slice()))
             .collect::<Vec<_>>();
         let batch = self.command_history.take_packet();
+        let newest_stamp = batch.last().expect("nonempty command batch").server_time;
         self.gamestate_probe.sample(
             Instant::now(),
             gamestate_probe::MovePacketHead {
                 server_id: self.server_id,
                 message_acknowledge: self.latest_snapshot.message_sequence,
                 server_command_sequence: self.reliable_sequence,
-                command_stamp: batch.last().expect("nonempty command batch").server_time,
+                command_stamp: newest_stamp,
                 snapshot_time: self.latest_snapshot.server_time,
                 command_time: self.latest_snapshot.player.command_time(),
                 highest_server_command: self.highest_server_command,
@@ -778,6 +794,8 @@ impl ClientSession {
                 &pending,
                 batch,
             )?;
+        // `CL_WritePacket`'s `p_realtime` and `p_serverTime`.
+        self.sent_packets.sent(newest_stamp, Instant::now());
         Ok(())
     }
 
@@ -907,6 +925,7 @@ impl ClientSession {
     /// Receive the next snapshot; zero timeout drains only immediately queued network data.
     pub fn receive_snapshot(&mut self, timeout: Duration) -> Result<&Snapshot, ClientError> {
         if let Some(local) = &mut self.local {
+            self.snapshot_ping = None;
             return if local.receive(
                 &mut self.game_state,
                 &mut self.latest_snapshot,
@@ -1036,6 +1055,8 @@ impl ClientSession {
                     self.base_command_events.clear();
                     self.history.clear();
                     self.command_history.begin_gamestate();
+                    self.sent_packets.clear();
+                    self.snapshot_ping = None;
                     self.request_full_snapshot = true;
                     self.transitions.push_back(SessionTransition {
                         kind: if old_map == new_map {
@@ -1117,6 +1138,10 @@ impl ClientSession {
                 self.reliable_sequence = command.sequence;
             }
             let previous = std::mem::replace(&mut self.latest_snapshot, snapshot);
+            // `CL_ParseSnapshot`'s ping, timed as the snapshot is read.
+            self.snapshot_ping = self
+                .sent_packets
+                .ping(self.latest_snapshot.player.command_time(), Instant::now());
             self.command_history.received_gamestate_snapshot();
             self.gamestate_probe.snapshot(
                 Instant::now(),

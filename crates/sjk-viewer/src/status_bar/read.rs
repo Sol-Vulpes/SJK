@@ -45,7 +45,7 @@ impl crate::GpuState {
         };
         inputs.clock = clock;
         inputs.date = date;
-        let mut top = self.status_bar_top_inputs();
+        let mut top = self.status_bar_top_inputs(now);
         top.feed = self.status_bar.top_inputs.feed;
         let state = &mut self.status_bar;
         state.inputs = inputs;
@@ -228,10 +228,10 @@ impl crate::GpuState {
         weapons
     }
 
-    /// What the top bar shows now (the feed apart): the Force known, the player's
+    /// What the top bar shows at `now` (the feed apart): the Force known, the player's
     /// standing, the time left, the server's name, map, game type and players, the ping
     /// and the frame rate.
-    fn status_bar_top_inputs(&self) -> TopInputs {
+    fn status_bar_top_inputs(&self, now: Instant) -> TopInputs {
         let mut top = TopInputs {
             fps: self.frame_pacer.fps(),
             ..TopInputs::default()
@@ -306,8 +306,11 @@ impl crate::GpuState {
         if slots > 0 {
             top.players = Some((count as u8, u16::try_from(slots).unwrap_or(u16::MAX)));
         }
-        let ping = self.lagometer.snapshot_newest(0).ping;
-        top.ping = u16::try_from(ping).ok().filter(|ping| *ping < 1_000);
+        // The server's measure, as the scoreboard shows it ([`super::ping`]); none in a
+        // local game, which has no network.
+        if !session.is_local() {
+            top.ping = self.status_bar.ping.shown(now);
+        }
         top
     }
 }

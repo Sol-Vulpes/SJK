@@ -1,3 +1,22 @@
+## Top bar ping and the lagometer's snapshot ping (17/11/2026)
+
+17/11/2026, `personal/bar-ping` from `main` `d35a06d94` (Sol: the scoreboard said about
+10 ms, the top bar about 50). Cause: the bar read the lagometer's newest sample, which was
+`serverTime - ps.commandTime`, how far our commands trail the server's clock (about one
+server frame plus the way up), not a round trip. Implemented: `sjk_client::snapshot_ping`
+keeps the last 256 move packets (send time, newest command's stamp) in a ring allocated
+once, and `ClientSession::snapshot_ping` gives each snapshot stock's `cl.snap.ping`
+(`CL_ParseSnapshot`), which the lagometer and the chat's `%P%` now take; a demo and a local
+game have none. The top bar (`status_bar/ping.rs`) shows our own row's ping from a `scores`
+reply for 5 s, otherwise the average of the last 32 own snapshots' stock ping, the window
+`SV_CalcPings` averages, since both measures add a round trip, up to a packet interval and
+up to a frame; no `score` request is added (JoF caps client commands). Verified: unit tests
+of the ring (the walk, 999, wrap, unstamped packets and none), the bar's average, the 999
+filter, the scores' freshness and the empty case; fmt, build, Clippy on the files touched
+and the workspace tests. Not verified: nothing was run against a server (no client
+launched), so the bar's number has not been compared with the scoreboard in game; a server
+without `sv_pingFix` times its pings by its frame clock, which the bar cannot reproduce.
+
 ## Notification banners; the holocron pop-up removed (16/11/2026)
 
 16/11/2026, `personal/banners` from `main` `1745f6ca8` (Sol: "remove the big notification of

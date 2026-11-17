@@ -24,6 +24,19 @@
 
 # ---- Console & chat ----
 
+[bar-ping]
+area: HUD
+title: Top bar ping matches the scoreboard; the lagometer graphs stock's snapshot ping
+change: Top bar ping: your scoreboard row's for 5 s after a scores reply, else the average of 32.
+change: The 32 are stock's snapshot pings: move packet sent to the snapshot that shows it run.
+change: Lagometer, its cg_lagometer 2 average and chat %P% use that ping, not the 50 ms lag.
+test: On a remote server: the top bar's ping is near your scoreboard row's (Tab), not ~50.
+test: Hold Tab a few seconds, release: the bar keeps about the same number after 5 s.
+test: cg_lagometer 2: green ping columns low, the average above the graph near the bar's.
+test: Spectate and follow a player: the bar keeps the ping it had; a local game shows none.
+test: Play a demo with cg_lagometer 1: no ping columns, red only for a dropped snapshot.
+note: The bar asks for no scores: it reads the replies the scoreboard or intermission ask for.
+
 [new-emblem]
 area: Menus & settings
 title: New emblem: the steel SJK monogram before a burning sun, in menus, icons and chat
