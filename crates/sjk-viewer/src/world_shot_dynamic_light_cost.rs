@@ -32,7 +32,7 @@ fn size() -> [u32; 2] {
 
 /// Render `frames` frames back to back and return each section's median milliseconds in
 /// frame order, then the whole frame's (`total`), over the sampled frames.
-fn section_medians(gpu: &mut GpuState, frames: usize) -> Vec<(&'static str, f32)> {
+pub(super) fn section_medians(gpu: &mut GpuState, frames: usize) -> Vec<(&'static str, f32)> {
     let mut sections: Vec<(&'static str, Vec<f32>)> = Vec::new();
     let mut total = Vec::new();
     for _ in 0..frames {

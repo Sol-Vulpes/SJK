@@ -4,6 +4,7 @@
 //! deterministic animation and renderer-neutral draw commands. Platform and
 //! GPU integration deliberately remain with the consuming application.
 
+pub mod acrylic;
 mod animation;
 mod arc;
 mod aura;

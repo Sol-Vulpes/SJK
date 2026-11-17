@@ -1125,7 +1125,9 @@ impl GpuState {
         let present_mode = context.present_mode(vsync);
         let screenshot_setup = screenshot::setup(&context, console.as_ref(), &game_data);
         let configuration = wgpu::SurfaceConfiguration {
-            usage: screenshot_setup.surface_usage,
+            // Shaders read the frame for the acrylic backdrops' blur, where allowed.
+            usage: screenshot_setup.surface_usage
+                | ui_renderer::backdrop::surface_usage(context.surface_usages),
             format,
             color_space: wgpu::SurfaceColorSpace::Auto,
             width: size.width.max(1),
@@ -2945,6 +2947,12 @@ impl GpuState {
             timings_shown.then(|| self.frame_timings.draw_list()),
             hud_edit_shown.then(|| self.hud_edit.draw_list()),
         ];
+        let backdrop = self.hud_target_sampleable();
+        self.ui_shapes.prepare_backdrop(
+            &self.device,
+            [self.configuration.width, self.configuration.height],
+            backdrop,
+        );
         self.ui_shapes
             .prepare_layers(&self.queue, layers.into_iter().flatten(), viewport);
         // Wide glyphs this frame asked for first draw next frame.

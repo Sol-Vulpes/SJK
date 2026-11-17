@@ -151,6 +151,17 @@ pub enum DrawCommand {
     /// renderer ([`crate::card_shine_shade`]) and cut to the card's rounded corners
     /// itself. A clip cuts it like any rectangle, keeping its pattern in place.
     CardShine { rect: Rect, shine: crate::CardShine },
+    /// Acrylic glass over `rect`, its corners rounded by `radius`: what the frame holds
+    /// behind it under the 2D layer (the world and its effects), blurred, its brightness
+    /// held under a ceiling, `tint` over it at the tint's alpha, a faint grain and a light
+    /// top edge ([`crate::acrylic`]). It covers what the 2D layer drew under it, as frosted
+    /// glass covers what stands behind. Where the renderer cannot blur, it draws `tint`
+    /// alone, opaquer ([`crate::acrylic::fallback`]).
+    Backdrop {
+        rect: Rect,
+        radius: f32,
+        tint: Color,
+    },
     /// Straight stroke from `from` to `to` with square ends, anti-aliased along its
     /// sides by the renderer. `width` is the stroke thickness in pixels.
     Line {
@@ -210,6 +221,7 @@ impl DrawCommand {
             | Self::TexturedQuad { rect, .. }
             | Self::TexturedQuadUv { rect, .. }
             | Self::CardShine { rect, .. }
+            | Self::Backdrop { rect, .. }
             | Self::PushClip(rect)
             | Self::PushRoundedClip { rect, .. } => *rect = rect.translated(dx, dy),
             Self::TexturedQuadTurned { rect, pivot, .. } => {
@@ -249,7 +261,8 @@ impl DrawCommand {
             | Self::TexturedQuad { rect, .. }
             | Self::TexturedQuadUv { rect, .. }
             | Self::TexturedQuadTurned { rect, .. }
-            | Self::CardShine { rect, .. } => Some(rect),
+            | Self::CardShine { rect, .. }
+            | Self::Backdrop { rect, .. } => Some(rect),
             Self::Arc {
                 center,
                 radius,

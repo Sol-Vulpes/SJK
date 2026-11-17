@@ -5,6 +5,7 @@ use bytemuck::{Pod, Zeroable};
 use sjk_ui::{Color, DrawCommand, DrawList, FontWeight, Rect, TextAlign, TextId};
 
 pub(crate) mod art;
+pub(crate) mod backdrop;
 mod card_art;
 pub(crate) mod duel_badge;
 mod emblem;
@@ -241,6 +242,9 @@ const SHINE_MODE: f32 = 6.0;
 /// `parameters.y` value that selects the convex polygon shader path (`ui_shapes.wgsl`).
 const POLYGON_MODE: f32 = 7.0;
 
+/// `parameters.y` value that selects the acrylic backdrop shader path (`ui_shapes.wgsl`).
+const BACKDROP_MODE: f32 = 8.0;
+
 #[repr(C)]
 #[derive(Clone, Copy, Pod, Zeroable)]
 pub(super) struct ShapeVertex {
@@ -310,6 +314,14 @@ pub(crate) fn texture_switches(lists: &[&DrawList]) -> usize {
             DrawCommand::TexturedQuad { texture, .. }
             | DrawCommand::TexturedQuadUv { texture, .. }
             | DrawCommand::TexturedQuadTurned { texture, .. } => *texture,
+            // Acrylic samples the blurred frame.
+            DrawCommand::Backdrop { .. } => {
+                if runs.len() < art::MAX_RUNS {
+                    art::switch(&mut runs, vertices, Source::Backdrop);
+                }
+                vertices += 6;
+                continue;
+            }
             // A shape after the emblem's light goes back to alpha blending.
             _ => {
                 art::untextured(&mut runs, vertices);
@@ -412,6 +424,8 @@ pub(crate) struct ShapeRenderer {
     map_edit: MapEditPictures,
     /// The feats' medal pictures, once one is uploaded.
     feats: FeatPictures,
+    /// The frame blurred under acrylic backdrops ([`DrawCommand::Backdrop`]).
+    backdrop: backdrop::BackdropBlur,
     preview_sampler: wgpu::Sampler,
     /// Whether a frame past the vertex or run storage has been logged: shapes
     /// past it are dropped, so the log names the cause of a missing picture.
@@ -498,6 +512,7 @@ impl ShapeRenderer {
             mapped_at_creation: false,
         });
         let icons = IconAtlas::new(device, &texture_layout);
+        let backdrop = backdrop::BackdropBlur::new(device, &texture_layout);
         let levelshot = LevelshotTexture::new(device, &texture_layout);
         let hud_preview = LevelshotTexture::new(device, &texture_layout);
         let news = (0..NEWS_IMAGE_SLOTS)
@@ -624,6 +639,7 @@ impl ShapeRenderer {
             blade_stills: None,
             map_edit: MapEditPictures::default(),
             feats: FeatPictures::default(),
+            backdrop,
             preview_sampler: device.create_sampler(&wgpu::SamplerDescriptor {
                 label: Some("SJK model preview sampler"),
                 mag_filter: wgpu::FilterMode::Linear,
@@ -715,6 +731,7 @@ impl ShapeRenderer {
             source: Source::Atlas,
         });
         self.art.begin_frame();
+        self.backdrop.begin_frame();
         let now = crate::menu::art::motion::seconds();
         let mut opacity = [1.0_f32; 8];
         let mut opacity_depth = 0_usize;
@@ -882,7 +899,8 @@ impl ShapeRenderer {
                         | Source::News(_)
                         | Source::MapEditPreview
                         | Source::Preview
-                        | Source::BladePictures => ([0.0, 0.0], [1.0, 1.0]),
+                        | Source::BladePictures
+                        | Source::Backdrop => ([0.0, 0.0], [1.0, 1.0]),
                         Source::BladeStills => blade_still_range(texture),
                         Source::MapEditCells => map_edit_pictures::uv_range(
                             map_edit_pictures::cell_of(texture).unwrap_or_default(),
@@ -960,7 +978,8 @@ impl ShapeRenderer {
                         | Source::HudPreview
                         | Source::News(_)
                         | Source::MapEditPreview
-                        | Source::Preview => uv,
+                        | Source::Preview
+                        | Source::Backdrop => uv,
                         Source::MapEditCells | Source::FeatCells => {
                             let (low, high) = match source {
                                 Source::FeatCells => feat_pictures::uv_range(
@@ -1075,6 +1094,36 @@ impl ShapeRenderer {
                         opacity[opacity_depth],
                         viewport,
                     );
+                }
+                DrawCommand::Backdrop { rect, radius, tint } => {
+                    let shown = clipped(rect, clips[clip_depth]);
+                    if self.backdrop.ready() {
+                        // A transformed backdrop lands elsewhere: blur all the frame.
+                        self.backdrop.add(if transforms[transform_depth].is_some() {
+                            Rect::new(0.0, 0.0, viewport[0], viewport[1])
+                        } else {
+                            shown
+                        });
+                        self.push_backdrop(
+                            rect,
+                            shown,
+                            radius,
+                            tint,
+                            opacity[opacity_depth],
+                            viewport,
+                        );
+                    } else {
+                        let plain = sjk_ui::acrylic::fallback(tint);
+                        self.push_rect(
+                            shown,
+                            plain,
+                            plain,
+                            radius,
+                            false,
+                            opacity[opacity_depth],
+                            viewport,
+                        );
+                    }
                 }
                 DrawCommand::Line {
                     from,
@@ -1281,6 +1330,7 @@ impl ShapeRenderer {
                 Source::MapEditCells => self.map_edit.grid_group(),
                 Source::FeatCells => self.feats.group(),
                 Source::MapEditPreview => self.map_edit.preview_group(),
+                Source::Backdrop => self.backdrop.result(),
                 Source::Atlas => None,
             };
             pass.set_bind_group(0, group.unwrap_or(self.icons.bind_group()), &[]);
@@ -1616,6 +1666,77 @@ impl ShapeRenderer {
                 parameters: [shine.alpha * opacity, SHINE_MODE],
                 uv: [shown.x - rect.x, shown.y - rect.y],
             }));
+    }
+
+    /// One quad over `shown` (the part of the backdrop at `rect` left by the clip);
+    /// `ui_shapes.wgsl` shades it as acrylic from the blurred frame ([`sjk_ui::acrylic`]):
+    /// `local` the pixel's place from the backdrop's top-left, `uv` its place on the screen.
+    fn push_backdrop(
+        &mut self,
+        rect: Rect,
+        shown: Rect,
+        radius: f32,
+        tint: Color,
+        opacity: f32,
+        viewport: [f32; 2],
+    ) {
+        if shown.width <= 0.0
+            || shown.height <= 0.0
+            || opacity <= 0.0
+            || self.vertices.len() + 6 > MAX_SHAPE_VERTICES
+            || !art::switch(&mut self.runs, self.vertices.len(), Source::Backdrop)
+        {
+            return;
+        }
+        let radius = radius.clamp(0.0, rect.width.min(rect.height) * 0.5);
+        let corners = [
+            [shown.x, shown.y],
+            [shown.right(), shown.y],
+            [shown.right(), shown.bottom()],
+            [shown.x, shown.y],
+            [shown.right(), shown.bottom()],
+            [shown.x, shown.bottom()],
+        ];
+        self.vertices.extend(corners.map(|[x, y]| ShapeVertex {
+            position: [x / viewport[0] * 2.0 - 1.0, 1.0 - y / viewport[1] * 2.0],
+            local: [x - rect.x, y - rect.y],
+            size: [rect.width, rect.height],
+            start_color: [tint.r, tint.g, tint.b, tint.a],
+            end_color: [radius, 0.0, 0.0, 0.0],
+            parameters: [opacity, BACKDROP_MODE],
+            uv: [x / viewport[0], y / viewport[1]],
+        }));
+    }
+
+    /// Before the frame's shapes are laid out: whether the image the 2D layer draws into
+    /// can be sampled this frame (`available`), and its `size` (the window's), for the
+    /// acrylic backdrops' blur ([`backdrop`]).
+    pub(crate) fn prepare_backdrop(
+        &mut self,
+        device: &wgpu::Device,
+        size: [u32; 2],
+        available: bool,
+    ) {
+        self.backdrop
+            .prepare(device, &self.texture_layout, size, available);
+    }
+
+    /// Whether this frame's shapes draw an acrylic backdrop, which
+    /// [`Self::encode_backdrop`] then blurs the frame for.
+    pub(crate) fn backdrop_used(&self) -> bool {
+        self.backdrop.used()
+    }
+
+    /// Blur `source`, the image the 2D layer is about to draw into, round this frame's
+    /// acrylic backdrops; before the 2D layer's pass, and nothing without a backdrop.
+    pub(crate) fn encode_backdrop(
+        &self,
+        device: &wgpu::Device,
+        encoder: &mut wgpu::CommandEncoder,
+        source: &wgpu::TextureView,
+    ) {
+        self.backdrop
+            .encode(device, &self.texture_layout, encoder, source);
     }
 
     fn push_shape(
@@ -2231,6 +2352,35 @@ mod line_clip_tests {
 
 #[cfg(test)]
 mod shape_shader_tests {
+    #[test]
+    fn the_acrylic_ceiling_matches_its_reference() {
+        let source = include_str!("ui_shapes.wgsl");
+        let line = source
+            .lines()
+            .find(|line| line.starts_with("const ACRYLIC_CEILING: f32 = "))
+            .expect("the acrylic ceiling in ui_shapes.wgsl");
+        let value: f32 = line
+            .trim_start_matches("const ACRYLIC_CEILING: f32 = ")
+            .trim_end_matches(';')
+            .parse()
+            .expect("a number");
+        assert_eq!(value, sjk_ui::acrylic::LUMA_CEILING);
+    }
+
+    #[test]
+    fn the_backdrop_shader_validates() {
+        use wgpu::naga;
+        let source = include_str!("ui_backdrop.wgsl");
+        let module = naga::front::wgsl::parse_str(source)
+            .unwrap_or_else(|error| panic!("{}", error.emit_to_string(source)));
+        naga::valid::Validator::new(
+            naga::valid::ValidationFlags::all(),
+            naga::valid::Capabilities::all(),
+        )
+        .validate(&module)
+        .unwrap_or_else(|error| panic!("{}", error.emit_to_string(source)));
+    }
+
     #[test]
     fn the_shape_shader_validates() {
         use wgpu::naga;
