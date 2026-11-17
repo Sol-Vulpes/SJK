@@ -165,6 +165,7 @@ impl crate::GpuState {
         self.world_load_map.clear();
         self.net_timing.end_session();
         self.server_view.end();
+        self.status_bar.forget_ping();
         self.portal.aim(None, None);
         self.join_task = None;
         self.world_load_task = None;

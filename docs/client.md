@@ -3673,7 +3673,7 @@ Write each token as a separate word; matching ignores case. For example,
 | `%F%` | Force reserve |
 | `%W%` | Current weapon's EJK display name |
 | `%A%` | Current weapon's ammo pool, including its negative sentinel |
-| `%P%` | SJK lagometer's latest snapshot latency estimate in milliseconds |
+| `%P%` | The latest snapshot's ping in milliseconds, stock's `cl.snap.ping` as EJK's `CG_Say_f` writes it (the lagometer's, [Lagometer](#lagometer)); 0 in a demo or a local game |
 | `%U%` | Horizontal speed in units per second, rounded to an integer |
 | `%UKM%` | Horizontal speed using EJK's km/h conversion, one decimal |
 | `%UM%` | Horizontal speed using EJK's mph conversion, one decimal |
@@ -3890,8 +3890,25 @@ The top bar carries the match:
 | Map | `cg_statusBarTopMap` | right | The map's name without `mp/` |
 | Game type | `cg_statusBarTopMode` | right | A pill: FFA, Duel, Power Duel, Team FFA, Siege, CTF, CTY... |
 | Players | `cg_statusBarTopPlayers` | right | A person's mark, the players on the server (the filled player slots, bots and spectators included) and its slots (`sv_maxclients`) |
-| Ping | `cg_statusBarTopPing` | right | The ping in milliseconds, green under 80, gold under 150, ember beyond |
+| Ping | `cg_statusBarTopPing` | right | The ping in milliseconds as the server measures it, the scoreboard's number (below), green under 80, gold under 150, ember beyond; none in a local game |
 | Frame rate | `cg_statusBarTopFps` | right | The frames per second the client measures (the `cg_drawFps` rate) |
+
+The ping is the one players compare, the scoreboard's: the server times each snapshot from
+its leaving to the arrival of the packet that acknowledges it and averages the last 32
+(`SV_CalcPings`). Our own row's ping from a `scores` reply is shown for 5 seconds after it
+came; replies come only while the scoreboard is held (a request every 2 seconds) or at an
+intermission, and the bar asks for none, as servers count client commands (JoF's cap them).
+Between replies it shows the average of the last 32 snapshots' stock ping (the lagometer's,
+[below](#lagometer)), counting only snapshots that show our own commands run (not a
+followed player's, not the intermission's) and leaving out stock's 999 for "no packet
+reached". That ping has the server measure's parts the other way round (a round trip, a wait
+of up to a packet interval at one end and up to a frame at the other), so the averages agree
+where single samples wander by a packet interval and a frame. With neither new, the newer
+value stays: spectating a player keeps the ping measured before. Until 17/11/2026 the bar
+showed `serverTime - ps.commandTime`, how far our commands trail the server's clock, which
+sits near 50 ms on JoF however good the connection (Sol saw 50 where the scoreboard said
+10). See [status_bar/ping.rs](../crates/sjk-viewer/src/status_bar/ping.rs). Not compared
+with the scoreboard in game yet.
 
 The joins and leaves come from the players' config strings, not the servers' print lines
 (whose words differ from mod to mod): a slot that fills is a join, one that empties a
@@ -4016,8 +4033,14 @@ where JoF keeps them when the vehicle has no HUD menu of its own.
 network graph: frame interpolation in its top third (yellow above the middle line
 while the view runs ahead of the latest snapshot, blue below while it interpolates)
 and snapshot latency at its bottom (green, yellow when the server held a snapshot
-back for rate, red for a dropped one). It takes JoF EJK's values (`cg_draw.c`,
-`CG_DrawLagometer` and `CG_DrawSpeedGraph`):
+back for rate, red for a dropped one). The latency is stock's snapshot ping,
+`cl.snap.ping` (`CL_ParseSnapshot`): from the newest move packet whose commands the
+snapshot shows the server ran to the snapshot's reading, 999 when it shows none of the
+packets kept run; a demo, a local game and a map's first snapshots have none and leave the
+column empty ([snapshot_ping.rs](../crates/sjk-client/src/snapshot_ping.rs),
+[networking.md](networking.md#user-commands-and-move-packets)). Until 17/11/2026 it was
+`serverTime - ps.commandTime`, about one server frame whatever the network did. It takes
+JoF EJK's values (`cg_draw.c`, `CG_DrawLagometer` and `CG_DrawSpeedGraph`):
 
 - `1` (**Graph**): the graph on its backdrop, as SJK always drew it; an old config's
   `cg_lagometer 1` looks the same;
