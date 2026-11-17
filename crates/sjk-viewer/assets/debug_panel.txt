@@ -4336,6 +4336,14 @@ test: Menu and Force icons look as before, edges not cut.
 
 # ---- Rendering & effects ----
 
+[load-marks-saber]
+area: Rendering & effects
+title: Map load logs three more steps after the effect atlas
+change: New lines: world load phase particle-pipelines, saber-renderer, dust-weather.
+test: Load any map, open logs/last-client.log: the three lines sit between effect-atlas
+test: and pipelines-ui.
+note: For a GTX 1650 on DX12 that dies silently right after effect-atlas.
+
 [big-glow-model-hitch]
 area: Rendering & effects
 title: No freeze when a player in a model with big glowing textures joins
