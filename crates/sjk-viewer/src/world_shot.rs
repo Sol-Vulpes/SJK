@@ -19,6 +19,8 @@ pub(crate) fn on_big_stack(shots: impl FnOnce() + Send + 'static) {
 }
 
 thread_local! {
+    /// Draw acrylic backdrops as their plain tint, to time the blur against it.
+    pub(crate) static BACKDROP_OFF: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
     /// Keep `GpuState::movers` from frame to frame without a snapshot.
     pub(crate) static MOVERS_PINNED: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
 }
@@ -133,7 +135,10 @@ pub(crate) fn attach_target(gpu: &mut GpuState, size: [u32; 2]) {
         sample_count: 1,
         dimension: wgpu::TextureDimension::D2,
         format,
-        usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::COPY_SRC,
+        // Read by the acrylic backdrops' blur, as a Vulkan swapchain image is.
+        usage: wgpu::TextureUsages::RENDER_ATTACHMENT
+            | wgpu::TextureUsages::COPY_SRC
+            | wgpu::TextureUsages::TEXTURE_BINDING,
         view_formats: &ui_target::surface_view_formats(format, gpu.context.ui_direct),
     }));
 }
@@ -2344,7 +2349,7 @@ like this one.",
                 println!("{}", shoot(&mut gpu, 4, name).display());
             }
             // A server's change of map, its world (not the menu's) behind:
-            // the navy ground instead, until the new map is named.
+            // the UI's ground instead, until the new map is named.
             gpu.is_menu_world = false;
             if let Some(menu) = gpu.client_menu.as_mut() {
                 menu.loading_for_shot(Stage::Loading, true, None, true, None);

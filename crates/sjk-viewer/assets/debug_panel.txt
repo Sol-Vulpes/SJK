@@ -37,6 +37,19 @@ test: Spectate and follow a player: the bar keeps the ping it had; a local game 
 test: Play a demo with cg_lagometer 1: no ping columns, red only for a dropped snapshot.
 note: The bar asks for no scores: it reads the replies the scoreboard or intermission ask for.
 
+[sun-theme]
+area: Menus & settings
+title: Sun theme: warm colours and acrylic glass over the game
+change: The SJK UI's navy and holo blue are now ember brown, amber lines and sun gold.
+change: Status bars, banners, pop-up and hover cards and the scoreboard band are acrylic glass.
+change: The game shows through them blurred; the status bars are the clearest.
+test: Main menu, Settings, Collection: warm colours everywhere, text easy to read.
+test: Join a match: both status bars show the map blurred behind them; text stays readable.
+test: Look at a bright sky or snow (siege_hoth): bar and banner text still reads well.
+test: debug_holocron rare: the banner is frosted glass; Tab: the scoreboard column too.
+test: r_drawTimings 1: the ui-backdrop line stays small (about 0.1 ms or less).
+note: On DirectX 12 the glass is a plain warm tint (no blur): the swapchain cannot be read.
+
 [new-emblem]
 area: Menus & settings
 title: New emblem: the steel SJK monogram before a burning sun, in menus, icons and chat

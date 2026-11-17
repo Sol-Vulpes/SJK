@@ -134,7 +134,7 @@ impl ChatOverlay {
         let _ = list.push(DrawCommand::RoundedRect {
             rect: card,
             radius: 0.55 * u,
-            color: Color::new(0.03, 0.05, 0.09, 1.0),
+            color: crate::menu::sjk::color::GLASS,
         });
         let _ = list.push(DrawCommand::RoundedRect {
             rect: Rect::new(x + 0.7 * u, y, size[0] - 1.4 * u, 0.17 * u),

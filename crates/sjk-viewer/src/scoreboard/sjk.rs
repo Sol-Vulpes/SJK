@@ -117,7 +117,7 @@ const CARD_OFFSET: f32 = 64.0;
 /// Where the signal bars start before the ping's right edge: their 25 pixels,
 /// a gap, then room for three digits.
 const BARS_BEFORE_PING: f32 = 76.0;
-/// How much of the UI's navy lies over the game behind the columns, over
+/// How much of the UI's ground lies over the game beside the columns, over
 /// the general dim.
 const BOARD_DIM: f32 = 0.5;
 /// A team's colour, muted: only its thin rule and its name wear it.
@@ -646,12 +646,20 @@ pub(super) fn build(
 }
 
 /// The game a little darker everywhere, deeper behind the header and the
-/// columns: fades of the UI's navy, no panel. The full board's columns are
-/// dimmed from the chat column's edge to the window's; a compact board's
-/// (`span`) about the board, fading out on both sides.
+/// columns: fades of the UI's ground, no panel. The columns stand on a band of
+/// acrylic glass (the game blurred behind it, [`color::acrylic::PANEL`]): the full
+/// board's from the chat column's edge to the window's; a compact board's (`span`)
+/// about the board, the darkness fading out on both sides of it.
 fn dim(ui: &mut MenuCanvas, frame: &Frame, viewport: [f32; 2], span: Option<[f32; 2]>) {
     let [width, height] = viewport;
     let navy = |alpha| color::alpha(color::SPACE, alpha);
+    let glass = |ui: &mut MenuCanvas, rect: Rect| {
+        let _ = ui.draw_list_mut().push(DrawCommand::Backdrop {
+            rect,
+            radius: 0.0,
+            tint: color::tint(color::acrylic::PANEL),
+        });
+    };
     ui.accent_bar(Rect::new(0.0, 0.0, width, height), navy(0.32));
     let header = frame.point(0.0, 230.0)[1];
     fade(ui, Rect::new(0.0, 0.0, width, header), navy(0.6), navy(0.0));
@@ -667,7 +675,7 @@ fn dim(ui: &mut MenuCanvas, frame: &Frame, viewport: [f32; 2], span: Option<[f32
     if right.is_finite() {
         let [end, _] = frame.point(right + 30.0, 0.0);
         let [stop, _] = frame.point(right + 170.0, 0.0);
-        ui.accent_bar(Rect::new(full, 0.0, end - full, height), navy(BOARD_DIM));
+        glass(ui, Rect::new(full, 0.0, end - full, height));
         fade_across(
             ui,
             Rect::new(end, 0.0, stop - end, height),
@@ -675,7 +683,7 @@ fn dim(ui: &mut MenuCanvas, frame: &Frame, viewport: [f32; 2], span: Option<[f32
             navy(0.0),
         );
     } else {
-        ui.accent_bar(Rect::new(full, 0.0, width - full, height), navy(BOARD_DIM));
+        glass(ui, Rect::new(full, 0.0, width - full, height));
     }
 }
 

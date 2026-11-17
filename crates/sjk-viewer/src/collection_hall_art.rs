@@ -865,7 +865,7 @@ impl Panel {
                 let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
                     rect: frame.rect(left, top, card_w, card_h),
                     radius: 8.0 * s,
-                    color: Color::new(0.05, 0.08, 0.15, 0.95),
+                    color: color::alpha(color::GLASS, 0.95),
                 });
                 let _ = self.ui.draw_list_mut().push(DrawCommand::Border {
                     rect: frame.rect(left, top, card_w, card_h),
@@ -922,7 +922,7 @@ impl Panel {
                     let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
                         rect,
                         radius: 6.0 * s,
-                        color: Color::new(0.05, 0.08, 0.15, 0.95),
+                        color: color::alpha(color::GLASS, 0.95),
                     });
                     let art_h = card_w / crate::cards::faces::ART_ASPECT;
                     let _ = self.ui.draw_list_mut().push(DrawCommand::TexturedQuad {

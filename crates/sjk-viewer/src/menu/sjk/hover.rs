@@ -181,10 +181,11 @@ pub(crate) fn place(anchor: [f32; 4], size: [f32; 2]) -> [f32; 2] {
     [x, y]
 }
 
-/// The card's fill.
-const FILL: Color = Color::new(0.04, 0.06, 0.12, 0.97);
-/// A note's fill: darker than a hover card's, for reading a while (10/11/2026).
-const NOTE_FILL: Color = Color::new(0.015, 0.022, 0.05, 0.99);
+/// The card's glass: acrylic, the glass's tint over the blurred game
+/// ([`color::acrylic::CARD`]).
+const FILL: Color = color::alpha(color::GLASS, color::acrylic::CARD);
+/// A note's glass: darker than a hover card's, for reading a while (10/11/2026).
+const NOTE_FILL: Color = color::alpha(color::SPACE, 0.9);
 
 /// Draw `card` beside `anchor` (window pixels, the thing's pointer area), faded in to
 /// `alpha`.
@@ -247,10 +248,10 @@ fn draw_filled(
     );
     push(
         canvas,
-        DrawCommand::RoundedRect {
+        DrawCommand::Backdrop {
             rect: frame.rect(x, y, size[0], size[1]),
             radius: 12.0 * s,
-            color: fill,
+            tint: fill,
         },
     );
     push(

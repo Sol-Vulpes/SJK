@@ -3853,9 +3853,11 @@ PC's clock is read at most once a second into retained text
 Two thin bars docked to the screen's edges over play (Sol's requests, 15/11/2026 for the
 first bar, 16/11/2026: "stick it to the top or bottom of the screen, not a bubble ... both
 enabled same time"): full width, flush with the edge, about 28 pixels tall at 1080 lines
-(more with a larger `ui_textScale`), in the SJK UI's look in every menu style (navy
-glass, a holo hairline along the inner edge, the UI's families), each with a left, a
-centre and a right group. Both are on by default (Sol's choice, 16/11/2026); the release
+(more with a larger `ui_textScale`), in the SJK UI's look in every menu style (clear
+acrylic glass since 17/11/2026, the game blurred behind it under a third of the ground's
+ember tint, Sol: "the top bar and bottom bar really need much more transparency"; an
+amber hairline along the inner edge; the UI's families), each with a left, a centre and a
+right group. Both are on by default (Sol's choice, 16/11/2026); the release
 that brought them asks again in the News panel's settings to review (`= cg_statusBar
 reset`, `= cg_statusBarTop reset`), so a value saved by an earlier build does not keep
 them off unchosen. Settings > HUD, under "Status bars": "Bottom bar" (`cg_statusBar`),
@@ -4489,7 +4491,7 @@ the original cgame reads:
 - The team scores in every team game but Siege (`cg_drawTeamScores`, on by default): two
   team boxes under the clock at the top centre, red left and blue right, from `CS_SCORES1`
   and `CS_SCORES2` (`-` while the server has not sent one), in the SJK UI's look in every
-  HUD style (the design canvas of 24/10/2026): the UI's navy under the team's muted colour
+  HUD style (the design canvas of 24/10/2026): the UI's ground under the team's muted colour
   (`menu::sjk::color::RED_TEAM` and `BLUE_TEAM`, the SJK scoreboard's), a rule of that
   colour along the bottom. Beside a flag the score stands at the inner edge, as wide as its
   digits (smaller past 66 pixels, so "300" or "-12" fit); without flags (team FFA) it has
@@ -4551,7 +4553,7 @@ commands, [`SentCommands`](../crates/sjk-client/src/sent_commands.rs)), or calle
 (the server counts its caller's YES), the card folds to one 64-pixel row (`VoteRow`): the
 time bar along its top, the YES count, the proposal (a JA+ `ampoll` question) over the
 YES / NO bar and the NO count, so it only shows what is asked and how the vote goes, and F1 / F2 are push and pull again. A team vote's card stands under the global one. It is drawn as SJK's
-menu cards are (navy plate, holo edge, gold mark and time bar), in the HUD's font even under
+menu cards are (dark plate, holo edge, gold mark and time bar), in the HUD's font even under
 `ui_gameFont`, and stands under the match timer. The HUD edit mode drags it during a vote.
 
 `testvote` shows a made-up vote on the panel for 30 seconds, its counts growing, for
@@ -5314,7 +5316,7 @@ The client looks for a newer SJK release when it starts and from the Update page
   available", "SJK 2026.1011.1", "Click to install" and "Downloads now; it starts
   when SJK restarts" (or, for a folder that cannot update itself, "Click for its page"
   and "This folder cannot update itself: see its page"), with SJK's emblem in the SJK
-  UI's holo blue and no sound. While the pointer is free (over the menus, not in a
+  UI's amber and no sound. While the pointer is free (over the menus, not in a
   match) a click on the banner starts the download, as Install does, and opens the Update
   page with its progress; for that folder it opens the release page (since 19/10/2026,
   Slash's request; `GpuState::update_card_pointer`). It waits while the window is away, and the Update page opening takes it back
@@ -7585,13 +7587,13 @@ with `cl_sjkChatGifs 0`) shows a disc with its name; it is sent all the same.
 ### Look
 
 The ring is drawn in the SJK UI's look ([ring.rs](../crates/sjk-viewer/src/quick_wheel/ring.rs),
-[SJK UI](sjk-ui.md)): the choices on a navy band (deep enough to read over any
+[SJK UI](sjk-ui.md)): the choices on a dark band (deep enough to read over any
 scene) edged with holo line-work and a tick between choices; the highlighted
 choice grown inside a gold ring with a gold glow behind it and a gold arc on the
 band's rim; a gold arc on the middle disc pointing where the mouse points. In the
 middle: the page's name, the highlighted choice's name in gold, and a dot for
 each page (the page on show a gold bar). With more than one page, the previous
-and next pages' names stand left and right of the ring on navy pills, with the
+and next pages' names stand left and right of the ring on dark pills, with the
 button that goes there ("Left click", "Right click"), and "Scroll to change page"
 under it. A gold dot outside the band marks choices in effect. Text is in the
 SJK UI's families (Rajdhani, Exo 2), which load in every menu style (Inter
@@ -7602,7 +7604,7 @@ The choices are round icons in the style of the game's neutral Force icons
 Every action has its own since 08/10/2026, and every custom command shares one,
 braces round a dot (`{•}`), so several custom choices on a page look alike: the
 middle names the highlighted one. A choice whose picture is missing shows its
-name on a navy disc with a holo rim (two lines at most). A page holds at most 10
+name on a dark disc with a holo rim (two lines at most). A page holds at most 10
 choices (ten icons fill the ring with a gap between each, the highlighted one
 grown; the Force page holds 12, drawn smaller); an empty page says "Nothing here
 yet".
@@ -8141,7 +8143,7 @@ with scrolling stars over it. Each stage keeps its `blendFunc`, its `tcMod`
 `alphaGen` (`wave`, `const`, `vertex`); other generators draw at full strength,
 and an `animMap` shows its first frame. Below full height `alphaGen vertex` is
 `con_opacity`, so the retail stars fade with it while an opaque first stage stays
-opaque; at full height it is 1. Without the shader the console is a dark navy
+opaque; at full height it is 1. Without the shader the console is a dark
 panel. The background reaches `480 × fraction − 2` units of the 640×480 virtual
 screen, with a bar two units tall in EternalJK's `console_color` (0.509, 0.609,
 0.847) under it. `con_ratioFix` (1, archived, EternalJK's name and meaning) shows
@@ -8253,7 +8255,7 @@ through; they load with the look, and the console font stands in until they
 have. After Ctrl+C the header says how many characters were copied. Below full
 height the panel follows `con_opacity`. The notify lines stay the classic ones.
 
-The deck is a full-width navy panel (the world shows faintly through): a header
+The deck is a full-width dark panel (the world shows faintly through): a header
 with "Console" underlined gold, the version, the date and the time; the input
 on a band with the SJK UI's gold bar; key hints (Tab, Up and Down, Page Up and
 Down, F3, Ctrl+C); a gold rail fading into a holo line along its bottom edge.
@@ -8881,7 +8883,7 @@ default, so the chat looks as it did until a player turns them on.
 
 `cg_chatBoxBackdrop` (default 0, archived; Settings > Chat > **Chat backdrop (%)**, and
 HUD in the classic views, 0 to 100 in steps of 10) puts a dark band behind each drawn
-row of a chat message, that many per cent opaque, in the SJK UI's navy
+row of a chat message, that many per cent opaque, in the SJK UI's ground
 (`menu::sjk::color::SPACE`). A band is as long as what its row shows (on a line's
 first row the sender's emblems, name, tick and label, then the text and emoji
 pictures, and the ellipsis of a cut last row) plus half its height at each end, which

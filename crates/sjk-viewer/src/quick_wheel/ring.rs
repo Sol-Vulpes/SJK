@@ -1,12 +1,12 @@
 //! The wheel's ring in the SJK UI's look (`docs/sjk-ui.md`): the choices on a
-//! dark navy band edged with holo line-work, the highlighted one grown inside a
+//! dark band edged with the UI's line-work, the highlighted one grown inside a
 //! gold ring over a lit sector, a gold arc on the middle disc pointing where the
 //! mouse points, and in the middle the page's name, the highlighted choice's
 //! name in gold and a dot for each page. On the wheel itself the previous and
 //! next pages' names stand beside the ring and a line under it says how to
 //! change page. The in-game wheel and the Settings editor's preview both draw it.
 //!
-//! Sizes are pixels of a 1080-line window times [`Ring::unit`]; the navy is deep
+//! Sizes are pixels of a 1080-line window times [`Ring::unit`]; the band is dark
 //! enough that every line reads over any scene.
 
 use super::pages::MAX_CHOICES;
@@ -342,7 +342,7 @@ pub(crate) fn draw(canvas: &mut MenuCanvas, ring: &Ring<'_>) {
     }
 }
 
-/// A choice without a picture: a navy disc with a holo rim (gold when lit) and
+/// A choice without a picture: a dark disc with an amber rim (gold when lit) and
 /// its name on up to two lines.
 fn name_disc(canvas: &mut MenuCanvas, label: &str, rect: Rect, lit: bool, u: f32) {
     push(
@@ -350,7 +350,7 @@ fn name_disc(canvas: &mut MenuCanvas, label: &str, rect: Rect, lit: bool, u: f32
         DrawCommand::RoundedRect {
             rect,
             radius: rect.width * 0.5,
-            color: Color::new(0.05, 0.08, 0.15, 0.95),
+            color: color::alpha(color::GLASS, 0.95),
         },
     );
     push(
@@ -485,7 +485,7 @@ fn middle(canvas: &mut MenuCanvas, ring: &Ring<'_>, arrived: f32) {
 }
 
 /// The previous page's name left of the ring and the next one's right of it,
-/// each with the mouse button that goes there, on a navy pill.
+/// each with the mouse button that goes there, on a dark pill.
 fn neighbours(canvas: &mut MenuCanvas, ring: &Ring<'_>, previous: &str, next: &str) {
     let u = ring.unit;
     let [x, y] = ring.centre;

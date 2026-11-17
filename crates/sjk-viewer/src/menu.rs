@@ -418,7 +418,7 @@ impl ClientMenu {
             return false;
         }
         self.world_fade.begin_transparent(viewport);
-        // The SJK UI's deep navy rather than black, as its fades are.
+        // The SJK UI's dark ground rather than black, as its fades are.
         let _ = self
             .world_fade
             .draw_list_mut()

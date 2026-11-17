@@ -1,8 +1,8 @@
 //! The status bars (Sol's requests, 15/11/2026 and 16/11/2026: "stick it to the top or
 //! bottom of the screen, not a bubble ... both enabled same time"): two thin strips
 //! docked to the screen's edges over play, full width, flush with the edge, in the SJK
-//! UI's look (navy glass, a holo hairline on the inner edge), their contents in a left,
-//! a centre and a right group.
+//! UI's look (clear acrylic glass, the game blurred behind it, and an amber hairline on the
+//! inner edge), their contents in a left, a centre and a right group.
 //!
 //! - **The bottom bar** ([`CVAR`], `cg_statusBar`) carries what the player has and wears:
 //!   on the left their credits, kyber shards, dormant kybers and DOOM coins (the hub's
@@ -1150,13 +1150,16 @@ fn build(
     true
 }
 
-/// A bar's glass: the navy ground across the screen, a holo hairline along its inner
-/// edge (the bottom bar's top, the top bar's bottom).
+/// A bar's glass: clear acrylic across the screen (the game behind it blurred, a third of
+/// the ground's tint over it, `color::acrylic::BAR`; Sol, 17/11/2026: "the top bar and
+/// bottom bar really need much more transparency"), an amber hairline along its inner edge
+/// (the bottom bar's top, the top bar's bottom).
 fn glass(canvas: &mut MenuCanvas, bar: Rect, edge: Bar, s: f32) {
     let list = canvas.draw_list_mut();
-    let _ = list.push(DrawCommand::SolidRect {
+    let _ = list.push(DrawCommand::Backdrop {
         rect: bar,
-        color: color::alpha(color::SPACE, 0.84),
+        radius: 0.0,
+        tint: color::tint(color::acrylic::BAR),
     });
     let hair = 1.0_f32.max(s);
     let y = match edge {

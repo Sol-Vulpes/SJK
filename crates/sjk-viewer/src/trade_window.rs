@@ -1435,7 +1435,7 @@ fn tile(
         color: if lit {
             color::alpha(item.colour, 0.22)
         } else {
-            Color::new(0.06, 0.09, 0.17, 0.95)
+            color::alpha(color::GLASS, 0.95)
         },
     });
     let _ = ui.draw_list_mut().push(DrawCommand::Border {
@@ -1825,7 +1825,7 @@ fn warning(ui: &mut MenuCanvas, frame: &Frame, x: f32, y: f32, width: f32, words
         format_args!("!"),
         frame.rect(x + 10.0, y + height * 0.5 - 10.0, 22.0, 20.0),
         15.0 * s,
-        Color::new(0.06, 0.09, 0.17, 1.0),
+        color::GLASS,
         FontWeight::Semibold,
         TextAlign::Center,
     );

@@ -308,6 +308,8 @@ pub(super) enum Source {
     MapEditPreview,
     /// The feats' medal pictures (`feat_pictures.rs`).
     FeatCells,
+    /// The frame blurred under acrylic backdrops (`backdrop.rs`).
+    Backdrop,
 }
 
 impl Source {

@@ -98,9 +98,10 @@ pub(crate) fn scrim(canvas: &mut MenuCanvas, viewport: [f32; 2]) {
     );
 }
 
-/// A pop-up card over `rect` (frame pixels): its drop shadow, the dark glass
-/// and a holo edge. Text draws over every shape, so whatever the card covers
-/// must be left out by its screen.
+/// A pop-up card over `rect` (frame pixels): its drop shadow, acrylic glass (the game
+/// blurred behind it under most of the glass's tint, [`color::acrylic::CARD`]) and an
+/// amber edge. Text draws over every shape, so whatever the card covers must be left out
+/// by its screen.
 pub(crate) fn card(canvas: &mut MenuCanvas, frame: &Frame, rect: [f32; 4]) {
     let [x, y, width, height] = rect;
     let s = frame.s;
@@ -114,10 +115,10 @@ pub(crate) fn card(canvas: &mut MenuCanvas, frame: &Frame, rect: [f32; 4]) {
     );
     push(
         canvas,
-        DrawCommand::RoundedRect {
+        DrawCommand::Backdrop {
             rect: frame.rect(x, y, width, height),
             radius: 18.0 * s,
-            color: Color::new(0.04, 0.06, 0.12, 0.98),
+            tint: color::alpha(color::GLASS, color::acrylic::CARD),
         },
     );
     push(
@@ -761,10 +762,10 @@ pub(crate) fn list_marked(
     );
     push(
         canvas,
-        DrawCommand::RoundedRect {
+        DrawCommand::Backdrop {
             rect: frame.rect(x, y, width, height),
             radius: 14.0 * s,
-            color: Color::new(0.04, 0.06, 0.12, 0.98),
+            tint: color::alpha(color::GLASS, color::acrylic::CARD),
         },
     );
     push(

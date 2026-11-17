@@ -1070,7 +1070,7 @@ impl Panel {
         let _ = list.push(DrawCommand::RoundedRect {
             rect: frame.rect(left, top, width, height),
             radius: 18.0 * s,
-            color: Color::new(0.04, 0.06, 0.12, 0.95),
+            color: color::alpha(color::GLASS, 0.95),
         });
         let look = self.skins.get(&found.id);
         let _ = crate::console::collection_panel::swatch::small_swatch(
@@ -2556,7 +2556,7 @@ fn pack_tile(
     let _ = list.push(DrawCommand::RoundedRect {
         rect: frame.rect(left, top, width, height),
         radius: 18.0 * s,
-        color: fade(Color::new(0.04, 0.06, 0.12, 1.0), 0.95),
+        color: fade(color::GLASS, 0.95),
     });
     let _ = list.push(DrawCommand::Border {
         rect: frame.rect(left, top, width, height),
@@ -2865,7 +2865,7 @@ pub(super) fn tucked_card(
     let _ = list.push(DrawCommand::RoundedRect {
         rect,
         radius,
-        color: Color::new(0.035, 0.05, 0.1, 0.98),
+        color: color::alpha(color::SPACE, 0.98),
     });
     let _ = list.push(DrawCommand::GradientRect {
         rect,

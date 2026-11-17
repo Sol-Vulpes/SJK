@@ -853,6 +853,12 @@ fn moved(command: DrawCommand, offset: [f32; 2]) -> Option<DrawCommand> {
             color,
             texture: None,
         },
+        // The picture has no frame behind it to blur: acrylic as its plain tint.
+        DrawCommand::Backdrop { rect, radius, tint } => DrawCommand::RoundedRect {
+            rect: shift(rect),
+            radius,
+            color: sjk_ui::acrylic::fallback(tint),
+        },
         DrawCommand::PushClip(rect) => DrawCommand::PushClip(shift(rect)),
         DrawCommand::PushRoundedClip { rect, radius } => DrawCommand::PushRoundedClip {
             rect: shift(rect),

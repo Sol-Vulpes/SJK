@@ -2491,6 +2491,7 @@ Each section ends at its mark, so it holds what was encoded since the one before
 | `glow` | the dynamic glow (`r_DynamicGlow`) |
 | `volumetrics` | light shafts (with sun shadows on) and dust motes |
 | `overlays+post+hud` | the resolve and post-processing (FXAA, bloom, eye adaptation, the display pass), then the HUD, menus and text |
+| `ui-backdrop` | the acrylic backdrops' blur, between the post-processing and the HUD, on frames that draw one ([Acrylic backdrops](#acrylic-backdrops)); its time is out of `overlays+post+hud`, marked on both sides of it |
 | `capture` | the WHEEL OF DOOM's mirror and console screenshots |
 
 A section's name shows only on the frames that mark it, so with a feature off its
@@ -5168,6 +5169,46 @@ dimmed labels are now 0.77 to 0.96 opaque, disabled ones 0.58 to 0.63. Chromatic
 retail menu values) keep their authored values and so show at full saturation.
 Scrims and other translucent fills keep theirs: dark ones look darker, and faint
 white washes (separators, borders, hover fills) look fainter than before.
+
+### Acrylic backdrops
+
+`DrawCommand::Backdrop { rect, radius, tint }` (17/11/2026) draws acrylic glass, as
+Windows' acrylic and iOS's materials do: what the frame holds behind the rectangle,
+blurred, its brightness held under a ceiling, the tint over it at its alpha, a faint grain
+and a light top edge. The SJK UI uses it for the status bars, the notification banners,
+its pop-up and hover cards and the scoreboard's band ([sjk-ui.md](sjk-ui.md#acrylic-glass)).
+
+- **What is blurred:** the image the 2D layer draws into, as it stands before the 2D pass:
+  the world, its flares and post-processing. The 2D drawn under a backdrop is not in it;
+  the backdrop covers it (its output is opaque inside its rounded rectangle, times its
+  opacity group).
+- **The blur** ([backdrop.rs](../crates/sjk-viewer/src/ui_renderer/backdrop.rs),
+  `ui_backdrop.wgsl`): a dual Kawase chain in `Rgba8Unorm` display values. The frame goes to
+  a quarter of its size in one pass (four bilinear taps, a 4x4 mean), is halved until the
+  smallest level is about 68 lines tall (three levels at 1080 lines, four at 2160), then
+  drawn back up to the quarter (five taps down, eight up). Every pass is scissored to the
+  frame's backdrops, each grown by the chain's reach (76 pixels at 1080 lines, 172 at
+  2160) and overlapping ones merged, so the two status bars blur two strips of the frame.
+  The levels are made when the window's size changes; a frame makes one bind group, for
+  its source view.
+- **The material** (`ui_shapes.wgsl`, mode 8, reference `sjk_ui::acrylic::shade`): the
+  quarter-size result sampled at the pixel's place on the screen, scaled down to a Rec. 709
+  luma of at most 0.42 (`LUMA_CEILING`, keeping its hue) so text keeps its contrast over
+  snow, the tint mixed over it, a top hairline and sheen of warm light, and a grain of
+  plus or minus 0.012.
+- **When:** only on frames whose 2D layer draws a backdrop (`ShapeRenderer::backdrop_used`),
+  after the post-processing and before the 2D pass, and only when that image can be read
+  by a shader (`GpuState::hud_target_sampleable`): a post-processing intermediate always,
+  the swapchain image when the surface allows `TEXTURE_BINDING` (Vulkan and Metal do; the
+  surface is configured with it then), a world shot's image always. Otherwise (DirectX 12
+  swapchains), and in the CPU menu snapshots and the HUD picker's picture, a backdrop draws
+  its tint alone, opaquer (`sjk_ui::acrylic::fallback`, 60 % of the way to opaque).
+- **Cost:** its own GPU section, `ui-backdrop`. Measured with the ignored world shot
+  `status_bar_acrylic_cost` (both status bars over duel6, medians of 240 sampled frames)
+  on an RTX 5080: 0.014 ms at 1920x1080 and 0.022 ms at 3840x2160; the whole frame's
+  median did not move against the plain tint beyond its drift between runs. A backdrop
+  covering more of the screen (a pop-up card, the scoreboard's band) blurs a larger
+  region, at most the whole frame.
 
 ### Menu text
 

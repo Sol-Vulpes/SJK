@@ -537,7 +537,7 @@ pub(crate) enum CodePalette {
     /// The game's own colours ([`quake_color`]).
     #[default]
     Game,
-    /// The same hues lifted to read on the SJK UI's navy ground: black,
+    /// The same hues lifted to read on the SJK UI's dark ground: black,
     /// red, green, blue, magenta and grey lighter, the rest as the game's.
     Legible,
     /// The game's own colours, a dark glyph edged in a soft light halo instead of
@@ -1214,7 +1214,7 @@ mod tests {
             let game = CodePalette::Game.colour(index);
             let legible = CodePalette::Legible.colour(index);
             assert_eq!(game, quake_color(index));
-            // Every code reads on the navy ground (luminance 0.004).
+            // Every code reads on the dark ground (luminance 0.004).
             assert!(luminance(legible) >= 0.35, "^{index}: {legible:?}");
             assert!(luminance(legible) >= luminance(game) - 1e-6, "^{index}");
             // The strongest channel stays the strongest: red stays red.

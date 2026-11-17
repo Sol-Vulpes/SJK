@@ -536,6 +536,12 @@ includes:
   an edge move inside them, and each part has a switch (`cg_statusBar`,
   `cg_statusBarTop`); since 17/11/2026 the top bar's ping is the scoreboard's measure
   and the lagometer graphs stock's snapshot ping;
+- the sun theme (17/11/2026): the SJK UI's navy and holo blue turned to warm sun colours
+  (ember-brown ground, amber line-work, sun gold), and acrylic glass, the game blurred
+  behind the status bars, banners, pop-up cards and scoreboard;
+- the sun theme (17/11/2026): the SJK UI's navy and holo blue turned to warm sun colours
+  (ember-brown ground, amber line-work, sun gold), and acrylic glass, the game blurred
+  behind the status bars, banners, pop-up cards and scoreboard;
 - SJK Alpha (19/10/2026), the first collection of cards: the Mythical rarity, the
   Credits and Meme kinds, and card 1, "Bishop", honouring the author of JKR (art by
   Sol, AI-assisted: a rusted helmet portrait).

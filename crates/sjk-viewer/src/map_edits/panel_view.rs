@@ -85,7 +85,7 @@ pub(super) fn build(panel: &mut Panel, ui: &mut MenuCanvas, viewport: [f32; 2]) 
 }
 
 /// Over the scene: the box being drawn (holo, faintly filled) and the hover's tip, one
-/// line on navy glass under and right of the pointer, kept on the scene.
+/// line on dark glass under and right of the pointer, kept on the scene.
 fn scene_marks(ui: &mut MenuCanvas, frame: &Frame, panel: &Panel) {
     let s = frame.s;
     measure_label(ui, frame, panel);
@@ -156,7 +156,7 @@ fn scene_marks(ui: &mut MenuCanvas, frame: &Frame, panel: &Panel) {
     );
 }
 
-/// The measure's label over its line's middle: its length and deltas in gold on navy
+/// The measure's label over its line's middle: its length and deltas in gold on dark
 /// glass, kept on the scene.
 fn measure_label(ui: &mut MenuCanvas, frame: &Frame, panel: &Panel) {
     let s = frame.s;

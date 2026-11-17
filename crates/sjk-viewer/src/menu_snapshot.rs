@@ -14,8 +14,8 @@
 //! They are written to `target/menu-snapshots/` in the workspace at
 //! 1440x1080 (the 640x480 canvas at 2.25 units per pixel). The drawing is an
 //! approximation of the UI renderer: rounded rectangles anti-aliased over one
-//! pixel, nearest-texel art without its motion and flicker, the Inter font only, and
-//! only the atlas icons a screen's test supplies. Text is drawn over every shape,
+//! pixel, nearest-texel art without its motion and flicker, acrylic glass as its plain tint
+//! (no blur), the Inter font only, and only the atlas icons a screen's test supplies. Text is drawn over every shape,
 //! as on screen. The in-game menus are drawn over a retail levelshot standing for
 //! the match.
 
@@ -473,6 +473,12 @@ fn raster(
                         }
                     }
                 }
+            }
+            // The CPU has no blurred frame: acrylic draws its plain tint, as the renderer
+            // does where it cannot blur.
+            DrawCommand::Backdrop { rect, radius, tint } => {
+                let plain = sjk_ui::acrylic::fallback(*tint);
+                fill_rounded(image, *rect, *radius, clip, color(plain, o));
             }
             DrawCommand::CardShine { rect, shine } => {
                 let (xs, ys) = span(*rect, clip);

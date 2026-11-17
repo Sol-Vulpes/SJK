@@ -431,7 +431,7 @@ impl DevBar {
             DrawCommand::RoundedRect {
                 rect: self.bar,
                 radius: bar[3] * 0.5 * s,
-                color: Color::new(0.04, 0.06, 0.12, 0.86),
+                color: color::alpha(color::GLASS, 0.86),
             },
         );
         push(
