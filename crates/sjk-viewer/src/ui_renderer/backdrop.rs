@@ -124,19 +124,25 @@ impl Regions {
             }
         }
         // Merge until no two overlap (at most sixteen: a few comparisons).
-        let mut merged = true;
-        while merged {
-            merged = false;
-            'pairs: for i in 0..count {
-                for j in i + 1..count {
-                    if intersection(out[i], out[j]).is_some() {
-                        out[i] = out[i].union(out[j]);
-                        out[j] = out[count - 1];
-                        count -= 1;
-                        merged = true;
-                        break 'pairs;
-                    }
+        let mut i = 0;
+        while i < count {
+            let mut j = i + 1;
+            let mut grew = false;
+            while j < count {
+                if intersection(out[i], out[j]).is_some() {
+                    out[i] = out[i].union(out[j]);
+                    out[j] = out[count - 1];
+                    count -= 1;
+                    grew = true;
+                } else {
+                    j += 1;
                 }
+            }
+            // A region that grew may now reach one already passed: look again.
+            if grew {
+                i = 0;
+            } else {
+                i += 1;
             }
         }
         (out, count)
