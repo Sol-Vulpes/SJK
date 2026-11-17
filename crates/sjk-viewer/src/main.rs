@@ -1510,6 +1510,10 @@ impl GpuState {
             &particle_layout,
             context.scene_format(),
         );
+        // Marks between the effect atlas and the UI pipelines: a GTX 1650 on DX12
+        // died silently somewhere in this stretch (17/11/2026), and one mark for it
+        // all could not say which step.
+        load_profile.mark("particle-pipelines")?;
         let saber_gpu = saber_gpu::Runtime::new(
             &device,
             &queue,
@@ -1519,8 +1523,10 @@ impl GpuState {
             frame_target::aa::effects::FORMAT,
             &context.blade_signatures,
         )?;
+        load_profile.mark("saber-renderer")?;
         let dust_motes = dust_motes::Runtime::new(&device, &camera_layout, context.scene_format());
         let weather = weather::Runtime::new(active_game_state, &bsp);
+        load_profile.mark("dust-weather")?;
         // Every 2D pipeline writes display values through a UNORM view (`ui_target.rs`).
         let ui_format = ui_target::format(format);
         let hud_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {

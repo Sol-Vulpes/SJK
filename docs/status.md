@@ -1,3 +1,14 @@
+## Load marks around the saber renderer (17/11/2026)
+
+17/11/2026, `personal/load-marks` from `main` `d35a06d94`. A player's GTX 1650 on DirectX 12
+(build 2026.1113.1, two runs) died silently while loading the menu map: both logs end at
+`world load phase effect-atlas`, before `pipelines-ui`, with no error. Five steps ran in that
+gap with no mark. Implemented: `world load phase` marks `particle-pipelines` (after the
+particle and entity pipelines), `saber-renderer` (after `saber_gpu::Runtime::new`) and
+`dust-weather` in `main.rs`, so the next log names the step that dies; the HUD and UI
+pipelines stay closed by `pipelines-ui`. Verified: `cargo check` of the client. Not verified:
+no game run; the cause itself is not known yet.
+
 ## Top bar ping and the lagometer's snapshot ping (17/11/2026)
 
 17/11/2026, `personal/bar-ping` from `main` `d35a06d94` (Sol: the scoreboard said about
