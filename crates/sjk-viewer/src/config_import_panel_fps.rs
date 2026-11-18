@@ -65,9 +65,9 @@ impl Panel {
             (None, None) => Vec::new(),
         };
         let summary_colour = if info.alert.is_some() {
-            color::EMBER
+            color::ember()
         } else {
-            color::GOLD
+            color::gold()
         };
         let explanation = wrapped(EXPLANATION, EXPLANATION_LINES);
         let origin_line = choice
@@ -124,7 +124,7 @@ impl Panel {
             format_args!("Gameplay FPS"),
             frame.rect(TEXT_X, CARD_TOP + 30.0, TEXT_WIDTH, 30.0),
             22.0 * s,
-            color::GOLD_BRIGHT,
+            color::gold_bright(),
             FontWeight::Semibold,
             TextAlign::Start,
         );
@@ -135,7 +135,7 @@ impl Panel {
                 format_args!("{}", origin.file),
                 frame.rect(TEXT_X + 200.0, CARD_TOP + 33.0, TEXT_WIDTH - 200.0, 26.0),
                 16.0 * s,
-                color::MUTED,
+                color::muted(),
                 FontWeight::Regular,
                 TextAlign::End,
             );
@@ -146,7 +146,7 @@ impl Panel {
             format_args!("Pick the movement you are used to"),
             frame.rect(TEXT_X, CARD_TOP + 70.0, TEXT_WIDTH, 52.0),
             40.0 * s,
-            color::TEXT,
+            color::text(),
             FontWeight::Semibold,
             TextAlign::Start,
         );
@@ -157,12 +157,12 @@ impl Panel {
         }
         y += gap(&summary);
         for line in &explanation {
-            self.fps_line(&frame, line, y, color::alpha(color::TEXT, 0.86));
+            self.fps_line(&frame, line, y, color::alpha(color::text(), 0.86));
             y += LINE;
         }
         y += 10.0;
         for line in &origin_line {
-            self.fps_line(&frame, line, y, color::TEXT);
+            self.fps_line(&frame, line, y, color::text());
             y += LINE;
         }
         self.fps_tiles(&frame, &choice, tiles_top);
@@ -183,9 +183,9 @@ impl Panel {
             frame.rect(TEXT_X + 8.0, typed_top, TEXT_WIDTH - 16.0, 26.0),
             18.0 * s,
             if choice.selected == OTHER {
-                color::TEXT
+                color::text()
             } else {
-                color::QUIET
+                color::quiet()
             },
             FontWeight::Regular,
             TextAlign::Start,
@@ -198,7 +198,7 @@ impl Panel {
                 format_args!("{note}"),
                 frame.rect(TEXT_X + 8.0, y, TEXT_WIDTH - 16.0, 24.0),
                 16.0 * s,
-                color::QUIET,
+                color::quiet(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -247,7 +247,11 @@ impl Panel {
                 format_args!("{}", choice.caption(index)),
                 frame.rect(x, top + TILE_HEIGHT + 4.0, width, 22.0),
                 15.0 * frame.s,
-                if chosen { color::GOLD } else { color::MUTED },
+                if chosen {
+                    color::gold()
+                } else {
+                    color::muted()
+                },
                 FontWeight::Regular,
                 TextAlign::Center,
             );

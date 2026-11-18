@@ -127,7 +127,7 @@ impl crate::GpuState {
                 if own.options_off & crate::blade_skin_file::extras::option_bit(&extra.id) != 0 {
                     inputs.push_effect(Effect {
                         words: extra.name.as_str(),
-                        colour: color::GOLD_BRIGHT,
+                        colour: color::gold_bright(),
                     });
                 }
             }
@@ -147,25 +147,25 @@ impl crate::GpuState {
         if let Some(words) = tactical_words(crate::tactical::level()) {
             inputs.push_effect(Effect {
                 words,
-                colour: color::HOLO,
+                colour: color::holo(),
             });
         }
         if on(crate::chat::quiet::CVAR) {
             inputs.push_effect(Effect {
                 words: "Do not disturb",
-                colour: color::EMBER,
+                colour: color::ember(),
             });
         }
         if crate::away_emote::own_away() {
             inputs.push_effect(Effect {
                 words: "Away",
-                colour: color::MUTED,
+                colour: color::muted(),
             });
         }
         if on(crate::toon_choice::CVAR) {
             inputs.push_effect(Effect {
                 words: "Toon",
-                colour: color::HOLO,
+                colour: color::holo(),
             });
         }
         let mut switches = [false; TOY_COUNT];

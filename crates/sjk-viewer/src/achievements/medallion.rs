@@ -18,9 +18,9 @@ const BOARD_RADIUS: f32 = 31.0;
 /// A category's colour.
 pub(crate) fn tint(category: Category) -> Color {
     match category {
-        Category::Combat => color::EMBER,
-        Category::Duels => color::GOLD,
-        Category::Journeys => color::HOLO,
+        Category::Combat => color::ember(),
+        Category::Duels => color::gold(),
+        Category::Journeys => color::holo(),
         Category::Community => Color::new(0.45, 0.86, 0.62, 1.0),
         Category::Collection => Color::new(0.72, 0.58, 1.0, 1.0),
         Category::CardboardBox => Color::new(0.86, 0.68, 0.44, 1.0),
@@ -104,7 +104,7 @@ pub(crate) fn draw(canvas: &mut MenuCanvas, medallion: Medallion) {
         width: 3.0 * k,
         start: 0.0,
         sweep: TAU,
-        color: color::alpha(color::HOLO, 0.16),
+        color: color::alpha(color::holo(), 0.16),
         knockout: None,
     });
     let fraction = if secret {
@@ -119,7 +119,7 @@ pub(crate) fn draw(canvas: &mut MenuCanvas, medallion: Medallion) {
             width: 4.0 * k,
             start: -FRAC_PI_2,
             sweep: TAU * fraction,
-            color: if done { color::GOLD_BRIGHT } else { hue },
+            color: if done { color::gold_bright() } else { hue },
             knockout: None,
         });
     }
@@ -137,9 +137,9 @@ pub(crate) fn draw(canvas: &mut MenuCanvas, medallion: Medallion) {
         ),
         22.0 * k,
         if done {
-            color::GOLD_BRIGHT
+            color::gold_bright()
         } else {
-            color::QUIET
+            color::quiet()
         },
         FontWeight::Semibold,
         TextAlign::Center,

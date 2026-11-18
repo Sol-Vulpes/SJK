@@ -3884,8 +3884,8 @@ fossil 1
                     sjk_ui::DrawCommand::Border { color: paint, .. }
                     | sjk_ui::DrawCommand::RoundedRect { color: paint, .. } => {
                         use crate::menu::sjk::color;
-                        *paint == color::alpha(color::GOLD_BRIGHT, 0.85)
-                            || *paint == color::alpha(color::GOLD_BRIGHT, 0.9)
+                        *paint == color::alpha(color::gold_bright(), 0.85)
+                            || *paint == color::alpha(color::gold_bright(), 0.9)
                     }
                     _ => false,
                 })

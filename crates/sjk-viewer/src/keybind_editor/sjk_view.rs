@@ -111,7 +111,7 @@ impl KeybindEditor {
                 format_args!("No action matches \u{201c}{}\u{201d}.", list.search.trim()),
                 frame.rect(LABEL_X, ROWS_TOP + 14.0, ROWS_WIDTH - 44.0, 28.0),
                 19.0 * s,
-                color::MUTED,
+                color::muted(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -181,7 +181,7 @@ impl KeybindEditor {
             );
         }
         if total > VISIBLE {
-            self.ui.scrollbar(
+            self.ui.sjk_scrollbar(
                 SCROLLBAR_TOKEN,
                 frame.rect(
                     ROWS_X + ROWS_WIDTH + 14.0,
@@ -223,7 +223,7 @@ impl KeybindEditor {
             format_args!("{}", entry.label),
             frame.rect(title_x, DETAIL_TOP, DETAIL_X + DETAIL_WIDTH - title_x, 40.0),
             32.0 * s,
-            color::TEXT,
+            color::text(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -237,11 +237,11 @@ impl KeybindEditor {
             for (line, colour) in [
                 (
                     format!("Press the key for {}, as its {slot} key.", entry.label),
-                    color::GOLD_BRIGHT,
+                    color::gold_bright(),
                 ),
                 (
                     "Esc cancels; Backspace clears its keys.".to_owned(),
-                    color::MUTED,
+                    color::muted(),
                 ),
             ] {
                 for part in wrap(&line, 44) {
@@ -272,9 +272,9 @@ impl KeybindEditor {
             .collect::<Vec<_>>()
             .join(" and ");
         let facts: [(&str, String, Color); 3] = [
-            ("Keys", shown_keys, color::TEXT),
-            ("Default", default, color::TEXT),
-            ("Console", entry.command.to_owned(), color::HOLO),
+            ("Keys", shown_keys, color::text()),
+            ("Default", default, color::text()),
+            ("Console", entry.command.to_owned(), color::holo()),
         ];
         for (name, value, colour) in facts {
             fact(&mut self.ui, frame, &mut y, name, &value, colour);
@@ -288,7 +288,7 @@ impl KeybindEditor {
                     format_args!("{part}"),
                     frame.rect(DETAIL_X, y, DETAIL_WIDTH, 28.0),
                     17.0 * s,
-                    color::EMBER,
+                    color::ember(),
                     FontWeight::Regular,
                     TextAlign::Start,
                 );
@@ -354,22 +354,26 @@ fn cap(
     let radius = 8.0 * s;
     let (fill, edge, ink) = match slot {
         Slot::Waiting => (
-            color::GOLD,
-            color::GOLD_BRIGHT,
+            color::gold(),
+            color::gold_bright(),
             Color::new(0.078, 0.063, 0.02, 1.0),
         ),
         Slot::Key(_) => (
-            color::alpha(color::SPACE, 0.6),
+            color::alpha(color::space(), 0.6),
             color::alpha(
-                if focused { color::TEXT } else { color::HOLO },
+                if focused {
+                    color::text()
+                } else {
+                    color::holo()
+                },
                 if focused { 0.7 } else { 0.45 },
             ),
-            color::TEXT,
+            color::text(),
         ),
         Slot::Empty => (
-            color::alpha(color::SPACE, 0.3),
-            color::alpha(color::HOLO, 0.18),
-            color::QUIET,
+            color::alpha(color::space(), 0.3),
+            color::alpha(color::holo(), 0.18),
+            color::quiet(),
         ),
     };
     let _ = canvas.draw_list_mut().push(DrawCommand::RoundedRect {
@@ -412,7 +416,7 @@ fn fact(
         format_args!("{name}"),
         frame.rect(DETAIL_X, *y, 110.0, 28.0),
         17.0 * s,
-        color::MUTED,
+        color::muted(),
         FontWeight::Regular,
         TextAlign::Start,
     );

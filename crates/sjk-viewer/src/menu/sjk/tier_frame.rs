@@ -161,7 +161,7 @@ pub(crate) fn tier_frame(
                 rect: area,
                 radius: radius * s,
                 color: super::color::alpha(
-                    super::color::SPACE,
+                    super::color::space(),
                     if look.hovered { 0.8 } else { 0.62 },
                 ),
             },
@@ -174,7 +174,7 @@ pub(crate) fn tier_frame(
                 DrawCommand::RoundedRect {
                     rect: area,
                     radius: radius * s,
-                    color: super::color::alpha(super::color::GOLD, 0.1),
+                    color: super::color::alpha(super::color::gold(), 0.1),
                 },
             );
         }
@@ -221,7 +221,7 @@ pub(crate) fn tier_frame(
     // The edge: holo below Rare, the tier's colour from Rare on, full at Mythical.
     let (edge, edge_width) = match tier {
         Rarity::Common | Rarity::Uncommon => (
-            super::color::alpha(super::color::HOLO, if look.hovered { 0.34 } else { 0.18 }),
+            super::color::alpha(super::color::holo(), if look.hovered { 0.34 } else { 0.18 }),
             1.0,
         ),
         Rarity::Rare | Rarity::Legendary => (faded(colour, 0.5 * ink), 1.2),
@@ -323,7 +323,7 @@ pub(crate) fn tier_frame(
     if look.flash > 0.0 {
         let flash = look.flash.min(1.0);
         let lit = if step == 0 {
-            super::color::HOLO
+            super::color::holo()
         } else {
             colour
         };

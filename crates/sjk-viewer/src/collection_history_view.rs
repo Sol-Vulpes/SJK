@@ -76,9 +76,9 @@ impl Panel {
                 frame.rect(right + 24.0, FILTER_Y - 12.0, RIGHT_X - right - 24.0, 24.0),
                 16.0 * frame.s,
                 if history.loading() {
-                    color::MUTED
+                    color::muted()
                 } else {
-                    color::EMBER
+                    color::ember()
                 },
                 FontWeight::Regular,
                 TextAlign::End,
@@ -128,7 +128,7 @@ impl Panel {
             let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
                 rect: frame.rect(RIGHT_X + 10.0, LIST_Y + along, 4.0, thumb),
                 radius: 2.0 * frame.s,
-                color: color::alpha(color::HOLO, 0.35),
+                color: color::alpha(color::holo(), 0.35),
             });
         }
     }
@@ -143,7 +143,7 @@ impl Panel {
             format_args!("{headline}"),
             frame.rect(LEFT_X, 520.0, width, 40.0),
             30.0 * s,
-            color::TEXT,
+            color::text(),
             FontWeight::Semibold,
             TextAlign::Center,
         );
@@ -154,7 +154,7 @@ impl Panel {
                 format_args!("{line}"),
                 frame.rect(LEFT_X, 566.0, width, 26.0),
                 18.0 * s,
-                color::MUTED,
+                color::muted(),
                 FontWeight::Regular,
                 TextAlign::Center,
             );
@@ -189,11 +189,11 @@ impl Panel {
                 rect: frame.rect(band[0], band[1], band[2], band[3]),
                 radius: 8.0 * s,
                 color: if chosen {
-                    color::alpha(color::GOLD, 0.12)
+                    color::alpha(color::gold(), 0.12)
                 } else if hovered {
-                    color::alpha(color::HOLO, 0.08)
+                    color::alpha(color::holo(), 0.08)
                 } else {
-                    color::alpha(color::SPACE, 0.4)
+                    color::alpha(color::space(), 0.4)
                 },
             });
         } else {
@@ -215,7 +215,7 @@ impl Panel {
                 rect: frame.rect(band[0], band[1], band[2], band[3]),
                 radius: 8.0 * s,
                 width: 1.2 * s,
-                color: color::alpha(color::GOLD_BRIGHT, 0.7),
+                color: color::alpha(color::gold_bright(), 0.7),
             });
         }
         let middle = y + ROW_HEIGHT * 0.5;
@@ -262,7 +262,7 @@ impl Panel {
                 format_args!("{}", if *open { "-" } else { "+" }),
                 frame.rect(text_x, middle - 13.0, 20.0, 26.0),
                 24.0 * s,
-                color::GOLD_BRIGHT,
+                color::gold_bright(),
                 FontWeight::Semibold,
                 TextAlign::Center,
             );
@@ -276,7 +276,7 @@ impl Panel {
             format_args!("{shown}{more}"),
             frame.rect(text_x, middle - 12.0, amount_x - text_x - 12.0, 24.0),
             17.0 * s,
-            color::TEXT,
+            color::text(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -302,7 +302,7 @@ impl Panel {
             format_args!("{when}"),
             frame.rect(RIGHT_X - WHEN_WIDTH, middle - 12.0, WHEN_WIDTH - 14.0, 24.0),
             15.0 * s,
-            color::MUTED,
+            color::muted(),
             FontWeight::Regular,
             TextAlign::End,
         );

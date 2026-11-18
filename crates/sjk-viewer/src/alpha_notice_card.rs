@@ -252,7 +252,7 @@ impl Card {
             format_args!("Alpha build"),
             frame.rect(TEXT_X, top + 30.0, TEXT_WIDTH, 30.0),
             22.0 * s,
-            color::GOLD_BRIGHT,
+            color::gold_bright(),
             FontWeight::Semibold,
             TextAlign::Start,
         );
@@ -262,7 +262,7 @@ impl Card {
             format_args!("Welcome to Sol JK"),
             frame.rect(TEXT_X, top + 66.0, TEXT_WIDTH, 48.0),
             36.0 * s,
-            color::TEXT,
+            color::text(),
             FontWeight::Semibold,
             TextAlign::Start,
         );
@@ -273,7 +273,7 @@ impl Card {
                 format_args!("{line}"),
                 frame.rect(TEXT_X, top + line_y, TEXT_WIDTH, LINE),
                 18.0 * s,
-                color::MUTED,
+                color::muted(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -297,7 +297,7 @@ impl Card {
                 rect: ring,
                 radius: ring.height * 0.5,
                 width: 2.0 * s,
-                color: color::alpha(color::GOLD, 0.7),
+                color: color::alpha(color::gold(), 0.7),
             });
         }
         let name_x = TEXT_X + ROW_HEIGHT + 16.0;
@@ -307,7 +307,11 @@ impl Card {
             format_args!("Report a bug"),
             frame.rect(name_x, row + 2.0, 240.0, 28.0),
             22.0 * s,
-            if lit { color::GOLD_BRIGHT } else { color::TEXT },
+            if lit {
+                color::gold_bright()
+            } else {
+                color::text()
+            },
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -317,7 +321,7 @@ impl Card {
             format_args!("In the game menu (Escape)"),
             frame.rect(name_x, row + 28.0, 240.0, 24.0),
             16.0 * s,
-            color::QUIET,
+            color::quiet(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -342,7 +346,7 @@ impl Card {
             format_args!("discord.gg/dGBdMygvJw"),
             frame.rect(right - DISCORD_WIDTH - 236.0, row + 13.0, 220.0, LINE),
             16.0 * s,
-            color::QUIET,
+            color::quiet(),
             FontWeight::Regular,
             TextAlign::End,
         );
@@ -364,9 +368,9 @@ impl Card {
                     ),
                     18.0 * s,
                     if ticked {
-                        color::TEXT
+                        color::text()
                     } else {
-                        color::GOLD_BRIGHT
+                        color::gold_bright()
                     },
                     FontWeight::Regular,
                     TextAlign::Start,

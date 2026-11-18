@@ -29,25 +29,29 @@ const COPIED_FOR: Duration = Duration::from_millis(1_600);
 /// The prompt's `›` (Windows-1252 0x9B).
 const CHEVRON: u8 = 0x9b;
 
-/// The SJK UI's text colours for the rows.
-pub(super) const INK: Ink = Ink {
-    text: rgba(color::TEXT, 1.0),
-    error: [1.0, 0.56, 0.5, 1.0],
-    stamp: rgba(color::QUIET, 1.0),
-    highlight: rgba(color::GOLD, 0.34),
-    palette: CodePalette::Legible,
-};
+/// The SJK UI's text colours for the rows, in the theme in use.
+pub(super) fn ink() -> Ink {
+    Ink {
+        text: rgba(color::text(), 1.0),
+        error: [1.0, 0.56, 0.5, 1.0],
+        stamp: rgba(color::quiet(), 1.0),
+        highlight: rgba(color::gold(), 0.34),
+        palette: CodePalette::Legible,
+    }
+}
 
 /// The deck's input row: a gold `›` and the input two cells after it.
-pub(super) const PROMPT: Prompt = Prompt {
-    clock: false,
-    mark: CHEVRON,
-    mark_column: 0,
-    mark_color: rgba(color::GOLD_BRIGHT, 1.0),
-    input_column: 2,
-    text_color: rgba(color::TEXT, 1.0),
-    gold_caret: true,
-};
+pub(super) fn prompt() -> Prompt {
+    Prompt {
+        clock: false,
+        mark: CHEVRON,
+        mark_column: 0,
+        mark_color: rgba(color::gold_bright(), 1.0),
+        input_column: 2,
+        text_color: rgba(color::text(), 1.0),
+        gold_caret: true,
+    }
+}
 
 /// `color` as a layer colour at `alpha`.
 const fn rgba(color: Color, alpha: f32) -> [f32; 4] {
@@ -139,7 +143,7 @@ pub(super) fn caret(grid: &Grid, x: f32, y: f32, overstrike: bool) -> SolidQuad 
     if overstrike {
         SolidQuad {
             rect: [x, y, grid.width, grid.height],
-            color: rgba(color::GOLD, 0.55),
+            color: rgba(color::gold(), 0.55),
         }
     } else {
         SolidQuad {
@@ -149,7 +153,7 @@ pub(super) fn caret(grid: &Grid, x: f32, y: f32, overstrike: bool) -> SolidQuad 
                 (grid.width * 0.25).round().max(2.0),
                 grid.height * 0.84,
             ],
-            color: rgba(color::GOLD_BRIGHT, 1.0),
+            color: rgba(color::gold_bright(), 1.0),
         }
     }
 }
@@ -261,15 +265,15 @@ impl Chalk<'_, '_> {
         let text = self.measure(Family::Display, key, size);
         let width = (text + 14.0 * s).max(height).round();
         let top = (middle - height * 0.5).round();
-        self.quad([x, top, width, height], rgba(color::HOLO, 0.08));
-        self.outline([x, top, width, height], rgba(color::HOLO, 0.42));
+        self.quad([x, top, width, height], rgba(color::holo(), 0.08));
+        self.outline([x, top, width, height], rgba(color::holo(), 0.42));
         self.label(
             Family::Display,
             key,
             x + (width - text) * 0.5,
             middle,
             size,
-            rgba(color::TEXT, 1.0),
+            rgba(color::text(), 1.0),
             false,
             width,
         );
@@ -303,7 +307,7 @@ impl Chalk<'_, '_> {
             pen,
             middle,
             size,
-            rgba(color::MUTED, 1.0),
+            rgba(color::muted(), 1.0),
             false,
             f32::MAX,
         );
@@ -439,8 +443,8 @@ impl ViewerConsole {
                 label_x - 12.0 * s - grid.left,
                 s.round().max(1.0),
             ],
-            rgba(color::GOLD, 0.0),
-            rgba(color::GOLD, 0.6),
+            rgba(color::gold(), 0.0),
+            rgba(color::gold(), 0.6),
         ));
         chalk.label(
             Family::Body,
@@ -448,7 +452,7 @@ impl ViewerConsole {
             label_x,
             middle,
             14.0 * s,
-            rgba(color::GOLD_BRIGHT, 1.0),
+            rgba(color::gold_bright(), 1.0),
             false,
             f32::MAX,
         );
@@ -476,7 +480,7 @@ impl ViewerConsole {
         let width = (3.0 * s).round().max(2.0);
         frame.quads.push(SolidQuad {
             rect: [x, layout.rows_top, width, track],
-            color: rgba(color::HOLO, 0.1),
+            color: rgba(color::holo(), 0.1),
         });
         let length = (track * shown as f32 / total as f32).max(18.0 * s);
         let newest = total.saturating_sub(1 + self.scroll_offset);
@@ -486,9 +490,9 @@ impl ViewerConsole {
         frame.quads.push(SolidQuad {
             rect: [x, bottom - length, width, length],
             color: if self.scroll_offset > 0 {
-                rgba(color::GOLD, 0.9)
+                rgba(color::gold(), 0.9)
             } else {
-                rgba(color::HOLO, 0.5)
+                rgba(color::holo(), 0.5)
             },
         });
     }
@@ -517,7 +521,7 @@ impl ViewerConsole {
             return;
         }
         // The caret's thin bar sits on the cell's left edge, over the ghost.
-        painter.raw(frame, rest, column, y, rgba(color::MUTED, 0.55));
+        painter.raw(frame, rest, column, y, rgba(color::muted(), 0.55));
     }
 }
 
@@ -580,7 +584,7 @@ fn copied(chalk: &mut Chalk<'_, '_>, chrome: &mut Chrome, facts: &Facts<'_>, x: 
         x,
         middle,
         15.0 * s,
-        rgba(color::GOLD_BRIGHT, 1.0),
+        rgba(color::gold_bright(), 1.0),
         false,
         f32::MAX,
     );
@@ -592,13 +596,13 @@ fn copied(chalk: &mut Chalk<'_, '_>, chrome: &mut Chrome, facts: &Facts<'_>, x: 
 const PANEL: f32 = 0.97;
 
 /// The ground of the panel at `alpha`.
-const fn space(alpha: f32) -> [f32; 4] {
-    rgba(color::SPACE, alpha)
+fn space(alpha: f32) -> [f32; 4] {
+    rgba(color::space(), alpha)
 }
 
 /// The lighter glass of a panel's top.
-const fn space_lit(alpha: f32) -> [f32; 4] {
-    rgba(color::GLASS, alpha)
+fn space_lit(alpha: f32) -> [f32; 4] {
+    rgba(color::glass(), alpha)
 }
 
 /// Deck: the full-width panel.
@@ -638,13 +642,13 @@ mod deck {
             margin,
             middle,
             25.0 * s,
-            rgba(color::TEXT, 1.0),
+            rgba(color::text(), 1.0),
             false,
             f32::MAX,
         );
         chalk.quad(
             [margin, header - (2.0 * s).round(), name, (2.0 * s).round()],
-            rgba(color::GOLD, 1.0),
+            rgba(color::gold(), 1.0),
         );
         let version = chalk.label(
             Family::Body,
@@ -652,7 +656,7 @@ mod deck {
             margin + name + 18.0 * s,
             middle,
             15.0 * s,
-            rgba(color::MUTED, 1.0),
+            rgba(color::muted(), 1.0),
             false,
             f32::MAX,
         );
@@ -664,7 +668,7 @@ mod deck {
                 after,
                 middle,
                 15.0 * s,
-                rgba(color::GOLD_BRIGHT, 1.0),
+                rgba(color::gold_bright(), 1.0),
                 false,
                 f32::MAX,
             ) + 24.0 * s;
@@ -677,7 +681,7 @@ mod deck {
             right,
             middle,
             25.0 * s,
-            rgba(color::TEXT, 1.0),
+            rgba(color::text(), 1.0),
             true,
             f32::MAX,
         );
@@ -687,19 +691,19 @@ mod deck {
             right - time - 14.0 * s,
             middle,
             15.0 * s,
-            rgba(color::MUTED, 1.0),
+            rgba(color::muted(), 1.0),
             true,
             f32::MAX,
         );
-        chalk.rule(0.0, header, width, rgba(color::HOLO, 0.16));
+        chalk.rule(0.0, header, width, rgba(color::holo(), 0.16));
 
         // Bottom: the lit rail, the keys, the input band.
         let rail = (RAIL * s).round().max(1.0);
-        chalk.rule(0.0, lines - 1.0, width, rgba(color::HOLO, 0.3));
+        chalk.rule(0.0, lines - 1.0, width, rgba(color::holo(), 0.3));
         chalk.shade(Shade::horizontal(
             [0.0, lines - rail, width * 0.45, rail],
-            rgba(color::GOLD_BRIGHT, 1.0),
-            rgba(color::GOLD, 0.0),
+            rgba(color::gold_bright(), 1.0),
+            rgba(color::gold(), 0.0),
         ));
         let footer = (FOOTER * s).round();
         let keys_middle = lines - rail - footer * 0.5;
@@ -707,12 +711,12 @@ mod deck {
 
         let band = (grid.pitch + 16.0 * s).round();
         let band_y = lines - rail - footer - band;
-        chalk.quad([0.0, band_y, width, band], rgba(color::HOLO, 0.07));
-        chalk.rule(0.0, band_y, width, rgba(color::HOLO, 0.12));
-        chalk.rule(0.0, band_y + band, width, rgba(color::HOLO, 0.12));
+        chalk.quad([0.0, band_y, width, band], rgba(color::holo(), 0.07));
+        chalk.rule(0.0, band_y, width, rgba(color::holo(), 0.12));
+        chalk.rule(0.0, band_y + band, width, rgba(color::holo(), 0.12));
         chalk.quad(
             [0.0, band_y + band * 0.2, (4.0 * s).round(), band * 0.6],
-            rgba(color::GOLD_BRIGHT, 1.0),
+            rgba(color::gold_bright(), 1.0),
         );
         let input_y = (band_y + (band - grid.pitch) * 0.5).round();
         Layout {

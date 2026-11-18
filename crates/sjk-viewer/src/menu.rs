@@ -424,7 +424,7 @@ impl ClientMenu {
             .draw_list_mut()
             .push(sjk_ui::DrawCommand::SolidRect {
                 rect: sjk_ui::Rect::new(0.0, 0.0, viewport[0], viewport[1]),
-                color: sjk::color::alpha(sjk::color::SPACE, darkness),
+                color: sjk::color::alpha(sjk::color::space(), darkness),
             });
         true
     }

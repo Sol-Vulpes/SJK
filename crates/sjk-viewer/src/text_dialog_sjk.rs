@@ -210,7 +210,7 @@ impl TextDialog {
         if matches!(kind, Kind::Note { .. }) {
             let _ = ui.draw_list_mut().push(DrawCommand::SolidRect {
                 rect: Rect::new(0.0, 0.0, viewport[0], viewport[1]),
-                color: color::alpha(color::SPACE, NOTE_SCRIM),
+                color: color::alpha(color::space(), NOTE_SCRIM),
             });
         } else {
             kit::scrim(ui, viewport);
@@ -259,7 +259,7 @@ fn heading(ui: &mut MenuCanvas, frame: &Frame, display: &UiFont, view: &View<'_>
         format_args!("{title}"),
         frame.rect(TEXT_X, view.geometry.eyebrow_y(), TEXT_WIDTH, 30.0),
         22.0 * s,
-        color::GOLD_BRIGHT,
+        color::gold_bright(),
         FontWeight::Semibold,
         TextAlign::Start,
     );
@@ -269,7 +269,7 @@ fn heading(ui: &mut MenuCanvas, frame: &Frame, display: &UiFont, view: &View<'_>
         format_args!("{bound}"),
         frame.rect(TEXT_X, view.geometry.eyebrow_y() + 3.0, TEXT_WIDTH, 26.0),
         16.0 * s,
-        color::MUTED,
+        color::muted(),
         FontWeight::Regular,
         TextAlign::End,
     );
@@ -288,7 +288,7 @@ fn heading(ui: &mut MenuCanvas, frame: &Frame, display: &UiFont, view: &View<'_>
         format_args!("{shown}{}", if cut { "..." } else { "" }),
         frame.rect(TEXT_X, view.geometry.headline_y(), TEXT_WIDTH, 52.0),
         HEADLINE_SIZE * s,
-        color::TEXT,
+        color::text(),
         FontWeight::Semibold,
         TextAlign::Start,
     );
@@ -304,7 +304,7 @@ fn heading(ui: &mut MenuCanvas, frame: &Frame, display: &UiFont, view: &View<'_>
                 DETAIL_LINE,
             ),
             18.0 * s,
-            color::alpha(color::TEXT, 0.86),
+            color::alpha(color::text(), 0.86),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -351,7 +351,7 @@ fn model_row(ui: &mut MenuCanvas, frame: &Frame, body: &UiFont, view: &View<'_>)
             format_args!("Click the scene round this card to note what is there, a model too"),
             frame.rect(TEXT_X, middle - 12.0, TEXT_WIDTH, 24.0),
             16.0 * s,
-            color::MUTED,
+            color::muted(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -365,7 +365,7 @@ fn model_row(ui: &mut MenuCanvas, frame: &Frame, body: &UiFont, view: &View<'_>)
         format_args!("MODEL"),
         frame.rect(TEXT_X, middle - 12.0, 80.0, 24.0),
         17.0 * s,
-        color::GOLD_BRIGHT,
+        color::gold_bright(),
         FontWeight::Semibold,
         TextAlign::Start,
     );
@@ -377,7 +377,7 @@ fn model_row(ui: &mut MenuCanvas, frame: &Frame, body: &UiFont, view: &View<'_>)
         format_args!("{shown}{}", if cut { "..." } else { "" }),
         frame.rect(TEXT_X + 80.0, middle - 12.0, room, 24.0),
         17.0 * s,
-        color::TEXT,
+        color::text(),
         FontWeight::Regular,
         TextAlign::Start,
     );
@@ -442,13 +442,13 @@ fn field(
     let _ = ui.draw_list_mut().push(DrawCommand::RoundedRect {
         rect,
         radius: 14.0 * s,
-        color: color::alpha(color::SPACE, 0.6),
+        color: color::alpha(color::space(), 0.6),
     });
     let edge = match (focused, writing && hovered) {
         (true, _) => Color::new(1.0, 1.0, 1.0, 0.7),
-        (false, true) => color::alpha(color::HOLO, 0.6),
-        _ if writing => color::alpha(color::HOLO, 0.4),
-        _ => color::alpha(color::HOLO, 0.2),
+        (false, true) => color::alpha(color::holo(), 0.6),
+        _ if writing => color::alpha(color::holo(), 0.4),
+        _ => color::alpha(color::holo(), 0.2),
     };
     let _ = ui.draw_list_mut().push(DrawCommand::Border {
         rect,
@@ -468,9 +468,9 @@ fn field(
         )
     };
     let ink = if writing {
-        color::TEXT
+        color::text()
     } else {
-        color::alpha(color::TEXT, 0.6)
+        color::alpha(color::text(), 0.6)
     };
     let face = Face::new(body, style, size, 0.0);
     layout.lay_out(view.text, &face, inner * s);
@@ -491,7 +491,7 @@ fn field(
             format_args!("Type here"),
             rect,
             size,
-            color::QUIET,
+            color::quiet(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -513,7 +513,7 @@ fn field(
         let height = (24.0 * style.scale).min(LINE - 2.0) * s;
         let _ = ui.draw_list_mut().push(DrawCommand::SolidRect {
             rect: caret_rect(line_rect, caret_x, height, s),
-            color: color::GOLD_BRIGHT,
+            color: color::gold_bright(),
         });
     }
     // A click chooses the field while writing, and edits a failed report.
@@ -547,7 +547,7 @@ fn info(ui: &mut MenuCanvas, frame: &Frame, view: &View<'_>) {
             24.0,
         ),
         15.0 * s,
-        color::MUTED,
+        color::muted(),
         FontWeight::Regular,
         TextAlign::Start,
     );
@@ -565,9 +565,9 @@ fn info(ui: &mut MenuCanvas, frame: &Frame, view: &View<'_>) {
         ),
         18.0 * s,
         if count >= limit {
-            color::GOLD_BRIGHT
+            color::gold_bright()
         } else {
-            color::MUTED
+            color::muted()
         },
         FontWeight::Regular,
         TextAlign::End,
@@ -631,7 +631,7 @@ fn foot(ui: &mut MenuCanvas, frame: &Frame, view: &View<'_>) {
         Phase::Sending => {
             let seconds = crate::menu::art::motion::seconds();
             crate::menu::sjk::loading::activity(ui, frame, TEXT_X + 10.0, middle, seconds);
-            status(ui, TEXT_X + 32.0, "Waiting for the SJK hub", color::MUTED);
+            status(ui, TEXT_X + 32.0, "Waiting for the SJK hub", color::muted());
         }
         Phase::Sent(_) => {
             let right = kit::tick(ui, frame, TEXT_X, middle, true, false);
@@ -639,7 +639,7 @@ fn foot(ui: &mut MenuCanvas, frame: &Frame, view: &View<'_>) {
                 ui,
                 right + 14.0,
                 "Stored by the SJK hub",
-                color::GOLD_BRIGHT,
+                color::gold_bright(),
             );
         }
         Phase::Failed(_) => {
@@ -647,7 +647,7 @@ fn foot(ui: &mut MenuCanvas, frame: &Frame, view: &View<'_>) {
                 ui,
                 TEXT_X,
                 "Your text is kept: edit it and send again",
-                color::MUTED,
+                color::muted(),
             );
         }
     }
@@ -1114,7 +1114,7 @@ mod tests {
             .iter()
             .find_map(|command| match command {
                 DrawCommand::SolidRect { rect, color }
-                    if *color == color::GOLD_BRIGHT && rect.width < 6.0 =>
+                    if *color == color::gold_bright() && rect.width < 6.0 =>
                 {
                     Some(*rect)
                 }

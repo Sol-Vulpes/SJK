@@ -462,9 +462,9 @@ fn counted_tabs(
             frame.rect(x, ROW_Y, width + 20.0, 34.0),
             LABEL_SIZE * s,
             match (lit, hovered) {
-                (true, _) => color::GOLD_BRIGHT,
-                (false, true) => color::TEXT,
-                (false, false) => color::MUTED,
+                (true, _) => color::gold_bright(),
+                (false, true) => color::text(),
+                (false, false) => color::muted(),
             },
             FontWeight::Regular,
             TextAlign::Start,
@@ -476,7 +476,7 @@ fn counted_tabs(
                 format_args!("{value}"),
                 frame.rect(x + width + COUNT_GAP, ROW_Y - 6.0, count + 12.0, 24.0),
                 COUNT_SIZE * s,
-                if lit { color::GOLD } else { color::QUIET },
+                if lit { color::gold() } else { color::quiet() },
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -488,7 +488,7 @@ fn counted_tabs(
             let _ = canvas.draw_list_mut().push(DrawCommand::RoundedRect {
                 rect: frame.rect(x, ROW_Y + 38.0, width, 3.0),
                 radius: 1.5 * s,
-                color: color::GOLD_BRIGHT,
+                color: color::gold_bright(),
             });
         }
         let [x, y, width, height] = hit_area(labels, counts, index, widen);
@@ -631,7 +631,11 @@ fn breadcrumb(canvas: &mut MenuCanvas, frame: &Frame, kind: &str, count: &str, w
         format_args!("{COLLECTION}"),
         frame.rect(ROW_X, ROW_Y, home + 20.0, 34.0),
         LABEL_SIZE * s,
-        if hovered { color::TEXT } else { color::MUTED },
+        if hovered {
+            color::text()
+        } else {
+            color::muted()
+        },
         FontWeight::Regular,
         TextAlign::Start,
     );
@@ -650,7 +654,7 @@ fn breadcrumb(canvas: &mut MenuCanvas, frame: &Frame, kind: &str, count: &str, w
         format_args!("{CRUMB_SEPARATOR}"),
         frame.rect(separator_x, ROW_Y, 30.0, 34.0),
         LABEL_SIZE * s,
-        color::QUIET,
+        color::quiet(),
         FontWeight::Regular,
         TextAlign::Start,
     );
@@ -660,7 +664,7 @@ fn breadcrumb(canvas: &mut MenuCanvas, frame: &Frame, kind: &str, count: &str, w
         format_args!("{kind}"),
         frame.rect(kind_x, ROW_Y, kind_width + 20.0, 34.0),
         LABEL_SIZE * s,
-        color::GOLD_BRIGHT,
+        color::gold_bright(),
         FontWeight::Regular,
         TextAlign::Start,
     );
@@ -676,7 +680,7 @@ fn breadcrumb(canvas: &mut MenuCanvas, frame: &Frame, kind: &str, count: &str, w
                 24.0,
             ),
             COUNT_SIZE * s,
-            color::GOLD,
+            color::gold(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -684,7 +688,7 @@ fn breadcrumb(canvas: &mut MenuCanvas, frame: &Frame, kind: &str, count: &str, w
     let _ = canvas.draw_list_mut().push(DrawCommand::RoundedRect {
         rect: frame.rect(kind_x, ROW_Y + 38.0, kind_width, 3.0),
         radius: 1.5 * s,
-        color: color::GOLD_BRIGHT,
+        color: color::gold_bright(),
     });
 }
 

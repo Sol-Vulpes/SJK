@@ -64,7 +64,7 @@ impl Panel {
             format_args!("What's new"),
             frame.rect((end - frame.origin[0]) / s + 22.0, 57.0, 600.0, 60.0),
             48.0 * s,
-            color::TEXT,
+            color::text(),
             FontWeight::Semibold,
             TextAlign::Start,
         );
@@ -111,9 +111,9 @@ impl Panel {
                 frame.rect(RAIL_X + 28.0, top + 2.0, RAIL_WIDTH - 28.0, 30.0),
                 24.0 * s,
                 match (chosen, hovered) {
-                    (true, _) => color::GOLD_BRIGHT,
-                    (false, true) => color::TEXT,
-                    (false, false) => color::MUTED,
+                    (true, _) => color::gold_bright(),
+                    (false, true) => color::text(),
+                    (false, false) => color::muted(),
                 },
                 FontWeight::Regular,
                 TextAlign::Start,
@@ -133,9 +133,9 @@ impl Panel {
                 frame.rect(RAIL_X + 28.0, top + 32.0, RAIL_WIDTH - 28.0, 22.0),
                 15.0 * s,
                 if unreleased {
-                    color::GOLD
+                    color::gold()
                 } else {
-                    color::QUIET
+                    color::quiet()
                 },
                 FontWeight::Regular,
                 TextAlign::Start,
@@ -155,7 +155,7 @@ impl Panel {
                 format_args!("{error}"),
                 frame.rect(NOTES_X, NOTES_TOP, NOTES_WIDTH, 30.0),
                 19.0 * s,
-                color::EMBER,
+                color::ember(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -180,7 +180,7 @@ impl Panel {
             ),
             frame.rect(NOTES_X, NOTES_TOP, NOTES_WIDTH, 24.0),
             17.0 * s,
-            color::GOLD_BRIGHT,
+            color::gold_bright(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -190,7 +190,7 @@ impl Panel {
             format_args!("{title}"),
             frame.rect(NOTES_X, NOTES_TOP + 28.0, NOTES_WIDTH, 60.0),
             48.0 * s,
-            color::TEXT,
+            color::text(),
             FontWeight::Semibold,
             TextAlign::Start,
         );
@@ -224,7 +224,7 @@ impl Panel {
                     &Place {
                         x: NOTES_X,
                         y,
-                        colour: color::MUTED,
+                        colour: color::muted(),
                         code_family: TextFamily::Code,
                     },
                     Some(&mut chip_token),
@@ -238,7 +238,7 @@ impl Panel {
                             .push(sjk_ui::DrawCommand::RoundedRect {
                                 rect: dot,
                                 radius: dot.width * 0.5,
-                                color: color::GOLD,
+                                color: color::gold(),
                             });
                     }
                     inline_code::draw_rows(
@@ -249,7 +249,7 @@ impl Panel {
                         &Place {
                             x: NOTES_X + INDENT,
                             y,
-                            colour: color::alpha(color::TEXT, 0.92),
+                            colour: color::alpha(color::text(), 0.92),
                             code_family: TextFamily::Code,
                         },
                         Some(&mut chip_token),
@@ -261,7 +261,7 @@ impl Panel {
                     format_args!("{}", line.text),
                     frame.rect(NOTES_X + INDENT, y + 1.0, NOTES_WIDTH - INDENT, height),
                     17.0 * s,
-                    color::alpha(color::GOLD, 0.85),
+                    color::alpha(color::gold(), 0.85),
                     FontWeight::Regular,
                     TextAlign::Start,
                 ),
@@ -270,7 +270,7 @@ impl Panel {
         }
         self.page_lines = shown.saturating_sub(2).max(1);
         if self.max_scroll > 0 {
-            self.ui.scrollbar(
+            self.ui.sjk_scrollbar(
                 PANE_BAR_TOKEN,
                 frame.rect(NOTES_X + NOTES_WIDTH + 24.0, top, 4.0, NOTES_BOTTOM - top),
                 self.scroll,

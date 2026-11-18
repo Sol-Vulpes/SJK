@@ -44,7 +44,7 @@ impl Line {
     pub(crate) fn how(words: impl Into<String>) -> Self {
         Self {
             words: words.into(),
-            colour: color::TEXT,
+            colour: color::text(),
         }
     }
 
@@ -52,7 +52,7 @@ impl Line {
     pub(crate) fn status(words: impl Into<String>) -> Self {
         Self {
             words: words.into(),
-            colour: color::MUTED,
+            colour: color::muted(),
         }
     }
 
@@ -60,7 +60,7 @@ impl Line {
     pub(crate) fn held(words: impl Into<String>) -> Self {
         Self {
             words: words.into(),
-            colour: color::GOLD_BRIGHT,
+            colour: color::gold_bright(),
         }
     }
 }
@@ -183,20 +183,24 @@ pub(crate) fn place(anchor: [f32; 4], size: [f32; 2]) -> [f32; 2] {
 
 /// The card's glass: acrylic, the glass's tint over the blurred game
 /// ([`color::acrylic::CARD`]).
-const FILL: Color = color::alpha(color::GLASS, color::acrylic::CARD);
+fn fill() -> Color {
+    color::alpha(color::glass(), color::acrylic::CARD)
+}
 /// A note's glass: darker than a hover card's, for reading a while (10/11/2026).
-const NOTE_FILL: Color = color::alpha(color::SPACE, 0.9);
+fn note_fill() -> Color {
+    color::alpha(color::space(), 0.9)
+}
 
 /// Draw `card` beside `anchor` (window pixels, the thing's pointer area), faded in to
 /// `alpha`.
 pub(crate) fn draw(canvas: &mut MenuCanvas, frame: &Frame, anchor: Rect, card: &Card, alpha: f32) {
-    let _ = draw_filled(canvas, frame, anchor, card, alpha, FILL, 0.0);
+    let _ = draw_filled(canvas, frame, anchor, card, alpha, fill(), 0.0);
 }
 
 /// Draw `card` as a note a click opened beside `anchor` (window pixels): as a hover
 /// card, over everything, on a darker fill.
 pub(crate) fn draw_note(canvas: &mut MenuCanvas, frame: &Frame, anchor: Rect, card: &Card) {
-    let _ = draw_filled(canvas, frame, anchor, card, 1.0, NOTE_FILL, 0.0);
+    let _ = draw_filled(canvas, frame, anchor, card, 1.0, note_fill(), 0.0);
 }
 
 /// Draw `card` as a note with `room` (frame pixels) left under its lines for the
@@ -209,7 +213,7 @@ pub(crate) fn draw_note_with_room(
     card: &Card,
     room: f32,
 ) -> ([f32; 4], f32) {
-    draw_filled(canvas, frame, anchor, card, 1.0, NOTE_FILL, room)
+    draw_filled(canvas, frame, anchor, card, 1.0, note_fill(), room)
 }
 
 /// Draw `card` beside `anchor` on `fill`, faded in to `alpha`, `room` taller than its
@@ -243,7 +247,7 @@ fn draw_filled(
         DrawCommand::RoundedRect {
             rect: frame.rect(x + 3.0, y + 8.0, size[0], size[1]),
             radius: 12.0 * s,
-            color: color::alpha(color::SPACE, 0.55),
+            color: color::alpha(color::space(), 0.55),
         },
     );
     push(
@@ -344,7 +348,7 @@ mod tests {
     fn long_lines_wrap_and_new_lines_start_after_a_gap() {
         let card = Card {
             title: "Rare card".to_owned(),
-            colour: color::HOLO,
+            colour: color::holo(),
             lines: vec![
                 Line::how(
                     "Opening a holocron gives one sealed card; this kind comes in about one holocron in fifty.",

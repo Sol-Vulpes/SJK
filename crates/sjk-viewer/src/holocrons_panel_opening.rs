@@ -760,7 +760,7 @@ impl Panel {
         if !unsealing {
             let _ = self.ui.draw_list_mut().push(DrawCommand::SolidRect {
                 rect: sjk_ui::Rect::new(0.0, 0.0, viewport[0], viewport[1]),
-                color: color::alpha(color::SPACE, 0.93),
+                color: color::alpha(color::space(), 0.93),
             });
         }
         let seconds = self.seconds(now);
@@ -846,7 +846,7 @@ impl Panel {
             format_args!("Nothing was opened"),
             frame.rect(CARD_X - 500.0, 420.0, 1_000.0, 48.0),
             38.0 * s,
-            color::TEXT,
+            color::text(),
             FontWeight::Semibold,
             TextAlign::Center,
         );
@@ -856,7 +856,7 @@ impl Panel {
             format_args!("{message}"),
             frame.rect(CARD_X - 500.0, 480.0, 1_000.0, 28.0),
             19.0 * s,
-            color::MUTED,
+            color::muted(),
             FontWeight::Regular,
             TextAlign::Center,
         );
@@ -1065,12 +1065,12 @@ impl Panel {
         let _ = list.push(DrawCommand::RoundedRect {
             rect: frame.rect(left + 4.0, top + 10.0, width, height),
             radius: 18.0 * s,
-            color: color::alpha(color::SPACE, 0.6),
+            color: color::alpha(color::space(), 0.6),
         });
         let _ = list.push(DrawCommand::RoundedRect {
             rect: frame.rect(left, top, width, height),
             radius: 18.0 * s,
-            color: color::alpha(color::GLASS, 0.95),
+            color: color::alpha(color::glass(), 0.95),
         });
         let look = self.skins.get(&found.id);
         let _ = crate::console::collection_panel::swatch::small_swatch(
@@ -1109,7 +1109,7 @@ impl Panel {
             format_args!("{label}"),
             frame.rect(left, top + 158.0, width, 26.0),
             17.0 * s,
-            color::MUTED,
+            color::muted(),
             FontWeight::Regular,
             TextAlign::Center,
         );
@@ -1143,7 +1143,7 @@ impl Panel {
             frame.rect(CARD_X - 500.0, TITLE_Y, 1_000.0, 50.0),
             42.0 * s,
             fade(if card.finish.index == 2 {
-                color::GOLD_BRIGHT
+                color::gold_bright()
             } else {
                 tone.colour
             }),
@@ -1171,14 +1171,14 @@ impl Panel {
             ),
             frame.rect(CARD_X - 500.0, EDITION_Y, 1_000.0, 28.0),
             19.0 * s,
-            fade(color::TEXT),
+            fade(color::text()),
             FontWeight::Regular,
             TextAlign::Center,
         );
         // A Solar blade card's blade is told in place of what the finish is.
         let (about, about_colour) = match &card.bonus {
             Some(found) => (bonus_line(found), found.colour()),
-            None => (card.finish.about.to_owned(), color::MUTED),
+            None => (card.finish.about.to_owned(), color::muted()),
         };
         text(
             &mut self.ui,
@@ -1202,7 +1202,7 @@ impl Panel {
             format_args!("{last_line}"),
             frame.rect(CARD_X - 500.0, SEALED_Y, 1_000.0, 26.0),
             17.0 * s,
-            fade(color::QUIET),
+            fade(color::quiet()),
             FontWeight::Regular,
             TextAlign::Center,
         );
@@ -1218,7 +1218,7 @@ impl Panel {
                     34.0,
                 ),
                 24.0 * s,
-                fade(color::MUTED),
+                fade(color::muted()),
                 FontWeight::Regular,
                 TextAlign::Center,
             );
@@ -1348,7 +1348,7 @@ impl Panel {
             frame,
             CARD_X,
             [STRIP_Y - 36.0, STRIP_Y + height + 36.0],
-            color::alpha(color::GOLD_BRIGHT, 0.9),
+            color::alpha(color::gold_bright(), 0.9),
             1.0,
         );
         // The holocron's flash fades over the strip.
@@ -1457,7 +1457,7 @@ impl Panel {
                 let _ = list.push(DrawCommand::RoundedRect {
                     rect,
                     radius: 14.0 * k * s,
-                    color: color::alpha(color::SPACE, 0.9),
+                    color: color::alpha(color::space(), 0.9),
                 });
                 let _ = list.push(DrawCommand::GradientRect {
                     rect,
@@ -1497,7 +1497,7 @@ impl Panel {
                     format_args!("+{}", cards::credits_text(credits)),
                     frame.rect(x, y + height - 78.0 * k, width, 38.0 * k),
                     30.0 * k * s,
-                    color::GOLD_BRIGHT,
+                    color::gold_bright(),
                     FontWeight::Semibold,
                     TextAlign::Center,
                 );
@@ -1507,7 +1507,7 @@ impl Panel {
                     format_args!("credits"),
                     frame.rect(x, y + height - 38.0 * k, width, 22.0 * k),
                     15.0 * k * s,
-                    color::MUTED,
+                    color::muted(),
                     FontWeight::Regular,
                     TextAlign::Center,
                 );
@@ -1517,7 +1517,7 @@ impl Panel {
                 let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
                     rect,
                     radius: 14.0 * k * s,
-                    color: color::alpha(color::SPACE, 0.9),
+                    color: color::alpha(color::space(), 0.9),
                 });
                 let look = self.skins.get(skin.id);
                 let _ = crate::console::collection_panel::swatch::small_swatch(
@@ -1556,7 +1556,7 @@ impl Panel {
                     format_args!("{}", skin.name),
                     frame.rect(x, y + height - 40.0 * k, width, 26.0 * k),
                     17.0 * k * s,
-                    color::TEXT,
+                    color::text(),
                     FontWeight::Regular,
                     TextAlign::Center,
                 );
@@ -1566,7 +1566,7 @@ impl Panel {
                 let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
                     rect,
                     radius: 14.0 * k * s,
-                    color: color::alpha(color::SPACE, 0.9),
+                    color: color::alpha(color::space(), 0.9),
                 });
                 glow(
                     &mut self.ui,
@@ -1612,7 +1612,7 @@ impl Panel {
                     format_args!("{words}"),
                     frame.rect(x, y + height - 40.0 * k, width, 26.0 * k),
                     17.0 * k * s,
-                    color::TEXT,
+                    color::text(),
                     FontWeight::Regular,
                     TextAlign::Center,
                 );
@@ -1622,7 +1622,7 @@ impl Panel {
                 let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
                     rect,
                     radius: 14.0 * k * s,
-                    color: color::alpha(color::SPACE, 0.9),
+                    color: color::alpha(color::space(), 0.9),
                 });
                 let _ = self.ui.draw_list_mut().push(DrawCommand::Border {
                     rect,
@@ -1643,7 +1643,7 @@ impl Panel {
                     format_args!("Tag"),
                     frame.rect(x, y + height - 40.0 * k, width, 26.0 * k),
                     17.0 * k * s,
-                    color::TEXT,
+                    color::text(),
                     FontWeight::Regular,
                     TextAlign::Center,
                 );
@@ -1655,13 +1655,13 @@ impl Panel {
                 let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
                     rect,
                     radius: 14.0 * k * s,
-                    color: color::alpha(color::SPACE, 0.9),
+                    color: color::alpha(color::space(), 0.9),
                 });
                 let _ = self.ui.draw_list_mut().push(DrawCommand::Border {
                     rect,
                     radius: 14.0 * k * s,
                     width: (2.0 + near) * s,
-                    color: color::alpha(color::GOLD, 0.7 + 0.3 * near),
+                    color: color::alpha(color::gold(), 0.7 + 0.3 * near),
                 });
                 text(
                     &mut self.ui,
@@ -1669,7 +1669,7 @@ impl Panel {
                     format_args!("?"),
                     frame.rect(x, y + height * 0.5 - 40.0 * k, width, 70.0 * k),
                     60.0 * k * s,
-                    color::GOLD,
+                    color::gold(),
                     FontWeight::Semibold,
                     TextAlign::Center,
                 );
@@ -1679,7 +1679,7 @@ impl Panel {
                     format_args!("New {}", short_kind(kind)),
                     frame.rect(x, y + height - 40.0 * k, width, 26.0 * k),
                     17.0 * k * s,
-                    color::TEXT,
+                    color::text(),
                     FontWeight::Regular,
                     TextAlign::Center,
                 );
@@ -1713,7 +1713,7 @@ impl Panel {
         let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
             rect: area,
             radius: 22.0 * s,
-            color: color::alpha(color::SPACE, 0.95 * eased),
+            color: color::alpha(color::space(), 0.95 * eased),
         });
         if let Some(banner) = crate::profile_card::banner::get(&found.id) {
             crate::profile_card::banner::draw_rounded(&mut self.ui, area, banner.id, 22.0 * s);
@@ -1824,7 +1824,7 @@ impl Panel {
             format_args!("Update SJK to see it"),
             frame.rect(middle[0] - 300.0, middle[1] + side * 0.5, 600.0, 30.0),
             20.0 * s,
-            color::alpha(color::TEXT, alpha),
+            color::alpha(color::text(), alpha),
             FontWeight::Regular,
             TextAlign::Center,
         );
@@ -1931,7 +1931,7 @@ impl Panel {
             format_args!("From {} {}", tier.article(), tier.title()),
             frame.rect(CARD_X - 500.0, EDITION_Y, 1_000.0, 28.0),
             19.0 * s,
-            fade(color::TEXT),
+            fade(color::text()),
             FontWeight::Regular,
             TextAlign::Center,
         );
@@ -1946,7 +1946,7 @@ impl Panel {
             ),
             frame.rect(CARD_X - 600.0, ABOUT_Y, 1_200.0, 26.0),
             17.0 * s,
-            fade(color::MUTED),
+            fade(color::muted()),
             FontWeight::Regular,
             TextAlign::Center,
         );
@@ -1960,7 +1960,7 @@ impl Panel {
                 ),
                 frame.rect(CARD_X - 500.0, SEALED_Y, 1_000.0, 26.0),
                 17.0 * s,
-                fade(color::QUIET),
+                fade(color::quiet()),
                 FontWeight::Regular,
                 TextAlign::Center,
             );
@@ -1972,7 +1972,7 @@ impl Panel {
                 format_args!("{} of {count}", index + 1),
                 frame.rect(CARD_X - 300.0, 120.0, 600.0, 34.0),
                 24.0 * s,
-                fade(color::MUTED),
+                fade(color::muted()),
                 FontWeight::Regular,
                 TextAlign::Center,
             );
@@ -2045,7 +2045,7 @@ impl Panel {
             format_args!("{kind}. From {} {}", tier.article(), tier.title()),
             frame.rect(CARD_X - 500.0, EDITION_Y, 1_000.0, 28.0),
             19.0 * s,
-            fade(color::TEXT),
+            fade(color::text()),
             FontWeight::Regular,
             TextAlign::Center,
         );
@@ -2068,7 +2068,7 @@ impl Panel {
             ),
             frame.rect(CARD_X - 600.0, ABOUT_Y, 1_200.0, 26.0),
             17.0 * s,
-            fade(color::MUTED),
+            fade(color::muted()),
             FontWeight::Regular,
             TextAlign::Center,
         );
@@ -2094,7 +2094,7 @@ impl Panel {
             format_args!("{held}"),
             frame.rect(CARD_X - 500.0, SEALED_Y, 1_000.0, 26.0),
             17.0 * s,
-            fade(color::QUIET),
+            fade(color::quiet()),
             FontWeight::Regular,
             TextAlign::Center,
         );
@@ -2105,7 +2105,7 @@ impl Panel {
                 format_args!("{} of {count}", index + 1),
                 frame.rect(CARD_X - 300.0, 120.0, 600.0, 34.0),
                 24.0 * s,
-                fade(color::MUTED),
+                fade(color::muted()),
                 FontWeight::Regular,
                 TextAlign::Center,
             );
@@ -2210,7 +2210,7 @@ impl Panel {
         let _ = list.push(DrawCommand::RoundedRect {
             rect,
             radius: 8.0 * k * s,
-            color: color::alpha(color::SPACE, 0.92),
+            color: color::alpha(color::space(), 0.92),
         });
         let _ = list.push(DrawCommand::GradientRect {
             rect,
@@ -2257,7 +2257,7 @@ impl Panel {
                     format_args!("+{}", cards::credits_text(credits)),
                     frame.rect(x, y + height - 32.0 * k, width, 24.0 * k),
                     18.0 * k * s,
-                    color::GOLD_BRIGHT,
+                    color::gold_bright(),
                     FontWeight::Semibold,
                     TextAlign::Center,
                 );
@@ -2283,7 +2283,7 @@ impl Panel {
                     from: hilt,
                     to: from,
                     width: 5.0 * k * s,
-                    color: color::alpha(color::MUTED, 0.9),
+                    color: color::alpha(color::muted(), 0.9),
                 });
                 let _ = list.push(DrawCommand::Border {
                     rect,
@@ -2414,8 +2414,8 @@ pub(super) fn strip_ends(
     height: f32,
 ) {
     let width = (right - left) * 0.28;
-    let dark = color::alpha(color::SPACE, 0.93);
-    let clear = color::alpha(color::SPACE, 0.0);
+    let dark = color::alpha(color::space(), 0.93);
+    let clear = color::alpha(color::space(), 0.0);
     for (x, start, end) in [(left, dark, clear), (right - width, clear, dark)] {
         let _ = canvas.draw_list_mut().push(DrawCommand::GradientRect {
             rect: frame.rect(x, top, width, height),
@@ -2528,8 +2528,8 @@ fn pack_tile(
     let [left, top] = [centre[0] - width * 0.5, centre[1] - height * 0.5];
     let (accent, bright, words, label) = match currency {
         Currency::Credits => (
-            color::GOLD,
-            color::GOLD_BRIGHT,
+            color::gold(),
+            color::gold_bright(),
             cards::credits_text(amount),
             "credits",
         ),
@@ -2551,12 +2551,12 @@ fn pack_tile(
     let _ = list.push(DrawCommand::RoundedRect {
         rect: frame.rect(left + 4.0, top + 10.0, width, height),
         radius: 18.0 * s,
-        color: fade(color::SPACE, 0.6),
+        color: fade(color::space(), 0.6),
     });
     let _ = list.push(DrawCommand::RoundedRect {
         rect: frame.rect(left, top, width, height),
         radius: 18.0 * s,
-        color: fade(color::GLASS, 0.95),
+        color: fade(color::glass(), 0.95),
     });
     let _ = list.push(DrawCommand::Border {
         rect: frame.rect(left, top, width, height),
@@ -2590,7 +2590,7 @@ fn pack_tile(
         format_args!("{label}"),
         frame.rect(left, top + 158.0, width, 26.0),
         17.0 * s,
-        fade(color::MUTED, 1.0),
+        fade(color::muted(), 1.0),
         FontWeight::Regular,
         TextAlign::Center,
     );
@@ -2655,7 +2655,7 @@ pub(crate) fn credits_line(
     let words_width = crate::text::display_width(words, size) * crate::text::style::current().scale;
     let total = cards::mark::width(mark) + gap + words_width;
     let left = x - total * 0.5;
-    let gold = Color::new(color::GOLD.r, color::GOLD.g, color::GOLD.b, alpha);
+    let gold = Color::new(color::gold().r, color::gold().g, color::gold().b, alpha);
     let [mx, my] = frame.point(left, y + (size * 1.25 - mark) * 0.5);
     cards::mark::draw(canvas.draw_list_mut(), [mx, my], mark * s, gold);
     text(
@@ -2670,9 +2670,9 @@ pub(crate) fn credits_line(
         ),
         size * s,
         Color::new(
-            color::GOLD_BRIGHT.r,
-            color::GOLD_BRIGHT.g,
-            color::GOLD_BRIGHT.b,
+            color::gold_bright().r,
+            color::gold_bright().g,
+            color::gold_bright().b,
             alpha,
         ),
         FontWeight::Semibold,
@@ -2719,7 +2719,7 @@ fn coin(
         rect: ring(1.0),
         radius: radius * s,
         width: (radius * 0.12 * s).max(1.0),
-        color: fade(color::GOLD, 1.0),
+        color: fade(color::gold(), 1.0),
     });
     if !face_up {
         return;
@@ -2729,7 +2729,7 @@ fn coin(
             rect: ring(0.72),
             radius: radius * 0.72 * s,
             width: (radius * 0.04 * s).max(1.0),
-            color: fade(color::GOLD_BRIGHT, 0.5),
+            color: fade(color::gold_bright(), 0.5),
         });
     }
     let mark = radius;
@@ -2737,7 +2737,7 @@ fn coin(
         list,
         frame.point(x - cards::mark::width(mark) * 0.5, y - mark * 0.5),
         mark * s,
-        fade(color::GOLD_BRIGHT, 1.0),
+        fade(color::gold_bright(), 1.0),
     );
 }
 
@@ -2794,7 +2794,7 @@ pub(super) fn tucked_card(
     let s = frame.s;
     let tier = holocrons::slot(tier);
     let edge = if finish == 2 {
-        color::GOLD_BRIGHT
+        color::gold_bright()
     } else {
         tier.colour
     };
@@ -2865,7 +2865,7 @@ pub(super) fn tucked_card(
     let _ = list.push(DrawCommand::RoundedRect {
         rect,
         radius,
-        color: color::alpha(color::SPACE, 0.98),
+        color: color::alpha(color::space(), 0.98),
     });
     let _ = list.push(DrawCommand::GradientRect {
         rect,
@@ -2940,7 +2940,7 @@ fn flourish(
     }
     let s = frame.s;
     let colour = if finish == 2 {
-        color::GOLD_BRIGHT
+        color::gold_bright()
     } else {
         tone
     };

@@ -143,13 +143,13 @@ impl Panel {
         let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
             rect,
             radius: 14.0 * s,
-            color: color::alpha(color::GOLD, if hovered { 0.18 } else { 0.06 }),
+            color: color::alpha(color::gold(), if hovered { 0.18 } else { 0.06 }),
         });
         let _ = self.ui.draw_list_mut().push(DrawCommand::Border {
             rect,
             radius: 14.0 * s,
             width: 1.2 * s,
-            color: color::alpha(color::GOLD, if hovered { 1.0 } else { 0.55 }),
+            color: color::alpha(color::gold(), if hovered { 1.0 } else { 0.55 }),
         });
         text(
             &mut self.ui,
@@ -157,7 +157,7 @@ impl Panel {
             format_args!("{label}"),
             frame.rect(seen_x, y + 3.0, width, 22.0),
             15.0 * s,
-            color::GOLD_BRIGHT,
+            color::gold_bright(),
             FontWeight::Semibold,
             TextAlign::Center,
         );
@@ -222,7 +222,7 @@ pub(super) fn count_pill(
     let _ = canvas.draw_list_mut().push(DrawCommand::RoundedRect {
         rect: frame.rect(x, y, width, height),
         radius: height * 0.5 * s,
-        color: color::GOLD_BRIGHT,
+        color: color::gold_bright(),
     });
     text(
         canvas,

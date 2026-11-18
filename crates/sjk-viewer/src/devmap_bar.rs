@@ -251,10 +251,10 @@ pub(crate) fn layout(place: Place) -> ([f32; 4], [[f32; 4]; ENTRIES.len()]) {
 /// A kind's colour.
 fn tint(kind: Kind) -> Color {
     match kind {
-        Kind::Toggle => color::GOLD,
-        Kind::Give => color::HOLO,
-        Kind::Npc => color::EMBER,
-        Kind::Player => color::MUTED,
+        Kind::Toggle => color::gold(),
+        Kind::Give => color::holo(),
+        Kind::Npc => color::ember(),
+        Kind::Player => color::muted(),
     }
 }
 
@@ -423,7 +423,7 @@ impl DevBar {
             DrawCommand::RoundedRect {
                 rect: frame.rect(bar[0] + 3.0, bar[1] + 6.0, bar[2], bar[3]),
                 radius: bar[3] * 0.5 * s,
-                color: color::alpha(color::SPACE, 0.45),
+                color: color::alpha(color::space(), 0.45),
             },
         );
         push(
@@ -431,7 +431,7 @@ impl DevBar {
             DrawCommand::RoundedRect {
                 rect: self.bar,
                 radius: bar[3] * 0.5 * s,
-                color: color::alpha(color::GLASS, 0.86),
+                color: color::alpha(color::glass(), 0.86),
             },
         );
         push(
@@ -440,7 +440,7 @@ impl DevBar {
                 rect: self.bar,
                 radius: bar[3] * 0.5 * s,
                 width: 1.5 * s,
-                color: color::alpha(color::HOLO, if self.held { 0.7 } else { 0.35 }),
+                color: color::alpha(color::holo(), if self.held { 0.7 } else { 0.35 }),
             },
         );
         text(
@@ -449,7 +449,7 @@ impl DevBar {
             format_args!("DEVMAP"),
             frame.rect(bar[0] + END_PADDING, bar[1], LABEL_WIDTH, bar[3]),
             17.0 * s,
-            color::GOLD,
+            color::gold(),
             FontWeight::Semibold,
             TextAlign::Start,
         );
@@ -465,7 +465,7 @@ impl DevBar {
                             1.5,
                             button[3] - 12.0,
                         ),
-                        color: color::alpha(color::HOLO, 0.25),
+                        color: color::alpha(color::holo(), 0.25),
                     },
                 );
             }
@@ -505,7 +505,7 @@ impl DevBar {
                 format_args!("{}", entry.label),
                 rect,
                 LABEL_SIZE * s,
-                if lit { color::SPACE } else { tint },
+                if lit { color::space() } else { tint },
                 FontWeight::Semibold,
                 TextAlign::Center,
             );
@@ -524,7 +524,7 @@ impl DevBar {
                 format_args!("{} \u{b7} {}", ENTRIES[index].about, ENTRIES[index].command),
                 note,
                 NOTE_SIZE * s,
-                color::TEXT,
+                color::text(),
                 FontWeight::Regular,
                 TextAlign::Center,
             ),
@@ -534,7 +534,7 @@ impl DevBar {
                 format_args!("Click a button to run it"),
                 note,
                 NOTE_SIZE * s,
-                color::MUTED,
+                color::muted(),
                 FontWeight::Regular,
                 TextAlign::Center,
             ),
@@ -544,7 +544,7 @@ impl DevBar {
                 format_args!("Bind a key to {HOLD_COMMAND} to click the bar"),
                 note,
                 NOTE_SIZE * s,
-                color::QUIET,
+                color::quiet(),
                 FontWeight::Regular,
                 TextAlign::Center,
             ),
@@ -554,7 +554,7 @@ impl DevBar {
                 format_args!("Hold {} to click the bar", self.keys),
                 note,
                 NOTE_SIZE * s,
-                color::QUIET,
+                color::quiet(),
                 FontWeight::Regular,
                 TextAlign::Center,
             ),
@@ -573,7 +573,7 @@ impl DevBar {
                         size + 4.0 * s,
                     ),
                     radius: size * 0.5 + 2.0 * s,
-                    color: color::alpha(color::SPACE, 0.9),
+                    color: color::alpha(color::space(), 0.9),
                 },
             );
             push(

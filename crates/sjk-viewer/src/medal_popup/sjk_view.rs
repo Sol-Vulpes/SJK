@@ -52,11 +52,13 @@ const RISE: f32 = 14.0;
 const SCRIM: f32 = 0.8;
 
 /// The SJK UI's colours for the ceremony.
-const PALETTE: Palette = Palette {
-    gold: color::GOLD,
-    bright: color::GOLD_BRIGHT,
-    line: color::HOLO,
-};
+fn palette() -> Palette {
+    Palette {
+        gold: color::gold(),
+        bright: color::gold_bright(),
+        line: color::holo(),
+    }
+}
 
 impl MedalPopup {
     /// Draw the SJK UI's pop-up over the whole frame at `now`, its text to `target`.
@@ -81,7 +83,7 @@ impl MedalPopup {
         let screen = Rect::new(0.0, 0.0, viewport[0], viewport[1]);
         let _ = ui.draw_list_mut().push(DrawCommand::SolidRect {
             rect: screen,
-            color: color::alpha(color::SPACE, SCRIM * view.scrim),
+            color: color::alpha(color::space(), SCRIM * view.scrim),
         });
         // A click anywhere acts as the button; the button itself is drawn over it.
         ui.hit_region(SCREEN_TOKEN, screen);
@@ -102,7 +104,7 @@ fn stage(frame: &Frame, view: &View<'_>) -> Stage {
             MEDAL_SIZE,
         ),
         texture: view.award.medal.art(),
-        palette: PALETTE,
+        palette: palette(),
     }
 }
 
@@ -167,7 +169,7 @@ fn words(ui: &mut MenuCanvas, frame: &Frame, body: &UiFont, view: &View<'_>, mom
                 format_args!("{} \u{b7} {at} of {of}", view.kicker(false)),
                 KICKER_Y + rise,
                 KICKER_SIZE,
-                color::GOLD_BRIGHT,
+                color::gold_bright(),
                 FontWeight::Semibold,
             ),
             None => line(
@@ -177,7 +179,7 @@ fn words(ui: &mut MenuCanvas, frame: &Frame, body: &UiFont, view: &View<'_>, mom
                 format_args!("{}", view.kicker(false)),
                 KICKER_Y + rise,
                 KICKER_SIZE,
-                color::GOLD_BRIGHT,
+                color::gold_bright(),
                 FontWeight::Semibold,
             ),
         }
@@ -188,7 +190,7 @@ fn words(ui: &mut MenuCanvas, frame: &Frame, body: &UiFont, view: &View<'_>, mom
             format_args!("From the SJK team"),
             FROM_Y + rise,
             FROM_SIZE,
-            color::MUTED,
+            color::muted(),
             FontWeight::Regular,
         );
     });
@@ -205,7 +207,7 @@ fn words(ui: &mut MenuCanvas, frame: &Frame, body: &UiFont, view: &View<'_>, mom
                 format_args!("{name} x{count}"),
                 y,
                 NAME_SIZE,
-                color::GOLD_BRIGHT,
+                color::gold_bright(),
                 FontWeight::Semibold,
             );
         } else {
@@ -216,7 +218,7 @@ fn words(ui: &mut MenuCanvas, frame: &Frame, body: &UiFont, view: &View<'_>, mom
                 format_args!("{name}"),
                 y,
                 NAME_SIZE,
-                color::GOLD_BRIGHT,
+                color::gold_bright(),
                 FontWeight::Semibold,
             );
         }
@@ -236,7 +238,7 @@ fn words(ui: &mut MenuCanvas, frame: &Frame, body: &UiFont, view: &View<'_>, mom
                 format_args!("{part}"),
                 y + index as f32 * LINE + rise,
                 DESCRIPTION_SIZE,
-                color::TEXT,
+                color::text(),
                 FontWeight::Regular,
             );
         }
@@ -248,7 +250,7 @@ fn words(ui: &mut MenuCanvas, frame: &Frame, body: &UiFont, view: &View<'_>, mom
                 format_args!("{}", view.given),
                 given_y + rise,
                 GIVEN_SIZE,
-                color::MUTED,
+                color::muted(),
                 FontWeight::Regular,
             );
         }
@@ -269,7 +271,7 @@ fn words(ui: &mut MenuCanvas, frame: &Frame, body: &UiFont, view: &View<'_>, mom
                     format_args!("{open}{part}{close}"),
                     top + index as f32 * NOTE_LINE + rise,
                     NOTE_SIZE,
-                    color::alpha(color::TEXT, 0.92),
+                    color::alpha(color::text(), 0.92),
                     FontWeight::Regular,
                 );
             }

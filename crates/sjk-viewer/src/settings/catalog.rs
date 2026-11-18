@@ -1858,6 +1858,29 @@ pub(super) const GAME: &[Setting] = &[
         kind: ValueKind::Choice(&crate::menu::style::MenuStyle::NAMES),
     },
     Setting {
+        label: "Theme",
+        cvar: crate::menu::sjk::theme::CVAR,
+        kind: ValueKind::Choice(&crate::menu::sjk::theme::Theme::NAMES),
+    },
+    Setting {
+        label: "Theme hue",
+        cvar: crate::menu::sjk::theme::HUE_CVAR,
+        kind: ValueKind::Integer {
+            min: 0,
+            max: crate::menu::sjk::theme::HUE_MAX,
+            step: crate::menu::sjk::theme::HUE_STEP,
+        },
+    },
+    Setting {
+        label: "Theme saturation",
+        cvar: crate::menu::sjk::theme::SATURATION_CVAR,
+        kind: ValueKind::Integer {
+            min: 0,
+            max: crate::menu::sjk::theme::SATURATION_MAX,
+            step: crate::menu::sjk::theme::SATURATION_STEP,
+        },
+    },
+    Setting {
         label: "SJK Launcher notice",
         cvar: crate::launcher_notice::CVAR,
         kind: ValueKind::Bool,

@@ -1489,6 +1489,18 @@ const HELP: &[(&str, &str)] = &[
         "The SJK UI, SJK's own menus over the live map; or classic menus after the original game's.",
     ),
     (
+        crate::menu::sjk::theme::CVAR,
+        "The SJK UI's colours: warm, the sun's; cold, deep navy and holo blue; or custom, the hue and saturation below.",
+    ),
+    (
+        crate::menu::sjk::theme::HUE_CVAR,
+        "Turns the SJK UI to any colour, keeping each colour's lightness so text reads as well. Moving it picks the custom theme.",
+    ),
+    (
+        crate::menu::sjk::theme::SATURATION_CVAR,
+        "How colourful the custom theme is, from greys to the warm theme's strength. Moving it picks the custom theme.",
+    ),
+    (
         crate::launcher_notice::CVAR,
         "Without the SJK Launcher on this computer, the SJK UI's main page says it is out, with a link to it. Off hides it, as its x does.",
     ),

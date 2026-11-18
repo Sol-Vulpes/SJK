@@ -753,7 +753,7 @@ impl Card {
             format_args!("{}", words.title),
             frame.rect(LEFT, 126.0, 700.0, 50.0),
             36.0 * s,
-            color::GOLD_BRIGHT,
+            color::gold_bright(),
             FontWeight::Semibold,
             TextAlign::Start,
         );
@@ -763,7 +763,7 @@ impl Card {
             format_args!("{}", words.about),
             frame.rect(LEFT, 174.0, 1100.0, 26.0),
             18.0 * s,
-            color::MUTED,
+            color::muted(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -773,7 +773,7 @@ impl Card {
             format_args!("{}", words.notice),
             frame.rect(LEFT, 198.0, 1100.0, 22.0),
             15.0 * s,
-            color::QUIET,
+            color::quiet(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -785,9 +785,9 @@ impl Card {
             frame.rect(1420.0, 132.0, 96.0, 28.0),
             17.0 * s,
             if ui.token_hovered(BACK_TOKEN) {
-                color::TEXT
+                color::text()
             } else {
-                color::MUTED
+                color::muted()
             },
             FontWeight::Regular,
             TextAlign::End,
@@ -805,7 +805,7 @@ impl Card {
             format_args!("{}", words.switch),
             frame.rect(LEFT, top + 12.0, 700.0, 30.0),
             21.0 * s,
-            color::TEXT,
+            color::text(),
             FontWeight::Semibold,
             TextAlign::Start,
         );
@@ -817,7 +817,7 @@ impl Card {
             format_args!("{explained}"),
             frame.rect(LEFT, top + 50.0, 1100.0, 24.0),
             16.0 * s,
-            color::MUTED,
+            color::muted(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -831,7 +831,7 @@ impl Card {
             ),
             frame.rect(LEFT, top + 78.0, 1100.0, 24.0),
             15.0 * s,
-            color::QUIET,
+            color::quiet(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -855,7 +855,7 @@ impl Card {
             format_args!("{AUTO_SWITCH}"),
             frame.rect(LEFT, AUTO_TOP + 6.0, 700.0, 28.0),
             19.0 * s,
-            color::TEXT,
+            color::text(),
             FontWeight::Semibold,
             TextAlign::Start,
         );
@@ -866,7 +866,7 @@ impl Card {
             format_args!("{}", if self.auto { words.auto_on } else { AUTO_OFF }),
             frame.rect(LEFT, AUTO_TOP + 33.0, 1000.0, 22.0),
             15.0 * s,
-            color::MUTED,
+            color::muted(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -891,7 +891,7 @@ impl Card {
                     format_args!("{waiting}"),
                     frame.rect(LEFT, GROUPS_TOP + 10.0, 1100.0, 28.0),
                     18.0 * s,
-                    color::MUTED,
+                    color::muted(),
                     FontWeight::Regular,
                     TextAlign::Start,
                 );
@@ -942,7 +942,11 @@ impl Card {
                         format_args!("{}", cut(&group.name, 36)),
                         frame.rect(LEFT + 42.0, top + 6.0, 440.0, 28.0),
                         20.0 * s,
-                        if fetchable { color::TEXT } else { color::QUIET },
+                        if fetchable {
+                            color::text()
+                        } else {
+                            color::quiet()
+                        },
                         FontWeight::Semibold,
                         TextAlign::Start,
                     );
@@ -952,7 +956,7 @@ impl Card {
                         format_args!("{}  ·  {}", group.kind.label(), cut(&group.description, 48)),
                         frame.rect(LEFT + 42.0, top + 33.0, 440.0, 22.0),
                         15.0 * s,
-                        color::MUTED,
+                        color::muted(),
                         FontWeight::Regular,
                         TextAlign::Start,
                     );
@@ -985,7 +989,11 @@ impl Card {
                         format_args!("{detail}"),
                         frame.rect(RIGHT - 500.0, top + 33.0, 500.0, 22.0),
                         15.0 * s,
-                        if focused { color::MUTED } else { color::QUIET },
+                        if focused {
+                            color::muted()
+                        } else {
+                            color::quiet()
+                        },
                         FontWeight::Regular,
                         TextAlign::End,
                     );
@@ -1002,7 +1010,7 @@ impl Card {
                         ),
                         frame.rect(RIGHT - 300.0, HEADING - 8.0, 300.0, 22.0),
                         14.0 * s,
-                        color::QUIET,
+                        color::quiet(),
                         FontWeight::Regular,
                         TextAlign::End,
                     );
@@ -1021,9 +1029,9 @@ impl Card {
                     RIGHT - LEFT,
                     &back,
                     if ui.token_hovered(GROUPS_TOKEN) {
-                        color::GOLD_BRIGHT
+                        color::gold_bright()
                     } else {
-                        color::HOLO
+                        color::holo()
                     },
                 );
                 ui.hit_region(
@@ -1042,7 +1050,7 @@ impl Card {
                         ),
                         frame.rect(RIGHT - 300.0, HEADING - 22.0, 300.0, 22.0),
                         14.0 * s,
-                        color::QUIET,
+                        color::quiet(),
                         FontWeight::Regular,
                         TextAlign::End,
                     );
@@ -1072,7 +1080,7 @@ impl Card {
                     format_args!("All of {}", cut(&group.name, 32)),
                     frame.rect(LEFT + 42.0, GROUPS_TOP + 4.0, 440.0, 26.0),
                     19.0 * s,
-                    color::TEXT,
+                    color::text(),
                     FontWeight::Semibold,
                     TextAlign::Start,
                 );
@@ -1087,7 +1095,7 @@ impl Card {
                     ),
                     frame.rect(LEFT + 42.0, GROUPS_TOP + 30.0, 440.0, 22.0),
                     15.0 * s,
-                    color::MUTED,
+                    color::muted(),
                     FontWeight::Regular,
                     TextAlign::Start,
                 );
@@ -1144,7 +1152,11 @@ impl Card {
                         format_args!("{}", shorten(&asset.name, 44)),
                         frame.rect(LEFT + 42.0, top + 9.0, 470.0, 26.0),
                         18.0 * s,
-                        if for_sjk { color::TEXT } else { color::QUIET },
+                        if for_sjk {
+                            color::text()
+                        } else {
+                            color::quiet()
+                        },
                         FontWeight::Regular,
                         TextAlign::Start,
                     );
@@ -1154,7 +1166,7 @@ impl Card {
                         format_args!("{}", cut(&asset.description, 40)),
                         frame.rect(LEFT + 530.0, top + 12.0, 330.0, 22.0),
                         15.0 * s,
-                        color::MUTED,
+                        color::muted(),
                         FontWeight::Regular,
                         TextAlign::Start,
                     );
@@ -1181,7 +1193,7 @@ impl Card {
                         format_args!("{}", human_size(asset.size)),
                         frame.rect(RIGHT - 100.0, top + 10.0, 100.0, 24.0),
                         16.0 * s,
-                        color::QUIET,
+                        color::quiet(),
                         FontWeight::Regular,
                         TextAlign::End,
                     );
@@ -1245,7 +1257,7 @@ impl Card {
             format_args!("{hints}"),
             frame.rect(LEFT + 215.0, buttons + 12.0, 600.0, 24.0),
             15.0 * s,
-            color::QUIET,
+            color::quiet(),
             FontWeight::Regular,
             TextAlign::Center,
         );
@@ -1257,7 +1269,7 @@ impl Card {
                 format_args!("Next automatic check {hour:02}:{minute:02}"),
                 frame.rect(LEFT, buttons + 60.0, RIGHT - LEFT, 22.0),
                 14.0 * s,
-                color::QUIET,
+                color::quiet(),
                 FontWeight::Regular,
                 TextAlign::Center,
             );
@@ -1289,7 +1301,7 @@ impl Card {
         match &self.phase {
             Phase::Manifest => (
                 format!("Asking {} for its list...", self.words.repository),
-                color::MUTED,
+                color::muted(),
                 None,
             ),
             Phase::Checking { done, total } => (
@@ -1298,12 +1310,12 @@ impl Card {
                     human_size(*done),
                     human_size(*total)
                 ),
-                color::MUTED,
+                color::muted(),
                 ratio(*done, *total),
             ),
             Phase::Removing { done, total } => (
                 format!("Removing files no longer chosen ({done} of {total})..."),
-                color::MUTED,
+                color::muted(),
                 ratio(*done as u64, *total as u64),
             ),
             Phase::Downloading {
@@ -1320,7 +1332,7 @@ impl Card {
                     human_size(*done),
                     human_size(*total)
                 ),
-                color::GOLD_BRIGHT,
+                color::gold_bright(),
                 ratio(*done, *total),
             ),
             // An automatic check that found nothing to do says what is here.
@@ -1338,15 +1350,15 @@ impl Card {
                     capital(self.words.repository),
                     shorten(reason, 80)
                 ),
-                color::EMBER,
+                color::ember(),
                 None,
             ),
             Phase::Cancelled => (
                 "Stopped. Download again to carry on where it stopped.".into(),
-                color::MUTED,
+                color::muted(),
                 None,
             ),
-            Phase::Idle | Phase::Finished(_) => (self.ready(), color::MUTED, None),
+            Phase::Idle | Phase::Finished(_) => (self.ready(), color::muted(), None),
         }
     }
 
@@ -1359,7 +1371,7 @@ impl Card {
                     outcome.failures.len(),
                     shorten(first, 70)
                 ),
-                color::EMBER,
+                color::ember(),
                 None,
             );
         }
@@ -1374,7 +1386,7 @@ impl Card {
         } else {
             done.push_str(&format!(" Turn on {} to load them.", self.words.switch));
         }
-        (done, color::GOLD_BRIGHT, None)
+        (done, color::gold_bright(), None)
     }
 
     fn ready(&self) -> String {
@@ -1430,7 +1442,11 @@ fn auto_tick(
         format_args!("Auto"),
         frame.rect(AUTO_X + 34.0, y - 12.0, 60.0, 24.0),
         16.0 * frame.s,
-        if marked { color::TEXT } else { color::MUTED },
+        if marked {
+            color::text()
+        } else {
+            color::muted()
+        },
         FontWeight::Regular,
         TextAlign::Start,
     );
@@ -1493,13 +1509,13 @@ fn summaries(snapshot: &Snapshot, selection: &Selection) -> Vec<Summary> {
 /// The group's state on the right of its row.
 fn group_state(summary: &Summary) -> (String, Color) {
     if summary.files == 0 {
-        return ("Not for SJK".into(), color::QUIET);
+        return ("Not for SJK".into(), color::quiet());
     }
     if summary.wanted == 0 {
         return if summary.ours > 0 {
             (
                 format!("Not chosen  ·  {} to remove", human_size(summary.ours)),
-                color::MUTED,
+                color::muted(),
             )
         } else if summary.here > 0 {
             (
@@ -1507,16 +1523,16 @@ fn group_state(summary: &Summary) -> (String, Color) {
                     "Not chosen  ·  {} of {} in game folder",
                     summary.here, summary.files
                 ),
-                color::QUIET,
+                color::quiet(),
             )
         } else {
-            ("Not chosen".into(), color::QUIET)
+            ("Not chosen".into(), color::quiet())
         };
     }
     let whole = summary.wanted == summary.files;
     match (whole, summary.missing) {
         (true, 0) if summary.here == summary.files => {
-            (format!("All {} here", summary.files), color::GOLD_BRIGHT)
+            (format!("All {} here", summary.files), color::gold_bright())
         }
         (true, missing) => (
             format!(
@@ -1525,14 +1541,14 @@ fn group_state(summary: &Summary) -> (String, Color) {
                 summary.files,
                 human_size(missing)
             ),
-            color::TEXT,
+            color::text(),
         ),
         (false, 0) => (
             format!(
                 "{} of {} chosen  ·  all here",
                 summary.wanted, summary.files
             ),
-            color::GOLD_BRIGHT,
+            color::gold_bright(),
         ),
         (false, missing) => (
             format!(
@@ -1541,7 +1557,7 @@ fn group_state(summary: &Summary) -> (String, Color) {
                 summary.files,
                 human_size(missing)
             ),
-            color::TEXT,
+            color::text(),
         ),
     }
 }
@@ -1554,19 +1570,21 @@ fn file_state(
     downloaded: bool,
 ) -> (&'static str, Color) {
     if !for_sjk {
-        return ("JoF's client only", color::QUIET);
+        return ("JoF's client only", color::quiet());
     }
     match (state, wanted) {
-        (AssetState::Installed, true) => ("Here", color::GOLD_BRIGHT),
-        (AssetState::InGameFolder, true) => ("In game folder", color::GOLD_BRIGHT),
-        (AssetState::InGameFolder, false) => ("In game folder", color::MUTED),
-        (AssetState::Missing, true) => ("To download", color::TEXT),
-        (AssetState::Outdated, true) => ("To update", color::TEXT),
+        (AssetState::Installed, true) => ("Here", color::gold_bright()),
+        (AssetState::InGameFolder, true) => ("In game folder", color::gold_bright()),
+        (AssetState::InGameFolder, false) => ("In game folder", color::muted()),
+        (AssetState::Missing, true) => ("To download", color::text()),
+        (AssetState::Outdated, true) => ("To update", color::text()),
         (AssetState::Installed | AssetState::Outdated, false) if downloaded => {
-            ("To remove", color::EMBER)
+            ("To remove", color::ember())
         }
-        (AssetState::Installed | AssetState::Outdated, false) => ("Here, not chosen", color::MUTED),
-        _ => ("Not chosen", color::QUIET),
+        (AssetState::Installed | AssetState::Outdated, false) => {
+            ("Here, not chosen", color::muted())
+        }
+        _ => ("Not chosen", color::quiet()),
     }
 }
 
@@ -1577,14 +1595,14 @@ fn bar(canvas: &mut MenuCanvas, frame: &Frame, rect: [f32; 4], ratio: f32) {
     let _ = canvas.draw_list_mut().push(DrawCommand::RoundedRect {
         rect: frame.rect(x, y, width, height),
         radius,
-        color: color::alpha(color::HOLO, 0.12),
+        color: color::alpha(color::holo(), 0.12),
     });
     let fill = width * ratio.clamp(0.0, 1.0);
     if fill > 0.0 {
         let _ = canvas.draw_list_mut().push(DrawCommand::RoundedRect {
             rect: frame.rect(x, y, fill.max(height), height),
             radius,
-            color: color::GOLD,
+            color: color::gold(),
         });
     }
 }

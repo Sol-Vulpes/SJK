@@ -71,7 +71,7 @@ impl Panel {
             format_args!("Import"),
             frame.rect(TEXT_X, CARD_TOP + 30.0, TEXT_WIDTH, 30.0),
             22.0 * s,
-            color::GOLD_BRIGHT,
+            color::gold_bright(),
             FontWeight::Semibold,
             TextAlign::Start,
         );
@@ -81,7 +81,7 @@ impl Panel {
             format_args!("{}", self.file),
             frame.rect(TEXT_X + 120.0, CARD_TOP + 33.0, TEXT_WIDTH - 120.0, 26.0),
             16.0 * s,
-            color::MUTED,
+            color::muted(),
             FontWeight::Regular,
             TextAlign::End,
         );
@@ -91,7 +91,7 @@ impl Panel {
             format_args!("{headline}"),
             frame.rect(TEXT_X, CARD_TOP + 70.0, TEXT_WIDTH, 52.0),
             40.0 * s,
-            color::TEXT,
+            color::text(),
             FontWeight::Semibold,
             TextAlign::Start,
         );
@@ -108,7 +108,7 @@ impl Panel {
                     format_args!("{line}"),
                     frame.rect(TEXT_X, y, TEXT_WIDTH, 28.0),
                     18.0 * s,
-                    color::alpha(color::TEXT, 0.86),
+                    color::alpha(color::text(), 0.86),
                     FontWeight::Regular,
                     TextAlign::Start,
                 );
@@ -196,9 +196,9 @@ impl Panel {
                 frame.rect(TEXT_X + 8.0, middle - 13.0, VALUE_X - TEXT_X - 16.0, 26.0),
                 19.0 * s,
                 if focused {
-                    color::TEXT
+                    color::text()
                 } else {
-                    color::alpha(color::TEXT, 0.9)
+                    color::alpha(color::text(), 0.9)
                 },
                 FontWeight::Regular,
                 TextAlign::Start,
@@ -210,7 +210,11 @@ impl Panel {
                 format_args!("{value}"),
                 frame.rect(VALUE_X, middle - 12.0, switch_left - VALUE_X - 20.0, 24.0),
                 17.0 * s,
-                if ticked { color::MUTED } else { color::QUIET },
+                if ticked {
+                    color::muted()
+                } else {
+                    color::quiet()
+                },
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -227,7 +231,7 @@ impl Panel {
                 format_args!("{}", unknown_note(unknown)),
                 frame.rect(TEXT_X + 8.0, top + 4.0, TEXT_WIDTH, 24.0),
                 16.0 * s,
-                color::QUIET,
+                color::quiet(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -269,9 +273,9 @@ impl Panel {
                 frame.rect(TEXT_X + 8.0, middle - 13.0, 340.0, 26.0),
                 19.0 * s,
                 if focused {
-                    color::TEXT
+                    color::text()
                 } else {
-                    color::alpha(color::TEXT, 0.9)
+                    color::alpha(color::text(), 0.9)
                 },
                 FontWeight::Regular,
                 TextAlign::Start,
@@ -282,7 +286,7 @@ impl Panel {
                 format_args!("{value}"),
                 frame.rect(TEXT_X + 360.0, middle - 12.0, TEXT_WIDTH - 368.0, 24.0),
                 17.0 * s,
-                color::MUTED,
+                color::muted(),
                 FontWeight::Regular,
                 TextAlign::End,
             );
@@ -298,7 +302,7 @@ impl Panel {
             format_args!("Not here? Browse for its .cfg, or drop it on this window."),
             frame.rect(TEXT_X + 8.0, top + 4.0, TEXT_WIDTH, 24.0),
             16.0 * s,
-            color::QUIET,
+            color::quiet(),
             FontWeight::Regular,
             TextAlign::Start,
         );

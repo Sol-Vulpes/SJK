@@ -695,22 +695,22 @@ impl Panel {
         let gif = self.tag_gif.clone();
         let why = gif.why_not(blanks);
         let (words, colour) = match (&why, &gif.said, &gif.link) {
-            (Some(why), _, _) => ((*why).to_owned(), color::QUIET),
+            (Some(why), _, _) => ((*why).to_owned(), color::quiet()),
             (None, _, Some(_)) if gif.confirm => (
                 "Press Make again: one blank tag becomes this GIF tag, for good.".to_owned(),
-                color::GOLD_BRIGHT,
+                color::gold_bright(),
             ),
-            (None, Some((said, true)), None) => (said.clone(), color::TEXT),
-            (None, Some((said, false)), _) => (said.clone(), color::alpha(color::GOLD, 0.9)),
+            (None, Some((said, true)), None) => (said.clone(), color::text()),
+            (None, Some((said, false)), _) => (said.clone(), color::alpha(color::gold(), 0.9)),
             (None, _, Some(_)) => (
                 "That GIF, as it will play on walls. Make spends one blank tag.".to_owned(),
-                color::TEXT,
+                color::text(),
             ),
             (None, _, None) => (
                 gif.paste_said
                     .unwrap_or("Copy a GIPHY link (giphy.com), then Paste link.")
                     .to_owned(),
-                color::MUTED,
+                color::muted(),
             ),
         };
         text(
@@ -798,21 +798,21 @@ impl Panel {
                     crate::tag_copies::copy_name(&copies[0]),
                     crate::tag_copies::copy_name(&copies[1])
                 ),
-                color::GOLD_BRIGHT,
+                color::gold_bright(),
             ),
             (Some(Tool::Break), _, _) => (
                 "One copy goes; you keep at least one of every tag.".to_owned(),
-                color::GOLD_BRIGHT,
+                color::gold_bright(),
             ),
-            (_, _, Some((said, true))) => (said.clone(), color::TEXT),
-            (_, _, Some((said, false))) => (said.clone(), color::alpha(color::GOLD, 0.9)),
+            (_, _, Some((said, true))) => (said.clone(), color::text()),
+            (_, _, Some((said, false))) => (said.clone(), color::alpha(color::gold(), 0.9)),
             _ => match tools.craft_why {
-                Some(why) => (why.to_owned(), color::QUIET),
+                Some(why) => (why.to_owned(), color::quiet()),
                 None if tools.shatter.is_none() => (
                     "Duplicates break down into kyber shards or craft into a new tag.".to_owned(),
-                    color::QUIET,
+                    color::quiet(),
                 ),
-                None => (String::new(), color::QUIET),
+                None => (String::new(), color::quiet()),
             },
         };
         if !words.is_empty() {
@@ -838,14 +838,14 @@ impl Panel {
             format_args!("{words}"),
             frame.rect(LEFT_X, y + 6.0, 260.0, 26.0),
             20.0 * frame.s,
-            color::GOLD_BRIGHT,
+            color::gold_bright(),
             FontWeight::Semibold,
             TextAlign::Start,
         );
         let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
             rect: frame.rect(LEFT_X + 260.0, y + 19.0, width - 260.0, 1.0),
             radius: 0.5 * frame.s,
-            color: color::alpha(color::HOLO, 0.18),
+            color: color::alpha(color::holo(), 0.18),
         });
     }
 
@@ -867,12 +867,12 @@ impl Panel {
         let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
             rect: frame.rect(x, WALL_Y, 4.0, track),
             radius: 2.0 * frame.s,
-            color: color::alpha(color::HOLO, 0.1),
+            color: color::alpha(color::holo(), 0.1),
         });
         let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
             rect: frame.rect(x, top.min(WALL_BOTTOM - size), 4.0, size),
             radius: 2.0 * frame.s,
-            color: color::alpha(color::HOLO, 0.45),
+            color: color::alpha(color::holo(), 0.45),
         });
     }
 
@@ -920,7 +920,7 @@ impl Panel {
                 rect: frame.rect(x - 3.0, y - 3.0, TILE_WIDTH + 6.0, TILE_HEIGHT + 6.0),
                 radius: 15.0 * s,
                 width: 1.8 * s,
-                color: color::GOLD_BRIGHT,
+                color: color::gold_bright(),
             });
         }
         let art = 120.0;
@@ -948,11 +948,11 @@ impl Panel {
             frame.rect(x + 8.0, y + 142.0, TILE_WIDTH - 16.0, 24.0),
             17.0 * s,
             if chosen {
-                color::GOLD_BRIGHT
+                color::gold_bright()
             } else if count > 0 {
-                color::TEXT
+                color::text()
             } else {
-                color::QUIET
+                color::quiet()
             },
             FontWeight::Semibold,
             TextAlign::Center,
@@ -974,7 +974,7 @@ impl Panel {
             frame.rect(x + 8.0, y + 168.0, TILE_WIDTH - 16.0, 20.0),
             14.0 * s,
             if in_use.is_some() {
-                color::HOLO
+                color::holo()
             } else {
                 Color::new(tone.r, tone.g, tone.b, if count > 0 { 0.9 } else { 0.5 })
             },
@@ -1080,7 +1080,7 @@ impl Panel {
         let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
             rect: area,
             radius: 16.0 * s,
-            color: color::alpha(color::SPACE, 0.88),
+            color: color::alpha(color::space(), 0.88),
         });
         let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
             rect: frame.rect(CARD_X + 24.0, CARD_TOP, CARD_WIDTH - 48.0, 3.0),
@@ -1091,7 +1091,7 @@ impl Panel {
             rect: area,
             radius: 16.0 * s,
             width: 1.2 * s,
-            color: color::alpha(color::HOLO, 0.3),
+            color: color::alpha(color::holo(), 0.3),
         });
         let x = CARD_X + CARD_PAD;
         let width = CARD_WIDTH - CARD_PAD * 2.0;
@@ -1122,7 +1122,7 @@ impl Panel {
             } else {
                 38.0
             } * s,
-            color::GOLD_BRIGHT,
+            color::gold_bright(),
             FontWeight::Semibold,
             TextAlign::Start,
         );
@@ -1216,9 +1216,9 @@ impl Panel {
             PROPOSE
         };
         for (words, colour) in [
-            (how, color::TEXT),
-            (held_line, color::MUTED),
-            (foot.to_owned(), color::QUIET),
+            (how, color::text()),
+            (held_line, color::muted()),
+            (foot.to_owned(), color::quiet()),
         ] {
             text(
                 &mut self.ui,
@@ -1264,7 +1264,7 @@ impl Panel {
             format_args!("toy_tag sticks it where you look"),
             frame.rect(bx + bw + 18.0, by + 12.0, width - bw - 18.0, 24.0),
             15.0 * s,
-            color::QUIET,
+            color::quiet(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -1293,7 +1293,7 @@ impl Panel {
                 rect,
                 radius: height * 0.5 * s,
                 color: color::alpha(
-                    if active { color::GOLD } else { color::HOLO },
+                    if active { color::gold() } else { color::holo() },
                     if active {
                         0.16
                     } else if hovered {
@@ -1323,9 +1323,9 @@ impl Panel {
                 radius: height * 0.5 * s,
                 width: if active { 1.6 } else { 1.0 } * s,
                 color: if active {
-                    color::GOLD_BRIGHT
+                    color::gold_bright()
                 } else {
-                    color::alpha(color::HOLO, if has { 0.35 } else { 0.12 })
+                    color::alpha(color::holo(), if has { 0.35 } else { 0.12 })
                 },
             });
             let copies = match finish.index {
@@ -1345,11 +1345,11 @@ impl Panel {
                 frame.rect(left, y + (height - 22.0) * 0.5, chip, 22.0),
                 16.0 * s,
                 if active {
-                    color::GOLD_BRIGHT
+                    color::gold_bright()
                 } else if has {
-                    color::TEXT
+                    color::text()
                 } else {
-                    color::QUIET
+                    color::quiet()
                 },
                 FontWeight::Semibold,
                 TextAlign::Center,
@@ -1379,7 +1379,7 @@ pub(super) fn finish_badge(
     let _ = canvas.draw_list_mut().push(DrawCommand::RoundedRect {
         rect,
         radius: 10.0 * s,
-        color: color::alpha(color::SPACE, 0.85),
+        color: color::alpha(color::space(), 0.85),
     });
     let _ = canvas.draw_list_mut().push(DrawCommand::Border {
         rect,
@@ -1444,7 +1444,7 @@ fn entry_words(entry: &Entry) -> (String, String, Color) {
                 face.kind.name().to_owned(),
                 face.tone().colour,
             ),
-            None => (id.clone(), "Card".to_owned(), color::QUIET),
+            None => (id.clone(), "Card".to_owned(), color::quiet()),
         },
         Entry::Gif(_) => (
             "GIF".to_owned(),

@@ -451,7 +451,7 @@ impl Row {
     fn frame_colour(self) -> sjk_ui::Color {
         match self.tier() {
             Some(tier) => color::alpha(tier.colour(), if self.owned { 0.9 } else { 0.4 }),
-            None => color::alpha(color::HOLO, 0.3),
+            None => color::alpha(color::holo(), 0.3),
         }
     }
 
@@ -903,7 +903,7 @@ impl Panel {
         let note = frame.rect(note_x, y - 1.0, 28.0, 28.0);
         let open = self.new_note;
         let hovered = self.ui.token_hovered(NEW_NOTE_TOKEN) || open;
-        let tint = if lit { color::GOLD } else { color::HOLO };
+        let tint = if lit { color::gold() } else { color::holo() };
         let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
             rect: note,
             radius: 14.0 * s,
@@ -922,9 +922,9 @@ impl Panel {
             frame.rect(note_x, y + 1.0, 28.0, 24.0),
             18.0 * s,
             if lit {
-                color::GOLD_BRIGHT
+                color::gold_bright()
             } else {
-                color::MUTED
+                color::muted()
             },
             FontWeight::Semibold,
             TextAlign::Center,
@@ -946,13 +946,13 @@ impl Panel {
         let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
             rect,
             radius: 14.0 * s,
-            color: color::alpha(color::GOLD, if hovered { 0.18 } else { 0.06 }),
+            color: color::alpha(color::gold(), if hovered { 0.18 } else { 0.06 }),
         });
         let _ = self.ui.draw_list_mut().push(DrawCommand::Border {
             rect,
             radius: 14.0 * s,
             width: 1.2 * s,
-            color: color::alpha(color::GOLD, if hovered { 1.0 } else { 0.55 }),
+            color: color::alpha(color::gold(), if hovered { 1.0 } else { 0.55 }),
         });
         text(
             &mut self.ui,
@@ -960,7 +960,7 @@ impl Panel {
             format_args!("{label}"),
             frame.rect(seen_x, y + 3.0, width, 22.0),
             15.0 * s,
-            color::GOLD_BRIGHT,
+            color::gold_bright(),
             FontWeight::Semibold,
             TextAlign::Center,
         );
@@ -978,7 +978,7 @@ impl Panel {
             count => format!("{count} new kybers"),
         };
         if count == 0 {
-            card.colour = color::MUTED;
+            card.colour = color::muted();
         }
         card
     }
@@ -1038,8 +1038,8 @@ impl Panel {
                 format!("{}  {}", tier.symbol(), tier.label()),
                 tier.colour(),
             ),
-            Group::Favourites => (format!("{}  Favourites", symbols::EDITION), color::GOLD),
-            Group::Stock => (format!("{}  Stock", symbols::SABER), color::HOLO),
+            Group::Favourites => (format!("{}  Favourites", symbols::EDITION), color::gold()),
+            Group::Stock => (format!("{}  Stock", symbols::SABER), color::holo()),
         };
         let tier = match group {
             Group::Tier(tier) => Some(tier),
@@ -1068,7 +1068,7 @@ impl Panel {
                 format_args!("{count}"),
                 frame.rect(rule_x, words_y + 3.0, count_width, 22.0),
                 15.0 * s,
-                color::MUTED,
+                color::muted(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -1127,7 +1127,7 @@ impl Panel {
                 let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
                     rect,
                     radius: TOOLBAR_HEIGHT * 0.5 * s,
-                    color: color::alpha(color::GOLD, if lit { 0.18 } else { 0.08 }),
+                    color: color::alpha(color::gold(), if lit { 0.18 } else { 0.08 }),
                 });
             }
             let _ = self.ui.draw_list_mut().push(DrawCommand::Border {
@@ -1135,9 +1135,9 @@ impl Panel {
                 radius: TOOLBAR_HEIGHT * 0.5 * s,
                 width: 1.2 * s,
                 color: if lit {
-                    color::GOLD
+                    color::gold()
                 } else {
-                    color::alpha(color::HOLO, 0.4)
+                    color::alpha(color::holo(), 0.4)
                 },
             });
             if chroma {
@@ -1156,7 +1156,11 @@ impl Panel {
                 format_args!("{label}"),
                 frame.rect(left + mark, y + 4.0, width - mark, TOOLBAR_HEIGHT - 8.0),
                 15.0 * s,
-                if lit { color::GOLD_BRIGHT } else { color::TEXT },
+                if lit {
+                    color::gold_bright()
+                } else {
+                    color::text()
+                },
                 FontWeight::Semibold,
                 TextAlign::Center,
             );
@@ -1169,16 +1173,16 @@ impl Panel {
         let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
             rect,
             radius: TOOLBAR_HEIGHT * 0.5 * s,
-            color: color::alpha(color::SPACE, if focused { 0.8 } else { 0.5 }),
+            color: color::alpha(color::space(), if focused { 0.8 } else { 0.5 }),
         });
         let _ = self.ui.draw_list_mut().push(DrawCommand::Border {
             rect,
             radius: TOOLBAR_HEIGHT * 0.5 * s,
             width: 1.2 * s,
             color: if focused {
-                color::GOLD
+                color::gold()
             } else {
-                color::alpha(color::HOLO, 0.35)
+                color::alpha(color::holo(), 0.35)
             },
         });
         let caret = (self.epoch.elapsed().as_millis() / 500).is_multiple_of(2);
@@ -1200,9 +1204,9 @@ impl Panel {
             frame.rect(left + 16.0, y + 4.0, width - 32.0, TOOLBAR_HEIGHT - 8.0),
             14.0 * s,
             if focused || !self.shader_filter.query.is_empty() {
-                color::TEXT
+                color::text()
             } else {
-                color::QUIET
+                color::quiet()
             },
             FontWeight::Regular,
             TextAlign::Start,
@@ -1226,14 +1230,14 @@ impl Panel {
             let rect = frame.rect(x, STRIP_Y, width, STRIP_HEIGHT);
             let lit = self.shader_filter.tier == tier;
             let hovered = self.ui.token_hovered(token);
-            let colour = tier.map_or(color::GOLD, Rarity::colour);
+            let colour = tier.map_or(color::gold(), Rarity::colour);
             let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
                 rect,
                 radius: 10.0 * s,
                 color: if lit {
-                    color::alpha(color::GOLD, 0.12)
+                    color::alpha(color::gold(), 0.12)
                 } else {
-                    color::alpha(color::SPACE, if hovered { 0.75 } else { 0.5 })
+                    color::alpha(color::space(), if hovered { 0.75 } else { 0.5 })
                 },
             });
             let _ = self.ui.draw_list_mut().push(DrawCommand::Border {
@@ -1241,9 +1245,9 @@ impl Panel {
                 radius: 10.0 * s,
                 width: 1.2 * s,
                 color: if lit {
-                    color::GOLD
+                    color::gold()
                 } else {
-                    color::alpha(color::HOLO, if hovered { 0.4 } else { 0.2 })
+                    color::alpha(color::holo(), if hovered { 0.4 } else { 0.2 })
                 },
             });
             let label = tier.map_or_else(
@@ -1258,8 +1262,8 @@ impl Panel {
                 16.0 * s,
                 match tier {
                     Some(tier) => tier.colour(),
-                    None if lit => color::GOLD_BRIGHT,
-                    None => color::TEXT,
+                    None if lit => color::gold_bright(),
+                    None => color::text(),
                 },
                 FontWeight::Semibold,
                 TextAlign::Start,
@@ -1277,7 +1281,7 @@ impl Panel {
                 format_args!("{words}"),
                 frame.rect(x + 10.0, STRIP_Y + 30.0, words_width, 18.0),
                 14.0 * s,
-                color::MUTED,
+                color::muted(),
                 FontWeight::Semibold,
                 TextAlign::Start,
             );
@@ -1290,7 +1294,7 @@ impl Panel {
                 let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
                     rect: bar(1.0),
                     radius: 2.0 * s,
-                    color: color::alpha(color::HOLO, 0.16),
+                    color: color::alpha(color::holo(), 0.16),
                 });
                 if known && held > 0 && total > 0 {
                     let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
@@ -1341,11 +1345,11 @@ impl Panel {
                 frame.rect(x, y + 2.0, width, 22.0),
                 15.0 * s,
                 if lit {
-                    color::GOLD_BRIGHT
+                    color::gold_bright()
                 } else if hovered {
-                    color::TEXT
+                    color::text()
                 } else {
-                    color::MUTED
+                    color::muted()
                 },
                 FontWeight::Semibold,
                 if end {
@@ -1361,7 +1365,7 @@ impl Panel {
                     let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
                         rect: frame.rect(mark_x, y + 7.0 + bar as f32 * 4.0, length, 2.0),
                         radius: 1.0 * s,
-                        color: color::GOLD,
+                        color: color::gold(),
                     });
                 }
             }
@@ -1372,7 +1376,7 @@ impl Panel {
         }
         let _ = self.ui.draw_list_mut().push(DrawCommand::SolidRect {
             rect: frame.rect(LIST_X, y + HEADS_HEIGHT, LIST_WIDTH, 1.0),
-            color: color::alpha(color::HOLO, 0.25),
+            color: color::alpha(color::holo(), 0.25),
         });
     }
 
@@ -1388,7 +1392,7 @@ impl Panel {
         let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
             rect: frame.rect(SCROLL_X, top, 4.0, height),
             radius: 2.0 * s,
-            color: color::alpha(color::HOLO, 0.14),
+            color: color::alpha(color::holo(), 0.14),
         });
         let total = lines.len() as f32;
         let thumb = (height * shown as f32 / total).max(24.0);
@@ -1397,7 +1401,7 @@ impl Panel {
         let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
             rect: frame.rect(SCROLL_X, thumb_top, 4.0, thumb),
             radius: 2.0 * s,
-            color: color::GOLD,
+            color: color::gold(),
         });
     }
 
@@ -1418,7 +1422,7 @@ impl Panel {
                 let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
                     rect,
                     radius: 9.0 * s,
-                    color: color::alpha(color::GOLD, if lit { 0.16 } else { 0.08 }),
+                    color: color::alpha(color::gold(), if lit { 0.16 } else { 0.08 }),
                 });
             }
             let _ = self.ui.draw_list_mut().push(DrawCommand::Border {
@@ -1426,15 +1430,15 @@ impl Panel {
                 radius: 9.0 * s,
                 width: 1.2 * s,
                 color: if lit {
-                    color::GOLD
+                    color::gold()
                 } else {
-                    color::alpha(color::HOLO, 0.3)
+                    color::alpha(color::holo(), 0.3)
                 },
             });
             let ink = if lit {
-                color::GOLD_BRIGHT
+                color::gold_bright()
             } else {
-                color::QUIET
+                color::quiet()
             };
             let marks: &[[f32; 4]] = if grid {
                 &[
@@ -1487,7 +1491,7 @@ impl Panel {
             let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
                 rect: frame.rect(x + 2.0, y + CHOSEN_LIFT + 4.0, width - 4.0, height),
                 radius: 10.0 * s,
-                color: color::alpha(color::SPACE, 0.55),
+                color: color::alpha(color::space(), 0.55),
             });
         }
         let flash = row.skin.map_or(0.0, |skin| {
@@ -1515,7 +1519,10 @@ impl Panel {
                 let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
                     rect: area,
                     radius: 10.0 * s,
-                    color: color::alpha(color::SPACE, if chosen || hovered { 0.82 } else { 0.64 }),
+                    color: color::alpha(
+                        color::space(),
+                        if chosen || hovered { 0.82 } else { 0.64 },
+                    ),
                 });
                 let _ = self.ui.draw_list_mut().push(DrawCommand::Border {
                     rect: area,
@@ -1539,7 +1546,7 @@ impl Panel {
                 rect: frame.rect(x - 3.0, y - 3.0, width + 6.0, height + 6.0),
                 radius: 13.0 * s,
                 width: 1.6 * s,
-                color: color::alpha(color::GOLD_BRIGHT, 0.85),
+                color: color::alpha(color::gold_bright(), 0.85),
             });
         }
         // The name's lines and the state stand at the foot; the blade has the room above.
@@ -1571,8 +1578,8 @@ impl Panel {
         let name_colour = match (chosen, row.owned, row.name_colour()) {
             (_, true, Some(own)) => own,
             (true, _, _) => CHOSEN_OUTLINE,
-            (false, true, _) => color::TEXT,
-            (false, false, _) => color::MUTED,
+            (false, true, _) => color::text(),
+            (false, false, _) => color::muted(),
         };
         for (at, words) in [first, second].iter().enumerate() {
             if words.is_empty() {
@@ -1598,11 +1605,11 @@ impl Panel {
             frame.rect(x + 10.0, state_y, state_width, 16.0 * k),
             12.5 * s,
             if row.worn {
-                color::GOLD_BRIGHT
+                color::gold_bright()
             } else if row.owned && row.skin.is_some() {
-                color::GOLD
+                color::gold()
             } else {
-                color::QUIET
+                color::quiet()
             },
             FontWeight::Regular,
             TextAlign::Start,
@@ -1669,7 +1676,7 @@ impl Panel {
             let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
                 rect: frame.rect(LIST_X, y + 4.0, 3.0, height - 8.0),
                 radius: 1.5 * s,
-                color: color::alpha(color::GOLD_BRIGHT, 0.9),
+                color: color::alpha(color::gold_bright(), 0.9),
             });
         }
         let middle = y + height * 0.5;
@@ -1683,7 +1690,7 @@ impl Panel {
                 format_args!("{}", skin.number_text()),
                 words(x, width, 15.0),
                 15.0 * s,
-                color::QUIET,
+                color::quiet(),
                 FontWeight::Semibold,
                 TextAlign::Start,
             );
@@ -1753,9 +1760,9 @@ impl Panel {
             18.0 * s,
             match (chosen, row.owned, row.name_colour()) {
                 (_, true, Some(own)) => own,
-                (true, _, _) => color::GOLD_BRIGHT,
-                (false, true, _) => color::TEXT,
-                (false, false, _) => color::MUTED,
+                (true, _, _) => color::gold_bright(),
+                (false, true, _) => color::text(),
+                (false, false, _) => color::muted(),
             },
             FontWeight::Semibold,
             TextAlign::Start,
@@ -1766,7 +1773,7 @@ impl Panel {
                 format!("{}  {}", tier.symbol(), tier.label()),
                 color::alpha(tier.colour(), if row.owned { 1.0 } else { 0.7 }),
             ),
-            None => ("Your colour".to_owned(), color::QUIET),
+            None => ("Your colour".to_owned(), color::quiet()),
         };
         text(
             &mut self.ui,
@@ -1786,18 +1793,18 @@ impl Panel {
                 format_args!("{}", skin.smith),
                 words(smith_x, smith_width, 14.0),
                 14.0 * s,
-                color::MUTED,
+                color::muted(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
         }
         let [yours_x, yours_width] = columns.yours;
         let (yours, yours_colour) = match (row.skin, row.worn, row.owned) {
-            (_, true, _) => (format!("{}  Worn", symbols::SABER), color::GOLD_BRIGHT),
-            (None, false, _) => (String::new(), color::QUIET),
-            (Some(_), false, true) if row.count > 1 => (format!("x{}", row.count), color::GOLD),
-            (Some(_), false, true) => (format!("{}  Yours", symbols::TICK), color::GOLD),
-            (Some(_), false, false) => ("-".to_owned(), color::QUIET),
+            (_, true, _) => (format!("{}  Worn", symbols::SABER), color::gold_bright()),
+            (None, false, _) => (String::new(), color::quiet()),
+            (Some(_), false, true) if row.count > 1 => (format!("x{}", row.count), color::gold()),
+            (Some(_), false, true) => (format!("{}  Yours", symbols::TICK), color::gold()),
+            (Some(_), false, false) => ("-".to_owned(), color::quiet()),
         };
         text(
             &mut self.ui,
@@ -1837,7 +1844,7 @@ impl Panel {
         inputs: &Inputs<'_>,
     ) -> (String, sjk_ui::Color) {
         if !crate::economy::in_trade(skin) {
-            return ("-".to_owned(), color::QUIET);
+            return ("-".to_owned(), color::quiet());
         }
         let unlock = inputs.holdings.unlock(skin.id);
         let own = unlock
@@ -1851,10 +1858,10 @@ impl Panel {
                         crate::economy::shards_text(crate::economy::shatter_yield(skin.tier)),
                         symbols::SHARD
                     ),
-                    color::HOLO,
+                    color::holo(),
                 )
             } else {
-                ("-".to_owned(), color::QUIET)
+                ("-".to_owned(), color::quiet())
             };
         }
         let card = crate::economy::blade_card(
@@ -1871,9 +1878,9 @@ impl Panel {
         (
             format!("{} {}", crate::economy::shards_text(cost), symbols::SHARD),
             if cost <= shards {
-                color::TEXT
+                color::text()
             } else {
-                color::QUIET
+                color::quiet()
             },
         )
     }
@@ -1917,23 +1924,26 @@ impl Panel {
         match (row.skin, grant) {
             (None, _) if row.worn => (
                 format!("{}  What you hold now: no kyber on.", symbols::SABER),
-                color::MUTED,
+                color::muted(),
             ),
-            (None, _) => ("Wearing it takes your kyber off.".to_owned(), color::MUTED),
+            (None, _) => (
+                "Wearing it takes your kyber off.".to_owned(),
+                color::muted(),
+            ),
             (Some(_), Some(grant)) => (
                 format!("{}  {}", symbols::TICK, owned_line(grant)),
-                color::GOLD,
+                color::gold(),
             ),
             (Some(skin), None) if crate::saber_lab::owns(skin.id) => (
                 format!(
                     "{}  Yours in the Saber Lab, on this PC only: other players see your usual blade.",
                     symbols::TICK
                 ),
-                color::GOLD,
+                color::gold(),
             ),
             (Some(skin), None) => (
                 format!("How to get it: {}", crate::terms::say(skin.how_to_get)),
-                color::MUTED,
+                color::muted(),
             ),
         }
     }
@@ -1960,7 +1970,7 @@ impl Panel {
         let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
             rect: area,
             radius: CARD_RADIUS * s,
-            color: color::alpha(color::SPACE, 0.86),
+            color: color::alpha(color::space(), 0.86),
         });
         if let Some(tier) = row.tier() {
             // The tier's band along the top, and its glow under it, as on the wall's tiles.
@@ -2000,7 +2010,7 @@ impl Panel {
                 format!("{}  {}{}", tier.symbol(), tier.label(), row.number_words()),
                 color::alpha(tier.colour(), if row.owned { 1.0 } else { 0.7 }),
             ),
-            None => (format!("{}  Your saber", symbols::SABER), color::HOLO),
+            None => (format!("{}  Your saber", symbols::SABER), color::holo()),
         };
         text(
             &mut self.ui,
@@ -2023,7 +2033,7 @@ impl Panel {
                 ),
                 frame.rect(x, y + 3.0, width, 22.0),
                 15.0 * s,
-                color::MUTED,
+                color::muted(),
                 FontWeight::Semibold,
                 TextAlign::End,
             );
@@ -2063,8 +2073,8 @@ impl Panel {
             50.0 * s,
             match (lit, row.name_colour()) {
                 (true, Some(own)) => own,
-                (true, None) => color::GOLD_BRIGHT,
-                (false, _) => color::TEXT,
+                (true, None) => color::gold_bright(),
+                (false, _) => color::text(),
             },
             FontWeight::Semibold,
             TextAlign::Start,
@@ -2075,7 +2085,7 @@ impl Panel {
                 rect,
                 radius: 13.0 * s,
                 width: 1.2 * s,
-                color: if lit { color::GOLD } else { color::QUIET },
+                color: if lit { color::gold() } else { color::quiet() },
             });
             text(
                 &mut self.ui,
@@ -2083,7 +2093,7 @@ impl Panel {
                 format_args!("{tag}"),
                 frame.rect(tag_x, tag_y + 2.0, tag_width, 22.0),
                 15.0 * s,
-                if lit { color::GOLD } else { color::QUIET },
+                if lit { color::gold() } else { color::quiet() },
                 FontWeight::Semibold,
                 TextAlign::Center,
             );
@@ -2098,7 +2108,7 @@ impl Panel {
                 [left, y],
                 Fact::Chroma,
                 "Takes your colour",
-                color::HOLO,
+                color::holo(),
             );
         }
         if row.count > 1 {
@@ -2108,12 +2118,12 @@ impl Panel {
                 [left, y],
                 Fact::Icon(symbols::COPIES),
                 &copies,
-                color::HOLO,
+                color::holo(),
             );
         }
         if let Some(skin) = row.skin {
             for (icon, from) in sources(skin) {
-                left = self.fact(frame, [left, y], Fact::Icon(icon), &from, color::HOLO);
+                left = self.fact(frame, [left, y], Fact::Icon(icon), &from, color::holo());
             }
             let smith = format!("Smith: {}", skin.smith);
             let _ = self.fact(
@@ -2121,7 +2131,7 @@ impl Panel {
                 [left, y],
                 Fact::Icon(symbols::SMITH),
                 &smith,
-                color::HOLO,
+                color::holo(),
             );
         } else {
             let _ = self.fact(
@@ -2129,7 +2139,7 @@ impl Panel {
                 [left, y],
                 Fact::Icon(symbols::GIFT),
                 "Every player's",
-                color::HOLO,
+                color::holo(),
             );
         }
         y += FACT_HEIGHT + 16.0;
@@ -2141,7 +2151,7 @@ impl Panel {
             ABOUT_CHARS,
             usize::MAX,
             ABOUT_SIZE,
-            color::TEXT,
+            color::text(),
             FontWeight::Regular,
         );
         y += 6.0;
@@ -2166,7 +2176,7 @@ impl Panel {
                 LINE_CHARS,
                 2,
                 LINE_SIZE,
-                color::MUTED,
+                color::muted(),
                 FontWeight::Regular,
             );
         }
@@ -2357,7 +2367,7 @@ impl Panel {
             format_args!("{line}"),
             frame.rect(left, y + 11.0, (right - left).max(0.0), 22.0),
             15.0 * s,
-            color::HOLO,
+            color::holo(),
             FontWeight::Semibold,
             TextAlign::End,
         );
@@ -2409,9 +2419,9 @@ impl Panel {
             return;
         }
         let hint_colour = if self.spin.held() {
-            color::HOLO
+            color::holo()
         } else {
-            color::QUIET
+            color::quiet()
         };
         text(
             &mut self.ui,
@@ -2442,13 +2452,13 @@ impl Panel {
             let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
                 rect,
                 radius: 17.0 * s,
-                color: color::alpha(color::SPACE, 0.6),
+                color: color::alpha(color::space(), 0.6),
             });
             let _ = self.ui.draw_list_mut().push(DrawCommand::Border {
                 rect,
                 radius: 17.0 * s,
                 width: 1.2 * s,
-                color: color::alpha(color::HOLO, 0.6),
+                color: color::alpha(color::holo(), 0.6),
             });
             text(
                 &mut self.ui,
@@ -2456,7 +2466,7 @@ impl Panel {
                 format_args!("{words}"),
                 frame.rect(x, switch_bottom + 6.0, pill, 22.0),
                 16.0 * s,
-                color::HOLO,
+                color::holo(),
                 FontWeight::Semibold,
                 TextAlign::Center,
             );
@@ -2483,7 +2493,7 @@ impl Panel {
                     format_args!("{words}"),
                     frame.rect(x, y + 4.0, 700.0, 22.0),
                     15.0 * s,
-                    color::QUIET,
+                    color::quiet(),
                     FontWeight::Semibold,
                     TextAlign::Start,
                 );
@@ -2518,9 +2528,9 @@ impl Panel {
                 rect,
                 radius: 14.0 * s,
                 color: if lit {
-                    color::alpha(color::GOLD, 0.14)
+                    color::alpha(color::gold(), 0.14)
                 } else {
-                    color::alpha(color::SPACE, 0.62)
+                    color::alpha(color::space(), 0.62)
                 },
             });
             let _ = self.ui.draw_list_mut().push(DrawCommand::Border {
@@ -2528,11 +2538,11 @@ impl Panel {
                 radius: 14.0 * s,
                 width: if lit { 1.6 * s } else { 1.2 * s },
                 color: if lit {
-                    color::GOLD
+                    color::gold()
                 } else if hovered {
-                    color::alpha(color::HOLO, 0.6)
+                    color::alpha(color::holo(), 0.6)
                 } else {
-                    color::alpha(color::HOLO, 0.25)
+                    color::alpha(color::holo(), 0.25)
                 },
             });
             text(
@@ -2541,7 +2551,7 @@ impl Panel {
                 format_args!("{}  {word}", symbols::SABER),
                 frame.rect(left + 16.0, y + 6.0, width - 32.0, 18.0),
                 13.0 * s,
-                if lit { color::GOLD } else { color::QUIET },
+                if lit { color::gold() } else { color::quiet() },
                 FontWeight::Semibold,
                 TextAlign::Start,
             );
@@ -2552,9 +2562,9 @@ impl Panel {
                 frame.rect(left + 16.0, y + 24.0, width - 32.0, 24.0),
                 18.0 * s,
                 if lit {
-                    color::GOLD_BRIGHT
+                    color::gold_bright()
                 } else {
-                    color::MUTED
+                    color::muted()
                 },
                 FontWeight::Semibold,
                 TextAlign::Start,
@@ -2579,7 +2589,11 @@ impl Panel {
             format_args!("{both_word}"),
             frame.rect(after + 10.0, middle - 11.0, label_width, 22.0),
             16.0 * s,
-            if self.both { color::GOLD } else { color::MUTED },
+            if self.both {
+                color::gold()
+            } else {
+                color::muted()
+            },
             FontWeight::Semibold,
             TextAlign::Start,
         );
@@ -2608,7 +2622,7 @@ impl Panel {
             ),
             frame.rect(x, y, CARD_WIDTH - CARD_PAD * 2.0, 22.0),
             16.0 * s,
-            color::HOLO,
+            color::holo(),
             FontWeight::Semibold,
             TextAlign::Start,
         );
@@ -2646,13 +2660,13 @@ impl Panel {
         let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
             rect,
             radius: FACT_HEIGHT * 0.5 * s,
-            color: color::alpha(color::SPACE, 0.55),
+            color: color::alpha(color::space(), 0.55),
         });
         let _ = self.ui.draw_list_mut().push(DrawCommand::Border {
             rect,
             radius: FACT_HEIGHT * 0.5 * s,
             width: 1.0 * s,
-            color: color::alpha(color::HOLO, 0.35),
+            color: color::alpha(color::holo(), 0.35),
         });
         let icon_x = x + 14.0;
         match fact {
@@ -2681,7 +2695,7 @@ impl Panel {
             format_args!("{words}"),
             frame.rect(icon_x + FACT_ICON + 8.0, y + 6.0, width, 22.0),
             16.0 * s,
-            color::TEXT,
+            color::text(),
             FontWeight::Semibold,
             TextAlign::Start,
         );
@@ -2742,7 +2756,7 @@ impl Panel {
                 format_args!("Parts"),
                 frame.rect(x, y, width, 22.0),
                 16.0 * s,
-                color::HOLO,
+                color::holo(),
                 FontWeight::Semibold,
                 TextAlign::Start,
             );
@@ -2764,7 +2778,7 @@ impl Panel {
                     22.0,
                 ),
                 16.0 * s,
-                if *on { color::TEXT } else { color::MUTED },
+                if *on { color::text() } else { color::muted() },
                 FontWeight::Semibold,
                 TextAlign::Start,
             );
@@ -2828,7 +2842,7 @@ impl Panel {
         use crate::menu::sjk::hover::{Card, Line};
         let s = frame.s;
         let (tint, words_tint) = if unlocked {
-            (color::GOLD, color::GOLD_BRIGHT)
+            (color::gold(), color::gold_bright())
         } else {
             (LOCKED_RED, LOCKED_RED_TEXT)
         };
@@ -2906,7 +2920,7 @@ impl Panel {
         let s = frame.s;
         let card = Card {
             title: "Extra features".to_owned(),
-            colour: color::GOLD_BRIGHT,
+            colour: color::gold_bright(),
             lines: vec![Line::status(
                 "Unlocked. Switch them on or off: on, they show on your blade for every SJK player.",
             )],
@@ -2935,7 +2949,7 @@ impl Panel {
                     22.0,
                 ),
                 16.0 * s,
-                if *on { color::TEXT } else { color::MUTED },
+                if *on { color::text() } else { color::muted() },
                 FontWeight::Semibold,
                 TextAlign::Start,
             );

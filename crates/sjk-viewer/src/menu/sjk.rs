@@ -26,6 +26,7 @@ pub(crate) mod kit;
 pub(crate) mod loading;
 pub(crate) mod recent;
 pub(crate) mod settings;
+pub(crate) mod theme;
 pub(crate) mod tier_frame;
 
 use super::{ClientMenu, MenuAction};
@@ -429,43 +430,75 @@ impl ClientMenu {
     }
 }
 
-/// The SJK UI's colours: the sun of SJK's emblem (Sol's request, 17/11/2026: "switch to a
-/// warm colour ... orange, yellow, things that come from the sun"), in place of the deep
-/// navy and holo blue of before. They are display values, like all 2D colours
-/// (`crate::ui_target`). The names are the tokens' roles; `SPACE` and `HOLO` kept theirs
-/// from the navy palette (the ground, the line-work), so every screen took the new colours
-/// without being touched.
+/// The SJK UI's colour tokens, display values like all 2D colours (`crate::ui_target`).
+/// The names are the tokens' roles (the ground, the line-work, ...). The themed ones are
+/// functions: they read the palette of the theme in use ([`super::theme`], `ui_theme`:
+/// the sun's warm colours by default, Sol's request of 17/11/2026, the navy and holo
+/// blue of before, or a custom hue), which can change between two frames. The team
+/// colours and the trusted green are constants: their meaning never follows the theme.
 ///
 /// The text colours keep their contrast on the ground and over acrylic glass in front of
-/// the brightest scene (`tests::the_palette_keeps_its_contrast`).
+/// the brightest scene in every theme (`theme::tests::every_palette_keeps_its_contrast`).
 pub(crate) mod color {
+    use super::theme::{LIVE, Token};
     use sjk_ui::Color;
 
-    /// The ground: a deep ember brown, never pure black. Fades, scrims and the tint of
-    /// acrylic glass ([`acrylic`]).
-    pub(crate) const SPACE: Color = Color::new(0.078, 0.043, 0.024, 1.0);
+    /// The ground: a deep ember brown in the warm theme, never pure black. Fades,
+    /// scrims and the tint of acrylic glass ([`acrylic`]).
+    #[inline]
+    pub(crate) fn space() -> Color {
+        LIVE.get(Token::Space)
+    }
     /// Dark glass: a card's, a tile's or a panel's fill, a step lighter than the ground.
-    pub(crate) const GLASS: Color = Color::new(0.122, 0.071, 0.039, 1.0);
+    #[inline]
+    pub(crate) fn glass() -> Color {
+        LIVE.get(Token::Glass)
+    }
     /// Dark glass lit: the chosen or hovered tile's fill.
-    pub(crate) const GLASS_LIT: Color = Color::new(0.18, 0.106, 0.059, 1.0);
-    /// Line-work: rules, ticks, outlines, the ring, in the sun's amber. Never text that
-    /// matters.
-    pub(crate) const HOLO: Color = Color::new(1.0, 0.663, 0.471, 1.0);
-    /// What you choose: the selection, the one main action of a screen, in the sun's gold.
-    pub(crate) const GOLD: Color = Color::new(1.0, 0.784, 0.239, 1.0);
+    #[inline]
+    pub(crate) fn glass_lit() -> Color {
+        LIVE.get(Token::GlassLit)
+    }
+    /// Line-work: rules, ticks, outlines, the ring, in the sun's amber in the warm
+    /// theme. Never text that matters.
+    #[inline]
+    pub(crate) fn holo() -> Color {
+        LIVE.get(Token::Holo)
+    }
+    /// What you choose: the selection, the one main action of a screen, in the sun's
+    /// gold in the warm theme.
+    #[inline]
+    pub(crate) fn gold() -> Color {
+        LIVE.get(Token::Gold)
+    }
     /// Gold lit: the chosen item's text and marks.
-    pub(crate) const GOLD_BRIGHT: Color = Color::new(1.0, 0.89, 0.561, 1.0);
+    #[inline]
+    pub(crate) fn gold_bright() -> Color {
+        LIVE.get(Token::GoldBright)
+    }
+    /// Text: a warm white in the warm theme.
+    #[inline]
+    pub(crate) fn text() -> Color {
+        LIVE.get(Token::Text)
+    }
+    /// Secondary text.
+    #[inline]
+    pub(crate) fn muted() -> Color {
+        LIVE.get(Token::Muted)
+    }
+    /// Quieter still: an item that ends the session.
+    #[inline]
+    pub(crate) fn quiet() -> Color {
+        LIVE.get(Token::Quiet)
+    }
+    /// Only for leaving (Quit) and for what went wrong: the sun's red rim in the warm
+    /// theme, apart from the line-work. A custom theme keeps the warm one's.
+    #[inline]
+    pub(crate) fn ember() -> Color {
+        LIVE.get(Token::Ember)
+    }
     /// A trusted player's green (the trust mark's, `ui_renderer::trust_texture`).
     pub(crate) const TRUSTED: Color = Color::new(0.42, 0.86, 0.45, 1.0);
-    /// Text: a warm white.
-    pub(crate) const TEXT: Color = Color::new(0.988, 0.937, 0.886, 1.0);
-    /// Secondary text.
-    pub(crate) const MUTED: Color = Color::new(0.839, 0.749, 0.667, 1.0);
-    /// Quieter still: an item that ends the session.
-    pub(crate) const QUIET: Color = Color::new(0.678, 0.584, 0.514, 1.0);
-    /// Only for leaving (Quit) and for what went wrong: the sun's red rim, apart from the
-    /// amber line-work.
-    pub(crate) const EMBER: Color = Color::new(1.0, 0.361, 0.239, 1.0);
     /// The red team, muted: the SJK scoreboard's team rules and names, the CTF HUD's
     /// team boxes.
     pub(crate) const RED_TEAM: Color = Color::new(0.88, 0.38, 0.38, 1.0);
@@ -492,96 +525,12 @@ pub(crate) mod color {
         pub(crate) const CARD: f32 = 0.66;
     }
 
-    /// The tint of acrylic glass laying `amount` of the ground over the scene ([`acrylic`]).
-    pub(crate) const fn tint(amount: f32) -> Color {
-        alpha(SPACE, amount)
-    }
-
-    #[cfg(test)]
-    mod tests {
-        use super::*;
-
-        /// WCAG's relative luminance of a display colour.
-        fn luminance(color: Color) -> f32 {
-            let linear = |c: f32| crate::ui_target::srgb_to_linear(c.clamp(0.0, 1.0));
-            0.2126 * linear(color.r) + 0.7152 * linear(color.g) + 0.0722 * linear(color.b)
-        }
-
-        /// WCAG's contrast ratio of two display colours.
-        fn contrast(a: Color, b: Color) -> f32 {
-            let (a, b) = (luminance(a), luminance(b));
-            (a.max(b) + 0.05) / (a.min(b) + 0.05)
-        }
-
-        fn rgb([r, g, b]: [f32; 3]) -> Color {
-            Color::new(r, g, b, 1.0)
-        }
-
-        /// `top` at its alpha over `under`.
-        fn over(top: Color, under: Color) -> Color {
-            let a = top.a;
-            Color::new(
-                top.r * a + under.r * (1.0 - a),
-                top.g * a + under.g * (1.0 - a),
-                top.b * a + under.b * (1.0 - a),
-                1.0,
-            )
-        }
-
-        /// Hue in degrees of a display colour.
-        fn hue(c: Color) -> f32 {
-            let max = c.r.max(c.g).max(c.b);
-            let min = c.r.min(c.g).min(c.b);
-            let d = (max - min).max(1e-6);
-            let h = if max == c.r {
-                (c.g - c.b) / d
-            } else if max == c.g {
-                2.0 + (c.b - c.r) / d
-            } else {
-                4.0 + (c.r - c.g) / d
-            };
-            (h * 60.0).rem_euclid(360.0)
-        }
-
-        #[test]
-        fn the_palette_keeps_its_contrast() {
-            let white = [1.0, 1.0, 1.0];
-            let body = [("text", TEXT), ("muted", MUTED)];
-            let accents = [("gold", GOLD), ("gold bright", GOLD_BRIGHT), ("holo", HOLO)];
-            // On the ground itself, as the menus draw it.
-            for (name, colour) in body.into_iter().chain(accents) {
-                let ratio = contrast(colour, SPACE);
-                assert!(ratio >= 7.0, "{name} on the ground: {ratio:.2}");
-            }
-            for (name, colour) in [("quiet", QUIET), ("ember", EMBER)] {
-                let ratio = contrast(colour, SPACE);
-                assert!(ratio >= 4.5, "{name} on the ground: {ratio:.2}");
-            }
-            // Over each kind of acrylic glass in front of the brightest scene (snow, a
-            // white sky), blurred and tinted, and over its plain fallback.
-            for amount in [acrylic::BAR, acrylic::BANNER, acrylic::PANEL, acrylic::CARD] {
-                let glass = rgb(sjk_ui::acrylic::shade(white, tint(amount)));
-                let plain = over(sjk_ui::acrylic::fallback(tint(amount)), rgb(white));
-                for (name, colour) in body.into_iter().chain(accents) {
-                    let ratio = contrast(colour, glass);
-                    assert!(ratio >= 4.5, "{name} on acrylic {amount}: {ratio:.2}");
-                }
-                for (name, colour) in body {
-                    let ratio = contrast(colour, plain);
-                    assert!(ratio >= 4.5, "{name} on the fallback {amount}: {ratio:.2}");
-                }
-            }
-        }
-
-        #[test]
-        fn gold_stands_apart_from_the_line_work_and_ember() {
-            assert!(hue(GOLD) - hue(HOLO) >= 15.0, "gold against the line-work");
-            assert!(hue(HOLO) - hue(EMBER) >= 8.0, "the line-work against ember");
-            // The ground and the glass are warm: red over green over blue.
-            for ground in [SPACE, GLASS, GLASS_LIT] {
-                assert!(ground.r > ground.g && ground.g > ground.b);
-            }
-        }
+    /// The tint of acrylic glass laying `amount` of the ground over the scene
+    /// ([`acrylic`]), in the theme in use. The palette's contrast over each kind is
+    /// tested in [`super::theme`].
+    #[inline]
+    pub(crate) fn tint(amount: f32) -> Color {
+        alpha(space(), amount)
     }
 }
 
@@ -681,7 +630,7 @@ pub(crate) fn key_hint(
             rect: cap,
             radius: 5.0 * s,
             width: s.max(1.0),
-            color: color::alpha(color::HOLO, 0.45),
+            color: color::alpha(color::holo(), 0.45),
         });
         text(
             canvas,
@@ -689,7 +638,7 @@ pub(crate) fn key_hint(
             format_args!("{key}"),
             cap,
             17.0 * s,
-            color::TEXT,
+            color::text(),
             FontWeight::Semibold,
             TextAlign::Center,
         );
@@ -702,7 +651,7 @@ pub(crate) fn key_hint(
         format_args!("{action}"),
         Rect::new(x + 4.0 * s, y, action_width, height),
         15.0 * s,
-        color::MUTED,
+        color::muted(),
         FontWeight::Regular,
         TextAlign::Start,
     );
@@ -757,7 +706,7 @@ pub(crate) fn top_bar(
         format_args!("{title}"),
         frame.rect(title_x, BAR_Y - 30.0, 600.0, 60.0),
         48.0 * s,
-        color::TEXT,
+        color::text(),
         FontWeight::Semibold,
         TextAlign::Start,
     );
@@ -938,7 +887,7 @@ mod tests {
             format_args!("Play"),
             Rect::new(0.0, 100.0, 200.0, 40.0),
             20.0,
-            color::TEXT,
+            color::text(),
             FontWeight::Regular,
             TextAlign::Start,
         );

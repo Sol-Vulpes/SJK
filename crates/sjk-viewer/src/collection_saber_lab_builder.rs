@@ -242,7 +242,7 @@ fn glass(canvas: &mut MenuCanvas, frame: &Frame, [x, y, width, height]: [f32; 4]
         DrawCommand::RoundedRect {
             rect: frame.rect(x, y, width, height),
             radius: 16.0 * frame.s,
-            color: color::alpha(color::SPACE, 0.72),
+            color: color::alpha(color::space(), 0.72),
         },
     );
 }
@@ -300,28 +300,28 @@ fn chip(
     let [x, y, width, height] = rect;
     let (fill, edge, words) = match tone {
         Tone::Plain => (
-            color::alpha(color::GLASS, 0.95),
-            color::alpha(color::HOLO, 0.32),
-            color::TEXT,
+            color::alpha(color::glass(), 0.95),
+            color::alpha(color::holo(), 0.32),
+            color::text(),
         ),
         Tone::Gold => (
             Color::new(0.09, 0.08, 0.05, 0.95),
-            color::alpha(color::GOLD, 0.5),
-            color::TEXT,
+            color::alpha(color::gold(), 0.5),
+            color::text(),
         ),
         Tone::Core => (
-            color::alpha(color::GLASS, 0.9),
-            color::alpha(color::HOLO, 0.2),
-            color::MUTED,
+            color::alpha(color::glass(), 0.9),
+            color::alpha(color::holo(), 0.2),
+            color::muted(),
         ),
         Tone::Lifted => (
             Color::new(0.14, 0.11, 0.05, 0.98),
-            color::GOLD_BRIGHT,
-            color::GOLD_BRIGHT,
+            color::gold_bright(),
+            color::gold_bright(),
         ),
     };
     let edge = if hovered {
-        color::alpha(color::GOLD_BRIGHT, 0.9)
+        color::alpha(color::gold_bright(), 0.9)
     } else {
         edge
     };
@@ -485,7 +485,7 @@ impl Panel {
             format_args!("EFFECTS"),
             frame.rect(LIBRARY_X, TOP, LIBRARY_WIDTH, 28.0),
             22.0 * s,
-            color::HOLO,
+            color::holo(),
             FontWeight::Semibold,
             TextAlign::Start,
         );
@@ -515,10 +515,10 @@ impl Panel {
                     radius: 16.0 * s,
                     width: 2.0 * s,
                     color: match (fine, over) {
-                        (true, true) => color::GOLD_BRIGHT,
-                        (true, false) => color::alpha(color::GOLD, 0.45),
-                        (false, true) => color::EMBER,
-                        (false, false) => color::alpha(color::EMBER, 0.3),
+                        (true, true) => color::gold_bright(),
+                        (true, false) => color::alpha(color::gold(), 0.45),
+                        (false, true) => color::ember(),
+                        (false, false) => color::alpha(color::ember(), 0.3),
                     },
                 },
             );
@@ -548,11 +548,11 @@ impl Panel {
                 frame.rect(x, TABS_Y - 14.0, width, 28.0),
                 18.0 * fit * s,
                 if active {
-                    color::GOLD_BRIGHT
+                    color::gold_bright()
                 } else if hovered {
-                    color::TEXT
+                    color::text()
                 } else {
-                    color::MUTED
+                    color::muted()
                 },
                 FontWeight::Semibold,
                 TextAlign::Center,
@@ -563,7 +563,7 @@ impl Panel {
                     DrawCommand::RoundedRect {
                         rect: frame.rect(x + 6.0, TABS_Y + 13.0, width - 12.0, 2.5),
                         radius: 1.0 * s,
-                        color: color::GOLD,
+                        color: color::gold(),
                     },
                 );
             }
@@ -587,16 +587,16 @@ impl Panel {
                 frame,
                 rect,
                 if hovered || lifted {
-                    color::alpha(color::HOLO, 0.12)
+                    color::alpha(color::holo(), 0.12)
                 } else {
-                    color::alpha(color::HOLO, 0.05)
+                    color::alpha(color::holo(), 0.05)
                 },
                 if on {
-                    color::alpha(color::GOLD, 0.55)
+                    color::alpha(color::gold(), 0.55)
                 } else if hovered {
-                    color::alpha(color::GOLD_BRIGHT, 0.8)
+                    color::alpha(color::gold_bright(), 0.8)
                 } else {
-                    color::alpha(color::HOLO, 0.22)
+                    color::alpha(color::holo(), 0.22)
                 },
             );
             text(
@@ -605,20 +605,20 @@ impl Panel {
                 format_args!("{}", effect.name),
                 frame.rect(x + 12.0, y + 6.0, CARD_WIDTH - 24.0, 26.0),
                 19.0 * s,
-                if ready { color::TEXT } else { color::MUTED },
+                if ready { color::text() } else { color::muted() },
                 FontWeight::Semibold,
                 TextAlign::Start,
             );
             let (words, colour) = if !on {
-                (effect.short.to_owned(), color::QUIET)
+                (effect.short.to_owned(), color::quiet())
             } else if kind == Kind::Core {
-                ("On the blade".to_owned(), color::GOLD)
+                ("On the blade".to_owned(), color::gold())
             } else if let Some(group) = shape.group_of(effect.key) {
-                (format!("In {}", shape.groups[group].name), color::GOLD)
+                (format!("In {}", shape.groups[group].name), color::gold())
             } else if effect.key == "orbit" {
-                ("With its glints".to_owned(), color::GOLD)
+                ("With its glints".to_owned(), color::gold())
             } else {
-                ("Always on".to_owned(), color::GOLD)
+                ("Always on".to_owned(), color::gold())
             };
             text(
                 &mut self.ui,
@@ -639,7 +639,7 @@ impl Panel {
             [LIBRARY_X, BOTTOM - 46.0, LIBRARY_WIDTH],
             (60, 2),
             14.0,
-            color::QUIET,
+            color::quiet(),
             TextAlign::Start,
         );
     }
@@ -691,7 +691,7 @@ impl Panel {
                 36.0,
             ),
             24.0 * s,
-            color::TEXT,
+            color::text(),
             FontWeight::Semibold,
             TextAlign::Start,
         );
@@ -745,7 +745,7 @@ impl Panel {
                 [GROUPS_X, y, GROUPS_WIDTH],
                 (64, 4),
                 16.0,
-                color::MUTED,
+                color::muted(),
                 TextAlign::Start,
             );
             if matches!(unbuilt, Unbuilt::Elsewhere) {
@@ -772,16 +772,16 @@ impl Panel {
             self.lab_build.editor.as_ref().and_then(Editor::problem),
             &self.lab_build.note,
         ) {
-            (Some(why), _) => (format!("Does not read: {why}"), color::EMBER),
-            (None, Some((why, _))) => (why.clone(), color::EMBER),
+            (Some(why), _) => (format!("Does not read: {why}"), color::ember()),
+            (None, Some((why, _))) => (why.clone(), color::ember()),
             (None, None) if self.lab_build.editor.as_ref().is_some_and(Editor::unsaved) => {
-                ("Shown; writing the files…".to_owned(), color::QUIET)
+                ("Shown; writing the files…".to_owned(), color::quiet())
             }
             (None, None) if revertable => (
                 "Saved. Revert puts it back as it was before your first change.".to_owned(),
-                color::QUIET,
+                color::quiet(),
             ),
-            (None, None) => ("Saved in the lab's folder.".to_owned(), color::QUIET),
+            (None, None) => ("Saved in the lab's folder.".to_owned(), color::quiet()),
         };
         left_lines(
             &mut self.ui,
@@ -820,9 +820,9 @@ impl Panel {
             };
             let fine = builder::may_go(shape, key, place).is_ok();
             match (fine, over == Some(place)) {
-                (true, true) => color::GOLD_BRIGHT,
-                (true, false) => color::alpha(color::GOLD, 0.45),
-                (false, true) => color::EMBER,
+                (true, true) => color::gold_bright(),
+                (true, false) => color::alpha(color::gold(), 0.45),
+                (false, true) => color::ember(),
                 (false, false) => rest,
             }
         };
@@ -835,8 +835,8 @@ impl Panel {
             &mut self.ui,
             frame,
             [GROUPS_X, y, GROUPS_WIDTH, height],
-            color::alpha(color::HOLO, 0.03),
-            edge_of(Place::Core, color::alpha(color::HOLO, 0.18)),
+            color::alpha(color::holo(), 0.03),
+            edge_of(Place::Core, color::alpha(color::holo(), 0.18)),
         );
         self.lab_build
             .spots
@@ -846,7 +846,7 @@ impl Panel {
             "THE BLADE ITSELF",
             "every blade has it",
             [GROUPS_X, y],
-            color::MUTED,
+            color::muted(),
         );
         for (key, rect) in core.iter().zip(rects) {
             chip(
@@ -868,8 +868,8 @@ impl Panel {
             &mut self.ui,
             frame,
             [GROUPS_X, y, GROUPS_WIDTH, height],
-            color::alpha(color::HOLO, 0.05),
-            edge_of(Place::Always, color::alpha(color::HOLO, 0.3)),
+            color::alpha(color::holo(), 0.05),
+            edge_of(Place::Always, color::alpha(color::holo(), 0.3)),
         );
         self.lab_build.spots.push((
             Spot::Zone(Place::Always),
@@ -881,7 +881,7 @@ impl Panel {
             "ALWAYS ON",
             &format!("{count} effect{}", if count == 1 { "" } else { "s" }),
             [GROUPS_X, y],
-            color::HOLO,
+            color::holo(),
         );
         if always.is_empty() {
             text(
@@ -890,7 +890,7 @@ impl Panel {
                 format_args!("Drop an effect here to have it always on."),
                 frame.rect(GROUPS_X + BOX_PAD, y + BOX_TITLE, inner, CHIP_HEIGHT),
                 14.0 * s,
-                color::QUIET,
+                color::quiet(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -944,8 +944,8 @@ impl Panel {
                         &mut self.ui,
                         frame,
                         rect,
-                        color::alpha(color::GOLD, 0.02),
-                        edge_of(place, color::alpha(color::GOLD, 0.3)),
+                        color::alpha(color::gold(), 0.02),
+                        edge_of(place, color::alpha(color::gold(), 0.3)),
                     );
                     self.lab_build.spots.push((Spot::Zone(place), rect));
                     let left = builder::MAX_GROUPS - shape.groups.len();
@@ -955,7 +955,7 @@ impl Panel {
                         format_args!("+ NEW GROUP"),
                         frame.rect(x + BOX_PAD, y + 6.0, inner, 24.0),
                         17.0 * s,
-                        color::GOLD,
+                        color::gold(),
                         FontWeight::Semibold,
                         TextAlign::Start,
                     );
@@ -968,7 +968,7 @@ impl Panel {
                         [x + BOX_PAD, y + BOX_TITLE + 4.0, inner],
                         (34, 2),
                         13.5,
-                        color::QUIET,
+                        color::quiet(),
                         TextAlign::Start,
                     );
                     continue;
@@ -979,8 +979,8 @@ impl Panel {
                     &mut self.ui,
                     frame,
                     rect,
-                    color::alpha(color::GOLD, 0.05),
-                    edge_of(place, color::alpha(color::GOLD, 0.45)),
+                    color::alpha(color::gold(), 0.05),
+                    edge_of(place, color::alpha(color::gold(), 0.45)),
                 );
                 self.lab_build.spots.push((Spot::Zone(place), rect));
                 // Its name, or the name being typed; how full it is; its switch; its way out.
@@ -1005,7 +1005,7 @@ impl Panel {
                         format_args!("{}", group.name.to_uppercase()),
                         frame.rect(name_rect[0], name_rect[1], name_rect[2], name_rect[3]),
                         17.0 * s,
-                        color::GOLD_BRIGHT,
+                        color::gold_bright(),
                         FontWeight::Semibold,
                         TextAlign::Start,
                     ),
@@ -1028,9 +1028,9 @@ impl Panel {
                     if pointer.is_some_and(|at| {
                         self.lab_build.spot_at(at, false) == Some(Spot::Ungroup(index))
                     }) {
-                        color::EMBER
+                        color::ember()
                     } else {
-                        color::QUIET
+                        color::quiet()
                     },
                     FontWeight::Regular,
                     TextAlign::Center,
@@ -1042,7 +1042,7 @@ impl Panel {
                     format_args!("{} of {}", group.effects.len(), builder::MAX_IN_GROUP),
                     frame.rect(x + BOX_PAD, y + height - 21.0, inner, 16.0),
                     12.5 * s,
-                    color::QUIET,
+                    color::quiet(),
                     FontWeight::Regular,
                     TextAlign::End,
                 );
@@ -1091,7 +1091,7 @@ impl Panel {
             format_args!("{after}"),
             frame.rect(x + BOX_PAD + width + 14.0, y + 5.0, 300.0, 22.0),
             13.5 * s,
-            color::QUIET,
+            color::quiet(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -1145,7 +1145,7 @@ impl Panel {
                     frame,
                     at,
                     Color::new(0.1, 0.04, 0.02, 0.96),
-                    color::EMBER,
+                    color::ember(),
                 );
                 text(
                     &mut self.ui,
@@ -1153,7 +1153,7 @@ impl Panel {
                     format_args!("{why}"),
                     frame.rect(at[0] + 10.0, at[1], at[2] - 20.0, at[3]),
                     14.0 * s,
-                    color::TEXT,
+                    color::text(),
                     FontWeight::Regular,
                     TextAlign::Start,
                 );
@@ -1195,7 +1195,11 @@ impl Panel {
         };
         let card = Card {
             title: effect.name.to_owned(),
-            colour: if on { color::GOLD_BRIGHT } else { color::HOLO },
+            colour: if on {
+                color::gold_bright()
+            } else {
+                color::holo()
+            },
             lines: vec![Line::how(effect.about), Line::status(how)],
         };
         let fade = ((rested - REST).as_secs_f32() / 0.12).min(1.0);

@@ -121,7 +121,7 @@ impl Item {
             ),
             tier: found.map_or_else(String::new, |tier| tier.label.to_owned()),
             holocron_slot: found.map(|tier| tier.index),
-            colour: found.map_or(color::HOLO, |tier| tier.colour),
+            colour: found.map_or(color::holo(), |tier| tier.colour),
             value,
             locked_for: None,
             favourite: false,
@@ -142,7 +142,7 @@ impl Item {
                 .unwrap_or_else(|| id.to_owned()),
             tier: found.map_or_else(String::new, |skin| skin.tier.label().to_owned()),
             holocron_slot: None,
-            colour: found.map_or(color::HOLO, |skin| skin.tier.colour()),
+            colour: found.map_or(color::holo(), |skin| skin.tier.colour()),
             value,
             locked_for: None,
             favourite: false,
@@ -171,7 +171,7 @@ impl Item {
             },
             tier: found.map_or_else(String::new, |tag| tag.tier.label().to_owned()),
             holocron_slot: None,
-            colour: found.map_or(color::HOLO, |tag| tag.tier.colour()),
+            colour: found.map_or(color::holo(), |tag| tag.tier.colour()),
             value,
             locked_for: None,
             favourite: false,
@@ -586,7 +586,7 @@ impl Window {
         // A light shade only: the match still shows round the window.
         let _ = ui.draw_list_mut().push(DrawCommand::SolidRect {
             rect: Rect::new(0.0, 0.0, viewport[0], viewport[1]),
-            color: color::alpha(color::SPACE, 0.38),
+            color: color::alpha(color::space(), 0.38),
         });
         if view.trade.is_open() {
             draw_open(ui, &frame, view);
@@ -755,7 +755,7 @@ fn draw_small(ui: &mut MenuCanvas, frame: &Frame, view: &View) {
         format_args!("{kicker}"),
         frame.rect(head_x, SMALL_Y + 30.0, width - 80.0, 30.0),
         22.0 * s,
-        color::GOLD_BRIGHT,
+        color::gold_bright(),
         FontWeight::Semibold,
         TextAlign::Start,
     );
@@ -765,7 +765,7 @@ fn draw_small(ui: &mut MenuCanvas, frame: &Frame, view: &View) {
         format_args!("{headline}"),
         frame.rect(head_x, SMALL_Y + 64.0, width - 200.0, 48.0),
         36.0 * s,
-        color::TEXT,
+        color::text(),
         FontWeight::Semibold,
         TextAlign::Start,
     );
@@ -776,7 +776,7 @@ fn draw_small(ui: &mut MenuCanvas, frame: &Frame, view: &View) {
             format_args!("{}", clock(view.seconds_left)),
             frame.rect(x, SMALL_Y + 66.0, width, 44.0),
             32.0 * s,
-            color::GOLD_BRIGHT,
+            color::gold_bright(),
             FontWeight::Semibold,
             TextAlign::End,
         );
@@ -788,7 +788,7 @@ fn draw_small(ui: &mut MenuCanvas, frame: &Frame, view: &View) {
             format_args!("{line}"),
             frame.rect(x, body_top + index as f32 * 28.0, width, 28.0),
             18.0 * s,
-            color::MUTED,
+            color::muted(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -802,12 +802,12 @@ fn draw_small(ui: &mut MenuCanvas, frame: &Frame, view: &View) {
         let _ = ui.draw_list_mut().push(DrawCommand::RoundedRect {
             rect: frame.rect(x, bar_y, width, 4.0),
             radius: 2.0 * s,
-            color: color::alpha(color::HOLO, 0.16),
+            color: color::alpha(color::holo(), 0.16),
         });
         let _ = ui.draw_list_mut().push(DrawCommand::RoundedRect {
             rect: frame.rect(x, bar_y, width * share, 4.0),
             radius: 2.0 * s,
-            color: color::GOLD,
+            color: color::gold(),
         });
     }
     let right = SMALL_X + SMALL_W - PAD;
@@ -853,7 +853,7 @@ fn draw_small(ui: &mut MenuCanvas, frame: &Frame, view: &View) {
     }
     let mut foot = buttons_y + 46.0 + 20.0;
     if !view.problem.is_empty() {
-        line(ui, frame, x, foot, width, &view.problem, color::EMBER);
+        line(ui, frame, x, foot, width, &view.problem, color::ember());
         foot += problem_room;
     }
     hints(
@@ -879,7 +879,7 @@ fn draw_open(ui: &mut MenuCanvas, frame: &Frame, view: &View) {
         format_args!("Closes in {} without a change", clock(view.seconds_left)),
         frame.rect(LEFT_X, WIN_Y + 66.0, inner, 24.0),
         15.0 * s,
-        color::QUIET,
+        color::quiet(),
         FontWeight::Regular,
         TextAlign::End,
     );
@@ -927,7 +927,15 @@ fn draw_open(ui: &mut MenuCanvas, frame: &Frame, view: &View) {
     // What to know before Ready: the hub's refusal, a gift, or an uneven trade.
     let say_y = buttons_y - 40.0;
     if !view.problem.is_empty() {
-        line(ui, frame, LEFT_X, say_y, inner, &view.problem, color::EMBER);
+        line(
+            ui,
+            frame,
+            LEFT_X,
+            say_y,
+            inner,
+            &view.problem,
+            color::ember(),
+        );
     } else if view.receives_gift() {
         line(
             ui,
@@ -949,7 +957,7 @@ fn draw_open(ui: &mut MenuCanvas, frame: &Frame, view: &View) {
             say_y,
             inner,
             "Uneven: one side is worth more than twice the other. Check before you confirm.",
-            color::GOLD_BRIGHT,
+            color::gold_bright(),
         );
     }
     kit::button(
@@ -1008,7 +1016,7 @@ fn own_items(ui: &mut MenuCanvas, frame: &Frame, view: &View, own_y: f32) {
         ),
         frame.rect(LEFT_X, own_y, COLUMN_W, 26.0),
         19.0 * s,
-        color::TEXT,
+        color::text(),
         FontWeight::Semibold,
         TextAlign::Start,
     );
@@ -1032,7 +1040,7 @@ fn own_items(ui: &mut MenuCanvas, frame: &Frame, view: &View, own_y: f32) {
                 tiles_y + index as f32 * 24.0,
                 COLUMN_W,
                 part,
-                color::QUIET,
+                color::quiet(),
             );
         }
     }
@@ -1068,7 +1076,7 @@ fn own_items(ui: &mut MenuCanvas, frame: &Frame, view: &View, own_y: f32) {
             tiles_y,
             COLUMN_W,
             "No favourite to offer: star kybers in the Collection.",
-            color::QUIET,
+            color::quiet(),
         );
     }
     let rows = shown.div_ceil(TILES_ROW).max(1) as f32;
@@ -1084,7 +1092,7 @@ fn own_items(ui: &mut MenuCanvas, frame: &Frame, view: &View, own_y: f32) {
                 "{} more not shown: the most worth come first",
                 count - shown
             ),
-            color::QUIET,
+            color::quiet(),
         );
         under += 24.0;
     }
@@ -1096,7 +1104,7 @@ fn own_items(ui: &mut MenuCanvas, frame: &Frame, view: &View, own_y: f32) {
             under,
             COLUMN_W,
             "Locked kybers stay out of trades: unlock them in the Collection.",
-            color::GOLD_BRIGHT,
+            color::gold_bright(),
         );
         under += 24.0;
     }
@@ -1119,7 +1127,7 @@ fn own_items(ui: &mut MenuCanvas, frame: &Frame, view: &View, own_y: f32) {
                 under + index as f32 * 22.0,
                 COLUMN_W,
                 part,
-                color::GOLD_BRIGHT,
+                color::gold_bright(),
             );
         }
     } else if full && !view.own.is_empty() {
@@ -1130,7 +1138,7 @@ fn own_items(ui: &mut MenuCanvas, frame: &Frame, view: &View, own_y: f32) {
             under,
             COLUMN_W,
             &format!("A side holds {} items at most.", view.items_max),
-            color::QUIET,
+            color::quiet(),
         );
     }
 }
@@ -1145,7 +1153,7 @@ fn daily_limits(ui: &mut MenuCanvas, frame: &Frame, view: &View, own_y: f32) {
         format_args!("Daily limits"),
         frame.rect(RIGHT_X, own_y, COLUMN_W, 26.0),
         19.0 * s,
-        color::TEXT,
+        color::text(),
         FontWeight::Semibold,
         TextAlign::Start,
     );
@@ -1159,18 +1167,18 @@ fn daily_limits(ui: &mut MenuCanvas, frame: &Frame, view: &View, own_y: f32) {
             format_args!("{title}"),
             frame.rect(right - 140.0, head_y, 140.0, 20.0),
             13.5 * s,
-            color::QUIET,
+            color::quiet(),
             FontWeight::Semibold,
             TextAlign::End,
         );
     }
     let _ = ui.draw_list_mut().push(DrawCommand::SolidRect {
         rect: frame.rect(RIGHT_X, head_y + 24.0, COLUMN_W, 1.0),
-        color: color::alpha(color::HOLO, 0.12),
+        color: color::alpha(color::holo(), 0.12),
     });
     let mut y = head_y + 34.0;
     for limit in &view.limits {
-        let ink = limit.colour.unwrap_or(color::MUTED);
+        let ink = limit.colour.unwrap_or(color::muted());
         line(
             ui,
             frame,
@@ -1189,9 +1197,9 @@ fn daily_limits(ui: &mut MenuCanvas, frame: &Frame, view: &View, own_y: f32) {
                 frame.rect(right - 140.0, y, 140.0, 24.0),
                 16.0 * s,
                 if most > 0 && done >= most {
-                    color::EMBER
+                    color::ember()
                 } else {
-                    color::TEXT
+                    color::text()
                 },
                 FontWeight::Semibold,
                 TextAlign::End,
@@ -1205,7 +1213,7 @@ fn daily_limits(ui: &mut MenuCanvas, frame: &Frame, view: &View, own_y: f32) {
     };
     let _ = ui.draw_list_mut().push(DrawCommand::SolidRect {
         rect: frame.rect(RIGHT_X, y + 2.0, COLUMN_W, 1.0),
-        color: color::alpha(color::HOLO, 0.12),
+        color: color::alpha(color::holo(), 0.12),
     });
     y += 14.0;
     line(
@@ -1215,7 +1223,7 @@ fn daily_limits(ui: &mut MenuCanvas, frame: &Frame, view: &View, own_y: f32) {
         y,
         COLUMN_W,
         "Daily reset in",
-        color::MUTED,
+        color::muted(),
     );
     text(
         ui,
@@ -1223,7 +1231,7 @@ fn daily_limits(ui: &mut MenuCanvas, frame: &Frame, view: &View, own_y: f32) {
         format_args!("{}", hms(left)),
         frame.rect(RIGHT_X, y, COLUMN_W, 24.0),
         16.0 * s,
-        color::GOLD_BRIGHT,
+        color::gold_bright(),
         FontWeight::Semibold,
         TextAlign::End,
     );
@@ -1251,13 +1259,13 @@ fn gift_question(ui: &mut MenuCanvas, frame: &Frame, view: &View, top: f32, bott
     let _ = ui.draw_list_mut().push(DrawCommand::RoundedRect {
         rect: panel,
         radius: 14.0 * s,
-        color: color::alpha(color::GOLD, 0.07),
+        color: color::alpha(color::gold(), 0.07),
     });
     let _ = ui.draw_list_mut().push(DrawCommand::Border {
         rect: panel,
         radius: 14.0 * s,
         width: 1.5 * s,
-        color: color::alpha(color::GOLD, 0.7),
+        color: color::alpha(color::gold(), 0.7),
     });
     // A gold gift mark: a ring with an exclamation, plain ASCII.
     let [cx, cy] = [LEFT_X + 60.0, top + height * 0.5];
@@ -1265,13 +1273,13 @@ fn gift_question(ui: &mut MenuCanvas, frame: &Frame, view: &View, top: f32, bott
     let _ = ui.draw_list_mut().push(DrawCommand::RoundedRect {
         rect: ring,
         radius: 28.0 * s,
-        color: color::alpha(color::GOLD, 0.16),
+        color: color::alpha(color::gold(), 0.16),
     });
     let _ = ui.draw_list_mut().push(DrawCommand::Border {
         rect: ring,
         radius: 28.0 * s,
         width: 2.0 * s,
-        color: color::GOLD,
+        color: color::gold(),
     });
     text(
         ui,
@@ -1279,7 +1287,7 @@ fn gift_question(ui: &mut MenuCanvas, frame: &Frame, view: &View, top: f32, bott
         format_args!("!"),
         frame.rect(cx - 28.0, cy - 18.0, 56.0, 36.0),
         30.0 * s,
-        color::GOLD_BRIGHT,
+        color::gold_bright(),
         FontWeight::Semibold,
         TextAlign::Center,
     );
@@ -1291,7 +1299,7 @@ fn gift_question(ui: &mut MenuCanvas, frame: &Frame, view: &View, top: f32, bott
         format_args!("Give it as a gift?"),
         frame.rect(x, top + 34.0, words_width, 40.0),
         30.0 * s,
-        color::TEXT,
+        color::text(),
         FontWeight::Semibold,
         TextAlign::Start,
     );
@@ -1321,7 +1329,7 @@ fn gift_question(ui: &mut MenuCanvas, frame: &Frame, view: &View, top: f32, bott
             format_args!("{part}"),
             frame.rect(x, top + 86.0 + index as f32 * 28.0, words_width, 28.0),
             18.0 * s,
-            color::MUTED,
+            color::muted(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -1349,7 +1357,7 @@ fn side(
         format_args!("{title}"),
         frame.rect(x, y, COLUMN_W - 150.0, 28.0),
         21.0 * s,
-        color::TEXT,
+        color::text(),
         FontWeight::Semibold,
         TextAlign::Start,
     );
@@ -1359,7 +1367,7 @@ fn side(
         format_args!("worth about {value} shards"),
         frame.rect(x, y + 2.0, COLUMN_W, 24.0),
         15.0 * s,
-        color::MUTED,
+        color::muted(),
         FontWeight::Regular,
         TextAlign::End,
     );
@@ -1380,7 +1388,7 @@ fn side(
                     rect: frame.rect(at[0], at[1], TILE, TILE),
                     radius: 10.0 * s,
                     width: 1.0 * s,
-                    color: color::alpha(color::HOLO, 0.16),
+                    color: color::alpha(color::holo(), 0.16),
                 });
             }
         }
@@ -1388,7 +1396,7 @@ fn side(
     let (label, colour) = match (ready, confirmed) {
         (_, true) => ("Confirmed", color::TRUSTED),
         (true, false) => ("Ready", color::TRUSTED),
-        (false, false) => ("Choosing...", color::QUIET),
+        (false, false) => ("Choosing...", color::quiet()),
     };
     let chip = frame.rect(x, slots_y + TILE + 14.0, 130.0, 28.0);
     let _ = ui.draw_list_mut().push(DrawCommand::RoundedRect {
@@ -1435,7 +1443,7 @@ fn tile(
         color: if lit {
             color::alpha(item.colour, 0.22)
         } else {
-            color::alpha(color::GLASS, 0.95)
+            color::alpha(color::glass(), 0.95)
         },
     });
     let _ = ui.draw_list_mut().push(DrawCommand::Border {
@@ -1508,13 +1516,13 @@ fn tile(
         let _ = ui.draw_list_mut().push(DrawCommand::RoundedRect {
             rect: pill,
             radius: 9.0 * s,
-            color: color::alpha(color::GOLD, 0.18),
+            color: color::alpha(color::gold(), 0.18),
         });
         let _ = ui.draw_list_mut().push(DrawCommand::Border {
             rect: pill,
             radius: 9.0 * s,
             width: 1.0 * s,
-            color: color::alpha(color::GOLD, 0.7),
+            color: color::alpha(color::gold(), 0.7),
         });
         text(
             ui,
@@ -1522,7 +1530,7 @@ fn tile(
             format_args!("{}", countdown(left)),
             frame.rect(x + 6.0, y + TILE - 22.0, TILE - 12.0, 16.0),
             11.5 * s,
-            color::GOLD_BRIGHT,
+            color::gold_bright(),
             FontWeight::Semibold,
             TextAlign::Center,
         );
@@ -1539,7 +1547,7 @@ fn tile(
         format_args!("{label}"),
         frame.rect(x + 3.0, y + TILE - 22.0, TILE - 6.0, 18.0),
         12.0 * s,
-        color::TEXT,
+        color::text(),
         FontWeight::Semibold,
         TextAlign::Center,
     );
@@ -1555,11 +1563,11 @@ fn item_marks(ui: &mut MenuCanvas, frame: &Frame, [x, y]: [f32; 2], item: &Item)
     let s = frame.s;
     let mut left = x + 11.0;
     if item.favourite {
-        star(ui, frame, [left, y + 11.0], 6.5, color::GOLD_BRIGHT);
+        star(ui, frame, [left, y + 11.0], 6.5, color::gold_bright());
         left += 15.0;
     }
     if item.locked {
-        padlock(ui, frame, [left, y + 11.0], color::GOLD_BRIGHT);
+        padlock(ui, frame, [left, y + 11.0], color::gold_bright());
     }
     if item.worn {
         text(
@@ -1568,7 +1576,7 @@ fn item_marks(ui: &mut MenuCanvas, frame: &Frame, [x, y]: [f32; 2], item: &Item)
             format_args!("Worn"),
             frame.rect(x + 4.0, y + 4.0, TILE - 9.0, 14.0),
             10.5 * s,
-            color::GOLD_BRIGHT,
+            color::gold_bright(),
             FontWeight::Semibold,
             TextAlign::End,
         );
@@ -1578,7 +1586,7 @@ fn item_marks(ui: &mut MenuCanvas, frame: &Frame, [x, y]: [f32; 2], item: &Item)
         let _ = ui.draw_list_mut().push(DrawCommand::RoundedRect {
             rect,
             radius: 7.5 * s,
-            color: color::GOLD_BRIGHT,
+            color: color::gold_bright(),
         });
         text(
             ui,
@@ -1653,16 +1661,20 @@ fn favourites_chip(ui: &mut MenuCanvas, frame: &Frame, on: bool, [right, y]: [f3
         let _ = ui.draw_list_mut().push(DrawCommand::RoundedRect {
             rect,
             radius: 14.0 * s,
-            color: color::alpha(color::GOLD, if on { 0.22 } else { 0.09 }),
+            color: color::alpha(color::gold(), if on { 0.22 } else { 0.09 }),
         });
     }
     let _ = ui.draw_list_mut().push(DrawCommand::Border {
         rect,
         radius: 14.0 * s,
         width: 1.2 * s,
-        color: color::alpha(color::GOLD, if on { 1.0 } else { 0.45 }),
+        color: color::alpha(color::gold(), if on { 1.0 } else { 0.45 }),
     });
-    let ink = if on { color::GOLD_BRIGHT } else { color::MUTED };
+    let ink = if on {
+        color::gold_bright()
+    } else {
+        color::muted()
+    };
     star(ui, frame, [right - width + 17.0, y + 14.0], 6.5, ink);
     text(
         ui,
@@ -1686,13 +1698,13 @@ fn swap_badge(ui: &mut MenuCanvas, frame: &Frame, [cx, cy]: [f32; 2]) {
     let _ = ui.draw_list_mut().push(DrawCommand::RoundedRect {
         rect: ring,
         radius: radius * s,
-        color: color::alpha(color::GOLD, 0.12),
+        color: color::alpha(color::gold(), 0.12),
     });
     let _ = ui.draw_list_mut().push(DrawCommand::Border {
         rect: ring,
         radius: radius * s,
         width: 1.5 * s,
-        color: color::alpha(color::GOLD, 0.8),
+        color: color::alpha(color::gold(), 0.8),
     });
     for (dy, chevron) in [(-15.0, ">"), (-1.0, "<")] {
         text(
@@ -1701,7 +1713,7 @@ fn swap_badge(ui: &mut MenuCanvas, frame: &Frame, [cx, cy]: [f32; 2]) {
             format_args!("{chevron}"),
             frame.rect(cx - radius, cy + dy, radius * 2.0, 16.0),
             17.0 * s,
-            color::GOLD_BRIGHT,
+            color::gold_bright(),
             FontWeight::Semibold,
             TextAlign::Center,
         );
@@ -1731,7 +1743,7 @@ fn header(ui: &mut MenuCanvas, frame: &Frame, view: &View, kicker: &str) {
         format_args!("{kicker}"),
         frame.rect(x, WIN_Y + 26.0, 400.0, 26.0),
         19.0 * s,
-        color::GOLD_BRIGHT,
+        color::gold_bright(),
         FontWeight::Semibold,
         TextAlign::Start,
     );
@@ -1758,7 +1770,7 @@ fn header(ui: &mut MenuCanvas, frame: &Frame, view: &View, kicker: &str) {
         format_args!("{}", view.partner_shown),
         frame.rect(x + radius * 2.0 + 14.0, WIN_Y + 56.0, 620.0, 42.0),
         32.0 * s,
-        color::TEXT,
+        color::text(),
         FontWeight::Semibold,
         TextAlign::Start,
     );
@@ -1769,7 +1781,7 @@ fn accent(ui: &mut MenuCanvas, frame: &Frame, [x, y, width]: [f32; 3]) {
     let _ = ui.draw_list_mut().push(DrawCommand::RoundedRect {
         rect: frame.rect(x + 24.0, y, width - 48.0, 3.0),
         radius: 1.5 * frame.s,
-        color: color::alpha(color::GOLD, 0.8),
+        color: color::alpha(color::gold(), 0.8),
     });
 }
 
@@ -1777,7 +1789,7 @@ fn accent(ui: &mut MenuCanvas, frame: &Frame, [x, y, width]: [f32; 3]) {
 fn rule(ui: &mut MenuCanvas, frame: &Frame, y: f32) {
     let _ = ui.draw_list_mut().push(DrawCommand::SolidRect {
         rect: frame.rect(LEFT_X, y, WIN_W - PAD * 2.0, 1.0),
-        color: color::alpha(color::HOLO, 0.14),
+        color: color::alpha(color::holo(), 0.14),
     });
 }
 
@@ -1805,19 +1817,19 @@ fn warning(ui: &mut MenuCanvas, frame: &Frame, x: f32, y: f32, width: f32, words
     let _ = ui.draw_list_mut().push(DrawCommand::RoundedRect {
         rect: card,
         radius: 8.0 * s,
-        color: color::alpha(color::GOLD, 0.10),
+        color: color::alpha(color::gold(), 0.10),
     });
     let _ = ui.draw_list_mut().push(DrawCommand::Border {
         rect: card,
         radius: 8.0 * s,
         width: 1.0 * s,
-        color: color::alpha(color::GOLD, 0.55),
+        color: color::alpha(color::gold(), 0.55),
     });
     let ring = frame.rect(x + 10.0, y + height * 0.5 - 11.0, 22.0, 22.0);
     let _ = ui.draw_list_mut().push(DrawCommand::RoundedRect {
         rect: ring,
         radius: 11.0 * s,
-        color: color::alpha(color::GOLD, 0.9),
+        color: color::alpha(color::gold(), 0.9),
     });
     text(
         ui,
@@ -1825,7 +1837,7 @@ fn warning(ui: &mut MenuCanvas, frame: &Frame, x: f32, y: f32, width: f32, words
         format_args!("!"),
         frame.rect(x + 10.0, y + height * 0.5 - 10.0, 22.0, 20.0),
         15.0 * s,
-        color::GLASS,
+        color::glass(),
         FontWeight::Semibold,
         TextAlign::Center,
     );
@@ -1837,7 +1849,7 @@ fn warning(ui: &mut MenuCanvas, frame: &Frame, x: f32, y: f32, width: f32, words
             y + 7.0 + index as f32 * 22.0,
             width - 50.0,
             part,
-            color::GOLD_BRIGHT,
+            color::gold_bright(),
         );
     }
     height
@@ -2048,20 +2060,20 @@ impl Toast {
         let _ = ui.draw_list_mut().push(DrawCommand::RoundedRect {
             rect: card,
             radius: 16.0 * s,
-            color: color::alpha(color::SPACE, 0.92),
+            color: color::alpha(color::space(), 0.92),
         });
         let _ = ui.draw_list_mut().push(DrawCommand::Border {
             rect: card,
             radius: 16.0 * s,
             width: 1.0 * s,
-            color: color::alpha(color::GOLD, 0.65),
+            color: color::alpha(color::gold(), 0.65),
         });
         // Their picture (or their initial) in a gold ring: the gold of a trade.
         let [cx, cy] = frame.point(x + 50.0, y + height * 0.5);
         let _ = ui.draw_list_mut().push(DrawCommand::RoundedRect {
             rect: Rect::new(cx - 27.0 * s, cy - 27.0 * s, 54.0 * s, 54.0 * s),
             radius: 27.0 * s,
-            color: color::alpha(color::GOLD, 0.85),
+            color: color::alpha(color::gold(), 0.85),
         });
         let (key_id, version) = &said.who;
         let initial = said.initial.to_string();
@@ -2088,7 +2100,7 @@ impl Toast {
             format_args!("{}", said.headline),
             frame.rect(text_x, y + 16.0, text_w - toast_beside(said), 32.0),
             24.0 * s,
-            color::TEXT,
+            color::text(),
             FontWeight::Semibold,
             TextAlign::Start,
         );
@@ -2099,7 +2111,7 @@ impl Toast {
                 format_args!("{}", clock(left)),
                 frame.rect(text_x, y + 16.0, text_w, 32.0),
                 24.0 * s,
-                color::GOLD_BRIGHT,
+                color::gold_bright(),
                 FontWeight::Semibold,
                 TextAlign::End,
             );
@@ -2111,7 +2123,7 @@ impl Toast {
                 format_args!("{}", said.line),
                 frame.rect(text_x, y + 50.0, text_w, 22.0),
                 15.0 * s,
-                color::MUTED,
+                color::muted(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -2146,7 +2158,7 @@ impl Toast {
             let _ = ui.draw_list_mut().push(DrawCommand::RoundedRect {
                 rect: frame.rect(x + 24.0, y + height - 6.0, (width - 48.0) * share, 3.0),
                 radius: 1.5 * s,
-                color: color::GOLD,
+                color: color::gold(),
             });
         }
         ui.finish(0);

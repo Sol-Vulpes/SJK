@@ -519,7 +519,7 @@ impl PlayerMenu {
             format_args!("{}  ·  {count}{found}", category.title()),
             frame.rect(x + 22.0, top + 6.0, 330.0, 28.0),
             22.0 * s,
-            color::HOLO,
+            color::holo(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -578,7 +578,7 @@ impl PlayerMenu {
                 format_args!("{note}"),
                 frame.rect(x + 4.0, bottom + 4.0, width, 22.0),
                 16.0 * s,
-                color::MUTED,
+                color::muted(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -599,7 +599,7 @@ impl PlayerMenu {
                 format_args!("{line}"),
                 frame.rect(x + 22.0, grid_top + 8.0, width - 44.0, 24.0),
                 17.0 * s,
-                color::MUTED,
+                color::muted(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -743,7 +743,7 @@ impl PlayerMenu {
                         format_args!("{name}  ·  {members}"),
                         frame.rect(x + 4.0, y + 4.0, 320.0, 24.0),
                         18.0 * s,
-                        color::GOLD,
+                        color::gold(),
                         FontWeight::Regular,
                         TextAlign::Start,
                     );
@@ -755,14 +755,14 @@ impl PlayerMenu {
                             format_args!("{CUSTOMIZABLE_HINT}"),
                             frame.rect(x + 210.0, y + 6.0, width - 210.0, 22.0),
                             15.0 * s,
-                            color::MUTED,
+                            color::muted(),
                             FontWeight::Regular,
                             TextAlign::End,
                         );
                     } else {
                         let _ = self.canvas.draw_list_mut().push(DrawCommand::SolidRect {
                             rect: frame.rect(x + 210.0, y + 16.0, width - 210.0, 1.0),
-                            color: color::alpha(color::GOLD, 0.35),
+                            color: color::alpha(color::gold(), 0.35),
                         });
                     }
                     y += HEADING;
@@ -799,7 +799,7 @@ impl PlayerMenu {
             }
         }
         if lines.len() > shown {
-            self.canvas.scrollbar(
+            self.canvas.sjk_scrollbar(
                 GRID_SCROLL_TOKEN,
                 frame.rect(x + width + 12.0, grid_top, 4.0, area_height.max(1.0)),
                 first,
@@ -828,7 +828,7 @@ impl PlayerMenu {
         let _ = self.canvas.draw_list_mut().push(DrawCommand::RoundedRect {
             rect,
             radius: 8.0 * s,
-            color: color::alpha(color::SPACE, if lit { 0.75 } else { 0.6 }),
+            color: color::alpha(color::space(), if lit { 0.75 } else { 0.6 }),
         });
         let species = match self.choice {
             Some(Choice::Species(index)) => Some(index),
@@ -845,7 +845,7 @@ impl PlayerMenu {
                     });
                 }
                 None if self.icons.failed(item) => {
-                    self.tile_name(item, rect, 11.0 * s, color::TEXT, 0.2 * s);
+                    self.tile_name(item, rect, 11.0 * s, color::text(), 0.2 * s);
                 }
                 None => {}
             },
@@ -876,7 +876,7 @@ impl PlayerMenu {
                             name,
                             rect,
                             12.0 * s,
-                            color::TEXT,
+                            color::text(),
                             FontWeight::Regular,
                             0.2 * s,
                             TextAlign::Center,
@@ -904,7 +904,7 @@ impl PlayerMenu {
                         rect: inner,
                         radius: 6.0 * s,
                         width: 1.5 * s,
-                        color: color::alpha(color::GOLD, 0.6),
+                        color: color::alpha(color::gold(), 0.6),
                     });
                 }
                 let light = self
@@ -919,9 +919,9 @@ impl PlayerMenu {
                     rect,
                     15.0 * s,
                     if chosen && light {
-                        color::SPACE
+                        color::space()
                     } else {
-                        color::TEXT
+                        color::text()
                     },
                     FontWeight::Regular,
                     0.0,
@@ -957,9 +957,9 @@ impl PlayerMenu {
                     rect,
                     18.0 * s,
                     if chosen {
-                        color::GOLD_BRIGHT
+                        color::gold_bright()
                     } else {
-                        color::alpha(color::TEXT, if lit { 1.0 } else { 0.85 })
+                        color::alpha(color::text(), if lit { 1.0 } else { 0.85 })
                     },
                     FontWeight::Regular,
                     0.0,
@@ -976,7 +976,7 @@ impl PlayerMenu {
                 radius: 8.0 * s,
                 width: if chosen { 2.5 * s } else { 1.5 * s },
                 color: if chosen {
-                    color::GOLD_BRIGHT
+                    color::gold_bright()
                 } else {
                     Color::new(1.0, 1.0, 1.0, 0.6)
                 },
@@ -1022,13 +1022,13 @@ impl PlayerMenu {
         let _ = draw.push(DrawCommand::RoundedRect {
             rect: badge,
             radius: size * 0.5,
-            color: color::alpha(color::SPACE, 0.85),
+            color: color::alpha(color::space(), 0.85),
         });
         let _ = draw.push(DrawCommand::Border {
             rect: badge,
             radius: size * 0.5,
             width: 1.5 * s,
-            color: color::GOLD_BRIGHT,
+            color: color::gold_bright(),
         });
         // Three sliders, each with its knob somewhere else along it.
         for (line, knob) in [0.25_f32, 0.7, 0.45].into_iter().enumerate() {
@@ -1037,7 +1037,7 @@ impl PlayerMenu {
             let length = size * 0.48;
             let _ = draw.push(DrawCommand::SolidRect {
                 rect: sjk_ui::Rect::new(from, y - 0.6 * s, length, 1.2 * s),
-                color: color::GOLD_BRIGHT,
+                color: color::gold_bright(),
             });
             let _ = draw.push(DrawCommand::SolidRect {
                 rect: sjk_ui::Rect::new(
@@ -1046,7 +1046,7 @@ impl PlayerMenu {
                     3.0 * s,
                     4.0 * s,
                 ),
-                color: color::GOLD_BRIGHT,
+                color: color::gold_bright(),
             });
         }
     }

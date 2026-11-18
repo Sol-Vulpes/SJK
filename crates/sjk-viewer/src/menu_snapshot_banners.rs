@@ -20,7 +20,7 @@ fn profile_banner_cards_snapshot() {
         format_args!("Profile banners"),
         frame.rect(96.0, 64.0, 1728.0, 64.0),
         48.0,
-        color::TEXT,
+        color::text(),
         FontWeight::Semibold,
         TextAlign::Start,
     );
@@ -30,7 +30,7 @@ fn profile_banner_cards_snapshot() {
         format_args!("One identity, the same cover on your profile and player cards"),
         frame.rect(96.0, 146.0, 1728.0, 40.0),
         24.0,
-        color::MUTED,
+        color::muted(),
         FontWeight::Regular,
         TextAlign::Start,
     );

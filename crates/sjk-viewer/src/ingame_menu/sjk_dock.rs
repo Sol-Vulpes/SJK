@@ -93,9 +93,9 @@ pub(super) fn icon_row(canvas: &mut MenuCanvas, frame: &Frame, extras: &Extras<'
                 radius: ring.height * 0.5,
                 width: 2.0 * s,
                 color: if focused {
-                    color::GOLD_BRIGHT
+                    color::gold_bright()
                 } else {
-                    color::alpha(color::GOLD, 0.7)
+                    color::alpha(color::gold(), 0.7)
                 },
             });
         }
@@ -113,7 +113,7 @@ pub(super) fn icon_row(canvas: &mut MenuCanvas, frame: &Frame, extras: &Extras<'
         format_args!("{label}"),
         frame.rect(ROW_X, LABEL_Y, label_width + 20.0, 30.0),
         24.0 * s,
-        color::GOLD_BRIGHT,
+        color::gold_bright(),
         FontWeight::Regular,
         TextAlign::Start,
     );
@@ -128,7 +128,7 @@ pub(super) fn icon_row(canvas: &mut MenuCanvas, frame: &Frame, extras: &Extras<'
         format_args!("{}", crate::terms::say(icon.hint())),
         frame.rect(x, LABEL_Y + 3.0, 560.0, 24.0),
         16.0 * s,
-        color::MUTED,
+        color::muted(),
         FontWeight::Regular,
         TextAlign::Start,
     );
@@ -161,7 +161,7 @@ pub(super) fn card_controls(
             format_args!("A vote is on"),
             frame.rect(CARD_X, VOTE_TOP, CARD_WIDTH, 28.0),
             22.0 * s,
-            color::GOLD_BRIGHT,
+            color::gold_bright(),
             FontWeight::Semibold,
             TextAlign::Start,
         );
@@ -171,7 +171,7 @@ pub(super) fn card_controls(
             format_args!("{} yes, {} no", card.vote_yes, card.vote_no),
             frame.rect(CARD_X, VOTE_TOP, CARD_WIDTH, 28.0),
             17.0 * s,
-            color::MUTED,
+            color::muted(),
             FontWeight::Regular,
             TextAlign::End,
         );
@@ -188,7 +188,7 @@ pub(super) fn card_controls(
                 format_args!("{line}"),
                 frame.rect(CARD_X, y, CARD_WIDTH, 36.0),
                 30.0 * s,
-                color::TEXT,
+                color::text(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -212,10 +212,10 @@ pub(super) fn card_controls(
     }
     // The player's side.
     let (side, colour) = match (view.team_game, card.team, card.you) {
-        (_, 3, _) | (_, _, You::Watching) => ("Watching", color::MUTED),
+        (_, 3, _) | (_, _, You::Watching) => ("Watching", color::muted()),
         (true, 1, _) => ("Red team", team_colour(1)),
         (true, 2, _) => ("Blue team", team_colour(2)),
-        _ => ("Playing", color::TEXT),
+        _ => ("Playing", color::text()),
     };
     text(
         canvas,
@@ -223,7 +223,7 @@ pub(super) fn card_controls(
         format_args!("Your side"),
         frame.rect(CARD_X, SIDE_TOP, 110.0, 30.0),
         16.0 * s,
-        color::MUTED,
+        color::muted(),
         FontWeight::Regular,
         TextAlign::Start,
     );
@@ -286,9 +286,9 @@ pub(super) fn card_controls(
             frame.rect(CARD_X, y, width + 20.0, 28.0),
             21.0 * s,
             if lit {
-                color::GOLD_BRIGHT
+                color::gold_bright()
             } else {
-                color::MUTED
+                color::muted()
             },
             FontWeight::Regular,
             TextAlign::Start,
@@ -297,7 +297,7 @@ pub(super) fn card_controls(
             let _ = canvas.draw_list_mut().push(DrawCommand::RoundedRect {
                 rect: frame.rect(CARD_X, y + 27.0, width, 2.0),
                 radius: 1.0 * s,
-                color: color::GOLD_BRIGHT,
+                color: color::gold_bright(),
             });
         }
         text(
@@ -311,7 +311,7 @@ pub(super) fn card_controls(
                 26.0,
             ),
             15.0 * s,
-            color::QUIET,
+            color::quiet(),
             FontWeight::Regular,
             TextAlign::Start,
         );

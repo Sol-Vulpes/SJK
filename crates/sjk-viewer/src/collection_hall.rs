@@ -855,7 +855,7 @@ impl Panel {
                     }
                     Tile::SaberLab => summary.lines.push((
                         "On while the lab runs: hold, swing and build a blade".to_owned(),
-                        color::MUTED,
+                        color::muted(),
                     )),
                 }
                 summary
@@ -946,7 +946,7 @@ impl Panel {
             return;
         }
         let [width, height] = viewport;
-        let space = |alpha| color::alpha(color::SPACE, alpha);
+        let space = |alpha| color::alpha(color::space(), alpha);
         let x = |frame_x: f32| frame.point(frame_x, 0.0)[0];
         let y = |frame_y: f32| frame.point(0.0, frame_y)[1];
         let solid = x(layout.right);
@@ -995,9 +995,9 @@ impl Panel {
             rect: frame.rect(x, y, width, height),
             radius: 16.0 * s,
             color: if chosen {
-                color::alpha(color::GLASS_LIT, 0.94)
+                color::alpha(color::glass_lit(), 0.94)
             } else {
-                color::alpha(color::GLASS, 0.86)
+                color::alpha(color::glass(), 0.86)
             },
         });
         let _ = self.ui.draw_list_mut().push(DrawCommand::Border {
@@ -1005,11 +1005,11 @@ impl Panel {
             radius: 16.0 * s,
             width: if chosen { 2.0 } else { 1.2 } * s,
             color: if chosen {
-                color::GOLD_BRIGHT
+                color::gold_bright()
             } else if hovered {
-                color::alpha(color::HOLO, 0.55)
+                color::alpha(color::holo(), 0.55)
             } else {
-                color::alpha(color::HOLO, 0.22)
+                color::alpha(color::holo(), 0.22)
             },
         });
         let pad = 22.0;
@@ -1024,9 +1024,9 @@ impl Panel {
             frame.rect(x + pad, y + 18.0, name_width + 20.0, 34.0),
             name_size * s,
             if chosen {
-                color::GOLD_BRIGHT
+                color::gold_bright()
             } else {
-                color::TEXT
+                color::text()
             },
             FontWeight::Semibold,
             TextAlign::Start,
@@ -1052,7 +1052,11 @@ impl Panel {
                 format_args!("{}", summary.count),
                 frame.rect(left, y + 22.0, (x + width - pad - left).max(0.0), 26.0),
                 17.0 * s,
-                if chosen { color::GOLD } else { color::QUIET },
+                if chosen {
+                    color::gold()
+                } else {
+                    color::quiet()
+                },
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -1094,13 +1098,13 @@ impl Panel {
             let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
                 rect: frame.rect(bar[0], bar[1], bar[2], bar[3]),
                 radius: 2.0 * s,
-                color: color::alpha(color::HOLO, 0.18),
+                color: color::alpha(color::holo(), 0.18),
             });
             if share > 0.0 {
                 let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
                     rect: frame.rect(bar[0], bar[1], (bar[2] * share).max(bar[3]), bar[3]),
                     radius: 2.0 * s,
-                    color: color::GOLD_BRIGHT,
+                    color: color::gold_bright(),
                 });
             }
         }
@@ -1115,14 +1119,14 @@ impl Panel {
         let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
             rect: frame.rect(x, GRID_Y, 4.0, room),
             radius: 2.0 * s,
-            color: color::alpha(color::HOLO, 0.14),
+            color: color::alpha(color::holo(), 0.14),
         });
         let length = room * layout.shown_rows as f32 / layout.rows as f32;
         let top = GRID_Y + room * self.hall_state.first as f32 / layout.rows as f32;
         let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
             rect: frame.rect(x, top, 4.0, length),
             radius: 2.0 * s,
-            color: color::alpha(color::HOLO, 0.6),
+            color: color::alpha(color::holo(), 0.6),
         });
     }
 
@@ -1163,7 +1167,7 @@ impl Panel {
             format_args!("Wearing now"),
             frame.rect(x, GRID_Y, width, 26.0),
             18.0 * s,
-            color::QUIET,
+            color::quiet(),
             FontWeight::Regular,
             TextAlign::Center,
         );
@@ -1228,7 +1232,7 @@ impl Panel {
                 format_args!("{}", rest.join(" \u{b7} ")),
                 frame.rect(x - 20.0, lines_top + 26.0 * ts, width + 40.0, 26.0),
                 16.0 * s,
-                color::MUTED,
+                color::muted(),
                 FontWeight::Regular,
                 TextAlign::Center,
             );

@@ -922,6 +922,14 @@ impl ViewerConsole {
             if name.eq_ignore_ascii_case("r_resolution") {
                 self.sync_custom_resolution(value);
             }
+            // The hue and the saturation are the custom theme's: moving one picks it.
+            if crate::menu::sjk::theme::follows_custom(name) {
+                let custom = crate::menu::sjk::theme::Theme::NAMES[2];
+                let _ = self
+                    .shell
+                    .cvars
+                    .set_text(crate::menu::sjk::theme::CVAR, custom);
+            }
             self.persist();
         }
         Ok(())

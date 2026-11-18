@@ -233,7 +233,7 @@ impl Panel {
             frame,
             [LEFT_X + 300.0, LEAD_Y + 16.0, 300.0, 6.0],
             fraction,
-            color::GOLD,
+            color::gold(),
         );
         // The pages' switch, at the wall's top right.
         let labels = Page::ALL.map(Page::name);
@@ -294,7 +294,7 @@ impl Panel {
                     format_args!("{count}"),
                     frame.rect(left + name_width + 12.0, top + 2.0, 90.0, 24.0),
                     15.0 * s,
-                    color::MUTED,
+                    color::muted(),
                     FontWeight::Regular,
                     TextAlign::Start,
                 );
@@ -325,7 +325,7 @@ impl Panel {
             96,
             1,
             15.0,
-            color::QUIET,
+            color::quiet(),
         );
     }
 
@@ -343,7 +343,14 @@ impl Panel {
         let done = standing.unlocked.is_some();
         let centre = [x + CELL * 0.5 - 4.0, top + RADIUS + 4.0];
         if done {
-            glow(&mut self.ui, frame, centre, RADIUS * 1.5, color::GOLD, 0.16);
+            glow(
+                &mut self.ui,
+                frame,
+                centre,
+                RADIUS * 1.5,
+                color::gold(),
+                0.16,
+            );
         }
         medallion::draw(
             &mut self.ui,
@@ -362,7 +369,7 @@ impl Panel {
                 width: 2.0 * s,
                 start: 0.0,
                 sweep: std::f32::consts::TAU,
-                color: color::GOLD_BRIGHT,
+                color: color::gold_bright(),
                 knockout: None,
             });
         }
@@ -380,9 +387,9 @@ impl Panel {
                 frame.rect(centre[0] - CELL * 0.5 - 6.0, y, CELL + 12.0, 20.0),
                 14.0 * s,
                 match (chosen, done) {
-                    (true, _) => color::GOLD_BRIGHT,
-                    (false, true) => color::TEXT,
-                    (false, false) => color::MUTED,
+                    (true, _) => color::gold_bright(),
+                    (false, true) => color::text(),
+                    (false, false) => color::muted(),
                 },
                 FontWeight::Regular,
                 TextAlign::Center,
@@ -408,7 +415,7 @@ impl Panel {
             frame,
             centre,
             BIG_RADIUS * 2.0,
-            if done { color::GOLD } else { hue },
+            if done { color::gold() } else { hue },
             if done { 0.32 } else { 0.16 },
         );
         medallion::draw(
@@ -429,9 +436,9 @@ impl Panel {
             frame.rect(SHOWCASE_X, y, SHOWCASE_WIDTH, 56.0),
             50.0 * s,
             if done {
-                color::GOLD_BRIGHT
+                color::gold_bright()
             } else {
-                color::TEXT
+                color::text()
             },
             FontWeight::Semibold,
             TextAlign::Center,
@@ -462,7 +469,7 @@ impl Panel {
             56,
             2,
             20.0,
-            color::TEXT,
+            color::text(),
         );
         y += 12.0;
         let width = 520.0;
@@ -471,7 +478,7 @@ impl Panel {
             frame,
             [middle - width * 0.5, y, width, 6.0],
             standing.fraction(),
-            if done { color::GOLD } else { hue },
+            if done { color::gold() } else { hue },
         );
         // A secret says nothing of its goal or how far the player is.
         let progress = if standing.secret() {
@@ -499,7 +506,7 @@ impl Panel {
             format_args!("{progress}"),
             frame.rect(middle - width * 0.5, y + 14.0, width * 0.5, 22.0),
             16.0 * s,
-            color::MUTED,
+            color::muted(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -510,9 +517,9 @@ impl Panel {
             frame.rect(middle, y + 14.0, width * 0.5, 22.0),
             16.0 * s,
             if done {
-                color::GOLD_BRIGHT
+                color::gold_bright()
             } else {
-                color::MUTED
+                color::muted()
             },
             FontWeight::Regular,
             TextAlign::End,
@@ -577,7 +584,7 @@ impl Panel {
                 format_args!("{}", crate::terms::say(kind.name)),
                 frame.rect(x + 54.0, y + 6.0, 260.0, 28.0),
                 22.0 * s,
-                color::TEXT,
+                color::text(),
                 FontWeight::Semibold,
                 TextAlign::Start,
             );
@@ -598,7 +605,7 @@ impl Panel {
                 ),
                 frame.rect(x + 470.0, y + 8.0, 90.0, 22.0),
                 15.0 * s,
-                color::MUTED,
+                color::muted(),
                 FontWeight::Regular,
                 TextAlign::End,
             );
@@ -619,7 +626,7 @@ fn bar(
     let _ = canvas.draw_list_mut().push(DrawCommand::RoundedRect {
         rect: frame.rect(x, y, width, height),
         radius: height * 0.5 * s,
-        color: color::alpha(color::HOLO, 0.14),
+        color: color::alpha(color::holo(), 0.14),
     });
     let filled = width * fraction.clamp(0.0, 1.0);
     if filled > 0.5 {

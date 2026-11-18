@@ -121,7 +121,7 @@ impl Panel {
         if token == TOY_TOKEN {
             return Some(Card {
                 title: "Illuminate holocron".to_owned(),
-                colour: color::GOLD_BRIGHT,
+                colour: color::gold_bright(),
                 lines: vec![
                     Line::how(
                         "Every SJK player has it. Light it here, from the quick wheel's Toys \
@@ -135,7 +135,7 @@ impl Panel {
         if token == BOX_TOKEN {
             return Some(Card {
                 title: "Cardboard box".to_owned(),
-                colour: color::GOLD_BRIGHT,
+                colour: color::gold_bright(),
                 lines: vec![
                     Line::how(
                         "Every SJK player has it. Get in here, from the quick wheel's Toys \
@@ -149,7 +149,7 @@ impl Panel {
         if token == RAGDOLL_TOKEN {
             return Some(Card {
                 title: "Ragdoll".to_owned(),
-                colour: color::GOLD_BRIGHT,
+                colour: color::gold_bright(),
                 lines: vec![
                     Line::how(
                         "Every SJK player has it. Go limp here, from the quick wheel's Toys \
@@ -163,7 +163,7 @@ impl Panel {
         if token == DRONE_TOKEN {
             return Some(Card {
                 title: "Drone".to_owned(),
-                colour: color::GOLD_BRIGHT,
+                colour: color::gold_bright(),
                 lines: vec![
                     Line::how(
                         "Every SJK player has it: freecam and peek fly it. Turn it on here, \
@@ -178,7 +178,7 @@ impl Panel {
         if token == BOOMBOX_TOKEN {
             return Some(Card {
                 title: "Boombox".to_owned(),
-                colour: color::GOLD_BRIGHT,
+                colour: color::gold_bright(),
                 lines: vec![
                     Line::how(
                         "Every verified SJK player has it. Carry it here, from the quick \
@@ -193,7 +193,7 @@ impl Panel {
         if token == BOX_HUNT_TOKEN {
             return Some(Card {
                 title: "Box hunt".to_owned(),
-                colour: color::GOLD_BRIGHT,
+                colour: color::gold_bright(),
                 lines: vec![
                     Line::how(
                         "Every 10 minutes one player with Box hunt on becomes the mark. Kill \
@@ -208,7 +208,7 @@ impl Panel {
         if token == BANANA_TOKEN {
             return Some(Card {
                 title: "Banana peel".to_owned(),
-                colour: color::GOLD_BRIGHT,
+                colour: color::gold_bright(),
                 lines: vec![
                     Line::how(
                         "Every SJK player has it. Turn it on here or with a key bound to \
@@ -223,7 +223,7 @@ impl Panel {
         if token == QUESTS_TOKEN {
             return Some(Card {
                 title: "Quests".to_owned(),
-                colour: color::GOLD_BRIGHT,
+                colour: color::gold_bright(),
                 lines: vec![
                     Line::how(
                         "Every SJK player has it. Turn it on here, from the quick wheel's Toys \
@@ -238,7 +238,7 @@ impl Panel {
         if token == FISHING_TOKEN {
             return Some(Card {
                 title: "Fishing".to_owned(),
-                colour: color::GOLD_BRIGHT,
+                colour: color::gold_bright(),
                 lines: vec![
                     Line::how(
                         "Every SJK player has it. Get the rod out here, from the quick \
@@ -253,7 +253,7 @@ impl Panel {
         if token == MONITOR_TOKEN {
             return Some(Card {
                 title: "Monitor".to_owned(),
-                colour: color::GOLD_BRIGHT,
+                colour: color::gold_bright(),
                 lines: vec![
                     Line::how(
                         "Every SJK player has it. Turn it on here, from the quick wheel's Toys \
@@ -268,7 +268,7 @@ impl Panel {
         if token == HAX_TOKEN {
             return Some(Card {
                 title: "The Hax".to_owned(),
-                colour: color::GOLD_BRIGHT,
+                colour: color::gold_bright(),
                 lines: vec![
                     Line::how(
                         "Every SJK player has it. Turn it on here, from the quick wheel's Toys \
@@ -283,7 +283,7 @@ impl Panel {
         if token == ORDER_TOKEN {
             return Some(Card {
                 title: "Order 66".to_owned(),
-                colour: color::GOLD_BRIGHT,
+                colour: color::gold_bright(),
                 lines: vec![
                     Line::how(
                         "Every SJK player has it. Turn it on here, from the quick wheel's Toys \
@@ -320,7 +320,7 @@ fn medal_card(showing: &medals::Showing) -> Card {
     });
     Card {
         title: medal.name().to_owned(),
-        colour: color::GOLD_BRIGHT,
+        colour: color::gold_bright(),
         lines,
     }
 }
@@ -390,7 +390,7 @@ fn achievement_card(
     Card {
         title: title.into_owned(),
         colour: if done {
-            color::GOLD_BRIGHT
+            color::gold_bright()
         } else {
             crate::achievements::medallion::tint(kind.category)
         },
@@ -423,7 +423,7 @@ pub(super) fn shader_card(
     let Some(skin) = skin else {
         return Card {
             title: "Stock blade".to_owned(),
-            colour: color::HOLO,
+            colour: color::holo(),
             lines: vec![
                 Line::how("Every player has it: the plain blade, in your saber's colour."),
                 Line::held("Yours"),
@@ -481,7 +481,7 @@ pub(super) fn shader_card(
 pub(super) fn wish_card(on: bool, full: bool, may: bool) -> Card {
     Card {
         title: format!("{}  Wishlist", crate::symbols::GIFT),
-        colour: color::GOLD_BRIGHT,
+        colour: color::gold_bright(),
         lines: vec![
             Line::how(format!(
                 "Up to {} kybers you lack, kept on the SJK hub. A wished kyber in your \
@@ -530,7 +530,7 @@ pub(super) fn mark_card(
             let on = chosen.is_some_and(|(id, _)| marks.favourite(id));
             Card {
                 title: format!("{}  Favourite", crate::symbols::EDITION),
-                colour: color::GOLD_BRIGHT,
+                colour: color::gold_bright(),
                 lines: vec![
                     Line::how(
                         "A star: your favourites are listed first, and the Favourites chip \
@@ -550,7 +550,7 @@ pub(super) fn mark_card(
                 chosen.map_or((false, false), |(id, owned)| (marks.locked(id), owned));
             Card {
                 title: format!("{}  Lock", crate::symbols::LOCK),
-                colour: color::GOLD_BRIGHT,
+                colour: color::gold_bright(),
                 lines: vec![
                     Line::how(
                         "A padlock: a locked kyber is never broken down in the Forge (not \
@@ -569,7 +569,7 @@ pub(super) fn mark_card(
         }
         MarkToken::Favourites => Card {
             title: "Favourites".to_owned(),
-            colour: color::GOLD_BRIGHT,
+            colour: color::gold_bright(),
             lines: vec![
                 Line::how("Shows your starred kybers alone (Shift+F); again shows them all."),
                 Line::status("Star a kyber with F, or its star beside the chosen one."),
@@ -577,7 +577,7 @@ pub(super) fn mark_card(
         },
         MarkToken::SeenAll => Card {
             title: "New".to_owned(),
-            colour: color::GOLD_BRIGHT,
+            colour: color::gold_bright(),
             lines: vec![
                 Line::how(
                     "Kybers you got since you last looked (holocrons, gifts, trades, \
@@ -641,7 +641,7 @@ fn tile_card(tile: &crate::cards::binder::Tile) -> Card {
         colour: if tile.owned() {
             tile.tone(&faces).colour
         } else {
-            color::MUTED
+            color::muted()
         },
         lines,
     }
@@ -735,7 +735,7 @@ mod tests {
         };
         let card = achievement_card(kind, Some(&done));
         assert_eq!(card.lines[2].words, "Unlocked 10/10/2026");
-        assert_eq!(card.colour, color::GOLD_BRIGHT);
+        assert_eq!(card.colour, color::gold_bright());
     }
 
     #[test]

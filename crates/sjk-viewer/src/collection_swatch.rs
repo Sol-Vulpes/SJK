@@ -155,7 +155,7 @@ pub(crate) fn blade(
         DrawCommand::RoundedRect {
             rect: frame.rect(x, y, width, height),
             radius: 14.0 * s,
-            color: color::alpha(color::SPACE, 0.94),
+            color: color::alpha(color::space(), 0.94),
         },
     );
     let centre = y + height * 0.5;
@@ -224,7 +224,7 @@ pub(crate) fn blade(
             rect: frame.rect(x, y, width, height),
             radius: 14.0 * s,
             width: 1.2 * s,
-            color: color::alpha(color::HOLO, if owned { 0.22 } else { 0.14 }),
+            color: color::alpha(color::holo(), if owned { 0.22 } else { 0.14 }),
         },
     );
     if !owned {
@@ -453,7 +453,7 @@ pub(crate) fn chroma_mark(
         x + radius,
         y + radius,
         radius + 1.2,
-        color::alpha(color::SPACE, 0.75 * alpha),
+        color::alpha(color::space(), 0.75 * alpha),
     );
     for segment in 0..WHEEL_SEGMENTS {
         let hue = segment as f32 / WHEEL_SEGMENTS as f32;
@@ -503,7 +503,7 @@ pub(crate) fn small_stock(canvas: &mut DrawList, frame: &Frame, rect: [f32; 4], 
         DrawCommand::RoundedRect {
             rect: frame.rect(x, y, width, height),
             radius: 14.0 * s,
-            color: color::alpha(color::SPACE, 0.94),
+            color: color::alpha(color::space(), 0.94),
         },
     );
     let centre = y + height * 0.5;
@@ -538,7 +538,7 @@ pub(crate) fn small_stock(canvas: &mut DrawList, frame: &Frame, rect: [f32; 4], 
             rect: frame.rect(x, y, width, height),
             radius: 14.0 * s,
             width: 1.2 * s,
-            color: color::alpha(color::HOLO, 0.22),
+            color: color::alpha(color::holo(), 0.22),
         },
     );
 }
@@ -746,9 +746,9 @@ pub(crate) fn tile_blade(
                 frame,
                 &axis,
                 [
-                    color::alpha(color::QUIET, 0.08 * light),
-                    color::alpha(color::QUIET, 0.3 * light),
-                    color::alpha(color::MUTED, (0.45 * light).min(1.0)),
+                    color::alpha(color::quiet(), 0.08 * light),
+                    color::alpha(color::quiet(), 0.3 * light),
+                    color::alpha(color::muted(), (0.45 * light).min(1.0)),
                 ],
             );
             if owned { Shown::Waiting } else { Shown::Locked }
@@ -864,9 +864,9 @@ fn tile_hilt(canvas: &mut DrawList, frame: &Frame, axis: &TileAxis, lit: bool) {
         y,
         0.7 * unit,
         if lit {
-            color::GOLD
+            color::gold()
         } else {
-            color::alpha(color::QUIET, 0.8)
+            color::alpha(color::quiet(), 0.8)
         },
     );
 }
@@ -980,13 +980,13 @@ fn grey_strip(
         canvas,
         frame,
         [start, centre - height * 0.25, length, height * 0.5],
-        color::alpha(color::QUIET, 0.25 * light),
+        color::alpha(color::quiet(), 0.25 * light),
     );
     capsule(
         canvas,
         frame,
         [start, centre - height * 0.1, length, height * 0.2],
-        color::alpha(color::MUTED, (0.45 * light).min(1.0)),
+        color::alpha(color::muted(), (0.45 * light).min(1.0)),
     );
 }
 
@@ -1383,19 +1383,19 @@ fn grey_blade(
         canvas,
         frame,
         [start - 4.0, centre - 15.0, length + 12.0, 30.0],
-        color::alpha(color::QUIET, 0.08 * light),
+        color::alpha(color::quiet(), 0.08 * light),
     );
     capsule(
         canvas,
         frame,
         [start, centre - 6.0, length, 12.0],
-        color::alpha(color::QUIET, 0.3 * light),
+        color::alpha(color::quiet(), 0.3 * light),
     );
     capsule(
         canvas,
         frame,
         [start + 1.0, centre - 2.5, length - 2.0, 5.0],
-        color::alpha(color::MUTED, (0.45 * light).min(1.0)),
+        color::alpha(color::muted(), (0.45 * light).min(1.0)),
     );
 }
 
@@ -1456,9 +1456,9 @@ fn hilt_at(canvas: &mut DrawList, frame: &Frame, start: f32, centre: f32, length
             rect: frame.rect(x + 66.0, centre - 10.5, 7.0, 4.0),
             radius: 1.5 * s,
             color: if lit {
-                color::GOLD
+                color::gold()
             } else {
-                color::alpha(color::QUIET, 0.8)
+                color::alpha(color::quiet(), 0.8)
             },
         },
     );
@@ -1485,7 +1485,14 @@ fn small_padlock(canvas: &mut DrawList, frame: &Frame, x: f32, y: f32, scale: f3
 /// A padlock centred on (`x`, `y`).
 fn padlock(canvas: &mut DrawList, frame: &Frame, x: f32, y: f32) {
     let s = frame.s;
-    disc(canvas, frame, x, y, 30.0, color::alpha(color::SPACE, 0.82));
+    disc(
+        canvas,
+        frame,
+        x,
+        y,
+        30.0,
+        color::alpha(color::space(), 0.82),
+    );
     push(
         canvas,
         DrawCommand::Arc {
@@ -1494,7 +1501,7 @@ fn padlock(canvas: &mut DrawList, frame: &Frame, x: f32, y: f32) {
             width: 3.0 * s,
             start: std::f32::consts::PI,
             sweep: std::f32::consts::PI,
-            color: color::MUTED,
+            color: color::muted(),
             knockout: None,
         },
     );
@@ -1503,7 +1510,7 @@ fn padlock(canvas: &mut DrawList, frame: &Frame, x: f32, y: f32) {
             canvas,
             DrawCommand::SolidRect {
                 rect: frame.rect(x + side - 1.5, y - 5.0, 3.0, 5.0),
-                color: color::MUTED,
+                color: color::muted(),
             },
         );
     }
@@ -1512,7 +1519,7 @@ fn padlock(canvas: &mut DrawList, frame: &Frame, x: f32, y: f32) {
         DrawCommand::RoundedRect {
             rect: frame.rect(x - 11.0, y - 1.0, 22.0, 17.0),
             radius: 3.0 * s,
-            color: color::MUTED,
+            color: color::muted(),
         },
     );
     push(
@@ -1520,7 +1527,7 @@ fn padlock(canvas: &mut DrawList, frame: &Frame, x: f32, y: f32) {
         DrawCommand::RoundedRect {
             rect: frame.rect(x - 2.0, y + 4.0, 4.0, 7.0),
             radius: 2.0 * s,
-            color: color::SPACE,
+            color: color::space(),
         },
     );
 }

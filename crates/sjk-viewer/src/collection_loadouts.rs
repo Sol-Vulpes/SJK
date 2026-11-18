@@ -506,7 +506,7 @@ impl Card {
             format_args!("Loadouts"),
             frame.rect(left, y + 28.0, 400.0, 28.0),
             22.0 * s,
-            color::GOLD,
+            color::gold(),
             FontWeight::Semibold,
             TextAlign::Start,
         );
@@ -516,7 +516,7 @@ impl Card {
             format_args!("Kept on this PC"),
             frame.rect(left, y + 28.0, inner_width, 28.0),
             16.0 * s,
-            color::MUTED,
+            color::muted(),
             FontWeight::Regular,
             TextAlign::End,
         );
@@ -526,7 +526,7 @@ impl Card {
             format_args!("Save your look, wear it again in one click"),
             frame.rect(left, y + 64.0, inner_width, 48.0),
             34.0 * s,
-            color::TEXT,
+            color::text(),
             FontWeight::Semibold,
             TextAlign::Start,
         );
@@ -538,7 +538,7 @@ impl Card {
             ),
             frame.rect(left, y + 118.0, inner_width, 24.0),
             16.0 * s,
-            color::MUTED,
+            color::muted(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -565,7 +565,7 @@ impl Card {
                 format_args!("{line}"),
                 frame.rect(left, under, inner_width - 200.0, 28.0),
                 17.0 * s,
-                if warm { color::EMBER } else { color::HOLO },
+                if warm { color::ember() } else { color::holo() },
                 FontWeight::Semibold,
                 TextAlign::Start,
             );
@@ -596,7 +596,7 @@ impl Card {
             format_args!("{keys}"),
             frame.rect(x, y + height + 18.0, width, 24.0),
             15.0 * s,
-            color::MUTED,
+            color::muted(),
             FontWeight::Regular,
             TextAlign::End,
         );
@@ -630,9 +630,9 @@ impl Card {
             frame.rect(left + 6.0, top + 12.0, 30.0, 30.0),
             26.0 * s,
             if chosen {
-                color::GOLD_BRIGHT
+                color::gold_bright()
             } else {
-                color::HOLO
+                color::holo()
             },
             FontWeight::Semibold,
             TextAlign::Start,
@@ -655,9 +655,9 @@ impl Card {
                 frame.rect(words, top + 8.0, words_width, 30.0),
                 24.0 * s,
                 if chosen {
-                    color::GOLD_BRIGHT
+                    color::gold_bright()
                 } else {
-                    color::TEXT
+                    color::text()
                 },
                 FontWeight::Semibold,
                 TextAlign::Start,
@@ -668,7 +668,7 @@ impl Card {
                 format_args!("Empty slot"),
                 frame.rect(words, top + 8.0, words_width, 30.0),
                 24.0 * s,
-                color::QUIET,
+                color::quiet(),
                 FontWeight::Regular,
                 TextAlign::Start,
             ),
@@ -683,7 +683,7 @@ impl Card {
             format_args!("{line}"),
             frame.rect(words, top + 46.0, words_width, 22.0),
             15.0 * s,
-            color::MUTED,
+            color::muted(),
             FontWeight::Regular,
             TextAlign::Start,
         );

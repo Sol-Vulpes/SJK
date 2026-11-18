@@ -299,6 +299,24 @@ pub(super) fn register_daily_cvars(cvars: &mut CvarRegistry) -> Result<(), sjk_s
             "Menu layout: sjk (the SJK UI) or classic (after the original Jedi Academy menus)",
         ),
         CvarDefinition::new(
+            crate::menu::sjk::theme::CVAR,
+            crate::menu::sjk::theme::Theme::DEFAULT_NAME,
+            archive,
+            "The SJK UI's colours: warm (the sun's, the default), cold (deep navy and holo blue) or custom (ui_themeHue at ui_themeSaturation)",
+        ),
+        CvarDefinition::new(
+            crate::menu::sjk::theme::HUE_CVAR,
+            crate::menu::sjk::theme::DEFAULT_HUE,
+            archive,
+            "The custom SJK UI theme's hue, 0 to 360 round the colour wheel (0 red, 120 green, 240 blue); setting it picks ui_theme custom",
+        ),
+        CvarDefinition::new(
+            crate::menu::sjk::theme::SATURATION_CVAR,
+            crate::menu::sjk::theme::DEFAULT_SATURATION,
+            archive,
+            "The custom SJK UI theme's saturation, 0 (greys) to 100 (the warm theme's); setting it picks ui_theme custom",
+        ),
+        CvarDefinition::new(
             "r_gamma",
             1.0_f64,
             archive,

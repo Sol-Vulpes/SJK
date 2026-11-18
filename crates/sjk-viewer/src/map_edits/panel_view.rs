@@ -96,7 +96,7 @@ fn scene_marks(ui: &mut MenuCanvas, frame: &Frame, panel: &Panel) {
             DrawCommand::RoundedRect {
                 rect,
                 radius: 2.0 * s,
-                color: color::alpha(color::HOLO, 0.08),
+                color: color::alpha(color::holo(), 0.08),
             },
         );
         push(
@@ -105,7 +105,7 @@ fn scene_marks(ui: &mut MenuCanvas, frame: &Frame, panel: &Panel) {
                 rect,
                 radius: 2.0 * s,
                 width: 1.5 * s,
-                color: color::alpha(color::HOLO, 0.8),
+                color: color::alpha(color::holo(), 0.8),
             },
         );
         return;
@@ -132,7 +132,7 @@ fn scene_marks(ui: &mut MenuCanvas, frame: &Frame, panel: &Panel) {
         DrawCommand::RoundedRect {
             rect,
             radius: 8.0 * s,
-            color: color::alpha(color::SPACE, 0.86),
+            color: color::alpha(color::space(), 0.86),
         },
     );
     push(
@@ -141,7 +141,7 @@ fn scene_marks(ui: &mut MenuCanvas, frame: &Frame, panel: &Panel) {
             rect,
             radius: 8.0 * s,
             width: 1.0 * s,
-            color: color::alpha(color::HOLO, 0.35),
+            color: color::alpha(color::holo(), 0.35),
         },
     );
     text(
@@ -150,7 +150,7 @@ fn scene_marks(ui: &mut MenuCanvas, frame: &Frame, panel: &Panel) {
         format_args!("{tip}"),
         Rect::new(left + 12.0 * s, top + 4.0 * s, width - 16.0 * s, 20.0 * s),
         14.0 * s,
-        color::TEXT,
+        color::text(),
         FontWeight::Regular,
         TextAlign::Start,
     );
@@ -175,7 +175,7 @@ fn measure_label(ui: &mut MenuCanvas, frame: &Frame, panel: &Panel) {
         DrawCommand::RoundedRect {
             rect,
             radius: 8.0 * s,
-            color: color::alpha(color::SPACE, 0.9),
+            color: color::alpha(color::space(), 0.9),
         },
     );
     push(
@@ -184,7 +184,7 @@ fn measure_label(ui: &mut MenuCanvas, frame: &Frame, panel: &Panel) {
             rect,
             radius: 8.0 * s,
             width: 1.0 * s,
-            color: color::alpha(color::GOLD_BRIGHT, 0.6),
+            color: color::alpha(color::gold_bright(), 0.6),
         },
     );
     text(
@@ -193,7 +193,7 @@ fn measure_label(ui: &mut MenuCanvas, frame: &Frame, panel: &Panel) {
         format_args!("{words}"),
         Rect::new(left + 12.0 * s, top + 4.0 * s, width - 16.0 * s, 20.0 * s),
         15.0 * s,
-        color::GOLD_BRIGHT,
+        color::gold_bright(),
         FontWeight::Semibold,
         TextAlign::Start,
     );
@@ -203,7 +203,7 @@ fn measure_label(ui: &mut MenuCanvas, frame: &Frame, panel: &Panel) {
 fn scrim(ui: &mut MenuCanvas, frame: &Frame, viewport: [f32; 2]) {
     let [width, height] = viewport;
     let x = |frame_x: f32| frame.point(frame_x, 0.0)[0];
-    let space = |alpha| color::alpha(color::SPACE, alpha);
+    let space = |alpha| color::alpha(color::space(), alpha);
     let (start, dark) = (x(FADE_START).max(0.0), x(FADE_DARK));
     if dark > start {
         fade_across(
@@ -245,7 +245,7 @@ fn header(ui: &mut MenuCanvas, frame: &Frame, panel: &Panel) {
         format_args!("Map editor"),
         frame.rect(COLUMN_X, TITLE_Y - 26.0, COLUMN_WIDTH, 52.0),
         42.0 * s,
-        color::TEXT,
+        color::text(),
         FontWeight::Semibold,
         TextAlign::Start,
     );
@@ -255,7 +255,7 @@ fn header(ui: &mut MenuCanvas, frame: &Frame, panel: &Panel) {
         facts.map.as_str()
     };
     let rect = frame.rect(COLUMN_X, SUBTITLE_Y - 12.0, COLUMN_WIDTH, 24.0);
-    let (size, colour) = (17.0 * s, color::MUTED);
+    let (size, colour) = (17.0 * s, color::muted());
     let body = |ui: &mut MenuCanvas, value: std::fmt::Arguments<'_>| {
         text(
             ui,
@@ -310,9 +310,9 @@ fn header(ui: &mut MenuCanvas, frame: &Frame, panel: &Panel) {
             frame.rect(x, TABS_Y + 3.0, width + 20.0, 30.0),
             TAB_SIZE * s,
             match (current, lit) {
-                (true, _) => color::GOLD_BRIGHT,
-                (false, true) => color::TEXT,
-                (false, false) => color::MUTED,
+                (true, _) => color::gold_bright(),
+                (false, true) => color::text(),
+                (false, false) => color::muted(),
             },
             FontWeight::Regular,
             TextAlign::Start,
@@ -323,7 +323,7 @@ fn header(ui: &mut MenuCanvas, frame: &Frame, panel: &Panel) {
                 DrawCommand::RoundedRect {
                     rect: frame.rect(x, TABS_Y + 38.0, width, 3.0),
                     radius: 1.5 * s,
-                    color: color::GOLD_BRIGHT,
+                    color: color::gold_bright(),
                 },
             );
         }
@@ -364,7 +364,7 @@ fn selected(ui: &mut MenuCanvas, frame: &Frame, panel: &mut Panel) {
             format_args!("Nothing selected"),
             frame.rect(COLUMN_X, y, COLUMN_WIDTH, 34.0),
             26.0 * s,
-            color::TEXT,
+            color::text(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -378,7 +378,7 @@ fn selected(ui: &mut MenuCanvas, frame: &Frame, panel: &mut Panel) {
             frame,
             y + 44.0,
             "Click a prop or a surface in the scene,",
-            color::MUTED,
+            color::muted(),
         );
         text(
             ui,
@@ -386,7 +386,7 @@ fn selected(ui: &mut MenuCanvas, frame: &Frame, panel: &mut Panel) {
             format_args!("or aim at it and press {key}."),
             frame.rect(COLUMN_X, y + 70.0, COLUMN_WIDTH, 24.0),
             16.0 * s,
-            color::MUTED,
+            color::muted(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -395,7 +395,7 @@ fn selected(ui: &mut MenuCanvas, frame: &Frame, panel: &mut Panel) {
             frame,
             y + 96.0,
             "Hold the right button to fly (W A S D).",
-            color::MUTED,
+            color::muted(),
         );
         return;
     };
@@ -421,7 +421,7 @@ fn selected(ui: &mut MenuCanvas, frame: &Frame, panel: &mut Panel) {
             format_args!("{kind} and {} more", panel.facts.count - 1),
             frame.rect(COLUMN_X, y, COLUMN_WIDTH, 34.0),
             26.0 * s,
-            color::TEXT,
+            color::text(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -432,12 +432,12 @@ fn selected(ui: &mut MenuCanvas, frame: &Frame, panel: &mut Panel) {
             format_args!("{kind}"),
             frame.rect(COLUMN_X, y, COLUMN_WIDTH, 34.0),
             26.0 * s,
-            color::TEXT,
+            color::text(),
             FontWeight::Regular,
             TextAlign::Start,
         );
     }
-    line(ui, frame, y + 40.0, &selection.name, color::TEXT);
+    line(ui, frame, y + 40.0, &selection.name, color::text());
     // The fill's suggestion takes the second detail line.
     let chosen_fill = panel
         .fill_choice()
@@ -463,8 +463,8 @@ fn selected(ui: &mut MenuCanvas, frame: &Frame, panel: &mut Panel) {
         n => format!("{n} placed models among them: G R T move them"),
     });
     let extras: Vec<(&str, Color)> = [
-        set.as_deref().map(|set| (set, color::TEXT)),
-        fill.as_deref().map(|fill| (fill, color::GOLD_BRIGHT)),
+        set.as_deref().map(|set| (set, color::text())),
+        fill.as_deref().map(|fill| (fill, color::gold_bright())),
     ]
     .into_iter()
     .flatten()
@@ -479,7 +479,7 @@ fn selected(ui: &mut MenuCanvas, frame: &Frame, panel: &mut Panel) {
             frame,
             y + 64.0 + index as f32 * 24.0,
             part,
-            color::MUTED,
+            color::muted(),
         );
     }
     for (index, (extra, colour)) in extras.iter().enumerate() {
@@ -525,7 +525,7 @@ fn selected(ui: &mut MenuCanvas, frame: &Frame, panel: &mut Panel) {
             frame,
             y + 8.0,
             "The game needs it: it can be remapped, not hidden.",
-            color::MUTED,
+            color::muted(),
         ),
         Picked::Face | Picked::Sky => buttons(
             ui,
@@ -588,7 +588,7 @@ fn selected(ui: &mut MenuCanvas, frame: &Frame, panel: &mut Panel) {
         } else {
             "None known: Remap tries the name as typed"
         };
-        line(ui, frame, y + 16.0, line_text, color::MUTED);
+        line(ui, frame, y + 16.0, line_text, color::muted());
     }
     let own = without_image_extension(selection.shader.as_deref().unwrap_or("")).to_owned();
     let picked = selection.picked;
@@ -656,14 +656,14 @@ fn align_page(ui: &mut MenuCanvas, frame: &Frame, panel: &Panel, mut y: f32) {
             let mut letters = words.chars();
             let first = letters.next().map(|c| c.to_ascii_uppercase());
             let words: String = first.into_iter().chain(letters).collect();
-            line(ui, frame, y, &words, color::TEXT);
+            line(ui, frame, y, &words, color::text());
         }
         None => line(
             ui,
             frame,
             y,
             "Drawn by no edit: Draw a shader on it first",
-            color::MUTED,
+            color::muted(),
         ),
     }
     y += 40.0;
@@ -688,14 +688,14 @@ fn align_page(ui: &mut MenuCanvas, frame: &Frame, panel: &Panel, mut y: f32) {
         frame,
         y,
         "Shift: a texel, a degree, a finer growth.",
-        color::MUTED,
+        color::muted(),
     );
     line(
         ui,
         frame,
         y + 24.0,
         "Every selected drawn face, one step to undo.",
-        color::MUTED,
+        color::muted(),
     );
 }
 
@@ -711,7 +711,7 @@ fn placed_set(ui: &mut MenuCanvas, frame: &Frame, panel: &Panel, mut y: f32, mod
         format_args!("{models} models selected"),
         frame.rect(COLUMN_X, y, COLUMN_WIDTH, 34.0),
         26.0 * s,
-        color::TEXT,
+        color::text(),
         FontWeight::Regular,
         TextAlign::Start,
     );
@@ -720,20 +720,20 @@ fn placed_set(ui: &mut MenuCanvas, frame: &Frame, panel: &Panel, mut y: f32, mod
         .selection
         .as_ref()
         .map_or("", |selection| selection.name.as_str());
-    line(ui, frame, y + 40.0, newest, color::TEXT);
+    line(ui, frame, y + 40.0, newest, color::text());
     line(
         ui,
         frame,
         y + 64.0,
         "G R T or these move them all together;",
-        color::MUTED,
+        color::muted(),
     );
     line(
         ui,
         frame,
         y + 88.0,
         "Grab takes one model at a time.",
-        color::MUTED,
+        color::muted(),
     );
     y += 124.0;
     buttons(
@@ -793,7 +793,7 @@ fn list_ground(ui: &mut MenuCanvas, frame: &Frame, rect: [f32; 4]) {
         DrawCommand::RoundedRect {
             rect: frame.rect(x, y, width, height),
             radius: 12.0 * s,
-            color: color::alpha(color::SPACE, 0.6),
+            color: color::alpha(color::space(), 0.6),
         },
     );
     push(
@@ -802,7 +802,7 @@ fn list_ground(ui: &mut MenuCanvas, frame: &Frame, rect: [f32; 4]) {
             rect: frame.rect(x, y, width, height),
             radius: 12.0 * s,
             width: 1.5 * s,
-            color: color::alpha(color::HOLO, 0.35),
+            color: color::alpha(color::holo(), 0.35),
         },
     );
 }
@@ -839,7 +839,7 @@ fn list_row_from(
             DrawCommand::RoundedRect {
                 rect: frame.rect(COLUMN_X + 6.0, top, COLUMN_WIDTH - 12.0, LIST_ROW),
                 radius: 8.0 * s,
-                color: color::alpha(color::HOLO, if focused { 0.2 } else { 0.1 }),
+                color: color::alpha(color::holo(), if focused { 0.2 } else { 0.1 }),
             },
         );
     }
@@ -849,7 +849,7 @@ fn list_row_from(
             DrawCommand::RoundedRect {
                 rect: frame.rect(COLUMN_X + 6.0, top + 6.0, 3.0, LIST_ROW - 12.0),
                 radius: 1.5 * s,
-                color: color::GOLD_BRIGHT,
+                color: color::gold_bright(),
             },
         );
     }
@@ -865,9 +865,9 @@ fn list_row_from(
         ),
         15.0 * s,
         match (chosen, muted) {
-            (true, _) => color::GOLD_BRIGHT,
-            (false, true) => color::QUIET,
-            (false, false) => color::TEXT,
+            (true, _) => color::gold_bright(),
+            (false, true) => color::quiet(),
+            (false, false) => color::text(),
         },
         FontWeight::Regular,
         TextAlign::Start,
@@ -902,7 +902,7 @@ fn picture(
         DrawCommand::RoundedRect {
             rect: frame.rect(x, y, width, height),
             radius: 4.0 * s,
-            color: color::alpha(color::SPACE, 0.9),
+            color: color::alpha(color::space(), 0.9),
         },
     );
     match picture {
@@ -922,7 +922,7 @@ fn picture(
                 format_args!("{short}"),
                 frame.rect(x + 3.0, y + height * 0.5 - 8.0, width - 6.0, 16.0),
                 11.0 * s,
-                color::QUIET,
+                color::quiet(),
                 FontWeight::Regular,
                 TextAlign::Center,
             );
@@ -997,11 +997,11 @@ fn shader_tiles(ui: &mut MenuCanvas, frame: &Frame, panel: &mut Panel, y: f32, o
             panel.hover_shader = Some(index);
         }
         let border = if chosen {
-            Some((color::GOLD_BRIGHT, 2.5))
+            Some((color::gold_bright(), 2.5))
         } else if hovered || panel.focus == token {
-            Some((color::HOLO, 2.0))
+            Some((color::holo(), 2.0))
         } else if own {
-            Some((color::QUIET, 1.5))
+            Some((color::quiet(), 1.5))
         } else {
             None
         };
@@ -1022,7 +1022,7 @@ fn shader_tiles(ui: &mut MenuCanvas, frame: &Frame, panel: &mut Panel, y: f32, o
                 DrawCommand::RoundedRect {
                     rect: frame.rect(x + 1.0, top + TILE - 15.0, TILE - 2.0, 14.0),
                     radius: 3.0 * s,
-                    color: color::alpha(color::SPACE, 0.8),
+                    color: color::alpha(color::space(), 0.8),
                 },
             );
             text(
@@ -1041,7 +1041,7 @@ fn shader_tiles(ui: &mut MenuCanvas, frame: &Frame, panel: &mut Panel, y: f32, o
                 DrawCommand::RoundedRect {
                     rect: frame.rect(x + TILE - 9.0, top + 3.0, 6.0, 6.0),
                     radius: 3.0 * s,
-                    color: color::HOLO,
+                    color: color::holo(),
                 },
             );
         }
@@ -1070,7 +1070,7 @@ fn preview_card(ui: &mut MenuCanvas, frame: &Frame, panel: &mut Panel, top: f32,
         DrawCommand::RoundedRect {
             rect,
             radius: 12.0 * s,
-            color: color::alpha(color::SPACE, 0.88),
+            color: color::alpha(color::space(), 0.88),
         },
     );
     push(
@@ -1079,7 +1079,7 @@ fn preview_card(ui: &mut MenuCanvas, frame: &Frame, panel: &mut Panel, top: f32,
             rect,
             radius: 12.0 * s,
             width: 1.5 * s,
-            color: color::alpha(color::HOLO, 0.35),
+            color: color::alpha(color::holo(), 0.35),
         },
     );
     let small = |ui: &mut MenuCanvas, y: f32, value: std::fmt::Arguments<'_>, colour: Color| {
@@ -1105,7 +1105,7 @@ fn preview_card(ui: &mut MenuCanvas, frame: &Frame, panel: &mut Panel, top: f32,
                 "Chosen"
             }
         ),
-        color::QUIET,
+        color::quiet(),
     );
     let (box_x, box_y) = (X + 12.0, top + 30.0);
     push(
@@ -1113,7 +1113,7 @@ fn preview_card(ui: &mut MenuCanvas, frame: &Frame, panel: &mut Panel, top: f32,
         DrawCommand::RoundedRect {
             rect: frame.rect(box_x, box_y, BOX, BOX),
             radius: 6.0 * s,
-            color: color::alpha(color::SPACE, 0.95),
+            color: color::alpha(color::space(), 0.95),
         },
     );
     let mut size_line = None;
@@ -1136,18 +1136,18 @@ fn preview_card(ui: &mut MenuCanvas, frame: &Frame, panel: &mut Panel, top: f32,
             ui,
             box_y + BOX * 0.5 - 9.0,
             format_args!("No picture: drawn by its script only"),
-            color::MUTED,
+            color::muted(),
         ),
         None => small(
             ui,
             box_y + BOX * 0.5 - 9.0,
             format_args!("Loading the picture..."),
-            color::QUIET,
+            color::quiet(),
         ),
     }
     let mut y = box_y + BOX + 8.0;
     for part in wrap(short_shader(&shader), 28).take(2) {
-        small(ui, y, format_args!("{part}"), color::TEXT);
+        small(ui, y, format_args!("{part}"), color::text());
         y += 18.0;
     }
     match size_line {
@@ -1155,12 +1155,12 @@ fn preview_card(ui: &mut MenuCanvas, frame: &Frame, panel: &mut Panel, top: f32,
             ui,
             y,
             format_args!("Picture {width} x {height}"),
-            color::QUIET,
+            color::quiet(),
         ),
-        None => small(ui, y, format_args!(" "), color::QUIET),
+        None => small(ui, y, format_args!(" "), color::quiet()),
     }
     let y = top + HEIGHT - 66.0;
-    small(ui, y, format_args!("Drawn there now"), color::QUIET);
+    small(ui, y, format_args!("Drawn there now"), color::quiet());
     let thumbnail = panel.pictures.thumbnail(own);
     picture(ui, frame, [X + 12.0, y + 20.0, 40.0, 40.0], thumbnail, own);
     text(
@@ -1169,7 +1169,7 @@ fn preview_card(ui: &mut MenuCanvas, frame: &Frame, panel: &mut Panel, top: f32,
         format_args!("{}", wrap(short_shader(own), 20).next().unwrap_or("")),
         frame.rect(X + 60.0, y + 29.0, WIDTH - 72.0, 21.0),
         13.0 * s,
-        color::MUTED,
+        color::muted(),
         FontWeight::Regular,
         TextAlign::Start,
     );
@@ -1210,8 +1210,8 @@ fn head_mark(ui: &mut MenuCanvas, frame: &Frame, top: f32, index: usize, panel: 
 /// A suggestion's mark: gold for the nearby vote (Fill draws it on faces), holo else.
 fn reason_colour(reason: super::suggest::Reason) -> Color {
     match reason {
-        super::suggest::Reason::Nearby(_) => color::GOLD_BRIGHT,
-        _ => color::HOLO,
+        super::suggest::Reason::Nearby(_) => color::gold_bright(),
+        _ => color::holo(),
     }
 }
 
@@ -1227,7 +1227,7 @@ fn under_line(ui: &mut MenuCanvas, frame: &Frame, top: f32) {
                 1.0,
             ),
             radius: 0.5 * frame.s,
-            color: color::alpha(color::HOLO, 0.35),
+            color: color::alpha(color::holo(), 0.35),
         },
     );
 }
@@ -1250,7 +1250,7 @@ fn recent_mark(ui: &mut MenuCanvas, frame: &Frame, top: f32, index: usize, recen
             20.0,
         ),
         13.0 * s,
-        color::QUIET,
+        color::quiet(),
         FontWeight::Regular,
         TextAlign::End,
     );
@@ -1265,7 +1265,7 @@ fn recent_mark(ui: &mut MenuCanvas, frame: &Frame, top: f32, index: usize, recen
                     1.0,
                 ),
                 radius: 0.5 * s,
-                color: color::alpha(color::HOLO, 0.35),
+                color: color::alpha(color::holo(), 0.35),
             },
         );
     }
@@ -1322,7 +1322,7 @@ fn place(ui: &mut MenuCanvas, frame: &Frame, panel: &mut Panel) {
     list_ground(ui, frame, [COLUMN_X, y, COLUMN_WIDTH, height]);
     panel.model_list = Some(frame.rect(COLUMN_X, y, COLUMN_WIDTH, height));
     if panel.shown.is_empty() {
-        line(ui, frame, y + 16.0, "No model matches", color::MUTED);
+        line(ui, frame, y + 16.0, "No model matches", color::muted());
     }
     for slot in 0..MODEL_ROWS {
         let index = panel.model_first + slot;
@@ -1405,21 +1405,21 @@ fn place(ui: &mut MenuCanvas, frame: &Frame, panel: &mut Panel) {
                 "{} selected: these move them all; Grab one",
                 panel.facts.models
             ),
-            color::MUTED,
+            color::muted(),
         ),
         Some(description) => line(
             ui,
             frame,
             y,
             wrap(description, LINE_CHARS).next().unwrap_or(""),
-            color::MUTED,
+            color::muted(),
         ),
         None => line(
             ui,
             frame,
             y,
             "Place one, or select one, to move it",
-            color::QUIET,
+            color::quiet(),
         ),
     }
     y += 32.0;
@@ -1511,7 +1511,7 @@ fn things(ui: &mut MenuCanvas, frame: &Frame, panel: &mut Panel) {
             frame,
             y + 16.0,
             "No boombox, box or toy stands here",
-            color::MUTED,
+            color::muted(),
         );
     }
     for slot in 0..THING_ROWS {
@@ -1596,7 +1596,7 @@ fn things(ui: &mut MenuCanvas, frame: &Frame, panel: &mut Panel) {
         "A button, then a click on the floor stands it there. The hub has no move for a box or a toy: remove it and place it again."
     };
     for part in wrap(note, LINE_CHARS).take(4) {
-        line(ui, frame, y, part, color::MUTED);
+        line(ui, frame, y, part, color::muted());
         y += 24.0;
     }
 }
@@ -1611,7 +1611,7 @@ fn edits(ui: &mut MenuCanvas, frame: &Frame, panel: &mut Panel) {
     list_ground(ui, frame, [COLUMN_X, y, COLUMN_WIDTH, height]);
     panel.edit_list = Some(frame.rect(COLUMN_X, y, COLUMN_WIDTH, height));
     if panel.facts.rows.is_empty() {
-        line(ui, frame, y + 16.0, "No edits yet", color::MUTED);
+        line(ui, frame, y + 16.0, "No edits yet", color::muted());
     }
     for slot in 0..EDIT_ROWS {
         let index = panel.edit_first + slot;
@@ -1727,7 +1727,7 @@ fn weather(ui: &mut MenuCanvas, frame: &Frame, panel: &Panel) {
         facts.map_weather.join(", ")
     };
     for part in wrap(&format!("Map's own: {own}"), LINE_CHARS).take(2) {
-        line(ui, frame, y, part, color::MUTED);
+        line(ui, frame, y, part, color::muted());
         y += 26.0;
     }
     let kept = facts
@@ -1740,9 +1740,9 @@ fn weather(ui: &mut MenuCanvas, frame: &Frame, panel: &Panel) {
         None => "Kept: nothing, the map's own shows".to_owned(),
     };
     let colour = if kept.is_empty() {
-        color::TEXT
+        color::text()
     } else {
-        color::GOLD_BRIGHT
+        color::gold_bright()
     };
     for part in wrap(&words, LINE_CHARS).take(3) {
         line(ui, frame, y, part, colour);
@@ -1755,7 +1755,7 @@ fn weather(ui: &mut MenuCanvas, frame: &Frame, panel: &Panel) {
         )
         .take(2)
         {
-            line(ui, frame, y, part, color::EMBER);
+            line(ui, frame, y, part, color::ember());
             y += 26.0;
         }
     }
@@ -1815,7 +1815,7 @@ fn weather(ui: &mut MenuCanvas, frame: &Frame, panel: &Panel) {
     )
     .take(4)
     {
-        line(ui, frame, y, part, color::MUTED);
+        line(ui, frame, y, part, color::muted());
         y += 24.0;
     }
 }
@@ -1839,7 +1839,7 @@ fn lights(ui: &mut MenuCanvas, frame: &Frame, panel: &mut Panel) {
             "Every SJK player sees them; {drawn} of {} drawn (8 nearest)",
             facts.lights.len()
         ),
-        color::MUTED,
+        color::muted(),
     );
     y += 32.0;
     let light_chosen = panel.light_choice == LightChoice::Light && !facts.lights.is_empty();
@@ -1874,7 +1874,7 @@ fn lights(ui: &mut MenuCanvas, frame: &Frame, panel: &mut Panel) {
             frame,
             y + 16.0,
             "No light added: Add, then click a wall",
-            color::MUTED,
+            color::muted(),
         );
     }
     for slot in 0..LIGHT_ROWS {
@@ -1926,7 +1926,11 @@ fn lights(ui: &mut MenuCanvas, frame: &Frame, panel: &mut Panel) {
                     rect,
                     radius: 6.0 * s,
                     width: 2.0 * s,
-                    color: if lit { color::GOLD_BRIGHT } else { color::TEXT },
+                    color: if lit {
+                        color::gold_bright()
+                    } else {
+                        color::text()
+                    },
                 },
             );
         }
@@ -1957,14 +1961,14 @@ fn lights(ui: &mut MenuCanvas, frame: &Frame, panel: &mut Panel) {
         } else {
             "Found on the Experimental preset only"
         },
-        color::MUTED,
+        color::muted(),
     );
     y += 28.0;
     let height = LIST_ROW * LIGHT_ROWS as f32 + 16.0;
     list_ground(ui, frame, [COLUMN_X, y, COLUMN_WIDTH, height]);
     panel.lamp_list = Some(frame.rect(COLUMN_X, y, COLUMN_WIDTH, height));
     if panel.facts.lamps.is_empty() {
-        line(ui, frame, y + 16.0, "No lamp in this world", color::MUTED);
+        line(ui, frame, y + 16.0, "No lamp in this world", color::muted());
     }
     for slot in 0..LIGHT_ROWS {
         let index = panel.lamp_first + slot;
@@ -2031,9 +2035,9 @@ fn foot(ui: &mut MenuCanvas, frame: &Frame, panel: &Panel) {
         frame.rect(COLUMN_X, SCOPE_Y - 14.0, 160.0, 28.0),
         19.0 * s,
         if focused {
-            color::TEXT
+            color::text()
         } else {
-            color::alpha(color::TEXT, 0.88)
+            color::alpha(color::text(), 0.88)
         },
         FontWeight::Regular,
         TextAlign::Start,
@@ -2052,17 +2056,17 @@ fn foot(ui: &mut MenuCanvas, frame: &Frame, panel: &Panel) {
         Some((
             panel.status.as_str(),
             if panel.status_error {
-                color::EMBER
+                color::ember()
             } else {
-                color::TEXT
+                color::text()
             },
         ))
     } else if let Some(problem) = &facts.hub_problem {
-        Some((problem.as_str(), color::EMBER))
+        Some((problem.as_str(), color::ember()))
     } else if facts.scope == Scope::ThisServer {
         Some((
             facts.server.as_deref().unwrap_or("Not on a server"),
-            color::MUTED,
+            color::muted(),
         ))
     } else {
         None
@@ -2135,7 +2139,7 @@ fn keys(ui: &mut MenuCanvas, frame: &Frame, panel: &Panel) {
                 24.0,
             ),
             15.0 * frame.s,
-            color::EMBER,
+            color::ember(),
             FontWeight::Regular,
             TextAlign::End,
         );

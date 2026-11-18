@@ -553,7 +553,7 @@ impl Panel {
                 format_args!("{line}"),
                 frame.rect(LIST_X, PICKER_TOP + 8.0, SEARCH_WIDTH + 40.0, 24.0),
                 16.0 * s,
-                color::QUIET,
+                color::quiet(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -591,7 +591,7 @@ impl Panel {
         let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
             rect: area,
             radius: 8.0 * s,
-            color: color::alpha(color::HOLO, if lit { 0.16 } else { 0.05 }),
+            color: color::alpha(color::holo(), if lit { 0.16 } else { 0.05 }),
         });
         let inner = Rect::new(
             area.x + 4.0 * s,
@@ -632,7 +632,7 @@ impl Panel {
                 ),
                 inner,
                 14.0 * s,
-                color::QUIET,
+                color::quiet(),
                 FontWeight::Regular,
                 TextAlign::Center,
             ),
@@ -650,7 +650,7 @@ impl Panel {
             ] {
                 let _ = self.ui.draw_list_mut().push(DrawCommand::SolidRect {
                     rect: bar,
-                    color: color::GOLD,
+                    color: color::gold(),
                 });
             }
         }
@@ -666,7 +666,7 @@ impl Panel {
             let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
                 rect: star,
                 radius: star.width * 0.5,
-                color: color::alpha(color::SPACE, 0.7),
+                color: color::alpha(color::space(), 0.7),
             });
             let mark = Rect::new(
                 star.x + star.width * 0.18,
@@ -675,9 +675,9 @@ impl Panel {
                 star.height * 0.64,
             );
             let colour = match (favourite, self.ui.token_hovered(star_token)) {
-                (true, _) => color::GOLD_BRIGHT,
-                (false, true) => color::TEXT,
-                (false, false) => color::alpha(color::TEXT, 0.55),
+                (true, _) => color::gold_bright(),
+                (false, true) => color::text(),
+                (false, false) => color::alpha(color::text(), 0.55),
             };
             crate::chat::star(&mut self.ui, mark, colour);
         }
@@ -729,9 +729,9 @@ impl Panel {
             },
         };
         let colour = if picker.results.failure.is_some() {
-            color::EMBER
+            color::ember()
         } else {
-            color::QUIET
+            color::quiet()
         };
         text(
             &mut self.ui,
@@ -752,9 +752,9 @@ impl Panel {
         let picker = &self.gifs;
         let count = picker.ids.len();
         let (line, colour) = if let Some(notice) = picker.notice {
-            (notice.to_owned(), color::EMBER)
+            (notice.to_owned(), color::ember())
         } else if let Some(failure) = picker.results.failure.as_ref().filter(|_| count > 0) {
-            (failure.message(), color::EMBER)
+            (failure.message(), color::ember())
         } else if count > TILES {
             let first = picker.row * COLUMNS + 1;
             let last = ((picker.row + ROWS) * COLUMNS).min(count);
@@ -765,10 +765,10 @@ impl Panel {
             };
             (
                 format!("{first} to {last} of {count}{more}: Page Up and Page Down scroll"),
-                color::QUIET,
+                color::quiet(),
             )
         } else {
-            (String::new(), color::QUIET)
+            (String::new(), color::quiet())
         };
         text(
             &mut self.ui,
@@ -787,7 +787,7 @@ impl Panel {
             format_args!("Powered by GIPHY"),
             frame.rect(LIST_X + LIST_WIDTH - 220.0, FOOT_Y, 220.0, 20.0),
             14.0 * s,
-            color::MUTED,
+            color::muted(),
             FontWeight::Semibold,
             TextAlign::End,
         );
@@ -819,7 +819,7 @@ impl Panel {
             format_args!("Search GIFs with your own GIPHY key"),
             frame.rect(x, y, width, 40.0),
             32.0 * s,
-            color::TEXT,
+            color::text(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -834,7 +834,7 @@ impl Panel {
                 format_args!("{line}"),
                 frame.rect(x, y, width, 24.0),
                 18.0 * s,
-                color::MUTED,
+                color::muted(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -846,7 +846,7 @@ impl Panel {
             let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
                 rect: mark,
                 radius: mark.width * 0.5,
-                color: color::alpha(color::GOLD, 0.18),
+                color: color::alpha(color::gold(), 0.18),
             });
             text(
                 &mut self.ui,
@@ -854,7 +854,7 @@ impl Panel {
                 format_args!("{}", step + 1),
                 frame.rect(x, y + 4.0, 34.0, 26.0),
                 20.0 * s,
-                color::GOLD_BRIGHT,
+                color::gold_bright(),
                 FontWeight::Regular,
                 TextAlign::Center,
             );
@@ -864,7 +864,7 @@ impl Panel {
                 format_args!("{line}"),
                 frame.rect(x + 52.0, y + 5.0, width - 52.0, 24.0),
                 18.0 * s,
-                color::TEXT,
+                color::text(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -908,10 +908,10 @@ impl Panel {
         self.order.push(KEY_FIELD_TOKEN);
         y += 60.0;
         let (line, colour) = match notice {
-            Some(notice) => (notice, color::EMBER),
+            Some(notice) => (notice, color::ember()),
             None => (
                 "Kept on this PC only, in Settings > Network > GIPHY key. It allows 100 searches an hour.",
-                color::QUIET,
+                color::quiet(),
             ),
         };
         text(
@@ -953,7 +953,7 @@ impl Panel {
             format_args!("Powered by GIPHY"),
             frame.rect(x, buttons_y + 12.0, 300.0, 20.0),
             14.0 * s,
-            color::MUTED,
+            color::muted(),
             FontWeight::Semibold,
             TextAlign::Start,
         );

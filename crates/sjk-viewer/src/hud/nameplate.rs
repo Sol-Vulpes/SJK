@@ -214,9 +214,15 @@ const MAX_ICONS: usize = 4;
 const ICON_POWERS: [u8; 11] = [7, 6, 13, 8, 9, 10, 2, 0, 12, 5, 14];
 /// The colour of players who follow no team: no team tints their frame.
 const NEUTRAL_ACCENT: Color = Color::new(0.78, 0.82, 0.9, 0.9);
-/// The holo frame of an SJK player out of team games: its hexagon and its edge.
-pub(crate) const HOLO_HEX: Color = Color::new(110.0 / 255.0, 210.0 / 255.0, 1.0, 0.85);
-pub(crate) const HOLO_EDGE: Color = Color::new(110.0 / 255.0, 210.0 / 255.0, 1.0, 0.75);
+/// The holo frame of an SJK player out of team games: its hexagon and its edge, in the
+/// SJK UI theme's line-work (`menu::sjk::theme`; holo blue was its colour before the
+/// themes, 18/11/2026).
+pub(crate) fn holo_hex() -> Color {
+    crate::menu::sjk::color::alpha(crate::menu::sjk::color::holo(), 0.85)
+}
+pub(crate) fn holo_edge() -> Color {
+    crate::menu::sjk::color::alpha(crate::menu::sjk::color::holo(), 0.75)
+}
 /// The grey frame of a player without SJK, and their far plate's hairline.
 const GREY_HEX: Color = Color::new(170.0 / 255.0, 178.0 / 255.0, 190.0 / 255.0, 0.7);
 const GREY_EDGE: Color = Color::new(170.0 / 255.0, 178.0 / 255.0, 190.0 / 255.0, 0.6);
@@ -2567,7 +2573,7 @@ struct Frame {
 
 impl Frame {
     /// The frame of `entry`'s plate (design C): a duel's pair's colour, a team's, an
-    /// NPC's pale gold, grey for a player without SJK, else the holo blue.
+    /// NPC's pale gold, grey for a player without SJK, else the theme's line-work.
     fn of(entry: &Entry, duel: bool) -> Self {
         let with = |colour: Color, alpha: f32| Color::new(colour.r, colour.g, colour.b, alpha);
         if duel {
@@ -2589,7 +2595,7 @@ impl Frame {
         } else if !entry.sjk {
             (GREY_HEX, GREY_EDGE, false)
         } else {
-            (HOLO_HEX, HOLO_EDGE, true)
+            (holo_hex(), holo_edge(), true)
         };
         Self {
             hex,
@@ -3207,7 +3213,7 @@ mod tests {
         assert_eq!(health(&duel), 0);
     }
 
-    /// A player without SJK wears a grey frame, an SJK player the holo blue, a team its
+    /// A player without SJK wears a grey frame, an SJK player the theme's line-work, a team its
     /// colour.
     #[test]
     fn the_frame_tells_sjk_players_and_teams() {
@@ -3222,7 +3228,7 @@ mod tests {
             duelling: false,
             ..plate()
         };
-        assert_eq!(hex(with), HOLO_HEX);
+        assert_eq!(hex(with), holo_hex());
         let blue = hex(PreviewPlate {
             duelling: false,
             team: Some(false),

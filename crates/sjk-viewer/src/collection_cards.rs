@@ -163,7 +163,7 @@ impl Panel {
                 rect: frame.rect(LEFT_X, GRID_TOP, CARD_WIDTH, CARD_WIDTH * look::ASPECT),
                 radius: CARD_WIDTH * 0.07 * frame.s,
                 width: 1.5 * frame.s,
-                color: color::alpha(color::HOLO, 0.22),
+                color: color::alpha(color::holo(), 0.22),
             });
             return;
         }
@@ -200,7 +200,7 @@ impl Panel {
                 format_args!("No card matches these filters."),
                 frame.rect(LEFT_X, GRID_TOP + 10.0, 900.0, 24.0),
                 16.0 * frame.s,
-                color::QUIET,
+                color::quiet(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -286,9 +286,9 @@ impl Panel {
                     CARD_SHOW_BASE + index as u16,
                     show.name().to_owned(),
                     if *show == Show::Owned {
-                        color::GOLD
+                        color::gold()
                     } else {
-                        color::HOLO
+                        color::holo()
                     },
                     filter.show == *show,
                     [56.0, 80.0, 90.0][index],
@@ -301,14 +301,14 @@ impl Panel {
                 "Rarity: {}",
                 filter.rarity.map_or("Any", |rarity| rarity.name)
             ),
-            filter.rarity.map_or(color::HOLO, |rarity| rarity.colour),
+            filter.rarity.map_or(color::holo(), |rarity| rarity.colour),
             filter.rarity.is_some(),
             158.0,
         ));
         chips.push((
             CARD_KIND_TOKEN,
             format!("Kind: {}", filter.kind.map_or("Any", |kind| kind.name())),
-            color::HOLO,
+            color::holo(),
             filter.kind.is_some(),
             172.0,
         ));
@@ -319,9 +319,9 @@ impl Panel {
                 filter.finish.map_or("Any", |finish| finish.name)
             ),
             if filter.finish.is_some_and(|finish| finish.index == 2) {
-                color::GOLD_BRIGHT
+                color::gold_bright()
             } else {
-                color::HOLO
+                color::holo()
             },
             filter.finish.is_some(),
             128.0,
@@ -352,7 +352,7 @@ impl Panel {
                 format_args!("{label}"),
                 frame.rect(left, FILTER_Y + 4.0, width, FILTER_HEIGHT - 8.0),
                 14.0 * s,
-                if lit { color::TEXT } else { color::MUTED },
+                if lit { color::text() } else { color::muted() },
                 FontWeight::Semibold,
                 TextAlign::Center,
             );
@@ -366,9 +366,9 @@ impl Panel {
             frame.rect(left, FILTER_Y + 4.0, GRID_RIGHT - left, FILTER_HEIGHT - 8.0),
             15.0 * s,
             if filter.active() {
-                color::TEXT
+                color::text()
             } else {
-                color::QUIET
+                color::quiet()
             },
             FontWeight::Regular,
             TextAlign::End,
@@ -386,14 +386,14 @@ impl Panel {
         let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
             rect: frame.rect(x, GRID_TOP, 4.0, height),
             radius: 2.0 * s,
-            color: color::alpha(color::HOLO, 0.14),
+            color: color::alpha(color::holo(), 0.14),
         });
         let thumb = height * LINES as f32 / lines as f32;
         let top = GRID_TOP + (height - thumb) * first as f32 / (lines - LINES) as f32;
         let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
             rect: frame.rect(x, top, 4.0, thumb),
             radius: 2.0 * s,
-            color: color::GOLD,
+            color: color::gold(),
         });
         // Where the window stands, under the grid's right end: "Rows 4-6 of 9".
         text(
@@ -402,7 +402,7 @@ impl Panel {
             format_args!("Rows {}-{} of {lines}", first + 1, first + LINES),
             frame.rect(GRID_RIGHT - ROWS_WIDTH, REVEAL_Y + 8.0, ROWS_WIDTH, 24.0),
             15.0 * s,
-            color::QUIET,
+            color::quiet(),
             FontWeight::Regular,
             TextAlign::End,
         );
@@ -475,9 +475,9 @@ impl Panel {
             ),
             16.0 * frame.s,
             if outcome.message.is_empty() {
-                color::GOLD_BRIGHT
+                color::gold_bright()
             } else {
-                color::EMBER
+                color::ember()
             },
             FontWeight::Regular,
             TextAlign::Start,
@@ -526,7 +526,7 @@ impl Panel {
                 rect: frame.rect(x - 8.0, y - 8.0, CARD_WIDTH + 16.0, height + 16.0),
                 radius: (CARD_WIDTH * 0.07 + 8.0) * s,
                 width: 2.0 * s,
-                color: color::GOLD_BRIGHT,
+                color: color::gold_bright(),
             });
         }
         let tilt = self.card_tilt(frame, [x, y, CARD_WIDTH], index + 1, seconds);
@@ -557,7 +557,7 @@ impl Panel {
                 let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
                     rect,
                     radius: 12.5 * s,
-                    color: color::alpha(color::SPACE, 0.94),
+                    color: color::alpha(color::space(), 0.94),
                 });
                 let _ = self.ui.draw_list_mut().push(DrawCommand::Border {
                     rect,
@@ -593,14 +593,14 @@ impl Panel {
             let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
                 rect,
                 radius: 11.0 * s,
-                color: color::alpha(color::SPACE, 0.94),
+                color: color::alpha(color::space(), 0.94),
             });
             let _ = self.ui.draw_list_mut().push(DrawCommand::Border {
                 rect,
                 radius: 11.0 * s,
                 width: 1.2 * s,
                 color: if solar {
-                    color::GOLD_BRIGHT
+                    color::gold_bright()
                 } else {
                     color::alpha(tile.tone(faces).colour, 0.9)
                 },
@@ -612,9 +612,9 @@ impl Panel {
                 frame.rect(x + CARD_WIDTH - width + 6.0, y - 2.0, width, 18.0),
                 14.0 * s,
                 if solar {
-                    color::GOLD_BRIGHT
+                    color::gold_bright()
                 } else {
-                    color::TEXT
+                    color::text()
                 },
                 FontWeight::Semibold,
                 TextAlign::Center,
@@ -711,9 +711,9 @@ impl Panel {
                 frame.rect(SHOWCASE_X, y, SHOWCASE_WIDTH, 26.0),
                 18.0 * s,
                 if tile.owned() {
-                    color::TEXT
+                    color::text()
                 } else {
-                    color::MUTED
+                    color::muted()
                 },
                 FontWeight::Regular,
                 TextAlign::Center,
@@ -726,7 +726,7 @@ impl Panel {
             format_args!("{}", words.about),
             frame.rect(SHOWCASE_X, y, SHOWCASE_WIDTH, 24.0),
             16.0 * s,
-            color::QUIET,
+            color::quiet(),
             FontWeight::Regular,
             TextAlign::Center,
         );
@@ -746,7 +746,7 @@ impl Panel {
             72,
             if blade.is_some() { 1 } else { words.lines },
             15.0,
-            color::QUIET,
+            color::quiet(),
         );
         if let Some(skin) = blade {
             // A shader of the trade the player lacks is crafted in the Forge.
@@ -811,7 +811,7 @@ impl Panel {
                 rect,
                 radius: height * 0.5 * s,
                 color: color::alpha(
-                    if active { color::GOLD } else { color::HOLO },
+                    if active { color::gold() } else { color::holo() },
                     if active {
                         0.16
                     } else if hovered {
@@ -841,9 +841,9 @@ impl Panel {
                 radius: height * 0.5 * s,
                 width: if active { 1.6 } else { 1.0 } * s,
                 color: if active {
-                    color::GOLD_BRIGHT
+                    color::gold_bright()
                 } else {
-                    color::alpha(color::HOLO, if has { 0.35 } else { 0.12 })
+                    color::alpha(color::holo(), if has { 0.35 } else { 0.12 })
                 },
             });
             let label = if has {
@@ -858,11 +858,11 @@ impl Panel {
                 frame.rect(left, y + (height - 22.0) * 0.5, chip, 22.0),
                 16.0 * s,
                 if active {
-                    color::GOLD_BRIGHT
+                    color::gold_bright()
                 } else if has {
-                    color::TEXT
+                    color::text()
                 } else {
-                    color::QUIET
+                    color::quiet()
                 },
                 FontWeight::Semibold,
                 TextAlign::Center,
@@ -896,7 +896,7 @@ impl Panel {
         let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
             rect: window,
             radius: 0.0,
-            color: color::alpha(color::SPACE, 0.97),
+            color: color::alpha(color::space(), 0.97),
         });
         self.ui.hit_region(CARD_INSPECT_TOKEN, window);
         let height = INSPECT_WIDTH * look::ASPECT;
@@ -930,7 +930,7 @@ impl Panel {
             format_args!("Card {} of {}", self.card + 1, self.cards_shown),
             frame.rect(x, y, width, 24.0),
             16.0 * s,
-            color::QUIET,
+            color::quiet(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -956,9 +956,9 @@ impl Panel {
             frame.rect(x, y, width, 28.0),
             20.0 * s,
             if tile.owned() {
-                color::TEXT
+                color::text()
             } else {
-                color::MUTED
+                color::muted()
             },
             FontWeight::Regular,
             TextAlign::Start,
@@ -974,7 +974,7 @@ impl Panel {
             format_args!("{}", words.about),
             frame.rect(x, y, width, 26.0),
             18.0 * s,
-            color::QUIET,
+            color::quiet(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -986,7 +986,7 @@ impl Panel {
             [x, y, width],
             (62, 4),
             17.0,
-            color::QUIET,
+            color::quiet(),
             TextAlign::Start,
         );
     }
@@ -1009,9 +1009,9 @@ struct CardWords {
 fn card_words(tile: &Tile, faces: &cards::faces::Faces) -> CardWords {
     let face = shown_face(tile, faces);
     let colour = if !tile.owned() {
-        color::MUTED
+        color::muted()
     } else if tile.finish().index == 2 {
-        color::GOLD_BRIGHT
+        color::gold_bright()
     } else {
         tile.tone(faces).colour
     };
