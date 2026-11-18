@@ -198,8 +198,8 @@ pub(crate) struct Manifest {
 
 /// The driver's bones whose rig joints (from their bone map entry to the joint it
 /// aims at) become the capsules dynamic chains are kept out of: the trunk and the
-/// legs, which a tail or a cape hangs against. The head is left out (hair grows from it)
-/// and the arms are [`ARM_BONES`].
+/// legs, which a tail or a cape hangs against. The head is [`HEAD_BONE`] and the arms are
+/// [`ARM_BONES`].
 const COLLISION_BONES: &[&str] = &[
     "pelvis",
     "lower_lumbar",
@@ -215,9 +215,14 @@ const COLLISION_BONES: &[&str] = &[
 /// `dynamic` line): they move fast, and a cape rests on the shoulders.
 const ARM_BONES: &[&str] = &["lhumerus", "rhumerus", "lradius", "rradius"];
 
+/// The driver's bone whose rig joint's vertices become the head's capsule, measured only
+/// for a rig with a chain that asks (`head` on its `dynamic` line): hair grows from it,
+/// so it is no trunk capsule, and its joint aims at nothing (`dynamics::Capsule::head`).
+const HEAD_BONE: &str = "cranium";
+
 /// A `dynamic` line's words after the joint: `[gravity] [gravity <n>] [wag <n>]
 /// [stiffness <n>] [damping <n>] [limit <degrees>] [clearance <units>] [drag <n>] [arms]
-/// [nocollide]`, any order after the bare gravity.
+/// [head] [nocollide]`, any order after the bare gravity.
 fn dynamic_settings(words: &[&str]) -> Option<dynamics::Settings> {
     let mut settings = dynamics::Settings::default();
     let number = |word: &str| word.parse::<f32>().ok().filter(|n| n.is_finite());
@@ -240,6 +245,7 @@ fn dynamic_settings(words: &[&str]) -> Option<dynamics::Settings> {
             "clearance" => settings.clearance = number(words.next()?).filter(|n| *n >= 0.0)?,
             "drag" => settings.drag = number(words.next()?).filter(|n| *n >= 0.0)?,
             "arms" => settings.arms = true,
+            "head" => settings.head = true,
             _ => return None,
         }
     }
@@ -626,7 +632,9 @@ pub(crate) struct RigModel {
 /// The capsules dynamic chains are kept out of: one per bone map entry on a
 /// [`COLLISION_BONES`] bone (and [`ARM_BONES`] if a chain asks) that aims at another
 /// joint, round the bind-pose vertices whose strongest joint is that one (or an unmapped joint under it, such as a twist
-/// bone), the chains' own vertices left out.
+/// bone), the chains' own vertices left out. If a chain asks, the joint on [`HEAD_BONE`]
+/// gets one round its vertices the same way (the face's unmapped joints and the hair's
+/// anchors under it included).
 fn body_capsules(
     map: &[MapEntry],
     joints: &[Joint],
@@ -636,6 +644,35 @@ fn body_capsules(
     joint_index: impl Fn(&str) -> Option<usize>,
 ) -> Vec<dynamics::Capsule> {
     let arms = chains.wants_arms();
+    // The head: of the joints on the head bone (ears may follow it too), the one with no
+    // other above it.
+    let on_head_bone: Vec<usize> = map
+        .iter()
+        .filter(|entry| entry.bone == HEAD_BONE)
+        .filter_map(|entry| joint_index(&entry.joint))
+        .collect();
+    let under_another = |joint: usize| {
+        let mut parent = joints.get(joint).and_then(|joint| joint.parent);
+        for _ in 0..joints.len() {
+            let Some(at) = parent else {
+                return false;
+            };
+            if on_head_bone.contains(&at) {
+                return true;
+            }
+            parent = joints[at].parent;
+        }
+        false
+    };
+    let head = chains
+        .wants_head()
+        .then(|| {
+            on_head_bone
+                .iter()
+                .copied()
+                .find(|&joint| !under_another(joint))
+        })
+        .flatten();
     let spans: Vec<(usize, usize, bool)> = map
         .iter()
         .filter_map(|entry| {
@@ -664,6 +701,7 @@ fn body_capsules(
         None
     };
     let mut carried: Vec<Vec<Vec3A>> = vec![Vec::new(); spans.len()];
+    let mut on_head = Vec::new();
     for vertex in surfaces.iter().flat_map(|surface| &surface.vertices) {
         let Some(joint) = carrier(usize::from(vertex.joints[0])) else {
             continue;
@@ -673,6 +711,9 @@ fn body_capsules(
                 points.push(Vec3A::from_array(vertex.position));
             }
         }
+        if head == Some(joint) {
+            on_head.push(Vec3A::from_array(vertex.position));
+        }
     }
     spans
         .iter()
@@ -681,6 +722,7 @@ fn body_capsules(
             let capsule = dynamics::Capsule::measure(joints, from, to, points)?;
             Some(dynamics::Capsule { arm, ..capsule })
         })
+        .chain(head.and_then(|head| dynamics::Capsule::head(joints, head, &on_head)))
         .collect()
 }
 

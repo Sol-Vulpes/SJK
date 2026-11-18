@@ -180,8 +180,20 @@ out of the hips, its middle inside them at rest, still has its joint kept out of
 the joint moves the middle half as far, so a push on the middle moves the joint by twice the
 middle's depth. This one applies to every colliding chain, with no option: an existing tail or
 cape can look a little different near the body. The cloth between two chains and the mesh
-itself are not checked, so a sharp pose can still show some through. The head is not a
-capsule, and the arms are only for a chain whose line says `arms`: then the rig also measures
+itself are not checked, so a sharp pose can still show some through. The head and the arms
+are only for a chain that asks. With `head` on its line (18/11/2026) the rig also measures a
+capsule round the vertices carried by the joint on the head bone (`HEAD_BONE`, `cranium`; the
+face's unmapped joints and the hair's anchors under it carry onto it, the chains' own vertices
+are left out, and of several joints on that bone, such as ears, the one with no other above it
+is the head). They are thinned to one per half-unit cell first (`HEAD_CELL`), so the head is
+measured by its surface rather than by how dense its meshes are: on a measured rig a pair of
+glasses held 8,600 of the head's 16,600 vertices. A head aims at no joint, so its segment runs
+along the vertices' own long axis through their middle, as far as all but 2% of them reach each
+way less the radius, so its rounded ends stay inside too. Half of them lie closer to the axis
+than the radius (`HEAD_RADIUS_PERCENTILE`; the trunk's quarter gave half the head's width there,
+with the eyes, teeth and mouth inside it), so it sits under the skin and the hair cap. Hair hanging past the face or behind the skull is then kept out of it, by its
+`clearance` or as far as it lies at rest; a chain without the word ignores it, and a rig with
+no such chain has no head capsule. With `arms` on its line the rig also measures
 the upper arms and forearms (`ARM_BONES`) the same way, and a chain without the word ignores them. A rig
 with no such chain has no arm capsules at all. An arm moves fast, so hair it pushes moves fast
 too (measured on the empty-handed run: the largest step in 8 ms went from 1.3 units to 4.1;
@@ -251,7 +263,7 @@ A model folder (`models/players/<name>/`) with `sjk_rig.cfg` is a rig model; `/m
 | `scale <n>` or `scale auto` | game units per glTF metre | `auto` |
 | `lift <units>` | raise (negative: lower) the planted rig by hand | `0` |
 | `layer <joint> over <joint>` | the first's chain stays on its side of the second's, one line per column of a sheet (see [Dynamic joints](#dynamic-joints-tails-capes)) | none |
-| `dynamic <joint> [gravity] [gravity <n>] [wag <units>] [stiffness <n>] [damping <n>] [limit <degrees>] [clearance <units>] [drag <n>] [arms] [nocollide]` | the joints under it move on their own (spring, wag, gravity in units per second squared), kept out of the body unless `nocollide`, the arms too with `arms`, trailing behind the player's movement with `drag`, one line per chain (see [Dynamic joints](#dynamic-joints-tails-capes)) | none; gravity 1600, wag 2.5, stiffness 70, damping 7, no limit, clearance 0, drag 0, no arms |
+| `dynamic <joint> [gravity] [gravity <n>] [wag <units>] [stiffness <n>] [damping <n>] [limit <degrees>] [clearance <units>] [drag <n>] [arms] [head] [nocollide]` | the joints under it move on their own (spring, wag, gravity in units per second squared), kept out of the body unless `nocollide`, the arms too with `arms` and the head with `head`, trailing behind the player's movement with `drag`, one line per chain (see [Dynamic joints](#dynamic-joints-tails-capes)) | none; gravity 1600, wag 2.5, stiffness 70, damping 7, no limit, clearance 0, drag 0, no arms, no head |
 | `map <joint> <bone>` | the joint follows the JKA bone, bind orientation kept | |
 | `map <joint> <bone> <joint end> <bone end>` | ... aimed along the bone | |
 | `map <joint> <bone> as <other joint>` | ... with another joint's alignment (finger chains) | |
@@ -259,7 +271,7 @@ A model folder (`models/players/<name>/`) with `sjk_rig.cfg` is a rig model; `/m
 `map` lines replace the preset's entry for that joint or add one.
 
 A client rejects the whole manifest over a line or option it does not know, so on an older
-client a rig model using a newer one (`limit`, `clearance`, `layer`, `drag`, `arms`) does not load at all,
+client a rig model using a newer one (`limit`, `clearance`, `layer`, `drag`, `arms`, `head`) does not load at all,
 rather than dropping that line.
 
 ### Variants
