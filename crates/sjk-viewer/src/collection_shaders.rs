@@ -50,6 +50,9 @@ const LIST_HEAD: f32 = 30.0;
 /// How far the chosen tile lifts (frame pixels), and its outline's colour: white, so it
 /// never reads as a tier (Mythical's frame is gold).
 const CHOSEN_LIFT: f32 = 4.0;
+/// How far the tile under the pointer lifts, and how long the chosen one takes to rise.
+const HOVER_LIFT: f32 = 2.0;
+const LIFT_SECONDS: f32 = 0.16;
 const CHOSEN_OUTLINE: sjk_ui::Color = sjk_ui::Color::new(1.0, 1.0, 1.0, 1.0);
 /// The chroma mark's side on a tile and a row.
 const MARK: f32 = 16.0;
@@ -259,6 +262,44 @@ pub(super) fn vertical(lines: &[Line], chosen: usize, down: bool) -> usize {
         if let Line::Things(start, end) = lines[index] {
             return start + column.min(end - start - 1);
         }
+    }
+}
+
+/// The list's pane of glass (frame pixels) round its heads and `rows_height` of rows: from
+/// a little over the heads to a little under the last row, never past the list's room,
+/// short of the scroll bar.
+fn list_pane(rows_height: f32) -> [f32; 4] {
+    let top = LIST_TOP - 6.0;
+    let bottom = (ROWS_TOP + rows_height + 6.0).min(LIST_BOTTOM + 6.0);
+    [
+        LIST_X - 6.0,
+        top,
+        LIST_WIDTH + 12.0,
+        (bottom - top).max(0.0),
+    ]
+}
+
+/// The chosen tile's rise on the wall: the row last seen chosen and when it was chosen
+/// (the UI's clock), so a new choice rises over [`LIFT_SECONDS`] rather than jumping.
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub(super) struct Lift {
+    row: usize,
+    since: f32,
+}
+
+impl Lift {
+    /// How far chosen `row` has risen at `seconds`, 0 to 1 (eased out); risen at once
+    /// without the UI's motion (`motion` false) or when the clock runs back.
+    pub(super) fn follow(&mut self, row: usize, seconds: f32, motion: bool) -> f32 {
+        if row != self.row {
+            self.row = row;
+            self.since = seconds;
+        }
+        let t = (seconds - self.since) / LIFT_SECONDS;
+        if !motion || !(0.0..1.0).contains(&t) {
+            return 1.0;
+        }
+        1.0 - (1.0 - t).powi(3)
     }
 }
 
@@ -839,6 +880,9 @@ impl Panel {
                 both_worn: row.worn && second_worn,
             };
         }
+        self.shader_lift =
+            self.shader_rise
+                .follow(self.shader, seconds, crate::rarity_fx::enabled());
         // The wall or the list scrolls just enough to keep the chosen one in view.
         self.shader_lines = lines_of(&rows, self.grid, by_tier);
         self.shader_first = line_window(
@@ -851,6 +895,26 @@ impl Panel {
         let lines = std::mem::take(&mut self.shader_lines);
         let shown = shown_from(&lines, first, self.grid);
         if !self.grid {
+            // The list stands on one pane of acrylic glass, its heads and the rows in
+            // view; its rows are bands of light over it, not glass of their own.
+            let rows_height: f32 = lines
+                .iter()
+                .skip(first)
+                .take(shown)
+                .map(|line| line_height(line, false))
+                .sum();
+            let [x, y, width, height] = list_pane(rows_height);
+            let _ = self.ui.draw_list_mut().push(DrawCommand::Backdrop {
+                rect: frame.rect(x, y, width, height),
+                radius: 14.0 * frame.s,
+                tint: color::tint(color::acrylic::TILE),
+            });
+            let _ = self.ui.draw_list_mut().push(DrawCommand::Border {
+                rect: frame.rect(x, y, width, height),
+                radius: 14.0 * frame.s,
+                width: 1.2 * frame.s,
+                color: color::alpha(color::holo(), 0.22),
+            });
             self.column_heads(frame);
         }
         let columns = Columns::of(self.shader_numbers, self.trade_known);
@@ -1123,6 +1187,12 @@ impl Panel {
             let width = crate::text::display_width(label, 15.0) * text_scale() + 36.0 + mark;
             let rect = frame.rect(left, y, width, TOOLBAR_HEIGHT);
             let hovered = self.ui.token_hovered(token);
+            // Each control is a pill of acrylic glass, lit gold when on.
+            let _ = self.ui.draw_list_mut().push(DrawCommand::Backdrop {
+                rect,
+                radius: TOOLBAR_HEIGHT * 0.5 * s,
+                tint: color::tint(color::acrylic::TILE),
+            });
             if lit || hovered {
                 let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
                     rect,
@@ -1170,10 +1240,14 @@ impl Panel {
         let width = (LIST_X + LIST_WIDTH - left).max(120.0);
         let rect = frame.rect(left, y, width, TOOLBAR_HEIGHT);
         let focused = self.search_focus;
-        let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
+        let _ = self.ui.draw_list_mut().push(DrawCommand::Backdrop {
             rect,
             radius: TOOLBAR_HEIGHT * 0.5 * s,
-            color: color::alpha(color::space(), if focused { 0.8 } else { 0.5 }),
+            tint: color::tint(if focused {
+                color::acrylic::CARD
+            } else {
+                color::acrylic::TILE
+            }),
         });
         let _ = self.ui.draw_list_mut().push(DrawCommand::Border {
             rect,
@@ -1231,15 +1305,22 @@ impl Panel {
             let lit = self.shader_filter.tier == tier;
             let hovered = self.ui.token_hovered(token);
             let colour = tier.map_or(color::gold(), Rarity::colour);
-            let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
+            let _ = self.ui.draw_list_mut().push(DrawCommand::Backdrop {
                 rect,
                 radius: 10.0 * s,
-                color: if lit {
-                    color::alpha(color::gold(), 0.12)
-                } else {
-                    color::alpha(color::space(), if hovered { 0.75 } else { 0.5 })
-                },
+                tint: color::tint(color::acrylic::TILE),
             });
+            if lit || hovered {
+                let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
+                    rect,
+                    radius: 10.0 * s,
+                    color: if lit {
+                        color::alpha(color::gold(), 0.12)
+                    } else {
+                        color::alpha(color::holo(), 0.07)
+                    },
+                });
+            }
             let _ = self.ui.draw_list_mut().push(DrawCommand::Border {
                 rect,
                 radius: 10.0 * s,
@@ -1483,17 +1564,30 @@ impl Panel {
         let k = text_scale();
         let [x, y, width, height] = rect;
         let chosen = index == self.shader;
-        let y = if chosen { y - CHOSEN_LIFT } else { y };
         let token = SHADER_BASE + index as u16;
         let hovered = self.ui.token_hovered(token);
+        // The chosen tile rises over a moment ([`Lift`]); the one under the pointer a
+        // little, at once.
+        let risen = if chosen { self.shader_lift } else { 0.0 };
+        let lift = if chosen {
+            CHOSEN_LIFT * risen
+        } else if hovered {
+            HOVER_LIFT
+        } else {
+            0.0
+        };
+        // The pointer answers to the tile's place on the wall, not where it rose to.
+        let place = frame.rect(x, y, width, height);
+        let y = y - lift;
         let area = frame.rect(x, y, width, height);
-        if chosen {
+        if lift > 0.0 {
             let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
-                rect: frame.rect(x + 2.0, y + CHOSEN_LIFT + 4.0, width - 4.0, height),
+                rect: frame.rect(x + 2.0, y + lift + 4.0, width - 4.0, height),
                 radius: 10.0 * s,
-                color: color::alpha(color::space(), 0.55),
+                color: color::alpha(color::space(), 0.55 * lift / CHOSEN_LIFT),
             });
         }
+        let edge = row.tier().map_or_else(color::holo, Rarity::colour);
         let flash = row.skin.map_or(0.0, |skin| {
             self.first_look(crate::collection_seen::Kind::Kyber, skin.id)
         });
@@ -1510,20 +1604,25 @@ impl Panel {
                     chosen,
                     hovered: chosen || hovered,
                     dim: !row.owned,
+                    acrylic: true,
                     still: true,
                     flash,
                     ..kit::TierLook::at(seconds)
                 },
             ),
             None => {
-                let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
+                let _ = self.ui.draw_list_mut().push(DrawCommand::Backdrop {
                     rect: area,
                     radius: 10.0 * s,
-                    color: color::alpha(
-                        color::space(),
-                        if chosen || hovered { 0.82 } else { 0.64 },
-                    ),
+                    tint: color::tint(color::acrylic::TILE),
                 });
+                if chosen || hovered {
+                    let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
+                        rect: area,
+                        radius: 10.0 * s,
+                        color: color::alpha(color::holo(), 0.07),
+                    });
+                }
                 let _ = self.ui.draw_list_mut().push(DrawCommand::Border {
                     rect: area,
                     radius: 10.0 * s,
@@ -1532,14 +1631,53 @@ impl Panel {
                 });
             }
         }
+        // Worn: lit from its foot in gold (the second saber's in the line-work), with a bar
+        // along it, so what is equipped reads on the wall without its words.
+        if row.worn || row.second {
+            let lit = if row.worn {
+                color::gold()
+            } else {
+                color::holo()
+            };
+            let _ = self.ui.draw_list_mut().push(DrawCommand::GradientRect {
+                rect: frame.rect(x + 1.0, y + height * 0.55, width - 2.0, height * 0.45 - 1.0),
+                radius: 10.0 * s,
+                gradient: sjk_ui::Gradient {
+                    start: color::alpha(lit, 0.0),
+                    end: color::alpha(lit, 0.22),
+                    vertical: true,
+                },
+            });
+            let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
+                rect: frame.rect(x + 14.0, y + height - 5.0, width - 28.0, 2.5),
+                radius: 1.5 * s,
+                color: lit,
+            });
+        }
         if chosen {
+            // A ring of its tier's light round the white outline, fading in as it rises.
+            let _ = self.ui.draw_list_mut().push(DrawCommand::Border {
+                rect: frame.rect(x - 7.0, y - 7.0, width + 14.0, height + 14.0),
+                radius: 17.0 * s,
+                width: 4.0 * s,
+                color: color::alpha(edge, 0.35 * risen),
+            });
             let _ = self.ui.draw_list_mut().push(DrawCommand::Border {
                 rect: frame.rect(x - 3.0, y - 3.0, width + 6.0, height + 6.0),
                 radius: 13.0 * s,
                 width: 2.0 * s,
-                color: color::alpha(CHOSEN_OUTLINE, 0.95),
+                color: color::alpha(CHOSEN_OUTLINE, 0.55 + 0.4 * risen),
             });
-        } else if row.new {
+        } else if hovered {
+            // Under the pointer: its tier's colour round it.
+            let _ = self.ui.draw_list_mut().push(DrawCommand::Border {
+                rect: frame.rect(x - 2.0, y - 2.0, width + 4.0, height + 4.0),
+                radius: 12.0 * s,
+                width: 1.5 * s,
+                color: color::alpha(edge, 0.7),
+            });
+        }
+        if !chosen && row.new {
             // A New one not seen yet stands out in gold, with its sticker (Creyon,
             // 31/10/2026); chosen, the white outline says which is chosen.
             let _ = self.ui.draw_list_mut().push(DrawCommand::Border {
@@ -1646,7 +1784,7 @@ impl Panel {
         if row.new {
             let _ = marks_view::new_sticker(&mut self.ui, frame, [x + 8.0, y - 8.0], 17.0);
         }
-        self.ui.hit_region(token, area);
+        self.ui.hit_region(token, place);
     }
 
     /// Row `index` of the list at `y`: in its columns, the blade's number (while numbers
@@ -1967,10 +2105,24 @@ impl Panel {
         self.saber_area(frame, row, inputs, seconds, card_y);
         let (card_x, card_width) = (CARD_X, CARD_WIDTH);
         let area = frame.rect(card_x, card_y, card_width, card_height);
-        let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
+        // A card of acrylic glass (18/11/2026), its tier's light round it while held.
+        if let Some(tier) = row.tier().filter(|_| row.owned) {
+            let _ = self.ui.draw_list_mut().push(DrawCommand::Border {
+                rect: frame.rect(
+                    card_x - 5.0,
+                    card_y - 5.0,
+                    card_width + 10.0,
+                    card_height + 10.0,
+                ),
+                radius: (CARD_RADIUS + 5.0) * s,
+                width: 4.0 * s,
+                color: color::alpha(tier.colour(), 0.16),
+            });
+        }
+        let _ = self.ui.draw_list_mut().push(DrawCommand::Backdrop {
             rect: area,
             radius: CARD_RADIUS * s,
-            color: color::alpha(color::space(), 0.86),
+            tint: color::alpha(color::glass(), color::acrylic::CARD),
         });
         if let Some(tier) = row.tier() {
             // The tier's band along the top, and its glow under it, as on the wall's tiles.
@@ -3478,6 +3630,41 @@ mod tests {
         }
     }
 
+    /// A new choice on the wall rises over a moment, eased (a third of the way in, more
+    /// than a third up), and is risen at once without the UI's motion or as the Collection
+    /// opens; choosing it again does not restart it.
+    #[test]
+    fn the_chosen_tile_rises_over_a_moment() {
+        let mut lift = Lift::default();
+        assert_eq!(lift.follow(0, 30.0, true), 1.0, "risen as the page opens");
+        assert_eq!(lift.follow(5, 40.0, true), 0.0, "a new choice starts down");
+        let early = lift.follow(5, 40.0 + LIFT_SECONDS / 3.0, true);
+        assert!(early > 1.0 / 3.0 && early < 1.0, "{early}");
+        let later = lift.follow(5, 40.0 + LIFT_SECONDS * 0.8, true);
+        assert!(later > early && later < 1.0, "{later}");
+        assert_eq!(lift.follow(5, 40.0 + LIFT_SECONDS, true), 1.0);
+        assert_eq!(lift.follow(5, 50.0, true), 1.0, "the same choice stays up");
+        assert_eq!(lift.follow(6, 60.0, false), 1.0, "no motion: at once");
+        assert_eq!(lift.follow(7, 70.0, true), 0.0);
+        assert_eq!(lift.follow(7, 69.0, true), 1.0, "a clock run back: at once");
+    }
+
+    /// The list's pane of glass holds its heads and the rows in view, grows with them,
+    /// never reaches past the list's room nor under the scroll bar.
+    #[test]
+    fn the_list_pane_holds_the_rows_in_view() {
+        let [x, top, width, height] = list_pane(0.0);
+        assert!(top < LIST_TOP && top + height > ROWS_TOP, "the heads on it");
+        assert!(
+            x < LIST_X && x + width < SCROLL_X,
+            "short of the scroll bar"
+        );
+        let [_, _, _, three] = list_pane(row_height() * 3.0);
+        assert!((three - height - row_height() * 3.0).abs() < 0.01);
+        let [_, top, _, full] = list_pane(10_000.0);
+        assert!(top + full <= LIST_BOTTOM + 6.0 + 0.01, "kept to the room");
+    }
+
     /// The lone saber's room and the card under it keep to the right of the wall and
     /// the list, inside the frame and over the keys; a shader's facts fit along the card.
     #[test]
@@ -3673,6 +3860,23 @@ mod tests {
                         .sum();
                     assert_eq!(shown, held.min(SHADER_ROWS), "{grid}");
                     assert!(shown >= 12, "{shown} {grid}");
+                    // The acrylic glass: on the wall a backdrop under every tile, in the
+                    // list one pane under all the rows; the card's, the search field's,
+                    // the chips' and the tiers' strip's beside them. The renderer's runs
+                    // keep well inside its limit, so no glass is ever dropped.
+                    let commands = panel.ui.draw_list().commands();
+                    let backdrops = commands
+                        .iter()
+                        .filter(|command| matches!(command, DrawCommand::Backdrop { .. }))
+                        .count();
+                    let controls = 1 + 3 + 1 + (panel.tier_chips().len() + 1);
+                    let glass = if grid { shown } else { 1 };
+                    assert_eq!(backdrops, glass + controls, "{viewport:?} {grid}");
+                    let runs = crate::ui_renderer::texture_switches(&[panel.ui.draw_list()]);
+                    assert!(
+                        runs * 2 < crate::ui_renderer::art::MAX_RUNS,
+                        "{runs} {grid}"
+                    );
                     for command in panel.ui.draw_list().commands() {
                         if let DrawCommand::Text { rect, .. } = command {
                             assert!(rect.bottom() <= keys || rect.y >= keys, "{rect:?}");

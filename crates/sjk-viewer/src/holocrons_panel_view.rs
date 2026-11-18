@@ -464,6 +464,7 @@ impl Panel {
                 kit::holocron_tier(tier.index),
                 kit::TierSize::Row,
                 kit::TierLook {
+                    acrylic: true,
                     chosen,
                     hovered: hovered || chosen,
                     dim: !held,
@@ -617,6 +618,7 @@ impl Panel {
                 kit::holocron_tier(tier.index),
                 kit::TierSize::Tile,
                 kit::TierLook {
+                    acrylic: true,
                     chosen,
                     hovered: hovered || chosen,
                     dim: !held,
