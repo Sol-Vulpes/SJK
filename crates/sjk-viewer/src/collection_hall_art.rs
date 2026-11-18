@@ -241,7 +241,7 @@ impl Panel {
         let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
             rect: frame.rect(x, y, width, 4.0),
             radius: 2.0 * s,
-            color: color::alpha(color::HOLO, 0.16),
+            color: color::alpha(color::holo(), 0.16),
         });
         if share > 0.0 {
             let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
@@ -344,9 +344,9 @@ impl Panel {
                     ),
                     14.0 * frame.s,
                     if blade.note == "new" {
-                        color::GOLD
+                        color::gold()
                     } else {
-                        color::QUIET
+                        color::quiet()
                     },
                     FontWeight::Regular,
                     TextAlign::Start,
@@ -357,7 +357,7 @@ impl Panel {
         let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
             rect: frame.rect(x + left + split * 0.5, y, 1.0, height.max(0.0)),
             radius: 0.0,
-            color: color::alpha(color::HOLO, 0.14),
+            color: color::alpha(color::holo(), 0.14),
         });
         let size = 14.0;
         let line = size * 1.35 * ts;
@@ -403,7 +403,7 @@ impl Panel {
                 format_args!("{words}"),
                 frame.rect(right_x, top, right, line),
                 size * frame.s,
-                color::MUTED,
+                color::muted(),
                 FontWeight::Semibold,
                 TextAlign::End,
             );
@@ -443,7 +443,7 @@ impl Panel {
                 "None worn",
                 [x, y, width],
                 18.0,
-                color::MUTED,
+                color::muted(),
                 true,
                 ts,
             );
@@ -498,7 +498,7 @@ impl Panel {
             &format!("{} \u{b7} worn", tier.label()),
             words,
             14.0,
-            color::MUTED,
+            color::muted(),
             false,
             ts,
         );
@@ -532,7 +532,7 @@ impl Panel {
                 format_args!("{line}"),
                 frame.rect(x, y + index as f32 * step, width, step),
                 size * frame.s,
-                color::QUIET,
+                color::quiet(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -553,7 +553,7 @@ impl Panel {
                 "No tag chosen",
                 [x, y, width],
                 18.0,
-                color::MUTED,
+                color::muted(),
                 true,
                 ts,
             );
@@ -616,7 +616,7 @@ impl Panel {
             &format!("{} \u{b7} chosen", tier.label()),
             words,
             14.0,
-            color::MUTED,
+            color::muted(),
             false,
             ts,
         );
@@ -658,11 +658,11 @@ impl Panel {
                 .map(|(toy, _)| super::super::toys::name(*toy).to_owned())
                 .collect();
             let (words, colour) = if lit.is_empty() {
-                ("None on now".to_owned(), color::MUTED)
+                ("None on now".to_owned(), color::muted())
             } else {
                 (
                     format!("{} on: {}", lit.len(), super::listed(&lit, 2)),
-                    color::GOLD,
+                    color::gold(),
                 )
             };
             self.art_line(frame, &words, [x, y, width], 15.0, colour, false, ts);
@@ -681,13 +681,13 @@ impl Panel {
                 let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
                     rect: frame.rect(cx, cy, side, side),
                     radius: side * 0.22 * s,
-                    color: color::alpha(color::GOLD, 0.16),
+                    color: color::alpha(color::gold(), 0.16),
                 });
                 let _ = self.ui.draw_list_mut().push(DrawCommand::Border {
                     rect: frame.rect(cx, cy, side, side),
                     radius: side * 0.22 * s,
                     width: 1.6 * s,
-                    color: color::GOLD_BRIGHT,
+                    color: color::gold_bright(),
                 });
             }
             let pad = if *lit { side * 0.08 } else { 0.0 };
@@ -714,9 +714,9 @@ impl Panel {
             .filter_map(|(_, award)| award.as_ref().map(crate::medals::Award::label))
             .collect();
         let (words, colour) = if names.is_empty() {
-            ("None given yet".to_owned(), color::MUTED)
+            ("None given yet".to_owned(), color::muted())
         } else {
-            (super::listed(&names, 2), color::GOLD)
+            (super::listed(&names, 2), color::gold())
         };
         self.art_line(frame, &words, [x, y, width], 15.0, colour, false, ts);
         let top = y + 15.0 * 1.4 * ts + 10.0;
@@ -765,7 +765,7 @@ impl Panel {
                 "Every one unlocked",
                 [x, y, width],
                 18.0,
-                color::GOLD,
+                color::gold(),
                 true,
                 ts,
             );
@@ -780,12 +780,12 @@ impl Panel {
                 "Next up",
                 [x, top, width],
                 13.0,
-                color::QUIET,
+                color::quiet(),
                 false,
                 ts,
             );
             top += 13.0 * 1.4 * ts;
-            self.art_line(frame, name, [x, top, width], 19.0, color::TEXT, true, ts);
+            self.art_line(frame, name, [x, top, width], 19.0, color::text(), true, ts);
             top += 19.0 * 1.4 * ts + 2.0;
         } else {
             let lead = "Next up ";
@@ -795,12 +795,12 @@ impl Panel {
                 lead,
                 [x, top + 3.0 * ts, lead_width + 8.0],
                 14.0,
-                color::QUIET,
+                color::quiet(),
                 false,
                 ts,
             );
             let rest = [x + lead_width + 6.0, top, width - lead_width - 6.0];
-            self.art_line(frame, name, rest, 18.0, color::TEXT, true, ts);
+            self.art_line(frame, name, rest, 18.0, color::text(), true, ts);
             top += 18.0 * 1.4 * ts;
         }
         let room = y + height - top - 12.0;
@@ -813,7 +813,7 @@ impl Panel {
             format_args!("{figure}"),
             frame.rect(x, top, figure_width + big, big * 1.25 * ts),
             big * frame.s,
-            color::GOLD_BRIGHT,
+            color::gold_bright(),
             FontWeight::Semibold,
             TextAlign::Start,
         );
@@ -829,7 +829,7 @@ impl Panel {
                 small * 1.3 * ts,
             ),
             small * frame.s,
-            color::MUTED,
+            color::muted(),
             FontWeight::Semibold,
             TextAlign::Start,
         );
@@ -839,7 +839,7 @@ impl Panel {
             0.0
         };
         let bar_y = (top + big * 1.25 * ts + 4.0).min(y + height - 4.0);
-        self.art_bar(frame, [x, bar_y, width], share, color::HOLO);
+        self.art_bar(frame, [x, bar_y, width], share, color::holo());
     }
 
     /// Cards: the cards held as small faces (a sealed copy in its rarity's colour), or an
@@ -865,13 +865,13 @@ impl Panel {
                 let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
                     rect: frame.rect(left, top, card_w, card_h),
                     radius: 8.0 * s,
-                    color: color::alpha(color::GLASS, 0.95),
+                    color: color::alpha(color::glass(), 0.95),
                 });
                 let _ = self.ui.draw_list_mut().push(DrawCommand::Border {
                     rect: frame.rect(left, top, card_w, card_h),
                     radius: 8.0 * s,
                     width: 1.4 * s,
-                    color: color::alpha(color::HOLO, alpha),
+                    color: color::alpha(color::holo(), alpha),
                 });
             }
             let words_x = cx + card_w * 0.9 + 16.0;
@@ -887,7 +887,7 @@ impl Panel {
                 first,
                 [words_x, middle - 20.0 * 1.4 * ts, words_width],
                 18.0,
-                color::TEXT,
+                color::text(),
                 true,
                 ts,
             );
@@ -905,7 +905,7 @@ impl Panel {
             &format!("{words} held"),
             [x, y, width],
             15.0,
-            color::MUTED,
+            color::muted(),
             false,
             ts,
         );
@@ -922,7 +922,7 @@ impl Panel {
                     let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
                         rect,
                         radius: 6.0 * s,
-                        color: color::alpha(color::GLASS, 0.95),
+                        color: color::alpha(color::glass(), 0.95),
                     });
                     let art_h = card_w / crate::cards::faces::ART_ASPECT;
                     let _ = self.ui.draw_list_mut().push(DrawCommand::TexturedQuad {
@@ -944,7 +944,7 @@ impl Panel {
                 radius: 6.0 * s,
                 width: 1.2 * s,
                 color: match card {
-                    Ok(_) => color::alpha(color::HOLO, 0.4),
+                    Ok(_) => color::alpha(color::holo(), 0.4),
                     Err(colour) => *colour,
                 },
             });
@@ -998,7 +998,11 @@ impl Panel {
                 format_args!("{count}"),
                 frame.rect(middle - column * 0.5, top, column, 20.0 * 1.3 * ts),
                 20.0 * frame.s,
-                if count > 0 { tier.colour } else { color::QUIET },
+                if count > 0 {
+                    tier.colour
+                } else {
+                    color::quiet()
+                },
                 FontWeight::Semibold,
                 TextAlign::Center,
             );
@@ -1029,7 +1033,7 @@ impl Panel {
                     13.0 * 1.3 * ts,
                 ),
                 12.0 * frame.s,
-                color::alpha(color::QUIET, if count > 0 { 1.0 } else { 0.6 }),
+                color::alpha(color::quiet(), if count > 0 { 1.0 } else { 0.6 }),
                 FontWeight::Regular,
                 TextAlign::Center,
             );
@@ -1056,7 +1060,7 @@ impl Panel {
                 format_args!("{}", offer.blade.note),
                 frame.rect(right - width, top + 1.0, width, line),
                 (size - 2.0) * frame.s,
-                color::QUIET,
+                color::quiet(),
                 FontWeight::Regular,
                 TextAlign::End,
             );
@@ -1078,8 +1082,8 @@ impl Panel {
             crate::cards::shard::draw(self.ui.draw_list_mut(), at, mark * frame.s, kyber);
             kyber
         } else {
-            crate::cards::mark::draw(self.ui.draw_list_mut(), at, mark * frame.s, color::GOLD);
-            color::GOLD_BRIGHT
+            crate::cards::mark::draw(self.ui.draw_list_mut(), at, mark * frame.s, color::gold());
+            color::gold_bright()
         };
         text(
             &mut self.ui,
@@ -1129,7 +1133,7 @@ impl Panel {
                     "Deal of the day",
                     [x, top, width],
                     13.0,
-                    color::QUIET,
+                    color::quiet(),
                     false,
                     ts,
                 );
@@ -1160,7 +1164,7 @@ impl Panel {
                     let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
                         rect: frame.rect(x, top - 5.0, width, 1.0),
                         radius: 0.0,
-                        color: color::alpha(color::HOLO, 0.12),
+                        color: color::alpha(color::holo(), 0.12),
                     });
                     top += 2.0;
                 }
@@ -1218,7 +1222,7 @@ impl Panel {
                 &words,
                 [x, bottom + 4.0, width],
                 14.0,
-                color::MUTED,
+                color::muted(),
                 false,
                 ts,
             );
@@ -1256,8 +1260,13 @@ impl Panel {
                 crate::cards::shard::draw(self.ui.draw_list_mut(), at, mark * frame.s, kyber);
                 (kyber, crate::cards::shard::width(mark))
             } else {
-                crate::cards::mark::draw(self.ui.draw_list_mut(), at, mark * frame.s, color::GOLD);
-                (color::GOLD_BRIGHT, crate::cards::mark::width(mark))
+                crate::cards::mark::draw(
+                    self.ui.draw_list_mut(),
+                    at,
+                    mark * frame.s,
+                    color::gold(),
+                );
+                (color::gold_bright(), crate::cards::mark::width(mark))
             };
             let figure = crate::cards::grouped(amount);
             let left = x + mark_width + 10.0;
@@ -1282,14 +1291,22 @@ impl Panel {
                     (x + width - after).max(0.0),
                 ],
                 14.0,
-                color::QUIET,
+                color::quiet(),
                 false,
                 ts,
             );
         }
         let top = y + 2.0 * (line + 4.0) + 4.0;
         if !rest.is_empty() && top + 14.0 * 1.4 * ts <= y + height + 4.0 {
-            self.art_line(frame, rest, [x, top, width], 14.0, color::MUTED, false, ts);
+            self.art_line(
+                frame,
+                rest,
+                [x, top, width],
+                14.0,
+                color::muted(),
+                false,
+                ts,
+            );
         }
     }
 
@@ -1323,7 +1340,7 @@ impl Panel {
                 let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
                     rect: frame.rect(x, top - 6.0, width, 1.0),
                     radius: 0.0,
-                    color: color::alpha(color::HOLO, 0.12),
+                    color: color::alpha(color::holo(), 0.12),
                 });
             }
             self.art_line(
@@ -1331,7 +1348,7 @@ impl Panel {
                 day,
                 [x, top + 1.0, day_width],
                 14.0,
-                color::GOLD,
+                color::gold(),
                 true,
                 ts,
             );
@@ -1341,9 +1358,9 @@ impl Panel {
                 [x + day_width, top, width - day_width],
                 size,
                 if index == 0 {
-                    color::TEXT
+                    color::text()
                 } else {
-                    color::MUTED
+                    color::muted()
                 },
                 false,
                 ts,

@@ -171,7 +171,7 @@ impl Panel {
             format_args!("{title}"),
             frame.rect(x + 40.0, y + 30.0, width - 80.0, 50.0),
             36.0 * s,
-            color::TEXT,
+            color::text(),
             FontWeight::Semibold,
             TextAlign::Start,
         );
@@ -182,7 +182,7 @@ impl Panel {
                 format_args!("{line}"),
                 frame.rect(x + 40.0, y + 96.0 + at as f32 * LINE, width - 80.0, 26.0),
                 18.0 * s,
-                color::MUTED,
+                color::muted(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );

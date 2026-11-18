@@ -652,7 +652,7 @@ pub(super) fn build(
 /// about the board, the darkness fading out on both sides of it.
 fn dim(ui: &mut MenuCanvas, frame: &Frame, viewport: [f32; 2], span: Option<[f32; 2]>) {
     let [width, height] = viewport;
-    let navy = |alpha| color::alpha(color::SPACE, alpha);
+    let navy = |alpha| color::alpha(color::space(), alpha);
     let glass = |ui: &mut MenuCanvas, rect: Rect| {
         let _ = ui.draw_list_mut().push(DrawCommand::Backdrop {
             rect,
@@ -1061,7 +1061,7 @@ impl Painter<'_> {
             BAR_Y,
             560.0,
             48.0,
-            color::TEXT,
+            color::text(),
             FontWeight::Semibold,
             TextAlign::Start,
         );
@@ -1077,7 +1077,7 @@ impl Painter<'_> {
             BAR_Y + 3.0,
             (BOARD_LEFT + 420.0 - after).max(120.0),
             18.0,
-            color::MUTED,
+            color::muted(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -1089,7 +1089,7 @@ impl Painter<'_> {
                 BAR_Y + 46.0,
                 BOARD_LEFT - LEFT - 40.0,
                 17.0,
-                color::MUTED,
+                color::muted(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -1114,12 +1114,17 @@ impl Painter<'_> {
             BAR_Y + 3.0,
             word_width + 4.0,
             17.0,
-            color::MUTED,
+            color::muted(),
             FontWeight::Regular,
             TextAlign::End,
         );
         let value = Short::of(format_args!("{fps}"));
-        self.right_run(value.as_str(), right - word_width - 10.0, 32.0, color::TEXT);
+        self.right_run(
+            value.as_str(),
+            right - word_width - 10.0,
+            32.0,
+            color::text(),
+        );
     }
 
     /// Your place ("3rd of 14"), the teams' standing, or that you watch,
@@ -1156,10 +1161,10 @@ impl Painter<'_> {
                 _ if blue > red => Short::of(format_args!("Blue leads by {}", blue - red)),
                 _ => Short::of(format_args!("Tied at {red}")),
             };
-            return self.right_run(line.as_str(), RIGHT, 34.0, color::TEXT);
+            return self.right_run(line.as_str(), RIGHT, 34.0, color::text());
         }
         if local.team == SPECTATOR {
-            return self.right_run("Spectating", RIGHT, 30.0, color::MUTED);
+            return self.right_run("Spectating", RIGHT, 30.0, color::muted());
         }
         let players = rows
             .iter()
@@ -1183,9 +1188,9 @@ impl Painter<'_> {
             "of {players}{}",
             if tied { ", tied" } else { "" }
         ));
-        let of_left = self.right_run(of.as_str(), RIGHT, 28.0, color::MUTED);
+        let of_left = self.right_run(of.as_str(), RIGHT, 28.0, color::muted());
         let placed = Short::of(format_args!("{place}{}", ordinal(place)));
-        self.right_run(placed.as_str(), of_left - 10.0, 60.0, color::GOLD_BRIGHT)
+        self.right_run(placed.as_str(), of_left - 10.0, 60.0, color::gold_bright())
     }
 
     /// `value` in the display family, ending at `right` on the header line;
@@ -1227,12 +1232,17 @@ impl Painter<'_> {
             BAR_Y + 3.0,
             word_width + 4.0,
             17.0,
-            color::MUTED,
+            color::muted(),
             FontWeight::Regular,
             TextAlign::End,
         );
         let clock = Short::of(format_args!("{}:{:02}", time / 60_000, time / 1_000 % 60));
-        self.right_run(clock.as_str(), right - word_width - 10.0, 32.0, color::TEXT)
+        self.right_run(
+            clock.as_str(),
+            right - word_width - 10.0,
+            32.0,
+            color::text(),
+        )
     }
 
     /// Before the server's first scores.
@@ -1244,7 +1254,7 @@ impl Painter<'_> {
             LIST_TOP + 30.0,
             BOARD_WIDTH,
             20.0,
-            color::MUTED,
+            color::muted(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -1302,7 +1312,7 @@ impl Painter<'_> {
         let (line, tint) = match outcome {
             Outcome::Won(RED) => ("Red team won", RED_TEAM),
             Outcome::Won(_) => ("Blue team won", BLUE_TEAM),
-            Outcome::Tied => ("Teams tied", color::TEXT),
+            Outcome::Tied => ("Teams tied", color::text()),
         };
         self.run(
             TextFamily::Display,
@@ -1337,7 +1347,11 @@ impl Painter<'_> {
                     y,
                     240.0,
                     76.0,
-                    if trails { color::MUTED } else { color::TEXT },
+                    if trails {
+                        color::muted()
+                    } else {
+                        color::text()
+                    },
                     FontWeight::Semibold,
                     TextAlign::Start,
                 );
@@ -1367,7 +1381,7 @@ impl Painter<'_> {
                 y - 10.0,
                 width,
                 26.0,
-                color::GOLD_BRIGHT,
+                color::gold_bright(),
                 FontWeight::Semibold,
                 TextAlign::End,
             );
@@ -1393,7 +1407,7 @@ impl Painter<'_> {
             y + 18.0,
             width - (after - x),
             16.0,
-            color::MUTED,
+            color::muted(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -1418,7 +1432,7 @@ impl Painter<'_> {
                 300.0,
                 80.0,
                 30.0,
-                color::MUTED,
+                color::muted(),
                 FontWeight::Semibold,
                 TextAlign::Center,
             );
@@ -1482,7 +1496,11 @@ impl Painter<'_> {
         let local = self.is_local(row);
         let (name_size, score_size) = if big { (44.0, 112.0) } else { (32.0, 60.0) };
         let name_y = top + name_size * 0.6;
-        let name_colour = if row.bot { color::MUTED } else { color::TEXT };
+        let name_colour = if row.bot {
+            color::muted()
+        } else {
+            color::text()
+        };
         // The emblem of a player the hub knows sits on the name's outer side,
         // in the room the name leaves for it.
         // The JoF emblem comes before the name, on its left.
@@ -1545,9 +1563,9 @@ impl Painter<'_> {
             width,
             score_size,
             if local {
-                color::GOLD_BRIGHT
+                color::gold_bright()
             } else {
-                color::TEXT
+                color::text()
             },
             FontWeight::Semibold,
             align,
@@ -1571,7 +1589,7 @@ impl Painter<'_> {
             facts_y,
             width,
             if big { 18.0 } else { 16.0 },
-            color::MUTED,
+            color::muted(),
             FontWeight::Regular,
             align,
         );
@@ -1580,9 +1598,9 @@ impl Painter<'_> {
         self.push(DrawCommand::SolidRect {
             rect: rule,
             color: if local {
-                color::GOLD
+                color::gold()
             } else {
-                color::alpha(color::HOLO, 0.3)
+                color::alpha(color::holo(), 0.3)
             },
         });
     }
@@ -1602,7 +1620,7 @@ impl Painter<'_> {
             SPECTATORS_Y,
             label_width + 8.0,
             20.0,
-            color::HOLO,
+            color::holo(),
             FontWeight::Semibold,
             TextAlign::Start,
         );
@@ -1614,7 +1632,7 @@ impl Painter<'_> {
             SPECTATORS_Y + 1.0,
             RIGHT - x,
             17.0,
-            color::MUTED,
+            color::muted(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -1709,7 +1727,7 @@ impl Painter<'_> {
                 y,
                 at.width,
                 16.0,
-                color::MUTED,
+                color::muted(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -1727,7 +1745,7 @@ impl Painter<'_> {
                 y,
                 width,
                 15.0,
-                color::MUTED,
+                color::muted(),
                 FontWeight::Regular,
                 align,
             );
@@ -1767,7 +1785,7 @@ impl Painter<'_> {
         let rule = self.frame.rect(columns.x, top - 6.0, columns.width, 1.0);
         self.push(DrawCommand::SolidRect {
             rect: rule,
-            color: color::alpha(color::HOLO, 0.22),
+            color: color::alpha(color::holo(), 0.22),
         });
     }
 
@@ -1800,7 +1818,7 @@ impl Painter<'_> {
                 .rect(columns.x, y + height - 1.0, columns.width, 1.0);
             self.push(DrawCommand::SolidRect {
                 rect: rule,
-                color: color::alpha(color::HOLO, 0.06),
+                color: color::alpha(color::holo(), 0.06),
             });
         }
         let (name_size, number_size) = text_sizes(self.header.compact, height);
@@ -1814,9 +1832,9 @@ impl Painter<'_> {
                 60.0,
                 number_size,
                 if local {
-                    color::GOLD_BRIGHT
+                    color::gold_bright()
                 } else {
-                    color::MUTED
+                    color::muted()
                 },
                 FontWeight::Semibold,
                 TextAlign::End,
@@ -1833,7 +1851,7 @@ impl Painter<'_> {
             self.push(DrawCommand::RoundedRect {
                 rect,
                 radius: 4.0 * self.frame.s,
-                color: color::alpha(color::HOLO, 0.10),
+                color: color::alpha(color::holo(), 0.10),
             });
             self.run(
                 TextFamily::Body,
@@ -1843,9 +1861,9 @@ impl Painter<'_> {
                 slot,
                 size,
                 if local {
-                    color::GOLD_BRIGHT
+                    color::gold_bright()
                 } else {
-                    color::MUTED
+                    color::muted()
                 },
                 FontWeight::Semibold,
                 TextAlign::Center,
@@ -1917,11 +1935,11 @@ impl Painter<'_> {
             name_size,
             // An away name keeps its colours, faint (they take the run's alpha).
             if row.away.is_some() {
-                color::alpha(color::TEXT, AWAY_ALPHA)
+                color::alpha(color::text(), AWAY_ALPHA)
             } else if quiet {
-                color::alpha(color::MUTED, 0.85)
+                color::alpha(color::muted(), 0.85)
             } else {
-                color::TEXT
+                color::text()
             },
             FontWeight::Regular,
             TextAlign::Start,
@@ -1939,7 +1957,7 @@ impl Painter<'_> {
                 middle,
                 60.0,
                 14.0,
-                color::GOLD,
+                color::gold(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -1954,7 +1972,7 @@ impl Painter<'_> {
                 middle,
                 QUIET_WIDTH,
                 14.0,
-                color::MUTED,
+                color::muted(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -1963,9 +1981,9 @@ impl Painter<'_> {
             for &(stat, right) in &columns.stats[..columns.count] {
                 let first = stat == Stat::Score || stat == Stat::Record;
                 let colour = match (first, local) {
-                    (true, true) => color::GOLD_BRIGHT,
-                    (true, false) if !quiet => color::TEXT,
-                    _ => color::MUTED,
+                    (true, true) => color::gold_bright(),
+                    (true, false) if !quiet => color::text(),
+                    _ => color::muted(),
                 };
                 self.run(
                     TextFamily::Display,
@@ -2008,7 +2026,7 @@ impl Painter<'_> {
                 middle,
                 120.0,
                 15.0,
-                color::QUIET,
+                color::quiet(),
                 FontWeight::Regular,
                 TextAlign::End,
             );
@@ -2022,7 +2040,7 @@ impl Painter<'_> {
                 middle,
                 120.0,
                 15.0,
-                color::QUIET,
+                color::quiet(),
                 FontWeight::Regular,
                 TextAlign::End,
             ),
@@ -2044,9 +2062,9 @@ impl Painter<'_> {
                     columns.ping - columns.bars - 30.0,
                     number_size * 0.86,
                     if local {
-                        color::GOLD_BRIGHT
+                        color::gold_bright()
                     } else {
-                        color::MUTED
+                        color::muted()
                     },
                     FontWeight::Semibold,
                     TextAlign::End,
@@ -2545,7 +2563,7 @@ mod tests {
             .iter()
             .filter_map(|command| match command {
                 DrawCommand::SolidRect { rect, color }
-                    if *color == color::alpha(color::HOLO, 0.22) =>
+                    if *color == color::alpha(color::holo(), 0.22) =>
                 {
                     Some(*rect)
                 }
@@ -2846,7 +2864,7 @@ mod tests {
         let ui = draw(&rows, &header(TEAM, 31), [1920.0, 1080.0]);
         // Your row's band: the gold bar of the kit's band.
         let gold = ui.draw_list().commands().iter().any(|command| {
-            matches!(command, DrawCommand::RoundedRect { color, .. } if *color == color::GOLD_BRIGHT)
+            matches!(command, DrawCommand::RoundedRect { color, .. } if *color == color::gold_bright())
         });
         assert!(gold, "your row is drawn on its band");
     }

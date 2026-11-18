@@ -137,7 +137,7 @@ impl GpuState {
             return;
         }
         let gold = sjk_ui::Color::new(1.0, 0.82, 0.3, 1.0);
-        let dark = crate::menu::sjk::color::alpha(crate::menu::sjk::color::SPACE, 0.85);
+        let dark = crate::menu::sjk::color::alpha(crate::menu::sjk::color::space(), 0.85);
         let points: Vec<Option<glam::Vec2>> =
             measure.ends.iter().map(|end| view.project(*end)).collect();
         if let [Some(a), Some(b)] = points.as_slice() {

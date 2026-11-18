@@ -535,6 +535,9 @@ impl Group {
                 crate::game_font::CVAR,
                 crate::text::style::SCALE_CVAR,
                 crate::text::style::TRACKING_CVAR,
+                crate::menu::sjk::theme::CVAR,
+                crate::menu::sjk::theme::HUE_CVAR,
+                crate::menu::sjk::theme::SATURATION_CVAR,
                 crate::console::console_options::STYLE_CVAR,
                 crate::text::system_font::CONSOLE_CVAR,
                 "con_scale",
@@ -808,6 +811,7 @@ impl Group {
             ],
             Self::Interface => &[
                 (crate::menu::style::CVAR, "Menus"),
+                (crate::menu::sjk::theme::CVAR, "Theme"),
                 (crate::console::console_options::STYLE_CVAR, "Console"),
                 (crate::quick_wheel::pages::FILE, "Quick wheel"),
             ],
@@ -842,6 +846,7 @@ impl Group {
             ],
             Self::Advanced(Advanced::Interface) => &[
                 (crate::menu::style::CVAR, "Menus"),
+                (crate::menu::sjk::theme::CVAR, "Theme"),
                 (crate::console::console_options::STYLE_CVAR, "Console"),
             ],
             Self::Advanced(Advanced::Hud) => &[

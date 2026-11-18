@@ -91,7 +91,7 @@ fn push(ui: &mut MenuCanvas, command: DrawCommand) {
 fn viewfinder(ui: &mut MenuCanvas, viewport: [f32; 2], s: f32) {
     let [width, height] = viewport;
     let line = (1.5 * s).max(1.0);
-    let corner = color::alpha(color::HOLO, 0.55);
+    let corner = color::alpha(color::holo(), 0.55);
     let (inset, arm) = (28.0 * s, 40.0 * s);
     for (x, y, right, bottom) in [
         (inset, inset, false, false),
@@ -118,7 +118,7 @@ fn viewfinder(ui: &mut MenuCanvas, viewport: [f32; 2], s: f32) {
             },
         );
     }
-    let mark = color::alpha(color::HOLO, 0.4);
+    let mark = color::alpha(color::holo(), 0.4);
     let reach = 9.0 * s;
     for x in [width / 3.0, width * 2.0 / 3.0] {
         for y in [height / 3.0, height * 2.0 / 3.0] {
@@ -145,7 +145,7 @@ fn viewfinder(ui: &mut MenuCanvas, viewport: [f32; 2], s: f32) {
 fn scrim(ui: &mut MenuCanvas, frame: &Frame, viewport: [f32; 2]) {
     let [width, height] = viewport;
     let x = |frame_x: f32| frame.point(frame_x, 0.0)[0];
-    let space = |alpha| color::alpha(color::SPACE, alpha);
+    let space = |alpha| color::alpha(color::space(), alpha);
     let (start, dark) = (x(FADE_START).max(0.0), x(FADE_DARK));
     if dark > start {
         fade_across(
@@ -172,7 +172,7 @@ fn header(ui: &mut MenuCanvas, frame: &Frame, panel: &Panel) {
         format_args!("{}", crate::ingame_menu::CAMERA_CONTROL),
         frame.rect(COLUMN_X, TITLE_Y - 26.0, COLUMN_WIDTH, 52.0),
         42.0 * s,
-        color::TEXT,
+        color::text(),
         FontWeight::Semibold,
         TextAlign::Start,
     );
@@ -182,7 +182,7 @@ fn header(ui: &mut MenuCanvas, frame: &Frame, panel: &Panel) {
         format_args!("Frame the scene, then hide the panel."),
         frame.rect(COLUMN_X, SUBTITLE_Y - 12.0, COLUMN_WIDTH, 24.0),
         17.0 * s,
-        color::MUTED,
+        color::muted(),
         FontWeight::Regular,
         TextAlign::Start,
     );
@@ -203,9 +203,9 @@ fn header(ui: &mut MenuCanvas, frame: &Frame, panel: &Panel) {
             frame.rect(x, TABS_Y, width + 20.0, 34.0),
             26.0 * s,
             match (current, lit) {
-                (true, _) => color::GOLD_BRIGHT,
-                (false, true) => color::TEXT,
-                (false, false) => color::MUTED,
+                (true, _) => color::gold_bright(),
+                (false, true) => color::text(),
+                (false, false) => color::muted(),
             },
             FontWeight::Regular,
             TextAlign::Start,
@@ -216,7 +216,7 @@ fn header(ui: &mut MenuCanvas, frame: &Frame, panel: &Panel) {
                 DrawCommand::RoundedRect {
                     rect: frame.rect(x, TABS_Y + 38.0, width, 3.0),
                     radius: 1.5 * s,
-                    color: color::GOLD_BRIGHT,
+                    color: color::gold_bright(),
                 },
             );
         }
@@ -265,20 +265,23 @@ fn sun(ui: &mut MenuCanvas, frame: &Frame, panel: &Panel) {
             y += SLIDER_ROW;
         }
         let mode = match panel.sun_mode {
-            SunMode::Automatic => ("Automatic: the day settings move it", color::MUTED),
-            SunMode::Manual => ("Manual: Camera control holds it", color::TEXT),
-            SunMode::Returning => ("Returning to the day settings...", color::MUTED),
+            SunMode::Automatic => ("Automatic: the day settings move it", color::muted()),
+            SunMode::Manual => ("Manual: Camera control holds it", color::text()),
+            SunMode::Returning => ("Returning to the day settings...", color::muted()),
         };
         (
-            ("0° is the horizon, 90° straight overhead", color::MUTED),
+            ("0° is the horizon, 90° straight overhead", color::muted()),
             mode,
         )
     } else {
         (
-            ("Sun controls are not available in this view.", color::TEXT),
+            (
+                "Sun controls are not available in this view.",
+                color::text(),
+            ),
             (
                 "They need day and night (r_dayNight) and open sky.",
-                color::MUTED,
+                color::muted(),
             ),
         )
     };
@@ -386,7 +389,7 @@ fn name(ui: &mut MenuCanvas, frame: &Frame, label: &str, rect: Rect, focused: bo
         if focused {
             Color::new(1.0, 1.0, 1.0, 1.0)
         } else {
-            color::alpha(color::TEXT, 0.88)
+            color::alpha(color::text(), 0.88)
         },
         FontWeight::Regular,
         TextAlign::Start,
@@ -436,9 +439,9 @@ fn slider(ui: &mut MenuCanvas, frame: &Frame, panel: &Panel, row: usize, top: f3
         Some(edit) => edit.draw_sjk(ui, number, s),
         None => {
             let ink = if focused {
-                color::TEXT
+                color::text()
             } else {
-                color::alpha(color::TEXT, 0.9)
+                color::alpha(color::text(), 0.9)
             };
             let (unit, unit_width) = UNITS[row];
             let right = COLUMN_X + COLUMN_WIDTH;
@@ -748,15 +751,15 @@ mod tests {
             colours[index]
         };
         // The page on show is gold; the other tab waits muted.
-        assert_eq!(colour_of("Camera"), color::GOLD_BRIGHT);
-        assert_eq!(colour_of("Sun"), color::MUTED);
-        assert_eq!(colour_of("Camera control"), color::TEXT);
+        assert_eq!(colour_of("Camera"), color::gold_bright());
+        assert_eq!(colour_of("Sun"), color::muted());
+        assert_eq!(colour_of("Camera control"), color::text());
         // Hiding the panel is the one main action: a gold button.
         let hide = canvas.rect_for(APPLY_HIDE).expect("Hide panel");
         assert!(canvas.draw_list().commands().iter().any(|command| matches!(
             command,
             DrawCommand::RoundedRect { rect, color, .. }
-                if *rect == hide && *color == color::GOLD
+                if *rect == hide && *color == color::gold()
         )));
         // The column's ground is the UI's dark ground fading in from clear.
         let fades: Vec<_> = canvas
@@ -768,10 +771,10 @@ mod tests {
                 _ => None,
             })
             .collect();
-        assert_eq!(fades[0].start, color::alpha(color::SPACE, 0.0));
+        assert_eq!(fades[0].start, color::alpha(color::space(), 0.0));
         assert_eq!(
             fades.last().expect("fades").end,
-            color::alpha(color::SPACE, 0.86)
+            color::alpha(color::space(), 0.86)
         );
     }
 

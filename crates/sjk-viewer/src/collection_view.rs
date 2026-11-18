@@ -167,7 +167,7 @@ pub(crate) fn row_labels(
         fishing_card: None,
         wheel_of_doom: false,
         mining_card: None,
-        stock: color::HOLO,
+        stock: color::holo(),
         grid: false,
         options: "",
         second: "",
@@ -314,7 +314,7 @@ pub(crate) fn empty_state(
             format_args!("{title}"),
             frame.rect(left, middle - 26.0, room, 26.0),
             20.0 * s,
-            color::TEXT,
+            color::text(),
             FontWeight::Semibold,
             TextAlign::Start,
         );
@@ -324,7 +324,7 @@ pub(crate) fn empty_state(
             format_args!("{line}"),
             frame.rect(left, middle + 1.0, room, 22.0),
             14.0 * s,
-            color::MUTED,
+            color::muted(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -368,7 +368,7 @@ pub(crate) fn empty_state(
         format_args!("{title}"),
         frame.rect(x, at, width, 40.0),
         30.0 * s,
-        color::TEXT,
+        color::text(),
         FontWeight::Semibold,
         TextAlign::Center,
     );
@@ -382,7 +382,7 @@ pub(crate) fn empty_state(
         ((column / 8.6) as usize).max(20),
         3,
         17.0,
-        color::MUTED,
+        color::muted(),
     );
     if let Some(action) = action {
         let button = button_width(action.label, 64.0);
@@ -442,13 +442,13 @@ fn ghost(
         let _ = canvas.draw_list_mut().push(DrawCommand::RoundedRect {
             rect: area,
             radius: radius * s,
-            color: color::alpha(color::HOLO, 0.04),
+            color: color::alpha(color::holo(), 0.04),
         });
         let _ = canvas.draw_list_mut().push(DrawCommand::Border {
             rect: area,
             radius: radius * s,
             width: 1.5 * s,
-            color: color::alpha(color::HOLO, 0.26),
+            color: color::alpha(color::holo(), 0.26),
         });
     };
     let mark = |canvas: &mut crate::menu_widgets::MenuCanvas, rect: [f32; 4], mark: char| {
@@ -464,7 +464,7 @@ fn ghost(
                 size * 1.3,
             ),
             size * s,
-            color::alpha(color::HOLO, 0.32),
+            color::alpha(color::holo(), 0.32),
             FontWeight::Semibold,
             TextAlign::Center,
         );
@@ -799,13 +799,13 @@ impl Panel {
         let _ = list.push(DrawCommand::RoundedRect {
             rect,
             radius: 12.0 * frame.s,
-            color: color::alpha(color::SPACE, 0.85 * alpha),
+            color: color::alpha(color::space(), 0.85 * alpha),
         });
         let _ = list.push(DrawCommand::Border {
             rect,
             radius: 12.0 * frame.s,
             width: 2.0 * frame.s,
-            color: color::alpha(color::GOLD, alpha),
+            color: color::alpha(color::gold(), alpha),
         });
     }
 
@@ -827,7 +827,7 @@ impl Panel {
             format_args!("{held} of {total} collected"),
             frame.rect(RIGHT_X - TALLY_WIDTH, 58.0, TALLY_WIDTH, 30.0),
             22.0 * s,
-            color::TEXT,
+            color::text(),
             FontWeight::Semibold,
             TextAlign::End,
         );
@@ -843,13 +843,13 @@ impl Panel {
             let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
                 rect: frame.rect(x, 98.0, stretch, TALLY_HEIGHT),
                 radius,
-                color: color::alpha(color::HOLO, 0.24),
+                color: color::alpha(color::holo(), 0.24),
             });
             if share > 0.0 {
                 let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
                     rect: frame.rect(x, 98.0, (stretch * share).max(TALLY_HEIGHT), TALLY_HEIGHT),
                     radius,
-                    color: color::GOLD_BRIGHT,
+                    color: color::gold_bright(),
                 });
             }
             x += stretch + GROUP_GAP;
@@ -865,7 +865,7 @@ impl Panel {
             format_args!("{headline}"),
             frame.rect(LEFT_X, LEAD_Y, 900.0, 40.0),
             30.0 * s,
-            color::TEXT,
+            color::text(),
             FontWeight::Semibold,
             TextAlign::Start,
         );
@@ -876,7 +876,7 @@ impl Panel {
                 format_args!("{line}"),
                 frame.rect(LEFT_X, LEAD_Y + 42.0, 940.0, 24.0),
                 16.0 * s,
-                color::MUTED,
+                color::muted(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -1123,7 +1123,7 @@ fn lab_build_scrims(
     frame: &Frame,
 ) {
     let [width, height] = viewport;
-    let space = |alpha| color::alpha(color::SPACE, alpha);
+    let space = |alpha| color::alpha(color::space(), alpha);
     let x = |frame_x: f32| frame.point(frame_x, 0.0)[0];
     let y = |frame_y: f32| frame.point(0.0, frame_y)[1];
     fade_across(
@@ -1165,7 +1165,7 @@ fn lab_build_scrims(
 
 fn lab_scrims(canvas: &mut crate::menu_widgets::MenuCanvas, viewport: [f32; 2], frame: &Frame) {
     let [width, height] = viewport;
-    let space = |alpha| color::alpha(color::SPACE, alpha);
+    let space = |alpha| color::alpha(color::space(), alpha);
     let x = |frame_x: f32| frame.point(frame_x, 0.0)[0];
     let y = |frame_y: f32| frame.point(0.0, frame_y)[1];
     let top = y(540.0);
@@ -1212,7 +1212,7 @@ fn lab_scrims(canvas: &mut crate::menu_widgets::MenuCanvas, viewport: [f32; 2], 
 /// stand on cards of their own.
 fn stage_scrims(canvas: &mut crate::menu_widgets::MenuCanvas, viewport: [f32; 2], frame: &Frame) {
     let [width, height] = viewport;
-    let space = |alpha| color::alpha(color::SPACE, alpha);
+    let space = |alpha| color::alpha(color::space(), alpha);
     let x = |frame_x: f32| frame.point(frame_x, 0.0)[0];
     let y = |frame_y: f32| frame.point(0.0, frame_y)[1];
     fade_across(

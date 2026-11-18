@@ -667,7 +667,7 @@ impl ViewerConsole {
             self.presentation.slide(target, options.speed)
         };
         let (grid, ink) = if sjk_look {
-            (sjk::grid(viewport, options.scale), sjk::INK)
+            (sjk::grid(viewport, options.scale), sjk::ink())
         } else {
             (Grid::new(viewport, options.scale), Ink::CLASSIC)
         };
@@ -748,7 +748,7 @@ impl ViewerConsole {
         // Input row, while the console has the keyboard or fills the screen.
         if self.open || full_screen {
             let prompt = if sjk_look {
-                sjk::PROMPT
+                sjk::prompt()
             } else {
                 Prompt::CLASSIC
             };

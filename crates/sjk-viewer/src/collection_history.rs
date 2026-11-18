@@ -383,7 +383,7 @@ pub(super) fn tier_colour(id: &str) -> Color {
     crate::holocrons::any(id)
         .map(|tier| tier.colour)
         .or_else(|| crate::cards::Rarity::from_id(id).map(|rarity| rarity.colour))
-        .unwrap_or(crate::menu::sjk::color::GOLD)
+        .unwrap_or(crate::menu::sjk::color::gold())
 }
 
 /// The tier on the ladder of tier `id`: a holocron's or dormant kyber's, a card's rarity's.
@@ -511,7 +511,7 @@ pub(super) fn row(line: &HistoryLine) -> Row {
         },
         HistoryLine::Credits(ledger) => base(
             "Credits",
-            color::GOLD,
+            color::gold(),
             credits_text(ledger),
             Amount::of(ledger.delta, "credits").into_iter().collect(),
         ),
@@ -523,11 +523,11 @@ pub(super) fn row(line: &HistoryLine) -> Row {
         ),
         HistoryLine::Box(opened) => base(
             "Box",
-            color::EMBER,
+            color::ember(),
             box_text(opened),
             Amount::pair(opened.won - opened.price, opened.shards),
         ),
-        HistoryLine::Trade(trade) => base("Trade", color::HOLO, trade_text(trade), vec![]),
+        HistoryLine::Trade(trade) => base("Trade", color::holo(), trade_text(trade), vec![]),
     }
 }
 

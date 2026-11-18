@@ -657,7 +657,7 @@ fn scrims(
     chat: bool,
 ) {
     let [width, height] = viewport;
-    let space = |alpha| color::alpha(color::SPACE, alpha);
+    let space = |alpha| color::alpha(color::space(), alpha);
     let x = |frame_x: f32| frame.point(frame_x, 0.0)[0];
     let mut stops = |points: &[(f32, f32)]| {
         for pair in points.windows(2) {
@@ -723,7 +723,7 @@ fn anchor(
         centre,
         EMBLEM_RING * s,
         turn,
-        color::alpha(color::HOLO, 0.55),
+        color::alpha(color::holo(), 0.55),
     );
     let half = EMBLEM_SIZE * 0.5 * s;
     emblem::draw(
@@ -746,7 +746,7 @@ fn anchor(
             width: width * s,
             start,
             sweep: end - start,
-            color: color::alpha(color::HOLO, alpha),
+            color: color::alpha(color::holo(), alpha),
             knockout: None,
         });
     };
@@ -784,7 +784,7 @@ fn anchor(
         width: 5.0 * s,
         start: mark - sweep * 0.5,
         sweep,
-        color: color::GOLD_BRIGHT,
+        color: color::gold_bright(),
         knockout: None,
     });
 }
@@ -819,7 +819,7 @@ fn entries(canvas: &mut MenuCanvas, frame: &Frame, view: &View<'_>, rows: &Rows<
             format_args!("{title}"),
             frame.rect(x, CENTRE[1] + offset - 15.0, 600.0, 30.0),
             24.0 * s,
-            color::alpha(color::HOLO, 0.85),
+            color::alpha(color::holo(), 0.85),
             FontWeight::Semibold,
             TextAlign::Start,
         );
@@ -829,13 +829,13 @@ fn entries(canvas: &mut MenuCanvas, frame: &Frame, view: &View<'_>, rows: &Rows<
         let enabled = rows.enabled.get(row).copied().unwrap_or(true);
         let hint = rows.hints.get(row).map_or("", String::as_str);
         let colour = match (chosen, enabled, tone(view.page, row, label)) {
-            (true, true, _) if !lit => color::TEXT,
-            (true, true, Tone::Leaving) => color::EMBER,
-            (true, true, _) => color::GOLD_BRIGHT,
-            (true, false, _) => color::MUTED,
-            (false, false, _) => color::alpha(color::QUIET, 0.6),
-            (false, true, Tone::Back) => color::QUIET,
-            (false, true, _) => color::MUTED,
+            (true, true, _) if !lit => color::text(),
+            (true, true, Tone::Leaving) => color::ember(),
+            (true, true, _) => color::gold_bright(),
+            (true, false, _) => color::muted(),
+            (false, false, _) => color::alpha(color::quiet(), 0.6),
+            (false, true, Tone::Back) => color::quiet(),
+            (false, true, _) => color::muted(),
         };
         let size = if chosen { m.chosen } else { m.size };
         let [x, y] = entry_point(row, count);
@@ -872,7 +872,7 @@ fn entries(canvas: &mut MenuCanvas, frame: &Frame, view: &View<'_>, rows: &Rows<
                 format_args!("{hint}"),
                 frame.rect(x + 2.0, y + 20.0, 600.0, 24.0),
                 17.0 * s,
-                color::MUTED,
+                color::muted(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -1000,15 +1000,15 @@ fn players_table(
         format_args!("Players"),
         frame.rect(TABLE_X, TABLE_TITLE_Y, 600.0, 34.0),
         30.0 * s,
-        color::alpha(color::HOLO, 0.9),
+        color::alpha(color::holo(), 0.9),
         FontWeight::Semibold,
         TextAlign::Start,
     );
     let (line, colour) = match roster.gate().reason() {
-        Some(reason) => (reason, color::EMBER),
+        Some(reason) => (reason, color::ember()),
         None => (
             "Choose a player to report them to the SJK team",
-            color::MUTED,
+            color::muted(),
         ),
     };
     text(
@@ -1028,7 +1028,7 @@ fn players_table(
             format_args!("{label}"),
             frame.rect(TABLE_X + x, TABLE_HEAD_Y, width, 22.0),
             14.0 * s,
-            color::QUIET,
+            color::quiet(),
             FontWeight::Semibold,
             align,
         );
@@ -1040,8 +1040,8 @@ fn players_table(
     fade_across(
         canvas,
         frame.rect(TABLE_X, TABLE_TOP - 6.0, TABLE_WIDTH, 1.0),
-        color::alpha(color::HOLO, 0.4),
-        color::alpha(color::HOLO, 0.05),
+        color::alpha(color::holo(), 0.4),
+        color::alpha(color::holo(), 0.05),
     );
     let shown = roster.shown();
     for (row, label) in rows.labels.iter().enumerate() {
@@ -1052,13 +1052,13 @@ fn players_table(
             fade_across(
                 canvas,
                 band,
-                color::alpha(color::GOLD, 0.2),
-                color::alpha(color::GOLD, 0.03),
+                color::alpha(color::gold(), 0.2),
+                color::alpha(color::gold(), 0.03),
             );
             let _ = canvas.draw_list_mut().push(DrawCommand::RoundedRect {
                 rect: frame.rect(TABLE_X, y + 4.0, 4.0, TABLE_PITCH - 11.0),
                 radius: 2.0 * s,
-                color: color::GOLD_BRIGHT,
+                color: color::gold_bright(),
             });
         }
         let cell = |x: f32, width: f32| frame.rect(TABLE_X + x, y + 2.0, width, TABLE_PITCH - 6.0);
@@ -1068,9 +1068,9 @@ fn players_table(
             }
             None => {
                 let colour = match (chosen, label.as_str()) {
-                    (true, _) => color::GOLD_BRIGHT,
-                    (false, "Back") => color::QUIET,
-                    (false, _) => color::MUTED,
+                    (true, _) => color::gold_bright(),
+                    (false, "Back") => color::quiet(),
+                    (false, _) => color::muted(),
                 };
                 text(
                     canvas,
@@ -1108,9 +1108,9 @@ fn table_row(
         });
     }
     let name_colour = match (chosen, watching) {
-        (true, _) => color::GOLD_BRIGHT,
-        (false, true) => color::MUTED,
-        (false, false) => color::TEXT,
+        (true, _) => color::gold_bright(),
+        (false, true) => color::muted(),
+        (false, false) => color::text(),
     };
     text(
         canvas,
@@ -1129,7 +1129,11 @@ fn table_row(
             value,
             cell(x - width, width),
             22.0 * s,
-            if chosen { color::TEXT } else { color::MUTED },
+            if chosen {
+                color::text()
+            } else {
+                color::muted()
+            },
             FontWeight::Regular,
             TextAlign::End,
         );
@@ -1144,14 +1148,14 @@ fn table_row(
         (false, None) => number(canvas, TABLE_PING, 90.0, format_args!("-")),
     }
     let (hub, colour) = match (&player.hub, player.you) {
-        (Some(hub), true) if hub.verified => ("You, verified", color::GOLD_BRIGHT),
-        (Some(_), true) => ("You, SJK", color::HOLO),
-        (None, true) => ("You", color::QUIET),
-        (Some(hub), false) if hub.verified => ("Verified", color::GOLD_BRIGHT),
+        (Some(hub), true) if hub.verified => ("You, verified", color::gold_bright()),
+        (Some(_), true) => ("You, SJK", color::holo()),
+        (None, true) => ("You", color::quiet()),
+        (Some(hub), false) if hub.verified => ("Verified", color::gold_bright()),
         (Some(hub), false) if hub.trust == Some(Trust::Trusted) => ("Trusted", color::TRUSTED),
-        (Some(hub), false) if hub.trust == Some(Trust::Banned) => ("Chat banned", color::EMBER),
-        (Some(_), false) => ("SJK", color::HOLO),
-        (None, false) => ("", color::QUIET),
+        (Some(hub), false) if hub.trust == Some(Trust::Banned) => ("Chat banned", color::ember()),
+        (Some(_), false) => ("SJK", color::holo()),
+        (None, false) => ("", color::quiet()),
     };
     if !hub.is_empty() {
         text(
@@ -1183,8 +1187,8 @@ fn player_card(
         fade_across(
             canvas,
             frame.rect(CARD_X, y, CARD_WIDTH, 1.0),
-            color::alpha(color::HOLO, 0.45),
-            color::alpha(color::HOLO, 0.08),
+            color::alpha(color::holo(), 0.45),
+            color::alpha(color::holo(), 0.08),
         );
     };
     let body = |canvas: &mut MenuCanvas, y: f32, colour: Color, value: std::fmt::Arguments<'_>| {
@@ -1248,7 +1252,7 @@ fn player_card(
         format_args!("{}", player.name),
         frame.rect(name_x + jof, y, name_width - jof, 46.0),
         38.0 * s,
-        color::TEXT,
+        color::text(),
         FontWeight::Regular,
         TextAlign::Start,
     );
@@ -1267,7 +1271,7 @@ fn player_card(
             format_args!("Slot {}{what}", player.slot),
             slot_line,
             17.0 * s,
-            color::QUIET,
+            color::quiet(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -1278,7 +1282,7 @@ fn player_card(
             format_args!("Slot {}, {side}{what}", player.slot),
             slot_line,
             17.0 * s,
-            color::QUIET,
+            color::quiet(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -1287,14 +1291,14 @@ fn player_card(
     rule(canvas, y);
     y += 22.0;
     let (hub, colour) = match &player.hub {
-        Some(hub) if hub.verified => ("Verified SJK player", color::GOLD_BRIGHT),
+        Some(hub) if hub.verified => ("Verified SJK player", color::gold_bright()),
         Some(hub) => match hub.trust {
-            Some(Trust::New) => ("New SJK player", color::HOLO),
+            Some(Trust::New) => ("New SJK player", color::holo()),
             Some(Trust::Trusted) => ("Trusted SJK player", color::TRUSTED),
-            Some(Trust::Banned) => ("SJK player, banned from the chat", color::EMBER),
-            _ => ("SJK player", color::HOLO),
+            Some(Trust::Banned) => ("SJK player, banned from the chat", color::ember()),
+            _ => ("SJK player", color::holo()),
         },
-        None => ("Not known to the SJK hub", color::MUTED),
+        None => ("Not known to the SJK hub", color::muted()),
     };
     text(
         canvas,
@@ -1312,7 +1316,7 @@ fn player_card(
         body(
             canvas,
             y,
-            color::QUIET,
+            color::quiet(),
             format_args!("Known as {}", hub.name),
         );
     }
@@ -1337,7 +1341,7 @@ fn player_card(
                 format_args!("{}", medal.label(count)),
                 frame.rect(x + 46.0, row_y + 6.0, column - 52.0, 24.0),
                 17.0 * s,
-                color::TEXT,
+                color::text(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -1363,7 +1367,7 @@ fn player_card(
                 format_args!("{value}"),
                 rect,
                 50.0 * s,
-                color::TEXT,
+                color::text(),
                 FontWeight::Regular,
                 TextAlign::Start,
             ),
@@ -1373,7 +1377,7 @@ fn player_card(
                 format_args!("{none}"),
                 rect,
                 30.0 * s,
-                color::MUTED,
+                color::muted(),
                 FontWeight::Regular,
                 TextAlign::Start,
             ),
@@ -1384,7 +1388,7 @@ fn player_card(
             format_args!("{caption}"),
             frame.rect(x, y + 58.0, CARD_WIDTH / 3.0, 22.0),
             15.0 * s,
-            color::MUTED,
+            color::muted(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -1393,12 +1397,12 @@ fn player_card(
     rule(canvas, y);
     y += 22.0;
     if open {
-        body(canvas, y, color::GOLD_BRIGHT, format_args!("{status}"));
+        body(canvas, y, color::gold_bright(), format_args!("{status}"));
     } else {
         let _ = canvas.draw_list_mut().push(DrawCommand::RoundedRect {
             rect: frame.rect(CARD_X, y + 4.0, 4.0, 16.0),
             radius: 2.0 * s,
-            color: color::EMBER,
+            color: color::ember(),
         });
         text(
             canvas,
@@ -1406,7 +1410,7 @@ fn player_card(
             format_args!("{status}"),
             frame.rect(CARD_X + 14.0, y, CARD_WIDTH - 14.0, 24.0),
             17.0 * s,
-            color::TEXT,
+            color::text(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -1442,9 +1446,9 @@ fn trade_button(canvas: &mut MenuCanvas, frame: &Frame, y: f32, blocked: Option<
         frame.rect(TRADE_WORDS_X, y + 13.0, TRADE_WORDS_W, 24.0),
         TRADE_WORDS_SIZE * frame.s,
         if blocked.is_none() {
-            color::MUTED
+            color::muted()
         } else {
-            color::QUIET
+            color::quiet()
         },
         FontWeight::Regular,
         TextAlign::Start,
@@ -1695,8 +1699,8 @@ fn draw_card(canvas: &mut MenuCanvas, frame: &Frame, card: &Card, main: bool) {
         fade_across(
             canvas,
             frame.rect(CARD_X, y, CARD_WIDTH, 1.0),
-            color::alpha(color::HOLO, 0.45),
-            color::alpha(color::HOLO, 0.08),
+            color::alpha(color::holo(), 0.45),
+            color::alpha(color::holo(), 0.08),
         );
     };
     let body = |canvas: &mut MenuCanvas, y: f32, colour: Color, value: std::fmt::Arguments<'_>| {
@@ -1723,13 +1727,13 @@ fn draw_card(canvas: &mut MenuCanvas, frame: &Frame, card: &Card, main: bool) {
         format_args!("{name}"),
         frame.rect(CARD_X, y, CARD_WIDTH, 46.0),
         38.0 * s,
-        color::TEXT,
+        color::text(),
         FontWeight::Regular,
         TextAlign::Start,
     );
     y += 50.0;
     if !card.address.is_empty() {
-        body(canvas, y, color::QUIET, format_args!("{}", card.address));
+        body(canvas, y, color::quiet(), format_args!("{}", card.address));
     }
     y += 40.0;
     rule(canvas, y);
@@ -1740,7 +1744,7 @@ fn draw_card(canvas: &mut MenuCanvas, frame: &Frame, card: &Card, main: bool) {
         format_args!("{}", card.map),
         frame.rect(CARD_X, y, CARD_WIDTH, 40.0),
         34.0 * s,
-        color::TEXT,
+        color::text(),
         FontWeight::Regular,
         TextAlign::Start,
     );
@@ -1748,7 +1752,7 @@ fn draw_card(canvas: &mut MenuCanvas, frame: &Frame, card: &Card, main: bool) {
     body(
         canvas,
         y,
-        color::MUTED,
+        color::muted(),
         format_args!("{}, {}", card.mode, card.limits),
     );
     y += 50.0;
@@ -1795,7 +1799,7 @@ fn draw_card(canvas: &mut MenuCanvas, frame: &Frame, card: &Card, main: bool) {
                 value_text,
                 value,
                 size * s,
-                color::TEXT,
+                color::text(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -1807,7 +1811,7 @@ fn draw_card(canvas: &mut MenuCanvas, frame: &Frame, card: &Card, main: bool) {
                 caption_text,
                 label,
                 15.0 * s,
-                color::MUTED,
+                color::muted(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -1846,7 +1850,7 @@ fn draw_card(canvas: &mut MenuCanvas, frame: &Frame, card: &Card, main: bool) {
                     ),
                     caption_rect,
                     15.0 * s,
-                    color::MUTED,
+                    color::muted(),
                     FontWeight::Regular,
                     TextAlign::Start,
                 );
@@ -1866,7 +1870,7 @@ fn draw_card(canvas: &mut MenuCanvas, frame: &Frame, card: &Card, main: bool) {
     body(
         canvas,
         y,
-        color::MUTED,
+        color::muted(),
         format_args!(
             "{} playing, {} watching, {} slots",
             card.playing, card.watching, card.slots
@@ -1876,7 +1880,7 @@ fn draw_card(canvas: &mut MenuCanvas, frame: &Frame, card: &Card, main: bool) {
         body(
             canvas,
             y + 28.0,
-            color::QUIET,
+            color::quiet(),
             format_args!("You are spectating"),
         );
     }

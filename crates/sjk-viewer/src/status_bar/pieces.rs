@@ -190,7 +190,7 @@ pub(crate) fn saber_piece(skin: Option<&'static str>) -> Piece {
         },
         None => Piece::Saber {
             name: "Stock blade",
-            colour: color::MUTED,
+            colour: color::muted(),
             tier: None,
         },
     }
@@ -625,7 +625,7 @@ impl Pen<'_> {
             let _ = list.push(DrawCommand::RoundedRect {
                 rect: ground,
                 radius: 3.0 * s,
-                color: color::alpha(color::HOLO, 0.16),
+                color: color::alpha(color::holo(), 0.16),
             });
             let _ = list.push(DrawCommand::SolidRect {
                 rect: Rect::new(
@@ -634,7 +634,7 @@ impl Pen<'_> {
                     ground.width - 4.0 * s,
                     2.0_f32.max(1.5 * s),
                 ),
-                color: color::GOLD_BRIGHT,
+                color: color::gold_bright(),
             });
         }
         let _ = list.push(DrawCommand::TexturedQuad {
@@ -647,7 +647,7 @@ impl Pen<'_> {
             let _ = list.push(DrawCommand::RoundedRect {
                 rect: Rect::new(rect.right() - side * 0.6, rect.y - side * 0.4, side, side),
                 radius: side * 0.5,
-                color: color::HOLO,
+                color: color::holo(),
             });
         }
     }
@@ -671,7 +671,7 @@ pub(crate) fn draw(
             let list = pen.canvas.draw_list_mut();
             match money {
                 Money::Credits => {
-                    let _ = crate::cards::mark::draw(list, at, icon, color::GOLD_BRIGHT);
+                    let _ = crate::cards::mark::draw(list, at, icon, color::gold_bright());
                 }
                 Money::Shards => {
                     let _ = crate::cards::shard::draw(list, at, icon, crate::cards::shard::KYBER);
@@ -703,7 +703,7 @@ pub(crate) fn draw(
                 format_args!("{}", Grouped(value)),
                 x + lead,
                 width - lead,
-                color::TEXT,
+                color::text(),
             );
         }
         Piece::Saber { name, colour, tier } => {
@@ -741,7 +741,7 @@ pub(crate) fn draw(
             let _ = pen.canvas.draw_list_mut().push(DrawCommand::RoundedRect {
                 rect: Rect::new(x, middle - dot * 0.5, dot, dot),
                 radius: dot * 0.5,
-                color: color::GOLD_BRIGHT,
+                color: color::gold_bright(),
             });
             if words {
                 let room = (DOT + ICON_GAP) * k * s;
@@ -751,14 +751,14 @@ pub(crate) fn draw(
                     x + room,
                     width - room + SLACK * s,
                     WORD_SIZE,
-                    color::GOLD_BRIGHT,
+                    color::gold_bright(),
                     FontWeight::Semibold,
                     0.0,
                 );
             }
         }
         Piece::Effect(effect) => pen.pill(effect.words, effect.colour, x, width),
-        Piece::Mode(words) => pen.pill(words, color::HOLO, x, width),
+        Piece::Mode(words) => pen.pill(words, color::holo(), x, width),
         Piece::Toy { index, on } => {
             let side = TOY * k * s;
             let rect = Rect::new(x, middle - side * 0.5 - 1.5 * s, side, side);
@@ -777,7 +777,7 @@ pub(crate) fn draw(
                         rect,
                         radius: side * 0.3,
                         width: 1.0_f32.max(s),
-                        color: color::alpha(color::HOLO, alpha * 0.8),
+                        color: color::alpha(color::holo(), alpha * 0.8),
                     });
                     text(
                         pen.canvas,
@@ -785,7 +785,7 @@ pub(crate) fn draw(
                         format_args!("{}", toy.letters),
                         rect,
                         side * 0.5,
-                        color::alpha(color::TEXT, alpha),
+                        color::alpha(color::text(), alpha),
                         FontWeight::Semibold,
                         TextAlign::Center,
                     );
@@ -796,7 +796,7 @@ pub(crate) fn draw(
                 let _ = pen.canvas.draw_list_mut().push(DrawCommand::RoundedRect {
                     rect: Rect::new(x + (side - dot) * 0.5, rect.bottom() + 1.5 * s, dot, dot),
                     radius: dot * 0.5,
-                    color: color::GOLD_BRIGHT,
+                    color: color::gold_bright(),
                 });
             }
         }
@@ -810,26 +810,26 @@ pub(crate) fn draw(
         } => pen.picture(texture, x, POWER * k * s, selected, active && !selected),
         Piece::Ammo { value, low } => {
             if let Some(value) = value {
-                let colour = if low { color::EMBER } else { color::TEXT };
+                let colour = if low { color::ember() } else { color::text() };
                 pen.number(format_args!("{value}"), x, width, colour);
             }
         }
-        Piece::Time(clock) => pen.number(format_args!("{clock}"), x, width, color::TEXT),
+        Piece::Time(clock) => pen.number(format_args!("{clock}"), x, width, color::text()),
         Piece::Date(date) => pen.run(
             TextFamily::Body,
             format_args!("{date}"),
             x,
             width + SLACK * s,
             WORD_SIZE,
-            color::MUTED,
+            color::muted(),
             FontWeight::Regular,
             0.0,
         ),
         Piece::Place { place, tied, score } => {
             let colour = if place == 1 {
-                color::GOLD_BRIGHT
+                color::gold_bright()
             } else {
-                color::TEXT
+                color::text()
             };
             let ordinal = Ordinal { place, tied };
             pen.number(format_args!("{ordinal}"), x, width, colour);
@@ -837,7 +837,7 @@ pub(crate) fn draw(
             pen.unit(
                 format_args!("score {score}"),
                 x + lead + UNIT_GAP * 2.0 * k * s,
-                color::MUTED,
+                color::muted(),
             );
         }
         Piece::Teams { red, blue, team } => {
@@ -848,7 +848,7 @@ pub(crate) fn draw(
             ] {
                 pen.unit(format_args!("{label}"), at, colour);
                 at += measures.words(label, UNIT_SIZE, TextFace::Regular, s) * s + UNIT_GAP * k * s;
-                let shade = if own { color::TEXT } else { color::MUTED };
+                let shade = if own { color::text() } else { color::muted() };
                 pen.number(format_args!("{value}"), at, 100.0 * s, shade);
                 at += pen.measured(measures, scratch, format_args!("{value}"))
                     + ICON_GAP * 2.0 * k * s;
@@ -857,9 +857,9 @@ pub(crate) fn draw(
         Piece::Left(left) => {
             let side = ICON * 0.85 * k * s;
             let colour = if left.closing() {
-                color::EMBER
+                color::ember()
             } else {
-                color::HOLO
+                color::holo()
             };
             clock_face(
                 pen.canvas.draw_list_mut(),
@@ -869,9 +869,9 @@ pub(crate) fn draw(
             );
             let lead = (ICON + ICON_GAP) * k * s;
             let shade = if left.closing() {
-                color::EMBER
+                color::ember()
             } else {
-                color::TEXT
+                color::text()
             };
             pen.number(format_args!("{left}"), x + lead, width - lead, shade);
             let widest = if left.0 >= 3600 { "0:00:00" } else { "00:00" };
@@ -881,7 +881,7 @@ pub(crate) fn draw(
             pen.unit(
                 format_args!("left"),
                 x + lead + number + UNIT_GAP * k * s,
-                color::MUTED,
+                color::muted(),
             );
         }
         Piece::Feed(index) => {
@@ -899,7 +899,7 @@ pub(crate) fn draw(
                 color: if shown.joined {
                     color::TRUSTED
                 } else {
-                    color::EMBER
+                    color::ember()
                 },
             });
             let lead = (DOT + ICON_GAP) * k * s;
@@ -910,14 +910,14 @@ pub(crate) fn draw(
                 x + lead,
                 name + SLACK * s,
                 WORD_SIZE,
-                color::TEXT,
+                color::text(),
                 FontWeight::Semibold,
                 0.0,
             );
             pen.unit(
                 format_args!("{}", feed_word(shown.joined)),
                 x + lead + name + UNIT_GAP * 2.0 * k * s,
-                color::MUTED,
+                color::muted(),
             );
             let _ = pen.canvas.draw_list_mut().push(DrawCommand::PopOpacity);
         }
@@ -930,34 +930,34 @@ pub(crate) fn draw(
                 x,
                 if cut { width } else { width + SLACK * s },
                 WORD_SIZE,
-                color::MUTED,
+                color::muted(),
                 FontWeight::Regular,
                 0.0,
             );
         }
-        Piece::Map => pen.number(format_args!("{}", texts.map), x, width, color::TEXT),
+        Piece::Map => pen.number(format_args!("{}", texts.map), x, width, color::text()),
         Piece::Players { count, slots } => {
             let side = ICON * 0.8 * k * s;
             person(
                 pen.canvas.draw_list_mut(),
                 [x + side * 0.5, middle],
                 side,
-                color::MUTED,
+                color::muted(),
             );
             let lead = side + ICON_GAP * k * s;
-            pen.number(format_args!("{count}"), x + lead, 60.0 * s, color::TEXT);
+            pen.number(format_args!("{count}"), x + lead, 60.0 * s, color::text());
             let widest = pen
                 .measured(measures, scratch, format_args!("00"))
                 .max(pen.measured(measures, scratch, format_args!("{count}")));
-            pen.unit(format_args!("/{slots}"), x + lead + widest, color::MUTED);
+            pen.unit(format_args!("/{slots}"), x + lead + widest, color::muted());
         }
         Piece::Ping(ping) => {
             let colour = if ping < PING_GOOD {
                 color::TRUSTED
             } else if ping < PING_FAIR {
-                color::GOLD_BRIGHT
+                color::gold_bright()
             } else {
-                color::EMBER
+                color::ember()
             };
             pen.number(format_args!("{ping}"), x, width, colour);
             let widest = pen
@@ -966,18 +966,18 @@ pub(crate) fn draw(
             pen.unit(
                 format_args!("ms"),
                 x + widest + UNIT_GAP * k * s,
-                color::MUTED,
+                color::muted(),
             );
         }
         Piece::Fps(fps) => {
-            pen.number(format_args!("{fps}"), x, width, color::TEXT);
+            pen.number(format_args!("{fps}"), x, width, color::text());
             let widest = pen
                 .measured(measures, scratch, format_args!("000"))
                 .max(pen.measured(measures, scratch, format_args!("{fps}")));
             pen.unit(
                 format_args!("fps"),
                 x + widest + UNIT_GAP * k * s,
-                color::MUTED,
+                color::muted(),
             );
         }
     }

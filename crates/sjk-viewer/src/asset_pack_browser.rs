@@ -192,7 +192,7 @@ impl Browser {
             format_args!("Asset browser"),
             frame.rect(452.0, 220.0, 800.0, 50.0),
             36.0 * frame.s,
-            color::TEXT,
+            color::text(),
             FontWeight::Semibold,
             TextAlign::Start,
         );
@@ -202,7 +202,7 @@ impl Browser {
             format_args!("Installed PK3 packs · choices for next start"),
             frame.rect(452.0, 282.0, 960.0, 28.0),
             18.0 * frame.s,
-            color::MUTED,
+            color::muted(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -220,7 +220,7 @@ impl Browser {
                 format_args!("{}", pack.label),
                 frame.rect(460.0, top + 7.0, 730.0, 26.0),
                 18.0 * frame.s,
-                color::TEXT,
+                color::text(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -238,9 +238,9 @@ impl Browser {
                 frame.rect(1220.0, top + 7.0, 216.0, 26.0),
                 18.0 * frame.s,
                 if self.disabled.contains(&pack.key) {
-                    color::MUTED
+                    color::muted()
                 } else {
-                    color::GOLD_BRIGHT
+                    color::gold_bright()
                 },
                 FontWeight::Regular,
                 TextAlign::End,
@@ -255,7 +255,7 @@ impl Browser {
                 format_args!("No installed PK3 packs found."),
                 frame.rect(452.0, 330.0, 960.0, 30.0),
                 18.0 * frame.s,
-                color::MUTED,
+                color::muted(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -266,7 +266,7 @@ impl Browser {
             format_args!("{}", self.status),
             frame.rect(452.0, 784.0, 960.0, 28.0),
             18.0 * frame.s,
-            color::GOLD_BRIGHT,
+            color::gold_bright(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -276,7 +276,7 @@ impl Browser {
             format_args!("Up/Down / wheel to browse · Enter / click to toggle · Esc to close"),
             frame.rect(452.0, 834.0, 950.0, 28.0),
             16.0 * frame.s,
-            color::MUTED,
+            color::muted(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -288,7 +288,7 @@ impl Browser {
             format_args!("Close"),
             frame.rect(1400.0, 225.0, 64.0, 28.0),
             16.0 * frame.s,
-            color::TEXT,
+            color::text(),
             FontWeight::Regular,
             TextAlign::End,
         );

@@ -503,7 +503,7 @@ impl Unlock {
             | Self::Many {
                 many: Many::Achievements { .. } | Many::Medals,
                 ..
-            } => color::GOLD,
+            } => color::gold(),
             Self::Holocron { tier, .. } => tier.colour,
             Self::Many {
                 many: Many::Holocrons { best, .. },
@@ -513,7 +513,7 @@ impl Unlock {
             Self::Update { .. }
             | Self::Content { .. }
             | Self::KyberGlint { .. }
-            | Self::LogRequest { .. } => color::HOLO,
+            | Self::LogRequest { .. } => color::holo(),
         }
     }
 
@@ -522,8 +522,8 @@ impl Unlock {
     fn note_colour(self) -> Color {
         match self {
             Self::Achievement { kind, .. } => crate::kyber::reward(kind.id)
-                .map_or(color::MUTED, |tier| banner::light(tier.colour, 0.3)),
-            _ => color::MUTED,
+                .map_or(color::muted(), |tier| banner::light(tier.colour, 0.3)),
+            _ => color::muted(),
         }
     }
 

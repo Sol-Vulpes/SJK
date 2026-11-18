@@ -735,13 +735,13 @@ fn build_panel(
     let _ = ui.draw_list_mut().push(DrawCommand::RoundedRect {
         rect: glass,
         radius: 12.0 * s,
-        color: color::alpha(color::SPACE, 0.82),
+        color: color::alpha(color::space(), 0.82),
     });
     let _ = ui.draw_list_mut().push(DrawCommand::Border {
         rect: glass,
         radius: 12.0 * s,
         width: 1.5 * s,
-        color: color::alpha(color::HOLO, 0.35),
+        color: color::alpha(color::holo(), 0.35),
     });
     y += PAD * s;
     let title = Rect::new(left + PAD * s, y, width - PAD * 2.0 * s, TITLE_HEIGHT * s);
@@ -751,7 +751,7 @@ fn build_panel(
         format_args!("FRAME TIMINGS"),
         title,
         17.0 * s,
-        color::GOLD_BRIGHT,
+        color::gold_bright(),
         FontWeight::Semibold,
         TextAlign::Start,
     );
@@ -762,7 +762,7 @@ fn build_panel(
             format_args!("{:.0} fps", readout.fps),
             title,
             13.0 * s,
-            color::MUTED,
+            color::muted(),
             FontWeight::Regular,
             TextAlign::End,
         );
@@ -777,7 +777,7 @@ fn build_panel(
         format_args!("ms over half a second{}", Sampled(sampled),),
         legend,
         11.5 * s,
-        color::QUIET,
+        color::quiet(),
         FontWeight::Regular,
         TextAlign::Start,
     );
@@ -791,12 +791,12 @@ fn build_panel(
             format_args!("{label}"),
             rect,
             15.0 * s,
-            color::TEXT,
+            color::text(),
             FontWeight::Semibold,
             TextAlign::Start,
         );
         if let Some(total) = total {
-            numbers(ui, rect.y, rect.height, right, s, total, color::TEXT);
+            numbers(ui, rect.y, rect.height, right, s, total, color::text());
         }
     };
     let gpu_total = (gpu && readout.ready).then_some(readout.gpu_total);
@@ -810,7 +810,7 @@ fn build_panel(
             width,
             s,
             format_args!("No timestamps on this graphics driver"),
-            color::MUTED,
+            color::muted(),
         );
         y += ROW_HEIGHT * s;
     } else if readout.gpu().is_empty() {
@@ -821,7 +821,7 @@ fn build_panel(
             width,
             s,
             format_args!("Measuring..."),
-            color::MUTED,
+            color::muted(),
         );
         y += ROW_HEIGHT * s;
     }
@@ -845,7 +845,7 @@ fn build_panel(
                 width,
                 s,
                 format_args!("Measuring..."),
-                color::MUTED,
+                color::muted(),
             );
             y += ROW_HEIGHT * s;
         }
@@ -864,7 +864,7 @@ fn build_panel(
             width,
             s,
             format_args!("Logging to logs/{FILE}"),
-            color::QUIET,
+            color::quiet(),
         );
     }
     ui.finish(0);
@@ -892,7 +892,7 @@ fn column_labels(ui: &mut MenuCanvas, y: f32, height: f32, right: f32, s: f32) {
             format_args!("{label}"),
             rect,
             11.5 * s,
-            color::QUIET,
+            color::quiet(),
             FontWeight::Regular,
             TextAlign::End,
         );
@@ -918,7 +918,7 @@ fn numbers(ui: &mut MenuCanvas, y: f32, height: f32, right: f32, s: f32, row: Ro
         format_args!("{:.2}", row.max),
         max_rect,
         12.5 * s,
-        color::QUIET,
+        color::quiet(),
         FontWeight::Regular,
         TextAlign::End,
     );
@@ -936,12 +936,12 @@ fn section_row(ui: &mut MenuCanvas, left: f32, y: f32, width: f32, s: f32, row: 
     );
     let _ = ui.draw_list_mut().push(DrawCommand::SolidRect {
         rect: bar,
-        color: color::alpha(color::HOLO, 0.14),
+        color: color::alpha(color::holo(), 0.14),
     });
     let name = if share >= HEAVY_SHARE {
-        color::GOLD_BRIGHT
+        color::gold_bright()
     } else {
-        color::MUTED
+        color::muted()
     };
     let rect = Rect::new(left + PAD * s, y, inner, ROW_HEIGHT * s);
     text(
@@ -954,7 +954,7 @@ fn section_row(ui: &mut MenuCanvas, left: f32, y: f32, width: f32, s: f32, row: 
         FontWeight::Regular,
         TextAlign::Start,
     );
-    numbers(ui, y, ROW_HEIGHT * s, left + width, s, row, color::TEXT);
+    numbers(ui, y, ROW_HEIGHT * s, left + width, s, row, color::text());
 }
 
 /// A line of small text across the panel.

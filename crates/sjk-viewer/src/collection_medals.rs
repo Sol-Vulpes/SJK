@@ -130,13 +130,13 @@ impl Panel {
         // The rail, with a bead at each end.
         let _ = self.ui.draw_list_mut().push(DrawCommand::SolidRect {
             rect: frame.rect(LEFT_X, RAIL_Y, RAIL_WIDTH, 1.5),
-            color: color::alpha(color::HOLO, 0.45),
+            color: color::alpha(color::holo(), 0.45),
         });
         for x in [LEFT_X, LEFT_X + RAIL_WIDTH] {
             let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
                 rect: frame.rect(x - 4.0, RAIL_Y - 3.0, 8.0, 8.0),
                 radius: 4.0 * s,
-                color: color::HOLO,
+                color: color::holo(),
             });
         }
         let slot = (RAIL_WIDTH / shown.len().max(1) as f32).min(SLOT);
@@ -150,7 +150,7 @@ impl Panel {
         while x < LEFT_X + RAIL_WIDTH {
             let _ = self.ui.draw_list_mut().push(DrawCommand::SolidRect {
                 rect: frame.rect(x, 720.0, 8.0, 1.0),
-                color: color::alpha(color::HOLO, 0.22),
+                color: color::alpha(color::holo(), 0.22),
             });
             x += 16.0;
         }
@@ -183,7 +183,7 @@ impl Panel {
                 ),
                 frame.rect(LEFT_X, 736.0, RAIL_WIDTH, 24.0),
                 15.0 * s,
-                color::QUIET,
+                color::quiet(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -213,7 +213,7 @@ impl Panel {
                 frame,
                 [centre, RAIL_Y + art * 0.68],
                 art * 0.62,
-                color::GOLD,
+                color::gold(),
                 if chosen { 0.42 } else { 0.18 },
             );
         }
@@ -223,7 +223,7 @@ impl Panel {
             let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
                 rect: frame.rect(centre - 2.0, RAIL_Y - 9.0, 4.0, 18.0),
                 radius: 2.0 * s,
-                color: color::GOLD_BRIGHT,
+                color: color::gold_bright(),
             });
         }
         let name = showing
@@ -238,9 +238,9 @@ impl Panel {
             frame.rect(centre - 110.0, caption, 220.0, 30.0),
             23.0 * s,
             match (chosen, held) {
-                (true, _) => color::GOLD_BRIGHT,
-                (false, true) => color::TEXT,
-                (false, false) => color::QUIET,
+                (true, _) => color::gold_bright(),
+                (false, true) => color::text(),
+                (false, false) => color::quiet(),
             },
             FontWeight::Semibold,
             TextAlign::Center,
@@ -256,7 +256,7 @@ impl Panel {
             format_args!("{status}"),
             frame.rect(centre - 110.0, caption + 32.0, 220.0, 22.0),
             15.0 * s,
-            if held { color::GOLD } else { color::QUIET },
+            if held { color::gold() } else { color::quiet() },
             FontWeight::Regular,
             TextAlign::Center,
         );
@@ -309,7 +309,7 @@ impl Panel {
                 frame,
                 [middle, top + BIG_ART * 0.62],
                 280.0,
-                color::GOLD,
+                color::gold(),
                 0.4,
             );
         }
@@ -327,9 +327,9 @@ impl Panel {
             frame.rect(SHOWCASE_X, y, SHOWCASE_WIDTH, 60.0),
             54.0 * s,
             if held {
-                color::GOLD_BRIGHT
+                color::gold_bright()
             } else {
-                color::alpha(color::TEXT, 0.75)
+                color::alpha(color::text(), 0.75)
             },
             FontWeight::Semibold,
             TextAlign::Center,
@@ -354,7 +354,7 @@ impl Panel {
             format_args!("{line}"),
             frame.rect(SHOWCASE_X, y, SHOWCASE_WIDTH, 24.0),
             18.0 * s,
-            if held { color::GOLD } else { color::QUIET },
+            if held { color::gold() } else { color::quiet() },
             FontWeight::Semibold,
             TextAlign::Center,
         );
@@ -377,7 +377,7 @@ impl Panel {
             56,
             2,
             20.0,
-            if held { color::TEXT } else { color::MUTED },
+            if held { color::text() } else { color::muted() },
         );
         let note = showing
             .award
@@ -388,7 +388,7 @@ impl Panel {
             y += 10.0;
             let _ = self.ui.draw_list_mut().push(DrawCommand::SolidRect {
                 rect: frame.rect(middle - 32.0, y, 64.0, 1.0),
-                color: color::alpha(color::HOLO, 0.45),
+                color: color::alpha(color::holo(), 0.45),
             });
             y += 14.0;
             text(
@@ -404,7 +404,7 @@ impl Panel {
                 ),
                 frame.rect(SHOWCASE_X, y, SHOWCASE_WIDTH, 20.0),
                 14.0 * s,
-                color::QUIET,
+                color::quiet(),
                 FontWeight::Regular,
                 TextAlign::Center,
             );
@@ -418,7 +418,7 @@ impl Panel {
                 58,
                 2,
                 18.0,
-                color::TEXT,
+                color::text(),
             );
         }
         let footer = if held {
@@ -432,7 +432,7 @@ impl Panel {
             format_args!("{footer}"),
             frame.rect(SHOWCASE_X, (y + 14.0).max(910.0), SHOWCASE_WIDTH, 22.0),
             15.0 * s,
-            color::MUTED,
+            color::muted(),
             FontWeight::Regular,
             TextAlign::Center,
         );

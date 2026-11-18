@@ -451,7 +451,7 @@ impl SettingsMenu {
             format_args!("HUD look"),
             frame.rect(TEXT_X, CARD[1] + 30.0, TEXT_WIDTH, 52.0),
             40.0 * s,
-            color::TEXT,
+            color::text(),
             FontWeight::Semibold,
             TextAlign::Start,
         );
@@ -463,7 +463,7 @@ impl SettingsMenu {
             ),
             frame.rect(TEXT_X, CARD[1] + 88.0, TEXT_WIDTH, 26.0),
             18.0 * s,
-            color::MUTED,
+            color::muted(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -497,7 +497,7 @@ impl SettingsMenu {
                 format_args!("Reading the HUDs..."),
                 frame.rect(TEXT_X + 8.0, ROWS_TOP, LIST_WIDTH, ROW),
                 18.0 * s,
-                color::MUTED,
+                color::muted(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -527,9 +527,9 @@ impl SettingsMenu {
                 ),
                 23.0 * s,
                 match (lit, in_use) {
-                    (true, _) => color::TEXT,
-                    (false, true) => color::GOLD_BRIGHT,
-                    (false, false) => color::alpha(color::TEXT, 0.88),
+                    (true, _) => color::text(),
+                    (false, true) => color::gold_bright(),
+                    (false, false) => color::alpha(color::text(), 0.88),
                 },
                 FontWeight::Regular,
                 TextAlign::Start,
@@ -537,7 +537,7 @@ impl SettingsMenu {
             if in_use {
                 self.hud_shape(
                     [right - 10.0, middle - 4.0, 8.0, 8.0],
-                    color::GOLD_BRIGHT,
+                    color::gold_bright(),
                     frame,
                 );
             }
@@ -551,10 +551,10 @@ impl SettingsMenu {
             let track = [right + 24.0, ROWS_TOP, 4.0, LIST_ROWS as f32 * ROW];
             let thumb = (LIST_ROWS as f32 / count as f32).clamp(0.08, 1.0) * track[3];
             let travel = (track[3] - thumb) * first as f32 / (count - LIST_ROWS) as f32;
-            self.hud_shape(track, color::alpha(color::HOLO, 0.12), frame);
+            self.hud_shape(track, color::alpha(color::holo(), 0.12), frame);
             self.hud_shape(
                 [track[0], track[1] + travel, track[2], thumb],
-                color::alpha(color::HOLO, 0.55),
+                color::alpha(color::holo(), 0.55),
                 frame,
             );
         }
@@ -571,7 +571,7 @@ impl SettingsMenu {
         let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
             rect,
             radius,
-            color: color::alpha(color::SPACE, 0.92),
+            color: color::alpha(color::space(), 0.92),
         });
         let picker = &self.hud;
         let Some(choice) = picker.choices.get(picker.highlight).cloned() else {
@@ -639,7 +639,7 @@ impl SettingsMenu {
                 format_args!("{note}"),
                 frame.rect(x, y + height * 0.5 - 13.0, width, 26.0),
                 17.0 * s,
-                color::MUTED,
+                color::muted(),
                 FontWeight::Regular,
                 TextAlign::Center,
             );
@@ -651,7 +651,7 @@ impl SettingsMenu {
             format_args!("{}", choice.label),
             frame.rect(x, y + height + 18.0, width, 40.0),
             30.0 * s,
-            color::TEXT,
+            color::text(),
             FontWeight::Semibold,
             TextAlign::Start,
         );
@@ -667,9 +667,9 @@ impl SettingsMenu {
             frame.rect(x, y + height + 60.0, width, 24.0),
             17.0 * s,
             if in_use {
-                color::GOLD_BRIGHT
+                color::gold_bright()
             } else {
-                color::MUTED
+                color::muted()
             },
             FontWeight::Regular,
             TextAlign::Start,
@@ -682,7 +682,7 @@ impl SettingsMenu {
             rect,
             radius,
             width: 1.0 * s,
-            color: color::alpha(color::HOLO, 0.3),
+            color: color::alpha(color::holo(), 0.3),
         });
     }
 

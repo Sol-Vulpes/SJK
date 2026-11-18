@@ -43,8 +43,8 @@ fn made_up(gpu: &GpuState) -> Inputs {
         ..Inputs::default()
     };
     for (words, colour) in [
-        ("Flare trail", crate::menu::sjk::color::GOLD_BRIGHT),
-        ("Do not disturb", crate::menu::sjk::color::EMBER),
+        ("Flare trail", crate::menu::sjk::color::gold_bright()),
+        ("Do not disturb", crate::menu::sjk::color::ember()),
     ] {
         inputs.push_effect(Effect { words, colour });
     }

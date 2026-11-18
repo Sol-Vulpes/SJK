@@ -1132,7 +1132,7 @@ fn build(
                     1.0_f32.max(s),
                     height - 2.0 * RULE_INSET * s,
                 ),
-                color: color::alpha(color::HOLO, 0.28),
+                color: color::alpha(color::holo(), 0.28),
             });
         }
         previous = Some(part);
@@ -1168,7 +1168,7 @@ fn glass(canvas: &mut MenuCanvas, bar: Rect, edge: Bar, s: f32) {
     };
     let _ = list.push(DrawCommand::SolidRect {
         rect: Rect::new(bar.x, y, bar.width, hair),
-        color: color::alpha(color::HOLO, 0.34),
+        color: color::alpha(color::holo(), 0.34),
     });
 }
 
@@ -1763,7 +1763,7 @@ mod tests {
         };
         inputs.push_effect(Effect {
             words: "Do not disturb",
-            colour: color::EMBER,
+            colour: color::ember(),
         });
         let mut out = [NO_PIECE; MAX_PIECES];
         let parts = Parts::from_switches(|part| matches!(part, Part::Saber | Part::Effects));
@@ -1798,7 +1798,7 @@ mod tests {
         for _ in 0..MAX_EFFECTS + 3 {
             inputs.push_effect(Effect {
                 words: "Away",
-                colour: color::MUTED,
+                colour: color::muted(),
             });
         }
         assert!(inputs.effects.iter().all(Option::is_some));
@@ -1908,7 +1908,7 @@ mod tests {
         for _ in 0..MAX_EFFECTS {
             inputs.push_effect(Effect {
                 words: "Tactical medium",
-                colour: color::HOLO,
+                colour: color::holo(),
             });
         }
         let mut out = [NO_PIECE; MAX_PIECES];

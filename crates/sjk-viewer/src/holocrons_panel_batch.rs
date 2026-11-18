@@ -202,7 +202,7 @@ impl Panel {
             ),
             frame.rect(MIDDLE_X - 500.0, 92.0, 1_000.0, 44.0),
             32.0 * s,
-            color::TEXT,
+            color::text(),
             FontWeight::Semibold,
             TextAlign::Center,
         );
@@ -333,7 +333,7 @@ impl Panel {
             format_args!("{}", batch_label(shown, true)),
             frame.rect(MIDDLE_X - 500.0, 80.0, 1_000.0, 50.0),
             40.0 * s,
-            color::TEXT,
+            color::text(),
             FontWeight::Semibold,
             TextAlign::Center,
         );
@@ -559,7 +559,7 @@ impl Panel {
             ),
             frame.rect(MIDDLE_X - 600.0, 836.0, 1_200.0, 26.0),
             17.0 * s,
-            color::alpha(color::QUIET, done),
+            color::alpha(color::quiet(), done),
             FontWeight::Regular,
             TextAlign::Center,
         );
@@ -605,7 +605,7 @@ fn found_note(panel: &mut Panel, frame: &Frame, words: std::fmt::Arguments<'_>, 
         words,
         frame.rect(x - 8.0, y, FOUND_WIDTH + 16.0, 20.0),
         14.0 * frame.s,
-        color::MUTED,
+        color::muted(),
         FontWeight::Regular,
         TextAlign::Center,
     );

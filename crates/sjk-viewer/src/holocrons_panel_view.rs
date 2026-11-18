@@ -87,7 +87,7 @@ fn cut(text: &str, chars: usize) -> String {
 /// keys read over any map. The middle of the left stays clear for the holocron.
 fn backdrop(canvas: &mut MenuCanvas, viewport: [f32; 2]) {
     let frame = Frame::new(viewport);
-    let space = |alpha| color::alpha(color::SPACE, alpha);
+    let space = |alpha| color::alpha(color::space(), alpha);
     let [panel, _] = frame.point(PANEL_FADE, 0.0);
     let [solid, _] = frame.point(RIGHT_X, 0.0);
     let height = viewport[1];
@@ -166,7 +166,7 @@ fn padlock(canvas: &mut MenuCanvas, frame: &Frame, x: f32, y: f32, size: f32, co
     let _ = list.push(DrawCommand::RoundedRect {
         rect: frame.rect(x - size * 0.06, y + size * 0.08, size * 0.12, size * 0.26),
         radius: size * 0.05 * s,
-        color: color::alpha(color::SPACE, 0.85),
+        color: color::alpha(color::space(), 0.85),
     });
 }
 
@@ -238,7 +238,7 @@ impl Panel {
                 format_args!("{label}"),
                 frame.rect(right - 200.0, y + 50.0, 200.0, 24.0),
                 15.0 * s,
-                color::QUIET,
+                color::quiet(),
                 FontWeight::Regular,
                 TextAlign::End,
             );
@@ -249,8 +249,8 @@ impl Panel {
             &mut self.ui,
             crate::cards::credits_text(credits),
             "credits",
-            color::GOLD_BRIGHT,
-            &|list, at, s| crate::cards::mark::draw(list, at, mark_height * s, color::GOLD),
+            color::gold_bright(),
+            &|list, at, s| crate::cards::mark::draw(list, at, mark_height * s, color::gold()),
             crate::cards::mark::width(mark_height),
         );
         if let Some(shards) = shards {
@@ -397,7 +397,7 @@ impl Panel {
             format_args!("{}", crate::terms::say(&headline)),
             frame.rect(RIGHT_X, HEAD_Y, RIGHT_WIDTH, 48.0),
             38.0 * s,
-            color::TEXT,
+            color::text(),
             FontWeight::Semibold,
             TextAlign::Start,
         );
@@ -407,7 +407,7 @@ impl Panel {
             format_args!("{}", crate::terms::say(line)),
             frame.rect(RIGHT_X, LINE_Y, RIGHT_WIDTH, 26.0),
             17.0 * s,
-            color::MUTED,
+            color::muted(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -517,7 +517,7 @@ impl Panel {
                 format_args!("{} of drops", tier.odds()),
                 frame.rect(RIGHT_X + 90.0, y + 30.0, 440.0, 20.0),
                 15.0 * s,
-                color::MUTED,
+                color::muted(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -530,7 +530,7 @@ impl Panel {
                         format_args!("{count}"),
                         frame.rect(right - 130.0 + 60.0, y + 1.0, 70.0, 36.0),
                         32.0 * s,
-                        if held { color::TEXT } else { color::QUIET },
+                        if held { color::text() } else { color::quiet() },
                         FontWeight::Semibold,
                         TextAlign::End,
                     );
@@ -540,7 +540,7 @@ impl Panel {
                         format_args!("held"),
                         frame.rect(right - 130.0, y + 33.0, 130.0, 18.0),
                         14.0 * s,
-                        color::QUIET,
+                        color::quiet(),
                         FontWeight::Regular,
                         TextAlign::End,
                     );
@@ -551,7 +551,7 @@ impl Panel {
                             right - 80.0,
                             y + ROW_HEIGHT * 0.5 + 2.0,
                             22.0,
-                            color::alpha(color::QUIET, 0.9),
+                            color::alpha(color::quiet(), 0.9),
                         );
                     }
                 }
@@ -561,7 +561,7 @@ impl Panel {
                     format_args!("\u{2014}"),
                     frame.rect(right - 130.0, y + 8.0, 130.0, 36.0),
                     32.0 * s,
-                    color::QUIET,
+                    color::quiet(),
                     FontWeight::Semibold,
                     TextAlign::End,
                 ),
@@ -588,7 +588,7 @@ impl Panel {
             format_args!("{}", crate::kyber::pity_line(self.data.pity)),
             frame.rect(RIGHT_X + RIGHT_WIDTH - 430.0, KYBER_Y - 13.0, 430.0, 26.0),
             15.0 * s,
-            color::GOLD,
+            color::gold(),
             FontWeight::Regular,
             TextAlign::End,
         );
@@ -669,7 +669,7 @@ impl Panel {
                 format_args!("dormant kyber"),
                 frame.rect(x + 52.0, y + 29.0, CRYSTAL_WIDTH - 100.0, 18.0),
                 13.0 * s,
-                color::QUIET,
+                color::quiet(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -680,7 +680,7 @@ impl Panel {
                 format_args!("{words}"),
                 frame.rect(x + CRYSTAL_WIDTH - 64.0, y + 8.0, 50.0, 34.0),
                 28.0 * s,
-                if held { color::TEXT } else { color::QUIET },
+                if held { color::text() } else { color::quiet() },
                 FontWeight::Semibold,
                 TextAlign::End,
             );
@@ -699,7 +699,7 @@ impl Panel {
                 format_args!("{part}"),
                 frame.rect(RIGHT_X, y, RIGHT_WIDTH, 24.0),
                 16.0 * s,
-                color::TEXT,
+                color::text(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -718,7 +718,7 @@ impl Panel {
             ),
             frame.rect(RIGHT_X, ABOUT_Y + 52.0, RIGHT_WIDTH - LOOT_WIDTH, 24.0),
             15.0 * s,
-            color::GOLD,
+            color::gold(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -739,7 +739,7 @@ impl Panel {
         );
         let _ = self.ui.draw_list_mut().push(DrawCommand::SolidRect {
             rect: frame.rect(RIGHT_X, RULE_Y, RIGHT_WIDTH, 1.0),
-            color: color::alpha(color::HOLO, 0.18),
+            color: color::alpha(color::holo(), 0.18),
         });
     }
 
@@ -758,9 +758,9 @@ impl Panel {
             frame.rect(RIGHT_X, NEXT_Y, RIGHT_WIDTH - 190.0, 30.0),
             22.0 * s,
             if self.data.next.is_empty() {
-                color::QUIET
+                color::quiet()
             } else {
-                color::TEXT
+                color::text()
             },
             FontWeight::Semibold,
             TextAlign::Start,
@@ -772,7 +772,7 @@ impl Panel {
                 format_args!("{today} of {cap} today"),
                 frame.rect(RIGHT_X + RIGHT_WIDTH - 190.0, NEXT_Y, 190.0, 30.0),
                 17.0 * s,
-                color::MUTED,
+                color::muted(),
                 FontWeight::Regular,
                 TextAlign::End,
             );
@@ -785,7 +785,7 @@ impl Panel {
                 format_args!("{}", crate::terms::say(&self.data.pace)),
                 frame.rect(RIGHT_X, BAR_Y + 9.0, RIGHT_WIDTH - 140.0, 15.0),
                 13.0 * s,
-                color::GOLD_BRIGHT,
+                color::gold_bright(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -795,13 +795,13 @@ impl Panel {
             let _ = list.push(DrawCommand::RoundedRect {
                 rect: frame.rect(RIGHT_X, BAR_Y, RIGHT_WIDTH, 6.0),
                 radius: 3.0 * s,
-                color: color::alpha(color::HOLO, 0.14),
+                color: color::alpha(color::holo(), 0.14),
             });
             if fraction > 0.0 {
                 let _ = list.push(DrawCommand::RoundedRect {
                     rect: frame.rect(RIGHT_X, BAR_Y, (RIGHT_WIDTH * fraction).max(6.0), 6.0),
                     radius: 3.0 * s,
-                    color: color::GOLD,
+                    color: color::gold(),
                 });
             }
         }
@@ -825,7 +825,7 @@ impl Panel {
             format_args!("times in UTC"),
             frame.rect(RIGHT_X + RIGHT_WIDTH - 130.0, RECENT_Y - 4.0, 130.0, 28.0),
             14.0 * s,
-            color::QUIET,
+            color::quiet(),
             FontWeight::Regular,
             TextAlign::End,
         );
@@ -854,7 +854,7 @@ impl Panel {
                 format_args!("None yet."),
                 frame.rect(RIGHT_X, RECENT_TOP, RIGHT_WIDTH, 24.0),
                 16.0 * s,
-                color::QUIET,
+                color::quiet(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -896,7 +896,7 @@ impl Panel {
                     format_args!("{shown}"),
                     frame.rect(x + 38.0, y + 22.0, RECENT_WIDTH - 50.0, 16.0),
                     13.0 * s,
-                    color::alpha(color::HOLO, 0.9),
+                    color::alpha(color::holo(), 0.9),
                     FontWeight::Regular,
                     TextAlign::Start,
                 );
@@ -907,7 +907,7 @@ impl Panel {
                     format_args!("{}", opened_word(tier)),
                     frame.rect(x + 38.0, y + 22.0, RECENT_WIDTH - 50.0, 16.0),
                     13.0 * s,
-                    color::QUIET,
+                    color::quiet(),
                     FontWeight::Regular,
                     TextAlign::Start,
                 );
@@ -924,7 +924,7 @@ impl Panel {
                 format_args!("{when}"),
                 frame.rect(x + 218.0, y + 3.0, RECENT_WIDTH - 218.0 - 12.0, 22.0),
                 15.0 * s,
-                color::MUTED,
+                color::muted(),
                 FontWeight::Regular,
                 TextAlign::End,
             );
@@ -937,7 +937,7 @@ impl Panel {
                         format_args!("Gift from the SJK team"),
                         frame.rect(x + 38.0, y + 22.0, RECENT_WIDTH - 50.0, 16.0),
                         13.0 * s,
-                        color::GOLD_BRIGHT,
+                        color::gold_bright(),
                         FontWeight::Regular,
                         TextAlign::Start,
                     );
@@ -948,7 +948,7 @@ impl Panel {
                         format_args!("Gift from the SJK team: \u{201c}{}\u{201d}", cut(note, 38)),
                         frame.rect(x + 38.0, y + 22.0, RECENT_WIDTH - 50.0, 16.0),
                         13.0 * s,
-                        color::GOLD_BRIGHT,
+                        color::gold_bright(),
                         FontWeight::Regular,
                         TextAlign::Start,
                     );
@@ -972,7 +972,7 @@ impl Panel {
                 centre,
                 LOCK_Y,
                 30.0,
-                color::alpha(color::MUTED, 0.9),
+                color::alpha(color::muted(), 0.9),
             );
         }
         text(
@@ -998,7 +998,7 @@ impl Panel {
                 format_args!("{count} held"),
                 frame.rect(centre - 380.0, HELD_Y, 760.0, 28.0),
                 19.0 * s,
-                color::MUTED,
+                color::muted(),
                 FontWeight::Regular,
                 TextAlign::Center,
             ),
@@ -1008,7 +1008,7 @@ impl Panel {
                 format_args!("{}", crate::terms::say(line)),
                 frame.rect(centre - 380.0, HELD_Y, 760.0, 28.0),
                 19.0 * s,
-                color::MUTED,
+                color::muted(),
                 FontWeight::Regular,
                 TextAlign::Center,
             ),
@@ -1026,7 +1026,7 @@ impl Panel {
                 format_args!("{}", crate::terms::say(&line)),
                 frame.rect(STAGE_AT[0] - 460.0, BUTTONS_Y, 920.0, BUTTON_HEIGHT),
                 19.0 * frame.s,
-                color::TEXT,
+                color::text(),
                 FontWeight::Semibold,
                 TextAlign::Center,
             );
@@ -1039,7 +1039,7 @@ impl Panel {
                 format_args!("{}", crate::terms::say(CLOSED_LINE)),
                 frame.rect(STAGE_AT[0] - 380.0, BUTTONS_Y, 760.0, BUTTON_HEIGHT),
                 19.0 * frame.s,
-                color::MUTED,
+                color::muted(),
                 FontWeight::Regular,
                 TextAlign::Center,
             );

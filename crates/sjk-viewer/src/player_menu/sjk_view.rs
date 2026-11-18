@@ -375,7 +375,7 @@ impl PlayerMenu {
             // soft shadow where the menu map's stage would hold it.
             let _ = self.canvas.draw_list_mut().push(DrawCommand::SolidRect {
                 rect: sjk_ui::Rect::new(0.0, 0.0, viewport[0], viewport[1]),
-                color: color::alpha(color::SPACE, 0.5),
+                color: color::alpha(color::space(), 0.5),
             });
         }
         scrims(&mut self.canvas, viewport, &frame);
@@ -675,11 +675,11 @@ impl PlayerMenu {
             let _ = self.canvas.draw_list_mut().push(DrawCommand::RoundedRect {
                 rect: frame.rect(shadow[0], shadow[1], shadow[2], shadow[3]),
                 radius: 14.0 * s,
-                color: color::alpha(color::SPACE, 0.55),
+                color: color::alpha(color::space(), 0.55),
             });
             let _ = self.canvas.draw_list_mut().push(DrawCommand::SolidRect {
                 rect: frame.rect(x + width * 0.25, MODEL_FEET_Y, width * 0.5, 1.5),
-                color: color::alpha(color::GOLD, 0.35),
+                color: color::alpha(color::gold(), 0.35),
             });
         }
         if self.preview_ready {
@@ -728,7 +728,7 @@ impl PlayerMenu {
             format_args!("{name}"),
             frame.rect(title_x, BAR_Y - 30.0, 1_000.0, 60.0),
             48.0 * s,
-            color::TEXT,
+            color::text(),
             FontWeight::Semibold,
             TextAlign::Start,
         );
@@ -758,7 +758,7 @@ impl PlayerMenu {
             if focused {
                 Color::new(1.0, 1.0, 1.0, 1.0)
             } else {
-                color::alpha(color::TEXT, 0.88)
+                color::alpha(color::text(), 0.88)
             },
             FontWeight::Regular,
             TextAlign::Start,
@@ -923,9 +923,9 @@ impl PlayerMenu {
                 number,
                 21.0 * frame.s,
                 if focused {
-                    color::TEXT
+                    color::text()
                 } else {
-                    color::alpha(color::TEXT, 0.9)
+                    color::alpha(color::text(), 0.9)
                 },
                 FontWeight::Regular,
                 TextAlign::End,
@@ -1102,9 +1102,9 @@ impl PlayerMenu {
                     number,
                     21.0 * frame.s,
                     if focused {
-                        color::TEXT
+                        color::text()
                     } else {
-                        color::alpha(color::TEXT, 0.9)
+                        color::alpha(color::text(), 0.9)
                     },
                     FontWeight::Regular,
                     TextAlign::End,
@@ -1241,7 +1241,7 @@ impl PlayerMenu {
                     format_args!("No hilts found"),
                     empty,
                     17.0 * s,
-                    color::MUTED,
+                    color::muted(),
                     FontWeight::Regular,
                     TextAlign::Start,
                 );
@@ -1252,7 +1252,7 @@ impl PlayerMenu {
                     format_args!("No hilt matches \"{}\"", query.trim()),
                     empty,
                     17.0 * s,
-                    color::MUTED,
+                    color::muted(),
                     FontWeight::Regular,
                     TextAlign::Start,
                 );
@@ -1270,7 +1270,7 @@ impl PlayerMenu {
                         format_args!("{name}  ·  {members}"),
                         frame.rect(x + 16.0, top, width - 32.0, HILT_ROW - 2.0),
                         16.0 * s,
-                        color::GOLD,
+                        color::gold(),
                         FontWeight::Regular,
                         TextAlign::Start,
                     );
@@ -1297,7 +1297,7 @@ impl PlayerMenu {
                         rect,
                         radius: 8.0 * s,
                         color: color::alpha(
-                            if picked { color::GOLD } else { color::HOLO },
+                            if picked { color::gold() } else { color::holo() },
                             if picked { 0.16 } else { 0.1 },
                         ),
                     });
@@ -1317,9 +1317,9 @@ impl PlayerMenu {
                     frame.rect(cell[0] + 12.0, cell[1], cell[2] - 40.0, cell[3]),
                     17.0 * s,
                     match (picked, hovered) {
-                        (true, _) => color::GOLD_BRIGHT,
-                        (false, true) => color::TEXT,
-                        (false, false) => color::alpha(color::TEXT, 0.82),
+                        (true, _) => color::gold_bright(),
+                        (false, true) => color::text(),
+                        (false, false) => color::alpha(color::text(), 0.82),
                     },
                     FontWeight::Regular,
                     TextAlign::Start,
@@ -1328,7 +1328,7 @@ impl PlayerMenu {
             }
         }
         if lines > shown_lines {
-            self.canvas.scrollbar(
+            self.canvas.sjk_scrollbar(
                 HILT_SCROLL + list as u16,
                 frame.rect(
                     x + width - 8.0,
@@ -1419,7 +1419,7 @@ impl PlayerMenu {
                     if hovered {
                         Color::new(1.0, 1.0, 1.0, 1.0)
                     } else {
-                        color::GOLD_BRIGHT
+                        color::gold_bright()
                     },
                     FontWeight::Regular,
                     TextAlign::Center,
@@ -1486,7 +1486,7 @@ impl PlayerMenu {
                     radius: 6.0 * s,
                     width: if choice == chosen { 2.5 * s } else { 1.5 * s },
                     color: if choice == chosen {
-                        color::GOLD_BRIGHT
+                        color::gold_bright()
                     } else {
                         Color::new(1.0, 1.0, 1.0, 0.6)
                     },
@@ -1505,7 +1505,7 @@ impl PlayerMenu {
             if focused {
                 Color::new(1.0, 1.0, 1.0, 1.0)
             } else {
-                color::alpha(color::TEXT, 0.88)
+                color::alpha(color::text(), 0.88)
             },
             FontWeight::Regular,
             TextAlign::Start,
@@ -1518,9 +1518,9 @@ impl PlayerMenu {
             frame.rect(LABEL_X, top + 28.0, SKIN_X - LABEL_X - 16.0, 20.0),
             15.0 * s,
             if skin.is_some() {
-                color::GOLD_BRIGHT
+                color::gold_bright()
             } else {
-                color::MUTED
+                color::muted()
             },
             FontWeight::Regular,
             TextAlign::Start,
@@ -1533,7 +1533,7 @@ impl PlayerMenu {
                 format_args!("{hint}"),
                 frame.rect(x, top + (ROW - 22.0) * 0.5, CONTROL_RIGHT - x, 22.0),
                 15.0 * s,
-                color::MUTED,
+                color::muted(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -1603,7 +1603,7 @@ impl PlayerMenu {
             format_args!("{}", super::classic::force_page::mastery(rank)),
             frame.rect(COLUMN_X, ROWS_TOP - 6.0, 400.0, 32.0),
             26.0 * s,
-            color::TEXT,
+            color::text(),
             FontWeight::Semibold,
             TextAlign::Start,
         );
@@ -1617,9 +1617,9 @@ impl PlayerMenu {
             frame.rect(CONTROL_RIGHT - 420.0, ROWS_TOP - 4.0, 420.0, 28.0),
             17.0 * s,
             if dirty {
-                color::GOLD_BRIGHT
+                color::gold_bright()
             } else {
-                color::MUTED
+                color::muted()
             },
             FontWeight::Regular,
             TextAlign::End,
@@ -1643,8 +1643,8 @@ impl PlayerMenu {
         let chosen = self.force.allocation().side;
         let half = (COLUMN_WIDTH - GUTTER) * 0.5;
         for (index, (side, label, tint)) in [
-            (ForceSide::Light, "Light side", color::HOLO),
-            (ForceSide::Dark, "Dark side", color::EMBER),
+            (ForceSide::Light, "Light side", color::holo()),
+            (ForceSide::Dark, "Dark side", color::ember()),
         ]
         .into_iter()
         .enumerate()
@@ -1658,7 +1658,7 @@ impl PlayerMenu {
                 color: if picked {
                     color::alpha(tint, 0.16)
                 } else {
-                    color::alpha(color::SPACE, 0.5)
+                    color::alpha(color::space(), 0.5)
                 },
             });
             let _ = self.canvas.draw_list_mut().push(DrawCommand::Border {
@@ -1693,7 +1693,11 @@ impl PlayerMenu {
                     32.0,
                 ),
                 26.0 * s,
-                if picked { color::TEXT } else { color::MUTED },
+                if picked {
+                    color::text()
+                } else {
+                    color::muted()
+                },
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -1790,7 +1794,7 @@ impl PlayerMenu {
             top + GROUP_HEADING * 0.5,
             width,
             "This server",
-            color::GOLD,
+            color::gold(),
         );
         let mut y = top + GROUP_HEADING + 4.0;
         // Each line wrapped to the column, 24 pixels a line, moving `y` on.
@@ -1818,7 +1822,7 @@ impl PlayerMenu {
                 &mut y,
                 "Not on a server. A server can lower the highest rank and turn powers \
                  off; its rules show here once you join.",
-                color::MUTED,
+                color::muted(),
             );
             return;
         };
@@ -1831,14 +1835,14 @@ impl PlayerMenu {
                 super::classic::force_page::mastery(rank),
                 sjk_client::mastery_points(rank)
             ),
-            color::TEXT,
+            color::text(),
         );
         if server.free_saber {
             line(
                 &mut self.canvas,
                 &mut y,
                 "Saber offense and defense 1 are free",
-                color::TEXT,
+                color::text(),
             );
         }
         let off = server.disabled_mask & ((1 << POWER_NAMES.len()) - 1);
@@ -1847,20 +1851,20 @@ impl PlayerMenu {
                 &mut self.canvas,
                 &mut y,
                 "No powers explicitly disabled",
-                color::TEXT,
+                color::text(),
             ),
             // A long list would run past the page: the rows say which.
             count @ 9.. => line(
                 &mut self.canvas,
                 &mut y,
                 &format!("{count} powers off, marked on their rows"),
-                color::EMBER,
+                color::ember(),
             ),
             _ => line(
                 &mut self.canvas,
                 &mut y,
                 &format!("Off: {}", server_off_list(off)),
-                color::EMBER,
+                color::ember(),
             ),
         }
         if server.gametype < GT_TEAM {
@@ -1868,7 +1872,7 @@ impl PlayerMenu {
                 &mut self.canvas,
                 &mut y,
                 "Team powers outside team games: server decides",
-                color::MUTED,
+                color::muted(),
             );
         }
         y += 8.0;
@@ -1877,7 +1881,7 @@ impl PlayerMenu {
             &mut y,
             "Powers it turns off stay yours to pick, for full Force duels. \
              Applied in play, they change when you respawn.",
-            color::QUIET,
+            color::quiet(),
         );
         debug_assert!(y <= BOTTOM, "the server's rules run to {y}");
     }
@@ -1908,7 +1912,7 @@ impl PlayerMenu {
             &mut self.canvas,
             COLUMN_X,
             COLUMN_WIDTH,
-            color::alpha(color::HOLO, 0.16),
+            color::alpha(color::holo(), 0.16),
         );
         let left = share(remaining);
         let cost = hovered.map_or(0, |(power, level)| self.force.cost_to(power, level));
@@ -1917,10 +1921,10 @@ impl PlayerMenu {
                 &mut self.canvas,
                 COLUMN_X,
                 left,
-                color::alpha(color::EMBER, 0.9),
+                color::alpha(color::ember(), 0.9),
             );
         } else {
-            bar(&mut self.canvas, COLUMN_X, left, color::GOLD);
+            bar(&mut self.canvas, COLUMN_X, left, color::gold());
             let taken = share(cost);
             bar(
                 &mut self.canvas,
@@ -1988,9 +1992,9 @@ impl PlayerMenu {
             name_rect,
             17.0 * s,
             match (usable, focused) {
-                (false, _) => color::QUIET,
+                (false, _) => color::quiet(),
                 (true, true) => Color::new(1.0, 1.0, 1.0, 1.0),
-                (true, false) => color::alpha(color::TEXT, 0.88),
+                (true, false) => color::alpha(color::text(), 0.88),
             },
             if level > 0 {
                 FontWeight::Semibold
@@ -2006,7 +2010,7 @@ impl PlayerMenu {
                 format_args!("{}", limit.tag()),
                 frame.rect(name_x, top + 24.0, marks_x - name_x - 6.0, 18.0),
                 13.0 * s,
-                color::alpha(color::EMBER, if usable { 0.95 } else { 0.6 }),
+                color::alpha(color::ember(), if usable { 0.95 } else { 0.6 }),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -2044,14 +2048,14 @@ impl PlayerMenu {
             canvas,
             centre(1),
             centre(3),
-            color::alpha(if usable { tint } else { color::HOLO }, 0.16),
+            color::alpha(if usable { tint } else { color::holo() }, 0.16),
         );
         if level > 1 {
             channel(canvas, centre(1), centre(level), color::alpha(tint, 0.8));
         }
         // A hovered level beyond the power's charges the channel up to it,
         // a spark running along it (drawn over the marks).
-        let charge = if affordable { tint } else { color::EMBER };
+        let charge = if affordable { tint } else { color::ember() };
         let mut spark = None;
         if let Some(target) = target.filter(|target| *target > level) {
             let from = centre(level.max(1));
@@ -2086,11 +2090,11 @@ impl PlayerMenu {
                     dot(canvas, cx, DISC + 16.0, color::alpha(tint, 0.12));
                     dot(canvas, cx, DISC + 7.0, color::alpha(tint, 0.22));
                     dot(canvas, cx, DISC, tint);
-                    color::SPACE
+                    color::space()
                 }
                 (false, true, _) => {
                     dot(canvas, cx, DISC, color::alpha(tint, 0.35));
-                    color::SPACE
+                    color::space()
                 }
                 (true, false, true) if affordable => {
                     dot(
@@ -2099,18 +2103,18 @@ impl PlayerMenu {
                         DISC + 10.0,
                         color::alpha(tint, 0.1 + 0.12 * breath),
                     );
-                    dot(canvas, cx, DISC, color::alpha(color::SPACE, 0.85));
+                    dot(canvas, cx, DISC, color::alpha(color::space(), 0.85));
                     dot(canvas, cx, DISC, color::alpha(tint, 0.22 + 0.18 * breath));
                     ring(canvas, tint, 2.2);
-                    color::TEXT
+                    color::text()
                 }
                 (true, false, true) => {
-                    dot(canvas, cx, DISC, color::alpha(color::SPACE, 0.85));
-                    ring(canvas, color::EMBER, 2.0);
-                    color::EMBER
+                    dot(canvas, cx, DISC, color::alpha(color::space(), 0.85));
+                    ring(canvas, color::ember(), 2.0);
+                    color::ember()
                 }
                 (true, false, false) => {
-                    dot(canvas, cx, DISC, color::alpha(color::SPACE, 0.85));
+                    dot(canvas, cx, DISC, color::alpha(color::space(), 0.85));
                     ring(
                         canvas,
                         color::alpha(tint, if focused { 0.85 } else { 0.55 }),
@@ -2119,9 +2123,9 @@ impl PlayerMenu {
                     lighter(tint)
                 }
                 (false, false, _) => {
-                    dot(canvas, cx, DISC, color::alpha(color::SPACE, 0.85));
-                    ring(canvas, color::alpha(color::HOLO, 0.16), 1.6);
-                    color::alpha(color::QUIET, 0.6)
+                    dot(canvas, cx, DISC, color::alpha(color::space(), 0.85));
+                    ring(canvas, color::alpha(color::holo(), 0.16), 1.6);
+                    color::alpha(color::quiet(), 0.6)
                 }
             };
             let cost = if power.level_is_free(mark, free_saber) {
@@ -2205,12 +2209,12 @@ impl PlayerMenu {
         let _ = self.canvas.draw_list_mut().push(DrawCommand::RoundedRect {
             rect: frame.rect(x + 4.0, y + 8.0, width, height),
             radius: 18.0 * s,
-            color: color::alpha(color::SPACE, 0.5),
+            color: color::alpha(color::space(), 0.5),
         });
         let _ = self.canvas.draw_list_mut().push(DrawCommand::RoundedRect {
             rect,
             radius: 18.0 * s,
-            color: color::alpha(color::GLASS, 0.92),
+            color: color::alpha(color::glass(), 0.92),
         });
         let tint = power_tint(index);
         let _ = self.canvas.draw_list_mut().push(DrawCommand::Border {
@@ -2238,7 +2242,7 @@ impl PlayerMenu {
             format_args!("{}", SentenceCase(POWER_NAMES[index])),
             frame.rect(text_x, y + 22.0, line, 46.0),
             40.0 * s,
-            color::TEXT,
+            color::text(),
             FontWeight::Semibold,
             TextAlign::Start,
         );
@@ -2273,7 +2277,7 @@ impl PlayerMenu {
             format_args!("Level {level} of 3"),
             frame.rect(text_x + 62.0, y + 104.0, line - 62.0, 24.0),
             16.0 * s,
-            color::MUTED,
+            color::muted(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -2289,21 +2293,21 @@ impl PlayerMenu {
                     26.0,
                 ),
                 17.0 * s,
-                color::alpha(color::TEXT, 0.9),
+                color::alpha(color::text(), 0.9),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
         }
         let (status, status_colour) = match self.force.next_level(index) {
-            NextLevel::Mastered => ("Mastered".to_owned(), color::GOLD_BRIGHT),
-            NextLevel::Free => ("Next level: free".to_owned(), color::GOLD_BRIGHT),
-            NextLevel::Costs(cost) => (format!("Next level: {cost} points"), color::GOLD_BRIGHT),
+            NextLevel::Mastered => ("Mastered".to_owned(), color::gold_bright()),
+            NextLevel::Free => ("Next level: free".to_owned(), color::gold_bright()),
+            NextLevel::Costs(cost) => (format!("Next level: {cost} points"), color::gold_bright()),
             NextLevel::Short(cost) => (
                 format!("Next level: {cost} points, too few left"),
-                color::EMBER,
+                color::ember(),
             ),
-            NextLevel::OtherSide => ("The other side's power".to_owned(), color::QUIET),
-            NextLevel::NeedsOffense => ("Needs Saber offense 1".to_owned(), color::EMBER),
+            NextLevel::OtherSide => ("The other side's power".to_owned(), color::quiet()),
+            NextLevel::NeedsOffense => ("Needs Saber offense 1".to_owned(), color::ember()),
         };
         if let Some(limit) = self.force.server_limit(index) {
             text(
@@ -2312,7 +2316,7 @@ impl PlayerMenu {
                 format_args!("{}", limit.describe()),
                 frame.rect(x + 24.0, y + height - 72.0, width - 48.0, 26.0),
                 17.0 * s,
-                color::EMBER,
+                color::ember(),
                 FontWeight::Semibold,
                 TextAlign::Start,
             );
@@ -2341,7 +2345,7 @@ impl PlayerMenu {
             format_args!("Levels {} / {} / {}", price(1), price(2), price(3)),
             frame.rect(x + 24.0, y + height - 44.0, width - 48.0, 26.0),
             16.0 * s,
-            color::MUTED,
+            color::muted(),
             FontWeight::Regular,
             TextAlign::End,
         );
@@ -2394,7 +2398,7 @@ impl PlayerMenu {
             format_args!("{title}"),
             frame.rect(1_224.0, 860.0, 600.0, 44.0),
             36.0 * s,
-            color::TEXT,
+            color::text(),
             FontWeight::Regular,
             TextAlign::End,
         );
@@ -2404,13 +2408,13 @@ impl PlayerMenu {
             format_args!("{detail}"),
             frame.rect(1_224.0, 904.0, 600.0, 26.0),
             18.0 * s,
-            color::MUTED,
+            color::muted(),
             FontWeight::Regular,
             TextAlign::End,
         );
         let _ = self.canvas.draw_list_mut().push(DrawCommand::SolidRect {
             rect: frame.rect(1_824.0 - 120.0, 850.0, 120.0, 1.5),
-            color: color::alpha(color::GOLD, 0.7),
+            color: color::alpha(color::gold(), 0.7),
         });
     }
 
@@ -2537,7 +2541,7 @@ pub(super) fn rgb_color(rgb: [u8; 3]) -> Color {
 /// fades at the top behind the title and at the bottom behind the keys.
 fn scrims(canvas: &mut crate::menu_widgets::MenuCanvas, viewport: [f32; 2], frame: &Frame) {
     let [width, height] = viewport;
-    let space = |alpha| color::alpha(color::SPACE, alpha);
+    let space = |alpha| color::alpha(color::space(), alpha);
     let x = |frame_x: f32| frame.point(frame_x, 0.0)[0];
     fade_across(
         canvas,

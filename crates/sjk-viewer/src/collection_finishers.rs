@@ -76,11 +76,11 @@ impl Panel {
                 radius: 18.0 * s,
                 width: 1.2 * s,
                 color: if lit {
-                    color::GOLD
+                    color::gold()
                 } else if hovered {
-                    color::alpha(color::HOLO, 0.6)
+                    color::alpha(color::holo(), 0.6)
                 } else {
-                    color::alpha(color::HOLO, 0.25)
+                    color::alpha(color::holo(), 0.25)
                 },
             });
             let active = token.is_some();
@@ -91,11 +91,11 @@ impl Panel {
                 frame.rect(left + 18.0, y + 5.0, width - 70.0, 26.0),
                 19.0 * s,
                 if lit {
-                    color::GOLD_BRIGHT
+                    color::gold_bright()
                 } else if active {
-                    color::TEXT
+                    color::text()
                 } else {
-                    color::QUIET
+                    color::quiet()
                 },
                 FontWeight::Semibold,
                 TextAlign::Start,
@@ -106,7 +106,7 @@ impl Panel {
                 format_args!("{count}"),
                 frame.rect(left + width - 64.0, y + 7.0, 50.0, 22.0),
                 14.0 * s,
-                if lit { color::GOLD } else { color::QUIET },
+                if lit { color::gold() } else { color::quiet() },
                 FontWeight::Regular,
                 TextAlign::End,
             );
@@ -221,7 +221,7 @@ impl Panel {
             ),
             frame.rect(left, y + 52.0, 560.0, 22.0),
             15.0 * s,
-            color::QUIET,
+            color::quiet(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -238,7 +238,7 @@ impl Panel {
             68.0,
             3,
             15.0,
-            color::TEXT,
+            color::text(),
             FontWeight::Regular,
         );
         if held {

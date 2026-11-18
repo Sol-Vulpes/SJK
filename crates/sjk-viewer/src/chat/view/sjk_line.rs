@@ -284,7 +284,7 @@ pub(in crate::chat) fn draw(
         ui.accent_bar(name_rect, Color::new(0.70, 0.88, 0.98, 0.16));
     }
     if !name.is_empty() {
-        let gold = crate::menu::sjk::color::GOLD;
+        let gold = crate::menu::sjk::color::gold();
         ui.text(
             name,
             Rect::new(name_x, y, prefix.name_width + 1.0, row_box(g)),

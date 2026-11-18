@@ -3856,7 +3856,8 @@ enabled same time"): full width, flush with the edge, about 28 pixels tall at 10
 (more with a larger `ui_textScale`), in the SJK UI's look in every menu style (clear
 acrylic glass since 17/11/2026, the game blurred behind it under a third of the ground's
 ember tint, Sol: "the top bar and bottom bar really need much more transparency"; an
-amber hairline along the inner edge; the UI's families), each with a left, a centre and a
+amber hairline along the inner edge; the UI's families; both the tint and the hairline
+follow the [SJK UI theme](sjk-ui.md#theme) since 18/11/2026), each with a left, a centre and a
 right group. Both are on by default (Sol's choice, 16/11/2026); the release
 that brought them asks again in the News panel's settings to review (`= cg_statusBar
 reset`, `= cg_statusBarTop reset`), so a value saved by an earlier build does not keep
@@ -4745,8 +4746,9 @@ holding the player's picture over the left end of a plate whose top-right corner
 holds their name with its mark after it and, under it, the bars of a sharer, or a dim
 dotted line (3 design pixels on, 4 off) on a plate without bars. Until 28/10/2026 the
 weapon they held stood after the name (`cg_nameplateWeapon`, dropped from saved
-profiles): Sol found it told nothing. The frame's colour says who they are: the holo
-blue (`rgba(110, 210, 255)`) for an SJK player, grey for a player without SJK (one the
+profiles): Sol found it told nothing. The frame's colour says who they are: the SJK UI
+theme's line-work for an SJK player (amber in the warm theme, holo blue in the cold one;
+until 18/11/2026 always the holo blue `rgba(110, 210, 255)`, [Theme](sjk-ui.md#theme)), grey for a player without SJK (one the
 hub does not know on this server), the team's red or blue in team games, the duel's
 colour in a duel, a paler gold on NPC plates. The plate is that colour made dark (a
 tenth of it, `nameplate_math::plate_fill`), 55% opaque (the design's 78%: Sol asked for

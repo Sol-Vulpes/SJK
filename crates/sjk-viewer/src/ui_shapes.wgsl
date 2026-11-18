@@ -282,7 +282,10 @@ const ACRYLIC_CEILING: f32 = 0.42;
 // The grain's strength, display values either side of the colour.
 const ACRYLIC_GRAIN: f32 = 0.012;
 // The light the top edge catches, and how much: a hairline, and a soft sheen under it.
-const ACRYLIC_LIGHT: vec3<f32> = vec3(1.0, 0.92, 0.8);
+// The light is white leaning a little towards the tint's hue (`ACRYLIC_LIGHT_HUE`), so it
+// follows the SJK UI's theme: a warm light on the warm theme's glass, a cool one on the
+// cold theme's.
+const ACRYLIC_LIGHT_HUE: f32 = 0.22;
 const ACRYLIC_EDGE: f32 = 0.2;
 const ACRYLIC_SHEEN: f32 = 0.045;
 
@@ -304,7 +307,10 @@ fn acrylic(input: VertexOutput) -> vec4<f32> {
     let rim = clamp(1.5 + outside, 0.0, 1.0);
     let upper = 1.0 - smoothstep(0.0, max(radius, 2.0) + 2.0, p.y);
     let sheen = 1.0 - smoothstep(0.0, max(size.y * 0.45, 1.0), p.y);
-    rgb = mix(rgb, ACRYLIC_LIGHT, rim * upper * ACRYLIC_EDGE + sheen * sheen * ACRYLIC_SHEEN);
+    let tint = input.start_color.rgb;
+    let hue = tint / max(max(tint.r, max(tint.g, tint.b)), 1.0e-4);
+    let light = mix(vec3(1.0), hue, ACRYLIC_LIGHT_HUE);
+    rgb = mix(rgb, light, rim * upper * ACRYLIC_EDGE + sheen * sheen * ACRYLIC_SHEEN);
     rgb = rgb + (shine_hash(vec2<i32>(floor(input.position.xy))) - 0.5) * 2.0 * ACRYLIC_GRAIN;
     let a = clamp(coverage * input.parameters.x, 0.0, 1.0);
     if a <= 0.0 {

@@ -478,7 +478,7 @@ impl Panel {
                 [COLUMN_X, FIRST_ROW, COLUMN_WIDTH],
                 (52, 3),
                 18.0,
-                color::TEXT,
+                color::text(),
                 TextAlign::Start,
             );
             return;
@@ -523,7 +523,7 @@ impl Panel {
             format_args!("Trail"),
             frame.rect(x + kit::TICK_BOX + 10.0, y - 12.0, 80.0, 24.0),
             17.0 * s,
-            color::TEXT,
+            color::text(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -539,7 +539,7 @@ impl Panel {
                 format_args!("{words}"),
                 frame.rect(COLUMN_X, y - 14.0, 160.0, 28.0),
                 21.0 * s,
-                color::MUTED,
+                color::muted(),
                 FontWeight::Semibold,
                 TextAlign::Start,
             );
@@ -574,7 +574,7 @@ impl Panel {
                 self,
                 &format!("{}: its own", held.label()),
                 y,
-                color::TEXT,
+                color::text(),
                 TextAlign::End,
             ),
         }
@@ -614,7 +614,7 @@ impl Panel {
             self,
             &format!("{}%", (self.lab.speed * 100.0).round()),
             y,
-            color::TEXT,
+            color::text(),
             TextAlign::End,
         );
         y += ROW_STEP;
@@ -632,7 +632,7 @@ impl Panel {
             format_args!("Flourish"),
             frame.rect(tick + kit::TICK_BOX + 10.0, y - 12.0, 110.0, 24.0),
             17.0 * s,
-            color::TEXT,
+            color::text(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -718,7 +718,7 @@ impl Panel {
             format_args!("{name}"),
             frame.rect(RIGHT_X - 380.0 + arrow, y - 15.0, 380.0 - arrow * 2.0, 30.0),
             21.0 * s,
-            color::TEXT,
+            color::text(),
             FontWeight::Semibold,
             TextAlign::Center,
         );
@@ -767,8 +767,8 @@ impl Panel {
         );
         // Why the editor could not open, else what the blade shown is.
         let (note, colour) = match &self.lab_edit_problem {
-            Some(why) => (why.clone(), color::EMBER),
-            None => (note.to_owned(), color::QUIET),
+            Some(why) => (why.clone(), color::ember()),
+            None => (note.to_owned(), color::quiet()),
         };
         left_lines(
             &mut self.ui,
@@ -788,7 +788,7 @@ impl Panel {
             [COLUMN_X, y, COLUMN_WIDTH],
             (66, 2),
             15.0,
-            color::QUIET,
+            color::quiet(),
             TextAlign::Start,
         );
     }

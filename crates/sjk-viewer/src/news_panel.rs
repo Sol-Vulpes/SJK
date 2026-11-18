@@ -943,7 +943,7 @@ impl Panel {
                 1.0,
                 PANEL_HEIGHT - 60.0,
             ),
-            color: color::alpha(color::HOLO, 0.25),
+            color: color::alpha(color::holo(), 0.25),
         });
         if let Some(texture) = crate::settings_icons::texture("changelog") {
             let _ = ui.draw_list_mut().push(DrawCommand::TexturedQuad {
@@ -958,7 +958,7 @@ impl Panel {
             format_args!("News"),
             frame.rect(PANEL_X + LIST_PAD + 42.0, PANEL_Y + 26.0, 300.0, 38.0),
             30.0 * s,
-            color::GOLD_BRIGHT,
+            color::gold_bright(),
             FontWeight::Semibold,
             TextAlign::Start,
         );
@@ -981,13 +981,13 @@ impl Panel {
                 let _ = ui.draw_list_mut().push(DrawCommand::RoundedRect {
                     rect: frame.rect(row[0], row[1], row[2], row[3]),
                     radius: 8.0 * s,
-                    color: color::alpha(color::HOLO, if selected { 0.16 } else { 0.08 }),
+                    color: color::alpha(color::holo(), if selected { 0.16 } else { 0.08 }),
                 });
             }
             if selected {
                 let _ = ui.draw_list_mut().push(DrawCommand::SolidRect {
                     rect: frame.rect(row[0], row[1] + 8.0, 3.0, row[3] - 16.0),
-                    color: color::GOLD,
+                    color: color::gold(),
                 });
             }
             ui.hit_region(token, frame.rect(row[0], row[1], row[2], row[3]));
@@ -998,9 +998,9 @@ impl Panel {
                 frame.rect(row[0] + 16.0, y + 8.0, row[2] - 48.0, 22.0),
                 14.0 * s,
                 if entry.kicker == "SETTINGS TO REVIEW" {
-                    color::GOLD
+                    color::gold()
                 } else {
-                    color::MUTED
+                    color::muted()
                 },
                 FontWeight::Semibold,
                 TextAlign::Start,
@@ -1012,9 +1012,9 @@ impl Panel {
                 frame.rect(row[0] + 16.0, y + 30.0, row[2] - 48.0, 30.0),
                 21.0 * s,
                 if selected {
-                    color::TEXT
+                    color::text()
                 } else {
-                    color::alpha(color::TEXT, 0.85)
+                    color::alpha(color::text(), 0.85)
                 },
                 FontWeight::Semibold,
                 TextAlign::Start,
@@ -1026,7 +1026,7 @@ impl Panel {
                 format_args!("{day}"),
                 frame.rect(row[0] + 16.0, y + 8.0, row[2] - 32.0, 22.0),
                 14.0 * s,
-                color::MUTED,
+                color::muted(),
                 FontWeight::Regular,
                 TextAlign::End,
             );
@@ -1035,7 +1035,7 @@ impl Panel {
                 let _ = ui.draw_list_mut().push(DrawCommand::RoundedRect {
                     rect: dot,
                     radius: dot.width * 0.5,
-                    color: color::GOLD_BRIGHT,
+                    color: color::gold_bright(),
                 });
             }
         }
@@ -1057,7 +1057,7 @@ impl Panel {
                     24.0,
                 ),
                 15.0 * s,
-                color::MUTED,
+                color::muted(),
                 FontWeight::Regular,
                 TextAlign::Center,
             );
@@ -1073,7 +1073,7 @@ impl Panel {
             format_args!("{}", entry.kicker),
             frame.rect(PANE_X, PANEL_Y + 32.0, PANE_WIDTH, 28.0),
             19.0 * s,
-            color::GOLD_BRIGHT,
+            color::gold_bright(),
             FontWeight::Semibold,
             TextAlign::Start,
         );
@@ -1088,7 +1088,7 @@ impl Panel {
             format_args!("{when}"),
             frame.rect(PANE_X, PANEL_Y + 32.0, PANE_WIDTH, 28.0),
             18.0 * s,
-            color::MUTED,
+            color::muted(),
             FontWeight::Semibold,
             TextAlign::End,
         );
@@ -1098,7 +1098,7 @@ impl Panel {
             format_args!("{}", entry.title),
             frame.rect(PANE_X, PANEL_Y + 66.0, PANE_WIDTH, 48.0),
             34.0 * s,
-            color::TEXT,
+            color::text(),
             FontWeight::Semibold,
             TextAlign::Start,
         );
@@ -1126,7 +1126,7 @@ impl Panel {
                         format_args!("{heading}"),
                         frame.rect(PANE_X + INDENT, y, PANE_WIDTH - INDENT, HEADING_HEIGHT),
                         HEADING_SIZE * s,
-                        color::GOLD_BRIGHT,
+                        color::gold_bright(),
                         FontWeight::Semibold,
                         TextAlign::Start,
                     );
@@ -1142,13 +1142,13 @@ impl Panel {
                         let _ = ui.draw_list_mut().push(DrawCommand::RoundedRect {
                             rect: dot,
                             radius: dot.width * 0.5,
-                            color: color::GOLD,
+                            color: color::gold(),
                         });
                     }
                     let (look, colour) = match tone {
-                        Tone::Text => (&LOOK, color::TEXT),
-                        Tone::Muted => (&LOOK, color::MUTED),
-                        Tone::Credit => (&CREDIT_LOOK, color::alpha(color::GOLD, 0.85)),
+                        Tone::Text => (&LOOK, color::text()),
+                        Tone::Muted => (&LOOK, color::muted()),
+                        Tone::Credit => (&CREDIT_LOOK, color::alpha(color::gold(), 0.85)),
                     };
                     self.actions
                         .extend(inline_code::actions(std::slice::from_ref(row)));
@@ -1191,7 +1191,7 @@ impl Panel {
                             HEADING_HEIGHT,
                         ),
                         HEADING_SIZE * s,
-                        color::GOLD_BRIGHT,
+                        color::gold_bright(),
                         FontWeight::Semibold,
                         TextAlign::Start,
                     );
@@ -1221,7 +1221,7 @@ impl Panel {
                             let _ = ui.draw_list_mut().push(DrawCommand::RoundedRect {
                                 rect,
                                 radius: 8.0 * s,
-                                color: color::alpha(color::HOLO, 0.08),
+                                color: color::alpha(color::holo(), 0.08),
                             });
                             text(
                                 ui,
@@ -1229,7 +1229,7 @@ impl Panel {
                                 format_args!("Picture loading..."),
                                 rect,
                                 16.0 * s,
-                                color::MUTED,
+                                color::muted(),
                                 FontWeight::Regular,
                                 TextAlign::Center,
                             );
@@ -1239,7 +1239,7 @@ impl Panel {
                         rect,
                         radius: 8.0 * s,
                         width: s.max(1.0),
-                        color: color::alpha(color::HOLO, 0.3),
+                        color: color::alpha(color::holo(), 0.3),
                     });
                 }
                 Item::Gap(_) => {}
@@ -1257,7 +1257,7 @@ impl Panel {
             let _ = ui.draw_list_mut().push(DrawCommand::RoundedRect {
                 rect: frame.rect(track[0], track[1], track[2], track[3]),
                 radius: 2.0 * s,
-                color: color::alpha(color::HOLO, 0.15),
+                color: color::alpha(color::holo(), 0.15),
             });
             let share = 1.0 / (last + 1) as f32;
             let thumb = (track[3] * share).max(40.0);
@@ -1265,7 +1265,7 @@ impl Panel {
             let _ = ui.draw_list_mut().push(DrawCommand::RoundedRect {
                 rect: frame.rect(track[0], top, track[2], thumb),
                 radius: 2.0 * s,
-                color: color::GOLD,
+                color: color::gold(),
             });
         }
         // The foot.

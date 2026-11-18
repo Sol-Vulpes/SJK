@@ -135,7 +135,7 @@ impl Panel {
             let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
                 rect: frame.rect(LIST_RIGHT + 10.0, LIST_Y + along, 4.0, thumb),
                 radius: 2.0 * frame.s,
-                color: color::alpha(color::HOLO, 0.35),
+                color: color::alpha(color::holo(), 0.35),
             });
         }
         match self.inventory.chosen_item().cloned() {
@@ -163,7 +163,7 @@ impl Panel {
             (
                 Mark::Credits,
                 crate::cards::credits_text(wallet.credits),
-                color::GOLD_BRIGHT,
+                color::gold_bright(),
                 crate::terms::say("credits, from opening Holocrons").into_owned(),
             ),
             (
@@ -188,7 +188,7 @@ impl Panel {
             let at = frame.point(x, middle - mark_height * 0.5);
             let mark_width = match mark {
                 Mark::Credits => {
-                    let _ = crate::cards::mark::draw(list, at, mark_height * s, color::GOLD);
+                    let _ = crate::cards::mark::draw(list, at, mark_height * s, color::gold());
                     crate::cards::mark::width(mark_height) + 10.0
                 }
                 Mark::Shards => {
@@ -216,14 +216,14 @@ impl Panel {
                 format_args!("{words}"),
                 frame.rect(words_x, middle - 11.0, words_width + 40.0, 22.0),
                 14.0 * s,
-                color::QUIET,
+                color::quiet(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
             x = words_x + words_width + 40.0;
         }
         let spare = if wallet.spare_copies == 0 {
-            ("No spare kybers to break down".to_owned(), color::QUIET)
+            ("No spare kybers to break down".to_owned(), color::quiet())
         } else {
             (
                 format!(
@@ -236,7 +236,7 @@ impl Panel {
                     },
                     crate::economy::shards_text(wallet.spare_shards)
                 ),
-                color::GOLD_BRIGHT,
+                color::gold_bright(),
             )
         };
         text(
@@ -287,7 +287,7 @@ impl Panel {
             format_args!("{headline}"),
             frame.rect(LEFT_X, 560.0, width, 40.0),
             30.0 * s,
-            color::TEXT,
+            color::text(),
             FontWeight::Semibold,
             TextAlign::Center,
         );
@@ -297,7 +297,7 @@ impl Panel {
             format_args!("{line}"),
             frame.rect(LEFT_X, 606.0, width, 26.0),
             18.0 * s,
-            color::MUTED,
+            color::muted(),
             FontWeight::Regular,
             TextAlign::Center,
         );
@@ -321,7 +321,7 @@ impl Panel {
             format_args!("{label}"),
             frame.rect(LEFT_X, middle - 14.0, 600.0, 28.0),
             22.0 * s,
-            color::GOLD_BRIGHT,
+            color::gold_bright(),
             FontWeight::Semibold,
             TextAlign::Start,
         );
@@ -336,13 +336,13 @@ impl Panel {
             format_args!("{kinds}, {} in all", crate::cards::grouped(quantity)),
             frame.rect(LIST_RIGHT - 500.0, middle - 12.0, 484.0, 24.0),
             15.0 * s,
-            color::MUTED,
+            color::muted(),
             FontWeight::Regular,
             TextAlign::End,
         );
         let _ = self.ui.draw_list_mut().push(DrawCommand::SolidRect {
             rect: frame.rect(LEFT_X, y + ROW_HEIGHT - 3.0, LIST_RIGHT - LEFT_X, 1.0),
-            color: color::alpha(color::HOLO, 0.22),
+            color: color::alpha(color::holo(), 0.22),
         });
     }
 
@@ -380,7 +380,7 @@ impl Panel {
                 rect: frame.rect(band[0] - 3.0, band[1] - 3.0, band[2] + 6.0, band[3] + 6.0),
                 radius: 11.0 * s,
                 width: 1.6 * s,
-                color: color::alpha(color::GOLD_BRIGHT, 0.85),
+                color: color::alpha(color::gold_bright(), 0.85),
             });
         }
         let middle = y + ROW_HEIGHT * 0.5;
@@ -398,7 +398,7 @@ impl Panel {
             frame.rect(LEFT_X + NAME_X, middle - 12.0, TIER_X - NAME_X - 14.0, 24.0),
             18.0 * s,
             if chosen {
-                color::GOLD_BRIGHT
+                color::gold_bright()
             } else {
                 item.colour
             },
@@ -446,7 +446,7 @@ impl Panel {
                     24.0,
                 ),
                 15.0 * s,
-                color::MUTED,
+                color::muted(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -462,7 +462,7 @@ impl Panel {
                 24.0,
             ),
             20.0 * s,
-            color::TEXT,
+            color::text(),
             FontWeight::Semibold,
             TextAlign::End,
         );
@@ -576,7 +576,7 @@ impl Panel {
                         let _ = list.push(DrawCommand::RoundedRect {
                             rect,
                             radius: 3.0 * s,
-                            color: color::alpha(color::GLASS, 0.95),
+                            color: color::alpha(color::glass(), 0.95),
                         });
                         let art = card_width / crate::cards::faces::ART_ASPECT;
                         let _ = list.push(DrawCommand::TexturedQuad {
@@ -694,7 +694,7 @@ impl Panel {
                 format_args!("{}  {edition}", crate::symbols::EDITION),
                 frame.rect(x + width * 0.5, y, width * 0.5, 22.0),
                 15.0 * s,
-                color::MUTED,
+                color::muted(),
                 FontWeight::Regular,
                 TextAlign::End,
             );
@@ -706,7 +706,7 @@ impl Panel {
             format_args!("{}", item.name),
             frame.rect(x, y, width, 40.0),
             34.0 * s,
-            color::TEXT,
+            color::text(),
             FontWeight::Semibold,
             TextAlign::Start,
         );
@@ -725,7 +725,7 @@ impl Panel {
                 [x, y, width],
                 (66, lines),
                 16.0,
-                color::MUTED,
+                color::muted(),
                 TextAlign::Start,
             );
             room -= lines;
@@ -739,7 +739,7 @@ impl Panel {
             format_args!("{}", held_words(item, &standing)),
             frame.rect(x, y, width, 28.0),
             22.0 * s,
-            color::TEXT,
+            color::text(),
             FontWeight::Semibold,
             TextAlign::Start,
         );
@@ -789,7 +789,7 @@ impl Panel {
                 [x, bottom - why_room + 8.0, width],
                 (64, 2),
                 15.0,
-                color::MUTED,
+                color::muted(),
                 TextAlign::Start,
             );
         }
@@ -835,7 +835,7 @@ impl Panel {
                 format_args!("{words}"),
                 frame.rect(x, y, width - 130.0, 24.0),
                 16.0 * s,
-                color::MUTED,
+                color::muted(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );

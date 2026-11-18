@@ -37,6 +37,19 @@ test: Spectate and follow a player: the bar keeps the ping it had; a local game 
 test: Play a demo with cg_lagometer 1: no ping columns, red only for a dropped snapshot.
 note: The bar asks for no scores: it reads the replies the scoreboard or intermission ask for.
 
+[ui-hue]
+area: Menus & settings
+title: Theme: warm, cold or any hue for the SJK UI
+change: Settings > Interface > Theme: warm (default), cold (the navy and blue of before), custom.
+change: Theme hue and saturation turn every colour, keeping its lightness; the swatch shows it.
+change: Scrollbar thumbs and SJK players' holo nameplate frames follow the theme.
+test: Interface > Theme cold: menus, status bars, cards and scoreboard turn navy at once.
+test: Drag Theme hue: the theme becomes custom and the whole UI follows the swatch live.
+test: Theme saturation 0: a grey UI; text, gold and lines still easy to read.
+test: In a match: status bar glass, banners (debug_holocron rare) and Tab follow the theme.
+test: Back to warm: the sun's colours exactly as before; quit and restart: the theme stays.
+note: Team colours, the trusted green, tiers and Quit's ember (in custom) never change.
+
 [sun-theme]
 area: Menus & settings
 title: Sun theme: warm colours and acrylic glass over the game

@@ -358,7 +358,7 @@ pub(super) fn items(sources: &Sources<'_>) -> Vec<Item> {
             tier: "",
             rank: 0,
             rarity: None,
-            colour: crate::menu::sjk::color::TEXT,
+            colour: crate::menu::sjk::color::text(),
             count: sources.gif_tags as u64,
             note: "Made from blank tags".to_owned(),
             thing: Thing::GifTags,

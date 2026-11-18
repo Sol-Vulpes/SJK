@@ -75,9 +75,11 @@ Principles:
 The sun's colours (Sol's request, 17/11/2026: "switch to a warm colour ... orange,
 yellow, things that come from the sun"), drawn from the burning sun behind SJK's
 emblem: an ember-brown ground, amber line-work, sun gold for the choice, a warm white
-for text. They replaced the deep navy and holo blue of before; the tokens kept their
-names (`SPACE`, `HOLO`), so every screen took them unchanged. Display values, like all
-2D colours ([rendering.md](rendering.md)), in `menu::sjk::color`:
+for text. They replaced the deep navy and holo blue of before, which stays as the cold
+[theme](#theme). Since 18/11/2026 the tokens are functions of `menu::sjk::color`
+(`color::space()`, `color::holo()`, ...) that read the theme in use, so every screen
+follows a change of theme on its next frame. The warm theme's values, display values
+like all 2D colours ([rendering.md](rendering.md)):
 
 | Token | Value | Use |
 | --- | --- | --- |
@@ -93,11 +95,47 @@ names (`SPACE`, `HOLO`), so every screen took them unchanged. Display values, li
 | Ember | `#FF5C3D` | Leaving (Quit) and what went wrong |
 
 The team colours (`RED_TEAM`, `BLUE_TEAM`), the trusted green, the tiers' colours and
-whatever a player chooses keep their own: they carry meaning. A test keeps the text
-colours' contrast: text, muted, the golds and the line-work at 7:1 or more on the
-ground, quiet and ember at 4.5:1, and text, muted, the golds and the line-work at 4.5:1
-or more over every kind of acrylic glass in front of a white scene, and over its plain
-fallback (`color::tests::the_palette_keeps_its_contrast`).
+whatever a player chooses keep their own: they carry meaning, so they stay constants
+outside the themes. A test keeps the text colours' contrast in every theme (the two
+presets and custom ones round the wheel at full, half and no saturation): text, muted,
+the golds and the line-work at 7:1 or more on the ground, quiet and ember at 4.5:1, and
+text, muted, the golds and the line-work at 4.5:1 or more over every kind of acrylic glass
+in front of a white scene, and over its plain fallback
+(`theme::tests::every_palette_keeps_its_contrast`).
+
+### Theme
+
+The player picks the SJK UI's colours (18/11/2026, Sol's request), in Settings >
+Interface under Theme, or `ui_theme` ([theme.rs](../crates/sjk-viewer/src/menu/sjk/theme.rs)):
+
+| `ui_theme` | Colours |
+| --- | --- |
+| `warm` (the default) | The sun's, in the table above |
+| `cold` | The SJK UI's colours before 17/11/2026: deep space navy `#060A14`, holo-blue line-work `#A8CFFF`, gold `#E8B84A` for the choice, cool white text `#E2E9F6`, ember `#FF7A3D`. Its glass is the navy its panels' literals had (`#0A0F1F`, lit `#121A2B`); its muted text is lifted 4 % (`#B0BCD3`) so it reads on the status bars' acrylic, which that palette never had |
+| `custom` | The warm palette turned to `ui_themeHue` (0 to 360 round the colour wheel, default 22, the warm line-work's own hue) at `ui_themeSaturation` (0 greys to 100 the warm palette's, the default) |
+
+A custom theme turns every token round the OKLab hue circle by the turn that brings the
+warm line-work's hue to the chosen one, scales its chroma by the saturation and sets it
+back to the warm token's relative luminance, cutting its chroma where sRGB cannot show it
+at that luminance. The lightness of each colour, and so the WCAG contrast between any two,
+is the warm theme's at every hue (`theme::tests::a_custom_hue_keeps_every_tokens_luminance`);
+at the default hue and saturation it is the warm theme. Ember keeps the warm theme's red in
+a custom theme: it means leaving and errors.
+
+Settings shows Theme as three segments (Warm, Cold, Custom), then Theme hue and Theme
+saturation as sliders, each with a swatch of the line-work it gives left of its track
+(`theme::row_swatch`, `kit::swatch`). Moving the hue or the saturation, in Settings or
+the console, picks `custom` (`ViewerConsole::apply_cvar`). A change applies on the next
+frame, without a restart: the frame's runtime cvars (`theme::sync`) work the palette out
+when one of the three cvars changed and store it in atomics (`theme::LIVE`), which a token
+reads with three relaxed loads; nothing allocates or locks per frame.
+
+What follows the theme besides the screens: the acrylic glass's tint (`color::tint`) and
+the light on its top edge (`ui_shapes.wgsl`, white leaning to the tint's hue), the SJK UI's
+scrollbars (`MenuCanvas::sjk_scrollbar`: the thumb muted, the line-work while hovered or
+held) and the holo frame of SJK players' nameplates ([client.md](client.md#nameplates)).
+What does not: the settings and quick wheel icons, which are pictures; the classic menus
+and classic+ panels' own colours; the emblem.
 
 ### Acrylic glass
 
@@ -995,7 +1033,7 @@ that mode for the visit and leaves the player's choice as it was.
     JoF EJK's camera framing and damping rows under Camera and prediction and,
     under Effects, Stock blades (`cg_stockBlades`, segments Off, Others, All,
     since 25/10/2026; [client.md](client.md#nameplates));
-    Interface the menus and the console (the quick wheel's rows are its
+    Interface the menus, the [theme](#theme) and the console (the quick wheel's rows are its
     category's and Sound's); HUD its classic rows without the chat box, the FPS
     readout opening its Readouts (moved there from Video, as the first-person
     weapon moved to Gameplay's camera rows), and the scoreboard's rows under a

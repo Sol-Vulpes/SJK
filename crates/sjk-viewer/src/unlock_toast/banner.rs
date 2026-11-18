@@ -280,7 +280,7 @@ pub(crate) fn draw(
         rect: card,
         radius: RADIUS * k,
         width: k.max(1.0),
-        color: color::alpha(color::GOLD_BRIGHT, 0.16),
+        color: color::alpha(color::gold_bright(), 0.16),
     });
     let top = Rect::new(
         card.x + RADIUS * k,
@@ -291,13 +291,13 @@ pub(crate) fn draw(
     for (half, start, end) in [
         (
             Rect::new(top.x, top.y, top.width * 0.5, top.height),
-            color::alpha(color::GOLD_BRIGHT, 0.0),
-            color::alpha(color::GOLD_BRIGHT, 0.22),
+            color::alpha(color::gold_bright(), 0.0),
+            color::alpha(color::gold_bright(), 0.22),
         ),
         (
             Rect::new(top.x + top.width * 0.5, top.y, top.width * 0.5, top.height),
-            color::alpha(color::GOLD_BRIGHT, 0.22),
-            color::alpha(color::GOLD_BRIGHT, 0.0),
+            color::alpha(color::gold_bright(), 0.22),
+            color::alpha(color::gold_bright(), 0.0),
         ),
     ] {
         let _ = list.push(DrawCommand::GradientRect {
@@ -329,8 +329,8 @@ pub(crate) fn draw(
         rect: tile,
         radius: ICON_RADIUS * k,
         gradient: Gradient {
-            start: mix(color::alpha(color::GLASS, 0.96), hue, 0.34),
-            end: mix(color::alpha(color::SPACE, 0.96), hue, 0.16),
+            start: mix(color::alpha(color::glass(), 0.96), hue, 0.34),
+            end: mix(color::alpha(color::space(), 0.96), hue, 0.16),
             vertical: true,
         },
     });
@@ -384,7 +384,7 @@ pub(crate) fn draw(
         let _ = list.push(DrawCommand::RoundedRect {
             rect: grown(badge, 2.0 * k, 0.0),
             radius: height * 0.5 + 2.0 * k,
-            color: color::alpha(color::SPACE, 0.95),
+            color: color::alpha(color::space(), 0.95),
         });
         let _ = list.push(DrawCommand::RoundedRect {
             rect: badge,
@@ -397,7 +397,7 @@ pub(crate) fn draw(
             format_args!("{}", look.badge),
             badge,
             15.0 * k,
-            color::SPACE,
+            color::space(),
             FontWeight::Semibold,
             TextAlign::Center,
         );
@@ -421,7 +421,7 @@ pub(crate) fn draw(
         format_args!("{NOW}"),
         row(HEADER_ROW, TEXT_WIDTH),
         HEADER_SIZE * k,
-        color::MUTED,
+        color::muted(),
         FontWeight::Regular,
         TextAlign::End,
     );
@@ -441,7 +441,7 @@ pub(crate) fn draw(
         format_args!("{}", look.body),
         row(BODY_ROW, TEXT_WIDTH),
         BODY_SIZE * k,
-        color::TEXT,
+        color::text(),
         FontWeight::Regular,
         TextAlign::Start,
     );
