@@ -5194,8 +5194,10 @@ its pop-up and hover cards and the scoreboard's band ([sjk-ui.md](sjk-ui.md#acry
 - **The material** (`ui_shapes.wgsl`, mode 8, reference `sjk_ui::acrylic::shade`): the
   quarter-size result sampled at the pixel's place on the screen, scaled down to a Rec. 709
   luma of at most 0.42 (`LUMA_CEILING`, keeping its hue) so text keeps its contrast over
-  snow, the tint mixed over it, a top hairline and sheen of warm light, and a grain of
-  plus or minus 0.012.
+  snow, the tint mixed over it, a top hairline and sheen of light (white leaning 22 % to
+  the tint's hue, so warm on the warm theme's glass and cool on the cold one's,
+  [sjk-ui.md](sjk-ui.md#theme)), and a grain of plus or minus 0.012. The tint is the SJK
+  UI theme's ground or glass (`color::tint`), read each frame.
 - **When:** only on frames whose 2D layer draws a backdrop (`ShapeRenderer::backdrop_used`),
   after the post-processing and before the 2D pass, and only when that image can be read
   by a shader (`GpuState::hud_target_sampleable`): a post-processing intermediate always,

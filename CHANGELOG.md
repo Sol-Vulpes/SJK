@@ -13,6 +13,7 @@ Format, read by the client (crates/sjk-viewer/src/changelog_data.rs, whose
 tests check this file):
 - "## <version> | <dd/mm/yyyy>" starts a release ("## Unreleased" for main
   after the last release, without a date);
+- Choose the SJK UI's colours in Settings > Interface > Theme: warm (the sun's, still the default), cold (the navy and holo blue from before) or custom, a hue slider with a live swatch and a saturation slider that turn every colour while keeping its lightness, so text reads as well; it changes at once. Scrollbars and SJK players' holo nameplate frames follow the theme too (`ui_theme`, `ui_themeHue`, `ui_themeSaturation`) _(Sol)_
 - The SJK UI wears the sun's colours instead of navy and holo blue: an ember-brown ground, amber lines, sun gold for what you choose and warm white text, drawn from the burning sun behind the emblem. The status bars, notification banners, pop-up cards, hover cards and the scoreboard's column are now acrylic glass: the game shows through them, blurred and warmly tinted, the status bars clearest of all, with the text kept readable over snow as over a dark corridor _(Sol)_
 - other lines up to the first item are the release's introduction;
 - "> <Heading>: <sentence>" lines before the first item are the release's short

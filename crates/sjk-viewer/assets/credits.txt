@@ -38,7 +38,7 @@ did: The assets folder: PK3s tidied into subfolders of your own, outside base
 did: Feats: double kills, sprees and HOOKED! with medals and an announcer
 did: The top bar's ping read as the scoreboard does, the lagometer's as stock
 did: The sun theme: warm colours and acrylic glass over the game
-did: The sun theme: warm colours and acrylic glass over the game
+did: SJK UI themes: warm, cold or any hue, keeping every colour's lightness
 did: The classic menus and classic+, the settings and search, the retail-look console
 did: The SJK UI, Sol JK's own menus over the live map
 did: SJK's icon art: the quick wheels' and the settings' icons
