@@ -1,3 +1,29 @@
+## Collection glass and the Kybers page (18/11/2026)
+
+18/11/2026, `personal/collection-glass` from `main` `44099d074` (Sol: "make the acrylic work
+on the collection now (if not too heavy), [same] with the saber shader UI, upgrade it"). The
+Collection's tiles, panes and cards are acrylic glass ([sjk-ui.md](sjk-ui.md#acrylic-glass)):
+the hall, the Kybers wall's tiles, its list pane, filter chips, search field, tiers' strip and
+card, the Inventory, Toys, Tags, Forge, History and Holocrons. Rows on a pane, pictures in a
+tile, card faces and the Medals and Achievements pages (no panels) stay plain. The Kybers
+wall: the chosen tile rises over 0.16 s in a ring of its tier's light (`shaders::Lift`), the
+hovered one lifts 2 pixels in its tier's colour, the worn kyber glows gold from its foot (a
+second saber's in the line-work). Measured with `duel6_collection_glass` (release, RTX 5080,
+Vulkan, every other kyber owned, warm and cold, medians of 120 sampled frames): the blur
+(`ui-backdrop`) 0.016 to 0.022 ms at 1080p, 0.029 to 0.038 ms at 4K; on `main` the same
+pages blurred nothing but the wall's hover card (0.015 ms, 0.020 ms). Whole frames, `main`
+then the branch (warm): 1080p hall 2.05 / 2.19, wall 1.66 / 1.88, list 1.75 / 1.65,
+inventory 1.49 / 1.68 ms; 4K hall 5.59 / 5.43, wall 4.34 / 4.71, list 4.29 / 4.16,
+inventory 4.00 / 3.05 ms. These swing by up to 0.4 ms between runs in the world's own
+sections (the 4K wall's `opaque` 0.98 against 1.21 ms), and against the plain tint in the
+same sitting the glass moved the frame by less than that drift either way, so no part was
+left as plain tint. Verified: unit tests (the acrylic tier frame, the lift's easing, the
+list pane's rectangle, a backdrop under every tile and the renderer's runs under half their
+limit, the palettes' contrast over `TILE` glass), the shots looked at in both themes, fmt,
+build, the workspace tests and the startup stack check. Not verified: in a game, on DX12
+(where the glass is its plain tint) and Metal; the lift's motion was judged from its curve,
+not watched.
+
 ## Load marks around the saber renderer (17/11/2026)
 
 17/11/2026, `personal/load-marks` from `main` `d35a06d94`. A player's GTX 1650 on DirectX 12

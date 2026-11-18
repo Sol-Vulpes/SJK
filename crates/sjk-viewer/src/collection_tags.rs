@@ -908,6 +908,7 @@ impl Panel {
             entry_tier(entry),
             crate::menu::sjk::kit::TierSize::Tile,
             crate::menu::sjk::kit::TierLook {
+                acrylic: true,
                 chosen,
                 hovered: hovered || chosen,
                 dim: count == 0,
@@ -1077,10 +1078,10 @@ impl Panel {
         let finish = self.tag_finish_shown(held);
         let height = CARD_BOTTOM - CARD_TOP;
         let area = frame.rect(CARD_X, CARD_TOP, CARD_WIDTH, height);
-        let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
+        let _ = self.ui.draw_list_mut().push(DrawCommand::Backdrop {
             rect: area,
             radius: 16.0 * s,
-            color: color::alpha(color::space(), 0.88),
+            tint: color::alpha(color::glass(), color::acrylic::CARD),
         });
         let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
             rect: frame.rect(CARD_X + 24.0, CARD_TOP, CARD_WIDTH - 48.0, 3.0),

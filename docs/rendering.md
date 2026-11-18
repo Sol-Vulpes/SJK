@@ -5176,7 +5176,8 @@ white washes (separators, borders, hover fills) look fainter than before.
 Windows' acrylic and iOS's materials do: what the frame holds behind the rectangle,
 blurred, its brightness held under a ceiling, the tint over it at its alpha, a faint grain
 and a light top edge. The SJK UI uses it for the status bars, the notification banners,
-its pop-up and hover cards and the scoreboard's band ([sjk-ui.md](sjk-ui.md#acrylic-glass)).
+its pop-up and hover cards, the scoreboard's band and, since 18/11/2026, the Collection's
+tiles, panes and cards ([sjk-ui.md](sjk-ui.md#acrylic-glass)).
 
 - **What is blurred:** the image the 2D layer draws into, as it stands before the 2D pass:
   the world, its flares and post-processing. The 2D drawn under a backdrop is not in it;
@@ -5210,7 +5211,16 @@ its pop-up and hover cards and the scoreboard's band ([sjk-ui.md](sjk-ui.md#acry
   on an RTX 5080: 0.014 ms at 1920x1080 and 0.022 ms at 3840x2160; the whole frame's
   median did not move against the plain tint beyond its drift between runs. A backdrop
   covering more of the screen (a pop-up card, the scoreboard's band) blurs a larger
-  region, at most the whole frame.
+  region, at most the whole frame. The Collection (18/11/2026), measured with the ignored
+  world shot `duel6_collection_glass` (the hall, the Kybers wall with thirty-odd glass
+  tiles, the list on its pane, the Inventory, warm and cold, medians of 120 sampled
+  frames, RTX 5080, Vulkan): `ui-backdrop` 0.016 to 0.022 ms at 1920x1080 and 0.029 to
+  0.038 ms at 3840x2160; the whole frame against the same pages drawn as the plain tint
+  moved by less than the drift between runs either way. A glass per tile costs about what
+  one pane over the grid would: their grown rectangles overlap and merge, and past sixteen
+  regions the rest join the last one's union, so the chain blurs the grid's area once; the
+  extra is one texture sample a pixel where a plain fill was, and a bind group change per
+  tile, kept well under the renderer's 512 runs (a test counts them on the Kybers page).
 
 ### Menu text
 

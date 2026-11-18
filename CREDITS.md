@@ -541,7 +541,9 @@ includes:
   behind the status bars, banners, pop-up cards and scoreboard; since 18/11/2026 one of
   the SJK UI's themes (`ui_theme`): warm, cold (the navy and holo blue of before) or a
   custom hue and saturation that keep every colour's lightness, the status bars' glass,
-  scrollbars and holo nameplate frames following it;
+  scrollbars and holo nameplate frames following it; since 18/11/2026 the Collection's
+  hall, tiles, lists and cards are acrylic glass too, and the Kybers page's chosen,
+  hovered and worn kybers show in their tier's light and the sun's gold;
 - SJK Alpha (19/10/2026), the first collection of cards: the Mythical rarity, the
   Credits and Meme kinds, and card 1, "Bishop", honouring the author of JKR (art by
   Sol, AI-assisted: a rusted helmet portrait).

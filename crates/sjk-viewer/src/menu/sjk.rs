@@ -523,6 +523,9 @@ pub(crate) mod color {
         pub(crate) const PANEL: f32 = 0.6;
         /// A pop-up card, a menu or a hover card over a screen.
         pub(crate) const CARD: f32 = 0.66;
+        /// A tile or a row standing on a page's ground (the Collection's walls, lists and
+        /// hall), as dark as the plain fill it replaced over a dark scene.
+        pub(crate) const TILE: f32 = 0.62;
     }
 
     /// The tint of acrylic glass laying `amount` of the ground over the scene

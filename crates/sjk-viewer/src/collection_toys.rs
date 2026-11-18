@@ -566,10 +566,14 @@ impl Panel {
         } else {
             color::alpha(color::holo(), 0.85)
         };
-        let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
+        let _ = self.ui.draw_list_mut().push(DrawCommand::Backdrop {
             rect: area,
             radius: 10.0 * s,
-            color: color::alpha(color::space(), if hovered { 0.85 } else { 0.6 }),
+            tint: color::tint(if hovered {
+                color::acrylic::CARD
+            } else {
+                color::acrylic::TILE
+            }),
         });
         let _ = self.ui.draw_list_mut().push(DrawCommand::Border {
             rect: area,
@@ -660,15 +664,22 @@ impl Panel {
         let right = x + ROWS_WIDTH;
         let area = frame.rect(x, y, ROWS_WIDTH, ROW_HEIGHT);
         let hovered = self.ui.token_hovered(toy.token);
-        let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
+        let _ = self.ui.draw_list_mut().push(DrawCommand::Backdrop {
             rect: area,
             radius: 12.0 * s,
-            color: if chosen {
-                color::alpha(color::gold(), 0.09)
-            } else {
-                color::alpha(color::space(), if hovered { 0.78 } else { 0.6 })
-            },
+            tint: color::tint(color::acrylic::TILE),
         });
+        if chosen || hovered {
+            let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
+                rect: area,
+                radius: 12.0 * s,
+                color: if chosen {
+                    color::alpha(color::gold(), 0.09)
+                } else {
+                    color::alpha(color::holo(), 0.07)
+                },
+            });
+        }
         let _ = self.ui.draw_list_mut().push(DrawCommand::Border {
             rect: area,
             radius: 12.0 * s,
@@ -843,10 +854,10 @@ impl Panel {
         let height = self.toy_card_height(toy).min(CARD_BOTTOM - CARD_TOP_MIN);
         let top = CARD_BOTTOM - height;
         let area = frame.rect(CARD_X, top, CARD_WIDTH, height);
-        let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
+        let _ = self.ui.draw_list_mut().push(DrawCommand::Backdrop {
             rect: area,
             radius: 16.0 * s,
-            color: color::alpha(color::space(), 0.88),
+            tint: color::alpha(color::glass(), color::acrylic::CARD),
         });
         let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
             rect: frame.rect(CARD_X + 24.0, top, CARD_WIDTH - 48.0, 3.0),

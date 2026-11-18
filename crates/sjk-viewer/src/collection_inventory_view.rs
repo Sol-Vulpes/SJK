@@ -155,7 +155,10 @@ impl Panel {
             [LEFT_X, WALLET_Y, RIGHT_X - LEFT_X, WALLET_HEIGHT],
             unlockables::Rarity::Common,
             TierSize::Row,
-            TierLook::at(0.0),
+            TierLook {
+                acrylic: true,
+                ..TierLook::at(0.0)
+            },
         );
         let middle = WALLET_Y + WALLET_HEIGHT * 0.5;
         let mut x = LEFT_X + 22.0;
@@ -370,6 +373,7 @@ impl Panel {
             item.rarity.unwrap_or(unlockables::Rarity::Common),
             TierSize::Row,
             TierLook {
+                acrylic: true,
                 chosen,
                 hovered: hovered || chosen,
                 ..TierLook::at(crate::menu::art::motion::seconds() as f32)
@@ -642,6 +646,7 @@ impl Panel {
             rarity,
             TierSize::Tile,
             TierLook {
+                acrylic: true,
                 shine: true,
                 ..TierLook::at(seconds)
             },

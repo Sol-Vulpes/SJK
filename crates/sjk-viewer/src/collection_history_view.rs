@@ -204,6 +204,7 @@ impl Panel {
                 tier.unwrap_or(crate::unlockables::Rarity::Common),
                 kit::TierSize::Row,
                 kit::TierLook {
+                    acrylic: true,
                     chosen,
                     hovered: hovered || chosen,
                     ..kit::TierLook::at(crate::menu::art::motion::seconds() as f32)

@@ -549,6 +549,7 @@ mod tests {
                 super::super::color::acrylic::BANNER,
                 super::super::color::acrylic::PANEL,
                 super::super::color::acrylic::CARD,
+                super::super::color::acrylic::TILE,
             ] {
                 let tint = super::super::color::alpha(p.space, amount);
                 let [r, g, b] = sjk_ui::acrylic::shade([1.0; 3], tint);

@@ -2013,7 +2013,11 @@ SJK UI; since 10/10/2026 the [Collection](sjk-ui.md#collection)'s Kybers tab
 in [collection_swatch.rs](../crates/sjk-viewer/src/collection_swatch.rs)). An SJK page
 in the SJK UI's look in every menu style; in the SJK UI the main page's and the
 in-game menu's Collection open it, with the classic menus `unlockables` (and the
-Profile page's See the collection) open it on its own:
+Profile page's See the collection) open it on its own. Since 18/11/2026 the page is
+acrylic glass (its tiles, the list's pane, its filters and the chosen kyber's card), the
+chosen tile rises in a ring of its tier's light, the one under the pointer lifts in its
+tier's colour and the kyber worn glows gold from its foot
+([Collection](sjk-ui.md#collection)):
 
 - a wall of tiles under a heading to each tier, or a list whose column heads sort it
   (25/10/2026, the Collection revamp: [Collection](sjk-ui.md#collection) has the layout,

@@ -64,6 +64,10 @@ pub(crate) struct TierLook {
     pub(crate) dim: bool,
     /// Fill it with the dark glass; `false` over a picture that fills it already.
     pub(crate) glass: bool,
+    /// The glass is acrylic: the game blurred behind it under the tile's tint
+    /// ([`super::color::acrylic::TILE`]), for a frame that stands on a page's ground; a
+    /// frame drawn over another glass (a card's, a panel's) keeps the plain fill.
+    pub(crate) acrylic: bool,
     /// Never move (a page whose [`crate::rarity_fx`] effects already animate it).
     pub(crate) still: bool,
     /// The UI's clock, for the sheen.
@@ -82,6 +86,7 @@ impl TierLook {
             hovered: false,
             dim: false,
             glass: true,
+            acrylic: false,
             still: false,
             seconds,
             flash: 0.0,
@@ -154,7 +159,27 @@ pub(crate) fn tier_frame(
     let step = tier_step(tier);
     let ink = if look.dim { 0.42 } else { 1.0 };
     let area = frame.rect(x, y, width, height);
-    if look.glass {
+    if look.glass && look.acrylic {
+        push(
+            canvas,
+            DrawCommand::Backdrop {
+                rect: area,
+                radius: radius * s,
+                tint: super::color::tint(super::color::acrylic::TILE),
+            },
+        );
+        // Lit by the pointer: a holo wash, lighter rather than darker over the scene.
+        if look.hovered {
+            push(
+                canvas,
+                DrawCommand::RoundedRect {
+                    rect: area,
+                    radius: radius * s,
+                    color: super::color::alpha(super::color::holo(), 0.07),
+                },
+            );
+        }
+    } else if look.glass {
         push(
             canvas,
             DrawCommand::RoundedRect {
@@ -166,6 +191,8 @@ pub(crate) fn tier_frame(
                 ),
             },
         );
+    }
+    if look.glass {
         // The thing chosen: a gold wash, the kit's colour for what is chosen, so a
         // Mythical frame (gold too) never passes for the choice.
         if look.chosen {
@@ -542,6 +569,49 @@ mod tests {
             commands(Rarity::Common, TierSize::Row, bare).len() + 1,
             commands(Rarity::Common, TierSize::Row, look).len()
         );
+    }
+
+    /// An acrylic frame lays one backdrop of the tile's tint where the plain one laid its
+    /// fill, lit holo under the pointer, and is the same frame otherwise; without glass it
+    /// lays none.
+    #[test]
+    fn an_acrylic_frame_lays_glass_for_its_fill() {
+        let backdrops =
+            |list: &[DrawCommand]| count(list, |c| matches!(c, DrawCommand::Backdrop { .. }));
+        for tier in TIERS {
+            for size in [TierSize::Tile, TierSize::Row] {
+                let plain = commands(tier, size, TierLook::at(0.0));
+                let acrylic = TierLook {
+                    acrylic: true,
+                    ..TierLook::at(0.0)
+                };
+                let glass = commands(tier, size, acrylic);
+                assert_eq!(backdrops(&plain), 0);
+                assert_eq!(backdrops(&glass), 1, "{tier:?} {size:?}");
+                assert_eq!(glass.len(), plain.len(), "{tier:?} {size:?}");
+                let DrawCommand::Backdrop { tint, .. } = glass[0] else {
+                    panic!("the glass first, under everything");
+                };
+                assert_eq!(
+                    tint,
+                    super::super::color::tint(super::super::color::acrylic::TILE)
+                );
+                let lit = commands(
+                    tier,
+                    size,
+                    TierLook {
+                        hovered: true,
+                        ..acrylic
+                    },
+                );
+                assert_eq!(lit.len(), glass.len() + 1, "the holo wash");
+                let bare = TierLook {
+                    glass: false,
+                    ..acrylic
+                };
+                assert_eq!(backdrops(&commands(tier, size, bare)), 0);
+            }
+        }
     }
 
     /// Mythical's sheen runs on the thing chosen alone, while crossing, and never on a still

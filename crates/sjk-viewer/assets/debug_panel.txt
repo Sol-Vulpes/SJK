@@ -37,6 +37,20 @@ test: Spectate and follow a player: the bar keeps the ping it had; a local game 
 test: Play a demo with cg_lagometer 1: no ping columns, red only for a dropped snapshot.
 note: The bar asks for no scores: it reads the replies the scoreboard or intermission ask for.
 
+[collection-glass]
+area: Menus & settings
+title: Collection glass: acrylic tiles and a finished Kybers page
+change: Hall tiles, Kybers tiles, list, filters and card, Inventory, Toys, Tags, Forge: glass.
+change: Kybers: the chosen tile rises in its tier's light; hover lifts it in its tier's colour.
+change: The kyber you wear glows gold from its foot; the second saber's in the line colour.
+test: Collection: the hall's tiles show the map blurred behind them; text easy to read.
+test: Kybers: arrows move the choice; the new tile rises smoothly, the old one settles.
+test: Hover tiles: each lifts with a ring of its tier's colour; Enter, Esc, Ctrl+Tab still work.
+test: V for the list: one glass pane under the rows; S sorts; the chips and search are glass.
+test: Theme cold (Settings > Interface): the same glass in navy; text still reads.
+test: r_drawTimings 1 on the Kybers wall: ui-backdrop stays small (about 0.03 ms or less).
+note: Rows inside a glass pane and pictures inside tiles keep plain fills: glass on glass.
+
 [secret-tier]
 area: Menus & settings
 title: Unique blades are now Secret blades, in red

@@ -976,7 +976,7 @@ impl Panel {
         );
     }
 
-    /// Tile `tile` (its place `index`) over `rect`: a dark glass card, its name and count,
+    /// Tile `tile` (its place `index`) over `rect`: an acrylic glass card, its name and count,
     /// its lines and its bar; the chosen one framed gold.
     fn tile(
         &mut self,
@@ -991,15 +991,31 @@ impl Panel {
         let token = TILE_BASE + index as u16;
         let chosen = index == self.hall_state.chosen;
         let hovered = self.ui.token_hovered(token);
-        let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
+        // Acrylic glass (18/11/2026): the scene behind the hall blurred under the glass's
+        // tint (lit for the chosen tile), the chosen washed gold, the hovered lit holo.
+        let _ = self.ui.draw_list_mut().push(DrawCommand::Backdrop {
             rect: frame.rect(x, y, width, height),
             radius: 16.0 * s,
-            color: if chosen {
-                color::alpha(color::glass_lit(), 0.94)
-            } else {
-                color::alpha(color::glass(), 0.86)
-            },
+            tint: color::alpha(
+                if chosen {
+                    color::glass_lit()
+                } else {
+                    color::glass()
+                },
+                color::acrylic::CARD,
+            ),
         });
+        if chosen || hovered {
+            let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
+                rect: frame.rect(x, y, width, height),
+                radius: 16.0 * s,
+                color: if chosen {
+                    color::alpha(color::gold(), 0.08)
+                } else {
+                    color::alpha(color::holo(), 0.06)
+                },
+            });
+        }
         let _ = self.ui.draw_list_mut().push(DrawCommand::Border {
             rect: frame.rect(x, y, width, height),
             radius: 16.0 * s,

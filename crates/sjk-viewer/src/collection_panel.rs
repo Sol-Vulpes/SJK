@@ -912,6 +912,9 @@ pub(crate) struct Panel {
     /// of them it showed.
     shader_first: usize,
     shader_lines: Vec<shaders::Line>,
+    /// The chosen tile's rise on the wall, and how far it has risen this frame (0 to 1).
+    shader_rise: shaders::Lift,
+    shader_lift: f32,
     shader_shown: usize,
     /// How the list orders its rows, and whether the blades' numbers showed last frame
     /// (their order is offered only then).
@@ -1142,6 +1145,8 @@ impl Panel {
             lab_stage_view: false,
             shader_first: 0,
             shader_lines: Vec::new(),
+            shader_rise: shaders::Lift::default(),
+            shader_lift: 1.0,
             shader_shown: 0,
             shader_sort: ShaderSort::default(),
             shader_numbers: false,

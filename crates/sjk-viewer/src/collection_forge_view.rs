@@ -640,10 +640,10 @@ impl Panel {
         let state = can(&offer, self.forge.purse());
         let held = matches!(state, Can::Owned | Can::Bought);
         let list = self.ui.draw_list_mut();
-        let _ = list.push(DrawCommand::RoundedRect {
+        let _ = list.push(DrawCommand::Backdrop {
             rect,
             radius: RADIUS * s,
-            color: color::alpha(color::space(), 0.9),
+            tint: color::tint(color::acrylic::CARD),
         });
         let _ = list.push(DrawCommand::GradientRect {
             rect,
@@ -962,10 +962,10 @@ impl Panel {
             let colour = tier.map_or(color::holo(), |tier| tier.colour);
             let name = crate::terms::say(tier.map_or(tier_id, |tier| tier.name));
             let rect = frame.rect(x, y, width, HOLOCRON_HEIGHT);
-            let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
+            let _ = self.ui.draw_list_mut().push(DrawCommand::Backdrop {
                 rect,
                 radius: RADIUS * s,
-                color: color::alpha(color::space(), 0.88),
+                tint: color::tint(color::acrylic::CARD),
             });
             let _ = self.ui.draw_list_mut().push(DrawCommand::GradientRect {
                 rect,
@@ -1529,6 +1529,7 @@ impl Panel {
             tier,
             kit::TierSize::Tile,
             kit::TierLook {
+                acrylic: true,
                 chosen,
                 hovered: chosen || hovered,
                 still: true,
@@ -1693,6 +1694,7 @@ impl Panel {
             tier,
             kit::TierSize::Row,
             kit::TierLook {
+                acrylic: true,
                 chosen,
                 hovered: chosen || hovered,
                 flash,
@@ -1876,10 +1878,10 @@ impl Panel {
         let [x0, y0, width0, height0] = DETAIL;
         let area = frame.rect(x0, y0, width0, height0);
         let tier = skin.tier;
-        let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
+        let _ = self.ui.draw_list_mut().push(DrawCommand::Backdrop {
             rect: area,
             radius: RADIUS * s,
-            color: color::alpha(color::space(), 0.84),
+            tint: color::tint(color::acrylic::CARD),
         });
         let _ = self.ui.draw_list_mut().push(DrawCommand::GradientRect {
             rect: frame.rect(x0, y0, width0, 260.0),
@@ -2600,10 +2602,10 @@ impl Panel {
         let [x0, y0, width0, height0] = DETAIL;
         let area = frame.rect(x0, y0, width0, height0);
         let shown = self.forge.fused.map_or(next, |skin| skin.tier);
-        let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
+        let _ = self.ui.draw_list_mut().push(DrawCommand::Backdrop {
             rect: area,
             radius: RADIUS * s,
-            color: color::alpha(color::space(), 0.84),
+            tint: color::tint(color::acrylic::CARD),
         });
         let _ = self.ui.draw_list_mut().push(DrawCommand::GradientRect {
             rect: frame.rect(x0, y0, width0, 260.0),

@@ -366,6 +366,9 @@ mod blade_stills_shots;
 #[path = "world_shot_collection_perf.rs"]
 mod collection_perf_shots;
 
+#[path = "world_shot_collection_glass.rs"]
+mod collection_glass_shots;
+
 #[path = "world_shot_blade_flicker.rs"]
 mod blade_flicker_shots;
 
