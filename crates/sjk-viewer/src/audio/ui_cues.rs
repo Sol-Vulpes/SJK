@@ -56,7 +56,7 @@ pub(crate) enum Cue {
     /// A New thing in the Collection was seen for the first time
     /// (`collection_reveal.rs`): a quiet blip.
     Reveal = 131_072,
-    /// The same for a Legendary, Mythical or Unique thing: a longer chime.
+    /// The same for a Legendary, Mythical or Secret thing: a longer chime.
     RevealRare = 262_144,
 }
 

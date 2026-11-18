@@ -275,7 +275,7 @@ mod tests {
         assert_eq!(console.text_value(SABER_SKIN_CVAR), Some("saber_void"));
     }
 
-    /// A Unique shader held (Sol's thank-you gifts, 25/10/2026) is offered first, the
+    /// A Secret shader held (Sol's thank-you gifts, 25/10/2026) is offered first, the
     /// rarest; one not held is not offered (none locked is).
     #[test]
     fn a_held_unique_shader_comes_first() {

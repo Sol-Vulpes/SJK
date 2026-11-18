@@ -179,12 +179,12 @@ colour-blind player too:
 | Rare | + the edge tinted the tier's colour and a soft glow from the bar |
 | Legendary | + corner brackets and a faint halo round the frame |
 | Mythical | + the full edge, lit inside too, the bar along the whole top, and a slow sheen crossing it now and then on the thing chosen alone (off with `ui_rarityEffects 0`) |
-| Unique | Outside the ladder (hand-given): its rose edge, an inner line of its own and its own mark |
+| Secret | Outside the ladder (hand-given): its red edge, an inner line of its own and its own mark |
 
 The thing chosen takes a gold wash over the glass (its page rings it gold), so a Mythical
 frame, gold itself, never passes for the choice. `kit::tier_mark` draws the tier's step
 beside its name as diamonds, one for Uncommon to four
-for Mythical (the holocron tiers' order) and none for Common, and Unique's SJK Symbols mark
+for Mythical (the holocron tiers' order) and none for Common, and Secret's SJK Symbols mark
 (U+E005), so the tier survives a colour-blind player, a dimmed thing not held and a picture in
 black and white. A holocron's or dormant kyber's tier and a card's rarity land on the same
 ladder (`kit::holocron_tier`, `kit::card_tier`). It frames the Inventory's rows and item
@@ -1802,7 +1802,7 @@ Holocrons tab's Shop, a blade card's Forge link) open that kind directly.
   the Kybers, Finishers, Tags and Cards tiles while some are New. Kybers: "14/166", down the
   left the blade worn, the New ones and then the others held (rarest first) as live
   strips (`swatch::strip`) with their names in their tiers' colours, as many as fit; down
-  the right each tier (Mythical to Common, Unique too while its chip shows) with held of
+  the right each tier (Mythical to Common, Secret too while its chip shows) with held of
   its total and a bar in its colour. Finishers: held of all, the one worn named large in
   its tier's colour over what it does, its tier's mark glowing at the right. Tags: the
   tag chosen in its picture (over its words in a tall tile), its name, tier and finish's
@@ -1916,14 +1916,14 @@ Holocrons tab's Shop, a blade card's Forge link) open that kind directly.
   Body ("soon", not offered yet). Under the line Owned (O), Chroma (C, the kybers that
   take the wearer's colour) and the search field (`/`, Ctrl+F) to the list's right
   edge; under them the tiers' strip: All, then each tier the player may see, the rarest
-  first (Unique's first of all, only for a player who holds one), each its mark and name
+  first (Secret's first of all, only for a player who holds one), each its mark and name
   in its colour, "2/12" held and a bar of that share; a click or T (Shift+T back) shows
   that tier alone, the one shown lit gold. The stock blade is always the first thing
   (its strip in the player's `color1`), then every blade skin, the rarest tier first
   (Mythical, Legendary, Rare, Uncommon, Common, the holocrons' tiers and colours; a
-  Unique kyber is never listed, found by the search, counted in "N of M owned", the
+  Secret kyber is never listed, found by the search, counted in "N of M owned", the
   Saber pill, the tab's count or the tally for a player who does not hold one,
-  [unlockables.md](unlockables.md#unique-kybers)). Since 29/10/2026 the player's
+  [unlockables.md](unlockables.md#secret-kybers)). Since 29/10/2026 the player's
   favourites stand first after the stock blade, under a gold "Favourites" heading of their
   own on the wall and in the list by tier (simply first in the list's other orders), a
   Favourites chip (Shift+F, after Chroma, only on a hub that keeps marks) shows them alone,
@@ -2421,7 +2421,7 @@ leaving a page stay quiet).
   Common), 600 ms (`TierLook::flash`). `ui_rarityEffects 0` leaves out the flash and the
   card's turn.
 - **Sound:** an interface cue under the cues' volume, `Cue::Reveal` (the ping's blip, at
-  0.35) or, for a Legendary, Mythical or Unique thing, `Cue::RevealRare` (the holocron's
+  0.35) or, for a Legendary, Mythical or Secret thing, `Cue::RevealRare` (the holocron's
   shimmer, at 0.5). Not tried in a game.
 
 ### Empty states
@@ -2460,7 +2460,7 @@ takes no input.
 | --- | --- | --- |
 | Medal | `Medal::how_to_get` (given by the SJK team, and for what) | the blade it brings while held; "Yours: given dd/mm/yyyy" or "Not given to you yet" |
 | Achievement | its goal | who counts it (SJK in matches, or the hub); "Unlocked dd/mm/yyyy" or "n of goal so far" |
-| Kyber | the stock blade is everyone's; a blade skin's `how_to_get` | its tier; "Yours since dd/mm/yyyy", or "Not yours yet" (try it on here), or why holdings are not known (never a Unique one the player lacks); then a line for each of its marks, what it means ([Marks](#marks)) |
+| Kyber | the stock blade is everyone's; a blade skin's `how_to_get` | its tier; "Yours since dd/mm/yyyy", or "Not yours yet" (try it on here), or why holdings are not known (never a Secret one the player lacks); then a line for each of its marks, what it means ([Marks](#marks)) |
 | Star, padlock, Favourites chip, Mark all seen | what a favourite, a lock, the chip and New are, kept where | whether the kyber chosen is starred or locked and the key that changes it; a padlock on a kyber not held says it cannot be locked |
 | Toy | everyone's, and where to light it | "Yours" |
 | Card (a binder tile) | from opening holocrons: how many holocrons found hold a card of its rarity ([loot table](holocrons.md#loot-table)), one of how many of that rarity | its rarity, kind and set, no number (a sealed tile: picked when revealed); the copies by finish and edition and when the first was found, or "Not found yet" |
@@ -3212,7 +3212,7 @@ group in the script (`SYMBOLS`) and gets its name in `symbols.rs`.
 | U+E002 | octagon with one upright bar | Rare |
 | U+E003 | octagon with a cross round a core | Legendary |
 | U+E004 | the Legendary mark in a second, outer octagon | Mythical |
-| U+E005 | Mythical's two octagons round a solid four-point star | Unique (25/10/2026) |
+| U+E005 | Mythical's two octagons round a solid four-point star | Secret (25/10/2026, named Unique until 18/11/2026) |
 | U+E010 | a card's outline | Normal finish |
 | U+E011 | a card with two slanting bands | Holo finish |
 | U+E012 | a card with a sun at its heart | Solar finish |

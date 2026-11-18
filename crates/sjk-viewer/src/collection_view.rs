@@ -67,7 +67,7 @@ pub(super) fn counts(inputs: &Inputs<'_>) -> [Count; 10] {
             .filter(|skin| inputs.holdings.unlock(skin.id).is_some())
             .count()
     });
-    // Out of the shaders the player sees: an unheld Unique one is not counted.
+    // Out of the shaders the player sees: an unheld Secret one is not counted.
     let shaders_shown = inputs.holdings.listed_count();
     [
         Count {

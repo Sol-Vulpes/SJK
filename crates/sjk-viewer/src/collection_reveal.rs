@@ -5,7 +5,7 @@
 //! then, [`crate::console::collection_panel::StageWish::held_off`]), a card turns over to
 //! face the player, and every thing's tier frame flashes once in the tier's colour (none
 //! with `ui_rarityEffects 0`). A quiet interface cue goes with it, a longer one for a
-//! Legendary, Mythical or Unique thing ([`cue_for`]).
+//! Legendary, Mythical or Secret thing ([`cue_for`]).
 //!
 //! Only a thing New when it is seen reveals itself, once: browsing things already seen,
 //! Mark all seen (N) and leaving a page stay quiet.
@@ -125,7 +125,7 @@ pub(crate) fn flash_at(t: f32) -> f32 {
 /// Legendary and above.
 pub(crate) fn cue_for(tier: Rarity) -> Cue {
     match tier {
-        Rarity::Legendary | Rarity::Mythical | Rarity::Unique => Cue::RevealRare,
+        Rarity::Legendary | Rarity::Mythical | Rarity::Secret => Cue::RevealRare,
         _ => Cue::Reveal,
     }
 }
@@ -190,7 +190,7 @@ mod tests {
         assert_eq!(cue_for(Rarity::Rare), Cue::Reveal);
         assert_eq!(cue_for(Rarity::Legendary), Cue::RevealRare);
         assert_eq!(cue_for(Rarity::Mythical), Cue::RevealRare);
-        assert_eq!(cue_for(Rarity::Unique), Cue::RevealRare);
+        assert_eq!(cue_for(Rarity::Secret), Cue::RevealRare);
         let mut reveals = Reveals::default();
         reveals.start(Kind::Kyber, &["saber_sun"], Rarity::Mythical, 0, true);
         assert_eq!(reveals.ignitions(), 1);

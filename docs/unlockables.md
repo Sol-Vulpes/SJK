@@ -37,15 +37,15 @@ fifteen choices no longer fit. Seen in off-screen GPU renders on duel6 (world sh
 | --- | --- |
 | Who sees a look | Every SJK player on the same game server, through the hub. |
 | Who may wear an unlockable | Only a key the hub lists it for. The hub refuses to relay a look whose blade skin the key does not own (`not_unlocked`). |
-| How one is unlocked | The hub operator or staff grant it by hand (Staff page, operator command), and since 10/10/2026 a medal brings one while held: Bug Hunter the Glitch, Tester the Hologram, Contributor the Runic blade ([Medal shaders](#medal-kybers)). Achievements granting them are an idea for later, with harder goals than today's. Since 17/10/2026 holocrons drop every shader but the medals' ([Holocron shader drops](#holocron-kyber-drops)). Since 25/10/2026 the Unique ones come only by hand, Sol's thank-you gifts ([Unique shaders](#unique-kybers)). |
+| How one is unlocked | The hub operator or staff grant it by hand (Staff page, operator command), and since 10/10/2026 a medal brings one while held: Bug Hunter the Glitch, Tester the Hologram, Contributor the Runic blade ([Medal shaders](#medal-kybers)). Achievements granting them are an idea for later, with harder goals than today's. Since 17/10/2026 holocrons drop every shader but the medals' ([Holocron shader drops](#holocron-kyber-drops)). Since 25/10/2026 the Secret ones come only by hand, Sol's thank-you gifts ([Secret shaders](#secret-kybers)). |
 | How a look travels | Stored on the key's live claim, listed in presence for players who arrive later, and sent through the feed as a live event when it changes. |
 | Illuminate | Free for everyone, a toy (`toy_illuminate`); its lit state is part of the look so others see the holocron. |
 | Toys in the look | Since 16/10/2026 a look lists the toys out that others draw (`toys`, ids; the [cardboard box](client.md#cardboard-box)'s is `cardboard_box`, [Order 66](client.md#order-66)'s `order66`, the [Hax](client.md#hax)'s `hax`, `hax_away` when its trap holds while away, since 26/10/2026 the [Monitor](client.md#monitor)'s `monitor` while its switch is on, so other clients foresee its hits, and since 30/10/2026 the [Banana peel](client.md#banana-peel)'s `banana` while it is on), sent only when one is out, so older hubs see the look they know. The hub takes up to 32 toy ids since 30/10/2026 (8 before, and a hub from before refuses a look listing more, as `bad_look`). A client draws the toys it knows (`looks::TOYS`) and ignores the rest. Free for everyone, like Illuminate. |
 | Feed with chat off | The feed reads while the player is on a game server whatever `cl_sjkChat` says (chat stays hidden); in the menus it reads only with chat on. |
-| Choosing | The Collection's Kybers tab (SJK UI look; the Unlockables page until 10/10/2026) lists every blade skin, owned or locked (a Unique one only to its holders), previews the chosen one on the player's own saber and equips owned ones; the Profile screen's Saber tab offers the owned blade skins too (10/10/2026); `cg_saberSkin` holds the choice. Since 23/10/2026 the Saber tab's Sounds row chooses the saber sounds apart from the blade (`cg_saberSounds`: follow it, stock, or an owned shader's; [Saber sounds](#saber-sounds)). |
+| Choosing | The Collection's Kybers tab (SJK UI look; the Unlockables page until 10/10/2026) lists every blade skin, owned or locked (a Secret one only to its holders), previews the chosen one on the player's own saber and equips owned ones; the Profile screen's Saber tab offers the owned blade skins too (10/10/2026); `cg_saberSkin` holds the choice. Since 23/10/2026 the Saber tab's Sounds row chooses the saber sounds apart from the blade (`cg_saberSounds`: follow it, stock, or an owned shader's; [Saber sounds](#saber-sounds)). |
 | Art (looks, sounds) | SJK's own, all rights reserved, not under the code's GPLv2: kept in the hub's private repository and served by the hub to registered SJK keys as packs. The code that draws it stays open and generic: no skin's values, sounds or pictures are in this repository or its history to come. |
 | Delivery | The identity service downloads the hub's packs into `assets/` beside `identity.key` (at start once registered, then every 6 hours, only when a pack's SHA-256 changed); the viewer mounts every cached pack at start and a new one at once, below the game data, so a PK3 with the same paths replaces their files. A cached pack mounts with the identity off too. |
-| Tiers | Every kyber has a tier: Common (white, 14/10/2026: filler that holocrons of any tier may drop; there is no Common holocron), the holocrons' four (Uncommon, Rare, Legendary, Mythical), their names and colours (10/10/2026, Sol's tiers; [Tiers](#tiers)), and Unique (rose, 25/10/2026: hand-given, seen only by its holders; [Unique shaders](#unique-kybers)). |
+| Tiers | Every kyber has a tier: Common (white, 14/10/2026: filler that holocrons of any tier may drop; there is no Common holocron), the holocrons' four (Uncommon, Rare, Legendary, Mythical), their names and colours (10/10/2026, Sol's tiers; [Tiers](#tiers)), and Secret (red; Unique in rose from 25/10/2026 to 18/11/2026: hand-given, seen only by its holders; [Secret shaders](#secret-kybers)). |
 | Format | A blade skin is a JSON file, `skins/blades/<unlock id>.bladeskin`, holding every parameter of the generic shading, its trail, light and sound paths. The format is documented here; the files are art. |
 
 ## Catalogue
@@ -243,8 +243,8 @@ Blades 170 to 299, Creyon's Star Wars round (PR #370, merged 06/11/2026), do not
 | 164 | `saber_batuu_dusk` | Batuu Dusk blade | Common | Creyon | yes |
 | 165 | `saber_alderaan_velvet` | Alderaan Velvet blade | Common | Creyon | yes |
 | 166 | `saber_varykino_blossom` | Varykino Blossom blade | Mythical | Sol | yes |
-| 167 | `saber_thousand_cranes` | Thousand Cranes blade | Unique | Sol | no |
-| 168 | `saber_hearth` | Hearth blade | Unique | Sol | no |
+| 167 | `saber_thousand_cranes` | Thousand Cranes blade | Secret | Sol | no |
+| 168 | `saber_hearth` | Hearth blade | Secret | Sol | no |
 | 169 | `saber_mystery` | Mystery blade | Legendary | Sol | no |
 | 170 | `saber_vulptex_crystalfire` | Vulptex Crystalfire blade | Mythical | Creyon | no |
 | 171 | `saber_zeffo_thunderchorus` | Zeffo Thunderchorus blade | Mythical | Creyon | no |
@@ -377,7 +377,7 @@ Blades 170 to 299, Creyon's Star Wars round (PR #370, merged 06/11/2026), do not
 | 298 | `saber_ansion_plains` | Ansion Plains blade | Common | Creyon | no |
 | 299 | `saber_sernpidal_dust` | Sernpidal Dust blade | Common | Creyon | no |
 | 300 | `saber_malachor_rose` | Malachor Rose blade | Mythical | Creyon | no |
-| 301 | `saber_doom` | DOOM blade | Unique | Sol | no |
+| 301 | `saber_doom` | DOOM blade | Secret | Sol | no |
 
 A client ignores an id it does not know. Both catalogues' tests pin this exact list
 (ids, names, order), so a change to one fails until the other follows.
@@ -669,7 +669,7 @@ the hub's, described in its `scripts/blade_skin_sounds.py` and `saber_skin_sound
   a part its wearer may switch off. It borrows Royal Naboo's sounds
   (the skins pack is near its 16 MiB cap). Not built from her idea: the wooden hilt, which
   waits for custom hilts.
-- **Thousand Cranes** (25/10/2026, blade 167, Sol's, the first [Unique](#unique-kybers) blade; a
+- **Thousand Cranes** (25/10/2026, blade 167, Sol's, the first [Secret](#secret-kybers) blade; a
   signature, `blade_signatures/thousand_cranes.glsl`): a thousand paper cranes (senbazuru), the old
   Japanese gift of thanks and good wishes, for a blade Sol gives by hand. A warm silk-white
   blade with the fine fibres of washi paper in its light (not a chroma), a red silk thread
@@ -688,7 +688,7 @@ the hub's, described in its `scripts/blade_skin_sounds.py` and `saber_skin_sound
   airy: a warm hum, paper-wing swings), are in the hub's skins pack. Kintsugi was the
   first idea, but the Healed Kyber (106) already is Creyon's Kintsugi; nothing in the
   catalogue had cranes.
-- **Hearth** (25/10/2026, blade 168, Sol's, the second [Unique](#unique-kybers) blade; a
+- **Hearth** (25/10/2026, blade 168, Sol's, the second [Secret](#secret-kybers) blade; a
   signature, `blade_signatures/hearth.glsl`): a home fire. A warm amber blade of glowing
   coals, their hearts bright and the cracks between them dark red, each breathing on its
   own, with embers rising off it (its file's `embers`); it kindles up from the hilt as it
@@ -704,7 +704,7 @@ the hub's, described in its `scripts/blade_skin_sounds.py` and `saber_skin_sound
   month, the blaze at six, the stones at a year); Sol dropped that the same day, the stages
   too alike to tell apart, so every holder has it whole (the growth code is on the branch
   `personal/hearth`, commit `c8e8bf26`).
-- **DOOM** (13/11/2026, blade 301, Sol's, the third [Unique](#unique-kybers) blade; a
+- **DOOM** (13/11/2026, blade 301, Sol's, the third [Secret](#secret-kybers) blade; a
   signature, `blade_signatures/doom.glsl`). Sol: "a special shader, unique tier, kinda
   crazy, the DOOM shader (always written caps and in red), a red saber with death aura
   effect, in red and black maybe, thunder, particles". Its name is "DOOM blade", in
@@ -723,7 +723,7 @@ the hub's, described in its `scripts/blade_skin_sounds.py` and `saber_skin_sound
   [rendering.md](rendering.md#falling-blossoms)). The doom gathers as it lights and dies as
   it goes out. Its own sounds, `sound/sjk/sol/doom/` (a dark growl beating like a heart,
   lightning's crackle in it, a thunderclap at ignition), are in the hub's skins pack. Alpha
-  edition, as the other Unique blades (Beta is Creyon's round). Not tried in a game; seen in world shots only.
+  edition, as the other Secret blades (Beta is Creyon's round). Not tried in a game; seen in world shots only.
 - **Speed of the round** (1/11/2026, updates 17 and 18): the round's blades looked like slow motion beside Sol's (their time factors had a median of 0.4 against 1.1). A blade's motion now runs at its own `@speed` (`uTime`), tuned per blade; its cycles and moments keep real time (`uClock`), so a period named in a description is in real seconds. A woven bolt's writhing speed followed the storm's phase and raced, the bug update 16 fixed elsewhere; it is steady now. Update 18 also reworked Trayus (straight point, fine outline, scything arcs, spectral blades), Korriban (cursed flames as real fire), Zeffo (blue to silver), Rakata (six Star Forge suns, a visible god ki body, forked threads), Dromund Kaas (slimmer effects, a smooth run of colour), Bendu (a seam and two winding currents), Kalevala (beskar shards, black lightning) and Ruusan (a dawn haze). Update 19 replaced the bare look of the Mythicals with something each blade is: Zeffo a storm in glass with tomb stones, Trayus with orbiting scythes, Dromund Kaas with devoured worlds, Kalevala a true sword whose shards form a crown, Ruusan with its thought bomb, Tund with its mirage, Ossus with drifting pages, Atollon with gathered lights. Tund went to Legendary; Haruun Kal and Lira San to Rare; Atollon, Ossus and Utapau to Mythical. Update 20, after Creyon named Tund, Prism, Unstable, Neon, Abyssal, World Shift and the beskar blades as what he means: the blade itself must be the effect. Moon is rock, Zeffo a standing wave, Dromund Kaas flesh and veins, Ossus one brush stroke; Crait no longer has a red front climbing it, and Wobani's block of mist is gone. Update 21: `halo(d, w)` is 1 for every negative `d`, so a wave written `halo(y - front, w)` lit everything below its front and snapped back when it wrapped, the sudden resets Creyon saw; every round blade takes `abs()` there now. New blades in place of Ziost Dark Anvil and Nur Shadowflame: Tatooine Krayt Spine and Byss Force Storm. Nihilus (a wound in the blade, no mask at his wish), Zeffo, Vardos Phrik and Nightsister Ichor were rebuilt; Garel Corona went to Common and Trandosha Scorekeeper to Rare. Update 22: Lotho Minor Furnace and Vulptex Spiritfire became Lotho Minor Lavaglass and Vulptex Crystalfire; Hyperlane became a new blade named Fondor Mass Driver under its old unlock id `saber_hyperlane`, so those who own it keep it; Nihilus, Rodia and Polis Massa were rebuilt. rxRibbon stays on Moraband, Bendu, Lehon, Utapau and Tund; 35 other blades draw their paths with `xBeads`, `xDust`, `xComets` or `xPuffs`. Crooked lines writhe with `xZigT` instead of jumping to a new random path. Peridea and Zonama went to Legendary, Nightsister Ichor to Mythical with RGB, and the round's Uncommons have no RGB. Update 23, each Legendary a body of its own: Kuat a ship on the slip, Nar Kreeta racing bars, Wroshyr bark, Iktotch crossing ripples, Kowak a silk cocoon, Mimban bubbling mud. Update 24 (Creyon's last round of the list): seen along the blade, as its wearer does, short zigzags and lumps fold into steps that look like tears (Zeffo's "glitching thunder"), so what runs along a round blade now stays long and slow. Sixty-odd Commons, Uncommons, Rares and Legendaries that were a bright rod with dust became a material of their own (slate, pewter, amber, coral, silk, hide, kolto, a night sky): the blade itself is the effect, written from a short recipe. Ossus Scroll lost its black ink for gold, Utapau Whirlwind became a tornado with no bright strands, Nihilus Hunger lost its arms and eats the light round it, Crait Salt Flats became a chroma, Atollon Gathering a Legendary. Trail styles 28 to 33 are new (Bone, Hunger, Hex, Gilded, Gale, Salt) and style 23 is now Byss's violet storm. Every round blade's file now has the colours its header names, which is what the trail and the Collection icon read. The round's sounds (not in the repository) got a swing made of each blade's own material. Update 25 (Creyon: beside the Legendaries already in the client the new ones looked cheap and bare): a round blade is a bright saber again, with its material showing round a white heart and large effects round it that read from afar, as Reactor's or Big Bang's do; effects rise with the blade as it lights and sink as it goes out; tips are round, not pointed (the Moon keeps its point); nothing small sits in a blade (Kuat's lattice, Iktotch's beads, Vardos's discs, Polis Massa's rocks and Byss's wreckage went); Zeffo's sideways forks, which looked like cuts, went; Wellspring Triad and Kuat Shipwright became chromas. Update 26: `blade_place` takes a place's side from the ray and the axis, not the quad's `blade.x` (under a close perspective a slice of the blade drew mirrored; pixel-identical otherwise); Rakata's trail follows its surge; a round blade's body starts softly in the emitter.rs`, `pipeline_cache/` in the player's folder, one file a blade, Vulkan only) and those not yet there are compiled one by one in the background, so a blade compiles once. Update 27 (Creyon's list after testing): extras on Trayus (Energy aura), Chirrut (cloth, motes always faintly seen), Fondor Mass Driver, Wroshyr and Kalevala; Nihilus's dying worlds slower; the Moon's purple at its ends removed; effects start a little above the hilt. Update 28: Trayus Scythe's run is straight and only its tip curves; Wayland, Sullust, Iridonia, Atollon, Crait, Scipio and Wobani had the stock glow they lean on calmed (it wobbled quickly); the Moon's body takes a chroma's colour, and its shatter costs less (fewer pieces, and a ray skips those far from its height).
 - **Creyon's Star Wars round** (29/10/2026, blades 170 to 269, `feat/blade-round-anime`): a
   hundred blades on Creyon's ideas, every one named for a place, a person or a piece of Star Wars
@@ -1042,8 +1042,8 @@ Built.
   `saberskin second none` (the stock blade) and `saberskin second same` set it, and so does
   the Collection's Kybers tab through its target switch ([Kybers tab](#kybers-tab)).
 - `saberskin` ([saber_skin_command.rs](../crates/sjk-viewer/src/saber_skin_command.rs))
-  alone lists the blade skins the player may see (an unheld Unique one is neither listed
-  nor taken by id or number, [Unique kybers](#unique-kybers)): id, name, owned (since
+  alone lists the blade skins the player may see (an unheld Secret one is neither listed
+  nor taken by id or number, [Secret kybers](#secret-kybers)): id, name, owned (since
   when) or locked (how to get it), which one is worn or chosen, and why ownership is not
   known when it is not (identity off, no hub, waiting). `saberskin <id>` (case ignored, stored as the
   catalogue's id) or `saberskin none` sets `cg_saberSkin`; a locked skin is set all
@@ -1269,8 +1269,8 @@ too). Every blade skin has a tier (`Unlockable::tier`, `unlockables::Rarity` in
 [unlockables.rs](../crates/sjk-viewer/src/unlockables.rs)), one of the holocrons' four,
 with the holocron tier's name (`Tier::label`) and colour
 ([holocrons.rs](../crates/sjk-viewer/src/holocrons.rs)) so a Rare kyber and a Rare
-holocron look alike, or Common (14/10/2026) or Unique (25/10/2026, rarer than Mythical
-and no holocron's, [Unique kybers](#unique-kybers)). The table below is the first
+holocron look alike, or Common (14/10/2026) or Secret (25/10/2026, rarer than Mythical
+and no holocron's, [Secret kybers](#secret-kybers)). The table below is the first
 placing; the catalogue's table above has today's:
 
 | Tier | Kybers |
@@ -1313,7 +1313,7 @@ moment (no state, no randomness). Each tier up adds to the one under it:
 | Rare | the frame's glow breathes: a soft pulse every 3 seconds |
 | Legendary | the breath, and a slanted sheen sweeping left to right (1.4 seconds of every 4, each frame at its own moment so a page does not flash at once) |
 | Mythical | the sheen, a bright spark running round the border with a short tail (a lap in 3.2 seconds), and on cards and tiles four faint motes rising inside |
-| Unique | Mythical's, in Unique's rose (25/10/2026, Sol: "mythical level of effects"; `Rarity::effect_rank`) |
+| Secret | Mythical's, in Secret's red (25/10/2026, Sol: "mythical level of effects"; `Rarity::effect_rank`) |
 
 - Sizes: `Full` (the Collection's cards, the Holocrons tab's tier rows) has all of it;
   `Small` (the rack's swatch frames, the detail's tier pill, the Saber tab's swatches)
@@ -2018,8 +2018,8 @@ Profile page's See the collection) open it on its own:
 - a wall of tiles under a heading to each tier, or a list whose column heads sort it
   (25/10/2026, the Collection revamp: [Collection](sjk-ui.md#collection) has the layout,
   keys and `ui_shaderList`): the stock blade (in the player's
-  `color1`), then every blade skin the player may see (a Unique one only while they
-  hold it, [Unique kybers](#unique-kybers)), the rarest [tier](#tiers) first, with a
+  `color1`), then every blade skin the player may see (a Secret one only while they
+  hold it, [Secret kybers](#secret-kybers)), the rarest [tier](#tiers) first, with a
   live swatch framed in its tier's colour. An owned skin's swatch shows the blade as the game draws
   it (Creyon's round 13, 19/10/2026: the drawings did not look like the blades): every
   skin a swatch shows is drawn live by the blade renderer, its own pipelines for a
@@ -2169,7 +2169,7 @@ Profile page's See the collection) open it on its own:
 - with the identity off, no hub or no answer yet, the tab says so and no skin is
   owned.
 
-The Staff page lists every unlockable for the player found (the Unique ones too), with
+The Staff page lists every unlockable for the player found (the Secret ones too), with
 Unlock (sending the note field's text) and Relock ([identity.md](identity.md#staff)), two to a row of 36
 pixels (10/10/2026) so the whole catalogue (fourteen) fits above the keys, each with the
 one button that applies.
@@ -2324,10 +2324,10 @@ deployed when built, nothing tried in the game.
 
 <a id="unique-shaders"></a>
 
-## Unique kybers
+## Secret kybers
 
 Built 25/10/2026 (Sol's decision), branch `personal/unique-tier`: a tier above Mythical,
-**Unique** (rose, `#FF6B9A`; `Rarity::Unique` in
+**Secret** (red, `#E82C3A`; named Unique, in rose `#FF6B9A`, until 18/11/2026; `Rarity::Secret` in
 [unlockables.rs](../crates/sjk-viewer/src/unlockables.rs)), for the personal thank-you
 gifts Sol gives by hand to people who helped SJK. The first is the **Thousand Cranes**
 blade (167), the second the **Hearth** (168), the third **DOOM** (301, 13/11/2026). The
@@ -2342,10 +2342,10 @@ hub names the tier `unique` (its side is built apart).
 - **Given by hand only:** granted at the hub like any grant by hand (the Staff page, the
   operator's command), with the note Sol writes. Never found, dropped, sold, traded or
   crafted: no holocron, dormant kyber, card or medal brings one (`droppable` is false,
-  so `economy::in_trade` is too), the economy's tables have no Unique column
+  so `economy::in_trade` is too), the economy's tables have no Secret column
   (`shatter_yield` and `craft_cost` give 0) and no shop offers one. Its "How to get it"
   reads "A personal thank-you from Sol." (`unlockables::PERSONAL_THANKS`).
-- **Seen only by its holders:** `Unlockable::hidden_unless_held` is true for a Unique
+- **Seen only by its holders:** `Unlockable::hidden_unless_held` is true for a Secret
   one, and `Holdings::shows` lets it through only while the player's own profile lists
   it. Everything a player reads of the catalogue goes through it (`Holdings::listed`,
   `Holdings::listed_count`), so to anyone else it is never listed or counted: the
@@ -2355,7 +2355,7 @@ hub names the tier `unique` (its side is built apart).
   Profile's "N of M kybers owned", the Saber tab's Blade and Sounds rows, and
   `saberskin` (not listed; its id or number answers "No blade skin"). These read each
   frame's holdings, so a gift shows at once and goes when taken back, with its chip and
-  a filter on it. Its holder sees it first (the rarest), counted, with a Unique chip
+  a filter on it. Its holder sees it first (the rarest), counted, with a Secret chip
   after Mythical's.
 - **Still shown:** the Staff page lists every unlockable, so staff can grant and take it
   back; `debug_collectibles` shows it as held to staff on their own PC; and a player
@@ -2363,9 +2363,9 @@ hub names the tier `unique` (its side is built apart).
   player card naming it.
 - **Its look:** the rarity mark U+E005 in SJK Symbols (Mythical's two frames round a
   solid four-point star, [sjk-ui.md](sjk-ui.md#symbols)) and Mythical's rarity effects
-  in its rose ([Rarity effects](#rarity-effects)).
+  in its red ([Rarity effects](#rarity-effects)).
 
-Verified by unit tests: the tier's name, colour, mark and effects; an unheld Unique blade
+Verified by unit tests: the tier's name, colour, mark and effects; an unheld Secret blade
 neither listed, counted, searched nor chipped on the Kybers tab, held one listed first,
 counted and chipped, and its chip gone once taken back; the Saber tab, `saberskin` and
 the economy. Not tried in the game; the hub's side is not part of this change.
@@ -2401,15 +2401,15 @@ instead of found). The same day Sol's card, SJK Alpha 000, began to bring the Su
 for as long as the player holds a copy ([cards.md](cards.md#faces-and-the-first-set),
 `grants`, `unlockables::CARD_BLADES`): for a few hours it was the only way, then Sol made
 it a second way besides holocrons. So 293 of the 299 kybers drop (the Varykino Blossom, 166, since 21/10/2026; Creyon's anime round from 170, since 29/10/2026), all but Glitch, Hologram
-and Runic (their medals), the Thousand Cranes, the Hearth and DOOM (Unique, given by hand,
-25/10/2026 and 13/11/2026) and the Mystery blade (169, only from mystery boxes); the test pins `droppable` exactly when no medal brings it and it is not Unique.
+and Runic (their medals), the Thousand Cranes, the Hearth and DOOM (Secret, given by hand,
+25/10/2026 and 13/11/2026) and the Mystery blade (169, only from mystery boxes); the test pins `droppable` exactly when no medal brings it and it is not Secret.
 
 Duplicates show in the Collection's Kybers tab (14/10/2026): the rack's state line, the
 grid card's state and the big card's pill read "Yours x2" (or "Worn x2"), the card's
 owned line and the hover card say ", 2 held". The tab's headline still counts kybers
-owned out of the catalogue the player sees ("5 of 23 owned"; an unheld Unique kyber is
+owned out of the catalogue the player sees ("5 of 23 owned"; an unheld Secret kyber is
 not counted), a duplicate counting once. The tab has a filter
-since 14/10/2026 for a catalogue near 200: chips for All and each tier (Unique's only for
+since 14/10/2026 for a catalogue near 200: chips for All and each tier (Secret's only for
 a player who holds one; T and Shift+T step through them), Owned (O), the edition (E,
 since 06/11/2026, [Alpha and Beta](#alpha-and-beta-the-collections)) and a search field
 (/ or Ctrl+F; Enter or Esc leave it, Esc first clears it) that matches a name or a tier's word; the stock blade stays first,
@@ -2431,8 +2431,8 @@ copy a request (the last copy too on a hub that says `shatter_last`, never a med
 card's), or every duplicate at once; shards craft any kyber of the trade the player does
 not hold and buy the day's four offers. Only kybers of the *trade* take part: droppable
 and brought by no medal (`economy::in_trade`, read from the catalogue's `droppable` and
-`Medal::blade`, as the hub reads its own), so Glitch, Hologram, Runic and the Unique ones
-([Unique kybers](#unique-kybers)) never do, and a kyber made droppable joins by itself.
+`Medal::blade`, as the hub reads its own), so Glitch, Hologram, Runic and the Secret ones
+([Secret kybers](#secret-kybers)) never do, and a kyber made droppable joins by itself.
 All of it is the Collection's Forge tab ([cards.md](cards.md#the-forge)); its requests are in
 [economy.rs](../crates/sjk-viewer/src/economy.rs):
 

@@ -37,6 +37,14 @@ test: Spectate and follow a player: the bar keeps the ping it had; a local game 
 test: Play a demo with cg_lagometer 1: no ping columns, red only for a dropped snapshot.
 note: The bar asks for no scores: it reads the replies the scoreboard or intermission ask for.
 
+[secret-tier]
+area: Menus & settings
+title: Unique blades are now Secret blades, in red
+change: The hand-given tier is called Secret; its colour, frame, chip and effects turn red.
+test: Collection > Kybers with a Secret blade held: Secret chip first, red mark and red frame.
+test: Wear it: Mythical-level effects in red; hover card and Inventory say Secret.
+test: Without one held: no Secret chip, nothing listed, totals unchanged.
+
 [ui-hue]
 area: Menus & settings
 title: Theme: warm, cold or any hue for the SJK UI

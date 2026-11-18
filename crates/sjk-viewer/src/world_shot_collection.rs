@@ -162,7 +162,7 @@ fn duel6_sjk_collection() {
             );
             gpu.illuminate.set_on(false);
             // A locked one, previewed on the saber. Rows are counted as a player holding no
-            // Unique shader sees the list (the shots below hold none).
+            // Secret shader sees the list (the shots below hold none).
             gpu.profile_hub_show_for_shot(Tab::Shaders);
             let storm = 1 + crate::unlockables::Holdings::Known(&[])
                 .listed()

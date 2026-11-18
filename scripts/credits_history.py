@@ -53,13 +53,14 @@ PEOPLE = {
 # The person a piece made only of Claude's commits belongs to.
 DEFAULT_OWNER = "Sol"
 # Topics kept off the credits page, with every commit their merge into main brought:
-# Sol's hand-given Unique gifts, which show only to their holders (docs/sjk.md
-# "Credits", docs/unlockables.md "Unique shaders").
+# Sol's hand-given Secret gifts (Unique until 18/11/2026), which show only to their
+# holders (docs/sjk.md "Credits", docs/unlockables.md "Secret kybers").
 QUIET = {
     "personal/thousand-cranes",
     "personal/hearth",
     "personal/hearth-full",
     "personal/doom-blade",
+    "personal/secret-tier",
 }
 
 HEADER = """\
