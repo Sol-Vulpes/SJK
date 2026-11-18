@@ -1281,7 +1281,7 @@ impl Panel {
                 .iter()
                 .filter(|unlockable| holdings.unlock(unlockable.id).is_some())
                 .count();
-            // Out of the shaders the player sees: an unheld Unique one is not counted.
+            // Out of the shaders the player sees: an unheld Secret one is not counted.
             (
                 format!("{owned} of {} kybers owned", holdings.listed_count()),
                 30.0,

@@ -199,7 +199,7 @@ fn gift(token: u16) -> bool {
 }
 
 /// Whether staff who are not the creator may give `unlockable`: only what holocrons can
-/// bring anyway (`droppable`). A Unique one, a medal's blade or a blade not opened to
+/// bring anyway (`droppable`). A Secret one, a medal's blade or a blade not opened to
 /// drops yet stays the creator's to give (the hub refuses it, `creator_only`).
 fn staff_may_unlock(unlockable: &crate::unlockables::Unlockable) -> bool {
     unlockable.droppable

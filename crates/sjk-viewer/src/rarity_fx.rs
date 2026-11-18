@@ -7,7 +7,7 @@
 //!   ([`SHEEN_SECONDS`]).
 //! - Mythical: the sheen, a bright spark running round the border with a short tail
 //!   ([`SPARK_SECONDS`]), and on the larger frames a few faint motes rising inside.
-//! - Unique (25/10/2026, Sol's thank-you gifts): Mythical's, in Unique's rose.
+//! - Secret (25/10/2026, Sol's thank-you gifts): Mythical's, in Secret's red.
 //!
 //! A locked item keeps only a faint breath, so what the player holds stands out. With
 //! `ui_rarityEffects 0` nothing here draws: the callers' static tier frames stay.
@@ -431,7 +431,7 @@ mod tests {
             Rarity::Rare,
             Rarity::Legendary,
             Rarity::Mythical,
-            Rarity::Unique,
+            Rarity::Secret,
         ] {
             for owned in [true, false] {
                 for size in [Size::Full, Size::Small, Size::Tiny] {
@@ -473,7 +473,7 @@ mod tests {
         assert!(count(Rarity::Legendary) > count(Rarity::Rare));
         assert!(count(Rarity::Mythical) > count(Rarity::Legendary));
         assert_eq!(
-            count(Rarity::Unique),
+            count(Rarity::Secret),
             count(Rarity::Mythical),
             "Mythical's show"
         );
@@ -564,7 +564,7 @@ mod tests {
             Rarity::Rare,
             Rarity::Legendary,
             Rarity::Mythical,
-            Rarity::Unique,
+            Rarity::Secret,
         ] {
             let drawn = commands(Item::of(tier, false, Size::Full), RECT, 1.0, 0.4);
             assert_eq!(drawn.len(), 2, "{tier:?}");
@@ -630,9 +630,9 @@ mod tests {
         }
         let mythical = Item::of(Rarity::Mythical, true, Size::Full);
         assert_eq!(mythical.colour, crate::holocrons::TIERS[3].colour);
-        // Unique has no holocron: Mythical's rank, its own colour.
-        let unique = Item::of(Rarity::Unique, true, Size::Full);
+        // Secret has no holocron: Mythical's rank, its own colour.
+        let unique = Item::of(Rarity::Secret, true, Size::Full);
         assert_eq!(unique.rank, mythical.rank);
-        assert_eq!(unique.colour, Rarity::Unique.colour());
+        assert_eq!(unique.colour, Rarity::Secret.colour());
     }
 }

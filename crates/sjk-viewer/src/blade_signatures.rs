@@ -188,11 +188,11 @@ pub(crate) const SIGNATURES: [Signature; 264] = [
     signature!("alderaan_velvet"),
     // 21/10/2026: Sol's Varykino Blossom, after Kushina's idea (blade 166).
     signature!("varykino_blossom"),
-    // 25/10/2026: Sol's Thousand Cranes (blade 167), the first Unique blade.
+    // 25/10/2026: Sol's Thousand Cranes (blade 167), the first Secret blade.
     signature!("thousand_cranes"),
-    // 25/10/2026: Sol's Hearth (blade 168), a Unique blade that grows as it is held.
+    // 25/10/2026: Sol's Hearth (blade 168), a Secret blade that grows as it is held.
     signature!("hearth"),
-    // 13/11/2026: Sol's DOOM (blade 301), the third Unique blade.
+    // 13/11/2026: Sol's DOOM (blade 301), the third Secret blade.
     signature!("doom"),
     // 29/10/2026: Creyon's Star Wars round (from blade 170).
     signature!("vulptex_crystalfire"),
@@ -765,7 +765,7 @@ impl Signature {
             );
         }
         // A mythical blade's awakening, breath and clash ring (round 19, `sig_mythic`), and a
-        // Unique one's (25/10/2026, Sol: Mythical's level of effects), unless it draws its own
+        // Secret one's (25/10/2026, Sol: Mythical's level of effects), unless it draws its own
         // (`@moments own`).
         if !self.own_moments()
             && crate::unlockables::find(self.id)

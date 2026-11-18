@@ -288,7 +288,7 @@ const SHADER_ROWS: usize = 1 + unlockables::ALL.len();
 const SHADER_SLOTS: usize = SHADER_ROWS + 1;
 const _: () = assert!(SHADER_BASE as usize + SHADER_SLOTS <= SHADER_LIMIT as usize);
 /// The Shaders tab's filter (14/10/2026): its tier chips (All, then the five tiers, and
-/// Unique's for a player who holds a Unique shader), the owned-only chip and the search
+/// Secret's for a player who holds a Secret shader), the owned-only chip and the search
 /// field.
 const FILTER_TIER_BASE: u16 = 7_300;
 const FILTER_OWNED_TOKEN: u16 = 7_310;
@@ -313,7 +313,7 @@ const _: () = assert!(FILTER_EDITION_TOKEN < CARD_BASE);
 /// The most characters a search holds.
 const SEARCH_MAX: usize = 24;
 /// The tiers the Forge's chips filter by, after All, the commonest first, as its Craft
-/// list stands. The Forge never lists Unique (no Unique shader is traded).
+/// list stands. The Forge never lists Secret (no Secret shader is traded).
 const FILTER_TIERS: [unlockables::Rarity; 5] = [
     unlockables::Rarity::Common,
     unlockables::Rarity::Uncommon,
@@ -323,7 +323,7 @@ const FILTER_TIERS: [unlockables::Rarity; 5] = [
 ];
 
 /// The Shaders tab's tier strip (25/10/2026), after All: the rarest first, as the wall
-/// stands, and Unique's first of all for a player who holds a Unique shader.
+/// stands, and Secret's first of all for a player who holds a Secret shader.
 const STRIP_TIERS: [unlockables::Rarity; 5] = [
     unlockables::Rarity::Mythical,
     unlockables::Rarity::Legendary,
@@ -332,7 +332,7 @@ const STRIP_TIERS: [unlockables::Rarity; 5] = [
     unlockables::Rarity::Common,
 ];
 const STRIP_TIERS_WITH_UNIQUE: [unlockables::Rarity; 6] = [
-    unlockables::Rarity::Unique,
+    unlockables::Rarity::Secret,
     unlockables::Rarity::Mythical,
     unlockables::Rarity::Legendary,
     unlockables::Rarity::Rare,
@@ -432,7 +432,7 @@ impl ShaderSort {
 /// cards), 1 the list.
 pub(crate) const SHADER_VIEW_CVAR: &str = "ui_shaderList";
 
-/// The blade skin of shader row `row` with no filter, for a player who holds no Unique
+/// The blade skin of shader row `row` with no filter, for a player who holds no Secret
 /// shader: `None` for the stock blade (row 0) or past the end. The page itself reads the
 /// filtered list ([`Panel::skin_at`]).
 #[cfg(test)]
@@ -954,7 +954,7 @@ pub(crate) struct Panel {
     finishers_shown: bool,
     finisher_worn: Option<&'static str>,
     shader_filter: ShaderFilter,
-    /// The Shaders tab offers Unique's chip: the player holds a Unique shader, as the last
+    /// The Shaders tab offers Secret's chip: the player holds a Secret shader, as the last
     /// frame's holdings said ([`Panel::tier_chips`]).
     unique_chip: bool,
     /// The search field takes the typing.
@@ -1874,8 +1874,8 @@ impl Panel {
         PanelAction::None
     }
 
-    /// The tiers the Shaders tab's strip offers after All: [`STRIP_TIERS`], and Unique's
-    /// first only for a player who holds a Unique shader.
+    /// The tiers the Shaders tab's strip offers after All: [`STRIP_TIERS`], and Secret's
+    /// first only for a player who holds a Secret shader.
     fn tier_chips(&self) -> &'static [unlockables::Rarity] {
         if self.unique_chip {
             &STRIP_TIERS_WITH_UNIQUE
@@ -3134,7 +3134,7 @@ mod tests {
         assert_eq!(TOY_COUNT, TOY_TOKENS.len());
     }
 
-    /// The Shaders tab's rows for a player who holds no Unique shader: the stock blade
+    /// The Shaders tab's rows for a player who holds no Secret shader: the stock blade
     /// and every other blade skin.
     pub(super) fn rows_shown() -> usize {
         1 + Holdings::Known(&[]).listed_count()
@@ -3340,13 +3340,13 @@ mod tests {
         assert!(!panel.shader_filter.active());
     }
 
-    /// Sol's rule (25/10/2026): a Unique shader shows only to its holders. Not held, it is
+    /// Sol's rule (25/10/2026): a Secret shader shows only to its holders. Not held, it is
     /// not listed, found by a search (its name, its tier's word or its number), counted in
     /// the headline, the Saber pill or the tab's tally, and has no chip; held, it is listed
     /// first (the rarest), counted, and its chip lists it. Taken back, its chip goes too.
     #[test]
     fn a_unique_shader_shows_only_to_its_holders() {
-        // The shaders every player sees: all but the Unique ones.
+        // The shaders every player sees: all but the Secret ones.
         let total = unlockables::blade_skins()
             .filter(|skin| !skin.hidden_unless_held())
             .count();
@@ -3364,11 +3364,11 @@ mod tests {
         let seen = runs(&panel);
         assert!(seen.contains(&format!("1 of {total} owned")), "{seen:?}");
         assert!(seen.contains(&format!("1/{total}")), "{seen:?}");
-        assert!(seen.iter().all(|run| !run.contains("Unique")), "{seen:?}");
+        assert!(seen.iter().all(|run| !run.contains("Secret")), "{seen:?}");
         assert!(panel.ui.rect_for(FILTER_TIER_BASE + 6).is_none(), "no chip");
         let counts = view::counts(&lacking);
         assert_eq!((counts[2].held, counts[2].total), (Some(1), total));
-        for query in ["thousand", "Cranes", "unique", "167", "#167"] {
+        for query in ["thousand", "Cranes", "secret", "167", "#167"] {
             panel.shader_filter.query = query.to_owned();
             redraw(&mut panel, &lacking);
             assert!(ids(&panel).is_empty(), "{query}");
@@ -3376,7 +3376,7 @@ mod tests {
         panel.shader_filter = ShaderFilter::default();
         for _ in 0..STRIP_TIERS_WITH_UNIQUE.len() + 1 {
             let _ = panel.cycle_tier(false);
-            assert_ne!(panel.shader_filter.tier, Some(unlockables::Rarity::Unique));
+            assert_ne!(panel.shader_filter.tier, Some(unlockables::Rarity::Secret));
         }
 
         let both = [
@@ -3405,9 +3405,9 @@ mod tests {
         let card = panel.card_of(SHADER_BASE + 1, &holding).expect("its card");
         assert_eq!(card.title, "Thousand Cranes blade");
         assert_eq!(card.lines[0].words, unlockables::PERSONAL_THANKS);
-        // T from All: the first segment, Unique's, lists it alone.
+        // T from All: the first segment, Secret's, lists it alone.
         let _ = panel.cycle_tier(false);
-        assert_eq!(panel.shader_filter.tier, Some(unlockables::Rarity::Unique));
+        assert_eq!(panel.shader_filter.tier, Some(unlockables::Rarity::Secret));
         redraw(&mut panel, &holding);
         assert_eq!(ids(&panel), ["saber_thousand_cranes"]);
         // Taken back: no chip, no filter on it, not listed.

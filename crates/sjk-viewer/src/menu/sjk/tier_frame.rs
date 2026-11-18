@@ -11,11 +11,11 @@
 //! - **Mythical:** the full edge in the tier's colour, lit inside too, the bar along the
 //!   whole top and, only on the thing chosen, a slow sheen crossing it now and then (off
 //!   with `ui_rarityEffects 0`, [`crate::rarity_fx`]).
-//! - **Unique:** outside the ladder (hand-given, never dropped): a rose edge and an inner
+//! - **Secret:** outside the ladder (hand-given, never dropped): a red edge and an inner
 //!   line of its own, and its own mark.
 //!
 //! [`tier_mark`] draws the step as diamonds (one for Uncommon to four for Mythical, the
-//! holocron tiers' order; none for Common) and Unique's SJK Symbols mark, so the tier
+//! holocron tiers' order; none for Common) and Secret's SJK Symbols mark, so the tier
 //! survives a colour-blind player, a greyed thing not held and a black-and-white picture.
 //! The thing chosen takes a gold wash over its glass (the caller rings it gold), so a
 //! Mythical frame, gold itself, never passes for the choice. Everything is the UI's own
@@ -90,10 +90,10 @@ impl TierLook {
 }
 
 /// The tier's step on the ladder, what [`tier_mark`] counts: 0 for Common, 1 (Uncommon)
-/// to 4 (Mythical); Unique, outside the ladder, has none (its own mark).
+/// to 4 (Mythical); Secret, outside the ladder, has none (its own mark).
 pub(crate) const fn tier_step(tier: Rarity) -> u8 {
     match tier {
-        Rarity::Common | Rarity::Unique => 0,
+        Rarity::Common | Rarity::Secret => 0,
         Rarity::Uncommon => 1,
         Rarity::Rare => 2,
         Rarity::Legendary => 3,
@@ -226,7 +226,7 @@ pub(crate) fn tier_frame(
         ),
         Rarity::Rare | Rarity::Legendary => (faded(colour, 0.5 * ink), 1.2),
         Rarity::Mythical => (faded(colour, 0.95 * ink), 1.6),
-        Rarity::Unique => (faded(colour, 0.75 * ink), 1.3),
+        Rarity::Secret => (faded(colour, 0.75 * ink), 1.3),
     };
     push(
         canvas,
@@ -300,8 +300,8 @@ pub(crate) fn tier_frame(
             }
         }
     }
-    // Unique's inner line, its own.
-    if tier == Rarity::Unique {
+    // Secret's inner line, its own.
+    if tier == Rarity::Secret {
         let inset = if size == TierSize::Tile { 4.0 } else { 3.0 };
         push(
             canvas,
@@ -404,7 +404,7 @@ pub(crate) fn sheen_at(seconds: f32) -> Option<f32> {
 /// How wide [`tier_mark`] draws tier `tier`'s mark at `size` (frame pixels), 0 for none:
 /// for laying a mark out before it is drawn (a centred line).
 pub(crate) fn tier_mark_width(tier: Rarity, size: f32) -> f32 {
-    if tier == Rarity::Unique {
+    if tier == Rarity::Secret {
         return size * 1.3;
     }
     let steps = tier_step(tier);
@@ -416,7 +416,7 @@ pub(crate) fn tier_mark_width(tier: Rarity, size: f32) -> f32 {
 }
 
 /// Tier `tier`'s mark from `x` (its left edge), centred on `y`, `size` frame pixels high:
-/// a diamond for each step ([`tier_step`]: none for Common), or Unique's SJK Symbols mark,
+/// a diamond for each step ([`tier_step`]: none for Common), or Secret's SJK Symbols mark,
 /// in the tier's colour (faint when `dim`). Returns how wide it is, 0 for none.
 pub(crate) fn tier_mark(
     canvas: &mut MenuCanvas,
@@ -427,7 +427,7 @@ pub(crate) fn tier_mark(
     dim: bool,
 ) -> f32 {
     let colour = faded(tier.colour(), if dim { 0.5 } else { 1.0 });
-    if tier == Rarity::Unique {
+    if tier == Rarity::Secret {
         let side = size * 1.3;
         text(
             canvas,
@@ -478,7 +478,7 @@ mod tests {
         Rarity::Rare,
         Rarity::Legendary,
         Rarity::Mythical,
-        Rarity::Unique,
+        Rarity::Secret,
     ];
 
     fn commands(tier: Rarity, size: TierSize, look: TierLook) -> Vec<DrawCommand> {
@@ -501,7 +501,7 @@ mod tests {
 
     /// Each step up the ladder adds its touch to the one under it: the bar from Uncommon,
     /// the glow from Rare, the brackets and halo from Legendary, the full edge at
-    /// Mythical; Unique has its inner line and no brackets.
+    /// Mythical; Secret has its inner line and no brackets.
     #[test]
     fn each_tier_adds_one_thing() {
         let look = TierLook::at(0.0);
@@ -524,7 +524,7 @@ mod tests {
         assert_eq!(gradients(Rarity::Rare), 1, "the top glow");
         assert_eq!(lines(Rarity::Rare), 0);
         assert_eq!(lines(Rarity::Legendary), 8, "four corners, two arms each");
-        assert_eq!(lines(Rarity::Unique), 0, "Unique stands outside the ladder");
+        assert_eq!(lines(Rarity::Secret), 0, "Secret stands outside the ladder");
         let borders = |tier| {
             count(&commands(tier, TierSize::Tile, look), |c| {
                 matches!(c, DrawCommand::Border { .. })
@@ -532,7 +532,7 @@ mod tests {
         };
         assert_eq!(borders(Rarity::Common), 1, "the hairline");
         assert_eq!(borders(Rarity::Legendary), 2, "the edge and the halo");
-        assert_eq!(borders(Rarity::Unique), 2, "the edge and its inner line");
+        assert_eq!(borders(Rarity::Secret), 2, "the edge and its inner line");
         // Over a picture, no glass.
         let bare = TierLook {
             glass: false,
@@ -599,7 +599,7 @@ mod tests {
         }
     }
 
-    /// The mark counts the step in diamonds (none for Common) and gives Unique its glyph;
+    /// The mark counts the step in diamonds (none for Common) and gives Secret its glyph;
     /// the holocron and card tiers land on the ladder's.
     #[test]
     fn the_mark_counts_the_step() {
@@ -614,7 +614,7 @@ mod tests {
             assert_eq!(width > 0.0, tier != Rarity::Common, "{tier:?}");
             // Its width is known before it is drawn, for a centred line.
             assert_eq!(width, tier_mark_width(tier, 12.0), "{tier:?}");
-            if tier == Rarity::Unique {
+            if tier == Rarity::Secret {
                 let words: Vec<String> = canvas.text_runs().map(str::to_owned).collect();
                 assert_eq!(words, [crate::symbols::RARITY[5].to_string()]);
             }

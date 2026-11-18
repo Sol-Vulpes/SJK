@@ -1,4 +1,4 @@
-// Hearth: a home fire, the second Unique blade (Sol, 25/10/2026), a thank-you given by hand. A
+// Hearth: a home fire, the second Secret blade (Sol, 25/10/2026), a thank-you given by hand. A
 // warm amber blade of glowing coals that breathe, embers rising off it, kindling from the hilt
 // as it lights and cooling to a deep red as it goes out. Tongues of flame lick up its edges, the
 // air above it shimmers with heat, and the fire is a blaze, taller, brighter and crackling,

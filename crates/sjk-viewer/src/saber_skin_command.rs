@@ -1,6 +1,6 @@
 //! The `saberskin` console command (`docs/unlockables.md`, "Settings and commands"):
 //! alone it lists the catalogue's blade skins ([`crate::unlockables`]) the player may see
-//! (an unheld Unique one is neither listed nor taken), each owned or
+//! (an unheld Secret one is neither listed nor taken), each owned or
 //! locked, with its number, and which one is worn; `saberskin <id>` (or its number,
 //! `saberskin 42`) or `saberskin none` sets
 //! `cg_saberSkin`. A locked skin is set all the same and shows once the player's own hub
@@ -127,7 +127,7 @@ impl Choice {
 }
 
 /// Read the command's word for a player with `holdings`: a skin they may not see (an
-/// unheld Unique one, [`Holdings::shows`]) is no skin to them, by id or number.
+/// unheld Secret one, [`Holdings::shows`]) is no skin to them, by id or number.
 pub(crate) fn parse(word: &str, holdings: Holdings<'_>) -> Result<Choice, String> {
     if word.eq_ignore_ascii_case("none") {
         return Ok(Choice::Stock);
@@ -370,7 +370,7 @@ mod tests {
     fn the_listing_says_owned_locked_and_worn() {
         let owned = [sun()];
         let lines = listing("saber_sun", Holdings::Known(&owned));
-        // A line, then one per blade skin of the catalogue the player sees (no Unique).
+        // A line, then one per blade skin of the catalogue the player sees (no Secret).
         let skins = crate::unlockables::blade_skins()
             .filter(|skin| !skin.hidden_unless_held())
             .count();
@@ -492,7 +492,7 @@ mod tests {
         );
     }
 
-    /// A Unique shader (Sol's thank-you gifts, 25/10/2026) is neither listed nor taken by id
+    /// A Secret shader (Sol's thank-you gifts, 25/10/2026) is neither listed nor taken by id
     /// or number for a player who does not hold it; its holder sees it listed and wears it.
     #[test]
     fn an_unheld_unique_shader_is_neither_listed_nor_taken() {
@@ -519,7 +519,7 @@ mod tests {
         let held = [sun(), cranes];
         let holder = Holdings::Known(&held);
         let lines = listing("saber_thousand_cranes", holder);
-        // A line, the shaders everyone sees and the one Unique held.
+        // A line, the shaders everyone sees and the one Secret held.
         let seen = crate::unlockables::blade_skins()
             .filter(|skin| !skin.hidden_unless_held())
             .count();
