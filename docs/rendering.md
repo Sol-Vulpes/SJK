@@ -373,6 +373,30 @@ bundle has axes, so a `tcGen vector` stage is never collapsed into a multitextur
 An entity's surface projects from its placed position, where rd-vanilla uses model space.
 The ignored world shot `map_spawn_views` renders any map's spawns (`SJK_SHOT_MAP`).
 
+## Facing and rim alpha (`alphaGen dot`, `oneMinusDot`)
+
+`alphaGen dot` gives a stage's alpha by how squarely the surface faces the viewer (1 head-on,
+0 edge-on) and `alphaGen oneMinusDot` one minus that, bright at the silhouette: a rim light
+on a model's hair or clothes. rd-vanilla parses both names but never computes them (no
+`AGEN_DOT` case in `ComputeColors`, `tr_shade.cpp`, MP or SP), so the alpha stays as the
+colour pass left it; SJK drew them as identity alpha the same way until 18/11/2026. No
+retail shader uses them, so nothing stock changes. Now `world_stage::alpha_generator_code`
+gives them codes 12 and 13 and `stage_runtime.wgsl` (`generated_color`) works the facing out
+per pixel from the interpolated normal and the camera, the same on either side, so a
+`cull none` card lights its rim from behind too. The falloff is linear (a surface at 60
+degrees to the view gets half). A rim stage on a model, for example:
+
+```
+{
+    map $whiteimage
+    blendFunc GL_SRC_ALPHA GL_ONE
+    rgbGen const ( 0.6 0.5 0.9 )
+    alphaGen oneMinusDot
+}
+```
+
+Other clients draw such a stage at full alpha, so over the whole surface.
+
 ## Video stages (`videoMap`)
 
 A stage with `videoMap <name>` plays a RoQ video on its surface, as rd-vanilla's
