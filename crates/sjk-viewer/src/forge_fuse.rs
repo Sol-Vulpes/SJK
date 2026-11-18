@@ -2,7 +2,7 @@
 //! barely use it"; `docs/cards.md`, "Fusion"): a number of duplicates of one tier, the
 //! hub's `economy.fuse` table, makes one saber shader of the next tier the player does not
 //! hold yet, chosen by the hub. Only on a hub whose economy says `fuse`
-//! ([`crate::economy::fuse_need`]); Mythical (the last tier) and Unique never fuse.
+//! ([`crate::economy::fuse_need`]); Mythical (the last tier) and Secret never fuse.
 //!
 //! This holds the rules the Forge's Fuse section and the badges follow, apart from any
 //! drawing: which copies may go ([`spares`]: of the trade, never a locked shader's, never
@@ -20,14 +20,14 @@ pub(crate) const TIERS: [Rarity; 4] = [
     Rarity::Legendary,
 ];
 
-/// The tier a fusion of `tier` gives; `None` for Mythical and Unique.
+/// The tier a fusion of `tier` gives; `None` for Mythical and Secret.
 pub(crate) fn next_tier(tier: Rarity) -> Option<Rarity> {
     match tier {
         Rarity::Common => Some(Rarity::Uncommon),
         Rarity::Uncommon => Some(Rarity::Rare),
         Rarity::Rare => Some(Rarity::Legendary),
         Rarity::Legendary => Some(Rarity::Mythical),
-        Rarity::Mythical | Rarity::Unique => None,
+        Rarity::Mythical | Rarity::Secret => None,
     }
 }
 
@@ -355,6 +355,6 @@ mod tests {
         assert_eq!(targets(Rarity::Common, |_| true), 0);
         assert_eq!(targets(Rarity::Mythical, |_| false), 0);
         assert_eq!(next_tier(Rarity::Legendary), Some(Rarity::Mythical));
-        assert_eq!(next_tier(Rarity::Unique), None);
+        assert_eq!(next_tier(Rarity::Secret), None);
     }
 }

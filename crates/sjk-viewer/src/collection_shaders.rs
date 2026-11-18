@@ -599,7 +599,7 @@ impl Columns {
 impl Panel {
     /// The rows: the stock blade, then, while the lab is on (`lab`), the Saber Lab's blade
     /// ([`crate::saber_lab::active`]), then the shaders the player may see
-    /// ([`unlockables::Holdings::listed`]: a Unique one only while held) that `filter` keeps,
+    /// ([`unlockables::Holdings::listed`]: a Secret one only while held) that `filter` keeps,
     /// by tier (the rarest first), or in the list's order `sort` when not `by_tier`; the
     /// favourites among `marks` first, each part in that order.
     fn rows(
@@ -713,7 +713,7 @@ impl Panel {
         if self.shader_sort == ShaderSort::Number && !self.shader_numbers {
             self.shader_sort = ShaderSort::Tier;
         }
-        // Unique's segment only for a player who holds a Unique shader; one taken back
+        // Secret's segment only for a player who holds a Secret shader; one taken back
         // takes its segment, and the filter on it, with it.
         self.unique_chip = inputs
             .holdings
@@ -729,7 +729,7 @@ impl Panel {
         }
         let by_tier = self.grid || self.shader_sort == ShaderSort::Tier;
         // The shader chosen last frame, in last frame's list: a list that changes under it
-        // (a Unique shader the hub's answer brings first, one given or taken back) keeps it
+        // (a Secret shader the hub's answer brings first, one given or taken back) keeps it
         // chosen rather than whatever now stands at its place.
         let chosen = self.skin_at(self.shader).map(|skin| skin.id);
         self.follow_marks(inputs);
@@ -776,7 +776,7 @@ impl Panel {
         let owned = unlockables::blade_skins()
             .filter(|skin| inputs.holdings.unlock(skin.id).is_some())
             .count();
-        // Out of the shaders this player sees: an unheld Unique one is not counted.
+        // Out of the shaders this player sees: an unheld Secret one is not counted.
         let total = inputs.holdings.listed_count();
         let headline = if inputs.holdings.reason().is_none() {
             format!("{owned} of {total} owned")
@@ -3716,7 +3716,7 @@ mod tests {
                     .iter()
                     .position(|other| other.id == skin.id)
                 else {
-                    // A Unique shader the player does not hold is not listed.
+                    // A Secret shader the player does not hold is not listed.
                     assert!(skin.hidden_unless_held() && !owned);
                     continue;
                 };
@@ -3889,9 +3889,9 @@ mod tests {
     }
 
     /// Sol's report (26/10/2026): reopened after scrolling, the wall started at the worn
-    /// shader's tier and hid what stood above it (the stock blade, his Unique shaders)
+    /// shader's tier and hid what stood above it (the stock blade, his Secret shaders)
     /// until a filter put it back at the top. Reopening starts from the top again, the worn
-    /// shader chosen and shown; and the hub's answer bringing Unique shaders first keeps
+    /// shader chosen and shown; and the hub's answer bringing Secret shaders first keeps
     /// the shader chosen.
     #[test]
     fn reopening_starts_from_the_top_and_the_chosen_stays_chosen() {
@@ -3924,10 +3924,10 @@ mod tests {
         for row in 0..3 {
             assert!(
                 panel.ui.rect_for(SHADER_BASE + row).is_some(),
-                "row {row} (the stock blade, the Unique ones) shown"
+                "row {row} (the stock blade, the Secret ones) shown"
             );
         }
-        // The Void chosen while the hub has not answered; its answer brings the Unique
+        // The Void chosen while the hub has not answered; its answer brings the Secret
         // shaders first, and the Void stays chosen.
         let only_sun = [unlock("saber_sun")];
         let before = Inputs {
@@ -3949,7 +3949,7 @@ mod tests {
         );
     }
 
-    /// With Unique's segment (a player who holds a Unique shader) the strip still stands in
+    /// With Secret's segment (a player who holds a Secret shader) the strip still stands in
     /// a row within the list's width, none over another, and the toolbar's chips and field
     /// too.
     #[test]

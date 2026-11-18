@@ -10,7 +10,7 @@
 // @solid 1
 // @palette {"corona.rim_cool":[0.7,0.2,0.04],"corona.rim_hot":[1.0,0.56,0.18],"corona.inner":[1.0,0.8,0.48],"core.white":[1.0,0.95,0.84],"core.fringe_cool":[1.0,0.5,0.16],"core.fringe_hot":[1.0,0.78,0.42],"light.color":[1.0,0.58,0.26],"trail":[1.0,0.58,0.24]}
 
-// Hearth: a home fire, the second Unique blade (Sol, 25/10/2026), a thank-you given by hand. A
+// Hearth: a home fire, the second Secret blade (Sol, 25/10/2026), a thank-you given by hand. A
 // warm amber blade of glowing coals that breathe, embers rising off it, kindling from the hilt
 // as it lights and cooling to a deep red as it goes out. Tongues of flame lick up its edges, the
 // air above it shimmers with heat, and the fire is a blaze, taller, brighter and crackling,

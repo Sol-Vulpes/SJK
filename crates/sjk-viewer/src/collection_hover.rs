@@ -91,7 +91,7 @@ impl Panel {
         }
         if let Some(row) = within(SHADER_BASE, self.shader_count) {
             let skin = self.skin_at(row);
-            // Never the card of a shader the player may not see (an unheld Unique one; the
+            // Never the card of a shader the player may not see (an unheld Secret one; the
             // list leaves it out already).
             if skin.is_some_and(|skin| !inputs.holdings.shows(skin)) {
                 return None;

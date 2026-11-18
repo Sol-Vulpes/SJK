@@ -42,7 +42,7 @@ Delete this page once its items are done. Fold whatever is still true into those
 
 **This is the saber Milamber intends for themselves.** It was tuned by eye, one effect at a time, over two weeks. Keep its look as it is: change its numbers only with Milamber.
 
-**Shipping it.** How it ships is Sol's decision. The natural fit is a [Unique](unlockables.md#unique-kybers) blade granted to Milamber, like Thousand Cranes and Hearth. Until then:
+**Shipping it.** How it ships is Sol's decision. The natural fit is a [Secret](unlockables.md#secret-kybers) blade granted to Milamber, like Thousand Cranes and Hearth. Until then:
 
 - It exists only as a lab blade. A folder's `saber_lab_<name>.bladeskin` is the lab blade "Saber Lab: <name>" (`saber_lab::EXTRA_PREFIX`).
 - It is worn on the lab's PC only. The hub never hears of a lab skin, so other players see the wearer's usual blade.

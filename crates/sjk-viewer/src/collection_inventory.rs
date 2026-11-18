@@ -488,7 +488,7 @@ pub(super) fn places(items: &[Item], query: &str, sort: Sort, filter: Filter) ->
 
 /// What a kyber is worth in kyber shards, from the hub's tables ([`crate::economy`]):
 /// breaking a copy down, crafting one, and the spares a fusion of its tier takes; all
-/// `None` for a kyber outside the trade (a Unique one, a medal's, one holocrons do not drop).
+/// `None` for a kyber outside the trade (a Secret one, a medal's, one holocrons do not drop).
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub(super) struct Worth {
     pub(super) shatter: Option<u64>,

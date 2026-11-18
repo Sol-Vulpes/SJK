@@ -1360,7 +1360,7 @@ creator has none of them:
 - never to themselves (their own person, by any of their keys): the hub refuses it
   (`own_gift`), and on their own player the page dims every Give, Rank and Unlock with
   "Staff cannot give to themselves";
-- only the kybers holocrons can bring (`droppable`): a Unique one, a medal's blade
+- only the kybers holocrons can bring (`droppable`): a Secret one, a medal's blade
   or a blade not opened to drops yet stays the creator's to give (`creator_only`); its row
   says "owner only" and its Unlock is dimmed;
 - a number a day (the hub's `GIFTS_PER_DAY`, 20 to begin with, gifts undone not counted):
