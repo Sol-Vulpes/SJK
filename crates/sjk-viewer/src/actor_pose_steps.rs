@@ -210,6 +210,7 @@ pub(super) fn prepare(mesh: &mut ActorMesh, frame: &Frame<'_>) -> Result<(), Box
     if !mesh.animator.humanoid() {
         mesh.render_yaw_degrees = None;
         mesh.preview.rig_pose.halt_motion();
+        mesh.preview.rig_pose.look_at(None);
         if let (Some(snapshot), Some(game_state), Some(id)) = (snapshot, game_state, mesh.entity_id)
             && let Some(state) = snapshot
                 .entities
@@ -262,9 +263,30 @@ pub(super) fn prepare(mesh: &mut ActorMesh, frame: &Frame<'_>) -> Result<(), Box
                 source,
             );
         }
+        if mesh
+            .preview
+            .rig
+            .as_ref()
+            .is_some_and(|rig| rig.wants_look())
+        {
+            // The look target that turns the head (`cg_players.c:4279-4289`), for the eyes.
+            let look = pose
+                .angle
+                .look_target
+                .and_then(|id| world.entity(id))
+                .map(|entity| {
+                    crate::rig_model::look_point(
+                        origin,
+                        angles.legs_yaw_degrees,
+                        entity.sample(presentation_time).translation,
+                    )
+                });
+            mesh.preview.rig_pose.look_at(look);
+        }
     } else {
         mesh.animator.clear_player_angles();
         mesh.preview.rig_pose.halt_motion();
+        mesh.preview.rig_pose.look_at(None);
     }
     mesh.animator.requested = Some(state);
     Ok(())

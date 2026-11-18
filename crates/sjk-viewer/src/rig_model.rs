@@ -194,6 +194,8 @@ pub(crate) struct Manifest {
     pub(crate) dynamic: Vec<(String, dynamics::Settings)>,
     /// `layer` lines: the chain under the first joint stays outside that under the second.
     pub(crate) layers: Vec<(String, String)>,
+    /// The `eyes` line's joints, which turn towards the player's look target ([`eyes`]).
+    pub(crate) eyes: Vec<String>,
 }
 
 /// The driver's bones whose rig joints (from their bone map entry to the joint it
@@ -296,6 +298,7 @@ impl Manifest {
             map: Vec::new(),
             dynamic: Vec::new(),
             layers: Vec::new(),
+            eyes: Vec::new(),
         };
         for (number, line) in text.lines().enumerate() {
             let line = line.split("//").next().unwrap_or("").trim();
@@ -331,6 +334,9 @@ impl Manifest {
                 ["layer", outer, "over", inner] => manifest
                     .layers
                     .push(((*outer).to_owned(), (*inner).to_owned())),
+                ["eyes", joints @ ..] if !joints.is_empty() => manifest
+                    .eyes
+                    .extend(joints.iter().map(|joint| (*joint).to_owned())),
                 ["map", joint, bone] => manifest.map.push(entry(joint, bone, Align::Rest)),
                 ["map", joint, bone, "as", other] => {
                     manifest
@@ -616,6 +622,8 @@ pub(crate) struct RigModel {
     lift: f32,
     /// The joints that move on their own.
     chains: dynamics::Chains,
+    /// The joints that look at the player's look target.
+    eyes: eyes::Eyes,
     pub(crate) clips: Vec<Clip>,
     pub(crate) surfaces: Vec<Surface>,
     /// Its body measured on the driver's bones, for a rig loaded to lend its clips
@@ -1174,6 +1182,20 @@ impl RigModel {
             crate::log::progress(format_args!("rig model {base}: {MANIFEST}: {problem}"));
         }
         chains.layer(&joints, &layers);
+        let eye_joints: Vec<usize> = manifest
+            .eyes
+            .iter()
+            .filter_map(|name| {
+                let found = joint_index(name);
+                if found.is_none() {
+                    crate::log::progress(format_args!(
+                        "rig model {base}: {MANIFEST}: no joint {name:?} for eyes"
+                    ));
+                }
+                found
+            })
+            .collect();
+        let eyes = eyes::Eyes::new(&joints, &eye_joints);
         // Alignments first (an `As` entry reads another's), then the driven joints.
         let mut aligned: Vec<Option<Mat3A>> = vec![None; joints.len()];
         for entry in &map {
@@ -1343,6 +1365,7 @@ impl RigModel {
             feet: None,
             lift: manifest.lift,
             chains,
+            eyes,
             clips,
             surfaces,
             body: None,
@@ -1412,6 +1435,11 @@ impl RigModel {
         self.chains.wants_drag()
     }
 
+    /// Whether it has eyes, so [`Scratch::look_at`] is worth calling.
+    pub(crate) fn wants_look(&self) -> bool {
+        !self.eyes.is_empty()
+    }
+
     pub(crate) fn pose(
         &self,
         bones: &[[[f32; 4]; 3]],
@@ -1442,6 +1470,8 @@ impl RigModel {
             palette,
             blended,
             dynamics: chain_state,
+            eyes: eye_state,
+            look,
             plant,
             last: _,
         } = scratch;
@@ -1497,6 +1527,11 @@ impl RigModel {
                 };
             }
             *blended = true;
+        }
+        if !self.eyes.is_empty() {
+            // The target where the eyes stand before the lift raises the rig.
+            let target = look.map(|point| point - Vec3A::Z * self.lift);
+            self.eyes.turn(pose, eye_state, target, step);
         }
         if !self.chains.is_empty() {
             dynamics::simulate(&self.joints, &self.chains, pose, chain_state, step);
@@ -1716,6 +1751,9 @@ pub(crate) struct Scratch {
     pub(crate) palette: Vec<[[f32; 4]; 3]>,
     /// The actor's dynamic joints, and when it was last posed.
     dynamics: dynamics::State,
+    /// The actor's eye turns, and the point they look at, in the model's space.
+    eyes: eyes::State,
+    look: Option<Vec3A>,
     /// The rise the feet planting gave the last pose ([`PLANT_EASE`]).
     plant: Option<f32>,
     last: Option<std::time::Instant>,
@@ -1741,6 +1779,24 @@ impl Scratch {
     pub(crate) fn halt_motion(&mut self) {
         self.dynamics.motion = dynamics::Motion::default();
     }
+
+    /// The point the actor's eyes look at, in the model's space (`None`: straight ahead).
+    pub(crate) fn look_at(&mut self, point: Option<[f32; 3]>) {
+        self.look = point.map(Vec3A::from_array);
+    }
+}
+
+/// How high above a player's origin its eyes are, game units: `DEFAULT_VIEWHEIGHT`
+/// (`bg_public.h`), what a rig's eyes look at on a look target ([`look_point`]).
+const LOOK_TARGET_EYES: f32 = 36.0;
+
+/// Where the eyes of the look target standing at `target` (its origin, in the world) are
+/// in the model space of an actor at `origin` facing `yaw_degrees` (the game's yaw, its
+/// legs'): what [`Scratch::look_at`] takes. A scaled actor's model space is taken as unscaled.
+pub(crate) fn look_point(origin: [f32; 3], yaw_degrees: f32, target: [f32; 3]) -> [f32; 3] {
+    let world = Vec3A::from_array(target) + Vec3A::Z * LOOK_TARGET_EYES - Vec3A::from_array(origin);
+    // The model's -Y is the entity's +X (`weapon_view::actor_world_rotation`).
+    (Mat3A::from_rotation_z(-(yaw_degrees + 90.0).to_radians()) * world).to_array()
 }
 
 /// `vertex` skinned with `palette` (the CPU path): position and unit normal.
@@ -1812,6 +1868,8 @@ mod body;
 mod clips;
 #[path = "rig_dynamics.rs"]
 mod dynamics;
+#[path = "rig_eyes.rs"]
+mod eyes;
 #[path = "rig_stock.rs"]
 mod stock;
 

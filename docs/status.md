@@ -1,3 +1,15 @@
+## Rig model eyes follow the look target (19/11/2026)
+
+19/11/2026, `feat/rig-eye-look` based on `main` `afd16b60`. A rig model's `sjk_rig.cfg` can
+name its eye joints (`eyes <joint> [<joint> ...]`); they look at the player's look target,
+the one the game turns the head towards, up and down too, at most 30 degrees past the head,
+eased, and back to rest without a target. Only the eye joint turns, so lids hung under it
+stay put ([rig-models.md](rig-models.md#eyes)). Verified: `cargo test -p sjk-viewer --bin sjk
+rig_` (unit tests for the turn, the limit, the easing, the manifest line and the target's
+model-space point) and a probe on an installed rig model with a face rig: both eyes found,
+turning about the eyeball's middle towards targets ahead, above, beside and below, stopping
+at the limit. Not tried in a game.
+
 ## Game chat: client icons and ticks (13/11/2026)
 
 13/11/2026, `personal/chat-client-icons` based on `main` `cdd73b774` (Sol: "I would like to
