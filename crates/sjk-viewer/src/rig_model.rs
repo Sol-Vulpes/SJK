@@ -217,7 +217,7 @@ const ARM_BONES: &[&str] = &["lhumerus", "rhumerus", "lradius", "rradius"];
 
 /// A `dynamic` line's words after the joint: `[gravity] [gravity <n>] [wag <n>]
 /// [stiffness <n>] [damping <n>] [limit <degrees>] [clearance <units>] [drag <n>] [arms]
-/// [nocollide]`, any order after the bare gravity.
+/// [breeze <units>] [nocollide]`, any order after the bare gravity.
 fn dynamic_settings(words: &[&str]) -> Option<dynamics::Settings> {
     let mut settings = dynamics::Settings::default();
     let number = |word: &str| word.parse::<f32>().ok().filter(|n| n.is_finite());
@@ -240,6 +240,7 @@ fn dynamic_settings(words: &[&str]) -> Option<dynamics::Settings> {
             "clearance" => settings.clearance = number(words.next()?).filter(|n| *n >= 0.0)?,
             "drag" => settings.drag = number(words.next()?).filter(|n| *n >= 0.0)?,
             "arms" => settings.arms = true,
+            "breeze" => settings.breeze = number(words.next()?).filter(|n| *n >= 0.0)?,
             _ => return None,
         }
     }
@@ -1408,8 +1409,8 @@ impl RigModel {
     /// per GLA bone, as the GLM is skinned with), with `play`'s clip over it, into
     /// `scratch.palette`.
     /// Whether a chain feels the air, so [`Scratch::observe_motion`] is worth calling.
-    pub(crate) fn wants_drag(&self) -> bool {
-        self.chains.wants_drag()
+    pub(crate) fn wants_motion(&self) -> bool {
+        self.chains.wants_motion()
     }
 
     pub(crate) fn pose(
