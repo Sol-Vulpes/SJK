@@ -157,6 +157,21 @@ How much of the ground's tint each kind lays over the scene (`color::acrylic`):
 | `BANNER` | 46 % | The notification banners |
 | `PANEL` | 60 % | The scoreboard's band |
 | `CARD` | 66 % | Pop-up cards, the kit's lists, hover cards (of the glass colour) |
+| `TILE` | 62 % | The Collection's tiles, rows and controls standing on a page's ground |
+
+Since 18/11/2026 the Collection is glass too (Sol: "make the acrylic work on the
+collection now (if not too heavy)"): the hall's tiles (the glass colour at `CARD`, lit for
+the chosen one), the Kybers wall's tiles, its filter chips, search field and tiers' strip,
+one pane under its list's rows and the chosen kyber's card; the Inventory's wallet, rows
+and item card; the Toys' rows and card, the Tags' tiles and card, the Forge's tiles, rows,
+offers, holocrons and detail panels, the History's rows and the Holocrons tab's tiers and
+tiles. A [tier frame](#tier-frame) is glass when its page asks for it (`TierLook::acrylic`).
+What stays plain, on purpose: whatever stands on another glass (the list's rows on their
+pane, a hall tile's pictures, the pills on a card: glass on glass would show the scene
+again through its parent), the cards' faces (their art covers the frame), and the Medals and
+Achievements pages, which draw on the ground with no panel. Every backdrop is blurred in
+one chain over the union of their rectangles ([rendering.md](rendering.md#acrylic-backdrops)),
+so a wall of thirty tiles costs about what one pane over it would.
 
 The full-screen grounds (the menus' fades and scrims) stay plain, so a menu stays easy
 to read. Where the frame cannot be blurred (a DirectX 12 swapchain, the CPU menu
@@ -182,7 +197,10 @@ colour-blind player too:
 | Unique | Outside the ladder (hand-given): its rose edge, an inner line of its own and its own mark |
 
 The thing chosen takes a gold wash over the glass (its page rings it gold), so a Mythical
-frame, gold itself, never passes for the choice. `kit::tier_mark` draws the tier's step
+frame, gold itself, never passes for the choice. With `TierLook::acrylic` (18/11/2026) the
+glass is [acrylic](#acrylic-glass) (`color::acrylic::TILE`) and the thing under the pointer
+takes a holo wash over it instead of a darker fill; a frame over another glass keeps the
+plain fill. `kit::tier_mark` draws the tier's step
 beside its name as diamonds, one for Uncommon to four
 for Mythical (the holocron tiers' order) and none for Common, and Unique's SJK Symbols mark
 (U+E005), so the tier survives a colour-blind player, a dimmed thing not held and a picture in
@@ -1793,8 +1811,9 @@ Holocrons tab's Shop, a blade card's Forge link) open that kind directly.
   Collection's landing page, `Tab::Hall`, off the kinds' order. A grid of large tiles,
   one to each kind: Kybers across two cells, Finishers (the Kybers tab's Finishers
   pill), Tags, Toys, Medals, Achievements, Cards, Holocrons, Forge, Inventory, History,
-  and the Saber Lab while the lab is on. A tile is a dark glass card (the chosen one
-  framed gold): the kind's name and the tab's count after it, a picture of what the
+  and the Saber Lab while the lab is on. A tile is a card of [acrylic glass](#acrylic-glass) (since
+  18/11/2026; the chosen one of the lit glass, washed and framed gold, the one under the
+  pointer lit holo): the kind's name and the tab's count after it, a picture of what the
   client already holds filling the room under the name (since 15/11/2026, Sol's review:
   words alone left the tiles two thirds empty;
   [collection_hall_art.rs](../crates/sjk-viewer/src/collection_hall_art.rs)), and a gold
@@ -1947,6 +1966,14 @@ Holocrons tab's Shop, a blade card's Forge link) open that kind directly.
     the star and the padlock on a dark pill over the blade's right end, a New one outlined
     in gold; the chosen tile lifted over a shadow in a white outline. Left and Right step a tile (on into the next tier's), Up
     and Down a line of tiles, to the same column or the nearest, past the headings.
+    Since 18/11/2026 (Sol: "upgrade it") each tile is [acrylic glass](#acrylic-glass); the
+    chosen one rises over 0.16 s, eased, its shadow and white outline coming with it and a
+    ring of its tier's light round them (`shaders::Lift`; at once with `ui_rarityEffects
+    0`); the one under the pointer lifts 2 pixels at once, lit holo and ringed in its tier's
+    colour (the pointer still answers to its place on the wall, so the lift never flickers
+    at its edge); the kyber worn glows gold from its foot with a gold bar under its state,
+    a second saber's own in the line-work's colour, so what is equipped reads without its
+    words.
   - **The list** (from y 400): column heads (Kyber, Tier and Yours sort it; "#", the
     blade's number, only while `debug_collectibles` shows numbers; Look, Smith and,
     while the hub's economy is known, Forge), then a row of 40 to each: the strip, the
@@ -1957,7 +1984,11 @@ Holocrons tab's Shop, a blade card's Forge link) open that kind directly.
     each tier's rows (and the favourites'); by name or by what is held, none. S steps the order
     (Tier, Name, Yours, then Number while numbers show), a click on a head sets it, the
     order on show gold with three bars; the kyber chosen stays chosen whatever the
-    order or the view.
+    order or the view. Since 18/11/2026 the heads and the rows in view stand on one pane
+    of acrylic glass (`list_pane`, from just over the heads to just under the last row,
+    short of the scroll bar), the rows bands of light over it. The filter chips, the
+    search field and the tiers' strip are glass pills over the page (the field more
+    covered while it takes typing), lit gold when on and holo under the pointer.
   Both scroll a line at a time just enough to keep the chosen one in view (a pointer
   over them never scrolls them), the wheel a line a notch, the chosen one kept in view
   in its column, a thin bar at the right saying where; from Rare up the tiles and the
@@ -1967,7 +1998,8 @@ Holocrons tab's Shop, a blade card's Forge link) open that kind directly.
   yet" over the stage): the preview is drawn by this screen only and never sent
   (`collection_panel::PreviewSkin`, `menu_stage`'s `skin_override`). Its card at the
   foot of the right (x 1000 to 1824, its foot at y 990, as tall as its words, its top
-  no higher than 436, the lone saber's room above it and "Drag to turn" just over it):
+  no higher than 436, the lone saber's room above it and "Drag to turn" just over it;
+  since 18/11/2026 acrylic glass, in a faint ring of its tier's light while held):
   the tier's mark and name, the edition, the name (gold when owned) with its state as
   a tag (a New sticker after the tier while it is New), its facts, what it is in full,
   "Yours since dd/mm/yyyy, from the SJK team" with the note (", with your Bug Hunter
