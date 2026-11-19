@@ -551,6 +551,7 @@ mod tests {
             staff: false,
             creator: false,
             jkr_creator: false,
+            all_access: false,
             trust: None,
             emoji: String::new(),
             created: 0,

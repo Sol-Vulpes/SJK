@@ -46,7 +46,9 @@ pub(crate) fn reasons(
     if !crate::economy::may_act(snapshot) {
         return Reasons::default();
     }
-    let Some(me) = snapshot.me.as_ref() else {
+    // All access holds every shader 99 times (the hub's `PROTOCOL.md`, "All access"): the
+    // dot would never go out.
+    let Some(me) = snapshot.me.as_ref().filter(|me| !me.all_access) else {
         return Reasons::default();
     };
     let purse = if crate::economy::shop_in_shards() {
@@ -179,5 +181,11 @@ mod tests {
             progress.can_open = false;
         }
         assert!(!reasons(&closed, three).any());
+        // All access holds everything: the dot stays out.
+        let mut all = snapshot(held, 9_999_999, vec![offer("saber_aurora", 30, true, true)]);
+        if let Some(me) = all.me.as_mut() {
+            me.all_access = true;
+        }
+        assert!(!reasons(&all, three).any());
     }
 }
