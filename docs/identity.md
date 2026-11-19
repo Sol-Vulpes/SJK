@@ -1383,6 +1383,17 @@ Profiles as `jkr_creator` (absent as false). It is a mark and nothing else: no s
 rights, no tools, no protection. The player card shows it as a rust JKR CREATOR pill,
 after SJK TEAM or SJK CREATOR when the person has one.
 
+All access (since 19/11/2026, for Sol's testing) is another flag only the hub operator
+sets (`sjk-hub all-access KEY_ID`, `no-all-access`), carried by Profiles as `all_access`
+(absent as false). The hub does the work (its `PROTOCOL.md`, "All access"): it lists every
+unlock with 99 copies (tags in every finish) and every card in every finish, reads credits
+and shards as 9999999, lets the look wear anything, and uses nothing up when the person
+buys, shatters or trades; their real collection stays in the hub untouched. The client
+reads that profile like any other, so every picker, the Collection and trades offer
+everything; the only client rule is that the Forge's gold dot
+([forge_alert.rs](../crates/sjk-viewer/src/forge_alert.rs)) stays out, since 99 copies
+would keep it lit.
+
 The Staff page ([staff_panel.rs](../crates/sjk-viewer/src/staff_panel.rs), the SJK
 UI's look) finds players down its left: a name or part of one (colour codes and symbols
 ignored, any of the 20 names the hub keeps for them) or a key id typed in the search

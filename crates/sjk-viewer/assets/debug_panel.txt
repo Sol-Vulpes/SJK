@@ -51,6 +51,19 @@ test: Theme cold (Settings > Interface): the same glass in navy; text still read
 test: r_drawTimings 1 on the Kybers wall: ui-backdrop stays small (about 0.03 ms or less).
 note: Rows inside a glass pane and pictures inside tiles keep plain fills: glass on glass.
 
+[all-access]
+area: Menus & settings
+title: All access: every shader, tag and card held, endless credits and shards (hub flag)
+change: Hub flag all_access (operator CLI only): the profile lists everything, nothing is spent.
+change: Trades give the other side a real copy and you keep yours; your trade limits are off.
+change: The Forge's gold dot stays out for an all-access profile.
+test: Once the hub has the flag on: Collection lists every shader, tag and card, x99.
+test: Wear a blade you never had, a Solar tag, Sun extras: others on the server see them.
+test: Buy a holocron and a shop offer: credits and shards stay at 9999999.
+test: Trade a shader and a tag to another key: they get it, your count stays 99.
+test: Shatter a copy in the Forge: still 99.
+note: Turned off with no-all-access: your real collection comes back as it was.
+
 [secret-tier]
 area: Menus & settings
 title: Unique blades are now Secret blades, in red

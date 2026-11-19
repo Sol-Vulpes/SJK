@@ -2180,6 +2180,7 @@ mod tests {
             staff: true,
             creator: false,
             jkr_creator: false,
+            all_access: false,
             trust: None,
             emoji: String::new(),
             created: 1_791_000_000,
