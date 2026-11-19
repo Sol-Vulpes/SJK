@@ -1,3 +1,17 @@
+## Rig model chains keep their shape as they hang (19/11/2026)
+
+19/11/2026, `feat/rig-chain-rest-shape` based on `main` `afd16b60`. A `dynamic` line may say
+`shape`: its spring then holds each joint at its modelled bend under its parent as drawn,
+rather than at its animated place in the model, and its gravity is heavier towards the root,
+so a strand or a coat droops as a whole and keeps its curve where a strong `gravity` used to
+pull it flat ([rig-models.md](rig-models.md#dynamic-joints-tails-capes)). Its wag adds only
+each bone's share. Lines without `shape` move as before; an older client rejects a manifest
+that uses the word. Verified: `cargo test -p sjk-viewer --bin sjk rig_` (a hooked strand
+keeps its hook with `shape` and flattens without, at the same drop; a stiff strand's tip wags
+as far either way; the manifest word) and a probe on an installed rig's back hair (limit 22):
+gravity 800 changed its bends 2.7 degrees on average with `shape` and 7.2 without. Not tried in
+a game.
+
 ## Game chat: client icons and ticks (13/11/2026)
 
 13/11/2026, `personal/chat-client-icons` based on `main` `cdd73b774` (Sol: "I would like to

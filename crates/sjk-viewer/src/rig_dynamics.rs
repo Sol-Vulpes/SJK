@@ -87,6 +87,11 @@ pub(crate) struct Settings {
     pub(crate) drag: f32,
     /// Whether the arms' capsules push the chain's points out too.
     pub(crate) arms: bool,
+    /// Whether the spring holds each joint where its modelled bend puts it under its parent
+    /// as the chain draws it, rather than where the animation puts it in the model. Its
+    /// gravity is heavier towards the root ([`Chains::load`]), so a styled strand droops as
+    /// a whole and keeps its curve instead of being pulled flat.
+    pub(crate) shape: bool,
 }
 
 impl Default for Settings {
@@ -101,6 +106,7 @@ impl Default for Settings {
             clearance: 0.0,
             drag: 0.0,
             arms: false,
+            shape: false,
         }
     }
 }
@@ -241,6 +247,13 @@ pub(super) struct Chains {
     pub(super) joints: Vec<usize>,
     /// How far along its chain each one is, 0 at the anchor to 1 at the tip.
     along: Vec<f32>,
+    /// How far along a chain one bone takes it.
+    along_step: f32,
+    /// How much of its chain hangs from its bone: 1 for the first under the anchor, down to
+    /// one bone's share at a tip (the bones from its parent to its farthest tip, over the
+    /// bones from the anchor to that tip). A chain that keeps its shape weighs its bones
+    /// by this, so it bends most at the root and its curve rides down on it.
+    load: Vec<f32>,
     /// Its chain's settings.
     settings: Vec<Settings>,
     /// Whether any chain has a [`Settings::drag`], read each frame for each actor.
@@ -305,12 +318,27 @@ impl Chains {
             })
             .collect();
         let deepest = found.iter().map(|(_, depth, ..)| *depth).max().unwrap_or(1) as f32;
+        // The depth of the farthest tip under each joint, children before parents.
+        let mut tips = vec![0; joints.len()];
+        for &(index, depth, ..) in found.iter().rev() {
+            let tip = tips[index].max(depth);
+            tips[index] = tip;
+            if let Some(parent) = joints[index].parent {
+                tips[parent] = tips[parent].max(tip);
+            }
+        }
+        let load = found
+            .iter()
+            .map(|&(index, depth, ..)| (tips[index] - depth + 1) as f32 / tips[index] as f32)
+            .collect();
         Self {
             joints: found.iter().map(|(index, ..)| *index).collect(),
             along: found
                 .iter()
                 .map(|(_, depth, ..)| *depth as f32 / deepest)
                 .collect(),
+            along_step: 1.0 / deepest,
+            load,
             settings: found.iter().map(|(.., settings)| *settings).collect(),
             drag: found.iter().any(|(.., settings)| settings.drag > 0.0),
             anchor: found.iter().map(|(_, _, anchor, _)| *anchor).collect(),
@@ -335,6 +363,7 @@ impl Chains {
         slots.sort_by_key(|slot| !is_inner(self.anchor[*slot]));
         self.joints = slots.iter().map(|slot| self.joints[*slot]).collect();
         self.along = slots.iter().map(|slot| self.along[*slot]).collect();
+        self.load = slots.iter().map(|slot| self.load[*slot]).collect();
         self.settings = slots.iter().map(|slot| self.settings[*slot]).collect();
         self.anchor = slots.iter().map(|slot| self.anchor[*slot]).collect();
         for slot in 0..self.joints.len() {
@@ -461,6 +490,18 @@ impl Chains {
         }
     }
 
+    /// Gravity on `slot`'s point: more towards the tip, or for a chain that keeps its shape,
+    /// more towards the root ([`Self::load`]).
+    fn weight(&self, slot: usize) -> Vec3A {
+        let settings = &self.settings[slot];
+        let share = if settings.shape {
+            self.load[slot]
+        } else {
+            self.along[slot]
+        };
+        Vec3A::NEG_Z * settings.gravity * share
+    }
+
     pub(super) fn is_empty(&self) -> bool {
         self.joints.is_empty()
     }
@@ -574,40 +615,40 @@ pub(super) fn simulate(
     let step = step.unwrap_or(0.0);
     state.time += step;
     let phase = std::f32::consts::TAU * WAG_HERTZ * state.time;
-    let target = |slot: usize, pose: &[Affine3A]| {
-        let along = chains.along[slot];
-        let wag = chains.settings[slot].wag;
-        // Model space: +X is the player's side (-Y the front, +Z up). The tip trails
-        // the base a little, so the wag runs down the chain.
-        pose[chains.joints[slot]].translation + Vec3A::X * wag * along * (phase - along * 0.6).sin()
+    // Model space: +X is the player's side (-Y the front, +Z up). The tip trails the base
+    // a little, so the wag runs down the chain.
+    let wag_at = |slot: usize, along: f32| {
+        Vec3A::X * chains.settings[slot].wag * along.max(0.0) * (phase - along * 0.6).sin()
     };
-    // Gravity on each point, more towards the tip.
-    let weight = |slot: usize| Vec3A::NEG_Z * chains.settings[slot].gravity * chains.along[slot];
+    let wag = |slot: usize| wag_at(slot, chains.along[slot]);
+    // A chain that keeps its shape already carries each joint on its parent's wag, and
+    // turned with its parent's bone: it adds only the change of that turn (the second
+    // difference down the chain), so its tip wags as far as another chain's.
+    let shaped_wag = |slot: usize| {
+        let along = chains.along[slot];
+        let step = chains.along_step;
+        wag_at(slot, along) - wag_at(slot, along - step) * 2.0 + wag_at(slot, along - step * 2.0)
+    };
+    let target = |slot: usize, pose: &[Affine3A]| pose[chains.joints[slot]].translation + wag(slot);
     if restart {
-        // Already hanging: where the spring holds the weight.
+        // Already hanging: where the spring holds the weight. A chain that keeps its shape
+        // starts again below, as each joint's parent is placed.
         state.points = (0..count)
-            .map(|slot| target(slot, pose) + weight(slot) / chains.settings[slot].stiffness)
+            .map(|slot| target(slot, pose) + chains.weight(slot) / chains.settings[slot].stiffness)
             .collect();
         state.velocities = vec![Vec3A::ZERO; count];
         state.pushes = vec![Vec3A::ZERO; count];
         state.lags = vec![Vec3A::ZERO; count];
     } else {
-        for slot in 0..count {
-            let pull = target(slot, pose) - state.points[slot];
-            let Settings {
-                stiffness,
-                damping,
-                drag,
-                ..
-            } = chains.settings[slot];
-            let air = if drag > 0.0 {
-                state.motion.wind(state.points[slot]) * -drag * chains.along[slot]
-            } else {
-                Vec3A::ZERO
-            };
-            let velocity = &mut state.velocities[slot];
-            *velocity += (pull * stiffness - *velocity * damping + weight(slot) + air) * step;
-            state.points[slot] += *velocity * step;
+        for slot in (0..count).filter(|slot| !chains.settings[*slot].shape) {
+            spring(
+                chains,
+                slot,
+                &state.motion,
+                target(slot, pose),
+                (&mut state.points[slot], &mut state.velocities[slot]),
+                step,
+            );
         }
     }
     state.animated.clear();
@@ -633,12 +674,34 @@ pub(super) fn simulate(
                 .unwrap_or(Vec3A::Z);
             origin + towards * length
         };
+        // A chain that keeps its shape pulls each joint towards its modelled bend under
+        // its parent as drawn, so its parent must be placed first.
+        let shaped = chains.settings[slot].shape;
+        let held = if shaped {
+            let held = origin + animated;
+            if restart {
+                state.points[slot] =
+                    held + shaped_wag(slot) + chains.weight(slot) / chains.settings[slot].stiffness;
+            } else {
+                spring(
+                    chains,
+                    slot,
+                    &state.motion,
+                    held + shaped_wag(slot),
+                    (&mut state.points[slot], &mut state.velocities[slot]),
+                    step,
+                );
+            }
+            held
+        } else {
+            state.animated[index].translation
+        };
         // A limited joint's spring runs free of the bone: the bone only tilts by how far
         // the spring lags, so it cannot snap from side to side as the lag turns round.
         let limit = chains.settings[slot].limit;
         let limited = limit < NO_LIMIT;
         let lag = if limited {
-            let raw = state.points[slot] - state.animated[index].translation;
+            let raw = state.points[slot] - held;
             let share = if restart {
                 1.0
             } else {
@@ -719,6 +782,32 @@ pub(super) fn simulate(
             state.points[slot] = pose[index].translation;
         }
     }
+}
+
+/// Move `slot`'s point and velocity by `step` seconds: its spring towards `target`, its
+/// damping, its weight and the air on it.
+fn spring(
+    chains: &Chains,
+    slot: usize,
+    motion: &Motion,
+    target: Vec3A,
+    (point, velocity): (&mut Vec3A, &mut Vec3A),
+    step: f32,
+) {
+    let Settings {
+        stiffness,
+        damping,
+        drag,
+        ..
+    } = chains.settings[slot];
+    let air = if drag > 0.0 {
+        motion.wind(*point) * -drag * chains.along[slot]
+    } else {
+        Vec3A::ZERO
+    };
+    let pull = target - *point;
+    *velocity += (pull * stiffness - *velocity * damping + chains.weight(slot) + air) * step;
+    *point += *velocity * step;
 }
 
 /// The bone `animated` tilted towards `lag`, at its length. The tilt grows smoothly with
@@ -1326,5 +1415,107 @@ mod tests {
         let at = pose[3].translation;
         let near = closest(pose[0].translation, pose[1].translation, at);
         assert!((at - near).length() > 6.5, "{at:?}");
+    }
+
+    /// A strand out to the side from an anchor, two 10-unit bones and a hook of 45
+    /// degrees up at their end: after it settles, how far its tip drops and the hook's
+    /// bend, degrees.
+    fn hooked_strand(settings: Settings) -> (f32, f32) {
+        let anchor = Vec3A::new(0.0, 0.0, 40.0);
+        let bend = Vec3A::new(10.0, 0.0, 40.0);
+        let middle = Vec3A::new(20.0, 0.0, 40.0);
+        let tip = middle + Vec3A::new(7.0, 0.0, 7.0);
+        let joints = vec![
+            joint(None, Vec3A::ZERO, anchor),
+            joint(Some(0), anchor, bend),
+            joint(Some(1), bend, middle),
+            joint(Some(2), middle, tip),
+        ];
+        let chains = Chains::under(&joints, &[0, 1, 2, 3], &[(0, settings)]);
+        let rest: Vec<Affine3A> = joints.iter().map(|joint| joint.bind).collect();
+        let mut state = State::default();
+        let mut pose = rest.clone();
+        simulate(&joints, &chains, &mut pose, &mut state, None);
+        for _ in 0..180 {
+            pose.clone_from(&rest);
+            simulate(&joints, &chains, &mut pose, &mut state, Some(1.0 / 60.0));
+        }
+        let second = pose[2].translation - pose[1].translation;
+        let last = pose[3].translation - pose[2].translation;
+        (
+            tip.z - pose[3].translation.z,
+            second.angle_between(last).to_degrees(),
+        )
+    }
+
+    fn hanging(gravity: f32, shape: bool) -> Settings {
+        Settings {
+            gravity,
+            wag: 0.0,
+            collide: false,
+            shape,
+            ..Settings::default()
+        }
+    }
+
+    #[test]
+    fn a_chain_that_keeps_its_shape_droops_with_its_curve() {
+        // No gravity: as modelled, either way.
+        for shape in [false, true] {
+            let (drop, hook) = hooked_strand(hanging(0.0, shape));
+            assert!(
+                drop.abs() < 0.01 && (hook - 45.0).abs() < 0.01,
+                "{drop} {hook}"
+            );
+        }
+        // About as far down at the tip, the hook flattened, or kept.
+        let (drop, hook) = hooked_strand(hanging(1600.0, false));
+        assert!(drop > 18.0 && hook < 25.0, "{drop} {hook}");
+        let (drop, hook) = hooked_strand(hanging(400.0, true));
+        assert!(drop > 18.0 && hook > 32.0, "{drop} {hook}");
+        // A gentle pull: a gentle droop.
+        let (drop, hook) = hooked_strand(hanging(50.0, true));
+        assert!((1.0..5.0).contains(&drop) && hook > 42.0, "{drop} {hook}");
+    }
+
+    /// How far a 4-bone strand hanging from an anchor wags at its tip over 10 seconds.
+    fn wagging_tip(settings: Settings) -> f32 {
+        let anchor = Vec3A::new(0.0, 0.0, 40.0);
+        let place = |at: usize| anchor + Vec3A::NEG_Z * 5.0 * at as f32;
+        let joints: Vec<Joint> = (0..5)
+            .map(|at: usize| joint(at.checked_sub(1), place(at.max(1) - 1), place(at)))
+            .collect();
+        let chains = Chains::under(&joints, &[0, 1, 2, 3, 4], &[(0, settings)]);
+        let rest: Vec<Affine3A> = joints.iter().map(|joint| joint.bind).collect();
+        let mut state = State::default();
+        let mut pose = rest.clone();
+        simulate(&joints, &chains, &mut pose, &mut state, None);
+        let mut most = 0.0f32;
+        for _ in 0..600 {
+            pose.clone_from(&rest);
+            simulate(&joints, &chains, &mut pose, &mut state, Some(1.0 / 60.0));
+            most = most.max(pose[4].translation.x.abs());
+        }
+        most
+    }
+
+    #[test]
+    fn a_chain_that_keeps_its_shape_adds_no_wag_of_its_own() {
+        // A stiff spring, so the wag is what it aims at: the bends do not add the parents'
+        // wag up again.
+        let stiff = |shape| Settings {
+            gravity: 0.0,
+            stiffness: 1000.0,
+            damping: 60.0,
+            collide: false,
+            shape,
+            ..Settings::default()
+        };
+        let plain = wagging_tip(stiff(false));
+        let shaped = wagging_tip(stiff(true));
+        assert!(
+            plain > 2.0 && (shaped - plain).abs() < plain * 0.2,
+            "{plain} {shaped}"
+        );
     }
 }
