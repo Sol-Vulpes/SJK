@@ -3,13 +3,12 @@
 //! Cardboard box), Order 66 (`docs/client.md`, Order 66), the Hax (`docs/client.md`,
 //! Hax), the Ragdoll (`docs/client.md`, Ragdoll), the Drone (`docs/client.md`, Drone),
 //! the Boombox (`docs/client.md`, Boombox), the Monitor (`docs/client.md`, Monitor), Box
-//! hunt (`docs/client.md`, Box hunt) the Banana peel (`docs/client.md`, Banana peel),
-//! Fishing (`docs/client.md`, Fishing) and Quests (`docs/quests.md`),
+//! hunt (`docs/client.md`, Box hunt), Fishing (`docs/client.md`, Fishing) and Quests (`docs/quests.md`),
 //! a row to each on the left (Sol's pick of 25/10/2026, the Collection revamp's canvas):
 //! its picture, its name and a line of what it does, the key bound to it and its own
 //! switch, which runs it in place (`toy_illuminate`, `toy_box`, `toy_order66`, `toy_hax`,
 //! `toy_ragdoll`, `toy_drone`, `toy_boombox`, `toy_monitor`, `toy_boxhunt`,
-//! `toy_banana`, `toy_fishing`, `toy_quests`). The chosen one is described on a dark card beside the
+//! `toy_fishing`, `toy_quests`). The chosen one is described on a dark card beside the
 //! model, where its key is bound without the console (a click or K, then the key). The
 //! holocron floats lit by the model while it is chosen.
 
@@ -40,11 +39,25 @@ const SWITCH_ROOM: f32 = 130.0;
 
 /// The list's sections (Sol's pick of 09/11/2026, once there were fourteen toys): each
 /// head and how many toys of [`ORDER`] stand under it.
-const SECTIONS: [(&str, usize); 3] = [("Around you", 5), ("With others", 4), ("Earn and win", 5)];
+const SECTIONS: [(&str, usize); 3] = [("Around you", 5), ("With others", 3), ("Earn and win", 5)];
 /// The toys in the list's order, as indices into [`TOYS`] (whose order the panel, the
 /// tokens and the bits keep): around you, the ones that need others with them on, and
 /// the ones that earn or win something.
-pub(super) const ORDER: [usize; TOY_COUNT] = [0, 1, 4, 5, 6, 2, 3, 7, 9, 8, 10, 12, 13, 11];
+pub(super) const ORDER: [usize; TOY_COUNT] = [
+    ILLUMINATE_TOY,
+    BOX_TOY,
+    RAGDOLL_TOY,
+    DRONE_TOY,
+    BOOMBOX_TOY,
+    ORDER66_TOY,
+    HAX_TOY,
+    MONITOR_TOY,
+    BOX_HUNT_TOY,
+    FISHING_TOY,
+    MINING_TOY,
+    QUESTS_TOY,
+    WHEEL_OF_DOOM_TOY,
+];
 
 /// Where each toy's row stands, in the order of [`TOYS`].
 fn row_tops() -> [f32; TOY_COUNT] {
@@ -129,9 +142,8 @@ const SHARE_ROW: f32 = 44.0;
 
 /// Every command a toy is run by, in the order the page is told their keys
 /// ([`Inputs::toy_keys`]): each toy's switch, Order 66's order after its own, the
-/// Monitor's throw (held, it charges) after its own, and the Banana peel's drop after its
-/// own.
-pub(crate) const COMMANDS: [&str; 17] = [
+/// Monitor's throw (held, it charges) after its own.
+pub(crate) const COMMANDS: [&str; 15] = [
     "toy_illuminate",
     "toy_box",
     "toy_order66",
@@ -143,8 +155,6 @@ pub(crate) const COMMANDS: [&str; 17] = [
     "toy_monitor",
     "+monitor_throw",
     "toy_boxhunt",
-    "toy_banana",
-    "banana_drop",
     crate::fishing::COMMAND,
     crate::wheel_of_doom::COMMAND,
     crate::mining::COMMAND,
@@ -332,26 +342,6 @@ const TOYS: [Toy; TOY_COUNT] = [
         idea: None,
     },
     Toy {
-        icon: "banana",
-        name: "Banana peel",
-        tag: "Drop peels; players who walk onto them slip.",
-        title: "Banana peel",
-        what: "Drop a banana peel at your feet, or toss one ahead as you run. A player who has it on too and walks onto a peel slips and falls as a ragdoll, cartoon style; the peel is gone. With it off, you walk over peels.",
-        more: Some(
-            "Three peels down at a time, each for two minutes, none by a spawn point. Its switch lets you drop them and slip on them.",
-        ),
-        commands: &[
-            (crate::banana::COMMAND, "Your key"),
-            (crate::banana::DROP_COMMAND, "Drop key"),
-        ],
-        switch: "Slip on peels",
-        sight: Some((crate::banana::SHOW_CVAR, "See banana peels")),
-        options: &[],
-        token: BANANA_TOKEN,
-        author: "Sol",
-        idea: Some("Kushina"),
-    },
-    Toy {
         icon: "fishing",
         name: "Fishing",
         tag: "Cast a line, wait for the bite, reel it in.",
@@ -514,7 +504,6 @@ pub(super) fn states(inputs: &Inputs<'_>) -> [bool; TOY_COUNT] {
         inputs.boombox,
         inputs.monitor,
         inputs.box_hunt,
-        inputs.banana,
         inputs.fishing,
         inputs.wheel_of_doom,
         inputs.mining,
@@ -1604,7 +1593,6 @@ mod tests {
             (crate::boombox::TOY, "Boombox"),
             (crate::monitor::TOY, "Monitor"),
             (crate::box_hunt::TOY, "Box hunt"),
-            (crate::banana::TOY, "Banana peel"),
             (crate::fishing::TOY, "Fishing"),
             (crate::mining::TOY, "Mining"),
             (crate::quests::TOY, "Quests"),
@@ -1651,7 +1639,7 @@ mod tests {
                         }
                     }
                     let mut card = vec![TOY_SWITCH_TOKEN, BIND_TOKEN];
-                    if toy == 2 || toy == 7 || toy == 9 {
+                    if toy == ORDER66_TOY || toy == MONITOR_TOY {
                         card.push(BIND_SECOND_TOKEN);
                     }
                     for token in card {
@@ -1687,11 +1675,11 @@ mod tests {
             assert!(tops[pair[1]] >= tops[pair[0]] + ROW_HEIGHT, "{pair:?}");
         }
         assert!(tops[ORDER[TOY_COUNT - 1]] + ROW_HEIGHT <= super::super::view::KEYS_Y);
-        assert_eq!(step(6, 1, false), 2);
-        assert_eq!(step(2, -1, false), 6);
+        assert_eq!(step(BOOMBOX_TOY, 1, false), ORDER66_TOY);
+        assert_eq!(step(ORDER66_TOY, -1, false), BOOMBOX_TOY);
         assert_eq!(step(ORDER[TOY_COUNT - 1], 1, true), ORDER[0]);
         assert_eq!(step(ORDER[TOY_COUNT - 1], 1, false), ORDER[TOY_COUNT - 1]);
-        assert_eq!(signature(&TOYS[9]), "Made by Sol, Kushina's idea");
+        assert_eq!(signature(&TOYS[FISHING_TOY]), "Made by Slash, Sanji's idea");
         assert_eq!(signature(&TOYS[0]), "Made by Sol");
     }
 
@@ -1775,7 +1763,7 @@ mod tests {
             let _ = panel.handle_pointer(event, true);
         }
         assert_eq!(panel.bind_wait, None, "a click elsewhere lets go");
-        panel.toy = 2;
+        panel.toy = ORDER66_TOY;
         assert_eq!(
             panel.bind_key(KeyCode::KeyO, Some("o".to_owned()), 1),
             PanelAction::Bind {

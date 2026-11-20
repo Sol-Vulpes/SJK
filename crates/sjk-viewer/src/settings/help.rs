@@ -737,10 +737,6 @@ const HELP: &[(&str, &str)] = &[
         "Off: mystery boxes open silently on this PC, yours and other players'.",
     ),
     (
-        crate::toy_sounds::Toy::Banana.cvar(),
-        "Off: Banana peel sounds are not played on this PC, yours or other players'. The toy still works and is still seen.",
-    ),
-    (
         crate::toy_sounds::Toy::Tag.cvar(),
         "Off: tags go up without the spray can's sound on this PC, yours and other players'.",
     ),
@@ -1220,10 +1216,6 @@ const HELP: &[(&str, &str)] = &[
     (
         crate::monitor::SHOW_CVAR,
         "Off: no Monitor toy monitor is drawn, yours or other players', nor their sounds heard. You can still be hit while the toy is on.",
-    ),
-    (
-        crate::banana::SHOW_CVAR,
-        "Off: no Banana peel toy peel is drawn, yours or other players', nor their sounds heard. You can still slip while the toy is on.",
     ),
     (
         crate::tags::SHOW_CVAR,

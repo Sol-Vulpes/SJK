@@ -44,9 +44,6 @@ impl GpuState {
         if let Some(on) = console.take_box_hunt_request() {
             self.box_hunt.set_on(on);
         }
-        if let Some(on) = console.take_banana_request() {
-            self.banana.set_on(on);
-        }
         if let Some(on) = console.take_quests_request() {
             self.quests.set_on(on);
         }
@@ -133,19 +130,10 @@ impl GpuState {
             None => {}
         }
         // `toy_illuminate` may have flipped it: tell the Toys tab. Order 66, the Hax, the
-        // Drone, the Monitor, Box hunt and the Banana peel stay as last switched, across
+        // Drone, the Monitor, Box hunt, the Prop gun and Quests stay as last switched, across
         // maps, servers and restarts (`toy_saved`).
         if let Some(console) = self.console.as_mut() {
-            let [
-                order66,
-                hax,
-                drone,
-                monitor,
-                box_hunt,
-                banana,
-                propgun,
-                quests,
-            ] = &mut self.toys_saved;
+            let [order66, hax, drone, monitor, box_hunt, propgun, quests] = &mut self.toys_saved;
             let on = order66.sync(console, crate::toy_saved::ORDER66_CVAR, self.order66.on());
             self.order66.set_on(on);
             let on = hax.sync(console, crate::toy_saved::HAX_CVAR, self.hax.on());
@@ -156,8 +144,6 @@ impl GpuState {
             self.monitor.set_on(on);
             let on = box_hunt.sync(console, crate::toy_saved::BOX_HUNT_CVAR, self.box_hunt.on());
             self.box_hunt.set_on(on);
-            let on = banana.sync(console, crate::toy_saved::BANANA_CVAR, self.banana.on());
-            self.banana.set_on(on);
             let on = propgun.sync(console, crate::toy_saved::PROPGUN_CVAR, self.propgun.on());
             self.propgun.set_on(on);
             let on = quests.sync(console, crate::toy_saved::QUESTS_CVAR, self.quests.on());
@@ -171,7 +157,6 @@ impl GpuState {
             console.set_boombox_on(self.boombox.on());
             console.set_monitor_on(self.monitor.on());
             console.set_box_hunt_on(self.box_hunt.on());
-            console.set_banana_on(self.banana.on());
             console.set_fishing_on(self.fishing.on());
             console.set_wheel_of_doom_on(self.wheel_of_doom.running());
             console.set_mining_on(self.mining.on());

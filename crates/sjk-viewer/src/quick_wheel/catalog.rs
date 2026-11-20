@@ -39,8 +39,6 @@ pub(crate) enum State {
     Monitor,
     /// Box hunt is on (`toy_boxhunt` flips it).
     BoxHunt,
-    /// The Banana peel toy is on (`toy_banana` flips it).
-    Banana,
     /// Quests are on (`toy_quests` flips it).
     Quests,
 }
@@ -49,7 +47,7 @@ pub(crate) enum State {
 /// icons and cut by `scripts/wheel_icons.py` from two boards (the first sixteen
 /// from the first, the rest, named by the actions they are for, from the
 /// second); uploaded into the UI atlas at start (`ui_renderer::wheel_icon`).
-pub(crate) const ICONS: [(&str, &[u8]); 60] = [
+pub(crate) const ICONS: [(&str, &[u8]); 59] = [
     ("drizzle", include_bytes!("../../assets/wheel/drizzle.png")),
     ("rain", include_bytes!("../../assets/wheel/rain.png")),
     ("storm", include_bytes!("../../assets/wheel/storm.png")),
@@ -212,11 +210,6 @@ pub(crate) const ICONS: [(&str, &[u8]); 60] = [
     (
         "box_hunt",
         include_bytes!("../../assets/mystery_box/toy_boxhunt.png"),
-    ),
-    // The Banana peel's picture, the peel (bundled with the client).
-    (
-        "banana",
-        include_bytes!("../../assets/banana/toy_banana.png"),
     ),
     // The WHEEL OF DOOM's picture, the wheel (bundled with the client).
     (
@@ -775,24 +768,6 @@ pub(crate) const ACTIONS: &[Action] = &[
         Toys,
         State::Quests,
         Some("quests"),
-    ),
-    // Lets the player drop banana peels, and slip on them.
-    action(
-        "banana",
-        "Banana peel",
-        crate::banana::COMMAND,
-        Toys,
-        State::Banana,
-        Some("banana"),
-    ),
-    // Drops one at the feet, or tossed ahead while moving.
-    action(
-        "banana_drop",
-        "Drop banana peel",
-        crate::banana::DROP_COMMAND,
-        Toys,
-        State::None,
-        Some("banana"),
     ),
     // Tells the player's DOOM coins and the WHEELS OF DOOM of the map (spun with Use).
     action(

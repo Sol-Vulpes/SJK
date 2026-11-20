@@ -80,6 +80,7 @@ A new emblem, a new Collection with kybers and an Inventory, status bars at both
 - Shaders: `alphaGen dot` and `alphaGen oneMinusDot` now draw: the alpha follows how squarely a surface faces you (1 head-on, 0 edge-on) or the opposite, so a model shader can have a rim light; stock parses them and draws nothing, and no retail shader uses them _(Kushina, PR #439)_
 - Rig models: tails, capes and long hair no longer sink through the floor when the player kneels or crouches; every chain kept out of the body is kept off the ground too _(Kushina, PR #442)_
 - The achievements of the toys being removed (Order 66, the cardboard box, the Monitor, the Hax, Fishing and Mining, and the Drone's Special Delivery) are retired: whoever earned one keeps it, with its kyber and medal, marked No longer obtainable, and they no longer count in the totals of those who have none; the Hobbies page shows only to a player who holds one of its achievements _(Sol)_
+- The Banana peel toy is removed, the first of the toys going before the release (Sol's cleanup): its key, its Collection row, its quick wheel choices and its settings are gone, and its saved settings are dropped from your profile; the Boombox still stands on the floor as before _(Sol)_
 
 ## 2026.1117.1 (Alpha) | 17/11/2026
 

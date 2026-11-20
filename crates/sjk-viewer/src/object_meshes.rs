@@ -106,10 +106,6 @@ pub(super) fn load<'a>(
         model: crate::monitor::MODEL.to_owned(),
         variant: String::new(),
     });
-    appearances.insert(Appearance {
-        model: crate::banana::MODEL.to_owned(),
-        variant: String::new(),
-    });
     appearances.extend(crate::wheel_of_doom::MODELS.map(|model| Appearance {
         model: model.to_owned(),
         variant: String::new(),

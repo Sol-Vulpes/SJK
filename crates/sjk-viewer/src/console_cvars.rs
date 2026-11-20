@@ -727,12 +727,6 @@ pub(super) fn register_daily_cvars(cvars: &mut CvarRegistry) -> Result<(), sjk_s
             "Play mystery box sounds (SJK)",
         ),
         CvarDefinition::new(
-            crate::toy_sounds::Toy::Banana.cvar(),
-            true,
-            archive,
-            "Play Banana peel sounds (SJK)",
-        ),
-        CvarDefinition::new(
             crate::toy_sounds::Toy::Tag.cvar(),
             true,
             archive,
@@ -1160,12 +1154,6 @@ pub(super) fn register_daily_cvars(cvars: &mut CvarRegistry) -> Result<(), sjk_s
             "Quests are on: you may be given a quest, such as hugging or kissing two other players within a minute, for an Echo, or be named in one (toy_quests switches it)",
         ),
         CvarDefinition::new(
-            crate::toy_saved::BANANA_CVAR,
-            false,
-            archive,
-            "The Banana peel toy is on: you may drop banana peels (banana_drop) and slip on the ones you walk onto (toy_banana switches it)",
-        ),
-        CvarDefinition::new(
             crate::toy_saved::PROPGUN_CVAR,
             false,
             archive,
@@ -1219,12 +1207,6 @@ pub(super) fn register_daily_cvars(cvars: &mut CvarRegistry) -> Result<(), sjk_s
             "",
             archive,
             "The gun the Prop gun toy holds: the name of a propguns/<name>.gun file (propgun lists them; SJK)",
-        ),
-        CvarDefinition::new(
-            crate::banana::SHOW_CVAR,
-            true,
-            archive,
-            "Banana peels are seen (0: no Banana peel toy peel is drawn, nor its sounds in the world heard, on this PC; SJK)",
         ),
         CvarDefinition::new(
             crate::tags::CVAR,

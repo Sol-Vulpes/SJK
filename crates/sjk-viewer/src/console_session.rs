@@ -700,8 +700,6 @@ impl ViewerConsole {
             pending_monitor: None,
             box_hunt_on: false,
             pending_box_hunt: None,
-            banana_on: false,
-            pending_banana: None,
             pending_settings_search: None,
             sjk_chat_panel: super::sjk_chat_panel::Panel::new(),
             config_import: super::config_import_panel::Panel::new(),
@@ -1198,6 +1196,10 @@ fn retire_modern_ui(cvars: &mut CvarRegistry) {
         "ui_shaderView",
         // The weapon icon on nameplates, removed on 28/10/2026 (Sol: it told nothing).
         "cg_nameplateWeapon",
+        // The Banana peel toy's switch, sounds and sight, removed on 20/11/2026.
+        "cl_toyBanana",
+        "s_toyBananaSound",
+        "cg_toyBananaShow",
     ] {
         let _ = cvars.unset(retired);
     }

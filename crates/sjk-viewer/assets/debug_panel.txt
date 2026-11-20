@@ -1143,8 +1143,8 @@ test: Ride a vehicle, alt-tab out a while: no away emote. JoF Fullforce FFA temp
 area: Gameplay
 title: Toys say ON and OFF in colour, toy_help lists every toy (Blep's idea, Creyon's #289)
 change: Switching a toy prints its name and ON in green or OFF in red on the centre of the screen.
-change: toy_help lists the eleven toys: name in yellow, command, what it does (Banana peel too).
-test: Switch each toy (box, Order 66, Hax, Drone, Monitor, Box hunt, Banana peel): name ON/OFF.
+change: toy_help lists every toy: name in yellow, command, what it does.
+test: Switch each toy (box, Order 66, Hax, Drone, Monitor, Box hunt): name ON/OFF.
 test: Boombox: putting it away says Boombox OFF; starting it still names the track.
 test: A toy restored at start and a box lifted by someone else say nothing. Run toy_help.
 
@@ -1215,32 +1215,6 @@ test: Steer a player with the Hax into a pit: Leap of Faith; steer 5 minutes: Sc
 test: Have a player lift your box, then kill them within 3 seconds: Surprise!.
 test: Peek a player, end the peek, kill them within 10 seconds: Eye in the Sky.
 note: Needs the hub's toy-achievements deployed, else they stay at Waiting for the SJK hub.
-
-[banana-in-look]
-area: Gameplay
-title: Banana peel in the hub look: its id goes in the look's toys while it is on
-change: The look lists banana while toy_banana is on, as the other toys; peels are unchanged.
-change: Needs the hub's look-toys (32 toy ids) deployed: an older hub took 8 at most.
-test: Turn every toy on (box, Order 66, Hax, Drone, Boombox, Monitor, Box hunt, Banana peel).
-test: A second SJK client still sees your blade skin and your carton: the look went through.
-test: Drop a peel with all of them on: the other client sees it and slips on it as before.
-note: An old hub refuses a look with all nine toys (bad_look): the blade skin stops showing.
-
-[banana-peel]
-area: Gameplay
-title: Banana peel toy: drop peels; opted-in players who walk onto one slip (Kushina's idea)
-change: toy_banana (opt-in: drop and slip), banana_drop drops one ahead of you, tossed when running.
-change: Walking onto a peel with the toy on: cartoon slip sound, feet up, you fall as a ragdoll.
-change: 3 peels each, 2 min each, 2 s apart, none by a spawn; cg_toyBananaShow hides them.
-test: Collection > Toys: 10 rows fit, Banana peel last; its card, Drop key, See banana peels.
-test: Toy off, banana_drop: "Turn the Banana peel toy on..."; on: a peel lands ahead, a flop.
-test: Run and drop: tossed ~72 ahead; you do not slip on it at once, but do after 1.5 s.
-test: Drop at a spawn point: "Not so close to a spawn point". Drop a 4th: the 1st goes.
-test: Two SJK clients, both on: B walks onto A's peel: B slips on both screens, peel gone.
-test: B with the toy off walks over it: nothing. B in a duel or carrying a flag: no slip.
-test: A turns the toy off or leaves, or the map changes: A's peels go on B's screen.
-test: Getting up: jump, attack or taunt, or lie still ~2.5 s. Look at the model up close.
-note: Untested in game: checked by unit tests and off-screen world shots only.
 
 [mac-high-dpi]
 area: Menus & settings
@@ -10479,9 +10453,9 @@ area: Menus & settings
 title: Collection > Toys: three sections and who made each toy
 change: Rows under Around you, With others, Earn and win; a By column (Sol or Slash).
 change: The card says Made by Sol, or Made by Slash, Sanji's idea, under the toy's name.
-test: Collection > Toys: three heads, 14 rows, the last clear of the keys line.
+test: Collection > Toys: three heads, 13 rows, the last clear of the keys line.
 test: Arrows and Tab walk the rows top to bottom; Order 66 follows Boombox.
-test: Choose Banana peel: Made by Sol, Kushina's idea. Fishing: Made by Slash, Sanji's idea.
+test: Choose Fishing: Made by Slash, Sanji's idea. Mining: Made by Slash, vinry's idea.
 
 [mining-toy]
 area: Gameplay
@@ -10679,3 +10653,13 @@ change: Shown only if held, with No longer obtainable; totals count the held one
 change: The Hobbies page leaves the switch when nothing on it is held; F skips it too.
 test: Collection > Achievements on a profile without them: General and Fun only, totals 45.
 test: On a profile holding a retired one: it shows, marked No longer obtainable.
+
+[banana-removed]
+area: Gameplay
+title: The Banana peel toy is removed (Sol's cleanup before the release)
+change: No toy_banana or banana_drop; gone from Toys, the quick wheel, key bindings, Settings.
+change: Its saved switch, sound and sight settings are dropped from the profile at load.
+change: The Boombox still stands on the floor (the floor trace moved to floor_spot.rs).
+test: Collection > Toys: 13 rows, With others holds Order 66, Hax and Monitor; all fit.
+test: Boombox: boombox_place stands it on the floor ahead, as before.
+test: Status bar toys and toy_help: no Banana peel; others switch and show as before.

@@ -205,21 +205,6 @@ impl Panel {
                 ],
             });
         }
-        if token == BANANA_TOKEN {
-            return Some(Card {
-                title: "Banana peel".to_owned(),
-                colour: color::gold_bright(),
-                lines: vec![
-                    Line::how(
-                        "Every SJK player has it. Turn it on here or with a key bound to \
-                         toy_banana, then drop peels with your drop key. Players who have it \
-                         on slip on the ones they walk onto.",
-                    ),
-                    Line::status(crate::editions::name(crate::editions::ALPHA)),
-                    Line::held("Yours"),
-                ],
-            });
-        }
         if token == QUESTS_TOKEN {
             return Some(Card {
                 title: "Quests".to_owned(),

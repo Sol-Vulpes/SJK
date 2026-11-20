@@ -140,8 +140,6 @@ const BOOMBOX_TOKEN: u16 = 1_307;
 const MONITOR_TOKEN: u16 = 1_303;
 /// Box hunt's niche on Toys.
 const BOX_HUNT_TOKEN: u16 = 1_304;
-/// The Banana peel's niche on Toys.
-const BANANA_TOKEN: u16 = 1_375;
 /// Fishing's niche on Toys.
 const FISHING_TOKEN: u16 = 1_378;
 /// Mining's niche on Toys (after the toy cards' own switches, [`TOY_OPTION_TOKEN`]).
@@ -154,15 +152,25 @@ const SELL_JUNK_TOKEN: u16 = 1_395;
 /// The Fishing card's Sell fish button and the Mining card's Sell ore (the catch market,
 /// 15/11/2026), in the free run above the panel's other tokens.
 const SELL_CATCH_TOKEN: u16 = 1_420;
-/// Fishing's place among the toys (`collection_toys::TOYS`).
-const FISHING_TOY: usize = 10;
-/// The WHEEL OF DOOM's niche on Toys, and its place among the toys.
+/// The WHEEL OF DOOM's niche on Toys.
 const WHEEL_OF_DOOM_TOKEN: u16 = 1_396;
-const WHEEL_OF_DOOM_TOY: usize = 11;
-/// Mining's, whose card sells rubble by the same button token.
-const MINING_TOY: usize = 12;
-/// Quests' place among the toys.
-const QUESTS_TOY: usize = 13;
+/// Each toy's place among the toys (`collection_toys::TOYS`, [`TOY_TOKENS`],
+/// [`Panel::toy`]): named, so a toy removed (the Banana peel, 20/11/2026) moves only
+/// these.
+const ILLUMINATE_TOY: usize = 0;
+const BOX_TOY: usize = 1;
+const ORDER66_TOY: usize = 2;
+const HAX_TOY: usize = 3;
+const RAGDOLL_TOY: usize = 4;
+const DRONE_TOY: usize = 5;
+const BOOMBOX_TOY: usize = 6;
+const MONITOR_TOY: usize = 7;
+const BOX_HUNT_TOY: usize = 8;
+const FISHING_TOY: usize = 9;
+const WHEEL_OF_DOOM_TOY: usize = 10;
+/// Mining's, whose card sells rubble by the same button token as Fishing's junk.
+const MINING_TOY: usize = 11;
+const QUESTS_TOY: usize = 12;
 /// The Toys tab's "?", the Toy Master's (`collection_toys::Panel::toy_master_badge`): its
 /// hover card tells of the toys hidden on maps and names those the player found.
 const TOY_MASTER_TOKEN: u16 = 1_376;
@@ -180,9 +188,9 @@ const BOTH_TOKEN: u16 = 1_306;
 /// How far (frame pixels) a press on the lone saber may move and still be a click.
 const CLICK_SLOP: f32 = 6.0;
 /// The toys the Toys tab shows: Illuminate, the cardboard box, Order 66, the Hax, the
-/// Ragdoll, the Drone, the Boombox, the Monitor, Box hunt, the Banana peel, Fishing,
-/// then the WHEEL OF DOOM, Mining and Quests.
-const TOY_COUNT: usize = 14;
+/// Ragdoll, the Drone, the Boombox, the Monitor, Box hunt, Fishing, then the WHEEL OF
+/// DOOM, Mining and Quests.
+const TOY_COUNT: usize = 13;
 /// Each toy's row, in the order of [`Panel::toy`].
 const TOY_TOKENS: [u16; TOY_COUNT] = [
     TOY_TOKEN,
@@ -194,7 +202,6 @@ const TOY_TOKENS: [u16; TOY_COUNT] = [
     BOOMBOX_TOKEN,
     MONITOR_TOKEN,
     BOX_HUNT_TOKEN,
-    BANANA_TOKEN,
     FISHING_TOKEN,
     WHEEL_OF_DOOM_TOKEN,
     MINING_TOKEN,
@@ -484,9 +491,6 @@ pub(crate) enum PanelAction {
     BoxHunt(bool),
     /// Turn Quests on (`true`) or off: the same as `toy_quests`, set rather than toggled.
     Quests(bool),
-    /// Turn the Banana peel on (`true`) or off: the same as `toy_banana`, set rather than
-    /// toggled.
-    Banana(bool),
     /// Get the fishing rod out (`true`) or put it away: the same as `toy_fishing`, set
     /// rather than toggled.
     Fishing(bool),
@@ -711,8 +715,6 @@ pub(crate) struct Inputs<'a> {
     pub(crate) box_hunt: bool,
     /// Quests are on now (kept as [`Self::illuminate`] is).
     pub(crate) quests: bool,
-    /// The Banana peel toy is on now (kept as [`Self::illuminate`] is).
-    pub(crate) banana: bool,
     /// The fishing rod is out now (kept as [`Self::illuminate`] is).
     pub(crate) fishing: bool,
     /// The pickaxe is in hand now (kept as [`Self::illuminate`] is).
@@ -798,9 +800,7 @@ pub(crate) struct Panel {
     /// (`collection_achievements::pages`): its segments and F go through these.
     achievement_pages: Vec<crate::achievements::Page>,
     shader: usize,
-    /// The toy chosen on Toys: 0 Illuminate, 1 the cardboard box, 2 Order 66, 3 the Hax,
-    /// 4 the Ragdoll, 5 the Drone, 6 the Boombox, 7 the Monitor, 8 Box hunt, 9 the Banana
-    /// peel, 10 Fishing, 11 Mining.
+    /// The toy chosen on Toys, by its place ([`ILLUMINATE_TOY`] to [`QUESTS_TOY`]).
     toy: usize,
     /// The banner chosen on Banners, which banners the profile holds and the one worn.
     banner: usize,
@@ -851,8 +851,6 @@ pub(crate) struct Panel {
     box_hunt_on: bool,
     /// Quests were on, as the last frame's inputs said.
     quests_on: bool,
-    /// The Banana peel was on, as the last frame's inputs said.
-    banana_on: bool,
     /// The fishing rod was out, as the last frame's inputs said.
     fishing_on: bool,
     /// The pickaxe was in hand, as the last frame's inputs said.
@@ -1118,7 +1116,6 @@ impl Panel {
             monitor_on: false,
             box_hunt_on: false,
             quests_on: false,
-            banana_on: false,
             fishing_on: false,
             mining_on: false,
             toys_unseen: 0,
@@ -1426,7 +1423,7 @@ impl Panel {
                 saber: None,
                 on_second: false,
                 on_both: false,
-                holocron: self.toy == 0,
+                holocron: self.toy == ILLUMINATE_TOY,
                 lab: None,
                 hall: false,
                 held_off: false,
@@ -1477,15 +1474,14 @@ impl Panel {
                 .get(self.shader)
                 .copied()
                 .map_or(PanelAction::None, |row| self.wear_action(row)),
-            Tab::Toys if self.toy == 1 => PanelAction::CardboardBox(!self.box_on),
-            Tab::Toys if self.toy == 2 => PanelAction::Order66(!self.order66_on),
-            Tab::Toys if self.toy == 3 => PanelAction::Hax(!self.hax_on),
-            Tab::Toys if self.toy == 4 => PanelAction::Ragdoll(!self.ragdoll_on),
-            Tab::Toys if self.toy == 5 => PanelAction::Drone(!self.drone_on),
-            Tab::Toys if self.toy == 6 => PanelAction::Boombox(!self.boombox_on),
-            Tab::Toys if self.toy == 7 => PanelAction::Monitor(!self.monitor_on),
-            Tab::Toys if self.toy == 8 => PanelAction::BoxHunt(!self.box_hunt_on),
-            Tab::Toys if self.toy == 9 => PanelAction::Banana(!self.banana_on),
+            Tab::Toys if self.toy == BOX_TOY => PanelAction::CardboardBox(!self.box_on),
+            Tab::Toys if self.toy == ORDER66_TOY => PanelAction::Order66(!self.order66_on),
+            Tab::Toys if self.toy == HAX_TOY => PanelAction::Hax(!self.hax_on),
+            Tab::Toys if self.toy == RAGDOLL_TOY => PanelAction::Ragdoll(!self.ragdoll_on),
+            Tab::Toys if self.toy == DRONE_TOY => PanelAction::Drone(!self.drone_on),
+            Tab::Toys if self.toy == BOOMBOX_TOY => PanelAction::Boombox(!self.boombox_on),
+            Tab::Toys if self.toy == MONITOR_TOY => PanelAction::Monitor(!self.monitor_on),
+            Tab::Toys if self.toy == BOX_HUNT_TOY => PanelAction::BoxHunt(!self.box_hunt_on),
             Tab::Toys if self.toy == FISHING_TOY => PanelAction::Fishing(!self.fishing_on),
             Tab::Toys if self.toy == WHEEL_OF_DOOM_TOY => PanelAction::WheelOfDoom,
             Tab::Toys if self.toy == MINING_TOY => PanelAction::Mining(!self.mining_on),
@@ -2872,7 +2868,7 @@ impl Panel {
             EXTRAS_BODY_TOKEN => PanelAction::None,
             // A toy's row chooses it; its own switch runs it.
             TOY_TOKEN | BOX_TOKEN | ORDER_TOKEN | HAX_TOKEN | RAGDOLL_TOKEN | DRONE_TOKEN
-            | BOOMBOX_TOKEN | MONITOR_TOKEN | BOX_HUNT_TOKEN | BANANA_TOKEN | FISHING_TOKEN
+            | BOOMBOX_TOKEN | MONITOR_TOKEN | BOX_HUNT_TOKEN | FISHING_TOKEN
             | WHEEL_OF_DOOM_TOKEN | MINING_TOKEN | QUESTS_TOKEN => {
                 self.toy = TOY_TOKENS.iter().position(|&row| row == token).unwrap_or(0);
                 PanelAction::None
@@ -3020,12 +3016,6 @@ impl Panel {
         self.extras_for_shot = unlocked;
     }
 
-    /// Choose the Toys tab's toy `index` (0 Illuminate), for a world shot.
-    #[cfg(test)]
-    pub(crate) fn choose_toy_for_shot(&mut self, index: usize) {
-        self.toy = index.min(TOY_COUNT - 1);
-    }
-
     /// Hold the lone saber turned so, still, as a drag would (`None` lets go), for a
     /// world shot.
     #[cfg(test)]
@@ -3119,7 +3109,6 @@ mod tests {
             boombox: false,
             monitor: false,
             box_hunt: false,
-            banana: false,
             fishing: false,
             mining: false,
             quests: false,

@@ -1,3 +1,18 @@
+## Toy removals: retired achievements, the Banana peel (20/11/2026)
+
+20/11/2026, Sol's cleanup before the release (Discord announcement 19/11: unused or sloppy
+toys go; Sol's list: Hax, Monitor, Banana peel, Order 66, the cardboard box, Fishing,
+Mining). Step 1, `personal/retire-toy-achievements`: their 34 achievements (and the Drone's
+Special Delivery, a monitor strike) are retired ([identity.md](identity.md)), kept by their
+holders; the Hobbies page leaves the switch when nothing on it is held. Step 2,
+`personal/remove-banana`: the Banana peel is gone (toy, frame, assets, script, settings,
+quick wheel, binds, Collection row, status bar piece, look id, world shots); its saved cvars
+are dropped at load; the Boombox's floor trace moved to `floor_spot.rs`; the Toys tab's
+places are named constants (`*_TOY` in `collection_panel.rs`) so the next removals move only
+those. The hub keeps the removed toys' routes and events on for older clients until the
+release sets the minimum client (Sol). Verified: the viewer's tests (4386), fmt, Clippy (no
+new warnings), the startup stack check. Not verified: in a game.
+
 ## Rig model chains stay off the ground (19/11/2026)
 
 19/11/2026, `feat/rig-chain-ground` based on `main` `afd16b60`. A rig model's dynamic chains

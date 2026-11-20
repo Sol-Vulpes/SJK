@@ -455,11 +455,6 @@ pub(super) const AUDIO: &[Setting] = &[
         kind: ValueKind::Bool,
     },
     Setting {
-        label: "Banana peel sounds",
-        cvar: crate::toy_sounds::Toy::Banana.cvar(),
-        kind: ValueKind::Bool,
-    },
-    Setting {
         label: "Tag spray sound",
         cvar: crate::toy_sounds::Toy::Tag.cvar(),
         kind: ValueKind::Bool,
@@ -1534,11 +1529,6 @@ pub(super) const GAME: &[Setting] = &[
     Setting {
         label: "Show monitors",
         cvar: crate::monitor::SHOW_CVAR,
-        kind: ValueKind::Bool,
-    },
-    Setting {
-        label: "Show banana peels",
-        cvar: crate::banana::SHOW_CVAR,
         kind: ValueKind::Bool,
     },
     Setting {
