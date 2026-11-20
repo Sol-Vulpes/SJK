@@ -170,7 +170,6 @@ impl crate::GpuState {
         }
         let mut switches = [false; TOY_COUNT];
         switches[toys::ILLUMINATE] = self.illuminate.lit();
-        switches[toys::CARDBOARD_BOX] = self.cardboard_box.on();
         switches[toys::ORDER66] = self.order66.on();
         switches[toys::HAX] = self.hax.on();
         switches[toys::RAGDOLL] = self.ragdoll.on();

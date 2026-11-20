@@ -92,7 +92,6 @@ impl GpuState {
         let relay_events = server
             .map(|server| player_identity::take_relay_events(Some(server)))
             .unwrap_or_default();
-        self.update_cardboard_box(Instant::now(), &toy_events);
         self.update_order66(&toy_events);
         self.update_hax(&toy_events, &relay_events);
         self.update_ragdoll(&relay_events);

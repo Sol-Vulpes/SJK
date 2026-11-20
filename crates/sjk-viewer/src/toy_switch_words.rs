@@ -3,12 +3,10 @@
 //! colour, the explanations in a command of their own).
 //!
 //! - **Switched:** every toy with an on/off switch says its name and **ON** in green or
-//!   **OFF** in red on the centre of the screen ([`switched`]): Illuminate, the cardboard
-//!   box, Order 66, the Hax, the Drone, the Monitor and Box hunt, and
-//!   the Boombox put away (its start names the track instead). Said only for the
-//!   player's own switch (a
-//!   bind, the quick wheel, the Collection's Toys tab); a toy restored at start
-//!   (`toy_saved`) or taken off by the game (a box lifted) says nothing.
+//!   **OFF** in red on the centre of the screen ([`switched`]): Illuminate, Order 66, the
+//!   Hax, the Drone, the Monitor and Box hunt, and the Boombox put away (its start names
+//!   the track instead). Said only for the player's own switch (a bind, the quick wheel,
+//!   the Collection's Toys tab); a toy restored at start (`toy_saved`) says nothing.
 //! - **`toy_help`** ([`COMMAND`]) lists every toy in the console, its name in yellow and,
 //!   in white, what it does and how ([`help_lines`]).
 
@@ -24,16 +22,11 @@ pub(crate) fn switched(name: &str, on: bool) -> String {
 }
 
 /// Every toy: its name, its switch and what it does and how, in `toy_help`'s order.
-pub(crate) const TOYS: [(&str, &str, &str); 15] = [
+pub(crate) const TOYS: [(&str, &str, &str); 14] = [
     (
         "Illuminate",
         "toy_illuminate",
         "a holocron floats by your shoulder and lights the way; SJK players see it",
-    ),
-    (
-        "Cardboard box",
-        "toy_box",
-        "hide in a box, crouched; another player lifts it with Use",
     ),
     (
         "Order 66",
@@ -138,7 +131,6 @@ mod tests {
         assert_eq!(lines.len(), TOYS.len() + 1);
         for command in [
             crate::illuminate::COMMAND,
-            crate::cardboard_box::COMMAND,
             crate::order66::COMMAND,
             crate::hax::COMMAND,
             crate::ragdoll::COMMAND,

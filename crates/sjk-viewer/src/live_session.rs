@@ -358,11 +358,6 @@ impl GpuState {
                 },
             );
             self.gameplay_input.apply_flip_kick(&mut command, flip_kick);
-            // In the cardboard box the player crouches (`cardboard_box`), but not
-            // while flying the free camera, whose `upmove` it would steer down.
-            self.cardboard_box
-                .set_flying(self.local_prediction.fake_noclip());
-            self.cardboard_box.shape_command(&mut command);
             // The WHEEL OF DOOM's effects on the player's own moves (`wheel_of_doom`).
             self.wheel_of_doom
                 .effects

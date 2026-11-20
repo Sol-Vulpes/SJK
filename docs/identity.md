@@ -1181,10 +1181,6 @@ live snapshot by `achievements_frame.rs`):
 - a map and a server count once the player is in the game there (not spectating, not
   following, not in the intermission), and time played is the time between such
   snapshots, at most a second at once;
-- time in the cardboard box counts like time played, while the player hides in it (on,
-  alive, playing: `CardboardBox::hiding`) and another player the game draws alive
-  stands within 1024 units (`tracker::BOX_NEAR`, about 28 metres; 512 until 26/10/2026)
-  in the snapshot;
 - what the player took in a private duel is their own health and shield in the
   snapshots while the duel is on: either falling is damage (not during the duel's
   countdown, which may set them, nor health or shield above the maximum health wearing

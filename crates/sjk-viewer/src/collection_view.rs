@@ -82,7 +82,7 @@ pub(super) fn counts(inputs: &Inputs<'_>) -> [Count; 10] {
             held: shaders,
             total: shaders_shown,
         },
-        // Every toy is everyone's (Illuminate, the cardboard box, Order 66).
+        // Every toy is everyone's (Illuminate, Order 66, the Hax...).
         Count {
             held: Some(TOY_COUNT),
             total: TOY_COUNT,
@@ -152,7 +152,6 @@ pub(crate) fn row_labels(
         setting: "",
         standings,
         illuminate: true,
-        cardboard_box: false,
         order66: false,
         hax: false,
         ragdoll: false,
@@ -553,7 +552,6 @@ impl Panel {
         let frame = Frame::new(viewport);
         self.follow_news(inputs);
         self.empty_action = None;
-        self.box_on = inputs.cardboard_box;
         self.order66_on = inputs.order66;
         self.hax_on = inputs.hax;
         self.ragdoll_on = inputs.ragdoll;
@@ -1046,30 +1044,28 @@ impl Panel {
             }
             Tab::Toys => keys.push((
                 &["Enter"],
-                match (self.toy, inputs.illuminate, inputs.cardboard_box) {
-                    (BOX_TOY, _, true) => "come out",
-                    (BOX_TOY, _, false) => "hide",
-                    (ORDER66_TOY, _, _) if inputs.order66 => "turn off",
-                    (ORDER66_TOY, _, _) => "turn on",
-                    (HAX_TOY, _, _) if inputs.hax => "turn off",
-                    (HAX_TOY, _, _) => "turn on",
-                    (RAGDOLL_TOY, _, _) if inputs.ragdoll => "get up",
-                    (RAGDOLL_TOY, _, _) => "go limp",
-                    (DRONE_TOY, _, _) if inputs.drone => "turn off",
-                    (DRONE_TOY, _, _) => "turn on",
-                    (BOOMBOX_TOY, _, _) if inputs.boombox => "put away",
-                    (BOOMBOX_TOY, _, _) => "play",
-                    (MONITOR_TOY, _, _) if inputs.monitor => "turn off",
-                    (MONITOR_TOY, _, _) => "turn on",
-                    (BOX_HUNT_TOY, _, _) if inputs.box_hunt => "turn off",
-                    (BOX_HUNT_TOY, _, _) => "turn on",
-                    (FISHING_TOY, _, _) if inputs.fishing => "put away",
-                    (FISHING_TOY, _, _) => "get the rod out",
-                    (MINING_TOY, _, _) if inputs.mining => "put away",
-                    (MINING_TOY, _, _) => "take the pickaxe",
-                    (QUESTS_TOY, _, _) if inputs.quests => "turn off",
-                    (QUESTS_TOY, _, _) => "turn on",
-                    (_, true, _) => "put out",
+                match (self.toy, inputs.illuminate) {
+                    (ORDER66_TOY, _) if inputs.order66 => "turn off",
+                    (ORDER66_TOY, _) => "turn on",
+                    (HAX_TOY, _) if inputs.hax => "turn off",
+                    (HAX_TOY, _) => "turn on",
+                    (RAGDOLL_TOY, _) if inputs.ragdoll => "get up",
+                    (RAGDOLL_TOY, _) => "go limp",
+                    (DRONE_TOY, _) if inputs.drone => "turn off",
+                    (DRONE_TOY, _) => "turn on",
+                    (BOOMBOX_TOY, _) if inputs.boombox => "put away",
+                    (BOOMBOX_TOY, _) => "play",
+                    (MONITOR_TOY, _) if inputs.monitor => "turn off",
+                    (MONITOR_TOY, _) => "turn on",
+                    (BOX_HUNT_TOY, _) if inputs.box_hunt => "turn off",
+                    (BOX_HUNT_TOY, _) => "turn on",
+                    (FISHING_TOY, _) if inputs.fishing => "put away",
+                    (FISHING_TOY, _) => "get the rod out",
+                    (MINING_TOY, _) if inputs.mining => "put away",
+                    (MINING_TOY, _) => "take the pickaxe",
+                    (QUESTS_TOY, _) if inputs.quests => "turn off",
+                    (QUESTS_TOY, _) => "turn on",
+                    (_, true) => "put out",
                     _ => "light",
                 },
             )),

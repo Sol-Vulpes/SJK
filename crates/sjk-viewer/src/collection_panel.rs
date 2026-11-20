@@ -124,8 +124,6 @@ const TOY_SIGHT_TOKEN: u16 = 1_305;
 const TOY_OPTION_TOKEN: u16 = 1_390;
 /// Most own switches a toy's card holds.
 const TOY_OPTION_TOKENS: usize = 4;
-/// The cardboard box's niche on Toys (Illuminate's is [`TOY_TOKEN`]).
-const BOX_TOKEN: u16 = 1_314;
 /// Order 66's niche on Toys.
 const ORDER_TOKEN: u16 = 1_315;
 /// The Hax's niche on Toys.
@@ -158,19 +156,18 @@ const WHEEL_OF_DOOM_TOKEN: u16 = 1_396;
 /// [`Panel::toy`]): named, so a toy removed (the Banana peel, 20/11/2026) moves only
 /// these.
 const ILLUMINATE_TOY: usize = 0;
-const BOX_TOY: usize = 1;
-const ORDER66_TOY: usize = 2;
-const HAX_TOY: usize = 3;
-const RAGDOLL_TOY: usize = 4;
-const DRONE_TOY: usize = 5;
-const BOOMBOX_TOY: usize = 6;
-const MONITOR_TOY: usize = 7;
-const BOX_HUNT_TOY: usize = 8;
-const FISHING_TOY: usize = 9;
-const WHEEL_OF_DOOM_TOY: usize = 10;
+const ORDER66_TOY: usize = 1;
+const HAX_TOY: usize = 2;
+const RAGDOLL_TOY: usize = 3;
+const DRONE_TOY: usize = 4;
+const BOOMBOX_TOY: usize = 5;
+const MONITOR_TOY: usize = 6;
+const BOX_HUNT_TOY: usize = 7;
+const FISHING_TOY: usize = 8;
+const WHEEL_OF_DOOM_TOY: usize = 9;
 /// Mining's, whose card sells rubble by the same button token as Fishing's junk.
-const MINING_TOY: usize = 11;
-const QUESTS_TOY: usize = 12;
+const MINING_TOY: usize = 10;
+const QUESTS_TOY: usize = 11;
 /// The Toys tab's "?", the Toy Master's (`collection_toys::Panel::toy_master_badge`): its
 /// hover card tells of the toys hidden on maps and names those the player found.
 const TOY_MASTER_TOKEN: u16 = 1_376;
@@ -187,14 +184,13 @@ const TARGET_SECOND_TOKEN: u16 = 1_302;
 const BOTH_TOKEN: u16 = 1_306;
 /// How far (frame pixels) a press on the lone saber may move and still be a click.
 const CLICK_SLOP: f32 = 6.0;
-/// The toys the Toys tab shows: Illuminate, the cardboard box, Order 66, the Hax, the
-/// Ragdoll, the Drone, the Boombox, the Monitor, Box hunt, Fishing, then the WHEEL OF
-/// DOOM, Mining and Quests.
-const TOY_COUNT: usize = 13;
+/// The toys the Toys tab shows: Illuminate, Order 66, the Hax, the Ragdoll, the Drone,
+/// the Boombox, the Monitor, Box hunt, Fishing, then the WHEEL OF DOOM, Mining and
+/// Quests.
+const TOY_COUNT: usize = 12;
 /// Each toy's row, in the order of [`Panel::toy`].
 const TOY_TOKENS: [u16; TOY_COUNT] = [
     TOY_TOKEN,
-    BOX_TOKEN,
     ORDER_TOKEN,
     HAX_TOKEN,
     RAGDOLL_TOKEN,
@@ -468,9 +464,6 @@ pub(crate) enum PanelAction {
     /// Light the Illuminate holocron (`true`) or put it out: the same as `toy_illuminate`,
     /// set rather than toggled.
     Illuminate(bool),
-    /// Get in the cardboard box (`true`) or out: the same as `toy_box`, set rather than
-    /// toggled.
-    CardboardBox(bool),
     /// Turn Order 66 on (`true`) or off: the same as `toy_order66`, set rather than
     /// toggled.
     Order66(bool),
@@ -697,8 +690,6 @@ pub(crate) struct Inputs<'a> {
     /// The Illuminate holocron is lit now (the client's own state, kept in the console
     /// by the viewer each frame).
     pub(crate) illuminate: bool,
-    /// The player is in the cardboard box now (kept as [`Self::illuminate`] is).
-    pub(crate) cardboard_box: bool,
     /// The Order 66 toy is on now (kept as [`Self::illuminate`] is).
     pub(crate) order66: bool,
     /// The Hax toy is on now (kept as [`Self::illuminate`] is).
@@ -833,8 +824,6 @@ pub(crate) struct Panel {
     /// The GIF tags part of the card (10/11/2026): what the hub and the player allow, the
     /// GIPHY link pasted for the blank tag and its second press.
     tag_gif: tags::GifCard,
-    /// The player was in the cardboard box, as the last frame's inputs said.
-    box_on: bool,
     /// Order 66 was on, as the last frame's inputs said.
     order66_on: bool,
     /// The Hax was on, as the last frame's inputs said.
@@ -1107,7 +1096,6 @@ impl Panel {
             tag_confirm: None,
             tag_gif: tags::GifCard::default(),
             tag_in_use: None,
-            box_on: false,
             order66_on: false,
             hax_on: false,
             ragdoll_on: false,
@@ -1474,7 +1462,6 @@ impl Panel {
                 .get(self.shader)
                 .copied()
                 .map_or(PanelAction::None, |row| self.wear_action(row)),
-            Tab::Toys if self.toy == BOX_TOY => PanelAction::CardboardBox(!self.box_on),
             Tab::Toys if self.toy == ORDER66_TOY => PanelAction::Order66(!self.order66_on),
             Tab::Toys if self.toy == HAX_TOY => PanelAction::Hax(!self.hax_on),
             Tab::Toys if self.toy == RAGDOLL_TOY => PanelAction::Ragdoll(!self.ragdoll_on),
@@ -2867,9 +2854,9 @@ impl Panel {
             }
             EXTRAS_BODY_TOKEN => PanelAction::None,
             // A toy's row chooses it; its own switch runs it.
-            TOY_TOKEN | BOX_TOKEN | ORDER_TOKEN | HAX_TOKEN | RAGDOLL_TOKEN | DRONE_TOKEN
-            | BOOMBOX_TOKEN | MONITOR_TOKEN | BOX_HUNT_TOKEN | FISHING_TOKEN
-            | WHEEL_OF_DOOM_TOKEN | MINING_TOKEN | QUESTS_TOKEN => {
+            TOY_TOKEN | ORDER_TOKEN | HAX_TOKEN | RAGDOLL_TOKEN | DRONE_TOKEN | BOOMBOX_TOKEN
+            | MONITOR_TOKEN | BOX_HUNT_TOKEN | FISHING_TOKEN | WHEEL_OF_DOOM_TOKEN
+            | MINING_TOKEN | QUESTS_TOKEN => {
                 self.toy = TOY_TOKENS.iter().position(|&row| row == token).unwrap_or(0);
                 PanelAction::None
             }
@@ -3101,7 +3088,6 @@ mod tests {
             setting,
             standings: &[],
             illuminate: true,
-            cardboard_box: false,
             order66: false,
             hax: false,
             ragdoll: false,
@@ -3598,32 +3584,33 @@ mod tests {
         }
     }
 
-    /// The box's niche chooses it, then runs it; Enter and the switch get in or out by
-    /// the state the page was told, and the stage holds no holocron for it.
+    /// The Ragdoll's niche, the first after Illuminate, chooses it, then runs it; Enter
+    /// and the switch go limp or get up by the state the page was told, and the stage
+    /// holds no holocron for it.
     #[test]
-    fn the_cardboard_box_is_chosen_then_put_on_or_taken_off() {
+    fn the_toy_after_illuminate_is_chosen_then_switched() {
         let mut shown = inputs(Holdings::Known(&[]), "");
         let mut panel = drawn(Tab::Toys, &shown);
         let _ = panel.key(KeyCode::ArrowRight, false, false);
-        assert_eq!(panel.toy, 1);
+        assert_eq!(panel.toy, RAGDOLL_TOY);
         assert_eq!(
             panel.key(KeyCode::Enter, false, false),
-            PanelAction::CardboardBox(true)
+            PanelAction::Ragdoll(true)
         );
         assert!(panel.stage_wish().is_some_and(|wish| !wish.holocron));
-        shown.cardboard_box = true;
+        shown.ragdoll = true;
         let mut panel = drawn(Tab::Toys, &shown);
         let _ = panel.key(KeyCode::ArrowRight, false, false);
         redraw(&mut panel, &shown);
         assert_eq!(
             panel.key(KeyCode::Enter, false, false),
-            PanelAction::CardboardBox(false)
+            PanelAction::Ragdoll(false)
         );
-        let all = panel.ui.text_runs().collect::<Vec<_>>().join("\n");
-        assert!(
-            all.contains("toy_box") && all.contains("In the box"),
-            "{all}"
+        let all = panel.ui.text_runs().collect::<Vec<_>>().join(
+            "
+",
         );
+        assert!(all.contains("toy_ragdoll") && all.contains("Limp"), "{all}");
         let _ = panel.key(KeyCode::ArrowLeft, false, false);
         assert_eq!(
             panel.key(KeyCode::Enter, false, true),
@@ -3702,17 +3689,17 @@ fossil 1
         assert_eq!(action, PanelAction::SellRubble);
     }
 
-    /// Order 66 is the third toy, the sixth row (the first With others): chosen, then
+    /// Order 66 is the second toy, the fifth row (the first With others): chosen, then
     /// turned on or off by the state the page was told; its row chooses it, its row's
     /// own switch runs it.
     #[test]
     fn order_66_is_chosen_then_turned_on_or_off() {
         let mut shown = inputs(Holdings::Known(&[]), "");
         let mut panel = drawn(Tab::Toys, &shown);
-        for _ in 0..5 {
+        for _ in 0..4 {
             let _ = panel.key(KeyCode::ArrowRight, false, false);
         }
-        assert_eq!(panel.toy, 2);
+        assert_eq!(panel.toy, ORDER66_TOY);
         assert_eq!(
             panel.key(KeyCode::Enter, false, false),
             PanelAction::Order66(true)
@@ -3741,7 +3728,7 @@ fossil 1
         };
         let mut panel = drawn(Tab::Toys, &shown);
         assert_eq!(click(&mut panel, ORDER_TOKEN), PanelAction::None, "chosen");
-        assert_eq!(panel.toy, 2);
+        assert_eq!(panel.toy, ORDER66_TOY);
         redraw(&mut panel, &shown);
         assert_eq!(
             click(&mut panel, ORDER_TOKEN),
@@ -3749,15 +3736,15 @@ fossil 1
             "still chosen"
         );
         assert_eq!(
-            click(&mut panel, TOY_SWITCH_BASE + 2),
+            click(&mut panel, TOY_SWITCH_BASE + ORDER66_TOY as u16),
             PanelAction::Order66(false)
         );
         // Another row's switch runs that toy, and chooses it.
         assert_eq!(
-            click(&mut panel, TOY_SWITCH_BASE + 3),
+            click(&mut panel, TOY_SWITCH_BASE + HAX_TOY as u16),
             PanelAction::Hax(true)
         );
-        assert_eq!(panel.toy, 3);
+        assert_eq!(panel.toy, HAX_TOY);
         let all = panel.ui.text_runs().collect::<Vec<_>>().join("\n");
         assert!(
             all.contains("toy_order66") && all.contains("In the order"),
@@ -3795,7 +3782,7 @@ fossil 1
                 seen: false,
             }
         );
-        shown.toys_unseen = 1 << 7;
+        shown.toys_unseen = 1 << MONITOR_TOY;
         redraw(&mut panel, &shown);
         assert_eq!(
             click(&mut panel, TOY_SIGHT_TOKEN),
@@ -3806,7 +3793,7 @@ fossil 1
         );
         assert_eq!(
             toys::unseen(|cvar| cvar != crate::toy_sight::DRONE),
-            1 << 5,
+            1 << DRONE_TOY,
             "the Drone's bit"
         );
     }

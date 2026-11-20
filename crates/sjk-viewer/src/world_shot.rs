@@ -294,9 +294,6 @@ mod movers;
 #[path = "world_shot_illuminate.rs"]
 mod holocron;
 
-#[path = "world_shot_cardboard_box.rs"]
-mod cardboard_box;
-
 #[path = "world_shot_fishing.rs"]
 mod fishing_shots;
 
@@ -1809,12 +1806,6 @@ like this one.",
                         [4, 12, 25],
                         [3_000, 21_000, 77_000],
                         61,
-                    ),
-                    (
-                        crate::cardboard_box::TOY,
-                        [2, 9, 17],
-                        [900, 8_400, 23_000],
-                        48,
                     ),
                     (crate::order66::TOY, [3, 8, 15], [1_200, 7_000, 19_500], 22),
                 ]

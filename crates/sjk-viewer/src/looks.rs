@@ -62,8 +62,7 @@ fn blade_skin(id: &str) -> Option<&'static str> {
 /// The toys a look can have out that this client draws, by id (`PROTOCOL.md`, "Looks"):
 /// a toy's bit in [`Worn::toys`] is its place here. A look naming another id (a newer
 /// client's toy) draws nothing more.
-pub(crate) const TOYS: [&str; 17] = [
-    crate::cardboard_box::TOY,
+pub(crate) const TOYS: [&str; 16] = [
     crate::order66::TOY,
     crate::hax::TOY,
     crate::hax::AWAY_TOY,
@@ -658,13 +657,11 @@ pub(crate) struct Unseen;
 
 impl Unseen {
     pub(crate) const ILLUMINATE: u8 = 1;
-    pub(crate) const CARDBOARD_BOX: u8 = 1 << 1;
     pub(crate) const BOOMBOX: u8 = 1 << 2;
 
     /// The bit of toy `id`, none for a toy that is not hidden so.
     fn of(id: &str) -> u8 {
         match id {
-            crate::cardboard_box::TOY => Self::CARDBOARD_BOX,
             crate::boombox::TOY => Self::BOOMBOX,
             _ => 0,
         }
@@ -693,21 +690,21 @@ mod tests {
 
     #[test]
     fn toys_go_both_ways_and_unknown_ones_draw_nothing() {
-        let boxed = Look {
-            toys: vec!["a_hat_from_later".to_owned(), "cardboard_box".to_owned()],
+        let worn_box = Look {
+            toys: vec!["a_hat_from_later".to_owned(), "boombox".to_owned()],
             ..Look::default()
         };
-        let worn = Worn::of(&boxed);
-        assert!(worn.has_toy("cardboard_box") && !worn.has_toy("a_hat_from_later"));
-        assert_eq!(worn.to_look("").toys, ["cardboard_box"]);
-        let off = worn.with_toy("cardboard_box", false);
+        let worn = Worn::of(&worn_box);
+        assert!(worn.has_toy("boombox") && !worn.has_toy("a_hat_from_later"));
+        assert_eq!(worn.to_look("").toys, ["boombox"]);
+        let off = worn.with_toy("boombox", false);
         assert!(off.to_look("").toys.is_empty());
         let mut looks = Looks::default();
-        looks.replace_roster([(3, "^2Sol", Some(&boxed))]);
+        looks.replace_roster([(3, "^2Sol", Some(&worn_box))]);
         looks.rebuild(shown);
-        assert!(looks.toy(3, "cardboard_box") && !looks.toy(5, "cardboard_box"));
+        assert!(looks.toy(3, "boombox") && !looks.toy(5, "boombox"));
         looks.set_muted(1 << 3);
-        assert!(!looks.toy(3, "cardboard_box"), "muted here: nothing drawn");
+        assert!(!looks.toy(3, "boombox"), "muted here: nothing drawn");
     }
 
     /// Every toy this client knows goes out in the look and comes back from it, all of
@@ -732,29 +729,25 @@ mod tests {
         assert_eq!(rod_away.to_look("").toys, rest);
     }
 
-    /// Other players' boxes, boomboxes and holocrons hidden on this PC are not drawn on
+    /// Other players' boomboxes and holocrons hidden on this PC are not drawn on
     /// them; the player's own still are, and other toys are not touched.
     #[test]
     fn toys_hidden_here_are_not_drawn_on_others() {
         let worn = Look {
-            toys: vec![
-                "cardboard_box".to_owned(),
-                "boombox".to_owned(),
-                "hax".to_owned(),
-            ],
+            toys: vec!["boombox".to_owned(), "hax".to_owned()],
             illuminate: true,
             ..Look::default()
         };
         let mut looks = Looks::default();
         looks.replace_roster([(3, "^2Sol", Some(&worn))]);
         looks.rebuild(shown);
-        looks.set_unseen(Unseen::CARDBOARD_BOX | Unseen::BOOMBOX | Unseen::ILLUMINATE);
-        assert!(!looks.toy(3, "cardboard_box") && !looks.toy(3, "boombox"));
+        looks.set_unseen(Unseen::BOOMBOX | Unseen::ILLUMINATE);
+        assert!(!looks.toy(3, "boombox"));
         assert!(!looks.illuminated(3));
         assert!(looks.toy(3, "hax"), "only the toys hidden");
         // The player's own slot keeps them.
         looks.set_own(Some(3), Worn::of(&worn));
-        assert!(looks.toy(3, "cardboard_box") && looks.illuminated(3));
+        assert!(looks.toy(3, "boombox") && looks.illuminated(3));
         looks.set_own(None, Worn::default());
         looks.rebuild(shown);
         looks.set_unseen(0);

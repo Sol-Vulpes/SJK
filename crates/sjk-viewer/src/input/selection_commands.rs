@@ -26,10 +26,6 @@ pub(super) fn register(shell: &mut sjk_shell::Shell) -> Result<(), sjk_shell::Co
             "Toy: turn the Illuminate holocron's light on or off",
         ),
         (
-            crate::cardboard_box::COMMAND,
-            "Toy: hide in a cardboard box, or come out (+use on a boxed player lifts theirs)",
-        ),
-        (
             crate::fishing::COMMAND,
             "Toy: fish facing water, or put the rod away (+use when the float bobs under hooks the catch)",
         ),

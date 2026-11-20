@@ -1,8 +1,8 @@
 //! Other players' toys, seen or not (Sol's request, 29/10/2026): each toy other players
 //! are seen with has a switch on its card in the Collection's Toys tab, "See ...",
 //! that hides theirs on this PC alone, for a player who does not like them (the Monitor's
-//! CRTs first). Each is an archived cvar, on by default: the Illuminate holocron's,
-//! the cardboard box's and the boombox's go through [`crate::looks::Looks::set_unseen`]
+//! CRTs first). Each is an archived cvar, on by default: the Illuminate holocron's and
+//! the boombox's go through [`crate::looks::Looks::set_unseen`]
 //! (as if those players had them off here), the drone's and the ragdoll's where their
 //! relayed events are drawn, and the Monitor's is its own [`crate::monitor::SHOW_CVAR`].
 //! Nothing changes for the toys' rules: a hidden toy is still the others'.
@@ -11,8 +11,6 @@ use crate::console::ViewerConsole;
 
 /// Other players' Illuminate holocrons are seen.
 pub(crate) const ILLUMINATE: &str = "cg_toyIlluminateShow";
-/// Other players' cardboard boxes are seen (and lifted).
-pub(crate) const CARDBOARD_BOX: &str = "cg_toyBoxShow";
 /// Other players' falls as ragdolls are seen.
 pub(crate) const RAGDOLL: &str = "cg_toyRagdollShow";
 /// Other players' drones are seen and heard.
@@ -21,14 +19,10 @@ pub(crate) const DRONE: &str = "cg_toyDroneShow";
 pub(crate) const BOOMBOX: &str = "cg_toyBoomboxShow";
 
 /// The switches this module adds, with their help, for the cvar registry.
-pub(crate) const CVARS: [(&str, &str); 5] = [
+pub(crate) const CVARS: [(&str, &str); 4] = [
     (
         ILLUMINATE,
         "Other players' Illuminate holocrons are seen (0: hidden on this PC; SJK)",
-    ),
-    (
-        CARDBOARD_BOX,
-        "Other players' cardboard boxes are seen (0: hidden on this PC, and not lifted; SJK)",
     ),
     (
         RAGDOLL,

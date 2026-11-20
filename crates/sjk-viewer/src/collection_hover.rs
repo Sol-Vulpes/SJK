@@ -132,20 +132,6 @@ impl Panel {
                 ],
             });
         }
-        if token == BOX_TOKEN {
-            return Some(Card {
-                title: "Cardboard box".to_owned(),
-                colour: color::gold_bright(),
-                lines: vec![
-                    Line::how(
-                        "Every SJK player has it. Get in here, from the quick wheel's Toys \
-                         page or with a key bound to toy_box.",
-                    ),
-                    Line::status(crate::editions::name(crate::editions::ALPHA)),
-                    Line::held("Yours"),
-                ],
-            });
-        }
         if token == RAGDOLL_TOKEN {
             return Some(Card {
                 title: "Ragdoll".to_owned(),

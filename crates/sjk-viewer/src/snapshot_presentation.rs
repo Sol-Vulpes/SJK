@@ -434,7 +434,6 @@ impl GpuState {
                 session,
                 snapshot,
                 obituaries_before,
-                self.cardboard_box.hiding(),
                 toys,
                 visual_now,
             );
