@@ -67,6 +67,19 @@ A new emblem, a new Collection with kybers and an Inventory, status bars at both
 - A player joining in a model with very large glowing textures (the old Creyon wolf) no longer freezes the game for up to 700 ms: the glow's light is worked out once, while the model loads in the background, instead of again on the frame it appears _(Sol)_
 - In the game's chat, SJK's emblem and the EJK icon are smaller and the same size; an EJK player's nameplate shows the EJK icon in the tick's place, with the tick on its bottom right corner as on the scoreboard _(Sol)_
 - The Collection's Nameplates tab is gone: it had no ornaments to collect. Nameplates over players are unchanged, and See & share nameplates and the nameplate style stay in Settings > HUD _(Sol)_
+- Notifications come down from the top of the screen like a phone's: achievements, holocrons, medals in a match, updates, content updates, wishlist offers, rare catches, kyber glints, daily catch goals and the SJK team's requests for your logs show on a banner of dark glass that slides down, rests five seconds and goes back up, over play and over the menus, never taking a key. Several of one kind share one banner ("5 new holocrons"), and `ui_rarityEffects 0` fades it in place instead. The large holocron pop-up of the main menu and the game menu (Esc) is gone: a new holocron is told by its banner, which says where it waits (Collection > Holocrons), and `cl_holocronNotifications` still turns those banners off, or on during duels; Tactical no longer turns them off, they wait until it is off like the others _(Sol)_
+- The top bar's ping is now the one on the scoreboard, as the server measures it: your own row's for a few seconds after the scoreboard was open, otherwise the average round trip of your last 32 snapshots, which lands close to it. It showed how far your commands trail the server's clock, about 50 ms however good the connection. The lagometer's ping, its average (`cg_lagometer 2`) and the chat's %P% are stock's snapshot ping, from the move packet the server ran to the snapshot that shows it _(Sol)_
+
+## 2026.1117.1 (Alpha) | 17/11/2026
+
+A devmap cheat bar, quicker votes, console translation and a log book for Fishing and Mining.
+
+> Fishing and Mining: A Log book lists every fish, ore and junk you have caught, a rare catch gets its own card, and `fishing_brag` shows it off.
+> Votes: F1 votes YES and F2 votes NO, and once you have voted the card folds to one small row.
+> Translate in console: Click another player's chat line in the console to read it in English.
+> Devmap bar: With cheats on, hold Ctrl for a bar of cheat buttons; `devmap` also starts JoF maps now.
+> Status balloons: `cg_statusBalloons` picks stock, SJK animations or clan pictures for balloons and name tags.
+
 - Status balloons: `cg_statusBalloons` offers stock, SJK animations, static clan pictures or clan animations; name tags select clan art, with static pictures for non-SJK players _(Hormorn, PR #421)_
 - JoF maps: `devmap` and Create game start the maps in the JoF content folder too, instead of the local server stopping at once _(Slash, PR #423)_
 - Vote panel: F1 votes YES and F2 votes NO while a vote waits for you (then they are push and pull again), and once you have voted the card folds to one row, the question over the YES / NO bar with its counts, so it covers less of the game _(Slash, PR #426)_
@@ -75,8 +88,6 @@ A new emblem, a new Collection with kybers and an Inventory, status bars at both
 - Chat translation in the console too: click another player's chat line in the console (game or SJK chat) to put it into English; the translation shows right under that line, however fast the chat goes _(Slash, PR #422)_
 - Fishing and Mining: now and then a kyber glint brings a few kyber shards, a daily goal (25 bites hooked, 40 boulders broken) wins an Echo, and the catch market buys fish and ore with one wanted each day at double price (`fishing_sellfish`, `mining_sellore`); each once the hub turns it on _(Slash, PR #424, after adwe's idea)_
 - Fishing and Mining: a Log book on their Collection card lists every fish, junk, ore and rubble, ??? until you catch it, with how many and the day of your first; a rare catch brings its own card, and `fishing_brag` or `mining_brag` (or the book's Share button) says it in the SJK chat _(Slash, PR #425, after adwe's idea)_
-- Notifications come down from the top of the screen like a phone's: achievements, holocrons, medals in a match, updates, content updates, wishlist offers, rare catches, kyber glints, daily catch goals and the SJK team's requests for your logs show on a banner of dark glass that slides down, rests five seconds and goes back up, over play and over the menus, never taking a key. Several of one kind share one banner ("5 new holocrons"), and `ui_rarityEffects 0` fades it in place instead. The large holocron pop-up of the main menu and the game menu (Esc) is gone: a new holocron is told by its banner, which says where it waits (Collection > Holocrons), and `cl_holocronNotifications` still turns those banners off, or on during duels; Tactical no longer turns them off, they wait until it is off like the others _(Sol)_
-- The top bar's ping is now the one on the scoreboard, as the server measures it: your own row's for a few seconds after the scoreboard was open, otherwise the average round trip of your last 32 snapshots, which lands close to it. It showed how far your commands trail the server's clock, about 50 ms however good the connection. The lagometer's ping, its average (`cg_lagometer 2`) and the chat's %P% are stock's snapshot ping, from the move packet the server ran to the snapshot that shows it _(Sol)_
 
 ## 2026.1113.1 (Alpha) | 13/11/2026
 
