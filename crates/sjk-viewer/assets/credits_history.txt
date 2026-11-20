@@ -3780,6 +3780,8 @@
 - fed9acd |  | Hide duel opponents' bars and send nothing while duelling
 
 = Slash
++ 20/11/2026 | SJK #432 | Console: Ctrl+F find bar over the scrollback
+- 1654756 |  | Console: Ctrl+F find bar over the scrollback
 + 20/11/2026 | SJK #430 | tell_attacker and duel start, won and lost lines
 - 9c0272b |  | Add tell_attacker and duel start, won and lost lines
 - 6aeaebc |  | Fill the new ObituaryEvent fields in the duel line tests
