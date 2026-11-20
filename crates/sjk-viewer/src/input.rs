@@ -143,10 +143,6 @@ pub(crate) enum InputAction {
     BoxHunt,
     /// `toy_quests`: take part in quests, or not ([`crate::quests`]).
     Quests,
-    /// `toy_banana`: drop banana peels and slip on them, or not ([`crate::banana`]).
-    Banana,
-    /// `banana_drop`: drop a banana peel ([`crate::banana`]).
-    DropBanana,
     /// `toy_propgun`: hold the chosen prop gun and fire it, or not ([`crate::propgun`]).
     PropGun,
     /// `toy_tag`: stick the chosen tag where the crosshair meets the world
@@ -407,8 +403,6 @@ impl GameplayInput {
                     | crate::monitor::CHARGE_RELEASE
                     | crate::box_hunt::COMMAND
                     | crate::quests::COMMAND
-                    | crate::banana::COMMAND
-                    | crate::banana::DROP_COMMAND
                     | crate::propgun::COMMAND
                     | crate::tags::COMMAND
                     | "cameracontrol"
@@ -601,8 +595,6 @@ impl GameplayInput {
             crate::monitor::CHARGE_RELEASE => Some(InputAction::ChargeMonitor(false)),
             crate::box_hunt::COMMAND => Some(InputAction::BoxHunt),
             crate::quests::COMMAND => Some(InputAction::Quests),
-            crate::banana::COMMAND => Some(InputAction::Banana),
-            crate::banana::DROP_COMMAND => Some(InputAction::DropBanana),
             crate::propgun::COMMAND => Some(InputAction::PropGun),
             crate::tags::COMMAND => match words.next().map(str::to_ascii_lowercase).as_deref() {
                 Some("clear" | "off") => Some(InputAction::ClearTag),
@@ -812,8 +804,6 @@ impl super::GpuState {
             Some(InputAction::ChargeMonitor(pressed)) => self.charge_monitor(pressed),
             Some(InputAction::BoxHunt) => self.toggle_box_hunt(),
             Some(InputAction::Quests) => self.toggle_quests(),
-            Some(InputAction::Banana) => self.toggle_banana(),
-            Some(InputAction::DropBanana) => self.drop_banana(),
             Some(InputAction::PropGun) => self.toggle_propgun(),
             Some(InputAction::FlipKick) => {
                 let restricted = self.live_session.as_ref().is_some_and(|session| {
@@ -1060,8 +1050,6 @@ mod tests {
             ("toy_tag", InputAction::StickTag),
             ("toy_tag clear", InputAction::ClearTag),
             ("toy_tag OFF", InputAction::ClearTag),
-            ("toy_banana", InputAction::Banana),
-            ("banana_drop", InputAction::DropBanana),
             ("toy_propgun", InputAction::PropGun),
             ("boombox_place", InputAction::PlaceBoombox),
         ] {

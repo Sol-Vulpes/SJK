@@ -62,7 +62,7 @@ fn blade_skin(id: &str) -> Option<&'static str> {
 /// The toys a look can have out that this client draws, by id (`PROTOCOL.md`, "Looks"):
 /// a toy's bit in [`Worn::toys`] is its place here. A look naming another id (a newer
 /// client's toy) draws nothing more.
-pub(crate) const TOYS: [&str; 18] = [
+pub(crate) const TOYS: [&str; 17] = [
     crate::cardboard_box::TOY,
     crate::order66::TOY,
     crate::hax::TOY,
@@ -73,8 +73,6 @@ pub(crate) const TOYS: [&str; 18] = [
     crate::monitor::TOY,
     // Box hunt's switch: the hub picks the mark among the players whose look has it.
     crate::box_hunt::TOY,
-    // The Banana peel's switch (since 30/10/2026: hubs before took 8 toy ids at most).
-    crate::banana::TOY,
     // The fishing rod out: others draw the rod, the bucket and the float.
     crate::fishing::TOY,
     // The wearer's model in toon shading, their choice (`cg_toonModel`).
@@ -713,11 +711,10 @@ mod tests {
     }
 
     /// Every toy this client knows goes out in the look and comes back from it, all of
-    /// them at once too: ten since the Banana peel and Fishing, more than the 8 hubs took
-    /// before 30/10/2026.
+    /// them at once too: more than the 8 hubs took before 30/10/2026.
     #[test]
     fn every_toy_goes_both_ways_all_at_once() {
-        assert!(TOYS.contains(&crate::banana::TOY) && TOYS.contains(&crate::fishing::TOY));
+        assert!(TOYS.len() > 8 && TOYS.contains(&crate::fishing::TOY));
         let all = TOYS
             .iter()
             .fold(Worn::default(), |worn, toy| worn.with_toy(toy, true));
@@ -725,14 +722,14 @@ mod tests {
         assert_eq!(look.toys, TOYS);
         let back = Worn::of(&look);
         assert!(TOYS.iter().all(|toy| back.has_toy(toy)));
-        let peel_away = back.with_toy(crate::banana::TOY, false);
-        assert!(!peel_away.has_toy(crate::banana::TOY) && peel_away.has_toy(crate::box_hunt::TOY));
+        let rod_away = back.with_toy(crate::fishing::TOY, false);
+        assert!(!rod_away.has_toy(crate::fishing::TOY) && rod_away.has_toy(crate::box_hunt::TOY));
         let rest: Vec<&str> = TOYS
             .iter()
             .copied()
-            .filter(|toy| *toy != crate::banana::TOY)
+            .filter(|toy| *toy != crate::fishing::TOY)
             .collect();
-        assert_eq!(peel_away.to_look("").toys, rest);
+        assert_eq!(rod_away.to_look("").toys, rest);
     }
 
     /// Other players' boxes, boomboxes and holocrons hidden on this PC are not drawn on

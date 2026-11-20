@@ -53,9 +53,6 @@ const ICONS: &[(&str, &str)] = &[
     (crate::box_hunt::COMMAND, crate::box_hunt::ICON),
     // SJK's Quests, which the client bundles (`crate::quests`).
     (crate::quests::COMMAND, crate::quests::ICON),
-    // SJK's Banana peel, which the client bundles (`crate::banana`).
-    (crate::banana::COMMAND, crate::banana::ICON),
-    (crate::banana::DROP_COMMAND, crate::banana::ICON),
     // SJK's WHEEL OF DOOM, which the client bundles (`crate::wheel_of_doom`).
     (crate::wheel_of_doom::COMMAND, crate::wheel_of_doom::ICON),
     // SJK's Tag, which the client bundles (`crate::tags`).

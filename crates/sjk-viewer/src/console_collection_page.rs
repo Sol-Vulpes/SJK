@@ -253,10 +253,6 @@ impl ViewerConsole {
                 self.pending_box_hunt = Some(on);
                 self.box_hunt_on = on;
             }
-            PanelAction::Banana(on) => {
-                self.pending_banana = Some(on);
-                self.banana_on = on;
-            }
             PanelAction::Banner(id) => {
                 let _ = crate::player_identity::with_service(|service| {
                     service.set_banner(id.to_owned())
@@ -483,16 +479,6 @@ impl ViewerConsole {
         self.pending_box_hunt.take()
     }
 
-    /// The viewer says whether the Banana peel is on, once a frame.
-    pub(crate) fn set_banana_on(&mut self, on: bool) {
-        self.banana_on = on;
-    }
-
-    /// The Toys tab asked to turn the Banana peel on (`true`) or off, once.
-    pub(crate) fn take_banana_request(&mut self) -> Option<bool> {
-        self.pending_banana.take()
-    }
-
     /// Carry out what the Collection's Loadouts card asked, and show the slots again with
     /// what it did.
     fn loadout_request(&mut self, request: &super::collection_panel::loadouts::Request) {
@@ -620,7 +606,6 @@ impl ViewerConsole {
         let boombox = self.boombox_on;
         let monitor = self.monitor_on;
         let box_hunt = self.box_hunt_on;
-        let banana = self.banana_on;
         let fishing = self.fishing_on;
         let mining = self.mining_on;
         let quests = self.quests_on;
@@ -688,7 +673,6 @@ impl ViewerConsole {
                 boombox,
                 monitor,
                 box_hunt,
-                banana,
                 fishing,
                 mining,
                 quests,
@@ -728,7 +712,6 @@ impl ViewerConsole {
             boombox,
             monitor,
             box_hunt,
-            banana,
             fishing,
             mining,
             quests,
@@ -994,12 +977,6 @@ impl ViewerConsole {
     #[cfg(test)]
     pub(crate) fn collection_tilt_for_shot(&mut self, key: usize, at: [f32; 2]) {
         self.collection_panel.tilt_card_for_shot(key, at);
-    }
-
-    /// Choose the Toys tab's toy `index` (0 Illuminate), for a world shot.
-    #[cfg(test)]
-    pub(crate) fn collection_toy_for_shot(&mut self, index: usize) {
-        self.collection_panel.choose_toy_for_shot(index);
     }
 
     /// Choose the hall's tile `index` (`open`: and open it, as Enter does), for a world

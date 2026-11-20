@@ -449,7 +449,6 @@ impl Group {
                 crate::remap_blocked_maps::MAP_CVAR,
                 "cg_remaps",
                 crate::monitor::SHOW_CVAR,
-                crate::banana::SHOW_CVAR,
                 crate::tags::SHOW_CVAR,
                 crate::tags::GIF_SHOW_CVAR,
                 crate::toy_sight::ILLUMINATE,

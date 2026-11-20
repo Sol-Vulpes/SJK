@@ -111,16 +111,8 @@ pub(super) fn register(shell: &mut sjk_shell::Shell) -> Result<(), sjk_shell::Co
             "Throw a monitor the way you look (the Monitor toy on); it sends players who have it on flying",
         ),
         (
-            crate::banana::COMMAND,
-            "Toy: Banana peel on or off (on, you drop peels with banana_drop and slip on the ones you walk onto; only players with it on slip)",
-        ),
-        (
             crate::propgun::COMMAND,
             "Toy: Prop gun on or off (on, you hold the gun propgun chose instead of your weapon, attack fires its bolts, and others' bolts knock you down; only players with it on are hit)",
-        ),
-        (
-            crate::banana::DROP_COMMAND,
-            "Drop a banana peel at your feet, or tossed ahead when you move (the Banana peel toy on); players who have it on slip on it",
         ),
         (
             crate::box_hunt::COMMAND,

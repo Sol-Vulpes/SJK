@@ -23,8 +23,6 @@ mod auto_switch;
 mod avatar_command;
 mod avatars;
 mod away_emote;
-mod banana;
-mod banana_frame;
 mod block_command;
 mod bolt;
 mod boombox;
@@ -136,6 +134,7 @@ mod fall_camera;
 mod first_person_view;
 mod first_person_weapon;
 mod flat_world;
+mod floor_spot;
 mod fog_frame;
 mod fog_volumes;
 mod force_overlay_submission;
@@ -670,8 +669,6 @@ struct GpuState {
     /// The Box hunt toy (`toy_boxhunt`): its switch, the consent to hunt and be the mark.
     box_hunt: box_hunt::BoxHunt,
     quests: quests::Quests,
-    /// The Banana peel toy (`toy_banana`): its switch and the peels on the floor.
-    banana: banana::Banana,
     /// The Prop gun toy (`toy_propgun`): the gun held, the bolts and what others hold.
     propgun: propgun::PropGun,
     /// The status balloons (`cg_statusBalloons`): each talking player's selected picture.
@@ -680,9 +677,9 @@ struct GpuState {
     tags: tags::Tags,
     /// The Ragdoll toy (`toy_ragdoll`): the player's own fall and the falls of others.
     ragdoll: ragdoll::Ragdoll,
-    /// Order 66's, the Hax's, the Drone's, the Monitor's, Box hunt's, the Banana peel's and
-    /// the Prop gun's switches as last saved (`toy_saved`).
-    toys_saved: [toy_saved::Saved; 8],
+    /// Order 66's, the Hax's, the Drone's, the Monitor's, Box hunt's, the Prop gun's and
+    /// Quests' switches as last saved (`toy_saved`).
+    toys_saved: [toy_saved::Saved; 7],
     /// The Holocrons tab's 3D holocron ([`holocrons::stage`]).
     holocron_stage: holocrons::stage::Stage,
     /// The time its turn and bob are drawn at, instead of the clock's, for a world shot.
@@ -1771,7 +1768,6 @@ impl GpuState {
             monitor: Default::default(),
             box_hunt: Default::default(),
             quests: Default::default(),
-            banana: Default::default(),
             propgun: Default::default(),
             status_balloons: Default::default(),
             tags: Default::default(),
@@ -2063,11 +2059,9 @@ impl GpuState {
         prediction_preview::tick(self, game_audio, Instant::now(), presentation_time as i32);
         // Hidden in the box, the eye stays down while the server stands the player up.
         self.keep_boxed_eye();
-        // The Monitor's monitors and the Banana peel's peels, then the Ragdoll's bodies
-        // (one may strike, one may trip) at this frame's time, for the camera and the
-        // actors.
+        // The Monitor's monitors, then the Ragdoll's bodies (one may strike) at this
+        // frame's time, for the camera and the actors.
         self.step_monitors(presentation_time);
-        self.step_bananas(presentation_time);
         self.step_propgun(presentation_time);
         self.step_ragdolls(presentation_time);
         timing.mark(Phase::Config);
@@ -3035,7 +3029,6 @@ impl GpuState {
         self.submit_order66(presentation_time, visual_now);
         self.submit_drones(presentation_time, visual_now);
         self.submit_monitors(presentation_time);
-        self.submit_bananas(presentation_time);
         self.submit_boomboxes();
         self.submit_propgun(presentation_time);
         self.submit_holocron_stage(visual_now);

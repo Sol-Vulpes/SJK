@@ -1388,8 +1388,8 @@ cannot: the [Hax](client.md#hax)'s hacker steering the hacked player, the
 [Boombox](client.md#boombox)'s track, told to each player within reach, and its box on
 the floor, told to every SJK player (since 03/11/2026), and the
 [Monitor](client.md#monitor)'s throws, told to every SJK player, the nearest first (its
-hits ride the Ragdoll's falls), and the [Banana peel](client.md#banana-peel)'s peels, told
-the same way, and their slips (since 29/10/2026), and the [Prop gun](client.md#prop-gun)'s
+hits ride the Ragdoll's falls), and (29/10/2026 to 20/11/2026) the Banana peel's peels and
+slips, and the [Prop gun](client.md#prop-gun)'s
 guns held and shots fired (since 01/11/2026), and the
 [status balloons](client.md#status-balloons)' reasons, told to every SJK player when they
 change (since 08/11/2026). Two threads of

@@ -4,7 +4,7 @@
 //!
 //! - **Switched:** every toy with an on/off switch says its name and **ON** in green or
 //!   **OFF** in red on the centre of the screen ([`switched`]): Illuminate, the cardboard
-//!   box, Order 66, the Hax, the Drone, the Monitor, Box hunt and the Banana peel, and
+//!   box, Order 66, the Hax, the Drone, the Monitor and Box hunt, and
 //!   the Boombox put away (its start names the track instead). Said only for the
 //!   player's own switch (a
 //!   bind, the quick wheel, the Collection's Toys tab); a toy restored at start
@@ -24,7 +24,7 @@ pub(crate) fn switched(name: &str, on: bool) -> String {
 }
 
 /// Every toy: its name, its switch and what it does and how, in `toy_help`'s order.
-pub(crate) const TOYS: [(&str, &str, &str); 16] = [
+pub(crate) const TOYS: [(&str, &str, &str); 15] = [
     (
         "Illuminate",
         "toy_illuminate",
@@ -79,11 +79,6 @@ pub(crate) const TOYS: [(&str, &str, &str); 16] = [
         "Quests",
         "toy_quests",
         "you may be given a quest, such as hugging two players within a minute, for an Echo",
-    ),
-    (
-        "Banana peel",
-        "toy_banana",
-        "drop peels with banana_drop; players who have it on and walk onto one slip and fall",
     ),
     (
         "Prop gun",
@@ -153,7 +148,6 @@ mod tests {
             crate::tags::COMMAND,
             crate::box_hunt::COMMAND,
             crate::quests::COMMAND,
-            crate::banana::COMMAND,
             crate::propgun::COMMAND,
             crate::wheel_of_doom::COMMAND,
         ] {
