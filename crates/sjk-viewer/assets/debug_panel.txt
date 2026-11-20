@@ -550,13 +550,10 @@ note: The log is in the session log's folder; Sol: send it to Claude to tune the
 
 [box-rework]
 area: Gameplay
-title: Mystery box loot: coins, Ray Gun, kyber, never empty
-change: No empty, refund or free roll; a holocron 45%, coin piles 50/200/500, Ray Gun, kyber.
+title: Mystery box loot: coins, kyber, never empty
+change: No empty, refund or free roll; a holocron 52.5%, coin piles 50/200/500, kyber.
 change: Others see the real holocron or crystal; the teddy bear also gives a DOOM coin.
-change: Ray Gun 30 s: attack fires; a hit ragdolls once, green shell 30 s; hunters pay 25.
 test: Open boxes: coins piles, holocrons and crystals roll by; no bolts or little box.
-test: Ray Gun: it jumps in hand at the stop; fire at a friend: they fall, glow green.
-test: Hit a box hunter: "RAY GUN: name down, +25 credits"; a second hit passes through.
 note: Needs the hub's box-rework branch deployed.
 
 [drop-odds]
@@ -9677,18 +9674,6 @@ test: Two SJK clients on one server: B sees A toon only when A has it on; B r_to
 test: Your hat, cape and hilt follow the body; NPCs, items and your view weapon stay stock.
 note: The what's-new card resets r_toonModels to on once; corpses after respawn stay stock.
 
-[prop-gun]
-area: Gameplay
-title: Prop gun toy: a fake gun from your pk3
-change: cl_toyPropGun holds a gun a pk3 defines (propguns/<id>.gun); propgun lists them.
-change: Bolts with muzzle, trail and impact effects; opted-in players get knocked down.
-change: The world gun sits on the hand like JA's own guns; shots leave the drawn muzzle.
-test: with a private gun pk3, toy_propgun on; fire in first and third person.
-test: the bolt leaves the barrel tip; muzzle, trail and impact effects show.
-test: a second SJK client sees the gun, the bolts, and hears the shots.
-test: an opted-in player hit by a bolt is knocked down; others are not.
-note: SJK ships no gun; test only with a local private pack.
-
 [heimdall-catchup]
 area: Gameplay
 title: JoF: one command a frame, stamped now (Heimdall kicks)
@@ -10558,7 +10543,17 @@ area: Gameplay
 title: Order 66 and the Hax are removed (Sol's cleanup before the release)
 change: No toy_order66, order66 or toy_hax; gone from Toys, the quick wheel, binds, Settings.
 change: Their switches, sounds and the Hax trap's settings are dropped from the profile at load.
-change: The Ragdoll, Monitor and Prop gun still spare the dead, duellists, flag carriers, AFK.
+change: The Ragdoll and the Monitor still spare the dead, duellists, flag carriers, AFK.
 test: Collection > Toys: 10 rows, With others holds the Monitor alone; all fit.
 test: Ragdoll in a duel: "No ragdoll in a duel". Monitor: an AFK player is not struck.
 test: A kill still cuts limbs (cg_dismember 2) and they come back on respawn.
+
+[propgun-raygun-removed]
+area: Gameplay
+title: The Prop gun toy and the box's Ray Gun are removed (Sol's cleanup)
+change: No toy_propgun or propgun; a pk3's propguns are ignored; its settings are dropped.
+change: The mystery box no longer gives the Ray Gun; its 7% goes to the holocron (52.5%).
+change: The hub's odds change ships with the release (hub branch no-raygun).
+test: Open boxes: no Ray Gun rolls by; the drops panel lists no Ray Gun once the hub is updated.
+test: Monitor: a hit player still falls as a ragdoll and gets up as before.
+test: First person: your weapon and saber show as before (no prop gun in the hand).

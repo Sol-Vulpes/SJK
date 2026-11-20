@@ -31,9 +31,9 @@
 //! the monitor (its thrower's slot, its number and its step, so that every client bounces
 //! it off the body alike). A client that hears of a blow after its step ran the body on
 //! runs it again from its start with it ([`body::Body::rerun`]). A fall a monitor began
-//! ends by itself once the body has lain still a while ([`REST_UP`]). A prop gun's bolt
-//! ([`crate::propgun`]) is such a blow too, naming its shooter and no monitor
-//! ([`UNTHROWN`]).
+//! ends by itself once the body has lain still a while ([`REST_UP`]). A blow naming no
+//! monitor this client knows (an older client's prop gun bolt, removed on 20/11/2026)
+//! bounces nothing off the body.
 
 mod body;
 mod scene;
@@ -140,18 +140,13 @@ pub(crate) fn mount(vfs: &mut sjk_vfs::VirtualFileSystem) -> Result<(), sjk_vfs:
 }
 
 /// What struck a body: a monitor, by its thrower's slot, its number among theirs and
-/// the step of its flight it struck at; or another blow (a prop gun's bolt,
-/// [`crate::propgun`]), by its dealer's slot, its number [`UNTHROWN`] and step 0.
+/// the step of its flight it struck at.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) struct By {
     pub(crate) thrower: u8,
     pub(crate) number: u8,
     pub(crate) step: u16,
 }
-
-/// [`By::number`] of a blow no monitor dealt (a prop gun's bolt). Past every
-/// monitor's number, so no client bounces a monitor off the body for it.
-pub(crate) const UNTHROWN: u8 = u8::MAX;
 
 /// A blow to the fall that began at `fall` (its moment), and what dealt it.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -988,8 +983,7 @@ impl GpuState {
         })
     }
 
-    /// The player is struck by monitor `by` (or another blow, `by`'s number
-    /// [`UNTHROWN`]) at `time` (game server milliseconds) at point `joint` of their body,
+    /// The player is struck by monitor `by` at `time` (game server milliseconds) at point `joint` of their body,
     /// pushed by `push` (units a second): they fall if they stand (and may:
     /// [`Ragdoll::strikable`]), the body takes the blow, and everyone is told. False when
     /// it did not land.

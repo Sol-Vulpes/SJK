@@ -715,12 +715,6 @@ pub(super) fn register_daily_cvars(cvars: &mut CvarRegistry) -> Result<(), sjk_s
             "Play the Tag toy's spray sound (SJK)",
         ),
         CvarDefinition::new(
-            crate::toy_sounds::Toy::PropGun.cvar(),
-            true,
-            archive,
-            "Play Prop gun sounds (SJK)",
-        ),
-        CvarDefinition::new(
             crate::toy_sounds::Toy::Master.cvar(),
             true,
             archive,
@@ -1111,12 +1105,6 @@ pub(super) fn register_daily_cvars(cvars: &mut CvarRegistry) -> Result<(), sjk_s
             archive,
             "Quests are on: you may be given a quest, such as hugging or kissing two other players within a minute, for an Echo, or be named in one (toy_quests switches it)",
         ),
-        CvarDefinition::new(
-            crate::toy_saved::PROPGUN_CVAR,
-            false,
-            archive,
-            "The Prop gun toy is on: you hold the chosen prop gun instead of your weapon, attack fires it, and others' bolts knock you down (toy_propgun switches it)",
-        ),
         // Other players' toys seen (Collection > Toys).
         CvarDefinition::new(
             crate::toy_sight::CVARS[0].0,
@@ -1147,18 +1135,6 @@ pub(super) fn register_daily_cvars(cvars: &mut CvarRegistry) -> Result<(), sjk_s
             true,
             archive,
             "Monitors are seen (0: no Monitor toy monitor is drawn, nor its sounds in the world heard, on this PC; SJK)",
-        ),
-        CvarDefinition::new(
-            crate::propgun::SHOW_CVAR,
-            true,
-            archive,
-            "Other players' prop guns are seen (0: their Prop gun toy guns, bolts and sounds are not drawn or heard on this PC; SJK)",
-        ),
-        CvarDefinition::new(
-            crate::propgun::GUN_CVAR,
-            "",
-            archive,
-            "The gun the Prop gun toy holds: the name of a propguns/<name>.gun file (propgun lists them; SJK)",
         ),
         CvarDefinition::new(
             crate::tags::CVAR,

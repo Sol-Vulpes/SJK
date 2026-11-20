@@ -144,8 +144,6 @@ pub(crate) struct GameAudio {
     blade_skins: Arc<crate::saber_skins::LoadedSkins>,
     /// The generation of the blade skins registered in `legacy`, once it is ready.
     saber_sets_generation: Option<u64>,
-    /// The Prop gun's flying bolts' loops this frame (source, sound, where).
-    propgun_loops: Vec<(SourceId, String, [f32; 3])>,
     /// The toys' volume and per-toy switches (`toy_sounds.rs`), read each frame.
     toy_sounds: crate::toy_sounds::Options,
     /// `cg_fleshSparks` ([`crate::impacts::flesh_sparks`]): below 2 the special saber
@@ -291,7 +289,6 @@ impl GameAudio {
             legacy_vfs: None,
             blade_skins: Arc::default(),
             saber_sets_generation: None,
-            propgun_loops: Vec::with_capacity(8),
             toy_sounds: Default::default(),
             flesh_sparks: crate::impacts::FLESH_SPARKS_ALL,
             menu_loops: [None; MENU_LOOPS],
@@ -593,12 +590,6 @@ impl GameAudio {
         self.mute.silences(source, cause)
     }
 
-    /// The Prop gun's flying bolts' loops this frame, played with the frame's loops.
-    pub(crate) fn set_propgun_loops(&mut self, loops: &[(SourceId, String, [f32; 3])]) {
-        self.propgun_loops.clear();
-        self.propgun_loops.extend_from_slice(loops);
-    }
-
     /// Rebuild all codemp loops at rendered cadence from interpolated origins.
     ///
     /// The set is bracketed by `ClearLoops`/`CommitLoops` because the audio
@@ -616,7 +607,6 @@ impl GameAudio {
         self.poll_legacy_load();
         self.output.send(AudioCommand::ClearLoops);
         self.send_frame_loops(snapshot, presented_time, listener_origin, world, bsp);
-        self.send_toy_loops();
         self.send_weather_loops();
         self.send_crackle_buzzes();
         self.update_flame(snapshot, presented_time, world, predicted);
@@ -680,50 +670,6 @@ impl GameAudio {
                 [0.0; 3],
             ));
         }
-    }
-
-    /// The toys' loops join the loop set (none for a player muted here); they are the
-    /// toys' sounds, not the map's music, so they ignore `s_musicVolume`: the Prop gun's
-    /// bolts in flight.
-    fn send_toy_loops(&mut self) {
-        use crate::toy_sounds::Toy;
-        for index in 0..self.propgun_loops.len() {
-            let (source, origin) = (self.propgun_loops[index].0, self.propgun_loops[index].2);
-            if let Some(handle) = self.find_handle(&self.propgun_loops[index].1) {
-                self.send_toy_loop(Toy::PropGun, handle, source, Some(origin));
-            }
-        }
-    }
-
-    /// A toy's loop on `source` at `origin` (`None`: in both ears), unless muted here
-    /// (the player, or the toy's sounds in the settings).
-    fn send_toy_loop(
-        &mut self,
-        toy: crate::toy_sounds::Toy,
-        handle: SoundHandle,
-        source: SourceId,
-        origin: Option<[f32; 3]>,
-    ) {
-        if self.mute.silences(source, None) {
-            return;
-        }
-        let Some(volume) = self.toy_sounds.gain(toy, 1.0) else {
-            return;
-        };
-        self.output.send(AudioCommand::SetLoop(
-            handle,
-            PlayRequest {
-                origin,
-                source,
-                channel: TOY_CHANNEL,
-                volume,
-                attenuation: match origin {
-                    Some(_) => sjk_client::legacy_sound_attenuation(0),
-                    None => sjk_audio::Attenuation::None,
-                },
-            },
-            [0.0; 3],
-        ));
     }
 
     fn send_frame_loops(

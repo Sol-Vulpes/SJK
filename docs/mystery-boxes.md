@@ -27,7 +27,7 @@ Words stand in the world over every box, in the headline font (Fira Sans Condens
 centre prints), for every SJK player who sees it (hidden behind
 walls, fading out past 1000 units, gone past 1400): "MYSTERY BOX" and its price (or "Free
 roll: press Use" for a player holding one), "Rolling..." while it rolls, then what came
-out (the credits, a holocron's or dormant kyber's tier, the Ray Gun...; the opener's also says
+out (the credits, a holocron's or dormant kyber's tier...; the opener's also says
 to press Use to take it).
 
 ## Opening one
@@ -74,24 +74,23 @@ no closing sound. Both rolls end together, so every client stops at the same tim
 | `holocron` | the tier's own holocron, every part of it, for everyone (since 11/11/2026 the hub's event names the tier; SJK's placeholder holocron for others before) |
 | `kyber` | the tier's own dormant kyber, for everyone |
 | `shards` | three cyan kyber crystals; seven, bigger, for the opener's pile of more than 15 shards |
-| `raygun` | the Ray Gun |
 | `blade` | a saber hilt; for an opener who holds the blade already, the shards it pays instead |
 
 Before 11/11/2026 (Sol: "replace the crystals for credits with actually a pile of coins")
 `empty` stopped on a handful of bolts, `refund` on a blue crystal, `double` on a green
 one, `jackpot` on a red one and `again` on a little mystery box; an older hub's `empty`
-and `again` still do. The coins, the Ray Gun and its bolt are SJK's own, bundled, made by
-[box_loot_model.py](../scripts/box_loot_model.py).
+and `again` still do. The coins are SJK's own, bundled, made by
+[box_loot_model.py](../scripts/box_loot_model.py). An older hub's `raygun` stops on the
+bolts: the Ray Gun went on 20/11/2026.
 
 What rolls before it stops is only these prizes (Sol, 29/10/2026: the game's weapons
 rolled with them before, which no box gave), but the teddy bear, which only comes at the
-end (30/10/2026): the three piles of coins, both piles of shards, the hilt, the Ray Gun,
-the four tiers' holocrons, Uncommon to Mythical, and the Rare and Mythical dormant kybers,
+end (30/10/2026): the three piles of coins, both piles of shards, the hilt, the four tiers' holocrons, Uncommon to Mythical, and the Rare and Mythical dormant kybers,
 each drawn as the Holocrons tab draws it, its parts posed and turning
 (`mystery_box::HOLOCRONS`, `KYBERS`; Sol, 11/11/2026: "we should see the kyber models and
 holos too", no placeholder). `world_shot::mystery_box_shots::duel6_mystery_box_holocrons`
 shows the four holocrons, `duel6_mystery_box_kybers` the four dormant kybers,
-`duel6_mystery_box_rework` the coins and the Ray Gun, and `duel6_mystery_box_loot` the
+`duel6_mystery_box_rework` the coins and the hilt, and `duel6_mystery_box_loot` the
 shards, the little box and the hilt.
 
 The opener is told what came out in the centre of the screen. It floats over the box,
@@ -119,13 +118,12 @@ rare dormant kyber):
 
 | Outcome | Chance | Pays |
 | --- | --- | --- |
-| `holocron` | 45.5 % | a holocron, Uncommon (green) or better |
+| `holocron` | 52.5 % | a holocron, Uncommon (green) or better |
 | `coins` | 15 % | 50 credits |
 | `double` | 6 % | 200 credits |
 | `jackpot` | 1 % | 500 credits |
 | `explode` | 12 % | a DOOM coin; the price goes to a hunter |
 | `shards` | 12 % | 10 to 25 kyber shards |
-| `raygun` | 7 % | the Ray Gun for 30 seconds |
 | `blade` | 1 % | the Mystery blade (60 shards if you hold it) |
 | `kyber` | 0.5 % | a dormant kyber: 60 % Uncommon, 30 % Rare, 9 % Legendary, 1 % Mythical |
 
@@ -175,21 +173,11 @@ rolled on the box's own odds (source `box`), attuned in the Collection as any do
 ([holocrons.md](holocrons.md#dormant-kybers)); everyone sees the tier's dormant kyber over the
 box (`open_<box>_kyber_<tier>`), with the jackpot's fanfare.
 
-**The Ray Gun** (`raygun`, Sol's idea of 11/11/2026, after Call of Duty zombies' box): the
-roll stops on a ray gun of SJK's own (a simple retro one: a steel barrel, red fins, a
-glowing green tube), which jumps into the opener's hand at once (no Use needed) for 30
-seconds. It is a [Prop gun](client.md#prop-gun) the client bundles
-(`sjk/raygun.gun`, never chosen with `propgun`): held instead of the real weapon, in
-first and third person, whether the Prop gun toy is on or not, attack firing a green bolt
-every 0.45 seconds that every SJK player on the server sees through the toy relay. A
-player a bolt strikes falls as a ragdoll, any SJK player in play (not typing, away, dead,
-in a duel or with the flag; the Prop gun toy need not be on), once: a green shell, the
-Monitor's Screen Saver's in green, wraps them for 30 seconds, and every Ray Gun's bolt
-passes through them meanwhile ("ZAPPED!"). Their own client decides the hit, and tells
-the hub (`POST /v1/raygun/hit`), which pays the shooter 25 credits when the struck player
-has the Box hunt toy on (at most 8 players a gun) and shows the shell to everyone (its
-`raygun` event `hit_<victim>_<credits>`); the shooter reads "RAY GUN: <name> down, +25
-credits". Players out of the box hunt fall but pay nothing.
+**The Ray Gun** (`raygun`, 11/11/2026 to 20/11/2026, after Call of Duty zombies' box) was
+a prize the box handed its opener for 30 seconds, held and fired as a Prop gun; it went
+with the Prop gun toy (Sol). Its 7 % went to the holocron (hub branch `no-raygun`,
+deployed with the release that removed it); until then a hub may still roll it, and the
+client stops on the bolts with nothing to give.
 
 **Shards, a free roll, the Mystery blade** (`shards`, `again`, `blade`, 29/10/2026): a
 pile of 10 to 25 kyber shards to spend in the shop; a free roll, spent on the next box
@@ -355,9 +343,6 @@ All the numbers are the hub's, PROVISIONAL.
 - The hub cannot tell where a player stands: the reach is the client's.
 - An outcome pays credits, blows the opener up or gives a holocron; other effects need a
   client release for each new kind.
-- The Ray Gun's hits are decided by the struck player's own client: a modified client
-  could refuse to fall, and two friends could pay each other 200 credits a gun (8 hits of
-  25). Others see the shell when the hub's feed reaches them, a few seconds late.
 - The explosion is SJK's only: no game server knows of it, so it hurts nobody else, and
   players on other clients see the opener die (the server's `kill`) with no box or
   explosion. A server that refuses `kill`, or counts it against the score, does so.

@@ -121,18 +121,16 @@ impl GpuState {
             None => {}
         }
         // `toy_illuminate` may have flipped it: tell the Toys tab. The Drone, the Monitor,
-        // Box hunt, the Prop gun and Quests stay as last switched, across
+        // Box hunt and Quests stay as last switched, across
         // maps, servers and restarts (`toy_saved`).
         if let Some(console) = self.console.as_mut() {
-            let [drone, monitor, box_hunt, propgun, quests] = &mut self.toys_saved;
+            let [drone, monitor, box_hunt, quests] = &mut self.toys_saved;
             let on = drone.sync(console, crate::toy_saved::DRONE_CVAR, self.drone.on());
             self.drone.set_on(on);
             let on = monitor.sync(console, crate::toy_saved::MONITOR_CVAR, self.monitor.on());
             self.monitor.set_on(on);
             let on = box_hunt.sync(console, crate::toy_saved::BOX_HUNT_CVAR, self.box_hunt.on());
             self.box_hunt.set_on(on);
-            let on = propgun.sync(console, crate::toy_saved::PROPGUN_CVAR, self.propgun.on());
-            self.propgun.set_on(on);
             let on = quests.sync(console, crate::toy_saved::QUESTS_CVAR, self.quests.on());
             self.quests.set_on(on);
             console.set_illuminate_lit(self.illuminate.lit());

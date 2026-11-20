@@ -183,8 +183,6 @@ const CHARGE_SOURCE: sjk_audio::SourceId = sjk_audio::SourceId(0x5100_0001);
 const CHARGE_CHANNEL: sjk_audio::ChannelId = sjk_audio::ChannelId(1);
 /// The numbers of a player's monitors go round this many.
 const NUMBERS: u8 = 100;
-// A blow no monitor dealt (a prop gun's bolt) names no monitor by a number past them all.
-const _: () = assert!(NUMBERS < crate::ragdoll::UNTHROWN);
 const SLOTS: usize = crate::looks::SLOTS;
 
 /// A bundled file's bytes, by its name in `assets/monitor`.

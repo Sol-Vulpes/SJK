@@ -30,12 +30,6 @@ const TEDDY_MODEL: &str = "models/sjk/teddy_bear.md3";
 const COINS_SMALL: &str = "models/sjk/coins_small.md3";
 const COINS_MEDIUM: &str = "models/sjk/coins_medium.md3";
 const COINS_BIG: &str = "models/sjk/coins_big.md3";
-/// The Ray Gun a box may hand its opener (bundled, `scripts/box_loot_model.py`; held and
-/// fired as a prop gun, `propgun.rs`).
-const RAYGUN_MODEL: &str = "models/sjk/raygun.md3";
-/// Heard as a Ray Gun's shield rises round the player it struck (bundled,
-/// `scripts/box_loot_assets.py`).
-pub(crate) const RAY_SHIELD_SOUND: &str = "sound/sjk/raygun/shield.wav";
 /// The chest's height and depth (across its front), and how far the lid reaches past it.
 const HEIGHT: f32 = 24.0;
 const DEPTH: f32 = 26.0;
@@ -206,8 +200,9 @@ const SHARD_MODEL: &str = "models/sjk/holocron_kyber_rare_crystal.md3";
 /// boxes: a thermal detonator before), SJK's holocron (a holocron of a tier not told, from
 /// an older hub; every client stops on its tier's since 11/11/2026, [`HOLOCRONS`]), a pile
 /// of kyber shards (shards; [`BIG_PILE`] for a big one), a little mystery box (a free
-/// opening, before 11/11/2026), a saber hilt (the boxes' blade) and the Ray Gun.
-const PRIZES: [Item; 10] = [
+/// opening, before 11/11/2026) and a saber hilt (the boxes' blade). The Ray Gun was the
+/// tenth until 20/11/2026, gone with the Prop gun it ran on.
+const PRIZES: [Item; 9] = [
     item("models/items/metallic_bolts.md3", 1.5),
     item(COINS_SMALL, 4.0),
     item(COINS_MEDIUM, 3.2),
@@ -217,7 +212,6 @@ const PRIZES: [Item; 10] = [
     pile(SHARD_MODEL, 1.5, 3),
     item(MODEL, 0.45),
     item("models/weapons2/saber/saber_w.md3", 2.6),
-    item(RAYGUN_MODEL, 2.2),
 ];
 
 /// A big pile of shards: more than [`BIG_PILE_FROM`] (the boxes' blade for a player who
@@ -227,16 +221,15 @@ const BIG_PILE_FROM: u64 = 15;
 
 /// What rolls over an opened box before it stops: only what a box can give (Sol,
 /// 29/10/2026: the game's weapons rolled before, which no box gave), the three piles of
-/// coins, the four tiers' holocrons, two kyber crystals, both piles of shards, the hilt
-/// and the Ray Gun (11/11/2026: the bolts, the little box and SJK's placeholder
-/// holocron rolled before); not the teddy bear, which only comes at the end.
-const REEL: [Item; 13] = [
+/// coins, the four tiers' holocrons, two kyber crystals, both piles of shards and the hilt
+/// (11/11/2026: the bolts, the little box and SJK's placeholder holocron rolled before);
+/// not the teddy bear, which only comes at the end.
+const REEL: [Item; 12] = [
     PRIZES[1],
     PRIZES[2],
     PRIZES[3],
     PRIZES[6],
     PRIZES[8],
-    PRIZES[9],
     BIG_PILE,
     HOLOCRONS[0],
     HOLOCRONS[1],
@@ -260,7 +253,6 @@ fn prize(outcome: &str, pays: bool, tier: Option<&str>) -> Item {
         wire::SHARD_PILE => PRIZES[6],
         wire::AGAIN => PRIZES[7],
         wire::BLADE => PRIZES[8],
-        wire::RAYGUN => PRIZES[9],
         wire::HOLOCRON => form
             .filter(|slot| *slot < HOLOCRONS.len())
             .map_or(PRIZES[5], |slot| HOLOCRONS[slot]),
@@ -328,7 +320,7 @@ macro_rules! bundled {
 
 /// The bundled files at their game paths (made by `scripts/mystery_box_assets.py` and
 /// `scripts/mystery_box_model.py`; the shader by hand).
-const FILES: [(&str, &[u8]); 22] = [
+const FILES: [(&str, &[u8]); 15] = [
     (ROLL_SOUND, bundled!("roll.wav")),
     (TAKE_SOUND, bundled!("take.wav")),
     (MODEL, bundled!("mystery_box.md3")),
@@ -356,13 +348,6 @@ const FILES: [(&str, &[u8]); 22] = [
     (COINS_SMALL, bundled!("coins_small.md3")),
     (COINS_MEDIUM, bundled!("coins_medium.md3")),
     (COINS_BIG, bundled!("coins_big.md3")),
-    (RAYGUN_MODEL, bundled!("raygun.md3")),
-    ("models/sjk/raygun_bolt.md3", bundled!("raygun_bolt.md3")),
-    ("sound/sjk/raygun/fire.wav", bundled!("raygun_fire.wav")),
-    ("sound/sjk/raygun/impact.wav", bundled!("raygun_impact.wav")),
-    ("sound/sjk/raygun/raise.wav", bundled!("raygun_raise.wav")),
-    (RAY_SHIELD_SOUND, bundled!("raygun_shield.wav")),
-    (crate::propgun::RAYGUN_FILE, bundled!("raygun.gun")),
 ];
 
 /// Mount the bundled files.
@@ -387,8 +372,6 @@ struct Prize {
     blade: Option<String>,
     /// The tier of the kyber crystal it gave (`kyber_rare`).
     kyber: Option<String>,
-    /// The seconds of the Ray Gun it gave.
-    raygun: Option<u64>,
     /// The DOOM coins held after (a box that blew up gave one).
     doom_coins: Option<u64>,
 }
@@ -967,7 +950,6 @@ fn drop_name(id: &str, credits: u64) -> String {
         wire::COINS | "double" | "jackpot" if credits > 0 => format!("{credits} credits"),
         wire::EXPLODE => "The teddy bear: a DOOM coin".to_owned(),
         wire::SHARD_PILE => "Kyber shards".to_owned(),
-        wire::RAYGUN => "The Ray Gun".to_owned(),
         wire::BLADE => "The Mystery blade".to_owned(),
         wire::KYBER => "A dormant kyber".to_owned(),
         wire::AGAIN => "Another roll".to_owned(),
@@ -1022,10 +1004,6 @@ fn prize_text(outcome: &str, prize: &Prize) -> String {
                 .map_or("A dormant kyber", |tier| tier.name);
             format!("{name}! In your Collection")
         }
-        (wire::RAYGUN, ..) => format!(
-            "THE RAY GUN! {} s in your hand: attack fires it",
-            prize.raygun.unwrap_or(30)
-        ),
         (wire::BLADE, ..) if prize.blade.is_some() => {
             "The Mystery blade! In your Collection".to_owned()
         }
@@ -1419,7 +1397,6 @@ impl GpuState {
                     shards: opened.shards,
                     blade: opened.blade.clone(),
                     kyber: opened.kyber.as_ref().map(|kyber| kyber.tier.clone()),
-                    raygun: opened.raygun,
                     doom_coins: opened.doom_coins,
                 };
                 let own = self
@@ -1458,22 +1435,11 @@ impl GpuState {
     fn mystery_box_moment(&mut self, moment: Moment) {
         match moment {
             Moment::Blast { opener, at } => self.mystery_box_blast(opener, at),
-            Moment::Stopped { id, outcome, prize } => {
-                // The Use prompt says to take it; the Ray Gun jumps into the hand at once.
+            Moment::Stopped { outcome, prize, .. } => {
+                // The Use prompt says to take it.
                 self.mystery_box_centre(prize_text(&outcome, &prize));
-                if outcome == wire::RAYGUN
-                    && let Some(taken) = self.mystery_boxes.take_prize(id)
-                {
-                    self.mystery_boxes.takes.push((id, u64::MAX));
-                    self.mystery_box_moment(Moment::Taken(taken));
-                }
             }
             Moment::Taken(taken) => {
-                if taken.outcome == wire::RAYGUN
-                    && let Some(seconds) = taken.prize.raygun
-                {
-                    self.raygun_start(seconds);
-                }
                 let text = prize_text(&taken.outcome, &taken.prize);
                 let how = if taken.by_itself {
                     " (taken for you)"
@@ -1790,7 +1756,7 @@ impl GpuState {
     }
 
     /// [`Self::shot_mystery_boxes`], stopped on the loot of 11/11/2026: the three piles of
-    /// gold coins and the Ray Gun, or with `kybers` the four kyber crystals.
+    /// gold coins and the hilt, or with `kybers` the four kyber crystals.
     pub(crate) fn shot_mystery_box_rework(
         &mut self,
         boxes: &[([f32; 3], f32)],
@@ -1800,7 +1766,7 @@ impl GpuState {
         let loot = if kybers {
             KYBERS
         } else {
-            [PRIZES[1], PRIZES[2], PRIZES[3], PRIZES[9]]
+            [PRIZES[1], PRIZES[2], PRIZES[3], PRIZES[8]]
         };
         self.shot_mystery_box_prizes(boxes, since, &loot);
     }
@@ -2005,12 +1971,13 @@ mod tests {
                 item.model
             );
         }
-        // 11/11/2026: coins for credits, the Ray Gun, the crystals, and never the
+        // 11/11/2026: coins for credits, the crystals, and never the
         // placeholder holocron, the bolts or the little box rolling by.
         assert_eq!(prize(wire::COINS, true, None).model, COINS_SMALL);
         assert_eq!(prize("double", true, None).model, COINS_MEDIUM);
         assert_eq!(prize("jackpot", true, None).model, COINS_BIG);
-        assert_eq!(prize(wire::RAYGUN, false, None), PRIZES[9]);
+        // A Ray Gun from a hub before the release that removed it: a prize not known.
+        assert_eq!(prize("raygun", false, None), PRIZES[0]);
         assert_eq!(prize(wire::KYBER, false, Some("kyber_mythical")), KYBERS[3]);
         assert_eq!(prize(wire::KYBER, false, Some("rare")), KYBERS[1]);
         assert_eq!(prize(wire::KYBER, false, None), KYBERS[1]);
@@ -2224,11 +2191,6 @@ mod tests {
             prize_text(wire::KYBER, &crystal),
             "Rare Dormant Kyber! In your Collection"
         );
-        let gun = Prize {
-            raygun: Some(30),
-            ..Prize::default()
-        };
-        assert!(prize_text(wire::RAYGUN, &gun).starts_with("THE RAY GUN! 30 s"));
         // The teddy bear's DOOM coin.
         let coined = Prize {
             doom_coins: Some(1),
