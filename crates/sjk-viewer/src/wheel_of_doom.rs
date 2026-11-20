@@ -880,7 +880,7 @@ impl GpuState {
     }
 
     /// The player's DOOM coins, when the hub said.
-    fn doom_coins(&self) -> Option<u64> {
+    pub(crate) fn doom_coins(&self) -> Option<u64> {
         crate::player_identity::with_snapshot(|snapshot| {
             snapshot.wheel_of_doom.as_ref().map(|wheel| wheel.coins)
         })
@@ -1190,22 +1190,7 @@ impl GpuState {
     fn wheel_of_doom_moment(&mut self, moment: Moment, own: Option<u8>, now: Instant) {
         match moment {
             Moment::Stopped { kind, title, line } => {
-                let text = match kind {
-                    Some(Kind::Effect(effect)) => {
-                        self.wheel_of_doom.effects.start(effect, now);
-                        format!("{title} {line}")
-                    }
-                    Some(Kind::Curse) => {
-                        self.wheel_of_doom.effects.curse(now, seed());
-                        format!("{title} {line}")
-                    }
-                    Some(Kind::Holocron(_)) => format!("{title} In your Collection"),
-                    Some(Kind::CoinBack) => format!("{title}! {line}"),
-                    Some(Kind::Explode) => title,
-                    Some(Kind::Nothing) => line,
-                    None => format!("{title}: {line}"),
-                };
-                self.wheel_of_doom_centre(text);
+                self.wheel_of_doom_outcome(kind, &title, &line, now);
             }
             Moment::Blast { slot, at } => {
                 let mine = slot.is_some() && slot == own;
@@ -1233,6 +1218,38 @@ impl GpuState {
                     crate::log::progress(format_args!("wheel of doom: kill not sent: {error}"));
                 }
             }
+        }
+    }
+
+    /// The player's own wheel or Force box coin roll gave `kind`: its effect starts and
+    /// the centre of the screen says it (`title`, `line`).
+    fn wheel_of_doom_outcome(&mut self, kind: Option<Kind>, title: &str, line: &str, now: Instant) {
+        let text = match kind {
+            Some(Kind::Effect(effect)) => {
+                self.wheel_of_doom.effects.start(effect, now);
+                format!("{title} {line}")
+            }
+            Some(Kind::Curse) => {
+                self.wheel_of_doom.effects.curse(now, seed());
+                format!("{title} {line}")
+            }
+            Some(Kind::Holocron(_)) => format!("{title} In your Collection"),
+            Some(Kind::CoinBack) => format!("{title}! {line}"),
+            Some(Kind::Explode) => title.to_owned(),
+            Some(Kind::Nothing) => line.to_owned(),
+            None => format!("{title}: {line}"),
+        };
+        self.wheel_of_doom_centre(text);
+    }
+
+    /// The player's own Force box coin roll stopped on WHEEL OF DOOM outcome `id` (the
+    /// box blows up by itself, as for its credits roll).
+    pub(crate) fn wheel_of_doom_strike(&mut self, id: &str, now: Instant) {
+        match known(id) {
+            Some((_, known)) => {
+                self.wheel_of_doom_outcome(Some(known.kind), known.title, known.line, now);
+            }
+            None => self.wheel_of_doom_outcome(None, id, "a newer hub's outcome", now),
         }
     }
 

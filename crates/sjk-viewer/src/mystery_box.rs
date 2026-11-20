@@ -92,6 +92,14 @@ const FACING: f32 = std::f32::consts::FRAC_PI_3;
 /// How long the roll lasts, to the tune's last chord (`scripts/mystery_box_assets.py`)
 /// and the extras pack's roll's last note (Sol, 30/10/2026; 5.5 s before).
 const ROLL: Duration = Duration::from_millis(5_200);
+/// How long Use is held at a box to roll a DOOM coin instead of credits (Sol, 20/11/2026:
+/// tap for credits, hold for the coin).
+const DOOM_HOLD: Duration = Duration::from_secs(1);
+/// How long a coin roll's outcome stays over the box: nothing waits to be taken (the
+/// holocron is in the Collection already, a punishment strikes at once).
+const DOOM_STAY: Duration = Duration::from_secs(3);
+/// The seconds between two of the player's coin rolls, as the hub keeps them.
+const DOOM_COOLDOWN: u64 = 15;
 /// How long what came out waits for its opener before it is taken by itself.
 const HOLD: Duration = Duration::from_secs(10);
 /// How long the roll's first thing takes to rise out of the box.
@@ -265,6 +273,21 @@ fn prize(outcome: &str, pays: bool, tier: Option<&str>) -> Item {
     }
 }
 
+/// What a DOOM coin roll stops on for the WHEEL OF DOOM's `outcome`: a holocron of its
+/// tier, a pile of coins for the coin back, the teddy bear for the blast and the bolts
+/// for nothing and the punishments.
+fn doom_prize(outcome: &str) -> Item {
+    use crate::wheel_of_doom::Kind;
+    match crate::wheel_of_doom::known(outcome).map(|(_, known)| known.kind) {
+        Some(Kind::Holocron(tier)) => crate::holocrons::stage::form_index(tier)
+            .filter(|slot| *slot < HOLOCRONS.len())
+            .map_or(PRIZES[5], |slot| HOLOCRONS[slot]),
+        Some(Kind::CoinBack) => PRIZES[1],
+        Some(Kind::Explode) => PRIZES[4],
+        _ => PRIZES[0],
+    }
+}
+
 /// Every model the boxes draw: the box, its lid, then [`REEL`] (which holds the prizes).
 /// Each once: a holocron's motes share a model, and the prizes roll too.
 fn models() -> impl Iterator<Item = &'static str> {
@@ -393,6 +416,9 @@ struct Opening {
     revealed: bool,
     /// A box that blew up has blown up, [`BLAST_DELAY`] after the roll stopped.
     blasted: bool,
+    /// A DOOM coin roll (the Force box's held Use, since 20/11/2026), and whether it is
+    /// the player's own; `None` for a credits roll.
+    doom: Option<bool>,
 }
 
 impl Opening {
@@ -496,6 +522,8 @@ enum Moment {
         prize: Prize,
     },
     Taken(Taken),
+    /// The player's own DOOM coin roll stopped on this WHEEL OF DOOM outcome.
+    Doomed(String),
     /// A box that blew up at the roll's end, for everyone who sees it: the opener's slot
     /// and the box's place.
     Blast {
@@ -545,6 +573,17 @@ pub(crate) struct MysteryBoxes {
     meshes_seen: usize,
     use_pressed: bool,
     use_held: bool,
+    /// Use let go since the frame's logic last looked.
+    use_released: bool,
+    /// The box Use is held at and since when, while the player holds a DOOM coin: let go
+    /// before [`DOOM_HOLD`] it rolls for credits, held that long for the coin.
+    holding: Option<(i64, Instant)>,
+    /// The box a coin roll was asked at and when, until the hub answers.
+    doom_asked: Option<(i64, Instant)>,
+    /// The last coin roll answer read.
+    doom_seen: u64,
+    /// Until when the hub makes the player wait for their next coin roll.
+    doom_until: Option<Instant>,
     /// The box asked to open and when, until the hub answers.
     asked: Option<(i64, Instant)>,
     /// The last hub answer read.
@@ -586,6 +625,9 @@ impl MysteryBoxes {
         let using = command.buttons & BUTTON_USE != 0;
         if using && !self.use_held {
             self.use_pressed = true;
+        }
+        if !using && self.use_held {
+            self.use_released = true;
         }
         self.use_held = using;
     }
@@ -698,6 +740,7 @@ impl MysteryBoxes {
             opener,
             revealed: false,
             blasted: false,
+            doom: None,
         });
         here.lid.set(true, now);
         let (origin, id) = (here.origin.to_array(), here.id);
@@ -707,6 +750,22 @@ impl MysteryBoxes {
                 origin: Some(origin),
                 source: source(id),
             });
+        }
+    }
+
+    /// Box `id` rolled DOOM coin `outcome` (the player's own when `mine`, by the player
+    /// on slot `opener`): the box opens and rolls as for credits, stopping on
+    /// [`doom_prize`].
+    fn doomed(&mut self, id: i64, outcome: &str, mine: bool, opener: Option<u8>, now: Instant) {
+        self.opened(id, outcome, None, opener, None, seed(), now);
+        if let Some(opening) = self
+            .here
+            .iter_mut()
+            .find(|here| here.id == id)
+            .and_then(|here| here.opening.as_mut())
+        {
+            opening.prize = doom_prize(outcome);
+            opening.doom = Some(mine);
         }
     }
 
@@ -724,12 +783,33 @@ impl MysteryBoxes {
                 opening.revealed = true;
                 // A box that blows up stops on the teddy bear and laughs; it blows up
                 // [`BLAST_DELAY`] later.
-                let path = match opening.outcome.as_str() {
-                    "jackpot" | wire::BLADE | wire::KYBER => JACKPOT,
-                    wire::EXPLODE => LAUGH,
-                    _ if opening.prize == PRIZES[0] => EMPTY,
-                    _ => WIN,
+                let doom = opening
+                    .doom
+                    .and_then(|_| crate::wheel_of_doom::known(&opening.outcome))
+                    .map(|(_, known)| known.kind);
+                let path = match (doom, opening.outcome.as_str()) {
+                    (Some(crate::wheel_of_doom::Kind::Holocron("mythical" | "legendary")), _) => {
+                        JACKPOT
+                    }
+                    (
+                        Some(
+                            crate::wheel_of_doom::Kind::Holocron(_)
+                            | crate::wheel_of_doom::Kind::CoinBack,
+                        ),
+                        _,
+                    ) => WIN,
+                    (Some(crate::wheel_of_doom::Kind::Nothing), _) => EMPTY,
+                    (Some(_), _) => LAUGH,
+                    (None, outcome) => match outcome {
+                        "jackpot" | wire::BLADE | wire::KYBER => JACKPOT,
+                        wire::EXPLODE => LAUGH,
+                        _ if opening.prize == PRIZES[0] => EMPTY,
+                        _ => WIN,
+                    },
                 };
+                if opening.doom == Some(true) {
+                    moments.push(Moment::Doomed(opening.outcome.clone()));
+                }
                 self.cues.push(Cue {
                     path,
                     origin: Some(here.origin.to_array()),
@@ -762,7 +842,12 @@ impl MysteryBoxes {
                     });
                 }
             }
-            if elapsed >= ROLL + HOLD {
+            let stays = if opening.doom.is_some() {
+                DOOM_STAY.max(BLAST_DELAY)
+            } else {
+                HOLD
+            };
+            if elapsed >= ROLL + stays {
                 here.lid.set(false, now);
                 self.cues.push(Cue {
                     path: EXTRAS_CLOSE,
@@ -770,7 +855,7 @@ impl MysteryBoxes {
                     source: source(here.id),
                 });
             }
-            if elapsed >= ROLL + HOLD
+            if elapsed >= ROLL + stays
                 && let Some(opening) = here.opening.take()
                 && let Some(prize) = opening.mine
             {
@@ -903,6 +988,9 @@ fn box_prompt(
     };
     if let Some(opening) = &here.opening {
         let rolled = now.saturating_duration_since(opening.started) >= ROLL;
+        if let Some(mine) = opening.doom {
+            return (!mine).then(|| prompt("Someone rolls a DOOM coin", None, false));
+        }
         return match (&opening.mine, rolled) {
             _ if opening.outcome == wire::EXPLODE => None,
             (Some(_), true) => Some(prompt("Take it", None, true)),
@@ -926,6 +1014,24 @@ fn box_prompt(
     } else {
         prompt(open, Some(format!("{} credits", wallet.price)), true)
     })
+}
+
+/// The Use prompt's line at an idle box while the player holds `coins` DOOM coins: what
+/// a tap costs (`line`), then the coin roll held Use gives, or the seconds to wait for it,
+/// or that it is coming while Use is `held`.
+fn doom_line(line: Option<String>, coins: u64, wait: Option<u64>, held: bool) -> String {
+    let doom = if held {
+        "Keep holding: DOOM coin roll".to_owned()
+    } else if let Some(left) = wait {
+        format!("DOOM coin roll again in {left} s")
+    } else {
+        let s = if coins == 1 { "" } else { "s" };
+        format!("Hold Use: DOOM coin roll ({coins} coin{s})")
+    };
+    match line {
+        Some(line) => format!("Tap: {line} \u{00b7} {doom}"),
+        None => doom,
+    }
 }
 
 /// What a box may give, as a player reads it, by the hub's `outcomes`: likeliest first,
@@ -1167,6 +1273,7 @@ impl GpuState {
         }
         let now = Instant::now();
         self.read_mystery_box_answer(now);
+        self.read_mystery_box_doom(now);
         let Some(session) = self
             .live_session
             .as_ref()
@@ -1229,6 +1336,12 @@ impl GpuState {
             if event.toy != wire::TOY || Some(event.slot) == own {
                 continue;
             }
+            if let Some((id, outcome)) = sjk_identity::wheel_of_doom::parse_doom_event(&event.event)
+            {
+                self.mystery_boxes
+                    .doomed(id, outcome, false, Some(event.slot), now);
+                continue;
+            }
             if let Some(told) = wire::parse_event(&event.event) {
                 self.mystery_boxes.opened(
                     told.id,
@@ -1259,11 +1372,15 @@ impl GpuState {
         }
         if self.mystery_boxes.here.is_empty() {
             self.mystery_boxes.use_pressed = false;
+            self.mystery_boxes.use_released = false;
+            self.mystery_boxes.holding = None;
             return;
         }
         let player = &session.latest_snapshot().player;
         if !plays(player) {
             self.mystery_boxes.use_pressed = false;
+            self.mystery_boxes.use_released = false;
+            self.mystery_boxes.holding = None;
             return;
         }
         let from = self
@@ -1276,6 +1393,13 @@ impl GpuState {
             &self.mystery_boxes.here,
         );
         let pressed = std::mem::take(&mut self.mystery_boxes.use_pressed);
+        let released = std::mem::take(&mut self.mystery_boxes.use_released);
+        let coins = self.doom_coins().unwrap_or(0);
+        let doom_wait = self
+            .mystery_boxes
+            .doom_until
+            .map(|until| until.saturating_duration_since(now).as_secs())
+            .filter(|left| *left > 0);
         let credits = crate::player_identity::with_snapshot(|snapshot| {
             snapshot.me.as_ref().map(|me| me.credits)
         })
@@ -1299,9 +1423,15 @@ impl GpuState {
                     now,
                 )
                 .map(|mut prompt| {
-                    // What it may give, while nobody opens it.
+                    // What it may give, while nobody opens it, and the coin roll held
+                    // Use gives.
                     if here.opening.is_none() {
                         prompt.drops.clone_from(&boxes.drops);
+                        if coins > 0 {
+                            prompt.line = Some(doom_line(prompt.line.take(), coins, doom_wait, {
+                                boxes.holding.is_some_and(|(held, _)| held == here.id)
+                            }));
+                        }
                     }
                     prompt
                 })
@@ -1309,9 +1439,51 @@ impl GpuState {
         if let Some(prompt) = prompt {
             self.want_use_prompt(prompt);
         }
-        let (Some(id), true) = (at, pressed) else {
+        let Some(id) = at else {
+            self.mystery_boxes.holding = None;
             return;
         };
+        if self
+            .mystery_boxes
+            .holding
+            .is_some_and(|(held, _)| held != id)
+        {
+            self.mystery_boxes.holding = None;
+        }
+        // Held at an idle box with a DOOM coin: let go early, the credits roll; held
+        // [`DOOM_HOLD`], the coin's.
+        let idle = self
+            .mystery_boxes
+            .here
+            .iter()
+            .any(|here| here.id == id && here.opening.is_none());
+        if pressed && idle && coins > 0 && doom_wait.is_none() {
+            self.mystery_boxes.holding = Some((id, now));
+            return;
+        }
+        let pressed = match self.mystery_boxes.holding {
+            Some((_, since)) if now.duration_since(since) >= DOOM_HOLD => {
+                self.mystery_boxes.holding = None;
+                if idle
+                    && crate::player_identity::with_service(|service| {
+                        service.doom_mystery_box(id, server.clone());
+                    })
+                    .is_some()
+                {
+                    self.mystery_boxes.doom_asked = Some((id, now));
+                }
+                return;
+            }
+            Some(_) if released => {
+                self.mystery_boxes.holding = None;
+                true
+            }
+            Some(_) => return,
+            None => pressed,
+        };
+        if !pressed {
+            return;
+        }
         if let Some(taken) = self.mystery_boxes.take_prize(id) {
             self.mystery_box_moment(Moment::Taken(taken));
             // Told to the other SJK players here, whose box would float on till the hold
@@ -1356,6 +1528,43 @@ impl GpuState {
             .is_some()
         {
             self.mystery_boxes.asked = Some((id, now));
+        }
+    }
+
+    /// Act on the hub's last answer to a coin roll, once: the box rolls, or the player
+    /// reads why not.
+    fn read_mystery_box_doom(&mut self, now: Instant) {
+        let seen = self.mystery_boxes.doom_seen;
+        let Some((serial, outcome)) = crate::player_identity::with_snapshot(|snapshot| {
+            snapshot
+                .mystery_box_doom
+                .as_ref()
+                .filter(|(serial, _)| *serial != seen)
+                .cloned()
+        })
+        .flatten() else {
+            return;
+        };
+        self.mystery_boxes.doom_seen = serial;
+        let asked = self.mystery_boxes.doom_asked.take();
+        match outcome {
+            Ok(doom) => {
+                let own = self
+                    .live_session
+                    .as_ref()
+                    .and_then(|session| u8::try_from(session.game_state().client_num).ok());
+                self.mystery_boxes.doom_until = Some(now + Duration::from_secs(DOOM_COOLDOWN));
+                self.mystery_boxes
+                    .doomed(doom.box_id, &doom.outcome, true, own, now);
+            }
+            Err(refused) => {
+                if let Some(left) = refused.left {
+                    self.mystery_boxes.doom_until = Some(now + Duration::from_secs(left));
+                }
+                if asked.is_some() {
+                    self.mystery_box_centre(refused.words);
+                }
+            }
         }
     }
 
@@ -1439,6 +1648,7 @@ impl GpuState {
                 // The Use prompt says to take it.
                 self.mystery_box_centre(prize_text(&outcome, &prize));
             }
+            Moment::Doomed(outcome) => self.wheel_of_doom_strike(&outcome, Instant::now()),
             Moment::Taken(taken) => {
                 let text = prize_text(&taken.outcome, &taken.prize);
                 let how = if taken.by_itself {
@@ -1805,6 +2015,7 @@ impl GpuState {
                     opener: None,
                     revealed: true,
                     blasted: false,
+                    doom: None,
                 }),
                 lid: Lid {
                     open: true,
@@ -1946,6 +2157,7 @@ mod tests {
             opener: None,
             revealed: false,
             blasted: false,
+            doom: None,
         };
         // Changing often early on, the prize over the last second and after.
         let early: std::collections::HashSet<&str> = (0..20)
@@ -2375,5 +2587,72 @@ mod tests {
             None
         );
         assert_eq!(cooldown_left(Some(now), 0, now), None);
+    }
+
+    /// A coin roll stops on a holocron of its tier, coins for the coin back, the teddy
+    /// bear for the blast and the bolts for the rest.
+    #[test]
+    fn a_coin_roll_stops_on_what_its_outcome_gives() {
+        let tier = |tier| HOLOCRONS[crate::holocrons::stage::form_index(tier).unwrap()];
+        assert_eq!(doom_prize("mythical"), tier("mythical"));
+        assert_eq!(doom_prize("holo_rare"), tier("rare"));
+        assert_eq!(doom_prize("doom_coin"), PRIZES[1]);
+        assert_eq!(doom_prize("explode"), PRIZES[4]);
+        assert_eq!(doom_prize("mirror"), PRIZES[0]);
+        assert_eq!(doom_prize("nothing"), PRIZES[0]);
+        assert_eq!(doom_prize("from_a_newer_hub"), PRIZES[0]);
+    }
+
+    /// The prompt says a tap's price, then what holding Use does.
+    #[test]
+    fn the_prompt_offers_the_coin_roll_to_a_coin_holder() {
+        assert_eq!(
+            doom_line(Some("100 credits".to_owned()), 2, None, false),
+            "Tap: 100 credits \u{00b7} Hold Use: DOOM coin roll (2 coins)"
+        );
+        assert_eq!(
+            doom_line(None, 1, Some(9), false),
+            "DOOM coin roll again in 9 s"
+        );
+        assert_eq!(
+            doom_line(Some("Free roll".to_owned()), 1, None, true),
+            "Tap: Free roll \u{00b7} Keep holding: DOOM coin roll"
+        );
+    }
+
+    /// A coin roll rolls as an opening, stops on its prize, tells its own roller and
+    /// leaves the box sooner, with nothing to take.
+    #[test]
+    fn a_coin_roll_tells_its_roller_and_leaves_nothing_to_take() {
+        let start = Instant::now();
+        let mut boxes = MysteryBoxes::default();
+        boxes.here.push(Here {
+            id: 4,
+            origin: Vec3::ZERO,
+            yaw: 0.0,
+            opening: None,
+            lid: Lid::default(),
+        });
+        boxes.doomed(4, "holo_rare", true, Some(1), start);
+        let opening = boxes.here[0].opening.as_ref().unwrap();
+        assert_eq!(
+            (opening.doom, opening.prize),
+            (Some(true), doom_prize("holo_rare"))
+        );
+        assert!(boxes.tick(start + ROLL / 2).is_empty());
+        assert_eq!(
+            boxes.tick(start + ROLL),
+            vec![Moment::Doomed("holo_rare".to_owned())]
+        );
+        assert!(boxes.take_prize(4).is_none());
+        assert!(boxes.tick(start + ROLL + DOOM_STAY).is_empty());
+        assert!(boxes.here[0].opening.is_none());
+        // Another player's: the prompt says so, and nothing is told here.
+        boxes.doomed(4, "mirror", false, Some(2), start);
+        assert!(
+            !boxes
+                .tick(start + ROLL)
+                .contains(&Moment::Doomed("mirror".to_owned()))
+        );
     }
 }
