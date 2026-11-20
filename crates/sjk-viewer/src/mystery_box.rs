@@ -38,34 +38,27 @@ const LID_OVERHANG: f32 = 1.0;
 const LID_OPEN: f32 = 75.0;
 const LID_OPENING: Duration = Duration::from_millis(450);
 const LID_CLOSING: Duration = Duration::from_millis(700);
-/// Played when a box opens, for the opener and everyone near: [`EXTRAS_OPEN`] when the
-/// SJK extras pack has it.
-const OPEN: &str = "sound/effects/crate_slide.mp3";
-/// The roll's music box tune, its last chord at [`ROLL`] (bundled): [`EXTRAS_ROLL`] when
-/// the SJK extras pack has it.
-const ROLL_SOUND: &str = "sound/sjk/mystery_box/roll.wav";
-/// The box's opening, roll and closing in the optional SJK extras pack
-/// (`unofficial_sjk_extras.pk3`, the Sith cloud's `extras`; Sol's sounds of 30/10/2026,
-/// the roll's last note at [`ROLL`]). Without the pack, [`OPEN`], [`ROLL_SOUND`] and no
-/// sound as the lid closes.
-const EXTRAS_OPEN: &str = "sound/sjk/mystery_box/extras_open.mp3";
-const EXTRAS_ROLL: &str = "sound/sjk/mystery_box/extras_roll.mp3";
-const EXTRAS_CLOSE: &str = "sound/sjk/mystery_box/extras_close.mp3";
-/// The extras pack's sounds and what plays without the pack.
-const EXTRAS: [(&str, Option<&str>); 4] = [
-    (EXTRAS_OPEN, Some(OPEN)),
-    (EXTRAS_ROLL, Some(ROLL_SOUND)),
-    (EXTRAS_CLOSE, None),
-    (LAUGH, Some(LAUGH_FALLBACK)),
-];
-/// The opener taking what came out (bundled).
-const TAKE_SOUND: &str = "sound/sjk/mystery_box/take.wav";
+// The Force box's sounds (Sol, 20/11/2026: "its own sounds from Star Wars"): Jedi
+// Academy's own retail files, read from the player's game, never shipped. The chest's
+// bundled music box tune and the extras pack's opening, roll and closing played before.
+/// Played when a box opens, for the opener and everyone near: the Force lifts the lid.
+const OPEN: &str = "sound/weapons/force/pull.mp3";
+/// Played while the roll runs: Force speed's hum, 5.14 s long, ending as the roll stops
+/// ([`ROLL`]).
+const ROLL_SOUND: &str = "sound/weapons/force/speedloop.wav";
+/// Played as the lid shuts.
+const CLOSE: &str = "sound/weapons/force/push.mp3";
+/// The laugh in the optional SJK extras pack (`unofficial_sjk_extras.pk3`) and what plays
+/// without the pack: the only extra the Force box still plays.
+const EXTRAS: [(&str, Option<&str>); 1] = [(LAUGH, Some(LAUGH_FALLBACK))];
+/// The opener taking what came out.
+const TAKE_SOUND: &str = "sound/weapons/force/protecthit.mp3";
 /// Played as the roll stops on credits.
 const WIN: &str = "sound/player/holocron.wav";
 /// Played as the roll stops on the jackpot.
-const JACKPOT: &str = "sound/items/respawn1.wav";
+const JACKPOT: &str = "sound/interface/secret_area.mp3";
 /// Played as the roll stops on nothing.
-const EMPTY: &str = "sound/movers/doors/door_locked.mp3";
+const EMPTY: &str = "sound/weapons/force/noforce.mp3";
 /// Played to every hunter, the mark too, when the box hunt picks a new mark (Sol's
 /// pick, 28/10/2026).
 const HUNT_MARK: &str = "sound/effects/mpalarm.wav";
@@ -89,8 +82,8 @@ const REACH: f32 = 80.0;
 const REACH_UP: f32 = 96.0;
 /// Widest angle between the player's facing and the box, in radians (60 degrees).
 const FACING: f32 = std::f32::consts::FRAC_PI_3;
-/// How long the roll lasts, to the tune's last chord (`scripts/mystery_box_assets.py`)
-/// and the extras pack's roll's last note (Sol, 30/10/2026; 5.5 s before).
+/// How long the roll lasts: about [`ROLL_SOUND`]'s length (5.2 s since 30/10/2026, the
+/// chest's tune and the extras pack's roll; 5.5 s before).
 const ROLL: Duration = Duration::from_millis(5_200);
 /// How long Use is held at a box to roll a DOOM coin instead of credits (Sol, 20/11/2026:
 /// tap for credits, hold for the coin).
@@ -341,11 +334,9 @@ macro_rules! bundled {
     };
 }
 
-/// The bundled files at their game paths (made by `scripts/mystery_box_assets.py` and
-/// `scripts/mystery_box_model.py`; the shader by hand).
-const FILES: [(&str, &[u8]); 15] = [
-    (ROLL_SOUND, bundled!("roll.wav")),
-    (TAKE_SOUND, bundled!("take.wav")),
+/// The bundled files at their game paths (made by `scripts/mystery_box_model.py`,
+/// `teddy_bear_model.py` and `box_loot_model.py`; the shader by hand).
+const FILES: [(&str, &[u8]); 13] = [
     (MODEL, bundled!("mystery_box.md3")),
     (LID_MODEL, bundled!("mystery_box_lid.md3")),
     (TEDDY_MODEL, bundled!("teddy_bear.md3")),
@@ -744,7 +735,7 @@ impl MysteryBoxes {
         });
         here.lid.set(true, now);
         let (origin, id) = (here.origin.to_array(), here.id);
-        for path in [EXTRAS_OPEN, EXTRAS_ROLL] {
+        for path in [OPEN, ROLL_SOUND] {
             self.cues.push(Cue {
                 path,
                 origin: Some(origin),
@@ -850,7 +841,7 @@ impl MysteryBoxes {
             if elapsed >= ROLL + stays {
                 here.lid.set(false, now);
                 self.cues.push(Cue {
-                    path: EXTRAS_CLOSE,
+                    path: CLOSE,
                     origin: Some(here.origin.to_array()),
                     source: source(here.id),
                 });
@@ -884,7 +875,7 @@ impl MysteryBoxes {
         }
         here.opening = None;
         here.lid.set(false, now);
-        for path in [TAKE_SOUND, EXTRAS_CLOSE] {
+        for path in [TAKE_SOUND, CLOSE] {
             self.cues.push(Cue {
                 path,
                 origin: Some(here.origin.to_array()),
@@ -926,7 +917,7 @@ impl MysteryBoxes {
         }
         let opening = here.opening.take()?;
         here.lid.set(false, Instant::now());
-        for path in [TAKE_SOUND, EXTRAS_CLOSE] {
+        for path in [TAKE_SOUND, CLOSE] {
             self.cues.push(Cue {
                 path,
                 origin: Some(here.origin.to_array()),
@@ -1912,9 +1903,7 @@ impl GpuState {
                 [
                     OPEN,
                     ROLL_SOUND,
-                    EXTRAS_OPEN,
-                    EXTRAS_ROLL,
-                    EXTRAS_CLOSE,
+                    CLOSE,
                     TAKE_SOUND,
                     WIN,
                     JACKPOT,
@@ -2240,10 +2229,8 @@ mod tests {
         // The hunt's source is no box's.
         assert!((0..=0xFFFF).all(|id| source(id) != HUNT_SOURCE));
         let paths: Vec<&str> = state.cues.drain(..).map(|cue| cue.path).collect();
-        // The extras pack's opening and roll, or the bundled ones without it.
-        assert_eq!(paths, [EXTRAS_OPEN, EXTRAS_ROLL]);
-        assert!(EXTRAS.contains(&(EXTRAS_OPEN, Some(OPEN))));
-        assert!(EXTRAS.contains(&(EXTRAS_ROLL, Some(ROLL_SOUND))));
+        // The Force lifts the lid, Force speed hums through the roll.
+        assert_eq!(paths, [OPEN, ROLL_SOUND]);
         // The lid swings open, and stays open while it rolls.
         assert_eq!(state.here[0].lid.angle(now), 0.0);
         assert_eq!(state.here[0].lid.angle(now + LID_OPENING), LID_OPEN);
@@ -2266,7 +2253,7 @@ mod tests {
         assert!(!taken.by_itself);
         assert_eq!(taken.prize.won, 200);
         let paths: Vec<&str> = state.cues.drain(..).map(|cue| cue.path).collect();
-        assert_eq!(paths, [TAKE_SOUND, EXTRAS_CLOSE]);
+        assert_eq!(paths, [TAKE_SOUND, CLOSE]);
         assert!(state.here[0].opening.is_none());
         assert!(!state.here[0].lid.open);
         assert!(state.tick(now + ROLL + HOLD).is_empty());
@@ -2463,10 +2450,9 @@ mod tests {
         assert!(state.tick(now + ROLL + BLAST_DELAY * 2).is_empty());
         // The laugh is the extras pack's, the retail gloat without it.
         assert!(EXTRAS.contains(&(LAUGH, Some(LAUGH_FALLBACK))));
-        // The lid closing sounds only with the extras pack.
-        assert!(EXTRAS.contains(&(EXTRAS_CLOSE, None)));
+        // The lid shuts with a Force push.
         state.tick(now + ROLL + HOLD);
-        assert!(state.cues.iter().any(|cue| cue.path == EXTRAS_CLOSE));
+        assert!(state.cues.iter().any(|cue| cue.path == CLOSE));
     }
 
     #[test]
@@ -2570,7 +2556,7 @@ mod tests {
         assert!(watcher.here[0].opening.is_none());
         assert!(!watcher.here[0].lid.open);
         let paths: Vec<&str> = watcher.cues.drain(..).map(|cue| cue.path).collect();
-        assert_eq!(paths, [TAKE_SOUND, EXTRAS_CLOSE]);
+        assert_eq!(paths, [TAKE_SOUND, CLOSE]);
     }
 
     #[test]

@@ -1,5 +1,6 @@
-// The mystery box's chest and lid (SJK; see README.md): wood and iron lit by the
-// world's light as a player model is, the question marks' glow added on top, pulsing.
+// The Force box's chest and lid (SJK; see README.md): temple stone and old gold lit by
+// the world's light as a player model is, the runes' and grooves' blue glow added on top,
+// pulsing.
 models/sjk/mystery_box
 {
 	{
@@ -13,7 +14,7 @@ models/sjk/mystery_box
 	}
 }
 
-// The faint halo of light rising over the chest, so a box is found from afar (SJK; see
+// The faint blue halo of light rising over the chest, so a box is found from afar (SJK; see
 // README.md): added, seen from inside and out, its rays drifting slowly round, breathing.
 models/sjk/mystery_box_halo
 {
