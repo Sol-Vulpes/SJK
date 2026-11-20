@@ -794,6 +794,9 @@ pub(crate) struct Panel {
     achievement_slots: Vec<achievements::Slot>,
     /// The achievements board's page on show.
     achievement_page: crate::achievements::Page,
+    /// The board's pages with something on them, as the switch shows them
+    /// (`collection_achievements::pages`): its segments and F go through these.
+    achievement_pages: Vec<crate::achievements::Page>,
     shader: usize,
     /// The toy chosen on Toys: 0 Illuminate, 1 the cardboard box, 2 Order 66, 3 the Hax,
     /// 4 the Ragdoll, 5 the Drone, 6 the Boombox, 7 the Monitor, 8 Box hunt, 9 the Banana
@@ -1086,6 +1089,7 @@ impl Panel {
             achievement: usize::MAX,
             achievement_slots: Vec::with_capacity(crate::achievements::ALL.len()),
             achievement_page: crate::achievements::Page::General,
+            achievement_pages: crate::achievements::Page::ALL.to_vec(),
             shader: 0,
             toy: 0,
             banner: 0,
@@ -2299,9 +2303,16 @@ impl Panel {
         match key {
             KeyCode::Escape => return PanelAction::Close,
             KeyCode::KeyV if self.tab == Tab::Shaders => return self.set_grid(!self.grid),
-            // F turns the achievements board's page: General, Fun, Hobbies.
+            // F turns the achievements board's page, through the ones the switch shows.
             KeyCode::KeyF if self.tab == Tab::Achievements => {
-                self.set_achievement_page(self.achievement_page.next());
+                let pages = &self.achievement_pages;
+                let at = pages
+                    .iter()
+                    .position(|page| *page == self.achievement_page)
+                    .unwrap_or(0);
+                if let Some(page) = pages.get((at + 1) % pages.len().max(1)).copied() {
+                    self.set_achievement_page(page);
+                }
             }
             // K waits for a key to bind to the chosen toy.
             KeyCode::KeyK if self.tab == Tab::Toys => self.bind_wait = Some(0),
@@ -2714,9 +2725,9 @@ impl Panel {
             }
             if let Some(page) = token
                 .checked_sub(ACHIEVEMENT_PAGE_BASE)
-                .and_then(|index| crate::achievements::Page::ALL.get(usize::from(index)))
+                .and_then(|index| self.achievement_pages.get(usize::from(index)).copied())
             {
-                self.set_achievement_page(*page);
+                self.set_achievement_page(page);
                 return PanelAction::None;
             }
             if let Some(toy) = token

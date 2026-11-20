@@ -9,6 +9,8 @@
 #                               made it when that is not the piece's owner.
 
 = Sol
++ 20/11/2026 | - | Retire the removed toys' achievements; a board page with nothing listed leaves the switch
+- 2dd4c26 |  | Retire the removed toys' achievements; a board page with nothing listed leaves the switch
 + 20/11/2026 | - | Chat icon test: a client's icon and its tick fit their row at every text size
 - 35b4215 |  | Chat icon test: a client's icon and its tick fit their row at every text size
 + 19/11/2026 | - | All access: read the hub's flag, keep the Forge's dot out for it

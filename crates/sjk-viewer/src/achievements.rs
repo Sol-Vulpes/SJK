@@ -342,12 +342,6 @@ impl Page {
             Self::Hobbies => "Hobbies",
         }
     }
-
-    /// The page after it, the last turning to the first.
-    pub(crate) fn next(self) -> Self {
-        let at = Self::ALL.iter().position(|page| *page == self).unwrap_or(0);
-        Self::ALL[(at + 1) % Self::ALL.len()]
-    }
 }
 
 impl Category {
@@ -726,7 +720,8 @@ pub(crate) const ALL: [Kind; 80] = [
         1,
         Order66,
         Hub,
-    ),
+    )
+    .retire(),
     kind(
         "box_minutes_10",
         "Tactical Espionage",
@@ -734,7 +729,8 @@ pub(crate) const ALL: [Kind; 80] = [
         10,
         CardboardBox,
         Client(C::BoxMinutes),
-    ),
+    )
+    .retire(),
     kind(
         "duel_flawless",
         "Flawless",
@@ -823,7 +819,8 @@ pub(crate) const ALL: [Kind; 80] = [
         1,
         Monitor,
         Client(C::MonitorPayback),
-    ),
+    )
+    .retire(),
     kind(
         "monitor_surge",
         "Power Surge",
@@ -832,7 +829,8 @@ pub(crate) const ALL: [Kind; 80] = [
         Monitor,
         Client(C::MonitorSurge),
     )
-    .secret(),
+    .secret()
+    .retire(),
     // 30/10/2026 (Sol): the toys' own, from a player's ideas, reworked.
     kind(
         "box_minutes_30",
@@ -841,7 +839,8 @@ pub(crate) const ALL: [Kind; 80] = [
         30,
         CardboardBox,
         Client(C::BoxMinutes),
-    ),
+    )
+    .retire(),
     kind(
         "box_minutes_60",
         "Legendary Soldier",
@@ -849,7 +848,8 @@ pub(crate) const ALL: [Kind; 80] = [
         60,
         CardboardBox,
         Client(C::BoxMinutes),
-    ),
+    )
+    .retire(),
     kind(
         "box_ambush",
         "Surprise!",
@@ -857,7 +857,8 @@ pub(crate) const ALL: [Kind; 80] = [
         1,
         CardboardBox,
         Client(C::BoxAmbush),
-    ),
+    )
+    .retire(),
     kind(
         "box_spotted_10",
         "Alert!",
@@ -865,7 +866,8 @@ pub(crate) const ALL: [Kind; 80] = [
         10,
         CardboardBox,
         Client(C::BoxSpotted),
-    ),
+    )
+    .retire(),
     kind(
         "order66_purge",
         "Wipe Them Out",
@@ -873,7 +875,8 @@ pub(crate) const ALL: [Kind; 80] = [
         5,
         Order66,
         Client(C::Order66Best),
-    ),
+    )
+    .retire(),
     kind(
         "order66_victims_25",
         "I Am the Senate",
@@ -881,7 +884,8 @@ pub(crate) const ALL: [Kind; 80] = [
         25,
         Order66,
         Client(C::Order66Victims),
-    ),
+    )
+    .retire(),
     kind(
         "hax_puppet",
         "Puppet Master",
@@ -889,7 +893,8 @@ pub(crate) const ALL: [Kind; 80] = [
         1,
         Hax,
         Client(C::HaxBest),
-    ),
+    )
+    .retire(),
     kind(
         "hax_double",
         "Double Agent",
@@ -897,7 +902,8 @@ pub(crate) const ALL: [Kind; 80] = [
         2,
         Hax,
         Client(C::HaxBest),
-    ),
+    )
+    .retire(),
     kind(
         "hax_triple",
         "Total Control",
@@ -906,7 +912,8 @@ pub(crate) const ALL: [Kind; 80] = [
         Hax,
         Client(C::HaxBest),
     )
-    .secret(),
+    .secret()
+    .retire(),
     kind(
         "hax_fall",
         "Leap of Faith",
@@ -914,7 +921,8 @@ pub(crate) const ALL: [Kind; 80] = [
         1,
         Hax,
         Client(C::HaxFalls),
-    ),
+    )
+    .retire(),
     kind(
         "hax_minutes_5",
         "Script Kiddie",
@@ -922,7 +930,8 @@ pub(crate) const ALL: [Kind; 80] = [
         5,
         Hax,
         Client(C::HaxMinutes),
-    ),
+    )
+    .retire(),
     kind(
         "hax_minutes_15",
         "Elite Hacker",
@@ -930,7 +939,8 @@ pub(crate) const ALL: [Kind; 80] = [
         15,
         Hax,
         Client(C::HaxMinutes),
-    ),
+    )
+    .retire(),
     kind(
         "hax_traps_5",
         "It's a Trap!",
@@ -938,7 +948,8 @@ pub(crate) const ALL: [Kind; 80] = [
         5,
         Hax,
         Client(C::HaxTraps),
-    ),
+    )
+    .retire(),
     kind(
         "drone_strike",
         "Eye in the Sky",
@@ -954,7 +965,8 @@ pub(crate) const ALL: [Kind; 80] = [
         1,
         Drone,
         Client(C::DroneMonitor),
-    ),
+    )
+    .retire(),
     kind(
         "boombox_minutes_30",
         "DJ",
@@ -987,7 +999,8 @@ pub(crate) const ALL: [Kind; 80] = [
         25,
         Monitor,
         Client(C::MonitorVictims),
-    ),
+    )
+    .retire(),
     kind(
         "monitor_double",
         "Two for One",
@@ -995,7 +1008,8 @@ pub(crate) const ALL: [Kind; 80] = [
         2,
         Monitor,
         Client(C::MonitorBestThrow),
-    ),
+    )
+    .retire(),
     kind(
         "monitor_triple",
         "Strike!",
@@ -1004,7 +1018,8 @@ pub(crate) const ALL: [Kind; 80] = [
         Monitor,
         Client(C::MonitorBestThrow),
     )
-    .secret(),
+    .secret()
+    .retire(),
     kind(
         "monitor_far",
         "Long Distance Call",
@@ -1012,7 +1027,8 @@ pub(crate) const ALL: [Kind; 80] = [
         1,
         Monitor,
         Client(C::MonitorFar),
-    ),
+    )
+    .retire(),
     kind(
         "box_hunt_mark",
         "Bounty Hunter",
@@ -1053,7 +1069,8 @@ pub(crate) const ALL: [Kind; 80] = [
         1,
         Fishing,
         Client(C::FishCaught),
-    ),
+    )
+    .retire(),
     kind(
         "fish_50",
         "Angler",
@@ -1061,7 +1078,8 @@ pub(crate) const ALL: [Kind; 80] = [
         50,
         Fishing,
         Client(C::FishCaught),
-    ),
+    )
+    .retire(),
     kind(
         "fish_kinds",
         "Every Fish in the Pond",
@@ -1069,7 +1087,8 @@ pub(crate) const ALL: [Kind; 80] = [
         crate::fishing::FISH_KINDS as u64,
         Fishing,
         Client(C::FishKinds),
-    ),
+    )
+    .retire(),
     kind(
         "echo_angler",
         "Echo Angler",
@@ -1079,7 +1098,8 @@ pub(crate) const ALL: [Kind; 80] = [
         5,
         Fishing,
         Client(C::EchoesLanded),
-    ),
+    )
+    .retire(),
     kind(
         "old_whiskers",
         "Old Whiskers",
@@ -1088,7 +1108,8 @@ pub(crate) const ALL: [Kind; 80] = [
         Fishing,
         Client(C::GreatCatfish),
     )
-    .secret(),
+    .secret()
+    .retire(),
     // 04/11/2026 (Slash): junk to collect, and one for a steady hand rather than time.
     kind(
         "junk_kinds",
@@ -1097,7 +1118,8 @@ pub(crate) const ALL: [Kind; 80] = [
         crate::fishing::JUNK_KINDS as u64,
         Fishing,
         Client(C::JunkKinds),
-    ),
+    )
+    .retire(),
     kind(
         "fish_steady",
         "Steady Hand",
@@ -1105,7 +1127,8 @@ pub(crate) const ALL: [Kind; 80] = [
         10,
         Fishing,
         Client(C::HookStreak),
-    ),
+    )
+    .retire(),
     // 05/11/2026 (Slash): the Mining toy's, counted on servers as the rest; the goals set
     // for its pace (some six boulders a minute, the Heart some 40 minutes).
     kind(
@@ -1115,7 +1138,8 @@ pub(crate) const ALL: [Kind; 80] = [
         1,
         Mining,
         Client(C::BouldersBroken),
-    ),
+    )
+    .retire(),
     kind(
         "mine_500",
         "Stonebreaker",
@@ -1123,7 +1147,8 @@ pub(crate) const ALL: [Kind; 80] = [
         500,
         Mining,
         Client(C::BouldersBroken),
-    ),
+    )
+    .retire(),
     kind(
         "mine_clean_250",
         "Sharp Eye",
@@ -1131,7 +1156,8 @@ pub(crate) const ALL: [Kind; 80] = [
         250,
         Mining,
         Client(C::CleanStrikes),
-    ),
+    )
+    .retire(),
     kind(
         "mine_kinds",
         "Prospector",
@@ -1139,7 +1165,8 @@ pub(crate) const ALL: [Kind; 80] = [
         crate::mining::ORE_KINDS as u64,
         Mining,
         Client(C::OreKinds),
-    ),
+    )
+    .retire(),
     kind(
         "heart_of_the_mountain",
         "Heart of the Mountain",
@@ -1148,7 +1175,8 @@ pub(crate) const ALL: [Kind; 80] = [
         Mining,
         Client(C::MountainHearts),
     )
-    .secret(),
+    .secret()
+    .retire(),
 ];
 
 /// The bit of the fish `id` in [`Record`]'s kinds of fish: its place among the fish of
@@ -2295,8 +2323,18 @@ mod tests {
             ]
         );
         let retired: Vec<&str> = ALL.iter().filter(|k| k.retired).map(|k| k.id).collect();
-        assert_eq!(retired, ["surveyor"]);
-        assert_eq!(OBTAINABLE, ALL.len() - 1);
+        assert_eq!(retired.len(), 35);
+        // Surveyor (26/10/2026), and the removed toys' achievements (20/11/2026): Order
+        // 66, the cardboard box, the Monitor, the Hax, Fishing and Mining, and the
+        // Drone's monitor strike.
+        let gone = [CardboardBox, Order66, Hax, Monitor, Fishing, Mining];
+        for kind in &ALL {
+            let retired = kind.id == "surveyor"
+                || kind.id == "drone_monitor"
+                || gone.contains(&kind.category);
+            assert_eq!(kind.retired, retired, "{}", kind.id);
+        }
+        assert_eq!(OBTAINABLE, ALL.len() - 35);
         assert_eq!(find("box_minutes_10").unwrap().amount(7), "7 min");
         assert_eq!(find("holocrons_200").unwrap().category, Collection);
         assert_eq!(find("order66_kill").unwrap().category, Order66);
@@ -2330,8 +2368,9 @@ mod tests {
         assert_eq!(record.count(Counter::MonitorBestThrow), 2);
         let back = Record::from_json(&record.to_json());
         assert_eq!(back, record);
-        let new: Vec<&str> = record.unlock(9, false).iter().map(|kind| kind.id).collect();
-        assert_eq!(new, ["monitor_double"]);
+        // The Monitor is gone (20/11/2026): its counts are kept, its achievements no
+        // longer unlock.
+        assert!(record.unlock(9, false).is_empty());
         assert_eq!(find("monitor_victims_25").unwrap().amount(3), "3");
         // The hub's count is a floor for a set, as for maps.
         assert!(
@@ -2343,8 +2382,8 @@ mod tests {
         for index in 0..30 {
             record.name(Counter::MonitorVictims, &format!("p{index}"));
         }
-        let _ = record.unlock(10, false);
-        assert!(record.unlocked.contains_key("monitor_victims_25"));
+        // Retired, it no longer unlocks, but clearing it still sets its count back.
+        assert!(record.unlock(10, false).is_empty());
         record.forget(find("monitor_victims_25").unwrap());
         assert_eq!(record.count(Counter::MonitorVictims), 24);
         record.forget(find("hax_minutes_5").unwrap());
@@ -2383,17 +2422,17 @@ mod tests {
     fn a_retired_achievement_shows_only_to_its_holders() {
         let record = Record::default();
         let none = record.standings(&[]);
-        assert_eq!(tally(&none), (0, ALL.len() - 1));
+        assert_eq!(tally(&none), (0, OBTAINABLE));
         let partway = record.standings(&[held("surveyor", 3, 0)]);
         let surveyor = partway.iter().find(|s| s.kind.id == "surveyor").unwrap();
         assert!(!surveyor.listed());
-        assert_eq!(tally(&partway), (0, ALL.len() - 1));
+        assert_eq!(tally(&partway), (0, OBTAINABLE));
         let holder = record.standings(&[held("surveyor", 5, 1_791_336_225)]);
         let surveyor = holder.iter().find(|s| s.kind.id == "surveyor").unwrap();
         assert!(surveyor.listed() && !surveyor.secret());
-        assert_eq!(tally(&holder), (1, ALL.len()));
-        assert_eq!(total_for(|_| false), ALL.len() - 1);
-        assert_eq!(total_for(|kind| kind.id == "surveyor"), ALL.len());
+        assert_eq!(tally(&holder), (1, OBTAINABLE + 1));
+        assert_eq!(total_for(|_| false), OBTAINABLE);
+        assert_eq!(total_for(|kind| kind.id == "surveyor"), OBTAINABLE + 1);
     }
 
     /// Duel partners are a set like maps: the hub's count is a floor after a reinstall,

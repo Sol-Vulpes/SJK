@@ -79,6 +79,7 @@ A new emblem, a new Collection with kybers and an Inventory, status bars at both
 - Emotes your way: Settings > Sound > Emotes "Hide others' emotes" (`cg_hideOthersEmotes`, off) stops other players' emotes showing or playing on your screen while yours still play, "Hidden emotes" (`emote_hide <id>`) hides single emotes when others play them, and "Muted emotes" (`emote_mute <id>`) plays single emotes without their sound _(Slash, after mg.perso's idea, PR #437)_
 - Shaders: `alphaGen dot` and `alphaGen oneMinusDot` now draw: the alpha follows how squarely a surface faces you (1 head-on, 0 edge-on) or the opposite, so a model shader can have a rim light; stock parses them and draws nothing, and no retail shader uses them _(Kushina, PR #439)_
 - Rig models: tails, capes and long hair no longer sink through the floor when the player kneels or crouches; every chain kept out of the body is kept off the ground too _(Kushina, PR #442)_
+- The achievements of the toys being removed (Order 66, the cardboard box, the Monitor, the Hax, Fishing and Mining, and the Drone's Special Delivery) are retired: whoever earned one keeps it, with its kyber and medal, marked No longer obtainable, and they no longer count in the totals of those who have none; the Hobbies page shows only to a player who holds one of its achievements _(Sol)_
 
 ## 2026.1117.1 (Alpha) | 17/11/2026
 
