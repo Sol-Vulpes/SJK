@@ -1566,11 +1566,22 @@ mod tests {
         let seen = run(&mut console, 4_000, 1_000);
         assert_eq!(
             seen.iter().filter(|c| c.starts_with("+attack")).count(),
-            21,
-            "the press and 20 repeats: {seen:?}"
+            17,
+            "the press and, after the delay, 16 repeats: {seen:?}"
         );
         console.clear_force_repeat();
         assert!(run(&mut console, 5_000, 1_000).is_empty(), "window lost");
+        // Hub report #317: a click runs its bind once; the repeats start only once the
+        // button is held past the delay.
+        console.execute_console_line("bind mouse4 amtele", None);
+        for held in [60, 120, 200] {
+            console.shell.set_command_clock_millis(10_000);
+            console.queue_bound_script("MOUSE4", true);
+            let seen = run(&mut console, 10_000, held);
+            console.queue_bound_script("MOUSE4", false);
+            let seen = [seen, run(&mut console, 10_000 + held, 1_000)].concat();
+            assert_eq!(count(&seen, "amtele"), 1, "a {held} ms click: {seen:?}");
+        }
     }
 
     #[test]
