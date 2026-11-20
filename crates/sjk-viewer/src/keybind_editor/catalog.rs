@@ -144,16 +144,6 @@ const FIXED: &[BindableAction] = &[
         "",
     ),
     action(Interaction, "Toy: Mining", crate::mining::COMMAND, ""),
-    // Order 66: the toy's switch, then the order every player with it on obeys.
-    action(Interaction, "Toy: Order 66", crate::order66::COMMAND, ""),
-    action(
-        Interaction,
-        "Execute Order 66",
-        crate::order66::EXECUTE_COMMAND,
-        "",
-    ),
-    // The Hax: the toy's switch; the hack itself is +use held on a player.
-    action(Interaction, "Toy: Hax", crate::hax::COMMAND, ""),
     // The Ragdoll: go limp, press again to get up.
     action(Interaction, "Toy: Ragdoll", crate::ragdoll::COMMAND, ""),
     // The Drone: the switch that lets players peek (freecam and peek fly the drone).

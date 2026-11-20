@@ -12,7 +12,12 @@ places are named constants (`*_TOY` in `collection_panel.rs`) so the next remova
 those. Step 3, `personal/remove-cardboard-box`: the cardboard box is gone the same way (its
 crouch shaping, boxed eye, crouched pose of boxed players, music loop, sight switch and the
 achievement tracker's box counting); `hax::pick_target` took over its `+use` pick, the
-quick wheel's default Toys page lost its slot (a saved one drops the unknown choice). The hub keeps the removed toys' routes and events on for older clients until the
+quick wheel's default Toys page lost its slot (a saved one drops the unknown choice). Step 4,
+`personal/remove-order66`: Order 66 and the Hax together (the Hax's trap blew both players up
+with Order 66's blast): the toys, their blast in `dismember.rs`, the hack's steering, camera,
+loop and HUD bar feed, the trap settings and their Settings search place, and the tracker's
+Hax counting; the rules the Ragdoll, Monitor and Prop gun share (`spared`, `duelling`,
+`own_away`) moved to `toy_rules.rs` with a test. The hub keeps the removed toys' routes and events on for older clients until the
 release sets the minimum client (Sol). Verified: the viewer's tests (4386), fmt, Clippy (no
 new warnings), the startup stack check. Not verified: in a game.
 

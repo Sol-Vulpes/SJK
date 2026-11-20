@@ -794,15 +794,6 @@ test: Untick "HUD off: crosshair": HUD off keeps the crosshair alone over the ma
 test: Tick "HUD off: chat": HUD off hides the chat box too; HUD on brings it back.
 test: Untick "HUD off: names": nameplates and team logos stay with the HUD off.
 
-[hax-trap-collection]
-area: Menus & settings
-title: Hax trap switches moved to Collection > Toys > Hax
-change: The Hax's card has "Trap: a hacker blows up with you" and "Trap while away".
-change: Settings > Gameplay no longer lists them; a search for hax or trap finds them there.
-test: Collection > Toys > Hax: both switches show and follow cl_haxTrap / cl_haxAway.
-test: Settings: search "trap": the rows show under "Collection > Toys > Hax" and switch.
-test: Settings > Gameplay > Toys starts at Show monitors.
-
 [menu-report-bug]
 area: Menus & settings
 title: Report a bug from the main menu (SJK page)
@@ -1144,7 +1135,7 @@ area: Gameplay
 title: Toys say ON and OFF in colour, toy_help lists every toy (Blep's idea, Creyon's #289)
 change: Switching a toy prints its name and ON in green or OFF in red on the centre of the screen.
 change: toy_help lists every toy: name in yellow, command, what it does.
-test: Switch each toy (box, Order 66, Hax, Drone, Monitor, Box hunt): name ON/OFF.
+test: Switch each toy (Drone, Monitor, Box hunt): name ON/OFF.
 test: Boombox: putting it away says Boombox OFF; starting it still names the track.
 test: A toy restored at start and a box lifted by someone else say nothing. Run toy_help.
 
@@ -1207,11 +1198,10 @@ test: In a game, copyServerIP in the console: the line says Copied server IP and
 area: Menus & settings
 title: Toy achievements (26) and the Achievements board's General and Fun pages
 change: Collection > Achievements: F or the switch at the top right turns General and Fun.
-change: Fun has a category per toy: box, Order 66, Hax, Drone, Boombox, Monitor, Box hunt.
+change: Fun has a category per toy: Drone, Boombox, Monitor, Box hunt (retired ones if held).
 change: Counted on a server not on this PC; the box hunt's four are counted by the hub.
 test: Open the board: General shows Combat to Collection, Fun the seven toys, nothing cut off.
 test: Hit 2 opted-in players with one monitor: Two for One waits for the hub, then unlocks.
-test: Steer a player with the Hax into a pit: Leap of Faith; steer 5 minutes: Script Kiddie.
 test: Have a player lift your box, then kill them within 3 seconds: Surprise!.
 test: Peek a player, end the peek, kill them within 10 seconds: Eye in the Sky.
 note: Needs the hub's toy-achievements deployed, else they stay at Waiting for the SJK hub.
@@ -1774,7 +1764,7 @@ title: Free view through JoF knockdowns and emotes (Slash, PR #219, hub #164 #16
 change: On JoF servers knockdowns, get-ups and emotes leave the view free, as the server does.
 change: Other JA+ servers keep the held view; cg_japlusFreeKnockdownView -1 auto, 0 held, 1 free.
 test: JoF: get knocked down, move the mouse: the view turns, no shaking while getting up.
-test: JoF: emote and look around: no shake. Ragdoll and Hax toys behave as before.
+test: JoF: emote and look around: no shake. The Ragdoll toy behaves as before.
 
 [slash-saber-key-chat]
 area: Gameplay
@@ -1827,12 +1817,6 @@ title: No ragdoll in a vehicle (Slash, PR #213, hub #168)
 change: A pilot or passenger never goes limp; a monitor's hit is refused; toy_ragdoll says so.
 test: devmap, npc spawn vehicle swoop_mp, board it, toy_ragdoll: "No ragdoll in a vehicle".
 test: 2nd client throws a monitor at you on the swoop: you stay seated and can drive.
-
-[slash-hack-ragdoll]
-area: Gameplay
-title: A hacked limp player gets up (Slash, PR #214, hub #167)
-change: A Hax hack on a player lying as a ragdoll gets them up, hacker or hacked.
-test: 2 clients with Ragdoll and Hax on: go limp, get hacked: you stand and the hacker steers.
 
 [slash-home-title]
 area: Menus & settings
@@ -2090,11 +2074,10 @@ area: Gameplay
 title: Ragdoll: only a new hit wakes you; held views stop the toys (#135 #139 #140)
 change: Falling again after an "Ouch!" stays down until the next hit (server damage feedback).
 change: A JA+ kiss, kick or knockdown, a grapple, a throw or a saber lock gets you up.
-change: The Ragdoll will not start then ("No ragdoll right now"), and a Hax hack ends.
+change: The Ragdoll will not start then ("No ragdoll right now").
 test: toy_ragdoll, get hit: "Ouch! You got up". toy_ragdoll again: you stay down.
 test: On a JoF server, ragdoll then amkiss someone: you get up, no camera spin.
 test: During a kiss, toy_ragdoll: "No ragdoll right now". Melee grapple: same, no spin.
-test: Hax: steer someone and amkiss (or be kissed while hacked): the hack ends, no spin.
 
 [held-view-look]
 area: Input
@@ -2226,17 +2209,6 @@ test: profile, click in the middle of a bio line: the caret is there, type: text
 test: Up/Down walk the lines, Shift+Enter breaks a line at the caret, Enter still saves.
 test: Ctrl+A then type: the bio is replaced; hold Backspace: it repeats.
 
-[hax-trap]
-area: Gameplay
-title: Hax trap: hacking a trapped player blows you both up
-change: Settings > Game options > Toys: Hax trap (cl_haxTrap), Hax trap while away (cl_haxAway).
-change: A hack on a trapped player: "IT'S A TRAP!" 2 s, then both die in an Order 66 blast.
-change: Others see it through a feed toy event; away hacking needs both switches.
-test: B sets Hax trap on; A hacks B: both read IT'S A TRAP! with beeps, then both blow up.
-test: A third SJK client sees both explode (pieces, or confetti with cg_dismember 0).
-test: B adds Hax trap while away and alt-tabs: A can hack B (refused without it).
-test: B types in chat: still no hacking, trap or not.
-
 [vehicle-gunfire]
 area: Audio
 title: Vehicle guns: firing sound and muzzle flash (Kushina's report)
@@ -2265,15 +2237,6 @@ test: Rename to (JAWA)Test: the hood. Then JAWA|Test and Test(JAWA): no emblem.
 test: Rename to {{s}}Test and Test{{S}}: no emblem. Check scoreboard and inspect (X) too.
 note: Both logos are small sources (80x93, 178x93): check they are not too soft at 4K.
 
-[hax-afk]
-area: Gameplay
-title: Hax: not on a player typing or away; softer rain
-change: No hack starts on a player whose chat is open or who is marked away on the scoreboard.
-change: The hacked player's client refuses while idle/alt-tabbed ("Hack failed: X is away").
-test: B opens the chat, A holds Use on B: "B is typing: no hacking them now".
-test: B alt-tabs (or /afk), A hacks B: refused, "is away" (or "is typing" at once).
-test: The green rain round a hacked player is fainter and sparser than before.
-
 [jof-sjk-chat]
 area: Console & chat
 title: SJK chat said in All chat on JoF servers (JoF tools), ALL/SJK and SJK labels
@@ -2288,15 +2251,6 @@ test: On JoF, send a GIF (or sjkgif 1): it stays in SJK chat, labelled SJK.
 test: SJK chat page on JoF: Send only in SJK (hover card explains); line stays SJK only.
 test: As staff, Shift+Enter in the composer or page: SJK only, nothing in All chat.
 note: Milamber's PR #194, moved into JoF tools at JoF's request.
-
-[hax-rain]
-area: Rendering & effects
-title: Hax: green digital rain round a hacked player
-change: Glyphs (0, 1, katakana) fall on a ring round the steered player, following them.
-change: Others learn it through a feed toy event (hacked_<until>, freed), maybe 1-2 s late.
-test: A hacks B: both see the green rain round B while A steers, and it moves with B.
-test: A third SJK client on the server sees it too, ending when B is free.
-test: B turns toy_hax off mid-hack: the rain stops (for the third client, within a few s).
 
 [e2e-whispers]
 area: Console & chat
@@ -2381,22 +2335,6 @@ change: A part and a section of one name are one switch (Power Coupling's Sparks
 test: Collection > Shaders > Holonet Feed: Data flecks shows once among its parts.
 test: Switch Data flecks off: the flecks beside the blade and the motes round it both go.
 
-[hax-fixes]
-area: Gameplay
-title: Hax: hackable after a teleport or respawn, and after a map change
-change: A player who teleported or respawned an odd number of times could not be hacked.
-change: A map change forgets the cooldown and immunity; relay reads retry within 2 s.
-test: B uses a teleporter (or dies and respawns), then A holds Use on B: the hack starts.
-test: Hack B, change map, hack B again at once: no long "Hax again" wait, B not immune.
-
-[toys-persist]
-area: Gameplay
-title: Order 66 and the Hax stay on until turned off
-change: Their switches are saved (cl_toyOrder66, cl_toyHax) and come back at every start.
-test: toy_hax and toy_order66 on, change map, join another server: both still on.
-test: Quit and start the game again: both still on (Collection > Toys shows them on).
-test: Turn one off, restart: it stays off. cl_toyHax 1 in the console turns the Hax on.
-
 [duel-stock-blades]
 area: Rendering & effects
 title: Normal blades in duels (cg_duelStockBlades, Creyon #192)
@@ -2406,21 +2344,6 @@ test: Settings, Game options: turn on Normal blades in duels; wear a blade skin.
 test: Local server: start a private duel: both blades go stock, skins back when it ends.
 test: g_gametype 3: every blade stock; turn the setting off: skins come back.
 note: Off by default; the What's new card offers it.
-
-[hax]
-area: Gameplay
-title: The Hax toy: hack another player, then steer them for 5 s
-change: toy_hax (key, quick wheel Toys page, Collection Toys tab) turns it on or off.
-change: Hold Use 3 s on a holder in reach: siege hack bar and sound, then you steer them 5 s.
-change: Their client plays your keys, swings and view; you watch from behind, your body stays.
-test: Two SJK clients on one server, both toy_hax on; A holds Use facing B up close.
-test: A: bar under the crosshair, hacking loop; B: "A is hacking you!", same bar, the loop.
-test: Release Use or walk away mid-hack: the bar goes on both.
-test: Bar full: both hear the mind trick; A's camera goes behind B, A's mouse turns B.
-test: A runs, jumps, crouches, walks, swings: B does it; B's own keys do nothing; 5 s, then free.
-test: B turns toy_hax off while steered: free at once, A reads "B broke free".
-test: Again at once: A "Hax again in N s"; B immune 15 s; in a duel: "Hack failed ... duel".
-note: Uses the hub's toy relay (deployed 22/10/2026); without cl_identity nothing happens.
 
 [sky-empty-box]
 area: Rendering & effects
@@ -9047,21 +8970,6 @@ test: Hold the scoreboard: the carrier has a flag icon before the name, in both 
 test: Settings > HUD > Team scores and Flag status (capture the flag) switch them off.
 note: Slash reported this on JoF servers; the status string is the original CS_FLAGSTATUS.
 
-[order66]
-area: Gameplay
-title: Order 66: everyone with the toy on dies together and blows apart
-change: toy_order66 (key, quick wheel Toys page, Collection Toys tab) turns it on or off.
-change: order66 gives the order: 3 s countdown, then kill for every SJK player with it on.
-change: Holders who die then explode: thermal blast, six pieces fly; confetti if cg_dismember 0.
-test: toy_order66, then order66: centre countdown 3 2 1 with beeps, then you die.
-test: Your body flies apart: head, arms, legs and trunk bounce, smoke and sink after 6 s.
-test: order66 again at once: "Order 66 again in N s" (one order every 30 s).
-test: In a private duel or carrying a flag: "Spared: ...", no kill.
-test: cg_dismember 0, then an order: confetti instead of pieces, the body hidden.
-test: Respawn: your body is whole again; the corpse left behind stays hidden.
-note: Others dying with you needs a second SJK client with the toy on; no hub deploy needed.
-note: The order's voice is sound/sjk/order66/order.wav, yours to add; SJK ships no sound.
-
 [chroma-pastel]
 area: Rendering & effects
 title: Shader blades keep their colour on pale custom tints
@@ -9335,7 +9243,7 @@ note: In the main menu (no server) emotes answers Join a server to emote.
 area: Menus & settings
 title: Collection: the Toys tab counts every toy (3/3, not 1/1)
 change: The Toys tab's count was still 1 of 1 from when Illuminate was alone. Hub report 108.
-test: Open the Collection: the Toys tab reads 3/3 (Illuminate, the box, Order 66).
+test: Open the Collection: the Toys tab counts every toy row.
 
 [dropdown-own-row]
 area: Menus & settings
@@ -9350,7 +9258,6 @@ area: Audio
 title: snd_restart brings emote, box and Order 66 sounds back
 change: Their sounds registered once and were lost with snd_restart's new output. Report 99.
 test: Join, play a dance with music, snd_restart in the console, dance again: the music plays.
-test: Same with the Order 66 toy's sound.
 
 [userinfo-window]
 area: Gameplay
@@ -9497,11 +9404,11 @@ note: Mac side checked by a Mac player after the next release.
 area: Menus & settings
 title: Toy volume + mute per toy (Settings > Sound > Toys)
 change: Toy volume s_toyVolume (0-2) scales every toy sound, loops included.
-change: One switch per toy (box, Order 66, Hax, Ragdoll, Drone) silences its sounds here.
+change: One switch per toy (Ragdoll, Drone, Boombox...) silences its sounds here.
 test: Settings > Sound > Toys: Toy volume slider and five switches, each with help text.
 test: toy_boombox: drag the slider while the music plays, it follows live; 0 silences it.
 test: Box sounds off: no music or cues, the box still shows; on again: music back.
-test: Ragdoll / Hax / Order 66 / Drone switches each silence only their toy.
+test: Ragdoll / Drone / Boombox switches each silence only their toy.
 
 [trading]
 area: Menus & settings
@@ -10428,7 +10335,7 @@ title: Collection > Toys: three sections and who made each toy
 change: Rows under Around you, With others, Earn and win; a By column (Sol or Slash).
 change: The card says Made by Sol, or Made by Slash, Sanji's idea, under the toy's name.
 test: Collection > Toys: three heads, 13 rows, the last clear of the keys line.
-test: Arrows and Tab walk the rows top to bottom; Order 66 follows Boombox.
+test: Arrows and Tab walk the rows top to bottom; the Monitor follows Boombox.
 test: Choose Fishing: Made by Slash, Sanji's idea. Mining: Made by Slash, vinry's idea.
 
 [mining-toy]
@@ -10475,7 +10382,7 @@ note: Both on = the timing of 2026.1028.1 that #385 asked for (closed as a dupli
 
 [ground-hud-toy-cameras]
 area: HUD
-title: Ground HUD stays during ragdoll, Peek and Hax
+title: Ground HUD stays during ragdoll and Peek
 change: A toy that borrows the camera no longer swaps the ground HUD for the normal HUD.
 test: Set cg_groundHud 1 in third person on a server and go limp (toy_ragdoll).
 test: The numbers stay at your feet and the normal status HUD does not appear.
@@ -10634,7 +10541,7 @@ title: The Banana peel toy is removed (Sol's cleanup before the release)
 change: No toy_banana or banana_drop; gone from Toys, the quick wheel, key bindings, Settings.
 change: Its saved switch, sound and sight settings are dropped from the profile at load.
 change: The Boombox still stands on the floor (the floor trace moved to floor_spot.rs).
-test: Collection > Toys: 13 rows, With others holds Order 66, Hax and Monitor; all fit.
+test: Collection > Toys: the rows fit; With others holds the Monitor.
 test: Boombox: boombox_place stands it on the floor ahead, as before.
 test: Status bar toys and toy_help: no Banana peel; others switch and show as before.
 
@@ -10643,7 +10550,15 @@ area: Gameplay
 title: The cardboard box toy is removed (Sol's cleanup before the release)
 change: No toy_box; gone from Toys, the quick wheel's Toys page, key bindings and Settings.
 change: Its sound and sight settings are dropped from the profile at load.
-change: The Hax keeps its Use reach and picks the player in front as before.
 test: Collection > Toys: 12 rows, Around you holds Illuminate, Ragdoll, Drone, Boombox.
-test: Quick wheel Toys page (default): Illuminate first, Order 66 second; all fit.
-test: Hax: hold Use facing a player who has it on, within reach: the hack starts as before.
+test: Quick wheel Toys page (default): Illuminate first, then the Ragdoll; all fit.
+
+[order66-hax-removed]
+area: Gameplay
+title: Order 66 and the Hax are removed (Sol's cleanup before the release)
+change: No toy_order66, order66 or toy_hax; gone from Toys, the quick wheel, binds, Settings.
+change: Their switches, sounds and the Hax trap's settings are dropped from the profile at load.
+change: The Ragdoll, Monitor and Prop gun still spare the dead, duellists, flag carriers, AFK.
+test: Collection > Toys: 10 rows, With others holds the Monitor alone; all fit.
+test: Ragdoll in a duel: "No ragdoll in a duel". Monitor: an AFK player is not struck.
+test: A kill still cuts limbs (cg_dismember 2) and they come back on respawn.

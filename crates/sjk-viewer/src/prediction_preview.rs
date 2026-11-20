@@ -54,7 +54,6 @@ pub(crate) fn tick(
         .view_authority
         .command_delta()
         .unwrap_or(snapshot.player.delta_angles());
-    gpu.hax.shape_preview(&mut command, delta);
     let origin = gpu
         .local_prediction
         .committed_state()

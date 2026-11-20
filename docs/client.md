@@ -5936,7 +5936,7 @@ The player's own toy still shows, and nothing changes for the toys' rules.
 | Monitor | See monitors | `cg_toyMonitorShow` | every monitor and its sounds, yours too ([Monitor](#monitor)) |
 | Prop gun | (console only) | `cg_toyPropGunShow` | their guns, bolts and sounds ([Prop gun](#prop-gun)) |
 
-Order 66, the Hax and Box hunt act only on players who have them on, so they have none.
+Box hunt acts only on players who have it on, so it has none.
 The holocron, the box and the boombox are hidden as if those players had them off here
 (`Looks::set_unseen`); the drone's and the ragdoll's relayed events are left undrawn.
 
@@ -5983,170 +5983,22 @@ the player crouched in it with its music, other SJK players saw it and lifted it
 settings (`s_toyBoxSound`, `cg_toyBoxShow`) are dropped from the profile at load
 (`console_session.rs`), a saved quick wheel loses its choice, and a bind left on
 `toy_box` only says the command is unknown. Its achievements are retired
-([identity.md](identity.md)); the Hax kept its `+use` reach and the pick of the
-player in front (`hax::pick_target`).
+([identity.md](identity.md)).
 
-## Order 66
+## Order 66 and the Hax (removed)
 
-Order 66 is a meme toy, SJK's own and free for every player (Sol's idea, 17/10/2026):
-every player who has it on dies at once, blown apart, when one of them executes the
-order. `toy_order66` turns it on or off, from a bind (Settings > Key bindings >
-Interaction > Toy: Order 66, unbound until a key is picked), from the quick wheel's
-[Toys page](#toys-page) or from the Collection's Toys tab ([SJK UI](sjk-ui.md#collection)).
-It stays as last switched, across deaths, maps, servers and restarts of the game, until
-the player turns it off (since 22/10/2026: saved in the archived `cl_toyOrder66`,
-[toy_saved.rs](../crates/sjk-viewer/src/toy_saved.rs)). `order66` (Interaction > Execute
-Order 66, or the Toys page) gives the order; only a player whose own toy is on, alive in
-the match on a server, can give it. Switching the toy says "Order 66 ON" or "OFF"
-([Illuminate](#illuminate)).
-
-- **Who takes part:** the players whose toy is on. It is a toy in their look
-  (`toys: ["order66"]`, [unlockables.md](unlockables.md); `looks::TOYS`), so every SJK
-  player on the server knows who is in. Players on stock clients, and SJK players with
-  the toy off, are never touched.
-- **The order** travels through the SJK hub as a [toy event](hub-chat.md#toy-events):
-  toy `order66`, event `execute_<moment>`, the moment it falls due in the game server's
-  time (milliseconds), 3 seconds after it was given. Every client on a server shares
-  that clock through its snapshots, so each counts down to the same moment however long
-  its way to the hub took. A client drops an order heard more than half a second after
-  its moment, one more than 10 seconds ahead, one whose sender's claim does not match
-  the name the game shows, and one less than 30 seconds after the last order it took on
-  that server: one order counts every 30 seconds, whoever sends it. The sender's own
-  client refuses sooner ones ("Order 66 again in N s"). Without the hub
-  (`cl_identity 0`) the order reaches only the sender, and the console says so.
-- **The countdown:** for a player in the order, the centre of the screen says
-  "EXECUTE ORDER 66", who gave it and the seconds left (3, 2, 1), with the thermal
-  detonator's warning beep each second; the order itself plays
-  `sound/sjk/order66/order.wav`, a game path SJK does not ship (nothing plays where it is
-  missing).
-- **The moment:** each client sends the stock `kill` command for its own player, so the
-  server sees ordinary suicides (a point lost in FFA, as with `kill`). It does not when
-  its toy is off by then, when the player is spectating, following someone, at the
-  intermission or already dead, in a duel (a private one, or a duel or power duel
-  game), or carrying a flag ("Spared: you are in a duel", "you carry the flag"). These
-  are game rules, not server cases. The order is called off when its sender's look no
-  longer has the toy.
-- **The blast:** a player whose toy is on and who dies from 0.1 seconds before the
-  moment to 2 seconds after blows up on every SJK client that sees it (their entity
-  turning `EF_DEAD`; the own player and the one followed from the player state). The
-  thermal detonator's explosion (`thermal/explosion`, its sound, flash and shake) goes
-  off where they stand, and the body flies apart: the head, both arms, both legs and
-  the trunk each become a piece, cut as [dismemberment](#dismemberment-and-disintegration)
-  cuts a limb (the limb's cap on the piece, the stump's on what is left). The pieces
-  are thrown out from the body and up (the head highest), spinning, fall under gravity,
-  bounce off the world's walls and floors a little slower each time, trail smoke while
-  they fly, lie still on a floor, and after 6 seconds sink away. Nothing is left
-  standing: the body is hidden, weapon and hat too, until the player is alive again,
-  and the corpse the server leaves at the respawn copies it, so it stays hidden as well.
-- **Confetti:** where dismemberment is off (`cg_dismember 0`) the body bursts into
-  confetti instead of pieces: six colours of paper scraps thrown up and falling
-  (`effects/sjk/order66_confetti.efx`).
-- **Limits:** pieces are made only for players within 3000 units of the camera and up
-  to 48 at once (eight players); past that a player still blows up, without pieces. A
-  piece is a limb mesh of the player's model: while the order counts down, the client
-  puts up to six per nearby player's model in the limb pool, one upload a frame, so the
-  blast itself uploads nothing (it may upload up to six a frame when the pool falls
-  short). A [rig model](rig-models.md) has no surfaces to cut: it gets the explosion and
-  stays whole. The cuts take a surface by its name or, failing that, its name and
-  `_off`, as some models name what they leave off by default (`jedi_hf`'s head variants
-  sit under `head_off`, its caps are `..._cap_torso_off`); a server's cut keeps stock's
-  names.
-
-The icons (the toy's red "66" badge, the order's blast) and the confetti scraps are
-drawn by [order66_assets.py](../scripts/order66_assets.py), nothing taken from another
-game or a film; the effect and its shader are written by hand
-([assets/order66](../crates/sjk-viewer/assets/order66/README.md)). They are bundled and
-mounted below all game data. See [order66.rs](../crates/sjk-viewer/src/order66.rs) and
-`GpuState::blow_apart` in [dismember.rs](../crates/sjk-viewer/src/dismember.rs).
-
-## Hax
-
-The Hax is a meme toy, SJK's own and free for every player (Sol's idea, 21/10/2026): a
-player who has it on hacks another who has it on, then steers them for a few seconds.
-`toy_hax` turns it on or off, from a bind (Settings > Key bindings > Interaction > Toy:
-Hax, unbound until a key is picked), from the quick wheel's [Toys page](#toys-page) or
-from the Collection's Toys tab ([SJK UI](sjk-ui.md#collection)). It stays as last
-switched, across maps, servers and restarts, until the player turns it off (saved in
-the archived `cl_toyHax`, as Order 66 in `cl_toyOrder66`). Switching it says "Hax ON" or "OFF"
-([Illuminate](#illuminate)).
-
-- **Who takes part:** the players whose toy is on. It is a toy in their look
-  (`toys: ["hax"]`, [unlockables.md](unlockables.md); `looks::TOYS`), so the hacker's
-  client knows who may be hacked. Players on stock clients, and SJK players with the toy
-  off, are never touched.
-- **Not on a player typing or away:** a hack does not begin on a player whose chat is
-  open (their talk balloon) or whom the scoreboard marks away (still for 3 minutes, or an
-  away tag in their name): "<name> is typing: no hacking them now". A hacked player's own
-  client also refuses the seize while they are away, idle or alt-tabbed as the away emote
-  counts it ("Hack failed: <name> is away"). Opening the chat once the hack is under way
-  does not stop it; turning the toy off does.
-- **The hack:** hold `+use` facing a holder of the toy within reach (96 units, in
-  front; `hax::pick_target`). The siege hack bar fills under the crosshair with the
-  stock hacker icon (`gfx/mp/c_icon_tech`, [hack_bar.rs](../crates/sjk-viewer/src/hud/hack_bar.rs))
-  and the stock hacking loop plays (`sound/player/hacking.wav`), for 3 seconds. Letting
-  go of `+use`, the target walking more than 160 units away or out of the hacker's
-  front, or the hacker dying ends it. The hacked player sees "<name> is hacking you!
-  Get away", the same bar, and hears the loop from the hacker: walking away is the
-  counter.
-- **The control:** once the bar is full, the hacked player's client decides. It takes
-  the seize only from a player the game shows under the name they claimed, not blocked
-  here, whose look has the toy, while its own toy is on and its player plays (not
-  spectating or dead, not in a duel, not carrying a flag, its view not held by the
-  server: [held view](#held-view)) and was not hacked in the last
-  15 seconds, and is not away (idle or alt-tabbed as the [away emote](#away-emote)
-  counts it, or an away tag in their name); else the hacker reads why ("Hack failed:
-  <name> is in a duel", "is away"). Taken, for
-  5 seconds the hacker's movement keys, jump and crouch, walk, attack and alt attack and
-  view become the hacked player's: their client sends them as its own user commands,
-  keeping the weapon they held, with no Force power, weapon change, saber style change,
-  chat or command. Both hear the stock mind trick (`sound/weapons/force/distract.wav`,
-  `distractstop.wav` at the end); the hacked player reads "HACKED: <name> has your
-  controls", their view turned by the hacker. The hacker's camera goes behind the hacked
-  player, turned by the hacker's mouse at once (the player follows after the relay's
-  way); the hacker's own player stands still where they were, open to attack, and their
-  view comes back when it ends. The hacker may hack again after 15 seconds.
-- **The digital rain:** while steered, the hacked player is wreathed in green glyphs (0,
-  1 and half-width katakana) falling on a ring round them from feet to head, emitted
-  every 70 ms where they stand so the rain follows them (`effects/sjk/hax_glyphs.efx`,
-  [assets/hax](../crates/sjk-viewer/assets/hax/README.md)). The hacked player and the
-  hacker see it at once; every other SJK player of the server sees it through a feed
-  [toy event](hub-chat.md#toy-events) the hacked player sends (`hacked_<until>`, the game
-  server time the steering ends; `freed` when they break free sooner), which may come a
-  second or two late. Nothing is drawn round a player blocked here.
-- **The trap:** with **Hax trap** on (the Hax's card in Collection > Toys since 03/11/2026,
-  Settings > Game options > Toys before; `cl_haxTrap`, off by default), a hack that completes on the player springs a trap instead of handing
-  over control (Sol's idea, 23/10/2026): both read "IT'S A TRAP!" with Order 66's beep
-  each second, and two seconds later both clients send `kill` and both players blow up
-  as in [Order 66](#order-66) (the explosion, then the pieces, or confetti with
-  `cg_dismember 0`). The trapped player's client tells everyone else through a feed toy
-  event (`trap_<moment>`, to the hacker), so every SJK client of the server blows the
-  two up too; one that hears it late still blows up the two if they died in the window.
-  The trap is not shown anywhere, unless **Hax trap while away** (`cl_haxAway`) is on
-  too: then the player may be hacked while away (idle, alt-tabbed or tagged), which
-  their look must tell hackers' clients (`toys: ["hax_away"]`), so a player hackable
-  while away is known to be trapped. Typing in the chat still keeps a player safe.
-- **Breaking free:** `toy_hax` off frees the hacked player at once; so do dying, a duel,
-  and the hacker going quiet for 1.5 seconds (after 0.4 seconds without news the player
-  stands still). The hacker's toy off, death or duel ends it for both.
-- **The way:** no client can move another player on a server, so the hacked player's
-  own client plays the hacker's controls. They go through the SJK hub's
-  [toy relay](hub-chat.md#toy-relay), not the toy events, which wait for the feed's next
-  poll: the hacker's client sends a frame (keys, buttons, view) when they change and
-  every 50 ms at least, at most one per 30 ms; a frame still waiting to be sent is
-  replaced by the next. Every SJK client on a game server keeps a long poll open for
-  the events meant for it (since 23/10/2026, for the [Ragdoll](#ragdoll); before, only
-  holders of the toy). The hack's start and end, the seize and the answers travel the same
-  way. The steering lags by the hacker's way to the hub, the hub's to the hacked
-  player and their ping, and the hacker sees the result after their own ping too. Without
-  the hub (`cl_identity 0`), or with a hub from before the relay, nothing is hacked.
-  A new map on the same server restarts its clock: a hack under way then ends, and the
-  cooldown and the immunity, timed on the old clock, are forgotten.
-
-The icon (a terminal with a green ">_") and the rain's glyphs are drawn by
-[hax_assets.py](../scripts/hax_assets.py) from shapes and the bundled JetBrains Mono and
-Noto Sans JP;
-the sounds and the hack bar's icon are the retail game's. See
-[hax.rs](../crates/sjk-viewer/src/hax.rs).
+Order 66 (Sol's idea, 17/10/2026: every holder of the toy blew up when one of them gave
+the order) and the Hax (21/10/2026: hold `+use` on a holder to hack and steer them, with
+its trap that blew both up as Order 66 did) were removed on 20/11/2026 in Sol's cleanup
+before the release. Their saved settings (`cl_toyOrder66`, `s_toyOrder66Sound`,
+`cl_toyHax`, `s_toyHaxSound`, `cl_haxTrap`, `cl_haxAway`) are dropped from the profile at
+load (`console_session.rs`), a saved quick wheel loses their choices, and a bind left on
+`toy_order66`, `order66` or `toy_hax` only says the command is unknown. Their
+achievements are retired ([identity.md](identity.md)). The rules the toys that strike or
+steer the player share (spectating, dead, in a duel, with the flag, the server holding
+the view; away from the keyboard) live in
+[toy_rules.rs](../crates/sjk-viewer/src/toy_rules.rs) since; the stock siege hack bar
+stays the siege's.
 
 ## Ragdoll
 
@@ -6204,7 +6056,7 @@ every fall ends with the map or the server.
   joint, so a model of any proportions stays in one piece. The saber, the hat and cape
   and the other bolts follow the posed bones. A model without the stock skeleton is
   drawn as animated.
-- **The camera:** behind the body's pelvis, turned by the mouse (as the Hax's hacker's).
+- **The camera:** behind the body's pelvis, turned by the mouse.
   Getting up gives the view back as it was. Flying the free camera while limp, the
   flight keeps its own view and the player's input: the real body is not walked to the
   ragdoll until it ends, in the sent commands or the frame preview between them, and
@@ -6229,14 +6081,13 @@ every fall ends with the map or the server.
   27/10/2026: `Ragdoll::wake`, read from the command before the walk takes its
   buttons; one held as they fell counts only once let go and pressed again, and a
   press never begins a fall); or at once when the player is hurt ("Ouch! You
-  got up"), dies, spectates, is in a duel, carries a flag or is hacked (a [Hax](#hax)
-  hack on a limp player left the body on the floor, Rollembones's report #167), or
+  got up"), dies, spectates, is in a duel, carries a flag, or
   when the server holds their view (a JA+ kiss, kick or knockdown, a melee grapple or
   throw, a saber lock: [held view](#held-view)). Hurt is a new damage feedback from the server (the player
   state's `damageEvent`, which `P_DamageFeedback` moves on at each hurt); comparing
   health instead woke a player who fell again after a hit at once (Sanji's report
   #135). Nobody goes limp in a duel ("No ragdoll in a duel"), with the flag, while
-  spectating or dead, in a [Hax](#hax) hack, while the server holds the view ("No
+  spectating or dead, while the server holds the view ("No
   ragdoll right now") or in a vehicle ("No ragdoll in a vehicle"): a monitor's hit
   left a limp pilot unable to drive or get out (Rollembones's report #168).
 - **Everyone sees the same fall:** no pose is ever sent. The faller's client relays
@@ -6333,9 +6184,8 @@ While the view is held:
   mouse does not turn it (the motion is dropped), as a view turned under the server's
   rewrites shakes, kicked down by a JA+ kata or a melee kick (Rollembones' report
   #146). A free camera and fake noclip are not held;
-- the [Ragdoll](#ragdoll) gets the player up and does not start, and a [Hax](#hax) hack
-  ends or is refused (the hacker reads "is busy"): their commands carry angles of their
-  own, so every rewrite turned the camera on by the gap between the two views and it
+- the [Ragdoll](#ragdoll) gets the player up and does not start: its commands carry
+  angles of their own, so every rewrite turned the camera on by the gap between the two views and it
   spun (Rollembones' report #139, a kiss; Foshin's #140, a grapple).
 
 ## Drone
@@ -6504,7 +6354,7 @@ sends them flying, the way the monitor struck them.
 - **Busy players are not hit** (Sol's ask, 26/10/2026): a player typing (a key catcher
   open: the chat, the console or a menu, what sends the talk balloon's `BUTTON_TALK`,
   `GpuState::talk_button`) or away (alt-tabbed or idle as the away emote counts it, or an
-  away tag in their name: the Hax's `hax_own_away`) is not struck; the monitor passes
+  away tag in their name: `GpuState::own_away`, `toy_rules.rs`) is not struck; the monitor passes
   through. Other clients foresee no hit on a player showing the talk balloon
   (`EF_TALK`) or whom their scoreboard counts away (`seen_away`).
 - **Foreseen hits** (Sol's ask, 26/10/2026, after hits showed a ping or more late):
@@ -7033,8 +6883,7 @@ game; the rock is the installed game's Yavin rock), and mounted below all game d
 Settings > Sound > Toys (Sol's request, 25/10/2026) sets how the toys sound on this PC:
 "Toy volume" (`s_toyVolume`, 0 to 2, default 1, times the effects volume) scales every
 toy's sounds, and a switch per toy silences that toy's sounds alone, the player's own
-and everyone else's (`s_toyOrder66Sound`, `s_toyHaxSound`,
-`s_toyRagdollSound`, `s_toyDroneSound`, `s_toyBoomboxSound`, `s_toyMonitorSound`,
+and everyone else's (`s_toyRagdollSound`, `s_toyDroneSound`, `s_toyBoomboxSound`, `s_toyMonitorSound`,
 `s_toyMysteryBoxSound` (the [mystery boxes](mystery-boxes.md)), `s_toyTagSound` (the [Tag](#tag)'s spray,
 03/11/2026), `s_toyMasterSound` (the toys [the Toy
 Master](toy-master.md) hides, 30/10/2026), `s_toyFishingSound`
@@ -7044,8 +6893,8 @@ Master](toy-master.md) hides, 30/10/2026), `s_toyFishingSound`
 on by default,
 archived). The toy still
 runs and is still seen; nothing is sent to anyone. The Illuminate holocron makes no
-sound. Every toy sound goes through `GameAudio::play_toy`, and the box music and the
-Hax loop through `send_toy_loop`, which read the settings each frame, so a change is
+sound. Every toy sound goes through `GameAudio::play_toy`, and the Prop gun's bolt loops
+through `send_toy_loop`, which read the settings each frame, so a change is
 heard at once, loops included. See [toy_sounds.rs](../crates/sjk-viewer/src/toy_sounds.rs).
 
 ## Holstered saber hilts
@@ -7470,10 +7319,7 @@ per toy, so a toy deleted from the page is added again in Settings > Quick wheel
 (Add a choice, Toys), and a future toy is one catalogue entry. Its default choice
 is Illuminate, which runs `toy_illuminate` (the toggle the bind uses) with the
 Illuminate holocron's picture. Its gold dot marks a lit holocron (the client's own
-state; no cvar holds it). Since 17/10/2026 the default page also has
-[Order 66](#order-66) (`toy_order66`, marked while it is on, then
-Execute Order 66, `order66`), since 21/10/2026 the [Hax](#hax) (`toy_hax`, marked
-while it is on), since 23/10/2026 the [Ragdoll](#ragdoll) (`toy_ragdoll`, marked
+state; no cvar holds it). Since 23/10/2026 the default page also has the [Ragdoll](#ragdoll) (`toy_ragdoll`, marked
 while the player is limp), and since 26/10/2026 the [Monitor](#monitor) (`toy_monitor`,
 marked while it is on, then Throw monitor, `monitor_throw`); a wheel saved before keeps
 its Toys page as it was, and gains them from Add a choice, Toys. The page holds ten, so
@@ -7560,7 +7406,7 @@ by its groups in Settings:
 | Interface | Nameplates (`nameplates`, cycles), HUD on/off, Screenshot (`screenshotJPEG`), Game menu (`togglemenu`), First setup (`firstsetup`), Match timer, FPS counter, Speedometer, Lagometer (`toggle cg_...`), Console (`toggleconsole`), What's new (`changelog`) |
 | Player | Cosmetics, AFK, Team menu (`teammenu`), Spectate (`team spectator`), Respawn (`kill`), Inspect player, Engage duel, Saber style (`saberAttackCycle`), Saber on/off (`sv_saberswitch`) |
 | Emotes | Taunt, Bow, Meditate, Flourish, Gloat, Sync emote (`sjkemote sync`), Stop emote (`sjkemote stop`), then the installed emotes (`sjkemote <id>`, [hub-chat.md](hub-chat.md#emotes-in-the-client)) |
-| Toys | Illuminate (`toy_illuminate`, marked while the holocron is lit), Order 66 (`toy_order66`, marked while it is on), Execute Order 66 (`order66`) |
+| Toys | Illuminate (`toy_illuminate`, marked while the holocron is lit) |
 | Weather | The map's own weather, drizzle, rain, storm, snow (`r_weatherForce`), ground fog everywhere (`r_weatherFog` 1/2), clouds, weather on/off |
 | Time of day | Day (`r_dayHour 12`), Night (`r_dayHour 0`), with the spare sun and moon icons |
 | Votes, demos and server | Vote yes, Vote no, Record demo (`record`), Stop recording (`stoprecord`), Reconnect |

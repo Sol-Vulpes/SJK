@@ -309,14 +309,10 @@ mod body_fade_shots;
 mod boombox_shots;
 #[path = "world_shot_drone.rs"]
 mod drone_shots;
-#[path = "world_shot_hax.rs"]
-mod hax_shots;
 #[path = "world_shot_monitor.rs"]
 mod monitor_shots;
 #[path = "world_shot_mystery_box.rs"]
 mod mystery_box_shots;
-#[path = "world_shot_order66.rs"]
-mod order66_shots;
 #[path = "world_shot_petals.rs"]
 mod petals;
 #[path = "world_shot_propgun.rs"]
@@ -1807,7 +1803,6 @@ like this one.",
                         [3_000, 21_000, 77_000],
                         61,
                     ),
-                    (crate::order66::TOY, [3, 8, 15], [1_200, 7_000, 19_500], 22),
                 ]
                 .into_iter()
                 .map(|(toy, people, secs, uses)| sjk_identity::ToyUse {

@@ -28,14 +28,6 @@ const ICONS: &[(&str, &str)] = &[
     ("use_electrobinoculars", "gfx/hud/i_icon_zoom.tga"),
     // SJK's Illuminate holocron, which the client bundles (`crate::illuminate`).
     ("toy_illuminate", "gfx/sjk/toy_illuminate.png"),
-    // SJK's Order 66, which the client bundles (`crate::order66`).
-    (crate::order66::COMMAND, crate::order66::ICON),
-    (
-        crate::order66::EXECUTE_COMMAND,
-        crate::order66::EXECUTE_ICON,
-    ),
-    // SJK's Hax, which the client bundles (`crate::hax`).
-    (crate::hax::COMMAND, crate::hax::ICON),
     // SJK's Ragdoll, which the client bundles (`crate::ragdoll`).
     (crate::ragdoll::COMMAND, crate::ragdoll::ICON),
     // SJK's Drone, which the client bundles (`crate::drone`).

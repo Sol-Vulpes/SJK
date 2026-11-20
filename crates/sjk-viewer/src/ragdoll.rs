@@ -13,11 +13,11 @@
 //! of it too.
 //!
 //! The player's real body stays on the game server: while limp, the client walks it to
-//! where the ragdoll lies (its own user commands, as the Hax's steering), so that the
+//! where the ragdoll lies (its own user commands), so that the
 //! player gets up there. Every SJK client draws the ragdoll in its place; players on
 //! stock clients see a player walking about. A limp player sends no button, so cannot
 //! attack, and gets up at once when hurt, dead, spectating, in a duel or carrying a flag
-//! ([`crate::order66::spared`]), or when the server holds their view (a kiss, a grapple,
+//! ([`crate::toy_rules::spared`]), or when the server holds their view (a kiss, a grapple,
 //! a kick: [`crate::held_view`]); nobody falls in one of those either.
 //!
 //! The fall is heard: an original flatline, the toy's own ([`FLATLINE`], made by
@@ -863,11 +863,11 @@ impl GpuState {
         // `held_view`). A pilot or passenger is held by the vehicle the same way: a limp
         // body could neither drive nor get out (a Monitor's hit, #168).
         let riding = snapshot.player.vehicle_entity_num() != 0;
-        let spared = crate::order66::spared(&snapshot.player, gametype).or_else(|| {
-            (riding || self.server_holds_view()).then_some(crate::order66::Spared::Held)
+        let spared = crate::toy_rules::spared(&snapshot.player, gametype).or_else(|| {
+            (riding || self.server_holds_view()).then_some(crate::toy_rules::Spared::Held)
         });
         let damage_event = snapshot.player.damage_event();
-        self.ragdoll.spared = spared.is_some() || self.hax.busy();
+        self.ragdoll.spared = spared.is_some();
         let now = self.ragdoll.time;
         // The relay's events: a sender counts only when the game shows the name they
         // claimed, and never one blocked on this PC, nor anyone's while the player hides
@@ -897,9 +897,7 @@ impl GpuState {
         if let Some(mine) = &self.ragdoll.mine {
             let why = if toggled || woken {
                 None
-            } else if spared.is_some() || self.hax.busy() || rested {
-                // A hack gets a limp player up too: the hacker steers a standing body,
-                // not one left on the floor (#167).
+            } else if spared.is_some() || rested {
                 Some("")
             } else if hurt(mine.damage_event, damage_event) {
                 Some("^3Ouch!^7 You got up")
@@ -914,16 +912,15 @@ impl GpuState {
             }
         } else if toggled {
             match spared {
-                Some(crate::order66::Spared::Duel) => self.ragdoll_centre("No ragdoll in a duel"),
-                Some(crate::order66::Spared::Flag) => {
+                Some(crate::toy_rules::Spared::Duel) => self.ragdoll_centre("No ragdoll in a duel"),
+                Some(crate::toy_rules::Spared::Flag) => {
                     self.ragdoll_centre("No ragdoll while carrying the flag");
                 }
-                Some(crate::order66::Spared::Held) if riding => {
+                Some(crate::toy_rules::Spared::Held) if riding => {
                     self.ragdoll_centre("No ragdoll in a vehicle");
                 }
-                Some(crate::order66::Spared::Held) => self.ragdoll_centre("No ragdoll right now"),
+                Some(crate::toy_rules::Spared::Held) => self.ragdoll_centre("No ragdoll right now"),
                 Some(_) => {}
-                None if self.hax.busy() => self.ragdoll_centre("No ragdoll in a hack"),
                 None => self.ragdoll_fall(damage_event),
             }
         }

@@ -46,7 +46,7 @@ pub(crate) const LAUNCH_SOUND: &str = "sound/chars/remote/misc/hiss.wav";
 /// The drone's size against the stock ball: the game's own.
 const SCALE: f32 = 1.0;
 /// Shortest time between two events sent (the relay takes 40 a second from a player,
-/// which the Hax and the Ragdoll share).
+/// which the Ragdoll shares).
 const SEND_GAP: Duration = Duration::from_millis(50);
 /// A player told of the drone hears it again this often while it does not move.
 const KEEPALIVE: Duration = Duration::from_millis(1_000);

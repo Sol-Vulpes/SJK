@@ -494,10 +494,6 @@ pub(crate) struct Toys {
     pub(crate) fishing: bool,
     /// The pickaxe is in hand.
     pub(crate) mining: bool,
-    /// The Order 66 toy is on.
-    pub(crate) order66: bool,
-    /// The Hax toy is on.
-    pub(crate) hax: bool,
     /// The player is limp (the Ragdoll toy).
     pub(crate) ragdoll: bool,
     /// The Drone toy is on.
@@ -527,8 +523,6 @@ fn in_effect(console: &crate::console::ViewerConsole, state: State, toys: Toys) 
         State::Illuminate => toys.illuminate,
         State::Fishing => toys.fishing,
         State::Mining => toys.mining,
-        State::Order66 => toys.order66,
-        State::Hax => toys.hax,
         State::Ragdoll => toys.ragdoll,
         State::Drone => toys.drone,
         State::Boombox => toys.boombox,
@@ -696,8 +690,6 @@ impl crate::GpuState {
             illuminate: self.illuminate.lit(),
             fishing: self.fishing.on(),
             mining: self.mining.on(),
-            order66: self.order66.on(),
-            hax: self.hax.on(),
             ragdoll: self.ragdoll.on(),
             drone: self.drone.on(),
             boombox: self.boombox.on(),
@@ -1098,9 +1090,6 @@ mod tests {
             commands,
             [
                 "toy_illuminate",
-                "toy_order66",
-                "order66",
-                "toy_hax",
                 "toy_ragdoll",
                 "toy_drone",
                 "toy_boombox",

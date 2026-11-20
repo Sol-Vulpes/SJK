@@ -775,8 +775,8 @@ mod tests {
         assert_eq!(pages.pages()[3].choices[2].command(), "r_weatherForce 2");
         assert_eq!(pages.pages()[1].choices[0].label(), "Third person");
         // Toys is an ordinary page of the catalogue's Toys: Illuminate, which
-        // toggles the holocron and is marked while it is lit, then Order 66's switch
-        // and its order, then the Hax (the cardboard box was second until 20/11/2026).
+        // toggles the holocron and is marked while it is lit, then the Ragdoll (the
+        // cardboard box, Order 66 and the Hax came between until 20/11/2026).
         let toys = &pages.pages()[2];
         assert!(!toys.force);
         let shown: Vec<(&str, State)> = toys
@@ -788,9 +788,6 @@ mod tests {
             shown,
             [
                 ("toy_illuminate", State::Illuminate),
-                ("toy_order66", State::Order66),
-                ("order66", State::None),
-                ("toy_hax", State::Hax),
                 ("toy_ragdoll", State::Ragdoll),
                 ("toy_drone", State::Drone),
                 ("toy_boombox", State::Boombox),

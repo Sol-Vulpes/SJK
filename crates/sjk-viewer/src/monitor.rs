@@ -31,7 +31,7 @@
 //!
 //! - **Busy:** nobody is struck while typing (a key catcher open: the chat, the
 //!   console, a menu, the talk balloon's `EF_TALK` for others) or away (alt-tabbed or
-//!   idle, or an away tag in their name, as the Hax reads it): a monitor passes through.
+//!   idle, or an away tag in their name: `toy_rules`): a monitor passes through.
 //! - **Foreseen:** every SJK client also tries each monitor against the other players
 //!   who have the toy on (their look says so) as it sees them, and on a hit knocks
 //!   their body down and bounces the monitor at once, as a shooter shows a hit before
@@ -750,7 +750,7 @@ impl GpuState {
             .config_string(0)
             .and_then(|info| sjk_client::LegacyClientInfo::new(info).integer("g_gametype"))
             .unwrap_or(0);
-        self.monitor.duel = crate::order66::duelling(&session.latest_snapshot().player, gametype);
+        self.monitor.duel = crate::toy_rules::duelling(&session.latest_snapshot().player, gametype);
         self.monitor.unseen = self
             .console
             .as_ref()
@@ -1258,7 +1258,7 @@ impl GpuState {
             || self.monitor.saver_holds(self.monitor.time)
             || !self.ragdoll.strikable()
             || self.talk_button()
-            || self.hax_own_away()
+            || self.own_away()
         {
             return None;
         }

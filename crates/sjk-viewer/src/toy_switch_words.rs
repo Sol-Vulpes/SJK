@@ -3,8 +3,8 @@
 //! colour, the explanations in a command of their own).
 //!
 //! - **Switched:** every toy with an on/off switch says its name and **ON** in green or
-//!   **OFF** in red on the centre of the screen ([`switched`]): Illuminate, Order 66, the
-//!   Hax, the Drone, the Monitor and Box hunt, and the Boombox put away (its start names
+//!   **OFF** in red on the centre of the screen ([`switched`]): Illuminate, the Drone,
+//!   the Monitor and Box hunt, and the Boombox put away (its start names
 //!   the track instead). Said only for the player's own switch (a bind, the quick wheel,
 //!   the Collection's Toys tab); a toy restored at start (`toy_saved`) says nothing.
 //! - **`toy_help`** ([`COMMAND`]) lists every toy in the console, its name in yellow and,
@@ -22,21 +22,11 @@ pub(crate) fn switched(name: &str, on: bool) -> String {
 }
 
 /// Every toy: its name, its switch and what it does and how, in `toy_help`'s order.
-pub(crate) const TOYS: [(&str, &str, &str); 14] = [
+pub(crate) const TOYS: [(&str, &str, &str); 12] = [
     (
         "Illuminate",
         "toy_illuminate",
         "a holocron floats by your shoulder and lights the way; SJK players see it",
-    ),
-    (
-        "Order 66",
-        "toy_order66",
-        "everyone who has it on falls when someone gives the order (order66)",
-    ),
-    (
-        "Hax",
-        "toy_hax",
-        "hold Use on a player who has it on to hack them and steer them for a few seconds",
     ),
     (
         "Ragdoll",
@@ -131,8 +121,6 @@ mod tests {
         assert_eq!(lines.len(), TOYS.len() + 1);
         for command in [
             crate::illuminate::COMMAND,
-            crate::order66::COMMAND,
-            crate::hax::COMMAND,
             crate::ragdoll::COMMAND,
             crate::drone::COMMAND,
             crate::boombox::COMMAND,

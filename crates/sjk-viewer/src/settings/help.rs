@@ -705,14 +705,6 @@ const HELP: &[(&str, &str)] = &[
         "Loudness of every toy's sounds: 1 as made, 2 twice as loud, 0 silent. Each toy can also be silenced below.",
     ),
     (
-        crate::toy_sounds::Toy::Order66.cvar(),
-        "Off: Order 66 sounds are not played on this PC, yours or other players'. The toy still works and is still seen.",
-    ),
-    (
-        crate::toy_sounds::Toy::Hax.cvar(),
-        "Off: Hax sounds are not played on this PC, yours or other players'. The toy still works and is still seen.",
-    ),
-    (
         crate::toy_sounds::Toy::Ragdoll.cvar(),
         "Off: Ragdoll sounds are not played on this PC, yours or other players'. The toy still works and is still seen.",
     ),
@@ -1200,14 +1192,6 @@ const HELP: &[(&str, &str)] = &[
     (
         crate::blade_lab_designs::CVAR,
         "Draw the Blade Lab skins (Serpent, Comic and the rest) as Creyon's Blade Lab drew them; off uses their skin files.",
-    ),
-    (
-        crate::hax::TRAP_CVAR,
-        "The Hax toy: a player who hacks you springs a trap; after two seconds you both blow up, as in Order 66.",
-    ),
-    (
-        crate::hax::AWAY_CVAR,
-        "With the Hax trap on: players may hack you while you are away, and blow up with you. Others can see it is set.",
     ),
     (
         crate::monitor::SHOW_CVAR,
@@ -2213,8 +2197,6 @@ mod tests {
             RENDER_LIGHTING,
             RENDER_SHADOWS,
             RENDER_WEATHER,
-            // Rows only a search shows (they live on the Collection's Hax card).
-            HAX_TOY,
         ]
         .into_iter()
         .flatten();

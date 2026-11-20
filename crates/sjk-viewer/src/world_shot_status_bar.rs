@@ -49,7 +49,7 @@ fn made_up(gpu: &GpuState) -> Inputs {
         inputs.push_effect(Effect { words, colour });
     }
     let mut on = [false; TOY_COUNT];
-    for toy in [toys::ILLUMINATE, toys::HAX, toys::BOX_HUNT, toys::PROPGUN] {
+    for toy in [toys::ILLUMINATE, toys::DRONE, toys::BOX_HUNT, toys::PROPGUN] {
         on[toy] = true;
     }
     inputs.toys = on;
