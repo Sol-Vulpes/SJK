@@ -186,6 +186,8 @@ impl ViewerConsole {
             crate::duel_visibility::HIDE_OTHERS_CVAR,
             1,
         )?;
+        let duel_ghost =
+            console_cvars::IntegerSetting::bind(&mut cvars, crate::duel_ghost::CVAR, 1)?;
         let plugin_disable = console_cvars::IntegerSetting::bind(
             &mut cvars,
             "cp_pluginDisable",
@@ -711,6 +713,7 @@ impl ViewerConsole {
             hide_corpses_in_duel,
             hide_pickups_in_duel,
             duel_hide_others,
+            duel_ghost,
             plugin_disable,
             draw_fog,
             remaps,

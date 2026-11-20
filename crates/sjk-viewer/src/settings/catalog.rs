@@ -1671,7 +1671,7 @@ pub(super) const GAME: &[Setting] = &[
     Setting {
         label: "Duel figures (JoF)",
         cvar: crate::duel_ghost::CVAR,
-        kind: ValueKind::Bool,
+        kind: ValueKind::Choice(&["0", "1", "2"]),
     },
     Setting {
         label: "Hide others in duel",
