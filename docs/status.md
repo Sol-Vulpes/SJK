@@ -1,3 +1,17 @@
+## Rig model chains stay off the ground (19/11/2026)
+
+19/11/2026, `feat/rig-chain-ground` based on `main` `afd16b60`. A rig model's dynamic chains
+that are kept out of the body (no `nocollide`) are kept off the ground too: a line traced
+down from the player's origin finds the floor, as a plane in the model's space, and a
+joint under it is laid on it at its bone's length, leaning the way it already did, at
+least its `clearance` (half a unit) above. No manifest change, so older clients load the
+same models ([rig-models.md](rig-models.md#dynamic-joints-tails-capes)). Verified: `cargo
+test -p sjk-viewer --bin sjk rig_` (a strand on a flat and a sloping floor, `nocollide`, no
+ground, the bone laid on the plane, the floor's model-space plane with yaw and scale) and a
+probe on an installed rig model in stock frames: standing its lowest vertex sits on the
+floor's plane (-23.9 against -24); kneeling (`BOTH_KNEES1`) a coat chain that went 2.3
+units through the floor stays above it. In `BOTH_DEATH1` the head itself sinks under the
+floor, chain anchors with it, which this leaves alone. Not tried in a game.
 ## Rim alpha: `alphaGen dot` and `oneMinusDot` (18/11/2026)
 
 18/11/2026, `feat/alphagen-dot` based on `main` `afd16b609`. A shader stage's `alphaGen dot` /

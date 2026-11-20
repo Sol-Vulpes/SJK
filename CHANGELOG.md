@@ -78,6 +78,7 @@ A new emblem, a new Collection with kybers and an Inventory, status bars at both
 - Duels: Settings > Duel figures (JoF) has a third choice, Hidden (`cg_duelGhost 2`): while you are not in a duel yourself, players in a private duel are not drawn or heard at all, with their sabers, shadows, nameplates and sounds; the default stays the blue figures _(Slash, PR #436, after headshotsmcgee117's idea)_
 - Emotes your way: Settings > Sound > Emotes "Hide others' emotes" (`cg_hideOthersEmotes`, off) stops other players' emotes showing or playing on your screen while yours still play, "Hidden emotes" (`emote_hide <id>`) hides single emotes when others play them, and "Muted emotes" (`emote_mute <id>`) plays single emotes without their sound _(Slash, after mg.perso's idea, PR #437)_
 - Shaders: `alphaGen dot` and `alphaGen oneMinusDot` now draw: the alpha follows how squarely a surface faces you (1 head-on, 0 edge-on) or the opposite, so a model shader can have a rim light; stock parses them and draws nothing, and no retail shader uses them _(Kushina, PR #439)_
+- Rig models: tails, capes and long hair no longer sink through the floor when the player kneels or crouches; every chain kept out of the body is kept off the ground too _(Kushina, PR #442)_
 
 ## 2026.1117.1 (Alpha) | 17/11/2026
 

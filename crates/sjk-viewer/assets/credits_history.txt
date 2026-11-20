@@ -3415,6 +3415,8 @@
 - bc795cb |  | Fixes to changelog, nameplate.rs, client.md
 
 = Kushina
++ 20/11/2026 | SJK #442 | Rig models: dynamic chains stay off the ground
+- 7c0040f |  | Rig models: dynamic chains stay off the ground
 + 20/11/2026 | SJK #439 | Draw alphaGen dot and oneMinusDot as facing and rim alpha
 - 19f7a3c |  | Draw alphaGen dot and oneMinusDot as facing and rim alpha
 + 12/11/2026 | SJK #408 | Collection menu text fits the text size and letter spacing

@@ -1214,7 +1214,7 @@ Blackwolf's VisionJK rebuild of the JA+ 2.4 B7 server module from its Linux bina
 `g_mod japlus`): JA+'s settings and their defaults and the `jp_cinfo` bits come from it,
 and its behaviour is ported into SJK's own code, not its source.
 
-Kushina ([kushinaSJK](https://github.com/kushinaSJK)), contributor and player, has 7 pull
+Kushina ([kushinaSJK](https://github.com/kushinaSJK)), contributor and player, has 8 pull
 requests merged into SJK
 ([all of them](https://github.com/Sol-Vulpes/SJK/pulls?q=is%3Apr+author%3AkushinaSJK)); her
 ideas are under [Ideas](#ideas):
@@ -1240,6 +1240,8 @@ ideas are under [Ideas](#ideas):
   Showcase current set, and a shader's extras behind an Extra features chip.
 - #439 `alphaGen dot` and `alphaGen oneMinusDot` draw: alpha from how squarely a surface
   faces the viewer, or its opposite for a rim light (stock parses them and draws nothing).
+- #442 a rig model's colliding chains (tails, capes, long hair) stay off the ground: a
+  trace down finds the floor and a joint under it is laid on it.
 
 Hormorn ([Hormorn](https://github.com/Hormorn)), contributor, has 2 pull requests merged
 into SJK ([all of them](https://github.com/Sol-Vulpes/SJK/pulls?q=is%3Apr+author%3AHormorn)):
