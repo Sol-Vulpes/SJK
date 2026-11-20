@@ -10670,3 +10670,12 @@ change: Their sabers, shadow, nameplate, effects and sounds go too; your own due
 test: Settings > Quick > Duel figures (JoF): Hidden. Two others duel: they vanish, silent.
 test: The duel ends: both show again. Figures (default) and Dark look as before.
 test: Follow a duellist as a spectator, or duel yourself: you and your opponent show.
+
+[retired-toy-achievements]
+area: Menus & settings
+title: The removed toys' achievements are retired: kept by their holders, no longer earned
+change: Order 66, cardboard box, Monitor, Hax, Fishing, Mining and Special Delivery retired.
+change: Shown only if held, with No longer obtainable; totals count the held ones only.
+change: The Hobbies page leaves the switch when nothing on it is held; F skips it too.
+test: Collection > Achievements on a profile without them: General and Fun only, totals 45.
+test: On a profile holding a retired one: it shows, marked No longer obtainable.

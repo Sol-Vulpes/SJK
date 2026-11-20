@@ -2277,8 +2277,8 @@ mod tests {
     #[test]
     fn a_retired_achievement_counts_only_for_its_holders() {
         let mut profile = full_profile();
-        let total = crate::achievements::ALL.len();
-        assert_eq!(ProfileFacts::of(&profile).total, total - 1);
+        let total = crate::achievements::OBTAINABLE;
+        assert_eq!(ProfileFacts::of(&profile).total, total);
         for id in ["surveyor", "mythical_find"] {
             profile.achievements.push(sjk_identity::Achievement {
                 id: id.to_owned(),
@@ -2292,7 +2292,7 @@ mod tests {
             });
         }
         let facts = ProfileFacts::of(&profile);
-        assert_eq!((facts.unlocked, facts.total), (6, total));
+        assert_eq!((facts.unlocked, facts.total), (6, total + 1));
         // Surveyor's unfinished progress, not unlocked, counts nothing.
         let mut unfinished = full_profile();
         unfinished.achievements.push(sjk_identity::Achievement {
@@ -2306,7 +2306,7 @@ mod tests {
             group: None,
         });
         let facts = ProfileFacts::of(&unfinished);
-        assert_eq!((facts.unlocked, facts.total), (4, total - 1));
+        assert_eq!((facts.unlocked, facts.total), (4, total));
     }
 
     #[test]
@@ -2322,8 +2322,11 @@ mod tests {
         let card = full_card(None);
         assert_eq!(card.texts[T_STAFF], "SJK TEAM");
         assert_eq!(card.texts[T_HOLOCRON], "Legendary Holocron");
-        // Out of the obtainable ones: they do not hold the retired Surveyor.
-        assert_eq!(card.texts[T_ACHIEVEMENTS], "Achievements  4 / 79");
+        // Out of the obtainable ones: they hold none of the retired ones.
+        assert_eq!(
+            card.texts[T_ACHIEVEMENTS],
+            format!("Achievements  4 / {}", crate::achievements::OBTAINABLE)
+        );
         assert_eq!(card.texts[T_BIO], "Fox of the JoF, maker of SJK.");
         assert!(card.texts[T_SINCE].starts_with("In SJK since "));
         assert_eq!(card.texts[T_GOAL], "1K");
