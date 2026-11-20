@@ -3778,6 +3778,8 @@
 - fed9acd |  | Hide duel opponents' bars and send nothing while duelling
 
 = Slash
++ 20/11/2026 | SJK #433 | Identity link: codes in two halves, and a staff key told which way it goes (#316)
+- 49af93a |  | identity link: codes in two halves, and a staff key told which way it goes
 + 20/11/2026 | SJK #434 | in_mouseRepeat: a click runs its bind once (hub report #317)
 - 6399b52 |  | in_mouseRepeat: a click runs its bind once (hub report #317)
 - a3ce8fe |  | Mouse repeat tests count the repeats after the delay
