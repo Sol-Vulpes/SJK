@@ -48,8 +48,8 @@ did: Capsule nameplates: each player's picture, name and weapon, the shared bars
 did: JA+ and JoF server support: movement, sabers, grapple, Force wheel, flip kick
 did: Illuminate, SJK's own toy: a holocron that lights the way, art by Sol
 did: The cardboard box toy (16/10 to 20/11/2026): hide in a carton, spotted with Use
-did: The Order 66 toy: synced deaths that blow players apart, TF2 style
-did: The Hax toy: hack another player with the siege bar, then steer them
+did: The Order 66 toy (17/10 to 20/11/2026): synced deaths that blow players apart
+did: The Hax toy (21/10 to 20/11/2026): hack another player, then steer them
 did: The Ragdoll toy: go limp, sandbox style, the same fall on every SJK client
 did: Ragdoll lifts and doors, and each body part's knocks on what it hits
 did: SJK team announcements in chat, and contributor reward rounds with Claim
@@ -686,7 +686,7 @@ did: The Empower glow hidden with a setting
 role: Ideas for SJK
 did: Hit sounds (cg_hitsounds) heard without EJK's pack
 did: Report a bug from the main menu, not only in a match
-did: The Hax trap's switches on the Hax's card in the Collection
+did: The Hax trap's switches on the Hax's card in the Collection (toy removed 20/11)
 did: Loadouts: a saved look worn again in one click
 did: Clan chats: a JoF chat and an S chat beside SJK chat, for their verified players
 

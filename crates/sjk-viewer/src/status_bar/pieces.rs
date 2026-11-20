@@ -76,14 +76,12 @@ pub(crate) struct Toy {
 }
 
 /// How many toys the bar shows.
-pub(crate) const TOY_COUNT: usize = 13;
+pub(crate) const TOY_COUNT: usize = 11;
 
 /// The toys with a switch, in the order of `toy_help` ([`crate::toy_switch_words::TOYS`])
 /// but the Tag, which has none (`Inputs::toys` keeps this order).
 pub(crate) const TOYS: [Toy; TOY_COUNT] = [
     toy("Illuminate", Some("illuminate"), "IL"),
-    toy("Order 66", Some("order66"), "66"),
-    toy("Hax", Some("hax"), "HX"),
     toy("Ragdoll", Some("ragdoll"), "RG"),
     toy("Drone", Some("drone"), "DR"),
     toy("Boombox", Some("boombox"), "BB"),
@@ -107,18 +105,16 @@ const fn toy(name: &'static str, icon: Option<&'static str>, letters: &'static s
 /// Index of each toy in [`TOYS`] and `Inputs::toys`.
 pub(crate) mod toys {
     pub(crate) const ILLUMINATE: usize = 0;
-    pub(crate) const ORDER66: usize = 1;
-    pub(crate) const HAX: usize = 2;
-    pub(crate) const RAGDOLL: usize = 3;
-    pub(crate) const DRONE: usize = 4;
-    pub(crate) const BOOMBOX: usize = 5;
-    pub(crate) const MONITOR: usize = 6;
-    pub(crate) const BOX_HUNT: usize = 7;
-    pub(crate) const QUESTS: usize = 8;
-    pub(crate) const PROPGUN: usize = 9;
-    pub(crate) const FISHING: usize = 10;
-    pub(crate) const WHEEL_OF_DOOM: usize = 11;
-    pub(crate) const MINING: usize = 12;
+    pub(crate) const RAGDOLL: usize = 1;
+    pub(crate) const DRONE: usize = 2;
+    pub(crate) const BOOMBOX: usize = 3;
+    pub(crate) const MONITOR: usize = 4;
+    pub(crate) const BOX_HUNT: usize = 5;
+    pub(crate) const QUESTS: usize = 6;
+    pub(crate) const PROPGUN: usize = 7;
+    pub(crate) const FISHING: usize = 8;
+    pub(crate) const WHEEL_OF_DOOM: usize = 9;
+    pub(crate) const MINING: usize = 10;
 }
 
 /// One thing on a bar.

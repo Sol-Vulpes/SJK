@@ -203,14 +203,6 @@ impl ViewerConsole {
                 // The page shows it at once; the viewer applies it next frame.
                 self.illuminate_lit = on;
             }
-            PanelAction::Order66(on) => {
-                self.pending_order66 = Some(on);
-                self.order66_on = on;
-            }
-            PanelAction::Hax(on) => {
-                self.pending_hax = Some(on);
-                self.hax_on = on;
-            }
             PanelAction::Ragdoll(on) => {
                 self.pending_ragdoll = Some(on);
                 self.ragdoll_on = on;
@@ -302,26 +294,6 @@ impl ViewerConsole {
     /// The Toys tab asked to light the holocron (`true`) or put it out, once.
     pub(crate) fn take_illuminate_request(&mut self) -> Option<bool> {
         self.pending_illuminate.take()
-    }
-
-    /// The viewer says whether the Order 66 toy is on, once a frame.
-    pub(crate) fn set_order66_on(&mut self, on: bool) {
-        self.order66_on = on;
-    }
-
-    /// The Toys tab asked to turn Order 66 on (`true`) or off, once.
-    pub(crate) fn take_order66_request(&mut self) -> Option<bool> {
-        self.pending_order66.take()
-    }
-
-    /// The viewer says whether the Hax toy is on, once a frame.
-    pub(crate) fn set_hax_on(&mut self, on: bool) {
-        self.hax_on = on;
-    }
-
-    /// The Toys tab asked to turn the Hax on (`true`) or off, once.
-    pub(crate) fn take_hax_request(&mut self) -> Option<bool> {
-        self.pending_hax.take()
     }
 
     /// The viewer says whether the player is limp (the Ragdoll), once a frame.
@@ -584,8 +556,6 @@ impl ViewerConsole {
             .unwrap_or_default()
             .to_owned();
         let illuminate = self.illuminate_lit();
-        let order66 = self.order66_on;
-        let hax = self.hax_on;
         let ragdoll = self.ragdoll_on;
         let drone = self.drone_on;
         let boombox = self.boombox_on;
@@ -650,8 +620,6 @@ impl ViewerConsole {
                 setting: &setting,
                 standings: &standings,
                 illuminate,
-                order66,
-                hax,
                 ragdoll,
                 drone,
                 boombox,
@@ -688,8 +656,6 @@ impl ViewerConsole {
             setting: &setting,
             standings: &standings,
             illuminate,
-            order66,
-            hax,
             ragdoll,
             drone,
             boombox,

@@ -236,35 +236,6 @@ impl Panel {
                 ],
             });
         }
-        if token == HAX_TOKEN {
-            return Some(Card {
-                title: "The Hax".to_owned(),
-                colour: color::gold_bright(),
-                lines: vec![
-                    Line::how(
-                        "Every SJK player has it. Turn it on here, from the quick wheel's Toys \
-                         page or with a key bound to toy_hax; hold Use on a player who has it \
-                         on to hack them.",
-                    ),
-                    Line::status(crate::editions::name(crate::editions::ALPHA)),
-                    Line::held("Yours"),
-                ],
-            });
-        }
-        if token == ORDER_TOKEN {
-            return Some(Card {
-                title: "Order 66".to_owned(),
-                colour: color::gold_bright(),
-                lines: vec![
-                    Line::how(
-                        "Every SJK player has it. Turn it on here, from the quick wheel's Toys \
-                         page or with a key bound to toy_order66; order66 executes it.",
-                    ),
-                    Line::status(crate::editions::name(crate::editions::ALPHA)),
-                    Line::held("Yours"),
-                ],
-            });
-        }
         if let Some(index) = within(CARD_BASE, self.cards_shown) {
             return self.card_tiles.get(index).map(tile_card);
         }

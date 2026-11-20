@@ -1,11 +1,10 @@
 //! The Collection's Toys tab: things to use in a match, everyone's. SJK's Illuminate
-//! holocron (`docs/client.md`, Illuminate), Order 66 (`docs/client.md`, Order 66), the Hax (`docs/client.md`,
-//! Hax), the Ragdoll (`docs/client.md`, Ragdoll), the Drone (`docs/client.md`, Drone),
+//! holocron (`docs/client.md`, Illuminate), the Ragdoll (`docs/client.md`, Ragdoll), the Drone (`docs/client.md`, Drone),
 //! the Boombox (`docs/client.md`, Boombox), the Monitor (`docs/client.md`, Monitor), Box
 //! hunt (`docs/client.md`, Box hunt), Fishing (`docs/client.md`, Fishing) and Quests (`docs/quests.md`),
 //! a row to each on the left (Sol's pick of 25/10/2026, the Collection revamp's canvas):
 //! its picture, its name and a line of what it does, the key bound to it and its own
-//! switch, which runs it in place (`toy_illuminate`, `toy_order66`, `toy_hax`,
+//! switch, which runs it in place (`toy_illuminate`,
 //! `toy_ragdoll`, `toy_drone`, `toy_boombox`, `toy_monitor`, `toy_boxhunt`,
 //! `toy_fishing`, `toy_quests`). The chosen one is described on a dark card beside the
 //! model, where its key is bound without the console (a click or K, then the key). The
@@ -38,7 +37,7 @@ const SWITCH_ROOM: f32 = 130.0;
 
 /// The list's sections (Sol's pick of 09/11/2026, once there were fourteen toys): each
 /// head and how many toys of [`ORDER`] stand under it.
-const SECTIONS: [(&str, usize); 3] = [("Around you", 4), ("With others", 3), ("Earn and win", 5)];
+const SECTIONS: [(&str, usize); 3] = [("Around you", 4), ("With others", 1), ("Earn and win", 5)];
 /// The toys in the list's order, as indices into [`TOYS`] (whose order the panel, the
 /// tokens and the bits keep): around you, the ones that need others with them on, and
 /// the ones that earn or win something.
@@ -47,8 +46,6 @@ pub(super) const ORDER: [usize; TOY_COUNT] = [
     RAGDOLL_TOY,
     DRONE_TOY,
     BOOMBOX_TOY,
-    ORDER66_TOY,
-    HAX_TOY,
     MONITOR_TOY,
     BOX_HUNT_TOY,
     FISHING_TOY,
@@ -139,13 +136,9 @@ const BOOK_SUBHEAD: f32 = 22.0;
 const SHARE_ROW: f32 = 44.0;
 
 /// Every command a toy is run by, in the order the page is told their keys
-/// ([`Inputs::toy_keys`]): each toy's switch, Order 66's order after its own, the
-/// Monitor's throw (held, it charges) after its own.
-pub(crate) const COMMANDS: [&str; 14] = [
+/// ([`Inputs::toy_keys`]): each toy's switch, the Monitor's throw (held, it charges) after its own.
+pub(crate) const COMMANDS: [&str; 11] = [
     "toy_illuminate",
-    "toy_order66",
-    "order66",
-    "toy_hax",
     "toy_ragdoll",
     "toy_drone",
     "toy_boombox",
@@ -180,8 +173,7 @@ struct Toy {
     /// who have it on.
     sight: Option<(&'static str, &'static str)>,
     /// The card's own switches under those, each an on/off cvar of the player's and its
-    /// words (the Hax's trap, moved here from Settings > Gameplay on 03/11/2026, Lex's
-    /// idea); at most [`super::TOY_OPTION_TOKENS`].
+    /// words (the Hax's trap until 20/11/2026); at most [`super::TOY_OPTION_TOKENS`].
     options: &'static [(&'static str, &'static str)],
     token: u16,
     /// Who made it, signed on its row and its card (Sol's list of 09/11/2026: Illuminate
@@ -205,39 +197,6 @@ const TOYS: [Toy; TOY_COUNT] = [
         sight: Some((crate::toy_sight::ILLUMINATE, "See others' holocrons")),
         options: &[],
         token: TOY_TOKEN,
-        author: "Sol",
-        idea: None,
-    },
-    Toy {
-        icon: "order66",
-        name: "Order 66",
-        tag: "One order, and everyone in it falls.",
-        title: "Order 66",
-        what: "When one player with it on executes the order, everyone with it on dies three seconds later and blows apart. One order every 30 seconds.",
-        more: Some("Join with its switch or key; the order key executes it for everyone in it."),
-        commands: &[("toy_order66", "Join key"), ("order66", "Order key")],
-        switch: "In the order",
-        sight: None,
-        options: &[],
-        token: ORDER_TOKEN,
-        author: "Sol",
-        idea: None,
-    },
-    Toy {
-        icon: "hax",
-        name: "Hax",
-        tag: "Hack a player and steer them for five seconds.",
-        title: "The Hax",
-        what: "Hold Use on a player who has it on too: the siege hack bar fills, then you steer them for five seconds, run, jump and swing included. Turn it off to break free.",
-        more: Some("With it on, hold Use on a player who has it on too."),
-        commands: &[("toy_hax", "Your key")],
-        switch: "Hacker",
-        sight: None,
-        options: &[
-            (crate::hax::TRAP_CVAR, "Trap: a hacker blows up with you"),
-            (crate::hax::AWAY_CVAR, "Trap while away"),
-        ],
-        token: HAX_TOKEN,
         author: "Sol",
         idea: None,
     },
@@ -409,7 +368,7 @@ pub(super) fn toy_master_found(
     })
 }
 
-/// The command toy `toy`'s key `slot` runs (0 its switch's, 1 Order 66's order).
+/// The command toy `toy`'s key `slot` runs (0 its switch's, 1 the Monitor's throw).
 pub(super) fn command(toy: usize, slot: usize) -> Option<&'static str> {
     TOYS.get(toy)
         .and_then(|toy| toy.commands.get(slot))
@@ -478,8 +437,6 @@ fn text_scale() -> f32 {
 pub(super) fn states(inputs: &Inputs<'_>) -> [bool; TOY_COUNT] {
     [
         inputs.illuminate,
-        inputs.order66,
-        inputs.hax,
         inputs.ragdoll,
         inputs.drone,
         inputs.boombox,
@@ -1060,7 +1017,7 @@ impl Panel {
                 frame.rect(left - 4.0, middle - 19.0, right - left + 8.0, 38.0),
             );
         }
-        // The toy's own switches (the Hax's trap).
+        // The toy's own switches.
         for (index, (_, words)) in toy.options.iter().enumerate().take(TOY_OPTION_TOKENS) {
             let middle = row + SIGHT_ROW * (index + 1) as f32;
             let on =
@@ -1567,8 +1524,6 @@ mod tests {
     #[test]
     fn a_look_toy_id_finds_its_name() {
         for (id, name) in [
-            (crate::order66::TOY, "Order 66"),
-            (crate::hax::TOY, "Hax"),
             (crate::drone::TOY, "Drone"),
             (crate::boombox::TOY, "Boombox"),
             (crate::monitor::TOY, "Monitor"),
@@ -1619,7 +1574,7 @@ mod tests {
                         }
                     }
                     let mut card = vec![TOY_SWITCH_TOKEN, BIND_TOKEN];
-                    if toy == ORDER66_TOY || toy == MONITOR_TOY {
+                    if toy == MONITOR_TOY {
                         card.push(BIND_SECOND_TOKEN);
                     }
                     for token in card {
@@ -1640,7 +1595,7 @@ mod tests {
 
     /// The sections hold every toy once, the rows stand in the list's order without
     /// overlapping, and the arrows walk that order: down from Boombox, the last of
-    /// Around you, comes Order 66.
+    /// Around you, comes the Monitor.
     #[test]
     fn the_sections_hold_every_toy_once() {
         let mut seen = ORDER.to_vec();
@@ -1655,8 +1610,8 @@ mod tests {
             assert!(tops[pair[1]] >= tops[pair[0]] + ROW_HEIGHT, "{pair:?}");
         }
         assert!(tops[ORDER[TOY_COUNT - 1]] + ROW_HEIGHT <= super::super::view::KEYS_Y);
-        assert_eq!(step(BOOMBOX_TOY, 1, false), ORDER66_TOY);
-        assert_eq!(step(ORDER66_TOY, -1, false), BOOMBOX_TOY);
+        assert_eq!(step(BOOMBOX_TOY, 1, false), MONITOR_TOY);
+        assert_eq!(step(MONITOR_TOY, -1, false), BOOMBOX_TOY);
         assert_eq!(step(ORDER[TOY_COUNT - 1], 1, true), ORDER[0]);
         assert_eq!(step(ORDER[TOY_COUNT - 1], 1, false), ORDER[TOY_COUNT - 1]);
         assert_eq!(signature(&TOYS[FISHING_TOY]), "Made by Slash, Sanji's idea");
@@ -1690,8 +1645,8 @@ mod tests {
     }
 
     /// A toy's key is bound from its card: K (or a click) waits, a key binds it to the
-    /// toy's command, Backspace clears it, Escape lets go without closing the page; Order
-    /// 66's order key binds `order66`.
+    /// toy's command, Backspace clears it, Escape lets go without closing the page; the
+    /// Monitor's throw key binds `+monitor_throw`.
     #[test]
     fn a_toy_key_is_bound_from_its_card() {
         let mut panel = super::super::tests::drawn(
@@ -1743,15 +1698,15 @@ mod tests {
             let _ = panel.handle_pointer(event, true);
         }
         assert_eq!(panel.bind_wait, None, "a click elsewhere lets go");
-        panel.toy = ORDER66_TOY;
+        panel.toy = MONITOR_TOY;
         assert_eq!(
             panel.bind_key(KeyCode::KeyO, Some("o".to_owned()), 1),
             PanelAction::Bind {
-                command: "order66",
+                command: "+monitor_throw",
                 key: "o".to_owned(),
             }
         );
-        assert_eq!(command(ORDER66_TOY, 1), Some("order66"));
+        assert_eq!(command(MONITOR_TOY, 1), Some("+monitor_throw"));
         assert_eq!(command(0, 1), None);
         assert!(COMMANDS.iter().all(|command| {
             TOYS.iter()

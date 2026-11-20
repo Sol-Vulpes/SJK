@@ -51,7 +51,6 @@ impl GpuState {
     /// What the toys tell the tracker of this moment, for their achievements.
     pub(crate) fn toy_moments(&self) -> achievements::tracker::Toys {
         achievements::tracker::Toys {
-            steering: self.hax.steering().map(u16::from),
             landed: self.drone.landed(),
             listeners: self.boombox.listeners(),
         }

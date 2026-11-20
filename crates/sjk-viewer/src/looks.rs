@@ -62,10 +62,7 @@ fn blade_skin(id: &str) -> Option<&'static str> {
 /// The toys a look can have out that this client draws, by id (`PROTOCOL.md`, "Looks"):
 /// a toy's bit in [`Worn::toys`] is its place here. A look naming another id (a newer
 /// client's toy) draws nothing more.
-pub(crate) const TOYS: [&str; 16] = [
-    crate::order66::TOY,
-    crate::hax::TOY,
-    crate::hax::AWAY_TOY,
+pub(crate) const TOYS: [&str; 13] = [
     crate::drone::TOY,
     crate::boombox::TOY,
     // The Monitor's switch: others foresee its monitors striking this player.
@@ -734,7 +731,7 @@ mod tests {
     #[test]
     fn toys_hidden_here_are_not_drawn_on_others() {
         let worn = Look {
-            toys: vec!["boombox".to_owned(), "hax".to_owned()],
+            toys: vec!["boombox".to_owned(), "drone".to_owned()],
             illuminate: true,
             ..Look::default()
         };
@@ -744,7 +741,7 @@ mod tests {
         looks.set_unseen(Unseen::BOOMBOX | Unseen::ILLUMINATE);
         assert!(!looks.toy(3, "boombox"));
         assert!(!looks.illuminated(3));
-        assert!(looks.toy(3, "hax"), "only the toys hidden");
+        assert!(looks.toy(3, "drone"), "only the toys hidden");
         // The player's own slot keeps them.
         looks.set_own(Some(3), Worn::of(&worn));
         assert!(looks.toy(3, "boombox") && looks.illuminated(3));

@@ -67,18 +67,6 @@ pub(super) fn register(shell: &mut sjk_shell::Shell) -> Result<(), sjk_shell::Co
             "Toy: take a pickaxe in hand, or put it away (boulders come up round you; attack strikes the one before you)",
         ),
         (
-            crate::order66::COMMAND,
-            "Toy: Order 66 on or off (every player who has it on dies when one of them executes it)",
-        ),
-        (
-            crate::order66::EXECUTE_COMMAND,
-            "Execute Order 66: in 3 seconds every player with the toy on blows up (toy_order66 first)",
-        ),
-        (
-            crate::hax::COMMAND,
-            "Toy: Hax on or off (hold +use on a player who has it on to hack them and steer them)",
-        ),
-        (
             crate::ragdoll::COMMAND,
             "Toy: go limp as a ragdoll, or get up (other SJK players see the same fall)",
         ),

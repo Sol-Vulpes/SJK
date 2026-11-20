@@ -1,17 +1,13 @@
-//! Toys that stay on until the player turns them off (Sol's request, 22/10/2026): Order 66,
-//! the Hax, the Drone, the Monitor, Box hunt, the Prop gun and Quests keep their switch
-//! in an archived cvar ([`ORDER66_CVAR`], [`HAX_CVAR`], [`DRONE_CVAR`],
-//! [`MONITOR_CVAR`], [`BOX_HUNT_CVAR`], [`PROPGUN_CVAR`], [`QUESTS_CVAR`]), so
+//! Toys that stay on until the player turns them off (Sol's request, 22/10/2026): the
+//! Drone, the Monitor, Box hunt, the Prop gun and Quests keep their switch in an archived
+//! cvar ([`DRONE_CVAR`], [`MONITOR_CVAR`], [`BOX_HUNT_CVAR`], [`PROPGUN_CVAR`],
+//! [`QUESTS_CVAR`]), so
 //! a toy turned on is still on after a map change, another server or a restart of the
 //! game. The toy's own state stays the viewer's; [`Saved::sync`] keeps the two in step
 //! once a frame, the cvar winning when it was set from the console or a config.
 
 use crate::console::ViewerConsole;
 
-/// Order 66's switch, saved.
-pub(crate) const ORDER66_CVAR: &str = "cl_toyOrder66";
-/// The Hax's switch, saved.
-pub(crate) const HAX_CVAR: &str = "cl_toyHax";
 /// The Drone's switch (the consent to be peeked), saved.
 pub(crate) const DRONE_CVAR: &str = "cl_toyDrone";
 /// The Monitor's switch (throw them, and be hit), saved.
@@ -57,16 +53,16 @@ mod tests {
         let mut console = ViewerConsole::new(directory.path().join("config.cfg")).unwrap();
         let mut saved = Saved::default();
         // Off by default; the toy turned on is written.
-        assert!(!saved.sync(&mut console, HAX_CVAR, false));
-        assert!(saved.sync(&mut console, HAX_CVAR, true));
-        assert_eq!(console.bool_cvar(HAX_CVAR), Some(true));
+        assert!(!saved.sync(&mut console, DRONE_CVAR, false));
+        assert!(saved.sync(&mut console, DRONE_CVAR, true));
+        assert_eq!(console.bool_cvar(DRONE_CVAR), Some(true));
         // A new run starts from the saved value, whatever the toy says.
         let mut next_run = Saved::default();
-        assert!(next_run.sync(&mut console, HAX_CVAR, false));
+        assert!(next_run.sync(&mut console, DRONE_CVAR, false));
         // Set from the console, the cvar wins; then the toy's toggle wins again.
-        console.set_cvar(HAX_CVAR, "0");
-        assert!(!next_run.sync(&mut console, HAX_CVAR, true));
-        assert!(next_run.sync(&mut console, HAX_CVAR, true));
-        assert_eq!(console.bool_cvar(HAX_CVAR), Some(true));
+        console.set_cvar(DRONE_CVAR, "0");
+        assert!(!next_run.sync(&mut console, DRONE_CVAR, true));
+        assert!(next_run.sync(&mut console, DRONE_CVAR, true));
+        assert_eq!(console.bool_cvar(DRONE_CVAR), Some(true));
     }
 }

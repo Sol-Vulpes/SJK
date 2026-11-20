@@ -14,8 +14,6 @@ pub(crate) const MAX_VOLUME: f64 = 2.0;
 /// The toys that make sounds (the Illuminate holocron is silent).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum Toy {
-    Order66,
-    Hax,
     Ragdoll,
     Drone,
     Boombox,
@@ -34,9 +32,7 @@ pub(crate) enum Toy {
 }
 
 impl Toy {
-    pub(crate) const ALL: [Self; 14] = [
-        Self::Order66,
-        Self::Hax,
+    pub(crate) const ALL: [Self; 12] = [
         Self::Ragdoll,
         Self::Drone,
         Self::Boombox,
@@ -54,8 +50,6 @@ impl Toy {
     /// The switch that lets this toy be heard (on by default).
     pub(crate) const fn cvar(self) -> &'static str {
         match self {
-            Self::Order66 => "s_toyOrder66Sound",
-            Self::Hax => "s_toyHaxSound",
             Self::Ragdoll => "s_toyRagdollSound",
             Self::Drone => "s_toyDroneSound",
             Self::Boombox => "s_toyBoomboxSound",
@@ -118,9 +112,9 @@ mod tests {
     #[test]
     fn a_switched_off_toy_or_zero_volume_is_silent() {
         let mut options = Options::default();
-        assert_eq!(options.gain(Toy::Hax, 0.8), Some(0.8));
-        options.heard[Toy::Hax as usize] = false;
-        assert_eq!(options.gain(Toy::Hax, 1.0), None);
+        assert_eq!(options.gain(Toy::Drone, 0.8), Some(0.8));
+        options.heard[Toy::Drone as usize] = false;
+        assert_eq!(options.gain(Toy::Drone, 1.0), None);
         assert_eq!(options.gain(Toy::Boombox, 1.0), Some(1.0));
         options.volume = 0.5;
         assert_eq!(options.gain(Toy::Boombox, 0.8), Some(0.4));

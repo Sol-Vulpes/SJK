@@ -123,10 +123,15 @@ fn cut(text: &str, chars: usize) -> String {
 
 /// The look toys the Collection's Toys tab has no row for, with their names on the Staff
 /// page's Toys tab: a look toy id ([`crate::looks::TOYS`]) that is a choice of the
-/// player's rather than a toy of its own.
-const OTHER_TOY_NAMES: [(&str, &str); 2] = [
+/// player's rather than a toy of its own, or a removed toy older clients still report
+/// (20/11/2026: the hub counts them until the release switches them off).
+const OTHER_TOY_NAMES: [(&str, &str); 6] = [
     (crate::toon_choice::TOY, "Toon model"),
-    (crate::hax::AWAY_TOY, "Hax, away"),
+    ("hax_away", "Hax, away (removed)"),
+    ("hax", "Hax (removed)"),
+    ("order66", "Order 66 (removed)"),
+    ("cardboard_box", "Cardboard box (removed)"),
+    ("banana", "Banana peel (removed)"),
 ];
 
 /// A look toy's name on the Toys tab: its Collection row's, a playstyle badge's, one of

@@ -174,7 +174,6 @@ mod gpu_texture;
 mod graphics_quality;
 mod graphics_reload;
 mod ground_hud;
-mod hax;
 mod held_view;
 mod hitch_log;
 mod holocron_banners;
@@ -233,7 +232,6 @@ mod npc_refresh;
 mod object_meshes;
 mod oblique_clip;
 mod official;
-mod order66;
 mod ordered_json;
 mod particle_atlas;
 mod particle_draw;
@@ -264,6 +262,7 @@ mod team_sabers;
 mod tickrate_help;
 mod toon_choice;
 mod toy_master;
+mod toy_rules;
 mod toy_saved;
 mod toy_sight;
 mod toy_sounds;
@@ -653,10 +652,6 @@ struct GpuState {
     mining: mining::Mining,
     /// The Mining toy's sounds to play this frame.
     mining_cues: Vec<&'static str>,
-    /// The Order 66 toy (`toy_order66`, `order66`): the order and the pieces flying.
-    order66: order66::Order66,
-    /// The Hax toy (`toy_hax`): a hack under way, the player steered or steering.
-    hax: hax::Hax,
     /// The Drone toy (`toy_drone`): its consent switch and the other players' drones.
     drone: drone::Drone,
     /// The Boombox toy (`toy_boombox`): the own stereo and track, and what plays here.
@@ -674,9 +669,9 @@ struct GpuState {
     tags: tags::Tags,
     /// The Ragdoll toy (`toy_ragdoll`): the player's own fall and the falls of others.
     ragdoll: ragdoll::Ragdoll,
-    /// Order 66's, the Hax's, the Drone's, the Monitor's, Box hunt's, the Prop gun's and
-    /// Quests' switches as last saved (`toy_saved`).
-    toys_saved: [toy_saved::Saved; 7],
+    /// The Drone's, the Monitor's, Box hunt's, the Prop gun's and Quests' switches as last
+    /// saved (`toy_saved`).
+    toys_saved: [toy_saved::Saved; 5],
     /// The Holocrons tab's 3D holocron ([`holocrons::stage`]).
     holocron_stage: holocrons::stage::Stage,
     /// The time its turn and bob are drawn at, instead of the clock's, for a world shot.
@@ -1757,8 +1752,6 @@ impl GpuState {
             fishing_cues: Vec::with_capacity(4),
             mining: Default::default(),
             mining_cues: Vec::with_capacity(4),
-            order66: Default::default(),
-            hax: Default::default(),
             drone: Default::default(),
             boombox: Default::default(),
             monitor: Default::default(),
@@ -2110,7 +2103,6 @@ impl GpuState {
         let peek_view = (!backdrop_view && intermission_view.is_none())
             .then(|| {
                 peek::camera(self, presentation_time)
-                    .or_else(|| hax::camera(self, presentation_time))
                     .or_else(|| ragdoll::camera(self, presentation_time))
             })
             .flatten();
@@ -3017,7 +3009,6 @@ impl GpuState {
         self.submit_illuminate(presentation_time, visual_now);
         self.submit_fishing(presentation_time, visual_now);
         self.submit_mining(visual_now);
-        self.submit_order66(presentation_time, visual_now);
         self.submit_drones(presentation_time, visual_now);
         self.submit_monitors(presentation_time);
         self.submit_boomboxes();
@@ -3060,7 +3051,6 @@ impl GpuState {
                     .predicted_state()
                     .filter(|_| self.live_session.is_some());
                 audio.observe_saber_switches(snapshot, predicted);
-                audio.set_hax_loop(self.hax_loop(presentation_time));
                 audio.set_weather(self.vfs.as_deref(), self.weather.heard());
                 audio.play_weather_cues(self.weather.take_cues());
                 audio.update_frame_loops(

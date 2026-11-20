@@ -144,9 +144,6 @@ pub(crate) struct GameAudio {
     blade_skins: Arc<crate::saber_skins::LoadedSkins>,
     /// The generation of the blade skins registered in `legacy`, once it is ready.
     saber_sets_generation: Option<u64>,
-    /// The Hax toy's hacking sound this frame (`hax.rs`): the hacker's slot, and where
-    /// they stand (`None`: the player's own, in both ears).
-    hax_loop: Option<(SourceId, Option<[f32; 3]>)>,
     /// The Prop gun's flying bolts' loops this frame (source, sound, where).
     propgun_loops: Vec<(SourceId, String, [f32; 3])>,
     /// The toys' volume and per-toy switches (`toy_sounds.rs`), read each frame.
@@ -294,7 +291,6 @@ impl GameAudio {
             legacy_vfs: None,
             blade_skins: Arc::default(),
             saber_sets_generation: None,
-            hax_loop: None,
             propgun_loops: Vec::with_capacity(8),
             toy_sounds: Default::default(),
             flesh_sparks: crate::impacts::FLESH_SPARKS_ALL,
@@ -597,11 +593,6 @@ impl GameAudio {
         self.mute.silences(source, cause)
     }
 
-    /// The Hax toy's hacking sound this frame, played with the frame's loops.
-    pub(crate) fn set_hax_loop(&mut self, hacking: Option<(u8, Option<[f32; 3]>)>) {
-        self.hax_loop = hacking.map(|(slot, origin)| (SourceId(u32::from(slot)), origin));
-    }
-
     /// The Prop gun's flying bolts' loops this frame, played with the frame's loops.
     pub(crate) fn set_propgun_loops(&mut self, loops: &[(SourceId, String, [f32; 3])]) {
         self.propgun_loops.clear();
@@ -692,15 +683,10 @@ impl GameAudio {
     }
 
     /// The toys' loops join the loop set (none for a player muted here); they are the
-    /// toys' sounds, not the map's music, so they ignore `s_musicVolume`: the Hax toy's
-    /// hacking sound, the Prop gun's bolts in flight.
+    /// toys' sounds, not the map's music, so they ignore `s_musicVolume`: the Prop gun's
+    /// bolts in flight.
     fn send_toy_loops(&mut self) {
         use crate::toy_sounds::Toy;
-        if let (Some(handle), Some((source, origin))) =
-            (self.find_handle(crate::hax::HACK_SOUND), self.hax_loop)
-        {
-            self.send_toy_loop(Toy::Hax, handle, source, origin);
-        }
         for index in 0..self.propgun_loops.len() {
             let (source, origin) = (self.propgun_loops[index].0, self.propgun_loops[index].2);
             if let Some(handle) = self.find_handle(&self.propgun_loops[index].1) {

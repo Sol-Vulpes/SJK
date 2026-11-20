@@ -280,36 +280,27 @@ pub(crate) struct ViewerConsole {
     illuminate_lit: bool,
     /// The Toys tab asked to light the holocron (`true`) or put it out, not yet taken.
     pending_illuminate: Option<bool>,
-    /// The Order 66 toy is on: the viewer's state, mirrored as
-    /// [`Self::illuminate_lit`] is.
-    order66_on: bool,
-    /// The Toys tab asked to turn Order 66 on (`true`) or off, not yet taken.
-    pending_order66: Option<bool>,
-    /// The Hax toy is on, mirrored as [`Self::order66_on`] is.
-    hax_on: bool,
-    /// The Toys tab asked to turn the Hax on (`true`) or off, not yet taken.
-    pending_hax: Option<bool>,
-    /// The player is limp (the Ragdoll), mirrored as [`Self::order66_on`] is.
+    /// The player is limp (the Ragdoll), mirrored as [`Self::illuminate_lit`] is.
     ragdoll_on: bool,
     /// The Toys tab asked to go limp (`true`) or get up, not yet taken.
     pending_ragdoll: Option<bool>,
-    /// The Drone is on, mirrored as [`Self::order66_on`] is.
+    /// The Drone is on, mirrored as [`Self::illuminate_lit`] is.
     drone_on: bool,
     /// The Toys tab asked to turn the Drone on (`true`) or off, not yet taken.
     pending_drone: Option<bool>,
-    /// The Boombox is carried, mirrored as [`Self::order66_on`] is.
+    /// The Boombox is carried, mirrored as [`Self::illuminate_lit`] is.
     boombox_on: bool,
     /// The Toys tab asked to carry the Boombox (`true`) or put it away, not yet taken.
     pending_boombox: Option<bool>,
-    /// Quests are on, mirrored as [`Self::order66_on`] is.
+    /// Quests are on, mirrored as [`Self::illuminate_lit`] is.
     quests_on: bool,
     /// The Toys tab asked to turn Quests on (`true`) or off, not yet taken.
     pending_quests: Option<bool>,
-    /// The fishing rod is out, mirrored as [`Self::order66_on`] is.
+    /// The fishing rod is out, mirrored as [`Self::illuminate_lit`] is.
     fishing_on: bool,
     /// The Toys tab asked to get the rod out (`true`) or put it away, not yet taken.
     pending_fishing: Option<bool>,
-    /// The pickaxe is in hand, mirrored as [`Self::order66_on`] is.
+    /// The pickaxe is in hand, mirrored as [`Self::illuminate_lit`] is.
     mining_on: bool,
     /// The Toys tab asked to take the pickaxe (`true`) or put it away, not yet taken.
     pending_mining: Option<bool>,
@@ -320,7 +311,7 @@ pub(crate) struct ViewerConsole {
     /// The Fishing or Mining card's Sell fish / Sell ore button (the catch market,
     /// 15/11/2026) was pressed: `Some(true)` fish, `Some(false)` ore.
     pending_catch_sell: Option<bool>,
-    /// A WHEEL OF DOOM of the player's runs, mirrored as [`Self::order66_on`] is.
+    /// A WHEEL OF DOOM of the player's runs, mirrored as [`Self::illuminate_lit`] is.
     wheel_of_doom_on: bool,
     /// The Toys tab pressed the WHEEL OF DOOM's switch, not yet taken.
     pending_wheel_of_doom: bool,
@@ -332,11 +323,11 @@ pub(crate) struct ViewerConsole {
     pending_servers: bool,
     /// The log book's Share button was pressed: Mining's (`true`) or Fishing's.
     pending_brag: Option<bool>,
-    /// The Monitor toy is on, mirrored as [`Self::order66_on`] is.
+    /// The Monitor toy is on, mirrored as [`Self::illuminate_lit`] is.
     monitor_on: bool,
     /// The Toys tab asked to turn the Monitor on (`true`) or off, not yet taken.
     pending_monitor: Option<bool>,
-    /// Box hunt is on, mirrored as [`Self::order66_on`] is.
+    /// Box hunt is on, mirrored as [`Self::illuminate_lit`] is.
     box_hunt_on: bool,
     /// The Toys tab asked to turn Box hunt on (`true`) or off, not yet taken.
     pending_box_hunt: Option<bool>,

@@ -679,18 +679,6 @@ pub(super) fn register_daily_cvars(cvars: &mut CvarRegistry) -> Result<(), sjk_s
             "Loudness of the toys' sounds, times the effects volume (SJK)",
         ),
         CvarDefinition::new(
-            crate::toy_sounds::Toy::Order66.cvar(),
-            true,
-            archive,
-            "Play Order 66 sounds (SJK)",
-        ),
-        CvarDefinition::new(
-            crate::toy_sounds::Toy::Hax.cvar(),
-            true,
-            archive,
-            "Play Hax sounds (SJK)",
-        ),
-        CvarDefinition::new(
             crate::toy_sounds::Toy::Ragdoll.cvar(),
             true,
             archive,
@@ -1098,30 +1086,6 @@ pub(super) fn register_daily_cvars(cvars: &mut CvarRegistry) -> Result<(), sjk_s
             true,
             archive,
             "Draw the kybers from Creyon's Blade Lab as the lab drew them",
-        ),
-        CvarDefinition::new(
-            crate::toy_saved::ORDER66_CVAR,
-            false,
-            archive,
-            "The Order 66 toy is on (toy_order66 switches it; it stays on until turned off)",
-        ),
-        CvarDefinition::new(
-            crate::hax::TRAP_CVAR,
-            false,
-            archive,
-            "Hax trap: a player who hacks you springs it, and you both blow up as in Order 66",
-        ),
-        CvarDefinition::new(
-            crate::hax::AWAY_CVAR,
-            false,
-            archive,
-            "With the Hax trap on, players may hack you while you are away (it shows on your look)",
-        ),
-        CvarDefinition::new(
-            crate::toy_saved::HAX_CVAR,
-            false,
-            archive,
-            "The Hax toy is on (toy_hax switches it; it stays on until turned off)",
         ),
         CvarDefinition::new(
             crate::toy_saved::DRONE_CVAR,

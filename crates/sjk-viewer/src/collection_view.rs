@@ -82,7 +82,7 @@ pub(super) fn counts(inputs: &Inputs<'_>) -> [Count; 10] {
             held: shaders,
             total: shaders_shown,
         },
-        // Every toy is everyone's (Illuminate, Order 66, the Hax...).
+        // Every toy is everyone's (Illuminate, the Ragdoll, the Drone...).
         Count {
             held: Some(TOY_COUNT),
             total: TOY_COUNT,
@@ -152,8 +152,6 @@ pub(crate) fn row_labels(
         setting: "",
         standings,
         illuminate: true,
-        order66: false,
-        hax: false,
         ragdoll: false,
         drone: false,
         boombox: false,
@@ -552,8 +550,6 @@ impl Panel {
         let frame = Frame::new(viewport);
         self.follow_news(inputs);
         self.empty_action = None;
-        self.order66_on = inputs.order66;
-        self.hax_on = inputs.hax;
         self.ragdoll_on = inputs.ragdoll;
         self.drone_on = inputs.drone;
         self.boombox_on = inputs.boombox;
@@ -1045,10 +1041,6 @@ impl Panel {
             Tab::Toys => keys.push((
                 &["Enter"],
                 match (self.toy, inputs.illuminate) {
-                    (ORDER66_TOY, _) if inputs.order66 => "turn off",
-                    (ORDER66_TOY, _) => "turn on",
-                    (HAX_TOY, _) if inputs.hax => "turn off",
-                    (HAX_TOY, _) => "turn on",
                     (RAGDOLL_TOY, _) if inputs.ragdoll => "get up",
                     (RAGDOLL_TOY, _) => "go limp",
                     (DRONE_TOY, _) if inputs.drone => "turn off",

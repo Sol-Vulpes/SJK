@@ -21,10 +21,6 @@ pub(crate) enum State {
     Fishing,
     /// The pickaxe is in hand (`toy_mining` flips it).
     Mining,
-    /// The Order 66 toy is on (`toy_order66` flips it).
-    Order66,
-    /// The Hax toy is on (`toy_hax` flips it).
-    Hax,
     /// The player is limp (`toy_ragdoll` flips it).
     Ragdoll,
     /// The Drone toy is on (`toy_drone` flips it).
@@ -45,7 +41,7 @@ pub(crate) enum State {
 /// icons and cut by `scripts/wheel_icons.py` from two boards (the first sixteen
 /// from the first, the rest, named by the actions they are for, from the
 /// second); uploaded into the UI atlas at start (`ui_renderer::wheel_icon`).
-pub(crate) const ICONS: [(&str, &[u8]); 58] = [
+pub(crate) const ICONS: [(&str, &[u8]); 55] = [
     ("drizzle", include_bytes!("../../assets/wheel/drizzle.png")),
     ("rain", include_bytes!("../../assets/wheel/rain.png")),
     ("storm", include_bytes!("../../assets/wheel/storm.png")),
@@ -171,17 +167,6 @@ pub(crate) const ICONS: [(&str, &[u8]); 58] = [
         "mining",
         include_bytes!("../../assets/mining/toy_mining.png"),
     ),
-    // Order 66's pictures, the badge and the blast (bundled with the client).
-    (
-        "order66",
-        include_bytes!("../../assets/order66/toy_order66.png"),
-    ),
-    (
-        "order66_execute",
-        include_bytes!("../../assets/order66/order66_execute.png"),
-    ),
-    // The Hax's picture, the terminal (bundled with the client).
-    ("hax", include_bytes!("../../assets/hax/toy_hax.png")),
     // The Ragdoll's picture, the slumped figure (bundled with the client).
     (
         "ragdoll",
@@ -656,32 +641,6 @@ pub(crate) const ACTIONS: &[Action] = &[
         State::Mining,
         Some("mining"),
     ),
-    action(
-        "order66",
-        "Order 66",
-        crate::order66::COMMAND,
-        Toys,
-        State::Order66,
-        Some("order66"),
-    ),
-    // Gives the order to every player with the toy on (the own toy first).
-    action(
-        "order66_execute",
-        "Execute Order 66",
-        crate::order66::EXECUTE_COMMAND,
-        Toys,
-        State::None,
-        Some("order66_execute"),
-    ),
-    // The hack itself is `+use` held on a player who has it on too.
-    action(
-        "hax",
-        "Hax",
-        crate::hax::COMMAND,
-        Toys,
-        State::Hax,
-        Some("hax"),
-    ),
     // Goes limp; again gets up.
     action(
         "ragdoll",
@@ -849,11 +808,8 @@ pub(crate) const GENERAL: [&str; 8] = [
     "first_setup",
 ];
 /// The ids of the Toys page's default choices.
-pub(crate) const TOYS: [&str; 9] = [
+pub(crate) const TOYS: [&str; 6] = [
     "illuminate",
-    "order66",
-    "order66_execute",
-    "hax",
     "ragdoll",
     "drone",
     "boombox",

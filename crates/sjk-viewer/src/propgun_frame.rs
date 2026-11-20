@@ -321,7 +321,7 @@ impl GpuState {
             .config_string(0)
             .and_then(|info| sjk_client::LegacyClientInfo::new(info).integer("g_gametype"))
             .unwrap_or(0);
-        self.propgun.duel = crate::order66::duelling(&session.latest_snapshot().player, gametype);
+        self.propgun.duel = crate::toy_rules::duelling(&session.latest_snapshot().player, gametype);
         self.propgun.unseen = self
             .console
             .as_ref()
@@ -507,7 +507,7 @@ impl GpuState {
     /// in a duel or held (the toy on for a prop gun's bolt, the caller's to check: the
     /// box's Ray Gun strikes anyone once).
     fn propgun_target(&self) -> Option<Target> {
-        if !self.ragdoll.strikable() || self.talk_button() || self.hax_own_away() {
+        if !self.ragdoll.strikable() || self.talk_button() || self.own_away() {
             return None;
         }
         if let Some(points) = self.ragdoll.own_points() {

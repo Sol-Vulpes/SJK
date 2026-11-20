@@ -1215,22 +1215,14 @@ live snapshot by `achievements_frame.rs`):
   player's Screen Saver, a hit on the player whose monitor raised it counts Payback,
   and the third different player hit counts Power Surge, each once a Screen Saver;
 - the toys' own (30/10/2026). The tracker weighs each obituary against what the toys
-  tell it of the moment (`tracker::Toys`, `GpuState::toy_moments`): who lifted the
-  player's box and when that reached this client, the player the Hax steers, the player
-  the Drone last watched and when it landed (the peek ended, or moved to another player),
-  and the SJK players within the range of the player's boombox while it plays. A kill of
-  the lifter within 3 seconds (`tracker::BOX_AMBUSH`) counts Surprise!, once a lift; of
-  the player the Drone watched within 10 seconds of its landing (`tracker::DRONE_STRIKE`),
-  Eye in the Sky, once a landing. A kill by the player steered of anyone but themselves
-  and the hacker counts towards the best of one hack (Puppet Master to Total Control);
-  their death by a fall, a pit or a hazard by their own hand or the world's, Leap of
-  Faith. Minutes steering and minutes with a listener in reach count as time played
-  does, the most listeners at once is kept (Block Party), and a listener dead by their
+  tell it of the moment (`tracker::Toys`, `GpuState::toy_moments`): the player the Drone
+  last watched and when it landed (the peek ended, or moved to another player), and the
+  SJK players within the range of the player's boombox while it plays. A kill of the
+  player the Drone watched within 10 seconds of its landing (`tracker::DRONE_STRIKE`)
+  counts Eye in the Sky, once a landing. Minutes with a listener in reach count as time
+  played does, the most listeners at once is kept (Block Party), and a listener dead by their
   own hand or the world's counts Tough Crowd. The rest are counted by the toys
-  (`achievements::note`, `note_best`, `note_name`): a box lifted (Alert!, by the name
-  shown), a trap sprung on a hacker (It's a Trap!), the holders blown up in the window of
-  the player's own Order 66 (Wipe Them Out, the most of one order, and I Am the Senate,
-  by name), and the player's monitor's hits as the struck players' clients tell them
+  (`achievements::note`, `note_best`, `note_name`): the player's monitor's hits as the struck players' clients tell them
   (Tech Support by name, Two for One and Strike! by the players one monitor struck, Long
   Distance Call by how far it flew from its throw, and Special Delivery, a hit on the
   player the Drone watched within 5 seconds of its landing). The sets of players are

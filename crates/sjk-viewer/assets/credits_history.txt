@@ -9,6 +9,8 @@
 #                               made it when that is not the piece's owner.
 
 = Sol
++ 20/11/2026 | - | Remove Order 66 and the Hax
+- a29194c |  | Remove Order 66 and the Hax
 + 20/11/2026 | - | Remove the cardboard box toy
 - 58bc2bc |  | Remove the cardboard box toy
 + 20/11/2026 | - | Remove the Banana peel toy

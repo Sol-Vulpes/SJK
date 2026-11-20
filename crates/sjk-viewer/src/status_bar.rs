@@ -1532,7 +1532,7 @@ mod tests {
             coins: Some(1),
             ..Inputs::default()
         };
-        inputs.toys[toys::HAX] = true;
+        inputs.toys[toys::DRONE] = true;
         let mut out = [NO_PIECE; MAX_PIECES];
         // Shards and crystals unknown, no weapon, no clock read yet: not shown.
         let count = bottom_pieces(&inputs, Parts::ALL, &mut out);
@@ -1560,11 +1560,11 @@ mod tests {
         ));
         assert_eq!(count, 3 + TOY_COUNT);
         assert_eq!(
-            out[3 + toys::HAX],
+            out[3 + toys::DRONE],
             (
                 Part::Toys,
                 Piece::Toy {
-                    index: toys::HAX,
+                    index: toys::DRONE,
                     on: true
                 }
             )
