@@ -73,6 +73,7 @@ A new emblem, a new Collection with kybers and an Inventory, status bars at both
 - Identity: `identity link` takes a code typed in two halves (ABCD EFGH) too, and a staff key, which the hub never joins to another account, is told at once to make the code on its own page with `identity site` and type it on the other computer instead _(Slash, PR #433, hub report #316, after JoF''kushina's report)_
 - Box hunt: a hunter out on their own screen (a teleport, or killed by the mark) whose word never reached the hub is told again, so the mark can still outlast every hunter and win, and credits the hunt pays show in your count within half a minute instead of up to 10 minutes later (hub reports #304 and #314) _(Slash, PR #429, after NX|LH's and blej's reports)_
 - Faces: players and NPCs blink again every 4 to 8 seconds (now and then a wink), their faces turn alert or frown now and then, and the dead close their eyes, as in the stock game _(Slash, PR #428, after Goylander's report)_
+- Duels: `tell_attacker <message>` whispers to the last player who hurt you, as in EternalJK; Duel start, won and lost lines (`cg_duelStartLine`, `cg_duelWinLine`, `cg_duelLoseLine`, Settings > Chat, empty = off) whisper your own line to your private duel opponent as the duel starts and ends, or send it to all chat with Duel lines to all chat (`cg_duelLinesToAll`) _(Slash, PR #430, after Ric's and Lex Deifaber's idea)_
 
 ## 2026.1117.1 (Alpha) | 17/11/2026
 

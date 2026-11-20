@@ -1,3 +1,14 @@
+## tell_attacker and duel lines (17/11/2026)
+
+17/11/2026, `feat/duel-lines` based on `main` `afd16b60` (Ric's idea, extended by Lex Deifaber,
+#ideas 04/11/2026; Sol's 16/11/2026 recap: "tell_attacker, a duel start and end line").
+`tell_attacker <message>` whispers to the last player who hurt you, as stock cgame and
+EternalJK do, without a bad `tell` for the world or yourself. `cg_duelStartLine`,
+`cg_duelWinLine` and `cg_duelLoseLine` (archived, empty = off) whisper a line to the private
+duel opponent at its start, win or loss (or to all chat with `cg_duelLinesToAll 1`), once a duel and 10 s apart per kind
+([client.md](client.md#joining-and-changing-maps)). Verified: `cargo test -p sjk-viewer duel_lines` and
+`tell_attacker` (start once, win, loss by obituary or death, a late obituary, other ends,
+the gap, followed players). Not verified: no private duel was played with it.
 ## Collection glass and the Kybers page (18/11/2026)
 
 18/11/2026, `personal/collection-glass` from `main` `44099d074` (Sol: "make the acrylic work

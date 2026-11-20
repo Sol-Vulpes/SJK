@@ -420,7 +420,7 @@ link: Lukas's pull requests | https://github.com/Sol-Vulpes/SJK/pulls?q=is%3Apr+
 
 [Slash]
 github: JoFSlash
-role: Contributor: 163 merged pull requests
+role: Contributor: 164 merged pull requests
 did: #114 Tab completes cfg file names after exec and writeconfig
 did: #113 CTF team saber colours, an option
 did: #153 The SJK scoreboard tells who won the Siege round or team match
@@ -584,6 +584,7 @@ did: #434 in_mouseRepeat: a click runs its bind once, repeats start after 250 ms
 did: #433 identity link: a code in two halves, a staff key told which way it goes
 did: #429 Box hunt: a lost out report goes again, paid credits show soon
 did: #428 Models blink and change their face, as in stock JKA (Goylander's report)
+did: #430 tell_attacker and duel start, won and lost lines
 link: Slash's pull requests | https://github.com/Sol-Vulpes/SJK/pulls?q=is%3Apr+author%3AJoFSlash
 
 [Milamber]

@@ -30,6 +30,28 @@ pub(crate) fn register(cvars: &mut CvarRegistry) -> Result<(), sjk_shell::CvarEr
         CvarFlags::NONE,
         "Do not disturb: hide public, team, SJK and admin chat but your duel partner's and whispers, until the map changes",
     ))?;
+    for (name, help) in [
+        (
+            crate::duel_lines::START_CVAR,
+            "Whispered to your private duel opponent as the duel starts; empty sends nothing",
+        ),
+        (
+            crate::duel_lines::WIN_CVAR,
+            "Whispered to your private duel opponent after you win the duel; empty sends nothing",
+        ),
+        (
+            crate::duel_lines::LOSE_CVAR,
+            "Whispered to your private duel opponent after you lose the duel; empty sends nothing",
+        ),
+    ] {
+        cvars.register(CvarDefinition::new(name, "", CvarFlags::ARCHIVE, help))?;
+    }
+    cvars.register(CvarDefinition::new(
+        crate::duel_lines::TO_ALL_CVAR,
+        false,
+        CvarFlags::ARCHIVE,
+        "Send the duel start, won and lost lines to all chat instead of whispering them to your opponent",
+    ))?;
     cvars.register(CvarDefinition::new(
         crate::chat::quiet::DUEL_CVAR,
         false,
