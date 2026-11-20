@@ -686,7 +686,12 @@ impl crate::GpuState {
         // Without the live sun (the Vanilla family) the PC clock's night is a
         // darker exposure; with it, the sun itself shows the hour.
         if !self.context.sun_shadows.day.enabled {
-            values.night = self.context.dynamic_light_settings.day_clock().night_tint();
+            let clock = self.context.dynamic_light_settings.day_clock();
+            values.night = clock.night_tint();
+            // Low FPS Night's dark bake must not be brightened back by eye adaptation.
+            if clock.low_fps_night() {
+                values.max_ev = 0.0;
+            }
         }
         let snapshot = self
             .live_session

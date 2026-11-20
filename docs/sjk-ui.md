@@ -906,7 +906,8 @@ that mode for the visit and leaves the player's choice as it was.
     `Group::Network`), each category's classic+ panel named for the hand-over
     to the classic style. Graphics leads with a Quality heading (the graphics
     preset, impact marks and player shadows, out of Video) and then
-    gathers the renderer's four tabs (image, lighting, shadows, weather) under
+    gathers the renderer's five tabs (image, lighting, shadows, weather, Low FPS
+    Night) under
     their names; Display is Video's other rows under Screen, Frame rate (with
     the menus' own cap, Menu FPS cap, `com_maxfpsMenu`, since 25/10/2026) and
     View; Sound holds every sound, the game's under Game, then the unlock

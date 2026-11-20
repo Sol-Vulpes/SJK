@@ -103,6 +103,8 @@ pub(crate) enum Entry {
     RenderShadows,
     /// SJK: rain, fog and clouds (the renderer settings' WEATHER tab).
     Weather,
+    /// SJK: Low FPS Night (the renderer settings' LOW FPS NIGHT tab).
+    LowFpsNight,
     /// A sub-page's Back, to the setup options.
     SetupBack,
     Back,
@@ -282,9 +284,11 @@ impl Entry {
             Self::Graphics => Outcome::Page(Page::Graphics),
             Self::Gameplay => Outcome::Page(Page::Gameplay),
             // Each opens its panel ([`Entry::panel`]); the renderer settings otherwise.
-            Self::RenderImage | Self::RenderLighting | Self::RenderShadows | Self::Weather => {
-                Outcome::Open(MainDestination::Renderer)
-            }
+            Self::RenderImage
+            | Self::RenderLighting
+            | Self::RenderShadows
+            | Self::Weather
+            | Self::LowFpsNight => Outcome::Open(MainDestination::Renderer),
             Self::PlayDemo | Self::Rules => Outcome::Unavailable,
         }
     }
@@ -365,6 +369,7 @@ impl Entry {
             Self::RenderLighting => Panel::Renderer { tab: 1 },
             Self::RenderShadows => Panel::Renderer { tab: 2 },
             Self::Weather => Panel::Renderer { tab: 3 },
+            Self::LowFpsNight => Panel::Renderer { tab: 4 },
             _ => return None,
         })
     }
@@ -389,6 +394,7 @@ impl Entry {
             Self::RenderLighting => "lighting",
             Self::RenderShadows => "shadows",
             Self::Weather => "weather",
+            Self::LowFpsNight => "low_fps_night",
             Self::MouseJoystick => "mouse_joystick",
             Self::GameOptions => "game_options",
             Self::Interface => "interface",
@@ -555,13 +561,14 @@ mod tests {
             ]
         );
         assert_eq!(
-            entries(Page::Graphics)[4..9],
+            entries(Page::Graphics)[4..10],
             [
                 Entry::Video,
                 Entry::RenderImage,
                 Entry::RenderLighting,
                 Entry::RenderShadows,
-                Entry::Weather
+                Entry::Weather,
+                Entry::LowFpsNight
             ]
         );
         assert_eq!(

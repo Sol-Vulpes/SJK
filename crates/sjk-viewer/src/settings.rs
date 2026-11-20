@@ -1068,6 +1068,7 @@ fn section_settings(section: Section, tab: usize) -> &'static [Setting] {
             1 => RENDER_LIGHTING,
             2 => RENDER_SHADOWS,
             3 => RENDER_WEATHER,
+            4 => RENDER_LOW_FPS_NIGHT,
             _ => &[],
         },
         Section::Group(group) => group.rows(),
@@ -1076,7 +1077,7 @@ fn section_settings(section: Section, tab: usize) -> &'static [Setting] {
 }
 
 /// The cvars of the Video tab's rows and of the renderer's tabs (Image, Lighting,
-/// Shadows, Weather), in their order: what the frame timings log records with its
+/// Shadows, Weather, Low FPS Night), in their order: what the frame timings log records with its
 /// times (`frame_timings.rs`). Rows that stand for a command, not a cvar, are in it
 /// too; the console has no value for them.
 pub(crate) fn graphics_cvars() -> impl Iterator<Item = &'static str> {
@@ -1086,6 +1087,7 @@ pub(crate) fn graphics_cvars() -> impl Iterator<Item = &'static str> {
         RENDER_LIGHTING,
         RENDER_SHADOWS,
         RENDER_WEATHER,
+        RENDER_LOW_FPS_NIGHT,
     ]
     .into_iter()
     .flatten()
@@ -1154,6 +1156,7 @@ pub(crate) fn row_takes(cvar: &str, value: &str) -> bool {
             RENDER_LIGHTING,
             RENDER_SHADOWS,
             RENDER_WEATHER,
+            RENDER_LOW_FPS_NIGHT,
         ])
         .flatten()
         .find(|setting| setting.cvar.eq_ignore_ascii_case(cvar));
@@ -1226,7 +1229,7 @@ fn preview_sound(row: &str) {
 }
 
 /// Whether `cvar` is one of the renderer's settings: the graphics preset and
-/// every row of Graphics' image, lighting, shadows and weather.
+/// every row of Graphics' image, lighting, shadows, weather and Low FPS Night.
 fn renderer_setting(cvar: &str) -> bool {
     crate::graphics_quality::ROW_NAME.eq_ignore_ascii_case(cvar)
         || [
@@ -1234,6 +1237,7 @@ fn renderer_setting(cvar: &str) -> bool {
             RENDER_LIGHTING,
             RENDER_SHADOWS,
             RENDER_WEATHER,
+            RENDER_LOW_FPS_NIGHT,
         ]
         .iter()
         .flat_map(|tab| tab.iter())

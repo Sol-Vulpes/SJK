@@ -1991,6 +1991,18 @@ const HELP: &[(&str, &str)] = &[
         "Day and night follow your PC's clock; without real-time lighting the nights are darker.",
     ),
     (
+        "r_lowFpsNight",
+        "A fixed 22:00 night at no FPS cost, without real-time lighting: the map goes dark, lamps and sabers keep their light.",
+    ),
+    (
+        "r_lowFpsNightLevel",
+        "Low FPS Night: how bright the map stays; lower is darker.",
+    ),
+    (
+        "r_lowFpsNightLamps",
+        "Low FPS Night: how much of their light the map's lamps keep.",
+    ),
+    (
         "r_dayMinutes",
         "How long a whole day lasts in real time, or the hour holds still.",
     ),
@@ -2073,6 +2085,7 @@ mod tests {
             RENDER_LIGHTING,
             RENDER_SHADOWS,
             RENDER_WEATHER,
+            RENDER_LOW_FPS_NIGHT,
             // Rows only a search shows (they live on the Collection's Hax card).
             HAX_TOY,
         ]

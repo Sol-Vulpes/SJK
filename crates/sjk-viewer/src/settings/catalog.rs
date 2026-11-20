@@ -24,7 +24,8 @@ pub(super) const QUICK_TAB: usize = 8;
 pub(super) const RENDERER_TAB: usize = 0;
 /// Tabs of the renderer settings, SJK's own rendering cvars, which the
 /// classic Graphics page's panels and the SJK UI's Graphics show.
-pub(super) const RENDERER_TABS: [&str; 4] = ["IMAGE", "LIGHTING", "SHADOWS", "WEATHER"];
+pub(super) const RENDERER_TABS: [&str; 5] =
+    ["IMAGE", "LIGHTING", "SHADOWS", "WEATHER", "LOW FPS NIGHT"];
 
 #[derive(Clone, Copy)]
 pub(super) enum ValueKind {
@@ -2574,5 +2575,33 @@ pub(super) const RENDER_WEATHER: &[Setting] = &[
         label: "Snow settles",
         cvar: crate::weather::SNOW_COVER_CVAR,
         kind: ValueKind::Bool,
+    },
+];
+
+/// Low FPS Night (`day_live::LOW_FPS_NIGHT_CVAR`): a fixed night on baked lighting at no
+/// cost, its own tab so players on slower PCs find it apart from the Solar Renderer's.
+pub(super) const RENDER_LOW_FPS_NIGHT: &[Setting] = &[
+    Setting {
+        label: "Low FPS Night",
+        cvar: "r_lowFpsNight",
+        kind: ValueKind::Bool,
+    },
+    Setting {
+        label: "Night brightness",
+        cvar: "r_lowFpsNightLevel",
+        kind: ValueKind::Float {
+            min: 0.05,
+            max: 1.0,
+            step: 0.05,
+        },
+    },
+    Setting {
+        label: "Lamp light kept",
+        cvar: "r_lowFpsNightLamps",
+        kind: ValueKind::Float {
+            min: 0.0,
+            max: 1.0,
+            step: 0.05,
+        },
     },
 ];

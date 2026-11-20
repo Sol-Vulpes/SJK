@@ -606,6 +606,7 @@ when they are drawn.
 | `r_bouncedLight` | With real-time lighting, light bounces through the GI probes (`gi_probes.rs`); 0 leaves the probes out (the voxel scene stays: lamp visibility needs it); default 1, applies after a graphics reload (10/11/2026) |
 | `r_lampShadows` | With real-time lighting, the nearest lamps' shadow maps (`lamp_shadows`); 0 leaves them out; default 1, applies after a graphics reload (10/11/2026) |
 | `r_daySky` | Without real-time lighting, the sky still shows `r_dayHour` turning with `r_dayMinutes` (the sky's day tint, as `r_dayClock` does for the PC's hour), and its night darkens the exposure (`day_live::night_tint` of the set hour); default 0, applies after a graphics reload (10/11/2026). World shot `solar_day_sky_without_live_light`: ground brightness 100, 79 and 64 of 255 at 12:00, 19:30 and 23:00 on ffa3 |
+| `r_lowFpsNight`, `r_lowFpsNightLevel`, `r_lowFpsNightLamps` | Low FPS Night, its own renderer tab: a fixed 22:00 night on baked lighting at no cost; default 0 (off), 0.2 and 0.1; all live, its night sky from the next map or graphics reload. See [Low FPS Night](#low-fps-night) |
 | `r_liveLighting` | Lighting tier; default 0. Tier 1 retains world shadow casters between frames; tier 0 also uses available baked indirect light. Applies at map load |
 | `r_dayHour` | Solar hour; default 12 (noon, SJK); updated live when day/night resources are installed |
 | `r_dayMinutes` | Minutes per simulated day; 0 holds the hour |
@@ -4598,6 +4599,38 @@ Two 45-second native `ffa1` replay process runs also passed without panic or GPU
 validation errors: threaded submission with HDR/FXAA, and inline submission with
 HDR/FXAA disabled to exercise direct surface acquisition. Both used isolated
 1280×720 settings; these are integration checks, not performance measurements.
+
+## Low FPS Night
+
+A fixed night for PCs that cannot afford real-time lighting (`r_lowFpsNight`, the
+renderer's LOW FPS NIGHT tab, 20/11/2026, after Kushina's idea). It runs on the map's own
+baked lighting alone (`r_dayNight 0`): it never turns real-time lighting on, and under it
+does nothing. In play on the author's PC it held the 142 FPS cap on a desert canyon map;
+real-time lighting at night had given 50 to 60 FPS on the same PC (09/11/2026), its sun
+shadow cascades being drawn every frame even with the sun below the horizon.
+
+- The sky is held at 22:00 (`day_live::LOW_FPS_NIGHT_HOUR`, `Clock::sky_values`, over
+  `r_dayClock` and `r_daySky`); the sky's day tint is installed for it from the next map
+  load or graphics reload (`day::Settings::sky`).
+- The bake is darkened in the stage shader (`night_bake`, `night_factor` in
+  `world_lighting_mode.wgsl`; Rust twin `day_live::night_factor`): lightmap texels and
+  the world's vertex-baked colours keep `r_lowFpsNightLevel` (default 0.2, 0.05 to 1)
+  as seen, its 2.2 power in linear light, so the slider reads as the brightness the eye
+  sees. The brightest bake (linear peak 0.45 to 1, lamp hot spots) keeps up to
+  `r_lowFpsNightLamps` (default 0.1) more. Textures, emission, additive stages and glow
+  are untouched, so lamp fixtures and signs still shine.
+- Dynamic lights (sabers, shots, explosions) on the world are divided by the level
+  (`dynamic_light_modulation` in `point_lights.wgsl`), so they light the dark as brightly
+  as by day. Models take the darkened light grid, minimum ambient included, before the
+  dynamic lights join it at full strength (`entity_lighting::finish`,
+  `finish_model_light`); saber blade skins keep the day's grid light.
+- The whole-picture night tint of `r_dayClock` and `r_daySky` is off in this mode, and
+  eye adaptation does not brighten the view back (`max_ev` 0, `post_exposure.rs`).
+- The switch rides the model word of the scene-light block
+  (`dynamic_light_settings::night_bits`: bit 5, level bits 8 to 15, lamps 16 to 23).
+- Cost: a few multiplies a pixel and one per entity; no pass, texture or allocation.
+- Limits: the lamp test goes by brightness, so the brightest sunlit bake of a map keeps
+  some light too (lower Lamp light kept); fog volumes keep their authored colour.
 
 ## Weather
 

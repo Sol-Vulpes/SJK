@@ -30,6 +30,12 @@ The site (site/assets/site.js, parseChangelog) reads the release headings,
 introductions and recap lines too.
 Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 -->
+## Unreleased
+
+= r_lowFpsNight: Low FPS Night: a fixed night at no FPS cost without real-time lighting; the map goes dark while lamps and sabers keep their light.
+
+- Settings > Graphics has a Low FPS Night tab (`r_lowFpsNight`): a fixed 22:00 night on the map's own baked lighting, for slower PCs, at no FPS cost. The map's light goes dark (Night brightness, `r_lowFpsNightLevel`), the brightest lamp spots keep some (Lamp light kept, `r_lowFpsNightLamps`), and sabers, shots and explosions light the dark as brightly as by day; it never turns real-time lighting on _(Kushina)_
+
 ## 2026.1117.1 (Alpha) | 17/11/2026
 
 A devmap cheat bar, quicker votes, console translation and a log book for Fishing and Mining.

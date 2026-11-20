@@ -39,6 +39,8 @@ const IDENTITY_LIGHT_BYTE: f32 = 255.0;
 #[derive(Clone, Copy, Debug, Default)]
 pub(crate) struct EntityLighting {
     layout: Option<LightGridLayout>,
+    /// Low FPS Night's `[level, lamps]` this frame (`r_lowFpsNight`, baked lighting only).
+    pub(crate) night: Option<[f32; 2]>,
 }
 
 impl EntityLighting {
@@ -61,6 +63,7 @@ impl EntityLighting {
             .unwrap_or(DEFAULT_GRID_SIZE);
         Self {
             layout: bsp.render().light_grid_layout(grid_size),
+            night: None,
         }
     }
 
@@ -79,7 +82,7 @@ impl EntityLighting {
             }
             None => grid_less(),
         };
-        finish(grid, origin, lights)
+        finish(grid, origin, lights, self.night)
     }
 
     /// Light/fog every instance at its origin; return the number with nonzero fog.
@@ -139,10 +142,26 @@ fn grid_less() -> GridLight {
 
 /// `tr_light.cpp:343-412` after the grid sample: minimum add, dynamic
 /// lights, ambient clamp and direction normalisation.
-fn finish(mut grid: GridLight, origin: [f32; 3], lights: &[PointLight]) -> EntityLight {
+/// `night`: Low FPS Night (`r_lowFpsNight`) darkens the grid's light, minimum included,
+/// before the dynamic lights join it at full strength.
+fn finish(
+    mut grid: GridLight,
+    origin: [f32; 3],
+    lights: &[PointLight],
+    night: Option<[f32; 2]>,
+) -> EntityLight {
     grid.ambient
         .iter_mut()
         .for_each(|value| *value += MINIMUM_AMBIENT);
+    if let Some(night) = night {
+        let peak = (0..3)
+            .map(|axis| ((grid.ambient[axis] + grid.directed[axis]) / 255.0).min(1.0))
+            .fold(0.0_f32, f32::max)
+            .powf(2.2);
+        let factor = crate::world_materials::shadows::day::live::night_factor(night, peak);
+        grid.ambient.iter_mut().for_each(|value| *value *= factor);
+        grid.directed.iter_mut().for_each(|value| *value *= factor);
+    }
     let magnitude = length(grid.directed);
     let mut direction = grid.direction.map(|value| value * magnitude);
     for light in lights {

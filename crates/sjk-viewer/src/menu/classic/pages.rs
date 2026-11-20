@@ -308,7 +308,7 @@ const SETUP: [Slot; 10] = {
 /// Setup's GRAPHICS (classic+): `setup.menu`'s layout with retail's video
 /// group (its two pages as one), the renderer settings' three groups and the
 /// weather down the left; Back returns to Setup.
-const GRAPHICS: [Slot; 11] = {
+const GRAPHICS: [Slot; 12] = {
     let [play, profile, settings, sjk] = nav_row();
     let [back, exit] = back_exit();
     [
@@ -345,6 +345,12 @@ const GRAPHICS: [Slot; 11] = {
             "WEATHER",
             "Rain, snow, fog and clouds: quality, amount, forced weather",
             281.0,
+        ),
+        list_row(
+            Entry::LowFpsNight,
+            "LOW FPS NIGHT",
+            "A fixed night at no FPS cost: dark map, lamps and sabers keep their light",
+            305.0,
         ),
         Slot {
             entry: Entry::SetupBack,

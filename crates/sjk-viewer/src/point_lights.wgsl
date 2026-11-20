@@ -163,5 +163,8 @@ fn dynamic_light_modulation(input: VertexOutput) -> vec3<f32> {
                 point_light_visibility(index, input.world_position, input.world_normal);
         }
     }
+    // Low FPS Night: the bake this modulates is darker by the level, so the light relative
+    // to it is that much stronger: sabers and shots light as brightly as by day.
+    if night_on() && !realtime_active() { return result / night_level(); }
     return result;
 }
