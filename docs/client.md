@@ -5930,7 +5930,6 @@ The player's own toy still shows, and nothing changes for the toys' rules.
 | Toy | Switch | Cvar | Hidden |
 | --- | --- | --- | --- |
 | Illuminate | See others' holocrons | `cg_toyIlluminateShow` | their holocron and its light |
-| Cardboard box | See others' boxes | `cg_toyBoxShow` | their box (not lifted either) |
 | Ragdoll | See others fall limp | `cg_toyRagdollShow` | their falls: their bodies as the game shows them |
 | Drone | See others' drones | `cg_toyDroneShow` | their drones, names and sounds (who peeks at you is still told) |
 | Boombox | See and hear others' boomboxes | `cg_toyBoomboxShow` | their stereo (on the shoulder or the floor) and its music |
@@ -5976,79 +5975,16 @@ colours, bundled the same way. Sol generated the art; see
 [assets/holocron](../crates/sjk-viewer/assets/holocron/README.md) and
 [illuminate.rs](../crates/sjk-viewer/src/illuminate.rs).
 
-## Cardboard box
+## Cardboard box (removed)
 
-The cardboard box is a toy, SJK's own and free for every player (Sol's idea,
-16/10/2026): a shipping carton to hide in, Metal Gear style. `toy_box` puts it on or
-takes it off, from a bind (Settings > Key bindings > Interaction > Toy: Cardboard box,
-unbound until a key is picked), from the quick wheel's [Toys page](#toys-page) or from
-the Collection's Toys tab ([SJK UI](sjk-ui.md#collection)). It is off at every start.
-Switching it says "Cardboard box ON" or "OFF" ([Illuminate](#illuminate)); a box lifted by
-another player goes without it. Putting it on plays its sound (one's own at once, in both ears; another's where they
-stand when their look gains the box, but not for the boxes already in the looks in the
-first 5 seconds on a server).
-
-- **In the box** the player crouches: while it is on and the player is alive and in the
-  match, every user command holds crouch (`upmove` -127, as a held `+movedown`, over a
-  jump), so the server sees an ordinary crouching player and movement stays stock. Its
-  music loops on the player, in both ears for one's own and placed on the player for
-  others (on channel 14, its own, so it cuts no game sound).
-- **Flying** the free camera or `fakenoclip` (hub report #152, 27/10/2026), the box
-  holds no crouch: the commands' `upmove` steers the flight there, and a held crouch
-  sank the camera. One's own carton stays on the body and keeps the body's facing, not
-  the camera's; it is drawn for mirrors only while the camera is inside it (a flight
-  starts in the body), and the player does not count as hiding.
-- **Crouched in the box:** every SJK client draws a boxed player who stands as
-  crouching (`BOTH_CROUCH1IDLE` over standing legs, `BOTH_STAND*` and the saber stances'
-  `BOTH_SABER*_STANCE`, and over the torso when it
-  stands too; `cardboard_box::crouched_in_box`, `actor_pose_steps.rs`; Dave's test of
-  #152, 28/10/2026). The box asks the server to crouch, but `PmoveSingle` zeroes a
-  talking player's moves, `upmove` included (EternalJK `bg_pmove.c:12441-12448` at
-  a40e793; JoF EJK `bg_pmove.c:13108-13115` at 390f756), so the server stands up a
-  boxed player with the chat or console open or the free camera's talk balloon, which
-  stays so the player keeps its protection. Any other move (a lunge, a kick, a roll, a
-  knockdown, which a boxed player can still make) plays as the server sends it. Who is
-  boxed is noted before the actors are posed (`note_boxed_players`), so the pose
-  follows the carton on the same frame. A crouch keeps the origin, so the pose sits
-  where a real crouch would. One's own eye stays at crouch height (12) too while hidden
-  in the box, so opening the menu or the chat no longer lifts the view
-  (`keep_boxed_eye`, 28/10/2026). Rig models crouch too. Other clients see the server's
-  player, as they never see the box.
-- **Others see it** through the SJK hub: the box is a toy in the player's look
-  (`toys: ["cardboard_box"]`, [unlockables.md](unlockables.md); `looks::TOYS`), so every
-  SJK player on the server draws the carton over that player (their entity's
-  interpolated origin, floor and view yaw) and hears the music, while the game draws
-  them: dead, hidden, cloaked or out of the snapshot, neither shows. Players on stock
-  clients see a crouching player. In first person one's own carton is drawn only in
-  mirrors, like the body.
-- **Spotted:** an SJK player who presses `+use` facing a boxed player (within 96
-  units, 60 degrees either side of where they face; the nearest) lifts the box: the
-  spotted sound plays where they stand and the box goes at once on the lifter's screen,
-  and the hub relays a toy event (`POST /v1/toy`, `cardboard_box` `spotted`, the
-  target's slot, [hub-chat.md](hub-chat.md#toy-events)). The boxed player's client
-  takes the box off and plays the sound; every other SJK client hides it and plays the
-  sound where the player stands. A lift seen here holds until that player's look drops
-  the box, at most 15 seconds. The `+use` itself still reaches the server as always.
-- **Taken off or lifted**, while its player is still drawn, the box tips over on its
-  side (0.45 s, pivoting on its bottom edge, faster as it goes): away from the lifter
-  when spotted, else the way the player faced. It lands with the drop sound, lies there
-  5 seconds and shrinks away; at most 8 lie about at once. A box that goes with its
-  player (dead, cloaked, out of sight) does not fall. One's own in first person shows
-  only in mirrors until it has tipped 0.5 radians, out of the view inside it.
-- **Dying in the box** plays its death sound: one's own in both ears, another's where
-  they fell, on every SJK client that sees the death (the player's entity turning
-  `EF_DEAD` while their look has the box). The box stays on until the respawn, so the
-  others still know whose death it was, and is lost with the life.
-
-The carton (an open-bottomed box of 46 x 46 x 44 units, drawn from both sides), its
-picture, shader and icon are bundled and mounted below all game data, so a PK3 with
-the same paths replaces them; they are drawn by
-[cardboard_box_assets.py](../scripts/cardboard_box_assets.py), nothing taken from
-another game ([assets/cardboard_box](../crates/sjk-viewer/assets/cardboard_box/README.md)).
-The sounds are game paths that SJK does not ship, `sound/sjk/cardboard_box/music`,
-`equip`, `spotted`, `drop` and `death` (`.wav`, else `.mp3`); where one is missing,
-nothing plays. See
-[cardboard_box.rs](../crates/sjk-viewer/src/cardboard_box.rs).
+The cardboard box (Sol's idea, 16/10/2026) was a carton to hide in, Metal Gear style:
+the player crouched in it with its music, other SJK players saw it and lifted it with
+`+use`. It was removed on 20/11/2026 in Sol's cleanup before the release. Its saved
+settings (`s_toyBoxSound`, `cg_toyBoxShow`) are dropped from the profile at load
+(`console_session.rs`), a saved quick wheel loses its choice, and a bind left on
+`toy_box` only says the command is unknown. Its achievements are retired
+([identity.md](identity.md)); the Hax kept its `+use` reach and the pick of the
+player in front (`hax::pick_target`).
 
 ## Order 66
 
@@ -6144,8 +6080,8 @@ the archived `cl_toyHax`, as Order 66 in `cl_toyOrder66`). Switching it says "Ha
   client also refuses the seize while they are away, idle or alt-tabbed as the away emote
   counts it ("Hack failed: <name> is away"). Opening the chat once the hack is under way
   does not stop it; turning the toy off does.
-- **The hack:** hold `+use` facing a holder of the toy within reach (the cardboard
-  box's, 96 units, in front). The siege hack bar fills under the crosshair with the
+- **The hack:** hold `+use` facing a holder of the toy within reach (96 units, in
+  front; `hax::pick_target`). The siege hack bar fills under the crosshair with the
   stock hacker icon (`gfx/mp/c_icon_tech`, [hack_bar.rs](../crates/sjk-viewer/src/hud/hack_bar.rs))
   and the stock hacking loop plays (`sound/player/hacking.wav`), for 3 seconds. Letting
   go of `+use`, the target walking more than 160 units away or out of the hacker's
@@ -7097,7 +7033,7 @@ game; the rock is the installed game's Yavin rock), and mounted below all game d
 Settings > Sound > Toys (Sol's request, 25/10/2026) sets how the toys sound on this PC:
 "Toy volume" (`s_toyVolume`, 0 to 2, default 1, times the effects volume) scales every
 toy's sounds, and a switch per toy silences that toy's sounds alone, the player's own
-and everyone else's (`s_toyBoxSound`, `s_toyOrder66Sound`, `s_toyHaxSound`,
+and everyone else's (`s_toyOrder66Sound`, `s_toyHaxSound`,
 `s_toyRagdollSound`, `s_toyDroneSound`, `s_toyBoomboxSound`, `s_toyMonitorSound`,
 `s_toyMysteryBoxSound` (the [mystery boxes](mystery-boxes.md)), `s_toyTagSound` (the [Tag](#tag)'s spray,
 03/11/2026), `s_toyMasterSound` (the toys [the Toy
@@ -7534,9 +7470,8 @@ per toy, so a toy deleted from the page is added again in Settings > Quick wheel
 (Add a choice, Toys), and a future toy is one catalogue entry. Its default choice
 is Illuminate, which runs `toy_illuminate` (the toggle the bind uses) with the
 Illuminate holocron's picture. Its gold dot marks a lit holocron (the client's own
-state; no cvar holds it). Since 16/10/2026 the default page also has the
-[Cardboard box](#cardboard-box) (`toy_box`, marked while the player is in it), and
-since 17/10/2026 [Order 66](#order-66) (`toy_order66`, marked while it is on, then
+state; no cvar holds it). Since 17/10/2026 the default page also has
+[Order 66](#order-66) (`toy_order66`, marked while it is on, then
 Execute Order 66, `order66`), since 21/10/2026 the [Hax](#hax) (`toy_hax`, marked
 while it is on), since 23/10/2026 the [Ragdoll](#ragdoll) (`toy_ragdoll`, marked
 while the player is limp), and since 26/10/2026 the [Monitor](#monitor) (`toy_monitor`,
@@ -7625,7 +7560,7 @@ by its groups in Settings:
 | Interface | Nameplates (`nameplates`, cycles), HUD on/off, Screenshot (`screenshotJPEG`), Game menu (`togglemenu`), First setup (`firstsetup`), Match timer, FPS counter, Speedometer, Lagometer (`toggle cg_...`), Console (`toggleconsole`), What's new (`changelog`) |
 | Player | Cosmetics, AFK, Team menu (`teammenu`), Spectate (`team spectator`), Respawn (`kill`), Inspect player, Engage duel, Saber style (`saberAttackCycle`), Saber on/off (`sv_saberswitch`) |
 | Emotes | Taunt, Bow, Meditate, Flourish, Gloat, Sync emote (`sjkemote sync`), Stop emote (`sjkemote stop`), then the installed emotes (`sjkemote <id>`, [hub-chat.md](hub-chat.md#emotes-in-the-client)) |
-| Toys | Illuminate (`toy_illuminate`, marked while the holocron is lit), Cardboard box (`toy_box`, marked while the player is in it), Order 66 (`toy_order66`, marked while it is on), Execute Order 66 (`order66`) |
+| Toys | Illuminate (`toy_illuminate`, marked while the holocron is lit), Order 66 (`toy_order66`, marked while it is on), Execute Order 66 (`order66`) |
 | Weather | The map's own weather, drizzle, rain, storm, snow (`r_weatherForce`), ground fog everywhere (`r_weatherFog` 1/2), clouds, weather on/off |
 | Time of day | Day (`r_dayHour 12`), Night (`r_dayHour 0`), with the spare sun and moon icons |
 | Votes, demos and server | Vote yes, Vote no, Record demo (`record`), Stop recording (`stoprecord`), Reconnect |

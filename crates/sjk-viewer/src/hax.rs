@@ -71,8 +71,13 @@ pub(crate) const CONTROL_MS: i32 = 5_000;
 const COOLDOWN_MS: i32 = 15_000;
 /// After being steered, a player cannot be hacked for this long.
 pub(crate) const IMMUNE_MS: i32 = 15_000;
-/// A hack holds while the target stays this close (the start needs the cardboard box's
-/// reach, `cardboard_box::REACH`).
+/// How far from the hacker's origin a hack can start: the stock `+use` reach
+/// (`USE_DISTANCE` 64, `g_active.c`) and a little (the cardboard box's lift reach, which
+/// brought it, 16/10/2026; the box was removed on 20/11/2026).
+const REACH: f32 = 96.0;
+/// How far off the hacker's facing a hack can start: the cosine of 60 degrees.
+const FACING: f32 = 0.5;
+/// A hack holds while the target stays this close (the start needs [`REACH`]).
 const HOLD_REACH: f32 = 160.0;
 /// A hack holds while the hacker faces the target this much (cosine of the angle).
 const HOLD_FACING: f32 = 0.3;
@@ -1033,9 +1038,7 @@ impl GpuState {
                     .then(|| Some((slot, origin_of(slot)?)))
                     .flatten()
                 });
-                let Some((target, _)) =
-                    crate::cardboard_box::pick_target(from, self.camera_yaw, candidates)
-                else {
+                let Some((target, _)) = pick_target(from, self.camera_yaw, candidates) else {
                     return;
                 };
                 let typing = snapshot.entities.iter().any(|entity| {
@@ -1366,6 +1369,26 @@ impl GpuState {
             );
         }
     }
+}
+
+/// The player `+use` hacks, if any: the nearest of `candidates` (slot and origin) within
+/// [`REACH`] of `origin` and in front of `yaw` (radians), on the level plane.
+pub(crate) fn pick_target(
+    origin: Vec3,
+    yaw: f32,
+    candidates: impl IntoIterator<Item = (u8, Vec3)>,
+) -> Option<(u8, Vec3)> {
+    let facing = glam::Vec2::from_angle(yaw);
+    candidates
+        .into_iter()
+        .filter_map(|(slot, at)| {
+            let distance = at.distance(origin);
+            let flat = (at - origin).truncate().normalize_or_zero();
+            (distance <= REACH && (flat == glam::Vec2::ZERO || flat.dot(facing) >= FACING))
+                .then_some((distance, slot, at))
+        })
+        .min_by(|a, b| a.0.total_cmp(&b.0))
+        .map(|(_, slot, at)| (slot, at))
 }
 
 #[cfg(test)]
@@ -1710,5 +1733,27 @@ mod tests {
             let back = degrees(short(degrees_in));
             assert!((back - degrees_in).abs() < 0.01, "{degrees_in} -> {back}");
         }
+    }
+
+    #[test]
+    fn use_picks_the_nearest_player_in_reach_and_in_front() {
+        let here = Vec3::ZERO;
+        let east = 0.0;
+        let near = [
+            (1, Vec3::new(80.0, 0.0, 0.0)),
+            (2, Vec3::new(40.0, 10.0, 0.0)),
+            (3, Vec3::new(-30.0, 0.0, 0.0)),
+            (4, Vec3::new(200.0, 0.0, 0.0)),
+        ];
+        assert_eq!(pick_target(here, east, near).map(|(slot, _)| slot), Some(2));
+        // Behind only: none.
+        assert_eq!(pick_target(here, east, [near[2]]), None);
+        // Too far: none.
+        assert_eq!(pick_target(here, east, [near[3]]), None);
+        // Facing west, the one behind is in front.
+        assert_eq!(
+            pick_target(here, std::f32::consts::PI, near).map(|(slot, _)| slot),
+            Some(3)
+        );
     }
 }

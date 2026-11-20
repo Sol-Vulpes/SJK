@@ -534,7 +534,6 @@ impl Options {
         // packs with the unlockables' art), below everything so game data with the same paths
         // replaces it.
         crate::illuminate::mount(&mut vfs)?;
-        crate::cardboard_box::mount(&mut vfs)?;
         crate::fishing::mount(&mut vfs)?;
         crate::mining::mount(&mut vfs)?;
         crate::order66::mount(&mut vfs)?;

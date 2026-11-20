@@ -23,9 +23,6 @@ impl GpuState {
         if let Some(on) = console.take_illuminate_request() {
             self.illuminate.set_on(on);
         }
-        if let Some(on) = console.take_cardboard_box_request() {
-            self.cardboard_box.set_on(on);
-        }
         if let Some(on) = console.take_order66_request() {
             self.order66.set_on(on);
         }
@@ -149,7 +146,6 @@ impl GpuState {
             let on = quests.sync(console, crate::toy_saved::QUESTS_CVAR, self.quests.on());
             self.quests.set_on(on);
             console.set_illuminate_lit(self.illuminate.lit());
-            console.set_cardboard_box_on(self.cardboard_box.on());
             console.set_order66_on(self.order66.on());
             console.set_hax_on(self.hax.on());
             console.set_ragdoll_on(self.ragdoll.on());

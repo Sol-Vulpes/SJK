@@ -34,7 +34,6 @@ mod camera_uniform;
 mod capture;
 mod card_outline;
 mod card_scenes;
-mod cardboard_box;
 mod cards;
 mod catch_book;
 mod cgame_options;
@@ -645,8 +644,6 @@ struct GpuState {
     illuminate: illuminate::Holocron,
     /// The other players' holocrons, lit by their looks.
     illuminate_others: illuminate::Others,
-    /// The cardboard box toy (`toy_box`): the player's own and the boxes of others.
-    cardboard_box: cardboard_box::CardboardBox,
     /// The Fishing toy (`toy_fishing`): the player's own rod and the rods of others.
     fishing: fishing::Fishing,
     /// The Fishing toy's sounds to play this frame.
@@ -1756,7 +1753,6 @@ impl GpuState {
             speed_trails: Default::default(),
             illuminate: Default::default(),
             illuminate_others: Default::default(),
-            cardboard_box: Default::default(),
             fishing: Default::default(),
             fishing_cues: Vec::with_capacity(4),
             mining: Default::default(),
@@ -2057,8 +2053,6 @@ impl GpuState {
             demo_playback::Session::current_server_time,
         );
         prediction_preview::tick(self, game_audio, Instant::now(), presentation_time as i32);
-        // Hidden in the box, the eye stays down while the server stands the player up.
-        self.keep_boxed_eye();
         // The Monitor's monitors, then the Ragdoll's bodies (one may strike) at this
         // frame's time, for the camera and the actors.
         self.step_monitors(presentation_time);
@@ -2979,8 +2973,6 @@ impl GpuState {
             self.update_limbs(presentation_time);
         }
         {
-            // Who is in a carton is noted before the poses that crouch them.
-            self.note_boxed_players();
             if let Err(error) = self.update_actor_animations(presentation_time, game_audio) {
                 eprintln!("remote actor animation stopped: {error}");
             }
@@ -3023,7 +3015,6 @@ impl GpuState {
         self.begin_saber_instances(presentation_time);
         self.particle_groups.iter_mut().for_each(Vec::clear);
         self.submit_illuminate(presentation_time, visual_now);
-        self.submit_cardboard_boxes(presentation_time, visual_now);
         self.submit_fishing(presentation_time, visual_now);
         self.submit_mining(visual_now);
         self.submit_order66(presentation_time, visual_now);
@@ -3069,7 +3060,6 @@ impl GpuState {
                     .predicted_state()
                     .filter(|_| self.live_session.is_some());
                 audio.observe_saber_switches(snapshot, predicted);
-                audio.set_box_music(self.cardboard_box.music());
                 audio.set_hax_loop(self.hax_loop(presentation_time));
                 audio.set_weather(self.vfs.as_deref(), self.weather.heard());
                 audio.play_weather_cues(self.weather.take_cues());

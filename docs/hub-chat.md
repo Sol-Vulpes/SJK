@@ -1068,8 +1068,7 @@ and plays changes. The code still says "mute" (`chat_mutes.rs`, `muted_players.r
   (`HiltCatalog::is_staff`, from the saber's definition).
 - **Everything else of theirs:** their emotes do not play (one playing when they are
   blocked ends; `emotes_frame.rs`, beside `sjkemote mute`'s emote-only list), their
-  Order 66 orders and cardboard box spots are ignored (`order66.rs`,
-  `cardboard_box.rs`), no player card shows when you aim at them and a card pinned
+  Order 66 orders are ignored (`order66.rs`), no player card shows when you aim at them and a card pinned
   before loses their hub profile (`hud_runtime.rs`), their world pings are not shown
   (`world_ping_frame.rs`), their toys and looks are not drawn (`looks.rs`), their GIFs
   are never fetched (`chat_gifs.rs`) and their holocron lines go with their chat. Their
@@ -1350,8 +1349,8 @@ a modified client could read every ping of its server. Only a server that tells 
 ## Toy events
 
 A toy event is something one SJK player's toy did to another (since 16/10/2026): the
-first is the [cardboard box](client.md#cardboard-box)'s `spotted`, a box lifted with
-`+use`. It rides the pings' path: the sender's client sends the toy, the event and the
+first was the cardboard box's `spotted`, a box lifted with `+use` (the box was removed
+on 20/11/2026). It rides the pings' path: the sender's client sends the toy, the event and the
 target's slot (`Service::toy_event`, through the identity worker), the hub relays it in
 the feed of that game server's readers (`toys`), and the feed thread queues it with the
 server it was read for (`Service::take_toy_events`). A reader applies it only when the

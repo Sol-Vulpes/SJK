@@ -705,10 +705,6 @@ const HELP: &[(&str, &str)] = &[
         "Loudness of every toy's sounds: 1 as made, 2 twice as loud, 0 silent. Each toy can also be silenced below.",
     ),
     (
-        crate::toy_sounds::Toy::Box.cvar(),
-        "Off: cardboard box sounds are not played on this PC, yours or other players'. The toy still works and is still seen.",
-    ),
-    (
         crate::toy_sounds::Toy::Order66.cvar(),
         "Off: Order 66 sounds are not played on this PC, yours or other players'. The toy still works and is still seen.",
     ),
@@ -1228,10 +1224,6 @@ const HELP: &[(&str, &str)] = &[
     (
         crate::toy_sight::ILLUMINATE,
         "Off: other players' Illuminate holocrons are not drawn on this PC. Yours still is.",
-    ),
-    (
-        crate::toy_sight::CARDBOARD_BOX,
-        "Off: other players' cardboard boxes are not drawn on this PC, and you cannot lift them.",
     ),
     (
         crate::toy_sight::RAGDOLL,

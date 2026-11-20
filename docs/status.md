@@ -9,7 +9,10 @@ holders; the Hobbies page leaves the switch when nothing on it is held. Step 2,
 quick wheel, binds, Collection row, status bar piece, look id, world shots); its saved cvars
 are dropped at load; the Boombox's floor trace moved to `floor_spot.rs`; the Toys tab's
 places are named constants (`*_TOY` in `collection_panel.rs`) so the next removals move only
-those. The hub keeps the removed toys' routes and events on for older clients until the
+those. Step 3, `personal/remove-cardboard-box`: the cardboard box is gone the same way (its
+crouch shaping, boxed eye, crouched pose of boxed players, music loop, sight switch and the
+achievement tracker's box counting); `hax::pick_target` took over its `+use` pick, the
+quick wheel's default Toys page lost its slot (a saved one drops the unknown choice). The hub keeps the removed toys' routes and events on for older clients until the
 release sets the minimum client (Sol). Verified: the viewer's tests (4386), fmt, Clippy (no
 new warnings), the startup stack check. Not verified: in a game.
 

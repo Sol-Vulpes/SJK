@@ -1,12 +1,11 @@
 //! The Collection's Toys tab: things to use in a match, everyone's. SJK's Illuminate
-//! holocron (`docs/client.md`, Illuminate), the cardboard box (`docs/client.md`,
-//! Cardboard box), Order 66 (`docs/client.md`, Order 66), the Hax (`docs/client.md`,
+//! holocron (`docs/client.md`, Illuminate), Order 66 (`docs/client.md`, Order 66), the Hax (`docs/client.md`,
 //! Hax), the Ragdoll (`docs/client.md`, Ragdoll), the Drone (`docs/client.md`, Drone),
 //! the Boombox (`docs/client.md`, Boombox), the Monitor (`docs/client.md`, Monitor), Box
 //! hunt (`docs/client.md`, Box hunt), Fishing (`docs/client.md`, Fishing) and Quests (`docs/quests.md`),
 //! a row to each on the left (Sol's pick of 25/10/2026, the Collection revamp's canvas):
 //! its picture, its name and a line of what it does, the key bound to it and its own
-//! switch, which runs it in place (`toy_illuminate`, `toy_box`, `toy_order66`, `toy_hax`,
+//! switch, which runs it in place (`toy_illuminate`, `toy_order66`, `toy_hax`,
 //! `toy_ragdoll`, `toy_drone`, `toy_boombox`, `toy_monitor`, `toy_boxhunt`,
 //! `toy_fishing`, `toy_quests`). The chosen one is described on a dark card beside the
 //! model, where its key is bound without the console (a click or K, then the key). The
@@ -39,13 +38,12 @@ const SWITCH_ROOM: f32 = 130.0;
 
 /// The list's sections (Sol's pick of 09/11/2026, once there were fourteen toys): each
 /// head and how many toys of [`ORDER`] stand under it.
-const SECTIONS: [(&str, usize); 3] = [("Around you", 5), ("With others", 3), ("Earn and win", 5)];
+const SECTIONS: [(&str, usize); 3] = [("Around you", 4), ("With others", 3), ("Earn and win", 5)];
 /// The toys in the list's order, as indices into [`TOYS`] (whose order the panel, the
 /// tokens and the bits keep): around you, the ones that need others with them on, and
 /// the ones that earn or win something.
 pub(super) const ORDER: [usize; TOY_COUNT] = [
     ILLUMINATE_TOY,
-    BOX_TOY,
     RAGDOLL_TOY,
     DRONE_TOY,
     BOOMBOX_TOY,
@@ -143,9 +141,8 @@ const SHARE_ROW: f32 = 44.0;
 /// Every command a toy is run by, in the order the page is told their keys
 /// ([`Inputs::toy_keys`]): each toy's switch, Order 66's order after its own, the
 /// Monitor's throw (held, it charges) after its own.
-pub(crate) const COMMANDS: [&str; 15] = [
+pub(crate) const COMMANDS: [&str; 14] = [
     "toy_illuminate",
-    "toy_box",
     "toy_order66",
     "order66",
     "toy_hax",
@@ -208,21 +205,6 @@ const TOYS: [Toy; TOY_COUNT] = [
         sight: Some((crate::toy_sight::ILLUMINATE, "See others' holocrons")),
         options: &[],
         token: TOY_TOKEN,
-        author: "Sol",
-        idea: None,
-    },
-    Toy {
-        icon: "cardboard_box",
-        name: "Cardboard box",
-        tag: "Hide in a carton; someone may lift it.",
-        title: "Cardboard box",
-        what: "Hide in a carton: you crouch in it with its music. Other SJK players see the box; one who walks up and presses Use lifts it. Die in it and everyone hears.",
-        more: None,
-        commands: &[("toy_box", "Your key")],
-        switch: "In the box",
-        sight: Some((crate::toy_sight::CARDBOARD_BOX, "See others' boxes")),
-        options: &[],
-        token: BOX_TOKEN,
         author: "Sol",
         idea: None,
     },
@@ -496,7 +478,6 @@ fn text_scale() -> f32 {
 pub(super) fn states(inputs: &Inputs<'_>) -> [bool; TOY_COUNT] {
     [
         inputs.illuminate,
-        inputs.cardboard_box,
         inputs.order66,
         inputs.hax,
         inputs.ragdoll,
@@ -1586,7 +1567,6 @@ mod tests {
     #[test]
     fn a_look_toy_id_finds_its_name() {
         for (id, name) in [
-            (crate::cardboard_box::TOY, "Cardboard box"),
             (crate::order66::TOY, "Order 66"),
             (crate::hax::TOY, "Hax"),
             (crate::drone::TOY, "Drone"),
@@ -1771,7 +1751,7 @@ mod tests {
                 key: "o".to_owned(),
             }
         );
-        assert_eq!(command(2, 1), Some("order66"));
+        assert_eq!(command(ORDER66_TOY, 1), Some("order66"));
         assert_eq!(command(0, 1), None);
         assert!(COMMANDS.iter().all(|command| {
             TOYS.iter()

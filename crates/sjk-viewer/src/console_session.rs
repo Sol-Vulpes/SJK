@@ -669,8 +669,6 @@ impl ViewerConsole {
             holocrons_last: false,
             illuminate_lit: false,
             pending_illuminate: None,
-            cardboard_box_on: false,
-            pending_cardboard_box: None,
             order66_on: false,
             pending_order66: None,
             hax_on: false,
@@ -1196,6 +1194,9 @@ fn retire_modern_ui(cvars: &mut CvarRegistry) {
         "ui_shaderView",
         // The weapon icon on nameplates, removed on 28/10/2026 (Sol: it told nothing).
         "cg_nameplateWeapon",
+        // The cardboard box toy's sounds and sight, removed on 20/11/2026.
+        "s_toyBoxSound",
+        "cg_toyBoxShow",
         // The Banana peel toy's switch, sounds and sight, removed on 20/11/2026.
         "cl_toyBanana",
         "s_toyBananaSound",

@@ -123,8 +123,7 @@ impl GpuState {
                 held
             };
             sent = Some(
-                held.with_toy(crate::cardboard_box::TOY, self.cardboard_box.on())
-                    .with_toy(crate::order66::TOY, self.order66.on())
+                held.with_toy(crate::order66::TOY, self.order66.on())
                     .with_toy(crate::hax::TOY, self.hax.on())
                     .with_toy(crate::hax::AWAY_TOY, away_hackable)
                     .with_toy(crate::drone::TOY, self.drone.on())
@@ -166,7 +165,6 @@ impl GpuState {
             sounds,
             finisher,
         }
-        .with_toy(crate::cardboard_box::TOY, self.cardboard_box.on())
         .with_toy(crate::order66::TOY, self.order66.on())
         .with_toy(crate::hax::TOY, self.hax.on())
         .with_toy(crate::hax::AWAY_TOY, away_hackable)

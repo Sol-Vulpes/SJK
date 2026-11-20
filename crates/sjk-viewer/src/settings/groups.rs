@@ -452,7 +452,6 @@ impl Group {
                 crate::tags::SHOW_CVAR,
                 crate::tags::GIF_SHOW_CVAR,
                 crate::toy_sight::ILLUMINATE,
-                crate::toy_sight::CARDBOARD_BOX,
                 crate::toy_sight::RAGDOLL,
                 crate::toy_sight::DRONE,
                 crate::toy_sight::BOOMBOX,

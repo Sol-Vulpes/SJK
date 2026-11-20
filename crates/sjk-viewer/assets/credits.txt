@@ -47,7 +47,7 @@ did: The HUD picker, the radial HUD, nameplates with shared bars and player card
 did: Capsule nameplates: each player's picture, name and weapon, the shared bars on a tray
 did: JA+ and JoF server support: movement, sabers, grapple, Force wheel, flip kick
 did: Illuminate, SJK's own toy: a holocron that lights the way, art by Sol
-did: The cardboard box toy: hide in a carton, spotted with Use, tipping over
+did: The cardboard box toy (16/10 to 20/11/2026): hide in a carton, spotted with Use
 did: The Order 66 toy: synced deaths that blow players apart, TF2 style
 did: The Hax toy: hack another player with the siege bar, then steer them
 did: The Ragdoll toy: go limp, sandbox style, the same fall on every SJK client
@@ -290,7 +290,7 @@ did: #191 Signature blades without the bright rim at the tip or hard edges round
 did: #202 Bodies fade away as in EternalJK, with their Force side's glow and sounds
 did: #208 Formatting that unblocked CI
 did: #230 Black sabers in Profile > Saber and in game
-did: #231 The cardboard box with the free camera, crouched in the box
+did: #231 The cardboard box with the free camera, crouched in the box (toy removed 20/11)
 did: #232 The limp body stays in sight from the free camera
 did: #210 The first to confirm a trade sees the swap at once
 did: #211 A trade refusal shown once, not at every map change

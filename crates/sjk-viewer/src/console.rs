@@ -280,11 +280,6 @@ pub(crate) struct ViewerConsole {
     illuminate_lit: bool,
     /// The Toys tab asked to light the holocron (`true`) or put it out, not yet taken.
     pending_illuminate: Option<bool>,
-    /// The player is in the cardboard box: the viewer's state, mirrored as
-    /// [`Self::illuminate_lit`] is.
-    cardboard_box_on: bool,
-    /// The Toys tab asked to get in the box (`true`) or out, not yet taken.
-    pending_cardboard_box: Option<bool>,
     /// The Order 66 toy is on: the viewer's state, mirrored as
     /// [`Self::illuminate_lit`] is.
     order66_on: bool,

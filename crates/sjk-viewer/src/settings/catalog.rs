@@ -415,11 +415,6 @@ pub(super) const AUDIO: &[Setting] = &[
         },
     },
     Setting {
-        label: "Cardboard box sounds",
-        cvar: crate::toy_sounds::Toy::Box.cvar(),
-        kind: ValueKind::Bool,
-    },
-    Setting {
         label: "Order 66 sounds",
         cvar: crate::toy_sounds::Toy::Order66.cvar(),
         kind: ValueKind::Bool,
@@ -1544,11 +1539,6 @@ pub(super) const GAME: &[Setting] = &[
     Setting {
         label: "Show others' holocrons",
         cvar: crate::toy_sight::ILLUMINATE,
-        kind: ValueKind::Bool,
-    },
-    Setting {
-        label: "Show others' boxes",
-        cvar: crate::toy_sight::CARDBOARD_BOX,
         kind: ValueKind::Bool,
     },
     Setting {

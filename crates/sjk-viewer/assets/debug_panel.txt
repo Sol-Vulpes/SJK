@@ -930,7 +930,7 @@ title: Toys (the box) reach other players faster
 change: A toy or blade change no longer waits behind the client's other hub calls.
 change: A look the hub finds too fast is retried after 1 s, not 10 s; a lapsed claim at once.
 change: The log says how long each look took: "SJK look sent: N ms after the change ...".
-test: With a second SJK client on the same server, toy_box on/off: it shows within ~1-2 s.
+test: With a second SJK client on the same server, toy_boombox on/off: it shows within ~1-2 s.
 test: Toggle the box quickly several times: the other client ends on the right state.
 test: logs\last-client.log has "SJK look sent" lines with small waits.
 
@@ -1646,14 +1646,6 @@ test: Profile > Saber: pick black, the model's blades are black; reopen, black i
 test: On a JA+/JoF server and on devmap: your black blade shows black, not white.
 test: RGB chip, step a dark red down: it stays dark red. Collection swatch shows black.
 
-[creyon-box-freecam]
-area: Gameplay
-title: Cardboard box with freecam, crouched in the box (Creyon, PR #231, hub #152)
-change: No crouch while flying; carton stays on the body; boxed players drawn crouched.
-test: toy_box on, hide, freecam: the camera flies freely, the carton stays on your body.
-test: In the box, open chat or Esc: you stay crouched, the view does not jump up.
-test: Boxed, lunge or kick: the move plays (another client sees it too).
-
 [creyon-ragdoll-freecam]
 area: Gameplay
 title: Limp body stays visible in freecam (Creyon, PR #232)
@@ -2076,7 +2068,6 @@ change: New counts: box time near players, flawless/close duels, partners, long 
 test: Collection > Achievements: all bands fit, arrows and Tab move through the wall in order.
 test: Hover the Secret medallion: "Secret achievement", no goal or count; same in Next up.
 test: Without Surveyor: it is gone and the total reads N of 34 (player card too).
-test: Hide in the box (toy_box) near another player for a minute: Tactical Espionage counts 1.
 test: Win a private duel untouched: Flawless; one under 5 health: Close Call; Well Met +1 each.
 test: Kill with a saber throw from far (over 512 units): Long Throw.
 test: Push a thermal detonator back at its thrower and kill them: Return to Sender.
@@ -2092,7 +2083,6 @@ test: Identity on, reach one (first_blood on a fresh key): no card yet, tab says
 test: Within the hub's hour the card comes with "Reward: ... Kyber Crystal", once only.
 test: Reach one, quit before the hub unlocks it, wait, restart: the card comes after sync.
 test: Identity off (cl_identity 0): reaching one shows its card with its category, no reward.
-test: Hide in the box (toy_box) with a player about 20 m away: Tactical Espionage counts.
 test: Hover Master Craftsman and Full Set: the new descriptions.
 
 [ragdoll-held-view]
@@ -2563,7 +2553,7 @@ test: Ask SolBot in SJK chat how to show your FPS: it should say cg_drawFPS 1.
 area: Console & chat
 title: Block a player: no chat, Kyle, silent, no emotes, toys or card (was Mute)
 change: The sender card's Mute is now Block; the list stays in chat-mutes.txt.
-change: Their emotes, Order 66 orders, cardboard box spots and player card are ignored too.
+change: Their emotes, Order 66 orders and player card are ignored too.
 change: block <player|target>, block (lists), unblock <player|all>; SJK chat page lists them.
 test: Rest on a name in chat, Block: their lines go, they turn Kyle with a blue single saber.
 test: Have them play an emote (sjkemote) and spot your box: nothing happens on your screen.
@@ -8965,22 +8955,6 @@ test: Press Browse, then Stop waiting before choosing: the card is usable again.
 test: Profile > picture > Browse: same Stop waiting behaviour.
 note: The Linux parts need a Linux player to confirm (update install, zenity window).
 
-[cardboard-box]
-area: Gameplay
-title: Cardboard box: hide in a carton (toy_box), Metal Gear style
-change: toy_box (key, quick wheel Toys page, Collection Toys tab) puts the box on or off.
-change: In it you crouch, its music loops; other SJK players see the box and hear it.
-change: Use facing a boxed player lifts it (spotted); it tips over with a drop sound.
-test: toy_box: equip sound, you crouch and cannot jump, the music loops.
-test: Third person: the carton sits over you on the floor and turns with you.
-test: toy_box again: the box tips over the way you face, thud, lies 5 s, shrinks away.
-test: Die in the box: the death sound; you respawn without it.
-test: Collection > Toys: two toys; the switch beside the box turns it on and off.
-note: Spotting and others seeing the box need a second SJK client and the hub deploy.
-note: Sounds only from base/zz_sjk_box_sounds_local.pk3 (yours, not shipped).
-
-# ---- Bug reports, 17/10/2026 ----
-
 [freecam-emote]
 area: Gameplay
 title: Free camera moves during emotes (amsit, amhips, dances)
@@ -9376,7 +9350,7 @@ area: Audio
 title: snd_restart brings emote, box and Order 66 sounds back
 change: Their sounds registered once and were lost with snd_restart's new output. Report 99.
 test: Join, play a dance with music, snd_restart in the console, dance again: the music plays.
-test: Same with the cardboard box's music and the Order 66 toy's sound.
+test: Same with the Order 66 toy's sound.
 
 [userinfo-window]
 area: Gameplay
@@ -9525,7 +9499,7 @@ title: Toy volume + mute per toy (Settings > Sound > Toys)
 change: Toy volume s_toyVolume (0-2) scales every toy sound, loops included.
 change: One switch per toy (box, Order 66, Hax, Ragdoll, Drone) silences its sounds here.
 test: Settings > Sound > Toys: Toy volume slider and five switches, each with help text.
-test: toy_box: drag the slider while the music plays, it follows live; 0 silences it.
+test: toy_boombox: drag the slider while the music plays, it follows live; 0 silences it.
 test: Box sounds off: no music or cues, the box still shows; on again: music back.
 test: Ragdoll / Hax / Order 66 / Drone switches each silence only their toy.
 
@@ -10663,3 +10637,13 @@ change: The Boombox still stands on the floor (the floor trace moved to floor_sp
 test: Collection > Toys: 13 rows, With others holds Order 66, Hax and Monitor; all fit.
 test: Boombox: boombox_place stands it on the floor ahead, as before.
 test: Status bar toys and toy_help: no Banana peel; others switch and show as before.
+
+[cardboard-box-removed]
+area: Gameplay
+title: The cardboard box toy is removed (Sol's cleanup before the release)
+change: No toy_box; gone from Toys, the quick wheel's Toys page, key bindings and Settings.
+change: Its sound and sight settings are dropped from the profile at load.
+change: The Hax keeps its Use reach and picks the player in front as before.
+test: Collection > Toys: 12 rows, Around you holds Illuminate, Ragdoll, Drone, Boombox.
+test: Quick wheel Toys page (default): Illuminate first, Order 66 second; all fit.
+test: Hax: hold Use facing a player who has it on, within reach: the hack starts as before.

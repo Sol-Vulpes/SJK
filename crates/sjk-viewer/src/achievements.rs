@@ -1472,13 +1472,6 @@ impl Record {
         self.play_ms = total % 60_000;
     }
 
-    /// Add `ms` hidden in the box, with someone close by, to its minutes.
-    fn hide(&mut self, ms: u64) {
-        let total = self.box_ms + ms;
-        self.add(Counter::BoxMinutes, total / 60_000);
-        self.box_ms = total % 60_000;
-    }
-
     /// Add `ms` to the minutes of `counter` ([`Counter::is_timed`]).
     fn time(&mut self, counter: Counter, ms: u64) {
         let total = self.spare_ms[counter as usize] + ms;
@@ -2446,7 +2439,10 @@ mod tests {
         }
         assert!(!Record::remember(&mut record.partners, "sol"));
         assert_eq!(record.count(Counter::DuelPartners), 3);
-        record.hide(61_500);
+        // The box's minutes and spare time (no longer counted since 20/11/2026) are
+        // kept in the file for their holders.
+        record.add(Counter::BoxMinutes, 1);
+        record.box_ms = 1_500;
         assert_eq!(
             (record.count(Counter::BoxMinutes), record.box_ms),
             (1, 1_500)

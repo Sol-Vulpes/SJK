@@ -9,6 +9,8 @@
 #                               made it when that is not the piece's owner.
 
 = Sol
++ 20/11/2026 | - | Remove the cardboard box toy
+- 58bc2bc |  | Remove the cardboard box toy
 + 20/11/2026 | - | Remove the Banana peel toy
 - a8a58c1 |  | Remove the Banana peel toy
 + 20/11/2026 | - | Retire the removed toys' achievements; a board page with nothing listed leaves the switch

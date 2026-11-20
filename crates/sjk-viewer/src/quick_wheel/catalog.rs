@@ -17,8 +17,6 @@ pub(crate) enum State {
     /// Illuminate's holocron is lit (the client's own state, no cvar holds it:
     /// `toy_illuminate` flips it).
     Illuminate,
-    /// The player is in the cardboard box (`toy_box` flips it).
-    CardboardBox,
     /// The fishing rod is out (`toy_fishing` flips it).
     Fishing,
     /// The pickaxe is in hand (`toy_mining` flips it).
@@ -47,7 +45,7 @@ pub(crate) enum State {
 /// icons and cut by `scripts/wheel_icons.py` from two boards (the first sixteen
 /// from the first, the rest, named by the actions they are for, from the
 /// second); uploaded into the UI atlas at start (`ui_renderer::wheel_icon`).
-pub(crate) const ICONS: [(&str, &[u8]); 59] = [
+pub(crate) const ICONS: [(&str, &[u8]); 58] = [
     ("drizzle", include_bytes!("../../assets/wheel/drizzle.png")),
     ("rain", include_bytes!("../../assets/wheel/rain.png")),
     ("storm", include_bytes!("../../assets/wheel/storm.png")),
@@ -162,11 +160,6 @@ pub(crate) const ICONS: [(&str, &[u8]); 59] = [
     (
         "illuminate",
         include_bytes!("../../assets/holocron/toy_illuminate.png"),
-    ),
-    // The cardboard box's own picture, the carton (bundled with the client).
-    (
-        "cardboard_box",
-        include_bytes!("../../assets/cardboard_box/toy_box.png"),
     ),
     // Fishing's picture, the rod over a bucket (bundled with the client).
     (
@@ -648,14 +641,6 @@ pub(crate) const ACTIONS: &[Action] = &[
         Some("illuminate"),
     ),
     action(
-        "cardboard_box",
-        "Cardboard box",
-        crate::cardboard_box::COMMAND,
-        Toys,
-        State::CardboardBox,
-        Some("cardboard_box"),
-    ),
-    action(
         "fishing",
         "Fishing",
         crate::fishing::COMMAND,
@@ -864,9 +849,8 @@ pub(crate) const GENERAL: [&str; 8] = [
     "first_setup",
 ];
 /// The ids of the Toys page's default choices.
-pub(crate) const TOYS: [&str; 10] = [
+pub(crate) const TOYS: [&str; 9] = [
     "illuminate",
-    "cardboard_box",
     "order66",
     "order66_execute",
     "hax",

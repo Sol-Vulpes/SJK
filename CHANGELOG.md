@@ -81,6 +81,7 @@ A new emblem, a new Collection with kybers and an Inventory, status bars at both
 - Rig models: tails, capes and long hair no longer sink through the floor when the player kneels or crouches; every chain kept out of the body is kept off the ground too _(Kushina, PR #442)_
 - The achievements of the toys being removed (Order 66, the cardboard box, the Monitor, the Hax, Fishing and Mining, and the Drone's Special Delivery) are retired: whoever earned one keeps it, with its kyber and medal, marked No longer obtainable, and they no longer count in the totals of those who have none; the Hobbies page shows only to a player who holds one of its achievements _(Sol)_
 - The Banana peel toy is removed, the first of the toys going before the release (Sol's cleanup): its key, its Collection row, its quick wheel choices and its settings are gone, and its saved settings are dropped from your profile; the Boombox still stands on the floor as before _(Sol)_
+- The cardboard box toy is removed too (Sol's cleanup before the release): its key, its Collection row, its quick wheel choice and its settings are gone; the Hax's hack still starts on Use as before _(Sol)_
 
 ## 2026.1117.1 (Alpha) | 17/11/2026
 

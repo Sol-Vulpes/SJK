@@ -72,10 +72,6 @@ pub(super) fn load<'a>(
         model: crate::illuminate::MODEL.to_owned(),
         variant: String::new(),
     });
-    appearances.insert(Appearance {
-        model: crate::cardboard_box::MODEL.to_owned(),
-        variant: String::new(),
-    });
     appearances.extend(
         crate::mining::MODELS
             .into_iter()

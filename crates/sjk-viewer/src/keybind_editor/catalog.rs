@@ -136,12 +136,6 @@ const FIXED: &[BindableAction] = &[
     ),
     // SJK's toys are `toy_<name>` commands: light the Illuminate holocron or put it out.
     action(Interaction, "Toy: Illuminate", "toy_illuminate", ""),
-    action(
-        Interaction,
-        "Toy: Cardboard box",
-        crate::cardboard_box::COMMAND,
-        "",
-    ),
     action(Interaction, "Toy: Fishing", crate::fishing::COMMAND, ""),
     action(
         Interaction,

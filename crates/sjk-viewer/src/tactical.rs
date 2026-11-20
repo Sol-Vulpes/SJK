@@ -141,7 +141,6 @@ pub(crate) fn plain_players() -> bool {
 /// The settings Minimal sets: the toys' and pop-ups' own switches.
 const MINIMAL: &[(&str, &str)] = &[
     (crate::toy_sight::ILLUMINATE, "0"),
-    (crate::toy_sight::CARDBOARD_BOX, "0"),
     (crate::toy_sight::RAGDOLL, "0"),
     (crate::toy_sight::DRONE, "0"),
     (crate::toy_sight::BOOMBOX, "0"),

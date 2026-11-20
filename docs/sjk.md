@@ -21,13 +21,13 @@ general contributor rules.
 - A client mod's commands and settings start with its id and a dot
   (`japlus.guntele`, `jof.commands`), and its switch is `mod_<id>`
   ([mods.md](mods.md)).
-- Every toy is a `toy_<name>` command (`toy_help` lists them all; `toy_illuminate`, `toy_box`,
+- Every toy is a `toy_<name>` command (`toy_help` lists them all; `toy_illuminate`,
   `toy_order66`, `toy_hax`, `toy_ragdoll`, `toy_drone`, `toy_boombox`, `toy_monitor`,
   `toy_boxhunt`, `toy_wheelofdoom`, `toy_quests`); a
   toy has no Force wheel entry, and one with a setting names it `cg_toy<Name>...`.
-  Illuminate, the cardboard box and Order 66 have none: they are always available and
+  Illuminate and Order 66 have none: they are always available and
   on only for the client's run. A toy others see has an id in the look's `toys`
-  (`cardboard_box`, `order66`). A toy may have a command of its own besides
+  (`order66`, `hax`). A toy may have a command of its own besides
   (`order66`, which gives the order; `monitor_throw`, which throws a monitor, and
   `+monitor_throw`, its held bind, which charges the throw; `boombox_place`, which stands
   the boombox on the floor).

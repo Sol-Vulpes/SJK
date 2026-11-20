@@ -679,12 +679,6 @@ pub(super) fn register_daily_cvars(cvars: &mut CvarRegistry) -> Result<(), sjk_s
             "Loudness of the toys' sounds, times the effects volume (SJK)",
         ),
         CvarDefinition::new(
-            crate::toy_sounds::Toy::Box.cvar(),
-            true,
-            archive,
-            "Play cardboard box sounds (SJK)",
-        ),
-        CvarDefinition::new(
             crate::toy_sounds::Toy::Order66.cvar(),
             true,
             archive,
@@ -1183,12 +1177,6 @@ pub(super) fn register_daily_cvars(cvars: &mut CvarRegistry) -> Result<(), sjk_s
             true,
             archive,
             crate::toy_sight::CVARS[3].1,
-        ),
-        CvarDefinition::new(
-            crate::toy_sight::CVARS[4].0,
-            true,
-            archive,
-            crate::toy_sight::CVARS[4].1,
         ),
         CvarDefinition::new(
             crate::monitor::SHOW_CVAR,

@@ -2013,15 +2013,15 @@ Holocrons tab's Shop, a blade card's Forge link) open that kind directly.
   model's blade following at once and, worn, every SJK player's view of it
   ([unlockables.md](unlockables.md#options)).
 - **Toys** (rows since 25/10/2026,
-  [collection_toys.rs](../crates/sjk-viewer/src/collection_toys.rs)): "14 toys" (counted from the toys, as the tab's count is, hub report #265), things
-  to use in a match, and how many are on now. Illuminate's holocron, the cardboard box
-  (since 16/10/2026), Order 66 (since 17/10/2026), the Hax (since 21/10/2026), the
+  [collection_toys.rs](../crates/sjk-viewer/src/collection_toys.rs)): "12 toys" (counted from the toys, as the tab's count is, hub report #265), things
+  to use in a match, and how many are on now. Illuminate's holocron, Order 66 (since
+  17/10/2026), the Hax (since 21/10/2026), the
   Ragdoll (since 23/10/2026), the Drone (since 24/10/2026), the Boombox (since
   25/10/2026, verified players), the Monitor (since 26/10/2026), Box hunt (since
   27/10/2026), Fishing and Quests (since 05/11/2026,
   [quests.md](quests.md)), Mining and the WHEEL OF DOOM. Since 09/11/2026 (Sol's pick,
   once there were fourteen) the rows stand in three sections, each under its head and a
-  rule: **Around you** (Illuminate, Cardboard box, Ragdoll, Drone, Boombox), **With
+  rule: **Around you** (Illuminate, Ragdoll, Drone, Boombox), **With
   others** (Order 66, Hax, Monitor) and **Earn and win** (Box hunt, Fishing,
   Mining, Quests, WHEEL OF DOOM); the first head's line names the columns (By, Your key,
   On). A row of 42, 2 apart (`ORDER` and `SECTIONS` in the file; the toys keep their own
@@ -2045,9 +2045,9 @@ Holocrons tab's Shop, a blade card's Forge link) open that kind directly.
   of its first key as the key-binding editor does (`rebind_action`, never a locked key);
   "Quick wheel: On its Toys page", a line more for some (the Hax: hold Use on a player
   who has it on; the Ragdoll: its key again gets up), then its switch, "Holocron lit",
-  "In the box", "In the order", "Hacker", "Limp", "Peek me", "Play", "Hit me", "Hunt",
+  "In the order", "Hacker", "Limp", "Peek me", "Play", "Hit me", "Hunt",
   "Rod out" or "Take quests": on while
-  the toy is on, Enter or a click runs it (the `toy_illuminate`, `toy_box`,
+  the toy is on, Enter or a click runs it (the `toy_illuminate`,
   `toy_order66`, `toy_hax`, `toy_ragdoll`, `toy_drone`, `toy_boombox`, `toy_monitor`,
   `toy_boxhunt`, `toy_fishing` or `toy_quests` toggle, set to the state wanted;
   the viewer owns the state, the console mirrors it each frame). Under it, for a toy other
