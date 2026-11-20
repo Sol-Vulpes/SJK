@@ -611,7 +611,7 @@ pub trait Hub: Send {
         _last: bool,
     ) -> Result<crate::wire::ShatterAnswer, HubError> {
         Err(HubError::Protocol(
-            "this hub client does not shatter shaders".to_owned(),
+            "this hub client does not shatter kybers".to_owned(),
         ))
     }
 
@@ -622,7 +622,7 @@ pub trait Hub: Send {
         _identity: &Identity,
     ) -> Result<crate::wire::ShatterAllAnswer, HubError> {
         Err(HubError::Protocol(
-            "this hub client does not shatter shaders".to_owned(),
+            "this hub client does not shatter kybers".to_owned(),
         ))
     }
 
@@ -636,7 +636,7 @@ pub trait Hub: Send {
         _last: bool,
     ) -> Result<crate::wire::ShatterAllAnswer, (HubError, Option<String>)> {
         Err((
-            HubError::Protocol("this hub client does not shatter shaders".to_owned()),
+            HubError::Protocol("this hub client does not shatter kybers".to_owned()),
             None,
         ))
     }
@@ -648,7 +648,7 @@ pub trait Hub: Send {
         _id: &str,
     ) -> Result<crate::wire::CraftAnswer, HubError> {
         Err(HubError::Protocol(
-            "this hub client does not craft shaders".to_owned(),
+            "this hub client does not craft kybers".to_owned(),
         ))
     }
 
@@ -661,7 +661,7 @@ pub trait Hub: Send {
         _ids: &[String],
     ) -> Result<crate::wire::FuseAnswer, HubError> {
         Err(HubError::Protocol(
-            "this hub client does not fuse shaders".to_owned(),
+            "this hub client does not fuse kybers".to_owned(),
         ))
     }
 

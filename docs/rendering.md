@@ -373,6 +373,30 @@ bundle has axes, so a `tcGen vector` stage is never collapsed into a multitextur
 An entity's surface projects from its placed position, where rd-vanilla uses model space.
 The ignored world shot `map_spawn_views` renders any map's spawns (`SJK_SHOT_MAP`).
 
+## Facing and rim alpha (`alphaGen dot`, `oneMinusDot`)
+
+`alphaGen dot` gives a stage's alpha by how squarely the surface faces the viewer (1 head-on,
+0 edge-on) and `alphaGen oneMinusDot` one minus that, bright at the silhouette: a rim light
+on a model's hair or clothes. rd-vanilla parses both names but never computes them (no
+`AGEN_DOT` case in `ComputeColors`, `tr_shade.cpp`, MP or SP), so the alpha stays as the
+colour pass left it; SJK drew them as identity alpha the same way until 18/11/2026. No
+retail shader uses them, so nothing stock changes. Now `world_stage::alpha_generator_code`
+gives them codes 12 and 13 and `stage_runtime.wgsl` (`generated_color`) works the facing out
+per pixel from the interpolated normal and the camera, the same on either side, so a
+`cull none` card lights its rim from behind too. The falloff is linear (a surface at 60
+degrees to the view gets half). A rim stage on a model, for example:
+
+```
+{
+    map $whiteimage
+    blendFunc GL_SRC_ALPHA GL_ONE
+    rgbGen const ( 0.6 0.5 0.9 )
+    alphaGen oneMinusDot
+}
+```
+
+Other clients draw such a stage at full alpha, so over the whole surface.
+
 ## Video stages (`videoMap`)
 
 A stage with `videoMap <name>` plays a RoQ video on its surface, as rd-vanilla's
@@ -549,6 +573,10 @@ run is handed back to it in the next, so a pipeline built once does not start fr
   (`GameData/SJK/cache/`, or the per-user SJK folder's), named by
   `wgpu::util::pipeline_cache_key`: `wgpu_pipeline_cache_vulkan_<vendor>_<device>.bin`. Off-screen
   renders (tests, world shots) open no file.
+  The Collection's kyber loops (15/11/2026) are kept beside it in `cache/blades/`, one PNG
+  each named by the kyber and the key of what it is drawn from, on every backend
+  ([unlockables.md](unlockables.md#kybers-tab)); deleting them is safe too (they are baked
+  again).
 - **Loading and invalidation.** It is loaded once at start with `fallback`: wgpu checks the
   header it wrote (header version and ABI, backend, vendor and device, the driver's pipeline
   cache UUID, the body's length) and starts an empty cache when anything differs, so a driver
@@ -755,6 +783,14 @@ loader does (`world_texture_prepare.rs`). Built on the render thread, a chain co
 6.5 ms for a 1024x1024 texture and 25 ms for a 2048x2048 one (release build): 56 and
 182 ms hitches for two player models in Sol's log, with their pipelines already off
 the thread.
+
+The materials are still compiled twice, by the worker and on the render thread, and a
+glowing stage's emission (`world_emission.rs`: its additive mean and its area reduction)
+used to read every pixel both times. The old Creyon wolf's 4096x4096 eye glow
+(`sjk_creyonwolf`) cost 140 to 200 ms on the render thread after its warm-up, and a 719 ms
+`config-refresh` hitch in Sol's 16/11/2026 log. An image of 1024x1024 pixels or more now
+keeps those scans (`emission_memo.rs`, keyed by the decoded image and a weak reference to
+it, 64 images at most), so the render thread takes the worker's.
 
 Players' models now go up as models a server names do: one prepared texture a frame,
 then the materials and geometry ([player_loads.rs](../crates/sjk-viewer/src/player_loads.rs)).
@@ -1126,12 +1162,16 @@ process's RAM in Task Manager.
   occlusion, HDR and glow at full resolution) and the skins' GPU work.
   The size also sets the lamp light cache's budget
   ([below](#experimentals-lamp-memory)).
-- With menu pictures on, the menus' saber shader swatches show their drawings
-  (`collection_swatch.rs`) instead of the live blade pictures (`blade_pictures.rs`, a
-  832x1664 target of three textures, about 17 MB, and each signature blade's
-  pipeline), and that target is freed. Live, a frame draws only the pictures that need
-  it: the hovered or chosen ones every frame, the others 30 times a second and six a
-  frame at most ([unlockables.md](unlockables.md#shaders-tab)).
+- With menu pictures on, the menus' kyber swatches show no live blade pictures
+  (`blade_pictures.rs`, a 832x1664 target of three textures, about 17 MB, and each
+  signature blade's pipeline), and that target is freed (live, 5 s after the last
+  picture is asked for). Since 15/11/2026 the swatches play the kybers' loops instead
+  (`blade_stills.rs`: eight pictures a kyber, a 3072x2304 RGBA8 atlas of 24 loops,
+  27 MiB, while a swatch shows, and a 768x768 baking target with its depth, 6.75 MiB,
+  only while baking), kept on disk in `cache/blades`; with menu pictures on the atlas
+  holds 48 first pictures (3072x576, 6.75 MiB), a missing one baked one a frame, only
+  those on screen, and their drawings stand in until then. Live, only the chosen kyber's
+  large swatch is drawn ([unlockables.md](unlockables.md#kybers-tab)).
 - The secondary views make their targets the first frame each is drawn, not with the
   world (`Lazy` in [scene_view_gpu.rs](../crates/sjk-viewer/src/scene_view_gpu.rs),
   `Runtime::provide_targets` in [scene_views.rs](../crates/sjk-viewer/src/scene_views.rs)).
@@ -2162,6 +2202,16 @@ Private duels are drawn as JoF EJK's `CG_Player` draws them (EternalJK
   50) under the `gfx/misc/sightbubble` shell at JoF EJK's 100 100 255
   ([force_overlays.rs](../crates/sjk-client/src/force_overlays.rs)), a lighter blue than
   stock's 50 50 255.
+- With `cg_duelGhost 2` (Hidden, headshotsmcgee117's idea), a viewer in no duel does
+  not see the duellists at all: every player whose `bolt1` is set leaves what is
+  presented, as `cg_duelHideOthers` leaves out bystanders the other way round
+  (`DuelHideScope::Duellists` in
+  [duel_hide.rs](../crates/sjk-client/src/duel_hide.rs)), so the body, its sabers and
+  their glow, shadow, Force effects, nameplate, loops and its events (footsteps,
+  swings, saber hits and blocks by the wielder, pain; table `EVENT_ACTORS`) go with it,
+  and its thrown saber too. Shots are hidden by their owner only where the server sets
+  it (jaPRO). It holds on every server. The viewer's own duel, or the duel of the
+  player it follows, is never hidden by it.
 - In a duel, everyone but the two duellists is drawn at a fifth of their colour
   (`RF_RGB_TINT`). The two duellists look as they are: stock's distance-lit
   `powerups/forceshell` on them is EternalJK's `cg_stylePlayer` shell bit, off by
@@ -2476,6 +2526,7 @@ Each section ends at its mark, so it holds what was encoded since the one before
 | `glow` | the dynamic glow (`r_DynamicGlow`) |
 | `volumetrics` | light shafts (with sun shadows on) and dust motes |
 | `overlays+post+hud` | the resolve and post-processing (FXAA, bloom, eye adaptation, the display pass), then the HUD, menus and text |
+| `ui-backdrop` | the acrylic backdrops' blur, between the post-processing and the HUD, on frames that draw one ([Acrylic backdrops](#acrylic-backdrops)); its time is out of `overlays+post+hud`, marked on both sides of it |
 | `capture` | the WHEEL OF DOOM's mirror and console screenshots |
 
 A section's name shows only on the frames that mark it, so with a feature off its
@@ -5185,6 +5236,58 @@ dimmed labels are now 0.77 to 0.96 opaque, disabled ones 0.58 to 0.63. Chromatic
 retail menu values) keep their authored values and so show at full saturation.
 Scrims and other translucent fills keep theirs: dark ones look darker, and faint
 white washes (separators, borders, hover fills) look fainter than before.
+
+### Acrylic backdrops
+
+`DrawCommand::Backdrop { rect, radius, tint }` (17/11/2026) draws acrylic glass, as
+Windows' acrylic and iOS's materials do: what the frame holds behind the rectangle,
+blurred, its brightness held under a ceiling, the tint over it at its alpha, a faint grain
+and a light top edge. The SJK UI uses it for the status bars, the notification banners,
+its pop-up and hover cards, the scoreboard's band and, since 18/11/2026, the Collection's
+tiles, panes and cards ([sjk-ui.md](sjk-ui.md#acrylic-glass)).
+
+- **What is blurred:** the image the 2D layer draws into, as it stands before the 2D pass:
+  the world, its flares and post-processing. The 2D drawn under a backdrop is not in it;
+  the backdrop covers it (its output is opaque inside its rounded rectangle, times its
+  opacity group).
+- **The blur** ([backdrop.rs](../crates/sjk-viewer/src/ui_renderer/backdrop.rs),
+  `ui_backdrop.wgsl`): a dual Kawase chain in `Rgba8Unorm` display values. The frame goes to
+  a quarter of its size in one pass (four bilinear taps, a 4x4 mean), is halved until the
+  smallest level is about 68 lines tall (three levels at 1080 lines, four at 2160), then
+  drawn back up to the quarter (five taps down, eight up). Every pass is scissored to the
+  frame's backdrops, each grown by the chain's reach (76 pixels at 1080 lines, 172 at
+  2160) and overlapping ones merged, so the two status bars blur two strips of the frame.
+  The levels are made when the window's size changes; a frame makes one bind group, for
+  its source view.
+- **The material** (`ui_shapes.wgsl`, mode 8, reference `sjk_ui::acrylic::shade`): the
+  quarter-size result sampled at the pixel's place on the screen, scaled down to a Rec. 709
+  luma of at most 0.42 (`LUMA_CEILING`, keeping its hue) so text keeps its contrast over
+  snow, the tint mixed over it, a top hairline and sheen of light (white leaning 22 % to
+  the tint's hue, so warm on the warm theme's glass and cool on the cold one's,
+  [sjk-ui.md](sjk-ui.md#theme)), and a grain of plus or minus 0.012. The tint is the SJK
+  UI theme's ground or glass (`color::tint`), read each frame.
+- **When:** only on frames whose 2D layer draws a backdrop (`ShapeRenderer::backdrop_used`),
+  after the post-processing and before the 2D pass, and only when that image can be read
+  by a shader (`GpuState::hud_target_sampleable`): a post-processing intermediate always,
+  the swapchain image when the surface allows `TEXTURE_BINDING` (Vulkan and Metal do; the
+  surface is configured with it then), a world shot's image always. Otherwise (DirectX 12
+  swapchains), and in the CPU menu snapshots and the HUD picker's picture, a backdrop draws
+  its tint alone, opaquer (`sjk_ui::acrylic::fallback`, 60 % of the way to opaque).
+- **Cost:** its own GPU section, `ui-backdrop`. Measured with the ignored world shot
+  `status_bar_acrylic_cost` (both status bars over duel6, medians of 240 sampled frames)
+  on an RTX 5080: 0.014 ms at 1920x1080 and 0.022 ms at 3840x2160; the whole frame's
+  median did not move against the plain tint beyond its drift between runs. A backdrop
+  covering more of the screen (a pop-up card, the scoreboard's band) blurs a larger
+  region, at most the whole frame. The Collection (18/11/2026), measured with the ignored
+  world shot `duel6_collection_glass` (the hall, the Kybers wall with thirty-odd glass
+  tiles, the list on its pane, the Inventory, warm and cold, medians of 120 sampled
+  frames, RTX 5080, Vulkan): `ui-backdrop` 0.016 to 0.022 ms at 1920x1080 and 0.029 to
+  0.038 ms at 3840x2160; the whole frame against the same pages drawn as the plain tint
+  moved by less than the drift between runs either way. A glass per tile costs about what
+  one pane over the grid would: their grown rectangles overlap and merge, and past sixteen
+  regions the rest join the last one's union, so the chain blurs the grid's area once; the
+  extra is one texture sample a pixel where a plain fill was, and a bind group change per
+  tile, kept well under the renderer's 512 runs (a test counts them on the Kybers page).
 
 ### Menu text
 

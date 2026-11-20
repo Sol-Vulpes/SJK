@@ -32,8 +32,14 @@
 github: Sol-Vulpes
 role: Creator and developer of Sol JK
 did: Sol JK itself: its name, emblem, website, releases and self-updates
+did: The steel-and-sun emblem, drawn from its geometry, its sun alive in the menus
 did: Your SJK page: sign-in from the game, joining keys, video bounties
 did: The assets folder: PK3s tidied into subfolders of your own, outside base
+did: Feats: double kills, sprees and HOOKED! with medals and an announcer
+did: The top bar's ping read as the scoreboard does, the lagometer's as stock
+did: The sun theme: warm colours and acrylic glass over the game
+did: SJK UI themes: warm, cold or any hue, keeping every colour's lightness
+did: The Collection in acrylic glass, and a finished Kybers page
 did: The classic menus and classic+, the settings and search, the retail-look console
 did: The SJK UI, Sol JK's own menus over the live map
 did: SJK's icon art: the quick wheels' and the settings' icons
@@ -92,6 +98,12 @@ did: Blade cards craft their saber shader for less, and lead to it from the Card
 did: Perk marks on cards: a badge for each thing a card brings
 did: The Forge: shop, crafting and breaking any saber shader down, in one tab
 did: The History tab: every drop, opening, credit and shard spent, box and trade
+did: The Inventory tab: everything owned in one list, by kind, with counts and a search
+did: Inventory pictures and item card: worth in shards, wear, break down, open from the list
+did: One tier frame on every Collection page: each tier adds a touch, diamonds count the step
+did: The Collection's hall: a tile to each kind with what is new in it, the whole look beside
+did: Kyber loops: every blade drawn once as a short straight seamless loop, kept for the tiles
+did: New on every kind: cards, tags and finishers marked New, and empty pages that point the way
 did: Blade cost ranking: every Legendary and Mythical blade timed on the GPU
 did: Top-tier saber shaders made faster with the same look
 did: Blade shaders kept in a cache on disk and built ahead for the blades worn
@@ -120,6 +132,7 @@ did: Rig models: glTF players with their own skeleton, moved by JKA's animations
 did: SJK Rig Model Export, the Blender add-on that writes a rig model folder
 did: Rig model emotes: a model's own animations played on its own skeleton
 did: Rig model capes and tails that swing, pushed out of the body and legs
+did: Creyon, a werewolf rig model with a cloth look, for every player through the hub
 did: Gameplay FPS: the movement of 125, 142, 250 or 333 at any frame rate, explained
 did: help_tickrate: the tick rate explained, and how SJK sends commands on JoF
 did: Import from Base, JA+, OpenJK, EJK and TaystJK configs found on your computer
@@ -183,6 +196,7 @@ did: The quick wheel's live Force page and Toys page, Illuminate as a toy
 did: The pilot's vehicle HUD and crosshair, jetpacks, the spawn bubble and Force spheres
 did: Create game and its map picker, Import and the test list in the SJK look
 did: Faster play: players' models loaded off the render thread, no hitch when players join
+did: No freeze when a player joins in a model with big glowing textures
 did: Lighting that stops at walls, doors that block lamps, a faster JoFTemple
 did: Invisible brushes: clips, triggers, ladders, nodrop and movers (doors, lifts) shown as Radiant shows them
 did: Weather under sabers and effects, shield hits, idrive and +duck after JoF EJK
@@ -232,6 +246,7 @@ did: JA+ server mode: SJK's server runs as a JA+ 2.4 B7 server with g_mod japlus
 did: JA+ server mode: its emotes, grappling hook and admins, who log in with their SJK key (after VisionJK)
 did: Lights in map edits: lights added, moved and recoloured for every player, map lamps turned off or moved
 did: Door and lift shadows on lamp light within a fixed budget a frame: no more stutter when they move
+did: Two status bars docked to the screen's edges, the HUD inside them: your wallet, kyber, weapons and time below, the match above
 link: https://github.com/Sol-Vulpes/SJK
 link: https://sol-vulpes.github.io/SJK/
 
@@ -405,7 +420,7 @@ link: Lukas's pull requests | https://github.com/Sol-Vulpes/SJK/pulls?q=is%3Apr+
 
 [Slash]
 github: JoFSlash
-role: Contributor: 159 merged pull requests
+role: Contributor: 167 merged pull requests
 did: #114 Tab completes cfg file names after exec and writeconfig
 did: #113 CTF team saber colours, an option
 did: #153 The SJK scoreboard tells who won the Siege round or team match
@@ -565,6 +580,14 @@ did: #427 Devmap bar: cheat buttons over play, hold Ctrl to click
 did: #422 Click a chat line in the console to translate it, right under it
 did: #424 Fishing and Mining: kyber finds, daily goals, the catch market (adwe's idea)
 did: #425 Fishing and Mining: log book, rare catch card, share in SJK chat
+did: #434 in_mouseRepeat: a click runs its bind once, repeats start after 250 ms held
+did: #433 identity link: a code in two halves, a staff key told which way it goes
+did: #429 Box hunt: a lost out report goes again, paid credits show soon
+did: #428 Models blink and change their face, as in stock JKA (Goylander's report)
+did: #430 tell_attacker and duel start, won and lost lines
+did: #432 Console: Ctrl+F find bar over the scrollback (headshots' idea)
+did: #436 Duels: hide others' duellists completely, cg_duelGhost 2 (headshots' idea)
+did: #437 Emotes: hide others' emotes, hide or mute single emotes (mg.perso's idea)
 link: Slash's pull requests | https://github.com/Sol-Vulpes/SJK/pulls?q=is%3Apr+author%3AJoFSlash
 
 [Milamber]
@@ -590,13 +613,15 @@ link: Blackwolf1337's pull requests | https://github.com/Sol-Vulpes/SJK/pulls?q=
 
 [Kushina]
 github: kushinaSJK
-role: Contributor: 6 merged pull requests; ideas for SJK
+role: Contributor: 8 merged pull requests; ideas for SJK
 did: #373 Rig model hair and other forked chains no longer jump about
 did: #374 Rig chains: limit, clearance, layer lines and levers; a bone's middle collides
 did: #377 Rig hair and capes trail behind a running player and keep out of the arms
 did: #389 The server browser's sort mark stands clear of its column's name
 did: #388 A ribbon bar for every medal on the scoreboard
 did: #408 Collection text fits a larger text size and letter spacing
+did: #439 alphaGen dot and oneMinusDot draw facing and rim alpha
+did: #442 Rig model chains stay off the ground
 did: The Varykino Blossom blade: a blossom-pink blade, lavender mist, a flowering branch and blossoms shed as it swings
 did: Favourite and locked saber shaders: stars listed first, locks kept from break down and trades
 did: Plugin options as Settings switches, in place of typing a cp_pluginDisable number

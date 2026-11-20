@@ -709,9 +709,9 @@ fn draw_side(ui: &mut MenuCanvas, frame: &Frame, browser: &ServerBrowser, focus:
             frame.rect(SIDE_X + 34.0, top, SIDE_WIDTH - 110.0, SOURCE_HEIGHT),
             26.0 * s,
             match (index == current, hovered) {
-                (true, _) => color::GOLD_BRIGHT,
-                (false, true) => color::TEXT,
-                (false, false) => color::MUTED,
+                (true, _) => color::gold_bright(),
+                (false, true) => color::text(),
+                (false, false) => color::muted(),
             },
             FontWeight::Regular,
             TextAlign::Start,
@@ -722,7 +722,7 @@ fn draw_side(ui: &mut MenuCanvas, frame: &Frame, browser: &ServerBrowser, focus:
             format_args!("{count}"),
             frame.rect(SIDE_X + SIDE_WIDTH - 80.0, top, 66.0, SOURCE_HEIGHT),
             20.0 * s,
-            color::MUTED,
+            color::muted(),
             FontWeight::Regular,
             TextAlign::End,
         );
@@ -753,7 +753,7 @@ fn draw_side(ui: &mut MenuCanvas, frame: &Frame, browser: &ServerBrowser, focus:
             if focused {
                 Color::new(1.0, 1.0, 1.0, 1.0)
             } else {
-                color::alpha(color::TEXT, 0.88)
+                color::alpha(color::text(), 0.88)
             },
             FontWeight::Regular,
             TextAlign::Start,
@@ -833,9 +833,9 @@ fn draw_list(ui: &mut MenuCanvas, frame: &Frame, browser: &ServerBrowser) {
         let active = column.sort == sort;
         let hovered = ui.token_hovered(token);
         let colour = match (active, hovered) {
-            (true, _) => color::GOLD_BRIGHT,
-            (false, true) => color::TEXT,
-            (false, false) => color::MUTED,
+            (true, _) => color::gold_bright(),
+            (false, true) => color::text(),
+            (false, false) => color::muted(),
         };
         let middle = HEADER_TOP + HEADER_HEIGHT * 0.5;
         text(
@@ -867,7 +867,7 @@ fn draw_list(ui: &mut MenuCanvas, frame: &Frame, browser: &ServerBrowser) {
         ui,
         DrawCommand::SolidRect {
             rect: frame.rect(LIST_X, HEADER_TOP + HEADER_HEIGHT, LIST_WIDTH, 1.0),
-            color: color::alpha(color::HOLO, 0.22),
+            color: color::alpha(color::holo(), 0.22),
         },
     );
     ui.scroll_region(
@@ -881,7 +881,7 @@ fn draw_list(ui: &mut MenuCanvas, frame: &Frame, browser: &ServerBrowser) {
             format_args!("{}", EmptyNote(browser)),
             frame.rect(LIST_X + 22.0, ROWS_TOP + 8.0, LIST_WIDTH - 44.0, 36.0),
             19.0 * s,
-            color::MUTED,
+            color::muted(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -904,7 +904,7 @@ fn draw_list(ui: &mut MenuCanvas, frame: &Frame, browser: &ServerBrowser) {
         );
     }
     if browser.visible_len() > VISIBLE {
-        ui.scrollbar(
+        ui.sjk_scrollbar(
             SCROLLBAR_TOKEN,
             frame.rect(
                 LIST_X + LIST_WIDTH + 14.0,
@@ -964,7 +964,7 @@ fn draw_row(
             DrawCommand::RoundedRect {
                 rect: frame.rect(LIST_X, top, LIST_WIDTH, ROW),
                 radius: 10.0 * s,
-                color: color::alpha(color::HOLO, 0.05),
+                color: color::alpha(color::holo(), 0.05),
             },
         );
     }
@@ -982,8 +982,8 @@ fn draw_row(
         19.0 * s,
         match (selected, humans > 0) {
             (true, _) => Color::new(1.0, 1.0, 1.0, 1.0),
-            (false, true) => color::alpha(color::TEXT, 0.92),
-            (false, false) => color::alpha(color::TEXT, 0.5),
+            (false, true) => color::alpha(color::text(), 0.92),
+            (false, false) => color::alpha(color::text(), 0.5),
         },
         FontWeight::Regular,
         TextAlign::Start,
@@ -994,10 +994,14 @@ fn draw_row(
             frame,
             NAME.x + NAME.width - 10.0,
             middle,
-            color::GOLD_BRIGHT,
+            color::gold_bright(),
         );
     }
-    let quiet = if selected { color::TEXT } else { color::MUTED };
+    let quiet = if selected {
+        color::text()
+    } else {
+        color::muted()
+    };
     text(
         ui,
         TextFamily::Display,
@@ -1019,7 +1023,7 @@ fn draw_row(
                     rect: frame.rect(x, middle - 11.0, width, 22.0),
                     radius: 11.0 * s,
                     width: s.max(1.0),
-                    color: color::alpha(color::HOLO, 0.4),
+                    color: color::alpha(color::holo(), 0.4),
                 },
             );
             text(
@@ -1028,7 +1032,7 @@ fn draw_row(
                 format_args!("{tag}"),
                 frame.rect(x, middle - 11.0, width, 22.0),
                 14.0 * s,
-                color::HOLO,
+                color::holo(),
                 FontWeight::Semibold,
                 TextAlign::Center,
             );
@@ -1051,9 +1055,9 @@ fn draw_row(
         frame.rect(PLAYERS.x, top, PLAYERS.width, ROW),
         20.0 * s,
         if humans > 0 {
-            color::TEXT
+            color::text()
         } else {
-            color::QUIET
+            color::quiet()
         },
         FontWeight::Regular,
         PLAYERS.align,
@@ -1130,9 +1134,9 @@ pub(crate) fn signal(
                 rect,
                 radius: 1.5 * frame.s,
                 color: match (bar < lit, selected) {
-                    (true, true) => color::GOLD_BRIGHT,
-                    (true, false) => color::HOLO,
-                    (false, _) => color::alpha(color::HOLO, 0.2),
+                    (true, true) => color::gold_bright(),
+                    (true, false) => color::holo(),
+                    (false, _) => color::alpha(color::holo(), 0.2),
                 },
             },
         );
@@ -1186,7 +1190,7 @@ fn draw_detail(
         ui,
         DrawCommand::SolidRect {
             rect,
-            color: color::alpha(color::SPACE, 0.7),
+            color: color::alpha(color::space(), 0.7),
         },
     );
     if picture.preview == Preview::Image {
@@ -1206,7 +1210,7 @@ fn draw_detail(
             format_args!("No picture of this map"),
             frame.rect(x, y, width, height - 40.0),
             16.0 * s,
-            color::QUIET,
+            color::quiet(),
             FontWeight::Regular,
             TextAlign::Center,
         );
@@ -1214,8 +1218,8 @@ fn draw_detail(
     super::fade(
         ui,
         frame.rect(x, y + height * 0.5, width, height * 0.5),
-        color::alpha(color::SPACE, 0.0),
-        color::alpha(color::SPACE, 0.85),
+        color::alpha(color::space(), 0.0),
+        color::alpha(color::space(), 0.85),
     );
     push(
         ui,
@@ -1223,7 +1227,7 @@ fn draw_detail(
             rect,
             radius: 0.0,
             width: s.max(1.0),
-            color: color::alpha(color::HOLO, 0.25),
+            color: color::alpha(color::holo(), 0.25),
         },
     );
     text(
@@ -1232,7 +1236,7 @@ fn draw_detail(
         format_args!("{}", short_map(&entry.map)),
         frame.rect(x + 18.0, y + height - 46.0, width - 36.0, 36.0),
         24.0 * s,
-        color::TEXT,
+        color::text(),
         FontWeight::Semibold,
         TextAlign::Start,
     );
@@ -1247,7 +1251,7 @@ fn draw_detail(
             format_args!("{carried}{part}"),
             frame.rect(DETAIL_X, NAME_TOP + line as f32 * 36.0, DETAIL_WIDTH, 36.0),
             30.0 * s,
-            color::TEXT,
+            color::text(),
             FontWeight::Semibold,
             TextAlign::Start,
         );
@@ -1288,7 +1292,7 @@ fn draw_detail(
             format_args!("{label}"),
             frame.rect(left, top, 210.0, 20.0),
             14.0 * s,
-            color::MUTED,
+            color::muted(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -1298,7 +1302,7 @@ fn draw_detail(
             format_args!("{value}"),
             frame.rect(left, top + 20.0, 210.0, 30.0),
             22.0 * s,
-            color::TEXT,
+            color::text(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -1309,7 +1313,7 @@ fn draw_detail(
         format_args!("{}", entry.address),
         frame.rect(DETAIL_X, ADDRESS_Y, 260.0, 24.0),
         16.0 * s,
-        color::HOLO,
+        color::holo(),
         FontWeight::Regular,
         TextAlign::Start,
     );
@@ -1320,7 +1324,7 @@ fn draw_detail(
             format_args!("Needs a password"),
             frame.rect(DETAIL_X + 220.0, ADDRESS_Y, DETAIL_WIDTH - 220.0, 24.0),
             16.0 * s,
-            color::GOLD_BRIGHT,
+            color::gold_bright(),
             FontWeight::Regular,
             TextAlign::End,
         );
@@ -1332,7 +1336,7 @@ fn draw_detail(
             format_args!("{limits}"),
             frame.rect(DETAIL_X, ADDRESS_Y + 28.0, DETAIL_WIDTH, 24.0),
             16.0 * s,
-            color::MUTED,
+            color::muted(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -1381,7 +1385,7 @@ fn draw_detail(
             format_args!("{message}"),
             frame.rect(DETAIL_X, PLAYERS_Y + 22.0, DETAIL_WIDTH, PLAYER_LINE),
             16.0 * s,
-            color::MUTED,
+            color::muted(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -1416,9 +1420,9 @@ fn draw_detail(
                     frame.rect(DETAIL_X + 12.0, line_y, DETAIL_WIDTH - 120.0, PLAYER_LINE),
                     17.0 * s,
                     if bot {
-                        color::alpha(color::TEXT, 0.5)
+                        color::alpha(color::text(), 0.5)
                     } else {
-                        color::TEXT
+                        color::text()
                     },
                     FontWeight::Regular,
                     TextAlign::Start,
@@ -1434,7 +1438,7 @@ fn draw_detail(
                         PLAYER_LINE,
                     ),
                     18.0 * s,
-                    color::MUTED,
+                    color::muted(),
                     FontWeight::Regular,
                     TextAlign::End,
                 );
@@ -1448,7 +1452,7 @@ fn draw_detail(
                     ui,
                     DrawCommand::SolidRect {
                         rect: frame.rect(DETAIL_X + DETAIL_WIDTH - 4.0, top, 3.0, track),
-                        color: color::alpha(color::HOLO, 0.15),
+                        color: color::alpha(color::holo(), 0.15),
                     },
                 );
                 push(
@@ -1460,7 +1464,7 @@ fn draw_detail(
                             3.0,
                             track * PLAYER_LINES as f32 / total,
                         ),
-                        color: color::alpha(color::HOLO, 0.7),
+                        color: color::alpha(color::holo(), 0.7),
                     },
                 );
             }
@@ -1510,7 +1514,7 @@ fn draw_status(ui: &mut MenuCanvas, frame: &Frame, status: &str) {
         format_args!("{status}"),
         frame.rect(SIDE_X, KEYS_Y, 640.0, 24.0),
         16.0 * frame.s,
-        color::MUTED,
+        color::muted(),
         FontWeight::Regular,
         TextAlign::Start,
     );
@@ -1630,7 +1634,7 @@ fn draw_dialog(ui: &mut MenuCanvas, frame: &Frame, viewport: [f32; 2], dialog: &
         format_args!("{title}"),
         frame.rect(x + 40.0, y + 28.0, width - 80.0, 52.0),
         36.0 * s,
-        color::TEXT,
+        color::text(),
         FontWeight::Semibold,
         TextAlign::Start,
     );
@@ -1641,7 +1645,7 @@ fn draw_dialog(ui: &mut MenuCanvas, frame: &Frame, viewport: [f32; 2], dialog: &
             format_args!("{part}"),
             frame.rect(x + 40.0, y + 88.0 + line as f32 * 26.0, width - 80.0, 26.0),
             17.0 * s,
-            color::MUTED,
+            color::muted(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -1665,7 +1669,7 @@ fn draw_dialog(ui: &mut MenuCanvas, frame: &Frame, viewport: [f32; 2], dialog: &
                             9.0,
                         ),
                         radius: 4.5 * s,
-                        color: color::TEXT,
+                        color: color::text(),
                     },
                 );
             }
@@ -1675,7 +1679,7 @@ fn draw_dialog(ui: &mut MenuCanvas, frame: &Frame, viewport: [f32; 2], dialog: &
                 format_args!("_"),
                 frame.rect(fx + 18.0 + dots as f32 * 16.0, fy, 20.0, fh),
                 17.0 * s,
-                color::TEXT,
+                color::text(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -1692,7 +1696,7 @@ fn draw_dialog(ui: &mut MenuCanvas, frame: &Frame, viewport: [f32; 2], dialog: &
             format_args!("{error}"),
             frame.rect(x + 40.0, y + 214.0, width - 80.0, 26.0),
             16.0 * s,
-            color::GOLD_BRIGHT,
+            color::gold_bright(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -1706,7 +1710,11 @@ fn draw_dialog(ui: &mut MenuCanvas, frame: &Frame, viewport: [f32; 2], dialog: &
             format_args!("Remember on this PC"),
             frame.rect(x + 40.0, line - 12.0, 300.0, 24.0),
             17.0 * s,
-            if *remember { color::TEXT } else { color::MUTED },
+            if *remember {
+                color::text()
+            } else {
+                color::muted()
+            },
             FontWeight::Regular,
             TextAlign::Start,
         );

@@ -2,6 +2,7 @@
 
 pub(crate) mod clock;
 mod data_source;
+pub(crate) use data_source::client_name_and_team;
 pub(crate) mod duel_pairs;
 use data_source::*;
 pub(crate) mod crosshair;
@@ -18,6 +19,7 @@ mod jetpack_fuel;
 pub(crate) mod lagometer;
 mod monitor_marks;
 pub(crate) use monitor_marks::MonitorMarks;
+pub(crate) mod feats;
 pub(crate) mod icons;
 pub(crate) mod identification;
 mod info;
@@ -73,7 +75,8 @@ const DRAW_LIMIT: usize = 384
     + kill_feed::CAPACITY * kill_feed::ENTRY_COMMANDS
     + movement::AURA_COMMANDS
     + movement_keys::COMMANDS
-    + sound_sonar::COMMANDS;
+    + sound_sonar::COMMANDS
+    + feats::CAPACITY * feats::ENTRY_COMMANDS;
 const DEFAULT_LAYOUT: &str = include_str!("../assets/hud/default.json");
 /// The weapon name fades over this long at the end of its life.
 const WEAPON_FADE_MS: u64 = 600;
@@ -265,6 +268,8 @@ pub(crate) struct HudOverlay {
     preview_question: String,
     /// The kill feed at the top right.
     pub(crate) kill_feed: kill_feed::Feed,
+    /// The feats' medals and announcer queue (`cg_feats`).
+    pub(crate) feats: feats::Feats,
     crosshair_name: String,
     speed: options::Speed,
     /// The local time (`cg_drawClock`, [`clock`]).
@@ -315,6 +320,22 @@ pub(crate) struct HudOverlay {
     offsets: placement::Offsets,
     /// The box each element drew in the last layout, for the HUD edit mode.
     pub(crate) element_bounds: placement::Bounds,
+    /// The room the status bars keep at the screen's edges this frame; the elements move
+    /// inside it ([`crate::status_bar::Reserved::shift`]).
+    edges: crate::status_bar::Reserved,
+    /// What the status bars show this frame that the HUD then leaves out.
+    bars: BarReadouts,
+}
+
+/// The HUD's readouts a status bar shows instead this frame (`status_bar.rs`): the match
+/// timer (the bar's time left), the local time and date (`cg_drawClock`, left out when
+/// the bar says all it says) and `cg_drawFps`'s rate.
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub(crate) struct BarReadouts {
+    pub(crate) timer: bool,
+    pub(crate) time: bool,
+    pub(crate) date: bool,
+    pub(crate) fps: bool,
 }
 
 /// Where the player wants the radial look's status meters (Lex's idea, 29/10/2026: too
@@ -503,6 +524,7 @@ impl HudOverlay {
             sent_votes_seen: 0,
             preview_question: String::new(),
             kill_feed: kill_feed::Feed::default(),
+            feats: feats::Feats::default(),
             crosshair_name: String::with_capacity(64),
             speed: options::Speed::default(),
             clock: clock::Clock::default(),
@@ -544,7 +566,25 @@ impl HudOverlay {
             radial_placement: RadialPlacement::default(),
             offsets: placement::Offsets::default(),
             element_bounds: placement::Bounds::default(),
+            edges: crate::status_bar::Reserved::NONE,
+            bars: BarReadouts::default(),
         }
+    }
+
+    /// Lay the HUD out inside the status bars this frame: `edges` is the room they keep,
+    /// `bars` what they show that the HUD then leaves out.
+    pub(crate) fn set_status_bars(
+        &mut self,
+        edges: crate::status_bar::Reserved,
+        bars: BarReadouts,
+    ) {
+        self.edges = edges;
+        self.bars = bars;
+    }
+
+    /// The status bars' readouts the HUD leaves out this frame.
+    pub(crate) fn bar_readouts(&self) -> BarReadouts {
+        self.bars
     }
 
     /// Place the elements the player moved ([`placement`]).
@@ -580,14 +620,15 @@ impl HudOverlay {
         self.sound_sonar = markers;
     }
 
-    /// Build, lay out and retain the HUD widget draw list. `user_scale` is
-    /// the player's `cg_hudScale` on top of the resolution-derived scale.
     /// The match clock to show in the upper right under the frame rate, as JoF EJK's
     /// `CG_DrawTimer` does, when it shows ([`Self::layout`] decides each frame).
     pub(crate) fn upper_right_timer(&self) -> Option<&str> {
         self.upper_right_timer.then_some(self.match_timer.as_str())
     }
 
+    /// Build, lay out and retain the HUD widget draw list. `user_scale` is
+    /// the player's `cg_hudScale` on top of the resolution-derived scale. Every element
+    /// drawn against an edge stands inside the status bars ([`Self::set_status_bars`]).
     pub(crate) fn layout(
         &mut self,
         font: &UiFont,
@@ -600,7 +641,8 @@ impl HudOverlay {
         self.upper_right_timer = visibility.timer
             && self.family.upper
             && self.family.timer_upper_right
-            && !self.match_timer.is_empty();
+            && !self.match_timer.is_empty()
+            && !self.bars.timer;
         self.displayed_ratios = self.ratios.map(|tween| tween.sample(time_ms));
         self.displayed_ammo = self.ammo_ratio.sample(time_ms);
         self.weapon_alpha = self.weapon_shown_ms.map_or(0.0, |shown| {
@@ -654,7 +696,8 @@ impl HudOverlay {
             team_vote_active: self.team_vote_active,
             votes: self.vote_meters(),
             crosshair_name: !self.crosshair_name.is_empty(),
-            timer: !self.match_timer.is_empty(),
+            // The top status bar's time left stands for the match timer.
+            timer: !self.match_timer.is_empty() && !self.bars.timer,
             warmup: !self.warmup_text.is_empty(),
             interrupted: self.interrupted,
             // SJK's own looks draw the vehicle as their layouts' hull, speed and
@@ -810,6 +853,18 @@ impl HudOverlay {
                 },
                 &mut output,
             );
+            // Inside the status bars, but for what stands with the crosshair (its name,
+            // the interruption notice): the crosshair is the 3D view's.
+            let with_crosshair = crosshair_widget(widget)
+                || (elements[index].is_none()
+                    && matches!(
+                        widget.anchor,
+                        sjk_ui::Anchor::Center | sjk_ui::Anchor::Left | sjk_ui::Anchor::Right
+                    ));
+            if !with_crosshair && let Some(bounds) = self.draw_list.bounds_from(start) {
+                let dy = self.edges.shift(bounds, viewport[1]);
+                self.draw_list.translate_from(start, 0.0, dy);
+            }
             if let Some(element) = element {
                 self.element_bounds
                     .add(element, self.draw_list.bounds_from(start));
@@ -829,9 +884,12 @@ impl HudOverlay {
             let start = self.draw_list.len();
             self.speed.emit(&mut self.draw_list, self.theme, viewport);
             self.place_from(Element::Speedometer, start, viewport);
-            let start = self.draw_list.len();
-            self.clock.emit(&mut self.draw_list, self.theme, viewport);
-            self.place_from(Element::Clock, start, viewport);
+            // The bottom status bar's time and date stand for the HUD's clock.
+            if !self.clock.covered_by(self.bars.time, self.bars.date) {
+                let start = self.draw_list.len();
+                self.clock.emit(&mut self.draw_list, self.theme, viewport);
+                self.place_from(Element::Clock, start, viewport);
+            }
             let start = self.draw_list.len();
             self.movement_keys.emit(&mut self.draw_list, viewport);
             self.place_from(Element::MovementKeys, start, viewport);
@@ -864,6 +922,10 @@ impl HudOverlay {
                 ),
             }
             self.place_from(Element::Selection, start, viewport);
+            // The family's and the icons' pieces stand at the top and the bottom: each
+            // moves inside the status bars by its own edge, once the kill feed's room
+            // under them is known.
+            let pieces = self.draw_list.len();
             top_right = top_right.max(self.emit_family(viewport));
             self.icons.flags_in_boxes = self.flag_status.flags_in_boxes(visibility);
             top_right = top_right.max(self.icons.emit(
@@ -874,11 +936,15 @@ impl HudOverlay {
                 self.weapon_select.shown.is_some(),
                 self.weapon_alpha,
             ));
+            let edges = self.edges;
+            self.draw_list
+                .translate_each_from(pieces, |rect| edges.shift(rect, viewport[1]));
             let options = self.kill_feed.options();
             if options.fps || self.upper_right_timer {
                 top_right = top_right.max(crate::console_overlay::upper_right_bottom(
                     viewport[1],
                     options.fps,
+                    !self.bars.fps,
                     self.upper_right_timer,
                 ));
             }
@@ -895,26 +961,41 @@ impl HudOverlay {
             );
             self.place_from(Element::KillFeed, start, viewport);
             let start = self.draw_list.len();
+            self.feats
+                .emit(&mut self.draw_list, viewport, hero_scale, font, self.theme);
+            self.place_from(Element::Feats, start, viewport);
+            let start = self.draw_list.len();
             self.flag_status
                 .emit(&mut self.draw_list, viewport, &self.icons, visibility);
             self.place_from(Element::Flags, start, viewport);
+            // The strafe guides follow the crosshair's heading: they stay where they are.
             self.guides.emit(&mut self.draw_list, viewport, time_ms);
         }
         // CG_DrawWeaponSelect does not follow cg_drawHud: only the row's own
         // conditions (`GpuState::sample_weapon_select`) decide.
         if let Some(shown) = &self.weapon_select.shown {
+            let start = self.draw_list.len();
             crate::weapon_select::emit_icons(&mut self.draw_list, &self.icons, shown, viewport);
+            if let Some(bounds) = self.draw_list.bounds_from(start) {
+                let dy = self.edges.shift(bounds, viewport[1]);
+                self.draw_list.translate_from(start, 0.0, dy);
+            }
         }
         output
     }
 
     /// Move what `element` drew from command `start` on where the player put it, when
     /// it keeps its place in [`placement::OFFSETS_CVAR`] (the others read their own
-    /// cvars as they draw), and keep its box for the edit mode.
+    /// cvars as they draw), then inside the status bars by its nearer edge, and keep its
+    /// box for the edit mode.
     fn place_from(&mut self, element: placement::Element, start: usize, viewport: [f32; 2]) {
         if element.binding() == placement::Binding::Free {
             let [dx, dy] = self.offsets.pixels(element, viewport);
             self.draw_list.translate_from(start, dx, dy);
+        }
+        if let Some(bounds) = self.draw_list.bounds_from(start) {
+            let dy = self.edges.shift(bounds, viewport[1]);
+            self.draw_list.translate_from(start, 0.0, dy);
         }
         self.element_bounds
             .add(element, self.draw_list.bounds_from(start));

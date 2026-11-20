@@ -66,7 +66,7 @@ const UPDATE_HINT: &str = "Check for a newer SJK release and install it";
 const IDENTITY_HINT: &str = "Your SJK identity: your key and the SJK hub";
 const SJK_PROFILE_HINT: &str = "Your SJK profile: medals, bio, record and achievements";
 const SJK_CHAT_HINT: &str = "Talk with every SJK player, on any server or in the menus";
-const COLLECTION_HINT: &str = "Medals, achievements, shaders, toys, holocrons and the Forge";
+const COLLECTION_HINT: &str = "Medals, achievements, kybers, toys, holocrons and the Forge";
 const BACK_HINT: &str = "Return to the main menu";
 
 /// Retail `main.menu`: two columns either side of the centre window, Exit

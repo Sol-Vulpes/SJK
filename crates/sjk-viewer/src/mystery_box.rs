@@ -573,6 +573,8 @@ pub(crate) struct MysteryBoxes {
     sounds_registered: Option<u64>,
     /// What an outcome pays, by the hub's list (for other players' openings).
     outcomes: Vec<(String, u64)>,
+    /// What a box may give and its chance, by the hub's list, for the Use prompt's panel.
+    drops: Vec<crate::use_prompt::Drop>,
     /// Free openings the player won in the box hunt and has not spent.
     free: u64,
     hunt: hunt::Hunt,
@@ -649,6 +651,7 @@ impl MysteryBoxes {
             .iter()
             .map(|outcome| (outcome.id.clone(), outcome.credits))
             .collect();
+        self.drops = box_drops(&boxes.outcomes);
         self.here = boxes
             .boxes
             .iter()
@@ -913,6 +916,7 @@ fn box_prompt(
         action: action.to_owned(),
         line,
         ready,
+        drops: Vec::new(),
     };
     if let Some(opening) = &here.opening {
         let rolled = now.saturating_duration_since(opening.started) >= ROLL;
@@ -939,6 +943,45 @@ fn box_prompt(
     } else {
         prompt(open, Some(format!("{} credits", wallet.price)), true)
     })
+}
+
+/// What a box may give, as a player reads it, by the hub's `outcomes`: likeliest first,
+/// the never rolled left out.
+fn box_drops(outcomes: &[wire::Outcome]) -> Vec<crate::use_prompt::Drop> {
+    let drops = outcomes
+        .iter()
+        .filter(|outcome| outcome.per_mille > 0)
+        .map(|outcome| crate::use_prompt::Drop {
+            name: drop_name(&outcome.id, outcome.credits),
+            per_mille: outcome.per_mille,
+            colour: None,
+        })
+        .collect();
+    crate::use_prompt::likeliest_first(drops)
+}
+
+/// The name of a box's outcome `id` paying `credits`, in the drops panel.
+fn drop_name(id: &str, credits: u64) -> String {
+    match id {
+        wire::HOLOCRON => "A holocron, Uncommon or better".to_owned(),
+        wire::COINS | "double" | "jackpot" if credits > 0 => format!("{credits} credits"),
+        wire::EXPLODE => "The teddy bear: a DOOM coin".to_owned(),
+        wire::SHARD_PILE => "Kyber shards".to_owned(),
+        wire::RAYGUN => "The Ray Gun".to_owned(),
+        wire::BLADE => "The Mystery blade".to_owned(),
+        wire::KYBER => "A dormant kyber".to_owned(),
+        wire::AGAIN => "Another roll".to_owned(),
+        "refund" => "Your credits back".to_owned(),
+        "empty" => "Nothing".to_owned(),
+        other => {
+            let words = other.replace('_', " ");
+            let mut chars = words.chars();
+            chars
+                .next()
+                .map(|first| first.to_uppercase().chain(chars).collect())
+                .unwrap_or_default()
+        }
+    }
 }
 
 /// The whole seconds left before the player may open another box, their last opening
@@ -976,7 +1019,7 @@ fn prize_text(outcome: &str, prize: &Prize) -> String {
                 .kyber
                 .as_deref()
                 .and_then(crate::kyber::from_id)
-                .map_or("A kyber crystal", |tier| tier.name);
+                .map_or("A dormant kyber", |tier| tier.name);
             format!("{name}! In your Collection")
         }
         (wire::RAYGUN, ..) => format!(
@@ -1277,6 +1320,13 @@ impl GpuState {
                         .is_some_and(|(_, asked)| now.duration_since(asked) < ASK_TIMEOUT),
                     now,
                 )
+                .map(|mut prompt| {
+                    // What it may give, while nobody opens it.
+                    if here.opening.is_none() {
+                        prompt.drops.clone_from(&boxes.drops);
+                    }
+                    prompt
+                })
             });
         if let Some(prompt) = prompt {
             self.want_use_prompt(prompt);
@@ -1807,6 +1857,35 @@ pub(crate) const SHOT_ROLL: Duration = ROLL;
 mod tests {
     use super::*;
 
+    #[test]
+    fn the_drops_panel_names_what_a_box_holds_likeliest_first() {
+        let outcome = |id: &str, per_mille, credits| wire::Outcome {
+            id: id.to_owned(),
+            per_mille,
+            credits,
+        };
+        let drops = box_drops(&[
+            outcome("coins", 150, 50),
+            outcome("holocron", 455, 0),
+            outcome("kyber", 5, 0),
+            outcome("explode", 120, 0),
+            outcome("empty", 0, 0),
+        ]);
+        let rows: Vec<_> = drops
+            .iter()
+            .map(|drop| (drop.name.as_str(), drop.per_mille))
+            .collect();
+        assert_eq!(
+            rows,
+            [
+                ("A holocron, Uncommon or better", 455),
+                ("50 credits", 150),
+                ("The teddy bear: a DOOM coin", 120),
+                ("A dormant kyber", 5),
+            ]
+        );
+    }
+
     fn here(id: i64, origin: [f32; 3]) -> Here {
         Here {
             id,
@@ -2143,7 +2222,7 @@ mod tests {
         };
         assert_eq!(
             prize_text(wire::KYBER, &crystal),
-            "Rare Kyber Crystal! In your Collection"
+            "Rare Dormant Kyber! In your Collection"
         );
         let gun = Prize {
             raygun: Some(30),

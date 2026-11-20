@@ -116,6 +116,10 @@ pub(super) const COMMANDS: &[(&str, &str)] = &[
         "Whisper to the last player who whispered to you: reply <message>, or bare to open the chat on it",
     ),
     (
+        TELL_ATTACKER_COMMAND,
+        "Whisper to the last player who hurt you: tell_attacker <message> (bindable, as in EternalJK)",
+    ),
+    (
         crate::chat::translate::COMMAND,
         "Translate the newest foreign chat line into English through the SJK hub, or the text given: tr [text]",
     ),
@@ -157,6 +161,7 @@ pub(super) const COMMANDS: &[(&str, &str)] = &[
         crate::cards::rehearsal::COMMAND,
         crate::cards::rehearsal::HELP,
     ),
+    (crate::feats::COMMAND, crate::feats::HELP),
     (
         crate::chat::find_blade::COMMAND,
         crate::chat::find_blade::HELP,
@@ -247,6 +252,14 @@ pub(super) const COMMANDS: &[(&str, &str)] = &[
         crate::console::SJK_GIF_HELP,
     ),
     (crate::emotes::COMMAND, crate::emotes::HELP),
+    (
+        crate::emote_filters::HIDE_COMMAND,
+        crate::emote_filters::HIDE_HELP,
+    ),
+    (
+        crate::emote_filters::MUTE_COMMAND,
+        crate::emote_filters::MUTE_HELP,
+    ),
     (crate::boombox::TRACK_COMMAND, crate::boombox::HELP),
     (crate::propgun::PICK_COMMAND, crate::propgun::PICK_HELP),
     (
@@ -916,6 +929,47 @@ impl crate::GpuState {
             }
         }
     }
+    /// `tell_attacker <message>` (stock cgame's `CG_TellAttacker_f`, bound to a key as an
+    /// auto-reply in EternalJK): whisper `message` to the player in
+    /// `ps.persistant[PERS_ATTACKER]`, once damage feedback has set stock's
+    /// `cg.attackerTime` gate ([`crate::damage_feedback::Feedback::has_attacker`]).
+    /// Unlike stock, it says why and sends nothing when the last hurt came from the
+    /// world, the player themselves or a slot now empty, instead of a bad `tell`.
+    fn tell_attacker_command(&mut self, args: &[String]) -> Result<Vec<String>, String> {
+        let Some(session) = &self.live_session else {
+            return Err("tell_attacker: not in a game".into());
+        };
+        let message = args.join(" ");
+        if message.trim().is_empty() {
+            return Err("Usage: tell_attacker <message>".into());
+        }
+        let snapshot = session.latest_snapshot();
+        let me = u16::try_from(session.game_state().client_num).ok();
+        let attacker = attacker_slot(
+            self.damage_feedback.has_attacker(),
+            snapshot.player.persistent[PERS_ATTACKER],
+            me,
+        )
+        .ok_or("tell_attacker: no player has hurt you yet; nothing sent")?;
+        self.chat.update_roster(
+            self.resident
+                .session
+                .as_ref()
+                .unwrap_or(session)
+                .game_state(),
+        );
+        if !self.chat.in_game(attacker) {
+            return Err("tell_attacker: the player who hurt you has left; nothing sent".into());
+        }
+        let Some(command) =
+            sjk_client::chat_command_full(sjk_client::ChatDestination::Player(attacker), &message)
+        else {
+            return Ok(Vec::new());
+        };
+        self.send_chat_command(&command, None);
+        Ok(Vec::new())
+    }
+
     /// `reply [message]` (JoF EternalJK's): whisper `message` to the last player who
     /// whispered to us, or open the composer on that whisper (`chat/reply.rs`).
     fn reply_command(&mut self, args: &[String]) -> Result<Vec<String>, String> {
@@ -1122,6 +1176,7 @@ impl crate::GpuState {
                 );
             }
             "reply" => return self.reply_command(args),
+            TELL_ATTACKER_COMMAND => return self.tell_attacker_command(args),
             crate::chat::translate::COMMAND => {
                 let text = args.join(" ");
                 return self
@@ -1255,13 +1310,7 @@ impl crate::GpuState {
                 self.sync_cursor_policy();
             }
             crate::console::COLLECTION_COMMAND if self.in_game_menu.is_sjk() => {
-                let tab = self
-                    .console
-                    .as_ref()
-                    .map_or(crate::profile_hub::Tab::Medals, |console| {
-                        console.collection_tab()
-                    });
-                self.toggle_profile_hub(tab);
+                self.toggle_collection_hub();
             }
             crate::console::COLLECTION_COMMAND => {
                 if let Some(console) = &mut self.console {
@@ -1270,6 +1319,9 @@ impl crate::GpuState {
                 self.sync_cursor_policy();
             }
             crate::emotes::COMMAND => return self.emote_command(args),
+            crate::emote_filters::HIDE_COMMAND | crate::emote_filters::MUTE_COMMAND => {
+                return self.emote_filter_command(&name, args);
+            }
             crate::boombox::TRACK_COMMAND => return self.boombox_command(args),
             crate::propgun::PICK_COMMAND => return self.propgun_command(args),
             crate::toy_switch_words::COMMAND => return Ok(crate::toy_switch_words::help_lines()),
@@ -1280,6 +1332,7 @@ impl crate::GpuState {
             crate::medal_popup::rehearsal::COMMAND => return self.debug_medal_command(args),
             crate::holocrons::rehearsal::COMMAND => return self.debug_holocron_command(args),
             crate::cards::rehearsal::COMMAND => return self.debug_open_command(args),
+            crate::feats::COMMAND => return self.debug_feat_command(args),
             crate::chat::find_blade::COMMAND => return self.debug_find_command(args),
             crate::unlock_toast::UPDATE_COMMAND => return self.debug_update_command(args),
             crate::official::ANNOUNCEMENT_COMMAND => return self.announcement_command(args),
@@ -1491,6 +1544,19 @@ impl crate::GpuState {
 /// `PMF_FOLLOW` (`bg_public.h`): the player state is the followed player's.
 const PMF_FOLLOW: u16 = 4096;
 
+/// EternalJK's (and stock cgame's) `tell_attacker`.
+pub(crate) const TELL_ATTACKER_COMMAND: &str = "tell_attacker";
+/// `PERS_ATTACKER` (`persEnum_t`, `bg_public.h`): who last hurt the player.
+const PERS_ATTACKER: usize = 6;
+
+/// The slot `tell_attacker` whispers to: `PERS_ATTACKER` once the player has been hurt
+/// (`hurt`, stock's `cg.attackerTime`), when that is another client; never the world
+/// (`ENTITYNUM_WORLD`) or the player's own slot `me` (a fall, a self-hit).
+fn attacker_slot(hurt: bool, attacker: u32, me: Option<u16>) -> Option<u16> {
+    let slot = u16::try_from(attacker).ok().filter(|&slot| slot < 32)?;
+    (hurt && Some(slot) != me).then_some(slot)
+}
+
 /// Who `messagemode3` whispers to: while following a player (spectating, `PMF_FOLLOW`),
 /// the player followed, as EternalJK's `Con_MessageMode3_f` sends to
 /// `cl.snap.ps.clientNum` (`cl_console.cpp:121`); else the player under the crosshair
@@ -1515,6 +1581,19 @@ mod tests {
         player.set_movement_flags(super::PMF_FOLLOW);
         assert_eq!(super::whisper_slot(&player, None), Some(5));
         assert_eq!(super::whisper_slot(&player, Some(2)), Some(5));
+    }
+
+    #[test]
+    fn tell_attacker_goes_only_to_another_player_who_hurt_us() {
+        use super::attacker_slot;
+        // Before any hurt, PERS_ATTACKER's 0 is nobody (stock's attackerTime gate).
+        assert_eq!(attacker_slot(false, 0, Some(3)), None);
+        assert_eq!(attacker_slot(true, 7, Some(3)), Some(7));
+        assert_eq!(attacker_slot(true, 0, Some(3)), Some(0));
+        // A fall or the world: no player to whisper to.
+        assert_eq!(attacker_slot(true, 3, Some(3)), None);
+        assert_eq!(attacker_slot(true, 1022, Some(3)), None);
+        assert_eq!(attacker_slot(true, 32, Some(3)), None);
     }
     use super::*;
 

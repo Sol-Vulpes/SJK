@@ -140,11 +140,20 @@ impl GpuState {
                 .as_ref()
                 .is_some_and(|session| !session.is_local());
             if own_commands && remote && self.server_clock.anchored() {
+                let now = Instant::now();
                 self.server_view.snapshot(
                     snapshot.server_time,
                     snapshot.player.command_time(),
-                    Instant::now(),
+                    now,
                 );
+                // The top bar's ping, from the snapshots that time our own packets.
+                if let Some(ping) = self
+                    .live_session
+                    .as_ref()
+                    .and_then(sjk_client::ClientSession::snapshot_ping)
+                {
+                    self.status_bar.observe_snapshot_ping(ping, now);
+                }
             }
             self.present_live_snapshot(&snapshot, true, game_audio, visual_now);
             true
@@ -159,6 +168,17 @@ impl GpuState {
         if caught_up {
             self.server_clock.adjust(Instant::now());
         }
+        // A `scores` reply read with the snapshots gives the top bar the server's own
+        // measure of our ping (`status_bar::ping`).
+        if let Some(session) = self
+            .live_session
+            .as_ref()
+            .filter(|session| !session.is_local())
+        {
+            self.status_bar.observe_scores(session, Instant::now());
+        }
+        // A duel line the snapshots made due (`duel_lines.rs`).
+        self.send_duel_line();
         timing.mark(Phase::Commands);
         self.ghost_frame();
         let talking = self.talk_button();

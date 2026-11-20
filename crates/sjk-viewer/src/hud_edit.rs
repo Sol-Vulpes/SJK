@@ -303,7 +303,7 @@ impl HudEdit {
                 rect,
                 radius: 6.0 * s,
                 color: color::alpha(
-                    if lit { color::GOLD } else { color::HOLO },
+                    if lit { color::gold() } else { color::holo() },
                     if lit { 0.16 } else { 0.06 },
                 ),
             });
@@ -312,7 +312,11 @@ impl HudEdit {
                 radius: 6.0 * s,
                 width: if lit { 2.0 } else { 1.5 } * s,
                 color: color::alpha(
-                    if lit { color::GOLD_BRIGHT } else { color::HOLO },
+                    if lit {
+                        color::gold_bright()
+                    } else {
+                        color::holo()
+                    },
                     if lit { 1.0 } else { 0.7 },
                 ),
             });
@@ -329,7 +333,11 @@ impl HudEdit {
                 format_args!("{}", element.label()),
                 Rect::new(rect.x, y, rect.width.max(160.0 * s), line),
                 16.0 * s,
-                if lit { color::GOLD_BRIGHT } else { color::TEXT },
+                if lit {
+                    color::gold_bright()
+                } else {
+                    color::text()
+                },
                 FontWeight::Semibold,
                 TextAlign::Start,
             );
@@ -343,7 +351,7 @@ impl HudEdit {
             format_args!("Move the HUD"),
             frame.rect(x + margin, y + 18.0, width - margin * 2.0, 34.0),
             26.0 * s,
-            color::GOLD_BRIGHT,
+            color::gold_bright(),
             FontWeight::Semibold,
             TextAlign::Start,
         );
@@ -360,7 +368,7 @@ impl HudEdit {
             ),
             frame.rect(x + margin, y + 56.0, width - margin * 2.0, 28.0),
             17.0 * s,
-            color::MUTED,
+            color::muted(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -469,6 +477,7 @@ impl crate::GpuState {
             Some(crate::chat::options::box_rect(
                 self.console.as_ref(),
                 viewport,
+                self.status_bar.reserved(),
             )),
         );
         let target = crate::ingame_menu::sjk_view::text_target(

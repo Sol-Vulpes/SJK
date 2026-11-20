@@ -5,7 +5,7 @@
 //! This is the one place that says which tiers the client knows and how each looks: its
 //! wire id, name, colour and odds ([`TIERS`]), and how a profile's entries and the hub's
 //! progress read ([`entries`], [`counts_of`], [`next_text`]). Everything that draws a
-//! holocron reads these: the drop pop-up ([`crate::holocron_popup`]), the chat lines
+//! holocron reads these: the drops' banners ([`crate::holocron_banners`]), the chat lines
 //! ([`line`]), the staff page and the Profile screen's Holocrons tab (which reads the
 //! counts, the list and the progress from the identity's snapshot once, in
 //! [`crate::console::holocrons_panel::Data::of`]). An id the client does not know is left
@@ -38,7 +38,7 @@ use sjk_ui::Color;
 
 /// How many tiers the client knows.
 pub(crate) const COUNT: usize = 4;
-/// The most holocrons the pop-up shows at once when a profile first lists many (a
+/// The most holocrons the banners tell of at once when a profile first lists many (a
 /// reinstalled PC): the newest of them.
 pub(crate) const FIRST_READ_MAX: usize = 20;
 
@@ -61,7 +61,7 @@ pub(crate) struct Tier {
     pub(crate) name: &'static str,
     /// The tier alone ("Rare"), as a saber shader's tier reads (`unlockables::Rarity`).
     pub(crate) label: &'static str,
-    /// The tier's colour: its pop-up, chat lines, gem and counts. None of the game's
+    /// The tier's colour: its banner, chat lines, gem and counts. None of the game's
     /// `^n` colours, and four colours that stay apart for players who tell colours
     /// apart poorly.
     pub(crate) colour: Color,
@@ -287,25 +287,6 @@ impl Entry {
         } else {
             format!("Received from {from} in a trade")
         })
-    }
-
-    /// "Found 10/10/2026 14:05" (UTC, day first, 24 hours), or "A gift from the SJK
-    /// team 10/10/2026 14:05" for a gift; no date when the hub did not say when.
-    pub(crate) fn when(&self) -> String {
-        let date = when_text(self.dropped);
-        if self.earned {
-            return if date.is_empty() {
-                "Earned from an achievement".to_owned()
-            } else {
-                format!("Earned {date}")
-            };
-        }
-        match (self.gift, date.is_empty()) {
-            (true, true) => "A gift from the SJK team".to_owned(),
-            (true, false) => format!("A gift from the SJK team, {date}"),
-            (false, true) => String::new(),
-            (false, false) => format!("Found {date}"),
-        }
     }
 }
 
@@ -541,21 +522,7 @@ mod tests {
         assert_eq!(ids, [9, 7]);
         assert!(!entries[0].gift && entries[1].gift);
         assert_eq!(entries[1].note, "For the fog bug");
-        assert_eq!(entries[0].when(), "Found 10/10/2026 14:05");
-        assert_eq!(
-            entries[1].when(),
-            "A gift from the SJK team, 10/10/2026 14:05"
-        );
-        let undated = Entry {
-            dropped: 0,
-            ..entries[0].clone()
-        };
-        assert_eq!(undated.when(), "");
-        let undated_gift = Entry {
-            dropped: 0,
-            ..entries[1].clone()
-        };
-        assert_eq!(undated_gift.when(), "A gift from the SJK team");
+        assert_eq!(entries[0].dropped, 1_791_641_100);
     }
 
     /// A kyber crystal reads as an entry of its own tier for the arrival, but is not one
@@ -569,7 +536,6 @@ mod tests {
         let crystal = Entry::from_wire(&list[0]).expect("a crystal");
         assert_eq!(crystal.tier.id, "kyber_rare");
         assert!(crystal.earned && !crystal.gift);
-        assert_eq!(crystal.when(), "Earned 10/10/2026 14:05");
         let ids: Vec<u64> = entries(&list).iter().map(|entry| entry.id).collect();
         assert_eq!(ids, [8], "crystals left out");
         assert_eq!(slot(1).id, "rare");

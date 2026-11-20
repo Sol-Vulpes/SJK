@@ -1,6 +1,6 @@
 //! The Collection page's frame, in the SJK UI's look: the map darkened behind Medals
 //! and Achievements, or dark on the left and clear over the player's model behind
-//! Shaders, Toys and Nameplates; the way back, the title and the row of tabs, each
+//! Shaders and Toys; the way back, the title and the row of tabs, each
 //! with how many of its things the player holds; at the top right how many of all of
 //! them, as a tick per thing, lit for the ones held; the tab; the keys.
 
@@ -47,7 +47,7 @@ pub(super) struct Count {
 impl Count {
     /// What the tab's name says after it: "2/4", how many for a tab with no set total
     /// (the holocrons held), empty when unknown or none.
-    fn label(self) -> String {
+    pub(super) fn label(self) -> String {
         match self.held {
             Some(held) if self.total > 0 => format!("{held}/{}", self.total),
             Some(held) if held > 0 => crate::cards::grouped(held as u64),
@@ -67,7 +67,7 @@ pub(super) fn counts(inputs: &Inputs<'_>) -> [Count; 10] {
             .filter(|skin| inputs.holdings.unlock(skin.id).is_some())
             .count()
     });
-    // Out of the shaders the player sees: an unheld Unique one is not counted.
+    // Out of the shaders the player sees: an unheld Secret one is not counted.
     let shaders_shown = inputs.holdings.listed_count();
     [
         Count {
@@ -96,10 +96,6 @@ pub(super) fn counts(inputs: &Inputs<'_>) -> [Count; 10] {
                     .count()
             }),
             total: crate::tags::CATALOGUE.len(),
-        },
-        Count {
-            held: Some(0),
-            total: 0,
         },
         // The holocrons are opened, not kept: how many, and no total.
         Count {
@@ -130,6 +126,11 @@ pub(super) fn counts(inputs: &Inputs<'_>) -> [Count; 10] {
             total: 0,
         },
         // The history counts nothing.
+        Count {
+            held: None,
+            total: 0,
+        },
+        // The inventory lists what the others count.
         Count {
             held: None,
             total: 0,
@@ -166,14 +167,11 @@ pub(crate) fn row_labels(
         fishing_card: None,
         wheel_of_doom: false,
         mining_card: None,
-        name: "",
-        stock: color::HOLO,
+        stock: color::holo(),
         grid: false,
         options: "",
         second: "",
         pair: crate::saber_skins::Pair::None,
-        share: false,
-        nameplate_style: crate::hud::nameplate::Style::Holo,
         toy_keys: &[],
         toys_unseen: 0,
         toy_options: 0,
@@ -265,6 +263,270 @@ pub(super) fn left_lines(
     y
 }
 
+/// The shape an empty page shows of what will fill it ([`empty_state`], 15/11/2026).
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum Ghosts {
+    /// Three card outlines, each with a "?".
+    Cards,
+    /// A dim holocron.
+    Cube,
+    /// A grey crystal (a dormant kyber).
+    Crystal,
+    /// Three medal outlines.
+    Medals,
+    /// A few dim rows, as a list's.
+    Rows,
+}
+
+/// The one thing an empty page offers ([`empty_state`]): its button's label and token.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) struct EmptyButton<'a> {
+    pub(crate) label: &'a str,
+    pub(crate) token: u16,
+}
+
+/// An empty page that points the way (the ideas page's "Empty states", 15/11/2026): in
+/// `rect` (frame pixels), the outlines of what fills the page (`ghosts`), its title and
+/// line (how it fills) and at most one `action`. A rect under 160 pixels tall lays it out
+/// as a row, the ghost at the left and the button at the right; a taller one as a column,
+/// centred. The words are the caller's, already through [`crate::terms::say`].
+pub(crate) fn empty_state(
+    canvas: &mut crate::menu_widgets::MenuCanvas,
+    frame: &Frame,
+    [x, y, width, height]: [f32; 4],
+    ghosts: Ghosts,
+    (title, line): (&str, &str),
+    action: Option<EmptyButton<'_>>,
+) {
+    let s = frame.s;
+    let control = crate::menu::sjk::kit::CONTROL_HEIGHT;
+    let button_width = |label: &str, pad: f32| label_width(label, 17.0, 1.0) + pad;
+    if height < 160.0 {
+        let side = (height - 8.0).max(24.0);
+        ghost(canvas, frame, [x + 4.0, y + 4.0, side, side], ghosts, true);
+        let button = action.map_or(0.0, |action| button_width(action.label, 48.0));
+        let left = x + side + 22.0;
+        let room = (width - side - 22.0 - button - 16.0).max(40.0);
+        let middle = y + height * 0.5;
+        text(
+            canvas,
+            TextFamily::Display,
+            format_args!("{title}"),
+            frame.rect(left, middle - 26.0, room, 26.0),
+            20.0 * s,
+            color::text(),
+            FontWeight::Semibold,
+            TextAlign::Start,
+        );
+        text(
+            canvas,
+            TextFamily::Body,
+            format_args!("{line}"),
+            frame.rect(left, middle + 1.0, room, 22.0),
+            14.0 * s,
+            color::muted(),
+            FontWeight::Regular,
+            TextAlign::Start,
+        );
+        if let Some(action) = action {
+            crate::menu::sjk::kit::button(
+                canvas,
+                frame,
+                [x + width - button, middle - control * 0.5, button, control],
+                action.label,
+                true,
+                true,
+                false,
+                action.token,
+            );
+        }
+        return;
+    }
+    let ghost_height = (height * 0.42).clamp(90.0, 300.0);
+    let ghost_width = match ghosts {
+        Ghosts::Cards | Ghosts::Medals => ghost_height * 2.2,
+        Ghosts::Rows => width.min(640.0),
+        Ghosts::Cube | Ghosts::Crystal => ghost_height,
+    };
+    let top = y + 8.0;
+    ghost(
+        canvas,
+        frame,
+        [
+            x + (width - ghost_width) * 0.5,
+            top,
+            ghost_width,
+            ghost_height,
+        ],
+        ghosts,
+        false,
+    );
+    let mut at = top + ghost_height + 28.0;
+    text(
+        canvas,
+        TextFamily::Display,
+        format_args!("{title}"),
+        frame.rect(x, at, width, 40.0),
+        30.0 * s,
+        color::text(),
+        FontWeight::Semibold,
+        TextAlign::Center,
+    );
+    at += 46.0;
+    let column = width.min(760.0);
+    at = centred_lines(
+        canvas,
+        frame,
+        line,
+        [x + (width - column) * 0.5, at, column],
+        ((column / 8.6) as usize).max(20),
+        3,
+        17.0,
+        color::muted(),
+    );
+    if let Some(action) = action {
+        let button = button_width(action.label, 64.0);
+        crate::menu::sjk::kit::button(
+            canvas,
+            frame,
+            [x + (width - button) * 0.5, at + 18.0, button, control],
+            action.label,
+            true,
+            true,
+            false,
+            action.token,
+        );
+    }
+}
+
+/// An empty state's button on a Collection page ([`empty_state`]).
+pub(super) const EMPTY_ACTION_TOKEN: u16 = 8_601;
+
+/// What an empty Collection page's button (or Enter) does.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(super) enum EmptyAction {
+    /// Show the Holocrons page, where the waiting ones open.
+    Holocrons,
+    /// Show the server list: holocrons drop while playing.
+    Servers,
+}
+
+impl Panel {
+    /// The empty state's button was pressed (or Enter on its page).
+    pub(super) fn press_empty_action(&mut self) -> PanelAction {
+        match self.empty_action {
+            Some(EmptyAction::Holocrons) => {
+                ui_cues_click();
+                PanelAction::Hub(Tab::Holocrons)
+            }
+            Some(EmptyAction::Servers) => {
+                ui_cues_click();
+                PanelAction::Servers
+            }
+            None => PanelAction::None,
+        }
+    }
+}
+
+/// `ghosts` drawn dim over `[x, y, width, height]` (`small`: a row's, one of them).
+fn ghost(
+    canvas: &mut crate::menu_widgets::MenuCanvas,
+    frame: &Frame,
+    [x, y, width, height]: [f32; 4],
+    ghosts: Ghosts,
+    small: bool,
+) {
+    let s = frame.s;
+    let outline = |canvas: &mut crate::menu_widgets::MenuCanvas, rect: [f32; 4], radius: f32| {
+        let area = frame.rect(rect[0], rect[1], rect[2], rect[3]);
+        let _ = canvas.draw_list_mut().push(DrawCommand::RoundedRect {
+            rect: area,
+            radius: radius * s,
+            color: color::alpha(color::holo(), 0.04),
+        });
+        let _ = canvas.draw_list_mut().push(DrawCommand::Border {
+            rect: area,
+            radius: radius * s,
+            width: 1.5 * s,
+            color: color::alpha(color::holo(), 0.26),
+        });
+    };
+    let mark = |canvas: &mut crate::menu_widgets::MenuCanvas, rect: [f32; 4], mark: char| {
+        let size = rect[2].min(rect[3]) * 0.42;
+        text(
+            canvas,
+            TextFamily::Body,
+            format_args!("{mark}"),
+            frame.rect(
+                rect[0],
+                rect[1] + (rect[3] - size * 1.3) * 0.5,
+                rect[2],
+                size * 1.3,
+            ),
+            size * s,
+            color::alpha(color::holo(), 0.32),
+            FontWeight::Semibold,
+            TextAlign::Center,
+        );
+    };
+    let count = if small { 1 } else { 3 };
+    match ghosts {
+        Ghosts::Cards | Ghosts::Medals => {
+            let medal = ghosts == Ghosts::Medals;
+            let item_width = if medal {
+                height
+            } else {
+                height / crate::cards::look::ASPECT
+            };
+            let gap = item_width * 0.18;
+            let all = item_width * count as f32 + gap * (count - 1) as f32;
+            let left = x + (width - all) * 0.5;
+            for index in 0..count {
+                let rect = [
+                    left + index as f32 * (item_width + gap),
+                    y,
+                    item_width,
+                    height,
+                ];
+                if medal {
+                    outline(canvas, rect, item_width * 0.5);
+                    mark(canvas, rect, crate::symbols::MEDAL);
+                } else {
+                    outline(canvas, rect, item_width * 0.07);
+                    mark(canvas, rect, '?');
+                }
+            }
+        }
+        Ghosts::Cube | Ghosts::Crystal => {
+            let side = width.min(height);
+            let rect = [
+                x + (width - side) * 0.5,
+                y + (height - side) * 0.5,
+                side,
+                side,
+            ];
+            outline(canvas, rect, side * 0.2);
+            mark(
+                canvas,
+                rect,
+                if ghosts == Ghosts::Cube {
+                    crate::symbols::HOLOCRON
+                } else {
+                    crate::symbols::SHARD
+                },
+            );
+        }
+        Ghosts::Rows => {
+            let rows = if small { 1 } else { 4 };
+            let step = height / rows as f32;
+            for index in 0..rows {
+                let top = y + index as f32 * step;
+                outline(canvas, [x, top + 3.0, width, step - 6.0], 8.0);
+            }
+        }
+    }
+}
+
 impl Panel {
     /// Draw the page with what `inputs` says.
     pub(crate) fn append_sjk(
@@ -290,6 +552,8 @@ impl Panel {
     /// Lay the page out; `_body` is the body family, kept for measured layouts.
     pub(super) fn build(&mut self, inputs: &Inputs<'_>, _body: &UiFont, viewport: [f32; 2]) {
         let frame = Frame::new(viewport);
+        self.follow_news(inputs);
+        self.empty_action = None;
         self.box_on = inputs.cardboard_box;
         self.order66_on = inputs.order66;
         self.hax_on = inputs.hax;
@@ -302,7 +566,6 @@ impl Panel {
         self.fishing_on = inputs.fishing;
         self.mining_on = inputs.mining;
         self.quests_on = inputs.quests;
-        self.share_on = inputs.share;
         self.toys_unseen = inputs.toys_unseen;
         self.toy_options = inputs.toy_options;
         let seconds = self.epoch.elapsed().as_secs_f32();
@@ -313,7 +576,36 @@ impl Panel {
         if self.tab == Tab::SaberLab && !crate::saber_lab::active() {
             self.tab = Tab::Shaders;
         }
-        let kit = matches!(self.tab, Tab::Shaders | Tab::Toys | Tab::Nameplates);
+        // The motion from the page shown last frame to this one (it only draws).
+        let now = self.look_clock();
+        self.transition.follow(
+            super::transition::Place {
+                hall: self.hall,
+                tab: self.tab,
+                finishers: self.finishers_shown,
+            },
+            now,
+            crate::rarity_fx::enabled(),
+        );
+        self.transition.now = self.transition.at(now);
+        // The hall, or the Loadouts card over it (the hall left out under it).
+        if self.hall {
+            // Not on show: shown again, the History tab reads the newest lines.
+            self.history.shown = false;
+            if self.loadouts.is_open() {
+                crate::settings::sjk_view::backdrop(&mut self.ui, viewport);
+                self.loadouts
+                    .draw(&mut self.ui, &frame, viewport, &self.loadout_slots);
+                self.ui.finish(u16::MAX);
+                return;
+            }
+            self.hall_view(inputs, viewport, seconds);
+            self.closing_card(&frame);
+            self.ui
+                .finish(hall::TILE_BASE + self.hall_state.chosen as u16);
+            return;
+        }
+        let kit = matches!(self.tab, Tab::Shaders | Tab::Toys);
         if self.lab_building() {
             lab_build_scrims(&mut self.ui, viewport, &frame);
         } else if self.tab == Tab::SaberLab && self.backstage != Backstage::None {
@@ -356,6 +648,8 @@ impl Panel {
             self.ui.finish(u16::MAX);
             return;
         }
+        // The page arriving: faint, or sliding in from the side, for its motion.
+        let arriving = self.arriving_page(&frame);
         let asking = self.tab == Tab::Forge && self.forge.ask.is_some();
         let back = if self.hub {
             crate::profile_hub::back_words(self.back)
@@ -363,7 +657,25 @@ impl Panel {
             "Back"
         };
         // A card asking on the Forge covers the page: the header is left out under it.
-        if !asking {
+        if !asking && self.tab == Tab::Shaders && self.finishers_shown {
+            // The Finishers pill's page is not kybers: the breadcrumb says Finishers.
+            let held = crate::finishers::CATALOGUE
+                .iter()
+                .filter(|f| inputs.holdings.debug() || inputs.holdings.unlock(f.id).is_some())
+                .count();
+            let count = Count {
+                held: Some(held),
+                total: crate::finishers::CATALOGUE.len(),
+            };
+            crate::profile_hub::collection_header_as(
+                &mut self.ui,
+                &frame,
+                (back, BACK_TOKEN),
+                "Finishers",
+                (&count.label(), self.widen),
+            );
+            self.tally(&frame, &counts);
+        } else if !asking {
             crate::profile_hub::collection_header(
                 &mut self.ui,
                 &frame,
@@ -383,12 +695,13 @@ impl Panel {
             Tab::Banners => self.banners(&frame, inputs),
             Tab::Cards => self.cards(&frame, inputs, seconds),
             Tab::History => self.history_tab(&frame, inputs),
+            Tab::Inventory => self.inventory_tab(&frame, inputs, seconds),
             Tab::Forge => {
                 self.grid = inputs.grid;
                 self.forge(&frame, inputs, seconds, viewport);
             }
             Tab::SaberLab => self.saber_lab(&frame, inputs),
-            _ => self.nameplates(&frame, inputs),
+            _ => {}
         }
         if self.offers_loadouts() {
             // Under the tally, clear of each tab's lead line and card.
@@ -411,13 +724,95 @@ impl Panel {
         self.keys(&frame, inputs);
         self.lab_build_overlay(&frame);
         self.hover_card(&frame, inputs);
+        self.arrived_page(&frame, arriving);
         self.ui.finish(self.focus_token());
+    }
+
+    /// The window rectangle a kind's page fills, where an opening tile grows to.
+    fn page_area(frame: &Frame) -> sjk_ui::Rect {
+        frame.rect(LEFT_X, 150.0, RIGHT_X - LEFT_X, 870.0)
+    }
+
+    /// Begin the page under this frame's motion: its opacity, and a slide's offset. What
+    /// was begun, for [`Self::arrived_page`] to end.
+    fn arriving_page(&mut self, frame: &Frame) -> (bool, bool) {
+        use super::transition::{Motion, SLIDE_FROM, arriving};
+        let Some((motion, t)) = self
+            .transition
+            .now
+            .filter(|(motion, _)| *motion != Motion::Close)
+        else {
+            return (false, false);
+        };
+        let list = self.ui.draw_list_mut();
+        let _ = list.push(DrawCommand::PushOpacity(arriving(motion, t)));
+        let slid = if let Motion::Slide { by } = motion {
+            let dx = by * SLIDE_FROM * frame.s * (1.0 - t);
+            let _ = list.push(DrawCommand::PushTransform([
+                1.0, 0.0, dx, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0,
+            ]));
+            true
+        } else {
+            false
+        };
+        (true, slid)
+    }
+
+    /// End what [`Self::arriving_page`] began, then draw an opening's tile on its way
+    /// from the hall into the page.
+    fn arrived_page(&mut self, frame: &Frame, (faded, slid): (bool, bool)) {
+        use super::transition::{Motion, between};
+        let list = self.ui.draw_list_mut();
+        if slid {
+            let _ = list.push(DrawCommand::PopTransform);
+        }
+        if faded {
+            let _ = list.push(DrawCommand::PopOpacity);
+        }
+        if let Some((Motion::Open { from }, t)) = self.transition.now {
+            let rect = between(from, Self::page_area(frame), t);
+            Self::moving_card(&mut self.ui, frame, rect, 1.0 - t * t);
+        }
+    }
+
+    /// Over the hall, a closing page on its way back onto its tile.
+    fn closing_card(&mut self, frame: &Frame) {
+        use super::transition::{Motion, between};
+        let (Some((Motion::Close, t)), Some(tile)) = (self.transition.now, self.transition.tile)
+        else {
+            return;
+        };
+        let page = Self::page_area(frame);
+        Self::moving_card(&mut self.ui, frame, between(page, tile, t), 1.0 - t * t);
+    }
+
+    /// A card on its way between a hall tile and its page (window pixels), `alpha`
+    /// opaque: the tile's dark glass and the gold of the one chosen.
+    fn moving_card(
+        canvas: &mut crate::menu_widgets::MenuCanvas,
+        frame: &Frame,
+        rect: sjk_ui::Rect,
+        alpha: f32,
+    ) {
+        let alpha = alpha.clamp(0.0, 1.0);
+        let list = canvas.draw_list_mut();
+        let _ = list.push(DrawCommand::RoundedRect {
+            rect,
+            radius: 12.0 * frame.s,
+            color: color::alpha(color::space(), 0.85 * alpha),
+        });
+        let _ = list.push(DrawCommand::Border {
+            rect,
+            radius: 12.0 * frame.s,
+            width: 2.0 * frame.s,
+            color: color::alpha(color::gold(), alpha),
+        });
     }
 
     /// How many of all the things the player holds, at the top right: the words, and a
     /// bar under them, a stretch to a tab in the tabs' order, each filled as far as its
     /// share held (one tick a thing no longer fits two hundred things, 21/10/2026).
-    fn tally(&mut self, frame: &Frame, counts: &[Count; 10]) {
+    pub(super) fn tally(&mut self, frame: &Frame, counts: &[Count]) {
         let s = frame.s;
         // Only the things with a set total: the holocrons are opened, not collected.
         let total: usize = counts.iter().map(|count| count.total).sum();
@@ -432,7 +827,7 @@ impl Panel {
             format_args!("{held} of {total} collected"),
             frame.rect(RIGHT_X - TALLY_WIDTH, 58.0, TALLY_WIDTH, 30.0),
             22.0 * s,
-            color::TEXT,
+            color::text(),
             FontWeight::Semibold,
             TextAlign::End,
         );
@@ -448,13 +843,13 @@ impl Panel {
             let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
                 rect: frame.rect(x, 98.0, stretch, TALLY_HEIGHT),
                 radius,
-                color: color::alpha(color::HOLO, 0.24),
+                color: color::alpha(color::holo(), 0.24),
             });
             if share > 0.0 {
                 let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
                     rect: frame.rect(x, 98.0, (stretch * share).max(TALLY_HEIGHT), TALLY_HEIGHT),
                     radius,
-                    color: color::GOLD_BRIGHT,
+                    color: color::gold_bright(),
                 });
             }
             x += stretch + GROUP_GAP;
@@ -470,7 +865,7 @@ impl Panel {
             format_args!("{headline}"),
             frame.rect(LEFT_X, LEAD_Y, 900.0, 40.0),
             30.0 * s,
-            color::TEXT,
+            color::text(),
             FontWeight::Semibold,
             TextAlign::Start,
         );
@@ -481,7 +876,7 @@ impl Panel {
                 format_args!("{line}"),
                 frame.rect(LEFT_X, LEAD_Y + 42.0, 940.0, 24.0),
                 16.0 * s,
-                color::MUTED,
+                color::muted(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -495,6 +890,24 @@ impl Panel {
         let mut keys: Vec<(&[&str], &str)> = Vec::with_capacity(10);
         match self.tab {
             Tab::Medals => keys.push((&["Left", "Right"], "choose")),
+            Tab::Inventory if self.inventory.search_focus => {
+                keys.push((&["Esc"], "clear the search"));
+                keys.push((&["Enter"], "done"));
+            }
+            Tab::Inventory => {
+                keys.push((&["Up", "Down"], "choose"));
+                keys.push((&["1-7"], "kind"));
+                keys.push((&["S"], "sort"));
+                keys.push((&["/"], "search"));
+                for offer in self.inventory.offers.iter().filter(|offer| offer.enabled) {
+                    let key: &[&str] = match offer.key {
+                        "B" => &["B"],
+                        "G" => &["G"],
+                        _ => &["Enter"],
+                    };
+                    keys.push((key, super::inventory::verb(offer.act)));
+                }
+            }
             Tab::History => {
                 keys.push((&["Left", "Right"], "filter"));
                 keys.push((&["Up", "Down"], "choose"));
@@ -510,6 +923,9 @@ impl Panel {
                     keys.push((&["Enter"], "open, close"));
                 }
                 keys.push((&["R"], "refresh"));
+            }
+            Tab::Cards if self.empty_action.is_some() => {
+                keys.push((&["Enter"], "the way to your first card"))
             }
             Tab::Cards if self.card_inspect => {
                 if self.cards_shown > 1 {
@@ -669,10 +1085,11 @@ impl Panel {
         }
         let covered = (self.tab == Tab::Cards && self.card_inspect)
             || (self.tab == Tab::Forge && self.forge.ask.is_some())
-            || (self.tab == Tab::Toys && self.bind_wait.is_some());
+            || (self.tab == Tab::Toys && self.bind_wait.is_some())
+            || (self.tab == Tab::Inventory && self.inventory.search_focus);
         if !covered {
             keys.push((&["Ctrl", "Tab"], &*next_tab));
-            keys.push((&["Esc"], "back"));
+            keys.push((&["Esc"], crate::profile_hub::COLLECTION));
         }
         let gap = 30.0 * s;
         let width: f32 = keys
@@ -706,7 +1123,7 @@ fn lab_build_scrims(
     frame: &Frame,
 ) {
     let [width, height] = viewport;
-    let space = |alpha| color::alpha(color::SPACE, alpha);
+    let space = |alpha| color::alpha(color::space(), alpha);
     let x = |frame_x: f32| frame.point(frame_x, 0.0)[0];
     let y = |frame_y: f32| frame.point(0.0, frame_y)[1];
     fade_across(
@@ -748,7 +1165,7 @@ fn lab_build_scrims(
 
 fn lab_scrims(canvas: &mut crate::menu_widgets::MenuCanvas, viewport: [f32; 2], frame: &Frame) {
     let [width, height] = viewport;
-    let space = |alpha| color::alpha(color::SPACE, alpha);
+    let space = |alpha| color::alpha(color::space(), alpha);
     let x = |frame_x: f32| frame.point(frame_x, 0.0)[0];
     let y = |frame_y: f32| frame.point(0.0, frame_y)[1];
     let top = y(540.0);
@@ -795,7 +1212,7 @@ fn lab_scrims(canvas: &mut crate::menu_widgets::MenuCanvas, viewport: [f32; 2], 
 /// stand on cards of their own.
 fn stage_scrims(canvas: &mut crate::menu_widgets::MenuCanvas, viewport: [f32; 2], frame: &Frame) {
     let [width, height] = viewport;
-    let space = |alpha| color::alpha(color::SPACE, alpha);
+    let space = |alpha| color::alpha(color::space(), alpha);
     let x = |frame_x: f32| frame.point(frame_x, 0.0)[0];
     let y = |frame_y: f32| frame.point(0.0, frame_y)[1];
     fade_across(

@@ -332,7 +332,7 @@ impl Card {
             format_args!("EMOTES"),
             frame.rect(INNER_X, CARD_TOP + 30.0, INNER_WIDTH, 30.0),
             22.0 * s,
-            color::GOLD_BRIGHT,
+            color::gold_bright(),
             FontWeight::Semibold,
             TextAlign::Start,
         );
@@ -342,7 +342,7 @@ impl Card {
             format_args!("Play an emote"),
             frame.rect(INNER_X, CARD_TOP + 66.0, INNER_WIDTH, 48.0),
             36.0 * s,
-            color::TEXT,
+            color::text(),
             FontWeight::Semibold,
             TextAlign::Start,
         );
@@ -369,7 +369,7 @@ impl Card {
                 format_args!("{words}"),
                 frame.rect(INNER_X, GRID_Y + 40.0, INNER_WIDTH, 30.0),
                 19.0 * s,
-                color::MUTED,
+                color::muted(),
                 FontWeight::Regular,
                 TextAlign::Center,
             );
@@ -395,7 +395,7 @@ impl Card {
                     rect: icon,
                     radius: icon.width * 0.5,
                     width: (1.5 * s).max(1.0),
-                    color: color::alpha(color::HOLO, 0.6),
+                    color: color::alpha(color::holo(), 0.6),
                 },
             };
             let _ = ui.draw_list_mut().push(picture);
@@ -405,7 +405,11 @@ impl Card {
                 format_args!("{}", short(&entry.name)),
                 frame.rect(x + 6.0, y + 90.0, TILE_WIDTH - 12.0, 22.0),
                 17.0 * s,
-                if lit { color::GOLD_BRIGHT } else { color::TEXT },
+                if lit {
+                    color::gold_bright()
+                } else {
+                    color::text()
+                },
                 FontWeight::Regular,
                 TextAlign::Center,
             );
@@ -415,7 +419,7 @@ impl Card {
                 format_args!("{}", short(&entry.id)),
                 frame.rect(x + 6.0, y + 111.0, TILE_WIDTH - 12.0, 18.0),
                 13.0 * s,
-                color::QUIET,
+                color::quiet(),
                 FontWeight::Regular,
                 TextAlign::Center,
             );
@@ -437,7 +441,7 @@ impl Card {
                 24.0,
             ),
             17.0 * s,
-            color::MUTED,
+            color::muted(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -472,16 +476,16 @@ fn tile(canvas: &mut MenuCanvas, frame: &Frame, rect: [f32; 4], lit: bool) {
     let _ = draw.push(DrawCommand::RoundedRect {
         rect,
         radius,
-        color: color::alpha(color::HOLO, if lit { 0.12 } else { 0.04 }),
+        color: color::alpha(color::holo(), if lit { 0.12 } else { 0.04 }),
     });
     let _ = draw.push(DrawCommand::Border {
         rect,
         radius,
         width: (1.5 * frame.s).max(1.0),
         color: if lit {
-            color::alpha(color::GOLD, 0.85)
+            color::alpha(color::gold(), 0.85)
         } else {
-            color::alpha(color::HOLO, 0.16)
+            color::alpha(color::holo(), 0.16)
         },
     });
 }
@@ -502,12 +506,12 @@ fn scroll_bar(canvas: &mut MenuCanvas, frame: &Frame, first: usize, rows: usize)
     let _ = draw.push(DrawCommand::RoundedRect {
         rect: track,
         radius: track.width * 0.5,
-        color: color::alpha(color::HOLO, 0.1),
+        color: color::alpha(color::holo(), 0.1),
     });
     let _ = draw.push(DrawCommand::RoundedRect {
         rect: thumb,
         radius: thumb.width * 0.5,
-        color: color::alpha(color::GOLD, 0.8),
+        color: color::alpha(color::gold(), 0.8),
     });
 }
 

@@ -71,6 +71,8 @@ const PREVIEW_WIDTH: f32 = 120.0;
 const TRACK_WIDTH: f32 = 230.0;
 const NUMBER_WIDTH: f32 = 46.0;
 const TRACK_X: f32 = CONTROL_RIGHT - NUMBER_WIDTH - 18.0 - TRACK_WIDTH;
+/// A colour row's swatch, centred left of its slider's track.
+const SWATCH_X: f32 = TRACK_X - 28.0;
 /// An open list's rows, and the lowest it reaches.
 const LIST_ROW: f32 = 40.0;
 const LIST_BOTTOM: f32 = KEYS_Y - 16.0;
@@ -128,7 +130,7 @@ pub(crate) fn row_name(
         if focused {
             Color::new(1.0, 1.0, 1.0, 1.0)
         } else {
-            color::alpha(color::TEXT, 0.88)
+            color::alpha(color::text(), 0.88)
         },
         FontWeight::Regular,
         TextAlign::Start,
@@ -239,7 +241,7 @@ impl SettingsMenu {
                 format_args!("No setting matches \u{201c}{}\u{201d}.", self.search.trim()),
                 frame.rect(LABEL_X, ROWS_TOP + 14.0, ROWS_WIDTH - 44.0, 28.0),
                 19.0 * s,
-                color::MUTED,
+                color::muted(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -277,7 +279,7 @@ impl SettingsMenu {
             self.ui.push_opacity(1.0 - faded);
         }
         if lines.len() > visible {
-            self.ui.scrollbar(
+            self.ui.sjk_scrollbar(
                 CLASSIC_SCROLLBAR_TOKEN,
                 frame.rect(
                     ROWS_X + ROWS_WIDTH + 14.0,
@@ -383,6 +385,10 @@ impl SettingsMenu {
                         ((value - min as f64) / (max - min) as f64) as f32
                     });
                 self.sjk_slider(frame, row, middle, ratio, &value, focused);
+                // A row whose value is a colour shows it by its slider.
+                if let Some(colour) = crate::menu::sjk::theme::row_swatch(setting.cvar, &value) {
+                    kit::swatch(&mut self.ui, frame, SWATCH_X, middle, colour);
+                }
             }
             ValueKind::Float { min, max, .. } => {
                 let ratio = value
@@ -538,9 +544,9 @@ impl SettingsMenu {
                 number,
                 21.0 * s,
                 if focused {
-                    color::TEXT
+                    color::text()
                 } else {
-                    color::alpha(color::TEXT, 0.9)
+                    color::alpha(color::text(), 0.9)
                 },
                 FontWeight::Regular,
                 TextAlign::End,
@@ -678,7 +684,7 @@ impl SettingsMenu {
                     40.0,
                 ),
                 32.0 * s,
-                color::TEXT,
+                color::text(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -692,7 +698,7 @@ impl SettingsMenu {
                     format_args!("{line}"),
                     frame.rect(DETAIL_X, y, DETAIL_WIDTH, 30.0),
                     19.0 * s,
-                    color::alpha(color::TEXT, 0.86),
+                    color::alpha(color::text(), 0.86),
                     FontWeight::Regular,
                     TextAlign::Start,
                 );
@@ -732,7 +738,7 @@ impl SettingsMenu {
                     format_args!("{line}"),
                     frame.rect(DETAIL_X, y, DETAIL_WIDTH, 28.0),
                     17.0 * s,
-                    color::GOLD_BRIGHT,
+                    color::gold_bright(),
                     FontWeight::Regular,
                     TextAlign::Start,
                 );
@@ -756,7 +762,7 @@ impl SettingsMenu {
                         &default
                     )))
                 ),
-                color::TEXT,
+                color::text(),
             );
         }
         match setting.kind() {
@@ -766,7 +772,7 @@ impl SettingsMenu {
                     &mut y,
                     "Range",
                     format_args!("Auto, 0 to {max}"),
-                    color::TEXT,
+                    color::text(),
                 );
             }
             ValueKind::Integer { min, max, .. } => {
@@ -775,7 +781,7 @@ impl SettingsMenu {
                     &mut y,
                     "Range",
                     format_args!("{min} to {max}"),
-                    color::TEXT,
+                    color::text(),
                 );
             }
             ValueKind::Float { min, max, .. } => {
@@ -784,7 +790,7 @@ impl SettingsMenu {
                     &mut y,
                     "Range",
                     format_args!("{} to {}", Number(min), Number(max)),
-                    color::TEXT,
+                    color::text(),
                 );
             }
             ValueKind::Choice(choices) => {
@@ -793,7 +799,7 @@ impl SettingsMenu {
                     &mut y,
                     "Choices",
                     format_args!("{}", Choices(setting.cvar, choices)),
-                    color::TEXT,
+                    color::text(),
                 );
             }
             _ => {}
@@ -805,11 +811,11 @@ impl SettingsMenu {
                 &mut y,
                 "Applies",
                 format_args!("{when}"),
-                color::GOLD_BRIGHT,
+                color::gold_bright(),
             );
         }
         if let Some(group) = found_in {
-            self.fact(frame, &mut y, "In", format_args!("{group}"), color::TEXT);
+            self.fact(frame, &mut y, "In", format_args!("{group}"), color::text());
         }
         let source = match setting.kind() {
             ValueKind::WheelPages => "File",
@@ -820,7 +826,7 @@ impl SettingsMenu {
             &mut y,
             source,
             format_args!("{}", setting.cvar),
-            color::HOLO,
+            color::holo(),
         );
         if self.section == Section::Group(Group::Quick) {
             y += 18.0;
@@ -834,7 +840,7 @@ impl SettingsMenu {
                     format_args!("{line}"),
                     frame.rect(DETAIL_X, y, DETAIL_WIDTH, 26.0),
                     16.0 * s,
-                    color::MUTED,
+                    color::muted(),
                     FontWeight::Regular,
                     TextAlign::Start,
                 );
@@ -860,7 +866,7 @@ impl SettingsMenu {
             format_args!("{name}"),
             frame.rect(DETAIL_X, *y, 110.0, 28.0),
             17.0 * s,
-            color::MUTED,
+            color::muted(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -1032,7 +1038,7 @@ impl std::fmt::Display for Choices {
 /// reads over any part of it.
 pub(crate) fn backdrop(canvas: &mut crate::menu_widgets::MenuCanvas, viewport: [f32; 2]) {
     let [width, height] = viewport;
-    let space = |alpha| color::alpha(color::SPACE, alpha);
+    let space = |alpha| color::alpha(color::space(), alpha);
     let split = width * 0.6;
     fade_across(
         canvas,
@@ -1086,9 +1092,9 @@ pub(crate) fn draw_rail(
             frame.rect(RAIL_X + 88.0, top + 8.0, CATEGORY_WIDTH - 88.0, 36.0),
             26.0 * s,
             match (current, hovered) {
-                (true, _) => color::GOLD_BRIGHT,
-                (false, true) => color::TEXT,
-                (false, false) => color::MUTED,
+                (true, _) => color::gold_bright(),
+                (false, true) => color::text(),
+                (false, false) => color::muted(),
             },
             FontWeight::Regular,
             TextAlign::Start,

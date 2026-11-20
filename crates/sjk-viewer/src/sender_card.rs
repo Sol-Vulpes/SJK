@@ -233,7 +233,7 @@ pub(crate) fn draw(
     let _ = list.push(DrawCommand::RoundedRect {
         rect: card,
         radius: 9.0 * u,
-        color: color::alpha(color::SPACE, 0.97),
+        color: color::alpha(color::space(), 0.97),
     });
     let _ = list.push(DrawCommand::PushRoundedClip {
         rect: card,
@@ -255,16 +255,16 @@ pub(crate) fn draw(
         rect: card,
         radius: 9.0 * u,
         width: 1.0 * u,
-        color: color::alpha(color::HOLO, 0.28),
+        color: color::alpha(color::holo(), 0.28),
     });
     let _ = list.push(DrawCommand::RoundedRect {
         rect: Rect::new(card.x + 14.0 * u, card.y, width - 28.0 * u, 2.0 * u),
         radius: 1.0 * u,
         color: color::alpha(
             if person.key_id.is_some() {
-                color::GOLD
+                color::gold()
             } else {
-                color::HOLO
+                color::holo()
             },
             0.7,
         ),
@@ -325,7 +325,7 @@ pub(crate) fn draw(
         format_args!("{shown}"),
         Rect::new(head_x, y, head_width - tick_room, 22.0 * u),
         name_size,
-        color::TEXT,
+        color::text(),
         FontWeight::Semibold,
         0.0,
         TextAlign::Start,
@@ -350,9 +350,9 @@ pub(crate) fn draw(
         Rect::new(head_x, y + 21.0 * u, head_width, 12.5 * u * 1.35),
         12.5 * u,
         if person.key_id.is_some() {
-            color::GOLD_BRIGHT
+            color::gold_bright()
         } else {
-            color::MUTED
+            color::muted()
         },
         FontWeight::Regular,
         0.0,
@@ -361,7 +361,7 @@ pub(crate) fn draw(
     y += HEAD * u;
     let _ = canvas.draw_list_mut().push(DrawCommand::SolidRect {
         rect: Rect::new(x, y + 6.0 * u, inner, 1.0 * u),
-        color: color::alpha(color::HOLO, 0.14),
+        color: color::alpha(color::holo(), 0.14),
     });
     y += RULE * u;
     let info = 12.0 * u;
@@ -370,7 +370,7 @@ pub(crate) fn draw(
             canvas,
             y,
             info,
-            color::MUTED,
+            color::muted(),
             format_args!("Known as {hub}"),
         );
         y += LINE * u;
@@ -386,17 +386,17 @@ pub(crate) fn draw(
             canvas,
             y,
             info,
-            color::MUTED,
+            color::muted(),
             format_args!("On this server, slot {slot}{how}"),
         ),
-        None if !how.is_empty() => line(canvas, y, info, color::QUIET, format_args!("{how}")),
+        None if !how.is_empty() => line(canvas, y, info, color::quiet(), format_args!("{how}")),
         None => {}
     }
     if person.place != Place::Unknown {
         y += LINE * u;
     }
     if let Some(note) = &person.note {
-        line(canvas, y, info, color::MUTED, format_args!("{note}"));
+        line(canvas, y, info, color::muted(), format_args!("{note}"));
         y += LINE * u;
     }
     if !person.medals.is_empty() {
@@ -419,7 +419,7 @@ pub(crate) fn draw(
     // Whisper first, the whole row: what a click on a name is most often for.
     let whisper_button = Rect::new(x, y, inner, BUTTON * u);
     if let Some(token) = tokens.whisper {
-        card_button(canvas, whisper_button, u, token, "Whisper", color::HOLO);
+        card_button(canvas, whisper_button, u, token, "Whisper", color::holo());
         y += (BUTTON + 6.0) * u;
     }
     let half = (inner - 8.0 * u) * 0.5;
@@ -443,7 +443,7 @@ pub(crate) fn draw(
             (false, true) => "Block this map",
             (true, true) => "Unblock map",
         };
-        card_button(canvas, map_button, u, tokens.map_block, own, color::GOLD);
+        card_button(canvas, map_button, u, tokens.map_block, own, color::gold());
         if let Some(staff) = row.staff {
             let label = if staff {
                 "Unblock all"
@@ -456,7 +456,7 @@ pub(crate) fn draw(
                 u,
                 tokens.staff_block,
                 label,
-                color::EMBER,
+                color::ember(),
             );
         }
         y += (BUTTON + 6.0) * u;
@@ -471,10 +471,10 @@ pub(crate) fn draw(
         u,
         tokens.mute,
         if muted { "Unblock" } else { "Block" },
-        color::GOLD,
+        color::gold(),
     );
     if person.trade {
-        card_button(canvas, right, u, tokens.trade, "Trade", color::GOLD);
+        card_button(canvas, right, u, tokens.trade, "Trade", color::gold());
     }
     let quiet = |muted: bool| {
         if muted {
@@ -516,15 +516,15 @@ pub(crate) fn draw(
                 tokens.ban,
                 shown.label,
                 if shown.armed {
-                    color::EMBER
+                    color::ember()
                 } else {
-                    color::HOLO
+                    color::holo()
                 },
             );
             let (said, colour) = match shown.line {
-                Some((said, true)) => (said, color::GOLD_BRIGHT),
-                Some((said, false)) => (said, color::EMBER),
-                None => (quiet(muted), color::QUIET),
+                Some((said, true)) => (said, color::gold_bright()),
+                Some((said, false)) => (said, color::ember()),
+                None => (quiet(muted), color::quiet()),
             };
             line(canvas, under, small, colour, format_args!("{said}"));
         }),
@@ -532,7 +532,7 @@ pub(crate) fn draw(
             canvas,
             under,
             small,
-            color::QUIET,
+            color::quiet(),
             format_args!("{}", quiet(muted)),
         ),
     }
@@ -542,7 +542,7 @@ pub(crate) fn draw(
             canvas,
             under + QUIET_ROW * u,
             small,
-            color::QUIET,
+            color::quiet(),
             format_args!("By name, colours aside: anyone wearing it"),
         );
     }
@@ -561,7 +561,7 @@ pub(crate) fn draw(
             u,
             tokens.report,
             "Report",
-            color::EMBER,
+            color::ember(),
         );
     }
     if person.safety {
@@ -632,7 +632,11 @@ fn card_button(
         format_args!("{label}"),
         Rect::new(button.x, button.y + 6.5 * u, button.width, 17.0 * u),
         13.5 * u,
-        if lit { color::GOLD_BRIGHT } else { color::TEXT },
+        if lit {
+            color::gold_bright()
+        } else {
+            color::text()
+        },
         FontWeight::Semibold,
         0.0,
         TextAlign::Center,

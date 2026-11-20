@@ -203,23 +203,48 @@ impl MenuCanvas {
         visible: usize,
         total: usize,
     ) {
+        let colours = (Color::new(0.42, 0.56, 0.66, 0.72), self.theme.accent);
+        self.scrollbar_in(token, track, first, visible, total, colours);
+    }
+
+    /// [`Self::scrollbar`] in the SJK UI's theme (`menu::sjk::theme`): its thumb in
+    /// the muted text colour, the line-work's while it is hovered or held.
+    pub(crate) fn sjk_scrollbar(
+        &mut self,
+        token: MenuToken,
+        track: Rect,
+        first: usize,
+        visible: usize,
+        total: usize,
+    ) {
+        use crate::menu::sjk::color;
+        let colours = (color::alpha(color::muted(), 0.72), color::holo());
+        self.scrollbar_in(token, track, first, visible, total, colours);
+    }
+
+    /// A scrollbar whose thumb is `idle`, or `active` while hovered or held.
+    fn scrollbar_in(
+        &mut self,
+        token: MenuToken,
+        track: Rect,
+        first: usize,
+        visible: usize,
+        total: usize,
+        (idle, active): (Color, Color),
+    ) {
         let _ = self.draw.push(DrawCommand::RoundedRect {
             rect: track,
             radius: track.width * 0.5,
             color: Color::new(1.0, 1.0, 1.0, 0.08),
         });
         let (thumb_y, thumb_height) = scrollbar_thumb(track, first, visible, total);
-        let active = self.token_hovered(token)
+        let hot = self.token_hovered(token)
             || self.token_pressed(token)
             || self.grabbed.is_some_and(|(held, ..)| held == token);
         let _ = self.draw.push(DrawCommand::RoundedRect {
             rect: Rect::new(track.x, thumb_y, track.width, thumb_height),
             radius: track.width * 0.5,
-            color: if active {
-                self.theme.accent
-            } else {
-                Color::new(0.42, 0.56, 0.66, 0.72)
-            },
+            color: if hot { active } else { idle },
         });
         self.scrollbar_area(token, track, first, visible, total);
     }

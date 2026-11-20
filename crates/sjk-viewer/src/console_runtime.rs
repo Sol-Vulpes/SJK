@@ -70,6 +70,7 @@ impl GpuState {
         let sell_junk = console.take_fishing_sell_request();
         let wheel_of_doom = console.take_wheel_of_doom_request();
         let sell_rubble = console.take_mining_sell_request();
+        let servers = console.take_servers_request();
         let sell_catch = console.take_catch_sell_request();
         let brag = console.take_brag_request();
         let mut actions = [None; MAX_ACTIONS_PER_FRAME];
@@ -117,6 +118,9 @@ impl GpuState {
         }
         if sell_rubble {
             self.sell_mining_rubble();
+        }
+        if servers {
+            self.open_servers_from_collection();
         }
         match sell_catch {
             Some(true) => self.sell_fishing_catch(),
@@ -198,7 +202,7 @@ impl GpuState {
         // Save settings changed this frame or earlier, once they hold still.
         if let Some(console) = self.console.as_mut() {
             console.persist();
-            // A release made while playing shows its update card within half an hour.
+            // A release made while playing shows its update banner within half an hour.
             console.recheck_for_updates();
         }
     }

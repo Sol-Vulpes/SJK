@@ -396,22 +396,22 @@ impl Panel {
         let (line, colour) = match inputs.chat {
             _ if !inputs.enabled => (
                 "SJK chat is off (Settings > Network > SJK chat)".to_owned(),
-                color::EMBER,
+                color::ember(),
             ),
             None => (
                 "The SJK identity is off: turn it on to chat (Settings > Network)".to_owned(),
-                color::EMBER,
+                color::ember(),
             ),
             Some(_) if reaction_error.is_some() => {
-                (reaction_error.unwrap().to_owned(), color::EMBER)
+                (reaction_error.unwrap().to_owned(), color::ember())
             }
-            Some(chat) if !chat.live => ("Connecting to the SJK hub...".to_owned(), color::MUTED),
+            Some(chat) if !chat.live => ("Connecting to the SJK hub...".to_owned(), color::muted()),
             Some(chat) if chat.online == 1 => {
-                ("1 SJK player reading".to_owned(), color::GOLD_BRIGHT)
+                ("1 SJK player reading".to_owned(), color::gold_bright())
             }
             Some(chat) => (
                 format!("{} SJK players reading", chat.online),
-                color::GOLD_BRIGHT,
+                color::gold_bright(),
             ),
         };
         text(
@@ -432,7 +432,7 @@ impl Panel {
             ),
             frame.rect(LIST_X, TOP + 26.0, LIST_WIDTH, 22.0),
             15.0 * s,
-            color::QUIET,
+            color::quiet(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -482,7 +482,7 @@ impl Panel {
                 format_args!("{line}"),
                 frame.rect(LIST_X, LIST_BOTTOM - 40.0, LIST_WIDTH, 24.0),
                 17.0 * s,
-                color::QUIET,
+                color::quiet(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -541,7 +541,7 @@ impl Panel {
                 format_args!("{first} older: Page Up"),
                 frame.rect(LIST_X, LIST_TOP - 26.0, LIST_WIDTH, 20.0),
                 14.0 * s,
-                color::QUIET,
+                color::quiet(),
                 FontWeight::Regular,
                 TextAlign::End,
             );
@@ -553,7 +553,7 @@ impl Panel {
                 format_args!("{} newer: Page Down", self.scroll),
                 frame.rect(LIST_X, LIST_BOTTOM - 2.0, LIST_WIDTH, 20.0),
                 14.0 * s,
-                color::QUIET,
+                color::quiet(),
                 FontWeight::Regular,
                 TextAlign::End,
             );
@@ -587,9 +587,9 @@ impl Panel {
             frame.rect(LIST_X + laid.jof, y, laid.name_width + 2.0, NAME_ROW - 2.0),
             NAME_SIZE * s,
             if laid.official.is_some() {
-                sjk_chat_look::ACCENT
+                sjk_chat_look::accent()
             } else {
-                color::TEXT
+                color::text()
             },
             FontWeight::Semibold,
             TextAlign::Start,
@@ -664,7 +664,7 @@ impl Panel {
                 format_args!(":"),
                 frame.rect(x, y, 12.0, NAME_ROW - 2.0),
                 TEXT_SIZE * s,
-                color::TEXT,
+                color::text(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -676,15 +676,15 @@ impl Panel {
             frame.rect(LIST_X + LIST_WIDTH - 420.0, y + 2.0, 420.0, NAME_ROW - 6.0),
             META_SIZE * s,
             if laid.staff {
-                color::GOLD_BRIGHT
+                color::gold_bright()
             } else {
-                color::QUIET
+                color::quiet()
             },
             FontWeight::Regular,
             TextAlign::End,
         );
         let colour = if laid.muted {
-            color::QUIET
+            color::quiet()
         } else {
             sjk_chat_look::text_colour(laid.tier)
         };
@@ -782,7 +782,7 @@ impl Panel {
                         BODY_ROW - 2.0,
                     ),
                     TEXT_SIZE * s,
-                    color::QUIET,
+                    color::quiet(),
                     FontWeight::Regular,
                     TextAlign::Start,
                 );
@@ -846,13 +846,13 @@ impl Panel {
         let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
             rect,
             radius: 14.0 * s,
-            color: color::alpha(color::HOLO, 0.05),
+            color: color::alpha(color::holo(), 0.05),
         });
         let _ = self.ui.draw_list_mut().push(DrawCommand::Border {
             rect,
             radius: 14.0 * s,
             width: 1.0 * s,
-            color: color::alpha(color::HOLO, 0.25),
+            color: color::alpha(color::holo(), 0.25),
         });
         let online = match chat {
             Some(_) => format!("Online  \u{b7}  {}", listed.count),
@@ -952,13 +952,13 @@ impl Panel {
         let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
             rect,
             radius: 14.0 * s,
-            color: color::alpha(color::HOLO, 0.05),
+            color: color::alpha(color::holo(), 0.05),
         });
         let _ = self.ui.draw_list_mut().push(DrawCommand::Border {
             rect,
             radius: 14.0 * s,
             width: 1.0 * s,
-            color: color::alpha(color::HOLO, 0.25),
+            color: color::alpha(color::holo(), 0.25),
         });
         let label = format!("Online  \u{b7}  {}", listed.count);
         self.online_heading(frame, &label, Some("Faces"));
@@ -982,7 +982,7 @@ impl Panel {
                 let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
                     rect: band,
                     radius: 8.0 * s,
-                    color: color::alpha(color::HOLO, 0.10),
+                    color: color::alpha(color::holo(), 0.10),
                 });
             }
             let middle = y + LIST_ROW * 0.5;
@@ -1018,9 +1018,9 @@ impl Panel {
                     frame.rect(x, middle - 10.0, label_width + 2.0, 20.0),
                     CLIENT_LABEL_SIZE * s,
                     if row.muted {
-                        color::QUIET
+                        color::quiet()
                     } else {
-                        color::MUTED
+                        color::muted()
                     },
                     FontWeight::Regular,
                     TextAlign::Start,
@@ -1056,7 +1056,11 @@ impl Panel {
                 format_args!("{name}"),
                 frame.rect(left, middle - 12.0, name_width + 2.0, 24.0),
                 LIST_NAME_SIZE * s,
-                if row.muted { color::QUIET } else { color::TEXT },
+                if row.muted {
+                    color::quiet()
+                } else {
+                    color::text()
+                },
                 FontWeight::Semibold,
                 TextAlign::Start,
             );
@@ -1093,7 +1097,7 @@ impl Panel {
             format_args!("{line}"),
             frame.rect(SIDE_X, y, SIDE_WIDTH, NOTE_ROW),
             15.0 * frame.s,
-            color::QUIET,
+            color::quiet(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -1154,7 +1158,7 @@ impl Panel {
             }
             None => {
                 let ground = if row.muted {
-                    color::alpha(color::QUIET, 0.22)
+                    color::alpha(color::quiet(), 0.22)
                 } else {
                     let own = crate::profile_card::stand_in_colour(&row.key_id, &name);
                     if online { own } else { color::alpha(own, 0.72) }
@@ -1171,11 +1175,11 @@ impl Panel {
                     square,
                     r * 1.1,
                     if row.muted {
-                        color::QUIET
+                        color::quiet()
                     } else if online {
-                        color::TEXT
+                        color::text()
                     } else {
-                        color::MUTED
+                        color::muted()
                     },
                     FontWeight::Semibold,
                     TextAlign::Center,
@@ -1183,13 +1187,13 @@ impl Panel {
             }
         }
         let (ring, width) = if lit {
-            (color::GOLD_BRIGHT, 2.0 * s)
+            (color::gold_bright(), 2.0 * s)
         } else if row.muted {
-            (color::alpha(color::QUIET, 0.35), 1.5 * s)
+            (color::alpha(color::quiet(), 0.35), 1.5 * s)
         } else if online {
-            (color::alpha(color::HOLO, 0.5), 1.5 * s)
+            (color::alpha(color::holo(), 0.5), 1.5 * s)
         } else {
-            (color::alpha(color::HOLO, 0.25), 1.5 * s)
+            (color::alpha(color::holo(), 0.25), 1.5 * s)
         };
         let _ = self.ui.draw_list_mut().push(DrawCommand::Arc {
             center: centre,
@@ -1204,11 +1208,14 @@ impl Panel {
             // In a match: a gold dot at the face's foot, right, rimmed by the ground.
             let foot = [centre[0] + r * 0.72, centre[1] + r * 0.72];
             let dot = if row.muted {
-                color::QUIET
+                color::quiet()
             } else {
-                color::GOLD_BRIGHT
+                color::gold_bright()
             };
-            for (size, colour) in [(7.0 * s, color::alpha(color::SPACE, 0.95)), (5.0 * s, dot)] {
+            for (size, colour) in [
+                (7.0 * s, color::alpha(color::space(), 0.95)),
+                (5.0 * s, dot),
+            ] {
                 let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
                     rect: sjk_ui::Rect::new(foot[0] - size, foot[1] - size, size * 2.0, size * 2.0),
                     radius: size,
@@ -1257,7 +1264,7 @@ impl Panel {
         let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
             rect: square,
             radius: r,
-            color: color::alpha(color::HOLO, if lit { 0.22 } else { 0.12 }),
+            color: color::alpha(color::holo(), if lit { 0.22 } else { 0.12 }),
         });
         let width = 1.5 * s;
         let _ = self.ui.draw_list_mut().push(DrawCommand::Arc {
@@ -1266,7 +1273,7 @@ impl Panel {
             width,
             start: 0.0,
             sweep: std::f32::consts::TAU,
-            color: color::alpha(color::HOLO, 0.35),
+            color: color::alpha(color::holo(), 0.35),
             knockout: None,
         });
         text(
@@ -1275,7 +1282,7 @@ impl Panel {
             format_args!("+{more}"),
             square,
             if more > 99 { 0.62 } else { 0.78 } * r,
-            color::MUTED,
+            color::muted(),
             FontWeight::Semibold,
             TextAlign::Center,
         );
@@ -1297,7 +1304,7 @@ impl Panel {
         };
         let card = crate::menu::sjk::hover::Card {
             title: words.only_title.to_owned(),
-            colour: color::EMBER,
+            colour: color::ember(),
             lines: words
                 .only_why
                 .iter()
@@ -1405,9 +1412,9 @@ impl Panel {
             frame.rect(LIST_X + 4.0, FIELD_Y + 54.0, FIELD_WIDTH, 20.0),
             14.0 * s,
             if notice.is_some() {
-                color::EMBER
+                color::ember()
             } else {
-                color::QUIET
+                color::quiet()
             },
             FontWeight::Regular,
             TextAlign::Start,
@@ -1454,7 +1461,7 @@ impl Panel {
             format_args!("Blocked on this PC ({})", inputs.blocked.len()),
             frame.rect(SIDE_X, top, SIDE_WIDTH, 24.0),
             17.0 * s,
-            color::TEXT,
+            color::text(),
             FontWeight::Semibold,
             TextAlign::Start,
         );
@@ -1473,7 +1480,7 @@ impl Panel {
                 format_args!("{name}"),
                 frame.rect(SIDE_X, y + 8.0, SIDE_WIDTH - 160.0, 24.0),
                 16.0 * s,
-                color::TEXT,
+                color::text(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -1503,7 +1510,7 @@ impl Panel {
                     22.0,
                 ),
                 15.0 * s,
-                color::QUIET,
+                color::quiet(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -1551,7 +1558,7 @@ impl Panel {
                     format_args!("{line}"),
                     frame.rect(SIDE_X, top + 30.0 + row as f32 * 24.0, SIDE_WIDTH, 22.0),
                     16.0 * s,
-                    color::QUIET,
+                    color::quiet(),
                     FontWeight::Regular,
                     TextAlign::Start,
                 );
@@ -1623,7 +1630,7 @@ impl Panel {
             format_args!("{name}"),
             rect,
             size * s,
-            color::TEXT,
+            color::text(),
             FontWeight::Semibold,
             TextAlign::Start,
         );
@@ -1692,9 +1699,9 @@ impl Panel {
                     BAN_TOKEN,
                 );
                 let (said, colour) = match shown.line {
-                    Some((said, true)) => (said, color::GOLD_BRIGHT),
-                    Some((said, false)) => (said, color::EMBER),
-                    None => (quiet, color::QUIET),
+                    Some((said, true)) => (said, color::gold_bright()),
+                    Some((said, false)) => (said, color::ember()),
+                    None => (quiet, color::quiet()),
                 };
                 text(
                     ui,
@@ -1715,7 +1722,7 @@ impl Panel {
                 format_args!("{quiet}"),
                 under,
                 14.0 * s,
-                color::QUIET,
+                color::quiet(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -1825,18 +1832,18 @@ impl Panel {
             .and_then(|(state, after)| {
                 if state.serial > after {
                     Some(if state.failed {
-                        (format!("Not done: {}", state.message), color::EMBER)
+                        (format!("Not done: {}", state.message), color::ember())
                     } else {
-                        (format!("Done: {}", state.message), color::GOLD_BRIGHT)
+                        (format!("Done: {}", state.message), color::gold_bright())
                     })
                 } else {
                     state
                         .busy
-                        .then(|| ("Sending to the hub...".to_owned(), color::MUTED))
+                        .then(|| ("Sending to the hub...".to_owned(), color::muted()))
                 }
             });
         let (line, colour) =
-            answer.unwrap_or_else(|| ("The hub logs what staff do.".to_owned(), color::QUIET));
+            answer.unwrap_or_else(|| ("The hub logs what staff do.".to_owned(), color::quiet()));
         text(
             &mut self.ui,
             TextFamily::Body,
@@ -1849,7 +1856,7 @@ impl Panel {
         );
         let _ = self.ui.draw_list_mut().push(DrawCommand::SolidRect {
             rect: frame.rect(SIDE_X - 30.0, LIST_TOP - 20.0, 1.0, LIST_BOTTOM - LIST_TOP),
-            color: color::alpha(color::HOLO, 0.25),
+            color: color::alpha(color::holo(), 0.25),
         });
     }
 
@@ -2397,7 +2404,7 @@ mod tests {
                     color,
                 } if (*radius - 14.0 * s).abs() < 0.01
                     && (*width - s).abs() < 0.01
-                    && *color == color::alpha(color::HOLO, 0.25)
+                    && *color == color::alpha(color::holo(), 0.25)
                     && rect.y > 150.0 * s =>
                 {
                     Some(*rect)
@@ -2535,7 +2542,7 @@ mod tests {
             .iter()
             .filter(|command| {
                 matches!(command, DrawCommand::RoundedRect { color, rect, .. }
-                    if *color == color::GOLD_BRIGHT && inside(*rect, window))
+                    if *color == color::gold_bright() && inside(*rect, window))
             })
             .count();
         assert_eq!(dots, 2);
@@ -2808,7 +2815,7 @@ mod tests {
         assert!(panel.ui.draw_list().commands().iter().any(|command| matches!(
             command,
             DrawCommand::Arc { color, center, .. }
-                if *color == color::GOLD_BRIGHT && (center[0] - centre(shown[0])[0]).abs() < 0.01
+                if *color == color::gold_bright() && (center[0] - centre(shown[0])[0]).abs() < 0.01
         )));
         point_at(
             &mut panel,
@@ -2846,7 +2853,7 @@ mod tests {
                 .any(|command| matches!(
                     command,
                     DrawCommand::RoundedRect { color, rect, .. }
-                        if *color == color::alpha(color::QUIET, 0.22) && *rect == zed
+                        if *color == color::alpha(color::quiet(), 0.22) && *rect == zed
                 ))
         );
         // A click chooses their newest message on show; someone who said nothing, none.

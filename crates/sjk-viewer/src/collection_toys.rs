@@ -75,6 +75,11 @@ fn head_tops() -> [f32; SECTIONS.len()] {
     heads
 }
 
+/// Toy `toy`'s name (its place in the order of [`TOYS`]), for the hall's Toys tile.
+pub(super) fn name(toy: usize) -> &'static str {
+    TOYS.get(toy).map_or("", |toy| toy.name)
+}
+
 /// The toy `by` rows on from `toy` in the list's order: wrapping round, or stopping at
 /// the ends.
 pub(super) fn step(toy: usize, by: isize, wrap: bool) -> usize {
@@ -487,40 +492,18 @@ fn icon(name: &str) -> TextureId {
     )
 }
 
+/// Toy `toy`'s picture (its place in the order of [`TOYS`]), for the hall's Toys tile.
+pub(super) fn picture(toy: usize) -> TextureId {
+    icon(TOYS[toy.min(TOY_COUNT - 1)].icon)
+}
+
 /// The player's text size (`ui_textScale`).
 fn text_scale() -> f32 {
     crate::text::style::current().scale.max(0.5)
 }
 
-/// A row of dots across the left side at `y`: the room for more.
-pub(super) fn room_for_more(
-    canvas: &mut crate::menu_widgets::MenuCanvas,
-    frame: &Frame,
-    y: f32,
-    words: &str,
-) {
-    let mut x = LEFT_X;
-    while x < LEFT_X + 820.0 {
-        let _ = canvas.draw_list_mut().push(DrawCommand::SolidRect {
-            rect: frame.rect(x, y, 8.0, 1.0),
-            color: color::alpha(color::HOLO, 0.22),
-        });
-        x += 16.0;
-    }
-    text(
-        canvas,
-        TextFamily::Body,
-        format_args!("{words}"),
-        frame.rect(LEFT_X, y + 16.0, 820.0, 24.0),
-        15.0 * frame.s,
-        color::QUIET,
-        FontWeight::Regular,
-        TextAlign::Start,
-    );
-}
-
 /// Whether each toy is on now, as `inputs` says, in the order of [`TOYS`].
-fn states(inputs: &Inputs<'_>) -> [bool; TOY_COUNT] {
+pub(super) fn states(inputs: &Inputs<'_>) -> [bool; TOY_COUNT] {
     [
         inputs.illuminate,
         inputs.cardboard_box,
@@ -579,14 +562,18 @@ impl Panel {
         let area = frame.rect(x, y, side, side);
         let hovered = self.ui.token_hovered(TOY_MASTER_TOKEN);
         let tint = if found > 0 {
-            color::GOLD_BRIGHT
+            color::gold_bright()
         } else {
-            color::alpha(color::HOLO, 0.85)
+            color::alpha(color::holo(), 0.85)
         };
-        let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
+        let _ = self.ui.draw_list_mut().push(DrawCommand::Backdrop {
             rect: area,
             radius: 10.0 * s,
-            color: color::alpha(color::SPACE, if hovered { 0.85 } else { 0.6 }),
+            tint: color::tint(if hovered {
+                color::acrylic::CARD
+            } else {
+                color::acrylic::TILE
+            }),
         });
         let _ = self.ui.draw_list_mut().push(DrawCommand::Border {
             rect: area,
@@ -625,13 +612,13 @@ impl Panel {
                 format_args!("{words}"),
                 frame.rect(ROWS_X + 18.0, y, 300.0, 20.0),
                 15.0 * s,
-                color::HOLO,
+                color::holo(),
                 FontWeight::Semibold,
                 TextAlign::Start,
             );
             let _ = self.ui.draw_list_mut().push(DrawCommand::SolidRect {
                 rect: frame.rect(ROWS_X, y + HEAD_STEP - 4.0, ROWS_WIDTH, 1.0),
-                color: color::alpha(color::HOLO, 0.25),
+                color: color::alpha(color::holo(), 0.25),
             });
         }
         for (words, x, width, align) in [
@@ -650,7 +637,7 @@ impl Panel {
                 format_args!("{words}"),
                 frame.rect(x, HEADS_Y, width, 20.0),
                 15.0 * s,
-                color::MUTED,
+                color::muted(),
                 FontWeight::Semibold,
                 align,
             );
@@ -677,23 +664,30 @@ impl Panel {
         let right = x + ROWS_WIDTH;
         let area = frame.rect(x, y, ROWS_WIDTH, ROW_HEIGHT);
         let hovered = self.ui.token_hovered(toy.token);
-        let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
+        let _ = self.ui.draw_list_mut().push(DrawCommand::Backdrop {
             rect: area,
             radius: 12.0 * s,
-            color: if chosen {
-                color::alpha(color::GOLD, 0.09)
-            } else {
-                color::alpha(color::SPACE, if hovered { 0.78 } else { 0.6 })
-            },
+            tint: color::tint(color::acrylic::TILE),
         });
+        if chosen || hovered {
+            let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
+                rect: area,
+                radius: 12.0 * s,
+                color: if chosen {
+                    color::alpha(color::gold(), 0.09)
+                } else {
+                    color::alpha(color::holo(), 0.07)
+                },
+            });
+        }
         let _ = self.ui.draw_list_mut().push(DrawCommand::Border {
             rect: area,
             radius: 12.0 * s,
             width: if chosen { 1.6 } else { 1.0 } * s,
             color: if chosen {
-                color::GOLD_BRIGHT
+                color::gold_bright()
             } else {
-                color::alpha(color::HOLO, if hovered { 0.35 } else { 0.16 })
+                color::alpha(color::holo(), if hovered { 0.35 } else { 0.16 })
             },
         });
         let art = ROW_ART;
@@ -713,9 +707,9 @@ impl Panel {
             frame.rect(words_x, y + 2.0, words_width, 24.0 * k),
             21.0 * s,
             if chosen {
-                color::GOLD_BRIGHT
+                color::gold_bright()
             } else {
-                color::TEXT
+                color::text()
             },
             FontWeight::Semibold,
             TextAlign::Start,
@@ -726,7 +720,7 @@ impl Panel {
             format_args!("{}", toy.tag),
             frame.rect(words_x, y + 2.0 + 22.0 * k, words_width, 18.0 * k),
             14.0 * s,
-            color::MUTED,
+            color::muted(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -737,7 +731,11 @@ impl Panel {
             format_args!("{}", toy.author),
             frame.rect(author_x, middle - 11.0, AUTHOR_WIDTH - 8.0, 22.0),
             16.0 * s,
-            if chosen { color::TEXT } else { color::MUTED },
+            if chosen {
+                color::text()
+            } else {
+                color::muted()
+            },
             FontWeight::Semibold,
             TextAlign::Start,
         );
@@ -748,7 +746,7 @@ impl Panel {
                 format_args!("Not bound"),
                 frame.rect(key_x, middle - 11.0, KEY_WIDTH, 22.0),
                 15.0 * s,
-                color::QUIET,
+                color::quiet(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -759,7 +757,7 @@ impl Panel {
                 rect: cap,
                 radius: 6.0 * s,
                 width: 1.2 * s,
-                color: color::alpha(color::TEXT, 0.55),
+                color: color::alpha(color::text(), 0.55),
             });
             text(
                 &mut self.ui,
@@ -767,7 +765,7 @@ impl Panel {
                 format_args!("{key}"),
                 frame.rect(key_x, middle - 11.0, width, 22.0),
                 16.0 * s,
-                color::TEXT,
+                color::text(),
                 FontWeight::Semibold,
                 TextAlign::Center,
             );
@@ -844,7 +842,7 @@ impl Panel {
                 frame,
                 [1_160.0, 560.0],
                 150.0,
-                color::GOLD,
+                color::gold(),
                 0.3,
             );
             let _ = self.ui.draw_list_mut().push(DrawCommand::TexturedQuad {
@@ -856,21 +854,21 @@ impl Panel {
         let height = self.toy_card_height(toy).min(CARD_BOTTOM - CARD_TOP_MIN);
         let top = CARD_BOTTOM - height;
         let area = frame.rect(CARD_X, top, CARD_WIDTH, height);
-        let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
+        let _ = self.ui.draw_list_mut().push(DrawCommand::Backdrop {
             rect: area,
             radius: 16.0 * s,
-            color: color::alpha(color::SPACE, 0.88),
+            tint: color::alpha(color::glass(), color::acrylic::CARD),
         });
         let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
             rect: frame.rect(CARD_X + 24.0, top, CARD_WIDTH - 48.0, 3.0),
             radius: 1.5 * s,
-            color: color::GOLD,
+            color: color::gold(),
         });
         let _ = self.ui.draw_list_mut().push(DrawCommand::Border {
             rect: area,
             radius: 16.0 * s,
             width: 1.2 * s,
-            color: color::alpha(color::HOLO, 0.3),
+            color: color::alpha(color::holo(), 0.3),
         });
         let x = CARD_X + CARD_PAD;
         let width = CARD_WIDTH - CARD_PAD * 2.0;
@@ -881,7 +879,7 @@ impl Panel {
             format_args!("Toy  ·  everyone's"),
             frame.rect(x, y, width, 22.0),
             16.0 * s,
-            color::HOLO,
+            color::holo(),
             FontWeight::Semibold,
             TextAlign::Start,
         );
@@ -892,7 +890,7 @@ impl Panel {
             format_args!("{}", toy.title),
             frame.rect(x, y, width, 50.0 * k.max(1.0)),
             40.0 * s,
-            color::GOLD_BRIGHT,
+            color::gold_bright(),
             FontWeight::Semibold,
             TextAlign::Start,
         );
@@ -903,7 +901,7 @@ impl Panel {
             format_args!("{}", signature(toy)),
             frame.rect(x, y, width, 24.0 * k.max(1.0)),
             17.0 * s,
-            color::MUTED,
+            color::muted(),
             FontWeight::Semibold,
             TextAlign::Start,
         );
@@ -928,7 +926,7 @@ impl Panel {
                 [x, y, width],
                 ABOUT_CHARS,
                 17.0,
-                color::TEXT,
+                color::text(),
             );
             y += 18.0;
             for (slot, (command, label)) in toy.commands.iter().enumerate() {
@@ -945,7 +943,7 @@ impl Panel {
                     format_args!("{label}"),
                     frame.rect(x, y + 8.0, 100.0, 22.0),
                     15.0 * s,
-                    color::HOLO,
+                    color::holo(),
                     FontWeight::Semibold,
                     TextAlign::Start,
                 );
@@ -964,9 +962,9 @@ impl Panel {
                     rect,
                     radius: 8.0 * s,
                     color: if waiting {
-                        color::alpha(color::GOLD, 0.16)
+                        color::alpha(color::gold(), 0.16)
                     } else {
-                        color::alpha(color::HOLO, if hovered { 0.14 } else { 0.05 })
+                        color::alpha(color::holo(), if hovered { 0.14 } else { 0.05 })
                     },
                 });
                 let _ = self.ui.draw_list_mut().push(DrawCommand::Border {
@@ -974,11 +972,11 @@ impl Panel {
                     radius: 8.0 * s,
                     width: 1.2 * s,
                     color: if waiting {
-                        color::GOLD
+                        color::gold()
                     } else if key.is_empty() {
-                        color::alpha(color::HOLO, 0.45)
+                        color::alpha(color::holo(), 0.45)
                     } else {
-                        color::alpha(color::TEXT, 0.55)
+                        color::alpha(color::text(), 0.55)
                     },
                 });
                 text(
@@ -988,9 +986,9 @@ impl Panel {
                     frame.rect(button_x, y + 6.0, button_width, 24.0),
                     17.0 * s,
                     if waiting {
-                        color::GOLD_BRIGHT
+                        color::gold_bright()
                     } else {
-                        color::TEXT
+                        color::text()
                     },
                     FontWeight::Semibold,
                     TextAlign::Center,
@@ -1008,7 +1006,7 @@ impl Panel {
                     format_args!("{note}"),
                     frame.rect(note_x, y + 9.0, (x + width - note_x).max(0.0), 20.0),
                     13.0 * s,
-                    color::QUIET,
+                    color::quiet(),
                     FontWeight::Regular,
                     TextAlign::Start,
                 );
@@ -1020,7 +1018,7 @@ impl Panel {
                 format_args!("Quick wheel"),
                 frame.rect(x, y + 4.0, 100.0, 22.0),
                 15.0 * s,
-                color::HOLO,
+                color::holo(),
                 FontWeight::Semibold,
                 TextAlign::Start,
             );
@@ -1030,7 +1028,7 @@ impl Panel {
                 format_args!("On its Toys page"),
                 frame.rect(x + 104.0, y + 4.0, width - 104.0, 22.0),
                 15.0 * s,
-                color::TEXT,
+                color::text(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -1043,14 +1041,14 @@ impl Panel {
                     [x, y, width],
                     NOTE_CHARS,
                     15.0,
-                    color::MUTED,
+                    color::muted(),
                 );
             }
         }
         y += 8.0;
         let _ = self.ui.draw_list_mut().push(DrawCommand::SolidRect {
             rect: frame.rect(x, y, width, 1.0),
-            color: color::alpha(color::HOLO, 0.18),
+            color: color::alpha(color::holo(), 0.18),
         });
         y += 10.0;
         let middle = y + 24.0;
@@ -1060,7 +1058,7 @@ impl Panel {
             format_args!("{}", toy.switch),
             frame.rect(x, middle - 15.0, width - 140.0, 30.0),
             22.0 * s,
-            color::TEXT,
+            color::text(),
             FontWeight::Semibold,
             TextAlign::Start,
         );
@@ -1082,7 +1080,7 @@ impl Panel {
                 format_args!("{words}"),
                 frame.rect(x, middle - 13.0, width - 140.0, 26.0),
                 18.0 * s,
-                color::MUTED,
+                color::muted(),
                 FontWeight::Semibold,
                 TextAlign::Start,
             );
@@ -1103,7 +1101,7 @@ impl Panel {
                 format_args!("{words}"),
                 frame.rect(x, middle - 13.0, width - 140.0, 26.0),
                 18.0 * s,
-                color::MUTED,
+                color::muted(),
                 FontWeight::Semibold,
                 TextAlign::Start,
             );
@@ -1143,7 +1141,7 @@ impl Panel {
             format_args!("Log book"),
             frame.rect(x, y, width * 0.5, 22.0),
             16.0 * s,
-            color::HOLO,
+            color::holo(),
             FontWeight::Semibold,
             TextAlign::Start,
         );
@@ -1153,7 +1151,7 @@ impl Panel {
             format_args!("{found} of {} found", card.book.len()),
             frame.rect(x + width * 0.5, y + 2.0, width * 0.5, 20.0),
             14.0 * s,
-            color::MUTED,
+            color::muted(),
             FontWeight::Regular,
             TextAlign::End,
         );
@@ -1178,7 +1176,7 @@ impl Panel {
                     format_args!("{head}"),
                     frame.rect(x, y + 2.0, width, 18.0),
                     13.0 * s,
-                    color::QUIET,
+                    color::quiet(),
                     FontWeight::Semibold,
                     TextAlign::Start,
                 );
@@ -1189,9 +1187,9 @@ impl Panel {
                 let cell_y = y + (index / 2) as f32 * BOOK_ROW;
                 let caught = entry.count > 0;
                 let colour = match (caught, entry.rare) {
-                    (false, _) => color::QUIET,
-                    (true, true) => color::GOLD_BRIGHT,
-                    (true, false) => color::TEXT,
+                    (false, _) => color::quiet(),
+                    (true, true) => color::gold_bright(),
+                    (true, false) => color::text(),
                 };
                 let note = entry.note();
                 let note_width = crate::text::display_width(&note, 12.0) * k;
@@ -1220,7 +1218,7 @@ impl Panel {
                     format_args!("{note}"),
                     frame.rect(cell_x, cell_y + 4.0, column, 18.0),
                     12.0 * s,
-                    color::MUTED,
+                    color::muted(),
                     FontWeight::Regular,
                     TextAlign::End,
                 );
@@ -1238,7 +1236,7 @@ impl Panel {
             rect,
             radius: 8.0 * s,
             color: color::alpha(
-                color::GOLD,
+                color::gold(),
                 match (live, hovered) {
                     (true, true) => 0.22,
                     (true, false) => 0.12,
@@ -1251,9 +1249,9 @@ impl Panel {
             radius: 8.0 * s,
             width: 1.2 * s,
             color: if live {
-                color::GOLD
+                color::gold()
             } else {
-                color::alpha(color::TEXT, 0.3)
+                color::alpha(color::text(), 0.3)
             },
         });
         text(
@@ -1263,9 +1261,9 @@ impl Panel {
             frame.rect(x, y + 6.0, button_width, 22.0),
             15.0 * s,
             if live {
-                color::GOLD_BRIGHT
+                color::gold_bright()
             } else {
-                color::QUIET
+                color::quiet()
             },
             FontWeight::Semibold,
             TextAlign::Center,
@@ -1285,7 +1283,7 @@ impl Panel {
             format_args!("{note}"),
             frame.rect(note_x, y + 8.0, (x + width - note_x).max(0.0), 20.0),
             13.0 * s,
-            color::QUIET,
+            color::quiet(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -1306,7 +1304,7 @@ impl Panel {
         let k = text_scale();
         let _ = self.ui.draw_list_mut().push(DrawCommand::SolidRect {
             rect: frame.rect(x, y, width, 1.0),
-            color: color::alpha(color::HOLO, 0.18),
+            color: color::alpha(color::holo(), 0.18),
         });
         y += 8.0;
         text(
@@ -1315,7 +1313,7 @@ impl Panel {
             format_args!("{}", card.title),
             frame.rect(x, y, 110.0, 22.0),
             15.0 * s,
-            color::HOLO,
+            color::holo(),
             FontWeight::Semibold,
             TextAlign::Start,
         );
@@ -1325,7 +1323,7 @@ impl Panel {
             format_args!("{}", card.summary),
             frame.rect(x + 110.0, y, width - 110.0, 22.0),
             15.0 * s,
-            color::TEXT,
+            color::text(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -1337,13 +1335,13 @@ impl Panel {
         let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
             rect,
             radius: 7.0 * s,
-            color: color::alpha(color::HOLO, if hovered { 0.18 } else { 0.07 }),
+            color: color::alpha(color::holo(), if hovered { 0.18 } else { 0.07 }),
         });
         let _ = self.ui.draw_list_mut().push(DrawCommand::Border {
             rect,
             radius: 7.0 * s,
             width: 1.0 * s,
-            color: color::alpha(color::HOLO, 0.5),
+            color: color::alpha(color::holo(), 0.5),
         });
         text(
             &mut self.ui,
@@ -1351,7 +1349,7 @@ impl Panel {
             format_args!("{shown}"),
             frame.rect(x + width - button_width, y + 1.0, button_width, 20.0),
             14.0 * s,
-            color::HOLO,
+            color::holo(),
             FontWeight::Semibold,
             TextAlign::Center,
         );
@@ -1363,7 +1361,7 @@ impl Panel {
             format_args!("{}", card.junk_line),
             frame.rect(x, y, width, LOG_LINE * k),
             14.0 * s,
-            color::MUTED,
+            color::muted(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -1376,7 +1374,7 @@ impl Panel {
                 format_args!("{line}"),
                 frame.rect(x, y, width, LOG_LINE * k),
                 14.0 * s,
-                color::MUTED,
+                color::muted(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -1410,16 +1408,16 @@ impl Panel {
         let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
             rect,
             radius: 8.0 * s,
-            color: color::alpha(color::GOLD, ground),
+            color: color::alpha(color::gold(), ground),
         });
         let _ = self.ui.draw_list_mut().push(DrawCommand::Border {
             rect,
             radius: 8.0 * s,
             width: 1.2 * s,
             color: if live {
-                color::GOLD
+                color::gold()
             } else {
-                color::alpha(color::TEXT, 0.3)
+                color::alpha(color::text(), 0.3)
             },
         });
         text(
@@ -1429,9 +1427,9 @@ impl Panel {
             frame.rect(x, y + 6.0, button_width, 24.0),
             17.0 * s,
             if live {
-                color::GOLD_BRIGHT
+                color::gold_bright()
             } else {
-                color::QUIET
+                color::quiet()
             },
             FontWeight::Semibold,
             TextAlign::Center,
@@ -1460,7 +1458,7 @@ impl Panel {
                 rect,
                 radius: 8.0 * s,
                 color: color::alpha(
-                    color::GOLD,
+                    color::gold(),
                     if hovered {
                         0.22
                     } else if catch_live {
@@ -1475,9 +1473,9 @@ impl Panel {
                 radius: 8.0 * s,
                 width: 1.2 * s,
                 color: if catch_live {
-                    color::GOLD
+                    color::gold()
                 } else {
-                    color::alpha(color::TEXT, 0.3)
+                    color::alpha(color::text(), 0.3)
                 },
             });
             text(
@@ -1487,9 +1485,9 @@ impl Panel {
                 frame.rect(note_x, y + 6.0, catch_width, 24.0),
                 17.0 * s,
                 if catch_live {
-                    color::GOLD_BRIGHT
+                    color::gold_bright()
                 } else {
-                    color::QUIET
+                    color::quiet()
                 },
                 FontWeight::Semibold,
                 TextAlign::Center,
@@ -1513,7 +1511,7 @@ impl Panel {
             format_args!("{note}"),
             frame.rect(note_x, y + 9.0, (x + width - note_x).max(0.0), 20.0),
             13.0 * s,
-            color::QUIET,
+            color::quiet(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -1551,7 +1549,7 @@ fn book_rows_height(first: usize, rest: usize) -> f32 {
 
 /// `body` from (`x`, `y`) in a column `width` wide, wrapped at `chars` to a line at the
 /// ordinary text size (fewer at a larger one), every line of it; returns where the next
-/// line would stand. The Nameplates tab's card writes its words so too.
+/// line would stand.
 pub(super) fn words(
     canvas: &mut crate::menu_widgets::MenuCanvas,
     frame: &Frame,

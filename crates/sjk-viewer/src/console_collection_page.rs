@@ -15,24 +15,26 @@ use sjk_ui::InputEvent;
 /// The `collection` command.
 pub(crate) const COLLECTION_COMMAND: &str = "collection";
 pub(crate) const COLLECTION_HELP: &str =
-    "Open your SJK collection: medals, achievements, shaders, toys and nameplates";
+    "Open your SJK collection: medals, achievements, kybers, toys, tags and cards";
 /// The `achievements` command.
 pub(crate) const ACHIEVEMENTS_COMMAND: &str = "achievements";
 pub(crate) const ACHIEVEMENTS_HELP: &str = "Open the Collection on your achievements";
 /// The `unlockables` command.
 pub(crate) const UNLOCKABLES_COMMAND: &str = "unlockables";
 pub(crate) const UNLOCKABLES_HELP: &str =
-    "Open the Collection on its shaders: saber looks you own or can unlock";
+    "Open the Collection on its kybers: saber looks you own or can unlock";
 
 impl ViewerConsole {
     /// `collection`, `achievements` or `unlockables` in the classic menus: show the page
-    /// on its own on `tab` (`None`: the tab shown last), or close it when it shows it.
+    /// on its own on `tab` (`None`: where the Collection opens, [`Self::collection_landing`]),
+    /// or close it when it shows it (any of its pages for `None`).
     pub(crate) fn toggle_collection_panel(&mut self, tab: Option<Tab>) {
-        let tab = tab.unwrap_or(self.collection_panel.tab());
-        if self.open && self.collection_panel.is_open() && self.collection_panel.tab() == tab {
+        let shown = self.open && self.collection_panel.is_open();
+        if shown && tab.is_none_or(|tab| self.collection_panel.tab() == tab) {
             self.close_collection_panel();
             return;
         }
+        let tab = tab.unwrap_or_else(|| self.collection_landing());
         let owns_console = !self.open;
         self.show_collection_panel(tab, owns_console, false, ReturnTarget::MainMenu);
     }
@@ -49,19 +51,36 @@ impl ViewerConsole {
         self.collection_panel.choose_saber_lab();
     }
 
-    /// Show the page on its own on the tab shown last (the classic menus).
+    /// Show the page on its own where the Collection opens (the classic menus).
     pub(crate) fn open_collection_panel(&mut self) {
-        let tab = self.collection_panel.tab();
+        let tab = self.collection_landing();
         let owns_console = !self.open;
+        // The Holocrons page is a page of its own: the classic menus open it alone.
+        if tab == Tab::Holocrons {
+            self.show_holocrons_panel(owns_console);
+            return;
+        }
         self.show_collection_panel(tab, owns_console, false, ReturnTarget::MainMenu);
     }
 
-    /// The Collection's tab on show, or shown last (Medals the first time).
+    /// The Collection's kind on show, or shown last (Medals the first time).
     pub(crate) fn collection_tab(&self) -> Tab {
         if self.holocrons_last {
             Tab::Holocrons
         } else {
-            self.collection_panel.tab()
+            self.collection_panel.kind()
+        }
+    }
+
+    /// Where the Collection opens when nothing names a kind (its own command, the menus'
+    /// Collection, the Profile page's See the collection): the hall while
+    /// `ui_collectionHall` is on (the default), else the kind shown last
+    /// ([`Self::collection_tab`]).
+    pub(crate) fn collection_landing(&self) -> Tab {
+        if self.integer_cvar(super::collection_panel::hall::CVAR) == Some(0) {
+            self.collection_tab()
+        } else {
+            Tab::Hall
         }
     }
 
@@ -158,15 +177,6 @@ impl ViewerConsole {
             PanelAction::RevealCards => {
                 let _ = crate::player_identity::reveal_cards();
             }
-            PanelAction::SeeAndShare(on) => {
-                self.set_cvar("cg_nameplate", if on { "1" } else { "0" });
-            }
-            PanelAction::NameplateStyle(style) => {
-                self.set_cvar(
-                    crate::hud::nameplate::STYLE_CVAR,
-                    &style.value().to_string(),
-                );
-            }
             PanelAction::ToySight { cvar, seen } => {
                 self.set_cvar(cvar, if seen { "1" } else { "0" });
             }
@@ -262,14 +272,25 @@ impl ViewerConsole {
             PanelAction::MakeGifTag(giphy) => crate::player_identity::make_gif_tag(giphy),
             PanelAction::ShatterTag(copy) => crate::player_identity::shatter_tag(copy),
             PanelAction::CraftTags(copies) => crate::player_identity::craft_tags(copies),
+            PanelAction::Servers => {
+                // The viewer shows the server list once the page is closed.
+                self.close_collection_panel();
+                self.pending_servers = true;
+            }
+            PanelAction::OpenHolocron(slot) => {
+                self.collection_panel_action(PanelAction::Hub(Tab::Holocrons));
+                self.holocrons_panel.open_on(slot);
+            }
             PanelAction::Hub(tab) => {
-                // A tab of another page: the Holocrons page.
+                // A tab of another page: the Holocrons page, from the hall's tile.
                 let back = self.collection_panel.back();
                 if self.collection_panel.is_hub() {
                     self.open_profile_hub_page(tab, back);
                 } else if tab == Tab::Holocrons {
                     let owns_console = self.collection_panel.close();
                     self.show_holocrons_panel(owns_console);
+                    // Escape on it comes back to the hall.
+                    self.holocrons_panel.set_from_hall(true);
                     self.holocrons_last = true;
                 }
             }
@@ -414,6 +435,11 @@ impl ViewerConsole {
     /// The viewer gives the Mining card its finds and sale.
     pub(crate) fn set_mining_card(&mut self, card: crate::fishing_sell::Card) {
         self.mining_card = card;
+    }
+
+    /// An empty Collection or Holocrons page asked for the server list, once.
+    pub(crate) fn take_servers_request(&mut self) -> bool {
+        std::mem::take(&mut self.pending_servers)
     }
 
     /// The Mining card's Sell rubble button was pressed, once.
@@ -572,7 +598,6 @@ impl ViewerConsole {
             .text_cvar(SABER_SKIN_CVAR)
             .unwrap_or_default()
             .to_owned();
-        let name = self.text_value("name").unwrap_or_default().to_owned();
         let tag = self
             .text_cvar(crate::tags::CVAR)
             .unwrap_or_default()
@@ -635,11 +660,6 @@ impl ViewerConsole {
             pair => pair,
         };
         let enabled = self.bool_cvar("cl_identity") == Some(true);
-        let share = crate::hud::nameplate::see_and_share(self);
-        let nameplate_style = crate::hud::nameplate::Style::of(
-            self.integer_cvar(crate::hud::nameplate::STYLE_CVAR)
-                .unwrap_or(0),
-        );
         let snapshot =
             crate::player_identity::collection_snapshot(crate::debug_collectibles::wanted(self));
         let held = snapshot
@@ -675,14 +695,11 @@ impl ViewerConsole {
                 fishing_card: Some(&fishing_card),
                 wheel_of_doom,
                 mining_card: Some(&mining_card),
-                name: &name,
                 stock,
                 grid,
                 options: &options,
                 second: &second,
                 pair,
-                share,
-                nameplate_style,
                 toy_keys: &toy_keys,
                 toys_unseen,
                 toy_options,
@@ -718,14 +735,11 @@ impl ViewerConsole {
             fishing_card: Some(&fishing_card),
             wheel_of_doom,
             mining_card: Some(&mining_card),
-            name: &name,
             stock,
             grid,
             options: &options,
             second: &second,
             pair,
-            share,
-            nameplate_style,
             toy_keys: &toy_keys,
             toys_unseen,
             toy_options,
@@ -762,7 +776,8 @@ impl ViewerConsole {
     fn follow_forge(&mut self, enabled: bool, snapshot: Option<&sjk_identity::Snapshot>) {
         let known = snapshot.is_some_and(|snapshot| snapshot.economy.is_some());
         self.collection_panel.set_trade_known(known);
-        let data = if self.collection_panel.tab() == Tab::Forge {
+        // The Inventory's Break down presses the Forge's own button (15/11/2026).
+        let data = if matches!(self.collection_panel.tab(), Tab::Forge | Tab::Inventory) {
             super::collection_panel::forge::ForgeData::read(enabled)
         } else {
             Default::default()
@@ -837,6 +852,18 @@ impl ViewerConsole {
     #[cfg(test)]
     pub(crate) fn history_activate_for_shot(&mut self, index: usize) {
         self.collection_panel.history_activate_for_shot(index);
+    }
+
+    /// Show the Inventory tab's chip `filter` and choose its `nth` thing, for a world shot.
+    #[cfg(test)]
+    pub(crate) fn inventory_choose_for_shot(&mut self, filter: usize, nth: usize) {
+        self.collection_panel.inventory_choose_for_shot(filter, nth);
+    }
+
+    /// Search the Inventory tab for `query` and sort it the `sort`th way, for a world shot.
+    #[cfg(test)]
+    pub(crate) fn inventory_for_shot(&mut self, query: &str, sort: usize) {
+        self.collection_panel.inventory_for_shot(query, sort);
     }
 
     /// Show the Forge's `section`, for a world shot.
@@ -975,17 +1002,34 @@ impl ViewerConsole {
         self.collection_panel.choose_toy_for_shot(index);
     }
 
+    /// Choose the hall's tile `index` (`open`: and open it, as Enter does), for a world
+    /// shot.
+    #[cfg(test)]
+    pub(crate) fn collection_hall_for_shot(&mut self, index: usize, open: bool) {
+        self.collection_panel.hall_choose_for_shot(index);
+        if open {
+            let action = self.collection_panel.hall_open_for_shot(index);
+            self.collection_panel_action(action);
+        }
+    }
+
+    /// Hold the Collection's motions `at` milliseconds in, for a world shot.
+    #[cfg(test)]
+    pub(crate) fn collection_transition_for_shot(&mut self, at: Option<u64>) {
+        self.collection_panel.transition_for_shot(at);
+    }
+
     /// Show the hover card of the Collection tab's thing `index`, for a world shot.
     #[cfg(test)]
     pub(crate) fn collection_hover_for_shot(&mut self, index: Option<usize>) {
         self.collection_panel.hover_for_shot(index);
     }
 
-    /// Open (or close) the Collection's New note, Extra features note and showcase
-    /// card, for a world shot.
+    /// Open (or close) the Collection's New note and Extra features note, for a world
+    /// shot.
     #[cfg(test)]
-    pub(crate) fn collection_notes_for_shot(&mut self, new: bool, extras: bool, showcase: bool) {
-        self.collection_panel.notes_for_shot(new, extras, showcase);
+    pub(crate) fn collection_notes_for_shot(&mut self, new: bool, extras: bool) {
+        self.collection_panel.notes_for_shot(new, extras);
     }
 
     /// Let every shader's extras count as unlocked on the Collection, for a world shot.
@@ -1005,6 +1049,13 @@ impl ViewerConsole {
     #[cfg(test)]
     pub(crate) fn collection_marks_for_shot(&mut self, marks: Option<crate::shader_marks::Marks>) {
         self.collection_panel.marks_for_shot(marks);
+    }
+
+    /// Show `news` (New cards, tags, finishers) in place of the live ones (`None` lets
+    /// go), for a world shot.
+    #[cfg(test)]
+    pub(crate) fn collection_news_for_shot(&mut self, news: Option<crate::collection_seen::News>) {
+        self.collection_panel.news_for_shot(news);
     }
 
     /// Hold the Shaders tab's lone saber turned so (`None` lets go), for a world shot.
@@ -1069,6 +1120,12 @@ impl ViewerConsole {
     #[cfg(test)]
     pub(crate) fn collection_lab_chase_for_shot(&mut self, chase: bool) {
         self.collection_panel.lab_chase_for_shot(chase);
+    }
+
+    /// Choose kyber `id` on the Kybers page, for a world shot.
+    #[cfg(test)]
+    pub(crate) fn collection_kyber_for_shot(&mut self, id: &'static str) {
+        self.collection_panel.focus_shader_for_shot(id);
     }
 
     /// Choose the Collection's shader row `row` (0 the stock blade), for a world shot.
@@ -1159,13 +1216,74 @@ mod tests {
         assert!(!console.collection_panel.is_open());
         assert!(console.is_open());
         assert_eq!(console.collection_stage_wish(), None);
-        // From a closed console: again on the tab shown last; then it closes the
-        // console it took over.
+        // From a closed console: on its hall, the kind shown last remembered; then it
+        // closes the console it took over.
         console.set_open(false);
         console.toggle_collection_panel(None);
+        assert_eq!(console.collection_panel.tab(), Tab::Hall);
         assert_eq!(console.collection_tab(), Tab::Shaders);
         assert!(console.is_open());
-        console.toggle_collection_panel(Some(Tab::Shaders));
+        console.toggle_collection_panel(None);
         assert!(!console.is_open(), "it closes the console it took over");
+    }
+
+    /// `ui_collectionHall`: the Collection opens on its hall (the default), or off on the
+    /// kind used last; a command naming a kind opens it directly either way, and the
+    /// Holocrons page's Escape comes back to the hall.
+    #[test]
+    fn the_collection_opens_on_its_hall_or_the_last_kind() {
+        let directory = tempfile::tempdir().unwrap();
+        let mut console = ViewerConsole::new(directory.path().join("config.cfg")).unwrap();
+        assert_eq!(
+            console.integer_cvar(super::super::collection_panel::hall::CVAR),
+            Some(1)
+        );
+        assert_eq!(console.collection_landing(), Tab::Hall);
+        // The SJK UI's screen: the menus' Collection lands on the hall.
+        console.open_profile_hub_page(console.collection_landing(), ReturnTarget::MainMenu);
+        assert_eq!(console.profile_hub_tab(), Some(Tab::Hall));
+        assert!(
+            console
+                .collection_stage_wish()
+                .is_some_and(|wish| wish.hall)
+        );
+        // A kind named (`unlockables`, `achievements`) skips the hall.
+        console.open_profile_hub_page(Tab::Achievements, ReturnTarget::MainMenu);
+        assert_eq!(console.profile_hub_tab(), Some(Tab::Achievements));
+        console.close_profile_hub_page();
+        console.open_profile_hub_page(Tab::Shaders, ReturnTarget::MainMenu);
+        assert_eq!(console.profile_hub_tab(), Some(Tab::Shaders));
+        // `holocrons` opens its page directly; its Escape comes back to the hall, on the
+        // Holocrons tile.
+        console.close_profile_hub_page();
+        console.open_profile_hub_page(Tab::Holocrons, ReturnTarget::MainMenu);
+        assert_eq!(console.profile_hub_tab(), Some(Tab::Holocrons));
+        console.holocrons_panel_action(super::super::holocrons_panel::PanelAction::Hall);
+        assert_eq!(console.profile_hub_tab(), Some(Tab::Hall));
+        assert_eq!(
+            console.collection_panel.hall_tile(),
+            super::super::collection_panel::hall::Tile::Holocrons
+        );
+        console.close_profile_hub_page();
+        // Off: the Collection opens on the kind used last.
+        let _ = console.set_cvar(super::super::collection_panel::hall::CVAR, "0");
+        console.open_profile_hub_page(Tab::Toys, ReturnTarget::MainMenu);
+        console.close_profile_hub_page();
+        assert_eq!(console.collection_landing(), Tab::Toys);
+        console.open_profile_hub_page(console.collection_landing(), ReturnTarget::MainMenu);
+        assert_eq!(console.profile_hub_tab(), Some(Tab::Toys));
+        console.close_profile_hub_page();
+        // The classic menus' page on its own follows the setting too.
+        let _ = console.set_cvar(super::super::collection_panel::hall::CVAR, "1");
+        console.open_collection_panel();
+        assert_eq!(console.collection_panel.tab(), Tab::Hall);
+        // From its hall the Holocrons tile opens the page alone, and Escape there comes
+        // back to the hall.
+        console.collection_panel_action(PanelAction::Hub(Tab::Holocrons));
+        assert!(console.holocrons_panel.is_open());
+        assert!(!console.collection_panel.is_open());
+        console.holocrons_panel_action(super::super::holocrons_panel::PanelAction::Hall);
+        assert!(console.collection_panel.is_open() && !console.holocrons_panel.is_open());
+        assert_eq!(console.collection_panel.tab(), Tab::Hall);
     }
 }

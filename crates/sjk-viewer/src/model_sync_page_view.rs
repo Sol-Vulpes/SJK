@@ -78,7 +78,7 @@ impl Page {
             format_args!("Model sync"),
             frame.rect(LEFT_X, 60.0, 700.0, 56.0),
             40.0 * s,
-            color::TEXT,
+            color::text(),
             FontWeight::Semibold,
             TextAlign::Start,
         );
@@ -101,7 +101,7 @@ impl Page {
             ),
             frame.rect(LEFT_X, 124.0, WIDTH, 28.0),
             18.0 * s,
-            color::alpha(color::TEXT, 0.86),
+            color::alpha(color::text(), 0.86),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -116,7 +116,7 @@ impl Page {
                 ),
                 frame.rect(LEFT_X, 154.0, WIDTH, 26.0),
                 16.0 * s,
-                color::MUTED,
+                color::muted(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -131,7 +131,7 @@ impl Page {
                 ),
                 frame.rect(LEFT_X, 154.0, WIDTH, 26.0),
                 16.0 * s,
-                color::MUTED,
+                color::muted(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -171,7 +171,7 @@ impl Page {
             ),
             frame.rect(auto_x, SEARCH_Y + 16.0, RIGHT_X - auto_x, 24.0),
             15.0 * s,
-            color::MUTED,
+            color::muted(),
             FontWeight::Regular,
             TextAlign::End,
         );
@@ -215,7 +215,7 @@ impl Page {
                 format_args!("{}", row.name),
                 frame.rect(NAME_X, top + 9.0, NAME_WIDTH, 28.0),
                 19.0 * s,
-                color::TEXT,
+                color::text(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -226,7 +226,7 @@ impl Page {
                     format_args!("Worn"),
                     frame.rect(WORN_X, top + 11.0, 90.0, 24.0),
                     15.0 * s,
-                    color::GOLD_BRIGHT,
+                    color::gold_bright(),
                     FontWeight::Semibold,
                     TextAlign::Start,
                 );
@@ -237,7 +237,7 @@ impl Page {
                 format_args!("{}", self.statuses[index]),
                 frame.rect(STATUS_X, top + 11.0, STATUS_WIDTH, 24.0),
                 16.0 * s,
-                color::MUTED,
+                color::muted(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -288,7 +288,7 @@ impl Page {
                 format_args!("{empty}"),
                 frame.rect(NAME_X, LIST_Y + 8.0, WIDTH - 48.0, 28.0),
                 18.0 * s,
-                color::MUTED,
+                color::muted(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -309,7 +309,7 @@ impl Page {
                     22.0,
                 ),
                 14.0 * s,
-                color::QUIET,
+                color::quiet(),
                 FontWeight::Regular,
                 TextAlign::End,
             );
@@ -334,7 +334,7 @@ impl Page {
                 format_args!("Working..."),
                 frame.rect(RIGHT_X - 200.0, SAID_Y - 12.0, 200.0, 24.0),
                 16.0 * s,
-                color::GOLD_BRIGHT,
+                color::gold_bright(),
                 FontWeight::Regular,
                 TextAlign::End,
             );
@@ -346,7 +346,7 @@ impl Page {
                 format_args!("Nothing yet. Share, Update and Download say here how they went."),
                 frame.rect(LEFT_X, SAID_Y + 18.0, WIDTH, 22.0),
                 16.0 * s,
-                color::QUIET,
+                color::quiet(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -360,9 +360,9 @@ impl Page {
                 frame.rect(LEFT_X, SAID_Y + 18.0 + at as f32 * SAID_LINE, WIDTH, 22.0),
                 16.0 * s,
                 if warning {
-                    color::EMBER
+                    color::ember()
                 } else {
-                    color::alpha(color::TEXT, 0.86)
+                    color::alpha(color::text(), 0.86)
                 },
                 FontWeight::Regular,
                 TextAlign::Start,

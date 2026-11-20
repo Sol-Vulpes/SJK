@@ -203,7 +203,7 @@ pub(crate) struct ClientMenu {
     /// The renderer ([`crate::ui_renderer::ShapeRenderer::id`]) the menu's
     /// images were uploaded into; another one (a world change) has none of them.
     uploaded_into: Option<u64>,
-    /// The Collection shows Shaders, Toys or Nameplates over this menu: the camera goes
+    /// The Collection shows Shaders or Toys over this menu: the camera goes
     /// to the player's shot and the model stands on the stage, or shows in a preview
     /// over a match ([`Self::set_collection_stage`]).
     collection_stage: bool,
@@ -418,13 +418,13 @@ impl ClientMenu {
             return false;
         }
         self.world_fade.begin_transparent(viewport);
-        // The SJK UI's deep navy rather than black, as its fades are.
+        // The SJK UI's dark ground rather than black, as its fades are.
         let _ = self
             .world_fade
             .draw_list_mut()
             .push(sjk_ui::DrawCommand::SolidRect {
                 rect: sjk_ui::Rect::new(0.0, 0.0, viewport[0], viewport[1]),
-                color: sjk::color::alpha(sjk::color::SPACE, darkness),
+                color: sjk::color::alpha(sjk::color::space(), darkness),
             });
         true
     }
@@ -473,9 +473,9 @@ impl ClientMenu {
         }
     }
 
-    /// Whether the Collection wants the player's model (on Shaders, Toys and
-    /// Nameplates). When it starts wanting it and the player screen is not open, the
-    /// model and sabers are read from the cvars, so the stage shows the player's own.
+    /// Whether the Collection wants the player's model (on Shaders and Toys). When it
+    /// starts wanting it and the player screen is not open, the model and sabers are
+    /// read from the cvars, so the stage shows the player's own.
     pub(crate) fn set_collection_stage(
         &mut self,
         wanted: bool,
@@ -493,8 +493,8 @@ impl ClientMenu {
         self.collection_stage = wanted;
     }
 
-    /// Whether the Collection wants the player's model this frame (Shaders, Toys,
-    /// Nameplates): the backdrop camera then frames the page's 16:9 frame at every window
+    /// Whether the Collection wants the player's model this frame (Shaders, Toys): the
+    /// backdrop camera then frames the page's 16:9 frame at every window
     /// shape ([`crate::menu_stage::frame_fit_fov`]).
     pub(crate) fn collection_stage(&self) -> bool {
         self.collection_stage
@@ -562,8 +562,7 @@ impl ClientMenu {
 
     /// The player model that stands on the backdrop's stage: only while a
     /// route with a stage is active (flying to, parked on, or flying back
-    /// from the Player screen, or behind the Collection's Shaders, Toys and
-    /// Nameplates).
+    /// from the Player screen, or behind the Collection's Shaders and Toys).
     pub(crate) fn stage_model(&self) -> Option<(Stage, &str)> {
         if self.collection_stage && !self.player.is_classic() {
             let stage = self.backdrop.as_ref()?.stage()?;
@@ -682,6 +681,16 @@ impl ClientMenu {
         self.filter_editing = false;
         self.browser_focus = 1_000 + self.browser.selected() as u16;
         self.reset_sjk_browser();
+    }
+
+    /// Show the server list from the main menu as Play does, its rows fetched unless fresh
+    /// ones show (an empty Collection page's "Find a server", 15/11/2026).
+    pub(crate) fn open_servers(&mut self, console: &ViewerConsole) {
+        if let Ok(master) = console.master_server() {
+            self.browser.set_master(master);
+        }
+        self.open_browser();
+        self.refresh_servers_if_stale();
     }
 
     /// Start a master-server fetch unless fresh rows are already on show.

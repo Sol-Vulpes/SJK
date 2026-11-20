@@ -313,7 +313,7 @@ fn draw_flat(
         color: if card.edition.is_empty() {
             Color::new(0.0, 0.0, 0.0, 0.0)
         } else {
-            color::alpha(color::GOLD, 0.16)
+            color::alpha(color::gold(), 0.16)
         },
     });
     // The finish over everything, inside the card.
@@ -344,7 +344,7 @@ fn draw_flat(
         format_args!("Sealed"),
         frame.rect(x, y + height * 0.47 + width * 0.33, width, 22.0 * unit),
         14.0 * unit * s,
-        faded(color::MUTED, ink),
+        faded(color::muted(), ink),
         FontWeight::Regular,
         TextAlign::Center,
     );
@@ -355,7 +355,7 @@ fn draw_flat(
             format_args!("{}", card.edition),
             frame.rect(stamp[0], stamp[1] + 2.0 * unit, stamp[2], 18.0 * unit),
             12.0 * unit * s,
-            faded(color::GOLD_BRIGHT, ink),
+            faded(color::gold_bright(), ink),
             FontWeight::Semibold,
             TextAlign::Center,
         );
@@ -425,9 +425,9 @@ fn face(
         radius: width * 0.016 * s,
         width: (width * 0.0032 * s).max(1.0),
         color: if card.dim {
-            color::alpha(color::MUTED, 0.5)
+            color::alpha(color::muted(), 0.5)
         } else {
-            color::GOLD_BRIGHT
+            color::gold_bright()
         },
     });
     let lore_box = [
@@ -474,7 +474,7 @@ fn face(
             width * 0.08,
         ),
         width * 0.052 * s,
-        faded(color::TEXT, ink),
+        faded(color::text(), ink),
         FontWeight::Semibold,
         TextAlign::Start,
     );
@@ -507,7 +507,7 @@ fn face(
         format_args!("{}  ·  {}", face.face.kind.name(), face.face.set_name),
         frame.rect(x + width * 0.049, strip_y, width * 0.5, width * 0.036),
         small * s,
-        faded(color::MUTED, ink),
+        faded(color::muted(), ink),
         FontWeight::Semibold,
         TextAlign::Start,
     );
@@ -522,7 +522,7 @@ fn face(
         format_args!("{}{finish}", card.edition),
         frame.rect(x + width * 0.45, strip_y, width * 0.501, width * 0.036),
         small * s,
-        faded(color::GOLD_BRIGHT, ink),
+        faded(color::gold_bright(), ink),
         FontWeight::Semibold,
         TextAlign::End,
     );
@@ -547,7 +547,7 @@ fn face(
                 step,
             ),
             width * 0.033 * fit.grow * s,
-            faded(color::TEXT, ink),
+            faded(color::text(), ink),
             FontWeight::Regular,
             fit.align,
         );
@@ -561,7 +561,7 @@ fn face(
         format_args!("Art: {}", face.face.artist),
         frame.rect(x + width * 0.049, foot_y, width * 0.55, width * 0.04),
         small * s,
-        faded(color::MUTED, ink),
+        faded(color::muted(), ink),
         FontWeight::Semibold,
         TextAlign::Start,
     );
@@ -590,7 +590,11 @@ fn label(
 ) {
     let s = frame.s;
     let ink = alpha.clamp(0.0, 1.0);
-    let name_colour = if card.dim { color::MUTED } else { color::TEXT };
+    let name_colour = if card.dim {
+        color::muted()
+    } else {
+        color::text()
+    };
     let size = width * LABEL_SIZE;
     let step = size * 1.18;
     let scale = crate::text::style::current().scale.max(0.5);
@@ -620,7 +624,7 @@ fn label(
         );
     }
     let foot = [y + width * (ASPECT - 0.14), width * 0.09];
-    let quiet = faded(color::MUTED, ink * if card.dim { 0.75 } else { 1.0 });
+    let quiet = faded(color::muted(), ink * if card.dim { 0.75 } else { 1.0 });
     text(
         canvas,
         TextFamily::Body,

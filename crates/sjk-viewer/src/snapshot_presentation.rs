@@ -49,13 +49,15 @@ pub(crate) struct Sinks<'a> {
 }
 
 /// Observe one accepted snapshot through every snapshot-driven presentation
-/// subsystem.
+/// subsystem. `ping` is the snapshot's stock ping for the lagometer
+/// ([`sjk_client::ClientSession::snapshot_ping`]); a demo and a local game have none.
 pub(crate) fn observe(
     snapshot: &Snapshot,
     game_state: &GameState,
     local: impact_spawn::LocalView,
     predicting_local_view: bool,
     visual_now: Instant,
+    ping: Option<i32>,
     sinks: &mut Sinks<'_>,
 ) {
     // `cg_fleshSparks`: the saber hits' sparks below, the special hit's sound above.
@@ -137,13 +139,11 @@ pub(crate) fn observe(
         sinks.chat,
         sinks.audio.as_mut(),
     );
-    let ping = snapshot
-        .server_time
-        .wrapping_sub(snapshot.player.command_time())
-        .max(0);
+    // `CG_AddLagometerSnapshotInfo` graphs `snap->ping`; without one (a demo, a local
+    // game, the first snapshots of a map) the column stays empty, a drop still red.
     sinks
         .lagometer
-        .add_received(snapshot.message_sequence, ping, snapshot.flags);
+        .add_received(snapshot.message_sequence, ping.unwrap_or(0), snapshot.flags);
     sinks.counters.snapshots += 1;
     sinks.counters.impact_events += impact.events as u64;
     sinks.counters.impact_visual_requests += impact.visual_requests as u64;
@@ -194,6 +194,7 @@ impl GpuState {
     /// A prepared world or local authority cannot contribute samples to a new
     /// remote timeline, even when the numeric timestamps happen to increase.
     pub(crate) fn reset_live_presentation(&mut self) {
+        self.status_bar.forget_ping();
         let Some(session) = &self.live_session else {
             return;
         };
@@ -214,6 +215,7 @@ impl GpuState {
             Instant::now(),
         );
         self.local_actor_state = Default::default();
+        self.duel_lines = Default::default();
         // A blade skin's burns belong to the old timeline: their start times and entity
         // numbers mean nothing on a new one (`disintegration::Forced`).
         self.forced_disintegrations = Default::default();
@@ -264,6 +266,7 @@ impl GpuState {
                 local,
                 false,
                 visual_now,
+                None,
                 &mut Sinks {
                     audio: game_audio,
                     vfs: self
@@ -391,6 +394,7 @@ impl GpuState {
                 },
                 !snapshot.player.is_spectator(),
                 visual_now,
+                session.snapshot_ping(),
                 &mut Sinks {
                     audio: game_audio,
                     vfs: self
@@ -434,6 +438,19 @@ impl GpuState {
                 toys,
                 visual_now,
             );
+            if let Ok(me) = u16::try_from(session.game_state().client_num) {
+                let fresh = crate::achievements_frame::fresh_obituaries(
+                    &self.obituaries,
+                    obituaries_before,
+                );
+                self.duel_lines
+                    .observe(&crate::duel_lines::Seen::from_player(
+                        &snapshot.player,
+                        me,
+                        &fresh,
+                        visual_now,
+                    ));
+            }
         }
         if let Some(adapter) = &mut self.legacy_world_adapter {
             // oldServerTime disappears after the server acknowledges admission.
@@ -610,6 +627,7 @@ mod tests {
             local_was_killed: false,
             server_time: 0,
             attacker_force: 0,
+            attacker_weapon: 0,
         }
     }
 

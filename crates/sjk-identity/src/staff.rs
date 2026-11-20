@@ -888,7 +888,7 @@ pub(crate) fn done(request: &StaffRequest, count: usize) -> String {
             "They may upload pictures again".to_owned()
         }
         StaffRequest::HolocronGive { tier, .. } => match tier.strip_prefix("kyber_") {
-            Some(crystal) => format!("Gave {} {crystal} kyber crystal", article(crystal)),
+            Some(crystal) => format!("Gave {} {crystal} dormant kyber", article(crystal)),
             None => format!("Gave {} {tier} holocron", article(tier)),
         },
         StaffRequest::HolocronRemove { id, .. } => format!("Took back holocron #{id}"),
@@ -1043,7 +1043,7 @@ mod tests {
         assert_eq!(done(&give("uncommon"), 1), "Gave an uncommon holocron");
         assert_eq!(
             done(&give("kyber_legendary"), 1),
-            "Gave a legendary kyber crystal"
+            "Gave a legendary dormant kyber"
         );
         for request in [
             StaffRequest::Merge {

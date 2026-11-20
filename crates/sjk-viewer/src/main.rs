@@ -53,6 +53,7 @@ mod debug_collectibles;
 mod drone;
 mod duel_blades;
 mod duel_ghost;
+mod duel_lines;
 mod duel_visibility;
 mod economy;
 mod editions;
@@ -77,6 +78,7 @@ mod shared_textures;
 
 mod body_fade;
 mod clock_trace;
+mod collection_seen;
 mod combat_effects;
 mod config_import;
 mod config_string_refresh;
@@ -148,11 +150,13 @@ mod devmap_bar;
 mod e2e_whisper_card;
 mod e2e_whispers;
 mod emote_end_debug;
+mod emote_filters;
 mod emote_help;
 mod emote_picker;
 mod emplaced_swivel;
 mod eweb_view;
 mod fake_noclip;
+mod feats;
 mod file_dialog;
 mod finishers;
 mod fps_help;
@@ -175,7 +179,7 @@ mod ground_hud;
 mod hax;
 mod held_view;
 mod hitch_log;
-mod holocron_popup;
+mod holocron_banners;
 mod holocrons;
 mod hud;
 mod hud_edit;
@@ -281,6 +285,7 @@ mod blade_pictures;
 mod blade_signatures;
 mod blade_skin_file;
 mod blade_skin_shape;
+mod blade_stills;
 mod bug_report;
 mod electrify;
 mod emote_icons;
@@ -387,6 +392,7 @@ mod startup_stack;
 mod static_models;
 mod status_balloons;
 mod status_balloons_frame;
+mod status_bar;
 mod stock_blades;
 mod support_links;
 mod symbols;
@@ -598,6 +604,10 @@ struct GpuState {
     saber_gpu: saber_gpu::Runtime,
     /// The Collection's live blade pictures, once a swatch asked for one.
     blade_pictures: Option<blade_pictures::Target>,
+    /// When a live blade picture was last asked for (its target freed a while after).
+    blade_pictures_used: Option<std::time::Instant>,
+    /// The Collection's blade stills: their atlas, disk cache and bakes.
+    blade_stills: blade_stills::Stills,
     dust_motes: dust_motes::Runtime,
     /// The quick wheel open while its key is held (`quick_wheel.rs`).
     quick_wheel: quick_wheel::QuickWheel,
@@ -734,10 +744,10 @@ struct GpuState {
     text_dialog: text_dialog::TextDialog,
     /// The new medal pop-up (`medal_popup`).
     medal_popup: medal_popup::MedalPopup,
-    /// The holocron drop pop-up (`holocron_popup`).
-    holocron_popup: holocron_popup::HolocronPopup,
-    /// The unlock pop-up over play and the menus (`unlock_toast`): achievements, and
-    /// medals and holocrons that arrive in a match.
+    /// The holocron drops' banners (`holocron_banners`).
+    holocron_banners: holocron_banners::HolocronBanners,
+    /// The notification banners over play and the menus (`unlock_toast`): achievements,
+    /// medals that arrive in a match, holocrons, updates and the rest.
     unlock_toast: unlock_toast::UnlockToast,
     /// A bug report is on its way to the hub (`bug_report`).
     bug_report_waiting: bool,
@@ -862,6 +872,9 @@ struct GpuState {
     gpu_phases: Option<gpu_phases::Profiler>,
     /// The frame timings readout and log (`r_drawTimings`, `r_logTimings`).
     frame_timings: frame_timings::State,
+    /// The status bars docked to the screen's edges (`cg_statusBar`, `cg_statusBarTop`,
+    /// [`status_bar`]).
+    status_bar: status_bar::State,
     third_person_camera: camera::State,
     /// Where a fall to death began, while it lasts ([`fall_camera`]).
     fall_camera: fall_camera::FallCamera,
@@ -872,7 +885,7 @@ struct GpuState {
     /// The SJK UI's Profile screen: which tab shows, switched here.
     profile_hub: profile_hub::Hub,
     /// The last frame's view, for placing 2D over the world outside the HUD pass (the
-    /// Collection's nameplate over the stage model).
+    /// drone's and the fishing line's marks, the holocron stage).
     frame_view: Option<hud::identification::Camera>,
     pointer_captured: bool,
     /// A primary press consumed by spectator aim-to-follow; consume its release too.
@@ -950,6 +963,8 @@ struct GpuState {
     forced_disintegrations: disintegration::Forced,
     /// What the player does in matches, for the achievements (`achievements.rs`).
     achievement_tracker: achievements::tracker::Tracker,
+    /// The private duel followed for its lines (`duel_lines.rs`).
+    duel_lines: duel_lines::DuelLines,
     lagometer: sjk_client::LagometerSamples,
     crosshair_scan: crosshair_scan::State,
     auto_switch: auto_switch::Tracker,
@@ -1114,7 +1129,9 @@ impl GpuState {
         let present_mode = context.present_mode(vsync);
         let screenshot_setup = screenshot::setup(&context, console.as_ref(), &game_data);
         let configuration = wgpu::SurfaceConfiguration {
-            usage: screenshot_setup.surface_usage,
+            // Shaders read the frame for the acrylic backdrops' blur, where allowed.
+            usage: screenshot_setup.surface_usage
+                | ui_renderer::backdrop::surface_usage(context.surface_usages),
             format,
             color_space: wgpu::SurfaceColorSpace::Auto,
             width: size.width.max(1),
@@ -1497,6 +1514,10 @@ impl GpuState {
             &particle_layout,
             context.scene_format(),
         );
+        // Marks between the effect atlas and the UI pipelines: a GTX 1650 on DX12
+        // died silently somewhere in this stretch (17/11/2026), and one mark for it
+        // all could not say which step.
+        load_profile.mark("particle-pipelines")?;
         let saber_gpu = saber_gpu::Runtime::new(
             &device,
             &queue,
@@ -1506,8 +1527,10 @@ impl GpuState {
             frame_target::aa::effects::FORMAT,
             &context.blade_signatures,
         )?;
+        load_profile.mark("saber-renderer")?;
         let dust_motes = dust_motes::Runtime::new(&device, &camera_layout, context.scene_format());
         let weather = weather::Runtime::new(active_game_state, &bsp);
+        load_profile.mark("dust-weather")?;
         // Every 2D pipeline writes display values through a UNORM view (`ui_target.rs`).
         let ui_format = ui_target::format(format);
         let hud_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
@@ -1705,6 +1728,8 @@ impl GpuState {
             sdf_text_pipeline,
             saber_gpu,
             blade_pictures: None,
+            blade_pictures_used: None,
+            blade_stills: Default::default(),
             dust_motes,
             quick_wheel: quick_wheel::QuickWheel::default(),
             devmap_bar: devmap_bar::DevBar::default(),
@@ -1799,7 +1824,7 @@ impl GpuState {
             world_pings: world_ping::WorldPings::default(),
             text_dialog: text_dialog::TextDialog::default(),
             medal_popup: medal_popup::MedalPopup::default(),
-            holocron_popup: holocron_popup::HolocronPopup::default(),
+            holocron_banners: holocron_banners::HolocronBanners::default(),
             unlock_toast: unlock_toast::UnlockToast::default(),
             bug_report_waiting: false,
             bug_report_from_menu: false,
@@ -1883,6 +1908,7 @@ impl GpuState {
             hitches: hitch_log::Recorder::default(),
             gpu_phases,
             frame_timings: frame_timings::State::default(),
+            status_bar: status_bar::State::default(),
             third_person_camera: camera::State::default(),
             fall_camera: fall_camera::FallCamera::default(),
             far_plane,
@@ -1946,6 +1972,7 @@ impl GpuState {
             saber_kills_seen: 0,
             forced_disintegrations: disintegration::Forced::default(),
             achievement_tracker: achievements::tracker::Tracker::default(),
+            duel_lines: duel_lines::DuelLines::default(),
             lagometer: sjk_client::LagometerSamples::new(),
             auto_switch: auto_switch::Tracker::default(),
             previous_particle_events: HashMap::new(),
@@ -2251,6 +2278,12 @@ impl GpuState {
             presentation_time as i32,
             intermission_view.is_some(),
         );
+        // The feats' announcer, one line at a time (`hud::feats`).
+        if let Some(feat) = self.hud.feats.take_line()
+            && let (Some(audio), Some(vfs)) = (game_audio.as_mut(), self.vfs.as_deref())
+        {
+            feats::announcer::say(audio, vfs, self.hud.feats.pack(), feat);
+        }
         // `CG_DrawRocketLocking`'s tick and lock, at the target (`CHAN_AUTO`).
         if let Some((sound, origin)) = self.hud.rocket_lock.take_sound()
             && let Some(audio) = game_audio.as_mut()
@@ -2273,6 +2306,12 @@ impl GpuState {
             hud_visibility.vehicle = false;
         }
         self.update_sound_sonar(game_audio.as_ref());
+        // The status bars keep their room at the screen's edges: the HUD and the
+        // overlays drawn against an edge stay inside it (`status_bar.rs`).
+        let play = self.status_bar_play(intermission_view.is_some());
+        self.reserve_status_bars(viewport, play);
+        self.hud
+            .set_status_bars(self.status_bar.reserved(), self.status_bar_readouts());
         let hud_style = menu_hud::HudStyle::read(self.console.as_ref());
         // The radial look is laid out for the bundled font (Inter), whatever
         // `cg_classicHudFont` says: its numbers are aligned to that font's metrics.
@@ -2362,47 +2401,25 @@ impl GpuState {
         // The alpha notice comes before everything, and every other card waits for it.
         let alpha_shown = self.prepare_alpha_card();
         let covered = console_covers_frame || alpha_shown || self.alpha_card.wants();
-        // A new medal, or a holocron drop after it, shows over the menus, which are not
-        // drawn under it.
+        // A new medal shows over the menus, which are not drawn under it; a holocron drop
+        // is a banner (`holocron_banners.rs`), given here and drawn with the others.
         let medal_shown = self.prepare_medal_popup(covered);
-        let holocron_shown = self.prepare_holocron_popup(covered || medal_shown);
+        self.prepare_holocron_banners();
         // The graphics reload card waits for the others.
-        let reload_card_shown = self.prepare_reload_card(
-            covered
-                || medal_shown
-                || holocron_shown
-                || self.medal_popup.pending()
-                || self.holocron_popup.pending(),
-        );
+        let reload_card_shown =
+            self.prepare_reload_card(covered || medal_shown || self.medal_popup.pending());
         // Then the small-card notice, once a start; the cards after wait for both.
         let small_card_shown = self.prepare_small_card_notice(
-            covered
-                || medal_shown
-                || holocron_shown
-                || reload_card_shown
-                || self.medal_popup.pending()
-                || self.holocron_popup.pending(),
+            covered || medal_shown || reload_card_shown || self.medal_popup.pending(),
         );
         let reload_shown = reload_card_shown || small_card_shown;
         // The low-FPS card too.
         self.update_fps_help();
-        let fps_shown = self.prepare_fps_card(
-            covered
-                || medal_shown
-                || holocron_shown
-                || reload_shown
-                || self.medal_popup.pending()
-                || self.holocron_popup.pending(),
-        );
+        let fps_shown = self
+            .prepare_fps_card(covered || medal_shown || reload_shown || self.medal_popup.pending());
         // And the SJK team's request for the player's logs.
         let logs_shown = self.prepare_log_request_card(
-            covered
-                || medal_shown
-                || holocron_shown
-                || reload_shown
-                || fps_shown
-                || self.medal_popup.pending()
-                || self.holocron_popup.pending(),
+            covered || medal_shown || reload_shown || fps_shown || self.medal_popup.pending(),
         );
         // The SJK team's windows: an announcement or the rounds asked for (over the
         // console too), or a reward waiting.
@@ -2410,57 +2427,48 @@ impl GpuState {
             alpha_shown
                 || self.alpha_card.wants()
                 || medal_shown
-                || holocron_shown
                 || reload_shown
                 || fps_shown
                 || logs_shown
-                || self.medal_popup.pending()
-                || self.holocron_popup.pending(),
+                || self.medal_popup.pending(),
         );
         // And what the update brought, last.
         let news_shown = self.prepare_news_panel(
             covered
                 || medal_shown
-                || holocron_shown
                 || reload_shown
                 || fps_shown
                 || logs_shown
                 || official_shown
-                || self.medal_popup.pending()
-                || self.holocron_popup.pending(),
+                || self.medal_popup.pending(),
         );
         // The playstyle card, once a start until turned off, after what the update brought.
         let playstyle_shown = self.prepare_playstyle_card(
             covered
                 || medal_shown
-                || holocron_shown
                 || reload_shown
                 || fps_shown
                 || logs_shown
                 || official_shown
                 || news_shown
-                || self.medal_popup.pending()
-                || self.holocron_popup.pending(),
+                || self.medal_popup.pending(),
         );
         // The emote help card, asked for, after them all.
         let emote_help_shown = self.prepare_emote_help_card(
             covered
                 || medal_shown
-                || holocron_shown
                 || reload_shown
                 || fps_shown
                 || logs_shown
                 || official_shown
                 || news_shown
                 || playstyle_shown
-                || self.medal_popup.pending()
-                || self.holocron_popup.pending(),
+                || self.medal_popup.pending(),
         );
         // The emote picker, likewise, under the help card.
         let emote_picker_shown = self.prepare_emote_picker(
             covered
                 || medal_shown
-                || holocron_shown
                 || reload_shown
                 || fps_shown
                 || logs_shown
@@ -2468,14 +2476,12 @@ impl GpuState {
                 || news_shown
                 || playstyle_shown
                 || emote_help_shown
-                || self.medal_popup.pending()
-                || self.holocron_popup.pending(),
+                || self.medal_popup.pending(),
         );
         // The encrypted whisper card, under the emote cards.
         let whisper_shown = self.prepare_e2e_whisper_card(
             covered
                 || medal_shown
-                || holocron_shown
                 || reload_shown
                 || fps_shown
                 || logs_shown
@@ -2484,14 +2490,12 @@ impl GpuState {
                 || playstyle_shown
                 || emote_help_shown
                 || emote_picker_shown
-                || self.medal_popup.pending()
-                || self.holocron_popup.pending(),
+                || self.medal_popup.pending(),
         );
         // A mod's notice on its servers.
         let mod_notice_shown = self.prepare_mod_notice_card(
             covered
                 || medal_shown
-                || holocron_shown
                 || reload_shown
                 || fps_shown
                 || logs_shown
@@ -2501,14 +2505,12 @@ impl GpuState {
                 || emote_help_shown
                 || emote_picker_shown
                 || whisper_shown
-                || self.medal_popup.pending()
-                || self.holocron_popup.pending(),
+                || self.medal_popup.pending(),
         );
         // The trade window, last: it waits under every other card.
         let trade_shown = self.prepare_trade_window(
             covered
                 || medal_shown
-                || holocron_shown
                 || reload_shown
                 || fps_shown
                 || logs_shown
@@ -2518,14 +2520,12 @@ impl GpuState {
                 || emote_picker_shown
                 || whisper_shown
                 || mod_notice_shown
-                || self.medal_popup.pending()
-                || self.holocron_popup.pending(),
+                || self.medal_popup.pending(),
         );
         let medal_popup = alpha_shown
             || official_shown
             || mod_notice_shown
             || medal_shown
-            || holocron_shown
             || reload_shown
             || fps_shown
             || logs_shown
@@ -2622,6 +2622,7 @@ impl GpuState {
         let vehicle_readout = (stock_vehicle && information_visible && intermission_view.is_none())
             .then(|| self.hud.vehicle.readout())
             .flatten();
+        self.menu_hud.set_lift(self.status_bar.reserved().bottom);
         self.menu_hud.prepare(
             &self.queue,
             menu_readout.as_ref(),
@@ -2634,12 +2635,20 @@ impl GpuState {
             ]
             .map(|element| hud_offsets.get(element)),
         );
+        let hud_text_font = self
+            .classic_hud_font
+            .as_ref()
+            .filter(|_| classic_hud)
+            .unwrap_or(&self.ui_font);
+        let blocks = self
+            .menu_hud
+            .block_bounds(viewport, hud_scale, hud_text_font);
         for (element, bounds) in [
             hud::placement::Element::Vitals,
             hud::placement::Element::Force,
         ]
         .into_iter()
-        .zip(self.menu_hud.block_bounds(viewport, hud_scale))
+        .zip(blocks)
         {
             self.hud.element_bounds.add(element, bounds);
         }
@@ -2681,6 +2690,8 @@ impl GpuState {
             self.append_configured_chat(viewport, text_scale, scoreboard_visible);
         }
         self.append_weapon_select_name(viewport);
+        // The status bars over play, as the HUD's elements show (`status_bar.rs`).
+        let [bottom_bar, top_bar] = self.append_status_bars(viewport);
         // The ghost editor's path, under its column (or over play while looking about).
         let ghost_overlay =
             !self.console_covers_frame() && !medal_popup && self.append_ghost_overlay(viewport);
@@ -2819,8 +2830,6 @@ impl GpuState {
             self.append_alpha_card(viewport);
         } else if medal_shown {
             self.append_medal_popup(viewport);
-        } else if holocron_shown {
-            self.append_holocron_popup(viewport);
         } else if reload_card_shown {
             self.append_reload_card(viewport);
         } else if small_card_shown {
@@ -2861,8 +2870,14 @@ impl GpuState {
             self.append_hud_edit(viewport);
         }
         let trade_toast = self.append_trade_toast(viewport, console_covers_frame || medal_popup);
-        // An achievement unlocked, or a medal or holocron in a match: its card over play or
-        // the menus, never input-taking.
+        // An achievement unlocked, a holocron, a medal in a match, an update: its banner
+        // over play or the menus, never input-taking.
+        // Under the top status bar while it shows.
+        unlock_toast::banner::set_top_inset(if top_bar {
+            self.status_bar.reserved().top
+        } else {
+            0.0
+        });
         let unlock_toast = self.append_unlock_toast(viewport, console_covers_frame || medal_popup);
         self.world_notes.draw_highlight(viewport);
         self.map_edit_gizmo_draw();
@@ -2895,6 +2910,10 @@ impl GpuState {
                 .is_open()
                 .then(|| self.quick_wheel.draw_list()),
             information_visible.then(|| self.hud.draw_list()),
+            bottom_bar
+                .then(|| self.status_bar.draw_lists()[0])
+                .flatten(),
+            top_bar.then(|| self.status_bar.draw_lists()[1]).flatten(),
             (chat_visible && !chat_over_trade).then(|| self.chat.draw_list()),
             self.ghost
                 .editor
@@ -2920,7 +2939,6 @@ impl GpuState {
                 .is_open()
                 .then(|| self.text_dialog.draw_list()),
             medal_shown.then(|| self.medal_popup.draw_list()),
-            holocron_shown.then(|| self.holocron_popup.draw_list()),
             reload_card_shown.then(|| self.graphics_reload.card.draw_list()),
             small_card_shown.then(|| self.small_card_notice.draw_list()),
             fps_shown.then(|| self.fps_card.draw_list()),
@@ -2940,6 +2958,12 @@ impl GpuState {
             timings_shown.then(|| self.frame_timings.draw_list()),
             hud_edit_shown.then(|| self.hud_edit.draw_list()),
         ];
+        let backdrop = self.hud_target_sampleable();
+        self.ui_shapes.prepare_backdrop(
+            &self.device,
+            [self.configuration.width, self.configuration.height],
+            backdrop,
+        );
         self.ui_shapes
             .prepare_layers(&self.queue, layers.into_iter().flatten(), viewport);
         // Wide glyphs this frame asked for first draw next frame.
@@ -3532,8 +3556,17 @@ impl GpuState {
                 has_entity_instances,
             );
         }
+        if let Some(phases) = &self.gpu_phases {
+            phases.mark(&mut encoder, "scene");
+        }
         self.encode_stage_preview(&mut encoder);
+        if let Some(phases) = &self.gpu_phases {
+            phases.mark(&mut encoder, "menu-model");
+        }
         self.encode_blade_pictures(&mut encoder);
+        if let Some(phases) = &self.gpu_phases {
+            phases.mark(&mut encoder, "blade-pictures");
+        }
         self.draw_card_scenes();
         let (output, mut encoder) = match target.finish(self, encoder, timing) {
             Ok(output) => output,

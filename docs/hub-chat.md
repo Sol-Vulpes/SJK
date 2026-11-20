@@ -763,13 +763,16 @@ request, 08/10/2026):
   stands right after the name, before the tick, on every line, the dock and the page
   (`sjk_chat_look::emoji_room`); a game line's sender the hub knows in that slot shows
   theirs too.
-- In the game's chat a line starts with SJK's emblem, small (1.35 times the text's
-  height, in its own colours, `ui_renderer::LOGO_TEXTURE`; Sol's request, 11/10/2026),
+- In the game's chat a line starts with SJK's emblem, small (1.2 times the text's
+  height since 14/11/2026, 1.35 before, in its own colours, `ui_renderer::LOGO_TEXTURE`; Sol's request, 11/10/2026),
   where it used to read the letters SJK. A holocron drop or grand find starts with the
-  holocron's or crystal's picture instead (01/11/2026,
+  holocron's or dormant kyber's picture instead (01/11/2026,
   [holocrons.md](holocrons.md#chat-lines)). The dock and the page, which show only SJK
   chat, have no mark. A message sent from another client that takes part in SJK chat
-  starts with that client's icon instead, at the same size: the clients are the
+  starts with that client's icon instead, centred in the emblem's place: those icons
+  are full discs, drawn 0.9 times the text's height, as big as the sun disc of SJK's
+  emblem (`ICON_SIDE` in `chat/view/sjk_line.rs`; until 14/11/2026 they had the
+  emblem's own side and looked much bigger, Sol's request): the clients are the
   entries of [chat/client_icons.rs](../crates/sjk-viewer/src/chat/client_icons.rs)
   (`KNOWN`, each with why and its evidence; today JoF EternalJK, `client` `ejk`,
   `ui_renderer::EJK_TEXTURE`, `assets/branding/jof-ejk-icon.png`, 21/10/2026, and the
@@ -788,10 +791,12 @@ request, 08/10/2026):
   have none and Team chat reads TEAM: SJK for a message only in SJK chat, ALL/SJK for
   one also said in the server's All chat ([Said on the game server too](#said-on-the-game-server-too);
   Sol's request, 22/10/2026). A holocron drop has no label.
-- A verified sender has their tick after the name (the nameplates' seal, gold or their
+- A verified sender has their tick (the nameplates' seal, gold or their
   group's, staff's or a creator's: [Ticks](identity.md#ticks),
   `ui_renderer::mark_texture`) and no word: no "SJK VERIFIED" or "Verified" tag. Staff
-  stays written on the page.
+  stays written on the page. In the game's chat it stays after the name (on the
+  emblem's foot for a day, 14/11/2026, then back after the name at Sol's request; the
+  nameplates keep it on a client icon's corner).
 - The line flows as one line and wraps only when it is too long, as a game chat line
   does. In the game it used to break straight away: the feed drew a sender's name and
   its tag on a row of their own and the message under it (`NAME_ADVANCE` in
@@ -1200,6 +1205,18 @@ The second gap is `s_muteSounds` ([client.md](client.md#muted-sounds)).
   players can be muted, as only they send emotes. `<player>` is a slot number, part of
   the name shown (a whole name wins when several match), or `target`, the player under
   the crosshair.
+- Emotes by kind, on this screen only (since 17/11/2026, mg.perso's idea;
+  [emote_filters.rs](../crates/sjk-viewer/src/emote_filters.rs), Settings > Sound >
+  Emotes, all off or empty by default; nothing is sent): Hide others' emotes
+  (`cg_hideOthersEmotes`) drops every other player's emote, its animation, sound and
+  console line, and ends the ones playing; the player's own still play, and the others
+  still see them. Hidden emotes (`cg_hiddenEmotes`, emote ids separated by spaces or
+  commas; `emote_hide <id>` adds one and again takes it out) does the same for those
+  emotes alone. Muted emotes (`s_mutedEmotes`, `emote_mute <id>`) plays those emotes
+  without their sound, the player's own too: the dance shows and its music keeps time
+  silently (`ActiveEmote::muted`, beside the away emote's `quiet`), so unmuting one
+  that plays brings its music back where it is. Both commands alone list their ids and
+  complete the installed ones on Tab.
 - `sjkemote sync [player]` (since 15/10/2026; the quick wheel's Sync emote) joins
   another player's emote in step: the named player (a slot number or part of the name
   shown), else the one under the crosshair, else the nearest emoting player within 512
@@ -1590,9 +1607,9 @@ never in a game server's chat.
   box and ends it with ": /rewards". A click (or `rewards`) opens the round list.
 - A reward waiting for the player opens the claim window as the medal pop-up opens: on
   the main menu, or when the game menu opens in a match, never over play; in a match an
-  unlock card says "Contributor reward waiting" / "Open the game menu to claim it" once
-  per reward. Claim calls `POST /v1/rewards/claim`; the hub's answer brings the profile
-  (its new gift holocrons then arrive through the holocron pop-up) and the rewards, and
+  notification banner says "Contributor reward waiting" / "Open the game menu to claim
+  it" once per reward. Claim calls `POST /v1/rewards/claim`; the hub's answer brings the
+  profile (its new gift holocrons then arrive with their banner) and the rewards, and
   the window shows the next reward or closes. A refusal says why in the window
   ("This reward was claimed already.", "This reward is not waiting for you any more.",
   else the hub's words). Later puts the window away until the menus close and open again.

@@ -709,7 +709,7 @@ impl State {
     }
 
     /// The two team boxes under the clock, red left and blue right, in a `w` by `h`
-    /// viewport: the UI's navy under the team's colour, a rule of it along the bottom;
+    /// viewport: the UI's ground under the team's colour, a rule of it along the bottom;
     /// the score at the inner
     /// edge and, in capture games with `cg_drawFlagStatus`, the flag at the outer edge
     /// (its taken picture while away, a gold arc round it counting down a drop) and
@@ -739,7 +739,7 @@ impl State {
                 w * 0.5 + gap * 0.5
             };
             let rect = Rect::new(x, top, box_w, box_h);
-            for color in [color::alpha(color::SPACE, 0.72), color::alpha(team, 0.22)] {
+            for color in [color::alpha(color::space(), 0.72), color::alpha(team, 0.22)] {
                 let _ = list.push(DrawCommand::SolidRect { rect, color });
             }
             let _ = list.push(DrawCommand::SolidRect {
@@ -775,7 +775,7 @@ impl State {
                 rect: inner,
                 text: TextId(TEXT_SCORES + side as u32),
                 size: score_size,
-                color: color::TEXT,
+                color: color::text(),
                 align: if !flags {
                     TextAlign::Center
                 } else if red {
@@ -825,7 +825,7 @@ impl State {
                     width: 2.0 * s,
                     start: -std::f32::consts::FRAC_PI_2,
                     sweep: std::f32::consts::TAU * left as f32 / FLAG_RETURN_MS as f32,
-                    color: color::GOLD,
+                    color: color::gold(),
                     knockout: None,
                 });
             }
@@ -841,9 +841,9 @@ impl State {
                 text: TextId(TEXT_STATUS + side as u32),
                 size: 13.0 * s,
                 color: match self.tones[side] {
-                    Tone::Quiet => color::MUTED,
-                    Tone::Plain => color::TEXT,
-                    Tone::Own => color::GOLD_BRIGHT,
+                    Tone::Quiet => color::muted(),
+                    Tone::Plain => color::text(),
+                    Tone::Own => color::gold_bright(),
                 },
                 align: if red {
                     TextAlign::Start
@@ -860,7 +860,7 @@ impl State {
             let (hint_x, hint_y) = (w * 0.5 - hint_w * 0.5, top + box_h + gap);
             let _ = list.push(DrawCommand::SolidRect {
                 rect: Rect::new(hint_x, hint_y, hint_w, hint_h),
-                color: color::alpha(color::SPACE, 0.78),
+                color: color::alpha(color::space(), 0.78),
             });
             let _ = list.push(DrawCommand::Text {
                 rect: Rect::new(
@@ -872,9 +872,9 @@ impl State {
                 text: TextId(TEXT_HINT),
                 size,
                 color: if self.flags[own.unwrap_or(0)] == Flag::AtBase {
-                    color::GOLD_BRIGHT
+                    color::gold_bright()
                 } else {
-                    color::TEXT
+                    color::text()
                 },
                 align: TextAlign::Center,
                 overflow: TextOverflow::Clip,

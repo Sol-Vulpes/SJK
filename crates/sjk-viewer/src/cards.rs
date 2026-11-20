@@ -223,7 +223,7 @@ pub(crate) const ODDS: [Odds; COUNT] = [
 ];
 
 /// What a holocron of tier `index` holds, one line: "A sealed card and 30 to 50 credits,
-/// or a saber shader (40%) or kyber shards (10%)."; without the shards from a hub that
+/// or a kyber (40%) or kyber shards (10%)."; without the shards from a hub that
 /// gives none.
 pub(crate) fn inside(index: usize) -> String {
     let index = index.min(COUNT - 1);
@@ -235,19 +235,19 @@ pub(crate) fn inside(index: usize) -> String {
         let tag = percent(odds.tag[index]);
         let shards = percent(odds.shard_pile[index]);
         return format!(
-            "Opening it gives a sealed card and {least} to {most} credits, or a saber shader \
+            "Opening it gives a sealed card and {least} to {most} credits, or a kyber \
              ({shader}), a tag ({tag}) or kyber shards ({shards})."
         );
     }
     if odds.shard_pile[index] == 0 {
         return format!(
             "Opening it gives a sealed card and {least} to {most} credits, or ({shader} of \
-             the time) a saber shader."
+             the time) a kyber."
         );
     }
     let shards = percent(odds.shard_pile[index]);
     format!(
-        "Opening it gives a sealed card and {least} to {most} credits, or a saber shader \
+        "Opening it gives a sealed card and {least} to {most} credits, or a kyber \
          ({shader}) or kyber shards ({shards})."
     )
 }
@@ -522,7 +522,7 @@ mod tests {
         assert_eq!(credits_text(1_234_567), "1 234 567");
         assert_eq!(
             inside(1),
-            "Opening it gives a sealed card and 30 to 50 credits, or a saber shader (40%) or kyber shards (10%)."
+            "Opening it gives a sealed card and 30 to 50 credits, or a kyber (40%) or kyber shards (10%)."
         );
         assert_eq!(inside(99), inside(COUNT - 1));
     }

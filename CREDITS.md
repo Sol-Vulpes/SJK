@@ -18,7 +18,9 @@ includes:
   video bounties and the Videographer medal (provisional art from Supporter's);
 - the SJK emblem, provided by Sol: in the classic menu's ring (in place of the
   retail logo video) and the SJK UI's holo ring, as the programs' and window's
-  icons, and on the README, release notes and site;
+  icons, and on the README, release notes and site; since 16/11/2026 Sol's steel
+  monogram before a burning sun, rebuilt from its geometry with a procedural sun
+  that moves in the menus (`scripts/sjk_emblem.py`);
 - SJK's slider entry habits (type to open, Space steps, clicking away applies);
 - the classic menu style as the default, and classic+ (the classic style
   modernised: the guide, the option panels' detail box and default marks, the
@@ -190,6 +192,25 @@ includes:
 - the Forge (21/10/2026, Sol's request): the shop, crafting and breaking shaders down in
   one Collection tab, the last copy too (never a card's or a medal's), and every
   duplicate at once;
+- the Inventory (15/11/2026, Sol's request): everything a player owns in one
+  Collection tab, by kind, with tiers, counts, a sort and a search; the same day each row
+  got its picture, a wallet strip and kind chips, and the chosen thing a card with what it
+  is worth in kyber shards and what to do with it (wear, break down, open, choose);
+- one tier frame (15/11/2026, Sol's pick of the Collection's ideas): a thing's tier told
+  the same way on the Inventory, Cards, Tags, Forge, History and Holocrons pages, each tier
+  up adding one touch and diamonds counting the step for colour-blind players;
+- the Collection's hall (15/11/2026, Sol's pick of "The hall" from the Collection's
+  design proposals): the Collection opens on a grid of large tiles, one to each kind with
+  what is new in it (shaders New, holocrons to open, the deal of the day, the newest
+  History line), the player's whole look beside it, each kind behind a breadcrumb;
+- kyber stills (15/11/2026, Sol's request: "make blades look great on Collection
+  tiles"): every kyber drawn once by the blade renderer with a soft glow, kept on disk,
+  shown large and tilted on the Kybers wall's tiles and on every strip, a kyber not held
+  greyed and dimmed rather than a grey drawing, the one looked at live;
+- New on every kind and empty states (15/11/2026, Sol's approval of the Collection ideas
+  page): cards, tags and finishers carry New as kybers do, counted on the hall's tiles, the
+  pages and the status bar, from one seen-list that took over the kybers' own; and empty
+  pages show what will fill them, how, and the one action that starts it;
 - the four holocrons, each tier an object of its own with moving parts (17/10/2026,
   Sol's pick of the proposed shapes: the Jedi cube, the Great Holocron, the Sith
   pyramid, the kyber prism), with Sol's generated faces for the last three;
@@ -279,6 +300,10 @@ includes:
 - the player card's saber shader, profile picture, SJK TEAM mark, holocron gem and, pinned,
   achievements, bio and join date;
 - the kill feed at the top right with weapon icons (`cg_killfeed`);
+- feats (`cg_feats`, 16/11/2026): multi-kills, sprees, first blood, revenge and HOOKED! for a
+  JA+ grapple kill, with medals drawn from shapes and an announcer whose voice packs come in
+  PK3s (SJK's own voice generated with Higgsfield's Seed Audio); the hook's kills were told
+  apart thanks to Blackwolf's VisionJK rebuild of JA+;
 - the SJK profile card and the profile pictures kept at the SJK hub;
 - muting a player from their name in chat (chat, model, saber and sounds), made
   blocking on 18/10/2026 at Sol's request (emotes, toys and player cards too, the `block`
@@ -356,7 +381,9 @@ includes:
 - Create game and its map picker, the Import page and the test list in the SJK look in
   every style;
 - smoother play: players' models and their pipelines prepared off the render thread,
-  saber definitions read once a map, settings saved off the main thread and a hitch log;
+  saber definitions read once a map, settings saved off the main thread and a hitch log,
+  and a model's glow light worked out once on its loader (no freeze for big glowing
+  models);
 - lighting that stops at walls (per-light shadow tiles), doors and lifts that block
   lamps, and a faster JoFTemple;
 - the invisible-brush view (`r_showBrushes`): clip, trigger, ladder, nodrop and the
@@ -501,6 +528,22 @@ includes:
 - door and lift shadows on lamp light within a budget (09/11/2026, Sol's request): the
   lamp cache is baked again 16 chunks of 64×64 texels a frame at most, only where a
   mover's shadow changed, so `T2_Rancor` no longer spends 14 ms a frame on it;
+- the status bars (15/11/2026, docked to both edges and on by default 16/11/2026): a
+  thin bar along the bottom with the player's credits, kyber shards, dormant kybers and
+  DOOM coins by their icons, kyber, effects, weapons, toys, the time and the date, and
+  one along the top with their Force powers, score, the time left, who joins and leaves,
+  the server, map, game type, players, ping and frame rate; the HUD and every overlay at
+  an edge move inside them, and each part has a switch (`cg_statusBar`,
+  `cg_statusBarTop`); since 17/11/2026 the top bar's ping is the scoreboard's measure
+  and the lagometer graphs stock's snapshot ping;
+- the sun theme (17/11/2026): the SJK UI's navy and holo blue turned to warm sun colours
+  (ember-brown ground, amber line-work, sun gold), and acrylic glass, the game blurred
+  behind the status bars, banners, pop-up cards and scoreboard; since 18/11/2026 one of
+  the SJK UI's themes (`ui_theme`): warm, cold (the navy and holo blue of before) or a
+  custom hue and saturation that keep every colour's lightness, the status bars' glass,
+  scrollbars and holo nameplate frames following it; since 18/11/2026 the Collection's
+  hall, tiles, lists and cards are acrylic glass too, and the Kybers page's chosen,
+  hovered and worn kybers show in their tier's light and the sun's gold;
 - SJK Alpha (19/10/2026), the first collection of cards: the Mythical rarity, the
   Credits and Meme kinds, and card 1, "Bishop", honouring the author of JKR (art by
   Sol, AI-assisted: a rusted helmet portrait).
@@ -825,7 +868,7 @@ merged into SJK
 - #306 long game-chat messages sent whole, as up to four messages split at a word; at the
   merge a draft refused past four pieces stays in the composer.
 
-Slash ([JoFSlash](https://github.com/JoFSlash)), contributor, has 159 pull requests merged
+Slash ([JoFSlash](https://github.com/JoFSlash)), contributor, has 167 pull requests merged
 into SJK ([all of them](https://github.com/Sol-Vulpes/SJK/pulls?q=is%3Apr+author%3AJoFSlash)):
 
 - #114 Tab completes the cfg file argument of `exec`, `execq`, `writeconfig` and `write`
@@ -1105,6 +1148,22 @@ medal pictures carry their own labels in `vram` and crash reports.
   (hub-shared #26).
 - #425 Fishing and Mining: a log book of every catch with the day of the first, a
   RARE CATCH card and sharing a rare catch in the SJK chat.
+- #434 `in_mouseRepeat`: a click on mouse 4 or 5 runs its bind once; the repeats
+  start only after a quarter of a second held (hub report #317).
+- #433 `identity link` reads a code typed in two halves, and a staff key is told
+  to make the code on its own page instead (hub report #316).
+- #429 box hunt: a hunter's out report the hub never counted goes again, and credits a
+  box hunt event paid show soon (hub reports #304, #314).
+- #428 models blink, wink now and then, frown or look alert and close their eyes
+  when dead, a port of stock JKA's `CG_G2PlayerHeadAnims` (after Goylander's report).
+- #430 `tell_attacker` whispers to whoever last hurt you, and optional duel start,
+  win and lose lines whispered to the opponent (after Ric's and Lex's ideas).
+- #432 Ctrl+F in the console finds text in its scrollback, ignoring case and colour
+  codes, every match marked (after headshotsmcgee117's idea).
+- #436 `cg_duelGhost 2` (Hidden): other players' duellists vanish completely,
+  sounds and shots too, while you are in no duel (after headshotsmcgee117's idea).
+- #437 emote filters: hide every other player's emotes, or hide or mute single
+  emotes by id (`emote_hide`, `emote_mute`; after mg.perso's idea).
 
 Milamber ([Milamber0](https://github.com/Milamber0)), contributor, has 4 pull requests merged
 into SJK ([all of them](https://github.com/Sol-Vulpes/SJK/pulls?q=is%3Apr+author%3AMilamber0)):
@@ -1155,7 +1214,7 @@ Blackwolf's VisionJK rebuild of the JA+ 2.4 B7 server module from its Linux bina
 `g_mod japlus`): JA+'s settings and their defaults and the `jp_cinfo` bits come from it,
 and its behaviour is ported into SJK's own code, not its source.
 
-Kushina ([kushinaSJK](https://github.com/kushinaSJK)), contributor and player, has 6 pull
+Kushina ([kushinaSJK](https://github.com/kushinaSJK)), contributor and player, has 8 pull
 requests merged into SJK
 ([all of them](https://github.com/Sol-Vulpes/SJK/pulls?q=is%3Apr+author%3AkushinaSJK)); her
 ideas are under [Ideas](#ideas):
@@ -1179,6 +1238,10 @@ ideas are under [Ideas](#ideas):
   chips, sums and search field are measured as drawn, the Forge's section line and the
   Shaders tab's New count went behind "i" and "?" notes, the Nameplates preview behind
   Showcase current set, and a shader's extras behind an Extra features chip.
+- #439 `alphaGen dot` and `alphaGen oneMinusDot` draw: alpha from how squarely a surface
+  faces the viewer, or its opposite for a rim light (stock parses them and draws nothing).
+- #442 a rig model's colliding chains (tails, capes, long hair) stay off the ground: a
+  trace down finds the floor and a joint under it is laid on it.
 
 Hormorn ([Hormorn](https://github.com/Hormorn)), contributor, has 2 pull requests merged
 into SJK ([all of them](https://github.com/Sol-Vulpes/SJK/pulls?q=is%3Apr+author%3AHormorn)):
@@ -1202,6 +1265,11 @@ code or its licence.
 Since 08/11/2026 Solfox is Sol's: a rig model (`sjk_rig.cfg`, a glTF with its own
 skeleton) whose body, head and clothes Sol generated with Tripo (AI), then fitted and
 sculpted, with a default look and a `cloth` one (hood, cape and long skirt that move).
+
+Since 14/11/2026 Creyon (`models/players/creyon`, the `sjk_creyon` pack) is a werewolf
+rig model made for Creyon: its body and wolf head were generated with Tripo (AI), fitted
+and sculpted by Sol and rigged on Solfox's skeleton, with a default look and a `cloth`
+one (Solfox's hood, cape and loincloth placed on him by Sol, moving on their own).
 
 Blep, a player, drew the Gonk, EZ and Geyon tags (Geyon for Creyon) and proposed them
 in the Discord's #tag-proposals; Sol picked them (30/10/2026), and the SJK hub serves

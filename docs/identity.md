@@ -30,11 +30,11 @@ This page is the design and the current limits. The player-facing summary is
 | Staff requests, Staff page, `staff` command | [staff.rs](../crates/sjk-identity/src/staff.rs), [staff_panel.rs](../crates/sjk-viewer/src/staff_panel.rs), [staff_panel_view.rs](../crates/sjk-viewer/src/staff_panel_view.rs), [console_staff_page.rs](../crates/sjk-viewer/src/console_staff_page.rs) |
 | Log requests: wire, session log, the player's card | [logs.rs](../crates/sjk-identity/src/logs.rs), [session_log.rs](../crates/sjk-viewer/src/session_log.rs), [log_request_card.rs](../crates/sjk-viewer/src/log_request_card.rs) |
 | Achievements: catalogue, counts, tracker | [achievements.rs](../crates/sjk-viewer/src/achievements.rs), [achievements/tracker.rs](../crates/sjk-viewer/src/achievements/tracker.rs), [achievements_frame.rs](../crates/sjk-viewer/src/achievements_frame.rs) |
-| Achievements: medallion look, unlock pop-up | [achievements/medallion.rs](../crates/sjk-viewer/src/achievements/medallion.rs), [achievement_toast.rs](../crates/sjk-viewer/src/achievement_toast.rs) |
+| Achievements: medallion look, notification banner | [achievements/medallion.rs](../crates/sjk-viewer/src/achievements/medallion.rs), [unlock_toast.rs](../crates/sjk-viewer/src/unlock_toast.rs), [unlock_toast/banner.rs](../crates/sjk-viewer/src/unlock_toast/banner.rs) |
 | SJK chat and emotes | [hub-chat.md](hub-chat.md) |
 | Unlocks and looks (blade skin, Illuminate) | [unlockables.md](unlockables.md), [looks.rs](../crates/sjk-viewer/src/looks.rs), [looks_frame.rs](../crates/sjk-viewer/src/looks_frame.rs) |
 | Asset packs: list, download, cache | [assets.rs](../crates/sjk-identity/src/assets.rs) |
-| Holocron drops: tiers, active flag, pop-up, chat lines, staff tools | [holocrons.md](holocrons.md), [holocrons.rs](../crates/sjk-viewer/src/holocrons.rs), [holocron_popup.rs](../crates/sjk-viewer/src/holocron_popup.rs) |
+| Holocron drops: tiers, active flag, banners, chat lines, staff tools | [holocrons.md](holocrons.md), [holocrons.rs](../crates/sjk-viewer/src/holocrons.rs), [holocron_banners.rs](../crates/sjk-viewer/src/holocron_banners.rs) |
 | The hub itself and its protocol | repository Sol-Vulpes/SJK-hub (`PROTOCOL.md`) |
 
 The hub is a separate repository because it is deployed on its own schedule. The
@@ -166,7 +166,7 @@ seconds, when its unlocks look out of date: the hub refused a blade skin
 last one sent, with another blade skin (staff took it back).
 
 Opening the game menu (Escape on a server, since 27/10/2026) reads what its pages show
-of the hub at once: the profile (achievements, medals, unlocks, kyber crystals), the
+of the hub at once: the profile (achievements, medals, unlocks, dormant kybers), the
 holocron progress and the trades, at most once every 15 seconds (`Service::menu_opened`,
 `player_identity::follow_game_menu`), and sends achievement counts that changed since the
 last sending, at most once every 30 seconds (the hub takes 40 in 10 minutes from an
@@ -387,7 +387,9 @@ open); a request nobody answered expires after 7 days.
 player's open requests (`GET /v1/log-requests`) at the registration and every 2 minutes
 (a hub that refuses, one from before log requests, is asked again an hour later). The
 console says when one comes in ("<name> from the SJK team asks for your game's logs:
-open the menu to answer"); the card ([sjk-ui.md](sjk-ui.md#log-request)) waits for the
+open the menu to answer"), and since 16/11/2026 a notification banner ("LOG REQUEST",
+"The SJK team asks for your logs", "Open the menu to answer"), which the card takes back
+as it opens; the card ([sjk-ui.md](sjk-ui.md#log-request)) waits for the
 main page or the game menu, never interrupting play, and says who asks, their note,
 what the logs hold, that the Windows user name is left out and that nothing goes unless
 the player chooses Send logs. Send logs (Enter) gathers the logs then
@@ -505,7 +507,7 @@ With the JoF tools on, medals are called "Honors" by default
 
 A medal is recognition the SJK team gives a player by hand: for testing SJK,
 contributing to its code, finding bugs or donating to SJK. Since 10/10/2026 (Sol's decision)
-a medal may bring one saber shader for as long as the player holds it: Tester the
+a medal may bring one kyber for as long as the player holds it: Tester the
 Hologram blade, Contributor the Runic blade, Bug Hunter the Glitch blade; Supporter
 brings none. The hub derives
 it from the medal and takes it back with the medal's last award, off the player's look
@@ -612,11 +614,12 @@ Where they show:
   count rise, it shows it once, large, with its name, description, date and note, and
   several show one after another ("1 of 3"). It
   opens on the main menu, or when the game menu opens in a match, never over play: a
-  medal that arrives during a match is announced once by the achievements' card at the
-  top of the screen ([Achievements](#achievements); since 10/10/2026, Sol's request, in
-  place of a centre print): "New medal", "Open the game menu to see it", the name (with
-  its count), what it is for and the medallion's picture in a gold ring, with the
-  achievements' chime. The pop-up takes the card back as it opens. While it shows, the
+  medal that arrives during a match is announced once by the achievements' banner at
+  the top of the screen ([Achievements](#achievements); since 10/10/2026, Sol's request,
+  in place of a centre print): "New medal", the name (with its count), what it is for,
+  "Open the game menu to see it" and the medallion's picture, with the achievements'
+  chime; three or more waiting together share one banner ("3 new medals"). The pop-up
+  takes the banner back as it opens. While it shows, the
   menu under it is neither drawn nor given input. What was
   shown is kept in `medals_seen.txt` beside `identity.key` (the key id, then one
   `<id> <count>` a line; ids the build does not know are kept), so each medal and each
@@ -651,7 +654,7 @@ Where they show:
   count for a repeatable medal only, and none is since 21/10/2026; a rank above 1 arrives
   as a promotion), `debug_medal <id> ranks` for the medal at ranks I to V one after
   another, `debug_medal all [note]` for every medal, `debug_medal` alone for the ids. It makes the list a hub profile would carry (dated today), which is read as the
-  hub's is and queued like a real arrival, so the card in a match, the pop-up
+  hub's is and queued like a real arrival, so the banner in a match, the pop-up
   on a menu, the ceremony, the fanfare and Next can all be tried; the console closes so
   it shows at once over a menu. Nothing is sent to the hub, and rehearsed medals are
   never written to `medals_seen.txt`, so a medal the team gives later still shows (a
@@ -884,7 +887,7 @@ on the hub, in the SJK UI's look in every menu style:
   selection or the whole bio. Its lines wrap and the caret measures in the player's
   menu text style;
 - their medals (picture, name, date given; on its own only) and how many
-  achievements are unlocked, with See the board, and how many saber shaders are owned,
+  achievements are unlocked, with See the board, and how many kybers are owned,
   with See the collection: both open the [Collection](sjk-ui.md#collection), where the
   medals hang on a rail (every medal the client knows, the ones given first with their
   whole picture, when they were given, what they are for and the team's note, the
@@ -1045,13 +1048,13 @@ clients show the stand-in.
 ## Achievements
 
 An achievement is a milestone of the player's own play. Since 21/10/2026 each brings a
-kyber crystal once, when it unlocks ([holocrons.md](holocrons.md#kyber-crystals)): Uncommon
+dormant kyber once, when it unlocks ([holocrons.md](holocrons.md#dormant-kybers)): Uncommon
 for most, Rare for the harder ones, Legendary for Duel Master, Veteran, Keeper of the
 Holocrons and Full Set, Mythical for Legend of the Arena. The Collection's Achievements tab says it under the achievement up
-close ("Reward: Rare Kyber Crystal" after the crystal's gem, in its colour), its hover card
-ends with it, and the unlock card says it at the right of "ACHIEVEMENT UNLOCKED" in place
-of the category when the hub unlocked it (not with the identity off, which brings no
-crystal; see below). The hub's `reward` on each achievement wins over the client's own table
+close ("Reward: Rare Dormant Kyber" after the dormant kyber's gem, in its colour), its hover card
+ends with it, and the notification banner says it under what the achievement asked, in
+place of the category, when the hub unlocked it (not with the identity off, which brings no
+dormant kyber; see below). The hub's `reward` on each achievement wins over the client's own table
 (`kyber::REWARDS`) once it sends one. The catalogue, in [achievements.rs](../crates/sjk-viewer/src/achievements.rs)
 and in the hub (same ids):
 
@@ -1072,8 +1075,8 @@ and in the hub (same ids):
 | Bug Reporter | `bug_reporter` | a bug report the hub took | hub |
 | Surveyor (retired 26/10/2026) | `surveyor` | 5 world notes the hub took | hub |
 | Decorated | `decorated` | a medal | hub |
-| Collector, Archivist, Keeper of the Holocrons | `holocrons_10`, `holocrons_50`, `holocrons_200` | 10, 50, 200 holocrons opened (kyber crystals not counted) | hub |
-| Touched by the Force (hidden) | `mythical_find` | a Mythical shader or card from a holocron | hub |
+| Collector, Archivist, Keeper of the Holocrons | `holocrons_10`, `holocrons_50`, `holocrons_200` | 10, 50, 200 holocrons opened (dormant kybers not counted) | hub |
+| Touched by the Force (hidden) | `mythical_find` | a Mythical kyber or card from a holocron | hub |
 | Craftsman | `craft_blade` | a blade crafted from a card | hub |
 | Master Craftsman | `craft_finishes` | a blade crafted from a card of every finish (3: Normal, Holo, Solar, `cards::FINISHES`); three crafts from cards of one finish count 1 | hub |
 | Full Set | `full_set` | every Common and Uncommon card of any one set, in any finish, revealed copies only (sealed ones do not count) | hub |
@@ -1134,7 +1137,7 @@ The Mining goals are set for its pace (about six boulders a minute, the Heart so
 minutes): 100 boulders would be a quarter of an hour. A hidden achievement (Touched by the Force) is a secret until it
 is unlocked: the board, its hover card and the "Next up" list show "Secret" or "Secret
 achievement", a `?` in its medallion, no goal and no count; unlocked, it shows like any
-other (the unlock card names it). A retired achievement (Surveyor, since 26/10/2026)
+other (the notification banner names it). A retired achievement (Surveyor, since 26/10/2026)
 can no longer be earned: it shows only to a player who holds it unlocked, with "No
 longer obtainable", and is not listed at all, nor its progress, for anyone else. Hidden
 and retired are flags of the client's catalogue (`Kind::hidden`, `Kind::retired`); the
@@ -1240,7 +1243,7 @@ signed request, at most once a minute while they change, and unchanged again an 
 later when the hub held part back; changed counts go at the minute even after a hold,
 so an achievement unlocked then reaches the hub within a minute). When the hub's answer
 unlocks an achievement, the profile is read again within 30 seconds, so its kyber
-crystal is listed at once rather than at the next ten-minute reading (reports 149 and
+dormant kyber is listed at once rather than at the next ten-minute reading (reports 149 and
 150, 26/10/2026). The hub keeps each key's best count, up to the goal, and when it was
 reached. Because the hub cannot see a match, it takes the counts as the player's own
 record and bounds how fast each may rise (an hourly allowance per achievement: what
@@ -1252,47 +1255,54 @@ Since 26/10/2026 the hub has the last word on the achievements the client counts
 the identity on and a hub address (`player_identity::hub_on`, whether the hub answers
 or not), one whose count reaches its goal here is not unlocked yet: it waits for the hub
 (`Record::awaiting`, kept in `achievements.json`), which takes the count at its hourly
-pace, unlocks it and grants its crystal minutes to hours later. Until then the board
+pace, unlocks it and grants its dormant kyber minutes to hours later. Until then the board
 and the hover card show it reached but "Waiting for the SJK hub" (`Standing::waiting`),
 and nothing is announced. Once the hub's profile holds it unlocked (`unlocked` above 0),
-the client announces it, with its crystal, once, at the next reading after it, also
+the client announces it, with its dormant kyber, once, at the next reading after it, also
 when the hub unlocked it while the game was closed. An achievement the hub unlocked that
 did not wait here (reached on another PC) is not announced. Before, the client unlocked
-and announced it with "Reward: ... Kyber Crystal" at once, and players read that a
-crystal had come while the hub had not unlocked it yet. With the identity off, or no hub
+and announced it with "Reward: ... Dormant Kyber" at once, and players read that a
+dormant kyber had come while the hub had not unlocked it yet. With the identity off, or no hub
 address, there is no hub to wait for: the client unlocks it and announces it at once,
-with its category where the reward would stand, as no crystal comes; what was waiting
+with its category where the reward would stand, as no dormant kyber comes; what was waiting
 for the hub when the identity is turned off unlocks the same way. Achievements the hub
 counts are unchanged.
 
 When one of the client's achievements is unlocked as above, it writes "Achievement
-unlocked" to the console and shows its pop-up
-([achievement_toast.rs](../crates/sjk-viewer/src/achievement_toast.rs)): a card at the
-top centre of the screen, clear of the crosshair, the chat and the HUD's corners, with
-the board's medallion, "Achievement unlocked", the name, the category and what it
-asked (a hidden one too: it is unlocked). It takes no input and pauses nothing, over play and over the menus alike. It
-slides down and grows into place in under half a second while a gold ring sweeps
-round the medallion, light bursts from it (a glow, a ring of light, sparks), its edge
-flares and a glint crosses the card; it holds five seconds and fades out. Several
-unlocks queue and show one after another. It waits while the console is open, a
+unlocked" to the console and shows its notification banner
+([unlock_toast.rs](../crates/sjk-viewer/src/unlock_toast.rs), its look and motion in
+[unlock_toast/banner.rs](../crates/sjk-viewer/src/unlock_toast/banner.rs); since
+16/11/2026, Sol's request, as a phone's notification, in place of a card that grew in
+with a burst of light): a banner of dark translucent glass at the top centre of the
+screen, clear of the crosshair, the chat and the HUD's corners, with the board's
+medallion on a tile in the category's colour, "ACHIEVEMENT UNLOCKED" and "now", the
+name, what it asked (a hidden one too: it is unlocked) and the dormant kyber it brings
+(its category without one). It takes no input and pauses nothing, over play and over
+the menus alike. It comes down from above the screen's top edge on a spring in 0.6
+seconds (settling a few pixels past its place and back) while the medallion's ring
+sweeps round, rests five seconds and goes back up out of the screen in 0.4 seconds;
+with `ui_rarityEffects 0` it fades in and out in place instead. Several unlocks queue
+and show one after another, and three or more waiting together share one banner ("3
+achievements"). It waits while the console is open, a
 large pop-up shows, the window is away (alt-tabbed out or minimised; since 10/10/2026,
 Sol's request) or the player is in a private duel (since 20/10/2026, hub report #81: the
 rewards play after the duel), and its clock runs only while it is drawn: a card hidden half way
 resumes where it was when the player comes back, and a long frame (a hitch, a map
 loading, a minimised window drawing nothing) moves it on by a tenth of a second at
-most, so no card is spent unseen. Each pop-up plays `sound/interface/secret_area.mp3`, the
+most, so no banner is spent unseen. Each reward's banner plays `sound/interface/secret_area.mp3`, the
 single-player game's sound for a secret area found (its game module plays it with the
 `@SP_INGAME_SECRET_AREA` centre print), which multiplayer installs have in the shared
 `assets0.pk3`; `cg_achievementSound 0` (Settings > Sound > Unlock sound) leaves it
-out. The same card ([unlock_toast.rs](../crates/sjk-viewer/src/unlock_toast.rs))
-announces a new medal ([Medals](#medals)) or holocron
-([holocrons.md](holocrons.md#the-pop-up)) that arrives during a match, in the queue with
-the achievements: "New medal" or "New holocron", "Open the game menu to see it" where the
-category stands, the medallion's picture or the tier's icon, and a holocron's light in its
-tier's colour. One arrival brings at most three cards, and the large pop-up that opens with
-the game menu takes back the cards of what it shows. The new medal and holocron pop-ups'
-entrances (and their fanfare) also wait for the window to come back. A newer SJK release
-the update check finds has a card too ([client.md](client.md#updates)). The board has two
+out. The same banner announces a new medal ([Medals](#medals)) that arrives during a
+match, and every new holocron ([holocrons.md](holocrons.md#the-banner)), in the queue
+with the achievements: "New medal" or "New holocron", the medallion's picture or the
+tier's icon on a tile of the tier's colour, and where to see it ("Open the game menu to
+see it", "See it in Collection > Holocrons"). The new medal pop-up that opens with the
+game menu takes back the banners of what it shows, and its entrance (and fanfare) also
+waits for the window to come back. A newer SJK release the update check finds has a
+banner too ([client.md](client.md#updates)), as do a content update, a contributor
+reward, a kyber on the wishlist in the shop, the Fishing and Mining toys' rare catches,
+kyber glints and daily goals, and a request from the SJK team for the game's logs. The board has two
 pages (since 30/10/2026, Sol: "the general/normal ones and the more specific ones / fun
 ones", so it can keep growing): General, with Combat, Duels and flags, Journeys,
 Community and Collection, and Fun, with a category for each toy (Cardboard box, Order
@@ -1334,7 +1344,7 @@ call): on the Staff page's Overview, beside Verify, their own **Make staff** or
 own player, and admin panel access stays the operator's.
 
 Since 23/10/2026 (Sol's call) what takes back, clears or merges is the creator's alone
-too: taking back medals, saber shaders and holocrons, credits and shards (given or taken),
+too: taking back medals, kybers and holocrons, credits and shards (given or taken),
 clearing achievements, taking a picture down and unlinking keys. The hub refuses those
 requests from other staff (an error `creator_only`); on their Staff page those buttons show
 dimmed, Tab skips them and a press does nothing (`owner_only` in `staff_panel.rs`), the
@@ -1343,14 +1353,14 @@ owner unlinks. Merging keys was the creator's too until 13/11/2026, when Sol ope
 every staff member (still never a staff player merged away, nor the creator).
 
 Since 08/11/2026 (Sol's call) every staff member gives, from the Staff page: medals (and
-their rank), saber shaders, holocrons and kyber crystals (`gift` in `staff_panel.rs`; the
+their rank), kybers, holocrons and dormant kybers (`gift` in `staff_panel.rs`; the
 hub's `PROTOCOL.md`, "Staff"). Three limits keep it from becoming a source of loot, and the
 creator has none of them:
 
 - never to themselves (their own person, by any of their keys): the hub refuses it
   (`own_gift`), and on their own player the page dims every Give, Rank and Unlock with
   "Staff cannot give to themselves";
-- only the saber shaders holocrons can bring (`droppable`): a Unique one, a medal's blade
+- only the kybers holocrons can bring (`droppable`): a Secret one, a medal's blade
   or a blade not opened to drops yet stays the creator's to give (`creator_only`); its row
   says "owner only" and its Unlock is dimmed;
 - a number a day (the hub's `GIFTS_PER_DAY`, 20 to begin with, gifts undone not counted):
@@ -1372,6 +1382,17 @@ The JKR creator (since 22/10/2026) is the creator of JKR, the client SJK is buil
 Profiles as `jkr_creator` (absent as false). It is a mark and nothing else: no staff
 rights, no tools, no protection. The player card shows it as a rust JKR CREATOR pill,
 after SJK TEAM or SJK CREATOR when the person has one.
+
+All access (since 19/11/2026, for Sol's testing) is another flag only the hub operator
+sets (`sjk-hub all-access KEY_ID`, `no-all-access`), carried by Profiles as `all_access`
+(absent as false). The hub does the work (its `PROTOCOL.md`, "All access"): it lists every
+unlock with 99 copies (tags in every finish) and every card in every finish, reads credits
+and shards as 9999999, lets the look wear anything, and uses nothing up when the person
+buys, shatters or trades; their real collection stays in the hub untouched. The client
+reads that profile like any other, so every picker, the Collection and trades offer
+everything; the only client rule is that the Forge's gold dot
+([forge_alert.rs](../crates/sjk-viewer/src/forge_alert.rs)) stays out, since 99 copies
+would keep it lit.
 
 The Staff page ([staff_panel.rs](../crates/sjk-viewer/src/staff_panel.rs), the SJK
 UI's look) finds players down its left: a name or part of one (colour codes and symbols
@@ -1402,7 +1423,7 @@ key ("Merged the other player into this one", "Unlinked the key: it starts afres
 
 - **Overview**, where the page opens: the account (flags, trust, member since, last seen,
   keys counted, medals and unlockables held, achievements, unopened holocrons and kyber
-  crystals, credits, shards and cards), Verify (`StaffRequest::Verify`; Unverify while the player is
+  dormant kybers, credits, shards and cards), Verify (`StaffRequest::Verify`; Unverify while the player is
   verified), the last six names the hub kept, and moderation: their picture (Take down,
   `StaffRequest::AvatarRemove`; Block pictures and Allow pictures,
   `StaffRequest::AvatarBlock`, [Pictures](#pictures)) and the SJK chat (Mute at the hub
@@ -1419,14 +1440,14 @@ key ("Merged the other player into this one", "Unlinked the key: it starts afres
   28/10/2026, each press picks the rank Give gives it at, shown as "gives at IV", sent as
   `rank` in `POST /v1/staff/award` only above I, back to I once given), Give
   (Give +1 for a repeatable one already held) and Take back (one award; a repeatable one
-  counts down); beside them the saber shaders (every unlockable), with a filter over them
+  counts down); beside them the kybers (every unlockable), with a filter over them
   (since 08/11/2026: a name or part of one, a number such as `42`, `042` or `#42`, a tier
   such as `mythical`, or the id; the list follows the typing) and **Held only**, each with
   its number, its tier or since when the player holds it: Unlock (`StaffRequest::Unlock`)
   and Relock (`StaffRequest::Relock`), in pages with `<` and `>`;
-- **Holocrons and credits**: the player's holocrons and kyber crystals, the four holocron
-  tiers and under them the four crystal tiers to choose, Give (`StaffRequest::HolocronGive`)
-  and their twelve newest holocrons and crystals with Remove
+- **Holocrons and credits**: the player's holocrons and dormant kybers, the four holocron
+  tiers and under them the four dormant kyber tiers to choose, Give (`StaffRequest::HolocronGive`)
+  and their twelve newest holocrons and dormant kybers with Remove
   (`StaffRequest::HolocronRemove`, on a second press within 3 seconds)
   ([holocrons.md](holocrons.md#staff)); beside them their credits and kyber shards, an
   amount (digits only) and Give credits, Take credits, Give shards and Take shards
@@ -1465,8 +1486,8 @@ key ("Merged the other player into this one", "Unlinked the key: it starts afres
   many times (the first toy's until one is chosen). A hub from before the toy counts
   answers 404: the tab says they need a newer SJK hub and nothing fails; and, since
   08/11/2026, **My gifts**, the staff member's own gifts of the last day, newest first
-  (`StaffQuery::Gifts`, `POST /v1/staff/gifts`): what (a medal and its rank, a shader by
-  number and name, a holocron or crystal tier), to whom, when and the note, and how many
+  (`StaffQuery::Gifts`, `POST /v1/staff/gifts`): what (a medal and its rank, a kyber by
+  number and name, a holocron or dormant kyber tier), to whom, when and the note, and how many
   gifts are left today ("no daily limit" for the creator), each with Undo on a second
   press (`StaffRequest::GiftUndo`, `POST /v1/staff/gift-undo` with the gift's number; the
   answer is the player's profile, which replaces theirs on the page, and the gift is marked
@@ -1519,7 +1540,7 @@ The client follows the person: once the hub answers the player's own profile,
 `Snapshot::key_id` is the player's id, so a linked key still recognises itself in the
 presence lists, its own holocron drops and looks in the feed, and on the Staff page.
 `Snapshot::local_key_id` stays this PC's key id: the Identity page shows and copies it,
-and what is kept per key on this PC (the medal and holocron pop-ups' seen lists) keeps
+and what is kept per key on this PC (the medal pop-up's and the holocron banners' seen lists) keeps
 using it. When staff unlink the key this PC uses, the client registers it again at
 once.
 
@@ -1538,8 +1559,11 @@ leaves the game.
   moves there; `identity link <code> confirm` joins it (the hub's usual merge,
   [Players with several keys](#players-with-several-keys)). The code is made on the
   page and typed in the game, never the other way round: a code the game showed could
-  be read on a stream and typed by someone else first. A staff key cannot join another
-  account.
+  be read on a stream and typed by someone else first. The code may be typed in two
+  halves (`identity link ABCD EFGH`). A staff key cannot join another account (the hub
+  never merges a staff player away), so it is the one kept: the game says so before it
+  sends anything, and the code is made on the staff key's own page (`identity site` on
+  that computer) and typed on the other (hub report #316, 17/11/2026).
 - Video bounties: the SJK team posts what to film and its reward. A signed-in player
   sends a link to the original file, or uploads it (straight from the browser to SJK's
   video storage, MP4, WebM, MOV or MKV), ticking that SJK may use the video and credit
@@ -1556,7 +1580,7 @@ leaves the game.
   localhost only.
 - `profile` opens the Profile page (again: closes it), in the SJK UI the Profile
   screen's SJK Profile tab; `collection` opens the Collection, `achievements` on its
-  Achievements tab and `unlockables` on its Shaders tab (in the SJK UI the Collection
+  Achievements tab and `unlockables` on its Kybers tab (in the SJK UI the Collection
   screen, [sjk-ui.md](sjk-ui.md#collection)).
 - `staff` opens the Staff page, for a staff key only (again: closes it); `staff <name or
   key id>` opens it searching for that player, and chooses them when the search finds
@@ -1568,7 +1592,7 @@ leaves the game.
   wears; it applies, and is sent, only while the own profile lists it
   ([unlockables.md](unlockables.md)). `saberskin` lists the blade skins (owned or
   locked) and `saberskin <id>`/`none` sets it; `unlockables` opens the Collection's
-  Shaders tab, where owned ones are equipped.
+  Kybers tab, where owned ones are equipped.
 - `cl_shareModels` (default 1; Settings > Network > Share my model list) sends the
   player model folders the game has, so other SJK players' cards say whether they see
   the model you wear ([Installed models](#installed-models)); 0 makes the hub forget
@@ -1583,11 +1607,11 @@ leaves the game.
   it; `sjkchat` opens its page, `messagemode5` (I) its composer in a game, and
   `sjkemote <id>` sends an emote ([hub-chat.md](hub-chat.md)).
 - `cg_achievementSound` (default 1; Settings > Sound > Unlock sound) plays the
-  secret-area sound with each unlock card: an achievement's, or a new medal's or
-  holocron's in a match.
+  secret-area sound with each reward's banner: an achievement's, a new holocron's, or a
+  new medal's in a match.
 - `debug_medal <id|all> [x<count>] [note]` shows made-up medals in the new medal
   pop-up, sending nothing ([Medals](#medals)).
-- `debug_holocron <tier|all> [x<count>]` shows made-up holocrons in the drop pop-up,
+- `debug_holocron <tier|all> [x<count>]` shows made-up holocrons' banners,
   sending nothing ([holocrons.md](holocrons.md#debug_holocron)).
 - The Identity page (Settings > Network > SJK identity key, main menu > SJK > IDENTITY
   in the classic menus, the in-game SJK menu, or the `identity` command) shows what the

@@ -1,12 +1,12 @@
 //! The wheel's ring in the SJK UI's look (`docs/sjk-ui.md`): the choices on a
-//! dark navy band edged with holo line-work, the highlighted one grown inside a
+//! dark band edged with the UI's line-work, the highlighted one grown inside a
 //! gold ring over a lit sector, a gold arc on the middle disc pointing where the
 //! mouse points, and in the middle the page's name, the highlighted choice's
 //! name in gold and a dot for each page. On the wheel itself the previous and
 //! next pages' names stand beside the ring and a line under it says how to
 //! change page. The in-game wheel and the Settings editor's preview both draw it.
 //!
-//! Sizes are pixels of a 1080-line window times [`Ring::unit`]; the navy is deep
+//! Sizes are pixels of a 1080-line window times [`Ring::unit`]; the band is dark
 //! enough that every line reads over any scene.
 
 use super::pages::MAX_CHOICES;
@@ -169,7 +169,7 @@ pub(crate) fn draw(canvas: &mut MenuCanvas, ring: &Ring<'_>) {
         16.0 * u,
         0.0,
         TAU,
-        color::alpha(color::SPACE, 0.24),
+        color::alpha(color::space(), 0.24),
     );
     arc(
         canvas,
@@ -178,13 +178,13 @@ pub(crate) fn draw(canvas: &mut MenuCanvas, ring: &Ring<'_>) {
         (OUTER - HUB) * u,
         0.0,
         TAU,
-        color::alpha(color::SPACE, 0.66),
+        color::alpha(color::space(), 0.66),
     );
     disc(
         canvas,
         centre,
         HUB * 2.0 * u,
-        color::alpha(color::SPACE, 0.82),
+        color::alpha(color::space(), 0.82),
     );
     // Holo line-work: the band's outer edge, the disc's rim, a tick between
     // choices.
@@ -196,7 +196,7 @@ pub(crate) fn draw(canvas: &mut MenuCanvas, ring: &Ring<'_>) {
         hairline,
         0.0,
         TAU,
-        color::alpha(color::HOLO, 0.38),
+        color::alpha(color::holo(), 0.38),
     );
     arc(
         canvas,
@@ -205,7 +205,7 @@ pub(crate) fn draw(canvas: &mut MenuCanvas, ring: &Ring<'_>) {
         hairline,
         0.0,
         TAU,
-        color::alpha(color::HOLO, 0.34),
+        color::alpha(color::holo(), 0.34),
     );
     if count > 1 {
         for index in 0..count {
@@ -216,7 +216,7 @@ pub(crate) fn draw(canvas: &mut MenuCanvas, ring: &Ring<'_>) {
                 12.0 * u,
                 angle(index, count) + step * 0.5 + turn,
                 2.0 / OUTER,
-                color::alpha(color::HOLO, 0.5 * arrived),
+                color::alpha(color::holo(), 0.5 * arrived),
             );
         }
     }
@@ -229,13 +229,13 @@ pub(crate) fn draw(canvas: &mut MenuCanvas, ring: &Ring<'_>) {
             canvas,
             spot,
             (ICON_LIT + 34.0) * fit * u,
-            color::alpha(color::GOLD, 0.07),
+            color::alpha(color::gold(), 0.07),
         );
         disc(
             canvas,
             spot,
             (ICON_LIT + 16.0) * fit * u,
-            color::alpha(color::GOLD, 0.12),
+            color::alpha(color::gold(), 0.12),
         );
         // At most a choice's share of a full ring of eight, so a page of two
         // does not light half the ring.
@@ -246,7 +246,7 @@ pub(crate) fn draw(canvas: &mut MenuCanvas, ring: &Ring<'_>) {
             4.0 * u,
             at,
             (step * 0.72).min(TAU / 8.0 * 0.72),
-            color::GOLD_BRIGHT,
+            color::gold_bright(),
         );
     }
     // The pointer: a gold arc on the disc's rim, brighter as it leaves the middle.
@@ -258,7 +258,7 @@ pub(crate) fn draw(canvas: &mut MenuCanvas, ring: &Ring<'_>) {
             4.0 * u,
             direction,
             0.46,
-            color::alpha(color::GOLD, 0.3 + 0.7 * strength.min(1.0)),
+            color::alpha(color::gold(), 0.3 + 0.7 * strength.min(1.0)),
         );
     }
     canvas.push_opacity(0.2 + 0.8 * arrived);
@@ -275,7 +275,7 @@ pub(crate) fn draw(canvas: &mut MenuCanvas, ring: &Ring<'_>) {
                 2.5 * u,
                 0.0,
                 TAU,
-                color::GOLD_BRIGHT,
+                color::gold_bright(),
             );
         }
         let rect = Rect::new(spot[0] - size * 0.5, spot[1] - size * 0.5, size, size);
@@ -283,12 +283,12 @@ pub(crate) fn draw(canvas: &mut MenuCanvas, ring: &Ring<'_>) {
             Some(texture) => {
                 let rect = match choice.size {
                     Some(pixels) => {
-                        disc(canvas, spot, size, color::alpha(color::SPACE, 0.75));
+                        disc(canvas, spot, size, color::alpha(color::space(), 0.75));
                         fit_inside(rect, pixels)
                     }
                     // An emote's own picture has no disc of its own, as the wheel's do.
                     None if crate::emote_icons::is_emote_texture(texture) => {
-                        disc(canvas, spot, size, color::alpha(color::SPACE, 0.75));
+                        disc(canvas, spot, size, color::alpha(color::space(), 0.75));
                         rect
                     }
                     None => rect,
@@ -309,7 +309,7 @@ pub(crate) fn draw(canvas: &mut MenuCanvas, ring: &Ring<'_>) {
                 canvas,
                 towards(centre, at, (OUTER + 14.0) * u),
                 9.0 * u,
-                color::GOLD_BRIGHT,
+                color::gold_bright(),
             );
         }
     }
@@ -326,7 +326,7 @@ pub(crate) fn draw(canvas: &mut MenuCanvas, ring: &Ring<'_>) {
             DrawCommand::RoundedRect {
                 rect: Rect::new(centre[0] - width * 0.5, y - 15.0 * u, width, 30.0 * u),
                 radius: 15.0 * u,
-                color: color::alpha(color::SPACE, 0.6),
+                color: color::alpha(color::space(), 0.6),
             },
         );
         text(
@@ -335,14 +335,14 @@ pub(crate) fn draw(canvas: &mut MenuCanvas, ring: &Ring<'_>) {
             format_args!("Scroll to change page"),
             Rect::new(centre[0] - width * 0.5, y - 12.0 * u, width, 24.0 * u),
             15.0 * u,
-            color::MUTED,
+            color::muted(),
             FontWeight::Regular,
             TextAlign::Center,
         );
     }
 }
 
-/// A choice without a picture: a navy disc with a holo rim (gold when lit) and
+/// A choice without a picture: a dark disc with an amber rim (gold when lit) and
 /// its name on up to two lines.
 fn name_disc(canvas: &mut MenuCanvas, label: &str, rect: Rect, lit: bool, u: f32) {
     push(
@@ -350,7 +350,7 @@ fn name_disc(canvas: &mut MenuCanvas, label: &str, rect: Rect, lit: bool, u: f32
         DrawCommand::RoundedRect {
             rect,
             radius: rect.width * 0.5,
-            color: Color::new(0.05, 0.08, 0.15, 0.95),
+            color: color::alpha(color::glass(), 0.95),
         },
     );
     push(
@@ -360,9 +360,9 @@ fn name_disc(canvas: &mut MenuCanvas, label: &str, rect: Rect, lit: bool, u: f32
             radius: rect.width * 0.5,
             width: (1.5 * u).max(1.0),
             color: if lit {
-                color::GOLD_BRIGHT
+                color::gold_bright()
             } else {
-                color::alpha(color::HOLO, 0.55)
+                color::alpha(color::holo(), 0.55)
             },
         },
     );
@@ -391,7 +391,11 @@ fn name_disc(canvas: &mut MenuCanvas, label: &str, rect: Rect, lit: bool, u: f32
                 line,
             ),
             size,
-            if lit { color::GOLD_BRIGHT } else { color::TEXT },
+            if lit {
+                color::gold_bright()
+            } else {
+                color::text()
+            },
             FontWeight::Semibold,
             TextAlign::Center,
         );
@@ -411,7 +415,7 @@ fn middle(canvas: &mut MenuCanvas, ring: &Ring<'_>, arrived: f32) {
         format_args!("{}", ring.page),
         Rect::new(x - width * 0.5 + slide, y - 58.0 * u, width, 28.0 * u),
         21.0 * u,
-        color::MUTED,
+        color::muted(),
         FontWeight::Semibold,
         TextAlign::Center,
     );
@@ -427,7 +431,7 @@ fn middle(canvas: &mut MenuCanvas, ring: &Ring<'_>, arrived: f32) {
             format_args!("{label}"),
             Rect::new(x - width * 0.5, y - 20.0 * u, width, 40.0 * u),
             30.0 * u,
-            color::GOLD_BRIGHT,
+            color::gold_bright(),
             FontWeight::Semibold,
             TextAlign::Center,
         ),
@@ -444,7 +448,7 @@ fn middle(canvas: &mut MenuCanvas, ring: &Ring<'_>, arrived: f32) {
                         22.0 * u,
                     ),
                     15.0 * u,
-                    color::MUTED,
+                    color::muted(),
                     FontWeight::Regular,
                     TextAlign::Center,
                 );
@@ -467,7 +471,7 @@ fn middle(canvas: &mut MenuCanvas, ring: &Ring<'_>, arrived: f32) {
                     DrawCommand::RoundedRect {
                         rect: Rect::new(left, dots_y - dot * 0.5, lit, dot),
                         radius: dot * 0.5,
-                        color: color::GOLD_BRIGHT,
+                        color: color::gold_bright(),
                     },
                 );
                 left += lit + gap - dot;
@@ -476,7 +480,7 @@ fn middle(canvas: &mut MenuCanvas, ring: &Ring<'_>, arrived: f32) {
                     canvas,
                     [left + dot * 0.5, dots_y],
                     dot,
-                    color::alpha(color::HOLO, 0.5),
+                    color::alpha(color::holo(), 0.5),
                 );
                 left += gap;
             }
@@ -485,7 +489,7 @@ fn middle(canvas: &mut MenuCanvas, ring: &Ring<'_>, arrived: f32) {
 }
 
 /// The previous page's name left of the ring and the next one's right of it,
-/// each with the mouse button that goes there, on a navy pill.
+/// each with the mouse button that goes there, on a dark pill.
 fn neighbours(canvas: &mut MenuCanvas, ring: &Ring<'_>, previous: &str, next: &str) {
     let u = ring.unit;
     let [x, y] = ring.centre;
@@ -499,7 +503,7 @@ fn neighbours(canvas: &mut MenuCanvas, ring: &Ring<'_>, previous: &str, next: &s
             DrawCommand::RoundedRect {
                 rect: Rect::new(rect_x, y - 30.0 * u, width, 60.0 * u),
                 radius: 14.0 * u,
-                color: color::alpha(color::SPACE, 0.62),
+                color: color::alpha(color::space(), 0.62),
             },
         );
         let inset = 16.0 * u;
@@ -515,7 +519,7 @@ fn neighbours(canvas: &mut MenuCanvas, ring: &Ring<'_>, previous: &str, next: &s
             format_args!("{caret}{name}{after}"),
             Rect::new(rect_x + inset, y - 24.0 * u, width - inset * 2.0, 28.0 * u),
             22.0 * u,
-            color::TEXT,
+            color::text(),
             FontWeight::Semibold,
             align,
         );
@@ -525,7 +529,7 @@ fn neighbours(canvas: &mut MenuCanvas, ring: &Ring<'_>, previous: &str, next: &s
             format_args!("{button}"),
             Rect::new(rect_x + inset, y + 3.0 * u, width - inset * 2.0, 22.0 * u),
             14.0 * u,
-            color::MUTED,
+            color::muted(),
             FontWeight::Regular,
             align,
         );

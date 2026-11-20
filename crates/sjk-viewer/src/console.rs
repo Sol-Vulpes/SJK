@@ -198,6 +198,16 @@ const ARGUMENT_SOURCES: &[sjk_shell::ArgumentSource] = &[
         label: "Emote",
     },
     sjk_shell::ArgumentSource {
+        command: crate::emote_filters::HIDE_COMMAND,
+        list: crate::emote_filters::ARGUMENTS,
+        label: "Emote",
+    },
+    sjk_shell::ArgumentSource {
+        command: crate::emote_filters::MUTE_COMMAND,
+        list: crate::emote_filters::ARGUMENTS,
+        label: "Emote",
+    },
+    sjk_shell::ArgumentSource {
         command: "vid_restart",
         list: VID_RESTART_ARGUMENTS,
         label: "Option",
@@ -323,6 +333,8 @@ pub(crate) struct ViewerConsole {
     mining_card: crate::fishing_sell::Card,
     /// The Mining card's Sell rubble button was pressed.
     pending_mining_sell: bool,
+    /// An empty Collection page asked for the server list (15/11/2026).
+    pending_servers: bool,
     /// The log book's Share button was pressed: Mining's (`true`) or Fishing's.
     pending_brag: Option<bool>,
     /// The Monitor toy is on, mirrored as [`Self::order66_on`] is.
@@ -354,6 +366,8 @@ pub(crate) struct ViewerConsole {
     hide_pickups_in_duel: console_cvars::IntegerSetting,
     /// `cg_duelHideOthers`.
     duel_hide_others: console_cvars::IntegerSetting,
+    /// `cg_duelGhost`: 2 hides the duellists of others' duels.
+    duel_ghost: console_cvars::IntegerSetting,
     /// `cp_pluginDisable`, read by `cg_duelHideOthers`'s Auto on JA+.
     plugin_disable: console_cvars::IntegerSetting,
     draw_fog: console_cvars::IntegerSetting,
@@ -488,6 +502,8 @@ impl ViewerConsole {
             mode: sjk_client::DuelHideMode::from_cvar(self.duel_hide_others.value()),
             plugin_disable: u32::try_from(self.plugin_disable.value())
                 .unwrap_or(sjk_client::PLUGIN_DISABLE_DEFAULT),
+            hide_duellists: crate::duel_ghost::Look::from_cvar(self.duel_ghost.value())
+                == crate::duel_ghost::Look::Hidden,
         }
     }
 
@@ -920,6 +936,14 @@ impl ViewerConsole {
             if name.eq_ignore_ascii_case("r_resolution") {
                 self.sync_custom_resolution(value);
             }
+            // The hue and the saturation are the custom theme's: moving one picks it.
+            if crate::menu::sjk::theme::follows_custom(name) {
+                let custom = crate::menu::sjk::theme::Theme::NAMES[2];
+                let _ = self
+                    .shell
+                    .cvars
+                    .set_text(crate::menu::sjk::theme::CVAR, custom);
+            }
             self.persist();
         }
         Ok(())
@@ -1292,6 +1316,7 @@ impl ViewerConsole {
             self.holocrons_panel.close();
             self.sjk_chat_panel.close();
             self.config_import.close();
+            self.classic.find.close();
         }
     }
 
@@ -1313,12 +1338,20 @@ impl ViewerConsole {
         self.rebuild_prompt();
     }
 
+    /// The emote ids installed in the game data, as `emote_hide`/`emote_mute` complete.
+    pub(crate) fn installed_emote_ids(&self) -> Vec<String> {
+        crate::emotes::installed_ids(self.script_vfs.as_deref())
+    }
+
     fn complete_command(&mut self, key: CompletionKey) {
         let resolver =
             console_scripting::Resolver::new(&self.config_directory, self.script_vfs.as_deref());
         let lists = |list: &str| match list {
             sjk_shell::MAP_EXTENSION => resolver.map_names(),
             EMOTE_ARGUMENTS => crate::emotes::argument_words(self.script_vfs.as_deref()),
+            crate::emote_filters::ARGUMENTS => {
+                crate::emotes::installed_ids(self.script_vfs.as_deref())
+            }
             VID_RESTART_ARGUMENTS => vec![console_client::VID_RESTART_FORCE.to_owned()],
             extension => resolver.root_files(extension),
         };

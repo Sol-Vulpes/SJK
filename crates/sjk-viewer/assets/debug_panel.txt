@@ -24,6 +24,279 @@
 
 # ---- Console & chat ----
 
+[bar-ping]
+area: HUD
+title: Top bar ping matches the scoreboard; the lagometer graphs stock's snapshot ping
+change: Top bar ping: your scoreboard row's for 5 s after a scores reply, else the average of 32.
+change: The 32 are stock's snapshot pings: move packet sent to the snapshot that shows it run.
+change: Lagometer, its cg_lagometer 2 average and chat %P% use that ping, not the 50 ms lag.
+test: On a remote server: the top bar's ping is near your scoreboard row's (Tab), not ~50.
+test: Hold Tab a few seconds, release: the bar keeps about the same number after 5 s.
+test: cg_lagometer 2: green ping columns low, the average above the graph near the bar's.
+test: Spectate and follow a player: the bar keeps the ping it had; a local game shows none.
+test: Play a demo with cg_lagometer 1: no ping columns, red only for a dropped snapshot.
+note: The bar asks for no scores: it reads the replies the scoreboard or intermission ask for.
+
+[collection-glass]
+area: Menus & settings
+title: Collection glass: acrylic tiles and a finished Kybers page
+change: Hall tiles, Kybers tiles, list, filters and card, Inventory, Toys, Tags, Forge: glass.
+change: Kybers: the chosen tile rises in its tier's light; hover lifts it in its tier's colour.
+change: The kyber you wear glows gold from its foot; the second saber's in the line colour.
+test: Collection: the hall's tiles show the map blurred behind them; text easy to read.
+test: Kybers: arrows move the choice; the new tile rises smoothly, the old one settles.
+test: Hover tiles: each lifts with a ring of its tier's colour; Enter, Esc, Ctrl+Tab still work.
+test: V for the list: one glass pane under the rows; S sorts; the chips and search are glass.
+test: Theme cold (Settings > Interface): the same glass in navy; text still reads.
+test: r_drawTimings 1 on the Kybers wall: ui-backdrop stays small (about 0.03 ms or less).
+note: Rows inside a glass pane and pictures inside tiles keep plain fills: glass on glass.
+
+[all-access]
+area: Menus & settings
+title: All access: every shader, tag and card held, endless credits and shards (hub flag)
+change: Hub flag all_access (operator CLI only): the profile lists everything, nothing is spent.
+change: Trades give the other side a real copy and you keep yours; your trade limits are off.
+change: The Forge's gold dot stays out for an all-access profile.
+test: Once the hub has the flag on: Collection lists every shader, tag and card, x99.
+test: Wear a blade you never had, a Solar tag, Sun extras: others on the server see them.
+test: Buy a holocron and a shop offer: credits and shards stay at 9999999.
+test: Trade a shader and a tag to another key: they get it, your count stays 99.
+test: Shatter a copy in the Forge: still 99.
+note: Turned off with no-all-access: your real collection comes back as it was.
+
+[secret-tier]
+area: Menus & settings
+title: Unique blades are now Secret blades, in red
+change: The hand-given tier is called Secret; its colour, frame, chip and effects turn red.
+test: Collection > Kybers with a Secret blade held: Secret chip first, red mark and red frame.
+test: Wear it: Mythical-level effects in red; hover card and Inventory say Secret.
+test: Without one held: no Secret chip, nothing listed, totals unchanged.
+
+[ui-hue]
+area: Menus & settings
+title: Theme: warm, cold or any hue for the SJK UI
+change: Settings > Interface > Theme: warm (default), cold (the navy and blue of before), custom.
+change: Theme hue and saturation turn every colour, keeping its lightness; the swatch shows it.
+change: Scrollbar thumbs and SJK players' holo nameplate frames follow the theme.
+test: Interface > Theme cold: menus, status bars, cards and scoreboard turn navy at once.
+test: Drag Theme hue: the theme becomes custom and the whole UI follows the swatch live.
+test: Theme saturation 0: a grey UI; text, gold and lines still easy to read.
+test: In a match: status bar glass, banners (debug_holocron rare) and Tab follow the theme.
+test: Back to warm: the sun's colours exactly as before; quit and restart: the theme stays.
+note: Team colours, the trusted green, tiers and Quit's ember (in custom) never change.
+
+[sun-theme]
+area: Menus & settings
+title: Sun theme: warm colours and acrylic glass over the game
+change: The SJK UI's navy and holo blue are now ember brown, amber lines and sun gold.
+change: Status bars, banners, pop-up and hover cards and the scoreboard band are acrylic glass.
+change: The game shows through them blurred; the status bars are the clearest.
+test: Main menu, Settings, Collection: warm colours everywhere, text easy to read.
+test: Join a match: both status bars show the map blurred behind them; text stays readable.
+test: Look at a bright sky or snow (siege_hoth): bar and banner text still reads well.
+test: debug_holocron rare: the banner is frosted glass; Tab: the scoreboard column too.
+test: r_drawTimings 1: the ui-backdrop line stays small (about 0.1 ms or less).
+note: On DirectX 12 the glass is a plain warm tint (no blur): the swapchain cannot be read.
+
+[new-emblem]
+area: Menus & settings
+title: New emblem: the steel SJK monogram before a burning sun, in menus, icons and chat
+change: The game's icon, window icon, menu emblem, chat mark and site use Sol's new emblem.
+change: The menu's sun moves: the disc turns, two flame layers lick, rays shimmer, sparks fly.
+change: Icons of 32 px and under draw a simpler emblem: plain steel on a hot disc.
+test: Main menu (SJK UI): the emblem in its ring; watch the flames and sparks for a minute.
+test: ui_menuStyle classic: the emblem stays inside the centre window's opening.
+test: Title bar, taskbar, Alt+Tab and sjk.exe in Explorer show the new icon.
+test: SJK chat: the emblem before SJK lines is as big as the EJK icon.
+
+[notification-banners]
+area: HUD
+title: Notifications slide down from the top like a phone's; the holocron pop-up is gone
+change: Achievements, holocrons, medals, updates and the rest: one glass banner at the top centre.
+change: It slides down, rests 5 s and slides back up; 3 or more of one kind share one banner.
+change: No large holocron card on the main menu or on Esc any more; the banner says where it is.
+test: debug_holocron rare: a banner slides down at the top centre, rests, then slides back up.
+test: debug_holocron rare x5: one banner, "5 new holocrons" (or echoes) with a 5 on a badge.
+test: debug_update: the update banner; click it over the menus: the Update page opens.
+test: With a holocron waiting, open the main menu, then Esc in a match: no large pop-up.
+test: ui_rarityEffects 0, then debug_holocron all: the banner fades in place, no slide.
+test: Fish or mine until a kyber glint or the daily goal: a banner, no centre print.
+note: cl_holocronNotifications 0 shows no holocron banners and counts new ones as seen.
+
+[feats]
+area: HUD
+title: Feats: multi-kills, sprees, first blood, revenge and HOOKED! with medals and announcer
+change: Settings > HUD "Feats" (cg_feats, off by default) shows a medal for each feat.
+change: The announcer says it from a voice pack (cg_announcer, SJK's own voice by default).
+test: Turn Feats on, kill two bots within 4 s: DOUBLE KILL medal under the top centre.
+test: Kill 5 without dying: KILLING SPREE; die, then kill your killer: REVENGE.
+test: In a match, debug_feat all: every medal in turn with its announcer line.
+test: On a JA+ server, finish someone with the grapple hook: HOOKED!
+test: Open Move HUD elements: a sample medal shows and can be dragged.
+note: Voice: put a test pack in sound/sjk/announcer/<name>/ in a PK3 to hear it.
+
+[kyber-names]
+area: Menus & settings
+title: Saber shaders are called kybers; kyber crystals are dormant kybers you attune
+change: Every player-facing "shader" of a blade look says kyber (tab, Forge, shop, trades).
+change: Kyber crystals are "Dormant kyber"; Open on them reads Attune, opened reads attuned.
+test: Collection hall: the double tile says Kybers; inside, the breadcrumb Collection > Kybers.
+test: Kybers page, Finishers pill: the breadcrumb says Finishers with its count.
+test: Holocrons tab: Dormant kybers heading; on one, Attune / Attune all and Enter attune.
+test: Attune one: "Attuning..." then the strip; History says Attuned a Rare Dormant Kyber.
+test: Forge, shop, trade window, Inventory, status bar, Settings rows: kyber wording.
+test: With jof.honorNames on: holocrons still read Echoes, kybers keep their name.
+note: Ids, cvars, commands and saved data are unchanged; the hub branch kyber-names matches.
+
+[blade-stills]
+area: Menus & settings
+title: Kyber tiles play each blade's real look: straight, glowing, a short loop
+change: Each kyber is baked once as an 8-picture loop (cache/blades), played straight on tiles.
+change: Only the chosen card's blade is live; not held: the real look greyed under a padlock.
+change: Fixed video memory: 27 MiB atlas while shown; the live blade's target freed after 5 s.
+test: Collection > Kybers, wall: blades fill the tiles, straight, flickering as they do in hand.
+test: Walk the wall with the arrows on an empty cache: no stutter while the loops bake.
+test: Watch a tile 10 s: its light stays even, no pulse, no jump back as the loop comes round.
+test: Arrow across New and seen kybers: the blade over the card stays lit (no off/on).
+test: List (V), hall, Forge strips: the same loops, readable in the list's rows.
+test: Close and start again: GameData/SJK/cache/blades has the PNGs; tiles show at once.
+test: Change a blade's options (or a pack): its loop is drawn again, the old file goes.
+test: ui_menuPictures 1: first pictures only, still (one baked a frame), no live blade.
+note: First open with an empty cache: a few frames of drawings while the loops bake.
+
+[collection-hall]
+area: Menus & settings
+title: Collection opens on its hall: a tile per kind, Enter in, Esc back out
+change: A grid of tiles (Kybers double), each with its count and news; the model on the right.
+change: A kind opens under "Collection > <kind>" in place of the tab row; Esc comes back.
+test: Main page > Collection: the hall; arrows move, Enter opens, hover + click work too.
+test: In a kind: Ctrl+Tab steps to the next kind; Esc or the breadcrumb returns to the hall.
+test: Esc on the hall leaves; unlockables / achievements / holocrons skip the hall.
+test: Holocrons tile, then Esc: back on the hall; Finishers tile opens Kybers on Finishers.
+test: Tile news: 2 new kybers, holocrons to open, deal of the day, toys on, last History line.
+test: The model turns into the right column, wearing your blade; the line names blade/tag.
+test: 4:3, 21:9 and ui_textScale 1.4: the grid reflows (3, 4 or 6 across) and scrolls.
+test: Settings > Interface "Collection hall" off: Collection opens on the kind used last.
+note: In a match the model shows in the live preview; the History line needs one visit first.
+
+[hall-polish]
+area: Menus & settings
+title: Collection hall: tiles drawn full, worn line and Loadouts over the model's head
+change: Each tile draws what it holds: blades, tier bars, toys, medals, holocrons, prices.
+change: "Wearing now", the blade / finisher / tag line and Loadouts (P) sit over the head.
+test: Kybers: worn + new blades as live strips, each tier's held/total and bar on the right.
+test: Toys tile: Illuminate on = lit with a gold dot; the others faint. Medals: given ones lit.
+test: Achievements: big "38 / 50" figure; Holocrons: tier pictures with counts.
+test: Forge: deal of the day blade + price (after the Forge was opened once); Inventory figures.
+test: History tile: the newest three lines once the History tab was read.
+test: The worn line and Loadouts never cover the model: 16:9, 4:3, 21:9 and ui_textScale 1.4.
+note: No cards held shows three blank cards and "No cards yet"; with cards, their small faces.
+
+[collection-new]
+area: Menus & settings
+title: New on every kind: cards, tags and finishers marked New, counted on the hall
+change: One seen-list collection-seen.txt (kyber:, card:id:finish, tag:id:finish, finisher:).
+change: shader-seen.txt is moved over once; New stickers, "N new" + Mark all seen (N) per page.
+test: First start on this build: no card, tag or finisher New; your New kybers stay New.
+test: Get a card / tag / finisher: its hall tile shows a gold "1 new" pill at the top right.
+test: Its page: "1 new" + Mark all seen (N) after the headline, a New sticker on the thing.
+test: Choose it 1 s: sticker gone; sweep across tiles: nothing seen. N or the chip: all seen.
+test: Finishers page: open 1 s sees the new finisher. Inventory: a New sticker on the row.
+test: Bottom bar: "1 new in your Collection" for that map; next map a gold dot; then gone.
+note: Settings > HUD "Bottom bar: new things" (cg_statusBarNew) hides that part.
+
+[empty-states]
+area: Menus & settings
+title: Empty Collection pages point the way: ghosts, how it fills, one action
+change: Cards with none: card outlines, Open holocrons (N waiting) or Find a server, Enter too.
+change: Holocrons: none / no dormant kyber; Medals none; an Inventory search that finds nothing.
+test: A profile with no card: Cards tab shows "No cards yet"; Enter opens the Holocrons page.
+test: Same with no holocron to open: the button says Find a server and shows the server list.
+test: Holocrons tab with no dormant kyber: a row "No dormant kybers yet", next achievement.
+test: See Achievements opens the Achievements tab; in a match Find a server opens the list.
+test: Inventory: search "cranes": Nothing you own matches "cranes"; Esc clears the search.
+test: jof.honorNames on: the words say Echoes / Honors.
+
+[collection-inventory]
+area: Menus & settings
+title: Collection > Inventory: one list of everything you own, with counts
+change: A tab after History: currencies, sealed holocrons and dormant kybers, kybers, finishers,
+change: tags and cards, each with its tier in colour and how many, under a heading per kind.
+test: collection, Ctrl+Tab to Inventory: credits and shards match the Forge; holocrons the tab's.
+test: S cycles Tier / Name / Quantity; the sort segments click too; Up/Down skip the headings.
+test: / opens the search: type, held Backspace, Ctrl+A/C/V work; Esc clears; wheel scrolls.
+note: DOOM coins show only once the hub said them (toy_wheelofdoom asks).
+
+[tier-frame]
+area: Menus & settings
+title: One tier frame: Inventory, Cards, Tags, Forge, History and Holocrons tell tiers alike
+change: Common glass; Uncommon a bar; Rare tinted edge + glow; Legendary brackets + halo.
+change: Mythical a full edge and, chosen, a slow sheen; Unique a rose inner line + its mark.
+change: Diamonds before the tier name count its step (1 Uncommon to 4 Mythical).
+test: Inventory, Cards, Tags, Forge (grid and list), History, Holocrons: each tier's frame.
+test: Choose a Mythical thing: a sheen crosses its frame every 6 s; ui_rarityEffects 0 stops it.
+test: Not held (Cards, Tags, Holocrons): the frame dims but the tier still reads.
+note: Kybers wall tiles and the hall keep their own look for now (a later pass).
+
+[inventory-card]
+area: Menus & settings
+title: Inventory: pictured rows, kind chips, wallet strip and the chosen thing's card
+change: Each row starts with its picture; 1-7 or a chip shows one kind; balances on top.
+change: The card on the right: tier, edition, how it came, copies, worth in shards, buttons.
+test: Kyber: Wear (Enter) sets the blade; B twice breaks a spare (+shards); G opens Kybers.
+test: Last copy, locked or Unique kyber: Break down greyed, the reason under the buttons.
+test: Holocron Open / dormant kyber Attune (Enter): the Holocrons tab runs its ceremony.
+test: Tag Choose, finisher Wear / Take off, card Show in Cards (G) lands on its tile.
+test: The strip's "spare copies worth N" matches the Forge's Break down all duplicates.
+note: Offer in trade is not there: the trade window takes the menus' input while open.
+
+[collection-wording]
+area: Menus & settings
+title: Collection wording: dormant kybers attune, wallet lines, Holocrons capitalised
+change: A dormant kyber's greyed Attune says the hub does not let you attune dormant kybers.
+change: Wallet: "credits, from opening Holocrons"; "kyber shards, from Holocrons and kybers..."
+change: Empty Cards, hall Cards tile, Inventory card: Holocrons capitalised, Echoes under JoF.
+test: Inventory, a dormant kyber chosen with the hub refusing: the reason names attuning.
+test: Inventory card of a holocron tier: "You hold 3 to open"; dormant kybers "3 to attune".
+test: jof.honorNames on: empty Cards and the hall's Cards tile say Echoes, capitalised.
+
+[first-look]
+area: Menus & settings
+title: First look at a New thing: blade ignites, card turns, frame flashes, soft sound
+change: Kybers: a New kyber's blade stays off on the stage until its 1 s look, then ignites.
+change: Cards turn over; every kind's tier frame flashes once; a cue, longer for Legendary+.
+test: Kybers: choose a New kyber: hilt alone, then after 1 s the blade lights with its sound.
+test: Cards / Tags / Finishers: a New one chosen 1 s: frame flash, card turns, soft blip.
+test: A Legendary or Mythical New thing: the longer chime. A seen thing: no sound at all.
+test: Mark all seen (N), or leaving the page early: no reveal. ui_rarityEffects 0: no flash.
+
+[collection-motion]
+area: Menus & settings
+title: Collection motion: tile grows into its page, Esc shrinks it back, Ctrl+Tab slides
+change: Enter: the tile's card grows into the page (180 ms), the page fades in behind it.
+change: Esc / breadcrumb: the page shrinks onto the same tile; Ctrl+Tab slides (100 ms).
+test: Hall, Enter on Cards: a gold card grows from the tile; Esc: it lands on Cards, chosen.
+test: Ctrl+Tab and Ctrl+Shift+Tab in a kind: the page slides in from right / left.
+test: Press Enter then Esc quickly: both act at once, nothing waits for the motion.
+test: ui_rarityEffects 0: a short crossfade instead of the growth and the slide.
+
+[hall-tier-marks]
+area: Menus & settings
+title: Collection hall: tier diamonds on its blades, deals, finisher, tag and holocrons
+change: The hall's tier-coloured lines carry the tier's diamonds, as the pages' rows do.
+change: The tag chosen sits in its tier's frame; the tiles stay plain kind tiles.
+test: Kybers tile: diamonds after each strip and before each tier's name on the right.
+test: Forge tile: the deal and the day's offers with their diamonds; Finishers, Tags too.
+test: Holocrons tile, where every tier's fits (4:3): diamonds before names; the worn blade's.
+
+[chat-icon-sizes]
+area: Console & chat
+title: Game chat: smaller SJK/EJK icons; nameplates: EJK icon with the tick on its corner
+change: SJK's emblem is a little smaller; the EJK icon is smaller still so both read the same size.
+test: An SJK and an EJK player's lines: the icons look the same size, the tick after the name.
+change: Nameplates (holo, capsule, classic): an EJK icon in the tick's place, tick on its corner.
+test: cg_nameplate 1 near an EJK player: their icon after the name, tick small at its bottom right.
+
 [chat-client-icons]
 area: Console & chat
 title: Game chat: EJK icon (and tick) before JoF EternalJK players' lines
@@ -32,6 +305,15 @@ change: An EJK player in SJK chat who claims nothing gets the EJK icon alone, by
 test: With a JoF EJK player on the server, their All chat lines start with the EJK icon.
 test: A verified EJK beta player shows their tick after the name; cl_sjkChatClientIcons 0 = SJK.
 note: World shot: game_lines_with_marks (Figo = claim, dart_mario = name match).
+
+[identity-link-staff]
+area: Console & chat
+title: identity link: a code in two halves, and a staff key told which way it goes
+change: identity link ABCD EFGH reads as ABCD-EFGH (a last word confirm still joins).
+change: A staff key typing a code is told to make the code on its own page instead.
+test: On a second PC, make a code on your page, type identity link with a space in it.
+test: The console names the account; add confirm and the key joins it.
+test: With a staff key, identity link <code> says to use identity site here instead.
 
 [staff-merge-keys]
 area: Menus & settings
@@ -170,6 +452,16 @@ test: On a jaPRO server: strafehelper 1, strafe-jump in JKA style: the lines sho
 test: /move cpm: the lines still show and sit at CPM's angles; /move siege: none.
 test: On a JoF or stock server the helper looks as before.
 
+[model-blink]
+area: Rendering & effects
+title: Models blink, change their face now and then, and the dead shut their eyes
+change: Stock CG_G2PlayerHeadAnims: leye/reye shut for 300 ms every 4-8 s (1 in 20 a wink),
+change: FACE_ALERT or FACE_FROWN on the face bone every 7-10 s, FACE_DEAD while dead.
+test: Third person (cg_thirdPerson 1), look at your face up close: the eyes shut now and then.
+test: Look at another player or a humanoid NPC: it blinks too, not in step with you.
+test: Die (kill): the eyes stay shut on the body. Respawn: blinking starts again.
+test: A rig (glTF) model looks and moves as before (it is left out on purpose).
+
 [rgb-model-colour]
 area: Rendering & effects
 title: RGB models (char_color) show the colour as in retail, not pale
@@ -266,6 +558,15 @@ test: Open boxes: coins piles, holocrons and crystals roll by; no bolts or littl
 test: Ray Gun: it jumps in hand at the stop; fire at a friend: they fall, glow green.
 test: Hit a box hunter: "RAY GUN: name down, +25 credits"; a second hit passes through.
 note: Needs the hub's box-rework branch deployed.
+
+[drop-odds]
+area: Gameplay
+title: Possible drops panel at boxes and wheels; louder WHEEL OF DOOM music
+change: Facing a box or wheel, a panel under the Use prompt lists drops with their %.
+change: WHEEL OF DOOM music at twice the gain, heard to 1400 units.
+test: Face a mystery box: after a moment the panel fades in, holocron 45.5 % first.
+test: Face a wheel: holocron tiers in colour, "A bad effect (12 kinds)" in red.
+test: A spin: the music is clearly louder, still heard across the room.
 
 [wheel-placed]
 area: Gameplay
@@ -510,6 +811,17 @@ change: A report sent from there names the map "menu" and no server.
 test: Main menu > SJK > Report a bug: the card opens; type a report and Send.
 test: The hub's report shows map "menu" and an empty server.
 test: In a match, Escape > Report a bug still sends the real map and server.
+
+[box-hunt-out-again]
+area: Gameplay
+title: Box hunt: a lost out report goes again; paid credits show soon (#304, #314)
+change: A hunter out on their screen but still in the chase by the hub's read reports it again.
+change: The mark's win (or a blown box's price) reads the profile within 30 s for the credits.
+test: 3 SJK players with Box hunt on; as a hunter, amtele/japlus.goto to the mark: you are out.
+test: On the mark's screen that hunter loses the red ring and the card counts one less.
+test: The mark kills the other hunters: You outlasted every hunter, and the credits rise <30 s.
+test: Collection > History has the line Box hunt: you outlasted every hunter.
+note: A lost report is hard to force in game; unit tests in mystery_box/hunt.rs cover it.
 
 [box-hunt-1103]
 area: Gameplay
@@ -1021,7 +1333,9 @@ area: Input
 title: Held mouse 4/5 repeats its bind, in_mouseRepeat (Kushina's idea)
 change: Settings > Controls > Hold mouse 4/5 repeats: Off, Mouse 4 and 5, Mouse 4 only.
 change: 20 presses a second at any frame rate (EJK: every other frame, a server flood).
+change: Repeats start after 250 ms held: a click runs the bind once (hub #317).
 test: bind mouse4 "echo hi", in_mouseRepeat 1, hold mouse 4 in game: 20 his a second.
+test: click mouse 4 quickly: one hi per click; hold it: the his start after a moment.
 test: in_mouseRepeat 2: mouse 5 no longer repeats; open the console: the repeat stops.
 test: bind mouse4 +attack and hold it: one swing chain, as a held key.
 
@@ -2585,6 +2899,18 @@ test: Only chat, team chat and whispers show; cvar changes and connect lines do 
 test: Select across a few lines and Ctrl+C: only the chat lines are copied.
 test: Switch it off: every line is back, in order. Both con_style sjk and classic.
 
+[console-find]
+area: Console & chat
+title: Console find bar: Ctrl+F (Slash, after headshotsmcgee117's idea)
+change: Ctrl+F in the open console puts a find field in place of the input line.
+change: Matches are marked (any case, colour codes ignored), the count shows n/m from the newest.
+test: Open the console with lots of output, Ctrl+F, type a word: matches are marked, 1/m shows.
+test: Enter or F3 goes to older matches, Shift+Enter or Shift+F3 to newer, scrolling there.
+test: Type a word with a colour code inside it in the scrollback (^1He^7llo): hello finds it.
+test: Ctrl+A, C, V and a held Backspace work in the field; Page Up and Down still scroll.
+test: Escape: the input line is back as it was. With con_chatOnly 1 only chat is searched.
+test: Both con_style sjk and classic.
+
 [console-feed]
 area: Console & chat
 title: Console feed (top left notify lines) off by default, con_drawNotify
@@ -2853,6 +3179,16 @@ test: Hold +attack: it fires as before. Hold a chord bound to weapnext: it cycle
 
 
 # ---- Menus & settings ----
+[collection-no-nameplates]
+area: Menus & settings
+title: Collection: the Nameplates tab is gone
+change: The Collection's row goes Medals ... Tags, Holocrons, Forge, Cards, History: no Nameplates.
+change: In-game nameplates and their settings are unchanged (Settings > HUD > Nameplates).
+test: Main page > Collection: no Nameplates tab; Ctrl+Tab from Tags goes to Holocrons.
+test: Click every tab and check its counts in the row; the tally at the top right still adds up.
+test: Settings > HUD: See & share nameplates and Nameplate style still switch the plates in a match.
+test: Shaders and Tags still show Loadouts (P); Discord presence still names each tab.
+
 [staff-chat-translation-stats]
 area: Menus & settings
 title: Staff page Chat tab: chat translation use (Slash, PR #416, needs hub #24)
@@ -3820,6 +4156,27 @@ test: 301 characters: the box stops at 300; sjksay with more sends the first 300
 
 # ---- HUD ----
 
+[status-bars-docked]
+area: HUD
+title: Status bars docked to the bottom and the top, both on, the HUD inside them
+change: Bottom (cg_statusBar): wallet, kyber, effects, weapons + ammo, toys, 24h time, date.
+change: Top (cg_statusBarTop): Force, place/score, time left, joins/leaves, server, map, players.
+change: The HUD, game HUD, chat, notify lines, vote, devmap bar move inside; dupes step aside.
+test: New profile, a match: a thin strip flush on each edge; health/Force blocks sit above it.
+test: Bottom: icons for credits/shards/dormant/coins; weapons centred, the one in hand lit.
+test: Switch weapons: the lit icon follows, ammo after the row; the selector row sits above.
+test: Bottom right: toys, then the time (24h, ticks each minute) and the date dd/mm/yyyy.
+test: Top: Force icons, the selected one lit, Speed on: a cyan dot; 2nd + score; ping, fps.
+test: Server with timelimit: "12:34 left" in the middle, the HUD timer gone; no limit: none.
+test: Bot or friend joins/leaves: green/ember dot + name "joined"/"left" at top right, fades.
+test: cg_drawFps 1: rate only on the bar, frame times under it; cg_drawClock 2: HUD clock gone.
+test: Classic, radial and game HUD; 4:3 and 21:9: nothing under a bar; toys go first on 4:3.
+test: Vote (testvote), chat at the foot, devmap bar (cg_devBar 1 and 2), notify lines: inside.
+test: Tab: bars stay, nothing jumps; Escape, console, cg_drawHud 0, a demo: both bars hide.
+test: News panel: "Bottom bar" and "Top bar" in Settings to review; each switch works.
+test: Settings > HUD > Status bars: each part's switch hides just that part.
+note: cg_statusBarPosition is gone. Insets for other overlays: status_bar.reserved().
+
 [nameplate-height]
 area: HUD
 title: Nameplate height slider (Hormorn, PR #401)
@@ -4096,6 +4453,22 @@ test: Menu and Force icons look as before, edges not cut.
 
 
 # ---- Rendering & effects ----
+
+[load-marks-saber]
+area: Rendering & effects
+title: Map load logs three more steps after the effect atlas
+change: New lines: world load phase particle-pipelines, saber-renderer, dust-weather.
+test: Load any map, open logs/last-client.log: the three lines sit between effect-atlas
+test: and pipelines-ui.
+note: For a GTX 1650 on DX12 that dies silently right after effect-atlas.
+
+[big-glow-model-hitch]
+area: Rendering & effects
+title: No freeze when a player in a model with big glowing textures joins
+change: A model's glow light is worked out once on its loader, not again on the frame it shows.
+test: On a server, have someone join or switch to creyonwolf: no stutter as the wolf appears.
+test: GameData/SJK/logs/session.log: no "hitch" line with config-refresh near that moment.
+note: Sol's 16/11 log: model install creyonwolf 719 ms (materials 709 ms).
 
 [rig-chain-motion]
 area: Rendering & effects
@@ -5047,6 +5420,18 @@ test: Fire in third person, then zoomed in: the beam starts at the gun, not wher
 
 # ---- Audio ----
 
+[emote-hide-mute]
+area: Audio
+title: Hide others' emotes, hide or mute single emotes (Slash, mg.perso's idea)
+change: Settings > Sound > Emotes: Hide others' emotes (cg_hideOthersEmotes, off) hides theirs.
+change: Hidden emotes (cg_hiddenEmotes, emote_hide <id>): those ids are hidden when others play.
+change: Muted emotes (s_mutedEmotes, emote_mute <id>): those ids dance without sound, yours too.
+test: Two SJK players: with Hide others' emotes on, the other's dance and music do not play here.
+test: The same: your own emote still plays and the other player still sees it.
+test: emote_hide dance: their dance is hidden, their wave plays; emote_hide dance again shows it.
+test: emote_mute dance while one plays: silent at once; emote_mute dance again: music in place.
+test: emote_hide and emote_mute alone list the ids; Tab completes the installed ones.
+
 [female-voice-missing-model]
 area: Audio
 title: Female voice for a player whose model is missing (Slash, PR #418, hub #312)
@@ -5145,6 +5530,17 @@ change: With a clean strike a second ore is drawn and the rarer comes out; iron 
 change: The Heart's odds and pity are unchanged; no clean strike, nothing changes.
 test: Mine boulders hitting the glint every time: iron still turns up now and then.
 test: Prospector (mine_kinds) can reach 9/9 for a player who always strikes clean.
+
+[duel-lines]
+area: Console & chat
+title: tell_attacker and duel start, won and lost lines (Ric, Lex Deifaber)
+change: tell_attacker <message> whispers to the last player who hurt you (EJK's).
+change: cg_duelStartLine, cg_duelWinLine, cg_duelLoseLine: whispered to the duel opponent.
+change: Empty (the default) sends nothing; one of each a duel, 10 s apart per kind.
+test: Get hit by a player, tell_attacker hi: they get the whisper. After a fall: refused.
+test: Settings > Chat: set the three lines, start a private duel: the start line goes once.
+test: Win it: the won line goes; lose one: the lost line. Opponent leaves: no end line.
+test: Two duels within 10 s: the second sends no start line.
 
 [duel-modes]
 area: Gameplay
@@ -8425,6 +8821,16 @@ change: Joining an emote starts your music where the leader's is.
 test: A starts an emote with music; B uses Sync emote: B's music plays, in step.
 test: A stops: B's music keeps playing without a jump.
 
+[creyon-hub]
+area: Rendering & effects
+title: Creyon on the hub: werewolf rig model, default and cloth looks
+change: New hub pack sjk_creyon (models/players/creyon, glTF rig, 2 looks, 8.5 MB).
+change: Rigged on Solfox's skeleton; tail chain; hood, cape and loincloth chains.
+test: Start: log says sjk_creyon downloaded; character list shows Creyon and Creyon cloth.
+test: /model creyon then /model creyon/cloth: run, crouch, jump, turn the head.
+test: Cloth look: cape and loincloth swing; crouch may push the long loincloth into floor.
+test: A second SJK client on the same server sees you as Creyon.
+
 [solfox-rig-hub]
 area: Rendering & effects
 title: Solfox on the hub is Sol's new rig model (default and cloth looks)
@@ -10255,3 +10661,12 @@ change: While an NPC's model loads on the worker it is drawn as nothing, not the
 change: An NPC whose model failed to load still shows the stand-in.
 test: Kill tauntauns where they respawn: no Kyle appears before the next one.
 test: devmap, npc spawn reborn and a vehicle from the spawn list: no Kyle for a moment.
+
+[duel-hidden-duellists]
+area: Rendering & effects
+title: Others' duellists can be hidden (cg_duelGhost 2, after headshotsmcgee117's idea)
+change: Duel figures (JoF) has a third choice, Hidden: players in others' duels are not drawn.
+change: Their sabers, shadow, nameplate, effects and sounds go too; your own duel is untouched.
+test: Settings > Quick > Duel figures (JoF): Hidden. Two others duel: they vanish, silent.
+test: The duel ends: both show again. Figures (default) and Dark look as before.
+test: Follow a duellist as a spectator, or duel yourself: you and your opponent show.

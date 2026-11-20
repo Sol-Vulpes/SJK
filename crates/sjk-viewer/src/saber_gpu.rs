@@ -1029,6 +1029,28 @@ impl Runtime {
         }
     }
 
+    /// Whether skin `index` draws as it looks in the menus: it has no signature, or its own
+    /// whole-blade pipeline is built (a failed build draws the shared ones for good). The
+    /// Collection's stills wait for it ([`crate::blade_stills`]).
+    pub(crate) fn skin_ready(&self, index: crate::saber_skins::SkinIndex) -> bool {
+        match self.signed.get(usize::from(index)) {
+            Some(Some(signed)) => signed
+                .built
+                .get()
+                .is_some_and(|built| built.as_ref().is_none_or(|own| own.main.get().is_some())),
+            _ => true,
+        }
+    }
+
+    /// Ask for skin `index`'s signature pipelines: `soon` as the Collection's pictures, else
+    /// with the lowest urgency (a still on screen, so its live picture is ready on a hover).
+    pub(crate) fn ask_build(&self, index: crate::saber_skins::SkinIndex, soon: bool) {
+        if let Some(Some(signed)) = self.signed.get(usize::from(index)) {
+            self.builds
+                .ask(signed, if soon { WANTED_PICTURE } else { WANTED_LATER });
+        }
+    }
+
     /// Ask for every loaded signature's pipelines, as a blade worn later would (the world
     /// shots that wait for them all).
     #[cfg(test)]

@@ -32,7 +32,7 @@ pub(crate) enum Cue {
     WheelMove = 64,
     /// The quick wheel ran the chosen choice.
     WheelRun = 128,
-    /// An unlock pop-up appeared (`unlock_toast.rs`): an achievement, or a medal or
+    /// A reward's notification banner appeared (`unlock_toast.rs`): an achievement, or a medal or
     /// holocron in a match.
     Achievement = 256,
     /// A new medal began its entrance on the medal pop-up (`medal_popup.rs`).
@@ -53,6 +53,11 @@ pub(crate) enum Cue {
     /// An end-to-end encrypted whisper from another player (`e2e_whispers.rs`); its
     /// sound is made in memory, as [`Cue::SjkChat`]'s (`sjk_chat_sound.rs`).
     EncryptedWhisper = 65536,
+    /// A New thing in the Collection was seen for the first time
+    /// (`collection_reveal.rs`): a quiet blip.
+    Reveal = 131_072,
+    /// The same for a Legendary, Mythical or Secret thing: a longer chime.
+    RevealRare = 262_144,
 }
 
 /// `(cue, sound path, volume)` — the game's own sounds, looked up through
@@ -68,7 +73,7 @@ pub(crate) enum Cue {
 /// power screen also plays as powers are picked (`ui/ingameforceselect.menu`);
 /// a run is `button1`, the menus' button press.
 ///
-/// An unlock card (an achievement's, or a medal's or holocron's in a match) plays
+/// A reward's banner (an achievement's, a holocron's, or a medal's in a match) plays
 /// `secret_area`, the single-player game's sound for a secret area found: its game
 /// module (`jagamex86.dll`) plays it with the `@SP_INGAME_SECRET_AREA` centre print.
 /// Its file is in the shared `assets0.pk3`, so a multiplayer install has it.
@@ -86,7 +91,10 @@ pub(crate) enum Cue {
 /// Force jump's charge, cracks open on `holocron.wav`, the sound the multiplayer game
 /// plays when a holocron is picked up (`cgs.media.holocronPickup`), ticks a tile with
 /// `menuroam`, quieter than a hover, and comes to rest on `sub_select`.
-pub(crate) const CUE_SOUNDS: [(Cue, &str, f32); 15] = [
+///
+/// A New thing's first look in the Collection is the world ping's blip, quieter than a
+/// ping; a Legendary or rarer one the holocron's shimmer, softer than its opening's.
+pub(crate) const CUE_SOUNDS: [(Cue, &str, f32); 17] = [
     (Cue::Hover, "sound/interface/menuroam.mp3", 0.6),
     (Cue::Click, "sound/interface/button1.mp3", 0.9),
     (Cue::Back, "sound/interface/esc.mp3", 0.9),
@@ -106,6 +114,8 @@ pub(crate) const CUE_SOUNDS: [(Cue, &str, f32); 15] = [
     (Cue::HolocronOpen, "sound/player/holocron.wav", 0.9),
     (Cue::CrateTick, "sound/interface/menuroam.mp3", 0.45),
     (Cue::CrateLand, "sound/interface/sub_select.mp3", 0.8),
+    (Cue::Reveal, "sound/interface/update.mp3", 0.35),
+    (Cue::RevealRare, "sound/player/holocron.wav", 0.5),
 ];
 
 /// Interface cues never share a channel with world sounds.
@@ -189,6 +199,10 @@ mod tests {
         assert!(volume(Cue::WheelMove) < volume(Cue::Hover));
         assert!(volume(Cue::WheelRun) < volume(Cue::Click));
         assert!(volume(Cue::WheelPage) < 1.0);
+        // A first look is quiet, the rarer one louder but softer than an opening.
+        assert!(volume(Cue::Reveal) < volume(Cue::WorldPing));
+        assert!(volume(Cue::Reveal) < volume(Cue::RevealRare));
+        assert!(volume(Cue::RevealRare) < volume(Cue::HolocronOpen));
         assert_eq!(bits & Cue::SjkChat as u32, 0);
         assert_eq!((Cue::SjkChat as u32).count_ones(), 1);
         assert_eq!(bits & Cue::EncryptedWhisper as u32, 0);

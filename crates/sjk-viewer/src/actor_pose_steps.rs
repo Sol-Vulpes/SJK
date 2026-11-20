@@ -13,11 +13,83 @@ const CROUCH_IDLE: &str = "BOTH_CROUCH1IDLE";
 /// Whether a protocol animation number is one of the standing animations: `BOTH_STAND*`
 /// (the idles and their turns) and the saber stances' idles (`BOTH_SABER*_STANCE`), the
 /// only ones a boxed player is crouched over.
+/// `MASK_SOLID` (`bg_public.h`): the world and terrain, not players' bodies or clip brushes.
+const MASK_SOLID: u32 = 0x0000_1001;
+
+/// The ground under a rig model's actor at `origin` (world) facing `yaw_degrees`, in its
+/// model space ([`crate::rig_model::ground_plane`]): a line traced straight down from the
+/// origin, so its chains lie on the floor rather than through it.
+fn ground_under(
+    mesh: &ActorMesh,
+    origin: [f32; 3],
+    yaw_degrees: f32,
+    snapshot: Option<&Snapshot>,
+    local_entity: Option<EntityId>,
+    collision: &impl sjk_client::pmove::MovementCollision,
+) -> Option<([f32; 3], [f32; 3])> {
+    let end = [
+        origin[0],
+        origin[1],
+        origin[2] - crate::rig_model::GROUND_REACH,
+    ];
+    let trace = collision.trace(origin, [0.0; 3], [0.0; 3], end, MASK_SOLID);
+    if trace.fraction >= 1.0 || trace.start_solid || trace.plane_normal[2] <= 0.0 {
+        return None;
+    }
+    // Drawn as `actor_world_submission` scales it (`CG_Player`, cg_players.c:8479-8493).
+    let state = snapshot.zip(mesh.entity_id).and_then(|(snapshot, id)| {
+        snapshot
+            .entities
+            .iter()
+            .find(|state| u64::from(state.number()) + 1 == id.get())
+    });
+    let local = snapshot
+        .filter(|_| mesh.entity_id.is_some() && mesh.entity_id == local_entity)
+        .map(|snapshot| &snapshot.player);
+    // CG_Player's iModelScale and its origin lift, as the model is drawn.
+    let mut root = sjk_runtime::Transform::IDENTITY;
+    if let Some((percent, npc_class)) =
+        crate::actor_world_submission::model_scale::source(state, local)
+    {
+        crate::actor_world_submission::model_scale::apply(&mut root, percent, npc_class);
+    }
+    let (scale, raised) = (root.scale[0], root.translation[2]);
+    Some(crate::rig_model::ground_plane(
+        origin,
+        yaw_degrees,
+        scale,
+        raised,
+        trace.end_position,
+        trace.plane_normal,
+    ))
+}
+
 fn standing_clip(clip: usize) -> bool {
     sjk_client::legacy_animation_name(clip).is_some_and(|name| {
         name.starts_with("BOTH_STAND")
             || (name.starts_with("BOTH_SABER") && name.ends_with("_STANCE"))
     })
+}
+
+/// `EF_DEAD` (`bg_public.h`).
+const EF_DEAD: u32 = 1 << 1;
+
+/// Whether the actor's entity carries `EF_DEAD`; the local player's flags are its
+/// player state's.
+fn dead(snapshot: Option<&Snapshot>, entity_id: Option<EntityId>, local: bool) -> bool {
+    let (Some(snapshot), Some(id)) = (snapshot, entity_id) else {
+        return false;
+    };
+    let flags = if local {
+        snapshot.player.entity_flags()
+    } else {
+        snapshot
+            .entities
+            .iter()
+            .find(|state| u64::from(state.number()) + 1 == id.get())
+            .map_or(0, |state| state.e_flags())
+    };
+    flags & EF_DEAD != 0
 }
 
 /// Immutable inputs shared by independently prepared actors in one frame.
@@ -210,6 +282,7 @@ pub(super) fn prepare(mesh: &mut ActorMesh, frame: &Frame<'_>) -> Result<(), Box
     if !mesh.animator.humanoid() {
         mesh.render_yaw_degrees = None;
         mesh.preview.rig_pose.halt_motion();
+        mesh.preview.rig_pose.stand_on(None);
         if let (Some(snapshot), Some(game_state), Some(id)) = (snapshot, game_state, mesh.entity_id)
             && let Some(state) = snapshot
                 .entities
@@ -262,9 +335,38 @@ pub(super) fn prepare(mesh: &mut ActorMesh, frame: &Frame<'_>) -> Result<(), Box
                 source,
             );
         }
+        if mesh
+            .preview
+            .rig
+            .as_ref()
+            .is_some_and(|rig| rig.wants_ground())
+        {
+            let ground = ground_under(
+                mesh,
+                origin,
+                angles.legs_yaw_degrees,
+                snapshot,
+                local_entity,
+                collision,
+            );
+            mesh.preview.rig_pose.stand_on(ground);
+        }
     } else {
         mesh.animator.clear_player_angles();
         mesh.preview.rig_pose.halt_motion();
+        mesh.preview.rig_pose.stand_on(None);
+    }
+    // `CG_G2PlayerHeadAnims` follows the player angles: blinks and the face's
+    // expressions. A rig model maps the stock skeleton onto its own bones, whose eyes
+    // a stock blink would turn the wrong way, so it keeps its face.
+    if mesh.animator.humanoid() && !mesh.corpse_pool && mesh.preview.rig.is_none() {
+        let dead = dead(snapshot, mesh.entity_id, mesh.entity_id == local_entity);
+        mesh.animator.head_anims(
+            &mesh.preview.animation,
+            &mesh.preview.config,
+            presentation_time,
+            dead,
+        );
     }
     mesh.animator.requested = Some(state);
     Ok(())

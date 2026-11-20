@@ -14,8 +14,8 @@
 //! They are written to `target/menu-snapshots/` in the workspace at
 //! 1440x1080 (the 640x480 canvas at 2.25 units per pixel). The drawing is an
 //! approximation of the UI renderer: rounded rectangles anti-aliased over one
-//! pixel, nearest-texel art without its motion and flicker, the Inter font only, and
-//! only the atlas icons a screen's test supplies. Text is drawn over every shape,
+//! pixel, nearest-texel art without its motion and flicker, acrylic glass as its plain tint
+//! (no blur), the Inter font only, and only the atlas icons a screen's test supplies. Text is drawn over every shape,
 //! as on screen. The in-game menus are drawn over a retail levelshot standing for
 //! the match.
 
@@ -474,6 +474,12 @@ fn raster(
                     }
                 }
             }
+            // The CPU has no blurred frame: acrylic draws its plain tint, as the renderer
+            // does where it cannot blur.
+            DrawCommand::Backdrop { rect, radius, tint } => {
+                let plain = sjk_ui::acrylic::fallback(*tint);
+                fill_rounded(image, *rect, *radius, clip, color(plain, o));
+            }
             DrawCommand::CardShine { rect, shine } => {
                 let (xs, ys) = span(*rect, clip);
                 for y in ys {
@@ -722,7 +728,7 @@ impl Snapshot {
 /// SJK's emblem in one atlas cell, as the renderer uploads it.
 fn logo_icon() -> RgbaImage {
     let emblem =
-        image::load_from_memory(include_bytes!("../../../assets/branding/sjk-logo-512.png"))
+        image::load_from_memory(include_bytes!("../../../assets/branding/emblem-chat.png"))
             .expect("the emblem decodes")
             .into_rgba8();
     image::imageops::resize(&emblem, 128, 128, image::imageops::FilterType::Lanczos3)
@@ -1560,6 +1566,7 @@ fn identity_page(shots: &Snapshot, art: ArtSet) {
             staff: false,
             creator: false,
             jkr_creator: false,
+            all_access: false,
             trust: None,
             emoji: String::new(),
             created: 0,
@@ -1934,6 +1941,7 @@ fn player_card_profile(shots: &mut Snapshot) {
         staff: true,
         creator: false,
         jkr_creator: false,
+        all_access: false,
         trust: None,
         emoji: String::new(),
         created: 1_790_812_800,
@@ -2481,6 +2489,67 @@ fn sjk_settings_snapshot() {
         let list = menu.draw_list().expect("the settings screen draws");
         save_sjk_shot(name, viewport, &backdrop, list, &icons, fonts);
     }
+}
+
+/// The SJK UI's themes (`menu::sjk::theme`): Settings > Interface on the theme hue
+/// row over the duel6 levelshot, in the warm and cold presets and two custom hues.
+#[test]
+#[ignore = "reads the installed game data named by JKA_GAME_DATA"]
+fn sjk_theme_snapshot() {
+    use crate::game_font::SjkFonts;
+    use crate::menu::sjk::{TextTarget, theme};
+    let (_, vfs) = art();
+    let display = crate::text::load_family(&crate::text::DISPLAY, 1.0, None).expect("Rajdhani");
+    let body = crate::text::load_family(&crate::text::BODY, 1.0, None).expect("Exo 2");
+    let backdrop = decode(&vfs, "levelshots/mp/duel6.jpg").expect("the duel6 levelshot");
+    let mut icons = HashMap::new();
+    for (index, (_, bytes)) in crate::settings_icons::ICONS.iter().enumerate() {
+        let icon = image::load_from_memory(bytes).expect("a settings icon");
+        icons.insert(
+            crate::ui_renderer::settings_icon(index).0,
+            icon.into_rgba8(),
+        );
+    }
+    let directory = tempfile::tempdir().unwrap();
+    let mut console =
+        crate::console::ViewerConsole::new(directory.path().join("config.cfg")).unwrap();
+    let cases = [
+        ("sjk-theme-warm", None, None),
+        ("sjk-theme-cold", Some("cold"), None),
+        ("sjk-theme-custom-150", None, Some("150")),
+        ("sjk-theme-custom-275", None, Some("275")),
+    ];
+    for (name, preset, hue) in cases {
+        if let Some(hue) = hue {
+            console.set_cvar(theme::HUE_CVAR, hue);
+        }
+        if let Some(preset) = preset {
+            console.set_cvar(theme::CVAR, preset);
+        }
+        theme::sync(&console);
+        let mut menu = crate::menu::ClientMenu::new(true, String::new());
+        menu.sjk_settings_for_snapshot(&console, 7, Some(theme::HUE_CVAR), false, None);
+        let (mut display_text, mut body_text) = (Vec::new(), Vec::new());
+        menu.append_sjk_settings(
+            TextTarget::Families(
+                SjkFonts {
+                    display: (&mut display_text, &display.font),
+                    body: (&mut body_text, &body.font),
+                    code: None,
+                },
+                crate::text::TextStyle::NEUTRAL,
+            ),
+            VIEWPORT_WIDE,
+        );
+        let fonts = SjkShotFonts {
+            display: (&display_text, &display.image),
+            body: (&body_text, &body.image),
+        };
+        let list = menu.draw_list().expect("the settings screen draws");
+        save_sjk_shot(name, VIEWPORT_WIDE, &backdrop, list, &icons, fonts);
+    }
+    console.set_cvar(theme::CVAR, theme::Theme::DEFAULT_NAME);
+    theme::sync(&console);
 }
 
 /// The HUD picker's card over the duel6 levelshot, with the retail HUD, SJK
@@ -3298,6 +3367,7 @@ fn medals_snapshot() {
             staff: false,
             creator: false,
             jkr_creator: false,
+            all_access: false,
             trust: None,
             emoji: String::new(),
             created: 0,

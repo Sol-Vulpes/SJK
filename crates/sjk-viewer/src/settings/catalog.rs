@@ -260,7 +260,7 @@ pub(super) const AUDIO: &[Setting] = &[
         kind: ValueKind::Bool,
     },
     Setting {
-        label: "Blade skin sounds",
+        label: "Kyber sounds",
         cvar: crate::audio::SKIN_SOUNDS_CVAR,
         kind: ValueKind::Choice(&["0", "1", "2"]),
     },
@@ -356,6 +356,21 @@ pub(super) const AUDIO: &[Setting] = &[
         label: "Mute emotes in duels",
         cvar: crate::emotes::DUEL_MUTE_CVAR,
         kind: ValueKind::Bool,
+    },
+    Setting {
+        label: "Hide others' emotes",
+        cvar: crate::emote_filters::OTHERS_CVAR,
+        kind: ValueKind::Bool,
+    },
+    Setting {
+        label: "Hidden emotes",
+        cvar: crate::emote_filters::HIDE_CVAR,
+        kind: ValueKind::Text,
+    },
+    Setting {
+        label: "Muted emotes",
+        cvar: crate::emote_filters::MUTE_CVAR,
+        kind: ValueKind::Text,
     },
     Setting {
         label: "Attack ends emote",
@@ -579,6 +594,121 @@ pub(super) const HUD_OPTIONS: &[Setting] = &[
     Setting {
         label: "Local time: 12-hour",
         cvar: crate::hud::clock::HOURS_CVAR,
+        kind: ValueKind::Bool,
+    },
+    Setting {
+        label: "Bottom bar",
+        cvar: crate::status_bar::CVAR,
+        kind: ValueKind::Bool,
+    },
+    Setting {
+        label: "Bottom bar: credits",
+        cvar: crate::status_bar::Part::Credits.cvar(),
+        kind: ValueKind::Bool,
+    },
+    Setting {
+        label: "Bottom bar: shards",
+        cvar: crate::status_bar::Part::Shards.cvar(),
+        kind: ValueKind::Bool,
+    },
+    Setting {
+        label: "Bottom bar: to attune",
+        cvar: crate::status_bar::Part::Crystals.cvar(),
+        kind: ValueKind::Bool,
+    },
+    Setting {
+        label: "Bottom bar: DOOM coins",
+        cvar: crate::status_bar::Part::Coins.cvar(),
+        kind: ValueKind::Bool,
+    },
+    Setting {
+        label: "Bottom bar: new things",
+        cvar: crate::status_bar::Part::New.cvar(),
+        kind: ValueKind::Bool,
+    },
+    Setting {
+        label: "Bottom bar: kyber",
+        cvar: crate::status_bar::Part::Saber.cvar(),
+        kind: ValueKind::Bool,
+    },
+    Setting {
+        label: "Bottom bar: effects",
+        cvar: crate::status_bar::Part::Effects.cvar(),
+        kind: ValueKind::Bool,
+    },
+    Setting {
+        label: "Bottom bar: weapons",
+        cvar: crate::status_bar::Part::Weapons.cvar(),
+        kind: ValueKind::Bool,
+    },
+    Setting {
+        label: "Bottom bar: toys",
+        cvar: crate::status_bar::Part::Toys.cvar(),
+        kind: ValueKind::Bool,
+    },
+    Setting {
+        label: "Bottom bar: time",
+        cvar: crate::status_bar::Part::Time.cvar(),
+        kind: ValueKind::Bool,
+    },
+    Setting {
+        label: "Bottom bar: date",
+        cvar: crate::status_bar::Part::Date.cvar(),
+        kind: ValueKind::Bool,
+    },
+    Setting {
+        label: "Top bar",
+        cvar: crate::status_bar::TOP_CVAR,
+        kind: ValueKind::Bool,
+    },
+    Setting {
+        label: "Top bar: Force powers",
+        cvar: crate::status_bar::Part::Force.cvar(),
+        kind: ValueKind::Bool,
+    },
+    Setting {
+        label: "Top bar: score",
+        cvar: crate::status_bar::Part::Score.cvar(),
+        kind: ValueKind::Bool,
+    },
+    Setting {
+        label: "Top bar: time left",
+        cvar: crate::status_bar::Part::TimeLeft.cvar(),
+        kind: ValueKind::Bool,
+    },
+    Setting {
+        label: "Top bar: joins, leaves",
+        cvar: crate::status_bar::Part::Feed.cvar(),
+        kind: ValueKind::Bool,
+    },
+    Setting {
+        label: "Top bar: server name",
+        cvar: crate::status_bar::Part::Server.cvar(),
+        kind: ValueKind::Bool,
+    },
+    Setting {
+        label: "Top bar: map",
+        cvar: crate::status_bar::Part::Map.cvar(),
+        kind: ValueKind::Bool,
+    },
+    Setting {
+        label: "Top bar: game type",
+        cvar: crate::status_bar::Part::Mode.cvar(),
+        kind: ValueKind::Bool,
+    },
+    Setting {
+        label: "Top bar: players",
+        cvar: crate::status_bar::Part::Players.cvar(),
+        kind: ValueKind::Bool,
+    },
+    Setting {
+        label: "Top bar: ping",
+        cvar: crate::status_bar::Part::Ping.cvar(),
+        kind: ValueKind::Bool,
+    },
+    Setting {
+        label: "Top bar: frame rate",
+        cvar: crate::status_bar::Part::Fps.cvar(),
         kind: ValueKind::Bool,
     },
     Setting {
@@ -1010,6 +1140,26 @@ pub(super) const HUD: &[Setting] = &[
         kind: ValueKind::Bool,
     },
     Setting {
+        label: "Feats",
+        cvar: crate::hud::feats::CVAR,
+        kind: ValueKind::Bool,
+    },
+    Setting {
+        label: "Feat medals",
+        cvar: crate::hud::feats::MEDALS_CVAR,
+        kind: ValueKind::Bool,
+    },
+    Setting {
+        label: "Feat announcer",
+        cvar: crate::hud::feats::VOICE_CVAR,
+        kind: ValueKind::Bool,
+    },
+    Setting {
+        label: "Announcer voice",
+        cvar: crate::feats::announcer::CVAR,
+        kind: ValueKind::Live(crate::feats::announcer::choices),
+    },
+    Setting {
         label: "Chat",
         cvar: "cg_drawChat",
         kind: ValueKind::Bool,
@@ -1037,6 +1187,26 @@ pub(super) const HUD: &[Setting] = &[
     Setting {
         label: "Do not disturb in duels",
         cvar: crate::chat::quiet::DUEL_CVAR,
+        kind: ValueKind::Bool,
+    },
+    Setting {
+        label: "Duel start line",
+        cvar: crate::duel_lines::START_CVAR,
+        kind: ValueKind::Text,
+    },
+    Setting {
+        label: "Duel won line",
+        cvar: crate::duel_lines::WIN_CVAR,
+        kind: ValueKind::Text,
+    },
+    Setting {
+        label: "Duel lost line",
+        cvar: crate::duel_lines::LOSE_CVAR,
+        kind: ValueKind::Text,
+    },
+    Setting {
+        label: "Duel lines to all chat",
+        cvar: crate::duel_lines::TO_ALL_CVAR,
         kind: ValueKind::Bool,
     },
     Setting {
@@ -1517,7 +1687,7 @@ pub(super) const GAME: &[Setting] = &[
     Setting {
         label: "Duel figures (JoF)",
         cvar: crate::duel_ghost::CVAR,
-        kind: ValueKind::Bool,
+        kind: ValueKind::Choice(&["0", "1", "2"]),
     },
     Setting {
         label: "Hide others in duel",
@@ -1714,9 +1884,37 @@ pub(super) const GAME: &[Setting] = &[
         kind: ValueKind::Bool,
     },
     Setting {
+        label: "Collection hall",
+        cvar: crate::console::collection_panel::hall::CVAR,
+        kind: ValueKind::Bool,
+    },
+    Setting {
         label: "Menu style",
         cvar: crate::menu::style::CVAR,
         kind: ValueKind::Choice(&crate::menu::style::MenuStyle::NAMES),
+    },
+    Setting {
+        label: "Theme",
+        cvar: crate::menu::sjk::theme::CVAR,
+        kind: ValueKind::Choice(&crate::menu::sjk::theme::Theme::NAMES),
+    },
+    Setting {
+        label: "Theme hue",
+        cvar: crate::menu::sjk::theme::HUE_CVAR,
+        kind: ValueKind::Integer {
+            min: 0,
+            max: crate::menu::sjk::theme::HUE_MAX,
+            step: crate::menu::sjk::theme::HUE_STEP,
+        },
+    },
+    Setting {
+        label: "Theme saturation",
+        cvar: crate::menu::sjk::theme::SATURATION_CVAR,
+        kind: ValueKind::Integer {
+            min: 0,
+            max: crate::menu::sjk::theme::SATURATION_MAX,
+            step: crate::menu::sjk::theme::SATURATION_STEP,
+        },
     },
     Setting {
         label: "SJK Launcher notice",
@@ -1966,7 +2164,7 @@ pub(super) const NETWORK: &[Setting] = &[
     },
     Setting {
         label: "Holocron notifications",
-        cvar: crate::holocron_popup::NOTIFICATIONS_CVAR,
+        cvar: crate::holocron_banners::NOTIFICATIONS_CVAR,
         kind: ValueKind::Choice(&["0", "1", "2"]),
     },
     Setting {

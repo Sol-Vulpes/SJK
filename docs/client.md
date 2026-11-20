@@ -682,13 +682,14 @@ the client's own shapes. Retail assets are never bundled.
 The art moves as retail's shaders move it (`shaders/ui.shader`); the `.menu`
 scripts themselves only swap pages at once and show or hide the glows. Retail's
 main page plays `video/ja01` (`gfx/menus/videologo`) in its ring; SJK shows its
-own emblem there instead and does not read the video: the gold
-starburst with the JK blade, centred in the centre window's opening and drawn
-over the frames, 176 of the 640x480 canvas's units across (about 400 pixels at
-1080 lines, 790 at 2160), with or without the retail art. Its orange core and
-ring breathe (glow strength 0.08 to 0.45 every 4.2 seconds) and the blade's cyan
-lights shimmer (0.30 ± 0.15 from two sines of 0.9 and 0.37 seconds), drawn as
-additive glow layers over the still emblem. The emblem is bundled
+own emblem there instead and does not read the video: the steel monogram before
+a burning sun (since 16/11/2026; the gold starburst before), centred in the
+centre window's opening and drawn over the frames, 176 of the 640x480 canvas's
+units across (about 400 pixels at 1080 lines, 790 at 2160), with or without the
+retail art. Its sun is additive layers behind the still steel, kept inside that
+square here: the plasma disc turns once in four minutes and breathes, two flame
+layers turn against each other and cross-fade on an uneven beat, the rays
+shimmer and the embers drift out (`menu/art/motion.rs`). The emblem is bundled
 ([assets/branding](../assets/branding/README.md), drawn by
 [menu/emblem.rs](../crates/sjk-viewer/src/menu/emblem.rs)) and decoded with its
 mip chain on a worker thread when the first menu shows. The SJK UI's main page
@@ -1032,7 +1033,7 @@ or off from it) set it. Each level holds the ones below it:
 
 | Level | What goes |
 | --- | --- |
-| Minimal (1) | Other players' emotes (playing ones end) and toys, as for a muted player but seen and heard otherwise; the toys' own "See ..." switches, tags and GIF tags off; status balloon pictures return to stock; holocron cards off and every unlock card in a game waits until Tactical is off |
+| Minimal (1) | Other players' emotes (playing ones end) and toys, as for a muted player but seen and heard otherwise; the toys' own "See ..." switches, tags and GIF tags off; status balloon pictures return to stock; every notification banner in a game, holocrons' included, waits until Tactical is off (holocron notifications went off until 16/11/2026, when the game menu's pop-up still showed the holocron) |
 | Medium (2) | Also the Vanilla graphics preset, no weather, clouds, lightning, weather sounds or map fog (`r_drawfog 0`), every blade stock (`cg_stockBlades 2`), no finishers, Force Speed afterimages or toon shading |
 | Max (3) | Also the flat world (`r_flatWorld`), no server or shared remaps, and every other player drawn plain: in `cg_tacticalModel` (`kyle` by default, `model` or `model/skin`; a team game's red or blue kept), the default saber (the stock staff for a staff) in the default blue, without hat, cape or blade skin, as a [blocked player](hub-chat.md#blocking-a-player) is drawn, their names, chat and sounds untouched |
 
@@ -1168,7 +1169,7 @@ or a JA+ black blade included, and the player card's swatches. At 0 a blade keep
 own colour unless it is the other team's (blue on red, red on blue) or past purple
 (RGB, black and the other extended colours), as in EJK. Free players, spectators and
 other game types keep each player's own colours. Fixes hub report 70 (random saber
-colours in team FFA). An SJK blade shader stays worn and takes the team colour as its
+colours in team FFA). An SJK kyber stays worn and takes the team colour as its
 base, as it takes the player's own colour elsewhere (a chroma turns to red or blue,
 [unlockables.md](unlockables.md#chromas); integrator's choice, 17/10/2026, Sol may
 revisit). See [team_sabers.rs](../crates/sjk-viewer/src/team_sabers.rs) and
@@ -1176,7 +1177,7 @@ revisit). See [team_sabers.rs](../crates/sjk-viewer/src/team_sabers.rs) and
 
 `cg_ctfTeamSabers` (archived, default 0; same pages, **CTF team saber colours**) goes
 further in capture the flag and capture the ysalamiri: every red or blue player's blades
-in their team's stock colour with no blade shader over them, muted players' default
+in their team's stock colour with no kyber over them, muted players' default
 saber included, whatever `cg_saberTeamColors` says. From SJK pull request #113 (Slash),
 made an option at the merge (Sol's choice, 17/10/2026).
 
@@ -1196,7 +1197,7 @@ class without one leaves the player's own. SJK does the same client-side
 it reads the installed class files once per Siege map (in the order SJK's server reads them) and
 works each player's colours out again only when the serverinfo or a player's
 configstring changes. The colours apply to held and thrown blades and the player
-card's swatches, replace a JA+ black blade, and keep an SJK blade shader worn over
+card's swatches, replace a JA+ black blade, and keep an SJK kyber worn over
 them, as the team colours do. Blocking a player still leaves their class colour (the
 game sets it, not the player), as it leaves a team colour. Only cgame forces the
 colour: the server, stock and SJK's own, sends `c1`/`c2` as the player set them.
@@ -1270,6 +1271,25 @@ and a JA+ 2.5 server restarts the kick with no stand and no flip (a demo of 30/1
 then kept the finished kick's clock, the legs started their kick on its frame, and the
 kick stood frozen while the server kept kicking (Slash, 30/10/2026). Other players are
 shown the server's animation, which carries no timers, so this does not reach them.
+
+## Blinking and facial expressions
+
+Humanoid players and NPCs whose skeleton has a `face` bone blink and change their
+expression as stock cgame's `CG_G2PlayerHeadAnims` makes them (`cg_players.c`), run after
+the player angles each frame. Each actor keeps its own timers (`clientInfo_t::facial_*`):
+the eyes shut every 4 to 8 seconds for 300 ms (`CG_G2SetHeadBlink`: `leye` and `reye`
+turned `(0, -50, 0)`, `BONE_ANGLES_POSTMULT` about `POSITIVE_Y`, `POSITIVE_Z`,
+`POSITIVE_X`), one blink in twenty a wink of the left eye; every 7 to 10 seconds the
+`face` bone plays `FACE_ALERT`, or `FACE_FROWN` when that timer is due too, for 2
+seconds (`CG_G2SetHeadAnim`, set again each frame without a blend, so it holds its first
+frame and plays on after); a dead player's face plays `FACE_DEAD`, frozen, which shuts the
+eyes. The talking faces need the voice channel's lip-sync amplitude
+(`S_GetVoiceVolume`), which SJK's mixer does not measure, so faces never talk yet. Body
+copies and cut-off limbs keep the face they were copied with. Rig (glTF) models are left
+out: they map the stock skeleton onto their own bones. Before 17/11/2026 SJK had none of
+this and models never blinked (Goylander's report). See
+[head_anims.rs](../crates/sjk-client/src/head_anims.rs) and
+[ghoul2_pose.rs](../crates/sjk-client/src/ghoul2_pose.rs).
 
 ## Tavion and Desann idle poses
 
@@ -2724,7 +2744,7 @@ works](rendering.md#graphics-reload)):
   card in the SJK UI's look, in every menu style, says what changed ("Vanilla
   graphics apply after a graphics reload", or the settings by name) with **Reload now**
   (Enter) and **Later** (Escape). Later puts it away until another such setting
-  changes; it waits for the medal and holocron pop-ups and the console.
+  changes; it waits for the medal pop-up and the console.
 - On a server (or in a local game) the map loads again under the loading screen,
   as on a map change to the same map, in a few seconds (ffa3 took 5.6 to 7.2 s
   off-screen, see [status](status.md)); the connection stays and the player stands still meanwhile,
@@ -3377,6 +3397,29 @@ in [quiet_chat.rs](../crates/sjk-client/src/quiet_chat.rs)). The SJK scoreboard 
 needs the hub to relay the flag (for example a `dnd` field in the look of
 `POST /v1/look`, given back in presence and look events), which it does not yet.
 
+**Duel lines** (Ric's idea, extended by Lex Deifaber, #ideas 04/11/2026): three archived text
+settings, empty (off) by default, in Settings > Chat in both styles: **Duel start line**
+(`cg_duelStartLine`), **Duel won line** (`cg_duelWinLine`) and **Duel lost line**
+(`cg_duelLoseLine`). Each is whispered (`tell`) to your private duel opponent, as the duel
+starts, after you win it and after you lose it. A whisper rather than `say`: the duel is
+between two players, the line stays out of everyone else's chat, works on every server and
+counts for nobody's flood guard. **Duel lines to all chat** (`cg_duelLinesToAll`, off by
+default) sends them as `say` instead, for players who want the server to read them; the same
+once-a-duel and 10-second limits apply. JA++ has no built-in setting for it (its players script it on
+its client Lua's `PrivateDuel` event); EternalJK players bind `tell_attacker gg`. The duel is the
+player's own `ps.duelInProgress` with `ps.duelIndex` (never a followed player's, never a Duel
+game type's rounds); its end is told by the obituaries, as the achievements read them: the
+opponent's means won, your own (or the duel ending with you dead) lost, waiting up to two
+seconds for an obituary that comes a snapshot late. A duel that ends any other way (the
+opponent leaves, the map changes, you go to spectators) sends no end line, and a line goes only
+while the opponent is still in the game. Each duel sends one start and one end line at most,
+and two lines of a kind are at least 10 seconds apart (a later one is dropped, not queued), so
+duels accepted and ended back to back cannot turn it into spam. The line is sent as typed chat
+is: substitutions, colours, encrypted to an SJK player who takes encrypted whispers
+([duel_lines.rs](../crates/sjk-viewer/src/duel_lines.rs)). The quick wheel is not used for
+it: its choices are console commands of any kind (emotes, toys, weather), not lines of text,
+and running one by itself at a duel's start would run whatever the slot holds.
+
 Chat remains connected to the real server during intermission, including
 global/team/private composer messages and console/bound chat commands. Messages
 received during background loading are retained; its loading notice hides the HUD. The scoreboard reserves a separate left column for messages and the
@@ -3652,6 +3695,15 @@ Your own whispers, which the server echoes back, do not count; when nobody has
 whispered, or the player left or renamed, `reply` says so and sends nothing
 ([chat/reply.rs](../crates/sjk-viewer/src/chat/reply.rs)).
 
+`tell_attacker <message>` (stock cgame's `CG_TellAttacker_f`, which EternalJK players bind to
+a key as an auto-reply, after Ric's idea of 04/11/2026) whispers `message` to the last player
+who hurt you: `ps.persistant[PERS_ATTACKER]`, once a hit has set stock's `cg.attackerTime`
+gate, the same one `messagemode4` uses. Where stock sends a `tell` the server refuses when
+the last hurt came from the world or from yourself, SJK says "no player has hurt you yet"
+and sends nothing, and it says so as well when that player has left. The message goes the
+way a typed `tell` goes: substitutions, colours, encrypted to an SJK player who takes
+encrypted whispers ([console_client.rs](../crates/sjk-viewer/src/console_client.rs)).
+
 `clientlist` (also `showplayerid`, JoF EJK's `showPlayerId` spelling) lists each player
 in the console: the client number, a team letter (F free, R red, B blue, S spectator),
 the name and ` (bot)` after bots, then `Listed N clients`. Commands that take a client
@@ -3674,7 +3726,7 @@ Write each token as a separate word; matching ignores case. For example,
 | `%F%` | Force reserve |
 | `%W%` | Current weapon's EJK display name |
 | `%A%` | Current weapon's ammo pool, including its negative sentinel |
-| `%P%` | SJK lagometer's latest snapshot latency estimate in milliseconds |
+| `%P%` | The latest snapshot's ping in milliseconds, stock's `cl.snap.ping` as EJK's `CG_Say_f` writes it (the lagometer's, [Lagometer](#lagometer)); 0 in a demo or a local game |
 | `%U%` | Horizontal speed in units per second, rounded to an integer |
 | `%UKM%` | Horizontal speed using EJK's km/h conversion, one decimal |
 | `%UM%` | Horizontal speed using EJK's mph conversion, one decimal |
@@ -3849,6 +3901,135 @@ on the HUD: 1 the time, 2 the time and the date (`dd/mm/yyyy`) after it, 3 the d
 PC's clock is read at most once a second into retained text
 ([clock.rs](../crates/sjk-viewer/src/hud/clock.rs)).
 
+## Status bars
+
+Two thin bars docked to the screen's edges over play (Sol's requests, 15/11/2026 for the
+first bar, 16/11/2026: "stick it to the top or bottom of the screen, not a bubble ... both
+enabled same time"): full width, flush with the edge, about 28 pixels tall at 1080 lines
+(more with a larger `ui_textScale`), in the SJK UI's look in every menu style (clear
+acrylic glass since 17/11/2026, the game blurred behind it under a third of the ground's
+ember tint, Sol: "the top bar and bottom bar really need much more transparency"; an
+amber hairline along the inner edge; the UI's families; both the tint and the hairline
+follow the [SJK UI theme](sjk-ui.md#theme) since 18/11/2026), each with a left, a centre and a
+right group. Both are on by default (Sol's choice, 16/11/2026); the release
+that brought them asks again in the News panel's settings to review (`= cg_statusBar
+reset`, `= cg_statusBarTop reset`), so a value saved by an earlier build does not keep
+them off unchosen. Settings > HUD, under "Status bars": "Bottom bar" (`cg_statusBar`),
+"Top bar" (`cg_statusBarTop`) and a switch for each part, all on. `cg_statusBarPosition`,
+which put the one bar at the top, is gone (16/11/2026): both edges are used.
+
+The bottom bar carries what the player has and wears:
+
+| Part | Switch | Where | Shows |
+| --- | --- | --- | --- |
+| Credits | `cg_statusBarCredits` | left | The credits' sign in gold and the hub's credits, digits grouped by three ("12 340") |
+| Kyber shards | `cg_statusBarShards` | left | The kyber shard in cyan and the hub's kyber shards |
+| To attune (dormant kybers) | `cg_statusBarCrystals` | left | The best held tier's dormant kyber picture and how many are still to attune, as the profile lists them (among its last 100 holocrons) |
+| DOOM coins | `cg_statusBarCoins` | left | A red coin with the wheel's spokes and the DOOM coins, once the hub's WHEEL OF DOOM answer has come (`toy_wheelofdoom`, a wheel on the map) |
+| New things | `cg_statusBarNew` | left | While the Collection holds New things ([sjk-ui.md](sjk-ui.md#new-on-every-kind)): "3 new in your Collection" in gold for the rest of the map they arrived on (or the next map, when they came between maps), then a gold dot alone until they are seen; more arriving says it again (15/11/2026) |
+| Kyber | `cg_statusBarSaber` | left | The first saber's kyber: its tier's diamonds (as the Collection marks tiers) and its name in the tier's colour ("Stock blade" when none), and the second saber's when it wears another |
+| Effects | `cg_statusBarEffects` | left | A pill for each thing on: the blade's extras switched on, the finisher worn, Tactical mode's level, Do not disturb, away, toon shading |
+| Weapons | `cg_statusBarWeapons` | centre | The weapons held by their selection icons, in the selection wheel's order (empty ones by their `_na` icon, the saber by its style's), the one in hand lit on a holo ground and underlined in gold, then its ammunition (ember at five or fewer; the room stays while a weapon held takes ammunition, so the row does not shift); the followed player's while following, none while spectating freely |
+| Toys | `cg_statusBarToys` | right | Every toy with a switch, its quick wheel picture lit with a gold dot while on, faint while off (the Prop gun, which has no picture, by its letters) |
+| Time | `cg_statusBarTime` | right | The PC's local time on the 24-hour clock (`21:07`), read once a second |
+| Date | `cg_statusBarDate` | right | The date day first (`16/11/2026`) |
+
+The top bar carries the match:
+
+| Part | Switch | Where | Shows |
+| --- | --- | --- | --- |
+| Force powers | `cg_statusBarTopForce` | left | The Force powers known, by their Force bar pictures in the wheel's order (JoF's Stasis, Repulse and Dash too), the selected one lit and underlined, one in use marked with a holo dot; none while spectating or following. Levels are not shown: protocol 26 sends only Jump's and Sense's |
+| Score | `cg_statusBarTopScore` | left | The player's place ("2nd", "Tied 3rd", gold when first) and score; in a team game the red and blue scores, the player's own brighter; none while watching |
+| Time left | `cg_statusBarTopTimeLeft` | centre | A clock face and the match's time left from the server's `timelimit` and the level's start (`12:04`, `1:02:09` past an hour), ember under a minute; nothing without a time limit |
+| Joins and leaves | `cg_statusBarTopFeed` | right | The last three players to join or leave, each a green (joined) or ember (left) dot, the name in its colours and "joined" or "left", shown 6 seconds then fading over 1.2; the newest stands nearest the server's name |
+| Server name | `cg_statusBarTopServer` | right | `sv_hostname` in its colours, cut to an ellipsis past 250 pixels |
+| Map | `cg_statusBarTopMap` | right | The map's name without `mp/` |
+| Game type | `cg_statusBarTopMode` | right | A pill: FFA, Duel, Power Duel, Team FFA, Siege, CTF, CTY... |
+| Players | `cg_statusBarTopPlayers` | right | A person's mark, the players on the server (the filled player slots, bots and spectators included) and its slots (`sv_maxclients`) |
+| Ping | `cg_statusBarTopPing` | right | The ping in milliseconds as the server measures it, the scoreboard's number (below), green under 80, gold under 150, ember beyond; none in a local game |
+| Frame rate | `cg_statusBarTopFps` | right | The frames per second the client measures (the `cg_drawFps` rate) |
+
+The ping is the one players compare, the scoreboard's: the server times each snapshot from
+its leaving to the arrival of the packet that acknowledges it and averages the last 32
+(`SV_CalcPings`). Our own row's ping from a `scores` reply is shown for 5 seconds after it
+came; replies come only while the scoreboard is held (a request every 2 seconds) or at an
+intermission, and the bar asks for none, as servers count client commands (JoF's cap them).
+Between replies it shows the average of the last 32 snapshots' stock ping (the lagometer's,
+[below](#lagometer)), counting only snapshots that show our own commands run (not a
+followed player's, not the intermission's) and leaving out stock's 999 for "no packet
+reached". That ping has the server measure's parts the other way round (a round trip, a wait
+of up to a packet interval at one end and up to a frame at the other), so the averages agree
+where single samples wander by a packet interval and a frame. With neither new, the newer
+value stays: spectating a player keeps the ping measured before. Until 17/11/2026 the bar
+showed `serverTime - ps.commandTime`, how far our commands trail the server's clock, which
+sits near 50 ms on JoF however good the connection (Sol saw 50 where the scoreboard said
+10). See [status_bar/ping.rs](../crates/sjk-viewer/src/status_bar/ping.rs). Not compared
+with the scoreboard in game yet.
+
+The joins and leaves come from the players' config strings, not the servers' print lines
+(whose words differ from mod to mod): a slot that fills is a join, one that empties a
+leave, a rename nothing. They are followed four times a second while a game is on, shown
+or not, and a new game state (a map change, another server) is read afresh without
+telling anyone joined. A part without a value (no hub, no time limit, no server name) is
+left out rather than shown empty. When a bar runs out of room (4:3, a large text size),
+the parts that matter least go first, one piece at a time: on the bottom the toys, the
+effects, the coins, the dormant kybers, the shards, the nudge, the date, the kyber, the
+credits, then the weapons, the time last; on the top the server's name, the game type,
+the score, the ping, the feed (its oldest entry first), the players, the Force, the map,
+the frame rate, the time left last. Numbers that tick (the frame rate, the ping, the time
+left, the clock, the ammunition) keep the width of their widest digits, so their
+neighbours do not shuffle.
+
+The bars show over play only, as the HUD's elements do: never under the menus, the
+console or an intermission, nor while `cg_drawHud 0` hides the elements, nor over a demo,
+where they would tell the viewer's own things rather than the recording's. Unlike the
+single bar before them, they stay under the scoreboard: the HUD then does not jump each
+time the scoreboard is held, and the top bar's players and time left stay readable round
+it.
+Tactical mode, there to fight, leaves the toys (switched off anyway) and the Collection's
+nudge out.
+
+**The HUD moves inside them.** Rather than the bars dodging the HUD, the bars keep their
+room and everything 2D drawn against an edge stands inside it; the 3D view is untouched.
+Each frame, before the HUD is laid out, `GpuState::reserve_status_bars` decides which bars
+show and how tall they are, and `status_bar.reserved()` gives every part of the client the
+room kept at the top and the bottom in window pixels (0 for a bar off or hidden):
+
+- The HUD's elements (the radial, classic and game looks' widgets, the selectors, the
+  kill feed, the feats' medals, the vote card, the lagometer, the speedometer, the
+  movement keys, the clock, the jetpack and vehicle meters, the flags, the followed
+  player's name, the upper right's portrait, inventory and powerups, the score line, the
+  warmup line) each move by the bar of the edge they stand nearer: down by the top bar's
+  height when their box's middle is above the screen's, up by the bottom bar's otherwise
+  (`Reserved::shift`), so each half keeps its own arrangement. What stands with the
+  crosshair (its name, the interruption notice, the strafe guides, the hack bar, the
+  Monitor's marks, the sound sonar) stays with it. The HUD editor's outlines follow.
+- The game HUD (`hud.menu`, anchored to the bottom) stands higher by the bottom bar's
+  height, its pictures and its text alike.
+- The chat's feed ends above the bottom bar when it is set at the screen's foot (the
+  default, 350 of 480, is clear of it); the console's notify lines start under the top
+  bar; the `cg_drawFps` readouts and the upper right match clock stand under it; the
+  devmap bar (`cg_devBar`) stands inside the bar of its own edge; the build label in a
+  development build sits under the top bar; the weapon row's name, the Possible drops
+  panel, the player card and the world pings' off-screen markers keep clear of both.
+- While a bar shows the same thing, the HUD's own readout is not drawn: the match timer
+  (the layouts' and the upper right one) while the top bar shows the time left,
+  `cg_drawFps`'s rate while it shows the frame rate (its frame times stay, under the bar),
+  and `cg_drawClock` while the bottom bar shows all it would (the time, the date, or
+  both).
+
+Its text follows `ui_textScale`; it is laid out from the window's height, so it reads the
+same at 1080p and at 4K. What the bars show is read four times a second into fixed
+storage (the clock once a second); each bar is laid out again only when what it shows, its
+switches or the screen change, and other frames hand on the shapes kept, allocating
+nothing. The feed fades in sixteen steps, so a fading entry lays the top bar out sixteen
+times rather than every frame
+([status_bar.rs](../crates/sjk-viewer/src/status_bar.rs)). World shots:
+`world_shot::status_bar_shots` (made-up contents at 1080p, 4K, 21:9 and 4:3),
+`status_bar_on_a_demo` (over a recorded match's HUD in the three looks, with a vote and
+the devmap bar, checking every HUD element stands inside the bars; `SJK_TEST_DEMO`) and
+`status_bar_cost`.
+
 ## Speedometer placement
 
 `cg_speedometerX` is the speed label's right-edge anchor in the 640-wide virtual
@@ -3908,8 +4089,14 @@ where JoF keeps them when the vehicle has no HUD menu of its own.
 network graph: frame interpolation in its top third (yellow above the middle line
 while the view runs ahead of the latest snapshot, blue below while it interpolates)
 and snapshot latency at its bottom (green, yellow when the server held a snapshot
-back for rate, red for a dropped one). It takes JoF EJK's values (`cg_draw.c`,
-`CG_DrawLagometer` and `CG_DrawSpeedGraph`):
+back for rate, red for a dropped one). The latency is stock's snapshot ping,
+`cl.snap.ping` (`CL_ParseSnapshot`): from the newest move packet whose commands the
+snapshot shows the server ran to the snapshot's reading, 999 when it shows none of the
+packets kept run; a demo, a local game and a map's first snapshots have none and leave the
+column empty ([snapshot_ping.rs](../crates/sjk-client/src/snapshot_ping.rs),
+[networking.md](networking.md#user-commands-and-move-packets)). Until 17/11/2026 it was
+`serverTime - ps.commandTime`, about one server frame whatever the network did. It takes
+JoF EJK's values (`cg_draw.c`, `CG_DrawLagometer` and `CG_DrawSpeedGraph`):
 
 - `1` (**Graph**): the graph on its backdrop, as SJK always drew it; an old config's
   `cg_lagometer 1` looks the same;
@@ -4320,6 +4507,16 @@ A feature sets the prompt each frame it applies (`GpuState::want_use_prompt`); t
 draws the last one set and forgets it. The [mystery boxes](mystery-boxes.md#opening-one)
 are its first user, in place of their centre prints.
 
+**Possible drops** (Sol, 15/11/2026): a prompt may carry what the thing faced can give
+(`Prompt::drops`): once the prompt has stood 0.35 s, a dark panel edged in gold fades in
+under it (0.25 s), titled "Possible drops", one row a thing with its chance on the right
+("45.5 %"), likeliest first, at most 12 rows, kept on the screen. It goes with the
+prompt. The chances are the hub's, read with the boxes and wheels, so they change when
+the hub's odds do. A [mystery box](mystery-boxes.md#opening-one) shows them while nobody
+opens it; a [WHEEL OF DOOM](wheel-of-doom.md#spinning-one) whenever its prompt shows,
+the holocrons in their tier's colour and its bad effects in one red row ("A bad effect
+(12 kinds)").
+
 ## Capture the flag HUD
 
 In Capture the Flag and Capture the Ysalamiri every HUD style shows the flags' state
@@ -4348,7 +4545,7 @@ the original cgame reads:
 - The team scores in every team game but Siege (`cg_drawTeamScores`, on by default): two
   team boxes under the clock at the top centre, red left and blue right, from `CS_SCORES1`
   and `CS_SCORES2` (`-` while the server has not sent one), in the SJK UI's look in every
-  HUD style (the design canvas of 24/10/2026): the UI's navy under the team's muted colour
+  HUD style (the design canvas of 24/10/2026): the UI's ground under the team's muted colour
   (`menu::sjk::color::RED_TEAM` and `BLUE_TEAM`, the SJK scoreboard's), a rule of that
   colour along the bottom. Beside a flag the score stands at the inner edge, as wide as its
   digits (smaller past 66 pixels, so "300" or "-12" fit); without flags (team FFA) it has
@@ -4410,7 +4607,7 @@ commands, [`SentCommands`](../crates/sjk-client/src/sent_commands.rs)), or calle
 (the server counts its caller's YES), the card folds to one 64-pixel row (`VoteRow`): the
 time bar along its top, the YES count, the proposal (a JA+ `ampoll` question) over the
 YES / NO bar and the NO count, so it only shows what is asked and how the vote goes, and F1 / F2 are push and pull again. A team vote's card stands under the global one. It is drawn as SJK's
-menu cards are (navy plate, holo edge, gold mark and time bar), in the HUD's font even under
+menu cards are (dark plate, holo edge, gold mark and time bar), in the HUD's font even under
 `ui_gameFont`, and stands under the match timer. The HUD edit mode drags it during a vote.
 
 `testvote` shows a made-up vote on the panel for 30 seconds, its counts growing, for
@@ -4474,6 +4671,62 @@ default; a profile that saved that 0 has it moved once to 1
 (`cg_killfeedDefaultVersion`), and that feed's `cg_killfeedAlignment` and
 `cg_killfeedReverse` are gone.
 
+## Feats
+
+`cg_feats` (off by default, Settings > HUD > "Feats") calls out multi-kills, sprees
+and a few special kills with a medal under the top centre and an announcer line, as
+arena shooters do ([feats.rs](../crates/sjk-viewer/src/feats.rs) for the rules,
+[hud/feats.rs](../crates/sjk-viewer/src/hud/feats.rs) for the medals and the
+announcer's queue). They are worked out by the client from the kill messages it already
+decodes (`EV_OBITUARY`, the shared obituary tracker the kill feed reads), so they need
+nothing from the server and work on every server and in demos. Every player's sprees
+and chains are followed; the viewed player's feats are shown and heard, so a spectator
+hears the player followed.
+
+| Feat | When |
+| --- | --- |
+| Double Kill, Triple Kill, Quad Kill, Penta Kill, Massacre | 2, 3, 4, 5, 6 or more kills, each at most 4 s (server time) after the one before |
+| Killing Spree, Rampage, Dominating, Unstoppable, Godlike | 5, 10, 15, 20, 25 kills without dying; any death (killed, suicide, the world) starts the count again |
+| First Blood | the level's first kill, only when the client saw the level start: `CS_LEVEL_START_TIME` changed while connected, or it was less than 10 s old at the first look, so joining a match never claims it |
+| Revenge | killing the player who last killed you |
+| Spree Ended | killing a player on a spree of 5 or more |
+| HOOKED! | a kill by JA+'s grapple hook: a `MOD_STUN_BATON` kill whose killer did not hold the stun baton |
+
+HOOKED!'s evidence: JA+ fires the hook as a stun baton missile with `damage = 1` and
+`methodOfDeath = MOD_STUN_BATON` (Blackwolf's VisionJK rebuild of JA+ 2.4 B7,
+`codemp/game/japlus/g_japlus_hook.c:146-147`), whatever weapon its owner holds. The
+obituary carries the killer's held weapon from the snapshot of the kill
+(`ObituaryEvent::attacker_weapon`), so a real stun baton kill is not taken for the hook.
+No server is checked by name.
+
+All of one kill's feats show at once, in the order of the table's families (HOOKED!,
+First Blood, the chain, the spree, Spree Ended, Revenge). A medal pops in, holds 2.5 s of
+server time and fades over 0.7 s; up to four stack, the newest on top, under the vote,
+timer and warmup line. It is part of the HUD's draw list, so it hides with the HUD, and
+the HUD edit mode moves it (a sample medal shows while it is open). The pictures are
+`gfx/sjk/feats/<id>.png`, drawn by [feat_assets.py](../scripts/feat_assets.py) and bundled
+below all game data, so a PK3 replaces them; they live in their own 4 x 4 texture (the
+icon atlas is full), made on the first upload.
+
+The announcer says each feat on `CHAN_ANNOUNCER`, one line every 1.7 s, at most three
+waiting (the oldest gives way). Its voices are packs: a folder
+`sound/sjk/announcer/<pack>/` with one sound per feat (`<id>.wav`, `.mp3` or `.ogg`; the
+ids and lines are in [assets/announcer](../crates/sjk-viewer/assets/announcer/README.md)).
+`cg_announcer` names the pack (`sjk`, SJK's own, by default; Settings lists the packs
+found at startup); a line the pack lacks comes from `sjk`, and a line neither has is
+silent.
+
+`debug_feat <id|all>` rehearses feats without a kill, in a match: each medal shows with
+its line, one every 1.7 s, whatever `cg_feats` and its options say (`debug_feat` alone
+lists the ids). It tries the medals' place, the announcer and a voice pack.
+
+| Cvar | Default | Effect |
+| --- | --- | --- |
+| `cg_feats` | 0 | Feats on |
+| `cg_featsMedals` | 1 | Show each feat as a medal |
+| `cg_featsVoice` | 1 | The announcer says each feat |
+| `cg_announcer` | `sjk` | The announcer's voice pack |
+
 ## Nameplates
 
 `cg_nameplate` (off by default since 17/10/2026; Settings "See & share nameplates") draws MMO-style
@@ -4504,8 +4757,8 @@ dark outline (`TwoTone`). Off keeps the shadow only. It applies to the chat too 
 `cg_chatBoxOutline`).
 
 **Styles** (31/10/2026, Sol's decision to let players choose among the designs SJK has
-had): `cg_nameplateStyle` (Settings "Nameplate style", and the Style row on the
-Collection's Nameplates tab, [sjk-ui.md](sjk-ui.md#collection)) picks the plates' look,
+had): `cg_nameplateStyle` (Settings > HUD "Nameplate style"; the Collection's
+Nameplates tab offered it too until 15/11/2026) picks the plates' look,
 `hud::nameplate::Style`: 0 Holo, the holo frame below (the default, the look since
 28/10/2026); 1 Capsule; 2 Classic. What a plate says is the same in all three (the
 name and its mark, the power icons, the duel badge, the bars and the sharing and duel
@@ -4546,8 +4799,9 @@ holding the player's picture over the left end of a plate whose top-right corner
 holds their name with its mark after it and, under it, the bars of a sharer, or a dim
 dotted line (3 design pixels on, 4 off) on a plate without bars. Until 28/10/2026 the
 weapon they held stood after the name (`cg_nameplateWeapon`, dropped from saved
-profiles): Sol found it told nothing. The frame's colour says who they are: the holo
-blue (`rgba(110, 210, 255)`) for an SJK player, grey for a player without SJK (one the
+profiles): Sol found it told nothing. The frame's colour says who they are: the SJK UI
+theme's line-work for an SJK player (amber in the warm theme, holo blue in the cold one;
+until 18/11/2026 always the holo blue `rgba(110, 210, 255)`, [Theme](sjk-ui.md#theme)), grey for a player without SJK (one the
 hub does not know on this server), the team's red or blue in team games, the duel's
 colour in a duel, a paler gold on NPC plates. The plate is that colour made dark (a
 tenth of it, `nameplate_math::plate_fill`), 55% opaque (the design's 78%: Sol asked for
@@ -4615,10 +4869,11 @@ command new for them (`DrawCommand::Polygon`, [rendering.md](rendering.md#submis
   Which slots are verified is read from the identity service once a second.
 - **Client icon** (08/11/2026, Sol's request: "the logos on the nameplates too with
   the tick then in small next to them for ejk people"): a player on another client
-  that takes part in SJK chat (today JoF EternalJK) has that client's icon after the
-  tick, smaller (9 design pixels to the seal's 11, about 0.8 of the name in the classic
-  style) and in its own colours, level with it; without a tick it takes the tick's
-  place. It comes from the claim's `client`, or, for a player of a client that claims
+  that takes part in SJK chat (today JoF EternalJK) has that client's icon in the
+  tick's place, in its own colours, and the tick (or trust mark) small on its bottom
+  right corner, as on the scoreboard and in the game's chat (`nameplate_math::corner_mark`,
+  0.55 of the icon's side; since 14/11/2026, Sol's request: until then the icon stood
+  after the tick, smaller). It comes from the claim's `client`, or, for a player of a client that claims
   nothing, from their name matching one online SJK chat reader's, which gives the icon
   alone, never a tick ([identity.md](identity.md), item 4). It is read with the marks
   (`player_identity::slot_clients`); SJK's players get none, and
@@ -4653,7 +4908,9 @@ command new for them (`DrawCommand::Polygon`, [rendering.md](rendering.md#submis
   `cg_nameplateDuel` (on; Settings >
   Quick > Nameplates > Duel badge) turns it off, and it shows with the name, so
   `cg_nameplate 0` hides it too. The duellist's body is drawn as JoF EJK draws it (see
-  [Entity render effects](rendering.md#entity-render-effects)).
+  [Entity render effects](rendering.md#entity-render-effects)); with `cg_duelGhost 2`
+  (Duel figures (JoF): Hidden) a player in no duel does not see the duellists, their
+  plates or their sounds at all.
 - `cg_duelHideOthers` (1, Auto; Settings > Advanced > Gameplay > Hide others in
   duel) hides everyone but you and your duel partner while you, or the player you
   follow, are in a private duel, as JoF EJK does (EternalJK `CG_Player`,
@@ -4680,7 +4937,7 @@ command new for them (`DrawCommand::Polygon`, [rendering.md](rendering.md#submis
   playback hides by the same setting.
 - `cg_duelStockBlades` (off; Settings > Gameplay > Normal blades in duels, and Game
   options), when on, draws every player's blade as the stock one, in the colour they set
-  (a stock colour or RGB) and with the stock sounds, instead of their blade skin, while you, or the
+  (a stock colour or RGB) and with the stock sounds, instead of their kyber, while you, or the
   player you follow, are in a private duel, or on a Duel or Power Duel server
   (`g_gametype` 3 or 4), Sol's request of 21/10/2026: nothing round a blade hides where it
   is or how it swings ([duel_blades.rs](../crates/sjk-viewer/src/duel_blades.rs),
@@ -4690,7 +4947,7 @@ command new for them (`DrawCommand::Polygon`, [rendering.md](rendering.md#submis
 - `cg_stockBlades` (0, Off; Settings > Advanced > Gameplay > Effects > Stock blades, and
   the classic Game options: Off, Others, All), Sol's request of 25/10/2026 for weak PCs
   (GTX 1050/1060 class, integrated GPUs): `1` draws other players' blades as stock blades in the colour they set (a stock
-  colour or RGB), without their blade skin; `2` every blade, yours included. A blade skin
+  colour or RGB), without their kyber; `2` every blade, yours included. A kyber
   costs about 0.4 to 0.6 ms of GPU time on an RTX 5080 once one is in view (a heavy
   signature up to 6 ms), so several milliseconds on a weak GPU on a full saber server.
   Everything the skin draws goes with it (its shading, afterimages, glints, petals, heat
@@ -4811,12 +5068,12 @@ them (decided 15/10/2026; since 17/10/2026 with no estimates on anyone else), an
 seeing any of them means sharing your own, through the hub (Sol's rule, 15/10/2026):
 
 - **See & share nameplates** is one setting, `cg_nameplate` (17/10/2026, off by default;
-  Settings > Interface, First setup, and the switch on the Collection's Nameplates tab,
-  [sjk-ui.md](sjk-ui.md#collection)): with nameplates on, whatever bars they show
+  Settings > HUD under Nameplates; the Collection's Nameplates tab had a switch for it
+  until 15/11/2026): with nameplates on, whatever bars they show
   (names only too), your client sends your real health, shield and Force (from the
   snapshot the server sends you, with its server time) to the SJK hub, which passes
   them to the other SJK players of your server ([hub-chat.md](hub-chat.md#vitals));
-  off, you see no nameplates and nothing is sent (`hud::nameplate::see_and_share`). It
+  off, you see no nameplates and nothing is sent (`hud::nameplate::State::sharing`). It
   needs `cl_identity` and a live claim, so it starts a few seconds after joining. It
   replaces `cg_nameplateShare` ("Share my bars"), which the client held on while
   nameplates showed bars: two settings for one value, and in Settings the row looked
@@ -5109,18 +5366,19 @@ The client looks for a newer SJK release when it starts and from the Update page
   new version starts. A folder that cannot update itself offers Download, which opens
   the release page; an install that fails says so with Details, which opens the
   Update page with the reason. A failed check (GitHub unreachable) shows nothing.
-- When the check finds a newer release, a card says so once a session at the top of
-  the screen, over the menus or a match, the achievements' card
-  ([identity.md](identity.md#achievements); since 10/10/2026, Sol's request): "Update
+- When the check finds a newer release, a banner says so once a session at the top of
+  the screen, over the menus or a match, the achievements' notification banner
+  ([identity.md](identity.md#achievements); since 10/10/2026, Sol's request; a banner that
+  comes down from the top edge since 16/11/2026): "Update
   available", "SJK 2026.1011.1", "Click to install" and "Downloads now; it starts
   when SJK restarts" (or, for a folder that cannot update itself, "Click for its page"
   and "This folder cannot update itself: see its page"), with SJK's emblem in the SJK
-  UI's holo blue and no sound. While the pointer is free (over the menus, not in a
-  match) a click on the card starts the download, as Install does, and opens the Update
+  UI's amber and no sound. While the pointer is free (over the menus, not in a
+  match) a click on the banner starts the download, as Install does, and opens the Update
   page with its progress; for that folder it opens the release page (since 19/10/2026,
   Slash's request; `GpuState::update_card_pointer`). It waits while the window is away, and the Update page opening takes it back
-  (a release found while the page shows gets no card). `debug_update [version] [manual]`
-  shows the card for a made-up release (2026.1231.1 without one; `manual` for the
+  (a release found while the page shows gets no banner). `debug_update [version] [manual]`
+  shows the banner for a made-up release (2026.1231.1 without one; `manual` for the
   folder that cannot update itself) and checks and installs nothing.
 - Main menu > Update (classic: SJK > UPDATE) or the
   `update` command opens the page (with the SJK UI's menus, a pop-up card over
@@ -5317,11 +5575,11 @@ are in [identity.md](identity.md).
   profile as others read it on the hub: name, verified, member since, other names,
   medals (on its own only), the bio (written there, up to 6 lines under the hub's
   rules), their record from the achievement counts and how many achievements and
-  shaders they hold. It
+  kybers they hold. It
   has the SJK UI's look in every menu style; See the board and See the collection
   open the Collection (`collection`, `achievements`, `unlockables`;
-  [sjk-ui.md](sjk-ui.md#collection)): medals, achievements, saber shaders
-  ([unlockables.md](unlockables.md#shaders-tab)), toys, nameplates and holocrons
+  [sjk-ui.md](sjk-ui.md#collection)): medals, achievements, kybers
+  ([unlockables.md](unlockables.md#kybers-tab)), toys, nameplates and holocrons
   (`holocrons`, [holocrons.md](holocrons.md#the-holocrons-tab)), a screen of its own in
   the SJK UI ([identity.md](identity.md#profile)); See holocrons opens its Holocrons.
   The SJK UI's main page and in-game menu show a profile card bottom left (picture,
@@ -5418,9 +5676,9 @@ plays the demo `SJK_TEST_DEMO` names off screen, pins the card on another player
 renders the ring from an orbit around them and from behind the recorder. It shows what
 the server already publishes to every client (name with its colour codes, model and its
 head icon, saber hilts with their blade colours, the hat and cape worn, bot skill; not
-the duel wins and losses), the saber shader they wear (a live swatch, as the Collection
+the duel wins and losses), the kyber they wear (a live swatch, as the Collection
 draws it, and its name; only when it draws on their blade on this PC: worn by their
-look, its pack loaded; a second saber's or a staff's other half's own shader, when it
+look, its pack loaded; a second saber's or a staff's other half's own kyber, when it
 is not the first's, on a row of its own named "(2nd blade)" or "(other half)") and, when the hub knows the player, their profile picture in
 place of the head icon (the icon then sits small on its lower left corner), SJK's
 emblem, their hub name, a gold VERIFIED, a teal SJK TEAM pill for staff, a gem of the
@@ -6574,7 +6832,7 @@ sees it there.
 
 - **The tags** are unlocks of the hub (its `PROTOCOL.md`,
   "Unlocks"; the client's list is [tags.rs](../crates/sjk-viewer/src/tags.rs)), each with a
-  tier as shaders have. Three are everyone's from the start (SJK, GG, Fox); the others drop
+  tier as kybers have. Three are everyone's from the start (SJK, GG, Fox); the others drop
   from holocrons ([holocrons.md](holocrons.md)), duplicates stacking. There are no uploads
   (Sol's decision, 27/10/2026): Sol picks every tag, new ones from rounds on Discord, and
   each needs a new id in both catalogues and its picture in the hub's `sjk_tags` pack.
@@ -6606,7 +6864,7 @@ sees it there.
   is held in that finish or two spare copies are lacking. The hub's answer reads under the
   buttons ("Holo Gonk tag broken down: +25 kyber shards.", "Crafted: Kyber tag. It is
   yours."). Spare copies trade too: the trade window lists them with their finish beside
-  the duplicate shaders, counted as duplicates in the day's limits
+  the duplicate kybers, counted as duplicates in the day's limits
   ([tag_copies.rs](../crates/sjk-viewer/src/tag_copies.rs)).
 - **Choosing:** Collection > Tags shows every tag under its collection's heading, then
   the credits cards under their own, the ones the player lacks dimmed and the Holo and Solar copies held as badges;
@@ -6765,14 +7023,15 @@ brings up are the ones the hub drops anyway.
   Catch market; `sjk_identity::catch`; each behind its own hub switch, off by default):
   - A claim's answer may carry `kyber_find`: the hub rolled a few kyber shards for a
     claim whose play signals had a hooked bite or a broken boulder (at most 3 a day).
-    The client says it on the centre of the screen and in the console ("A kyber glint
-    in the water! +3 kyber shards") and takes the new shard balance
+    The client says it in the console ("A kyber glint in the water! +3 kyber shards")
+    and with a notification banner ("KYBER GLINT", "+3 kyber shards"; a centre print
+    until 16/11/2026, [identity.md](identity.md#achievements)) and takes the new shard balance
     (`GpuState::catch_news_frame` in `fishing_sell.rs`).
   - It may carry `catch_quests`: the hub's own count of the day's bites and boulders
     against two goals (25 bites, 40 boulders), each winning an Echo once a day within
     the holocrons' daily cap. The Fishing and Mining cards show the goal in one line
     under the junk's ("Goal: 12/25 bites for an Echo"), and the claim that wins it says
-    so once.
+    so once, in the console and with a "DAILY GOAL" banner.
   - `GET /v1/fishing/junk` may carry `market`: fish and ore sell too, under the junk's
     one cap, one of them wanted each day at double its price. The cards then add
     "Wanted: Moon eel x2 (6 credits)" to that line and a **Sell fish** / **Sell ore** button beside Sell junk /
@@ -6786,8 +7045,8 @@ brings up are the ones the hub drops anyway.
   "???", the others with their count and the day the first came up ("Back" returns). The
   day is a `first <id> <yyyymmdd>` line of the log, which older clients skip (and drop
   when they write the log); catches from before have none. A rare fish (weight 3 or less:
-  the Kyber minnow, Ghost ray, Temple koi and Old Whiskers) also brings the unlock
-  pop-up's "RARE CATCH" card and the single-player game's secret-area sound among the
+  the Kyber minnow, Ghost ray, Temple koi and Old Whiskers) also brings a "RARE CATCH"
+  notification banner and the single-player game's secret-area sound among the
   toy's sounds. `fishing_brag` (and the book's "Share in SJK chat") says the session's
   last rare catch, else the log's rarest fish, as the player's own SJK chat message
   ("Caught Old Whiskers, the great catfish (my first!) - 9 of 12 kinds in my log"),
@@ -6839,7 +7098,7 @@ ore, the Heart among them) and the hidden Heart of the Mountain.
   [Fishing](#fishing)): the Mining card's "Log book" lists every ore and rubble with its
   count and first day, "???" until dug; a rare ore (weight 11 or less: star quartz, void
   crystal and the Heart of the Mountain, about one ore in seventeen) brings the "RARE
-  FIND" card and the secret-area sound (the Heart's alone before); `mining_brag` and the
+  FIND" banner and the secret-area sound (the Heart's alone before); `mining_brag` and the
   book's Share button say the last rare find, else the rarest ore, in the SJK chat.
 
 - **`toy_mining`** (a bind, the quick wheel's Toys catalogue, Collection > Toys, "Pickaxe
@@ -7000,17 +7259,17 @@ loaded skins change.
 
 `saberskin` lists the blade skins, owned (since when) or locked (how to get it), and
 which is worn; `saberskin <id>` or `saberskin none` sets `cg_saberSkin` (a locked one
-is kept and shows once unlocked). `unlockables` opens the Collection on its Shaders
+is kept and shows once unlocked). `unlockables` opens the Collection on its Kybers
 tab (also the Profile page's See the collection), where owned skins are equipped and
 unequipped and any is previewed on the player's own saber
 ([sjk-ui.md](sjk-ui.md#collection)).
 
 A player may choose other saber sounds than their skin's (`cg_saberSounds`, Profile >
-Saber > Sounds: follow the shader, the stock sounds, or any owned shader's; every SJK
+Saber > Sounds: follow the kyber, the stock sounds, or any owned kyber's; every SJK
 player hears the choice, [unlockables.md](unlockables.md#saber-sounds)); what follows
 holds for the set they are heard with. A skin brings its own sounds, heard for each player wearing it, over the stock ones,
 which keep playing (the skin's sound goes on a channel of its own, so that it does not
-cut the stock one), or, with `s_saberSkinSounds 2` (Settings > Sound > Blade skin
+cut the stock one), or, with `s_saberSkinSounds 2` (Settings > Sound > Kyber
 sounds: Only skin; 1, With normal, is the default), in their place, or, with
 `s_saberSkinSounds 0` (Off), not at all, every player heard with the stock sounds
 (the table of who wears which set is passed empty), so a skin's own sounds are heard clearly
@@ -7057,10 +7316,10 @@ launch, for a shortcut.
   pack. A reload takes about 20 ms. A file saved with a UTF-8 byte-order mark (Notepad,
   PowerShell) reads as one without.
 - **Mistakes:** a file that does not read, or whose images or sounds do not load, keeps its
-  skin's last good look (`LoadedSkins::keep`), and the Shaders tab's lead says which file
+  skin's last good look (`LoadedSkins::keep`), and the Kybers tab's lead says which file
   and why (`corona.reach must be 1 to 2, not 9`), as does the console. The lead otherwise
   names the folder and how long ago it was read.
-- **The preview:** starting the lab opens the Collection's Shaders tab (the SJK UI's
+- **The preview:** starting the lab opens the Collection's Kybers tab (the SJK UI's
   Collection screen, or the classic menus' page) with the lab blade chosen, the row after
   the stock blade whatever the filter, on the lone saber the tab turns
   ([sjk-ui.md](sjk-ui.md#collection)). Any skin of the folder can be chosen there.
@@ -7073,13 +7332,13 @@ launch, for a shortcut.
   the game chains them, the start from the stance, the attack and the return
   (`force_pose::STYLE_ATTACKS`, `BOTH_S1_S1_T_` / `BOTH_A1_T__B_` / `BOTH_R1_B__S1` and so
   on). A copy of the same saber floats on the right (`LAB_SABER_AREA`, four fifths of
-  its width long at most), turned by a drag as on Shaders, its hilt in a buffer of its
+  its width long at most), turned by a drag as on Kybers, its hilt in a buffer of its
   own (`StageSaber::float_instance_buffer`). Under it: Style and Moves as segments, the
   blade with arrows among the folder's skins, Equip, and the lab's status in the lead.
   Keys: 1 to 3 the style, Space stand or swing, Left and Right the blade, Enter equip.
   Over a match the tab shows no stage and says so; the stage is the main menu's only.
 - **Hilts, speed, ignition, sound and camera** (18/10/2026): the model holds the player's
-  own hilts (`saber1`, `saber2`, read as the Collection opens), as the Shaders tab's lone
+  own hilts (`saber1`, `saber2`, read as the Collection opens), as the Kybers tab's lone
   saber does; a staff or two sabers swing in their own style (`force_pose::lab_swings`,
   the `BOTH_A7_*` and `BOTH_A6_*` attacks) and the Style row says so. A Speed slider
   (10% to 200%, `-` and `=`) plays the animations and the moves' script at that pace
@@ -7120,10 +7379,10 @@ launch, for a shortcut.
   evenly leaves it, eight slices over 0.45 rad about the camera's forward through its
   grip, each as old as its place (`saber_trail::still_trail`, drawn that frame only,
   `SegmentPool::add_still`). The blade on the model and the floating one is the one worn
-  (`cg_saberSkin`, whatever Shaders equipped), so the lab's own shows once the tab's
+  (`cg_saberSkin`, whatever Kybers equipped), so the lab's own shows once the tab's
   Equip wears it. The Blade row (Left and Right) starts there, then previews the stock
   blade, the lab folder's skins and every other blade skin of the catalogue, the rarest
-  first, owned or not (`LabBlade`, `lab_blades`; drawn on this PC only, as Shaders
+  first, owned or not (`LabBlade`, `lab_blades`; drawn on this PC only, as Kybers
   previews a locked one). Equip wears what may be worn (a lab skin, or one the profile
   lists) and takes off what is worn; a blade not owned is only previewed, and the line
   under the row says which.
@@ -7214,7 +7473,7 @@ launch, for a shortcut.
   does. In the middle the blade's groups (`blade_builder::Shape`): The blade itself (the
   sections every skin has; never grouped, never taken off), Always on (the effects in
   no option), each group (an option of the file: its name, a click renames it, Enter
-  keeps the name; its switch, the wearer's own choice as on Shaders; `×` ungroups it,
+  keeps the name; its switch, the wearer's own choice as on Kybers; `×` ungroups it,
   its effects always on) and room for a new one while there are fewer than six. An
   effect is dragged (6 frame pixels from where it was pressed) from the library onto the
   blade, between Always on and the groups (at most four in one), onto New group (named
@@ -7385,13 +7644,13 @@ with `cl_sjkChatGifs 0`) shows a disc with its name; it is sent all the same.
 ### Look
 
 The ring is drawn in the SJK UI's look ([ring.rs](../crates/sjk-viewer/src/quick_wheel/ring.rs),
-[SJK UI](sjk-ui.md)): the choices on a navy band (deep enough to read over any
+[SJK UI](sjk-ui.md)): the choices on a dark band (deep enough to read over any
 scene) edged with holo line-work and a tick between choices; the highlighted
 choice grown inside a gold ring with a gold glow behind it and a gold arc on the
 band's rim; a gold arc on the middle disc pointing where the mouse points. In the
 middle: the page's name, the highlighted choice's name in gold, and a dot for
 each page (the page on show a gold bar). With more than one page, the previous
-and next pages' names stand left and right of the ring on navy pills, with the
+and next pages' names stand left and right of the ring on dark pills, with the
 button that goes there ("Left click", "Right click"), and "Scroll to change page"
 under it. A gold dot outside the band marks choices in effect. Text is in the
 SJK UI's families (Rajdhani, Exo 2), which load in every menu style (Inter
@@ -7402,7 +7661,7 @@ The choices are round icons in the style of the game's neutral Force icons
 Every action has its own since 08/10/2026, and every custom command shares one,
 braces round a dot (`{•}`), so several custom choices on a page look alike: the
 middle names the highlighted one. A choice whose picture is missing shows its
-name on a navy disc with a holo rim (two lines at most). A page holds at most 10
+name on a dark disc with a holo rim (two lines at most). A page holds at most 10
 choices (ten icons fill the ring with a gap between each, the highlighted one
 grown; the Force page holds 12, drawn smaller); an empty page says "Nothing here
 yet".
@@ -7941,7 +8200,7 @@ with scrolling stars over it. Each stage keeps its `blendFunc`, its `tcMod`
 `alphaGen` (`wave`, `const`, `vertex`); other generators draw at full strength,
 and an `animMap` shows its first frame. Below full height `alphaGen vertex` is
 `con_opacity`, so the retail stars fade with it while an opaque first stage stays
-opaque; at full height it is 1. Without the shader the console is a dark navy
+opaque; at full height it is 1. Without the shader the console is a dark
 panel. The background reaches `480 × fraction − 2` units of the 640×480 virtual
 screen, with a bar two units tall in EternalJK's `console_color` (0.509, 0.609,
 0.847) under it. `con_ratioFix` (1, archived, EternalJK's name and meaning) shows
@@ -7965,6 +8224,7 @@ never shows through an opaque console.
 | Up, Down, keypad 8 and 2 (Num Lock off), Shift+wheel, Ctrl+P, Ctrl+N | Command history (32 commands) |
 | Ctrl+L | Clear the scrollback |
 | Insert | Toggle overstrike: typing replaces the character after the cursor |
+| Ctrl+F | Find in the scrollback (below) |
 
 Shift's heights follow EternalJK's `CL_KeyDownEvent` by default; `con_shiftHeight`
 (archived, off; Settings > Interface, "Swap Shift console size") swaps
@@ -8033,6 +8293,24 @@ console) or the version line (classic) says "Chat only" while it is on. The feed
 the game, the console socket and `cl_logChat` are unchanged
 ([console_chat_only.rs](../crates/sjk-viewer/src/console_chat_only.rs)).
 
+Ctrl+F, after headshotsmcgee117's idea (Sol's ideas recap, 16/11/2026), puts a find
+field in place of the input line, in both looks: "Find:" where the prompt's mark is,
+the search, and at the right which match is current of how many, counted from the
+newest (`1/5`; `0/0` in red when nothing matches). What is typed is looked for in the
+scrollback ignoring case and `^0`-`^9` colour codes (`hello` finds `^1He^7llo`): every
+match is marked in gold, the current one brighter, and the console scrolls to the
+newest. Enter, F3 or Up goes to the next older match, Shift+Enter, Shift+F3 or Down
+to the next newer one, wrapping round, each scrolling the match to the middle of the
+rows. Page Up and Down and Ctrl+Home and End still scroll; the field has the input
+line's caret, deletion and clipboard keys (Ctrl+A, C, V, X, Shift+Insert, a held
+Backspace), and Ctrl+F again selects its text. Escape closes the field and gives the
+input line back as it was; closing the console closes it too, and the next Ctrl+F
+brings the last search back, selected. With `con_chatOnly` on only the chat lines on
+show are searched; translations under chat lines are not. Matches are found again
+only when the search, the scrollback or `con_chatOnly` changes
+([console_find.rs](../crates/sjk-viewer/src/console_find.rs)). Verified by unit tests
+(matching, the count and its steps, the scroll, chat only).
+
 ### SJK UI console
 
 `sjk`, the deck, is the classic console with another skin
@@ -8053,7 +8331,7 @@ through; they load with the look, and the console font stands in until they
 have. After Ctrl+C the header says how many characters were copied. Below full
 height the panel follows `con_opacity`. The notify lines stay the classic ones.
 
-The deck is a full-width navy panel (the world shows faintly through): a header
+The deck is a full-width dark panel (the world shows faintly through): a header
 with "Console" underlined gold, the version, the date and the time; the input
 on a band with the SJK UI's gold bar; key hints (Tab, Up and Down, Page Up and
 Down, F3, Ctrl+C); a gold rail fading into a holo line along its bottom edge.
@@ -8425,11 +8703,15 @@ a plain command runs it again; a `+` command ignores the repeated press, as
 repeats once every other frame, 125 presses a second at 250 FPS and more above, each
 possibly a command to the server, which servers that cap commands (JoF's) see as a
 flood; SJK repeats 20 times a second at any frame rate, at most once a frame, on the
-console's clock. Only a press that went to the binds repeats, only while the pointer is
+console's clock. A second (hub report #317): EJK starts repeating on the next frame, so
+even a click runs the bind twice or more; SJK waits 250 ms first, as a held keyboard key
+waits for its system repeats, so a click runs its bind once and only a held button
+repeats. Only a press that went to the binds repeats, only while the pointer is
 the game's and no console, chat or menu has the keys; a release stops it wherever it
 went, and losing the window stops both. See
 [mouse_repeat.rs](../crates/sjk-viewer/src/input/mouse_repeat.rs) and its tests
-(`twenty_presses_a_second_at_any_frame_rate`, `the_setting_picks_the_buttons`).
+(`twenty_presses_a_second_at_any_frame_rate`, `a_click_does_not_repeat`,
+`the_setting_picks_the_buttons`).
 
 `+duck` is JoF EJK's crouch without a roll (`CG_NorollDown_f`). Its press lets go
 of jump and walks for one user command, then it crouches like `+movedown`, sharing
@@ -8681,7 +8963,7 @@ default, so the chat looks as it did until a player turns them on.
 
 `cg_chatBoxBackdrop` (default 0, archived; Settings > Chat > **Chat backdrop (%)**, and
 HUD in the classic views, 0 to 100 in steps of 10) puts a dark band behind each drawn
-row of a chat message, that many per cent opaque, in the SJK UI's navy
+row of a chat message, that many per cent opaque, in the SJK UI's ground
 (`menu::sjk::color::SPACE`). A band is as long as what its row shows (on a line's
 first row the sender's emblems, name, tick and label, then the text and emoji
 pictures, and the ellipsis of a cut last row) plus half its height at each end, which

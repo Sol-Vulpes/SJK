@@ -2,6 +2,32 @@
 use crate::GpuState;
 
 impl GpuState {
+    /// Whether the image the 2D layer draws into can be read by a shader this frame, for
+    /// the acrylic backdrops' blur (`ui_renderer/backdrop.rs`): a post-processing
+    /// intermediate always can; the swapchain's image (or a world shot's) when it was made
+    /// with that use (Vulkan and Metal surfaces allow it, DirectX 12's do not) and its 2D
+    /// view holds display values.
+    pub(crate) fn hud_target_sampleable(&self) -> bool {
+        #[cfg(test)]
+        if crate::world_shot::BACKDROP_OFF.with(std::cell::Cell::get) {
+            return false;
+        }
+        if self
+            .post_aa
+            .as_ref()
+            .is_some_and(|aa| aa.hud_target_is_intermediate())
+        {
+            return true;
+        }
+        let usage = match (&self.context.surface, &self.headless_frame) {
+            (Some(_), _) => self.configuration.usage,
+            (None, Some(texture)) => texture.usage(),
+            (None, None) => return false,
+        };
+        usage.contains(wgpu::TextureUsages::TEXTURE_BINDING)
+            && (self.context.ui_direct || !self.context.format.is_srgb())
+    }
+
     /// Filter the completed scene after flares, then draw untouched HUD/text into final color.
     pub(crate) fn draw_frame_overlays(
         &self,
@@ -28,7 +54,7 @@ impl GpuState {
             || !self.console_layer.is_empty()
             || self.client_menu.as_ref().is_some_and(|m| m.is_visible())
             || self.frame_timings.drawn();
-        // A world shot's made-up scoreboard, quick wheel, unlock pop-up, chat box and pings
+        // A world shot's made-up scoreboard, quick wheel, banners, chat box and pings
         // draw without a session.
         #[cfg(test)]
         let hud = hud
@@ -37,6 +63,7 @@ impl GpuState {
             || self.quick_wheel.shown_without_a_game()
             || self.unlock_toast.pending() > 0
             || self.world_pings.forced
+            || self.status_bar.drawn()
             || self.scope.binoculars_for_shot.is_some();
         let hyperspace = self.local_prediction.hyperspace_shade();
         let flares = hyperspace.is_none()
@@ -115,15 +142,28 @@ impl GpuState {
             }
             return;
         }
+        let hud_target = self
+            .post_aa
+            .as_ref()
+            .map_or(output_ui, |aa| aa.hud_target(output_ui));
+        // Acrylic: the frame as it stands, blurred round the backdrops the 2D layer draws,
+        // before it draws over it (`ui_renderer/backdrop.rs`). Its own GPU section.
+        if self.ui_shapes.backdrop_used() {
+            if let Some(phases) = &self.gpu_phases {
+                phases.mark(encoder, "overlays+post+hud");
+            }
+            self.ui_shapes
+                .encode_backdrop(&self.device, encoder, hud_target);
+            if let Some(phases) = &self.gpu_phases {
+                phases.mark(encoder, "ui-backdrop");
+            }
+        }
         // The 2D layer draws display values through a UNORM view (`ui_target.rs`),
         // so it gets its own pass after the linear world and its resolve.
         let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
             label: Some("SJK unfiltered HUD after FXAA"),
             color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                view: self
-                    .post_aa
-                    .as_ref()
-                    .map_or(output_ui, |aa| aa.hud_target(output_ui)),
+                view: hud_target,
                 resolve_target: None,
                 depth_slice: None,
                 ops: wgpu::Operations {

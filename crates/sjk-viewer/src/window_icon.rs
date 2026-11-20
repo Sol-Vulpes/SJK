@@ -8,9 +8,9 @@
 //! show. Wayland has no window icon in winit; a desktop entry's icon is used
 //! there.
 //!
-//! Both pictures are the medallion of `assets/branding` (the ring, its core
-//! and the blade), which stays readable at 16 to 48 pixels where the whole
-//! starburst does not.
+//! Both come from `scripts/sjk_emblem.py` (`assets/branding/README.md`): the
+//! 32-pixel one is the small icons' drawing (plain steel on a hot disc), which
+//! stays readable at 16 to 24 pixels, the 64-pixel one the emblem with its sun.
 
 use winit::window::{Icon, WindowAttributes};
 

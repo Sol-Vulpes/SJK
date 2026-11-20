@@ -60,12 +60,15 @@ pub(crate) fn find_line(find: &sjk_identity::catch::KyberFind) -> String {
     )
 }
 
+/// A goal won to tell: its line, and whether it is Mining's (else Fishing's).
+pub(crate) type GoalWon = (&'static str, bool);
+
 /// What newly won goal `day` tells after `told` (the day's end and the goals told won):
-/// the line to say, if any, and what is told after.
+/// the goal to tell, if any, and what is told after.
 pub(crate) fn goal_news(
     day: &sjk_identity::catch::CatchQuests,
     told: (i64, bool, bool),
-) -> (Option<&'static str>, (i64, bool, bool)) {
+) -> (Option<GoalWon>, (i64, bool, bool)) {
     let (until, fishing, mining) = if told.0 == day.until {
         told
     } else {
@@ -74,9 +77,9 @@ pub(crate) fn goal_news(
         (day.until, false, false)
     };
     let line = if day.fishing_won && !fishing && day.won.as_deref() == Some("fishing") {
-        Some("Today's fishing goal is done: an Echo is yours!")
+        Some(("Today's fishing goal is done: an Echo is yours!", false))
     } else if day.mining_won && !mining && day.won.as_deref() == Some("mining") {
-        Some("Today's mining goal is done: an Echo is yours!")
+        Some(("Today's mining goal is done: an Echo is yours!", true))
     } else {
         None
     };
@@ -437,7 +440,8 @@ impl GpuState {
     }
 
     /// Tell a kyber find and a daily goal won, once each, as the claims' answers bring
-    /// them (`sjk_identity::catch`, since 15/11/2026).
+    /// them (`sjk_identity::catch`, since 15/11/2026): a line in the console and a
+    /// notification banner (`unlock_toast.rs`; a centre print until 16/11/2026).
     fn catch_news_frame(&mut self) {
         let seen = self.fishing.sale.find_seen;
         let told = self.fishing.sale.goals_told;
@@ -458,22 +462,29 @@ impl GpuState {
         let mut said = Vec::new();
         if let Some((count, find)) = find {
             self.fishing.sale.find_seen = count;
-            said.push(find_line(&find));
+            said.push((
+                find_line(&find),
+                crate::unlock_toast::Unlock::KyberGlint {
+                    shards: find.shards,
+                    balance: find.balance,
+                    mining: !find.fishing(),
+                },
+            ));
         }
         if let Some((line, after)) = goal {
             self.fishing.sale.goals_told = after;
-            said.extend(line.map(str::to_owned));
+            said.extend(line.map(|(line, mining)| {
+                (
+                    line.to_owned(),
+                    crate::unlock_toast::Unlock::CatchGoal { mining },
+                )
+            }));
         }
-        for line in said {
+        for (line, banner) in said {
             if let Some(console) = self.console.as_mut() {
-                console.push_log(line.clone());
+                console.push_log(line);
             }
-            self.chat.receive(
-                sjk_client::ServerEventKind::CenterPrint,
-                line,
-                None,
-                Instant::now(),
-            );
+            self.unlock_toast.push(banner);
         }
     }
 
@@ -645,7 +656,8 @@ mod tests {
         day.fishing_won = true;
         day.won = Some("fishing".to_owned());
         let (line, told) = goal_news(&day, told);
-        assert!(line.unwrap().contains("fishing goal"));
+        let (line, mining) = line.unwrap();
+        assert!(line.contains("fishing goal") && !mining);
         assert_eq!(goal_news(&day, told).0, None, "told once");
         // A goal won before the first answer seen is not told again later.
         let (line, _) = goal_news(

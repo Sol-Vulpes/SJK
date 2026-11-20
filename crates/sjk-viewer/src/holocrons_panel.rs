@@ -63,6 +63,10 @@ pub(crate) const LOOT_TOKEN: u16 = 1_323;
 pub(crate) const LOOT_BACK_TOKEN: u16 = 1_324;
 /// Shop, beside Open all: the Collection's Forge on its Shop.
 pub(crate) const SHOP_TOKEN: u16 = 1_325;
+/// The empty states' buttons (15/11/2026): See Achievements while no dormant kyber is
+/// held, Find a server while no holocron is.
+pub(crate) const ACHIEVEMENTS_TOKEN: u16 = 1_326;
+pub(crate) const SERVERS_TOKEN: u16 = 1_329;
 
 /// What the page knows of the player's holocrons: whether the hub could say, and what.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -144,6 +148,9 @@ pub(crate) struct Data {
     /// The SJK release the hub wants for opening and trading when this build is older
     /// (the hub's minimum client): `can_open` is false then and the page says to update.
     pub(crate) update: Option<String>,
+    /// The achievement nearest its goal, not reached yet (its name, count and goal):
+    /// what the dormant kybers' empty state points at, each achievement bringing one.
+    pub(crate) next_achievement: Option<(String, u64, u64)>,
 }
 
 impl Data {
@@ -168,6 +175,7 @@ impl Data {
             every: None,
             can_open: false,
             update: None,
+            next_achievement: None,
         }
     }
 
@@ -269,6 +277,7 @@ impl Data {
                 .filter(|&every| every > 0),
             can_open: crate::economy::may_act(snapshot),
             update: crate::economy::update_to(snapshot).map(str::to_owned),
+            next_achievement: next_achievement(&me.achievements),
         }
     }
 
@@ -400,12 +409,17 @@ impl Data {
 pub(crate) enum PanelAction {
     None,
     Close,
-    /// Show another of the Collection screen's tabs (a click on the row).
-    Hub(crate::profile_hub::Tab),
+    /// Back to the Collection's hall: Escape, or the breadcrumb's Collection, on the
+    /// Collection screen or when the hall opened the page.
+    Hall,
     /// Ask the hub to open these holocrons ([`opening`]).
     Open(Vec<u64>),
     /// Show the Collection's Forge on its Shop (Shop, or S).
     Shop,
+    /// Show the Collection's Achievements (no dormant kyber yet: each comes from one).
+    Achievements,
+    /// Show the server list (no holocron yet: they drop while playing).
+    Servers,
 }
 
 pub(crate) struct Panel {
@@ -416,6 +430,8 @@ pub(crate) struct Panel {
     /// Shown as the Profile screen's Holocrons tab: its title and row of tabs at the top,
     /// the page moved down under them.
     hub: bool,
+    /// Opened on its own by the Collection's hall: Escape goes back to it.
+    from_hall: bool,
     /// What the Profile screen's tabs put at the top.
     hub_header: crate::profile_hub::Header,
     /// The Collection row's counts after each tab's name, in the row's order.
@@ -423,6 +439,9 @@ pub(crate) struct Panel {
     ui: MenuCanvas,
     /// The tier chosen, an index into [`holocrons::TIERS`].
     selected: usize,
+    /// Open (or attune) the oldest of the tier chosen once the hub's list is read: the
+    /// Collection's Inventory asked (15/11/2026).
+    open_soon: bool,
     /// What the hub last said, and when it was read.
     data: Data,
     refreshed: Option<Instant>,
@@ -475,11 +494,13 @@ impl Panel {
             open: false,
             owns_console: false,
             hub: false,
+            from_hall: false,
             hub_header: crate::profile_hub::Header::default(),
             row: Vec::new(),
             // An opening of twenty: five strips of tiles at once, then all twenty found.
             ui: MenuCanvas::with_capacities(224, 160, 2_400),
             selected: 0,
+            open_soon: false,
             data: Data::nothing(State::Waiting),
             refreshed: None,
             ceremony: None,
@@ -512,7 +533,9 @@ impl Panel {
         self.open = true;
         self.owns_console = owns_console;
         self.hub = false;
+        self.from_hall = false;
         self.selected = 0;
+        self.open_soon = false;
         self.refreshed = None;
         self.ceremony = None;
         self.loot = false;
@@ -523,6 +546,12 @@ impl Panel {
     /// [`Self::open`] puts it back on its own.
     pub(crate) fn set_hub(&mut self, hub: bool) {
         self.hub = hub;
+    }
+
+    /// The Collection's hall opened the page on its own (the classic menus): Escape goes
+    /// back to it. [`Self::open`] forgets it.
+    pub(crate) fn set_from_hall(&mut self, from_hall: bool) {
+        self.from_hall = from_hall;
     }
 
     /// Whether the page is the Profile screen's Holocrons tab.
@@ -612,6 +641,25 @@ impl Panel {
         self.selected = index.min(SLOTS - 1);
     }
 
+    /// Choose the tier at slot `index` and open (or attune) its oldest as soon as the
+    /// hub's list is read ([`Self::take_open_soon`]): the Collection's Inventory's Open.
+    pub(crate) fn open_on(&mut self, index: usize) {
+        self.select(index);
+        self.open_soon = true;
+    }
+
+    /// The opening [`Self::open_on`] asked, once the page knows what it holds: its
+    /// ceremony starts as Open's would. `None` while it waits, or when there is nothing to
+    /// open (the wish then lapses).
+    pub(crate) fn take_open_soon(&mut self, now: Instant) -> Option<PanelAction> {
+        if !self.open_soon || self.data.state == State::Waiting {
+            return None;
+        }
+        self.open_soon = false;
+        let ids = self.open_one()?;
+        Some(self.ask(ids, now))
+    }
+
     /// What the 3D holocron shows: the chosen tier, in its own look while the player
     /// holds one of it, else the locked look; while one is opened, that one.
     pub(crate) fn stage_request(&self) -> holocrons::stage::Request {
@@ -668,6 +716,7 @@ impl Panel {
             return self.ask_all_key(key, now);
         }
         match key {
+            KeyCode::Escape if self.hub || self.from_hall => return PanelAction::Hall,
             KeyCode::Escape => return PanelAction::Close,
             KeyCode::Tab => self.step(if shift { -1 } else { 1 }, true),
             KeyCode::ArrowUp | KeyCode::ArrowLeft => self.step(-1, false),
@@ -746,13 +795,22 @@ impl Panel {
                 PanelAction::None
             }
             Some(SHOP_TOKEN) => PanelAction::Shop,
-            Some(token) if self.hub => match crate::profile_hub::collection_tab_of(token) {
-                Some(tab) if tab != crate::profile_hub::Tab::Holocrons => PanelAction::Hub(tab),
-                _ => PanelAction::None,
-            },
+            Some(ACHIEVEMENTS_TOKEN) => PanelAction::Achievements,
+            Some(SERVERS_TOKEN) => PanelAction::Servers,
+            Some(crate::profile_hub::HALL_TOKEN) if self.hub => PanelAction::Hall,
             _ => PanelAction::None,
         }
     }
+}
+
+/// The achievement of `held` nearest its goal and not reached, not a secret one: its
+/// name, count and goal.
+fn next_achievement(held: &[sjk_identity::Achievement]) -> Option<(String, u64, u64)> {
+    crate::achievements::standings(held)
+        .iter()
+        .filter(|standing| standing.listed() && standing.unlocked.is_none() && !standing.secret())
+        .max_by(|a, b| a.fraction().total_cmp(&b.fraction()))
+        .map(|next| (next.name().into_owned(), next.progress, next.kind.goal))
 }
 
 #[cfg(test)]
@@ -788,7 +846,7 @@ mod tests {
         assert_eq!(
             panel.selected().id,
             "kyber_uncommon",
-            "the kyber crystals come after the holocrons"
+            "the dormant kybers come after the holocrons"
         );
         let _ = panel.key(KeyCode::End, false);
         assert_eq!(panel.selected().id, "kyber_mythical");
@@ -1081,6 +1139,7 @@ mod tests {
             staff: false,
             creator: false,
             jkr_creator: false,
+            all_access: false,
             trust: None,
             emoji: String::new(),
             created: 0,
@@ -1329,7 +1388,7 @@ mod tests {
         else {
             panic!("a shader prize");
         };
-        assert_eq!(nameless.name, "A new saber shader");
+        assert_eq!(nameless.name, "A new kyber");
         let Some(opening::Prize::Shader(tidal)) =
             opening::Prize::of(&shader("saber_tidal", "Tidal blade"))
         else {
@@ -1360,7 +1419,7 @@ mod tests {
             ("tag_from_the_future", "tag"),
             ("toy_from_the_future", "toy"),
             ("banner_from_the_future", "profile banner"),
-            ("saber_from_the_future", "saber shader"),
+            ("saber_from_the_future", "kyber"),
             ("something_else", "prize"),
         ] {
             let Some(opening::Prize::Shader(found)) = opening::Prize::of(&unlock(id)) else {
@@ -1527,6 +1586,42 @@ mod tests {
         assert_eq!(panel.key(KeyCode::KeyA, false), PanelAction::None);
         assert_eq!(panel.ask(vec![3], Instant::now()), PanelAction::None);
         assert!(!panel.opening());
+    }
+
+    /// The Collection's Inventory's Open: the tier is chosen at once, and its oldest
+    /// opens once the page knows what it holds, once; a tier held none of asks nothing.
+    #[test]
+    fn open_on_opens_the_oldest_once_the_list_is_read() {
+        let mut panel = Panel::new();
+        panel.open(true);
+        panel.open_on(2);
+        assert_eq!(panel.selected, 2);
+        panel.data.state = State::Waiting;
+        assert_eq!(
+            panel.take_open_soon(Instant::now()),
+            None,
+            "waits for the list"
+        );
+        panel.data = openable();
+        assert_eq!(
+            panel.take_open_soon(Instant::now()),
+            None,
+            "none held of it"
+        );
+        assert_eq!(
+            panel.take_open_soon(Instant::now()),
+            None,
+            "the wish lapsed"
+        );
+        panel.open(true);
+        panel.data = openable();
+        panel.open_on(0);
+        assert_eq!(
+            panel.take_open_soon(Instant::now()),
+            Some(PanelAction::Open(vec![3]))
+        );
+        assert!(panel.opening());
+        assert_eq!(panel.take_open_soon(Instant::now()), None, "once");
     }
 
     /// Enter opens the oldest of the tier chosen and A every one, the oldest first; the
@@ -1864,8 +1959,8 @@ mod tests {
         assert_eq!(title, "Open 20 of your 34 holocrons?");
         assert!(lines.join(" ").contains("the other 14 wait"));
         let (title, lines) = ask_all::words(7, 7, true);
-        assert_eq!(title, "Open all 7 kyber crystals?");
-        assert!(lines.join(" ").contains("every shader found"));
+        assert_eq!(title, "Attune all 7 dormant kybers?");
+        assert!(lines.join(" ").contains("every kyber found"));
         for (opening, held) in [(2, 2), (7, 7), (20, 34), (20, 999)] {
             let (title, lines) = ask_all::words(opening, held, false);
             assert!(lines.len() <= 4);
