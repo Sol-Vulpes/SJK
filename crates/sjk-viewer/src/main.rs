@@ -56,7 +56,6 @@ mod economy;
 mod editions;
 mod entity_view;
 mod fishing;
-mod fishing_sell;
 mod forge_alert;
 mod forge_fuse;
 mod kyber;
@@ -210,7 +209,6 @@ mod menu_widgets;
 mod menu_world;
 mod mimic;
 mod mining;
-mod mining_sell;
 mod missile_trails;
 mod mod_notice_card;
 mod model_materials;
@@ -641,15 +639,6 @@ struct GpuState {
     illuminate: illuminate::Holocron,
     /// The other players' holocrons, lit by their looks.
     illuminate_others: illuminate::Others,
-    /// The Fishing toy (`toy_fishing`): the player's own rod and the rods of others.
-    fishing: fishing::Fishing,
-    /// The Fishing toy's sounds to play this frame.
-    fishing_cues: Vec<&'static str>,
-    /// The Mining toy (`toy_mining`): the player's own pickaxe and vein, and the pickaxes
-    /// of others.
-    mining: mining::Mining,
-    /// The Mining toy's sounds to play this frame.
-    mining_cues: Vec<&'static str>,
     /// The Drone toy (`toy_drone`): its consent switch and the other players' drones.
     drone: drone::Drone,
     /// The Boombox toy (`toy_boombox`): the own stereo and track, and what plays here.
@@ -870,7 +859,7 @@ struct GpuState {
     /// The SJK UI's Profile screen: which tab shows, switched here.
     profile_hub: profile_hub::Hub,
     /// The last frame's view, for placing 2D over the world outside the HUD pass (the
-    /// drone's and the fishing line's marks, the holocron stage).
+    /// drone's marks, the holocron stage).
     frame_view: Option<hud::identification::Camera>,
     pointer_captured: bool,
     /// A primary press consumed by spectator aim-to-follow; consume its release too.
@@ -1744,10 +1733,6 @@ impl GpuState {
             speed_trails: Default::default(),
             illuminate: Default::default(),
             illuminate_others: Default::default(),
-            fishing: Default::default(),
-            fishing_cues: Vec::with_capacity(4),
-            mining: Default::default(),
-            mining_cues: Vec::with_capacity(4),
             drone: Default::default(),
             boombox: Default::default(),
             monitor: Default::default(),
@@ -2557,10 +2542,6 @@ impl GpuState {
             viewport,
             information_visible && intermission_view.is_none() && !scoreboard_held,
         );
-        self.append_fishing_cue(
-            viewport,
-            information_visible && intermission_view.is_none() && !scoreboard_held,
-        );
         self.append_use_prompt(
             viewport,
             information_visible && intermission_view.is_none() && !scoreboard_held,
@@ -3001,8 +2982,6 @@ impl GpuState {
         self.begin_saber_instances(presentation_time);
         self.particle_groups.iter_mut().for_each(Vec::clear);
         self.submit_illuminate(presentation_time, visual_now);
-        self.submit_fishing(presentation_time, visual_now);
-        self.submit_mining(visual_now);
         self.submit_drones(presentation_time, visual_now);
         self.submit_monitors(presentation_time);
         self.submit_boomboxes();

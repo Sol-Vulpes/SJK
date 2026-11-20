@@ -294,9 +294,6 @@ mod movers;
 #[path = "world_shot_illuminate.rs"]
 mod holocron;
 
-#[path = "world_shot_fishing.rs"]
-mod fishing_shots;
-
 #[path = "world_shot_map_edits.rs"]
 mod map_edit_shots;
 
@@ -1778,13 +1775,13 @@ like this one.",
                 people: 63,
                 toys: [
                     (
-                        crate::fishing::TOY,
+                        crate::drone::TOY,
                         [9, 31, 48],
                         [21_600, 151_200, 412_000],
                         214,
                     ),
                     (
-                        crate::mining::TOY,
+                        crate::quests::TOY,
                         [7, 22, 40],
                         [14_400, 98_000, 301_000],
                         160,

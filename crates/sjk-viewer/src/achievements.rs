@@ -126,13 +126,13 @@ pub(crate) enum Counter {
     // The Fishing toy's (Slash, 29/10/2026; [`crate::fishing`]).
     /// Fish landed with the Fishing toy.
     FishCaught,
-    /// Kinds of fish landed (bits of [`fish_kind`]).
+    /// Kinds of fish landed (bits by place among the fish of [`crate::fishing::CATCHES`]).
     FishKinds,
     /// Echoes landed on the line.
     EchoesLanded,
     /// Old Whiskers, the great catfish, landed.
     GreatCatfish,
-    /// Kinds of junk fished up (bits of [`junk_kind`]; 04/11/2026).
+    /// Kinds of junk fished up (bits by place among the junk; 04/11/2026).
     JunkKinds,
     /// The most fish bites hooked in a row, none let go between (04/11/2026).
     HookStreak,
@@ -141,7 +141,7 @@ pub(crate) enum Counter {
     BouldersBroken,
     /// Clean strikes on them (a blow on the glint).
     CleanStrikes,
-    /// Kinds of ore dug (bits of [`ore_kind`]).
+    /// Kinds of ore dug (bits by place among the ores of [`crate::mining::FINDS`]).
     OreKinds,
     /// The Heart of the Mountain dug.
     MountainHearts,
@@ -1179,36 +1179,6 @@ pub(crate) const ALL: [Kind; 80] = [
     .retire(),
 ];
 
-/// The bit of the fish `id` in [`Record`]'s kinds of fish: its place among the fish of
-/// [`crate::fishing::CATCHES`] (junk has none).
-pub(crate) fn fish_kind(id: &str) -> Option<u32> {
-    crate::fishing::CATCHES
-        .iter()
-        .filter(|catch| catch.kind == crate::fishing::Kind::Fish)
-        .position(|catch| catch.id == id)
-        .map(|index| 1 << index)
-}
-
-/// The bit of the junk `id` in [`Record`]'s kinds of junk: its place among the junk of
-/// [`crate::fishing::CATCHES`] (fish have none).
-pub(crate) fn junk_kind(id: &str) -> Option<u32> {
-    crate::fishing::CATCHES
-        .iter()
-        .filter(|catch| catch.kind == crate::fishing::Kind::Junk)
-        .position(|catch| catch.id == id)
-        .map(|index| 1 << index)
-}
-
-/// The bit of the ore `id` in [`Record`]'s kinds of ore: its place among the ores of
-/// [`crate::mining::FINDS`] (rubble has none).
-pub(crate) fn ore_kind(id: &str) -> Option<u32> {
-    crate::mining::FINDS
-        .iter()
-        .filter(|find| find.kind == crate::mining::Kind::Ore)
-        .position(|find| find.id == id)
-        .map(|index| 1 << index)
-}
-
 /// How many achievements can still be earned (every one but the retired).
 pub(crate) const OBTAINABLE: usize = {
     let mut count = 0;
@@ -1388,11 +1358,11 @@ pub(crate) struct Record {
     partners: BTreeSet<String>,
     /// Kinds of weapon (bits of [`tracker::weapon_kind`]).
     weapons: u32,
-    /// Kinds of fish landed (bits of [`fish_kind`]).
+    /// Kinds of fish landed (bits by place among the fish of [`crate::fishing::CATCHES`]).
     fish: u32,
-    /// Kinds of junk fished up (bits of [`junk_kind`]).
+    /// Kinds of junk fished up (bits by place among the junk).
     junk: u32,
-    /// Kinds of ore dug (bits of [`ore_kind`]).
+    /// Kinds of ore dug (bits by place among the ores of [`crate::mining::FINDS`]).
     ores: u32,
     /// The toys' sets of players ([`Counter::is_named`]), by the counter's key: names
     /// without colours, lower case.
@@ -1477,56 +1447,6 @@ impl Record {
         let total = self.spare_ms[counter as usize] + ms;
         self.add(counter, total / 60_000);
         self.spare_ms[counter as usize] = total % 60_000;
-    }
-
-    /// A catch the Fishing toy landed: `catch` (none when the hook came up empty) or an
-    /// Echo (`echo`), `streak` fish bites hooked in a row with it. Whether a count
-    /// changed.
-    pub(crate) fn fished(
-        &mut self,
-        catch: Option<&crate::fishing::Catch>,
-        echo: bool,
-        streak: u32,
-    ) -> bool {
-        if echo {
-            self.add(Counter::EchoesLanded, 1);
-            return true;
-        }
-        let best = self.counts[Counter::HookStreak as usize];
-        self.raise(Counter::HookStreak, u64::from(streak));
-        let longer = self.counts[Counter::HookStreak as usize] > best;
-        let Some(catch) = catch else {
-            return longer;
-        };
-        match catch.kind {
-            crate::fishing::Kind::Junk => {
-                let before = self.junk;
-                self.junk |= junk_kind(catch.id).unwrap_or(0);
-                longer || self.junk != before
-            }
-            crate::fishing::Kind::Fish => {
-                self.add(Counter::FishCaught, 1);
-                self.fish |= fish_kind(catch.id).unwrap_or(0);
-                if catch.id == crate::fishing::GREAT_CATFISH {
-                    self.add(Counter::GreatCatfish, 1);
-                }
-                true
-            }
-        }
-    }
-
-    /// A boulder the Mining toy broke, for `find`, after `clean` clean strikes on it.
-    /// Whether a count changed (always: a boulder counts).
-    pub(crate) fn mined(&mut self, find: &crate::mining::Find, clean: u32) -> bool {
-        self.add(Counter::BouldersBroken, 1);
-        self.add(Counter::CleanStrikes, u64::from(clean));
-        if find.kind == crate::mining::Kind::Ore {
-            self.ores |= ore_kind(find.id).unwrap_or(0);
-            if find.id == crate::mining::HEART {
-                self.add(Counter::MountainHearts, 1);
-            }
-        }
-        true
     }
 
     /// Remember player `name` in the set of `counter` ([`Counter::is_named`]), by its
@@ -2070,76 +1990,6 @@ pub(crate) fn count(counter: Counter) -> u64 {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    /// A fish counts towards Angler and its kind, Old Whiskers towards its own, an Echo
-    /// on the line towards Echo Angler, junk towards Beachcomber by its kind and the
-    /// longest run of hooked bites towards Steady Hand; an empty hook counts only its
-    /// bite, and the kinds of fish and junk are kept in the file.
-    #[test]
-    fn fishing_counts_fish_their_kinds_echoes_and_the_catfish() {
-        let catch = |id: &str| {
-            crate::fishing::CATCHES
-                .iter()
-                .find(|catch| catch.id == id)
-                .unwrap()
-        };
-        let mut record = Record::default();
-        assert!(!record.fished(None, false, 0));
-        assert!(record.fished(Some(catch("boot")), false, 0));
-        assert!(!record.fished(Some(catch("boot")), false, 0));
-        assert!(record.fished(Some(catch("silver_darter")), false, 0));
-        assert!(record.fished(Some(catch("silver_darter")), false, 0));
-        assert!(record.fished(Some(catch(crate::fishing::GREAT_CATFISH)), false, 0));
-        assert!(record.fished(None, true, 0));
-        assert_eq!(record.count(Counter::FishCaught), 3);
-        assert_eq!(record.count(Counter::FishKinds), 2);
-        assert_eq!(record.count(Counter::GreatCatfish), 1);
-        assert_eq!(record.count(Counter::EchoesLanded), 1);
-        assert_eq!(record.count(Counter::JunkKinds), 1);
-        assert!(record.fished(Some(catch("hilt")), false, 0));
-        assert_eq!(record.count(Counter::JunkKinds), 2);
-        // The streak keeps its best; an empty hook's bite counts for it too.
-        assert!(record.fished(None, false, 4));
-        assert!(!record.fished(None, false, 3));
-        assert_eq!(record.count(Counter::HookStreak), 4);
-        assert_eq!(crate::fishing::FISH_KINDS, 12);
-        assert_eq!(find("fish_kinds").unwrap().goal, 12);
-        assert_eq!(crate::fishing::JUNK_KINDS, 6);
-        assert_eq!(find("junk_kinds").unwrap().goal, 6);
-        assert_eq!(find("echo_angler").unwrap().goal, 5);
-        assert_eq!(find("fish_first").unwrap().category.page(), Page::Hobbies);
-        assert_eq!(Record::from_json(&record.to_json()), record);
-    }
-
-    /// A boulder counts towards Stonebreaker, its clean strikes towards Sharp Eye, an
-    /// ore towards its kind, the Heart towards its own; rubble counts the boulder only,
-    /// and the kinds of ore are kept in the file.
-    #[test]
-    fn mining_counts_boulders_clean_strikes_ores_and_the_heart() {
-        let find = |id: &str| {
-            crate::mining::FINDS
-                .iter()
-                .find(|find| find.id == id)
-                .unwrap()
-        };
-        let mut record = Record::default();
-        assert!(record.mined(find("rubble"), 0));
-        assert!(record.mined(find("iron_ore"), 2));
-        assert!(record.mined(find("iron_ore"), 1));
-        assert!(record.mined(find(crate::mining::HEART), 0));
-        assert_eq!(record.count(Counter::BouldersBroken), 4);
-        assert_eq!(record.count(Counter::CleanStrikes), 3);
-        assert_eq!(record.count(Counter::OreKinds), 2);
-        assert_eq!(record.count(Counter::MountainHearts), 1);
-        assert_eq!(crate::mining::ORE_KINDS, 9);
-        assert_eq!(find("rubble").kind, crate::mining::Kind::Rubble);
-        assert_eq!(super::find("mine_kinds").unwrap().goal, 9);
-        assert_eq!(
-            super::find("mine_first").unwrap().category.page(),
-            Page::Hobbies
-        );
-        assert_eq!(Record::from_json(&record.to_json()), record);
-    }
 
     fn held(id: &str, progress: u64, unlocked: i64) -> sjk_identity::Achievement {
         sjk_identity::Achievement {

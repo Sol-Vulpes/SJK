@@ -490,10 +490,6 @@ impl QuickWheel {
 pub(crate) struct Toys {
     /// Illuminate's holocron is lit.
     pub(crate) illuminate: bool,
-    /// The fishing rod is out.
-    pub(crate) fishing: bool,
-    /// The pickaxe is in hand.
-    pub(crate) mining: bool,
     /// The player is limp (the Ragdoll toy).
     pub(crate) ragdoll: bool,
     /// The Drone toy is on.
@@ -521,8 +517,6 @@ fn in_effect(console: &crate::console::ViewerConsole, state: State, toys: Toys) 
     match state {
         State::None => false,
         State::Illuminate => toys.illuminate,
-        State::Fishing => toys.fishing,
-        State::Mining => toys.mining,
         State::Ragdoll => toys.ragdoll,
         State::Drone => toys.drone,
         State::Boombox => toys.boombox,
@@ -688,8 +682,6 @@ impl crate::GpuState {
         let store = &console.wheel_pages;
         let toys = Toys {
             illuminate: self.illuminate.lit(),
-            fishing: self.fishing.on(),
-            mining: self.mining.on(),
             ragdoll: self.ragdoll.on(),
             drone: self.drone.on(),
             boombox: self.boombox.on(),

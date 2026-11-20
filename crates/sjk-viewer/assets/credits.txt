@@ -666,7 +666,7 @@ did: Holocron catch-up after a short day, and holocrons that count real play
 [Sanjisan]
 role: Ideas for SJK
 did: Click a name in the chat to whisper them
-did: The Fishing toy: a rod, fish anywhere and Echoes on the line
+did: The Fishing toy (29/10 to 20/11/2026): a rod, fish anywhere, Echoes on the line
 
 [Nib]
 role: Ideas for SJK

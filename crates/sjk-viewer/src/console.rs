@@ -296,32 +296,16 @@ pub(crate) struct ViewerConsole {
     quests_on: bool,
     /// The Toys tab asked to turn Quests on (`true`) or off, not yet taken.
     pending_quests: Option<bool>,
-    /// The fishing rod is out, mirrored as [`Self::illuminate_lit`] is.
-    fishing_on: bool,
-    /// The Toys tab asked to get the rod out (`true`) or put it away, not yet taken.
-    pending_fishing: Option<bool>,
-    /// The pickaxe is in hand, mirrored as [`Self::illuminate_lit`] is.
-    mining_on: bool,
-    /// The Toys tab asked to take the pickaxe (`true`) or put it away, not yet taken.
-    pending_mining: Option<bool>,
-    /// The Fishing card's catches and sale, as the viewer last gave them.
-    fishing_card: crate::fishing_sell::Card,
-    /// The Fishing card's Sell junk button was pressed.
-    pending_fishing_sell: bool,
-    /// The Fishing or Mining card's Sell fish / Sell ore button (the catch market,
-    /// 15/11/2026) was pressed: `Some(true)` fish, `Some(false)` ore.
-    pending_catch_sell: Option<bool>,
     /// A WHEEL OF DOOM of the player's runs, mirrored as [`Self::illuminate_lit`] is.
     wheel_of_doom_on: bool,
     /// The Toys tab pressed the WHEEL OF DOOM's switch, not yet taken.
     pending_wheel_of_doom: bool,
-    /// The Mining card's finds and sale, as the viewer last gave them.
-    mining_card: crate::fishing_sell::Card,
-    /// The Mining card's Sell rubble button was pressed.
-    pending_mining_sell: bool,
+    /// The Fishing and Mining log books, read as the Collection opened
+    /// ([`crate::catch_book::load`]).
+    log_books: crate::catch_book::Books,
     /// An empty Collection page asked for the server list (15/11/2026).
     pending_servers: bool,
-    /// The log book's Share button was pressed: Mining's (`true`) or Fishing's.
+    /// The Log book's Share button was pressed: Mining's (`true`) or Fishing's.
     pending_brag: Option<bool>,
     /// The Monitor toy is on, mirrored as [`Self::illuminate_lit`] is.
     monitor_on: bool,

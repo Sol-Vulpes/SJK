@@ -62,19 +62,15 @@ fn blade_skin(id: &str) -> Option<&'static str> {
 /// The toys a look can have out that this client draws, by id (`PROTOCOL.md`, "Looks"):
 /// a toy's bit in [`Worn::toys`] is its place here. A look naming another id (a newer
 /// client's toy) draws nothing more.
-pub(crate) const TOYS: [&str; 13] = [
+pub(crate) const TOYS: [&str; 11] = [
     crate::drone::TOY,
     crate::boombox::TOY,
     // The Monitor's switch: others foresee its monitors striking this player.
     crate::monitor::TOY,
     // Box hunt's switch: the hub picks the mark among the players whose look has it.
     crate::box_hunt::TOY,
-    // The fishing rod out: others draw the rod, the bucket and the float.
-    crate::fishing::TOY,
     // The wearer's model in toon shading, their choice (`cg_toonModel`).
     crate::toon_choice::TOY,
-    // The pickaxe in hand: others draw it.
-    crate::mining::TOY,
     // Quests' switch: the hub gives quests among the players whose look has it.
     crate::quests::TOY,
     // The wearer's playstyles, their badges over the nameplate (`playstyle.rs`).
@@ -708,7 +704,7 @@ mod tests {
     /// them at once too: more than the 8 hubs took before 30/10/2026.
     #[test]
     fn every_toy_goes_both_ways_all_at_once() {
-        assert!(TOYS.len() > 8 && TOYS.contains(&crate::fishing::TOY));
+        assert!(TOYS.len() > 8 && TOYS.contains(&crate::box_hunt::TOY));
         let all = TOYS
             .iter()
             .fold(Worn::default(), |worn, toy| worn.with_toy(toy, true));
@@ -716,14 +712,14 @@ mod tests {
         assert_eq!(look.toys, TOYS);
         let back = Worn::of(&look);
         assert!(TOYS.iter().all(|toy| back.has_toy(toy)));
-        let rod_away = back.with_toy(crate::fishing::TOY, false);
-        assert!(!rod_away.has_toy(crate::fishing::TOY) && rod_away.has_toy(crate::box_hunt::TOY));
+        let drone_away = back.with_toy(crate::drone::TOY, false);
+        assert!(!drone_away.has_toy(crate::drone::TOY) && drone_away.has_toy(crate::box_hunt::TOY));
         let rest: Vec<&str> = TOYS
             .iter()
             .copied()
-            .filter(|toy| *toy != crate::fishing::TOY)
+            .filter(|toy| *toy != crate::drone::TOY)
             .collect();
-        assert_eq!(rod_away.to_look("").toys, rest);
+        assert_eq!(drone_away.to_look("").toys, rest);
     }
 
     /// Other players' boomboxes and holocrons hidden on this PC are not drawn on

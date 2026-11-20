@@ -966,16 +966,6 @@ test: Last copy: warning line, then it leaves Collection and the profile; Histor
 test: Switch off (or not staff): no Break down button; the Forge shows no banner answer.
 note: Needs hub shared #18 deployed first; --banner-shatter is off by default (client #369).
 
-[fishing-278]
-area: Gameplay
-title: Slash #278: Fishing toy (rod, bucket, 12 fish, Echoes on the line)
-change: toy_fishing: rod in hand, float on water or a small pond, bites every 20-60 s.
-change: Only holocrons play drops come up as Echoes (not bought, gifted, traded, earned).
-test: toy_fishing on duel6: pond, float dips, +use within 1 s lands a fish in the bucket.
-test: Move or take damage: the rod goes away. Another SJK player sees rod and bucket.
-test: debug_holocron while fishing: card at once, no Echo on the line, no Echo Angler count.
-note: Achievements need hub-shared #9 imported and deployed before they record online.
-
 [creyon-new-blades-370]
 area: Rendering & effects
 title: 130 new blades (Creyon #370), blades 170 to 299: not in holocrons yet
@@ -1043,7 +1033,7 @@ title: PRs 04/11 b: fishing sell/cue, vehicle emotes, nameplate alpha, sharpen, 
 change: Slash #349 sell junk (hub off until deployed), #350 bite cue, #352 emote ends on vehicle.
 change: Slash #353 cg_nameplateAlpha, #357 r_sharpen, #358 alias, #359 rounded banners.
 change: Slash #360 whisper recipient line; #355 Loadouts click; Bishop #347 Linux stack.
-test: s_volume 0, fish: a ! over the float + Bite! Press Use!; mount a swoop mid-emote: ends.
+test: Mount a swoop mid-emote: the emote ends (the fishing parts went with the toy).
 test: r_sharpen 50 vs 0 on ffa3; cg_nameplateAlpha 0.3; alias x "say hi" then x, restart, x.
 test: Whisper two people: To <name> line, < > step, click name lists both; Loadouts (P) click.
 
@@ -5394,26 +5384,6 @@ test: s_language francais, snd_restart: taunts and the bots' pain and death voic
 test: s_language english, snd_restart: they are English again.
 
 # ---- Gameplay ----
-
-[catch-log-book]
-area: Gameplay
-title: Fishing/Mining: log book, rare catch card, share in SJK chat (Slash, after adwe)
-change: Toys > Fishing/Mining: Log book button lists every kind, ??? until caught, with x and day.
-change: A rare fish (Kyber minnow or rarer) or ore (star quartz or rarer) brings a RARE card.
-change: fishing_brag / mining_brag (and the book's Share) say it in SJK chat, once a minute.
-test: Collection > Toys > Fishing > Log book: ??? cells, caught ones with count; Back returns.
-test: Land a new fish: its cell shows today's date; fishing_log.txt has a first <id> line.
-test: debug: give a Kyber minnow (or play): RARE CATCH card at the top, secret area sound.
-test: fishing_brag: one line in SJK chat as you, not in the game's chat; again: a moment ago.
-note: Nothing goes to the hub but the chat line; an old client keeps the log, drops first lines.
-
-[mining-rarer-of-two]
-area: Gameplay
-title: Mining: a clean strike gives the rarer of two ores (Slash, PR #414, hub #286)
-change: With a clean strike a second ore is drawn and the rarer comes out; iron still drops.
-change: The Heart's odds and pity are unchanged; no clean strike, nothing changes.
-test: Mine boulders hitting the glint every time: iron still turns up now and then.
-test: Prospector (mine_kinds) can reach 9/9 for a player who always strikes clean.
 
 [duel-lines]
 area: Console & chat
@@ -10216,25 +10186,6 @@ test: Fire: bolts go to the crosshair. Back off or use it again: put away, weapo
 test: Shoot it to pieces (200): it blows up and the holdable is gone.
 test: devmap hoth2: walk to an E-Web facing its way, use key: take it; again: let go.
 
-[fishing-play-balance]
-area: Gameplay
-title: Fishing counts as play, and its balance (Slash, #362, #361)
-change: A hooked bite keeps a player standing at the water earning holocron time.
-change: Bites every 15 to 40 s, Old Whiskers pity, Echo Angler at 5, two new achievements.
-test: toy_fishing, stand and hook bites: Holocrons tab keeps counting, no Not earning line.
-test: Stop hooking for over 5 minutes, or go idle 2 minutes: the tab says Not earning.
-test: Collection > Achievements > Fun: Fishing shows seven, Beachcomber and Steady Hand.
-note: Needs hub shared #12 and #13 deployed; Echo Angler stays 10 until then.
-
-[fishing-easier]
-area: Gameplay
-title: Easier fishing: bites, empty catches, Echo bites (Slash, #419)
-change: Bites every 12 to 25 s, 1.5 to 2 s to press Use, empty 5% (was 15%).
-change: Pulling too soon waits 5 to 10 s more; an Echo bite holds 3 s, three tries.
-test: toy_fishing online: bites come often, Use about a second late still hooks them.
-test: Press Use with no bite: the next bite comes 5 to 10 s later than usual.
-test: debug_holocron is no Echo; wait for a real drop: the golden bite holds 3 s.
-
 [devmap-jof-maps]
 area: Gameplay
 title: devmap and Create game start JoF content maps (Slash, #423)
@@ -10279,17 +10230,6 @@ change: Click a toy: its 10 players who had it out longest.
 test: As staff, Staff page > Toys: the list fills, longest out first; a toy opens its top 10.
 note: Needs hub shared #25 deployed; until then the tab says "Toy counts need a newer SJK hub."
 
-[catch-rewards]
-area: Gameplay
-title: Kyber finds, daily catch goals, catch market (Slash, after adwe's idea)
-change: Hub rolls a few kyber shards on claims with bites or broken boulders (3 a day).
-change: Daily goals: 25 bites, 40 boulders win an Echo each. Market buys fish and ore.
-test: Local hub with --kyber-finds, --catch-market, --junk-selling, --catch-quests staff.
-test: Fish or mine a while: "A kyber glint ... +N kyber shards", shards rise in Profile.
-test: Collection > Toys > Fishing: goal line counts bites; at 25 the Echo comes once.
-test: Sell fish: Wanted today line, the wanted one pays double, the 15 a day cap holds.
-note: Needs hub shared #26 deployed and its switches on; without it nothing new shows.
-
 [forge-shatter-many]
 area: Menus & settings
 title: The Forge breaks several shaders down at once (Slash, #367)
@@ -10321,18 +10261,7 @@ change: Rows under Around you, With others, Earn and win; a By column (Sol or Sl
 change: The card says Made by Sol, or Made by Slash, Sanji's idea, under the toy's name.
 test: Collection > Toys: three heads, 13 rows, the last clear of the keys line.
 test: Arrows and Tab walk the rows top to bottom; the Monitor follows Boombox.
-test: Choose Fishing: Made by Slash, Sanji's idea. Mining: Made by Slash, vinry's idea.
-
-[mining-toy]
-area: Gameplay
-title: Mining toy and selling rubble (Slash, #363, #364, after vinry's idea)
-change: toy_mining: a pickaxe, boulders come up round you, Attack breaks them for ore or rubble.
-change: Collection > Toys > Mining: the log and Sell rubble; mining_sell, mining_log in console.
-test: toy_mining on a server: the pickaxe in hand, three boulders in sight on the ground.
-test: Hold Attack at one: swings, a blow on the glint is a clean strike, it breaks into a find.
-test: Choose a weapon, alt attack or get hurt: the pickaxe goes away. The rod puts it away too.
-test: Collection > Achievements: F to Hobbies: Fishing's seven, Mining's five.
-note: The achievements need the five ids on the hub; Sell rubble needs hub shared #14.
+test: Choose Quests: Made by Slash, wonner67's idea.
 
 [quests-toy]
 area: Gameplay
@@ -10557,3 +10486,13 @@ change: The hub's odds change ships with the release (hub branch no-raygun).
 test: Open boxes: no Ray Gun rolls by; the drops panel lists no Ray Gun once the hub is updated.
 test: Monitor: a hit player still falls as a ragdoll and gets up as before.
 test: First person: your weapon and saber show as before (no prop gun in the hand).
+
+[fishing-mining-removed]
+area: Menus & settings
+title: Fishing and Mining removed; their logs stay in the Collection's Log book
+change: No toy_fishing or toy_mining, no selling, glints, daily goals or rare catch banners.
+change: Collection: a Log book tile after History and a tab, only with a catch in the logs.
+change: Both books read only: ??? for none caught, count and first day, rare ones in gold.
+test: With a fishing_log.txt holding a catch: the Log book tile and tab show, both books fit.
+test: Share under a book with a catch: one line in SJK chat; again at once: a moment ago.
+test: A profile with no logs: no Log book tile, no tab; Toys shows 8 rows, all fit.

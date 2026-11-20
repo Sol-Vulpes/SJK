@@ -17,10 +17,6 @@ pub(crate) enum State {
     /// Illuminate's holocron is lit (the client's own state, no cvar holds it:
     /// `toy_illuminate` flips it).
     Illuminate,
-    /// The fishing rod is out (`toy_fishing` flips it).
-    Fishing,
-    /// The pickaxe is in hand (`toy_mining` flips it).
-    Mining,
     /// The player is limp (`toy_ragdoll` flips it).
     Ragdoll,
     /// The Drone toy is on (`toy_drone` flips it).
@@ -41,7 +37,7 @@ pub(crate) enum State {
 /// icons and cut by `scripts/wheel_icons.py` from two boards (the first sixteen
 /// from the first, the rest, named by the actions they are for, from the
 /// second); uploaded into the UI atlas at start (`ui_renderer::wheel_icon`).
-pub(crate) const ICONS: [(&str, &[u8]); 55] = [
+pub(crate) const ICONS: [(&str, &[u8]); 53] = [
     ("drizzle", include_bytes!("../../assets/wheel/drizzle.png")),
     ("rain", include_bytes!("../../assets/wheel/rain.png")),
     ("storm", include_bytes!("../../assets/wheel/storm.png")),
@@ -156,16 +152,6 @@ pub(crate) const ICONS: [(&str, &[u8]); 55] = [
     (
         "illuminate",
         include_bytes!("../../assets/holocron/toy_illuminate.png"),
-    ),
-    // Fishing's picture, the rod over a bucket (bundled with the client).
-    (
-        "fishing",
-        include_bytes!("../../assets/fishing/toy_fishing.png"),
-    ),
-    // Mining's picture, the pickaxe over a crystal (bundled with the client).
-    (
-        "mining",
-        include_bytes!("../../assets/mining/toy_mining.png"),
     ),
     // The Ragdoll's picture, the slumped figure (bundled with the client).
     (
@@ -624,22 +610,6 @@ pub(crate) const ACTIONS: &[Action] = &[
         Toys,
         State::Illuminate,
         Some("illuminate"),
-    ),
-    action(
-        "fishing",
-        "Fishing",
-        crate::fishing::COMMAND,
-        Toys,
-        State::Fishing,
-        Some("fishing"),
-    ),
-    action(
-        "mining",
-        "Mining",
-        crate::mining::COMMAND,
-        Toys,
-        State::Mining,
-        Some("mining"),
     ),
     // Goes limp; again gets up.
     action(

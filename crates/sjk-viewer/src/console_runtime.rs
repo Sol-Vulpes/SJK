@@ -38,28 +38,11 @@ impl GpuState {
         if let Some(on) = console.take_quests_request() {
             self.quests.set_on(on);
         }
-        if let Some(on) = console.take_fishing_request()
-            && on != self.fishing.on()
-        {
-            self.fishing.toggle();
-        }
-        if let Some(on) = console.take_mining_request()
-            && on != self.mining.on()
-        {
-            // As `toggle_mining`: `+use` is both toys', so the rod goes away first.
-            if on && self.fishing.on() {
-                self.fishing.toggle();
-            }
-            self.mining.toggle();
-        }
         // The boombox checks who may carry it, so it is switched once the console is let
-        // go; the Fishing card's Sell junk and the Mining card's Sell rubble too.
+        // go.
         let boombox_request = console.take_boombox_request();
-        let sell_junk = console.take_fishing_sell_request();
         let wheel_of_doom = console.take_wheel_of_doom_request();
-        let sell_rubble = console.take_mining_sell_request();
         let servers = console.take_servers_request();
-        let sell_catch = console.take_catch_sell_request();
         let brag = console.take_brag_request();
         let mut actions = [None; MAX_ACTIONS_PER_FRAME];
         console.advance_command_frame();
@@ -98,27 +81,15 @@ impl GpuState {
         {
             self.toggle_boombox();
         }
-        if sell_junk {
-            self.sell_fishing_junk();
-        }
         if wheel_of_doom {
             self.wheel_of_doom_command();
-        }
-        if sell_rubble {
-            self.sell_mining_rubble();
         }
         if servers {
             self.open_servers_from_collection();
         }
-        match sell_catch {
-            Some(true) => self.sell_fishing_catch(),
-            Some(false) => self.sell_mining_ore(),
-            None => {}
-        }
-        match brag {
-            Some(true) => self.brag_mining(),
-            Some(false) => self.brag_fishing(),
-            None => {}
+        // The Log book's Share (`catch_book`).
+        if let Some(mining) = brag {
+            self.share_log_book(mining);
         }
         // `toy_illuminate` may have flipped it: tell the Toys tab. The Drone, the Monitor,
         // Box hunt and Quests stay as last switched, across
@@ -139,9 +110,7 @@ impl GpuState {
             console.set_boombox_on(self.boombox.on());
             console.set_monitor_on(self.monitor.on());
             console.set_box_hunt_on(self.box_hunt.on());
-            console.set_fishing_on(self.fishing.on());
             console.set_wheel_of_doom_on(self.wheel_of_doom.running());
-            console.set_mining_on(self.mining.on());
             console.set_quests_on(self.quests.on());
         }
         let connection = self

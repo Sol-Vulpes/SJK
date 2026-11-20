@@ -1109,13 +1109,13 @@ and in the hub (same ids):
 | Long Distance Call (retired 20/11/2026) | `monitor_far` | a player struck with a monitor 1575 units (40 metres, as the world ping measures) or more from where it was thrown, measured where it met the body (`achievements::MONITOR_FAR`) | client |
 | Bounty Hunter, Big Game Hunter | `box_hunt_mark`, `box_hunt_marks_10` | 1, 10 box hunt marks killed (a free roll won or not) | hub |
 | Still Standing, Most Wanted | `box_hunt_survive`, `box_hunt_survive_5` | 1, 5 marks stayed to the end without a hunter's kill, still in the hunt | hub |
-| First Bite, Angler (retired 20/11/2026) | `fish_first`, `fish_50` | 1, 50 fish landed with the Fishing toy ([client.md](client.md#fishing)) | client |
+| First Bite, Angler (retired 20/11/2026) | `fish_first`, `fish_50` | 1, 50 fish landed with the Fishing toy ([client.md](client.md#fishing-and-mining-removed-and-the-log-book)) | client |
 | Every Fish in the Pond (retired 20/11/2026) | `fish_kinds` | every kind of fish landed (12, `fishing::FISH_KINDS`) | client |
 | Echo Angler (retired 20/11/2026) | `echo_angler` | 5 Echoes landed on the line (10 until 04/11/2026) | client |
 | Old Whiskers (hidden) (retired 20/11/2026) | `old_whiskers` | Old Whiskers, the great catfish, landed | client |
 | Beachcomber (retired 20/11/2026) | `junk_kinds` | every kind of junk fished up (6, `fishing::JUNK_KINDS`) | client |
 | Steady Hand (retired 20/11/2026) | `fish_steady` | 10 fish bites hooked in a row, none let go between | client |
-| First Strike, Stonebreaker (retired 20/11/2026) | `mine_first`, `mine_500` | 1, 500 boulders broken with the Mining toy ([client.md](client.md#mining)) | client |
+| First Strike, Stonebreaker (retired 20/11/2026) | `mine_first`, `mine_500` | 1, 500 boulders broken with the Mining toy ([client.md](client.md#fishing-and-mining-removed-and-the-log-book)) | client |
 | Sharp Eye (retired 20/11/2026) | `mine_clean_250` | 250 clean strikes (a blow as the boulder glints) | client |
 | Prospector (retired 20/11/2026) | `mine_kinds` | every kind of ore dug (9, `mining::ORE_KINDS`, the Heart among them) | client |
 | Heart of the Mountain (hidden) (retired 20/11/2026) | `heart_of_the_mountain` | the Heart of the Mountain dug | client |
@@ -1296,8 +1296,8 @@ see it", "See it in Collection > Holocrons"). The new medal pop-up that opens wi
 game menu takes back the banners of what it shows, and its entrance (and fanfare) also
 waits for the window to come back. A newer SJK release the update check finds has a
 banner too ([client.md](client.md#updates)), as do a content update, a contributor
-reward, a kyber on the wishlist in the shop, the Fishing and Mining toys' rare catches,
-kyber glints and daily goals, and a request from the SJK team for the game's logs. The board has two
+reward, a kyber on the wishlist in the shop (the Fishing and Mining toys' rare catches,
+kyber glints and daily goals until 20/11/2026), and a request from the SJK team for the game's logs. The board has two
 pages (since 30/10/2026, Sol: "the general/normal ones and the more specific ones / fun
 ones", so it can keep growing): General, with Combat, Duels and flags, Journeys,
 Community and Collection, and Fun, with a category for each toy (Cardboard box, Order

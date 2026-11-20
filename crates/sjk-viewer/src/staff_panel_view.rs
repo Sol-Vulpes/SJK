@@ -125,8 +125,10 @@ fn cut(text: &str, chars: usize) -> String {
 /// page's Toys tab: a look toy id ([`crate::looks::TOYS`]) that is a choice of the
 /// player's rather than a toy of its own, or a removed toy older clients still report
 /// (20/11/2026: the hub counts them until the release switches them off).
-const OTHER_TOY_NAMES: [(&str, &str); 6] = [
+const OTHER_TOY_NAMES: [(&str, &str); 8] = [
     (crate::toon_choice::TOY, "Toon model"),
+    ("fishing", "Fishing (removed)"),
+    ("mining", "Mining (removed)"),
     ("hax_away", "Hax, away (removed)"),
     ("hax", "Hax (removed)"),
     ("order66", "Order 66 (removed)"),

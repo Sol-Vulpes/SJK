@@ -125,9 +125,7 @@ impl GpuState {
                     .with_toy(crate::boombox::TOY, self.boombox.on())
                     .with_toy(crate::monitor::TOY, self.monitor.on())
                     .with_toy(crate::box_hunt::TOY, self.box_hunt.on())
-                    .with_toy(crate::fishing::TOY, self.fishing.on())
                     .with_toy(crate::toon_choice::TOY, toon)
-                    .with_toy(crate::mining::TOY, self.mining.on())
                     .with_toy(crate::quests::TOY, self.quests.on())
                     .with_playstyles(plays),
             );
@@ -164,9 +162,7 @@ impl GpuState {
         .with_toy(crate::boombox::TOY, self.boombox.on())
         .with_toy(crate::monitor::TOY, self.monitor.on())
         .with_toy(crate::box_hunt::TOY, self.box_hunt.on())
-        .with_toy(crate::fishing::TOY, self.fishing.on())
         .with_toy(crate::toon_choice::TOY, toon)
-        .with_toy(crate::mining::TOY, self.mining.on())
         .with_toy(crate::quests::TOY, self.quests.on())
         .with_playstyles(plays);
         if let Some(sent) = sent {

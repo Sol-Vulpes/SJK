@@ -22,16 +22,14 @@ pub(crate) enum Toy {
     /// The Toy Master's hidden toys (`toy_master.rs`).
     Master,
     Tag,
-    Fishing,
     /// The WHEEL OF DOOM (`wheel_of_doom.rs`).
     WheelOfDoom,
-    Mining,
     /// The chimes as a quest is given and done (`quests.rs`).
     Quests,
 }
 
 impl Toy {
-    pub(crate) const ALL: [Self; 11] = [
+    pub(crate) const ALL: [Self; 9] = [
         Self::Ragdoll,
         Self::Drone,
         Self::Boombox,
@@ -39,9 +37,7 @@ impl Toy {
         Self::MysteryBox,
         Self::Master,
         Self::Tag,
-        Self::Fishing,
         Self::WheelOfDoom,
-        Self::Mining,
         Self::Quests,
     ];
 
@@ -55,9 +51,7 @@ impl Toy {
             Self::MysteryBox => "s_toyMysteryBoxSound",
             Self::Master => "s_toyMasterSound",
             Self::Tag => "s_toyTagSound",
-            Self::Fishing => "s_toyFishingSound",
             Self::WheelOfDoom => "s_toyWheelOfDoomSound",
-            Self::Mining => "s_toyMiningSound",
             Self::Quests => "s_toyQuestsSound",
         }
     }

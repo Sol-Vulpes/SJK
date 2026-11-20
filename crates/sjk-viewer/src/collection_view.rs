@@ -157,12 +157,9 @@ pub(crate) fn row_labels(
         boombox: false,
         monitor: false,
         box_hunt: false,
-        fishing: false,
-        mining: false,
         quests: false,
-        fishing_card: None,
         wheel_of_doom: false,
-        mining_card: None,
+        log_books: None,
         stock: color::holo(),
         grid: false,
         options: "",
@@ -555,8 +552,6 @@ impl Panel {
         self.boombox_on = inputs.boombox;
         self.monitor_on = inputs.monitor;
         self.box_hunt_on = inputs.box_hunt;
-        self.fishing_on = inputs.fishing;
-        self.mining_on = inputs.mining;
         self.quests_on = inputs.quests;
         self.toys_unseen = inputs.toys_unseen;
         self.toy_options = inputs.toy_options;
@@ -688,6 +683,7 @@ impl Panel {
             Tab::Cards => self.cards(&frame, inputs, seconds),
             Tab::History => self.history_tab(&frame, inputs),
             Tab::Inventory => self.inventory_tab(&frame, inputs, seconds),
+            Tab::LogBook => self.log_book_tab(&frame, inputs),
             Tab::Forge => {
                 self.grid = inputs.grid;
                 self.forge(&frame, inputs, seconds, viewport);
@@ -1051,10 +1047,6 @@ impl Panel {
                     (MONITOR_TOY, _) => "turn on",
                     (BOX_HUNT_TOY, _) if inputs.box_hunt => "turn off",
                     (BOX_HUNT_TOY, _) => "turn on",
-                    (FISHING_TOY, _) if inputs.fishing => "put away",
-                    (FISHING_TOY, _) => "get the rod out",
-                    (MINING_TOY, _) if inputs.mining => "put away",
-                    (MINING_TOY, _) => "take the pickaxe",
                     (QUESTS_TOY, _) if inputs.quests => "turn off",
                     (QUESTS_TOY, _) => "turn on",
                     (_, true) => "put out",

@@ -84,6 +84,7 @@ A new emblem, a new Collection with kybers and an Inventory, status bars at both
 - The cardboard box toy is removed too (Sol's cleanup before the release): its key, its Collection row, its quick wheel choice and its settings are gone; the Hax's hack still starts on Use as before _(Sol)_
 - Order 66 and the Hax are removed too (Sol's cleanup before the release): their keys, Collection rows, quick wheel choices and settings are gone, the Hax trap with them; the Ragdoll and the Monitor still leave alone a player who is dead, duelling, carrying the flag or away _(Sol)_
 - The Prop gun toy is removed, and with it the mystery box's Ray Gun, which ran on it: a box now gives a holocron a little more often instead (52.5 %, was 45.5 %) _(Sol)_
+- Fishing and Mining are removed too, with their selling, kyber glints and daily goals; what you caught stays yours: a Log book in the Collection (a tile after History) shows both logs, every fish, junk, ore and rubble you found with its first day, and shares your rarest catch in the SJK chat _(Sol)_
 
 ## 2026.1117.1 (Alpha) | 17/11/2026
 

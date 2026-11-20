@@ -6584,225 +6584,27 @@ from the card faces' textures. See [tags.rs](../crates/sjk-viewer/src/tags.rs),
 [tags_frame.rs](../crates/sjk-viewer/src/tags_frame.rs) and
 [collection_tags.rs](../crates/sjk-viewer/src/collection_tags.rs).
 
-## Fishing
+## Fishing and Mining (removed), and the Log book
 
-Fishing (Sanji's idea in #ideas, 29/10/2026; Slash's rules) is a toy for every SJK player: a rod in the hand, a
-bucket at the feet and a float on the water, and a bite to hook now and then. It gives
-nothing the economy counts: catches go to the player's own fish log, and the Echoes it
-brings up are the ones the hub drops anyway.
+Fishing (Sanji's idea, 29/10/2026, Slash's design: a rod, a bucket and a float, bites
+hooked with `+use`, Echo bites, junk and the catch market) and Mining (vinry's idea,
+built by Slash, 04/11/2026: a pickaxe, boulders broken with clean strikes, ore and
+rubble) were removed on 20/11/2026 in Sol's cleanup before the release, with their
+kyber glints, daily catch goals, selling commands and rare catch banners. Their saved
+settings (`s_toyFishingSound`, `s_toyMiningSound`, `cg_fishingBiteCue`) are dropped
+from the profile at load; a bind on `toy_fishing`, `toy_mining` or their selling and
+log commands only says the command is unknown. Their achievements are retired
+([identity.md](identity.md)).
 
-- **`toy_fishing`** (a bind, the quick wheel's Toys page, Collection > Toys, "Rod out")
-  gets the rod out or puts it away. The player must stand still: moving, getting hurt,
-  dying or leaving the game puts it away. The hands go empty (`weapmelee`), and the upper
-  body holds the rod in the rifles' ready pose (`TORSO_WEAPONREADY3`) while the legs stand.
-  In first person the own rod is held in view, low on the right, and the one in the hand
-  shows only in mirrors.
-- **Where it casts:** into water ahead (72, 56 or 40 units in front, the first that has
-  it), else onto ground ahead no more than 48 below the feet, where a small pond is drawn
-  for the cast: the toy fishes anywhere, since few maps have water. The pond is drawn
-  with the installed game's own swamp textures (Hidden Evil's lake layers over the stock
-  water, Yavin's mud, mossy rock and ground plants), so the game must be installed.
-- **Bites** come every 12 to 25 seconds (20 to 60 until 04/11/2026, 15 to 40 until 11/11/2026): the float dips, a splash plays, and `+use` within
-  1.5 to 2 seconds (0.8 to 1.2 until 11/11/2026) hooks it. Too soon scares the fish (the next bite waits 5 to 10
-  seconds more); too late lets it go. A hooked bite comes up empty 5% of the time (15% until 11/11/2026), with
-  junk 30% (six kinds) and a fish 65% (twelve kinds, from the Silver darter to Old
-  Whiskers, the great catfish, one fish in about 106), reeled in to the tip hanging by
-  its mouth, and said in the centre of the screen. Old Whiskers has bad luck protection
-  (04/11/2026): its weight among the fish rises by one for every 10 fish landed since the
-  last one (`fishing::WHISKERS_PITY`), so it comes in about 37 fish on average and within
-  67 for nine players in ten (over 240 before). Each catch is counted in
-  `fishing_log.txt` in the settings folder (`<id> <count>` a line, and `last <id>`); the
-  fish since the last Old Whiskers are kept there as a count, `whiskers_wait <count>`.
-- **The fish** each have their own model and painted skin (`fishing_fish_<id>.md3`, one
-  fish atlas): the slim Silver darter, the deep spiny Mud snapper, the spotted
-  big-mouthed Swamp gulper, the barred Striped bonefish, the Glow perch with its glowing
-  spots, the long Spiny pike with spines down its back, the scaled golden Sun carp, the
-  Moon eel, the Kyber minnow with crystals on its back, the flat Ghost ray, the red and
-  white Temple koi and Old Whiskers with its long whiskers. The **bucket** holds the last
-  fish caught (kept in the log, so it is there the next time the rod comes out): a short
-  one floats on its side on the water, a longer one stands head down with its tail out
-  over the rim. Other players' buckets are empty, since their catches are not sent.
-- **Echoes:** when the hub drops the player an Echo while they fish, its card waits, and
-  a golden bite comes 5 to 15 seconds later (3 seconds to hook it, three tries 30 to 90 seconds apart;
-  1.5 seconds and two tries until 11/11/2026); hooked,
-  the holocron comes up on the line and its card shows. Missed every try, or with the rod put
-  away, the card shows all the same. Fishing never brings an Echo the hub did not drop:
-  the caps stay as they are ([holocrons.md](holocrons.md)).
-- **Play time** (04/11/2026, headshotsmcgee117's question in #ideas): each bite hooked in
-  time is a play signal (`bites`), and the hub counts the time of a player standing at
-  the water toward holocrons while the last one came within 5 minutes
-  ([holocrons.md](holocrons.md), "Play signals"). A press of Use without a bite scares the
-  fish off, so a held or repeated key hooks nothing.
-- **Achievements:** First Bite (a fish), Angler (50 fish), Every Fish in the Pond (every kind), Echo Angler (5
-  Echoes on the line; 10 until 04/11/2026), Old Whiskers (hidden), Beachcomber (every kind
-  of junk) and Steady Hand (10 fish bites hooked in a row, none let go between; an Echo's
-  bite neither counts nor breaks the run), counted on servers only, as the others
-  ([identity.md](identity.md#achievements)).
-- **Sounds:** Settings > Sound > Toys, "Fishing" (`s_toyFishingSound`).
-- **The fish log on the card** (03/11/2026): the Fishing card in Collection > Toys says
-  how many fish were caught and of how many kinds, and in one line the junk held ("Junk:
-  7 pieces, worth 12 credits (8 left today)"). `fishing_log` in the console prints the
-  log in full: every fish and junk with its count, the junk held and what was sold.
-- **Selling junk** (03/11/2026, Sol's yes on PR #278; the hub's `PROTOCOL.md` "Fishing junk",
-  `sjk_identity::junk`): the card's "Sell junk (+N credits)" button, and `fishing_sell`
-  in the console, sell the junk held to the hub. The hub pays a few credits a piece (1
-  to 5) up to 15 credits in 24 hours per person and per address, the most valuable
-  pieces first, and answers what it took: only that is counted sold, as `sold <id>
-  <count>` lines in `fishing_log.txt` (older clients skip them), so the counts of what
-  was caught, and the achievements, never change. The card asks the hub what it still
-  pays (`GET /v1/fishing/junk`) when shown and every 30 seconds after; the button shows
-  only while the hub says this player may sell (the operator's switch, off until Sol
-  turns it on) and is greyed with nothing payable or no junk. One sale at a time
-  (`fishing_sell.rs`). Fish never sold before the catch market (below); the log keeps
-  every count for the achievements either way.
-- **Kyber finds, daily goals and the catch market** (15/11/2026, adwè's idea in #ideas;
-  hub `PROTOCOL.md` "Holocrons" Kyber finds, "Quests" Daily catch quests, "Fishing junk"
-  Catch market; `sjk_identity::catch`; each behind its own hub switch, off by default):
-  - A claim's answer may carry `kyber_find`: the hub rolled a few kyber shards for a
-    claim whose play signals had a hooked bite or a broken boulder (at most 3 a day).
-    The client says it in the console ("A kyber glint in the water! +3 kyber shards")
-    and with a notification banner ("KYBER GLINT", "+3 kyber shards"; a centre print
-    until 16/11/2026, [identity.md](identity.md#achievements)) and takes the new shard balance
-    (`GpuState::catch_news_frame` in `fishing_sell.rs`).
-  - It may carry `catch_quests`: the hub's own count of the day's bites and boulders
-    against two goals (25 bites, 40 boulders), each winning an Echo once a day within
-    the holocrons' daily cap. The Fishing and Mining cards show the goal in one line
-    under the junk's ("Goal: 12/25 bites for an Echo"), and the claim that wins it says
-    so once, in the console and with a "DAILY GOAL" banner.
-  - `GET /v1/fishing/junk` may carry `market`: fish and ore sell too, under the junk's
-    one cap, one of them wanted each day at double its price. The cards then add
-    "Wanted: Moon eel x2 (6 credits)" to that line and a **Sell fish** / **Sell ore** button beside Sell junk /
-    Sell rubble (`fishing_sellfish`, `mining_sellore` in the console). Only what the
-    hub's `sold` names is counted sold; the catch counts never change.
-  - Mining sends a new play signal, `rocks` (boulders broken,
-    `holocrons::signals::rock`), which sets no pace.
-- **Log book, rare catches and sharing** (15/11/2026, Slash, after adwè's #ideas post;
-  `catch_book.rs`, the same for [Mining](#mining)): the card's "Log book" button shows,
-  in place of the toy's words, every fish and junk two to a row, the ones never caught as
-  "???", the others with their count and the day the first came up ("Back" returns). The
-  day is a `first <id> <yyyymmdd>` line of the log, which older clients skip (and drop
-  when they write the log); catches from before have none. A rare fish (weight 3 or less:
-  the Kyber minnow, Ghost ray, Temple koi and Old Whiskers) also brings a "RARE CATCH"
-  notification banner and the single-player game's secret-area sound among the
-  toy's sounds. `fishing_brag` (and the book's "Share in SJK chat") says the session's
-  last rare catch, else the log's rarest fish, as the player's own SJK chat message
-  ("Caught Old Whiskers, the great catfish (my first!) - 9 of 12 kinds in my log"),
-  never in the game server's chat, at most once a minute and only when asked. The hub
-  neither reads nor pays for any of it.
-- **Bite cue** (03/11/2026, for players with the sound off): Settings > Sound > Toys,
-  "Fishing bite cue" (`cg_fishingBiteCue`: 0 off, 1 when the sound is off, the default,
-  2 always). While shown, a bite puts a pulsing "!" over the float (gold for an Echo's
-  bite), drawn as the mystery boxes' words are, and "Bite! Press Use!" (an Echo:
-  "Something shines under the float!") on the centre of the screen; a fish's bite let
-  go says "It got away.". "The sound is off" means the Fishing sounds switched off, the
-  toys' or the game's effects volume at 0, or the game muted while away
-  (`GpuState::fishing_cue_shown`); a sound muted by name (`s_muteSounds`) or no sound
-  device does not count, so set 2 there.
-
-No game server knows of it. The rod is a toy in the player's look (`toys: ["fishing"]`),
-so other SJK players draw it in the fisher's hand, with the line to a float where their
-own client finds water or ground ahead of that player; players on stock clients see a
-player standing still. The models, picture, shader and icon are bundled, made by
-[fishing_assets.py](../scripts/fishing_assets.py) from shapes (nothing taken from another
-game), and mounted below all game data. See
-[fishing.rs](../crates/sjk-viewer/src/fishing.rs).
-
-## Mining
-
-Mining (vinry's idea, built by Slash, 04/11/2026; phase 1) is a toy for every SJK player, and unlike
-[Fishing](#fishing) no waiting game: a pickaxe in the hand, boulders coming up out of the
-ground round the player, and each broken a blow at a time at the player's own pace. Phase 1
-gives nothing the economy counts: finds go to the player's own mining log, and five
-achievements count them on servers as the rest do (in a Mining category on the board's
-Hobbies page, beside Fishing's; [identity.md](identity.md)): First Strike (a boulder
-broken), Stonebreaker (500), Sharp Eye (250 clean strikes), Prospector (every kind of
-ore, the Heart among them) and the hidden Heart of the Mountain.
-
-- **Selling rubble** (phase 2, 05/11/2026): the hub buys the four kinds of rubble by the
-  Fishing junk's routes and under its cap (`junk` prices name them: `rubble` and `slag`
-  1 credit, `drill_bit` 2, `fossil` 3; one daily sum of 15 for junk and rubble together,
-  so mining earns nothing on top of fishing). The Mining card in Collection > Toys shows
-  the mining log under its switch ("Mining log: N ores, K of 9 kinds", then "Rubble: N
-  pieces, worth X credits (Y left today)") and a **Sell rubble (+N credits)** button,
-  hidden while the hub buys no rubble from this player (its switch off, an older hub whose
-  prices name none, no connection); `mining_sell` does the same, `mining_log` prints the
-  log in full. One sale runs at a time across both cards, and each toy takes only the
-  answer to its own sale: the pieces the hub's `sold` names go to `sold <id> <count>`
-  lines in `mining_log.txt`, the counts of what was dug unchanged (`mining_sell.rs`; the
-  card and the sale state are `fishing_sell`'s). Ore never sells: it stays in the log for
-  the achievements.
-- **Log book, rare finds and sharing** (15/11/2026, as Fishing's,
-  [Fishing](#fishing)): the Mining card's "Log book" lists every ore and rubble with its
-  count and first day, "???" until dug; a rare ore (weight 11 or less: star quartz, void
-  crystal and the Heart of the Mountain, about one ore in seventeen) brings the "RARE
-  FIND" banner and the secret-area sound (the Heart's alone before); `mining_brag` and the
-  book's Share button say the last rare find, else the rarest ore, in the SJK chat.
-
-- **`toy_mining`** (a bind, the quick wheel's Toys catalogue, Collection > Toys, "Pickaxe
-  out") takes the pickaxe in hand or puts it away. The player may walk with it;
-  an alt attack, choosing a weapon (`weapon <n>`, the saber's 1 among them, or the next
-  or previous one; it then comes out), getting hurt, dying or leaving the game puts it
-  away (health over the
-  maximum counting down after a spawn is no hurt). The hands go empty: the fists when the
-  player has them (`weapmelee`), else a lit saber is switched off; the pickaxe then
-  replaces whatever that hand holds. It is held as a hilt is: on the right hand's bolt,
-  turned with it (its handle along the bolt's +Z out of the top of the fist, its spike
-  forward along -Y, fitted in game against a hilt), so it stays in the grip in every pose,
-  first person included, where the own hands hold it; laid straight in the upright plane
-  the body faces (the handle and spike kept in it), so the hands' roll in the saber move
-  does not tip it to a side and its head stays level through the swing. The upper body takes the strong
-  saber stance (`BOTH_SABERSLOW_STANCE`), both hands on the handle, while it stands.
-  Taking it puts the fishing rod away and getting the rod out puts it away: `+use` is both
-  toys'.
-- **Boulders** (three at a time) come up out of the ground 140 to 420 units from the
-  player, at least 110 apart, rising over 0.6 seconds: the first ones within a second of
-  the pickaxe coming out, the next 4 to 8 seconds after one breaks (so another always
-  waits; about six a minute). A spot must be in the
-  player's sight, on ground flat enough (its normal at least 0.75 up), not in water, lava
-  or slime, nor the sky, at most 64 units below the feet (not the floor under a ledge),
-  the boulder itself in sight, and 56 units clear of the map's items (weapons, pickups).
-  A boulder more than 1400 units from the player goes, and another
-  comes up nearer; another map has none. They are the player's own: nobody else sees
-  them, and they do not block anyone.
-- **A swing** is the attack button (MB1; `+use` too): the attack is kept from the
-  weapon in hand while the pickaxe is out, so nothing fires. 0.7 seconds of the whole body playing the strong saber style's
-  blow from overhead down (`BOTH_A3_T__B_`, both hands on the handle; the legs too while
-  they stand, blended in over 100 ms), the pickaxe following the hands down to the ground
-  before the feet, its blow landing 0.42 seconds in (presses during a swing are not kept,
-  so spamming swings no faster; held, the attack swings again and again). The saber
-  swooshes the animation's cues play (`sound/weapons/saber/`) are left out while a player
-  holds the pickaxe (`actor_sounds.rs`): the pickaxe's own swing plays. The blow strikes the nearest boulder
-  within 64 units before the player (about 57 degrees either side of the way they face),
-  or, striking none, says nothing (a word there cut short the find just shown while the
-  attack was held). Others see the pickaxe held, not the swing: swings are not
-  sent.
-- **Blows:** a boulder takes 10 to 14, shrinking as it breaks and shaking at each.
-- **The glint:** 1 to 2.5 seconds after a boulder's first blow, then every 1.5 to 4
-  seconds, a star flashes on it for 0.8 seconds with a spark sound. A blow that lands
-  while it shines is a **clean strike**: it counts two blows, rings, and makes the find
-  better.
-- **The find:** rubble 40% of the time (four kinds), 10 points less for each clean strike
-  (never under 20%), else an ore (nine kinds, weighted 96 iron, 86 copper, 57 silver,
-  43 glowstone, 28 sunstone, 19 moonstone, 11 star quartz, 9 void crystal and 1 the
-  Heart of the Mountain). With any clean strike two ores are drawn and the rarer one comes
-  out, though never the Heart from the second draw, which only its own roll gives.
-  (Until hub report #286 a clean strike lifted the ore one tier, iron to copper and so
-  on, so a player who struck clean on every boulder never dug iron and Prospector stopped
-  at 8 of 9.) The Heart's
-  weight rises by one for every 100 ores dug since the last one, as Old Whiskers' does:
-  one in about 230 boulders, some 40 minutes of steady mining (an hour at an easy pace),
-  near Old Whiskers' half hour. The find jumps out of the broken boulder to the player's feet and is
-  said in the centre of the screen; each is counted in `mining_log.txt` in the settings
-  folder (`<id> <count>` a line, and `heart_wait <count>`).
-- **Sounds:** Settings > Sound > Toys, "Mining sounds" (`s_toyMiningSound`), all retail
-  game sounds (the melee swing, stone blows and breaking, a ricochet's ring, a spark).
-
-No game server knows of it. The pickaxe is a toy in the player's look (`toys: ["mining"]`),
-so other SJK players draw it in the miner's hands; players on stock clients see
-empty hands. The models, pictures, shader and icon are bundled, made by
-[mining_assets.py](../scripts/mining_assets.py) from shapes (nothing taken from another
-game; the rock is the installed game's Yavin rock), and mounted below all game data. See
-[mining.rs](../crates/sjk-viewer/src/mining.rs).
+Their logs (`fishing_log.txt`, `mining_log.txt` in the profile folder) stay the
+player's own record: the Collection's **Log book** (a tile in the hall after History,
+a tab on the row) shows both, read only, for a player whose logs hold a catch
+([catch_book.rs](../crates/sjk-viewer/src/catch_book.rs),
+[collection_log_book.rs](../crates/sjk-viewer/src/collection_log_book.rs)): every fish
+and junk, every ore and rubble, two to a row, the ones never caught as "???", the others
+with their count and first day, the rare ones in gold, and each book's Share button,
+which says its rarest catch in the SJK chat (once a minute). A player with no catch sees
+neither the tile nor the tab.
 
 ## Toy sounds
 
@@ -6812,10 +6614,8 @@ toy's sounds, and a switch per toy silences that toy's sounds alone, the player'
 and everyone else's (`s_toyRagdollSound`, `s_toyDroneSound`, `s_toyBoomboxSound`, `s_toyMonitorSound`,
 `s_toyMysteryBoxSound` (the [mystery boxes](mystery-boxes.md)), `s_toyTagSound` (the [Tag](#tag)'s spray,
 03/11/2026), `s_toyMasterSound` (the toys [the Toy
-Master](toy-master.md) hides, 30/10/2026), `s_toyFishingSound`
-(the [Fishing](#fishing) toy), `s_toyWheelOfDoomSound` (the
-[WHEEL OF DOOM](wheel-of-doom.md), 07/11/2026), `s_toyMiningSound` (the
-[Mining](#mining) toy), `s_toyQuestsSound` (the [Quests](quests.md) chimes, 05/11/2026), all
+Master](toy-master.md) hides, 30/10/2026), `s_toyWheelOfDoomSound` (the
+[WHEEL OF DOOM](wheel-of-doom.md), 07/11/2026), `s_toyQuestsSound` (the [Quests](quests.md) chimes, 05/11/2026), all
 on by default,
 archived). The toy still
 runs and is still seen; nothing is sent to anyone. The Illuminate holocron makes no
@@ -7249,11 +7049,9 @@ while the player is limp), and since 26/10/2026 the [Monitor](#monitor) (`toy_mo
 marked while it is on, then Throw monitor, `monitor_throw`); a wheel saved before keeps
 its Toys page as it was, and gains them from Add a choice, Toys. The page holds ten, so
 later toys are in the catalogue's Toys group only, to add from there: Box hunt
-(`toy_boxhunt`), [Quests](quests.md) (`toy_quests`, since 04/11/2026), the Tag (`toy_tag`),
-[Fishing](#fishing) (`toy_fishing`, marked while the rod
-is out), since 07/11/2026 the [WHEEL OF DOOM](wheel-of-doom.md) (`toy_wheelofdoom`,
-a press: the first shows the price, a second spins) and [Mining](#mining) (`toy_mining`,
-marked while the pickaxe is in hand).
+(`toy_boxhunt`), [Quests](quests.md) (`toy_quests`, since 04/11/2026), the Tag (`toy_tag`)
+and since 07/11/2026 the [WHEEL OF DOOM](wheel-of-doom.md) (`toy_wheelofdoom`, a press:
+the first shows the price, a second spins).
 
 ### GIF wheel
 
