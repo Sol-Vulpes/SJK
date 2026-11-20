@@ -960,4 +960,45 @@ mod tests {
         );
         assert_eq!(logos(&chat).len(), 2, "each line has its emblem");
     }
+
+    /// Hub report #321 (Hormorn): JoF EternalJK's icon reached over the chat's rows. It
+    /// and the tick after the name stay inside their own row at every chat text size
+    /// (`cg_chatBoxFontSize`), so they cover neither the text nor the lines above and
+    /// below.
+    #[test]
+    fn a_client_icon_and_its_tick_fit_their_row_at_every_text_size() {
+        let ejk = |id, name: &str| ChatMessage {
+            reactions: Default::default(),
+            client: "ejk".to_owned(),
+            ..message(id, name, "hello from JoF", true)
+        };
+        let mut chat = feed(&[], vec![ejk(1, "Milamber"), ejk(2, "Figo")]);
+        let (low, high) = crate::chat::options::CHAT_SIZE;
+        for size in [low as f32, 0.5, 0.85, 1.0, 1.5, high as f32] {
+            chat.options.font = size;
+            chat.build(true, &crate::text::test_font(), VIEWPORT, 1_000);
+            let row = chat.options.geometry(VIEWPORT).row;
+            let texts = texts(&chat);
+            let icons = quads(&chat, crate::ui_renderer::EJK_TEXTURE);
+            let ticks = ticks(&chat);
+            assert_eq!((icons.len(), ticks.len()), (2, 2), "at {size}");
+            for (name, icon, tick) in [
+                ("Milamber", icons[0], ticks[0]),
+                ("Figo", icons[1], ticks[1]),
+            ] {
+                let (_, text, _) = drawn(&texts, name);
+                // Both are centred on the row's band, which can sit a fraction of a
+                // pixel over the text's top, so each is held to the row's height and
+                // its middle to the row.
+                for (what, rect) in [("icon", icon), ("tick", tick)] {
+                    let middle = rect.y + rect.height / 2.0;
+                    assert!(
+                        rect.height <= row && middle > text.y && middle < text.y + row,
+                        "{name}'s {what} {rect:?} is taller than or outside its row {row} at {size}"
+                    );
+                }
+                assert!(icon.right() < text.x, "the icon before the name at {size}");
+            }
+        }
+    }
 }
