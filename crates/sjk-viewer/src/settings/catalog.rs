@@ -450,11 +450,6 @@ pub(super) const AUDIO: &[Setting] = &[
         kind: ValueKind::Bool,
     },
     Setting {
-        label: "Fishing sounds",
-        cvar: crate::toy_sounds::Toy::Fishing.cvar(),
-        kind: ValueKind::Bool,
-    },
-    Setting {
         label: "WHEEL OF DOOM sounds",
         cvar: crate::toy_sounds::Toy::WheelOfDoom.cvar(),
         kind: ValueKind::Bool,
@@ -462,16 +457,6 @@ pub(super) const AUDIO: &[Setting] = &[
     Setting {
         label: "Quests sounds",
         cvar: crate::toy_sounds::Toy::Quests.cvar(),
-        kind: ValueKind::Bool,
-    },
-    Setting {
-        label: "Fishing bite cue",
-        cvar: crate::fishing::CUE_CVAR,
-        kind: ValueKind::Choice(&["0", "1", "2"]),
-    },
-    Setting {
-        label: "Mining sounds",
-        cvar: crate::toy_sounds::Toy::Mining.cvar(),
         kind: ValueKind::Bool,
     },
     Setting {

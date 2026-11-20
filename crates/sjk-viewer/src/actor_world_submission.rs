@@ -69,12 +69,6 @@ struct Sinks<'a> {
     jetpack_sounds: &'a mut crate::jetpack::Sounds,
     /// The boombox's model and who carries one (bits by slot, [`crate::boombox`]).
     boombox: (Option<usize>, u64),
-    /// The fishing rod's and line's models and each fisher's line ([`crate::fishing`]),
-    /// and where each rod's tip is drawn (for the next frame's catch).
-    fishing: (Option<usize>, Option<usize>, crate::fishing::Lines),
-    fishing_tips: &'a mut [Option<[f32; 3]>; 64],
-    /// The pickaxe's model and each miner's pickaxe ([`crate::mining`]).
-    mining: (Option<usize>, crate::mining::Picks),
     /// How bright each player's Screen Saver shell is ([`crate::monitor::saver`]).
     screen_savers: crate::monitor::Glows,
     world: &'a sjk_runtime::World,
@@ -323,22 +317,6 @@ pub(crate) fn submit(
                 .iter()
                 .position(|mesh| mesh.appearance.model == crate::boombox::MODEL),
             gpu.boombox.carriers(),
-        ),
-        fishing: (
-            gpu.object_meshes
-                .iter()
-                .position(|mesh| mesh.appearance.model == crate::fishing::ROD),
-            gpu.object_meshes
-                .iter()
-                .position(|mesh| mesh.appearance.model == crate::fishing::LINE),
-            gpu.fishing.lines,
-        ),
-        fishing_tips: &mut gpu.fishing.tips,
-        mining: (
-            gpu.object_meshes
-                .iter()
-                .position(|mesh| mesh.appearance.model == crate::mining::PICK),
-            gpu.mining.picks,
         ),
         world: active_world,
         actor_meshes: &gpu.actor_meshes,
@@ -987,69 +965,6 @@ fn submit_actor(
             sinks.object_groups[boombox].push(instance);
         }
     }
-    // A fisher's rod in their right hand and the line from its tip, as the boombox: the
-    // rod in the hand only in mirrors in first person, where the own rod is held in view
-    // instead (and the line runs from that one's tip).
-    if entity.kind == EntityKind::Actor
-        && let (Some(mesh), (Some(rod), Some(line_mesh), lines)) = (mesh, sinks.fishing)
-        && number < 64
-        && let Some(end) = lines.ends[usize::from(number)]
-        && e_flags & EF_DEAD_FLAG == 0
-        && !trick.hidden
-    {
-        let actor = &sinks.actor_meshes[mesh];
-        if let Some((mut instance, tip)) = actor.animator.requested.and_then(|_| {
-            crate::fishing::rod_in_hand(
-                &actor.preview,
-                actor.animator.matrices(),
-                *transform,
-                lines.bend[usize::from(number)],
-            )
-        }) {
-            instance.view_flags = sinks.entity_view_flags | u32::from(!draw_actor);
-            sinks.object_groups[rod].push(instance);
-            let mut tip = tip;
-            if !draw_actor && Some(entity.id.get()) == local_entity_id {
-                let (mut held, held_tip) = crate::fishing::rod_in_view(
-                    sinks.camera_position,
-                    sinks.camera_yaw,
-                    sinks.camera_pitch,
-                    lines.bend[usize::from(number)],
-                );
-                held.view_flags = sinks.entity_view_flags;
-                sinks.object_groups[rod].push(held);
-                tip = held_tip;
-            }
-            if let Some(mut line) = crate::fishing::line(tip, Vec3::from_array(end)) {
-                line.view_flags = sinks.entity_view_flags;
-                sinks.object_groups[line_mesh].push(line);
-            }
-            sinks.fishing_tips[usize::from(number)] = Some(tip.to_array());
-        }
-    }
-    // A miner's pickaxe in their right hand, turned with it as a hilt is, so it follows
-    // the hold and the swing; in first person too, where the own hands hold it. The
-    // weapon or saber that hand held is not drawn (`submit_weapons`).
-    if entity.kind == EntityKind::Actor
-        && let (Some(mesh), (Some(pick), picks)) = (mesh, sinks.mining)
-        && number < 64
-        && picks.held[usize::from(number)]
-        && e_flags & EF_DEAD_FLAG == 0
-        && !trick.hidden
-    {
-        let actor = &sinks.actor_meshes[mesh];
-        if let Some(mut instance) = actor.animator.requested.and_then(|_| {
-            crate::mining::pick_in_hand(
-                &actor.preview,
-                actor.animator.matrices(),
-                *transform,
-                picks.turn,
-            )
-        }) {
-            instance.view_flags = sinks.entity_view_flags;
-            sinks.object_groups[pick].push(instance);
-        }
-    }
     // Everything after stock's mind-trick cut-off is skipped for a hidden trickster:
     // the body, its afterimages and its shells (`cg_players.c:11351-11356`).
     if trick.hidden {
@@ -1462,14 +1377,6 @@ fn submit_equipment(
 ) {
     let rotation = weapon_view::actor_world_rotation(transform.rotation);
     let origin = Vec3::from_array(transform.translation);
-    // A pickaxe in the hand (`mining`) replaces the weapon or saber there.
-    if usize::try_from(entity.id.get())
-        .ok()
-        .and_then(|id| id.checked_sub(1))
-        .is_some_and(|slot| sinks.mining.1.held.get(slot).copied().unwrap_or(false))
-    {
-        return;
-    }
     let team_plain = crate::team_sabers::of(&sinks.team_blades, entity.id.get()).plain;
     if saber_submission::submit(
         entity.id.get(),

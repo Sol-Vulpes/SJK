@@ -677,17 +677,9 @@ impl ViewerConsole {
             pending_boombox: None,
             quests_on: false,
             pending_quests: None,
-            fishing_on: false,
-            pending_fishing: None,
-            mining_on: false,
-            pending_mining: None,
-            fishing_card: Default::default(),
-            pending_fishing_sell: false,
-            pending_catch_sell: None,
             wheel_of_doom_on: false,
             pending_wheel_of_doom: false,
-            mining_card: Default::default(),
-            pending_mining_sell: false,
+            log_books: Default::default(),
             pending_servers: false,
             pending_brag: None,
             monitor_on: false,
@@ -1190,6 +1182,11 @@ fn retire_modern_ui(cvars: &mut CvarRegistry) {
         "ui_shaderView",
         // The weapon icon on nameplates, removed on 28/10/2026 (Sol: it told nothing).
         "cg_nameplateWeapon",
+        // The Fishing and Mining toys' sounds and bite cue, removed on 20/11/2026 (their
+        // logs stay: the Collection's Log book reads them).
+        "s_toyFishingSound",
+        "s_toyMiningSound",
+        "cg_fishingBiteCue",
         // The Prop gun toy's switch, gun, sounds and sight, removed on 20/11/2026.
         "cl_toyPropGun",
         "cl_propGun",

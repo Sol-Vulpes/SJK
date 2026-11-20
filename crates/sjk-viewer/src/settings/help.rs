@@ -164,9 +164,6 @@ const CHOICE_NAMES: &[(&str, &str, &str)] = &[
         "10",
         crate::chat::incoming_color::LABELS[10],
     ),
-    (crate::fishing::CUE_CVAR, "0", "Off"),
-    (crate::fishing::CUE_CVAR, "1", "Sound off"),
-    (crate::fishing::CUE_CVAR, "2", "Always"),
     (crate::chat_sounds::MASTER_CVAR, "0", "Off"),
     (crate::chat_sounds::MASTER_CVAR, "1", "On"),
     (crate::chat_sounds::MASTER_CVAR, "2", "Distinct (EJK)"),
@@ -741,24 +738,12 @@ const HELP: &[(&str, &str)] = &[
         "A font from this PC for the console, kept to its even grid. What it lacks comes from SJK's fonts.",
     ),
     (
-        crate::toy_sounds::Toy::Fishing.cvar(),
-        "Off: your casts, bites and catches are silent. The toy still works.",
-    ),
-    (
         crate::toy_sounds::Toy::WheelOfDoom.cvar(),
         "Off: every WHEEL OF DOOM spins silently on this PC, yours and other players', quacks included.",
     ),
     (
         crate::toy_sounds::Toy::Quests.cvar(),
         "Off: no chime as you are given a quest, named in one or finish one. Quests still work.",
-    ),
-    (
-        crate::fishing::CUE_CVAR,
-        "A \"!\" over the float and \"Bite! Press Use!\" when a fish bites. Sound off: only while the fishing sounds can't be heard.",
-    ),
-    (
-        crate::toy_sounds::Toy::Mining.cvar(),
-        "Off: your swings, blows and finds are silent. The toy still works.",
     ),
     (
         crate::away_emote::SJK_CVAR,

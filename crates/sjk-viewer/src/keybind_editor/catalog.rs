@@ -136,14 +136,12 @@ const FIXED: &[BindableAction] = &[
     ),
     // SJK's toys are `toy_<name>` commands: light the Illuminate holocron or put it out.
     action(Interaction, "Toy: Illuminate", "toy_illuminate", ""),
-    action(Interaction, "Toy: Fishing", crate::fishing::COMMAND, ""),
     action(
         Interaction,
         "Toy: WHEEL OF DOOM",
         crate::wheel_of_doom::COMMAND,
         "",
     ),
-    action(Interaction, "Toy: Mining", crate::mining::COMMAND, ""),
     // The Ragdoll: go limp, press again to get up.
     action(Interaction, "Toy: Ragdoll", crate::ragdoll::COMMAND, ""),
     // The Drone: the switch that lets players peek (freecam and peek fly the drone).

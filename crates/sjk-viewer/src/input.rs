@@ -95,28 +95,8 @@ pub(crate) enum InputAction {
     /// `toy_illuminate` (or its old name `force_illuminate`): turn Illuminate's holocron
     /// on or off ([`crate::illuminate`]).
     Illuminate,
-    /// `toy_fishing`: get the fishing rod out or put it away ([`crate::fishing`]).
-    Fishing,
     /// `toy_wheelofdoom`: show the WHEEL OF DOOM's price, or spin it ([`crate::wheel_of_doom`]).
     WheelOfDoom,
-    /// `toy_mining`: take the pickaxe in hand or put it away ([`crate::mining`]).
-    Mining,
-    /// `fishing_sell`: sell the fished junk to the hub ([`crate::fishing_sell`]).
-    FishingSell,
-    /// `fishing_log`: print the fish log in full to the console.
-    FishingLog,
-    /// `fishing_sellfish`: sell the fish held at the catch market.
-    FishingSellFish,
-    /// `mining_sellore`: sell the ore held at the catch market.
-    MiningSellOre,
-    /// `mining_sell`: sell the dug rubble to the hub ([`crate::mining_sell`]).
-    MiningSell,
-    /// `mining_log`: print the mining log in full to the console.
-    MiningLog,
-    /// `fishing_brag`: share the last rare catch in the SJK chat ([`crate::catch_book`]).
-    FishingBrag,
-    /// `mining_brag`: share the last rare find in the SJK chat.
-    MiningBrag,
     /// `toy_ragdoll`: go limp, or get up ([`crate::ragdoll`]).
     Ragdoll,
     /// `toy_drone`: let drones follow the player, or not ([`crate::drone`]).
@@ -368,17 +348,7 @@ impl GameplayInput {
                     | crate::world_ping::COMMAND
                     | "toy_illuminate"
                     | "force_illuminate"
-                    | crate::fishing::COMMAND
                     | crate::wheel_of_doom::COMMAND
-                    | crate::mining::COMMAND
-                    | crate::fishing_sell::COMMAND
-                    | crate::fishing_sell::LOG_COMMAND
-                    | crate::fishing_sell::FISH_COMMAND
-                    | crate::mining_sell::ORE_COMMAND
-                    | crate::mining_sell::COMMAND
-                    | crate::mining_sell::LOG_COMMAND
-                    | crate::fishing_sell::BRAG_COMMAND
-                    | crate::mining_sell::BRAG_COMMAND
                     | crate::ragdoll::COMMAND
                     | crate::drone::COMMAND
                     | crate::boombox::COMMAND
@@ -555,17 +525,7 @@ impl GameplayInput {
             }
             // The old name still runs the toy, but is not listed (`selection_commands`).
             "toy_illuminate" | "force_illuminate" => Some(InputAction::Illuminate),
-            crate::fishing::COMMAND => Some(InputAction::Fishing),
             crate::wheel_of_doom::COMMAND => Some(InputAction::WheelOfDoom),
-            crate::mining::COMMAND => Some(InputAction::Mining),
-            crate::fishing_sell::COMMAND => Some(InputAction::FishingSell),
-            crate::fishing_sell::LOG_COMMAND => Some(InputAction::FishingLog),
-            crate::fishing_sell::FISH_COMMAND => Some(InputAction::FishingSellFish),
-            crate::mining_sell::ORE_COMMAND => Some(InputAction::MiningSellOre),
-            crate::mining_sell::COMMAND => Some(InputAction::MiningSell),
-            crate::mining_sell::LOG_COMMAND => Some(InputAction::MiningLog),
-            crate::fishing_sell::BRAG_COMMAND => Some(InputAction::FishingBrag),
-            crate::mining_sell::BRAG_COMMAND => Some(InputAction::MiningBrag),
             crate::ragdoll::COMMAND => Some(InputAction::Ragdoll),
             crate::drone::COMMAND => Some(InputAction::Drone),
             crate::boombox::COMMAND => Some(InputAction::Boombox),
@@ -758,17 +718,7 @@ impl super::GpuState {
             Some(InputAction::WorldNote) => self.world_note_press(),
             Some(InputAction::WorldPing) => self.world_ping_press(),
             Some(InputAction::Illuminate) => self.toggle_illuminate(),
-            Some(InputAction::Fishing) => self.toggle_fishing(),
             Some(InputAction::WheelOfDoom) => self.wheel_of_doom_command(),
-            Some(InputAction::Mining) => self.toggle_mining(),
-            Some(InputAction::FishingSell) => self.sell_fishing_junk(),
-            Some(InputAction::FishingLog) => self.print_fishing_log(),
-            Some(InputAction::FishingSellFish) => self.sell_fishing_catch(),
-            Some(InputAction::MiningSellOre) => self.sell_mining_ore(),
-            Some(InputAction::MiningSell) => self.sell_mining_rubble(),
-            Some(InputAction::MiningLog) => self.print_mining_log(),
-            Some(InputAction::FishingBrag) => self.brag_fishing(),
-            Some(InputAction::MiningBrag) => self.brag_mining(),
             Some(InputAction::Ragdoll) => self.toggle_ragdoll(),
             Some(InputAction::Drone) => self.toggle_drone(),
             Some(InputAction::Boombox) => self.toggle_boombox(),
@@ -794,16 +744,8 @@ impl super::GpuState {
                     self.gameplay_input.flip_kick.start();
                 }
             }
-            Some(InputAction::Weapon(weapon)) => {
-                // A weapon chosen (the saber's 1 among them) puts the pickaxe away
-                // (`mining`), and is taken out as ever.
-                self.mining.weapon_chosen();
-                self.select_weapon(weapon);
-            }
-            Some(InputAction::WeaponCycle(direction)) => {
-                self.mining.weapon_chosen();
-                self.cycle_weapon(direction);
-            }
+            Some(InputAction::Weapon(weapon)) => self.select_weapon(weapon),
+            Some(InputAction::WeaponCycle(direction)) => self.cycle_weapon(direction),
             Some(InputAction::WeaponMelee) => self.select_melee(),
             Some(InputAction::SelectionCycle(inventory, direction)) => {
                 let snapshot = self

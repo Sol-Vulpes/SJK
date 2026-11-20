@@ -15,9 +15,8 @@
 //!   waits (the Collection's Holocrons page); it is the only thing that tells of one, as
 //!   the large pop-up that waited for the game menu is gone (16/11/2026);
 //! - a contributor reward waiting (`official.rs`), a saber kyber on the wishlist in the
-//!   shop today (`wishlist.rs`), a rare catch of the Fishing or Mining toy
-//!   (`catch_book.rs`), a kyber glint they found and a daily catch goal done
-//!   (`fishing_sell.rs`; centre prints until 16/11/2026), a request from the SJK team for
+//!   shop today (`wishlist.rs`) (the Fishing and Mining toys' rare catches, kyber glints
+//!   and daily goals until the toys went, 20/11/2026), a request from the SJK team for
 //!   the game's logs (`log_request_card.rs`, whose consent card still waits for a menu
 //!   and takes the banner back as it opens);
 //! - a newer SJK release the update check found (`update.rs`), once a session, with SJK's
@@ -170,22 +169,6 @@ pub(crate) enum Unlock {
     Wished {
         skin: &'static crate::unlockables::Unlockable,
     },
-    /// A rare fish landed or a rare ore dug (`mining`) by the player's toy
-    /// ([`crate::catch_book`]): the catch's `name` and how many the log now holds.
-    RareCatch {
-        name: &'static str,
-        count: u32,
-        mining: bool,
-    },
-    /// The Fishing or Mining (`mining`) toy found a kyber glint: `shards` kyber shards,
-    /// the player holding `balance` after (`fishing_sell.rs`).
-    KyberGlint {
-        shards: u32,
-        balance: i64,
-        mining: bool,
-    },
-    /// The day's Fishing or Mining (`mining`) goal is done: it won an Echo.
-    CatchGoal { mining: bool },
     /// The SJK team asks for the game's logs (request `id` at the hub): the consent card
     /// waits for a menu (`log_request_card.rs`).
     LogRequest { id: i64 },
@@ -240,7 +223,6 @@ impl Unlock {
             (Self::Update { version, .. }, Self::Update { version: other, .. }) => version == other,
             (Self::Reward { id }, Self::Reward { id: other }) => id == other,
             (Self::LogRequest { id }, Self::LogRequest { id: other }) => id == other,
-            (Self::CatchGoal { mining }, Self::CatchGoal { mining: other }) => mining == other,
             (Self::Wished { skin }, Self::Wished { skin: other }) => skin.id == other.id,
             (
                 Self::Content {
@@ -415,10 +397,6 @@ impl Unlock {
             Self::Reward { .. } => "CONTRIBUTOR REWARD",
             Self::Content { .. } => "CONTENT UPDATED",
             Self::Wished { .. } => "ON YOUR WISHLIST",
-            Self::RareCatch { mining: false, .. } => "RARE CATCH",
-            Self::RareCatch { mining: true, .. } => "RARE FIND",
-            Self::KyberGlint { .. } => "KYBER GLINT",
-            Self::CatchGoal { .. } => "DAILY GOAL",
             Self::LogRequest { .. } => "LOG REQUEST",
             Self::Many {
                 many: Many::Achievements { .. },
@@ -437,17 +415,13 @@ impl Unlock {
 
     /// Whether the banner plays the chime: everything but an update or a content
     /// update, which are news, not rewards, a wishlist's offer and a request for logs,
-    /// and the toys' rare catches, glints and goals, which were told without it (a rare
-    /// catch's toy plays it among its own sounds, at the toys' volume).
+    /// and a request for logs, which were told without it.
     pub(crate) const fn chimes(self) -> bool {
         !matches!(
             self,
             Self::Update { .. }
                 | Self::Content { .. }
                 | Self::Wished { .. }
-                | Self::RareCatch { .. }
-                | Self::KyberGlint { .. }
-                | Self::CatchGoal { .. }
                 | Self::LogRequest { .. }
         )
     }
@@ -471,11 +445,6 @@ impl Unlock {
             Self::Reward { .. } => "From the SJK team",
             Self::Content { .. } => "Automatic update",
             Self::Wished { .. } => "Collection, Forge, Shop",
-            Self::RareCatch { mining: false, .. } => "fishing_brag shares it",
-            Self::RareCatch { mining: true, .. } => "mining_brag shares it",
-            Self::KyberGlint { mining: false, .. } => "Found while fishing",
-            Self::KyberGlint { mining: true, .. } => "Found while mining",
-            Self::CatchGoal { .. } => "A new goal tomorrow",
             Self::LogRequest { .. } => "Open the menu to answer",
             Self::Many {
                 many: Many::Achievements { .. },
@@ -498,8 +467,6 @@ impl Unlock {
             Self::Achievement { kind, .. } => tint(kind.category),
             Self::Medal { .. }
             | Self::Reward { .. }
-            | Self::RareCatch { .. }
-            | Self::CatchGoal { .. }
             | Self::Many {
                 many: Many::Achievements { .. } | Many::Medals,
                 ..
@@ -510,10 +477,7 @@ impl Unlock {
                 ..
             } => best.colour,
             Self::Wished { skin } => skin.tier.colour(),
-            Self::Update { .. }
-            | Self::Content { .. }
-            | Self::KyberGlint { .. }
-            | Self::LogRequest { .. } => color::holo(),
+            Self::Update { .. } | Self::Content { .. } | Self::LogRequest { .. } => color::holo(),
         }
     }
 
@@ -546,14 +510,6 @@ impl Unlock {
                     Icon::Gem(tier.colour)
                 }
             }
-            Self::RareCatch { mining, .. }
-            | Self::KyberGlint { mining, .. }
-            | Self::CatchGoal { mining } => {
-                let toy = if mining { "mining" } else { "fishing" };
-                crate::quick_wheel::catalog::icon_index(toy).map_or(logo, |index| {
-                    Icon::Picture(crate::ui_renderer::wheel_icon(index), 0.74)
-                })
-            }
             _ => logo,
         }
     }
@@ -585,17 +541,6 @@ impl fmt::Display for Name {
             Unlock::Reward { .. } => formatter.write_str("Contributor reward waiting"),
             Unlock::Content { title, .. } => write!(formatter, "{title} updated"),
             Unlock::Wished { skin } => formatter.write_str(skin.name),
-            Unlock::RareCatch { name, .. } => {
-                formatter.write_str(crate::catch_book::bare_name(name))
-            }
-            Unlock::KyberGlint { shards: 1, .. } => formatter.write_str("+1 kyber shard"),
-            Unlock::KyberGlint { shards, .. } => write!(formatter, "+{shards} kyber shards"),
-            Unlock::CatchGoal { mining: false } => {
-                formatter.write_str("Today's fishing goal is done")
-            }
-            Unlock::CatchGoal { mining: true } => {
-                formatter.write_str("Today's mining goal is done")
-            }
             Unlock::LogRequest { .. } => formatter.write_str("The SJK team asks for your logs"),
             Unlock::Many {
                 many: Many::Achievements { .. },
@@ -653,14 +598,6 @@ impl fmt::Display for Description {
             Unlock::Wished { .. } => {
                 formatter.write_str("A kyber on your wishlist is in the shop today")
             }
-            Unlock::RareCatch { count: 0 | 1, .. } => {
-                formatter.write_str("Your first! New in your log book")
-            }
-            Unlock::RareCatch { count, .. } => write!(
-                formatter,
-                "Your {} in the log book",
-                crate::catch_book::ordinal(count)
-            ),
             Unlock::Content {
                 files,
                 bytes,
@@ -680,14 +617,6 @@ impl fmt::Display for Description {
                 }
                 formatter.write_str("  ·  from the next map")
             }
-            Unlock::KyberGlint {
-                balance, mining, ..
-            } => write!(
-                formatter,
-                "A kyber glint in the {}! You hold {balance} now",
-                if mining { "rock" } else { "water" }
-            ),
-            Unlock::CatchGoal { .. } => formatter.write_str("An Echo is yours!"),
             Unlock::LogRequest { .. } => {
                 formatter.write_str("Nothing leaves your PC unless you send them")
             }
@@ -1440,25 +1369,7 @@ mod tests {
             .max_by_key(|skin| skin.name.len())
             .unwrap();
         unlocks.push(Unlock::Wished { skin: longest });
-        // The longest catch of each toy, landed first and the 128th time.
-        for mining in [false, true] {
-            for count in [1, 128] {
-                unlocks.push(Unlock::RareCatch {
-                    name: "Blue-Ringed Moonwater Octopus",
-                    count,
-                    mining,
-                });
-            }
-        }
         unlocks.push(Unlock::Reward { id: 4 });
-        for mining in [false, true] {
-            unlocks.push(Unlock::KyberGlint {
-                shards: 12,
-                balance: 1_234_567,
-                mining,
-            });
-            unlocks.push(Unlock::CatchGoal { mining });
-        }
         unlocks.push(Unlock::LogRequest { id: 7 });
         // Several of each kind, the counts as high as a reinstall brings.
         for crystals in [true, false] {
@@ -1882,22 +1793,10 @@ mod tests {
             rehearsal: false,
         };
         assert_eq!(named.description().to_string(), "Earned: Centurion");
-        // The toys' news, once centre prints, and a request for logs: quiet banners.
-        let glint = Unlock::KyberGlint {
-            shards: 3,
-            balance: 40,
-            mining: true,
-        };
-        assert_eq!(glint.name().to_string(), "+3 kyber shards");
-        assert_eq!(
-            glint.description().to_string(),
-            "A kyber glint in the rock! You hold 40 now"
-        );
-        let goal = Unlock::CatchGoal { mining: false };
-        assert_eq!(goal.name().to_string(), "Today's fishing goal is done");
+        // A request for logs: a quiet banner.
         let logs = Unlock::LogRequest { id: 3 };
         assert_eq!(logs.tag(), "Open the menu to answer");
-        assert!(!glint.chimes() && !goal.chimes() && !logs.chimes());
+        assert!(!logs.chimes());
         assert!(logs.same(Unlock::LogRequest { id: 3 }));
         assert!(!logs.same(Unlock::LogRequest { id: 4 }));
     }

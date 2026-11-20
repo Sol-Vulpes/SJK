@@ -2017,15 +2017,15 @@ Holocrons tab's Shop, a blade card's Forge link) open that kind directly.
   to use in a match, and how many are on now. Illuminate's holocron, the
   Ragdoll (since 23/10/2026), the Drone (since 24/10/2026), the Boombox (since
   25/10/2026, verified players), the Monitor (since 26/10/2026), Box hunt (since
-  27/10/2026), Fishing and Quests (since 05/11/2026,
-  [quests.md](quests.md)), Mining and the WHEEL OF DOOM. Since 09/11/2026 (Sol's pick,
+  27/10/2026), Quests (since 05/11/2026, [quests.md](quests.md)) and the WHEEL OF DOOM
+  (Fishing and Mining until 20/11/2026: their logs are the Log book's). Since 09/11/2026 (Sol's pick,
   once there were fourteen) the rows stand in three sections, each under its head and a
   rule: **Around you** (Illuminate, Ragdoll, Drone, Boombox), **With
-  others** (Monitor) and **Earn and win** (Box hunt, Fishing,
-  Mining, Quests, WHEEL OF DOOM); the first head's line names the columns (By, Your key,
+  others** (Monitor) and **Earn and win** (Box hunt, Quests,
+  WHEEL OF DOOM); the first head's line names the columns (By, Your key,
   On). A row of 42, 2 apart (`ORDER` and `SECTIONS` in the file; the toys keep their own
   order for the panel, the tokens and the bits, named `*_TOY` in `collection_panel.rs`): its icon, its name and a line of what it
-  does, who made it (the By column: Sol for Illuminate to Box hunt and the WHEEL OF DOOM, Slash for Fishing, Mining and Quests), the key bound to its command
+  does, who made it (the By column: Sol for Illuminate to Box hunt and the WHEEL OF DOOM, Slash for Quests), the key bound to its command
   ("Not bound" when none) and its own switch, which runs that toy in place and chooses
   it; the chosen row framed gold on a soft gold ground. The arrows and Tab choose in the
   list's order; a click on a row chooses it.
@@ -2036,7 +2036,7 @@ Holocrons tab's Shop, a blade card's Forge link) open that kind directly.
   the model (x
   1360 to 1824, its foot at y 990, as tall as its words): "Toy · everyone's", its name,
   its signature under it ("Made by Sol", or "Made by Slash, Sanji's idea" when the idea
-  was someone else's: Sanji's Fishing, vinry's Mining, wonner67's
+  was someone else's: wonner67's
   Quests), what it is in full, its keys (the Monitor two: its key, `toy_monitor`, and the throw key,
   `+monitor_throw`, held to charge), each a button: a click (or K for the first) waits for a key ("Press
   a key...", Escape lets go, Backspace clears), which binds it to the command in place
@@ -2046,7 +2046,7 @@ Holocrons tab's Shop, a blade card's Forge link) open that kind directly.
   "Rod out" or "Take quests": on while
   the toy is on, Enter or a click runs it (the `toy_illuminate`,
   `toy_ragdoll`, `toy_drone`, `toy_boombox`, `toy_monitor`,
-  `toy_boxhunt`, `toy_fishing` or `toy_quests` toggle, set to the state wanted;
+  `toy_boxhunt` or `toy_quests` toggle, set to the state wanted;
   the viewer owns the state, the console mirrors it each frame). Under it, for a toy other
   players are seen with, a second, smaller switch, "See others' holocrons", "See others'
   boxes", "See others fall limp", "See others' drones", "See and hear others' boomboxes"
@@ -2056,6 +2056,14 @@ Holocrons tab's Shop, a blade card's Forge link) open that kind directly.
   "Enter: light" or "Enter: put out", "Enter: turn
   on" or "Enter: turn off", "Enter: play" or "Enter: put away", and "K: bind a key" (while a key waits: "Esc: cancel", "Backspace: clear the
   key").
+- **Log book** (20/11/2026, Sol's pick when the Fishing and Mining toys went;
+  [collection_log_book.rs](../crates/sjk-viewer/src/collection_log_book.rs)): a tile in
+  the hall after History and a tab on the row, for a player whose logs hold a catch
+  (`catch_book::shown`, read as the Collection opens). The fish book on the left, the
+  mining book on the right, each under its head with "N of M found": every kind two to
+  a row, "???" for one never caught, its count and first day for the others, the rare
+  ones in gold, then its "Share in SJK chat" button (greyed with nothing to share).
+  The lead line counts the kinds found of both; the hall's tile says the same.
 - **Nameplates** (10/10/2026 to 15/11/2026): a tab between Tags and Holocrons with
   empty places for nameplate ornaments, a showcase of the player's plate, a Style row and
   a See & share nameplates switch. It is gone (Sol, 15/11/2026): no ornaments were made,

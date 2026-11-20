@@ -2240,8 +2240,8 @@ mod tests {
         };
         // Twenty toys: a page of 14, then the other 6.
         let mut toys: Vec<_> = (0..20).map(|index| toy(&format!("toy_{index}"))).collect();
-        toys[0] = toy(crate::fishing::TOY);
-        toys[1] = toy(crate::mining::TOY);
+        toys[0] = toy(crate::drone::TOY);
+        toys[1] = toy(crate::boombox::TOY);
         let staff = StaffState {
             toys: Some(sjk_identity::ToyStats { people: 9, toys }),
             ..StaffState::default()
@@ -2251,7 +2251,7 @@ mod tests {
         assert!(panel.order.contains(&TOYS_NEXT_TOKEN));
         assert!(!panel.order.contains(&TOYS_PREV_TOKEN));
         assert_eq!(panel.activate(TOY_ROW_BASE + 1), PanelAction::None);
-        assert_eq!(panel.toy_chosen.as_deref(), Some(crate::mining::TOY));
+        assert_eq!(panel.toy_chosen.as_deref(), Some(crate::boombox::TOY));
         let _ = panel.activate(TOYS_NEXT_TOKEN);
         build(&mut panel, &staff);
         assert_eq!(panel.shown.toy_rows.len(), 6);

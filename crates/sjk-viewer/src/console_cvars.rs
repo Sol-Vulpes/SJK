@@ -721,12 +721,6 @@ pub(super) fn register_daily_cvars(cvars: &mut CvarRegistry) -> Result<(), sjk_s
             "Play the sounds of the Toy Master's hidden toys (SJK)",
         ),
         CvarDefinition::new(
-            crate::toy_sounds::Toy::Fishing.cvar(),
-            true,
-            archive,
-            "Play the Fishing toy's sounds (SJK)",
-        ),
-        CvarDefinition::new(
             crate::toy_sounds::Toy::WheelOfDoom.cvar(),
             true,
             archive,
@@ -737,18 +731,6 @@ pub(super) fn register_daily_cvars(cvars: &mut CvarRegistry) -> Result<(), sjk_s
             true,
             archive,
             "Play the chimes as you are given a quest or finish one (SJK)",
-        ),
-        CvarDefinition::new(
-            crate::fishing::CUE_CVAR,
-            crate::fishing::CUE_DEFAULT,
-            archive,
-            "Show a fish's bite on screen: 0 never, 1 when the fishing sounds can't be heard, 2 always (SJK)",
-        ),
-        CvarDefinition::new(
-            crate::toy_sounds::Toy::Mining.cvar(),
-            true,
-            archive,
-            "Play the Mining toy's sounds (SJK)",
         ),
         CvarDefinition::new(
             crate::held_view::LOOK_CVAR,

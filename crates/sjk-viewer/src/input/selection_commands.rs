@@ -25,47 +25,7 @@ pub(super) fn register(shell: &mut sjk_shell::Shell) -> Result<(), sjk_shell::Co
             "toy_illuminate",
             "Toy: turn the Illuminate holocron's light on or off",
         ),
-        (
-            crate::fishing::COMMAND,
-            "Toy: fish facing water, or put the rod away (+use when the float bobs under hooks the catch)",
-        ),
         (crate::wheel_of_doom::COMMAND, crate::wheel_of_doom::HELP),
-        (
-            crate::fishing_sell::COMMAND,
-            "Toy: sell your fished junk to the SJK hub for a few credits (a small sum a day)",
-        ),
-        (
-            crate::fishing_sell::FISH_COMMAND,
-            "Toy: sell your fish at the SJK hub's catch market (the same small sum a day as junk), once the hub opens it",
-        ),
-        (
-            crate::mining_sell::ORE_COMMAND,
-            "Toy: sell your ore at the SJK hub's catch market (the same small sum a day as junk), once the hub opens it",
-        ),
-        (
-            crate::fishing_sell::LOG_COMMAND,
-            "Toy: print your fish log in full: every fish and junk caught, held and sold",
-        ),
-        (
-            crate::mining_sell::COMMAND,
-            "Toy: sell your dug rubble to the SJK hub for a few credits (the same small sum a day as junk)",
-        ),
-        (
-            crate::mining_sell::LOG_COMMAND,
-            "Toy: print your mining log in full: every ore and rubble dug, held and sold",
-        ),
-        (
-            crate::fishing_sell::BRAG_COMMAND,
-            "Toy: share your last rare catch (else your rarest fish) in the SJK chat",
-        ),
-        (
-            crate::mining_sell::BRAG_COMMAND,
-            "Toy: share your last rare find (else your rarest ore) in the SJK chat",
-        ),
-        (
-            crate::mining::COMMAND,
-            "Toy: take a pickaxe in hand, or put it away (boulders come up round you; attack strikes the one before you)",
-        ),
         (
             crate::ragdoll::COMMAND,
             "Toy: go limp as a ragdoll, or get up (other SJK players see the same fall)",

@@ -305,8 +305,8 @@ the person's own count) and where dormant kybers come from.
   (rises of the game's hit counter, `PERS_HITS`), `hurt` (snapshots whose health or
   armour fell while the last attacker, `PERS_ATTACKER`, is another client: falls and
   self damage are not counted), `kills` and `deaths` (obituaries against or by another
-  client), and since 04/11/2026 `bites` (bites of the fishing toy hooked in time, so a
-  player standing at the water earns; headshots' question in #ideas). The counts are kept
+  client), and `bites` (04/11/2026 to 20/11/2026, the Fishing toy's hooked bites, so a
+  player standing at the water earned; sent as 0 since the toy went). The counts are kept
   only while the claim says `active`, sent with the next
   one and cleared once the hub accepted it (a failed claim keeps them for the next).
   [holocrons/signals.rs](../crates/sjk-viewer/src/holocrons/signals.rs) reads them from
@@ -416,8 +416,8 @@ it says "NEW ECHO", "Legendary Echo" and "Collection > Echoes" ([terms](mods.md#
   never brings an old one back. A new identity takes back the banners of the one before.
 - The identity worker reads the own profile again soon (at most once every 30 seconds) when
   a drop for the player's own key arrives in the feed, and the banner is given within half
-  a second of the profile arriving. While the Fishing toy is out, a holocron play dropped
-  waits for its bite instead ([client.md](client.md#fishing)).
+  a second of the profile arriving. (Until 20/11/2026, while the Fishing toy was out, a
+  holocron play dropped waited for its bite instead.)
 - A contributor reward's holocrons (25/10/2026, [hub-chat.md](hub-chat.md#announcements-and-reward-rounds))
   are gifts: claiming the reward brings the profile that holds them, and they arrive
   with their banner as any gift does.
@@ -632,8 +632,7 @@ input hooks and the 500 ms comparison are not covered by a test of their own.
 
 The banner in place of the pop-up (16/11/2026): `holocron_banners::tests` (one banner each,
 oldest first, once; counted as seen as its banner begins, not before; the newest twenty of a
-first read on one banner; Off counting them without one; rehearsals never written; the
-Fishing toy's Echoes) and `unlock_toast::tests` (the folding, its words, the duel's wait,
+first read on one banner; Off counting them without one; rehearsals never written) and `unlock_toast::tests` (the folding, its words, the duel's wait,
 every banner's words in its column in the families and in Inter at five window shapes,
 slid and faded); the world shots `world_shot::notify_banner_shots` (siege_hoth's bright
 sky and the main menu, at 1080p and 4K) were rendered and looked at. Not tried in a running
