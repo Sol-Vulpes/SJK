@@ -868,7 +868,7 @@ merged into SJK
 - #306 long game-chat messages sent whole, as up to four messages split at a word; at the
   merge a draft refused past four pieces stays in the composer.
 
-Slash ([JoFSlash](https://github.com/JoFSlash)), contributor, has 166 pull requests merged
+Slash ([JoFSlash](https://github.com/JoFSlash)), contributor, has 167 pull requests merged
 into SJK ([all of them](https://github.com/Sol-Vulpes/SJK/pulls?q=is%3Apr+author%3AJoFSlash)):
 
 - #114 Tab completes the cfg file argument of `exec`, `execq`, `writeconfig` and `write`
@@ -1162,6 +1162,8 @@ medal pictures carry their own labels in `vram` and crash reports.
   codes, every match marked (after headshotsmcgee117's idea).
 - #436 `cg_duelGhost 2` (Hidden): other players' duellists vanish completely,
   sounds and shots too, while you are in no duel (after headshotsmcgee117's idea).
+- #437 emote filters: hide every other player's emotes, or hide or mute single
+  emotes by id (`emote_hide`, `emote_mute`; after mg.perso's idea).
 
 Milamber ([Milamber0](https://github.com/Milamber0)), contributor, has 4 pull requests merged
 into SJK ([all of them](https://github.com/Sol-Vulpes/SJK/pulls?q=is%3Apr+author%3AMilamber0)):

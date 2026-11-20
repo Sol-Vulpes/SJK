@@ -3780,6 +3780,10 @@
 - fed9acd |  | Hide duel opponents' bars and send nothing while duelling
 
 = Slash
++ 20/11/2026 | SJK #437 | Emotes: hide others' emotes, hide or mute single emotes
+- ade10ab |  | Emotes: hide others' emotes, hide or mute single emotes
+- d5ca364 |  | Changelog: PR number for the emote filters
+- a56c8cf |  | emote_hide / emote_mute alone also list the installed emote ids
 + 20/11/2026 | SJK #436 | Duels: hide others' duellists completely (cg_duelGhost 2)
 - 0a3b5d5 |  | Duels: cg_duelGhost 2 hides others' duellists (headshotsmcgee117's idea)
 + 20/11/2026 | SJK #432 | Console: Ctrl+F find bar over the scrollback
