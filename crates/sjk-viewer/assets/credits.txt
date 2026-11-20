@@ -64,7 +64,7 @@ did: The mystery box's roll and its music box tune
 did: The mystery box's own chest and the words over it
 did: The Box hunt toy: kill the mark for a free mystery box roll
 did: The Banana peel toy (29/10 to 20/11/2026): peels opted-in players slip on as ragdolls
-did: The Prop gun toy: hold a fake gun from your own pk3; its bolts knock opted-in players down
+did: The Prop gun toy (01/11 to 20/11/2026): a fake gun from your pk3, its bolts knock down
 did: A macOS build for Apple Silicon, built by GitHub with every release (experimental)
 did: Clan chats: JoF's and the Sith clan's chats beside SJK chat, through the hub
 did: Medals from the SJK team, with medal pictures generated and chosen by Sol

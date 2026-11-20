@@ -135,8 +135,6 @@ pub(crate) enum InputAction {
     BoxHunt,
     /// `toy_quests`: take part in quests, or not ([`crate::quests`]).
     Quests,
-    /// `toy_propgun`: hold the chosen prop gun and fire it, or not ([`crate::propgun`]).
-    PropGun,
     /// `toy_tag`: stick the chosen tag where the crosshair meets the world
     /// ([`crate::tags`]).
     StickTag,
@@ -391,7 +389,6 @@ impl GameplayInput {
                     | crate::monitor::CHARGE_RELEASE
                     | crate::box_hunt::COMMAND
                     | crate::quests::COMMAND
-                    | crate::propgun::COMMAND
                     | crate::tags::COMMAND
                     | "cameracontrol"
             )
@@ -579,7 +576,6 @@ impl GameplayInput {
             crate::monitor::CHARGE_RELEASE => Some(InputAction::ChargeMonitor(false)),
             crate::box_hunt::COMMAND => Some(InputAction::BoxHunt),
             crate::quests::COMMAND => Some(InputAction::Quests),
-            crate::propgun::COMMAND => Some(InputAction::PropGun),
             crate::tags::COMMAND => match words.next().map(str::to_ascii_lowercase).as_deref() {
                 Some("clear" | "off") => Some(InputAction::ClearTag),
                 _ => Some(InputAction::StickTag),
@@ -784,7 +780,6 @@ impl super::GpuState {
             Some(InputAction::ChargeMonitor(pressed)) => self.charge_monitor(pressed),
             Some(InputAction::BoxHunt) => self.toggle_box_hunt(),
             Some(InputAction::Quests) => self.toggle_quests(),
-            Some(InputAction::PropGun) => self.toggle_propgun(),
             Some(InputAction::FlipKick) => {
                 let restricted = self.live_session.as_ref().is_some_and(|session| {
                     session
@@ -1030,7 +1025,6 @@ mod tests {
             ("toy_tag", InputAction::StickTag),
             ("toy_tag clear", InputAction::ClearTag),
             ("toy_tag OFF", InputAction::ClearTag),
-            ("toy_propgun", InputAction::PropGun),
             ("boombox_place", InputAction::PlaceBoombox),
         ] {
             assert!(GameplayInput::recognizes(command), "{command}");

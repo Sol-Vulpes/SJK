@@ -17,7 +17,11 @@ quick wheel's default Toys page lost its slot (a saved one drops the unknown cho
 with Order 66's blast): the toys, their blast in `dismember.rs`, the hack's steering, camera,
 loop and HUD bar feed, the trap settings and their Settings search place, and the tracker's
 Hax counting; the rules the Ragdoll, Monitor and Prop gun share (`spared`, `duelling`,
-`own_away`) moved to `toy_rules.rs` with a test. The hub keeps the removed toys' routes and events on for older clients until the
+`own_away`) moved to `toy_rules.rs` with a test. Step 5, `personal/remove-propgun`: the Prop gun and the
+mystery box's Ray Gun, which ran on it (Sol); its 7 % of box rolls goes to the holocron on
+hub branch `no-raygun` (5602722, not merged, deployed with the release); a hub that still
+rolls it stops the client's roll on the bolts. The first-person prop hold, the toy loop
+sound path and the Ragdoll's `UNTHROWN` went with it. The hub keeps the removed toys' routes and events on for older clients until the
 release sets the minimum client (Sol). Verified: the viewer's tests (4386), fmt, Clippy (no
 new warnings), the startup stack check. Not verified: in a game.
 

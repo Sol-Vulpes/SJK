@@ -22,7 +22,7 @@ pub(crate) fn switched(name: &str, on: bool) -> String {
 }
 
 /// Every toy: its name, its switch and what it does and how, in `toy_help`'s order.
-pub(crate) const TOYS: [(&str, &str, &str); 12] = [
+pub(crate) const TOYS: [(&str, &str, &str); 11] = [
     (
         "Illuminate",
         "toy_illuminate",
@@ -62,11 +62,6 @@ pub(crate) const TOYS: [(&str, &str, &str); 12] = [
         "Quests",
         "toy_quests",
         "you may be given a quest, such as hugging two players within a minute, for an Echo",
-    ),
-    (
-        "Prop gun",
-        "toy_propgun",
-        "hold a gun from a pk3 instead of your weapon (propgun chooses it); its bolts knock down players who have it on",
     ),
     (
         "Fishing",
@@ -128,7 +123,6 @@ mod tests {
             crate::tags::COMMAND,
             crate::box_hunt::COMMAND,
             crate::quests::COMMAND,
-            crate::propgun::COMMAND,
             crate::wheel_of_doom::COMMAND,
         ] {
             let naming: Vec<_> = lines

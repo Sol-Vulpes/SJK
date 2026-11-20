@@ -1153,7 +1153,7 @@ pub(crate) fn swing_pose() -> Option<(usize, &'static str)> {
 
 /// The pickaxe in the hand's frame, as a saber's hilt is held: its handle (the model's
 /// +X) out of the top of the fist along the hand bolt's +Z, its spike (the model's -Z)
-/// forward along -Y, where a gun's barrel points (`propgun_frame::HAND_TURN`). Fitted in
+/// forward along -Y, where a gun's barrel points (as a gun's barrel did). Fitted in
 /// game against a held hilt (04/11/2026).
 pub(crate) fn pick_turn() -> Quat {
     Quat::from_mat3(&glam::Mat3::from_cols(Vec3::Z, Vec3::X, Vec3::Y))

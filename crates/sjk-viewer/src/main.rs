@@ -61,8 +61,6 @@ mod forge_alert;
 mod forge_fuse;
 mod kyber;
 mod loot_odds;
-mod propgun;
-mod propgun_frame;
 mod quests;
 #[cfg(any(target_os = "linux", test))]
 #[path = "../stack_size.rs"]
@@ -661,17 +659,15 @@ struct GpuState {
     /// The Box hunt toy (`toy_boxhunt`): its switch, the consent to hunt and be the mark.
     box_hunt: box_hunt::BoxHunt,
     quests: quests::Quests,
-    /// The Prop gun toy (`toy_propgun`): the gun held, the bolts and what others hold.
-    propgun: propgun::PropGun,
     /// The status balloons (`cg_statusBalloons`): each talking player's selected picture.
     status_balloons: status_balloons::StatusBalloons,
     /// The Tag toy (`toy_tag`): the own tag stuck on the world.
     tags: tags::Tags,
     /// The Ragdoll toy (`toy_ragdoll`): the player's own fall and the falls of others.
     ragdoll: ragdoll::Ragdoll,
-    /// The Drone's, the Monitor's, Box hunt's, the Prop gun's and Quests' switches as last
-    /// saved (`toy_saved`).
-    toys_saved: [toy_saved::Saved; 5],
+    /// The Drone's, the Monitor's, Box hunt's and Quests' switches as last saved
+    /// (`toy_saved`).
+    toys_saved: [toy_saved::Saved; 4],
     /// The Holocrons tab's 3D holocron ([`holocrons::stage`]).
     holocron_stage: holocrons::stage::Stage,
     /// The time its turn and bob are drawn at, instead of the clock's, for a world shot.
@@ -1757,7 +1753,6 @@ impl GpuState {
             monitor: Default::default(),
             box_hunt: Default::default(),
             quests: Default::default(),
-            propgun: Default::default(),
             status_balloons: Default::default(),
             tags: Default::default(),
             ragdoll: Default::default(),
@@ -2049,7 +2044,6 @@ impl GpuState {
         // The Monitor's monitors, then the Ragdoll's bodies (one may strike) at this
         // frame's time, for the camera and the actors.
         self.step_monitors(presentation_time);
-        self.step_propgun(presentation_time);
         self.step_ragdolls(presentation_time);
         timing.mark(Phase::Config);
         self.refresh_config_strings(game_audio);
@@ -3012,7 +3006,6 @@ impl GpuState {
         self.submit_drones(presentation_time, visual_now);
         self.submit_monitors(presentation_time);
         self.submit_boomboxes();
-        self.submit_propgun(presentation_time);
         self.submit_holocron_stage(visual_now);
         self.sync_saber_skins(game_audio, presentation_time);
         let debug_missiles = effect_debug::sync(self.console.as_ref());
@@ -3155,15 +3148,12 @@ impl GpuState {
             }
             self.pickups.clear();
         }
-        // A held prop gun hangs on the pistol's hand rig, whatever the player holds.
-        let prop_view = self.propgun_view();
         let view_weapon = first_person_weapon::frame_inputs(
             self,
             active_snapshot,
             first_person,
             local_entity_id,
             presentation_time,
-            prop_view.map(|_| first_person_weapon::PROP_RIG),
         );
         let first_person_charge = view_weapon.and(active_snapshot).and_then(|snapshot| {
             let predicted = self
@@ -3173,18 +3163,7 @@ impl GpuState {
             charge_flash::Charges::collect(Some(snapshot), predicted)
                 .of(snapshot.player.client_num())
         });
-        self.propgun.view_muzzle = None;
-        if let Some(inputs) = view_weapon
-            && let Some(prop) = prop_view
-        {
-            self.propgun.view_muzzle = first_person_weapon::submit_prop(
-                &self.first_person_weapon,
-                inputs,
-                prop,
-                &mut self.object_groups,
-            );
-            self.last_first_person_flash = None;
-        } else if let Some(inputs) = view_weapon {
+        if let Some(inputs) = view_weapon {
             first_person_weapon::submit(&self.first_person_weapon, inputs, &mut self.object_groups);
             // `CG_AddPlayerWeapon` records the view gun's `tag_flash` for
             // trace-weapon beams (`cg_weapons.c:579`) and plays the

@@ -83,6 +83,7 @@ A new emblem, a new Collection with kybers and an Inventory, status bars at both
 - The Banana peel toy is removed, the first of the toys going before the release (Sol's cleanup): its key, its Collection row, its quick wheel choices and its settings are gone, and its saved settings are dropped from your profile; the Boombox still stands on the floor as before _(Sol)_
 - The cardboard box toy is removed too (Sol's cleanup before the release): its key, its Collection row, its quick wheel choice and its settings are gone; the Hax's hack still starts on Use as before _(Sol)_
 - Order 66 and the Hax are removed too (Sol's cleanup before the release): their keys, Collection rows, quick wheel choices and settings are gone, the Hax trap with them; the Ragdoll and the Monitor still leave alone a player who is dead, duelling, carrying the flag or away _(Sol)_
+- The Prop gun toy is removed, and with it the mystery box's Ray Gun, which ran on it: a box now gives a holocron a little more often instead (52.5 %, was 45.5 %) _(Sol)_
 
 ## 2026.1117.1 (Alpha) | 17/11/2026
 

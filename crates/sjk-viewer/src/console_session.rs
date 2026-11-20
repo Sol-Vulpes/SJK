@@ -1190,6 +1190,11 @@ fn retire_modern_ui(cvars: &mut CvarRegistry) {
         "ui_shaderView",
         // The weapon icon on nameplates, removed on 28/10/2026 (Sol: it told nothing).
         "cg_nameplateWeapon",
+        // The Prop gun toy's switch, gun, sounds and sight, removed on 20/11/2026.
+        "cl_toyPropGun",
+        "cl_propGun",
+        "s_toyPropGunSound",
+        "cg_toyPropGunShow",
         // Order 66's and the Hax's switches, sounds and trap, removed on 20/11/2026.
         "cl_toyOrder66",
         "s_toyOrder66Sound",

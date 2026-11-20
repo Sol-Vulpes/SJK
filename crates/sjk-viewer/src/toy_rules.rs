@@ -1,5 +1,5 @@
 //! Who a toy may act on right now: the rules the toys that strike or steer the player
-//! share (the Ragdoll, the Monitor, the Prop gun). They came with Order 66 (17/10/2026),
+//! share (the Ragdoll and the Monitor; the Prop gun until 20/11/2026). They came with Order 66 (17/10/2026),
 //! removed on 20/11/2026, and live here since.
 
 use super::*;

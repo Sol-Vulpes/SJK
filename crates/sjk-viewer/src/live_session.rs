@@ -408,8 +408,6 @@ impl GpuState {
             if !flying {
                 self.ragdoll.wake(&command);
             }
-            // A held prop gun fires instead of the real weapon (`propgun`).
-            self.propgun.shape_command(&mut command);
             let replay = (!flying)
                 .then(|| self.ragdoll.drive(&command, delta_angles, origin))
                 .flatten()

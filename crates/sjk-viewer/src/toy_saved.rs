@@ -1,6 +1,6 @@
 //! Toys that stay on until the player turns them off (Sol's request, 22/10/2026): the
-//! Drone, the Monitor, Box hunt, the Prop gun and Quests keep their switch in an archived
-//! cvar ([`DRONE_CVAR`], [`MONITOR_CVAR`], [`BOX_HUNT_CVAR`], [`PROPGUN_CVAR`],
+//! Drone, the Monitor, Box hunt and Quests keep their switch in an archived
+//! cvar ([`DRONE_CVAR`], [`MONITOR_CVAR`], [`BOX_HUNT_CVAR`],
 //! [`QUESTS_CVAR`]), so
 //! a toy turned on is still on after a map change, another server or a restart of the
 //! game. The toy's own state stays the viewer's; [`Saved::sync`] keeps the two in step
@@ -14,8 +14,6 @@ pub(crate) const DRONE_CVAR: &str = "cl_toyDrone";
 pub(crate) const MONITOR_CVAR: &str = "cl_toyMonitor";
 /// Box hunt's switch (hunt, and maybe be the mark), saved.
 pub(crate) const BOX_HUNT_CVAR: &str = "cl_toyBoxHunt";
-/// The Prop gun's switch (hold and fire it, and be hit), saved.
-pub(crate) const PROPGUN_CVAR: &str = "cl_toyPropGun";
 /// Quests' switch (be given quests, and named in them), saved.
 pub(crate) const QUESTS_CVAR: &str = "cl_toyQuests";
 

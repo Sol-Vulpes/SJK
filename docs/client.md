@@ -3928,7 +3928,7 @@ The bottom bar carries what the player has and wears:
 | Kyber | `cg_statusBarSaber` | left | The first saber's kyber: its tier's diamonds (as the Collection marks tiers) and its name in the tier's colour ("Stock blade" when none), and the second saber's when it wears another |
 | Effects | `cg_statusBarEffects` | left | A pill for each thing on: the blade's extras switched on, the finisher worn, Tactical mode's level, Do not disturb, away, toon shading |
 | Weapons | `cg_statusBarWeapons` | centre | The weapons held by their selection icons, in the selection wheel's order (empty ones by their `_na` icon, the saber by its style's), the one in hand lit on a holo ground and underlined in gold, then its ammunition (ember at five or fewer; the room stays while a weapon held takes ammunition, so the row does not shift); the followed player's while following, none while spectating freely |
-| Toys | `cg_statusBarToys` | right | Every toy with a switch, its quick wheel picture lit with a gold dot while on, faint while off (the Prop gun, which has no picture, by its letters) |
+| Toys | `cg_statusBarToys` | right | Every toy with a switch, its quick wheel picture lit with a gold dot while on, faint while off |
 | Time | `cg_statusBarTime` | right | The PC's local time on the 24-hour clock (`21:07`), read once a second |
 | Date | `cg_statusBarDate` | right | The date day first (`16/11/2026`) |
 
@@ -5934,7 +5934,6 @@ The player's own toy still shows, and nothing changes for the toys' rules.
 | Drone | See others' drones | `cg_toyDroneShow` | their drones, names and sounds (who peeks at you is still told) |
 | Boombox | See and hear others' boomboxes | `cg_toyBoomboxShow` | their stereo (on the shoulder or the floor) and its music |
 | Monitor | See monitors | `cg_toyMonitorShow` | every monitor and its sounds, yours too ([Monitor](#monitor)) |
-| Prop gun | (console only) | `cg_toyPropGunShow` | their guns, bolts and sounds ([Prop gun](#prop-gun)) |
 
 Box hunt acts only on players who have it on, so it has none.
 The holocron, the box and the boombox are hidden as if those players had them off here
@@ -6452,88 +6451,15 @@ from the profile at load (`console_session.rs`); a bind left on `toy_banana` or
 `banana_drop` only says the command is unknown. The small-box floor trace it brought
 lives on for the Boombox's placement ([floor_spot.rs](../crates/sjk-viewer/src/floor_spot.rs)).
 
-## Prop gun
+## Prop gun (removed)
 
-The Prop gun (Sol's idea, 01/11/2026) is a toy for every SJK player: a fake weapon held
-instead of the real one, whose bolts knock down the players who have the toy on too, as
-the [Monitor](#monitor) does. SJK ships no gun: each is a file in a pk3 the player adds
-themselves, and other players see and hear a gun only when they have the same file. The
-one exception is the mystery box's Ray Gun (11/11/2026, [mystery-boxes.md](mystery-boxes.md)):
-bundled as `sjk/raygun.gun` (never listed or chosen by `propgun`), held 30 seconds by the
-box's opener whatever the toy's switch, its bolts knocking down any SJK player in play
-once, then shielding them from every Ray Gun for 30 seconds (a green shell).
-
-- **The guns** are `propguns/<id>.gun` in any pk3 or the game folder; `<id>` is 1 to 24
-  of `a` to `z`, `0` to `9` and `_`. One setting a line, its name then its values (`//`
-  starts a comment):
-
-  | Setting | Values | Default |
-  | --- | --- | --- |
-  | `name` | the name said when it is taken out | the id |
-  | `view`, `world` | the first-person and third-person models (MD3), needed | |
-  | `viewOffset`, `worldOffset` | x y z on the model's own axes (X forward, Y left, Z up) | 0 0 0 |
-  | `viewAngles`, `worldAngles` | pitch yaw roll, degrees | 0 0 0 |
-  | `viewScale`, `worldScale` | how much bigger | 1 |
-  | `fire` | a shot others hear (several lines: one each shot in turn) | |
-  | `fireOwn` | the shooter's own shot, in both ears (else `fire`) | |
-  | `impact` | where a bolt meets the world or a body (several lines) | |
-  | `raise` | played when the gun is taken out | |
-  | `boltModel`, `boltScale` | the bolt's model along its way (none: its light only) | none, 1 |
-  | `boltColor`, `boltLight` | its light's colour (0 to 1) and reach | 0.4 1 0.3, 120 |
-  | `boltSpeed`, `boltLife` | units a second, milliseconds | 1800, 3000 |
-  | `impactEffect` | an effect where it meets the world or a body (`repeater/wall_impact`) | none |
-  | `fireEffect` | an effect where it leaves, along its way, at each shot | none |
-  | `boltEffect` | an effect started behind the bolt every 25 ms as it flies (a trail) | none |
-  | `boltSound` | a sound looped at the bolt as it flies (8 heard at once at most) | none |
-  | `refire` | milliseconds between two shots | 350 |
-  | `push` | how hard a bolt pushes the body it strikes, units a second | 900 |
-
-  A file with a fault is skipped and the console says which line. The models load with
-  the map, so a gun added during a match is drawn from the next one.
-- **`toy_propgun`** (a bind, the console) is the switch, both the right to fire and the
-  consent to be hit (always opt in). It stays as last switched, across maps, servers and
-  restarts (`cl_toyPropGun`, archived), and says the gun's name and ON, or "Prop gun OFF".
-  **`propgun`** lists the guns; `propgun <id>`, `next` and `prev` choose one (`cl_propGun`,
-  archived; the first gun at first).
-- **Held:** while it is on, the gun is drawn instead of whatever the player holds, saber
-  included. In first person it floats ahead, right and down of the eyes, moved by the
-  view bob and the view-model FOV (it does not follow a hand rig's animations), and
-  `cg_drawGun 0` hides it. In third person it hangs on the right hand (`*r_hand`), where
-  the real weapon would, turned as the game's own world guns are (the world model has the
-  view model's axes); the body keeps the animations the server plays (a saber stance
-  with a saber out).
-- **Firing:** attack and alt attack never reach the game server while a gun is held
-  ([live_session.rs](../crates/sjk-viewer/src/live_session.rs)); a press, or attack held,
-  fires once every `refire`. The bolt leaves from the first-person gun's muzzle (the view
-  model's `tag_flash`, as drawn), else from by the eyes (16 ahead, 5 right, 5 down), towards what the crosshair meets, and flies straight at its speed until it meets the
-  world (its impact sound and effect) or a body, or for its life. Nobody fires while limp,
-  dead, spectating, in a duel, held by the server or in a vehicle (the Ragdoll's rules).
-- **The hit** is decided by the struck player's client alone, against its own body (a
-  standing player's box, or a limp one's ragdoll points), when a bolt passes within 6
-  units of it, tried every 4 units of its way. The body falls limp as the Ragdoll's and
-  takes a blow at the point nearest, along the bolt's way at `push` with 220 upwards
-  (3,000 units a second at most). Not by the player's own bolts, not twice by one bolt, not
-  within 0.25 seconds of a blow, and not while typing or away (the Monitor's rules). The
-  fall travels as the Ragdoll's, its blow naming the shooter and no monitor
-  (`ragdoll::UNTHROWN`).
-- **Seen, or not:** `cg_toyPropGunShow` (archived, default 1) at 0 hides other players'
-  guns, bolts and their sounds on this PC; `s_toyPropGunSound` silences every Prop gun
-  sound. In a duel, or following one, no gun is drawn and no bolt flies.
-
-No game server knows of it, and the hub never carries a gun's files. What a player holds
-and fires goes through the [toy relay](hub-chat.md#toy-relay), one event every 30 ms,
-the player's newest shots first: `hold_<id>` (told to each SJK player, again every 15
-seconds; forgotten after 40 seconds untold), `put`, and
-`fire_<number>_<moment>_<x>_<y>_<z>_<dx>_<dy>_<dz>_<id>` (the shot's number among the
-player's, 0 to 99; the game server time; where it left, whole units; its way, in
-thousandths). Each client flies the same bolt from its moment and drops a shot heard more
-than 1.5 seconds late. A sender counts only when the game shows the name they claimed,
-and never one blocked here. Players on stock clients see nothing. Not in the Collection's
-Toys tab, the quick wheel or the settings yet. World shot:
-`world_shot::propgun_shots::propgun_on_a_demo` (with `SJK_TEST_DEMO` and
-`SJK_TEST_PROPGUN`, the id of a gun in the game data). See
-[propgun.rs](../crates/sjk-viewer/src/propgun.rs) and
-[propgun_frame.rs](../crates/sjk-viewer/src/propgun_frame.rs).
+The Prop gun (Sol's idea, 01/11/2026) let a player hold a fake gun from a pk3
+(`propguns/<id>.gun`) whose bolts knocked down the players who had the toy on; the
+mystery box's Ray Gun was one, bundled. Both were removed on 20/11/2026 (Sol: one
+knock-down toy is enough, the Monitor stays). Their saved settings (`cl_toyPropGun`,
+`cl_propGun`, `s_toyPropGunSound`, `cg_toyPropGunShow`) are dropped from the profile at
+load; a bind on `toy_propgun` only says the command is unknown, and a pk3's `propguns`
+folder is ignored.
 
 ## Tag
 
@@ -6893,9 +6819,8 @@ Master](toy-master.md) hides, 30/10/2026), `s_toyFishingSound`
 on by default,
 archived). The toy still
 runs and is still seen; nothing is sent to anyone. The Illuminate holocron makes no
-sound. Every toy sound goes through `GameAudio::play_toy`, and the Prop gun's bolt loops
-through `send_toy_loop`, which read the settings each frame, so a change is
-heard at once, loops included. See [toy_sounds.rs](../crates/sjk-viewer/src/toy_sounds.rs).
+sound. Every toy sound goes through `GameAudio::play_toy`, which reads the settings each
+frame, so a change is heard at once. See [toy_sounds.rs](../crates/sjk-viewer/src/toy_sounds.rs).
 
 ## Holstered saber hilts
 

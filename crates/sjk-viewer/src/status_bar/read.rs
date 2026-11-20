@@ -176,7 +176,6 @@ impl crate::GpuState {
         switches[toys::MONITOR] = self.monitor.on();
         switches[toys::BOX_HUNT] = self.box_hunt.on();
         switches[toys::QUESTS] = self.quests.on();
-        switches[toys::PROPGUN] = self.propgun.on();
         switches[toys::FISHING] = self.fishing.on();
         switches[toys::WHEEL_OF_DOOM] = self.wheel_of_doom.running();
         switches[toys::MINING] = self.mining.on();
