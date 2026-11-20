@@ -72,6 +72,7 @@ A new emblem, a new Collection with kybers and an Inventory, status bars at both
 - `in_mouseRepeat`: a click on mouse 4 or 5 runs its bind once again; the repeats start only once the button is held for a quarter of a second, as a held key's do _(Slash, PR #434, hub report #317, after JoF''kushina's report)_
 - Identity: `identity link` takes a code typed in two halves (ABCD EFGH) too, and a staff key, which the hub never joins to another account, is told at once to make the code on its own page with `identity site` and type it on the other computer instead _(Slash, PR #433, hub report #316, after JoF''kushina's report)_
 - Box hunt: a hunter out on their own screen (a teleport, or killed by the mark) whose word never reached the hub is told again, so the mark can still outlast every hunter and win, and credits the hunt pays show in your count within half a minute instead of up to 10 minutes later (hub reports #304 and #314) _(Slash, PR #429, after NX|LH's and blej's reports)_
+- Faces: players and NPCs blink again every 4 to 8 seconds (now and then a wink), their faces turn alert or frown now and then, and the dead close their eyes, as in the stock game _(Slash, PR #428, after Goylander's report)_
 
 ## 2026.1117.1 (Alpha) | 17/11/2026
 
