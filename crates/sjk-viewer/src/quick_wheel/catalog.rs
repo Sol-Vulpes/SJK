@@ -165,7 +165,7 @@ pub(crate) const ICONS: [(&str, &[u8]); 53] = [
         "boombox",
         include_bytes!("../../assets/boombox/toy_boombox.png"),
     ),
-    // The Monitor's picture, the old CRT (bundled with the client).
+    // Force Throw's picture, a crate the Force hurls (bundled with the client).
     (
         "monitor",
         include_bytes!("../../assets/monitor/toy_monitor.png"),

@@ -80,10 +80,17 @@ pub(super) fn load<'a>(
         model: crate::boombox::MODEL.to_owned(),
         variant: String::new(),
     });
-    appearances.insert(Appearance {
-        model: crate::monitor::MODEL.to_owned(),
-        variant: String::new(),
-    });
+    // Force Throw's junk and a crate's pieces (Jedi Academy's own).
+    appearances.extend(
+        crate::monitor::JUNK
+            .iter()
+            .map(|junk| junk.model)
+            .chain(crate::monitor::CHUNKS)
+            .map(|model| Appearance {
+                model: model.to_owned(),
+                variant: String::new(),
+            }),
+    );
     appearances.extend(crate::wheel_of_doom::MODELS.map(|model| Appearance {
         model: model.to_owned(),
         variant: String::new(),

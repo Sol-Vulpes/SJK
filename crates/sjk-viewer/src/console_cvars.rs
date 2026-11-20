@@ -700,7 +700,7 @@ pub(super) fn register_daily_cvars(cvars: &mut CvarRegistry) -> Result<(), sjk_s
             crate::toy_sounds::Toy::Monitor.cvar(),
             true,
             archive,
-            "Play Monitor sounds (SJK)",
+            "Play Force Throw sounds (SJK)",
         ),
         CvarDefinition::new(
             crate::toy_sounds::Toy::MysteryBox.cvar(),
@@ -1073,7 +1073,7 @@ pub(super) fn register_daily_cvars(cvars: &mut CvarRegistry) -> Result<(), sjk_s
             crate::toy_saved::MONITOR_CVAR,
             false,
             archive,
-            "The Monitor toy is on: you may throw monitors (monitor_throw, or +monitor_throw held to charge) and be hit by them (toy_monitor switches it)",
+            "The Force Throw toy is on: you may hurl junk (monitor_throw, or +monitor_throw held to charge) and be hit by it (toy_monitor switches it)",
         ),
         CvarDefinition::new(
             crate::toy_saved::BOX_HUNT_CVAR,
@@ -1116,7 +1116,7 @@ pub(super) fn register_daily_cvars(cvars: &mut CvarRegistry) -> Result<(), sjk_s
             crate::monitor::SHOW_CVAR,
             true,
             archive,
-            "Monitors are seen (0: no Monitor toy monitor is drawn, nor its sounds in the world heard, on this PC; SJK)",
+            "Force-thrown junk is seen (0: none is drawn, nor its sounds in the world heard, on this PC; SJK)",
         ),
         CvarDefinition::new(
             crate::tags::CVAR,

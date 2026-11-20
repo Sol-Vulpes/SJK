@@ -46,7 +46,7 @@ pub(crate) const TOYS: [(&str, &str, &str); 9] = [
     (
         "Monitor",
         "toy_monitor",
-        "throw monitors with your throw key, hold it to charge; monitors knock you flying",
+        "hurl junk with your throw key, hold it to charge; thrown junk knocks you flying",
     ),
     (
         "Tag",

@@ -208,7 +208,7 @@ impl Panel {
         }
         if token == MONITOR_TOKEN {
             return Some(Card {
-                title: "Monitor".to_owned(),
+                title: "Force Throw".to_owned(),
                 colour: color::gold_bright(),
                 lines: vec![
                     Line::how(

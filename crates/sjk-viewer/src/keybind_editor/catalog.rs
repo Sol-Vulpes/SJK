@@ -155,11 +155,12 @@ const FIXED: &[BindableAction] = &[
         crate::boombox::PLACE_COMMAND,
         "",
     ),
-    // The Monitor: the switch (throw, and be hit), and the throw (held, it charges).
-    action(Interaction, "Toy: Monitor", crate::monitor::COMMAND, ""),
+    // Force Throw (the Monitor before 21/11/2026, its commands kept): the switch (throw,
+    // and be hit), and the throw (held, it charges).
+    action(Interaction, "Toy: Force Throw", crate::monitor::COMMAND, ""),
     action(
         Interaction,
-        "Throw monitor",
+        "Force throw",
         crate::monitor::CHARGE_COMMAND,
         "",
     ),

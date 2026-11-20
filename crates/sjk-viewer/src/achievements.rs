@@ -377,7 +377,7 @@ impl Category {
             Self::Hax => "Hax",
             Self::Drone => "Drone",
             Self::Boombox => "Boombox",
-            Self::Monitor => "Monitor",
+            Self::Monitor => "Force Throw",
             Self::BoxHunt => "Box hunt",
             Self::Fishing => "Fishing",
             Self::Mining => "Mining",
@@ -814,23 +814,21 @@ pub(crate) const ALL: [Kind; 80] = [
     // Since 29/10/2026 (Sol's Screen Saver, `monitor/saver.rs`).
     kind(
         "monitor_payback",
-        "Payback",
-        "During your Screen Saver, hit the player whose monitor set it off.",
+        "Rebound",
+        "During your Force Barrier, hit the player whose throw raised it.",
         1,
         Monitor,
         Client(C::MonitorPayback),
-    )
-    .retire(),
+    ),
     kind(
         "monitor_surge",
-        "Power Surge",
-        "Hit 3 different players with monitors during one Screen Saver.",
+        "Force Surge",
+        "Hit 3 different players with thrown junk during one Force Barrier.",
         1,
         Monitor,
         Client(C::MonitorSurge),
     )
-    .secret()
-    .retire(),
+    .secret(),
     // 30/10/2026 (Sol): the toys' own, from a player's ideas, reworked.
     kind(
         "box_minutes_30",
@@ -961,12 +959,11 @@ pub(crate) const ALL: [Kind; 80] = [
     kind(
         "drone_monitor",
         "Special Delivery",
-        "Hit your Drone's target with a monitor within 5 seconds of landing it.",
+        "Hit your Drone's target with a Force throw within 5 seconds of landing it.",
         1,
         Drone,
         Client(C::DroneMonitor),
-    )
-    .retire(),
+    ),
     kind(
         "boombox_minutes_30",
         "DJ",
@@ -994,41 +991,37 @@ pub(crate) const ALL: [Kind; 80] = [
     .secret(),
     kind(
         "monitor_victims_25",
-        "Tech Support",
-        "Hit 25 different players with monitors.",
+        "Telekinetic",
+        "Hit 25 different players with Force-thrown junk.",
         25,
         Monitor,
         Client(C::MonitorVictims),
-    )
-    .retire(),
+    ),
     kind(
         "monitor_double",
         "Two for One",
-        "Hit 2 players with one monitor.",
+        "Hit 2 players with one Force throw.",
         2,
         Monitor,
         Client(C::MonitorBestThrow),
-    )
-    .retire(),
+    ),
     kind(
         "monitor_triple",
         "Strike!",
-        "Hit 3 players with one monitor.",
+        "Hit 3 players with one Force throw.",
         3,
         Monitor,
         Client(C::MonitorBestThrow),
     )
-    .secret()
-    .retire(),
+    .secret(),
     kind(
         "monitor_far",
-        "Long Distance Call",
-        "Hit a player with a monitor thrown from more than 40 metres away.",
+        "Reach of the Force",
+        "Hit a player with junk Force-thrown from more than 40 metres away.",
         1,
         Monitor,
         Client(C::MonitorFar),
-    )
-    .retire(),
+    ),
     kind(
         "box_hunt_mark",
         "Bounty Hunter",
@@ -2166,18 +2159,16 @@ mod tests {
             ]
         );
         let retired: Vec<&str> = ALL.iter().filter(|k| k.retired).map(|k| k.id).collect();
-        assert_eq!(retired.len(), 35);
+        assert_eq!(retired.len(), 28);
         // Surveyor (26/10/2026), and the removed toys' achievements (20/11/2026): Order
-        // 66, the cardboard box, the Monitor, the Hax, Fishing and Mining, and the
-        // Drone's monitor strike.
-        let gone = [CardboardBox, Order66, Hax, Monitor, Fishing, Mining];
+        // 66, the cardboard box, the Hax, Fishing and Mining. The Monitor's came back
+        // with Force Throw (21/11/2026), its ids kept.
+        let gone = [CardboardBox, Order66, Hax, Fishing, Mining];
         for kind in &ALL {
-            let retired = kind.id == "surveyor"
-                || kind.id == "drone_monitor"
-                || gone.contains(&kind.category);
+            let retired = kind.id == "surveyor" || gone.contains(&kind.category);
             assert_eq!(kind.retired, retired, "{}", kind.id);
         }
-        assert_eq!(OBTAINABLE, ALL.len() - 35);
+        assert_eq!(OBTAINABLE, ALL.len() - 28);
         assert_eq!(find("box_minutes_10").unwrap().amount(7), "7 min");
         assert_eq!(find("holocrons_200").unwrap().category, Collection);
         assert_eq!(find("order66_kill").unwrap().category, Order66);
@@ -2211,9 +2202,10 @@ mod tests {
         assert_eq!(record.count(Counter::MonitorBestThrow), 2);
         let back = Record::from_json(&record.to_json());
         assert_eq!(back, record);
-        // The Monitor is gone (20/11/2026): its counts are kept, its achievements no
-        // longer unlock.
-        assert!(record.unlock(9, false).is_empty());
+        // Force Throw (the Monitor's, back since 21/11/2026): its counts kept through the
+        // retirement unlock what they reach.
+        let unlocked: Vec<&str> = record.unlock(9, false).iter().map(|k| k.id).collect();
+        assert_eq!(unlocked, ["monitor_double"]);
         assert_eq!(find("monitor_victims_25").unwrap().amount(3), "3");
         // The hub's count is a floor for a set, as for maps.
         assert!(
@@ -2225,8 +2217,9 @@ mod tests {
         for index in 0..30 {
             record.name(Counter::MonitorVictims, &format!("p{index}"));
         }
-        // Retired, it no longer unlocks, but clearing it still sets its count back.
-        assert!(record.unlock(10, false).is_empty());
+        // Past its goal it unlocks; clearing it sets its count back.
+        let unlocked: Vec<&str> = record.unlock(10, false).iter().map(|k| k.id).collect();
+        assert_eq!(unlocked, ["monitor_victims_25"]);
         record.forget(find("monitor_victims_25").unwrap());
         assert_eq!(record.count(Counter::MonitorVictims), 24);
         record.forget(find("hax_minutes_5").unwrap());

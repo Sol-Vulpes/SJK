@@ -237,16 +237,16 @@ const TOYS: [Toy; TOY_COUNT] = [
     },
     Toy {
         icon: "monitor",
-        name: "Monitor",
-        tag: "Throw an old monitor; it sends players flying.",
-        title: "Monitor",
-        what: "Throw a big old CRT monitor. One that hits a player who has it on too knocks them down as a ragdoll and sends them flying, the way it struck them; they get up once they land. With it off, monitors pass through you.",
+        name: "Force Throw",
+        tag: "Hurl old junk with the Force; it sends players flying.",
+        title: "Force Throw",
+        what: "Hurl junk with the Force: a banded crate, a wrecked R5 droid or a wrecked GONK droid. What hits a player who has it on too knocks them down as a ragdoll and sends them flying, the way it struck them; they get up once they land. A crate bursts where it comes to rest. With it off, thrown junk passes through you.",
         more: Some(
-            "Its switch lets you throw and be hit; the throw key throws one, harder the longer you hold it.",
+            "Its switch lets you throw and be hit; the throw key throws, harder the longer you hold it. Struck 5 times within 20 seconds, a Force Barrier keeps thrown junk off you for 30 seconds.",
         ),
         commands: &[("toy_monitor", "Your key"), ("+monitor_throw", "Throw key")],
         switch: "Hit me",
-        sight: Some((crate::monitor::SHOW_CVAR, "See monitors")),
+        sight: Some((crate::monitor::SHOW_CVAR, "See thrown junk")),
         options: &[],
         token: MONITOR_TOKEN,
         author: "Sol",
@@ -1011,7 +1011,7 @@ mod tests {
         for (id, name) in [
             (crate::drone::TOY, "Drone"),
             (crate::boombox::TOY, "Boombox"),
-            (crate::monitor::TOY, "Monitor"),
+            (crate::monitor::TOY, "Force Throw"),
             (crate::box_hunt::TOY, "Box hunt"),
             (crate::quests::TOY, "Quests"),
         ] {

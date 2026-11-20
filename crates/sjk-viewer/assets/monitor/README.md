@@ -1,25 +1,19 @@
-# Monitor
+# Force Throw
 
-The Monitor toy (SJK's own, [client.md](../../../../docs/client.md#monitor)) throws a big
-old CRT monitor that sends the players it hits flying as ragdolls. Everything here is
-made by [monitor_assets.py](../../../../scripts/monitor_assets.py) from shapes, noise and
-synthesized sound (nothing taken from another game), so none is edited by hand except
-`monitor.shader`.
+The Force Throw toy (the Monitor until 21/11/2026, its commands, cvars and this folder's
+name kept; SJK's own, [client.md](../../../../docs/client.md#monitor)) hurls junk with the
+Force that sends the players it hits flying as ragdolls. What it hurls (a banded crate, a
+wrecked R5 and a wrecked GONK droid), the pieces a crate bursts into and its sounds are
+Jedi Academy's own retail files, read from the player's game by path and not shipped
+([monitor.rs](../../src/monitor.rs), `JUNK`, `CHUNKS` and the sounds). Only the two files
+here are SJK's, made by [force_throw_assets.py](../../../../scripts/force_throw_assets.py)
+from shapes and synthesized sound.
 
 | File | Game path | What |
 | --- | --- | --- |
-| `toy_monitor.png` | `gfx/sjk/toy_monitor.png` | The toy's icon (quick wheel, Collection, key bindings), 128x128: the monitor flying, speed lines behind it |
-| `monitor.jpg` | `models/sjk/monitor.jpg` | 1024x1024: the face (bezel, glass with a glowing prompt, power button) top left, the back (vents, label) top right, plain plastic below |
-| `monitor.md3` | `models/sjk/monitor.md3` | The bezel and the housing tapering back, 20 x 17 x 18 units; its screen facing +X, its centre (the flight's eight corners', `src/monitor/flight.rs`) at the origin |
-| `monitor.shader` | `shaders/sjk_monitor.shader` | `models/sjk/monitor`: lit as a player model is |
-| `throw.wav` | `sound/sjk/monitor/throw.wav` | A throw's whoosh, 22050 Hz mono |
-| `bonk.wav` | `sound/sjk/monitor/bonk.wav` | A monitor striking a body: a hollow plastic thunk and its glass ringing |
-| `knock.wav` | `sound/sjk/monitor/knock.wav` | A monitor knocking on the world: a clunk and a rattle |
-| `charge.wav` | `sound/sjk/monitor/charge.wav` | A throw held to charge (the thrower's): a tube's hum rising over a second to a ready ping |
-| `throw_hard.wav` | `sound/sjk/monitor/throw_hard.wav` | A charged throw leaving the hand: a thump and a deep whoosh |
-| `hit.wav` | `sound/sjk/monitor/hit.wav` | The thrower's hit sound when their monitor strikes someone: a bright tick |
-| `saver_on.wav` | `sound/sjk/monitor/saver_on.wav` | A Screen Saver rising: a CRT's degauss boing under a gold shimmer |
-| `saver_off.wav` | `sound/sjk/monitor/saver_off.wav` | A Screen Saver ending: a CRT switched off, its whine falling to a pop |
+| `toy_monitor.png` | `gfx/sjk/toy_monitor.png` | The toy's icon (quick wheel, Collection, key bindings), 128x128: a banded crate flying, blue rings of the Force behind it |
+| `hit.wav` | `sound/sjk/monitor/hit.wav` | The thrower's hit sound when their throw strikes someone: a bright tick, 22050 Hz mono |
 
-The client mounts them in memory below all game data
-([monitor.rs](../../src/monitor.rs)), so a PK3 that has the same paths replaces them.
+The client mounts them in memory below all game data, so a PK3 that has the same paths
+replaces them. The old CRT monitor's model, picture, shader and synthesized sounds
+(`monitor_assets.py`) went with the rework.
