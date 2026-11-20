@@ -1,3 +1,14 @@
+## Rim alpha: `alphaGen dot` and `oneMinusDot` (18/11/2026)
+
+18/11/2026, `feat/alphagen-dot` based on `main` `afd16b609`. A shader stage's `alphaGen dot` /
+`oneMinusDot` was parsed and drawn as identity alpha, as rd-vanilla does (it never computes
+them); now the stage's alpha is how squarely the surface faces the viewer, or one minus that
+for a rim light ([rendering.md](rendering.md#facing-and-rim-alpha-alphagen-dot-oneminusdot)).
+No retail shader and no pack installed here uses either. Verified: `cargo test -p sjk-viewer
+--bin sjk` for `world_stage` and `material_programs_validate_in_both_lighting_modes` (the
+stage program with the new branch validates in both lighting modes), `cargo clippy -p
+sjk-viewer --all-targets` (no warning in the changed code). Not tried in a game; the
+workspace build and tests are left to CI.
 ## Hide or mute emotes (17/11/2026)
 
 `feat/emote-mute`, based on `main` `afd16b60`, mg.perso's idea. Settings > Sound > Emotes:
