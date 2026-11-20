@@ -16,6 +16,10 @@
 // @room 9
 // @solid 1
 // @palette {"corona.rim_cool":[0.72,0.18,0.42],"corona.rim_hot":[1.0,0.55,0.75],"corona.inner":[1.0,0.68,0.84],"core.white":[1.0,0.86,0.93],"core.fringe_cool":[1.0,0.5,0.72],"core.fringe_hot":[1.0,0.7,0.84],"light.color":[1.0,0.55,0.75],"trail":[1.0,0.6,0.8]}
+// @extras {"card":"sjk_alpha_014","card_name":"SJK Alpha 014 (Kushina)","finish":"solar"}
+// @extra {"id":"blossom_mist","name":"Blossom mist","sheds":{"kind":"blossom_mist","per_unit":0.07,"life":2.6,"size":1.6,"fall":38.0,"drift":14.0}}
+// @extra {"id":"ink_stroke","name":"Ink stroke","trail":"ink"}
+// @extra {"id":"silk_threads","name":"Silk threads","layer":5}
 
 const vec3 VB_PINK = vec3(1.0, 0.52, 0.74);
 const vec3 VB_PALE = vec3(1.0, 0.86, 0.92);
@@ -88,10 +92,12 @@ vec3 vb_petals(vec3 ro, vec3 rd, float px, float y0, float y1){
   return acc;
 }
 
-// lavender and white mist curling up off the blade, two soft clouds woven together
+// lavender and white mist curling up off the blade, two soft clouds woven together; kept close
+// and thin so it does not thicken the blade (Kushina, 20/11/2026: it was 2.8 and 2.0 wide, at
+// 1.1 and 0.6)
 vec3 vb_mist(vec3 ro, vec3 rd, float y0, float y1){
-  return fxSmoke(ro, rd, y0, y1, 2.8, 1.6, 3.0, VB_LILAC)*1.1
-    + fxSmoke(ro, rd, y0 + 2.0, y1, 2.0, 2.2, 11.0, vec3(1.0, 0.94, 0.98))*0.6;
+  return fxSmoke(ro, rd, y0, y1, 1.8, 1.6, 3.0, VB_LILAC)*0.8
+    + fxSmoke(ro, rd, y0 + 2.0, y1, 1.3, 2.2, 11.0, vec3(1.0, 0.94, 0.98))*0.45;
 }
 
 // the effects round the blade
@@ -188,6 +194,46 @@ vec4 vb_pearl(vec3 ro, vec3 rd, float px){
   return vec4(min(col, vec3(1.0)), shape*0.92);
 }
 
+// the Silk threads extra (`layer` 5, Kushina's, 20/11/2026): a pair of thread-thin silk strands
+// wound round the wood of a twig from a to b (w0 to w1 thick), over s0 to s1 of it, turns times
+// (a binding), white-lilac with a sheen where they face the eye; how much shows, its colour in col
+const vec3 VB_SILK = vec3(0.93, 0.88, 1.0);
+const vec3 VB_SILK_SHADE = vec3(0.7, 0.6, 0.86);
+float vb_silk(vec3 ro, vec3 rd, float px, vec3 a, vec3 b, float w0, float w1, float s0, float s1,
+              float turns, float phase, out vec3 col){
+  col = VB_SILK;
+  float s;
+  float d = raySegRaw(ro, rd, a, b, s);
+  float w = mix(w0, w1, s);
+  if (d > w || s < s0 || s > s1) return 0.0;
+  // where the ray meets the twig's surface, and how far round the twig that is
+  vec3 u = normalize(b - a);
+  vec3 e1 = normalize(cross(u, abs(u.z) < 0.9 ? vec3(0.0, 0.0, 1.0) : vec3(1.0, 0.0, 0.0)));
+  vec3 e2 = cross(u, e1);
+  vec3 q = a + (b - a)*s;
+  float t = max(dot(q - ro, rd), 0.0);
+  vec3 hit = ro + rd*(t - sqrt(max(w*w - d*d, 0.0)));
+  vec3 r = hit - q;
+  r -= u*dot(r, u);
+  float round0 = atan(dot(r, e2), dot(r, e1))/6.2831853;
+  // along the binding, the two strands winding round it
+  float k = (s - s0)/max(s1 - s0, 1e-4);
+  float wound = round0 - k*turns + phase;
+  // how far across the strands (not round the twig) the nearest one runs: the winding changes
+  // by 1 every girth round and every span/turns along
+  float girth = 6.2831853*w;
+  float span = length(b - a)*(s1 - s0);
+  float across = 1.0/sqrt(1.0/(girth*girth) + turns*turns/max(span*span, 1e-6));
+  float d1 = abs(fract(wound + 0.5) - 0.5)*across;
+  float d2 = abs(fract(wound) - 0.5)*across;
+  float strand = max(fillD(d1 - 0.022, px), fillD(d2 - 0.018, px));
+  // tied off at both ends
+  strand *= smoothstep(0.0, 0.06, k)*smoothstep(1.0, 0.94, k);
+  float facing = clamp(dot(normalize(r), -rd), 0.0, 1.0);
+  col = mix(VB_SILK_SHADE, VB_SILK, facing) + vec3(1.0, 0.96, 1.0)*pow(facing, 8.0)*0.35;
+  return strand;
+}
+
 // the branch: a twig of dark cherry wood growing from where the blade leaves the hilt, curving
 // out and up, a smaller twig off it with a bud, and two open blossoms; it circles
 // nothing, but stands in true 3D beside the blade
@@ -209,6 +255,22 @@ vec4 vb_branch(vec3 ro, vec3 rd, float px){
   float edge = max(max(d1/w1, d2/w2), 0.0);
   vec3 bark = mix(VB_BARK, VB_WOOD, clamp(edge, 0.0, 1.0))*(0.85 + 0.15*sin((s1 + s2)*14.0));
   vec4 res = vec4(bark, wood);
+  // the Silk threads extra: short, dense bindings of silk wound tight here and there on the
+  // wood, the bark bare between them (Kushina: dense bindings spread over the twigs, not
+  // wound all along); gone with the branch
+  if (part(5.0) > 0.5){
+    vec3 c, cb;
+    float k = vb_silk(ro, rd, px, a, m, 0.34, 0.24, 0.17, 0.29, 8.0, 0.0, c);
+    float kb = vb_silk(ro, rd, px, a, m, 0.34, 0.24, 0.62, 0.71, 6.0, 0.4, cb);
+    res.rgb = mix(res.rgb, c, k*fillD(d1 - w1, px));
+    res.rgb = mix(res.rgb, cb, kb*fillD(d1 - w1, px));
+    k = vb_silk(ro, rd, px, m, e, 0.24, 0.13, 0.14, 0.25, 7.0, 0.2, c);
+    kb = vb_silk(ro, rd, px, m, e, 0.24, 0.13, 0.52, 0.6, 5.0, 0.7, cb);
+    res.rgb = mix(res.rgb, c, k*fillD(d2 - w2, px));
+    res.rgb = mix(res.rgb, cb, kb*fillD(d2 - w2, px));
+    k = vb_silk(ro, rd, px, m + (e - m)*0.3, side, 0.15, 0.08, 0.38, 0.54, 4.0, 0.5, c);
+    res.rgb = mix(res.rgb, c, k*fillD(d3 - w3, px));
+  }
   // the bud at the side twig's end
   float tb;
   float db = rayPt(ro, rd, side, tb);

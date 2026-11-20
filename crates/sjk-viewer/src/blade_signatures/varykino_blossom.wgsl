@@ -9,6 +9,10 @@
 // @room 9
 // @solid 1
 // @palette {"corona.rim_cool":[0.72,0.18,0.42],"corona.rim_hot":[1.0,0.55,0.75],"corona.inner":[1.0,0.68,0.84],"core.white":[1.0,0.86,0.93],"core.fringe_cool":[1.0,0.5,0.72],"core.fringe_hot":[1.0,0.7,0.84],"light.color":[1.0,0.55,0.75],"trail":[1.0,0.6,0.8]}
+// @extras {"card":"sjk_alpha_014","card_name":"SJK Alpha 014 (Kushina)","finish":"solar"}
+// @extra {"id":"blossom_mist","name":"Blossom mist","sheds":{"kind":"blossom_mist","per_unit":0.07,"life":2.6,"size":1.6,"fall":38.0,"drift":14.0}}
+// @extra {"id":"ink_stroke","name":"Ink stroke","trail":"ink"}
+// @extra {"id":"silk_threads","name":"Silk threads","layer":5}
 
 // Varykino Blossom: the spring gardens of Varykino, Naboo's lake retreat, as a blade (Kushina's
 // idea, 15/10/2026; the Mythical sibling of the Naboo Blossom). A soft blossom-pink blade, its
@@ -104,9 +108,11 @@ fn vb_petals(ro: vec3<f32>, rd: vec3<f32>, px: f32, y0: f32, y1: f32) -> vec3<f3
     return acc;
 }
 
-// lavender and white mist curling up off the blade, two soft clouds woven together
+// lavender and white mist curling up off the blade, two soft clouds woven together; kept close
+// and thin so it does not thicken the blade (Kushina, 20/11/2026: it was 2.8 and 2.0 wide, at
+// 1.1 and 0.6)
 fn vb_mist(ro: vec3<f32>, rd: vec3<f32>, y0: f32, y1: f32) -> vec3<f32> {
-    return fxSmoke(ro, rd, y0, y1, 2.8, 1.6, 3.0, VB_LILAC) * 1.1 + fxSmoke(ro, rd, y0 + 2.0, y1, 2.0, 2.2, 11.0, vec3<f32>(1.0, 0.94, 0.98)) * 0.6;
+    return fxSmoke(ro, rd, y0, y1, 1.8, 1.6, 3.0, VB_LILAC) * 0.8 + fxSmoke(ro, rd, y0 + 2.0, y1, 1.3, 2.2, 11.0, vec3<f32>(1.0, 0.94, 0.98)) * 0.45;
 }
 
 // the effects round the blade
@@ -217,6 +223,49 @@ fn vb_pearl(ro: vec3<f32>, rd: vec3<f32>, px: f32) -> vec4<f32> {
     return vec4(min(col, vec3<f32>(1.0)), shape * 0.92);
 }
 
+// the Silk threads extra (`layer` 5, Kushina's, 20/11/2026): a pair of thread-thin silk strands
+// wound round the wood of a twig from a to b (w0 to w1 thick), over s0 to s1 of it, turns times
+// (a binding), white-lilac with a sheen where they face the eye; how much shows, its colour in col
+const VB_SILK: vec3<f32> = vec3<f32>(0.93, 0.88, 1.0);
+
+const VB_SILK_SHADE: vec3<f32> = vec3<f32>(0.7, 0.6, 0.86);
+
+fn vb_silk(ro: vec3<f32>, rd: vec3<f32>, px: f32, a: vec3<f32>, b: vec3<f32>, w0: f32, w1: f32, s0: f32, s1: f32, turns: f32, phase: f32, col: ptr<function, vec3<f32>>) -> f32 {
+    (*col) = VB_SILK;
+    var s: f32;
+    let d = raySegRaw(ro, rd, a, b, &s);
+    let w = mix(w0, w1, s);
+    if d > w || s < s0 || s > s1 {
+        return 0.0;
+    }
+    // where the ray meets the twig's surface, and how far round the twig that is
+    let u = normalize(b - a);
+    let e1 = normalize(cross(u, select(vec3<f32>(1.0, 0.0, 0.0), vec3<f32>(0.0, 0.0, 1.0), abs(u.z) < 0.9)));
+    let e2 = cross(u, e1);
+    let q = a + (b - a) * s;
+    let t = max(dot(q - ro, rd), 0.0);
+    let hit = ro + rd * (t - sqrt(max(w * w - d * d, 0.0)));
+    var r = hit - q;
+    r -= u * dot(r, u);
+    let round0 = atan2(dot(r, e2), dot(r, e1)) / 6.2831853;
+    // along the binding, the two strands winding round it
+    let k = (s - s0) / max(s1 - s0, 1.0e-4);
+    let wound = round0 - k * turns + phase;
+    // how far across the strands (not round the twig) the nearest one runs: the winding changes
+    // by 1 every girth round and every span/turns along
+    let girth = 6.2831853 * w;
+    let span = length(b - a) * (s1 - s0);
+    let across = 1.0 / sqrt(1.0 / (girth * girth) + turns * turns / max(span * span, 1.0e-6));
+    let d1 = abs(fract(wound + 0.5) - 0.5) * across;
+    let d2 = abs(fract(wound) - 0.5) * across;
+    var strand = max(fillD(d1 - 0.022, px), fillD(d2 - 0.018, px));
+    // tied off at both ends
+    strand *= smoothstep(0.0, 0.06, k) * smoothstep(1.0, 0.94, k);
+    let facing = clamp(dot(normalize(r), -rd), 0.0, 1.0);
+    (*col) = mix(VB_SILK_SHADE, VB_SILK, facing) + vec3<f32>(1.0, 0.96, 1.0) * pow(facing, 8.0) * 0.35;
+    return strand;
+}
+
 // the branch: a twig of dark cherry wood growing from where the blade leaves the hilt, curving
 // out and up, a smaller twig off it with a bud, and two open blossoms; it circles
 // nothing, but stands in true 3D beside the blade
@@ -244,6 +293,38 @@ fn vb_branch(ro: vec3<f32>, rd: vec3<f32>, px: f32) -> vec4<f32> {
     let edge = max(max(d1 / w1, d2 / w2), 0.0);
     let bark = mix(VB_BARK, VB_WOOD, clamp(edge, 0.0, 1.0)) * (0.85 + 0.15 * sin((s1 + s2) * 14.0));
     var res = vec4(bark, wood);
+    // the Silk threads extra: short, dense bindings of silk wound tight here and there on the
+    // wood, the bark bare between them (Kushina: dense bindings spread over the twigs, not
+    // wound all along); gone with the branch
+    if part(5.0) > 0.5 {
+        var c: vec3<f32>;
+        var cb: vec3<f32>;
+        var k = vb_silk(ro, rd, px, a, m, 0.34, 0.24, 0.17, 0.29, 8.0, 0.0, &c);
+        var kb = vb_silk(ro, rd, px, a, m, 0.34, 0.24, 0.62, 0.71, 6.0, 0.4, &cb);
+        let sig_t0 = mix(res.rgb, c, k * fillD(d1 - w1, px));
+        res.r = sig_t0.x;
+        res.g = sig_t0.y;
+        res.b = sig_t0.z;
+        let sig_t1 = mix(res.rgb, cb, kb * fillD(d1 - w1, px));
+        res.r = sig_t1.x;
+        res.g = sig_t1.y;
+        res.b = sig_t1.z;
+        k = vb_silk(ro, rd, px, m, e, 0.24, 0.13, 0.14, 0.25, 7.0, 0.2, &c);
+        kb = vb_silk(ro, rd, px, m, e, 0.24, 0.13, 0.52, 0.6, 5.0, 0.7, &cb);
+        let sig_t2 = mix(res.rgb, c, k * fillD(d2 - w2, px));
+        res.r = sig_t2.x;
+        res.g = sig_t2.y;
+        res.b = sig_t2.z;
+        let sig_t3 = mix(res.rgb, cb, kb * fillD(d2 - w2, px));
+        res.r = sig_t3.x;
+        res.g = sig_t3.y;
+        res.b = sig_t3.z;
+        k = vb_silk(ro, rd, px, m + (e - m) * 0.3, side, 0.15, 0.08, 0.38, 0.54, 4.0, 0.5, &c);
+        let sig_t4 = mix(res.rgb, c, k * fillD(d3 - w3, px));
+        res.r = sig_t4.x;
+        res.g = sig_t4.y;
+        res.b = sig_t4.z;
+    }
     // the bud at the side twig's end
     var tb: f32;
     let db = rayPt(ro, rd, side, &tb);

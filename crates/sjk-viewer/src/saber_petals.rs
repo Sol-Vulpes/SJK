@@ -16,7 +16,10 @@
 //! its blade swings and as its wearer moves (`moving`); on a chroma the coloured dust takes its
 //! wearer's saber colour (`PetalSpec::turn`). Sol's DOOM (13/11/2026) sheds cinders
 //! (`"kind": "doom"`): black flakes burning red at their edges that climb and drift off as
-//! they go out.
+//! they go out. The Varykino Blossom's Blossom mist extra (Kushina's, 20/11/2026;
+//! `"kind": "blossom_mist"`) sheds the same blossoms, and the blade itself breathes out faint
+//! lavender mist along the whole way it swings ([`MIST`]), wisps close enough to run together
+//! into one cloud that drifts and sinks with the blossoms, spreading and thinning as it goes.
 
 use glam::Vec3;
 use serde::Deserialize;
@@ -44,6 +47,19 @@ pub(crate) enum PetalKind {
     /// DOOM's cinders: black flakes burning red at their edges, climbing off the swing and
     /// tumbling as they go out.
     Doom,
+    /// The blossoms as [`Self::Blossom`] sheds them, and with them the blade breathes out a
+    /// cloud of faint lavender mist ([`Self::Mist`]) that drifts down with them, spreading
+    /// and thinning until it is gone (the Varykino Blossom's Blossom mist extra, Kushina's,
+    /// 20/11/2026).
+    #[serde(rename = "blossom_mist")]
+    BlossomMist,
+    /// One wisp of that mist, which the emitter queues on its own (never a line's kind).
+    #[serde(skip)]
+    Mist,
+    /// The Blossom mist extra's mist alone, its blossoms left out: worn with the blade's
+    /// Falling blossoms switched off (Kushina, 20/11/2026: the mist works on its own).
+    #[serde(skip)]
+    MistAlone,
 }
 
 /// A skin's falling blossoms, as its signature's `@petals` line gives them.
@@ -127,6 +143,8 @@ pub(crate) struct PetalEmitter {
     last_millis: i64,
     /// The share of a petal owed from the last frames.
     carry: f32,
+    /// The share of a wisp of mist owed ([`PetalKind::BlossomMist`]).
+    mist_carry: f32,
 }
 
 /// 0 to 1 from `seed` and `salt`.
@@ -158,14 +176,18 @@ impl PetalEmitter {
         self.last_millis = now;
         let Some((last_body, last_tip)) = last.filter(|_| (1..=200).contains(&since)) else {
             self.carry = 0.0;
+            self.mist_carry = 0.0;
             return;
         };
         let swung = body_tip.distance(last_body);
         // What the tip travelled through the world beyond its swing: the wearer moving.
         let moved = (tip.distance(last_tip) - swung).max(0.0);
         self.carry += swung * spec.per_unit + moved * spec.moving;
-        let count = (self.carry.floor() as u32).min(MOST_A_FRAME);
+        let mut count = (self.carry.floor() as u32).min(MOST_A_FRAME);
         self.carry -= self.carry.floor();
+        if spec.kind == PetalKind::MistAlone {
+            count = 0;
+        }
         // A share of the tip's speed carries them on (a little: the swing's breath; an
         // ember far more).
         let carried = (tip - last_tip) / (since as f32 * 0.001) * spec.fling;
@@ -192,6 +214,43 @@ impl PetalEmitter {
                 spec,
             });
         }
+        if !matches!(spec.kind, PetalKind::BlossomMist | PetalKind::MistAlone) {
+            return;
+        }
+        // The blade breathes out its mist apart from the blossoms: wisps for every unit the
+        // tip swings, along the blade's outer seven tenths, spread over the way it came this
+        // frame so a fast swing leaves no gaps, carried on as the blossoms are. Off the plane
+        // the blade sweeps, to either side, and billowing on outward, so the cloud is thick
+        // and round from every side rather than a sheet seen edge on.
+        let across = direction.cross(tip - last_tip).normalize_or_zero();
+        self.mist_carry += swung * MIST_PER_UNIT;
+        let wisps = (self.mist_carry.floor() as u32).min(MIST_A_FRAME);
+        self.mist_carry -= self.mist_carry.floor();
+        for i in 0..wisps {
+            if queue.len() >= MOST_QUEUED {
+                return;
+            }
+            let seed = key.rotate_left(7)
+                ^ (now as u32).wrapping_mul(2_246_822_519)
+                ^ i.wrapping_mul(97_531);
+            let at = (i as f32 + unit(seed, 11)) / wisps as f32;
+            let along = 0.3 + 0.7 * unit(seed, 1);
+            let drift = Vec3::new(unit(seed, 5) - 0.5, unit(seed, 6) - 0.5, 0.0) * 2.0 * spec.drift;
+            let side = unit(seed, 12) * 2.0 - 1.0;
+            queue.push(PetalSpawn {
+                origin: last_tip.lerp(tip, at) - direction * (length * (1.0 - along))
+                    + across * side * MIST_THICK,
+                velocity: carried.clamp_length_max(most)
+                    + drift
+                    + across * side * MIST_BILLOW
+                    + Vec3::Z * (spec.rise - spec.fall) * 0.5,
+                seed,
+                spec: PetalSpec {
+                    kind: PetalKind::Mist,
+                    ..spec
+                },
+            });
+        }
     }
 }
 
@@ -205,8 +264,8 @@ macro_rules! bundled {
 /// Their shaders, which the frame's effect materials must load (`effect_assets::CODE_SHADERS`):
 /// the blossoms' three tints, then the crane flying right and flying left, then grey ash and
 /// ash still glowing, then the ember, then the Moon's moondust, then the angel's feather and
-/// its cloud, then DOOM's cinder.
-pub(crate) const SHADERS: [&str; 12] = [
+/// its cloud, then DOOM's cinder, then the blossoms' lavender mist.
+pub(crate) const SHADERS: [&str; 13] = [
     "gfx/sjk/petals/blossom_pink",
     "gfx/sjk/petals/blossom_pale",
     "gfx/sjk/petals/blossom_white",
@@ -219,10 +278,34 @@ pub(crate) const SHADERS: [&str; 12] = [
     "gfx/sjk/petals/feather",
     "gfx/sjk/petals/puff",
     "gfx/sjk/petals/doom_cinder",
+    "gfx/sjk/petals/mist",
 ];
 const BLOSSOMS: usize = 3;
 const CRANES: usize = 2;
 const ASHES: usize = 2;
+/// The blade's mist ([`PetalKind::BlossomMist`], `scripts/petal_mist.py`): its lavender, how
+/// opaque a wisp starts (faint: many overlap into the cloud), its size against a blossom's as
+/// it leaves and as it fades (it spreads as it thins, into its neighbours), the least and most
+/// of the blossoms' speed and sinking a wisp keeps (each its own, so the cloud has layers that
+/// slide past each other as the view moves and reads as 3D), how far (units, every way) one
+/// starts from the blade, its life against a blossom's (it is gone before it reaches the
+/// floor, which would cut it without soft particles), wisps for each unit the tip swings, the
+/// most a blade breathes out a frame (the frame rate: alpha-blended wisps cost fill), and how
+/// far off the swept plane (units, either side) one starts and how fast (units a second) it
+/// billows on outward (Kushina: puffier, never flat from the side).
+const MIST: [f32; 3] = [0.88, 0.74, 1.0];
+const MIST_ALPHA: f32 = 0.09;
+/// How much light the mist adds (its picture is premultiplied and drawn `GL_ONE
+/// GL_ONE_MINUS_SRC_ALPHA`): it glows softly as well as veiling, fading as it thins.
+const MIST_GLOW: f32 = 0.2;
+const MIST_GROWTH: (f32, f32) = (10.0, 23.0);
+const MIST_SINK: (f32, f32) = (0.6, 0.85);
+const MIST_SPREAD: f32 = 8.0;
+const MIST_LIFE: f32 = 0.55;
+const MIST_PER_UNIT: f32 = 0.15;
+const MIST_A_FRAME: u32 = 5;
+const MIST_THICK: f32 = 9.0;
+const MIST_BILLOW: f32 = 16.0;
 /// An ember's colour as it leaves the blade and as it goes out.
 const EMBER_HOT: [f32; 3] = [1.0, 0.92, 0.62];
 const EMBER_COOL: [f32; 3] = [0.95, 0.22, 0.04];
@@ -254,7 +337,7 @@ const PAPER: [[f32; 3]; 8] = [
     [0.6, 0.32, 0.56],
     [0.97, 0.93, 0.84],
 ];
-const FILES: [(&str, &[u8]); 13] = [
+const FILES: [(&str, &[u8]); 14] = [
     ("shaders/sjk_petals.shader", bundled!("petals.shader")),
     (
         "gfx/sjk/petals/blossom_pink.png",
@@ -280,6 +363,7 @@ const FILES: [(&str, &[u8]); 13] = [
         "gfx/sjk/petals/doom_cinder.png",
         bundled!("doom_cinder.png"),
     ),
+    ("gfx/sjk/petals/mist.png", bundled!("mist.png")),
 ];
 
 /// Mount the bundled petal files.
@@ -306,6 +390,11 @@ pub(crate) fn frame(gpu: &mut crate::GpuState, now: Instant) {
         if !crate::particle_room::effect_fits(gpu.particles.len()) {
             continue;
         }
+        if spawn.spec.kind == PetalKind::Mist {
+            let wisp = mist(&mut gpu.effects, &spawn, now);
+            gpu.particles.push(wisp);
+            continue;
+        }
         let seed = spawn.seed;
         let spec = spawn.spec;
         let size = spec.size * (0.75 + 0.5 * unit(seed, 7));
@@ -323,7 +412,10 @@ pub(crate) fn frame(gpu: &mut crate::GpuState, now: Instant) {
             (unit(seed, 9) * 360.0, (unit(seed, 8) - 0.5) * 50.0)
         };
         let shader = match spec.kind {
-            PetalKind::Blossom => SHADERS[(seed % BLOSSOMS as u32) as usize],
+            PetalKind::Blossom
+            | PetalKind::BlossomMist
+            | PetalKind::Mist
+            | PetalKind::MistAlone => SHADERS[(seed % BLOSSOMS as u32) as usize],
             PetalKind::Crane => SHADERS[BLOSSOMS + (seed % CRANES as u32) as usize],
             // One flake in three still glows.
             PetalKind::Ash => SHADERS[BLOSSOMS + CRANES + usize::from(seed % 3 == 0)],
@@ -416,6 +508,84 @@ pub(crate) fn frame(gpu: &mut crate::GpuState, now: Instant) {
     }
 }
 
+/// A wisp of the lavender mist the blade breathes out ([`PetalKind::Mist`]): it drifts and
+/// sinks with the blossoms (lagging a little, its own way behind), nearly upright so its
+/// picture's light stays above, spreading into its neighbours as it thins, and is gone before
+/// it lands.
+fn mist(
+    effects: &mut crate::effect_library::EffectLibrary,
+    spawn: &PetalSpawn,
+    now: Instant,
+) -> crate::particle_types::Particle {
+    use crate::particle_types::{Particle, PrimitiveShape};
+    let seed = spawn.seed;
+    let spec = spawn.spec;
+    let linear = sjk_effect::CurveFlags {
+        linear: true,
+        ..Default::default()
+    };
+    let size = spec.size * (0.8 + 0.4 * unit(seed, 7));
+    // Faint from the start, thinning away over all but its first fifth; its light the same.
+    let thinning = |from: f32| {
+        crate::effect_envelope::Envelope::from_values(
+            from,
+            0.0,
+            20.0,
+            sjk_effect::CurveFlags {
+                modifier: sjk_effect::CurveModifier::NonLinear,
+                ..Default::default()
+            },
+        )
+    };
+    let offset = Vec3::new(
+        unit(seed, 2) - 0.5,
+        unit(seed, 3) - 0.5,
+        unit(seed, 4) - 0.5,
+    ) * MIST_SPREAD;
+    let sink = MIST_SINK.0 + (MIST_SINK.1 - MIST_SINK.0) * unit(seed, 5);
+    Particle {
+        motion: crate::particle_motion::Motion::new(
+            spawn.origin + offset,
+            spawn.velocity * sink,
+            Vec3::new(0.0, 0.0, (spec.rise - spec.fall) * 0.6 * sink),
+            (unit(seed, 9) - 0.5) * 30.0,
+            (unit(seed, 8) - 0.5) * 12.0,
+            now,
+        ),
+        spawned_at: now,
+        delay: Duration::ZERO,
+        lifetime: Duration::from_secs_f32(spec.life * MIST_LIFE * (0.85 + 0.3 * unit(seed, 10))),
+        size: crate::effect_envelope::Envelope::from_values(
+            size * MIST_GROWTH.0,
+            size * MIST_GROWTH.1,
+            0.0,
+            linear,
+        ),
+        length: None,
+        streak: None,
+        trace_streak: false,
+        normal: None,
+        alpha: thinning(MIST_ALPHA),
+        use_alpha: true,
+        set_shader_time: false,
+        rgb: MIST.map(|channel| thinning(channel * MIST_GLOW)),
+        seed,
+        shader: effects.shader(SHADERS[SHADERS.len() - 1]),
+        // Should one still reach the floor, it stops there and thins.
+        physics: crate::particle_physics::State::new(
+            effects.code_primitive_definition(),
+            0,
+            0,
+            0.0,
+            sjk_effect::PrimitiveFlags {
+                apply_physics: true,
+                ..Default::default()
+            },
+        ),
+        shape: PrimitiveShape::Billboard,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -433,6 +603,60 @@ mod tests {
         moving: 0.0,
         turn: 0.0,
     };
+
+    #[test]
+    fn the_blossom_mist_blade_breathes_out_mist_apart_from_its_blossoms() {
+        let mist = PetalSpec {
+            kind: PetalKind::BlossomMist,
+            ..SPEC
+        };
+        for (spec, wisps) in [(SPEC, false), (mist, true)] {
+            let mut emitter = PetalEmitter::default();
+            let mut queue = Vec::new();
+            for step in 0..10 {
+                let tip = Vec3::new(10.0 * step as f32, 0.0, 40.0);
+                emitter.shed(
+                    Vec3::ZERO,
+                    Vec3::Z,
+                    40.0,
+                    tip,
+                    1_000 + step * 16,
+                    7,
+                    spec,
+                    &mut queue,
+                );
+            }
+            let made = queue
+                .iter()
+                .filter(|spawn| spawn.spec.kind == PetalKind::Mist)
+                .count();
+            // 90 units swung: about 13 wisps beside the blossoms, none for a plain blossom.
+            assert_eq!(made > 10, wisps, "{made}");
+            assert!(queue.iter().any(|spawn| spawn.spec.kind == spec.kind));
+        }
+        // With the blossoms left out (`MistAlone`): the same mist and no blossom.
+        let alone = PetalSpec {
+            kind: PetalKind::MistAlone,
+            ..SPEC
+        };
+        let mut emitter = PetalEmitter::default();
+        let mut queue = Vec::new();
+        for step in 0..10 {
+            let tip = Vec3::new(10.0 * step as f32, 0.0, 40.0);
+            emitter.shed(
+                Vec3::ZERO,
+                Vec3::Z,
+                40.0,
+                tip,
+                1_000 + step * 16,
+                7,
+                alone,
+                &mut queue,
+            );
+        }
+        assert!(queue.len() > 10);
+        assert!(queue.iter().all(|spawn| spawn.spec.kind == PetalKind::Mist));
+    }
 
     #[test]
     fn a_swing_sheds_petals_and_a_still_blade_none() {
@@ -505,6 +729,19 @@ mod tests {
         let spec: PetalSpec = serde_json::from_str(line).unwrap();
         assert_eq!((spec.kind, spec.rise), (PetalKind::Blossom, 0.0));
         assert_eq!(spec.fling, DEFAULT_FLING);
+        // The Blossom mist extra's: the same blossoms, with the blade's mist.
+        let mist: PetalSpec = serde_json::from_str(
+            &line.replace("{\"part\":3,", "{\"part\":3,\"kind\":\"blossom_mist\","),
+        )
+        .unwrap();
+        assert!(mist.valid() && mist.kind == PetalKind::BlossomMist);
+        assert_eq!(
+            PetalSpec {
+                kind: PetalKind::Blossom,
+                ..mist
+            },
+            spec
+        );
         // The Moon's moondust rises as cranes do.
         let moon = crate::blade_signatures::of("saber_moon")
             .and_then(|signature| signature.petals())

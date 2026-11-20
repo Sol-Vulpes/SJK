@@ -119,6 +119,7 @@ pub(crate) const CODE_SHADERS: &[&str] = &[
     "gfx/sjk/petals/feather",
     "gfx/sjk/petals/puff",
     "gfx/sjk/petals/doom_cinder",
+    "gfx/sjk/petals/mist",
     "gfx/damage/rivetmark",
     "gfx/effects/saberdamageglow",
     "gfx/misc/spark",

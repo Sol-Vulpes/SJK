@@ -39,7 +39,8 @@ struct VertexOutput {
     @location(2) @interpolate(flat) style: u32,
     @location(3) world: vec3<f32>,
     // The flare's V at its slice's far edge, past the tip (`saber_trail::FLARE_REACH`).
-    @location(4) @interpolate(flat) past: f32,
+    // The ink's (style 53) how far its stroke had come, blade lengths, along the slice.
+    @location(4) past: f32,
 }
 
 @vertex
@@ -238,6 +239,48 @@ fn ragnos_trail(input: VertexOutput, tint: vec3<f32>) -> vec3<f32> {
     let crimson = trail_tinted(vec3(0.9, 0.05, 0.08), tint);
     return trail_tinted(vec3(0.12, 0.0, 0.02), tint) * body * span + crimson * crack * span * 0.9 + trail_tinted(vec3(1.0, 0.25, 0.25), tint) * seam * 0.7;
 }
+
+// The ink (style 53, the Varykino Blossom's Ink stroke extra, Kushina's, 20/11/2026), over the
+// blur trail `trail_colour` draws for it exactly as for style 3: a narrow stroke of wet ink where the
+// tip passed, as a sumi-e brush lays it (`saber_trail.rs`' `Trail::ink_edges`, drawn along the arc
+// the blade swept, `curve`). A round drop where the brush was set down, then an even line as wide as
+// the brush presses, thinning to a point where it lifts; its heart a soft lilac, its edges a deeper
+// lilac where wet ink gathers; full for a while, then drying from its start on to its end.
+fn ink_line(input: VertexOutput) -> vec3<f32> {
+    let fresh = 1.0 - clamp(input.uv.x, 0.0, 1.0);
+    let along = max(input.uv.y, 0.0);
+    // Full for a while, then drying from the stroke's oldest end on toward its newest.
+    let wet = smoothstep(0.0, 0.45, fresh);
+    // The brush's pressure (the tip's speed, smoothed, in the colour's brightness,
+    // `saber_trail.rs`): the line keeps an even width, no breathing or bleeding along it
+    // (Kushina, 20/11/2026).
+    let press = clamp((max(max(input.color.r, input.color.g), input.color.b) - 0.1) / 0.9, 0.0, 1.0);
+    // Set down, the brush leaves a round drop a little fuller than the line, running into it;
+    // then the line is as wide as the brush presses, thinning to a point as it lifts.
+    let stroke_at = max(input.past, 0.0);
+    let drop = INK_HALF * INK_DROP;
+    let into_drop = (drop - min(stroke_at, drop)) / drop;
+    let cap = drop * sqrt(max(1.0 - into_drop * into_drop, 0.0));
+    let after = 1.0 - smoothstep(drop, drop * 4.0, stroke_at);
+    let body = max(INK_HALF * press, drop * after);
+    let half = max(select(body, cap, stroke_at < drop) * (0.6 + 0.4 * wet), 0.00001);
+    let d = abs(along - INK_CENTRE);
+    let line = 1.0 - smoothstep(half * 0.55, half, d);
+    let edge = smoothstep(half * 0.3, half * 0.9, d);
+    let colour = mix(INK_HEART, INK_EDGE, edge);
+    return colour * line * wet * INK_LIGHT;
+}
+// Where the stroke runs (as a share of the blade from the tip), half its width, and its light;
+// and how many times the blur's life its slices live (`saber_trail.rs`' `INK_LIFE`), the blur in
+// it drawn over the blur's own life.
+const INK_LIFE: f32 = 12.0;
+const INK_CENTRE: f32 = 0.035;
+const INK_HALF: f32 = 0.026;
+const INK_LIGHT: f32 = 0.6;
+// The drop where the brush is set down against the line's width, and the ink's heart and edge.
+const INK_DROP: f32 = 1.4;
+const INK_HEART: vec3<f32> = vec3(0.8, 0.66, 1.0);
+const INK_EDGE: vec3<f32> = vec3(0.64, 0.44, 1.0);
 
 // Glints in a trail: round points of light in cells of the slice's world position (each kept well
 // inside its cell, so no cell edge shows), `density` of the cells lit.
@@ -768,7 +811,8 @@ fn starfall_trail(input: VertexOutput, tint: vec3<f32>) -> vec3<f32> {
 @fragment
 fn fragment_main(input: VertexOutput) -> @location(0) vec4<f32> {
     let c = trail_colour(input);
-    if (input.style & STYLE) >= 10u {
+    // The ink is the blur trail's (style 3) with its stroke, so it keeps its edge.
+    if (input.style & STYLE) >= 10u && (input.style & STYLE) != 53u {
         return vec4(c.rgb * smoothstep(0.0, 0.16, clamp(input.uv.y, 0.0, 1.0)), c.a);
     }
     return c;
@@ -783,6 +827,10 @@ fn trail_colour(input: VertexOutput) -> vec4<f32> {
     }
     let glow = textureSample(blur_glow, trail_sampler, input.uv);
     let core = textureSample(blur_core, trail_sampler, input.uv);
+    // The ink's blur (style 53), its scroll back on the blur's own life.
+    let ink_uv = vec2(min(input.uv.x * INK_LIFE, 1.0), input.uv.y);
+    let ink_glow = textureSample(blur_glow, trail_sampler, ink_uv);
+    let ink_core = textureSample(blur_core, trail_sampler, ink_uv);
     // A blade skin (style 3): glow and core both take the skin's trail colour, deepened
     // (normalised to its brightest channel, then squared) so a pale colour does not wash
     // out to white once the two add up.
@@ -804,6 +852,14 @@ fn trail_colour(input: VertexOutput) -> vec4<f32> {
     if style == 51u {
         let tint = input.color.rgb / max(max(input.color.r, input.color.g), max(input.color.b, 0.001));
         return vec4(cloud_trail(input, tint), 1.0);
+    }
+    if style == 53u {
+        // Style 3's blur while a style 3 slice would live (its age, `color.a`, under
+        // 1 / `INK_LIFE`), then the ink over it.
+        let tint = input.color.rgb / max(max(input.color.r, input.color.g), max(input.color.b, 0.001));
+        let blur_alive = select(0.0, 1.0, input.color.a < 1.0 / INK_LIFE);
+        let blur = (ink_glow.rgb + ink_core.rgb * 0.6) * tint * tint * blur_alive;
+        return vec4(blur + ink_line(input), 1.0);
     }
     if style >= 45u && style <= 49u {
         let tint = input.color.rgb / max(max(input.color.r, input.color.g), max(input.color.b, 0.001));
