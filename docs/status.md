@@ -1,3 +1,68 @@
+## One status bar (21/11/2026)
+
+Step 5 of the season 2 work (the UI upgrade, Sol: "merge the new top bar we did with the
+bottom bar, so we only have a bottom bar"), branch `personal/one-status-bar`. The top bar's
+ten parts joined the bottom bar in one row ([client.md](client.md#status-bars)): one strip
+(`State::bar`) laid out from both inputs (`bar_pieces` merges the two piece lists in
+`Part::ALL`'s order without allocating), one ranking for what goes when room runs out, the
+server's name, game type and date off by default. `cg_statusBarTop` is retired, the top
+edge keeps no room (`Reserved::top` stays for the callers, always 0), and the notification
+banner's top inset went. The changelog's unreleased lines (the bars came after 2026.1117.1)
+describe the one bar. Verified: the viewer's tests, fmt, Clippy (no new warnings), the
+status bar world shots at 1080p, 4K large text, 21:9 and 4:3.
+
+## Force box, the DOOM coin roll and Force Throw (20-21/11/2026)
+
+Step 4 of the season 2 work (Sol's announcement of 19/11), branch `personal/force-box`.
+The mystery box is the Force box ([mystery-boxes.md](mystery-boxes.md)): its chest
+repainted in temple stone, old gold and blue runes (a placeholder; Sol makes the model, the
+README gives its contract), and Jedi Academy's own sounds by path (Force pull, speed hum,
+push; the bundled tune and the extras pack's open/roll/close dropped). The WHEEL OF DOOM is
+merged into it: Use held 1 s with a DOOM coin rolls the WHEEL's outcomes at the box's own
+odds (holocrons 60 %, punishments 30 %), through the hub's new `POST /v1/mystery-box/doom`
+(hub branch `force-box`, 1b9fd35, NOT merged or deployed: with the release), the
+punishments striking through the WHEEL's effects; no wheel stands on a map any more and
+`wheelofdoom_place` refuses ([wheel-of-doom.md](wheel-of-doom.md)); the wheel drawing code
+and the hub's wheels go at the release. The Monitor is Force Throw
+([client.md](client.md#monitor)): JA's crate, R5 and GONK wrecks hurled, a crate bursting
+into JA's chunks at rest, JA's sounds, the Screen Saver named the Force Barrier; its seven
+achievements un-retired with Force names, ids kept; commands and cvars kept. The unused
+`box_loot_glow` (the Ray Gun's) went too. Verified: the viewer's tests, fmt, Clippy (no new
+warnings), the hub's tests; world shots of the box (duel6) and the junk (a demo). Not tried
+in game: the coin roll needs the hub branch on a local hub.
+
+## Toy removals: retired achievements, the Banana peel (20/11/2026)
+
+20/11/2026, Sol's cleanup before the release (Discord announcement 19/11: unused or sloppy
+toys go; Sol's list: Hax, Monitor, Banana peel, Order 66, the cardboard box, Fishing,
+Mining). Step 1, `personal/retire-toy-achievements`: their 34 achievements (and the Drone's
+Special Delivery, a monitor strike) are retired ([identity.md](identity.md)), kept by their
+holders; the Hobbies page leaves the switch when nothing on it is held. Step 2,
+`personal/remove-banana`: the Banana peel is gone (toy, frame, assets, script, settings,
+quick wheel, binds, Collection row, status bar piece, look id, world shots); its saved cvars
+are dropped at load; the Boombox's floor trace moved to `floor_spot.rs`; the Toys tab's
+places are named constants (`*_TOY` in `collection_panel.rs`) so the next removals move only
+those. Step 3, `personal/remove-cardboard-box`: the cardboard box is gone the same way (its
+crouch shaping, boxed eye, crouched pose of boxed players, music loop, sight switch and the
+achievement tracker's box counting); `hax::pick_target` took over its `+use` pick, the
+quick wheel's default Toys page lost its slot (a saved one drops the unknown choice). Step 4,
+`personal/remove-order66`: Order 66 and the Hax together (the Hax's trap blew both players up
+with Order 66's blast): the toys, their blast in `dismember.rs`, the hack's steering, camera,
+loop and HUD bar feed, the trap settings and their Settings search place, and the tracker's
+Hax counting; the rules the Ragdoll, Monitor and Prop gun share (`spared`, `duelling`,
+`own_away`) moved to `toy_rules.rs` with a test. Step 5, `personal/remove-propgun`: the Prop gun and the
+mystery box's Ray Gun, which ran on it (Sol); its 7 % of box rolls goes to the holocron on
+hub branch `no-raygun` (5602722, not merged, deployed with the release); a hub that still
+rolls it stops the client's roll on the bolts. The first-person prop hold, the toy loop
+sound path and the Ragdoll's `UNTHROWN` went with it. Step 6, `personal/remove-fishing-mining`:
+Fishing and Mining (the toys, their selling, kyber glints, daily goals, rare catch banners,
+play signals and the Echo bite hold); `fishing.rs` and `mining.rs` keep only the catch
+tables and log reading, and the Collection's Log book (`collection_log_book.rs`, a hall
+tile and a tab only with a catch, `catch_book::shown`) shows both logs read only, with
+Share. The hub keeps the removed toys' routes and events on for older clients until the
+release sets the minimum client (Sol). Verified: the viewer's tests (4386), fmt, Clippy (no
+new warnings), the startup stack check. Not verified: in a game.
+
 ## Rig model chains stay off the ground (19/11/2026)
 
 19/11/2026, `feat/rig-chain-ground` based on `main` `afd16b60`. A rig model's dynamic chains

@@ -49,7 +49,7 @@ fn made_up(gpu: &GpuState) -> Inputs {
         inputs.push_effect(Effect { words, colour });
     }
     let mut on = [false; TOY_COUNT];
-    for toy in [toys::ILLUMINATE, toys::HAX, toys::BOX_HUNT, toys::PROPGUN] {
+    for toy in [toys::ILLUMINATE, toys::DRONE, toys::BOX_HUNT, toys::QUESTS] {
         on[toy] = true;
     }
     inputs.toys = on;
@@ -110,8 +110,8 @@ fn preview(gpu: &mut GpuState) {
 fn assert_inside(gpu: &GpuState, size: [u32; 2], name: &str) {
     let room = gpu.status_bar.reserved();
     assert!(
-        room.top > 0.0 && room.bottom > 0.0,
-        "{name}: both bars keep room"
+        room.top == 0.0 && room.bottom > 0.0,
+        "{name}: the bar keeps room at the bottom only"
     );
     let height = size[1] as f32;
     let mut seen = 0;
@@ -141,7 +141,7 @@ fn status_bar_shots() {
             };
             preview(&mut gpu);
             let _ = frame(&mut gpu, 20);
-            assert_eq!(gpu.status_bar.drawn_bars(), [true, true], "{name}");
+            assert!(gpu.status_bar.drawn(), "{name}");
             println!("{}", shoot(&mut gpu, 2, name).display());
         }
     });
@@ -252,7 +252,7 @@ fn status_bar_on_a_demo() {
             preview(&mut gpu);
             let _ = frame(&mut gpu, 70);
             println!("{}", shoot(&mut gpu, 2, name).display());
-            assert_eq!(gpu.status_bar.drawn_bars(), [true, true], "{name}");
+            assert!(gpu.status_bar.drawn(), "{name}");
             assert_inside(&gpu, size, name);
             if devbar.is_some() {
                 assert!(gpu.devmap_bar.shown(), "{name}: the devmap bar shows");
@@ -287,7 +287,7 @@ fn status_bar_cost() {
                     gpu.text_vertices.clear();
                     gpu.game_fonts.clear_text();
                     gpu.reserve_status_bars(viewport, true);
-                    assert_eq!(gpu.append_status_bars(viewport), [true, true]);
+                    assert!(gpu.append_status_bars(viewport));
                 }
                 let each = start.elapsed() / FRAMES;
                 println!(

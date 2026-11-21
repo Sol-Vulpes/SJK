@@ -47,24 +47,24 @@ did: The HUD picker, the radial HUD, nameplates with shared bars and player card
 did: Capsule nameplates: each player's picture, name and weapon, the shared bars on a tray
 did: JA+ and JoF server support: movement, sabers, grapple, Force wheel, flip kick
 did: Illuminate, SJK's own toy: a holocron that lights the way, art by Sol
-did: The cardboard box toy: hide in a carton, spotted with Use, tipping over
-did: The Order 66 toy: synced deaths that blow players apart, TF2 style
-did: The Hax toy: hack another player with the siege bar, then steer them
+did: The cardboard box toy (16/10 to 20/11/2026): hide in a carton, spotted with Use
+did: The Order 66 toy (17/10 to 20/11/2026): synced deaths that blow players apart
+did: The Hax toy (21/10 to 20/11/2026): hack another player, then steer them
 did: The Ragdoll toy: go limp, sandbox style, the same fall on every SJK client
 did: Ragdoll lifts and doors, and each body part's knocks on what it hits
 did: SJK team announcements in chat, and contributor reward rounds with Claim
 did: The Drone toy: freecam and peek fly a remote others see; peek needs consent
 did: Toy sound settings: a toy volume and a switch per toy to silence it
 did: The Boombox toy: an 80s stereo playing your own tracks to players close by
-did: The Monitor toy: throw an old CRT that sends opted-in players flying as ragdolls
-did: Charged Monitor throws (hold the key) and a hit marker with a hit sound
+did: Force Throw (the Monitor until 21/11/2026): hurl junk that sends players flying as ragdolls
+did: Charged Force throws (hold the key) and a hit marker with a hit sound
 did: The Tag toy: stick a premade tag on walls and floors, TF2 style
-did: Mystery boxes on maps: open one with Use for credits, and maybe win big
-did: The mystery box's roll and its music box tune
-did: The mystery box's own chest and the words over it
+did: Force boxes on maps (mystery boxes): credits or a DOOM coin roll, and maybe win big
+did: The Force box's roll (a music box tune until 20/11/2026)
+did: The Force box's stone chest and the words over it
 did: The Box hunt toy: kill the mark for a free mystery box roll
-did: The Banana peel toy: drop peels; opted-in players who walk onto one slip as ragdolls
-did: The Prop gun toy: hold a fake gun from your own pk3; its bolts knock opted-in players down
+did: The Banana peel toy (29/10 to 20/11/2026): peels opted-in players slip on as ragdolls
+did: The Prop gun toy (01/11 to 20/11/2026): a fake gun from your pk3, its bolts knock down
 did: A macOS build for Apple Silicon, built by GitHub with every release (experimental)
 did: Clan chats: JoF's and the Sith clan's chats beside SJK chat, through the hub
 did: Medals from the SJK team, with medal pictures generated and chosen by Sol
@@ -246,7 +246,7 @@ did: JA+ server mode: SJK's server runs as a JA+ 2.4 B7 server with g_mod japlus
 did: JA+ server mode: its emotes, grappling hook and admins, who log in with their SJK key (after VisionJK)
 did: Lights in map edits: lights added, moved and recoloured for every player, map lamps turned off or moved
 did: Door and lift shadows on lamp light within a fixed budget a frame: no more stutter when they move
-did: Two status bars docked to the screen's edges, the HUD inside them: your wallet, kyber, weapons and time below, the match above
+did: The status bar at the screen's bottom, the HUD above it: your wallet, kyber, weapons, match and time
 link: https://github.com/Sol-Vulpes/SJK
 link: https://sol-vulpes.github.io/SJK/
 
@@ -290,7 +290,7 @@ did: #191 Signature blades without the bright rim at the tip or hard edges round
 did: #202 Bodies fade away as in EternalJK, with their Force side's glow and sounds
 did: #208 Formatting that unblocked CI
 did: #230 Black sabers in Profile > Saber and in game
-did: #231 The cardboard box with the free camera, crouched in the box
+did: #231 The cardboard box with the free camera, crouched in the box (toy removed 20/11)
 did: #232 The limp body stays in sight from the free camera
 did: #210 The first to confirm a trade sees the swap at once
 did: #211 A trade refusal shown once, not at every map change
@@ -626,7 +626,7 @@ did: The Varykino Blossom blade: a blossom-pink blade, lavender mist, a flowerin
 did: Favourite and locked saber shaders: stars listed first, locks kept from break down and trades
 did: Plugin options as Settings switches, in place of typing a cp_pluginDisable number
 did: JoF EJK's saber hit sparks, mouse 4/5 repeat and lagometer modes 2 and 3 for players coming from EJK
-did: The Banana peel toy: drop peels that players who have it on slip on, cartoon style
+did: The Banana peel toy (29/10 to 20/11/2026): drop peels players slip on, cartoon style
 did: Prediction as in 2026.1028.1, a Settings choice for players who preferred it
 did: Reported the JoF Shuttle ship drawn black and its younglings grey
 link: Kushina's pull requests | https://github.com/Sol-Vulpes/SJK/pulls?q=is%3Apr+author%3AkushinaSJK
@@ -666,7 +666,7 @@ did: Holocron catch-up after a short day, and holocrons that count real play
 [Sanjisan]
 role: Ideas for SJK
 did: Click a name in the chat to whisper them
-did: The Fishing toy: a rod, fish anywhere and Echoes on the line
+did: The Fishing toy (29/10 to 20/11/2026): a rod, fish anywhere, Echoes on the line
 
 [Nib]
 role: Ideas for SJK
@@ -686,7 +686,7 @@ did: The Empower glow hidden with a setting
 role: Ideas for SJK
 did: Hit sounds (cg_hitsounds) heard without EJK's pack
 did: Report a bug from the main menu, not only in a match
-did: The Hax trap's switches on the Hax's card in the Collection
+did: The Hax trap's switches on the Hax's card in the Collection (toy removed 20/11)
 did: Loadouts: a saved look worn again in one click
 did: Clan chats: a JoF chat and an S chat beside SJK chat, for their verified players
 

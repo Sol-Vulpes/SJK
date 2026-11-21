@@ -490,16 +490,6 @@ impl QuickWheel {
 pub(crate) struct Toys {
     /// Illuminate's holocron is lit.
     pub(crate) illuminate: bool,
-    /// The player is in the cardboard box.
-    pub(crate) cardboard_box: bool,
-    /// The fishing rod is out.
-    pub(crate) fishing: bool,
-    /// The pickaxe is in hand.
-    pub(crate) mining: bool,
-    /// The Order 66 toy is on.
-    pub(crate) order66: bool,
-    /// The Hax toy is on.
-    pub(crate) hax: bool,
     /// The player is limp (the Ragdoll toy).
     pub(crate) ragdoll: bool,
     /// The Drone toy is on.
@@ -512,8 +502,6 @@ pub(crate) struct Toys {
     pub(crate) monitor: bool,
     /// Box hunt is on.
     pub(crate) box_hunt: bool,
-    /// The Banana peel toy is on.
-    pub(crate) banana: bool,
     /// Quests are on.
     pub(crate) quests: bool,
 }
@@ -529,18 +517,12 @@ fn in_effect(console: &crate::console::ViewerConsole, state: State, toys: Toys) 
     match state {
         State::None => false,
         State::Illuminate => toys.illuminate,
-        State::CardboardBox => toys.cardboard_box,
-        State::Fishing => toys.fishing,
-        State::Mining => toys.mining,
-        State::Order66 => toys.order66,
-        State::Hax => toys.hax,
         State::Ragdoll => toys.ragdoll,
         State::Drone => toys.drone,
         State::Boombox => toys.boombox,
         State::BoomboxDown => toys.boombox_down,
         State::Monitor => toys.monitor,
         State::BoxHunt => toys.box_hunt,
-        State::Banana => toys.banana,
         State::Quests => toys.quests,
         State::Equals(name, value) => integer(name) == Some(value),
         State::On(name) => integer(name).is_some_and(|value| value != 0),
@@ -700,18 +682,12 @@ impl crate::GpuState {
         let store = &console.wheel_pages;
         let toys = Toys {
             illuminate: self.illuminate.lit(),
-            cardboard_box: self.cardboard_box.on(),
-            fishing: self.fishing.on(),
-            mining: self.mining.on(),
-            order66: self.order66.on(),
-            hax: self.hax.on(),
             ragdoll: self.ragdoll.on(),
             drone: self.drone.on(),
             boombox: self.boombox.on(),
             boombox_down: self.boombox.down(),
             monitor: self.monitor.on(),
             box_hunt: self.box_hunt.on(),
-            banana: self.banana.on(),
             quests: self.quests.on(),
         };
         let pages = shown_pages(console, force.as_ref(), toys);
@@ -1100,17 +1076,19 @@ mod tests {
         let toys = &pages[TOYS];
         assert_eq!((toys.id.as_str(), toys.name.as_str()), ("toys", "Toys"));
         assert!(!toys.force);
-        assert_eq!(toys.choices.len(), 10);
         assert_eq!(toys.choices[0].label, "Illuminate");
-        assert_eq!(toys.choices[1].command, "toy_box");
-        assert_eq!(toys.choices[2].command, "toy_order66");
-        assert_eq!(toys.choices[3].command, "order66");
-        assert_eq!(toys.choices[4].command, "toy_hax");
-        assert_eq!(toys.choices[5].command, "toy_ragdoll");
-        assert_eq!(toys.choices[6].command, "toy_drone");
-        assert_eq!(toys.choices[7].command, "toy_boombox");
-        assert_eq!(toys.choices[8].command, "toy_monitor");
-        assert_eq!(toys.choices[9].command, "monitor_throw");
+        let commands: Vec<&str> = toys.choices.iter().map(|c| c.command.as_str()).collect();
+        assert_eq!(
+            commands,
+            [
+                "toy_illuminate",
+                "toy_ragdoll",
+                "toy_drone",
+                "toy_boombox",
+                "toy_monitor",
+                "monitor_throw",
+            ]
+        );
         assert_eq!(toys.choices[0].command, "toy_illuminate");
         assert!(toys.choices[0].icon.is_some(), "the holocron's picture");
         // The gold dot follows the holocron: out, then lit.

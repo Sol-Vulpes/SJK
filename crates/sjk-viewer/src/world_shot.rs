@@ -294,38 +294,24 @@ mod movers;
 #[path = "world_shot_illuminate.rs"]
 mod holocron;
 
-#[path = "world_shot_cardboard_box.rs"]
-mod cardboard_box;
-
-#[path = "world_shot_fishing.rs"]
-mod fishing_shots;
-
 #[path = "world_shot_map_edits.rs"]
 mod map_edit_shots;
 
 #[path = "world_shot_ghost_editor.rs"]
 mod ghost_editor_shots;
 
-#[path = "world_shot_banana.rs"]
-mod banana_shots;
 #[path = "world_shot_body_fade.rs"]
 mod body_fade_shots;
 #[path = "world_shot_boombox.rs"]
 mod boombox_shots;
 #[path = "world_shot_drone.rs"]
 mod drone_shots;
-#[path = "world_shot_hax.rs"]
-mod hax_shots;
 #[path = "world_shot_monitor.rs"]
 mod monitor_shots;
 #[path = "world_shot_mystery_box.rs"]
 mod mystery_box_shots;
-#[path = "world_shot_order66.rs"]
-mod order66_shots;
 #[path = "world_shot_petals.rs"]
 mod petals;
-#[path = "world_shot_propgun.rs"]
-mod propgun_shots;
 #[path = "world_shot_ragdoll.rs"]
 mod ragdoll_shots;
 #[path = "world_shot_toy_master.rs"]
@@ -1434,6 +1420,7 @@ Found the fog bug, ask me about it!"
             wheel_of_doom: None,
             wheel_of_doom_revision: 0,
             wheel_of_doom_spin: None,
+            mystery_box_doom: None,
             box_hunt: None,
             quests: None,
             secrets: None,
@@ -1792,13 +1779,13 @@ like this one.",
                 people: 63,
                 toys: [
                     (
-                        crate::fishing::TOY,
+                        crate::drone::TOY,
                         [9, 31, 48],
                         [21_600, 151_200, 412_000],
                         214,
                     ),
                     (
-                        crate::mining::TOY,
+                        crate::quests::TOY,
                         [7, 22, 40],
                         [14_400, 98_000, 301_000],
                         160,
@@ -1815,13 +1802,6 @@ like this one.",
                         [3_000, 21_000, 77_000],
                         61,
                     ),
-                    (
-                        crate::cardboard_box::TOY,
-                        [2, 9, 17],
-                        [900, 8_400, 23_000],
-                        48,
-                    ),
-                    (crate::order66::TOY, [3, 8, 15], [1_200, 7_000, 19_500], 22),
                 ]
                 .into_iter()
                 .map(|(toy, people, secs, uses)| sjk_identity::ToyUse {

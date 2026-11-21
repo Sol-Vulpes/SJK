@@ -239,8 +239,8 @@ pub(crate) struct Entry {
     pub(crate) gift: bool,
     /// An achievement earned it (a kyber crystal, source `achievement`).
     pub(crate) earned: bool,
-    /// Play dropped it (source `play`) and it is still the finder's: the Fishing
-    /// toy's Echoes are these only, not bought, gifted, earned or traded ones.
+    /// Play dropped it (source `play`) and it is still the finder's (not bought, gifted,
+    /// earned or traded).
     pub(crate) played: bool,
     /// The team's note as plain text; only on a gift, often empty.
     pub(crate) note: String,

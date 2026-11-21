@@ -335,6 +335,12 @@ pub struct Snapshot {
         u64,
         Result<crate::wheel_of_doom::Spin, crate::wheel_of_doom::Refused>,
     )>,
+    /// The answer to the last [`Service::doom_mystery_box`], by serial, or why it was
+    /// refused (in the player's words, with the seconds left to wait).
+    pub mystery_box_doom: Option<(
+        u64,
+        Result<crate::wheel_of_doom::Doom, crate::wheel_of_doom::Refused>,
+    )>,
     /// The box hunt as last read, by serial, for the server named
     /// ([`Service::read_box_hunt`]).
     pub box_hunt: Option<(u64, String, crate::mystery_box::HuntState)>,
@@ -802,6 +808,7 @@ impl Snapshot {
             wheel_of_doom: None,
             wheel_of_doom_revision: 0,
             wheel_of_doom_spin: None,
+            mystery_box_doom: None,
             box_hunt: None,
             quests: None,
             secrets: None,
@@ -962,6 +969,11 @@ enum Command {
     RefreshMapEdits,
     /// Open mystery box `id` on `server`.
     OpenMysteryBox {
+        id: i64,
+        server: String,
+    },
+    /// Roll a DOOM coin at mystery box `id` on `server`.
+    DoomMysteryBox {
         id: i64,
         server: String,
     },
@@ -2136,6 +2148,7 @@ impl Worker {
                     )
                 })
             }),
+            Command::DoomMysteryBox { id, server } => self.doom_mystery_box(id, &server, now),
             Command::PlaceMysteryBox(placed) => self.mystery_box(now, |hub, identity| {
                 hub.place_mystery_box(identity, &placed)
                     .map(|id| (BoxDone::Placed(id), None))
@@ -3805,6 +3818,37 @@ impl Worker {
         });
     }
 
+    /// Roll a DOOM coin at box `id` on `server`, as a wheel's spin: the answer goes in
+    /// [`Snapshot::mystery_box_doom`], the profile after it in [`Snapshot::me`] and the
+    /// DOOM coins left in [`Snapshot::wheel_of_doom`]; a holocron won is read at once.
+    fn doom_mystery_box(&mut self, id: i64, server: &str, now: Instant) {
+        self.wheel_serial += 1;
+        let serial = self.wheel_serial;
+        let outcome = match (self.hub.as_mut(), self.registered) {
+            (Some(hub), true) => hub.doom_mystery_box(&self.identity, id, server),
+            _ => Err(self.not_connected()),
+        };
+        if matches!(&outcome, Ok(answer) if answer.doom.holocron.is_some()) {
+            self.due_holocrons = self.due_holocrons.min(now);
+        }
+        self.update(|snapshot| {
+            let outcome = match outcome {
+                Ok(answer) => {
+                    if let (Some(coins), Some(wheel)) =
+                        (answer.doom.coins, snapshot.wheel_of_doom.as_mut())
+                    {
+                        wheel.coins = coins;
+                        snapshot.wheel_of_doom_revision += 1;
+                    }
+                    snapshot.set_me(answer.profile);
+                    Ok(answer.doom)
+                }
+                Err(error) => Err(crate::wheel_of_doom::refusal(&error)),
+            };
+            snapshot.mystery_box_doom = Some((serial, outcome));
+        });
+    }
+
     fn read_junk(&mut self) {
         let status = match (self.hub.as_mut(), self.registered) {
             (Some(hub), true) => hub.junk_status(&self.identity).ok(),
@@ -4915,6 +4959,12 @@ impl Service {
     /// arrives in [`Snapshot::mystery_box`], the credits after in the profile.
     pub fn open_mystery_box(&self, id: i64, server: String) {
         let _ = self.commands.send(Command::OpenMysteryBox { id, server });
+    }
+
+    /// Roll a DOOM coin at mystery box `id`, which the player stands at on `server` (the
+    /// Force box's held Use): what it gave arrives in [`Snapshot::mystery_box_doom`].
+    pub fn doom_mystery_box(&self, id: i64, server: String) {
+        let _ = self.commands.send(Command::DoomMysteryBox { id, server });
     }
 
     /// SJK's creator: place `placed` (its id is ignored); the answer arrives in

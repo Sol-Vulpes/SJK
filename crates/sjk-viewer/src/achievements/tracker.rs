@@ -2,10 +2,9 @@
 //! (`achievements.rs`): players defeated (and how, and in a duel), the player's own
 //! deaths for streaks, flags captured, the maps and servers played, the time played,
 //! duels won flawless or by a hair, the players duelled, long saber throws, thermal
-//! detonators sent back and time hidden in the cardboard box; and the toys' own, from
-//! what the toys tell it of the moment ([`Toys`]): the lifter of the player's box
-//! defeated at once, a player the Hax steers defeating others or falling, the player the
-//! Drone watched defeated after it landed, and the boombox's listeners. Only in a live
+//! detonators sent back; and the toys' own, from what the toys tell it of the moment
+//! ([`Toys`]): the player the Drone watched defeated after it landed, and the boombox's
+//! listeners. Only in a live
 //! match on a server: never in a demo, a game this client hosts, or while following
 //! someone else.
 //!
@@ -49,10 +48,6 @@ const WP_THERMAL: u8 = 12;
 const EF_DEAD: u32 = 1 << 1;
 const EF_NODRAW: u32 = 1 << 8;
 
-/// How close another player must be for time in the cardboard box to count (game units,
-/// from origin to origin: about 28 metres, within sight of the box across a room or a
-/// courtyard; 512 until 26/10/2026, which asked players to stand almost on top of it).
-pub(crate) const BOX_NEAR: f32 = 1024.0;
 /// The shortest saber throw Long Throw takes (game units, from the player to the victim).
 /// A swing reaches under 100; a thrown saber flies up to 700 per Saber Throw level
 /// (`SABER_MAX_THROW_DISTANCE`).
@@ -77,9 +72,6 @@ const THROW_FRESH_MS: i32 = 250;
 const THERMAL_WINDOW: Duration = Duration::from_secs(1);
 /// How long a private duel's record waits for its obituary after the duel ends.
 const DUEL_LINGER: Duration = Duration::from_secs(2);
-/// Surprise!: how soon after the player's box was lifted its lifter must fall to them
-/// (the lift reaches the boxed player through the hub, a moment after it was made).
-pub(crate) const BOX_AMBUSH: Duration = Duration::from_secs(3);
 /// Eye in the Sky: how soon after the Drone landed the player it watched must fall.
 pub(crate) const DRONE_STRIKE: Duration = Duration::from_secs(10);
 
@@ -197,10 +189,6 @@ fn hazard(means: u8) -> bool {
 /// obituaries and minutes are weighed against for the toys' achievements.
 #[derive(Clone, Copy, Debug, Default)]
 pub(crate) struct Toys {
-    /// The player who lifted the player's box, and when that reached this client.
-    pub(crate) lifted_by: Option<(u16, Instant)>,
-    /// The player the Hax steers now.
-    pub(crate) steering: Option<u16>,
     /// The player the Drone last watched, and when it landed (the peek ended).
     pub(crate) landed: Option<(u16, Instant)>,
     /// The SJK players in reach of the player's boombox while it plays (bits by slot).
@@ -301,18 +289,11 @@ pub(crate) struct Tracker {
     captures: Option<(u32, u8)>,
     /// When the last snapshot that counted as play was seen.
     last_play: Option<Instant>,
-    /// When the last snapshot that counted as time in the box was seen.
-    last_hide: Option<Instant>,
     /// The player has been in the game (not spectating) on this map.
     joined: bool,
-    /// The lift of the player's box, and the Drone's landing, that already counted.
-    ambushed: Option<Instant>,
+    /// The Drone's landing that already counted.
     struck: Option<Instant>,
-    /// The player the Hax steers and how many they defeated in this hack.
-    hack: Option<(u16, u64)>,
-    /// When the last snapshot that counted as time steering, and with the boombox
-    /// heard, was seen.
-    last_steer: Option<Instant>,
+    /// When the last snapshot that counted as time with the boombox heard was seen.
     last_music: Option<Instant>,
 }
 
@@ -325,8 +306,6 @@ pub(crate) struct Seen<'a> {
     pub(crate) local: bool,
     /// The obituaries this snapshot brought, oldest first.
     pub(crate) obituaries: &'a [ObituaryEvent],
-    /// The player hides in the cardboard box (`cardboard_box.rs`: on, alive, playing).
-    pub(crate) boxed: bool,
     /// What the toys tell of the moment.
     pub(crate) toys: Toys,
     pub(crate) now: Instant,
@@ -468,17 +447,12 @@ impl Tracker {
             record.play(ms);
             changed = true;
         }
-        let hiding = in_match && seen.boxed && someone_near(snapshot, me, player.origin());
-        if let Some(ms) = step(&mut self.last_hide, hiding, seen.now) {
-            record.hide(ms);
-            changed = true;
-        }
         changed |= self.watch_toys(seen, record, me, in_match);
         changed
     }
 
     /// Count the toys' achievements of `seen`: its obituaries against what the toys tell
-    /// ([`Toys`]), and the minutes steering and with the boombox heard.
+    /// ([`Toys`]), and the minutes with the boombox heard.
     fn watch_toys(
         &mut self,
         seen: &Seen<'_>,
@@ -488,11 +462,6 @@ impl Tracker {
     ) -> bool {
         let toys = seen.toys;
         let mut changed = false;
-        // A hack's tally lasts while the same player is steered.
-        self.hack = match (self.hack, toys.steering) {
-            (Some((slot, kills)), Some(steered)) if slot == steered => Some((slot, kills)),
-            (_, steered) => steered.map(|slot| (slot, 0)),
-        };
         for event in seen.obituaries {
             let (killer, victim) = (event.attacker, event.target);
             if victim >= PLAYERS {
@@ -500,46 +469,21 @@ impl Tracker {
             }
             // By their own hand, or the world's.
             let own_hand = killer == victim || killer >= PLAYERS;
-            if killer == me && victim != me {
-                if let Some((lifter, at)) = toys.lifted_by
-                    && lifter == victim
-                    && seen.now.saturating_duration_since(at) <= BOX_AMBUSH
-                    && self.ambushed != Some(at)
-                {
-                    self.ambushed = Some(at);
-                    record.add(Counter::BoxAmbush, 1);
-                    changed = true;
-                }
-                if let Some((watched, at)) = toys.landed
-                    && watched == victim
-                    && seen.now.saturating_duration_since(at) <= DRONE_STRIKE
-                    && self.struck != Some(at)
-                {
-                    self.struck = Some(at);
-                    record.add(Counter::DroneStrikes, 1);
-                    changed = true;
-                }
-            }
-            if let Some((steered, kills)) = &mut self.hack {
-                if killer == *steered && victim != *steered && victim != me {
-                    *kills += 1;
-                    record.raise(Counter::HaxBest, *kills);
-                    changed = true;
-                }
-                if victim == *steered && own_hand && hazard(event.means_of_death) {
-                    record.add(Counter::HaxFalls, 1);
-                    changed = true;
-                }
+            if killer == me
+                && victim != me
+                && let Some((watched, at)) = toys.landed
+                && watched == victim
+                && seen.now.saturating_duration_since(at) <= DRONE_STRIKE
+                && self.struck != Some(at)
+            {
+                self.struck = Some(at);
+                record.add(Counter::DroneStrikes, 1);
+                changed = true;
             }
             if victim != me && own_hand && toys.listeners & 1 << victim != 0 {
                 record.add(Counter::BoomboxToughCrowd, 1);
                 changed = true;
             }
-        }
-        let steering = in_match && toys.steering.is_some();
-        if let Some(ms) = step(&mut self.last_steer, steering, seen.now) {
-            record.time(Counter::HaxMinutes, ms);
-            changed = true;
         }
         let heard = in_match && toys.listeners != 0;
         if let Some(ms) = step(&mut self.last_music, heard, seen.now) {
@@ -684,15 +628,6 @@ fn step(last: &mut Option<Instant>, on: bool, now: Instant) -> Option<u64> {
     ms.filter(|ms| *ms > 0).map(|ms| ms.min(PLAY_STEP_MAX_MS))
 }
 
-/// Whether another player stands within [`BOX_NEAR`] of `origin`.
-fn someone_near(snapshot: &Snapshot, me: u16, origin: [f32; 3]) -> bool {
-    snapshot.entities.iter().any(|entity| {
-        standing_player(entity)
-            && entity.number() != me
-            && distance(entity.trajectory_base(), origin) <= BOX_NEAR
-    })
-}
-
 /// The player a thermal detonator leaving `from` left: the nearest within
 /// [`THROWER_REACH`], the player among them while they play.
 fn thrower(snapshot: &Snapshot, me: u16, playing: bool, from: [f32; 3]) -> Option<u16> {
@@ -793,7 +728,6 @@ mod tests {
         now: Instant,
         server: SocketAddr,
         local: bool,
-        boxed: bool,
         toys: Toys,
     }
 
@@ -811,7 +745,6 @@ mod tests {
                 now: Instant::now(),
                 server: "1.2.3.4:29070".parse().unwrap(),
                 local: false,
-                boxed: false,
                 toys: Toys::default(),
             }
         }
@@ -824,7 +757,6 @@ mod tests {
                 server: self.server,
                 local: self.local,
                 obituaries,
-                boxed: self.boxed,
                 toys: self.toys,
                 now: self.now,
             };
@@ -1197,21 +1129,8 @@ mod tests {
     }
 
     #[test]
-    fn the_lifter_of_the_box_and_the_player_the_drone_watched_count_once_soon_after() {
+    fn the_player_the_drone_watched_counts_once_soon_after() {
         let mut bench = Bench::new(game("mp/ffa3", 0, 2, &[]));
-        let lifted = bench.now;
-        bench.toys.lifted_by = Some((5, lifted));
-        bench.step(&[kill(2, 6, means::SABER)]);
-        assert_eq!(bench.record.count(Counter::BoxAmbush), 0, "not the lifter");
-        bench.step(&[kill(2, 5, means::SABER)]);
-        bench.step(&[kill(2, 5, means::SABER)]);
-        assert_eq!(bench.record.count(Counter::BoxAmbush), 1, "once a lift");
-        bench.toys.lifted_by = Some((5, bench.now));
-        for _ in 0..61 {
-            bench.step(&[]);
-        }
-        bench.step(&[kill(2, 5, means::SABER)]);
-        assert_eq!(bench.record.count(Counter::BoxAmbush), 1, "too late");
         bench.toys.landed = Some((6, bench.now));
         for _ in 0..180 {
             bench.step(&[]);
@@ -1226,44 +1145,6 @@ mod tests {
         }
         bench.step(&[kill(2, 6, means::SABER)]);
         assert_eq!(bench.record.count(Counter::DroneStrikes), 1, "past 10 s");
-    }
-
-    #[test]
-    fn a_player_steered_counts_their_kills_in_one_hack_their_falls_and_the_minutes() {
-        let mut bench = Bench::new(game("mp/ffa3", 0, 2, &[]));
-        bench.toys.steering = Some(7);
-        bench.step(&[kill(7, 8, means::SABER)]);
-        bench.step(&[kill(7, 2, means::SABER), kill(7, 9, means::SABER)]);
-        assert_eq!(
-            bench.record.count(Counter::HaxBest),
-            2,
-            "the hacker is no prey"
-        );
-        bench.toys.steering = None;
-        bench.step(&[kill(7, 8, means::SABER)]);
-        bench.toys.steering = Some(7);
-        bench.step(&[kill(7, 8, means::SABER)]);
-        assert_eq!(
-            bench.record.count(Counter::HaxBest),
-            2,
-            "a new hack starts at 0"
-        );
-        bench.step(&[kill(1022, 7, means::FALLING)]);
-        bench.step(&[kill(7, 7, means::SABER)]);
-        assert_eq!(
-            bench.record.count(Counter::HaxFalls),
-            1,
-            "a fall, not any death"
-        );
-        for _ in 0..1_200 {
-            bench.step(&[]);
-        }
-        assert_eq!(bench.record.count(Counter::HaxMinutes), 1);
-        assert_eq!(
-            bench.record.count(Counter::Kills),
-            0,
-            "none of them the player's"
-        );
     }
 
     #[test]
@@ -1282,42 +1163,6 @@ mod tests {
         bench.toys.listeners = 1 << 5;
         bench.step(&[]);
         assert_eq!(bench.record.count(Counter::BoomboxCrowd), 3, "a best");
-    }
-
-    #[test]
-    fn time_in_the_box_counts_only_with_another_player_close_by() {
-        assert_eq!(BOX_NEAR, 1024.0, "about 28 metres");
-        let mut bench = Bench::new(game("mp/ffa3", 0, 2, &[]));
-        bench.boxed = true;
-        bench.snapshot.entities = vec![player_at(5, [BOX_NEAR + 50.0, 0.0, 0.0])];
-        for _ in 0..10 {
-            bench.step(&[]);
-        }
-        assert_eq!(bench.record.box_ms, 0, "nobody close by");
-        // 900 units away: beyond the old 512, within the 1024 of 26/10/2026.
-        bench.snapshot.entities = vec![player_at(5, [900.0, 0.0, 0.0])];
-        for _ in 0..21 {
-            bench.step(&[]);
-        }
-        assert_eq!(bench.record.box_ms, 1_000);
-        // A dead player close by does not count, nor time out of the box.
-        bench.snapshot.entities[0].set_raw_field(19, EF_DEAD);
-        bench.step(&[]);
-        bench.step(&[]);
-        assert_eq!(bench.record.box_ms, 1_000);
-        bench.snapshot.entities[0].set_raw_field(19, 0);
-        bench.boxed = false;
-        bench.step(&[]);
-        bench.step(&[]);
-        assert_eq!(bench.record.box_ms, 1_000);
-        // Whole minutes go to the count.
-        bench.boxed = true;
-        bench.step(&[]);
-        for _ in 0..1_200 {
-            bench.step(&[]);
-        }
-        assert_eq!(bench.record.count(Counter::BoxMinutes), 1);
-        assert_eq!(bench.record.box_ms, 1_000);
     }
 
     #[test]

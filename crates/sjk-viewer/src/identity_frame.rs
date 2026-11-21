@@ -92,14 +92,9 @@ impl GpuState {
         let relay_events = server
             .map(|server| player_identity::take_relay_events(Some(server)))
             .unwrap_or_default();
-        self.update_cardboard_box(Instant::now(), &toy_events);
-        self.update_order66(&toy_events);
-        self.update_hax(&toy_events, &relay_events);
         self.update_ragdoll(&relay_events);
         self.update_monitor(&relay_events, &toy_events);
-        self.update_banana(&relay_events);
         self.update_status_balloons(&relay_events);
-        self.update_propgun(&relay_events, &toy_events);
         self.update_drone(&relay_events);
         self.update_boombox(&relay_events);
         self.update_mystery_boxes(&toy_events, &relay_events);

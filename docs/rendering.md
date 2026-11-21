@@ -3653,7 +3653,7 @@ when it is swung, which its own quad could not hold: they are particles in the w
 - **Spawned** by `saber_petals::frame` (after the contacts and rain steam in
   `entity_lights.rs`) as billboard particles of the bundled petal pictures
   (`assets/petals`, drawn by `scripts/petal_assets.py`: three tints of one cherry petal,
-  `shaders/sjk_petals.shader`, mounted below game data as Order 66's confetti), turning as
+  `shaders/sjk_petals.shader`, mounted below game data), turning as
   they sink, stopping where they land on the floor (`apply_physics`, no bounce) and fading
   over their last third. They count against the particle pool like any effect.
   Their three shaders are in `effect_assets::CODE_SHADERS`: the frame's effect materials load

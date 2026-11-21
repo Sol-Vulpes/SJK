@@ -1,19 +1,13 @@
-//! The Fishing and Mining toys' log book and their rare catches (Slash, 15/11/2026, after
-//! adwè's #ideas post asking for more reason to fish and mine): the cosmetic half of
-//! that plan, nothing of the economy.
+//! The Fishing and Mining toys' log books (Slash, 15/11/2026, after adwè's #ideas post),
+//! read only since the toys were removed (20/11/2026): the Collection's Log book page
+//! (`collection_log_book.rs`) shows them for a player whose logs hold a catch.
 //!
-//! - **The log book.** The toy's card in Collection > Toys opens on its log book (the
-//!   "Log book" button by the log's head): every fish and junk, or every ore and rubble,
-//!   one to a cell, the ones never caught as "???", the others with their count and the
-//!   day the first came up. The day is kept in the toy's own log, a `first <id>
-//!   <yyyymmdd>` line (three words, which logs before it and older clients skip, as
-//!   they do `sold`); catches from before it have no day.
-//! - **Rare catches.** A rare fish ([`crate::fishing::is_rare`]) or ore
-//!   ([`crate::mining::is_rare`]) brings a notification banner ("RARE CATCH", "RARE
-//!   FIND", [`crate::unlock_toast::Unlock::RareCatch`]) besides its centre line, with
-//!   the single-player game's secret-area sound in the toy's own sounds.
-//! - **Sharing.** `fishing_brag` and `mining_brag` (and the log book's Share button) say
-//!   the last rare catch of the session, else the log's rarest, in the SJK chat as the
+//! - **The books.** Every fish and junk, or every ore and rubble, one to a cell, the
+//!   ones never caught as "???", the others with their count and the day the first came
+//!   up (a `first <id> <yyyymmdd>` line of the toy's log; catches from before it have no
+//!   day), the rare ones ([`crate::fishing::is_rare`], [`crate::mining::is_rare`]) in
+//!   gold. [`load`] reads both logs from the profile folder as the Collection opens.
+//! - **Sharing.** Each book's Share button says its rarest catch in the SJK chat as the
 //!   player's own message ([`crate::player_identity::chat_sjk_only`]: the hub's chat
 //!   rules and quota hold, and nothing goes to the game server's chat), at most once in
 //!   [`BRAG_EVERY`]. Nothing is ever said for the player unasked.
@@ -28,17 +22,6 @@ pub(crate) const BRAG_EVERY: Duration = Duration::from_secs(60);
 
 /// The log's line of the day a catch first came up: `first <id> <yyyymmdd>`.
 pub(crate) const FIRST: &str = "first";
-
-/// Today on this PC, as the log keeps a day: `yyyymmdd`.
-pub(crate) fn today() -> u32 {
-    let now = sjk_shell::local_time::LocalTime::now();
-    day_of(now.year, now.month, now.day)
-}
-
-/// The day `year`/`month`/`day` as the log keeps it.
-pub(crate) fn day_of(year: i32, month: u8, day: u8) -> u32 {
-    (year.max(0) as u32) * 10_000 + u32::from(month) * 100 + u32::from(day)
-}
 
 /// A kept day as the card writes it: `dd/mm/yyyy`; `None` for one that is no day.
 pub(crate) fn day_text(day: u32) -> Option<String> {
@@ -147,34 +130,12 @@ impl Firsts {
         }
     }
 
-    /// Note `day` as the first of `id` unless one is known.
-    pub(crate) fn mark(&mut self, id: &str, day: u32) {
-        if self.of(id).is_none() {
-            self.0.push((id.to_owned(), day));
-        }
-    }
-
-    /// Count in `other`'s days, where none is known: what was caught before the log was
-    /// read.
-    pub(crate) fn merge(&mut self, other: &Firsts) {
-        for (id, day) in &other.0 {
-            self.mark(id, *day);
-        }
-    }
-
     /// The first day of `id`, when known.
     pub(crate) fn of(&self, id: &str) -> Option<u32> {
         self.0
             .iter()
             .find(|(known, _)| known == id)
             .map(|(_, day)| *day)
-    }
-
-    /// The lines to write: `first <id> <day>` each.
-    pub(crate) fn push_text(&self, text: &mut String) {
-        for (id, day) in &self.0 {
-            text.push_str(&format!("{FIRST} {id} {day}\n"));
-        }
     }
 }
 
@@ -208,13 +169,179 @@ pub(crate) fn share(line: String) -> Option<&'static str> {
     }
 }
 
+/// One toy's log book as the Collection's Log book page shows it (since the Fishing and
+/// Mining toys were removed, 20/11/2026: their logs stay the players' own record).
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub(crate) struct Book {
+    /// Its head: "Fishing", "Mining".
+    pub(crate) title: &'static str,
+    /// What its second part holds: "junk", "rubble".
+    pub(crate) goods: &'static str,
+    /// The fish (or ores) in the table's order, then the junk (or rubble).
+    pub(crate) book: Vec<Entry>,
+    /// The kinds of the first part: the rest is junk or rubble.
+    pub(crate) book_kinds: usize,
+    /// What its Share button says in the SJK chat (`None`: nothing worth sharing).
+    pub(crate) brag: Option<String>,
+}
+
+impl Book {
+    /// Whether anything of it was ever caught.
+    pub(crate) fn any(&self) -> bool {
+        self.book.iter().any(|entry| entry.count > 0)
+    }
+}
+
+/// Both log books.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub(crate) struct Books {
+    pub(crate) fishing: Book,
+    pub(crate) mining: Book,
+}
+
+impl Books {
+    /// The books of the log files' texts.
+    pub(crate) fn of(fishing: &str, mining: &str) -> Self {
+        Self {
+            fishing: fishing_book(&crate::fishing::Log::parse(fishing)),
+            mining: mining_book(&crate::mining::Log::parse(mining)),
+        }
+    }
+
+    /// Whether either holds a catch: only then has the Collection a Log book.
+    pub(crate) fn any(&self) -> bool {
+        self.fishing.any() || self.mining.any()
+    }
+}
+
+/// Whether the Collection shows its Log book ([`load`] found a catch).
+static SHOWN: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+/// Read both logs from the profile `directory`, and note whether the Log book shows.
+pub(crate) fn load(directory: &std::path::Path) -> Books {
+    let read = |file| std::fs::read_to_string(directory.join(file)).unwrap_or_default();
+    let books = Books::of(
+        &read(crate::fishing::LOG_FILE),
+        &read(crate::mining::LOG_FILE),
+    );
+    SHOWN.store(books.any(), std::sync::atomic::Ordering::Release);
+    books
+}
+
+/// Whether the Collection has its Log book: a tile in the hall, a tab on the row.
+pub(crate) fn shown() -> bool {
+    SHOWN.load(std::sync::atomic::Ordering::Acquire)
+}
+
+/// The fish log's book.
+fn fishing_book(log: &crate::fishing::Log) -> Book {
+    use crate::fishing::{CATCHES, Catch, Kind};
+    let entry = |c: &Catch| {
+        Entry::of(
+            c.name,
+            log.count(c.id),
+            log.first(c.id),
+            crate::fishing::is_rare(c),
+        )
+    };
+    let mut book: Vec<_> = CATCHES
+        .iter()
+        .filter(|c| c.kind == Kind::Fish)
+        .map(entry)
+        .collect();
+    let book_kinds = book.len();
+    book.extend(CATCHES.iter().filter(|c| c.kind == Kind::Junk).map(entry));
+    Book {
+        title: "Fishing",
+        goods: "junk",
+        book,
+        book_kinds,
+        brag: log
+            .rarest()
+            .map(|(catch, count)| brag_line("Caught", catch.name, count, log.species())),
+    }
+}
+
+/// The mining log's book.
+fn mining_book(log: &crate::mining::Log) -> Book {
+    use crate::mining::{FINDS, Find, Kind};
+    let entry = |f: &Find| {
+        Entry::of(
+            f.name,
+            log.count(f.id),
+            log.first(f.id),
+            crate::mining::is_rare(f),
+        )
+    };
+    let mut book: Vec<_> = FINDS
+        .iter()
+        .filter(|f| f.kind == Kind::Ore)
+        .map(entry)
+        .collect();
+    let book_kinds = book.len();
+    book.extend(FINDS.iter().filter(|f| f.kind == Kind::Rubble).map(entry));
+    Book {
+        title: "Mining",
+        goods: "rubble",
+        book,
+        book_kinds,
+        brag: log
+            .rarest()
+            .map(|(find, count)| brag_line("Dug out", find.name, count, log.kinds())),
+    }
+}
+
+/// The Log book's Share: the last share's time, for [`BRAG_EVERY`].
+static SHARED: std::sync::Mutex<Brag> = std::sync::Mutex::new(Brag { at: None });
+
+/// Share `book`'s line in the SJK chat (its Share button): what the centre of the
+/// screen says, if anything (nothing to share, too soon, SJK online off).
+pub(crate) fn share_book(book: &Book, now: Instant) -> Option<&'static str> {
+    let Some(line) = book.brag.clone() else {
+        return Some("Nothing to share yet.");
+    };
+    let may = SHARED.lock().map_or(false, |mut brag| brag.take(now));
+    if !may {
+        return Some("You shared a catch a moment ago.");
+    }
+    share(line)
+}
+
+impl crate::GpuState {
+    /// The Log book's Share button: the fish (`mining` false) or mining book's line in
+    /// the SJK chat, at most once in [`BRAG_EVERY`]; what came of it on the centre of the
+    /// screen when it did not go.
+    pub(crate) fn share_log_book(&mut self, mining: bool) {
+        let Some(directory) = self
+            .console
+            .as_ref()
+            .map(|console| console.config_directory().to_owned())
+        else {
+            return;
+        };
+        let books = load(&directory);
+        let book = if mining {
+            &books.mining
+        } else {
+            &books.fishing
+        };
+        if let Some(said) = share_book(book, Instant::now()) {
+            self.chat.receive(
+                sjk_client::ServerEventKind::CenterPrint,
+                said.to_owned(),
+                None,
+                Instant::now(),
+            );
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
     fn a_day_is_kept_and_written_day_first() {
-        assert_eq!(day_of(2026, 11, 5), 20261105);
         assert_eq!(day_text(20261105).as_deref(), Some("05/11/2026"));
         assert_eq!(parse_day("20261105"), Some(20261105));
         assert_eq!(parse_day("2026115"), None, "no month 1 day 15 of year 202");
@@ -264,17 +391,18 @@ mod tests {
     }
 
     #[test]
-    fn the_first_day_is_kept_once() {
+    fn the_first_day_is_read_once_a_catch() {
         let mut firsts = Firsts::default();
-        firsts.mark("sun_carp", 20261101);
-        firsts.mark("sun_carp", 20261115);
         firsts.read("moon_eel", "20261102");
         firsts.read("moon_eel", "nonsense");
-        assert_eq!(firsts.of("sun_carp"), Some(20261101));
+        firsts.read("sun_carp", "20261101");
+        firsts.read("sun_carp", "20261115");
         assert_eq!(firsts.of("moon_eel"), Some(20261102));
-        let mut text = String::new();
-        firsts.push_text(&mut text);
-        assert_eq!(text, "first sun_carp 20261101\nfirst moon_eel 20261102\n");
+        assert_eq!(
+            firsts.of("sun_carp"),
+            Some(20261115),
+            "the log's last line wins"
+        );
     }
 
     #[test]

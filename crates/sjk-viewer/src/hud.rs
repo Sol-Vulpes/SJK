@@ -290,8 +290,6 @@ pub(crate) struct HudOverlay {
     /// The jetpack fuel the bar at the right edge shows (`jetpack_fuel`), `None` while
     /// it is hidden.
     jetpack_fuel: Option<i32>,
-    /// The Hax toy's hack still to go (`hax.rs`), drawn as a siege hack is.
-    toy_hack_left: Option<f32>,
     /// The Monitor toy's charge ring and hit marker (`monitor.rs`).
     monitor_marks: MonitorMarks,
     /// The sound sonar's arcs this frame (`crate::sound_sonar`).
@@ -537,7 +535,6 @@ impl HudOverlay {
             interrupted: false,
             hack_left: None,
             jetpack_fuel: None,
-            toy_hack_left: None,
             monitor_marks: MonitorMarks::default(),
             sound_sonar: Default::default(),
             lagometer: sjk_client::LagometerSamples::new(),
@@ -603,11 +600,6 @@ impl HudOverlay {
             self.radial_placement = placement;
             self.radial_document = place_radial(&self.radial_base, placement);
         }
-    }
-
-    /// The share of a Hax toy's hack still to go, while the player hacks or is hacked.
-    pub(crate) fn set_toy_hack(&mut self, left: Option<f32>) {
-        self.toy_hack_left = left;
     }
 
     /// The Monitor toy's marks on the crosshair this frame.
@@ -790,7 +782,7 @@ impl HudOverlay {
             hack_bar::emit(
                 &mut self.draw_list,
                 viewport,
-                self.hack_left.or(self.toy_hack_left),
+                self.hack_left,
                 crosshair::rect(crosshair_look, self.targeting.center(viewport), viewport),
                 self.icons.cell(icons::assets::HACKER),
             );

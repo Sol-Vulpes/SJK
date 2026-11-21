@@ -1,15 +1,12 @@
 //! The Collection's Toys tab: things to use in a match, everyone's. SJK's Illuminate
-//! holocron (`docs/client.md`, Illuminate), the cardboard box (`docs/client.md`,
-//! Cardboard box), Order 66 (`docs/client.md`, Order 66), the Hax (`docs/client.md`,
-//! Hax), the Ragdoll (`docs/client.md`, Ragdoll), the Drone (`docs/client.md`, Drone),
+//! holocron (`docs/client.md`, Illuminate), the Ragdoll (`docs/client.md`, Ragdoll), the Drone (`docs/client.md`, Drone),
 //! the Boombox (`docs/client.md`, Boombox), the Monitor (`docs/client.md`, Monitor), Box
-//! hunt (`docs/client.md`, Box hunt) the Banana peel (`docs/client.md`, Banana peel),
-//! Fishing (`docs/client.md`, Fishing) and Quests (`docs/quests.md`),
+//! hunt (`docs/client.md`, Box hunt) and Quests (`docs/quests.md`),
 //! a row to each on the left (Sol's pick of 25/10/2026, the Collection revamp's canvas):
 //! its picture, its name and a line of what it does, the key bound to it and its own
-//! switch, which runs it in place (`toy_illuminate`, `toy_box`, `toy_order66`, `toy_hax`,
+//! switch, which runs it in place (`toy_illuminate`,
 //! `toy_ragdoll`, `toy_drone`, `toy_boombox`, `toy_monitor`, `toy_boxhunt`,
-//! `toy_banana`, `toy_fishing`, `toy_quests`). The chosen one is described on a dark card beside the
+//! `toy_quests`). The chosen one is described on a dark card beside the
 //! model, where its key is bound without the console (a click or K, then the key). The
 //! holocron floats lit by the model while it is chosen.
 
@@ -40,11 +37,20 @@ const SWITCH_ROOM: f32 = 130.0;
 
 /// The list's sections (Sol's pick of 09/11/2026, once there were fourteen toys): each
 /// head and how many toys of [`ORDER`] stand under it.
-const SECTIONS: [(&str, usize); 3] = [("Around you", 5), ("With others", 4), ("Earn and win", 5)];
+const SECTIONS: [(&str, usize); 3] = [("Around you", 4), ("With others", 1), ("Earn and win", 3)];
 /// The toys in the list's order, as indices into [`TOYS`] (whose order the panel, the
 /// tokens and the bits keep): around you, the ones that need others with them on, and
 /// the ones that earn or win something.
-pub(super) const ORDER: [usize; TOY_COUNT] = [0, 1, 4, 5, 6, 2, 3, 7, 9, 8, 10, 12, 13, 11];
+pub(super) const ORDER: [usize; TOY_COUNT] = [
+    ILLUMINATE_TOY,
+    RAGDOLL_TOY,
+    DRONE_TOY,
+    BOOMBOX_TOY,
+    MONITOR_TOY,
+    BOX_HUNT_TOY,
+    QUESTS_TOY,
+    WHEEL_OF_DOOM_TOY,
+];
 
 /// Where each toy's row stands, in the order of [`TOYS`].
 fn row_tops() -> [f32; TOY_COUNT] {
@@ -115,39 +121,18 @@ const NOTE_CHARS: f32 = 52.0;
 const SIGNATURE_ROW: f32 = 28.0;
 /// The card's "See" row under its switch.
 const SIGHT_ROW: f32 = 48.0;
-/// The Fishing card's fish log under its switch: its head (the fish caught), its line of
-/// junk and the Sell junk row (`fishing_log` prints every kind in the console).
-const LOG_HEAD: f32 = 30.0;
-const LOG_LINE: f32 = 22.0;
-const SELL_ROW: f32 = 42.0;
-/// The log book ([`crate::catch_book`]), in place of the toy's words: its head, a row
-/// of two cells, the head over the junk (or rubble), and the Share row.
-const BOOK_HEAD: f32 = 28.0;
-const BOOK_ROW: f32 = 23.0;
-const BOOK_SUBHEAD: f32 = 22.0;
-const SHARE_ROW: f32 = 44.0;
 
 /// Every command a toy is run by, in the order the page is told their keys
-/// ([`Inputs::toy_keys`]): each toy's switch, Order 66's order after its own, the
-/// Monitor's throw (held, it charges) after its own, and the Banana peel's drop after its
-/// own.
-pub(crate) const COMMANDS: [&str; 17] = [
+/// ([`Inputs::toy_keys`]): each toy's switch, the Monitor's throw (held, it charges) after its own.
+pub(crate) const COMMANDS: [&str; 9] = [
     "toy_illuminate",
-    "toy_box",
-    "toy_order66",
-    "order66",
-    "toy_hax",
     "toy_ragdoll",
     "toy_drone",
     "toy_boombox",
     "toy_monitor",
     "+monitor_throw",
     "toy_boxhunt",
-    "toy_banana",
-    "banana_drop",
-    crate::fishing::COMMAND,
     crate::wheel_of_doom::COMMAND,
-    crate::mining::COMMAND,
     crate::quests::COMMAND,
 ];
 
@@ -173,8 +158,7 @@ struct Toy {
     /// who have it on.
     sight: Option<(&'static str, &'static str)>,
     /// The card's own switches under those, each an on/off cvar of the player's and its
-    /// words (the Hax's trap, moved here from Settings > Gameplay on 03/11/2026, Lex's
-    /// idea); at most [`super::TOY_OPTION_TOKENS`].
+    /// words (the Hax's trap until 20/11/2026); at most [`super::TOY_OPTION_TOKENS`].
     options: &'static [(&'static str, &'static str)],
     token: u16,
     /// Who made it, signed on its row and its card (Sol's list of 09/11/2026: Illuminate
@@ -198,54 +182,6 @@ const TOYS: [Toy; TOY_COUNT] = [
         sight: Some((crate::toy_sight::ILLUMINATE, "See others' holocrons")),
         options: &[],
         token: TOY_TOKEN,
-        author: "Sol",
-        idea: None,
-    },
-    Toy {
-        icon: "cardboard_box",
-        name: "Cardboard box",
-        tag: "Hide in a carton; someone may lift it.",
-        title: "Cardboard box",
-        what: "Hide in a carton: you crouch in it with its music. Other SJK players see the box; one who walks up and presses Use lifts it. Die in it and everyone hears.",
-        more: None,
-        commands: &[("toy_box", "Your key")],
-        switch: "In the box",
-        sight: Some((crate::toy_sight::CARDBOARD_BOX, "See others' boxes")),
-        options: &[],
-        token: BOX_TOKEN,
-        author: "Sol",
-        idea: None,
-    },
-    Toy {
-        icon: "order66",
-        name: "Order 66",
-        tag: "One order, and everyone in it falls.",
-        title: "Order 66",
-        what: "When one player with it on executes the order, everyone with it on dies three seconds later and blows apart. One order every 30 seconds.",
-        more: Some("Join with its switch or key; the order key executes it for everyone in it."),
-        commands: &[("toy_order66", "Join key"), ("order66", "Order key")],
-        switch: "In the order",
-        sight: None,
-        options: &[],
-        token: ORDER_TOKEN,
-        author: "Sol",
-        idea: None,
-    },
-    Toy {
-        icon: "hax",
-        name: "Hax",
-        tag: "Hack a player and steer them for five seconds.",
-        title: "The Hax",
-        what: "Hold Use on a player who has it on too: the siege hack bar fills, then you steer them for five seconds, run, jump and swing included. Turn it off to break free.",
-        more: Some("With it on, hold Use on a player who has it on too."),
-        commands: &[("toy_hax", "Your key")],
-        switch: "Hacker",
-        sight: None,
-        options: &[
-            (crate::hax::TRAP_CVAR, "Trap: a hacker blows up with you"),
-            (crate::hax::AWAY_CVAR, "Trap while away"),
-        ],
-        token: HAX_TOKEN,
         author: "Sol",
         idea: None,
     },
@@ -301,16 +237,16 @@ const TOYS: [Toy; TOY_COUNT] = [
     },
     Toy {
         icon: "monitor",
-        name: "Monitor",
-        tag: "Throw an old monitor; it sends players flying.",
-        title: "Monitor",
-        what: "Throw a big old CRT monitor. One that hits a player who has it on too knocks them down as a ragdoll and sends them flying, the way it struck them; they get up once they land. With it off, monitors pass through you.",
+        name: "Force Throw",
+        tag: "Hurl old junk with the Force; it sends players flying.",
+        title: "Force Throw",
+        what: "Hurl junk with the Force: a banded crate, a wrecked R5 droid or a wrecked GONK droid. What hits a player who has it on too knocks them down as a ragdoll and sends them flying, the way it struck them; they get up once they land. A crate bursts where it comes to rest. With it off, thrown junk passes through you.",
         more: Some(
-            "Its switch lets you throw and be hit; the throw key throws one, harder the longer you hold it.",
+            "Its switch lets you throw and be hit; the throw key throws, harder the longer you hold it. Struck 5 times within 20 seconds, a Force Barrier keeps thrown junk off you for 30 seconds.",
         ),
         commands: &[("toy_monitor", "Your key"), ("+monitor_throw", "Throw key")],
         switch: "Hit me",
-        sight: Some((crate::monitor::SHOW_CVAR, "See monitors")),
+        sight: Some((crate::monitor::SHOW_CVAR, "See thrown junk")),
         options: &[],
         token: MONITOR_TOKEN,
         author: "Sol",
@@ -332,50 +268,13 @@ const TOYS: [Toy; TOY_COUNT] = [
         idea: None,
     },
     Toy {
-        icon: "banana",
-        name: "Banana peel",
-        tag: "Drop peels; players who walk onto them slip.",
-        title: "Banana peel",
-        what: "Drop a banana peel at your feet, or toss one ahead as you run. A player who has it on too and walks onto a peel slips and falls as a ragdoll, cartoon style; the peel is gone. With it off, you walk over peels.",
-        more: Some(
-            "Three peels down at a time, each for two minutes, none by a spawn point. Its switch lets you drop them and slip on them.",
-        ),
-        commands: &[
-            (crate::banana::COMMAND, "Your key"),
-            (crate::banana::DROP_COMMAND, "Drop key"),
-        ],
-        switch: "Slip on peels",
-        sight: Some((crate::banana::SHOW_CVAR, "See banana peels")),
-        options: &[],
-        token: BANANA_TOKEN,
-        author: "Sol",
-        idea: Some("Kushina"),
-    },
-    Toy {
-        icon: "fishing",
-        name: "Fishing",
-        tag: "Cast a line, wait for the bite, reel it in.",
-        title: "Fishing",
-        what: "Stand still and cast into the water ahead, or a pond where there is none. When the float dips, press Use in time to land a fish or some junk. An Echo dropped to you while you fish bites too. Other SJK players see your rod.",
-        more: Some(
-            "Moving or getting hurt puts the rod away. Junk sells to the hub for a few credits, a small sum a day.",
-        ),
-        commands: &[(crate::fishing::COMMAND, "Your key")],
-        switch: "Rod out",
-        sight: None,
-        options: &[],
-        token: FISHING_TOKEN,
-        author: "Slash",
-        idea: Some("Sanji"),
-    },
-    Toy {
         icon: "wheel_of_doom",
         name: "WHEEL OF DOOM",
-        tag: "Spin it for a DOOM coin: a holocron, or doom.",
+        tag: "Roll a DOOM coin at a Force box: a holocron, or doom.",
         title: "WHEEL OF DOOM",
-        what: "Big dark wheels stand on some maps. Press Use at one to spin it for a DOOM coin (the teddy bear in a mystery box brings one): it spins to the end of its music and may land on a holocron of any tier, your coin back, nothing, or something terrible: your keys or mouse turned against you, the world mirrored or upside down, darkness, no saber, quacks, a curse, or a blast. Everyone near sees and hears it spin.",
+        what: "Hold Use at a Force box to roll a DOOM coin instead of credits (the teddy bear in a Force box brings one): better loot than credits, a holocron of any tier 60% of the time, your coin back, nothing, or something terrible: your keys or mouse turned against you, the world mirrored or upside down, darkness, no saber, quacks, a curse, or a blast. Everyone near sees the box roll.",
         more: Some(
-            "Its switch tells your DOOM coins and the wheels of the map. One spin of a wheel at a time, not in a duel. What it does lasts a few seconds and ends on a new map or when you die.",
+            "Its switch tells your DOOM coins. One coin roll every 15 seconds. What it does lasts a few seconds and ends on a new map or when you die.",
         ),
         commands: &[(crate::wheel_of_doom::COMMAND, "Your key")],
         switch: "Coins",
@@ -384,23 +283,6 @@ const TOYS: [Toy; TOY_COUNT] = [
         token: WHEEL_OF_DOOM_TOKEN,
         author: "Sol",
         idea: None,
-    },
-    Toy {
-        icon: "mining",
-        name: "Mining",
-        tag: "Break the boulders that come up round you for ore.",
-        title: "Mining",
-        what: "Take a pickaxe and boulders come up round you. Strike one with Attack (hold it to keep swinging) to break it for ore or rubble. When it glints, strike: a clean strike counts twice and digs out rarer ore. Other SJK players see your pickaxe.",
-        more: Some(
-            "A weapon key or getting hurt puts it away. Rubble sells to the hub for a few credits, a small sum a day shared with junk.",
-        ),
-        commands: &[(crate::mining::COMMAND, "Your key")],
-        switch: "Pickaxe out",
-        sight: None,
-        options: &[],
-        token: MINING_TOKEN,
-        author: "Slash",
-        idea: Some("vinry"),
     },
     Toy {
         icon: "quests",
@@ -437,7 +319,7 @@ pub(super) fn toy_master_found(
     })
 }
 
-/// The command toy `toy`'s key `slot` runs (0 its switch's, 1 Order 66's order).
+/// The command toy `toy`'s key `slot` runs (0 its switch's, 1 the Monitor's throw).
 pub(super) fn command(toy: usize, slot: usize) -> Option<&'static str> {
     TOYS.get(toy)
         .and_then(|toy| toy.commands.get(slot))
@@ -506,18 +388,12 @@ fn text_scale() -> f32 {
 pub(super) fn states(inputs: &Inputs<'_>) -> [bool; TOY_COUNT] {
     [
         inputs.illuminate,
-        inputs.cardboard_box,
-        inputs.order66,
-        inputs.hax,
         inputs.ragdoll,
         inputs.drone,
         inputs.boombox,
         inputs.monitor,
         inputs.box_hunt,
-        inputs.banana,
-        inputs.fishing,
         inputs.wheel_of_doom,
-        inputs.mining,
         inputs.quests,
     ]
 }
@@ -787,21 +663,6 @@ impl Panel {
     fn toy_card_height(&self, toy: &Toy) -> f32 {
         let k = text_scale();
         let line = |size: f32| size * 1.42 * k;
-        if self.toy_book
-            && let Some(book) = book_height(toy.token)
-        {
-            return CARD_PAD
-                + 24.0
-                + 50.0 * k.max(1.0)
-                + SIGNATURE_ROW * k.max(1.0)
-                + 10.0
-                + book
-                + 8.0
-                + 18.0
-                + 48.0
-                + fish_log_height()
-                + CARD_PAD;
-        }
         let about = crate::menu::sjk::wrap(toy.what, (ABOUT_CHARS / k).max(12.0) as usize).count();
         let more = toy.more.map_or(0, |more| {
             crate::menu::sjk::wrap(more, (NOTE_CHARS / k).max(12.0) as usize).count()
@@ -820,11 +681,6 @@ impl Panel {
             + 48.0
             + if toy.sight.is_some() { SIGHT_ROW } else { 0.0 }
             + toy.options.len() as f32 * SIGHT_ROW
-            + if toy.token == FISHING_TOKEN || toy.token == MINING_TOKEN {
-                fish_log_height()
-            } else {
-                0.0
-            }
             + CARD_PAD
     }
 
@@ -906,19 +762,8 @@ impl Panel {
             TextAlign::Start,
         );
         y += SIGNATURE_ROW * k.max(1.0) + 10.0;
-        // The Fishing and Mining cards' log book stands in place of the toy's words.
-        let book = if self.toy_book {
-            match toy.token {
-                FISHING_TOKEN => inputs.fishing_card,
-                MINING_TOKEN => inputs.mining_card,
-                _ => None,
-            }
-        } else {
-            None
-        };
-        if let Some(card) = book {
-            y = self.log_book(frame, card, [x, y, width]);
-        } else {
+        // What the toy does, its keys, the quick wheel's line and its switches.
+        {
             y = words(
                 &mut self.ui,
                 frame,
@@ -1090,7 +935,7 @@ impl Panel {
                 frame.rect(left - 4.0, middle - 19.0, right - left + 8.0, 38.0),
             );
         }
-        // The toy's own switches (the Hax's trap).
+        // The toy's own switches.
         for (index, (_, words)) in toy.options.iter().enumerate().take(TOY_OPTION_TOKENS) {
             let middle = row + SIGHT_ROW * (index + 1) as f32;
             let on =
@@ -1111,440 +956,7 @@ impl Panel {
                 frame.rect(left - 4.0, middle - 19.0, right - left + 8.0, 38.0),
             );
         }
-        let log = match toy.token {
-            FISHING_TOKEN => inputs.fishing_card,
-            MINING_TOKEN => inputs.mining_card,
-            _ => None,
-        };
-        if let Some(card) = log {
-            let below = row + SIGHT_ROW * toy.options.len() as f32 + 30.0;
-            self.fish_log(frame, card, [x, below, width]);
-        }
     }
-
-    /// The toy's log book from (`x`, `y`) ([`crate::catch_book`]): every kind of `card`'s
-    /// log two to a row, the ones never caught as "???", the others with their count and
-    /// first day, the rare ones in gold; then the Share button. Returns where the next
-    /// line stands.
-    fn log_book(
-        &mut self,
-        frame: &Frame,
-        card: &crate::fishing_sell::Card,
-        [x, mut y, width]: [f32; 3],
-    ) -> f32 {
-        let s = frame.s;
-        let k = text_scale();
-        let found = card.book.iter().filter(|entry| entry.count > 0).count();
-        text(
-            &mut self.ui,
-            TextFamily::Display,
-            format_args!("Log book"),
-            frame.rect(x, y, width * 0.5, 22.0),
-            16.0 * s,
-            color::holo(),
-            FontWeight::Semibold,
-            TextAlign::Start,
-        );
-        text(
-            &mut self.ui,
-            TextFamily::Body,
-            format_args!("{found} of {} found", card.book.len()),
-            frame.rect(x + width * 0.5, y + 2.0, width * 0.5, 20.0),
-            14.0 * s,
-            color::muted(),
-            FontWeight::Regular,
-            TextAlign::End,
-        );
-        y += BOOK_HEAD;
-        let column = (width - 16.0) * 0.5;
-        let split = card.book_kinds.min(card.book.len());
-        for (part, entries) in [&card.book[..split], &card.book[split..]]
-            .into_iter()
-            .enumerate()
-        {
-            if entries.is_empty() {
-                continue;
-            }
-            if part == 1 {
-                let mut head = card.goods.to_owned();
-                if let Some(first) = head.get_mut(..1) {
-                    first.make_ascii_uppercase();
-                }
-                text(
-                    &mut self.ui,
-                    TextFamily::Display,
-                    format_args!("{head}"),
-                    frame.rect(x, y + 2.0, width, 18.0),
-                    13.0 * s,
-                    color::quiet(),
-                    FontWeight::Semibold,
-                    TextAlign::Start,
-                );
-                y += BOOK_SUBHEAD;
-            }
-            for (index, entry) in entries.iter().enumerate() {
-                let cell_x = x + (index % 2) as f32 * (column + 16.0);
-                let cell_y = y + (index / 2) as f32 * BOOK_ROW;
-                let caught = entry.count > 0;
-                let colour = match (caught, entry.rare) {
-                    (false, _) => color::quiet(),
-                    (true, true) => color::gold_bright(),
-                    (true, false) => color::text(),
-                };
-                let note = entry.note();
-                let note_width = crate::text::display_width(&note, 12.0) * k;
-                text(
-                    &mut self.ui,
-                    TextFamily::Body,
-                    format_args!("{}", entry.name),
-                    frame.rect(
-                        cell_x,
-                        cell_y + 2.0,
-                        (column - note_width - 6.0).max(0.0),
-                        20.0,
-                    ),
-                    14.0 * s,
-                    colour,
-                    if entry.rare && caught {
-                        FontWeight::Semibold
-                    } else {
-                        FontWeight::Regular
-                    },
-                    TextAlign::Start,
-                );
-                text(
-                    &mut self.ui,
-                    TextFamily::Body,
-                    format_args!("{note}"),
-                    frame.rect(cell_x, cell_y + 4.0, column, 18.0),
-                    12.0 * s,
-                    color::muted(),
-                    FontWeight::Regular,
-                    TextAlign::End,
-                );
-            }
-            y += entries.len().div_ceil(2) as f32 * BOOK_ROW;
-        }
-        // Share: the player's own line in the SJK chat, only when pressed.
-        y += 6.0;
-        let live = card.brag.is_some();
-        let shown = "Share in SJK chat";
-        let button_width = crate::text::display_width(shown, 15.0) * k + 28.0;
-        let rect = frame.rect(x, y, button_width, 32.0);
-        let hovered = live && self.ui.token_hovered(BRAG_TOKEN);
-        let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
-            rect,
-            radius: 8.0 * s,
-            color: color::alpha(
-                color::gold(),
-                match (live, hovered) {
-                    (true, true) => 0.22,
-                    (true, false) => 0.12,
-                    (false, _) => 0.04,
-                },
-            ),
-        });
-        let _ = self.ui.draw_list_mut().push(DrawCommand::Border {
-            rect,
-            radius: 8.0 * s,
-            width: 1.2 * s,
-            color: if live {
-                color::gold()
-            } else {
-                color::alpha(color::text(), 0.3)
-            },
-        });
-        text(
-            &mut self.ui,
-            TextFamily::Display,
-            format_args!("{shown}"),
-            frame.rect(x, y + 6.0, button_width, 22.0),
-            15.0 * s,
-            if live {
-                color::gold_bright()
-            } else {
-                color::quiet()
-            },
-            FontWeight::Semibold,
-            TextAlign::Center,
-        );
-        if live {
-            self.ui.hit_region(BRAG_TOKEN, rect);
-        }
-        let note_x = x + button_width + 12.0;
-        let note = if live {
-            "Your last rare catch, else your rarest"
-        } else {
-            "Nothing to share yet"
-        };
-        text(
-            &mut self.ui,
-            TextFamily::Body,
-            format_args!("{note}"),
-            frame.rect(note_x, y + 8.0, (x + width - note_x).max(0.0), 20.0),
-            13.0 * s,
-            color::quiet(),
-            FontWeight::Regular,
-            TextAlign::Start,
-        );
-        y + SHARE_ROW - 6.0
-    }
-
-    /// A toy's log from (`x`, `y`), the Fishing card's fish log or the Mining card's
-    /// mining log: what was caught or dug, what sells held (junk, rubble), and the Sell
-    /// button with what it pays now (when the hub buys it from the player) and the last
-    /// sale's result.
-    fn fish_log(
-        &mut self,
-        frame: &Frame,
-        card: &crate::fishing_sell::Card,
-        [x, mut y, width]: [f32; 3],
-    ) {
-        let s = frame.s;
-        let k = text_scale();
-        let _ = self.ui.draw_list_mut().push(DrawCommand::SolidRect {
-            rect: frame.rect(x, y, width, 1.0),
-            color: color::alpha(color::holo(), 0.18),
-        });
-        y += 8.0;
-        text(
-            &mut self.ui,
-            TextFamily::Display,
-            format_args!("{}", card.title),
-            frame.rect(x, y, 110.0, 22.0),
-            15.0 * s,
-            color::holo(),
-            FontWeight::Semibold,
-            TextAlign::Start,
-        );
-        text(
-            &mut self.ui,
-            TextFamily::Body,
-            format_args!("{}", card.summary),
-            frame.rect(x + 110.0, y, width - 110.0, 22.0),
-            15.0 * s,
-            color::text(),
-            FontWeight::Regular,
-            TextAlign::Start,
-        );
-        // The log book's button, or the way back to the toy's words.
-        let shown = if self.toy_book { "Back" } else { "Log book" };
-        let button_width = crate::text::display_width(shown, 14.0) * k + 22.0;
-        let rect = frame.rect(x + width - button_width, y - 3.0, button_width, 26.0);
-        let hovered = self.ui.token_hovered(LOG_BOOK_TOKEN);
-        let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
-            rect,
-            radius: 7.0 * s,
-            color: color::alpha(color::holo(), if hovered { 0.18 } else { 0.07 }),
-        });
-        let _ = self.ui.draw_list_mut().push(DrawCommand::Border {
-            rect,
-            radius: 7.0 * s,
-            width: 1.0 * s,
-            color: color::alpha(color::holo(), 0.5),
-        });
-        text(
-            &mut self.ui,
-            TextFamily::Display,
-            format_args!("{shown}"),
-            frame.rect(x + width - button_width, y + 1.0, button_width, 20.0),
-            14.0 * s,
-            color::holo(),
-            FontWeight::Semibold,
-            TextAlign::Center,
-        );
-        self.ui.hit_region(LOG_BOOK_TOKEN, rect);
-        y += LOG_HEAD - 8.0;
-        text(
-            &mut self.ui,
-            TextFamily::Body,
-            format_args!("{}", card.junk_line),
-            frame.rect(x, y, width, LOG_LINE * k),
-            14.0 * s,
-            color::muted(),
-            FontWeight::Regular,
-            TextAlign::Start,
-        );
-        y += LOG_LINE;
-        // The day's goal, the market's wanted catch (15/11/2026): room is kept for them.
-        for line in card.extra.iter().take(crate::fishing_sell::EXTRA_LINES) {
-            text(
-                &mut self.ui,
-                TextFamily::Body,
-                format_args!("{line}"),
-                frame.rect(x, y, width, LOG_LINE * k),
-                14.0 * s,
-                color::muted(),
-                FontWeight::Regular,
-                TextAlign::Start,
-            );
-            y += LOG_LINE;
-        }
-        y += 4.0;
-        let Some(pays) = card.sell else {
-            return;
-        };
-        let has_junk = card.pieces > 0;
-        let goods = card.goods;
-        let shown = if card.selling {
-            "Selling...".to_owned()
-        } else if pays > 0 && has_junk {
-            format!("Sell {goods} (+{pays} credits)")
-        } else {
-            format!("Sell {goods}")
-        };
-        let live = !card.selling && pays > 0 && has_junk;
-        let button_width =
-            ((crate::text::display_width(&shown, 17.0) * k + 32.0).max(140.0)).min(width);
-        let rect = frame.rect(x, y, button_width, 36.0);
-        let hovered = live && self.ui.token_hovered(SELL_JUNK_TOKEN);
-        let ground = if hovered {
-            0.22
-        } else if live {
-            0.12
-        } else {
-            0.04
-        };
-        let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
-            rect,
-            radius: 8.0 * s,
-            color: color::alpha(color::gold(), ground),
-        });
-        let _ = self.ui.draw_list_mut().push(DrawCommand::Border {
-            rect,
-            radius: 8.0 * s,
-            width: 1.2 * s,
-            color: if live {
-                color::gold()
-            } else {
-                color::alpha(color::text(), 0.3)
-            },
-        });
-        text(
-            &mut self.ui,
-            TextFamily::Display,
-            format_args!("{shown}"),
-            frame.rect(x, y + 6.0, button_width, 24.0),
-            17.0 * s,
-            if live {
-                color::gold_bright()
-            } else {
-                color::quiet()
-            },
-            FontWeight::Semibold,
-            TextAlign::Center,
-        );
-        if live {
-            self.ui.hit_region(SELL_JUNK_TOKEN, rect);
-        }
-        let mut note_x = x + button_width + 12.0;
-        // The catch market's own button beside it, while the hub buys fish or ore.
-        if let Some(catch_pays) = card.catch_sell {
-            let catch_goods = card.catch_goods;
-            let catch_shown = if card.selling {
-                "Selling...".to_owned()
-            } else if catch_pays > 0 {
-                format!("Sell {catch_goods} (+{catch_pays})")
-            } else {
-                format!("Sell {catch_goods}")
-            };
-            let catch_live = !card.selling && catch_pays > 0 && card.catch_pieces > 0;
-            let catch_width = ((crate::text::display_width(&catch_shown, 17.0) * k + 32.0)
-                .max(120.0))
-            .min((x + width - note_x).max(0.0));
-            let rect = frame.rect(note_x, y, catch_width, 36.0);
-            let hovered = catch_live && self.ui.token_hovered(SELL_CATCH_TOKEN);
-            let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
-                rect,
-                radius: 8.0 * s,
-                color: color::alpha(
-                    color::gold(),
-                    if hovered {
-                        0.22
-                    } else if catch_live {
-                        0.12
-                    } else {
-                        0.04
-                    },
-                ),
-            });
-            let _ = self.ui.draw_list_mut().push(DrawCommand::Border {
-                rect,
-                radius: 8.0 * s,
-                width: 1.2 * s,
-                color: if catch_live {
-                    color::gold()
-                } else {
-                    color::alpha(color::text(), 0.3)
-                },
-            });
-            text(
-                &mut self.ui,
-                TextFamily::Display,
-                format_args!("{catch_shown}"),
-                frame.rect(note_x, y + 6.0, catch_width, 24.0),
-                17.0 * s,
-                if catch_live {
-                    color::gold_bright()
-                } else {
-                    color::quiet()
-                },
-                FontWeight::Semibold,
-                TextAlign::Center,
-            );
-            if catch_live {
-                self.ui.hit_region(SELL_CATCH_TOKEN, rect);
-            }
-            note_x += catch_width + 12.0;
-        }
-        // Beside them, the last sale's result, else why it does nothing.
-        let nothing = format!("No {goods} to sell");
-        let note = match &card.line {
-            Some(line) => line.as_str(),
-            None if !has_junk => nothing.as_str(),
-            None if pays == 0 => "The hub buys no more today",
-            None => "A small sum a day",
-        };
-        text(
-            &mut self.ui,
-            TextFamily::Body,
-            format_args!("{note}"),
-            frame.rect(note_x, y + 9.0, (x + width - note_x).max(0.0), 20.0),
-            13.0 * s,
-            color::quiet(),
-            FontWeight::Regular,
-            TextAlign::Start,
-        );
-    }
-}
-
-/// How tall the Fishing card's fish log (and the Mining card's log) stands below its
-/// switch.
-fn fish_log_height() -> f32 {
-    30.0 + LOG_HEAD + LOG_LINE * (1 + crate::fishing_sell::EXTRA_LINES) as f32 + 4.0 + SELL_ROW
-}
-
-/// How tall the log book of the toy `token` stands: its kinds (fish and junk, ores and
-/// rubble) two to a row. `None` for a toy with no log book.
-fn book_height(token: u16) -> Option<f32> {
-    let (first, all) = match token {
-        FISHING_TOKEN => (crate::fishing::FISH_KINDS, crate::fishing::CATCHES.len()),
-        MINING_TOKEN => (crate::mining::ORE_KINDS, crate::mining::FINDS.len()),
-        _ => return None,
-    };
-    Some(book_rows_height(first, all - first))
-}
-
-/// How tall a log book of `first` kinds then `rest` stands.
-fn book_rows_height(first: usize, rest: usize) -> f32 {
-    BOOK_HEAD
-        + first.div_ceil(2) as f32 * BOOK_ROW
-        + if rest > 0 {
-            BOOK_SUBHEAD + rest.div_ceil(2) as f32 * BOOK_ROW
-        } else {
-            0.0
-        }
-        + SHARE_ROW
 }
 
 /// `body` from (`x`, `y`) in a column `width` wide, wrapped at `chars` to a line at the
@@ -1597,16 +1009,10 @@ mod tests {
     #[test]
     fn a_look_toy_id_finds_its_name() {
         for (id, name) in [
-            (crate::cardboard_box::TOY, "Cardboard box"),
-            (crate::order66::TOY, "Order 66"),
-            (crate::hax::TOY, "Hax"),
             (crate::drone::TOY, "Drone"),
             (crate::boombox::TOY, "Boombox"),
-            (crate::monitor::TOY, "Monitor"),
+            (crate::monitor::TOY, "Force Throw"),
             (crate::box_hunt::TOY, "Box hunt"),
-            (crate::banana::TOY, "Banana peel"),
-            (crate::fishing::TOY, "Fishing"),
-            (crate::mining::TOY, "Mining"),
             (crate::quests::TOY, "Quests"),
         ] {
             assert_eq!(name_of(id), Some(name), "{id}");
@@ -1651,7 +1057,7 @@ mod tests {
                         }
                     }
                     let mut card = vec![TOY_SWITCH_TOKEN, BIND_TOKEN];
-                    if toy == 2 || toy == 7 || toy == 9 {
+                    if toy == MONITOR_TOY {
                         card.push(BIND_SECOND_TOKEN);
                     }
                     for token in card {
@@ -1672,7 +1078,7 @@ mod tests {
 
     /// The sections hold every toy once, the rows stand in the list's order without
     /// overlapping, and the arrows walk that order: down from Boombox, the last of
-    /// Around you, comes Order 66.
+    /// Around you, comes the Monitor.
     #[test]
     fn the_sections_hold_every_toy_once() {
         let mut seen = ORDER.to_vec();
@@ -1687,29 +1093,21 @@ mod tests {
             assert!(tops[pair[1]] >= tops[pair[0]] + ROW_HEIGHT, "{pair:?}");
         }
         assert!(tops[ORDER[TOY_COUNT - 1]] + ROW_HEIGHT <= super::super::view::KEYS_Y);
-        assert_eq!(step(6, 1, false), 2);
-        assert_eq!(step(2, -1, false), 6);
+        assert_eq!(step(BOOMBOX_TOY, 1, false), MONITOR_TOY);
+        assert_eq!(step(MONITOR_TOY, -1, false), BOOMBOX_TOY);
         assert_eq!(step(ORDER[TOY_COUNT - 1], 1, true), ORDER[0]);
         assert_eq!(step(ORDER[TOY_COUNT - 1], 1, false), ORDER[TOY_COUNT - 1]);
-        assert_eq!(signature(&TOYS[9]), "Made by Sol, Kushina's idea");
+        assert_eq!(
+            signature(&TOYS[QUESTS_TOY]),
+            "Made by Slash, wonner67's idea"
+        );
         assert_eq!(signature(&TOYS[0]), "Made by Sol");
     }
 
-    /// Every toy's card holds its words in full below its highest top, and the Fishing
-    /// and Mining cards their log book.
+    /// Every toy's card holds its words in full below its highest top.
     #[test]
     fn every_toy_card_holds_its_words() {
-        let mut panel = Panel::new();
-        panel.toy_book = true;
-        for toy in TOYS.iter().filter(|toy| book_height(toy.token).is_some()) {
-            assert!(
-                panel.toy_card_height(toy) <= CARD_BOTTOM - CARD_TOP_MIN,
-                "{} {}",
-                toy.name,
-                panel.toy_card_height(toy)
-            );
-        }
-        panel.toy_book = false;
+        let panel = Panel::new();
         for toy in &TOYS {
             assert!(
                 panel.toy_card_height(toy) <= CARD_BOTTOM - CARD_TOP_MIN,
@@ -1722,8 +1120,8 @@ mod tests {
     }
 
     /// A toy's key is bound from its card: K (or a click) waits, a key binds it to the
-    /// toy's command, Backspace clears it, Escape lets go without closing the page; Order
-    /// 66's order key binds `order66`.
+    /// toy's command, Backspace clears it, Escape lets go without closing the page; the
+    /// Monitor's throw key binds `+monitor_throw`.
     #[test]
     fn a_toy_key_is_bound_from_its_card() {
         let mut panel = super::super::tests::drawn(
@@ -1775,15 +1173,15 @@ mod tests {
             let _ = panel.handle_pointer(event, true);
         }
         assert_eq!(panel.bind_wait, None, "a click elsewhere lets go");
-        panel.toy = 2;
+        panel.toy = MONITOR_TOY;
         assert_eq!(
             panel.bind_key(KeyCode::KeyO, Some("o".to_owned()), 1),
             PanelAction::Bind {
-                command: "order66",
+                command: "+monitor_throw",
                 key: "o".to_owned(),
             }
         );
-        assert_eq!(command(2, 1), Some("order66"));
+        assert_eq!(command(MONITOR_TOY, 1), Some("+monitor_throw"));
         assert_eq!(command(0, 1), None);
         assert!(COMMANDS.iter().all(|command| {
             TOYS.iter()

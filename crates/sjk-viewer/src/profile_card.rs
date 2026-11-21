@@ -615,6 +615,7 @@ mod tests {
             wheel_of_doom: None,
             wheel_of_doom_revision: 0,
             wheel_of_doom_spin: None,
+            mystery_box_doom: None,
             box_hunt: None,
             quests: None,
             secrets: None,
@@ -668,8 +669,8 @@ mod tests {
     #[test]
     fn the_line_says_what_the_hub_knows() {
         let standings = standings();
-        // The retired Surveyor, not held, is not counted.
-        let total = standings.len() - 1;
+        // The retired ones, none held, are not counted.
+        let total = crate::achievements::OBTAINABLE;
         let online = snapshot(Status::Online, Some(me()));
         let summary = summarise(
             "^1Sol",

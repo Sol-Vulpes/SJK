@@ -104,6 +104,39 @@ pub struct SpinAnswer {
     pub profile: Profile,
 }
 
+/// One DOOM coin roll at a Force box (a mystery box, since 20/11/2026: the WHEEL OF DOOM
+/// merged into it), as the roller is answered (`POST /v1/mystery-box/doom`).
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
+pub struct Doom {
+    /// The box rolled at.
+    #[serde(rename = "box")]
+    pub box_id: i64,
+    /// What it gave: one of the wheel's outcomes (`holo_rare`, `mirror`, ...).
+    pub outcome: String,
+    /// The holocron a holocron outcome gave.
+    #[serde(default)]
+    pub holocron: Option<BoxHolocron>,
+    /// The DOOM coins the roller holds after.
+    #[serde(default)]
+    pub coins: Option<u64>,
+}
+
+/// `POST /v1/mystery-box/doom`'s answer.
+#[derive(Clone, Debug, Deserialize)]
+pub struct DoomAnswer {
+    /// What the roll gave.
+    pub doom: Doom,
+    /// The roller's profile after (a holocron won).
+    pub profile: Profile,
+}
+
+/// What a feed event of the mystery box's toy says of a coin roll: box `box` gave
+/// `outcome` (`doom_<box>_<outcome>`, since 20/11/2026).
+pub fn parse_doom_event(event: &str) -> Option<(i64, &str)> {
+    let (id, outcome) = event.strip_prefix("doom_")?.split_once('_')?;
+    Some((id.parse().ok()?, outcome)).filter(|(_, outcome)| !outcome.is_empty())
+}
+
 /// What a feed event of [`TOY`] says: placed wheel `wheel` landed on `outcome`
 /// (`land_<wheel>_<outcome>`; the toy's `spin_<outcome>` before 11/11/2026 is not read).
 pub fn parse_event(event: &str) -> Option<(i64, &str)> {
@@ -297,5 +330,24 @@ mod tests {
                 left: None
             }
         );
+    }
+
+    #[test]
+    fn a_coin_roll_event_names_its_box_and_outcome() {
+        assert_eq!(
+            parse_doom_event("doom_12_holo_rare"),
+            Some((12, "holo_rare"))
+        );
+        assert_eq!(parse_doom_event("doom_3_mirror"), Some((3, "mirror")));
+        assert_eq!(parse_doom_event("open_3_coins"), None);
+        assert_eq!(parse_doom_event("doom_x_mirror"), None);
+        assert_eq!(parse_doom_event("doom_3_"), None);
+        let doom: Doom = serde_json::from_value(serde_json::json!({
+            "id": 9, "box": 4, "outcome": "holo_rare",
+            "holocron": {"id": 2, "tier": "rare"}, "coins": 1,
+        }))
+        .unwrap();
+        assert_eq!((doom.box_id, doom.coins), (4, Some(1)));
+        assert_eq!(doom.holocron.unwrap().tier, "rare");
     }
 }

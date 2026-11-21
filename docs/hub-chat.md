@@ -1068,8 +1068,7 @@ and plays changes. The code still says "mute" (`chat_mutes.rs`, `muted_players.r
   (`HiltCatalog::is_staff`, from the saber's definition).
 - **Everything else of theirs:** their emotes do not play (one playing when they are
   blocked ends; `emotes_frame.rs`, beside `sjkemote mute`'s emote-only list), their
-  Order 66 orders and cardboard box spots are ignored (`order66.rs`,
-  `cardboard_box.rs`), no player card shows when you aim at them and a card pinned
+  no player card shows when you aim at them and a card pinned
   before loses their hub profile (`hud_runtime.rs`), their world pings are not shown
   (`world_ping_frame.rs`), their toys and looks are not drawn (`looks.rs`), their GIFs
   are never fetched (`chat_gifs.rs`) and their holocron lines go with their chat. Their
@@ -1350,8 +1349,8 @@ a modified client could read every ping of its server. Only a server that tells 
 ## Toy events
 
 A toy event is something one SJK player's toy did to another (since 16/10/2026): the
-first is the [cardboard box](client.md#cardboard-box)'s `spotted`, a box lifted with
-`+use`. It rides the pings' path: the sender's client sends the toy, the event and the
+first was the cardboard box's `spotted`, a box lifted with `+use` (the box was removed
+on 20/11/2026). It rides the pings' path: the sender's client sends the toy, the event and the
 target's slot (`Service::toy_event`, through the identity worker), the hub relays it in
 the feed of that game server's readers (`toys`), and the feed thread queues it with the
 server it was read for (`Service::take_toy_events`). A reader applies it only when the
@@ -1361,7 +1360,7 @@ box: the readers decide, so a modified client could lift anyone's box, which tak
 a toy and nothing else. Without the hub's change (before 16/10/2026) the event is
 refused and only the lifter's screen hides the box, for at most 15 seconds.
 
-The second (since 17/10/2026, no hub change) is [Order 66](client.md#order-66)'s order:
+The second (17/10/2026 to 20/11/2026, no hub change) was Order 66's order:
 toy `order66`, event `execute_<moment>`, the game server time (milliseconds) at which
 every player with the toy on dies, 3 seconds after it was given. It concerns everyone
 with the toy on, not one player: the hub wants a target other than the sender, so the
@@ -1382,15 +1381,14 @@ raised it (any other slot would do; the readers ignore the target).
 The toy relay (since 21/10/2026, Sol-Vulpes/SJK-hub, `PROTOCOL.md`, "Toy relay")
 carries toy events that must reach one player at once, many times a
 second, which the feed's toy events (one a second, read by a poll every few seconds)
-cannot: the [Hax](client.md#hax)'s hacker steering the hacked player, the
+cannot: the Hax's hacker steering the hacked player (until 20/11/2026), the
 [Ragdoll](client.md#ragdoll)'s falls, told to every SJK player on the server, the
 [Drone](client.md#drone)'s place, told to each in turn, the
 [Boombox](client.md#boombox)'s track, told to each player within reach, and its box on
 the floor, told to every SJK player (since 03/11/2026), and the
 [Monitor](client.md#monitor)'s throws, told to every SJK player, the nearest first (its
-hits ride the Ragdoll's falls), and the [Banana peel](client.md#banana-peel)'s peels, told
-the same way, and their slips (since 29/10/2026), and the [Prop gun](client.md#prop-gun)'s
-guns held and shots fired (since 01/11/2026), and the
+hits ride the Ragdoll's falls), and (29/10/2026 to 20/11/2026) the Banana peel's peels and
+slips, and the Prop gun's guns held and shots fired (01/11/2026 to 20/11/2026), and the
 [status balloons](client.md#status-balloons)' reasons, told to every SJK player when they
 change (since 08/11/2026). Two threads of
 the identity service of their own ([relay.rs](../crates/sjk-identity/src/relay.rs),

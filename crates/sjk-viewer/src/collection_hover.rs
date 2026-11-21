@@ -132,20 +132,6 @@ impl Panel {
                 ],
             });
         }
-        if token == BOX_TOKEN {
-            return Some(Card {
-                title: "Cardboard box".to_owned(),
-                colour: color::gold_bright(),
-                lines: vec![
-                    Line::how(
-                        "Every SJK player has it. Get in here, from the quick wheel's Toys \
-                         page or with a key bound to toy_box.",
-                    ),
-                    Line::status(crate::editions::name(crate::editions::ALPHA)),
-                    Line::held("Yours"),
-                ],
-            });
-        }
         if token == RAGDOLL_TOKEN {
             return Some(Card {
                 title: "Ragdoll".to_owned(),
@@ -205,21 +191,6 @@ impl Panel {
                 ],
             });
         }
-        if token == BANANA_TOKEN {
-            return Some(Card {
-                title: "Banana peel".to_owned(),
-                colour: color::gold_bright(),
-                lines: vec![
-                    Line::how(
-                        "Every SJK player has it. Turn it on here or with a key bound to \
-                         toy_banana, then drop peels with your drop key. Players who have it \
-                         on slip on the ones they walk onto.",
-                    ),
-                    Line::status(crate::editions::name(crate::editions::ALPHA)),
-                    Line::held("Yours"),
-                ],
-            });
-        }
         if token == QUESTS_TOKEN {
             return Some(Card {
                 title: "Quests".to_owned(),
@@ -235,59 +206,15 @@ impl Panel {
                 ],
             });
         }
-        if token == FISHING_TOKEN {
-            return Some(Card {
-                title: "Fishing".to_owned(),
-                colour: color::gold_bright(),
-                lines: vec![
-                    Line::how(
-                        "Every SJK player has it. Get the rod out here, from the quick \
-                         wheel's Toys page or with a key bound to toy_fishing, and stand \
-                         still: water ahead, or a pond where there is none.",
-                    ),
-                    Line::status(crate::editions::name(crate::editions::ALPHA)),
-                    Line::held("Yours"),
-                ],
-            });
-        }
         if token == MONITOR_TOKEN {
             return Some(Card {
-                title: "Monitor".to_owned(),
+                title: "Force Throw".to_owned(),
                 colour: color::gold_bright(),
                 lines: vec![
                     Line::how(
                         "Every SJK player has it. Turn it on here, from the quick wheel's Toys \
                          page or with a key bound to toy_monitor, then throw (hold the throw key \
                          to charge) at players who have it on too.",
-                    ),
-                    Line::status(crate::editions::name(crate::editions::ALPHA)),
-                    Line::held("Yours"),
-                ],
-            });
-        }
-        if token == HAX_TOKEN {
-            return Some(Card {
-                title: "The Hax".to_owned(),
-                colour: color::gold_bright(),
-                lines: vec![
-                    Line::how(
-                        "Every SJK player has it. Turn it on here, from the quick wheel's Toys \
-                         page or with a key bound to toy_hax; hold Use on a player who has it \
-                         on to hack them.",
-                    ),
-                    Line::status(crate::editions::name(crate::editions::ALPHA)),
-                    Line::held("Yours"),
-                ],
-            });
-        }
-        if token == ORDER_TOKEN {
-            return Some(Card {
-                title: "Order 66".to_owned(),
-                colour: color::gold_bright(),
-                lines: vec![
-                    Line::how(
-                        "Every SJK player has it. Turn it on here, from the quick wheel's Toys \
-                         page or with a key bound to toy_order66; order66 executes it.",
                     ),
                     Line::status(crate::editions::name(crate::editions::ALPHA)),
                     Line::held("Yours"),

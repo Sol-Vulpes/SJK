@@ -3,12 +3,10 @@
 //! colour, the explanations in a command of their own).
 //!
 //! - **Switched:** every toy with an on/off switch says its name and **ON** in green or
-//!   **OFF** in red on the centre of the screen ([`switched`]): Illuminate, the cardboard
-//!   box, Order 66, the Hax, the Drone, the Monitor, Box hunt and the Banana peel, and
-//!   the Boombox put away (its start names the track instead). Said only for the
-//!   player's own switch (a
-//!   bind, the quick wheel, the Collection's Toys tab); a toy restored at start
-//!   (`toy_saved`) or taken off by the game (a box lifted) says nothing.
+//!   **OFF** in red on the centre of the screen ([`switched`]): Illuminate, the Drone,
+//!   the Monitor and Box hunt, and the Boombox put away (its start names
+//!   the track instead). Said only for the player's own switch (a bind, the quick wheel,
+//!   the Collection's Toys tab); a toy restored at start (`toy_saved`) says nothing.
 //! - **`toy_help`** ([`COMMAND`]) lists every toy in the console, its name in yellow and,
 //!   in white, what it does and how ([`help_lines`]).
 
@@ -24,26 +22,11 @@ pub(crate) fn switched(name: &str, on: bool) -> String {
 }
 
 /// Every toy: its name, its switch and what it does and how, in `toy_help`'s order.
-pub(crate) const TOYS: [(&str, &str, &str); 16] = [
+pub(crate) const TOYS: [(&str, &str, &str); 9] = [
     (
         "Illuminate",
         "toy_illuminate",
         "a holocron floats by your shoulder and lights the way; SJK players see it",
-    ),
-    (
-        "Cardboard box",
-        "toy_box",
-        "hide in a box, crouched; another player lifts it with Use",
-    ),
-    (
-        "Order 66",
-        "toy_order66",
-        "everyone who has it on falls when someone gives the order (order66)",
-    ),
-    (
-        "Hax",
-        "toy_hax",
-        "hold Use on a player who has it on to hack them and steer them for a few seconds",
     ),
     (
         "Ragdoll",
@@ -63,7 +46,7 @@ pub(crate) const TOYS: [(&str, &str, &str); 16] = [
     (
         "Monitor",
         "toy_monitor",
-        "throw monitors with your throw key, hold it to charge; monitors knock you flying",
+        "hurl junk with your throw key, hold it to charge; thrown junk knocks you flying",
     ),
     (
         "Tag",
@@ -81,29 +64,9 @@ pub(crate) const TOYS: [(&str, &str, &str); 16] = [
         "you may be given a quest, such as hugging two players within a minute, for an Echo",
     ),
     (
-        "Banana peel",
-        "toy_banana",
-        "drop peels with banana_drop; players who have it on and walk onto one slip and fall",
-    ),
-    (
-        "Prop gun",
-        "toy_propgun",
-        "hold a gun from a pk3 instead of your weapon (propgun chooses it); its bolts knock down players who have it on",
-    ),
-    (
-        "Fishing",
-        "toy_fishing",
-        "stand still and cast; press Use when the float dips to land a fish or junk for your fish log",
-    ),
-    (
         "WHEEL OF DOOM",
         "toy_wheelofdoom",
         "tells your DOOM coins; spin a wheel standing on the map with Use, for a coin: it may turn your keys, mouse or view against you, or give a holocron",
-    ),
-    (
-        "Mining",
-        "toy_mining",
-        "boulders come up round you; strike one with Use to break it for ore, and strike as it glints for a clean strike",
     ),
 ];
 
@@ -143,9 +106,6 @@ mod tests {
         assert_eq!(lines.len(), TOYS.len() + 1);
         for command in [
             crate::illuminate::COMMAND,
-            crate::cardboard_box::COMMAND,
-            crate::order66::COMMAND,
-            crate::hax::COMMAND,
             crate::ragdoll::COMMAND,
             crate::drone::COMMAND,
             crate::boombox::COMMAND,
@@ -153,8 +113,6 @@ mod tests {
             crate::tags::COMMAND,
             crate::box_hunt::COMMAND,
             crate::quests::COMMAND,
-            crate::banana::COMMAND,
-            crate::propgun::COMMAND,
             crate::wheel_of_doom::COMMAND,
         ] {
             let naming: Vec<_> = lines

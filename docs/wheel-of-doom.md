@@ -1,5 +1,14 @@
 # WHEEL OF DOOM
 
+**Since 20/11/2026 no wheel stands on a map** (Sol: the WHEEL merged into the
+[Force box](mystery-boxes.md#the-doom-coin-roll)): the DOOM coin rolls at a box, held Use,
+for the WHEEL's outcomes at the box's own odds, and its punishments strike through the
+effects below (`wheel_of_doom_outcome`, shared with the box). The client takes no placed
+wheel and `wheelofdoom_place` refuses; the hub keeps the placed wheels and the spin route
+for older clients until the release, which deletes them with the client's wheel drawing.
+`toy_wheelofdoom` says the player's coins and points at the Force box. What follows is the
+wheel as it stood.
+
 Big dark wheels SJK's creator places on maps (Sol's design of 07/11/2026; placed since
 11/11/2026), which any SJK player spins with Use for a DOOM coin, the only way to spin
 one: a [mystery box](mystery-boxes.md) that blows up (the teddy bear) brings a coin. The
