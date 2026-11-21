@@ -20,7 +20,7 @@ fn searchable() -> &'static Searchable {
         let tab =
             |caption: &str| settings(TABS.iter().position(|tab| *tab == caption).unwrap_or(0));
         let advanced = |group| Group::Advanced(group).rows();
-        let sources: [(&'static str, &'static [Setting]); 16] = [
+        let sources: [(&'static str, &'static [Setting]); 17] = [
             ("Display", Group::Display.rows()),
             // The renderer and the Video rows Display leaves to Graphics.
             ("Graphics", tab("VIDEO")),
@@ -28,6 +28,7 @@ fn searchable() -> &'static Searchable {
             ("Graphics: lighting", RENDER_LIGHTING),
             ("Graphics: shadows", RENDER_SHADOWS),
             ("Graphics: weather", RENDER_WEATHER),
+            ("Graphics: low FPS night", RENDER_LOW_FPS_NIGHT),
             ("Sound", advanced(Advanced::Sound)),
             ("Controls", tab("CONTROLS")),
             ("Gameplay", advanced(Advanced::Gameplay)),

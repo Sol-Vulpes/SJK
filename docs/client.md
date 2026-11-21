@@ -548,7 +548,8 @@ one group and regroups the settings screen's GAME, HUD, HUD+ and TEXT tabs by su
     display, frame rate, field of view, marks, shadows, gamma); Image, Lighting and Shadows are the
     renderer settings' tabs; Weather is the renderer settings' WEATHER tab
     (weather, density, quality, forced weather, ground fog, clouds; see
-    [Weather](rendering.md#weather)).
+    [Weather](rendering.md#weather)); Low FPS Night is its LOW FPS NIGHT tab
+    (see [Low FPS Night](rendering.md#low-fps-night)).
   - Gameplay: Mouse is the CONTROLS settings (retail's Mouse/Joystick, moved
     here from the key bindings). Game Options holds the gameplay rows (simple
     items, forced models, saber and speed trails, aura shell, shader remaps,
@@ -2538,7 +2539,7 @@ disruptor's scope, the binoculars) keeps the status hidden rather than bringing 
 back for the zoom (`Presentation::Covered` in `ground_hud/readout.rs`).
 Names rend2 or EternalJK use with another meaning are avoided.
 
-These rendering cvars have their own four groups. The SJK UI's Settings
+These rendering cvars have their own five groups. The SJK UI's Settings
 gathers them in its Graphics category; with the classic menu style they are
 panels of the Setup page's GRAPHICS page (in the main menu and the in-game
 pop-up), after Video. A renderer entry without a panel of its own opens the SJK
@@ -2552,6 +2553,7 @@ of VIDEO is gone (10/10/2026). The groups are:
 | LIGHTING (Solar Renderer lighting) | Real-time lighting (`r_dayNight`), bounced light (`r_bouncedLight`), lamp shadows (`r_lampShadows`), live lighting (`r_liveLighting`: Baked bounce, Live with casters kept, All live), sunlight brightness, ambient fill and its corner shading, indirect boost, emission-map lights (`r_emissiveLights`), glowing lamp light; *Light shafts*: light shafts (`r_volumetrics`), their clarity, sunbeam dust (`r_dustMotes`: Off, Light, Full); *Time of day*: time-of-day sky (`r_daySky`), time of day, the PC's clock (`r_dayClock`), day length (`r_dayMinutes`: holds still, 10 or 30 minutes, 1 or 24 hours) |
 | SHADOWS | World and character sun shadows, shadow resolution (Low 512 to Ultra 4096), shadow softness (`r_sunShadowTaps`: Hard 4 to Softest 32), sharp and close cascade distances (Short to Very long), slit closing, contact shadows |
 | WEATHER | Weather (`r_weather`), its density (`r_weatherDensity`: Light, Original, Double, Triple, Quadruple), quality (`r_weatherQuality`), forced weather (`r_weatherForce`), ground fog (`r_weatherFog`), volumetric clouds (`r_clouds`), lightning in storms (`r_weatherLightning`), wet reflections (`r_weatherReflections`), puddles, rain visibility, haze and spray, ground fog thickness (`r_weatherPuddles`, `r_weatherRainOpacity`, `r_weatherHaze`, `r_weatherFogDensity`) and settled snow (`r_weatherSnowCover`); see [Weather](rendering.md#weather) |
+| LOW FPS NIGHT | Low FPS Night (`r_lowFpsNight`), Night brightness (`r_lowFpsNightLevel`, 0.05 to 1 as seen) and Lamp light kept (`r_lowFpsNightLamps`, 0 to 1): a fixed night on baked lighting at no cost; see [Low FPS Night](rendering.md#low-fps-night) |
 
 Since 10/11/2026 (Sol: "make more dropdowns when it makes sense with explicit settings more
 than sliders") the settings whose numbers are steps of a few known costs are dropdowns of

@@ -71,12 +71,14 @@ pub(crate) const ICONS: [(&str, &[u8]); 32] = [
     ),
     ("shadows", include_bytes!("../assets/settings/shadows.png")),
     ("weather", include_bytes!("../assets/settings/weather.png")),
+    // Low FPS Night's tab; it took the unused spare crosshair's cell, the atlas being
+    // full (`assets/settings/README.md`).
+    (
+        "low_fps_night",
+        include_bytes!("../assets/settings/low_fps_night.png"),
+    ),
     ("text", include_bytes!("../assets/settings/text.png")),
     ("camera", include_bytes!("../assets/settings/camera.png")),
-    (
-        "crosshair",
-        include_bytes!("../assets/settings/crosshair.png"),
-    ),
     (
         "nameplates",
         include_bytes!("../assets/settings/nameplates.png"),

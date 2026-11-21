@@ -962,6 +962,7 @@ pub(super) fn group_icon(name: &str) -> Option<&'static str> {
         "lighting" => "lighting",
         "shadows" => "shadows",
         "weather" => "weather",
+        "low fps night" => "low_fps_night",
         _ => return None,
     })
 }

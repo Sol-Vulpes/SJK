@@ -505,8 +505,8 @@ mod tests {
             .collect();
         assert_eq!(
             groups,
-            [0, 1, 2, 3].map(|tab| Panel::Renderer { tab }).to_vec(),
-            "IMAGE, LIGHTING, SHADOWS and WEATHER, in the renderer tabs' order"
+            [0, 1, 2, 3, 4].map(|tab| Panel::Renderer { tab }).to_vec(),
+            "IMAGE, LIGHTING, SHADOWS, WEATHER and LOW FPS NIGHT, in the renderer tabs' order"
         );
         for page in [Page::Graphics, Page::Gameplay] {
             menu.show(page);

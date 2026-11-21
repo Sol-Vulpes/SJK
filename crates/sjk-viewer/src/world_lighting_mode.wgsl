@@ -1,5 +1,32 @@
 override visible_emission: bool = false;
 
+// Low FPS Night (`r_lowFpsNight`, `dynamic_light_settings::night_bits`): set only on baked
+// lighting. Bit 5 of the model word turns it on, bits 8..15 hold the level (as seen),
+// 16..23 the lamps.
+fn night_on() -> bool {
+    return (point_lights.metadata.y & 32u) != 0u;
+}
+
+// The night's linear share of the bake on dark and middling light: the level as seen,
+// to the power 2.2.
+fn night_level() -> f32 {
+    let level = max(f32((point_lights.metadata.y >> 8u) & 255u) / 255.0, 0.05);
+    return pow(level, 2.2);
+}
+
+// Baked light `light` (linear) at night: darkened to the level, the brightest bake (lamp
+// hot spots) keeping more by the lamps.
+fn night_bake(light: vec3<f32>) -> vec3<f32> {
+    return light * night_factor(max(light.r, max(light.g, light.b)));
+}
+
+// The factor on baked light whose brightest linear channel is `peak`; twin of
+// `day_live::night_factor`.
+fn night_factor(peak: f32) -> f32 {
+    let lamps = f32((point_lights.metadata.y >> 16u) & 255u) / 255.0;
+    return mix(night_level(), 1.0, lamps * smoothstep(0.45, 1.0, peak));
+}
+
 // One material-composition hook. Zero keeps the previous arithmetic and blend ordering.
 fn apply_lighting_mode(input: VertexOutput, primary: vec4<f32>, secondary: vec4<f32>) -> vec4<f32> {
     let mode = point_lights.metadata.z;
@@ -54,6 +81,20 @@ fn apply_lighting_mode(input: VertexOutput, primary: vec4<f32>, secondary: vec4<
         }
     }
     color = vec4(model_sun_color(input,color.rgb),color.a);
+    // Low FPS Night: the bake (lightmap texels, the world's vertex-baked colour) darkened;
+    // textures, emission and additive stages keep their light.
+    if night_on() && !fullbright && !realtime_active() {
+        if base_lightmap { base = vec4(night_bake(base.rgb), base.a); }
+        if extra_lightmap && stage.secondary_control.z > 0.5 {
+            extra = vec4(night_bake(extra.rgb), extra.a);
+        }
+        let rgb = i32(stage.generators.x);
+        if (flags & 1u) != 0u && (rgb == 2 || rgb == 3) && input.entity_control.x <= 0.5 &&
+            input.light_ambient.a == 0.0 {
+            let baked = pow(max(color.rgb, vec3(0.0)), vec3(2.2));
+            color = vec4(pow(night_bake(baked), vec3(1.0 / 2.2)), color.a);
+        }
+    }
     let emitted = select(vec3(0.0), emitted_light(input), !fullbright);
     // Real-time lighting replaces baked illumination; authored textures retain their material role.
     if !fullbright && base_lightmap { base = realtime_lightmap(input, base); base = vec4(base.rgb+emitted,base.a); }

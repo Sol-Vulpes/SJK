@@ -271,12 +271,13 @@ const GRAPHICS_SUBHEADINGS: &[(&str, &str)] = &[
 
 /// The renderer tabs [`Group::Graphics`] gathers after [`GRAPHICS_LEAD`], each
 /// under its heading.
-fn graphics_tabs() -> [(&'static str, &'static [Setting]); 4] {
+fn graphics_tabs() -> [(&'static str, &'static [Setting]); 5] {
     [
         ("Image", RENDER_IMAGE),
         ("Solar Renderer lighting", RENDER_LIGHTING),
         ("Shadows", RENDER_SHADOWS),
         ("Weather", RENDER_WEATHER),
+        ("Low FPS Night", RENDER_LOW_FPS_NIGHT),
     ]
 }
 
@@ -293,6 +294,7 @@ fn find(cvar: &str) -> Option<Setting> {
                 RENDER_LIGHTING,
                 RENDER_SHADOWS,
                 RENDER_WEATHER,
+                RENDER_LOW_FPS_NIGHT,
             ]
             .into_iter()
             .flatten(),
@@ -1070,6 +1072,7 @@ mod tests {
                     RENDER_LIGHTING,
                     RENDER_SHADOWS,
                     RENDER_WEATHER,
+                    RENDER_LOW_FPS_NIGHT,
                 ]
                 .into_iter()
                 .flatten(),
@@ -1266,9 +1269,10 @@ mod tests {
                 "Shadows",
                 "Weather",
                 "Rain looks",
+                "Low FPS Night",
             ]
         );
-        assert_eq!(lines.len(), rows.len() + 5 + GRAPHICS_SUBHEADINGS.len());
+        assert_eq!(lines.len(), rows.len() + 6 + GRAPHICS_SUBHEADINGS.len());
         // Every row once, in order.
         let shown: Vec<usize> = lines
             .iter()
