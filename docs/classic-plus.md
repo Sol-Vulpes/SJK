@@ -55,6 +55,35 @@ A classic+ page must still read as the retail menu it stands for.
   bottom says what the hovered or focused item does. Classic screens and the
   SJK UI edit the same values, so switching style never loses anything.
 
+## The own look
+
+Since 21/11/2026 (Sol's request: a classic style of our own that is neat on large
+screens) the classic menus have a second look, `ui_classicLook sjk` (archived; Settings
+> Interface > Menus > Classic menus' look, Retail or SJK; `retail` is the default, the
+stock look being the default look). It keeps every page, entry and key of the classic
+style, so the rules of this page still say where things are, and changes only what is
+drawn ([own_look.rs](../crates/sjk-viewer/src/menu/classic/own_look.rs)):
+
+- **No retail picture.** The art set the classic screens are handed is empty
+  (`own_look::art`, in `sync_menu_style`), so each page draws the version it always had
+  for a player without the game's art: rules, bands, boxes and the title in type,
+  sharp at any size, where the retail pictures are 640x480 art stretched over the
+  window.
+- **The theme's colours.** Retail's colours, which the pages go on naming, are swapped
+  for the theme's when a page is finished (`own_look::recolour`, called by
+  `MenuCanvas::finish`; `DrawList::recolour` in `sjk-ui`): one table, `COLOURS`, says
+  which token each retail colour takes (titles the line-work, values the muted text,
+  buttons the gold, frames the line-work dimmed towards the ground, panels the glass),
+  and the alpha a page gave a colour is kept. So Solar, Sith, Jedi or a custom theme
+  ([sjk-ui.md](sjk-ui.md#theme)) dress the classic menus as they dress the SJK UI. A
+  colour not in the table is left alone: the white focus, greys, team colours, the
+  Force sides' and the saber swatches' own. The SJK UI's pages name no retail colour,
+  so the pass leaves them as they are.
+
+What it does not change yet: the layout is still retail's 640x480 canvas, fitted and
+centred, so a 16:9 window shows the page as a 4:3 block over the map. A wide layout is
+the next step.
+
 ## What the plus adds
 
 Each rule names a page that already follows it.

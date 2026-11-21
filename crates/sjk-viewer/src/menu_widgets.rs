@@ -293,6 +293,8 @@ impl MenuCanvas {
 
     /// Finish focus ordering and restore semantic selection.
     pub(crate) fn finish(&mut self, selected_token: MenuToken) {
+        // The classic menus' own look: retail's colours give way to the theme's.
+        crate::menu::classic::own_look::recolour(&mut self.draw);
         self.check_storage();
         self.input.begin_frame(&self.tree);
         if let Some(index) = self

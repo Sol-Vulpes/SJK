@@ -528,6 +528,9 @@ includes:
 - door and lift shadows on lamp light within a budget (09/11/2026, Sol's request): the
   lamp cache is baked again 16 chunks of 64×64 texels a frame at most, only where a
   mover's shadow changed, so `T2_Rancor` no longer spends 14 ms a frame on it;
+- the classic menus' own look (21/11/2026): `ui_classicLook sjk` draws the classic pages
+  without retail artwork and in the theme's colours, by one colour table and a pass over
+  each finished page;
 - the named themes and First setup's look (21/11/2026): Solar, Sith (a new red palette),
   Jedi and Custom, shown as four tiles in their own colours at the top of First setup,
   which opens on the look (theme, hue, saturation, menu style);

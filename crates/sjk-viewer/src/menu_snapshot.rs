@@ -709,7 +709,11 @@ impl Snapshot {
         over_match: bool,
         viewport: [f32; 2],
     ) {
-        let directory = workspace_root().join("target/menu-snapshots");
+        let directory = workspace_root().join(if crate::menu::classic::own_look::on() {
+            "target/menu-snapshots-own"
+        } else {
+            "target/menu-snapshots"
+        });
         std::fs::create_dir_all(&directory).expect("create the snapshot directory");
         let size = (viewport[0] as u32, viewport[1] as u32);
         let mut image = match (&self.in_match, over_match) {
@@ -751,6 +755,11 @@ fn match_backdrop(vfs: &sjk_vfs::VirtualFileSystem) -> Option<RgbaImage> {
 #[ignore = "reads the installed game data named by JKA_GAME_DATA"]
 fn menu_snapshot() {
     let (art, vfs) = art();
+    // `SJK_CLASSIC_LOOK=sjk` draws the set in the classic menus' own look, into
+    // `target/menu-snapshots-own`; `SJK_THEME` names the theme it wears.
+    let own = std::env::var("SJK_CLASSIC_LOOK").is_ok_and(|look| look == "sjk");
+    crate::menu::classic::own_look::set(own);
+    let art = crate::menu::classic::own_look::art(art);
     let mut shots = Snapshot {
         font: crate::text::load_modern(1.0, None).expect("build the menu font"),
         icons: HashMap::from([(crate::ui_renderer::LOGO_TEXTURE.0, logo_icon())]),
@@ -767,6 +776,10 @@ fn menu_snapshot() {
     let directory = tempfile::tempdir().expect("scratch profile");
     let mut console =
         crate::console::ViewerConsole::new(directory.path().join("config.cfg")).expect("console");
+    if let Ok(theme) = std::env::var("SJK_THEME") {
+        console.set_cvar(crate::menu::sjk::theme::CVAR, &theme);
+        crate::menu::sjk::theme::sync(&console);
+    }
     // A changed setting shows its mark and its default.
     console.set_cvar("r_hdrExposure", "1.5");
     // The classic option panels, focused on a row with something to say.
