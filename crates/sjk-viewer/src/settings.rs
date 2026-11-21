@@ -18,13 +18,16 @@ pub(crate) mod mode;
 mod numeric;
 mod plugin_rows;
 mod pointer;
+mod present;
 pub(crate) mod quick;
+mod requires;
 mod resolution;
 mod resolution_list;
 mod search;
 mod sjk_popup;
 pub(crate) mod sjk_view;
 pub(crate) mod slider_peek;
+mod stops;
 mod usage;
 mod wheel_editor;
 mod wheel_editor_view;
@@ -193,6 +196,10 @@ enum Pick {
     Mode(DisplayMode),
     /// A graphics quality level.
     Quality(crate::graphics_quality::Level),
+    /// One of a number row's named stops ([`stops`]).
+    Stop(stops::Stop),
+    /// A number row's "Custom...": type any value of its range.
+    Custom,
 }
 
 /// A classic+ dropdown open on row `row`: its choices, the highlighted one
@@ -288,9 +295,14 @@ pub(crate) struct SettingsMenu {
     values: Vec<String>,
     /// Each row's default and whether its value differs (classic+ panels).
     defaults: Vec<classic_view::RowDefault>,
+    /// For each row, the rule that keeps its setting from having an effect right
+    /// now ([`requires`]); `None` for a row that acts.
+    idle: Vec<Option<&'static requires::Rule>>,
     /// The classic+ detail box's facts line and the description line's keys,
     /// rewritten each frame.
     detail_facts: String,
+    /// The focused row's value as the classic+ detail box shows it.
+    detail_value: String,
     key_hint: String,
     editing: Option<TextDraft>,
     /// What the window's monitor offers; asked for each time the screen opens.
@@ -394,7 +406,9 @@ impl SettingsMenu {
             selected: 0,
             values: Vec::with_capacity(12),
             defaults: Vec::with_capacity(20),
+            idle: Vec::with_capacity(20),
             detail_facts: String::with_capacity(96),
+            detail_value: String::new(),
             key_hint: String::with_capacity(96),
             editing: None,
             monitor: None,
@@ -864,6 +878,19 @@ impl SettingsMenu {
             return;
         }
         let next = match (setting.kind(), console.cvar(setting.cvar)) {
+            // A number with named stops steps along them.
+            (ValueKind::Stops { stops, integer, .. }, Some(value)) => {
+                let Ok(current) = value.as_text().trim().parse::<f64>() else {
+                    return;
+                };
+                stops::text(stops::step(stops, current, direction), integer)
+            }
+            // A volume steps in what it shows, not in gain ([`present`]).
+            (ValueKind::Float { min, max, .. }, Some(CvarValue::Float(value)))
+                if present::unit(setting.cvar) == present::Unit::Loudness =>
+            {
+                present::loudness_stepped(*value, direction, min, max)
+            }
             (ValueKind::Bool, Some(CvarValue::Bool(value))) => (!value).to_string(),
             (ValueKind::Bool, Some(value)) => if switch_on(value) { "0" } else { "1" }.to_owned(),
             (ValueKind::Integer { min, max, step }, Some(CvarValue::Integer(value))) => {
@@ -1024,6 +1051,12 @@ impl SettingsMenu {
                 .iter()
                 .map(|setting| classic_view::row_default(console, setting)),
         );
+        self.idle.clear();
+        self.idle.extend(
+            self.rows()
+                .iter()
+                .map(|setting| requires::idle(console, setting.cvar)),
+        );
         if let Some(before) = before {
             self.record_change(&before);
         }
@@ -1168,6 +1201,12 @@ pub(crate) fn row_takes(cvar: &str, value: &str) -> bool {
             number.fract() == 0.0 && (min as f64..=max as f64).contains(&number)
         }
         (ValueKind::Float { min, max, .. }, Ok(number)) => (min..=max).contains(&number),
+        (
+            ValueKind::Stops {
+                min, max, integer, ..
+            },
+            Ok(number),
+        ) => (!integer || number.fract() == 0.0) && (min.min(0.0)..=max).contains(&number),
         _ => false,
     }
 }
@@ -1515,6 +1554,11 @@ mod tests {
                 (ValueKind::Float { min, max, .. }, CvarValue::Float(value)) => {
                     (min..=max).contains(value)
                 }
+                // A number with named stops: its default is one of them.
+                (ValueKind::Stops { stops, .. }, value) => value
+                    .as_text()
+                    .parse::<f64>()
+                    .is_ok_and(|value| stops::index(stops, value).is_some()),
                 // Choices cycle the cvar's text form, whatever its type.
                 (ValueKind::Choice(values), value) => values.contains(&value.as_text().as_str()),
                 (ValueKind::Text, CvarValue::Text(_)) => true,

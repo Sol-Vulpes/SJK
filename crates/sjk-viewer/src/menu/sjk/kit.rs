@@ -322,6 +322,28 @@ pub(crate) fn slider(
     );
 }
 
+/// The mark of a slider's default on its track (see [`slider`], drawn after this
+/// so its knob covers the mark when the value is the default): a short tick across
+/// the track at `ratio`, so the player sees where stock is and how far they are
+/// from it.
+pub(crate) fn slider_mark(
+    canvas: &mut MenuCanvas,
+    frame: &Frame,
+    x: f32,
+    y: f32,
+    width: f32,
+    ratio: f32,
+) {
+    const TICK: [f32; 2] = [3.0, 14.0];
+    let at = x + width * ratio.clamp(0.0, 1.0);
+    pill(
+        canvas,
+        frame,
+        [at - TICK[0] * 0.5, y - TICK[1] * 0.5, TICK[0], TICK[1]],
+        color::alpha(color::holo(), 0.55),
+    );
+}
+
 /// A colour swatch: a disc of `colour` centred on (`x`, `y`) in a thin ring of the
 /// line-work, as the Settings theme rows show the colour their slider gives.
 pub(crate) fn swatch(canvas: &mut MenuCanvas, frame: &Frame, x: f32, y: f32, colour: Color) {

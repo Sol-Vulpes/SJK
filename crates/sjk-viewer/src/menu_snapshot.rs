@@ -2387,7 +2387,82 @@ fn sjk_settings_snapshot() {
     // Advanced's categories, then Simple's: Display, and Graphics on Vanilla and
     // on the SJK renderer, whose alpha warning the detail column shows.
     SettingsMode::Advanced.store(&mut console);
-    let simple: [Case; 6] = [
+    // The smarter controls: values players really set (the hub's settings usage), so
+    // the units, the volume curve and a typed stop show.
+    console.set_cvar("s_volume", "0.05");
+    console.set_cvar("s_musicVolume", "0.0");
+    console.set_cvar("sensitivity", "2.1");
+    console.set_cvar("com_maxfps", "275");
+    console.set_cvar("r_dayHour", "19.5");
+    let simple: [Case; 16] = [
+        // A number with named stops: its list, a typed value in use ("Custom...").
+        (
+            "sjk-settings-stops",
+            VIEWPORT_WIDE,
+            1,
+            Some("com_maxfps"),
+            true,
+            None,
+        ),
+        // Volumes as loudness, the default marked on each track.
+        (
+            "sjk-settings-sound",
+            VIEWPORT_WIDE,
+            3,
+            Some("s_volume"),
+            false,
+            None,
+        ),
+        (
+            "sjk-settings-controls",
+            VIEWPORT_WIDE,
+            4,
+            Some("sensitivity"),
+            false,
+            None,
+        ),
+        // Nameplates off: the rows that need them are dimmed and say so.
+        (
+            "sjk-settings-hud-needs",
+            VIEWPORT_WIDE,
+            8,
+            Some("cg_nameplateScale"),
+            false,
+            None,
+        ),
+        (
+            "sjk-settings-network",
+            VIEWPORT_WIDE,
+            12,
+            Some("rate"),
+            true,
+            None,
+        ),
+        (
+            "sjk-settings-time-of-day",
+            VIEWPORT_WIDE,
+            2,
+            Some("r_dayHour"),
+            false,
+            None,
+        ),
+        // A slip of the fingers, and a wide search led by its best matches.
+        (
+            "sjk-settings-search-typo",
+            VIEWPORT_WIDE,
+            1,
+            None,
+            false,
+            Some("crosshar"),
+        ),
+        (
+            "sjk-settings-search-best",
+            VIEWPORT_WIDE,
+            1,
+            None,
+            false,
+            Some("hud"),
+        ),
         (
             "sjk-settings-chat",
             VIEWPORT_WIDE,
@@ -2435,6 +2510,22 @@ fn sjk_settings_snapshot() {
             14,
             Some(crate::graphics_quality::ROW_NAME),
             true,
+            None,
+        ),
+        (
+            "sjk-settings-simple-sound",
+            VIEWPORT_WIDE,
+            15,
+            Some("s_musicVolume"),
+            false,
+            None,
+        ),
+        (
+            "sjk-settings-simple-display",
+            VIEWPORT_WIDE,
+            13,
+            Some("com_maxfps"),
+            false,
             None,
         ),
     ];

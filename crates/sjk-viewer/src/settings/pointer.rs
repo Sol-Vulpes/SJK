@@ -305,19 +305,54 @@ impl SettingsMenu {
             }
             None => self.ui.slider_ratio(rect, pointer_x),
         });
-        let raw = match setting.kind() {
-            ValueKind::Integer { min, max, .. } => min as f64 + (max - min) as f64 * ratio,
-            ValueKind::Float { min, max, .. } => min + (max - min) * ratio,
-            _ => return false,
+        // Where the pointer is along the track, as the setting lays its range out
+        // on it ([`super::present`]).
+        let value = match setting.kind() {
+            ValueKind::Float { min, max, .. }
+                if super::present::unit(setting.cvar) == super::present::Unit::Loudness =>
+            {
+                Some(super::present::loudness_snapped(
+                    setting.cvar,
+                    min,
+                    max,
+                    ratio,
+                ))
+            }
+            kind @ ValueKind::Integer { min, max, .. } => kind.snapped(super::present::at(
+                setting.cvar,
+                min as f64,
+                max as f64,
+                ratio,
+            )),
+            kind @ ValueKind::Float { min, max, .. } => {
+                kind.snapped(super::present::at(setting.cvar, min, max, ratio))
+            }
+            _ => None,
         };
-        let Some(value) = setting.kind().snapped(raw) else {
+        let Some(mut value) = value else {
             return false;
         };
+        // The SJK UI marks the default on the track: a knob dragged onto the mark
+        // takes the default itself, whatever the steps around it.
+        if self.sjk_controls.is_some()
+            && let Some(default) = self
+                .defaults
+                .get(row)
+                .and_then(|default| default.text.as_deref())
+            && default.trim().parse::<f64>().is_ok()
+            && (f64::from(super::present::track(setting, default)) - ratio).abs() < DEFAULT_CATCH
+        {
+            value = default.trim().to_owned();
+        }
         console.set_cvar(setting.cvar, &value);
         self.refresh(console);
         true
     }
 }
+
+/// How near its default's mark, as a share of the track, a dragged knob takes the
+/// default: three pixels of the SJK UI's track either side.
+const DEFAULT_CATCH: f64 = 0.015;
 
 /// Rows one wheel step moves: up for a positive delta, down for a negative one, none
 /// for a sideways step (`f32::signum` gives 1 for +0.0, which scrolled up a row).

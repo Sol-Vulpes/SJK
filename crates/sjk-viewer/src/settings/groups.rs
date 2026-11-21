@@ -745,12 +745,19 @@ impl Group {
                 "s_volume",
                 "s_musicVolume",
                 crate::audio::VOICE_VOLUME_CVAR,
+                // The fourth most changed sound setting, a fifth of the time from a
+                // search (the hub's settings usage, 21/11/2026).
+                crate::emotes::VOLUME_CVAR,
                 "snd_mute_losefocus",
             ],
             Self::Simple(Simple::Controls) => &["sensitivity", "m_invert", "cl_run"],
             Self::Simple(Simple::Gameplay) => &[
                 crate::camera::STYLE_CVAR,
                 crate::gameplay_fps::CVAR,
+                // The two things players search Settings for most ("pred", "remap":
+                // the hub's settings usage, 21/11/2026).
+                "cg_predictLegacy",
+                crate::remap_blocked_maps::SERVER_CVAR,
                 "cg_drawGun",
                 "cg_saberTrail",
                 crate::effect_flash::REDUCE_CVAR,
