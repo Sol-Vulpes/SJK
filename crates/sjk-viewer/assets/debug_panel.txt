@@ -37,7 +37,10 @@ test: Force page: light and dark sides keep their own blue and red; saber swatch
 test: Look for a leftover retail blue anywhere and note where (it is one table entry).
 test: ui_classicLook retail: the retail pictures and colours are back, unchanged.
 test: With ui_menuStyle sjk the row is dimmed and says it needs Menu style on Classic.
-note: The layout is still the 4:3 block centred on wide screens; a wide layout is next.
+test: Main page: frame lines from the corners, a window each side of the ring, the ring.
+test: On 16:9 the windows and lines reach the screen's sides; nothing is a 4:3 picture.
+test: Other pages: the page bar is a band from edge to edge between two rules.
+note: Entries and panels are still placed on the 4:3 canvas; moving them out is next.
 
 [first-setup-themes]
 area: Menus & settings

@@ -1,3 +1,14 @@
+## Classic menus: the artwork redrawn, to 16:9 (22/11/2026)
+
+Second step of the classic menus' own look (Sol, on seeing the first: "the background
+looks plain; the idea was to redraw the original UI so it is HD and 16:9"), branch
+`personal/classic-hd-art`. `menu/classic/own_art.rs` draws what retail has as pictures
+(ground, angular frame lines, side columns, the main page's two windows and ring, the
+other pages' bar band) as shapes in the theme's colours from the window's size, reaching
+a wide window's edges. Page content (entries, panels) is still on the centred 4:3
+canvas; the in-game window and dialogs keep their plain boxes. Snapshots
+`main-classic-wide` and `sjk-page-wide`. Not yet run in the game.
+
 ## Classic menus' own look (21/11/2026)
 
 Sol's request (21/11: rework classic+ so it has our own UI and is neat on 4K), branch

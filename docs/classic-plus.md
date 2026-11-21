@@ -80,9 +80,27 @@ drawn ([own_look.rs](../crates/sjk-viewer/src/menu/classic/own_look.rs)):
   Force sides' and the saber swatches' own. The SJK UI's pages name no retail colour,
   so the pass leaves them as they are.
 
-What it does not change yet: the layout is still retail's 640x480 canvas, fitted and
-centred, so a 16:9 window shows the page as a 4:3 block over the map. A wide layout is
-the next step.
+- **Retail's artwork, redrawn**
+  ([own_art.rs](../crates/sjk-viewer/src/menu/classic/own_art.rs), since 22/11/2026: the
+  first own look left the ground plain, which was not the point). The pieces retail has
+  as 640x480 pictures are drawn as shapes in the theme's colours, from the window's own
+  size, so a line is one weight at any resolution: the ground over the map, the angular
+  frame lines from each corner, the columns of small writing down the sides (as dashes;
+  no alphabet is drawn), and on the main page a framed glass window either side of the
+  ring, each with the slot between its two entries, and the ring round the emblem (a
+  dark disc, three rings, two shoulder arcs, the run of ticks under it, cross hairs
+  behind the emblem); on the other pages the page bar's band between two rules. The
+  title stays type: the game's logo is not redrawn.
+- **16:9.** What retail's pictures ended at the 4:3 page's edge reaches the window's
+  edge instead: the frame lines start at the corners, the side windows run from the
+  ring to a margin from each side, the bar's band and the columns sit at the edges. On
+  a 4:3 window the same code gives retail's proportions.
+
+What it does not change yet: the entries and panels themselves are still placed on
+retail's 640x480 canvas, fitted and centred, so on a wide window a page's content is a
+4:3 block inside artwork that fills the screen. Moving each page's content out to the
+width is page-by-page work, not started. The in-game window and the dialogs keep
+their plain drawn boxes.
 
 ## What the plus adds
 
