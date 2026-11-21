@@ -44,7 +44,7 @@ pub(super) fn register(shell: &mut sjk_shell::Shell) -> Result<(), sjk_shell::Co
         ),
         (
             crate::monitor::COMMAND,
-            "Toy: Monitor on or off (on, you throw monitors with monitor_throw and they knock you flying)",
+            "Toy: Force Throw on or off (on, you hurl junk with monitor_throw and thrown junk knocks you flying)",
         ),
         (
             crate::tags::COMMAND,
@@ -52,7 +52,7 @@ pub(super) fn register(shell: &mut sjk_shell::Shell) -> Result<(), sjk_shell::Co
         ),
         (
             crate::monitor::THROW_COMMAND,
-            "Throw a monitor the way you look (the Monitor toy on); it sends players who have it on flying",
+            "Force-throw junk the way you look (the Force Throw toy on); it sends players who have it on flying",
         ),
         (
             crate::box_hunt::COMMAND,

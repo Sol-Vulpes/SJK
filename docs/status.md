@@ -1,3 +1,23 @@
+## Force box, the DOOM coin roll and Force Throw (20-21/11/2026)
+
+Step 4 of the season 2 work (Sol's announcement of 19/11), branch `personal/force-box`.
+The mystery box is the Force box ([mystery-boxes.md](mystery-boxes.md)): its chest
+repainted in temple stone, old gold and blue runes (a placeholder; Sol makes the model, the
+README gives its contract), and Jedi Academy's own sounds by path (Force pull, speed hum,
+push; the bundled tune and the extras pack's open/roll/close dropped). The WHEEL OF DOOM is
+merged into it: Use held 1 s with a DOOM coin rolls the WHEEL's outcomes at the box's own
+odds (holocrons 60 %, punishments 30 %), through the hub's new `POST /v1/mystery-box/doom`
+(hub branch `force-box`, 1b9fd35, NOT merged or deployed: with the release), the
+punishments striking through the WHEEL's effects; no wheel stands on a map any more and
+`wheelofdoom_place` refuses ([wheel-of-doom.md](wheel-of-doom.md)); the wheel drawing code
+and the hub's wheels go at the release. The Monitor is Force Throw
+([client.md](client.md#monitor)): JA's crate, R5 and GONK wrecks hurled, a crate bursting
+into JA's chunks at rest, JA's sounds, the Screen Saver named the Force Barrier; its seven
+achievements un-retired with Force names, ids kept; commands and cvars kept. The unused
+`box_loot_glow` (the Ray Gun's) went too. Verified: the viewer's tests, fmt, Clippy (no new
+warnings), the hub's tests; world shots of the box (duel6) and the junk (a demo). Not tried
+in game: the coin roll needs the hub branch on a local hub.
+
 ## Toy removals: retired achievements, the Banana peel (20/11/2026)
 
 20/11/2026, Sol's cleanup before the release (Discord announcement 19/11: unused or sloppy

@@ -5385,6 +5385,35 @@ test: s_language english, snd_restart: they are English again.
 
 # ---- Gameplay ----
 
+[force-box]
+area: Gameplay
+title: Force box: stone, gold, blue runes, JA sounds; hold Use to roll a DOOM coin
+change: The mystery box looks like an ancient Jedi box (placeholder) and plays JA Force sounds.
+change: Tap Use: the credits roll. Hold Use 1 s with a DOOM coin: the WHEEL's outcomes instead.
+change: No WHEEL OF DOOM stands on a map; wheelofdoom_place refuses.
+test: A box on duel6: stone chest, gold bands, two glowing blue runes a side, a blue halo.
+test: Tap Use: Force pull opens it, a hum through the roll, a push as the lid shuts.
+test: With a coin: prompt says Tap: 100 credits and Hold Use: DOOM coin roll (N coins).
+test: Hold Use 1 s: Keep holding, then the box rolls; a holocron, coins, bolts or the teddy bear.
+test: A punishment (mirror, drunk...) strikes you; the teddy bear blows you up; 15 s to roll again.
+test: A 2nd SJK player sees the roll; their prompt says Someone rolls a DOOM coin.
+test: toy_wheelofdoom: your coins and Hold Use at a Force box; no wheel stands on its old map.
+note: The coin roll needs hub branch force-box (1b9fd35) on a local hub; not deployed.
+
+[force-throw]
+area: Gameplay
+title: Force Throw: the Monitor hurls JA junk with the Force; its achievements are back
+change: Each throw is a crate, a wrecked R5 or a wrecked GONK; a crate bursts where it rests.
+change: JA sounds (push, debris, absorb); the Screen Saver is now the Force Barrier.
+change: Rebound, Force Surge, Telekinetic, Reach of the Force, Two for One, Strike! un-retired.
+test: Collection > Toys: Force Throw with a crate icon; switch it on, throw: a Force push sound.
+test: Throw a few: crate, R5 and GONK in turn; they fly and bounce as the monitor did.
+test: A crate comes to rest: it bursts into pieces with a crash; the pieces fall and fade.
+test: Hit a 2nd SJK player who has it on: debris sound, they fly; your hit tick and marker.
+test: Struck 5 times in 20 s: FORCE BARRIER centre print, gold shell, absorb sound.
+test: Achievements > Fun: a Force Throw group (6 shown) and Special Delivery under Drone.
+note: Commands and cvars keep their names: toy_monitor, +monitor_throw, cg_toyMonitorShow.
+
 [duel-lines]
 area: Console & chat
 title: tell_attacker and duel start, won and lost lines (Ric, Lex Deifaber)

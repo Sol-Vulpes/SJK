@@ -778,7 +778,8 @@ mod tests {
     /// seven toys fit four too, two to a band but the last; Hobbies' two share one. Every listed achievement is on one page.
     #[test]
     fn the_wall_packs_the_categories_into_bands() {
-        // A new player: the removed toys' achievements are not there, and Hobbies,
+        // A new player: the removed toys' achievements are not there (Force Throw's
+        // came back, 21/11/2026), and Hobbies,
         // Fishing's and Mining's page, leaves the switch.
         let new = standings_holding(&[]);
         let fun: Vec<_> = groups(&new, Page::Fun)
@@ -788,9 +789,10 @@ mod tests {
         assert_eq!(
             fun,
             [
-                ("Drone", 0, 0, 1),
-                ("Boombox", 0, 2, 3),
-                ("Box hunt", 0, 6, 4)
+                ("Drone", 0, 0, 2),
+                ("Boombox", 0, 3, 3),
+                ("Force Throw", 1, 0, 6),
+                ("Box hunt", 1, 7, 4)
             ]
         );
         assert!(groups(&new, Page::Hobbies).is_empty());
@@ -822,7 +824,7 @@ mod tests {
                 ("Hax", 1, 0, 7),
                 ("Drone", 1, 8, 2),
                 ("Boombox", 2, 0, 3),
-                ("Monitor", 2, 4, 6),
+                ("Force Throw", 2, 4, 6),
                 ("Box hunt", 3, 0, 4),
             ]
         );

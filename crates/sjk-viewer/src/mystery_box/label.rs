@@ -550,6 +550,7 @@ mod tests {
             opener: None,
             revealed: false,
             blasted: false,
+            doom: None,
         }
     }
 

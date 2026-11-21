@@ -6,7 +6,6 @@ Nothing here comes from another game. Shapes are made of cylinders, ellipsoids a
 the colours are drawn from noise. This script writes, into the output folder:
 
 - `box_loot.jpg`: 256x256 swatches: steel, red fins, dark grip, gold, the gold's rim;
-- `box_loot_glow.jpg`: 64x64, the green glow of the tube and the bolt;
 - `coins_small.md3`, `coins_medium.md3`, `coins_big.md3`: gold coins in a heap of 5, a
   heap of 14 and a heap of 30, about 6, 9 and 12 units across, origin under the middle.
 
@@ -25,7 +24,6 @@ import numpy as np
 from PIL import Image
 
 SHADER = "models/sjk/box_loot"
-GLOW_SHADER = "models/sjk/box_loot_glow"
 ATLAS = 256
 JPEG_QUALITY = 90
 # Swatches, pixels (left, top, right, bottom).
@@ -34,9 +32,6 @@ RED = (128, 0, 256, 64)
 GRIP = (128, 64, 256, 128)
 GOLD = (0, 128, 128, 256)
 RIM = (128, 128, 256, 256)
-# The glow picture is one swatch.
-GLOW = (0, 0, 64, 64)
-GLOW_SIZE = 64
 SEGMENTS = 16
 RINGS = 8
 
@@ -71,13 +66,6 @@ def pictures(output: Path) -> None:
     fill(RIM, (255.0, 214.0, 98.0), 0.2)
     Image.fromarray(np.clip(atlas, 0, 255).astype(np.uint8)).save(
         output / "box_loot.jpg", quality=JPEG_QUALITY
-    )
-    # The glow: bright green, whitest in the middle.
-    y, x = np.mgrid[0:GLOW_SIZE, 0:GLOW_SIZE] / (GLOW_SIZE - 1) - 0.5
-    core = np.clip(1.0 - np.hypot(x, y) * 1.6, 0.0, 1.0)
-    glow = np.stack([60 + 150 * core, 200 + 55 * core, 40 + 120 * core], axis=-1)
-    Image.fromarray(np.clip(glow, 0, 255).astype(np.uint8)).save(
-        output / "box_loot_glow.jpg", quality=JPEG_QUALITY
     )
 
 

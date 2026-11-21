@@ -1085,6 +1085,7 @@ mod tests {
             wheel_of_doom: None,
             wheel_of_doom_revision: 0,
             wheel_of_doom_spin: None,
+            mystery_box_doom: None,
             box_hunt: None,
             quests: None,
             secrets: None,

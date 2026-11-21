@@ -789,6 +789,19 @@ pub trait Hub: Send {
         ))
     }
 
+    /// Roll a DOOM coin at mystery box `id`, which the player stands at on `server`
+    /// (`POST /v1/mystery-box/doom`, the Force box's held Use, since 20/11/2026).
+    fn doom_mystery_box(
+        &mut self,
+        _identity: &Identity,
+        _id: i64,
+        _server: &str,
+    ) -> Result<crate::wheel_of_doom::DoomAnswer, HubError> {
+        Err(HubError::Protocol(
+            "this hub client does not roll DOOM coins".to_owned(),
+        ))
+    }
+
     /// The box hunt on `server` as the player reads it (`POST /v1/box-hunt`), saying whether the player is
     /// `away` (in the chat, a menu, idle: the hub picks no mark among them).
     fn box_hunt(
@@ -2481,6 +2494,20 @@ impl Hub for HttpHub {
             Some(identity),
             "POST",
             "/v1/mystery-box/open",
+            Some(json!({ "box": id, "server": server })),
+        )?)
+    }
+
+    fn doom_mystery_box(
+        &mut self,
+        identity: &Identity,
+        id: i64,
+        server: &str,
+    ) -> Result<crate::wheel_of_doom::DoomAnswer, HubError> {
+        parse(self.send(
+            Some(identity),
+            "POST",
+            "/v1/mystery-box/doom",
             Some(json!({ "box": id, "server": server })),
         )?)
     }

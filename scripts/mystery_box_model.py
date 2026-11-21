@@ -1,15 +1,18 @@
-"""Make the mystery box's model and pictures (`docs/mystery-boxes.md`, SJK's own).
+"""Make the Force box's model and pictures (`docs/mystery-boxes.md`, SJK's own).
 
-The box is a long wooden chest bound in iron with a glowing question mark painted on each
-half of its long sides, and a lid hinged at the back that the client swings open while
-the box rolls. Nothing here comes from another game: the wood, the iron and the marks are
-drawn from noise and shapes. This script writes, into the output folder:
+The box is a long chest of ancient temple stone bound in old gold, with a glowing blue
+rune cut into each half of its long sides and a groove of blue light along them, and a
+lid hinged at the back that the client swings open while the box rolls (Sol, 20/11/2026:
+the mystery box made an ancient Jedi Force box; a placeholder until Sol's own model, the
+wooden chest bound in iron with question marks before). Nothing here comes from another
+game: the stone, the gold and the runes are drawn from noise and shapes. This script
+writes, into the output folder:
 
-- `mystery_box.jpg`: the chest's picture, 1024x1024: a long side top (planks, iron
-  bands, two question marks), the lid's top below it, then an end, the dark inside and
-  the iron edge strip along the bottom;
-- `mystery_box_glow.jpg`: the same layout, black but for the question marks' glow (the
-  shader adds it, pulsing);
+- `mystery_box.jpg`: the chest's picture, 1024x1024: a long side top (stone blocks, gold
+  bands, two runes), the lid's top below it, then an end, the dark inside and the gold
+  edge strip along the bottom;
+- `mystery_box_glow.jpg`: the same layout, black but for the runes' and grooves' blue
+  glow (the shader adds it, pulsing);
 - `mystery_box_halo.jpg`: the halo's light, bright at its foot and fading upwards, in
   soft rays (the shader adds it);
 - `mystery_box.md3`: the chest, LENGTH along y, DEPTH along x (its front, a long side,
@@ -52,13 +55,14 @@ LID = (0, 410, 1024, 860)
 END = (0, 860, 180, 1024)
 INSIDE = (190, 860, 370, 1024)
 EDGE = (380, 860, 1024, 940)
-WOOD = np.array([92.0, 58.0, 34.0])
-IRON = np.array([58.0, 58.0, 62.0])
-PAINT = (236, 214, 150)
-GLOW = (150, 225, 255)
+# Weathered temple stone, old gold, the runes' pale cut and their blue light.
+STONE = np.array([118.0, 112.0, 100.0])
+GOLD = np.array([150.0, 112.0, 46.0])
+PAINT = (196, 228, 255)
+GLOW = (110, 190, 255)
 # The halo's light at its brightest (the shader adds it, so this is all it lights), and
 # its picture's size: across (round the halo) and up.
-HALO_LIGHT = np.array([92.0, 77.0, 44.0])
+HALO_LIGHT = np.array([40.0, 78.0, 112.0])
 HALO_SIZE = (128, 256)
 
 
@@ -71,63 +75,77 @@ def noise(rng, size, scale: float) -> np.ndarray:
     return np.asarray(big, dtype=float)[:h, :w] / 255.0
 
 
-def planks(rng, size, count: int) -> np.ndarray:
-    """Weathered planks running across `size` (h, w), `count` of them, RGB floats."""
+def stone(rng, size, rows: int) -> np.ndarray:
+    """Ashlar of temple stone across `size` (h, w): `rows` courses of blocks, each course's
+    joints offset from the last, worn and stained, RGB floats."""
     h, w = size
-    # Grain: noise stretched along the planks.
-    grain = noise(rng, (h, w // 8 + 2), 3.0)
-    grain = np.asarray(
-        Image.fromarray((grain * 255).astype(np.uint8)).resize((w, h), Image.BICUBIC),
-        dtype=float,
-    ) / 255.0
-    blotch = noise(rng, size, 70)
-    shade = 0.72 + 0.28 * grain + 0.16 * (blotch - 0.5)
-    rgb = WOOD[None, None, :] * shade[:, :, None]
-    # Each plank its own tone, a dark seam between them.
-    for i in range(count):
-        top, bottom = i * h // count, (i + 1) * h // count
-        rgb[top:bottom] *= 0.88 + 0.2 * rng.random()
-        rgb[max(top - 3, 0) : top + 3] *= 0.35
+    grit = noise(rng, size, 2.5)
+    wear = noise(rng, size, 40)
+    stain = noise(rng, size, 120)
+    shade = 0.74 + 0.16 * grit + 0.18 * (wear - 0.5) - 0.12 * np.clip(stain - 0.55, 0, 1)
+    rgb = STONE[None, None, :] * shade[:, :, None]
+    block = max(w // 6, 40)
+    for i in range(rows):
+        top, bottom = i * h // rows, (i + 1) * h // rows
+        rgb[top:bottom] *= 0.9 + 0.16 * rng.random()
+        rgb[max(top - 2, 0) : top + 2] *= 0.42
+        offset = (block // 2) * (i % 2)
+        for x in range(offset, w, block):
+            rgb[top:bottom, max(x - 2, 0) : x + 2] *= 0.42
     return rgb
 
 
-def iron_band(rgb: np.ndarray, x0: int, x1: int, rng) -> None:
-    """An iron band across the planks from column `x0` to `x1`, riveted."""
+def gold_band(rgb: np.ndarray, x0: int, x1: int, rng) -> None:
+    """An old gold band across the stone from column `x0` to `x1`, studded."""
     h = rgb.shape[0]
-    band = IRON[None, None, :] * (0.8 + 0.3 * noise(rng, (h, x1 - x0), 6))[:, :, None]
-    # A lighter top edge and a darker bottom one, as if raised.
-    band[:, :3] *= 1.35
-    band[:, -3:] *= 0.55
+    tarnish = 0.72 + 0.38 * noise(rng, (h, x1 - x0), 5)
+    band = GOLD[None, None, :] * tarnish[:, :, None]
+    # A bright top edge and a dark bottom one, as if raised.
+    band[:, :3] *= 1.45
+    band[:, -3:] *= 0.5
     rgb[:, x0:x1] = band
+    cx = (x0 + x1) // 2
     for y in range(18, h, 52):
-        cx = (x0 + x1) // 2
-        yy, xx = np.ogrid[: h, x0:x1]
+        yy, xx = np.ogrid[:h, x0:x1]
         dot = (yy - y) ** 2 + (xx - cx) ** 2 <= 36
-        rgb[:, x0:x1][dot] = IRON * 1.6
+        rgb[:, x0:x1][dot] = GOLD * 1.7
 
 
-def question_mark(size: int) -> Image.Image:
-    """A bold question mark, white on black, `size` pixels tall."""
+def rune(size: int) -> Image.Image:
+    """SJK's Force box rune, white on black, `size` pixels tall: a blade of light with a
+    short guard, held between two arcs open above and below, standing on a winged base,
+    a star over it; drawn here, of no order or emblem."""
     img = Image.new("L", (size, size), 0)
     draw = ImageDraw.Draw(img)
-    width = size // 9
-    r = size * 0.24
-    cx, cy = size / 2, size * 0.3
-    draw.arc((cx - r, cy - r, cx + r, cy + r), 160, 405, fill=255, width=width)
-    # From the arc's lower right end down to the stem.
-    inner = r - width / 2
-    end = (cx + inner * math.cos(math.radians(45)), cy + inner * math.sin(math.radians(45)))
-    stem_top = (cx, cy + r * 1.35)
-    stem_bottom = (cx, size * 0.72)
-    draw.line([end, stem_top], fill=255, width=width)
-    draw.line([stem_top, stem_bottom], fill=255, width=width)
-    # Round joints and ends so the strokes meet cleanly.
-    for x, y in (end, stem_top, stem_bottom):
-        half = width / 2
+    width = max(size // 14, 2)
+    cx, cy = size / 2, size * 0.52
+    r = size * 0.32
+    for start, end in ((115, 245), (295, 425)):
+        draw.arc((cx - r, cy - r, cx + r, cy + r), start, end, fill=255, width=width)
+    base, tip = size * 0.9, size * 0.14
+    draw.line([(cx, base), (cx, tip)], fill=255, width=width)
+    guard = cy + r * 0.15
+    draw.line([(cx - r * 0.28, guard), (cx + r * 0.28, guard)], fill=255, width=width)
+    for side in (-1, 1):
+        draw.line([(cx, base), (cx + side * r * 0.85, base - r * 0.32)], fill=255, width=width)
+    sy, sr = size * 0.06, size * 0.055
+    draw.polygon([(cx, sy - sr), (cx + sr * 0.3, sy), (cx, sy + sr), (cx - sr * 0.3, sy)], fill=255)
+    draw.polygon([(cx - sr, sy), (cx, sy - sr * 0.3), (cx + sr, sy), (cx, sy + sr * 0.3)], fill=255)
+    half = width / 2
+    for x, y in ((cx, base), (cx, tip)):
         draw.ellipse((x - half, y - half, x + half, y + half), fill=255)
-    dot = size * 0.86
-    draw.ellipse((cx - width * 0.7, dot - width * 0.7, cx + width * 0.7, dot + width * 0.7), fill=255)
     return img
+
+
+def groove(glow: Image.Image, rgb: np.ndarray, region, y: int, x0: int, x1: int) -> None:
+    """A thin cut groove of blue light along row `y` of `region`, from `x0` to `x1`: pale
+    in the picture, glowing in the glow."""
+    rgb[y - 2 : y + 2, x0:x1] = np.array(PAINT) * 0.8
+    draw = ImageDraw.Draw(glow)
+    left, top = region[0], region[1]
+    for spread, light in ((7, 0.35), (3, 0.7), (1, 1.0)):
+        colour = tuple(int(c * light) for c in GLOW)
+        draw.rectangle((left + x0, top + y - spread, left + x1, top + y + spread), fill=colour)
 
 
 def darken_edges(rgb: np.ndarray, width: int, amount: float) -> np.ndarray:
@@ -147,12 +165,16 @@ def pictures(output: Path) -> Image.Image:
     atlas = np.zeros((ATLAS, ATLAS, 3))
     glow = Image.new("RGB", (ATLAS, ATLAS), (0, 0, 0))
 
-    # The long side: planks, bands at both ends and the middle, a mark on each half.
+    # The long side: stone, gold bands at both ends and the middle, a rune on each half,
+    # a groove of light along its top and bottom.
     h, w = region_size(SIDE)
-    side = planks(rng, (h, w), 4)
+    side = stone(rng, (h, w), 4)
     for x0 in (0, w // 2 - 28, w - 56):
-        iron_band(side, x0, x0 + 56, rng)
-    mark = question_mark(int(h * 0.8))
+        gold_band(side, x0, x0 + 56, rng)
+    for y in (34, h - 34):
+        for x0, x1 in ((56, w // 2 - 28), (w // 2 + 28, w - 56)):
+            groove(glow, side, SIDE, y, x0, x1)
+    mark = rune(int(h * 0.7))
     mark_glow = mark.filter(ImageFilter.GaussianBlur(14))
     for centre in (w // 4 + 14, 3 * w // 4 - 14):
         left, top = centre - mark.width // 2, (h - mark.height) // 2
@@ -169,24 +191,24 @@ def pictures(output: Path) -> Image.Image:
         glow.paste(coloured, (SIDE[0] + left, SIDE[1] + top))
     atlas[SIDE[1] : SIDE[3], SIDE[0] : SIDE[2]] = darken_edges(side, 18, 0.45)
 
-    # The lid's top: planks along it, bands across.
+    # The lid's top: stone along it, gold bands across.
     h, w = region_size(LID)
-    lid = planks(rng, (h, w), 5)
+    lid = stone(rng, (h, w), 5)
     for x0 in (0, w // 2 - 28, w - 56):
-        iron_band(lid, x0, x0 + 56, rng)
+        gold_band(lid, x0, x0 + 56, rng)
     atlas[LID[1] : LID[3], LID[0] : LID[2]] = darken_edges(lid, 18, 0.45)
 
     h, w = region_size(END)
-    end = planks(rng, (h, w), 3)
-    iron_band(end, 0, 18, rng)
-    iron_band(end, w - 18, w, rng)
+    end = stone(rng, (h, w), 3)
+    gold_band(end, 0, 18, rng)
+    gold_band(end, w - 18, w, rng)
     atlas[END[1] : END[3], END[0] : END[2]] = darken_edges(end, 10, 0.4)
 
     h, w = region_size(INSIDE)
-    atlas[INSIDE[1] : INSIDE[3], INSIDE[0] : INSIDE[2]] = planks(rng, (h, w), 3) * 0.25
+    atlas[INSIDE[1] : INSIDE[3], INSIDE[0] : INSIDE[2]] = stone(rng, (h, w), 3) * 0.25
 
     h, w = region_size(EDGE)
-    edge = IRON[None, None, :] * (0.8 + 0.3 * noise(rng, (h, w), 6))[:, :, None]
+    edge = GOLD[None, None, :] * (0.75 + 0.35 * noise(rng, (h, w), 6))[:, :, None]
     atlas[EDGE[1] : EDGE[3], EDGE[0] : EDGE[2]] = edge
 
     image = Image.fromarray(np.clip(atlas, 0, 255).astype(np.uint8))
@@ -346,7 +368,7 @@ FLOOR = PLINTH + 1.5
 HALO_OUT = 2.0
 HALO_RISE = 52.0
 HALO_STEPS = 32
-# How high the lid's planks arch over its straight edge, and in how many strips.
+# How high the lid's stone arches over its straight edge, and in how many strips.
 LID_EDGE = 1.5
 LID_ARCH = 7.0
 ARCH_STEPS = 10
@@ -470,7 +492,7 @@ def lid() -> list:
             sts = [uv_of(region, 0, ta), uv_of(region, 1, ta), uv_of(region, 1, tb), uv_of(region, 0, tb)]
             quads.append((corners, [na, na, nb, nb], None, sts))
 
-    # The planks over the arch, the lid's picture along its length.
+    # The stone over the arch, the lid's picture along its length.
     strip(-hy, hy, 0.0, LID)
     # The arch's ends, closed: a fan from the middle of the edge's top.
     for y, ny in ((hy, 1.0), (-hy, -1.0)):

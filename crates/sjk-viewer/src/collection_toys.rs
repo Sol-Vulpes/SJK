@@ -237,16 +237,16 @@ const TOYS: [Toy; TOY_COUNT] = [
     },
     Toy {
         icon: "monitor",
-        name: "Monitor",
-        tag: "Throw an old monitor; it sends players flying.",
-        title: "Monitor",
-        what: "Throw a big old CRT monitor. One that hits a player who has it on too knocks them down as a ragdoll and sends them flying, the way it struck them; they get up once they land. With it off, monitors pass through you.",
+        name: "Force Throw",
+        tag: "Hurl old junk with the Force; it sends players flying.",
+        title: "Force Throw",
+        what: "Hurl junk with the Force: a banded crate, a wrecked R5 droid or a wrecked GONK droid. What hits a player who has it on too knocks them down as a ragdoll and sends them flying, the way it struck them; they get up once they land. A crate bursts where it comes to rest. With it off, thrown junk passes through you.",
         more: Some(
-            "Its switch lets you throw and be hit; the throw key throws one, harder the longer you hold it.",
+            "Its switch lets you throw and be hit; the throw key throws, harder the longer you hold it. Struck 5 times within 20 seconds, a Force Barrier keeps thrown junk off you for 30 seconds.",
         ),
         commands: &[("toy_monitor", "Your key"), ("+monitor_throw", "Throw key")],
         switch: "Hit me",
-        sight: Some((crate::monitor::SHOW_CVAR, "See monitors")),
+        sight: Some((crate::monitor::SHOW_CVAR, "See thrown junk")),
         options: &[],
         token: MONITOR_TOKEN,
         author: "Sol",
@@ -270,11 +270,11 @@ const TOYS: [Toy; TOY_COUNT] = [
     Toy {
         icon: "wheel_of_doom",
         name: "WHEEL OF DOOM",
-        tag: "Spin it for a DOOM coin: a holocron, or doom.",
+        tag: "Roll a DOOM coin at a Force box: a holocron, or doom.",
         title: "WHEEL OF DOOM",
-        what: "Big dark wheels stand on some maps. Press Use at one to spin it for a DOOM coin (the teddy bear in a mystery box brings one): it spins to the end of its music and may land on a holocron of any tier, your coin back, nothing, or something terrible: your keys or mouse turned against you, the world mirrored or upside down, darkness, no saber, quacks, a curse, or a blast. Everyone near sees and hears it spin.",
+        what: "Hold Use at a Force box to roll a DOOM coin instead of credits (the teddy bear in a Force box brings one): better loot than credits, a holocron of any tier 60% of the time, your coin back, nothing, or something terrible: your keys or mouse turned against you, the world mirrored or upside down, darkness, no saber, quacks, a curse, or a blast. Everyone near sees the box roll.",
         more: Some(
-            "Its switch tells your DOOM coins and the wheels of the map. One spin of a wheel at a time, not in a duel. What it does lasts a few seconds and ends on a new map or when you die.",
+            "Its switch tells your DOOM coins. One coin roll every 15 seconds. What it does lasts a few seconds and ends on a new map or when you die.",
         ),
         commands: &[(crate::wheel_of_doom::COMMAND, "Your key")],
         switch: "Coins",
@@ -1011,7 +1011,7 @@ mod tests {
         for (id, name) in [
             (crate::drone::TOY, "Drone"),
             (crate::boombox::TOY, "Boombox"),
-            (crate::monitor::TOY, "Monitor"),
+            (crate::monitor::TOY, "Force Throw"),
             (crate::box_hunt::TOY, "Box hunt"),
             (crate::quests::TOY, "Quests"),
         ] {

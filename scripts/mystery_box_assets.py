@@ -1,4 +1,8 @@
-"""Make the mystery boxes' sounds (`docs/mystery-boxes.md`, SJK's own).
+"""Make the mystery boxes' old sounds (`docs/mystery-boxes.md`, SJK's own).
+
+Since 20/11/2026 the Force box plays Jedi Academy's own retail sounds and ships neither
+file below; the script stays for `wheel_of_doom_assets.py`, which builds on its tones and
+WAV writer.
 
 An opened box plays a little music box tune while what is inside rolls over it, slowing
 like a wound-down spring, and ends on a chord as the roll stops on what came out. Nothing
