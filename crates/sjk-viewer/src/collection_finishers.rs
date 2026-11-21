@@ -76,11 +76,11 @@ impl Panel {
                 radius: 18.0 * s,
                 width: 1.2 * s,
                 color: if lit {
-                    color::GOLD
+                    color::gold()
                 } else if hovered {
-                    color::alpha(color::HOLO, 0.6)
+                    color::alpha(color::holo(), 0.6)
                 } else {
-                    color::alpha(color::HOLO, 0.25)
+                    color::alpha(color::holo(), 0.25)
                 },
             });
             let active = token.is_some();
@@ -91,11 +91,11 @@ impl Panel {
                 frame.rect(left + 18.0, y + 5.0, width - 70.0, 26.0),
                 19.0 * s,
                 if lit {
-                    color::GOLD_BRIGHT
+                    color::gold_bright()
                 } else if active {
-                    color::TEXT
+                    color::text()
                 } else {
-                    color::QUIET
+                    color::quiet()
                 },
                 FontWeight::Semibold,
                 TextAlign::Start,
@@ -106,7 +106,7 @@ impl Panel {
                 format_args!("{count}"),
                 frame.rect(left + width - 64.0, y + 7.0, 50.0, 22.0),
                 14.0 * s,
-                if lit { color::GOLD } else { color::QUIET },
+                if lit { color::gold() } else { color::quiet() },
                 FontWeight::Regular,
                 TextAlign::End,
             );
@@ -132,6 +132,9 @@ impl Panel {
             "What your saber kills do to the body, for every SJK player on your server. One at a time, with any blade.",
         );
         self.kind_pills(frame, saber, (owned, CATALOGUE.len()));
+        self.kind_new_count(frame, &headline, crate::collection_seen::Kind::Finisher);
+        // All shown at once: the New ones are seen once the page has stayed a second.
+        self.watch_finishers();
         let worn = worn(inputs);
         for (index, finisher) in CATALOGUE.iter().enumerate() {
             let y = CARD_TOP + index as f32 * (CARD_HEIGHT + CARD_GAP);
@@ -159,6 +162,28 @@ impl Panel {
             width: 1.4 * s,
             color: color::alpha(tier, if held { 0.9 } else { 0.4 }),
         });
+        // A first look: the card's edge flashes once in its tier's colour.
+        let flash = self.first_look(crate::collection_seen::Kind::Finisher, finisher.id);
+        if flash > 0.0 {
+            let out = 4.0 + 6.0 * (1.0 - flash);
+            let _ = self.ui.draw_list_mut().push(DrawCommand::Border {
+                rect: frame.rect(CARD_X, y, CARD_WIDTH, CARD_HEIGHT),
+                radius: 14.0 * s,
+                width: 2.6 * s,
+                color: color::alpha(tier, flash),
+            });
+            let _ = self.ui.draw_list_mut().push(DrawCommand::Border {
+                rect: frame.rect(
+                    CARD_X - out,
+                    y - out,
+                    CARD_WIDTH + out * 2.0,
+                    CARD_HEIGHT + out * 2.0,
+                ),
+                radius: (14.0 + out) * s,
+                width: 3.0 * s,
+                color: color::alpha(tier, 0.45 * flash),
+            });
+        }
         let left = CARD_X + 24.0;
         text(
             &mut self.ui,
@@ -170,6 +195,15 @@ impl Panel {
             FontWeight::Semibold,
             TextAlign::Start,
         );
+        if self.is_new(crate::collection_seen::Kind::Finisher, finisher.id) {
+            let name = super::view::label_width(finisher.name, 26.0, self.widen);
+            let _ = super::marks_view::new_sticker(
+                &mut self.ui,
+                frame,
+                [left + name + 14.0, y + 21.0],
+                22.0,
+            );
+        }
         let state = if is_worn {
             format!("{}  Worn", symbols::SABER)
         } else if held {
@@ -187,7 +221,7 @@ impl Panel {
             ),
             frame.rect(left, y + 52.0, 560.0, 22.0),
             15.0 * s,
-            color::QUIET,
+            color::quiet(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -204,7 +238,7 @@ impl Panel {
             68.0,
             3,
             15.0,
-            color::TEXT,
+            color::text(),
             FontWeight::Regular,
         );
         if held {
@@ -239,6 +273,7 @@ impl Panel {
         match token {
             SABER_KIND_TOKEN => {
                 self.finishers_shown = false;
+                self.leave_news();
                 Some(PanelAction::None)
             }
             FINISHERS_KIND_TOKEN => {

@@ -685,7 +685,7 @@ fn head(ui: &mut MenuCanvas, frame: &Frame, top: f32, gift: bool, kicker: &str, 
             format_args!("{}", crate::symbols::GIFT),
             frame.rect(TEXT_X, top + HEAD - 4.0, MARK, MARK),
             44.0 * s,
-            color::GOLD,
+            color::gold(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -702,7 +702,7 @@ fn head(ui: &mut MenuCanvas, frame: &Frame, top: f32, gift: bool, kicker: &str, 
         format_args!("{kicker}"),
         frame.rect(TEXT_X + MARK + 16.0, top + HEAD + 8.0, 420.0, 26.0),
         19.0 * s,
-        color::GOLD_BRIGHT,
+        color::gold_bright(),
         FontWeight::Semibold,
         TextAlign::Start,
     );
@@ -712,7 +712,7 @@ fn head(ui: &mut MenuCanvas, frame: &Frame, top: f32, gift: bool, kicker: &str, 
         format_args!("{right}"),
         frame.rect(RIGHT - 360.0, top + HEAD + 8.0, 360.0, 26.0),
         16.0 * s,
-        color::MUTED,
+        color::muted(),
         FontWeight::Regular,
         TextAlign::End,
     );
@@ -728,7 +728,7 @@ fn title(ui: &mut MenuCanvas, frame: &Frame, value: &str, y: f32) -> f32 {
             format_args!("{line}"),
             frame.rect(TEXT_X, y, TEXT_WIDTH, TITLE_LINE),
             32.0 * frame.s,
-            color::TEXT,
+            color::text(),
             FontWeight::Semibold,
             TextAlign::Start,
         );
@@ -790,7 +790,7 @@ fn rounds_page(
             format_args!("{line}"),
             frame.rect(TEXT_X, y, TEXT_WIDTH, LINE),
             18.0 * s,
-            color::MUTED,
+            color::muted(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -808,7 +808,7 @@ fn rounds_page(
                 let _ = ui.draw_list_mut().push(DrawCommand::RoundedRect {
                     rect: frame.rect(TEXT_X - 10.0, y, TEXT_WIDTH + 20.0, ROW - 2.0),
                     radius: 6.0 * s,
-                    color: color::alpha(color::HOLO, 0.05),
+                    color: color::alpha(color::holo(), 0.05),
                 });
             }
             let name = person_name(&person.name);
@@ -827,7 +827,7 @@ fn rounds_page(
                 format_args!("{name}"),
                 frame.rect(x, y + 3.0, NAME_WIDTH - (x - TEXT_X) - 30.0, ROW - 6.0),
                 18.0 * s,
-                color::TEXT,
+                color::text(),
                 FontWeight::Semibold,
                 TextAlign::Start,
             );
@@ -864,7 +864,7 @@ fn rounds_page(
                     ROW - 6.0,
                 ),
                 17.0 * s,
-                color::MUTED,
+                color::muted(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -883,7 +883,7 @@ fn rounds_page(
             ),
             frame.rect(TEXT_X, below, TEXT_WIDTH, 22.0),
             15.0 * s,
-            color::QUIET,
+            color::quiet(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -1010,7 +1010,7 @@ fn claim_page(
         format_args!("From the SJK team, thank you."),
         frame.rect(TEXT_X, top + TITLE_TOP + TITLE_LINE + 6.0, TEXT_WIDTH, 24.0),
         17.0 * s,
-        color::MUTED,
+        color::muted(),
         FontWeight::Regular,
         TextAlign::Start,
     );
@@ -1045,7 +1045,7 @@ fn claim_page(
                     ui.draw_list_mut(),
                     [x - width * 0.5, y - height * 0.5],
                     height,
-                    color::GOLD_BRIGHT,
+                    color::gold_bright(),
                 );
             }
             Item::Shards(_) => {
@@ -1056,13 +1056,13 @@ fn claim_page(
                     ui.draw_list_mut(),
                     [x - width * 0.5, y - height * 0.5],
                     height,
-                    color::HOLO,
+                    color::holo(),
                 );
             }
         }
         let colour = match item {
             Item::Holocrons(tier, _) => tier.colour,
-            _ => color::TEXT,
+            _ => color::text(),
         };
         text(
             ui,
@@ -1088,7 +1088,7 @@ fn claim_page(
             format_args!("Something this version of SJK cannot show yet."),
             frame.rect(TEXT_X, y + 8.0, TEXT_WIDTH, LINE),
             18.0 * s,
-            color::MUTED,
+            color::muted(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -1101,7 +1101,7 @@ fn claim_page(
             format_args!("{line}"),
             frame.rect(TEXT_X, y, TEXT_WIDTH, LINE),
             18.0 * s,
-            color::TEXT,
+            color::text(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -1114,7 +1114,7 @@ fn claim_page(
             format_args!("{message}"),
             frame.rect(TEXT_X, y + 6.0, TEXT_WIDTH, LINE),
             17.0 * s,
-            color::EMBER,
+            color::ember(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -1192,7 +1192,7 @@ fn compose_page(ui: &mut MenuCanvas, frame: &Frame, composer: &Composer) -> u16 
             format_args!("{value}"),
             frame.rect(TEXT_X, top + y + 10.0, label_width, 24.0),
             17.0 * s,
-            color::MUTED,
+            color::muted(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -1264,22 +1264,22 @@ fn compose_page(ui: &mut MenuCanvas, frame: &Frame, composer: &Composer) -> u16 
     let _ = ui.draw_list_mut().push(DrawCommand::RoundedRect {
         rect: frame.rect(area[0], area[1], area[2], area[3]),
         radius: 10.0 * s,
-        color: color::alpha(color::SPACE, 0.6),
+        color: color::alpha(color::space(), 0.6),
     });
     let _ = ui.draw_list_mut().push(DrawCommand::Border {
         rect: frame.rect(area[0], area[1], area[2], area[3]),
         radius: 10.0 * s,
         width: if focused(Field::Text) { 2.0 } else { 1.0 } * s,
         color: if focused(Field::Text) {
-            color::TEXT
+            color::text()
         } else {
-            color::alpha(color::HOLO, 0.35)
+            color::alpha(color::holo(), 0.35)
         },
     });
     if focused(Field::Text) && crate::text_entry::is_selected(&composer.text) {
         let _ = ui.draw_list_mut().push(DrawCommand::SolidRect {
             rect: frame.rect(area[0] + 8.0, area[1] + 8.0, area[2] - 16.0, area[3] - 16.0),
-            color: color::alpha(color::HOLO, 0.25),
+            color: color::alpha(color::holo(), 0.25),
         });
     }
     let mut rows: Vec<String> = Vec::new();
@@ -1303,7 +1303,7 @@ fn compose_page(ui: &mut MenuCanvas, frame: &Frame, composer: &Composer) -> u16 
                 24.0,
             ),
             16.0 * s,
-            color::TEXT,
+            color::text(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -1320,7 +1320,7 @@ fn compose_page(ui: &mut MenuCanvas, frame: &Frame, composer: &Composer) -> u16 
         ),
         frame.rect(area[0], area[1] + area[3] + 2.0, area[2], 18.0),
         13.0 * s,
-        color::QUIET,
+        color::quiet(),
         FontWeight::Regular,
         TextAlign::End,
     );
@@ -1339,7 +1339,7 @@ fn compose_page(ui: &mut MenuCanvas, frame: &Frame, composer: &Composer) -> u16 
         format_args!("{SENDER}:"),
         frame.rect(field_x + logo + 8.0, top + preview_y + 10.0, 60.0, 24.0),
         17.0 * s,
-        color::GOLD,
+        color::gold(),
         FontWeight::Semibold,
         TextAlign::Start,
     );
@@ -1362,15 +1362,15 @@ fn compose_page(ui: &mut MenuCanvas, frame: &Frame, composer: &Composer) -> u16 
         );
     }
     let notice = if composer.busy {
-        ("Sending...".to_owned(), color::MUTED)
+        ("Sending...".to_owned(), color::muted())
     } else if composer.confirm {
         (
             "Send this to every SJK player? It cannot be taken back from screens that showed it."
                 .to_owned(),
-            color::GOLD_BRIGHT,
+            color::gold_bright(),
         )
     } else {
-        (composer.message.clone(), color::EMBER)
+        (composer.message.clone(), color::ember())
     };
     if !notice.0.is_empty() {
         text(
@@ -1475,7 +1475,7 @@ fn picker(ui: &mut MenuCanvas, frame: &Frame, top: f32, at: usize) {
         format_args!("Link to (Up, Down, Enter; Esc closes)"),
         frame.rect(x + 20.0, y + 14.0, width - 40.0, 28.0),
         18.0 * frame.s,
-        color::GOLD_BRIGHT,
+        color::gold_bright(),
         FontWeight::Semibold,
         TextAlign::Start,
     );
@@ -1485,7 +1485,7 @@ fn picker(ui: &mut MenuCanvas, frame: &Frame, top: f32, at: usize) {
             let _ = ui.draw_list_mut().push(sjk_ui::DrawCommand::RoundedRect {
                 rect: frame.rect(x + 10.0, row_y, width - 20.0, row - 2.0),
                 radius: 6.0 * frame.s,
-                color: color::alpha(color::HOLO, 0.18),
+                color: color::alpha(color::holo(), 0.18),
             });
         }
         text(
@@ -1495,9 +1495,9 @@ fn picker(ui: &mut MenuCanvas, frame: &Frame, top: f32, at: usize) {
             frame.rect(x + 22.0, row_y, width - 44.0, row),
             17.0 * frame.s,
             if index == at {
-                color::TEXT
+                color::text()
             } else {
-                color::MUTED
+                color::muted()
             },
             FontWeight::Regular,
             TextAlign::Start,

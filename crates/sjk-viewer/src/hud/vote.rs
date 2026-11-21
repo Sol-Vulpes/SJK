@@ -29,10 +29,18 @@ pub(super) const TEXT_LAST: u32 = NO_KEYS_TEXT;
 // SJK's own palette ([`crate::menu::sjk::color`]), as its menus' cards draw it.
 const YES: Color = color::TRUSTED;
 const NO: Color = color::RED_TEAM;
-const PLATE: Color = Color::new(0.04, 0.06, 0.12, 0.9);
-const SHADOW: Color = color::alpha(color::SPACE, 0.5);
-const EDGE: Color = color::alpha(color::HOLO, 0.45);
-const TRACK: Color = color::alpha(color::HOLO, 0.16);
+fn plate_fill() -> Color {
+    color::alpha(color::glass(), 0.9)
+}
+fn shadow() -> Color {
+    color::alpha(color::space(), 0.5)
+}
+fn edge() -> Color {
+    color::alpha(color::holo(), 0.45)
+}
+fn track() -> Color {
+    color::alpha(color::holo(), 0.16)
+}
 /// Room above the card, so it stands under the match timer at the top centre.
 const BELOW_TIMER: f32 = 44.0;
 /// A vote that starts this soon after the player's own `callvote` is theirs: the
@@ -417,9 +425,9 @@ pub(super) fn emit(
     }
 }
 
-/// The SJK menu card's plate: a soft shadow, the navy plate and a holo edge.
+/// The SJK menu card's plate: a soft shadow, the dark glass plate and an amber edge.
 fn emit_plate(draw: &mut DrawList, plate: Rect, radius: f32, scale: f32) {
-    // The SJK menu card: a soft shadow, the navy plate and a holo edge.
+    // The SJK menu card: a soft shadow, the dark glass plate and an amber edge.
     let _ = draw.push(DrawCommand::RoundedRect {
         rect: Rect::new(
             plate.x + 4.0 * scale,
@@ -428,18 +436,18 @@ fn emit_plate(draw: &mut DrawList, plate: Rect, radius: f32, scale: f32) {
             plate.height,
         ),
         radius,
-        color: SHADOW,
+        color: shadow(),
     });
     let _ = draw.push(DrawCommand::RoundedRect {
         rect: plate,
         radius,
-        color: PLATE,
+        color: plate_fill(),
     });
     let _ = draw.push(DrawCommand::Border {
         rect: plate,
         radius,
         width: 1.5 * scale,
-        color: EDGE,
+        color: edge(),
     });
 }
 
@@ -448,14 +456,14 @@ fn emit_plate(draw: &mut DrawList, plate: Rect, radius: f32, scale: f32) {
 fn emit_row(draw: &mut DrawList, row: &VoteRow, meter: Meter, card: u32, scale: f32) {
     let text = |index: u32| TextId(CARD_TEXT_FIRST + card * CARD_TEXTS + index);
     emit_plate(draw, row.plate, 12.0 * scale, scale);
-    bar(draw, row.time, 1.0, TRACK, scale);
-    bar(draw, row.time, meter.time, color::GOLD, scale);
+    bar(draw, row.time, 1.0, track(), scale);
+    bar(draw, row.time, meter.time, color::gold(), scale);
     emit_text(
         draw,
         row.question,
         text(1),
         18.0 * scale,
-        color::TEXT,
+        color::text(),
         TextAlign::Center,
         FontWeight::Semibold,
         0.3,
@@ -495,14 +503,14 @@ fn emit_card(draw: &mut DrawList, layout: &VoteLayout, meter: Meter, card: u32, 
             layout.label.height - 10.0 * scale,
         ),
         radius: 2.0 * scale,
-        color: color::GOLD_BRIGHT,
+        color: color::gold_bright(),
     });
     emit_text(
         draw,
         layout.label,
         text(0),
         17.0 * scale,
-        color::GOLD_BRIGHT,
+        color::gold_bright(),
         TextAlign::Start,
         FontWeight::Semibold,
         2.0,
@@ -512,20 +520,20 @@ fn emit_card(draw: &mut DrawList, layout: &VoteLayout, meter: Meter, card: u32, 
         layout.label,
         text(2),
         22.0 * scale,
-        color::TEXT,
+        color::text(),
         TextAlign::End,
         FontWeight::Semibold,
         0.5,
     );
     // Time left, shrinking from the full width.
-    bar(draw, layout.time, 1.0, TRACK, scale);
-    bar(draw, layout.time, meter.time, color::GOLD, scale);
+    bar(draw, layout.time, 1.0, track(), scale);
+    bar(draw, layout.time, meter.time, color::gold(), scale);
     emit_text(
         draw,
         layout.proposal,
         text(1),
         30.0 * scale,
-        color::TEXT,
+        color::text(),
         TextAlign::Center,
         FontWeight::Semibold,
         0.3,
@@ -556,7 +564,7 @@ fn emit_card(draw: &mut DrawList, layout: &VoteLayout, meter: Meter, card: u32, 
         layout.keys,
         TextId(YES_KEYS_TEXT),
         15.0 * scale,
-        color::MUTED,
+        color::muted(),
         TextAlign::Start,
         FontWeight::Regular,
         0.5,
@@ -566,7 +574,7 @@ fn emit_card(draw: &mut DrawList, layout: &VoteLayout, meter: Meter, card: u32, 
         layout.keys,
         TextId(NO_KEYS_TEXT),
         15.0 * scale,
-        color::MUTED,
+        color::muted(),
         TextAlign::End,
         FontWeight::Regular,
         0.5,
@@ -575,7 +583,7 @@ fn emit_card(draw: &mut DrawList, layout: &VoteLayout, meter: Meter, card: u32, 
 
 /// YES fills `split` from the left, NO from the right, in proportion to the votes cast.
 fn emit_split(draw: &mut DrawList, split: Rect, meter: Meter, scale: f32) {
-    bar(draw, split, 1.0, TRACK, scale);
+    bar(draw, split, 1.0, track(), scale);
     let cast = meter.yes + meter.no;
     if cast > 0 {
         let yes = meter.yes as f32 / cast as f32;

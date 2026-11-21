@@ -80,8 +80,8 @@ impl SoundsChoice {
     /// The chosen one's name; following the shader names the one heard.
     pub(super) fn label(&self, blade: Option<&'static crate::unlockables::Unlockable>) -> String {
         match (self.chosen(), blade) {
-            (SoundChoice::Follow, Some(blade)) => format!("Follow shader ({})", blade.name),
-            (SoundChoice::Follow, None) => "Follow shader (stock)".to_owned(),
+            (SoundChoice::Follow, Some(blade)) => format!("Follow kyber ({})", blade.name),
+            (SoundChoice::Follow, None) => "Follow kyber (stock)".to_owned(),
             (choice, _) => choice.label().to_owned(),
         }
     }

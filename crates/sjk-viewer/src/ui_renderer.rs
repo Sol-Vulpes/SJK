@@ -5,9 +5,11 @@ use bytemuck::{Pod, Zeroable};
 use sjk_ui::{Color, DrawCommand, DrawList, FontWeight, Rect, TextAlign, TextId};
 
 pub(crate) mod art;
+pub(crate) mod backdrop;
 mod card_art;
 pub(crate) mod duel_badge;
 mod emblem;
+pub(crate) mod feat_pictures;
 mod gif_textures;
 mod icons;
 mod levelshot;
@@ -18,6 +20,7 @@ mod trust_badge;
 mod verified_badge;
 use art::{ArtTextures, Run, Source};
 use emblem::EmblemTextures;
+use feat_pictures::FeatPictures;
 use gif_textures::GifTextures;
 use icons::IconAtlas;
 pub(crate) use icons::{
@@ -211,8 +214,9 @@ pub(crate) fn verified_badge_pixels() -> Vec<u8> {
 }
 use levelshot::LevelshotTexture;
 
-/// SJK's emblem, scaled into one icon cell at start.
-const SJK_EMBLEM: &[u8] = include_bytes!("../../../assets/branding/sjk-logo-512.png");
+/// SJK's emblem, scaled into one icon cell at start: the small icons' drawing
+/// (`scripts/sjk_emblem.py`), which still reads at a chat line's height.
+const SJK_EMBLEM: &[u8] = include_bytes!("../../../assets/branding/emblem-chat.png");
 /// JoF EternalJK's icon, scaled into one icon cell at start.
 const EJK_ICON: &[u8] = include_bytes!("../../../assets/branding/jof-ejk-icon.png");
 /// The SJK Launcher's icon, scaled into one icon cell at start.
@@ -237,6 +241,9 @@ const SHINE_MODE: f32 = 6.0;
 
 /// `parameters.y` value that selects the convex polygon shader path (`ui_shapes.wgsl`).
 const POLYGON_MODE: f32 = 7.0;
+
+/// `parameters.y` value that selects the acrylic backdrop shader path (`ui_shapes.wgsl`).
+const BACKDROP_MODE: f32 = 8.0;
 
 #[repr(C)]
 #[derive(Clone, Copy, Pod, Zeroable)]
@@ -307,6 +314,14 @@ pub(crate) fn texture_switches(lists: &[&DrawList]) -> usize {
             DrawCommand::TexturedQuad { texture, .. }
             | DrawCommand::TexturedQuadUv { texture, .. }
             | DrawCommand::TexturedQuadTurned { texture, .. } => *texture,
+            // Acrylic samples the blurred frame.
+            DrawCommand::Backdrop { .. } => {
+                if runs.len() < art::MAX_RUNS {
+                    art::switch(&mut runs, vertices, Source::Backdrop);
+                }
+                vertices += 6;
+                continue;
+            }
             // A shape after the emblem's light goes back to alpha blending.
             _ => {
                 art::untextured(&mut runs, vertices);
@@ -323,7 +338,9 @@ pub(crate) fn texture_switches(lists: &[&DrawList]) -> usize {
             }
             None if texture == PREVIEW_TEXTURE => Source::Preview,
             None if texture == BLADE_PICTURES_TEXTURE => Source::BladePictures,
+            None if crate::blade_stills::cell_of(texture).is_some() => Source::BladeStills,
             None if map_edit_pictures::cell_of(texture).is_some() => Source::MapEditCells,
+            None if feat_pictures::cell_of(texture).is_some() => Source::FeatCells,
             None if texture == map_edit_pictures::PREVIEW => Source::MapEditPreview,
             None if crate::chat_gifs::slot_of(texture).is_some() => {
                 Source::Gif(crate::chat_gifs::slot_of(texture).unwrap_or_default() as u8)
@@ -348,6 +365,25 @@ pub(crate) fn texture_switches(lists: &[&DrawList]) -> usize {
         vertices += 6;
     }
     runs.len()
+}
+
+/// The texture coordinates of the blade still's cell `texture` names.
+fn blade_still_range(texture: sjk_ui::TextureId) -> ([f32; 2], [f32; 2]) {
+    crate::blade_stills::uv_range(crate::blade_stills::cell_of(texture).map_or(0, |(cell, _)| cell))
+}
+
+/// How grey a dimmed still is drawn (a kyber not held): most of its colour gone, so it
+/// reads as one to get, its shape and light still there.
+const STILL_GREY: f32 = 0.6;
+
+/// Desaturate `vertices` (a textured quad just pushed) when `texture` is a blade still's
+/// dimmed look: the shader's textured mode greys by `parameters[0]`.
+fn dim_still(vertices: &mut [ShapeVertex], texture: sjk_ui::TextureId) {
+    if crate::blade_stills::cell_of(texture).is_some_and(|(_, dim)| dim) {
+        for vertex in vertices {
+            vertex.parameters[0] = STILL_GREY;
+        }
+    }
 }
 
 /// Fixed-capacity WGPU shape renderer. GPU ownership never leaks into `sjk-ui`.
@@ -382,8 +418,14 @@ pub(crate) struct ShapeRenderer {
     /// The model preview's display texture, once one exists.
     preview: Option<wgpu::BindGroup>,
     blade_pictures: Option<wgpu::BindGroup>,
+    /// The Collection's blade stills' atlas, once made.
+    blade_stills: Option<wgpu::BindGroup>,
     /// The map editor's shader pictures, while its panel shows them.
     map_edit: MapEditPictures,
+    /// The feats' medal pictures, once one is uploaded.
+    feats: FeatPictures,
+    /// The frame blurred under acrylic backdrops ([`DrawCommand::Backdrop`]).
+    backdrop: backdrop::BackdropBlur,
     preview_sampler: wgpu::Sampler,
     /// Whether a frame past the vertex or run storage has been logged: shapes
     /// past it are dropped, so the log names the cause of a missing picture.
@@ -470,6 +512,7 @@ impl ShapeRenderer {
             mapped_at_creation: false,
         });
         let icons = IconAtlas::new(device, &texture_layout);
+        let backdrop = backdrop::BackdropBlur::new(device, &texture_layout);
         let levelshot = LevelshotTexture::new(device, &texture_layout);
         let hud_preview = LevelshotTexture::new(device, &texture_layout);
         let news = (0..NEWS_IMAGE_SLOTS)
@@ -593,7 +636,10 @@ impl ShapeRenderer {
             news,
             preview: None,
             blade_pictures: None,
+            blade_stills: None,
             map_edit: MapEditPictures::default(),
+            feats: FeatPictures::default(),
+            backdrop,
             preview_sampler: device.create_sampler(&wgpu::SamplerDescriptor {
                 label: Some("SJK model preview sampler"),
                 mag_filter: wgpu::FilterMode::Linear,
@@ -685,6 +731,7 @@ impl ShapeRenderer {
             source: Source::Atlas,
         });
         self.art.begin_frame();
+        self.backdrop.begin_frame();
         let now = crate::menu::art::motion::seconds();
         let mut opacity = [1.0_f32; 8];
         let mut opacity_depth = 0_usize;
@@ -850,14 +897,20 @@ impl ShapeRenderer {
                         | Source::Levelshot
                         | Source::HudPreview
                         | Source::News(_)
-                        | Source::BladePictures
                         | Source::MapEditPreview
-                        | Source::Preview => ([0.0, 0.0], [1.0, 1.0]),
+                        | Source::Preview
+                        | Source::BladePictures
+                        | Source::Backdrop => ([0.0, 0.0], [1.0, 1.0]),
+                        Source::BladeStills => blade_still_range(texture),
                         Source::MapEditCells => map_edit_pictures::uv_range(
                             map_edit_pictures::cell_of(texture).unwrap_or_default(),
                         ),
+                        Source::FeatCells => feat_pictures::uv_range(
+                            feat_pictures::cell_of(texture).unwrap_or_default(),
+                        ),
                         Source::Atlas => icons::uv_range(animated(texture, now)),
                     };
+                    let before = self.vertices.len();
                     icons::push_quad(
                         &mut self.vertices,
                         clipped(rect, clips[clip_depth]),
@@ -867,6 +920,7 @@ impl ShapeRenderer {
                         viewport,
                         MAX_SHAPE_VERTICES,
                     );
+                    dim_still(&mut self.vertices[before..], texture);
                 }
                 DrawCommand::TexturedQuadTurned {
                     rect,
@@ -883,9 +937,14 @@ impl ShapeRenderer {
                         Source::MapEditCells => map_edit_pictures::uv_range(
                             map_edit_pictures::cell_of(texture).unwrap_or_default(),
                         ),
+                        Source::FeatCells => feat_pictures::uv_range(
+                            feat_pictures::cell_of(texture).unwrap_or_default(),
+                        ),
+                        Source::BladeStills => blade_still_range(texture),
                         _ => ([0.0, 0.0], [1.0, 1.0]),
                     };
                     // Like explicit coordinates, a turned quad is not clipped.
+                    let before = self.vertices.len();
                     icons::push_quad_at(
                         &mut self.vertices,
                         icons::turned_corners(rect, pivot, degrees),
@@ -895,6 +954,7 @@ impl ShapeRenderer {
                         viewport,
                         MAX_SHAPE_VERTICES,
                     );
+                    dim_still(&mut self.vertices[before..], texture);
                 }
                 DrawCommand::TexturedQuadUv {
                     rect,
@@ -918,11 +978,17 @@ impl ShapeRenderer {
                         | Source::HudPreview
                         | Source::News(_)
                         | Source::MapEditPreview
-                        | Source::Preview => uv,
-                        Source::MapEditCells => {
-                            let (low, high) = map_edit_pictures::uv_range(
-                                map_edit_pictures::cell_of(texture).unwrap_or_default(),
-                            );
+                        | Source::Preview
+                        | Source::Backdrop => uv,
+                        Source::MapEditCells | Source::FeatCells => {
+                            let (low, high) = match source {
+                                Source::FeatCells => feat_pictures::uv_range(
+                                    feat_pictures::cell_of(texture).unwrap_or_default(),
+                                ),
+                                _ => map_edit_pictures::uv_range(
+                                    map_edit_pictures::cell_of(texture).unwrap_or_default(),
+                                ),
+                            };
                             uv.map(|[s, t]| {
                                 [
                                     low[0] + s * (high[0] - low[0]),
@@ -932,8 +998,19 @@ impl ShapeRenderer {
                         }
                         // A blade picture is clipped as other shapes are (it scrolls in
                         // the Collection's list): its coordinates are an upright
-                        // rectangle, cut with it.
-                        Source::BladePictures => {
+                        // rectangle, cut with it. A loop picture's are in its cell,
+                        // mapped into the texture first.
+                        Source::BladePictures | Source::BladeStills => {
+                            let (low, high) = match source {
+                                Source::BladeStills => blade_still_range(texture),
+                                _ => ([0.0; 2], [1.0; 2]),
+                            };
+                            let uv = uv.map(|[s, t]| {
+                                [
+                                    low[0] + s * (high[0] - low[0]),
+                                    low[1] + t * (high[1] - low[1]),
+                                ]
+                            });
                             let clip = clipped(rect, clips[clip_depth]);
                             if clip.width <= 0.0 || clip.height <= 0.0 {
                                 continue;
@@ -952,6 +1029,7 @@ impl ShapeRenderer {
                                 at(clip.right(), clip.bottom()),
                                 at(clip.x, clip.bottom()),
                             ];
+                            let before = self.vertices.len();
                             icons::push_quad_corners(
                                 &mut self.vertices,
                                 clip,
@@ -961,6 +1039,7 @@ impl ShapeRenderer {
                                 viewport,
                                 MAX_SHAPE_VERTICES,
                             );
+                            dim_still(&mut self.vertices[before..], texture);
                             continue;
                         }
                         Source::Atlas => {
@@ -1015,6 +1094,36 @@ impl ShapeRenderer {
                         opacity[opacity_depth],
                         viewport,
                     );
+                }
+                DrawCommand::Backdrop { rect, radius, tint } => {
+                    let shown = clipped(rect, clips[clip_depth]);
+                    if self.backdrop.ready() {
+                        // A transformed backdrop lands elsewhere: blur all the frame.
+                        self.backdrop.add(if transforms[transform_depth].is_some() {
+                            Rect::new(0.0, 0.0, viewport[0], viewport[1])
+                        } else {
+                            shown
+                        });
+                        self.push_backdrop(
+                            rect,
+                            shown,
+                            radius,
+                            tint,
+                            opacity[opacity_depth],
+                            viewport,
+                        );
+                    } else {
+                        let plain = sjk_ui::acrylic::fallback(tint);
+                        self.push_rect(
+                            shown,
+                            plain,
+                            plain,
+                            radius,
+                            false,
+                            opacity[opacity_depth],
+                            viewport,
+                        );
+                    }
                 }
                 DrawCommand::Line {
                     from,
@@ -1130,9 +1239,17 @@ impl ShapeRenderer {
                 Some(_) => Source::BladePictures,
                 None => return None,
             },
+            None if crate::blade_stills::cell_of(texture).is_some() => match self.blade_stills {
+                Some(_) => Source::BladeStills,
+                None => return None,
+            },
             None if map_edit_pictures::cell_of(texture).is_some() => {
                 self.map_edit.grid_group()?;
                 Source::MapEditCells
+            }
+            None if feat_pictures::cell_of(texture).is_some() => {
+                self.feats.group()?;
+                Source::FeatCells
             }
             None if texture == map_edit_pictures::PREVIEW => {
                 self.map_edit.preview_group()?;
@@ -1209,8 +1326,11 @@ impl ShapeRenderer {
                     .map(LevelshotTexture::bind_group),
                 Source::Preview => self.preview.as_ref(),
                 Source::BladePictures => self.blade_pictures.as_ref(),
+                Source::BladeStills => self.blade_stills.as_ref(),
                 Source::MapEditCells => self.map_edit.grid_group(),
+                Source::FeatCells => self.feats.group(),
                 Source::MapEditPreview => self.map_edit.preview_group(),
+                Source::Backdrop => self.backdrop.result(),
                 Source::Atlas => None,
             };
             pass.set_bind_group(0, group.unwrap_or(self.icons.bind_group()), &[]);
@@ -1548,6 +1668,77 @@ impl ShapeRenderer {
             }));
     }
 
+    /// One quad over `shown` (the part of the backdrop at `rect` left by the clip);
+    /// `ui_shapes.wgsl` shades it as acrylic from the blurred frame ([`sjk_ui::acrylic`]):
+    /// `local` the pixel's place from the backdrop's top-left, `uv` its place on the screen.
+    fn push_backdrop(
+        &mut self,
+        rect: Rect,
+        shown: Rect,
+        radius: f32,
+        tint: Color,
+        opacity: f32,
+        viewport: [f32; 2],
+    ) {
+        if shown.width <= 0.0
+            || shown.height <= 0.0
+            || opacity <= 0.0
+            || self.vertices.len() + 6 > MAX_SHAPE_VERTICES
+            || !art::switch(&mut self.runs, self.vertices.len(), Source::Backdrop)
+        {
+            return;
+        }
+        let radius = radius.clamp(0.0, rect.width.min(rect.height) * 0.5);
+        let corners = [
+            [shown.x, shown.y],
+            [shown.right(), shown.y],
+            [shown.right(), shown.bottom()],
+            [shown.x, shown.y],
+            [shown.right(), shown.bottom()],
+            [shown.x, shown.bottom()],
+        ];
+        self.vertices.extend(corners.map(|[x, y]| ShapeVertex {
+            position: [x / viewport[0] * 2.0 - 1.0, 1.0 - y / viewport[1] * 2.0],
+            local: [x - rect.x, y - rect.y],
+            size: [rect.width, rect.height],
+            start_color: [tint.r, tint.g, tint.b, tint.a],
+            end_color: [radius, 0.0, 0.0, 0.0],
+            parameters: [opacity, BACKDROP_MODE],
+            uv: [x / viewport[0], y / viewport[1]],
+        }));
+    }
+
+    /// Before the frame's shapes are laid out: whether the image the 2D layer draws into
+    /// can be sampled this frame (`available`), and its `size` (the window's), for the
+    /// acrylic backdrops' blur ([`backdrop`]).
+    pub(crate) fn prepare_backdrop(
+        &mut self,
+        device: &wgpu::Device,
+        size: [u32; 2],
+        available: bool,
+    ) {
+        self.backdrop
+            .prepare(device, &self.texture_layout, size, available);
+    }
+
+    /// Whether this frame's shapes draw an acrylic backdrop, which
+    /// [`Self::encode_backdrop`] then blurs the frame for.
+    pub(crate) fn backdrop_used(&self) -> bool {
+        self.backdrop.used()
+    }
+
+    /// Blur `source`, the image the 2D layer is about to draw into, round this frame's
+    /// acrylic backdrops; before the 2D layer's pass, and nothing without a backdrop.
+    pub(crate) fn encode_backdrop(
+        &self,
+        device: &wgpu::Device,
+        encoder: &mut wgpu::CommandEncoder,
+        source: &wgpu::TextureView,
+    ) {
+        self.backdrop
+            .encode(device, &self.texture_layout, encoder, source);
+    }
+
     fn push_shape(
         &mut self,
         rect: Rect,
@@ -1644,8 +1835,28 @@ impl ShapeRenderer {
     }
 
     pub(crate) fn set_blade_pictures(&mut self, device: &wgpu::Device, view: &wgpu::TextureView) {
-        self.blade_pictures = Some(device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("SJK blade pictures UI binding"),
+        self.blade_pictures = Some(self.picture_binding(device, view, "SJK blade pictures UI"));
+    }
+
+    /// Let go of the blade stills' atlas, so it can be freed.
+    pub(crate) fn clear_blade_stills(&mut self) {
+        self.blade_stills = None;
+    }
+
+    /// Sample `view` for textures naming a blade still's cell ([`crate::blade_stills`]).
+    pub(crate) fn set_blade_stills(&mut self, device: &wgpu::Device, view: &wgpu::TextureView) {
+        self.blade_stills = Some(self.picture_binding(device, view, "SJK blade stills UI"));
+    }
+
+    /// `view` bound with the preview's sampler.
+    fn picture_binding(
+        &self,
+        device: &wgpu::Device,
+        view: &wgpu::TextureView,
+        label: &str,
+    ) -> wgpu::BindGroup {
+        device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some(label),
             layout: &self.texture_layout,
             entries: &[
                 wgpu::BindGroupEntry {
@@ -1657,7 +1868,7 @@ impl ShapeRenderer {
                     resource: wgpu::BindingResource::Sampler(&self.preview_sampler),
                 },
             ],
-        }));
+        })
     }
 
     /// Replace the map preview sampled by `TexturedQuad` commands naming
@@ -1706,6 +1917,18 @@ impl ShapeRenderer {
     ) {
         self.map_edit
             .upload_preview(device, queue, &self.texture_layout, image);
+    }
+
+    /// Put the feats' medal picture `cell` ([`feat_pictures::cell_texture`]).
+    pub(crate) fn upload_feat_picture(
+        &mut self,
+        device: &wgpu::Device,
+        queue: &crate::frame_queue::FrameQueue,
+        cell: u32,
+        rgba: &[u8],
+    ) {
+        self.feats
+            .upload(device, queue, &self.texture_layout, cell, rgba);
     }
 
     /// Drop the map editor's pictures (its panel closed); whether any were held.
@@ -2129,6 +2352,35 @@ mod line_clip_tests {
 
 #[cfg(test)]
 mod shape_shader_tests {
+    #[test]
+    fn the_acrylic_ceiling_matches_its_reference() {
+        let source = include_str!("ui_shapes.wgsl");
+        let line = source
+            .lines()
+            .find(|line| line.starts_with("const ACRYLIC_CEILING: f32 = "))
+            .expect("the acrylic ceiling in ui_shapes.wgsl");
+        let value: f32 = line
+            .trim_start_matches("const ACRYLIC_CEILING: f32 = ")
+            .trim_end_matches(';')
+            .parse()
+            .expect("a number");
+        assert_eq!(value, sjk_ui::acrylic::LUMA_CEILING);
+    }
+
+    #[test]
+    fn the_backdrop_shader_validates() {
+        use wgpu::naga;
+        let source = include_str!("ui_backdrop.wgsl");
+        let module = naga::front::wgsl::parse_str(source)
+            .unwrap_or_else(|error| panic!("{}", error.emit_to_string(source)));
+        naga::valid::Validator::new(
+            naga::valid::ValidationFlags::all(),
+            naga::valid::Capabilities::all(),
+        )
+        .validate(&module)
+        .unwrap_or_else(|error| panic!("{}", error.emit_to_string(source)));
+    }
+
     #[test]
     fn the_shape_shader_validates() {
         use wgpu::naga;

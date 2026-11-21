@@ -4,7 +4,7 @@ A holocron is loot a player earns by playing SJK. The SJK hub rolls and stores t
 the client shows them. Since 12/10/2026 a holocron can be opened: it gives a sealed card
 and credits ([cards.md](cards.md)), and nothing else (no power or setting). This page is the design, the decisions and what
 is checked; the wire is the hub's `PROTOCOL.md` ("Holocrons") in Sol-Vulpes/SJK-hub,
-decided together with the client and built in parallel. Players read the pop-up, the chat
+decided together with the client and built in parallel. Players read the banner, the chat
 lines and the Collection's Holocrons tab.
 
 With the JoF tools on, holocrons are called "Echoes" and medals "Honors" by default
@@ -19,7 +19,7 @@ With the JoF tools on, holocrons are called "Echoes" and medals "Honors" by defa
 | Drops joined to the chat's messages, told to the worker when they are the player's own | [feed.rs](../crates/sjk-identity/src/feed.rs) |
 | The one client list of tiers, the player's counts, recent holocrons, progress | [holocrons.rs](../crates/sjk-viewer/src/holocrons.rs) |
 | What counts as actively playing, the input clock | [holocrons/activity.rs](../crates/sjk-viewer/src/holocrons/activity.rs), [holocrons_frame.rs](../crates/sjk-viewer/src/holocrons_frame.rs), input hooks in [viewer_app.rs](../crates/sjk-viewer/src/viewer_app.rs) |
-| The drop pop-up, its ceremony and look | [holocron_popup.rs](../crates/sjk-viewer/src/holocron_popup.rs), [holocron_popup/view.rs](../crates/sjk-viewer/src/holocron_popup/view.rs) |
+| The drops' banners, their queue and `holocrons_seen.txt` updates; the banner's look | [holocron_banners.rs](../crates/sjk-viewer/src/holocron_banners.rs), [unlock_toast.rs](../crates/sjk-viewer/src/unlock_toast.rs), [unlock_toast/banner.rs](../crates/sjk-viewer/src/unlock_toast/banner.rs) |
 | `holocrons_seen.txt` | [holocrons/seen.rs](../crates/sjk-viewer/src/holocrons/seen.rs) |
 | The chat lines' words and the tier gem | [holocrons/line.rs](../crates/sjk-viewer/src/holocrons/line.rs), [holocrons/gem.rs](../crates/sjk-viewer/src/holocrons/gem.rs), [sjk_chat_look.rs](../crates/sjk-viewer/src/sjk_chat_look.rs) |
 | The tiers' pictures in the UI atlas | [holocrons/icons.rs](../crates/sjk-viewer/src/holocrons/icons.rs), [ui_renderer/icons.rs](../crates/sjk-viewer/src/ui_renderer/icons.rs), [hud/icons.rs](../crates/sjk-viewer/src/hud/icons.rs) |
@@ -27,7 +27,7 @@ With the JoF tools on, holocrons are called "Echoes" and medals "Honors" by defa
 | The loot table (the page, the odds worked out) | [holocrons_panel_loot.rs](../crates/sjk-viewer/src/holocrons_panel_loot.rs), [cards/loot.rs](../crates/sjk-viewer/src/cards/loot.rs) |
 | The tab's 3D holocron, the camera's shot behind it | [holocrons/stage.rs](../crates/sjk-viewer/src/holocrons/stage.rs), [menu_backdrop/routes.rs](../crates/sjk-viewer/src/menu_backdrop/routes.rs) |
 | `debug_holocron` | [holocrons/rehearsal.rs](../crates/sjk-viewer/src/holocrons/rehearsal.rs) |
-| Kyber crystals: their tiers, odds, pity and achievement rewards | [kyber.rs](../crates/sjk-viewer/src/kyber.rs) |
+| Dormant kybers: their tiers, odds, pity and achievement rewards | [kyber.rs](../crates/sjk-viewer/src/kyber.rs) |
 | Give holocron and Remove on the Staff page | [staff_panel.rs](../crates/sjk-viewer/src/staff_panel.rs), [staff_panel_view.rs](../crates/sjk-viewer/src/staff_panel_view.rs) |
 | The hub's rolls, caps and storage | repository Sol-Vulpes/SJK-hub (`PROTOCOL.md`, `src/holocrons.rs`) |
 
@@ -64,7 +64,7 @@ set), not one cube in four colours:
 | Uncommon | The Jedi cube (Sol's sculpted model, 08/11/2026): a steel-framed cube with riveted corners, glowing green glass on each face round a raised emblem plate, baked onto a 300-triangle low poly with a normal map | nothing of its own |
 | Rare | The Great Holocron: a dodecahedron, a raised pentagon in each face with the Jedi Order's emblem and runes, lit edges | a broken halo, tilted, turning and bobbing around it |
 | Legendary | The Sith pyramid (Sol's sculpted model, 05/11/2026): a dark frustum on a carved plinth, glowing purple runes and lines down its sides, baked from a high-poly model onto a 58-triangle low poly with a normal map | its cap floats over it, turning and bobbing; a glowing eye turns between them |
-| Mythical | The engram (21/10/2026; until then the kyber prism, now the [Kyber crystal](#kyber-crystals); Sol's sculpted model since 08/11/2026): a lumpy gem of 38 engraved triangular gold plates, each its own slab (its face baked from the high poly with a normal map) with glowing seams between them and a white-hot core inside | the shell turns about its length while it slowly tumbles over; the plates breathe out and back (up to 0.4 units, the core showing between them at the top of the breath); the seams and core pulse; streaks of reflection sweep the plates as they turn; eight sparks circle it |
+| Mythical | The engram (21/10/2026; until then the kyber prism, now the [Dormant kyber](#dormant-kybers); Sol's sculpted model since 08/11/2026): a lumpy gem of 38 engraved triangular gold plates, each its own slab (its face baked from the high poly with a normal map) with glowing seams between them and a white-hot core inside | the shell turns about its length while it slowly tumbles over; the plates breathe out and back (up to 0.4 units, the core showing between them at the top of the breath); the seams and core pulse; streaks of reflection sweep the plates as they turn; eight sparks circle it |
 
 They are made by `scripts/holocron_assets.py` with the shapes in `scripts/holocron_forms.py`:
 a model per part (the body, which stands still against the holocron, and each moving
@@ -73,7 +73,7 @@ part, modelled about its own centre), each also in the locked look, and the part
 client includes ([holocrons/stage.rs](../crates/sjk-viewer/src/holocrons/stage.rs),
 `FORMS`), so the two never disagree; the script also writes the list of bundled files the
 client mounts (`holocron_files.rs`). The Jedi cube's face is the shipped face in the tier's
-colour; the Great Holocron's pentagon and the kyber crystal come from Sol's pictures
+colour; the Great Holocron's pentagon and the dormant kyber come from Sol's pictures
 (17/10/2026) in the asset folder's `art/`, fitted and painted in the tier's colours by the
 script, and the Jedi cube, the Sith pyramid and the engram are Sol's sculpted models there
 (`art/jedi_cube/`, `art/sith_pyramid/`, `art/gold_engram/`: each a low poly with its
@@ -94,9 +94,9 @@ sprite was tried on the old engram (`deformVertexes autosprite`), but on the sta
 surface whose only stage is added light did not show, so the halo comes from the glow pass
 around the seams and core instead.
 
-### Kyber crystals
+### Dormant kyber models
 
-Since 21/10/2026 the client also has the kyber crystals' models (the crystal logic and UI
+Since 21/10/2026 the client also has the dormant kybers' models (the dormant kyber logic and UI
 are their own work): the kyber prism that was the Mythical holocron's form, in each tier's
 colours and light, with the hub's tier ids. The commoner the plainer:
 
@@ -121,57 +121,64 @@ a breathing frame, Legendary's sheen, Mythical's running spark and motes, faint 
 tier not held ([unlockables.md](unlockables.md#rarity-effects), off with
 `ui_rarityEffects 0`).
 
-## Kyber crystals
+<a id="kyber-crystals"></a>
+
+## Dormant kybers
+
+Called kyber crystals until 15/11/2026, when Sol renamed them (Sol's decision,
+15/11/2026: the blade looks they give became kybers, so the sealed one waits to be
+attuned); the hub's tier ids (`kyber_uncommon` to `kyber_mythical`) and the code's
+names are unchanged.
 
 Since 21/10/2026 (Sol's decisions; client branch `personal/kyber-crystals`, the hub's in
 parallel, neither deployed): a loot of its own beside the holocrons, which stay exactly as
-they are. A **kyber crystal** comes only from an achievement, one per achievement and once
-per person, and opening one always gives a saber shader. Four tiers, the holocrons' names
-with "Kyber Crystal" (`kyber_uncommon` "Uncommon Kyber Crystal" to `kyber_mythical`), in
-the holocron tier's colour and light; every tier keeps a small chance of a Mythical shader.
+they are. A **dormant kyber** comes only from an achievement, one per achievement and once
+per person, and attuning one (opening it) always gives a kyber. Four tiers, the holocrons' names
+with "Dormant Kyber" (`kyber_uncommon` "Uncommon Dormant Kyber" to `kyber_mythical`), in
+the holocron tier's colour and light; every tier keeps a small chance of a Mythical kyber.
 The client's list is [kyber.rs](../crates/sjk-viewer/src/kyber.rs) (`kyber::TIERS`, reusing
 `holocrons::Tier`, `Tier::is_kyber`).
 
-- **At the hub** a crystal is a row of the holocrons table with a crystal tier, source
+- **At the hub** a dormant kyber is a row of the holocrons table with a dormant kyber tier, source
   `achievement` and an empty note: listed, opened (`POST /v1/holocrons/open`) and given or
   removed by staff as holocrons are. It is never dropped by play, never sold, never in the
   caps or the holocron drop odds. The client keeps it out of everything about holocrons
   found by play: `Tier::from_id` and `holocrons::entries` know holocrons only (the player
   card, the counts, the Collection row), the tab's "16 holocrons", "x% of drops" and recent
-  list leave crystals out. `holocrons::any` and `Entry::from_wire` know both, for the tab,
-  the arrival and the chat. Crystal counts are counted from the profile's list (the hub
+  list leave dormant kybers out. `holocrons::any` and `Entry::from_wire` know both, for the tab,
+  the arrival and the chat. Dormant kyber counts are counted from the profile's list (the hub
   lists sealed rows first), not from `holocron_counts`.
 - **Odds** come with `GET /v1/holocrons` as a top-level `kyber` object (not in `loot`, so
-  older clients' loot parsing is untouched): `tiers`, each crystal tier's `shader_tier` per
+  older clients' loot parsing is untouched): `tiers`, each dormant kyber tier's `shader_tier` per
   mille over common to mythical, and `pity` (`every`, `since`). `kyber::BUILT_IN` is the
   client's copy, shown before the hub's first answer and for older hubs, pinned by a test;
   the hub's replace it only when they fit (the four tiers in order, five shares summing to
   a thousand). Provisional, Sol's to tune:
 
-  | Crystal | Common | Uncommon | Rare | Legendary | Mythical |
+  | Dormant kyber | Common | Uncommon | Rare | Legendary | Mythical |
   | --- | --- | --- | --- | --- | --- |
   | Uncommon | 45% | 40% | 12% | 2.5% | 0.5% |
   | Rare | 20% | 40% | 30% | 8.5% | 1.5% |
   | Legendary | 0% | 25% | 45% | 25% | 5% |
   | Mythical | 0% | 0% | 30% | 50% | 20% |
 
-- **Pity**, shown to the player: `since` is the person's crystals opened since the last
+- **Pity**, shown to the player: `since` is the person's dormant kybers attuned since the last
   that gave Legendary or better; the `every`-th (10) in a row without one is forced to
-  Legendary or Mythical. The tab says "Legendary or better guaranteed within 7 crystals"
-  (`kyber::pity_line`; "Your next crystal is Legendary or better, guaranteed" at the last;
-  "at least every 10 crystals" before the hub said). Opening a crystal makes the identity
+  Legendary or Mythical. The tab says "Legendary or better guaranteed within 7 dormant kybers"
+  (`kyber::pity_line`; "Your next dormant kyber is Legendary or better, guaranteed" at the last;
+  "at least every 10 dormant kybers" before the hub said). Attuning a dormant kyber makes the identity
   service read the progress again at once, so the line follows.
-- **The shader** is picked by the hub: the tier rolled from the crystal's odds (pity may
-  force it), then among the droppable shaders of that tier the ones the person does not
+- **The kyber** is picked by the hub: the tier rolled from the dormant kyber's odds (pity may
+  force it), then among the droppable kybers of that tier the ones the person does not
   hold first (holding them all, any, and the copy stacks), a tier with none falling back as
-  a holocron's shader does. Medal shaders never come out.
+  a holocron's kyber does. Medal kybers never come out.
 - **Rewards** (`kyber::REWARDS`, pinned against `achievements::ALL`): Uncommon for
   `first_blood`, `streak_5`, `ledge_10`, `duel_wins_10`, `captures_10`, `maps_10`,
   `servers_5`, `hours_10`, `storyteller`, `bug_reporter`, `holocrons_10`, `craft_blade`,
   `order66_kill`, `box_minutes_10`, `duel_close_call`, `saber_throw_far`, `fish_first`, `junk_kinds`,
   `mine_first`; Rare for
   `kills_100`, `saber_kills_100`, `streak_10`, `dark_side_25`, `arsenal`, `maps_25`,
-  `surveyor` (retired 26/10/2026: its holders keep their crystal), `decorated`,
+  `surveyor` (retired 26/10/2026: its holders keep their dormant kyber), `decorated`,
   `holocrons_50`, `mythical_find`, `craft_finishes`, `duel_flawless`, `duel_partners_25`,
   `thermal_return`, the five style masters (`style_blue_50`, `style_yellow_50`,
   `style_red_50`, `style_dual_50`, `style_staff_50`), the five Fishing ones (`fish_50`,
@@ -180,39 +187,39 @@ The client's list is [kyber.rs](../crates/sjk-viewer/src/kyber.rs) (`kyber::TIER
   `full_set`; Mythical for `kills_1000`. A hub
   that sends `reward` on an achievement replaces the client's word for it
   (`kyber::follow_rewards`, lock-free, read by the boards every frame). The hub grants a
-  crystal when the achievement unlocks and backfills those already unlocked; clearing an
-  achievement takes its crystal back while unopened. Crystals cannot be traded, sold,
+  dormant kyber when the achievement unlocks and backfills those already unlocked; clearing an
+  achievement takes its dormant kyber back while still dormant. Dormant kybers cannot be traded, sold,
   bought or broken down; grants are not announced, grand finds from opening one are.
-- **In the client**: the Holocrons tab's row of crystal tiles, their hover card and loot
-  table ([below](#the-holocrons-tab)); the arrival of a granted crystal as a gift's
-  ([the pop-up](#the-pop-up)); the chat's grand find line ([chat lines](#chat-lines)); the
-  achievement's reward on the Achievements tab, its hover card and its unlock card
+- **In the client**: the Holocrons tab's row of dormant kyber tiles, their hover card and loot
+  table ([below](#the-holocrons-tab)); the arrival of a granted dormant kyber as a gift's
+  ([the banner](#the-banner)); the chat's grand find line ([chat lines](#chat-lines)); the
+  achievement's reward on the Achievements tab, its hover card and its banner
   ([identity.md](identity.md#achievements)); `debug_holocron` and `debug_open` take the
-  crystal tiers.
-- **The 3D crystal**: the tab draws a crystal by its slot (`Tier::slot`, 4 to 7 after the
-  holocrons' 0 to 3) through the stage's `Request { tier, owned }`. Until the crystal models
+  dormant kyber tiers.
+- **The 3D dormant kyber**: the tab draws a dormant kyber by its slot (`Tier::slot`, 4 to 7 after the
+  holocrons' 0 to 3) through the stage's `Request { tier, owned }`. Until the dormant kyber models
   come (the branch `personal/engram-holocron` makes them, and the Mythical holocron's new
   engram, from the kyber prism the Mythical holocron wears today), the stage keeps any slot
-  past the holocrons to the Mythical holocron's parts and light, so a crystal shows as
+  past the holocrons to the Mythical holocron's parts and light, so a dormant kyber shows as
   today's kyber prism in gold; its tiles and arrival draw the tier's gem, the icons' bits 4
-  to 7 being unset. Not built: the reveal seating the crystal in a hilt and igniting the
-  blade (the shader's entrance is the holocron one's).
+  to 7 being unset. Not built: the reveal seating the dormant kyber in a hilt and igniting the
+  blade (the kyber's entrance is the holocron one's).
 
 ## Loot table
 
 Every chance a holocron brings, as players see it on the Holocrons tab's loot table
 (12/10/2026, Sol's request; Loot table or L). The client works it out from the hub's
 tables, which `GET /v1/holocrons` sends under `loot` (14/10/2026, [`loot_odds.rs`](../crates/sjk-viewer/src/loot_odds.rs)):
-the tiers' odds, the card's odds and credits ([cards.md](cards.md#odds)) and the shader
+the tiers' odds, the card's odds and credits ([cards.md](cards.md#odds)) and the kyber
 odds. Until the hub's first answer, or from a hub older than them, it shows its own copy
 (`loot_odds::BUILT_IN`); tables that do not fit what the client can show (other tiers,
 rarities or finishes, shares not summing to a thousand) are ignored the same way. Tier
 odds read elsewhere ("10.5% of drops") come from the same tables. A card's rarity and its finish are rolled apart, so a kind is the two chances
 multiplied; "per holocron found" weighs each tier by how often it drops. Since 14/10/2026 an
-opening may bring a saber shader instead of the card and its credits (30% of Uncommon
+opening may bring a kyber instead of the card and its credits (30% of Uncommon
 holocrons to 50% of Mythical ones, [unlockables.md](unlockables.md)): the card columns of a
 tier are the card's odds when it holds one, the "any holocron" shares are of the cards
-found, and the credits' averages and the second table are per holocron found, shaders
+found, and the credits' averages and the second table are per holocron found, kybers
 counted (`cards::loot::card_in`). Since 17/10/2026 (prepared, not deployed) one opening in
 ten may bring a pile of kyber shards instead ([cards.md](cards.md#shards-and-the-shop)): the
 tables' `shard_pile` and `shards`, a "Kyber shards" column (the chance and the range, the
@@ -221,7 +228,7 @@ A card comes with a few shards beside its credits (the card pack, `card_shards`,
 [cards.md](cards.md#odds)).
 Since 27/10/2026 (the hub's `tag-toy` branch) an opening may bring a tag instead of the card
 (`tag` in the tables, 150 per mille in every tier, taken from the cards' share; the tag's
-tier rolled as a shader's; [client.md](client.md#tag)); this client's own copy of the
+tier rolled as a kyber's; [client.md](client.md#tag)); this client's own copy of the
 tables keeps no tags, so the figures below are without them. Since 31/10/2026 (the hub's
 `tag-cards` branch, Sol's decision: stingy and flat) a dropped tag comes Holo 4 % of the
 time and Solar 0.5 %, in every tier (`tag_finish` in the tables, per mille, Holo then
@@ -264,10 +271,10 @@ about 1 in 119 581 holocrons", worked out), how the card is picked among its rar
 rounded up (`cards::loot::percent`). A change to the hub's tables needs the client's copy
 changed with it: until then the page shows the old odds.
 
-On a kyber crystal's tile the page is the crystals' table instead ("Loot table: kyber
-crystals"): per crystal tier the chance of each saber shader tier, a row of how many
-droppable shaders each tier holds, and notes on how the shader is picked, the pity (with
-the person's own count) and where crystals come from.
+On a dormant kyber's tile the page is the dormant kybers' table instead ("Loot table: dormant
+kybers"): per dormant kyber tier the chance of each kyber tier, a row of how many
+droppable kybers each tier holds, and notes on how the kyber is picked, the pity (with
+the person's own count) and where dormant kybers come from.
 
 ## Earning
 
@@ -298,8 +305,8 @@ the person's own count) and where crystals come from.
   (rises of the game's hit counter, `PERS_HITS`), `hurt` (snapshots whose health or
   armour fell while the last attacker, `PERS_ATTACKER`, is another client: falls and
   self damage are not counted), `kills` and `deaths` (obituaries against or by another
-  client), and since 04/11/2026 `bites` (bites of the fishing toy hooked in time, so a
-  player standing at the water earns; headshots' question in #ideas). The counts are kept
+  client), and `bites` (04/11/2026 to 20/11/2026, the Fishing toy's hooked bites, so a
+  player standing at the water earned; sent as 0 since the toy went). The counts are kept
   only while the claim says `active`, sent with the next
   one and cleared once the hub accepted it (a failed claim keeps them for the next).
   [holocrons/signals.rs](../crates/sjk-viewer/src/holocrons/signals.rs) reads them from
@@ -358,65 +365,62 @@ sends.
 
 ## In the client
 
-### The pop-up
+### The banner
 
-A holocron new to the client shows once, large, on a darkened screen in its tier's colour:
-"New holocron" (and "1 of 3"), where it came from (dropped while playing, or a gift from
-the SJK team), its name, when it was found (`dd/mm/yyyy HH:MM`, UTC), how rare it is and,
-for a gift, the team's note. It follows the medal pop-up
-([identity.md](identity.md#medals), [medal_popup.rs](../crates/sjk-viewer/src/medal_popup.rs)):
+A holocron new to the client is told of once by a notification banner that comes down
+from the top of the screen, rests a few seconds and goes back up, as a phone's
+notifications do ([identity.md](identity.md#achievements),
+[unlock_toast.rs](../crates/sjk-viewer/src/unlock_toast.rs),
+[holocron_banners.rs](../crates/sjk-viewer/src/holocron_banners.rs)): "NEW HOLOCRON" and
+"now", its name ("Legendary Holocron"), where it came from ("Found while playing: 10.5%
+of drops are Legendary", or "A gift from the SJK team") and where it waits ("See it in
+Collection > Holocrons"), with the tier's picture (its gem without one) on a tile of the
+tier's colour, and the achievements' chime (`cg_achievementSound`). With JoF's names on
+it says "NEW ECHO", "Legendary Echo" and "Collection > Echoes" ([terms](mods.md#honors-and-echoes)).
 
-- It opens on the main menu, or when the game menu opens in a match, never over play. A
-  holocron that arrives during a match is announced once by a card at the top of the
-  screen, the achievements' ([identity.md](identity.md#achievements),
-  [unlock_toast.rs](../crates/sjk-viewer/src/unlock_toast.rs); since 10/10/2026, Sol's
-  request, in place of a centre print): "New holocron", "Open the game menu to see it", the
-  name in the tier's light, "Found while playing: 28% of drops are Rare" (or "A gift from
-  the SJK team"; for a kyber crystal "NEW KYBER CRYSTAL" and "Earned from an achievement",
-  or "Earned: Centurion" when the row's note names the achievement), the tier's icon (its gem without one) in a ring that sweeps round, and the
-  burst, sparks and edge in the tier's colour, with the achievements' chime
-  (`cg_achievementSound`). It takes no input and leaves after about six seconds; one
-  arrival brings at most three cards (a reinstalled PC finding twenty shows three), and the
-  pop-up shows them all. When the pop-up opens it takes back the holocron cards still
-  showing or waiting. While it shows, the menu under it is neither drawn nor given input. A
-  medal on show or waiting goes first.
+- Until 16/11/2026 a holocron also showed once more, large, on a darkened screen, when the
+  main menu or the game menu opened (Esc), with a ceremony, "1 of 3" and Next or Close, and
+  the card in a match only said "Open the game menu to see it". Sol: "remove the big
+  notification of the holocron drops (when you press ESC), we just remove it. And
+  holocrons and other notifications should come up like an iOS notification". The
+  banner is now all there is: it shows over play and over the menus alike (the main menu
+  too), takes no input and blocks nothing.
+- Several waiting together share one banner (three or more of one kind,
+  `unlock_toast::GROUP_AT`): "NEW HOLOCRONS", "5 new holocrons", "The rarest: a Legendary
+  Holocron" (or "Every one a Rare Holocron"), "See them in Collection > Holocrons", in the
+  rarest one's colour with the count on a badge. A reinstalled PC finding twenty
+  holocrons is one banner, and holocrons that come while one waits (in a private duel,
+  say) join it. Dormant kybers fold apart from holocrons ("3 new dormant kybers").
 - `cl_holocronNotifications` (archived, default 1; Settings > General > Holocron
-  notifications, Network > SJK online in the classic views; Lukas, SJK #179) controls
-  only the live card during play. 1 (After
-  duels) gives it as above; during a private duel it waits, as every achievement, medal
-  and holocron card does (hub report #81, `unlock_toast::held_in_duel`), and plays once
-  the duel ends. 2 (Always) lets the holocron cards show during a duel too, ahead of the
-  other cards held there. 0 (Off) gives none: cards showing or waiting are taken back,
-  and those not given yet never are, so turning it back on replays nothing. In every
-  mode the holocron itself still waits and its large pop-up opens normally when the
-  player opens the game menu.
-- A kyber crystal the hub grants arrives the same way, as a gift does: "New kyber crystal",
-  "Earned from an achievement" (or "Earned: <achievement>" when the hub names it in the
-  row's note, which is then not quoted), its name, when, and "Earned from achievements.
-  Always a saber shader." in place of the drop odds; its own picture
-  (`gfx/sjk/holocron_kyber_<tier>`, the atlas cells 4 to 7) since 27/10/2026, its gem only
-  when that picture is missing (until then the pop-up always drew the gem, which read as a
-  plain holocron: report 150).
-- Each arrives in a ceremony of the medal's timing and light in the tier's colour (it comes
-  down into place, rings and sparks run out, a ring of ticks turns, a glow breathes while it
-  waits, the words fade up one group after another) with the multiplayer game's fanfare
-  (`music/goodsmall.mp3`, the medals' cue; silent without game data). Enter, Space, Right,
-  Escape or a click finish the entrance, then take Next (Close on the last). The look is the
-  SJK UI's in its families, Inter until they load, and the same under the classic menus.
-- Everything is draw-list shapes of a fixed number: no allocation a frame, and a canvas of
-  320 commands holds the busiest moment.
+  notifications, Network > SJK online in the classic views; Lukas, SJK #179): 1 (After
+  duels) shows the banners; during a private duel they wait, as every reward's banner
+  does (hub report #81, `unlock_toast::held_in_duel`), and show once the duel ends. 2
+  (Always) lets the holocron banners show during a duel too, ahead of the others held
+  there. 0 (Off) shows none: banners showing or waiting are taken back, and what comes is
+  counted as shown without a banner, so turning it back on replays nothing. Tactical
+  holds the banners in a game until it is off, as every banner's
+  ([client.md](client.md#tactical-mode)); it no longer turns this setting off.
+- A dormant kyber the hub grants arrives the same way, as a gift does: "NEW DORMANT KYBER",
+  "Earned from an achievement" (or "Earned: Centurion" when the hub names the achievement
+  in the row's note, which is then not quoted), "Attune it in Collection > Holocrons", with
+  its own picture (`gfx/sjk/holocron_kyber_<tier>`, the atlas cells 4 to 7) since
+  27/10/2026, its gem only when that picture is missing (until then it always drew the gem,
+  which read as a plain holocron: report 150).
 - `holocrons_seen.txt` in the settings folder, beside `identity.key`, holds the key id and
-  the highest holocron number shown, written when a holocron's button is taken. A number
-  above it is new. With no file for the key (a reinstall, a new PC) everything the profile
-  holds is new, and the newest 20 show once, oldest first. A holocron of a tier the client
-  does not know is left out and never counted as shown. Holocron numbers only rise at the
-  hub, so a staff removal never brings an old one back.
+  the highest holocron number shown, written as a holocron's banner begins (for several,
+  the highest of them). A number above it is new. A banner held back and never shown (the
+  game closed during a duel) leaves its holocrons new for the next start. With no file
+  for the key (a reinstall, a new PC) everything the profile holds is new, and the newest
+  20 show once, on one banner. A holocron of a tier the client does not know is left out
+  and never counted as shown. Holocron numbers only rise at the hub, so a staff removal
+  never brings an old one back. A new identity takes back the banners of the one before.
 - The identity worker reads the own profile again soon (at most once every 30 seconds) when
-  a drop for the player's own key arrives in the feed, and the pop-up sees the new holocron
-  within half a second of the profile arriving.
+  a drop for the player's own key arrives in the feed, and the banner is given within half
+  a second of the profile arriving. (Until 20/11/2026, while the Fishing toy was out, a
+  holocron play dropped waited for its bite instead.)
 - A contributor reward's holocrons (25/10/2026, [hub-chat.md](hub-chat.md#announcements-and-reward-rounds))
   are gifts: claiming the reward brings the profile that holds them, and they arrive
-  through this pop-up as any gift does.
+  with their banner as any gift does.
 
 ### Chat lines
 
@@ -440,47 +444,47 @@ goes, in all three places the SJK chat shows ([hub-chat.md](hub-chat.md#how-a-li
   player's own drop still makes the worker read the profile.
 - **Grand finds** (since 17/10/2026, with a hub that sends the feed's `finds`): when a
   holocron someone opened gives a Legendary, Mythical or Solar card, or a Legendary or
-  Mythical shader, every SJK player gets a line like a drop's, in the holocron's colour with its
+  Mythical kyber, every SJK player gets a line like a drop's, in the holocron's colour with its
   gem: `Sol opened a Mythical Holocron: Phoenix blade!`, `Fox opened an Uncommon
   Holocron: a Legendary card!`, `You opened a Rare Holocron: an Uncommon card, Solar!`
-  (the shader's name plain and at most 40 characters, the card's rarity and its finish
-  unless plain). A kyber crystal's find reads the same with its name and colour: `Sol
-  opened a Rare Kyber Crystal: Phoenix blade!` (the event's tier is the crystal's). A
-  crystal's grant has no line. The identity service relays a find as a drop line whose mark carries
+  (the kyber's name plain and at most 40 characters, the card's rarity and its finish
+  unless plain). A dormant kyber's find reads the same with its name and colour: `Sol
+  attuned a Rare Dormant Kyber: Phoenix blade!` (the event's tier is the dormant kyber's). A
+  dormant kyber's grant has no line. The identity service relays a find as a drop line whose mark carries
   the prize (`DropMark::find`, [feed.rs](../crates/sjk-identity/src/feed.rs)); the
   words are [holocrons/line.rs](../crates/sjk-viewer/src/holocrons/line.rs)'s. Muted
   players' finds and unknown tiers are left out as drops are.
 - **How a find looks** (01/11/2026, Sol's request): in all three views a drop's or
-  find's mark is the holocron's or crystal's own picture (`gfx/sjk/holocron_<tier>`,
+  find's mark is the holocron's or dormant kyber's own picture (`gfx/sjk/holocron_<tier>`,
   [holocrons/icons.rs](../crates/sjk-viewer/src/holocrons/icons.rs), drawn 1.3 times a
   tick's side), the gem only where the picture is missing; in the game's chat it starts
   the line, in place of SJK's emblem. In the game's chat the prize's words are drawn in
   the prize's own colour (the blade's tier, a card's rarity or rank), the rest of the
   line in the holocron's; a find of a blade skin the client knows draws that blade after
   the picture, small and live as the Collection's swatches draw it, fading with its
-  line. The hub's `item` (the shader's unlock id) comes through as `FindMark::skin`; a
-  hub without it gives the colour from the shader's tier and no blade. While the
+  line. The hub's `item` (the kyber's unlock id) comes through as `FindMark::skin`; a
+  hub without it gives the colour from the kyber's tier and no blade. While the
   composer is open, resting the pointer on the blade shows it large in a card above the
   line (its tier in its colour, its name, the blade), as long as the pointer stays on
   it ([chat/find_blade.rs](../crates/sjk-viewer/src/chat/find_blade.rs)).
   `debug_find [tier] [blade id or #number]` puts a made-up find of a blade in the feed
-  (a Legendary Kyber Crystal and a Mythical blade by default), nothing sent.
+  (a Legendary Dormant Kyber and a Mythical blade by default), nothing sent.
 
 ### Staff
 
-The Staff page ([identity.md](identity.md#staff)) has a Holocrons and kyber crystals
+The Staff page ([identity.md](identity.md#staff)) has a Holocrons and dormant kybers
 section on its Holocrons and credits tab: the chosen player's unopened counts of both, the
-four holocron tiers and under them the four kyber crystal tiers to choose (the choice
-ringed in its colour, and named under the chips: "Give: a Rare Kyber Crystal, opened to a
-saber shader"), Give (with the note field, `StaffRequest::HolocronGive`, `POST
-/v1/staff/holocron-give`, which takes a crystal tier id such as `kyber_rare` as well as a
+four holocron tiers and under them the four dormant kyber tiers to choose (the choice
+ringed in its colour, and named under the chips: "Give: a Rare Dormant Kyber, attuned to a
+kyber"), Give (with the note field, `StaffRequest::HolocronGive`, `POST
+/v1/staff/holocron-give`, which takes a dormant kyber tier id such as `kyber_rare` as well as a
 holocron's; 26/10/2026, Sol's request) and the player's twelve newest holocrons and
-crystals (number, date, how it came: play, gift, trade or earned, and whether opened) with
+dormant kybers (number, date, how it came: play, gift, trade or earned, and whether opened) with
 Remove on a second press (`StaffRequest::HolocronRemove`, `POST
-/v1/staff/holocron-remove`). A crystal given by staff is a sealed row of source `staff`:
+/v1/staff/holocron-remove`). A dormant kyber given by staff is a sealed row of source `staff`:
 clearing an achievement never takes it back, and it opens like an earned one. The hub's answer is the
 target's profile and replaces the chosen player's, and the player's own when it is theirs.
-Since 08/11/2026 every staff member gives holocrons and crystals, never to themselves and a
+Since 08/11/2026 every staff member gives holocrons and dormant kybers, never to themselves and a
 number a day, and undoes their own gifts of the day on the My gifts tab; Remove stays the
 creator's ([identity.md](identity.md#staff)).
 
@@ -488,12 +492,12 @@ creator's ([identity.md](identity.md#staff)).
 
 `debug_holocron <tier|all> [x<count>]` (alone it lists the tiers and the odds) rehearses
 drops offline: `all` queues one of each tier, `rare x3` three of one (1 to 20). They go
-through the same queue, card (in a match), pop-up, ceremony and sound, and the first one's
-chat line goes into the game's feed as the player's own. A crystal tier (`kyber_rare`, or
-`kyber` for one of each) rehearses a crystal's arrival, earned from an achievement, with no
-chat line. `debug_open kyber_rare x3` (or `kyber`) plays a crystal's opening, each a
-droppable shader its odds can give. The console closes so the pop-up
-shows at once on a menu, or the cards over play in a match. Nothing is sent to the hub, and rehearsed holocrons (numbered from
+through the same queue, banner (three or more on one) and sound, and the first one's
+chat line goes into the game's feed as the player's own. A dormant kyber tier (`kyber_rare`, or
+`kyber` for one of each) rehearses a dormant kyber's arrival, earned from an achievement, with no
+chat line. `debug_open kyber_rare x3` (or `kyber`) plays a dormant kyber's attuning, each a
+droppable kyber its odds can give. The console closes so the banner shows at once, over
+a menu or over play. Nothing is sent to the hub, and rehearsed holocrons (numbered from
 4,000,000,000) are never written to `holocrons_seen.txt`.
 
 ### The Holocrons tab
@@ -504,19 +508,19 @@ Profile page's See holocrons or the `holocrons` command open the same page on it
 the SJK UI's look as the Collection page does. Left, the world is left
 clear for one 3D holocron; right, over a dark panel, the four tiers (their picture, name in
 the tier's colour, how many are held or a dash while the hub has not answered, and the odds
-of a drop), since 21/10/2026 the kyber crystals ([above](#kyber-crystals): a "Kyber
-crystals" heading with the pity line at its right, then a tile per crystal tier with its
+of a drop), since 21/10/2026 the dormant kybers ([above](#dormant-kybers): a "Dormant
+kybers" heading with the pity line at its right, then a tile per dormant kyber tier with its
 gem, the tier in its colour and how many are held, chosen like a row; its hover card says
-"Earned from achievements. Always a saber shader.", that each achievement brings one, the
-pity and how many are held), what the chosen tier is (for a crystal what opening one gives,
-by shader tier), "Next holocron in about N minutes of play" with a bar
+"Earned from achievements. Always a kyber.", that each achievement brings one, the
+pity and how many are held), what the chosen tier is (for a dormant kyber what attuning one gives,
+by kyber tier), "Next holocron in about N minutes of play" with a bar
 and "n of 8 today" (once the cap is reached, "Limit reached: resets in about 5 h 20 min",
 the time until the hub's `resets_at`, counted from the hub's clock when it answered;
 "Limit reached for today" from a hub that does not say it. Before 29/10/2026 the page
 worked the end of the hub's rolling 24 hours out of the play drops the profile lists, and
 a holocron received in a trade, listed as a play drop but not counted by the hub, put it
 off: the page could say hours while the next one came at once. A player's
-report (#77, 19/10/2026) had read "8 of 8 today" as a calendar day that had not reset), the newest eight holocrons (ten until the crystals took a row; tier, `dd/mm/yyyy HH:MM` in UTC, and for a gift
+report (#77, 19/10/2026) had read "8 of 8 today" as a calendar day that had not reset), the newest eight holocrons (ten until the dormant kybers took a row; tier, `dd/mm/yyyy HH:MM` in UTC, and for a gift
 "Gift from the SJK team" with the note) and, when the identity is off, no hub is set or the
 hub has not answered, the reason ("Holocrons need the SJK identity"). Since 12/10/2026 the
 counts are the holocrons not opened yet, the player's credits (and since 17/10/2026 their
@@ -529,11 +533,11 @@ the buttons; when this build is older than the hub's minimum client (since 21/10
 line says to update to that release instead.
 
 - **Keys and pointer:** Up and Down (or Left and Right, Tab and Shift+Tab, the wheel, 1 to
-  4 for the holocrons and 5 to 8 for the crystals, Home and End) choose the tier, the
-  crystals coming after the holocrons; Escape goes back; a click on a row chooses it; Ctrl+Tab
-  is the Profile screen's. Enter opens the oldest holocron (or crystal) of the tier chosen, A opens up
-  to twenty of that kind (every holocron, or every crystal: a crystal's opening strip shows
-  shaders only, by the crystal's odds), asking first when more than one would open ([cards.md](cards.md#in-the-client))
+  4 for the holocrons and 5 to 8 for the dormant kybers, Home and End) choose the tier, the
+  dormant kybers coming after the holocrons; Escape goes back; a click on a row chooses it; Ctrl+Tab
+  is the Profile screen's. Enter opens the oldest holocron (or attunes the oldest dormant kyber) of the tier chosen, A opens up
+  to twenty of that kind (every holocron, or every dormant kyber: a dormant kyber's attuning strip shows
+  kybers only, by the dormant kyber's odds), asking first when more than one would open ([cards.md](cards.md#in-the-client))
   (both only when the hub lets the player open). L, or Loot table at the right of what the chosen tier holds, shows the
   [loot table](#loot-table); S, or Shop, the Forge's Shop ([cards.md](cards.md#the-forge)).
 - **The 3D holocron** is a normal object of the world pass, not a stage of the Character
@@ -594,14 +598,14 @@ client reads; the Collection's Holocrons tab is built on it.
 ## Editions
 
 Since 06/11/2026 (Sol's collections, [unlockables.md](unlockables.md#alpha-and-beta-the-collections)):
-every holocron and kyber crystal carries the **edition** the hub stamped on it when it was
+every holocron and dormant kyber carries the **edition** the hub stamped on it when it was
 given, `"edition": "alpha"` or `"beta"` on each row of the profile's `holocrons` list (the
 wire `Holocron::edition`, [wire.rs](../crates/sjk-identity/src/wire.rs); a hub before then
 sends none, read as `alpha`, `wire::EDITION_FIRST`). It keeps it for good, through trades
 too. Opening one brings only things of its edition or an older one (the hub's
 `editions::within(item, holocron)`): an Alpha
 one only Alpha things, a Beta one Beta or Alpha. The hub stamps it at every give (play
-drop, staff or operator gift, purchase, mystery box, toy, kyber crystal), Beta only while
+drop, staff or operator gift, purchase, mystery box, toy, dormant kyber), Beta only while
 its switch `--beta-min-client VERSION|off` (`SJK_HUB_BETA_MIN_CLIENT`, off by default)
 names a release and the person's newest client meets it; until then every one is Alpha.
 
@@ -623,8 +627,16 @@ rehearsal, ceremony and layout (every tier, with and without a picture, a note, 
 window shapes, in the families and in Inter); the three chat views' lines; the staff page's
 requests; the activity rules against player states. Not tried: any of it against a running
 hub (`crates/sjk-identity/tests/hub_e2e.rs` has an ignored test that needs one), in a game,
-or with the art of the tiers (the pop-up draws the gem until the pictures are mounted); the
+or with the art of the tiers (the pop-up drew the gem until the pictures were mounted); the
 input hooks and the 500 ms comparison are not covered by a test of their own.
+
+The banner in place of the pop-up (16/11/2026): `holocron_banners::tests` (one banner each,
+oldest first, once; counted as seen as its banner begins, not before; the newest twenty of a
+first read on one banner; Off counting them without one; rehearsals never written) and `unlock_toast::tests` (the folding, its words, the duel's wait,
+every banner's words in its column in the families and in Inter at five window shapes,
+slid and faded); the world shots `world_shot::notify_banner_shots` (siege_hoth's bright
+sky and the main menu, at 1080p and 4K) were rendered and looked at. Not tried in a running
+client (no game window was started) or against a hub.
 
 The Holocrons tab (10/10/2026): unit tests for its keys, wheel and clicks, the stage request
 for the chosen tier (and the locked look), the data from every identity state, the twice a second
@@ -632,8 +644,8 @@ read, every state at 1080p, 4K, 4:3 and 21:9 on the Profile screen and on its ow
 holocron's placement in those windows and its swap, and the tier models' and shaders'
 mounting (`illuminate::tests::every_part_names_shaders_of_its_look_and_they_are_mounted`).
 The four holocrons (17/10/2026): `holocrons::stage::tests` check the parts' table, poses and
-models (since 21/10/2026 also the kyber crystals', `Request::of` and the forms' lights), the
-world shot `duel6_sjk_kyber_forms` (21/10/2026) shows the engram and the four kyber crystals
+models (since 21/10/2026 also the dormant kybers', `Request::of` and the forms' lights), the
+world shot `duel6_sjk_kyber_forms` (21/10/2026) shows the engram and the four dormant kybers
 held at two moments and locked, and the engram alone at three moments (looked at on this
 machine; the breath was checked by a test build with the plates pushed far out), and the
 world shot `duel6_sjk_holocron_forms` shows each tier held at two moments and
@@ -653,14 +665,14 @@ quarters of what it should (and it floated before the eye, not the third-person 
 The unit test projects it back through the view at 90 and 64 degrees in four windows, and
 the world shot `duel6_sjk_collection` renders it from the game menu at a match's field.
 
-Kyber crystals (21/10/2026): `kyber::tests` (tiers, built-in odds and the hub's, pity line,
+Dormant kybers (21/10/2026): `kyber::tests` (tiers, built-in odds and the hub's, pity line,
 rewards against the achievements, the arrival's words), the tab's data and opening
 (`crystals_are_counted_apart_and_open_on_their_own`), the shader-only strip, the
-rehearsals, the chat line and the unlock card; the world shots
-`world_shot::holocrons_tab::duel6_sjk_kyber_crystals` (the tiles, a crystal chosen and one
-held none of, its hover card, its loot table, the strip and the shader's entrance) and
+rehearsals, the chat line and the banner; the world shots
+`world_shot::holocrons_tab::duel6_sjk_kyber_crystals` (the tiles, a dormant kyber chosen and one
+held none of, its hover card, its loot table, the strip and the kyber's entrance) and
 `world_shot::collection::duel6_sjk_kyber_achievements` were rendered and looked at. Not
-tried against a hub that sends crystals.
+tried against a hub that sends dormant kybers.
 
 ## Planned, not built
 
@@ -668,13 +680,13 @@ What opened holocrons will also give: the cards' faces ([cards.md](cards.md#plan
 The shop (in kyber shards), the kyber shards and the holocrons credits buy (an Uncommon
 for 150, a Rare for 400, source `bought`, outside the caps) are live since 21/10/2026, in the
 Collection's Forge ([cards.md](cards.md#the-forge)).
-Saber shaders drop already
-([unlockables.md](unlockables.md#holocron-shader-drops)).
+Kybers drop already
+([unlockables.md](unlockables.md#holocron-kyber-drops)).
 
 ## Profile banner prizes
 
 Openings may award a counted profile banner instead of a card and credits, when
-the hub supplies a banner share. Other prize shares stay unchanged, and crystals
-still give shaders only. The reveal shows the cover and links its use to Collection
+the hub supplies a banner share. Other prize shares stay unchanged, and dormant kybers
+still give kybers only. The reveal shows the cover and links its use to Collection
 > Banners. See [profile banners](profile-banners.md#echo-rewards-and-ownership) for
 the first catalogue, proposed balance and inventory rules.

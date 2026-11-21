@@ -496,7 +496,7 @@ impl Panel {
             format_args!("Editing {name}"),
             frame.rect(column_x, column.top - 14.0, column_width - 260.0, 28.0),
             21.0 * s,
-            color::TEXT,
+            color::text(),
             FontWeight::Semibold,
             TextAlign::Start,
         );
@@ -528,16 +528,18 @@ impl Panel {
         let (status, colour) = match edit.editor.problem() {
             Some(why) => (
                 format!("Does not read: {why}. The last good look stays."),
-                color::EMBER,
+                color::ember(),
             ),
-            None if edit.editor.unsaved() => ("Shown; writing the files…".to_owned(), color::QUIET),
+            None if edit.editor.unsaved() => {
+                ("Shown; writing the files…".to_owned(), color::quiet())
+            }
             None if edit.editor.revertable() => (
                 "Saved. Revert puts it back as it was before your first change.".to_owned(),
-                color::QUIET,
+                color::quiet(),
             ),
             None => (
                 "Shown and saved in the lab's folder.".to_owned(),
-                color::QUIET,
+                color::quiet(),
             ),
         };
         text(
@@ -593,12 +595,12 @@ impl Panel {
             let (mark, label_colour, weight) = match row.value {
                 Value::Group { open, .. } | Value::Colour { open, .. } => (
                     if open { "- " } else { "+ " },
-                    color::TEXT,
+                    color::text(),
                     FontWeight::Semibold,
                 ),
-                Value::Add => ("+ add ", color::GOLD, FontWeight::Regular),
-                Value::Heading => ("", color::GOLD_BRIGHT, FontWeight::Semibold),
-                _ => ("", color::MUTED, FontWeight::Regular),
+                Value::Add => ("+ add ", color::gold(), FontWeight::Regular),
+                Value::Heading => ("", color::gold_bright(), FontWeight::Semibold),
+                _ => ("", color::muted(), FontWeight::Regular),
             };
             text(
                 &mut self.ui,
@@ -692,17 +694,19 @@ impl Panel {
                         format_args!("{}", shown_number(*value, *whole)),
                         frame.rect(right_x - VALUE_WIDTH, middle - 11.0, VALUE_WIDTH, 22.0),
                         16.0 * s,
-                        color::TEXT,
+                        color::text(),
                         FontWeight::Regular,
                         TextAlign::End,
                     );
                 }
-                Value::Switch(on) => value_text(self, if *on { "On" } else { "Off" }, color::TEXT),
-                Value::Text(words) => value_text(self, &shorten(words, 26), color::TEXT),
+                Value::Switch(on) => {
+                    value_text(self, if *on { "On" } else { "Off" }, color::text())
+                }
+                Value::Text(words) => value_text(self, &shorten(words, 26), color::text()),
                 // A section says what it draws, and its file when it is an additions
                 // file's.
-                Value::Group { .. } if row.section() => note(self, row, color::QUIET),
-                Value::Group { count, .. } => value_text(self, &format!("{count}"), color::QUIET),
+                Value::Group { .. } if row.section() => note(self, row, color::quiet()),
+                Value::Group { count, .. } => value_text(self, &format!("{count}"), color::quiet()),
                 Value::Colour { rgb, .. } => {
                     // The channels left of the swatch.
                     text(
@@ -716,7 +720,7 @@ impl Panel {
                             22.0,
                         ),
                         16.0 * s,
-                        color::MUTED,
+                        color::muted(),
                         FontWeight::Regular,
                         TextAlign::End,
                     );
@@ -727,7 +731,7 @@ impl Panel {
                         color: Color::new(rgb[0] / peak, rgb[1] / peak, rgb[2] / peak, 1.0),
                     });
                 }
-                Value::Add => note(self, row, color::MUTED),
+                Value::Add => note(self, row, color::muted()),
                 Value::Heading => {}
             }
         }
@@ -748,7 +752,7 @@ impl Panel {
                     18.0,
                 ),
                 13.0 * s,
-                color::QUIET,
+                color::quiet(),
                 FontWeight::Regular,
                 TextAlign::End,
             );

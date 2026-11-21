@@ -534,23 +534,18 @@ impl Options {
         // packs with the unlockables' art), below everything so game data with the same paths
         // replaces it.
         crate::illuminate::mount(&mut vfs)?;
-        crate::cardboard_box::mount(&mut vfs)?;
-        crate::fishing::mount(&mut vfs)?;
-        crate::mining::mount(&mut vfs)?;
-        crate::order66::mount(&mut vfs)?;
-        crate::hax::mount(&mut vfs)?;
         crate::ragdoll::mount(&mut vfs)?;
         crate::drone::mount(&mut vfs)?;
         crate::boombox::mount(&mut vfs)?;
         crate::monitor::mount(&mut vfs)?;
         crate::box_hunt::mount(&mut vfs)?;
         crate::quests::mount(&mut vfs)?;
-        crate::banana::mount(&mut vfs)?;
         crate::tags::mount(&mut vfs)?;
         crate::mystery_box::mount(&mut vfs)?;
         crate::wheel_of_doom::mount(&mut vfs)?;
         crate::saber_petals::mount(&mut vfs)?;
         crate::status_balloons::mount(&mut vfs)?;
+        crate::feats::mount(&mut vfs)?;
         super::force_presets::mount(&mut vfs)?;
         crate::card_outline::mount(&mut vfs)?;
         crate::duel_ghost::mount(&mut vfs)?;

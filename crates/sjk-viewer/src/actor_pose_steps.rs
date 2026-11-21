@@ -6,18 +6,79 @@ use sjk_protocol::{GameState, Snapshot};
 use sjk_runtime::{AnimationState, EntityId, World};
 use std::error::Error;
 
-/// `BOTH_CROUCH1IDLE`'s animation number (`anims.h`; `pmove_locomotion.rs`).
-const BOTH_CROUCH1IDLE: usize = 1_005;
-const CROUCH_IDLE: &str = "BOTH_CROUCH1IDLE";
-
 /// Whether a protocol animation number is one of the standing animations: `BOTH_STAND*`
 /// (the idles and their turns) and the saber stances' idles (`BOTH_SABER*_STANCE`), the
 /// only ones a boxed player is crouched over.
-fn standing_clip(clip: usize) -> bool {
-    sjk_client::legacy_animation_name(clip).is_some_and(|name| {
-        name.starts_with("BOTH_STAND")
-            || (name.starts_with("BOTH_SABER") && name.ends_with("_STANCE"))
-    })
+/// `MASK_SOLID` (`bg_public.h`): the world and terrain, not players' bodies or clip brushes.
+const MASK_SOLID: u32 = 0x0000_1001;
+
+/// The ground under a rig model's actor at `origin` (world) facing `yaw_degrees`, in its
+/// model space ([`crate::rig_model::ground_plane`]): a line traced straight down from the
+/// origin, so its chains lie on the floor rather than through it.
+fn ground_under(
+    mesh: &ActorMesh,
+    origin: [f32; 3],
+    yaw_degrees: f32,
+    snapshot: Option<&Snapshot>,
+    local_entity: Option<EntityId>,
+    collision: &impl sjk_client::pmove::MovementCollision,
+) -> Option<([f32; 3], [f32; 3])> {
+    let end = [
+        origin[0],
+        origin[1],
+        origin[2] - crate::rig_model::GROUND_REACH,
+    ];
+    let trace = collision.trace(origin, [0.0; 3], [0.0; 3], end, MASK_SOLID);
+    if trace.fraction >= 1.0 || trace.start_solid || trace.plane_normal[2] <= 0.0 {
+        return None;
+    }
+    // Drawn as `actor_world_submission` scales it (`CG_Player`, cg_players.c:8479-8493).
+    let state = snapshot.zip(mesh.entity_id).and_then(|(snapshot, id)| {
+        snapshot
+            .entities
+            .iter()
+            .find(|state| u64::from(state.number()) + 1 == id.get())
+    });
+    let local = snapshot
+        .filter(|_| mesh.entity_id.is_some() && mesh.entity_id == local_entity)
+        .map(|snapshot| &snapshot.player);
+    // CG_Player's iModelScale and its origin lift, as the model is drawn.
+    let mut root = sjk_runtime::Transform::IDENTITY;
+    if let Some((percent, npc_class)) =
+        crate::actor_world_submission::model_scale::source(state, local)
+    {
+        crate::actor_world_submission::model_scale::apply(&mut root, percent, npc_class);
+    }
+    let (scale, raised) = (root.scale[0], root.translation[2]);
+    Some(crate::rig_model::ground_plane(
+        origin,
+        yaw_degrees,
+        scale,
+        raised,
+        trace.end_position,
+        trace.plane_normal,
+    ))
+}
+
+/// `EF_DEAD` (`bg_public.h`).
+const EF_DEAD: u32 = 1 << 1;
+
+/// Whether the actor's entity carries `EF_DEAD`; the local player's flags are its
+/// player state's.
+fn dead(snapshot: Option<&Snapshot>, entity_id: Option<EntityId>, local: bool) -> bool {
+    let (Some(snapshot), Some(id)) = (snapshot, entity_id) else {
+        return false;
+    };
+    let flags = if local {
+        snapshot.player.entity_flags()
+    } else {
+        snapshot
+            .entities
+            .iter()
+            .find(|state| u64::from(state.number()) + 1 == id.get())
+            .map_or(0, |state| state.e_flags())
+    };
+    flags & EF_DEAD != 0
 }
 
 /// Immutable inputs shared by independently prepared actors in one frame.
@@ -100,103 +161,6 @@ pub(super) fn prepare(mesh: &mut ActorMesh, frame: &Frame<'_>) -> Result<(), Box
         });
     mesh.flame_pose
         .apply(mesh.entity_id, flame_clip, presentation_time, &mut state);
-    // A boxed player who stands is drawn crouching: the server stands them up while they
-    // talk (the chat, the free camera's balloon; `cardboard_box::crouched_in_box`). Only
-    // standing legs are replaced, so a lunge, a kick, a roll or a knockdown plays as
-    // sent; the torso follows only when it stands too (a gun's ready pose stays). Clips
-    // are protocol animation numbers, looked up by name (`ghoul2_pose.rs`), not
-    // `animation.cfg` lines. A rig model follows the stock skeleton that drives it, so
-    // it crouches too (a boxed rig model stood up through its carton, 28/10/2026).
-    if !mesh.corpse_pool
-        && mesh.animator.humanoid()
-        && mesh
-            .entity_id
-            .and_then(|id| usize::try_from(id.get().checked_sub(1)?).ok())
-            .is_some_and(crate::cardboard_box::crouched_in_box)
-        && standing_clip(state.lower.clip)
-        && mesh.preview.config.get_exact(CROUCH_IDLE).is_some()
-    {
-        let upper = standing_clip(state.upper.clip);
-        for (track, crouch) in [(&mut state.lower, true), (&mut state.upper, upper)] {
-            if crouch {
-                track.clip = BOTH_CROUCH1IDLE;
-                track.forced_frame = None;
-                track.transition = None;
-            }
-        }
-    }
-    // A miner's swing is the whole body's (`mining`): the strong saber style's blow from
-    // overhead, from the swing's start, the legs too while they stand (a step plays as sent), blended in
-    // over 100 ms as `CG_SetLerpFrameAnimation` blends the torso.
-    if !mesh.corpse_pool
-        && mesh.animator.humanoid()
-        && let Some(slot) = mesh
-            .entity_id
-            .and_then(|id| usize::try_from(id.get().checked_sub(1)?).ok())
-        && let Some(elapsed) = crate::mining::swinging(slot)
-        && let Some((swing, name)) = crate::mining::swing_pose()
-        && mesh.preview.config.get_exact(name).is_some()
-    {
-        let started = presentation_time - elapsed;
-        let legs = standing_clip(state.lower.clip);
-        for (track, play) in [(&mut state.upper, true), (&mut state.lower, legs)] {
-            if !play {
-                continue;
-            }
-            let outgoing = *track;
-            track.clip = swing;
-            track.started_at_millis = started;
-            track.phase_millis = 0;
-            track.speed_milli = 1_000;
-            track.forced_frame = None;
-            track.transition = (elapsed < 100 && outgoing.clip != swing).then_some(
-                sjk_runtime::AnimationTrackTransition {
-                    clip: outgoing.clip,
-                    revision: outgoing.revision,
-                    started_at_millis: outgoing.started_at_millis,
-                    phase_millis: outgoing.phase_millis,
-                    speed_milli: outgoing.speed_milli,
-                    forced_frame: outgoing.forced_frame,
-                    blend_started_at_millis: started,
-                    blend_duration_millis: 100,
-                },
-            );
-        }
-    }
-    // A fisher holds the rod before the chest, as a rifle's ready pose (`fishing`), and a
-    // miner the pickaxe (`mining`): only a standing torso, so a jump or a hit plays as
-    // sent (and puts the rod away).
-    if !mesh.corpse_pool
-        && mesh.animator.humanoid()
-        && mesh
-            .entity_id
-            .and_then(|id| usize::try_from(id.get().checked_sub(1)?).ok())
-            .and_then(|slot| {
-                if crate::mining::holding_pick(slot) {
-                    crate::mining::hold_pose()
-                } else if crate::fishing::holding_rod(slot) {
-                    crate::fishing::hold_pose()
-                } else {
-                    None
-                }
-            })
-            .is_some_and(|(_, name)| mesh.preview.config.get_exact(name).is_some())
-        && standing_clip(state.upper.clip)
-        && let Some((hold, _)) = mesh
-            .entity_id
-            .and_then(|id| usize::try_from(id.get().checked_sub(1)?).ok())
-            .and_then(|slot| {
-                if crate::mining::holding_pick(slot) {
-                    crate::mining::hold_pose()
-                } else {
-                    crate::fishing::hold_pose()
-                }
-            })
-    {
-        state.upper.clip = hold;
-        state.upper.forced_frame = None;
-        state.upper.transition = None;
-    }
     if mesh.corpse_pool && !mesh.body_copied {
         state.lower.forced_frame =
             sjk_client::legacy_body_frame(&mesh.preview.config, state.lower.clip);
@@ -210,6 +174,7 @@ pub(super) fn prepare(mesh: &mut ActorMesh, frame: &Frame<'_>) -> Result<(), Box
     if !mesh.animator.humanoid() {
         mesh.render_yaw_degrees = None;
         mesh.preview.rig_pose.halt_motion();
+        mesh.preview.rig_pose.stand_on(None);
         if let (Some(snapshot), Some(game_state), Some(id)) = (snapshot, game_state, mesh.entity_id)
             && let Some(state) = snapshot
                 .entities
@@ -262,9 +227,38 @@ pub(super) fn prepare(mesh: &mut ActorMesh, frame: &Frame<'_>) -> Result<(), Box
                 source,
             );
         }
+        if mesh
+            .preview
+            .rig
+            .as_ref()
+            .is_some_and(|rig| rig.wants_ground())
+        {
+            let ground = ground_under(
+                mesh,
+                origin,
+                angles.legs_yaw_degrees,
+                snapshot,
+                local_entity,
+                collision,
+            );
+            mesh.preview.rig_pose.stand_on(ground);
+        }
     } else {
         mesh.animator.clear_player_angles();
         mesh.preview.rig_pose.halt_motion();
+        mesh.preview.rig_pose.stand_on(None);
+    }
+    // `CG_G2PlayerHeadAnims` follows the player angles: blinks and the face's
+    // expressions. A rig model maps the stock skeleton onto its own bones, whose eyes
+    // a stock blink would turn the wrong way, so it keeps its face.
+    if mesh.animator.humanoid() && !mesh.corpse_pool && mesh.preview.rig.is_none() {
+        let dead = dead(snapshot, mesh.entity_id, mesh.entity_id == local_entity);
+        mesh.animator.head_anims(
+            &mesh.preview.animation,
+            &mesh.preview.config,
+            presentation_time,
+            dead,
+        );
     }
     mesh.animator.requested = Some(state);
     Ok(())
@@ -464,43 +458,5 @@ pub(super) fn failed(mesh: &mut ActorMesh, error: &dyn Error) {
             mesh.appearance.model,
             mesh.appearance.variant,
         ));
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn the_box_crouch_is_the_protocol_crouch() {
-        assert_eq!(
-            sjk_client::legacy_animation_name(BOTH_CROUCH1IDLE),
-            Some(CROUCH_IDLE)
-        );
-        let index = |name| sjk_game_jka::legacy_animation_index(name).unwrap();
-        // Standing (the stances' idles) is crouched over in a box ...
-        for stand in [
-            "BOTH_STAND1",
-            "BOTH_STAND2",
-            "BOTH_STAND5",
-            "BOTH_STAND1IDLE1",
-            "BOTH_SABERFAST_STANCE",
-            "BOTH_SABERDUAL_STANCE",
-            "BOTH_SABERSTAFF_STANCE",
-        ] {
-            assert!(standing_clip(index(stand)), "{stand}");
-        }
-        // ... a move the server plays is not (#231's review: lunge, kicks, rolls,
-        // knockdowns), nor a crouch already.
-        for other in [
-            "BOTH_LUNGE2_B__T_",
-            "BOTH_A7_KICK_F",
-            "BOTH_ROLL_STAB",
-            "BOTH_KNOCKDOWN1",
-            "BOTH_CROUCH1WALK",
-            "BOTH_CROUCH1IDLE",
-        ] {
-            assert!(!standing_clip(index(other)), "{other}");
-        }
     }
 }

@@ -140,11 +140,20 @@ impl GpuState {
                 .as_ref()
                 .is_some_and(|session| !session.is_local());
             if own_commands && remote && self.server_clock.anchored() {
+                let now = Instant::now();
                 self.server_view.snapshot(
                     snapshot.server_time,
                     snapshot.player.command_time(),
-                    Instant::now(),
+                    now,
                 );
+                // The top bar's ping, from the snapshots that time our own packets.
+                if let Some(ping) = self
+                    .live_session
+                    .as_ref()
+                    .and_then(sjk_client::ClientSession::snapshot_ping)
+                {
+                    self.status_bar.observe_snapshot_ping(ping, now);
+                }
             }
             self.present_live_snapshot(&snapshot, true, game_audio, visual_now);
             true
@@ -159,6 +168,17 @@ impl GpuState {
         if caught_up {
             self.server_clock.adjust(Instant::now());
         }
+        // A `scores` reply read with the snapshots gives the top bar the server's own
+        // measure of our ping (`status_bar::ping`).
+        if let Some(session) = self
+            .live_session
+            .as_ref()
+            .filter(|session| !session.is_local())
+        {
+            self.status_bar.observe_scores(session, Instant::now());
+        }
+        // A duel line the snapshots made due (`duel_lines.rs`).
+        self.send_duel_line();
         timing.mark(Phase::Commands);
         self.ghost_frame();
         let talking = self.talk_button();
@@ -338,25 +358,12 @@ impl GpuState {
                 },
             );
             self.gameplay_input.apply_flip_kick(&mut command, flip_kick);
-            // In the cardboard box the player crouches (`cardboard_box`), but not
-            // while flying the free camera, whose `upmove` it would steer down.
-            self.cardboard_box
-                .set_flying(self.local_prediction.fake_noclip());
-            self.cardboard_box.shape_command(&mut command);
             // The WHEEL OF DOOM's effects on the player's own moves (`wheel_of_doom`).
             self.wheel_of_doom
                 .effects
                 .shape_command(&mut command, wheel_saber, now);
-            // Moving, jumping or attacking puts the rod away; `+use` hooks a bite
-            // (`fishing`).
-            self.fishing.shape_command(&command);
-            // The attack button (or `+use`) swings the pickaxe and is kept from the weapon;
-            // an alt attack puts it away (`mining`).
-            self.mining.shape_command(&mut command);
             // Attacks count toward the play the holocron claims report.
             crate::holocrons::signals::command(command.buttons);
-            // A Hax hack starts and holds on `+use` (`hax`).
-            self.hax.observe_use(&command);
             // `+use` at a mystery box opens it (`mystery_box`).
             self.mystery_boxes.observe_use(&command);
             // `+use` at a WHEEL OF DOOM spins it for a DOOM coin (`wheel_of_doom`).
@@ -381,8 +388,7 @@ impl GpuState {
                 .local_prediction
                 .committed_state()
                 .map(crate::ghost_replay::Pose::of);
-            // The Hax toy steers, or stands still while steering another (`hax`); a
-            // limp player's real body walks to their ragdoll (`ragdoll`), though not
+            // A limp player's real body walks to their ragdoll (`ragdoll`), though not
             // while they fly the free camera: the flight is theirs, and the server's body
             // is held still (`command_for_server`).
             let flying = self.local_prediction.fake_noclip();
@@ -396,16 +402,9 @@ impl GpuState {
             if !flying {
                 self.ragdoll.wake(&command);
             }
-            // A held prop gun fires instead of the real weapon (`propgun`).
-            self.propgun.shape_command(&mut command);
-            let replay = self
-                .hax
-                .drive(&command, delta_angles, (self.camera_pitch, self.camera_yaw))
-                .or_else(|| {
-                    (!flying)
-                        .then(|| self.ragdoll.drive(&command, delta_angles, origin))
-                        .flatten()
-                })
+            let replay = (!flying)
+                .then(|| self.ragdoll.drive(&command, delta_angles, origin))
+                .flatten()
                 .or_else(|| pose.and_then(|pose| self.ghost.drive(&command, &pose)));
             // Or the mimic copies another player (`mimic`).
             let replay = replay.or_else(|| {

@@ -38,28 +38,31 @@ pub(super) enum AskAll {
     Cancel,
 }
 
-/// The card's title and words for `opening` holocrons (or kyber crystals, `crystals`) of
-/// the `held` the page can open.
+/// The card's title and words for `opening` holocrons (or dormant kybers, `crystals`, which
+/// are attuned rather than opened) of the `held` the page can open.
 pub(super) fn words(opening: usize, held: usize, crystals: bool) -> (String, Vec<String>) {
     let things = crate::terms::say(if crystals {
-        "kyber crystals"
+        "dormant kybers"
     } else {
         "holocrons"
     });
+    let verb = if crystals { "Attune" } else { "Open" };
     let title = if held > opening {
-        format!("Open {opening} of your {held} {things}?")
+        format!("{verb} {opening} of your {held} {things}?")
     } else {
-        format!("Open all {opening} {things}?")
+        format!("{verb} all {opening} {things}?")
     };
     let mut lines: Vec<String> = Vec::new();
     let body = if opening > ONE_BY_ONE && crystals {
-        "They open together, in a quicker and simpler animation than opening them one by \
-         one: the strips run five at a time and every shader found is laid out at the end, \
-         without each shader's own reveal."
+        "They attune together, in a quicker and simpler animation than attuning them one by \
+         one: the strips run five at a time and every kyber found is laid out at the end, \
+         without each kyber's own reveal."
     } else if opening > ONE_BY_ONE {
         "They open together, in a quicker and simpler animation than opening them one by \
          one: the strips run five at a time and everything found is laid out at the end, \
          without each card's own reveal."
+    } else if crystals {
+        "Each one plays its full attuning, one after another."
     } else {
         "Each one plays its full opening, one after another."
     };
@@ -67,8 +70,9 @@ pub(super) fn words(opening: usize, held: usize, crystals: bool) -> (String, Vec
     if held > opening {
         let rest = held - opening;
         let line = format!(
-            "{} open at most at once; the other {rest} wait for the next time.",
-            sjk_identity::OPEN_MAX
+            "{} {} at most at once; the other {rest} wait for the next time.",
+            sjk_identity::OPEN_MAX,
+            verb.to_lowercase()
         );
         lines.extend(wrap(&line, WRAP).map(str::to_owned));
     }
@@ -154,11 +158,8 @@ impl Panel {
         let s = frame.s;
         let focus = self.ask_all.unwrap_or(AskAll::Open);
         let opening = self.open_every().map_or(0, |ids| ids.len());
-        let (title, lines) = words(
-            opening,
-            self.data.openable(self.selected),
-            self.selected().is_kyber(),
-        );
+        let kyber = self.selected().is_kyber();
+        let (title, lines) = words(opening, self.data.openable(self.selected), kyber);
         let height = CARD_BASE + LINE * lines.len() as f32;
         let card = [CARD_X, CARD_MIDDLE - height * 0.5, CARD_WIDTH, height];
         kit::scrim(&mut self.ui, viewport);
@@ -170,7 +171,7 @@ impl Panel {
             format_args!("{title}"),
             frame.rect(x + 40.0, y + 30.0, width - 80.0, 50.0),
             36.0 * s,
-            color::TEXT,
+            color::text(),
             FontWeight::Semibold,
             TextAlign::Start,
         );
@@ -181,7 +182,7 @@ impl Panel {
                 format_args!("{line}"),
                 frame.rect(x + 40.0, y + 96.0 + at as f32 * LINE, width - 80.0, 26.0),
                 18.0 * s,
-                color::MUTED,
+                color::muted(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -206,13 +207,14 @@ impl Panel {
             &mut self.ui,
             frame,
             [x + width - 40.0 - 180.0, buttons, 180.0, 46.0],
-            "Open all",
+            if kyber { "Attune all" } else { "Open all" },
             true,
             true,
             focus == AskAll::Open,
             ASK_ALL_OPEN_TOKEN,
         );
         let enter = match focus {
+            AskAll::Open if kyber => "attune all",
             AskAll::Open => "open all",
             AskAll::Cancel => "cancel",
         };

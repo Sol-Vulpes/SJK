@@ -9,6 +9,128 @@
 #                               made it when that is not the piece's owner.
 
 = Sol
++ 21/11/2026 | - | One status bar: the top bar's parts merged into the bottom bar
+- 1150107 |  | One status bar: the top bar's parts merged into the bottom bar
++ 21/11/2026 | - | Force box: hold Use at a mystery box to roll a DOOM coin
+- 536d03b |  | Force box: hold Use at a mystery box to roll a DOOM coin
++ 21/11/2026 | - | WHEEL OF DOOM: no wheel stands on a map; its DOOM coin rolls at the Force box
+- 8622e49 |  | WHEEL OF DOOM: no wheel stands on a map; its DOOM coin rolls at the Force box
++ 21/11/2026 | - | Force box: temple stone, old gold and blue runes; Jedi Academy's own sounds
+- 7cb8574 |  | Force box: temple stone, old gold and blue runes; Jedi Academy's own sounds
++ 21/11/2026 | - | Force Throw: the Monitor reworked, hurling Jedi Academy's own junk
+- 1f223b0 |  | Force Throw: the Monitor reworked, hurling Jedi Academy's own junk
++ 21/11/2026 | - | Docs for the Force box, the DOOM coin roll and Force Throw; drop the Ray Gun's glow
+- f3a21b5 |  | Docs for the Force box, the DOOM coin roll and Force Throw; drop the Ray Gun's glow
++ 20/11/2026 | - | Remove the Fishing and Mining toys; their logs stay in a Collection Log book
+- e7f8284 |  | Remove the Fishing and Mining toys; their logs stay in a Collection Log book
++ 20/11/2026 | - | Remove the Prop gun toy and the mystery box's Ray Gun
+- ab864de |  | Remove the Prop gun toy and the mystery box's Ray Gun
++ 20/11/2026 | - | Remove Order 66 and the Hax
+- a29194c |  | Remove Order 66 and the Hax
++ 20/11/2026 | - | Remove the cardboard box toy
+- 58bc2bc |  | Remove the cardboard box toy
++ 20/11/2026 | - | Remove the Banana peel toy
+- a8a58c1 |  | Remove the Banana peel toy
++ 20/11/2026 | - | Retire the removed toys' achievements; a board page with nothing listed leaves the switch
+- 2dd4c26 |  | Retire the removed toys' achievements; a board page with nothing listed leaves the switch
++ 20/11/2026 | - | Chat icon test: a client's icon and its tick fit their row at every text size
+- 35b4215 |  | Chat icon test: a client's icon and its tick fit their row at every text size
++ 19/11/2026 | - | All access: read the hub's flag, keep the Forge's dot out for it
+- 11ab480 |  | All access: read the hub's flag, keep the Forge's dot out for it
++ 18/11/2026 | - | Collection glass: acrylic tiles, panels and cards; the Kybers page finished
+- 5e7bc23 |  | Collection glass: acrylic tiles, panels and cards; the Kybers page finished
++ 18/11/2026 | - | Docs, changelog, credits and test list: the Collection's glass
+- a33a8b3 |  | Docs, changelog, credits and test list: the Collection's glass
++ 18/11/2026 | - | Secret blades: the hand-given Unique tier renamed Secret, in red
+- 4500334 |  | Secret blades: the hand-given Unique tier renamed Secret, in red
++ 18/11/2026 | - | SJK UI themes: warm, cold or a custom hue, live
+- 3a72f99 |  | SJK UI themes: warm, cold or a custom hue, live
++ 18/11/2026 | - | Docs, changelog, credits and test list: the SJK UI themes
+- 657c7df |  | Docs, changelog, credits and test list: the SJK UI themes
++ 17/11/2026 | - | Load marks around the saber renderer: a silent death after the effect atlas gets named
+- aa32bfb |  | Load marks around the saber renderer: a silent death after the effect atlas gets named
++ 17/11/2026 | - | Debug panel: the load marks entry
+- 41e436e |  | Debug panel: the load marks entry
++ 17/11/2026 | - | Acrylic backdrops: the frame blurred under the 2D layer's glass
+- 62cb034 |  | Acrylic backdrops: the frame blurred under the 2D layer's glass
++ 17/11/2026 | - | Sun theme: the SJK UI in the sun's warm colours, its glass acrylic
+- 3c74e1a |  | Sun theme: the SJK UI in the sun's warm colours, its glass acrylic
++ 17/11/2026 | - | Changelog and test list: the sun theme and its acrylic glass
+- e91ca24 |  | Changelog and test list: the sun theme and its acrylic glass
++ 17/11/2026 | - | Acrylic backdrops: merge the blur's regions without moving the loop's bound
+- 55cd125 |  | Acrylic backdrops: merge the blur's regions without moving the loop's bound
++ 17/11/2026 | - | Top bar ping: the scoreboard's measure; the lagometer graphs stock's snapshot ping
+- ef6c558 |  | Top bar ping: the scoreboard's measure; the lagometer graphs stock's snapshot ping
++ 16/11/2026 | - | Changelog: the release's recap names the new emblem, both status bars, banners and feats
+- d35a06d |  | Changelog: the release's recap names the new emblem, both status bars, banners and feats
++ 16/11/2026 | - | New emblem: Sol's steel monogram before a burning sun, drawn from its geometry
+- 6f861e9 |  | New emblem: Sol's steel monogram before a burning sun, drawn from its geometry
++ 16/11/2026 | - | Notification banners from the top; the holocron pop-up is gone
+- f98aa9d |  | Notification banners from the top; the holocron pop-up is gone
++ 16/11/2026 | - | Status bars docked to the bottom and the top, the HUD inside them
+- 5865e99 |  | Status bars docked to the bottom and the top, the HUD inside them
++ 16/11/2026 | - | debug_feat: rehearse feats' medals and announcer lines without a kill
+- d920d47 |  | debug_feat: rehearse feats' medals and announcer lines without a kill
++ 16/11/2026 | - | Add feats: multi-kills, sprees and HOOKED! with medals and an announcer
+- aa6bfd5 |  | Add feats: multi-kills, sprees and HOOKED! with medals and an announcer
++ 16/11/2026 | - | Give feats SJK's own announcer voice
+- 644cc64 |  | Give feats SJK's own announcer voice
++ 16/11/2026 | - | Release 2026.1116.1 (Alpha)
+- 4049e54 |  | Release 2026.1116.1 (Alpha)
++ 16/11/2026 | - | Kyber loops and the stage blade stop flickering in the Collection
+- e235747 |  | Kyber loops and the stage blade stop flickering in the Collection
++ 16/11/2026 | - | Stage sweep world shot marks its kybers New
+- 79443f9 |  | Stage sweep world shot marks its kybers New
++ 16/11/2026 | - | Status bar: on by default at the bottom, icons for the money, clear of the HUD
+- efa26e4 |  | Status bar: on by default at the bottom, icons for the money, clear of the HUD
++ 16/11/2026 | - | Collection release check: every page shot at five sizes, hall Cards tile reads the Cards tab's stacks
+- 50cc307 |  | Collection release check: every page shot at five sizes, hall Cards tile reads the Cards tab's stacks
++ 16/11/2026 | - | No hitch when a player joins in a model with big glowing textures
+- c53c317 |  | No hitch when a player joins in a model with big glowing textures
++ 16/11/2026 | - | Release review: clippy, formatting and stale comments
+- 9342916 |  | Release review: clippy, formatting and stale comments
++ 15/11/2026 | - | Collection: straight kyber loops instead of live tile blades, fixed VRAM
+- b67daf5 |  | Collection: straight kyber loops instead of live tile blades, fixed VRAM
++ 15/11/2026 | - | Kyber loops keep their colours; tile blades centred over the name
+- 8b3dcfa |  | Kyber loops keep their colours; tile blades centred over the name
++ 15/11/2026 | - | Blade stills: wait for last frame's submit before mapping its readback
+- dd1967f |  | Blade stills: wait for last frame's submit before mapping its readback
++ 15/11/2026 | - | Collection wording: dormant kybers attune, plain wallet lines, Holocrons capitalised
+- e1d1f8e |  | Collection wording: dormant kybers attune, plain wallet lines, Holocrons capitalised
++ 15/11/2026 | - | Collection hall: tier marks on its blades, deals, finisher, tag and holocrons
+- dc5075d |  | Collection hall: tier marks on its blades, deals, finisher, tag and holocrons
++ 15/11/2026 | - | Collection: first look at a New thing ignites, turns, flashes and chimes
+- c7ab982 |  | Collection: first look at a New thing ignites, turns, flashes and chimes
++ 15/11/2026 | - | Collection: the hall's tile grows into its page, Esc shrinks it back, Ctrl+Tab slides
+- 94f0d65 |  | Collection: the hall's tile grows into its page, Esc shrinks it back, Ctrl+Tab slides
++ 15/11/2026 | - | Kyber stills: each blade drawn once with its glow, kept on disk, large on the Kybers tiles
+- 4d44418 |  | Kyber stills: each blade drawn once with its glow, kept on disk, large on the Kybers tiles
++ 15/11/2026 | - | Collection: New on every kind, and empty states that point the way
+- 8d36e0a |  | Collection: New on every kind, and empty states that point the way
++ 15/11/2026 | - | Inventory card and one tier frame: pictured rows, item card, kit tier frame
+- 2b0ceda |  | Inventory card and one tier frame: pictured rows, item card, kit tier frame
++ 15/11/2026 | - | Kyber names: saber shaders are kybers, kyber crystals dormant kybers you attune
+- b3060b4 |  | Kyber names: saber shaders are kybers, kyber crystals dormant kybers you attune
++ 15/11/2026 | - | Collection hall: tiles drawn full, the worn line over the model's head
+- c999e12 |  | Collection hall: tiles drawn full, the worn line over the model's head
++ 15/11/2026 | - | Collection hall: the Collection opens on a grid of kinds
+- b63413b |  | Collection hall: the Collection opens on a grid of kinds
++ 15/11/2026 | - | Collection: an Inventory tab listing everything the player owns
+- 3915309 |  | Collection: an Inventory tab listing everything the player owns
++ 15/11/2026 | - | Status bar: credits, blade skin, effects and toys at the top or bottom
+- 856c7fa |  | Status bar: credits, blade skin, effects and toys at the top or bottom
++ 15/11/2026 | - | Debug panel: shorten the chat-icon-sizes test line to fit 96 characters
+- 4b678c7 |  | Debug panel: shorten the chat-icon-sizes test line to fit 96 characters
++ 15/11/2026 | - | Collection: remove the Nameplates tab
+- 10a3037 |  | Collection: remove the Nameplates tab
++ 15/11/2026 | - | Possible drops panel at mystery boxes and WHEELS OF DOOM; louder wheel music
+- cdc9bf5 |  | Possible drops panel at mystery boxes and WHEELS OF DOOM; louder wheel music
++ 15/11/2026 | - | Game chat: the tick back after the name, the smaller matched icons kept
+- 8a6a438 |  | Game chat: the tick back after the name, the smaller matched icons kept
++ 15/11/2026 | - | Creyon on the hub: changelog, credits, unlockables doc and debug panel entry
+- 0223042 |  | Creyon on the hub: changelog, credits, unlockables doc and debug panel entry
++ 14/11/2026 | - | Chat and nameplates: smaller, matched SJK/EJK icons with the tick on their corner
+- 081ceea |  | Chat and nameplates: smaller, matched SJK/EJK icons with the tick on their corner
 + 13/11/2026 | - | Release 2026.1113.1 (Alpha)
 - 4b468cd |  | Release 2026.1113.1 (Alpha)
 + 13/11/2026 | - | Game chat: a claim's client icon with its tick, the EJK icon alone for unclaimed chat readers
@@ -3299,13 +3421,13 @@
 - 0874042 |  | Decode print and cp text as legacy bytes
 
 = Hormorn
-+ 15/11/2026 | - | Update CHANGELOG.md
++ 16/11/2026 | - | Update CHANGELOG.md
 - f141a5d |  | Update CHANGELOG.md
-+ 15/11/2026 | - | Cargo fmt --all (fix)
++ 16/11/2026 | - | Cargo fmt --all (fix)
 - 2262415 |  | cargo fmt --all (fix)
-+ 15/11/2026 | - | Fix changelog review check for choice settings
++ 16/11/2026 | - | Fix changelog review check for choice settings
 - df6af5d |  | Fix changelog review check for choice settings
-+ 15/11/2026 | SJK #421 | Expand cg_statusBalloons into four display modes.
++ 16/11/2026 | SJK #421 | Expand cg_statusBalloons into four display modes.
 - c749c5d |  | Expand cg_statusBalloons into four display modes: stock game behavior, original SJK animations, static clan artwork, and animated clan artwork.
 - 98d75ae |  | Fix status balloon CI checks
 + 11/11/2026 | SJK #401 | Add a height slider for nameplates
@@ -3317,6 +3439,10 @@
 - bc795cb |  | Fixes to changelog, nameplate.rs, client.md
 
 = Kushina
++ 20/11/2026 | SJK #442 | Rig models: dynamic chains stay off the ground
+- 7c0040f |  | Rig models: dynamic chains stay off the ground
++ 20/11/2026 | SJK #439 | Draw alphaGen dot and oneMinusDot as facing and rim alpha
+- 19f7a3c |  | Draw alphaGen dot and oneMinusDot as facing and rim alpha
 + 12/11/2026 | SJK #408 | Collection menu text fits the text size and letter spacing
 - a3e3ebd |  | Cards tab: drop the credits and shards from the headline
 - 4b6612a |  | Forge: section chips fit their labels, the section's line behind an "i" chip
@@ -3682,8 +3808,35 @@
 - fed9acd |  | Hide duel opponents' bars and send nothing while duelling
 
 = Slash
++ 20/11/2026 | SJK #437 | Emotes: hide others' emotes, hide or mute single emotes
+- ade10ab |  | Emotes: hide others' emotes, hide or mute single emotes
+- d5ca364 |  | Changelog: PR number for the emote filters
+- a56c8cf |  | emote_hide / emote_mute alone also list the installed emote ids
++ 20/11/2026 | SJK #436 | Duels: hide others' duellists completely (cg_duelGhost 2)
+- 0a3b5d5 |  | Duels: cg_duelGhost 2 hides others' duellists (headshotsmcgee117's idea)
++ 20/11/2026 | SJK #432 | Console: Ctrl+F find bar over the scrollback
+- 1654756 |  | Console: Ctrl+F find bar over the scrollback
++ 20/11/2026 | SJK #430 | tell_attacker and duel start, won and lost lines
+- 9c0272b |  | Add tell_attacker and duel start, won and lost lines
+- 6aeaebc |  | Fill the new ObituaryEvent fields in the duel line tests
+- 98c3336 |  | Duel lines to all chat: cg_duelLinesToAll sends them as say (off: a whisper)
++ 20/11/2026 | SJK #428 | Models blink and change their face, as in stock JKA (Goylander's report)
+- 02ff241 |  | Models blink: port CG_G2PlayerHeadAnims
+- 7f715df |  | head_anims test: pair blinks without chunks_exact (clippy)
++ 20/11/2026 | SJK #429 | Box hunt: a lost out report goes again; paid credits show soon (hub #304, #314)
+- 15f4898 |  | Box hunt: a lost out report goes again; paid credits show soon (#304, #314)
++ 20/11/2026 | SJK #433 | Identity link: codes in two halves, and a staff key told which way it goes (#316)
+- 49af93a |  | identity link: codes in two halves, and a staff key told which way it goes
++ 20/11/2026 | SJK #434 | in_mouseRepeat: a click runs its bind once (hub report #317)
+- 6399b52 |  | in_mouseRepeat: a click runs its bind once (hub report #317)
+- a3ce8fe |  | Mouse repeat tests count the repeats after the delay
+- aa82bf9 |  | Changelog: PR number for hub report #317
++ 20/11/2026 | - | Release 2026.1117.1
+- afd16b6 |  | Release 2026.1117.1
 + 16/11/2026 | - | Collection: log book rows 23 px, so the Fishing card fits with the catch line
 - bf3487e |  | Collection: log book rows 23 px, so the Fishing card fits with the catch line
++ 16/11/2026 | - | Credits history for PRs #420, #422, #424, #425
+- 6ab33ed |  | Credits history for PRs #420, #422, #424, #425
 + 16/11/2026 | SJK #425 | Fishing and Mining: log book, rare catch card, share in SJK chat
 - a15625b |  | Fishing and Mining: log book, rare catch card, share in SJK chat
 + 16/11/2026 | SJK #424 | Fishing and Mining: kyber finds, daily goals, catch market (adwe's idea)

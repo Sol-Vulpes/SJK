@@ -468,6 +468,12 @@ impl Runtime {
         }
     }
 
+    /// Whether [`Self::hud_target`] is one of this pass's own intermediates (which shaders
+    /// can read) rather than the swapchain image's 2D view.
+    pub(crate) fn hud_target_is_intermediate(&self) -> bool {
+        self.display.is_some() || !self.scene_effects()
+    }
+
     /// Resolve only scene effects here; display gamma is deliberately later.
     /// The resolve writes linear colour through the sRGB view of the texture
     /// the 2D layer then draws into.

@@ -1081,9 +1081,9 @@ impl Panel {
         PanelAction::Hub(HubTab::Achievements)
     }
 
-    /// See the collection: the Collection's Medals.
+    /// See the collection: where the Collection opens (its hall, or the kind shown last).
     fn see_unlockables(&self) -> PanelAction {
-        PanelAction::Hub(HubTab::Medals)
+        PanelAction::Hub(HubTab::Hall)
     }
 
     /// See the holocrons: the Collection's Holocrons.
@@ -1328,6 +1328,7 @@ pub(crate) mod tests {
             staff: false,
             creator: false,
             jkr_creator: false,
+            all_access: false,
             trust: None,
             emoji: String::new(),
             created: 1_759_708_800,
@@ -1382,6 +1383,7 @@ pub(crate) mod tests {
             wheel_of_doom: None,
             wheel_of_doom_revision: 0,
             wheel_of_doom_spin: None,
+            mystery_box_doom: None,
             box_hunt: None,
             quests: None,
             secrets: None,
@@ -1583,7 +1585,7 @@ pub(crate) mod tests {
         panel.focus = Focus::Board;
         assert_eq!(panel.activate(None), PanelAction::Hub(HubTab::Achievements));
         panel.focus = Focus::Unlockables;
-        assert_eq!(panel.activate(None), PanelAction::Hub(HubTab::Medals));
+        assert_eq!(panel.activate(None), PanelAction::Hub(HubTab::Hall));
         panel.focus = Focus::Holocrons;
         assert_eq!(panel.activate(None), PanelAction::Hub(HubTab::Holocrons));
         assert_eq!(panel.escape(), PanelAction::Close);
@@ -1731,7 +1733,7 @@ pub(crate) mod tests {
             ]
         );
         panel.focus = Focus::Unlockables;
-        assert_eq!(panel.activate(None), PanelAction::Hub(HubTab::Medals));
+        assert_eq!(panel.activate(None), PanelAction::Hub(HubTab::Hall));
         panel.focus = Focus::Holocrons;
         assert_eq!(panel.activate(None), PanelAction::Hub(HubTab::Holocrons));
         panel.focus = Focus::Board;

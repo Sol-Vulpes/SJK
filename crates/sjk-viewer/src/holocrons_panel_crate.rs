@@ -84,12 +84,12 @@ impl Item {
     /// The colour it is shown in: a card's rarity's (gold for Solar), a shader's tier's.
     pub(crate) fn colour(self) -> sjk_ui::Color {
         match self {
-            Self::Card { finish: 2, .. } => crate::menu::sjk::color::GOLD_BRIGHT,
+            Self::Card { finish: 2, .. } => crate::menu::sjk::color::gold_bright(),
             Self::Card { rarity, .. } => RARITIES[rarity].colour,
             Self::Shader(skin) => skin.tier.colour(),
             Self::Tag(tag) => tag.tier.colour(),
             Self::Banner(banner) => banner.tier.colour(),
-            Self::New(_) => crate::menu::sjk::color::GOLD,
+            Self::New(_) => crate::menu::sjk::color::gold(),
             Self::Shards { .. } => crate::cards::shard::KYBER,
         }
     }
@@ -401,7 +401,7 @@ mod tests {
                     crystal.id
                 );
             }
-            let strip = strip(crystal.slot, 4_000_000_001, Item::New("saber shader"));
+            let strip = strip(crystal.slot, 4_000_000_001, Item::New("kyber"));
             assert_eq!(strip.len(), TILES);
             assert!(
                 strip
@@ -597,6 +597,6 @@ mod tests {
         assert!(card(1, 1).grade() > card(1, 0).grade());
         assert!(card(2, 0).grade() > card(1, 2).grade());
         assert!(shader("saber_sun").grade() > card(3, 2).grade());
-        assert_eq!(card(0, 2).colour(), crate::menu::sjk::color::GOLD_BRIGHT);
+        assert_eq!(card(0, 2).colour(), crate::menu::sjk::color::gold_bright());
     }
 }

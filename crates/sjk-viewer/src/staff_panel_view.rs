@@ -123,10 +123,17 @@ fn cut(text: &str, chars: usize) -> String {
 
 /// The look toys the Collection's Toys tab has no row for, with their names on the Staff
 /// page's Toys tab: a look toy id ([`crate::looks::TOYS`]) that is a choice of the
-/// player's rather than a toy of its own.
-const OTHER_TOY_NAMES: [(&str, &str); 2] = [
+/// player's rather than a toy of its own, or a removed toy older clients still report
+/// (20/11/2026: the hub counts them until the release switches them off).
+const OTHER_TOY_NAMES: [(&str, &str); 8] = [
     (crate::toon_choice::TOY, "Toon model"),
-    (crate::hax::AWAY_TOY, "Hax, away"),
+    ("fishing", "Fishing (removed)"),
+    ("mining", "Mining (removed)"),
+    ("hax_away", "Hax, away (removed)"),
+    ("hax", "Hax (removed)"),
+    ("order66", "Order 66 (removed)"),
+    ("cardboard_box", "Cardboard box (removed)"),
+    ("banana", "Banana peel (removed)"),
 ];
 
 /// A look toy's name on the Toys tab: its Collection row's, a playstyle badge's, one of
@@ -217,18 +224,18 @@ fn gift_words(gift: &sjk_identity::GiftRow) -> (String, Color) {
                 (_, Some(rank)) if rank != "I" => format!("{name}, rank {rank}"),
                 _ => name,
             };
-            (words, color::GOLD_BRIGHT)
+            (words, color::gold_bright())
         }
         "unlock" => match crate::unlockables::find(&gift.what) {
             Some(unlockable) => (
-                format!("Shader {} {}", unlockable.number_text(), unlockable.name),
+                format!("Kyber {} {}", unlockable.number_text(), unlockable.name),
                 unlockable.tier.colour(),
             ),
-            None => (format!("Shader {}", gift.what), color::GOLD_BRIGHT),
+            None => (format!("Kyber {}", gift.what), color::gold_bright()),
         },
         _ => match crate::holocrons::any(&gift.what) {
             Some(tier) => (tier.title().into_owned(), tier.colour),
-            None => (gift.what.clone(), color::GOLD_BRIGHT),
+            None => (gift.what.clone(), color::gold_bright()),
         },
     }
 }
@@ -473,7 +480,7 @@ impl Panel {
                 format_args!("{name}"),
                 frame.rect(LEFT_X + 18.0, y + 2.0, LEFT_WIDTH - 150.0, 26.0),
                 21.0 * s,
-                color::TEXT,
+                color::text(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -493,9 +500,9 @@ impl Panel {
                 frame.rect(LEFT_X + 18.0, y + 26.0, LEFT_WIDTH - 170.0, 18.0),
                 13.0 * s,
                 if inputs.staff.playing_of(&player.key_id).is_some() {
-                    color::GOLD_BRIGHT
+                    color::gold_bright()
                 } else {
-                    color::QUIET
+                    color::quiet()
                 },
                 FontWeight::Regular,
                 TextAlign::Start,
@@ -513,7 +520,7 @@ impl Panel {
                 format_args!("{tags}"),
                 frame.rect(LEFT_X + LEFT_WIDTH - 150.0, y + 10.0, 136.0, 24.0),
                 16.0 * s,
-                color::GOLD_BRIGHT,
+                color::gold_bright(),
                 FontWeight::Regular,
                 TextAlign::End,
             );
@@ -550,7 +557,7 @@ impl Panel {
                 format_args!("{} / {pages}", page + 1),
                 frame.rect(LEFT_X + 44.0, y + 6.0, 88.0, 20.0),
                 14.0 * s,
-                color::QUIET,
+                color::quiet(),
                 FontWeight::Regular,
                 TextAlign::Center,
             );
@@ -568,7 +575,7 @@ impl Panel {
                 ),
                 frame.rect(LEFT_X + 190.0, y + 6.0, LEFT_WIDTH - 190.0, 20.0),
                 14.0 * s,
-                color::QUIET,
+                color::quiet(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -614,7 +621,7 @@ impl Panel {
             format_args!("{name}"),
             frame.rect(name_x, TOP - 6.0, RIGHT_X - 24.0 - name_x, 48.0),
             38.0 * s,
-            color::TEXT,
+            color::text(),
             FontWeight::Semibold,
             TextAlign::Start,
         );
@@ -648,7 +655,7 @@ impl Panel {
             format_args!("{}", facts.join(", ")),
             frame.rect(name_x, TOP + 46.0, RIGHT_X - 24.0 - name_x, 24.0),
             16.0 * s,
-            color::MUTED,
+            color::muted(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -665,7 +672,7 @@ impl Panel {
             format_args!("Note with the next gift (optional, everyone reads it)"),
             frame.rect(RIGHT_X, y, RIGHT_WIDTH, 22.0),
             15.0 * s,
-            color::MUTED,
+            color::muted(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -734,9 +741,9 @@ impl Panel {
                 frame.rect(MIDDLE_X + 68.0, y + 4.0, 136.0, 28.0),
                 21.0 * s,
                 if held > 0 {
-                    color::GOLD_BRIGHT
+                    color::gold_bright()
                 } else {
-                    color::MUTED
+                    color::muted()
                 },
                 FontWeight::Semibold,
                 TextAlign::Start,
@@ -758,7 +765,7 @@ impl Panel {
                 format_args!("{line}"),
                 frame.rect(MIDDLE_X + 68.0, y + 32.0, 136.0, 22.0),
                 14.0 * s,
-                color::QUIET,
+                color::quiet(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -843,14 +850,7 @@ impl Panel {
     fn unlockables(&mut self, frame: &Frame, profile: &Profile) {
         let s = frame.s;
         let top = SECTION_TOP - 20.0;
-        kit::heading(
-            &mut self.ui,
-            frame,
-            RIGHT_X,
-            top,
-            RIGHT_WIDTH,
-            "Saber shaders",
-        );
+        kit::heading(&mut self.ui, frame, RIGHT_X, top, RIGHT_WIDTH, "Kybers");
         // The filter and Held only.
         let field = [RIGHT_X, top + 18.0, RIGHT_WIDTH - 140.0, 36.0];
         let focused = self.focus == UNLOCK_FILTER_TOKEN;
@@ -928,9 +928,9 @@ impl Panel {
                 RIGHT_X,
                 list_top + 4.0,
                 if self.unlock_held {
-                    "No held shader matches."
+                    "No held kyber matches."
                 } else {
-                    "No shader matches."
+                    "No kyber matches."
                 },
             );
         }
@@ -971,7 +971,7 @@ impl Panel {
                 format_args!("{} / {pages}", page + 1),
                 frame.rect(RIGHT_X + RIGHT_WIDTH - 104.0, top, 60.0, 20.0),
                 13.0 * s,
-                color::QUIET,
+                color::quiet(),
                 FontWeight::Regular,
                 TextAlign::Center,
             );
@@ -1004,9 +1004,9 @@ impl Panel {
                 frame.rect(x, y + 1.0, cell - 96.0, 20.0),
                 16.0 * s,
                 if held {
-                    color::GOLD_BRIGHT
+                    color::gold_bright()
                 } else {
-                    color::MUTED
+                    color::muted()
                 },
                 FontWeight::Semibold,
                 TextAlign::Start,
@@ -1027,7 +1027,7 @@ impl Panel {
                 format_args!("{line}"),
                 frame.rect(x, y + 20.0, cell - 96.0, 15.0),
                 12.0 * s,
-                color::QUIET,
+                color::quiet(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -1069,12 +1069,12 @@ impl Panel {
             MIDDLE_X,
             HOLOCRONS_TOP - 36.0,
             MIDDLE_WIDTH,
-            &crate::terms::say("Holocrons and kyber crystals"),
+            &crate::terms::say("Holocrons and dormant kybers"),
         );
         let counts = holocrons::counts_of(&profile.holocron_counts);
         let crystals = crystal_counts(profile);
         let holocrons_word = crate::terms::say("Holocrons");
-        for (line, (what, held)) in [(&*holocrons_word, counts), ("Crystals", crystals)]
+        for (line, (what, held)) in [(&*holocrons_word, counts), ("Dormant kybers", crystals)]
             .into_iter()
             .enumerate()
         {
@@ -1092,7 +1092,7 @@ impl Panel {
                     20.0,
                 ),
                 14.0 * s,
-                color::MUTED,
+                color::muted(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -1141,7 +1141,11 @@ impl Panel {
                 format_args!("{}", tier.label),
                 frame.rect(x + 38.0, y + 6.0, TIER_CHIP[0] - 42.0, 30.0),
                 16.0 * s,
-                if chosen { color::TEXT } else { color::MUTED },
+                if chosen {
+                    color::text()
+                } else {
+                    color::muted()
+                },
                 FontWeight::Semibold,
                 TextAlign::Start,
             );
@@ -1173,7 +1177,7 @@ impl Panel {
         ) {
             (_, Some(why), _) => why.to_owned(),
             (true, None, _) => format!(
-                "Give: {} {}, opened to a saber shader",
+                "Give: {} {}, attuned to a kyber",
                 chosen.article(),
                 chosen.name
             ),
@@ -1208,10 +1212,13 @@ impl Panel {
             text(
                 &mut self.ui,
                 TextFamily::Body,
-                format_args!("{}", crate::terms::say("No holocrons or crystals yet.")),
+                format_args!(
+                    "{}",
+                    crate::terms::say("No holocrons or dormant kybers yet.")
+                ),
                 frame.rect(MIDDLE_X, rows_y, MIDDLE_WIDTH, 24.0),
                 16.0 * s,
-                color::MUTED,
+                color::muted(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -1255,7 +1262,7 @@ impl Panel {
                 ),
                 frame.rect(MIDDLE_X + 196.0, y + 3.0, MIDDLE_WIDTH - 332.0, 24.0),
                 12.5 * s,
-                color::QUIET,
+                color::quiet(),
                 FontWeight::Regular,
                 TextAlign::End,
             );
@@ -1290,7 +1297,7 @@ impl Panel {
                     20.0,
                 ),
                 13.0 * s,
-                color::QUIET,
+                color::quiet(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -1342,7 +1349,7 @@ impl Panel {
                 format_args!("No achievements at the hub yet."),
                 frame.rect(MIDDLE_X, top, MIDDLE_WIDTH, 24.0),
                 16.0 * s,
-                color::MUTED,
+                color::muted(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -1363,9 +1370,9 @@ impl Panel {
                 frame.rect(x, y, 230.0, 28.0),
                 19.0 * s,
                 if held.unlocked > 0 {
-                    color::GOLD_BRIGHT
+                    color::gold_bright()
                 } else {
-                    color::TEXT
+                    color::text()
                 },
                 FontWeight::Regular,
                 TextAlign::Start,
@@ -1385,7 +1392,7 @@ impl Panel {
                 format_args!("{status}"),
                 frame.rect(x + 236.0, y + 2.0, width - 350.0, 24.0),
                 14.0 * s,
-                color::QUIET,
+                color::quiet(),
                 FontWeight::Regular,
                 TextAlign::End,
             );
@@ -1409,7 +1416,7 @@ impl Panel {
                 format_args!("and {} more", listed.len() - ACHIEVEMENTS_SHOWN),
                 frame.rect(MIDDLE_X, y, MIDDLE_WIDTH, 22.0),
                 14.0 * s,
-                color::QUIET,
+                color::quiet(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -1427,7 +1434,7 @@ impl Panel {
                 format_args!("{part}"),
                 frame.rect(MIDDLE_X, y + 6.0, PANE_WIDTH, 22.0),
                 14.0 * s,
-                color::QUIET,
+                color::quiet(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -1521,7 +1528,7 @@ impl Panel {
                 ),
             ),
             (
-                "Kyber crystals",
+                "Dormant kybers",
                 format!(
                     "{} uncommon, {} rare, {} legendary, {} mythical unopened",
                     crystals[0], crystals[1], crystals[2], crystals[3]
@@ -1548,7 +1555,7 @@ impl Panel {
                 format_args!("{}", crate::terms::say(label)),
                 frame.rect(MIDDLE_X, y, 140.0, 24.0),
                 15.0 * s,
-                color::QUIET,
+                color::quiet(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -1558,7 +1565,7 @@ impl Panel {
                 format_args!("{}", cut(value, 52)),
                 frame.rect(MIDDLE_X + 150.0, y, MIDDLE_WIDTH - 150.0, 24.0),
                 15.0 * s,
-                color::TEXT,
+                color::text(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -1638,7 +1645,7 @@ impl Panel {
                 format_args!("{}", cut(&worn.name, 30)),
                 frame.rect(MIDDLE_X, y, 340.0, 26.0),
                 17.0 * s,
-                color::TEXT,
+                color::text(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -1648,7 +1655,7 @@ impl Panel {
                 format_args!("last {seen}"),
                 frame.rect(MIDDLE_X + 340.0, y + 2.0, MIDDLE_WIDTH - 340.0, 24.0),
                 13.0 * s,
-                color::QUIET,
+                color::quiet(),
                 FontWeight::Regular,
                 TextAlign::End,
             );
@@ -1774,7 +1781,7 @@ impl Panel {
                 format_args!("{label}"),
                 frame.rect(RIGHT_X, y, 240.0, 30.0),
                 20.0 * s,
-                color::TEXT,
+                color::text(),
                 FontWeight::Semibold,
                 TextAlign::Start,
             );
@@ -1784,7 +1791,7 @@ impl Panel {
                 format_args!("{value}"),
                 frame.rect(RIGHT_X + 240.0, y, RIGHT_WIDTH - 240.0, 30.0),
                 20.0 * s,
-                color::GOLD_BRIGHT,
+                color::gold_bright(),
                 FontWeight::Semibold,
                 TextAlign::End,
             );
@@ -1891,13 +1898,13 @@ impl Panel {
             format_args!("Chat bans in force, newest first"),
             frame.rect(MIDDLE_X, y + 4.0, PANE_WIDTH - 150.0, 30.0),
             20.0 * s,
-            color::TEXT,
+            color::text(),
             FontWeight::Semibold,
             TextAlign::Start,
         );
         y += 54.0;
         if staff.chat_bans.is_empty() {
-            self.right_line(frame, y, "No chat ban in force.", color::MUTED);
+            self.right_line(frame, y, "No chat ban in force.", color::muted());
         }
         for (row, ban) in staff.chat_bans.iter().take(BAN_ROWS_SHOWN).enumerate() {
             let token = BAN_LIFT_BASE + row as u16;
@@ -1914,7 +1921,7 @@ impl Panel {
                 format_args!("{name}"),
                 frame.rect(MIDDLE_X, row_y + 2.0, 230.0, 26.0),
                 18.0 * s,
-                color::TEXT,
+                color::text(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -1933,7 +1940,7 @@ impl Panel {
                 ),
                 frame.rect(MIDDLE_X + 236.0, row_y + 4.0, PANE_WIDTH - 350.0, 24.0),
                 14.0 * s,
-                color::QUIET,
+                color::quiet(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -1957,7 +1964,7 @@ impl Panel {
                 frame,
                 y + BAN_ROWS_SHOWN as f32 * LOG_ROW,
                 &format!("and {} more", staff.chat_bans.len() - BAN_ROWS_SHOWN),
-                color::QUIET,
+                color::quiet(),
             );
         }
     }
@@ -1976,7 +1983,7 @@ impl Panel {
             format_args!("Chat translation"),
             frame.rect(X, y, WIDTH, 30.0),
             20.0 * s,
-            color::TEXT,
+            color::text(),
             FontWeight::Semibold,
             TextAlign::Start,
         );
@@ -2027,7 +2034,7 @@ impl Panel {
                 format_args!("{label}"),
                 frame.rect(X, row_y, WIDTH - 110.0, 24.0),
                 15.0 * s,
-                color::MUTED,
+                color::muted(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -2037,7 +2044,7 @@ impl Panel {
                 format_args!("{value}"),
                 frame.rect(X + WIDTH - 140.0, row_y - 1.0, 140.0, 24.0),
                 17.0 * s,
-                color::TEXT,
+                color::text(),
                 FontWeight::Semibold,
                 TextAlign::End,
             );
@@ -2082,7 +2089,7 @@ impl Panel {
             format_args!("From, 30 days"),
             frame.rect(X, y, WIDTH, 24.0),
             16.0 * s,
-            color::TEXT,
+            color::text(),
             FontWeight::Semibold,
             TextAlign::Start,
         );
@@ -2116,7 +2123,7 @@ impl Panel {
             format_args!("Toys out, the longest first"),
             frame.rect(MIDDLE_X, y + 4.0, PANE_WIDTH - 150.0, 30.0),
             20.0 * s,
-            color::TEXT,
+            color::text(),
             FontWeight::Semibold,
             TextAlign::Start,
         );
@@ -2127,7 +2134,7 @@ impl Panel {
             } else {
                 "Reading them from the hub..."
             };
-            self.right_line(frame, y, line, color::MUTED);
+            self.right_line(frame, y, line, color::muted());
             return;
         };
         let grouped = crate::cards::grouped;
@@ -2144,11 +2151,11 @@ impl Panel {
                     grouped(count)
                 ),
             },
-            color::MUTED,
+            color::muted(),
         );
         y += 30.0;
         if stats.toys.is_empty() {
-            self.right_line(frame, y, "No toy out in 30 days.", color::MUTED);
+            self.right_line(frame, y, "No toy out in 30 days.", color::muted());
             return;
         }
         // The columns: the toy, players today, in 7 and 30 days, time out in 7 and 30
@@ -2173,7 +2180,7 @@ impl Panel {
                 format_args!("{head}"),
                 frame.rect(*x, y, *width, 20.0),
                 13.0 * s,
-                color::QUIET,
+                color::quiet(),
                 FontWeight::Regular,
                 *align,
             );
@@ -2231,9 +2238,9 @@ impl Panel {
                     frame.rect(*x, row_y + 3.0, *width, 22.0),
                     if column == 0 { 16.0 } else { 15.0 } * s,
                     if picked && column == 0 {
-                        color::GOLD_BRIGHT
+                        color::gold_bright()
                     } else {
-                        color::TEXT
+                        color::text()
                     },
                     FontWeight::Regular,
                     *align,
@@ -2271,7 +2278,7 @@ impl Panel {
                 format_args!("{} / {pages}", self.toy_page + 1),
                 frame.rect(MIDDLE_X + 44.0, page_y + 6.0, 88.0, 20.0),
                 14.0 * s,
-                color::QUIET,
+                color::quiet(),
                 FontWeight::Regular,
                 TextAlign::Center,
             );
@@ -2295,7 +2302,7 @@ impl Panel {
             format_args!("{}", cut(&toy_name(&toy.toy), 24)),
             frame.rect(X, y, WIDTH, 30.0),
             20.0 * s,
-            color::TEXT,
+            color::text(),
             FontWeight::Semibold,
             TextAlign::Start,
         );
@@ -2318,7 +2325,7 @@ impl Panel {
                 format_args!("{name}"),
                 frame.rect(X, row_y, WIDTH, 22.0),
                 16.0 * s,
-                color::TEXT,
+                color::text(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -2333,7 +2340,7 @@ impl Panel {
                 ),
                 frame.rect(X, row_y + 21.0, WIDTH, 20.0),
                 14.0 * s,
-                color::QUIET,
+                color::quiet(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -2348,7 +2355,7 @@ impl Panel {
             format_args!("{line}"),
             frame.rect(x, y, RIGHT_WIDTH, 22.0),
             15.0 * frame.s,
-            color::MUTED,
+            color::muted(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -2363,7 +2370,7 @@ impl Panel {
                 format_args!("{part}"),
                 frame.rect(x, y + row as f32 * 21.0, RIGHT_WIDTH, 21.0),
                 14.0 * frame.s,
-                color::QUIET,
+                color::quiet(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -2375,7 +2382,7 @@ impl Panel {
         let mut x = MIDDLE_X;
         for (label, width, view, token) in [
             ("Overview", 104.0, View::Overview, OVERVIEW_TAB_TOKEN),
-            ("Medals, shaders", 158.0, View::Rewards, REWARDS_TAB_TOKEN),
+            ("Medals, kybers", 158.0, View::Rewards, REWARDS_TAB_TOKEN),
             (
                 "Holocrons, credits",
                 176.0,
@@ -2480,7 +2487,7 @@ impl Panel {
             )
         };
         for part in wrap(&explain, 72).take(2) {
-            self.right_line(frame, y, part, color::QUIET);
+            self.right_line(frame, y, part, color::quiet());
             y += 22.0;
         }
         y += 18.0;
@@ -2491,7 +2498,7 @@ impl Panel {
                 frame,
                 y,
                 "None yet, or not read: Refresh reads them.",
-                color::MUTED,
+                color::muted(),
             );
         }
         for (row, request) in staff.log_requests.iter().take(LOG_ROWS_SHOWN).enumerate() {
@@ -2505,7 +2512,7 @@ impl Panel {
                 format_args!("{}", cut(&crate::medals::plain_note(&request.name), 18)),
                 frame.rect(MIDDLE_X, row_y + 2.0, 190.0, 26.0),
                 18.0 * s,
-                color::TEXT,
+                color::text(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -2533,9 +2540,9 @@ impl Panel {
                 frame.rect(MIDDLE_X + 196.0, row_y + 4.0, 230.0, 24.0),
                 14.0 * s,
                 if sent {
-                    color::GOLD_BRIGHT
+                    color::gold_bright()
                 } else {
-                    color::QUIET
+                    color::quiet()
                 },
                 FontWeight::Regular,
                 TextAlign::Start,
@@ -2592,7 +2599,7 @@ impl Panel {
             format_args!("{title}"),
             frame.rect(MIDDLE_X, y + 4.0, PANE_WIDTH - 150.0, 30.0),
             20.0 * s,
-            color::TEXT,
+            color::text(),
             FontWeight::Semibold,
             TextAlign::Start,
         );
@@ -2600,7 +2607,7 @@ impl Panel {
         match group {
             Some(_) => {
                 if staff.crashes.is_empty() {
-                    self.right_line(frame, y, "No report of this kind any more.", color::MUTED);
+                    self.right_line(frame, y, "No report of this kind any more.", color::muted());
                 }
                 for (row, crash) in staff.crashes.iter().take(CRASH_ROWS_SHOWN).enumerate() {
                     let token = CRASH_OPEN_BASE + row as u16;
@@ -2612,7 +2619,7 @@ impl Panel {
                         format_args!("{}", cut(&crate::medals::plain_note(&crash.name), 16)),
                         frame.rect(MIDDLE_X, row_y + 2.0, 170.0, 26.0),
                         18.0 * s,
-                        color::TEXT,
+                        color::text(),
                         FontWeight::Regular,
                         TextAlign::Start,
                     );
@@ -2626,7 +2633,7 @@ impl Panel {
                         ),
                         frame.rect(MIDDLE_X + 176.0, row_y + 4.0, 250.0, 24.0),
                         14.0 * s,
-                        color::QUIET,
+                        color::quiet(),
                         FontWeight::Regular,
                         TextAlign::Start,
                     );
@@ -2644,7 +2651,7 @@ impl Panel {
                 }
             }
             None if self.crash_group.is_some() => {
-                self.right_line(frame, y, "Reading...", color::MUTED);
+                self.right_line(frame, y, "Reading...", color::muted());
             }
             None => {
                 if staff.crash_groups.is_empty() {
@@ -2652,7 +2659,7 @@ impl Panel {
                         frame,
                         y,
                         "No crash reports, or not read: Refresh reads them.",
-                        color::MUTED,
+                        color::muted(),
                     );
                 }
                 for (row, kind) in staff
@@ -2692,7 +2699,7 @@ impl Panel {
                         ),
                         frame.rect(MIDDLE_X + 12.0, row_y + 1.0, PANE_WIDTH - 24.0, 22.0),
                         15.0 * s,
-                        color::TEXT,
+                        color::text(),
                         FontWeight::Regular,
                         TextAlign::Start,
                     );
@@ -2702,7 +2709,7 @@ impl Panel {
                         format_args!("{}", cut(&kind.message, 62)),
                         frame.rect(MIDDLE_X + 12.0, row_y + 22.0, PANE_WIDTH - 24.0, 20.0),
                         13.0 * s,
-                        color::QUIET,
+                        color::quiet(),
                         FontWeight::Regular,
                         TextAlign::Start,
                     );
@@ -2723,7 +2730,7 @@ impl Panel {
             format_args!("Main key: the one this player started with (key ids never show)"),
             frame.rect(MIDDLE_X, y, PANE_WIDTH, 24.0),
             16.0 * s,
-            color::MUTED,
+            color::muted(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -2740,7 +2747,7 @@ impl Panel {
                     format_args!("{part}"),
                     frame.rect(MIDDLE_X, y, PANE_WIDTH, 22.0),
                     14.0 * s,
-                    color::QUIET,
+                    color::quiet(),
                     FontWeight::Regular,
                     TextAlign::Start,
                 );
@@ -2756,7 +2763,7 @@ impl Panel {
                 format_args!("Linked key {}", row + 1),
                 frame.rect(MIDDLE_X, row_y + 2.0, PANE_WIDTH - 150.0, 26.0),
                 18.0 * s,
-                color::TEXT,
+                color::text(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -2789,7 +2796,7 @@ impl Panel {
                     20.0,
                 ),
                 13.0 * s,
-                color::QUIET,
+                color::quiet(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -2807,7 +2814,7 @@ impl Panel {
                 format_args!("An unlinked key starts afresh; nothing moves back."),
                 frame.rect(MIDDLE_X, y + rows + more + 4.0, PANE_WIDTH, 20.0),
                 13.0 * s,
-                color::QUIET,
+                color::quiet(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -2842,7 +2849,7 @@ impl Panel {
                 format_args!("{part}"),
                 frame.rect(MIDDLE_X, y, PANE_WIDTH, 22.0),
                 14.0 * s,
-                color::QUIET,
+                color::quiet(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -2899,16 +2906,16 @@ impl Panel {
         let (line, colour) = if self.picking {
             (
                 "Choose the player to merge away in the list (Esc lets go)",
-                color::GOLD_BRIGHT,
+                color::gold_bright(),
             )
         } else {
             match self.shown.merge_problem {
                 None => (
                     "Ready: Merge asks once more before anything moves",
-                    color::MUTED,
+                    color::muted(),
                 ),
-                Some(MergeProblem::Empty) => (MergeProblem::Empty.words(), color::QUIET),
-                Some(problem) => (problem.words(), color::EMBER),
+                Some(MergeProblem::Empty) => (MergeProblem::Empty.words(), color::quiet()),
+                Some(problem) => (problem.words(), color::ember()),
             }
         };
         text(
@@ -2975,9 +2982,9 @@ impl Panel {
                 "Kept",
                 named(&kept.name),
                 seen_of(Some(kept)),
-                color::GOLD_BRIGHT,
+                color::gold_bright(),
             ),
-            ("Merged away", gone, seen_of(gone_profile), color::EMBER),
+            ("Merged away", gone, seen_of(gone_profile), color::ember()),
         ] {
             text(
                 &mut self.ui,
@@ -2995,7 +3002,7 @@ impl Panel {
                 format_args!("{about}"),
                 frame.rect(MIDDLE_X, y + 28.0, PANE_WIDTH, 20.0),
                 14.0 * s,
-                color::MUTED,
+                color::muted(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -3011,7 +3018,7 @@ impl Panel {
                 format_args!("{part}"),
                 frame.rect(MIDDLE_X, y, PANE_WIDTH, 22.0),
                 14.0 * s,
-                color::TEXT,
+                color::text(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -3072,13 +3079,13 @@ impl Panel {
             format_args!("{heading}"),
             frame.rect(MIDDLE_X, y + 4.0, PANE_WIDTH - 150.0, 30.0),
             20.0 * s,
-            color::TEXT,
+            color::text(),
             FontWeight::Semibold,
             TextAlign::Start,
         );
         y += 54.0;
         let Some(log) = log else {
-            self.right_line(frame, y, "Reading them from the hub...", color::MUTED);
+            self.right_line(frame, y, "Reading them from the hub...", color::muted());
             return;
         };
         if log.gifts.is_empty() {
@@ -3086,7 +3093,7 @@ impl Panel {
                 frame,
                 y,
                 "No gift in the last day. Undo works on your own gifts for a day.",
-                color::MUTED,
+                color::muted(),
             );
         }
         for (row, gift) in log.gifts.iter().take(GIFT_ROWS_SHOWN).enumerate() {
@@ -3100,7 +3107,7 @@ impl Panel {
                 format_args!("{}", cut(&what, 30)),
                 frame.rect(MIDDLE_X, row_y + 2.0, 300.0, 26.0),
                 17.0 * s,
-                if gift.undone { color::QUIET } else { colour },
+                if gift.undone { color::quiet() } else { colour },
                 FontWeight::Semibold,
                 TextAlign::Start,
             );
@@ -3124,7 +3131,7 @@ impl Panel {
                 ),
                 frame.rect(MIDDLE_X + 306.0, row_y + 4.0, PANE_WIDTH - 430.0, 24.0),
                 14.0 * s,
-                color::QUIET,
+                color::quiet(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -3152,7 +3159,7 @@ impl Panel {
                 frame,
                 y + GIFT_ROWS_SHOWN as f32 * LOG_ROW,
                 &format!("and {} more", log.gifts.len() - GIFT_ROWS_SHOWN),
-                color::QUIET,
+                color::quiet(),
             );
         }
     }
@@ -3161,9 +3168,9 @@ impl Panel {
     fn status(&mut self, frame: &Frame, staff: &StaffState) {
         let s = frame.s;
         let (line, colour) = if staff.busy {
-            ("Working...".to_owned(), color::MUTED)
+            ("Working...".to_owned(), color::muted())
         } else if staff.failed {
-            (cut(&crate::terms::say(&staff.message), 90), color::EMBER)
+            (cut(&crate::terms::say(&staff.message), 90), color::ember())
         } else if staff.message.is_empty()
             && !self.shown.creator
             && matches!(self.view, View::Achievements | View::Keys)
@@ -3174,12 +3181,12 @@ impl Panel {
                     _ => "Only the owner clears; this tab is to read.",
                 }
                 .to_owned(),
-                color::MUTED,
+                color::muted(),
             )
         } else {
             (
                 cut(&crate::terms::say(&staff.message), 90),
-                color::GOLD_BRIGHT,
+                color::gold_bright(),
             )
         };
         text(

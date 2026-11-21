@@ -276,7 +276,7 @@ impl Panel {
             format_args!("Model viewer"),
             frame.rect(LEFT_X, 70.0, 700.0, 56.0),
             40.0 * s,
-            color::TEXT,
+            color::text(),
             FontWeight::Semibold,
             TextAlign::Start,
         );
@@ -288,7 +288,7 @@ impl Panel {
                 format_args!("Reading the installed models..."),
                 frame.rect(LEFT_X, 134.0, LIST_WIDTH, 28.0),
                 18.0 * s,
-                color::MUTED,
+                color::muted(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -303,7 +303,7 @@ impl Panel {
                 ),
                 frame.rect(LEFT_X, 134.0, LIST_WIDTH, 28.0),
                 18.0 * s,
-                color::MUTED,
+                color::muted(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -338,7 +338,7 @@ impl Panel {
                 format_args!("{}", entry.name),
                 frame.rect(LEFT_X + 20.0, top + 9.0, LIST_WIDTH - 200.0, 28.0),
                 19.0 * s,
-                color::TEXT,
+                color::text(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -354,7 +354,7 @@ impl Panel {
                     format_args!("{tag}"),
                     frame.rect(LEFT_X + LIST_WIDTH - 180.0, top + 11.0, 160.0, 24.0),
                     15.0 * s,
-                    color::MUTED,
+                    color::muted(),
                     FontWeight::Regular,
                     TextAlign::End,
                 );
@@ -371,7 +371,7 @@ impl Panel {
                 format_args!("No model matches \"{}\".", self.query),
                 frame.rect(LEFT_X + 20.0, LIST_Y + 8.0, LIST_WIDTH - 40.0, 28.0),
                 18.0 * s,
-                color::MUTED,
+                color::muted(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -391,7 +391,7 @@ impl Panel {
                 format_args!("{model}"),
                 frame.rect(x, y + 740.0, width, 44.0),
                 32.0 * s,
-                color::TEXT,
+                color::text(),
                 FontWeight::Semibold,
                 TextAlign::Center,
             );
@@ -402,7 +402,7 @@ impl Panel {
                     format_args!("{skin}"),
                     frame.rect(x, y + 786.0, width, 30.0),
                     20.0 * s,
-                    color::GOLD_BRIGHT,
+                    color::gold_bright(),
                     FontWeight::Regular,
                     TextAlign::Center,
                 );
@@ -414,7 +414,7 @@ impl Panel {
             format_args!("Type to search · Up/Down, Page Up/Down, wheel to choose · Esc to close"),
             frame.rect(LEFT_X, 1010.0, 1100.0, 28.0),
             16.0 * s,
-            color::MUTED,
+            color::muted(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -428,7 +428,7 @@ impl Panel {
             format_args!("Close"),
             frame.rect(LEFT_X + LIST_WIDTH - 80.0, 83.0, 80.0, 28.0),
             17.0 * s,
-            color::TEXT,
+            color::text(),
             FontWeight::Regular,
             TextAlign::End,
         );
@@ -445,7 +445,7 @@ impl Panel {
             return;
         }
         let [width, height] = viewport;
-        let space = |alpha| color::alpha(color::SPACE, alpha);
+        let space = |alpha| color::alpha(color::space(), alpha);
         let x = |frame_x: f32| frame.point(frame_x, 0.0)[0];
         fade_across(
             &mut self.ui,

@@ -87,7 +87,7 @@ fn cut(text: &str, chars: usize) -> String {
 /// keys read over any map. The middle of the left stays clear for the holocron.
 fn backdrop(canvas: &mut MenuCanvas, viewport: [f32; 2]) {
     let frame = Frame::new(viewport);
-    let space = |alpha| color::alpha(color::SPACE, alpha);
+    let space = |alpha| color::alpha(color::space(), alpha);
     let [panel, _] = frame.point(PANEL_FADE, 0.0);
     let [solid, _] = frame.point(RIGHT_X, 0.0);
     let height = viewport[1];
@@ -166,7 +166,7 @@ fn padlock(canvas: &mut MenuCanvas, frame: &Frame, x: f32, y: f32, size: f32, co
     let _ = list.push(DrawCommand::RoundedRect {
         rect: frame.rect(x - size * 0.06, y + size * 0.08, size * 0.12, size * 0.26),
         radius: size * 0.05 * s,
-        color: color::alpha(color::SPACE, 0.85),
+        color: color::alpha(color::space(), 0.85),
     });
 }
 
@@ -238,7 +238,7 @@ impl Panel {
                 format_args!("{label}"),
                 frame.rect(right - 200.0, y + 50.0, 200.0, 24.0),
                 15.0 * s,
-                color::QUIET,
+                color::quiet(),
                 FontWeight::Regular,
                 TextAlign::End,
             );
@@ -249,8 +249,8 @@ impl Panel {
             &mut self.ui,
             crate::cards::credits_text(credits),
             "credits",
-            color::GOLD_BRIGHT,
-            &|list, at, s| crate::cards::mark::draw(list, at, mark_height * s, color::GOLD),
+            color::gold_bright(),
+            &|list, at, s| crate::cards::mark::draw(list, at, mark_height * s, color::gold()),
             crate::cards::mark::width(mark_height),
         );
         if let Some(shards) = shards {
@@ -397,7 +397,7 @@ impl Panel {
             format_args!("{}", crate::terms::say(&headline)),
             frame.rect(RIGHT_X, HEAD_Y, RIGHT_WIDTH, 48.0),
             38.0 * s,
-            color::TEXT,
+            color::text(),
             FontWeight::Semibold,
             TextAlign::Start,
         );
@@ -407,12 +407,41 @@ impl Panel {
             format_args!("{}", crate::terms::say(line)),
             frame.rect(RIGHT_X, LINE_Y, RIGHT_WIDTH, 26.0),
             17.0 * s,
-            color::MUTED,
+            color::muted(),
             FontWeight::Regular,
             TextAlign::Start,
         );
         // The kyber shards and the credits at the panel's top right, each word under it.
         self.balances(frame, RIGHT_X + RIGHT_WIDTH, HEAD_Y + 4.0);
+    }
+
+    /// No dormant kyber held (15/11/2026, "Empty states") in place of the four tiles:
+    /// one comes from each achievement, once; the nearest to its goal, and the way there.
+    fn no_crystals(&mut self, frame: &Frame) {
+        let line = match &self.data.next_achievement {
+            Some((name, progress, goal)) => format!(
+                "Each achievement gives one, once. Next: {name} {}/{}",
+                crate::cards::grouped(*progress),
+                crate::cards::grouped(*goal)
+            ),
+            None => "Each achievement gives one, once.".to_owned(),
+        };
+        crate::console::collection_panel::empty_state(
+            &mut self.ui,
+            frame,
+            [
+                RIGHT_X,
+                CRYSTALS_TOP - 4.0,
+                RIGHT_WIDTH,
+                CRYSTAL_HEIGHT + 8.0,
+            ],
+            crate::console::collection_panel::Ghosts::Crystal,
+            ("No dormant kybers yet", &line),
+            Some(crate::console::collection_panel::EmptyButton {
+                label: "See Achievements",
+                token: super::ACHIEVEMENTS_TOKEN,
+            }),
+        );
     }
 
     /// The four tiers, one row each.
@@ -426,33 +455,31 @@ impl Panel {
             let count = self.data.count(index);
             let held = count.is_some_and(|count| count > 0);
             let rect = frame.rect(RIGHT_X, y, RIGHT_WIDTH, ROW_HEIGHT);
-            let list = self.ui.draw_list_mut();
-            let _ = list.push(DrawCommand::RoundedRect {
-                rect,
-                radius: 14.0 * s,
-                color: if chosen {
-                    tier.colour_alpha(0.16)
-                } else {
-                    color::alpha(color::SPACE, 0.55)
+            // The tier's frame, one look everywhere (15/11/2026); its effects stay
+            // `rarity_fx`'s, over it.
+            kit::tier_frame(
+                &mut self.ui,
+                frame,
+                [RIGHT_X, y, RIGHT_WIDTH, ROW_HEIGHT],
+                kit::holocron_tier(tier.index),
+                kit::TierSize::Row,
+                kit::TierLook {
+                    acrylic: true,
+                    chosen,
+                    hovered: hovered || chosen,
+                    dim: !held,
+                    still: true,
+                    ..kit::TierLook::at(0.0)
                 },
-            });
-            let _ = list.push(DrawCommand::Border {
-                rect,
-                radius: 14.0 * s,
-                width: if chosen { 2.0 * s } else { 1.2 * s },
-                color: if chosen {
-                    Color::new(1.0, 1.0, 1.0, 0.7)
-                } else if hovered {
-                    tier.colour_alpha(0.55)
-                } else {
-                    color::alpha(color::HOLO, 0.16)
-                },
-            });
-            let _ = list.push(DrawCommand::RoundedRect {
-                rect: frame.rect(RIGHT_X + 10.0, y + 12.0, 5.0, ROW_HEIGHT - 24.0),
-                radius: 2.5 * s,
-                color: tier.colour_alpha(if held { 1.0 } else { 0.4 }),
-            });
+            );
+            if chosen {
+                let _ = self.ui.draw_list_mut().push(DrawCommand::Border {
+                    rect,
+                    radius: 8.0 * s,
+                    width: 2.0 * s,
+                    color: Color::new(1.0, 1.0, 1.0, 0.7),
+                });
+            }
             // The tier's effects over its row, faint for a tier not held yet.
             crate::rarity_fx::draw(
                 self.ui.draw_list_mut(),
@@ -461,7 +488,7 @@ impl Panel {
                     ..crate::rarity_fx::Item::holocron(tier, crate::rarity_fx::Size::Full)
                 },
                 rect,
-                14.0 * s,
+                kit::TierSize::Row.radius() * s,
                 s,
                 crate::menu::art::motion::seconds() as f32,
             );
@@ -491,7 +518,7 @@ impl Panel {
                 format_args!("{} of drops", tier.odds()),
                 frame.rect(RIGHT_X + 90.0, y + 30.0, 440.0, 20.0),
                 15.0 * s,
-                color::MUTED,
+                color::muted(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -504,7 +531,7 @@ impl Panel {
                         format_args!("{count}"),
                         frame.rect(right - 130.0 + 60.0, y + 1.0, 70.0, 36.0),
                         32.0 * s,
-                        if held { color::TEXT } else { color::QUIET },
+                        if held { color::text() } else { color::quiet() },
                         FontWeight::Semibold,
                         TextAlign::End,
                     );
@@ -514,7 +541,7 @@ impl Panel {
                         format_args!("held"),
                         frame.rect(right - 130.0, y + 33.0, 130.0, 18.0),
                         14.0 * s,
-                        color::QUIET,
+                        color::quiet(),
                         FontWeight::Regular,
                         TextAlign::End,
                     );
@@ -525,7 +552,7 @@ impl Panel {
                             right - 80.0,
                             y + ROW_HEIGHT * 0.5 + 2.0,
                             22.0,
-                            color::alpha(color::QUIET, 0.9),
+                            color::alpha(color::quiet(), 0.9),
                         );
                     }
                 }
@@ -535,7 +562,7 @@ impl Panel {
                     format_args!("\u{2014}"),
                     frame.rect(right - 130.0, y + 8.0, 130.0, 36.0),
                     32.0 * s,
-                    color::QUIET,
+                    color::quiet(),
                     FontWeight::Semibold,
                     TextAlign::End,
                 ),
@@ -554,7 +581,7 @@ impl Panel {
             RIGHT_X,
             KYBER_Y,
             RIGHT_WIDTH - 440.0,
-            "Kyber crystals",
+            "Dormant kybers",
         );
         text(
             &mut self.ui,
@@ -562,10 +589,18 @@ impl Panel {
             format_args!("{}", crate::kyber::pity_line(self.data.pity)),
             frame.rect(RIGHT_X + RIGHT_WIDTH - 430.0, KYBER_Y - 13.0, 430.0, 26.0),
             15.0 * s,
-            color::GOLD,
+            color::gold(),
             FontWeight::Regular,
             TextAlign::End,
         );
+        if self
+            .data
+            .crystals
+            .is_some_and(|crystals| crystals.iter().all(|count| *count == 0))
+        {
+            self.no_crystals(frame);
+            return;
+        }
         for (index, tier) in crate::kyber::TIERS.iter().enumerate() {
             let x = RIGHT_X + index as f32 * (CRYSTAL_WIDTH + CRYSTAL_GAP);
             let y = CRYSTALS_TOP;
@@ -575,28 +610,30 @@ impl Panel {
             let count = self.data.count(tier.slot);
             let held = count.is_some_and(|count| count > 0);
             let rect = frame.rect(x, y, CRYSTAL_WIDTH, CRYSTAL_HEIGHT);
-            let list = self.ui.draw_list_mut();
-            let _ = list.push(DrawCommand::RoundedRect {
-                rect,
-                radius: 12.0 * s,
-                color: if chosen {
-                    tier.colour_alpha(0.16)
-                } else {
-                    color::alpha(color::SPACE, 0.55)
+            // The tier's frame, one look everywhere (15/11/2026).
+            kit::tier_frame(
+                &mut self.ui,
+                frame,
+                [x, y, CRYSTAL_WIDTH, CRYSTAL_HEIGHT],
+                kit::holocron_tier(tier.index),
+                kit::TierSize::Tile,
+                kit::TierLook {
+                    acrylic: true,
+                    chosen,
+                    hovered: hovered || chosen,
+                    dim: !held,
+                    still: true,
+                    ..kit::TierLook::at(0.0)
                 },
-            });
-            let _ = list.push(DrawCommand::Border {
-                rect,
-                radius: 12.0 * s,
-                width: if chosen { 2.0 * s } else { 1.2 * s },
-                color: if chosen {
-                    Color::new(1.0, 1.0, 1.0, 0.7)
-                } else if hovered {
-                    tier.colour_alpha(0.55)
-                } else {
-                    color::alpha(color::HOLO, 0.16)
-                },
-            });
+            );
+            if chosen {
+                let _ = self.ui.draw_list_mut().push(DrawCommand::Border {
+                    rect,
+                    radius: 12.0 * s,
+                    width: 2.0 * s,
+                    color: Color::new(1.0, 1.0, 1.0, 0.7),
+                });
+            }
             crate::rarity_fx::draw(
                 self.ui.draw_list_mut(),
                 crate::rarity_fx::Item {
@@ -631,10 +668,10 @@ impl Panel {
             text(
                 &mut self.ui,
                 TextFamily::Body,
-                format_args!("crystal"),
+                format_args!("dormant kyber"),
                 frame.rect(x + 52.0, y + 29.0, CRYSTAL_WIDTH - 100.0, 18.0),
                 13.0 * s,
-                color::QUIET,
+                color::quiet(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -645,7 +682,7 @@ impl Panel {
                 format_args!("{words}"),
                 frame.rect(x + CRYSTAL_WIDTH - 64.0, y + 8.0, 50.0, 34.0),
                 28.0 * s,
-                if held { color::TEXT } else { color::QUIET },
+                if held { color::text() } else { color::quiet() },
                 FontWeight::Semibold,
                 TextAlign::End,
             );
@@ -664,7 +701,7 @@ impl Panel {
                 format_args!("{part}"),
                 frame.rect(RIGHT_X, y, RIGHT_WIDTH, 24.0),
                 16.0 * s,
-                color::TEXT,
+                color::text(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -683,7 +720,7 @@ impl Panel {
             ),
             frame.rect(RIGHT_X, ABOUT_Y + 52.0, RIGHT_WIDTH - LOOT_WIDTH, 24.0),
             15.0 * s,
-            color::GOLD,
+            color::gold(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -704,7 +741,7 @@ impl Panel {
         );
         let _ = self.ui.draw_list_mut().push(DrawCommand::SolidRect {
             rect: frame.rect(RIGHT_X, RULE_Y, RIGHT_WIDTH, 1.0),
-            color: color::alpha(color::HOLO, 0.18),
+            color: color::alpha(color::holo(), 0.18),
         });
     }
 
@@ -723,9 +760,9 @@ impl Panel {
             frame.rect(RIGHT_X, NEXT_Y, RIGHT_WIDTH - 190.0, 30.0),
             22.0 * s,
             if self.data.next.is_empty() {
-                color::QUIET
+                color::quiet()
             } else {
-                color::TEXT
+                color::text()
             },
             FontWeight::Semibold,
             TextAlign::Start,
@@ -737,7 +774,7 @@ impl Panel {
                 format_args!("{today} of {cap} today"),
                 frame.rect(RIGHT_X + RIGHT_WIDTH - 190.0, NEXT_Y, 190.0, 30.0),
                 17.0 * s,
-                color::MUTED,
+                color::muted(),
                 FontWeight::Regular,
                 TextAlign::End,
             );
@@ -750,7 +787,7 @@ impl Panel {
                 format_args!("{}", crate::terms::say(&self.data.pace)),
                 frame.rect(RIGHT_X, BAR_Y + 9.0, RIGHT_WIDTH - 140.0, 15.0),
                 13.0 * s,
-                color::GOLD_BRIGHT,
+                color::gold_bright(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -760,13 +797,13 @@ impl Panel {
             let _ = list.push(DrawCommand::RoundedRect {
                 rect: frame.rect(RIGHT_X, BAR_Y, RIGHT_WIDTH, 6.0),
                 radius: 3.0 * s,
-                color: color::alpha(color::HOLO, 0.14),
+                color: color::alpha(color::holo(), 0.14),
             });
             if fraction > 0.0 {
                 let _ = list.push(DrawCommand::RoundedRect {
                     rect: frame.rect(RIGHT_X, BAR_Y, (RIGHT_WIDTH * fraction).max(6.0), 6.0),
                     radius: 3.0 * s,
-                    color: color::GOLD,
+                    color: color::gold(),
                 });
             }
         }
@@ -790,10 +827,28 @@ impl Panel {
             format_args!("times in UTC"),
             frame.rect(RIGHT_X + RIGHT_WIDTH - 130.0, RECENT_Y - 4.0, 130.0, 28.0),
             14.0 * s,
-            color::QUIET,
+            color::quiet(),
             FontWeight::Regular,
             TextAlign::End,
         );
+        if self.data.recent.is_empty() && self.data.total() == Some(0) {
+            // None ever (15/11/2026, "Empty states"): how they come, and where.
+            crate::console::collection_panel::empty_state(
+                &mut self.ui,
+                frame,
+                [RIGHT_X, RECENT_TOP + 4.0, RIGHT_WIDTH, 100.0],
+                crate::console::collection_panel::Ghosts::Cube,
+                (
+                    &crate::terms::say("No holocrons yet"),
+                    &crate::terms::say("Holocrons drop while you play on SJK servers."),
+                ),
+                Some(crate::console::collection_panel::EmptyButton {
+                    label: "Find a server",
+                    token: super::SERVERS_TOKEN,
+                }),
+            );
+            return;
+        }
         if self.data.recent.is_empty() {
             text(
                 &mut self.ui,
@@ -801,7 +856,7 @@ impl Panel {
                 format_args!("None yet."),
                 frame.rect(RIGHT_X, RECENT_TOP, RIGHT_WIDTH, 24.0),
                 16.0 * s,
-                color::QUIET,
+                color::quiet(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -833,7 +888,7 @@ impl Panel {
             if let Some(trade) = recent.trade.as_ref().filter(|_| !recent.gift) {
                 // Came in a trade: from whom, and how long it waits before it trades again.
                 let shown = if recent.opened {
-                    format!("Opened - {trade}")
+                    format!("{} - {trade}", opened_word(tier))
                 } else {
                     trade.clone()
                 };
@@ -843,7 +898,7 @@ impl Panel {
                     format_args!("{shown}"),
                     frame.rect(x + 38.0, y + 22.0, RECENT_WIDTH - 50.0, 16.0),
                     13.0 * s,
-                    color::alpha(color::HOLO, 0.9),
+                    color::alpha(color::holo(), 0.9),
                     FontWeight::Regular,
                     TextAlign::Start,
                 );
@@ -851,10 +906,10 @@ impl Panel {
                 text(
                     &mut self.ui,
                     TextFamily::Body,
-                    format_args!("Opened"),
+                    format_args!("{}", opened_word(tier)),
                     frame.rect(x + 38.0, y + 22.0, RECENT_WIDTH - 50.0, 16.0),
                     13.0 * s,
-                    color::QUIET,
+                    color::quiet(),
                     FontWeight::Regular,
                     TextAlign::Start,
                 );
@@ -871,7 +926,7 @@ impl Panel {
                 format_args!("{when}"),
                 frame.rect(x + 218.0, y + 3.0, RECENT_WIDTH - 218.0 - 12.0, 22.0),
                 15.0 * s,
-                color::MUTED,
+                color::muted(),
                 FontWeight::Regular,
                 TextAlign::End,
             );
@@ -884,7 +939,7 @@ impl Panel {
                         format_args!("Gift from the SJK team"),
                         frame.rect(x + 38.0, y + 22.0, RECENT_WIDTH - 50.0, 16.0),
                         13.0 * s,
-                        color::GOLD_BRIGHT,
+                        color::gold_bright(),
                         FontWeight::Regular,
                         TextAlign::Start,
                     );
@@ -895,7 +950,7 @@ impl Panel {
                         format_args!("Gift from the SJK team: \u{201c}{}\u{201d}", cut(note, 38)),
                         frame.rect(x + 38.0, y + 22.0, RECENT_WIDTH - 50.0, 16.0),
                         13.0 * s,
-                        color::GOLD_BRIGHT,
+                        color::gold_bright(),
                         FontWeight::Regular,
                         TextAlign::Start,
                     );
@@ -919,7 +974,7 @@ impl Panel {
                 centre,
                 LOCK_Y,
                 30.0,
-                color::alpha(color::MUTED, 0.9),
+                color::alpha(color::muted(), 0.9),
             );
         }
         text(
@@ -945,7 +1000,7 @@ impl Panel {
                 format_args!("{count} held"),
                 frame.rect(centre - 380.0, HELD_Y, 760.0, 28.0),
                 19.0 * s,
-                color::MUTED,
+                color::muted(),
                 FontWeight::Regular,
                 TextAlign::Center,
             ),
@@ -955,7 +1010,7 @@ impl Panel {
                 format_args!("{}", crate::terms::say(line)),
                 frame.rect(centre - 380.0, HELD_Y, 760.0, 28.0),
                 19.0 * s,
-                color::MUTED,
+                color::muted(),
                 FontWeight::Regular,
                 TextAlign::Center,
             ),
@@ -973,7 +1028,7 @@ impl Panel {
                 format_args!("{}", crate::terms::say(&line)),
                 frame.rect(STAGE_AT[0] - 460.0, BUTTONS_Y, 920.0, BUTTON_HEIGHT),
                 19.0 * frame.s,
-                color::TEXT,
+                color::text(),
                 FontWeight::Semibold,
                 TextAlign::Center,
             );
@@ -986,7 +1041,7 @@ impl Panel {
                 format_args!("{}", crate::terms::say(CLOSED_LINE)),
                 frame.rect(STAGE_AT[0] - 380.0, BUTTONS_Y, 760.0, BUTTON_HEIGHT),
                 19.0 * frame.s,
-                color::MUTED,
+                color::muted(),
                 FontWeight::Regular,
                 TextAlign::Center,
             );
@@ -994,6 +1049,12 @@ impl Panel {
         }
         let one = self.open_one().is_some();
         let all = self.data.openable(self.selected);
+        // A dormant kyber is attuned, not opened (Sol, 15/11/2026).
+        let verb = if self.selected().is_kyber() {
+            "Attune"
+        } else {
+            "Open"
+        };
         // The shop opens with opening.
         let shop = self.data.can_open;
         let total = OPEN_WIDTH
@@ -1026,16 +1087,16 @@ impl Panel {
             &mut self.ui,
             frame,
             [left, BUTTONS_Y, OPEN_WIDTH, BUTTON_HEIGHT],
-            "Open",
+            verb,
             true,
             one,
             false,
             OPEN_TOKEN,
         );
         let label = if all > 1 {
-            format!("Open all ({})", all.min(sjk_identity::OPEN_MAX))
+            format!("{verb} all ({})", all.min(sjk_identity::OPEN_MAX))
         } else {
-            "Open all".to_owned()
+            format!("{verb} all")
         };
         kit::button(
             &mut self.ui,
@@ -1065,11 +1126,12 @@ impl Panel {
         };
         add(&["Up", "Down"], "choose");
         add(&["Tab"], "next");
+        let kyber = self.selected().is_kyber();
         if self.open_one().is_some() {
-            add(&["Enter"], "open");
+            add(&["Enter"], if kyber { "attune" } else { "open" });
         }
         if self.data.openable(self.selected) > 1 {
-            add(&["A"], "open all");
+            add(&["A"], if kyber { "attune all" } else { "open all" });
         }
         add(&["L"], "loot table");
         if self.data.can_open {
@@ -1081,7 +1143,16 @@ impl Panel {
                 crate::terms::say_static(crate::profile_hub::Tab::Holocrons.next(true).label()),
             );
         }
-        add(&["Esc"], "back");
+        // Escape comes back to the Collection's hall from its screen or when the hall
+        // opened the page.
+        add(
+            &["Esc"],
+            if self.hub || self.from_hall {
+                crate::profile_hub::COLLECTION
+            } else {
+                "back"
+            },
+        );
         let keys = &keys[..count];
         let gap = 30.0 * s;
         let width: f32 = keys
@@ -1095,6 +1166,11 @@ impl Panel {
             x = key_hint(&mut self.ui, caps, action, x, y, s) + gap;
         }
     }
+}
+
+/// How one opened is said: a dormant kyber is attuned (Sol, 15/11/2026).
+fn opened_word(tier: &Tier) -> &'static str {
+    if tier.is_kyber() { "Attuned" } else { "Opened" }
 }
 
 /// What the hover card of tier `index` says: how holocrons are found, how often one is
@@ -1155,7 +1231,7 @@ fn edition_lines(slot: usize, data: &Data) -> Vec<crate::menu::sjk::hover::Line>
     ]
 }
 
-/// What the hover card of a kyber crystal's tile says: where crystals come from, what one
+/// What the hover card of a dormant kyber's tile says: where they come from, what one
 /// gives, the pity, and how many the player holds.
 fn crystal_card(tier: &'static Tier, data: &Data) -> crate::menu::sjk::hover::Card {
     use crate::menu::sjk::hover::{Card, Line};
@@ -1333,25 +1409,43 @@ mod tests {
         }
     }
 
-    /// The Collection screen's tabs are drawn by the page and answer where they are drawn.
+    /// On the Collection screen the page draws the breadcrumb ("Collection › Holocrons"),
+    /// whose Collection, like Escape, goes back to the hall; on its own, neither.
     #[test]
-    fn the_hub_page_draws_the_screens_tabs_with_holocrons_lit() {
+    fn the_hub_page_draws_the_breadcrumb_back_to_the_hall() {
         let mut panel = Panel::new();
         panel.open(true);
         panel.set_hub(true);
         panel.build([1920.0, 1080.0]);
-        for tab in crate::profile_hub::Screen::Collection.tabs() {
-            assert!(
-                panel
-                    .ui
-                    .rect_for(crate::profile_hub::TOKEN + tab.index() as u16)
-                    .is_some(),
-                "{tab:?}"
-            );
+        let home = panel
+            .ui
+            .rect_for(crate::profile_hub::HALL_TOKEN)
+            .expect("the breadcrumb");
+        assert!(panel.ui.rect_for(crate::profile_hub::TOKEN).is_none());
+        let at = sjk_ui::Vec2::new(home.x + home.width * 0.5, home.y + home.height * 0.5);
+        let mut action = PanelAction::None;
+        for event in [
+            InputEvent::PointerMove(at),
+            InputEvent::PointerPress {
+                position: at,
+                button: sjk_ui::PointerButton::Primary,
+            },
+            InputEvent::PointerRelease {
+                position: at,
+                button: sjk_ui::PointerButton::Primary,
+            },
+        ] {
+            action = panel.handle_pointer(event);
         }
+        assert_eq!(action, PanelAction::Hall);
+        assert_eq!(panel.key(KeyCode::Escape, false), PanelAction::Hall);
         panel.set_hub(false);
         panel.build([1920.0, 1080.0]);
-        assert!(panel.ui.rect_for(crate::profile_hub::TOKEN).is_none());
+        assert!(panel.ui.rect_for(crate::profile_hub::HALL_TOKEN).is_none());
+        assert_eq!(panel.key(KeyCode::Escape, false), PanelAction::Close);
+        // Opened on its own by the hall, Escape goes back to it.
+        panel.set_from_hall(true);
+        assert_eq!(panel.key(KeyCode::Escape, false), PanelAction::Hall);
     }
 
     #[test]

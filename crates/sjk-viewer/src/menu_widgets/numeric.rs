@@ -205,16 +205,16 @@ impl NumericEdit {
         let field = self.sjk_field(number, s);
         let radius = field.height * 0.5;
         let edge = if self.invalid {
-            color::EMBER
+            color::ember()
         } else {
-            color::GOLD
+            color::gold()
         };
         let selected = self.caret.selection(&self.text).is_some();
         let list = ui.draw_list_mut();
         let _ = list.push(DrawCommand::RoundedRect {
             rect: field,
             radius,
-            color: color::alpha(color::SPACE, 0.96),
+            color: color::alpha(color::space(), 0.96),
         });
         if selected {
             let inset = 4.0 * s;
@@ -227,7 +227,7 @@ impl NumericEdit {
             let _ = list.push(DrawCommand::RoundedRect {
                 rect: band,
                 radius: band.height * 0.5,
-                color: color::alpha(color::HOLO, 0.32),
+                color: color::alpha(color::holo(), 0.32),
             });
         }
         let _ = list.push(DrawCommand::Border {
@@ -246,9 +246,9 @@ impl NumericEdit {
             Rect::new(left, number.y, number.right() - left, number.height),
             SJK_TEXT * s,
             if self.invalid {
-                color::EMBER
+                color::ember()
             } else {
-                color::TEXT
+                color::text()
             },
             FontWeight::Regular,
             TextAlign::End,

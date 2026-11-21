@@ -25,14 +25,6 @@ const LARM: u8 = 12;
 const RARM: u8 = 13;
 const RHAND: u8 = 14;
 const LLEG: u8 = 15;
-const RLEG: u8 = 16;
-/// Every part's bit in [`Surfaces::lost`]: a body [`GpuState::blow_apart`] hid whole.
-const ALL_PARTS: u8 = 0x7f;
-/// The parts Order 66 blows off a player (`order66.rs`), cut in this order; the trunk
-/// (torso and hips) is the last piece.
-const BLAST_PARTS: [u8; 5] = [HEAD, LARM, RARM, LLEG, RLEG];
-/// The bone the trunk turns about.
-const TRUNK_PIVOT: &str = "pelvis";
 /// `cgs.effects.mBlasterSmoke`.
 pub(crate) const SMOKE: &str = "blaster/smoke_bolton";
 /// `cg_dismember`, as EternalJK (`cg_xcvar.h`), which has it off by default;
@@ -119,19 +111,6 @@ impl Surfaces {
         self.root = None;
         self.lost = 0;
         self.weapon_lost = false;
-        self.refresh(hierarchy);
-    }
-
-    /// Hide the whole model, weapon too, until [`Self::reset`]: what Order 66's blast
-    /// leaves of a player (`order66.rs`). A body copied from it stays hidden as well.
-    fn hide_all(&mut self, hierarchy: &[GlmSurfaceHierarchy]) {
-        for (index, surface) in hierarchy.iter().enumerate() {
-            if surface.parent.is_none() {
-                self.set(index, NODESCENDANTS);
-            }
-        }
-        self.lost = ALL_PARTS;
-        self.weapon_lost = true;
         self.refresh(hierarchy);
     }
 
@@ -251,22 +230,6 @@ fn bone_index(animation: &sjk_model::Gla, name: &str) -> Option<usize> {
         .position(|bone| bone.name.eq_ignore_ascii_case(name))
 }
 
-/// [`find`], or else the surface named `name` and `_off`, as some models name the
-/// surfaces they leave off by default (`jedi_hf`'s `head_off` holds its head variants,
-/// its caps are `..._cap_torso_off`). Order 66's cuts only, so a server's cut keeps
-/// stock's names.
-fn find_part(hierarchy: &[GlmSurfaceHierarchy], name: &str) -> Option<usize> {
-    find(hierarchy, name).or_else(|| {
-        hierarchy.iter().position(|surface| {
-            surface
-                .name
-                .get(..name.len())
-                .is_some_and(|head| head.eq_ignore_ascii_case(name))
-                && surface.name[name.len()..].eq_ignore_ascii_case("_off")
-        })
-    })
-}
-
 fn find(hierarchy: &[GlmSurfaceHierarchy], name: &str) -> Option<usize> {
     hierarchy
         .iter()
@@ -377,24 +340,13 @@ fn bone_position(
 }
 
 /// The surfaces of one cut, found in the owner's hierarchy: the limb's root surface
-/// (`None`: the model's own roots, the trunk Order 66 leaves), its cap, the stump's
+/// (`None`: the model's own roots), its cap, the stump's
 /// cap and the bone it turns about.
 struct CutSurfaces {
     limb: Option<usize>,
     limb_cap: Option<usize>,
     stub_cap: Option<usize>,
     pivot_bone: Option<usize>,
-}
-
-/// One piece Order 66 blew off a player ([`GpuState::blow_apart`]).
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub(crate) struct Piece {
-    /// The piece's limb mesh's id.
-    pub(crate) id: EntityId,
-    /// Its pivot bone in the owner's model space at the blast.
-    pub(crate) pivot: [f32; 3],
-    /// The head, which flies highest.
-    pub(crate) head: bool,
 }
 
 fn entity_flags(snapshot: &sjk_protocol::Snapshot, local: bool, number: u16) -> Option<u32> {
@@ -452,8 +404,6 @@ impl GpuState {
             live_session,
             demo_session,
             actor_meshes,
-            #[cfg(test)]
-            order66,
             ..
         } = self;
         let Some(snapshot) = crate::first_person_view::presented_snapshot(
@@ -476,11 +426,6 @@ impl GpuState {
             if mesh.limb.is_some() || mesh.corpse_pool || mesh.surfaces.lost == 0 {
                 continue;
             }
-            // A world shot's blown-up player lives on in the demo: keep the body hidden.
-            #[cfg(test)]
-            if mesh.entity_id.is_some() && mesh.entity_id == order66.shot_hidden {
-                continue;
-            }
             let Some(number) = mesh
                 .entity_id
                 .and_then(|id| u16::try_from(id.get().saturating_sub(1)).ok())
@@ -497,10 +442,6 @@ impl GpuState {
             let (Some(_), Some(id)) = (mesh.limb.as_ref(), mesh.entity_id) else {
                 continue;
             };
-            // Order 66's pieces have no entity: `order66.rs` frees them.
-            if crate::order66::is_piece(id) {
-                continue;
-            }
             let present = snapshot.entities.iter().any(|state| {
                 u64::from(state.number()) + 1 == id.get()
                     && sjk_client::legacy_limb(state).is_some()
@@ -740,175 +681,6 @@ impl GpuState {
         Ok(Some(limb_index))
     }
 
-    /// Blow the player whose actor is `owner` apart (Order 66, `order66.rs`). With
-    /// `pieces`, its head, arms and legs, then its trunk, each go to a limb mesh of
-    /// their own (ids from `next_id`; a pooled mesh, else a new upload while `uploads`
-    /// allows); whatever is left of it is hidden, weapon too, until it is alive again
-    /// ([`Self::update_limbs`] gives the limbs back). A rig model's glTF has no surfaces
-    /// to cut or hide, so it stays whole. Returns the pieces made.
-    pub(crate) fn blow_apart(
-        &mut self,
-        owner: EntityId,
-        pieces: bool,
-        mut next_id: impl FnMut() -> EntityId,
-        uploads: &mut usize,
-    ) -> Vec<Piece> {
-        let mut made = Vec::new();
-        let Some(owner_index) = self.actor_meshes.iter().position(|mesh| {
-            mesh.limb.is_none() && !mesh.corpse_pool && mesh.entity_id == Some(owner)
-        }) else {
-            return made;
-        };
-        if self.actor_meshes[owner_index].preview.rig.is_some() {
-            return made;
-        }
-        let world = self
-            .demo_session
-            .as_ref()
-            .map_or(&self.live_world, crate::demo_playback::Session::world);
-        let state = world.entity(owner).and_then(|entity| entity.animation());
-        if let (true, Some(state)) = (pieces, state) {
-            for part in BLAST_PARTS.map(Some).into_iter().chain([None]) {
-                let owner_mesh = &self.actor_meshes[owner_index];
-                let hierarchy = &owner_mesh.preview.mesh.hierarchy;
-                let animation = &owner_mesh.preview.animation;
-                let (surfaces, bit) = match part {
-                    Some(part) => {
-                        let bit = 1u8 << (part - HEAD);
-                        let names = cut(
-                            &owner_mesh.surfaces,
-                            hierarchy,
-                            part,
-                            owner_mesh.animator.humanoid(),
-                        );
-                        let Some(limb) = find_part(hierarchy, &names.limb)
-                            .filter(|_| owner_mesh.surfaces.lost & bit == 0)
-                        else {
-                            continue;
-                        };
-                        let surfaces = CutSurfaces {
-                            limb: Some(limb),
-                            limb_cap: find_part(hierarchy, &names.limb_cap),
-                            stub_cap: find_part(hierarchy, &names.stub_cap),
-                            pivot_bone: bone_index(animation, names.pivot),
-                        };
-                        (surfaces, bit)
-                    }
-                    // The trunk: what the cuts left, from the model's own roots.
-                    None => {
-                        let surfaces = CutSurfaces {
-                            limb: None,
-                            limb_cap: None,
-                            stub_cap: None,
-                            pivot_bone: bone_index(animation, TRUNK_PIVOT),
-                        };
-                        (surfaces, 0)
-                    }
-                };
-                let pivot = surfaces
-                    .pivot_bone
-                    .and_then(|bone| bone_position(animation, owner_mesh.animator.matrices(), bone))
-                    .unwrap_or_default();
-                let id = next_id();
-                let weapon = part == Some(RARM);
-                match self.move_limb(owner_index, &surfaces, bit, weapon, id, state, uploads) {
-                    Ok(Some(index)) => {
-                        if let Some(limb) = &mut self.actor_meshes[index].limb {
-                            limb.pivot = pivot;
-                        }
-                        made.push(Piece {
-                            id,
-                            pivot,
-                            head: part == Some(HEAD),
-                        });
-                    }
-                    Ok(None) => {}
-                    Err(error) => crate::log::progress(format_args!("order 66 piece: {error}")),
-                }
-            }
-        }
-        let owner_mesh = &mut self.actor_meshes[owner_index];
-        owner_mesh
-            .surfaces
-            .hide_all(&owner_mesh.preview.mesh.hierarchy);
-        made
-    }
-
-    /// Put up to `count` more limb meshes of the actor `owner`'s model in the pool, one
-    /// upload each, so a blast later takes them without uploading (Order 66 readies
-    /// them during its countdown). Returns how many it uploaded.
-    pub(crate) fn pool_limb_meshes(&mut self, owner: EntityId, count: usize) -> usize {
-        let Some(owner_index) = self.actor_meshes.iter().position(|mesh| {
-            mesh.limb.is_none() && !mesh.corpse_pool && mesh.entity_id == Some(owner)
-        }) else {
-            return 0;
-        };
-        let owner_mesh = &self.actor_meshes[owner_index];
-        if owner_mesh.preview.rig.is_some() {
-            return 0;
-        }
-        let appearance = owner_mesh.appearance.clone();
-        // A pooled mesh evaluates nothing; its limb takes the blast's state when used.
-        let world = self
-            .demo_session
-            .as_ref()
-            .map_or(&self.live_world, crate::demo_playback::Session::world);
-        let Some(state) = world.entity(owner).and_then(|entity| entity.animation()) else {
-            return 0;
-        };
-        let mut uploaded = 0;
-        while uploaded < count {
-            let preview = self.actor_meshes[owner_index].preview.clone();
-            match self.upload_actor(preview, &appearance, owner, [None, None]) {
-                Ok(mut mesh) => {
-                    mesh.entity_id = None;
-                    mesh.limb = Some(Limb {
-                        state,
-                        pivot_bone: None,
-                        pivot: [0.0; 3],
-                        trail: Cell::new(i64::MIN),
-                        previous_origin: Cell::new(None),
-                    });
-                    self.actor_meshes.push(mesh);
-                    self.actor_groups.push(Vec::with_capacity(2));
-                    uploaded += 1;
-                }
-                Err(error) => {
-                    crate::log::progress(format_args!("order 66 limb mesh: {error}"));
-                    break;
-                }
-            }
-        }
-        uploaded
-    }
-
-    /// How many free limb meshes of the actor `owner`'s model the pool holds.
-    pub(crate) fn pooled_limb_meshes(&self, owner: EntityId) -> usize {
-        let Some(appearance) = self
-            .actor_meshes
-            .iter()
-            .find(|mesh| mesh.limb.is_none() && !mesh.corpse_pool && mesh.entity_id == Some(owner))
-            .map(|mesh| &mesh.appearance)
-        else {
-            return 0;
-        };
-        self.actor_meshes
-            .iter()
-            .filter(|mesh| {
-                mesh.limb.is_some() && mesh.entity_id.is_none() && &mesh.appearance == appearance
-            })
-            .count()
-    }
-
-    /// Give the limb mesh of piece `id` back to the pool.
-    pub(crate) fn free_limb_mesh(&mut self, id: EntityId) {
-        for mesh in &mut self.actor_meshes {
-            if mesh.limb.is_some() && mesh.entity_id == Some(id) {
-                mesh.entity_id = None;
-            }
-        }
-    }
-
     fn limb_smoke(&mut self, origin: Vec3, direction: [f32; 3], time: i64, salt: u32) {
         let Some(vfs) = self.vfs.clone() else { return };
         effect_runtime::spawn_effect(
@@ -1047,47 +819,6 @@ mod tests {
         let defaults = reveal_caps(&mut hierarchy);
         let surfaces = Surfaces::new(&hierarchy, defaults, 0..6);
         assert_eq!(surfaces.variant(&hierarchy, "l_arm"), "l_arma");
-    }
-
-    /// Order 66's blast: the limb cut off first keeps its own part, the trunk the rest
-    /// with the stump's cap, and the owner shows nothing (weapon too) until reattached.
-    #[test]
-    fn a_blown_apart_body_is_hidden_whole_and_its_trunk_keeps_the_rest() {
-        let mut hierarchy = model();
-        let defaults = reveal_caps(&mut hierarchy);
-        let mut owner = Surfaces::new(&hierarchy, defaults, 0..6);
-        owner.set(2, NODESCENDANTS);
-        owner.set(4, 0);
-        owner.refresh(&hierarchy);
-        let mut trunk = owner.clone();
-        trunk.root = None;
-        trunk.refresh(&hierarchy);
-        assert_eq!(shown(&trunk), [true, true, false, false, true, false]);
-        owner.hide_all(&hierarchy);
-        assert_eq!(shown(&owner), [false; 6]);
-        assert!(owner.weapon_lost && owner.lost == ALL_PARTS);
-        owner.reset(&hierarchy);
-        assert_eq!(shown(&owner), [true, true, true, true, false, false]);
-        assert!(!owner.weapon_lost);
-    }
-
-    #[test]
-    fn order_66_finds_a_part_by_its_off_name_too() {
-        let hierarchy = vec![
-            surface("torso", 0, None, &[1, 3]),
-            surface("head_off", OFF, Some(0), &[2]),
-            surface("heada", 0, Some(1), &[]),
-            surface("torso_cap_head_off", OFF, Some(0), &[]),
-        ];
-        assert_eq!(
-            find(&hierarchy, "head"),
-            None,
-            "a server's cut keeps stock's names"
-        );
-        assert_eq!(find_part(&hierarchy, "head"), Some(1));
-        assert_eq!(find_part(&hierarchy, "torso_cap_head"), Some(3));
-        assert_eq!(find_part(&hierarchy, "torso"), Some(0));
-        assert_eq!(find_part(&hierarchy, "hea"), None);
     }
 
     #[test]

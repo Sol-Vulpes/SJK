@@ -1,5 +1,14 @@
 # WHEEL OF DOOM
 
+**Since 20/11/2026 no wheel stands on a map** (Sol: the WHEEL merged into the
+[Force box](mystery-boxes.md#the-doom-coin-roll)): the DOOM coin rolls at a box, held Use,
+for the WHEEL's outcomes at the box's own odds, and its punishments strike through the
+effects below (`wheel_of_doom_outcome`, shared with the box). The client takes no placed
+wheel and `wheelofdoom_place` refuses; the hub keeps the placed wheels and the spin route
+for older clients until the release, which deletes them with the client's wheel drawing.
+`toy_wheelofdoom` says the player's coins and points at the Force box. What follows is the
+wheel as it stood.
+
 Big dark wheels SJK's creator places on maps (Sol's design of 07/11/2026; placed since
 11/11/2026), which any SJK player spins with Use for a DOOM coin, the only way to spin
 one: a [mystery box](mystery-boxes.md) that blows up (the teddy bear) brings a coin. The
@@ -47,7 +56,10 @@ Standing at a wheel (within 120 units across the floor and 96 up or down) and fa
 (within 60 degrees), the player sees the [Use prompt](client.md#use-prompt): "Spin the
 WHEEL OF DOOM" over "1 DOOM coin (you hold N)", or greyed with why not ("No DOOM coin: the
 teddy bear brings one", "Someone is spinning it", "Your turn again in N s", "Out of order
-for now"). Use asks the hub (`POST /v1/wheel-of-doom/spin`, `{"wheel":<id>,"server":"ip:port"}`);
+for now"), and under it, after a moment, a "Possible drops" panel (since 15/11/2026,
+[client.md](client.md#use-prompt)) with the hub's chances: each holocron tier in its
+colour, the coin back, nothing, BOOM, the curse, and the twelve other bad effects as one
+red row. Use asks the hub (`POST /v1/wheel-of-doom/spin`, `{"wheel":<id>,"server":"ip:port"}`);
 the client refuses first, in the centre of the screen, in a duel, dead, spectating, with
 the flag or wherever the [Ragdoll](client.md#ragdoll) could not strike the player, while
 the hub has not answered the last spin, while the wheel spins, during the cooldown it knows
@@ -61,7 +73,10 @@ Settings > Controls) says the player's DOOM coins and how many wheels stand on t
 
 A spin lasts 34 seconds, the length of Sol's WHEEL OF DOOM music, which plays at the wheel
 for everyone (`sound/sjk/wheel_of_doom/music.mp3`, in the optional SJK extras pack; without
-it the wheel spins to its ticks alone). The wheel turns 14 times and the rest of the way to
+it the wheel spins to its ticks alone). Since 15/11/2026 (Sol: louder) it plays at twice
+the gain, whole within 300 units and fading out by 1400, as the Toy master's show
+(`MUSIC_VOLUME`, `MUSIC_FULL`, `MUSIC_RANGE`); the game's attenuation for a channel-0 sound
+before. The wheel turns 14 times and the rest of the way to
 its segment from where it last stopped, fast at first and crawling at the end (a quartic
 ease out), so who wins stays open to the last note; a tick plays each time a peg passes
 the pointer. It stops on the hub's segment as the music ends, plays the stop and, on a bad
@@ -84,7 +99,7 @@ odds are the hub's, PROVISIONAL: a holocron of some tier 29% of the time.
 
 | Segment | Outcome | Chance | What happens to the spinner |
 | --- | --- | --- | --- |
-| 0 | `mythical` | 1 % | The gold jackpot: a Mythical holocron (source `wheel`, uncapped, untradeable, as box ones), Sol's exception of 07/11/2026. Fanfare, "MYTHICAL HOLOCRON! In your Collection". The holocrons are read again at once, and it arrives as any new holocron does ([holocrons.md](holocrons.md#the-pop-up)); the hub's feed announces it to everyone as a Mythical drop |
+| 0 | `mythical` | 1 % | The gold jackpot: a Mythical holocron (source `wheel`, uncapped, untradeable, as box ones), Sol's exception of 07/11/2026. Fanfare, "MYTHICAL HOLOCRON! In your Collection". The holocrons are read again at once, and it arrives as any new holocron does ([holocrons.md](holocrons.md#the-banner)); the hub's feed announces it to everyone as a Mythical drop |
 | 1 | `reverse_keys` | 4 % | 30 s: forward and back, left and right swapped in the user command |
 | 2 | `holo_uncommon` | 17 % | An Uncommon (green) holocron, as the Mythical one: source `wheel`, uncapped, untradeable |
 | 3 | `invert_mouse` | 4 % | 30 s: the mouse's pitch and yaw both turned the wrong way |
@@ -125,7 +140,7 @@ wheel's id), the quack in the spinner's ears.
 
 | When | Sound |
 | --- | --- |
-| The spin, from its start to its stop | Sol's music, `sound/sjk/wheel_of_doom/music.mp3`, in the optional SJK extras pack (none without it) |
+| The spin, from its start to its stop | Sol's music, `sound/sjk/wheel_of_doom/music.mp3`, in the optional SJK extras pack (none without it), at twice the gain and heard to 1400 units |
 | A peg passes the pointer | `sound/sjk/wheel_of_doom/tick.wav` (bundled) |
 | The wheel stops | `sound/sjk/wheel_of_doom/stop.wav` (bundled) |
 | A bad outcome (an effect, explode, curse) | The mystery box's laugh: Sol's `sound/sjk/mystery_box/laugh.mp3` in the optional SJK extras pack, else the retail gloat `sound/chars/alora/misc/gloat1.mp3` |

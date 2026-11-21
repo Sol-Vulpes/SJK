@@ -125,6 +125,11 @@ pub struct Profile {
     /// hub's `PROTOCOL.md`, "JKR creator"; absent when false and from older hubs).
     #[serde(default)]
     pub jkr_creator: bool,
+    /// Whether the hub's operator gave this person all access, for testing: the hub lists
+    /// every unlock and card as held, credits and shards read endless and nothing is used
+    /// up (the hub's `PROTOCOL.md`, "All access"; absent when false and from older hubs).
+    #[serde(default)]
+    pub all_access: bool,
     /// The player's tick as the hub sends it (absent from older hubs); draw
     /// [`Tick::shown`].
     #[serde(default)]

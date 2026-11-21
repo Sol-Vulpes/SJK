@@ -202,7 +202,7 @@ impl Panel {
             ),
             frame.rect(MIDDLE_X - 500.0, 92.0, 1_000.0, 44.0),
             32.0 * s,
-            color::TEXT,
+            color::text(),
             FontWeight::Semibold,
             TextAlign::Center,
         );
@@ -333,7 +333,7 @@ impl Panel {
             format_args!("{}", batch_label(shown, true)),
             frame.rect(MIDDLE_X - 500.0, 80.0, 1_000.0, 50.0),
             40.0 * s,
-            color::TEXT,
+            color::text(),
             FontWeight::Semibold,
             TextAlign::Center,
         );
@@ -522,7 +522,7 @@ impl Panel {
                         [x, words_y],
                         item.colour(),
                     );
-                    // Its kind, capitalized ("Tag", "Saber shader", "Card").
+                    // Its kind, capitalized ("Tag", "Kyber", "Card").
                     let kind = found.kind();
                     let (first, rest) = kind.split_at(1);
                     let kind = format!("{}{rest}", first.to_ascii_uppercase());
@@ -554,12 +554,12 @@ impl Panel {
                 if bonus_batch(shown) {
                     "Bonus covers are on the Collection's Banners tab."
                 } else {
-                    "Cards are on the Collection's Cards tab, shaders on its Shaders tab; kyber shards craft shaders."
+                    "Cards are on the Collection's Cards tab, kybers on its Kybers tab; kyber shards craft kybers."
                 }
             ),
             frame.rect(MIDDLE_X - 600.0, 836.0, 1_200.0, 26.0),
             17.0 * s,
-            color::alpha(color::QUIET, done),
+            color::alpha(color::quiet(), done),
             FontWeight::Regular,
             TextAlign::Center,
         );
@@ -605,7 +605,7 @@ fn found_note(panel: &mut Panel, frame: &Frame, words: std::fmt::Arguments<'_>, 
         words,
         frame.rect(x - 8.0, y, FOUND_WIDTH + 16.0, 20.0),
         14.0 * frame.s,
-        color::MUTED,
+        color::muted(),
         FontWeight::Regular,
         TextAlign::Center,
     );

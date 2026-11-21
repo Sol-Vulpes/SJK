@@ -13,13 +13,18 @@ const RIGHT_MARGIN: f32 = 11.0;
 
 /// Bottom of the upper right's readouts, for a window `viewport_height` pixels tall,
 /// with the frame's text scale (`main.rs`: the height scale, at least 0.85): the
-/// frame rate and its frame times (`fps`) and the match clock (`timer`), as JoF EJK's
-/// `CG_DrawUpperRight` stacks them. The HUD's kill feed stands under it.
-pub(crate) fn upper_right_bottom(viewport_height: f32, fps: bool, timer: bool) -> f32 {
+/// frame rate (`rate`, unless the top status bar shows it) and its frame times (`fps`)
+/// and the match clock (`timer`), as JoF EJK's `CG_DrawUpperRight` stacks them. The
+/// HUD's kill feed stands under it. Measured from the screen's top: the top status bar's
+/// room is added where they are drawn.
+pub(crate) fn upper_right_bottom(viewport_height: f32, fps: bool, rate: bool, timer: bool) -> f32 {
     let scale = ui_scale::height_scale(viewport_height).max(0.85);
-    FPS_TOP
-        + scale
-            * (if fps { FPS_LINE + DETAILS_LINE } else { 0.0 } + if timer { FPS_LINE } else { 0.0 })
+    let fps = if fps {
+        DETAILS_LINE + if rate { FPS_LINE } else { 0.0 }
+    } else {
+        0.0
+    };
+    FPS_TOP + scale * (fps + if timer { FPS_LINE } else { 0.0 })
 }
 
 /// Where `line` set at `scale` starts to end at `right`. `append_text` breaks a line
@@ -35,9 +40,11 @@ fn right_aligned(font: &UiFont, line: &str, scale: f32, right: f32) -> f32 {
     (right.min(right + last - em - 1.0) - width).max(8.0)
 }
 
-/// The upper right's lines, top to bottom: their text and line box at 1080 lines.
+/// The upper right's lines, top to bottom: their text and line box at 1080 lines. The
+/// rate's line is left out while the top status bar shows the frame rate (`on_bar`).
 fn upper_right_lines<'a>(
     fps: Option<(u32, &'a str)>,
+    on_bar: bool,
     timer: Option<&'a str>,
     rate: &'a mut String,
 ) -> impl Iterator<Item = (&'a str, f32)> {
@@ -49,6 +56,7 @@ fn upper_right_lines<'a>(
     let rate: &'a str = rate;
     fps.into_iter()
         .flat_map(move |(_, details)| [(rate, FPS_LINE), (details, DETAILS_LINE)])
+        .filter(move |(_, line)| !(on_bar && *line == FPS_LINE))
         .chain(timer.map(|timer| (timer, FPS_LINE)))
 }
 
@@ -117,9 +125,11 @@ impl GpuState {
                 .flatten();
             let timer = self.hud.upper_right_timer();
             let right = viewport[0] - RIGHT_MARGIN * text_scale;
-            let mut y = FPS_TOP;
+            // Under the top status bar while it shows (`status_bar.rs`).
+            let mut y = FPS_TOP + self.status_bar.reserved().top;
+            let on_bar = self.hud.bar_readouts().fps;
             let mut rate = std::mem::take(&mut self.upper_right_rate);
-            for (line, height) in upper_right_lines(fps, timer, &mut rate) {
+            for (line, height) in upper_right_lines(fps, on_bar, timer, &mut rate) {
                 let scale = ui_scale::glyph_scale(font, height, text_scale);
                 let x = right_aligned(font, line, scale, right);
                 append_text(vertices, font, line, [x, y], scale, viewport);
@@ -168,6 +178,7 @@ impl GpuState {
             // Only the game client, whose menu is merely closed, not a map viewer
             // without one.
             full_screen: !in_game && !self.game_menu && self.client_menu.is_some() && !menu_visible,
+            notify_top: self.status_bar.reserved().top,
         };
         let frame = self.console_layer.begin_frame();
         console.append_classic(frame, font, atlas, labels, viewport, env);
@@ -187,6 +198,7 @@ mod upper_right_tests {
         let mut rate = String::new();
         let lines: Vec<_> = upper_right_lines(
             Some((125, "host 2.44 ms · p99 3.83")),
+            false,
             Some("0:04.419"),
             &mut rate,
         )
@@ -201,13 +213,38 @@ mod upper_right_tests {
             ]
         );
         let mut rate = String::new();
-        let clock: Vec<_> = upper_right_lines(None, Some("12:00"), &mut rate).collect();
+        let clock: Vec<_> = upper_right_lines(None, false, Some("12:00"), &mut rate).collect();
         assert_eq!(clock, [("12:00", FPS_LINE)]);
-        assert_eq!(upper_right_bottom(1080.0, false, false), FPS_TOP);
-        assert_eq!(upper_right_bottom(1080.0, false, true), FPS_TOP + FPS_LINE);
+        assert_eq!(upper_right_bottom(1080.0, false, true, false), FPS_TOP);
         assert_eq!(
-            upper_right_bottom(1080.0, true, true),
+            upper_right_bottom(1080.0, false, true, true),
+            FPS_TOP + FPS_LINE
+        );
+        assert_eq!(
+            upper_right_bottom(1080.0, true, true, true),
             FPS_TOP + FPS_LINE * 2.0 + DETAILS_LINE
+        );
+    }
+
+    /// While the top status bar shows the frame rate, the upper right keeps only the
+    /// frame times and the clock, and the kill feed's room shrinks with it.
+    #[test]
+    fn the_rate_steps_aside_for_the_top_bar() {
+        let mut rate = String::new();
+        let lines: Vec<_> =
+            upper_right_lines(Some((125, "host 2.44 ms")), true, Some("0:04"), &mut rate)
+                .map(|(text, line)| (text.to_owned(), line))
+                .collect();
+        assert_eq!(
+            lines,
+            [
+                ("host 2.44 ms".to_owned(), DETAILS_LINE),
+                ("0:04".to_owned(), FPS_LINE)
+            ]
+        );
+        assert_eq!(
+            upper_right_bottom(1080.0, true, false, false),
+            FPS_TOP + DETAILS_LINE
         );
     }
 }

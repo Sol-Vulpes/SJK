@@ -775,37 +775,28 @@ mod tests {
         assert_eq!(pages.pages()[3].choices[2].command(), "r_weatherForce 2");
         assert_eq!(pages.pages()[1].choices[0].label(), "Third person");
         // Toys is an ordinary page of the catalogue's Toys: Illuminate, which
-        // toggles the holocron and is marked while it is lit, then the cardboard box,
-        // Order 66's switch and its order, then the Hax.
+        // toggles the holocron and is marked while it is lit, then the Ragdoll (the
+        // cardboard box, Order 66 and the Hax came between until 20/11/2026).
         let toys = &pages.pages()[2];
         assert!(!toys.force);
-        assert_eq!(toys.choices.len(), 10);
-        assert_eq!(toys.choices[0].label(), "Illuminate");
-        assert_eq!(toys.choices[0].command(), "toy_illuminate");
-        assert_eq!(toys.choices[0].state(), State::Illuminate);
-        assert!(toys.choices[0].icon().is_some());
-        assert_eq!(toys.choices[1].command(), "toy_box");
-        assert_eq!(toys.choices[1].state(), State::CardboardBox);
-        assert!(toys.choices[1].icon().is_some());
-        assert_eq!(toys.choices[2].command(), "toy_order66");
-        assert_eq!(toys.choices[2].state(), State::Order66);
-        assert_eq!(toys.choices[3].command(), "order66");
-        assert_eq!(toys.choices[3].state(), State::None);
-        assert_eq!(toys.choices[4].command(), "toy_hax");
-        assert_eq!(toys.choices[4].state(), State::Hax);
-        assert_eq!(toys.choices[5].command(), "toy_ragdoll");
-        assert_eq!(toys.choices[5].state(), State::Ragdoll);
-        assert_eq!(toys.choices[6].command(), "toy_drone");
-        assert_eq!(toys.choices[6].state(), State::Drone);
-        assert_eq!(toys.choices[7].command(), "toy_boombox");
-        assert_eq!(toys.choices[7].state(), State::Boombox);
-        assert_eq!(toys.choices[8].command(), "toy_monitor");
-        assert_eq!(toys.choices[8].state(), State::Monitor);
-        assert!(
-            toys.choices[2..]
-                .iter()
-                .all(|choice| choice.icon().is_some())
+        let shown: Vec<(&str, State)> = toys
+            .choices
+            .iter()
+            .map(|choice| (choice.command(), choice.state()))
+            .collect();
+        assert_eq!(
+            shown,
+            [
+                ("toy_illuminate", State::Illuminate),
+                ("toy_ragdoll", State::Ragdoll),
+                ("toy_drone", State::Drone),
+                ("toy_boombox", State::Boombox),
+                ("toy_monitor", State::Monitor),
+                (crate::monitor::THROW_COMMAND, State::None),
+            ]
         );
+        assert_eq!(toys.choices[0].label(), "Illuminate");
+        assert!(toys.choices.iter().all(|choice| choice.icon().is_some()));
         // Nothing is written until something changes.
         assert!(!directory.path().join(FILE).exists());
         // Binds name a page by id or name, whatever the case and spacing.
@@ -847,12 +838,13 @@ mod tests {
         let toys = saved.find("toys").unwrap();
         let illuminate = catalog::action_index("illuminate").unwrap();
         pages.remove_choice(toys, 0);
-        assert_eq!(pages.pages()[toys].choices.len(), 9);
+        let left = catalog::TOYS.len() - 1;
+        assert_eq!(pages.pages()[toys].choices.len(), left);
         assert_eq!(
             pages.set_choice(toys, None, Slot::Action(illuminate)),
-            Some(9)
+            Some(left)
         );
-        assert_eq!(pages.pages()[toys].choices[9].label(), "Illuminate");
+        assert_eq!(pages.pages()[toys].choices[left].label(), "Illuminate");
         // The Force page is kept as a page of its own kind, without choices.
         assert!(
             saved

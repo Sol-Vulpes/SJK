@@ -17,16 +17,6 @@ pub(crate) enum State {
     /// Illuminate's holocron is lit (the client's own state, no cvar holds it:
     /// `toy_illuminate` flips it).
     Illuminate,
-    /// The player is in the cardboard box (`toy_box` flips it).
-    CardboardBox,
-    /// The fishing rod is out (`toy_fishing` flips it).
-    Fishing,
-    /// The pickaxe is in hand (`toy_mining` flips it).
-    Mining,
-    /// The Order 66 toy is on (`toy_order66` flips it).
-    Order66,
-    /// The Hax toy is on (`toy_hax` flips it).
-    Hax,
     /// The player is limp (`toy_ragdoll` flips it).
     Ragdoll,
     /// The Drone toy is on (`toy_drone` flips it).
@@ -39,8 +29,6 @@ pub(crate) enum State {
     Monitor,
     /// Box hunt is on (`toy_boxhunt` flips it).
     BoxHunt,
-    /// The Banana peel toy is on (`toy_banana` flips it).
-    Banana,
     /// Quests are on (`toy_quests` flips it).
     Quests,
 }
@@ -49,7 +37,7 @@ pub(crate) enum State {
 /// icons and cut by `scripts/wheel_icons.py` from two boards (the first sixteen
 /// from the first, the rest, named by the actions they are for, from the
 /// second); uploaded into the UI atlas at start (`ui_renderer::wheel_icon`).
-pub(crate) const ICONS: [(&str, &[u8]); 60] = [
+pub(crate) const ICONS: [(&str, &[u8]); 53] = [
     ("drizzle", include_bytes!("../../assets/wheel/drizzle.png")),
     ("rain", include_bytes!("../../assets/wheel/rain.png")),
     ("storm", include_bytes!("../../assets/wheel/storm.png")),
@@ -165,32 +153,6 @@ pub(crate) const ICONS: [(&str, &[u8]); 60] = [
         "illuminate",
         include_bytes!("../../assets/holocron/toy_illuminate.png"),
     ),
-    // The cardboard box's own picture, the carton (bundled with the client).
-    (
-        "cardboard_box",
-        include_bytes!("../../assets/cardboard_box/toy_box.png"),
-    ),
-    // Fishing's picture, the rod over a bucket (bundled with the client).
-    (
-        "fishing",
-        include_bytes!("../../assets/fishing/toy_fishing.png"),
-    ),
-    // Mining's picture, the pickaxe over a crystal (bundled with the client).
-    (
-        "mining",
-        include_bytes!("../../assets/mining/toy_mining.png"),
-    ),
-    // Order 66's pictures, the badge and the blast (bundled with the client).
-    (
-        "order66",
-        include_bytes!("../../assets/order66/toy_order66.png"),
-    ),
-    (
-        "order66_execute",
-        include_bytes!("../../assets/order66/order66_execute.png"),
-    ),
-    // The Hax's picture, the terminal (bundled with the client).
-    ("hax", include_bytes!("../../assets/hax/toy_hax.png")),
     // The Ragdoll's picture, the slumped figure (bundled with the client).
     (
         "ragdoll",
@@ -203,7 +165,7 @@ pub(crate) const ICONS: [(&str, &[u8]); 60] = [
         "boombox",
         include_bytes!("../../assets/boombox/toy_boombox.png"),
     ),
-    // The Monitor's picture, the old CRT (bundled with the client).
+    // Force Throw's picture, a crate the Force hurls (bundled with the client).
     (
         "monitor",
         include_bytes!("../../assets/monitor/toy_monitor.png"),
@@ -212,11 +174,6 @@ pub(crate) const ICONS: [(&str, &[u8]); 60] = [
     (
         "box_hunt",
         include_bytes!("../../assets/mystery_box/toy_boxhunt.png"),
-    ),
-    // The Banana peel's picture, the peel (bundled with the client).
-    (
-        "banana",
-        include_bytes!("../../assets/banana/toy_banana.png"),
     ),
     // The WHEEL OF DOOM's picture, the wheel (bundled with the client).
     (
@@ -654,56 +611,6 @@ pub(crate) const ACTIONS: &[Action] = &[
         State::Illuminate,
         Some("illuminate"),
     ),
-    action(
-        "cardboard_box",
-        "Cardboard box",
-        crate::cardboard_box::COMMAND,
-        Toys,
-        State::CardboardBox,
-        Some("cardboard_box"),
-    ),
-    action(
-        "fishing",
-        "Fishing",
-        crate::fishing::COMMAND,
-        Toys,
-        State::Fishing,
-        Some("fishing"),
-    ),
-    action(
-        "mining",
-        "Mining",
-        crate::mining::COMMAND,
-        Toys,
-        State::Mining,
-        Some("mining"),
-    ),
-    action(
-        "order66",
-        "Order 66",
-        crate::order66::COMMAND,
-        Toys,
-        State::Order66,
-        Some("order66"),
-    ),
-    // Gives the order to every player with the toy on (the own toy first).
-    action(
-        "order66_execute",
-        "Execute Order 66",
-        crate::order66::EXECUTE_COMMAND,
-        Toys,
-        State::None,
-        Some("order66_execute"),
-    ),
-    // The hack itself is `+use` held on a player who has it on too.
-    action(
-        "hax",
-        "Hax",
-        crate::hax::COMMAND,
-        Toys,
-        State::Hax,
-        Some("hax"),
-    ),
     // Goes limp; again gets up.
     action(
         "ragdoll",
@@ -775,24 +682,6 @@ pub(crate) const ACTIONS: &[Action] = &[
         Toys,
         State::Quests,
         Some("quests"),
-    ),
-    // Lets the player drop banana peels, and slip on them.
-    action(
-        "banana",
-        "Banana peel",
-        crate::banana::COMMAND,
-        Toys,
-        State::Banana,
-        Some("banana"),
-    ),
-    // Drops one at the feet, or tossed ahead while moving.
-    action(
-        "banana_drop",
-        "Drop banana peel",
-        crate::banana::DROP_COMMAND,
-        Toys,
-        State::None,
-        Some("banana"),
     ),
     // Tells the player's DOOM coins and the WHEELS OF DOOM of the map (spun with Use).
     action(
@@ -889,12 +778,8 @@ pub(crate) const GENERAL: [&str; 8] = [
     "first_setup",
 ];
 /// The ids of the Toys page's default choices.
-pub(crate) const TOYS: [&str; 10] = [
+pub(crate) const TOYS: [&str; 6] = [
     "illuminate",
-    "cardboard_box",
-    "order66",
-    "order66_execute",
-    "hax",
     "ragdoll",
     "drone",
     "boombox",

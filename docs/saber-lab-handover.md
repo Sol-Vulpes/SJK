@@ -42,7 +42,7 @@ Delete this page once its items are done. Fold whatever is still true into those
 
 **This is the saber Milamber intends for themselves.** It was tuned by eye, one effect at a time, over two weeks. Keep its look as it is: change its numbers only with Milamber.
 
-**Shipping it.** How it ships is Sol's decision. The natural fit is a [Unique](unlockables.md#unique-shaders) blade granted to Milamber, like Thousand Cranes and Hearth. Until then:
+**Shipping it.** How it ships is Sol's decision. The natural fit is a [Secret](unlockables.md#secret-kybers) blade granted to Milamber, like Thousand Cranes and Hearth. Until then:
 
 - It exists only as a lab blade. A folder's `saber_lab_<name>.bladeskin` is the lab blade "Saber Lab: <name>" (`saber_lab::EXTRA_PREFIX`).
 - It is worn on the lab's PC only. The hub never hears of a lab skin, so other players see the wearer's usual blade.
@@ -84,7 +84,7 @@ Each is detailed in [client.md](client.md#saber-lab) and [unlockables.md](unlock
 
 - **The lab** (`saber_lab.rs`):
   - A folder of loose blade-skin files mounted over the hub's packs, and remounted when its stamp changes (it is looked at every half second).
-  - A file's mistake is named on the Shaders tab, and the last good look is kept.
+  - A file's mistake is named on the Kybers tab, and the last good look is kept.
   - Lab skins count as owned on this PC only.
 - **The Saber Lab tab** (`collection_saber_lab.rs`, `menu_stage/lab.rs`):
   - The player's model holds the blade and swings it in a chosen style and move, at a chosen speed. A copy floats beside it.

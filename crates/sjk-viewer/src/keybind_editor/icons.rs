@@ -28,16 +28,6 @@ const ICONS: &[(&str, &str)] = &[
     ("use_electrobinoculars", "gfx/hud/i_icon_zoom.tga"),
     // SJK's Illuminate holocron, which the client bundles (`crate::illuminate`).
     ("toy_illuminate", "gfx/sjk/toy_illuminate.png"),
-    // SJK's cardboard box, which the client bundles (`crate::cardboard_box`).
-    (crate::cardboard_box::COMMAND, "gfx/sjk/toy_box.png"),
-    // SJK's Order 66, which the client bundles (`crate::order66`).
-    (crate::order66::COMMAND, crate::order66::ICON),
-    (
-        crate::order66::EXECUTE_COMMAND,
-        crate::order66::EXECUTE_ICON,
-    ),
-    // SJK's Hax, which the client bundles (`crate::hax`).
-    (crate::hax::COMMAND, crate::hax::ICON),
     // SJK's Ragdoll, which the client bundles (`crate::ragdoll`).
     (crate::ragdoll::COMMAND, crate::ragdoll::ICON),
     // SJK's Drone, which the client bundles (`crate::drone`).
@@ -53,9 +43,6 @@ const ICONS: &[(&str, &str)] = &[
     (crate::box_hunt::COMMAND, crate::box_hunt::ICON),
     // SJK's Quests, which the client bundles (`crate::quests`).
     (crate::quests::COMMAND, crate::quests::ICON),
-    // SJK's Banana peel, which the client bundles (`crate::banana`).
-    (crate::banana::COMMAND, crate::banana::ICON),
-    (crate::banana::DROP_COMMAND, crate::banana::ICON),
     // SJK's WHEEL OF DOOM, which the client bundles (`crate::wheel_of_doom`).
     (crate::wheel_of_doom::COMMAND, crate::wheel_of_doom::ICON),
     // SJK's Tag, which the client bundles (`crate::tags`).

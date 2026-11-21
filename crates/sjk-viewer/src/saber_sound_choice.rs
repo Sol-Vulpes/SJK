@@ -78,7 +78,7 @@ impl SoundChoice {
     /// The choice's name, as the Saber tab shows it.
     pub(crate) fn label(self) -> &'static str {
         match self {
-            Self::Follow => "Follow the shader",
+            Self::Follow => "Follow the kyber",
             Self::Stock => "Stock sounds",
             Self::Shader(id) => crate::unlockables::blade_skin(id).map_or(id, |skin| skin.name),
         }
@@ -167,7 +167,7 @@ mod tests {
         assert_eq!(
             SoundChoice::parse("Saber_Void").sound_skin(None),
             Some("saber_void"),
-            "a shader's sounds on the stock blade, by the catalogue's id"
+            "a kyber's sounds on the stock blade, by the catalogue's id"
         );
         assert_eq!(
             SoundChoice::parse("saber_from_a_newer_client").sound_skin(sun),

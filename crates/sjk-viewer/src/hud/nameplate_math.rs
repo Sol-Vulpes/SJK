@@ -191,8 +191,23 @@ const NAME_ROW: f32 = 15.0;
 /// The verified seal's side, and the gap before it.
 const MARK: f32 = 11.0;
 const MARK_GAP: f32 = 4.0;
-/// The side of another client's icon after the mark (Sol, 08/11/2026: "in small").
-const CLIENT: f32 = 9.0;
+/// The mark's side on the foot of another client's icon, against the icon's, and how
+/// far it sits in from the icon's right and bottom edges (shares of its own side).
+const CORNER_MARK: f32 = 0.55;
+const CORNER_INSET: (f32, f32) = (0.8, 0.9);
+
+/// Where the mark goes on the foot of another client's icon at `icon`: small at its
+/// bottom right, as on the scoreboard and in the game's chat (Sol, 14/11/2026; until
+/// then the icon stood small after the mark).
+pub(crate) fn corner_mark(icon: Rect) -> Rect {
+    let small = icon.width * CORNER_MARK;
+    Rect::new(
+        icon.right() - small * CORNER_INSET.0,
+        icon.bottom() - small * CORNER_INSET.1,
+        small,
+        small,
+    )
+}
 /// The widest the name runs before its ellipsis.
 const NAME_MAX: f32 = 160.0;
 /// The bars, top to bottom (shield, health, Force), the gap over each and the room
@@ -314,7 +329,8 @@ pub(crate) struct HoloSpec {
     pub(crate) picture: bool,
     /// The mark after the name (the verified seal or a trust mark).
     pub(crate) mark: bool,
-    /// Another client's icon after the mark (`chat::client_icons`).
+    /// Another client's icon, in the mark's place with the mark small on its foot
+    /// (`chat::client_icons`, `nameplate_math::corner_mark`).
     pub(crate) client: bool,
     /// The duel badge on the picture.
     pub(crate) duel: bool,
@@ -380,18 +396,13 @@ impl Holo {
         let measure = |pick: fn(&Measures) -> f32| lerp(pick(&SHORT), pick(&TALL), detail) * k;
         let line = |height: f32| (height * k).max(spec.least_bar);
         let name_width = spec.name_width.clamp(0.0, NAME_MAX * k);
-        let mark_width = if spec.mark {
+        // What follows the name: the mark, or another client's icon in its place with
+        // the mark small on its foot ([`corner_mark`]).
+        let tail_width = if spec.mark || spec.client {
             (MARK_GAP + MARK) * k
         } else {
             0.0
         };
-        // What follows the name: the mark, then a client's icon.
-        let tail_width = mark_width
-            + if spec.client {
-                (MARK_GAP + CLIENT) * k
-            } else {
-                0.0
-            };
         let left = if spec.picture {
             measure(|m| m.left)
         } else {
@@ -470,12 +481,11 @@ impl Holo {
             NAME_ROW * k,
         );
         let square = |left: f32, side: f32| Rect::new(left, middle - side * 0.5, side, side);
+        let slot = square(name.right() + MARK_GAP * k, MARK * k);
+        let client = spec.client.then_some(slot);
         let mark = spec
             .mark
-            .then(|| square(name.right() + MARK_GAP * k, MARK * k));
-        let client = spec
-            .client
-            .then(|| square(name.right() + mark_width + MARK_GAP * k, CLIENT * k));
+            .then(|| if spec.client { corner_mark(slot) } else { slot });
         let badge = spec.duel.then(|| match hex {
             Some(hex) => {
                 let side = lerp(FAR_BADGE, BADGE, near) * k;
@@ -746,27 +756,27 @@ mod tests {
             && inner.bottom() <= outer.bottom() + 1e-3
     }
 
-    /// Another client's icon follows the seal, smaller, level with it and inside the
-    /// plate, which widens for it once the name is long.
+    /// Another client's icon takes the seal's place, and the seal sits small on its
+    /// bottom right corner; the plate needs no more room for it.
     #[test]
-    fn a_client_icon_follows_the_seal() {
+    fn a_client_icon_wears_the_seal_on_its_corner() {
+        let seal = Holo::new(&spec(ALL)).mark.unwrap();
         let holo = Holo::new(&HoloSpec {
             client: true,
             ..spec(ALL)
         });
         let (mark, client) = (holo.mark.unwrap(), holo.client.unwrap());
-        assert!(client.x > mark.right() && client.width < mark.width);
-        assert!(inside(client, holo.plate));
-        let centre = |rect: Rect| rect.y + rect.height * 0.5;
-        assert!((centre(client) - centre(mark)).abs() < 1e-3);
+        assert_eq!(client, seal, "the seal's place");
+        assert!(mark.width < client.width && mark.x > client.x && mark.y > client.y);
+        assert!(mark.right() > client.right() - 1e-3 || mark.bottom() > client.bottom() - 1e-3);
         assert!(Holo::new(&spec(ALL)).client.is_none());
-        // Without a seal it takes the seal's place.
         let alone = Holo::new(&HoloSpec {
             mark: false,
             client: true,
             ..spec(ALL)
         });
-        assert!((alone.client.unwrap().x - mark.x).abs() < 1e-3);
+        assert_eq!(alone.client, Some(seal));
+        assert!(alone.mark.is_none());
         let long = |client: bool| {
             Holo::new(&HoloSpec {
                 name_width: 150.0,
@@ -774,11 +784,7 @@ mod tests {
                 ..spec(ALL)
             })
         };
-        let grown = long(true).plate.width - long(false).plate.width;
-        assert!(
-            (grown - (MARK_GAP + CLIENT) * holo.k).abs() < 1e-3,
-            "{grown}"
-        );
+        assert!((long(true).plate.width - long(false).plate.width).abs() < 1e-3);
         assert!(inside(long(true).client.unwrap(), long(true).plate));
     }
 

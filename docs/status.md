@@ -1,3 +1,477 @@
+## One status bar (21/11/2026)
+
+Step 5 of the season 2 work (the UI upgrade, Sol: "merge the new top bar we did with the
+bottom bar, so we only have a bottom bar"), branch `personal/one-status-bar`. The top bar's
+ten parts joined the bottom bar in one row ([client.md](client.md#status-bars)): one strip
+(`State::bar`) laid out from both inputs (`bar_pieces` merges the two piece lists in
+`Part::ALL`'s order without allocating), one ranking for what goes when room runs out, the
+server's name, game type and date off by default. `cg_statusBarTop` is retired, the top
+edge keeps no room (`Reserved::top` stays for the callers, always 0), and the notification
+banner's top inset went. The changelog's unreleased lines (the bars came after 2026.1117.1)
+describe the one bar. Verified: the viewer's tests, fmt, Clippy (no new warnings), the
+status bar world shots at 1080p, 4K large text, 21:9 and 4:3.
+
+## Force box, the DOOM coin roll and Force Throw (20-21/11/2026)
+
+Step 4 of the season 2 work (Sol's announcement of 19/11), branch `personal/force-box`.
+The mystery box is the Force box ([mystery-boxes.md](mystery-boxes.md)): its chest
+repainted in temple stone, old gold and blue runes (a placeholder; Sol makes the model, the
+README gives its contract), and Jedi Academy's own sounds by path (Force pull, speed hum,
+push; the bundled tune and the extras pack's open/roll/close dropped). The WHEEL OF DOOM is
+merged into it: Use held 1 s with a DOOM coin rolls the WHEEL's outcomes at the box's own
+odds (holocrons 60 %, punishments 30 %), through the hub's new `POST /v1/mystery-box/doom`
+(hub branch `force-box`, 1b9fd35, NOT merged or deployed: with the release), the
+punishments striking through the WHEEL's effects; no wheel stands on a map any more and
+`wheelofdoom_place` refuses ([wheel-of-doom.md](wheel-of-doom.md)); the wheel drawing code
+and the hub's wheels go at the release. The Monitor is Force Throw
+([client.md](client.md#monitor)): JA's crate, R5 and GONK wrecks hurled, a crate bursting
+into JA's chunks at rest, JA's sounds, the Screen Saver named the Force Barrier; its seven
+achievements un-retired with Force names, ids kept; commands and cvars kept. The unused
+`box_loot_glow` (the Ray Gun's) went too. Verified: the viewer's tests, fmt, Clippy (no new
+warnings), the hub's tests; world shots of the box (duel6) and the junk (a demo). Not tried
+in game: the coin roll needs the hub branch on a local hub.
+
+## Toy removals: retired achievements, the Banana peel (20/11/2026)
+
+20/11/2026, Sol's cleanup before the release (Discord announcement 19/11: unused or sloppy
+toys go; Sol's list: Hax, Monitor, Banana peel, Order 66, the cardboard box, Fishing,
+Mining). Step 1, `personal/retire-toy-achievements`: their 34 achievements (and the Drone's
+Special Delivery, a monitor strike) are retired ([identity.md](identity.md)), kept by their
+holders; the Hobbies page leaves the switch when nothing on it is held. Step 2,
+`personal/remove-banana`: the Banana peel is gone (toy, frame, assets, script, settings,
+quick wheel, binds, Collection row, status bar piece, look id, world shots); its saved cvars
+are dropped at load; the Boombox's floor trace moved to `floor_spot.rs`; the Toys tab's
+places are named constants (`*_TOY` in `collection_panel.rs`) so the next removals move only
+those. Step 3, `personal/remove-cardboard-box`: the cardboard box is gone the same way (its
+crouch shaping, boxed eye, crouched pose of boxed players, music loop, sight switch and the
+achievement tracker's box counting); `hax::pick_target` took over its `+use` pick, the
+quick wheel's default Toys page lost its slot (a saved one drops the unknown choice). Step 4,
+`personal/remove-order66`: Order 66 and the Hax together (the Hax's trap blew both players up
+with Order 66's blast): the toys, their blast in `dismember.rs`, the hack's steering, camera,
+loop and HUD bar feed, the trap settings and their Settings search place, and the tracker's
+Hax counting; the rules the Ragdoll, Monitor and Prop gun share (`spared`, `duelling`,
+`own_away`) moved to `toy_rules.rs` with a test. Step 5, `personal/remove-propgun`: the Prop gun and the
+mystery box's Ray Gun, which ran on it (Sol); its 7 % of box rolls goes to the holocron on
+hub branch `no-raygun` (5602722, not merged, deployed with the release); a hub that still
+rolls it stops the client's roll on the bolts. The first-person prop hold, the toy loop
+sound path and the Ragdoll's `UNTHROWN` went with it. Step 6, `personal/remove-fishing-mining`:
+Fishing and Mining (the toys, their selling, kyber glints, daily goals, rare catch banners,
+play signals and the Echo bite hold); `fishing.rs` and `mining.rs` keep only the catch
+tables and log reading, and the Collection's Log book (`collection_log_book.rs`, a hall
+tile and a tab only with a catch, `catch_book::shown`) shows both logs read only, with
+Share. The hub keeps the removed toys' routes and events on for older clients until the
+release sets the minimum client (Sol). Verified: the viewer's tests (4386), fmt, Clippy (no
+new warnings), the startup stack check. Not verified: in a game.
+
+## Rig model chains stay off the ground (19/11/2026)
+
+19/11/2026, `feat/rig-chain-ground` based on `main` `afd16b60`. A rig model's dynamic chains
+that are kept out of the body (no `nocollide`) are kept off the ground too: a line traced
+down from the player's origin finds the floor, as a plane in the model's space, and a
+joint under it is laid on it at its bone's length, leaning the way it already did, at
+least its `clearance` (half a unit) above. No manifest change, so older clients load the
+same models ([rig-models.md](rig-models.md#dynamic-joints-tails-capes)). Verified: `cargo
+test -p sjk-viewer --bin sjk rig_` (a strand on a flat and a sloping floor, `nocollide`, no
+ground, the bone laid on the plane, the floor's model-space plane with yaw and scale) and a
+probe on an installed rig model in stock frames: standing its lowest vertex sits on the
+floor's plane (-23.9 against -24); kneeling (`BOTH_KNEES1`) a coat chain that went 2.3
+units through the floor stays above it. In `BOTH_DEATH1` the head itself sinks under the
+floor, chain anchors with it, which this leaves alone. Not tried in a game.
+## Rim alpha: `alphaGen dot` and `oneMinusDot` (18/11/2026)
+
+18/11/2026, `feat/alphagen-dot` based on `main` `afd16b609`. A shader stage's `alphaGen dot` /
+`oneMinusDot` was parsed and drawn as identity alpha, as rd-vanilla does (it never computes
+them); now the stage's alpha is how squarely the surface faces the viewer, or one minus that
+for a rim light ([rendering.md](rendering.md#facing-and-rim-alpha-alphagen-dot-oneminusdot)).
+No retail shader and no pack installed here uses either. Verified: `cargo test -p sjk-viewer
+--bin sjk` for `world_stage` and `material_programs_validate_in_both_lighting_modes` (the
+stage program with the new branch validates in both lighting modes), `cargo clippy -p
+sjk-viewer --all-targets` (no warning in the changed code). Not tried in a game; the
+workspace build and tests are left to CI.
+## Hide or mute emotes (17/11/2026)
+
+`feat/emote-mute`, based on `main` `afd16b60`, mg.perso's idea. Settings > Sound > Emotes:
+Hide others' emotes (`cg_hideOthersEmotes`, off by default) keeps other players' emotes
+off this screen, the player's own untouched; Hidden emotes (`cg_hiddenEmotes`,
+`emote_hide <id>`) hides single emotes others play; Muted emotes (`s_mutedEmotes`,
+`emote_mute <id>`) plays single emotes without their sound
+([hub-chat.md](hub-chat.md#emotes-in-the-client)). Client only, nothing sent to the hub.
+Verified on Windows 11: unit tests in `emote_filters.rs` (the own emote stays, the
+others' playing ones end, a muted emote's music never starts and comes back in place, an
+away emote back from away stays muted, the lists' parsing and toggling).
+## Duels: others' duellists can be hidden (17/11/2026)
+
+17/11/2026, `feat/duel-invisible` (Slash, after headshotsmcgee117's idea in #ideas,
+13/11/2026): players outside a duel wanted duellists gone altogether, not shown as
+figures. `cg_duelGhost` is now 0 Dark (stock), 1 Figures (the default, unchanged) or
+2 Hidden; Hidden leaves every player whose `bolt1` is set out of what is presented
+while the viewer, or the player it follows, is in no duel
+([duel_hide.rs](../crates/sjk-client/src/duel_hide.rs), `DuelHideScope::Duellists`,
+read from `DuelHideSettings::hide_duellists`), so body, sabers, shadow, nameplate,
+effects, loops and their `EVENT_ACTORS` events go, on every server. Unit tests only;
+known limits: shots of a duellist stay where the server does not set the missile owner
+(stock, JA+), and a saber clash flare (`EV_SABER_CLASH`, no wielder in it) still shows.
+## tell_attacker and duel lines (17/11/2026)
+
+17/11/2026, `feat/duel-lines` based on `main` `afd16b60` (Ric's idea, extended by Lex Deifaber,
+#ideas 04/11/2026; Sol's 16/11/2026 recap: "tell_attacker, a duel start and end line").
+`tell_attacker <message>` whispers to the last player who hurt you, as stock cgame and
+EternalJK do, without a bad `tell` for the world or yourself. `cg_duelStartLine`,
+`cg_duelWinLine` and `cg_duelLoseLine` (archived, empty = off) whisper a line to the private
+duel opponent at its start, win or loss (or to all chat with `cg_duelLinesToAll 1`), once a duel and 10 s apart per kind
+([client.md](client.md#joining-and-changing-maps)). Verified: `cargo test -p sjk-viewer duel_lines` and
+`tell_attacker` (start once, win, loss by obituary or death, a late obituary, other ends,
+the gap, followed players). Not verified: no private duel was played with it.
+## Collection glass and the Kybers page (18/11/2026)
+
+18/11/2026, `personal/collection-glass` from `main` `44099d074` (Sol: "make the acrylic work
+on the collection now (if not too heavy), [same] with the saber shader UI, upgrade it"). The
+Collection's tiles, panes and cards are acrylic glass ([sjk-ui.md](sjk-ui.md#acrylic-glass)):
+the hall, the Kybers wall's tiles, its list pane, filter chips, search field, tiers' strip and
+card, the Inventory, Toys, Tags, Forge, History and Holocrons. Rows on a pane, pictures in a
+tile, card faces and the Medals and Achievements pages (no panels) stay plain. The Kybers
+wall: the chosen tile rises over 0.16 s in a ring of its tier's light (`shaders::Lift`), the
+hovered one lifts 2 pixels in its tier's colour, the worn kyber glows gold from its foot (a
+second saber's in the line-work). Measured with `duel6_collection_glass` (release, RTX 5080,
+Vulkan, every other kyber owned, warm and cold, medians of 120 sampled frames): the blur
+(`ui-backdrop`) 0.016 to 0.022 ms at 1080p, 0.029 to 0.038 ms at 4K; on `main` the same
+pages blurred nothing but the wall's hover card (0.015 ms, 0.020 ms). Whole frames, `main`
+then the branch (warm): 1080p hall 2.05 / 2.19, wall 1.66 / 1.88, list 1.75 / 1.65,
+inventory 1.49 / 1.68 ms; 4K hall 5.59 / 5.43, wall 4.34 / 4.71, list 4.29 / 4.16,
+inventory 4.00 / 3.05 ms. These swing by up to 0.4 ms between runs in the world's own
+sections (the 4K wall's `opaque` 0.98 against 1.21 ms), and against the plain tint in the
+same sitting the glass moved the frame by less than that drift either way, so no part was
+left as plain tint. Verified: unit tests (the acrylic tier frame, the lift's easing, the
+list pane's rectangle, a backdrop under every tile and the renderer's runs under half their
+limit, the palettes' contrast over `TILE` glass), the shots looked at in both themes, fmt,
+build, the workspace tests and the startup stack check. Not verified: in a game, on DX12
+(where the glass is its plain tint) and Metal; the lift's motion was judged from its curve,
+not watched.
+
+## Load marks around the saber renderer (17/11/2026)
+
+17/11/2026, `personal/load-marks` from `main` `d35a06d94`. A player's GTX 1650 on DirectX 12
+(build 2026.1113.1, two runs) died silently while loading the menu map: both logs end at
+`world load phase effect-atlas`, before `pipelines-ui`, with no error. Five steps ran in that
+gap with no mark. Implemented: `world load phase` marks `particle-pipelines` (after the
+particle and entity pipelines), `saber-renderer` (after `saber_gpu::Runtime::new`) and
+`dust-weather` in `main.rs`, so the next log names the step that dies; the HUD and UI
+pipelines stay closed by `pipelines-ui`. Verified: `cargo check` of the client. Not verified:
+no game run; the cause itself is not known yet.
+
+## Top bar ping and the lagometer's snapshot ping (17/11/2026)
+
+17/11/2026, `personal/bar-ping` from `main` `d35a06d94` (Sol: the scoreboard said about
+10 ms, the top bar about 50). Cause: the bar read the lagometer's newest sample, which was
+`serverTime - ps.commandTime`, how far our commands trail the server's clock (about one
+server frame plus the way up), not a round trip. Implemented: `sjk_client::snapshot_ping`
+keeps the last 256 move packets (send time, newest command's stamp) in a ring allocated
+once, and `ClientSession::snapshot_ping` gives each snapshot stock's `cl.snap.ping`
+(`CL_ParseSnapshot`), which the lagometer and the chat's `%P%` now take; a demo and a local
+game have none. The top bar (`status_bar/ping.rs`) shows our own row's ping from a `scores`
+reply for 5 s, otherwise the average of the last 32 own snapshots' stock ping, the window
+`SV_CalcPings` averages, since both measures add a round trip, up to a packet interval and
+up to a frame; no `score` request is added (JoF caps client commands). Verified: unit tests
+of the ring (the walk, 999, wrap, unstamped packets and none), the bar's average, the 999
+filter, the scores' freshness and the empty case; fmt, build, Clippy on the files touched
+and the workspace tests. Not verified: nothing was run against a server (no client
+launched), so the bar's number has not been compared with the scoreboard in game; a server
+without `sv_pingFix` times its pings by its frame clock, which the bar cannot reproduce.
+
+## Notification banners; the holocron pop-up removed (16/11/2026)
+
+16/11/2026, `personal/banners` from `main` `1745f6ca8` (Sol: "remove the big notification of
+the holocron drops (when you press ESC) ... holocrons and other notifications should come up
+like an iOS notification, from the top of the screen then go back, maybe with transparent
+background"). Implemented: the holocron pop-up (`holocron_popup.rs`, its view, its keys and
+clicks, the menus left undrawn under it) is gone; `holocron_banners.rs` gives each new
+holocron a banner, counting it as seen as the banner begins. The unlock card is now a banner
+(`unlock_toast.rs`, look and motion in `unlock_toast/banner.rs`): dark translucent glass at
+the top centre, sliding down on a spring (0.6 s), resting 5 s, sliding back up (0.4 s), a fade
+with `ui_rarityEffects 0`; three or more of one kind fold into one banner. The kyber glint and
+daily goal centre prints of Fishing and Mining, and a request for logs (the console only
+before), are banners too. The build label at the top centre is left out while a banner rests
+over it. Verified: unit tests of the queue, folding, words, spring and slide, seen file and
+Off; every banner's words in its column at five window shapes; fmt, build, Clippy and the
+workspace tests; the world shots `world_shot::notify_banner_shots` (siege_hoth's bright sky
+and the main menu, 1080p and 4K, the slide and the fade) looked at. Not verified: nothing was
+run in a game window (no client launched), so the motion was seen only as stills; no hub.
+The banner's top is `unlock_toast::banner::top_inset`, 0 until the top status bar gives its
+height.
+
+## Status bars docked to both edges (16/11/2026)
+
+16/11/2026, `personal/edge-bars` from `main` `1745f6ca8` (Sol: "stick it to the TOP or bottom
+of the screen, not a bubble ... both enabled same time"; bottom: what the bar had, the time,
+the date and the weapons held; top: Force powers, time left, joins and leaves, FPS, map,
+player count). Implemented: `status_bar.rs` rewritten as two full-width strips flush with
+the edges (`cg_statusBar`, new `cg_statusBarTop`, both on, both `= ... reset` in the News
+panel), 21 part switches (new: weapons, time, date; top: Force, score, time left, feed,
+server, map, game type, players, ping, frame rate), `cg_statusBarPosition` removed. Parts
+in `status_bar/pieces.rs`, readers in `status_bar/read.rs`, the join and leave feed from the
+`CS_PLAYERS` slots in `status_bar/feed.rs`, times in `status_bar/times.rs`. The bars keep
+their room (`State::reserved`, set before the HUD's layout): the HUD's elements move by
+their nearer edge (`Reserved::shift`; the family's and icons' pieces each by their own,
+`DrawList::translate_each_from`), the game HUD is lifted (`MenuHud::set_lift`), and the
+chat feed, the notify lines, the upper right readouts, the devmap bar, the build label, the
+weapon row's name, the Possible drops panel, the player card and the off-screen world pings
+stay inside; the HUD's match timer, `cg_drawFps`'s rate and `cg_drawClock` step aside while
+a bar shows the same. The bars now stay under the scoreboard. Release timings
+(`status_bar_cost`, both bars with every part, 2 000 frames, reserve step included):
+10.5 us a frame kept and 14.5 us laid out at 1080p, 10.8 and 14.6 us at 4K (the single
+floating bar it replaces: 6.5 and 8.7 us); the frame's text runs, added again each frame as
+every SJK UI page does, are most of it. Verified: unit tests (the parts' switches,
+bars and defaults, the groups' places and what goes first when room runs out, the nearer-edge
+shift, the inline text, the feed's joins, leaves, renames, new matches and fade, the times,
+`translate_each_from`, the upper right without its rate, the drops panel and the world pings
+inside the bars; the keybind editor's search test now counts the new "Bottom bar: weapons"
+toggle); fmt, build without warnings, Clippy (nothing new in the files touched), the
+workspace tests, the startup stack check; the world shots `status_bar_shots` (1080p, 4K at
+`ui_textScale 1.4`, 21:9, 4:3), `status_bar_on_a_demo` (game, classic and radial HUDs, 4K,
+21:9, 4:3, a vote and the devmap bar at the bottom and the top, each asserting every HUD
+element's box stands between the bars) and `status_bar_in_the_news`. Seen in the shots and
+not changed (they overlapped before, and both moved by the same room): the classic layout's
+weapon box under the devmap bar at the bottom, and the devmap bar at the top over the build
+label and the vote card. Not verified: nothing was run in a game (no client launched): the
+feed against a live server's joins, the Force icons and the weapons from a live player
+state, the time left from a live server's `timelimit`, JoF and JA+ HUD packs (`hud.menu`
+variants with pieces at the top would be lifted too, as the whole game HUD is anchored to
+the bottom), and the unlock banners, which another branch will place with
+`State::reserved`.
+
+## Feats (16/11/2026)
+
+16/11/2026, `personal/feats` from `main` `4049e547f` (Sol: Unreal Tournament and Halo style
+DOUBLE KILL, DOMINATING with medals and an announcer, voice packs in PK3s, and a special one
+for a JA+ grapple kill). Implemented: `cg_feats` (off by default), the rules in
+`feats.rs` from the shared obituaries, the medals in `hud/feats.rs` with their own picture
+texture (`ui_renderer/feat_pictures.rs`), the announcer packs in `feats/announcer.rs`,
+four Settings rows, HOOKED! from `MOD_STUN_BATON` with the killer's held weapon (new
+`ObituaryEvent::attacker_weapon`). Verified: unit tests of every rule (chain window edges,
+spree steps and resets, first blood only for a level seen starting, revenge once, the hook
+against a real baton, one kill's order), the line queue, the pack list and fallback; fmt,
+build, Clippy and the workspace tests. Not verified: nothing was run in game (no client
+launched); the medals' place under the top centre against every HUD style and the vote panel
+wants a look. SJK's own voice: the fourteen lines generated in one take with Higgsfield's Seed
+Audio 1.0 (preset voice Barrett), cut at its silences (14 segments found, one per line, in
+order) into `assets/announcer/sjk/`; not listened to by me, Sol judges the voice. Left: a later
+step may count feats in the achievements.
+
+## Collection release check (16/11/2026)
+
+16/11/2026, `personal/collection-qa` from `main` `d306a0f2e` (Sol: "make sure all is
+optimized, looks good, all the new stuffs we will activate work"). A new world shot,
+`duel6_collection_qa` (`world_shot_collection_qa.rs`), renders every Collection page on one
+rich profile at 1024 x 768, 1600 x 1200, 1080p, 21:9 and 4K, once its kyber loops are in,
+then at 1080p in the low-memory mode and on a profile holding nothing, and times each page.
+Looked at: no text cut or overlapping, no tile without its blades (the blank strips of the
+earlier 4:3 and 21:9 hall shots were stills not baked yet), the empty states and the
+identity-off states (Forge, Echoes) clean. Fixed: the hall's Cards tile read the profile's
+cards apart from the Cards tab and the Inventory, so a shot's cards showed "No cards yet"
+there; it now reads the same stacks and counts its copies from them (in a game both came
+from the hub, so nothing changed there). A unit test opens every hall tile and comes back
+on it with Escape. Timings (release, RTX 5080, host time a frame, the GPU left to run; the
+menus' own phase in brackets): 1080p 0.5 to 1.7 ms (0.01 to 0.4), 4K 0.9 to 1.5 ms (0.01 to
+0.3), the hall's tile growing into the Kybers page 0.9 ms; worst frames 2.3 ms once loops
+and pipelines were built (a first run, building every signature pipeline, had single frames
+of 22 to 50 ms). Left: at 1024 x 768 the pages keep the 16:9 frame fitted to the width
+(empty bands above and below, small text); the hall alone reflows. At that size thin glyphs
+of the body text (an "i", the middle dot) drop out: the game fonts are drawn from a coverage
+atlas, a renderer matter beyond the Collection.
+
+## Collection speed and straight kyber loops (15/11/2026)
+
+15/11/2026, `personal/collection-perf` from `main` `63da62e28` (Sol: "quite laggy atm even for
+me with a big PC, optimize it, think that we have people with small GPUs and 3GO VRAM too, the
+sabers on the UI should be straight, maybe we should pre render a gif or video"). Measured
+first (`world_shot_collection_perf.rs`, release, RTX 5080, Vulkan, `SJK_TEST_PACKS`): a
+settled Collection frame costs under 1 ms on the host at 1080p and 4K, so the lag was the
+transient work. Walking the Kybers wall cold (no picture on disk, no signature built, a row
+every six frames for 25 s): before, 30 frames over 33 ms (worst 86 ms, median 3.7 ms); the
+tiles' live pictures (the hovered and chosen tile, and every owned tile whose still was not
+baked) drew new blades through the live target. Now tiles, rows and strips never draw live:
+each kyber is baked once into an eight-picture loop (`blade_stills.rs`, 384 x 96 a picture,
+a tenth of a second of its animation apart, two a frame, each blended with the moment a loop
+later so it loops without a seam), played crossfaded ten
+pictures a second and kept as one PNG (RGB, about 200 KB; 61 MB for 301 kybers); only the
+chosen kyber's large swatch is live. After: 1 frame over 33 ms (opening the page; worst
+60 ms, median 3.9 ms), a second visit read from disk with none. Settled frames (whole frame,
+GPU waited for): 1080p wall 3.96 -> 3.35 ms, 4K wall 7.36 -> 5.97 ms, 4K list 7.25 -> 6.02
+ms, 4K hall 6.79 -> 5.61 ms. The wall's tiles draw the blade straight (no tilt). Video
+memory, fixed: the loops' atlas 3072 x 2304 RGBA8 (27 MiB, 24 loops) while shown, a 6.75
+MiB baking target while baking; with the menu pictures on, 48 first pictures, still, in
+6.75 MiB, nothing live; the live pictures' target (about 17 MB) is now freed 5 s after the
+last live picture instead of being kept for the session. The 4K wall shot before this
+showed the tiles' blades missing (hilts only); they show now. Verified: unit tests (texture
+ids, the atlas budgets, the loop's playing, slots' reuse, the bake order, the disk format
+and a changed blade's replacement), `duel6_collection_perf` and `duel6_collection_cold`,
+the shots looked at, workspace build and tests, the startup stack check. Not verified: in
+a game, on a small card, DX12 and Metal; the low-memory shot ran with `ui_menuPictures=1`
+but the shot does not prove the first-picture mode was in effect.
+Review round (same day): many loops washed out to flat white (Thousand Cranes, Eclipse,
+Varykino Blossom, Exogorth, World Shift, Event Horizon, Sun on the hall). The bake averaged
+the blade's values over 1 before clamping, spreading white cores, and screen-blended a 1.7x
+glow over the blade itself; now each baking pixel is clamped first (as the live picture's
+8-bit target does) and the glow only lights the dark round the blade, at 0.6 (`VERSION` 3,
+caches baked again). `duel6_collection_compare` chooses each of those kybers with every one
+held, the wall's loop beside the stage's live blade: colours and shapes match. A wall tile's
+blade sits in the middle of the room over its name (sized to a one- or two-line name, kept
+inside it). Still different: a chroma kyber's loop (Eclipse) is baked in the skin's own
+colour, not the wearer's, as the stills were.
+
+## Collection polish: wording, hall tier marks, first look, motion (15/11/2026)
+
+15/11/2026, `personal/collection-polish` based on `main` `646083619` (Sol's approval of the
+Collection ideas round's polish, ideas 9 and 10 among them). Wording: a dormant kyber's
+refusal names attuning, the wallet strip says how each currency is earned, Holocron is
+capitalised in the new strings (Echo/Echoes under JoF naming) and every hall art line goes
+through `terms::say`. The hall's tier-coloured lines carry `kit::tier_mark` (tiles stay kind
+tiles). First look (`collection_reveal.rs`, `menu_stage/reveal.rs`): a New kyber's stage
+blade waits on the hilt and ignites with its own sound, a card turns over, the tier frame
+flashes, `Cue::Reveal`/`Cue::RevealRare` play. Motion (`collection_transition.rs`): tile into
+page and back (180 ms), Ctrl+Tab slide (100 ms), a crossfade with `ui_rarityEffects 0`;
+it only draws, keys act at once ([sjk-ui.md](sjk-ui.md#collection)). Verified: `cargo
+build`/`test --workspace` with no warning (unit tests for the reveal's trigger, once and only
+for New, the transition's timing, keys during it and the reverse landing on its tile), the
+startup stack check, and the `duel6_sjk_collection_hall` (with a frame 90 ms into an
+opening), `duel6_sjk_collection_inventory` and `duel6_sjk_collection_new` world shots. Not
+tried in a game: the ignition on the stage, its sound and the cues were not heard.
+
+## Kyber stills on the Collection's tiles (15/11/2026)
+
+15/11/2026, `personal/blade-stills` from `main` `1eae244cc`, `main` `f1557c4a2` merged in
+(Sol: "make blades look great on Collection tiles"). Each kyber is drawn once by the blade
+renderer into a 256 x 96 still at a fixed moment of its animation, at twice that size and
+brought down with a soft glow (`blade_stills.wgsl`), kept on disk in `cache/blades/` under a
+key of what it is drawn from; the swatches show stills (the hovered or chosen one live, once
+drawn with its own pipelines), a kyber not held its still greyed and dimmed under a small
+padlock; the Kybers wall's tiles draw the blade large across the tile, tilted, in their
+[tier frame](sjk-ui.md#tier-frame), name and state at the foot
+([unlockables.md](unlockables.md#kybers-tab), [sjk-ui.md](sjk-ui.md#collection)). Video
+memory: a 1536 x 768 RGBA8 atlas (4.5 MiB, 48 stills) while a swatch shows, a 3 MiB baking
+target only while baking. Verified on Windows 11 (RTX 5080, Vulkan): unit tests of the
+texture ids, the cells' reuse, the bake queue's bound (four a frame, one with the menu
+pictures on, the ones not ready waiting), the keys and the disk's replacement of a changed
+blade's still; `duel6_blade_stills` (every other kyber owned, `SJK_TEST_PACKS`): 301 stills
+baked and written, a frame with one bake +0.32 ms over one with none (median of 287 frames,
+1.86 ms), the first frames of four bakes with the baking target made about 7 ms; forgotten in
+memory, the wall's stills read back from disk in 4 frames without a bake; the wall, hovered
+wall, list and hall shots looked at. The startup stack check, `cargo fmt` on the files
+changed, build, workspace tests and Clippy. Not verified: in a game (scrolling a full wall,
+an option change re-baking its still, the menu pictures on a small card), DX12 and Metal,
+a weak GPU's bake time.
+
+## New on every kind, empty states (15/11/2026)
+
+15/11/2026, `personal/collection-new` based on `main` `1eae244cc` (Sol's approval of ideas 3
+and 4 of the Collection ideas page). The seen-list became kind-keyed
+(`collection-seen.txt`: kybers, cards and tags by finish, finishers), migrated once from
+`shader-seen.txt`; cards, tags and finishers show New stickers, "N new" and Mark all seen
+(N), the hall's tiles "N new" pills, the Inventory a sticker on New rows, and the status bar
+a New part (`cg_statusBarNew`, on). Empty Cards, Holocrons (none, no dormant kyber), Medals
+and Inventory-search pages show `empty_state`'s ghosts, how they fill and one action
+([sjk-ui.md](sjk-ui.md#empty-states)). Verified: `cargo test --workspace` (the list's
+format, the migration from `shader-seen.txt`, first holdings seen, per-kind counts, Mark
+all seen, the watch's second, the empty Cards tab's two actions, the pages' and tiles'
+counts, the status bar's words then dot), the startup stack check and the
+`duel6_sjk_collection_new` world shots. Not tried in a game: the seen-list against a live
+hub's holdings, Find a server from a match, and the Holocrons tab's empty states (no world
+shot of that page).
+## Inventory card and tier frame (15/11/2026)
+
+15/11/2026, `personal/inventory-card` from `main` `1eae244cc` (Sol's picks of ideas 1 and 2
+of the Collection's ideas round). One tier frame (`kit::tier_frame`, `kit::tier_mark`;
+[sjk-ui.md](sjk-ui.md#tier-frame)) on the Inventory, Cards, Tags, Forge (tiles and list
+rows), History and Holocrons pages; the Kybers wall and the hall keep their own look until a
+later pass. The Inventory's rows carry pictures, kind chips (1 to 7) filter it, a wallet
+strip replaces the Currencies group, and the chosen thing's card shows its worth from the
+hub's tables and buttons that reuse the existing paths (Kybers' Equip, the Forge's Break down
+press, the Holocrons page's opening, Tags' Choose, the Finishers' Wear, Cards' tile)
+([sjk-ui.md](sjk-ui.md#collection)). Verified: `cargo test --workspace` (unit tests for each
+tier's frame and mark, the card's buttons by kind, a kyber's worth and the spares' sum, the
+chips), the startup stack check, and the `duel6_sjk_collection_inventory`,
+`duel6_sjk_collection_tags`, `duel6_sjk_collection_history` and `duel6_sjk_forge_shots`
+world shots. Not tried in a game: Break down, Open and Attune against a live hub, the sheen's
+motion (shots are stills).
+
+## Collection hall (15/11/2026)
+
+15/11/2026, `personal/collection-hall` based on `main` `af3a7c2c6` (Sol's pick of "The hall"
+from the Collection's design proposals). The Collection opens on a hall of tiles, one to each
+kind with what the client already knows of it (counts, New shaders, holocrons to open, the
+deal of the day, toys on, the newest History line), the model turned into a column on the
+right; a kind opens under a "Collection › Shaders" breadcrumb in place of the row of tabs,
+Ctrl+Tab steps kinds, Escape comes back to the hall; `ui_collectionHall` (on) or off opens on
+the kind used last, and the commands naming a kind skip the hall
+([sjk-ui.md](sjk-ui.md#collection)). Verified: `cargo test -p sjk-viewer` (grid reflow at
+4:3, 16:9, 21:9 and large text, arrows, Enter, Escape, Ctrl+Tab from the hall, the
+breadcrumb, deep links, the setting, the Holocrons page's way back), the startup stack check,
+and the `duel6_sjk_collection_hall` world shots (16:9, 4:3, 21:9, 4K at `ui_textScale 1.4`,
+Shaders under the breadcrumb). `duel6_sjk_collection` (now with an in-game hall shot) was not
+rerun. Not tried in a game: the camera's turn while easing, the live preview's place over a
+match and the History line after a real read are
+unseen live.
+
+Polish the same day (`personal/hall-polish`, Sol's review of the world shots): the tiles draw
+what they hold rather than two or three lines (blade strips and each tier's share, finisher,
+tag picture, toy pictures lit while on, medal pictures, the next achievement as a large
+figure, cards or an empty binder, holocron pictures with counts, the deal of the day's blade
+and price with the day's other offers, credits and shards as figures, three History lines;
+rows at most 330 tall, the grid centred at 21:9;
+`collection_hall_art.rs`), and the worn line and Loadouts (P) moved from over the model's
+feet to the column's top under "Wearing now". Verified: `cargo test -p sjk-viewer`, the
+startup stack check and the re-rendered `duel6_sjk_collection_hall` shots at 16:9, 4:3, 21:9
+and 4K at `ui_textScale 1.4` with the hub's packs (`SJK_TEST_PACKS`). Not seen: the Cards
+tile with cards held, and the Forge tile before the shop is read, outside unit tests.
+
+## Status bar (15/11/2026)
+
+15/11/2026, `personal/status-bar` based on `main` `aacf7c07e` (Sol: an in-game status bar at
+the top or bottom with per-element toggles). `cg_statusBar` 0 off (default), 1 top, 2 bottom,
+and a switch per part (`cg_statusBarCredits`, `Shards`, `Crystals`, `Coins`, `Saber`,
+`Effects`, `Toys`, all on), in Settings > HUD under "Status bar"
+([client.md](client.md#status-bars)). Verified: `cargo test -p sjk-viewer status_bar` (place,
+switches, pieces left out, fitting, digit groups, toy pictures) and the `status_bar_shots`
+world shots (top, bottom, 4K at `ui_textScale 1.4`, made-up numbers). Not tried in a game:
+the hub's numbers, the toys' switches and the hiding under menus and the scoreboard are
+unseen live.
+
+## Status bar on by default (16/11/2026)
+
+16/11/2026, `personal/status-bar-2` based on `main` `d306a0f2e` (Sol: "do a default on and
+when we publish they have toggle to turn it off in the news. make icons rather than text
+for the coins, credits etc."). `cg_statusBar` is now the switch (on), `cg_statusBarPosition`
+the place (0 bottom, the default; 1 top), and the release offers the switch again in the
+News panel (`= cg_statusBar reset` under Unreleased: a profile saved by a main build holds
+the old `0`, which would keep it off unchosen). The money is an icon and its number (the
+credits' sign, the kyber shard, the best held tier's dormant kyber picture, a red DOOM coin
+drawn from shapes), the kyber has its tier's diamonds. The bottom is the default because the
+top's middle holds the match timer (`cg_drawTimer` on, `default.json` `match_timer`). The bar
+keeps clear of the HUD from `hud::placement::Bounds` (the menu HUD's blocks now count their
+text runs, the score line among them, which also widens their `hud_edit` boxes), steps aside
+while the weapon, Force or item selector shows (bottom) or a vote or the warmup line (top),
+drops the toys under Tactical mode and hides over demos. It is laid out again only when
+what it shows, its switches, place or the screen change. Release timings
+(`status_bar_cost`, every part showing, 2 000 frames): 6.5 us a frame kept and 8.7 us laid
+out at 1080p, 5.8 and 7.4 us at 4K. Verified: `cargo test -p sjk-viewer status_bar`
+(defaults, position, placement beside and past HUD boxes, stacked boxes, coin, best dormant
+tier), the changelog and settings tests, and the `status_bar_shots`, `status_bar_on_a_demo`
+(game, classic and radial HUDs at 4:3, 16:9, 21:9 and 4K) and `status_bar_in_the_news`
+world shots. Not tried in a game: the hub's numbers live, the selectors' give-way, a vote,
+the warmup line, JoF and JA+ HUD packs.
+
+## Collection without its Nameplates tab (15/11/2026)
+
+15/11/2026, `personal/collection-no-nameplates` based on `main` `aacf7c07e` (Sol's request).
+The Collection's Nameplates tab (`collection_nameplates.rs`: empty ornament places, the
+plate showcase, a Style row and a See & share nameplates switch) is removed with its
+tokens, actions, hover-card hook, tests and world shots; the row is now Medals,
+Achievements, Shaders, Toys, Tags, Holocrons, Forge, Cards, History (Saber Lab after it
+while the lab is on), indices and tokens renumbered, and `Backstage::World` no longer
+carries the model's head (only the plate used it). The nameplates over players and their
+settings are untouched: `cg_nameplate` and `cg_nameplateStyle` stay in Settings > HUD
+under Nameplates ([sjk-ui.md](sjk-ui.md#collection)). Verified: build, clippy (no new
+warning) and `cargo test -p sjk-viewer`. Not tried in a game; the world shots were not run.
 ## Rig chains: a gusting breeze (19/11/2026)
 
 19/11/2026, `feat/rig-chain-wind` based on `main` `afd16b609`. A standing rig model's hair and
@@ -3486,7 +3960,7 @@ each a signature blade program) every frame: now a frame draws a new picture, th
 hovered or chosen ones (`blade_pictures::focus`, Shaders tab, Forge, Saber tab, a
 holocron's shader) and, with more than two in use, the others 30 times a second, six a
 frame at most, longest waiting first; a cell drawn alone is cleared in its rectangle and
-the kept ones shielded by depth ([unlockables.md](unlockables.md#shaders-tab)). Visible
+the kept ones shielded by depth ([unlockables.md](unlockables.md#kybers-tab)). Visible
 change: those other pictures' animation steps at up to 30 a second (about 26 on the grid
 at 60 FPS, fewer on slower frames), the UI over them still every frame.
 `CvarRegistry::get` lowers a camel-case name (`cg_drawScores`, `cg_hudScale`, read many
@@ -4172,7 +4646,7 @@ running clients through a deployed hub, the sound by ear.
 
 21/10/2026, `personal/kyber-crystals`, based on `main` `775c4e8b` (Sol's decisions; the
 hub side is built in parallel from the same spec, not deployed). A kyber crystal, one per
-achievement, always opens to a saber shader ([holocrons.md](holocrons.md#kyber-crystals)):
+achievement, always opens to a saber shader ([holocrons.md](holocrons.md#dormant-kybers)):
 `kyber.rs` (tiers `kyber_uncommon` to `kyber_mythical`, the built-in odds, pity and
 achievement rewards, pinned by tests), the wire's `kyber` object and `reward`, the
 Holocrons tab's crystal tiles, pity line, hover card and crystal loot table, the opening's
@@ -6896,7 +7370,7 @@ were not loaded). Not tried in the game.
 `main`, not deployed) holds unlocks as counts and rolls an opening as a card or a shader by the
 holocron's tier; the client reads the new answer (`Unlock::count`, `Opened::unlock`, `card` now
 optional). No ceremony for a shader yet (a line in the pop-up says what was found); the crate
-animation is next. Checked by unit tests only. See [unlockables.md](unlockables.md#holocron-shader-drops).
+animation is next. Checked by unit tests only. See [unlockables.md](unlockables.md#holocron-kyber-drops).
 
 ## Shaders: the Common tier and nine plain blades
 
@@ -8677,7 +9151,7 @@ Branch `personal/medal-blades` (10/10/2026, based on `8018e58e`, Windows 11), wi
 hub's `feat/medal-blades`: Sol decided that medals bring saber shaders while held (Bug
 Hunter the Glitch, Early Tester the Hologram, Early Contributor the Runic blade), taken
 back with the medal; achievements grant none yet and holocron drops of blades are
-parked. Details in [unlockables.md](unlockables.md#medal-shaders). Verified by unit
+parked. Details in [unlockables.md](unlockables.md#medal-kybers). Verified by unit
 tests in both repositories; the hub not deployed when built, not tried in the game.
 
 ## Nine more saber shaders
@@ -8720,7 +9194,7 @@ shader, a locked one too as a local preview, the holocron floats by it on Toys a
 nameplate stands over its head on Nameplates. Commands: `collection` (new),
 `achievements` and `unlockables` open its tabs; the Profile page's See the board and
 See the collection open it. Docs: [sjk-ui.md](sjk-ui.md#collection),
-[unlockables.md](unlockables.md#shaders-tab).
+[unlockables.md](unlockables.md#kybers-tab).
 
 Verified: `cargo test -p sjk-viewer` with unit tests of the two screens' rows (each
 screen's tabs wrapping within it, the Collection's counts, rows within the frame at the
@@ -13659,6 +14133,11 @@ game was started: how a retail or EternalJK client shows SJK's chat and names on
 a live server is unverified.
 
 ## SJK emblem
+
+Since 16/11/2026 (branch `personal/new-emblem`) the emblem is Sol's steel monogram
+before a burning sun, rebuilt from its geometry by `scripts/sjk_emblem.py`, which
+writes every icon, the menu's moving sun layers, the chat mark and the site's images
+([assets/branding](../assets/branding/README.md)); the gold starburst below is retired.
 
 Branch `personal/sjk-logo` (2026-10-05, based on `bcb0b76`) puts Sol's
 emblem in the classic main menu's ring, where the `ja01` logo video played (the

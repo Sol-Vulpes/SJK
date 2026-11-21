@@ -66,8 +66,6 @@ impl GpuState {
                 .and_then(|console| console.bool_cvar(style.cvar()))
                 .unwrap_or(false)
         });
-        // The Hax's trap holds while away: hackers' clients may then hack the player away.
-        let away_hackable = self.hax.on() && crate::hax::away_hackable(self.console.as_ref());
         let text = |name: &str| {
             self.console
                 .as_ref()
@@ -123,18 +121,11 @@ impl GpuState {
                 held
             };
             sent = Some(
-                held.with_toy(crate::cardboard_box::TOY, self.cardboard_box.on())
-                    .with_toy(crate::order66::TOY, self.order66.on())
-                    .with_toy(crate::hax::TOY, self.hax.on())
-                    .with_toy(crate::hax::AWAY_TOY, away_hackable)
-                    .with_toy(crate::drone::TOY, self.drone.on())
+                held.with_toy(crate::drone::TOY, self.drone.on())
                     .with_toy(crate::boombox::TOY, self.boombox.on())
                     .with_toy(crate::monitor::TOY, self.monitor.on())
                     .with_toy(crate::box_hunt::TOY, self.box_hunt.on())
-                    .with_toy(crate::banana::TOY, self.banana.on())
-                    .with_toy(crate::fishing::TOY, self.fishing.on())
                     .with_toy(crate::toon_choice::TOY, toon)
-                    .with_toy(crate::mining::TOY, self.mining.on())
                     .with_toy(crate::quests::TOY, self.quests.on())
                     .with_playstyles(plays),
             );
@@ -167,18 +158,11 @@ impl GpuState {
             sounds,
             finisher,
         }
-        .with_toy(crate::cardboard_box::TOY, self.cardboard_box.on())
-        .with_toy(crate::order66::TOY, self.order66.on())
-        .with_toy(crate::hax::TOY, self.hax.on())
-        .with_toy(crate::hax::AWAY_TOY, away_hackable)
         .with_toy(crate::drone::TOY, self.drone.on())
         .with_toy(crate::boombox::TOY, self.boombox.on())
         .with_toy(crate::monitor::TOY, self.monitor.on())
         .with_toy(crate::box_hunt::TOY, self.box_hunt.on())
-        .with_toy(crate::banana::TOY, self.banana.on())
-        .with_toy(crate::fishing::TOY, self.fishing.on())
         .with_toy(crate::toon_choice::TOY, toon)
-        .with_toy(crate::mining::TOY, self.mining.on())
         .with_toy(crate::quests::TOY, self.quests.on())
         .with_playstyles(plays);
         if let Some(sent) = sent {

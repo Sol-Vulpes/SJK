@@ -193,16 +193,18 @@ fn tab_words(tab: Tab) -> &'static str {
         Tab::Medals => "Looking at medals",
         Tab::Achievements => "Looking at achievements",
         // The Saber Lab is a development tab: told as the shaders are.
-        Tab::Shaders | Tab::SaberLab => "Looking at saber shaders",
+        Tab::Shaders | Tab::SaberLab => "Looking at kybers",
         Tab::Toys => "Looking at toys",
+        Tab::LogBook => "Reading their log book",
         Tab::Tags => "Looking at tags",
         Tab::Banners => "Choosing a profile banner",
-        Tab::Nameplates => "Looking at nameplates",
         Tab::Holocrons if crate::terms::renamed() => "Opening echoes",
         Tab::Holocrons => "Opening holocrons",
         Tab::Forge => "In the Forge",
         Tab::Cards => "Looking at cards",
         Tab::History => "Looking at their history",
+        Tab::Inventory => "Looking at their inventory",
+        Tab::Hall => "Looking at their collection",
     }
 }
 

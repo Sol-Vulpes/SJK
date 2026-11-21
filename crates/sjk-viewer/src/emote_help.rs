@@ -76,7 +76,7 @@ const PARAGRAPHS: [&str; 3] = [
      group (your emotes, Sync emote, Stop emote), then hold the wheel key (Q by default), \
      move towards one and let go.",
     "Others see your emotes with the SJK identity on (cl_identity 1). Moving ends most \
-     emotes. Their music: Settings > Sound > Emotes.",
+     emotes. Their music, and hiding or muting emotes: Settings > Sound > Emotes.",
 ];
 
 /// What the player chose on the card.
@@ -227,7 +227,7 @@ impl Card {
             format_args!("EMOTES"),
             frame.rect(TEXT_X, top + 30.0, TEXT_WIDTH, 30.0),
             22.0 * s,
-            color::GOLD_BRIGHT,
+            color::gold_bright(),
             FontWeight::Semibold,
             TextAlign::Start,
         );
@@ -237,7 +237,7 @@ impl Card {
             format_args!("How emotes work"),
             frame.rect(TEXT_X, top + 66.0, TEXT_WIDTH, 48.0),
             36.0 * s,
-            color::TEXT,
+            color::text(),
             FontWeight::Semibold,
             TextAlign::Start,
         );
@@ -250,7 +250,7 @@ impl Card {
                     format_args!("{command}"),
                     frame.rect(TEXT_X, y, COMMAND_WIDTH, LINE),
                     17.0 * s,
-                    color::GOLD_BRIGHT,
+                    color::gold_bright(),
                     FontWeight::Regular,
                     TextAlign::Start,
                 );
@@ -266,7 +266,11 @@ impl Card {
                 format_args!("{}", line.words),
                 frame.rect(x, y, width, LINE),
                 18.0 * s,
-                if line.wide { color::MUTED } else { color::TEXT },
+                if line.wide {
+                    color::muted()
+                } else {
+                    color::text()
+                },
                 FontWeight::Regular,
                 TextAlign::Start,
             );

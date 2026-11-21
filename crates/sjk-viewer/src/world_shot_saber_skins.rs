@@ -605,7 +605,7 @@ fn duel6_orbits() {
     });
 }
 
-/// Sol's DOOM (13/11/2026, a Unique blade): an upright blade up close, its black heart,
+/// Sol's DOOM (13/11/2026, a Secret blade): an upright blade up close, its black heart,
 /// smoke, lightning and skulls at eight times over a few heartbeats and thunder strikes
 /// (`duel6-doom-blade`).
 #[test]

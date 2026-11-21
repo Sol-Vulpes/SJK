@@ -97,16 +97,6 @@ fn headline(
     if progress.len() > 4 {
         line.push_str(&format!("   ·   {} more sets", progress.len() - 4));
     }
-    if stacks.is_empty() {
-        let open = crate::terms::say(
-            "Open a holocron on the Holocrons tab: each holds a card and credits.",
-        );
-        line = if line.is_empty() {
-            open.into_owned()
-        } else {
-            format!("{line}.   {open}")
-        };
-    }
     let total = cards::total(stacks);
     let of: usize = progress.iter().map(|set| set.of).sum();
     let found: usize = progress.iter().map(|set| set.found).sum();
@@ -133,6 +123,13 @@ impl Panel {
         let progress = binder::progress(&all, &faces);
         let (headline, line) = headline(inputs, stacks.as_deref(), &progress);
         self.lead(frame, &headline, &line);
+        if stacks.as_deref().is_some_and(<[Stack]>::is_empty) {
+            // Nothing held yet: how cards come, and the way to the first.
+            self.watch_new(None);
+            self.cards_empty(frame, inputs);
+            return;
+        }
+        self.kind_new_count(frame, &headline, crate::collection_seen::Kind::Card);
         let stacks = stacks.unwrap_or_default();
         let can_reveal = inputs.snapshot.is_some_and(crate::economy::may_act);
         self.revealable = if can_reveal {
@@ -150,13 +147,23 @@ impl Panel {
         );
         self.cards_shown = self.card_tiles.len();
         self.card = self.card.min(self.cards_shown.saturating_sub(1));
+        let chosen = self
+            .card_tiles
+            .get(self.card)
+            .and_then(|tile| tile.best())
+            .and_then(|stack| stack.card.clone());
+        self.watch_new(
+            chosen
+                .as_deref()
+                .map(|id| (crate::collection_seen::Kind::Card, id)),
+        );
         if all.is_empty() {
             // A dark outline where the first card will lie.
             let _ = self.ui.draw_list_mut().push(DrawCommand::Border {
                 rect: frame.rect(LEFT_X, GRID_TOP, CARD_WIDTH, CARD_WIDTH * look::ASPECT),
                 radius: CARD_WIDTH * 0.07 * frame.s,
                 width: 1.5 * frame.s,
-                color: color::alpha(color::HOLO, 0.22),
+                color: color::alpha(color::holo(), 0.22),
             });
             return;
         }
@@ -193,7 +200,7 @@ impl Panel {
                 format_args!("No card matches these filters."),
                 frame.rect(LEFT_X, GRID_TOP + 10.0, 900.0, 24.0),
                 16.0 * frame.s,
-                color::QUIET,
+                color::quiet(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -204,6 +211,48 @@ impl Panel {
             self.card_up_close(frame, chosen, &faces, &inputs.holdings, seconds);
         }
         self.card_tiles = tiles;
+    }
+
+    /// The Cards tab while the player holds no card (15/11/2026, the ideas page's
+    /// "Empty states"): three card outlines, how cards come, and Open holocrons while some
+    /// wait, else Find a server.
+    fn cards_empty(&mut self, frame: &Frame, inputs: &Inputs<'_>) {
+        let waiting: u32 = me(inputs).map_or(0, |me| {
+            crate::holocrons::counts_of(&me.holocron_counts)
+                .iter()
+                .sum()
+        });
+        let (line, label, action) = if waiting > 0 {
+            (
+                "Cards come out of Holocrons. Every Holocron you open may hold one, in Normal, \
+                 Holo or Solar. The SJK Alpha set has a card for every player who helped build \
+                 SJK.",
+                format!(
+                    "Open Holocrons  \u{b7}  {} waiting  (Enter)",
+                    crate::cards::grouped(u64::from(waiting))
+                ),
+                super::view::EmptyAction::Holocrons,
+            )
+        } else {
+            (
+                "Cards come out of Holocrons, and Holocrons drop while you play on SJK servers.",
+                "Find a server  (Enter)".to_owned(),
+                super::view::EmptyAction::Servers,
+            )
+        };
+        self.empty_action = Some(action);
+        let label = crate::terms::say_owned(label);
+        super::view::empty_state(
+            &mut self.ui,
+            frame,
+            [LEFT_X, GRID_TOP, super::view::RIGHT_X - LEFT_X, 560.0],
+            super::view::Ghosts::Cards,
+            (&crate::terms::say("No cards yet"), &crate::terms::say(line)),
+            Some(super::view::EmptyButton {
+                label: &label,
+                token: super::view::EMPTY_ACTION_TOKEN,
+            }),
+        );
     }
 
     /// The wheel over the Cards tab: a line a notch, the chosen tile kept in view.
@@ -237,9 +286,9 @@ impl Panel {
                     CARD_SHOW_BASE + index as u16,
                     show.name().to_owned(),
                     if *show == Show::Owned {
-                        color::GOLD
+                        color::gold()
                     } else {
-                        color::HOLO
+                        color::holo()
                     },
                     filter.show == *show,
                     [56.0, 80.0, 90.0][index],
@@ -252,14 +301,14 @@ impl Panel {
                 "Rarity: {}",
                 filter.rarity.map_or("Any", |rarity| rarity.name)
             ),
-            filter.rarity.map_or(color::HOLO, |rarity| rarity.colour),
+            filter.rarity.map_or(color::holo(), |rarity| rarity.colour),
             filter.rarity.is_some(),
             158.0,
         ));
         chips.push((
             CARD_KIND_TOKEN,
             format!("Kind: {}", filter.kind.map_or("Any", |kind| kind.name())),
-            color::HOLO,
+            color::holo(),
             filter.kind.is_some(),
             172.0,
         ));
@@ -270,9 +319,9 @@ impl Panel {
                 filter.finish.map_or("Any", |finish| finish.name)
             ),
             if filter.finish.is_some_and(|finish| finish.index == 2) {
-                color::GOLD_BRIGHT
+                color::gold_bright()
             } else {
-                color::HOLO
+                color::holo()
             },
             filter.finish.is_some(),
             128.0,
@@ -303,7 +352,7 @@ impl Panel {
                 format_args!("{label}"),
                 frame.rect(left, FILTER_Y + 4.0, width, FILTER_HEIGHT - 8.0),
                 14.0 * s,
-                if lit { color::TEXT } else { color::MUTED },
+                if lit { color::text() } else { color::muted() },
                 FontWeight::Semibold,
                 TextAlign::Center,
             );
@@ -317,9 +366,9 @@ impl Panel {
             frame.rect(left, FILTER_Y + 4.0, GRID_RIGHT - left, FILTER_HEIGHT - 8.0),
             15.0 * s,
             if filter.active() {
-                color::TEXT
+                color::text()
             } else {
-                color::QUIET
+                color::quiet()
             },
             FontWeight::Regular,
             TextAlign::End,
@@ -337,14 +386,14 @@ impl Panel {
         let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
             rect: frame.rect(x, GRID_TOP, 4.0, height),
             radius: 2.0 * s,
-            color: color::alpha(color::HOLO, 0.14),
+            color: color::alpha(color::holo(), 0.14),
         });
         let thumb = height * LINES as f32 / lines as f32;
         let top = GRID_TOP + (height - thumb) * first as f32 / (lines - LINES) as f32;
         let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
             rect: frame.rect(x, top, 4.0, thumb),
             radius: 2.0 * s,
-            color: color::GOLD,
+            color: color::gold(),
         });
         // Where the window stands, under the grid's right end: "Rows 4-6 of 9".
         text(
@@ -353,7 +402,7 @@ impl Panel {
             format_args!("Rows {}-{} of {lines}", first + 1, first + LINES),
             frame.rect(GRID_RIGHT - ROWS_WIDTH, REVEAL_Y + 8.0, ROWS_WIDTH, 24.0),
             15.0 * s,
-            color::QUIET,
+            color::quiet(),
             FontWeight::Regular,
             TextAlign::End,
         );
@@ -426,9 +475,9 @@ impl Panel {
             ),
             16.0 * frame.s,
             if outcome.message.is_empty() {
-                color::GOLD_BRIGHT
+                color::gold_bright()
             } else {
-                color::EMBER
+                color::ember()
             },
             FontWeight::Regular,
             TextAlign::Start,
@@ -451,12 +500,33 @@ impl Panel {
         let chosen = index == self.card;
         let token = CARD_BASE + index as u16;
         let height = CARD_WIDTH * look::ASPECT;
+        let flash = tile
+            .best()
+            .and_then(|stack| stack.card.as_deref())
+            .map_or(0.0, |id| {
+                self.first_look(crate::collection_seen::Kind::Card, id)
+            });
+        // The tier's frame round the card, one look everywhere (15/11/2026), gold round the
+        // one chosen.
+        crate::menu::sjk::kit::tier_frame(
+            &mut self.ui,
+            frame,
+            [x - 4.0, y - 4.0, CARD_WIDTH + 8.0, height + 8.0],
+            crate::menu::sjk::kit::card_tier(tile.rarity.index),
+            crate::menu::sjk::kit::TierSize::Tile,
+            crate::menu::sjk::kit::TierLook {
+                chosen,
+                dim: !tile.owned(),
+                flash,
+                ..crate::menu::sjk::kit::TierLook::at(seconds)
+            },
+        );
         if chosen {
             let _ = self.ui.draw_list_mut().push(DrawCommand::Border {
-                rect: frame.rect(x - 5.0, y - 5.0, CARD_WIDTH + 10.0, height + 10.0),
-                radius: (CARD_WIDTH * 0.07 + 5.0) * s,
+                rect: frame.rect(x - 8.0, y - 8.0, CARD_WIDTH + 16.0, height + 16.0),
+                radius: (CARD_WIDTH * 0.07 + 8.0) * s,
                 width: 2.0 * s,
-                color: color::GOLD_BRIGHT,
+                color: color::gold_bright(),
             });
         }
         let tilt = self.card_tilt(frame, [x, y, CARD_WIDTH], index + 1, seconds);
@@ -487,7 +557,7 @@ impl Panel {
                 let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
                     rect,
                     radius: 12.5 * s,
-                    color: color::alpha(color::SPACE, 0.94),
+                    color: color::alpha(color::space(), 0.94),
                 });
                 let _ = self.ui.draw_list_mut().push(DrawCommand::Border {
                     rect,
@@ -507,6 +577,12 @@ impl Panel {
                 );
             }
         }
+        // New: a sticker over the picture's foot (`crate::collection_seen`).
+        if let Some(id) = tile.best().and_then(|stack| stack.card.as_deref())
+            && self.is_new(crate::collection_seen::Kind::Card, id)
+        {
+            let _ = super::marks_view::new_sticker(&mut self.ui, frame, [x + 6.0, y + 100.0], 20.0);
+        }
         let count = tile.count();
         if count > 1 {
             // The count on a pill over the tile's top right corner.
@@ -517,14 +593,14 @@ impl Panel {
             let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
                 rect,
                 radius: 11.0 * s,
-                color: color::alpha(color::SPACE, 0.94),
+                color: color::alpha(color::space(), 0.94),
             });
             let _ = self.ui.draw_list_mut().push(DrawCommand::Border {
                 rect,
                 radius: 11.0 * s,
                 width: 1.2 * s,
                 color: if solar {
-                    color::GOLD_BRIGHT
+                    color::gold_bright()
                 } else {
                     color::alpha(tile.tone(faces).colour, 0.9)
                 },
@@ -536,9 +612,9 @@ impl Panel {
                 frame.rect(x + CARD_WIDTH - width + 6.0, y - 2.0, width, 18.0),
                 14.0 * s,
                 if solar {
-                    color::GOLD_BRIGHT
+                    color::gold_bright()
                 } else {
-                    color::TEXT
+                    color::text()
                 },
                 FontWeight::Semibold,
                 TextAlign::Center,
@@ -570,6 +646,11 @@ impl Panel {
             0,
             seconds,
         );
+        // A first look turns the card over to face the player.
+        let turn = tile
+            .best()
+            .and_then(|stack| stack.card.as_deref())
+            .map_or(1.0, |id| self.first_turn(id));
         let shown = tile.in_finish(self.card_look_for());
         let finish = shown.map_or(&FINISHES[0], |stack| stack.finish);
         let edition = shown.map_or("", |stack| stack.edition.as_str());
@@ -588,7 +669,7 @@ impl Panel {
             },
             seconds,
             1.0,
-            1.0,
+            turn,
         );
         // A click on it looks at it closely.
         self.ui.hit_region(
@@ -630,9 +711,9 @@ impl Panel {
                 frame.rect(SHOWCASE_X, y, SHOWCASE_WIDTH, 26.0),
                 18.0 * s,
                 if tile.owned() {
-                    color::TEXT
+                    color::text()
                 } else {
-                    color::MUTED
+                    color::muted()
                 },
                 FontWeight::Regular,
                 TextAlign::Center,
@@ -645,7 +726,7 @@ impl Panel {
             format_args!("{}", words.about),
             frame.rect(SHOWCASE_X, y, SHOWCASE_WIDTH, 24.0),
             16.0 * s,
-            color::QUIET,
+            color::quiet(),
             FontWeight::Regular,
             TextAlign::Center,
         );
@@ -665,7 +746,7 @@ impl Panel {
             72,
             if blade.is_some() { 1 } else { words.lines },
             15.0,
-            color::QUIET,
+            color::quiet(),
         );
         if let Some(skin) = blade {
             // A shader of the trade the player lacks is crafted in the Forge.
@@ -730,7 +811,7 @@ impl Panel {
                 rect,
                 radius: height * 0.5 * s,
                 color: color::alpha(
-                    if active { color::GOLD } else { color::HOLO },
+                    if active { color::gold() } else { color::holo() },
                     if active {
                         0.16
                     } else if hovered {
@@ -760,9 +841,9 @@ impl Panel {
                 radius: height * 0.5 * s,
                 width: if active { 1.6 } else { 1.0 } * s,
                 color: if active {
-                    color::GOLD_BRIGHT
+                    color::gold_bright()
                 } else {
-                    color::alpha(color::HOLO, if has { 0.35 } else { 0.12 })
+                    color::alpha(color::holo(), if has { 0.35 } else { 0.12 })
                 },
             });
             let label = if has {
@@ -777,11 +858,11 @@ impl Panel {
                 frame.rect(left, y + (height - 22.0) * 0.5, chip, 22.0),
                 16.0 * s,
                 if active {
-                    color::GOLD_BRIGHT
+                    color::gold_bright()
                 } else if has {
-                    color::TEXT
+                    color::text()
                 } else {
-                    color::QUIET
+                    color::quiet()
                 },
                 FontWeight::Semibold,
                 TextAlign::Center,
@@ -815,7 +896,7 @@ impl Panel {
         let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
             rect: window,
             radius: 0.0,
-            color: color::alpha(color::SPACE, 0.97),
+            color: color::alpha(color::space(), 0.97),
         });
         self.ui.hit_region(CARD_INSPECT_TOKEN, window);
         let height = INSPECT_WIDTH * look::ASPECT;
@@ -849,7 +930,7 @@ impl Panel {
             format_args!("Card {} of {}", self.card + 1, self.cards_shown),
             frame.rect(x, y, width, 24.0),
             16.0 * s,
-            color::QUIET,
+            color::quiet(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -875,9 +956,9 @@ impl Panel {
             frame.rect(x, y, width, 28.0),
             20.0 * s,
             if tile.owned() {
-                color::TEXT
+                color::text()
             } else {
-                color::MUTED
+                color::muted()
             },
             FontWeight::Regular,
             TextAlign::Start,
@@ -893,7 +974,7 @@ impl Panel {
             format_args!("{}", words.about),
             frame.rect(x, y, width, 26.0),
             18.0 * s,
-            color::QUIET,
+            color::quiet(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -905,7 +986,7 @@ impl Panel {
             [x, y, width],
             (62, 4),
             17.0,
-            color::QUIET,
+            color::quiet(),
             TextAlign::Start,
         );
     }
@@ -928,9 +1009,9 @@ struct CardWords {
 fn card_words(tile: &Tile, faces: &cards::faces::Faces) -> CardWords {
     let face = shown_face(tile, faces);
     let colour = if !tile.owned() {
-        color::MUTED
+        color::muted()
     } else if tile.finish().index == 2 {
-        color::GOLD_BRIGHT
+        color::gold_bright()
     } else {
         tile.tone(faces).colour
     };
@@ -1005,10 +1086,8 @@ fn reveal_words(outcome: &sjk_identity::RevealOutcome) -> String {
         .iter()
         .filter_map(|revealed| revealed.unlock.as_ref())
         .map(|unlock| match unlock.name.trim() {
-            "" => crate::unlockables::find(&unlock.id).map_or_else(
-                || "new saber shader".to_owned(),
-                |known| known.name.to_owned(),
-            ),
+            "" => crate::unlockables::find(&unlock.id)
+                .map_or_else(|| "new kyber".to_owned(), |known| known.name.to_owned()),
             name => name.to_owned(),
         })
         .collect();
@@ -1314,9 +1393,11 @@ mod tests {
             let frame = Frame::new(viewport);
             let row = frame.rect(0.0, 0.0, 1_920.0, crate::profile_hub::ROW_BOTTOM);
             assert!(!card.overlaps(row), "{viewport:?}: {card:?} under {row:?}");
-            let forge = crate::profile_hub::TOKEN + Tab::Forge.index() as u16;
-            let forge = panel.ui.rect_for(forge).expect("the Forge tab");
-            assert!(forge.bottom() <= row.bottom() + 0.01, "{viewport:?}");
+            let home = panel
+                .ui
+                .rect_for(crate::profile_hub::HALL_TOKEN)
+                .expect("the breadcrumb");
+            assert!(home.bottom() <= row.bottom() + 0.01, "{viewport:?}");
         }
     }
 

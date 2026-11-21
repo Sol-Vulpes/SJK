@@ -90,7 +90,7 @@ impl CreateGameMenu {
             format_args!("{}", self.status),
             frame.rect(ROWS_X, KEYS_Y, 760.0, 24.0),
             16.0 * s,
-            color::MUTED,
+            color::muted(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -135,7 +135,7 @@ impl CreateGameMenu {
             let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
                 rect: frame.rect(ROWS_X, top, ROWS_WIDTH, LINE),
                 radius: 10.0 * frame.s,
-                color: color::alpha(color::HOLO, 0.05),
+                color: color::alpha(color::holo(), 0.05),
             });
         }
         let mode = MODES[self.draft.mode];
@@ -153,7 +153,7 @@ impl CreateGameMenu {
             if focused {
                 Color::new(1.0, 1.0, 1.0, 1.0)
             } else {
-                color::alpha(color::TEXT, 0.88)
+                color::alpha(color::text(), 0.88)
             },
             FontWeight::Regular,
             TextAlign::Start,
@@ -285,7 +285,7 @@ impl CreateGameMenu {
                         24.0,
                     ),
                     17.0 * frame.s,
-                    color::MUTED,
+                    color::muted(),
                     FontWeight::Regular,
                     TextAlign::End,
                 );
@@ -325,7 +325,7 @@ impl CreateGameMenu {
             format_args!("{title}"),
             frame.rect(DETAIL_X, NAME_TOP, DETAIL_WIDTH, 40.0),
             32.0 * s,
-            color::TEXT,
+            color::text(),
             FontWeight::Semibold,
             TextAlign::Start,
         );
@@ -376,7 +376,7 @@ impl CreateGameMenu {
                 format_args!("{label}"),
                 frame.rect(left, top, STAT_WIDTH - 16.0, 20.0),
                 14.0 * s,
-                color::MUTED,
+                color::muted(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -386,7 +386,7 @@ impl CreateGameMenu {
                 format_args!("{value}"),
                 frame.rect(left, top + 20.0, STAT_WIDTH - 16.0, 30.0),
                 22.0 * s,
-                color::TEXT,
+                color::text(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -402,7 +402,7 @@ impl CreateGameMenu {
             format_args!("{about}"),
             frame.rect(DETAIL_X, ABOUT_Y, DETAIL_WIDTH, 24.0),
             16.0 * s,
-            color::MUTED,
+            color::muted(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -473,7 +473,7 @@ pub(super) fn draw_picture(
     let area = frame.rect(x, y, width, height);
     let _ = ui.draw_list_mut().push(DrawCommand::SolidRect {
         rect: area,
-        color: color::alpha(color::SPACE, 0.7),
+        color: color::alpha(color::space(), 0.7),
     });
     match preview {
         Preview::Image => {
@@ -490,7 +490,7 @@ pub(super) fn draw_picture(
             format_args!("No picture of this map"),
             frame.rect(x, y, width, height - 40.0),
             16.0 * s,
-            color::QUIET,
+            color::quiet(),
             FontWeight::Regular,
             TextAlign::Center,
         ),
@@ -499,14 +499,14 @@ pub(super) fn draw_picture(
     super::sjk::fade(
         ui,
         frame.rect(x, y + height * 0.5, width, height * 0.5),
-        color::alpha(color::SPACE, 0.0),
-        color::alpha(color::SPACE, 0.85),
+        color::alpha(color::space(), 0.0),
+        color::alpha(color::space(), 0.85),
     );
     let _ = ui.draw_list_mut().push(DrawCommand::Border {
         rect: area,
         radius: 0.0,
         width: s.max(1.0),
-        color: color::alpha(color::HOLO, 0.25),
+        color: color::alpha(color::holo(), 0.25),
     });
     text(
         ui,
@@ -514,7 +514,7 @@ pub(super) fn draw_picture(
         format_args!("{map}"),
         frame.rect(x + 18.0, y + height - 46.0, width - 36.0, 36.0),
         24.0 * s,
-        color::TEXT,
+        color::text(),
         FontWeight::Semibold,
         TextAlign::Start,
     );

@@ -27,7 +27,7 @@ pub(crate) const ENTRIES: [Entry; 10] = [
     },
     Entry {
         label: "Collection",
-        hint: "Medals, achievements, shaders, toys, holocrons and the Forge",
+        hint: "Medals, achievements, kybers, toys, holocrons and the Forge",
     },
     Entry {
         label: "Identity",

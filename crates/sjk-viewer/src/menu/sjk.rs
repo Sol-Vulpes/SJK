@@ -1,6 +1,6 @@
 //! The SJK UI (`ui_menuStyle sjk`): SJK's own menus, drawn over the live map in
 //! SJK's own type, as SJK's site looks (`site/assets/style.css`). It keeps the
-//! feeling of retail's menus (gold for what you choose, holo blue line-work, the
+//! feeling of retail's menus (gold for what you choose, thin line-work, the
 //! turning ring round the emblem) and drops their window frames and boxes:
 //! screens are laid out on alignment, thin lines and dark fades at the screen's
 //! edges. Design: `docs/sjk-ui.md`.
@@ -26,6 +26,8 @@ pub(crate) mod kit;
 pub(crate) mod loading;
 pub(crate) mod recent;
 pub(crate) mod settings;
+pub(crate) mod theme;
+pub(crate) mod tier_frame;
 
 use super::{ClientMenu, MenuAction};
 use crate::console::ViewerConsole;
@@ -428,29 +430,75 @@ impl ClientMenu {
     }
 }
 
-/// The SJK UI's colours, as on SJK's site. They are display values, like all
-/// 2D colours (`crate::ui_target`).
+/// The SJK UI's colour tokens, display values like all 2D colours (`crate::ui_target`).
+/// The names are the tokens' roles (the ground, the line-work, ...). The themed ones are
+/// functions: they read the palette of the theme in use ([`super::theme`], `ui_theme`:
+/// the sun's warm colours by default, Sol's request of 17/11/2026, the navy and holo
+/// blue of before, or a custom hue), which can change between two frames. The team
+/// colours and the trusted green are constants: their meaning never follows the theme.
+///
+/// The text colours keep their contrast on the ground and over acrylic glass in front of
+/// the brightest scene in every theme (`theme::tests::every_palette_keeps_its_contrast`).
 pub(crate) mod color {
+    use super::theme::{LIVE, Token};
     use sjk_ui::Color;
 
-    /// The ground: deep space navy, never pure black.
-    pub(crate) const SPACE: Color = Color::new(0.024, 0.039, 0.078, 1.0);
-    /// Line-work: rules, ticks, outlines.
-    pub(crate) const HOLO: Color = Color::new(0.659, 0.812, 1.0, 1.0);
-    /// What you choose: the selection, the one main action of a screen.
-    pub(crate) const GOLD: Color = Color::new(0.91, 0.722, 0.29, 1.0);
+    /// The ground: a deep ember brown in the warm theme, never pure black. Fades,
+    /// scrims and the tint of acrylic glass ([`acrylic`]).
+    #[inline]
+    pub(crate) fn space() -> Color {
+        LIVE.get(Token::Space)
+    }
+    /// Dark glass: a card's, a tile's or a panel's fill, a step lighter than the ground.
+    #[inline]
+    pub(crate) fn glass() -> Color {
+        LIVE.get(Token::Glass)
+    }
+    /// Dark glass lit: the chosen or hovered tile's fill.
+    #[inline]
+    pub(crate) fn glass_lit() -> Color {
+        LIVE.get(Token::GlassLit)
+    }
+    /// Line-work: rules, ticks, outlines, the ring, in the sun's amber in the warm
+    /// theme. Never text that matters.
+    #[inline]
+    pub(crate) fn holo() -> Color {
+        LIVE.get(Token::Holo)
+    }
+    /// What you choose: the selection, the one main action of a screen, in the sun's
+    /// gold in the warm theme.
+    #[inline]
+    pub(crate) fn gold() -> Color {
+        LIVE.get(Token::Gold)
+    }
     /// Gold lit: the chosen item's text and marks.
-    pub(crate) const GOLD_BRIGHT: Color = Color::new(1.0, 0.851, 0.478, 1.0);
+    #[inline]
+    pub(crate) fn gold_bright() -> Color {
+        LIVE.get(Token::GoldBright)
+    }
+    /// Text: a warm white in the warm theme.
+    #[inline]
+    pub(crate) fn text() -> Color {
+        LIVE.get(Token::Text)
+    }
+    /// Secondary text.
+    #[inline]
+    pub(crate) fn muted() -> Color {
+        LIVE.get(Token::Muted)
+    }
+    /// Quieter still: an item that ends the session.
+    #[inline]
+    pub(crate) fn quiet() -> Color {
+        LIVE.get(Token::Quiet)
+    }
+    /// Only for leaving (Quit) and for what went wrong: the sun's red rim in the warm
+    /// theme, apart from the line-work. A custom theme keeps the warm one's.
+    #[inline]
+    pub(crate) fn ember() -> Color {
+        LIVE.get(Token::Ember)
+    }
     /// A trusted player's green (the trust mark's, `ui_renderer::trust_texture`).
     pub(crate) const TRUSTED: Color = Color::new(0.42, 0.86, 0.45, 1.0);
-    /// Text.
-    pub(crate) const TEXT: Color = Color::new(0.886, 0.914, 0.965, 1.0);
-    /// Secondary text.
-    pub(crate) const MUTED: Color = Color::new(0.663, 0.71, 0.796, 1.0);
-    /// Quieter still: an item that ends the session.
-    pub(crate) const QUIET: Color = Color::new(0.53, 0.573, 0.675, 1.0);
-    /// Only for leaving: Quit.
-    pub(crate) const EMBER: Color = Color::new(1.0, 0.478, 0.239, 1.0);
     /// The red team, muted: the SJK scoreboard's team rules and names, the CTF HUD's
     /// team boxes.
     pub(crate) const RED_TEAM: Color = Color::new(0.88, 0.38, 0.38, 1.0);
@@ -460,6 +508,32 @@ pub(crate) mod color {
     /// `color` at `alpha`.
     pub(crate) const fn alpha(color: Color, alpha: f32) -> Color {
         Color::new(color.r, color.g, color.b, alpha)
+    }
+
+    /// How much of the ground each kind of acrylic glass lays over the blurred scene
+    /// behind it ([`sjk_ui::DrawCommand::Backdrop`], [`tint`]): the status bars the
+    /// clearest (Sol: "really much more transparency"), a pop-up card the most covered,
+    /// so it still reads as the one thing on screen.
+    pub(crate) mod acrylic {
+        /// The status bars docked to the screen's edges.
+        pub(crate) const BAR: f32 = 0.34;
+        /// The notification banners.
+        pub(crate) const BANNER: f32 = 0.46;
+        /// Panels over play: the scoreboard's band.
+        pub(crate) const PANEL: f32 = 0.6;
+        /// A pop-up card, a menu or a hover card over a screen.
+        pub(crate) const CARD: f32 = 0.66;
+        /// A tile or a row standing on a page's ground (the Collection's walls, lists and
+        /// hall), as dark as the plain fill it replaced over a dark scene.
+        pub(crate) const TILE: f32 = 0.62;
+    }
+
+    /// The tint of acrylic glass laying `amount` of the ground over the scene
+    /// ([`acrylic`]), in the theme in use. The palette's contrast over each kind is
+    /// tested in [`super::theme`].
+    #[inline]
+    pub(crate) fn tint(amount: f32) -> Color {
+        alpha(space(), amount)
     }
 }
 
@@ -559,7 +633,7 @@ pub(crate) fn key_hint(
             rect: cap,
             radius: 5.0 * s,
             width: s.max(1.0),
-            color: color::alpha(color::HOLO, 0.45),
+            color: color::alpha(color::holo(), 0.45),
         });
         text(
             canvas,
@@ -567,7 +641,7 @@ pub(crate) fn key_hint(
             format_args!("{key}"),
             cap,
             17.0 * s,
-            color::TEXT,
+            color::text(),
             FontWeight::Semibold,
             TextAlign::Center,
         );
@@ -580,7 +654,7 @@ pub(crate) fn key_hint(
         format_args!("{action}"),
         Rect::new(x + 4.0 * s, y, action_width, height),
         15.0 * s,
-        color::MUTED,
+        color::muted(),
         FontWeight::Regular,
         TextAlign::Start,
     );
@@ -635,7 +709,7 @@ pub(crate) fn top_bar(
         format_args!("{title}"),
         frame.rect(title_x, BAR_Y - 30.0, 600.0, 60.0),
         48.0 * s,
-        color::TEXT,
+        color::text(),
         FontWeight::Semibold,
         TextAlign::Start,
     );
@@ -816,7 +890,7 @@ mod tests {
             format_args!("Play"),
             Rect::new(0.0, 100.0, 200.0, 40.0),
             20.0,
-            color::TEXT,
+            color::text(),
             FontWeight::Regular,
             TextAlign::Start,
         );

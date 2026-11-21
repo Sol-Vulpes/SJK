@@ -343,6 +343,14 @@ fn generated_color(input: VertexOutput) -> vec4<f32> {
     if alpha_kind == 8 { color = vec4(color.rgb, 1.0 - input.entity_color.a); }
     if alpha_kind == 10 { color = vec4(color.rgb, input.lighting_diffuse.a); }
     if alpha_kind == 11 { color = vec4(color.rgb, input.color.a); }
+    // `alphaGen dot` and `oneMinusDot`, which rd-vanilla parses but never computes: how
+    // squarely the surface faces the viewer, per pixel, either side alike (a `cull none`
+    // card), and one minus that, bright at the rim (`world_stage::alpha_generator_code`).
+    if alpha_kind == 12 || alpha_kind == 13 {
+        let facing = abs(dot(normalize(input.world_normal),
+            normalize(camera.camera_position - input.world_position)));
+        color = vec4(color.rgb, select(facing, 1.0 - facing, alpha_kind == 13));
+    }
     // RF_RGB_TINT and RF_FORCE_ENT_ALPHA override the stage generators in
     // rd-vanilla `tr_shade.cpp:1648-1675`; cgame supplies those flags for
     // disabled/respawning pickups.
