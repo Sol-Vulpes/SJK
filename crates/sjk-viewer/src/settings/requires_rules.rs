@@ -3,6 +3,12 @@
 
 /// Every dependency the rows show.
 const RULES: &[Rule] = &[
+    // The classic menus' look is read only to draw the classic menus
+    // (menu/style.rs, `sync_menu_style`).
+    rule(
+        crate::menu::classic::own_look::CVAR,
+        &[is(crate::menu::style::CVAR, "classic")],
+    ),
     // Nameplates: `update()` clears the plates and returns while the switch is off
     // (hud/nameplate.rs), so none of their options is read.
     rule("cg_nameplateRange", &[on("cg_nameplate")]),

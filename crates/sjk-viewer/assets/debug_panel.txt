@@ -24,6 +24,21 @@
 
 # ---- Console & chat ----
 
+[classic-own-look]
+area: Menus & settings
+title: Classic menus' own look: no retail art, the theme's colours (ui_classicLook sjk)
+change: Settings > Interface > Classic menus' look: Retail (default) or SJK.
+change: SJK draws every classic page without the game's pictures, in the theme's colours.
+test: ui_menuStyle classic, then ui_classicLook sjk: the main page has no Star Wars art.
+test: Text, rules and boxes are sharp at your resolution; nothing is a stretched picture.
+test: Change Theme to Sith, Jedi, Custom: the classic pages follow at once.
+test: Walk Play, Profile (character, saber, Force, cosmetics), Settings, SJK, in-game menu.
+test: Force page: light and dark sides keep their own blue and red; saber swatches too.
+test: Look for a leftover retail blue anywhere and note where (it is one table entry).
+test: ui_classicLook retail: the retail pictures and colours are back, unchanged.
+test: With ui_menuStyle sjk the row is dimmed and says it needs Menu style on Classic.
+note: The layout is still the 4:3 block centred on wide screens; a wide layout is next.
+
 [first-setup-themes]
 area: Menus & settings
 title: First setup opens on the look: Solar, Sith, Jedi and Custom theme tiles

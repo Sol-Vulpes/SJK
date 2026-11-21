@@ -236,6 +236,7 @@ const INTERFACE: &[Section] = &[
         "Menus",
         &[
             "ui_menuStyle",
+            "ui_classicLook",
             "ui_textScale",
             "ui_letterSpacing",
             "ui_gameFont",

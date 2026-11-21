@@ -131,7 +131,11 @@ impl crate::GpuState {
             art::request(vfs);
         }
         self.ui_shapes.install_menu_art(&self.device, &self.queue);
-        let art = self.ui_shapes.menu_art();
+        // The classic menus' own look draws every piece: no retail picture.
+        super::classic::own_look::set(super::classic::own_look::from_cvar(
+            console.text_value(super::classic::own_look::CVAR),
+        ));
+        let art = super::classic::own_look::art(self.ui_shapes.menu_art());
         if let Some(menu) = &mut self.client_menu {
             menu.set_menu_style(style, console);
             menu.set_menu_art(art);

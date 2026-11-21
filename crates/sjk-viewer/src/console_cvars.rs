@@ -299,6 +299,12 @@ pub(super) fn register_daily_cvars(cvars: &mut CvarRegistry) -> Result<(), sjk_s
             "Menu layout: sjk (the SJK UI) or classic (after the original Jedi Academy menus)",
         ),
         CvarDefinition::new(
+            crate::menu::classic::own_look::CVAR,
+            crate::menu::classic::own_look::NAMES[0],
+            archive,
+            "The classic menus' look: retail (the game's own artwork and colours) or sjk (drawn sharp at any size, in the theme's colours)",
+        ),
+        CvarDefinition::new(
             crate::menu::sjk::theme::CVAR,
             crate::menu::sjk::theme::Theme::DEFAULT_NAME,
             archive,

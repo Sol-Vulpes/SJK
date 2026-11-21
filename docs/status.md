@@ -1,3 +1,16 @@
+## Classic menus' own look (21/11/2026)
+
+Sol's request (21/11: rework classic+ so it has our own UI and is neat on 4K), branch
+`personal/classic-own-look`, first step. `ui_classicLook sjk` (default `retail`) draws
+the classic pages with no retail picture (the art set handed to them is empty, so each
+takes its drawn version) and swaps retail's colours for the theme's as a page is
+finished (`menu/classic/own_look.rs`: one table of 30 retail colours and their tokens,
+`DrawList::recolour` in `sjk-ui`). No page's code changed: 420 uses of the retail
+colour constants stay as they are. Checked on the 91 classic snapshots in Solar, Sith
+and Jedi (`SJK_CLASSIC_LOOK=sjk SJK_THEME=sith` on `menu_snapshot`), not yet in the game.
+Not done: the layout is still retail's 640x480 canvas centred on a wide window; a wide
+layout is the next step. Spec: [classic-plus.md](classic-plus.md#the-own-look).
+
 ## Named themes and First setup's look (21/11/2026)
 
 Sol's request (21/11: remake First setup a bit, propose the themes: the current Solar one,
