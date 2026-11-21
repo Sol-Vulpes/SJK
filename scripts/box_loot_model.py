@@ -1,17 +1,11 @@
-"""Make the mystery box's loot of 11/11/2026 (`docs/mystery-boxes.md`, SJK's own): the Ray
-Gun, its bolt and the piles of gold coins.
+"""Make the mystery box's loot of 11/11/2026 (`docs/mystery-boxes.md`, SJK's own): the
+piles of gold coins (the Ray Gun and its bolt were made here too until 20/11/2026, when
+the Ray Gun went with the Prop gun it ran on).
 
-Nothing here comes from another game. The Ray Gun is a simple retro ray gun after Sol's
-ask ("based on the raygun, more simplified"): a steel barrel with a round chamber at the
-back, three red fins round the front, a cone-tipped emitter, a glowing green tube along
-the top and a dark grip. Shapes are made of cylinders, ellipsoids and boxes; the colours
-are drawn from noise. This script writes, into the output folder:
+Nothing here comes from another game. Shapes are made of cylinders, ellipsoids and boxes;
+the colours are drawn from noise. This script writes, into the output folder:
 
 - `box_loot.jpg`: 256x256 swatches: steel, red fins, dark grip, gold, the gold's rim;
-- `box_loot_glow.jpg`: 64x64, the green glow of the tube and the bolt;
-- `raygun.md3`: the gun, about 14 units long, X forward, Y left, Z up (a prop gun's axes,
-  `propgun.rs`), its origin in the grip; two surfaces, the gun and its glowing tube;
-- `raygun_bolt.md3`: the bolt, a stretched glowing drop along +X;
 - `coins_small.md3`, `coins_medium.md3`, `coins_big.md3`: gold coins in a heap of 5, a
   heap of 14 and a heap of 30, about 6, 9 and 12 units across, origin under the middle.
 
@@ -30,7 +24,6 @@ import numpy as np
 from PIL import Image
 
 SHADER = "models/sjk/box_loot"
-GLOW_SHADER = "models/sjk/box_loot_glow"
 ATLAS = 256
 JPEG_QUALITY = 90
 # Swatches, pixels (left, top, right, bottom).
@@ -39,9 +32,6 @@ RED = (128, 0, 256, 64)
 GRIP = (128, 64, 256, 128)
 GOLD = (0, 128, 128, 256)
 RIM = (128, 128, 256, 256)
-# The glow picture is one swatch.
-GLOW = (0, 0, 64, 64)
-GLOW_SIZE = 64
 SEGMENTS = 16
 RINGS = 8
 
@@ -76,13 +66,6 @@ def pictures(output: Path) -> None:
     fill(RIM, (255.0, 214.0, 98.0), 0.2)
     Image.fromarray(np.clip(atlas, 0, 255).astype(np.uint8)).save(
         output / "box_loot.jpg", quality=JPEG_QUALITY
-    )
-    # The glow: bright green, whitest in the middle.
-    y, x = np.mgrid[0:GLOW_SIZE, 0:GLOW_SIZE] / (GLOW_SIZE - 1) - 0.5
-    core = np.clip(1.0 - np.hypot(x, y) * 1.6, 0.0, 1.0)
-    glow = np.stack([60 + 150 * core, 200 + 55 * core, 40 + 120 * core], axis=-1)
-    Image.fromarray(np.clip(glow, 0, 255).astype(np.uint8)).save(
-        output / "box_loot_glow.jpg", quality=JPEG_QUALITY
     )
 
 
@@ -266,39 +249,6 @@ def write_md3(path: Path, name: str, surfaces) -> None:
     path.write_bytes(header + frame + b"".join(blobs))
 
 
-def raygun(output: Path) -> None:
-    gun = Mesh(ATLAS)
-    glow = Mesh(GLOW_SIZE)
-    # The barrel along +X, over the grip.
-    gun.cylinder((-3.0, 0, 2.6), (6.5, 0, 2.6), 1.15, 0.95, STEEL)
-    # The round chamber at the back.
-    gun.ellipsoid((-3.2, 0, 2.6), (2.0, 1.75, 1.75), STEEL)
-    # Three red fins round the front, the biggest at the back.
-    for x, radius in ((3.0, 2.3), (4.3, 1.95), (5.6, 1.6)):
-        gun.cylinder((x - 0.22, 0, 2.6), (x + 0.22, 0, 2.6), radius, radius, RED)
-    # The emitter: a cone, then a small red ring at its tip.
-    gun.cylinder((6.5, 0, 2.6), (8.6, 0, 2.6), 0.95, 0.35, STEEL)
-    gun.cylinder((8.4, 0, 2.6), (8.9, 0, 2.6), 0.55, 0.55, RED)
-    # The grip, raked back, and a trigger guard's block.
-    gun.box((-1.4, 0, -0.4), (1.7, 1.3, 4.6), GRIP, tilt_y=0.32)
-    gun.box((0.4, 0, 0.9), (1.6, 0.5, 0.5), GRIP)
-    # The green tube along the top, glowing (its own surface).
-    glow.cylinder((-2.0, 0, 4.15), (2.8, 0, 4.15), 0.55, 0.55, GLOW)
-    glow.ellipsoid((-2.0, 0, 4.15), (0.55, 0.55, 0.55), GLOW)
-    glow.ellipsoid((2.8, 0, 4.15), (0.55, 0.55, 0.55), GLOW)
-    # The tube's steel mounts.
-    for x in (-1.4, 2.2):
-        gun.box((x, 0, 3.6), (0.5, 0.5, 0.9), STEEL)
-    write_md3(
-        output / "raygun.md3",
-        "raygun",
-        [("raygun", SHADER, gun), ("raygun_glow", GLOW_SHADER, glow)],
-    )
-    bolt = Mesh(GLOW_SIZE)
-    bolt.ellipsoid((0, 0, 0), (5.0, 1.6, 1.6), GLOW)
-    write_md3(output / "raygun_bolt.md3", "raygun_bolt", [("raygun_bolt", GLOW_SHADER, bolt)])
-
-
 def coins(output: Path, name: str, count: int, spread: float, seed: int) -> None:
     """A heap of `count` coins: lying flat in a rough cone, the top ones tilted."""
     rng = np.random.default_rng(seed)
@@ -341,7 +291,6 @@ def main() -> None:
     output = Path(sys.argv[1])
     output.mkdir(parents=True, exist_ok=True)
     pictures(output)
-    raygun(output)
     coins(output, "coins_small", 5, 1.6, 11)
     coins(output, "coins_medium", 14, 3.0, 12)
     coins(output, "coins_big", 30, 4.4, 13)

@@ -164,9 +164,6 @@ const CHOICE_NAMES: &[(&str, &str, &str)] = &[
         "10",
         crate::chat::incoming_color::LABELS[10],
     ),
-    (crate::fishing::CUE_CVAR, "0", "Off"),
-    (crate::fishing::CUE_CVAR, "1", "Sound off"),
-    (crate::fishing::CUE_CVAR, "2", "Always"),
     (crate::chat_sounds::MASTER_CVAR, "0", "Off"),
     (crate::chat_sounds::MASTER_CVAR, "1", "On"),
     (crate::chat_sounds::MASTER_CVAR, "2", "Distinct (EJK)"),
@@ -705,18 +702,6 @@ const HELP: &[(&str, &str)] = &[
         "Loudness of every toy's sounds: 1 as made, 2 twice as loud, 0 silent. Each toy can also be silenced below.",
     ),
     (
-        crate::toy_sounds::Toy::Box.cvar(),
-        "Off: cardboard box sounds are not played on this PC, yours or other players'. The toy still works and is still seen.",
-    ),
-    (
-        crate::toy_sounds::Toy::Order66.cvar(),
-        "Off: Order 66 sounds are not played on this PC, yours or other players'. The toy still works and is still seen.",
-    ),
-    (
-        crate::toy_sounds::Toy::Hax.cvar(),
-        "Off: Hax sounds are not played on this PC, yours or other players'. The toy still works and is still seen.",
-    ),
-    (
         crate::toy_sounds::Toy::Ragdoll.cvar(),
         "Off: Ragdoll sounds are not played on this PC, yours or other players'. The toy still works and is still seen.",
     ),
@@ -737,10 +722,6 @@ const HELP: &[(&str, &str)] = &[
         "Off: mystery boxes open silently on this PC, yours and other players'.",
     ),
     (
-        crate::toy_sounds::Toy::Banana.cvar(),
-        "Off: Banana peel sounds are not played on this PC, yours or other players'. The toy still works and is still seen.",
-    ),
-    (
         crate::toy_sounds::Toy::Tag.cvar(),
         "Off: tags go up without the spray can's sound on this PC, yours and other players'.",
     ),
@@ -757,24 +738,12 @@ const HELP: &[(&str, &str)] = &[
         "A font from this PC for the console, kept to its even grid. What it lacks comes from SJK's fonts.",
     ),
     (
-        crate::toy_sounds::Toy::Fishing.cvar(),
-        "Off: your casts, bites and catches are silent. The toy still works.",
-    ),
-    (
         crate::toy_sounds::Toy::WheelOfDoom.cvar(),
         "Off: every WHEEL OF DOOM spins silently on this PC, yours and other players', quacks included.",
     ),
     (
         crate::toy_sounds::Toy::Quests.cvar(),
         "Off: no chime as you are given a quest, named in one or finish one. Quests still work.",
-    ),
-    (
-        crate::fishing::CUE_CVAR,
-        "A \"!\" over the float and \"Bite! Press Use!\" when a fish bites. Sound off: only while the fishing sounds can't be heard.",
-    ),
-    (
-        crate::toy_sounds::Toy::Mining.cvar(),
-        "Off: your swings, blows and finds are silent. The toy still works.",
     ),
     (
         crate::away_emote::SJK_CVAR,
@@ -1210,20 +1179,8 @@ const HELP: &[(&str, &str)] = &[
         "Draw the Blade Lab skins (Serpent, Comic and the rest) as Creyon's Blade Lab drew them; off uses their skin files.",
     ),
     (
-        crate::hax::TRAP_CVAR,
-        "The Hax toy: a player who hacks you springs a trap; after two seconds you both blow up, as in Order 66.",
-    ),
-    (
-        crate::hax::AWAY_CVAR,
-        "With the Hax trap on: players may hack you while you are away, and blow up with you. Others can see it is set.",
-    ),
-    (
         crate::monitor::SHOW_CVAR,
         "Off: no Monitor toy monitor is drawn, yours or other players', nor their sounds heard. You can still be hit while the toy is on.",
-    ),
-    (
-        crate::banana::SHOW_CVAR,
-        "Off: no Banana peel toy peel is drawn, yours or other players', nor their sounds heard. You can still slip while the toy is on.",
     ),
     (
         crate::tags::SHOW_CVAR,
@@ -1236,10 +1193,6 @@ const HELP: &[(&str, &str)] = &[
     (
         crate::toy_sight::ILLUMINATE,
         "Off: other players' Illuminate holocrons are not drawn on this PC. Yours still is.",
-    ),
-    (
-        crate::toy_sight::CARDBOARD_BOX,
-        "Off: other players' cardboard boxes are not drawn on this PC, and you cannot lift them.",
     ),
     (
         crate::toy_sight::RAGDOLL,
@@ -1738,95 +1691,91 @@ const HELP: &[(&str, &str)] = &[
     ),
     (
         crate::status_bar::CVAR,
-        "A thin bar on the screen's bottom edge: your money, kyber, effects, weapons, toys, time and date. The HUD moves above it.",
+        "A thin bar on the screen's bottom edge: your money, kyber, weapons, toys, match and time. The HUD moves above it.",
     ),
     (
         crate::status_bar::Part::Credits.cvar(),
-        "Shows your credits on the bottom bar.",
+        "Shows your credits on the status bar.",
     ),
     (
         crate::status_bar::Part::Shards.cvar(),
-        "Shows your kyber shards on the bottom bar.",
+        "Shows your kyber shards on the status bar.",
     ),
     (
         crate::status_bar::Part::Crystals.cvar(),
-        "Shows how many dormant kybers you have left to attune on the bottom bar.",
+        "Shows how many dormant kybers you have left to attune on the status bar.",
     ),
     (
         crate::status_bar::Part::Coins.cvar(),
-        "Shows your DOOM coins on the bottom bar, once the hub has said how many.",
+        "Shows your DOOM coins on the status bar, once the hub has said how many.",
     ),
     (
         crate::status_bar::Part::New.cvar(),
-        "Says on the bottom bar when your Collection holds new things: in words for that map, then a gold dot.",
+        "Says on the status bar when your Collection holds new things: in words for that map, then a gold dot.",
     ),
     (
         crate::status_bar::Part::Saber.cvar(),
-        "Shows the kyber on your saber, in its tier's colour, on the bottom bar.",
+        "Shows the kyber on your saber, in its tier's colour, on the status bar.",
     ),
     (
         crate::status_bar::Part::Effects.cvar(),
-        "Shows what is on about you on the bottom bar: blade extras, finisher, Tactical, Do not disturb, away.",
+        "Shows what is on about you on the status bar: blade extras, finisher, Tactical, Do not disturb, away.",
     ),
     (
         crate::status_bar::Part::Weapons.cvar(),
-        "Shows the weapons you hold in the bottom bar's middle, the one in your hand lit, with its ammunition.",
+        "Shows the weapons you hold in the status bar's middle, the one in your hand lit, with its ammunition.",
     ),
     (
         crate::status_bar::Part::Toys.cvar(),
-        "Shows every toy on the bottom bar, its picture lit while it is on.",
+        "Shows every toy on the status bar, its picture lit while it is on.",
     ),
     (
         crate::status_bar::Part::Time.cvar(),
-        "Shows your PC's local time at the bottom bar's right, on the 24-hour clock.",
+        "Shows your PC's local time at the status bar's right, on the 24-hour clock.",
     ),
     (
         crate::status_bar::Part::Date.cvar(),
-        "Shows the date at the bottom bar's right, day first.",
-    ),
-    (
-        crate::status_bar::TOP_CVAR,
-        "A thin bar on the screen's top edge: your Force, score, time left, joins and leaves, server, map, players, ping and FPS.",
+        "Shows the date at the status bar's right, day first.",
     ),
     (
         crate::status_bar::Part::Force.cvar(),
-        "Shows the Force powers you know on the top bar, the selected one lit and one in use marked.",
+        "Shows the Force powers you know on the status bar, the selected one lit and one in use marked.",
     ),
     (
         crate::status_bar::Part::Score.cvar(),
-        "Shows your place and score on the top bar, or the teams' scores in a team game.",
+        "Shows your place and score on the status bar, or the teams' scores in a team game.",
     ),
     (
         crate::status_bar::Part::TimeLeft.cvar(),
-        "Shows the match's time left in the top bar's middle when the server sets a time limit. The HUD's match timer steps aside.",
+        "Shows the match's time left in the status bar's middle when the server sets a time limit. The HUD's match timer steps aside.",
     ),
     (
         crate::status_bar::Part::Feed.cvar(),
-        "Tells on the top bar who joins and leaves the server, for a few seconds each.",
+        "Tells on the status bar who joins and leaves the server, for a few seconds each.",
     ),
     (
         crate::status_bar::Part::Server.cvar(),
-        "Shows the server's name on the top bar.",
+        "Shows the server's name on the status bar.",
     ),
     (
         crate::status_bar::Part::Map.cvar(),
-        "Shows the map on the top bar.",
+        "Shows the map on the status bar.",
     ),
     (
         crate::status_bar::Part::Mode.cvar(),
-        "Shows the game type on the top bar: FFA, Duel, CTF...",
+        "Shows the game type on the status bar: FFA, Duel, CTF...",
     ),
     (
         crate::status_bar::Part::Players.cvar(),
-        "Shows how many players are on the server and how many it holds on the top bar.",
+        "Shows how many players are on the server and how many it holds on the status bar.",
     ),
     (
         crate::status_bar::Part::Ping.cvar(),
-        "Shows your ping on the top bar, green when low, ember when high.",
+        "Shows your ping on the status bar, green when low, ember when high.",
     ),
     (
         crate::status_bar::Part::Fps.cvar(),
-        "Shows your frame rate on the top bar. The FPS readout keeps its frame times under it.",
+        "Shows your frame rate on the status bar. The FPS readout keeps its frame times under it.",
     ),
     (
         crate::hud::movement_keys::CVAR,
@@ -2229,8 +2178,6 @@ mod tests {
             RENDER_LIGHTING,
             RENDER_SHADOWS,
             RENDER_WEATHER,
-            // Rows only a search shows (they live on the Collection's Hax card).
-            HAX_TOY,
         ]
         .into_iter()
         .flatten();

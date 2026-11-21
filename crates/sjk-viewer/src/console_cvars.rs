@@ -679,24 +679,6 @@ pub(super) fn register_daily_cvars(cvars: &mut CvarRegistry) -> Result<(), sjk_s
             "Loudness of the toys' sounds, times the effects volume (SJK)",
         ),
         CvarDefinition::new(
-            crate::toy_sounds::Toy::Box.cvar(),
-            true,
-            archive,
-            "Play cardboard box sounds (SJK)",
-        ),
-        CvarDefinition::new(
-            crate::toy_sounds::Toy::Order66.cvar(),
-            true,
-            archive,
-            "Play Order 66 sounds (SJK)",
-        ),
-        CvarDefinition::new(
-            crate::toy_sounds::Toy::Hax.cvar(),
-            true,
-            archive,
-            "Play Hax sounds (SJK)",
-        ),
-        CvarDefinition::new(
             crate::toy_sounds::Toy::Ragdoll.cvar(),
             true,
             archive,
@@ -718,7 +700,7 @@ pub(super) fn register_daily_cvars(cvars: &mut CvarRegistry) -> Result<(), sjk_s
             crate::toy_sounds::Toy::Monitor.cvar(),
             true,
             archive,
-            "Play Monitor sounds (SJK)",
+            "Play Force Throw sounds (SJK)",
         ),
         CvarDefinition::new(
             crate::toy_sounds::Toy::MysteryBox.cvar(),
@@ -727,34 +709,16 @@ pub(super) fn register_daily_cvars(cvars: &mut CvarRegistry) -> Result<(), sjk_s
             "Play mystery box sounds (SJK)",
         ),
         CvarDefinition::new(
-            crate::toy_sounds::Toy::Banana.cvar(),
-            true,
-            archive,
-            "Play Banana peel sounds (SJK)",
-        ),
-        CvarDefinition::new(
             crate::toy_sounds::Toy::Tag.cvar(),
             true,
             archive,
             "Play the Tag toy's spray sound (SJK)",
         ),
         CvarDefinition::new(
-            crate::toy_sounds::Toy::PropGun.cvar(),
-            true,
-            archive,
-            "Play Prop gun sounds (SJK)",
-        ),
-        CvarDefinition::new(
             crate::toy_sounds::Toy::Master.cvar(),
             true,
             archive,
             "Play the sounds of the Toy Master's hidden toys (SJK)",
-        ),
-        CvarDefinition::new(
-            crate::toy_sounds::Toy::Fishing.cvar(),
-            true,
-            archive,
-            "Play the Fishing toy's sounds (SJK)",
         ),
         CvarDefinition::new(
             crate::toy_sounds::Toy::WheelOfDoom.cvar(),
@@ -767,18 +731,6 @@ pub(super) fn register_daily_cvars(cvars: &mut CvarRegistry) -> Result<(), sjk_s
             true,
             archive,
             "Play the chimes as you are given a quest or finish one (SJK)",
-        ),
-        CvarDefinition::new(
-            crate::fishing::CUE_CVAR,
-            crate::fishing::CUE_DEFAULT,
-            archive,
-            "Show a fish's bite on screen: 0 never, 1 when the fishing sounds can't be heard, 2 always (SJK)",
-        ),
-        CvarDefinition::new(
-            crate::toy_sounds::Toy::Mining.cvar(),
-            true,
-            archive,
-            "Play the Mining toy's sounds (SJK)",
         ),
         CvarDefinition::new(
             crate::held_view::LOOK_CVAR,
@@ -1112,30 +1064,6 @@ pub(super) fn register_daily_cvars(cvars: &mut CvarRegistry) -> Result<(), sjk_s
             "Draw the kybers from Creyon's Blade Lab as the lab drew them",
         ),
         CvarDefinition::new(
-            crate::toy_saved::ORDER66_CVAR,
-            false,
-            archive,
-            "The Order 66 toy is on (toy_order66 switches it; it stays on until turned off)",
-        ),
-        CvarDefinition::new(
-            crate::hax::TRAP_CVAR,
-            false,
-            archive,
-            "Hax trap: a player who hacks you springs it, and you both blow up as in Order 66",
-        ),
-        CvarDefinition::new(
-            crate::hax::AWAY_CVAR,
-            false,
-            archive,
-            "With the Hax trap on, players may hack you while you are away (it shows on your look)",
-        ),
-        CvarDefinition::new(
-            crate::toy_saved::HAX_CVAR,
-            false,
-            archive,
-            "The Hax toy is on (toy_hax switches it; it stays on until turned off)",
-        ),
-        CvarDefinition::new(
             crate::toy_saved::DRONE_CVAR,
             false,
             archive,
@@ -1145,7 +1073,7 @@ pub(super) fn register_daily_cvars(cvars: &mut CvarRegistry) -> Result<(), sjk_s
             crate::toy_saved::MONITOR_CVAR,
             false,
             archive,
-            "The Monitor toy is on: you may throw monitors (monitor_throw, or +monitor_throw held to charge) and be hit by them (toy_monitor switches it)",
+            "The Force Throw toy is on: you may hurl junk (monitor_throw, or +monitor_throw held to charge) and be hit by it (toy_monitor switches it)",
         ),
         CvarDefinition::new(
             crate::toy_saved::BOX_HUNT_CVAR,
@@ -1158,18 +1086,6 @@ pub(super) fn register_daily_cvars(cvars: &mut CvarRegistry) -> Result<(), sjk_s
             false,
             archive,
             "Quests are on: you may be given a quest, such as hugging or kissing two other players within a minute, for an Echo, or be named in one (toy_quests switches it)",
-        ),
-        CvarDefinition::new(
-            crate::toy_saved::BANANA_CVAR,
-            false,
-            archive,
-            "The Banana peel toy is on: you may drop banana peels (banana_drop) and slip on the ones you walk onto (toy_banana switches it)",
-        ),
-        CvarDefinition::new(
-            crate::toy_saved::PROPGUN_CVAR,
-            false,
-            archive,
-            "The Prop gun toy is on: you hold the chosen prop gun instead of your weapon, attack fires it, and others' bolts knock you down (toy_propgun switches it)",
         ),
         // Other players' toys seen (Collection > Toys).
         CvarDefinition::new(
@@ -1197,34 +1113,10 @@ pub(super) fn register_daily_cvars(cvars: &mut CvarRegistry) -> Result<(), sjk_s
             crate::toy_sight::CVARS[3].1,
         ),
         CvarDefinition::new(
-            crate::toy_sight::CVARS[4].0,
-            true,
-            archive,
-            crate::toy_sight::CVARS[4].1,
-        ),
-        CvarDefinition::new(
             crate::monitor::SHOW_CVAR,
             true,
             archive,
-            "Monitors are seen (0: no Monitor toy monitor is drawn, nor its sounds in the world heard, on this PC; SJK)",
-        ),
-        CvarDefinition::new(
-            crate::propgun::SHOW_CVAR,
-            true,
-            archive,
-            "Other players' prop guns are seen (0: their Prop gun toy guns, bolts and sounds are not drawn or heard on this PC; SJK)",
-        ),
-        CvarDefinition::new(
-            crate::propgun::GUN_CVAR,
-            "",
-            archive,
-            "The gun the Prop gun toy holds: the name of a propguns/<name>.gun file (propgun lists them; SJK)",
-        ),
-        CvarDefinition::new(
-            crate::banana::SHOW_CVAR,
-            true,
-            archive,
-            "Banana peels are seen (0: no Banana peel toy peel is drawn, nor its sounds in the world heard, on this PC; SJK)",
+            "Force-thrown junk is seen (0: none is drawn, nor its sounds in the world heard, on this PC; SJK)",
         ),
         CvarDefinition::new(
             crate::tags::CVAR,

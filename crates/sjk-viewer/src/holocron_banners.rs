@@ -20,8 +20,6 @@
 //!   banners, held during a private duel until it ends as every reward's banner is; 2 shows
 //!   them during duels too; 0 shows none: what comes is counted as shown without a banner,
 //!   and banners waiting are taken back, so turning it on again replays nothing.
-//! - The Fishing toy hooks a holocron play dropped while it fishes before its banner comes
-//!   ([`crate::fishing`]: [`HolocronBanners::unannounced`]).
 //!
 //! `debug_holocron` ([`crate::holocrons::rehearsal`]) queues made-up holocrons through the
 //! same banners, so they can be tried offline; those are never written to
@@ -62,12 +60,6 @@ struct Queued {
 }
 
 impl Queued {
-    /// A holocron play dropped whose banner is still to come: the Fishing toy's Echo.
-    /// Rehearsals, bought, gifted, traded holocrons and earned crystals never are.
-    fn echo(&self) -> bool {
-        !self.rehearsal && self.entry.played && !self.entry.tier.is_kyber()
-    }
-
     fn unlock(&self) -> Unlock {
         Unlock::Holocron {
             tier: self.entry.tier,
@@ -174,20 +166,6 @@ impl HolocronBanners {
         !self.queue.is_empty()
     }
 
-    /// A holocron play dropped waits for its banner (the Fishing toy hooks it first,
-    /// [`crate::fishing`]).
-    pub(crate) fn unannounced(&self) -> bool {
-        self.queue.iter().any(Queued::echo)
-    }
-
-    /// The tier slot of the first holocron play dropped that waits for its banner.
-    pub(crate) fn unannounced_tier(&self) -> Option<usize> {
-        self.queue
-            .iter()
-            .find(|waiting| Queued::echo(waiting))
-            .map(|waiting| waiting.entry.tier.slot)
-    }
-
     /// Hand every waiting holocron to `show`, oldest first, as one banner each (the
     /// banners fold several waiting together into one, [`crate::unlock_toast::GROUP_AT`]).
     pub(crate) fn announce(&mut self, mut show: impl FnMut(Unlock)) {
@@ -264,8 +242,8 @@ impl crate::GpuState {
         }
     }
 
-    /// Give the waiting holocrons their banners, over play or a menu, unless the Fishing
-    /// toy holds an Echo for its bite (`fishing.rs`); with [`OFF`], count them as seen and
+    /// Give the waiting holocrons their banners, over play or a menu; with [`OFF`], count
+    /// them as seen and
     /// take back the holocron banners waiting or showing. A private duel or Tactical
     /// holding them is the banners' own wait ([`crate::unlock_toast`]).
     pub(crate) fn prepare_holocron_banners(&mut self) {
@@ -277,7 +255,7 @@ impl crate::GpuState {
             }
             return;
         }
-        if self.holocron_banners.pending() && !self.fishing.holds_echo() {
+        if self.holocron_banners.pending() {
             let toast = &mut self.unlock_toast;
             self.holocron_banners.announce(|unlock| toast.push(unlock));
         }
@@ -409,36 +387,6 @@ mod tests {
             }
         }
         names
-    }
-
-    /// The Fishing toy hooks only holocrons play dropped: not a rehearsal, a bought,
-    /// gifted or traded holocron, nor an earned crystal.
-    #[test]
-    fn only_play_drops_wait_as_echoes() {
-        let queued = |entry: Entry, rehearsal: bool| Queued { entry, rehearsal };
-        let played = Entry {
-            played: true,
-            ..entry(1, 1)
-        };
-        let mut banners = HolocronBanners::default();
-        banners.queue.extend([
-            queued(entry(2, 2), false),
-            queued(played.clone(), true),
-            queued(
-                Entry {
-                    gift: true,
-                    ..entry(3, 1)
-                },
-                false,
-            ),
-        ]);
-        assert!(!banners.unannounced() && banners.unannounced_tier().is_none());
-        banners.queue.push_back(queued(played, false));
-        assert!(banners.unannounced());
-        assert_eq!(banners.unannounced_tier(), Some(holocrons::TIERS[1].slot));
-        // Once given, it waits no more.
-        give(&mut banners);
-        assert!(!banners.unannounced() && !banners.pending());
     }
 
     /// New holocrons get one banner each, oldest first, once: counted as seen when the

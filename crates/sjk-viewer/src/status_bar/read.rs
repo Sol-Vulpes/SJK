@@ -170,20 +170,13 @@ impl crate::GpuState {
         }
         let mut switches = [false; TOY_COUNT];
         switches[toys::ILLUMINATE] = self.illuminate.lit();
-        switches[toys::CARDBOARD_BOX] = self.cardboard_box.on();
-        switches[toys::ORDER66] = self.order66.on();
-        switches[toys::HAX] = self.hax.on();
         switches[toys::RAGDOLL] = self.ragdoll.on();
         switches[toys::DRONE] = self.drone.on();
         switches[toys::BOOMBOX] = self.boombox.on();
         switches[toys::MONITOR] = self.monitor.on();
         switches[toys::BOX_HUNT] = self.box_hunt.on();
         switches[toys::QUESTS] = self.quests.on();
-        switches[toys::BANANA] = self.banana.on();
-        switches[toys::PROPGUN] = self.propgun.on();
-        switches[toys::FISHING] = self.fishing.on();
         switches[toys::WHEEL_OF_DOOM] = self.wheel_of_doom.running();
-        switches[toys::MINING] = self.mining.on();
         inputs.toys = switches;
         inputs
     }

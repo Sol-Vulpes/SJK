@@ -137,7 +137,7 @@ pub(crate) fn mount(vfs: &mut sjk_vfs::VirtualFileSystem) -> Result<(), sjk_vfs:
 pub(crate) const COMMANDS: &[(&str, &str)] = &[
     (
         "wheelofdoom_place",
-        "SJK creator: place a WHEEL OF DOOM where you aim, facing you ('server': for this server only)",
+        "SJK creator: no longer places a WHEEL OF DOOM (the DOOM coin rolls at a Force box)",
     ),
     (
         "wheelofdoom_remove",
@@ -576,14 +576,6 @@ fn pick_wheel<'a>(
         .map(|(id, _)| id)
 }
 
-/// A wheel the creator asked to place, waiting for the map's checksum.
-struct PendingPlace {
-    origin: Vec3,
-    yaw: f32,
-    /// `ip:port` for this server only, empty for every server.
-    server: String,
-}
-
 /// The toy's state: the wheels of the map, the spinner's effects, the spin asked and the
 /// sounds.
 pub(crate) struct WheelOfDoom {
@@ -602,7 +594,6 @@ pub(crate) struct WheelOfDoom {
     read_at: Option<Instant>,
     /// The server and map the effects began on: another ends them.
     place: Option<(std::net::SocketAddr, String)>,
-    pending_place: Option<PendingPlace>,
     use_pressed: bool,
     use_held: bool,
     cues: Vec<Cue>,
@@ -631,7 +622,6 @@ impl Default for WheelOfDoom {
             answer_seen: 0,
             read_at: None,
             place: None,
-            pending_place: None,
             use_pressed: false,
             use_held: false,
             cues: Vec::with_capacity(16),
@@ -870,17 +860,8 @@ impl GpuState {
         );
     }
 
-    fn wheel_of_doom_print(&mut self, text: String) {
-        self.chat.receive(
-            sjk_client::ServerEventKind::Print,
-            text,
-            None,
-            Instant::now(),
-        );
-    }
-
     /// The player's DOOM coins, when the hub said.
-    fn doom_coins(&self) -> Option<u64> {
+    pub(crate) fn doom_coins(&self) -> Option<u64> {
         crate::player_identity::with_snapshot(|snapshot| {
             snapshot.wheel_of_doom.as_ref().map(|wheel| wheel.coins)
         })
@@ -897,13 +878,8 @@ impl GpuState {
             Some(coins) => format!("You hold {coins} DOOM coins"),
             None => "Asking the hub for your DOOM coins".to_owned(),
         };
-        let here = match self.wheel_of_doom.placed.len() {
-            0 => "No WHEEL OF DOOM on this map".to_owned(),
-            1 => "A WHEEL OF DOOM stands on this map".to_owned(),
-            count => format!("{count} WHEELS OF DOOM stand on this map"),
-        };
         self.wheel_of_doom_centre(format!(
-            "{coins}. {here}: press Use at one to spin it. The teddy bear in a mystery box brings a coin"
+            "{coins}. Hold Use at a Force box to roll one. The teddy bear in a Force box brings a coin"
         ));
     }
 
@@ -989,11 +965,10 @@ impl GpuState {
             )
         })
         .unwrap_or_default();
-        if on_map || self.wheel_of_doom.pending_place.is_some() {
+        if on_map {
             self.map_edits.want_checksum(&map_name);
         }
         if let Some((map, checksum)) = self.map_edits.map().map(|(map, c)| (map.to_owned(), c)) {
-            self.place_pending_wheel_of_doom(&map, checksum);
             let fresh = self.wheel_of_doom.taken.as_ref().is_some_and(
                 |(taken, taken_map, taken_checksum, taken_server)| {
                     *taken == revision
@@ -1003,16 +978,10 @@ impl GpuState {
                 },
             );
             if !fresh {
-                let wheels = crate::player_identity::with_snapshot(|snapshot| {
-                    snapshot
-                        .wheel_of_doom
-                        .as_ref()
-                        .map(|wheel| wheel.wheels.clone())
-                        .unwrap_or_default()
-                })
-                .unwrap_or_default();
-                self.wheel_of_doom
-                    .take(&wheels, &map, checksum, &server_text);
+                // Since 20/11/2026 no wheel stands on a map (Sol: the WHEEL OF DOOM merged
+                // into the Force box, its DOOM coin rolled there): the hub's placed wheels
+                // are left for older clients until the release, which deletes them.
+                self.wheel_of_doom.take(&[], &map, checksum, &server_text);
                 self.wheel_of_doom.taken = Some((revision, map, checksum, server_text.clone()));
             }
         } else {
@@ -1190,22 +1159,7 @@ impl GpuState {
     fn wheel_of_doom_moment(&mut self, moment: Moment, own: Option<u8>, now: Instant) {
         match moment {
             Moment::Stopped { kind, title, line } => {
-                let text = match kind {
-                    Some(Kind::Effect(effect)) => {
-                        self.wheel_of_doom.effects.start(effect, now);
-                        format!("{title} {line}")
-                    }
-                    Some(Kind::Curse) => {
-                        self.wheel_of_doom.effects.curse(now, seed());
-                        format!("{title} {line}")
-                    }
-                    Some(Kind::Holocron(_)) => format!("{title} In your Collection"),
-                    Some(Kind::CoinBack) => format!("{title}! {line}"),
-                    Some(Kind::Explode) => title,
-                    Some(Kind::Nothing) => line,
-                    None => format!("{title}: {line}"),
-                };
-                self.wheel_of_doom_centre(text);
+                self.wheel_of_doom_outcome(kind, &title, &line, now);
             }
             Moment::Blast { slot, at } => {
                 let mine = slot.is_some() && slot == own;
@@ -1236,23 +1190,35 @@ impl GpuState {
         }
     }
 
-    /// Send the wheel the creator asked to place once the map's checksum is known.
-    fn place_pending_wheel_of_doom(&mut self, map: &str, checksum: i32) {
-        let Some(pending) = self.wheel_of_doom.pending_place.take() else {
-            return;
+    /// The player's own wheel or Force box coin roll gave `kind`: its effect starts and
+    /// the centre of the screen says it (`title`, `line`).
+    fn wheel_of_doom_outcome(&mut self, kind: Option<Kind>, title: &str, line: &str, now: Instant) {
+        let text = match kind {
+            Some(Kind::Effect(effect)) => {
+                self.wheel_of_doom.effects.start(effect, now);
+                format!("{title} {line}")
+            }
+            Some(Kind::Curse) => {
+                self.wheel_of_doom.effects.curse(now, seed());
+                format!("{title} {line}")
+            }
+            Some(Kind::Holocron(_)) => format!("{title} In your Collection"),
+            Some(Kind::CoinBack) => format!("{title}! {line}"),
+            Some(Kind::Explode) => title.to_owned(),
+            Some(Kind::Nothing) => line.to_owned(),
+            None => format!("{title}: {line}"),
         };
-        let placed = MysteryBox {
-            id: 0,
-            map: map.to_owned(),
-            checksum,
-            server: pending.server,
-            origin: pending.origin.to_array(),
-            yaw: pending.yaw,
-        };
-        if crate::player_identity::with_service(|service| service.place_wheel_of_doom(placed))
-            .is_none()
-        {
-            self.wheel_of_doom_print("WHEEL OF DOOM: not connected to the SJK hub".to_owned());
+        self.wheel_of_doom_centre(text);
+    }
+
+    /// The player's own Force box coin roll stopped on WHEEL OF DOOM outcome `id` (the
+    /// box blows up by itself, as for its credits roll).
+    pub(crate) fn wheel_of_doom_strike(&mut self, id: &str, now: Instant) {
+        match known(id) {
+            Some((_, known)) => {
+                self.wheel_of_doom_outcome(Some(known.kind), known.title, known.line, now);
+            }
+            None => self.wheel_of_doom_outcome(None, id, "a newer hub's outcome", now),
         }
     }
 
@@ -1273,33 +1239,10 @@ impl GpuState {
             .as_ref()
             .filter(|session| !session.is_local())
             .ok_or("Join a game server first: wheels stand on a server's map")?;
-        let server = session.server().to_string();
         match name {
+            // Since 20/11/2026 no wheel stands on a map: the DOOM coin rolls at a Force box.
             "wheelofdoom_place" => {
-                let one_server = match args.first().map(String::as_str) {
-                    None => false,
-                    Some("server") => true,
-                    Some(other) => {
-                        return Err(format!("wheelofdoom_place [server], not {other}"));
-                    }
-                };
-                let (eye, forward) = self.world_notes.view().ok_or("No view to aim from")?;
-                let hit = self
-                    .decal_surfaces
-                    .ray_hit(eye, forward, 4096.0)
-                    .ok_or("Aim at the floor where the wheel should stand")?;
-                let yaw = (forward.y.atan2(forward.x).to_degrees() + 180.0).rem_euclid(360.0);
-                self.wheel_of_doom.pending_place = Some(PendingPlace {
-                    origin: eye + forward * hit.distance,
-                    yaw,
-                    server: if one_server { server } else { String::new() },
-                });
-                let map = crate::remap_blocked_maps::map_name(&self.world_load_map).to_owned();
-                self.map_edits.want_checksum(&map);
-                Ok(vec![format!(
-                    "Placing a WHEEL OF DOOM on {map}{}...",
-                    if one_server { " for this server" } else { "" }
-                )])
+                Err("Wheels no longer stand on maps: the DOOM coin rolls at a Force box".to_owned())
             }
             "wheelofdoom_remove" => {
                 let id = match args.first() {

@@ -23,8 +23,6 @@ mod auto_switch;
 mod avatar_command;
 mod avatars;
 mod away_emote;
-mod banana;
-mod banana_frame;
 mod block_command;
 mod bolt;
 mod boombox;
@@ -36,7 +34,6 @@ mod camera_uniform;
 mod capture;
 mod card_outline;
 mod card_scenes;
-mod cardboard_box;
 mod cards;
 mod catch_book;
 mod cgame_options;
@@ -59,13 +56,10 @@ mod economy;
 mod editions;
 mod entity_view;
 mod fishing;
-mod fishing_sell;
 mod forge_alert;
 mod forge_fuse;
 mod kyber;
 mod loot_odds;
-mod propgun;
-mod propgun_frame;
 mod quests;
 #[cfg(any(target_os = "linux", test))]
 #[path = "../stack_size.rs"]
@@ -136,6 +130,7 @@ mod fall_camera;
 mod first_person_view;
 mod first_person_weapon;
 mod flat_world;
+mod floor_spot;
 mod fog_frame;
 mod fog_volumes;
 mod force_overlay_submission;
@@ -176,7 +171,6 @@ mod gpu_texture;
 mod graphics_quality;
 mod graphics_reload;
 mod ground_hud;
-mod hax;
 mod held_view;
 mod hitch_log;
 mod holocron_banners;
@@ -215,7 +209,6 @@ mod menu_widgets;
 mod menu_world;
 mod mimic;
 mod mining;
-mod mining_sell;
 mod missile_trails;
 mod mod_notice_card;
 mod model_materials;
@@ -235,7 +228,6 @@ mod npc_refresh;
 mod object_meshes;
 mod oblique_clip;
 mod official;
-mod order66;
 mod ordered_json;
 mod particle_atlas;
 mod particle_draw;
@@ -266,6 +258,7 @@ mod team_sabers;
 mod tickrate_help;
 mod toon_choice;
 mod toy_master;
+mod toy_rules;
 mod toy_saved;
 mod toy_sight;
 mod toy_sounds;
@@ -646,21 +639,6 @@ struct GpuState {
     illuminate: illuminate::Holocron,
     /// The other players' holocrons, lit by their looks.
     illuminate_others: illuminate::Others,
-    /// The cardboard box toy (`toy_box`): the player's own and the boxes of others.
-    cardboard_box: cardboard_box::CardboardBox,
-    /// The Fishing toy (`toy_fishing`): the player's own rod and the rods of others.
-    fishing: fishing::Fishing,
-    /// The Fishing toy's sounds to play this frame.
-    fishing_cues: Vec<&'static str>,
-    /// The Mining toy (`toy_mining`): the player's own pickaxe and vein, and the pickaxes
-    /// of others.
-    mining: mining::Mining,
-    /// The Mining toy's sounds to play this frame.
-    mining_cues: Vec<&'static str>,
-    /// The Order 66 toy (`toy_order66`, `order66`): the order and the pieces flying.
-    order66: order66::Order66,
-    /// The Hax toy (`toy_hax`): a hack under way, the player steered or steering.
-    hax: hax::Hax,
     /// The Drone toy (`toy_drone`): its consent switch and the other players' drones.
     drone: drone::Drone,
     /// The Boombox toy (`toy_boombox`): the own stereo and track, and what plays here.
@@ -670,19 +648,15 @@ struct GpuState {
     /// The Box hunt toy (`toy_boxhunt`): its switch, the consent to hunt and be the mark.
     box_hunt: box_hunt::BoxHunt,
     quests: quests::Quests,
-    /// The Banana peel toy (`toy_banana`): its switch and the peels on the floor.
-    banana: banana::Banana,
-    /// The Prop gun toy (`toy_propgun`): the gun held, the bolts and what others hold.
-    propgun: propgun::PropGun,
     /// The status balloons (`cg_statusBalloons`): each talking player's selected picture.
     status_balloons: status_balloons::StatusBalloons,
     /// The Tag toy (`toy_tag`): the own tag stuck on the world.
     tags: tags::Tags,
     /// The Ragdoll toy (`toy_ragdoll`): the player's own fall and the falls of others.
     ragdoll: ragdoll::Ragdoll,
-    /// Order 66's, the Hax's, the Drone's, the Monitor's, Box hunt's, the Banana peel's and
-    /// the Prop gun's switches as last saved (`toy_saved`).
-    toys_saved: [toy_saved::Saved; 8],
+    /// The Drone's, the Monitor's, Box hunt's and Quests' switches as last saved
+    /// (`toy_saved`).
+    toys_saved: [toy_saved::Saved; 4],
     /// The Holocrons tab's 3D holocron ([`holocrons::stage`]).
     holocron_stage: holocrons::stage::Stage,
     /// The time its turn and bob are drawn at, instead of the clock's, for a world shot.
@@ -885,7 +859,7 @@ struct GpuState {
     /// The SJK UI's Profile screen: which tab shows, switched here.
     profile_hub: profile_hub::Hub,
     /// The last frame's view, for placing 2D over the world outside the HUD pass (the
-    /// drone's and the fishing line's marks, the holocron stage).
+    /// drone's marks, the holocron stage).
     frame_view: Option<hud::identification::Camera>,
     pointer_captured: bool,
     /// A primary press consumed by spectator aim-to-follow; consume its release too.
@@ -1759,20 +1733,11 @@ impl GpuState {
             speed_trails: Default::default(),
             illuminate: Default::default(),
             illuminate_others: Default::default(),
-            cardboard_box: Default::default(),
-            fishing: Default::default(),
-            fishing_cues: Vec::with_capacity(4),
-            mining: Default::default(),
-            mining_cues: Vec::with_capacity(4),
-            order66: Default::default(),
-            hax: Default::default(),
             drone: Default::default(),
             boombox: Default::default(),
             monitor: Default::default(),
             box_hunt: Default::default(),
             quests: Default::default(),
-            banana: Default::default(),
-            propgun: Default::default(),
             status_balloons: Default::default(),
             tags: Default::default(),
             ragdoll: Default::default(),
@@ -2061,14 +2026,9 @@ impl GpuState {
             demo_playback::Session::current_server_time,
         );
         prediction_preview::tick(self, game_audio, Instant::now(), presentation_time as i32);
-        // Hidden in the box, the eye stays down while the server stands the player up.
-        self.keep_boxed_eye();
-        // The Monitor's monitors and the Banana peel's peels, then the Ragdoll's bodies
-        // (one may strike, one may trip) at this frame's time, for the camera and the
-        // actors.
+        // The Monitor's monitors, then the Ragdoll's bodies (one may strike) at this
+        // frame's time, for the camera and the actors.
         self.step_monitors(presentation_time);
-        self.step_bananas(presentation_time);
-        self.step_propgun(presentation_time);
         self.step_ragdolls(presentation_time);
         timing.mark(Phase::Config);
         self.refresh_config_strings(game_audio);
@@ -2122,7 +2082,6 @@ impl GpuState {
         let peek_view = (!backdrop_view && intermission_view.is_none())
             .then(|| {
                 peek::camera(self, presentation_time)
-                    .or_else(|| hax::camera(self, presentation_time))
                     .or_else(|| ragdoll::camera(self, presentation_time))
             })
             .flatten();
@@ -2583,10 +2542,6 @@ impl GpuState {
             viewport,
             information_visible && intermission_view.is_none() && !scoreboard_held,
         );
-        self.append_fishing_cue(
-            viewport,
-            information_visible && intermission_view.is_none() && !scoreboard_held,
-        );
         self.append_use_prompt(
             viewport,
             information_visible && intermission_view.is_none() && !scoreboard_held,
@@ -2690,8 +2645,8 @@ impl GpuState {
             self.append_configured_chat(viewport, text_scale, scoreboard_visible);
         }
         self.append_weapon_select_name(viewport);
-        // The status bars over play, as the HUD's elements show (`status_bar.rs`).
-        let [bottom_bar, top_bar] = self.append_status_bars(viewport);
+        // The status bar over play, as the HUD's elements show (`status_bar.rs`).
+        let status_bar = self.append_status_bars(viewport);
         // The ghost editor's path, under its column (or over play while looking about).
         let ghost_overlay =
             !self.console_covers_frame() && !medal_popup && self.append_ghost_overlay(viewport);
@@ -2872,12 +2827,6 @@ impl GpuState {
         let trade_toast = self.append_trade_toast(viewport, console_covers_frame || medal_popup);
         // An achievement unlocked, a holocron, a medal in a match, an update: its banner
         // over play or the menus, never input-taking.
-        // Under the top status bar while it shows.
-        unlock_toast::banner::set_top_inset(if top_bar {
-            self.status_bar.reserved().top
-        } else {
-            0.0
-        });
         let unlock_toast = self.append_unlock_toast(viewport, console_covers_frame || medal_popup);
         self.world_notes.draw_highlight(viewport);
         self.map_edit_gizmo_draw();
@@ -2910,10 +2859,7 @@ impl GpuState {
                 .is_open()
                 .then(|| self.quick_wheel.draw_list()),
             information_visible.then(|| self.hud.draw_list()),
-            bottom_bar
-                .then(|| self.status_bar.draw_lists()[0])
-                .flatten(),
-            top_bar.then(|| self.status_bar.draw_lists()[1]).flatten(),
+            status_bar.then(|| self.status_bar.draw_list()).flatten(),
             (chat_visible && !chat_over_trade).then(|| self.chat.draw_list()),
             self.ghost
                 .editor
@@ -2985,8 +2931,6 @@ impl GpuState {
             self.update_limbs(presentation_time);
         }
         {
-            // Who is in a carton is noted before the poses that crouch them.
-            self.note_boxed_players();
             if let Err(error) = self.update_actor_animations(presentation_time, game_audio) {
                 eprintln!("remote actor animation stopped: {error}");
             }
@@ -3029,15 +2973,9 @@ impl GpuState {
         self.begin_saber_instances(presentation_time);
         self.particle_groups.iter_mut().for_each(Vec::clear);
         self.submit_illuminate(presentation_time, visual_now);
-        self.submit_cardboard_boxes(presentation_time, visual_now);
-        self.submit_fishing(presentation_time, visual_now);
-        self.submit_mining(visual_now);
-        self.submit_order66(presentation_time, visual_now);
         self.submit_drones(presentation_time, visual_now);
         self.submit_monitors(presentation_time);
-        self.submit_bananas(presentation_time);
         self.submit_boomboxes();
-        self.submit_propgun(presentation_time);
         self.submit_holocron_stage(visual_now);
         self.sync_saber_skins(game_audio, presentation_time);
         let debug_missiles = effect_debug::sync(self.console.as_ref());
@@ -3076,8 +3014,6 @@ impl GpuState {
                     .predicted_state()
                     .filter(|_| self.live_session.is_some());
                 audio.observe_saber_switches(snapshot, predicted);
-                audio.set_box_music(self.cardboard_box.music());
-                audio.set_hax_loop(self.hax_loop(presentation_time));
                 audio.set_weather(self.vfs.as_deref(), self.weather.heard());
                 audio.play_weather_cues(self.weather.take_cues());
                 audio.update_frame_loops(
@@ -3182,15 +3118,12 @@ impl GpuState {
             }
             self.pickups.clear();
         }
-        // A held prop gun hangs on the pistol's hand rig, whatever the player holds.
-        let prop_view = self.propgun_view();
         let view_weapon = first_person_weapon::frame_inputs(
             self,
             active_snapshot,
             first_person,
             local_entity_id,
             presentation_time,
-            prop_view.map(|_| first_person_weapon::PROP_RIG),
         );
         let first_person_charge = view_weapon.and(active_snapshot).and_then(|snapshot| {
             let predicted = self
@@ -3200,18 +3133,7 @@ impl GpuState {
             charge_flash::Charges::collect(Some(snapshot), predicted)
                 .of(snapshot.player.client_num())
         });
-        self.propgun.view_muzzle = None;
-        if let Some(inputs) = view_weapon
-            && let Some(prop) = prop_view
-        {
-            self.propgun.view_muzzle = first_person_weapon::submit_prop(
-                &self.first_person_weapon,
-                inputs,
-                prop,
-                &mut self.object_groups,
-            );
-            self.last_first_person_flash = None;
-        } else if let Some(inputs) = view_weapon {
+        if let Some(inputs) = view_weapon {
             first_person_weapon::submit(&self.first_person_weapon, inputs, &mut self.object_groups);
             // `CG_AddPlayerWeapon` records the view gun's `tag_flash` for
             // trace-weapon beams (`cg_weapons.c:579`) and plays the

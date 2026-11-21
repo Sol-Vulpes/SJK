@@ -48,14 +48,11 @@ pub(crate) fn tick(
         0,
     );
     command.buttons = sjk_game_jka::pmove_talk::command_buttons(command.buttons, gpu.talk_button());
-    gpu.cardboard_box.shape_preview(&mut command);
-    gpu.propgun.shape_preview(&mut command);
     let delta = gpu
         .gameplay_input
         .view_authority
         .command_delta()
         .unwrap_or(snapshot.player.delta_angles());
-    gpu.hax.shape_preview(&mut command, delta);
     let origin = gpu
         .local_prediction
         .committed_state()

@@ -1,33 +1,34 @@
-//! The status bars (Sol's requests, 15/11/2026 and 16/11/2026: "stick it to the top or
-//! bottom of the screen, not a bubble ... both enabled same time"): two thin strips
-//! docked to the screen's edges over play, full width, flush with the edge, in the SJK
-//! UI's look (clear acrylic glass, the game blurred behind it, and an amber hairline on the
-//! inner edge), their contents in a left, a centre and a right group.
+//! The status bar (Sol's requests, 15/11/2026 and 16/11/2026: "stick it to the top or
+//! bottom of the screen, not a bubble"; 21/11/2026: "merge the new top bar we did with the
+//! bottom bar, so we only have a bottom bar"): one thin strip docked to the screen's
+//! bottom edge over play, full width, flush with the edge, in the SJK UI's look (clear
+//! acrylic glass, the game blurred behind it, and an amber hairline along its top), its
+//! contents in a left, a centre and a right group. From 16/11 to 21/11/2026 a second bar
+//! stood on the top edge (`cg_statusBarTop`, retired) with the match's parts.
 //!
-//! - **The bottom bar** ([`CVAR`], `cg_statusBar`) carries what the player has and wears:
-//!   on the left their credits, kyber shards, dormant kybers and DOOM coins (the hub's
-//!   numbers, each an icon and its number), the Collection's New nudge ([`Nudge`]: "3 new
-//!   in your Collection" for the rest of the map they arrived on, then a gold dot), the
-//!   kyber on their saber with its tier's diamonds and what is on about them (the blade's
-//!   extras, the finisher, Tactical mode, Do not disturb, away, toon shading); in the
-//!   centre the weapons they hold, by their selection icons, the one in hand lit with its
-//!   ammunition after the row; on the right every toy's switch, its picture lit while on,
-//!   then the local time (24-hour) and the date (day first).
-//! - **The top bar** ([`TOP_CVAR`], `cg_statusBarTop`) carries the match: on the left the
-//!   Force powers known, the selected one lit and one in use dotted, and the player's
-//!   place and score (the teams' scores in a team game); in the centre the time left when
-//!   the server sets a time limit; on the right who joins and leaves ([`feed`]), the
-//!   server's name, the map, the game type, the players on the server over its slots, the
-//!   ping (the server's measure, as the scoreboard shows it, [`ping`]) and the frame rate.
+//! - **Left:** what the player has and wears, then their match: their credits, kyber
+//!   shards, dormant kybers and DOOM coins (the hub's numbers, each an icon and its
+//!   number), the Collection's New nudge ([`Nudge`]: "3 new in your Collection" for the
+//!   rest of the map they arrived on, then a gold dot), the kyber on their saber with its
+//!   tier's diamonds and what is on about them (the blade's extras, the finisher, Tactical
+//!   mode, Do not disturb, away, toon shading), the Force powers known (the selected one
+//!   lit, one in use dotted) and their place and score (the teams' scores in a team game).
 //!   The Force powers' levels are not shown: protocol 26 sends only Jump's and Sense's,
 //!   and the rest would be guesses.
+//! - **Centre:** the weapons they hold, by their selection icons, the one in hand lit with
+//!   its ammunition after the row, and the time left when the server sets a time limit.
+//! - **Right:** every toy's switch, its picture lit while on, who joins and leaves
+//!   ([`feed`]), the server's name, the map, the game type, the players on the server over
+//!   its slots, the ping (the server's measure, as the scoreboard shows it, [`ping`]), the
+//!   frame rate, then the local time (24-hour) and the date (day first).
 //!
-//! Both are on by default (Sol, 16/11/2026), each offered again in the News panel's
-//! settings to review, and each part has its own switch ([`Part::cvar`], all on), so a
-//! player keeps only what they want. A part without a value (no hub, no time limit) is
-//! left out rather than shown empty; when a bar runs out of room, the parts that matter
-//! least go first ([`Part::keep`], the toys and the server's name before the clock and
-//! the time left, [`arrange`]). Tactical mode, which is there to fight, leaves the toys
+//! It is on by default (Sol, 16/11/2026), offered again in the News panel's settings to
+//! review, and each part has its own switch ([`Part::cvar`]; all on but the server's name,
+//! the game type and the date, [`Part::on_by_default`], since 21/11/2026 the one bar holds
+//! everything), so a player keeps only what they want. A part without a value (no hub, no
+//! time limit) is left out rather than shown empty; when the bar runs out of room, the
+//! parts that matter least go first ([`Part::keep`], the server's name, the toys and the
+//! feed before the clock and the time left, [`arrange`]). Tactical mode, which is there to fight, leaves the toys
 //! and the Collection's nudge out.
 //!
 //! They show over play only, as the HUD's elements do: not under the menus or the
@@ -72,21 +73,14 @@ use sjk_shell::{CvarDefinition, CvarFlags, CvarRegistry};
 use sjk_ui::{DrawCommand, Rect, TextureId};
 use std::time::{Duration, Instant};
 
-/// The bottom bar's switch: on by default (Sol, 16/11/2026).
+/// The bar's switch: on by default (Sol, 16/11/2026).
 pub(crate) const CVAR: &str = "cg_statusBar";
-/// The top bar's switch: on by default (Sol, 16/11/2026).
-pub(crate) const TOP_CVAR: &str = "cg_statusBarTop";
+/// The top bar's switch until 21/11/2026, dropped from saved settings at load.
+pub(crate) const RETIRED_TOP_CVAR: &str = "cg_statusBarTop";
 
 /// How often what the bars show is read again; the clock is read once a second.
 const EVERY: Duration = Duration::from_millis(250);
 const CLOCK_EVERY: Duration = Duration::from_secs(1);
-
-/// A bar.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub(crate) enum Bar {
-    Bottom,
-    Top,
-}
 
 /// Where a part stands on its bar.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -124,7 +118,8 @@ pub(crate) enum Part {
 }
 
 impl Part {
-    /// Every part, the bottom bar's first, in the Settings rows' order.
+    /// Every part, in the bar's order (the left group's, the centre's, the right's) and
+    /// the Settings rows'.
     pub(crate) const ALL: [Self; 21] = [
         Self::Credits,
         Self::Shards,
@@ -133,13 +128,11 @@ impl Part {
         Self::New,
         Self::Saber,
         Self::Effects,
-        Self::Weapons,
-        Self::Toys,
-        Self::Time,
-        Self::Date,
         Self::Force,
         Self::Score,
+        Self::Weapons,
         Self::TimeLeft,
+        Self::Toys,
         Self::Feed,
         Self::Server,
         Self::Map,
@@ -147,7 +140,27 @@ impl Part {
         Self::Players,
         Self::Ping,
         Self::Fps,
+        Self::Time,
+        Self::Date,
     ];
+
+    /// Its place in [`Part::ALL`], the bar's order.
+    const fn order(self) -> usize {
+        let mut index = 0;
+        while index < Self::ALL.len() {
+            if Self::ALL[index] as u32 == self as u32 {
+                return index;
+            }
+            index += 1;
+        }
+        index
+    }
+
+    /// Whether its switch starts on (Sol, 21/11/2026: one bar holds everything, so the
+    /// server's name, the game type and the date start off).
+    pub(crate) const fn on_by_default(self) -> bool {
+        !matches!(self, Self::Server | Self::Mode | Self::Date)
+    }
 
     /// Its switch: archived, on by default.
     pub(crate) const fn cvar(self) -> &'static str {
@@ -179,49 +192,31 @@ impl Part {
     /// The switch's line in `cvarlist`.
     const fn help(self) -> &'static str {
         match self {
-            Self::Credits => "Bottom bar shows your credits",
-            Self::Shards => "Bottom bar shows your kyber shards",
-            Self::Crystals => "Bottom bar shows your dormant kybers still to attune",
-            Self::Coins => "Bottom bar shows your DOOM coins",
-            Self::New => "Bottom bar says when your Collection holds new things",
-            Self::Saber => "Bottom bar shows the kyber on your saber",
+            Self::Credits => "Status bar shows your credits",
+            Self::Shards => "Status bar shows your kyber shards",
+            Self::Crystals => "Status bar shows your dormant kybers still to attune",
+            Self::Coins => "Status bar shows your DOOM coins",
+            Self::New => "Status bar says when your Collection holds new things",
+            Self::Saber => "Status bar shows the kyber on your saber",
             Self::Effects => {
-                "Bottom bar shows what is on about you: blade extras, finisher, Tactical, Do not disturb, away"
+                "Status bar shows what is on about you: blade extras, finisher, Tactical, Do not disturb, away"
             }
             Self::Weapons => {
-                "Bottom bar shows the weapons you hold, the one in hand lit with its ammunition"
+                "Status bar shows the weapons you hold, the one in hand lit with its ammunition"
             }
-            Self::Toys => "Bottom bar shows every toy's switch, lit while on",
-            Self::Time => "Bottom bar shows the local time, 24-hour",
-            Self::Date => "Bottom bar shows the date, day first",
-            Self::Force => "Top bar shows the Force powers you know, the selected one lit",
-            Self::Score => "Top bar shows your place and score, or the teams' scores",
-            Self::TimeLeft => "Top bar shows the match time left when the server sets a limit",
-            Self::Feed => "Top bar tells who joins and leaves the server",
-            Self::Server => "Top bar shows the server's name",
-            Self::Map => "Top bar shows the map",
-            Self::Mode => "Top bar shows the game type",
-            Self::Players => "Top bar shows the players on the server and its slots",
-            Self::Ping => "Top bar shows your ping",
-            Self::Fps => "Top bar shows your frame rate",
-        }
-    }
-
-    /// The bar it is on.
-    pub(crate) const fn bar(self) -> Bar {
-        match self {
-            Self::Credits
-            | Self::Shards
-            | Self::Crystals
-            | Self::Coins
-            | Self::New
-            | Self::Saber
-            | Self::Effects
-            | Self::Weapons
-            | Self::Toys
-            | Self::Time
-            | Self::Date => Bar::Bottom,
-            _ => Bar::Top,
+            Self::Toys => "Status bar shows every toy's switch, lit while on",
+            Self::Time => "Status bar shows the local time, 24-hour",
+            Self::Date => "Status bar shows the date, day first",
+            Self::Force => "Status bar shows the Force powers you know, the selected one lit",
+            Self::Score => "Status bar shows your place and score, or the teams' scores",
+            Self::TimeLeft => "Status bar shows the match time left when the server sets a limit",
+            Self::Feed => "Status bar tells who joins and leaves the server",
+            Self::Server => "Status bar shows the server's name",
+            Self::Map => "Status bar shows the map",
+            Self::Mode => "Status bar shows the game type",
+            Self::Players => "Status bar shows the players on the server and its slots",
+            Self::Ping => "Status bar shows your ping",
+            Self::Fps => "Status bar shows your frame rate",
         }
     }
 
@@ -242,31 +237,32 @@ impl Part {
         }
     }
 
-    /// How long it stays when its bar runs out of room: the lowest goes first. The toys,
-    /// the effects' pills and the server's name before the clock and the time left.
+    /// How long it stays when the bar runs out of room: the lowest goes first. The
+    /// server's name, the game type, the date, the toys, the effects' pills and the feed
+    /// before the money, the match and the clock (21/11/2026, the two bars' ranks merged).
     pub(crate) const fn keep(self) -> u8 {
         match self {
-            Self::Toys => 1,
-            Self::Effects => 2,
-            Self::Coins => 3,
-            Self::Crystals => 4,
-            Self::Shards => 5,
-            Self::New => 6,
-            Self::Date => 7,
-            Self::Saber => 8,
-            Self::Credits => 9,
-            Self::Weapons => 10,
-            Self::Time => 11,
             Self::Server => 1,
             Self::Mode => 2,
-            Self::Score => 3,
-            Self::Ping => 4,
-            Self::Feed => 5,
-            Self::Players => 6,
-            Self::Force => 7,
-            Self::Map => 8,
-            Self::Fps => 9,
-            Self::TimeLeft => 10,
+            Self::Date => 3,
+            Self::Toys => 4,
+            Self::Effects => 5,
+            Self::Feed => 6,
+            Self::Coins => 7,
+            Self::Crystals => 8,
+            Self::Shards => 9,
+            Self::Players => 10,
+            Self::New => 11,
+            Self::Score => 12,
+            Self::Force => 13,
+            Self::Map => 14,
+            Self::Ping => 15,
+            Self::Saber => 16,
+            Self::Credits => 17,
+            Self::Fps => 18,
+            Self::Weapons => 19,
+            Self::TimeLeft => 20,
+            Self::Time => 21,
         }
     }
 
@@ -295,7 +291,7 @@ impl Parts {
         Self::from_switches(|part| {
             console
                 .and_then(|console| console.bool_cvar(part.cvar()))
-                .unwrap_or(true)
+                .unwrap_or(part.on_by_default())
         })
     }
 
@@ -318,11 +314,9 @@ impl Parts {
         Self(self.0 & !part.bit())
     }
 
-    /// Whether any part of `bar` is on.
-    pub(crate) fn any_on(self, bar: Bar) -> bool {
-        Part::ALL
-            .into_iter()
-            .any(|part| part.bar() == bar && self.has(part))
+    /// Whether any part is on.
+    pub(crate) fn any_on(self) -> bool {
+        self.0 != 0
     }
 }
 
@@ -332,18 +326,12 @@ pub(crate) fn register(cvars: &mut CvarRegistry) -> Result<(), sjk_shell::CvarEr
         CVAR,
         true,
         CvarFlags::ARCHIVE,
-        "Bottom bar with your credits, kyber, effects, weapons, toys, time and date",
-    ))?;
-    cvars.register(CvarDefinition::new(
-        TOP_CVAR,
-        true,
-        CvarFlags::ARCHIVE,
-        "Top bar with your Force powers, score, time left, joins and leaves, server, map, players, ping and frame rate",
+        "Status bar at the bottom with your credits, kyber, effects, Force, score, weapons, time left, toys, joins and leaves, map, players, ping, frame rate and time",
     ))?;
     for part in Part::ALL {
         cvars.register(CvarDefinition::new(
             part.cvar(),
-            true,
+            part.on_by_default(),
             CvarFlags::ARCHIVE,
             part.help(),
         ))?;
@@ -638,10 +626,11 @@ pub(crate) fn feed_for_shot(entries: &[(&str, bool, u8)]) -> [Option<feed::Shown
     out
 }
 
-/// Most pieces a bar holds.
-const MAX_PIECES: usize = 64;
-const _: () = assert!(4 + 1 + 2 + MAX_EFFECTS + MAX_WEAPONS + 1 + TOY_COUNT + 2 <= MAX_PIECES);
-const _: () = assert!(MAX_POWERS + 1 + 1 + feed::SHOWN + 7 <= MAX_PIECES);
+/// Most pieces the bar holds: what was the bottom bar's and the top bar's.
+const MAX_PIECES: usize = 96;
+const BOTTOM_MOST: usize = 4 + 1 + 2 + MAX_EFFECTS + MAX_WEAPONS + 1 + TOY_COUNT + 2;
+const TOP_MOST: usize = MAX_POWERS + 1 + 1 + feed::SHOWN + 7;
+const _: () = assert!(BOTTOM_MOST + TOP_MOST <= MAX_PIECES);
 
 /// A placeholder piece, to fill fixed storage.
 const NO_PIECE: (Part, Piece) = (
@@ -766,6 +755,34 @@ fn top_pieces(inputs: &TopInputs, parts: Parts, out: &mut [(Part, Piece); MAX_PI
     }
     if let Some(fps) = inputs.fps {
         push(Part::Fps, Piece::Fps(fps));
+    }
+    count
+}
+
+/// The bar's pieces for `parts`: those of `inputs` and `top` (the match's, the top bar's
+/// until 21/11/2026), in the bar's order ([`Part::ALL`]; each part's pieces in their own
+/// order), into `out`; how many. Sorted in place by insertion, allocating nothing.
+fn bar_pieces(
+    inputs: &Inputs,
+    top: &TopInputs,
+    parts: Parts,
+    out: &mut [(Part, Piece); MAX_PIECES],
+) -> usize {
+    let mut count = bottom_pieces(inputs, parts, out);
+    let mut more = [NO_PIECE; MAX_PIECES];
+    let extra = top_pieces(top, parts, &mut more);
+    for piece in &more[..extra] {
+        if count < MAX_PIECES {
+            out[count] = *piece;
+            count += 1;
+        }
+    }
+    for index in 1..count {
+        let mut at = index;
+        while at > 0 && out[at - 1].0.order() > out[at].0.order() {
+            out.swap(at - 1, at);
+            at -= 1;
+        }
     }
     count
 }
@@ -929,9 +946,9 @@ impl<I> Default for Strip<I> {
 
 /// The bars' storage, kept for the game's run.
 pub(crate) struct State {
-    bottom: Strip<Inputs>,
-    top: Strip<TopInputs>,
-    /// What the bars show, as last read, and when.
+    bar: Strip<(Inputs, TopInputs)>,
+    /// What the bar shows, as last read, and when: the player's things and the match's
+    /// (the top bar's until 21/11/2026).
     inputs: Inputs,
     top_inputs: TopInputs,
     read: Option<Instant>,
@@ -945,7 +962,7 @@ pub(crate) struct State {
     ping: ping::Ping,
     /// The bars' switches and their parts', as read at an archive revision of the
     /// console's cvars ([`ViewerConsole::archive_revision`]).
-    switches: Option<(u64, [bool; 2], Parts)>,
+    switches: Option<(u64, bool, Parts)>,
     /// The parts on this frame (Tactical mode's taken out).
     parts: Parts,
     /// The room the bars keep this frame.
@@ -964,8 +981,7 @@ pub(crate) struct State {
 impl Default for State {
     fn default() -> Self {
         Self {
-            bottom: Strip::default(),
-            top: Strip::default(),
+            bar: Strip::default(),
             inputs: Inputs::default(),
             top_inputs: TopInputs::default(),
             read: None,
@@ -1002,34 +1018,24 @@ impl State {
         self.showing.has(part)
     }
 
-    /// The bottom and the top bar's shapes, after [`crate::GpuState::append_status_bars`]
-    /// laid them out.
-    pub(crate) fn draw_lists(&self) -> [Option<&sjk_ui::DrawList>; 2] {
-        [
-            self.bottom.drawn.then(|| self.bottom.canvas.draw_list()),
-            self.top.drawn.then(|| self.top.canvas.draw_list()),
-        ]
+    /// The bar's shapes, after [`crate::GpuState::append_status_bars`] drew it this
+    /// frame.
+    pub(crate) fn draw_list(&self) -> Option<&sjk_ui::DrawList> {
+        self.bar.drawn.then(|| self.bar.canvas.draw_list())
     }
 
-    /// Whether a bar is drawn this frame (world shots: the 2D pass runs for it without a
-    /// session).
+    /// Whether the bar is drawn this frame (world shots: the 2D pass runs for it without
+    /// a session).
     #[cfg(test)]
     pub(crate) fn drawn(&self) -> bool {
-        self.bottom.drawn || self.top.drawn
+        self.bar.drawn
     }
 
-    /// Whether each bar, bottom then top, is drawn this frame.
-    #[cfg(test)]
-    pub(crate) fn drawn_bars(&self) -> [bool; 2] {
-        [self.bottom.drawn, self.top.drawn]
-    }
-
-    /// Forget the kept layouts, so the next frame lays the bars out again (the timing
-    /// shot measures both ways).
+    /// Forget the kept layout, so the next frame lays the bar out again (the timing shot
+    /// measures both ways).
     #[cfg(test)]
     pub(crate) fn forget_layout(&mut self) {
-        self.bottom.laid = None;
-        self.top.laid = None;
+        self.bar.laid = None;
     }
 
     /// A snapshot that shows our own commands run (not a followed player's, not the
@@ -1074,7 +1080,6 @@ impl State {
 #[allow(clippy::too_many_arguments)]
 fn build(
     canvas: &mut MenuCanvas,
-    edge: Bar,
     list: &[(Part, Piece)],
     texts: Texts<'_>,
     viewport: [f32; 2],
@@ -1101,12 +1106,9 @@ fn build(
         &mut kept[..count],
     );
     let height = bar_height(k) * s;
-    let top = match edge {
-        Bar::Bottom => viewport[1] - height,
-        Bar::Top => 0.0,
-    };
+    let top = viewport[1] - height;
     let bar = Rect::new(0.0, top, viewport[0], height);
-    glass(canvas, bar, edge, s);
+    glass(canvas, bar, s);
     let mut pen = pieces::Pen {
         canvas,
         middle: top + height * 0.5,
@@ -1150,11 +1152,10 @@ fn build(
     true
 }
 
-/// A bar's glass: clear acrylic across the screen (the game behind it blurred, a third of
+/// The bar's glass: clear acrylic across the screen (the game behind it blurred, a third of
 /// the ground's tint over it, `color::acrylic::BAR`; Sol, 17/11/2026: "the top bar and
-/// bottom bar really need much more transparency"), an amber hairline along its inner edge
-/// (the bottom bar's top, the top bar's bottom).
-fn glass(canvas: &mut MenuCanvas, bar: Rect, edge: Bar, s: f32) {
+/// bottom bar really need much more transparency"), an amber hairline along its top.
+fn glass(canvas: &mut MenuCanvas, bar: Rect, s: f32) {
     let list = canvas.draw_list_mut();
     let _ = list.push(DrawCommand::Backdrop {
         rect: bar,
@@ -1162,12 +1163,8 @@ fn glass(canvas: &mut MenuCanvas, bar: Rect, edge: Bar, s: f32) {
         tint: color::tint(color::acrylic::BAR),
     });
     let hair = 1.0_f32.max(s);
-    let y = match edge {
-        Bar::Bottom => bar.y,
-        Bar::Top => bar.bottom() - hair,
-    };
     let _ = list.push(DrawCommand::SolidRect {
-        rect: Rect::new(bar.x, y, bar.width, hair),
+        rect: Rect::new(bar.x, bar.y, bar.width, hair),
         color: color::alpha(color::holo(), 0.34),
     });
 }
@@ -1204,11 +1201,11 @@ impl crate::GpuState {
         }
     }
 
-    /// Decide which bars show this frame and how much of the screen's edges they keep
-    /// ([`State::reserved`]), before the HUD is laid out: a bar shows when its switch and
-    /// a part of it are on and `play` shows (a live game, no menu or console over it, no
-    /// intermission, the HUD's elements not hidden), never over a demo. Reads what the
-    /// bars show when due, and who joins and leaves while a game is on.
+    /// Decide whether the bar shows this frame and how much of the screen's bottom edge it
+    /// keeps ([`State::reserved`]), before the HUD is laid out: it shows when its switch
+    /// and a part of it are on and `play` shows (a live game, no menu or console over it,
+    /// no intermission, the HUD's elements not hidden), never over a demo. Reads what the
+    /// bar shows when due, and who joins and leaves while a game is on.
     pub(crate) fn reserve_status_bars(&mut self, viewport: [f32; 2], play: bool) {
         let now = Instant::now();
         self.observe_join_feed(now);
@@ -1218,12 +1215,10 @@ impl crate::GpuState {
         let (on, mut parts) = match self.status_bar.switches {
             Some((kept, on, parts)) if Some(kept) == revision => (on, parts),
             _ => {
-                let switch = |cvar: &str| {
-                    console
-                        .and_then(|console| console.bool_cvar(cvar))
-                        .unwrap_or(true)
-                };
-                let read = ([switch(CVAR), switch(TOP_CVAR)], Parts::read(console));
+                let on = console
+                    .and_then(|console| console.bool_cvar(CVAR))
+                    .unwrap_or(true);
+                let read = (on, Parts::read(console));
                 self.status_bar.switches = revision.map(|revision| (revision, read.0, read.1));
                 read
             }
@@ -1232,19 +1227,14 @@ impl crate::GpuState {
         if crate::tactical::level() != crate::tactical::Level::Off {
             parts = parts.without(Part::Toys).without(Part::New);
         }
-        // Over a demo they would tell the viewer's own things, not the recording's.
+        // Over a demo it would tell the viewer's own things, not the recording's.
         let live = self.live_session.is_some() && play;
-        let shown = [
-            live && on[0] && parts.any_on(Bar::Bottom),
-            live && on[1] && parts.any_on(Bar::Top),
-        ];
-        // A world shot shows the bars it made up, without a game.
+        let shown = live && on && parts.any_on();
+        // A world shot shows the bar it made up, without a game.
         #[cfg(test)]
-        let shown = [
-            shown[0] || self.status_bar.preview.is_some(),
-            shown[1] || self.status_bar.preview_top.is_some(),
-        ];
-        if (shown[0] || shown[1]) && self.status_bar.due(now) {
+        let shown =
+            shown || self.status_bar.preview.is_some() || self.status_bar.preview_top.is_some();
+        if shown && self.status_bar.due(now) {
             self.read_status_bars(now);
         }
         #[cfg(test)]
@@ -1261,22 +1251,17 @@ impl crate::GpuState {
         if !held {
             state.top_inputs.feed = state.feed.shown(now);
         }
-        state.bottom.shown = shown[0];
-        state.top.shown = shown[1];
+        state.bar.shown = shown;
         state.parts = parts;
         let s = crate::menu::sjk::scale(viewport);
         let height = bar_height(self.ui_font.style().scale.max(0.5)) * s;
         state.reserved = Reserved {
-            top: if shown[1] { height } else { 0.0 },
-            bottom: if shown[0] { height } else { 0.0 },
+            top: 0.0,
+            bottom: if shown { height } else { 0.0 },
         };
         let mut showing = Parts(0);
         let mut show = |part: Part, value: bool| {
-            let bar = match part.bar() {
-                Bar::Bottom => shown[0],
-                Bar::Top => shown[1],
-            };
-            if bar && value && parts.has(part) {
+            if shown && value && parts.has(part) {
                 showing.0 |= part.bit();
             }
         };
@@ -1296,116 +1281,64 @@ impl crate::GpuState {
         false
     }
 
-    /// Lay out the bars [`Self::reserve_status_bars`] showed this frame (each kept as it
-    /// was when what it shows has not changed) and add their text; whether each, bottom
-    /// then top, was drawn, so its shapes go into the frame's layers.
-    pub(crate) fn append_status_bars(&mut self, viewport: [f32; 2]) -> [bool; 2] {
+    /// Lay out the bar [`Self::reserve_status_bars`] showed this frame (kept as it was
+    /// when what it shows has not changed) and add its text; whether it was drawn, so its
+    /// shapes go into the frame's layers.
+    pub(crate) fn append_status_bars(&mut self, viewport: [f32; 2]) -> bool {
         let parts = self.status_bar.parts;
         let k = self.ui_font.style().scale.max(0.5);
         let best = self.status_bar.inputs.crystal_tier;
         let tier = best.min(crate::kyber::COUNT - 1);
         let pictures = crate::holocrons::icons::is_loaded(crate::kyber::TIERS[tier].slot);
-        let mut drawn = [false; 2];
-        for (index, edge) in [Bar::Bottom, Bar::Top].into_iter().enumerate() {
-            let state = &mut self.status_bar;
-            let shown = match edge {
-                Bar::Bottom => state.bottom.shown,
-                Bar::Top => state.top.shown,
-            };
-            if !shown {
-                match edge {
-                    Bar::Bottom => state.bottom.drawn = false,
-                    Bar::Top => state.top.drawn = false,
-                }
-                continue;
-            }
-            let target = crate::ingame_menu::sjk_view::text_target(
-                &mut self.game_fonts,
-                &mut self.text_vertices,
-                &self.ui_font,
-            );
-            let measures = Measures {
-                display: target.display_measure(),
-                body: target.body_measure(),
-            };
-            let mut list = [NO_PIECE; MAX_PIECES];
-            let texts = Texts {
-                server: state.top_inputs.server.as_str(),
-                map: state.top_inputs.map.as_str(),
-                feed: &state.top_inputs.feed,
-            };
-            let ok = match edge {
-                Bar::Bottom => {
-                    let laid = Laid {
-                        inputs: state.inputs,
-                        parts,
-                        viewport,
-                        k,
-                        pictures,
-                    };
-                    match state.bottom.laid {
-                        Some((kept, ok)) if kept == laid => ok,
-                        _ => {
-                            let count = bottom_pieces(&state.inputs, parts, &mut list);
-                            let ok = build(
-                                &mut state.bottom.canvas,
-                                edge,
-                                &list[..count],
-                                texts,
-                                viewport,
-                                k,
-                                measures,
-                                &mut state.scratch,
-                            );
-                            state.bottom.laid = Some((laid, ok));
-                            ok
-                        }
-                    }
-                }
-                Bar::Top => {
-                    let laid = Laid {
-                        inputs: state.top_inputs,
-                        parts,
-                        viewport,
-                        k,
-                        pictures: false,
-                    };
-                    match state.top.laid {
-                        Some((kept, ok)) if kept == laid => ok,
-                        _ => {
-                            let count = top_pieces(&state.top_inputs, parts, &mut list);
-                            let ok = build(
-                                &mut state.top.canvas,
-                                edge,
-                                &list[..count],
-                                texts,
-                                viewport,
-                                k,
-                                measures,
-                                &mut state.scratch,
-                            );
-                            state.top.laid = Some((laid, ok));
-                            ok
-                        }
-                    }
-                }
-            };
-            let canvas = match edge {
-                Bar::Bottom => {
-                    state.bottom.drawn = ok;
-                    &state.bottom.canvas
-                }
-                Bar::Top => {
-                    state.top.drawn = ok;
-                    &state.top.canvas
-                }
-            };
-            if ok {
-                target.append(canvas, viewport);
-            }
-            drawn[index] = ok;
+        let state = &mut self.status_bar;
+        if !state.bar.shown {
+            state.bar.drawn = false;
+            return false;
         }
-        drawn
+        let target = crate::ingame_menu::sjk_view::text_target(
+            &mut self.game_fonts,
+            &mut self.text_vertices,
+            &self.ui_font,
+        );
+        let measures = Measures {
+            display: target.display_measure(),
+            body: target.body_measure(),
+        };
+        let texts = Texts {
+            server: state.top_inputs.server.as_str(),
+            map: state.top_inputs.map.as_str(),
+            feed: &state.top_inputs.feed,
+        };
+        let laid = Laid {
+            inputs: (state.inputs, state.top_inputs),
+            parts,
+            viewport,
+            k,
+            pictures,
+        };
+        let ok = match state.bar.laid {
+            Some((kept, ok)) if kept == laid => ok,
+            _ => {
+                let mut list = [NO_PIECE; MAX_PIECES];
+                let count = bar_pieces(&state.inputs, &state.top_inputs, parts, &mut list);
+                let ok = build(
+                    &mut state.bar.canvas,
+                    &list[..count],
+                    texts,
+                    viewport,
+                    k,
+                    measures,
+                    &mut state.scratch,
+                );
+                state.bar.laid = Some((laid, ok));
+                ok
+            }
+        };
+        state.bar.drawn = ok;
+        if ok {
+            target.append(&state.bar.canvas, viewport);
+        }
+        ok
     }
 }
 
@@ -1421,70 +1354,100 @@ mod tests {
         }
     }
 
-    /// Both bars are on, with every part, for a profile that never chose.
+    /// The bar is on, with every part but the server's name, the game type and the date,
+    /// for a profile that never chose; the top bar's switch is gone.
     #[test]
-    fn both_bars_are_on_by_default() {
+    fn the_bar_is_on_by_default() {
         let mut cvars = CvarRegistry::default();
         register(&mut cvars).unwrap();
-        for cvar in [CVAR, TOP_CVAR]
-            .into_iter()
-            .chain(Part::ALL.map(Part::cvar))
-        {
+        assert_eq!(
+            cvars.get(CVAR).unwrap().value,
+            sjk_shell::CvarValue::Bool(true)
+        );
+        for part in Part::ALL {
+            let on = !matches!(part, Part::Server | Part::Mode | Part::Date);
+            assert_eq!(part.on_by_default(), on, "{part:?}");
             assert_eq!(
-                cvars.get(cvar).unwrap().value,
-                sjk_shell::CvarValue::Bool(true),
-                "{cvar}"
+                cvars.get(part.cvar()).unwrap().value,
+                sjk_shell::CvarValue::Bool(on),
+                "{part:?}"
             );
         }
+        assert!(cvars.get(RETIRED_TOP_CVAR).is_none(), "retired");
+        assert!(!Parts::read(None).has(Part::Server));
+        assert!(Parts::read(None).has(Part::Map));
         assert!(cvars.get("cg_statusBarPosition").is_none(), "gone");
         assert!(!Parts::ALL.without(Part::Toys).has(Part::Toys));
         assert!(Parts::ALL.without(Part::Toys).has(Part::Credits));
     }
 
     #[test]
-    fn each_part_has_its_own_switch_and_bar() {
+    fn each_part_has_its_own_switch_and_rank() {
         let mut cvars: Vec<&str> = Part::ALL.iter().map(|part| part.cvar()).collect();
         cvars.sort_unstable();
         cvars.dedup();
         assert_eq!(cvars.len(), Part::ALL.len());
-        for part in Part::ALL {
-            let prefix = match part.bar() {
-                Bar::Bottom => "cg_statusBar",
-                Bar::Top => "cg_statusBarTop",
-            };
-            assert!(part.cvar().starts_with(prefix), "{part:?}");
-            assert_eq!(
-                part.cvar().starts_with("cg_statusBarTop"),
-                part.bar() == Bar::Top,
-                "{part:?}"
-            );
-        }
+        assert!(
+            Part::ALL
+                .iter()
+                .all(|part| part.cvar().starts_with("cg_statusBar"))
+        );
         let only_toys = Parts::from_switches(|part| part == Part::Toys);
         assert!(only_toys.has(Part::Toys));
-        assert!(only_toys.any_on(Bar::Bottom));
-        assert!(!only_toys.any_on(Bar::Top));
+        assert!(only_toys.any_on());
+        assert!(!Parts::from_switches(|_| false).any_on());
         assert!(Part::ALL.iter().all(|part| Parts::ALL.has(*part)));
         assert_eq!(Parts::from_switches(|_| true), Parts::ALL);
-        // Each bar has every group, and each part a rank of its own on its bar.
-        for bar in [Bar::Bottom, Bar::Top] {
-            let mut keeps: Vec<u8> = Part::ALL
-                .iter()
-                .filter(|part| part.bar() == bar)
-                .map(|part| part.keep())
-                .collect();
-            let len = keeps.len();
-            keeps.sort_unstable();
-            keeps.dedup();
-            assert_eq!(keeps.len(), len, "{bar:?}");
-            for group in [Group::Left, Group::Centre, Group::Right] {
-                assert!(
-                    Part::ALL
-                        .iter()
-                        .any(|part| part.bar() == bar && part.group() == group),
-                    "{bar:?} {group:?}"
-                );
-            }
+        // Each part a rank of its own, its place in the order, and the order goes left,
+        // centre, right.
+        let mut keeps: Vec<u8> = Part::ALL.iter().map(|part| part.keep()).collect();
+        keeps.sort_unstable();
+        keeps.dedup();
+        assert_eq!(keeps.len(), Part::ALL.len());
+        for (index, part) in Part::ALL.iter().enumerate() {
+            assert_eq!(part.order(), index);
         }
+        let groups: Vec<Group> = Part::ALL.iter().map(|part| part.group()).collect();
+        assert!(groups.windows(2).all(|pair| {
+            let rank = |group: Group| match group {
+                Group::Left => 0,
+                Group::Centre => 1,
+                Group::Right => 2,
+            };
+            rank(pair[0]) <= rank(pair[1])
+        }));
+    }
+
+    /// The one bar holds the player's things and the match's in the bar's order: the
+    /// Force and the score after the effects, the time left after the weapons, the feed,
+    /// the map and the frame rate before the time.
+    #[test]
+    fn one_bar_holds_both_in_order() {
+        let inputs = Inputs {
+            credits: Some(5),
+            clock: Some(times::Clock::default()),
+            ..Inputs::default()
+        };
+        let mut powers = [None; MAX_POWERS];
+        powers[0] = Some((TextureId(1), true, false));
+        let top = TopInputs {
+            powers,
+            left: Some(times::Left(60)),
+            map: Line::from("ffa3"),
+            fps: Some(144),
+            ..TopInputs::default()
+        };
+        let mut out = [NO_PIECE; MAX_PIECES];
+        let count = bar_pieces(&inputs, &top, Parts::ALL, &mut out);
+        let parts: Vec<Part> = out[..count].iter().map(|(part, _)| *part).collect();
+        assert!(parts.starts_with(&[Part::Credits]));
+        let at = |part: Part| parts.iter().position(|p| *p == part).unwrap();
+        assert!(at(Part::Credits) < at(Part::Force));
+        assert!(at(Part::Force) < at(Part::TimeLeft));
+        assert!(at(Part::TimeLeft) < at(Part::Map));
+        assert!(at(Part::Map) < at(Part::Fps));
+        assert!(at(Part::Fps) < at(Part::Time));
+        assert_eq!(*parts.last().unwrap(), Part::Time);
     }
 
     /// An element nearer the top moves down by the top bar's height, one nearer the
@@ -1532,7 +1495,7 @@ mod tests {
             coins: Some(1),
             ..Inputs::default()
         };
-        inputs.toys[toys::HAX] = true;
+        inputs.toys[toys::DRONE] = true;
         let mut out = [NO_PIECE; MAX_PIECES];
         // Shards and crystals unknown, no weapon, no clock read yet: not shown.
         let count = bottom_pieces(&inputs, Parts::ALL, &mut out);
@@ -1560,11 +1523,11 @@ mod tests {
         ));
         assert_eq!(count, 3 + TOY_COUNT);
         assert_eq!(
-            out[3 + toys::HAX],
+            out[3 + toys::DRONE],
             (
                 Part::Toys,
                 Piece::Toy {
-                    index: toys::HAX,
+                    index: toys::DRONE,
                     on: true
                 }
             )

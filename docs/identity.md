@@ -1080,45 +1080,45 @@ and in the hub (same ids):
 | Craftsman | `craft_blade` | a blade crafted from a card | hub |
 | Master Craftsman | `craft_finishes` | a blade crafted from a card of every finish (3: Normal, Holo, Solar, `cards::FINISHES`); three crafts from cards of one finish count 1 | hub |
 | Full Set | `full_set` | every Common and Uncommon card of any one set, in any finish, revealed copies only (sealed ones do not count) | hub |
-| Executor | `order66_kill` | an Order 66 execute on another player who also has the toy | hub |
-| Tactical Espionage | `box_minutes_10` | 10 minutes hidden in the cardboard box with another player close by | client |
+| Executor (retired 20/11/2026) | `order66_kill` | an Order 66 execute on another player who also has the toy | hub |
+| Tactical Espionage (retired 20/11/2026) | `box_minutes_10` | 10 minutes hidden in the cardboard box with another player close by | client |
 | Flawless | `duel_flawless` | a duel won without taking damage | client |
 | Close Call | `duel_close_call` | a duel won with less than 5 health left | client |
 | Well Met | `duel_partners_25` | 25 different players duelled | client |
 | Long Throw | `saber_throw_far` | a player defeated by a saber throw from 512 units or more | client |
 | Return to Sender | `thermal_return` | a player defeated with their own thermal detonator | client |
-| Payback | `monitor_payback` | during the player's Screen Saver, the player whose monitor raised it struck with a monitor | client |
-| Power Surge (hidden) | `monitor_surge` | 3 different players struck with monitors during one Screen Saver | client |
+| Payback (retired 20/11/2026) | `monitor_payback` | during the player's Screen Saver, the player whose monitor raised it struck with a monitor | client |
+| Power Surge (hidden) (retired 20/11/2026) | `monitor_surge` | 3 different players struck with monitors during one Screen Saver | client |
 | Blue, Yellow, Red, Dual, Staff Master | `style_blue_50`, `style_yellow_50`, `style_red_50`, `style_dual_50`, `style_staff_50` | 50 duels won with the saber in that style (`fd.saberAnimLevel` when the kill is made: 1 Fast, 2 Medium, 3 Strong, 6 two sabers, 7 staff; Desann's and Tavion's count towards none), in a private duel (saber only or full Force) or a duel game; kills out of a duel do not count | client |
-| Sneaking Mission, Legendary Soldier | `box_minutes_30`, `box_minutes_60` | 30, 60 minutes hidden in the cardboard box with another player close by (Tactical Espionage's count) | client |
-| Surprise! | `box_ambush` | the player who lifted the player's box defeated by the player within 3 seconds | client |
-| Alert! | `box_spotted_10` | the boxes of 10 different players lifted | client |
-| Wipe Them Out | `order66_purge` | 5 holders of the toy brought down by one Order 66 of the player's | client |
-| I Am the Senate | `order66_victims_25` | 25 different players brought down by the player's Order 66s | client |
-| Puppet Master, Double Agent, Total Control (hidden) | `hax_puppet`, `hax_double`, `hax_triple` | 1, 2, 3 players defeated by a player the Hax steers, in one hack (the hacker not counted) | client |
-| Leap of Faith | `hax_fall` | a player the Hax steers dead by a fall, a pit or a hazard (by their own hand or the world's) | client |
-| Script Kiddie, Elite Hacker | `hax_minutes_5`, `hax_minutes_15` | 5, 15 minutes steering players with the Hax | client |
-| It's a Trap! | `hax_traps_5` | 5 hackers caught in the player's Hax trap | client |
+| Sneaking Mission, Legendary Soldier (retired 20/11/2026) | `box_minutes_30`, `box_minutes_60` | 30, 60 minutes hidden in the cardboard box with another player close by (Tactical Espionage's count) | client |
+| Surprise! (retired 20/11/2026) | `box_ambush` | the player who lifted the player's box defeated by the player within 3 seconds | client |
+| Alert! (retired 20/11/2026) | `box_spotted_10` | the boxes of 10 different players lifted | client |
+| Wipe Them Out (retired 20/11/2026) | `order66_purge` | 5 holders of the toy brought down by one Order 66 of the player's | client |
+| I Am the Senate (retired 20/11/2026) | `order66_victims_25` | 25 different players brought down by the player's Order 66s | client |
+| Puppet Master, Double Agent, Total Control (hidden) (retired 20/11/2026) | `hax_puppet`, `hax_double`, `hax_triple` | 1, 2, 3 players defeated by a player the Hax steers, in one hack (the hacker not counted) | client |
+| Leap of Faith (retired 20/11/2026) | `hax_fall` | a player the Hax steers dead by a fall, a pit or a hazard (by their own hand or the world's) | client |
+| Script Kiddie, Elite Hacker (retired 20/11/2026) | `hax_minutes_5`, `hax_minutes_15` | 5, 15 minutes steering players with the Hax | client |
+| It's a Trap! (retired 20/11/2026) | `hax_traps_5` | 5 hackers caught in the player's Hax trap | client |
 | Eye in the Sky | `drone_strike` | the player the Drone watched defeated by the player within 10 seconds of it landing (the peek ended) | client |
-| Special Delivery | `drone_monitor` | the player the Drone watched struck with the player's monitor within 5 seconds of it landing | client |
+| Special Delivery (retired 20/11/2026) | `drone_monitor` | the player the Drone watched struck with the player's monitor within 5 seconds of it landing | client |
 | DJ | `boombox_minutes_30` | 30 minutes of the player's boombox playing with an SJK player within its range | client |
 | Block Party | `boombox_crowd` | 3 SJK players within the boombox's range at once | client |
 | Tough Crowd (hidden) | `boombox_tough_crowd` | a player within the boombox's range dead by their own hand or the world's while it plays | client |
-| Tech Support | `monitor_victims_25` | 25 different players struck with the player's monitors | client |
-| Two for One, Strike! (hidden) | `monitor_double`, `monitor_triple` | 2, 3 players struck with one monitor | client |
-| Long Distance Call | `monitor_far` | a player struck with a monitor 1575 units (40 metres, as the world ping measures) or more from where it was thrown, measured where it met the body (`achievements::MONITOR_FAR`) | client |
+| Tech Support (retired 20/11/2026) | `monitor_victims_25` | 25 different players struck with the player's monitors | client |
+| Two for One, Strike! (hidden) (retired 20/11/2026) | `monitor_double`, `monitor_triple` | 2, 3 players struck with one monitor | client |
+| Long Distance Call (retired 20/11/2026) | `monitor_far` | a player struck with a monitor 1575 units (40 metres, as the world ping measures) or more from where it was thrown, measured where it met the body (`achievements::MONITOR_FAR`) | client |
 | Bounty Hunter, Big Game Hunter | `box_hunt_mark`, `box_hunt_marks_10` | 1, 10 box hunt marks killed (a free roll won or not) | hub |
 | Still Standing, Most Wanted | `box_hunt_survive`, `box_hunt_survive_5` | 1, 5 marks stayed to the end without a hunter's kill, still in the hunt | hub |
-| First Bite, Angler | `fish_first`, `fish_50` | 1, 50 fish landed with the Fishing toy ([client.md](client.md#fishing)) | client |
-| Every Fish in the Pond | `fish_kinds` | every kind of fish landed (12, `fishing::FISH_KINDS`) | client |
-| Echo Angler | `echo_angler` | 5 Echoes landed on the line (10 until 04/11/2026) | client |
-| Old Whiskers (hidden) | `old_whiskers` | Old Whiskers, the great catfish, landed | client |
-| Beachcomber | `junk_kinds` | every kind of junk fished up (6, `fishing::JUNK_KINDS`) | client |
-| Steady Hand | `fish_steady` | 10 fish bites hooked in a row, none let go between | client |
-| First Strike, Stonebreaker | `mine_first`, `mine_500` | 1, 500 boulders broken with the Mining toy ([client.md](client.md#mining)) | client |
-| Sharp Eye | `mine_clean_250` | 250 clean strikes (a blow as the boulder glints) | client |
-| Prospector | `mine_kinds` | every kind of ore dug (9, `mining::ORE_KINDS`, the Heart among them) | client |
-| Heart of the Mountain (hidden) | `heart_of_the_mountain` | the Heart of the Mountain dug | client |
+| First Bite, Angler (retired 20/11/2026) | `fish_first`, `fish_50` | 1, 50 fish landed with the Fishing toy ([client.md](client.md#fishing-and-mining-removed-and-the-log-book)) | client |
+| Every Fish in the Pond (retired 20/11/2026) | `fish_kinds` | every kind of fish landed (12, `fishing::FISH_KINDS`) | client |
+| Echo Angler (retired 20/11/2026) | `echo_angler` | 5 Echoes landed on the line (10 until 04/11/2026) | client |
+| Old Whiskers (hidden) (retired 20/11/2026) | `old_whiskers` | Old Whiskers, the great catfish, landed | client |
+| Beachcomber (retired 20/11/2026) | `junk_kinds` | every kind of junk fished up (6, `fishing::JUNK_KINDS`) | client |
+| Steady Hand (retired 20/11/2026) | `fish_steady` | 10 fish bites hooked in a row, none let go between | client |
+| First Strike, Stonebreaker (retired 20/11/2026) | `mine_first`, `mine_500` | 1, 500 boulders broken with the Mining toy ([client.md](client.md#fishing-and-mining-removed-and-the-log-book)) | client |
+| Sharp Eye (retired 20/11/2026) | `mine_clean_250` | 250 clean strikes (a blow as the boulder glints) | client |
+| Prospector (retired 20/11/2026) | `mine_kinds` | every kind of ore dug (9, `mining::ORE_KINDS`, the Heart among them) | client |
+| Heart of the Mountain (hidden) (retired 20/11/2026) | `heart_of_the_mountain` | the Heart of the Mountain dug | client |
 
 
 The fourteen after Decorated came on 26/10/2026 (Sol's list), with the categories
@@ -1142,6 +1142,13 @@ can no longer be earned: it shows only to a player who holds it unlocked, with "
 longer obtainable", and is not listed at all, nor its progress, for anyone else. Hidden
 and retired are flags of the client's catalogue (`Kind::hidden`, `Kind::retired`); the
 hub's `"retired": true` on Surveyor's entry is not needed by the client.
+Since 20/11/2026 the removed toys' achievements are retired the same way (Sol: those who
+earned them keep them, kybers and medals included): Order 66, the cardboard box, the
+Monitor, the Hax, Fishing and Mining, and the Drone's Special Delivery (a monitor
+strike). Their counts stay in the record file; they never unlock again. A board page
+with nothing listed leaves the switch (`collection_achievements::pages`): Hobbies, which
+held only Fishing and Mining, shows only to a player who holds one of theirs, and F turns
+through the pages the switch shows.
 Totals ("12 of 39 unlocked", the player card's "Achievements 12 / 39", the profile
 card) count every obtainable achievement and the retired ones the player holds, so a
 holder of Surveyor reads "of 40".
@@ -1174,10 +1181,6 @@ live snapshot by `achievements_frame.rs`):
 - a map and a server count once the player is in the game there (not spectating, not
   following, not in the intermission), and time played is the time between such
   snapshots, at most a second at once;
-- time in the cardboard box counts like time played, while the player hides in it (on,
-  alive, playing: `CardboardBox::hiding`) and another player the game draws alive
-  stands within 1024 units (`tracker::BOX_NEAR`, about 28 metres; 512 until 26/10/2026)
-  in the snapshot;
 - what the player took in a private duel is their own health and shield in the
   snapshots while the duel is on: either falling is damage (not during the duel's
   countdown, which may set them, nor health or shield above the maximum health wearing
@@ -1212,22 +1215,14 @@ live snapshot by `achievements_frame.rs`):
   player's Screen Saver, a hit on the player whose monitor raised it counts Payback,
   and the third different player hit counts Power Surge, each once a Screen Saver;
 - the toys' own (30/10/2026). The tracker weighs each obituary against what the toys
-  tell it of the moment (`tracker::Toys`, `GpuState::toy_moments`): who lifted the
-  player's box and when that reached this client, the player the Hax steers, the player
-  the Drone last watched and when it landed (the peek ended, or moved to another player),
-  and the SJK players within the range of the player's boombox while it plays. A kill of
-  the lifter within 3 seconds (`tracker::BOX_AMBUSH`) counts Surprise!, once a lift; of
-  the player the Drone watched within 10 seconds of its landing (`tracker::DRONE_STRIKE`),
-  Eye in the Sky, once a landing. A kill by the player steered of anyone but themselves
-  and the hacker counts towards the best of one hack (Puppet Master to Total Control);
-  their death by a fall, a pit or a hazard by their own hand or the world's, Leap of
-  Faith. Minutes steering and minutes with a listener in reach count as time played
-  does, the most listeners at once is kept (Block Party), and a listener dead by their
+  tell it of the moment (`tracker::Toys`, `GpuState::toy_moments`): the player the Drone
+  last watched and when it landed (the peek ended, or moved to another player), and the
+  SJK players within the range of the player's boombox while it plays. A kill of the
+  player the Drone watched within 10 seconds of its landing (`tracker::DRONE_STRIKE`)
+  counts Eye in the Sky, once a landing. Minutes with a listener in reach count as time
+  played does, the most listeners at once is kept (Block Party), and a listener dead by their
   own hand or the world's counts Tough Crowd. The rest are counted by the toys
-  (`achievements::note`, `note_best`, `note_name`): a box lifted (Alert!, by the name
-  shown), a trap sprung on a hacker (It's a Trap!), the holders blown up in the window of
-  the player's own Order 66 (Wipe Them Out, the most of one order, and I Am the Senate,
-  by name), and the player's monitor's hits as the struck players' clients tell them
+  (`achievements::note`, `note_best`, `note_name`): the player's monitor's hits as the struck players' clients tell them
   (Tech Support by name, Two for One and Strike! by the players one monitor struck, Long
   Distance Call by how far it flew from its throw, and Special Delivery, a hit on the
   player the Drone watched within 5 seconds of its landing). The sets of players are
@@ -1301,8 +1296,8 @@ see it", "See it in Collection > Holocrons"). The new medal pop-up that opens wi
 game menu takes back the banners of what it shows, and its entrance (and fanfare) also
 waits for the window to come back. A newer SJK release the update check finds has a
 banner too ([client.md](client.md#updates)), as do a content update, a contributor
-reward, a kyber on the wishlist in the shop, the Fishing and Mining toys' rare catches,
-kyber glints and daily goals, and a request from the SJK team for the game's logs. The board has two
+reward, a kyber on the wishlist in the shop (the Fishing and Mining toys' rare catches,
+kyber glints and daily goals until 20/11/2026), and a request from the SJK team for the game's logs. The board has two
 pages (since 30/10/2026, Sol: "the general/normal ones and the more specific ones / fun
 ones", so it can keep growing): General, with Combat, Duels and flags, Journeys,
 Community and Collection, and Fun, with a category for each toy (Cardboard box, Order

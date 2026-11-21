@@ -30,12 +30,6 @@ const TEDDY_MODEL: &str = "models/sjk/teddy_bear.md3";
 const COINS_SMALL: &str = "models/sjk/coins_small.md3";
 const COINS_MEDIUM: &str = "models/sjk/coins_medium.md3";
 const COINS_BIG: &str = "models/sjk/coins_big.md3";
-/// The Ray Gun a box may hand its opener (bundled, `scripts/box_loot_model.py`; held and
-/// fired as a prop gun, `propgun.rs`).
-const RAYGUN_MODEL: &str = "models/sjk/raygun.md3";
-/// Heard as a Ray Gun's shield rises round the player it struck (bundled,
-/// `scripts/box_loot_assets.py`).
-pub(crate) const RAY_SHIELD_SOUND: &str = "sound/sjk/raygun/shield.wav";
 /// The chest's height and depth (across its front), and how far the lid reaches past it.
 const HEIGHT: f32 = 24.0;
 const DEPTH: f32 = 26.0;
@@ -44,34 +38,27 @@ const LID_OVERHANG: f32 = 1.0;
 const LID_OPEN: f32 = 75.0;
 const LID_OPENING: Duration = Duration::from_millis(450);
 const LID_CLOSING: Duration = Duration::from_millis(700);
-/// Played when a box opens, for the opener and everyone near: [`EXTRAS_OPEN`] when the
-/// SJK extras pack has it.
-const OPEN: &str = "sound/effects/crate_slide.mp3";
-/// The roll's music box tune, its last chord at [`ROLL`] (bundled): [`EXTRAS_ROLL`] when
-/// the SJK extras pack has it.
-const ROLL_SOUND: &str = "sound/sjk/mystery_box/roll.wav";
-/// The box's opening, roll and closing in the optional SJK extras pack
-/// (`unofficial_sjk_extras.pk3`, the Sith cloud's `extras`; Sol's sounds of 30/10/2026,
-/// the roll's last note at [`ROLL`]). Without the pack, [`OPEN`], [`ROLL_SOUND`] and no
-/// sound as the lid closes.
-const EXTRAS_OPEN: &str = "sound/sjk/mystery_box/extras_open.mp3";
-const EXTRAS_ROLL: &str = "sound/sjk/mystery_box/extras_roll.mp3";
-const EXTRAS_CLOSE: &str = "sound/sjk/mystery_box/extras_close.mp3";
-/// The extras pack's sounds and what plays without the pack.
-const EXTRAS: [(&str, Option<&str>); 4] = [
-    (EXTRAS_OPEN, Some(OPEN)),
-    (EXTRAS_ROLL, Some(ROLL_SOUND)),
-    (EXTRAS_CLOSE, None),
-    (LAUGH, Some(LAUGH_FALLBACK)),
-];
-/// The opener taking what came out (bundled).
-const TAKE_SOUND: &str = "sound/sjk/mystery_box/take.wav";
+// The Force box's sounds (Sol, 20/11/2026: "its own sounds from Star Wars"): Jedi
+// Academy's own retail files, read from the player's game, never shipped. The chest's
+// bundled music box tune and the extras pack's opening, roll and closing played before.
+/// Played when a box opens, for the opener and everyone near: the Force lifts the lid.
+const OPEN: &str = "sound/weapons/force/pull.mp3";
+/// Played while the roll runs: Force speed's hum, 5.14 s long, ending as the roll stops
+/// ([`ROLL`]).
+const ROLL_SOUND: &str = "sound/weapons/force/speedloop.wav";
+/// Played as the lid shuts.
+const CLOSE: &str = "sound/weapons/force/push.mp3";
+/// The laugh in the optional SJK extras pack (`unofficial_sjk_extras.pk3`) and what plays
+/// without the pack: the only extra the Force box still plays.
+const EXTRAS: [(&str, Option<&str>); 1] = [(LAUGH, Some(LAUGH_FALLBACK))];
+/// The opener taking what came out.
+const TAKE_SOUND: &str = "sound/weapons/force/protecthit.mp3";
 /// Played as the roll stops on credits.
 const WIN: &str = "sound/player/holocron.wav";
 /// Played as the roll stops on the jackpot.
-const JACKPOT: &str = "sound/items/respawn1.wav";
+const JACKPOT: &str = "sound/interface/secret_area.mp3";
 /// Played as the roll stops on nothing.
-const EMPTY: &str = "sound/movers/doors/door_locked.mp3";
+const EMPTY: &str = "sound/weapons/force/noforce.mp3";
 /// Played to every hunter, the mark too, when the box hunt picks a new mark (Sol's
 /// pick, 28/10/2026).
 const HUNT_MARK: &str = "sound/effects/mpalarm.wav";
@@ -95,9 +82,17 @@ const REACH: f32 = 80.0;
 const REACH_UP: f32 = 96.0;
 /// Widest angle between the player's facing and the box, in radians (60 degrees).
 const FACING: f32 = std::f32::consts::FRAC_PI_3;
-/// How long the roll lasts, to the tune's last chord (`scripts/mystery_box_assets.py`)
-/// and the extras pack's roll's last note (Sol, 30/10/2026; 5.5 s before).
+/// How long the roll lasts: about [`ROLL_SOUND`]'s length (5.2 s since 30/10/2026, the
+/// chest's tune and the extras pack's roll; 5.5 s before).
 const ROLL: Duration = Duration::from_millis(5_200);
+/// How long Use is held at a box to roll a DOOM coin instead of credits (Sol, 20/11/2026:
+/// tap for credits, hold for the coin).
+const DOOM_HOLD: Duration = Duration::from_secs(1);
+/// How long a coin roll's outcome stays over the box: nothing waits to be taken (the
+/// holocron is in the Collection already, a punishment strikes at once).
+const DOOM_STAY: Duration = Duration::from_secs(3);
+/// The seconds between two of the player's coin rolls, as the hub keeps them.
+const DOOM_COOLDOWN: u64 = 15;
 /// How long what came out waits for its opener before it is taken by itself.
 const HOLD: Duration = Duration::from_secs(10);
 /// How long the roll's first thing takes to rise out of the box.
@@ -206,8 +201,9 @@ const SHARD_MODEL: &str = "models/sjk/holocron_kyber_rare_crystal.md3";
 /// boxes: a thermal detonator before), SJK's holocron (a holocron of a tier not told, from
 /// an older hub; every client stops on its tier's since 11/11/2026, [`HOLOCRONS`]), a pile
 /// of kyber shards (shards; [`BIG_PILE`] for a big one), a little mystery box (a free
-/// opening, before 11/11/2026), a saber hilt (the boxes' blade) and the Ray Gun.
-const PRIZES: [Item; 10] = [
+/// opening, before 11/11/2026) and a saber hilt (the boxes' blade). The Ray Gun was the
+/// tenth until 20/11/2026, gone with the Prop gun it ran on.
+const PRIZES: [Item; 9] = [
     item("models/items/metallic_bolts.md3", 1.5),
     item(COINS_SMALL, 4.0),
     item(COINS_MEDIUM, 3.2),
@@ -217,7 +213,6 @@ const PRIZES: [Item; 10] = [
     pile(SHARD_MODEL, 1.5, 3),
     item(MODEL, 0.45),
     item("models/weapons2/saber/saber_w.md3", 2.6),
-    item(RAYGUN_MODEL, 2.2),
 ];
 
 /// A big pile of shards: more than [`BIG_PILE_FROM`] (the boxes' blade for a player who
@@ -227,16 +222,15 @@ const BIG_PILE_FROM: u64 = 15;
 
 /// What rolls over an opened box before it stops: only what a box can give (Sol,
 /// 29/10/2026: the game's weapons rolled before, which no box gave), the three piles of
-/// coins, the four tiers' holocrons, two kyber crystals, both piles of shards, the hilt
-/// and the Ray Gun (11/11/2026: the bolts, the little box and SJK's placeholder
-/// holocron rolled before); not the teddy bear, which only comes at the end.
-const REEL: [Item; 13] = [
+/// coins, the four tiers' holocrons, two kyber crystals, both piles of shards and the hilt
+/// (11/11/2026: the bolts, the little box and SJK's placeholder holocron rolled before);
+/// not the teddy bear, which only comes at the end.
+const REEL: [Item; 12] = [
     PRIZES[1],
     PRIZES[2],
     PRIZES[3],
     PRIZES[6],
     PRIZES[8],
-    PRIZES[9],
     BIG_PILE,
     HOLOCRONS[0],
     HOLOCRONS[1],
@@ -260,7 +254,6 @@ fn prize(outcome: &str, pays: bool, tier: Option<&str>) -> Item {
         wire::SHARD_PILE => PRIZES[6],
         wire::AGAIN => PRIZES[7],
         wire::BLADE => PRIZES[8],
-        wire::RAYGUN => PRIZES[9],
         wire::HOLOCRON => form
             .filter(|slot| *slot < HOLOCRONS.len())
             .map_or(PRIZES[5], |slot| HOLOCRONS[slot]),
@@ -269,6 +262,21 @@ fn prize(outcome: &str, pays: bool, tier: Option<&str>) -> Item {
             .filter(|slot| *slot < KYBERS.len())
             .map_or(KYBERS[1], |slot| KYBERS[slot]),
         _ if pays => PRIZES[2],
+        _ => PRIZES[0],
+    }
+}
+
+/// What a DOOM coin roll stops on for the WHEEL OF DOOM's `outcome`: a holocron of its
+/// tier, a pile of coins for the coin back, the teddy bear for the blast and the bolts
+/// for nothing and the punishments.
+fn doom_prize(outcome: &str) -> Item {
+    use crate::wheel_of_doom::Kind;
+    match crate::wheel_of_doom::known(outcome).map(|(_, known)| known.kind) {
+        Some(Kind::Holocron(tier)) => crate::holocrons::stage::form_index(tier)
+            .filter(|slot| *slot < HOLOCRONS.len())
+            .map_or(PRIZES[5], |slot| HOLOCRONS[slot]),
+        Some(Kind::CoinBack) => PRIZES[1],
+        Some(Kind::Explode) => PRIZES[4],
         _ => PRIZES[0],
     }
 }
@@ -326,11 +334,9 @@ macro_rules! bundled {
     };
 }
 
-/// The bundled files at their game paths (made by `scripts/mystery_box_assets.py` and
-/// `scripts/mystery_box_model.py`; the shader by hand).
-const FILES: [(&str, &[u8]); 22] = [
-    (ROLL_SOUND, bundled!("roll.wav")),
-    (TAKE_SOUND, bundled!("take.wav")),
+/// The bundled files at their game paths (made by `scripts/mystery_box_model.py`,
+/// `teddy_bear_model.py` and `box_loot_model.py`; the shader by hand).
+const FILES: [(&str, &[u8]); 12] = [
     (MODEL, bundled!("mystery_box.md3")),
     (LID_MODEL, bundled!("mystery_box_lid.md3")),
     (TEDDY_MODEL, bundled!("teddy_bear.md3")),
@@ -349,20 +355,9 @@ const FILES: [(&str, &[u8]); 22] = [
         bundled!("mystery_box.shader"),
     ),
     ("models/sjk/box_loot.jpg", bundled!("box_loot.jpg")),
-    (
-        "models/sjk/box_loot_glow.jpg",
-        bundled!("box_loot_glow.jpg"),
-    ),
     (COINS_SMALL, bundled!("coins_small.md3")),
     (COINS_MEDIUM, bundled!("coins_medium.md3")),
     (COINS_BIG, bundled!("coins_big.md3")),
-    (RAYGUN_MODEL, bundled!("raygun.md3")),
-    ("models/sjk/raygun_bolt.md3", bundled!("raygun_bolt.md3")),
-    ("sound/sjk/raygun/fire.wav", bundled!("raygun_fire.wav")),
-    ("sound/sjk/raygun/impact.wav", bundled!("raygun_impact.wav")),
-    ("sound/sjk/raygun/raise.wav", bundled!("raygun_raise.wav")),
-    (RAY_SHIELD_SOUND, bundled!("raygun_shield.wav")),
-    (crate::propgun::RAYGUN_FILE, bundled!("raygun.gun")),
 ];
 
 /// Mount the bundled files.
@@ -387,8 +382,6 @@ struct Prize {
     blade: Option<String>,
     /// The tier of the kyber crystal it gave (`kyber_rare`).
     kyber: Option<String>,
-    /// The seconds of the Ray Gun it gave.
-    raygun: Option<u64>,
     /// The DOOM coins held after (a box that blew up gave one).
     doom_coins: Option<u64>,
 }
@@ -410,6 +403,9 @@ struct Opening {
     revealed: bool,
     /// A box that blew up has blown up, [`BLAST_DELAY`] after the roll stopped.
     blasted: bool,
+    /// A DOOM coin roll (the Force box's held Use, since 20/11/2026), and whether it is
+    /// the player's own; `None` for a credits roll.
+    doom: Option<bool>,
 }
 
 impl Opening {
@@ -513,6 +509,8 @@ enum Moment {
         prize: Prize,
     },
     Taken(Taken),
+    /// The player's own DOOM coin roll stopped on this WHEEL OF DOOM outcome.
+    Doomed(String),
     /// A box that blew up at the roll's end, for everyone who sees it: the opener's slot
     /// and the box's place.
     Blast {
@@ -562,6 +560,17 @@ pub(crate) struct MysteryBoxes {
     meshes_seen: usize,
     use_pressed: bool,
     use_held: bool,
+    /// Use let go since the frame's logic last looked.
+    use_released: bool,
+    /// The box Use is held at and since when, while the player holds a DOOM coin: let go
+    /// before [`DOOM_HOLD`] it rolls for credits, held that long for the coin.
+    holding: Option<(i64, Instant)>,
+    /// The box a coin roll was asked at and when, until the hub answers.
+    doom_asked: Option<(i64, Instant)>,
+    /// The last coin roll answer read.
+    doom_seen: u64,
+    /// Until when the hub makes the player wait for their next coin roll.
+    doom_until: Option<Instant>,
     /// The box asked to open and when, until the hub answers.
     asked: Option<(i64, Instant)>,
     /// The last hub answer read.
@@ -603,6 +612,9 @@ impl MysteryBoxes {
         let using = command.buttons & BUTTON_USE != 0;
         if using && !self.use_held {
             self.use_pressed = true;
+        }
+        if !using && self.use_held {
+            self.use_released = true;
         }
         self.use_held = using;
     }
@@ -715,15 +727,32 @@ impl MysteryBoxes {
             opener,
             revealed: false,
             blasted: false,
+            doom: None,
         });
         here.lid.set(true, now);
         let (origin, id) = (here.origin.to_array(), here.id);
-        for path in [EXTRAS_OPEN, EXTRAS_ROLL] {
+        for path in [OPEN, ROLL_SOUND] {
             self.cues.push(Cue {
                 path,
                 origin: Some(origin),
                 source: source(id),
             });
+        }
+    }
+
+    /// Box `id` rolled DOOM coin `outcome` (the player's own when `mine`, by the player
+    /// on slot `opener`): the box opens and rolls as for credits, stopping on
+    /// [`doom_prize`].
+    fn doomed(&mut self, id: i64, outcome: &str, mine: bool, opener: Option<u8>, now: Instant) {
+        self.opened(id, outcome, None, opener, None, seed(), now);
+        if let Some(opening) = self
+            .here
+            .iter_mut()
+            .find(|here| here.id == id)
+            .and_then(|here| here.opening.as_mut())
+        {
+            opening.prize = doom_prize(outcome);
+            opening.doom = Some(mine);
         }
     }
 
@@ -741,12 +770,33 @@ impl MysteryBoxes {
                 opening.revealed = true;
                 // A box that blows up stops on the teddy bear and laughs; it blows up
                 // [`BLAST_DELAY`] later.
-                let path = match opening.outcome.as_str() {
-                    "jackpot" | wire::BLADE | wire::KYBER => JACKPOT,
-                    wire::EXPLODE => LAUGH,
-                    _ if opening.prize == PRIZES[0] => EMPTY,
-                    _ => WIN,
+                let doom = opening
+                    .doom
+                    .and_then(|_| crate::wheel_of_doom::known(&opening.outcome))
+                    .map(|(_, known)| known.kind);
+                let path = match (doom, opening.outcome.as_str()) {
+                    (Some(crate::wheel_of_doom::Kind::Holocron("mythical" | "legendary")), _) => {
+                        JACKPOT
+                    }
+                    (
+                        Some(
+                            crate::wheel_of_doom::Kind::Holocron(_)
+                            | crate::wheel_of_doom::Kind::CoinBack,
+                        ),
+                        _,
+                    ) => WIN,
+                    (Some(crate::wheel_of_doom::Kind::Nothing), _) => EMPTY,
+                    (Some(_), _) => LAUGH,
+                    (None, outcome) => match outcome {
+                        "jackpot" | wire::BLADE | wire::KYBER => JACKPOT,
+                        wire::EXPLODE => LAUGH,
+                        _ if opening.prize == PRIZES[0] => EMPTY,
+                        _ => WIN,
+                    },
                 };
+                if opening.doom == Some(true) {
+                    moments.push(Moment::Doomed(opening.outcome.clone()));
+                }
                 self.cues.push(Cue {
                     path,
                     origin: Some(here.origin.to_array()),
@@ -779,15 +829,20 @@ impl MysteryBoxes {
                     });
                 }
             }
-            if elapsed >= ROLL + HOLD {
+            let stays = if opening.doom.is_some() {
+                DOOM_STAY.max(BLAST_DELAY)
+            } else {
+                HOLD
+            };
+            if elapsed >= ROLL + stays {
                 here.lid.set(false, now);
                 self.cues.push(Cue {
-                    path: EXTRAS_CLOSE,
+                    path: CLOSE,
                     origin: Some(here.origin.to_array()),
                     source: source(here.id),
                 });
             }
-            if elapsed >= ROLL + HOLD
+            if elapsed >= ROLL + stays
                 && let Some(opening) = here.opening.take()
                 && let Some(prize) = opening.mine
             {
@@ -816,7 +871,7 @@ impl MysteryBoxes {
         }
         here.opening = None;
         here.lid.set(false, now);
-        for path in [TAKE_SOUND, EXTRAS_CLOSE] {
+        for path in [TAKE_SOUND, CLOSE] {
             self.cues.push(Cue {
                 path,
                 origin: Some(here.origin.to_array()),
@@ -858,7 +913,7 @@ impl MysteryBoxes {
         }
         let opening = here.opening.take()?;
         here.lid.set(false, Instant::now());
-        for path in [TAKE_SOUND, EXTRAS_CLOSE] {
+        for path in [TAKE_SOUND, CLOSE] {
             self.cues.push(Cue {
                 path,
                 origin: Some(here.origin.to_array()),
@@ -920,6 +975,9 @@ fn box_prompt(
     };
     if let Some(opening) = &here.opening {
         let rolled = now.saturating_duration_since(opening.started) >= ROLL;
+        if let Some(mine) = opening.doom {
+            return (!mine).then(|| prompt("Someone rolls a DOOM coin", None, false));
+        }
         return match (&opening.mine, rolled) {
             _ if opening.outcome == wire::EXPLODE => None,
             (Some(_), true) => Some(prompt("Take it", None, true)),
@@ -945,6 +1003,24 @@ fn box_prompt(
     })
 }
 
+/// The Use prompt's line at an idle box while the player holds `coins` DOOM coins: what
+/// a tap costs (`line`), then the coin roll held Use gives, or the seconds to wait for it,
+/// or that it is coming while Use is `held`.
+fn doom_line(line: Option<String>, coins: u64, wait: Option<u64>, held: bool) -> String {
+    let doom = if held {
+        "Keep holding: DOOM coin roll".to_owned()
+    } else if let Some(left) = wait {
+        format!("DOOM coin roll again in {left} s")
+    } else {
+        let s = if coins == 1 { "" } else { "s" };
+        format!("Hold Use: DOOM coin roll ({coins} coin{s})")
+    };
+    match line {
+        Some(line) => format!("Tap: {line} \u{00b7} {doom}"),
+        None => doom,
+    }
+}
+
 /// What a box may give, as a player reads it, by the hub's `outcomes`: likeliest first,
 /// the never rolled left out.
 fn box_drops(outcomes: &[wire::Outcome]) -> Vec<crate::use_prompt::Drop> {
@@ -967,7 +1043,6 @@ fn drop_name(id: &str, credits: u64) -> String {
         wire::COINS | "double" | "jackpot" if credits > 0 => format!("{credits} credits"),
         wire::EXPLODE => "The teddy bear: a DOOM coin".to_owned(),
         wire::SHARD_PILE => "Kyber shards".to_owned(),
-        wire::RAYGUN => "The Ray Gun".to_owned(),
         wire::BLADE => "The Mystery blade".to_owned(),
         wire::KYBER => "A dormant kyber".to_owned(),
         wire::AGAIN => "Another roll".to_owned(),
@@ -1022,10 +1097,6 @@ fn prize_text(outcome: &str, prize: &Prize) -> String {
                 .map_or("A dormant kyber", |tier| tier.name);
             format!("{name}! In your Collection")
         }
-        (wire::RAYGUN, ..) => format!(
-            "THE RAY GUN! {} s in your hand: attack fires it",
-            prize.raygun.unwrap_or(30)
-        ),
         (wire::BLADE, ..) if prize.blade.is_some() => {
             "The Mystery blade! In your Collection".to_owned()
         }
@@ -1189,6 +1260,7 @@ impl GpuState {
         }
         let now = Instant::now();
         self.read_mystery_box_answer(now);
+        self.read_mystery_box_doom(now);
         let Some(session) = self
             .live_session
             .as_ref()
@@ -1251,6 +1323,12 @@ impl GpuState {
             if event.toy != wire::TOY || Some(event.slot) == own {
                 continue;
             }
+            if let Some((id, outcome)) = sjk_identity::wheel_of_doom::parse_doom_event(&event.event)
+            {
+                self.mystery_boxes
+                    .doomed(id, outcome, false, Some(event.slot), now);
+                continue;
+            }
             if let Some(told) = wire::parse_event(&event.event) {
                 self.mystery_boxes.opened(
                     told.id,
@@ -1281,11 +1359,15 @@ impl GpuState {
         }
         if self.mystery_boxes.here.is_empty() {
             self.mystery_boxes.use_pressed = false;
+            self.mystery_boxes.use_released = false;
+            self.mystery_boxes.holding = None;
             return;
         }
         let player = &session.latest_snapshot().player;
         if !plays(player) {
             self.mystery_boxes.use_pressed = false;
+            self.mystery_boxes.use_released = false;
+            self.mystery_boxes.holding = None;
             return;
         }
         let from = self
@@ -1298,6 +1380,13 @@ impl GpuState {
             &self.mystery_boxes.here,
         );
         let pressed = std::mem::take(&mut self.mystery_boxes.use_pressed);
+        let released = std::mem::take(&mut self.mystery_boxes.use_released);
+        let coins = self.doom_coins().unwrap_or(0);
+        let doom_wait = self
+            .mystery_boxes
+            .doom_until
+            .map(|until| until.saturating_duration_since(now).as_secs())
+            .filter(|left| *left > 0);
         let credits = crate::player_identity::with_snapshot(|snapshot| {
             snapshot.me.as_ref().map(|me| me.credits)
         })
@@ -1321,9 +1410,15 @@ impl GpuState {
                     now,
                 )
                 .map(|mut prompt| {
-                    // What it may give, while nobody opens it.
+                    // What it may give, while nobody opens it, and the coin roll held
+                    // Use gives.
                     if here.opening.is_none() {
                         prompt.drops.clone_from(&boxes.drops);
+                        if coins > 0 {
+                            prompt.line = Some(doom_line(prompt.line.take(), coins, doom_wait, {
+                                boxes.holding.is_some_and(|(held, _)| held == here.id)
+                            }));
+                        }
                     }
                     prompt
                 })
@@ -1331,9 +1426,51 @@ impl GpuState {
         if let Some(prompt) = prompt {
             self.want_use_prompt(prompt);
         }
-        let (Some(id), true) = (at, pressed) else {
+        let Some(id) = at else {
+            self.mystery_boxes.holding = None;
             return;
         };
+        if self
+            .mystery_boxes
+            .holding
+            .is_some_and(|(held, _)| held != id)
+        {
+            self.mystery_boxes.holding = None;
+        }
+        // Held at an idle box with a DOOM coin: let go early, the credits roll; held
+        // [`DOOM_HOLD`], the coin's.
+        let idle = self
+            .mystery_boxes
+            .here
+            .iter()
+            .any(|here| here.id == id && here.opening.is_none());
+        if pressed && idle && coins > 0 && doom_wait.is_none() {
+            self.mystery_boxes.holding = Some((id, now));
+            return;
+        }
+        let pressed = match self.mystery_boxes.holding {
+            Some((_, since)) if now.duration_since(since) >= DOOM_HOLD => {
+                self.mystery_boxes.holding = None;
+                if idle
+                    && crate::player_identity::with_service(|service| {
+                        service.doom_mystery_box(id, server.clone());
+                    })
+                    .is_some()
+                {
+                    self.mystery_boxes.doom_asked = Some((id, now));
+                }
+                return;
+            }
+            Some(_) if released => {
+                self.mystery_boxes.holding = None;
+                true
+            }
+            Some(_) => return,
+            None => pressed,
+        };
+        if !pressed {
+            return;
+        }
         if let Some(taken) = self.mystery_boxes.take_prize(id) {
             self.mystery_box_moment(Moment::Taken(taken));
             // Told to the other SJK players here, whose box would float on till the hold
@@ -1381,6 +1518,43 @@ impl GpuState {
         }
     }
 
+    /// Act on the hub's last answer to a coin roll, once: the box rolls, or the player
+    /// reads why not.
+    fn read_mystery_box_doom(&mut self, now: Instant) {
+        let seen = self.mystery_boxes.doom_seen;
+        let Some((serial, outcome)) = crate::player_identity::with_snapshot(|snapshot| {
+            snapshot
+                .mystery_box_doom
+                .as_ref()
+                .filter(|(serial, _)| *serial != seen)
+                .cloned()
+        })
+        .flatten() else {
+            return;
+        };
+        self.mystery_boxes.doom_seen = serial;
+        let asked = self.mystery_boxes.doom_asked.take();
+        match outcome {
+            Ok(doom) => {
+                let own = self
+                    .live_session
+                    .as_ref()
+                    .and_then(|session| u8::try_from(session.game_state().client_num).ok());
+                self.mystery_boxes.doom_until = Some(now + Duration::from_secs(DOOM_COOLDOWN));
+                self.mystery_boxes
+                    .doomed(doom.box_id, &doom.outcome, true, own, now);
+            }
+            Err(refused) => {
+                if let Some(left) = refused.left {
+                    self.mystery_boxes.doom_until = Some(now + Duration::from_secs(left));
+                }
+                if asked.is_some() {
+                    self.mystery_box_centre(refused.words);
+                }
+            }
+        }
+    }
+
     /// Act on the hub's last answer to a mystery box request, once.
     fn read_mystery_box_answer(&mut self, now: Instant) {
         let seen = self.mystery_boxes.answer_seen;
@@ -1419,7 +1593,6 @@ impl GpuState {
                     shards: opened.shards,
                     blade: opened.blade.clone(),
                     kyber: opened.kyber.as_ref().map(|kyber| kyber.tier.clone()),
-                    raygun: opened.raygun,
                     doom_coins: opened.doom_coins,
                 };
                 let own = self
@@ -1458,22 +1631,12 @@ impl GpuState {
     fn mystery_box_moment(&mut self, moment: Moment) {
         match moment {
             Moment::Blast { opener, at } => self.mystery_box_blast(opener, at),
-            Moment::Stopped { id, outcome, prize } => {
-                // The Use prompt says to take it; the Ray Gun jumps into the hand at once.
+            Moment::Stopped { outcome, prize, .. } => {
+                // The Use prompt says to take it.
                 self.mystery_box_centre(prize_text(&outcome, &prize));
-                if outcome == wire::RAYGUN
-                    && let Some(taken) = self.mystery_boxes.take_prize(id)
-                {
-                    self.mystery_boxes.takes.push((id, u64::MAX));
-                    self.mystery_box_moment(Moment::Taken(taken));
-                }
             }
+            Moment::Doomed(outcome) => self.wheel_of_doom_strike(&outcome, Instant::now()),
             Moment::Taken(taken) => {
-                if taken.outcome == wire::RAYGUN
-                    && let Some(seconds) = taken.prize.raygun
-                {
-                    self.raygun_start(seconds);
-                }
                 let text = prize_text(&taken.outcome, &taken.prize);
                 let how = if taken.by_itself {
                     " (taken for you)"
@@ -1736,9 +1899,7 @@ impl GpuState {
                 [
                     OPEN,
                     ROLL_SOUND,
-                    EXTRAS_OPEN,
-                    EXTRAS_ROLL,
-                    EXTRAS_CLOSE,
+                    CLOSE,
                     TAKE_SOUND,
                     WIN,
                     JACKPOT,
@@ -1790,7 +1951,7 @@ impl GpuState {
     }
 
     /// [`Self::shot_mystery_boxes`], stopped on the loot of 11/11/2026: the three piles of
-    /// gold coins and the Ray Gun, or with `kybers` the four kyber crystals.
+    /// gold coins and the hilt, or with `kybers` the four kyber crystals.
     pub(crate) fn shot_mystery_box_rework(
         &mut self,
         boxes: &[([f32; 3], f32)],
@@ -1800,7 +1961,7 @@ impl GpuState {
         let loot = if kybers {
             KYBERS
         } else {
-            [PRIZES[1], PRIZES[2], PRIZES[3], PRIZES[9]]
+            [PRIZES[1], PRIZES[2], PRIZES[3], PRIZES[8]]
         };
         self.shot_mystery_box_prizes(boxes, since, &loot);
     }
@@ -1839,6 +2000,7 @@ impl GpuState {
                     opener: None,
                     revealed: true,
                     blasted: false,
+                    doom: None,
                 }),
                 lid: Lid {
                     open: true,
@@ -1980,6 +2142,7 @@ mod tests {
             opener: None,
             revealed: false,
             blasted: false,
+            doom: None,
         };
         // Changing often early on, the prize over the last second and after.
         let early: std::collections::HashSet<&str> = (0..20)
@@ -2005,12 +2168,13 @@ mod tests {
                 item.model
             );
         }
-        // 11/11/2026: coins for credits, the Ray Gun, the crystals, and never the
+        // 11/11/2026: coins for credits, the crystals, and never the
         // placeholder holocron, the bolts or the little box rolling by.
         assert_eq!(prize(wire::COINS, true, None).model, COINS_SMALL);
         assert_eq!(prize("double", true, None).model, COINS_MEDIUM);
         assert_eq!(prize("jackpot", true, None).model, COINS_BIG);
-        assert_eq!(prize(wire::RAYGUN, false, None), PRIZES[9]);
+        // A Ray Gun from a hub before the release that removed it: a prize not known.
+        assert_eq!(prize("raygun", false, None), PRIZES[0]);
         assert_eq!(prize(wire::KYBER, false, Some("kyber_mythical")), KYBERS[3]);
         assert_eq!(prize(wire::KYBER, false, Some("rare")), KYBERS[1]);
         assert_eq!(prize(wire::KYBER, false, None), KYBERS[1]);
@@ -2061,10 +2225,8 @@ mod tests {
         // The hunt's source is no box's.
         assert!((0..=0xFFFF).all(|id| source(id) != HUNT_SOURCE));
         let paths: Vec<&str> = state.cues.drain(..).map(|cue| cue.path).collect();
-        // The extras pack's opening and roll, or the bundled ones without it.
-        assert_eq!(paths, [EXTRAS_OPEN, EXTRAS_ROLL]);
-        assert!(EXTRAS.contains(&(EXTRAS_OPEN, Some(OPEN))));
-        assert!(EXTRAS.contains(&(EXTRAS_ROLL, Some(ROLL_SOUND))));
+        // The Force lifts the lid, Force speed hums through the roll.
+        assert_eq!(paths, [OPEN, ROLL_SOUND]);
         // The lid swings open, and stays open while it rolls.
         assert_eq!(state.here[0].lid.angle(now), 0.0);
         assert_eq!(state.here[0].lid.angle(now + LID_OPENING), LID_OPEN);
@@ -2087,7 +2249,7 @@ mod tests {
         assert!(!taken.by_itself);
         assert_eq!(taken.prize.won, 200);
         let paths: Vec<&str> = state.cues.drain(..).map(|cue| cue.path).collect();
-        assert_eq!(paths, [TAKE_SOUND, EXTRAS_CLOSE]);
+        assert_eq!(paths, [TAKE_SOUND, CLOSE]);
         assert!(state.here[0].opening.is_none());
         assert!(!state.here[0].lid.open);
         assert!(state.tick(now + ROLL + HOLD).is_empty());
@@ -2224,11 +2386,6 @@ mod tests {
             prize_text(wire::KYBER, &crystal),
             "Rare Dormant Kyber! In your Collection"
         );
-        let gun = Prize {
-            raygun: Some(30),
-            ..Prize::default()
-        };
-        assert!(prize_text(wire::RAYGUN, &gun).starts_with("THE RAY GUN! 30 s"));
         // The teddy bear's DOOM coin.
         let coined = Prize {
             doom_coins: Some(1),
@@ -2289,10 +2446,9 @@ mod tests {
         assert!(state.tick(now + ROLL + BLAST_DELAY * 2).is_empty());
         // The laugh is the extras pack's, the retail gloat without it.
         assert!(EXTRAS.contains(&(LAUGH, Some(LAUGH_FALLBACK))));
-        // The lid closing sounds only with the extras pack.
-        assert!(EXTRAS.contains(&(EXTRAS_CLOSE, None)));
+        // The lid shuts with a Force push.
         state.tick(now + ROLL + HOLD);
-        assert!(state.cues.iter().any(|cue| cue.path == EXTRAS_CLOSE));
+        assert!(state.cues.iter().any(|cue| cue.path == CLOSE));
     }
 
     #[test]
@@ -2396,7 +2552,7 @@ mod tests {
         assert!(watcher.here[0].opening.is_none());
         assert!(!watcher.here[0].lid.open);
         let paths: Vec<&str> = watcher.cues.drain(..).map(|cue| cue.path).collect();
-        assert_eq!(paths, [TAKE_SOUND, EXTRAS_CLOSE]);
+        assert_eq!(paths, [TAKE_SOUND, CLOSE]);
     }
 
     #[test]
@@ -2413,5 +2569,72 @@ mod tests {
             None
         );
         assert_eq!(cooldown_left(Some(now), 0, now), None);
+    }
+
+    /// A coin roll stops on a holocron of its tier, coins for the coin back, the teddy
+    /// bear for the blast and the bolts for the rest.
+    #[test]
+    fn a_coin_roll_stops_on_what_its_outcome_gives() {
+        let tier = |tier| HOLOCRONS[crate::holocrons::stage::form_index(tier).unwrap()];
+        assert_eq!(doom_prize("mythical"), tier("mythical"));
+        assert_eq!(doom_prize("holo_rare"), tier("rare"));
+        assert_eq!(doom_prize("doom_coin"), PRIZES[1]);
+        assert_eq!(doom_prize("explode"), PRIZES[4]);
+        assert_eq!(doom_prize("mirror"), PRIZES[0]);
+        assert_eq!(doom_prize("nothing"), PRIZES[0]);
+        assert_eq!(doom_prize("from_a_newer_hub"), PRIZES[0]);
+    }
+
+    /// The prompt says a tap's price, then what holding Use does.
+    #[test]
+    fn the_prompt_offers_the_coin_roll_to_a_coin_holder() {
+        assert_eq!(
+            doom_line(Some("100 credits".to_owned()), 2, None, false),
+            "Tap: 100 credits \u{00b7} Hold Use: DOOM coin roll (2 coins)"
+        );
+        assert_eq!(
+            doom_line(None, 1, Some(9), false),
+            "DOOM coin roll again in 9 s"
+        );
+        assert_eq!(
+            doom_line(Some("Free roll".to_owned()), 1, None, true),
+            "Tap: Free roll \u{00b7} Keep holding: DOOM coin roll"
+        );
+    }
+
+    /// A coin roll rolls as an opening, stops on its prize, tells its own roller and
+    /// leaves the box sooner, with nothing to take.
+    #[test]
+    fn a_coin_roll_tells_its_roller_and_leaves_nothing_to_take() {
+        let start = Instant::now();
+        let mut boxes = MysteryBoxes::default();
+        boxes.here.push(Here {
+            id: 4,
+            origin: Vec3::ZERO,
+            yaw: 0.0,
+            opening: None,
+            lid: Lid::default(),
+        });
+        boxes.doomed(4, "holo_rare", true, Some(1), start);
+        let opening = boxes.here[0].opening.as_ref().unwrap();
+        assert_eq!(
+            (opening.doom, opening.prize),
+            (Some(true), doom_prize("holo_rare"))
+        );
+        assert!(boxes.tick(start + ROLL / 2).is_empty());
+        assert_eq!(
+            boxes.tick(start + ROLL),
+            vec![Moment::Doomed("holo_rare".to_owned())]
+        );
+        assert!(boxes.take_prize(4).is_none());
+        assert!(boxes.tick(start + ROLL + DOOM_STAY).is_empty());
+        assert!(boxes.here[0].opening.is_none());
+        // Another player's: the prompt says so, and nothing is told here.
+        boxes.doomed(4, "mirror", false, Some(2), start);
+        assert!(
+            !boxes
+                .tick(start + ROLL)
+                .contains(&Moment::Doomed("mirror".to_owned()))
+        );
     }
 }

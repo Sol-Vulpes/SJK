@@ -126,13 +126,13 @@ pub(crate) enum Counter {
     // The Fishing toy's (Slash, 29/10/2026; [`crate::fishing`]).
     /// Fish landed with the Fishing toy.
     FishCaught,
-    /// Kinds of fish landed (bits of [`fish_kind`]).
+    /// Kinds of fish landed (bits by place among the fish of [`crate::fishing::CATCHES`]).
     FishKinds,
     /// Echoes landed on the line.
     EchoesLanded,
     /// Old Whiskers, the great catfish, landed.
     GreatCatfish,
-    /// Kinds of junk fished up (bits of [`junk_kind`]; 04/11/2026).
+    /// Kinds of junk fished up (bits by place among the junk; 04/11/2026).
     JunkKinds,
     /// The most fish bites hooked in a row, none let go between (04/11/2026).
     HookStreak,
@@ -141,7 +141,7 @@ pub(crate) enum Counter {
     BouldersBroken,
     /// Clean strikes on them (a blow on the glint).
     CleanStrikes,
-    /// Kinds of ore dug (bits of [`ore_kind`]).
+    /// Kinds of ore dug (bits by place among the ores of [`crate::mining::FINDS`]).
     OreKinds,
     /// The Heart of the Mountain dug.
     MountainHearts,
@@ -342,12 +342,6 @@ impl Page {
             Self::Hobbies => "Hobbies",
         }
     }
-
-    /// The page after it, the last turning to the first.
-    pub(crate) fn next(self) -> Self {
-        let at = Self::ALL.iter().position(|page| *page == self).unwrap_or(0);
-        Self::ALL[(at + 1) % Self::ALL.len()]
-    }
 }
 
 impl Category {
@@ -383,7 +377,7 @@ impl Category {
             Self::Hax => "Hax",
             Self::Drone => "Drone",
             Self::Boombox => "Boombox",
-            Self::Monitor => "Monitor",
+            Self::Monitor => "Force Throw",
             Self::BoxHunt => "Box hunt",
             Self::Fishing => "Fishing",
             Self::Mining => "Mining",
@@ -726,7 +720,8 @@ pub(crate) const ALL: [Kind; 80] = [
         1,
         Order66,
         Hub,
-    ),
+    )
+    .retire(),
     kind(
         "box_minutes_10",
         "Tactical Espionage",
@@ -734,7 +729,8 @@ pub(crate) const ALL: [Kind; 80] = [
         10,
         CardboardBox,
         Client(C::BoxMinutes),
-    ),
+    )
+    .retire(),
     kind(
         "duel_flawless",
         "Flawless",
@@ -818,16 +814,16 @@ pub(crate) const ALL: [Kind; 80] = [
     // Since 29/10/2026 (Sol's Screen Saver, `monitor/saver.rs`).
     kind(
         "monitor_payback",
-        "Payback",
-        "During your Screen Saver, hit the player whose monitor set it off.",
+        "Rebound",
+        "During your Force Barrier, hit the player whose throw raised it.",
         1,
         Monitor,
         Client(C::MonitorPayback),
     ),
     kind(
         "monitor_surge",
-        "Power Surge",
-        "Hit 3 different players with monitors during one Screen Saver.",
+        "Force Surge",
+        "Hit 3 different players with thrown junk during one Force Barrier.",
         1,
         Monitor,
         Client(C::MonitorSurge),
@@ -841,7 +837,8 @@ pub(crate) const ALL: [Kind; 80] = [
         30,
         CardboardBox,
         Client(C::BoxMinutes),
-    ),
+    )
+    .retire(),
     kind(
         "box_minutes_60",
         "Legendary Soldier",
@@ -849,7 +846,8 @@ pub(crate) const ALL: [Kind; 80] = [
         60,
         CardboardBox,
         Client(C::BoxMinutes),
-    ),
+    )
+    .retire(),
     kind(
         "box_ambush",
         "Surprise!",
@@ -857,7 +855,8 @@ pub(crate) const ALL: [Kind; 80] = [
         1,
         CardboardBox,
         Client(C::BoxAmbush),
-    ),
+    )
+    .retire(),
     kind(
         "box_spotted_10",
         "Alert!",
@@ -865,7 +864,8 @@ pub(crate) const ALL: [Kind; 80] = [
         10,
         CardboardBox,
         Client(C::BoxSpotted),
-    ),
+    )
+    .retire(),
     kind(
         "order66_purge",
         "Wipe Them Out",
@@ -873,7 +873,8 @@ pub(crate) const ALL: [Kind; 80] = [
         5,
         Order66,
         Client(C::Order66Best),
-    ),
+    )
+    .retire(),
     kind(
         "order66_victims_25",
         "I Am the Senate",
@@ -881,7 +882,8 @@ pub(crate) const ALL: [Kind; 80] = [
         25,
         Order66,
         Client(C::Order66Victims),
-    ),
+    )
+    .retire(),
     kind(
         "hax_puppet",
         "Puppet Master",
@@ -889,7 +891,8 @@ pub(crate) const ALL: [Kind; 80] = [
         1,
         Hax,
         Client(C::HaxBest),
-    ),
+    )
+    .retire(),
     kind(
         "hax_double",
         "Double Agent",
@@ -897,7 +900,8 @@ pub(crate) const ALL: [Kind; 80] = [
         2,
         Hax,
         Client(C::HaxBest),
-    ),
+    )
+    .retire(),
     kind(
         "hax_triple",
         "Total Control",
@@ -906,7 +910,8 @@ pub(crate) const ALL: [Kind; 80] = [
         Hax,
         Client(C::HaxBest),
     )
-    .secret(),
+    .secret()
+    .retire(),
     kind(
         "hax_fall",
         "Leap of Faith",
@@ -914,7 +919,8 @@ pub(crate) const ALL: [Kind; 80] = [
         1,
         Hax,
         Client(C::HaxFalls),
-    ),
+    )
+    .retire(),
     kind(
         "hax_minutes_5",
         "Script Kiddie",
@@ -922,7 +928,8 @@ pub(crate) const ALL: [Kind; 80] = [
         5,
         Hax,
         Client(C::HaxMinutes),
-    ),
+    )
+    .retire(),
     kind(
         "hax_minutes_15",
         "Elite Hacker",
@@ -930,7 +937,8 @@ pub(crate) const ALL: [Kind; 80] = [
         15,
         Hax,
         Client(C::HaxMinutes),
-    ),
+    )
+    .retire(),
     kind(
         "hax_traps_5",
         "It's a Trap!",
@@ -938,7 +946,8 @@ pub(crate) const ALL: [Kind; 80] = [
         5,
         Hax,
         Client(C::HaxTraps),
-    ),
+    )
+    .retire(),
     kind(
         "drone_strike",
         "Eye in the Sky",
@@ -950,7 +959,7 @@ pub(crate) const ALL: [Kind; 80] = [
     kind(
         "drone_monitor",
         "Special Delivery",
-        "Hit your Drone's target with a monitor within 5 seconds of landing it.",
+        "Hit your Drone's target with a Force throw within 5 seconds of landing it.",
         1,
         Drone,
         Client(C::DroneMonitor),
@@ -982,8 +991,8 @@ pub(crate) const ALL: [Kind; 80] = [
     .secret(),
     kind(
         "monitor_victims_25",
-        "Tech Support",
-        "Hit 25 different players with monitors.",
+        "Telekinetic",
+        "Hit 25 different players with Force-thrown junk.",
         25,
         Monitor,
         Client(C::MonitorVictims),
@@ -991,7 +1000,7 @@ pub(crate) const ALL: [Kind; 80] = [
     kind(
         "monitor_double",
         "Two for One",
-        "Hit 2 players with one monitor.",
+        "Hit 2 players with one Force throw.",
         2,
         Monitor,
         Client(C::MonitorBestThrow),
@@ -999,7 +1008,7 @@ pub(crate) const ALL: [Kind; 80] = [
     kind(
         "monitor_triple",
         "Strike!",
-        "Hit 3 players with one monitor.",
+        "Hit 3 players with one Force throw.",
         3,
         Monitor,
         Client(C::MonitorBestThrow),
@@ -1007,8 +1016,8 @@ pub(crate) const ALL: [Kind; 80] = [
     .secret(),
     kind(
         "monitor_far",
-        "Long Distance Call",
-        "Hit a player with a monitor thrown from more than 40 metres away.",
+        "Reach of the Force",
+        "Hit a player with junk Force-thrown from more than 40 metres away.",
         1,
         Monitor,
         Client(C::MonitorFar),
@@ -1053,7 +1062,8 @@ pub(crate) const ALL: [Kind; 80] = [
         1,
         Fishing,
         Client(C::FishCaught),
-    ),
+    )
+    .retire(),
     kind(
         "fish_50",
         "Angler",
@@ -1061,7 +1071,8 @@ pub(crate) const ALL: [Kind; 80] = [
         50,
         Fishing,
         Client(C::FishCaught),
-    ),
+    )
+    .retire(),
     kind(
         "fish_kinds",
         "Every Fish in the Pond",
@@ -1069,7 +1080,8 @@ pub(crate) const ALL: [Kind; 80] = [
         crate::fishing::FISH_KINDS as u64,
         Fishing,
         Client(C::FishKinds),
-    ),
+    )
+    .retire(),
     kind(
         "echo_angler",
         "Echo Angler",
@@ -1079,7 +1091,8 @@ pub(crate) const ALL: [Kind; 80] = [
         5,
         Fishing,
         Client(C::EchoesLanded),
-    ),
+    )
+    .retire(),
     kind(
         "old_whiskers",
         "Old Whiskers",
@@ -1088,7 +1101,8 @@ pub(crate) const ALL: [Kind; 80] = [
         Fishing,
         Client(C::GreatCatfish),
     )
-    .secret(),
+    .secret()
+    .retire(),
     // 04/11/2026 (Slash): junk to collect, and one for a steady hand rather than time.
     kind(
         "junk_kinds",
@@ -1097,7 +1111,8 @@ pub(crate) const ALL: [Kind; 80] = [
         crate::fishing::JUNK_KINDS as u64,
         Fishing,
         Client(C::JunkKinds),
-    ),
+    )
+    .retire(),
     kind(
         "fish_steady",
         "Steady Hand",
@@ -1105,7 +1120,8 @@ pub(crate) const ALL: [Kind; 80] = [
         10,
         Fishing,
         Client(C::HookStreak),
-    ),
+    )
+    .retire(),
     // 05/11/2026 (Slash): the Mining toy's, counted on servers as the rest; the goals set
     // for its pace (some six boulders a minute, the Heart some 40 minutes).
     kind(
@@ -1115,7 +1131,8 @@ pub(crate) const ALL: [Kind; 80] = [
         1,
         Mining,
         Client(C::BouldersBroken),
-    ),
+    )
+    .retire(),
     kind(
         "mine_500",
         "Stonebreaker",
@@ -1123,7 +1140,8 @@ pub(crate) const ALL: [Kind; 80] = [
         500,
         Mining,
         Client(C::BouldersBroken),
-    ),
+    )
+    .retire(),
     kind(
         "mine_clean_250",
         "Sharp Eye",
@@ -1131,7 +1149,8 @@ pub(crate) const ALL: [Kind; 80] = [
         250,
         Mining,
         Client(C::CleanStrikes),
-    ),
+    )
+    .retire(),
     kind(
         "mine_kinds",
         "Prospector",
@@ -1139,7 +1158,8 @@ pub(crate) const ALL: [Kind; 80] = [
         crate::mining::ORE_KINDS as u64,
         Mining,
         Client(C::OreKinds),
-    ),
+    )
+    .retire(),
     kind(
         "heart_of_the_mountain",
         "Heart of the Mountain",
@@ -1148,38 +1168,9 @@ pub(crate) const ALL: [Kind; 80] = [
         Mining,
         Client(C::MountainHearts),
     )
-    .secret(),
+    .secret()
+    .retire(),
 ];
-
-/// The bit of the fish `id` in [`Record`]'s kinds of fish: its place among the fish of
-/// [`crate::fishing::CATCHES`] (junk has none).
-pub(crate) fn fish_kind(id: &str) -> Option<u32> {
-    crate::fishing::CATCHES
-        .iter()
-        .filter(|catch| catch.kind == crate::fishing::Kind::Fish)
-        .position(|catch| catch.id == id)
-        .map(|index| 1 << index)
-}
-
-/// The bit of the junk `id` in [`Record`]'s kinds of junk: its place among the junk of
-/// [`crate::fishing::CATCHES`] (fish have none).
-pub(crate) fn junk_kind(id: &str) -> Option<u32> {
-    crate::fishing::CATCHES
-        .iter()
-        .filter(|catch| catch.kind == crate::fishing::Kind::Junk)
-        .position(|catch| catch.id == id)
-        .map(|index| 1 << index)
-}
-
-/// The bit of the ore `id` in [`Record`]'s kinds of ore: its place among the ores of
-/// [`crate::mining::FINDS`] (rubble has none).
-pub(crate) fn ore_kind(id: &str) -> Option<u32> {
-    crate::mining::FINDS
-        .iter()
-        .filter(|find| find.kind == crate::mining::Kind::Ore)
-        .position(|find| find.id == id)
-        .map(|index| 1 << index)
-}
 
 /// How many achievements can still be earned (every one but the retired).
 pub(crate) const OBTAINABLE: usize = {
@@ -1360,11 +1351,11 @@ pub(crate) struct Record {
     partners: BTreeSet<String>,
     /// Kinds of weapon (bits of [`tracker::weapon_kind`]).
     weapons: u32,
-    /// Kinds of fish landed (bits of [`fish_kind`]).
+    /// Kinds of fish landed (bits by place among the fish of [`crate::fishing::CATCHES`]).
     fish: u32,
-    /// Kinds of junk fished up (bits of [`junk_kind`]).
+    /// Kinds of junk fished up (bits by place among the junk).
     junk: u32,
-    /// Kinds of ore dug (bits of [`ore_kind`]).
+    /// Kinds of ore dug (bits by place among the ores of [`crate::mining::FINDS`]).
     ores: u32,
     /// The toys' sets of players ([`Counter::is_named`]), by the counter's key: names
     /// without colours, lower case.
@@ -1444,68 +1435,11 @@ impl Record {
         self.play_ms = total % 60_000;
     }
 
-    /// Add `ms` hidden in the box, with someone close by, to its minutes.
-    fn hide(&mut self, ms: u64) {
-        let total = self.box_ms + ms;
-        self.add(Counter::BoxMinutes, total / 60_000);
-        self.box_ms = total % 60_000;
-    }
-
     /// Add `ms` to the minutes of `counter` ([`Counter::is_timed`]).
     fn time(&mut self, counter: Counter, ms: u64) {
         let total = self.spare_ms[counter as usize] + ms;
         self.add(counter, total / 60_000);
         self.spare_ms[counter as usize] = total % 60_000;
-    }
-
-    /// A catch the Fishing toy landed: `catch` (none when the hook came up empty) or an
-    /// Echo (`echo`), `streak` fish bites hooked in a row with it. Whether a count
-    /// changed.
-    pub(crate) fn fished(
-        &mut self,
-        catch: Option<&crate::fishing::Catch>,
-        echo: bool,
-        streak: u32,
-    ) -> bool {
-        if echo {
-            self.add(Counter::EchoesLanded, 1);
-            return true;
-        }
-        let best = self.counts[Counter::HookStreak as usize];
-        self.raise(Counter::HookStreak, u64::from(streak));
-        let longer = self.counts[Counter::HookStreak as usize] > best;
-        let Some(catch) = catch else {
-            return longer;
-        };
-        match catch.kind {
-            crate::fishing::Kind::Junk => {
-                let before = self.junk;
-                self.junk |= junk_kind(catch.id).unwrap_or(0);
-                longer || self.junk != before
-            }
-            crate::fishing::Kind::Fish => {
-                self.add(Counter::FishCaught, 1);
-                self.fish |= fish_kind(catch.id).unwrap_or(0);
-                if catch.id == crate::fishing::GREAT_CATFISH {
-                    self.add(Counter::GreatCatfish, 1);
-                }
-                true
-            }
-        }
-    }
-
-    /// A boulder the Mining toy broke, for `find`, after `clean` clean strikes on it.
-    /// Whether a count changed (always: a boulder counts).
-    pub(crate) fn mined(&mut self, find: &crate::mining::Find, clean: u32) -> bool {
-        self.add(Counter::BouldersBroken, 1);
-        self.add(Counter::CleanStrikes, u64::from(clean));
-        if find.kind == crate::mining::Kind::Ore {
-            self.ores |= ore_kind(find.id).unwrap_or(0);
-            if find.id == crate::mining::HEART {
-                self.add(Counter::MountainHearts, 1);
-            }
-        }
-        true
     }
 
     /// Remember player `name` in the set of `counter` ([`Counter::is_named`]), by its
@@ -2050,76 +1984,6 @@ pub(crate) fn count(counter: Counter) -> u64 {
 mod tests {
     use super::*;
 
-    /// A fish counts towards Angler and its kind, Old Whiskers towards its own, an Echo
-    /// on the line towards Echo Angler, junk towards Beachcomber by its kind and the
-    /// longest run of hooked bites towards Steady Hand; an empty hook counts only its
-    /// bite, and the kinds of fish and junk are kept in the file.
-    #[test]
-    fn fishing_counts_fish_their_kinds_echoes_and_the_catfish() {
-        let catch = |id: &str| {
-            crate::fishing::CATCHES
-                .iter()
-                .find(|catch| catch.id == id)
-                .unwrap()
-        };
-        let mut record = Record::default();
-        assert!(!record.fished(None, false, 0));
-        assert!(record.fished(Some(catch("boot")), false, 0));
-        assert!(!record.fished(Some(catch("boot")), false, 0));
-        assert!(record.fished(Some(catch("silver_darter")), false, 0));
-        assert!(record.fished(Some(catch("silver_darter")), false, 0));
-        assert!(record.fished(Some(catch(crate::fishing::GREAT_CATFISH)), false, 0));
-        assert!(record.fished(None, true, 0));
-        assert_eq!(record.count(Counter::FishCaught), 3);
-        assert_eq!(record.count(Counter::FishKinds), 2);
-        assert_eq!(record.count(Counter::GreatCatfish), 1);
-        assert_eq!(record.count(Counter::EchoesLanded), 1);
-        assert_eq!(record.count(Counter::JunkKinds), 1);
-        assert!(record.fished(Some(catch("hilt")), false, 0));
-        assert_eq!(record.count(Counter::JunkKinds), 2);
-        // The streak keeps its best; an empty hook's bite counts for it too.
-        assert!(record.fished(None, false, 4));
-        assert!(!record.fished(None, false, 3));
-        assert_eq!(record.count(Counter::HookStreak), 4);
-        assert_eq!(crate::fishing::FISH_KINDS, 12);
-        assert_eq!(find("fish_kinds").unwrap().goal, 12);
-        assert_eq!(crate::fishing::JUNK_KINDS, 6);
-        assert_eq!(find("junk_kinds").unwrap().goal, 6);
-        assert_eq!(find("echo_angler").unwrap().goal, 5);
-        assert_eq!(find("fish_first").unwrap().category.page(), Page::Hobbies);
-        assert_eq!(Record::from_json(&record.to_json()), record);
-    }
-
-    /// A boulder counts towards Stonebreaker, its clean strikes towards Sharp Eye, an
-    /// ore towards its kind, the Heart towards its own; rubble counts the boulder only,
-    /// and the kinds of ore are kept in the file.
-    #[test]
-    fn mining_counts_boulders_clean_strikes_ores_and_the_heart() {
-        let find = |id: &str| {
-            crate::mining::FINDS
-                .iter()
-                .find(|find| find.id == id)
-                .unwrap()
-        };
-        let mut record = Record::default();
-        assert!(record.mined(find("rubble"), 0));
-        assert!(record.mined(find("iron_ore"), 2));
-        assert!(record.mined(find("iron_ore"), 1));
-        assert!(record.mined(find(crate::mining::HEART), 0));
-        assert_eq!(record.count(Counter::BouldersBroken), 4);
-        assert_eq!(record.count(Counter::CleanStrikes), 3);
-        assert_eq!(record.count(Counter::OreKinds), 2);
-        assert_eq!(record.count(Counter::MountainHearts), 1);
-        assert_eq!(crate::mining::ORE_KINDS, 9);
-        assert_eq!(find("rubble").kind, crate::mining::Kind::Rubble);
-        assert_eq!(super::find("mine_kinds").unwrap().goal, 9);
-        assert_eq!(
-            super::find("mine_first").unwrap().category.page(),
-            Page::Hobbies
-        );
-        assert_eq!(Record::from_json(&record.to_json()), record);
-    }
-
     fn held(id: &str, progress: u64, unlocked: i64) -> sjk_identity::Achievement {
         sjk_identity::Achievement {
             id: id.to_owned(),
@@ -2295,8 +2159,16 @@ mod tests {
             ]
         );
         let retired: Vec<&str> = ALL.iter().filter(|k| k.retired).map(|k| k.id).collect();
-        assert_eq!(retired, ["surveyor"]);
-        assert_eq!(OBTAINABLE, ALL.len() - 1);
+        assert_eq!(retired.len(), 28);
+        // Surveyor (26/10/2026), and the removed toys' achievements (20/11/2026): Order
+        // 66, the cardboard box, the Hax, Fishing and Mining. The Monitor's came back
+        // with Force Throw (21/11/2026), its ids kept.
+        let gone = [CardboardBox, Order66, Hax, Fishing, Mining];
+        for kind in &ALL {
+            let retired = kind.id == "surveyor" || gone.contains(&kind.category);
+            assert_eq!(kind.retired, retired, "{}", kind.id);
+        }
+        assert_eq!(OBTAINABLE, ALL.len() - 28);
         assert_eq!(find("box_minutes_10").unwrap().amount(7), "7 min");
         assert_eq!(find("holocrons_200").unwrap().category, Collection);
         assert_eq!(find("order66_kill").unwrap().category, Order66);
@@ -2330,8 +2202,10 @@ mod tests {
         assert_eq!(record.count(Counter::MonitorBestThrow), 2);
         let back = Record::from_json(&record.to_json());
         assert_eq!(back, record);
-        let new: Vec<&str> = record.unlock(9, false).iter().map(|kind| kind.id).collect();
-        assert_eq!(new, ["monitor_double"]);
+        // Force Throw (the Monitor's, back since 21/11/2026): its counts kept through the
+        // retirement unlock what they reach.
+        let unlocked: Vec<&str> = record.unlock(9, false).iter().map(|k| k.id).collect();
+        assert_eq!(unlocked, ["monitor_double"]);
         assert_eq!(find("monitor_victims_25").unwrap().amount(3), "3");
         // The hub's count is a floor for a set, as for maps.
         assert!(
@@ -2343,8 +2217,9 @@ mod tests {
         for index in 0..30 {
             record.name(Counter::MonitorVictims, &format!("p{index}"));
         }
-        let _ = record.unlock(10, false);
-        assert!(record.unlocked.contains_key("monitor_victims_25"));
+        // Past its goal it unlocks; clearing it sets its count back.
+        let unlocked: Vec<&str> = record.unlock(10, false).iter().map(|k| k.id).collect();
+        assert_eq!(unlocked, ["monitor_victims_25"]);
         record.forget(find("monitor_victims_25").unwrap());
         assert_eq!(record.count(Counter::MonitorVictims), 24);
         record.forget(find("hax_minutes_5").unwrap());
@@ -2383,17 +2258,17 @@ mod tests {
     fn a_retired_achievement_shows_only_to_its_holders() {
         let record = Record::default();
         let none = record.standings(&[]);
-        assert_eq!(tally(&none), (0, ALL.len() - 1));
+        assert_eq!(tally(&none), (0, OBTAINABLE));
         let partway = record.standings(&[held("surveyor", 3, 0)]);
         let surveyor = partway.iter().find(|s| s.kind.id == "surveyor").unwrap();
         assert!(!surveyor.listed());
-        assert_eq!(tally(&partway), (0, ALL.len() - 1));
+        assert_eq!(tally(&partway), (0, OBTAINABLE));
         let holder = record.standings(&[held("surveyor", 5, 1_791_336_225)]);
         let surveyor = holder.iter().find(|s| s.kind.id == "surveyor").unwrap();
         assert!(surveyor.listed() && !surveyor.secret());
-        assert_eq!(tally(&holder), (1, ALL.len()));
-        assert_eq!(total_for(|_| false), ALL.len() - 1);
-        assert_eq!(total_for(|kind| kind.id == "surveyor"), ALL.len());
+        assert_eq!(tally(&holder), (1, OBTAINABLE + 1));
+        assert_eq!(total_for(|_| false), OBTAINABLE);
+        assert_eq!(total_for(|kind| kind.id == "surveyor"), OBTAINABLE + 1);
     }
 
     /// Duel partners are a set like maps: the hub's count is a floor after a reinstall,
@@ -2407,7 +2282,10 @@ mod tests {
         }
         assert!(!Record::remember(&mut record.partners, "sol"));
         assert_eq!(record.count(Counter::DuelPartners), 3);
-        record.hide(61_500);
+        // The box's minutes and spare time (no longer counted since 20/11/2026) are
+        // kept in the file for their holders.
+        record.add(Counter::BoxMinutes, 1);
+        record.box_ms = 1_500;
         assert_eq!(
             (record.count(Counter::BoxMinutes), record.box_ms),
             (1, 1_500)

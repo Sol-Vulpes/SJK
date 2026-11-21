@@ -67,7 +67,7 @@ impl GroundHud {
 /// Returns the normal HUD's visibility with its status widgets switched off
 /// while the ground HUD stands in for them. `time_ms` picks the demo snapshot
 /// when no live session runs. `camera_detached` is the player's own free camera: a toy
-/// that only borrows the view this frame (limp in a ragdoll, Peek, Hax) leaves the
+/// that only borrows the view this frame (limp in a ragdoll, Peek) leaves the
 /// player's HUD choice alone, though `gpu.detached_camera` is set while it does.
 pub(crate) fn frame(
     gpu: &mut GpuState,

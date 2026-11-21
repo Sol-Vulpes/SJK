@@ -109,6 +109,9 @@ impl ViewerConsole {
         self.sjk_chat_panel.close();
         self.holocrons_panel.close();
         self.dead_key.settle();
+        // The Log book's books, and whether it shows (`catch_book`), before the hall is
+        // drawn.
+        self.log_books = crate::catch_book::load(self.config_directory());
         self.collection_panel.open(tab, owns_console, hub, back);
         let store = super::collection_panel::loadouts::Store::load(self.config_directory());
         self.collection_panel.set_loadouts(&store, Some(""));
@@ -203,18 +206,6 @@ impl ViewerConsole {
                 // The page shows it at once; the viewer applies it next frame.
                 self.illuminate_lit = on;
             }
-            PanelAction::CardboardBox(on) => {
-                self.pending_cardboard_box = Some(on);
-                self.cardboard_box_on = on;
-            }
-            PanelAction::Order66(on) => {
-                self.pending_order66 = Some(on);
-                self.order66_on = on;
-            }
-            PanelAction::Hax(on) => {
-                self.pending_hax = Some(on);
-                self.hax_on = on;
-            }
             PanelAction::Ragdoll(on) => {
                 self.pending_ragdoll = Some(on);
                 self.ragdoll_on = on;
@@ -227,19 +218,7 @@ impl ViewerConsole {
                 self.pending_boombox = Some(on);
                 self.boombox_on = on;
             }
-            PanelAction::Fishing(on) => {
-                self.pending_fishing = Some(on);
-                self.fishing_on = on;
-            }
-            PanelAction::Mining(on) => {
-                self.pending_mining = Some(on);
-                self.mining_on = on;
-            }
-            PanelAction::SellJunk => self.pending_fishing_sell = true,
             PanelAction::WheelOfDoom => self.pending_wheel_of_doom = true,
-            PanelAction::SellRubble => self.pending_mining_sell = true,
-            PanelAction::SellFish => self.pending_catch_sell = Some(true),
-            PanelAction::SellOre => self.pending_catch_sell = Some(false),
             PanelAction::Brag { mining } => self.pending_brag = Some(mining),
             PanelAction::Monitor(on) => {
                 self.pending_monitor = Some(on);
@@ -252,10 +231,6 @@ impl ViewerConsole {
             PanelAction::BoxHunt(on) => {
                 self.pending_box_hunt = Some(on);
                 self.box_hunt_on = on;
-            }
-            PanelAction::Banana(on) => {
-                self.pending_banana = Some(on);
-                self.banana_on = on;
             }
             PanelAction::Banner(id) => {
                 let _ = crate::player_identity::with_service(|service| {
@@ -312,36 +287,6 @@ impl ViewerConsole {
         self.pending_illuminate.take()
     }
 
-    /// The viewer says whether the player is in the cardboard box, once a frame.
-    pub(crate) fn set_cardboard_box_on(&mut self, on: bool) {
-        self.cardboard_box_on = on;
-    }
-
-    /// The Toys tab asked to get in the cardboard box (`true`) or out, once.
-    pub(crate) fn take_cardboard_box_request(&mut self) -> Option<bool> {
-        self.pending_cardboard_box.take()
-    }
-
-    /// The viewer says whether the Order 66 toy is on, once a frame.
-    pub(crate) fn set_order66_on(&mut self, on: bool) {
-        self.order66_on = on;
-    }
-
-    /// The Toys tab asked to turn Order 66 on (`true`) or off, once.
-    pub(crate) fn take_order66_request(&mut self) -> Option<bool> {
-        self.pending_order66.take()
-    }
-
-    /// The viewer says whether the Hax toy is on, once a frame.
-    pub(crate) fn set_hax_on(&mut self, on: bool) {
-        self.hax_on = on;
-    }
-
-    /// The Toys tab asked to turn the Hax on (`true`) or off, once.
-    pub(crate) fn take_hax_request(&mut self) -> Option<bool> {
-        self.pending_hax.take()
-    }
-
     /// The viewer says whether the player is limp (the Ragdoll), once a frame.
     pub(crate) fn set_ragdoll_on(&mut self, on: bool) {
         self.ragdoll_on = on;
@@ -382,16 +327,6 @@ impl ViewerConsole {
         self.pending_quests.take()
     }
 
-    /// The viewer says whether the fishing rod is out, once a frame.
-    pub(crate) fn set_fishing_on(&mut self, on: bool) {
-        self.fishing_on = on;
-    }
-
-    /// The Toys tab asked to get the rod out (`true`) or put it away, once.
-    pub(crate) fn take_fishing_request(&mut self) -> Option<bool> {
-        self.pending_fishing.take()
-    }
-
     /// The viewer says whether a WHEEL OF DOOM of the player's runs, once a frame.
     pub(crate) fn set_wheel_of_doom_on(&mut self, on: bool) {
         self.wheel_of_doom_on = on;
@@ -402,65 +337,14 @@ impl ViewerConsole {
         std::mem::take(&mut self.pending_wheel_of_doom)
     }
 
-    /// The viewer says whether the pickaxe is in hand, once a frame.
-    pub(crate) fn set_mining_on(&mut self, on: bool) {
-        self.mining_on = on;
-    }
-
-    /// The Toys tab asked to take the pickaxe (`true`) or put it away, once.
-    pub(crate) fn take_mining_request(&mut self) -> Option<bool> {
-        self.pending_mining.take()
-    }
-
-    /// Whether the Fishing card is on show (the Collection open on Toys, Fishing chosen):
-    /// the viewer gives it its catches then ([`Self::set_fishing_card`]).
-    pub(crate) fn fishing_card_shown(&self) -> bool {
-        self.collection_panel.is_open()
-            && self.collection_panel.tab() == Tab::Toys
-            && self.collection_panel.fishing_chosen()
-    }
-
-    /// The viewer gives the Fishing card its catches and sale.
-    pub(crate) fn set_fishing_card(&mut self, card: crate::fishing_sell::Card) {
-        self.fishing_card = card;
-    }
-
-    /// Whether the Mining card is on show (the Collection open on Toys, Mining chosen).
-    pub(crate) fn mining_card_shown(&self) -> bool {
-        self.collection_panel.is_open()
-            && self.collection_panel.tab() == Tab::Toys
-            && self.collection_panel.mining_chosen()
-    }
-
-    /// The viewer gives the Mining card its finds and sale.
-    pub(crate) fn set_mining_card(&mut self, card: crate::fishing_sell::Card) {
-        self.mining_card = card;
-    }
-
     /// An empty Collection or Holocrons page asked for the server list, once.
     pub(crate) fn take_servers_request(&mut self) -> bool {
         std::mem::take(&mut self.pending_servers)
     }
 
-    /// The Mining card's Sell rubble button was pressed, once.
-    pub(crate) fn take_mining_sell_request(&mut self) -> bool {
-        std::mem::take(&mut self.pending_mining_sell)
-    }
-
-    /// The Fishing card's Sell fish (`Some(true)`) or the Mining card's Sell ore
-    /// (`Some(false)`) button was pressed, once.
-    pub(crate) fn take_catch_sell_request(&mut self) -> Option<bool> {
-        self.pending_catch_sell.take()
-    }
-
-    /// The log book's Share button was pressed, once: Mining's (`true`) or Fishing's.
+    /// The Log book's Share button was pressed, once: Mining's (`true`) or Fishing's.
     pub(crate) fn take_brag_request(&mut self) -> Option<bool> {
         self.pending_brag.take()
-    }
-
-    /// The Fishing card's Sell junk button was pressed, once.
-    pub(crate) fn take_fishing_sell_request(&mut self) -> bool {
-        std::mem::take(&mut self.pending_fishing_sell)
     }
 
     /// The viewer says whether the Monitor toy is on, once a frame.
@@ -481,16 +365,6 @@ impl ViewerConsole {
     /// The Toys tab asked to turn Box hunt on (`true`) or off, once.
     pub(crate) fn take_box_hunt_request(&mut self) -> Option<bool> {
         self.pending_box_hunt.take()
-    }
-
-    /// The viewer says whether the Banana peel is on, once a frame.
-    pub(crate) fn set_banana_on(&mut self, on: bool) {
-        self.banana_on = on;
-    }
-
-    /// The Toys tab asked to turn the Banana peel on (`true`) or off, once.
-    pub(crate) fn take_banana_request(&mut self) -> Option<bool> {
-        self.pending_banana.take()
     }
 
     /// Carry out what the Collection's Loadouts card asked, and show the slots again with
@@ -612,21 +486,14 @@ impl ViewerConsole {
             .unwrap_or_default()
             .to_owned();
         let illuminate = self.illuminate_lit();
-        let cardboard_box = self.cardboard_box_on;
-        let order66 = self.order66_on;
-        let hax = self.hax_on;
         let ragdoll = self.ragdoll_on;
         let drone = self.drone_on;
         let boombox = self.boombox_on;
         let monitor = self.monitor_on;
         let box_hunt = self.box_hunt_on;
-        let banana = self.banana_on;
-        let fishing = self.fishing_on;
-        let mining = self.mining_on;
         let quests = self.quests_on;
-        let fishing_card = self.fishing_card.clone();
         let wheel_of_doom = self.wheel_of_doom_on;
-        let mining_card = self.mining_card.clone();
+        let log_books = self.log_books.clone();
         let stock = self.stock_blade();
         // Tiles unless the list is chosen (`ui_shaderList 1`).
         let grid = self.integer_cvar(super::collection_panel::SHADER_VIEW_CVAR) != Some(1);
@@ -680,21 +547,14 @@ impl ViewerConsole {
                 setting: &setting,
                 standings: &standings,
                 illuminate,
-                cardboard_box,
-                order66,
-                hax,
                 ragdoll,
                 drone,
                 boombox,
                 monitor,
                 box_hunt,
-                banana,
-                fishing,
-                mining,
                 quests,
-                fishing_card: Some(&fishing_card),
                 wheel_of_doom,
-                mining_card: Some(&mining_card),
+                log_books: Some(&log_books),
                 stock,
                 grid,
                 options: &options,
@@ -720,21 +580,14 @@ impl ViewerConsole {
             setting: &setting,
             standings: &standings,
             illuminate,
-            cardboard_box,
-            order66,
-            hax,
             ragdoll,
             drone,
             boombox,
             monitor,
             box_hunt,
-            banana,
-            fishing,
-            mining,
             quests,
-            fishing_card: Some(&fishing_card),
             wheel_of_doom,
-            mining_card: Some(&mining_card),
+            log_books: Some(&log_books),
             stock,
             grid,
             options: &options,
@@ -994,12 +847,6 @@ impl ViewerConsole {
     #[cfg(test)]
     pub(crate) fn collection_tilt_for_shot(&mut self, key: usize, at: [f32; 2]) {
         self.collection_panel.tilt_card_for_shot(key, at);
-    }
-
-    /// Choose the Toys tab's toy `index` (0 Illuminate), for a world shot.
-    #[cfg(test)]
-    pub(crate) fn collection_toy_for_shot(&mut self, index: usize) {
-        self.collection_panel.choose_toy_for_shot(index);
     }
 
     /// Choose the hall's tile `index` (`open`: and open it, as Enter does), for a world

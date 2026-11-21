@@ -23,15 +23,6 @@ impl GpuState {
         if let Some(on) = console.take_illuminate_request() {
             self.illuminate.set_on(on);
         }
-        if let Some(on) = console.take_cardboard_box_request() {
-            self.cardboard_box.set_on(on);
-        }
-        if let Some(on) = console.take_order66_request() {
-            self.order66.set_on(on);
-        }
-        if let Some(on) = console.take_hax_request() {
-            self.hax.set_on(on);
-        }
         if let Some(on) = console.take_ragdoll_request() {
             self.ragdoll.set_on(on);
         }
@@ -44,34 +35,14 @@ impl GpuState {
         if let Some(on) = console.take_box_hunt_request() {
             self.box_hunt.set_on(on);
         }
-        if let Some(on) = console.take_banana_request() {
-            self.banana.set_on(on);
-        }
         if let Some(on) = console.take_quests_request() {
             self.quests.set_on(on);
         }
-        if let Some(on) = console.take_fishing_request()
-            && on != self.fishing.on()
-        {
-            self.fishing.toggle();
-        }
-        if let Some(on) = console.take_mining_request()
-            && on != self.mining.on()
-        {
-            // As `toggle_mining`: `+use` is both toys', so the rod goes away first.
-            if on && self.fishing.on() {
-                self.fishing.toggle();
-            }
-            self.mining.toggle();
-        }
         // The boombox checks who may carry it, so it is switched once the console is let
-        // go; the Fishing card's Sell junk and the Mining card's Sell rubble too.
+        // go.
         let boombox_request = console.take_boombox_request();
-        let sell_junk = console.take_fishing_sell_request();
         let wheel_of_doom = console.take_wheel_of_doom_request();
-        let sell_rubble = console.take_mining_sell_request();
         let servers = console.take_servers_request();
-        let sell_catch = console.take_catch_sell_request();
         let brag = console.take_brag_request();
         let mut actions = [None; MAX_ACTIONS_PER_FRAME];
         console.advance_command_frame();
@@ -110,71 +81,36 @@ impl GpuState {
         {
             self.toggle_boombox();
         }
-        if sell_junk {
-            self.sell_fishing_junk();
-        }
         if wheel_of_doom {
             self.wheel_of_doom_command();
-        }
-        if sell_rubble {
-            self.sell_mining_rubble();
         }
         if servers {
             self.open_servers_from_collection();
         }
-        match sell_catch {
-            Some(true) => self.sell_fishing_catch(),
-            Some(false) => self.sell_mining_ore(),
-            None => {}
+        // The Log book's Share (`catch_book`).
+        if let Some(mining) = brag {
+            self.share_log_book(mining);
         }
-        match brag {
-            Some(true) => self.brag_mining(),
-            Some(false) => self.brag_fishing(),
-            None => {}
-        }
-        // `toy_illuminate` may have flipped it: tell the Toys tab. Order 66, the Hax, the
-        // Drone, the Monitor, Box hunt and the Banana peel stay as last switched, across
+        // `toy_illuminate` may have flipped it: tell the Toys tab. The Drone, the Monitor,
+        // Box hunt and Quests stay as last switched, across
         // maps, servers and restarts (`toy_saved`).
         if let Some(console) = self.console.as_mut() {
-            let [
-                order66,
-                hax,
-                drone,
-                monitor,
-                box_hunt,
-                banana,
-                propgun,
-                quests,
-            ] = &mut self.toys_saved;
-            let on = order66.sync(console, crate::toy_saved::ORDER66_CVAR, self.order66.on());
-            self.order66.set_on(on);
-            let on = hax.sync(console, crate::toy_saved::HAX_CVAR, self.hax.on());
-            self.hax.set_on(on);
+            let [drone, monitor, box_hunt, quests] = &mut self.toys_saved;
             let on = drone.sync(console, crate::toy_saved::DRONE_CVAR, self.drone.on());
             self.drone.set_on(on);
             let on = monitor.sync(console, crate::toy_saved::MONITOR_CVAR, self.monitor.on());
             self.monitor.set_on(on);
             let on = box_hunt.sync(console, crate::toy_saved::BOX_HUNT_CVAR, self.box_hunt.on());
             self.box_hunt.set_on(on);
-            let on = banana.sync(console, crate::toy_saved::BANANA_CVAR, self.banana.on());
-            self.banana.set_on(on);
-            let on = propgun.sync(console, crate::toy_saved::PROPGUN_CVAR, self.propgun.on());
-            self.propgun.set_on(on);
             let on = quests.sync(console, crate::toy_saved::QUESTS_CVAR, self.quests.on());
             self.quests.set_on(on);
             console.set_illuminate_lit(self.illuminate.lit());
-            console.set_cardboard_box_on(self.cardboard_box.on());
-            console.set_order66_on(self.order66.on());
-            console.set_hax_on(self.hax.on());
             console.set_ragdoll_on(self.ragdoll.on());
             console.set_drone_on(self.drone.on());
             console.set_boombox_on(self.boombox.on());
             console.set_monitor_on(self.monitor.on());
             console.set_box_hunt_on(self.box_hunt.on());
-            console.set_banana_on(self.banana.on());
-            console.set_fishing_on(self.fishing.on());
             console.set_wheel_of_doom_on(self.wheel_of_doom.running());
-            console.set_mining_on(self.mining.on());
             console.set_quests_on(self.quests.on());
         }
         let connection = self

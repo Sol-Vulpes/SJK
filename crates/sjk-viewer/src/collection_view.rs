@@ -82,7 +82,7 @@ pub(super) fn counts(inputs: &Inputs<'_>) -> [Count; 10] {
             held: shaders,
             total: shaders_shown,
         },
-        // Every toy is everyone's (Illuminate, the cardboard box, Order 66).
+        // Every toy is everyone's (Illuminate, the Ragdoll, the Drone...).
         Count {
             held: Some(TOY_COUNT),
             total: TOY_COUNT,
@@ -152,21 +152,14 @@ pub(crate) fn row_labels(
         setting: "",
         standings,
         illuminate: true,
-        cardboard_box: false,
-        order66: false,
-        hax: false,
         ragdoll: false,
         drone: false,
         boombox: false,
         monitor: false,
         box_hunt: false,
-        banana: false,
-        fishing: false,
-        mining: false,
         quests: false,
-        fishing_card: None,
         wheel_of_doom: false,
-        mining_card: None,
+        log_books: None,
         stock: color::holo(),
         grid: false,
         options: "",
@@ -554,17 +547,11 @@ impl Panel {
         let frame = Frame::new(viewport);
         self.follow_news(inputs);
         self.empty_action = None;
-        self.box_on = inputs.cardboard_box;
-        self.order66_on = inputs.order66;
-        self.hax_on = inputs.hax;
         self.ragdoll_on = inputs.ragdoll;
         self.drone_on = inputs.drone;
         self.boombox_on = inputs.boombox;
         self.monitor_on = inputs.monitor;
         self.box_hunt_on = inputs.box_hunt;
-        self.banana_on = inputs.banana;
-        self.fishing_on = inputs.fishing;
-        self.mining_on = inputs.mining;
         self.quests_on = inputs.quests;
         self.toys_unseen = inputs.toys_unseen;
         self.toy_options = inputs.toy_options;
@@ -696,6 +683,7 @@ impl Panel {
             Tab::Cards => self.cards(&frame, inputs, seconds),
             Tab::History => self.history_tab(&frame, inputs),
             Tab::Inventory => self.inventory_tab(&frame, inputs, seconds),
+            Tab::LogBook => self.log_book_tab(&frame, inputs),
             Tab::Forge => {
                 self.grid = inputs.grid;
                 self.forge(&frame, inputs, seconds, viewport);
@@ -1048,32 +1036,20 @@ impl Panel {
             }
             Tab::Toys => keys.push((
                 &["Enter"],
-                match (self.toy, inputs.illuminate, inputs.cardboard_box) {
-                    (1, _, true) => "come out",
-                    (1, _, false) => "hide",
-                    (2, _, _) if inputs.order66 => "turn off",
-                    (2, _, _) => "turn on",
-                    (3, _, _) if inputs.hax => "turn off",
-                    (3, _, _) => "turn on",
-                    (4, _, _) if inputs.ragdoll => "get up",
-                    (4, _, _) => "go limp",
-                    (5, _, _) if inputs.drone => "turn off",
-                    (5, _, _) => "turn on",
-                    (6, _, _) if inputs.boombox => "put away",
-                    (6, _, _) => "play",
-                    (7, _, _) if inputs.monitor => "turn off",
-                    (7, _, _) => "turn on",
-                    (8, _, _) if inputs.box_hunt => "turn off",
-                    (8, _, _) => "turn on",
-                    (9, _, _) if inputs.banana => "turn off",
-                    (9, _, _) => "turn on",
-                    (10, _, _) if inputs.fishing => "put away",
-                    (10, _, _) => "get the rod out",
-                    (12, _, _) if inputs.mining => "put away",
-                    (12, _, _) => "take the pickaxe",
-                    (13, _, _) if inputs.quests => "turn off",
-                    (13, _, _) => "turn on",
-                    (_, true, _) => "put out",
+                match (self.toy, inputs.illuminate) {
+                    (RAGDOLL_TOY, _) if inputs.ragdoll => "get up",
+                    (RAGDOLL_TOY, _) => "go limp",
+                    (DRONE_TOY, _) if inputs.drone => "turn off",
+                    (DRONE_TOY, _) => "turn on",
+                    (BOOMBOX_TOY, _) if inputs.boombox => "put away",
+                    (BOOMBOX_TOY, _) => "play",
+                    (MONITOR_TOY, _) if inputs.monitor => "turn off",
+                    (MONITOR_TOY, _) => "turn on",
+                    (BOX_HUNT_TOY, _) if inputs.box_hunt => "turn off",
+                    (BOX_HUNT_TOY, _) => "turn on",
+                    (QUESTS_TOY, _) if inputs.quests => "turn off",
+                    (QUESTS_TOY, _) => "turn on",
+                    (_, true) => "put out",
                     _ => "light",
                 },
             )),
